@@ -1,9 +1,6 @@
 ; global_ctors/global_dtors terminator: this is used to add a terminating null
 ; value to the initialization list.
 
-target endian = little
-target pointersize = 32
-
 %struct..TorRec = type { int, void ()* }
 
 %llvm.global_ctors = appending global [1 x %struct..TorRec] [
