@@ -41,11 +41,21 @@ void FindUsedTypes::IncorporateType(const Type *Ty) {
     IncorporateType(*I);
 }
 
+void FindUsedTypes::IncorporateSymbolTable(const SymbolTable &ST) {
+  SymbolTable::const_iterator TI = ST.find(Type::TypeTy);
+  if (TI == ST.end()) return;  // No named types
+
+  for (SymbolTable::type_const_iterator I = TI->second.begin(),
+         E = TI->second.end(); I != E; ++I)
+    IncorporateType(cast<Type>(I->second));
+}
 
 // run - This incorporates all types used by the specified module
 //
 bool FindUsedTypes::run(Module &m) {
   UsedTypes.clear();  // reset if run multiple times...
+
+  IncorporateSymbolTable(m.getSymbolTable());
 
   // Loop over global variables, incorporating their types
   for (Module::const_giterator I = m.gbegin(), E = m.gend(); I != E; ++I)
@@ -54,6 +64,7 @@ bool FindUsedTypes::run(Module &m) {
   for (Module::iterator MI = m.begin(), ME = m.end(); MI != ME; ++MI) {
     IncorporateType(MI->getType());
     const Function &F = *MI;
+    IncorporateSymbolTable(F.getSymbolTable());
   
     // Loop over all of the instructions in the function, adding their return
     // type as well as the types of their operands.
