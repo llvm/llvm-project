@@ -77,18 +77,20 @@ includes a few new features, such as a simple profiler, support for Mac OS/X,
 better interoperability with external source bases, a new example language
 front-end, and improvements in a few optimizations.</p>
 
-<p>At this time, LLVM is known to correctly compile the C &amp; C++ SPEC CPU2000
-benchmarks with the C backend (X86 only), the Olden benchmarks, and the Ptrdist
-benchmarks.  It has also been used to compile
-<b>many</b> other programs.  LLVM now also works with a broad variety of
-C++ programs, though it has still received much less testing than the C
-front-end.
+<p>At this time, LLVM is known to correctly compile and run all non-unwinding C
+&amp; C++ SPEC CPU2000 benchmarks, the Olden benchmarks, and the Ptrdist
+benchmarks.  It has also been used to compile <b>many</b> other programs.  LLVM
+now also works with a broad variety of C++ programs, though it has still
+received much less testing than the C front-end.
 </p>
 
 <p>
-Note that the Sparc and X86 backends do not currently support exception throwing
-or long jumping (including 253.perlbmk in SPEC).  For these programs, you must
-use the C backend.  Support for unwinding will be added in a future release.
+The LLVM native code generators are very stable, but do not currently support
+unwinding (exception throwing or <tt>longjmp</tt>ing), which prevent them from
+working with programs like the <tt>253.perlbmk</tt> in SPEC CPU2000.  The C
+backend and the rest of LLVM does support these programs however, so you can
+still use LLVM with them.  Support for unwinding will be added in a future
+release.
 </p>
 
 
@@ -248,6 +250,7 @@ many platforms, such as X86).</li>
 <li><a href="http://llvm.cs.uiuc.edu/PR123">[X86] div and rem constant exprs invalidate iterators!</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR130">[vmcore] Symbol table doesn't rename colliding variables during type resolution</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR138">Archive reader does not understand 4.4BSD/Mac OS X long filenames</a></li>
+<li><a href="http://llvm.cs.uiuc.edu/PR30">[llvm-ar] Command line arguments have funny syntax</a></li>
 </ol>
 
 
@@ -320,7 +323,9 @@ new platforms.  We welcome portability patches and error messages.</p>
 
 <p>This section contains all known problems with the LLVM system, listed by
 component.  As new problems are discovered, they will be added to these
-sections.</p>
+sections.  If you run into a problem, please check the <a
+href="http://llvm.cs.uiuc.edu/bugs/">LLVM bug database</a>, and submit a bug if
+there isn't already one.</p>
 
 </div>
 
@@ -666,7 +671,8 @@ can access versions of these documents specific to this release by going into
 the "<tt>llvm/doc/</tt>" directory in the LLVM tree.</p>
 
 <p>If you have any questions or comments about LLVM, please feel free to contact
-us via the mailing lists.</p>
+us via the <a href="http://mail.cs.uiuc.edu/mailman/listinfo/llvmdev">mailing
+lists</a>.</p>
 
 </div>
 
