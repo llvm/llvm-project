@@ -39,6 +39,10 @@ private:
   ///
   void IncorporateType(const Type *Ty);
 
+  /// IncorporateSymbolTable - Include any named types.
+  ///
+  void IncorporateSymbolTable(const SymbolTable &ST);
+
 public:
   /// run - This incorporates all types used by the specified module
   bool run(Module &M);
