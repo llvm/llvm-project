@@ -14,6 +14,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Function.h"
+#include <iostream>
 using namespace llvm;
 
 namespace {

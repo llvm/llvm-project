@@ -513,21 +513,24 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
   }
 
   // Now that we've done the deed, simplify the switch instruction.
+  const Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
   switch (NumExitBlocks) {
   case 0:
-    // There is only 1 successor (the block containing the switch itself), which
+    // There are no successors (the block containing the switch itself), which
     // means that previously this was the last part of the function, and hence
     // this should be rewritten as a `ret'
     
     // Check if the function should return a value
-    if (TheSwitch->getParent()->getParent()->getReturnType() != Type::VoidTy &&
-        TheSwitch->getParent()->getParent()->getReturnType() ==
-        TheSwitch->getCondition()->getType())
+    if (OldFnRetTy == Type::VoidTy) {
+      new ReturnInst(0, TheSwitch);  // Return void
+    } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
       // return what we have
       new ReturnInst(TheSwitch->getCondition(), TheSwitch);
-    else
-      // just return
-      new ReturnInst(0, TheSwitch);
+    } else {
+      // Otherwise we must have code extracted an unwind or something, just
+      // return whatever we want.
+      new ReturnInst(Constant::getNullValue(OldFnRetTy), TheSwitch);
+    }
 
     TheSwitch->getParent()->getInstList().erase(TheSwitch);
     break;
@@ -583,8 +586,8 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
 /// for each scalar output in the function: at every exit, store intermediate 
 /// computed result back into memory.
 ///
-Function *CodeExtractor::ExtractCodeRegion(const std::vector<BasicBlock*> &code)
-{
+Function *CodeExtractor::
+ExtractCodeRegion(const std::vector<BasicBlock*> &code) {
   if (!isEligible(code))
     return 0;
 
