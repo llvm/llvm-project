@@ -59,7 +59,10 @@
      <ul>
      <li><a href="#getAnalysisUsage">The <tt>getAnalysisUsage</tt> 
                                      method</a></li>
-     <li><a href="#getAnalysis">The <tt>getAnalysis</tt> method</a></li>
+     <li><a href="#AU::addRequired">The <tt>AnalysisUsage::addRequired&lt;&gt;</tt> and <tt>AnalysisUsage::addRequiredTransitive&lt;&gt;</tt> methods</a></li>
+     <li><a href="#AU::addPreserved">The <tt>AnalysisUsage::addPreserved&lt;&gt;</tt> method</a></li>
+     <li><a href="#AU::examples">Example implementations of <tt>getAnalysisUsage</tt></a></li>
+     <li><a href="#getAnalysis">The <tt>getAnalysis&lt;&gt;</tt> and <tt>getAnalysisToUpdate&lt;&gt;</tt> methods</a></li>
      </ul></li>
   <li><a href="#analysisgroup">Implementing Analysis Groups</a>
      <ul>
@@ -171,12 +174,9 @@ include $(LEVEL)/Makefile.common
 <p>This makefile specifies that all of the <tt>.cpp</tt> files in the current
 directory are to be compiled and linked together into a
 <tt>lib/Debug/libhello.so</tt> shared object that can be dynamically loaded by
-the <tt>opt</tt> or <tt>analyze</tt> tools.</p>
-
-<p>
-Note that the suffix of the shared library may differ from the example above if
-your system uses a different suffix by default.
-</p>
+the <tt>opt</tt> or <tt>analyze</tt> tools.  If your operating system uses a
+suffix other than .so (such as windows of Mac OS/X), the appropriate extension
+will be used.</p>
 
 <p>Now that we have the build scripts set up, we just need to write the code for
 the pass itself.</p>
@@ -487,7 +487,7 @@ should return true if they modified the program, or false if they didn't.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="doInitialization_mod">The <tt>doInitialization(Module &amp;)</tt>
   method</a>
 </div>
@@ -516,7 +516,7 @@ free functions that it needs, adding prototypes to the module if necessary.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="runOnFunction">The <tt>runOnFunction</tt> method</a>
 </div>
 
@@ -533,7 +533,7 @@ be returned if the function is modified.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="doFinalization_mod">The <tt>doFinalization(Module
   &amp;)</tt> method</a>
 </div>
@@ -581,7 +581,7 @@ href="#FunctionPass"><tt>FunctionPass</tt></a>'s have, but also have the followi
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="doInitialization_fn">The <tt>doInitialization(Function
   &amp;)</tt> method</a>
 </div>
@@ -603,7 +603,7 @@ fast).</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="runOnBasicBlock">The <tt>runOnBasicBlock</tt> method</a>
 </div>
 
@@ -621,7 +621,7 @@ if the basic block is modified.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="doFinalization_fn">The <tt>doFinalization(Function &amp;)</tt> 
   method</a>
 </div>
@@ -647,14 +647,12 @@ finalization.</p>
 
 <div class="doc_text">
 
-<p>A <tt>MachineFunctionPass</tt> executes on the machine-dependent
-representation of each LLVM function in the program,
-independent of all of the other functions in the program.
-A <tt>MachineFunctionPass</tt> is also a <tt>FunctionPass</tt>, so all
+<p>A <tt>MachineFunctionPass</tt> is a part of the LLVM code generator that
+executes on the machine-dependent representation of each LLVM function in the
+program.  A <tt>MachineFunctionPass</tt> is also a <tt>FunctionPass</tt>, so all
 the restrictions that apply to a <tt>FunctionPass</tt> also apply to it.
-<tt>MachineFunctionPass</tt>es also have additional restrictions. In
-particular, <tt>MachineFunctionPass</tt>es are not allowed to do any of
-the following:</p>
+<tt>MachineFunctionPass</tt>es also have additional restrictions. In particular,
+<tt>MachineFunctionPass</tt>es are not allowed to do any of the following:</p>
 
 <ol>
 <li>Modify any LLVM Instructions, BasicBlocks or Functions.</li>
@@ -669,7 +667,7 @@ data)</li>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="runOnMachineFunction">The <tt>runOnMachineFunction(MachineFunction
   &amp;MF)</tt> method</a>
 </div>
@@ -718,11 +716,7 @@ registering a pass that logically should be available for use in the
 
 <li><b><tt>RegisterAnalysis</tt></b> - This template should be used when you are
 registering a pass that logically should be available for use in the
-'<tt>analysis</tt>' utility.</li>
-
-<li><b><tt>RegisterLLC</tt></b> - This template should be used when you are
-registering a pass that logically should be available for use in the
-'<tt>llc</tt>' utility.</li>
+'<tt>analyze</tt>' utility.</li>
 
 <li><b><tt>RegisterPass</tt></b> - This is the generic form of the
 <tt>Register*</tt> templates that should be used if you want your pass listed by
@@ -739,14 +733,6 @@ the command line to specify that the pass should be added to a program (for
 example <tt>opt</tt> or <tt>analyze</tt>).  The second argument is the name of
 the pass, which is to be used for the <tt>--help</tt> output of programs, as
 well as for debug output generated by the <tt>--debug-pass</tt> option.</p>
-
-<p>If you pass is constructed by its default constructor, you only ever have to
-pass these two arguments.  If, on the other hand, you require other information
-(like target specific information), you must pass an additional argument.  This
-argument is a pointer to a function used to create the pass.  For an example of
-how this works, look at the <a
-href="http://llvm.cs.uiuc.edu/doxygen/LowerAllocations_8cpp-source.html">LowerAllocations.cpp</a>
-file.</p>
 
 <p>If a pass is registered to be used by the <tt>analyze</tt> utility, you
 should implement the virtual <tt>print</tt> method:</p>
@@ -819,34 +805,77 @@ invalidated sets may be specified for your transformation.  The implementation
 should fill in the <tt><a
 href="http://llvm.cs.uiuc.edu/doxygen/classllvm_1_1AnalysisUsage.html">AnalysisUsage</a></tt>
 object with information about which passes are required and not invalidated.  To
-do this, the following set methods are provided by the <tt><a
-href="http://llvm.cs.uiuc.edu/doxygen/classllvm_1_1AnalysisUsage.html">AnalysisUsage</a></tt>
-class:</p>
+do this, a pass may call any of the following methods on the AnalysisUsage
+object:</p>
+</div>
 
-<pre>
-  <i>// addRequires - Add the specified pass to the required set for your pass.</i>
-  <b>template</b>&lt;<b>class</b> PassClass&gt;
-  AnalysisUsage &amp;AnalysisUsage::addRequired();
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="AU::addRequired">The <tt>AnalysisUsage::addRequired&lt;&gt;</tt> and <tt>AnalysisUsage::addRequiredTransitive&lt;&gt;</tt> methods</a>
+</div>
 
-  <i>// addPreserved - Add the specified pass to the set of analyses preserved by
-  // this pass</i>
-  <b>template</b>&lt;<b>class</b> PassClass&gt;
-  AnalysisUsage &amp;AnalysisUsage::addPreserved();
+<div class="doc_text">
+<p>
+If you pass requires a previous pass to be executed (an analysis for example),
+it can use one of these methods to arrange for it to be run before your pass.
+LLVM has many different types of analyses and passes that can be required,
+spaning the range from <tt>DominatorSet</tt> to <tt>BreakCriticalEdges</tt>.
+requiring <tt>BreakCriticalEdges</tt>, for example, guarantees that there will
+be no critical edges in the CFG when your pass has been run.
+</p>
 
-  <i>// setPreservesAll - Call this if the pass does not modify its input at all</i>
-  <b>void</b> AnalysisUsage::setPreservesAll();
+<p>
+Some analyses chain to other analyses to do their job.  For example, an <a
+href="AliasAnalysis.html">AliasAnalysis</a> implementation is required to <a
+href="AliasAnalysis.html#chaining">chain</a> to other alias analysis passes.  In
+cases where analyses chain, the <tt>addRequiredTransitive</tt> method should be
+used instead of the <tt>addRequired</tt> method.  This informs the PassManager
+that the transitively required pass should be alive as long as the requiring
+pass is.
+</p>
+</div>
 
-  <i>// setPreservesCFG - This function should be called by the pass, iff they do not:
-  //
-  //  1. Add or remove basic blocks from the function
-  //  2. Modify terminator instructions in any way.
-  //
-  //  This is automatically implied for <a href="#BasicBlockPass">BasicBlockPass</a>'s
-  //</i>
-  <b>void</b> AnalysisUsage::setPreservesCFG();
-</pre>
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="AU::addPreserved">The <tt>AnalysisUsage::addPreserved&lt;&gt;</tt> method</a>
+</div>
 
-<p>Some examples of how to use these methods are:</p>
+<div class="doc_text">
+<p>
+One of the jobs of the PassManager is to optimize how and when analyses are run.
+In particular, it attempts to avoid recomputing data unless it needs to.  For
+this reason, passes are allowed to declare that they preserve (i.e., they don't
+invalidate) an existing analysis if it's available.  For example, a simple
+constant folding pass would not modify the CFG, so it can't possible effect the
+results of dominator analysis.  By default, all passes are assumed to invalidate
+all others.
+</p>
+
+<p>
+The <tt>AnalysisUsage</tt> class provides several methods which are useful in
+certain circumstances that are related to <tt>addPreserved</tt>.  In particular,
+the <tt>setPreservesAll</tt> method can be called to indicate that the pass does
+not modify the LLVM program at all (which is true for analyses), and the
+<tt>setPreservesCFG</tt> method can be used by transformations that change
+instructions in the program but do not modify the CFG or terminator instructions
+(note that this property is implicitly set for <a
+href="#BasicBlockPass">BasicBlockPass</a>'s).
+</p>
+
+<p>
+<tt>addPreserved</tt> is particularly useful for transformations like
+<tt>BreakCriticalEdges</tt>.  This pass knows how to update a small set of loop
+and dominator related analyses if they exist, so it can preserve them, despite
+the fact that it hacks on the CFG.
+</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="AU::examples">Example implementations of <tt>getAnalysisUsage</tt></a>
+</div>
+
+<div class="doc_text">
 
 <pre>
   <i>// This is an example implementation from an analysis, which does not modify
@@ -871,20 +900,22 @@ class:</p>
 
 <!-- _______________________________________________________________________ -->
 <div class="doc_subsubsection">
-  <a name="getAnalysis">The <tt>getAnalysis&lt;&gt;</tt> method</a>
+  <a name="getAnalysis">The <tt>getAnalysis&lt;&gt;</tt> and <tt>getAnalysisToUpdate&lt;&gt;</tt> methods</a>
 </div>
 
 <div class="doc_text">
 
-<p>The <tt>Pass::getAnalysis&lt;&gt;</tt> method is inherited by your class,
-providing you with access to the passes that you declared that you required with
-the <a href="#getAnalysisUsage"><tt>getAnalysisUsage</tt></a> method.  It takes
-a single template argument that specifies which pass class you want, and returns
-a reference to that pass.</p>
+<p>The <tt>Pass::getAnalysis&lt;&gt;</tt> method is automatically inherited by
+your class, providing you with access to the passes that you declared that you
+required with the <a href="#getAnalysisUsage"><tt>getAnalysisUsage</tt></a>
+method.  It takes a single template argument that specifies which pass class you
+want, and returns a reference to that pass.  For example:</p>
 
 <pre>
-  <b>template</b>&lt;<b>typename</b> PassClass&gt;
-  AnalysisType &amp;getAnalysis();
+   bool LICM::runOnFunction(Function &F) {
+     LoopInfo &amp;LI = getAnalysis&lt;LoopInfo&gt;();
+     ...
+   }
 </pre>
 
 <p>This method call returns a reference to the pass desired.  You may get a
@@ -893,6 +924,20 @@ declare as required in your <a
 href="#getAnalysisUsage"><tt>getAnalysisUsage</tt></a> implementation.  This
 method can be called by your <tt>run*</tt> method implementation, or by any
 other local method invoked by your <tt>run*</tt> method.</p>
+
+<p>
+If your pass is capable of updating analyses if they exist (e.g.,
+<tt>BreakCriticalEdges</tt>, as described above), you can use the
+<tt>getAnalysisToUpdate</tt> method, which returns a pointer to the analysis if
+it is active.  For example:</p>
+
+<pre>
+  ...
+  if (DominatorSet *DS = getAnalysisToUpdate&lt;DominatorSet&gt;()) {
+    <i>// A DominatorSet is active.  This code will update it.</i>
+  }
+  ...
+</pre>
 
 </div>
 
@@ -924,7 +969,7 @@ Analysis Groups.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="agconcepts">Analysis Group Concepts</a>
 </div>
 
@@ -975,7 +1020,7 @@ hypothetical example) instead.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="registerag">Using <tt>RegisterAnalysisGroup</tt></a>
 </div>
 
@@ -1345,7 +1390,7 @@ where we are going:</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="SMP">Multithreaded LLVM</a>
 </div>
 
@@ -1368,7 +1413,7 @@ Despite that, we have kept the LLVM passes SMP ready, and you should too.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
   <a name="ModuleSource">A new <tt>ModuleSource</tt> interface</a>
 </div>
 
@@ -1395,7 +1440,7 @@ capable of this, the loader just needs to be reworked a bit.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="subsubsection">
+<div class="doc_subsubsection">
 <a name="PassFunctionPass"><tt>Pass</tt>es requiring <tt>FunctionPass</tt>es</a>
 </div>
 
