@@ -829,7 +829,7 @@ Instruction *InstCombiner::visitRem(BinaryOperator &I) {
   if (I.getType()->isSigned())
     if (Value *RHSNeg = dyn_castNegVal(I.getOperand(1)))
       if (!isa<ConstantSInt>(RHSNeg) ||
-          cast<ConstantSInt>(RHSNeg)->getValue() >= 0) {
+          cast<ConstantSInt>(RHSNeg)->getValue() > 0) {
         // X % -Y -> X % Y
         AddUsesToWorkList(I);
         I.setOperand(1, RHSNeg);
