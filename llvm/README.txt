@@ -1,42 +1,62 @@
-##===----------------------------------------------------------------------===##
-# 
-#                     The LLVM Compiler Infrastructure
-#
-# This file was developed by the LLVM research group and is distributed under
-# the University of Illinois Open Source License. See LICENSE.TXT for details.
-# 
-##===----------------------------------------------------------------------===##
+                       The LLVM Compiler Infrastructure
+                           http://llvm.cs.uiuc.edu
 
 Welcome to LLVM!
+-----------------
+This file is intended to do four things:
+(1) help you get started using LLVM;
+(2) tell you how to get questions about LLVM answered;
+(3) tell you where to find documentation for different kinds of questions; and
+(4) tell you about three LLVM-related mailing lists.
 
-This file provides the location of all important LLVM documentation.  In
-particular, you should read the license information and the installation
-directions before you begin using LLVM.
 
-After that, there are several technical references that will help you use LLVM.
-Consult them as necessary.
+Getting Started with LLVM
+-------------------------
 
-Finally, you can find information on how to communicate with the LLVM
-developers and LLVM community.  This is of primary interest if you wish to
-submit a bug, supply a patch, or just keep current with what's going on with
-LLVM.
+(1) For license information:
+        llvm/LICENSE.txt
 
-Introductory Literature:
+(2) Installing and compiling LLVM:
+        llvm/docs/GettingStarted.html
 
-	LLVM Home Page:
-		http://llvm.cs.uiuc.edu
+(3) Learn about features and limitations of this release:
+        llvm/docs/ReleaseNotes.html
 
-	License Information:
-		llvm/LICENSE.txt
+(4) Learn how to write a pass within the LLVM system:
+        llvm/docs/WritingAnLLVMPass.html
 
-	Release Notes:
-		llvm/docs/ReleaseNotes.html
+(5) Learn how to start a new development project using LLVM, where your
+    new source code can live anywhere (outside or inside the LLVM tree),
+    while using LLVM header files and libraries:
+        llvm/docs/Projects.html
 
-LLVM Design:
 
-	LLVM: A Compilation Framework for Lifelong Program Analysis &
-	Transformation
-		http://llvm.cs.uiuc.edu/pubs/2003-09-30-LifelongOptimizationTR.html
+Getting Help with LLVM
+----------------------
+
+(1) If you have questions or development problems not answered in the
+    documentation, send e-mail to llvmdev@cs.uiuc.edu.  This mailing list is
+    monitored by all the people in the LLVM group at Illinois, and you should
+    expect prompt first responses.
+
+(2) To report a bug, submit a bug report as described in the document:
+		http://llvm.cs.uiuc.edu/docs/HowToSubmitABug.html
+
+(3) We now use Bugzilla to track bugs, so you can check the status of
+    previous bugs at:
+	     <FIXME: WHERE DO THEY GO???>
+
+
+LLVM Documentation
+------------------
+
+All the documents mentioned below except the design overview tech report
+are include as part of the LLVM release (in llvm/docs/*):
+
+LLVM Design Overview:
+       LLVM : A Compilation Framework for Lifelong Program Analysis
+       and Transformation:
+	  http://llvm.cs.uiuc.edu/pubs/2003-09-30-LifelongOptimizationTR.html
 
 LLVM User Guides:
 
@@ -69,7 +89,7 @@ LLVM Programming Documentation:
 	Coding Standards:
 		llvm/docs/CodingStandards.html
 
-LLVM Community:
+Other LLVM Resources:
 
 	Submitting a Bug:
 		http://llvm.cs.uiuc.edu/docs/HowToSubmitABug.html
@@ -80,37 +100,30 @@ LLVM Community:
 	Creating a new LLVM Project:
 		llvm/docs/Projects.html
 
-	Mailing Lists:
-		There are several mailing lists providing LLVM users with
-		information:
+Mailing Lists
+--------------
+There are three mailing lists for providing LLVM users with information:
 
-			o LLVM Announcements List:
-			http://mail.cs.uiuc.edu/mailman/listinfo/llvm-announce
+(1) LLVM Announcements List:
+    http://mail.cs.uiuc.edu/mailman/listinfo/llvm-announce
 
-				This is a low volume list that provides
-				important announcements regarding LLVM.  It is
-				primarily intended to announce new releases,
-				major updates to the software, etc.  This list
-				is highly recommended for anyone that uses LLVM.
+    This is a low volume list that provides important announcements regarding
+    LLVM.  It is primarily intended to announce new releases, major updates to
+    the software, etc.  This list is highly recommended for anyone that uses
+    LLVM.
 
+(2) LLVM Developers List:
+    http://mail.cs.uiuc.edu/mailman/listinfo/llvmdev
 
-			o LLVM Developers List:
-			http://mail.cs.uiuc.edu/mailman/listinfo/llvmdev
+    This list is for people who want to be included in technical discussions
+    of LLVM.  People post to this list when they have questions about writing
+    code for or using the LLVM tools.  It is relatively low volume.
 
-				This list is for people who want to be included
-				in technical discussions of LLVM.  People post
-				to this list when they have questions about
-				writing code for or using the LLVM tools.  It
-				is low volume.
+(3) LLVM Commits List
+    http://mail.cs.uiuc.edu/mailman/listinfo/llvm-commits
 
-			o LLVM Commits List
-			http://mail.cs.uiuc.edu/mailman/listinfo/llvm-commits
-
-				This list contains all commit messages that are
-				made when LLVM developers commit code changes
-				to the CVS archive.  It is useful for those who
-				want to stay on the bleeding edge of LLVM
-				development.
-
-				This list is very high volume.
+   This list contains all commit messages that are made when LLVM developers
+   commit code changes to the CVS archive.  It is useful for those who want to
+   stay on the bleeding edge of LLVM development. This list is very high
+   volume.
 
