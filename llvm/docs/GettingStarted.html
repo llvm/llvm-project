@@ -90,6 +90,11 @@
             <li><tt>cd <i>where-you-want-the-C-front-end-to-live</i></tt>
             <li><tt>gunzip --stdout cfrontend.<i>platform</i>.tar.gz | tar -xvf
             -</tt>
+            <li><b>Sparc Only:</b><br>
+            <tt>
+            cd cfrontend/sparc<br>
+            ./fixheaders
+            </tt>
         </ol>
 
         <p>
@@ -377,7 +382,8 @@
 
     <p>
     Before configuring and compiling the LLVM suite, you need to extract the
-    LLVM GCC front end from the binary distribution.  It is used for building the
+    LLVM GCC front end from the binary distribution.  It is used for building
+    the
     bytecode libraries later used by the GCC front end for linking programs, and
     its location must be specified when the LLVM suite is configured.
     </p>
@@ -389,6 +395,17 @@
         <li><tt>gunzip --stdout cfrontend.<i>platform</i>.tar.gz | tar -xvf
         -</tt>
     </ol>
+
+    If you are on a Sparc/Solaris machine, you will need to fix the header
+    files:
+
+    <p>
+
+    <tt>
+    cd cfrontend/sparc
+    <br>
+    ./fixheaders
+    </tt>
 
     <!------------------------------------------------------------------------->
     <h3><a name="config">Local LLVM Configuration</a></h3>
