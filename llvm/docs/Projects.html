@@ -186,19 +186,18 @@ directories:</p>
   This subdirectory should contain tests that verify that your code
   works correctly.  Automated tests are especially useful.
   <p>
-  Currently, the LLVM build system provides little support for tests,
-  although some exists.  Expanded support for tests will hopefully
-  occur in the future.  In the meantime, the LLVM system does provide the
-  following:
+  Currently, the LLVM build system provides basic support for tests.
+  The LLVM system provides the following:
   <ul>
     <li>
-    LLVM provides several QMTest test classes that can be used to
-    create tests.  They can be found in
-    <tt>llvm/test/QMTest/llvm.py</tt>.  These test classes perform a
-    variety of functions, including code optimization tests, assembly
-    tests,  and code analysis tests.  The Makefile in
-    <tt>llvm/test</tt> provides the QMTest context needed by LLVM test
-    classes.
+    LLVM provides a tcl procedure that is used by Dejagnu to run
+    tests.  It can be found in <tt>llvm/lib/llvm-dg.exp</tt>.  This
+    test procedure uses RUN lines in the actual test case to determine
+    how to run the test.  See the <a
+    href="TestingGuide.html">TestingGuide</a> for more details. You
+    can easily write Makefile support similar to the Makefiles in <tt>llvm/test</tt>
+    to use Dejagnu to run your project's tests.</li>
+
     <p>
 
     <li>

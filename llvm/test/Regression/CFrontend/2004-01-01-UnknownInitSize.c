@@ -3,7 +3,7 @@
 /*
  * This regression test ensures that the C front end can compile initializers
  * even when it cannot determine the size (as below).
- * XFAIL: linux,darwin
+ * XFAIL: *
 */
 struct one
 {

@@ -38,13 +38,16 @@
   <li><a href="#layout">Program layout</a>
     <ol>
       <li><a href="#cvsdir"><tt>CVS</tt> directories</a>
+      <li><a href="#examples"><tt>llvm/examples</tt></a>
       <li><a href="#include"><tt>llvm/include</tt></a>
       <li><a href="#lib"><tt>llvm/lib</tt></a>
+      <li><a href="#projects"><tt>llvm/projects</tt></a>
       <li><a href="#runtime"><tt>llvm/runtime</tt></a>  
       <li><a href="#test"><tt>llvm/test</tt></a>
       <li><a href="#llvmtest"><tt>llvm-test</tt></a>
       <li><a href="#tools"><tt>llvm/tools</tt></a>  
       <li><a href="#utils"><tt>llvm/utils</tt></a>
+      <li><a href="#win32"><tt>llvm/win32</tt></a>
     </ol></li>
 
   <li><a href="#tutorial">An Example Using the LLVM Tool Chain</a>
@@ -85,6 +88,12 @@ GCC that compiles C and C++ code into LLVM bytecode.  Currently, the GCC front
 end is a modified version of GCC 3.4 (we track the GCC 3.4 development).  Once
 compiled into LLVM bytecode, a program can be manipulated with the LLVM tools
 from the LLVM suite.</p>
+
+<p>
+There is a third, optional piece called llvm-test.  It is a suite of programs
+with a testing harness that can be used to further test LLVM's functionality
+and performance.
+</p>
 
 </div>
 
@@ -295,7 +304,7 @@ href="CFEBuildInstrs.html">try to compile it</a> on your platform.</p>
     <tr>
       <td><a href="http://gcc.gnu.org">GCC</a></td>
       <td>3.4.2</td>
-      <td>C/C++ compiler (<a href="#Note4">Note 4</a>)</td>
+      <td>C/C++ compiler (<a href="#Note3">Note 3</a>)</td>
     </tr>
 
     <tr>
@@ -359,23 +368,9 @@ href="CFEBuildInstrs.html">try to compile it</a> on your platform.</p>
     </tr>
 
     <tr>
-      <td><a href="http://www.codesourcery.com/qmtest">QMTest</a></td>
-      <td>2.0.3</td>
-      <td>Automated test suite (<a href="#Note2">Note 2</a>,<a href="#Note3">
-          Note 3</a>)</td>
-    </tr>
-
-    <tr>
-      <td><a href="http://www.python.org">Python</a></td>
-      <td>2.3</td>
-      <td>Automated test suite (<a href="#Note2">Note 2</a>,<a href="#Note3">
-          Note 3</a>)</td>
-    </tr>
-
-    <tr>
       <td><a href="https://www.cvshome.org/downloads.html">CVS</a></td>
       <td>&gt;1.11</td>
-      <td>CVS access to LLVM (<a href="#Note5">Note 5</a>)</td>
+      <td>CVS access to LLVM (<a href="#Note4">Note 4</a>)</td>
     </tr>
 
   </table>
@@ -388,21 +383,12 @@ href="CFEBuildInstrs.html">try to compile it</a> on your platform.</p>
       package.</a></li>
     <li><a name="Note2">Only needed if you want to run the automated test 
       suite in the <tt>test</tt> directory.</a></li>
-    <li><a name="Note3">These are needed to use the LLVM test suite.</a>
-      Please note that newer versions of QMTest may not work with the LLVM 
-      test suite.  QMTest 2.0.3 can be retrieved from the QMTest CVS 
-      repository using the following commands:
-      <ul>
-        <li><tt>cvs -d :pserver:anoncvs@cvs.codesourcery.com:/home/qm/Repository login</tt></li>
-        <li>When prompted, use <tt>anoncvs</tt> as the password. </li>
-        <li><tt>cvs -d :pserver:anoncvs@cvs.codesourcery.com:/home/qm/Repository co -r release-2-0-3 qm</tt></li>
-      </ul>
     </li>
-    <li><a name="Note4">Only the C and C++ languages are needed so there's no
+    <li><a name="Note3">Only the C and C++ languages are needed so there's no
       need to build the other languages for LLVM's purposes.</a> See 
       <a href="#brokengcc">below</a> for specific version info.
     </li>
-    <li><a name="Note5">You only need CVS if you intend to build from the 
+    <li><a name="Note4">You only need CVS if you intend to build from the 
       latest LLVM sources. If you're working from a release distribution, you
       don't need CVS.</a></li>
   </ol>
@@ -413,7 +399,7 @@ href="CFEBuildInstrs.html">try to compile it</a> on your platform.</p>
     <li><b>bzip2*</b> - bzip2 command for distribution generation</li>
     <li><b>bunzip2*</b> - bunzip2 command for distribution checking</li>
     <li><b>chmod</b> - change permissions on a file</li>
-    <li><b>cat</b> - output concatentation utility</li>
+    <li><b>cat</b> - output concatenation utility</li>
     <li><b>cp</b> - copy files</li>
     <li><b>date</b> - print the current date/time </li>
     <li><b>echo</b> - print to standard output</li>
@@ -546,7 +532,7 @@ You can set these on the command line, or better yet, set them in your
     <dt>alias llvmgcc <i>LLVMGCCDIR</i><tt>/bin/gcc</tt>
     <dt>alias llvmg++ <i>LLVMGCCDIR</i><tt>/bin/g++</tt>
     <dd>
-    This alias allows you to use the LLVM C and C++ front ends without putting
+    These aliases allow you to use the LLVM C and C++ front ends without putting
     them in your <tt>PATH</tt> or typing in their complete pathnames.
 </dl>
 
@@ -568,28 +554,27 @@ file is a TAR archive that is compressed with the gzip program.
 
 <p> The files are as follows:
 <dl>
-    <dt>llvm-1.3.tar.gz
-    <dd>This is the source code to the LLVM suite.
-    <p>
+  <dt><tt>llvm-1.4.tar.gz</tt></dt>
+  <dd>This is the source code for the LLVM libraries and tools.<br/></dd>
 
-    <dt>cfrontend-1.3.source.tar.gz
-    <dd>This is the source release of the GCC front end.
-    <p>
+  <dt><tt>llvm-test-1.4.tar.gz</tt></dt>
+  <dd>This is the source code for the LLVM test suite.</tt></dd>
 
-    <dt>cfrontend-1.3.sparc-sun-solaris2.8.tar.gz
-    <dd>This is the binary release of the GCC front end for Solaris/Sparc.
-    <p>
+  <dt><tt>cfrontend-1.4.source.tar.gz</tt></dt>
+  <dd>This is the source release of the GCC front end.<br/></dd>
 
-    <dt>cfrontend-1.3.i686-redhat-linux-gnu.tar.gz
-    <dd>This is the binary release of the GCC front end for Linux/x86.
-    <p>
+  <dt><tt>cfrontend-1.4.sparc-sun-solaris2.8.tar.gz</tt></dt>
+  <dd>This is the binary release of the GCC front end for Solaris/Sparc.
+  <br/></dd>
 
-    <dt>cfrontend-1.3.i386-unknown-freebsd5.1.tar.gz
-    <dd>This is the binary release of the GCC front end for FreeBSD/x86.
-    <p>
+  <dt><tt>cfrontend-1.4.i686-redhat-linux-gnu.tar.gz</tt></dt>
+  <dd>This is the binary release of the GCC front end for Linux/x86.<br/></dd>
 
-    <dt>cfrontend-1.3.powerpc-apple-darwin7.0.0.tar.gz
-    <dd>This is the binary release of the GCC front end for MacOS X/PPC.
+  <dt><tt>cfrontend-1.4.i386-unknown-freebsd5.1.tar.gz</tt></dt>
+  <dd>This is the binary release of the GCC front end for FreeBSD/x86.<br/></dd>
+
+  <dt><tt>cfrontend-1.4.powerpc-apple-darwin7.0.0.tar.gz</tt></dt>
+  <dd>This is the binary release of the GCC front end for MacOS X/PPC.<br/></dd>
 </dl>
 
 </div>
@@ -622,11 +607,22 @@ revision), you can specify a label.  The following releases have the following
 label:</p>
 
 <ul>
+<li>Release 1.4: <b>RELEASE_14</b></li>
 <li>Release 1.3: <b>RELEASE_13</b></li>
 <li>Release 1.2: <b>RELEASE_12</b></li>
 <li>Release 1.1: <b>RELEASE_11</b></li>
 <li>Release 1.0: <b>RELEASE_1</b></li>
 </ul>
+
+<p>If you would like to get the LLVM test suite (a separate package as of 1.4),
+you get it from the CVS repository:</p>
+<pre>
+  cd llvm/projects
+  cvs -z3 -d :pserver:anon@llvm-cvs.cs.uiuc.edu:/var/cvs/llvm co llvm-test
+</pre>
+<p>By placing it in the <tt>llvm/projects</tt>, it will be automatically
+configured by the LLVM configure script as well as automatically updated when
+you run <tt>cvs update</tt>.</p>
 
 <p>If you would like to get the GCC front end source code, you can also get it
 from the CVS repository:</p>
@@ -636,7 +632,7 @@ from the CVS repository:</p>
 </pre>
 
 <p>Please note that you must follow <a href="CFEBuildInstrs.html">these 
-instructions</a> to successfully build the LLVM C front-end.</p>
+instructions</a> to successfully build the LLVM GCC front-end.</p>
 
 </div>
 
@@ -701,10 +697,10 @@ not for the faint of heart, so be forewarned.</p>
 <div class="doc_text">
 
 <p>Once checked out from the CVS repository, the LLVM suite source code must be
-configured via the <tt>configure</tt> script.  This script sets variables in
-<tt>llvm/Makefile.config</tt> and <tt>llvm/include/Config/config.h</tt>.  It
-also populates <i>OBJ_ROOT</i> with the Makefiles needed to begin building
-LLVM.</p>
+configured via the <tt>configure</tt> script.  This script sets variables in the
+various <tt>*.in</tt> files, most notably <tt>llvm/Makefile.config</tt> and 
+<tt>llvm/include/Config/config.h</tt>.  It also populates <i>OBJ_ROOT</i> with 
+the Makefiles needed to begin building LLVM.</p>
 
 <p>The following environment variables are used by the <tt>configure</tt>
 script to configure the build system:</p>
@@ -730,47 +726,41 @@ script to configure the build system:</p>
 <p>The following options can be used to set or enable LLVM specific options:</p>
 
 <dl>
-  <dt><i>--with-llvmgccdir=LLVMGCCDIR</i>
+  <dt><i>--with-llvmgccdir=LLVMGCCDIR</i></dt>
   <dd>
     Path to the location where the LLVM GCC front end binaries and
     associated libraries were installed.  This must be specified as an
     absolute pathname.
-    <p>
-  <dt><i>--enable-optimized</i>
+    <p></p>
+  </dd>
+  <dt><i>--with-tclinclude</i></dt>
+  <dd>Path to the tcl include directory under which the <tt>tclsh</tt> can be
+  found. Use this if you have multiple tcl installations on your machine and you
+  want to use a specific one (8.x) for LLVM. LLVM only uses tcl for running the
+  dejagnu based test suite in <tt>llvm/test</tt>. If you don't specify this
+  option, the LLVM configure script will search for tcl 8.4 and 8.3 releases.
+  <p></p>
+  </dd>
+  <dt><i>--enable-optimized</i></dt>
   <dd>
     Enables optimized compilation by default (debugging symbols are removed
     and GCC optimization flags are enabled).  The default is to use an
     unoptimized build (also known as a debug build).
-    <p>
-  <dt><i>--enable-jit</i>
+    <p></p>
+  </dd>
+  <dt><i>--enable-jit</i></dt>
   <dd>
     Compile the Just In Time (JIT) compiler functionality.  This is not
     available
     on all platforms.  The default is dependent on platform, so it is best
     to explicitly enable it if you want it.
-    <p>
-  <dt><i>--enable-spec2000</i>
-  <dt><i>--enable-spec2000=&lt;<tt>directory</tt>&gt;</i>
-  <dd>
-    Enable the use of SPEC2000 when testing LLVM.  This is disabled by default
-    (unless <tt>configure</tt> finds SPEC2000 installed).  By specifying
-    <tt>directory</tt>, you can tell configure where to find the SPEC2000
-    benchmarks.  If <tt>directory</tt> is left unspecified, <tt>configure</tt>
-    uses the default value
-    <tt>/home/vadve/shared/benchmarks/speccpu2000/benchspec</tt>.
-    <p>
-  <dt><i>--enable-spec95</i>
-  <dt><i>--enable-spec95=&lt;<tt>directory</tt>&gt;</i>
-  <dd>
-    Enable the use of SPEC95 when testing LLVM.  It is similar to the
-    <i>--enable-spec2000</i> option.
-    <p>
-  <dt><i>--enable-povray</i>
-  <dt><i>--enable-povray=&lt;<tt>directory</tt>&gt;</i>
-  <dd>
-    Enable the use of Povray as an external test.  Versions of Povray written
-    in C should work.  This option is similar to the <i>--enable-spec2000</i>
-    option.
+    <p></p>
+  </dd>
+  <dt><i>--enable-doxygen</i></dt>
+  <dd>Look for the doxygen program and enable construction of doxygen based
+  documentation from the source code. This is disabled by default because 
+  generating the documentation can take a long time and producess 100s of 
+  megabytes of output.</dd>
 </dl>
 
 <p>To configure LLVM, follow these steps:</p>
@@ -783,13 +773,13 @@ script to configure the build system:</p>
 
     <li>Run the <tt>configure</tt> script located in the LLVM source tree:
     <br>
-    <tt><i>SRC_ROOT</i>/configure</tt>
+    <tt><i>SRC_ROOT</i>/configure --prefix=/install/path [other options]</tt>
     <p>
 </ol>
 
 <p>In addition to running <tt>configure</tt>, you must set the
-<tt>LLVM_LIB_SEARCH_PATH</tt> environment variable in your startup scripts.
-This environment variable is used to locate "system" libraries like
+<tt>LLVM_LIB_SEARCH_PATH</tt> environment variable in your startup shell 
+scripts.  This environment variable is used to locate "system" libraries like
 "<tt>-lc</tt>" and "<tt>-lm</tt>" when linking.  This variable should be set to
 the absolute path of the <tt>bytecode-libs</tt> subdirectory of the GCC front
 end, or <i>LLVMGCCDIR</i>/<tt>bytecode-libs</tt>.  For example, one might set
@@ -841,7 +831,7 @@ builds:</p>
 <p><tt>gmake</tt></p>
 
 <p>If the build fails, please <a href="#brokengcc">check here</a> to see if you
-are using a known broken version of GCC to compile LLVM with.</p>
+are using a version of GCC that is known not to compile LLVM.</p>
 
 <p>
 If you have multiple processors in your machine, you may wish to use some of
@@ -860,7 +850,7 @@ source code:</p>
   generated C/C++ files, libraries, and executables.
   <p>
 
-  <dt><tt>gmake distclean</tt>
+  <dt><tt>gmake dist-clean</tt>
   <dd>
   Removes everything that <tt>gmake clean</tt> does, but also removes files
   generated by <tt>configure</tt>.  It attempts to return the source tree to the
@@ -869,11 +859,13 @@ source code:</p>
 
   <dt><tt>gmake install</tt>
   <dd>
-  Installs LLVM libraries and tools in a heirarchy under $PREFIX, specified with
-  <tt>./configure --prefix=[dir]</tt>, defaults to <tt>/usr/local</tt>.
+  Installs LLVM header files, libraries, tools, and documentation in a
+  hierarchy 
+  under $PREFIX, specified with <tt>./configure --prefix=[dir]</tt>, which 
+  defaults to <tt>/usr/local</tt>.
   <p>
   
-  <dt><tt>gmake -C runtime install</tt>
+  <dt><tt>gmake -C runtime install-bytecode</tt>
   <dd>
   Assuming you built LLVM into $OBJDIR, when this command is run, it will 
   install bytecode libraries into the GCC front end's bytecode library 
@@ -881,6 +873,10 @@ source code:</p>
   this is the target to use once you've built them.
   <p>
 </dl>
+
+<p>Please see the <a href="MakefileGuide.html">Makefile Guide</a> for further
+details on these <tt>make</tt> targets and descriptions of other targets
+available.</p>
 
 <p>It is also possible to override default values from <tt>configure</tt> by
 declaring variables on the command line.  The following are some examples:</p>
@@ -900,6 +896,11 @@ declaring variables on the command line.  The following are some examples:</p>
   <dd>
   Print what <tt>gmake</tt> is doing on standard output.
   <p>
+
+  <dt><tt>gmake TOOL_VERBOSE=1</tt></dt>
+  <dd>Ask each tool invoked by the makefiles to print out what it is doing on 
+  the standard output. This also implies <tt>VERBOSE=1</tt>.
+  <p></dd>
 </dl>
 
 <p>Every directory in the LLVM object tree includes a <tt>Makefile</tt> to build
@@ -941,9 +942,9 @@ named after the build type:</p>
   <dd>
   <dl>
     <dt>Tools
-    <dd><tt><i>OBJ_ROOT</i>/tools/Debug</tt>
+    <dd><tt><i>OBJ_ROOT</i>/Debug/bin</tt>
     <dt>Libraries
-    <dd><tt><i>OBJ_ROOT</i>/lib/Debug</tt>
+    <dd><tt><i>OBJ_ROOT</i>/Debug/lib</tt>
   </dl>
   <p>
 
@@ -951,9 +952,9 @@ named after the build type:</p>
   <dd>
   <dl>
     <dt>Tools
-    <dd><tt><i>OBJ_ROOT</i>/tools/Release</tt>
+    <dd><tt><i>OBJ_ROOT</i>/Release/bin</tt>
     <dt>Libraries
-    <dd><tt><i>OBJ_ROOT</i>/lib/Release</tt>
+    <dd><tt><i>OBJ_ROOT</i>/Release/lib</tt>
   </dl>
   <p>
 
@@ -961,9 +962,9 @@ named after the build type:</p>
   <dd>
   <dl>
     <dt>Tools
-    <dd><tt><i>OBJ_ROOT</i>/tools/Profile</tt>
+    <dd><tt><i>OBJ_ROOT</i>/Profile/bin</tt>
     <dt>Libraries
-    <dd><tt><i>OBJ_ROOT</i>/lib/Profile</tt>
+    <dd><tt><i>OBJ_ROOT</i>/Profile/lib</tt>
   </dl>
 </dl>
 
@@ -978,7 +979,8 @@ named after the build type:</p>
 
 <p>
 If you're running on a linux system that supports the "<a
-href="http://www.tat.physik.uni-tuebingen.de/~rguenth/linux/binfmt_misc.html">binfmt_misc</a>"
+  href="http://www.tat.physik.uni-tuebingen.de/~rguenth/linux/binfmt_misc.html">
+  binfmt_misc</a>"
 module, and you have root access on the system, you can set your system up to
 execute LLVM bytecode files directly.  To do this, use commands like this (the
 first command may not be required if you are already using the module):</p>
@@ -1015,17 +1017,20 @@ The following is a brief introduction to code layout:</p>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="cvsdir"><tt>CVS</tt> directories</a></div>
-
 <div class="doc_text">
-
 <p>Every directory checked out of CVS will contain a <tt>CVS</tt> directory; for
 the most part these can just be ignored.</p>
+</div>
 
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="examples"><tt>llvm/examples</tt></a></div>
+<div class="doc_text">
+  <p>This directory contains some simple examples of how to use the LLVM IR and
+  JIT.</p>
 </div>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="include"><tt>llvm/include</tt></a></div>
-
 <div class="doc_text">
 
 <p>This directory contains public header files exported from the LLVM
@@ -1054,7 +1059,6 @@ library. The three main subdirectories of this directory are:</p>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="lib"><tt>llvm/lib</tt></a></div>
-
 <div class="doc_text">
 
 <p>This directory contains most of the source files of the LLVM system. In LLVM,
@@ -1115,6 +1119,16 @@ different <a href="#tools">tools</a>.</p>
 </div>
 
 <!-- ======================================================================= -->
+<div class="doc_subsection"><a name="projects"><tt>llvm/projects</tt></a></div>
+<div class="doc_text">
+  <p>This directory contains projects that are not strictly part of LLVM but are
+  shipped with LLVM. This is also the directory where you should create your own
+  LLVM-based projects. See <tt>llvm/projects/sample</tt> for an example of how
+  to set up your own project. See <tt>llvm/projects/Stacker</tt> for a fully 
+  functional example of a compiler front end.</p>
+</div>
+
+<!-- ======================================================================= -->
 <div class="doc_subsection"><a name="runtime"><tt>llvm/runtime</tt></a></div>
 <div class="doc_text">
 
@@ -1139,9 +1153,10 @@ end to compile.</p>
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="llvmtest"><tt>llvm-test</tt></a></div>
 <div class="doc_text">
-  <p>This is not a directory in the normal llvm module, it is a separate CVS
+  <p>This is not a directory in the normal llvm module; it is a separate CVS
   module that must be checked out (usually to <tt>projects/llvm-test</tt>). This
-  module contains a comprehensive correctness, performance and benchmarking test
+  module contains a comprehensive correctness, performance, and benchmarking
+  test
   suite for LLVM. It is a separate CVS module because not every LLVM user is
   interested in downloading or building such a comprehensive test. For further
   details on this test suite, please see the 
@@ -1179,7 +1194,9 @@ information is in the <a href="CommandGuide/index.html">Command Guide</a>.</p>
   pre-processing, translation, optimization, assembly, and linking of programs
   all from one command line. <tt>llvmc</tt> also takes care of processing the
   dependent libraries found in bytecode. This reduces the need to get the
-  traditional <tt>-l&lt;name&gt;</tt> options right on the command line.</dd>
+  traditional <tt>-l&lt;name&gt;</tt> options right on the command line. Please
+  note that this tool is new in 1.4 and considered experimental. It will be
+  fully supported in 1.5.</dd>
 
   <dt><tt><b>llvm-ar</b></tt></dt>
   <dd>The archiver produces an archive containing
@@ -1194,6 +1211,14 @@ information is in the <a href="CommandGuide/index.html">Command Guide</a>.</p>
   <dd>The disassembler transforms the LLVM bytecode to human readable 
   LLVM assembly.</dd>
 
+  <dt><tt><b>llvm-ld</b></tt></dt>
+  <dd><tt>llvm-ld</tt> is very similar to gccld and provides a general purpose
+  and extensible linker for LLVM. This is the linker invoked by <tt>llvmc</tt>.
+  It allows optimization modules to be loaded so that language specific
+  optimizations can be applied at link time. Please note that this tool is new
+  in LLVM 1.4 and still considered experimental. It will be fully supported in
+  LLVM 1.5.</dd>
+
   <dt><tt><b>llvm-link</b></tt></dt>
   <dd><tt>llvm-link</tt>, not surprisingly, links multiple LLVM modules into 
   a single program.</dd>
@@ -1203,7 +1228,7 @@ information is in the <a href="CommandGuide/index.html">Command Guide</a>.</p>
   can directly execute LLVM bytecode (although very slowly...). In addition
   to a simple interpreter, <tt>lli</tt> also has a tracing mode (entered by
   specifying <tt>-trace</tt> on the command line). Finally, for
-  architectures that support it (currently only x86 and Sparc), by default,
+  architectures that support it (currently x86, Sparc, and PowerPC), by default,
   <tt>lli</tt> will function as a Just-In-Time compiler (if the
   functionality was compiled in), and will execute the code <i>much</i>
   faster than the interpreter.</dd>
@@ -1331,6 +1356,15 @@ are code generators for parts of LLVM infrastructure.</p>
 
 </div>
 
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="win32"><tt>llvm/win32</tt></a></div>
+<div class="doc_text">
+  <p>This directory contains build scripts and project files for use with 
+  Visual C++. This allows developers on Windows to build LLVM without the need
+  for Cygwin. The contents of this directory should be considered experimental
+  at this time.
+  </p>
+</div>
 <!-- *********************************************************************** -->
 <div class="doc_section">
   <a name="tutorial">An Example Using the LLVM Tool Chain</a>

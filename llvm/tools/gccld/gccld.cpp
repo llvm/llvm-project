@@ -168,31 +168,37 @@ int main(int argc, char **argv, char **envp) {
   int exitCode = 0;
 
   try {
-    std::string ModuleID("gccld-output");
-    std::auto_ptr<Module> Composite(new Module(ModuleID));
-
-    // We always look first in the current directory when searching for
-    // libraries.
-    LibPaths.insert(LibPaths.begin(), ".");
-
-    // If the user specified an extra search path in their environment, respect
-    // it.
-    if (char *SearchPath = getenv("LLVM_LIB_SEARCH_PATH"))
-      LibPaths.push_back(SearchPath);
-
     // Remove any consecutive duplicates of the same library...
     Libraries.erase(std::unique(Libraries.begin(), Libraries.end()),
                     Libraries.end());
 
-    // Link in all of the files
-    if (LinkFiles(argv[0], Composite.get(), InputFilenames, Verbose))
-      return 1; // Error already printed
+    // Set up the Composite module.
+    std::auto_ptr<Module> Composite(0);
 
-    if (!LinkAsLibrary)
-      LinkLibraries(argv[0], Composite.get(), Libraries, LibPaths,
-                    Verbose, Native);
+    if (LinkAsLibrary) {
+      // Link in only the files.
+      Composite.reset( new Module(argv[0]) );
+      if (LinkFiles(argv[0], Composite.get(), InputFilenames, Verbose))
+        return 1; // Error already printed
+      // The libraries aren't linked in but are noted as "dependent" in the
+      // module.
+      for (cl::list<std::string>::const_iterator I = Libraries.begin(), 
+           E = Libraries.end(); I != E ; ++I) {
+        Composite.get()->addLibrary(*I);
+      }
 
-    // Link in all of the libraries next...
+    } else {
+      // Build a list of the items from our command line
+      LinkItemList Items;
+      BuildLinkItems(Items, InputFilenames, Libraries);
+
+      // Link all the items together
+      Composite.reset( LinkItems(argv[0], Items, LibPaths, Verbose, Native) );
+
+      // Check for an error during linker
+      if (!Composite.get())
+        return 1; // Error already printed
+    }
 
     // Create the output file.
     std::string RealBytecodeOutput = OutputFilename;

@@ -28,7 +28,11 @@
   </li>
   <li><a href="#tutorial">Tutorial</a>
     <ol>
-      <li><a href="#libraries">Libraries</a></li>
+      <li><a href="#libraries">Libraries</a>
+        <ol>
+	  <li><a href="#Modules">Bytecode Modules</a></li>
+	</ol>
+      </li>
       <li><a href="#tools">Tools</a>
         <ol>
 	  <li><a href="#JIT">JIT Tools</a></li>
@@ -41,6 +45,7 @@
       <li><a href="#all">all</a></li>
       <li><a href="#all-local">all-local</a></li>
       <li><a href="#check">check</a></li>
+      <li><a href="#check-local">check-local</a></li>
       <li><a href="#clean">clean</a></li>
       <li><a href="#clean-local">clean-local</a></li>
       <li><a href="#dist">dist</a></li>
@@ -195,7 +200,7 @@
 <div class="doc_subsection"><a name="Comments">Comments</a></div>
 <div class="doc_text">
   <p>User Makefiles need not have comments in them unless the construction is
-  unusual or it doesn't strictly follow the rules and patterns of the LLVM
+  unusual or it does not strictly follow the rules and patterns of the LLVM
   makefile system. Makefile comments are invoked with the pound (#) character.
   The # character and any text following it, to the end of the line, are ignored
   by <tt>make</tt>.</p>
@@ -233,6 +238,27 @@
   Note that you normally do not need to specify the sources involved. The LLVM
   Makefile system will infer the source files from the contents of the source
   directory.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection"><a name="Modules">Bytecode Modules</a></div>
+<div class="doc_text">
+  <p>In some situations, it is desireable to build a single bytecode module from
+  a variety of sources, instead of an archive, shared library, or bytecode 
+  library. Bytecode modules can be specified in addition to any of the other
+  types of libraries by defining the <a href="#MODULE_NAME">MODULE_NAME</a>
+  variable. For example:</p>
+  <pre><tt>
+      LIBRARYNAME = mylib
+      BYTECODE_LIBRARY = 1
+      MODULE_NAME = mymod
+  </tt></pre>
+  <p>will build a module named <tt>mymod.bc</tt> from the sources in the
+  directory. This module will be an aggregation of all the bytecode modules 
+  derived from the sources. The example will also build a bytecode archive 
+  containing a bytecode module for each compiled source file. The difference is
+  subtle, but important depending on how the module or library is to be linked.
+  </p>
 </div>
 
 <!-- ======================================================================= -->
@@ -312,11 +338,13 @@
 <div class="doc_text">
   <p>This section describes each of the targets that can be built using the LLVM
   Makefile system. Any target can be invoked from any directory but not all are
-  applicable to a given directory (e.g. "check", "dist", and "install" will
+  applicable to a given directory (e.g. "check", "dist" and "install" will
   always operate as if invoked from the top level directory).</p>
 
   <table style="text-align:left">
-    <tr><th>Target Name</th><th>Implied Targets</th><th>Target Description</th></tr>
+    <tr>
+      <th>Target Name</th><th>Implied Targets</th><th>Target Description</th>
+    </tr>
     <tr><td><a href="#all"><tt>all</tt></a></td><td></td>
       <td>Compile the software recursively. Default target.
     </td></tr>
@@ -324,7 +352,12 @@
       <td>Compile the software in the local directory only.
     </td></tr>
     <tr><td><a href="#check"><tt>check</tt></a></td><td></td>
-      <td>Change to the llvm/test directory and run regression tests.
+      <td>Change to the <tt>test</tt> directory in a project and run the
+      test suite there.
+    </td></tr>
+    <tr><td><a href="#check-local"><tt>check-local</tt></a></td><td></td>
+      <td>Run a local test suite. Generally this is only defined in the 
+        <tt>Makefile</tt> of the project's <tt>test</tt> directory.
     </td></tr>
     <tr><td><a href="#clean"><tt>clean</tt></a></td><td></td>
       <td>Remove built objects recursively.
@@ -378,11 +411,40 @@
 </div>
 
 <!-- ======================================================================= -->
+<div class="doc_subsection"><a name="check">check</a></div>
+<div class="doc_text">
+  <p>This target can be invoked from anywhere within a project's directories
+  but always invokes the <a href="#check-local"><tt>check-local</tt></a> target 
+  in the project's <tt>test</tt> directory, if it exists and has a 
+  <tt>Makefile</tt>. A warning is produced otherwise.  If 
+  <a href="#TESTSUITE"><tt>TESTSUITE</tt></a> is defined on the <tt>make</tt>
+  command line, it will be passed down to the invocation of 
+  <tt>make check-local</tt> in the <tt>test</tt> directory. The intended usage 
+  for this is to assist in running specific suites of tests. If
+  <tt>TESTSUITE</tt> is not set, the implementation of <tt>check-local</tt> 
+  should run all normal tests.  It is up to the project to define what 
+  different values for <tt>TESTSUTE</tt> will do. See the 
+  <a href="TestingGuide.html">TestingGuide</a> for further details.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="check-local">check-local</a></div>
+<div class="doc_text">
+  <p>This target should be implemented by the <tt>Makefile</tt> in the project's
+  <tt>test</tt> directory. It is invoked by the <tt>check</tt> target elsewhere.
+  Each project is free to define the actions of <tt>check-local</tt> as 
+  appropriate for that project. The LLVM project itself uses dejagnu to run a 
+  suite of feature and regresson tests. Other projects may choose to use 
+  dejagnu or any other testing mechanism.</p>
+</div>
+
+<!-- ======================================================================= -->
 <div class="doc_subsection"><a name="clean">clean</a></div>
 <div class="doc_text">
   <p>This target cleans the build directory, recursively removing all things
-  that the Makefile builds. Despite once or twice attempting to remove /*, the
-  cleaning rules have been made guarded so they shouldn't go awry.</p>
+  that the Makefile builds. The cleaning rules have been made guarded so they 
+  shouldn't go awry (via <tt>rm -f $(UNSET_VARIABLE)/*</tt> which will attempt
+  to erase the entire directory structure.</p>
 </div>
 
 <!-- ======================================================================= -->
@@ -453,8 +515,8 @@
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="printvars">printvars</a></div>
 <div class="doc_text">
-  <p>This utility target just causes LLVM to print out some of its variables so
-  that you can double check how things are set. </p>
+  <p>This utility target just causes the LLVM makefiles to print out some of 
+  the makefile variables so that you can double check how things are set. </p>
 </div>
 
 <!-- ======================================================================= -->
@@ -544,6 +606,14 @@
     source files, all built sources, all Makefiles, and most documentation files 
     will be automatically distributed. Use this variable to distribute any 
     files that are not automatically distributed.</dd>
+    <dt><a name="FAKE_SOURCES"><tt>FAKE_SOURCES</tt><small>(optional)</small>
+    </a></dt>
+    <dd>This variable is like <a href="#SOURCES"><tt>SOURCES</tt></a> except that
+    the source files don't need to exist. The makefiles only use
+    <tt>FAKE_SOURCES</tt> to create the names of derived objects that should be
+    included in the directory's result. It is assumed that the project's
+    <tt>Makefile</tt> will define how to build the derived objects
+    necessary.</dd>
     <dt><a name="KEEP_SYMBOLS"><tt>KEEP_SYMBOLS</tt></a></dt>
     <dd>If set to any value, specifies that when linking executables the
     makefiles should retain debug symbols in the executable. Normally, symbols
@@ -588,6 +658,8 @@
     <dd>Specifies the name of the LLVM code generation target that the
     current directory builds. Setting this variable enables additional rules to
     build <tt>.inc</tt> files from <tt>.td</tt> files. </dd>
+    <dt><a name="TESTSUITE"><tt>TESTSUITE</tt></a></dt>
+    <dd>Specifies the directory of tests to run in <tt>llvm/test</tt>.</dd>
     <dt><a name="TOOLNAME"><tt>TOOLNAME</tt></a></dt>
     <dd>Specifies the name of the tool that the current directory should
     build.</dd>
@@ -619,7 +691,7 @@
     <li>In the Makefile (only <em>after</em> the inclusion of <a
     href="#Makefile.common"><tt>$(LEVEL)/Makefile.common</tt></a>).</li>
   </ul>
-  <p>The overridable variables are given below:</p>
+  <p>The override variables are given below:</p>
   <dl>
     <dt><a name="AR"><tt>AR</tt></a> <small>(defaulted)</small></dt>
     <dd>Specifies the path to the <tt>ar</tt> tool.</dd>
@@ -772,7 +844,8 @@
     <dd>The configuration specific directory into which executables are placed
     before they are installed.</dd>
     <dt><a name="TopDistDir"><tt>TopDistDir</tt></a></dt>
-    <dd>The top most directory into which the distribution files are copied.</dd>
+    <dd>The top most directory into which the distribution files are copied.
+    </dd>
     <dt><a name="Verb"><tt>Verb</tt></a></dt>
     <dd>Use this as the first thing on your build script lines to enable or
     disable verbose mode. It expands to either an @ (quiet mode) or nothing
@@ -786,83 +859,88 @@
   <p>Variables listed below are used by the LLVM Makefile System 
   and considered internal. You should not use these variables under any
   circumstances.</p>
-  <dl>
-    <dt><a name="Archive"><tt>Archive</tt></a></dt><dd></dd>
-    <dt><a name="AR.Flags"><tt>AR.Flags</tt></a></dt><dd></dd>
-    <dt><a name="BaseNameSources"><tt>BaseNameSources</tt></a></dt><dd></dd>
-    <dt><a name="BCCompile.C"><tt>BCCompile.C</tt></a></dt><dd></dd>
-    <dt><a name="BCCompile.CXX"><tt>BCCompile.CXX</tt></a></dt><dd></dd>
-    <dt><a name="BCLinkLib"><tt>BCLinkLib</tt></a></dt><dd></dd>
-    <dt><a name="Burg"><tt>Burg</tt></a></dt><dd></dd>
-    <dt><a name="C.Flags"><tt>C.Flags</tt></a></dt><dd></dd>
-    <dt><a name="Compile.C"><tt>Compile.C</tt></a></dt><dd></dd>
-    <dt><a name="CompileCommonOpts"><tt>CompileCommonOpts</tt></a></dt><dd></dd>
-    <dt><a name="Compile.CXX"><tt>Compile.CXX</tt></a></dt><dd></dd>
-    <dt><a name="ConfigStatusScript"><tt>ConfigStatusScript</tt></a></dt><dd></dd>
-    <dt><a name="ConfigureScript"><tt>ConfigureScript</tt></a></dt><dd></dd>
-    <dt><a name="CPP.Flags"><tt>CPP.Flags</tt></a></dt><dd></dd>
-    <dt><a name="CPP.Flags "><tt>CPP.Flags </tt></a></dt><dd></dd>
-    <dt><a name="CXX.Flags"><tt>CXX.Flags</tt></a></dt><dd></dd>
-    <dt><a name="DependFiles"><tt>DependFiles</tt></a></dt><dd></dd>
-    <dt><a name="DestArchiveLib"><tt>DestArchiveLib</tt></a></dt><dd></dd>
-    <dt><a name="DestBytecodeLib"><tt>DestBytecodeLib</tt></a></dt><dd></dd>
-    <dt><a name="DestRelinkedLib"><tt>DestRelinkedLib</tt></a></dt><dd></dd>
-    <dt><a name="DestSharedLib"><tt>DestSharedLib</tt></a></dt><dd></dd>
-    <dt><a name="DestTool"><tt>DestTool</tt></a></dt><dd></dd>
-    <dt><a name="DistAlways"><tt>DistAlways</tt></a></dt><dd></dd>
-    <dt><a name="DistCheckDir"><tt>DistCheckDir</tt></a></dt><dd></dd>
-    <dt><a name="DistCheckTop"><tt>DistCheckTop</tt></a></dt><dd></dd>
-    <dt><a name="DistFiles"><tt>DistFiles</tt></a></dt><dd></dd>
-    <dt><a name="DistName"><tt>DistName</tt></a></dt><dd></dd>
-    <dt><a name="DistOther"><tt>DistOther</tt></a></dt><dd></dd>
-    <dt><a name="DistSources"><tt>DistSources</tt></a></dt><dd></dd>
-    <dt><a name="DistSubDirs"><tt>DistSubDirs</tt></a></dt><dd></dd>
-    <dt><a name="DistTarBZ2"><tt>DistTarBZ2</tt></a></dt><dd></dd>
-    <dt><a name="DistTarGZip"><tt>DistTarGZip</tt></a></dt><dd></dd>
-    <dt><a name="DistZip"><tt>DistZip</tt></a></dt><dd></dd>
-    <dt><a name="ExtraLibs"><tt>ExtraLibs</tt></a></dt><dd></dd>
-    <dt><a name="INCFiles"><tt>INCFiles</tt></a></dt><dd></dd>
-    <dt><a name="InternalTargets"><tt>InternalTargets</tt></a></dt><dd></dd>
-    <dt><a name="LD.Flags"><tt>LD.Flags</tt></a></dt><dd></dd>
-    <dt><a name="LexOutput"><tt>LexOutput</tt></a></dt><dd></dd>
-    <dt><a name="LibName.A"><tt>LibName.A</tt></a></dt><dd></dd>
-    <dt><a name="LibName.BC"><tt>LibName.BC</tt></a></dt><dd></dd>
-    <dt><a name="LibName.LA"><tt>LibName.LA</tt></a></dt><dd></dd>
-    <dt><a name="LibName.O"><tt>LibName.O</tt></a></dt><dd></dd>
-    <dt><a name="LibTool.Flags"><tt>LibTool.Flags</tt></a></dt><dd></dd>
-    <dt><a name="Link"><tt>Link</tt></a></dt><dd></dd>
-    <dt><a name="LLVMGCCLibDir"><tt>LLVMGCCLibDir</tt></a></dt><dd></dd>
-    <dt><a name="LLVMLibDir"><tt>LLVMLibDir</tt></a></dt><dd></dd>
-    <dt><a name="LLVMLibsOptions"><tt>LLVMLibsOptions</tt></a></dt><dd></dd>
-    <dt><a name="LLVMLibsPaths"><tt>LLVMLibsPaths</tt></a></dt><dd></dd>
-    <dt><a name="LLVMToolDir"><tt>LLVMToolDir</tt></a></dt><dd></dd>
-    <dt><a name="LLVMUsedLibs"><tt>LLVMUsedLibs</tt></a></dt><dd></dd>
-    <dt><a name="LocalTargets"><tt>LocalTargets</tt></a></dt><dd></dd>
-    <dt><a name="LTCompile.C"><tt>LTCompile.C</tt></a></dt><dd></dd>
-    <dt><a name="LTCompile.CXX"><tt>LTCompile.CXX</tt></a></dt><dd></dd>
-    <dt><a name="LTInstall"><tt>LTInstall</tt></a></dt><dd></dd>
-    <dt><a name="ObjectsBC"><tt>ObjectsBC</tt></a></dt><dd></dd>
-    <dt><a name="ObjectsLO"><tt>ObjectsLO</tt></a></dt><dd></dd>
-    <dt><a name="ObjectsO"><tt>ObjectsO</tt></a></dt><dd></dd>
-    <dt><a name="ObjMakefiles"><tt>ObjMakefiles</tt></a></dt><dd></dd>
-    <dt><a name="Parallel_Targets"><tt>Parallel_Targets</tt></a></dt><dd></dd>
-    <dt><a name="PreConditions"><tt>PreConditions</tt></a></dt><dd></dd>
-    <dt><a name="ProjLibsOptions"><tt>ProjLibsOptions</tt></a></dt><dd></dd>
-    <dt><a name="ProjLibsPaths"><tt>ProjLibsPaths</tt></a></dt><dd></dd>
-    <dt><a name="ProjUsedLibs"><tt>ProjUsedLibs</tt></a></dt><dd></dd>
-    <dt><a name="Ranlib"><tt>Ranlib</tt></a></dt><dd></dd>
-    <dt><a name="RecursiveTargets"><tt>RecursiveTargets</tt></a></dt><dd></dd>
-    <dt><a name="Relink"><tt>Relink</tt></a></dt><dd></dd>
-    <dt><a name="SrcMakefiles"><tt>SrcMakefiles</tt></a></dt><dd></dd>
-    <dt><a name="Strip"><tt>Strip</tt></a></dt><dd></dd>
-    <dt><a name="StripWarnMsg"><tt>StripWarnMsg</tt></a></dt><dd></dd>
-    <dt><a name="TableGen"><tt>TableGen</tt></a></dt><dd></dd>
-    <dt><a name="TDFiles"><tt>TDFiles</tt></a></dt><dd></dd>
-    <dt><a name="ToolBuildPath"><tt>ToolBuildPath</tt></a></dt><dd></dd>
-    <dt><a name="TopLevelTargets"><tt>TopLevelTargets</tt></a></dt><dd></dd>
-    <dt><a name="UserTargets"><tt>UserTargets</tt></a></dt><dd></dd>
-    <dt><a name="YaccOutput"><tt>YaccOutput</tt></a></dt><dd></dd>
-  </dl>
+  <p><tt>
+    Archive
+    AR.Flags
+    BaseNameSources
+    BCCompile.C
+    BCCompile.CXX
+    BCLinkLib
+    Burg
+    C.Flags
+    Compile.C
+    CompileCommonOpts
+    Compile.CXX
+    ConfigStatusScript
+    ConfigureScript
+    CPP.Flags
+    CPP.Flags 
+    CXX.Flags
+    DependFiles
+    DestArchiveLib
+    DestBytecodeLib
+    DestModule
+    DestRelinkedLib
+    DestSharedLib
+    DestTool
+    DistAlways
+    DistCheckDir
+    DistCheckTop
+    DistFiles
+    DistName
+    DistOther
+    DistSources
+    DistSubDirs
+    DistTarBZ2
+    DistTarGZip
+    DistZip
+    ExtraLibs
+    FakeSources
+    INCFiles
+    InternalTargets
+    LD.Flags
+    LexFiles
+    LexOutput
+    LibName.A
+    LibName.BC
+    LibName.LA
+    LibName.O
+    LibTool.Flags
+    Link
+    LinkModule
+    LLVMLibDir
+    LLVMLibsOptions
+    LLVMLibsPaths
+    LLVMToolDir
+    LLVMUsedLibs
+    LocalTargets
+    LTCompile.C
+    LTCompile.CXX
+    LTInstall
+    Module
+    ObjectsBC
+    ObjectsLO
+    ObjectsO
+    ObjMakefiles
+    ParallelTargets
+    PreConditions
+    ProjLibsOptions
+    ProjLibsPaths
+    ProjUsedLibs
+    Ranlib
+    RecursiveTargets
+    Relink
+    SrcMakefiles
+    Strip
+    StripWarnMsg
+    TableGen
+    TDFiles
+    ToolBuildPath
+    TopLevelTargets
+    UserTargets
+    YaccFiles
+    YaccOutput
+  </tt></p>
 </div>
 
 <!-- *********************************************************************** -->

@@ -41,7 +41,4 @@ dist-hook::
 	  $(TopDistDir)/include/llvm/Support/DataTypes.h  \
 	  $(TopDistDir)/include/llvm/Support/ThreadSupport.h
 
-check : 
-	$(MAKE) -C test check TESTSUITE=$(TESTSUITE)
-
 tools-only: all

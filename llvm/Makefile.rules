@@ -20,10 +20,10 @@
 # Define the various target sets
 #--------------------------------------------------------------------
 RecursiveTargets := all clean clean-all install uninstall install-bytecode
-LocalTargets     := all-local clean-local clean-all-local \
+LocalTargets     := all-local clean-local clean-all-local check-local \
                     install-local printvars uninstall-local \
 		    install-bytecode-local
-TopLevelTargets  := dist dist-check dist-clean tags dist-gzip dist-bzip2 \
+TopLevelTargets  := check dist dist-check dist-clean tags dist-gzip dist-bzip2 \
                     dist-zip
 UserTargets      := $(RecursiveTargets) $(LocalTargets) $(TopLevelTargets)
 InternalTargets  := preconditions distdir dist-hook
@@ -154,12 +154,13 @@ ifdef ENABLE_PROFILING
 else
   ifdef ENABLE_OPTIMIZED
     BuildMode := Release
-    CXX.Flags  := -O3 -DNDEBUG -finline-functions -felide-constructors -fomit-frame-pointer
+    CXX.Flags  := -O3 -DNDEBUG -finline-functions \
+                  -felide-constructors -fomit-frame-pointer
     C.Flags    := -O3 -DNDEBUG -fomit-frame-pointer
     LD.Flags   := -O3 -DNDEBUG 
   else
     BuildMode := Debug
-    CXX.Flags := -g -D_DEBUG 
+    CXX.Flags := -g -D_DEBUG
     C.Flags   := -g -D_DEBUG
     LD.Flags  := -g -D_DEBUG 
     KEEP_SYMBOLS := 1
@@ -213,10 +214,6 @@ endif
 ifndef LLVMGXX
 LLVMGXX  := PATH=$(LLVMToolDir):$(PATH) $(LLVMGCCDIR)/bin/g++
 endif
-
-# Need a better way to compute this.
-LLVMGCCLibDir := $(dir $(shell $(LLVMGCC) -print-file-name=libgcc.a))/
-LLVMGCCStdCXXLibDir := $(dir $(shell $(LLVMGCC) -print-file-name=libstdc++.a))/
 
 #--------------------------------------------------------------------
 # Adjust to user's request
@@ -1090,6 +1087,23 @@ endif
 endif 
 
 ###############################################################################
+# CHECK: Running the test suite
+###############################################################################
+
+check::
+	$(Verb) if test -d "$(BUILD_OBJ_ROOT)/test" ; then \
+	  if test -f "$(BUILD_OBJ_ROOT)/test/Makefile" ; then \
+	    $(EchoCmd) Running test suite ; \
+	    $(MAKE) -C $(BUILD_OBJ_ROOT)/test check-local \
+	      TESTSUITE=$(TESTSUITE) ; \
+	  else \
+	    $(EchoCmd) No Makefile in test directory ; \
+	  fi ; \
+	else \
+	  $(EchoCmd) No test directory ; \
+	fi
+
+###############################################################################
 # DISTRIBUTION: Handle construction of a distribution tarball
 ###############################################################################
 
@@ -1212,7 +1226,7 @@ $(DistDir)/.makedistdir: $(DistSources)
 	  fi ; \
 	  $(EchoCmd) Removing old $(DistDir) ; \
 	  $(RM) -rf $(DistDir); \
-	  $(EchoCmd) Making 'all' to be sure. ; \
+	  $(EchoCmd) Making 'all' to verify build ; \
 	  $(MAKE) all ; \
 	fi
 	$(Echo) Building Distribution Directory $(DistDir)
@@ -1296,7 +1310,7 @@ endif
 ifeq ($(LEVEL),.)
 
 #------------------------------------------------------------------------
-# Install support for project's include files:
+# Install support for the project's include files:
 #------------------------------------------------------------------------
 install-local::
 	$(Echo) Installing include files

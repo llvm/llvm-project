@@ -7,6 +7,39 @@
 # 
 ##===----------------------------------------------------------------------===##
 
+ifdef BUILD_FOR_WEBSITE
+
+# This special case is for keeping the CommandGuide on the LLVM web site
+# up to date automatically as the documents are checked in. It must build
+# the POD files to HTML only and keep them in the src directories. It must also
+# build in an unconfigured tree, hence the ifdef. To use this, run
+# make -s BUILD_FOR_WEBSITE=1 inside the cvs commit script.
+
+POD  := $(wildcard *.pod)
+HTML := $(patsubst %.pod, html/%.html, $(POD))
+MAN  := $(patsubst %.pod, man/man1/%.1, $(POD))
+PS   := $(patsubst %.pod, ps/%.ps, $(POD))
+
+all: $(HTML) $(MAN) $(PS)
+
+.SUFFIXES:
+.SUFFIXES: .html .pod .1 .ps
+
+html/%.html: %.pod
+	pod2html --css=manpage.css --htmlroot=. \
+	  --podpath=. --noindex --infile=$< --outfile=$@ --title=$*
+
+man/man1/%.1: %.pod
+	pod2man --release=1.4 --center="LLVM Command Guide" $< $@
+
+ps/%.ps: man/man1/%.1
+	groff -Tps -man $< > $@
+
+clean:
+	rm -f pod2htm*.*~~ $(HTML) $(MAN) $(PS)
+
+else 
+
 LEVEL := ../..
 
 include $(LEVEL)/Makefile.common
@@ -62,3 +95,5 @@ uninstall-local::
 printvars::
 	$(Echo) "POD            : " '$(POD)'
 	$(Echo) "HTML           : " '$(HTML)'
+
+endif
