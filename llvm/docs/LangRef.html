@@ -17,6 +17,14 @@
   <li><a href="#abstract">Abstract</a></li>
   <li><a href="#introduction">Introduction</a></li>
   <li><a href="#identifiers">Identifiers</a></li>
+  <li><a href="#highlevel">High Level Structure</a>
+    <ol>
+      <li><a href="#modulestructure">Module Structure</a></li>
+      <li><a href="#linkage">Linkage Types</a></li>
+      <li><a href="#globalvars">Global Variables</a></li>
+      <li><a href="#functionstructure">Function Structure</a></li>
+    </ol>
+  </li>
   <li><a href="#typesystem">Type System</a>
     <ol>
       <li><a href="#t_primitive">Primitive Types</a> 	
@@ -35,11 +43,13 @@
       </li>
     </ol>
   </li>
-  <li><a href="#highlevel">High Level Structure</a>
+  <li><a href="#constants">Constants</a>
     <ol>
-      <li><a href="#modulestructure">Module Structure</a></li>
-      <li><a href="#globalvars">Global Variables</a></li>
-      <li><a href="#functionstructure">Function Structure</a></li>
+      <li><a href="#simpleconstants">Simple Constants</a>
+      <li><a href="#aggregateconstants">Aggregate Constants</a>
+      <li><a href="#globalconstants">Global Variable and Function Addresses</a>
+      <li><a href="#undefvalues">Undefined Values</a>
+      <li><a href="#constantexprs">Constant Expressions</a>
     </ol>
   </li>
   <li><a href="#instref">Instruction Reference</a>
@@ -218,71 +228,256 @@ the parser.</p>
 purposes:</p>
 
 <ol>
-  <li>Numeric constants are represented as you would expect: 12, -3
-123.421,   etc.  Floating point constants have an optional hexadecimal
-notation.</li>
-  <li>Named values are represented as a string of characters with a '%'
-prefix.   For example, %foo, %DivisionByZero,
-%a.really.long.identifier.  The actual   regular expression used is '<tt>%[a-zA-Z$._][a-zA-Z$._0-9]*</tt>'.
-Identifiers which require other characters in their names can be
-surrounded   with quotes.  In this way, anything except a <tt>"</tt>
-character can be used   in a name.</li>
-  <li>Unnamed values are represented as an unsigned numeric value with
-a '%'   prefix.  For example, %12, %2, %44.</li>
+  <li>Named values are represented as a string of characters with a '%' prefix.
+  For example, %foo, %DivisionByZero, %a.really.long.identifier.  The actual
+  regular expression used is '<tt>%[a-zA-Z$._][a-zA-Z$._0-9]*</tt>'.
+  Identifiers which require other characters in their names can be surrounded
+  with quotes.  In this way, anything except a <tt>"</tt> character can be used
+  in a name.</li>
+
+  <li>Unnamed values are represented as an unsigned numeric value with a '%'
+  prefix.  For example, %12, %2, %44.</li>
+
+  <li>Constants, which are described in <a href="#constants">section about
+  constants</a></li>
 </ol>
-<p>LLVM requires that values start with a '%' sign for two reasons:
-Compilers don't need to worry about name clashes with reserved words,
-and the set of reserved words may be expanded in the future without
-penalty.  Additionally, unnamed identifiers allow a compiler to quickly
-come up with a temporary variable without having to avoid symbol table
-conflicts.</p>
+
+<p>LLVM requires that values start with a '%' sign for two reasons: Compilers
+don't need to worry about name clashes with reserved words, and the set of
+reserved words may be expanded in the future without penalty.  Additionally,
+unnamed identifiers allow a compiler to quickly come up with a temporary
+variable without having to avoid symbol table conflicts.</p>
+
 <p>Reserved words in LLVM are very similar to reserved words in other
 languages. There are keywords for different opcodes ('<tt><a
- href="#i_add">add</a></tt>', '<tt><a href="#i_cast">cast</a></tt>', '<tt><a
- href="#i_ret">ret</a></tt>', etc...), for primitive type names ('<tt><a
- href="#t_void">void</a></tt>', '<tt><a href="#t_uint">uint</a></tt>',
-etc...), and others.  These reserved words cannot conflict with
-variable names, because none of them start with a '%' character.</p>
-<p>Here is an example of LLVM code to multiply the integer variable '<tt>%X</tt>'
-by 8:</p>
+href="#i_add">add</a></tt>', '<tt><a href="#i_cast">cast</a></tt>', '<tt><a
+href="#i_ret">ret</a></tt>', etc...), for primitive type names ('<tt><a
+href="#t_void">void</a></tt>', '<tt><a href="#t_uint">uint</a></tt>', etc...),
+and others.  These reserved words cannot conflict with variable names, because
+none of them start with a '%' character.</p>
+
+<p>Here is an example of LLVM code to multiply the integer variable
+'<tt>%X</tt>' by 8:</p>
+
 <p>The easy way:</p>
-<pre>  %result = <a href="#i_mul">mul</a> uint %X, 8<br></pre>
+
+<pre>
+  %result = <a href="#i_mul">mul</a> uint %X, 8
+</pre>
+
 <p>After strength reduction:</p>
-<pre>  %result = <a href="#i_shl">shl</a> uint %X, ubyte 3<br></pre>
+
+<pre>
+  %result = <a href="#i_shl">shl</a> uint %X, ubyte 3
+</pre>
+
 <p>And the hard way:</p>
-<pre>  <a href="#i_add">add</a> uint %X, %X           <i>; yields {uint}:%0</i>
-  <a
- href="#i_add">add</a> uint %0, %0           <i>; yields {uint}:%1</i>
-  %result = <a
- href="#i_add">add</a> uint %1, %1<br></pre>
+
+<pre>
+  <a href="#i_add">add</a> uint %X, %X           <i>; yields {uint}:%0</i>
+  <a href="#i_add">add</a> uint %0, %0           <i>; yields {uint}:%1</i>
+  %result = <a href="#i_add">add</a> uint %1, %1
+</pre>
+
 <p>This last way of multiplying <tt>%X</tt> by 8 illustrates several
 important lexical features of LLVM:</p>
+
 <ol>
-  <li>Comments are delimited with a '<tt>;</tt>' and go until the end
-of   line.</li>
-  <li>Unnamed temporaries are created when the result of a computation
-is not   assigned to a named value.</li>
+
+  <li>Comments are delimited with a '<tt>;</tt>' and go until the end of
+  line.</li>
+
+  <li>Unnamed temporaries are created when the result of a computation is not
+  assigned to a named value.</li>
+
   <li>Unnamed temporaries are numbered sequentially</li>
+
 </ol>
-<p>...and it also show a convention that we follow in this document. 
-When demonstrating instructions, we will follow an instruction with a
-comment that defines the type and name of value produced.  Comments are
-shown in italic text.</p>
-<p>The one non-intuitive notation for constants is the optional
-hexidecimal form of floating point constants.  For example, the form '<tt>double
-0x432ff973cafa8000</tt>' is equivalent to (but harder to read than) '<tt>double
-4.5e+15</tt>' which is also supported by the parser.  The only time
-hexadecimal floating point constants are useful (and the only time that
-they are generated by the disassembler) is when an FP constant has to
-be emitted that is not representable as a decimal floating point number
-exactly.  For example, NaN's, infinities, and other special cases are
-represented in their IEEE hexadecimal format so that assembly and
-disassembly do not cause any bits to change in the constants.</p>
+
+<p>...and it also show a convention that we follow in this document.  When
+demonstrating instructions, we will follow an instruction with a comment that
+defines the type and name of value produced.  Comments are shown in italic
+text.</p>
+
 </div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"> <a name="highlevel">High Level Structure</a> </div>
+<!-- *********************************************************************** -->
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"> <a name="modulestructure">Module Structure</a>
+</div>
+
+<div class="doc_text">
+
+<p>LLVM programs are composed of "Module"s, each of which is a
+translation unit of the input programs.  Each module consists of
+functions, global variables, and symbol table entries.  Modules may be
+combined together with the LLVM linker, which merges function (and
+global variable) definitions, resolves forward declarations, and merges
+symbol table entries. Here is an example of the "hello world" module:</p>
+
+<pre><i>; Declare the string constant as a global constant...</i>
+<a href="#identifiers">%.LC0</a> = <a href="#linkage_internal">internal</a> <a
+ href="#globalvars">constant</a> <a href="#t_array">[13 x sbyte]</a> c"hello world\0A\00"          <i>; [13 x sbyte]*</i>
+
+<i>; External declaration of the puts function</i>
+<a href="#functionstructure">declare</a> int %puts(sbyte*)                                            <i>; int(sbyte*)* </i>
+
+<i>; Definition of main function</i>
+int %main() {                                                        <i>; int()* </i>
+        <i>; Convert [13x sbyte]* to sbyte *...</i>
+        %cast210 = <a
+ href="#i_getelementptr">getelementptr</a> [13 x sbyte]* %.LC0, long 0, long 0 <i>; sbyte*</i>
+
+        <i>; Call puts function to write out the string to stdout...</i>
+        <a
+ href="#i_call">call</a> int %puts(sbyte* %cast210)                              <i>; int</i>
+        <a
+ href="#i_ret">ret</a> int 0<br>}<br></pre>
+
+<p>This example is made up of a <a href="#globalvars">global variable</a>
+named "<tt>.LC0</tt>", an external declaration of the "<tt>puts</tt>"
+function, and a <a href="#functionstructure">function definition</a>
+for "<tt>main</tt>".</p>
+
+<p>In general, a module is made up of a list of global values,
+where both functions and global variables are global values.  Global values are
+represented by a pointer to a memory location (in this case, a pointer to an
+array of char, and a pointer to a function), and have one of the following <a
+href="#linkage">linkage types</a>.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="linkage">Linkage Types</a>
+</div>
+
+<div class="doc_text">
+
+<p>
+All Global Variables and Functions have one of the following types of linkage:
+</p>
+
+<dl>
+
+  <dt><tt><b><a name="linkage_internal">internal</a></b></tt> </dt>
+
+  <dd>Global values with internal linkage are only directly accessible by
+  objects in the current module.  In particular, linking code into a module with
+  an internal global value may cause the internal to be renamed as necessary to
+  avoid collisions.  Because the symbol is internal to the module, all
+  references can be updated.  This corresponds to the notion of the
+  '<tt>static</tt>' keyword in C, or the idea of "anonymous namespaces" in C++.
+  </dd>
+
+  <dt><tt><b><a name="linkage_linkonce">linkonce</a></b></tt>: </dt>
+
+  <dd>"<tt>linkonce</tt>" linkage is similar to <tt>internal</tt> linkage, with
+  the twist that linking together two modules defining the same
+  <tt>linkonce</tt> globals will cause one of the globals to be discarded.  This
+  is typically used to implement inline functions.  Unreferenced
+  <tt>linkonce</tt> globals are allowed to be discarded.
+  </dd>
+
+  <dt><tt><b><a name="linkage_weak">weak</a></b></tt>: </dt>
+
+  <dd>"<tt>weak</tt>" linkage is exactly the same as <tt>linkonce</tt> linkage,
+  except that unreferenced <tt>weak</tt> globals may not be discarded.  This is
+  used to implement constructs in C such as "<tt>int X;</tt>" at global scope.
+  </dd>
+
+  <dt><tt><b><a name="linkage_appending">appending</a></b></tt>: </dt>
+
+  <dd>"<tt>appending</tt>" linkage may only be applied to global variables of
+  pointer to array type.  When two global variables with appending linkage are
+  linked together, the two global arrays are appended together.  This is the
+  LLVM, typesafe, equivalent of having the system linker append together
+  "sections" with identical names when .o files are linked.
+  </dd>
+
+  <dt><tt><b><a name="linkage_external">externally visible</a></b></tt>:</dt>
+
+  <dd>If none of the above identifiers are used, the global is externally
+  visible, meaning that it participates in linkage and can be used to resolve
+  external symbol references.
+  </dd>
+</dl>
+
+<p><a name="linkage_external">For example, since the "<tt>.LC0</tt>"
+variable is defined to be internal, if another module defined a "<tt>.LC0</tt>"
+variable and was linked with this one, one of the two would be renamed,
+preventing a collision.  Since "<tt>main</tt>" and "<tt>puts</tt>" are
+external (i.e., lacking any linkage declarations), they are accessible
+outside of the current module.  It is illegal for a function <i>declaration</i>
+to have any linkage type other than "externally visible".</a></p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="globalvars">Global Variables</a>
+</div>
+
+<div class="doc_text">
+
+<p>Global variables define regions of memory allocated at compilation
+time instead of run-time.  Global variables may optionally be
+initialized.  A variable may be defined as a global "constant", which
+indicates that the contents of the variable will never be modified
+(enabling better optimization, allowing the global data to be placed in the
+read-only section of an executable, etc).</p>
+
+<p>As SSA values, global variables define pointer values that are in
+scope (i.e. they dominate) all basic blocks in the program.  Global
+variables always define a pointer to their "content" type because they
+describe a region of memory, and all memory objects in LLVM are
+accessed through pointers.</p>
+
+</div>
+
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="functionstructure">Functions</a>
+</div>
+
+<div class="doc_text">
+
+<p>LLVM function definitions are composed of a (possibly empty) argument list,
+an opening curly brace, a list of basic blocks, and a closing curly brace.  LLVM
+function declarations are defined with the "<tt>declare</tt>" keyword, a
+function name, and a function signature.</p>
+
+<p>A function definition contains a list of basic blocks, forming the CFG for
+the function.  Each basic block may optionally start with a label (giving the
+basic block a symbol table entry), contains a list of instructions, and ends
+with a <a href="#terminators">terminator</a> instruction (such as a branch or
+function return).</p>
+
+<p>The first basic block in program is special in two ways: it is immediately
+executed on entrance to the function, and it is not allowed to have predecessor
+basic blocks (i.e. there can not be any branches to the entry block of a
+function).  Because the block can have no predecessors, it also cannot have any
+<a href="#i_phi">PHI nodes</a>.</p>
+
+<p>LLVM functions are identified by their name and type signature.  Hence, two
+functions with the same name but different parameter lists or return values are
+considered different functions, and LLVM will resolves references to each
+appropriately.</p>
+
+</div>
+
+
+
 <!-- *********************************************************************** -->
 <div class="doc_section"> <a name="typesystem">Type System</a> </div>
 <!-- *********************************************************************** -->
+
 <div class="doc_text">
+
 <p>The LLVM type system is one of the most important features of the
 intermediate representation.  Being typed enables a number of
 optimizations to be performed on the IR directly, without having to do
@@ -290,9 +485,9 @@ extra analyses on the side before the transformation.  A strong type
 system makes it easier to read the generated code and enables novel
 analyses and transformations that are not feasible to perform on normal
 three address code representations.</p>
-<!-- The written form for the type system was heavily influenced by the
-syntactic problems with types in the C language<sup><a
-href="#rw_stroustrup">1</a></sup>.<p> --> </div>
+
+</div>
+
 <!-- ======================================================================= -->
 <div class="doc_subsection"> <a name="t_primitive">Primitive Types</a> </div>
 <div class="doc_text">
@@ -378,25 +573,39 @@ produced by instructions, passed as arguments, or used as operands to
 instructions.  This means that all structures and arrays must be
 manipulated either by pointer or by component.</p>
 </div>
+
 <!-- ======================================================================= -->
 <div class="doc_subsection"> <a name="t_derived">Derived Types</a> </div>
+
 <div class="doc_text">
+
 <p>The real power in LLVM comes from the derived types in the system. 
 This is what allows a programmer to represent arrays, functions,
 pointers, and other useful types.  Note that these derived types may be
 recursive: For example, it is possible to have a two dimensional array.</p>
+
 </div>
+
 <!-- _______________________________________________________________________ -->
 <div class="doc_subsubsection"> <a name="t_array">Array Type</a> </div>
+
 <div class="doc_text">
+
 <h5>Overview:</h5>
+
 <p>The array type is a very simple derived type that arranges elements
 sequentially in memory.  The array type requires a size (number of
 elements) and an underlying data type.</p>
+
 <h5>Syntax:</h5>
-<pre>  [&lt;# elements&gt; x &lt;elementtype&gt;]<br></pre>
+
+<pre>
+  [&lt;# elements&gt; x &lt;elementtype&gt;]
+</pre>
+
 <p>The number of elements is a constant integer value, elementtype may
 be any type with a size.</p>
+
 <h5>Examples:</h5>
 <table class="layout">
   <tr class="layout">
@@ -558,166 +767,203 @@ be any integral or floating point type.</p>
 </div>
 
 <!-- *********************************************************************** -->
-<div class="doc_section"> <a name="highlevel">High Level Structure</a> </div>
+<div class="doc_section"> <a name="constants">Constants</a> </div>
 <!-- *********************************************************************** -->
-<!-- ======================================================================= -->
-<div class="doc_subsection"> <a name="modulestructure">Module Structure</a>
-</div>
+
 <div class="doc_text">
-<p>LLVM programs are composed of "Module"s, each of which is a
-translation unit of the input programs.  Each module consists of
-functions, global variables, and symbol table entries.  Modules may be
-combined together with the LLVM linker, which merges function (and
-global variable) definitions, resolves forward declarations, and merges
-symbol table entries. Here is an example of the "hello world" module:</p>
-<pre><i>; Declare the string constant as a global constant...</i>
-<a href="#identifiers">%.LC0</a> = <a href="#linkage_internal">internal</a> <a
- href="#globalvars">constant</a> <a href="#t_array">[13 x sbyte]</a> c"hello world\0A\00"          <i>; [13 x sbyte]*</i>
 
-<i>; External declaration of the puts function</i>
-<a href="#functionstructure">declare</a> int %puts(sbyte*)                                            <i>; int(sbyte*)* </i>
+<p>LLVM has several different basic types of constants.  This section describes
+them all and their syntax.</p>
 
-<i>; Definition of main function</i>
-int %main() {                                                        <i>; int()* </i>
-        <i>; Convert [13x sbyte]* to sbyte *...</i>
-        %cast210 = <a
- href="#i_getelementptr">getelementptr</a> [13 x sbyte]* %.LC0, long 0, long 0 <i>; sbyte*</i>
+</div>
 
-        <i>; Call puts function to write out the string to stdout...</i>
-        <a
- href="#i_call">call</a> int %puts(sbyte* %cast210)                              <i>; int</i>
-        <a
- href="#i_ret">ret</a> int 0<br>}<br></pre>
-<p>This example is made up of a <a href="#globalvars">global variable</a>
-named "<tt>.LC0</tt>", an external declaration of the "<tt>puts</tt>"
-function, and a <a href="#functionstructure">function definition</a>
-for "<tt>main</tt>".</p>
-<a name="linkage"> In general, a module is made up of a list of global
-values, where both functions and global variables are global values. 
-Global values are represented by a pointer to a memory location (in
-this case, a pointer to an array of char, and a pointer to a function),
-and have one of the following linkage types:</a>
-<p> </p>
+<!-- ======================================================================= -->
+<div class="doc_subsection"> <a name="simpleconstants">Simple Constants</a>
+</div>
+
+<div class="doc_text">
+
 <dl>
-  <dt><tt><b><a name="linkage_internal">internal</a></b></tt> </dt>
-  <dd>Global values with internal linkage are only directly accessible
-by objects in the current module.  In particular, linking code into a
-module with an internal global value may cause the internal to be
-renamed as necessary to avoid collisions.  Because the symbol is
-internal to the module, all references can be updated.  This
-corresponds to the notion of the '<tt>static</tt>' keyword in C, or the
-idea of "anonymous namespaces" in C++.
-    <p> </p>
+  <dt><b>Boolean constants</b></dt>
+
+  <dd>The two strings '<tt>true</tt>' and '<tt>false</tt>' are both valid
+  constants of the <tt><a href="#t_primitive">bool</a></tt> type.
   </dd>
-  <dt><tt><b><a name="linkage_linkonce">linkonce</a></b></tt>: </dt>
-  <dd>"<tt>linkonce</tt>" linkage is similar to <tt>internal</tt>
-linkage, with the twist that linking together two modules defining the
-same <tt>linkonce</tt> globals will cause one of the globals to be
-discarded.  This is typically used to implement inline functions. 
-Unreferenced <tt>linkonce</tt> globals are allowed to be discarded.
-    <p> </p>
+
+  <dt><b>Integer constants</b></dt>
+
+  <dd>Standard integers (such as '4') are constants of <a
+  href="#t_integer">integer</a> type.  Negative numbers may be used with signed
+  integer types.
   </dd>
-  <dt><tt><b><a name="linkage_weak">weak</a></b></tt>: </dt>
-  <dd>"<tt>weak</tt>" linkage is exactly the same as <tt>linkonce</tt>
-linkage, except that unreferenced <tt>weak</tt> globals may not be
-discarded.  This is used to implement constructs in C such as "<tt>int
-X;</tt>" at global scope.
-    <p> </p>
+
+  <dt><b>Floating point constants</b></dt>
+
+  <dd>Floating point constants use standard decimal notation (e.g. 123.421),
+  exponential notation (e.g. 1.23421e+2), or a more precise hexadecimal
+  notation.  etc.  Floating point constants have an optional hexadecimal
+  notation (see below).  Floating point constants must have a <a
+  href="#t_floating">floating point</a> type. </dd>
+
+  <dt><b>Null pointer constants</b></dt>
+
+  <dd>The identifier '<tt>null</tt>' is recognized as a null pointer constant,
+  and must be of <a href="#t_pointer">pointer type</a>.</dd>
+
+</dl>
+
+<p>The one non-intuitive notation for constants is the optional hexidecimal form
+of floating point constants.  For example, the form '<tt>double
+0x432ff973cafa8000</tt>' is equivalent to (but harder to read than) '<tt>double
+4.5e+15</tt>'.  The only time hexadecimal floating point constants are required
+(and the only time that they are generated by the disassembler) is when an FP
+constant has to be emitted that is not representable as a decimal floating point
+number exactly.  For example, NaN's, infinities, and other special cases are
+represented in their IEEE hexadecimal format so that assembly and disassembly do
+not cause any bits to change in the constants.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="aggregateconstants">Aggregate Constants</a>
+</div>
+
+<div class="doc_text">
+
+<dl>
+  <dt><b>Structure constants</b></dt>
+
+  <dd>Structure constants are represented with notation similar to structure
+  type definitions (a comma separated list of elements, surrounded by braces
+  (<tt>{}</tt>).  For example: "<tt>{ int 4, float 17.0 }</tt>".  Structure
+  constants must have <a href="#t_struct">structure type</a>, and the number and
+  types of elements must match those specified by the type.
   </dd>
-  <dt><tt><b><a name="linkage_appending">appending</a></b></tt>: </dt>
-  <dd>"<tt>appending</tt>" linkage may only be applied to global
-variables of pointer to array type.  When two global variables with
-appending linkage are linked together, the two global arrays are
-appended together.  This is the LLVM, typesafe, equivalent of having
-the system linker append together "sections" with identical names when
-.o files are linked.
-    <p> </p>
+
+  <dt><b>Array constants</b></dt>
+
+  <dd>Array constants are represented with notation similar to array type
+  definitions (a comma separated list of elements, surrounded by square brackets
+  (<tt>[]</tt>).  For example: "<tt>[ int 42, int 11, int 74 ]</tt>".  Array
+  constants must have <a href="#t_array">array type</a>, and the number and
+  types of elements must match those specified by the type.
   </dd>
-  <dt><tt><b><a name="linkage_external">externally visible</a></b></tt>:</dt>
-  <dd>If none of the above identifiers are used, the global is
-externally visible, meaning that it participates in linkage and can be
-used to resolve external symbol references.
-    <p> </p>
+
+  <dt><b>Packed constants</b></dt>
+
+  <dd>Packed constants are represented with notation similar to packed type
+  definitions (a comma separated list of elements, surrounded by
+  less-than/greater-than's (<tt>&lt;&gt;</tt>).  For example: "<tt>&lt; int 42,
+  int 11, int 74, int 100 &gt;</tt>".  Packed constants must have <a
+  href="#t_packed">packed type</a>, and the number and types of elements must
+  match those specified by the type.
+  </dd>
+
+  <dt><b>Zero initialization</b></dt>
+
+  <dd>The string '<tt>zeroinitializer</tt>' can be used to zero initialize a
+  value to zero of <em>any</em> type, including scalar and aggregate types.
+  This is often used to avoid having to print large zero initializers (e.g. for
+  large arrays), and is always exactly equivalent to using explicit zero
+  initializers.
   </dd>
 </dl>
-<p> </p>
-<p><a name="linkage_external">For example, since the "<tt>.LC0</tt>"
-variable is defined to be internal, if another module defined a "<tt>.LC0</tt>"
-variable and was linked with this one, one of the two would be renamed,
-preventing a collision.  Since "<tt>main</tt>" and "<tt>puts</tt>" are
-external (i.e., lacking any linkage declarations), they are accessible
-outside of the current module.  It is illegal for a function <i>declaration</i>
-to have any linkage type other than "externally visible".</a></p>
+
 </div>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection">
-  <a name="globalvars">Global Variables</a>
+  <a name="globalconstants">Global Variable and Function Addresses</a>
 </div>
 
 <div class="doc_text">
 
-<p>Global variables define regions of memory allocated at compilation
-time instead of run-time.  Global variables may optionally be
-initialized.  A variable may be defined as a global "constant", which
-indicates that the contents of the variable will never be modified
-(opening options for optimization).</p>
+<p>The addresses of <a href="#globalvars">global variables</a> and <a
+href="#functionstructure">functions</a> are always implicitly valid (link-time)
+constants.  These constants explicitly referenced when the <a
+href="#identifiers">identifier for the global</a> is used, and always have <a
+href="#t_pointer">pointer</a> type. For example, the following is a legal LLVM
+file:</p>
 
-<p>As SSA values, global variables define pointer values that are in
-scope (i.e. they dominate) for all basic blocks in the program.  Global
-variables always define a pointer to their "content" type because they
-describe a region of memory, and all memory objects in LLVM are
-accessed through pointers.</p>
+<pre>
+  %X = global int 17
+  %Y = global int 42
+  %Z = global [2 x int*] [ int* %X, int* %Y ]
+</pre>
 
 </div>
-
 
 <!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="functionstructure">Functions</a>
+<div class="doc_subsection"><a name="undefvalues">Undefined Values</a>
 </div>
 
 <div class="doc_text">
 
-<p>LLVM function definitions are composed of a (possibly empty) argument list,
-an opening curly brace, a list of basic blocks, and a closing curly brace.  LLVM
-function declarations are defined with the "<tt>declare</tt>" keyword, a
-function name, and a function signature.</p>
+<p>The string '<tt>undef</tt>' is recognized as a filler that has no specified
+value.  Undefined values may be of any type, and be used anywhere a constant
+is.</p>
 
-<p>A function definition contains a list of basic blocks, forming the CFG for
-the function.  Each basic block may optionally start with a label (giving the
-basic block a symbol table entry), contains a list of instructions, and ends
-with a <a href="#terminators">terminator</a> instruction (such as a branch or
-function return).</p>
-
-<p>The first basic block in program is special in two ways: it is immediately
-executed on entrance to the function, and it is not allowed to have predecessor
-basic blocks (i.e. there can not be any branches to the entry block of a
-function).  Because the block can have no predecessors, it also cannot have any
-<a href="#i_phi">PHI nodes</a>.</p>
-
-<p>LLVM functions are identified by their name and type signature.  Hence, two
-functions with the same name but different parameter lists or return values are
-considered different functions, and LLVM will resolves references to each
-appropriately.</p>
+<p>Undefined values are used to indicate the compiler that the program is well
+defined no matter what value is used, giving it more freedom.</p>
 
 </div>
 
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="constantexprs">Constant Expressions</a>
+</div>
+
+<div class="doc_text">
+
+<p>Constant expressions are used to allow expressions involving other constants
+to be used as constants.  Constant expressions may be of any <a
+href="#t_firstclass">first class</a> type, and may involve any LLVM operation
+that does not have side effects (e.g. load and call are not supported).  The
+following is the syntax for constant expressions:</p>
+
+<dl>
+  <dt><b><tt>cast ( CST to TYPE )</tt></b></dt>
+
+  <dd>Cast a constant to another type.</dd>
+
+  <dt><b><tt>getelementptr ( CSTPTR, IDX0, IDX1, ... )</tt></b></dt>
+
+  <dd>Perform the <a href="#i_getelementptr">getelementptr operation</a> on
+  constants.  As with the <a href="#i_getelementptr">getelementptr</a>
+  instruction, the index list may have zero or more indexes, which are required
+  to make sense for the type of "CSTPTR".</dd>
+
+  <dt><b><tt>OPCODE ( LHS, RHS )</tt></b></dt>
+
+  <dd>Perform the specied operation of the LHS and RHS constants.  OPCODE may be
+  any of the <a href="#binaryops">binary</a> or <a href="#bitwiseops">bitwise
+  binary</a> operations.  The constraints on operands are the same as those for
+  the corresponding instruction (e.g. no bitwise operations on floating point
+  are allowed).</dd>
+
+</dl>
+
+</div>
 
 <!-- *********************************************************************** -->
 <div class="doc_section"> <a name="instref">Instruction Reference</a> </div>
 <!-- *********************************************************************** -->
+
 <div class="doc_text">
+
 <p>The LLVM instruction set consists of several different
 classifications of instructions: <a href="#terminators">terminator
 instructions</a>, <a href="#binaryops">binary instructions</a>, <a
  href="#memoryops">memory instructions</a>, and <a href="#otherops">other
 instructions</a>.</p>
+
 </div>
+
 <!-- ======================================================================= -->
 <div class="doc_subsection"> <a name="terminators">Terminator
 Instructions</a> </div>
+
 <div class="doc_text">
+
 <p>As mentioned <a href="#functionstructure">previously</a>, every
 basic block in a program ends with a "Terminator" instruction, which
 indicates which block should be executed after the current block is
@@ -730,7 +976,9 @@ instruction, the '<a href="#i_switch"><tt>switch</tt></a>' instruction,
 the '<a href="#i_invoke"><tt>invoke</tt></a>' instruction, the '<a
  href="#i_unwind"><tt>unwind</tt></a>' instruction, and the '<a
  href="#i_unreachable"><tt>unreachable</tt></a>' instruction.</p>
+
 </div>
+
 <!-- _______________________________________________________________________ -->
 <div class="doc_subsubsection"> <a name="i_ret">'<tt>ret</tt>'
 Instruction</a> </div>
@@ -2308,7 +2556,9 @@ unsigned 16 bit value, and the return value must be 8, 16, or 32 bits.
 
 <h5>Syntax:</h5>
 <pre>
-  call void (&lt;integer type&gt;, &lt;integer type&gt;)* %llvm.writeport (&lt;integer type&gt; &lt;value&gt;, &lt;integer type&gt; &lt;address&gt;)
+  call void (&lt;integer type&gt;, &lt;integer type&gt;)*
+            %llvm.writeport (&lt;integer type&gt; &lt;value&gt;,
+                             &lt;integer type&gt; &lt;address&gt;)
 </pre>
 
 <h5>Overview:</h5>
