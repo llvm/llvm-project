@@ -34,6 +34,10 @@ ifeq ($(OS),SunOS)
 QMEXPECT:=$(LLVM_SRC_ROOT)/test/QMTest/expectations.sunos.qmr
 endif
 
+ifeq ($(OS),Darwin)
+QMEXPECT:=$(LLVM_SRC_ROOT)/test/QMTest/expectations.darwin.qmr
+endif
+
 #
 # This is configuration information used by the test suite.  In QM Test, it's
 # called a 'context.'
