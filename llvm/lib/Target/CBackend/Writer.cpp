@@ -1390,9 +1390,13 @@ void CWriter::visitCallInst(CallInst &I) {
         Out << ")";
         return;
       case Intrinsic::vaend:
-        Out << "va_end(*(va_list*)&";
-        writeOperand(I.getOperand(1));
-        Out << ")";
+        if (!isa<ConstantPointerNull>(I.getOperand(1))) {
+          Out << "va_end(*(va_list*)&";
+          writeOperand(I.getOperand(1));
+          Out << ")";
+        } else {
+          Out << "va_end(*(va_list*)0)";
+        }
         return;
       case Intrinsic::vacopy:
         Out << "0;";
