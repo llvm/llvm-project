@@ -29575,12 +29575,6 @@ _ACEOF
           ac_config_commands="$ac_config_commands test/Makefile.tests"
 
 
-          ac_config_commands="$ac_config_commands test/QMTest/llvm.py"
-
-
-          ac_config_commands="$ac_config_commands test/QMTest/llvmdb.py"
-
-
           ac_config_commands="$ac_config_commands tools/Makefile"
 
 
@@ -30139,8 +30133,6 @@ ${srcdir}/autoconf/mkinstalldirs `dirname lib/Makefile`
 ${srcdir}/autoconf/mkinstalldirs `dirname runtime/Makefile`
 ${srcdir}/autoconf/mkinstalldirs `dirname test/Makefile`
 ${srcdir}/autoconf/mkinstalldirs `dirname test/Makefile.tests`
-${srcdir}/autoconf/mkinstalldirs `dirname test/QMTest/llvm.py`
-${srcdir}/autoconf/mkinstalldirs `dirname test/QMTest/llvmdb.py`
 ${srcdir}/autoconf/mkinstalldirs `dirname tools/Makefile`
 ${srcdir}/autoconf/mkinstalldirs `dirname utils/Makefile`
 ${srcdir}/autoconf/mkinstalldirs `dirname projects/Makefile`
@@ -30168,8 +30160,6 @@ do
   "runtime/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS runtime/Makefile" ;;
   "test/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS test/Makefile" ;;
   "test/Makefile.tests" ) CONFIG_COMMANDS="$CONFIG_COMMANDS test/Makefile.tests" ;;
-  "test/QMTest/llvm.py" ) CONFIG_COMMANDS="$CONFIG_COMMANDS test/QMTest/llvm.py" ;;
-  "test/QMTest/llvmdb.py" ) CONFIG_COMMANDS="$CONFIG_COMMANDS test/QMTest/llvmdb.py" ;;
   "tools/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS tools/Makefile" ;;
   "utils/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS utils/Makefile" ;;
   "projects/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS projects/Makefile" ;;
@@ -31087,8 +31077,6 @@ echo "$as_me: executing $ac_dest commands" >&6;}
     runtime/Makefile ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/runtime/Makefile runtime/Makefile ;;
     test/Makefile ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/test/Makefile test/Makefile ;;
     test/Makefile.tests ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/test/Makefile.tests test/Makefile.tests ;;
-    test/QMTest/llvm.py ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/test/QMTest/llvm.py test/QMTest/llvm.py ;;
-    test/QMTest/llvmdb.py ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/test/QMTest/llvmdb.py test/QMTest/llvmdb.py ;;
     tools/Makefile ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/tools/Makefile tools/Makefile ;;
     utils/Makefile ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/utils/Makefile utils/Makefile ;;
     projects/Makefile ) ${SHELL} ${srcdir}/autoconf/install-sh -c ${srcdir}/projects/Makefile projects/Makefile ;;
