@@ -11,7 +11,6 @@ TOOLNAME = llc
 USEDLIBS = cwriter \
            sparcv9 \
            x86 \
-           powerpc \
            selectiondag \
            sparcv9regalloc \
            sched \
