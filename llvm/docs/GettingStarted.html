@@ -129,7 +129,8 @@ from the LLVM suite.</p>
         header files for the default platform. Useful options include:
       <ul>
         <li><tt>--with-llvmgccdir=<i>directory</i></tt>
-            <p>Specify where the LLVM GCC frontend is installed.</p></li>
+            <p>Specify the full pathname of where the LLVM GCC frontend is
+            installed.</p></li>
         <li><tt>--enable-spec2000=<i>directory</i></tt>
             <p>Enable the SPEC2000 benchmarks for testing.  The SPEC2000
             benchmarks should be available in
@@ -476,7 +477,8 @@ script to configure the build system:</p>
   <dt><i>--with-llvmgccdir=LLVMGCCDIR</i>
   <dd>
     Path to the location where the LLVM C front end binaries and
-    associated libraries will be installed.
+    associated libraries will be installed.  This must be specified as an
+    absolute pathname.
     <p>
   <dt><i>--enable-optimized</i>
   <dd>
