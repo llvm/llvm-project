@@ -1,37 +1,3 @@
-NOTICE:
-=======
-All distributions of LLVM prior to the 1.0 Release will be licensed to you
-under the LLVM pre-release license.  The 1.0 Release will be announced on the
-LLVM Announcements Mailing List.
-
-After the 1.0 Release of LLVM, the LLVM code will be licensed to you under the
-LLVM Release License (aka the Illinois Open Source License).
-
-The main point is that you cannot re-distribute LLVM until the 1.0 Release.
-
-==============================================================================
-LLVM pre-release license
-==============================================================================
-
-This is a pre-release distribution of the LLVM software and is provided for
-evaluation only.  This version of the LLVM software or modifications thereof
-should not be distributed to third parties for any purpose.  Any third parties
-interested in it can request a copy directly by sending e-mail to
-llvmdev@cs.uiuc.edu.  As this is an evaluation release, we would appreciate any
-and all feedback, ideas, and reports of bugs that you encounter.  You may
-discuss development of LLVM on llvmdev@cs.uiuc.edu, and bugs can be submitted
-through the LLVM Bug Tracker at http://llvm.cs.uiuc.edu/bugzilla/ .  We thank
-you for your interest in LLVM and look forward to any comments or feedback you
-may have.
-
-THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
-SOFTWARE.
-
 ==============================================================================
 LLVM Release License
 ==============================================================================
