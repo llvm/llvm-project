@@ -64,7 +64,7 @@ LLVM User Guides:
         llvm/docs/GettingStarted.html
 
     LLVM Command Guide:
-        llvm/docs/CommandGuide/CommandGuide.html
+        llvm/docs/CommandGuide/index.html
 
     LLVM Assembly Language:
         llvm/docs/LangRef.html
