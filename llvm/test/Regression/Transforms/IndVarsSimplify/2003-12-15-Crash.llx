@@ -1,0 +1,22 @@
+void %_ZN17CoinFactorization7cleanupEv() {
+entry:
+	br bool false, label %loopexit.14, label %cond_continue.3
+
+cond_continue.3:		; preds = %entry
+	ret void
+
+loopexit.14:		; preds = %entry
+	%tmp.738 = sub int 0, 0		; <int> [#uses=1]
+	br bool false, label %no_exit.15.preheader, label %loopexit.15
+
+no_exit.15.preheader:		; preds = %loopexit.14
+	br label %no_exit.15
+
+no_exit.15:		; preds = %no_exit.15.preheader, %no_exit.15
+	%highC.0 = phi int [ %tmp.738, %no_exit.15.preheader ], [ %dec.0, %no_exit.15 ]		; <int> [#uses=1]
+	%dec.0 = add int %highC.0, -1		; <int> [#uses=1]
+	br bool false, label %no_exit.15, label %loopexit.15
+
+loopexit.15:		; preds = %loopexit.14, %no_exit.15
+	ret void
+}
