@@ -801,18 +801,18 @@ them all and their syntax.</p>
 
   <dd>Floating point constants use standard decimal notation (e.g. 123.421),
   exponential notation (e.g. 1.23421e+2), or a more precise hexadecimal
-  notation.  etc.  Floating point constants have an optional hexadecimal
+  notation.  Floating point constants have an optional hexadecimal
   notation (see below).  Floating point constants must have a <a
   href="#t_floating">floating point</a> type. </dd>
 
   <dt><b>Null pointer constants</b></dt>
 
-  <dd>The identifier '<tt>null</tt>' is recognized as a null pointer constant,
+  <dd>The identifier '<tt>null</tt>' is recognized as a null pointer constant
   and must be of <a href="#t_pointer">pointer type</a>.</dd>
 
 </dl>
 
-<p>The one non-intuitive notation for constants is the optional hexidecimal form
+<p>The one non-intuitive notation for constants is the optional hexadecimal form
 of floating point constants.  For example, the form '<tt>double
 0x432ff973cafa8000</tt>' is equivalent to (but harder to read than) '<tt>double
 4.5e+15</tt>'.  The only time hexadecimal floating point constants are required
@@ -835,7 +835,7 @@ not cause any bits to change in the constants.</p>
 
   <dd>Structure constants are represented with notation similar to structure
   type definitions (a comma separated list of elements, surrounded by braces
-  (<tt>{}</tt>).  For example: "<tt>{ int 4, float 17.0 }</tt>".  Structure
+  (<tt>{}</tt>)).  For example: "<tt>{ int 4, float 17.0 }</tt>".  Structure
   constants must have <a href="#t_struct">structure type</a>, and the number and
   types of elements must match those specified by the type.
   </dd>
@@ -844,7 +844,7 @@ not cause any bits to change in the constants.</p>
 
   <dd>Array constants are represented with notation similar to array type
   definitions (a comma separated list of elements, surrounded by square brackets
-  (<tt>[]</tt>).  For example: "<tt>[ int 42, int 11, int 74 ]</tt>".  Array
+  (<tt>[]</tt>)).  For example: "<tt>[ int 42, int 11, int 74 ]</tt>".  Array
   constants must have <a href="#t_array">array type</a>, and the number and
   types of elements must match those specified by the type.
   </dd>
@@ -853,7 +853,7 @@ not cause any bits to change in the constants.</p>
 
   <dd>Packed constants are represented with notation similar to packed type
   definitions (a comma separated list of elements, surrounded by
-  less-than/greater-than's (<tt>&lt;&gt;</tt>).  For example: "<tt>&lt; int 42,
+  less-than/greater-than's (<tt>&lt;&gt;</tt>)).  For example: "<tt>&lt; int 42,
   int 11, int 74, int 100 &gt;</tt>".  Packed constants must have <a
   href="#t_packed">packed type</a>, and the number and types of elements must
   match those specified by the type.
@@ -880,8 +880,8 @@ not cause any bits to change in the constants.</p>
 
 <p>The addresses of <a href="#globalvars">global variables</a> and <a
 href="#functionstructure">functions</a> are always implicitly valid (link-time)
-constants.  These constants explicitly referenced when the <a
-href="#identifiers">identifier for the global</a> is used, and always have <a
+constants.  These constants are explicitly referenced when the <a
+href="#identifiers">identifier for the global</a> is used and always have <a
 href="#t_pointer">pointer</a> type. For example, the following is a legal LLVM
 file:</p>
 
@@ -903,8 +903,8 @@ file:</p>
 value.  Undefined values may be of any type, and be used anywhere a constant
 is.</p>
 
-<p>Undefined values are used to indicate the compiler that the program is well
-defined no matter what value is used, giving it more freedom.</p>
+<p>Undefined values are used to indicate to the compiler that the program is
+well defined no matter what value is used, giving it more freedom.</p>
 
 </div>
 
@@ -2309,7 +2309,7 @@ href="GarbageCollection.html">Accurate Garbage Collection with LLVM</a>.
 
 <h5>Overview:</h5>
 
-<p>The '<tt>llvm.gcroot</tt>' intrinsic declares the existance of a GC root to
+<p>The '<tt>llvm.gcroot</tt>' intrinsic declares the existence of a GC root to
 the code generator, and allows some metadata to be associated with it.</p>
 
 <h5>Arguments:</h5>
