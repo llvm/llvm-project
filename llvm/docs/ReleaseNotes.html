@@ -40,10 +40,10 @@
 
 <p>This document contains the release notes for the LLVM compiler
 infrastructure, release 1.1.  Here we describe the status of LLVM, including any
-known problems, and bug fixes from the previous release.  The most up-to-date
+known problems and bug fixes from the previous release.  The most up-to-date
 version of this document can be found on the <a
 href="http://llvm.cs.uiuc.edu/releases/1.1/">LLVM 1.1 web site</a>.  If you are
-not reading this on the LLVM web pages, you should probably go there, because
+not reading this on the LLVM web pages, you should probably go there because
 this document may be updated after the release.</p>
 
 <p>For more information about LLVM, including information about potentially more
@@ -69,7 +69,7 @@ href="http://llvm.cs.uiuc.edu/releases/">releases page</a>.</p>
 
 <p>This is the second public release of the LLVM compiler infrastructure.  This
 release is primarily a bugfix release, dramatically improving the C/C++
-front-end, and improving support for C++ in the LLVM core.  This release also
+front-end and improving support for C++ in the LLVM core.  This release also
 includes a few new features, such as a simple profiler, support for Mac OS X,
 better interoperability with external source bases, a new example language
 front-end, and improvements in a few optimizations.  The performance of several
@@ -84,10 +84,10 @@ received much less testing than the C front-end.
 </p>
 
 <p>
-The LLVM native code generators are very stable, but do not currently support
+The LLVM native code generators are very stable but do not currently support
 unwinding (exception throwing or <tt>longjmp</tt>ing), which prevent them from
 working with programs like the <tt>253.perlbmk</tt> in SPEC CPU2000.  The C
-backend and the rest of LLVM does support these programs however, so you can
+backend and the rest of LLVM supports these programs, so you can
 still use LLVM with them.  Support for unwinding will be added in a future
 release.
 </p>
@@ -101,7 +101,7 @@ This release implements the following new features:
 <ol>
 <li><a
 href="http://mail.cs.uiuc.edu/pipermail/llvmdev/2003-November/000528.html">A new
-LLVM profiler, similar to gprof</a> is available</li>
+LLVM profiler, similar to gprof,</a> is available.</li>
 
 <li>LLVM and the C/C++ front-end now compile on Mac OS X!  Mac OS X users can
 now explore the LLVM optimizer with the C backend and interpreter.  Note that
@@ -109,7 +109,7 @@ LLVM requires GCC 3.3 on Mac OS X.</li>
 
 <li>LLVM has been <a
 href="http://mail.cs.uiuc.edu/pipermail/llvmdev/2003-November/000554.html">moved
-into an 'llvm' C++ namespace</a>, for easier integration with third-party
+into an 'llvm' C++ namespace</a> for easier integration with third-party
 code. Note that due to lack of namespace support in GDB 5.x, you will probably
 want to upgrade to GDB 6 or better to debug LLVM code.</li>
 
@@ -119,7 +119,8 @@ object tree as subdirectories are built.  This means that:
   <ol>
   <li>
   New directories can be added to the source tree, and the build will
-  automatically pick them up (i.e. no need to re-run <tt>configure</tt>).
+  automatically pick them up (i.e. no need to edit <tt>configure.ac</tt> and
+  re-run <tt>configure</tt>).
   </li>
 
   <li>
@@ -131,7 +132,9 @@ object tree as subdirectories are built.  This means that:
 
 <li>A front-end for "Stacker" (a simple Forth-like language) is now
     <a href="http://llvm.cs.uiuc.edu/PR136">included in the main LLVM tree</a>.
-    Additionally, Reid Spencer, the author, contributed a document <a href="Stacker.html">describing his experiences writing Stacker, and the language itself</a>.  This document is invaluable for others writing front-ends targetting LLVM.</li>
+    Additionally, Reid Spencer, the author, contributed a document
+    <a href="Stacker.html">describing his experiences writing Stacker and the language itself</a>.
+    This document is invaluable for others writing front-ends targetting LLVM.</li>
 
 <li>The <tt>configure</tt> script will now configure all projects placed in the
 <tt>llvm/projects</tt> directory.</li>
@@ -142,12 +145,12 @@ object tree as subdirectories are built.  This means that:
 <li>The <tt>-licm</tt> pass can now sink instructions out the bottom of loops
 in addition to being able to hoist them out the top.</li>
 
-<li>The <tt>-basicaa</tt> pass (the default alias analysis) has been upgraded
-to be <a href="http://llvm.cs.uiuc.edu/PR86">significantly more 
+<li>The <tt>-basicaa</tt> pass (the default alias analysis pass) has been
+upgraded to be <a href="http://llvm.cs.uiuc.edu/PR86">significantly more 
 precise</a>.</li>
 
 <li>LLVM 1.1 implements a simple size optimization for LLVM bytecode files.  
-    This means that the 1.1 files are smaller than 1.0, but that 1.0 won't 
+    This means that the 1.1 files are smaller than 1.0, but LLVM 1.0 won't 
     read 1.1 bytecode files.</li>
 
 <li><a href="http://llvm.cs.uiuc.edu/PR140">The gccld program produces a runner script that includes command-line options to load the necessary shared objects.</a></li>
@@ -187,12 +190,12 @@ fixed:
     more, giving the optimizer more freedom.</a></li>
 
 <li>The C front-end now <a href="http://llvm.cs.uiuc.edu/PR84">generates 
-    type-safe code</a> in several cases that it did not before, which prevented
-    some important optimizations.</li>
+    type-safe code</a> in several cases that it did not before, allowing
+    optimization of code that could not be optimized previously.</li>
 
 <li>The LLVM build system has been taught to catch some common configuration 
     problems that <a href="http://llvm.cs.uiuc.edu/PR96">caused it to get 
-    horribly confused</a> before.</li>
+    horribly confused</a>.</li>
 
 <li>The LLVM header files are now 
     <a href="http://llvm.cs.uiuc.edu/PR114">-Wold-style-cast clean</a>.</li>
@@ -209,8 +212,9 @@ cases).</li>
 <a href="http://llvm.cs.uiuc.edu/PR11">generated N^2 amounts of duplicated cleanup code</a> in some cases.</li>
 
 <li>The JIT used to <a href="http://llvm.cs.uiuc.edu/PR177">generate code for 
-    all functions pointed to by globals</a> immediately, before the program 
-    started execution, but now it waits until the first time they are called to
+    all functions pointed to by globals</a> before the program 
+    started execution.  Now, it waits until the first time the functions are
+    called to
     compile them.  This dramatically speeds up short runs of large C++ programs,
     which often have large numbers of functions pointed to by vtables.</li>
 </ol>
@@ -232,7 +236,7 @@ In this release, the following bugs in the previous release were fixed:
 <li><a href="http://llvm.cs.uiuc.edu/PR71">llvm-as crashes when labels are used in phi nodes</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR72">[build problem] Callgraph.cpp not pulled in from libipa.a</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR77">Variables in scope of output setjmp
-calls should be volatile</a> (Note that this does not effect correctness on
+calls should be volatile</a> (Note that this does not affect correctness on
 many platforms, such as X86).</li>
 <li><a href="http://llvm.cs.uiuc.edu/PR83">[X86] Emission of global bool initializers broken</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR91">[gccld] The -r (relinking) option does not work correctly</a></li>
@@ -307,7 +311,7 @@ LLVM works on Mac OS X 10.3 and above, but only with the C backend or
 interpreter (no native backend for the PowerPC is available yet).
 The core LLVM infrastructure uses "autoconf" for portability, so hopefully we
 work on more platforms than that.  However, it is likely that we
-missed something, and that minor porting is required to get LLVM to work on 
+missed something and that minor porting is required to get LLVM to work on 
 new platforms.  We welcome portability patches and error messages.</p>
 
 </div>
@@ -323,7 +327,7 @@ new platforms.  We welcome portability patches and error messages.</p>
 <p>This section contains all known problems with the LLVM system, listed by
 component.  As new problems are discovered, they will be added to these
 sections.  If you run into a problem, please check the <a
-href="http://llvm.cs.uiuc.edu/bugs/">LLVM bug database</a>, and submit a bug if
+href="http://llvm.cs.uiuc.edu/bugs/">LLVM bug database</a> and submit a bug if
 there isn't already one.</p>
 
 </div>
@@ -418,11 +422,11 @@ work:
     the following extensions are known to <b>not be</b> supported:
   <ol>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Local-Labels.html#Local%20Labels">Local Labels</a>: Labels local to a block.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html#Labels%20as%20Values">Labels as Values</a>: Getting pointers to labels, and computed gotos.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html#Labels%20as%20Values">Labels as Values</a>: Getting pointers to labels and computed gotos.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Nested-Functions.html#Nested%20Functions">Nested Functions</a>: As in Algol and Pascal, lexical scoping of functions.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Constructing-Calls.html#Constructing%20Calls">Constructing Calls</a>: Dispatching a call to another function.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Extended%20Asm">Extended Asm</a>: Assembler instructions with C expressions as operands.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Constraints.html#Constraints">Constraints</a>: Constraints for asm operands</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Constraints.html#Constraints">Constraints</a>: Constraints for asm operands.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Asm-Labels.html#Asm%20Labels">Asm Labels</a>: Specifying the assembler name to use for a C symbol.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Explicit-Reg-Vars.html#Explicit%20Reg%20Vars">Explicit Reg Vars</a>: Defining variables residing in specified registers.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Return-Address.html#Return%20Address">Return Address</a>: Getting the return or frame address of a function.</li>
@@ -435,7 +439,7 @@ work:
   <p>The following GCC extensions are <b>partially</b> supported.  An ignored
   attribute means that the LLVM compiler ignores the presence of the attribute,
   but the code should still work.  An unsupported attribute is one which is
-  ignored by the LLVM compiler, which will cause a different interpretation of
+  ignored by the LLVM compiler and will cause a different interpretation of
   the program.</p>
 
   <ol>
@@ -445,7 +449,7 @@ work:
 
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html#Function%20Attributes">Function Attributes</a>:
 
-      Declaring that functions have no side effects, or that they can never
+      Declaring that functions have no side effects or that they can never
       return.<br>
 
       <b>Supported:</b> <tt>format</tt>, <tt>format_arg</tt>, <tt>non_null</tt>,
@@ -504,7 +508,8 @@ work:
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Subscripting.html#Subscripting">Subscripting</a>: Any array can be subscripted, even if not an lvalue.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Pointer-Arith.html#Pointer%20Arith">Pointer Arith</a>: Arithmetic on <code>void</code>-pointers and function pointers.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Initializers.html#Initializers">Initializers</a>: Non-constant initializers.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Compound-Literals.html#Compound%20Literals">Compound Literals</a>: Compound literals give structures, unions or arrays as values.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Compound-Literals.html#Compound%20Literals">Compound Literals</a>: Compound literals give structures, unions,
+or arrays as values.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Designated-Inits.html#Designated%20Inits">Designated Inits</a>: Labeling elements of initializers.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Cast-to-Union.html#Cast%20to%20Union">Cast to Union</a>: Casting to union type from any member of the union.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Case-Ranges.html#Case%20Ranges">Case Ranges</a>: `case 1 ... 9' and such.</li>
@@ -536,7 +541,7 @@ lists, please let us know (also including whether or not they work).</p>
 
 <div class="doc_text">
 
-<p>For this release, the C++ front-end is considered to be fully functional, but
+<p>For this release, the C++ front-end is considered to be fully functional but
 has not been tested as thoroughly as the C front-end.  It has been tested and 
 works for a number of non-trivial programs, but there may be lurking bugs.
 Please report any bugs or problems.</p>
@@ -552,7 +557,7 @@ Please report any bugs or problems.</p>
 
 <ul>
 <li>The C++ front-end inherits all problems afflicting the <a href="#c-fe">C
-    front-end</a></li>
+    front-end</a>.</li>
 </ul>
 
 </div>
@@ -574,7 +579,7 @@ href="http://gcc.gnu.org/gcc-3.4/changes.html">GCC 3.4 release notes</a>.</li>
 <li>Destructors for local objects are not always run when a <tt>longjmp</tt> is
     performed. In particular, destructors for objects in the <tt>longjmp</tt>ing
     function and in the <tt>setjmp</tt> receiver function may not be run.
-    Objects in intervening stack frames will be destroyed however (which is
+    Objects in intervening stack frames will be destroyed, however (which is
     better than most compilers).</li>
 
 <li>The LLVM C++ front-end follows the <a
@@ -663,7 +668,7 @@ frontends.</li>
 <div class="doc_text">
 
 <p>A wide variety of additional information is available on the LLVM web page,
-including mailing lists publications describing algorithms and components
+including mailing lists and publications describing algorithms and components
 implemented in LLVM.  The web page also contains versions of the API
 documentation which is up-to-date with the CVS version of the source code.  You
 can access versions of these documents specific to this release by going into
