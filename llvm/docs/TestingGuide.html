@@ -102,7 +102,7 @@ regression tests are in the main "llvm" module under the directory
 programs in C and C++ is in the <tt>llvm-test</tt> module. This module should 
 be checked out to the <tt>llvm/projects</tt> directory. When you
 <tt>configure</tt> the <tt>llvm</tt> module, the <tt>llvm-test</tt> module
-will be automatically configured. Or you can do it manually.</p>
+will be automatically configured. Alternatively, you can configure the <tt>llvm-test</tt> module manually.</p>
 <p>To run all of the simple tests in LLVM using DejaGNU, use the master Makefile in the
 <tt>llvm/test</tt> directory:</p>
 <pre>
@@ -140,7 +140,7 @@ programs), run the <tt>llvm-test</tt> tests:</p>
 <p>The LLVM test suite contains two major categories of tests: code
 fragments and whole programs. Code fragments are in the <tt>llvm</tt> module
 under the directory under the <tt>llvm/test</tt> directory. The whole programs
-test suite are n the <tt>llvm-test</tt> module under the main directory.</p>
+test suite are in the <tt>llvm-test</tt> module under the main directory.</p>
 
 </div>
 
@@ -251,12 +251,13 @@ location of these external programs is configured by the llvm-test
 <div class="doc_text">
 <p>The LLVM test suite is partially driven by DejaGNU and partially
 driven by GNU Make. Specifically, the Features and Regression tests
-are all driven by DejaGNU. The llvm-test
+are all driven by DejaGNU. The <tt>llvm-test</tt>
 module is currently driven by a set of Makefiles.</p>
 
 <p>The DejaGNU structure is very simple, but does require some
-information to be set. This information is gathered via configure and
-is written to a file, <tt>site.exp</tt> in llvm/test. The llvm/test
+information to be set. This information is gathered via <tt>configure</tt> and
+is written to a file, <tt>site.exp</tt> in <tt>llvm/test</tt>. The
+<tt>llvm/test</tt>
 Makefile does this work for you.</p>
 
 <p>In order for DejaGNU to work, each directory of tests must have a
@@ -392,7 +393,8 @@ test suite creates temporary files during execution.</p>
 tests. By default, it will run all of these tests.</p>
 
 <p>To run only the DejaGNU driven tests, run <tt>gmake</tt> at the
-command line in llvm/tests.  To run a specific directory of tests, specify the TESTSUITE.
+command line in llvm/tests.  To run a specific directory of tests, use the
+TESTSUITE variable.
 </p>
 
 <p>For example, to run the Regression tests, type 
