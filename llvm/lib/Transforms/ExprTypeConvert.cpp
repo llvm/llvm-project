@@ -151,7 +151,7 @@ bool llvm::ExpressionConvertibleToType(Value *V, const Type *Ty,
   // If it's a constant... all constants can be converted to a different
   // type.
   //
-  if (Constant *CPV = dyn_cast<Constant>(V))
+  if (isa<Constant>(V) && !isa<GlobalValue>(V))
     return true;
   
   CTMap[V] = Ty;
@@ -984,10 +984,9 @@ static void ConvertOperandToType(User *U, Value *OldVal, Value *NewVal,
 
     unsigned OtherIdx = (OldVal == I->getOperand(0)) ? 1 : 0;
     Value *OtherOp    = I->getOperand(OtherIdx);
-    Value *NewOther   = ConvertExpressionToType(OtherOp, NewTy, VMC, TD);
-
-    Res->setOperand(OtherIdx, NewOther);
     Res->setOperand(!OtherIdx, NewVal);
+    Value *NewOther   = ConvertExpressionToType(OtherOp, NewTy, VMC, TD);
+    Res->setOperand(OtherIdx, NewOther);
     break;
   }
   case Instruction::Shl:

@@ -54,8 +54,8 @@ static bool InlineCallIfPossible(CallSite CS, CallGraph &CG,
          E = CalleeNode->end(); I != E; ++I)
     CallerNode->addCalledFunction(*I);
   
-  // If we inlined the last possible call site to the function,
-  // delete the function body now.
+  // If we inlined the last possible call site to the function, delete the
+  // function body now.
   if (Callee->use_empty() && Callee->hasInternalLinkage() &&
       !SCCFunctions.count(Callee)) {
     DEBUG(std::cerr << "    -> Deleting dead function: "
@@ -64,7 +64,7 @@ static bool InlineCallIfPossible(CallSite CS, CallGraph &CG,
     // Remove any call graph edges from the callee to its callees.
     while (CalleeNode->begin() != CalleeNode->end())
       CalleeNode->removeCallEdgeTo(*(CalleeNode->end()-1));
-              
+     
     // Removing the node for callee from the call graph and delete it.
     delete CG.removeFunctionFromModule(CalleeNode);
     ++NumDeleted;
@@ -167,27 +167,27 @@ bool Inliner::doFinalization(CallGraph &CG) {
   // from the program.  Insert the dead ones in the FunctionsToRemove set.
   for (CallGraph::iterator I = CG.begin(), E = CG.end(); I != E; ++I) {
     CallGraphNode *CGN = I->second;
-    Function *F = CGN ? CGN->getFunction() : 0;
+    if (Function *F = CGN ? CGN->getFunction() : 0) {
+      // If the only remaining users of the function are dead constants,
+      // remove them.
+      bool HadDeadConstantUsers = !F->use_empty();
+      F->removeDeadConstantUsers();
 
-    // If the only remaining users of the function are dead constants,
-    // remove them.
-    if (F) F->removeDeadConstantUsers();
-
-    if (F && (F->hasLinkOnceLinkage() || F->hasInternalLinkage()) &&
-        F->use_empty()) {
-
-      // Remove any call graph edges from the function to its callees.
-      while (CGN->begin() != CGN->end())
-        CGN->removeCallEdgeTo(*(CGN->end()-1));
-      
-      // If the function has external linkage (basically if it's a linkonce
-      // function) remove the edge from the external node to the callee
-      // node.
-      if (!F->hasInternalLinkage())
-        CG.getExternalCallingNode()->removeCallEdgeTo(CGN);
-      
-      // Removing the node for callee from the call graph and delete it.
-      FunctionsToRemove.insert(CGN);
+      if ((F->hasLinkOnceLinkage() || F->hasInternalLinkage()) &&
+          F->use_empty()) {
+        // Remove any call graph edges from the function to its callees.
+        while (CGN->begin() != CGN->end())
+          CGN->removeCallEdgeTo(*(CGN->end()-1));
+        
+        // If the function has external linkage (basically if it's a linkonce
+        // function) remove the edge from the external node to the callee
+        // node.
+        if (!F->hasInternalLinkage() || HadDeadConstantUsers)
+          CG.getExternalCallingNode()->removeCallEdgeTo(CGN);
+        
+        // Removing the node for callee from the call graph and delete it.
+        FunctionsToRemove.insert(CGN);
+      }
     }
   }
 

@@ -302,7 +302,8 @@ bool RPR::PeepholeOptimize(BasicBlock *BB, BasicBlock::iterator &BI) {
       // Make sure the source doesn't change type
       ConvertedTypes[Src] = Src->getType();
       if (ValueConvertibleToType(CI, Src->getType(), ConvertedTypes, TD)) {
-        PRINT_PEEPHOLE3("CAST-DEST-EXPR-CONV:in ", *Src, *CI, *BB->getParent());
+        //PRINT_PEEPHOLE3("CAST-DEST-EXPR-CONV:in ", *Src, *CI,
+        //                *BB->getParent());
 
         DEBUG(std::cerr << "\nCONVERTING EXPR TYPE:\n");
         { // ValueMap must be destroyed before function verified!
