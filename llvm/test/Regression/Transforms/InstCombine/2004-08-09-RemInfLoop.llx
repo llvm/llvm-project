@@ -1,0 +1,8 @@
+; RUN: llvm-as < %s | opt -instcombine
+
+; This testcase should not send the instcombiner into an infinite loop!
+
+int %test(int %X) {
+	%Y = rem int %X, 0
+	ret int %Y
+}
