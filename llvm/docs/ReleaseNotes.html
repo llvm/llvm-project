@@ -64,7 +64,10 @@ as well as a large suite of scalar and interprocedural optimizations.<p>
 The default optimizer sequence used by the C/C++ front-ends is:<p>
 
 <ol>
+<li>CFG simplification (-simplifycfg)
 <li>Interprocedural dead code elimination (-globaldce)
+<li>Interprocedural constant propagation (-ipconstprop)
+<li>Dead argument elimination (-deadargelim)
 <li>Exception handling pruning (-prune-eh)
 <li>Function inlining (-inline)
 <li>Instruction combining (-instcombine)
@@ -94,6 +97,7 @@ At link-time, the following optimizations are run:<p>
 <ol>
 <li>Global constant merging (-constmerge)
 <li>[optional] Internalization [which marks most functions and global variables static] (-internalize)
+<li>Interprocedural constant propagation (-ipconstprop)
 <li>Interprocedural dead argument elimination (-deadargelim)
 <li>Instruction combining (-instcombine)
 <li>CFG simplification (-simplifycfg)
@@ -103,7 +107,8 @@ At link-time, the following optimizations are run:<p>
 At this time, LLVM is known to work properly with SPEC CPU 2000, the Olden
 benchmarks, and the Ptrdist benchmarks among many other programs.  Note however
 that the Sparc and X86 backends do not currently support exception throwing or
-long jumping.  For these programs you must use the C backend.<p>
+long jumping (including 253.perlbmk in SPEC).  For these programs you must use
+the C backend.<p>
 
 
 <!-- *********************************************************************** -->
@@ -358,6 +363,10 @@ problem probably cannot be fixed.<p>
 <li><a href="http://llvm.cs.uiuc.edu/PR33">Initializers for global variables</a>
 cannot include special floating point numbers like Not-A-Number or Infinity.<p>
 
+<li><a href="http://zion.cs.uiuc.edu/PR56">Zero arg vararg functions are not 
+supported</a>.  This should not affect LLVM produced by the C or C++ 
+frontends.<p>
+
 <li>The code produces by the C back-end has only been tested with the Sun CC and
 GCC compilers.  It is possible that it will have to be adjusted to support other
 C compilers.<p>
@@ -389,8 +398,6 @@ via the mailing lists.<p>
 <hr><font size-1>
 
 Maintained By: <a href="http://llvm.cs.uiuc.edu/">The LLVM Team</a><br>
-<a href="http://llvm.cs.uiuc.edu">The LLVM Compiler Infrastructure</a>
-<br>
 <!-- Created: Wed Oct  1 17:38:54 CDT 2003 -->
 <!-- hhmts start -->
 Last modified: Mon Oct 20 14:04:51 CDT 2003
