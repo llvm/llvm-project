@@ -61,7 +61,7 @@
 about LLVM through the experience of creating a simple programming language
 named Stacker.  Stacker was invented specifically as a demonstration of
 LLVM. The emphasis in this document is not on describing the
-intricacies of LLVM itself, but on how to use it to build your own
+intricacies of LLVM itself but on how to use it to build your own
 compiler system.</p>
 </div>
 <!-- ======================================================================= -->
@@ -70,7 +70,7 @@ compiler system.</p>
 <p>Amongst other things, LLVM is a platform for compiler writers.
 Because of its exceptionally clean and small IR (intermediate
 representation), compiler writing with LLVM is much easier than with
-other system. As proof, the author of Stacker wrote the entire
+other systems. As proof, the author of Stacker wrote the entire
 compiler (language definition, lexer, parser, code generator, etc.) in
 about <em>four days</em>! That's important to know because it shows 
 how quickly you can get a new
@@ -78,11 +78,11 @@ language up when using LLVM. Furthermore, this was the <em >first</em>
 language the author ever created using LLVM. The learning curve is 
 included in that four days.</p>
 <p>The language described here, Stacker, is Forth-like. Programs
-are simple collections of word definitions and the only thing definitions
+are simple collections of word definitions, and the only thing definitions
 can do is manipulate a stack or generate I/O.  Stacker is not a "real" 
-programming language; its very simple.  Although it is computationally 
+programming language; it's very simple.  Although it is computationally 
 complete, you wouldn't use it for your next big project. However, 
-the fact that it is complete, its simple, and it <em>doesn't</em> have 
+the fact that it is complete, it's simple, and it <em>doesn't</em> have 
 a C-like syntax make it useful for demonstration purposes. It shows
 that LLVM could be applied to a wide variety of languages.</p>
 <p>The basic notions behind stacker is very simple. There's a stack of 
@@ -96,11 +96,11 @@ program in Stacker:</p>
 : MAIN hello_world ;<br></code></p>
 <p>This has two "definitions" (Stacker manipulates words, not
 functions and words have definitions): <code>MAIN</code> and <code>
-hello_world</code>. The <code>MAIN</code> definition is standard, it
+hello_world</code>. The <code>MAIN</code> definition is standard; it
 tells Stacker where to start. Here, <code>MAIN</code> is defined to 
 simply invoke the word <code>hello_world</code>. The
 <code>hello_world</code> definition tells stacker to push the 
-<code>"Hello, World!"</code> string onto the stack, print it out 
+<code>"Hello, World!"</code> string on to the stack, print it out 
 (<code>&gt;s</code>), pop it off the stack (<code>DROP</code>), and
 finally print a carriage return (<code>CR</code>). Although 
 <code>hello_world</code> uses the stack, its net effect is null. Well
@@ -124,7 +124,7 @@ learned. Those lessons are described in the following subsections.<p>
 <p>Although I knew that LLVM uses a Single Static Assignment (SSA) format, 
 it wasn't obvious to me how prevalent this idea was in LLVM until I really
 started using it.  Reading the <a href="ProgrammersManual.html">
-Programmer's Manual</a> and <a href="LangRef.html">Language Reference</a>
+Programmer's Manual</a> and <a href="LangRef.html">Language Reference</a>,
 I noted that most of the important LLVM IR (Intermediate Representation) C++ 
 classes were derived from the Value class. The full power of that simple
 design only became fully understood once I started constructing executable
@@ -200,7 +200,7 @@ should be constructed. In general, here's what I learned:
 <ol>
     <li><em>Create your blocks early.</em> While writing your compiler, you 
     will encounter several situations where you know apriori that you will
-    need several blocks. For example, if-then-else, switch, while and for
+    need several blocks. For example, if-then-else, switch, while, and for
     statements in C/C++ all need multiple blocks for expression in LVVM. 
     The rule is, create them early.</li>
     <li><em>Terminate your blocks early.</em> This just reduces the chances 
@@ -261,15 +261,15 @@ MyCompiler::handle_if( BasicBlock* bb, SetCondInst* condition )
 the instructions for the "then" and "else" parts. They would use the third part
 of the idiom almost exclusively (inserting new instructions before the 
 terminator). Furthermore, they could even recurse back to <code>handle_if</code> 
-should they encounter another if/then/else statement and it will just work.</p>
+should they encounter another if/then/else statement, and it will just work.</p>
 <p>Note how cleanly this all works out. In particular, the push_back methods on
 the <code>BasicBlock</code>'s instruction list. These are lists of type 
 <code>Instruction</code> which also happen to be <code>Value</code>s. To create 
-the "if" branch we merely instantiate a <code>BranchInst</code> that takes as 
+the "if" branch, we merely instantiate a <code>BranchInst</code> that takes as 
 arguments the blocks to branch to and the condition to branch on. The blocks
 act like branch labels! This new <code>BranchInst</code> terminates
 the <code>BasicBlock</code> provided as an argument. To give the caller a way
-to keep inserting after calling <code>handle_if</code> we create an "exit" block
+to keep inserting after calling <code>handle_if</code>, we create an "exit" block
 which is returned to the caller.  Note that the "exit" block is used as the 
 terminator for both the "then" and the "else" blocks. This guarantees that no
 matter what else "handle_if" or "fill_in" does, they end up at the "exit" block.
@@ -283,7 +283,7 @@ One of the first things I noticed is the frequent use of the "push_back"
 method on the various lists. This is so common that it is worth mentioning.
 The "push_back" inserts a value into an STL list, vector, array, etc. at the
 end. The method might have also been named "insert_tail" or "append".
-Althought I've used STL quite frequently, my use of push_back wasn't very
+Although I've used STL quite frequently, my use of push_back wasn't very
 high in other programs. In LLVM, you'll use it all the time.
 </p>
 </div>
@@ -292,17 +292,17 @@ high in other programs. In LLVM, you'll use it all the time.
 <div class="doc_text">
 <p>
 It took a little getting used to and several rounds of postings to the LLVM
-mail list to wrap my head around this instruction correctly. Even though I had
+mailing list to wrap my head around this instruction correctly. Even though I had
 read the Language Reference and Programmer's Manual a couple times each, I still
 missed a few <em>very</em> key points:
 </p>
 <ul>
-    <li>GetElementPtrInst gives you back a Value for the last thing indexed</em>
+    <li>GetElementPtrInst gives you back a Value for the last thing indexed.</em>
     <li>All global variables in LLVM  are <em>pointers</em>.
     <li>Pointers must also be dereferenced with the GetElementPtrInst instruction.
 </ul>
 <p>This means that when you look up an element in the global variable (assuming
-its a struct or array), you <em>must</em> deference the pointer first! For many
+it's a struct or array), you <em>must</em> deference the pointer first! For many
 things, this leads to the idiom:
 </p>
 <pre><code>
@@ -319,13 +319,13 @@ will run against your grain because you'll naturally think of the global array
 variable and the address of its first element as the same. That tripped me up
 for a while until I realized that they really do differ .. by <em>type</em>.
 Remember that LLVM is a strongly typed language itself. Everything
-has a type.  The "type" of the global variable is [24 x int]*. That is, its
+has a type.  The "type" of the global variable is [24 x int]*. That is, it's
 a pointer to an array of 24 ints.  When you dereference that global variable with
 a single (0) index, you now have a "[24 x int]" type.  Although
 the pointer value of the dereferenced global and the address of the zero'th element
 in the array will be the same, they differ in their type. The zero'th element has
 type "int" while the pointer value has type "[24 x int]".</p>
-<p>Get this one aspect of LLVM right in your head and you'll save yourself
+<p>Get this one aspect of LLVM right in your head, and you'll save yourself
 a lot of compiler writing headaches down the road.</p>
 </div>
 <!-- ======================================================================= -->
@@ -334,7 +334,7 @@ a lot of compiler writing headaches down the road.</p>
 <p>Linkage types in LLVM can be a little confusing, especially if your compiler
 writing mind has affixed very hard concepts to particular words like "weak",
 "external", "global", "linkonce", etc. LLVM does <em>not</em> use the precise
-definitions of say ELF or GCC even though they share common terms. To be fair,
+definitions of, say, ELF or GCC, even though they share common terms. To be fair,
 the concepts are related and similar but not precisely the same. This can lead
 you to think you know what a linkage type represents but in fact it is slightly
 different. I recommend you read the 
@@ -342,10 +342,10 @@ different. I recommend you read the
 carefully. Then, read it again.<p>
 <p>Here are some handy tips that I discovered along the way:</p>
 <ul>
-    <li>Unitialized means external. That is, the symbol is declared in the current
+    <li>Uninitialized means external. That is, the symbol is declared in the current
     module and can be used by that module but it is not defined by that module.</li>
     <li>Setting an initializer changes a global's linkage type from whatever it was
-    to a normal, defind global (not external). You'll need to call the setLinkage()
+    to a normal, defined global (not external). You'll need to call the setLinkage()
     method to reset it if you specify the initializer after the GlobalValue has been
     constructed. This is important for LinkOnce and Weak linkage types.</li> 
     <li>Appending linkage can be used to keep track of compilation information at
@@ -362,7 +362,7 @@ Constants in LLVM took a little getting used to until I discovered a few utility
 functions in the LLVM IR that make things easier. Here's what I learned: </p>
 <ul>
  <li>Constants are Values like anything else and can be operands of instructions</li>
- <li>Integer constants, frequently needed can be created using the static "get"
+ <li>Integer constants, frequently needed, can be created using the static "get"
  methods of the ConstantInt, ConstantSInt, and ConstantUInt classes. The nice thing
  about these is that you can "get" any kind of integer quickly.</li>
  <li>There's a special method on Constant class which allows you to get the null 
@@ -379,14 +379,14 @@ functions in the LLVM IR that make things easier. Here's what I learned: </p>
 proceeding, a few words about the stack are in order. The stack is simply
 a global array of 32-bit integers or pointers. A global index keeps track
 of the location of the top of the stack. All of this is hidden from the 
-programmer but it needs to be noted because it is the foundation of the 
+programmer, but it needs to be noted because it is the foundation of the 
 conceptual programming model for Stacker. When you write a definition,
 you are, essentially, saying how you want that definition to manipulate
 the global stack.</p>
 <p>Manipulating the stack can be quite hazardous. There is no distinction
 given and no checking for the various types of values that can be placed
 on the stack. Automatic coercion between types is performed. In many 
-cases this is useful. For example, a boolean value placed on the stack
+cases, this is useful. For example, a boolean value placed on the stack
 can be interpreted as an integer with good results. However, using a
 word that interprets that boolean value as a pointer to a string to
 print out will almost always yield a crash. Stacker simply leaves it
@@ -406,9 +406,9 @@ is terminated by a semi-colon.</p>
 <p>So, your typical definition will have the form:</p>
 <pre><code>: name ... ;</code></pre>
 <p>The <code>name</code> is up to you but it must start with a letter and contain
-only letters numbers and underscore. Names are case sensitive and must not be
+only letters, numbers, and underscore. Names are case sensitive and must not be
 the same as the name of a built-in word. The <code>...</code> is replaced by
-the stack manipulting words that you wish define <code>name</code> as. <p>
+the stack manipulating words that you wish to define <code>name</code> as. <p>
 </div>
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="comments"></a>Comments</div>
@@ -429,12 +429,12 @@ a real program.</p>
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="literals"></a>Literals</div>
 <div class="doc_text">
-    <p>There are three kinds of literal values in Stacker. Integer, Strings,
+    <p>There are three kinds of literal values in Stacker: Integers, Strings,
     and Booleans. In each case, the stack operation is to simply push the
-    value onto the stack. So, for example:<br/>
+    value on to the stack. So, for example:<br/>
     <code> 42 " is the answer." TRUE </code><br/>
-    will push three values onto the stack: the integer 42, the
-    string " is the answer." and the boolean TRUE.</p>
+    will push three values on to the stack: the integer 42, the
+    string " is the answer.", and the boolean TRUE.</p>
 </div>
 <!-- ======================================================================= -->
 <div class="doc_subsection"><a name="words"></a>Words</div>
@@ -464,20 +464,20 @@ linking.</p>
 <p>The built-in words of the Stacker language are put in several groups 
 depending on what they do. The groups are as follows:</p>
 <ol> 
-    <li><em>Logical</em>These words provide the logical operations for
+    <li><em>Logical</em>: These words provide the logical operations for
     comparing stack operands.<br/>The words are: &lt; &gt; &lt;= &gt;= 
     = &lt;&gt; true false.</li>
-    <li><em>Bitwise</em>These words perform bitwise computations on 
+    <li><em>Bitwise</em>: These words perform bitwise computations on 
     their operands. <br/> The words are: &lt;&lt; &gt;&gt; XOR AND NOT</li>
-    <li><em>Arithmetic</em>These words perform arithmetic computations on
+    <li><em>Arithmetic</em>: These words perform arithmetic computations on
     their operands. <br/> The words are: ABS NEG + - * / MOD */ ++ -- MIN MAX</li>
-    <li><em>Stack</em>These words manipulate the stack directly by moving
+    <li><em>Stack</em>: These words manipulate the stack directly by moving
     its elements around.<br/> The words are: DROP DUP SWAP OVER ROT DUP2 DROP2 PICK TUCK</li>
-    <li><em>Memory</em>These words allocate, free and manipulate memory
+    <li><em>Memory</em>: These words allocate, free, and manipulate memory
     areas outside the stack.<br/>The words are: MALLOC FREE GET PUT</li>
-    <li><em>Control</em>These words alter the normal left to right flow
+    <li><em>Control</em>: These words alter the normal left to right flow
     of execution.<br/>The words are: IF ELSE ENDIF WHILE END RETURN EXIT RECURSE</li>
-    <li><em>I/O</em> These words perform output on the standard output
+    <li><em>I/O</em>: These words perform output on the standard output
     and input on the standard input. No other I/O is possible in Stacker.
     <br/>The words are: SPACE TAB CR &gt;s &gt;d &gt;c &lt;s &lt;d &lt;c.</li>
 </ol>
@@ -554,12 +554,12 @@ using the following construction:</p>
 <tr><td>FALSE</td>
     <td>FALSE</td>
     <td> -- b</td>
-    <td>The boolean value FALSE (0) is pushed onto the stack.</td>
+    <td>The boolean value FALSE (0) is pushed on to the stack.</td>
 </tr>
 <tr><td>TRUE</td>
     <td>TRUE</td>
     <td> -- b</td>
-    <td>The boolean value TRUE (-1) is pushed onto the stack.</td>
+    <td>The boolean value TRUE (-1) is pushed on to the stack.</td>
 </tr>
 <tr><td colspan="4">BITWISE OPERATIONS</td></tr>
 <tr><td>Word</td><td>Name</td><td>Operation</td><td>Description</td></tr>
@@ -604,75 +604,75 @@ using the following construction:</p>
     <td>ABS</td>
     <td>w -- |w|</td>
     <td>One value s popped off the stack; its absolute value is computed
-    and then pushed onto the stack. If w1 is -1 then w2 is 1. If w1 is
+    and then pushed on to the stack. If w1 is -1 then w2 is 1. If w1 is
     1 then w2 is also 1.</td>
 </tr>
 <tr><td>NEG</td>
     <td>NEG</td>
     <td>w -- -w</td>
     <td>One value is popped off the stack which is negated and then
-    pushed back onto the stack. If w1 is -1 then w2 is 1. If w1 is
+    pushed back on to the stack. If w1 is -1 then w2 is 1. If w1 is
     1 then w2 is -1.</td>
 </tr>
 <tr><td> + </td>
     <td>ADD</td>
     <td>w1 w2 -- w2+w1</td>
     <td>Two values are popped off the stack. Their sum is pushed back
-    onto the stack</td>
+    on to the stack</td>
 </tr>
 <tr><td> - </td>
     <td>SUB</td>
     <td>w1 w2 -- w2-w1</td>
     <td>Two values are popped off the stack. Their difference is pushed back
-    onto the stack</td>
+    on to the stack</td>
 </tr>
 <tr><td> * </td>
     <td>MUL</td>
     <td>w1 w2 -- w2*w1</td>
     <td>Two values are popped off the stack. Their product is pushed back
-    onto the stack</td>
+    on to the stack</td>
 </tr>
 <tr><td> / </td>
     <td>DIV</td>
     <td>w1 w2 -- w2/w1</td>
     <td>Two values are popped off the stack. Their quotient is pushed back
-    onto the stack</td>
+    on to the stack</td>
 </tr>
 <tr><td>MOD</td>
     <td>MOD</td>
     <td>w1 w2 -- w2%w1</td>
     <td>Two values are popped off the stack. Their remainder after division
-    of w1 by w2 is pushed back onto the stack</td>
+    of w1 by w2 is pushed back on to the stack</td>
 </tr>
 <tr><td> */ </td>
     <td>STAR_SLAH</td>
     <td>w1 w2 w3 -- (w3*w2)/w1</td>
     <td>Three values are popped off the stack. The product of w1 and w2 is
-    divided by w3. The result is pushed back onto the stack.</td>
+    divided by w3. The result is pushed back on to the stack.</td>
 </tr>
 <tr><td> ++ </td>
     <td>INCR</td>
     <td>w -- w+1</td>
     <td>One value is popped off the stack. It is incremented by one and then
-    pushed back onto the stack.</td>
+    pushed back on to the stack.</td>
 </tr>
 <tr><td> -- </td>
     <td>DECR</td>
     <td>w -- w-1</td>
     <td>One value is popped off the stack. It is decremented by one and then
-    pushed back onto the stack.</td>
+    pushed back on to the stack.</td>
 </tr>
 <tr><td>MIN</td>
     <td>MIN</td>
     <td>w1 w2 -- (w2&lt;w1?w2:w1)</td>
     <td>Two values are popped off the stack. The larger one is pushed back
-    onto the stack.</td>
+    on to the stack.</td>
 </tr>
 <tr><td>MAX</td>
     <td>MAX</td>
     <td>w1 w2 -- (w2&gt;w1?w2:w1)</td>
     <td>Two values are popped off the stack. The larger value is pushed back
-	onto the stack.</td>
+	on to the stack.</td>
 </tr>
 <tr><td colspan="4">STACK MANIPULATION OPERATIONS</td></tr>
 <tr><td>Word</td><td>Name</td><td>Operation</td><td>Description</td></tr>
@@ -703,13 +703,13 @@ using the following construction:</p>
 <tr><td>DUP</td>
     <td>DUP</td>
     <td>w1 -- w1 w1</td>
-    <td>One value is popped off the stack. That value is then pushed onto
-	the stack twice to duplicate the top stack vaue.</td>
+    <td>One value is popped off the stack. That value is then pushed on to
+	the stack twice to duplicate the top stack value.</td>
 </tr>
 <tr><td>DUP2</td>
     <td>DUP2</td>
     <td>w1 w2 -- w1 w2 w1 w2</td>
-    <td>The top two values on the stack are duplicated. That is, two vaues
+    <td>The top two values on the stack are duplicated. That is, two values
 	are popped off the stack. They are alternately pushed back on the
 	stack twice each.</td>
 </tr>
@@ -717,7 +717,7 @@ using the following construction:</p>
     <td>SWAP</td>
     <td>w1 w2 -- w2 w1</td>
     <td>The top two stack items are reversed in their order. That is, two
-	values are popped off the stack and pushed back onto the stack in
+	values are popped off the stack and pushed back on to the stack in
 	the opposite order they were popped.</td>
 </tr>
 <tr><td>SWAP2</td>
@@ -725,27 +725,27 @@ using the following construction:</p>
     <td>w1 w2 w3 w4 -- w3 w4 w2 w1</td>
     <td>The top four stack items are swapped in pairs. That is, two values
 	are popped and retained. Then, two more values are popped and retained.
-	The values are pushed back onto the stack in the reverse order but
+	The values are pushed back on to the stack in the reverse order but
 	in pairs.</p>
 </tr>
 <tr><td>OVER</td>
     <td>OVER</td>
     <td>w1 w2-- w1 w2 w1</td>
     <td>Two values are popped from the stack. They are pushed back
-	onto the stack in the order w1 w2 w1. This seems to cause the
+	on to the stack in the order w1 w2 w1. This seems to cause the
 	top stack element to be duplicated "over" the next value.</td>
 </tr>
 <tr><td>OVER2</td>
     <td>OVER2</td>
     <td>w1 w2 w3 w4 -- w1 w2 w3 w4 w1 w2</td>
-    <td>The third and fourth values on the stack are replicated onto the
+    <td>The third and fourth values on the stack are replicated on to the
 	top of the stack</td>
 </tr>
 <tr><td>ROT</td>
     <td>ROT</td>
     <td>w1 w2 w3 -- w2 w3 w1</td>
     <td>The top three values are rotated. That is, three value are popped
-	off the stack. They are pushed back onto the stack in the order
+	off the stack. They are pushed back on to the stack in the order
 	w1 w3 w2.</td>
 </tr>
 <tr><td>ROT2</td>
@@ -822,7 +822,7 @@ using the following construction:</p>
     <td>One value is popped off the stack. The value is used as the size
 	of a memory block to allocate. The size is in bytes, not words.
         The memory allocation is completed and the address of the memory
-	block is pushed onto the stack.</td>
+	block is pushed on to the stack.</td>
 </tr>
 <tr><td>FREE</td>
     <td>FREE</td>
@@ -911,7 +911,7 @@ using the following construction:</p>
     <td>The boolean value on the top of the stack is examined. If it is non-zero then the 
 	"words..." between WHILE and END are executed. Execution then begins again at the WHILE where another
 	boolean is popped off the stack. To prevent this operation from eating up the entire
-	stack, you should push onto the stack (just before the END) a boolean value that indicates
+	stack, you should push on to the stack (just before the END) a boolean value that indicates
 	whether to terminate. Note that since booleans and integers can be coerced you can
 	use the following "for loop" idiom:<br/>
 	<code>(push count) WHILE (words...) -- END</code><br/>
@@ -960,19 +960,19 @@ using the following construction:</p>
     <td>IN_STR</td>
     <td> -- s </td>
     <td>A string is read from the input via the scanf(3) format string " %as". The
-	resulting string is pushed onto the stack.</td>
+	resulting string is pushed on to the stack.</td>
 </tr>
 <tr><td>&lt;d</td>
     <td>IN_STR</td>
     <td> -- w </td>
     <td>An integer is read from the input via the scanf(3) format string " %d". The
-	resulting value is pushed onto the stack</td>
+	resulting value is pushed on to the stack</td>
 </tr>
 <tr><td>&lt;c</td>
     <td>IN_CHR</td>
     <td> -- w </td>
     <td>A single character is read from the input via the scanf(3) format string 
-	" %c". The value is converted to an integer and pushed onto the stack.</td>
+	" %c". The value is converted to an integer and pushed on to the stack.</td>
 </tr>
 <tr><td>DUMP</td>
     <td>DUMP</td>
@@ -989,9 +989,9 @@ using the following construction:</p>
 <p>The following fully documented program highlights many features of both
 the Stacker language and what is possible with LLVM. The program has two modes
 of operations. If you provide numeric arguments to the program, it checks to see
-if those arguments are prime numbers, prints out the results. Without any 
-aruments, the program prints out any prime numbers it finds between 1 and one 
-million (there's a log of them!). The source code comments below tell the 
+if those arguments are prime numbers and prints out the results. Without any 
+arguments, the program prints out any prime numbers it finds between 1 and one 
+million (there's a lot of them!). The source code comments below tell the 
 remainder of the story.
 </p>
 </div>
@@ -1015,7 +1015,7 @@ remainder of the story.
 : exit_loop FALSE;
     
 ################################################################################
-# This definition tryies an actual division of a candidate prime number. It
+# This definition tries an actual division of a candidate prime number. It
 # determines whether the division loop on this candidate should continue or
 # not.
 # STACK<:
@@ -1075,7 +1075,7 @@ remainder of the story.
 # STACK<:
 #   p - the prime number to check
 # STACK>:
-#   yn - boolean indiating if its a prime or not
+#   yn - boolean indicating if its a prime or not
 #   p - the prime number checked
 ################################################################################
 : try_harder
@@ -1248,7 +1248,7 @@ remainder of the story.
 under the LLVM "projects" directory. You will need to obtain the LLVM sources
 to find it (either via anonymous CVS or a tarball. See the 
 <a href="GettingStarted.html">Getting Started</a> document).</p>
-<p>Under the "projects" directory there is a directory named "stacker". That
+<p>Under the "projects" directory there is a directory named "Stacker". That
 directory contains everything, as follows:</p>
 <ul>
     <li><em>lib</em> - contains most of the source code
@@ -1301,7 +1301,7 @@ directory contains everything, as follows:</p>
 definitions, the ROLL word is not implemented. This word was left out of 
 Stacker on purpose so that it can be an exercise for the student.  The exercise 
 is to implement the ROLL functionality (in your own workspace) and build a test 
-program for it.  If you can implement ROLL you understand Stacker and probably 
+program for it.  If you can implement ROLL, you understand Stacker and probably 
 a fair amount about LLVM since this is one of the more complicated Stacker 
 operations. The work will almost be completely limited to the 
 <a href="#compiler">compiler</a>.  
@@ -1326,7 +1326,7 @@ interested, here are some things that could be implemented better:</p>
     emitted currently is somewhat wasteful. It gets cleaned up a lot by existing
     passes but more could be done.</li>
     <li>Add -O -O1 -O2 and -O3 optimization switches to the compiler driver to
-    allow LLVM optimization without using "opt"</li>
+    allow LLVM optimization without using "opt."</li>
     <li>Make the compiler driver use the LLVM linking facilities (with IPO) before 
     depending on GCC to do the final link.</li>
     <li>Clean up parsing. It doesn't handle errors very well.</li>
