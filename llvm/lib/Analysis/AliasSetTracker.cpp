@@ -101,7 +101,7 @@ void AliasSet::addCallSite(CallSite CS, AliasAnalysis &AA) {
       return;
     else if (AA.onlyReadsMemory(F)) {
       AliasTy = MayAlias;
-      AccessTy = Refs;
+      AccessTy |= Refs;
       return;
     }
   }
