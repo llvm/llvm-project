@@ -27,15 +27,23 @@ dir=$3
 # Create the working directory and make it the current directory.
 #
 mkdir -p $dir
+echo "Changing directory to $dir"
 cd $dir
 
 #
 # Extract the LLVM sources given the label.
 #
+echo "Extracting source $tag from $cvsroot"
 cvs -d $cvsroot export -r $tag llvm llvm-gcc
+
+#
+# Move the llvm-gcc sources so that they match what is used by end-users.
+#
+mkdir -p cfrontend
+mv llvm-gcc cfrontend/src
 
 #
 # Create source tarballs.
 #
-tar -cvf - llvm | gzip > llvm-${version}.tar.gz
-tar -cvf - llvm-gcc | gzip > cfrontend-${version}.source.tar.gz
+tar -cf - llvm | gzip > llvm-${version}.tar.gz
+tar -cf - cfrontend | gzip > cfrontend-${version}.source.tar.gz
