@@ -187,7 +187,7 @@ fixed:
 
 <li>The C++ front-end now compiles functions to 
     <a href="http://llvm.cs.uiuc.edu/PR29">use the linkonce linkage type</a> 
-    more, giving the optimizer more freedom.</a></li>
+    more, giving the optimizer more freedom.</li>
 
 <li>The C front-end now <a href="http://llvm.cs.uiuc.edu/PR84">generates 
     type-safe code</a> in several cases that it did not before, allowing
@@ -377,9 +377,7 @@ more than 256 elements</a>.</li>
 </div>
 
 <div class="doc_text">
-
 <ul>
-
 <li>C99 Variable sized arrays do not release stack memory when they go out of 
     scope.  Thus, the following program may run out of stack space:
 <pre>
@@ -388,9 +386,19 @@ more than 256 elements</a>.</li>
       foo(X);
     }
 </pre></li>
-
 </ul>
+</div>
 
+<div class="doc_subsubsection">
+  Bugs in 1.1 fixed in 1.2
+</div>
+
+<div class="doc_text">
+<ul>
+<li><a href="http://llvm.cs.uiuc.edu/PR186">Need weak linkage on
+memory-management functions in libc runtime to allow them to be
+overridden</a></li>
+</ul>
 </div>
 
 <!-- _______________________________________________________________________ -->
