@@ -81,6 +81,11 @@ Value *llvm::MapValue(const Value *V, std::map<const Value*, Value*> &VM) {
         for (unsigned i = 1, e = CE->getNumOperands(); i != e; ++i)
           Idx.push_back(cast<Constant>(MapValue(CE->getOperand(i), VM)));
         return VMSlot = ConstantExpr::getGetElementPtr(MV, Idx);
+      } else if (CE->getOpcode() == Instruction::Select) {
+        Constant *MV1 = cast<Constant>(MapValue(CE->getOperand(0), VM));
+        Constant *MV2 = cast<Constant>(MapValue(CE->getOperand(1), VM));
+        Constant *MV3 = cast<Constant>(MapValue(CE->getOperand(2), VM));
+        return VMSlot = ConstantExpr::getSelect(MV1, MV2, MV3);
       } else {
         assert(CE->getNumOperands() == 2 && "Must be binary operator?");
         Constant *MV1 = cast<Constant>(MapValue(CE->getOperand(0), VM));
