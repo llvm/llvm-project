@@ -45,7 +45,6 @@ process, and you should <b>only</b> try to do it if:</p>
 
 <ol>
   <li>you really, really, really can't use the binaries we distribute</li>
-  <li>you need GCC to fix some of the header files on your system</li>
   <li>you are an elite GCC hacker.</li>
 </ol>
 
@@ -59,7 +58,7 @@ process, and you should <b>only</b> try to do it if:</p>
 <!--=========================================================================-->
 
 <div class="doc_text">
-<p>If you are building LLVM and the C front-end under Cygwin, please note that
+<p>If you are building LLVM and the GCC front-end under Cygwin, please note that
 the LLVM and GCC makefiles do not correctly handle spaces in paths.  To deal
 with this issue, make sure that your LLVM and GCC source and build trees are 
 located in a top-level directory (like <tt>/cygdrive/c/llvm</tt> and 
@@ -76,7 +75,7 @@ and Settings" directory).  We welcome patches to fix this issue.
 <!--=========================================================================-->
 
 <div class="doc_text">
-<p>If you are building LLVM and the C front-end under AIX, do NOT use GNU
+<p>If you are building LLVM and the GCC front-end under AIX, do NOT use GNU
 Binutils.  They are not stable under AIX and may produce incorrect and/or
 invalid code.  Instead, use the system assembler and linker.
 </p>
@@ -121,7 +120,7 @@ invalid code.  Instead, use the system assembler and linker.
 </pre></li>
 
 
-<li><p>Configure, build, and install the C front-end:</p>
+<li><p>Configure, build, and install the GCC front-end:</p>
 
 <p>
 <b>Linux/x86:</b><br>
@@ -176,7 +175,7 @@ functions from C as referenced from C++, so we typically configure with
  <ul>
   <li><p><b>Fix 1:</b> If you have system header files that include
    inline assembly, you may have to modify them to remove the inline
-   assembly, and install the modified versions in
+   assembly and install the modified versions in
    <code>$CFEINSTALL/lib/gcc/<i>target-triplet</i>/3.4-llvm/include</code>.</li>
 
   <li><b>Fix 2:</b> If you are building the C++ front-end on a CPU we
@@ -186,10 +185,10 @@ functions from C as referenced from C++, so we typically configure with
    and apply a patch so that it does not use inline assembly.</li>
  </ul>
 
- <p><b>Porting to a new architecture:</b> If you are porting the new front-end
- to a new architecture, or compiling in a different configuration that we have
- previously, there are probably several changes you will have to make to the GCC
- target to get it to work correctly.  These include:<p>
+ <p><b>Porting to a new architecture:</b> If you are porting the front-end
+ to a new architecture or compiling in a configuration that we have
+ not tried previously, there are probably several changes you will have to make
+ to the GCC target to get it to work correctly.  These include:<p>
 
  <ul>
   <li>Often targets include special assembler or linker flags which
@@ -216,7 +215,7 @@ functions from C as referenced from C++, so we typically configure with
 
 <li><p>Go back into the LLVM source tree proper.  Rerun configure, using
 the <code>--with-llvmgccdir=$CFEINSTALL</code> option to specify the path
-to the newly built C front-end.</p></li>
+to the newly built GCC front-end.</p></li>
 
 <li><p>If you edited header files during the C/C++ front-end build as
 described in "Fix 1" above, you must now copy those header files from
@@ -228,7 +227,7 @@ libgcc.a library, which you can find by running
 
 <li><p>Rebuild your CVS tree.  This shouldn't cause the whole thing to be
   rebuilt, but it should build the runtime libraries.  After the tree is
-  built, install the runtime libraries into your C front-end build tree.
+  built, install the runtime libraries into your GCC front-end build tree.
   These are the commands you need.</p>
 <pre>
  % gmake
@@ -255,8 +254,8 @@ the <tt>llvm-ranlib</tt> tool to do this, as follows:</p>
 following means:</p>
  <ul>
   <li> compiling and running a "hello, LLVM" program in C and C++.</li>
-  <li> running the tests under <tt>test/Programs</tt> using <code>gmake -C
-   test/Programs</code></li>
+  <li> running the regression tests in <tt>llvm/test</tt>
+  <li> running the tests found in the <tt>llvm-test</tt> CVS module</li>
  </ul></li>
 </ol>
 </div>
