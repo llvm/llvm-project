@@ -18,12 +18,16 @@
 #include "llvm/iTerminators.h"
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/FunctionUtils.h"
+#include "Support/Statistic.h"
 using namespace llvm;
 
 namespace {
+  Statistic<> NumExtracted("loop-extract", "Number of loops extracted");
+  
   // FIXME: This is not a function pass, but the PassManager doesn't allow
   // Module passes to require FunctionPasses, so we can't get loop info if we're
   // not a function pass.
@@ -35,8 +39,10 @@ namespace {
     virtual bool runOnFunction(Function &F);
     
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequired<LoopInfo>();
+      AU.addRequiredID(BreakCriticalEdgesID);
       AU.addRequiredID(LoopSimplifyID);
+      AU.addRequired<DominatorSet>();
+      AU.addRequired<LoopInfo>();
     }
   };
 
@@ -59,6 +65,8 @@ bool LoopExtractor::runOnFunction(Function &F) {
   if (LI.begin() == LI.end())
     return false;
 
+  DominatorSet &DS = getAnalysis<DominatorSet>();
+
   // If there is more than one top-level loop in this function, extract all of
   // the loops.
   bool Changed = false;
@@ -66,7 +74,8 @@ bool LoopExtractor::runOnFunction(Function &F) {
     for (LoopInfo::iterator i = LI.begin(), e = LI.end(); i != e; ++i) {
       if (NumLoops == 0) return Changed;
       --NumLoops;
-      Changed |= (ExtractLoop(*i) != 0);
+      Changed |= ExtractLoop(DS, *i) != 0;
+      ++NumExtracted;
     }
   } else {
     // Otherwise there is exactly one top-level loop.  If this function is more
@@ -93,7 +102,8 @@ bool LoopExtractor::runOnFunction(Function &F) {
     if (ShouldExtractLoop) {
       if (NumLoops == 0) return Changed;
       --NumLoops;
-      Changed |= (ExtractLoop(TLL) != 0);
+      Changed |= ExtractLoop(DS, TLL) != 0;
+      ++NumExtracted;
     } else {
       // Okay, this function is a minimal container around the specified loop.
       // If we extract the loop, we will continue to just keep extracting it
@@ -102,7 +112,8 @@ bool LoopExtractor::runOnFunction(Function &F) {
       for (Loop::iterator i = TLL->begin(), e = TLL->end(); i != e; ++i) {
         if (NumLoops == 0) return Changed;
         --NumLoops;
-        Changed |= (ExtractLoop(*i) != 0);
+        Changed |= ExtractLoop(DS, *i) != 0;
+        ++NumExtracted;
       }
     }
   }
