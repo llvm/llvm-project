@@ -23,7 +23,7 @@ The B<llvm-ar> command can be used to I<read> both SVR4 and BSD style archive
 files. However, it cannot be used to write them.  While the B<llvm-ar> command 
 produces files that are I<almost> identical to the format used by other C<ar> 
 implementations, it has two significant departures in order to make the 
-archive appropriate for LLVM. There are first departure is that B<llvm-ar> only
+archive appropriate for LLVM. The first departure is that B<llvm-ar> only
 uses BSD4.4 style long path names (stored immediately after the header) and
 never contains a string table for long names. The second departure is that the
 symbol table is formated for efficient construction of an in-memory data
@@ -63,7 +63,7 @@ slash (/) character.
 B<llvm-ar> can compress the members of an archive to save space. The 
 compression used depends on what's available on the platform and what choices
 the LLVM Compressor utility makes. It generally favors bzip2 but will select
-between "no compression", bzip2 or zlib depending on what makes sense for the
+between "no compression" or bzip2 depending on what makes sense for the
 file's content.
 
 =item I<Directory Recursion>
@@ -229,9 +229,9 @@ a time stamp than the time stamp of the member in the archive.
 =item [z] 
 
 When inserting or replacing any file in the archive, compress the file first.
-The compression will attempt to use the zlib compression algorithm. This
+This
 modifier is safe to use when (previously) compressed bytecode files are added to
-the archive; the compress bytecode files will not be doubly compressed.
+the archive; the compressed bytecode files will not be doubly compressed.
 
 =back
 
@@ -342,9 +342,8 @@ This field provides the size of the file, in bytes, encoded as a decimal ASCII
 string. If the size field is negative (starts with a minus sign, 0x02D), then
 the archive member is stored in compressed form. The first byte of the archive
 member's data indicates the compression type used. A value of 0 (0x30) indicates
-that no compression was used. A value of 1 (0x31) indicates that zlib
-compression was used. A value of 2 (0x32) indicates that bzip2 compression was
-used.
+that no compression was used. A value of 2 (0x32) indicates that bzip2
+compression was used.
 
 =item fmag - char[2]
 
