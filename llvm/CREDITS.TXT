@@ -56,7 +56,7 @@ D: The `paths' pass
 N: Reid Spencer
 E: rspencer@x10sys.com
 W: http://extprosys.sourceforge.net/
-D: Complete 'llvm' namespacification, bug fixes and improvements
+D: Complete 'llvm' namespacification, Stacker, bug fixes, and improvements
 
 N: Bill Wendling
 E: wendling@isanbard.org
