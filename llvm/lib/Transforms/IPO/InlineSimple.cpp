@@ -31,6 +31,16 @@ namespace {
   // FunctionInfo - For each function, calculate the size of it in blocks and
   // instructions.
   struct FunctionInfo {
+    // HasAllocas - Keep track of whether or not a function contains an alloca
+    // instruction that is not in the entry block of the function.  Inlining
+    // this call could cause us to blow out the stack, because the stack memory
+    // would never be released.
+    //
+    // FIXME: LLVM needs a way of dealloca'ing memory, which would make this
+    // irrelevant!
+    //
+    bool HasAllocas;
+
     // NumInsts, NumBlocks - Keep track of how large each function is, which is
     // used to estimate the code size cost of inlining it.
     unsigned NumInsts, NumBlocks;
@@ -41,7 +51,11 @@ namespace {
     // entry here.
     std::vector<ArgInfo> ArgumentWeights;
 
-    FunctionInfo() : NumInsts(0), NumBlocks(0) {}
+    FunctionInfo() : HasAllocas(false), NumInsts(0), NumBlocks(0) {}
+
+    /// analyzeFunction - Fill in the current structure with information gleaned
+    /// from the specified function.
+    void analyzeFunction(Function *F);
   };
 
   class SimpleInliner : public Inliner {
@@ -123,6 +137,41 @@ static unsigned CountCodeReductionForAlloca(Value *V) {
   return Reduction;
 }
 
+/// analyzeFunction - Fill in the current structure with information gleaned
+/// from the specified function.
+void FunctionInfo::analyzeFunction(Function *F) {
+  unsigned NumInsts = 0, NumBlocks = 0;
+
+  // Look at the size of the callee.  Each basic block counts as 20 units, and
+  // each instruction counts as 10.
+  for (Function::const_iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
+    for (BasicBlock::const_iterator II = BB->begin(), E = BB->end();
+         II != E; ++II) {
+      ++NumInsts;
+
+      // If there is an alloca in the body of the function, we cannot currently
+      // inline the function without the risk of exploding the stack.
+      if (isa<AllocaInst>(II) && BB != F->begin()) {
+        HasAllocas = true;
+        this->NumBlocks = this->NumInsts = 1;
+        return;
+      }
+    }
+
+    ++NumBlocks;
+  }
+
+  this->NumBlocks = NumBlocks;
+  this->NumInsts  = NumInsts;
+
+  // Check out all of the arguments to the function, figuring out how much
+  // code can be eliminated if one of the arguments is a constant.
+  for (Function::aiterator I = F->abegin(), E = F->aend(); I != E; ++I)
+    ArgumentWeights.push_back(ArgInfo(CountCodeReductionForConstant(I),
+                                      CountCodeReductionForAlloca(I)));
+}
+
+
 // getInlineCost - The heuristic used to determine if we should inline the
 // function call or not.
 //
@@ -149,31 +198,14 @@ int SimpleInliner::getInlineCost(CallSite CS) {
   // Get information about the callee...
   FunctionInfo &CalleeFI = CachedFunctionInfo[Callee];
 
-  // If we haven't calculated this information yet...
-  if (CalleeFI.NumBlocks == 0) {
-    unsigned NumInsts = 0, NumBlocks = 0;
+  // If we haven't calculated this information yet, do so now.
+  if (CalleeFI.NumBlocks == 0)
+    CalleeFI.analyzeFunction(Callee);
 
-    // Look at the size of the callee.  Each basic block counts as 20 units, and
-    // each instruction counts as 10.
-    for (Function::const_iterator BB = Callee->begin(), E = Callee->end();
-         BB != E; ++BB) {
-      NumInsts += BB->size();
-      NumBlocks++;
-    }
-
-    CalleeFI.NumBlocks = NumBlocks;
-    CalleeFI.NumInsts  = NumInsts;
-
-    // Check out all of the arguments to the function, figuring out how much
-    // code can be eliminated if one of the arguments is a constant.
-    std::vector<ArgInfo> &ArgWeights = CalleeFI.ArgumentWeights;
-
-    for (Function::aiterator I = Callee->abegin(), E = Callee->aend();
-         I != E; ++I)
-      ArgWeights.push_back(ArgInfo(CountCodeReductionForConstant(I),
-                                   CountCodeReductionForAlloca(I)));
-  }
-
+  // Don't inline calls to functions with allocas that are not in the entry
+  // block of the function.
+  if (CalleeFI.HasAllocas)
+    return 2000000000;
 
   // Add to the inline quality for properties that make the call valuable to
   // inline.  This includes factors that indicate that the result of inlining
