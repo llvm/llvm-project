@@ -184,11 +184,24 @@ non-obvious ways.  Here are some hints and tips:<p>
     Assume a non-zero exit code or core dump from the test program is
     a failure. Defaults to true.<p>
 
+	<li><tt>-dsa-track-integers</tt><br>
+    Track integers as potential pointers.<p>
+
 	<li><tt>-disable-{dce,simplifycfg}</tt><br>
     Do not run the specified passes to clean up and reduce the size of the
     test program. By default, <tt>bugpoint</tt> uses these passes internally
     when attempting to reduce test programs.  If you're trying to find
     a bug in one of these passes, <tt>bugpoint</tt> may crash.<p>
+
+	<li><tt>-enable-correct-eh-support</tt><br>
+    Make the -lowerinvoke pass insert expensive, but correct, exception
+    handling code.<p>
+
+	<li><tt>-internalize-public-api-file &lt;filename&gt;</tt><br>
+    Preserve the symbols listed in the file <tt>filename</tt>.<p>
+
+	<li><tt>-internalize-public-api-list &lt;list&gt;</tt><br>
+    Preserve the symbols listed in <tt>list</tt>.<p>
 
 	<li> <tt>-help</tt><br>
 	Print a summary of command line options.<p>
@@ -214,6 +227,9 @@ non-obvious ways.  Here are some hints and tips:<p>
     (the "reference output"). If you do not use this option,
     <tt>bugpoint</tt> will attempt to generate a reference output by
     compiling the program with the C backend and running it.<p>
+
+	<li><tt>-profile-info-file &lt;filename&gt;</tt><br>
+    Profile file loaded by -profile-loader.<p>
 
 	<a name="opt_run-"><li><tt>-run-{int,jit,llc,cbe}</tt><br>
     Whenever the test program is compiled, <tt>bugpoint</tt> should generate
