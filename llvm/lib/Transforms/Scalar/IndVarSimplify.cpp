@@ -26,6 +26,7 @@
 #include "Support/Debug.h"
 #include "Support/Statistic.h"
 #include "Support/STLExtras.h"
+#include <algorithm>
 using namespace llvm;
 
 namespace {
@@ -206,6 +207,14 @@ static bool TransformLoop(LoopInfo *Loops, Loop *Loop) {
           PHIOps.insert(PHIOps.end(), MaybeDead->op_begin(),
                         MaybeDead->op_end());
           MaybeDead->getParent()->getInstList().erase(MaybeDead);
+          
+          // Erase any duplicates entries in the PHIOps list.
+          std::vector<Value*>::iterator It =
+            std::find(PHIOps.begin(), PHIOps.end(), MaybeDead);
+          while (It != PHIOps.end()) {
+            PHIOps.erase(It);
+            It = std::find(PHIOps.begin(), PHIOps.end(), MaybeDead);
+          }
 
           // Erasing the instruction could invalidate the AfterPHI iterator!
           AfterPHIIt = Header->begin();
