@@ -7,9 +7,7 @@
 </head>
 <body>
 
-<div class="doc_title">
-  LLVM 1.1 Release Notes
-</div>
+<div class="doc_title">LLVM 1.1 Release Notes</div>
  
 <ol>
   <li><a href="#intro">Introduction</a></li>
@@ -18,7 +16,6 @@
   <li><a href="#install-instructions">Installation Instructions</a></li>
   <li><a href="#knownproblems">Known Problems</a>
   <ul>
-<!--    <li><a href="#portabilityprobs">Portability Problems</a> -->
     <li><a href="#core">Known problems with the LLVM Core</a>
     <li><a href="#c-fe">Known problems with the C Front-end</a>
     <li><a href="#c++-fe">Known problems with the C++ Front-end</a>
@@ -30,7 +27,7 @@
 </ol>
 
 <div class="doc_text">
-  <p><b>Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a></b><p>
+  <p><b>Written by the <a href="http://llvm.cs.uiuc.edu">LLVM team</a></b><p>
 </div>
 
 <!-- *********************************************************************** -->
@@ -75,7 +72,9 @@ release is primarily a bugfix release, dramatically improving the C/C++
 front-end, and improving support for C++ in the LLVM core.  This release also
 includes a few new features, such as a simple profiler, support for Mac OS X,
 better interoperability with external source bases, a new example language
-front-end, and improvements in a few optimizations.</p>
+front-end, and improvements in a few optimizations.  The performance of several
+LLVM components has been improved, and several gratuitous type-safety issues in
+the C front-end have been fixed.</p>
 
 <p>At this time, LLVM is known to correctly compile and run all non-unwinding C
 &amp; C++ SPEC CPU2000 benchmarks, the Olden benchmarks, and the Ptrdist
