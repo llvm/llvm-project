@@ -1,0 +1,15 @@
+* Rewrite the llvm parser/lexer in http://www.antlr.org when time permits.
+  They actually do C++.  Imagine that.
+* Need a way to attach bytecode block info at various levels of asm code.
+* Recognize and save comments in assembly and bytecode format
+* Encode line number table in bytecode (like #line), optional table
+
+* Encode negative relative offsets in the bytecode file
+
+* Apparently bison has a %pure_parser option.  Maybe useful for AsmParser
+
+* Implement the following derived types:
+  * "packed format", like this:    [4 x sbyte]: Packed SIMD datatype
+* Bytecode reader should use extensions that may or may not be linked into the
+  application to read blocks.  Thus an easy way to ignore symbol table info
+  would be to not link in that reader into the app.
