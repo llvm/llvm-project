@@ -1392,34 +1392,33 @@ Instruction *InstCombiner::visitSetCondInst(BinaryOperator &I) {
 
   // setcc's with boolean values can always be turned into bitwise operations
   if (Ty == Type::BoolTy) {
-    // If this is <, >, or !=, we can change this into a simple xor instruction
-    if (!isTrueWhenEqual(I))
-      return BinaryOperator::createXor(Op0, Op1);
-
-    // Otherwise we need to make a temporary intermediate instruction and insert
-    // it into the instruction stream.  This is what we are after:
-    //
-    //  seteq bool %A, %B -> ~(A^B)
-    //  setle bool %A, %B -> ~A | B
-    //  setge bool %A, %B -> A | ~B
-    //
-    if (I.getOpcode() == Instruction::SetEQ) {  // seteq case
+    switch (I.getOpcode()) {
+    default: assert(0 && "Invalid setcc instruction!");
+    case Instruction::SetEQ: {     //  seteq bool %A, %B -> ~(A^B)
       Instruction *Xor = BinaryOperator::createXor(Op0, Op1, I.getName()+"tmp");
       InsertNewInstBefore(Xor, I);
       return BinaryOperator::createNot(Xor);
     }
+    case Instruction::SetNE:
+      return BinaryOperator::createXor(Op0, Op1);
 
-    // Handle the setXe cases...
-    assert(I.getOpcode() == Instruction::SetGE ||
-           I.getOpcode() == Instruction::SetLE);
-
-    if (I.getOpcode() == Instruction::SetGE)
+    case Instruction::SetGT:
+      std::swap(Op0, Op1);                   // Change setgt -> setlt
+      // FALL THROUGH
+    case Instruction::SetLT: {               // setlt bool A, B -> ~X & Y
+      Instruction *Not = BinaryOperator::createNot(Op0, I.getName()+"tmp");
+      InsertNewInstBefore(Not, I);
+      return BinaryOperator::createAnd(Not, Op1);
+    }
+    case Instruction::SetGE:
       std::swap(Op0, Op1);                   // Change setge -> setle
-
-    // Now we just have the SetLE case.
-    Instruction *Not = BinaryOperator::createNot(Op0, I.getName()+"tmp");
-    InsertNewInstBefore(Not, I);
-    return BinaryOperator::createOr(Not, Op1);
+      // FALL THROUGH
+    case Instruction::SetLE: {     //  setle bool %A, %B -> ~A | B
+      Instruction *Not = BinaryOperator::createNot(Op0, I.getName()+"tmp");
+      InsertNewInstBefore(Not, I);
+      return BinaryOperator::createOr(Not, Op1);
+    }
+    }
   }
 
   // See if we are doing a comparison between a constant and an instruction that
