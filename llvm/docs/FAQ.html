@@ -49,6 +49,8 @@
   <li>I've built LLVM and am testing it, but the tests freeze.</li>
   <li>Why do test results differ when I perform different types of builds?</li>
   <li>Compiling LLVM with GCC 3.3.2 fails, what should I do?</li>
+  <li>When I use the test suite, all of the C Backend tests fail.  What is
+      wrong?</li>
   </ol></li>
 
   <li><a href="#cfe">Using the GCC Front End</a>
@@ -336,6 +338,31 @@ build.</p>
 <div class="answer">
 <p>This is <a href="http://gcc.gnu.org/PR?13392">a bug in GCC</a>, and 
    affects projects other than LLVM.  Try upgrading or downgrading your GCC.</p>
+</div>
+
+<div class="question">
+<p>
+When I use the test suite, all of the C Backend tests fail.  What is
+wrong?
+</p>
+</div>
+
+<div class="answer">
+<p>
+If you build LLVM and the C Backend tests fail in <tt>llvm/test/Programs</tt>,
+then chances are good that the directory pointed to by the LLVM_LIB_SEARCH_PATH
+environment variable does not contain the libcrtend.a library.
+</p>
+
+<p>
+To fix it, verify that LLVM_LIB_SEARCH_PATH points to the correct directory
+and that libcrtend.a is inside.  For pre-built LLVM GCC front ends, this
+should be the absolute path to
+<tt>cfrontend/&lt;<i>platform</i>&gt;/llvm-gcc/bytecode-libs</tt>.  If you've
+built your own LLVM GCC front end, then ensure that you've built and installed
+the libraries in <tt>llvm/runtime</tt> and have LLVM_LIB_SEARCH_PATH pointing
+to the <tt>LLVMGCCDIR/bytecode-libs</tt> subdirectory.
+</p>
 </div>
 
 <!-- *********************************************************************** -->
