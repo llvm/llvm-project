@@ -893,10 +893,9 @@ file:</p>
 </div>
 
 <!-- ======================================================================= -->
-<div class="doc_subsection"><a name="undefvalues">Undefined Values</a>
-</div>
-
+<div class="doc_subsection"><a name="undefvalues">Undefined Values</a></div>
 <div class="doc_text">
+<<<<<<< LangRef.html
 
 <p>The string '<tt>undef</tt>' is recognized as a filler that has no specified
 value.  Undefined values may be of any type, and be used anywhere a constant
@@ -905,6 +904,15 @@ is.</p>
 <p>Undefined values are used to indicate to the compiler that the program is
 well defined no matter what value is used, giving it more freedom.</p>
 
+=======
+  <p>The string '<tt>undef</tt>' is recognized as a type-less constant that has 
+  no specific value.  Undefined values may be of any type, and be used anywhere 
+  a constant is permitted.</p>
+
+  <p>Undefined values indicate to the compiler that the program is well defined
+  no matter what value is used, giving the compiler more freedom to optimize.
+  </p>
+>>>>>>> 1.82
 </div>
 
 <!-- ======================================================================= -->
@@ -933,14 +941,12 @@ following is the syntax for constant expressions:</p>
 
   <dt><b><tt>OPCODE ( LHS, RHS )</tt></b></dt>
 
-  <dd>Perform the specied operation of the LHS and RHS constants.  OPCODE may be
-  any of the <a href="#binaryops">binary</a> or <a href="#bitwiseops">bitwise
+  <dd>Perform the specified operation of the LHS and RHS constants. OPCODE may 
+  be any of the <a href="#binaryops">binary</a> or <a href="#bitwiseops">bitwise
   binary</a> operations.  The constraints on operands are the same as those for
   the corresponding instruction (e.g. no bitwise operations on floating point
   are allowed).</dd>
-
 </dl>
-
 </div>
 
 <!-- *********************************************************************** -->
