@@ -1,6 +1,6 @@
 Summary: Static and JIT research compiler infrastructure
 Name: llvm
-Version: 1.2
+Version: 1.3
 Release: 0
 License: U of Illinois/NCSA Open Source License
 Group: Development/Languages
