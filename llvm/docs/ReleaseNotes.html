@@ -121,12 +121,12 @@ href="http://llvm.cs.uiuc.edu/PR203">RPM package generation</a>.</li>
 </ul>
 </li>
 <li><a href="http://llvm.cs.uiuc.edu/PR253">LLVM now no longer depends on the boost library</a>.</li>
-<li>The X86 backend now generates <b>substantially</b> better native code, and is faster.</li>
+<li>The X86 backend now generates <b>substantially</b> better native code and is faster.</li>
 <li>The C backend has been turned moved from the "llvm-dis" tool to the "llc"
 tool.  You can activate it with "<tt>llc -march=c foo.bc -o foo.c</tt>".</li>
 <li>LLVM includes a new interprocedural optimization that marks global variables
 "constant" when they are provably never written to.</li>
-<li>LLVM now includes a new interprocedural optimization that converts small "by reference" arguments to "by value" arguments, which is often improve the performance of C++ programs substantially.</li>
+<li>LLVM now includes a new interprocedural optimization that converts small "by reference" arguments to "by value" arguments, which often improves the performance of C++ programs substantially.</li>
 <li>Bugpoint can now do a better job reducing miscompilation problems by
 reducing programs down to a particular loop nest, instead of just the function
 being miscompiled.</li>
@@ -145,7 +145,7 @@ In this release, the following missing features were implemented:
 <ol>
 <li><a href="http://llvm.cs.uiuc.edu/PR16">Exception handling in the X86
 &amp; Sparc native code generators</a> is now supported</li>
-<li>The C/C++ front-end now support the GCC <tt>__builtin_return_address</tt> and <tt>__builtin_frame_address</tt> extensions.  These are also supported by the X86 backend and by the C backend.</li>
+<li>The C/C++ front-end now supports the GCC <tt>__builtin_return_address</tt> and <tt>__builtin_frame_address</tt> extensions.  These are also supported by the X86 backend and by the C backend.</li>
 <li><a href="http://llvm.cs.uiuc.edu/PR249">[X86] Missing cast from ULong -> Double, cast FP -> bool and support for -9223372036854775808</a></li>
 <li>The C/C++ front-end <a href="http://llvm.cs.uiuc.edu/PR273">now supports</a>
 the "<a href="http://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html#Labels%20as%20Values">labels as values</a>" GCC extension, often used to build "threaded interpreters".</a></li>
@@ -231,7 +231,7 @@ cause use of invalid pointers!</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR274">[JIT] Programs cannot resolve the fstat function</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR284">[indvars] Induction variable analysis violates LLVM invariants</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR296">[execution engines] Unhandled cast constant expression</a></li>
-
+<li><a href="http://llvm.cs.uiuc.edu/PR299">[Sparc] Code generator asserts on alloca of zero size type</a></li>
 </ol>
 
 
@@ -602,7 +602,7 @@ href="http://gcc.gnu.org/gcc-3.4/changes.html">GCC 3.4 release notes</a>.</li>
 <div class="doc_text">
 
 <ul>
-<li>None so far.
+<li>There are several programs in the LLVM testsuite that the Sparc code generator is known to miscompile.</li>
 </ul>
 
 </div>
