@@ -362,6 +362,18 @@ table in the archive).</li>
 <li><a href="http://llvm.cs.uiuc.edu/PR82">LLVM cannot handle structures with
 more than 256 elements</a>.</li>
 
+<li>
+The gccld program 
+<a href="http://llvm.cs.uiuc.edu/bugs/show_bug.cgi?id=139">
+does not link objects/archives in the order specified on the command line.
+</a>
+</li>
+
+<li>
+<a href="http://llvm.cs.uiuc.edu/bugs/show_bug.cgi?id=174">
+Tail duplication does not update SSA form correctly.
+</a>
+</li>
 </ul>
 
 </div>
@@ -386,18 +398,27 @@ more than 256 elements</a>.</li>
       foo(X);
     }
 </pre></li>
-</ul>
-</div>
 
-<div class="doc_subsubsection">
-  Bugs in 1.1 fixed in 1.2
-</div>
+<li>
+Initialization of global union variables can only be done
+<a href="http://llvm.cs.uiuc.edu/bugs/show_bug.cgi?id=162">with the largest
+union member</a>.
+</li>
 
-<div class="doc_text">
-<ul>
-<li><a href="http://llvm.cs.uiuc.edu/PR186">Need weak linkage on
-memory-management functions in libc runtime to allow them to be
-overridden</a></li>
+<li>
+<a href="http://llvm.cs.uiuc.edu/bugs/show_bug.cgi?id=182">
+Functions marked "extern inline" are not compiled into LLVM with linkonce
+linkage.
+</a>
+</li>
+
+
+<li>
+The memory management functions in the libc runtime
+<a href="http://llvm.cs.uiuc.edu/PR186">need weak linkage so that they can be
+overridden.
+</a>
+</li>
 </ul>
 </div>
 
@@ -566,8 +587,13 @@ Please report any bugs or problems.</p>
 <ul>
 <li>The C++ front-end inherits all problems afflicting the <a href="#c-fe">C
     front-end</a>.</li>
-</ul>
 
+<li>
+<a href="http://llvm.cs.uiuc.edu/bugs/show_bug.cgi?id=137">
+Code is generated for empty classes.
+</a>
+</li>
+</ul>
 </div>
 
 <!-- _______________________________________________________________________ -->
@@ -637,6 +663,11 @@ href="http://llvm.cs.uiuc.edu/PR15">does not currently
 support the <tt>unwind</tt> instruction</a>, so code that throws a C++ exception
 or calls the C <tt>longjmp</tt> function will abort.</li>
 
+<li>
+<a href="http://llvm.cs.uiuc.edu/bugs/show_bug.cgi?id=167">
+The llc program can crash on legal code.
+</a>
+</li>
 </ul>
 
 </div>
