@@ -1,11 +1,16 @@
 LEVEL  = ..
 DIRS   = Programs
-include Makefile.tests
 
 #
 # Make QMTest the default for testing features and regressions
+# Do this first to force QMTest to run first
 #
 all:: qmtest
+
+#
+# Include other test rules
+#
+include Makefile.tests
 
 #
 # New QMTest functionality:
