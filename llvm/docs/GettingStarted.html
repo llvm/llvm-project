@@ -125,7 +125,7 @@ and performance.
     <ol>
       <li><tt>cd <i>where-you-want-llvm-to-live</i></tt>
       <li><tt>gunzip --stdout llvm-<i>version</i>.tar.gz | tar -xvf -</tt>
-      <li><tt>cd llvm</tt>
+      <li><tt>cd llvm</tt></li>
     </ol></li>
 
     <li>With anonymous CVS access (or use a <a href="#mirror">mirror</a>):
@@ -140,6 +140,32 @@ and performance.
       <li><tt>cvs up -P -d</tt></li>
     </ol></li>
   </ul></li>
+
+  <li>Get the Test Suite Source Code (<em>optional</em>)
+  <ul>
+    <li>With the distributed files:
+    <ol>
+      <li><tt>cd <i>where-you-want-llvm-to-live</i></tt>
+      <li><tt>cd llvm/projects</tt>
+      <li><tt>gunzip --stdout llvm-test-<i>version</i>.tar.gz | tar -xvf -</tt>
+      <li><tt>cd ..</tt></li>
+    </ol></li>
+
+    <li>With anonymous CVS access (or use a <a href="#mirror">mirror</a>):
+    <ol>
+      <li><tt>cd <i>where-you-want-llvm-to-live</i></tt></li>
+      <li><tt>cd llvm/projects</tt>
+      <li><tt>cvs -d
+          :pserver:anon@llvm-cvs.cs.uiuc.edu:/var/cvs/llvm login</tt></li>
+      <li>Hit the return key when prompted for the password.
+      <li><tt>cvs -z3 -d :pserver:anon@llvm-cvs.cs.uiuc.edu:/var/cvs/llvm 
+          co llvm-test</tt></li>
+      <li><tt>cd llvm-test</tt></li>
+      <li><tt>cvs up -P -d</tt></li>
+      <li><tt>cd ..</tt></li>
+    </ol></li>
+  </ul></li>
+
 
   <li>Configure the LLVM Build Environment
   <ol>
@@ -573,7 +599,7 @@ compressed with the gzip program.
   <dt><tt>cfrontend-1.4.i386-unknown-freebsd5.1.tar.gz</tt></dt>
   <dd>This is the binary release of the GCC front end for FreeBSD/x86.<br/></dd>
 
-  <dt><tt>cfrontend-1.4.powerpc-apple-darwin7.0.0.tar.gz</tt></dt>
+  <dt><tt>cfrontend-1.4.powerpc-apple-darwin7.6.0.tar.gz</tt></dt>
   <dd>This is the binary release of the GCC front end for MacOS X/PPC.<br/></dd>
 </dl>
 
