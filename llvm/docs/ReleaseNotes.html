@@ -73,7 +73,8 @@ href="http://llvm.cs.uiuc.edu/releases/">releases page</a>.</p>
 release primarily improves the <a href="#codequality">performance of the
 code</a> produced by all aspects of the LLVM compiler, adds many <a
 href="#newfeatures">new features</a>, <a href="#bugfix">fixes a few
-bugs</a>, and speeds up the compiler.</p>
+bugs</a>, speeds up the compiler, and introduces a new (experimental)
+PowerPC code generator.</p>
 
 <p> At this time, LLVM is known to correctly compile and run all C &amp; C++
 SPEC CPU95 &amp; 2000 benchmarks, the Olden benchmarks, and the Ptrdist 
@@ -149,6 +150,8 @@ tablegen description of the target (before they were hand coded).</li>
 <li>All LLVM tools will now respond to the 
 <a href="http://llvm.cs.uiuc.edu/PR413"><tt>--version</tt> option</a> which 
 will tell you the version of LLVM on which the tool is based.</li>
+<li>An experimental PowerPC backend has been added, capable of compiling several
+SPEC benchmarks.</li>
 </ol>
 
 </div>
@@ -198,13 +201,15 @@ produced when linking C++ programs has been fixed.</li>
 Bytecode Reader</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR392">Global Vars Have (Somewhat) Limited 
   Type Range</a></li>
-<li><a href="http://llvm.cs.uiuc.edu/PR341">operator&lt;&lt; on a Value* now prints the address of the object instead of its contents.</a></li>
+<li><a href="http://llvm.cs.uiuc.edu/PR341">operator&lt;&lt; on a Value* now
+prints the address of the object instead of its contents.</a></li>
 <li><a href="http://llvm.cs.uiuc.edu/PR402">Bytecode Enhancements
-  Needed</a></li>
-<li><a href="http://llvm.cs.uiuc.edu/PR404">[loopsimplify] Loop simplify is really slow on 252.eon</a></li>
-<li><a href="Http://llvm.cs.uiuc.edu/PR122">[code-cleanup] SymbolTable 
-    class cleanup, Type should not derive from Value, eliminate 
-    ConstantPointerRef class</a>.</li>
+Needed</a></li>
+<li><a href="http://llvm.cs.uiuc.edu/PR404">[loopsimplify] Loop simplify is
+really slow on 252.eon</a></li>
+<li><a href="Http://llvm.cs.uiuc.edu/PR122">[code-cleanup] SymbolTable class
+cleanup, Type should not derive from Value, eliminate ConstantPointerRef
+class</a>.</li>
 <li>The memory footprint of the LLVM IR has been reduced substantially.</li>
 <li>The LLVM linker and many core classes have been sped up substantially.</li>
 </ol>
@@ -345,11 +350,11 @@ initialized unsigned bitfields</a></li>
 <li>Intel and AMD machines running Red Hat Linux and FreeBSD (and probably 
     other unix-like systems).</li>
 <li>Sun UltraSPARC workstations running Solaris 8.</li>
-<li>PowerPC-based Mac OS X boxes, running 10.3 and above (C backend and 
-    interpreter only, no native codegen is available yet).</li>
 <li>Intel and AMD machines running on Win32 with the Cygwin libraries.</li>
+<li>PowerPC-based Mac OS X boxes, running 10.2 and above.  Note that no JIT
+support is available yet, and LLC support is beta.  The C backend can be used
+to produce stable code for this platform.</li>
 </ul>
-
 
 <p>The core LLVM infrastructure uses
 <a href="http://www.gnu.org/software/autoconf/">GNU autoconf</a> to adapt itself
@@ -396,9 +401,11 @@ useful to some people.  In particular, if you would like to work on one of these
 components, please contact us on the llvmdev list.</p>
 
 <ul>
+<li>The PowerPC backend is incomplete and is known to miscompile several SPEC
+benchmarks. The file <tt>llvm/lib/Target/PowerPC/README.txt</tt> has
+details.</li>
 <li>The following passes are incomplete or buggy: <tt>-pgmdep, -memdep,
     -ipmodref, -cee</tt></li>
-
 <li>The <tt>-pre</tt> pass is incomplete (there are cases it doesn't handle that
     it should) and not thoroughly tested.</li>
 <li>The <tt>llvm-ar</tt> tool is incomplete and probably buggy.</li>
@@ -423,9 +430,7 @@ work.</li>
 such, execution of a threaded program could cause these data structures to be
 corrupted.</li>
 
-<li>It is not possible to <tt>dlopen</tt> an LLVM bytecode file in the JIT.</li>
-
-<li>Linking in static archive files (.a files) is very slow (there is no symbol
+<li>Linking in static archive files (.a files) is slow (there is no symbol
 table in the archive).</li>
 
 <li>The gccld program <a href="http://llvm.cs.uiuc.edu/PR139">does not link
