@@ -34,8 +34,9 @@ Introductory Literature:
 
 LLVM Design:
 
-	 The LLVM Instruction Set and Compilation Strategy:
-		http://llvm.cs.uiuc.edu/pubs/2002-08-09-LLVMCompilationStrategy.html
+	LLVM: A Compilation Framework for Lifelong Program Analysis &
+	Transformation
+		http://llvm.cs.uiuc.edu/pubs/2003-09-30-LifelongOptimizationTR.html
 
 LLVM User Guides:
 
