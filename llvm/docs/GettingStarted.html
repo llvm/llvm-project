@@ -182,24 +182,55 @@ software you will need.</p>
 
   <li>Linux on x86 (Pentium and above)
   <ul>
-    <li>Approximately 760 MB of Free Disk Space
+    <li>Approximately 918 MB of Free Disk Space
     <ul>
-      <li>Source code: 30 MB</li>
-      <li>Object code: 670 MB</li>
-      <li>GCC front end: 60 MB</li>
+      <li>Source code: 28 MB</li>
+      <li>Object code: 850 MB</li>
+      <li>GCC front end: 40 MB</li>
     </ul></li>
-  </ul></li>
+  </ul>
+  </li>
+
+  <p></p>
 
   <li>Solaris on SparcV9 (Ultrasparc)
   <ul>
-    <li>Approximately 1.24 GB of Free Disk Space
+    <li>Approximately 1.52 GB of Free Disk Space
       <ul>
-        <li>Source code: 30 MB</li>
-        <li>Object code: 1000 MB</li>
-        <li>GCC front end: 210 MB</li>
+        <li>Source code: 28 MB</li>
+        <li>Object code: 1470 MB</li>
+        <li>GCC front end: 50 MB</li>
       </ul></li>
-  </ul></li>
+  </ul>
+  </li>
 
+  <p></p>
+
+  <li>FreeBSD on x86 (Pentium and above)
+  <ul>
+    <li>Approximately 918 MB of Free Disk Space
+    <ul>
+      <li>Source code: 28 MB</li>
+      <li>Object code: 850 MB</li>
+      <li>GCC front end: 40 MB</li>
+    </ul></li>
+  </ul>
+  </li>
+
+  <p></p>
+
+  <li>MacOS X on PowerPC
+  <ul>
+    <li>No native code generation
+    <li>Approximately 1.20 GB of Free Disk Space
+      <ul>
+        <li>Source code: 28 MB</li>
+        <li>Object code: 1160 MB</li>
+        <li>GCC front end: 40 MB</li>
+      </ul></li>
+  </ul>
+
+  </li>
 </ul>
 
 <p>The LLVM suite <i>may</i> compile on other platforms, but it is not
@@ -252,7 +283,6 @@ LLVM:</p>
       <p>These are needed to use the LLVM test suite.</p></li>
 
 </ul>
-
 
 <p>The remainder of this guide is meant to get you up and running with
 LLVM and to give you some basic information about the LLVM environment.
@@ -348,22 +378,31 @@ You can set these on the command line, or better yet, set them in your
 
 <p>
 If you have the LLVM distribution, you will need to unpack it before you
-can begin to compile it.  LLVM is distributed as a set of three files.  Each
+can begin to compile it.  LLVM is distributed as a set of two files: the LLVM
+suite and the LLVM GCC front end compiled for your platform.  Each
 file is a TAR archive that is compressed with the gzip program.
 </p>
 
-<p> The three files are as follows:
+<p> The files are as follows:
 <dl compact>
-    <dt>llvm.tar.gz
+    <dt>llvm-1.1.tar.gz
     <dd>This is the source code to the LLVM suite.
     <p>
 
-    <dt>cfrontend.sparc.tar.gz
+    <dt>cfrontend-1.1.sparc-sun-solaris2.8.tar.gz
     <dd>This is the binary release of the GCC front end for Solaris/Sparc.
     <p>
 
-    <dt>cfrontend.x86.tar.gz
+    <dt>cfrontend-1.1.i686-redhat-linux-gnu.tar.gz
     <dd>This is the binary release of the GCC front end for Linux/x86.
+    <p>
+
+    <dt>cfrontend-1.1.i386-unknown-freebsd5.1.tar.gz
+    <dd>This is the binary release of the GCC front end for FreeBSD/x86.
+    <p>
+
+    <dt>cfrontend-1.1.powerpc-apple-darwin7.0.0.tar.gz
+    <dd>This is the binary release of the GCC front end for MacOS X/PPC.
 </dl>
 
 </div>
@@ -391,6 +430,20 @@ follows:</p>
 directory and fully populate it with the LLVM source code, Makefiles,
 test directories, and local copies of documentation files.</p>
 
+<p>
+If you want to get a specific release (as opposed to the most recent revision),
+you can specify a label.  The following releases have the following label:
+<ul>
+  <li>
+  Release 1.1: <b>RELEASE_11</b>
+  </li>
+
+  <li>
+  Release 1.0: <b>RELEASE_1</b>
+  </li>
+</ul>
+</p>
+
 <p>Note that the GCC front end is not included in the CVS repository. You
 should have downloaded the binary distribution for your platform.</p>
 
@@ -412,12 +465,12 @@ location must be specified when the LLVM suite is configured.</p>
 
 <ol>
   <li><tt>cd <i>where-you-want-the-front-end-to-live</i></tt></li>
-  <li><tt>gunzip --stdout cfrontend.<i>platform</i>.tar.gz | tar -xvf
+  <li><tt>gunzip --stdout cfrontend-<i>version</i>.<i>platform</i>.tar.gz | tar -xvf
       -</tt></li>
 </ol>
 
-<p>If you are on a Sparc/Solaris machine, you will need to fix the header
-files:</p>
+<p>If you are using Solaris/Sparc or MacOS X/PPC, you will need to fix the
+header files:</p>
 
 <p><tt>cd cfrontend/sparc<br>
    ./fixheaders</tt></p>
@@ -443,7 +496,8 @@ not for the faint of heart, so be forewarned.</p>
 <p>Once checked out from the CVS repository, the LLVM suite source code must be
 configured via the <tt>configure</tt> script.  This script sets variables in
 <tt>llvm/Makefile.config</tt> and <tt>llvm/include/Config/config.h</tt>.  It
-also populates <i>OBJ_ROOT</i> with the Makefiles needed to build LLVM.</p>
+also populates <i>OBJ_ROOT</i> with the Makefiles needed to begin building
+LLVM.</p>
 
 <p>The following environment variables are used by the <tt>configure</tt>
 script to configure the build system:</p>
@@ -477,7 +531,7 @@ script to configure the build system:</p>
   <dt><i>--with-llvmgccdir=LLVMGCCDIR</i>
   <dd>
     Path to the location where the LLVM C front end binaries and
-    associated libraries will be installed.  This must be specified as an
+    associated libraries were installed.  This must be specified as an
     absolute pathname.
     <p>
   <dt><i>--enable-optimized</i>
@@ -488,7 +542,8 @@ script to configure the build system:</p>
     <p>
   <dt><i>--enable-jit</i>
   <dd>
-    Compile the Just In Time (JIT) functionality.  This is not available
+    Compile the Just In Time (JIT) compiler functionality.  This is not
+    available
     on all platforms.  The default is dependent on platform, so it is best
     to explicitly enable it if you want it.
     <p>
@@ -521,10 +576,10 @@ script to configure the build system:</p>
 <tt>LLVM_LIB_SEARCH_PATH</tt> environment variable in your startup scripts.
 This environment variable is used to locate "system" libraries like
 "<tt>-lc</tt>" and "<tt>-lm</tt>" when linking.  This variable should be set to
-the absolute path for the bytecode-libs subdirectory of the GCC front end
-install, or <i>LLVMGCCDIR</i>/bytecode-libs.  For example, one might set
+the absolute path of the <tt>bytecode-libs</tt> subdirectory of the GCC front
+end, or <i>LLVMGCCDIR</i>/<tt>bytecode-libs</tt>.  For example, one might set
 <tt>LLVM_LIB_SEARCH_PATH</tt> to
-<tt>/home/vadve/lattner/local/x86/llvm-gcc/bytecode-libs</tt> for the X86
+<tt>/home/vadve/lattner/local/x86/llvm-gcc/bytecode-libs</tt> for the x86
 version of the GCC front end on our research machines.</p>
 
 </div>
