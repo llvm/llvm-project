@@ -1156,11 +1156,17 @@ CreateCodeForFixedSizeAlloca(const TargetMachine& target,
                              unsigned numElements,
                              std::vector<MachineInstr*>& getMvec)
 {
-  assert(tsize > 0 && "Illegal (zero) type size for alloca");
   assert(result && result->getParent() &&
          "Result value is not part of a function?");
   Function *F = result->getParent()->getParent();
   MachineFunction &mcInfo = MachineFunction::get(F);
+
+  // If the alloca is of zero bytes (which is perfectly legal) we bump it up to
+  // one byte.  This is unnecessary, but I really don't want to break any
+  // fragile logic in this code.  FIXME.
+  if (tsize == 0)
+    tsize = 1;
+
 
   // Put the variable in the dynamically sized area of the frame if either:
   // (a) The offset is too large to use as an immediate in load/stores
