@@ -274,10 +274,23 @@ LLVM:</p>
       automake from 1.4p5 on should work; we only use aclocal from that
       package.</p></li>
 
-  <li><A href="http://www.codesourcery.com/qm/qmtest">QMTest</A></li>
+  <li><A href="http://www.codesourcery.com/qm/qmtest">QMTest 2.0.3</A></li>
   <li><A href="http://www.python.org">Python</A>
 
-      <p>These are needed to use the LLVM test suite.</p></li>
+      <p>
+      These are needed to use the LLVM test suite.  Please note that newer
+      versions of QMTest may not work with the LLVM test suite.  QMTest 2.0.3
+      can be retrieved from the QMTest CVS repository using the following
+      commands:
+      <ul>
+        <li><tt>cvs -d :pserver:anoncvs@cvs.codesourcery.com:/home/qm/Repository login</tt>
+        </li>
+        <li>When prompted, use <tt>anoncvs</tt> as the password.
+        </li>
+        <li><tt>cvs -d :pserver:anoncvs@cvs.codesourcery.com:/home/qm/Repository co -r release-2-0-3 qm</tt>
+        </li>
+      </ul>
+      </p></li>
 
 </ul>
 
