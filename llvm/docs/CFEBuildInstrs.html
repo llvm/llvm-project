@@ -108,6 +108,11 @@ process, and you should only try to do it if
   <li>No inline assembly for position independent code.  At the LLVM level,
       everything is position independent.</li>
   <li>We handle <tt>.init</tt> and <tt>.fini</tt> differently.</li>
+  <li>You may have to disable multilib support in your target.  Using multilib
+      support causes the GCC compiler driver to add a lot of "<tt>-L</tt>"
+      options to the link line, which do not relate to LLVM and confuse
+      <tt>gccld</tt>.  To disable multilibs, delete any
+      <tt>MULTILIB_OPTIONS</tt> lines from your target files.</li>
   <li>Did we mention that we don't support inline assembly?  You'll probably
       have to add some fixinclude hacks to disable it in the system
       headers.</li>
