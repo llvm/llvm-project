@@ -14,34 +14,9 @@ The B<llc> command compiles LLVM bytecode into assembly language for a
 specified architecture.  The assembly language output can then be passed through
 a native assembler and linker to generate native code.
 
-The choice of architecture for the output assembly code is determined as
-follows, by attempting to satisfy each of the following rules in turn (first
-one wins):
-
-=over
-
-=item *
-
-If the user has specified an architecture with the -m option, use that
-architecture.
-
-=item *
-
-Examine the input LLVM bytecode file: if it is little endian and has a
-pointer size of 32 bits, select the Intel IA-32 architecture.  If it is big
-endian and has a pointer size of 64 bits, select the SparcV9 architecture.
-
-=item *
-
-If B<llc> was compiled on an architecture for which it can generate code, select
-the architecture upon which B<llc> was compiled.
-
-=item *
-
-Exit with an error message telling the user to specify the output
-architecture explicitly.
-
-=back
+The choice of architecture for the output assembly code is automatically 
+determined from the input bytecode file, unless a B<-m> option is used to override
+the default.
 
 =head1 OPTIONS
 
@@ -90,41 +65,31 @@ Emit C code, not assembly
 
 =back
 
-=item B<-enable-correct-eh-support>
-
-Instruct the B<-lowerinvoke> pass to insert code for correct exception handling
-support.  This is expensive and is by default omitted for efficiency.
-
-=item B<-help>
-
-Print a summary of command line options.
-
-=item B<-stats>
-
-Print statistics recorded by code-generation passes.
-
-=item B<-time-passes>
-
-Record the amount of time needed for each pass and print a report to standard
-error.
-
-=back
-
-=head2 Intel IA-32-specific Options
-
-=over
-
 =item B<--disable-fp-elim>
 
 Disable frame pointer elimination optimization.
 
-=item B<--disable-pattern-isel>
+=item B<--enable-correct-eh-support>
 
-Use the 'simple' X86 instruction selector (the default).
+Instruct the B<lowerinvoke> pass to insert code for correct exception handling
+support.  This is expensive and is by default omitted for efficiency.
+
+=item B<--help>
+
+Print a summary of command line options.
+
+=item B<--stats>
+
+Print statistics recorded by code-generation passes.
+
+=item B<--time-passes>
+
+Record the amount of time needed for each pass and print a report to standard
+error.
 
 =item B<--print-machineinstrs>
 
-Print generated machine code.
+Print generated machine code between compilation phases (useful for debugging).
 
 =item B<--regalloc>=I<allocator>
 
@@ -171,6 +136,17 @@ Local spiller
 
 =back
 
+=head2 Intel IA-32-specific Options
+
+=over
+
+=item B<--x86-asm-syntax=att|intel>
+
+Specify whether to emit assembly code in AT&T syntax (the default) or intel
+syntax.
+
+=back
+
 =head2 SPARCV9-specific Options
 
 =over
@@ -182,15 +158,6 @@ Disable peephole optimization pass.
 =item B<--disable-sched>
 
 Disable local scheduling pass.
-
-=item B<--disable-strip>
-
-The Sparc backend embeds the LLVM bytecode into the assembly output.  This
-option requests that symbol names be retained; by default, they are stripped out.
-
-=item B<--enable-maps>
-
-Emit LLVM-to-machine code mapping information into the assembly output.
 
 =back
 
