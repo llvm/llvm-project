@@ -114,7 +114,23 @@ command line should like something like this:
    --enable-languages=c,c++ --host=sparcv9-sun-solaris2.8
  % gmake all-gcc
  % setenv LLVM_LIB_SEARCH_PATH `pwd`/gcc 
- % gmake all; gmake install
+ % gmake all
+</pre>
+
+<p>
+At this point, libstdc++ may fail to build because of wchar errors (look for
+errors that reference <tt>vfwscanf</tt> or <tt>wcstof</tt>).  If that happens,
+edit <tt>sparcv9-sun-solaris2.8/libstdc++-v3/config.h</tt> and comment out the
+line that defines <tt>_GLIBCXX_USE_WCHAR_T</tt>.
+</p>
+
+<p>
+Then, continue as below:
+</p>
+
+<pre>
+ % gmake all
+ % gmake install
 </pre>
 
  <p><b>Common Problem:</b> You may get error messages regarding the fact
