@@ -789,11 +789,12 @@ script to configure the build system:</p>
   <a href="CFEBuildInstrs.html">Bootstrapping the LLVM C/C++ Front-End</a>
   for details on building the C/C++ Front End.</dd>
   <dt><i>--with-tclinclude</i></dt>
-  <dd>Path to the tcl include directory under which the <tt>tclsh</tt> can be
+  <dd>Path to the tcl include directory under which <tt>tclsh</tt> can be
   found. Use this if you have multiple tcl installations on your machine and you
   want to use a specific one (8.x) for LLVM. LLVM only uses tcl for running the
   dejagnu based test suite in <tt>llvm/test</tt>. If you don't specify this
-  option, the LLVM configure script will search for tcl 8.4 and 8.3 releases.
+  option, the LLVM configure script will search for the tcl 8.4 and 8.3
+  releases.
   <p></p>
   </dd>
   <dt><i>--enable-optimized</i></dt>
@@ -818,7 +819,7 @@ script to configure the build system:</p>
   native compiler (no cross-compiler targets available). The "native" target is 
   selected as the target of the build host. You can also specify a comma 
   separated list of target names that you want available in llc. The target 
-  names use all lower case. The current set is of targets is: <br/>
+  names use all lower case. The current set of targets is: <br/>
   <tt>alpha, ia64, powerpc, skeleton, sparc, x86</tt>.
   <p></p></dd>
   <dt><i>--enable-doxygen</i></dt>
@@ -1149,7 +1150,7 @@ different <a href="#tools">tools</a>.</p>
   <dd> This directory contains files that describe various target architectures
   for code generation.  For example, the <tt>llvm/lib/Target/SparcV9</tt> 
   directory holds the Sparc machine description while
-  <tt>llvm/lib/Target/CBackend</tt> implements the LLVM-to-C converter</dd>
+  <tt>llvm/lib/Target/CBackend</tt> implements the LLVM-to-C converter.</dd>
     
   <dt><tt><b>llvm/lib/CodeGen/</b></tt></dt>
   <dd> This directory contains the major parts of the code generator: Instruction 
@@ -1252,8 +1253,8 @@ information is in the <a href="CommandGuide/index.html">Command Guide</a>.</p>
   all from one command line. <tt>llvmc</tt> also takes care of processing the
   dependent libraries found in bytecode. This reduces the need to get the
   traditional <tt>-l&lt;name&gt;</tt> options right on the command line. Please
-  note that this tool is new in 1.4 and considered experimental. It will be
-  fully supported in 1.5.</dd>
+  note that this tool, while functional, is still experimental and not feature
+  complete.</dd>
 
   <dt><tt><b>llvm-ar</b></tt></dt>
   <dd>The archiver produces an archive containing
@@ -1272,9 +1273,8 @@ information is in the <a href="CommandGuide/index.html">Command Guide</a>.</p>
   <dd><tt>llvm-ld</tt> is very similar to gccld and provides a general purpose
   and extensible linker for LLVM. This is the linker invoked by <tt>llvmc</tt>.
   It allows optimization modules to be loaded so that language specific
-  optimizations can be applied at link time. Please note that this tool is new
-  in LLVM 1.4 and still considered experimental. It will be fully supported in
-  LLVM 1.5.</dd>
+  optimizations can be applied at link time. This tool is considered
+  experimental.</dd>
 
   <dt><tt><b>llvm-link</b></tt></dt>
   <dd><tt>llvm-link</tt>, not surprisingly, links multiple LLVM modules into 
@@ -1292,7 +1292,7 @@ information is in the <a href="CommandGuide/index.html">Command Guide</a>.</p>
 
   <dt><tt><b>llc</b></tt></dt>
   <dd> <tt>llc</tt> is the LLVM backend compiler, which
-  translates LLVM bytecode to a SPARC or x86 assembly file, or to C code (with
+  translates LLVM bytecode to a native code assembly file or to C code (with
   the -march=c option).</dd>
 
   <dt><tt><b>llvm-gcc</b></tt></dt>
@@ -1300,8 +1300,7 @@ information is in the <a href="CommandGuide/index.html">Command Guide</a>.</p>
   that has been retargeted to emit LLVM code as the machine code output.  It
   works just like any other GCC compiler, taking the typical <tt>-c, -S, -E,
   -o</tt> options that are typically used.  The source code for the
-  <tt>llvm-gcc</tt> tool is currently not included in the LLVM CVS tree
-  because it is quite large and not very interesting.
+  <tt>llvm-gcc</tt> tool is available as a separate CVS module.
   <blockquote>
     <dl>
       <dt><tt><b>gccas</b></tt></dt>
