@@ -47,7 +47,7 @@ TABLE       { text-align: center; border: 2px solid black;
                      border-bottom: 1px solid #999999; font-size: 12pt;
                      width: 75%; }
 .doc_author     { text-align: left; font-weight: bold; padding-left: 20pt }
-.doc_text       { text-align: left; padding-left: 20pt }
+.doc_text       { text-align: left; padding-left: 20pt; padding-right: 10pt }
 
 .doc_footer     { text-align: left; padding: 0 0 0 0 }
 
