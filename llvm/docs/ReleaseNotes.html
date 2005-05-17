@@ -148,7 +148,7 @@ than the caller, etc.  The only case not supported are varargs calls, but that
 could be added if desired.
 </p>
 
-<p>In order for a front-end to get a guaranteed tail call, it must mark
+<p>To ensure a call is interpreted as a tail call, a front-end must mark
 functions as "fastcc", mark calls with the 'tail' marker, and follow the call
 with a return of the called value (or void).  The optimizer and code generator
 attempt to handle more general cases, but the simple case will always work if
@@ -217,7 +217,7 @@ multiple of 8 bytes in size.
       hitting swap during optimized builds</a>.</li>
   <li>The <a href="http://llvm.cs.uiuc.edu/ProjectsWithLLVM/#llvmtv">LLVM
       Transformation Visualizer</a> (llvm-tv) project has been updated to
-      work with LLVM CVS.</li>
+      work with LLVM 1.5.</li>
   <li>Nightly tester output is now archived on the <a
       href="http://mail.cs.uiuc.edu/pipermail/llvm-testresults/">
       llvm-testresults</a> mailing list.</li>
@@ -243,7 +243,7 @@ only accessed in main to SSA registers.</li>
 
 <li>Loops with trip counts based on array pointer comparisons (e.g. "<tt>for (i
 = 0; &amp;A[i] != &amp;A[n]; ++i) ...</tt>") are optimized better than before,
-which primarily helps iterator-intensive C++ codes.</li>
+which primarily helps iterator-intensive C++ code.</li>
 
 <li>The optimizer now eliminates simple cases where redundant conditions exist
     between neighboring blocks.</li>
@@ -353,8 +353,8 @@ things), is more aggressive and intelligent.</li>
 <p>LLVM is known to work on the following platforms:</p>
 
 <ul>
-<li>Intel and AMD machines running Red Hat Linux and FreeBSD (and probably 
-    other unix-like systems).</li>
+  <li>Intel and AMD machines running Red Hat Linux, Fedora Core and FreeBSD 
+      (and probably other unix-like systems).</li>
 <li>Sun UltraSPARC workstations running Solaris 8.</li>
 <li>Intel and AMD machines running on Win32 with the Cygwin libraries (limited
     support is available for native builds with Visual C++).</li>
