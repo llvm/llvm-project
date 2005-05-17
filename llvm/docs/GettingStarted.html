@@ -277,11 +277,6 @@ software you will need.</p>
   <td>GCC</td>
 </tr>
 <tr>
-  <td>Linux<sup><a href="#pf_7">7</a></sup></td>
-  <td>Itanium (IA-64)</td>
-  <td>GCC</td>
-</tr>
-<tr>
   <td>HP-UX<sup><a href="#pf_7">7</a></sup></td>
   <td>Itanium (IA-64)</td>
   <td>HP aCC</td>
@@ -307,9 +302,9 @@ if necessary.</li>
 </div>
 
 <p>Note that you will need about 1-3 GB of space for a full LLVM build in Debug
-mode, depending on the system (because of all the debug info), and the libraries
-appear in more than one of the tools that get linked, so there is some
-duplication.  If you do not need many of the tools and you are space-conscious,
+mode, depending on the system (it is so large because of all the debugging
+information and the fact that the libraries are statically linked into multiple
+tools).  If you do not need many of the tools and you are space-conscious,
 you can disable them individually in <tt>llvm/tools/Makefile</tt>.  The Release
 build requires considerably less space.</p>
 
@@ -576,9 +571,10 @@ variables.
 <dl>
   <dt><tt>LLVM_LIB_SEARCH_PATH</tt>=<tt>/path/to/your/bytecode/libs</tt></dt>
   <dd>[Optional] This environment variable helps LLVM linking tools find the
-  locations of your bytecode libraries. It is provided only a
+  locations of your bytecode libraries. It is provided only as a
   convenience since you can specify the paths using the -L options of the
-  tools and the C/C++ front-end will use the bytecode files installed in its
+  tools and the C/C++ front-end will automatically use the bytecode files
+  installed in its
   <tt>lib</tt> directory.</dd>
 </dl>
 
@@ -620,7 +616,7 @@ compressed with the gzip program.
   <dt><tt>cfrontend-x.y.i386-unknown-freebsd5.1.tar.gz</tt></dt>
   <dd>Binary release of the GCC front end for FreeBSD/x86.<br/></dd>
 
-  <dt><tt>cfrontend-x.y.powerpc-apple-darwin7.6.0.tar.gz</tt></dt>
+  <dt><tt>cfrontend-x.y.powerpc-apple-darwin7.8.0.tar.gz</tt></dt>
   <dd>Binary release of the GCC front end for MacOS X/PPC.<br/></dd>
 </dl>
 
