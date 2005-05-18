@@ -30,7 +30,7 @@ html/%.html: %.pod
 	  --podpath=. --noindex --infile=$< --outfile=$@ --title=$*
 
 man/man1/%.1: %.pod
-	pod2man --release=1.4 --center="LLVM Command Guide" $< $@
+	pod2man --release=1.5 --center="LLVM Command Guide" $< $@
 
 ps/%.ps: man/man1/%.1
 	groff -Tps -man $< > $@
