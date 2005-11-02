@@ -6,7 +6,7 @@
 //  We could modify the test to use only GCC extensions, but I don't know if
 //  that would change the nature of the test.
 //
-// XFAIL: sparcv9
+// XFAIL: sparc
 
 #include <complex.h>
 
