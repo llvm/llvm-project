@@ -963,14 +963,14 @@ SDOperand DAGCombiner::visitAND(SDNode *N) {
                          DAG.getConstant(N1C->getValue()&N01C->getValue(), VT));
   }
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
-  if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+  if (N1C && N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     unsigned ExtendBits =
     MVT::getSizeInBits(cast<VTSDNode>(N0.getOperand(1))->getVT());
-    if ((N1C->getValue() & (~0ULL << ExtendBits)) == 0)
+    if (ExtendBits == 64 || (N1C->getValue() & (~0ULL << ExtendBits) == 0))
       return DAG.getNode(ISD::AND, VT, N0.getOperand(0), N1);
   }
   // fold (and (or x, 0xFFFF), 0xFF) -> 0xFF
-  if (N0.getOpcode() == ISD::OR && N1C)
+  if (N1C && N0.getOpcode() == ISD::OR)
     if (ConstantSDNode *ORI = dyn_cast<ConstantSDNode>(N0.getOperand(1)))
       if ((ORI->getValue() & N1C->getValue()) == N1C->getValue())
         return N1;
@@ -1031,7 +1031,7 @@ SDOperand DAGCombiner::visitAND(SDNode *N) {
     return DAG.getNode(N0.getOpcode(), VT, ANDNode, N0.getOperand(1));
   }
   // fold (and (sra)) -> (and (srl)) when possible.
-  if (N0.getOpcode() == ISD::SRA && N0.Val->hasOneUse())
+  if (N0.getOpcode() == ISD::SRA && N0.Val->hasOneUse()) {
     if (ConstantSDNode *N01C = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       // If the RHS of the AND has zeros where the sign bits of the SRA will
       // land, turn the SRA into an SRL.
@@ -1043,7 +1043,7 @@ SDOperand DAGCombiner::visitAND(SDNode *N) {
         return SDOperand();
       }
     }
-      
+  }
   // fold (zext_inreg (extload x)) -> (zextload x)
   if (N0.getOpcode() == ISD::EXTLOAD) {
     MVT::ValueType EVT = cast<VTSDNode>(N0.getOperand(3))->getVT();
