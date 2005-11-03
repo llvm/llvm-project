@@ -31,12 +31,12 @@ dnl===
 dnl===-----------------------------------------------------------------------===
 dnl Initialize autoconf and define the package name, version number and
 dnl email address for reporting bugs.
-AC_INIT([[llvm]],[[1.6cvs]],[llvmbugs@cs.uiuc.edu])
+AC_INIT([[llvm]],[[1.6]],[llvmbugs@cs.uiuc.edu])
 
 dnl Provide a copyright substitution and ensure the copyright notice is included
 dnl in the output of --version option of the generated configure script.
 AC_SUBST(LLVM_COPYRIGHT,["Copyright (c) 2003-2005 University of Illinois at Urbana-Champaign."])
-AC_COPYRIGHT($LLVM_COPYRIGHT)
+AC_COPYRIGHT([Copyright (c) 2003-2005 University of Illinois at Urbana-Champaign.])
 
 dnl Indicate that we require autoconf 2.59 or later. Ths is needed because we
 dnl use some autoconf macros only available in 2.59.
