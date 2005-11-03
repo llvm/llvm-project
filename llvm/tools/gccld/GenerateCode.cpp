@@ -423,7 +423,10 @@ int llvm::GenerateNative(const std::string &OutputFilename,
 
   // Add in the libraries to link.
   for (unsigned index = 0; index < Libraries.size(); index++)
-    if (Libraries[index] != "crtend") {
+    // HACK: If this is libg, discard it.  This gets added by the compiler
+    // driver when doing: 'llvm-gcc main.c -Wl,-native -o a.out -g'. Note that
+    // this should really be fixed by changing the llvm-gcc compiler driver.
+    if (Libraries[index] != "crtend" && Libraries[index] != "g") {
       std::string Tmp = "-l"+Libraries[index];
       StringsToDelete.push_back(strdup(Tmp.c_str()));
       args.push_back(StringsToDelete.back());
