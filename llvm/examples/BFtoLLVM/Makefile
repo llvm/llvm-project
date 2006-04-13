@@ -10,4 +10,5 @@
 LEVEL = ../..
 TOOLNAME = BFtoLLVM
 EXAMPLE_TOOL = 1
+EXTRA_DIST = tests
 include $(LEVEL)/Makefile.common
