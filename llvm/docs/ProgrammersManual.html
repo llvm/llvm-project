@@ -1710,8 +1710,8 @@ returned.</p></li>
 href="/doxygen/GlobalValue_8h-source.html">llvm/GlobalValue.h</a>"</tt><br>
 doxygen info: <a href="/doxygen/classllvm_1_1GlobalValue.html">GlobalValue
 Class</a><br>
-Superclasses: <a href="#User"><tt>User</tt></a>, <a
-href="#Value"><tt>Value</tt></a></p>
+Superclasses: <a href="#Constant"><tt>Constant</tt></a>, 
+<a href="#User"><tt>User</tt></a>, <a href="#Value"><tt>Value</tt></a></p>
 
 <p>Global values (<a href="#GlobalVariable"><tt>GlobalVariable</tt></a>s or <a
 href="#Function"><tt>Function</tt></a>s) are the only LLVM values that are
@@ -1778,15 +1778,17 @@ GlobalValue is currently embedded into.</p></li>
 <p><tt>#include "<a
 href="/doxygen/Function_8h-source.html">llvm/Function.h</a>"</tt><br> doxygen
 info: <a href="/doxygen/classllvm_1_1Function.html">Function Class</a><br>
-Superclasses: <a href="#GlobalValue"><tt>GlobalValue</tt></a>, <a
-href="#User"><tt>User</tt></a>, <a href="#Value"><tt>Value</tt></a></p>
+Superclasses: <a href="#GlobalValue"><tt>GlobalValue</tt></a>, 
+<a href="#Constant"><tt>Constant</tt></a>, 
+<a href="#User"><tt>User</tt></a>, 
+<a href="#Value"><tt>Value</tt></a></p>
 
 <p>The <tt>Function</tt> class represents a single procedure in LLVM.  It is
 actually one of the more complex classes in the LLVM heirarchy because it must
 keep track of a large amount of data.  The <tt>Function</tt> class keeps track
-of a list of <a href="#BasicBlock"><tt>BasicBlock</tt></a>s, a list of formal <a
-href="#Argument"><tt>Argument</tt></a>s, and a <a
-href="#SymbolTable"><tt>SymbolTable</tt></a>.</p>
+of a list of <a href="#BasicBlock"><tt>BasicBlock</tt></a>s, a list of formal 
+<a href="#Argument"><tt>Argument</tt></a>s, and a 
+<a href="#SymbolTable"><tt>SymbolTable</tt></a>.</p>
 
 <p>The list of <a href="#BasicBlock"><tt>BasicBlock</tt></a>s is the most
 commonly used part of <tt>Function</tt> objects.  The list imposes an implicit
@@ -1915,20 +1917,22 @@ iterator<br>
 href="/doxygen/GlobalVariable_8h-source.html">llvm/GlobalVariable.h</a>"</tt>
 <br>
 doxygen info: <a href="/doxygen/classllvm_1_1GlobalVariable.html">GlobalVariable
-Class</a><br> Superclasses: <a href="#GlobalValue"><tt>GlobalValue</tt></a>, <a
-href="#User"><tt>User</tt></a>, <a href="#Value"><tt>Value</tt></a></p>
+ Class</a><br>
+Superclasses: <a href="#GlobalValue"><tt>GlobalValue</tt></a>, 
+<a href="#Constant"><tt>Constant</tt></a>,
+<a href="#User"><tt>User</tt></a>,
+<a href="#Value"><tt>Value</tt></a></p>
 
 <p>Global variables are represented with the (suprise suprise)
 <tt>GlobalVariable</tt> class. Like functions, <tt>GlobalVariable</tt>s are also
 subclasses of <a href="#GlobalValue"><tt>GlobalValue</tt></a>, and as such are
 always referenced by their address (global values must live in memory, so their
-"name" refers to their address). See <a
-href="#GlobalValue"><tt>GlobalValue</tt></a> for more on this. Global variables
-may have an initial value (which must be a <a
-href="#Constant"><tt>Constant</tt></a>), and if they have an initializer, they
-may be marked as "constant" themselves (indicating that their contents never
-change at runtime).</p>
-
+"name" refers to their constant address). See 
+<a href="#GlobalValue"><tt>GlobalValue</tt></a> for more on this.  Global 
+variables may have an initial value (which must be a 
+<a href="#Constant"><tt>Constant</tt></a>), and if they have an initializer, 
+they may be marked as "constant" themselves (indicating that their contents 
+never change at runtime).</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
