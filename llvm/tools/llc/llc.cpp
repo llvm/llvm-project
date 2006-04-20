@@ -216,6 +216,9 @@ int main(int argc, char **argv) {
         sys::RemoveFileOnSignal(sys::Path(OutputFilename));
       }
     }
+
+    if (FileType != TargetMachine::AssemblyFile)
+      std::cerr << "WARNING: only -filetype=asm is currently supported.\n";
     
     // Ask the target to add backend passes as necessary.
     if (Target.addPassesToEmitFile(Passes, *Out, FileType, Fast)) {
