@@ -232,6 +232,12 @@ software you will need.</p>
   <td>GCC</td>
 </tr>
 <tr>
+  <td>MacOS X<sup><a href="#pf_2">2</a></sup></td>
+  <td>x86</td>
+  <td>GCC</td>
+
+</tr>
+<tr>
   <td>Cygwin/Win32</td>
   <td>x86<sup><a href="#pf_1">1</a></sup></td>
   <td>GCC 3.4.X, binutils 2.15</td>
@@ -617,18 +623,18 @@ compressed with the gzip program.
   <dt><tt>cfrontend-x.y.source.tar.gz</tt></dt>
   <dd>Source release of the GCC front end.<br/></dd>
 
-  <dt><tt>cfrontend-x.y.sparc-sun-solaris2.8.tar.gz</tt></dt>
-  <dd>Binary release of the GCC front end for Solaris/Sparc.
-  <br/></dd>
-
   <dt><tt>cfrontend-x.y.i686-redhat-linux-gnu.tar.gz</tt></dt>
   <dd>Binary release of the GCC front end for Linux/x86.<br/></dd>
 
-  <dt><tt>cfrontend-x.y.i386-unknown-freebsd5.1.tar.gz</tt></dt>
-  <dd>Binary release of the GCC front end for FreeBSD/x86.<br/></dd>
+  <dt><tt>llvm-gcc4-x.y.source.tar.gz</tt></dt>
+  <dd>Source release of the llvm-gcc4 front end.  See README.LLVM in the root
+      directory for build instructions.<br/></dd>
 
-  <dt><tt>cfrontend-x.y.powerpc-apple-darwin7.8.0.tar.gz</tt></dt>
-  <dd>Binary release of the GCC front end for MacOS X/PPC.<br/></dd>
+  <dt><tt>llvm-gcc4-x.y.powerpc-apple-darwin8.6.0.tar.gz</tt></dt>
+  <dd>Binary release of the llvm-gcc4 front end for MacOS X/PowerPC.<br/></dd>
+
+  <dt><tt>llvm-gcc4-x.y.i686-apple-darwin8.6.1.tar.gz</tt></dt>
+  <dd>Binary release of the llvm-gcc4 front end for MacOS X/X86.<br/></dd>
 </dl>
 
 </div>
@@ -661,6 +667,7 @@ revision), you can specify a label.  The following releases have the following
 labels:</p>
 
 <ul>
+<li>Release 1.7: <b>RELEASE_17</b></li>
 <li>Release 1.6: <b>RELEASE_16</b></li>
 <li>Release 1.5: <b>RELEASE_15</b></li>
 <li>Release 1.4: <b>RELEASE_14</b></li>
@@ -680,8 +687,7 @@ you get it from the CVS repository:</p>
 configured by the LLVM configure script as well as automatically updated when
 you run <tt>cvs update</tt>.</p>
 
-<p>If you would like to get the GCC front end source code, you can also get it
-from the CVS repository:</p>
+<p>If you would like to get the GCC 3.4 front end source code, you can also get it from the CVS repository:</p>
 
 <pre>
   cvs -z3 -d :pserver:anon@llvm-cvs.cs.uiuc.edu:/var/cvs/llvm co llvm-gcc
@@ -690,22 +696,6 @@ from the CVS repository:</p>
 <p>Please note that you must follow <a href="CFEBuildInstrs.html">these 
 instructions</a> to successfully build the LLVM GCC front-end.</p>
 
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsubsection">
-  <a name="mirrors">LLVM CVS Mirrors</a>
-</div>
-
-<div class="doc_text">
-
-<p>If the main CVS server is overloaded or inaccessible, you can try one of
-these user-hosted mirrors:</p>
-
-<ul>
-<li><a href="http://llvm.x10sys.com/">Mirror hosted by eXtensible Systems
-Inc.</a></li>
-</ul>
 </div>
 
 <!-- ======================================================================= -->
