@@ -31,6 +31,7 @@
       <li><a href="#installcf">Install the GCC Front End</a>
       <li><a href="#config">Local LLVM Configuration</a>
       <li><a href="#compile">Compiling the LLVM Suite Source Code</a>
+      <li><a href="#cross-compile">Compiling LLVM As A Cross-Compiler</a>
       <li><a href="#objfiles">The Location of LLVM Object Files</a>
       <li><a href="#optionalconfig">Optional Configuration Items</a>
     </ol></li>
@@ -984,6 +985,46 @@ it and any subdirectories that it contains.  Entering any directory inside the
 LLVM object tree and typing <tt>gmake</tt> should rebuild anything in or below
 that directory that is out of date.</p>
 
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="cross-compile">Compiling LLVM As A Cross-compiler</a>
+</div>
+
+<div class="doc_text">
+  <p>LLVM can be built as a cross-compiler, however some additional steps are
+  required.<sup><a href="#ccn_1">1</a></sup> To build a cross-compiler, use
+  these instructions:</p>
+  <ol>
+    <li>Configure and build LLVM Suite as a native compiler. You will need
+    just <tt>TableGen</tt> from that build.
+      <ul>
+        <li>If you have <tt>$LLVM_OBJ_ROOT=$LLVM_SRC_ROOT</tt> just execute 
+          <tt>make -C utils/TableGen</tt> after configuring.</li>
+        <li>Otherwise you will need to monitor building process and terminate 
+          it just after <tt>TableGen</tt> was built.</li>
+      </ul>
+    </li>
+    <li>Copy the TableGen binary to somewhere safe (out of your build tree).
+    </li>
+    <li>Configure LLVM to build as a cross-compiler. To do this, supply the
+    configure script with <tt>--build</tt> and <tt>--host</tt> options that
+    are different. The values of these options must be legal target triples and
+    should specify a processor for which LLVM supports code generation.</li>
+    <li>Put the saved <tt>TableGen</tt> executable into the
+    into <tt>$LLVM_OBJ_ROOT/{BUILD_TYPE}/bin</tt> directory (e.g. into 
+    <tt>.../Release/bin</tt> for a Release build).</li>
+    <li>Build LLVM  as usual.</li>
+  </ol>
+  <p><b>Notes:</b></p>
+  <div class="doc_notes">
+    <ol>
+      <li><a name="ccn_1">Cross-compiling</a> was tested only with Linux as 
+      build platform and Windows as host using mingw32 cross-compiler. Other
+      combinations have not been tested.</li>
+    </ol>
+  </div>
 </div>
 
 <!-- ======================================================================= -->
