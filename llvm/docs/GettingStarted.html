@@ -31,7 +31,11 @@
       <li><a href="#installcf">Install the GCC Front End</a>
       <li><a href="#config">Local LLVM Configuration</a>
       <li><a href="#compile">Compiling the LLVM Suite Source Code</a>
+<<<<<<< GettingStarted.html
       <li><a href="#cross-compile">Compiling LLVM As A Cross-Compiler</a>
+=======
+      <li><a href="#cross-compile">Cross-Compiling LLVM</a>
+>>>>>>> 1.139
       <li><a href="#objfiles">The Location of LLVM Object Files</a>
       <li><a href="#optionalconfig">Optional Configuration Items</a>
     </ol></li>
@@ -989,15 +993,17 @@ that directory that is out of date.</p>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection">
-  <a name="cross-compile">Compiling LLVM as a Cross-compiler</a>
+  <a name="cross-compile">Cross-Compiling LLVM</a>
 </div>
 
 <div class="doc_text">
-  <p>LLVM can be built as a cross-compiler, however some additional steps are
-  required.<sup><a href="#ccn_1">1</a></sup> To build a cross-compiler, use
+  <p>It is possible to cross-compile LLVM. That is, you can create LLVM
+  executables and libraries for a platform different than the one one which you
+  are compiling.  To do this, a few additional steps are 
+  required. <sup><a href="#ccn_1">1</a></sup> To cross-compile LLVM, use
   these instructions:</p>
   <ol>
-    <li>Configure and build LLVM Suite as a native compiler. You will need
+    <li>Configure and build LLVM as a native compiler. You will need
     just <tt>TableGen</tt> from that build.
       <ul>
         <li>If you have <tt>$LLVM_OBJ_ROOT=$LLVM_SRC_ROOT</tt> just execute 
@@ -1008,15 +1014,18 @@ that directory that is out of date.</p>
     </li>
     <li>Copy the TableGen binary to somewhere safe (out of your build tree).
     </li>
-    <li>Configure LLVM to build as a cross-compiler. To do this, supply the
+    <li>Configure LLVM to build with a cross-compiler. To do this, supply the
     configure script with <tt>--build</tt> and <tt>--host</tt> options that
-    are different. The values of these options must be legal target triples and
-    should specify a processor for which LLVM supports code generation.</li>
+    are different. The values of these options must be legal target triples 
+    that your GCC compiler supports.</li>
     <li>Put the saved <tt>TableGen</tt> executable into the
     into <tt>$LLVM_OBJ_ROOT/{BUILD_TYPE}/bin</tt> directory (e.g. into 
     <tt>.../Release/bin</tt> for a Release build).</li>
     <li>Build LLVM  as usual.</li>
   </ol>
+  <p>The result of such a build will produce executables that are not executable
+  on your build host (--build option) but can be executed on your compile host
+  (--host option).</p>
   <p><b>Notes:</b></p>
   <div class="doc_notes">
     <ol>
@@ -1590,7 +1599,11 @@ out:</p>
   <a href="mailto:sabre@nondot.org">Chris Lattner</a><br>
   <a href="http://llvm.x10sys.com/rspencer/">Reid Spencer</a><br>
   <a href="http://llvm.org">The LLVM Compiler Infrastructure</a><br>
+<<<<<<< GettingStarted.html
   Last modified: $Date$
+=======
+  Last modified: $Date$
+>>>>>>> 1.139
 </address>
 </body>
 </html>
