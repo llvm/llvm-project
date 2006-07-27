@@ -66,7 +66,7 @@ TABLE       { text-align: center; border: 2px solid black;
                   padding: 0 1em 0 1em;
                   display:table;
                 }
-.doc_notes      { background: #fafafa; border: 1px solid #cecece; padding: 1em }
+.doc_notes      { background: #fafafa; border: 1px solid #cecece; padding: 0.1em }
 
 TABLE.layout    { text-align: left; border: none; border-collapse: collapse;
                   padding: 4px 4px 4px 4px; }
