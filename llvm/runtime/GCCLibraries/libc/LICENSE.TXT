@@ -1,5 +1,8 @@
 libc
 ------------------------------------------------------------------------------
 The stripped down C library found in llvm/runtime/GCCLibraries/libc is licensed
-to you under the GNU Lesser General Public License (LGPL).
+to you under the GNU Lesser General Public License (LGPL).  The license, along
+with copyright information, is in COPYING.LIB.
 
+Portions of glibc also contain copyrights and licenses from third parties.
+Those are listed in LICENSES.
