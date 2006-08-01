@@ -47,6 +47,7 @@ my @TARGETS_BUILT       = map { lc($_) } qw{@TARGETS_TO_BUILD@};
 #---- begin Makefile values ----
 my $CXXFLAGS            = q{@LLVM_CXXFLAGS@};
 my $LDFLAGS             = q{@LLVM_LDFLAGS@};
+my $SYSTEM_LIBS         = q{@LIBS@};
 my $LLVM_BUILDMODE      = q{@LLVM_BUILDMODE@};
 #---- end Makefile values ----
 
@@ -109,7 +110,7 @@ foreach my $arg (@ARGV) {
         } elsif ($arg eq "--cxxflags") {
             $has_opt = 1; print "-I$INCLUDEDIR $CXXFLAGS\n";
         } elsif ($arg eq "--ldflags") {
-            $has_opt = 1; print "-L$LIBDIR $LDFLAGS\n";
+            $has_opt = 1; print "-L$LIBDIR $LDFLAGS $SYSTEM_LIBS\n";
         } elsif ($arg eq "--libs") {
             $has_opt = 1; $want_libs = 1;
         } elsif ($arg eq "--libnames") {
