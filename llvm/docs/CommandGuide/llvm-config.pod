@@ -38,6 +38,14 @@ Print a summary of B<llvm-config> arguments.
 
 Print the installation prefix for LLVM.
 
+=item B<--src-root>
+
+Print the source root from which LLVM was built.
+
+=item B<--obj-root>
+
+Print the object root used to build LLVM.
+
 =item B<--bindir>
 
 Print the installation directory for LLVM binaries.
@@ -82,6 +90,10 @@ Print all valid component names.
 =item B<--targets-built>
 
 Print the component names for all targets supported by this copy of LLVM.
+
+=item B<--build-mode>
+
+Print the build mode used when LLVM was built (e.g. Debug or Release)
 
 =back
 
