@@ -3633,6 +3633,8 @@ void DAGISelEmitter::run(std::ostream &OS) {
   OS << "#if defined(__GNUC__) && \\\n";
   OS << "    ((__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 4)))\n";
   OS << "#define NOINLINE __attribute__((noinline))\n";
+  OS << "#else\n\n";
+  OS << "#define NOINLINE\n\n";
   OS << "#endif\n\n";
 
   OS << "// Instance var to keep track of multiply used nodes that have \n"
