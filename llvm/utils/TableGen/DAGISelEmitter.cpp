@@ -2134,6 +2134,7 @@ private:
   std::vector<std::string> &TargetVTs;
 
   std::string ChainName;
+  bool DoReplace;
   unsigned TmpNo;
   unsigned OpcNo;
   unsigned VTNo;
@@ -2164,10 +2165,11 @@ public:
                      std::vector<std::pair<bool, std::string> > &gc,
                      std::set<std::pair<unsigned, std::string> > &gd,
                      std::vector<std::string> &to,
-                     std::vector<std::string> &tv)
+                     std::vector<std::string> &tv,
+                     bool dorep)
   : ISE(ise), Predicates(preds), Pattern(pattern), Instruction(instr),
     GeneratedCode(gc), GeneratedDecl(gd), TargetOpcodes(to), TargetVTs(tv),
-    TmpNo(0), OpcNo(0), VTNo(0) {}
+    DoReplace(dorep), TmpNo(0), OpcNo(0), VTNo(0) {}
 
   /// EmitMatchCode - Emit a matcher for N, going to the label for PatternNo
   /// if the match fails. At this point, we already know that the opcode for N
@@ -2234,6 +2236,7 @@ public:
     bool HasChain     = PatternHasProperty(N, SDNodeInfo::SDNPHasChain, ISE);
     bool HasOutFlag   = PatternHasProperty(N, SDNodeInfo::SDNPOutFlag,  ISE);
     bool EmittedUseCheck = false;
+    bool EmittedSlctedCheck = false;
     if (HasChain) {
       if (NodeHasChain)
         OpNo = 1;
@@ -2242,6 +2245,13 @@ public:
         // Multiple uses of actual result?
         emitCheck(RootName + ".hasOneUse()");
         EmittedUseCheck = true;
+        // hasOneUse() check is not strong enough. If the original node has
+        // already been selected, it may have been replaced with another.
+        for (unsigned j = 0; j != CInfo.getNumResults(); j++)
+          emitCheck("!CodeGenMap.count(" + RootName + ".getValue(" + utostr(j) +
+                    "))");
+        
+        EmittedSlctedCheck = true;
         if (NodeHasChain) {
           // FIXME: Don't fold if 1) the parent node writes a flag, 2) the node
           // has a chain use.
@@ -2310,6 +2320,12 @@ public:
         // Multiple uses of actual result?
         emitCheck(RootName + ".hasOneUse()");
       }
+      if (!EmittedSlctedCheck)
+        // hasOneUse() check is not strong enough. If the original node has
+        // already been selected, it may have been replaced with another.
+        for (unsigned j = 0; j < CInfo.getNumResults(); j++)
+          emitCheck("!CodeGenMap.count(" + RootName + ".getValue(" + utostr(j) +
+                    "))");
     }
 
     for (unsigned i = 0, e = N->getNumChildren(); i != e; ++i, ++OpNo) {
@@ -2473,7 +2489,7 @@ public:
 
         for (unsigned i = 0; i < NumRes; ++i) {
           emitDecl("Tmp" + utostr(i+ResNo));
-          emitCode("AddToQueue(Tmp" + utostr(i+ResNo) + ", CPTmp" +
+          emitCode("Select(Tmp" + utostr(i+ResNo) + ", CPTmp" +
                    utostr(i+ResNo) + ");");
         }
 
@@ -2485,12 +2501,12 @@ public:
         if (LikeLeaf)
           emitCode("Tmp" + utostr(ResNo) + " = " + Val + ";");
         else {
-          emitCode("AddToQueue(Tmp" + utostr(ResNo) + ", " + Val + ");");
-          if (isRoot && N->isLeaf()) {
-            emitCode("ReplaceUses(N, Tmp" + utostr(ResNo) + ");");
-            emitCode("Result = Tmp" + utostr(ResNo) + ";");
-            emitCode("return;");
-          }
+          emitCode("Select(Tmp" + utostr(ResNo) + ", " + Val + ");");
+        }
+
+        if (isRoot && N->isLeaf()) {
+          emitCode("Result = Tmp" + utostr(ResNo) + ";");
+          emitCode("return;");
         }
       }
       // Add Tmp<ResNo> to VariableMap, so that we don't multiply select this
@@ -2604,12 +2620,12 @@ public:
       // Emit all the chain and CopyToReg stuff.
       bool ChainEmitted = NodeHasChain;
       if (NodeHasChain)
-        emitCode("AddToQueue(" + ChainName + ", " + ChainName + ");");
+        emitCode("Select(" + ChainName + ", " + ChainName + ");");
       if (NodeHasInFlag || HasImpInputs)
         EmitInFlagSelectCode(Pattern, "N", ChainEmitted, true);
       if (NodeHasOptInFlag) {
         emitCode("if (HasInFlag)");
-        emitCode("  AddToQueue(InFlag, N.getOperand(N.getNumOperands()-1));");
+        emitCode("  Select(InFlag, N.getOperand(N.getNumOperands()-1));");
       }
 
       unsigned NumResults = Inst.getNumResults();    
@@ -2661,7 +2677,7 @@ public:
             emitCode("for (unsigned i = 2, e = N.getNumOperands(); "
                      "i != e; ++i) {");
           emitCode("  SDOperand VarOp(0, 0);");
-          emitCode("  AddToQueue(VarOp, N.getOperand(i));");
+          emitCode("  Select(VarOp, N.getOperand(i));");
           emitCode("  Ops.push_back(VarOp);");
           emitCode("}");
         }
@@ -2683,7 +2699,7 @@ public:
         }
 
         if (HasVarOps)
-          Code += ", &Ops[0], Ops.size()";
+          Code += ", Ops";
         else if (NodeHasOptInFlag)
           Code = "HasInFlag ? " + Code + ", InFlag) : " + Code;
 
@@ -2704,35 +2720,50 @@ public:
           return std::make_pair(1, ResNo);
 
         for (unsigned i = 0; i < NumResults; i++)
-          emitCode("ReplaceUses(SDOperand(N.Val, " +
-                   utostr(i) + "), SDOperand(ResNode, " + utostr(i) + "));");
+          emitCode("SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, " +
+                   utostr(i) + ", ResNode, " + utostr(i) + ");");
 
         if (NodeHasOutFlag)
           emitCode("InFlag = SDOperand(ResNode, " + 
                    utostr(NumResults + (unsigned)NodeHasChain) + ");");
 
         if (HasImpResults && EmitCopyFromRegs(N, ChainEmitted)) {
-          emitCode("ReplaceUses(SDOperand(N.Val, 0), SDOperand(ResNode, 0));");
+          emitCode("SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, "
+                   "0, ResNode, 0);");
           NumResults = 1;
         }
 
-        if (InputHasChain)
-          emitCode("ReplaceUses(SDOperand(N.Val, " + 
-                   utostr(PatResults) + "), SDOperand(" + ChainName + ".Val, " +
-                   ChainName + ".ResNo" + "));");
+        if (InputHasChain) {
+          emitCode("SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, " + 
+                   utostr(PatResults) + ", " + ChainName + ".Val, " +
+                   ChainName + ".ResNo" + ");");
+          if (DoReplace)
+            emitCode("if (N.ResNo == 0) AddHandleReplacement(N.Val, " +
+                     utostr(PatResults) + ", " + ChainName + ".Val, " +
+                     ChainName + ".ResNo" + ");");
+        }
 
         if (FoldedChains.size() > 0) {
           std::string Code;
           for (unsigned j = 0, e = FoldedChains.size(); j < e; j++)
-            emitCode("ReplaceUses(SDOperand(" +
+            emitCode("SelectionDAG::InsertISelMapEntry(CodeGenMap, " +
                      FoldedChains[j].first + ".Val, " + 
-                     utostr(FoldedChains[j].second) + "), SDOperand(ResNode, " +
-                     utostr(NumResults) + "));");
+                     utostr(FoldedChains[j].second) + ", ResNode, " +
+                     utostr(NumResults) + ");");
+
+          for (unsigned j = 0, e = FoldedChains.size(); j < e; j++) {
+            std::string Code =
+              FoldedChains[j].first + ".Val, " +
+              utostr(FoldedChains[j].second) + ", ";
+            emitCode("AddHandleReplacement(" + Code + "ResNode, " +
+                     utostr(NumResults) + ");");
+          }
         }
 
         if (NodeHasOutFlag)
-          emitCode("ReplaceUses(SDOperand(N.Val, " +
-                   utostr(PatResults + (unsigned)InputHasChain) +"), InFlag);");
+          emitCode("SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, " +
+                   utostr(PatResults + (unsigned)InputHasChain) +
+                   ", InFlag.Val, InFlag.ResNo);");
 
         // User does not expect the instruction would produce a chain!
         bool AddedChain = NodeHasChain && !InputHasChain;
@@ -2789,7 +2820,8 @@ public:
         if (NodeHasInFlag || HasImpInputs)
           Code += ", InFlag";
         emitCode(Code + ");");
-        emitCode("  ReplaceUses(N, SDOperand(ResNode, 0));");
+        emitCode("  SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, N.ResNo"
+                 ", ResNode, 0);");
         emitCode("  Result = SDOperand(ResNode, 0);");
         emitCode("}");
       }
@@ -2807,7 +2839,9 @@ public:
       emitCode("Tmp" + utostr(ResNo) + " = Transform_" + Op->getName()
                + "(Tmp" + utostr(OpVal) + ".Val);");
       if (isRoot) {
-        emitCode("ReplaceUses(N, Tmp" + utostr(ResNo) + ");");
+        emitCode("SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val,"
+                 "N.ResNo, Tmp" + utostr(ResNo) + ".Val, Tmp" +
+                 utostr(ResNo) + ".ResNo);");
         emitCode("Result = Tmp" + utostr(ResNo) + ";");
         emitCode("return;");
       }
@@ -2871,7 +2905,7 @@ private:
           if (RR->isSubClassOf("Register")) {
             MVT::ValueType RVT = getRegisterValueType(RR, T);
             if (RVT == MVT::Flag) {
-              emitCode("AddToQueue(InFlag, " + RootName + utostr(OpNo) + ");");
+              emitCode("Select(InFlag, " + RootName + utostr(OpNo) + ");");
             } else {
               if (!ChainEmitted) {
                 emitDecl("Chain");
@@ -2879,7 +2913,7 @@ private:
                 ChainName = "Chain";
                 ChainEmitted = true;
               }
-              emitCode("AddToQueue(" + RootName + utostr(OpNo) + ", " +
+              emitCode("Select(" + RootName + utostr(OpNo) + ", " +
                        RootName + utostr(OpNo) + ");");
               emitCode("ResNode = CurDAG->getCopyToReg(" + ChainName +
                        ", CurDAG->getRegister(" + ISE.getQualifiedName(RR) +
@@ -2894,7 +2928,7 @@ private:
     }
 
     if (HasInFlag)
-      emitCode("AddToQueue(InFlag, " + RootName +
+      emitCode("Select(InFlag, " + RootName +
                ".getOperand(" + utostr(OpNo) + "));");
   }
 
@@ -2940,11 +2974,13 @@ void DAGISelEmitter::GenerateCodeForPattern(PatternToMatch &Pattern,
                       std::vector<std::pair<bool, std::string> > &GeneratedCode,
                          std::set<std::pair<unsigned, std::string> > &GeneratedDecl,
                                         std::vector<std::string> &TargetOpcodes,
-                                            std::vector<std::string> &TargetVTs) {
+                                            std::vector<std::string> &TargetVTs,
+                                            bool DoReplace) {
   PatternCodeEmitter Emitter(*this, Pattern.getPredicates(),
                              Pattern.getSrcPattern(), Pattern.getDstPattern(),
                              GeneratedCode, GeneratedDecl,
-                             TargetOpcodes, TargetVTs);
+                             TargetOpcodes, TargetVTs,
+                             DoReplace);
 
   // Emit the matcher, capturing named arguments in VariableMap.
   bool FoundChain = false;
@@ -3071,9 +3107,7 @@ void DAGISelEmitter::EmitPatterns(std::vector<std::pair<PatternToMatch*,
       OS << std::string(Indent, ' ') << "// Pattern complexity = "
          << getPatternSize(Pattern.getSrcPattern(), *this) + AddedComplexity
          << "  cost = "
-         << getResultPatternCost(Pattern.getDstPattern(), *this)
-         << "  size = "
-         << getResultPatternSize(Pattern.getDstPattern(), *this) << "\n";
+         << getResultPatternCost(Pattern.getDstPattern(), *this) << "\n";
     }
     EmitPatterns(Other, Indent, OS);
     return;
@@ -3185,6 +3219,9 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
        E = PatternsByOpcode.end(); PBOI != E; ++PBOI) {
     const std::string &OpName = PBOI->first->getName();
     const SDNodeInfo &OpcodeInfo = getSDNodeInfo(PBOI->first);
+    bool OptSlctOrder = 
+      (OpcodeInfo.hasProperty(SDNodeInfo::SDNPHasChain) &&
+       OpcodeInfo.getNumResults() > 0);
     std::vector<PatternToMatch*> &PatternsOfOp = PBOI->second;
     assert(!PatternsOfOp.empty() && "No patterns but map has entry?");
 
@@ -3232,7 +3269,7 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
         std::vector<std::string> TargetOpcodes;
         std::vector<std::string> TargetVTs;
         GenerateCodeForPattern(*Patterns[i], GeneratedCode, GeneratedDecl,
-                               TargetOpcodes, TargetVTs);
+                               TargetOpcodes, TargetVTs, OptSlctOrder);
         for (std::set<std::pair<unsigned, std::string> >::iterator
                si = GeneratedDecl.begin(), se = GeneratedDecl.end(); si!=se; ++si)
           AllGenDecls.insert(*si);
@@ -3363,6 +3400,19 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
 
       OS << "void Select_" << OpName << (OpVTStr != "" ? "_" : "")
          << OpVTStr << "(SDOperand &Result, const SDOperand &N) {\n";    
+      if (OptSlctOrder) {
+        OS << "  if (N.ResNo == " << OpcodeInfo.getNumResults()
+           << " && N.getValue(0).hasOneUse()) {\n"
+           << "    SDOperand Dummy = "
+           << "CurDAG->getNode(ISD::HANDLENODE, MVT::Other, N);\n"
+           << "    SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, "
+           << OpcodeInfo.getNumResults() << ", Dummy.Val, 0);\n"
+           << "    SelectionDAG::InsertISelMapEntry(HandleMap, N.Val, "
+           << OpcodeInfo.getNumResults() << ", Dummy.Val, 0);\n"
+           << "    Result = Dummy;\n"
+           << "    return;\n"
+           << "  }\n";
+      }
 
       // Print all declarations.
       for (std::set<std::pair<unsigned, std::string> >::iterator
@@ -3412,18 +3462,17 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
   // Emit boilerplate.
   OS << "void Select_INLINEASM(SDOperand& Result, SDOperand N) {\n"
      << "  std::vector<SDOperand> Ops(N.Val->op_begin(), N.Val->op_end());\n"
-     << "  AddToQueue(Ops[0], N.getOperand(0)); // Select the chain.\n\n"
+     << "  Select(Ops[0], N.getOperand(0)); // Select the chain.\n\n"
      << "  // Select the flag operand.\n"
      << "  if (Ops.back().getValueType() == MVT::Flag)\n"
-     << "    AddToQueue(Ops.back(), Ops.back());\n"
+     << "    Select(Ops.back(), Ops.back());\n"
      << "  SelectInlineAsmMemoryOperands(Ops, *CurDAG);\n"
      << "  std::vector<MVT::ValueType> VTs;\n"
      << "  VTs.push_back(MVT::Other);\n"
      << "  VTs.push_back(MVT::Flag);\n"
-     << "  SDOperand New = CurDAG->getNode(ISD::INLINEASM, VTs, &Ops[0], "
-                 "Ops.size());\n"
-     << "  ReplaceUses(SDOperand(N.Val, 0), New);\n"
-     << "  ReplaceUses(SDOperand(N.Val, 1), SDOperand(New.Val, 1));\n"
+     << "  SDOperand New = CurDAG->getNode(ISD::INLINEASM, VTs, Ops);\n"
+    << "  SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 0, New.Val, 0);\n"
+    << "  SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 1, New.Val, 1);\n"
      << "  Result = New.getValue(N.ResNo);\n"
      << "  return;\n"
      << "}\n\n";
@@ -3435,6 +3484,11 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
      << "INSTRUCTION_LIST_END)) {\n"
      << "    Result = N;\n"
      << "    return;   // Already selected.\n"
+     << "  }\n\n"
+    << "  std::map<SDOperand, SDOperand>::iterator CGMI = CodeGenMap.find(N);\n"
+     << "  if (CGMI != CodeGenMap.end()) {\n"
+     << "    Result = CGMI->second;\n"
+     << "    return;\n"
      << "  }\n\n"
      << "  switch (N.getOpcode()) {\n"
      << "  default: break;\n"
@@ -3452,18 +3506,96 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
      << "  }\n"
      << "  case ISD::AssertSext:\n"
      << "  case ISD::AssertZext: {\n"
-     << "    AddToQueue(Result, N.getOperand(0));\n"
-     << "    ReplaceUses(N, Result);\n"
+     << "    SDOperand Tmp0;\n"
+     << "    Select(Tmp0, N.getOperand(0));\n"
+     << "    if (!N.Val->hasOneUse())\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, N.ResNo, "
+     << "Tmp0.Val, Tmp0.ResNo);\n"
+     << "    Result = Tmp0;\n"
      << "    return;\n"
      << "  }\n"
      << "  case ISD::TokenFactor:\n"
-     << "  case ISD::CopyFromReg:\n"
-     << "  case ISD::CopyToReg: {\n"
-     << "    for (unsigned i = 0, e = N.getNumOperands(); i != e; ++i) {\n"
-     << "      SDOperand Dummy;\n"
-     << "      AddToQueue(Dummy, N.getOperand(i));\n"
+     << "    if (N.getNumOperands() == 2) {\n"
+     << "      SDOperand Op0, Op1;\n"
+     << "      Select(Op0, N.getOperand(0));\n"
+     << "      Select(Op1, N.getOperand(1));\n"
+     << "      Result = \n"
+     << "          CurDAG->getNode(ISD::TokenFactor, MVT::Other, Op0, Op1);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, N.ResNo, "
+     << "Result.Val, Result.ResNo);\n"
+     << "    } else {\n"
+     << "      std::vector<SDOperand> Ops;\n"
+     << "      for (unsigned i = 0, e = N.getNumOperands(); i != e; ++i) {\n"
+     << "        SDOperand Val;\n"
+     << "        Select(Val, N.getOperand(i));\n"
+     << "        Ops.push_back(Val);\n"
+     << "      }\n"
+     << "      Result = \n"
+     << "          CurDAG->getNode(ISD::TokenFactor, MVT::Other, Ops);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, N.ResNo, "
+     << "Result.Val, Result.ResNo);\n"
      << "    }\n"
+     << "    return;\n"
+     << "  case ISD::CopyFromReg: {\n"
+     << "    SDOperand Chain;\n"
+     << "    Select(Chain, N.getOperand(0));\n"
+     << "    unsigned Reg = cast<RegisterSDNode>(N.getOperand(1))->getReg();\n"
+     << "    MVT::ValueType VT = N.Val->getValueType(0);\n"
+     << "    if (N.Val->getNumValues() == 2) {\n"
+     << "      if (Chain == N.getOperand(0)) {\n"
+     << "        Result = N; // No change\n"
+     << "        return;\n"
+     << "      }\n"
+     << "      SDOperand New = CurDAG->getCopyFromReg(Chain, Reg, VT);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 0, "
+     << "New.Val, 0);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 1, "
+     << "New.Val, 1);\n"
+     << "      Result = New.getValue(N.ResNo);\n"
+     << "      return;\n"
+     << "    } else {\n"
+     << "      SDOperand Flag;\n"
+     << "      if (N.getNumOperands() == 3) Select(Flag, N.getOperand(2));\n"
+     << "      if (Chain == N.getOperand(0) &&\n"
+     << "          (N.getNumOperands() == 2 || Flag == N.getOperand(2))) {\n"
+     << "        Result = N; // No change\n"
+     << "        return;\n"
+     << "      }\n"
+     << "      SDOperand New = CurDAG->getCopyFromReg(Chain, Reg, VT, Flag);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 0, "
+     << "New.Val, 0);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 1, "
+     << "New.Val, 1);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 2, "
+     << "New.Val, 2);\n"
+     << "      Result = New.getValue(N.ResNo);\n"
+     << "      return;\n"
+     << "    }\n"
+     << "  }\n"
+     << "  case ISD::CopyToReg: {\n"
+     << "    SDOperand Chain;\n"
+     << "    Select(Chain, N.getOperand(0));\n"
+     << "    unsigned Reg = cast<RegisterSDNode>(N.getOperand(1))->getReg();\n"
+     << "    SDOperand Val;\n"
+     << "    Select(Val, N.getOperand(2));\n"
      << "    Result = N;\n"
+     << "    if (N.Val->getNumValues() == 1) {\n"
+     << "      if (Chain != N.getOperand(0) || Val != N.getOperand(2))\n"
+     << "        Result = CurDAG->getCopyToReg(Chain, Reg, Val);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 0, "
+     << "Result.Val, 0);\n"
+     << "    } else {\n"
+     << "      SDOperand Flag(0, 0);\n"
+     << "      if (N.getNumOperands() == 4) Select(Flag, N.getOperand(3));\n"
+     << "      if (Chain != N.getOperand(0) || Val != N.getOperand(2) ||\n"
+     << "          (N.getNumOperands() == 4 && Flag != N.getOperand(3)))\n"
+     << "        Result = CurDAG->getCopyToReg(Chain, Reg, Val, Flag);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 0, "
+     << "Result.Val, 0);\n"
+     << "      SelectionDAG::InsertISelMapEntry(CodeGenMap, N.Val, 1, "
+     << "Result.Val, 1);\n"
+     << "      Result = Result.getValue(N.ResNo);\n"
+     << "    }\n"
      << "    return;\n"
      << "  }\n"
      << "  case ISD::INLINEASM:  Select_INLINEASM(Result, N); return;\n";
@@ -3547,93 +3679,80 @@ void DAGISelEmitter::run(std::ostream &OS) {
   OS << "#if defined(__GNUC__) && \\\n";
   OS << "    ((__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 4)))\n";
   OS << "#define NOINLINE __attribute__((noinline))\n";
-  OS << "#else\n";
-  OS << "#define NOINLINE\n";
   OS << "#endif\n\n";
 
-  OS << "// Instruction selector priority queue:\n"
-     << "std::vector<SDNode*> ISelQueue;\n";
-  OS << "/// Keep track of nodes which have already been added to queue.\n"
-     << "unsigned char *ISelQueued;\n";
-  OS << "/// Keep track of nodes which have already been selected.\n"
-     << "unsigned char *ISelSelected;\n";
-  OS << "/// Dummy parameter to ReplaceAllUsesOfValueWith().\n"
-     << "std::vector<SDNode*> ISelKilled;\n\n";
+  OS << "// Instance var to keep track of multiply used nodes that have \n"
+     << "// already been selected.\n"
+     << "std::map<SDOperand, SDOperand> CodeGenMap;\n";
 
-  OS << "/// Sorting functions for the selection queue.\n"
-     << "struct isel_sort : public std::binary_function"
-     << "<SDNode*, SDNode*, bool> {\n"
-     << "  bool operator()(const SDNode* left, const SDNode* right) "
-     << "const {\n"
-     << "    return (left->getNodeId() > right->getNodeId());\n"
-     << "  }\n"
-     << "};\n\n";
+  OS << "// Instance var to keep track of mapping of chain generating nodes\n"
+     << "// and their place handle nodes.\n";
+  OS << "std::map<SDOperand, SDOperand> HandleMap;\n";
+  OS << "// Instance var to keep track of mapping of place handle nodes\n"
+     << "// and their replacement nodes.\n";
+  OS << "std::map<SDOperand, SDOperand> ReplaceMap;\n";
 
-  OS << "inline void setQueued(int Id) {\n";
-  OS << "  ISelQueued[Id / 8] |= 1 << (Id % 8);\n";
-  OS << "}\n";
-  OS << "inline bool isQueued(int Id) {\n";
-  OS << "  return ISelQueued[Id / 8] & (1 << (Id % 8));\n";
-  OS << "}\n";
-  OS << "inline void setSelected(int Id) {\n";
-  OS << "  ISelSelected[Id / 8] |= 1 << (Id % 8);\n";
-  OS << "}\n";
-  OS << "inline bool isSelected(int Id) {\n";
-  OS << "  return ISelSelected[Id / 8] & (1 << (Id % 8));\n";
-  OS << "}\n\n";
-
-  OS << "inline void AddToQueue(SDOperand &Result, SDOperand N) {\n";
-  OS << "  Result = N;\n";
-  OS << "  int Id = N.Val->getNodeId();\n";
-  OS << "  if (Id != -1 && !isQueued(Id)) {\n";
-  OS << "    ISelQueue.push_back(N.Val);\n";
- OS << "    std::push_heap(ISelQueue.begin(), ISelQueue.end(), isel_sort());\n";
-  OS << "    setQueued(Id);\n";
+  OS << "\n";
+  OS << "// AddHandleReplacement - Note the pending replacement node for a\n"
+     << "// handle node in ReplaceMap.\n";
+  OS << "void AddHandleReplacement(SDNode *H, unsigned HNum, SDNode *R, "
+     << "unsigned RNum) {\n";
+  OS << "  SDOperand N(H, HNum);\n";
+  OS << "  std::map<SDOperand, SDOperand>::iterator HMI = HandleMap.find(N);\n";
+  OS << "  if (HMI != HandleMap.end()) {\n";
+  OS << "    ReplaceMap[HMI->second] = SDOperand(R, RNum);\n";
+  OS << "    HandleMap.erase(N);\n";
   OS << "  }\n";
-  OS << "}\n\n";
+  OS << "}\n";
 
-  OS << "inline void RemoveKilled() {\n";
-OS << "  unsigned NumKilled = ISelKilled.size();\n";
-  OS << "  if (NumKilled) {\n";
-  OS << "    for (unsigned i = 0; i != NumKilled; ++i) {\n";
-  OS << "      SDNode *Temp = ISelKilled[i];\n";
-  OS << "      std::remove(ISelQueue.begin(), ISelQueue.end(), Temp);\n";
-  OS << "    };\n";
- OS << "    std::make_heap(ISelQueue.begin(), ISelQueue.end(), isel_sort());\n";
-  OS << "    ISelKilled.clear();\n";
+  OS << "\n";
+  OS << "// SelectDanglingHandles - Select replacements for all `dangling`\n";
+  OS << "// handles.Some handles do not yet have replacements because the\n";
+  OS << "// nodes they replacements have only dead readers.\n";
+  OS << "void SelectDanglingHandles() {\n";
+  OS << "  for (std::map<SDOperand, SDOperand>::iterator I = "
+     << "HandleMap.begin(),\n"
+     << "         E = HandleMap.end(); I != E; ++I) {\n";
+  OS << "    SDOperand N = I->first;\n";
+  OS << "    SDOperand R;\n";
+  OS << "    Select(R, N.getValue(0));\n";
+  OS << "    AddHandleReplacement(N.Val, N.ResNo, R.Val, R.ResNo);\n";
   OS << "  }\n";
-  OS << "}\n\n";
+  OS << "}\n";
+  OS << "\n";
+  OS << "// ReplaceHandles - Replace all the handles with the real target\n";
+  OS << "// specific nodes.\n";
+  OS << "void ReplaceHandles() {\n";
+  OS << "  for (std::map<SDOperand, SDOperand>::iterator I = "
+     << "ReplaceMap.begin(),\n"
+     << "        E = ReplaceMap.end(); I != E; ++I) {\n";
+  OS << "    SDOperand From = I->first;\n";
+  OS << "    SDOperand To   = I->second;\n";
+  OS << "    for (SDNode::use_iterator UI = From.Val->use_begin(), "
+     << "E = From.Val->use_end(); UI != E; ++UI) {\n";
+  OS << "      SDNode *Use = *UI;\n";
+  OS << "      std::vector<SDOperand> Ops;\n";
+  OS << "      for (unsigned i = 0, e = Use->getNumOperands(); i != e; ++i){\n";
+  OS << "        SDOperand O = Use->getOperand(i);\n";
+  OS << "        if (O.Val == From.Val)\n";
+  OS << "          Ops.push_back(To);\n";
+  OS << "        else\n";
+  OS << "          Ops.push_back(O);\n";
+  OS << "      }\n";
+  OS << "      SDOperand U = SDOperand(Use, 0);\n";
+  OS << "      CurDAG->UpdateNodeOperands(U, Ops);\n";
+  OS << "    }\n";
+  OS << "  }\n";
+  OS << "}\n";
 
-  OS << "inline void ReplaceUses(SDOperand F, SDOperand T) {\n";
-  OS << "  CurDAG->ReplaceAllUsesOfValueWith(F, T, ISelKilled);\n";
-  OS << "  setSelected(F.Val->getNodeId());\n";
-  OS << "  RemoveKilled();\n";
-  OS << "}\n\n";
-
+  OS << "\n";
   OS << "// SelectRoot - Top level entry to DAG isel.\n";
-  OS << "SDOperand SelectRoot(SDOperand Root) {\n";
-  OS << "  SelectRootInit();\n";
-  OS << "  unsigned NumBytes = (DAGSize + 7) / 8;\n";
-  OS << "  ISelQueued   = new unsigned char[NumBytes];\n";
-  OS << "  ISelSelected = new unsigned char[NumBytes];\n";
-  OS << "  memset(ISelQueued,   0, NumBytes);\n";
-  OS << "  memset(ISelSelected, 0, NumBytes);\n";
-  OS << "\n";
+  OS << "SDOperand SelectRoot(SDOperand N) {\n";
   OS << "  SDOperand ResNode;\n";
-  OS << "  Select(ResNode, Root);\n";
-  OS << "  while (!ISelQueue.empty()) {\n";
-  OS << "    SDOperand Tmp;\n";
-  OS << "    SDNode *Node = ISelQueue.front();\n";
-  OS << "    std::pop_heap(ISelQueue.begin(), ISelQueue.end(), isel_sort());\n";
-  OS << "    ISelQueue.pop_back();\n";
-  OS << "    if (!isSelected(Node->getNodeId()))\n";
-  OS << "      Select(Tmp, SDOperand(Node, 0));\n";
-  OS << "  }\n";
-  OS << "\n";
-  OS << "  delete[] ISelQueued;\n";
-  OS << "  ISelQueued = NULL;\n";
-  OS << "  delete[] ISelSelected;\n";
-  OS << "  ISelSelected = NULL;\n";
+  OS << "  Select(ResNode, N);\n";
+  OS << "  SelectDanglingHandles();\n";
+  OS << "  ReplaceHandles();\n";
+  OS << "  ReplaceMap.clear();\n";
   OS << "  return ResNode;\n";
   OS << "}\n";
   
