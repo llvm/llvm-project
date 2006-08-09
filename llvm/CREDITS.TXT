@@ -85,6 +85,10 @@ N: Paolo Invernizzi
 E: arathorn@fastwebnet.it
 D: Visual C++ compatibility fixes 
 
+N: Patrick Jenkins
+E: patjenk@wam.umd.edu
+D: Nightly Tester
+
 N: Brad Jones
 E: kungfoomaster@nondot.org
 D: Support for packed types
@@ -93,6 +97,10 @@ N: Eric Kidd
 W: http://randomhacks.net/
 D: llvm-config script
 
+N: Anton Korobeynikov
+E: asl@math.spbu.ru
+D: Mingw32 fixes, cross-compiling support, minor changes here and there
+
 N: Sumant Kowshik
 E: kowshik@uiuc.edu
 D: Author of the original C backend
@@ -100,7 +108,9 @@ D: Author of the original C backend
 N: Jim Laskey
 E: jlaskey@apple.com
 D: Improvements to the PPC backend, instruction scheduling
-D: Debug implementation, Dwarf implementation
+D: Debug and Dwarf implementation
+D: Auto upgrade mangler 
+D: llvm-gcc4 svn wrangler
 
 N: Chris Lattner
 E: sabre@nondot.org
@@ -112,6 +122,7 @@ E: tonic@nondot.org
 W: http://nondot.org/~tonic/
 D: The initial llvm-ar tool, converted regression testsuite to dejagnu
 D: Modulo scheduling in the SparcV9 backend
+D: Release manager (1.7+)
 
 N: Andrew Lenharth
 E: alenhar2@cs.uiuc.edu
@@ -150,20 +161,17 @@ E: ashukla@cs.uiuc.edu
 D: The `paths' pass
 
 N: Reid Spencer
-E: rspencer@x10sys.com
-W: http://llvm.x10sys.com/rspencer
+E: rspencer@reidspencer.com
+W: http://reidspencer.com/
 D: Stacker, llvmc, llvm-ld, llvm-ar, lib/Archive, lib/Linker, lib/System, 
 D: bytecode enhancements, symtab hacking, unoverloading of intrinsics, makefile 
-D: and configuration system, documentation.
+D: and configuration system, documentation, various bug fixing.
 
 N: Adam Treat
 E: manyoso@yahoo.com
 D: C++ bugs filed, and C++ front-end bug fixes.
 
 N: Bill Wendling
-E: wendling@isanbard.org
+E: isanbard@gmail.com
 D: The `Lower Setjmp/Longjmp' pass, improvements to the -lowerswitch pass.
-
-N: Patrick Jenkins
-E: patjenk@wam.umd.edu
-D: Nightly Tester
+D: Bug hunter extraordinaire.
