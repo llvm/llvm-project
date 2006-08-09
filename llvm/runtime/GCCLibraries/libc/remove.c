@@ -1,6 +1,11 @@
 //===-- remove.c - The remove function for the LLVM libc Library --*- C -*-===//
 // 
-// A lot of this code is ripped gratuitously from glibc and libiberty.
+// This code is a modified form of the remove() function from the GNU C
+// library.
+//
+// Modifications:
+//  2005/11/28 - Added to LLVM tree.  Functions renamed to allow compilation.
+//               Code to control symbol linkage types removed.
 //
 //===----------------------------------------------------------------------===//
 

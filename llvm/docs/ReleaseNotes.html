@@ -4,11 +4,11 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <link rel="stylesheet" href="llvm.css" type="text/css">
-  <title>LLVM 1.7 Release Notes</title>
+  <title>LLVM 1.8 Release Notes</title>
 </head>
 <body>
 
-<div class="doc_title">LLVM 1.7 Release Notes</div>
+<div class="doc_title">LLVM 1.8 Release Notes</div>
  
 <ol>
   <li><a href="#intro">Introduction</a></li>
@@ -32,9 +32,10 @@
 <div class="doc_text">
 
 <p>This document contains the release notes for the LLVM compiler
-infrastructure, release 1.7.  Here we describe the status of LLVM, including any
+infrastructure, release 1.8.  Here we describe the status of LLVM, including any
 known problems and major improvements from the previous release.  The most
-up-to-date version of this document can be found on the <a
+up-to-date version of this document (corresponding to LLVM CVS) can be found
+on the <a
 href="http://llvm.org/releases/">LLVM releases web site</a>.  If you are
 not reading this on the LLVM web pages, you should probably go there because
 this document may be updated after the release.</p>
@@ -60,40 +61,32 @@ href="http://llvm.org/releases/">releases page</a>.</p>
 
 <div class="doc_text">
 
-<p>This is the eighth public release of the LLVM Compiler Infrastructure. This
+<p>This is the nineth public release of the LLVM Compiler Infrastructure. This
 release incorporates a large number of enhancements and new features,
-including vector support (Intel SSE and Altivec), a new GCC4.0-based
-C/C++ front-end, Objective C/C++ support, inline assembly support, and many
-other big features.
+including DWARF debugging support (C and C++ on Darwin/PPC), improved inline
+assembly support, a new <a href="http://llvm.org/nightlytest/">nightly 
+tester</a>, llvm-config enhancements, many bugs
+fixed, and performance and compile time improvements.
 </p>
 
 </div>
 
 <!--=========================================================================-->
 <div class="doc_subsection">
-<a name="newfeatures">New Features in LLVM 1.7</a>
+<a name="newfeatures">New Features in LLVM 1.8</a>
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="llvmgcc4">GCC4.0-based llvm-gcc
-front-end</a></div>
+<div class="doc_subsubsection"><a name="dwarf">DWARF debugging 
+support </a></div>
 
 <div class="doc_text">
 
-<p>LLVM 1.7 includes a brand new llvm-gcc, based on GCC 4.0.1.  This version
-of llvm-gcc solves many serious long-standing problems with llvm-gcc, including
-all of those blocked by the <a href="http://llvm.org/PR498">llvm-gcc 4 meta 
-bug</a>.  In addition, llvm-gcc4 implements support for many new features, 
-including GCC inline assembly, generic vector support, SSE and Altivec
-intrinsics, and several new GCC attributes.  Finally, llvm-gcc4 is
-significantly faster than llvm-gcc3, respects -O options, its -c/-S options
-correspond to GCC's (they emit native code), supports Objective C/C++, and 
-it has debugging support well underway.</p>
-
-<p>If you can use it, llvm-gcc4 offers significant new functionality, and we
-hope that it will replace llvm-gcc3 completely in a future release.  
-Unfortunately, it does not currently support C++ exception handling at all, and
-it only works on Apple Mac OS/X machines with X86 or PowerPC processors.
+<p>The llvm-gcc4 C front-end now generates debugging info for C and C++.  This
+information is propagated through the compiler and the code generator can
+currently produce DWARF debugging information from it.  DWARF is a standard
+debugging format used on many platforms, but currently LLVM only includes 
+target support for Mac OS X targets for the 1.8 release.
 </p>
 
 </div>
@@ -104,174 +97,96 @@ Support</a></div>
 
 <div class="doc_text">
 
-<p>The LLVM IR and llvm-gcc4 front-end now fully support arbitrary GCC <a 
-href="LangRef.html#inlineasm">inline assembly</a>.  The LLVM X86 and PowerPC
-code generators have initial support for it,
-being able to compile basic statements, but are missing some features.  Please
-report any inline asm statements that crash the compiler or that are miscompiled
-as bugs.</p>
+<p>Inline assembly support is substantially improved in LLVM 1.8 over LLVM 1.7.
+Many unsupported features are now supported, and inline asm support in the X86
+backend is far better.  llvm-gcc4 now supports global register variables as 
+well.</p>
 
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="newsparc">New SPARC backend</a></div>
+<div class="doc_subsubsection"><a name="loopopt">Loop Optimizer Improvements</a></div>
 
 <div class="doc_text">
 
-<p>LLVM 1.7 includes a new, fully functional, SPARC backend built in the
-target-independent code generator.  This SPARC backend includes support for 
-SPARC V8 and SPARC V9 subtargets (controlling whether V9 features can be used),
-and targets the 32-bit SPARC ABI.</p>
-
-<p>The LLVM 1.7 release is the last release that will include the LLVM "SparcV9"
-backend, which was the very first LLVM native code generator.  It will
-be removed in LLVM 1.8, being replaced with the new SPARC backend.</p>
-
-</div>
-
-<!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="genvector">Generic Vector Support
-</a></div>
-
-<div class="doc_text">
-
-<p>LLVM now includes significantly extended support for SIMD vectors in its
-core instruction set.  It now includes three new instructions for manipulating
-vectors: <a href="LangRef.html#i_extractelement"><tt>extractelement</tt></a>,
-<a href="LangRef.html#i_insertelement"><tt>insertelement</tt></a>, and
-<a href="LangRef.html#i_shufflevector"><tt>shufflevector</tt></a>.  Further,
-many bugs in vector handling have been fixed, and vectors are now supported by
-the target-independent code generator.  For example, if a vector operation is
-not supported by a particular target, it will be correctly broken down and
-executed as scalar operations.</p>
-
-<p>Because llvm-gcc3 does not support GCC generic vectors or vector intrinsics,
-llvm-gcc4 must be used.</p>
-</div>
-
-
-<!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="ssealtivec">Intel SSE and PowerPC 
-Altivec support
-</a></div>
-
-<div class="doc_text">
-
-<p>The LLVM X86 backend now supports Intel SSE 1, 2, and 3, and now uses scalar
-SSE operations to implement scalar floating point math when the target supports
-SSE1 (for floats) or SSE2 (for doubles).  Vector SSE instructions are generated
-by llvm-gcc4 when the generic vector mechanism or specific SSE intrinsics are 
-used.
-</p>
-
-<p>The LLVM PowerPC backend now supports the Altivec instruction set, including
-both GCC -maltivec and -faltivec modes.  Altivec instructions are generated
-by llvm-gcc4 when the generic vector mechanism or specific Altivec intrinsics
-are used.
+<p>The loop optimizer passes now uses "Loop-Closed SSA Form", which makes it
+easier to update SSA form as loop transformations change the code.  An 
+immediate benefit of this is that the loop unswitching pass can now unswitch
+loops in more cases.
 </p>
 
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="optimizernew">Optimizer 
-Improvements</a></div>
+<div class="doc_subsubsection"><a name="jumptab">Jump Table Support for Switches
+</a></div>
 
 <div class="doc_text">
-<ul>
-<li>The Loop Unswitching pass (<tt>-loop-unswitch</tt>) has had several bugs
-    fixed, has several new features, and is enabled by default in llvmgcc3
-    now.</li>
-<li>The Loop Strength Reduction pass (<tt>-loop-reduce</tt>) is now enabled for
-    the X86 and Alpha backends.</li>
-<li>The Instruction Combining pass (<tt>-instcombine</tt>) now includes a
-    framework and implementation for simplifying code based on whether computed
-    bits are demanded or not.</li>
-<li>The Scalar Replacement of Aggregates pass (<tt>-scalarrepl</tt>) can now
-    promote simple unions to registers.</li>
-<li>The Reassociation pass (<tt>-reassociate</tt>) can now
-    factor expressions, e.g. turning "A*A+A*B" into "A*(A+B)".</li>
-<li>Several LLVM passes are <a href="http://llvm.org/PR681">significantly
-faster</a>.</li>
-</ul>
+
+<p>The code generator now lowers switch statements to jump tables, providing
+significant performance boosts for applications (e.g. interpreters) whose
+performance is highly correlated to switch statement performance.</p>
+
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="codgennew">Code Generator 
-Improvements</a></div>
+<div class="doc_subsubsection"><a name="jitrelease">Deallocation of JIT'd 
+Machine Code
+</a></div>
 
 <div class="doc_text">
-<ul>
-<li>LLVM has a new prepass (before register allocation) list scheduler, which
-    supports bottom-up and top-down scheduling, pluggable priority functions and
-    pluggable hazard recognizers.  The X86 backend uses this to reduce register
-    pressure and RISC targets schedule based on operation latency.</li>
-<li>The tblgen-based target description framework introduced in LLVM 1.6 has
-    several new features, useful for targets that can fold loads and stores into
-    operations, and features that make the .td files more expressive.</li>
-<li>The instruction selector is significantly faster in 1.7 than in 1.6.</li>
-<li>The X86, Alpha and Itanium backends use new DAG-DAG instruction selectors,
-    making them easier to maintain and generate slightly better code.</li>
-<li>The X86 backend now supports generation of Scalar SSE code for scalar FP
-    expressions.  LLVM provides significantly better performance with Scalar SSE
-    instructions than it does with the Intel floating point stack 
-    instructions.</li>
-<li>The Itanium backend now has a bundling pass, which improves performance
-    by ~10% and reduces code size (previously it unconditionally inserted a stop
-    bit after every instruction).</li>
-</ul>
+
+<p>The LLVM JIT now allows clients to deallocate machine code JIT'd to its code
+buffer.  This is important for long living applications that depend on the JIT.
+</p>
+
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="othernew">Other New Features</a></div>
+<div class="doc_subsubsection"><a name="other">Other Improvements</a></div>
 
 <div class="doc_text">
+
+<p>This release includes many other improvements, including improvements to
+   the optimizers and code generators (improving the generated code) changes to
+   speed up the compiler in many ways (improving algorithms and fine tuning 
+   code), and changes to reduce the code size of the compiler itself.</p>
+
+<p>More specific changes include:</p>
+
 <ul>
-<li>The Mac OS/X PowerPC and X86 backends now have initial support for
-    Darwin DWARF
-    debugging information, however, debug info generation has been disabled for
-    the 1.7 release in llvmgcc4.</li>
-<li>LLVM includes the new <a href="docs/CommandGuide/html/llvm-config.html">
-    llvm-config</a> utility, which makes it easier to build and link programs
-    against the LLVM libraries when not using the LLVM makefiles.</li>
-<li>LLVM now supports first class global ctor/dtor initialization lists, no
-    longer forcing targets to use "__main".</li>
-<li>LLVM supports assigning globals and functions to a particular section
-    in the result executable using the GCC section attribute.</li>
-<li><a href="ExtendingLLVM.html">Adding intrinsics to LLVM</a> is now
-     significantly easier.</li>
-<li>llvmgcc4 now fully supports C99 Variable Length Arrays, including dynamic
-    stack deallocation.</li>
+<li>LLVM 1.8 includes an initial ARM backend.  This backend is in early 
+    development stages.</li>
+<li>LLVM 1.8 now includes significantly better support for mingw and 
+    cygwin.</li>
+<li>The <a href="CommandGuide/html/llvm-config.html">llvm-config</a> tool is 
+    now built by default and has several new features.</li>
+<li>The X86 and PPC backends now use the correct platform ABI for passing 
+    vectors as arguments to functions.</li>
+<li>The X86 backend now includes support for the Microsoft ML assembler 
+    ("MASM").</li>
+<li>The PowerPC backend now pattern matches the 'rlwimi' instruction more 
+    aggressively.</li>
+<li>Most of LLVM is now built with "-pedantic", ensuring better portability 
+    to more C++ Compilers.</li>
+<li>The PowerPC backend now includes initial 64-bit support.  The JIT is not
+    complete, and the static compiler has a couple of known bugs, but support
+    is mostly in place. LLVM 1.9 will include completed PPC-64 support. </li>
 
 </ul>
 </div>
-
 
 <!--=========================================================================-->
 <div class="doc_subsection">
-<a name="changes">Significant Changes in LLVM 1.7</a>
+<a name="changes">Significant Changes in LLVM 1.8</a>
 </div>
 
 <div class="doc_text">
 <ul>
-<li>The official LLVM URL is now <a href="http://llvm.org/">
-    http://llvm.org/</a>.</li>
-<li>The LLVM intrinsics used to be overloaded based on type: for example,
-    <a href="LangRef.html#int_ctpop"><tt>llvm.ctpop</tt></a> could work with any
-    integer datatype.  They are now separated into different intrinsics with
-    suffixes to denote their argument type (e.g. <tt>llvm.ctpop.i32</tt>)).  Old
-    LLVM .ll and .bc files that use these intrinsics will continue to work with
-    new LLVM versions (they are transparently upgraded by the parsers), but will
-    cause a warning to be emitted.</li>
-<li>The <tt>llvm.readport</tt>, <tt>llvm.writeport</tt>, <tt>llvm.readio</tt>,
-    and <tt>llvm.writeio</tt> intrinsics have been removed.  The first two
-    were ever only supported by the X86 backend, the last two were never
-    correctly supported by any target, and none were accessible through the
-    C front-end.  Inline assembly support can now be used to
-    implement these operations.</li>
-<li>The <tt>llvm-db</tt> tool had basic support for stepping through code, which
-    used the JIT.  This code has been removed, and DWARF emission support added
-    instead.  <tt>llvm-db</tt> still exists in CVS if someone wanted to write a
-    <tt>ptrace</tt> backend for it.</li>
+<li>The LLVM "SparcV9" backend (deprecated in LLVM 1.7) has been removed in 
+LLVM 1.8.  The LLVM "Sparc" backend replaces it.</li>
+<li>The --version option now prints more useful information, including the
+    build configuration for the tool.</li>
 </ul>
 </div>
 
@@ -289,6 +204,7 @@ Improvements</a></div>
 <ul>
   <li>Intel and AMD machines running Red Hat Linux, Fedora Core and FreeBSD 
       (and probably other unix-like systems).</li>
+<li>Intel and AMD machines running on Win32 using MinGW libraries (native)</li>
 <li>Sun UltraSPARC workstations running Solaris 8.</li>
 <li>Intel and AMD machines running on Win32 with the Cygwin libraries (limited
     support is available for native builds with Visual C++).</li>
@@ -332,7 +248,7 @@ there isn't already one.</p>
 be broken or unreliable, or are in early development.  These components should
 not be relied on, and bugs should not be filed against them, but they may be
 useful to some people.  In particular, if you would like to work on one of these
-components, please contact us on the llvmdev list.</p>
+components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev">LLVMdev list</a>.</p>
 
 <ul>
 <li>The <tt>-cee</tt> pass is known to be buggy, and may be removed in in a 
@@ -382,8 +298,7 @@ components, please contact us on the llvmdev list.</p>
 <div class="doc_text">
 
 <p>
-llvm-gcc3 has many significant problems that are fixed by llvm-gcc4.  See
-    those blocked on the <a href="http://llvm.org/PR498">llvm-gcc4 meta bug</a>.
+llvm-gcc3 has many significant problems that are fixed by llvm-gcc4.
 Two major ones include:</p>
 
 <ul>
@@ -401,6 +316,11 @@ Two major ones include:</p>
 href="http://llvm.org/PR162">with the largest union member</a>.</li>
 
 </ul>
+
+<p>llvm-gcc4 is far more stable and produces better code than llvm-gcc3, but
+does not currently support Link-Time-Optimization or C++ Exception Handling,
+which llvm-gcc3 does.</p>
+
 </div>
 
 <!-- _______________________________________________________________________ -->
@@ -638,8 +558,7 @@ space if they depend on these (e.g. C99 varargs).</li>
 <div class="doc_text">
 
 <ul>
-<li><a href="http://llvm.org/PR736">Indirect calls crash JIT on 
-Darwin/x86</a>.</li>
+<li>none yet.</li>
 </ul>
 
 </div>
@@ -718,19 +637,16 @@ programs.</li>
 
 </div>
 
-
 <!-- ======================================================================= -->
 <div class="doc_subsection">
-  <a name="sparcv9-be">Known problems with the SparcV9 back-end</a>
+  <a name="arm-be">Known problems with the ARM back-end</a>
 </div>
 
 <div class="doc_text">
 
 <ul>
-<li><a href="http://llvm.org/PR60">[sparcv9] SparcV9 backend miscompiles
-several programs in the LLVM test suite</a></li>
-<li>The SparcV9 backend is slated to be removed before the LLVM 1.8 
-    release.</li>
+<li>The ARM backend is currently in early development stages, it is not 
+ready for production use.</li>
 </ul>
 
 </div>

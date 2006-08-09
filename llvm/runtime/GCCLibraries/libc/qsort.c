@@ -1,3 +1,13 @@
+//===-- qsort.c - The qsort function for the LLVM libc Library ----*- C -*-===//
+// 
+// This code is a modified form of the qsort() function from the GNU C
+// library.
+//
+// Modifications:
+//  2003/05/29 - Code disabled for compilation.  Line wrapping changed.
+//
+//===----------------------------------------------------------------------===//
+
 /* Copyright (C) 1991, 1992, 1996, 1997, 1999 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Douglas C. Schmidt (schmidt@ics.uci.edu).

@@ -6,3 +6,12 @@ with copyright information, is in COPYING.LIB.
 
 Portions of glibc also contain copyrights and licenses from third parties.
 Those are listed in LICENSES.
+
+FSF copyright and warranty disclaimer:
+Copyright (C) 1991, 1992, 1996, 1997, 1999 Free Software Foundation, Inc.
+Copyright (C) 1995,96,97,2002 Free Software Foundation, Inc.
+
+The GNU C Library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
