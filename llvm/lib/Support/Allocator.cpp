@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/DataTypes.h"
 #include <iostream>
 using namespace llvm;
 
