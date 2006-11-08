@@ -2418,6 +2418,8 @@ private:
   /// EmitFunctionDebugFrame - Emit per function frame info into a debug frame
   /// section.
   void EmitFunctionDebugFrame() {
+    if (!TAI->getDwarfRequiresFrameSection())
+      return;
     // Start the dwarf frame section.
     Asm->SwitchToDataSection(TAI->getDwarfFrameSection());
     
