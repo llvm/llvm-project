@@ -1,5 +1,5 @@
 // RUN: %llvmgcc -xc++ -S -o - %s | not grep weak
-// XFAIL: *
+// XFAIL: llvmgcc4
 
 template<class T>
 void thefunc();
