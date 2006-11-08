@@ -2102,8 +2102,8 @@ Function : BasicBlockList END {
 };
 
 FnDeclareLinkage: /*default*/ |
-                  DLLIMPORT   { CurFun.Linkage = GlobalValue::DLLImportLinkage } |
-                  EXTERN_WEAK { CurFun.Linkage = GlobalValue::DLLImportLinkage };
+                  DLLIMPORT   { CurFun.Linkage = GlobalValue::DLLImportLinkage; } |
+                  EXTERN_WEAK { CurFun.Linkage = GlobalValue::DLLImportLinkage; };
   
 FunctionProto : DECLARE { CurFun.isDeclare = true; } FnDeclareLinkage FunctionHeaderH {
     $$ = CurFun.CurrentFunction;
