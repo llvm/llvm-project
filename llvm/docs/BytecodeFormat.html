@@ -1587,45 +1587,47 @@ possible. </p>
       <tr><td>Add</td><td>7</td><td>1</td><td>1.0</td></tr>
       <tr><td>Sub</td><td>8</td><td>1</td><td>1.0</td></tr>
       <tr><td>Mul</td><td>9</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Div</td><td>10</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Rem</td><td>11</td><td>1</td><td>1.0</td></tr>
+      <tr><td>UDiv</td><td>10</td><td>1</td><td>1.9</td></tr>
+      <tr><td>SDiv</td><td>11</td><td>1</td><td>1.9</td></tr>
+      <tr><td>FDiv</td><td>12</td><td>1</td><td>1.9</td></tr>
+      <tr><td>URem</td><td>13</td><td>1</td><td>1.9</td></tr>
+      <tr><td>SRem</td><td>14</td><td>1</td><td>1.9</td></tr>
+      <tr><td>FRem</td><td>15</td><td>1</td><td>1.9</td></tr>
       <tr><td colspan="4"><b>Logical Operators</b></td></tr>
-      <tr><td>And</td><td>12</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Or</td><td>13</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Xor</td><td>14</td><td>1</td><td>1.0</td></tr>
+      <tr><td>And</td><td>16</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Or</td><td>17</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Xor</td><td>18</td><td>1</td><td>1.0</td></tr>
       <tr><td colspan="4"><b>Binary Comparison Operators</b></td></tr>
-      <tr><td>SetEQ</td><td>15</td><td>1</td><td>1.0</td></tr>
-      <tr><td>SetNE</td><td>16</td><td>1</td><td>1.0</td></tr>
-      <tr><td>SetLE</td><td>17</td><td>1</td><td>1.0</td></tr>
-      <tr><td>SetGE</td><td>18</td><td>1</td><td>1.0</td></tr>
-      <tr><td>SetLT</td><td>19</td><td>1</td><td>1.0</td></tr>
-      <tr><td>SetGT</td><td>20</td><td>1</td><td>1.0</td></tr>
+      <tr><td>SetEQ</td><td>19</td><td>1</td><td>1.0</td></tr>
+      <tr><td>SetNE</td><td>20</td><td>1</td><td>1.0</td></tr>
+      <tr><td>SetLE</td><td>21</td><td>1</td><td>1.0</td></tr>
+      <tr><td>SetGE</td><td>22</td><td>1</td><td>1.0</td></tr>
+      <tr><td>SetLT</td><td>23</td><td>1</td><td>1.0</td></tr>
+      <tr><td>SetGT</td><td>24</td><td>1</td><td>1.0</td></tr>
       <tr><td colspan="4"><b>Memory Operators</b></td></tr>
-      <tr><td>Malloc</td><td>21</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Free</td><td>22</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Alloca</td><td>23</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Load</td><td>24</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Store</td><td>25</td><td>1</td><td>1.0</td></tr>
-      <tr><td>GetElementPtr</td><td>26</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Malloc</td><td>25</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Free</td><td>26</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Alloca</td><td>27</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Load</td><td>28</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Store</td><td>29</td><td>1</td><td>1.0</td></tr>
+      <tr><td>GetElementPtr</td><td>30</td><td>1</td><td>1.0</td></tr>
       <tr><td colspan="4"><b>Other Operators</b></td></tr>
-      <tr><td>PHI</td><td>27</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Cast</td><td>28</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Call</td><td>29</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Shl</td><td>30</td><td>1</td><td>1.0</td></tr>
-      <tr><td>Shr</td><td>31</td><td>1</td><td>1.0</td></tr>
-      <tr><td>VANext</td><td>32</td><td>1</td><td>1.0,unused since 1.5</td></tr>
-      <tr><td>VAArg</td><td>33</td><td>1</td><td>1.0,unused sine 1.5</td></tr>
-      <tr><td>Select</td><td>34</td><td>2</td><td>1.2</td></tr>
-      <tr><td>UserOp1</td><td>35</td><td>1</td><td>1.0</td></tr>
-      <tr><td>UserOp2</td><td>36</td><td>1</td><td>1.0</td></tr>
-      <tr><td>VAArg</td><td>37</td><td>5</td><td>1.5</td></tr>
-      <tr><td>ExtractElement</td><td>38</td><td>5</td><td>1.5</td></tr>
-      <tr><td>InsertElement</td><td>39</td><td>5</td><td>1.5</td></tr>
-      <tr><td>ShuffleElement</td><td>40</td><td>5</td><td>1.5</td></tr>
+      <tr><td>PHI</td><td>31</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Cast</td><td>32</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Call</td><td>33</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Shl</td><td>34</td><td>1</td><td>1.0</td></tr>
+      <tr><td>Shr</td><td>35</td><td>1</td><td>1.0</td></tr>
       <!--
-      <tr><td>AShr</td><td>41</td><td>6</td><td>1.9</td></tr>
-      <tr><td>LShr</td><td>42</td><td>6</td><td>1.9</td></tr>
+      <tr><td>LShr</td><td>35</td><td>6</td><td>2.0</td></tr>
+      <tr><td>AShr</td><td>36</td><td>6</td><td>2.0</td></tr>
       -->
+      <tr><td>Select</td><td>36</td><td>2</td><td>1.2</td></tr>
+      <tr><td>UserOp1</td><td>37</td><td>1</td><td>1.0</td></tr>
+      <tr><td>UserOp2</td><td>38</td><td>1</td><td>1.0</td></tr>
+      <tr><td>VAArg</td><td>39</td><td>5</td><td>1.5</td></tr>
+      <tr><td>ExtractElement</td><td>40</td><td>5</td><td>1.5</td></tr>
+      <tr><td>InsertElement</td><td>41</td><td>5</td><td>1.5</td></tr>
+      <tr><td>ShuffleElement</td><td>42</td><td>5</td><td>1.5</td></tr>
       <tr><td colspan="4">
           <b>Pseudo Instructions<a href="#pi_note">*</a></b>
       </td></tr>
