@@ -516,10 +516,9 @@ SDOperand X86TargetLowering::LowerCCCArguments(SDOperand Op, SelectionDAG &DAG) 
   BytesToPopOnReturn = 0;         // Callee pops nothing.
   BytesCallerReserves = ArgOffset;
 
-  // If this is a struct return on Darwin/X86, the callee pops the hidden struct
-  // pointer.
-  if (MF.getFunction()->getCallingConv() == CallingConv::CSRet &&
-      Subtarget->isTargetDarwin())
+  // If this is a struct return on, the callee pops the hidden struct
+  // pointer. This is common for Darwin/X86, Linux & Mingw32 targets.
+  if (MF.getFunction()->getCallingConv() == CallingConv::CSRet)
     BytesToPopOnReturn = 4;
 
   // Return the new list of results.
@@ -680,9 +679,10 @@ SDOperand X86TargetLowering::LowerCCCCallTo(SDOperand Op, SelectionDAG &DAG) {
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPush = 0;
 
-  // If this is is a call to a struct-return function on Darwin/X86, the callee
+  // If this is is a call to a struct-return function, the callee
   // pops the hidden struct pointer, so we have to push it back.
-  if (CallingConv == CallingConv::CSRet && Subtarget->isTargetDarwin())
+  // This is common for Darwin/X86, Linux & Mingw32 targets.
+  if (CallingConv == CallingConv::CSRet)
     NumBytesForCalleeToPush = 4;
   
   NodeTys.clear();
