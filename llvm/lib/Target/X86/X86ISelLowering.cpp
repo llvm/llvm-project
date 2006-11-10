@@ -516,10 +516,9 @@ SDOperand X86TargetLowering::LowerCCCArguments(SDOperand Op, SelectionDAG &DAG) 
   BytesToPopOnReturn = 0;         // Callee pops nothing.
   BytesCallerReserves = ArgOffset;
 
-  // If this is a struct return on Darwin/X86, the callee pops the hidden struct
-  // pointer.
-  if (MF.getFunction()->getCallingConv() == CallingConv::CSRet &&
-      Subtarget->isTargetDarwin())
+  // If this is a struct return on, the callee pops the hidden struct
+  // pointer. This is common for Darwin/X86, Linux & Mingw32 targets.
+  if (MF.getFunction()->getCallingConv() == CallingConv::CSRet)
     BytesToPopOnReturn = 4;
 
   // Return the new list of results.
@@ -680,9 +679,10 @@ SDOperand X86TargetLowering::LowerCCCCallTo(SDOperand Op, SelectionDAG &DAG) {
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPush = 0;
 
-  // If this is is a call to a struct-return function on Darwin/X86, the callee
+  // If this is is a call to a struct-return function, the callee
   // pops the hidden struct pointer, so we have to push it back.
-  if (CallingConv == CallingConv::CSRet && Subtarget->isTargetDarwin())
+  // This is common for Darwin/X86, Linux & Mingw32 targets.
+  if (CallingConv == CallingConv::CSRet)
     NumBytesForCalleeToPush = 4;
   
   NodeTys.clear();
@@ -2582,6 +2582,22 @@ bool X86::isMOVHLPSMask(SDNode *N) {
          isUndefOrEqual(N->getOperand(3), 3);
 }
 
+/// isMOVHLPS_v_undef_Mask - Special case of isMOVHLPSMask for canonical form
+/// of vector_shuffle v, v, <2, 3, 2, 3>, i.e. vector_shuffle v, undef,
+/// <2, 3, 2, 3>
+bool X86::isMOVHLPS_v_undef_Mask(SDNode *N) {
+  assert(N->getOpcode() == ISD::BUILD_VECTOR);
+
+  if (N->getNumOperands() != 4)
+    return false;
+
+  // Expect bit0 == 2, bit1 == 3, bit2 == 2, bit3 == 3
+  return isUndefOrEqual(N->getOperand(0), 2) &&
+         isUndefOrEqual(N->getOperand(1), 3) &&
+         isUndefOrEqual(N->getOperand(2), 2) &&
+         isUndefOrEqual(N->getOperand(3), 3);
+}
+
 /// isMOVLPMask - Return true if the specified VECTOR_SHUFFLE operand
 /// specifies a shuffle of elements that is suitable for input to MOVLP{S|D}.
 bool X86::isMOVLPMask(SDNode *N) {
@@ -3724,7 +3740,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDOperand Op, SelectionDAG &DAG) {
     SDOperand Mask = DAG.getNode(ISD::BUILD_VECTOR, MaskVT,
                                  &IdxVec[0], IdxVec.size());
     Vec = DAG.getNode(ISD::VECTOR_SHUFFLE, Vec.getValueType(),
-                      Vec, Vec, Mask);
+                      Vec, DAG.getNode(ISD::UNDEF, Vec.getValueType()), Mask);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, VT, Vec,
                        DAG.getConstant(0, getPointerTy()));
   } else if (MVT::getSizeInBits(VT) == 64) {
