@@ -814,6 +814,7 @@ bool X86DAGToDAGISel::SelectScalarSSELoad(SDOperand Root, SDOperand Pred,
     InChain = N.getOperand(0).getValue(1);
     if (ISD::isNON_EXTLoad(InChain.Val) &&
         InChain.getValue(0).hasOneUse() &&
+	N.hasOneUse() &&
         CanBeFoldedBy(N.Val, Pred.Val, Root.Val)) {
       LoadSDNode *LD = cast<LoadSDNode>(InChain);
       if (!SelectAddr(LD->getBasePtr(), Base, Scale, Index, Disp))
