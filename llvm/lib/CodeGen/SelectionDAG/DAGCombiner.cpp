@@ -1608,7 +1608,7 @@ SDOperand DAGCombiner::visitXOR(SDNode *N) {
     abort();
   }
   // fold !(x or y) -> (!x and !y) iff x or y are setcc
-  if (N1C && N1C->getValue() == 1 && 
+  if (N1C && N1C->getValue() == 1 && VT == MVT::i1 &&
       (N0.getOpcode() == ISD::OR || N0.getOpcode() == ISD::AND)) {
     SDOperand LHS = N0.getOperand(0), RHS = N0.getOperand(1);
     if (isOneUseSetCC(RHS) || isOneUseSetCC(LHS)) {
