@@ -160,7 +160,11 @@ namespace llvm {
 
       /// PINSRW - Insert the lower 16-bits of a 32-bit value to a vector,
       /// corresponds to X86::PINSRW.
-      PINSRW
+      PINSRW,
+
+      /// FMAX, FMIN - Floating point max and min.
+      ///
+      FMAX, FMIN
     };
   }
 

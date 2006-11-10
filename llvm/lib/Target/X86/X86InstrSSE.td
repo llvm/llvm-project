@@ -20,6 +20,8 @@
 
 def X86loadp   : SDNode<"X86ISD::LOAD_PACK", SDTLoad, [SDNPHasChain]>;
 def X86loadu   : SDNode<"X86ISD::LOAD_UA",   SDTLoad, [SDNPHasChain]>;
+def X86fmin    : SDNode<"X86ISD::FMIN",      SDTFPBinOp>;
+def X86fmax    : SDNode<"X86ISD::FMAX",      SDTFPBinOp>;
 def X86fand    : SDNode<"X86ISD::FAND",      SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def X86fxor    : SDNode<"X86ISD::FXOR",      SDTFPBinOp,
@@ -375,6 +377,10 @@ defm SUB : scalar_sse12_fp_binop_rm<0x5C, "sub", fsub,
                                     int_x86_sse_sub_ss, int_x86_sse2_sub_sd>;
 defm DIV : scalar_sse12_fp_binop_rm<0x5E, "div", fdiv,
                                     int_x86_sse_div_ss, int_x86_sse2_div_sd>;
+defm MAX : scalar_sse12_fp_binop_rm<0x5F, "max", X86fmax,
+                                    int_x86_sse_max_ss, int_x86_sse2_max_sd>;
+defm MIN : scalar_sse12_fp_binop_rm<0x5D, "min", X86fmin,
+                                    int_x86_sse_min_ss, int_x86_sse2_min_sd>;
 
 
 def SQRTSSr : SSI<0x51, MRMSrcReg, (ops FR32:$dst, FR32:$src),
@@ -390,43 +396,12 @@ def SQRTSDm : SDI<0x51, MRMSrcMem, (ops FR64:$dst, f64mem:$src),
                  "sqrtsd {$src, $dst|$dst, $src}",
                  [(set FR64:$dst, (fsqrt (loadf64 addr:$src)))]>;
 
-class SS_Intrr<bits<8> o, string OpcodeStr, Intrinsic IntId>
-  : SSI<o, MRMSrcReg, (ops VR128:$dst, VR128:$src1, VR128:$src2),
-        !strconcat(OpcodeStr, " {$src2, $dst|$dst, $src2}"),
-        [(set VR128:$dst, (v4f32 (IntId VR128:$src1, VR128:$src2)))]>;
-class SS_Intrm<bits<8> o, string OpcodeStr, Intrinsic IntId>
-  : SSI<o, MRMSrcMem, (ops VR128:$dst, VR128:$src1, ssmem:$src2),
-        !strconcat(OpcodeStr, " {$src2, $dst|$dst, $src2}"),
-        [(set VR128:$dst, (v4f32 (IntId VR128:$src1, sse_load_f32:$src2)))]>;
-class SD_Intrr<bits<8> o, string OpcodeStr, Intrinsic IntId>
-  : SDI<o, MRMSrcReg, (ops VR128:$dst, VR128:$src1, VR128:$src2),
-        !strconcat(OpcodeStr, " {$src2, $dst|$dst, $src2}"),
-        [(set VR128:$dst, (v2f64 (IntId VR128:$src1, VR128:$src2)))]>;
-class SD_Intrm<bits<8> o, string OpcodeStr, Intrinsic IntId>
-  : SDI<o, MRMSrcMem, (ops VR128:$dst, VR128:$src1, sdmem:$src2),
-        !strconcat(OpcodeStr, " {$src2, $dst|$dst, $src2}"),
-        [(set VR128:$dst, (v2f64 (IntId VR128:$src1, sse_load_f64:$src2)))]>;
-
-
 // Aliases to match intrinsics which expect XMM operand(s).
 
 defm SQRTSS_Int  : SS_IntUnary<0x51, "sqrtss" , int_x86_sse_sqrt_ss>;
 defm SQRTSD_Int  : SD_IntUnary<0x51, "sqrtsd" , int_x86_sse2_sqrt_sd>;
 defm RSQRTSS_Int : SS_IntUnary<0x52, "rsqrtss", int_x86_sse_rsqrt_ss>;
 defm RCPSS_Int   : SS_IntUnary<0x53, "rcpss"  , int_x86_sse_rcp_ss>;
-
-let isTwoAddress = 1 in {
-let isCommutable = 1 in {
-def Int_MAXSSrr : SS_Intrr<0x5F, "maxss", int_x86_sse_max_ss>;
-def Int_MAXSDrr : SD_Intrr<0x5F, "maxsd", int_x86_sse2_max_sd>;
-def Int_MINSSrr : SS_Intrr<0x5D, "minss", int_x86_sse_min_ss>;
-def Int_MINSDrr : SD_Intrr<0x5D, "minsd", int_x86_sse2_min_sd>;
-}
-def Int_MAXSSrm : SS_Intrm<0x5F, "maxss", int_x86_sse_max_ss>;
-def Int_MAXSDrm : SD_Intrm<0x5F, "maxsd", int_x86_sse2_max_sd>;
-def Int_MINSSrm : SS_Intrm<0x5D, "minss", int_x86_sse_min_ss>;
-def Int_MINSDrm : SD_Intrm<0x5D, "minsd", int_x86_sse2_min_sd>;
-}
 
 // Conversion instructions
 def CVTTSS2SIrr: SSI<0x2C, MRMSrcReg, (ops GR32:$dst, FR32:$src),

@@ -4967,6 +4967,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::S2VEC:              return "X86ISD::S2VEC";
   case X86ISD::PEXTRW:             return "X86ISD::PEXTRW";
   case X86ISD::PINSRW:             return "X86ISD::PINSRW";
+  case X86ISD::FMAX:               return "X86ISD::FMAX";
+  case X86ISD::FMIN:               return "X86ISD::FMIN";
   }
 }
 
@@ -5347,7 +5349,7 @@ static SDOperand PerformSELECTCombine(SDNode *N, SelectionDAG &DAG,
       SDOperand RHS = N->getOperand(2);
       ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
       
-      unsigned IntNo = 0;
+      unsigned Opcode = 0;
       if (LHS == Cond.getOperand(0) && RHS == Cond.getOperand(1)) {
         switch (CC) {
         default: break;
@@ -5358,9 +5360,8 @@ static SDOperand PerformSELECTCombine(SDNode *N, SelectionDAG &DAG,
           // FALL THROUGH.
         case ISD::SETOLT:  // (X olt/lt Y) ? X : Y -> min
         case ISD::SETLT:
-          IntNo = LHS.getValueType() == MVT::f32 ? Intrinsic::x86_sse_min_ss :
-                                                   Intrinsic::x86_sse2_min_sd;
-          break;
+          Opcode = X86ISD::FMIN;  
+	  break;
           
         case ISD::SETOGT: // (X > Y) ? X : Y -> max
         case ISD::SETUGT:
@@ -5369,9 +5370,8 @@ static SDOperand PerformSELECTCombine(SDNode *N, SelectionDAG &DAG,
           // FALL THROUGH.
         case ISD::SETUGE:  // (X uge/ge Y) ? X : Y -> max
         case ISD::SETGE:
-          IntNo = LHS.getValueType() == MVT::f32 ? Intrinsic::x86_sse_max_ss :
-                                                   Intrinsic::x86_sse2_max_sd;
-          break;
+	  Opcode = X86ISD::FMAX; 
+	  break;
         }
       } else if (LHS == Cond.getOperand(1) && RHS == Cond.getOperand(0)) {
         switch (CC) {
@@ -5383,9 +5383,8 @@ static SDOperand PerformSELECTCombine(SDNode *N, SelectionDAG &DAG,
           // FALL THROUGH.
         case ISD::SETUGE:  // (X uge/ge Y) ? Y : X -> min
         case ISD::SETGE:
-          IntNo = LHS.getValueType() == MVT::f32 ? Intrinsic::x86_sse_min_ss :
-                                                   Intrinsic::x86_sse2_min_sd;
-          break;
+          Opcode = X86ISD::FMIN; 
+	  break;
           
         case ISD::SETOLE:   // (X <= Y) ? Y : X -> max
         case ISD::SETULE:
@@ -5394,30 +5393,12 @@ static SDOperand PerformSELECTCombine(SDNode *N, SelectionDAG &DAG,
           // FALL THROUGH.
         case ISD::SETOLT:   // (X olt/lt Y) ? Y : X -> max
         case ISD::SETLT:
-          IntNo = LHS.getValueType() == MVT::f32 ? Intrinsic::x86_sse_max_ss :
-                                                   Intrinsic::x86_sse2_max_sd;
-          break;
+          Opcode = X86ISD::FMAX; 
+	  break;
         }
       }
-      
-      // minss/maxss take a v4f32 operand.
-      if (IntNo) {
-        if (LHS.getValueType() == MVT::f32) {
-          LHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, MVT::v4f32, LHS);
-          RHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, MVT::v4f32, RHS);
-        } else {
-          LHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, MVT::v2f64, LHS);
-          RHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, MVT::v2f64, RHS);
-        }
-        
-        MVT::ValueType PtrTy = Subtarget->is64Bit() ? MVT::i64 : MVT::i32;
-        SDOperand IntNoN = DAG.getConstant(IntNo, PtrTy);
-        
-        SDOperand Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, LHS.getValueType(),
-                                    IntNoN, LHS, RHS);
-        return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, N->getValueType(0), Val,
-                           DAG.getConstant(0, PtrTy));
-      }
+      if (Opcode)
+        return DAG.getNode(Opcode, N->getValueType(0), LHS, RHS);  
     }
     
   }
