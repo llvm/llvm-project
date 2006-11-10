@@ -1,5 +1,6 @@
 // RUN: %llvmgcc %s -S -o -
 // PR854
+// XFAIL: llvmgcc3
   struct kernel_symbol {
     unsigned long value;
   };
