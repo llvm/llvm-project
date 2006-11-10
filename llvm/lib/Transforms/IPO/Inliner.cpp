@@ -112,8 +112,13 @@ bool Inliner::runOnSCC(const std::vector<CallGraphNode*> &SCC) {
         // Calls to external functions are never inlinable.
         if (Callee->isExternal() ||
             CallSites[CSi].getInstruction()->getParent()->getParent() ==Callee){
-          std::swap(CallSites[CSi], CallSites.back());
-          CallSites.pop_back();
+          if (SCC.size() == 1) {
+            std::swap(CallSites[CSi], CallSites.back());
+            CallSites.pop_back();
+          } else {
+            // Keep the 'in SCC / not in SCC' boundary correct.
+            CallSites.erase(CallSites.begin()+CSi);
+          }
           --CSi;
           continue;
         }
@@ -131,9 +136,16 @@ bool Inliner::runOnSCC(const std::vector<CallGraphNode*> &SCC) {
 
           // Attempt to inline the function...
           if (InlineCallIfPossible(CS, CG, SCCFunctions)) {
-            // Remove this call site from the list.
-            std::swap(CallSites[CSi], CallSites.back());
-            CallSites.pop_back();
+            // Remove this call site from the list.  If possible, use 
+            // swap/pop_back for efficiency, but do not use it if doing so would
+            // move a call site to a function in this SCC before the
+            // 'FirstCallInSCC' barrier.
+            if (SCC.size() == 1) {
+              std::swap(CallSites[CSi], CallSites.back());
+              CallSites.pop_back();
+            } else {
+              CallSites.erase(CallSites.begin()+CSi);
+            }
             --CSi;
 
             ++NumInlined;
