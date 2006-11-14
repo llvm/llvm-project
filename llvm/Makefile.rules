@@ -213,7 +213,7 @@ ifdef ENABLE_PROFILING
   C.Flags   := $(OPTIMIZE_OPTION) -pg -g
   LD.Flags  := $(OPTIMIZE_OPTION) -pg -g
 else
-  ifdef ENABLE_OPTIMIZED
+  ifeq ($(ENABLE_OPTIMIZED),1)
     BuildMode := Release
     # Don't use -fomit-frame-pointer on Darwin or FreeBSD.
     ifneq ($(OS),FreeBSD)
