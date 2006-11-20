@@ -36,22 +36,24 @@
 <!-- *********************************************************************** -->
 
 <div class="doc_text">
-<p>This document is intended to explain the process of building the
-LLVM C/C++ front-end from its source code. You have to do this, for example, if
-you are porting LLVM to a new architecture or operating system, if you are
-working from Top-Of-Tree CVS/SVN, or if there is no precompiled snapshot
-available.</p>
 
-<p><b>NOTE:</b> This is currently a somewhat fragile, error-prone
-process, and you should <b>only</b> try to do it if:</p>
+<p>This document is intended to explain the process of building the LLVM C/C++
+front-end from its source code. You have to do this, for example, if you are
+porting LLVM to a new architecture or operating system, if you are working from
+Top-Of-Tree CVS/SVN, or if there is no precompiled snapshot available.</p>
+
+<p><b>NOTE:</b> This is currently a somewhat fragile, error-prone process, and
+you should <b>only</b> try to do it if:</p>
 
 <ol>
-  <li>you really, really, really can't use the binaries we distribute</li>
+  <li>you really, <em>really</em>, <b><em>really</em></b> can't use the
+      binaries we distribute</li>
   <li>you are an elite GCC hacker.</li>
   <li>you want to use the latest bits from CVS.</li>
 </ol>
 
 <p>We welcome patches to help make this process simpler.</p>
+
 </div>
 
 <!--=========================================================================-->
@@ -61,38 +63,48 @@ process, and you should <b>only</b> try to do it if:</p>
 <!--=========================================================================-->
 
 <div class="doc_text">
+
 <p>If you are building LLVM and the GCC front-end under Cygwin, please note that
 the LLVM and GCC makefiles do not correctly handle spaces in paths.  To deal
-with this issue, make sure that your LLVM and GCC source and build trees are 
-located in a top-level directory (like <tt>/cygdrive/c/llvm</tt> and 
+with this issue, make sure that your LLVM and GCC source and build trees are
+located in a top-level directory (like <tt>/cygdrive/c/llvm</tt> and
 <tt>/cygdrive/c/llvm-cfrontend</tt>), not in a directory that contains a space
-(which includes your "home directory", because it lives under the "Documents 
-and Settings" directory).  We welcome patches to fix this issue.
-</p>
+(which includes your "home directory", because it lives under the "Documents and
+Settings" directory).  We welcome patches to fix this issue.</p>
+
 <p>It has been found that the GCC 3.3.3 compiler provided with recent Cygwin
 versions is incapable of compiling the LLVM GCC front-end correctly. If your
-Cygwin
-installation includes GCC 3.3.3, we <i>strongly</i> recommend that you download
-GCC 3.4.3, build it separately, and use it for compiling the LLVM GCC front-end.
- This has been
-shown to work correctly.</p>
+Cygwin installation includes GCC 3.3.3, we <em>strongly</em> recommend that you
+download GCC 3.4.3, build it separately, and use it for compiling the LLVM GCC
+front-end.  This has been shown to work correctly.</p>
+
 <p>Some versions of Cygwin utilize an experimental version of GNU binutils that
 will cause the GNU <tt>ld</tt> linker to fail an assertion when linking
 components of the libstdc++. It is recommended that you replace the entire
 binutils package with version 2.15 such that "<tt>ld --version</tt>" responds
 with</p>
+
+<div class="doc_code">
 <pre>GNU ld version 2.15</pre>
-not with:<br/>
+</div>
+
+<p>not with:</p>
+
+<div class="doc_code">
 <pre>GNU ld version 2.15.91 20040725</pre>
+</div>
+
 </div>
 
 <!--=========================================================================-->
 <div class="doc_subsection"><a name="aix">Building under AIX</a></div>
+
 <div class="doc_text">
+
 <p>If you are building LLVM and the GCC front-end under AIX, do NOT use GNU
 Binutils.  They are not stable under AIX and may produce incorrect and/or
-invalid code.  Instead, use the system assembler and linker.
-</p>
+invalid code.  Instead, use the system assembler and linker.</p>
+
 </div>
 
 <!-- *********************************************************************** -->
@@ -104,33 +116,37 @@ invalid code.  Instead, use the system assembler and linker.
 <div class="doc_text">
 
 <p>This section describes how to aquire and build llvm-gcc4, which is based on
-the GCC 4.0.1 front-end.  This front-end supports C, C++, Objective-C, and 
+the GCC 4.0.1 front-end.  This front-end supports C, C++, Objective-C, and
 Objective-C++.  Note that the instructions for building this front-end are
-completely different than those for building llvm-gcc3.
-</p>
+completely different than those for building llvm-gcc3.</p>
 
 <ol>
-<li>
-<p>Retrieve the appropriate llvm-gcc4-x.y.source.tar.gz archive from the llvm
-web site.</p>
-<p>It is also possible to download the sources of the llvm-gcc4 front end from
-a read-only mirror using subversion.  To check out the code the first time use:
-</p>
+  <li><p>Retrieve the appropriate llvm-gcc4-x.y.source.tar.gz archive from the
+         llvm web site.</p>
 
-<tt>svn co svn://anonsvn.opensource.apple.com/svn/llvm/trunk
-<i>dst-directory</i></tt>
+      <p>It is also possible to download the sources of the llvm-gcc4 front end
+         from a read-only mirror using subversion.  To check out the code the
+         first time use:</p>
 
-<p>After that, the code can be be updated in the destination directory using;
-</p>
+<div class="doc_code">
+<pre>
+svn co svn://anonsvn.opensource.apple.com/svn/llvm/trunk <i>dst-directory</i>
+</pre>
+</div>
 
-<tt>svn update</tt>
+      <p>After that, the code can be be updated in the destination directory
+         using:</p>
 
-<p>The mirror is brought up to date every evening.</p>
-</li>
+<div class="doc_code">
+<pre>svn update</pre>
+</div>
 
-<li>Follow the directions in the top-level README.LLVM file for up-to-date
-    instructions on how to build llvm-gcc4.</li>
+      <p>The mirror is brought up to date every evening.</p></li>
+
+  <li>Follow the directions in the top-level <tt>README.LLVM</tt> file for
+      up-to-date instructions on how to build llvm-gcc4.</li>
 </ol>
+
 </div>
 
 <!-- *********************************************************************** -->
@@ -140,192 +156,251 @@ a read-only mirror using subversion.  To check out the code the first time use:
 <!-- *********************************************************************** -->
 
 <div class="doc_text">
+
 <ol>
-<li>Aquire llvm-gcc3 from <a href="GettingStarted.html#checkout">LLVM CVS</a> or
-from a <a href="http://llvm.org/releases/">release tarball</a>.</li>
+  <li>Aquire llvm-gcc3 from <a href="GettingStarted.html#checkout">LLVM CVS</a>
+      or from a <a href="http://llvm.org/releases/">release tarball</a>.</li>
 
-<li><p>Configure and build the LLVM libraries and tools. There are two ways to
-do this: either with <i>objdir</i> == <i>srcdir</i> or
-<i>objdir</i> != <i>srcdir</i>. It is recommended 
-that <i>srcdir</i> be the same as <i>objdir</i> for your LLVM tree (but note
-that you should always use <i>srcdir</i> != <i>objdir</i> for llvm-gcc):</p>
-<ul>
-  <li>With <i>objdir</i> != <i>srcdir</i>:<pre>
- % cd <i>objdir</i>
- % <i>srcdir</i>/configure --prefix=/some/path/you/can/install/to [options...]
- % gmake tools-only
-  </pre></li>
-  <li>With <i>objdir</i> == <i>srcdir</i>:<pre>
- % cd llvm
- % ./configure --prefix=/some/path/you/can/install/to [options...]
- % gmake tools-only
-  </pre></li>
-</ul>
-<p>This will build all of the LLVM tools and libraries. The <tt>--prefix</tt> 
-option defaults to /usr/local (per configure standards) but unless you are a 
-system administrator, you probably won't be able to install LLVM there because
-of permissions. Specify a path into which LLVM can be installed (e.g.
-<tt>--prefix=/home/user/llvm</tt>).</p>
-</li>
+  <li><p>Configure and build the LLVM libraries and tools. There are two ways to
+         do this: either with <tt><i>objdir</i> == <i>srcdir</i></tt> or
+         <tt><i>objdir</i> != <i>srcdir</i></tt>. It is recommended that
+         <tt><i>srcdir</i></tt> be the same as <tt><i>objdir</i></tt> for your
+         LLVM tree (but note that you should always use <tt><i>srcdir</i> !=
+         <i>objdir</i></tt> for llvm-gcc):</p>
 
-<li><p>Add the directory containing the tools to your PATH.</p>
+      <ul>
+        <li><p>With <tt><i>objdir</i> != <i>srcdir</i></tt>:</p>
+
+<div class="doc_code">
 <pre>
- % set path = ( `cd llvm/Debug/bin &amp;&amp; pwd` $path )
-</pre></li>
-
-<li><p>Unpack the C/C++ front-end source into cfrontend/src, either by
-       untar'ing a cfrontend.source.tar.gz file or checking out CVS into this
-       directory.</p></li>
-
-<li><p>Make "build" and "install" directories as siblings of the "src" tree:</p>
-<pre>
- % pwd
- /usr/local/example/cfrontend/src
- % cd ..
- % mkdir build install
- % set CFEINSTALL = `pwd`/install
-</pre></li>
-
-
-<li><p>Configure, build, and install the GCC front-end:</p>
-
-<p>
-<b>Linux/x86:</b><br>
-<b>Linux/IA-64:</b><br>
-<b>MacOS X/PowerPC</b> (requires dlcompat library):<br>
-<b>AIX/PowerPC:</b>
-</p>
-
-<pre>
- % cd build
- % ../src/configure --prefix=$CFEINSTALL --disable-threads --disable-nls \
-   --disable-shared --enable-languages=c,c++ --program-prefix=llvm-
- % gmake all; gmake install
+% cd <i>objdir</i>
+% <i>srcdir</i>/configure --prefix=/some/path/you/can/install/to [options...]
+% gmake tools-only
 </pre>
+</div>
+        </li>
+        <li><p>With <tt><i>objdir</i> == <i>srcdir</i></tt>:</p>
 
-<p><b>Cygwin/x86:</b></p>
-
+<div class="doc_code">
 <pre>
- % cd build
- % ../src/configure --prefix=$CFEINSTALL --disable-threads --disable-nls \
-   --disable-shared --enable-languages=c,c++ --disable-c-mbchar \
-   --program-prefix=llvm-
- % gmake all; gmake install
+% cd llvm
+% ./configure --prefix=/some/path/you/can/install/to [options...]
+% gmake tools-only
 </pre>
+</div>
+        </li>
+      </ul>
 
-<p><b>Solaris/SPARC:</b></p>
+      <p>This will build all of the LLVM tools and libraries. The
+         <tt>--prefix</tt> option defaults to <tt>/usr/local</tt> (per configure
+         standards) but unless you are a system administrator, you probably
+         won't be able to install LLVM there because of permissions. Specify a
+         path into which LLVM can be installed
+         (e.g. <tt>--prefix=/home/user/llvm</tt>).</p></li>
+  <li><p>Add the directory containing the tools to your PATH.</p>
 
-<p>
-The GCC front-end can be configured for either SPARC V8 (32 bit) or SPARC V9 (64
-bit).  This changes, among other things, the sizes of integer types and the
-macros defined for conditional compilation.
-</p>
-
-<p>
-The SPARC V8 ABI support is more robust than the V9 ABI support and can generate
-SPARC V9 code.  It is highly recommended that you use the V8 ABI with LLVM, as
-shown below.  Also,
-note that Solaris has trouble with various wide (multibyte) character
-functions from C as referenced from C++, so we typically configure with
---disable-c-mbchar (cf. <a href="http://llvm.org/PR206">Bug 206</a>).
-</p>
-
+<div class="doc_code">
+csh:
 <pre>
- % cd build
- % ../src/configure --prefix=$CFEINSTALL --disable-threads --disable-nls \
-   --disable-shared --enable-languages=c,c++ --host=sparc-sun-solaris2.8 \
-   --disable-c-mbchar --program-prefix=llvm-
- % gmake all; gmake install
+  % set path = ( `cd llvm/Debug/bin &amp;&amp; pwd` $path )
 </pre>
-
- <p><b>Common Problem:</b> You may get error messages regarding the fact
- that LLVM does not support inline assembly. Here are two common
- fixes:</p>
-
- <ul>
-  <li><p><b>Fix 1:</b> If you have system header files that include
-   inline assembly, you may have to modify them to remove the inline
-   assembly and install the modified versions in
-   <code>$CFEINSTALL/lib/gcc/<i>target-triplet</i>/3.4-llvm/include</code>.</li>
-
-  <li><b>Fix 2:</b> If you are building the C++ front-end on a CPU we
-   haven't tried yet, you will probably have to edit the appropriate
-   version of atomicity.h under
-   <code>src/libstdc++-v3/config/cpu/<i>name-of-cpu</i>/atomicity.h</code>
-   and apply a patch so that it does not use inline assembly.</li>
- </ul>
-
- <p><b>Porting to a new architecture:</b> If you are porting the front-end
- to a new architecture or compiling in a configuration that we have
- not tried previously, there are probably several changes you will have to make
- to the GCC target to get it to work correctly.  These include:<p>
-
- <ul>
-  <li>Often targets include special assembler or linker flags which
-      <tt>gccas</tt>/<tt>gccld</tt> does not understand.  In general, these can
-      just be removed.</li>
-  <li>LLVM currently does not support any floating point values other than 
-      32-bit and 64-bit IEEE floating point.  The primary effect of this is
-      that you may have to map "long double" onto "double".</li>
-  <li>The profiling hooks in GCC do not apply at all to the LLVM front-end.
-      These may need to be disabled.</li>
-  <li>No inline assembly for position independent code.  At the LLVM level,
-      everything is position independent.</li>
-  <li>We handle <tt>.init</tt> and <tt>.fini</tt> differently.</li>
-  <li>You may have to disable multilib support in your target.  Using multilib
-      support causes the GCC compiler driver to add a lot of "<tt>-L</tt>"
-      options to the link line, which do not relate to LLVM and confuse
-      <tt>gccld</tt>.  To disable multilibs, delete any
-      <tt>MULTILIB_OPTIONS</tt> lines from your target files.</li>
-  <li>Did we mention that we don't support inline assembly?  You'll probably
-      have to add some fixinclude hacks to disable it in the system
-      headers.</li>
- </ul>
-</li>
-
-<li><p>Put <tt>$CFEINSTALL/bin</tt> into your <tt>PATH</tt> environment
-variable.</p>
-  <ul>
-    <li>sh: <tt>export PATH=$CFEINSTALL/bin:$PATH</tt></li>
-    <li>csh: <tt>setenv PATH $CFEINSTALL/bin:$PATH</tt></li>
-  </ul>
-</li>
-
-<li><p>Go back into the LLVM source tree proper.  Rerun configure, using
-the same options as the last time. This will cause the configuration to now find
-the newly built llvm-gcc and llvm-g++ executables. </p></li>
-
-<li><p>Rebuild your CVS tree.  This shouldn't cause the whole thing to be
-  rebuilt, but it should build the runtime libraries.  After the tree is
-  built, install the runtime libraries into your GCC front-end build tree.
-  These are the commands you need:</p>
+sh:
 <pre>
- % gmake
- % gmake -C runtime install-bytecode
-</pre></li>
-
-<li><p>Optionally, build a symbol table for the newly installed runtime 
-libraries. Although this step is optional, you are strongly encouraged to 
-do this as the symbol tables will make a significant difference in your 
-link times. Use the <tt>llvm-ranlib</tt> tool to do this, as follows:</p>
-<pre>
- % cd $CFEINSTALL/lib
- % llvm-ranlib libiberty.a
- % llvm-ranlib libstdc++.a
- % llvm-ranlib libsupc++.a
- % cd $CFEINSTALL/lib/gcc/<i>target-triplet</i>/3.4-llvm
- % llvm-ranlib libgcc.a
- % llvm-ranlib libgcov.a
+  % export PATH=`cd llvm/Debug/bin &amp;&amp; pwd`:$PATH
 </pre>
+</div>
+  </li>
 
-<li><p>Test the newly-installed C frontend by one or more of the
-following means:</p>
- <ul>
-  <li> running the feature &amp; regression tests via <tt>make check</tt></li>
-  <li> compiling and running a "hello, LLVM" program in C and C++.</li>
-  <li> running the tests found in the <tt>llvm-test</tt> CVS module</li>
- </ul></li>
+  <li><p>Unpack the C/C++ front-end source, either by
+      untar'ing/unzipping a tar.gz file or checking out CVS into this
+      directory.</p></li>
+  <li><p>Make "build" and "install" directories as siblings of the "src"
+      tree:</p>
+
+<div class="doc_code">
+csh:
+<pre>
+  % pwd
+  /usr/local/example/llvm-gcc3.4/src
+  % cd ..
+  % mkdir build install
+  % set CFEINSTALL = `pwd`/install
+</pre>
+sh:
+<pre>
+  % pwd
+  /usr/local/example/llvm-gcc3.4/src
+  % cd ..
+  % mkdir build install
+  % export CFEINSTALL=`pwd`/install
+</pre>
+</div>
+  </li>
+
+  <li><p>Configure, build, and install the GCC front-end:</p>
+
+      <p>
+      <b>Linux/x86:</b><br>
+      <b>Linux/IA-64:</b><br>
+      <b>MacOS X/PowerPC</b> (requires dlcompat library):<br>
+      <b>AIX/PowerPC:</b>
+      </p>
+
+<div class="doc_code">
+<pre>
+% cd build
+% ../src/configure --prefix=$CFEINSTALL --disable-threads --disable-nls \
+  --disable-shared --enable-languages=c,c++ --program-prefix=llvm-
+% gmake all; gmake install
+</pre>
+</div>
+
+      <p><b>Cygwin/x86:</b></p>
+
+<div class="doc_code">
+<pre>
+% cd build
+% ../src/configure --prefix=$CFEINSTALL --disable-threads --disable-nls \
+  --disable-shared --enable-languages=c,c++ --disable-c-mbchar \
+  --program-prefix=llvm-
+% gmake all; gmake install
+</pre>
+</div>
+
+      <p><b>Solaris/SPARC:</b></p>
+
+      <p>The GCC front-end can be configured for either SPARC V8 (32 bit) or
+         SPARC V9 (64 bit).  This changes, among other things, the sizes of
+         integer types and the macros defined for conditional compilation.</p>
+
+      <p>The SPARC V8 ABI support is more robust than the V9 ABI support and can
+         generate SPARC V9 code.  It is highly recommended that you use the V8
+         ABI with LLVM, as shown below.  Also, note that Solaris has trouble
+         with various wide (multibyte) character functions from C as referenced
+         from C++, so we typically configure with --disable-c-mbchar (cf. <a
+         href="http://llvm.org/PR206">Bug 206</a>).</p>
+
+<div class="doc_code">
+<pre>
+% cd build
+% ../src/configure --prefix=$CFEINSTALL --disable-threads --disable-nls \
+  --disable-shared --enable-languages=c,c++ --host=sparc-sun-solaris2.8 \
+  --disable-c-mbchar --program-prefix=llvm-
+% gmake all; gmake install
+</pre>
+</div>
+
+      <p><b>Common Problem:</b> You may get error messages regarding the fact
+         that LLVM does not support inline assembly. Here are two common
+         fixes:</p>
+
+      <ul>
+        <li><p><b>Fix 1:</b> If you have system header files that include inline
+            assembly, you may have to modify them to remove the inline assembly
+            and install the modified versions in
+            <code>$CFEINSTALL/lib/gcc/<i>target-triplet</i>/3.4-llvm/include</code>.</li>
+
+        <li><b>Fix 2:</b> If you are building the C++ front-end on a CPU we
+            haven't tried yet, you will probably have to edit the appropriate
+            version of atomicity.h under
+            <code>src/libstdc++-v3/config/cpu/<i>name-of-cpu</i>/atomicity.h</code>
+            and apply a patch so that it does not use inline assembly.</li>
+      </ul>
+
+      <p><b>Porting to a new architecture:</b> If you are porting the front-end
+         to a new architecture or compiling in a configuration that we have not
+         tried previously, there are probably several changes you will have to
+         make to the GCC target to get it to work correctly.  These include:</p>
+
+      <ul>
+        <li>Often targets include special assembler or linker flags which
+            <tt>gccas</tt>/<tt>gccld</tt> does not understand.  In general,
+            these can just be removed.</li>
+
+        <li>LLVM currently does not support any floating point values other than
+            32-bit and 64-bit IEEE floating point.  The primary effect of this
+            is that you may have to map "long double" onto "double".</li>
+
+        <li>The profiling hooks in GCC do not apply at all to the LLVM
+            front-end.  These may need to be disabled.</li>
+
+        <li>No inline assembly for position independent code.  At the LLVM
+            level, everything is position independent.</li>
+
+        <li>We handle <tt>.init</tt> and <tt>.fini</tt> differently.</li>
+
+        <li>You may have to disable multilib support in your target.  Using
+            multilib support causes the GCC compiler driver to add a lot of
+            "<tt>-L</tt>" options to the link line, which do not relate to LLVM
+            and confuse <tt>gccld</tt>.  To disable multilibs, delete any
+            <tt>MULTILIB_OPTIONS</tt> lines from your target files.</li>
+
+        <li>Did we mention that we don't support inline assembly?  You'll
+            probably have to add some fixinclude hacks to disable it in the
+            system headers.</li>
+      </ul></li>
+
+  <li><p>Put <tt>$CFEINSTALL/bin</tt> into your <tt>PATH</tt> environment
+      variable.</p>
+
+<div class="doc_code">
+csh:
+<pre>
+  % setenv PATH $CFEINSTALL/bin:$PATH
+</pre>
+sh:
+<pre>
+  % export PATH=$CFEINSTALL/bin:$PATH
+</pre>
+</div>
+  </li>
+
+  <li><p>Go back into the LLVM source tree proper.  Rerun configure, using the
+      same options as the last time. This will cause the configuration to now
+      find the newly built llvm-gcc and llvm-g++ executables. </p></li>
+
+  <li><p>Rebuild your CVS tree.  This shouldn't cause the whole thing to be
+      rebuilt, but it should build the runtime libraries.  After the tree is
+      built, install the runtime libraries into your GCC front-end build tree.
+      These are the commands you need:</p>
+
+<div class="doc_code">
+<pre>
+% gmake
+% gmake -C runtime install-bytecode
+</pre>
+</div>
+  </li>
+
+  <li><p>Optionally, build a symbol table for the newly installed runtime
+      libraries. Although this step is optional, you are strongly encouraged to
+      do this as the symbol tables will make a significant difference in your
+      link times. Use the <tt>llvm-ranlib</tt> tool to do this, as follows:</p>
+
+<div class="doc_code">
+<pre>
+% cd $CFEINSTALL/lib
+% llvm-ranlib libiberty.a
+% llvm-ranlib libstdc++.a
+% llvm-ranlib libsupc++.a
+% cd $CFEINSTALL/lib/gcc/<i>target-triplet</i>/3.4-llvm
+% llvm-ranlib libgcc.a
+% llvm-ranlib libgcov.a
+</pre>
+</div>
+  </li>
+
+  <li><p>Test the newly-installed C frontend by one or more of the following
+      means:</p>
+
+      <ul>
+        <li>running the feature &amp; regression tests via <tt>make
+            check</tt></li>
+        <li>compiling and running a "hello, LLVM" program in C and C++.</li>
+        <li>running the tests found in the <tt>llvm-test</tt> CVS module</li>
+      </ul></li>
 </ol>
+
 </div>
 
 <!-- *********************************************************************** -->

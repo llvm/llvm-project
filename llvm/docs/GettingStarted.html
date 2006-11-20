@@ -119,11 +119,11 @@ and performance.
   <li>Install the GCC front end if you intend to compile C or C++:
     <ol>
       <li><tt>cd <i>where-you-want-the-C-front-end-to-live</i></tt></li>
-      <li><tt>gunzip --stdout cfrontend.<i>platform</i>.tar.gz | tar -xvf -</tt>
+      <li><tt>gunzip --stdout llvm-gcc.<i>platform</i>.tar.gz | tar -xvf -</tt>
       </li>
-      <li><tt>cd cfrontend/<i>platform</i><br>
+      <li><tt>cd llvm-gcc3.4/<i>platform</i> (llvm-gcc3.4 only)<br>
         ./fixheaders</tt></li>
-      <li>Add the cfrontend's "bin" directory to your PATH variable.</li>
+      <li>Add llvm-gcc's "bin" directory to your PATH variable.</li>
     </ol></li>
 
   <li>Get the LLVM Source Code
@@ -592,7 +592,7 @@ All these paths are absolute:</p>
     This is where the LLVM GCC Front End is installed.
     <p>
     For the pre-built GCC front end binaries, the LLVMGCCDIR is
-    <tt>cfrontend/<i>platform</i>/llvm-gcc</tt>.
+    <tt>llvm-gcc/<i>platform</i>/llvm-gcc</tt>.
 </dl>
 
 </div>
@@ -643,21 +643,19 @@ compressed with the gzip program.
   <dt><tt>llvm-test-x.y.tar.gz</tt></dt>
   <dd>Source release for the LLVM test suite.</dd>
 
-  <dt><tt>cfrontend-x.y.source.tar.gz</tt></dt>
-  <dd>Source release of the GCC front end.<br/></dd>
-
-  <dt><tt>cfrontend-x.y.i686-redhat-linux-gnu.tar.gz</tt></dt>
-  <dd>Binary release of the GCC front end for Linux/x86.<br/></dd>
+  <dt><tt>llvm-gcc3.4-x.y.source.tar.gz</tt></dt>
+  <dd>Source release of the LLVM GCC 3.4 front end.<br/></dd>
+	
+  <dt><tt>llvm-gcc3.4-x.y-platform.tar.gz</tt></dt>
+  <dd>Binary release of the LLVM GCC 3.4 for a specific platform.<br/></dd>
 
   <dt><tt>llvm-gcc4-x.y.source.tar.gz</tt></dt>
   <dd>Source release of the llvm-gcc4 front end.  See README.LLVM in the root
       directory for build instructions.<br/></dd>
 
-  <dt><tt>llvm-gcc4-x.y.powerpc-apple-darwin8.6.0.tar.gz</tt></dt>
-  <dd>Binary release of the llvm-gcc4 front end for MacOS X/PowerPC.<br/></dd>
+  <dt><tt>llvm-gcc4-x.y-platform.tar.gz</tt></dt>
+  <dd>Binary release of the llvm-gcc4 front end for a specific platform.<br/></dd>
 
-  <dt><tt>llvm-gcc4-x.y.i686-apple-darwin8.6.1.tar.gz</tt></dt>
-  <dd>Binary release of the llvm-gcc4 front end for MacOS X/X86.<br/></dd>
 </dl>
 
 <p>It is also possible to download the sources of the llvm-gcc4 front end from a
@@ -694,6 +692,8 @@ revision), you can specify a label.  The following releases have the following
 labels:</p>
 
 <ul>
+<li>Release 1.9: <b>RELEASE_19</b></li>
+<li>Release 1.8: <b>RELEASE_18</b></li>
 <li>Release 1.7: <b>RELEASE_17</b></li>
 <li>Release 1.6: <b>RELEASE_16</b></li>
 <li>Release 1.5: <b>RELEASE_15</b></li>
@@ -741,13 +741,13 @@ location must be specified when the LLVM suite is configured.</p>
 
 <ol>
   <li><tt>cd <i>where-you-want-the-front-end-to-live</i></tt></li>
-  <li><tt>gunzip --stdout cfrontend-<i>version</i>.<i>platform</i>.tar.gz | tar -xvf
+  <li><tt>gunzip --stdout llvmgcc-<i>version</i>.<i>platform</i>.tar.gz | tar -xvf
       -</tt></li>
 </ol>
 
-<p>Next, you will need to fix your system header files:</p>
+<p>Next, you will need to fix your system header files (llvm-gcc3.4 only):</p>
 
-<p><tt>cd cfrontend/<i>platform</i><br>
+<p><tt>cd llvm-gcc3.4/<i>platform</i><br>
    ./fixheaders</tt></p>
 
 <p>The binary versions of the GCC front end may not suit all of your needs.  For
