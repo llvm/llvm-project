@@ -62,7 +62,8 @@ href="http://llvm.org/releases/">releases page</a>.</p>
 <div class="doc_text">
 
 <p>This is the tenth public release of the LLVM Compiler Infrastructure. This
-release incorporates a large number of enhancements and new features.
+release incorporates a large number of enhancements, new features, and bug
+fixes.  We recommend that all users of previous LLVM versions upgrade.
 </p>
 
 </div>
@@ -73,41 +74,106 @@ release incorporates a large number of enhancements and new features.
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="elfdwarf">DWARF debugging 
-support for X86/ELF</a></div>
+<div class="doc_subsubsection"><a name="x86-64">New X86-64 Backend</a></div>
 <div class="doc_text">
-<p>The llvm-gcc4 C front-end now generates debugging info for C and C++ for
-X86/ELF platforms (Linux).  This extends the PPC/Darwin and X86/Darwin debugging
-support available in release 18.8 DWARF is a standard debugging format used on 
-many platforms.</p>
+<p>LLVM 1.9 now fully supports the x86-64 instruction set on Mac OS/X, and
+supports it on Linux (and other operating systems) when compiling in -static
+mode. LLVM includes JIT support for X86-64, and supports both Intel EMT-64T
+and AMD-64 architectures.  The X86-64 instruction set permits addressing a
+64-bit addressing space and provides the compiler with twice the
+number of integer registers to use.</p>
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="signedinst">Signed Instructions</a></div>
+<div class="doc_subsubsection"><a name="lto">Link-Time Optimization integration
+with native linkers</a></div>
 <div class="doc_text">
-<p>As a step towards making LLVM's integer types signless, several new
-instructions have been added to LLVM. The DIV instruction has become UDIV, SDIV,
-and FDIV.  The REM instruction has become UREM, SREM and FREM. The SHR
-instruction has become ASHR and LSHR. See the <a href="LangRef.html">Language
-  Reference</a> for details on these new instructions.</p>
+<p>LLVM now includes <a href="LinkTimeOptimization.html">liblto</a> which can
+be used to integrate LLVM Link-Time Optimization support into a native linker.
+This allows LLVM .bc to transparently participate with linking an application,
+even when some .o files are in LLVM form and some are not.</p>
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="featureA">New Feature C</a></div>
+<div class="doc_subsubsection"><a name="dwarf">DWARF debugging 
+support for Linux, Cygwin and MinGW on X86</a></div>
 <div class="doc_text">
-<p>Describe feature C here.</p>
+<p>llvm-gcc4 now supports generating debugging info for Linux, Cygwin and MinGW.
+This extends the PPC/Darwin and X86/Darwin debugging support available in the
+1.8 release. DWARF is a standard debugging format used on many platforms.</p>
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="featureB">New Feature D</a></div>
+<div class="doc_subsubsection"><a name="optimizer">Optimizer
+Improvements</a></div>
 <div class="doc_text">
-<p>Describe feature D here.</p>
+<p>The mid-level optimizer is now faster and produces better code in many cases.
+  Significant changes include:</p>
+
+<ul>
+<li>LLVM includes a new 'predicate simplifier' pass, which
+    currently performs dominator tree-based optimizations.</li>
+<li>The complete loop unroll pass now supports unrolling of
+     multiple basic block loops.</li>
+<li>The 'globalopt' pass can now perform the scalar replacement of
+    aggregates transformation on some heap allocations.</li>
+<li>The globalsmodref-aa alias analysis can now track 'indirect pointer
+     globals' more accurately.</li>
+<li>The instruction combiner can now perform element propagation  
+analysis of vector expressions, eliminating computation of vector elements
+that are not used.</li>
+</ul>
+  
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="jitrelease">New Feature E</a></div>
+<div class="doc_subsubsection"><a name="codegen">Code
+Generator Enhancements</a></div>
+
 <div class="doc_text">
-<p>Describe feature E here.</p>
+<p>
+The LLVM Target-Independent code generator now supports more target features and
+optimizes many cases more aggressively.  New features include:
+</p>
+
+<ul>
+<li>LLVM now includes a late branch folding pass which optimizes code
+    layout, performs several branch optzns, and deletes unreachable code.</li>
+<li>The code generator now support targets that have pre/post-increment
+    addressing modes.</li>
+<li>LLVM now supports dynamically-loadable register allocators and
+     schedulers.</li>
+<li>LLVM 1.9 includes several improvements to inline asm support,
+    including support for new constraints and modifiers.</li>
+<li>The register coalescer is now more aggressive than before,  
+     allowing it to eliminate more copies.</li>
+</ul>
+
+<p>In addition, the LLVM target description format has itself been extended in
+ several ways:</p>
+ 
+<ul>
+<li>tblgen now allows definition of '<a 
+     href="TableGenFundamentals.html#multiclass">multiclasses</a>' which can be
+     used to factor instruction patterns more aggressively in .td files.</li>
+<li>LLVM has a new TargetAsmInfo class which captures a variety of
+     information about the target assembly language format.</li>
+<li>.td files now support "<tt>${:foo}</tt>" syntax for encoding 
+     subtarget-specific assembler syntax into instruction descriptions.</li>
+</ul>
+
+<p>Further, several significant target-specific enhancements are included in
+LLVM 1.9:</p>
+
+<ul>
+<li>The LLVM ARM backend now supports more instructions
+    and the use of a frame pointer.  It is now possible to build  
+   libgcc and a simple cross compiler, but it is not considered "complete" yet.
+   </li>
+<li>LLVM supports the Win32 dllimport/dllexport linkage and
+     stdcall/fastcall calling conventions.</li>
+</ul>
+
 </div>
 
 <!--_________________________________________________________________________-->
@@ -121,38 +187,41 @@ instruction has become ASHR and LSHR. See the <a href="LangRef.html">Language
 <p>More specific changes include:</p>
 
 <ul>
-<li>LLVM 1.8 includes an initial ARM backend.  This backend is in early 
-    development stages.</li>
-<li>LLVM 1.8 now includes significantly better support for mingw and 
-    cygwin.</li>
-<li>The <a href="CommandGuide/html/llvm-config.html">llvm-config</a> tool is 
-    now built by default and has several new features.</li>
-<li>The X86 and PPC backends now use the correct platform ABI for passing 
-    vectors as arguments to functions.</li>
-<li>The X86 backend now includes support for the Microsoft ML assembler 
-    ("MASM").</li>
-<li>The PowerPC backend now pattern matches the 'rlwimi' instruction more 
-    aggressively.</li>
-<li>Most of LLVM is now built with "-pedantic", ensuring better portability 
-    to more C++ Compilers.</li>
-<li>The PowerPC backend now includes initial 64-bit support.  The JIT is not
-    complete, and the static compiler has a couple of known bugs, but support
-    is mostly in place. LLVM 1.9 will include completed PPC-64 support. </li>
-
+<li>The llvm-test framework now supports SPEC2006.</li>
+<li>LLVM now includes a <a href="GetElementPtr.html">FAQ about the
+<tt>getelementptr</tt> instruction</a>.</li>
+<li>Bugpoint now supports a new "<tt>-find-bugs</tt>" mode.  This mode makes
+    bugpoint permute pass sequences to try to expose bugs due to pass
+    sequencing.</li>
+<li>The JIT now supports lazily streaming code from multiple modules at a
+     time, implicitly linking the code as it goes.</li>
 </ul>
 </div>
 
 <!--=========================================================================-->
 <div class="doc_subsection">
-<a name="changes">Significant Changes in LLVM 1.8</a>
+<a name="apichanges">Significant API Changes in LLVM 1.9</a>
 </div>
 
 <div class="doc_text">
+
+<p>Several significant API changes have been made.  If you are maintaining
+out-of-tree code, please be aware that:</p>
+
 <ul>
-<li>The LLVM "SparcV9" backend (deprecated in LLVM 1.7) has been removed in 
-LLVM 1.8.  The LLVM "Sparc" backend replaces it.</li>
-<li>The --version option now prints more useful information, including the
-    build configuration for the tool.</li>
+<li>The ConstantSInt and ConstantUInt classes have been merged into the
+ ConstantInt class.</li>
+<li><p>As a step towards making LLVM's integer types signless, several new
+instructions have been added to LLVM. The <tt>Div</tt> instruction is now 
+<tt>UDiv</tt>, <tt>SDiv</tt>, and <tt>FDiv</tt>.  The <tt>Rem</tt> instruction
+is now <tt>URem</tt>, <tt>SRem</tt> and <tt>FRem</tt>. See the
+<a href="LangRef.html">Language Reference</a> for details on these new
+instructions.</p>
+<li><p><tt>ConstantBool::True</tt> and <tt>ConstantBool::False</tt> have been
+      renamed to <tt>ConstantBool::getTrue()</tt> and
+      <tt>ConstantBool::getFalse()</tt>.</p></li>
+<li>The 'analyze' tool has been merged into the 'opt' tool.</li>
+
 </ul>
 </div>
 
@@ -174,7 +243,8 @@ LLVM 1.8.  The LLVM "Sparc" backend replaces it.</li>
 <li>Sun UltraSPARC workstations running Solaris 8.</li>
 <li>Intel and AMD machines running on Win32 with the Cygwin libraries (limited
     support is available for native builds with Visual C++).</li>
-<li>PowerPC and X86-based Mac OS X systems, running 10.2 and above.</li>
+<li>PowerPC and X86-based Mac OS X systems, running 10.2 and above in 32-bit and
+    64-bit modes.</li>
 <li>Alpha-based machines running Debian GNU/Linux.</li>
 <li>Itanium-based machines running Linux and HP-UX.</li>
 </ul>
@@ -220,6 +290,7 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 <li>The <tt>-cee</tt> pass is known to be buggy, and may be removed in in a 
     future release.</li>
 <li>The IA64 code generator is experimental.</li>
+<li>The ARM code generator is experimental.</li>
 <li>The Alpha JIT is experimental.</li>
 <li>"<tt>-filetype=asm</tt>" (the default) is the only supported value for the 
     <tt>-filetype</tt> llc option.</li>
@@ -229,16 +300,138 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 
 <!-- ======================================================================= -->
 <div class="doc_subsection">
-  <a name="build">Known problems with the Build System</a>
+  <a name="x86-be">Known problems with the X86 back-end</a>
 </div>
 
 <div class="doc_text">
 
 <ul>
-<li>none yet</li>
+<li>The X86 backend does not yet support <a href="http://llvm.org/PR879">inline
+    assembly that uses the X86 floating point stack</a>.  See the <a 
+    href="http://llvm.org/PR879">bug</a> for details on workarounds on
+    Linux.</li>
+</ul>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ppc-be">Known problems with the PowerPC back-end</a>
+</div>
+
+<div class="doc_text">
+
+<ul>
+<li><a href="http://llvm.org/PR642">PowerPC backend does not correctly
+implement ordered FP comparisons</a>.</li>
+<li>The 64-bit PowerPC backend is not fully stable. If you desire PPC64 support,
+    please use mainline CVS LLVM, which has several important bug fixes.</li>
+</ul>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="sparc-be">Known problems with the SPARC back-end</a>
+</div>
+
+<div class="doc_text">
+
+<ul>
+<li>The SPARC backend only supports the 32-bit SPARC ABI (-m32), it does not
+    support the 64-bit SPARC ABI (-m64).</li>
+</ul>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="c-be">Known problems with the C back-end</a>
+</div>
+
+<div class="doc_text">
+
+<ul>
+
+<li>The C back-end produces code that violates the ANSI C Type-Based Alias
+Analysis rules.  As such, special options may be necessary to compile the code
+(for example, GCC requires the <tt>-fno-strict-aliasing</tt> option).  This
+problem probably cannot be fixed.</li>
+
+<li><a href="http://llvm.org/PR56">Zero arg vararg functions are not 
+supported</a>.  This should not affect LLVM produced by the C or C++ 
+frontends.</li>
+
+<li>The C backend does not correctly implement the <a 
+href="LangRef.html#i_stacksave"><tt>llvm.stacksave</tt></a> or
+<a href="LangRef.html#i_stackrestore"><tt>llvm.stackrestore</tt></a> 
+intrinsics.  This means that some code compiled by it can run out of stack
+space if they depend on these (e.g. C99 varargs).</li>
+
+<li><a href="http://llvm.org/PR802">The C backend does not support inline
+    assembly code</a>.</li>
+</ul>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="alpha-be">Known problems with the Alpha back-end</a>
+</div>
+
+<div class="doc_text">
+
+<ul>
+
+<li>On 21164s, some rare FP arithmetic sequences which may trap do not have the
+appropriate nops inserted to ensure restartability.</li>
+
 </ul>
 </div>
 
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ia64-be">Known problems with the IA64 back-end</a>
+</div>
+
+<div class="doc_text">
+
+<ul>
+
+<li>C++ programs are likely to fail on IA64, as calls to <tt>setjmp</tt> are
+made where the argument is not 16-byte aligned, as required on IA64. (Strictly
+speaking this is not a bug in the IA64 back-end; it will also be encountered
+when building C++ programs using the C back-end.)</li>
+
+<li>The C++ front-end does not use <a href="http://llvm.org/PR406">IA64
+ABI compliant layout of v-tables</a>.  In particular, it just stores function
+pointers instead of function descriptors in the vtable.  This bug prevents
+mixing C++ code compiled with LLVM with C++ objects compiled by other C++
+compilers.</li>
+
+<li>There are a few ABI violations which will lead to problems when mixing LLVM
+output with code built with other compilers, particularly for floating-point
+programs.</li>
+
+<li>Defining vararg functions is not supported (but calling them is ok).</li>
+
+</ul>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="arm-be">Known problems with the ARM back-end</a>
+</div>
+
+<div class="doc_text">
+
+<ul>
+<li>The ARM backend is currently in early development stages, it is not 
+ready for production use.</li>
+</ul>
+
+</div>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection">
@@ -264,28 +457,14 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 <div class="doc_text">
 
 <p>
-llvm-gcc3 has many significant problems that are fixed by llvm-gcc4.
-Two major ones include:</p>
-
-<ul>
-<li>With llvm-gcc3, 
-    C99 variable sized arrays do not release stack memory when they go out of 
-    scope.  Thus, the following program may run out of stack space:
-<pre>
-    for (i = 0; i != 1000000; ++i) {
-      int X[n];
-      foo(X);
-    }
-</pre></li>
-
-<li>With llvm-gcc3, Initialization of global union variables can only be done <a
-href="http://llvm.org/PR162">with the largest union member</a>.</li>
-
-</ul>
 
 <p>llvm-gcc4 is far more stable and produces better code than llvm-gcc3, but
-does not currently support Link-Time-Optimization or C++ Exception Handling,
+does not currently support <a href="http://llvm.org/PR869">Link-Time 
+Optimization</a> or <a href="http://llvm.org/PR870">C++ Exception Handling</a>,
 which llvm-gcc3 does.</p>
+
+<p>llvm-gcc4 does not support the <a href="http://llvm.org/PR947">GCC indirect
+goto extension</a>, but llvm-gcc3 does.</p>
 
 </div>
 
@@ -302,28 +481,12 @@ which llvm-gcc3 does.</p>
 support for floating point data types of any size other than 32 and 64
 bits.</li>
     
-<li>The following Unix system functionality has not been tested and may not
-work:
-  <ol>
-  <li><tt>sigsetjmp</tt>, <tt>siglongjmp</tt> - These are not turned into the
-      appropriate <tt>invoke</tt>/<tt>unwind</tt> instructions.  Note that
-      <tt>setjmp</tt> and <tt>longjmp</tt> <em>are</em> compiled correctly.
-  <li><tt>getcontext</tt>, <tt>setcontext</tt>, <tt>makecontext</tt>
-      - These functions have not been tested.
-  </ol></li>
-
 <li>Although many GCC extensions are supported, some are not.  In particular,
     the following extensions are known to <b>not be</b> supported:
   <ol>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Local-Labels.html#Local%20Labels">Local Labels</a>: Labels local to a block.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Nested-Functions.html#Nested%20Functions">Nested Functions</a>: As in Algol and Pascal, lexical scoping of functions.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Constructing-Calls.html#Constructing%20Calls">Constructing Calls</a>: Dispatching a call to another function.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Extended%20Asm">Extended Asm</a>: Assembler instructions with C expressions as operands.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Constraints.html#Constraints">Constraints</a>: Constraints for asm operands.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Asm-Labels.html#Asm%20Labels">Asm Labels</a>: Specifying the assembler name to use for a C symbol.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Explicit-Reg-Vars.html#Explicit%20Reg%20Vars">Explicit Reg Vars</a>: Defining variables residing in specified registers.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html#Vector%20Extensions">Vector Extensions</a>: Using vector instructions through built-in functions.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Target-Builtins.html#Target%20Builtins">Target Builtins</a>:   Built-in functions specific to particular targets.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Thread_002dLocal.html">Thread-Local</a>: Per-thread variables.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Pragmas.html#Pragmas">Pragmas</a>: Pragmas accepted by GCC.</li>
   </ol>
@@ -344,29 +507,31 @@ work:
       Declaring that functions have no side effects or that they can never
       return.<br>
 
-      <b>Supported:</b> <tt>format</tt>, <tt>format_arg</tt>, <tt>non_null</tt>,
-      <tt>noreturn</tt>, <tt>constructor</tt>, <tt>destructor</tt>,
-      <tt>unused</tt>, <tt>used</tt>,
-      <tt>deprecated</tt>, <tt>warn_unused_result</tt>, <tt>weak</tt><br>
+      <b>Supported:</b> <tt>constructor</tt>, <tt>destructor</tt>,
+      <tt>deprecated</tt>, <tt>fastcall</tt>, <tt>format</tt>, 
+      <tt>format_arg</tt>, <tt>non_null</tt>, <tt>noreturn</tt>, 
+      <tt>stdcall</tt>, <tt>unused</tt>, <tt>used</tt>, 
+      <tt>warn_unused_result</tt>, <tt>weak</tt><br>
 
       <b>Ignored:</b> <tt>noinline</tt>,
       <tt>always_inline</tt>, <tt>pure</tt>, <tt>const</tt>, <tt>nothrow</tt>,
       <tt>malloc</tt>, <tt>no_instrument_function</tt>, <tt>cdecl</tt><br>
 
       <b>Unsupported:</b> <tt>section</tt>, <tt>alias</tt>,
-      <tt>visibility</tt>, <tt>regparm</tt>, <tt>stdcall</tt>,
-      <tt>fastcall</tt>, all other target specific attributes</li>
+      <tt>visibility</tt>, <tt>regparm</tt>, all other target specific 
+      attributes</li>
    
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html#Variable%20Attributes">Variable Attributes</a>:
       Specifying attributes of variables.<br>
       <b>Supported:</b> <tt>cleanup</tt>, <tt>common</tt>, <tt>nocommon</tt>,
-                        <tt>deprecated</tt>, <tt>transparent_union</tt>,
+                        <tt>deprecated</tt>, <tt>dllimport</tt>, 
+                        <tt>dllexport</tt>,  <tt>transparent_union</tt>,
                         <tt>unused</tt>, <tt>used</tt>, <tt>weak</tt><br>
 
       <b>Unsupported:</b> <tt>aligned</tt>, <tt>mode</tt>, <tt>packed</tt>,
                         <tt>section</tt>, <tt>shared</tt>, <tt>tls_model</tt>,
-                        <tt>vector_size</tt>, <tt>dllimport</tt>, 
-                        <tt>dllexport</tt>, all target specific attributes.</li>
+                        <tt>vector_size</tt>, all target specific attributes.
+  </li>
 
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Type-Attributes.html#Type%20Attributes">Type Attributes</a>:	Specifying attributes of types.<br>
       <b>Supported:</b> <tt>transparent_union</tt>, <tt>unused</tt>,
@@ -402,6 +567,12 @@ work:
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Empty-Structures.html#Empty%20Structures">Empty Structures</a>: Structures with no members.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Variadic-Macros.html#Variadic%20Macros">Variadic Macros</a>: Macros with a variable number of arguments.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Escaped-Newlines.html#Escaped%20Newlines">Escaped Newlines</a>:  Slightly looser rules for escaped newlines.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Extended%20Asm">Extended Asm</a>: Assembler instructions with C expressions as operands.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Constraints.html#Constraints">Constraints</a>: Constraints for asm operands.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Asm-Labels.html#Asm%20Labels">Asm Labels</a>: Specifying the assembler name to use for a C symbol.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Explicit-Reg-Vars.html#Explicit%20Reg%20Vars">Explicit Reg Vars</a>: Defining variables residing in specified registers.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html#Vector%20Extensions">Vector Extensions</a>: Using vector instructions through built-in functions.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Target-Builtins.html#Target%20Builtins">Target Builtins</a>:   Built-in functions specific to particular targets.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Subscripting.html#Subscripting">Subscripting</a>: Any array can be subscripted, even if not an lvalue.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Pointer-Arith.html#Pointer%20Arith">Pointer Arith</a>: Arithmetic on <code>void</code>-pointers and function pointers.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Initializers.html#Initializers">Initializers</a>: Non-constant initializers.</li>
@@ -446,26 +617,13 @@ itself.</p>
 </div>
 
 <!-- _______________________________________________________________________ -->
-<div class="doc_subsubsection">Bugs</div>
-
-<div class="doc_text">
-
-<ul>
-<li>The C++ front-end inherits all problems afflicting the <a href="#c-fe">C
-    front-end</a>.</li>
-
-</ul>
-
-</div>
-
-<!-- _______________________________________________________________________ -->
 <div class="doc_subsubsection">
   Notes
 </div>
 
 <div class="doc_text">
-
 <ul>
+<li>llvm-gcc4 does not support C++ exception handling at all yet.</li>
 
 <li>Destructors for local objects are not always run when a <tt>longjmp</tt> is
     performed. In particular, destructors for objects in the <tt>longjmp</tt>ing
@@ -480,7 +638,7 @@ itself.</p>
     representation issues.  Because we use this API, code generated by the LLVM
     compilers should be binary compatible with machine code generated by other
     Itanium ABI C++ compilers (such as G++, the Intel and HP compilers, etc).
-    <i>However</i>, the exception handling mechanism used by LLVM is very
+    <i>However</i>, the exception handling mechanism used by llvm-gcc3 is very
     different from the model used in the Itanium ABI, so <b>exceptions will not
     interact correctly</b>. </li>
 
@@ -488,134 +646,7 @@ itself.</p>
 
 </div>
 
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="c-be">Known problems with the C back-end</a>
-</div>
 
-<div class="doc_text">
-
-<ul>
-
-<li>The C back-end produces code that violates the ANSI C Type-Based Alias
-Analysis rules.  As such, special options may be necessary to compile the code
-(for example, GCC requires the <tt>-fno-strict-aliasing</tt> option).  This
-problem probably cannot be fixed.</li>
-
-<li><a href="http://llvm.org/PR56">Zero arg vararg functions are not 
-supported</a>.  This should not affect LLVM produced by the C or C++ 
-frontends.</li>
-
-<li>The C backend does not correctly implement the <a 
-href="LangRef.html#i_stacksave"><tt>llvm.stacksave</tt></a> or
-<a href="LangRef.html#i_stackrestore"><tt>llvm.stackrestore</tt></a> 
-intrinsics.  This means that some code compiled by it can run out of stack
-space if they depend on these (e.g. C99 varargs).</li>
-
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="x86-be">Known problems with the X86 back-end</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-<li>none yet.</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="ppc-be">Known problems with the PowerPC back-end</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-<li><a href="http://llvm.org/PR642">PowerPC backend does not correctly
-implement ordered FP comparisons</a>.</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="alpha-be">Known problems with the Alpha back-end</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-
-<li>On 21164s, some rare FP arithmetic sequences which may trap do not have the
-appropriate nops inserted to ensure restartability.</li>
-
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="ia64-be">Known problems with the IA64 back-end</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-
-<li>C++ programs are likely to fail on IA64, as calls to <tt>setjmp</tt> are
-made where the argument is not 16-byte aligned, as required on IA64. (Strictly
-speaking this is not a bug in the IA64 back-end; it will also be encountered
-when building C++ programs using the C back-end.)</li>
-
-<li>The C++ front-end does not use <a href="http://llvm.org/PR406">IA64
-ABI compliant layout of v-tables</a>.  In particular, it just stores function
-pointers instead of function descriptors in the vtable.  This bug prevents
-mixing C++ code compiled with LLVM with C++ objects compiled by other C++
-compilers.</li>
-
-<li>There are a few ABI violations which will lead to problems when mixing LLVM
-output with code built with other compilers, particularly for floating-point
-programs.</li>
-
-<li>Defining vararg functions is not supported (but calling them is ok).</li>
-
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="sparc-be">Known problems with the SPARC back-end</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-<li>The SPARC backend only supports the 32-bit SPARC ABI (-m32), it does not
-    support the 64-bit SPARC ABI (-m64).</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="arm-be">Known problems with the ARM back-end</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-<li>The ARM backend is currently in early development stages, it is not 
-ready for production use.</li>
-</ul>
-
-</div>
 
 <!-- *********************************************************************** -->
 <div class="doc_section">
