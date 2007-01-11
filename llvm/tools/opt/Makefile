@@ -11,6 +11,6 @@ TOOLNAME = opt
 REQUIRES_EH := 1
 
 LINK_COMPONENTS := bcreader bcwriter instrumentation scalaropts ipo \
-                   datastructure transforms
+                   transforms
 
 include $(LEVEL)/Makefile.common
