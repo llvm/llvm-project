@@ -22,8 +22,6 @@
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/DataStructure/DataStructure.h"
-#include "llvm/Analysis/DataStructure/CallTargets.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Function.h"
 #include "llvm/Transforms/Instrumentation.h"
@@ -56,8 +54,6 @@ namespace {
       (void) llvm::createConstantMergePass();
       (void) llvm::createConstantPropagationPass();
       (void) llvm::createCorrelatedExpressionEliminationPass();
-      (void) llvm::createDSAAPass();
-      (void) llvm::createDSOptPass();
       (void) llvm::createDeadArgEliminationPass();
       (void) llvm::createDeadCodeEliminationPass();
       (void) llvm::createDeadInstEliminationPass();
@@ -105,7 +101,6 @@ namespace {
       (void) llvm::createScalarReplAggregatesPass();
       (void) llvm::createSimplifyLibCallsPass();
       (void) llvm::createSingleLoopExtractorPass();
-      (void) llvm::createSteensgaardPass();
       (void) llvm::createStripSymbolsPass();
       (void) llvm::createTailCallEliminationPass();
       (void) llvm::createTailDuplicationPass();
@@ -117,22 +112,14 @@ namespace {
       (void) llvm::createNullProfilerRSPass();
       (void) llvm::createRSProfilingPass();
       (void) llvm::createIndMemRemPass();
-      (void) llvm::createDataStructureStatsPass();
-      (void) llvm::createDataStructureGraphCheckerPass();
       (void) llvm::createInstCountPass();
       (void) llvm::createPredicateSimplifierPass();
 
-      (void)new llvm::LocalDataStructures();
-      (void)new llvm::BUDataStructures();
-      (void)new llvm::TDDataStructures();
-      (void)new llvm::CompleteBUDataStructures();
-      (void)new llvm::EquivClassGraphs();
       (void)new llvm::IntervalPartition();
       (void)new llvm::ImmediateDominators();
       (void)new llvm::PostDominatorSet();
       (void)new llvm::FindUsedTypes();
       (void)new llvm::ScalarEvolution();
-      (void)new llvm::CallTargetFinder();
       ((llvm::Function*)0)->viewCFGOnly();
       llvm::AliasSetTracker X(*(llvm::AliasAnalysis*)0);
       X.add((llvm::Value*)0, 0);  // for -print-alias-sets
