@@ -456,6 +456,9 @@ static bool LinkGlobals(Module *Dest, Module *Src,
                            SGV->getName(), Dest);
       // Propagate alignment info.
       NewDGV->setAlignment(SGV->getAlignment());
+
+      // Propagate section info.
+      NewDGV->setSection(SGV->getSection());
       
       // If the LLVM runtime renamed the global, but it is an externally visible
       // symbol, DGV must be an existing global with internal linkage.  Rename
@@ -481,6 +484,9 @@ static bool LinkGlobals(Module *Dest, Module *Src,
       // Propagate alignment info.
       NewDGV->setAlignment(std::max(DGV->getAlignment(), SGV->getAlignment()));
 
+      // Propagate section info.
+      NewDGV->setSection(SGV->getSection());
+
       // Make sure to remember this mapping...
       ValueMap.insert(std::make_pair(SGV, NewDGV));
 
@@ -489,6 +495,9 @@ static bool LinkGlobals(Module *Dest, Module *Src,
     } else {
       // Propagate alignment info.
       DGV->setAlignment(std::max(DGV->getAlignment(), SGV->getAlignment()));
+
+      // Propagate section info.
+      DGV->setSection(SGV->getSection());
 
       // Otherwise, perform the mapping as instructed by GetLinkageResult.  If
       // the types don't match, and if we are to link from the source, nuke DGV
