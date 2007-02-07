@@ -377,9 +377,9 @@ static bool isEliminableCastOfCast(const Type *SrcTy, const Type *MidTy,
   
   // If we are casting between pointer and integer types, treat pointers as
   // integers of the appropriate size for the code below.
-  if (isa<PointerType>(SrcTy)) SrcTy = TD->getIntPtrType();
-  if (isa<PointerType>(MidTy)) MidTy = TD->getIntPtrType();
-  if (isa<PointerType>(DstTy)) DstTy = TD->getIntPtrType();
+  if (isa<PointerType>(SrcTy)) SrcTy = TD->getIntPtrType()->getSignedVersion();
+  if (isa<PointerType>(MidTy)) MidTy = TD->getIntPtrType()->getSignedVersion();
+  if (isa<PointerType>(DstTy)) DstTy = TD->getIntPtrType()->getSignedVersion();
   
   // Allow free casting and conversion of sizes as long as the sign doesn't
   // change...
