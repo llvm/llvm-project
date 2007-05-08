@@ -985,10 +985,10 @@ bool BitcodeReader::ParseModule(const std::string &ModuleID) {
         GlobalInits.push_back(std::make_pair(NewGV, InitID-1));
       break;
     }
-    // FUNCTION:  [type, callingconv, isproto, linkage, alignment, section,
-    //             visibility]
+    // FUNCTION:  [type, callingconv, isproto, linkage, paramattr,
+    //             alignment, section, visibility]
     case bitc::MODULE_CODE_FUNCTION: {
-      if (Record.size() < 7)
+      if (Record.size() < 8)
         return Error("Invalid MODULE_CODE_FUNCTION record");
       const Type *Ty = getTypeByID(Record[0]);
       if (!isa<PointerType>(Ty))
@@ -1004,13 +1004,17 @@ bool BitcodeReader::ParseModule(const std::string &ModuleID) {
       Func->setCallingConv(Record[1]);
       bool isProto = Record[2];
       Func->setLinkage(GetDecodedLinkage(Record[3]));
-      Func->setAlignment((1 << Record[4]) >> 1);
-      if (Record[5]) {
-        if (Record[5]-1 >= SectionTable.size())
+      
+      assert(Func->getFunctionType()->getParamAttrs() == 
+             getParamAttrs(Record[4]));
+      
+      Func->setAlignment((1 << Record[5]) >> 1);
+      if (Record[6]) {
+        if (Record[6]-1 >= SectionTable.size())
           return Error("Invalid section ID");
-        Func->setSection(SectionTable[Record[5]-1]);
+        Func->setSection(SectionTable[Record[6]-1]);
       }
-      Func->setVisibility(GetDecodedVisibility(Record[6]));
+      Func->setVisibility(GetDecodedVisibility(Record[7]));
       
       ValueList.push_back(Func);
       
@@ -1364,12 +1368,12 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
     }
       
     case bitc::FUNC_CODE_INST_INVOKE: { // INVOKE: [cc,fnty, op0,op1,op2, ...]
-      if (Record.size() < 3) return Error("Invalid INVOKE record");
-      unsigned CCInfo = Record[0];
-      BasicBlock *NormalBB = getBasicBlock(Record[1]);
-      BasicBlock *UnwindBB = getBasicBlock(Record[2]);
+      if (Record.size() < 4) return Error("Invalid INVOKE record");
+      unsigned CCInfo = Record[1];
+      BasicBlock *NormalBB = getBasicBlock(Record[2]);
+      BasicBlock *UnwindBB = getBasicBlock(Record[3]);
       
-      unsigned OpNum = 3;
+      unsigned OpNum = 4;
       Value *Callee;
       if (getValueTypePair(Record, OpNum, NextValueNo, Callee))
         return Error("Invalid INVOKE record");
@@ -1383,6 +1387,8 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
           Record.size() < OpNum+FTy->getNumParams())
         return Error("Invalid INVOKE record");
       
+      assert(FTy->getParamAttrs() == getParamAttrs(Record[0]));
+
       SmallVector<Value*, 16> Ops;
       for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i, ++OpNum) {
         Ops.push_back(getFnValueByID(Record[OpNum], FTy->getParamType(i)));
@@ -1484,11 +1490,12 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_CALL: { // CALL: [cc, fnty, fnid, arg0, arg1...]
-      if (Record.size() < 1)
+      if (Record.size() < 2)
         return Error("Invalid CALL record");
-      unsigned CCInfo = Record[0];
       
-      unsigned OpNum = 1;
+      unsigned CCInfo = Record[1];
+      
+      unsigned OpNum = 2;
       Value *Callee;
       if (getValueTypePair(Record, OpNum, NextValueNo, Callee))
         return Error("Invalid CALL record");
@@ -1498,6 +1505,8 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
       if (OpTy) FTy = dyn_cast<FunctionType>(OpTy->getElementType());
       if (!FTy || Record.size() < FTy->getNumParams()+OpNum)
         return Error("Invalid CALL record");
+      
+      assert(FTy->getParamAttrs() == getParamAttrs(Record[0]));
       
       SmallVector<Value*, 16> Args;
       // Read the fixed params.
