@@ -22,9 +22,9 @@ class GPR<bits<5> num, string n> : PPCReg<n> {
 }
 
 // GP8 - One of the 32 64-bit general-purpose registers
-class GP8<GPR Alias> : PPCReg<Alias.Name> {
-  field bits<5> Num = Alias.Num;
-  let Aliases = [Alias];
+class GP8<GPR SubReg> : PPCReg<SubReg.Name> {
+  field bits<5> Num = SubReg.Num;
+  let SubRegs = [SubReg];
 }
 
 // SPR - One of the 32-bit special-purpose registers
