@@ -386,6 +386,12 @@ static void WriteModuleInfo(const Module *M, const ValueEnumerator &VE,
     Vals.push_back(F->getCallingConv());
     Vals.push_back(F->isDeclaration());
     Vals.push_back(getEncodedLinkage(F));
+    
+    // Note: we emit the param attr ID number for the function type of this
+    // function.  In the future, we intend for attrs to be properties of
+    // functions, instead of on the type.  This is to support this future work.
+    Vals.push_back(VE.getParamAttrID(F->getFunctionType()->getParamAttrs()));
+    
     Vals.push_back(Log2_32(F->getAlignment())+1);
     Vals.push_back(F->hasSection() ? SectionMap[F->getSection()] : 0);
     Vals.push_back(getEncodedVisibility(F));
@@ -736,15 +742,21 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
       Vals.push_back(VE.getValueID(I.getOperand(i)));
     break;
   case Instruction::Invoke: {
+    const PointerType *PTy = cast<PointerType>(I.getOperand(0)->getType());
+    const FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
     Code = bitc::FUNC_CODE_INST_INVOKE;
+    
+    // Note: we emit the param attr ID number for the function type of this
+    // function.  In the future, we intend for attrs to be properties of
+    // functions, instead of on the type.  This is to support this future work.
+    Vals.push_back(VE.getParamAttrID(FTy->getParamAttrs()));
+    
     Vals.push_back(cast<InvokeInst>(I).getCallingConv());
     Vals.push_back(VE.getValueID(I.getOperand(1)));      // normal dest
     Vals.push_back(VE.getValueID(I.getOperand(2)));      // unwind dest
     PushValueAndType(I.getOperand(0), InstID, Vals, VE); // callee
     
     // Emit value #'s for the fixed parameters.
-    const PointerType *PTy = cast<PointerType>(I.getOperand(0)->getType());
-    const FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
     for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i)
       Vals.push_back(VE.getValueID(I.getOperand(i+3)));  // fixed param.
 
@@ -806,14 +818,21 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(cast<StoreInst>(I).isVolatile());
     break;
   case Instruction::Call: {
+    const PointerType *PTy = cast<PointerType>(I.getOperand(0)->getType());
+    const FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
+
     Code = bitc::FUNC_CODE_INST_CALL;
+    
+    // Note: we emit the param attr ID number for the function type of this
+    // function.  In the future, we intend for attrs to be properties of
+    // functions, instead of on the type.  This is to support this future work.
+    Vals.push_back(VE.getParamAttrID(FTy->getParamAttrs()));
+    
     Vals.push_back((cast<CallInst>(I).getCallingConv() << 1) |
                    unsigned(cast<CallInst>(I).isTailCall()));
     PushValueAndType(I.getOperand(0), InstID, Vals, VE);  // Callee
     
     // Emit value #'s for the fixed parameters.
-    const PointerType *PTy = cast<PointerType>(I.getOperand(0)->getType());
-    const FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
     for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i)
       Vals.push_back(VE.getValueID(I.getOperand(i+1)));  // fixed param.
       
