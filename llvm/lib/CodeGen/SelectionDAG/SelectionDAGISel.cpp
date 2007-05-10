@@ -1462,6 +1462,11 @@ bool SelectionDAGLowering::handleSmallSwitchRange(CaseRec& CR,
   return true;
 }
 
+static inline bool areJTsAllowed(const TargetLowering &TLI) {
+  return (TLI.isOperationLegal(ISD::BR_JT, MVT::Other) ||
+          TLI.isOperationLegal(ISD::BRIND, MVT::Other));
+}
+  
 /// handleJTSwitchCase - Emit jumptable for current switch case range
 bool SelectionDAGLowering::handleJTSwitchCase(CaseRec& CR,
                                               CaseRecVector& WorkList,
@@ -1478,9 +1483,7 @@ bool SelectionDAGLowering::handleJTSwitchCase(CaseRec& CR,
        I!=E; ++I)
     TSize += I->size();
 
-  if ((!TLI.isOperationLegal(ISD::BR_JT, MVT::Other) &&
-       !TLI.isOperationLegal(ISD::BRIND, MVT::Other)) ||
-      TSize <= 3)
+  if (!areJTsAllowed(TLI) || TSize <= 3)
     return false;
   
   double Density = (double)TSize / (double)((Last - First) + 1ULL);  
@@ -1622,8 +1625,12 @@ bool SelectionDAGLowering::handleBTSplitSwitchCase(CaseRec& CR,
     LSize += J->size();
     RSize -= J->size();
   }
-  // If our case is dense we *really* should handle it earlier!
-  assert((FMetric > 0) && "Should handle dense range earlier!");
+  if (areJTsAllowed(TLI)) {
+    // If our case is dense we *really* should handle it earlier!
+    assert((FMetric > 0) && "Should handle dense range earlier!");
+  } else {
+    Pivot = CR.Range.first + Size/2;
+  }
   
   CaseRange LHSR(CR.Range.first, Pivot);
   CaseRange RHSR(Pivot, CR.Range.second);
