@@ -3422,8 +3422,8 @@ SDOperand DAGCombiner::visitSTORE(SDNode *N) {
   SDOperand Ptr   = ST->getBasePtr();
   
   // If this is a store of a bit convert, store the input value if the
-  // resultant store does not need a  higher alignment than the original.
-  if (Value.getOpcode() == ISD::BIT_CONVERT) {
+  // resultant store does not need a higher alignment than the original.
+  if (Value.getOpcode() == ISD::BIT_CONVERT && !ST->isTruncatingStore()) {
     unsigned Align = ST->getAlignment();
     MVT::ValueType SVT = Value.getOperand(0).getValueType();
     unsigned OrigAlign = TLI.getTargetMachine().getTargetData()->
