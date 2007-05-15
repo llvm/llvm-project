@@ -499,8 +499,8 @@ href="CFEBuildInstrs.html">try to compile it</a> on your platform.</p>
 <p>LLVM is very demanding of the host C++ compiler, and as such tends to expose
 bugs in the compiler.  In particular, several versions of GCC crash when trying
 to compile LLVM.  We routinely use GCC 3.3.3, 3.4.0, and Apple 4.0.1 
-successfully with them (however, see below).  Other versions of GCC will 
-probably work as well.  GCC versions listed
+successfully with them (however, see important notes below).  Other versions 
+of GCC will probably work as well.  GCC versions listed
 here are known to not work.  If you are using one of these versions, please try
 to upgrade your GCC to something more recent.  If you run into a problem with a
 version of GCC not listed here, please <a href="mailto:llvmdev@cs.uiuc.edu">let
@@ -525,6 +525,13 @@ the "<tt>convert_from_eh_region_ranges_1</tt>" GCC function.</p>
    possibly others) does not compile LLVM correctly (it appears that exception 
    handling is broken in some cases).  Please download the FSF 3.3.3 or upgrade
    to a newer version of GCC.</p>
+<p><b>GCC 3.4.0</b> on linux/x86 (32-bit)</b>: GCC miscompiles portions of the 
+   code generator, causing an infinite loop in the llvm-gcc build when built
+   with optimizations enabled (i.e. a release build).</p>
+<p><b>GCC 3.4.2</b> on linux/x86 (32-bit)</b>: GCC miscompiles portions of the 
+   code generator at -O3, as with 3.4.0.  However gcc 3.4.2 (unlike 3.4.0)
+   correctly compiles LLVM at -O2.  A work around is to build release LLVM
+   builds with "make ENABLE_OPTIMIZED=1 OPTIMIZE_OPTION=-O2 ..."</p>
 <p><b>GCC 3.4.x</b> on X86-64/amd64</b>: GCC <a href="http://llvm.org/PR1056">
    miscompiles portions of LLVM</a>.</p>
 <p><b>IA-64 GCC 4.0.0</b>: The IA-64 version of GCC 4.0.0 is known to
