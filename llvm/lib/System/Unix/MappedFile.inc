@@ -78,6 +78,7 @@ void MappedFile::unmap() {
     if (options_ & WRITE_ACCESS)
       ::msync(base_, info_->Size, MS_SYNC);
     ::munmap(base_, info_->Size);
+    base_ = 0;  // Mark this as non-mapped.
   }
 }
 
