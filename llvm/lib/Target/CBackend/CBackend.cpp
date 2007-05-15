@@ -1398,6 +1398,11 @@ static void generateCompilerSpecificCode(std::ostream& Out) {
       << "#define __ATTRIBUTE_DTOR__\n"
       << "#define LLVM_ASM(X)\n"
       << "#endif\n\n";
+  
+  Out << "#if __GNUC__ < 4 /* Old GCC's, or compilers not GCC */ \n"
+      << "#define __builtin_stack_save() 0   /* not implemented */\n"
+      << "#define __builtin_stack_restore(X) /* noop */\n"
+      << "#endif\n\n";
 
   // Output target-specific code that should be inserted into main.
   Out << "#define CODE_FOR_MAIN() /* Any target-specific code for main()*/\n";
