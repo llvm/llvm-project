@@ -908,9 +908,6 @@ system. The current set of primitive types is as follows:</p>
         <tbody>
         <tr><th>Type</th><th>Description</th></tr>
         <tr><td><tt><a name="t_void">void</a></tt></td><td>No value</td></tr>
-        <tr><td><tt>i8</tt></td><td>8-bit value</td></tr>
-        <tr><td><tt>i32</tt></td><td>32-bit value</td></tr>
-        <tr><td><tt>float</tt></td><td>32-bit floating point value</td></tr>
         <tr><td><tt>label</tt></td><td>Branch destination</td></tr>
         </tbody>
       </table>
@@ -919,9 +916,7 @@ system. The current set of primitive types is as follows:</p>
       <table>
         <tbody>
           <tr><th>Type</th><th>Description</th></tr>
-          <tr><td><tt>i1</tt></td><td>True or False value</td></tr>
-          <tr><td><tt>i16</tt></td><td>16-bit value</td></tr>
-          <tr><td><tt>i64</tt></td><td>64-bit value</td></tr>
+          <tr><td><tt>float</tt></td><td>32-bit floating point value</td></tr>
          <tr><td><tt>double</tt></td><td>64-bit floating point value</td></tr>
         </tbody>
       </table>
@@ -942,7 +937,7 @@ classifications:</p>
     <tr><th>Classification</th><th>Types</th></tr>
     <tr>
       <td><a name="t_integer">integer</a></td>
-      <td><tt>i1, i8, i16, i32, i64</tt></td>
+      <td><tt>i1, i2, i3, ... i8, ... i16, ... i32, ... i64, ... </tt></td>
     </tr>
     <tr>
       <td><a name="t_floating">floating point</a></td>
@@ -950,7 +945,7 @@ classifications:</p>
     </tr>
     <tr>
       <td><a name="t_firstclass">first class</a></td>
-      <td><tt>i1, i8, i16, i32, i64, float, double, <br/>
+      <td><tt>i1, ..., float, double, <br/>
           <a href="#t_pointer">pointer</a>,<a href="#t_vector">vector</a></tt>
       </td>
     </tr>
@@ -975,6 +970,51 @@ pointers, and other useful types.  Note that these derived types may be
 recursive: For example, it is possible to have a two dimensional array.</p>
 
 </div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection"> <a name="t_integer">Integer Type</a> </div>
+
+<div class="doc_text">
+
+<h5>Overview:</h5>
+<p>The integer type is a very simple derived type that simply specifies an
+arbitrary bit width for the integer type desired. Any bit width from 1 bit to
+2^23-1 (about 8 million) can be specified.</p>
+
+<h5>Syntax:</h5>
+
+<pre>
+  iN
+</pre>
+
+<p>The number of bits the integer will occupy is specified by the <tt>N</tt>
+value.</p>
+
+<h5>Examples:</h5>
+<table class="layout">
+  <tr class="layout">
+    <td class="left">
+      <tt>i1</tt><br/>
+      <tt>i4</tt><br/>
+      <tt>i8</tt><br/>
+      <tt>i16</tt><br/>
+      <tt>i32</tt><br/>
+      <tt>i42</tt><br/>
+      <tt>i64</tt><br/>
+      <tt>i1942652</tt><br/>
+    </td>
+    <td class="left">
+      A boolean integer of 1 bit<br/>
+      A nibble sized integer of 4 bits.<br/>
+      A byte sized integer of 8 bits.<br/>
+      A half word sized integer of 16 bits.<br/>
+      A word sized integer of 32 bits.<br/>
+      An integer whose bit width is the answer. <br/>
+      A double word sized integer of 64 bits.<br/>
+      A really big integer of over 1 million bits.<br/>
+    </td>
+  </tr>
+</table>
 
 <!-- _______________________________________________________________________ -->
 <div class="doc_subsubsection"> <a name="t_array">Array Type</a> </div>
