@@ -1359,15 +1359,12 @@ all:: $(YaccFiles:%.y=$(PROJ_SRC_DIR)/%.cpp.cvs)
 %.h: %.y
 
 # Rule for building the bison based parsers...
-$(PROJ_SRC_DIR)/%.cpp $(PROJ_SRC_DIR)/%.h : $(PROJ_SRC_DIR)/%.y
 ifneq ($(BISON),)
+$(PROJ_SRC_DIR)/%.cpp $(PROJ_SRC_DIR)/%.h : $(PROJ_SRC_DIR)/%.y
 	$(Echo) "Bisoning $*.y"
 	$(Verb) $(BISON) -v -d -p $(<F:%Parser.y=%) -o $*.tab.c $<
 	$(Verb) $(MV) -f $*.tab.c $(PROJ_SRC_DIR)/$*.cpp
 	$(Verb) $(MV) -f $*.tab.h $(PROJ_SRC_DIR)/$*.h
-else
-	$(Echo) "Bison of $*.y SKIPPED -- bison not found"
-endif
 
 # IFF the .y file has changed since it was last checked into CVS, copy the .y
 # file to .y.cvs and the generated .cpp/.h file to .cpp.cvs/.h.cvs.  We use this
@@ -1379,6 +1376,16 @@ $(PROJ_SRC_DIR)/%.cpp.cvs: $(PROJ_SRC_DIR)/%.cpp
       ($(CP) $< $@; \
        $(CP) $(PROJ_SRC_DIR)/$*.y $(PROJ_SRC_DIR)/$*.y.cvs; \
        $(CP) $(PROJ_SRC_DIR)/$*.h $(PROJ_SRC_DIR)/$*.h.cvs)
+
+else
+$(PROJ_SRC_DIR)/%.cpp : $(PROJ_SRC_DIR)/%.cpp.cvs
+	$(Echo) "Bison of $*.y SKIPPED, bison not found -- copying .cpp.cvs"
+	$(Verb)$(CP) $(PROJ_SRC_DIR)/$*.cpp.cvs $(PROJ_SRC_DIR)/$*.cpp
+
+$(PROJ_SRC_DIR)/%.h : $(PROJ_SRC_DIR)/%.h.cvs
+	$(Echo) "Bison of $*.y SKIPPED, bison not found -- copying .h.cvs"
+	$(Verb)$(CP) $(PROJ_SRC_DIR)/$*.h.cvs $(PROJ_SRC_DIR)/$*.h
+endif
 
 
 $(YaccFiles:%.y=$(ObjDir)/%.o): $(ObjDir)/%.o : $(PROJ_SRC_DIR)/%.cpp
