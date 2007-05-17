@@ -62,6 +62,7 @@ static bool ObsoleteVarArgs;
 static bool NewVarArgs;
 static BasicBlock *CurBB;
 static GlobalVariable *CurGV;
+static unsigned lastCallingConv;
 
 // This contains info used when building the body of a function.  It is
 // destroyed when the function is completed.
@@ -380,19 +381,18 @@ static bool FuncTysDifferOnlyBySRet(const FunctionType *F1,
   if (F1->getReturnType() != F2->getReturnType() ||
       F1->getNumParams() != F2->getNumParams())
     return false;
-  ParamAttrsList PAL1;
-  if (F1->getParamAttrs())
-    PAL1 = *F1->getParamAttrs();
-  ParamAttrsList PAL2;
-  if (F2->getParamAttrs())
-    PAL2 = *F2->getParamAttrs();
-  if (PAL1.getParamAttrs(0) != PAL2.getParamAttrs(0))
+  const ParamAttrsList *PAL1 = F1->getParamAttrs();
+  const ParamAttrsList *PAL2 = F2->getParamAttrs();
+  if (PAL1 && !PAL2 || PAL2 && !PAL1)
+    return false;
+  if (PAL1 && PAL2 && ((PAL1->size() != PAL2->size()) ||
+      (PAL1->getParamAttrs(0) != PAL2->getParamAttrs(0)))) 
     return false;
   unsigned SRetMask = ~unsigned(ParamAttr::StructRet);
   for (unsigned i = 0; i < F1->getNumParams(); ++i) {
-    if (F1->getParamType(i) != F2->getParamType(i) ||
-        unsigned(PAL1.getParamAttrs(i+1)) & SRetMask !=
-        unsigned(PAL2.getParamAttrs(i+1)) & SRetMask)
+    if (F1->getParamType(i) != F2->getParamType(i) || (PAL1 && PAL2 &&
+        (unsigned(PAL1->getParamAttrs(i+1)) & SRetMask !=
+         unsigned(PAL2->getParamAttrs(i+1)) & SRetMask)))
       return false;
   }
   return true;
@@ -1460,6 +1460,10 @@ upgradeIntrinsicCall(const Type* RetTy, const ValID &ID,
                      std::vector<Value*>& Args) {
 
   std::string Name = ID.Type == ValID::NameVal ? ID.Name : "";
+  if (Name.length() <= 5 || Name[0] != 'l' || Name[1] != 'l' || 
+      Name[2] != 'v' || Name[3] != 'm' || Name[4] != '.')
+    return 0;
+
   switch (Name[5]) {
     case 'i':
       if (Name == "llvm.isunordered.f32" || Name == "llvm.isunordered.f64") {
@@ -2006,17 +2010,17 @@ OptLinkage
   ;
 
 OptCallingConv 
-  : /*empty*/          { $$ = OldCallingConv::C; } 
-  | CCC_TOK            { $$ = OldCallingConv::C; } 
-  | CSRETCC_TOK        { $$ = OldCallingConv::CSRet; } 
-  | FASTCC_TOK         { $$ = OldCallingConv::Fast; } 
-  | COLDCC_TOK         { $$ = OldCallingConv::Cold; } 
-  | X86_STDCALLCC_TOK  { $$ = OldCallingConv::X86_StdCall; } 
-  | X86_FASTCALLCC_TOK { $$ = OldCallingConv::X86_FastCall; } 
+  : /*empty*/          { $$ = lastCallingConv = OldCallingConv::C; } 
+  | CCC_TOK            { $$ = lastCallingConv = OldCallingConv::C; } 
+  | CSRETCC_TOK        { $$ = lastCallingConv = OldCallingConv::CSRet; } 
+  | FASTCC_TOK         { $$ = lastCallingConv = OldCallingConv::Fast; } 
+  | COLDCC_TOK         { $$ = lastCallingConv = OldCallingConv::Cold; } 
+  | X86_STDCALLCC_TOK  { $$ = lastCallingConv = OldCallingConv::X86_StdCall; } 
+  | X86_FASTCALLCC_TOK { $$ = lastCallingConv = OldCallingConv::X86_FastCall; } 
   | CC_TOK EUINT64VAL  {
     if ((unsigned)$2 != $2)
       error("Calling conv too large");
-    $$ = $2;
+    $$ = lastCallingConv = $2;
   }
   ;
 
@@ -2146,8 +2150,17 @@ UpRTypes
     bool isVarArg = Params.size() && Params.back() == Type::VoidTy;
     if (isVarArg) Params.pop_back();
 
+    ParamAttrsList *PAL = 0;
+    if (lastCallingConv == OldCallingConv::CSRet) {
+      ParamAttrsVector Attrs;
+      ParamAttrsWithIndex PAWI;
+      PAWI.index = 1;  PAWI.attrs = ParamAttr::StructRet; // first arg
+      Attrs.push_back(PAWI);
+      PAL = ParamAttrsList::get(Attrs);
+    }
+
     const FunctionType *FTy =
-      FunctionType::get($1.PAT->get(), Params, isVarArg, 0);
+      FunctionType::get($1.PAT->get(), Params, isVarArg, PAL);
 
     $$.PAT = new PATypeHolder( HandleUpRefs(FTy, $$.S) );
     delete $1.PAT;  // Delete the return type handle
@@ -2930,15 +2943,17 @@ FunctionHeaderH
 
     // Convert the CSRet calling convention into the corresponding parameter
     // attribute.
-    ParamAttrsList *ParamAttrs = 0;
+    ParamAttrsList *PAL = 0;
     if ($1 == OldCallingConv::CSRet) {
-      ParamAttrs = new ParamAttrsList();
-      ParamAttrs->addAttributes(0, ParamAttr::None);     // result
-      ParamAttrs->addAttributes(1, ParamAttr::StructRet); // first arg
+      ParamAttrsVector Attrs;
+      ParamAttrsWithIndex PAWI;
+      PAWI.index = 1;  PAWI.attrs = ParamAttr::StructRet; // first arg
+      Attrs.push_back(PAWI);
+      PAL = ParamAttrsList::get(Attrs);
     }
 
     const FunctionType *FT = 
-      FunctionType::get(RetTy, ParamTyList, isVarArg, ParamAttrs);
+      FunctionType::get(RetTy, ParamTyList, isVarArg, PAL);
     const PointerType *PFT = PointerType::get(FT);
     delete $2.PAT;
 
@@ -3076,6 +3091,7 @@ FunctionHeaderH
       }
       delete $5;                     // We're now done with the argument list
     }
+    lastCallingConv = OldCallingConv::C;
   }
   ;
 
@@ -3324,15 +3340,17 @@ BBTerminatorInst
           FTySign.add(I->S);
         }
       }
-      ParamAttrsList *ParamAttrs = 0;
+      ParamAttrsList *PAL = 0;
       if ($2 == OldCallingConv::CSRet) {
-        ParamAttrs = new ParamAttrsList();
-        ParamAttrs->addAttributes(0, ParamAttr::None);      // Function result
-        ParamAttrs->addAttributes(1, ParamAttr::StructRet);  // first param
+        ParamAttrsVector Attrs;
+        ParamAttrsWithIndex PAWI;
+        PAWI.index = 1;  PAWI.attrs = ParamAttr::StructRet; // first arg
+        Attrs.push_back(PAWI);
+        PAL = ParamAttrsList::get(Attrs);
       }
       bool isVarArg = ParamTypes.size() && ParamTypes.back() == Type::VoidTy;
       if (isVarArg) ParamTypes.pop_back();
-      Ty = FunctionType::get($3.PAT->get(), ParamTypes, isVarArg, ParamAttrs);
+      Ty = FunctionType::get($3.PAT->get(), ParamTypes, isVarArg, PAL);
       PFTy = PointerType::get(Ty);
       $$.S.copy($3.S);
     } else {
@@ -3375,6 +3393,7 @@ BBTerminatorInst
     cast<InvokeInst>($$.TI)->setCallingConv(upgradeCallingConv($2));
     delete $3.PAT;
     delete $6;
+    lastCallingConv = OldCallingConv::C;
   }
   | Unwind {
     $$.TI = new UnwindInst();
@@ -3729,14 +3748,16 @@ InstVal
         error("Functions cannot return aggregate types");
 
       // Deal with CSRetCC
-      ParamAttrsList *ParamAttrs = 0;
+      ParamAttrsList *PAL = 0;
       if ($2 == OldCallingConv::CSRet) {
-        ParamAttrs = new ParamAttrsList();
-        ParamAttrs->addAttributes(0, ParamAttr::None);     // function result
-        ParamAttrs->addAttributes(1, ParamAttr::StructRet); // first parameter
+        ParamAttrsVector Attrs;
+        ParamAttrsWithIndex PAWI;
+        PAWI.index = 1;  PAWI.attrs = ParamAttr::StructRet; // first arg
+        Attrs.push_back(PAWI);
+        PAL = ParamAttrsList::get(Attrs);
       }
 
-      FTy = FunctionType::get(RetTy, ParamTypes, isVarArg, ParamAttrs);
+      FTy = FunctionType::get(RetTy, ParamTypes, isVarArg, PAL);
       PFTy = PointerType::get(FTy);
       $$.S.copy($3.S);
     } else {
@@ -3792,6 +3813,7 @@ InstVal
     }
     delete $3.PAT;
     delete $6;
+    lastCallingConv = OldCallingConv::C;
   }
   | MemoryInst {
     $$ = $1;
