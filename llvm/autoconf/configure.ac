@@ -495,6 +495,7 @@ LLVM_PROG_PERL([5.006])
 AC_SUBST(PERL)
 if test x"$PERL" = xnone; then
    AC_SUBST(HAVE_PERL,0)
+   AC_MSG_ERROR([perl is required but was not found, please install it])
 else
    AC_SUBST(HAVE_PERL,1)
 fi
