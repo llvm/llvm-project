@@ -4725,18 +4725,19 @@ isOperandValidForConstraint(SDOperand Op, char Constraint, SelectionDAG &DAG) {
   case 'I':
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getValue() <= 31)
-        return Op;
+        return DAG.getTargetConstant(C->getValue(), Op.getValueType());
     }
     return SDOperand(0,0);
   case 'N':
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getValue() <= 255)
-        return Op;
+        return DAG.getTargetConstant(C->getValue(), Op.getValueType());
     }
     return SDOperand(0,0);
   case 'i': {
     // Literal immediates are always ok.
-    if (isa<ConstantSDNode>(Op)) return Op;
+    if (ConstantSDNode *CST = dyn_cast<ConstantSDNode>(Op))
+      return DAG.getTargetConstant(CST->getValue(), Op.getValueType());
 
     // If we are in non-pic codegen mode, we allow the address of a global (with
     // an optional displacement) to be used with 'i'.

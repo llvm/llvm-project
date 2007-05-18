@@ -3326,31 +3326,39 @@ isOperandValidForConstraint(SDOperand Op, char Letter, SelectionDAG &DAG) {
   case 'N':
   case 'O':
   case 'P': {
-    if (!isa<ConstantSDNode>(Op)) return SDOperand(0,0);// Must be an immediate.
-    unsigned Value = cast<ConstantSDNode>(Op)->getValue();
+    ConstantSDNode *CST = dyn_cast<ConstantSDNode>(Op);
+    if (!CST) return SDOperand(0, 0); // Must be an immediate to match.
+    unsigned Value = CST->getValue();
     switch (Letter) {
     default: assert(0 && "Unknown constraint letter!");
     case 'I':  // "I" is a signed 16-bit constant.
-      if ((short)Value == (int)Value) return Op;
+      if ((short)Value == (int)Value)
+        return DAG.getTargetConstant(Value, Op.getValueType());
       break;
     case 'J':  // "J" is a constant with only the high-order 16 bits nonzero.
     case 'L':  // "L" is a signed 16-bit constant shifted left 16 bits.
-      if ((short)Value == 0) return Op;
+      if ((short)Value == 0)
+        return DAG.getTargetConstant(Value, Op.getValueType());
       break;
     case 'K':  // "K" is a constant with only the low-order 16 bits nonzero.
-      if ((Value >> 16) == 0) return Op;
+      if ((Value >> 16) == 0)
+        return DAG.getTargetConstant(Value, Op.getValueType());
       break;
     case 'M':  // "M" is a constant that is greater than 31.
-      if (Value > 31) return Op;
+      if (Value > 31)
+        return DAG.getTargetConstant(Value, Op.getValueType());
       break;
     case 'N':  // "N" is a positive constant that is an exact power of two.
-      if ((int)Value > 0 && isPowerOf2_32(Value)) return Op;
+      if ((int)Value > 0 && isPowerOf2_32(Value))
+        return DAG.getTargetConstant(Value, Op.getValueType());
       break;
     case 'O':  // "O" is the constant zero. 
-      if (Value == 0) return Op;
+      if (Value == 0)
+        return DAG.getTargetConstant(Value, Op.getValueType());
       break;
     case 'P':  // "P" is a constant whose negation is a signed 16-bit constant.
-      if ((short)-Value == (int)-Value) return Op;
+      if ((short)-Value == (int)-Value)
+        return DAG.getTargetConstant(Value, Op.getValueType());
       break;
     }
     break;
