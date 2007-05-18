@@ -264,7 +264,7 @@ time.</p>
 
 <div class="doc_code"><pre>
      static char ID;
-     Hello() : FunctionPass((intptr_t)&ID) {}
+     Hello() : FunctionPass((intptr_t)&amp;ID) {}
 </pre></div><p>
 
 <p> This declares pass identifier used by LLVM to identify pass. This allows LLVM to
@@ -312,7 +312,7 @@ argument "<tt>hello</tt>", and a name "<tt>Hello World Pass</tt>".</p>
   <b>struct Hello</b> : <b>public</b> <a href="#FunctionPass">FunctionPass</a> {
     
     static char ID;
-    Hello() : FunctionPass((intptr_t)&ID) {}
+    Hello() : FunctionPass((intptr_t)&amp;ID) {}
 
     <b>virtual bool</b> <a href="#runOnFunction">runOnFunction</a>(Function &amp;F) {
       llvm::cerr &lt;&lt; "<i>Hello: </i>" &lt;&lt; F.getName() &lt;&lt; "\n";
@@ -485,7 +485,7 @@ refering to function bodies in no predictable order, or adding and removing
 functions.  Because nothing is known about the behavior of <tt>ModulePass</tt>
 subclasses, no optimization can be done for their execution. A module pass
 can use function level passes (e.g. dominators) using getAnalysis interface
-<tt> getAnalysis<DominatorTree>(Function)</tt>. </p> 
+<tt> getAnalysis&lt;DominatorTree&gt;(Function)</tt>. </p> 
 
 <p>To write a correct <tt>ModulePass</tt> subclass, derive from
 <tt>ModulePass</tt> and overload the <tt>runOnModule</tt> method with the
@@ -746,7 +746,7 @@ program, or false if they didn't. </p>
   <b>virtual bool</b> doInitialization(Loop *, LPPassManager &amp;LPM);
 </pre></div>
 
-The <tt>doInitialization</tt> method is designed to do simple initialization 
+<p>The <tt>doInitialization</tt> method is designed to do simple initialization 
 type of stuff that does not depend on the functions being processed.  The 
 <tt>doInitialization</tt> method call is not scheduled to overlap with any 
 other pass executions (thus it should be very fast). LPPassManager 
@@ -1159,7 +1159,7 @@ For example:</p>
    }
 </pre></div>
 
-In above example, runOnFunction for DominatorTree is called by pass manager
+<p>In above example, runOnFunction for DominatorTree is called by pass manager
 before returning a reference to the desired pass.</p>
 
 <p>
@@ -1796,6 +1796,8 @@ multithreaded constructs, requiring only the LLVM core to have locking in a few
 places (for global resources).  Although this is a simple extension, we simply
 haven't had time (or multiprocessor machines, thus a reason) to implement this.
 Despite that, we have kept the LLVM passes SMP ready, and you should too.</p>
+
+</div>
 
 <!-- *********************************************************************** -->
 <hr>
