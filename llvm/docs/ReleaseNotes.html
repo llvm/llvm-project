@@ -4,11 +4,11 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <link rel="stylesheet" href="llvm.css" type="text/css">
-  <title>LLVM 1.9 Release Notes</title>
+  <title>LLVM 2.0 Release Notes</title>
 </head>
 <body>
 
-<div class="doc_title">LLVM 1.9 Release Notes</div>
+<div class="doc_title">LLVM 2.0 Release Notes</div>
  
 <ol>
   <li><a href="#intro">Introduction</a></li>
@@ -32,13 +32,10 @@
 <div class="doc_text">
 
 <p>This document contains the release notes for the LLVM compiler
-infrastructure, release 1.9.  Here we describe the status of LLVM, including any
-known problems and major improvements from the previous release.  The most
-up-to-date version of this document (corresponding to LLVM CVS) can be found
-on the <a
-href="http://llvm.org/releases/">LLVM releases web site</a>.  If you are
-not reading this on the LLVM web pages, you should probably go there because
-this document may be updated after the release.</p>
+infrastructure, release 2.0.  Here we describe the status of LLVM, including any
+known problems and major improvements from the previous release.  All LLVM
+releases may be downloaded from the <a href="http://llvm.org/releases/">LLVM
+releases web site</a>.
 
 <p>For more information about LLVM, including information about the latest
 release, please check out the <a href="http://llvm.org/">main LLVM
@@ -61,67 +58,175 @@ href="http://llvm.org/releases/">releases page</a>.</p>
 
 <div class="doc_text">
 
-<p>This is the tenth public release of the LLVM Compiler Infrastructure. This
-release incorporates a large number of enhancements, new features, and bug
-fixes.  We recommend that all users of previous LLVM versions upgrade.
-</p>
+<p>This is the eleventh public release of the LLVM Compiler Infrastructure. 
+Being the first major release since 1.0, this release is different in several
+ways from our previous releases:</p>
+
+<ol>
+<li>We took this as an opportunity to
+break backwards compatibility with the LLVM 1.x bytecode and .ll file format.
+If you have LLVM 1.9 .ll files that you would like to upgrade to LLVM 2.x, we 
+recommend the use of the stand alone <a href="#llvm-upgrade">llvm-upgrade</a>
+tool (which is included with 2.0).  We intend to keep compatibility with .ll 
+and .bc formats within the 2.x release series, like we did within the 1.x 
+series.</li>
+<li>There are several significant change to the LLVM IR and internal APIs, such
+    as a major overhaul of the type system, the completely new bitcode file
+    format, etc (described below).</li>
+<li>We designed the release around a 6 month release cycle instead of the usual
+    3-month cycle.  This gave us extra time to develop and test some of the
+    more invasive features in this release.</li>
+<li>LLVM 2.0 no longer supports the llvm-gcc3 front-end.  Users are required to
+    upgrade to llvm-gcc4.  llvm-gcc4 includes many features over
+    llvm-gcc3, is faster, and is <a href="CFEBuildInstrs.html">much easier to
+    build from source</a>.</li>
+</ol>
+
+<p>Note that while this is a major version bump, this release has been
+   extensively tested on a wide range of software.  It is easy to say that this
+   is our best release yet, in terms of both features and correctness.  This is
+   the first LLVM release to correctly compile and optimize major software like
+   LLVM itself, Mozilla/Seamonkey, Qt 4.3rc1, kOffice, etc out of the box on
+   linux/x86.
+   </p>
 
 </div>
 
 <!--=========================================================================-->
 <div class="doc_subsection">
-<a name="newfeatures">New Features in LLVM 1.9</a>
+<a name="newfeatures">New Features in LLVM 2.0</a>
 </div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="x86-64">New X86-64 Backend</a></div>
+<div class="doc_subsubsection"><a name="majorchanges">Major Changes</a></div>
 <div class="doc_text">
-<p>LLVM 1.9 now fully supports the x86-64 instruction set on Mac OS/X, and
-supports it on Linux (and other operating systems) when compiling in -static
-mode. LLVM includes JIT support for X86-64, and supports both Intel EMT-64T
-and AMD-64 architectures.  The X86-64 instruction set permits addressing a
-64-bit addressing space and provides the compiler with twice the
-number of integer registers to use.</p>
+
+<p>Changes to the LLVM IR itself:</p>
+
+<ul>
+
+<li>Integer types are now completely signless. This means that we
+    have types like i8/i16/i32 instead of ubyte/sbyte/short/ushort/int
+    etc. LLVM operations that depend on sign have been split up into 
+    separate instructions (<a href="http://llvm.org/PR950">PR950</a>).  This
+    eliminates cast instructions that just change the sign of the operands (e.g.
+    int -> uint), which reduces the size of the IR and makes optimizers
+    simpler to write.</li>
+
+<li>Integer types with arbitrary bitwidths (e.g. i13, i36, i42, i1057, etc) are
+    now supported in the LLVM IR and optimizations (<a 
+    href="http://llvm.org/PR1043">PR1043</a>).  However, neither llvm-gcc
+    (<a href="http://llvm.org/PR1284">PR1284</a>) nor the native code generators
+    (<a href="http://llvm.org/PR1270">PR1270</a>) support non-standard width
+    integers yet.</li>
+
+<li>'Type planes' have been removed (<a href="http://llvm.org/PR411">PR411</a>).
+    It is no longer possible to have two values with the same name in the 
+    same symbol table.  This simplifies LLVM internals, allowing significant 
+    speedups.</li>
+
+<li>Global variables and functions in .ll files are now prefixed with
+    @ instead of % (<a href="http://llvm.org/PR645">PR645</a>).</li>
+
+<li>The LLVM 1.x "bytecode" format has been replaced with a  
+    completely new binary representation, named 'bitcode'. The <a
+    href="BitCodeFormat.html">Bitcode Format</a> brings a
+    number of advantages to the LLVM over the old bytecode format: it is denser  
+    (files are smaller), more extensible, requires less memory to read,  
+    is easier to keep backwards compatible (so LLVM 2.5 will read 2.0 .bc  
+    files), and has many other nice features.</li>
+
+<li>Load and store instructions now track the alignment of their pointer
+    (<a href="http://www.llvm.org/PR400">PR400</a>).  This allows the IR to
+    express loads that are not sufficiently aligned (e.g. due to '<tt>#pragma
+    packed</tt>') or to capture extra alignment information.</li>
+</ul>
+
+<p>Major new features:</p>
+
+<ul>
+
+<li>A number of ELF features are now supported by LLVM, including 'visibility',
+    extern weak linkage, Thread Local Storage (TLS) with the <tt>__thread</tt>
+    keyword, and symbol aliases.
+    Among other things, this means that many of the special options needed to
+    configure llvm-gcc on linux are no longer needed, and special hacks to build
+    large C++ libraries like Qt are not needed.</li>
+
+<li>LLVM now has a new MSIL backend. llc -march=msil will now turn LLVM 
+    into MSIL (".net") bytecode.  This is still fairly early development 
+    with a number of limitations.</li>
+
+<li>A new <a href="CommandGuide/html/llvm-upgrade.html">llvm-upgrade</a> tool 
+    exists to migrates LLVM 1.9 .ll files to LLVM 2.0 syntax.</li>
+</ul>
+
 </div>
 
-<!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="lto">Link-Time Optimization integration
-with native linkers</a></div>
-<div class="doc_text">
-<p>LLVM now includes <a href="LinkTimeOptimization.html">liblto</a> which can
-be used to integrate LLVM Link-Time Optimization support into a native linker.
-This allows LLVM .bc to transparently participate with linking an application,
-even when some .o files are in LLVM form and some are not.</p>
-</div>
 
 <!--_________________________________________________________________________-->
-<div class="doc_subsubsection"><a name="dwarf">DWARF debugging 
-support for Linux, Cygwin and MinGW on X86</a></div>
+<div class="doc_subsubsection"><a name="llvmgccfeatures">llvm-gcc
+Improvements</a></div>
 <div class="doc_text">
-<p>llvm-gcc4 now supports generating debugging info for Linux, Cygwin and MinGW.
-This extends the PPC/Darwin and X86/Darwin debugging support available in the
-1.8 release. DWARF is a standard debugging format used on many platforms.</p>
+<p>New features include:
+</p>
+
+<ul>
+<li>Precompiled Headers (PCH) are now supported.</li>
+
+<li>"<tt>#pragma packed</tt>" is now supported, as are the various features
+    described above (visibility, extern weak linkage, __thread, aliases,
+    etc).</li>
+
+<li>Tracking function parameter/result attributes is now possible.</li>
+
+<li>Many internal enhancements have been added, such as improvements to
+    NON_LVALUE_EXPR, arrays with non-zero base, structs with variable sized
+    fields, VIEW_CONVERT_EXPR, CEIL_DIV_EXPR, nested functions, and many other
+    things.  This is primarily to supports non-C GCC front-ends, like Ada.</li>
+
+<li>It is simpler to configure llvm-gcc for linux.</li>
+
+</ul>
+  
 </div>
 
 <!--_________________________________________________________________________-->
 <div class="doc_subsubsection"><a name="optimizer">Optimizer
 Improvements</a></div>
+
 <div class="doc_text">
-<p>The mid-level optimizer is now faster and produces better code in many cases.
-  Significant changes include:</p>
+<p>New features include:
+</p>
 
 <ul>
-<li>LLVM includes a new 'predicate simplifier' pass, which
-    currently performs dominator tree-based optimizations.</li>
-<li>The complete loop unroll pass now supports unrolling of
-     multiple basic block loops.</li>
-<li>The 'globalopt' pass can now perform the scalar replacement of
-    aggregates transformation on some heap allocations.</li>
-<li>The globalsmodref-aa alias analysis can now track 'indirect pointer
-     globals' more accurately.</li>
-<li>The instruction combiner can now perform element propagation  
-analysis of vector expressions, eliminating computation of vector elements
-that are not used.</li>
+<li>The <a href="WritingAnLLVMPass.html">pass manager</a> has been entirely
+    rewritten, making it significantly smaller, simpler, and more extensible.
+    Support has been added to run FunctionPasses interlaced with
+    CallGraphSCCPasses, and we now support loop transformations explicitly with
+    LoopPass.</li>
+
+<li>The <tt>-scalarrepl</tt> pass can now promote unions containing FP values
+    into a register, it can also handle unions of vectors of the same
+    size.</li>
+
+<li>LLVM 2.0 includes a new loop rotation pass, which converts "for loops" into 
+    "do/while loops", where the condition is at the bottom of the loop.</li>
+
+<li>The Loop Strength Reduction pass has been improved, and support added 
+    for sinking expressions across blocks to reduce register pressure.</li>
+
+<li>ModulePasses may now use the result of FunctionPasses.</li>
+
+<li>The [Post]DominatorSet classes have been removed from LLVM and clients
+    switched to use the far-more-efficient ETForest class instead.</li>
+
+<li>The ImmediateDominator class has also been removed, and clients have been
+    switched to use DominatorTree instead.</li>
+
+<li>The predicate simplifier pass has been improved, making it able to do 
+    simple value range propagation and eliminate more conditionals.</li>
+
 </ul>
   
 </div>
@@ -132,96 +237,229 @@ Generator Enhancements</a></div>
 
 <div class="doc_text">
 <p>
-The LLVM Target-Independent code generator now supports more target features and
-optimizes many cases more aggressively.  New features include:
+New features include:
 </p>
 
 <ul>
-<li>LLVM now includes a late branch folding pass which optimizes code
-    layout, performs several branch optzns, and deletes unreachable code.</li>
-<li>The code generator now support targets that have pre/post-increment
-    addressing modes.</li>
-<li>LLVM now supports dynamically-loadable register allocators and
-     schedulers.</li>
-<li>LLVM 1.9 includes several improvements to inline asm support,
-    including support for new constraints and modifiers.</li>
-<li>The register coalescer is now more aggressive than before,  
-     allowing it to eliminate more copies.</li>
+
+<li>Support was added for software floating point, which allows LLVM to target
+    chips that don't have hardware FPUs (e.g. ARM thumb mode).</li>
+
+<li>A new register scavenger has been implemented, which is useful for
+    finding free registers after register allocation.  This is useful when
+    rewriting frame references on RISC targets, for example.</li>
+
+<li>Heuristics have been added to avoid coalescing vregs with very large live 
+    ranges to physregs.  This was bad because it effectively pinned the physical
+    register for the entire lifetime of the virtual register (<a 
+    href="http://llvm.org/PR711">PR711</a>).</li>
+
+<li>Support now exists for very simple (but still very useful) 
+    rematerialization the register allocator, enough to move  
+    instructions like "load immediate" and constant pool loads.</li>
+
+<li>Switch statement lowering is significantly better, improving codegen for 
+    sparse switches that have dense subregions, and implemented support 
+    for the shift/and trick.</li>
+
+<li>Added support for tracking physreg sub-registers and super-registers 
+    in the code generator, as well as extensive register  
+    allocator changes to track them.</li>
+
+<li>There is initial support for virtreg sub-registers 
+    (<a href="http://llvm.org/PR1350">PR1350</a>).</li>
+
+</ul>
+
+<p>
+Other improvements include:
+</p>
+
+<ul>
+
+<li>Inline assembly support is much more solid that before.
+    The two primary features still missing are support for 80-bit floating point
+    stack registers on X86 (<a href="http://llvm.org/PR879">PR879</a>), and
+    support for inline asm in the C backend (<a 
+    href="http://llvm.org/PR802">PR802</a>).</li>
+
+<li>DWARF debug information generation has been improved.  LLVM now passes 
+    most of the GDB testsuite on MacOS and debug info is more dense.</li>
+
+<li>Codegen support for Zero-cost DWARF exception handling has been added (<a 
+    href="http://llvm.org/PR592">PR592</a>).  It is mostly
+    complete and just in need of continued bug fixes and optimizations at 
+    this point.  However, support in llvm-g++ is disabled with an
+    #ifdef for the 2.0 release  (<a 
+    href="http://llvm.org/PR870">PR870</a>).</li>
+
+<li>The code generator now has more accurate and general hooks for  
+    describing addressing modes ("isLegalAddressingMode") to  
+    optimizations like loop strength reduction and code sinking.</li>
+
+<li>Progress has been made on a direct Mach-o .o file writer. Many small 
+    apps work, but it is still not quite complete.</li>
+
 </ul>
 
 <p>In addition, the LLVM target description format has itself been extended in
  several ways:</p>
  
 <ul>
-<li>tblgen now allows definition of '<a 
-     href="TableGenFundamentals.html#multiclass">multiclasses</a>' which can be
-     used to factor instruction patterns more aggressively in .td files.</li>
-<li>LLVM has a new TargetAsmInfo class which captures a variety of
-     information about the target assembly language format.</li>
-<li>.td files now support "<tt>${:foo}</tt>" syntax for encoding 
-     subtarget-specific assembler syntax into instruction descriptions.</li>
-</ul>
+<li>Extended TargetData to support better target parameterization in
+    the .ll/.bc files, eliminating the 'pointersize/endianness' attributes
+    in the files (<a href="http://llvm.org/PR761">PR761</a>).</li>
 
-<p>Further, several significant target-specific enhancements are included in
-LLVM 1.9:</p>
+<li>TargetData was generalized for finer grained alignment handling,
+    handling of vector alignment, and handling of preferred alignment</li>
 
-<ul>
-<li>The LLVM ARM backend now supports more instructions
-    and the use of a frame pointer.  It is now possible to build  
-   libgcc and a simple cross compiler, but it is not considered "complete" yet.
-   </li>
-<li>LLVM supports the Win32 dllimport/dllexport linkage and
-     stdcall/fastcall calling conventions.</li>
+<li>LLVM now supports describing target calling conventions  
+    explicitly in .td files, reducing the amount of C++ code that needs  
+    to be written for a port.</li>
+
 </ul>
 
 </div>
 
 <!--_________________________________________________________________________-->
+<div class="doc_subsubsection"><a name="specifictargets">Target-Specific
+Improvements</a></div>
+
+<div class="doc_text">
+
+<p>X86-specific Code Generator Enhancements:
+</p>
+
+<ul>
+<li>The MMX instruction set is now supported through intrinsics.</li>
+<li>The scheduler was improved to better reduce register pressure on  
+    X86 and other targets that are register pressure sensitive.</li>
+<li>Linux/x86-64 support is much better.</li>
+<li>PIC support for linux/x86 has been added.</li>
+<li>The X86 backend now supports the GCC regparm attribute.</li>
+<li>LLVM now supports inline asm with multiple constraint letters per operand 
+    (like "ri") which is common in X86 inline asms.</li>
+</ul>
+
+<p>ARM-specific Code Generator Enhancements:</p>
+
+<ul>
+<li>The ARM code generator is now stable and fully supported.</li>
+
+<li>There are major new features, including support for ARM 
+    v4-v6 chips, vfp support, soft float point support, pre/postinc support,
+    load/store multiple generation, constant pool entry motion (to support
+    large functions), and inline asm support, weak linkage support, static
+    ctor/dtor support and many bug fixes.</li>
+<li>Added support for Thumb code generation (<tt>llc -march=thumb</tt>).</li>
+
+<li>The ARM backend now supports the ARM AAPCS/EABI ABI and PIC codegen on 
+    arm/linux.</li>
+
+<li>Several bugs were fixed for DWARF debug info generation on arm/linux.</li>
+</ul>
+
+<p>PowerPC-specific Code Generator Enhancements:</p>
+
+<ul>
+<li>The PowerPC 64 JIT now supports addressing code loaded above the 2G
+     boundary.</li>
+
+<li>Improved support for the Linux/ppc ABI and the linux/ppc JIT is fully 
+    functional now.  llvm-gcc and static compilation are not fully supported 
+    yet though.</li>
+
+<li>Many PowerPC 64 bug fixes.</li>
+
+</ul>
+
+</div>
+
+
+<!--_________________________________________________________________________-->
 <div class="doc_subsubsection"><a name="other">Other Improvements</a></div>
 <div class="doc_text">
-<p>This release includes many other improvements, including improvements to
-   the optimizers and code generators (improving the generated code) changes to
-   speed up the compiler in many ways (improving algorithms and fine tuning 
-   code), and changes to reduce the code size of the compiler itself.</p>
 
 <p>More specific changes include:</p>
 
 <ul>
-<li>The llvm-test framework now supports SPEC2006.</li>
-<li>LLVM now includes a <a href="GetElementPtr.html">FAQ about the
-<tt>getelementptr</tt> instruction</a>.</li>
-<li>Bugpoint now supports a new "<tt>-find-bugs</tt>" mode.  This mode makes
-    bugpoint permute pass sequences to try to expose bugs due to pass
-    sequencing.</li>
-<li>The JIT now supports lazily streaming code from multiple modules at a
-     time, implicitly linking the code as it goes.</li>
+<li>LLVM no longer relies on static destructors to shut itself down.  Instead,
+    it lazily initializes itself and shuts down when <tt>llvm_shutdown()</tt> is 
+    explicitly called.</li>
+
+<li>LLVM now has significantly fewer static constructors, reducing startup time.
+    </li>
+
+<li>Several classes have been refactored to reduce the amount of code that
+    gets linked into apps that use the JIT.</li>
+
+<li>Construction of intrinsic function declarations has been simplified.</li>
+
+<li>The gccas/gccld tools have been replaced with small shell scripts.</li>
+
+<li>Support has been added to llvm-test for running on low-memory  
+    or slow machines (make SMALL_PROBLEM_SIZE=1).</li>
+
 </ul>
 </div>
 
-<!--=========================================================================-->
-<div class="doc_subsection">
-<a name="apichanges">Significant API Changes in LLVM 1.9</a>
-</div>
-
+<!--_________________________________________________________________________-->
+<div class="doc_subsubsection"><a name="apichanges">API Changes</a></div>
 <div class="doc_text">
 
-<p>Several significant API changes have been made.  If you are maintaining
-out-of-tree code, please be aware that:</p>
+<p>LLVM 2.0 contains a revamp of the type system and several other significant
+internal changes.  If you are programming to the C++ API, be aware of the
+following major changes:</p>
 
 <ul>
-<li>The ConstantSInt and ConstantUInt classes have been merged into the
- ConstantInt class.</li>
-<li><p>As a step towards making LLVM's integer types signless, several new
-instructions have been added to LLVM. The <tt>Div</tt> instruction is now 
-<tt>UDiv</tt>, <tt>SDiv</tt>, and <tt>FDiv</tt>.  The <tt>Rem</tt> instruction
-is now <tt>URem</tt>, <tt>SRem</tt> and <tt>FRem</tt>. See the
-<a href="LangRef.html">Language Reference</a> for details on these new
-instructions.</p>
-<li><p><tt>ConstantBool::True</tt> and <tt>ConstantBool::False</tt> have been
-      renamed to <tt>ConstantBool::getTrue()</tt> and
-      <tt>ConstantBool::getFalse()</tt>.</p></li>
-<li>The 'analyze' tool has been merged into the 'opt' tool.</li>
+<li>Pass registration is slightly different in LLVM 2.0 (you now need an
+   intptr_t in your constructor), as explained in the <a 
+   href="WritingAnLLVMPass.html#basiccode">Writing an LLVM Pass</a>
+   document.</li>
+   
+<li><tt>ConstantBool</tt>, <tt>ConstantIntegral</tt> and <tt>ConstantInt</tt>
+    classes have been merged together, we now just have
+    <tt>ConstantInt</tt>.</li>
 
+<li><tt>Type::IntTy</tt>, <tt>Type::UIntTy</tt>, <tt>Type::SByteTy</tt>, ... are
+    replaced by <tt>Type::Int8Ty</tt>, <tt>Type::Int16Ty</tt>, etc.  LLVM types
+    have always corresponded to fixed size types
+    (e.g. long was always 64-bits), but the type system no longer includes
+    information about the sign of the type.</li>
+
+<li>Several classes (<tt>CallInst</tt>, <tt>GetElementPtrInst</tt>,
+    <tt>ConstantArray</tt>, etc), that once took <tt>std::vector</tt> as
+     arguments now take ranges instead.   For example, you can create a
+    <tt>GetElementPtrInst</tt> with code like:
+    
+    <pre>
+      Value *Ops[] = { Op1, Op2, Op3 };
+      GEP = new GetElementPtrInst(BasePtr, Ops, 3);
+    </pre>
+    
+    This avoids creation of a temporary vector (and a call to malloc/free).  If
+    you have an std::vector, use code like this:
+    <pre>
+      std::vector&lt;Value*&gt; Ops = ...;
+      GEP = new GetElementPtrInst(BasePtr, &amp;Ops[0], Ops.size());
+    </pre>
+
+    </li>
+    
+<li>CastInst is now abstract and its functionality is split into several parts,
+    one for each of the <a href="LangRef.html#convertops">new cast
+    instructions</a>.</li>
+
+<li><tt>Instruction::getNext()/getPrev()</tt> are now private (along with
+    <tt>BasicBlock::getNext</tt>, etc), for efficiency reasons (they are now no
+    longer just simple pointers).  Please use BasicBlock::iterator, etc instead.
+</li>
+
+<li><tt>Module::getNamedFunction()</tt> is now called
+    <tt>Module::getFunction()</tt>.</li>
+
+<li><tt>SymbolTable.h</tt> has been split into <tt>ValueSymbolTable.h</tt> and 
+<tt>TypeSymbolTable.h</tt>.</li>
 </ul>
 </div>
 
@@ -289,8 +527,8 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 <ul>
 <li>The <tt>-cee</tt> pass is known to be buggy, and may be removed in in a 
     future release.</li>
+<li>C++ EH support</li>
 <li>The IA64 code generator is experimental.</li>
-<li>The ARM code generator is experimental.</li>
 <li>The Alpha JIT is experimental.</li>
 <li>"<tt>-filetype=asm</tt>" (the default) is the only supported value for the 
     <tt>-filetype</tt> llc option.</li>
@@ -307,9 +545,7 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 
 <ul>
 <li>The X86 backend does not yet support <a href="http://llvm.org/PR879">inline
-    assembly that uses the X86 floating point stack</a>.  See the <a 
-    href="http://llvm.org/PR879">bug</a> for details on workarounds on
-    Linux.</li>
+    assembly that uses the X86 floating point stack</a>.</li>
 </ul>
 
 </div>
@@ -324,8 +560,28 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 <ul>
 <li><a href="http://llvm.org/PR642">PowerPC backend does not correctly
 implement ordered FP comparisons</a>.</li>
-<li>The 64-bit PowerPC backend is not fully stable. If you desire PPC64 support,
-    please use mainline CVS LLVM, which has several important bug fixes.</li>
+<li>The Linux PPC32/ABI support needs testing for the interpreter and static
+compilation, and lacks Dwarf debugging informations.
+</ul>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="arm-be">Known problems with the ARM back-end</a>
+</div>
+
+<div class="doc_text">
+
+<ul>
+<li>The Thumb mode works only on ARMv6 or higher processors. On sub-ARMv6
+processors, any thumb program compiled with LLVM crashes or produces wrong
+results. (<a href="http://llvm.org/PR1388">PR1388</a>)</li>
+<li>Compilation for ARM Linux OABI (old ABI) is supported, but not fully tested.
+</li>
+<li>QEMU-ARM (<= 0.9.0) wrongly executes programs compiled with LLVM. A non-affected QEMU version must be used or this
+<a href="http://cvs.savannah.nongnu.org/viewcvs/qemu/target-arm/translate.c?root=qemu&amp;r1=1.46&amp;r2=1.47&amp;makepatch=1&amp;diff_format=h">
+patch</a> must be applied on QEMU.</li>
 </ul>
 
 </div>
@@ -340,36 +596,6 @@ implement ordered FP comparisons</a>.</li>
 <ul>
 <li>The SPARC backend only supports the 32-bit SPARC ABI (-m32), it does not
     support the 64-bit SPARC ABI (-m64).</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="c-be">Known problems with the C back-end</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-
-<li>The C back-end produces code that violates the ANSI C Type-Based Alias
-Analysis rules.  As such, special options may be necessary to compile the code
-(for example, GCC requires the <tt>-fno-strict-aliasing</tt> option).  This
-problem probably cannot be fixed.</li>
-
-<li><a href="http://llvm.org/PR56">Zero arg vararg functions are not 
-supported</a>.  This should not affect LLVM produced by the C or C++ 
-frontends.</li>
-
-<li>The C backend does not correctly implement the <a 
-href="LangRef.html#int_stacksave"><tt>llvm.stacksave</tt></a> or
-<a href="LangRef.html#int_stackrestore"><tt>llvm.stackrestore</tt></a> 
-intrinsics.  This means that some code compiled by it can run out of stack
-space if they depend on these (e.g. C99 varargs).</li>
-
-<li><a href="http://llvm.org/PR802">The C backend does not support inline
-    assembly code</a>.</li>
 </ul>
 
 </div>
@@ -415,36 +641,25 @@ programs.</li>
 
 <li>Defining vararg functions is not supported (but calling them is ok).</li>
 
+<li>The Itanium backend has bitrotted somewhat.</li>
 </ul>
 
 </div>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection">
-  <a name="arm-be">Known problems with the ARM back-end</a>
+  <a name="c-be">Known problems with the C back-end</a>
 </div>
 
 <div class="doc_text">
 
 <ul>
-<li>The ARM backend is currently in early development stages, it is not 
-ready for production use.</li>
+<li><a href="http://llvm.org/PR802">The C backend does not support inline
+    assembly code</a>.</li>
 </ul>
 
 </div>
 
-<!-- ======================================================================= -->
-<div class="doc_subsection">
-  <a name="core">Known problems with the LLVM Core</a>
-</div>
-
-<div class="doc_text">
-
-<ul>
-  <li>In the JIT, <tt>dlsym()</tt> on a symbol compiled by the JIT will not
-  work.</li>
-</ul>
-</div>
 
 <!-- ======================================================================= -->
 <div class="doc_subsection">
@@ -456,15 +671,9 @@ ready for production use.</li>
 
 <div class="doc_text">
 
-<p>
-
-<p>llvm-gcc4 is far more stable and produces better code than llvm-gcc3, but
-does not currently support <a href="http://llvm.org/PR869">Link-Time 
-Optimization</a> or <a href="http://llvm.org/PR870">C++ Exception Handling</a>,
-which llvm-gcc3 does.</p>
-
-<p>llvm-gcc4 does not support the <a href="http://llvm.org/PR947">GCC indirect
-goto extension</a>, but llvm-gcc3 does.</p>
+<p>llvm-gcc4 does not currently support <a href="http://llvm.org/PR869">Link-Time 
+Optimization</a> on most platforms "out-of-the-box".  Please inquire on the 
+llvmdev mailing list if you are interested.</p>
 
 </div>
 
@@ -474,86 +683,52 @@ goto extension</a>, but llvm-gcc3 does.</p>
 </div>
 
 <div class="doc_text">
-
 <ul>
 
-<li>"long double" is transformed by the front-end into "double".  There is no
-support for floating point data types of any size other than 32 and 64
-bits.</li>
+<li><p>"long double" is silently transformed by the front-end into "double".  There
+is no support for floating point data types of any size other than 32 and 64
+bits.</p></li>
     
-<li>Although many GCC extensions are supported, some are not.  In particular,
-    the following extensions are known to <b>not be</b> supported:
-  <ol>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Local-Labels.html#Local%20Labels">Local Labels</a>: Labels local to a block.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Nested-Functions.html#Nested%20Functions">Nested Functions</a>: As in Algol and Pascal, lexical scoping of functions.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Constructing-Calls.html#Constructing%20Calls">Constructing Calls</a>: Dispatching a call to another function.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Thread_002dLocal.html">Thread-Local</a>: Per-thread variables.</li>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Pragmas.html#Pragmas">Pragmas</a>: Pragmas accepted by GCC.</li>
-  </ol>
+<li><p>llvm-gcc does <b>not</b> support <tt>__builtin_apply</tt> yet.
+  See <a href="http://gcc.gnu.org/onlinedocs/gcc/Constructing-Calls.html#Constructing%20Calls">Constructing Calls</a>: Dispatching a call to another function.</p>
+</li>
 
-  <p>The following GCC extensions are <b>partially</b> supported.  An ignored
-  attribute means that the LLVM compiler ignores the presence of the attribute,
-  but the code should still work.  An unsupported attribute is one which is
-  ignored by the LLVM compiler and will cause a different interpretation of
-  the program.</p>
-
+<li><p>llvm-gcc <b>partially</b> supports tthese GCC extensions:</p>
   <ol>
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Variable-Length.html#Variable%20Length">Variable Length</a>:
-      Arrays whose length is computed at run time.<br>
-      Supported, but allocated stack space is not freed until the function returns (noted above).</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Nested-Functions.html#Nested%20Functions">Nested Functions</a>: As in Algol and Pascal, lexical scoping of functions.<br>
+      Nested functions are supported, but llvm-gcc does not support non-local
+      gotos or taking the address of a nested function.</li>
 
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html#Function%20Attributes">Function Attributes</a>:
 
       Declaring that functions have no side effects or that they can never
       return.<br>
 
-      <b>Supported:</b> <tt>constructor</tt>, <tt>destructor</tt>,
+      <b>Supported:</b> <tt>alias</tt>, <tt>always_inline</tt>, <tt>cdecl</tt>,
+      <tt>constructor</tt>, <tt>destructor</tt>,
       <tt>deprecated</tt>, <tt>fastcall</tt>, <tt>format</tt>, 
-      <tt>format_arg</tt>, <tt>non_null</tt>, <tt>noreturn</tt>, 
+      <tt>format_arg</tt>, <tt>non_null</tt>, <tt>noreturn</tt>, <tt>regparm</tt>
       <tt>section</tt>, <tt>stdcall</tt>, <tt>unused</tt>, <tt>used</tt>, 
       <tt>visibility</tt>, <tt>warn_unused_result</tt>, <tt>weak</tt><br>
 
-      <b>Ignored:</b> <tt>noinline</tt>,
-      <tt>always_inline</tt>, <tt>pure</tt>, <tt>const</tt>, <tt>nothrow</tt>,
-      <tt>malloc</tt>, <tt>no_instrument_function</tt>, <tt>cdecl</tt><br>
-
-      <b>Unsupported:</b> <tt>alias</tt>, <tt>regparm</tt>, all other target specific 
-      attributes</li>
-   
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html#Variable%20Attributes">Variable Attributes</a>:
-      Specifying attributes of variables.<br>
-      <b>Supported:</b> <tt>cleanup</tt>, <tt>common</tt>, <tt>nocommon</tt>,
-      <tt>deprecated</tt>, <tt>dllimport</tt>, <tt>dllexport</tt>, 
-      <tt>section</tt>, <tt>transparent_union</tt>, <tt>unused</tt>, 
-      <tt>used</tt>, <tt>weak</tt><br>
-
-      <b>Unsupported:</b> <tt>aligned</tt>, <tt>mode</tt>, <tt>packed</tt>,
-                          <tt>shared</tt>, <tt>tls_model</tt>,
-                          <tt>vector_size</tt>, all target specific attributes.
-  </li>
-
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Type-Attributes.html#Type%20Attributes">Type Attributes</a>:	Specifying attributes of types.<br>
-      <b>Supported:</b> <tt>transparent_union</tt>, <tt>unused</tt>,
-                        <tt>deprecated</tt>, <tt>may_alias</tt><br>
-
-      <b>Unsupported:</b> <tt>aligned</tt>, <tt>packed</tt>, 
-                        all target specific attributes.</li>
-
-  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html#Other%20Builtins">Other Builtins</a>:
-      Other built-in functions.<br>
-      We support all builtins which have a C language equivalent (e.g., 
-         <tt>__builtin_cos</tt>),  <tt>__builtin_alloca</tt>, 
-         <tt>__builtin_types_compatible_p</tt>, <tt>__builtin_choose_expr</tt>,
-         <tt>__builtin_constant_p</tt>, and <tt>__builtin_expect</tt>
-         (currently ignored).  We also support builtins for ISO C99 floating
-         point comparison macros (e.g., <tt>__builtin_islessequal</tt>), 
-         <tt>__builtin_prefetch</tt>, <tt>__builtin_popcount[ll]</tt>,
-         <tt>__builtin_clz[ll]</tt>, and <tt>__builtin_ctz[ll]</tt>.</li>
+      <b>Ignored:</b> <tt>noinline</tt>, <tt>pure</tt>, <tt>const</tt>, <tt>nothrow</tt>,
+      <tt>malloc</tt>, <tt>no_instrument_function</tt></li>
   </ol>
+</li>
 
-  <p>The following extensions <b>are</b> known to be supported:</p>
+<li><p>llvm-gcc supports the vast majority of GCC extensions, including:</p>
 
   <ol>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Pragmas.html#Pragmas">Pragmas</a>: Pragmas accepted by GCC.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Local-Labels.html#Local%20Labels">Local Labels</a>: Labels local to a block.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html#Other%20Builtins">Other Builtins</a>:
+      Other built-in functions.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html#Variable%20Attributes">Variable Attributes</a>:
+      Specifying attributes of variables.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Type-Attributes.html#Type%20Attributes">Type Attributes</a>:	Specifying attributes of types.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Thread_002dLocal.html">Thread-Local</a>: Per-thread variables.</li>
+  <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Variable-Length.html#Variable%20Length">Variable Length</a>:
+      Arrays whose length is computed at run time.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html#Labels%20as%20Values">Labels as Values</a>: Getting pointers to labels and computed gotos.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Statement-Exprs.html#Statement%20Exprs">Statement Exprs</a>:   Putting statements and declarations inside expressions.</li>
   <li><a href="http://gcc.gnu.org/onlinedocs/gcc/Typeof.html#Typeof">Typeof</a>: <code>typeof</code>: referring to the type of an expression.</li>
@@ -609,20 +784,15 @@ lists, please let us know (also including whether or not they work).</p>
 
 <div class="doc_text">
 
-<p>For this release, the C++ front-end is considered to be fully
+<p>The C++ front-end is considered to be fully
 tested and works for a number of non-trivial programs, including LLVM
-itself.</p>
+itself, Qt, Mozilla, etc.</p>
 
-</div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsubsection">
-  Notes
-</div>
-
-<div class="doc_text">
 <ul>
-<li>llvm-gcc4 does not support C++ exception handling at all yet.</li>
+<li>llvm-gcc4 only has partial support for <a href="http://llvm.org/PR870">C++ 
+Exception Handling</a>, and it is not enabled by default.</li>
+
+<!-- NO EH Support!
 
 <li>Destructors for local objects are not always run when a <tt>longjmp</tt> is
     performed. In particular, destructors for objects in the <tt>longjmp</tt>ing
@@ -640,7 +810,7 @@ itself.</p>
     <i>However</i>, the exception handling mechanism used by llvm-gcc3 is very
     different from the model used in the Itanium ABI, so <b>exceptions will not
     interact correctly</b>. </li>
-
+-->
 </ul>
 
 </div>
@@ -656,11 +826,10 @@ itself.</p>
 <div class="doc_text">
 
 <p>A wide variety of additional information is available on the <a
-href="http://llvm.org">LLVM web page</a>, including <a
-href="http://llvm.org/docs/">documentation</a> and <a
-href="http://llvm.org/pubs/">publications describing algorithms and
-components implemented in LLVM</a>.  The web page also contains versions of the
-API documentation which is up-to-date with the CVS version of the source code.
+href="http://llvm.org">LLVM web page</a>, in particular in the <a
+href="http://llvm.org/docs/">documentation</a> section.  The web page also
+contains versions of the API documentation which is up-to-date with the CVS
+version of the source code.
 You can access versions of these documents specific to this release by going
 into the "<tt>llvm/doc/</tt>" directory in the LLVM tree.</p>
 
@@ -679,7 +848,7 @@ lists</a>.</p>
   <a href="http://validator.w3.org/check/referer"><img
   src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01!" /></a>
 
-  <a href="http://llvm.org/">The LLVM Compiler Infrastructure</a><br>
+  <a href="http://llvm.org/">LLVM Compiler Infrastructure</a><br>
   Last modified: $Date$
 </address>
 
