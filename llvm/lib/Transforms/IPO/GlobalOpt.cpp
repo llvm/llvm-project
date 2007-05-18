@@ -623,7 +623,10 @@ static bool OptimizeAwayTrappingUsesOfLoads(GlobalVariable *GV, Constant *LV) {
       Loads.push_back(LI);
       Changed |= OptimizeAwayTrappingUsesOfValue(LI, LV);
     } else {
-      assert(isa<StoreInst>(*GUI) && "Only expect load and stores!");
+      // If we get here we could have stores, loads, or phi nodes whose values
+      // are loaded.
+      assert((isa<StoreInst>(*GUI) || isa<PHINode>(*GUI)) &&
+             "Only expect load and stores!");
     }
 
   if (Changed) {

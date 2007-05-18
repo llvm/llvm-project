@@ -6449,16 +6449,25 @@ Instruction *InstCombiner::commonPointerCastTransforms(CastInst &CI) {
           while (Offset) {
             if (const StructType *STy = dyn_cast<StructType>(GEPIdxTy)) {
               const StructLayout *SL = TD->getStructLayout(STy);
-              unsigned Elt = SL->getElementContainingOffset(Offset);
-              NewIndices.push_back(ConstantInt::get(Type::Int32Ty, Elt));
+              if (Offset < (int64_t)SL->getSizeInBytes()) {
+                unsigned Elt = SL->getElementContainingOffset(Offset);
+                NewIndices.push_back(ConstantInt::get(Type::Int32Ty, Elt));
               
-              Offset -= SL->getElementOffset(Elt);
-              GEPIdxTy = STy->getElementType(Elt);
+                Offset -= SL->getElementOffset(Elt);
+                GEPIdxTy = STy->getElementType(Elt);
+              } else {
+                // Otherwise, we can't index into this, bail out.
+                Offset = 0;
+                OrigBase = 0;
+              }
             } else if (isa<ArrayType>(GEPIdxTy) || isa<VectorType>(GEPIdxTy)) {
               const SequentialType *STy = cast<SequentialType>(GEPIdxTy);
-              uint64_t EltSize = TD->getTypeSize(STy->getElementType());
-              NewIndices.push_back(ConstantInt::get(IntPtrTy, Offset/EltSize));
-              Offset %= EltSize;
+              if (uint64_t EltSize = TD->getTypeSize(STy->getElementType())) {
+                NewIndices.push_back(ConstantInt::get(IntPtrTy,Offset/EltSize));
+                Offset %= EltSize;
+              } else {
+                NewIndices.push_back(ConstantInt::get(IntPtrTy, 0));
+              }
               GEPIdxTy = STy->getElementType();
             } else {
               // Otherwise, we can't index into this, bail out.
