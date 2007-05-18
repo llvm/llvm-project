@@ -24,8 +24,15 @@
 #include "llvm/Support/MemoryBuffer.h"
 using namespace llvm;
 
-BitcodeReader::~BitcodeReader() {
+void BitcodeReader::FreeState() {
   delete Buffer;
+  Buffer = 0;
+  std::vector<PATypeHolder>().swap(TypeList);
+  ValueList.clear();
+  std::vector<const ParamAttrsList*>().swap(ParamAttrs);
+  std::vector<BasicBlock*>().swap(FunctionBBs);
+  std::vector<Function*>().swap(FunctionsWithBodies);
+  DeferredFunctionInfo.clear();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1102,42 +1109,6 @@ bool BitcodeReader::ParseBitcode() {
 }
 
 
-bool BitcodeReader::materializeFunction(Function *F, std::string *ErrInfo) {
-  // If it already is material, ignore the request.
-  if (!F->hasNotBeenReadFromBytecode()) return false;
-
-  DenseMap<Function*, std::pair<uint64_t, unsigned> >::iterator DFII = 
-    DeferredFunctionInfo.find(F);
-  assert(DFII != DeferredFunctionInfo.end() && "Deferred function not found!");
-  
-  // Move the bit stream to the saved position of the deferred function body and
-  // restore the real linkage type for the function.
-  Stream.JumpToBit(DFII->second.first);
-  F->setLinkage((GlobalValue::LinkageTypes)DFII->second.second);
-  DeferredFunctionInfo.erase(DFII);
-  
-  if (ParseFunctionBody(F)) {
-    if (ErrInfo) *ErrInfo = ErrorString;
-    return true;
-  }
-  
-  return false;
-}
-
-Module *BitcodeReader::materializeModule(std::string *ErrInfo) {
-  DenseMap<Function*, std::pair<uint64_t, unsigned> >::iterator I = 
-    DeferredFunctionInfo.begin();
-  while (!DeferredFunctionInfo.empty()) {
-    Function *F = (*I++).first;
-    assert(F->hasNotBeenReadFromBytecode() &&
-           "Deserialized function found in map!");
-    if (materializeFunction(F, ErrInfo))
-      return 0;
-  }
-  return TheModule;
-}
-
-
 /// ParseFunctionBody - Lazily parse the specified function body block.
 bool BitcodeReader::ParseFunctionBody(Function *F) {
   if (Stream.EnterSubBlock(bitc::FUNCTION_BLOCK_ID))
@@ -1586,6 +1557,69 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
   return false;
 }
 
+//===----------------------------------------------------------------------===//
+// ModuleProvider implementation
+//===----------------------------------------------------------------------===//
+
+
+bool BitcodeReader::materializeFunction(Function *F, std::string *ErrInfo) {
+  // If it already is material, ignore the request.
+  if (!F->hasNotBeenReadFromBytecode()) return false;
+  
+  DenseMap<Function*, std::pair<uint64_t, unsigned> >::iterator DFII = 
+    DeferredFunctionInfo.find(F);
+  assert(DFII != DeferredFunctionInfo.end() && "Deferred function not found!");
+  
+  // Move the bit stream to the saved position of the deferred function body and
+  // restore the real linkage type for the function.
+  Stream.JumpToBit(DFII->second.first);
+  F->setLinkage((GlobalValue::LinkageTypes)DFII->second.second);
+  
+  if (ParseFunctionBody(F)) {
+    if (ErrInfo) *ErrInfo = ErrorString;
+    return true;
+  }
+  
+  return false;
+}
+
+void BitcodeReader::dematerializeFunction(Function *F) {
+  // If this function isn't materialized, or if it is a proto, this is a noop.
+  if (F->hasNotBeenReadFromBytecode() || F->isDeclaration())
+    return;
+  
+  assert(DeferredFunctionInfo.count(F) && "No info to read function later?");
+  
+  // Just forget the function body, we can remat it later.
+  F->deleteBody();
+  F->setLinkage(GlobalValue::GhostLinkage);
+}
+
+
+Module *BitcodeReader::materializeModule(std::string *ErrInfo) {
+  for (DenseMap<Function*, std::pair<uint64_t, unsigned> >::iterator I = 
+       DeferredFunctionInfo.begin(), E = DeferredFunctionInfo.end(); I != E;
+       ++I) {
+    Function *F = I->first;
+    if (F->hasNotBeenReadFromBytecode() &&
+        materializeFunction(F, ErrInfo))
+      return 0;
+  }
+  return TheModule;
+}
+
+
+/// This method is provided by the parent ModuleProvde class and overriden
+/// here. It simply releases the module from its provided and frees up our
+/// state.
+/// @brief Release our hold on the generated module
+Module *BitcodeReader::releaseModule(std::string *ErrInfo) {
+  // Since we're losing control of this Module, we must hand it back complete
+  Module *M = ModuleProvider::releaseModule(ErrInfo);
+  FreeState();
+  return M;
+}
+
 
 //===----------------------------------------------------------------------===//
 // External interface
@@ -1615,12 +1649,18 @@ Module *llvm::ParseBitcodeFile(MemoryBuffer *Buffer, std::string *ErrMsg){
   R = static_cast<BitcodeReader*>(getBitcodeModuleProvider(Buffer, ErrMsg));
   if (!R) return 0;
   
-  // Read the whole module, get a pointer to it, tell ModuleProvider not to
-  // delete it when its dtor is run.
-  Module *M = R->releaseModule(ErrMsg);
-  
-  // Don't let the BitcodeReader dtor delete 'Buffer'.
+  // Read in the entire module.
+  Module *M = R->materializeModule(ErrMsg);
+
+  // Don't let the BitcodeReader dtor delete 'Buffer', regardless of whether
+  // there was an error.
   R->releaseMemoryBuffer();
+  
+  // If there was no error, tell ModuleProvider not to delete it when its dtor
+  // is run.
+  if (M)
+    M = R->releaseModule(ErrMsg);
+  
   delete R;
   return M;
 }

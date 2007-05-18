@@ -39,6 +39,10 @@ public:
     ++NumOperands;
   }
   
+  void clear() {
+    std::vector<Use>().swap(Uses);
+  }
+  
   Value *operator[](unsigned i) const { return getOperand(i); }
   
   Value *back() const { return Uses.back(); }
@@ -111,8 +115,11 @@ public:
   BitcodeReader(MemoryBuffer *buffer) : Buffer(buffer), ErrorString(0) {
     HasReversedFunctionsWithBodies = false;
   }
-  ~BitcodeReader();
+  ~BitcodeReader() {
+    FreeState();
+  }
   
+  void FreeState();
   
   /// releaseMemoryBuffer - This causes the reader to completely forget about
   /// the memory buffer it contains, which prevents the buffer from being
@@ -123,7 +130,9 @@ public:
   
   virtual bool materializeFunction(Function *F, std::string *ErrInfo = 0);
   virtual Module *materializeModule(std::string *ErrInfo = 0);
-  
+  virtual void dematerializeFunction(Function *F);
+  virtual Module *releaseModule(std::string *ErrInfo = 0);
+
   bool Error(const char *Str) {
     ErrorString = Str;
     return true;
