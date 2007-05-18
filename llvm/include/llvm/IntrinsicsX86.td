@@ -702,6 +702,10 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Misc.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
+  def int_x86_mmx_maskmovq : GCCBuiltin<"__builtin_ia32_maskmovq">,
+              Intrinsic<[llvm_void_ty, llvm_v8i8_ty, llvm_v8i8_ty, llvm_ptr_ty],
+                        [IntrWriteMem]>;
+
   def int_x86_mmx_pmovmskb : GCCBuiltin<"__builtin_ia32_pmovmskb">,
               Intrinsic<[llvm_i32_ty, llvm_v8i8_ty], [IntrNoMem]>;
 
