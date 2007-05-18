@@ -3448,7 +3448,8 @@ void SelectionDAGLowering::visitInlineAsm(CallInst &I) {
 
         // Add information to the INLINEASM node to know about this output.
         unsigned ResOpType = 4/*MEM*/ | (1 << 3);
-        AsmNodeOperands.push_back(DAG.getConstant(ResOpType, MVT::i32));
+        AsmNodeOperands.push_back(DAG.getTargetConstant(ResOpType, 
+                                                        TLI.getPointerTy()));
         AsmNodeOperands.push_back(OpInfo.CallOperand);
         break;
       }
@@ -3540,7 +3541,8 @@ void SelectionDAGLowering::visitInlineAsm(CallInst &I) {
         
         // Add information to the INLINEASM node to know about this input.
         unsigned ResOpType = 3 /*IMM*/ | (1 << 3);
-        AsmNodeOperands.push_back(DAG.getConstant(ResOpType, MVT::i32));
+        AsmNodeOperands.push_back(DAG.getTargetConstant(ResOpType, 
+                                                        TLI.getPointerTy()));
         AsmNodeOperands.push_back(InOperandVal);
         break;
       } else if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
@@ -3550,7 +3552,8 @@ void SelectionDAGLowering::visitInlineAsm(CallInst &I) {
                
         // Add information to the INLINEASM node to know about this input.
         unsigned ResOpType = 4/*MEM*/ | (1 << 3);
-        AsmNodeOperands.push_back(DAG.getConstant(ResOpType, MVT::i32));
+        AsmNodeOperands.push_back(DAG.getTargetConstant(ResOpType,
+                                                        TLI.getPointerTy()));
         AsmNodeOperands.push_back(InOperandVal);
         break;
       }
