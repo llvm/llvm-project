@@ -3678,11 +3678,12 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
   // Emit boilerplate.
   OS << "SDNode *Select_INLINEASM(SDOperand N) {\n"
      << "  std::vector<SDOperand> Ops(N.Val->op_begin(), N.Val->op_end());\n"
-     << "  AddToISelQueue(N.getOperand(0)); // Select the chain.\n\n"
-     << "  // Select the flag operand.\n"
-     << "  if (Ops.back().getValueType() == MVT::Flag)\n"
-     << "    AddToISelQueue(Ops.back());\n"
-     << "  SelectInlineAsmMemoryOperands(Ops, *CurDAG);\n"
+     << "  SelectInlineAsmMemoryOperands(Ops, *CurDAG);\n\n"
+    
+     << "  // Ensure that the asm operands are themselves selected.\n"
+     << "  for (unsigned j = 0, e = Ops.size(); j != e; ++j)\n"
+     << "    AddToISelQueue(Ops[j]);\n\n"
+    
      << "  std::vector<MVT::ValueType> VTs;\n"
      << "  VTs.push_back(MVT::Other);\n"
      << "  VTs.push_back(MVT::Flag);\n"
@@ -3718,6 +3719,7 @@ void DAGISelEmitter::EmitInstructionSelector(std::ostream &OS) {
      << "  case ISD::TargetConstant:\n"
      << "  case ISD::TargetConstantPool:\n"
      << "  case ISD::TargetFrameIndex:\n"
+     << "  case ISD::TargetExternalSymbol:\n"
      << "  case ISD::TargetJumpTable:\n"
      << "  case ISD::TargetGlobalTLSAddress:\n"
      << "  case ISD::TargetGlobalAddress: {\n"
