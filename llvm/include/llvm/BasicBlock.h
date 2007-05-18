@@ -17,6 +17,7 @@
 #include "llvm/Instruction.h"
 #include "llvm/SymbolTableListTraits.h"
 #include "llvm/ADT/ilist"
+#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 

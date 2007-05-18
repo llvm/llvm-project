@@ -16,6 +16,7 @@
 
 #include "llvm/Value.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
   template<typename ValueSubClass, typename ItemParentClass>
