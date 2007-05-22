@@ -7773,6 +7773,14 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
     if (Callee->isDeclaration() && !Caller->use_empty() && 
         // Conversion is ok if changing from pointer to int of same size.
         !(isa<PointerType>(FT->getReturnType()) &&
+  const FunctionType *ActualFT =
+    cast<FunctionType>(cast<PointerType>(CE->getType())->getElementType());
+  
+  // If the parameter attributes don't match up, don't do the xform.  We don't
+  // want to lose an sret attribute or something.
+  if (FT->getParamAttrs() != ActualFT->getParamAttrs())
+    return false;
+  
           TD->getIntPtrType() == OldRetTy))
       return false;   // Cannot transform this return value.
 
