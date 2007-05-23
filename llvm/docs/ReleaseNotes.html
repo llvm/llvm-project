@@ -32,10 +32,10 @@
 <div class="doc_text">
 
 <p>This document contains the release notes for the LLVM compiler
-infrastructure, release 2.0.  Here we describe the status of LLVM, including any
-known problems and major improvements from the previous release.  All LLVM
+infrastructure, release 2.0.  Here we describe the status of LLVM, including
+major improvements from the previous release and any known problems.  All LLVM
 releases may be downloaded from the <a href="http://llvm.org/releases/">LLVM
-releases web site</a>.
+releases web site</a>.</p>
 
 <p>For more information about LLVM, including information about the latest
 release, please check out the <a href="http://llvm.org/">main LLVM
@@ -153,7 +153,7 @@ series.</li>
     configure llvm-gcc on linux are no longer needed, and special hacks to build
     large C++ libraries like Qt are not needed.</li>
 
-<li>LLVM now has a new MSIL backend. llc -march=msil will now turn LLVM 
+<li>LLVM now has a new MSIL backend. <tt>llc -march=msil</tt> will now turn LLVM
     into MSIL (".net") bytecode.  This is still fairly early development 
     with a number of limitations.</li>
 
@@ -202,30 +202,30 @@ Improvements</a></div>
 <ul>
 <li>The <a href="WritingAnLLVMPass.html">pass manager</a> has been entirely
     rewritten, making it significantly smaller, simpler, and more extensible.
-    Support has been added to run FunctionPasses interlaced with
-    CallGraphSCCPasses, and we now support loop transformations explicitly with
-    LoopPass.</li>
+    Support has been added to run <tt>FunctionPass</tt>es interlaced with
+    <tt>CallGraphSCCPass</tt>es, we now support loop transformations
+    explicitly with <tt>LoopPass</tt>, and <tt>ModulePass</tt>es may now use the
+    result of <tt>FunctionPass</tt>es.</li>
+
+<li>LLVM 2.0 includes a new loop rotation pass, which converts "for loops" into 
+    "do/while loops", where the condition is at the bottom of the loop.</li>
+
+<li>The Loop Strength Reduction pass has been improved, and we now support
+    sinking expressions across blocks to reduce register pressure.</li>
 
 <li>The <tt>-scalarrepl</tt> pass can now promote unions containing FP values
     into a register, it can also handle unions of vectors of the same
     size.</li>
 
-<li>LLVM 2.0 includes a new loop rotation pass, which converts "for loops" into 
-    "do/while loops", where the condition is at the bottom of the loop.</li>
-
-<li>The Loop Strength Reduction pass has been improved, and support added 
-    for sinking expressions across blocks to reduce register pressure.</li>
-
-<li>ModulePasses may now use the result of FunctionPasses.</li>
-
 <li>The [Post]DominatorSet classes have been removed from LLVM and clients
-    switched to use the far-more-efficient ETForest class instead.</li>
+    switched to use the more-efficient ETForest class instead.</li>
 
 <li>The ImmediateDominator class has also been removed, and clients have been
     switched to use DominatorTree instead.</li>
 
 <li>The predicate simplifier pass has been improved, making it able to do 
-    simple value range propagation and eliminate more conditionals.</li>
+    simple value range propagation and eliminate more conditionals.  However,
+    note that predsimplify is not enabled by default in llvm-gcc.</li>
 
 </ul>
   
@@ -242,7 +242,7 @@ New features include:
 
 <ul>
 
-<li>Support was added for software floating point, which allows LLVM to target
+<li>LLVM now supports software floating point, which allows LLVM to target
     chips that don't have hardware FPUs (e.g. ARM thumb mode).</li>
 
 <li>A new register scavenger has been implemented, which is useful for
@@ -262,8 +262,8 @@ New features include:
     sparse switches that have dense subregions, and implemented support 
     for the shift/and trick.</li>
 
-<li>Added support for tracking physreg sub-registers and super-registers 
-    in the code generator, as well as extensive register  
+<li>LLVM now supports tracking physreg sub-registers and super-registers 
+    in the code generator, and includes extensive register
     allocator changes to track them.</li>
 
 <li>There is initial support for virtreg sub-registers 
@@ -306,7 +306,7 @@ Other improvements include:
  several ways:</p>
  
 <ul>
-<li>Extended TargetData to support better target parameterization in
+<li>TargetData now supports better target parameterization in
     the .ll/.bc files, eliminating the 'pointersize/endianness' attributes
     in the files (<a href="http://llvm.org/PR761">PR761</a>).</li>
 
@@ -338,7 +338,7 @@ Improvements</a></div>
 <li>PIC support for linux/x86 has been added.</li>
 <li>The X86 backend now supports the GCC regparm attribute.</li>
 <li>LLVM now supports inline asm with multiple constraint letters per operand 
-    (like "ri") which is common in X86 inline asms.</li>
+    (like "mri") which is common in X86 inline asms.</li>
 </ul>
 
 <p>ARM-specific Code Generator Enhancements:</p>
@@ -349,14 +349,16 @@ Improvements</a></div>
 <li>There are major new features, including support for ARM 
     v4-v6 chips, vfp support, soft float point support, pre/postinc support,
     load/store multiple generation, constant pool entry motion (to support
-    large functions), and inline asm support, weak linkage support, static
+    large functions), inline asm support, weak linkage support, static
     ctor/dtor support and many bug fixes.</li>
+    
 <li>Added support for Thumb code generation (<tt>llc -march=thumb</tt>).</li>
 
 <li>The ARM backend now supports the ARM AAPCS/EABI ABI and PIC codegen on 
     arm/linux.</li>
 
 <li>Several bugs were fixed for DWARF debug info generation on arm/linux.</li>
+
 </ul>
 
 <p>PowerPC-specific Code Generator Enhancements:</p>
@@ -413,7 +415,7 @@ following major changes:</p>
 
 <ul>
 <li>Pass registration is slightly different in LLVM 2.0 (you now need an
-   intptr_t in your constructor), as explained in the <a 
+   <tt>intptr_t</tt> in your constructor), as explained in the <a 
    href="WritingAnLLVMPass.html#basiccode">Writing an LLVM Pass</a>
    document.</li>
    
@@ -425,7 +427,8 @@ following major changes:</p>
     replaced by <tt>Type::Int8Ty</tt>, <tt>Type::Int16Ty</tt>, etc.  LLVM types
     have always corresponded to fixed size types
     (e.g. long was always 64-bits), but the type system no longer includes
-    information about the sign of the type.</li>
+    information about the sign of the type.  Also, the
+    <tt>Type::isPrimitiveType()</tt> method now returns false for integers.</li>
 
 <li>Several classes (<tt>CallInst</tt>, <tt>GetElementPtrInst</tt>,
     <tt>ConstantArray</tt>, etc), that once took <tt>std::vector</tt> as
@@ -438,7 +441,7 @@ following major changes:</p>
     </pre>
     
     This avoids creation of a temporary vector (and a call to malloc/free).  If
-    you have an std::vector, use code like this:
+    you have an <tt>std::vector</tt>, use code like this:
     <pre>
       std::vector&lt;Value*&gt; Ops = ...;
       GEP = new GetElementPtrInst(BasePtr, &amp;Ops[0], Ops.size());
@@ -446,13 +449,14 @@ following major changes:</p>
 
     </li>
     
-<li>CastInst is now abstract and its functionality is split into several parts,
-    one for each of the <a href="LangRef.html#convertops">new cast
-    instructions</a>.</li>
+<li><tt>CastInst</tt> is now abstract and its functionality is split into
+    several parts, one for each of the <a href="LangRef.html#convertops">new
+    cast instructions</a>.</li>
 
 <li><tt>Instruction::getNext()/getPrev()</tt> are now private (along with
     <tt>BasicBlock::getNext</tt>, etc), for efficiency reasons (they are now no
-    longer just simple pointers).  Please use BasicBlock::iterator, etc instead.
+    longer just simple pointers).  Please use <tt>BasicBlock::iterator</tt>, etc
+    instead.
 </li>
 
 <li><tt>Module::getNamedFunction()</tt> is now called
@@ -475,14 +479,14 @@ following major changes:</p>
 <p>LLVM is known to work on the following platforms:</p>
 
 <ul>
-  <li>Intel and AMD machines running Red Hat Linux, Fedora Core and FreeBSD 
+<li>Intel and AMD machines running Red Hat Linux, Fedora Core and FreeBSD 
       (and probably other unix-like systems).</li>
-<li>Intel and AMD machines running on Win32 using MinGW libraries (native)</li>
-<li>Sun UltraSPARC workstations running Solaris 8.</li>
-<li>Intel and AMD machines running on Win32 with the Cygwin libraries (limited
-    support is available for native builds with Visual C++).</li>
 <li>PowerPC and X86-based Mac OS X systems, running 10.2 and above in 32-bit and
     64-bit modes.</li>
+<li>Intel and AMD machines running on Win32 using MinGW libraries (native)</li>
+<li>Intel and AMD machines running on Win32 with the Cygwin libraries (limited
+    support is available for native builds with Visual C++).</li>
+<li>Sun UltraSPARC workstations running Solaris 8.</li>
 <li>Alpha-based machines running Debian GNU/Linux.</li>
 <li>Itanium-based machines running Linux and HP-UX.</li>
 </ul>
@@ -527,7 +531,8 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 <ul>
 <li>The <tt>-cee</tt> pass is known to be buggy, and may be removed in in a 
     future release.</li>
-<li>C++ EH support</li>
+<li>C++ EH support is disabled for this release.</li>
+<li>The MSIL backend is experimental.</li>
 <li>The IA64 code generator is experimental.</li>
 <li>The Alpha JIT is experimental.</li>
 <li>"<tt>-filetype=asm</tt>" (the default) is the only supported value for the 
@@ -561,7 +566,7 @@ components, please contact us on the <a href="http://lists.cs.uiuc.edu/mailman/l
 <li><a href="http://llvm.org/PR642">PowerPC backend does not correctly
 implement ordered FP comparisons</a>.</li>
 <li>The Linux PPC32/ABI support needs testing for the interpreter and static
-compilation, and lacks Dwarf debugging informations.
+compilation, and lacks support for debug information.</li>
 </ul>
 
 </div>
@@ -574,14 +579,13 @@ compilation, and lacks Dwarf debugging informations.
 <div class="doc_text">
 
 <ul>
-<li>The Thumb mode works only on ARMv6 or higher processors. On sub-ARMv6
-processors, any thumb program compiled with LLVM crashes or produces wrong
-results. (<a href="http://llvm.org/PR1388">PR1388</a>)</li>
+<li>Thumb mode works only on ARMv6 or higher processors. On sub-ARMv6
+processors, thumb program can crash or produces wrong
+results (<a href="http://llvm.org/PR1388">PR1388</a>).</li>
 <li>Compilation for ARM Linux OABI (old ABI) is supported, but not fully tested.
 </li>
-<li>QEMU-ARM (<= 0.9.0) wrongly executes programs compiled with LLVM. A non-affected QEMU version must be used or this
-<a href="http://cvs.savannah.nongnu.org/viewcvs/qemu/target-arm/translate.c?root=qemu&amp;r1=1.46&amp;r2=1.47&amp;makepatch=1&amp;diff_format=h">
-patch</a> must be applied on QEMU.</li>
+<li>There is a bug in QEMU-ARM (<= 0.9.0) which causes it to incorrectly execute
+programs compiled with LLVM.  Please use more recent versions of QEMU.</li>
 </ul>
 
 </div>
