@@ -389,8 +389,7 @@ static const Type *getPromotedType(const Type *Ty) {
   if (const IntegerType* ITy = dyn_cast<IntegerType>(Ty)) {
     if (ITy->getBitWidth() < 32)
       return Type::Int32Ty;
-  } else if (Ty == Type::FloatTy)
-    return Type::DoubleTy;
+  }
   return Ty;
 }
 
