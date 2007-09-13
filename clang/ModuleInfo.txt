@@ -1,5 +1,0 @@
-# This file provides information for llvm-top
-DepModule: llvm 
-ConfigCmd:
-ConfigTest:
-BuildCmd:
