@@ -26,6 +26,7 @@
 #include "llvm/Target/TargetData.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -493,8 +494,10 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV) {
 }
 
 /// AllUsesOfValueWillTrapIfNull - Return true if all users of the specified
-/// value will trap if the value is dynamically null.
-static bool AllUsesOfValueWillTrapIfNull(Value *V) {
+/// value will trap if the value is dynamically null.  PHIs keeps track of any 
+/// phi nodes we've seen to avoid reprocessing them.
+static bool AllUsesOfValueWillTrapIfNull(Value *V,
+                                         SmallPtrSet<PHINode*, 8> &PHIs) {
   for (Value::use_iterator UI = V->use_begin(), E = V->use_end(); UI != E; ++UI)
     if (isa<LoadInst>(*UI)) {
       // Will trap.
@@ -513,10 +516,15 @@ static bool AllUsesOfValueWillTrapIfNull(Value *V) {
         //cerr << "NONTRAPPING USE: " << **UI;
         return false;  // Not calling the ptr
       }
-    } else if (CastInst *CI = dyn_cast<CastInst>(*UI)) {
-      if (!AllUsesOfValueWillTrapIfNull(CI)) return false;
+    } else if (BitCastInst *CI = dyn_cast<BitCastInst>(*UI)) {
+      if (!AllUsesOfValueWillTrapIfNull(CI, PHIs)) return false;
     } else if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(*UI)) {
-      if (!AllUsesOfValueWillTrapIfNull(GEPI)) return false;
+      if (!AllUsesOfValueWillTrapIfNull(GEPI, PHIs)) return false;
+    } else if (PHINode *PN = dyn_cast<PHINode>(*UI)) {
+      // If we've already seen this phi node, ignore it, it has already been
+      // checked.
+      if (PHIs.insert(PN))
+        return AllUsesOfValueWillTrapIfNull(PN, PHIs);
     } else if (isa<ICmpInst>(*UI) &&
                isa<ConstantPointerNull>(UI->getOperand(1))) {
       // Ignore setcc X, null
@@ -533,7 +541,8 @@ static bool AllUsesOfValueWillTrapIfNull(Value *V) {
 static bool AllUsesOfLoadedValueWillTrapIfNull(GlobalVariable *GV) {
   for (Value::use_iterator UI = GV->use_begin(), E = GV->use_end(); UI!=E; ++UI)
     if (LoadInst *LI = dyn_cast<LoadInst>(*UI)) {
-      if (!AllUsesOfValueWillTrapIfNull(LI))
+      SmallPtrSet<PHINode*, 8> PHIs;
+      if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
         return false;
     } else if (isa<StoreInst>(*UI)) {
       // Ignore stores to the global.
@@ -802,7 +811,8 @@ static GlobalVariable *OptimizeGlobalAddressOfMalloc(GlobalVariable *GV,
 /// like dereferencing the pointer, but not storing through the address, unless
 /// it is to the specified global.
 static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(Instruction *V,
-                                                      GlobalVariable *GV) {
+                                                      GlobalVariable *GV,
+                                              SmallPtrSet<PHINode*, 8> &PHIs) {
   for (Value::use_iterator UI = V->use_begin(), E = V->use_end(); UI != E;++UI)
     if (isa<LoadInst>(*UI) || isa<CmpInst>(*UI)) {
       // Fine, ignore.
@@ -810,9 +820,16 @@ static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(Instruction *V,
       if (SI->getOperand(0) == V && SI->getOperand(1) != GV)
         return false;  // Storing the pointer itself... bad.
       // Otherwise, storing through it, or storing into GV... fine.
-    } else if (isa<GetElementPtrInst>(*UI) || isa<SelectInst>(*UI)) {
-      if (!ValueIsOnlyUsedLocallyOrStoredToOneGlobal(cast<Instruction>(*UI),GV))
+    } else if (isa<GetElementPtrInst>(*UI) || isa<SelectInst>(*UI) ||
+               isa<BitCastInst>(*UI)) {
+      if (!ValueIsOnlyUsedLocallyOrStoredToOneGlobal(cast<Instruction>(*UI),
+                                                     GV, PHIs))
         return false;
+    } else if (PHINode *PN = dyn_cast<PHINode>(*UI)) {
+      // PHIs are ok if all uses are ok.  Don't infinitely recurse through PHI
+      // cycles.
+      if (PHIs.insert(PN))
+        return ValueIsOnlyUsedLocallyOrStoredToOneGlobal(PN, GV, PHIs);
     } else {
       return false;
     }
@@ -827,24 +844,31 @@ static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(Instruction *V,
 static void ReplaceUsesOfMallocWithGlobal(Instruction *Alloc, 
                                           GlobalVariable *GV) {
   while (!Alloc->use_empty()) {
-    Instruction *U = Alloc->use_back();
+    Instruction *U = cast<Instruction>(*Alloc->use_begin());
+    Instruction *InsertPt = U;
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // If this is the store of the allocation into the global, remove it.
       if (SI->getOperand(1) == GV) {
         SI->eraseFromParent();
         continue;
       }
+    } else if (PHINode *PN = dyn_cast<PHINode>(U)) {
+      // Insert the load in the corresponding predecessor, not right before the
+      // PHI.
+      unsigned PredNo = Alloc->use_begin().getOperandNo()/2;
+      InsertPt = PN->getIncomingBlock(PredNo)->getTerminator();
     }
     
     // Insert a load from the global, and use it instead of the malloc.
-    Value *NL = new LoadInst(GV, GV->getName()+".val", U);
+    Value *NL = new LoadInst(GV, GV->getName()+".val", InsertPt);
     U->replaceUsesOfWith(Alloc, NL);
   }
 }
 
 /// GlobalLoadUsesSimpleEnoughForHeapSRA - If all users of values loaded from
 /// GV are simple enough to perform HeapSRA, return true.
-static bool GlobalLoadUsesSimpleEnoughForHeapSRA(GlobalVariable *GV) {
+static bool GlobalLoadUsesSimpleEnoughForHeapSRA(GlobalVariable *GV,
+                                                 MallocInst *MI) {
   for (Value::use_iterator UI = GV->use_begin(), E = GV->use_end(); UI != E; 
        ++UI)
     if (LoadInst *LI = dyn_cast<LoadInst>(*UI)) {
@@ -860,77 +884,148 @@ static bool GlobalLoadUsesSimpleEnoughForHeapSRA(GlobalVariable *GV) {
         }
         
         // getelementptr is also ok, but only a simple form.
-        GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(*UI);
-        if (!GEPI) return false;
+        if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(*UI)) {
+          // Must index into the array and into the struct.
+          if (GEPI->getNumOperands() < 3)
+            return false;
+          
+          // Otherwise the GEP is ok.
+          continue;
+        }
         
-        // Must index into the array and into the struct.
-        if (GEPI->getNumOperands() < 3)
-          return false;
+        if (PHINode *PN = dyn_cast<PHINode>(*UI)) {
+          // We have a phi of a load from the global.  We can only handle this
+          // if the other PHI'd values are actually the same.  In this case,
+          // the rewriter will just drop the phi entirely.
+          for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+            Value *IV = PN->getIncomingValue(i);
+            if (IV == LI) continue;  // Trivial the same.
+            
+            // If the phi'd value is from the malloc that initializes the value,
+            // we can xform it.
+            if (IV == MI) continue;
+            
+            // Otherwise, we don't know what it is.
+            return false;
+          }
+          return true;
+        }
         
-        // Otherwise the GEP is ok.
-        continue;
+        // Otherwise we don't know what this is, not ok.
+        return false;
       }
     }
   return true;
+}
+
+/// GetHeapSROALoad - Return the load for the specified field of the HeapSROA'd
+/// value, lazily creating it on demand.
+static Value *GetHeapSROALoad(Instruction *Load, unsigned FieldNo,
+                              const std::vector<GlobalVariable*> &FieldGlobals,
+                              std::vector<Value *> &InsertedLoadsForPtr) {
+  if (InsertedLoadsForPtr.size() <= FieldNo)
+    InsertedLoadsForPtr.resize(FieldNo+1);
+  if (InsertedLoadsForPtr[FieldNo] == 0)
+    InsertedLoadsForPtr[FieldNo] = new LoadInst(FieldGlobals[FieldNo],
+                                                Load->getName()+".f" + 
+                                                utostr(FieldNo), Load);
+  return InsertedLoadsForPtr[FieldNo];
+}
+
+/// RewriteHeapSROALoadUser - Given a load instruction and a value derived from
+/// the load, rewrite the derived value to use the HeapSRoA'd load.
+static void RewriteHeapSROALoadUser(LoadInst *Load, Instruction *LoadUser, 
+                               const std::vector<GlobalVariable*> &FieldGlobals,
+                                    std::vector<Value *> &InsertedLoadsForPtr) {
+  // If this is a comparison against null, handle it.
+  if (ICmpInst *SCI = dyn_cast<ICmpInst>(LoadUser)) {
+    assert(isa<ConstantPointerNull>(SCI->getOperand(1)));
+    // If we have a setcc of the loaded pointer, we can use a setcc of any
+    // field.
+    Value *NPtr;
+    if (InsertedLoadsForPtr.empty()) {
+      NPtr = GetHeapSROALoad(Load, 0, FieldGlobals, InsertedLoadsForPtr);
+    } else {
+      NPtr = InsertedLoadsForPtr.back();
+    }
+    
+    Value *New = new ICmpInst(SCI->getPredicate(), NPtr,
+                              Constant::getNullValue(NPtr->getType()),
+                              SCI->getName(), SCI);
+    SCI->replaceAllUsesWith(New);
+    SCI->eraseFromParent();
+    return;
+  }
+  
+  // Handle 'getelementptr Ptr, Idx, uint FieldNo ...'
+  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(LoadUser)) {
+    assert(GEPI->getNumOperands() >= 3 && isa<ConstantInt>(GEPI->getOperand(2))
+           && "Unexpected GEPI!");
+  
+    // Load the pointer for this field.
+    unsigned FieldNo = cast<ConstantInt>(GEPI->getOperand(2))->getZExtValue();
+    Value *NewPtr = GetHeapSROALoad(Load, FieldNo,
+                                    FieldGlobals, InsertedLoadsForPtr);
+    
+    // Create the new GEP idx vector.
+    SmallVector<Value*, 8> GEPIdx;
+    GEPIdx.push_back(GEPI->getOperand(1));
+    GEPIdx.append(GEPI->op_begin()+3, GEPI->op_end());
+    
+    Value *NGEPI = new GetElementPtrInst(NewPtr, GEPIdx.begin(), GEPIdx.end(),
+                                         GEPI->getName(), GEPI);
+    GEPI->replaceAllUsesWith(NGEPI);
+    GEPI->eraseFromParent();
+    return;
+  }
+  
+  // Handle PHI nodes.  PHI nodes must be merging in the same values, plus
+  // potentially the original malloc.  Insert phi nodes for each field, then
+  // process uses of the PHI.
+  PHINode *PN = cast<PHINode>(LoadUser);
+  std::vector<Value *> PHIsForField;
+  PHIsForField.resize(FieldGlobals.size());
+  for (unsigned i = 0, e = FieldGlobals.size(); i != e; ++i) {
+    Value *LoadV = GetHeapSROALoad(Load, i, FieldGlobals, InsertedLoadsForPtr);
+
+    PHINode *FieldPN = new PHINode(LoadV->getType(),
+                                   PN->getName()+"."+utostr(i), PN);
+    // Fill in the predecessor values.
+    for (unsigned pred = 0, e = PN->getNumIncomingValues(); pred != e; ++pred) {
+      // Each predecessor either uses the load or the original malloc.
+      Value *InVal = PN->getIncomingValue(pred);
+      BasicBlock *BB = PN->getIncomingBlock(pred);
+      Value *NewVal;
+      if (isa<MallocInst>(InVal)) {
+        // Insert a reload from the global in the predecessor.
+        NewVal = GetHeapSROALoad(BB->getTerminator(), i, FieldGlobals,
+                                 PHIsForField);
+      } else {
+        NewVal = InsertedLoadsForPtr[i];
+      }
+      FieldPN->addIncoming(NewVal, BB);
+    }
+    PHIsForField[i] = FieldPN;
+  }
+  
+  // Since PHIsForField specifies a phi for every input value, the lazy inserter
+  // will never insert a load.
+  while (!PN->use_empty())
+    RewriteHeapSROALoadUser(Load, PN->use_back(), FieldGlobals, PHIsForField);
+  PN->eraseFromParent();
 }
 
 /// RewriteUsesOfLoadForHeapSRoA - We are performing Heap SRoA on a global.  Ptr
 /// is a value loaded from the global.  Eliminate all uses of Ptr, making them
 /// use FieldGlobals instead.  All uses of loaded values satisfy
 /// GlobalLoadUsesSimpleEnoughForHeapSRA.
-static void RewriteUsesOfLoadForHeapSRoA(LoadInst *Ptr, 
+static void RewriteUsesOfLoadForHeapSRoA(LoadInst *Load, 
                              const std::vector<GlobalVariable*> &FieldGlobals) {
   std::vector<Value *> InsertedLoadsForPtr;
   //InsertedLoadsForPtr.resize(FieldGlobals.size());
-  while (!Ptr->use_empty()) {
-    Instruction *User = Ptr->use_back();
-    
-    // If this is a comparison against null, handle it.
-    if (ICmpInst *SCI = dyn_cast<ICmpInst>(User)) {
-      assert(isa<ConstantPointerNull>(SCI->getOperand(1)));
-      // If we have a setcc of the loaded pointer, we can use a setcc of any
-      // field.
-      Value *NPtr;
-      if (InsertedLoadsForPtr.empty()) {
-        NPtr = new LoadInst(FieldGlobals[0], Ptr->getName()+".f0", Ptr);
-        InsertedLoadsForPtr.push_back(Ptr);
-      } else {
-        NPtr = InsertedLoadsForPtr.back();
-      }
-      
-      Value *New = new ICmpInst(SCI->getPredicate(), NPtr,
-                                Constant::getNullValue(NPtr->getType()),
-                                SCI->getName(), SCI);
-      SCI->replaceAllUsesWith(New);
-      SCI->eraseFromParent();
-      continue;
-    }
-    
-    // Otherwise, this should be: 'getelementptr Ptr, Idx, uint FieldNo ...'
-    GetElementPtrInst *GEPI = cast<GetElementPtrInst>(User);
-    assert(GEPI->getNumOperands() >= 3 && isa<ConstantInt>(GEPI->getOperand(2))
-           && "Unexpected GEPI!");
-    
-    // Load the pointer for this field.
-    unsigned FieldNo = cast<ConstantInt>(GEPI->getOperand(2))->getZExtValue();
-    if (InsertedLoadsForPtr.size() <= FieldNo)
-      InsertedLoadsForPtr.resize(FieldNo+1);
-    if (InsertedLoadsForPtr[FieldNo] == 0)
-      InsertedLoadsForPtr[FieldNo] = new LoadInst(FieldGlobals[FieldNo],
-                                                  Ptr->getName()+".f" + 
-                                                  utostr(FieldNo), Ptr);
-    Value *NewPtr = InsertedLoadsForPtr[FieldNo];
-
-    // Create the new GEP idx vector.
-    SmallVector<Value*, 8> GEPIdx;
-    GEPIdx.push_back(GEPI->getOperand(1));
-    GEPIdx.append(GEPI->op_begin()+3, GEPI->op_end());
-
-    Value *NGEPI = new GetElementPtrInst(NewPtr, GEPIdx.begin(), GEPIdx.end(),
-                                         GEPI->getName(), GEPI);
-    GEPI->replaceAllUsesWith(NGEPI);
-    GEPI->eraseFromParent();
-  }
+  while (!Load->use_empty())
+    RewriteHeapSROALoadUser(Load, Load->use_back(), 
+                            FieldGlobals, InsertedLoadsForPtr);
 }
 
 /// PerformHeapAllocSRoA - MI is an allocation of an array of structures.  Break
@@ -1116,8 +1211,11 @@ static bool OptimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
       // malloc to be stored into the specified global, loaded setcc'd, and
       // GEP'd.  These are all things we could transform to using the global
       // for.
-      if (!ValueIsOnlyUsedLocallyOrStoredToOneGlobal(MI, GV))
-        return false;
+      {
+        SmallPtrSet<PHINode*, 8> PHIs;
+        if (!ValueIsOnlyUsedLocallyOrStoredToOneGlobal(MI, GV, PHIs))
+          return false;
+      }
 
       
       // If we have a global that is only initialized with a fixed size malloc,
@@ -1143,7 +1241,7 @@ static bool OptimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
         // This the structure has an unreasonable number of fields, leave it
         // alone.
         if (AllocTy->getNumElements() <= 16 && AllocTy->getNumElements() > 0 &&
-            GlobalLoadUsesSimpleEnoughForHeapSRA(GV)) {
+            GlobalLoadUsesSimpleEnoughForHeapSRA(GV, MI)) {
           GVI = PerformHeapAllocSRoA(GV, MI);
           return true;
         }
