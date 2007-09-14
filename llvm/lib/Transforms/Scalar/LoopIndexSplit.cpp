@@ -336,24 +336,14 @@ void LoopIndexSplit::findLoopConditionals() {
   if (!CI)
     return;
 
-  // FIXME
-  if (CI->getPredicate() == ICmpInst::ICMP_EQ
-      || CI->getPredicate() == ICmpInst::ICMP_NE)
-    return;
-
+  // FIXME 
   if (CI->getPredicate() == ICmpInst::ICMP_SGT
       || CI->getPredicate() == ICmpInst::ICMP_UGT
       || CI->getPredicate() == ICmpInst::ICMP_SGE
-      || CI->getPredicate() == ICmpInst::ICMP_UGE) {
-
-    BasicBlock *FirstSuccessor = BR->getSuccessor(0);
-    // splitLoop() is expecting LT/LE as exit condition predicate.
-    // Swap operands here if possible to meet this requirement.
-    if (!L->contains(FirstSuccessor)) 
-      CI->swapOperands();
-    else
-      return;
-  }
+      || CI->getPredicate() == ICmpInst::ICMP_UGE
+      || CI->getPredicate() == ICmpInst::ICMP_EQ
+      || CI->getPredicate() == ICmpInst::ICMP_NE)
+    return;
 
   ExitCondition = CI;
 
