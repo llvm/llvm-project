@@ -813,15 +813,14 @@ static GlobalVariable *OptimizeGlobalAddressOfMalloc(GlobalVariable *GV,
 static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(Instruction *V,
                                                       GlobalVariable *GV,
                                               SmallPtrSet<PHINode*, 8> &PHIs) {
-  for (Value::use_iterator UI = V->use_begin(), E = V->use_end(); UI != E;++UI)
+  for (Value::use_iterator UI = V->use_begin(), E = V->use_end(); UI != E; ++UI)
     if (isa<LoadInst>(*UI) || isa<CmpInst>(*UI)) {
       // Fine, ignore.
     } else if (StoreInst *SI = dyn_cast<StoreInst>(*UI)) {
       if (SI->getOperand(0) == V && SI->getOperand(1) != GV)
         return false;  // Storing the pointer itself... bad.
       // Otherwise, storing through it, or storing into GV... fine.
-    } else if (isa<GetElementPtrInst>(*UI) || isa<SelectInst>(*UI) ||
-               isa<BitCastInst>(*UI)) {
+    } else if (isa<GetElementPtrInst>(*UI)) {
       if (!ValueIsOnlyUsedLocallyOrStoredToOneGlobal(cast<Instruction>(*UI),
                                                      GV, PHIs))
         return false;
@@ -829,7 +828,8 @@ static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(Instruction *V,
       // PHIs are ok if all uses are ok.  Don't infinitely recurse through PHI
       // cycles.
       if (PHIs.insert(PN))
-        return ValueIsOnlyUsedLocallyOrStoredToOneGlobal(PN, GV, PHIs);
+        if (!ValueIsOnlyUsedLocallyOrStoredToOneGlobal(PN, GV, PHIs))
+          return false;
     } else {
       return false;
     }
