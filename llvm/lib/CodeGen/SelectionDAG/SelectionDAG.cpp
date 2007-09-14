@@ -375,7 +375,7 @@ static void AddNodeIDNode(FoldingSetNodeID &ID, SDNode *N) {
     LoadSDNode *LD = cast<LoadSDNode>(N);
     ID.AddInteger(LD->getAddressingMode());
     ID.AddInteger(LD->getExtensionType());
-    ID.AddInteger(LD->getLoadedVT());
+    ID.AddInteger((unsigned int)(LD->getLoadedVT()));
     ID.AddPointer(LD->getSrcValue());
     ID.AddInteger(LD->getSrcValueOffset());
     ID.AddInteger(LD->getAlignment());
@@ -386,7 +386,7 @@ static void AddNodeIDNode(FoldingSetNodeID &ID, SDNode *N) {
     StoreSDNode *ST = cast<StoreSDNode>(N);
     ID.AddInteger(ST->getAddressingMode());
     ID.AddInteger(ST->isTruncatingStore());
-    ID.AddInteger(ST->getStoredVT());
+    ID.AddInteger((unsigned int)(ST->getStoredVT()));
     ID.AddPointer(ST->getSrcValue());
     ID.AddInteger(ST->getSrcValueOffset());
     ID.AddInteger(ST->getAlignment());
@@ -636,7 +636,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N,
   if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     ID.AddInteger(LD->getAddressingMode());
     ID.AddInteger(LD->getExtensionType());
-    ID.AddInteger(LD->getLoadedVT());
+    ID.AddInteger((unsigned int)(LD->getLoadedVT()));
     ID.AddPointer(LD->getSrcValue());
     ID.AddInteger(LD->getSrcValueOffset());
     ID.AddInteger(LD->getAlignment());
@@ -644,7 +644,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N,
   } else if (const StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     ID.AddInteger(ST->getAddressingMode());
     ID.AddInteger(ST->isTruncatingStore());
-    ID.AddInteger(ST->getStoredVT());
+    ID.AddInteger((unsigned int)(ST->getStoredVT()));
     ID.AddPointer(ST->getSrcValue());
     ID.AddInteger(ST->getSrcValueOffset());
     ID.AddInteger(ST->getAlignment());
@@ -2253,7 +2253,7 @@ SDOperand SelectionDAG::getLoad(MVT::ValueType VT,
   AddNodeIDNode(ID, ISD::LOAD, VTs, Ops, 3);
   ID.AddInteger(ISD::UNINDEXED);
   ID.AddInteger(ISD::NON_EXTLOAD);
-  ID.AddInteger(VT);
+  ID.AddInteger((unsigned int)VT);
   ID.AddPointer(SV);
   ID.AddInteger(SVOffset);
   ID.AddInteger(Alignment);
@@ -2307,7 +2307,7 @@ SDOperand SelectionDAG::getExtLoad(ISD::LoadExtType ExtType, MVT::ValueType VT,
   AddNodeIDNode(ID, ISD::LOAD, VTs, Ops, 3);
   ID.AddInteger(ISD::UNINDEXED);
   ID.AddInteger(ExtType);
-  ID.AddInteger(EVT);
+  ID.AddInteger((unsigned int)EVT);
   ID.AddPointer(SV);
   ID.AddInteger(SVOffset);
   ID.AddInteger(Alignment);
@@ -2335,7 +2335,7 @@ SelectionDAG::getIndexedLoad(SDOperand OrigLoad, SDOperand Base,
   AddNodeIDNode(ID, ISD::LOAD, VTs, Ops, 3);
   ID.AddInteger(AM);
   ID.AddInteger(LD->getExtensionType());
-  ID.AddInteger(LD->getLoadedVT());
+  ID.AddInteger((unsigned int)(LD->getLoadedVT()));
   ID.AddPointer(LD->getSrcValue());
   ID.AddInteger(LD->getSrcValueOffset());
   ID.AddInteger(LD->getAlignment());
@@ -2376,7 +2376,7 @@ SDOperand SelectionDAG::getStore(SDOperand Chain, SDOperand Val,
   AddNodeIDNode(ID, ISD::STORE, VTs, Ops, 4);
   ID.AddInteger(ISD::UNINDEXED);
   ID.AddInteger(false);
-  ID.AddInteger(VT);
+  ID.AddInteger((unsigned int)VT);
   ID.AddPointer(SV);
   ID.AddInteger(SVOffset);
   ID.AddInteger(Alignment);
@@ -2421,7 +2421,7 @@ SDOperand SelectionDAG::getTruncStore(SDOperand Chain, SDOperand Val,
   AddNodeIDNode(ID, ISD::STORE, VTs, Ops, 4);
   ID.AddInteger(ISD::UNINDEXED);
   ID.AddInteger(isTrunc);
-  ID.AddInteger(SVT);
+  ID.AddInteger((unsigned int)SVT);
   ID.AddPointer(SV);
   ID.AddInteger(SVOffset);
   ID.AddInteger(Alignment);
@@ -2448,7 +2448,7 @@ SelectionDAG::getIndexedStore(SDOperand OrigStore, SDOperand Base,
   AddNodeIDNode(ID, ISD::STORE, VTs, Ops, 4);
   ID.AddInteger(AM);
   ID.AddInteger(ST->isTruncatingStore());
-  ID.AddInteger(ST->getStoredVT());
+  ID.AddInteger((unsigned int)(ST->getStoredVT()));
   ID.AddPointer(ST->getSrcValue());
   ID.AddInteger(ST->getSrcValueOffset());
   ID.AddInteger(ST->getAlignment());
