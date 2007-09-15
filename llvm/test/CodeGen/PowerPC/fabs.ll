@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llc -march=ppc32 | grep {fabs f1, f1}
+; RUN: llvm-as < %s | llc -march=ppc32 -mtriple=powerpc-apple-darwin | grep {fabs f1, f1}
 
 define double @fabs(double %f) {
 entry:
