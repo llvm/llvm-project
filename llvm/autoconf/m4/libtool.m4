@@ -1905,7 +1905,7 @@ AC_DEFUN([AC_LIBTOOL_WIN32_DLL],
 AC_DEFUN([AC_ENABLE_SHARED],
 [define([enable_shared_default], ifelse($1, no, no, yes))dnl
 AC_ARG_ENABLE([shared],
-    [AS_HELP_STRING([--enable-shared@<:@=PKGS@:>@],[build shared libraries @<:@default=enable_shared_default@:>@])],
+    AS_HELP_STRING([--enable-shared@<:@=PKGS@:>@],[build shared libraries @<:@default=enable_shared_default@:>@]),
     [p=${PACKAGE-default}
     case $enableval in
     yes) enable_shared=yes ;;
@@ -1943,7 +1943,7 @@ AC_ENABLE_SHARED(no)
 AC_DEFUN([AC_ENABLE_STATIC],
 [define([enable_static_default], ifelse($1, no, no, yes))dnl
 AC_ARG_ENABLE([static],
-    [AS_HELP_STRING([--enable-static@<:@=PKGS@:>@],[build static libraries @<:@default=enable_static_default@:>@])],
+    AS_HELP_STRING([--enable-static@<:@=PKGS@:>@],[build static libraries @<:@default=enable_static_default@:>@]),
     [p=${PACKAGE-default}
     case $enableval in
     yes) enable_static=yes ;;
@@ -1981,7 +1981,7 @@ AC_ENABLE_STATIC(no)
 AC_DEFUN([AC_ENABLE_FAST_INSTALL],
 [define([enable_Fast_install_default], ifelse($1, no, no, yes))dnl
 AC_ARG_ENABLE([fast-install],
-    [AS_HELP_STRING([--enable-fast-install@<:@=PKGS@:>@],[optimize for fast installation @<:@default=enable_Fast_install_default@:>@])],
+    AS_HELP_STRING([--enable-fast-install@<:@=PKGS@:>@],[optimize for fast installation @<:@default=enable_Fast_install_default@:>@]),
     [p=${PACKAGE-default}
     case $enableval in
     yes) enable_fast_install=yes ;;
