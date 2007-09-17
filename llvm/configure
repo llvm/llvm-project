@@ -1542,12 +1542,12 @@ Optional Features:
                           %a (default is YES)
   --enable-ltdl-install   install libltdl
   --enable-shared[=PKGS]  build shared libraries
-                          [default=enable_shared_default]
+                          [default=yes]
   --enable-static[=PKGS]  build static libraries
-                          [default=enable_static_default]
+                          [default=yes]
   --enable-fast-install[=PKGS]
                           optimize for fast installation
-                          [default=enable_Fast_install_default]
+                          [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
 
 Optional Packages:
