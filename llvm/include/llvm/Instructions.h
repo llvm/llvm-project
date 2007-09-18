@@ -660,7 +660,7 @@ public:
 
   /// @returns true if the predicate of this ICmpInst is signed, false otherwise
   /// @brief Determine if this instruction's predicate is signed.
-  bool isSignedPredicate() { return isSignedPredicate(getPredicate()); }
+  bool isSignedPredicate() const { return isSignedPredicate(getPredicate()); }
 
   /// @returns true if the predicate provided is signed, false otherwise
   /// @brief Determine if the predicate is signed.

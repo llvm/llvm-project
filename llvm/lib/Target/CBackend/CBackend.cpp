@@ -138,7 +138,7 @@ namespace {
     void writeOperandRaw(Value *Operand);
     void writeOperandInternal(Value *Operand);
     void writeOperandWithCast(Value* Operand, unsigned Opcode);
-    void writeOperandWithCast(Value* Operand, ICmpInst::Predicate predicate);
+    void writeOperandWithCast(Value* Operand, const ICmpInst &I);
     bool writeInstructionCast(const Instruction &I);
 
   private :
@@ -1245,52 +1245,34 @@ void CWriter::writeOperandWithCast(Value* Operand, unsigned Opcode) {
 
 // Write the operand with a cast to another type based on the icmp predicate 
 // being used. 
-void CWriter::writeOperandWithCast(Value* Operand, ICmpInst::Predicate predicate) {
-
-  // Extract the operand's type, we'll need it.
-  const Type* OpTy = Operand->getType();
-
-  // Indicate whether to do the cast or not.
-  bool shouldCast = false;
-
-  // Indicate whether the cast should be to a signed type or not.
-  bool castIsSigned = false;
-
-  // Based on the Opcode for which this Operand is being written, determine
-  // the new type to which the operand should be casted by setting the value
-  // of OpTy. If we change OpTy, also set shouldCast to true.
-  switch (predicate) {
-    default:
-      // for eq and ne, it doesn't matter
-      break; 
-    case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE:
-    case ICmpInst::ICMP_ULT:
-    case ICmpInst::ICMP_ULE:
-      shouldCast = true;
-      break;
-    case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE:
-    case ICmpInst::ICMP_SLT:
-    case ICmpInst::ICMP_SLE:
-      shouldCast = true;
-      castIsSigned = true;
-      break;
-  }
+void CWriter::writeOperandWithCast(Value* Operand, const ICmpInst &Cmp) {
+  // This has to do a cast to ensure the operand has the right signedness. 
+  // Also, if the operand is a pointer, we make sure to cast to an integer when
+  // doing the comparison both for signedness and so that the C compiler doesn't
+  // optimize things like "p < NULL" to false (p may contain an integer value
+  // f.e.).
+  bool shouldCast = Cmp.isRelational();
 
   // Write out the casted operand if we should, otherwise just write the
   // operand.
-  if (shouldCast) {
-    Out << "((";
-    if (OpTy->isInteger() && OpTy != Type::Int1Ty)
-      printSimpleType(Out, OpTy, castIsSigned);
-    else
-      printType(Out, OpTy); // not integer, sign doesn't matter
-    Out << ")";
+  if (!shouldCast) {
     writeOperand(Operand);
-    Out << ")";
-  } else 
-    writeOperand(Operand);
+    return;
+  }
+  
+  // Should this be a signed comparison?  If so, convert to signed.
+  bool castIsSigned = Cmp.isSignedPredicate();
+
+  // If the operand was a pointer, convert to a large integer type.
+  const Type* OpTy = Operand->getType();
+  if (isa<PointerType>(OpTy))
+    OpTy = TD->getIntPtrType();
+  
+  Out << "((";
+  printSimpleType(Out, OpTy, castIsSigned);
+  Out << ")";
+  writeOperand(Operand);
+  Out << ")";
 }
 
 // generateCompilerSpecificCode - This is where we add conditional compilation
@@ -2262,7 +2244,7 @@ void CWriter::visitICmpInst(ICmpInst &I) {
   // Certain icmp predicate require the operand to be forced to a specific type
   // so we use writeOperandWithCast here instead of writeOperand. Similarly
   // below for operand 1
-  writeOperandWithCast(I.getOperand(0), I.getPredicate());
+  writeOperandWithCast(I.getOperand(0), I);
 
   switch (I.getPredicate()) {
   case ICmpInst::ICMP_EQ:  Out << " == "; break;
@@ -2278,7 +2260,7 @@ void CWriter::visitICmpInst(ICmpInst &I) {
   default: cerr << "Invalid icmp predicate!" << I; abort();
   }
 
-  writeOperandWithCast(I.getOperand(1), I.getPredicate());
+  writeOperandWithCast(I.getOperand(1), I);
   if (NeedsClosingParens)
     Out << "))";
 
