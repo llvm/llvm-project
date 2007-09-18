@@ -352,7 +352,7 @@ bool X86SharedAsmPrinter::doFinalization(Module &M) {
 
     O << "\n";
 
-    if (TAI->doesSupportExceptionHandling() && MMI) {
+    if (ExceptionHandling && TAI->doesSupportExceptionHandling() && MMI) {
       // Add the (possibly multiple) personalities to the set of global values.
       const std::vector<Function *>& Personalities = MMI->getPersonalities();
 
