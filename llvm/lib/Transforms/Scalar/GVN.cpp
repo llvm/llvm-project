@@ -673,6 +673,7 @@ namespace {
     void dump(DenseMap<BasicBlock*, Value*>& d);
     bool iterateOnFunction(Function &F);
     Value* CollapsePhi(PHINode* p);
+    bool isSafeReplacement(PHINode* p, Instruction* inst);
   };
   
   char GVN::ID = 0;
@@ -731,13 +732,27 @@ Value* GVN::CollapsePhi(PHINode* p) {
   if (constVal) {
     if (Instruction* inst = dyn_cast<Instruction>(constVal)) {
       if (DT.dominates(inst, p))
-        return inst;
+        if (isSafeReplacement(p, inst))
+          return inst;
     } else {
       return constVal;
     }
   }
   
   return 0;
+}
+
+bool GVN::isSafeReplacement(PHINode* p, Instruction* inst) {
+  if (!isa<PHINode>(inst))
+    return true;
+  
+  for (Instruction::use_iterator UI = p->use_begin(), E = p->use_end();
+       UI != E; ++UI)
+    if (PHINode* use_phi = dyn_cast<PHINode>(UI))
+      if (use_phi->getParent() == inst->getParent())
+        return false;
+  
+  return true;
 }
 
 /// GetValueForBlock - Get the value to use within the specified basic block.
