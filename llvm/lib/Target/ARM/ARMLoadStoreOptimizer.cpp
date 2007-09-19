@@ -317,7 +317,9 @@ static inline unsigned getLSMultipleTransferSize(MachineInstr *MI) {
 /// =>
 /// ldmdb rn!, <ra, rb, rc>
 static bool mergeBaseUpdateLSMultiple(MachineBasicBlock &MBB,
-                                      MachineBasicBlock::iterator MBBI) {
+                                      MachineBasicBlock::iterator MBBI,
+                                      bool &Advance,
+                                      MachineBasicBlock::iterator &I) {
   MachineInstr *MI = MBBI;
   unsigned Base = MI->getOperand(0).getReg();
   unsigned Bytes = getLSMultipleTransferSize(MI);
@@ -358,11 +360,19 @@ static bool mergeBaseUpdateLSMultiple(MachineBasicBlock &MBB,
       if ((Mode == ARM_AM::ia || Mode == ARM_AM::ib) &&
           isMatchingIncrement(NextMBBI, Base, Bytes, Pred, PredReg)) {
         MI->getOperand(1).setImm(ARM_AM::getAM4ModeImm(Mode, true));
+        if (NextMBBI == I) {
+          Advance = true;
+          ++I;
+        }
         MBB.erase(NextMBBI);
         return true;
       } else if ((Mode == ARM_AM::da || Mode == ARM_AM::db) &&
                  isMatchingDecrement(NextMBBI, Base, Bytes, Pred, PredReg)) {
         MI->getOperand(1).setImm(ARM_AM::getAM4ModeImm(Mode, true));
+        if (NextMBBI == I) {
+          Advance = true;
+          ++I;
+        }
         MBB.erase(NextMBBI);
         return true;
       }
@@ -389,6 +399,10 @@ static bool mergeBaseUpdateLSMultiple(MachineBasicBlock &MBB,
       if (Mode == ARM_AM::ia &&
           isMatchingIncrement(NextMBBI, Base, Bytes, Pred, PredReg)) {
         MI->getOperand(1).setImm(ARM_AM::getAM5Opc(ARM_AM::ia, true, Offset));
+        if (NextMBBI == I) {
+          Advance = true;
+          ++I;
+        }
         MBB.erase(NextMBBI);
       }
       return true;
@@ -428,7 +442,9 @@ static unsigned getPostIndexedLoadStoreOpcode(unsigned Opc) {
 /// register into the LDR/STR/FLD{D|S}/FST{D|S} op when possible:
 static bool mergeBaseUpdateLoadStore(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     const TargetInstrInfo *TII) {
+                                     const TargetInstrInfo *TII,
+                                     bool &Advance,
+                                     MachineBasicBlock::iterator &I) {
   MachineInstr *MI = MBBI;
   unsigned Base = MI->getOperand(1).getReg();
   bool BaseKill = MI->getOperand(1).isKill();
@@ -475,8 +491,13 @@ static bool mergeBaseUpdateLoadStore(MachineBasicBlock &MBB,
       DoMerge = true;
       NewOpc = getPostIndexedLoadStoreOpcode(Opcode);
     }
-    if (DoMerge)
+    if (DoMerge) {
+      if (NextMBBI == I) {
+        Advance = true;
+        ++I;
+      }
       MBB.erase(NextMBBI);
+    }
   }
 
   if (!DoMerge)
@@ -668,7 +689,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
         // Try folding preceeding/trailing base inc/dec into the generated
         // LDM/STM ops.
         for (unsigned i = 0, e = MBBII.size(); i < e; ++i)
-          if (mergeBaseUpdateLSMultiple(MBB, MBBII[i]))
+          if (mergeBaseUpdateLSMultiple(MBB, MBBII[i], Advance, MBBI))
             NumMerges++;
         NumMerges += MBBII.size();
 
@@ -676,7 +697,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
         // that were not merged to form LDM/STM ops.
         for (unsigned i = 0; i != NumMemOps; ++i)
           if (!MemOps[i].Merged)
-            if (mergeBaseUpdateLoadStore(MBB, MemOps[i].MBBI, TII))
+            if (mergeBaseUpdateLoadStore(MBB, MemOps[i].MBBI, TII,Advance,MBBI))
               NumMerges++;
 
         // RS may be pointing to an instruction that's deleted. 
