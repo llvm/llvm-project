@@ -583,8 +583,8 @@ void LoopUnswitch::UnswitchTrivialCondition(Loop *L, Value *Cond,
   // insert the new conditional branch.
   EmitPreheaderBranchOnCondition(Cond, Val, NewExit, NewPH, 
                                  OrigPH->getTerminator());
-  OrigPH->getTerminator()->eraseFromParent();
   LPM->deleteSimpleAnalysisValue(OrigPH->getTerminator(), L);
+  OrigPH->getTerminator()->eraseFromParent();
 
   // We need to reprocess this loop, it could be unswitched again.
   redoLoop = true;
@@ -759,8 +759,8 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
 
   // Emit the new branch that selects between the two versions of this loop.
   EmitPreheaderBranchOnCondition(LIC, Val, NewBlocks[0], LoopBlocks[0], OldBR);
-  OldBR->eraseFromParent();
   LPM->deleteSimpleAnalysisValue(OldBR, L);
+  OldBR->eraseFromParent();
 
   // Update dominator info
   if (DF && DT) {
@@ -859,10 +859,10 @@ static void ReplaceUsesOfWith(Instruction *I, Value *V,
   for (Value::use_iterator UI = I->use_begin(), E = I->use_end();
        UI != E; ++UI)
     Worklist.push_back(cast<Instruction>(*UI));
-  I->replaceAllUsesWith(V);
-  I->eraseFromParent();
   LPM->deleteSimpleAnalysisValue(I, L);
   RemoveFromWorklist(I, Worklist);
+  I->replaceAllUsesWith(V);
+  I->eraseFromParent();
   ++NumSimplify;
 }
 
@@ -889,8 +889,8 @@ void LoopUnswitch::RemoveBlockIfDead(BasicBlock *BB,
           // Remove the branch from the latch to the header block, this makes
           // the header dead, which will make the latch dead (because the header
           // dominates the latch).
-          Pred->getTerminator()->eraseFromParent();
           LPM->deleteSimpleAnalysisValue(Pred->getTerminator(), L);
+          Pred->getTerminator()->eraseFromParent();
           new UnreachableInst(Pred);
           
           // The loop is now broken, remove it from LI.
@@ -947,8 +947,8 @@ void LoopUnswitch::RemoveBlockIfDead(BasicBlock *BB,
   Succs.erase(std::unique(Succs.begin(), Succs.end()), Succs.end());
   
   // Remove the basic block, including all of the instructions contained in it.
-  BB->eraseFromParent();
   LPM->deleteSimpleAnalysisValue(BB, L);  
+  BB->eraseFromParent();
   // Remove successor blocks here that are not dead, so that we know we only
   // have dead blocks in this list.  Nondead blocks have a way of becoming dead,
   // then getting removed before we revisit them, which is badness.
@@ -1050,9 +1050,9 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
               Instruction* OldTerm = Old->getTerminator();
               new BranchInst(Split, SI->getSuccessor(i),
                              ConstantInt::getTrue(), OldTerm);
-              
+
+              LPM->deleteSimpleAnalysisValue(Old->getTerminator(), L);                
               Old->getTerminator()->eraseFromParent();
-              
               
               PHINode *PN;
               for (BasicBlock::iterator II = SI->getSuccessor(i)->begin();
@@ -1103,9 +1103,9 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
       for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i)
         if (Instruction *Use = dyn_cast<Instruction>(I->getOperand(i)))
           Worklist.push_back(Use);
-      I->eraseFromParent();
       LPM->deleteSimpleAnalysisValue(I, L);
       RemoveFromWorklist(I, Worklist);
+      I->eraseFromParent();
       ++NumSimplify;
       continue;
     }
@@ -1166,8 +1166,8 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
         // Move all of the successor contents from Succ to Pred.
         Pred->getInstList().splice(BI, Succ->getInstList(), Succ->begin(),
                                    Succ->end());
-        BI->eraseFromParent();
         LPM->deleteSimpleAnalysisValue(BI, L);
+        BI->eraseFromParent();
         RemoveFromWorklist(BI, Worklist);
         
         // If Succ has any successors with PHI nodes, update them to have
@@ -1176,8 +1176,8 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
         
         // Remove Succ from the loop tree.
         LI->removeBlock(Succ);
-        Succ->eraseFromParent();
         LPM->deleteSimpleAnalysisValue(Succ, L);
+        Succ->eraseFromParent();
         ++NumSimplify;
       } else if (ConstantInt *CB = dyn_cast<ConstantInt>(BI->getCondition())){
         // Conditional branch.  Turn it into an unconditional branch, then
@@ -1189,8 +1189,8 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
         BasicBlock *LiveSucc = BI->getSuccessor(!CB->getZExtValue());
         DeadSucc->removePredecessor(BI->getParent(), true);
         Worklist.push_back(new BranchInst(LiveSucc, BI));
-        BI->eraseFromParent();
         LPM->deleteSimpleAnalysisValue(BI, L);
+        BI->eraseFromParent();
         RemoveFromWorklist(BI, Worklist);
         ++NumSimplify;
 
