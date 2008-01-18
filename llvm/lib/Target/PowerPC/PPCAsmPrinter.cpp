@@ -917,7 +917,8 @@ bool DarwinAsmPrinter::doFinalization(Module &M) {
 
     if (C->isNullValue() && /* FIXME: Verify correct */
         !I->hasSection() &&
-        (I->hasInternalLinkage() || I->hasExternalLinkage())) {
+        (I->hasInternalLinkage() || I->hasWeakLinkage() ||
+         I->hasLinkOnceLinkage() || I->hasExternalLinkage())) {
       if (Size == 0) Size = 1;   // .comm Foo, 0 is undefined, avoid it.
       if (I->hasExternalLinkage()) {
         O << "\t.globl " << name << '\n';
