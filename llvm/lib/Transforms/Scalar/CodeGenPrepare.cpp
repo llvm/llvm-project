@@ -401,8 +401,10 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI){
   }
   
   // If we removed all uses, nuke the cast.
-  if (CI->use_empty())
+  if (CI->use_empty()) {
     CI->eraseFromParent();
+    MadeChange = true;
+  }
   
   return MadeChange;
 }
