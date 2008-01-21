@@ -101,7 +101,10 @@ def CC_X86_64_C : CallingConv<[
 
   // Promote i8/i16 arguments to i32.
   CCIfType<[i8, i16], CCPromoteToType<i32>>,
-  
+
+  // The 'nest' parameter, if any, is passed in R10.
+  CCIfNest<CCAssignToReg<[R10]>>,
+
   // The first 6 integer arguments are passed in integer registers.
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D]>>,
   CCIfType<[i64], CCAssignToReg<[RDI, RSI, RDX, RCX, R8 , R9 ]>>,
@@ -113,9 +116,6 @@ def CC_X86_64_C : CallingConv<[
   // The first 8 MMX vector arguments are passed in GPRs.
   CCIfType<[v8i8, v4i16, v2i32, v1i64],
               CCAssignToReg<[RDI, RSI, RDX, RCX, R8 , R9 ]>>,
-
-  // The 'nest' parameter, if any, is passed in R10.
-  CCIfNest<CCAssignToReg<[R10]>>,
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
@@ -140,7 +140,10 @@ def CC_X86_64_TailCall : CallingConv<[
 
   // Promote i8/i16 arguments to i32.
   CCIfType<[i8, i16], CCPromoteToType<i32>>,
-  
+
+  // The 'nest' parameter, if any, is passed in R10.
+  CCIfNest<CCAssignToReg<[R10]>>,
+
   // The first 6 integer arguments are passed in integer registers.
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D]>>,
   CCIfType<[i64], CCAssignToReg<[RDI, RSI, RDX, RCX, R8]>>,
@@ -152,9 +155,6 @@ def CC_X86_64_TailCall : CallingConv<[
   // The first 8 MMX vector arguments are passed in GPRs.
   CCIfType<[v8i8, v4i16, v2i32, v1i64],
               CCAssignToReg<[RDI, RSI, RDX, RCX, R8]>>,
-
-  // The 'nest' parameter, if any, is passed in R10.
-  CCIfNest<CCAssignToReg<[R10]>>,
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
