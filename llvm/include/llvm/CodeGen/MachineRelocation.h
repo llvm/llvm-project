@@ -141,7 +141,7 @@ public:
     Result.ConstantVal = cst;
     Result.TargetReloType = RelocationType;
     Result.AddrType = isExtSym;
-    Result.NeedStub = false;
+    Result.NeedStub = true;
     Result.GOTRelative = GOTrelative;
     Result.Target.ExtSym = ES;
     return Result;
