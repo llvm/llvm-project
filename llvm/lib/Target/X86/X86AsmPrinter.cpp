@@ -25,6 +25,7 @@
 #include "llvm/Constants.h"
 #include "llvm/Module.h"
 #include "llvm/DerivedTypes.h"
+#include "llvm/ParameterAttributes.h"
 #include "llvm/Type.h"
 #include "llvm/Assembly/Writer.h"
 #include "llvm/Support/Mangler.h"
@@ -48,11 +49,19 @@ static X86MachineFunctionInfo calculateFunctionInfo(const Function *F,
     return Info;
   }
 
+  unsigned argNum = 1;
   for (Function::const_arg_iterator AI = F->arg_begin(), AE = F->arg_end();
-       AI != AE; ++AI)
+       AI != AE; ++AI, ++argNum) {
+    const Type* Ty = AI->getType();
+
+    // 'Dereference' type in case of byval parameter attribute
+    if (F->paramHasAttr(argNum, ParamAttr::ByVal))
+      Ty = cast<PointerType>(Ty)->getElementType();
+
     // Size should be aligned to DWORD boundary
-    Size += ((TD->getABITypeSize(AI->getType()) + 3)/4)*4;
-  
+    Size += ((TD->getABITypeSize(Ty) + 3)/4)*4;
+  }
+
   // We're not supporting tooooo huge arguments :)
   Info.setBytesToPopOnReturn((unsigned int)Size);
   return Info;
