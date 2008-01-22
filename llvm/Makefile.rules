@@ -1457,7 +1457,7 @@ clean-all-local::
 ifndef DISABLE_AUTO_DEPENDENCIES
 
 # If its not one of the cleaning targets
-ifneq ($(strip $(filter-out clean clean-local dist-clean,$(MAKECMDGOALS)))),)
+ifneq ($(strip $(filter-out clean clean-local dist-clean,$(MAKECMDGOALS))),)
 
 # Get the list of dependency files
 DependFiles := $(basename $(filter %.cpp %.c %.cc, $(Sources)))
