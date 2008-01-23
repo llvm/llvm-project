@@ -292,6 +292,9 @@ emitPrologue(MachineFunction &MF) const
     FPOffset = NumBytes;
     RAOffset = 0;
     NumBytes += 4;
+  } else {
+    // No calls and no fp.
+    RAOffset = FPOffset = 0;
   }
 
   MFI->setObjectOffset(MFI->CreateStackObject(4,4), FPOffset);
