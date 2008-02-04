@@ -426,8 +426,6 @@ bool ShadowStackCollector::performCustomLowering(Function &F) {
     Roots[I].second->eraseFromParent();
   }
   
-  F.dump();
-  
   Roots.clear();
   return true;
 }
