@@ -64,12 +64,15 @@ int X86RegisterInfo::getDwarfRegNum(unsigned RegNo, bool isEH) const {
   unsigned Flavour = DWARFFlavour::X86_64;
   if (!Subtarget->is64Bit()) {
     if (Subtarget->isTargetDarwin()) {
-      Flavour = DWARFFlavour::X86_32_Darwin;
+      if (isEH)
+        Flavour = DWARFFlavour::X86_32_DarwinEH;
+      else
+        Flavour = DWARFFlavour::X86_32_Generic;
     } else if (Subtarget->isTargetCygMing()) {
       // Unsupported by now, just quick fallback
-      Flavour = DWARFFlavour::X86_32_ELF;
+      Flavour = DWARFFlavour::X86_32_Generic;
     } else {
-      Flavour = DWARFFlavour::X86_32_ELF;
+      Flavour = DWARFFlavour::X86_32_Generic;
     }
   }
 

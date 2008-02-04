@@ -36,7 +36,7 @@ namespace N86 {
 ///
 namespace DWARFFlavour {
   enum {
-    X86_64 = 0, X86_32_Darwin = 1, X86_32_ELF = 2
+    X86_64 = 0, X86_32_DarwinEH = 1, X86_32_Generic = 2
   };
 } 
   

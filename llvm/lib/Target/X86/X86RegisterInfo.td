@@ -25,11 +25,8 @@ let Namespace = "X86" in {
 
   // Dwarf numbering is different for 32-bit and 64-bit, and there are 
   // variations by target as well. Currently the first entry is for X86-64, 
-  // second - for X86-32/Darwin and third for X86-32/Linux
-
-  // FIXME:  Comments in gcc indicate that Darwin uses different numbering
-  // for debug info and exception handling info:(  The numbering here is
-  // for exception handling.
+  // second - for EH on X86-32/Darwin and third is 'generic' one (X86-32/Linux
+  // and debug information on X86-32/Darwin)
 
   // 8-bit registers
   // Low registers
