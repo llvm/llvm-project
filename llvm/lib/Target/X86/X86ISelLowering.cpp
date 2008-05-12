@@ -4987,6 +4987,7 @@ SDOperand X86TargetLowering::LowerVAARG(SDOperand Op, SelectionDAG &DAG) {
 
   assert(0 && "VAArgInst is not yet implemented for x86-64!");
   abort();
+  return SDOperand();
 }
 
 SDOperand X86TargetLowering::LowerVACOPY(SDOperand Op, SelectionDAG &DAG) {
