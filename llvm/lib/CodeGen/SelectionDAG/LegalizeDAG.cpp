@@ -3999,6 +3999,7 @@ SDOperand SelectionDAGLegalize::LegalizeOp(SDOperand Op) {
       Result = DAG.getConstant(1, VT);
       break;
     }
+    break;
   }
   case ISD::TRAP: {
     MVT::ValueType VT = Node->getValueType(0);
