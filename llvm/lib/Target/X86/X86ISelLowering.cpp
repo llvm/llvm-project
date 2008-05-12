@@ -6283,6 +6283,8 @@ static bool EltsFromConsecutiveLoads(SDNode *N, SDOperand PermMask,
       return false;
     if (!Base) {
       Base = Elt.Val;
+      if (Base->getOpcode() == ISD::UNDEF)
+        return false;
       continue;
     }
     if (Elt.getOpcode() == ISD::UNDEF)
