@@ -602,6 +602,7 @@ static Constant *ConstantFoldFP(double (*NativeFP)(double), double V,
   if (Ty == Type::DoubleTy)
     return ConstantFP::get(APFloat(V));
   assert(0 && "Can only constant fold float/double");
+  return 0; // dummy return to suppress warning
 }
 
 static Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
@@ -619,6 +620,7 @@ static Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
   if (Ty == Type::DoubleTy)
     return ConstantFP::get(APFloat(V));
   assert(0 && "Can only constant fold float/double");
+  return 0; // dummy return to suppress warning
 }
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
