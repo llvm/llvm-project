@@ -2592,11 +2592,8 @@ void CWriter::lowerIntrinsics(Function &F) {
 }
 
 void CWriter::visitCallInst(CallInst &I) {
-  //check if we have inline asm
-  if (isInlineAsm(I)) {
-    visitInlineAsm(I);
-    return;
-  }
+  if (isa<InlineAsm>(I.getOperand(0)))
+    return visitInlineAsm(I);
 
   bool WroteCallee = false;
 
@@ -2914,53 +2911,64 @@ void CWriter::visitInlineAsm(CallInst &CI) {
   InlineAsm* as = cast<InlineAsm>(CI.getOperand(0));
   std::vector<InlineAsm::ConstraintInfo> Constraints = as->ParseConstraints();
   std::vector<std::pair<std::string, Value*> > Input;
-  std::vector<std::pair<std::string, Value*> > Output;
+  std::vector<std::pair<std::string, std::pair<Value*, int> > > Output;
   std::string Clobber;
-  int count = CI.getType() == Type::VoidTy ? 1 : 0;
+  unsigned ValueCount = 0;
+  
+  std::vector<std::pair<Value*, int> > ResultVals;
+  if (CI.getType() == Type::VoidTy)
+    ;
+  else if (const StructType *ST = dyn_cast<StructType>(CI.getType())) {
+    for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i)
+      ResultVals.push_back(std::make_pair(&CI, (int)i));
+  } else {
+    ResultVals.push_back(std::make_pair(&CI, -1));
+  }
+  
   for (std::vector<InlineAsm::ConstraintInfo>::iterator I = Constraints.begin(),
          E = Constraints.end(); I != E; ++I) {
     assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
-    std::string c = 
-      InterpretASMConstraint(*I);
-    switch(I->Type) {
-    default:
-      assert(0 && "Unknown asm constraint");
-      break;
+    std::string C = InterpretASMConstraint(*I);
+    if (C.empty()) continue;
+    
+    switch (I->Type) {
+    default: assert(0 && "Unknown asm constraint");
     case InlineAsm::isInput: {
-      if (c.size()) {
-        Input.push_back(std::make_pair(c, count ? CI.getOperand(count) : &CI));
-        ++count; //consume arg
-      }
+      assert(ValueCount >= ResultVals.size() && "Input can't refer to result");
+      Value *V = CI.getOperand(ValueCount-ResultVals.size());
+      Input.push_back(std::make_pair(C, V));
       break;
     }
     case InlineAsm::isOutput: {
-      if (c.size()) {
-        Output.push_back(std::make_pair("="+((I->isEarlyClobber ? "&" : "")+c),
-                                        count ? CI.getOperand(count) : &CI));
-        ++count; //consume arg
-      }
+      std::pair<Value*, int> V;
+      if (ValueCount < ResultVals.size())
+        V = ResultVals[ValueCount];
+      else
+        V = std::make_pair(CI.getOperand(ValueCount-ResultVals.size()), -1);
+      Output.push_back(std::make_pair("="+((I->isEarlyClobber ? "&" : "")+C),
+                                      V));
       break;
     }
-    case InlineAsm::isClobber: {
-      if (c.size()) 
-        Clobber += ",\"" + c + "\"";
-      break;
+    case InlineAsm::isClobber:
+      Clobber += ",\"" + C + "\"";
+      continue;  // Not an actual argument.
     }
-    }
+    ++ValueCount; // Consumes an argument.
   }
   
-  //fix up the asm string for gcc
+  // Fix up the asm string for gcc.
   std::string asmstr = gccifyAsm(as->getAsmString());
   
   Out << "__asm__ volatile (\"" << asmstr << "\"\n";
   Out << "        :";
-  for (std::vector<std::pair<std::string, Value*> >::iterator I =Output.begin(),
-         E = Output.end(); I != E; ++I) {
-    Out << "\"" << I->first << "\"(";
-    writeOperandRaw(I->second);
+  for (unsigned i = 0, e = Output.size(); i != e; ++i) {
+    if (i)
+      Out << ", ";
+    Out << "\"" << Output[i].first << "\"(";
+    writeOperandRaw(Output[i].second.first);
+    if (Output[i].second.second != -1)
+      Out << ".field" << Output[i].second.second; // Multiple retvals.
     Out << ")";
-    if (I + 1 != E)
-      Out << ",";
   }
   Out << "\n        :";
   for (std::vector<std::pair<std::string, Value*> >::iterator I = Input.begin(),
