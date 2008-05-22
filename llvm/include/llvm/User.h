@@ -46,6 +46,11 @@ protected:
     : Value(Ty, vty), OperandList(OpList), NumOperands(NumOps) {}
 
 public:
+  /// placement delete - required by std, but never called.
+  void operator delete(void*, size_t) {
+    assert(0 && "Constructor throws?");
+  }
+
   Value *getOperand(unsigned i) const {
     assert(i < NumOperands && "getOperand() out of range!");
     return OperandList[i];
