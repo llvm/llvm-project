@@ -2935,7 +2935,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
     default: assert(0 && "Unknown asm constraint");
     case InlineAsm::isInput: {
       assert(ValueCount >= ResultVals.size() && "Input can't refer to result");
-      Value *V = CI.getOperand(ValueCount-ResultVals.size());
+      Value *V = CI.getOperand(ValueCount-ResultVals.size()+1);
       Input.push_back(std::make_pair(C, V));
       break;
     }
@@ -2944,7 +2944,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
       if (ValueCount < ResultVals.size())
         V = ResultVals[ValueCount];
       else
-        V = std::make_pair(CI.getOperand(ValueCount-ResultVals.size()), -1);
+        V = std::make_pair(CI.getOperand(ValueCount-ResultVals.size()+1), -1);
       Output.push_back(std::make_pair("="+((I->isEarlyClobber ? "&" : "")+C),
                                       V));
       break;
@@ -2964,20 +2964,19 @@ void CWriter::visitInlineAsm(CallInst &CI) {
   for (unsigned i = 0, e = Output.size(); i != e; ++i) {
     if (i)
       Out << ", ";
-    Out << "\"" << Output[i].first << "\"(";
-    writeOperandRaw(Output[i].second.first);
+    Out << "\"" << Output[i].first << "\"("
+        << GetValueName(Output[i].second.first);
     if (Output[i].second.second != -1)
       Out << ".field" << Output[i].second.second; // Multiple retvals.
     Out << ")";
   }
   Out << "\n        :";
-  for (std::vector<std::pair<std::string, Value*> >::iterator I = Input.begin(),
-         E = Input.end(); I != E; ++I) {
-    Out << "\"" << I->first << "\"(";
-    writeOperandRaw(I->second);
+  for (unsigned i = 0, e = Input.size(); i != e; ++i) {
+    if (i)
+      Out << ", ";
+    Out << "\"" << Input[i].first << "\"(";
+    writeOperand(Input[i].second);
     Out << ")";
-    if (I + 1 != E)
-      Out << ",";
   }
   if (Clobber.size())
     Out << "\n        :" << Clobber.substr(1);
