@@ -6,13 +6,6 @@
 typedef __builtin_va_list va_list;
 typedef unsigned long size_t;
 void *memset(void *, int, size_t);
-struct S92 { int a:14; } ;
- extern struct S92 s92;
-
- struct S92 check92 () { struct S92 ret;
- memset (&ret, 0, sizeof (ret));
- ret.a = s92.a;
- return ret; }
 
 struct S93 { __attribute__((aligned (8))) void * a; } ;
  extern struct S93 s93;
