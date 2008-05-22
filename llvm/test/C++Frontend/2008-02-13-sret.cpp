@@ -1,5 +1,4 @@
-// RUN: %llvmgxx -S -O0 -m32 -emit-llvm %s -o - | grep {retval\\|memtmp} | \
-// RUN: grep S242 | grep {i32 1} | count 1
+// RUN: %llvmgxx -S -O1 -m32 -emit-llvm %s -o - | grep {store i32} | count 1
 
 // Test that all 8 bytes of ret in check242 are copied, and only 4 bytes of
 // ret in check93 are copied (the same LLVM struct is used for both).
