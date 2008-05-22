@@ -1886,7 +1886,7 @@ defm PSRLW : PDI_binop_rmi_int<0xD1, 0x71, MRM2r, "psrlw",
                                int_x86_sse2_psrl_w, int_x86_sse2_psrli_w>;
 defm PSRLD : PDI_binop_rmi_int<0xD2, 0x72, MRM2r, "psrld",
                                int_x86_sse2_psrl_d, int_x86_sse2_psrli_d>;
-defm PSRLQ : PDI_binop_rmi_int<0xD3, 0x72, MRM2r, "psrlq",
+defm PSRLQ : PDI_binop_rmi_int<0xD3, 0x73, MRM2r, "psrlq",
                                int_x86_sse2_psrl_q, int_x86_sse2_psrli_q>;
 
 defm PSRAW : PDI_binop_rmi_int<0xE1, 0x71, MRM4r, "psraw",
