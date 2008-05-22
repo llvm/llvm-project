@@ -1891,7 +1891,7 @@ defm PSRLQ : PDI_binop_rmi_int<0xD3, 0x73, MRM2r, "psrlq",
 
 defm PSRAW : PDI_binop_rmi_int<0xE1, 0x71, MRM4r, "psraw",
                                int_x86_sse2_psra_w, int_x86_sse2_psrai_w>;
-defm PSRAD : PDI_binop_rmi_int<0xE2, 0x71, MRM4r, "psrad",
+defm PSRAD : PDI_binop_rmi_int<0xE2, 0x72, MRM4r, "psrad",
                                int_x86_sse2_psra_d, int_x86_sse2_psrai_d>;
 
 // 128-bit logical shifts.
