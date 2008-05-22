@@ -1015,7 +1015,7 @@ def MOVZSS2PSrm : SSI<0x10, MRMSrcMem, (outs VR128:$dst), (ins f32mem:$src),
                    [(set VR128:$dst, (v4f32 (X86vzmovl (v4f32 (scalar_to_vector
                                                       (loadf32 addr:$src))))))]>;
 
-def : Pat<(v4f32 (X86vzmovl (memopv4f32 addr:$src))),
+def : Pat<(v4f32 (X86vzmovl (loadv4f32 addr:$src))),
           (MOVZSS2PSrm addr:$src)>;
 
 //===----------------------------------------------------------------------===//
@@ -2273,7 +2273,9 @@ def MOVZSD2PDrm : SDI<0x10, MRMSrcMem, (outs VR128:$dst), (ins f64mem:$src),
                         (v2f64 (X86vzmovl (v2f64 (scalar_to_vector
                                                  (loadf64 addr:$src))))))]>;
 
-def : Pat<(v2f64 (X86vzmovl (memopv2f64 addr:$src))),
+def : Pat<(v2f64 (X86vzmovl (loadv2f64 addr:$src))),
+            (MOVZSD2PDrm addr:$src)>;
+def : Pat<(v2f64 (X86vzmovl (bc_v2f64 (loadv4f32 addr:$src)))),
             (MOVZSD2PDrm addr:$src)>;
 def : Pat<(v2f64 (X86vzload addr:$src)), (MOVZSD2PDrm addr:$src)>;
 }
@@ -2315,12 +2317,16 @@ def MOVZPQILo2PQIrr : I<0x7E, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                     [(set VR128:$dst, (v2i64 (X86vzmovl (v2i64 VR128:$src))))]>,
                       XS, Requires<[HasSSE2]>;
 
-let AddedComplexity = 20 in
+let AddedComplexity = 20 in {
 def MOVZPQILo2PQIrm : I<0x7E, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                         "movq\t{$src, $dst|$dst, $src}",
                     [(set VR128:$dst, (v2i64 (X86vzmovl
-                                             (memopv2i64 addr:$src))))]>,
+                                             (loadv2i64 addr:$src))))]>,
                       XS, Requires<[HasSSE2]>;
+
+def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4i32 addr:$src)))),
+            (MOVZPQILo2PQIrm addr:$src)>;
+}
 
 //===----------------------------------------------------------------------===//
 // SSE3 Instructions
