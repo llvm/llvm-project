@@ -353,6 +353,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\lib\Analysis\LibCallAliasAnalysis.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\lib\Analysis\LibCallSemantics.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\lib\Analysis\LoadValueNumbering.cpp"
 				>
 			</File>
@@ -480,6 +488,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\llvm\Analysis\IntervalPartition.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\llvm\Analysis\LibCallSemantics.h"
 				>
 			</File>
 			<File

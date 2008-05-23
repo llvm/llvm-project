@@ -352,6 +352,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\lib\Transforms\IPO\ExtractGV.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\lib\Transforms\Ipo\GlobalDCE.cpp"
 					>
 				</File>
@@ -393,10 +397,6 @@
 				</File>
 				<File
 					RelativePath="..\..\lib\Transforms\Ipo\RaiseAllocations.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\lib\Transforms\Ipo\SimplifyLibCalls.cpp"
 					>
 				</File>
 				<File
@@ -718,6 +718,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\llvm\Transforms\Utils\PromoteMemToReg.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\llvm\Transforms\RSProfiling.h"
 				>
 			</File>
 			<File
