@@ -155,6 +155,7 @@ namespace {
     
     void writeOperand(Value *Operand);
     void writeOperandRaw(Value *Operand);
+    void writeInstComputationInline(Instruction &I);
     void writeOperandInternal(Value *Operand);
     void writeOperandWithCast(Value* Operand, unsigned Opcode);
     void writeOperandWithCast(Value* Operand, const ICmpInst &I);
@@ -1217,12 +1218,32 @@ std::string CWriter::GetValueName(const Value *Operand) {
   return Name;
 }
 
+/// writeInstComputationInline - Emit the computation for the specified
+/// instruction inline, with no destination provided.
+void CWriter::writeInstComputationInline(Instruction &I) {
+  // If this is a non-trivial bool computation, make sure to truncate down to
+  // a 1 bit value.  This is important because we want "add i1 x, y" to return
+  // "0" when x and y are true, not "2" for example.
+  bool NeedBoolTrunc = false;
+  if (I.getType() == Type::Int1Ty && !isa<ICmpInst>(I) && !isa<FCmpInst>(I))
+    NeedBoolTrunc = true;
+  
+  if (NeedBoolTrunc)
+    Out << "((";
+  
+  visit(I);
+  
+  if (NeedBoolTrunc)
+    Out << ")&1)";
+}
+
+
 void CWriter::writeOperandInternal(Value *Operand) {
   if (Instruction *I = dyn_cast<Instruction>(Operand))
+    // Should we inline this instruction to build a tree?
     if (isInlinableInst(*I) && !isDirectAlloca(I)) {
-      // Should we inline this instruction to build a tree?
       Out << '(';
-      visit(*I);
+      writeInstComputationInline(*I);
       Out << ')';
       return;
     }
@@ -2146,12 +2167,12 @@ void CWriter::printBasicBlock(BasicBlock *BB) {
         outputLValue(II);
       else
         Out << "  ";
-      visit(*II);
+      writeInstComputationInline(*II);
       Out << ";\n";
     }
   }
 
-  // Don't emit prefix or suffix for the terminator...
+  // Don't emit prefix or suffix for the terminator.
   visit(*BB->getTerminator());
 }
 
@@ -2475,29 +2496,34 @@ static const char * getFloatBitCastField(const Type *Ty) {
 void CWriter::visitCastInst(CastInst &I) {
   const Type *DstTy = I.getType();
   const Type *SrcTy = I.getOperand(0)->getType();
-  Out << '(';
   if (isFPIntBitCast(I)) {
+    Out << '(';
     // These int<->float and long<->double casts need to be handled specially
     Out << GetValueName(&I) << "__BITCAST_TEMPORARY." 
         << getFloatBitCastField(I.getOperand(0)->getType()) << " = ";
     writeOperand(I.getOperand(0));
     Out << ", " << GetValueName(&I) << "__BITCAST_TEMPORARY."
         << getFloatBitCastField(I.getType());
-  } else {
-    printCast(I.getOpcode(), SrcTy, DstTy);
-    if (I.getOpcode() == Instruction::SExt && SrcTy == Type::Int1Ty) {
-      // Make sure we really get a sext from bool by subtracing the bool from 0
-      Out << "0-";
-    }
-    writeOperand(I.getOperand(0));
-    if (DstTy == Type::Int1Ty && 
-        (I.getOpcode() == Instruction::Trunc ||
-         I.getOpcode() == Instruction::FPToUI ||
-         I.getOpcode() == Instruction::FPToSI ||
-         I.getOpcode() == Instruction::PtrToInt)) {
-      // Make sure we really get a trunc to bool by anding the operand with 1 
-      Out << "&1u";
-    }
+    Out << ')';
+    return;
+  }
+  
+  Out << '(';
+  printCast(I.getOpcode(), SrcTy, DstTy);
+
+  // Make a sext from i1 work by subtracting the i1 from 0 (an int).
+  if (SrcTy == Type::Int1Ty && I.getOpcode() == Instruction::SExt)
+    Out << "0-";
+  
+  writeOperand(I.getOperand(0));
+    
+  if (DstTy == Type::Int1Ty && 
+      (I.getOpcode() == Instruction::Trunc ||
+       I.getOpcode() == Instruction::FPToUI ||
+       I.getOpcode() == Instruction::FPToSI ||
+       I.getOpcode() == Instruction::PtrToInt)) {
+    // Make sure we really get a trunc to bool by anding the operand with 1 
+    Out << "&1u";
   }
   Out << ')';
 }
