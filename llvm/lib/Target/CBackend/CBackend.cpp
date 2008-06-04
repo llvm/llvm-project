@@ -2936,10 +2936,6 @@ static std::string gccifyAsm(std::string asmstr) {
 void CWriter::visitInlineAsm(CallInst &CI) {
   InlineAsm* as = cast<InlineAsm>(CI.getOperand(0));
   std::vector<InlineAsm::ConstraintInfo> Constraints = as->ParseConstraints();
-  std::vector<std::pair<std::string, Value*> > Input;
-  std::vector<std::pair<std::string, std::pair<Value*, int> > > Output;
-  std::string Clobber;
-  unsigned ValueCount = 0;
   
   std::vector<std::pair<Value*, int> > ResultVals;
   if (CI.getType() == Type::VoidTy)
@@ -2951,61 +2947,103 @@ void CWriter::visitInlineAsm(CallInst &CI) {
     ResultVals.push_back(std::make_pair(&CI, -1));
   }
   
+  // Fix up the asm string for gcc and emit it.
+  Out << "__asm__ volatile (\"" << gccifyAsm(as->getAsmString()) << "\"\n";
+  Out << "        :";
+
+  unsigned ValueCount = 0;
+  bool IsFirst = true;
+  
+  // Convert over all the output constraints.
   for (std::vector<InlineAsm::ConstraintInfo>::iterator I = Constraints.begin(),
-         E = Constraints.end(); I != E; ++I) {
+       E = Constraints.end(); I != E; ++I) {
+    
+    if (I->Type != InlineAsm::isOutput) {
+      ++ValueCount;
+      continue;  // Ignore non-output constraints.
+    }
+    
     assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
     std::string C = InterpretASMConstraint(*I);
     if (C.empty()) continue;
     
-    switch (I->Type) {
-    default: assert(0 && "Unknown asm constraint");
-    case InlineAsm::isInput: {
-      assert(ValueCount >= ResultVals.size() && "Input can't refer to result");
-      Value *V = CI.getOperand(ValueCount-ResultVals.size()+1);
-      Input.push_back(std::make_pair(C, V));
-      break;
-    }
-    case InlineAsm::isOutput: {
-      std::pair<Value*, int> V;
-      if (ValueCount < ResultVals.size())
-        V = ResultVals[ValueCount];
-      else
-        V = std::make_pair(CI.getOperand(ValueCount-ResultVals.size()+1), -1);
-      Output.push_back(std::make_pair("="+((I->isEarlyClobber ? "&" : "")+C),
-                                      V));
-      break;
-    }
-    case InlineAsm::isClobber:
-      Clobber += ",\"" + C + "\"";
-      continue;  // Not an actual argument.
-    }
-    ++ValueCount; // Consumes an argument.
-  }
-  
-  // Fix up the asm string for gcc.
-  std::string asmstr = gccifyAsm(as->getAsmString());
-  
-  Out << "__asm__ volatile (\"" << asmstr << "\"\n";
-  Out << "        :";
-  for (unsigned i = 0, e = Output.size(); i != e; ++i) {
-    if (i)
+    if (!IsFirst) {
       Out << ", ";
-    Out << "\"" << Output[i].first << "\"("
-        << GetValueName(Output[i].second.first);
-    if (Output[i].second.second != -1)
-      Out << ".field" << Output[i].second.second; // Multiple retvals.
+      IsFirst = false;
+    }
+
+    // Unpack the dest.
+    Value *DestVal;
+    int DestValNo = -1;
+    
+    if (ValueCount < ResultVals.size()) {
+      DestVal = ResultVals[ValueCount].first;
+      DestValNo = ResultVals[ValueCount].second;
+    } else
+      DestVal = CI.getOperand(ValueCount-ResultVals.size()+1);
+
+    if (I->isEarlyClobber)
+      C = "&"+C;
+      
+    Out << "\"=" << C << "\"(" << GetValueName(DestVal);
+    if (DestValNo != -1)
+      Out << ".field" << DestValNo; // Multiple retvals.
     Out << ")";
+    ++ValueCount;
   }
+  
+  
+  // Convert over all the input constraints.
   Out << "\n        :";
-  for (unsigned i = 0, e = Input.size(); i != e; ++i) {
-    if (i)
+  IsFirst = true;
+  ValueCount = 0;
+  for (std::vector<InlineAsm::ConstraintInfo>::iterator I = Constraints.begin(),
+       E = Constraints.end(); I != E; ++I) {
+    if (I->Type != InlineAsm::isInput) {
+      ++ValueCount;
+      continue;  // Ignore non-input constraints.
+    }
+    
+    assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
+    std::string C = InterpretASMConstraint(*I);
+    if (C.empty()) continue;
+    
+    if (!IsFirst) {
       Out << ", ";
-    Out << "\"" << Input[i].first << "\"(";
-    writeOperand(Input[i].second);
+      IsFirst = false;
+    }
+    
+    assert(ValueCount >= ResultVals.size() && "Input can't refer to result");
+    Value *SrcVal = CI.getOperand(ValueCount-ResultVals.size()+1);
+    
+    Out << "\"" << C << "\"(";
+    if (!I->isIndirect)
+      writeOperand(SrcVal);
+    else
+      writeOperandDeref(SrcVal);
     Out << ")";
   }
-  if (Clobber.size())
-    Out << "\n        :" << Clobber.substr(1);
+  
+  // Convert over the clobber constraints.
+  IsFirst = true;
+  ValueCount = 0;
+  for (std::vector<InlineAsm::ConstraintInfo>::iterator I = Constraints.begin(),
+       E = Constraints.end(); I != E; ++I) {
+    if (I->Type != InlineAsm::isClobber)
+      continue;  // Ignore non-input constraints.
+
+    assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
+    std::string C = InterpretASMConstraint(*I);
+    if (C.empty()) continue;
+    
+    if (!IsFirst) {
+      Out << ", ";
+      IsFirst = false;
+    }
+    
+    Out << '\"' << C << '"';
+  }
+  
   Out << ")";
 }
 
