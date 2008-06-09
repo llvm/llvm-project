@@ -1,823 +1,420 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>The LLVM Compiler Driver (llvmc)</title>
-  <link rel="stylesheet" href="llvm.css" type="text/css">
-  <meta name="author" content="Reid Spencer">
-  <meta name="description" 
-  content="A description of the use and design of the LLVM Compiler Driver.">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.4: http://docutils.sourceforge.net/" />
+<title>Customizing LLVMC: Reference Manual</title>
+<link rel="stylesheet" href="llvm.css" type="text/css" />
 </head>
 <body>
-<div class="doc_title">The LLVM Compiler Driver (llvmc)</div>
-<p class="doc_warning">NOTE: This document is a work in progress!</p>
-<ol>
-  <li><a href="#abstract">Abstract</a></li>
-  <li><a href="#introduction">Introduction</a>
-    <ol>
-      <li><a href="#purpose">Purpose</a></li>
-      <li><a href="#operation">Operation</a></li>
-      <li><a href="#phases">Phases</a></li>
-      <li><a href="#actions">Actions</a></li>
-    </ol>
-  </li>
-  <li><a href="#configuration">Configuration</a>
-    <ol>
-      <li><a href="#overview">Overview</a></li>
-      <li><a href="#filetypes">Configuration Files</a></li>
-      <li><a href="#syntax">Syntax</a></li>
-      <li><a href="#substitutions">Substitutions</a></li>
-      <li><a href="#sample">Sample Config File</a></li>
-    </ol>
-  <li><a href="#glossary">Glossary</a>
-</ol>
-<div class="doc_author">
-<p>Written by <a href="mailto:rspencer@x10sys.com">Reid Spencer</a>
-</p>
+<div class="document" id="customizing-llvmc-reference-manual">
+
+<div class="doc_title">Customizing LLVMC: Reference Manual</div>
+
+<div class="doc_warning">
+  <p>Note: This document is a work-in-progress.  Additions and clarifications
+  are welcome.</p>
 </div>
 
-<!-- *********************************************************************** -->
-<div class="doc_section"> <a name="abstract">Abstract</a></div>
-<!-- *********************************************************************** -->
-<div class="doc_text">
-  <p>This document describes the requirements, design, and configuration of the
-  LLVM compiler driver, <tt>llvmc</tt>.  The compiler driver knows about LLVM's 
-  tool set and can be configured to know about a variety of compilers for 
-  source languages.  It uses this knowledge to execute the tools necessary 
-  to accomplish general compilation, optimization, and linking tasks. The main 
-  purpose of <tt>llvmc</tt> is to provide a simple and consistent interface to 
-  all compilation tasks. This reduces the burden on the end user who can just 
-  learn to use <tt>llvmc</tt> instead of the entire LLVM tool set and all the
-  source language compilers compatible with LLVM.</p>
-</div>
-<!-- *********************************************************************** -->
-<div class="doc_section"> <a name="introduction">Introduction</a></div>
-<!-- *********************************************************************** -->
-<div class="doc_text">
-  <p>The <tt>llvmc</tt> <a href="#def_tool">tool</a> is a configurable compiler 
-  <a href="#def_driver">driver</a>. As such, it isn't a compiler, optimizer, 
-  or a linker itself but it drives (invokes) other software that perform those 
-  tasks. If you are familiar with the GNU Compiler Collection's <tt>gcc</tt> 
-  tool, <tt>llvmc</tt> is very similar.</p>
-  <p>The following introductory sections will help you understand why this tool
-  is necessary and what it does.</p>
-</div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="purpose">Purpose</a></div>
-<div class="doc_text">
-  <p><tt>llvmc</tt> was invented to make compilation of user programs with 
-  LLVM-based tools easier. To accomplish this, <tt>llvmc</tt> strives to:</p>
-  <ul>
-    <li>Be the single point of access to most of the LLVM tool set.</li>
-    <li>Hide the complexities of the LLVM tools through a single interface.</li>
-    <li>Provide a consistent interface for compiling all languages.</li>
-  </ul>
-  <p>Additionally, <tt>llvmc</tt> makes it easier to write a compiler for use
-  with LLVM, because it:</p>
-  <ul>
-    <li>Makes integration of existing non-LLVM tools simple.</li>
-    <li>Extends the capabilities of minimal compiler tools by optimizing their
-    output.</li>
-    <li>Reduces the number of interfaces a compiler writer must know about
-    before a working compiler can be completed (essentially only the VMCore
-    interfaces need to be understood).</li>
-    <li>Supports source language translator invocation via both dynamically
-    loadable shared objects and invocation of an executable.</li>
-  </ul>
+<p>LLVMC is a generic compiler driver, designed to be customizable and
+extensible. It plays the same role for LLVM as the <tt class="docutils literal"><span class="pre">gcc</span></tt> program
+does for GCC - LLVMC's job is essentially to transform a set of input
+files into a set of targets depending on configuration rules and user
+options. What makes LLVMC different is that these transformation rules
+are completely customizable - in fact, LLVMC knows nothing about the
+specifics of transformation (even the command-line options are mostly
+not hard-coded) and regards the transformation structure as an
+abstract graph. This makes it possible to adapt LLVMC for other
+purposes - for example, as a build tool for game resources.</p>
+<p>Because LLVMC employs TableGen <a class="footnote-reference" href="#id2" id="id1" name="id1">[1]</a> as its configuration language, you
+need to be familiar with it to customize LLVMC.</p>
+<div class="contents topic">
+<ul class="simple">
+<li><a class="reference" href="#compiling-with-llvmc" id="id3" name="id3">Compiling with LLVMC</a></li>
+<li><a class="reference" href="#predefined-options" id="id4" name="id4">Predefined options</a></li>
+<li><a class="reference" href="#customizing-llvmc-the-compilation-graph" id="id5" name="id5">Customizing LLVMC: the compilation graph</a></li>
+<li><a class="reference" href="#writing-a-tool-description" id="id6" name="id6">Writing a tool description</a></li>
+<li><a class="reference" href="#option-list-specifying-all-options-in-a-single-place" id="id7" name="id7">Option list - specifying all options in a single place</a></li>
+<li><a class="reference" href="#using-hooks-and-environment-variables-in-the-cmd-line-property" id="id8" name="id8">Using hooks and environment variables in the <tt class="docutils literal"><span class="pre">cmd_line</span></tt> property</a></li>
+<li><a class="reference" href="#conditional-evaluation-the-case-expression" id="id9" name="id9">Conditional evaluation: the <tt class="docutils literal"><span class="pre">case</span></tt> expression</a></li>
+<li><a class="reference" href="#language-map" id="id10" name="id10">Language map</a></li>
+<li><a class="reference" href="#references" id="id11" name="id11">References</a></li>
+</ul>
 </div>
 
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="operation">Operation</a></div>
+<div class="doc_author">Written by Mikhail Glushenkov</div>
+
 <div class="doc_text">
-  <p>At a high level, <tt>llvmc</tt> operation is very simple.  The basic action
-  taken by <tt>llvmc</tt> is to simply invoke some tool or set of tools to fill 
-  the user's request for compilation. Every execution of <tt>llvmc</tt>takes the 
-  following sequence of steps:</p>
-  <dl>
-    <dt><b>Collect Command Line Options</b></dt>
-    <dd>The command line options provide the marching orders to <tt>llvmc</tt> 
-    on what actions it should perform. This is the request the user is making 
-    of <tt>llvmc</tt> and it is interpreted first. See the <tt>llvmc</tt>
-    <a href="CommandGuide/html/llvmc.html">manual page</a> for details on the
-    options.</dd>
-    <dt><b>Read Configuration Files</b></dt>
-    <dd>Based on the options and the suffixes of the filenames presented, a set 
-    of configuration files are read to configure the actions <tt>llvmc</tt> will 
-    take.  Configuration files are provided by either LLVM or the 
-    compiler tools that <tt>llvmc</tt> invokes. These files determine what 
-    actions <tt>llvmc</tt> will take in response to the user's request. See 
-    the section on <a href="#configuration">configuration</a> for more details.
-    </dd>
-    <dt><b>Determine Phases To Execute</b></dt>
-    <dd>Based on the command line options and configuration files,
-    <tt>llvmc</tt> determines the compilation <a href="#phases">phases</a> that
-    must be executed by the user's request. This is the primary work of
-    <tt>llvmc</tt>.</dd>
-    <dt><b>Determine Actions To Execute</b></dt>
-    <dd>Each <a href="#phases">phase</a> to be executed can result in the
-    invocation of one or more <a href="#actions">actions</a>. An action is
-    either a whole program or a function in a dynamically linked shared library. 
-    In this step, <tt>llvmc</tt> determines the sequence of actions that must be 
-    executed. Actions will always be executed in a deterministic order.</dd>
-    <dt><b>Execute Actions</b></dt>
-    <dd>The <a href="#actions">actions</a> necessary to support the user's
-    original request are executed sequentially and deterministically. All 
-    actions result in either the invocation of a whole program to perform the 
-    action or the loading of a dynamically linkable shared library and invocation 
-    of a standard interface function within that library.</dd> 
-    <dt><b>Termination</b></dt>
-    <dd>If any action fails (returns a non-zero result code), <tt>llvmc</tt>
-    also fails and returns the result code from the failing action. If
-    everything succeeds, <tt>llvmc</tt> will return a zero result code.</dd>
-  </dl>
-  <p><tt>llvmc</tt>'s operation must be simple, regular and predictable. 
-  Developers need to be able to rely on it to take a consistent approach to
-  compilation. For example, the invocation:</p>
-  <code>
-    llvmc -O2 x.c y.c z.c -o xyz</code>
-  <p>must produce <i>exactly</i> the same results as:</p>
-  <pre><tt>
-    llvmc -O2 x.c -o x.o
-    llvmc -O2 y.c -o y.o
-    llvmc -O2 z.c -o z.o
-    llvmc -O2 x.o y.o z.o -o xyz</tt></pre>
-  <p>To accomplish this, <tt>llvmc</tt> uses a very simple goal oriented
-  procedure to do its work. The overall goal is to produce a functioning
-  executable. To accomplish this, <tt>llvmc</tt> always attempts to execute a 
-  series of compilation <a href="#def_phase">phases</a> in the same sequence. 
-  However, the user's options to <tt>llvmc</tt> can cause the sequence of phases 
-  to start in the middle or finish early.</p>
+<div class="doc_section"><a class="toc-backref" href="#id3" id="compiling-with-llvmc" name="compiling-with-llvmc">Compiling with LLVMC</a></div>
+<p>LLVMC tries hard to be as compatible with <tt class="docutils literal"><span class="pre">gcc</span></tt> as possible,
+although there are some small differences. Most of the time, however,
+you shouldn't be able to notice them:</p>
+<pre class="literal-block">
+$ # This works as expected:
+$ llvmc2 -O3 -Wall hello.cpp
+$ ./a.out
+hello
+</pre>
+<p>One nice feature of LLVMC is that one doesn't have to distinguish
+between different compilers for different languages (think <tt class="docutils literal"><span class="pre">g++</span></tt> and
+<tt class="docutils literal"><span class="pre">gcc</span></tt>) - the right toolchain is chosen automatically based on input
+language names (which are, in turn, determined from file
+extensions). If you want to force files ending with &quot;.c&quot; to compile as
+C++, use the <tt class="docutils literal"><span class="pre">-x</span></tt> option, just like you would do it with <tt class="docutils literal"><span class="pre">gcc</span></tt>:</p>
+<pre class="literal-block">
+$ llvmc2 -x c hello.cpp
+$ # hello.cpp is really a C file
+$ ./a.out
+hello
+</pre>
+<p>On the other hand, when using LLVMC as a linker to combine several C++
+object files you should provide the <tt class="docutils literal"><span class="pre">--linker</span></tt> option since it's
+impossible for LLVMC to choose the right linker in that case:</p>
+<pre class="literal-block">
+$ llvmc2 -c hello.cpp
+$ llvmc2 hello.o
+[A lot of link-time errors skipped]
+$ llvmc2 --linker=c++ hello.o
+$ ./a.out
+hello
+</pre>
 </div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="phases"></a>Phases </div>
 <div class="doc_text">
-  <p><tt>llvmc</tt> breaks every compilation task into the following five 
-  distinct phases:</p>
-  <dl><dt><b>Preprocessing</b></dt><dd>Not all languages support preprocessing; 
-    but for those that do, this phase can be invoked. This phase is for 
-    languages that provide combining, filtering, or otherwise altering with the 
-    source language input before the translator parses it. Although C and C++ 
-    are the most common users of this phase, other languages may provide their 
-    own preprocessor (whether its the C pre-processor or not).</dd>
-  </dl>
-  <dl><dt><b>Translation</b></dt><dd>The translation phase converts the source 
-    language input into something that LLVM can interpret and use for 
-    downstream phases. The translation is essentially from "non-LLVM form" to
-    "LLVM form".</dd>
-  </dl>
-  <dl><dt><b>Optimization</b></dt><dd>Once an LLVM Module has been obtained from 
-    the translation phase, the program enters the optimization phase. This phase 
-    attempts to optimize all of the input provided on the command line according 
-    to the options provided.</dd>
-  </dl>
-  <dl><dt><b>Linking</b></dt><dd>The inputs are combined to form a complete
-    program.</dd>
-  </dl>
-  <p>The following table shows the inputs, outputs, and command line options
-  applicable to each phase.</p>
-  <table>
-    <tr>
-      <th style="width: 10%">Phase</th>
-      <th style="width: 25%">Inputs</th>
-      <th style="width: 25%">Outputs</th>
-      <th style="width: 40%">Options</th>
-    </tr>
-    <tr><td><b>Preprocessing</b></td>
-      <td class="td_left"><ul><li>Source Language File</li></ul></td>
-      <td class="td_left"><ul><li>Source Language File</li></ul></td>
-      <td class="td_left"><dl>
-          <dt><tt>-E</tt></dt>
-          <dd>Stops the compilation after preprocessing</dd>
-      </dl></td>
-    </tr>
-    <tr>
-      <td><b>Translation</b></td>
-      <td class="td_left"><ul>
-          <li>Source Language File</li>
-      </ul></td>
-      <td class="td_left"><ul>
-          <li>LLVM Assembly</li>
-          <li>LLVM Bitcode</li>
-          <li>LLVM C++ IR</li>
-      </ul></td>
-      <td class="td_left"><dl>
-          <dt><tt>-c</tt></dt>
-          <dd>Stops the compilation after translation so that optimization and 
-          linking are not done.</dd>
-          <dt><tt>-S</tt></dt>
-          <dd>Stops the compilation before object code is written so that only
-          assembly code remains.</dd>
-      </dl></td>
-    </tr>
-    <tr>
-      <td><b>Optimization</b></td>
-      <td class="td_left"><ul>
-          <li>LLVM Assembly</li>
-          <li>LLVM Bitcode</li>
-      </ul></td>
-      <td class="td_left"><ul>
-          <li>LLVM Bitcode</li>
-      </ul></td>
-      <td class="td_left"><dl>
-          <dt><tt>-Ox</tt>
-          <dd>This group of options controls the amount of optimization 
-          performed.</dd>
-      </dl></td>
-    </tr>
-    <tr>
-      <td><b>Linking</b></td>
-      <td class="td_left"><ul>
-          <li>LLVM Bitcode</li>
-          <li>Native Object Code</li>
-          <li>LLVM Library</li>
-          <li>Native Library</li>
-      </ul></td>
-      <td class="td_left"><ul>
-          <li>LLVM Bitcode Executable</li>
-          <li>Native Executable</li>
-      </ul></td>
-      <td class="td_left"><dl>
-          <dt><tt>-L</tt></dt><dd>Specifies a path for library search.</dd>
-          <dt><tt>-l</tt></dt><dd>Specifies a library to link in.</dd>
-      </dl></td>
-    </tr>
-  </table>
+<div class="doc_section"><a class="toc-backref" href="#id4" id="predefined-options" name="predefined-options">Predefined options</a></div>
+<p>LLVMC has some built-in options that can't be overridden in the
+configuration files:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">-o</span> <span class="pre">FILE</span></tt> - Output file name.</li>
+<li><tt class="docutils literal"><span class="pre">-x</span> <span class="pre">LANGUAGE</span></tt> - Specify the language of the following input files
+until the next -x option.</li>
+<li><tt class="docutils literal"><span class="pre">-v</span></tt> - Enable verbose mode, i.e. print out all executed commands.</li>
+<li><tt class="docutils literal"><span class="pre">--view-graph</span></tt> - Show a graphical representation of the compilation
+graph. Requires that you have <tt class="docutils literal"><span class="pre">dot</span></tt> and <tt class="docutils literal"><span class="pre">gv</span></tt> commands
+installed. Hidden option, useful for debugging.</li>
+<li><tt class="docutils literal"><span class="pre">--write-graph</span></tt> - Write a <tt class="docutils literal"><span class="pre">compilation-graph.dot</span></tt> file in the
+current directory with the compilation graph description in the
+Graphviz format. Hidden option, useful for debugging.</li>
+<li><tt class="docutils literal"><span class="pre">--save-temps</span></tt> - Write temporary files to the current directory
+and do not delete them on exit. Hidden option, useful for debugging.</li>
+<li><tt class="docutils literal"><span class="pre">--help</span></tt>, <tt class="docutils literal"><span class="pre">--help-hidden</span></tt>, <tt class="docutils literal"><span class="pre">--version</span></tt> - These options have
+their standard meaning.</li>
+</ul>
 </div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="actions"></a>Actions</div>
 <div class="doc_text">
-  <p>An action, with regard to <tt>llvmc</tt> is a basic operation that it takes
-  in order to fulfill the user's request. Each phase of compilation will invoke
-  zero or more actions in order to accomplish that phase.</p>
-  <p>Actions come in two forms:</p>
-  <ul>
-    <li>Invokable Executables</li>
-    <li>Functions in a shared library</li>
-  </ul>
+<div class="doc_section"><a class="toc-backref" href="#id5" id="customizing-llvmc-the-compilation-graph" name="customizing-llvmc-the-compilation-graph">Customizing LLVMC: the compilation graph</a></div>
+<p>At the time of writing LLVMC does not support on-the-fly reloading of
+configuration, so to customize LLVMC you'll have to recompile the
+source code (which lives under <tt class="docutils literal"><span class="pre">$LLVM_DIR/tools/llvmc2</span></tt>). The
+default configuration files are <tt class="docutils literal"><span class="pre">Common.td</span></tt> (contains common
+definitions, don't forget to <tt class="docutils literal"><span class="pre">include</span></tt> it in your configuration
+files), <tt class="docutils literal"><span class="pre">Tools.td</span></tt> (tool descriptions) and <tt class="docutils literal"><span class="pre">Graph.td</span></tt> (compilation
+graph definition).</p>
+<p>To compile LLVMC with your own configuration file (say,``MyGraph.td``),
+run <tt class="docutils literal"><span class="pre">make</span></tt> like this:</p>
+<pre class="literal-block">
+$ cd $LLVM_DIR/tools/llvmc2
+$ make GRAPH=MyGraph.td TOOLNAME=my_llvmc
+</pre>
+<p>This will build an executable named <tt class="docutils literal"><span class="pre">my_llvmc</span></tt>. There are also
+several sample configuration files in the <tt class="docutils literal"><span class="pre">llvmc2/examples</span></tt>
+subdirectory that should help to get you started.</p>
+<p>Internally, LLVMC stores information about possible source
+transformations in form of a graph. Nodes in this graph represent
+tools, and edges between two nodes represent a transformation path. A
+special &quot;root&quot; node is used to mark entry points for the
+transformations. LLVMC also assigns a weight to each edge (more on
+this later) to choose between several alternative edges.</p>
+<p>The definition of the compilation graph (see file <tt class="docutils literal"><span class="pre">Graph.td</span></tt>) is
+just a list of edges:</p>
+<pre class="literal-block">
+def CompilationGraph : CompilationGraph&lt;[
+    Edge&lt;root, llvm_gcc_c&gt;,
+    Edge&lt;root, llvm_gcc_assembler&gt;,
+    ...
+
+    Edge&lt;llvm_gcc_c, llc&gt;,
+    Edge&lt;llvm_gcc_cpp, llc&gt;,
+    ...
+
+    OptionalEdge&lt;llvm_gcc_c, opt, [(switch_on &quot;opt&quot;)]&gt;,
+    OptionalEdge&lt;llvm_gcc_cpp, opt, [(switch_on &quot;opt&quot;)]&gt;,
+    ...
+
+    OptionalEdge&lt;llvm_gcc_assembler, llvm_gcc_cpp_linker,
+        (case (input_languages_contain &quot;c++&quot;), (inc_weight),
+              (or (parameter_equals &quot;linker&quot;, &quot;g++&quot;),
+                  (parameter_equals &quot;linker&quot;, &quot;c++&quot;)), (inc_weight))&gt;,
+    ...
+
+    ]&gt;;
+</pre>
+<p>As you can see, the edges can be either default or optional, where
+optional edges are differentiated by sporting a <tt class="docutils literal"><span class="pre">case</span></tt> expression
+used to calculate the edge's weight.</p>
+<p>The default edges are assigned a weight of 1, and optional edges get a
+weight of 0 + 2*N where N is the number of tests that evaluated to
+true in the <tt class="docutils literal"><span class="pre">case</span></tt> expression. It is also possible to provide an
+integer parameter to <tt class="docutils literal"><span class="pre">inc_weight</span></tt> and <tt class="docutils literal"><span class="pre">dec_weight</span></tt> - in this case,
+the weight is increased (or decreased) by the provided value instead
+of the default 2.</p>
+<p>When passing an input file through the graph, LLVMC picks the edge
+with the maximum weight. To avoid ambiguity, there should be only one
+default edge between two nodes (with the exception of the root node,
+which gets a special treatment - there you are allowed to specify one
+default edge <em>per language</em>).</p>
+<p>To get a visual representation of the compilation graph (useful for
+debugging), run <tt class="docutils literal"><span class="pre">llvmc2</span> <span class="pre">--view-graph</span></tt>. You will need <tt class="docutils literal"><span class="pre">dot</span></tt> and
+<tt class="docutils literal"><span class="pre">gsview</span></tt> installed for this to work properly.</p>
 </div>
-
-<!-- *********************************************************************** -->
-<div class="doc_section"><a name="configuration">Configuration</a></div>
-<!-- *********************************************************************** -->
 <div class="doc_text">
-  <p>This section of the document describes the configuration files used by
-  <tt>llvmc</tt>.  Configuration information is relatively static for a 
-  given release of LLVM and a compiler tool. However, the details may 
-  change from release to release of either.  Users are encouraged to simply use 
-  the various options of the <tt>llvmc</tt> command and ignore the configuration 
-  of the tool. These configuration files are for compiler writers and LLVM 
-  developers. Those wishing to simply use <tt>llvmc</tt> don't need to understand 
-  this section but it may be instructive on how the tool works.</p>
+<div class="doc_section"><a class="toc-backref" href="#id6" id="writing-a-tool-description" name="writing-a-tool-description">Writing a tool description</a></div>
+<p>As was said earlier, nodes in the compilation graph represent tools,
+which are described separately. A tool definition looks like this
+(taken from the <tt class="docutils literal"><span class="pre">Tools.td</span></tt> file):</p>
+<pre class="literal-block">
+def llvm_gcc_cpp : Tool&lt;[
+    (in_language &quot;c++&quot;),
+    (out_language &quot;llvm-assembler&quot;),
+    (output_suffix &quot;bc&quot;),
+    (cmd_line &quot;llvm-g++ -c $INFILE -o $OUTFILE -emit-llvm&quot;),
+    (sink)
+    ]&gt;;
+</pre>
+<p>This defines a new tool called <tt class="docutils literal"><span class="pre">llvm_gcc_cpp</span></tt>, which is an alias for
+<tt class="docutils literal"><span class="pre">llvm-g++</span></tt>. As you can see, a tool definition is just a list of
+properties; most of them should be self-explanatory. The <tt class="docutils literal"><span class="pre">sink</span></tt>
+property means that this tool should be passed all command-line
+options that lack explicit descriptions.</p>
+<p>The complete list of the currently implemented tool properties follows:</p>
+<ul class="simple">
+<li>Possible tool properties:<ul>
+<li><tt class="docutils literal"><span class="pre">in_language</span></tt> - input language name.</li>
+<li><tt class="docutils literal"><span class="pre">out_language</span></tt> - output language name.</li>
+<li><tt class="docutils literal"><span class="pre">output_suffix</span></tt> - output file suffix.</li>
+<li><tt class="docutils literal"><span class="pre">cmd_line</span></tt> - the actual command used to run the tool. You can
+use <tt class="docutils literal"><span class="pre">$INFILE</span></tt> and <tt class="docutils literal"><span class="pre">$OUTFILE</span></tt> variables, output redirection
+with <tt class="docutils literal"><span class="pre">&gt;</span></tt>, hook invocations (<tt class="docutils literal"><span class="pre">$CALL</span></tt>), environment variables
+(via <tt class="docutils literal"><span class="pre">$ENV</span></tt>) and the <tt class="docutils literal"><span class="pre">case</span></tt> construct (more on this below).</li>
+<li><tt class="docutils literal"><span class="pre">join</span></tt> - this tool is a &quot;join node&quot; in the graph, i.e. it gets a
+list of input files and joins them together. Used for linkers.</li>
+<li><tt class="docutils literal"><span class="pre">sink</span></tt> - all command-line options that are not handled by other
+tools are passed to this tool.</li>
+</ul>
+</li>
+</ul>
+<p>The next tool definition is slightly more complex:</p>
+<pre class="literal-block">
+def llvm_gcc_linker : Tool&lt;[
+    (in_language &quot;object-code&quot;),
+    (out_language &quot;executable&quot;),
+    (output_suffix &quot;out&quot;),
+    (cmd_line &quot;llvm-gcc $INFILE -o $OUTFILE&quot;),
+    (join),
+    (prefix_list_option &quot;L&quot;, (forward),
+                        (help &quot;add a directory to link path&quot;)),
+    (prefix_list_option &quot;l&quot;, (forward),
+                        (help &quot;search a library when linking&quot;)),
+    (prefix_list_option &quot;Wl&quot;, (unpack_values),
+                        (help &quot;pass options to linker&quot;))
+    ]&gt;;
+</pre>
+<p>This tool has a &quot;join&quot; property, which means that it behaves like a
+linker. This tool also defines several command-line options: <tt class="docutils literal"><span class="pre">-l</span></tt>,
+<tt class="docutils literal"><span class="pre">-L</span></tt> and <tt class="docutils literal"><span class="pre">-Wl</span></tt> which have their usual meaning. An option has two
+attributes: a name and a (possibly empty) list of properties. All
+currently implemented option types and properties are described below:</p>
+<ul>
+<li><p class="first">Possible option types:</p>
+<blockquote>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">switch_option</span></tt> - a simple boolean switch, for example <tt class="docutils literal"><span class="pre">-time</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">parameter_option</span></tt> - option that takes an argument, for example
+<tt class="docutils literal"><span class="pre">-std=c99</span></tt>;</li>
+<li><tt class="docutils literal"><span class="pre">parameter_list_option</span></tt> - same as the above, but more than one
+occurence of the option is allowed.</li>
+<li><tt class="docutils literal"><span class="pre">prefix_option</span></tt> - same as the parameter_option, but the option name
+and parameter value are not separated.</li>
+<li><tt class="docutils literal"><span class="pre">prefix_list_option</span></tt> - same as the above, but more than one
+occurence of the option is allowed; example: <tt class="docutils literal"><span class="pre">-lm</span> <span class="pre">-lpthread</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">alias_option</span></tt> - a special option type for creating
+aliases. Unlike other option types, aliases are not allowed to
+have any properties besides the aliased option name. Usage
+example: <tt class="docutils literal"><span class="pre">(alias_option</span> <span class="pre">&quot;preprocess&quot;,</span> <span class="pre">&quot;E&quot;)</span></tt></li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">Possible option properties:</p>
+<blockquote>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">append_cmd</span></tt> - append a string to the tool invocation command.</li>
+<li><tt class="docutils literal"><span class="pre">forward</span></tt> - forward this option unchanged.</li>
+<li><tt class="docutils literal"><span class="pre">output_suffix</span></tt> - modify the output suffix of this
+tool. Example : <tt class="docutils literal"><span class="pre">(switch</span> <span class="pre">&quot;E&quot;,</span> <span class="pre">(output_suffix</span> <span class="pre">&quot;i&quot;)</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">stop_compilation</span></tt> - stop compilation after this phase.</li>
+<li><tt class="docutils literal"><span class="pre">unpack_values</span></tt> - used for for splitting and forwarding
+comma-separated lists of options, e.g. <tt class="docutils literal"><span class="pre">-Wa,-foo=bar,-baz</span></tt> is
+converted to <tt class="docutils literal"><span class="pre">-foo=bar</span> <span class="pre">-baz</span></tt> and appended to the tool invocation
+command.</li>
+<li><tt class="docutils literal"><span class="pre">help</span></tt> - help string associated with this option. Used for
+<tt class="docutils literal"><span class="pre">--help</span></tt> output.</li>
+<li><tt class="docutils literal"><span class="pre">required</span></tt> - this option is obligatory.</li>
+</ul>
+</blockquote>
+</li>
+</ul>
 </div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="overview"></a>Overview</div>
 <div class="doc_text">
-<p><tt>llvmc</tt> is highly configurable both on the command line and in 
-configuration files. The options it understands are generic, consistent and 
-simple by design.  Furthermore, the <tt>llvmc</tt> options apply to the 
-compilation of any LLVM enabled programming language. To be enabled as a 
-supported source language compiler, a compiler writer must provide a 
-configuration file that tells <tt>llvmc</tt> how to invoke the compiler 
-and what its capabilities are. The purpose of the configuration files then 
-is to allow compiler writers to specify to <tt>llvmc</tt> how the compiler 
-should be invoked. Users may but are not advised to alter the compiler's 
-<tt>llvmc</tt> configuration.</p>
-
-<p>Because <tt>llvmc</tt> just invokes other programs, it must deal with the
-available command line options for those programs regardless of whether they
-were written for LLVM or not. Furthermore, not all compiler tools will
-have the same capabilities. Some compiler tools will simply generate LLVM assembly
-code, others will be able to generate fully optimized bitcode. In general,
-<tt>llvmc</tt> doesn't make any assumptions about the capabilities or command 
-line options of a sub-tool. It simply uses the details found in the 
-configuration files and leaves it to the compiler writer to specify the 
-configuration correctly.</p>
-
-<p>This approach means that new compiler tools can be up and working very
-quickly. As a first cut, a tool can simply compile its source to raw
-(unoptimized) bitcode or LLVM assembly and <tt>llvmc</tt> can be configured 
-to pick up the slack (translate LLVM assembly to bitcode, optimize the 
-bitcode, generate native assembly, link, etc.).   In fact, the compiler tools 
-need not use any LLVM libraries, and it could be written in any language 
-(instead of C++).  The configuration data will allow the full range of 
-optimization, assembly, and linking capabilities that LLVM provides to be added 
-to these kinds of tools.  Enabling the rapid development of front-ends is one 
-of the primary goals of <tt>llvmc</tt>.</p>
-
-<p>As a compiler tool matures, it may utilize the LLVM libraries and tools 
-to more efficiently produce optimized bitcode directly in a single compilation 
-and optimization program. In these cases, multiple tools would not be needed 
-and the configuration data for the compiler would change.</p>
-
-<p>Configuring <tt>llvmc</tt> to the needs and capabilities of a source language 
-compiler is relatively straight-forward.  A compiler writer must provide a 
-definition of what to do for each of the five compilation phases for each of 
-the optimization levels. The specification consists simply of prototypical 
-command lines into which <tt>llvmc</tt> can substitute command line
-arguments and file names. Note that any given phase can be completely blank if
-the source language's compiler combines multiple phases into a single program.
-For example, quite often pre-processing, translation, and optimization are
-combined into a single program. The specification for such a compiler would have
-blank entries for pre-processing and translation but a full command line for
-optimization.</p>
+<div class="doc_section"><a class="toc-backref" href="#id7" id="option-list-specifying-all-options-in-a-single-place" name="option-list-specifying-all-options-in-a-single-place">Option list - specifying all options in a single place</a></div>
+<p>It can be handy to have all information about options gathered in a
+single place to provide an overview. This can be achieved by using a
+so-called <tt class="docutils literal"><span class="pre">OptionList</span></tt>:</p>
+<pre class="literal-block">
+def Options : OptionList&lt;[
+(switch_option &quot;E&quot;, (help &quot;Help string&quot;)),
+(alias_option &quot;quiet&quot;, &quot;q&quot;)
+...
+]&gt;;
+</pre>
+<p><tt class="docutils literal"><span class="pre">OptionList</span></tt> is also a good place to specify option aliases.</p>
+<p>Tool-specific option properties like <tt class="docutils literal"><span class="pre">append_cmd</span></tt> have (obviously)
+no meaning in the context of <tt class="docutils literal"><span class="pre">OptionList</span></tt>, so the only properties
+allowed there are <tt class="docutils literal"><span class="pre">help</span></tt> and <tt class="docutils literal"><span class="pre">required</span></tt>.</p>
+<p>Option lists are used at the file scope. See file
+<tt class="docutils literal"><span class="pre">examples/Clang.td</span></tt> for an example of <tt class="docutils literal"><span class="pre">OptionList</span></tt> usage.</p>
 </div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="filetypes">Configuration Files</a></div>
-<div class="doc_subsubsection"><a name="filecontents">File Contents</a></div>
 <div class="doc_text">
-  <p>Each configuration file provides the details for a single source language
-  that is to be compiled.  This configuration information tells <tt>llvmc</tt> 
-  how to invoke the language's pre-processor, translator, optimizer, assembler
-  and linker. Note that a given source language needn't provide all these tools
-  as many of them exist in llvm currently.</p>
+<div class="doc_section"><a class="toc-backref" href="#id8" id="using-hooks-and-environment-variables-in-the-cmd-line-property" name="using-hooks-and-environment-variables-in-the-cmd-line-property">Using hooks and environment variables in the <tt class="docutils literal"><span class="pre">cmd_line</span></tt> property</a></div>
+<p>Normally, LLVMC executes programs from the system <tt class="docutils literal"><span class="pre">PATH</span></tt>. Sometimes,
+this is not sufficient: for example, we may want to specify tool names
+in the configuration file. This can be achieved via the mechanism of
+hooks - to compile LLVMC with your hooks, just drop a .cpp file into
+<tt class="docutils literal"><span class="pre">tools/llvmc2</span></tt> directory. Hooks should live in the <tt class="docutils literal"><span class="pre">hooks</span></tt>
+namespace and have the signature <tt class="docutils literal"><span class="pre">std::string</span> <span class="pre">hooks::MyHookName</span>
+<span class="pre">(void)</span></tt>. They can be used from the <tt class="docutils literal"><span class="pre">cmd_line</span></tt> tool property:</p>
+<pre class="literal-block">
+(cmd_line &quot;$CALL(MyHook)/path/to/file -o $CALL(AnotherHook)&quot;)
+</pre>
+<p>It is also possible to use environment variables in the same manner:</p>
+<pre class="literal-block">
+(cmd_line &quot;$ENV(VAR1)/path/to/file -o $ENV(VAR2)&quot;)
+</pre>
+<p>To change the command line string based on user-provided options use
+the <tt class="docutils literal"><span class="pre">case</span></tt> expression (documented below):</p>
+<pre class="literal-block">
+(cmd_line
+  (case
+    (switch_on &quot;E&quot;),
+       &quot;llvm-g++ -E -x c $INFILE -o $OUTFILE&quot;,
+    (default),
+       &quot;llvm-g++ -c -x c $INFILE -o $OUTFILE -emit-llvm&quot;))
+</pre>
 </div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsubsection"><a name="dirsearch">Directory Search</a></div>
 <div class="doc_text">
-  <p><tt>llvmc</tt> always looks for files of a specific name. It uses the
-  first file with the name its looking for by searching directories in the
-  following order:<br/>
-  <ol>
-    <li>Any directory specified by the <tt>-config-dir</tt> option will be
-    checked first.</li>
-    <li>If the environment variable LLVM_CONFIG_DIR is set, and it contains
-    the name of a valid directory, that directory will be searched next.</li>
-    <li>If the user's home directory (typically <tt>/home/user</tt> contains 
-    a sub-directory named <tt>.llvm</tt> and that directory contains a 
-    sub-directory named <tt>etc</tt> then that directory will be tried 
-    next.</li>
-    <li>If the LLVM installation directory (typically <tt>/usr/local/llvm</tt>
-    contains a sub-directory named <tt>etc</tt> then that directory will be
-    tried last.</li>
-    <li>A standard "system" directory will be searched next. This is typically
-    <tt>/etc/llvm</tt> on UNIX&trade; and <tt>C:\WINNT</tt> on Microsoft
-    Windows&trade;.</li>
-    <li>If the configuration file sought still can't be found, <tt>llvmc</tt>
-    will print an error message and exit.</li>
-  </ol>
-  <p>The first file found in this search will be used. Other files with the 
-  same name will be ignored even if they exist in one of the subsequent search
-  locations.</p>
+<div class="doc_section"><a class="toc-backref" href="#id9" id="conditional-evaluation-the-case-expression" name="conditional-evaluation-the-case-expression">Conditional evaluation: the <tt class="docutils literal"><span class="pre">case</span></tt> expression</a></div>
+<p>The 'case' construct can be used to calculate weights of the optional
+edges and to choose between several alternative command line strings
+in the <tt class="docutils literal"><span class="pre">cmd_line</span></tt> tool property. It is designed after the
+similarly-named construct in functional languages and takes the form
+<tt class="docutils literal"><span class="pre">(case</span> <span class="pre">(test_1),</span> <span class="pre">statement_1,</span> <span class="pre">(test_2),</span> <span class="pre">statement_2,</span> <span class="pre">...</span> <span class="pre">(test_N),</span>
+<span class="pre">statement_N)</span></tt>. The statements are evaluated only if the corresponding
+tests evaluate to true.</p>
+<p>Examples:</p>
+<pre class="literal-block">
+// Increases edge weight by 5 if &quot;-A&quot; is provided on the
+// command-line, and by 5 more if &quot;-B&quot; is also provided.
+(case
+    (switch_on &quot;A&quot;), (inc_weight 5),
+    (switch_on &quot;B&quot;), (inc_weight 5))
+
+// Evaluates to &quot;cmdline1&quot; if option &quot;-A&quot; is provided on the
+// command line, otherwise to &quot;cmdline2&quot;
+(case
+    (switch_on &quot;A&quot;), &quot;cmdline1&quot;,
+    (switch_on &quot;B&quot;), &quot;cmdline2&quot;,
+    (default), &quot;cmdline3&quot;)
+</pre>
+<p>Note the slight difference in 'case' expression handling in contexts
+of edge weights and command line specification - in the second example
+the value of the <tt class="docutils literal"><span class="pre">&quot;B&quot;</span></tt> switch is never checked when switch <tt class="docutils literal"><span class="pre">&quot;A&quot;</span></tt> is
+enabled, and the whole expression always evaluates to <tt class="docutils literal"><span class="pre">&quot;cmdline1&quot;</span></tt> in
+that case.</p>
+<p>Case expressions can also be nested, i.e. the following is legal:</p>
+<pre class="literal-block">
+(case (switch_on &quot;E&quot;), (case (switch_on &quot;o&quot;), ..., (default), ...)
+      (default), ...)
+</pre>
+<p>You should, however, try to avoid doing that because it hurts
+readability. It is usually better to split tool descriptions and/or
+use TableGen inheritance instead.</p>
+<ul class="simple">
+<li>Possible tests are:<ul>
+<li><tt class="docutils literal"><span class="pre">switch_on</span></tt> - Returns true if a given command-line option is
+provided by the user. Example: <tt class="docutils literal"><span class="pre">(switch_on</span> <span class="pre">&quot;opt&quot;)</span></tt>. Note that
+you have to define all possible command-line options separately in
+the tool descriptions. See the next doc_text for the discussion of
+different kinds of command-line options.</li>
+<li><tt class="docutils literal"><span class="pre">parameter_equals</span></tt> - Returns true if a command-line parameter equals
+a given value. Example: <tt class="docutils literal"><span class="pre">(parameter_equals</span> <span class="pre">&quot;W&quot;,</span> <span class="pre">&quot;all&quot;)</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">element_in_list</span></tt> - Returns true if a command-line parameter list
+includes a given value. Example: <tt class="docutils literal"><span class="pre">(parameter_in_list</span> <span class="pre">&quot;l&quot;,</span> <span class="pre">&quot;pthread&quot;)</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">input_languages_contain</span></tt> - Returns true if a given language
+belongs to the current input language set. Example:
+<tt class="docutils literal"><span class="pre">`(input_languages_contain</span> <span class="pre">&quot;c++&quot;)</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">in_language</span></tt> - Evaluates to true if the language of the input
+file equals to the argument. Valid only when using <tt class="docutils literal"><span class="pre">case</span></tt>
+expression in a <tt class="docutils literal"><span class="pre">cmd_line</span></tt> tool property. Example:
+<tt class="docutils literal"><span class="pre">`(in_language</span> <span class="pre">&quot;c++&quot;)</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">not_empty</span></tt> - Returns true if a given option (which should be
+either a parameter or a parameter list) is set by the
+user. Example: <tt class="docutils literal"><span class="pre">`(not_empty</span> <span class="pre">&quot;o&quot;)</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">default</span></tt> - Always evaluates to true. Should always be the last
+test in the <tt class="docutils literal"><span class="pre">case</span></tt> expression.</li>
+<li><tt class="docutils literal"><span class="pre">and</span></tt> - A standard logical combinator that returns true iff all
+of its arguments return true. Used like this: <tt class="docutils literal"><span class="pre">(and</span> <span class="pre">(test1),</span>
+<span class="pre">(test2),</span> <span class="pre">...</span> <span class="pre">(testN))</span></tt>. Nesting of <tt class="docutils literal"><span class="pre">and</span></tt> and <tt class="docutils literal"><span class="pre">or</span></tt> is allowed,
+but not encouraged.</li>
+<li><tt class="docutils literal"><span class="pre">or</span></tt> - Another logical combinator that returns true only if any
+one of its arguments returns true. Example: <tt class="docutils literal"><span class="pre">(or</span> <span class="pre">(test1),</span>
+<span class="pre">(test2),</span> <span class="pre">...</span> <span class="pre">(testN))</span></tt>.</li>
+</ul>
+</li>
+</ul>
 </div>
-
-<div class="doc_subsubsection"><a name="filenames">File Names</a></div>
 <div class="doc_text">
-  <p>In the directories searched, each configuration file is given a specific
-  name to foster faster lookup (so llvmc doesn't have to do directory searches).
-  The name of a given language specific configuration file is simply the same 
-  as the suffix used to identify files containing source in that language. 
-  For example, a configuration file for C++ source might be named 
-  <tt>cpp</tt>, <tt>C</tt>, or <tt>cxx</tt>. For languages that support multiple
-  file suffixes, multiple (probably identical) files (or symbolic links) will
-  need to be provided.</p>
+<div class="doc_section"><a class="toc-backref" href="#id10" id="language-map" name="language-map">Language map</a></div>
+<p>One last thing that you will need to modify when adding support for a
+new language to LLVMC is the language map, which defines mappings from
+file extensions to language names. It is used to choose the proper
+toolchain(s) for a given input file set. Language map definition is
+located in the file <tt class="docutils literal"><span class="pre">Tools.td</span></tt> and looks like this:</p>
+<pre class="literal-block">
+def LanguageMap : LanguageMap&lt;
+    [LangToSuffixes&lt;&quot;c++&quot;, [&quot;cc&quot;, &quot;cp&quot;, &quot;cxx&quot;, &quot;cpp&quot;, &quot;CPP&quot;, &quot;c++&quot;, &quot;C&quot;]&gt;,
+     LangToSuffixes&lt;&quot;c&quot;, [&quot;c&quot;]&gt;,
+     ...
+    ]&gt;;
+</pre>
 </div>
-
-<div class="doc_subsubsection"><a name="whatgetsread">What Gets Read</a></div>
 <div class="doc_text">
-  <p>Which configuration files are read depends on the command line options and 
-  the suffixes of the file names provided on <tt>llvmc</tt>'s command line. Note
-  that the <tt>-x LANGUAGE</tt> option alters the language that <tt>llvmc</tt>
-  uses for the subsequent files on the command line.  Only the configuration 
-  files actually needed to complete <tt>llvmc</tt>'s task are read. Other 
-  language specific files will be ignored.</p>
+<div class="doc_section"><a class="toc-backref" href="#id11" id="references" name="references">References</a></div>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1" name="id2">[1]</a></td><td>TableGen Fundamentals
+<a class="reference" href="http://llvm.cs.uiuc.edu/docs/TableGenFundamentals.html">http://llvm.cs.uiuc.edu/docs/TableGenFundamentals.html</a></td></tr>
+</tbody>
+</table>
 </div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="syntax"></a>Syntax</div>
-<div class="doc_text">
-  <p>The syntax of the configuration files is very simple and somewhat
-  compatible with Java's property files. Here are the syntax rules:</p>
-  <ul>
-    <li>The file encoding is ASCII.</li>
-    <li>The file is line oriented. There should be one configuration definition 
-    per line. Lines are terminated by the newline (0x0A) and/or carriage return
-    characters (0x0D)</li>
-    <li>A backslash (<tt>\</tt>) before a newline causes the newline to be
-    ignored. This is useful for line continuation of long definitions. A
-    backslash anywhere else is recognized as a backslash.</li>
-    <li>A configuration item consists of a name, an <tt>=</tt> and a value.</li>
-    <li>A name consists of a sequence of identifiers separated by period.</li>
-    <li>An identifier consists of specific keywords made up of only lower case
-    and upper case letters (e.g. <tt>lang.name</tt>).</li>
-    <li>Values come in four flavors: booleans, integers, commands and 
-    strings.</li>
-    <li>Valid "false" boolean values are <tt>false False FALSE no No NO
-      off Off</tt> and <tt>OFF</tt>.</li>
-    <li>Valid "true" boolean values are <tt>true True TRUE yes Yes YES
-      on On</tt> and <tt>ON</tt>.</li>
-    <li>Integers are simply sequences of digits.</li>
-    <li>Commands start with a program name and are followed by a sequence of
-    words that are passed to that program as command line arguments. Program
-    arguments that begin and end with the <tt>%</tt> sign will have their value
-    substituted. Program names beginning with <tt>/</tt> are considered to be
-    absolute. Otherwise the <tt>PATH</tt> will be applied to find the program to
-    execute.</li>
-    <li>Strings are composed of multiple sequences of characters from the
-    character class <tt>[-A-Za-z0-9_:%+/\\|,]</tt> separated by white
-    space.</li>
-    <li>White space on a line is folded. Multiple blanks or tabs will be
-    reduced to a single blank.</li>
-    <li>White space before the configuration item's name is ignored.</li>
-    <li>White space on either side of the <tt>=</tt> is ignored.</li>
-    <li>White space in a string value is used to separate the individual
-    components of the string value but otherwise ignored.</li>
-    <li>Comments are introduced by the <tt>#</tt> character. Everything after a
-    <tt>#</tt> and before the end of line is ignored.</li>
-  </ul>
 </div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="items">Configuration Items</a></div>
-<div class="doc_text">
-  <p>The table below provides definitions of the allowed configuration items
-  that may appear in a configuration file. Every item has a default value and
-  does not need to appear in the configuration file. Missing items will have the 
-  default value. Each identifier may appear as all lower case, first letter
-  capitalized or all upper case.</p>
-  <table>
-    <tbody>
-      <tr>
-        <th>Name</th>
-        <th>Value Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-      <tr><td colspan="4"><h4>LLVMC ITEMS</h4></td></tr>
-      <tr>
-        <td><b>version</b></td>
-        <td>string</td>
-        <td class="td_left">Provides the version string for the contents of this
-          configuration file. What is accepted as a legal configuration file
-          will change over time and this item tells <tt>llvmc</tt> which version
-          should be expected.</td>
-        <td><i>b</i></td>
-      </tr>
-      <tr><td colspan="4"><h4>LANG ITEMS</h4></td></tr>
-      <tr>
-        <td><b>lang.name</b></td>
-        <td>string</td>
-        <td class="td_left">Provides the common name for a language definition. 
-          For example "C++", "Pascal", "FORTRAN", etc.</td>
-        <td><i>blank</i></td>
-      </tr>
-      <tr>
-        <td><b>lang.opt1</b></td>
-        <td>string</td>
-        <td class="td_left">Specifies the parameters to give the optimizer when
-          <tt>-O1</tt> is specified on the <tt>llvmc</tt> command line.</td>
-        <td><tt>-simplifycfg -instcombine -mem2reg</tt></td>
-      </tr>
-      <tr>
-        <td><b>lang.opt2</b></td>
-        <td>string</td>
-        <td class="td_left">Specifies the parameters to give the optimizer when
-          <tt>-O2</tt> is specified on the <tt>llvmc</tt> command line.</td>
-        <td><i>TBD</i></td>
-      </tr>
-      <tr>
-        <td><b>lang.opt3</b></td>
-        <td>string</td>
-        <td class="td_left">Specifies the parameters to give the optimizer when
-          <tt>-O3</tt> is specified on the <tt>llvmc</tt> command line.</td>
-        <td><i>TBD</i></td>
-      </tr>
-      <tr>
-        <td><b>lang.opt4</b></td>
-        <td>string</td>
-        <td class="td_left">Specifies the parameters to give the optimizer when
-          <tt>-O4</tt> is specified on the <tt>llvmc</tt> command line.</td>
-        <td><i>TBD</i></td>
-      </tr>
-      <tr>
-        <td><b>lang.opt5</b></td>
-        <td>string</td>
-        <td class="td_left">Specifies the parameters to give the optimizer when 
-          <tt>-O5</tt> is specified on the <tt>llvmc</tt> command line.</td>
-        <td><i>TBD</i></td>
-      </tr>
-      <tr><td colspan="4"><h4>PREPROCESSOR ITEMS</h4></td></tr>
-      <tr>
-        <td><b>preprocessor.command</b></td>
-        <td>command</td>
-        <td class="td_left">This provides the command prototype that will be used
-          to run the preprocessor.  This is generally only used with the 
-          <tt>-E</tt> option.</td>
-        <td>&lt;blank&gt;</td>
-      </tr>
-      <tr>
-        <td><b>preprocessor.required</b></td>
-        <td>boolean</td>
-        <td class="td_left">This item specifies whether the pre-processing phase
-          is required by the language. If the value is true, then the
-          <tt>preprocessor.command</tt> value must not be blank. With this option,
-          <tt>llvmc</tt> will always run the preprocessor as it assumes that the
-          translation and optimization phases don't know how to pre-process their
-          input.</td>
-        <td>false</td>
-      </tr>
-      <tr><td colspan="4"><h4>TRANSLATOR ITEMS</h4></td></tr>
-      <tr>
-        <td><b>translator.command</b></td>
-        <td>command</td>
-        <td class="td_left">This provides the command prototype that will be used 
-          to run the translator. Valid substitutions are <tt>%in%</tt> for the 
-          input file and <tt>%out%</tt> for the output file.</td>
-        <td>&lt;blank&gt;</td>
-      </tr>
-      <tr>
-        <td><b>translator.output</b></td>
-        <td><tt>bitcode</tt> or <tt>assembly</tt></td>
-        <td class="td_left">This item specifies the kind of output the language's 
-          translator generates.</td>
-        <td><tt>bitcode</tt></td>
-      </tr>
-      <tr>
-        <td><b>translator.preprocesses</b></td>
-        <td>boolean</td>
-        <td class="td_left">Indicates that the translator also preprocesses. If
-          this is true, then <tt>llvmc</tt> will skip the pre-processing phase
-          whenever the final phase is not pre-processing.</td>
-        <td><tt>false</tt></td>
-      </tr>
-      <tr><td colspan="4"><h4>OPTIMIZER ITEMS</h4></td></tr>
-      <tr>
-        <td><b>optimizer.command</b></td>
-        <td>command</td>
-        <td class="td_left">This provides the command prototype that will be used 
-          to run the optimizer. Valid substitutions are <tt>%in%</tt> for the 
-          input file and <tt>%out%</tt> for the output file.</td>
-        <td>&lt;blank&gt;</td>
-      </tr>
-      <tr>
-        <td><b>optimizer.output</b></td>
-        <td><tt>bitcode</tt> or <tt>assembly</tt></td>
-        <td class="td_left">This item specifies the kind of output the language's 
-          optimizer generates. Valid values are "assembly" and "bitcode"</td>
-        <td><tt>bitcode</tt></td>
-      </tr>
-      <tr>
-        <td><b>optimizer.preprocesses</b></td>
-        <td>boolean</td>
-        <td class="td_left">Indicates that the optimizer also preprocesses. If
-          this is true, then <tt>llvmc</tt> will skip the pre-processing phase
-          whenever the final phase is optimization or later.</td>
-        <td><tt>false</tt></td>
-      </tr>
-      <tr>
-        <td><b>optimizer.translates</b></td>
-        <td>boolean</td>
-        <td class="td_left">Indicates that the optimizer also translates. If
-          this is true, then <tt>llvmc</tt> will skip the translation phase
-          whenever the final phase is optimization or later.</td>
-        <td><tt>false</tt></td>
-      </tr>
-      <tr><td colspan="4"><h4>ASSEMBLER ITEMS</h4></td></tr>
-      <tr>
-        <td><b>assembler.command</b></td>
-        <td>command</td>
-        <td class="td_left">This provides the command prototype that will be used 
-          to run the assembler. Valid substitutions are <tt>%in%</tt> for the 
-          input file and <tt>%out%</tt> for the output file.</td>
-        <td>&lt;blank&gt;</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="substitutions">Substitutions</a></div>
-<div class="doc_text">
-  <p>On any configuration item that ends in <tt>command</tt>, you must
-  specify substitution tokens.  Substitution tokens begin and end with a percent
-  sign (<tt>%</tt>) and are replaced by the corresponding text. Any substitution
-  token may be given on any <tt>command</tt> line but some are more useful than
-  others. In particular each command <em>should</em> have both an <tt>%in%</tt>
-  and an <tt>%out%</tt> substitution. The table below provides definitions of
-  each of the allowed substitution tokens.</p>
-  <table>
-    <tbody>
-      <tr>
-        <th>Substitution Token</th>
-        <th>Replacement Description</th>
-      </tr>
-      <tr>
-        <td><tt>%args%</tt></td>
-        <td class="td_left">Replaced with all the tool-specific arguments given
-          to <tt>llvmc</tt> via the <tt>-T</tt> set of options. This just allows
-          you to place these arguments in the correct place on the command line.
-          If the <tt>%args%</tt> option does not appear on your command line, 
-          then you are explicitly disallowing the <tt>-T</tt> option for your 
-          tool.
-        </td>
-      <tr>
-        <td><tt>%force%</tt></td>
-        <td class="td_left">Replaced with the <tt>-f</tt> option if it was
-          specified on the <tt>llvmc</tt> command line. This is intended to tell
-          the compiler tool to force the overwrite of output files. 
-        </td>
-      </tr>
-      <tr>
-        <td><tt>%in%</tt></td>
-        <td class="td_left">Replaced with the full path of the input file. You
-          needn't worry about the cascading of file names. <tt>llvmc</tt> will
-          create temporary files and ensure that the output of one phase is the
-          input to the next phase.</td>
-      </tr>
-      <tr>
-        <td><tt>%opt%</tt></td>
-        <td class="td_left">Replaced with the optimization options for the
-          tool. If the tool understands the <tt>-O</tt> options then that will
-          be passed. Otherwise, the <tt>lang.optN</tt> series of configuration
-          items will specify which arguments are to be given.</td>
-      </tr>
-      <tr>
-        <td><tt>%out%</tt></td>
-        <td class="td_left">Replaced with the full path of the output file.
-          Note that this is not necessarily the output file specified with the
-          <tt>-o</tt> option on <tt>llvmc</tt>'s command line. It might be a
-          temporary file that will be passed to a subsequent phase's input.
-        </td>
-      </tr>
-      <tr>
-        <td><tt>%stats%</tt></td>
-        <td class="td_left">If your command accepts the <tt>-stats</tt> option,
-          use this substitution token. If the user requested <tt>-stats</tt> 
-          from the <tt>llvmc</tt> command line then this token will be replaced
-          with <tt>-stats</tt>, otherwise it will be ignored.
-        </td>
-      </tr>
-      <tr>
-        <td><tt>%target%</tt></td>
-        <td class="td_left">Replaced with the name of the target "machine" for 
-          which code should be generated. The value used here is taken from the
-          <tt>llvmc</tt> option <tt>-march</tt>.
-        </td>
-      </tr>
-      <tr>
-        <td><tt>%time%</tt></td>
-        <td class="td_left">If your command accepts the <tt>-time-passes</tt> 
-          option, use this substitution token. If the user requested 
-          <tt>-time-passes</tt> from the <tt>llvmc</tt> command line then this 
-          token will be replaced with <tt>-time-passes</tt>, otherwise it will 
-          be ignored.
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsection"><a name="sample">Sample Config File</a></div>
-<div class="doc_text">
-  <p>Since an example is always instructive, here's how the Stacker language
-  configuration file looks.</p>
-  <pre><tt>
-# Stacker Configuration File For llvmc
-
-##########################################################
-# Language definitions
-##########################################################
-  lang.name=Stacker 
-  lang.opt1=-simplifycfg -instcombine -mem2reg
-  lang.opt2=-simplifycfg -instcombine -mem2reg -load-vn \
-    -gcse -dse -scalarrepl -sccp 
-  lang.opt3=-simplifycfg -instcombine -mem2reg -load-vn \
-    -gcse -dse -scalarrepl -sccp -branch-combine -adce \
-    -globaldce -inline -licm 
-  lang.opt4=-simplifycfg -instcombine -mem2reg -load-vn \
-    -gcse -dse -scalarrepl -sccp -ipconstprop \
-    -branch-combine -adce -globaldce -inline -licm 
-  lang.opt5=-simplifycfg -instcombine -mem2reg --load-vn \
-    -gcse -dse scalarrepl -sccp -ipconstprop \
-    -branch-combine -adce -globaldce -inline -licm \
-    -block-placement
-
-##########################################################
-# Pre-processor definitions
-##########################################################
-
-  # Stacker doesn't have a preprocessor but the following
-  # allows the -E option to be supported
-  preprocessor.command=cp %in% %out%
-  preprocessor.required=false
-
-##########################################################
-# Translator definitions
-##########################################################
-
-  # To compile stacker source, we just run the stacker
-  # compiler with a default stack size of 2048 entries.
-  translator.command=stkrc -s 2048 %in% -o %out% %time% \
-    %stats% %force% %args%
-
-  # stkrc doesn't preprocess but we set this to true so
-  # that we don't run the cp command by default.
-  translator.preprocesses=true
-
-  # The translator is required to run.
-  translator.required=true
-
-  # stkrc doesn't handle the -On options
-  translator.output=bitcode
-
-##########################################################
-# Optimizer definitions
-##########################################################
-  
-  # For optimization, we use the LLVM "opt" program
-  optimizer.command=opt %in% -o %out% %opt% %time% %stats% \
-    %force% %args%
-
-  optimizer.required = true
-
-  # opt doesn't translate
-  optimizer.translates = no
-
-  # opt doesn't preprocess
-  optimizer.preprocesses=no
-
-  # opt produces bitcode
-  optimizer.output = bc
-
-##########################################################
-# Assembler definitions
-##########################################################
-  assembler.command=llc %in% -o %out% %target% %time% %stats%
-</tt></pre>
-</div> 
-
-<!-- *********************************************************************** -->
-<div class="doc_section"><a name="glossary">Glossary</a></div>
-<!-- *********************************************************************** -->
-<div class="doc_text">
-  <p>This document uses precise terms in reference to the various artifacts and
-  concepts related to compilation. The terms used throughout this document are
-  defined below.</p>
-  <dl>
-    <dt><a name="def_assembly"><b>assembly</b></a></dt> 
-    <dd>A compilation <a href="#def_phase">phase</a> in which LLVM bitcode or 
-    LLVM assembly code is assembled to a native code format (either target 
-    specific aseembly language or the platform's native object file format).
-    </dd>
-
-    <dt><a name="def_compiler"><b>compiler</b></a></dt>
-    <dd>Refers to any program that can be invoked by <tt>llvmc</tt> to accomplish 
-    the work of one or more compilation <a href="#def_phase">phases</a>.</dd>
-
-    <dt><a name="def_driver"><b>driver</b></a></dt>
-    <dd>Refers to <tt>llvmc</tt> itself.</dd>
-
-    <dt><a name="def_linking"><b>linking</b></a></dt>
-    <dd>A compilation <a href="#def_phase">phase</a> in which LLVM bitcode files 
-    and (optionally) native system libraries are combined to form a complete 
-    executable program.</dd>
-
-    <dt><a name="def_optimization"><b>optimization</b></a></dt>
-    <dd>A compilation <a href="#def_phase">phase</a> in which LLVM bitcode is 
-    optimized.</dd>
-
-    <dt><a name="def_phase"><b>phase</b></a></dt>
-    <dd>Refers to any one of the five compilation phases that that 
-    <tt>llvmc</tt> supports. The five phases are:
-    <a href="#def_preprocessing">preprocessing</a>, 
-    <a href="#def_translation">translation</a>,
-    <a href="#def_optimization">optimization</a>,
-    <a href="#def_assembly">assembly</a>,
-    <a href="#def_linking">linking</a>.</dd>
-
-    <dt><a name="def_sourcelanguage"><b>source language</b></a></dt>
-    <dd>Any common programming language (e.g. C, C++, Java, Stacker, ML,
-    FORTRAN).  These languages are distinguished from any of the lower level
-    languages (such as LLVM or native assembly), by the fact that a 
-    <a href="#def_translation">translation</a> <a href="#def_phase">phase</a> 
-    is required before LLVM can be applied.</dd> 
-
-    <dt><a name="def_tool"><b>tool</b></a></dt>
-    <dd>Refers to any program in the LLVM tool set.</dd>
-
-    <dt><a name="def_translation"><b>translation</b></a></dt>
-    <dd>A compilation <a href="#def_phase">phase</a> in which 
-    <a href="#def_sourcelanguage">source language</a> code is translated into 
-    either LLVM assembly language or LLVM bitcode.</dd>
-  </dl>
-</div>
-<!-- *********************************************************************** -->
-<hr>
-<address> <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
- src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a><a
- href="http://validator.w3.org/check/referer"><img
- src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01!"></a><a
- href="mailto:rspencer@x10sys.com">Reid Spencer</a><br>
-<a href="http://llvm.org">The LLVM Compiler Infrastructure</a><br>
-Last modified: $Date$
+<hr />
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!" /></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" /></a>
+  <a href="http://llvm.org">The LLVM Compiler Infrastructure</a><br/>
+  Last modified: $Date$
 </address>
-<!-- vim: sw=2
--->
 </body>
 </html>

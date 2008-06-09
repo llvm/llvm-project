@@ -84,6 +84,7 @@
   </li>
   <li><a href="#targetimpls">Target-specific Implementation Notes</a>
     <ul>
+    <li><a href="#tailcallopt">Tail call optimization</a></li>
     <li><a href="#x86">The X86 backend</a></li>
     <li><a href="#ppc">The PowerPC backend</a>
       <ul>
@@ -1620,7 +1621,51 @@ are specific to the code generator for a particular target.</p>
 
 </div>
 
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="tailcallopt">Tail call optimization</a>
+</div>
 
+<div class="doc_text">
+  <p>Tail call optimization, callee reusing the stack of the caller, is currently supported on x86/x86-64 and PowerPC. It is performed if:
+    <ul>
+      <li>Caller and callee have the calling convention <tt>fastcc</tt>.</li>
+      <li>The call is a tail call - in tail position (ret immediately follows call and ret uses value of call or is void).</li>
+      <li>Option <tt>-tailcallopt</tt> is enabled.</li>
+      <li>Platform specific constraints are met.</li>
+    </ul>
+  </p>
+
+  <p>x86/x86-64 constraints:
+    <ul>
+      <li>No variable argument lists are used.</li>
+      <li>On x86-64 when generating GOT/PIC code only module-local calls (visibility = hidden or protected) are supported.</li>
+    </ul>
+  </p>
+  <p>PowerPC constraints:
+    <ul>
+      <li>No variable argument lists are used.</li>
+      <li>No byval parameters are used.</li>
+      <li>On ppc32/64 GOT/PIC only module-local calls (visibility = hidden or protected) are supported.</li>
+    </ul>
+  </p>
+  <p>Example:</p>
+  <p>Call as <tt>llc -tailcallopt test.ll</tt>.
+    <div class="doc_code">
+      <pre>
+declare fastcc i32 @tailcallee(i32 inreg %a1, i32 inreg %a2, i32 %a3, i32 %a4)
+
+define fastcc i32 @tailcaller(i32 %in1, i32 %in2) {
+  %l1 = add i32 %in1, %in2
+  %tmp = tail call fastcc i32 @tailcallee(i32 %in1 inreg, i32 %in2 inreg, i32 %in1, i32 %l1)
+  ret i32 %tmp
+}</pre>
+    </div>
+  </p>
+  <p>Implications of <tt>-tailcallopt</tt>:</p>
+  <p>To support tail call optimization in situations where the callee has more arguments than the caller a 'callee pops arguments' convention is used. This currently causes each <tt>fastcc</tt> call that is not tail call optimized (because one or more of above constraints are not met) to be followed by a readjustment of the stack. So performance might be worse in such cases.</p>
+  <p>On x86 and x86-64 one register is reserved for indirect tail calls (e.g via a function pointer). So there is one less register for integer argument passing. For x86 this means 2 registers (if <tt>inreg</tt> parameter attribute is used) and for x86-64 this means 5 register are used.</p>
+</div>
 <!-- ======================================================================= -->
 <div class="doc_subsection">
   <a name="x86">The X86 backend</a>
