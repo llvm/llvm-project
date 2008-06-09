@@ -23,6 +23,12 @@ all:: html man ps
 
 clean:
 	rm -f pod2htm*.*~~ $(HTML) $(MAN) $(PS)
+
+# To create other directories, as needed, and timestamp their creation
+%/.dir:
+	-mkdir $* > /dev/null
+	date > $@
+
 else
 
 # Otherwise, if not in BUILD_FOR_WEBSITE mode, use the project info.
