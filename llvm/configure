@@ -34246,7 +34246,7 @@ echo $ECHO_N "checking llvm-gcc component support... $ECHO_C" >&6; }
 
   LLVMGCC_MAJVERS=$llvmgccmajvers
 
-  llvmgcclangs=`"$LLVMGCC" -v --help 2>&1 | grep '^Configured with:' | sed 's/^.*--enable-languages=\([^ -]*\).*/\1/'`
+  llvmgcclangs=`"$LLVMGCC" -v --help 2>&1 | grep '^Configured with:' | sed 's/^.*--enable-languages=\([^ ]*\).*/\1/'`
   LLVMGCC_LANGS=$llvmgcclangs
 
   { echo "$as_me:$LINENO: result: ok" >&5
