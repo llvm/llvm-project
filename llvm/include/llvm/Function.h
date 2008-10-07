@@ -158,7 +158,7 @@ public:
   ///
   void addFnAttr(Attributes N) { 
     // Function Attributes are stored at ~0 index 
-    addAttribute(~0, N);
+    addAttribute(~0U, N);
   }
 
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
