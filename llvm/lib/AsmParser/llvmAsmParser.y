@@ -1296,9 +1296,9 @@ FuncAttr      : NORETURN { $$ = Attribute::NoReturn; }
               | SIGNEXT  { $$ = Attribute::SExt;     }
               | READNONE { $$ = Attribute::ReadNone; }
               | READONLY { $$ = Attribute::ReadOnly; }
-              | NOINLINE { $$ = Attribute::NoInline }
-              | ALWAYSINLINE { $$ = Attribute::AlwaysInline }
-              | OPTSIZE { $$ = Attribute::OptimizeForSize }
+              | NOINLINE { $$ = Attribute::NoInline; }
+              | ALWAYSINLINE { $$ = Attribute::AlwaysInline; }
+              | OPTSIZE { $$ = Attribute::OptimizeForSize; }
               ;
 
 OptFuncAttrs  : /* empty */ { $$ = Attribute::None; }
