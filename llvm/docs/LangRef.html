@@ -4333,8 +4333,8 @@ function is bound to the result argument.
   %r = call %struct.A @foo()                        <i>; yields { 32, i8 }</i>
   %gr = extractvalue %struct.A %r, 0                <i>; yields i32</i>
   %gr1 = extractvalue %struct.A %r, 1               <i>; yields i8</i>
-  %Z = call void @foo() noreturn                    <i>; indicates that foo never returns nomrally
-  %ZZ = call zeroext i32 @bar()                     <i>; Return value is zero extended
+  %Z = call void @foo() noreturn                    <i>; indicates that %foo never returns nomrally</i>
+  %ZZ = call zeroext i32 @bar()                     <i>; Return value is %zero extended</i>
 </pre>
 
 </div>
