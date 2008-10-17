@@ -64,7 +64,7 @@ Value *DbgStopPointInst::getFileName() const {
   GlobalVariable *GV = cast<GlobalVariable>(getContext());
   if (!GV->hasInitializer()) return NULL;
   ConstantStruct *CS = cast<ConstantStruct>(GV->getInitializer());
-  return CS->getOperand(4);
+  return CS->getOperand(3);
 }
 
 Value *DbgStopPointInst::getDirectory() const {
