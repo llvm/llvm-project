@@ -425,6 +425,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\lib\CodeGen\PBQP.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\lib\CodeGen\PHIElimination.cpp"
 				>
 			</File>
@@ -450,6 +454,10 @@
 			</File>
 			<File
 				RelativePath="..\..\lib\CodeGen\RegAllocLocal.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\lib\CodeGen\RegAllocPBQP.cpp"
 				>
 			</File>
 			<File
@@ -736,6 +744,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\llvm\CodeGen\Passes.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\lib\CodeGen\PBQP.h"
 				>
 			</File>
 			<File
