@@ -5784,6 +5784,11 @@ Instruction *InstCombiner::FoldICmpDivCst(ICmpInst &ICI, BinaryOperator *DivI,
     return 0;
   if (DivRHS->isZero())
     return 0; // The ProdOV computation fails on divide by zero.
+  if (DivIsSigned && DivRHS->isAllOnesValue())
+    return 0; // The overflow computation also screws up here
+  if (DivRHS->isOne())
+    return 0; // Not worth bothering, and eliminates some funny cases
+              // with INT_MIN.
 
   // Compute Prod = CI * DivRHS. We are essentially solving an equation
   // of form X/C1=C2. We solve for X by multiplying C1 (DivRHS) and 
@@ -5810,7 +5815,6 @@ Instruction *InstCombiner::FoldICmpDivCst(ICmpInst &ICI, BinaryOperator *DivI,
   int LoOverflow = 0, HiOverflow = 0;
   ConstantInt *LoBound = 0, *HiBound = 0;
   
-  
   if (!DivIsSigned) {  // udiv
     // e.g. X/5 op 3  --> [15, 20)
     LoBound = Prod;
@@ -5829,11 +5833,13 @@ Instruction *InstCombiner::FoldICmpDivCst(ICmpInst &ICI, BinaryOperator *DivI,
         HiOverflow = AddWithOverflow(HiBound, Prod, DivRHS, true);
     } else {                       // (X / pos) op neg
       // e.g. X/5 op -3  --> [-15-4, -15+1) --> [-19, -14)
-      Constant *DivRHSH = ConstantExpr::getNeg(SubOne(DivRHS));
-      LoOverflow = AddWithOverflow(LoBound, Prod,
-                                   cast<ConstantInt>(DivRHSH), true) ? -1 : 0;
       HiBound = AddOne(Prod);
-      HiOverflow = ProdOV ? -1 : 0;
+      LoOverflow = HiOverflow = ProdOV ? -1 : 0;
+      if (!LoOverflow) {
+        ConstantInt* DivNeg = cast<ConstantInt>(ConstantExpr::getNeg(DivRHS));
+        LoOverflow = AddWithOverflow(LoBound, HiBound, DivNeg,
+                                     true) ? -1 : 0;
+       }
     }
   } else if (DivRHS->getValue().isNegative()) { // Divisor is < 0.
     if (CmpRHSV == 0) {       // (X / neg) op 0
@@ -5846,14 +5852,13 @@ Instruction *InstCombiner::FoldICmpDivCst(ICmpInst &ICI, BinaryOperator *DivI,
       }
     } else if (CmpRHSV.isStrictlyPositive()) {   // (X / neg) op pos
       // e.g. X/-5 op 3  --> [-19, -14)
+      HiBound = AddOne(Prod);
       HiOverflow = LoOverflow = ProdOV ? -1 : 0;
       if (!LoOverflow)
-        LoOverflow = AddWithOverflow(LoBound, Prod, AddOne(DivRHS), true) ?-1:0;
-      HiBound = AddOne(Prod);
+        LoOverflow = AddWithOverflow(LoBound, HiBound, DivRHS, true) ? -1 : 0;
     } else {                       // (X / neg) op neg
-      // e.g. X/-5 op -3  --> [15, 20)
-      LoBound = Prod;
-      LoOverflow = HiOverflow = ProdOV ? 1 : 0;
+      LoBound = Prod;       // e.g. X/-5 op -3  --> [15, 20)
+      LoOverflow = HiOverflow = ProdOV;
       if (!HiOverflow)
         HiOverflow = SubWithOverflow(HiBound, Prod, DivRHS, true);
     }
