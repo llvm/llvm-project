@@ -3309,25 +3309,34 @@ at the location specified by the '<tt>&lt;pointer&gt;</tt>' operand.</p>
 <div class="doc_text">
 <h5>Syntax:</h5>
 <pre>
-  &lt;result&gt; = getelementptr &lt;ty&gt;* &lt;ptrval&gt;{, &lt;ty&gt; &lt;idx&gt;}*
+  &lt;result&gt; = getelementptr &lt;pty&gt;* &lt;ptrval&gt;{, &lt;ty&gt; &lt;idx&gt;}*
 </pre>
 
 <h5>Overview:</h5>
 
 <p>
 The '<tt>getelementptr</tt>' instruction is used to get the address of a
-subelement of an aggregate data structure.</p>
+subelement of an aggregate data structure. It performs address calculation only
+and does not access memory.</p>
 
 <h5>Arguments:</h5>
 
-<p>This instruction takes a list of integer operands that indicate what
-elements of the aggregate object to index to.  The actual types of the arguments
-provided depend on the type of the first pointer argument.  The
-'<tt>getelementptr</tt>' instruction is used to index down through the type
-levels of a structure or to a specific index in an array.  When indexing into a
-structure, only <tt>i32</tt> integer constants are allowed.  When indexing 
-into an array or pointer, only integers of 32 or 64 bits are allowed; 32-bit 
-values will be sign extended to 64-bits if required.</p>
+<p>The first argument is always a pointer, and forms the basis of the
+calculation. The remaining arguments are indices, that indicate which of the
+elements of the aggregate object are indexed. The interpretation of each index
+is dependent on the type being indexed into. The first index always indexes the
+pointer value given as the first argument, the second index indexes a value of
+the type pointed to (not necessarily the value directly pointed to, since the
+first index can be non-zero), etc. The first type indexed into must be a pointer
+value, subsequent types can be arrays, vectors and structs. Note that subsequent
+types being indexed into can never be pointers, since that would require loading
+the pointer before continuing calculation.</p>
+
+<p>The type of each index argument depends on the type it is indexing into.
+When indexing into a (packed) structure, only <tt>i32</tt> integer
+<b>constants</b> are allowed.  When indexing into an array, pointer or vector,
+only integers of 32 or 64 bits are allowed (also non-constants). 32-bit values
+will be sign extended to 64-bits if required.</p>
 
 <p>For example, let's consider a C code fragment and how it gets
 compiled to LLVM:</p>
@@ -3368,13 +3377,6 @@ entry:
 
 <h5>Semantics:</h5>
 
-<p>The index types specified for the '<tt>getelementptr</tt>' instruction depend
-on the pointer type that is being indexed into. <a href="#t_pointer">Pointer</a>
-and <a href="#t_array">array</a> types can use a 32-bit or 64-bit
-<a href="#t_integer">integer</a> type but the value will always be sign extended
-to 64-bits.  <a href="#t_struct">Structure</a> and <a href="#t_pstruct">packed
-structure</a> types require <tt>i32</tt> <b>constants</b>.</p>
-
 <p>In the example above, the first index is indexing into the '<tt>%ST*</tt>'
 type, which is a pointer, yielding a '<tt>%ST</tt>' = '<tt>{ i32, double, %RT
 }</tt>' type, a structure.  The second index indexes into the third element of
@@ -3414,7 +3416,11 @@ FAQ</a>.</p>
 
 <pre>
     <i>; yields [12 x i8]*:aptr</i>
-    %aptr = getelementptr {i32, [12 x i8]}* %sptr, i64 0, i32 1
+    %aptr = getelementptr {i32, [12 x i8]}* %saptr, i64 0, i32 1
+    <i>; yields i8*:vptr</i>
+    %vptr = getelementptr {i32, <2 x i8>}* %svptr, i64 0, i32 1, i32 1
+    <i>; yields i8*:eptr</i>
+    %eptr = getelementptr [12 x i8]* %aptr, i64 0, i32 1
 </pre>
 </div>
 
