@@ -984,7 +984,7 @@ static bool LinkFunctionProtos(Module *Dest, const Module *Src,
       // The only valid mappings are:
       // - SF is external declaration, which is effectively a no-op.
       // - SF is weak, when we just need to throw SF out.
-      if (!SF->isDeclaration())
+      if (!SF->isDeclaration() && !SF->mayBeOverridden())
         return Error(Err, "Function-Alias Collision on '" + SF->getName() +
                      "': symbol multiple defined");
     }
