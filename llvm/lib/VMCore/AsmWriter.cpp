@@ -1666,16 +1666,16 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     // only do this if the first argument is a pointer to a nonvararg function,
     // and if the return type is not a pointer to a function.
     //
+    Out << ' ';
     if (!FTy->isVarArg() &&
         (!isa<PointerType>(RetTy) ||
          !isa<FunctionType>(cast<PointerType>(RetTy)->getElementType()))) {
-      Out << ' '; printType(RetTy);
+      printType(RetTy);
+      Out << ' ';
       writeOperand(Operand, false);
     } else {
-      Out << ' ';
       writeOperand(Operand, true);
     }
-
     Out << '(';
     for (unsigned op = 3, Eop = I.getNumOperands(); op < Eop; ++op) {
       if (op > 3)
