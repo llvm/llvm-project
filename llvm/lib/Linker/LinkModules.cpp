@@ -662,12 +662,15 @@ static bool LinkGlobals(Module *Dest, const Module *Src,
       if (DGVar->isDeclaration() && SGV->isConstant() && !DGVar->isConstant())
         DGVar->setConstant(true);
 
-    // SGV is global, but DGV is alias. The only valid mapping is when SGV is
-    // external declaration, which is effectively a no-op. Also make sure
-    // linkage calculation was correct.
-    if (isa<GlobalAlias>(DGV) && !SGV->isDeclaration())
-      return Error(Err, "Global-Alias Collision on '" + SGV->getName() +
-                   "': symbol multiple defined");
+    // SGV is global, but DGV is alias.
+    if (isa<GlobalAlias>(DGV)) {
+      // The only valid mappings are:
+      // - SGV is external declaration, which is effectively a no-op.
+      // - SGV is weak, when we just need to throw SGV out.
+      if (!SGV->isDeclaration() && !SGV->mayBeOverridden())
+        return Error(Err, "Global-Alias Collision on '" + SGV->getName() +
+                     "': symbol multiple defined");
+    }
     
     // Set calculated linkage
     DGV->setLinkage(NewLinkage);
@@ -854,28 +857,39 @@ static bool LinkGlobalInits(Module *Dest, const Module *Src,
       // Figure out what the initializer looks like in the dest module...
       Constant *SInit =
         cast<Constant>(RemapOperand(SGV->getInitializer(), ValueMap));
+      // Grab destination global variable or alias.
+      GlobalValue *DGV = cast<GlobalValue>(ValueMap[SGV]->stripPointerCasts());
 
-      GlobalVariable *DGV =
-        cast<GlobalVariable>(ValueMap[SGV]->stripPointerCasts());
-      if (DGV->hasInitializer()) {
-        if (SGV->hasExternalLinkage()) {
-          if (DGV->getInitializer() != SInit)
-            return Error(Err, "Global Variable Collision on '" + SGV->getName() +
-                         "': global variables have different initializers");
-        } else if (DGV->mayBeOverridden()) {
-          // Nothing is required, mapped values will take the new global
-          // automatically.
-        } else if (SGV->mayBeOverridden()) {
-          // Nothing is required, mapped values will take the new global
-          // automatically.
-        } else if (DGV->hasAppendingLinkage()) {
-          assert(0 && "Appending linkage unimplemented!");
+      // If dest if global variable, check that initializers match.
+      if (GlobalVariable *DGVar = dyn_cast<GlobalVariable>(DGV)) {
+        if (DGVar->hasInitializer()) {
+          if (SGV->hasExternalLinkage()) {
+            if (DGVar->getInitializer() != SInit)
+              return Error(Err, "Global Variable Collision on '" +
+                           SGV->getName() +
+                           "': global variables have different initializers");
+          } else if (DGVar->mayBeOverridden()) {
+            // Nothing is required, mapped values will take the new global
+            // automatically.
+          } else if (SGV->mayBeOverridden()) {
+            // Nothing is required, mapped values will take the new global
+            // automatically.
+          } else if (DGVar->hasAppendingLinkage()) {
+            assert(0 && "Appending linkage unimplemented!");
+          } else {
+            assert(0 && "Unknown linkage!");
+          }
         } else {
-          assert(0 && "Unknown linkage!");
+          // Copy the initializer over now...
+          DGVar->setInitializer(SInit);
         }
       } else {
-        // Copy the initializer over now...
-        DGV->setInitializer(SInit);
+        // Destination is alias, the only valid situation is when source is
+        // weak. Also, note, that we already checked linkage in LinkGlobals(),
+        // thus we assert here.
+        // FIXME: Should we weaken this assumption, 'dereference' alias and
+        // check for initializer of aliasee?
+        assert(SGV->mayBeOverridden());
       }
     }
   }
