@@ -635,7 +635,8 @@ static bool InvalidateRegDef(MachineBasicBlock::iterator I,
 /// marked kill, then it must be due to register reuse. Transfer the kill info
 /// over.
 static void UpdateKills(MachineInstr &MI, BitVector &RegKills,
-                        std::vector<MachineOperand*> &KillOps) {
+                        std::vector<MachineOperand*> &KillOps,
+                        const TargetRegisterInfo* TRI) {
   const TargetInstrDesc &TID = MI.getDesc();
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
@@ -669,6 +670,11 @@ static void UpdateKills(MachineInstr &MI, BitVector &RegKills,
     unsigned Reg = MO.getReg();
     RegKills.reset(Reg);
     KillOps[Reg] = NULL;
+    // It also defines (or partially define) aliases.
+    for (const unsigned *AS = TRI->getAliasSet(Reg); *AS; ++AS) {
+      RegKills.reset(*AS);
+      KillOps[*AS] = NULL;
+    }
   }
 }
 
@@ -839,7 +845,7 @@ namespace {
             
             Spills.addAvailable(NewOp.StackSlotOrReMat, MI, NewPhysReg);
             --MII;
-            UpdateKills(*MII, RegKills, KillOps);
+            UpdateKills(*MII, RegKills, KillOps, TRI);
             DOUT << '\t' << *MII;
             
             DOUT << "Reuse undone!\n";
@@ -1283,7 +1289,7 @@ void LocalSpiller::RewriteMBB(MachineBasicBlock &MBB, VirtRegMap &VRM) {
         }
         // This invalidates Phys.
         Spills.ClobberPhysReg(Phys);
-        UpdateKills(*prior(MII), RegKills, KillOps);
+        UpdateKills(*prior(MII), RegKills, KillOps, TRI);
         DOUT << '\t' << *prior(MII);
       }
     }
@@ -1500,7 +1506,7 @@ void LocalSpiller::RewriteMBB(MachineBasicBlock &MBB, VirtRegMap &VRM) {
         TII->copyRegToReg(MBB, &MI, DesignatedReg, PhysReg, RC, RC);
 
         MachineInstr *CopyMI = prior(MII);
-        UpdateKills(*CopyMI, RegKills, KillOps);
+        UpdateKills(*CopyMI, RegKills, KillOps, TRI);
 
         // This invalidates DesignatedReg.
         Spills.ClobberPhysReg(DesignatedReg);
@@ -1550,7 +1556,7 @@ void LocalSpiller::RewriteMBB(MachineBasicBlock &MBB, VirtRegMap &VRM) {
         MI.getOperand(i).setIsKill();
       unsigned RReg = SubIdx ? TRI->getSubReg(PhysReg, SubIdx) : PhysReg;
       MI.getOperand(i).setReg(RReg);
-      UpdateKills(*prior(MII), RegKills, KillOps);
+      UpdateKills(*prior(MII), RegKills, KillOps, TRI);
       DOUT << '\t' << *prior(MII);
     }
 
@@ -1650,7 +1656,7 @@ void LocalSpiller::RewriteMBB(MachineBasicBlock &MBB, VirtRegMap &VRM) {
             // super-register is needed below.
             if (KillOpnd && !KillOpnd->getSubReg() &&
                 TII->unfoldMemoryOperand(MF, &MI, PhysReg, false, true,NewMIs)){
-              MBB.insert(MII, NewMIs[0]);
+             MBB.insert(MII, NewMIs[0]);
               NewStore = NewMIs[1];
               MBB.insert(MII, NewStore);
               VRM.addSpillSlotUse(SS, NewStore);
@@ -1825,7 +1831,7 @@ void LocalSpiller::RewriteMBB(MachineBasicBlock &MBB, VirtRegMap &VRM) {
             VRM.RemoveMachineInstrFromMaps(&MI);
             MBB.erase(&MI);
             Erased = true;
-            UpdateKills(*LastStore, RegKills, KillOps);
+            UpdateKills(*LastStore, RegKills, KillOps, TRI);
             goto ProcessNextInst;
           }
         }
@@ -1835,7 +1841,7 @@ void LocalSpiller::RewriteMBB(MachineBasicBlock &MBB, VirtRegMap &VRM) {
     DistanceMap.insert(std::make_pair(&MI, Dist++));
     if (!Erased && !BackTracked) {
       for (MachineBasicBlock::iterator II = &MI; II != NextMII; ++II)
-        UpdateKills(*II, RegKills, KillOps);
+        UpdateKills(*II, RegKills, KillOps, TRI);
     }
     MII = NextMII;
   }
