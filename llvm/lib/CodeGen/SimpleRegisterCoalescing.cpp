@@ -456,6 +456,16 @@ bool SimpleRegisterCoalescing::ReMaterializeTrivialDef(LiveInterval &SrcInt,
   unsigned DefIdx = li_->getDefIndex(CopyIdx);
   const LiveRange *DLR= li_->getInterval(DstReg).getLiveRangeContaining(DefIdx);
   DLR->valno->copy = NULL;
+  // Don't forget to update sub-register intervals.
+  if (TargetRegisterInfo::isPhysicalRegister(DstReg)) {
+    for (const unsigned* SR = tri_->getSubRegisters(DstReg); *SR; ++SR) {
+      if (!li_->hasInterval(*SR))
+        continue;
+      DLR = li_->getInterval(*SR).getLiveRangeContaining(DefIdx);
+      if (DLR && DLR->valno->copy == CopyMI)
+        DLR->valno->copy = NULL;
+    }
+  }
 
   MachineBasicBlock::iterator MII = CopyMI;
   MachineBasicBlock *MBB = CopyMI->getParent();
