@@ -151,10 +151,10 @@ def WTF : PseudoInstAlpha<(outs), (ins variable_ops), "#wtf", [], s_pseudo>;
 let hasCtrlDep = 1, Defs = [R30], Uses = [R30] in {
 def ADJUSTSTACKUP : PseudoInstAlpha<(outs), (ins s64imm:$amt),
                 "; ADJUP $amt", 
-                [(callseq_start imm:$amt)], s_pseudo>;
+                [(callseq_start timm:$amt)], s_pseudo>;
 def ADJUSTSTACKDOWN : PseudoInstAlpha<(outs), (ins s64imm:$amt1, s64imm:$amt2),
                 "; ADJDOWN $amt1",
-                [(callseq_end imm:$amt1, imm:$amt2)], s_pseudo>;
+                [(callseq_end timm:$amt1, timm:$amt2)], s_pseudo>;
 }
 
 def ALTENT : PseudoInstAlpha<(outs), (ins s64imm:$TARGET), "$$$TARGET..ng:\n", [], s_pseudo>;

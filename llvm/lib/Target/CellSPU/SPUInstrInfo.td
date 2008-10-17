@@ -24,10 +24,10 @@
 let hasCtrlDep = 1, Defs = [R1], Uses = [R1] in {
   def ADJCALLSTACKDOWN : Pseudo<(outs), (ins u16imm_i32:$amt),
                                 "${:comment} ADJCALLSTACKDOWN",
-                                [(callseq_start imm:$amt)]>;
+                                [(callseq_start timm:$amt)]>;
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins u16imm_i32:$amt),
                                 "${:comment} ADJCALLSTACKUP",
-                                [(callseq_end imm:$amt)]>;
+                                [(callseq_end timm:$amt)]>;
 }
 
 //===----------------------------------------------------------------------===//

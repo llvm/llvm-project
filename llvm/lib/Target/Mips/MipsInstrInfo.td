@@ -393,10 +393,10 @@ class CondMov<bits<6> func, string instr_asm, PatLeaf MovCode>:
 let Defs = [SP], Uses = [SP] in {
 def ADJCALLSTACKDOWN : MipsPseudo<(outs), (ins uimm16:$amt),
                                   "!ADJCALLSTACKDOWN $amt",
-                                  [(callseq_start imm:$amt)]>;
+                                  [(callseq_start timm:$amt)]>;
 def ADJCALLSTACKUP   : MipsPseudo<(outs), (ins uimm16:$amt1, uimm16:$amt2),
                                   "!ADJCALLSTACKUP $amt1",
-                                  [(callseq_end imm:$amt1, imm:$amt2)]>;
+                                  [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 
 // Some assembly macros need to avoid pseudoinstructions and assembler

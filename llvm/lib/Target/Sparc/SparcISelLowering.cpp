@@ -269,7 +269,7 @@ static SDValue LowerCALL(SDValue Op, SelectionDAG &DAG) {
   // Keep stack frames 8-byte aligned.
   ArgsSize = (ArgsSize+7) & ~7;
 
-  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(ArgsSize));
+  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(ArgsSize, true));
   
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
@@ -420,9 +420,8 @@ static SDValue LowerCALL(SDValue Op, SelectionDAG &DAG) {
   Chain = DAG.getNode(SPISD::CALL, NodeTys, Ops, InFlag.getNode() ? 3 : 2);
   InFlag = Chain.getValue(1);
   
-  Chain = DAG.getCALLSEQ_END(Chain,
-                             DAG.getConstant(ArgsSize, MVT::i32),
-                             DAG.getConstant(0, MVT::i32), InFlag);
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(ArgsSize, true),
+                             DAG.getIntPtrConstant(0, true), InFlag);
   InFlag = Chain.getValue(1);
   
   // Assign locations to each value returned by this call.

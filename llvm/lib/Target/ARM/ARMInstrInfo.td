@@ -452,12 +452,12 @@ let Defs = [SP], Uses = [SP] in {
 def ADJCALLSTACKUP :
 PseudoInst<(outs), (ins i32imm:$amt1, i32imm:$amt2, pred:$p),
            "@ ADJCALLSTACKUP $amt1",
-           [(ARMcallseq_end imm:$amt1, imm:$amt2)]>;
+           [(ARMcallseq_end timm:$amt1, timm:$amt2)]>;
 
 def ADJCALLSTACKDOWN : 
 PseudoInst<(outs), (ins i32imm:$amt, pred:$p),
            "@ ADJCALLSTACKDOWN $amt",
-           [(ARMcallseq_start imm:$amt)]>;
+           [(ARMcallseq_start timm:$amt)]>;
 }
 
 def DWARF_LOC :

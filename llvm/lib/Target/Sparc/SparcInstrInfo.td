@@ -210,10 +210,10 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 let Defs = [O6], Uses = [O6] in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
                                "!ADJCALLSTACKDOWN $amt",
-                               [(callseq_start imm:$amt)]>;
+                               [(callseq_start timm:$amt)]>;
 def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             "!ADJCALLSTACKUP $amt1",
-                            [(callseq_end imm:$amt1, imm:$amt2)]>;
+                            [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 
 // FpMOVD/FpNEGD/FpABSD - These are lowered to single-precision ops by the 

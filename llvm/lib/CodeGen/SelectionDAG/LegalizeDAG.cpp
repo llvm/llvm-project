@@ -1678,8 +1678,7 @@ SDValue SelectionDAGLegalize::LegalizeOp(SDValue Op) {
 
       // Chain the dynamic stack allocation so that it doesn't modify the stack
       // pointer when other instructions are using the stack.
-      Chain = DAG.getCALLSEQ_START(Chain,
-                                   DAG.getConstant(0, TLI.getPointerTy()));
+      Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(0, true));
 
       SDValue Size  = Tmp2.getOperand(1);
       SDValue SP = DAG.getCopyFromReg(Chain, SPReg, VT);
@@ -1693,11 +1692,8 @@ SDValue SelectionDAGLegalize::LegalizeOp(SDValue Op) {
       Tmp1 = DAG.getNode(ISD::SUB, VT, SP, Size);       // Value
       Chain = DAG.getCopyToReg(Chain, SPReg, Tmp1);     // Output chain
 
-      Tmp2 =
-        DAG.getCALLSEQ_END(Chain,
-                           DAG.getConstant(0, TLI.getPointerTy()),
-                           DAG.getConstant(0, TLI.getPointerTy()),
-                           SDValue());
+      Tmp2 = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, true),
+                                DAG.getIntPtrConstant(0, true), SDValue());
 
       Tmp1 = LegalizeOp(Tmp1);
       Tmp2 = LegalizeOp(Tmp2);

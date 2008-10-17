@@ -2142,8 +2142,7 @@ SDValue PPCTargetLowering::LowerCALL(SDValue Op, SelectionDAG &DAG,
   
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
-  Chain = DAG.getCALLSEQ_START(Chain,
-                               DAG.getConstant(NumBytes, PtrVT));
+  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, true));
   SDValue CallSeqStart = Chain;
   
   // Load the return address and frame pointer so it can be move somewhere else
@@ -2476,8 +2475,8 @@ SDValue PPCTargetLowering::LowerCALL(SDValue Op, SelectionDAG &DAG,
     SmallVector<SDValue, 8> CallSeqOps;
     SDVTList CallSeqNodeTys = DAG.getVTList(MVT::Other, MVT::Flag);
     CallSeqOps.push_back(Chain);
-    CallSeqOps.push_back(DAG.getIntPtrConstant(NumBytes));
-    CallSeqOps.push_back(DAG.getIntPtrConstant(0));
+    CallSeqOps.push_back(DAG.getIntPtrConstant(NumBytes, true));
+    CallSeqOps.push_back(DAG.getIntPtrConstant(0, true));
     if (InFlag.getNode())
       CallSeqOps.push_back(InFlag);
     Chain = DAG.getNode(ISD::CALLSEQ_END, CallSeqNodeTys, &CallSeqOps[0],
@@ -2564,9 +2563,8 @@ SDValue PPCTargetLowering::LowerCALL(SDValue Op, SelectionDAG &DAG,
   Chain = DAG.getNode(CallOpc, NodeTys, &Ops[0], Ops.size());
   InFlag = Chain.getValue(1);
 
-  Chain = DAG.getCALLSEQ_END(Chain,
-                             DAG.getConstant(NumBytes, PtrVT),
-                             DAG.getConstant(BytesCalleePops, PtrVT),
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, true),
+                             DAG.getIntPtrConstant(BytesCalleePops, true),
                              InFlag);
   if (TheCall->getValueType(0) != MVT::Other)
     InFlag = Chain.getValue(1);

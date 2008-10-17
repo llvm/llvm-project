@@ -358,8 +358,7 @@ AlphaTargetLowering::LowerCallTo(SDValue Chain, const Type *RetTy,
   if (Args.size() > 6)
     NumBytes = (Args.size() - 6) * 8;
 
-  Chain = DAG.getCALLSEQ_START(Chain,
-                               DAG.getConstant(NumBytes, getPointerTy()));
+  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, true));
   std::vector<SDValue> args_to_use;
   for (unsigned i = 0, e = Args.size(); i != e; ++i)
   {
@@ -402,10 +401,8 @@ AlphaTargetLowering::LowerCallTo(SDValue Chain, const Type *RetTy,
   Ops.insert(Ops.end(), args_to_use.begin(), args_to_use.end());
   SDValue TheCall = DAG.getNode(AlphaISD::CALL, RetVals, &Ops[0], Ops.size());
   Chain = TheCall.getValue(RetTyVT != MVT::isVoid);
-  Chain = DAG.getCALLSEQ_END(Chain,
-                             DAG.getConstant(NumBytes, getPointerTy()),
-                             DAG.getConstant(0, getPointerTy()),
-                             SDValue());
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, true),
+                             DAG.getIntPtrConstant(0, true), SDValue());
   SDValue RetVal = TheCall;
 
   if (RetTyVT != ActualRetTyVT) {

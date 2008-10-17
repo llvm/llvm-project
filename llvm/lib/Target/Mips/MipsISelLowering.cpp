@@ -608,8 +608,7 @@ LowerCALL(SDValue Op, SelectionDAG &DAG)
   
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getNextStackOffset();
-  Chain = DAG.getCALLSEQ_START(Chain,DAG.getConstant(NumBytes, 
-                                 getPointerTy()));
+  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, true));
 
   // With EABI is it possible to have 16 args on registers.
   SmallVector<std::pair<unsigned, SDValue>, 16> RegsToPass;
@@ -715,10 +714,8 @@ LowerCALL(SDValue Op, SelectionDAG &DAG)
   InFlag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain,
-                             DAG.getConstant(NumBytes, getPointerTy()),
-                             DAG.getConstant(0, getPointerTy()),
-                             InFlag);
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, true),
+                             DAG.getIntPtrConstant(0, true), InFlag);
   InFlag = Chain.getValue(1);
 
   // Create a stack location to hold GP when PIC is used. This stack 

@@ -333,7 +333,7 @@ IA64TargetLowering::LowerCallTo(SDValue Chain, const Type *RetTy,
   //        "stack frame not 16-byte aligned!");
   NumBytes = (NumBytes+15) & ~15;
   
-  Chain = DAG.getCALLSEQ_START(Chain,DAG.getConstant(NumBytes, getPointerTy()));
+  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, true));
 
   SDValue StackPtr;
   std::vector<SDValue> Stores;
@@ -543,10 +543,8 @@ IA64TargetLowering::LowerCallTo(SDValue Chain, const Type *RetTy,
     }
   }
   
-  Chain = DAG.getCALLSEQ_END(Chain,
-                             DAG.getConstant(NumBytes, getPointerTy()),
-                             DAG.getConstant(0, getPointerTy()),
-                             SDValue());
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, true),
+                             DAG.getIntPtrConstant(0, true), SDValue());
   return std::make_pair(RetVal, Chain);
 }
 

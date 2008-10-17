@@ -342,10 +342,10 @@ let hasCtrlDep = 1 in {
 let Defs = [R1], Uses = [R1] in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins u16imm:$amt),
                               "${:comment} ADJCALLSTACKDOWN",
-                              [(callseq_start imm:$amt)]>;
+                              [(callseq_start timm:$amt)]>;
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
                               "${:comment} ADJCALLSTACKUP",
-                              [(callseq_end imm:$amt1, imm:$amt2)]>;
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 
 def UPDATE_VRSAVE    : Pseudo<(outs GPRC:$rD), (ins GPRC:$rS),

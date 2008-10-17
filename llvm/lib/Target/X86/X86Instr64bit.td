@@ -94,11 +94,11 @@ def extloadi64i32  : PatFrag<(ops node:$ptr), (i64 (extloadi32 node:$ptr))>;
 let Defs = [RSP, EFLAGS], Uses = [RSP] in {
 def ADJCALLSTACKDOWN64 : I<0, Pseudo, (outs), (ins i32imm:$amt),
                            "#ADJCALLSTACKDOWN",
-                           [(X86callseq_start imm:$amt)]>,
+                           [(X86callseq_start timm:$amt)]>,
                           Requires<[In64BitMode]>;
 def ADJCALLSTACKUP64   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            "#ADJCALLSTACKUP",
-                           [(X86callseq_end imm:$amt1, imm:$amt2)]>,
+                           [(X86callseq_end timm:$amt1, timm:$amt2)]>,
                           Requires<[In64BitMode]>;
 }
 

@@ -1171,7 +1171,8 @@ LowerCALL(SDValue Op, SelectionDAG &DAG, const SPUSubtarget *ST) {
 
   // Update number of stack bytes actually used, insert a call sequence start
   NumStackBytes = (ArgOffset - SPUFrameInfo::minStackSize());
-  Chain = DAG.getCALLSEQ_START(Chain, DAG.getConstant(NumStackBytes, PtrVT));
+  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumStackBytes,
+                                                            true));
 
   if (!MemOpChains.empty()) {
     // Adjust the stack pointer for the stack arguments.
@@ -1243,10 +1244,8 @@ LowerCALL(SDValue Op, SelectionDAG &DAG, const SPUSubtarget *ST) {
                       &Ops[0], Ops.size());
   InFlag = Chain.getValue(1);
 
-  Chain = DAG.getCALLSEQ_END(Chain,
-                             DAG.getConstant(NumStackBytes, PtrVT),
-                             DAG.getConstant(0, PtrVT),
-                             InFlag);
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumStackBytes, true),
+                             DAG.getIntPtrConstant(0, true), InFlag);
   if (TheCall->getValueType(0) != MVT::Other)
     InFlag = Chain.getValue(1);
 

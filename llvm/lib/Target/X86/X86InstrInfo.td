@@ -345,11 +345,11 @@ def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs), [{
 let Defs = [ESP, EFLAGS], Uses = [ESP] in {
 def ADJCALLSTACKDOWN32 : I<0, Pseudo, (outs), (ins i32imm:$amt),
                            "#ADJCALLSTACKDOWN",
-                           [(X86callseq_start imm:$amt)]>,
+                           [(X86callseq_start timm:$amt)]>,
                           Requires<[In32BitMode]>;
 def ADJCALLSTACKUP32   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            "#ADJCALLSTACKUP",
-                           [(X86callseq_end imm:$amt1, imm:$amt2)]>,
+                           [(X86callseq_end timm:$amt1, timm:$amt2)]>,
                           Requires<[In32BitMode]>;
 }
 
