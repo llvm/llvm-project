@@ -180,14 +180,14 @@ def HA16 : SDNodeXForm<imm, [{
 }]>;
 def MB : SDNodeXForm<imm, [{
   // Transformation function: get the start bit of a mask
-  unsigned mb, me;
+  unsigned mb = 0, me;
   (void)isRunOfOnes((unsigned)N->getZExtValue(), mb, me);
   return getI32Imm(mb);
 }]>;
 
 def ME : SDNodeXForm<imm, [{
   // Transformation function: get the end bit of a mask
-  unsigned mb, me;
+  unsigned mb, me = 0;
   (void)isRunOfOnes((unsigned)N->getZExtValue(), mb, me);
   return getI32Imm(me);
 }]>;
