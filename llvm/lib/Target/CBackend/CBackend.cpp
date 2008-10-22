@@ -2060,20 +2060,20 @@ void CWriter::printFloatingPointConstants(const Constant *C) {
   
   if (FPC->getType() == Type::DoubleTy) {
     double Val = FPC->getValueAPF().convertToDouble();
-    uint64_t i = FPC->getValueAPF().bitcastToAPInt().getZExtValue();
+    uint64_t i = FPC->getValueAPF().convertToAPInt().getZExtValue();
     Out << "static const ConstantDoubleTy FPConstant" << FPCounter++
     << " = 0x" << utohexstr(i)
     << "ULL;    /* " << Val << " */\n";
   } else if (FPC->getType() == Type::FloatTy) {
     float Val = FPC->getValueAPF().convertToFloat();
-    uint32_t i = (uint32_t)FPC->getValueAPF().bitcastToAPInt().
+    uint32_t i = (uint32_t)FPC->getValueAPF().convertToAPInt().
     getZExtValue();
     Out << "static const ConstantFloatTy FPConstant" << FPCounter++
     << " = 0x" << utohexstr(i)
     << "U;    /* " << Val << " */\n";
   } else if (FPC->getType() == Type::X86_FP80Ty) {
     // api needed to prevent premature destruction
-    APInt api = FPC->getValueAPF().bitcastToAPInt();
+    APInt api = FPC->getValueAPF().convertToAPInt();
     const uint64_t *p = api.getRawData();
     Out << "static const ConstantFP80Ty FPConstant" << FPCounter++
     << " = { 0x"
@@ -2081,7 +2081,7 @@ void CWriter::printFloatingPointConstants(const Constant *C) {
     << "ULL, 0x" << utohexstr((uint16_t)(p[0] >> 48)) << ",{0,0,0}"
     << "}; /* Long double constant */\n";
   } else if (FPC->getType() == Type::PPC_FP128Ty) {
-    APInt api = FPC->getValueAPF().bitcastToAPInt();
+    APInt api = FPC->getValueAPF().convertToAPInt();
     const uint64_t *p = api.getRawData();
     Out << "static const ConstantFP128Ty FPConstant" << FPCounter++
     << " = { 0x"
