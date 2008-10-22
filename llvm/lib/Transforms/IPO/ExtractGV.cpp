@@ -52,7 +52,7 @@ namespace {
     bool deleteGV() {
       for (std::vector<GlobalValue*>::iterator GI = Named.begin(), 
              GE = Named.end(); GI != GE; ++GI) {
-        if (Function* NamedFunc = dyn_cast<Function>(&*GI)) {
+        if (Function* NamedFunc = dyn_cast<Function>(*GI)) {
          // If we're in relinking mode, set linkage of all internal callees to
          // external. This will allow us extract function, and then - link
          // everything together
