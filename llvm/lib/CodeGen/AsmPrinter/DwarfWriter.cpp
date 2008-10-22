@@ -2060,8 +2060,11 @@ private:
         return;
       }
     }
-
+#if 0
+    // FIXME: This is causing an abort because C++ mangled names are compared
+    // with their unmangled counterparts. See PR2885. Don't do this assert.
     assert(0 && "Couldn't find DIE for machine function!");
+#endif
   }
 
   /// EmitInitial - Emit initial Dwarf declarations.  This is necessary for cc
