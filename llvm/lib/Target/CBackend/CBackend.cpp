@@ -88,12 +88,15 @@ namespace {
     std::map<const ConstantFP *, unsigned> FPConstantMap;
     std::set<Function*> intrinsicPrototypesAlreadyGenerated;
     std::set<const Argument*> ByValParams;
+    unsigned FPCounter;
 
   public:
     static char ID;
     explicit CWriter(raw_ostream &o)
       : FunctionPass(&ID), Out(o), IL(0), Mang(0), LI(0), 
-        TheModule(0), TAsm(0), TD(0) {}
+        TheModule(0), TAsm(0), TD(0) {
+      FPCounter = 0;
+    }
 
     virtual const char *getPassName() const { return "C backend"; }
 
@@ -181,6 +184,7 @@ namespace {
     void printModuleTypes(const TypeSymbolTable &ST);
     void printContainedStructs(const Type *Ty, std::set<const Type *> &);
     void printFloatingPointConstants(Function &F);
+    void printFloatingPointConstants(const Constant *C);
     void printFunctionSignature(const Function *F, bool Prototype);
 
     void printFunction(Function &);
@@ -833,10 +837,10 @@ void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
 //
 static bool isFPCSafeToPrint(const ConstantFP *CFP) {
   // Do long doubles in hex for now.
-  if (CFP->getType()!=Type::FloatTy && CFP->getType()!=Type::DoubleTy)
+  if (CFP->getType() != Type::FloatTy && CFP->getType() != Type::DoubleTy)
     return false;
   APFloat APF = APFloat(CFP->getValueAPF());  // copy
-  if (CFP->getType()==Type::FloatTy)
+  if (CFP->getType() == Type::FloatTy)
     APF.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven);
 #if HAVE_PRINTF_A && ENABLE_CBE_PRINTF_A
   char Buffer[100];
@@ -1128,11 +1132,21 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
                        "long double")
           << "*)&FPConstant" << I->second << ')';
     } else {
-      assert(FPC->getType() == Type::FloatTy || 
-             FPC->getType() == Type::DoubleTy);
-      double V = FPC->getType() == Type::FloatTy ? 
-                 FPC->getValueAPF().convertToFloat() : 
-                 FPC->getValueAPF().convertToDouble();
+      double V;
+      if (FPC->getType() == Type::FloatTy)
+        V = FPC->getValueAPF().convertToFloat();
+      else if (FPC->getType() == Type::DoubleTy)
+        V = FPC->getValueAPF().convertToDouble();
+      else {
+        // Long double.  Convert the number to double, discarding precision.
+        // This is not awesome, but it at least makes the CBE output somewhat
+        // useful.
+        APFloat Tmp = FPC->getValueAPF();
+        bool LosesInfo;
+        Tmp.convert(APFloat::IEEEdouble, APFloat::rmTowardZero, &LosesInfo);
+        V = Tmp.convertToDouble();
+      }
+      
       if (IsNAN(V)) {
         // The value is NaN
 
@@ -2018,50 +2032,67 @@ void CWriter::printFloatingPointConstants(Function &F) {
   // the precision of the printed form, unless the printed form preserves
   // precision.
   //
-  static unsigned FPCounter = 0;
   for (constant_iterator I = constant_begin(&F), E = constant_end(&F);
        I != E; ++I)
-    if (const ConstantFP *FPC = dyn_cast<ConstantFP>(*I))
-      if (!isFPCSafeToPrint(FPC) && // Do not put in FPConstantMap if safe.
-          !FPConstantMap.count(FPC)) {
-        FPConstantMap[FPC] = FPCounter;  // Number the FP constants
-
-        if (FPC->getType() == Type::DoubleTy) {
-          double Val = FPC->getValueAPF().convertToDouble();
-          uint64_t i = FPC->getValueAPF().convertToAPInt().getZExtValue();
-          Out << "static const ConstantDoubleTy FPConstant" << FPCounter++
-              << " = 0x" << utohexstr(i)
-              << "ULL;    /* " << Val << " */\n";
-        } else if (FPC->getType() == Type::FloatTy) {
-          float Val = FPC->getValueAPF().convertToFloat();
-          uint32_t i = (uint32_t)FPC->getValueAPF().convertToAPInt().
-                                    getZExtValue();
-          Out << "static const ConstantFloatTy FPConstant" << FPCounter++
-              << " = 0x" << utohexstr(i)
-              << "U;    /* " << Val << " */\n";
-        } else if (FPC->getType() == Type::X86_FP80Ty) {
-          // api needed to prevent premature destruction
-          APInt api = FPC->getValueAPF().convertToAPInt();
-          const uint64_t *p = api.getRawData();
-          Out << "static const ConstantFP80Ty FPConstant" << FPCounter++
-              << " = { 0x"
-              << utohexstr((uint16_t)p[1] | (p[0] & 0xffffffffffffLL)<<16)
-              << "ULL, 0x" << utohexstr((uint16_t)(p[0] >> 48)) << ",{0,0,0}"
-              << "}; /* Long double constant */\n";
-        } else if (FPC->getType() == Type::PPC_FP128Ty) {
-          APInt api = FPC->getValueAPF().convertToAPInt();
-          const uint64_t *p = api.getRawData();
-          Out << "static const ConstantFP128Ty FPConstant" << FPCounter++
-              << " = { 0x"
-              << utohexstr(p[0]) << ", 0x" << utohexstr(p[1])
-              << "}; /* Long double constant */\n";
-
-        } else
-          assert(0 && "Unknown float type!");
-      }
+    printFloatingPointConstants(*I);
 
   Out << '\n';
 }
+
+void CWriter::printFloatingPointConstants(const Constant *C) {
+  // If this is a constant expression, recursively check for constant fp values.
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
+    for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i)
+      printFloatingPointConstants(CE->getOperand(i));
+    return;
+  }
+    
+  // Otherwise, check for a FP constant that we need to print.
+  const ConstantFP *FPC = dyn_cast<ConstantFP>(C);
+  if (FPC == 0 ||
+      // Do not put in FPConstantMap if safe.
+      isFPCSafeToPrint(FPC) ||
+      // Already printed this constant?
+      FPConstantMap.count(FPC))
+    return;
+
+  FPConstantMap[FPC] = FPCounter;  // Number the FP constants
+  
+  if (FPC->getType() == Type::DoubleTy) {
+    double Val = FPC->getValueAPF().convertToDouble();
+    uint64_t i = FPC->getValueAPF().bitcastToAPInt().getZExtValue();
+    Out << "static const ConstantDoubleTy FPConstant" << FPCounter++
+    << " = 0x" << utohexstr(i)
+    << "ULL;    /* " << Val << " */\n";
+  } else if (FPC->getType() == Type::FloatTy) {
+    float Val = FPC->getValueAPF().convertToFloat();
+    uint32_t i = (uint32_t)FPC->getValueAPF().bitcastToAPInt().
+    getZExtValue();
+    Out << "static const ConstantFloatTy FPConstant" << FPCounter++
+    << " = 0x" << utohexstr(i)
+    << "U;    /* " << Val << " */\n";
+  } else if (FPC->getType() == Type::X86_FP80Ty) {
+    // api needed to prevent premature destruction
+    APInt api = FPC->getValueAPF().bitcastToAPInt();
+    const uint64_t *p = api.getRawData();
+    Out << "static const ConstantFP80Ty FPConstant" << FPCounter++
+    << " = { 0x"
+    << utohexstr((uint16_t)p[1] | (p[0] & 0xffffffffffffLL)<<16)
+    << "ULL, 0x" << utohexstr((uint16_t)(p[0] >> 48)) << ",{0,0,0}"
+    << "}; /* Long double constant */\n";
+  } else if (FPC->getType() == Type::PPC_FP128Ty) {
+    APInt api = FPC->getValueAPF().bitcastToAPInt();
+    const uint64_t *p = api.getRawData();
+    Out << "static const ConstantFP128Ty FPConstant" << FPCounter++
+    << " = { 0x"
+    << utohexstr(p[0]) << ", 0x" << utohexstr(p[1])
+    << "}; /* Long double constant */\n";
+    
+  } else {
+    assert(0 && "Unknown float type!");
+  }
+}
+
 
 
 /// printSymbolTable - Run through symbol table looking for type names.  If a
