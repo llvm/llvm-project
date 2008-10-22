@@ -1142,8 +1142,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         // This is not awesome, but it at least makes the CBE output somewhat
         // useful.
         APFloat Tmp = FPC->getValueAPF();
-        bool LosesInfo;
-        Tmp.convert(APFloat::IEEEdouble, APFloat::rmTowardZero, &LosesInfo);
+        Tmp.convert(APFloat::IEEEdouble, APFloat::rmTowardZero);
         V = Tmp.convertToDouble();
       }
       
