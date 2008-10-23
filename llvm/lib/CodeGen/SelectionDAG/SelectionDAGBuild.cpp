@@ -905,11 +905,13 @@ void SelectionDAGLowering::visitRet(ReturnInst &I) {
   SmallVector<SDValue, 8> NewValues;
   NewValues.push_back(getControlRoot());
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {  
-    SDValue RetOp = getValue(I.getOperand(i));
-
     SmallVector<MVT, 4> ValueVTs;
     ComputeValueVTs(TLI, I.getOperand(i)->getType(), ValueVTs);
-    for (unsigned j = 0, f = ValueVTs.size(); j != f; ++j) {
+    unsigned NumValues = ValueVTs.size();
+    if (NumValues == 0) continue;
+
+    SDValue RetOp = getValue(I.getOperand(i));
+    for (unsigned j = 0, f = NumValues; j != f; ++j) {
       MVT VT = ValueVTs[j];
 
       // FIXME: C calling convention requires the return type to be promoted to
@@ -2195,11 +2197,23 @@ void SelectionDAGLowering::visitVFCmp(User &I) {
 }
 
 void SelectionDAGLowering::visitSelect(User &I) {
-  SDValue Cond     = getValue(I.getOperand(0));
-  SDValue TrueVal  = getValue(I.getOperand(1));
-  SDValue FalseVal = getValue(I.getOperand(2));
-  setValue(&I, DAG.getNode(ISD::SELECT, TrueVal.getValueType(), Cond,
-                           TrueVal, FalseVal));
+  SmallVector<MVT, 4> ValueVTs;
+  ComputeValueVTs(TLI, I.getType(), ValueVTs);
+  unsigned NumValues = ValueVTs.size();
+  if (NumValues != 0) {
+    SmallVector<SDValue, 4> Values(NumValues);
+    SDValue Cond     = getValue(I.getOperand(0));
+    SDValue TrueVal  = getValue(I.getOperand(1));
+    SDValue FalseVal = getValue(I.getOperand(2));
+
+    for (unsigned i = 0; i != NumValues; ++i)
+      Values[i] = DAG.getNode(ISD::SELECT, TrueVal.getValueType(), Cond,
+                              SDValue(TrueVal.getNode(), TrueVal.getResNo() + i),
+                              SDValue(FalseVal.getNode(), FalseVal.getResNo() + i));
+
+    setValue(&I, DAG.getMergeValues(DAG.getVTList(&ValueVTs[0], NumValues),
+                                    &Values[0], NumValues));
+  }
 }
 
 
