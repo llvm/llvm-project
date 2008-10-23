@@ -8139,7 +8139,7 @@ echo "${ECHO_T}no" >&6; }
 fi
 
 
-for ac_prog in ocamlc.opt ocamlc
+for ac_prog in ocamlc
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -8184,7 +8184,7 @@ fi
   test -n "$OCAMLC" && break
 done
 
-for ac_prog in ocamlopt.opt ocamlopt
+for ac_prog in ocamlopt
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -8229,7 +8229,7 @@ fi
   test -n "$OCAMLOPT" && break
 done
 
-for ac_prog in ocamldep.opt ocamldep
+for ac_prog in ocamldep
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -8274,7 +8274,7 @@ fi
   test -n "$OCAMLDEP" && break
 done
 
-for ac_prog in ocamldoc.opt ocamldoc
+for ac_prog in ocamldoc
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2

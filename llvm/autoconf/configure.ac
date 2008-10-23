@@ -610,10 +610,10 @@ AC_PATH_PROG(POD2MAN, [pod2man])
 AC_PATH_PROG(RUNTEST, [runtest])
 DJ_AC_PATH_TCLSH
 AC_PATH_PROG(ZIP, [zip])
-AC_PATH_PROGS(OCAMLC, [ocamlc.opt ocamlc])
-AC_PATH_PROGS(OCAMLOPT, [ocamlopt.opt ocamlopt])
-AC_PATH_PROGS(OCAMLDEP, [ocamldep.opt ocamldep])
-AC_PATH_PROGS(OCAMLDOC, [ocamldoc.opt ocamldoc])
+AC_PATH_PROGS(OCAMLC, [ocamlc])
+AC_PATH_PROGS(OCAMLOPT, [ocamlopt])
+AC_PATH_PROGS(OCAMLDEP, [ocamldep])
+AC_PATH_PROGS(OCAMLDOC, [ocamldoc])
 
 dnl Determine if the linker supports the -R option.
 AC_LINK_USE_R

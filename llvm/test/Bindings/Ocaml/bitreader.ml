@@ -1,4 +1,4 @@
-(* RUN: %ocamlc -warn-error A llvm.cma llvm_bitreader.cma llvm_bitwriter.cma %s -o %t
+(* RUN: %ocamlc -warn-error A llvm.cma llvm_bitreader.cma llvm_bitwriter.cma %s -o %t 2> /dev/null
  * RUN: ./%t %t.bc
  * RUN: llvm-dis < %t.bc | grep caml_int_ty
  *)

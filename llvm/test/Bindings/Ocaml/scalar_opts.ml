@@ -1,4 +1,4 @@
-(* RUN: %ocamlc -warn-error A llvm.cma llvm_scalar_opts.cma llvm_target.cma %s -o %t
+(* RUN: %ocamlc -warn-error A llvm.cma llvm_scalar_opts.cma llvm_target.cma %s -o %t 2> /dev/null
  *)
 
 (* Note: It takes several seconds for ocamlc to link an executable with
