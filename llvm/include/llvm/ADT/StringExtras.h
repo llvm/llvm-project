@@ -156,7 +156,7 @@ static inline const char* CStrInCStrNoCase(const char *s1, const char *s2) {
   
   const char *I1=s1, *I2=s2;
   
-  while (*I1 != '\0' || *I2 != '\0' )
+  while (*I1 != '\0' && *I2 != '\0' )
     if (tolower(*I1) != tolower(*I2)) { // No match.  Start over.
       ++s1; I1 = s1; I2 = s2;
     }
