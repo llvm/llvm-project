@@ -1,4 +1,4 @@
-/* RUN: %llvmgcc %s -m64 -S -o - -emit-llvm -O0 | grep {zeroinitializer.*zeroinitializer.*zeroinitializer.*zeroinitializer.*zeroinitializer.*zeroinitializer}
+/* RUN: %llvmgcc %s -S -o - -emit-llvm -O0 | grep {zeroinitializer.*zeroinitializer.*zeroinitializer.*zeroinitializer.*zeroinitializer.*zeroinitializer}
 
 The FE must generate padding here both at the end of each PyG_Head and
 between array elements.  Reduced from Python. */

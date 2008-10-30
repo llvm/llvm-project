@@ -1,4 +1,4 @@
-/* RUN: %llvmgcc %s -m64 -S -o - -emit-llvm -O0 | grep zeroinitializer | count 1
+/* RUN: %llvmgcc %s -S -o - -emit-llvm -O0 | grep zeroinitializer | count 1
 
 The FE must not generate padding here between array elements.  PR 2533. */
 
