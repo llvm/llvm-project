@@ -174,6 +174,11 @@ X86TargetMachine::X86TargetMachine(const Module &M, const std::string &FS,
 bool X86TargetMachine::addInstSelector(PassManagerBase &PM, bool Fast) {
   // Install an instruction selector.
   PM.add(createX86ISelDag(*this, Fast));
+
+  // If we're using Fast-ISel, clean up the mess.
+  if (EnableFastISel)
+    PM.add(createDeadMachineInstructionElimPass());
+
   return false;
 }
 

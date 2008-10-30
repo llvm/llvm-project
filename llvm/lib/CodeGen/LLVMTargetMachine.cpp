@@ -189,10 +189,6 @@ bool LLVMTargetMachine::addCommonCodeGenPasses(PassManagerBase &PM, bool Fast) {
   if (PrintMachineCode)
     PM.add(createMachineFunctionPrinterPass(cerr));
 
-  // If we're using Fast-ISel, clean up the mess.
-  if (EnableFastISel)
-    PM.add(createDeadMachineInstructionElimPass());
-
   if (EnableLICM)
     PM.add(createMachineLICMPass());
 
