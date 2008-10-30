@@ -837,10 +837,15 @@ unsigned X86TargetLowering::getByValTypeAlignment(const Type *Ty) const {
 MVT
 X86TargetLowering::getOptimalMemOpType(uint64_t Size, unsigned Align,
                                        bool isSrcConst, bool isSrcStr) const {
-  if ((isSrcConst || isSrcStr) && Subtarget->hasSSE2() && Size >= 16)
-    return MVT::v4i32;
-  if ((isSrcConst || isSrcStr) && Subtarget->hasSSE1() && Size >= 16)
-    return MVT::v4f32;
+  // FIXME: This turns off use of xmm stores for memset/memcpy on targets like
+  // linux.  This is because the stack realignment code can't handle certain
+  // cases like PR2962.  This should be removed when PR2962 is fixed.
+  if (Subtarget->getStackAlignment() >= 16) {
+    if ((isSrcConst || isSrcStr) && Subtarget->hasSSE2() && Size >= 16)
+      return MVT::v4i32;
+    if ((isSrcConst || isSrcStr) && Subtarget->hasSSE1() && Size >= 16)
+      return MVT::v4f32;
+  }
   if (Subtarget->is64Bit() && Size >= 8)
     return MVT::i64;
   return MVT::i32;
