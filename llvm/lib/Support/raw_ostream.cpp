@@ -175,7 +175,7 @@ raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
     unsigned BytesUsed = Fmt.print(&V[0], NextBufferSize);
     
     // If BytesUsed fit into the vector, we win.
-    if (BytesUsed < NextBufferSize)
+    if (BytesUsed <= NextBufferSize)
       return write(&V[0], BytesUsed);
     
     // Otherwise, try again with a new size.
