@@ -119,8 +119,7 @@ and performance.
       <li><tt>cd <i>where-you-want-the-C-front-end-to-live</i></tt></li>
       <li><tt>gunzip --stdout llvm-gcc.<i>platform</i>.tar.gz | tar -xvf -</tt>
       </li>
-      <ul><li>If the binary extension is ".bz" use bunzip2 instead of gunzip.</li>
-      </ul>
+      <li>Note: If the binary extension is ".bz" use bunzip2 instead of gunzip.</li>
       <li>Add llvm-gcc's "bin" directory to your PATH variable.</li>
     </ol></li>
 
@@ -320,10 +319,10 @@ project.</li>
     future. We highly recommend that you rebuild your current binutils with the
     patch from <a href="http://sourceware.org/bugzilla/show_bug.cgi?id=2659">
     Binutils bugzilla</a>, if it wasn't already applied.</li>
-<li><a name="pf_9">XCode 2.5 and gcc 4.0.1 (Apple Build 5370) will trip
+<li><a name="pf_9">XCode 2.5 and gcc 4.0.1</a> (Apple Build 5370) will trip
     internal LLVM assert messages when compiled for Release at optimization
-    levels greater than 0 (i.e., <i>&ldquo;-O1&rdquo;</i> and higher).
-    Add <i>OPTIMIZE_OPTION=&quot;-O0&quot;</i> to the build command line
+    levels greater than 0 (i.e., <i>"-O1"</i> and higher).
+    Add <i>OPTIMIZE_OPTION="-O0"</i> to the build command line
     if compiling for LLVM Release or bootstrapping the LLVM toolchain.</li>
 </ol>
 </div>
@@ -556,6 +555,10 @@ the "<tt>convert_from_eh_region_ranges_1</tt>" GCC function.</p>
    portions of its testsuite.</p>
 <p><b>GCC 4.1.2 on OpenSUSE</b>: Seg faults during libstdc++ build and on x86_64
 platforms compiling md5.c gets a mangled constant.</p>
+<p><b>GCC 4.1.2 (20061115 (prerelease) (Debian 4.1.1-21)) on Debian</b>: Appears
+to miscompile parts of LLVM 2.4. One symptom is ValueSymbolTable complaining
+about symbols remaining in the table on destruction.</p>
+
 <p><b>GNU ld 2.16.X</b>. Some 2.16.X versions of the ld linker will produce very
 long warning messages complaining that some ".gnu.linkonce.t.*" symbol was
 defined in a discarded section. You can safely ignore these messages as they are
@@ -712,6 +715,7 @@ revision), you can checkout it from the '<tt>tags</tt>' directory (instead of
   subdirectories of the '<tt>tags</tt>' directory:</p>
 
 <ul>
+<li>Release 2.4: <b>RELEASE_24</b></li>
 <li>Release 2.3: <b>RELEASE_23</b></li>
 <li>Release 2.2: <b>RELEASE_22</b></li>
 <li>Release 2.1: <b>RELEASE_21</b></li>
