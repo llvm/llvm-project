@@ -149,8 +149,6 @@
         <ol>
           <li><a href="#i_icmp">'<tt>icmp</tt>' Instruction</a></li>
           <li><a href="#i_fcmp">'<tt>fcmp</tt>' Instruction</a></li>
-          <li><a href="#i_vicmp">'<tt>vicmp</tt>' Instruction</a></li>
-          <li><a href="#i_vfcmp">'<tt>vfcmp</tt>' Instruction</a></li>
           <li><a href="#i_phi">'<tt>phi</tt>'   Instruction</a></li>
           <li><a href="#i_select">'<tt>select</tt>' Instruction</a></li>
           <li><a href="#i_call">'<tt>call</tt>'  Instruction</a></li>
@@ -1867,12 +1865,6 @@ following is the syntax for constant expressions:</p>
 
   <dt><b><tt>fcmp COND ( VAL1, VAL2 )</tt></b></dt>
   <dd>Performs the <a href="#i_fcmp">fcmp operation</a> on constants.</dd>
-
-  <dt><b><tt>vicmp COND ( VAL1, VAL2 )</tt></b></dt>
-  <dd>Performs the <a href="#i_vicmp">vicmp operation</a> on constants.</dd>
-
-  <dt><b><tt>vfcmp COND ( VAL1, VAL2 )</tt></b></dt>
-  <dd>Performs the <a href="#i_vfcmp">vfcmp operation</a> on constants.</dd>
 
   <dt><b><tt>extractelement ( VAL, IDX )</tt></b></dt>
 
@@ -4171,109 +4163,6 @@ always yields an <a href="#t_primitive">i1</a> result, as follows:</p>
 <p>Note that the code generator does not yet support vector types with
    the <tt>fcmp</tt> instruction.</p>
 
-</div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsubsection">
-  <a name="i_vicmp">'<tt>vicmp</tt>' Instruction</a>
-</div>
-<div class="doc_text">
-<h5>Syntax:</h5>
-<pre>  &lt;result&gt; = vicmp &lt;cond&gt; &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;   <i>; yields {ty}:result</i>
-</pre>
-<h5>Overview:</h5>
-<p>The '<tt>vicmp</tt>' instruction returns an integer vector value based on
-element-wise comparison of its two integer vector operands.</p>
-<h5>Arguments:</h5>
-<p>The '<tt>vicmp</tt>' instruction takes three operands. The first operand is
-the condition code indicating the kind of comparison to perform. It is not
-a value, just a keyword. The possible condition code are:</p>
-<ol>
-  <li><tt>eq</tt>: equal</li>
-  <li><tt>ne</tt>: not equal </li>
-  <li><tt>ugt</tt>: unsigned greater than</li>
-  <li><tt>uge</tt>: unsigned greater or equal</li>
-  <li><tt>ult</tt>: unsigned less than</li>
-  <li><tt>ule</tt>: unsigned less or equal</li>
-  <li><tt>sgt</tt>: signed greater than</li>
-  <li><tt>sge</tt>: signed greater or equal</li>
-  <li><tt>slt</tt>: signed less than</li>
-  <li><tt>sle</tt>: signed less or equal</li>
-</ol>
-<p>The remaining two arguments must be <a href="#t_vector">vector</a> or
-<a href="#t_integer">integer</a> typed. They must also be identical types.</p>
-<h5>Semantics:</h5>
-<p>The '<tt>vicmp</tt>' instruction compares <tt>op1</tt> and <tt>op2</tt>
-according to the condition code given as <tt>cond</tt>. The comparison yields a 
-<a href="#t_vector">vector</a> of <a href="#t_integer">integer</a> result, of
-identical type as the values being compared.  The most significant bit in each
-element is 1 if the element-wise comparison evaluates to true, and is 0
-otherwise.  All other bits of the result are undefined.  The condition codes
-are evaluated identically to the <a href="#i_icmp">'<tt>icmp</tt>'
-instruction</a>.</p>
-
-<h5>Example:</h5>
-<pre>
-  &lt;result&gt; = vicmp eq &lt;2 x i32&gt; &lt; i32 4, i32 0&gt;, &lt; i32 5, i32 0&gt;   <i>; yields: result=&lt;2 x i32&gt; &lt; i32 0, i32 -1 &gt;</i>
-  &lt;result&gt; = vicmp ult &lt;2 x i8 &gt; &lt; i8 1, i8 2&gt;, &lt; i8 2, i8 2 &gt;        <i>; yields: result=&lt;2 x i8&gt; &lt; i8 -1, i8 0 &gt;</i>
-</pre>
-</div>
-
-<!-- _______________________________________________________________________ -->
-<div class="doc_subsubsection">
-  <a name="i_vfcmp">'<tt>vfcmp</tt>' Instruction</a>
-</div>
-<div class="doc_text">
-<h5>Syntax:</h5>
-<pre>  &lt;result&gt; = vfcmp &lt;cond&gt; &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;</pre>
-<h5>Overview:</h5>
-<p>The '<tt>vfcmp</tt>' instruction returns an integer vector value based on
-element-wise comparison of its two floating point vector operands.  The output
-elements have the same width as the input elements.</p>
-<h5>Arguments:</h5>
-<p>The '<tt>vfcmp</tt>' instruction takes three operands. The first operand is
-the condition code indicating the kind of comparison to perform. It is not
-a value, just a keyword. The possible condition code are:</p>
-<ol>
-  <li><tt>false</tt>: no comparison, always returns false</li>
-  <li><tt>oeq</tt>: ordered and equal</li>
-  <li><tt>ogt</tt>: ordered and greater than </li>
-  <li><tt>oge</tt>: ordered and greater than or equal</li>
-  <li><tt>olt</tt>: ordered and less than </li>
-  <li><tt>ole</tt>: ordered and less than or equal</li>
-  <li><tt>one</tt>: ordered and not equal</li>
-  <li><tt>ord</tt>: ordered (no nans)</li>
-  <li><tt>ueq</tt>: unordered or equal</li>
-  <li><tt>ugt</tt>: unordered or greater than </li>
-  <li><tt>uge</tt>: unordered or greater than or equal</li>
-  <li><tt>ult</tt>: unordered or less than </li>
-  <li><tt>ule</tt>: unordered or less than or equal</li>
-  <li><tt>une</tt>: unordered or not equal</li>
-  <li><tt>uno</tt>: unordered (either nans)</li>
-  <li><tt>true</tt>: no comparison, always returns true</li>
-</ol>
-<p>The remaining two arguments must be <a href="#t_vector">vector</a> of 
-<a href="#t_floating">floating point</a> typed. They must also be identical
-types.</p>
-<h5>Semantics:</h5>
-<p>The '<tt>vfcmp</tt>' instruction compares <tt>op1</tt> and <tt>op2</tt>
-according to  the condition code given as <tt>cond</tt>. The comparison yields a 
-<a href="#t_vector">vector</a> of <a href="#t_integer">integer</a> result, with
-an identical number of elements as the values being compared, and each element
-having identical with to the width of the floating point elements. The most 
-significant bit in each element is 1 if the element-wise comparison evaluates to
-true, and is 0 otherwise.  All other bits of the result are undefined.  The
-condition codes are evaluated identically to the 
-<a href="#i_fcmp">'<tt>fcmp</tt>' instruction</a>.</p>
-
-<h5>Example:</h5>
-<pre>
-  <i>; yields: result=&lt;2 x i32&gt; &lt; i32 0, i32 -1 &gt;</i>
-  &lt;result&gt; = vfcmp oeq &lt;2 x float&gt; &lt; float 4, float 0 &gt;, &lt; float 5, float 0 &gt;
-  
-  <i>; yields: result=&lt;2 x i64&gt; &lt; i64 -1, i64 0 &gt;</i>
-  &lt;result&gt; = vfcmp ult &lt;2 x double&gt; &lt; double 1, double 2 &gt;, &lt; double 2, double 2&gt;
-</pre>
 </div>
 
 <!-- _______________________________________________________________________ -->
