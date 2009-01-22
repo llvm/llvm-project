@@ -326,6 +326,19 @@ MemDepResult MemoryDependenceAnalysis::getDependency(Instruction *QueryInst) {
   return LocalCache;
 }
 
+#ifndef NDEBUG
+/// AssertSorted - This method is used when -debug is specified to verify that
+/// cache arrays are properly kept sorted.
+static void AssertSorted(MemoryDependenceAnalysis::NonLocalDepInfo &Cache,
+                         int Count = -1) {
+  if (Count == -1) Count = Cache.size();
+  if (Count == 0) return;
+
+  for (unsigned i = 1; i != unsigned(Count); ++i)
+    assert(Cache[i-1] <= Cache[i] && "Cache isn't sorted!");
+}
+#endif
+
 /// getNonLocalCallDependency - Perform a full dependency query for the
 /// specified call, returning the set of blocks that the value is
 /// potentially live across.  The returned set of results will include a
@@ -386,6 +399,7 @@ MemoryDependenceAnalysis::getNonLocalCallDependency(CallSite QueryCS) {
   SmallPtrSet<BasicBlock*, 64> Visited;
   
   unsigned NumSortedEntries = Cache.size();
+  DEBUG(AssertSorted(Cache));
   
   // Iterate while we still have blocks to update.
   while (!DirtyBlocks.empty()) {
@@ -398,6 +412,7 @@ MemoryDependenceAnalysis::getNonLocalCallDependency(CallSite QueryCS) {
     
     // Do a binary search to see if we already have an entry for this block in
     // the cache set.  If so, find it.
+    DEBUG(AssertSorted(Cache, NumSortedEntries));
     NonLocalDepInfo::iterator Entry = 
       std::upper_bound(Cache.begin(), Cache.begin()+NumSortedEntries,
                        std::make_pair(DirtyBB, MemDepResult()));
@@ -647,6 +662,7 @@ getNonLocalPointerDepFromBB(Value *Pointer, uint64_t PointeeSize,
   // won't get any reuse from currently inserted values, because we don't
   // revisit blocks after we insert info for them.
   unsigned NumSortedEntries = Cache->size();
+  DEBUG(AssertSorted(*Cache));
   
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
@@ -659,6 +675,7 @@ getNonLocalPointerDepFromBB(Value *Pointer, uint64_t PointeeSize,
 
       // Get the dependency info for Pointer in BB.  If we have cached
       // information, we will use it, otherwise we compute it.
+      DEBUG(AssertSorted(*Cache, NumSortedEntries));
       MemDepResult Dep = GetNonLocalInfoForBlock(Pointer, PointeeSize, isLoad,
                                                  BB, Cache, NumSortedEntries);
       
@@ -705,7 +722,7 @@ getNonLocalPointerDepFromBB(Value *Pointer, uint64_t PointeeSize,
     // If this is directly a PHI node, just use the incoming values for each
     // pred as the phi translated version.
     if (PHINode *PtrPHI = dyn_cast<PHINode>(PtrInst)) {
-      for (BasicBlock **PI = PredCache->GetPreds(BB); *PI; ++PI){
+      for (BasicBlock **PI = PredCache->GetPreds(BB); *PI; ++PI) {
         BasicBlock *Pred = *PI;
         Value *PredPtr = PtrPHI->getIncomingValueForBlock(Pred);
         
@@ -728,6 +745,21 @@ getNonLocalPointerDepFromBB(Value *Pointer, uint64_t PointeeSize,
           // treat this as a phi translation failure.
           goto PredTranslationFailure;
         }
+
+        // We may have added values to the cache list before this PHI
+        // translation.  If so, we haven't done anything to ensure that the
+        // cache remains sorted.  Sort it now (if needed) so that recursive
+        // invocations of getNonLocalPointerDepFromBB that could reuse the cache
+        // value will only see properly sorted cache arrays.
+        if (NumSortedEntries != Cache->size()) {
+          std::sort(Cache->begin(), Cache->end());
+          NumSortedEntries = Cache->size();
+        }
+        
+        // FIXME: it is entirely possible that PHI translating will end up with
+        // the same value.  Consider PHI translating something like:
+        // X = phi [x, bb1], [y, bb2].  PHI translating for bb1 doesn't *need*
+        // to recurse here, pedantically speaking.
         
         // If we have a problem phi translating, fall through to the code below
         // to handle the failure condition.
@@ -739,7 +771,8 @@ getNonLocalPointerDepFromBB(Value *Pointer, uint64_t PointeeSize,
       // Refresh the CacheInfo/Cache pointer so that it isn't invalidated.
       CacheInfo = &NonLocalPointerDeps[CacheKey];
       Cache = &CacheInfo->second;
-      
+      NumSortedEntries = Cache->size();
+
       // Since we did phi translation, the "Cache" set won't contain all of the
       // results for the query.  This is ok (we can still use it to accelerate
       // specific block queries) but we can't do the fastpath "return all
@@ -817,7 +850,7 @@ getNonLocalPointerDepFromBB(Value *Pointer, uint64_t PointeeSize,
     // Added many values, do a full scale sort.
     std::sort(Cache->begin(), Cache->end());
   }
-  
+  DEBUG(AssertSorted(*Cache));
   return false;
 }
 
