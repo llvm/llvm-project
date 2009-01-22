@@ -10,19 +10,18 @@
 //  This file contains both code to deal with invoking "external" functions, but
 //  also contains code that implements "exported" external functions.
 //
-//  There are currently two mechanisms for handling external functions in the
-//  Interpreter.  The first is to implement lle_* wrapper functions that are
-//  specific to well-known library functions which manually translate the
-//  arguments from GenericValues and make the call.  If such a wrapper does
-//  not exist, and libffi is available, then the Interpreter will attempt to
-//  invoke the function using libffi, after finding its address.
+//  External functions in the interpreter are implemented by
+//  using the system's dynamic loader to look up the address of the function
+//  we want to invoke.  If a function is found, then one of the
+//  many lle_* wrapper functions in this file will translate its arguments from
+//  GenericValues to the types the function is actually expecting, before the
+//  function is called.
 //
 //===----------------------------------------------------------------------===//
 
 #include "Interpreter.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Module.h"
-#include "llvm/Config/config.h"     // Detect libffi
 #include "llvm/Support/Streams.h"
 #include "llvm/System/DynamicLibrary.h"
 #include "llvm/Target/TargetData.h"
@@ -33,21 +32,17 @@
 #include <cmath>
 #include <cstring>
 
-#ifdef HAVE_LIBFFI
-#include FFI_HEADER
+#ifdef __linux__
+#include <cxxabi.h>
 #endif
+
+using std::vector;
 
 using namespace llvm;
 
-typedef GenericValue (*ExFunc)(const FunctionType *,
-                               const std::vector<GenericValue> &);
-static ManagedStatic<std::map<const Function *, ExFunc> > ExportedFunctions;
+typedef GenericValue (*ExFunc)(FunctionType *, const vector<GenericValue> &);
+static ManagedStatic<std::map<const Function *, ExFunc> > Functions;
 static std::map<std::string, ExFunc> FuncNames;
-
-#ifdef HAVE_LIBFFI
-typedef void (*RawFunc)(void);
-static ManagedStatic<std::map<const Function *, RawFunc> > RawFunctions;
-#endif // HAVE_LIBFFI
 
 static Interpreter *TheInterpreter;
 
@@ -94,147 +89,13 @@ static ExFunc lookupFunction(const Function *F) {
   if (FnPtr == 0)  // Try calling a generic function... if it exists...
     FnPtr = (ExFunc)(intptr_t)sys::DynamicLibrary::SearchForAddressOfSymbol(
             ("lle_X_"+F->getName()).c_str());
+  if (FnPtr == 0)
+    FnPtr = (ExFunc)(intptr_t)
+      sys::DynamicLibrary::SearchForAddressOfSymbol(F->getName());
   if (FnPtr != 0)
-    ExportedFunctions->insert(std::make_pair(F, FnPtr));  // Cache for later
+    Functions->insert(std::make_pair(F, FnPtr));  // Cache for later
   return FnPtr;
 }
-
-#ifdef HAVE_LIBFFI
-static ffi_type *ffiTypeFor(const Type *Ty) {
-  switch (Ty->getTypeID()) {
-    case Type::VoidTyID: return &ffi_type_void;
-    case Type::IntegerTyID:
-      switch (cast<IntegerType>(Ty)->getBitWidth()) {
-        case 8:  return &ffi_type_sint8;
-        case 16: return &ffi_type_sint16;
-        case 32: return &ffi_type_sint32;
-        case 64: return &ffi_type_sint64;
-      }
-    case Type::FloatTyID:   return &ffi_type_float;
-    case Type::DoubleTyID:  return &ffi_type_double;
-    case Type::PointerTyID: return &ffi_type_pointer;
-    default: break;
-  }
-  // TODO: Support other types such as StructTyID, ArrayTyID, OpaqueTyID, etc.
-  cerr << "Type could not be mapped for use with libffi.\n";
-  abort();
-  return NULL;
-}
-
-static void *ffiValueFor(const Type *Ty, const GenericValue &AV,
-                         void *ArgDataPtr) {
-  switch (Ty->getTypeID()) {
-    case Type::IntegerTyID:
-      switch (cast<IntegerType>(Ty)->getBitWidth()) {
-        case 8: {
-          int8_t *I8Ptr = (int8_t *) ArgDataPtr;
-          *I8Ptr = (int8_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-        case 16: {
-          int16_t *I16Ptr = (int16_t *) ArgDataPtr;
-          *I16Ptr = (int16_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-        case 32: {
-          int32_t *I32Ptr = (int32_t *) ArgDataPtr;
-          *I32Ptr = (int32_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-        case 64: {
-          int64_t *I64Ptr = (int64_t *) ArgDataPtr;
-          *I64Ptr = (int64_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-      }
-    case Type::FloatTyID: {
-      float *FloatPtr = (float *) ArgDataPtr;
-      *FloatPtr = AV.FloatVal;
-      return ArgDataPtr;
-    }
-    case Type::DoubleTyID: {
-      double *DoublePtr = (double *) ArgDataPtr;
-      *DoublePtr = AV.DoubleVal;
-      return ArgDataPtr;
-    }
-    case Type::PointerTyID: {
-      void **PtrPtr = (void **) ArgDataPtr;
-      *PtrPtr = GVTOP(AV);
-      return ArgDataPtr;
-    }
-    default: break;
-  }
-  // TODO: Support other types such as StructTyID, ArrayTyID, OpaqueTyID, etc.
-  cerr << "Type value could not be mapped for use with libffi.\n";
-  abort();
-  return NULL;
-}
-
-static bool ffiInvoke(RawFunc Fn, Function *F,
-                      const std::vector<GenericValue> &ArgVals,
-                      const TargetData *TD, GenericValue &Result) {
-  ffi_cif cif;
-  const FunctionType *FTy = F->getFunctionType();
-  const unsigned NumArgs = F->arg_size();
-
-  // TODO: We don't have type information about the remaining arguments, because
-  // this information is never passed into ExecutionEngine::runFunction().
-  if (ArgVals.size() > NumArgs && F->isVarArg()) {
-    cerr << "Calling external var arg function '" << F->getName()
-         << "' is not supported by the Interpreter.\n";
-    abort();
-  }
-
-  unsigned ArgBytes = 0;
-
-  std::vector<ffi_type*> args(NumArgs);
-  for (Function::const_arg_iterator A = F->arg_begin(), E = F->arg_end();
-       A != E; ++A) {
-    const unsigned ArgNo = A->getArgNo();
-    const Type *ArgTy = FTy->getParamType(ArgNo);
-    args[ArgNo] = ffiTypeFor(ArgTy);
-    ArgBytes += TD->getTypeStoreSize(ArgTy);
-  }
-
-  uint8_t *ArgData = (uint8_t*) alloca(ArgBytes);
-  uint8_t *ArgDataPtr = ArgData;
-  std::vector<void*> values(NumArgs);
-  for (Function::const_arg_iterator A = F->arg_begin(), E = F->arg_end();
-       A != E; ++A) {
-    const unsigned ArgNo = A->getArgNo();
-    const Type *ArgTy = FTy->getParamType(ArgNo);
-    values[ArgNo] = ffiValueFor(ArgTy, ArgVals[ArgNo], ArgDataPtr);
-    ArgDataPtr += TD->getTypeStoreSize(ArgTy);
-  }
-
-  const Type *RetTy = FTy->getReturnType();
-  ffi_type *rtype = ffiTypeFor(RetTy);
-
-  if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, NumArgs, rtype, &args[0]) == FFI_OK) {
-    void *ret = NULL;
-    if (RetTy->getTypeID() != Type::VoidTyID)
-      ret = alloca(TD->getTypeStoreSize(RetTy));
-    ffi_call(&cif, Fn, ret, &values[0]);
-    switch (RetTy->getTypeID()) {
-      case Type::IntegerTyID:
-        switch (cast<IntegerType>(RetTy)->getBitWidth()) {
-          case 8:  Result.IntVal = APInt(8 , *(int8_t *) ret); break;
-          case 16: Result.IntVal = APInt(16, *(int16_t*) ret); break;
-          case 32: Result.IntVal = APInt(32, *(int32_t*) ret); break;
-          case 64: Result.IntVal = APInt(64, *(int64_t*) ret); break;
-        }
-        break;
-      case Type::FloatTyID:   Result.FloatVal   = *(float *) ret; break;
-      case Type::DoubleTyID:  Result.DoubleVal  = *(double*) ret; break;
-      case Type::PointerTyID: Result.PointerVal = *(void **) ret; break;
-      default: break;
-    }
-    return true;
-  }
-
-  return false;
-}
-#endif // HAVE_LIBFFI
 
 GenericValue Interpreter::callExternalFunction(Function *F,
                                      const std::vector<GenericValue> &ArgVals) {
@@ -242,33 +103,20 @@ GenericValue Interpreter::callExternalFunction(Function *F,
 
   // Do a lookup to see if the function is in our cache... this should just be a
   // deferred annotation!
-  std::map<const Function *, ExFunc>::iterator FI = ExportedFunctions->find(F);
-  if (ExFunc Fn = (FI == ExportedFunctions->end()) ? lookupFunction(F)
-                                                   : FI->second)
-    return Fn(F->getFunctionType(), ArgVals);
-
-#ifdef HAVE_LIBFFI
-  std::map<const Function *, RawFunc>::iterator RF = RawFunctions->find(F);
-  RawFunc RawFn;
-  if (RF == RawFunctions->end()) {
-    RawFn = (RawFunc)(intptr_t)
-      sys::DynamicLibrary::SearchForAddressOfSymbol(F->getName());
-    if (RawFn != 0)
-      RawFunctions->insert(std::make_pair(F, RawFn));  // Cache for later
-  } else {
-    RawFn = RF->second;
+  std::map<const Function *, ExFunc>::iterator FI = Functions->find(F);
+  ExFunc Fn = (FI == Functions->end()) ? lookupFunction(F) : FI->second;
+  if (Fn == 0) {
+    cerr << "Tried to execute an unknown external function: "
+         << F->getType()->getDescription() << " " << F->getName() << "\n";
+    if (F->getName() == "__main")
+      return GenericValue();
+    abort();
   }
 
-  GenericValue Result;
-  if (RawFn != 0 && ffiInvoke(RawFn, F, ArgVals, getTargetData(), Result))
-    return Result;
-#endif // HAVE_LIBFFI
-
-  cerr << "Tried to execute an unknown external function: "
-       << F->getType()->getDescription() << " " << F->getName() << "\n";
-  if (F->getName() != "__main")
-    abort();
-  return GenericValue();
+  // TODO: FIXME when types are not const!
+  GenericValue Result = Fn(const_cast<FunctionType*>(F->getFunctionType()),
+                           ArgVals);
+  return Result;
 }
 
 
@@ -277,9 +125,24 @@ GenericValue Interpreter::callExternalFunction(Function *F,
 //
 extern "C" {  // Don't add C++ manglings to llvm mangling :)
 
+// void putchar(ubyte)
+GenericValue lle_X_putchar(FunctionType *FT, const vector<GenericValue> &Args){
+  cout << ((char)Args[0].IntVal.getZExtValue()) << std::flush;
+  return Args[0];
+}
+
+// void _IO_putc(int c, FILE* fp)
+GenericValue lle_X__IO_putc(FunctionType *FT, const vector<GenericValue> &Args){
+#ifdef __linux__
+  _IO_putc((char)Args[0].IntVal.getZExtValue(), (FILE*) Args[1].PointerVal);
+#else
+  assert(0 && "Can't call _IO_putc on this platform");
+#endif
+  return Args[0];
+}
+
 // void atexit(Function*)
-GenericValue lle_X_atexit(const FunctionType *FT,
-                          const std::vector<GenericValue> &Args) {
+GenericValue lle_X_atexit(FunctionType *FT, const vector<GenericValue> &Args) {
   assert(Args.size() == 1);
   TheInterpreter->addAtExitHandler((Function*)GVTOP(Args[0]));
   GenericValue GV;
@@ -288,23 +151,163 @@ GenericValue lle_X_atexit(const FunctionType *FT,
 }
 
 // void exit(int)
-GenericValue lle_X_exit(const FunctionType *FT,
-                        const std::vector<GenericValue> &Args) {
+GenericValue lle_X_exit(FunctionType *FT, const vector<GenericValue> &Args) {
   TheInterpreter->exitCalled(Args[0]);
   return GenericValue();
 }
 
 // void abort(void)
-GenericValue lle_X_abort(const FunctionType *FT,
-                         const std::vector<GenericValue> &Args) {
+GenericValue lle_X_abort(FunctionType *FT, const vector<GenericValue> &Args) {
   raise (SIGABRT);
   return GenericValue();
 }
 
-// int sprintf(char *, const char *, ...) - a very rough implementation to make
+// void *malloc(uint)
+GenericValue lle_X_malloc(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1 && "Malloc expects one argument!");
+  assert(isa<PointerType>(FT->getReturnType()) && "malloc must return pointer");
+  return PTOGV(malloc(Args[0].IntVal.getZExtValue()));
+}
+
+// void *calloc(uint, uint)
+GenericValue lle_X_calloc(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2 && "calloc expects two arguments!");
+  assert(isa<PointerType>(FT->getReturnType()) && "calloc must return pointer");
+  return PTOGV(calloc(Args[0].IntVal.getZExtValue(), 
+                      Args[1].IntVal.getZExtValue()));
+}
+
+// void *calloc(uint, uint)
+GenericValue lle_X_realloc(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2 && "calloc expects two arguments!");
+  assert(isa<PointerType>(FT->getReturnType()) &&"realloc must return pointer");
+  return PTOGV(realloc(GVTOP(Args[0]), Args[1].IntVal.getZExtValue()));
+}
+
+// void free(void *)
+GenericValue lle_X_free(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  free(GVTOP(Args[0]));
+  return GenericValue();
+}
+
+// int atoi(char *)
+GenericValue lle_X_atoi(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.IntVal = APInt(32, atoi((char*)GVTOP(Args[0])));
+  return GV;
+}
+
+// double pow(double, double)
+GenericValue lle_X_pow(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2);
+  GenericValue GV;
+  GV.DoubleVal = pow(Args[0].DoubleVal, Args[1].DoubleVal);
+  return GV;
+}
+
+// double sin(double)
+GenericValue lle_X_sin(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.DoubleVal = sin(Args[0].DoubleVal);
+  return GV;
+}
+
+// double cos(double)
+GenericValue lle_X_cos(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.DoubleVal = cos(Args[0].DoubleVal);
+  return GV;
+}
+
+// double exp(double)
+GenericValue lle_X_exp(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.DoubleVal = exp(Args[0].DoubleVal);
+  return GV;
+}
+
+// double sqrt(double)
+GenericValue lle_X_sqrt(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.DoubleVal = sqrt(Args[0].DoubleVal);
+  return GV;
+}
+
+// double log(double)
+GenericValue lle_X_log(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.DoubleVal = log(Args[0].DoubleVal);
+  return GV;
+}
+
+// double floor(double)
+GenericValue lle_X_floor(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.DoubleVal = floor(Args[0].DoubleVal);
+  return GV;
+}
+
+#ifdef HAVE_RAND48
+
+// double drand48()
+GenericValue lle_X_drand48(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.empty());
+  GenericValue GV;
+  GV.DoubleVal = drand48();
+  return GV;
+}
+
+// long lrand48()
+GenericValue lle_X_lrand48(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.empty());
+  GenericValue GV;
+  GV.IntVal = APInt(32, lrand48());
+  return GV;
+}
+
+// void srand48(long)
+GenericValue lle_X_srand48(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  srand48(Args[0].IntVal.getZExtValue());
+  return GenericValue();
+}
+
+#endif
+
+// int rand()
+GenericValue lle_X_rand(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.empty());
+  GenericValue GV;
+  GV.IntVal = APInt(32, rand());
+  return GV;
+}
+
+// void srand(uint)
+GenericValue lle_X_srand(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  srand(Args[0].IntVal.getZExtValue());
+  return GenericValue();
+}
+
+// int puts(const char*)
+GenericValue lle_X_puts(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.IntVal = APInt(32, puts((char*)GVTOP(Args[0])));
+  return GV;
+}
+
+// int sprintf(sbyte *, sbyte *, ...) - a very rough implementation to make
 // output useful.
-GenericValue lle_X_sprintf(const FunctionType *FT,
-                           const std::vector<GenericValue> &Args) {
+GenericValue lle_X_sprintf(FunctionType *FT, const vector<GenericValue> &Args) {
   char *OutputBuffer = (char *)GVTOP(Args[0]);
   const char *FmtStr = (const char *)GVTOP(Args[1]);
   unsigned ArgNo = 2;
@@ -381,12 +384,10 @@ GenericValue lle_X_sprintf(const FunctionType *FT,
   return GV;
 }
 
-// int printf(const char *, ...) - a very rough implementation to make output
-// useful.
-GenericValue lle_X_printf(const FunctionType *FT,
-                          const std::vector<GenericValue> &Args) {
+// int printf(sbyte *, ...) - a very rough implementation to make output useful.
+GenericValue lle_X_printf(FunctionType *FT, const vector<GenericValue> &Args) {
   char Buffer[10000];
-  std::vector<GenericValue> NewArgs;
+  vector<GenericValue> NewArgs;
   NewArgs.push_back(PTOGV((void*)&Buffer[0]));
   NewArgs.insert(NewArgs.end(), Args.begin(), Args.end());
   GenericValue GV = lle_X_sprintf(FT, NewArgs);
@@ -471,8 +472,7 @@ static void ByteswapSCANFResults(const char *Fmt, void *Arg0, void *Arg1,
 }
 
 // int sscanf(const char *format, ...);
-GenericValue lle_X_sscanf(const FunctionType *FT,
-                          const std::vector<GenericValue> &args) {
+GenericValue lle_X_sscanf(FunctionType *FT, const vector<GenericValue> &args) {
   assert(args.size() < 10 && "Only handle up to 10 args to sscanf right now!");
 
   char *Args[10];
@@ -488,8 +488,7 @@ GenericValue lle_X_sscanf(const FunctionType *FT,
 }
 
 // int scanf(const char *format, ...);
-GenericValue lle_X_scanf(const FunctionType *FT,
-                         const std::vector<GenericValue> &args) {
+GenericValue lle_X_scanf(FunctionType *FT, const vector<GenericValue> &args) {
   assert(args.size() < 10 && "Only handle up to 10 args to scanf right now!");
 
   char *Args[10];
@@ -504,33 +503,324 @@ GenericValue lle_X_scanf(const FunctionType *FT,
   return GV;
 }
 
-// int fprintf(FILE *, const char *, ...) - a very rough implementation to make
-// output useful.
-GenericValue lle_X_fprintf(const FunctionType *FT,
-                           const std::vector<GenericValue> &Args) {
+
+// int clock(void) - Profiling implementation
+GenericValue lle_i_clock(FunctionType *FT, const vector<GenericValue> &Args) {
+  extern unsigned int clock(void);
+  GenericValue GV; 
+  GV.IntVal = APInt(32, clock());
+  return GV;
+}
+
+
+//===----------------------------------------------------------------------===//
+// String Functions...
+//===----------------------------------------------------------------------===//
+
+// int strcmp(const char *S1, const char *S2);
+GenericValue lle_X_strcmp(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2);
+  GenericValue Ret;
+  Ret.IntVal = APInt(32, strcmp((char*)GVTOP(Args[0]), (char*)GVTOP(Args[1])));
+  return Ret;
+}
+
+// char *strcat(char *Dest, const char *src);
+GenericValue lle_X_strcat(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2);
+  assert(isa<PointerType>(FT->getReturnType()) &&"strcat must return pointer");
+  return PTOGV(strcat((char*)GVTOP(Args[0]), (char*)GVTOP(Args[1])));
+}
+
+// char *strcpy(char *Dest, const char *src);
+GenericValue lle_X_strcpy(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2);
+  assert(isa<PointerType>(FT->getReturnType()) &&"strcpy must return pointer");
+  return PTOGV(strcpy((char*)GVTOP(Args[0]), (char*)GVTOP(Args[1])));
+}
+
+static GenericValue size_t_to_GV (size_t n) {
+  GenericValue Ret;
+  if (sizeof (size_t) == sizeof (uint64_t)) {
+    Ret.IntVal = APInt(64, n);
+  } else {
+    assert (sizeof (size_t) == sizeof (unsigned int));
+    Ret.IntVal = APInt(32, n);
+  }
+  return Ret;
+}
+
+static size_t GV_to_size_t (GenericValue GV) {
+  size_t count;
+  if (sizeof (size_t) == sizeof (uint64_t)) {
+    count = (size_t)GV.IntVal.getZExtValue();
+  } else {
+    assert (sizeof (size_t) == sizeof (unsigned int));
+    count = (size_t)GV.IntVal.getZExtValue();
+  }
+  return count;
+}
+
+// size_t strlen(const char *src);
+GenericValue lle_X_strlen(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  size_t strlenResult = strlen ((char *) GVTOP (Args[0]));
+  return size_t_to_GV (strlenResult);
+}
+
+// char *strdup(const char *src);
+GenericValue lle_X_strdup(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  assert(isa<PointerType>(FT->getReturnType()) && "strdup must return pointer");
+  return PTOGV(strdup((char*)GVTOP(Args[0])));
+}
+
+// char *__strdup(const char *src);
+GenericValue lle_X___strdup(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  assert(isa<PointerType>(FT->getReturnType()) &&"_strdup must return pointer");
+  return PTOGV(strdup((char*)GVTOP(Args[0])));
+}
+
+// void *memset(void *S, int C, size_t N)
+GenericValue lle_X_memset(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 3);
+  size_t count = GV_to_size_t (Args[2]);
+  assert(isa<PointerType>(FT->getReturnType()) && "memset must return pointer");
+  return PTOGV(memset(GVTOP(Args[0]), uint32_t(Args[1].IntVal.getZExtValue()), 
+                      count));
+}
+
+// void *memcpy(void *Dest, void *src, size_t Size);
+GenericValue lle_X_memcpy(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 3);
+  assert(isa<PointerType>(FT->getReturnType()) && "memcpy must return pointer");
+  size_t count = GV_to_size_t (Args[2]);
+  return PTOGV(memcpy((char*)GVTOP(Args[0]), (char*)GVTOP(Args[1]), count));
+}
+
+// void *memcpy(void *Dest, void *src, size_t Size);
+GenericValue lle_X_memmove(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 3);
+  assert(isa<PointerType>(FT->getReturnType()) && "memmove must return pointer");
+  size_t count = GV_to_size_t (Args[2]);
+  return PTOGV(memmove((char*)GVTOP(Args[0]), (char*)GVTOP(Args[1]), count));
+}
+
+//===----------------------------------------------------------------------===//
+// IO Functions...
+//===----------------------------------------------------------------------===//
+
+// getFILE - Turn a pointer in the host address space into a legit pointer in
+// the interpreter address space.  This is an identity transformation.
+#define getFILE(ptr) ((FILE*)ptr)
+
+// FILE *fopen(const char *filename, const char *mode);
+GenericValue lle_X_fopen(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2);
+  assert(isa<PointerType>(FT->getReturnType()) && "fopen must return pointer");
+  return PTOGV(fopen((const char *)GVTOP(Args[0]),
+                     (const char *)GVTOP(Args[1])));
+}
+
+// int fclose(FILE *F);
+GenericValue lle_X_fclose(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.IntVal = APInt(32, fclose(getFILE(GVTOP(Args[0]))));
+  return GV;
+}
+
+// int feof(FILE *stream);
+GenericValue lle_X_feof(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+
+  GV.IntVal = APInt(32, feof(getFILE(GVTOP(Args[0]))));
+  return GV;
+}
+
+// size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
+GenericValue lle_X_fread(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 4);
+  size_t result;
+
+  result = fread((void*)GVTOP(Args[0]), GV_to_size_t (Args[1]),
+                 GV_to_size_t (Args[2]), getFILE(GVTOP(Args[3])));
+  return size_t_to_GV (result);
+}
+
+// size_t fwrite(const void *ptr, size_t size, size_t nitems, FILE *stream);
+GenericValue lle_X_fwrite(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 4);
+  size_t result;
+
+  result = fwrite((void*)GVTOP(Args[0]), GV_to_size_t (Args[1]),
+                  GV_to_size_t (Args[2]), getFILE(GVTOP(Args[3])));
+  return size_t_to_GV (result);
+}
+
+// char *fgets(char *s, int n, FILE *stream);
+GenericValue lle_X_fgets(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 3);
+  return PTOGV(fgets((char*)GVTOP(Args[0]), Args[1].IntVal.getZExtValue(),
+                     getFILE(GVTOP(Args[2]))));
+}
+
+// FILE *freopen(const char *path, const char *mode, FILE *stream);
+GenericValue lle_X_freopen(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 3);
+  assert(isa<PointerType>(FT->getReturnType()) &&"freopen must return pointer");
+  return PTOGV(freopen((char*)GVTOP(Args[0]), (char*)GVTOP(Args[1]),
+                       getFILE(GVTOP(Args[2]))));
+}
+
+// int fflush(FILE *stream);
+GenericValue lle_X_fflush(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.IntVal = APInt(32, fflush(getFILE(GVTOP(Args[0]))));
+  return GV;
+}
+
+// int getc(FILE *stream);
+GenericValue lle_X_getc(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.IntVal = APInt(32, getc(getFILE(GVTOP(Args[0]))));
+  return GV;
+}
+
+// int _IO_getc(FILE *stream);
+GenericValue lle_X__IO_getc(FunctionType *F, const vector<GenericValue> &Args) {
+  return lle_X_getc(F, Args);
+}
+
+// int fputc(int C, FILE *stream);
+GenericValue lle_X_fputc(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2);
+  GenericValue GV;
+  GV.IntVal = APInt(32, fputc(Args[0].IntVal.getZExtValue(), 
+                              getFILE(GVTOP(Args[1]))));
+  return GV;
+}
+
+// int ungetc(int C, FILE *stream);
+GenericValue lle_X_ungetc(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 2);
+  GenericValue GV;
+  GV.IntVal = APInt(32, ungetc(Args[0].IntVal.getZExtValue(), 
+                               getFILE(GVTOP(Args[1]))));
+  return GV;
+}
+
+// int ferror (FILE *stream);
+GenericValue lle_X_ferror(FunctionType *FT, const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+  GV.IntVal = APInt(32, ferror (getFILE(GVTOP(Args[0]))));
+  return GV;
+}
+
+// int fprintf(FILE *,sbyte *, ...) - a very rough implementation to make output
+// useful.
+GenericValue lle_X_fprintf(FunctionType *FT, const vector<GenericValue> &Args) {
   assert(Args.size() >= 2);
   char Buffer[10000];
-  std::vector<GenericValue> NewArgs;
+  vector<GenericValue> NewArgs;
   NewArgs.push_back(PTOGV(Buffer));
   NewArgs.insert(NewArgs.end(), Args.begin()+1, Args.end());
   GenericValue GV = lle_X_sprintf(FT, NewArgs);
 
-  fputs(Buffer, (FILE *) GVTOP(Args[0]));
+  fputs(Buffer, getFILE(GVTOP(Args[0])));
   return GV;
+}
+
+// int __cxa_guard_acquire (__guard *g);
+GenericValue lle_X___cxa_guard_acquire(FunctionType *FT, 
+                                       const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+  GenericValue GV;
+#ifdef __linux__
+  GV.IntVal = APInt(32, __cxxabiv1::__cxa_guard_acquire (
+                          (__cxxabiv1::__guard*)GVTOP(Args[0])));
+#else
+  assert(0 && "Can't call __cxa_guard_acquire on this platform");
+#endif
+  return GV;
+}
+
+// void __cxa_guard_release (__guard *g);
+GenericValue lle_X___cxa_guard_release(FunctionType *FT, 
+                                       const vector<GenericValue> &Args) {
+  assert(Args.size() == 1);
+#ifdef __linux__
+  __cxxabiv1::__cxa_guard_release ((__cxxabiv1::__guard*)GVTOP(Args[0]));
+#else
+  assert(0 && "Can't call __cxa_guard_release on this platform");
+#endif
+  return GenericValue();
 }
 
 } // End extern "C"
 
 
 void Interpreter::initializeExternalFunctions() {
-  FuncNames["lle_X_atexit"]       = lle_X_atexit;
+  FuncNames["lle_X_putchar"]      = lle_X_putchar;
+  FuncNames["lle_X__IO_putc"]     = lle_X__IO_putc;
   FuncNames["lle_X_exit"]         = lle_X_exit;
   FuncNames["lle_X_abort"]        = lle_X_abort;
-
+  FuncNames["lle_X_malloc"]       = lle_X_malloc;
+  FuncNames["lle_X_calloc"]       = lle_X_calloc;
+  FuncNames["lle_X_realloc"]      = lle_X_realloc;
+  FuncNames["lle_X_free"]         = lle_X_free;
+  FuncNames["lle_X_atoi"]         = lle_X_atoi;
+  FuncNames["lle_X_pow"]          = lle_X_pow;
+  FuncNames["lle_X_sin"]          = lle_X_sin;
+  FuncNames["lle_X_cos"]          = lle_X_cos;
+  FuncNames["lle_X_exp"]          = lle_X_exp;
+  FuncNames["lle_X_log"]          = lle_X_log;
+  FuncNames["lle_X_floor"]        = lle_X_floor;
+  FuncNames["lle_X_srand"]        = lle_X_srand;
+  FuncNames["lle_X_rand"]         = lle_X_rand;
+#ifdef HAVE_RAND48
+  FuncNames["lle_X_drand48"]      = lle_X_drand48;
+  FuncNames["lle_X_srand48"]      = lle_X_srand48;
+  FuncNames["lle_X_lrand48"]      = lle_X_lrand48;
+#endif
+  FuncNames["lle_X_sqrt"]         = lle_X_sqrt;
+  FuncNames["lle_X_puts"]         = lle_X_puts;
   FuncNames["lle_X_printf"]       = lle_X_printf;
   FuncNames["lle_X_sprintf"]      = lle_X_sprintf;
   FuncNames["lle_X_sscanf"]       = lle_X_sscanf;
   FuncNames["lle_X_scanf"]        = lle_X_scanf;
+  FuncNames["lle_i_clock"]        = lle_i_clock;
+
+  FuncNames["lle_X_strcmp"]       = lle_X_strcmp;
+  FuncNames["lle_X_strcat"]       = lle_X_strcat;
+  FuncNames["lle_X_strcpy"]       = lle_X_strcpy;
+  FuncNames["lle_X_strlen"]       = lle_X_strlen;
+  FuncNames["lle_X___strdup"]     = lle_X___strdup;
+  FuncNames["lle_X_memset"]       = lle_X_memset;
+  FuncNames["lle_X_memcpy"]       = lle_X_memcpy;
+  FuncNames["lle_X_memmove"]      = lle_X_memmove;
+
+  FuncNames["lle_X_fopen"]        = lle_X_fopen;
+  FuncNames["lle_X_fclose"]       = lle_X_fclose;
+  FuncNames["lle_X_feof"]         = lle_X_feof;
+  FuncNames["lle_X_fread"]        = lle_X_fread;
+  FuncNames["lle_X_fwrite"]       = lle_X_fwrite;
+  FuncNames["lle_X_fgets"]        = lle_X_fgets;
+  FuncNames["lle_X_fflush"]       = lle_X_fflush;
+  FuncNames["lle_X_fgetc"]        = lle_X_getc;
+  FuncNames["lle_X_getc"]         = lle_X_getc;
+  FuncNames["lle_X__IO_getc"]     = lle_X__IO_getc;
+  FuncNames["lle_X_fputc"]        = lle_X_fputc;
+  FuncNames["lle_X_ungetc"]       = lle_X_ungetc;
   FuncNames["lle_X_fprintf"]      = lle_X_fprintf;
+  FuncNames["lle_X_freopen"]      = lle_X_freopen;
+
+  FuncNames["lle_X___cxa_guard_acquire"] = lle_X___cxa_guard_acquire;
+  FuncNames["lle_X____cxa_guard_release"] = lle_X___cxa_guard_release;
 }
 

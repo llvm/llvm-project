@@ -717,11 +717,6 @@ AC_SEARCH_LIBS(dlopen,dl,AC_DEFINE([HAVE_DLOPEN],[1],
                [Define if dlopen() is available on this platform.]),
                AC_MSG_WARN([dlopen() not found - disabling plugin support]))
 
-dnl libffi is optional; used to call external functions from the interpreter
-AC_SEARCH_LIBS(ffi_call,ffi,AC_DEFINE([HAVE_LIBFFI],[1],
-               [Define to 1 if you have the libffi library (-lffi).]),
-               AC_MSG_WARN([libffi not found - disabling external calls from interpreter]))
-
 dnl mallinfo is optional; the code can compile (minus features) without it
 AC_SEARCH_LIBS(mallinfo,malloc,AC_DEFINE([HAVE_MALLINFO],[1],
                [Define if mallinfo() is available on this platform.]))
@@ -783,10 +778,6 @@ if test "$ENABLE_THREADS" -eq 1 ; then
 else
   AC_SUBST(HAVE_PTHREAD, 0)
 fi
-
-dnl Debian vs. the world.
-AC_CHECK_HEADER(ffi/ffi.h, AC_DEFINE(FFI_HEADER, ["ffi/ffi.h"], [Path to ffi.h]))
-AC_CHECK_HEADER(ffi.h, AC_DEFINE(FFI_HEADER, ["ffi.h"], [Path to ffi.h]))
 
 dnl===-----------------------------------------------------------------------===
 dnl===
