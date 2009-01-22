@@ -1,3 +1,0 @@
-
-#define f() x
-f
