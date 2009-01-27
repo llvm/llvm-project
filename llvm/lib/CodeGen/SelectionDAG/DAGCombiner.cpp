@@ -3814,6 +3814,9 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // canonicalize constant to RHS
   if (N0CFP && !N1CFP)
     return DAG.getNode(ISD::FADD, VT, N1, N0);
+  // fold (A + 0) -> A
+  if (UnsafeFPMath && N1CFP && N1CFP->getValueAPF().isZero())
+    return N0;
   // fold (A + (-B)) -> A-B
   if (isNegatibleForFree(N1, LegalOperations) == 2)
     return DAG.getNode(ISD::FSUB, VT, N0, 
@@ -3852,7 +3855,8 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   if (UnsafeFPMath && N0CFP && N0CFP->getValueAPF().isZero()) {
     if (isNegatibleForFree(N1, LegalOperations))
       return GetNegatedExpression(N1, DAG, LegalOperations);
-    return DAG.getNode(ISD::FNEG, VT, N1);
+    if (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))
+      return DAG.getNode(ISD::FNEG, VT, N1);
   }
   // fold (A-(-B)) -> A+B
   if (isNegatibleForFree(N1, LegalOperations))
@@ -3881,12 +3885,16 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   // canonicalize constant to RHS
   if (N0CFP && !N1CFP)
     return DAG.getNode(ISD::FMUL, VT, N1, N0);
+  // fold (A * 0) -> 0
+  if (UnsafeFPMath && N1CFP && N1CFP->getValueAPF().isZero())
+    return N1;
   // fold (fmul X, 2.0) -> (fadd X, X)
   if (N1CFP && N1CFP->isExactlyValue(+2.0))
     return DAG.getNode(ISD::FADD, VT, N0, N0);
   // fold (fmul X, -1.0) -> (fneg X)
   if (N1CFP && N1CFP->isExactlyValue(-1.0))
-    return DAG.getNode(ISD::FNEG, VT, N0);
+    if (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))
+      return DAG.getNode(ISD::FNEG, VT, N0);
   
   // -X * -Y -> X*Y
   if (char LHSNeg = isNegatibleForFree(N0, LegalOperations)) {
@@ -3970,10 +3978,13 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
     const APFloat& V = N1CFP->getValueAPF();
     // copysign(x, c1) -> fabs(x)       iff ispos(c1)
     // copysign(x, c1) -> fneg(fabs(x)) iff isneg(c1)
-    if (!V.isNegative())
-      return DAG.getNode(ISD::FABS, VT, N0);
-    else
-      return DAG.getNode(ISD::FNEG, VT, DAG.getNode(ISD::FABS, VT, N0));
+    if (!V.isNegative()) {
+      if (!LegalOperations || TLI.isOperationLegal(ISD::FABS, VT))
+        return DAG.getNode(ISD::FABS, VT, N0);
+    } else {
+      if (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))
+        return DAG.getNode(ISD::FNEG, VT, DAG.getNode(ISD::FABS, VT, N0));
+    }
   }
   
   // copysign(fabs(x), y) -> copysign(x, y)

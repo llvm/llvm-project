@@ -27,6 +27,7 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/CommandLine.h"
@@ -2376,16 +2377,26 @@ SDValue SelectionDAG::getNode(unsigned Opcode, MVT VT,
   case ISD::UREM:
   case ISD::MULHU:
   case ISD::MULHS:
-    assert(VT.isInteger() && "This operator does not apply to FP types!");
-    // fall through
   case ISD::MUL:
   case ISD::SDIV:
   case ISD::SREM:
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
+    // fall through
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM:
+    if (UnsafeFPMath && Opcode == ISD::FADD) {
+      // 0+x --> x
+      if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N1))
+        if (CFP->getValueAPF().isZero())
+          return N2;
+      // x+0 --> x
+      if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N2))
+        if (CFP->getValueAPF().isZero())
+          return N1;
+    }
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
     break;
