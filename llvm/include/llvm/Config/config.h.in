@@ -20,9 +20,6 @@
 /* Define if threads enabled */
 #undef ENABLE_THREADS
 
-/* Path to ffi.h */
-#undef FFI_HEADER
-
 /* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
 
@@ -186,9 +183,6 @@
 
 /* Define to 1 if you have the `elf' library (-lelf). */
 #undef HAVE_LIBELF
-
-/* Define to 1 if you have the libffi library (-lffi). */
-#undef HAVE_LIBFFI
 
 /* Define to 1 if you have the `imagehlp' library (-limagehlp). */
 #undef HAVE_LIBIMAGEHLP
