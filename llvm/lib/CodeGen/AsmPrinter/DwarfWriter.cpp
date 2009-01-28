@@ -1578,7 +1578,7 @@ private:
   void AddSourceLine(DIE *Die, const DIGlobal *G) {
     unsigned FileID = 0;
     unsigned Line = G->getLineNumber();
-    if (G->getVersion() < LLVMDebugVersion6) {
+    if (G->getVersion() <= LLVMDebugVersion6) {
       // Version6 or earlier. Use compile unit info to get file id.
       CompileUnit *Unit = FindCompileUnit(G->getCompileUnit());
       FileID = Unit->getID();
