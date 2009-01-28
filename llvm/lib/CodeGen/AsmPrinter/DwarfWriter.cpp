@@ -1662,10 +1662,8 @@ private:
 
   /// AddType - Add a new type attribute to the specified entity.
   void AddType(CompileUnit *DW_Unit, DIE *Entity, DIType Ty) {
-    if (Ty.isNull()) {
-      AddBasicType(Entity, DW_Unit, "", DW_ATE_signed, sizeof(int32_t));
+    if (Ty.isNull())
       return;
-    }
 
     // Check for pre-existence.
     DIEntry *&Slot = DW_Unit->getDIEntrySlotFor(Ty.getGV());
