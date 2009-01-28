@@ -3851,6 +3851,9 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   // fold (fsub c1, c2) -> c1-c2
   if (N0CFP && N1CFP && VT != MVT::ppcf128)
     return DAG.getNode(ISD::FSUB, VT, N0, N1);
+  // fold (A-0) -> A
+  if (UnsafeFPMath && N1CFP && N1CFP->getValueAPF().isZero())
+    return N0;
   // fold (0-B) -> -B
   if (UnsafeFPMath && N0CFP && N0CFP->getValueAPF().isZero()) {
     if (isNegatibleForFree(N1, LegalOperations))
