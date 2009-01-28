@@ -1733,8 +1733,8 @@ private:
 
     // Add source line info if available and TyDesc is not a forward
     // declaration.
-    // FIXME - Enable this. if (!DTy.isForwardDecl())
-    // FIXME - Enable this.     AddSourceLine(&Buffer, *DTy);
+    if (!DTy.isForwardDecl())
+      AddSourceLine(&Buffer, &DTy);
   }
 
   /// ConstructTypeDIE - Construct type DIE from DICompositeType.
@@ -1815,20 +1815,23 @@ private:
     // Add name if not anonymous or intermediate type.
     if (!Name.empty()) AddString(&Buffer, DW_AT_name, DW_FORM_string, Name);
 
-    // Add size if non-zero (derived types might be zero-sized.)
-    if (Size)
-      AddUInt(&Buffer, DW_AT_byte_size, 0, Size);
-    else {
-      // Add zero size if it is not a forward declaration.
-      if (CTy.isForwardDecl())
-        AddUInt(&Buffer, DW_AT_declaration, DW_FORM_flag, 1);
-      else
-        AddUInt(&Buffer, DW_AT_byte_size, 0, 0); 
+    if (Tag == DW_TAG_enumeration_type || Tag == DW_TAG_structure_type
+        || Tag == DW_TAG_union_type) {
+      // Add size if non-zero (derived types might be zero-sized.)
+      if (Size)
+        AddUInt(&Buffer, DW_AT_byte_size, 0, Size);
+      else {
+        // Add zero size if it is not a forward declaration.
+        if (CTy.isForwardDecl())
+          AddUInt(&Buffer, DW_AT_declaration, DW_FORM_flag, 1);
+        else
+          AddUInt(&Buffer, DW_AT_byte_size, 0, 0); 
+      }
+      
+      // Add source line info if available.
+      if (!CTy.isForwardDecl())
+        AddSourceLine(&Buffer, &CTy);
     }
-
-    // Add source line info if available.
-    if (!CTy.isForwardDecl())
-      AddSourceLine(&Buffer, &CTy);
   }
   
   // ConstructSubrangeDIE - Construct subrange DIE from DISubrange.
@@ -1853,7 +1856,6 @@ private:
       AddUInt(&Buffer, DW_AT_GNU_vector, DW_FORM_flag, 1);
     
     DIArray Elements = CTy->getTypeArray();
-    AddType(DW_Unit, &Buffer, CTy->getTypeDerivedFrom());
 
     // Construct an anonymous type for index type.
     DIE IdxBuffer(DW_TAG_base_type);
@@ -1906,7 +1908,7 @@ private:
 
     AddSourceLine(MemberDie, &DT);
 
-    AddUInt(MemberDie, DW_AT_bit_size, 0, DT.getSizeInBits());
+    // FIXME _ Handle bitfields
     DIEBlock *Block = new DIEBlock();
     AddUInt(Block, 0, DW_FORM_data1, DW_OP_plus_uconst);
     AddUInt(Block, 0, DW_FORM_udata, DT.getOffsetInBits() >> 3);
