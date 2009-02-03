@@ -1,5 +1,0 @@
-load_lib llvm.exp
-
-if { [llvm_supports_target Alpha] } {
-  RunLLVMTests [lsort [glob -nocomplain $srcdir/$subdir/*.{ll}]]
-}

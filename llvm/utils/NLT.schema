@@ -1,8 +1,0 @@
-CREATE TABLE `Tests` (
-  `NAME` varchar(255) NOT NULL default '',
-  `RUN` date NOT NULL default '0000-00-00',
-  `TEST` varchar(32) NOT NULL default '',
-  `VALUE` double NOT NULL default '0',
-  KEY `name_index` (`NAME`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1
-
