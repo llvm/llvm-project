@@ -1,0 +1,262 @@
+#!/bin/sh
+# LLVM LOCAL file B&I
+
+set -x
+
+# Build LLVM the "Apple way".
+# Parameters:
+
+# The first parameter is a space-separated list of the architectures the
+# compilers will run on. For instance, "ppc i386". If the current machine
+# isn't in the list, it will (effectively) be added.
+# FIXME: HOSTS is not used in this script. Use it or Remove it.
+HOSTS="$1"
+
+# The second parameter is a space-separated list of the architectures the
+# compilers will generate code for. If the current machine isn't in the list, a
+# compiler for it will get built anyway, but won't be installed.
+TARGETS="$2"
+
+# The third parameter is the path to the compiler sources. There should be a
+# shell script named 'configure' in this directory. This script makes a copy...
+ORIG_SRC_DIR="$3"
+
+# The fourth parameter is the location where the LLVM will be installed. You can
+# move it once it's built, so this mostly controls the layout of $DEST_DIR.
+DEST_ROOT="$4"
+
+# The fifth parameter is the place where the compiler will be copied once it's
+# built.
+DEST_DIR="$5"
+
+# The sixth parameter is a directory in which to place information (like
+# unstripped executables and generated source files) helpful in debugging the
+# resulting compiler.
+SYM_DIR="$6"
+
+# The seventh parameter is a yes/no that indicates whether assertions should be
+# enabled in the LLVM libs/tools.
+LLVM_ASSERTIONS="$7"
+
+# The eighth parameter is a yes/no that indicates whether this is an optimized
+# build.
+LLVM_OPTIMIZED="$8"
+
+# The nineth parameter is the version number of the submission, e.g. 1007.
+LLVM_SUBMIT_VERSION="$9"
+
+# The tenth parameter is the subversion number of the submission, e.g. 03.
+LLVM_SUBMIT_SUBVERSION="${10}"
+
+# The current working directory is where the build will happen. It may already
+# contain a partial result of an interrupted build, in which case this script
+# will continue where it left off.
+DIR=`pwd`
+
+DARWIN_VERS=`uname -r | sed 's/\..*//'`
+echo DARWIN_VERS = $DARWIN_VERS
+
+# If the user has CC set in their environment unset it now
+unset CC
+
+DT_HOME=$DEST_DIR/Developer/usr
+DEST_ROOT="/Developer$DEST_ROOT"
+if [ "x$DEVELOPER_BIN" != "x" ]; then
+    DT_HOME=$DEST_DIR/$DEVELOPER_DIR/usr
+    DEST_ROOT="/$DEVELOPER_DIR$DEST_ROOT"
+fi
+
+################################################################################
+# Run the build.
+
+# Create the source tree we'll actually use to build, deleting
+# tcl since it doesn't actually build properly in a cross environment
+# and we don't really need it.
+SRC_DIR=$DIR/src
+rm -rf $SRC_DIR || exit 1
+mkdir $SRC_DIR || exit 1
+ln -s $ORIG_SRC_DIR/* $SRC_DIR/ || exit 1
+
+# Build the LLVM tree universal.
+mkdir -p $DIR/obj-llvm || exit 1
+cd $DIR/obj-llvm || exit 1
+
+if [ \! -f Makefile.config ]; then
+    $SRC_DIR/configure --prefix=$DT_HOME/local \
+        --enable-targets=arm,x86,powerpc,cbe \
+        --enable-assertions=$LLVM_ASSERTIONS \
+        --enable-optimized=$LLVM_OPTIMIZED \
+        || exit 1
+fi
+
+SUBVERSION=`echo $RC_ProjectSourceVersion | sed -e 's/[^.]*\.\([0-9]*\).*/\1/'`
+
+if [ "x$SUBVERSION" != "x$RC_ProjectSourceVersion" ]; then
+    LLVM_SUBMIT_SUBVERSION=`printf "%02d" $SUBVERSION`
+    RC_ProjectSourceVersion=`echo $RC_ProjectSourceVersion | sed -e 's/\..*//'`
+    LLVM_SUBMIT_VERSION=$RC_ProjectSourceVersion
+fi
+
+if [ "x$LLVM_SUBMIT_SUBVERSION" = "x00" -o "x$LLVM_SUBMIT_SUBVERSION" = "x0" ]; then
+    LLVM_VERSION="$LLVM_SUBMIT_VERSION"
+else
+    LLVM_VERSION="$LLVM_SUBMIT_VERSION-$LLVM_SUBMIT_SUBVERSION"
+fi
+
+GCC_VER=`cc --version 2>/dev/null | sed 1q`
+
+if echo "$GCC_VER" | grep GCC > /dev/null; then
+    GCC_VER=`echo $GCC_VER | sed -e 's/.*(GCC) \([0-9.][0-9.]*\).*/\1/'`
+    MAJ_VER=`echo $GCC_VER | sed 's/\..*//'`
+    MIN_VER=`echo $GCC_VER | sed 's/[^.]*\.\([0-9]*\).*/\1/'`
+fi
+
+JOBS_FLAG=""
+
+# Note: If compiling with GCC 4.0, don't pass the -jN flag. Building universal
+# already has parallelism and we don't want to make the builders hit swap by
+# firing off too many gccs at the same time.
+if [ "x$MAJ_VER" != "x4" -o "x$MIN_VER" != "x0" ]; then
+    # Figure out how many make processes to run.
+    SYSCTL=`sysctl -n hw.activecpu`
+
+    # hw.activecpu only available in 10.2.6 and later
+    if [ -z "$SYSCTL" ]; then
+        SYSCTL=`sysctl -n hw.ncpu`
+    fi
+
+    # sysctl -n hw.* does not work when invoked via B&I chroot /BuildRoot.
+    # Builders can default to 2, since even if they are single processor,
+    # nothing else is running on the machine.
+    if [ -z "$SYSCTL" ]; then
+        SYSCTL=2
+    fi
+
+    JOBS_FLAG="-j $SYSCTL"
+fi
+
+make $JOBS_FLAG $OPTIMIZE_OPTS UNIVERSAL=1 UNIVERSAL_ARCH="$TARGETS" \
+    LLVM_SUBMIT_VERSION=$LLVM_SUBMIT_VERSION \
+    LLVM_SUBMIT_SUBVERSION=$LLVM_SUBMIT_SUBVERSION \
+    CXXFLAGS="-DLLVM_VERSION_INFO='\" Apple Build #$LLVM_VERSION\"'" \
+    VERBOSE=1
+
+if ! test $? == 0 ; then
+    echo "error: LLVM 'make' failed!"
+    exit 1
+fi 
+
+################################################################################
+# Construct the actual destination root, by copying stuff from $DIR/dst-* to
+# $DEST_DIR, with occasional 'lipo' commands.
+
+cd $DEST_DIR || exit 1
+
+# Clean out DEST_DIR in case -noclean was passed to buildit.
+rm -rf * || exit 1
+
+cd $DIR/obj-llvm || exit 1
+
+# Install the tree into the destination directory.
+make $LOCAL_MAKEFLAGS $OPTIMIZE_OPTS UNIVERSAL=1 UNIVERSAL_ARCH="$TARGETS" \
+    LLVM_SUBMIT_VERSION=$LLVM_SUBMIT_VERSION \
+    LLVM_SUBMIT_SUBVERSION=$LLVM_SUBMIT_SUBVERSION \
+    OPTIMIZE_OPTION='-O2' VERBOSE=1 install
+
+if ! test $? == 0 ; then
+    echo "error: LLVM 'make install' failed!"
+    exit 1
+fi 
+
+# Install Version.h
+RC_ProjectSourceSubversion=`printf "%d" $LLVM_SUBMIT_SUBVERSION`
+echo "#define LLVM_VERSION ${RC_ProjectSourceVersion}" > $DEST_DIR$DEST_ROOT/include/llvm/Version.h
+echo "#define LLVM_MINOR_VERSION ${RC_ProjectSourceSubversion}" >> $DEST_DIR$DEST_ROOT/include/llvm/Version.h
+
+if [ "x$LLVM_DEBUG" != "x1" ]; then
+    # Strip local symbols from llvm libraries.
+    strip -S $DEST_DIR$DEST_ROOT/lib/*.[oa]
+    strip -Sx $DEST_DIR$DEST_ROOT/lib/*.so
+fi
+
+# Copy over the tblgen utility.
+cp `find $DIR -name tblgen` $DT_HOME/local/bin
+
+# Remove .dir files 
+cd $DEST_DIR$DEST_ROOT
+rm bin/.dir etc/llvm/.dir lib/.dir
+
+# Remove PPC64 fat slices.
+cd $DEST_DIR$DEST_ROOT/bin
+if [ $MACOSX_DEPLOYMENT_TARGET = "10.4" ]; then
+    find . -perm 755 -type f -exec lipo -extract ppc -extract i386 {} -output {} \;
+elif [ $MACOSX_DEPLOYMENT_TARGET = "10.5" ]; then
+    find . -perm 755 -type f -exec lipo -extract ppc7400 -extract i386 {} -output {} \;
+else
+    find . -perm 755 -type f -exec lipo -extract ppc7400 -extract i386 -extract x86_64 {} -output {} \;
+fi
+
+cd $DEST_DIR$DEST_ROOT
+mkdir -p $DT_HOME/lib
+mv lib/libLTO.dylib $DT_HOME/lib/libLTO.dylib
+rm -f lib/libLTO.a lib/libLTO.la
+
+# Compress manpages
+MDIR=$DEST_DIR$DEST_ROOT/share/man/man1
+gzip -f $MDIR/*
+
+################################################################################
+# Create SYM_DIR with information required for debugging.
+
+# Figure out how many make processes to run.
+SYSCTL=`sysctl -n hw.activecpu`
+
+# hw.activecpu only available in 10.2.6 and later
+if [ -z "$SYSCTL" ]; then
+  SYSCTL=`sysctl -n hw.ncpu`
+fi
+
+# sysctl -n hw.* does not work when invoked via B&I chroot /BuildRoot. Builders
+# can default to 2, since even if they are single processor, nothing else is
+# running on the machine.
+if [ -z "$SYSCTL" ]; then
+  SYSCTL=2
+fi
+
+cd $SYM_DIR || exit 1
+
+# Clean out SYM_DIR in case -noclean was passed to buildit.
+rm -rf * || exit 1
+
+# Generate .dSYM files
+find $DEST_DIR -perm -0111 -type f ! \( -name '*.la' -o -name gccas -o -name gccld -o -name llvm-config \) -print \
+    | xargs -n 1 -P ${SYSCTL} dsymutil
+
+# Save .dSYM files and .a archives
+cd $DEST_DIR || exit 1
+find . \( -path \*.dSYM/\* -or -name \*.a \) -print \
+    | cpio -pdml $SYM_DIR || exit 1
+
+# Save source files.
+mkdir $SYM_DIR/src || exit 1
+cd $DIR || exit 1
+find obj-* -name \*.\[chy\] -o -name \*.cpp -print \
+    | cpio -pdml $SYM_DIR/src || exit 1
+
+################################################################################
+# Remove debugging information from DEST_DIR.
+
+find $DEST_DIR -name \*.a -print | xargs ranlib || exit 1
+find $DEST_DIR -name \*.dSYM -print | xargs rm -r || exit 1
+chgrp -h -R wheel $DEST_DIR
+chgrp -R wheel $DEST_DIR
+
+################################################################################
+# Remove tar ball from docs directory
+
+find $DEST_DIR -name html.tar.gz -exec rm {} \;
+
+################################################################################
+# w00t! Done!
+
+exit 0

@@ -1,0 +1,76 @@
+=pod
+
+=head1 NAME
+
+llvm-gcc - LLVM C front-end
+
+=head1 SYNOPSIS
+
+B<llvm-gcc> [I<options>] I<filename>
+
+=head1 DESCRIPTION
+
+The B<llvm-gcc> command is the LLVM C front end.  It is a modified
+version of gcc that compiles C/ObjC programs into native objects, LLVM
+bitcode or LLVM assembly language, depending upon the options.
+
+By default, B<llvm-gcc> compiles to native objects just like GCC does. If the
+B<-emit-llvm> and B<-c> options are given then it will generate LLVM bitcode files
+instead. If B<-emit-llvm> and B<-S> are given, then it will generate LLVM
+assembly.
+
+Being derived from the GNU Compiler Collection, B<llvm-gcc> has many
+of gcc's features and accepts most of gcc's options.  It handles a
+number of gcc's extensions to the C programming language.  See the gcc
+documentation for details.
+
+=head1 OPTIONS
+
+=over
+
+=item B<--help>
+
+Print a summary of command line options.
+
+=item B<-o> I<filename>
+
+Specify the output file to be I<filename>.
+
+=item B<-I> I<directory>
+
+Add a directory to the header file search path.  This option can be
+repeated.
+
+=item B<-L> I<directory>
+
+Add I<directory> to the library search path.  This option can be
+repeated.
+
+=item B<-l>I<name>
+
+Link in the library libI<name>.[bc | a | so].  This library should
+be a bitcode library.
+
+=item B<-emit-llvm>
+
+Make the output be LLVM bitcode (with B<-c>) or assembly (with B<-s>) instead
+of native object (or assembly).  If B<-emit-llvm> is given without either B<-c>
+or B<-S> it has no effect.
+
+=back
+
+=head1 EXIT STATUS
+
+If B<llvm-gcc> succeeds, it will exit with 0.  Otherwise, if an error
+occurs, it will exit with a non-zero value.
+
+=head1 SEE ALSO
+
+L<llvm-g++|llvmgxx>
+
+=head1 AUTHORS
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut
+

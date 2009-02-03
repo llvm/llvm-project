@@ -1,0 +1,348 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+  <title>Kaleidoscope: Tutorial Introduction and the Lexer</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="author" content="Chris Lattner">
+  <link rel="stylesheet" href="../llvm.css" type="text/css">
+</head>
+
+<body>
+
+<div class="doc_title">Kaleidoscope: Tutorial Introduction and the Lexer</div>
+
+<ul>
+<li><a href="index.html">Up to Tutorial Index</a></li>
+<li>Chapter 1
+  <ol>
+    <li><a href="#intro">Tutorial Introduction</a></li>
+    <li><a href="#language">The Basic Language</a></li>
+    <li><a href="#lexer">The Lexer</a></li>
+  </ol>
+</li>
+<li><a href="LangImpl2.html">Chapter 2</a>: Implementing a Parser and AST</li>
+</ul>
+
+<div class="doc_author">
+  <p>Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a></p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="intro">Tutorial Introduction</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>Welcome to the "Implementing a language with LLVM" tutorial.  This tutorial
+runs through the implementation of a simple language, showing how fun and
+easy it can be.  This tutorial will get you up and started as well as help to
+build a framework you can extend to other languages.  The code in this tutorial
+can also be used as a playground to hack on other LLVM specific things.
+</p>
+
+<p>
+The goal of this tutorial is to progressively unveil our language, describing
+how it is built up over time.  This will let us cover a fairly broad range of
+language design and LLVM-specific usage issues, showing and explaining the code
+for it all along the way, without overwhelming you with tons of details up
+front.</p>
+
+<p>It is useful to point out ahead of time that this tutorial is really about
+teaching compiler techniques and LLVM specifically, <em>not</em> about teaching
+modern and sane software engineering principles.  In practice, this means that
+we'll take a number of shortcuts to simplify the exposition.  For example, the
+code leaks memory, uses global variables all over the place, doesn't use nice
+design patterns like <a
+href="http://en.wikipedia.org/wiki/Visitor_pattern">visitors</a>, etc... but it
+is very simple.  If you dig in and use the code as a basis for future projects,
+fixing these deficiencies shouldn't be hard.</p>
+
+<p>I've tried to put this tutorial together in a way that makes chapters easy to
+skip over if you are already familiar with or are uninterested in the various
+pieces.  The structure of the tutorial is:
+</p>
+
+<ul>
+<li><b><a href="#language">Chapter #1</a>: Introduction to the Kaleidoscope
+language, and the definition of its Lexer</b> - This shows where we are going
+and the basic functionality that we want it to do.  In order to make this
+tutorial maximally understandable and hackable, we choose to implement 
+everything in C++ instead of using lexer and parser generators.  LLVM obviously
+works just fine with such tools, feel free to use one if you prefer.</li>
+<li><b><a href="LangImpl2.html">Chapter #2</a>: Implementing a Parser and
+AST</b> - With the lexer in place, we can talk about parsing techniques and
+basic AST construction.  This tutorial describes recursive descent parsing and
+operator precedence parsing.  Nothing in Chapters 1 or 2 is LLVM-specific,
+the code doesn't even link in LLVM at this point. :)</li>
+<li><b><a href="LangImpl3.html">Chapter #3</a>: Code generation to LLVM IR</b> -
+With the AST ready, we can show off how easy generation of LLVM IR really 
+is.</li>
+<li><b><a href="LangImpl4.html">Chapter #4</a>: Adding JIT and Optimizer
+Support</b> - Because a lot of people are interested in using LLVM as a JIT,
+we'll dive right into it and show you the 3 lines it takes to add JIT support.
+LLVM is also useful in many other ways, but this is one simple and "sexy" way
+to shows off its power. :)</li>
+<li><b><a href="LangImpl5.html">Chapter #5</a>: Extending the Language: Control
+Flow</b> - With the language up and running, we show how to extend it with
+control flow operations (if/then/else and a 'for' loop).  This gives us a chance
+to talk about simple SSA construction and control flow.</li>
+<li><b><a href="LangImpl6.html">Chapter #6</a>: Extending the Language: 
+User-defined Operators</b> - This is a silly but fun chapter that talks about
+extending the language to let the user program define their own arbitrary
+unary and binary operators (with assignable precedence!).  This lets us build a
+significant piece of the "language" as library routines.</li>
+<li><b><a href="LangImpl7.html">Chapter #7</a>: Extending the Language: Mutable
+Variables</b> - This chapter talks about adding user-defined local variables
+along with an assignment operator.  The interesting part about this is how
+easy and trivial it is to construct SSA form in LLVM: no, LLVM does <em>not</em>
+require your front-end to construct SSA form!</li>
+<li><b><a href="LangImpl8.html">Chapter #8</a>: Conclusion and other useful LLVM
+tidbits</b> - This chapter wraps up the series by talking about potential
+ways to extend the language, but also includes a bunch of pointers to info about
+"special topics" like adding garbage collection support, exceptions, debugging,
+support for "spaghetti stacks", and a bunch of other tips and tricks.</li>
+
+</ul>
+
+<p>By the end of the tutorial, we'll have written a bit less than 700 lines of 
+non-comment, non-blank, lines of code.  With this small amount of code, we'll
+have built up a very reasonable compiler for a non-trivial language including
+a hand-written lexer, parser, AST, as well as code generation support with a JIT
+compiler.  While other systems may have interesting "hello world" tutorials,
+I think the breadth of this tutorial is a great testament to the strengths of
+LLVM and why you should consider it if you're interested in language or compiler
+design.</p>
+
+<p>A note about this tutorial: we expect you to extend the language and play
+with it on your own.  Take the code and go crazy hacking away at it, compilers
+don't need to be scary creatures - it can be a lot of fun to play with
+languages!</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="language">The Basic Language</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>This tutorial will be illustrated with a toy language that we'll call
+"<a href="http://en.wikipedia.org/wiki/Kaleidoscope">Kaleidoscope</a>" (derived 
+from "meaning beautiful, form, and view").
+Kaleidoscope is a procedural language that allows you to define functions, use
+conditionals, math, etc.  Over the course of the tutorial, we'll extend
+Kaleidoscope to support the if/then/else construct, a for loop, user defined
+operators, JIT compilation with a simple command line interface, etc.</p>
+
+<p>Because we want to keep things simple, the only datatype in Kaleidoscope is a
+64-bit floating point type (aka 'double' in C parlance).  As such, all values
+are implicitly double precision and the language doesn't require type
+declarations.  This gives the language a very nice and simple syntax.  For
+example, the following simple example computes <a 
+href="http://en.wikipedia.org/wiki/Fibonacci_number">Fibonacci numbers:</a></p>
+
+<div class="doc_code">
+<pre>
+# Compute the x'th fibonacci number.
+def fib(x)
+  if x &lt; 3 then
+    1
+  else
+    fib(x-1)+fib(x-2)
+
+# This expression will compute the 40th number.
+fib(40)
+</pre>
+</div>
+
+<p>We also allow Kaleidoscope to call into standard library functions (the LLVM
+JIT makes this completely trivial).  This means that you can use the 'extern'
+keyword to define a function before you use it (this is also useful for mutually
+recursive functions).  For example:</p>
+
+<div class="doc_code">
+<pre>
+extern sin(arg);
+extern cos(arg);
+extern atan2(arg1 arg2);
+
+atan2(sin(.4), cos(42))
+</pre>
+</div>
+
+<p>A more interesting example is included in Chapter 6 where we write a little
+Kaleidoscope application that <a href="LangImpl6.html#example">displays 
+a Mandelbrot Set</a> at various levels of magnification.</p>
+
+<p>Lets dive into the implementation of this language!</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="lexer">The Lexer</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>When it comes to implementing a language, the first thing needed is
+the ability to process a text file and recognize what it says.  The traditional
+way to do this is to use a "<a 
+href="http://en.wikipedia.org/wiki/Lexical_analysis">lexer</a>" (aka 'scanner')
+to break the input up into "tokens".  Each token returned by the lexer includes
+a token code and potentially some metadata (e.g. the numeric value of a number).
+First, we define the possibilities:
+</p>
+
+<div class="doc_code">
+<pre>
+// The lexer returns tokens [0-255] if it is an unknown character, otherwise one
+// of these for known things.
+enum Token {
+  tok_eof = -1,
+
+  // commands
+  tok_def = -2, tok_extern = -3,
+
+  // primary
+  tok_identifier = -4, tok_number = -5,
+};
+
+static std::string IdentifierStr;  // Filled in if tok_identifier
+static double NumVal;              // Filled in if tok_number
+</pre>
+</div>
+
+<p>Each token returned by our lexer will either be one of the Token enum values
+or it will be an 'unknown' character like '+', which is returned as its ASCII
+value.  If the current token is an identifier, the <tt>IdentifierStr</tt>
+global variable holds the name of the identifier.  If the current token is a
+numeric literal (like 1.0), <tt>NumVal</tt> holds its value.  Note that we use
+global variables for simplicity, this is not the best choice for a real language
+implementation :).
+</p>
+
+<p>The actual implementation of the lexer is a single function named
+<tt>gettok</tt>. The <tt>gettok</tt> function is called to return the next token
+from standard input.  Its definition starts as:</p>
+
+<div class="doc_code">
+<pre>
+/// gettok - Return the next token from standard input.
+static int gettok() {
+  static int LastChar = ' ';
+
+  // Skip any whitespace.
+  while (isspace(LastChar))
+    LastChar = getchar();
+</pre>
+</div>
+
+<p>
+<tt>gettok</tt> works by calling the C <tt>getchar()</tt> function to read
+characters one at a time from standard input.  It eats them as it recognizes
+them and stores the last character read, but not processed, in LastChar.  The
+first thing that it has to do is ignore whitespace between tokens.  This is 
+accomplished with the loop above.</p>
+
+<p>The next thing <tt>gettok</tt> needs to do is recognize identifiers and
+specific keywords like "def".  Kaleidoscope does this with this simple loop:</p>
+
+<div class="doc_code">
+<pre>
+  if (isalpha(LastChar)) { // identifier: [a-zA-Z][a-zA-Z0-9]*
+    IdentifierStr = LastChar;
+    while (isalnum((LastChar = getchar())))
+      IdentifierStr += LastChar;
+
+    if (IdentifierStr == "def") return tok_def;
+    if (IdentifierStr == "extern") return tok_extern;
+    return tok_identifier;
+  }
+</pre>
+</div>
+
+<p>Note that this code sets the '<tt>IdentifierStr</tt>' global whenever it
+lexes an identifier.  Also, since language keywords are matched by the same
+loop, we handle them here inline.  Numeric values are similar:</p>
+
+<div class="doc_code">
+<pre>
+  if (isdigit(LastChar) || LastChar == '.') {   // Number: [0-9.]+
+    std::string NumStr;
+    do {
+      NumStr += LastChar;
+      LastChar = getchar();
+    } while (isdigit(LastChar) || LastChar == '.');
+
+    NumVal = strtod(NumStr.c_str(), 0);
+    return tok_number;
+  }
+</pre>
+</div>
+
+<p>This is all pretty straight-forward code for processing input.  When reading
+a numeric value from input, we use the C <tt>strtod</tt> function to convert it
+to a numeric value that we store in <tt>NumVal</tt>.  Note that this isn't doing
+sufficient error checking: it will incorrectly read "1.23.45.67" and handle it as
+if you typed in "1.23".  Feel free to extend it :).  Next we handle comments:
+</p>
+
+<div class="doc_code">
+<pre>
+  if (LastChar == '#') {
+    // Comment until end of line.
+    do LastChar = getchar();
+    while (LastChar != EOF &amp;&amp; LastChar != '\n' &amp;&amp; LastChar != '\r');
+    
+    if (LastChar != EOF)
+      return gettok();
+  }
+</pre>
+</div>
+
+<p>We handle comments by skipping to the end of the line and then return the
+next token.  Finally, if the input doesn't match one of the above cases, it is
+either an operator character like '+' or the end of the file.  These are handled
+with this code:</p>
+
+<div class="doc_code">
+<pre>
+  // Check for end of file.  Don't eat the EOF.
+  if (LastChar == EOF)
+    return tok_eof;
+  
+  // Otherwise, just return the character as its ascii value.
+  int ThisChar = LastChar;
+  LastChar = getchar();
+  return ThisChar;
+}
+</pre>
+</div>
+
+<p>With this, we have the complete lexer for the basic Kaleidoscope language
+(the <a href="LangImpl2.html#code">full code listing</a> for the Lexer is
+available in the <a href="LangImpl2.html">next chapter</a> of the tutorial).
+Next we'll <a href="LangImpl2.html">build a simple parser that uses this to 
+build an Abstract Syntax Tree</a>.  When we have that, we'll include a driver
+so that you can use the lexer and parser together.
+</p>
+
+<a href="LangImpl2.html">Next: Implementing a Parser and AST</a>
+</div>
+
+<!-- *********************************************************************** -->
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01!"></a>
+
+  <a href="mailto:sabre@nondot.org">Chris Lattner</a><br>
+  <a href="http://llvm.org">The LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date: 2007-10-17 11:05:13 -0700 (Wed, 17 Oct 2007) $
+</address>
+</body>
+</html>

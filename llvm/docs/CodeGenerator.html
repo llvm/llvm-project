@@ -1,0 +1,2063 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>The LLVM Target-Independent Code Generator</title>
+  <link rel="stylesheet" href="llvm.css" type="text/css">
+</head>
+<body>
+
+<div class="doc_title">
+  The LLVM Target-Independent Code Generator
+</div>
+
+<ol>
+  <li><a href="#introduction">Introduction</a>
+    <ul>
+      <li><a href="#required">Required components in the code generator</a></li>
+      <li><a href="#high-level-design">The high-level design of the code
+          generator</a></li>
+      <li><a href="#tablegen">Using TableGen for target description</a></li>
+    </ul>
+  </li>
+  <li><a href="#targetdesc">Target description classes</a>
+    <ul>
+      <li><a href="#targetmachine">The <tt>TargetMachine</tt> class</a></li>
+      <li><a href="#targetdata">The <tt>TargetData</tt> class</a></li>
+      <li><a href="#targetlowering">The <tt>TargetLowering</tt> class</a></li>
+      <li><a href="#targetregisterinfo">The <tt>TargetRegisterInfo</tt> class</a></li>
+      <li><a href="#targetinstrinfo">The <tt>TargetInstrInfo</tt> class</a></li>
+      <li><a href="#targetframeinfo">The <tt>TargetFrameInfo</tt> class</a></li>
+      <li><a href="#targetsubtarget">The <tt>TargetSubtarget</tt> class</a></li>
+      <li><a href="#targetjitinfo">The <tt>TargetJITInfo</tt> class</a></li>
+    </ul>
+  </li>
+  <li><a href="#codegendesc">Machine code description classes</a>
+    <ul>
+    <li><a href="#machineinstr">The <tt>MachineInstr</tt> class</a></li>
+    <li><a href="#machinebasicblock">The <tt>MachineBasicBlock</tt>
+                                     class</a></li>
+    <li><a href="#machinefunction">The <tt>MachineFunction</tt> class</a></li>
+    </ul>
+  </li>
+  <li><a href="#codegenalgs">Target-independent code generation algorithms</a>
+    <ul>
+    <li><a href="#instselect">Instruction Selection</a>
+      <ul>
+      <li><a href="#selectiondag_intro">Introduction to SelectionDAGs</a></li>
+      <li><a href="#selectiondag_process">SelectionDAG Code Generation
+                                          Process</a></li>
+      <li><a href="#selectiondag_build">Initial SelectionDAG
+                                        Construction</a></li>
+      <li><a href="#selectiondag_legalize_types">SelectionDAG LegalizeTypes Phase</a></li>
+      <li><a href="#selectiondag_legalize">SelectionDAG Legalize Phase</a></li>
+      <li><a href="#selectiondag_optimize">SelectionDAG Optimization
+                                           Phase: the DAG Combiner</a></li>
+      <li><a href="#selectiondag_select">SelectionDAG Select Phase</a></li>
+      <li><a href="#selectiondag_sched">SelectionDAG Scheduling and Formation
+                                        Phase</a></li>
+      <li><a href="#selectiondag_future">Future directions for the
+                                         SelectionDAG</a></li>
+      </ul></li>
+     <li><a href="#liveintervals">Live Intervals</a>
+       <ul>
+       <li><a href="#livevariable_analysis">Live Variable Analysis</a></li>
+       <li><a href="#liveintervals_analysis">Live Intervals Analysis</a></li>
+       </ul></li>
+    <li><a href="#regalloc">Register Allocation</a>
+      <ul>
+      <li><a href="#regAlloc_represent">How registers are represented in
+                                        LLVM</a></li>
+      <li><a href="#regAlloc_howTo">Mapping virtual registers to physical
+                                    registers</a></li>
+      <li><a href="#regAlloc_twoAddr">Handling two address instructions</a></li>
+      <li><a href="#regAlloc_ssaDecon">The SSA deconstruction phase</a></li>
+      <li><a href="#regAlloc_fold">Instruction folding</a></li>
+      <li><a href="#regAlloc_builtIn">Built in register allocators</a></li>
+      </ul></li>
+    <li><a href="#codeemit">Code Emission</a>
+        <ul>
+        <li><a href="#codeemit_asm">Generating Assembly Code</a></li>
+        <li><a href="#codeemit_bin">Generating Binary Machine Code</a></li>
+        </ul></li>
+    </ul>
+  </li>
+  <li><a href="#targetimpls">Target-specific Implementation Notes</a>
+    <ul>
+    <li><a href="#tailcallopt">Tail call optimization</a></li>
+    <li><a href="#x86">The X86 backend</a></li>
+    <li><a href="#ppc">The PowerPC backend</a>
+      <ul>
+      <li><a href="#ppc_abi">LLVM PowerPC ABI</a></li>
+      <li><a href="#ppc_frame">Frame Layout</a></li>
+      <li><a href="#ppc_prolog">Prolog/Epilog</a></li>
+      <li><a href="#ppc_dynamic">Dynamic Allocation</a></li>
+      </ul></li>
+    </ul></li>
+
+</ol>
+
+<div class="doc_author">
+  <p>Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a>,
+                <a href="mailto:isanbard@gmail.com">Bill Wendling</a>,
+                <a href="mailto:pronesto@gmail.com">Fernando Magno Quintao
+                                                    Pereira</a> and
+                <a href="mailto:jlaskey@mac.com">Jim Laskey</a></p>
+</div>
+
+<div class="doc_warning">
+  <p>Warning: This is a work in progress.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="introduction">Introduction</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>The LLVM target-independent code generator is a framework that provides a
+suite of reusable components for translating the LLVM internal representation to
+the machine code for a specified target&mdash;either in assembly form (suitable
+for a static compiler) or in binary machine code format (usable for a JIT
+compiler). The LLVM target-independent code generator consists of five main
+components:</p>
+
+<ol>
+<li><a href="#targetdesc">Abstract target description</a> interfaces which
+capture important properties about various aspects of the machine, independently
+of how they will be used.  These interfaces are defined in
+<tt>include/llvm/Target/</tt>.</li>
+
+<li>Classes used to represent the <a href="#codegendesc">machine code</a> being
+generated for a target.  These classes are intended to be abstract enough to
+represent the machine code for <i>any</i> target machine.  These classes are
+defined in <tt>include/llvm/CodeGen/</tt>.</li>
+
+<li><a href="#codegenalgs">Target-independent algorithms</a> used to implement
+various phases of native code generation (register allocation, scheduling, stack
+frame representation, etc).  This code lives in <tt>lib/CodeGen/</tt>.</li>
+
+<li><a href="#targetimpls">Implementations of the abstract target description
+interfaces</a> for particular targets.  These machine descriptions make use of
+the components provided by LLVM, and can optionally provide custom
+target-specific passes, to build complete code generators for a specific target.
+Target descriptions live in <tt>lib/Target/</tt>.</li>
+
+<li><a href="#jit">The target-independent JIT components</a>.  The LLVM JIT is
+completely target independent (it uses the <tt>TargetJITInfo</tt> structure to
+interface for target-specific issues.  The code for the target-independent
+JIT lives in <tt>lib/ExecutionEngine/JIT</tt>.</li>
+
+</ol>
+
+<p>
+Depending on which part of the code generator you are interested in working on,
+different pieces of this will be useful to you.  In any case, you should be
+familiar with the <a href="#targetdesc">target description</a> and <a
+href="#codegendesc">machine code representation</a> classes.  If you want to add
+a backend for a new target, you will need to <a href="#targetimpls">implement the
+target description</a> classes for your new target and understand the <a
+href="LangRef.html">LLVM code representation</a>.  If you are interested in
+implementing a new <a href="#codegenalgs">code generation algorithm</a>, it
+should only depend on the target-description and machine code representation
+classes, ensuring that it is portable.
+</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+ <a name="required">Required components in the code generator</a>
+</div>
+
+<div class="doc_text">
+
+<p>The two pieces of the LLVM code generator are the high-level interface to the
+code generator and the set of reusable components that can be used to build
+target-specific backends.  The two most important interfaces (<a
+href="#targetmachine"><tt>TargetMachine</tt></a> and <a
+href="#targetdata"><tt>TargetData</tt></a>) are the only ones that are
+required to be defined for a backend to fit into the LLVM system, but the others
+must be defined if the reusable code generator components are going to be
+used.</p>
+
+<p>This design has two important implications.  The first is that LLVM can
+support completely non-traditional code generation targets.  For example, the C
+backend does not require register allocation, instruction selection, or any of
+the other standard components provided by the system.  As such, it only
+implements these two interfaces, and does its own thing.  Another example of a
+code generator like this is a (purely hypothetical) backend that converts LLVM
+to the GCC RTL form and uses GCC to emit machine code for a target.</p>
+
+<p>This design also implies that it is possible to design and
+implement radically different code generators in the LLVM system that do not
+make use of any of the built-in components.  Doing so is not recommended at all,
+but could be required for radically different targets that do not fit into the
+LLVM machine description model: FPGAs for example.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+ <a name="high-level-design">The high-level design of the code generator</a>
+</div>
+
+<div class="doc_text">
+
+<p>The LLVM target-independent code generator is designed to support efficient and
+quality code generation for standard register-based microprocessors.  Code
+generation in this model is divided into the following stages:</p>
+
+<ol>
+<li><b><a href="#instselect">Instruction Selection</a></b> - This phase
+determines an efficient way to express the input LLVM code in the target
+instruction set.
+This stage produces the initial code for the program in the target instruction
+set, then makes use of virtual registers in SSA form and physical registers that
+represent any required register assignments due to target constraints or calling
+conventions.  This step turns the LLVM code into a DAG of target
+instructions.</li>
+
+<li><b><a href="#selectiondag_sched">Scheduling and Formation</a></b> - This
+phase takes the DAG of target instructions produced by the instruction selection
+phase, determines an ordering of the instructions, then emits the instructions
+as <tt><a href="#machineinstr">MachineInstr</a></tt>s with that ordering.  Note
+that we describe this in the <a href="#instselect">instruction selection
+section</a> because it operates on a <a
+href="#selectiondag_intro">SelectionDAG</a>.
+</li>
+
+<li><b><a href="#ssamco">SSA-based Machine Code Optimizations</a></b> - This 
+optional stage consists of a series of machine-code optimizations that 
+operate on the SSA-form produced by the instruction selector.  Optimizations 
+like modulo-scheduling or peephole optimization work here.
+</li>
+
+<li><b><a href="#regalloc">Register Allocation</a></b> - The
+target code is transformed from an infinite virtual register file in SSA form 
+to the concrete register file used by the target.  This phase introduces spill 
+code and eliminates all virtual register references from the program.</li>
+
+<li><b><a href="#proepicode">Prolog/Epilog Code Insertion</a></b> - Once the 
+machine code has been generated for the function and the amount of stack space 
+required is known (used for LLVM alloca's and spill slots), the prolog and 
+epilog code for the function can be inserted and "abstract stack location 
+references" can be eliminated.  This stage is responsible for implementing 
+optimizations like frame-pointer elimination and stack packing.</li>
+
+<li><b><a href="#latemco">Late Machine Code Optimizations</a></b> - Optimizations
+that operate on "final" machine code can go here, such as spill code scheduling
+and peephole optimizations.</li>
+
+<li><b><a href="#codeemit">Code Emission</a></b> - The final stage actually 
+puts out the code for the current function, either in the target assembler 
+format or in machine code.</li>
+
+</ol>
+
+<p>The code generator is based on the assumption that the instruction selector
+will use an optimal pattern matching selector to create high-quality sequences of
+native instructions.  Alternative code generator designs based on pattern 
+expansion and aggressive iterative peephole optimization are much slower.  This
+design permits efficient compilation (important for JIT environments) and
+aggressive optimization (used when generating code offline) by allowing 
+components of varying levels of sophistication to be used for any step of 
+compilation.</p>
+
+<p>In addition to these stages, target implementations can insert arbitrary
+target-specific passes into the flow.  For example, the X86 target uses a
+special pass to handle the 80x87 floating point stack architecture.  Other
+targets with unusual requirements can be supported with custom passes as
+needed.</p>
+
+</div>
+
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+ <a name="tablegen">Using TableGen for target description</a>
+</div>
+
+<div class="doc_text">
+
+<p>The target description classes require a detailed description of the target
+architecture.  These target descriptions often have a large amount of common
+information (e.g., an <tt>add</tt> instruction is almost identical to a 
+<tt>sub</tt> instruction).
+In order to allow the maximum amount of commonality to be factored out, the LLVM
+code generator uses the <a href="TableGenFundamentals.html">TableGen</a> tool to
+describe big chunks of the target machine, which allows the use of
+domain-specific and target-specific abstractions to reduce the amount of 
+repetition.</p>
+
+<p>As LLVM continues to be developed and refined, we plan to move more and more
+of the target description to the <tt>.td</tt> form.  Doing so gives us a
+number of advantages.  The most important is that it makes it easier to port
+LLVM because it reduces the amount of C++ code that has to be written, and the
+surface area of the code generator that needs to be understood before someone
+can get something working.  Second, it makes it easier to change things. In
+particular, if tables and other things are all emitted by <tt>tblgen</tt>, we
+only need a change in one place (<tt>tblgen</tt>) to update all of the targets
+to a new interface.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="targetdesc">Target description classes</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>The LLVM target description classes (located in the
+<tt>include/llvm/Target</tt> directory) provide an abstract description of the
+target machine independent of any particular client.  These classes are
+designed to capture the <i>abstract</i> properties of the target (such as the
+instructions and registers it has), and do not incorporate any particular pieces
+of code generation algorithms.</p>
+
+<p>All of the target description classes (except the <tt><a
+href="#targetdata">TargetData</a></tt> class) are designed to be subclassed by
+the concrete target implementation, and have virtual methods implemented.  To
+get to these implementations, the <tt><a
+href="#targetmachine">TargetMachine</a></tt> class provides accessors that
+should be implemented by the target.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetmachine">The <tt>TargetMachine</tt> class</a>
+</div>
+
+<div class="doc_text">
+
+<p>The <tt>TargetMachine</tt> class provides virtual methods that are used to
+access the target-specific implementations of the various target description
+classes via the <tt>get*Info</tt> methods (<tt>getInstrInfo</tt>,
+<tt>getRegisterInfo</tt>, <tt>getFrameInfo</tt>, etc.).  This class is 
+designed to be specialized by
+a concrete target implementation (e.g., <tt>X86TargetMachine</tt>) which
+implements the various virtual methods.  The only required target description
+class is the <a href="#targetdata"><tt>TargetData</tt></a> class, but if the
+code generator components are to be used, the other interfaces should be
+implemented as well.</p>
+
+</div>
+
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetdata">The <tt>TargetData</tt> class</a>
+</div>
+
+<div class="doc_text">
+
+<p>The <tt>TargetData</tt> class is the only required target description class,
+and it is the only class that is not extensible (you cannot derived  a new 
+class from it).  <tt>TargetData</tt> specifies information about how the target 
+lays out memory for structures, the alignment requirements for various data 
+types, the size of pointers in the target, and whether the target is 
+little-endian or big-endian.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetlowering">The <tt>TargetLowering</tt> class</a>
+</div>
+
+<div class="doc_text">
+
+<p>The <tt>TargetLowering</tt> class is used by SelectionDAG based instruction
+selectors primarily to describe how LLVM code should be lowered to SelectionDAG
+operations.  Among other things, this class indicates:</p>
+
+<ul>
+  <li>an initial register class to use for various <tt>ValueType</tt>s</li>
+  <li>which operations are natively supported by the target machine</li>
+  <li>the return type of <tt>setcc</tt> operations</li>
+  <li>the type to use for shift amounts</li>
+  <li>various high-level characteristics, like whether it is profitable to turn
+      division by a constant into a multiplication sequence</li>
+</ul>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetregisterinfo">The <tt>TargetRegisterInfo</tt> class</a>
+</div>
+
+<div class="doc_text">
+
+<p>The <tt>TargetRegisterInfo</tt> class is used to describe the register
+file of the target and any interactions between the registers.</p>
+
+<p>Registers in the code generator are represented in the code generator by
+unsigned integers.  Physical registers (those that actually exist in the target
+description) are unique small numbers, and virtual registers are generally
+large.  Note that register #0 is reserved as a flag value.</p>
+
+<p>Each register in the processor description has an associated
+<tt>TargetRegisterDesc</tt> entry, which provides a textual name for the
+register (used for assembly output and debugging dumps) and a set of aliases
+(used to indicate whether one register overlaps with another).
+</p>
+
+<p>In addition to the per-register description, the <tt>TargetRegisterInfo</tt>
+class exposes a set of processor specific register classes (instances of the
+<tt>TargetRegisterClass</tt> class).  Each register class contains sets of
+registers that have the same properties (for example, they are all 32-bit
+integer registers).  Each SSA virtual register created by the instruction
+selector has an associated register class.  When the register allocator runs, it
+replaces virtual registers with a physical register in the set.</p>
+
+<p>
+The target-specific implementations of these classes is auto-generated from a <a
+href="TableGenFundamentals.html">TableGen</a> description of the register file.
+</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetinstrinfo">The <tt>TargetInstrInfo</tt> class</a>
+</div>
+
+<div class="doc_text">
+  <p>The <tt>TargetInstrInfo</tt> class is used to describe the machine 
+  instructions supported by the target. It is essentially an array of 
+  <tt>TargetInstrDescriptor</tt> objects, each of which describes one
+  instruction the target supports. Descriptors define things like the mnemonic
+  for the opcode, the number of operands, the list of implicit register uses
+  and defs, whether the instruction has certain target-independent properties 
+  (accesses memory, is commutable, etc), and holds any target-specific
+  flags.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetframeinfo">The <tt>TargetFrameInfo</tt> class</a>
+</div>
+
+<div class="doc_text">
+  <p>The <tt>TargetFrameInfo</tt> class is used to provide information about the
+  stack frame layout of the target. It holds the direction of stack growth, 
+  the known stack alignment on entry to each function, and the offset to the 
+  local area.  The offset to the local area is the offset from the stack 
+  pointer on function entry to the first location where function data (local 
+  variables, spill locations) can be stored.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetsubtarget">The <tt>TargetSubtarget</tt> class</a>
+</div>
+
+<div class="doc_text">
+  <p>The <tt>TargetSubtarget</tt> class is used to provide information about the
+  specific chip set being targeted.  A sub-target informs code generation of 
+  which instructions are supported, instruction latencies and instruction 
+  execution itinerary; i.e., which processing units are used, in what order, and
+  for how long.</p>
+</div>
+
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="targetjitinfo">The <tt>TargetJITInfo</tt> class</a>
+</div>
+
+<div class="doc_text">
+  <p>The <tt>TargetJITInfo</tt> class exposes an abstract interface used by the
+  Just-In-Time code generator to perform target-specific activities, such as
+  emitting stubs.  If a <tt>TargetMachine</tt> supports JIT code generation, it
+  should provide one of these objects through the <tt>getJITInfo</tt>
+  method.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="codegendesc">Machine code description classes</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>At the high-level, LLVM code is translated to a machine specific
+representation formed out of
+<a href="#machinefunction"><tt>MachineFunction</tt></a>,
+<a href="#machinebasicblock"><tt>MachineBasicBlock</tt></a>, and <a 
+href="#machineinstr"><tt>MachineInstr</tt></a> instances
+(defined in <tt>include/llvm/CodeGen</tt>).  This representation is completely
+target agnostic, representing instructions in their most abstract form: an
+opcode and a series of operands.  This representation is designed to support
+both an SSA representation for machine code, as well as a register allocated,
+non-SSA form.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="machineinstr">The <tt>MachineInstr</tt> class</a>
+</div>
+
+<div class="doc_text">
+
+<p>Target machine instructions are represented as instances of the
+<tt>MachineInstr</tt> class.  This class is an extremely abstract way of
+representing machine instructions.  In particular, it only keeps track of 
+an opcode number and a set of operands.</p>
+
+<p>The opcode number is a simple unsigned integer that only has meaning to a 
+specific backend.  All of the instructions for a target should be defined in 
+the <tt>*InstrInfo.td</tt> file for the target. The opcode enum values
+are auto-generated from this description.  The <tt>MachineInstr</tt> class does
+not have any information about how to interpret the instruction (i.e., what the 
+semantics of the instruction are); for that you must refer to the 
+<tt><a href="#targetinstrinfo">TargetInstrInfo</a></tt> class.</p> 
+
+<p>The operands of a machine instruction can be of several different types:
+a register reference, a constant integer, a basic block reference, etc.  In
+addition, a machine operand should be marked as a def or a use of the value
+(though only registers are allowed to be defs).</p>
+
+<p>By convention, the LLVM code generator orders instruction operands so that
+all register definitions come before the register uses, even on architectures
+that are normally printed in other orders.  For example, the SPARC add 
+instruction: "<tt>add %i1, %i2, %i3</tt>" adds the "%i1", and "%i2" registers
+and stores the result into the "%i3" register.  In the LLVM code generator,
+the operands should be stored as "<tt>%i3, %i1, %i2</tt>": with the destination
+first.</p>
+
+<p>Keeping destination (definition) operands at the beginning of the operand 
+list has several advantages.  In particular, the debugging printer will print 
+the instruction like this:</p>
+
+<div class="doc_code">
+<pre>
+%r3 = add %i1, %i2
+</pre>
+</div>
+
+<p>Also if the first operand is a def, it is easier to <a 
+href="#buildmi">create instructions</a> whose only def is the first 
+operand.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="buildmi">Using the <tt>MachineInstrBuilder.h</tt> functions</a>
+</div>
+
+<div class="doc_text">
+
+<p>Machine instructions are created by using the <tt>BuildMI</tt> functions,
+located in the <tt>include/llvm/CodeGen/MachineInstrBuilder.h</tt> file.  The
+<tt>BuildMI</tt> functions make it easy to build arbitrary machine 
+instructions.  Usage of the <tt>BuildMI</tt> functions look like this:</p>
+
+<div class="doc_code">
+<pre>
+// Create a 'DestReg = mov 42' (rendered in X86 assembly as 'mov DestReg, 42')
+// instruction.  The '1' specifies how many operands will be added.
+MachineInstr *MI = BuildMI(X86::MOV32ri, 1, DestReg).addImm(42);
+
+// Create the same instr, but insert it at the end of a basic block.
+MachineBasicBlock &amp;MBB = ...
+BuildMI(MBB, X86::MOV32ri, 1, DestReg).addImm(42);
+
+// Create the same instr, but insert it before a specified iterator point.
+MachineBasicBlock::iterator MBBI = ...
+BuildMI(MBB, MBBI, X86::MOV32ri, 1, DestReg).addImm(42);
+
+// Create a 'cmp Reg, 0' instruction, no destination reg.
+MI = BuildMI(X86::CMP32ri, 2).addReg(Reg).addImm(0);
+// Create an 'sahf' instruction which takes no operands and stores nothing.
+MI = BuildMI(X86::SAHF, 0);
+
+// Create a self looping branch instruction.
+BuildMI(MBB, X86::JNE, 1).addMBB(&amp;MBB);
+</pre>
+</div>
+
+<p>The key thing to remember with the <tt>BuildMI</tt> functions is that you
+have to specify the number of operands that the machine instruction will take.
+This allows for efficient memory allocation.  You also need to specify if
+operands default to be uses of values, not definitions.  If you need to add a
+definition operand (other than the optional destination register), you must
+explicitly mark it as such:</p>
+
+<div class="doc_code">
+<pre>
+MI.addReg(Reg, MachineOperand::Def);
+</pre>
+</div>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="fixedregs">Fixed (preassigned) registers</a>
+</div>
+
+<div class="doc_text">
+
+<p>One important issue that the code generator needs to be aware of is the
+presence of fixed registers.  In particular, there are often places in the 
+instruction stream where the register allocator <em>must</em> arrange for a
+particular value to be in a particular register.  This can occur due to 
+limitations of the instruction set (e.g., the X86 can only do a 32-bit divide 
+with the <tt>EAX</tt>/<tt>EDX</tt> registers), or external factors like calling
+conventions.  In any case, the instruction selector should emit code that 
+copies a virtual register into or out of a physical register when needed.</p>
+
+<p>For example, consider this simple LLVM example:</p>
+
+<div class="doc_code">
+<pre>
+define i32 @test(i32 %X, i32 %Y) {
+  %Z = udiv i32 %X, %Y
+  ret i32 %Z
+}
+</pre>
+</div>
+
+<p>The X86 instruction selector produces this machine code for the <tt>div</tt>
+and <tt>ret</tt> (use 
+"<tt>llc X.bc -march=x86 -print-machineinstrs</tt>" to get this):</p>
+
+<div class="doc_code">
+<pre>
+;; Start of div
+%EAX = mov %reg1024           ;; Copy X (in reg1024) into EAX
+%reg1027 = sar %reg1024, 31
+%EDX = mov %reg1027           ;; Sign extend X into EDX
+idiv %reg1025                 ;; Divide by Y (in reg1025)
+%reg1026 = mov %EAX           ;; Read the result (Z) out of EAX
+
+;; Start of ret
+%EAX = mov %reg1026           ;; 32-bit return value goes in EAX
+ret
+</pre>
+</div>
+
+<p>By the end of code generation, the register allocator has coalesced
+the registers and deleted the resultant identity moves producing the
+following code:</p>
+
+<div class="doc_code">
+<pre>
+;; X is in EAX, Y is in ECX
+mov %EAX, %EDX
+sar %EDX, 31
+idiv %ECX
+ret 
+</pre>
+</div>
+
+<p>This approach is extremely general (if it can handle the X86 architecture, 
+it can handle anything!) and allows all of the target specific
+knowledge about the instruction stream to be isolated in the instruction 
+selector.  Note that physical registers should have a short lifetime for good 
+code generation, and all physical registers are assumed dead on entry to and
+exit from basic blocks (before register allocation).  Thus, if you need a value
+to be live across basic block boundaries, it <em>must</em> live in a virtual 
+register.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="ssa">Machine code in SSA form</a>
+</div>
+
+<div class="doc_text">
+
+<p><tt>MachineInstr</tt>'s are initially selected in SSA-form, and
+are maintained in SSA-form until register allocation happens.  For the most 
+part, this is trivially simple since LLVM is already in SSA form; LLVM PHI nodes
+become machine code PHI nodes, and virtual registers are only allowed to have a
+single definition.</p>
+
+<p>After register allocation, machine code is no longer in SSA-form because there 
+are no virtual registers left in the code.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="machinebasicblock">The <tt>MachineBasicBlock</tt> class</a>
+</div>
+
+<div class="doc_text">
+
+<p>The <tt>MachineBasicBlock</tt> class contains a list of machine instructions
+(<tt><a href="#machineinstr">MachineInstr</a></tt> instances).  It roughly
+corresponds to the LLVM code input to the instruction selector, but there can be
+a one-to-many mapping (i.e. one LLVM basic block can map to multiple machine
+basic blocks). The <tt>MachineBasicBlock</tt> class has a
+"<tt>getBasicBlock</tt>" method, which returns the LLVM basic block that it
+comes from.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="machinefunction">The <tt>MachineFunction</tt> class</a>
+</div>
+
+<div class="doc_text">
+
+<p>The <tt>MachineFunction</tt> class contains a list of machine basic blocks
+(<tt><a href="#machinebasicblock">MachineBasicBlock</a></tt> instances).  It
+corresponds one-to-one with the LLVM function input to the instruction selector.
+In addition to a list of basic blocks, the <tt>MachineFunction</tt> contains a
+a <tt>MachineConstantPool</tt>, a <tt>MachineFrameInfo</tt>, a
+<tt>MachineFunctionInfo</tt>, and a <tt>MachineRegisterInfo</tt>.  See
+<tt>include/llvm/CodeGen/MachineFunction.h</tt> for more information.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="codegenalgs">Target-independent code generation algorithms</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>This section documents the phases described in the <a
+href="#high-level-design">high-level design of the code generator</a>.  It
+explains how they work and some of the rationale behind their design.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="instselect">Instruction Selection</a>
+</div>
+
+<div class="doc_text">
+<p>
+Instruction Selection is the process of translating LLVM code presented to the
+code generator into target-specific machine instructions.  There are several
+well-known ways to do this in the literature.  LLVM uses a SelectionDAG based
+instruction selector.
+</p>
+
+<p>Portions of the DAG instruction selector are generated from the target 
+description (<tt>*.td</tt>) files.  Our goal is for the entire instruction
+selector to be generated from these <tt>.td</tt> files, though currently
+there are still things that require custom C++ code.</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_intro">Introduction to SelectionDAGs</a>
+</div>
+
+<div class="doc_text">
+
+<p>The SelectionDAG provides an abstraction for code representation in a way
+that is amenable to instruction selection using automatic techniques
+(e.g. dynamic-programming based optimal pattern matching selectors). It is also
+well-suited to other phases of code generation; in particular,
+instruction scheduling (SelectionDAG's are very close to scheduling DAGs
+post-selection).  Additionally, the SelectionDAG provides a host representation
+where a large variety of very-low-level (but target-independent) 
+<a href="#selectiondag_optimize">optimizations</a> may be
+performed; ones which require extensive information about the instructions
+efficiently supported by the target.</p>
+
+<p>The SelectionDAG is a Directed-Acyclic-Graph whose nodes are instances of the
+<tt>SDNode</tt> class.  The primary payload of the <tt>SDNode</tt> is its 
+operation code (Opcode) that indicates what operation the node performs and
+the operands to the operation.
+The various operation node types are described at the top of the
+<tt>include/llvm/CodeGen/SelectionDAGNodes.h</tt> file.</p>
+
+<p>Although most operations define a single value, each node in the graph may 
+define multiple values.  For example, a combined div/rem operation will define
+both the dividend and the remainder. Many other situations require multiple
+values as well.  Each node also has some number of operands, which are edges 
+to the node defining the used value.  Because nodes may define multiple values,
+edges are represented by instances of the <tt>SDValue</tt> class, which is 
+a <tt>&lt;SDNode, unsigned&gt;</tt> pair, indicating the node and result
+value being used, respectively.  Each value produced by an <tt>SDNode</tt> has
+an associated <tt>MVT</tt> (Machine Value Type) indicating what the type of the
+value is.</p>
+
+<p>SelectionDAGs contain two different kinds of values: those that represent
+data flow and those that represent control flow dependencies.  Data values are
+simple edges with an integer or floating point value type.  Control edges are
+represented as "chain" edges which are of type <tt>MVT::Other</tt>.  These edges
+provide an ordering between nodes that have side effects (such as
+loads, stores, calls, returns, etc).  All nodes that have side effects should
+take a token chain as input and produce a new one as output.  By convention,
+token chain inputs are always operand #0, and chain results are always the last
+value produced by an operation.</p>
+
+<p>A SelectionDAG has designated "Entry" and "Root" nodes.  The Entry node is
+always a marker node with an Opcode of <tt>ISD::EntryToken</tt>.  The Root node
+is the final side-effecting node in the token chain. For example, in a single
+basic block function it would be the return node.</p>
+
+<p>One important concept for SelectionDAGs is the notion of a "legal" vs.
+"illegal" DAG.  A legal DAG for a target is one that only uses supported
+operations and supported types.  On a 32-bit PowerPC, for example, a DAG with
+a value of type i1, i8, i16, or i64 would be illegal, as would a DAG that uses a
+SREM or UREM operation.  The
+<a href="#selectinodag_legalize_types">legalize types</a> and
+<a href="#selectiondag_legalize">legalize operations</a> phases are
+responsible for turning an illegal DAG into a legal DAG.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_process">SelectionDAG Instruction Selection Process</a>
+</div>
+
+<div class="doc_text">
+
+<p>SelectionDAG-based instruction selection consists of the following steps:</p>
+
+<ol>
+<li><a href="#selectiondag_build">Build initial DAG</a> - This stage
+    performs a simple translation from the input LLVM code to an illegal
+    SelectionDAG.</li>
+<li><a href="#selectiondag_optimize">Optimize SelectionDAG</a> - This stage
+    performs simple optimizations on the SelectionDAG to simplify it, and
+    recognize meta instructions (like rotates and <tt>div</tt>/<tt>rem</tt>
+    pairs) for targets that support these meta operations.  This makes the
+    resultant code more efficient and the <a href="#selectiondag_select">select
+    instructions from DAG</a> phase (below) simpler.</li>
+<li><a href="#selectiondag_legalize_types">Legalize SelectionDAG Types</a> - This
+    stage transforms SelectionDAG nodes to eliminate any types that are
+    unsupported on the target.</li>
+<li><a href="#selectiondag_optimize">Optimize SelectionDAG</a> - The
+    SelectionDAG optimizer is run to clean up redundancies exposed
+    by type legalization.</li>
+<li><a href="#selectiondag_legalize">Legalize SelectionDAG Types</a> - This
+    stage transforms SelectionDAG nodes to eliminate any types that are
+    unsupported on the target.</li>
+<li><a href="#selectiondag_optimize">Optimize SelectionDAG</a> - The
+    SelectionDAG optimizer is run to eliminate inefficiencies introduced
+    by operation legalization.</li>
+<li><a href="#selectiondag_select">Select instructions from DAG</a> - Finally,
+    the target instruction selector matches the DAG operations to target
+    instructions.  This process translates the target-independent input DAG into
+    another DAG of target instructions.</li>
+<li><a href="#selectiondag_sched">SelectionDAG Scheduling and Formation</a>
+    - The last phase assigns a linear order to the instructions in the 
+    target-instruction DAG and emits them into the MachineFunction being
+    compiled.  This step uses traditional prepass scheduling techniques.</li>
+</ol>
+
+<p>After all of these steps are complete, the SelectionDAG is destroyed and the
+rest of the code generation passes are run.</p>
+
+<p>One great way to visualize what is going on here is to take advantage of a 
+few LLC command line options.  The following options pop up a window displaying
+the SelectionDAG at specific times (if you only get errors printed to the console
+while using this, you probably
+<a href="ProgrammersManual.html#ViewGraph">need to configure your system</a> to
+add support for it).</p>
+
+<ul>
+<li><tt>-view-dag-combine1-dags</tt> displays the DAG after being built, before
+    the first optimization pass.</li>
+<li><tt>-view-legalize-dags</tt> displays the DAG before Legalization.</li>
+<li><tt>-view-dag-combine2-dags</tt> displays the DAG before the second
+    optimization pass.</li>
+<li><tt>-view-isel-dags</tt> displays the DAG before the Select phase.</li>
+<li><tt>-view-sched-dags</tt> displays the DAG before Scheduling.</li>
+</ul>
+
+<p>The <tt>-view-sunit-dags</tt> displays the Scheduler's dependency graph.
+This graph is based on the final SelectionDAG, with nodes that must be
+scheduled together bundled into a single scheduling-unit node, and with
+immediate operands and other nodes that aren't relevant for scheduling
+omitted.
+</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_build">Initial SelectionDAG Construction</a>
+</div>
+
+<div class="doc_text">
+
+<p>The initial SelectionDAG is na&iuml;vely peephole expanded from the LLVM
+input by the <tt>SelectionDAGLowering</tt> class in the
+<tt>lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp</tt> file.  The intent of this
+pass is to expose as much low-level, target-specific details to the SelectionDAG
+as possible.  This pass is mostly hard-coded (e.g. an LLVM <tt>add</tt> turns
+into an <tt>SDNode add</tt> while a <tt>getelementptr</tt> is expanded into the
+obvious arithmetic). This pass requires target-specific hooks to lower calls,
+returns, varargs, etc.  For these features, the
+<tt><a href="#targetlowering">TargetLowering</a></tt> interface is used.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_legalize_types">SelectionDAG LegalizeTypes Phase</a>
+</div>
+
+<div class="doc_text">
+
+<p>The Legalize phase is in charge of converting a DAG to only use the types
+that are natively supported by the target.</p>
+
+<p>There are two main ways of converting values of unsupported scalar types
+   to values of supported types: converting small types to 
+   larger types ("promoting"), and breaking up large integer types
+   into smaller ones ("expanding").  For example, a target might require
+   that all f32 values are promoted to f64 and that all i1/i8/i16 values
+   are promoted to i32.  The same target might require that all i64 values
+   be expanded into pairs of i32 values.  These changes can insert sign and
+   zero extensions as needed to make sure that the final code has the same
+   behavior as the input.</p>
+
+<p>There are two main ways of converting values of unsupported vector types
+   to value of supported types: splitting vector types, multiple times if
+   necessary, until a legal type is found, and extending vector types by
+   adding elements to the end to round them out to legal types ("widening").
+   If a vector gets split all the way down to single-element parts with
+   no supported vector type being found, the elements are converted to
+   scalars ("scalarizing").</p>
+
+<p>A target implementation tells the legalizer which types are supported
+   (and which register class to use for them) by calling the
+   <tt>addRegisterClass</tt> method in its TargetLowering constructor.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_legalize">SelectionDAG Legalize Phase</a>
+</div>
+
+<div class="doc_text">
+
+<p>The Legalize phase is in charge of converting a DAG to only use the
+operations that are natively supported by the target.</p>
+
+<p>Targets often have weird constraints, such as not supporting every
+   operation on every supported datatype (e.g. X86 does not support byte
+   conditional moves and PowerPC does not support sign-extending loads from
+   a 16-bit memory location).  Legalize takes care of this by open-coding
+   another sequence of operations to emulate the operation ("expansion"), by
+   promoting one type to a larger type that supports the operation
+   ("promotion"), or by using a target-specific hook to implement the
+   legalization ("custom").</p>
+
+<p>A target implementation tells the legalizer which operations are not
+   supported (and which of the above three actions to take) by calling the
+   <tt>setOperationAction</tt> method in its <tt>TargetLowering</tt>
+   constructor.</p>
+
+<p>Prior to the existence of the Legalize passes, we required that every target
+<a href="#selectiondag_optimize">selector</a> supported and handled every
+operator and type even if they are not natively supported.  The introduction of
+the Legalize phases allows all of the canonicalization patterns to be shared
+across targets, and makes it very easy to optimize the canonicalized code
+because it is still in the form of a DAG.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_optimize">SelectionDAG Optimization Phase: the DAG
+  Combiner</a>
+</div>
+
+<div class="doc_text">
+
+<p>The SelectionDAG optimization phase is run multiple times for code generation,
+immediately after the DAG is built and once after each legalization.  The first
+run of the pass allows the initial code to be cleaned up (e.g. performing 
+optimizations that depend on knowing that the operators have restricted type 
+inputs).  Subsequent runs of the pass clean up the messy code generated by the 
+Legalize passes, which allows Legalize to be very simple (it can focus on making
+code legal instead of focusing on generating <em>good</em> and legal code).</p>
+
+<p>One important class of optimizations performed is optimizing inserted sign
+and zero extension instructions.  We currently use ad-hoc techniques, but could
+move to more rigorous techniques in the future.  Here are some good papers on
+the subject:</p>
+
+<p>
+ "<a href="http://www.eecs.harvard.edu/~nr/pubs/widen-abstract.html">Widening
+ integer arithmetic</a>"<br>
+ Kevin Redwine and Norman Ramsey<br>
+ International Conference on Compiler Construction (CC) 2004
+</p>
+
+
+<p>
+ "<a href="http://portal.acm.org/citation.cfm?doid=512529.512552">Effective
+ sign extension elimination</a>"<br>
+ Motohiro Kawahito, Hideaki Komatsu, and Toshio Nakatani<br>
+ Proceedings of the ACM SIGPLAN 2002 Conference on Programming Language Design
+ and Implementation.
+</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_select">SelectionDAG Select Phase</a>
+</div>
+
+<div class="doc_text">
+
+<p>The Select phase is the bulk of the target-specific code for instruction
+selection.  This phase takes a legal SelectionDAG as input, pattern matches the
+instructions supported by the target to this DAG, and produces a new DAG of
+target code.  For example, consider the following LLVM fragment:</p>
+
+<div class="doc_code">
+<pre>
+%t1 = add float %W, %X
+%t2 = mul float %t1, %Y
+%t3 = add float %t2, %Z
+</pre>
+</div>
+
+<p>This LLVM code corresponds to a SelectionDAG that looks basically like
+this:</p>
+
+<div class="doc_code">
+<pre>
+(fadd:f32 (fmul:f32 (fadd:f32 W, X), Y), Z)
+</pre>
+</div>
+
+<p>If a target supports floating point multiply-and-add (FMA) operations, one
+of the adds can be merged with the multiply.  On the PowerPC, for example, the
+output of the instruction selector might look like this DAG:</p>
+
+<div class="doc_code">
+<pre>
+(FMADDS (FADDS W, X), Y, Z)
+</pre>
+</div>
+
+<p>The <tt>FMADDS</tt> instruction is a ternary instruction that multiplies its
+first two operands and adds the third (as single-precision floating-point
+numbers).  The <tt>FADDS</tt> instruction is a simple binary single-precision
+add instruction.  To perform this pattern match, the PowerPC backend includes
+the following instruction definitions:</p>
+
+<div class="doc_code">
+<pre>
+def FMADDS : AForm_1&lt;59, 29,
+                    (ops F4RC:$FRT, F4RC:$FRA, F4RC:$FRC, F4RC:$FRB),
+                    "fmadds $FRT, $FRA, $FRC, $FRB",
+                    [<b>(set F4RC:$FRT, (fadd (fmul F4RC:$FRA, F4RC:$FRC),
+                                           F4RC:$FRB))</b>]&gt;;
+def FADDS : AForm_2&lt;59, 21,
+                    (ops F4RC:$FRT, F4RC:$FRA, F4RC:$FRB),
+                    "fadds $FRT, $FRA, $FRB",
+                    [<b>(set F4RC:$FRT, (fadd F4RC:$FRA, F4RC:$FRB))</b>]&gt;;
+</pre>
+</div>
+
+<p>The portion of the instruction definition in bold indicates the pattern used
+to match the instruction.  The DAG operators (like <tt>fmul</tt>/<tt>fadd</tt>)
+are defined in the <tt>lib/Target/TargetSelectionDAG.td</tt> file.  
+"<tt>F4RC</tt>" is the register class of the input and result values.</p>
+
+<p>The TableGen DAG instruction selector generator reads the instruction 
+patterns in the <tt>.td</tt> file and automatically builds parts of the pattern
+matching code for your target.  It has the following strengths:</p>
+
+<ul>
+<li>At compiler-compiler time, it analyzes your instruction patterns and tells
+    you if your patterns make sense or not.</li>
+<li>It can handle arbitrary constraints on operands for the pattern match.  In
+    particular, it is straight-forward to say things like "match any immediate
+    that is a 13-bit sign-extended value".  For examples, see the 
+    <tt>immSExt16</tt> and related <tt>tblgen</tt> classes in the PowerPC
+    backend.</li>
+<li>It knows several important identities for the patterns defined.  For
+    example, it knows that addition is commutative, so it allows the 
+    <tt>FMADDS</tt> pattern above to match "<tt>(fadd X, (fmul Y, Z))</tt>" as
+    well as "<tt>(fadd (fmul X, Y), Z)</tt>", without the target author having
+    to specially handle this case.</li>
+<li>It has a full-featured type-inferencing system.  In particular, you should
+    rarely have to explicitly tell the system what type parts of your patterns
+    are.  In the <tt>FMADDS</tt> case above, we didn't have to tell
+    <tt>tblgen</tt> that all of the nodes in the pattern are of type 'f32'.  It
+    was able to infer and propagate this knowledge from the fact that
+    <tt>F4RC</tt> has type 'f32'.</li>
+<li>Targets can define their own (and rely on built-in) "pattern fragments".
+    Pattern fragments are chunks of reusable patterns that get inlined into your
+    patterns during compiler-compiler time.  For example, the integer
+    "<tt>(not x)</tt>" operation is actually defined as a pattern fragment that
+    expands as "<tt>(xor x, -1)</tt>", since the SelectionDAG does not have a
+    native '<tt>not</tt>' operation.  Targets can define their own short-hand
+    fragments as they see fit.  See the definition of '<tt>not</tt>' and
+    '<tt>ineg</tt>' for examples.</li>
+<li>In addition to instructions, targets can specify arbitrary patterns that
+    map to one or more instructions using the 'Pat' class.  For example,
+    the PowerPC has no way to load an arbitrary integer immediate into a
+    register in one instruction. To tell tblgen how to do this, it defines:
+    <br>
+    <br>
+    <div class="doc_code">
+    <pre>
+// Arbitrary immediate support.  Implement in terms of LIS/ORI.
+def : Pat&lt;(i32 imm:$imm),
+          (ORI (LIS (HI16 imm:$imm)), (LO16 imm:$imm))&gt;;
+    </pre>
+    </div>
+    <br>    
+    If none of the single-instruction patterns for loading an immediate into a
+    register match, this will be used.  This rule says "match an arbitrary i32
+    immediate, turning it into an <tt>ORI</tt> ('or a 16-bit immediate') and an
+    <tt>LIS</tt> ('load 16-bit immediate, where the immediate is shifted to the
+    left 16 bits') instruction".  To make this work, the
+    <tt>LO16</tt>/<tt>HI16</tt> node transformations are used to manipulate the
+    input immediate (in this case, take the high or low 16-bits of the
+    immediate).</li>
+<li>While the system does automate a lot, it still allows you to write custom
+    C++ code to match special cases if there is something that is hard to
+    express.</li>
+</ul>
+
+<p>While it has many strengths, the system currently has some limitations,
+primarily because it is a work in progress and is not yet finished:</p>
+
+<ul>
+<li>Overall, there is no way to define or match SelectionDAG nodes that define
+    multiple values (e.g. <tt>ADD_PARTS</tt>, <tt>LOAD</tt>, <tt>CALL</tt>,
+    etc).  This is the biggest reason that you currently still <em>have to</em>
+    write custom C++ code for your instruction selector.</li>
+<li>There is no great way to support matching complex addressing modes yet.  In
+    the future, we will extend pattern fragments to allow them to define
+    multiple values (e.g. the four operands of the <a href="#x86_memory">X86
+    addressing mode</a>, which are currently matched with custom C++ code).
+    In addition, we'll extend fragments so that a
+    fragment can match multiple different patterns.</li>
+<li>We don't automatically infer flags like isStore/isLoad yet.</li>
+<li>We don't automatically generate the set of supported registers and
+    operations for the <a href="#selectiondag_legalize">Legalizer</a> yet.</li>
+<li>We don't have a way of tying in custom legalized nodes yet.</li>
+</ul>
+
+<p>Despite these limitations, the instruction selector generator is still quite
+useful for most of the binary and logical operations in typical instruction
+sets.  If you run into any problems or can't figure out how to do something, 
+please let Chris know!</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_sched">SelectionDAG Scheduling and Formation Phase</a>
+</div>
+
+<div class="doc_text">
+
+<p>The scheduling phase takes the DAG of target instructions from the selection
+phase and assigns an order.  The scheduler can pick an order depending on
+various constraints of the machines (i.e. order for minimal register pressure or
+try to cover instruction latencies).  Once an order is established, the DAG is
+converted to a list of <tt><a href="#machineinstr">MachineInstr</a></tt>s and
+the SelectionDAG is destroyed.</p>
+
+<p>Note that this phase is logically separate from the instruction selection
+phase, but is tied to it closely in the code because it operates on
+SelectionDAGs.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="selectiondag_future">Future directions for the SelectionDAG</a>
+</div>
+
+<div class="doc_text">
+
+<ol>
+<li>Optional function-at-a-time selection.</li>
+<li>Auto-generate entire selector from <tt>.td</tt> file.</li>
+</ol>
+
+</div>
+ 
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ssamco">SSA-based Machine Code Optimizations</a>
+</div>
+<div class="doc_text"><p>To Be Written</p></div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="liveintervals">Live Intervals</a>
+</div>
+
+<div class="doc_text">
+
+<p>Live Intervals are the ranges (intervals) where a variable is <i>live</i>.
+They are used by some <a href="#regalloc">register allocator</a> passes to
+determine if two or more virtual registers which require the same physical
+register are live at the same point in the program (i.e., they conflict).  When
+this situation occurs, one virtual register must be <i>spilled</i>.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="livevariable_analysis">Live Variable Analysis</a>
+</div>
+
+<div class="doc_text">
+
+<p>The first step in determining the live intervals of variables is to
+calculate the set of registers that are immediately dead after the
+instruction (i.e., the instruction calculates the value, but it is
+never used) and the set of registers that are used by the instruction,
+but are never used after the instruction (i.e., they are killed). Live
+variable information is computed for each <i>virtual</i> register and
+<i>register allocatable</i> physical register in the function.  This
+is done in a very efficient manner because it uses SSA to sparsely
+compute lifetime information for virtual registers (which are in SSA
+form) and only has to track physical registers within a block.  Before
+register allocation, LLVM can assume that physical registers are only
+live within a single basic block.  This allows it to do a single,
+local analysis to resolve physical register lifetimes within each
+basic block. If a physical register is not register allocatable (e.g.,
+a stack pointer or condition codes), it is not tracked.</p>
+
+<p>Physical registers may be live in to or out of a function. Live in values
+are typically arguments in registers. Live out values are typically return
+values in registers. Live in values are marked as such, and are given a dummy
+"defining" instruction during live intervals analysis. If the last basic block
+of a function is a <tt>return</tt>, then it's marked as using all live out
+values in the function.</p>
+
+<p><tt>PHI</tt> nodes need to be handled specially, because the calculation
+of the live variable information from a depth first traversal of the CFG of
+the function won't guarantee that a virtual register used by the <tt>PHI</tt>
+node is defined before it's used. When a <tt>PHI</tt> node is encountered, only
+the definition is handled, because the uses will be handled in other basic
+blocks.</p>
+
+<p>For each <tt>PHI</tt> node of the current basic block, we simulate an
+assignment at the end of the current basic block and traverse the successor
+basic blocks. If a successor basic block has a <tt>PHI</tt> node and one of
+the <tt>PHI</tt> node's operands is coming from the current basic block,
+then the variable is marked as <i>alive</i> within the current basic block
+and all of its predecessor basic blocks, until the basic block with the
+defining instruction is encountered.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="liveintervals_analysis">Live Intervals Analysis</a>
+</div>
+
+<div class="doc_text">
+
+<p>We now have the information available to perform the live intervals analysis
+and build the live intervals themselves.  We start off by numbering the basic
+blocks and machine instructions.  We then handle the "live-in" values.  These
+are in physical registers, so the physical register is assumed to be killed by
+the end of the basic block.  Live intervals for virtual registers are computed
+for some ordering of the machine instructions <tt>[1, N]</tt>.  A live interval
+is an interval <tt>[i, j)</tt>, where <tt>1 &lt;= i &lt;= j &lt; N</tt>, for which a
+variable is live.</p>
+
+<p><i><b>More to come...</b></i></p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="regalloc">Register Allocation</a>
+</div>
+
+<div class="doc_text">
+
+<p>The <i>Register Allocation problem</i> consists in mapping a program
+<i>P<sub>v</sub></i>, that can use an unbounded number of virtual
+registers, to a program <i>P<sub>p</sub></i> that contains a finite
+(possibly small) number of physical registers. Each target architecture has
+a different number of physical registers. If the number of physical
+registers is not enough to accommodate all the virtual registers, some of
+them will have to be mapped into memory. These virtuals are called
+<i>spilled virtuals</i>.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+
+<div class="doc_subsubsection">
+  <a name="regAlloc_represent">How registers are represented in LLVM</a>
+</div>
+
+<div class="doc_text">
+
+<p>In LLVM, physical registers are denoted by integer numbers that
+normally range from 1 to 1023. To see how this numbering is defined
+for a particular architecture, you can read the
+<tt>GenRegisterNames.inc</tt> file for that architecture. For
+instance, by inspecting
+<tt>lib/Target/X86/X86GenRegisterNames.inc</tt> we see that the 32-bit
+register <tt>EAX</tt> is denoted by 15, and the MMX register
+<tt>MM0</tt> is mapped to 48.</p>
+
+<p>Some architectures contain registers that share the same physical
+location. A notable example is the X86 platform. For instance, in the
+X86 architecture, the registers <tt>EAX</tt>, <tt>AX</tt> and
+<tt>AL</tt> share the first eight bits. These physical registers are
+marked as <i>aliased</i> in LLVM. Given a particular architecture, you
+can check which registers are aliased by inspecting its
+<tt>RegisterInfo.td</tt> file. Moreover, the method
+<tt>TargetRegisterInfo::getAliasSet(p_reg)</tt> returns an array containing
+all the physical registers aliased to the register <tt>p_reg</tt>.</p>
+
+<p>Physical registers, in LLVM, are grouped in <i>Register Classes</i>.
+Elements in the same register class are functionally equivalent, and can
+be interchangeably used. Each virtual register can only be mapped to
+physical registers of a particular class. For instance, in the X86
+architecture, some virtuals can only be allocated to 8 bit registers.
+A register class is described by <tt>TargetRegisterClass</tt> objects.
+To discover if a virtual register is compatible with a given physical,
+this code can be used:
+</p>
+
+<div class="doc_code">
+<pre>
+bool RegMapping_Fer::compatible_class(MachineFunction &amp;mf,
+                                      unsigned v_reg,
+                                      unsigned p_reg) {
+  assert(TargetRegisterInfo::isPhysicalRegister(p_reg) &amp;&amp;
+         "Target register must be physical");
+  const TargetRegisterClass *trc = mf.getRegInfo().getRegClass(v_reg);
+  return trc-&gt;contains(p_reg);
+}
+</pre>
+</div>
+
+<p>Sometimes, mostly for debugging purposes, it is useful to change
+the number of physical registers available in the target
+architecture. This must be done statically, inside the
+<tt>TargetRegsterInfo.td</tt> file. Just <tt>grep</tt> for
+<tt>RegisterClass</tt>, the last parameter of which is a list of
+registers. Just commenting some out is one simple way to avoid them
+being used. A more polite way is to explicitly exclude some registers
+from the <i>allocation order</i>. See the definition of the
+<tt>GR</tt> register class in
+<tt>lib/Target/IA64/IA64RegisterInfo.td</tt> for an example of this
+(e.g., <tt>numReservedRegs</tt> registers are hidden.)</p>
+
+<p>Virtual registers are also denoted by integer numbers. Contrary to
+physical registers, different virtual registers never share the same
+number. The smallest virtual register is normally assigned the number
+1024. This may change, so, in order to know which is the first virtual
+register, you should access
+<tt>TargetRegisterInfo::FirstVirtualRegister</tt>. Any register whose
+number is greater than or equal to
+<tt>TargetRegisterInfo::FirstVirtualRegister</tt> is considered a virtual
+register. Whereas physical registers are statically defined in a
+<tt>TargetRegisterInfo.td</tt> file and cannot be created by the
+application developer, that is not the case with virtual registers.
+In order to create new virtual registers, use the method
+<tt>MachineRegisterInfo::createVirtualRegister()</tt>. This method will return a
+virtual register with the highest code.
+</p>
+
+<p>Before register allocation, the operands of an instruction are
+mostly virtual registers, although physical registers may also be
+used. In order to check if a given machine operand is a register, use
+the boolean function <tt>MachineOperand::isRegister()</tt>. To obtain
+the integer code of a register, use
+<tt>MachineOperand::getReg()</tt>. An instruction may define or use a
+register. For instance, <tt>ADD reg:1026 := reg:1025 reg:1024</tt>
+defines the registers 1024, and uses registers 1025 and 1026. Given a
+register operand, the method <tt>MachineOperand::isUse()</tt> informs
+if that register is being used by the instruction. The method
+<tt>MachineOperand::isDef()</tt> informs if that registers is being
+defined.</p>
+
+<p>We will call physical registers present in the LLVM bitcode before
+register allocation <i>pre-colored registers</i>. Pre-colored
+registers are used in many different situations, for instance, to pass
+parameters of functions calls, and to store results of particular
+instructions. There are two types of pre-colored registers: the ones
+<i>implicitly</i> defined, and those <i>explicitly</i>
+defined. Explicitly defined registers are normal operands, and can be
+accessed with <tt>MachineInstr::getOperand(int)::getReg()</tt>.  In
+order to check which registers are implicitly defined by an
+instruction, use the
+<tt>TargetInstrInfo::get(opcode)::ImplicitDefs</tt>, where
+<tt>opcode</tt> is the opcode of the target instruction. One important
+difference between explicit and implicit physical registers is that
+the latter are defined statically for each instruction, whereas the
+former may vary depending on the program being compiled. For example,
+an instruction that represents a function call will always implicitly
+define or use the same set of physical registers. To read the
+registers implicitly used by an instruction, use
+<tt>TargetInstrInfo::get(opcode)::ImplicitUses</tt>. Pre-colored
+registers impose constraints on any register allocation algorithm. The
+register allocator must make sure that none of them is been
+overwritten by the values of virtual registers while still alive.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+
+<div class="doc_subsubsection">
+  <a name="regAlloc_howTo">Mapping virtual registers to physical registers</a>
+</div>
+
+<div class="doc_text">
+
+<p>There are two ways to map virtual registers to physical registers (or to
+memory slots). The first way, that we will call <i>direct mapping</i>,
+is based on the use of methods of the classes <tt>TargetRegisterInfo</tt>,
+and <tt>MachineOperand</tt>. The second way, that we will call
+<i>indirect mapping</i>, relies on the <tt>VirtRegMap</tt> class in
+order to insert loads and stores sending and getting values to and from
+memory.</p>
+
+<p>The direct mapping provides more flexibility to the developer of
+the register allocator; however, it is more error prone, and demands
+more implementation work.  Basically, the programmer will have to
+specify where load and store instructions should be inserted in the
+target function being compiled in order to get and store values in
+memory. To assign a physical register to a virtual register present in
+a given operand, use <tt>MachineOperand::setReg(p_reg)</tt>. To insert
+a store instruction, use
+<tt>TargetRegisterInfo::storeRegToStackSlot(...)</tt>, and to insert a load
+instruction, use <tt>TargetRegisterInfo::loadRegFromStackSlot</tt>.</p>
+
+<p>The indirect mapping shields the application developer from the
+complexities of inserting load and store instructions. In order to map
+a virtual register to a physical one, use
+<tt>VirtRegMap::assignVirt2Phys(vreg, preg)</tt>.  In order to map a
+certain virtual register to memory, use
+<tt>VirtRegMap::assignVirt2StackSlot(vreg)</tt>. This method will
+return the stack slot where <tt>vreg</tt>'s value will be located.  If
+it is necessary to map another virtual register to the same stack
+slot, use <tt>VirtRegMap::assignVirt2StackSlot(vreg,
+stack_location)</tt>. One important point to consider when using the
+indirect mapping, is that even if a virtual register is mapped to
+memory, it still needs to be mapped to a physical register. This
+physical register is the location where the virtual register is
+supposed to be found before being stored or after being reloaded.</p>
+
+<p>If the indirect strategy is used, after all the virtual registers
+have been mapped to physical registers or stack slots, it is necessary
+to use a spiller object to place load and store instructions in the
+code. Every virtual that has been mapped to a stack slot will be
+stored to memory after been defined and will be loaded before being
+used. The implementation of the spiller tries to recycle load/store
+instructions, avoiding unnecessary instructions. For an example of how
+to invoke the spiller, see
+<tt>RegAllocLinearScan::runOnMachineFunction</tt> in
+<tt>lib/CodeGen/RegAllocLinearScan.cpp</tt>.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="regAlloc_twoAddr">Handling two address instructions</a>
+</div>
+
+<div class="doc_text">
+
+<p>With very rare exceptions (e.g., function calls), the LLVM machine
+code instructions are three address instructions. That is, each
+instruction is expected to define at most one register, and to use at
+most two registers.  However, some architectures use two address
+instructions. In this case, the defined register is also one of the
+used register. For instance, an instruction such as <tt>ADD %EAX,
+%EBX</tt>, in X86 is actually equivalent to <tt>%EAX = %EAX +
+%EBX</tt>.</p>
+
+<p>In order to produce correct code, LLVM must convert three address
+instructions that represent two address instructions into true two
+address instructions. LLVM provides the pass
+<tt>TwoAddressInstructionPass</tt> for this specific purpose. It must
+be run before register allocation takes place. After its execution,
+the resulting code may no longer be in SSA form. This happens, for
+instance, in situations where an instruction such as <tt>%a = ADD %b
+%c</tt> is converted to two instructions such as:</p>
+
+<div class="doc_code">
+<pre>
+%a = MOVE %b
+%a = ADD %a %c
+</pre>
+</div>
+
+<p>Notice that, internally, the second instruction is represented as
+<tt>ADD %a[def/use] %c</tt>. I.e., the register operand <tt>%a</tt> is
+both used and defined by the instruction.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="regAlloc_ssaDecon">The SSA deconstruction phase</a>
+</div>
+
+<div class="doc_text">
+
+<p>An important transformation that happens during register allocation is called
+the <i>SSA Deconstruction Phase</i>. The SSA form simplifies many
+analyses that are performed on the control flow graph of
+programs. However, traditional instruction sets do not implement
+PHI instructions. Thus, in order to generate executable code, compilers
+must replace PHI instructions with other instructions that preserve their
+semantics.</p>
+
+<p>There are many ways in which PHI instructions can safely be removed
+from the target code. The most traditional PHI deconstruction
+algorithm replaces PHI instructions with copy instructions. That is
+the strategy adopted by LLVM. The SSA deconstruction algorithm is
+implemented in <tt>lib/CodeGen/PHIElimination.cpp</tt>. In order to
+invoke this pass, the identifier <tt>PHIEliminationID</tt> must be
+marked as required in the code of the register allocator.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="regAlloc_fold">Instruction folding</a>
+</div>
+
+<div class="doc_text">
+
+<p><i>Instruction folding</i> is an optimization performed during
+register allocation that removes unnecessary copy instructions. For
+instance, a sequence of instructions such as:</p>
+
+<div class="doc_code">
+<pre>
+%EBX = LOAD %mem_address
+%EAX = COPY %EBX
+</pre>
+</div>
+
+<p>can be safely substituted by the single instruction:</p>
+
+<div class="doc_code">
+<pre>
+%EAX = LOAD %mem_address
+</pre>
+</div>
+
+<p>Instructions can be folded with the
+<tt>TargetRegisterInfo::foldMemoryOperand(...)</tt> method. Care must be
+taken when folding instructions; a folded instruction can be quite
+different from the original instruction. See
+<tt>LiveIntervals::addIntervalsForSpills</tt> in
+<tt>lib/CodeGen/LiveIntervalAnalysis.cpp</tt> for an example of its use.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+
+<div class="doc_subsubsection">
+  <a name="regAlloc_builtIn">Built in register allocators</a>
+</div>
+
+<div class="doc_text">
+
+<p>The LLVM infrastructure provides the application developer with
+three different register allocators:</p>
+
+<ul>
+  <li><i>Simple</i> - This is a very simple implementation that does
+      not keep values in registers across instructions. This register
+      allocator immediately spills every value right after it is
+      computed, and reloads all used operands from memory to temporary
+      registers before each instruction.</li>
+  <li><i>Local</i> - This register allocator is an improvement on the
+      <i>Simple</i> implementation. It allocates registers on a basic
+      block level, attempting to keep values in registers and reusing
+      registers as appropriate.</li>
+  <li><i>Linear Scan</i> - <i>The default allocator</i>. This is the
+      well-know linear scan register allocator. Whereas the
+      <i>Simple</i> and <i>Local</i> algorithms use a direct mapping
+      implementation technique, the <i>Linear Scan</i> implementation
+      uses a spiller in order to place load and stores.</li>
+</ul>
+
+<p>The type of register allocator used in <tt>llc</tt> can be chosen with the
+command line option <tt>-regalloc=...</tt>:</p>
+
+<div class="doc_code">
+<pre>
+$ llc -f -regalloc=simple file.bc -o sp.s;
+$ llc -f -regalloc=local file.bc -o lc.s;
+$ llc -f -regalloc=linearscan file.bc -o ln.s;
+</pre>
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="proepicode">Prolog/Epilog Code Insertion</a>
+</div>
+<div class="doc_text"><p>To Be Written</p></div>
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="latemco">Late Machine Code Optimizations</a>
+</div>
+<div class="doc_text"><p>To Be Written</p></div>
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="codeemit">Code Emission</a>
+</div>
+<div class="doc_text"><p>To Be Written</p></div>
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="codeemit_asm">Generating Assembly Code</a>
+</div>
+<div class="doc_text"><p>To Be Written</p></div>
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="codeemit_bin">Generating Binary Machine Code</a>
+</div>
+
+<div class="doc_text">
+   <p>For the JIT or <tt>.o</tt> file writer</p>
+</div>
+
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="targetimpls">Target-specific Implementation Notes</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>This section of the document explains features or design decisions that
+are specific to the code generator for a particular target.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="tailcallopt">Tail call optimization</a>
+</div>
+
+<div class="doc_text">
+  <p>Tail call optimization, callee reusing the stack of the caller, is currently supported on x86/x86-64 and PowerPC. It is performed if:
+    <ul>
+      <li>Caller and callee have the calling convention <tt>fastcc</tt>.</li>
+      <li>The call is a tail call - in tail position (ret immediately follows call and ret uses value of call or is void).</li>
+      <li>Option <tt>-tailcallopt</tt> is enabled.</li>
+      <li>Platform specific constraints are met.</li>
+    </ul>
+  </p>
+
+  <p>x86/x86-64 constraints:
+    <ul>
+      <li>No variable argument lists are used.</li>
+      <li>On x86-64 when generating GOT/PIC code only module-local calls (visibility = hidden or protected) are supported.</li>
+    </ul>
+  </p>
+  <p>PowerPC constraints:
+    <ul>
+      <li>No variable argument lists are used.</li>
+      <li>No byval parameters are used.</li>
+      <li>On ppc32/64 GOT/PIC only module-local calls (visibility = hidden or protected) are supported.</li>
+    </ul>
+  </p>
+  <p>Example:</p>
+  <p>Call as <tt>llc -tailcallopt test.ll</tt>.
+    <div class="doc_code">
+      <pre>
+declare fastcc i32 @tailcallee(i32 inreg %a1, i32 inreg %a2, i32 %a3, i32 %a4)
+
+define fastcc i32 @tailcaller(i32 %in1, i32 %in2) {
+  %l1 = add i32 %in1, %in2
+  %tmp = tail call fastcc i32 @tailcallee(i32 %in1 inreg, i32 %in2 inreg, i32 %in1, i32 %l1)
+  ret i32 %tmp
+}</pre>
+    </div>
+  </p>
+  <p>Implications of <tt>-tailcallopt</tt>:</p>
+  <p>To support tail call optimization in situations where the callee has more arguments than the caller a 'callee pops arguments' convention is used. This currently causes each <tt>fastcc</tt> call that is not tail call optimized (because one or more of above constraints are not met) to be followed by a readjustment of the stack. So performance might be worse in such cases.</p>
+  <p>On x86 and x86-64 one register is reserved for indirect tail calls (e.g via a function pointer). So there is one less register for integer argument passing. For x86 this means 2 registers (if <tt>inreg</tt> parameter attribute is used) and for x86-64 this means 5 register are used.</p>
+</div>
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="x86">The X86 backend</a>
+</div>
+
+<div class="doc_text">
+
+<p>The X86 code generator lives in the <tt>lib/Target/X86</tt> directory.  This
+code generator is capable of targeting a variety of x86-32 and x86-64
+processors, and includes support for ISA extensions such as MMX and SSE.
+</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="x86_tt">X86 Target Triples supported</a>
+</div>
+
+<div class="doc_text">
+
+<p>The following are the known target triples that are supported by the X86 
+backend.  This is not an exhaustive list, and it would be useful to add those
+that people test.</p>
+
+<ul>
+<li><b>i686-pc-linux-gnu</b> - Linux</li>
+<li><b>i386-unknown-freebsd5.3</b> - FreeBSD 5.3</li>
+<li><b>i686-pc-cygwin</b> - Cygwin on Win32</li>
+<li><b>i686-pc-mingw32</b> - MingW on Win32</li>
+<li><b>i386-pc-mingw32msvc</b> - MingW crosscompiler on Linux</li>
+<li><b>i686-apple-darwin*</b> - Apple Darwin on X86</li>
+</ul>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="x86_cc">X86 Calling Conventions supported</a>
+</div>
+
+
+<div class="doc_text">
+
+<p>The following target-specific calling conventions are known to backend:</p>
+
+<ul>
+<li><b>x86_StdCall</b> - stdcall calling convention seen on Microsoft Windows
+platform (CC ID = 64).</li>
+<li><b>x86_FastCall</b> - fastcall calling convention seen on Microsoft Windows
+platform (CC ID = 65).</li>
+</ul>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="x86_memory">Representing X86 addressing modes in MachineInstrs</a>
+</div>
+
+<div class="doc_text">
+
+<p>The x86 has a very flexible way of accessing memory.  It is capable of
+forming memory addresses of the following expression directly in integer
+instructions (which use ModR/M addressing):</p>
+
+<div class="doc_code">
+<pre>
+Base + [1,2,4,8] * IndexReg + Disp32
+</pre>
+</div>
+
+<p>In order to represent this, LLVM tracks no less than 4 operands for each
+memory operand of this form.  This means that the "load" form of '<tt>mov</tt>'
+has the following <tt>MachineOperand</tt>s in this order:</p>
+
+<pre>
+Index:        0     |    1        2       3           4
+Meaning:   DestReg, | BaseReg,  Scale, IndexReg, Displacement
+OperandTy: VirtReg, | VirtReg, UnsImm, VirtReg,   SignExtImm
+</pre>
+
+<p>Stores, and all other instructions, treat the four memory operands in the 
+same way and in the same order.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="x86_memory">X86 address spaces supported</a>
+</div>
+
+<div class="doc_text">
+
+<p>x86 has the ability to perform loads and stores to different address spaces 
+via the x86 segment registers.  A segment override prefix byte on an instruction
+causes the instruction's memory access to go to the specified segment.  LLVM
+address space 0 is the default address space, which includes the stack, and
+any unqualified memory accesses in a program.  Address spaces 1-255 are
+currently reserved for user-defined code.  The GS-segment is represented by
+address space 256.  Other x86 segments have yet to be allocated address space
+numbers.
+
+<p>Some operating systems use the GS-segment to implement TLS, so care should be
+taken when reading and writing to address space 256 on these platforms.
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="x86_names">Instruction naming</a>
+</div>
+
+<div class="doc_text">
+
+<p>An instruction name consists of the base name, a default operand size, and a
+a character per operand with an optional special size. For example:</p>
+
+<p>
+<tt>ADD8rr</tt> -&gt; add, 8-bit register, 8-bit register<br>
+<tt>IMUL16rmi</tt> -&gt; imul, 16-bit register, 16-bit memory, 16-bit immediate<br>
+<tt>IMUL16rmi8</tt> -&gt; imul, 16-bit register, 16-bit memory, 8-bit immediate<br>
+<tt>MOVSX32rm16</tt> -&gt; movsx, 32-bit register, 16-bit memory
+</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ppc">The PowerPC backend</a>
+</div>
+
+<div class="doc_text">
+<p>The PowerPC code generator lives in the lib/Target/PowerPC directory.  The
+code generation is retargetable to several variations or <i>subtargets</i> of
+the PowerPC ISA; including ppc32, ppc64 and altivec.
+</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="ppc_abi">LLVM PowerPC ABI</a>
+</div>
+
+<div class="doc_text">
+<p>LLVM follows the AIX PowerPC ABI, with two deviations. LLVM uses a PC
+relative (PIC) or static addressing for accessing global values, so no TOC (r2)
+is used. Second, r31 is used as a frame pointer to allow dynamic growth of a
+stack frame.  LLVM takes advantage of having no TOC to provide space to save
+the frame pointer in the PowerPC linkage area of the caller frame.  Other
+details of PowerPC ABI can be found at <a href=
+"http://developer.apple.com/documentation/DeveloperTools/Conceptual/LowLevelABI/Articles/32bitPowerPC.html"
+>PowerPC ABI.</a> Note: This link describes the 32 bit ABI.  The
+64 bit ABI is similar except space for GPRs are 8 bytes wide (not 4) and r13 is
+reserved for system use.</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="ppc_frame">Frame Layout</a>
+</div>
+
+<div class="doc_text">
+<p>The size of a PowerPC frame is usually fixed for the duration of a
+function&rsquo;s invocation.  Since the frame is fixed size, all references into
+the frame can be accessed via fixed offsets from the stack pointer.  The
+exception to this is when dynamic alloca or variable sized arrays are present,
+then a base pointer (r31) is used as a proxy for the stack pointer and stack
+pointer is free to grow or shrink.  A base pointer is also used if llvm-gcc is
+not passed the -fomit-frame-pointer flag. The stack pointer is always aligned to
+16 bytes, so that space allocated for altivec vectors will be properly
+aligned.</p>
+<p>An invocation frame is laid out as follows (low memory at top);</p>
+</div>
+
+<div class="doc_text">
+<table class="layout">
+	<tr>
+		<td>Linkage<br><br></td>
+	</tr>
+	<tr>
+		<td>Parameter area<br><br></td>
+	</tr>
+	<tr>
+		<td>Dynamic area<br><br></td>
+	</tr>
+	<tr>
+		<td>Locals area<br><br></td>
+	</tr>
+	<tr>
+		<td>Saved registers area<br><br></td>
+	</tr>
+	<tr style="border-style: none hidden none hidden;">
+		<td><br></td>
+	</tr>
+	<tr>
+		<td>Previous Frame<br><br></td>
+	</tr>
+</table>
+</div>
+
+<div class="doc_text">
+<p>The <i>linkage</i> area is used by a callee to save special registers prior
+to allocating its own frame.  Only three entries are relevant to LLVM. The
+first entry is the previous stack pointer (sp), aka link.  This allows probing
+tools like gdb or exception handlers to quickly scan the frames in the stack.  A
+function epilog can also use the link to pop the frame from the stack.  The
+third entry in the linkage area is used to save the return address from the lr
+register. Finally, as mentioned above, the last entry is used to save the
+previous frame pointer (r31.)  The entries in the linkage area are the size of a
+GPR, thus the linkage area is 24 bytes long in 32 bit mode and 48 bytes in 64
+bit mode.</p>
+</div>
+
+<div class="doc_text">
+<p>32 bit linkage area</p>
+<table class="layout">
+	<tr>
+		<td>0</td>
+		<td>Saved SP (r1)</td>
+	</tr>
+	<tr>
+		<td>4</td>
+		<td>Saved CR</td>
+	</tr>
+	<tr>
+		<td>8</td>
+		<td>Saved LR</td>
+	</tr>
+	<tr>
+		<td>12</td>
+		<td>Reserved</td>
+	</tr>
+	<tr>
+		<td>16</td>
+		<td>Reserved</td>
+	</tr>
+	<tr>
+		<td>20</td>
+		<td>Saved FP (r31)</td>
+	</tr>
+</table>
+</div>
+
+<div class="doc_text">
+<p>64 bit linkage area</p>
+<table class="layout">
+	<tr>
+		<td>0</td>
+		<td>Saved SP (r1)</td>
+	</tr>
+	<tr>
+		<td>8</td>
+		<td>Saved CR</td>
+	</tr>
+	<tr>
+		<td>16</td>
+		<td>Saved LR</td>
+	</tr>
+	<tr>
+		<td>24</td>
+		<td>Reserved</td>
+	</tr>
+	<tr>
+		<td>32</td>
+		<td>Reserved</td>
+	</tr>
+	<tr>
+		<td>40</td>
+		<td>Saved FP (r31)</td>
+	</tr>
+</table>
+</div>
+
+<div class="doc_text">
+<p>The <i>parameter area</i> is used to store arguments being passed to a callee
+function.  Following the PowerPC ABI, the first few arguments are actually
+passed in registers, with the space in the parameter area unused.  However, if
+there are not enough registers or the callee is a thunk or vararg function,
+these register arguments can be spilled into the parameter area.  Thus, the
+parameter area must be large enough to store all the parameters for the largest
+call sequence made by the caller.  The size must also be minimally large enough
+to spill registers r3-r10.  This allows callees blind to the call signature,
+such as thunks and vararg functions, enough space to cache the argument
+registers.  Therefore, the parameter area is minimally 32 bytes (64 bytes in 64
+bit mode.)  Also note that since the parameter area is a fixed offset from the
+top of the frame, that a callee can access its spilt arguments using fixed
+offsets from the stack pointer (or base pointer.)</p>
+</div>
+
+<div class="doc_text">
+<p>Combining the information about the linkage, parameter areas and alignment. A
+stack frame is minimally 64 bytes in 32 bit mode and 128 bytes in 64 bit
+mode.</p>
+</div>
+
+<div class="doc_text">
+<p>The <i>dynamic area</i> starts out as size zero.  If a function uses dynamic
+alloca then space is added to the stack, the linkage and parameter areas are
+shifted to top of stack, and the new space is available immediately below the
+linkage and parameter areas.  The cost of shifting the linkage and parameter
+areas is minor since only the link value needs to be copied.  The link value can
+be easily fetched by adding the original frame size to the base pointer.  Note
+that allocations in the dynamic space need to observe 16 byte alignment.</p>
+</div>
+
+<div class="doc_text">
+<p>The <i>locals area</i> is where the llvm compiler reserves space for local
+variables.</p>
+</div>
+
+<div class="doc_text">
+<p>The <i>saved registers area</i> is where the llvm compiler spills callee saved
+registers on entry to the callee.</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="ppc_prolog">Prolog/Epilog</a>
+</div>
+
+<div class="doc_text">
+<p>The llvm prolog and epilog are the same as described in the PowerPC ABI, with
+the following exceptions.  Callee saved registers are spilled after the frame is
+created.  This allows the llvm epilog/prolog support to be common with other
+targets.  The base pointer callee saved register r31 is saved in the TOC slot of
+linkage area.  This simplifies allocation of space for the base pointer and
+makes it convenient to locate programatically and during debugging.</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="ppc_dynamic">Dynamic Allocation</a>
+</div>
+
+<div class="doc_text">
+<p></p>
+</div>
+
+<div class="doc_text">
+<p><i>TODO - More to come.</i></p>
+</div>
+
+
+<!-- *********************************************************************** -->
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="mailto:sabre@nondot.org">Chris Lattner</a><br>
+  <a href="http://llvm.org">The LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+llvm_gc_initialize
+llvm_gc_allocate
+llvm_gc_collect
+llvm_gc_write
+llvm_gc_read
+
+llvm_gc_root_chain

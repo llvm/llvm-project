@@ -1,0 +1,460 @@
+#!@PERL@
+##===- tools/llvm-config ---------------------------------------*- perl -*-===##
+# 
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+# 
+##===----------------------------------------------------------------------===##
+#
+# Synopsis: Prints out compiler options needed to build against an installed
+#           copy of LLVM.
+#
+# Syntax:   llvm-config OPTIONS... [COMPONENTS...]
+# 
+##===----------------------------------------------------------------------===##
+
+use 5.006;
+use strict;
+use warnings;
+
+#---- begin autoconf values ----
+my $PACKAGE_NAME        = q{@PACKAGE_NAME@};
+my $VERSION             = q{@PACKAGE_VERSION@};
+my $PREFIX              = q{@LLVM_PREFIX@};
+my $LLVM_CONFIGTIME     = q{@LLVM_CONFIGTIME@};
+my $LLVM_SRC_ROOT       = q{@abs_top_srcdir@};
+my $LLVM_OBJ_ROOT       = q{@abs_top_builddir@};
+my $LLVM_ON_WIN32       = q{@LLVM_ON_WIN32@};
+my $LLVM_ON_UNIX        = q{@LLVM_ON_UNIX@};
+my $LLVMGCCDIR          = q{@LLVMGCCDIR@};
+my $LLVMGCC             = q{@LLVMGCC@};
+my $LLVMGXX             = q{@LLVMGXX@};
+my $LLVMGCC_VERSION     = q{@LLVMGCC_VERSION@};
+my $LLVMGCC_MAJVERS     = q{@LLVMGCC_MAJVERS@};
+my $ENDIAN              = q{@ENDIAN@};
+my $SHLIBEXT            = q{@SHLIBEXT@};
+my $EXEEXT              = q{@EXEEXT@};
+my $OS                  = q{@OS@};
+my $ARCH                = lc(q{@ARCH@});
+my $TARGET_TRIPLE       = q{@target@};
+my $TARGETS_TO_BUILD    = q{@TARGETS_TO_BUILD@};
+my $TARGET_HAS_JIT      = q{@TARGET_HAS_JIT@};
+my @TARGETS_BUILT       = map { lc($_) } qw{@TARGETS_TO_BUILD@};
+#---- end autoconf values ----
+
+# Must pretend x86_64 architecture is really x86, otherwise the native backend
+# won't get linked in.
+$ARCH = "x86" if $ARCH eq "x86_64";
+
+#---- begin Makefile values ----
+my $CPPFLAGS            = q{@LLVM_CPPFLAGS@};
+my $CFLAGS              = q{@LLVM_CFLAGS@};
+my $CXXFLAGS            = q{@LLVM_CXXFLAGS@};
+my $LDFLAGS             = q{@LLVM_LDFLAGS@};
+my $SYSTEM_LIBS         = q{@LIBS@};
+my $LLVM_BUILDMODE      = q{@LLVM_BUILDMODE@};
+#---- end Makefile values ----
+
+# Figure out where llvm-config is being run from.  Primarily, we care if it has
+# been installed, or is running from the build directory, which changes the
+# locations of some files.
+
+# Convert the current executable name into its directory (e.g. ".").
+my ($RUN_DIR) = ($0 =~ /^(.*)\/.*$/);
+
+# Find the unix pwd program: we don't want to use the bash builtin, as it does
+# not look through symlinks etc.
+my $PWD = `which pwd`;
+chomp($PWD);
+$PWD = "pwd" if (!-e $PWD);
+
+# Turn the directory into an absolute directory on the file system, also pop up
+# from "bin" into the build or prefix dir.
+my $ABS_RUN_DIR = `cd $RUN_DIR/..; $PWD`;
+chomp($ABS_RUN_DIR);
+
+# Compute the absolute object directory build, e.g. "foo/llvm/Debug".
+my $ABS_OBJ_ROOT = "$LLVM_OBJ_ROOT/$LLVM_BUILDMODE";
+$ABS_OBJ_ROOT = `cd $ABS_OBJ_ROOT; $PWD` if (-d $ABS_OBJ_ROOT);
+chomp($ABS_OBJ_ROOT);
+
+my $INCLUDEDIR = "$ABS_RUN_DIR/include";
+my $LIBDIR     = "$ABS_RUN_DIR/lib";
+my $BINDIR     = "$ABS_RUN_DIR/bin";
+if ($ABS_RUN_DIR eq $ABS_OBJ_ROOT) {
+  # If we are running out of the build directory, the include dir is in the
+  # srcdir.
+  $INCLUDEDIR = "$LLVM_SRC_ROOT/include";
+} else {
+  # If installed, ignore the prefix the tree was configured with, use the
+  # current prefix.
+  $PREFIX = $ABS_RUN_DIR;
+}
+
+sub usage;
+sub fix_library_names (@);
+sub fix_library_files (@);
+sub expand_dependencies (@);
+sub name_map_entries;
+
+# Parse our command-line arguments.
+usage if @ARGV == 0;
+my @components;
+my $has_opt = 0;
+my $want_libs = 0;
+my $want_libnames = 0;
+my $want_libfiles = 0;
+my $want_components = 0;
+foreach my $arg (@ARGV) {
+    if ($arg =~ /^-/) {
+        if ($arg eq "--version") {
+            $has_opt = 1; print "$VERSION\n";
+        } elsif ($arg eq "--prefix") {
+            $has_opt = 1; print "$PREFIX\n";
+        } elsif ($arg eq "--bindir") {
+            $has_opt = 1; print "$BINDIR\n";
+        } elsif ($arg eq "--includedir") {
+            $has_opt = 1; print "$INCLUDEDIR\n";
+        } elsif ($arg eq "--libdir") {
+            $has_opt = 1; print "$LIBDIR\n";
+        } elsif ($arg eq "--cppflags") {
+            $has_opt = 1; print "-I$INCLUDEDIR $CPPFLAGS\n";
+        } elsif ($arg eq "--cflags") {
+            $has_opt = 1; print "-I$INCLUDEDIR $CFLAGS\n";
+        } elsif ($arg eq "--cxxflags") {
+            $has_opt = 1; print "-I$INCLUDEDIR $CXXFLAGS\n";
+        } elsif ($arg eq "--ldflags") {
+            $has_opt = 1; print "-L$LIBDIR $LDFLAGS $SYSTEM_LIBS\n";
+        } elsif ($arg eq "--libs") {
+            $has_opt = 1; $want_libs = 1;
+        } elsif ($arg eq "--libnames") {
+            $has_opt = 1; $want_libnames = 1;
+        } elsif ($arg eq "--libfiles") {
+            $has_opt = 1; $want_libfiles = 1;
+        } elsif ($arg eq "--components") {
+            $has_opt = 1; print join(' ', name_map_entries), "\n";
+        } elsif ($arg eq "--targets-built") {
+            $has_opt = 1; print join(' ', @TARGETS_BUILT), "\n";
+        } elsif ($arg eq "--host-target") {
+            $has_opt = 1; print "$TARGET_TRIPLE\n";
+        } elsif ($arg eq "--build-mode") {
+            $has_opt = 1; print "$LLVM_BUILDMODE\n";
+        } elsif ($arg eq "--obj-root") {
+            $has_opt = 1; print `cd $LLVM_OBJ_ROOT/; $PWD`;
+        } elsif ($arg eq "--src-root") {
+            $has_opt = 1; print `cd $LLVM_SRC_ROOT/; $PWD`;
+        } else {
+            usage();
+        }
+    } else {
+        push @components, $arg;
+    }
+}
+
+# If no options were specified, fail.
+usage unless $has_opt;
+
+# If no components were specified, default to 'all'.
+if (@components == 0) {
+    push @components, 'all';
+}
+
+# Force component names to lower case.
+@components = map lc, @components;
+
+# Handle any arguments which require building our dependency graph.
+if ($want_libs || $want_libnames || $want_libfiles) {
+    my @libs = expand_dependencies(@components);
+    print join(' ', fix_library_names(@libs)), "\n" if ($want_libs);
+    print join(' ',  @libs), "\n" if ($want_libnames);
+    print join(' ', fix_library_files(@libs)), "\n" if ($want_libfiles);
+}
+
+exit 0;
+
+#==========================================================================
+#  Support Routines
+#==========================================================================
+
+sub usage {
+    print STDERR <<__EOD__;
+Usage: llvm-config <OPTION>... [<COMPONENT>...]
+
+Get various configuration information needed to compile programs which use
+LLVM.  Typically called from 'configure' scripts.  Examples:
+  llvm-config --cxxflags
+  llvm-config --ldflags
+  llvm-config --libs engine bcreader scalaropts
+
+Options:
+  --version          Print LLVM version.
+  --prefix           Print the installation prefix.
+  --src-root         Print the source root LLVM was built from.
+  --obj-root         Print the object root used to build LLVM.
+  --bindir           Directory containing LLVM executables.
+  --includedir       Directory containing LLVM headers.
+  --libdir           Directory containing LLVM libraries.
+  --cppflags         C preprocessor flags for files that include LLVM headers.
+  --cflags           C compiler flags for files that include LLVM headers.
+  --cxxflags         C++ compiler flags for files that include LLVM headers.
+  --ldflags          Print Linker flags.
+  --libs             Libraries needed to link against LLVM components.
+  --libnames         Bare library names for in-tree builds.
+  --libfiles         Fully qualified library filenames for makefile depends.
+  --components       List of all possible components.
+  --targets-built    List of all targets currently built.
+  --host-target      Target triple used to configure LLVM.
+  --build-mode       Print build mode of LLVM tree (e.g. Debug or Release).
+Typical components:
+  all                All LLVM libraries (default).
+  backend            Either a native backend or the C backend.
+  engine             Either a native JIT or a bytecode interpreter.
+__EOD__
+    exit(1);
+}
+
+# Use -lfoo instead of libfoo.a whenever possible, and add directories to
+# files which can't be found using -L.
+sub fix_library_names (@) {
+    my @libs = @_;
+    my @result;
+    foreach my $lib (@libs) {
+        # Transform the bare library name appropriately.
+        my ($basename) = ($lib =~ /^lib([^.]*)\.a/);
+        if (defined $basename) {
+            push @result, "-l$basename";
+        } else {
+            push @result, "$LIBDIR/$lib";
+        }
+    }
+    return @result;
+}
+
+# Turn the list of libraries into a list of files.
+sub fix_library_files(@) {
+    my @libs = @_;
+    my @result;
+    foreach my $lib (@libs) {
+        # Transform the bare library name into a filename.
+        push @result, "$LIBDIR/$lib";
+    }
+    return @result;
+}
+
+#==========================================================================
+#  Library Dependency Analysis
+#==========================================================================
+#  Given a few human-readable library names, find all their dependencies
+#  and sort them into an order which the linker will like.  If we packed
+#  our libraries into fewer archives, we could make the linker do much
+#  of this work for us.
+#
+#  Libraries have two different types of names in this code: Human-friendly
+#  "component" names entered on the command-line, and the raw file names
+#  we use internally (and ultimately pass to the linker).
+#
+#  To understand this code, you'll need a working knowledge of Perl 5,
+#  and possibly some quality time with 'man perlref'.
+
+sub load_dependencies;
+sub build_name_map;
+sub have_native_backend;
+sub find_best_engine;
+sub expand_names (@);
+sub find_all_required_sets (@);
+sub find_all_required_sets_helper ($$@);
+
+# Each "set" contains one or more libraries which must be included as a
+# group (due to cyclic dependencies).  Sets are represented as a Perl array
+# reference pointing to a list of internal library names.
+my @SETS;
+
+# Various mapping tables.
+my %LIB_TO_SET_MAP; # Maps internal library names to their sets.
+my %SET_DEPS;       # Maps sets to a list of libraries they depend on.
+my %NAME_MAP;       # Maps human-entered names to internal names.
+
+# Have our dependencies been loaded yet?
+my $DEPENDENCIES_LOADED = 0;
+
+# Given a list of human-friendly component names, translate them into a
+# complete set of linker arguments.
+sub expand_dependencies (@) {
+    my @libs = @_;
+    load_dependencies;
+    my @required_sets = find_all_required_sets(expand_names(@libs));
+    my @sorted_sets = topologically_sort_sets(@required_sets);
+
+    # Expand the library sets into libraries.
+    my @result;
+    foreach my $set (@sorted_sets) { push @result, @{$set}; }
+    return @result;
+}
+
+# Load in the raw dependency data stored at the end of this file.
+sub load_dependencies {
+    return if $DEPENDENCIES_LOADED;
+    $DEPENDENCIES_LOADED = 1;
+    while (<DATA>) {
+        # Parse our line.
+        my ($libs, $deps) = /^\s*([^:]+):\s*(.*)\s*$/;
+        die "Malformed dependency data" unless defined $deps;
+        my @libs = split(' ', $libs);
+        my @deps = split(' ', $deps);
+
+        # Record our dependency data.
+        my $set = \@libs;
+        push @SETS, $set;
+        foreach my $lib (@libs) { $LIB_TO_SET_MAP{$lib} = $set; }
+        $SET_DEPS{$set} = \@deps;
+    }
+    build_name_map;
+}
+
+# Build a map converting human-friendly component names into internal
+# library names.
+sub build_name_map {
+    # Add entries for all the actual libraries.
+    foreach my $set (@SETS) {
+        foreach my $lib (sort @$set) {
+            my $short_name = $lib;
+            $short_name =~ s/^(lib)?LLVM([^.]*)\..*$/$2/;
+            $short_name =~ tr/A-Z/a-z/;
+            $NAME_MAP{$short_name} = [$lib];
+        }
+    }
+
+    # Add target-specific entries
+    foreach my $target (@TARGETS_BUILT) {
+        # FIXME: Temporary, until we don't switch all targets
+        if (defined $NAME_MAP{$target.'asmprinter'}) {
+            $NAME_MAP{$target} = [$target.'asmprinter', $target.'codegen']
+        }
+    }
+
+    # Add virtual entries.
+    $NAME_MAP{'native'}  = have_native_backend() ? [$ARCH] : [];
+    $NAME_MAP{'nativecodegen'} = have_native_backend() ? [$ARCH.'codegen'] : [];
+    $NAME_MAP{'backend'} = have_native_backend() ? ['native'] : ['cbackend'];
+    $NAME_MAP{'engine'}  = find_best_engine;
+    $NAME_MAP{'all'}     = [name_map_entries];   # Must be last.
+}
+
+# Return true if we have a native backend to use.
+sub have_native_backend {
+    my %BUILT;
+    foreach my $target (@TARGETS_BUILT) { $BUILT{$target} = 1; }
+    return defined $NAME_MAP{$ARCH} && defined $BUILT{$ARCH};
+}
+
+# Find a working subclass of ExecutionEngine for this platform.
+sub find_best_engine {
+    if (have_native_backend && $TARGET_HAS_JIT) {
+        return ['jit', 'native'];
+    } else {
+        return ['interpreter'];
+    }
+}
+
+# Get all the human-friendly component names.
+sub name_map_entries {
+    load_dependencies;
+    return sort keys %NAME_MAP;
+}
+
+# Map human-readable names to internal library names.
+sub expand_names (@) {
+    my @names = @_;
+    my @result;
+    foreach my $name (@names) {
+        if (defined $LIB_TO_SET_MAP{$name}) {
+            # We've hit bottom: An actual library name.
+            push @result, $name;
+        } elsif (defined $NAME_MAP{$name}) {
+            # We've found a short name to expand.
+            push @result, expand_names(@{$NAME_MAP{$name}});
+        } else {
+            print STDERR "llvm-config: unknown component name: $name\n";
+            exit(1);
+        }
+    }
+    return @result;
+}
+
+# Given a list of internal library names, return all sets of libraries which
+# will need to be included by the linker (in no particular order).
+sub find_all_required_sets (@) {
+    my @libs = @_;
+    my %sets_added;
+    my @result;
+    find_all_required_sets_helper(\%sets_added, \@result, @libs);
+    return @result;
+}
+
+# Recursive closures are pretty broken in Perl, so we're going to separate
+# this function from find_all_required_sets and pass in the state we need
+# manually, as references.  Yes, this is fairly unpleasant.
+sub find_all_required_sets_helper ($$@) {
+    my ($sets_added, $result, @libs) = @_;
+    foreach my $lib (@libs) {
+        my $set = $LIB_TO_SET_MAP{$lib};
+        next if defined $$sets_added{$set};
+        $$sets_added{$set} = 1;
+        push @$result, $set;
+        find_all_required_sets_helper($sets_added, $result, @{$SET_DEPS{$set}});
+    }
+}
+
+# Print a list of sets, with a label.  Used for debugging.
+sub print_sets ($@) {
+    my ($label, @sets) = @_;
+    my @output;
+    foreach my $set (@sets) { push @output, join(',', @$set); }
+    print "$label: ", join(';', @output), "\n";
+}
+
+# Returns true if $lib is a key in $added.
+sub has_lib_been_added ($$) {
+    my ($added, $lib) = @_;
+    return defined $$added{$LIB_TO_SET_MAP{$lib}};
+}
+
+# Returns true if all the dependencies of $set appear in $added.
+sub have_all_deps_been_added ($$) {
+    my ($added, $set) = @_;
+    #print_sets("  Checking", $set);
+    #print_sets("     Wants", $SET_DEPS{$set});
+    foreach my $lib (@{$SET_DEPS{$set}}) {
+        return 0 unless has_lib_been_added($added, $lib);
+    }
+    return 1;
+}
+
+# Given a list of sets, topologically sort them using dependencies.
+sub topologically_sort_sets (@) {
+    my @sets = @_;
+    my %added;
+    my @result;
+    SCAN: while (@sets) { # We'll delete items from @sets as we go.
+        #print_sets("So far", reverse(@result));
+        #print_sets("Remaining", @sets);
+        for (my $i = 0; $i < @sets; ++$i) {
+            my $set = $sets[$i];
+            if (have_all_deps_been_added(\%added, $set)) {
+                push @result, $set;
+                $added{$set} = 1;
+                #print "Removing $i.\n";
+                splice(@sets, $i, 1);
+                next SCAN; # Restart our scan.
+            }
+        }
+        die "Can't find a library with no dependencies";
+    }
+    return reverse(@result);
+}
+
+# Our library dependency data will be added after the '__END__' token, and will
+# be read through the magic <DATA> filehandle.
+__END__

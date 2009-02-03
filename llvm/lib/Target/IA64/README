@@ -1,0 +1,48 @@
+TODO:
+  - Un-bitrot ISel
+  - Hook up If-Conversion a la ARM target
+  - Hook up all branch analysis functions
+  - Instruction scheduling
+  - Bundling
+  - Dynamic Optimization
+  - Testing and bugfixing
+  - stop passing FP args in both FP *and* integer regs when not required
+  - allocate low (nonstacked) registers more aggressively
+  - clean up and thoroughly test the isel patterns.
+  - fix stacked register allocation order: (for readability) we don't want
+    the out? registers being the first ones used
+  - fix up floating point
+    (nb http://gcc.gnu.org/wiki?pagename=ia64%20floating%20point )
+  - bundling!
+    (we will avoid the mess that is:
+     http://gcc.gnu.org/ml/gcc/2003-12/msg00832.html )
+  - instruction scheduling (hmmmm! ;)
+  - counted loop support
+  - make integer + FP mul/div more clever (we have fixed pseudocode atm)
+  - track and use comparison complements
+
+INFO:
+  - we are strictly LP64 here, no support for ILP32 on HP-UX. Linux users
+    don't need to worry about this.
+  - i have instruction scheduling/bundling pseudocode, that really works
+    (has been tested, albeit at the perl-script level).
+    so, before you go write your own, send me an email!
+
+KNOWN DEFECTS AT THE CURRENT TIME:
+  - C++ vtables contain naked function pointers, not function descriptors,
+  which is bad. see http://llvm.cs.uiuc.edu/bugs/show_bug.cgi?id=406
+  - varargs are broken
+  - alloca doesn't work (indeed, stack frame layout is bogus)
+  - no support for big-endian environments
+  - (not really the backend, but...) the CFE has some issues on IA64.
+    these will probably be fixed soon.
+  
+ACKNOWLEDGEMENTS:
+  - Chris Lattner (x100)
+  - Other LLVM developers ("hey, that looks familiar")
+
+CONTACT:
+  - You can email me at duraid@octopus.com.au. If you find a small bug,
+    just email me. If you find a big bug, please file a bug report
+    in bugzilla! http://llvm.cs.uiuc.edu is your one stop shop for all
+    things LLVM.

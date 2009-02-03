@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# Program: count
+#
+# Synopsis: Count the number of lines of input on stdin and test that it
+#           matches the specified number.
+#
+# Syntax:   count <number>
+
+set -e
+set -u
+input_lines=`wc -l`
+if [ "$input_lines" -ne "$1" ]; then
+  echo "count: expected $1 lines and got ${input_lines}."
+  exit 1
+fi
+exit 0

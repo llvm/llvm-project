@@ -1,0 +1,122 @@
+=pod
+
+=head1 NAME
+
+llvm-nm - list LLVM bitcode file's symbol table
+
+=head1 SYNOPSIS
+
+B<llvm-nm> [I<options>] [I<filenames...>]
+
+=head1 DESCRIPTION
+
+The B<llvm-nm> utility lists the names of symbols from the LLVM bitcode files,
+or B<ar> archives containing LLVM bitcode files, named on the command line.
+Each symbol is listed along with some simple information about its provenance.
+If no file name is specified, or I<-> is used as a file name, B<llvm-nm> will
+process a bitcode file on its standard input stream.
+
+B<llvm-nm>'s default output format is the traditional BSD B<nm> output format.
+Each such output record consists of an (optional) 8-digit hexadecimal address,
+followed by a type code character, followed by a name, for each symbol. One
+record is printed per line; fields are separated by spaces. When the address is
+omitted, it is replaced by 8 spaces.
+
+Type code characters currently supported, and their meanings, are as follows:
+
+=over
+
+=item U
+
+Named object is referenced but undefined in this bitcode file
+
+=item C
+
+Common (multiple definitions link together into one def)
+
+=item W
+
+Weak reference (multiple definitions link together into zero or one definitions)
+
+=item t
+
+Local function (text) object
+
+=item T
+
+Global function (text) object
+
+=item d
+
+Local data object
+
+=item D
+
+Global data object
+
+=item ?
+
+Something unrecognizable
+
+=back
+
+Because LLVM bitcode files typically contain objects that are not considered to
+have addresses until they are linked into an executable image or dynamically
+compiled "just-in-time", B<llvm-nm> does not print an address for any symbol,
+even symbols which are defined in the bitcode file.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-P>
+
+Use POSIX.2 output format. Alias for B<--format=posix>.
+
+=item B<-B>    (default)
+
+Use BSD output format. Alias for B<--format=bsd>.
+
+=item B<--help>
+
+Print a summary of command-line options and their meanings.
+
+=item B<--defined-only>
+
+Print only symbols defined in this bitcode file (as opposed to
+symbols which may be referenced by objects in this file, but not
+defined in this file.)
+
+=item B<--extern-only>, B<-g>
+
+Print only symbols whose definitions are external; that is, accessible
+from other bitcode files.
+
+=item B<--undefined-only>, B<-u>
+
+Print only symbols referenced but not defined in this bitcode file.
+
+=item B<--format=>I<fmt>, B<-f>
+
+Select an output format; I<fmt> may be I<sysv>, I<posix>, or I<bsd>. The
+default is I<bsd>.
+
+=back
+
+=head1 BUGS
+
+B<llvm-nm> cannot demangle C++ mangled names, like GNU B<nm> can.
+
+=head1 EXIT STATUS
+
+B<llvm-nm> exits with an exit code of zero.
+
+=head1 SEE ALSO
+
+L<llvm-dis|llvm-dis>, ar(1), nm(1)
+
+=head1 AUTHOR
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut

@@ -1,0 +1,10 @@
+add_llvm_library(LLVMDebugger
+  Debugger.cpp
+  ProgramInfo.cpp
+  RuntimeInfo.cpp
+  SourceFile.cpp
+  SourceLanguage-CFamily.cpp
+  SourceLanguage-CPlusPlus.cpp
+  SourceLanguage-Unknown.cpp
+  SourceLanguage.cpp
+  )

@@ -1,0 +1,298 @@
+# This procedure executes one line of a test case's execution script.
+proc execOneLine { test PRS outcome lineno line } {
+  set status 0
+  set resultmsg ""
+  set retval [ catch { eval exec -keepnewline -- $line } errmsg ]
+  if { $retval != 0 } {
+    set code [lindex $::errorCode 0]
+    set lineno [expr $lineno + 1]
+    if { $PRS != ""} {
+      set PRS " for $PRS" 
+    }
+    set errmsg " at line $lineno\nwhile running: $line\n$errmsg"
+    switch "$code" {
+      CHILDSTATUS {
+        set status [lindex $::errorCode 2]
+        if { $status != 0 } {
+          set resultmsg "$test$PRS\nFailed with exit($status)$errmsg"
+        }
+      }
+      CHILDKILLED {
+        set signal [lindex $::errorCode 2]
+        set resultmsg "$test$PRS\nFailed with signal($signal)$errmsg"
+      }
+      CHILDSUSP {
+        set signal [lindex $::errorCode 2]
+        set resultmsg "$test$PRS\nFailed with suspend($signal)$errmsg"
+      }
+      POSIX {
+        set posixNum [lindex $::errorCode 1]
+        set posixMsg [lindex $::errorCode 2]
+        set resultmsg "$test$PRS\nFailed with posix($posixNum,$posixMsg)$errmsg"
+      }
+      NONE {
+        # Any other error such as stderr output of a program, or syntax error in
+        # the RUN line.
+        set resultmsg "$test$PRS\nFailed with unknown error (or has stderr output)$errmsg" 
+      }
+      default {
+        set resultmsg "$test$PRS\nFailed with unknown error$errmsg" 
+      }
+    }
+  } 
+  return $resultmsg
+}
+
+# This procedure performs variable substitutions on the RUN: lines of a test
+# cases.
+proc substitute { line test tmpFile } {
+  global srcroot objroot srcdir objdir subdir target_triplet prcontext 
+  global llvmgcc llvmgxx llvmgcc_version llvmgccmajvers ocamlc
+  global gccpath gxxpath compile_c compile_cxx link shlibext llvmlibsdir llvmdsymutil
+  global valgrind grep gas
+  set path [file join $srcdir $subdir]
+
+  # Substitute all Tcl variables.
+  set new_line [subst $line ]
+
+  #replace %% with _#MARKER#_ to make the replacement of %% more predictable
+  regsub -all {%%} $new_line {_#MARKER#_} new_line
+  #replace %prcontext with prcontext.tcl (Must replace before %p)
+  regsub -all {%prcontext} $new_line $prcontext new_line
+  #replace %llvmgcc with actual path to llvmgcc
+  regsub -all {%llvmgcc} $new_line "$llvmgcc -emit-llvm -w" new_line
+  #replace %llvmgxx with actual path to llvmg++
+  regsub -all {%llvmgxx} $new_line "$llvmgxx -emit-llvm -w" new_line
+  #replace %compile_cxx with C++ compilation command
+  regsub -all {%compile_cxx} $new_line "$compile_cxx" new_line
+  #replace %compile_c with C compilation command
+  regsub -all {%compile_c} $new_line "$compile_c" new_line
+  #replace %link with C++ link command
+  regsub -all {%link} $new_line "$link" new_line
+  #replace %shlibext with shared library extension
+  regsub -all {%shlibext} $new_line "$shlibext" new_line
+  #replace %ocamlc with ocaml compiler command
+  regsub -all {%ocamlc} $new_line "$ocamlc" new_line
+  #replace %llvmdsymutil with dsymutil command
+  regsub -all {%llvmdsymutil} $new_line "$llvmdsymutil" new_line
+  #replace %llvmlibsdir with configure library directory
+  regsub -all {%llvmlibsdir} $new_line "$llvmlibsdir" new_line
+  #replace %p with path to source, 
+  regsub -all {%p} $new_line [file join $srcdir $subdir] new_line
+  #replace %s with filename
+  regsub -all {%s} $new_line $test new_line
+  #replace %t with temp filenames
+  regsub -all {%t} $new_line $tmpFile new_line
+  #replace _#MARKER#_ with %
+  regsub -all {_#MARKER#_} $new_line % new_line
+
+  #replace grep with GNU grep
+  regsub -all { grep } $new_line " $grep " new_line
+  #replace as with GNU as
+  regsub -all {\| as } $new_line "| $gas " new_line
+
+  #valgind related stuff
+# regsub -all {bugpoint } $new_line "$valgrind bugpoint " new_line
+  regsub -all {llc } $new_line "$valgrind llc " new_line
+  regsub -all {lli } $new_line "$valgrind lli " new_line
+  regsub -all {llvm-ar } $new_line "$valgrind llvm-ar " new_line
+  regsub -all {llvm-as } $new_line "$valgrind llvm-as " new_line
+  regsub -all {llvm-bcanalyzer } $new_line "$valgrind llvm-bcanalyzer " new_line
+  regsub -all {llvm-dis } $new_line "$valgrind llvm-dis " new_line
+  regsub -all {llvm-extract } $new_line "$valgrind llvm-extract " new_line
+  regsub -all {llvm-ld } $new_line "$valgrind llvm-ld " new_line
+  regsub -all {llvm-link } $new_line "$valgrind llvm-link " new_line
+  regsub -all {llvm-nm } $new_line "$valgrind llvm-nm " new_line
+  regsub -all {llvm-prof } $new_line "$valgrind llvm-prof " new_line
+  regsub -all {llvm-ranlib } $new_line "$valgrind llvm-ranlib " new_line
+  regsub -all {([^a-zA-Z_-])opt } $new_line "\\1$valgrind opt " new_line
+  regsub -all {^opt } $new_line "$valgrind opt " new_line
+  regsub -all {tblgen } $new_line "$valgrind tblgen " new_line
+  regsub -all "not $valgrind " $new_line "$valgrind not " new_line
+
+  return $new_line
+}
+
+# This procedure runs the set of tests for the test_source_files array.
+proc RunLLVMTests { test_source_files } {
+  global srcroot objroot srcdir objdir subdir target_triplet llvmgcc_version
+  set timeout 60
+
+  set path [file join $objdir $subdir]
+  
+  #Make Output Directory if it does not exist already
+  if { [file exists path] } {
+    cd $path
+  } else {
+    file mkdir $path
+    cd $path
+  }
+  
+  file mkdir Output
+  cd Output
+
+  foreach test $test_source_files {
+    #Should figure out best way to set the timeout
+    #set timeout 40
+    
+    set filename [file tail $test]
+    verbose "ABOUT TO RUN: $filename" 2
+    set outcome PASS
+    set tmpFile "$filename.tmp"
+    
+    # Mark that it should not be XFAIL for this target.
+    set targetPASS 0
+    
+    #set hasRunline bool to check if testcase has a runline
+    set numLines 0
+
+    # Open the test file and start reading lines
+    set testFileId [ open $test r]
+    set runline ""
+    set PRNUMS ""
+    foreach line [split [read $testFileId] \n] {
+
+      # if its the END. line then stop parsing (optimization for big files)
+      if {[regexp {END.[[:space:]]*$} $line match endofscript]} {        
+        break
+
+      # if the line is continued, concatenate and continue the loop
+      } elseif {[regexp {RUN: *(.+)(\\)$} $line match oneline suffix]} {
+        set runline "$runline$oneline "
+
+      # if its a terminating RUN: line then do substitution on the whole line
+      # and then save the line. 
+      } elseif {[regexp {RUN: *(.+)$} $line match oneline suffix]} {
+        set runline "$runline$oneline"
+        set runline [ substitute $runline $test $tmpFile ]
+        set lines($numLines) $runline
+        set numLines [expr $numLines + 1]
+        set runline ""
+
+      # if its an PR line, save the problem report number
+      } elseif {[regexp {PR([0-9]+)} $line match prnum]} {
+        if {$PRNUMS == ""} {
+          set PRNUMS "PR$prnum"
+        } else {
+          set PRNUMS "$PRNUMS,$prnum"
+        }
+      # if its an XFAIL line, see if we should be XFAILing or not.
+      } elseif {[regexp {XFAIL:[ *](.+)} $line match targets]} {
+        set targets
+
+        #split up target if more then 1 specified
+        foreach target [split $targets ,] {
+          if { [regexp {\*} $target match] } {
+              if {$targetPASS != 1} {
+                 set outcome XFAIL
+              }
+          } elseif { [regexp $target $target_triplet match] } {
+              if {$targetPASS != 1} {
+                 set outcome XFAIL
+              }
+          } elseif { [regexp {llvmgcc(([0-9]+)|([0-9]+[.][0-9]+))} $target match submatch submatch2]  } {
+            if { [regexp ^($submatch)$|^(($submatch)(\.)) $llvmgcc_version match] } {
+              if {$targetPASS != 1} {
+                 set outcome XFAIL
+              }
+            }
+          }
+        }
+      } elseif {[regexp {XTARGET:[ *](.+)} $line match targets]} {
+        set targets
+
+        #split up target if more then 1 specified
+        foreach target [split $targets ,] {
+          if { [regexp {\*} $target match] } {
+              set targetPASS 1
+              set outcome PASS
+          } elseif { [regexp $target $target_triplet match] } {
+              set targetPASS 1
+              set outcome PASS
+          } elseif { [regexp {llvmgcc(([0-9]+)|([0-9]+[.][0-9]+))} $target match submatch submatch2]  } {
+            if { [regexp ^($submatch)$|^(($submatch)(\.)) $llvmgcc_version match] } {
+              set targetPASS 1
+              set outcome PASS
+            }
+          }
+        }
+      }
+    }
+    
+    # Done reading the script
+    close $testFileId
+    
+    
+    if { $numLines == 0 } {
+      fail "$test: \nDoes not have a RUN line\n"
+    } else {
+      set failed 0
+      for { set i 0 } { $i < $numLines } { set i [ expr $i + 1 ] } {
+        regsub ^.*RUN:(.*) $lines($i) \1 theLine
+        set resultmsg [execOneLine $test $PRNUMS $outcome $i $theLine ]
+        if { $resultmsg != "" } {
+          if { $outcome == "XFAIL" } {
+            xfail "$resultmsg"
+          } else {
+            fail "$resultmsg"
+          }
+          set failed 1
+          break
+        }
+      }
+      if { $failed } {
+        continue
+      } else {
+        if { $PRNUMS != "" } {
+          set PRNUMS " for $PRNUMS"
+        }
+        if { $outcome == "XFAIL" } {
+          xpass "$test$PRNUMS"
+        } else {
+          pass "$test$PRNUMS"
+        }
+      }
+    }
+  }
+}
+
+# This procedure provides an interface to check the LLVMGCC_LANGS makefile
+# variable to see if llvm-gcc supports compilation of a particular language.
+proc llvm_gcc_supports { lang } {
+  global llvmgcc llvmgcc_langs
+  # validate the language choices and determine the name of the compiler
+  # component responsible for determining if the compiler has been built.
+  switch "$lang" {
+    ada     { set file gnat1 }
+    c       { set file cc1 }
+    c++     { set file cc1plus }
+    objc    { set file cc1obj }
+    obj-c++ { set file cc1objplus }
+    fortran { set file f951 }
+    default { return 0 }
+  }
+  foreach supported_lang [split "$llvmgcc_langs" ,] {
+    if { "$lang" == "$supported_lang" } {
+      # FIXME: Knowing it is configured is not enough. We should do two more
+      # checks here. First, we need to run llvm-gcc -print-prog-name=$file to 
+      # get the path to the compiler. If we don't get a path, the language isn't
+      # properly configured or built. If we do get a path, we should check to 
+      # make sure that it is executable and perhaps even try executing it.
+      return 1;
+    }
+  }
+  return 0;
+}
+
+# This procedure provides an interface to check the TARGETS_TO_BUILD makefile
+# variable to see if a particular target has been configured to build. This
+# helps avoid running tests for targets that aren't available.
+proc llvm_supports_target { tgtName } {
+  global TARGETS_TO_BUILD
+  foreach target [split $TARGETS_TO_BUILD] {
+    if { [regexp $tgtName $target match] } {
+      return 1
+    }
+  }
+  return 0
+}

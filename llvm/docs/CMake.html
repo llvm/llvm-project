@@ -1,0 +1,360 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>Building LLVM with CMake</title>
+  <link rel="stylesheet" href="llvm.css" type="text/css">
+</head>
+
+<div class="doc_title">
+  Building LLVM with CMake
+</div>
+
+<ul>
+  <li><a href="#intro">Introduction</a></li>
+  <li><a href="#quickstart">Quick start</a></li>
+  <li><a href="#usage">Basic CMake usage</a>
+  <li><a href="#options">Options and variables</a>
+    <ul>
+    <li><a href="#freccmake">Frequently-used CMake variables</a></li>
+    <li><a href="#llvmvars">LLVM-specific variables</a></li>
+  </ul></li>
+  <li><a href="#testing">Executing the test suite</a>
+  <li><a href="#cross">Cross compiling</a>
+  <li><a href="#embedding">Embedding LLVM in your project</a>
+  <li><a href="#specifics">Compiler/Platform specific topics</a>
+    <ul>
+    <li><a href="#msvc">Microsoft Visual C++</a></li>
+  </ul></li>
+</ul>
+
+<div class="doc_author">
+<p>Written by <a href="mailto:ofv@wanadoo.es">Oscar Fuentes</a></p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+<a name="intro">Introduction</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+  <p><a href="http://www.cmake.org/">CMake</a> is a cross-platform
+    build-generator tool. CMake does not build the project, it generates
+    the files needed by your build tool (GNU make, Visual Studio, etc) for
+    building LLVM.</p>
+
+  <p>If you are really anxious about getting a functional LLVM build,
+    go to the <a href="#quickstart">Quick start</a> section. If you
+    are a CMake novice, start on <a href="#usage">Basic CMake
+      usage</a> and then go back to the <a href="#quickstart">Quick
+      start</a> once you know what you are
+    doing. The <a href="#options">Options and variables</a> section
+    is a reference for customizing your build. If you already have
+    experience with CMake, this is the recommended starting point.
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+<a name="quickstart">Quick start</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p> We use here the command-line, non-interactive CMake interface </p>
+
+<ol>
+
+  <li><p><a href=http://www.cmake.org/cmake/resources/software.html>Download</a>
+      and install CMake. Version 2.6.2 is the minimum required.</p>
+
+  <li><p>Open a shell. Your development tools must be reachable from this
+      shell through the PATH environment variable.</p>
+
+  <li><p>Create a directory for containing the build. It is not
+      supported to build LLVM on the source directory. cd to this
+      directory:</p>
+    <div class="doc_code">
+      <p><tt>mkdir mybuilddir</tt></p>
+      <p><tt>cd mybuilddir</tt></p>
+    </div>
+
+  <li><p>Execute this command on the shell
+      replacing <i>path/to/llvm/source/root</i> with the path to the
+      root of your LLVM source tree:</p>
+    <div class="doc_code">
+      <p><tt>cmake path/to/llvm/source/root</tt></p>
+    </div>
+
+    <p>CMake will detect your development environment, perform a
+      series of test and generate the files required for building
+      LLVM. CMake will use default values for all build
+      parameters. See the <a href="#options">Options and variables</a>
+      section for fine-tuning your build</p>
+
+    <p>This can fail if CMake can't detect your toolset, or if it
+      thinks that the environment is not sane enough. On this case
+      make sure that the toolset that you intend to use is the only
+      one reachable from the shell and that the shell itself is the
+      correct one for you development environment. CMake will refuse
+      to build MinGW makefiles if you have a POSIX shell reachable
+      through the PATH environment variable, for instance. You can
+      force CMake to use a given build tool, see
+      the <a href="#usage">Usage</a> section.</p>
+
+</ol>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="usage">Basic CMake usage</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+  <p>This section explains basic aspects of CMake, mostly for
+    explaining those options which you may need on your day-to-day
+    usage.</p>
+
+  <p>CMake comes with extensive documentation in the form of html
+    files and on the cmake executable itself. Execute <i>cmake
+    --help</i> for further help options.</p>
+
+  <p>CMake requires to know for which build tool it shall generate
+    files (GNU make, Visual Studio, Xcode, etc). If not specified on
+    the command line, it tries to guess it based on you
+    environment. Once identified the build tool, CMake uses the
+    corresponding <i>Generator</i> for creating files for your build
+    tool. You can explicitly specify the generator with the command
+    line option <i>-G "Name of the generator"</i>. For knowing the
+    available generators on your platform, execute</p>
+
+    <div class="doc_code">
+      <p><tt>cmake --help</tt></p>
+    </div>
+
+    <p>This will list the generator's names at the end of the help
+      text. Generator's names are case-sensitive. Example:</p>
+
+    <div class="doc_code">
+      <p><tt>cmake -G "Visual Studio 8 2005" path/to/llvm/source/root</tt></p>
+    </div>
+
+    <p>For a given development platform there can be more than one
+      adequate generator. If you use Visual Studio "NMake Makefiles"
+      is a generator you can use for building with NMake. By default,
+      CMake chooses the more specific generator supported by your
+      development environment. If you want an alternative generator,
+      you must tell this to CMake with the <i>-G</i> option.</p>
+
+    <p>TODO: explain variables and cache. Move explanation here from
+      #options section.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="options">Options and variables</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+  <p>Variables customize how the build will be generated. Options are
+    boolean variables, with possible values ON/OFF. Options and
+    variables are defined on the CMake command line like this:</p>
+
+  <div class="doc_code">
+    <p><tt>cmake -DVARIABLE=value path/to/llvm/source</tt></p>
+  </div>
+
+  <p>You can set a variable after the initial CMake invocation for
+    changing its value. You can also undefine a variable:</p>
+
+  <div class="doc_code">
+    <p><tt>cmake -UVARIABLE path/to/llvm/source</tt></p>
+  </div>
+
+  <p>Variables are stored on the CMake cache. This is a file
+    named <it>CMakeCache.txt</it> on the root of the build
+    directory. Do not hand-edit it.</p>
+
+  <p>Variables are listed here appending its type after a colon. It is
+    correct to write the variable and the type on the CMake command
+    line:</p>
+
+  <div class="doc_code">
+    <p><tt>cmake -DVARIABLE:TYPE=value path/to/llvm/source</tt></p>
+  </div>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="freccmake">Frequently-used CMake variables</a>
+</div>
+
+<div class="doc_text">
+
+<p>Here are listed some of the CMake variables that are used often,
+  along with a brief explanation and LLVM-specific notes. For full
+  documentation, check the CMake docs or execute <i>cmake
+  --help-variable VARIABLE_NAME</i>.</p>
+
+<dl>
+  <dt><b>CMAKE_BUILD_TYPE</b>:STRING</dt>
+
+  <dd>Sets the build type for <i>make</i> based generators. Possible
+    values are Release, Debug, RelWithDebInfo and MiniSizeRel. On
+    systems like Visual Studio the user sets the build type with the IDE
+    settings.</dd>
+
+  <dt><b>CMAKE_INSTALL_PREFIX</b>:PATH</dt>
+  <dd>Path where LLVM will be installed if "make install" is invoked
+    or the "INSTALL" target is built.</dd>
+
+  <dt><b>CMAKE_C_FLAGS</b>:STRING</dt>
+  <dd>Extra flags to use when compiling C source files.</dd>
+
+  <dt><b>CMAKE_CXX_FLAGS</b>:STRING</dt>
+  <dd>Extra flags to use when compiling C++ source files.</dd>
+
+  <dt><b>BUILD_SHARED_LIBS</b>:BOOL</dt>
+  <dd>Flag indicating is shared libraries will be built. Its default
+    value is OFF. Shared libraries are not supported on Windows and
+    not recommended in the other OSes.</dd>
+</dl>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="llvmvars">LLVM-specific variables</a>
+</div>
+
+<div class="doc_text">
+
+<dl>
+  <dt><b>LLVM_TARGETS_TO_BUILD</b>:STRING</dt>
+  <dd>Semicolon-separated list of targets to build, or <i>all</i> for
+    building all targets. Case-sensitive. For Visual C++ defaults
+    to <i>X86</i>. On the other cases defaults to <i>all</i>. Example:
+    <i>-DLLVM_TARGETS_TO_BUILD="X86;PowerPC;Alpha"</i>.</dd>
+
+  <dt><b>LLVM_ENABLE_THREADS</b>:BOOL</dt>
+  <dd>Build with threads support, if available. Defaults to ON.</dd>
+
+  <dt><b>LLVM_ENABLE_PIC</b>:BOOL</dt>
+  <dd>Add the <i>-fPIC</i> flag to the compiler command-line, if the
+    compiler supports this flag. Some systems, like Windows, does not
+    need this flag. Defaults to OFF.</dd>
+
+  <dt><b>LLVM_BUILD_32_BITS</b>:BOOL</dt>
+  <dd>Build 32-bits executables and libraries on 64-bits systems. This
+  option is available only on some 64-bits unix systems. Defaults to
+  OFF.</dd>
+
+  <dt><b>LLVM_PLO_FLAGS</b>:STRING</dt>
+  <dd>Extra flags for creating partially linked objects. Visual C++
+    does not use this.</dd>
+
+  <dt><b>LLVM_TABLEGEN</b>:STRING</dt>
+  <dd>Full path to a native TableGen executable (usually
+    named <i>tblgen</i>). This is intented for cross-compiling: if the
+    user sets this variable, no native TableGen will be created.</dd>
+</dl>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="testing">Executing the test suite</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>LLVM testing is not supported on Visual Studio.</p>
+
+<p>TODO</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="cross">Cross compiling</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>TODO</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="embedding">Embedding LLVM in your project</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>TODO</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="specifics">Compiler/Platform specific topics</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>Notes for specific compilers and/or platforms.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="msvc">Microsoft Visual C++</a>
+</div>
+
+<div class="doc_text">
+
+  <p>For linking the JIT into your executable, add</p>
+
+  <div class="doc_code">
+    <p><tt>/INCLUDE:_X86TargetMachineModule</tt></p>
+  </div>
+
+  <p>to your linker options. This is required for adding the relevant
+    LLVM object code to the executable. Not doing this will result on
+    some methods returning NULL (<i>ExecutionEngine::create</i>, for
+    instance).</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="mailto:ofv@wanadoo.es">Oscar Fuentes</a><br>
+  <a href="http://llvm.org">LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date: 2008-12-31 03:59:36 +0100 (Wed, 31 Dec 2008) $
+</address>
+
+</body>
+</html>

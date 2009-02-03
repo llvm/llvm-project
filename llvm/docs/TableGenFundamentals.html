@@ -1,0 +1,753 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>TableGen Fundamentals</title>
+  <link rel="stylesheet" href="llvm.css" type="text/css">
+</head>
+<body>
+
+<div class="doc_title">TableGen Fundamentals</div>
+
+<div class="doc_text">
+<ul>
+  <li><a href="#introduction">Introduction</a>
+  <ol>
+    <li><a href="#concepts">Basic concepts</a></li>
+    <li><a href="#example">An example record</a></li>
+    <li><a href="#running">Running TableGen</a></li>
+  </ol></li>
+  <li><a href="#syntax">TableGen syntax</a>
+  <ol>
+    <li><a href="#primitives">TableGen primitives</a>
+    <ol>
+      <li><a href="#comments">TableGen comments</a></li>
+      <li><a href="#types">The TableGen type system</a></li>
+      <li><a href="#values">TableGen values and expressions</a></li>
+    </ol></li>
+    <li><a href="#classesdefs">Classes and definitions</a>
+    <ol>
+      <li><a href="#valuedef">Value definitions</a></li>
+      <li><a href="#recordlet">'let' expressions</a></li>
+      <li><a href="#templateargs">Class template arguments</a></li>
+      <li><a href="#multiclass">Multiclass definitions and instances</a></li>
+    </ol></li>
+    <li><a href="#filescope">File scope entities</a>
+    <ol>
+      <li><a href="#include">File inclusion</a></li>
+      <li><a href="#globallet">'let' expressions</a></li>
+    </ol></li>
+  </ol></li>
+  <li><a href="#backends">TableGen backends</a>
+  <ol>
+    <li><a href="#">todo</a></li>
+  </ol></li>
+</ul>
+</div>
+
+<div class="doc_author">
+  <p>Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a></p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="introduction">Introduction</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>TableGen's purpose is to help a human develop and maintain records of
+domain-specific information.  Because there may be a large number of these
+records, it is specifically designed to allow writing flexible descriptions and
+for common features of these records to be factored out.  This reduces the
+amount of duplication in the description, reduces the chance of error, and
+makes it easier to structure domain specific information.</p>
+
+<p>The core part of TableGen <a href="#syntax">parses a file</a>, instantiates
+the declarations, and hands the result off to a domain-specific "<a
+href="#backends">TableGen backend</a>" for processing.  The current major user
+of TableGen is the <a href="CodeGenerator.html">LLVM code generator</a>.</p>
+
+<p>Note that if you work on TableGen much, and use emacs or vim, that you can
+find an emacs "TableGen mode" and a vim language file in the
+<tt>llvm/utils/emacs</tt> and <tt>llvm/utils/vim</tt> directories of your LLVM
+distribution, respectively.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="concepts">Basic concepts</a></div>
+
+<div class="doc_text">
+
+<p>TableGen files consist of two key parts: 'classes' and 'definitions', both
+of which are considered 'records'.</p>
+
+<p><b>TableGen records</b> have a unique name, a list of values, and a list of
+superclasses.  The list of values is the main data that TableGen builds for each
+record; it is this that holds the domain specific information for the
+application.  The interpretation of this data is left to a specific <a
+href="#backends">TableGen backend</a>, but the structure and format rules are
+taken care of and are fixed by TableGen.</p>
+
+<p><b>TableGen definitions</b> are the concrete form of 'records'.  These
+generally do not have any undefined values, and are marked with the
+'<tt>def</tt>' keyword.</p>
+
+<p><b>TableGen classes</b> are abstract records that are used to build and
+describe other records.  These 'classes' allow the end-user to build
+abstractions for either the domain they are targeting (such as "Register",
+"RegisterClass", and "Instruction" in the LLVM code generator) or for the
+implementor to help factor out common properties of records (such as "FPInst",
+which is used to represent floating point instructions in the X86 backend).
+TableGen keeps track of all of the classes that are used to build up a
+definition, so the backend can find all definitions of a particular class, such
+as "Instruction".</p>
+
+<p><b>TableGen multiclasses</b> are groups of abstract records that are
+instantiated all at once.  Each instantiation can result in multiple TableGen
+definitions.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="example">An example record</a></div>
+
+<div class="doc_text">
+
+<p>With no other arguments, TableGen parses the specified file and prints out
+all of the classes, then all of the definitions.  This is a good way to see what
+the various definitions expand to fully.  Running this on the <tt>X86.td</tt>
+file prints this (at the time of this writing):</p>
+
+<div class="doc_code">
+<pre>
+...
+<b>def</b> ADD32rr {   <i>// Instruction X86Inst I</i>
+  <b>string</b> Namespace = "X86";
+  <b>dag</b> OutOperandList = (outs GR32:$dst);
+  <b>dag</b> InOperandList = (ins GR32:$src1, GR32:$src2);
+  <b>string</b> AsmString = "add{l}\t{$src2, $dst|$dst, $src2}";
+  <b>list</b>&lt;dag&gt; Pattern = [(set GR32:$dst, (add GR32:$src1, GR32:$src2))];
+  <b>list</b>&lt;Register&gt; Uses = [];
+  <b>list</b>&lt;Register&gt; Defs = [EFLAGS];
+  <b>list</b>&lt;Predicate&gt; Predicates = [];
+  <b>int</b> CodeSize = 3;
+  <b>int</b> AddedComplexity = 0;
+  <b>bit</b> isReturn = 0;
+  <b>bit</b> isBranch = 0;
+  <b>bit</b> isIndirectBranch = 0;
+  <b>bit</b> isBarrier = 0;
+  <b>bit</b> isCall = 0;
+  <b>bit</b> canFoldAsLoad = 0;
+  <b>bit</b> mayLoad = 0;
+  <b>bit</b> mayStore = 0;
+  <b>bit</b> isImplicitDef = 0;
+  <b>bit</b> isTwoAddress = 1;
+  <b>bit</b> isConvertibleToThreeAddress = 1;
+  <b>bit</b> isCommutable = 1;
+  <b>bit</b> isTerminator = 0;
+  <b>bit</b> isReMaterializable = 0;
+  <b>bit</b> isPredicable = 0;
+  <b>bit</b> hasDelaySlot = 0;
+  <b>bit</b> usesCustomDAGSchedInserter = 0;
+  <b>bit</b> hasCtrlDep = 0;
+  <b>bit</b> isNotDuplicable = 0;
+  <b>bit</b> hasSideEffects = 0;
+  <b>bit</b> mayHaveSideEffects = 0;
+  <b>bit</b> neverHasSideEffects = 0;
+  InstrItinClass Itinerary = NoItinerary;
+  <b>string</b> Constraints = "";
+  <b>string</b> DisableEncoding = "";
+  <b>bits</b>&lt;8&gt; Opcode = { 0, 0, 0, 0, 0, 0, 0, 1 };
+  Format Form = MRMDestReg;
+  <b>bits</b>&lt;6&gt; FormBits = { 0, 0, 0, 0, 1, 1 };
+  ImmType ImmT = NoImm;
+  <b>bits</b>&lt;3&gt; ImmTypeBits = { 0, 0, 0 };
+  <b>bit</b> hasOpSizePrefix = 0;
+  <b>bit</b> hasAdSizePrefix = 0;
+  <b>bits</b>&lt;4&gt; Prefix = { 0, 0, 0, 0 };
+  <b>bit</b> hasREX_WPrefix = 0;
+  FPFormat FPForm = ?;
+  <b>bits</b>&lt;3&gt; FPFormBits = { 0, 0, 0 };
+}
+...
+</pre>
+</div>
+
+<p>This definition corresponds to a 32-bit register-register add instruction in
+the X86.  The string after the '<tt>def</tt>' string indicates the name of the
+record&mdash;"<tt>ADD32rr</tt>" in this case&mdash;and the comment at the end of
+the line indicates the superclasses of the definition.  The body of the record
+contains all of the data that TableGen assembled for the record, indicating that
+the instruction is part of the "X86" namespace, the pattern indicating how the
+the instruction should be emitted into the assembly file, that it is a
+two-address instruction, has a particular encoding, etc.  The contents and
+semantics of the information in the record is specific to the needs of the X86
+backend, and is only shown as an example.</p>
+
+<p>As you can see, a lot of information is needed for every instruction
+supported by the code generator, and specifying it all manually would be
+unmaintainble, prone to bugs, and tiring to do in the first place.  Because we
+are using TableGen, all of the information was derived from the following
+definition:</p>
+
+<div class="doc_code">
+<pre>
+let Defs = [EFLAGS],
+    isCommutable = 1,                  <i>// X = ADD Y,Z --&gt; X = ADD Z,Y</i>
+    isConvertibleToThreeAddress = 1 <b>in</b> <i>// Can transform into LEA.</i>
+def ADD32rr  : I&lt;0x01, MRMDestReg, (outs GR32:$dst),
+                                   (ins GR32:$src1, GR32:$src2),
+                 "add{l}\t{$src2, $dst|$dst, $src2}",
+                 [(set GR32:$dst, (add GR32:$src1, GR32:$src2))]&gt;;
+</pre>
+</div>
+
+<p>This definition makes use of the custom class <tt>I</tt> (extended from the
+custom class <tt>X86Inst</tt>), which is defined in the X86-specific TableGen
+file, to factor out the common features that instructions of its class share.  A
+key feature of TableGen is that it allows the end-user to define the
+abstractions they prefer to use when describing their information.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="running">Running TableGen</a></div>
+
+<div class="doc_text">
+
+<p>TableGen runs just like any other LLVM tool.  The first (optional) argument
+specifies the file to read.  If a filename is not specified, <tt>tblgen</tt>
+reads from standard input.</p>
+
+<p>To be useful, one of the <a href="#backends">TableGen backends</a> must be
+used.  These backends are selectable on the command line (type '<tt>tblgen
+-help</tt>' for a list).  For example, to get a list of all of the definitions
+that subclass a particular type (which can be useful for building up an enum
+list of these records), use the <tt>-print-enums</tt> option:</p>
+
+<div class="doc_code">
+<pre>
+$ tblgen X86.td -print-enums -class=Register
+AH, AL, AX, BH, BL, BP, BPL, BX, CH, CL, CX, DH, DI, DIL, DL, DX, EAX, EBP, EBX,
+ECX, EDI, EDX, EFLAGS, EIP, ESI, ESP, FP0, FP1, FP2, FP3, FP4, FP5, FP6, IP,
+MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7, R10, R10B, R10D, R10W, R11, R11B, R11D,
+R11W, R12, R12B, R12D, R12W, R13, R13B, R13D, R13W, R14, R14B, R14D, R14W, R15,
+R15B, R15D, R15W, R8, R8B, R8D, R8W, R9, R9B, R9D, R9W, RAX, RBP, RBX, RCX, RDI,
+RDX, RIP, RSI, RSP, SI, SIL, SP, SPL, ST0, ST1, ST2, ST3, ST4, ST5, ST6, ST7,
+XMM0, XMM1, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, XMM2, XMM3, XMM4, XMM5,
+XMM6, XMM7, XMM8, XMM9,
+
+$ tblgen X86.td -print-enums -class=Instruction 
+ABS_F, ABS_Fp32, ABS_Fp64, ABS_Fp80, ADC32mi, ADC32mi8, ADC32mr, ADC32ri,
+ADC32ri8, ADC32rm, ADC32rr, ADC64mi32, ADC64mi8, ADC64mr, ADC64ri32, ADC64ri8,
+ADC64rm, ADC64rr, ADD16mi, ADD16mi8, ADD16mr, ADD16ri, ADD16ri8, ADD16rm,
+ADD16rr, ADD32mi, ADD32mi8, ADD32mr, ADD32ri, ADD32ri8, ADD32rm, ADD32rr,
+ADD64mi32, ADD64mi8, ADD64mr, ADD64ri32, ...
+</pre>
+</div>
+
+<p>The default backend prints out all of the records, as described <a
+href="#example">above</a>.</p>
+
+<p>If you plan to use TableGen, you will most likely have to <a
+href="#backends">write a backend</a> that extracts the information specific to
+what you need and formats it in the appropriate way.</p>
+
+</div>
+
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="syntax">TableGen syntax</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>TableGen doesn't care about the meaning of data (that is up to the backend to
+define), but it does care about syntax, and it enforces a simple type system.
+This section describes the syntax and the constructs allowed in a TableGen file.
+</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="primitives">TableGen primitives</a></div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection"><a name="comments">TableGen comments</a></div>
+
+<div class="doc_text">
+
+<p>TableGen supports BCPL style "<tt>//</tt>" comments, which run to the end of
+the line, and it also supports <b>nestable</b> "<tt>/* */</tt>" comments.</p>
+
+</div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="types">The TableGen type system</a>
+</div>
+
+<div class="doc_text">
+
+<p>TableGen files are strongly typed, in a simple (but complete) type-system.
+These types are used to perform automatic conversions, check for errors, and to
+help interface designers constrain the input that they allow.  Every <a
+href="#valuedef">value definition</a> is required to have an associated type.
+</p>
+
+<p>TableGen supports a mixture of very low-level types (such as <tt>bit</tt>)
+and very high-level types (such as <tt>dag</tt>).  This flexibility is what
+allows it to describe a wide range of information conveniently and compactly.
+The TableGen types are:</p>
+
+<dl>
+<dt><tt><b>bit</b></tt></dt>
+  <dd>A 'bit' is a boolean value that can hold either 0 or 1.</dd>
+
+<dt><tt><b>int</b></tt></dt>
+  <dd>The 'int' type represents a simple 32-bit integer value, such as 5.</dd>
+
+<dt><tt><b>string</b></tt></dt>
+  <dd>The 'string' type represents an ordered sequence of characters of
+  arbitrary length.</dd>
+
+<dt><tt><b>bits</b>&lt;n&gt;</tt></dt>
+  <dd>A 'bits' type is an arbitrary, but fixed, size integer that is broken up
+  into individual bits.  This type is useful because it can handle some bits
+  being defined while others are undefined.</dd>
+
+<dt><tt><b>list</b>&lt;ty&gt;</tt></dt>
+  <dd>This type represents a list whose elements are some other type.  The
+  contained type is arbitrary: it can even be another list type.</dd>
+
+<dt>Class type</dt>
+  <dd>Specifying a class name in a type context means that the defined value
+  must be a subclass of the specified class.  This is useful in conjunction with
+  the <b><tt>list</tt></b> type, for example, to constrain the elements of the
+  list to a common base class (e.g., a <tt><b>list</b>&lt;Register&gt;</tt> can
+  only contain definitions derived from the "<tt>Register</tt>" class).</dd>
+
+<dt><tt><b>dag</b></tt></dt>
+  <dd>This type represents a nestable directed graph of elements.</dd>
+
+<dt><tt><b>code</b></tt></dt>
+  <dd>This represents a big hunk of text. NOTE: I don't remember why this is
+  distinct from string!</dd>
+</dl>
+
+<p>To date, these types have been sufficient for describing things that
+TableGen has been used for, but it is straight-forward to extend this list if
+needed.</p>
+
+</div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="values">TableGen values and expressions</a>
+</div>
+
+<div class="doc_text">
+
+<p>TableGen allows for a pretty reasonable number of different expression forms
+when building up values.  These forms allow the TableGen file to be written in a
+natural syntax and flavor for the application.  The current expression forms
+supported include:</p>
+
+<dl>
+<dt><tt>?</tt></dt>
+  <dd>uninitialized field</dd>
+<dt><tt>0b1001011</tt></dt>
+  <dd>binary integer value</dd>
+<dt><tt>07654321</tt></dt>
+  <dd>octal integer value (indicated by a leading 0)</dd>
+<dt><tt>7</tt></dt>
+  <dd>decimal integer value</dd>
+<dt><tt>0x7F</tt></dt>
+  <dd>hexadecimal integer value</dd>
+<dt><tt>"foo"</tt></dt>
+  <dd>string value</dd>
+<dt><tt>[{ ... }]</tt></dt>
+  <dd>code fragment</dd>
+<dt><tt>[ X, Y, Z ]</tt></dt>
+  <dd>list value.</dd>
+<dt><tt>{ a, b, c }</tt></dt>
+  <dd>initializer for a "bits&lt;3&gt;" value</dd>
+<dt><tt>value</tt></dt>
+  <dd>value reference</dd>
+<dt><tt>value{17}</tt></dt>
+  <dd>access to one bit of a value</dd>
+<dt><tt>value{15-17}</tt></dt>
+  <dd>access to multiple bits of a value</dd>
+<dt><tt>DEF</tt></dt>
+  <dd>reference to a record definition</dd>
+<dt><tt>CLASS&lt;val list&gt;</tt></dt>
+  <dd>reference to a new anonymous definition of CLASS with the specified
+      template arguments.</dd>
+<dt><tt>X.Y</tt></dt>
+  <dd>reference to the subfield of a value</dd>
+<dt><tt>list[4-7,17,2-3]</tt></dt>
+  <dd>A slice of the 'list' list, including elements 4,5,6,7,17,2, and 3 from
+  it.  Elements may be included multiple times.</dd>
+<dt><tt>(DEF a, b)</tt></dt>
+  <dd>a dag value.  The first element is required to be a record definition, the
+  remaining elements in the list may be arbitrary other values, including nested
+  `<tt>dag</tt>' values.</dd>
+<dt><tt>!strconcat(a, b)</tt></dt>
+  <dd>A string value that is the result of concatenating the 'a' and 'b'
+  strings.</dd>
+</dl>
+
+<p>Note that all of the values have rules specifying how they convert to values
+for different types.  These rules allow you to assign a value like "<tt>7</tt>"
+to a "<tt>bits&lt;4&gt;</tt>" value, for example.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="classesdefs">Classes and definitions</a>
+</div>
+
+<div class="doc_text">
+
+<p>As mentioned in the <a href="#concepts">intro</a>, classes and definitions
+(collectively known as 'records') in TableGen are the main high-level unit of
+information that TableGen collects.  Records are defined with a <tt>def</tt> or
+<tt>class</tt> keyword, the record name, and an optional list of "<a
+href="#templateargs">template arguments</a>".  If the record has superclasses,
+they are specified as a comma separated list that starts with a colon character
+("<tt>:</tt>").  If <a href="#valuedef">value definitions</a> or <a
+href="#recordlet">let expressions</a> are needed for the class, they are
+enclosed in curly braces ("<tt>{}</tt>"); otherwise, the record ends with a
+semicolon.</p>
+
+<p>Here is a simple TableGen file:</p>
+
+<div class="doc_code">
+<pre>
+<b>class</b> C { <b>bit</b> V = 1; }
+<b>def</b> X : C;
+<b>def</b> Y : C {
+  <b>string</b> Greeting = "hello";
+}
+</pre>
+</div>
+
+<p>This example defines two definitions, <tt>X</tt> and <tt>Y</tt>, both of
+which derive from the <tt>C</tt> class.  Because of this, they both get the
+<tt>V</tt> bit value.  The <tt>Y</tt> definition also gets the Greeting member
+as well.</p>
+
+<p>In general, classes are useful for collecting together the commonality
+between a group of records and isolating it in a single place.  Also, classes
+permit the specification of default values for their subclasses, allowing the
+subclasses to override them as they wish.</p>
+
+</div>
+
+<!---------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="valuedef">Value definitions</a>
+</div>
+
+<div class="doc_text">
+
+<p>Value definitions define named entries in records.  A value must be defined
+before it can be referred to as the operand for another value definition or
+before the value is reset with a <a href="#recordlet">let expression</a>.  A
+value is defined by specifying a <a href="#types">TableGen type</a> and a name.
+If an initial value is available, it may be specified after the type with an
+equal sign.  Value definitions require terminating semicolons.</p>
+
+</div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="recordlet">'let' expressions</a>
+</div>
+
+<div class="doc_text">
+
+<p>A record-level let expression is used to change the value of a value
+definition in a record.  This is primarily useful when a superclass defines a
+value that a derived class or definition wants to override.  Let expressions
+consist of the '<tt>let</tt>' keyword followed by a value name, an equal sign
+("<tt>=</tt>"), and a new value.  For example, a new class could be added to the
+example above, redefining the <tt>V</tt> field for all of its subclasses:</p>
+
+<div class="doc_code">
+<pre>
+<b>class</b> D : C { let V = 0; }
+<b>def</b> Z : D;
+</pre>
+</div>
+
+<p>In this case, the <tt>Z</tt> definition will have a zero value for its "V"
+value, despite the fact that it derives (indirectly) from the <tt>C</tt> class,
+because the <tt>D</tt> class overrode its value.</p>
+
+</div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="templateargs">Class template arguments</a>
+</div>
+
+<div class="doc_text">
+
+<p>TableGen permits the definition of parameterized classes as well as normal
+concrete classes.  Parameterized TableGen classes specify a list of variable
+bindings (which may optionally have defaults) that are bound when used.  Here is
+a simple example:</p>
+
+<div class="doc_code">
+<pre>
+<b>class</b> FPFormat&lt;<b>bits</b>&lt;3&gt; val&gt; {
+  <b>bits</b>&lt;3&gt; Value = val;
+}
+<b>def</b> NotFP      : FPFormat&lt;0&gt;;
+<b>def</b> ZeroArgFP  : FPFormat&lt;1&gt;;
+<b>def</b> OneArgFP   : FPFormat&lt;2&gt;;
+<b>def</b> OneArgFPRW : FPFormat&lt;3&gt;;
+<b>def</b> TwoArgFP   : FPFormat&lt;4&gt;;
+<b>def</b> CompareFP  : FPFormat&lt;5&gt;;
+<b>def</b> CondMovFP  : FPFormat&lt;6&gt;;
+<b>def</b> SpecialFP  : FPFormat&lt;7&gt;;
+</pre>
+</div>
+
+<p>In this case, template arguments are used as a space efficient way to specify
+a list of "enumeration values", each with a "<tt>Value</tt>" field set to the
+specified integer.</p>
+
+<p>The more esoteric forms of <a href="#values">TableGen expressions</a> are
+useful in conjunction with template arguments.  As an example:</p>
+
+<div class="doc_code">
+<pre>
+<b>class</b> ModRefVal&lt;<b>bits</b>&lt;2&gt; val&gt; {
+  <b>bits</b>&lt;2&gt; Value = val;
+}
+
+<b>def</b> None   : ModRefVal&lt;0&gt;;
+<b>def</b> Mod    : ModRefVal&lt;1&gt;;
+<b>def</b> Ref    : ModRefVal&lt;2&gt;;
+<b>def</b> ModRef : ModRefVal&lt;3&gt;;
+
+<b>class</b> Value&lt;ModRefVal MR&gt; {
+  <i>// Decode some information into a more convenient format, while providing
+  // a nice interface to the user of the "Value" class.</i>
+  <b>bit</b> isMod = MR.Value{0};
+  <b>bit</b> isRef = MR.Value{1};
+
+  <i>// other stuff...</i>
+}
+
+<i>// Example uses</i>
+<b>def</b> bork : Value&lt;Mod&gt;;
+<b>def</b> zork : Value&lt;Ref&gt;;
+<b>def</b> hork : Value&lt;ModRef&gt;;
+</pre>
+</div>
+
+<p>This is obviously a contrived example, but it shows how template arguments
+can be used to decouple the interface provided to the user of the class from the
+actual internal data representation expected by the class.  In this case,
+running <tt>tblgen</tt> on the example prints the following definitions:</p>
+
+<div class="doc_code">
+<pre>
+<b>def</b> bork {      <i>// Value</i>
+  <b>bit</b> isMod = 1;
+  <b>bit</b> isRef = 0;
+}
+<b>def</b> hork {      <i>// Value</i>
+  <b>bit</b> isMod = 1;
+  <b>bit</b> isRef = 1;
+}
+<b>def</b> zork {      <i>// Value</i>
+  <b>bit</b> isMod = 0;
+  <b>bit</b> isRef = 1;
+}
+</pre>
+</div>
+
+<p> This shows that TableGen was able to dig into the argument and extract a
+piece of information that was requested by the designer of the "Value" class.
+For more realistic examples, please see existing users of TableGen, such as the
+X86 backend.</p>
+
+</div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="multiclass">Multiclass definitions and instances</a>
+</div>
+
+<div class="doc_text">
+
+<p>
+While classes with template arguments are a good way to factor commonality
+between two instances of a definition, multiclasses allow a convenient notation
+for defining multiple definitions at once (instances of implicitly constructed
+classes).  For example, consider an 3-address instruction set whose instructions
+come in two forms: "<tt>reg = reg op reg</tt>" and "<tt>reg = reg op imm</tt>"
+(e.g. SPARC). In this case, you'd like to specify in one place that this
+commonality exists, then in a separate place indicate what all the ops are.
+</p>
+
+<p>
+Here is an example TableGen fragment that shows this idea:
+</p>
+
+<div class="doc_code">
+<pre>
+<b>def</b> ops;
+<b>def</b> GPR;
+<b>def</b> Imm;
+<b>class</b> inst&lt;<b>int</b> opc, <b>string</b> asmstr, <b>dag</b> operandlist&gt;;
+
+<b>multiclass</b> ri_inst&lt;<b>int</b> opc, <b>string</b> asmstr&gt; {
+  def _rr : inst&lt;opc, !strconcat(asmstr, " $dst, $src1, $src2"),
+                 (ops GPR:$dst, GPR:$src1, GPR:$src2)&gt;;
+  def _ri : inst&lt;opc, !strconcat(asmstr, " $dst, $src1, $src2"),
+                 (ops GPR:$dst, GPR:$src1, Imm:$src2)&gt;;
+}
+
+<i>// Instantiations of the ri_inst multiclass.</i>
+<b>defm</b> ADD : ri_inst&lt;0b111, "add"&gt;;
+<b>defm</b> SUB : ri_inst&lt;0b101, "sub"&gt;;
+<b>defm</b> MUL : ri_inst&lt;0b100, "mul"&gt;;
+...
+</pre>
+</div>
+
+<p>The name of the resultant definitions has the multidef fragment names
+   appended to them, so this defines <tt>ADD_rr</tt>, <tt>ADD_ri</tt>,
+   <tt>SUB_rr</tt>, etc.  Using a multiclass this way is exactly equivalent to
+   instantiating the classes multiple times yourself, e.g. by writing:</p>
+
+<div class="doc_code">
+<pre>
+<b>def</b> ops;
+<b>def</b> GPR;
+<b>def</b> Imm;
+<b>class</b> inst&lt;<b>int</b> opc, <b>string</b> asmstr, <b>dag</b> operandlist&gt;;
+
+<b>class</b> rrinst&lt;<b>int</b> opc, <b>string</b> asmstr&gt;
+  : inst&lt;opc, !strconcat(asmstr, " $dst, $src1, $src2"),
+         (ops GPR:$dst, GPR:$src1, GPR:$src2)&gt;;
+
+<b>class</b> riinst&lt;<b>int</b> opc, <b>string</b> asmstr&gt;
+  : inst&lt;opc, !strconcat(asmstr, " $dst, $src1, $src2"),
+         (ops GPR:$dst, GPR:$src1, Imm:$src2)&gt;;
+
+<i>// Instantiations of the ri_inst multiclass.</i>
+<b>def</b> ADD_rr : rrinst&lt;0b111, "add"&gt;;
+<b>def</b> ADD_ri : riinst&lt;0b111, "add"&gt;;
+<b>def</b> SUB_rr : rrinst&lt;0b101, "sub"&gt;;
+<b>def</b> SUB_ri : riinst&lt;0b101, "sub"&gt;;
+<b>def</b> MUL_rr : rrinst&lt;0b100, "mul"&gt;;
+<b>def</b> MUL_ri : riinst&lt;0b100, "mul"&gt;;
+...
+</pre>
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="filescope">File scope entities</a>
+</div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="include">File inclusion</a>
+</div>
+
+<div class="doc_text">
+<p>TableGen supports the '<tt>include</tt>' token, which textually substitutes
+the specified file in place of the include directive.  The filename should be
+specified as a double quoted string immediately after the '<tt>include</tt>'
+keyword.  Example:</p>
+
+<div class="doc_code">
+<pre>
+<b>include</b> "foo.td"
+</pre>
+</div>
+
+</div>
+
+<!-- -------------------------------------------------------------------------->
+<div class="doc_subsubsection">
+  <a name="globallet">'let' expressions</a>
+</div>
+
+<div class="doc_text">
+
+<p>"Let" expressions at file scope are similar to <a href="#recordlet">"let"
+expressions within a record</a>, except they can specify a value binding for
+multiple records at a time, and may be useful in certain other cases.
+File-scope let expressions are really just another way that TableGen allows the
+end-user to factor out commonality from the records.</p>
+
+<p>File-scope "let" expressions take a comma-separated list of bindings to
+apply, and one or more records to bind the values in.  Here are some
+examples:</p>
+
+<div class="doc_code">
+<pre>
+<b>let</b> isTerminator = 1, isReturn = 1, isBarrier = 1, hasCtrlDep = 1 <b>in</b>
+  <b>def</b> RET : I&lt;0xC3, RawFrm, (outs), (ins), "ret", [(X86retflag 0)]&gt;;
+
+<b>let</b> isCall = 1 <b>in</b>
+  <i>// All calls clobber the non-callee saved registers...</i>
+  <b>let</b> Defs = [EAX, ECX, EDX, FP0, FP1, FP2, FP3, FP4, FP5, FP6, ST0,
+              MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
+              XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7, EFLAGS] <b>in</b> {
+    <b>def</b> CALLpcrel32 : Ii32&lt;0xE8, RawFrm, (outs), (ins i32imm:$dst,variable_ops),
+                           "call\t${dst:call}", []&gt;;
+    <b>def</b> CALL32r     : I&lt;0xFF, MRM2r, (outs), (ins GR32:$dst, variable_ops),
+                        "call\t{*}$dst", [(X86call GR32:$dst)]&gt;;
+    <b>def</b> CALL32m     : I&lt;0xFF, MRM2m, (outs), (ins i32mem:$dst, variable_ops),
+                        "call\t{*}$dst", []&gt;;
+  }
+</pre>
+</div>
+
+<p>File-scope "let" expressions are often useful when a couple of definitions
+need to be added to several records, and the records do not otherwise need to be
+opened, as in the case with the <tt>CALL*</tt> instructions above.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="backends">TableGen backends</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>TODO: How they work, how to write one.  This section should not contain
+details about any particular backend, except maybe -print-enums as an example.
+This should highlight the APIs in <tt>TableGen/Record.h</tt>.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="mailto:sabre@nondot.org">Chris Lattner</a><br>
+  <a href="http://llvm.org">LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+
+</body>
+</html>

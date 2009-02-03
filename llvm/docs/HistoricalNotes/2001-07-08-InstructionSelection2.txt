@@ -1,0 +1,25 @@
+Date: Sun, 8 Jul 2001 10:02:20 -0500
+From: Vikram S. Adve <vadve@cs.uiuc.edu>
+To: vadve@cs.uiuc.edu, Ruchira Sasanka <sasanka@students.uiuc.edu>
+Cc: Chris Lattner <lattner@cs.uiuc.edu>
+Subject: RE: machine instruction operands
+
+I got interrupted and forgot to explain the example.  In that case:
+
+        reg will be the 3rd operand of MUL and it will be of type
+MO_MInstrVirtualReg.  The field MachineInstr* minstr will point to the
+instruction that computes reg.
+
+        numElements will be an immediate constant, not a register.
+
+        %sp will be operand 1 of ADD and it will be of type MO_MachineReg.  The
+field regNum identifies the register.
+
+        numElements will be operand 2 of ADD and it will be of type
+MO_VMVirtualReg.  The field Value* value identifies the value.
+
+        ptr will be operand 3 of ADD will also be %sp, i.e., of
+        type MO_MachineReg. regNum identifies the register.
+
+--Vikram
+

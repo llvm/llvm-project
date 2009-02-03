@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>LLVM Command Guide</title>
+  <link rel="stylesheet" href="/docs/llvm.css" type="text/css">
+</head>
+<body>
+
+<div class="doc_title">
+  LLVM Command Guide
+</div>
+
+<div class="doc_text">
+
+<p>These documents are HTML versions of the <a href="man/man1/">man pages</a>
+for all of the LLVM tools.  These pages describe how to use the LLVM commands
+and what their options are.  Note that these pages do not describe all of the
+options available for all tools.  To get a complete listing, pass the
+<tt>--help</tt> (general options) or <tt>--help-hidden</tt> (general+debugging
+options) arguments to the tool you are interested in.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="basic">Basic Commands</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<ul>
+
+<li><a href="/cmds/llvm-as.html"><b>llvm-as</b></a> -
+    assemble a human-readable .ll file into bytecode</li>
+
+<li><a href="/cmds/llvm-dis.html"><b>llvm-dis</b></a> -
+    disassemble a bytecode file into a human-readable .ll file</li>
+
+<li><a href="/cmds/opt.html"><b>opt</b></a> -
+    run a series of LLVM-to-LLVM optimizations on a bytecode file</li>
+
+<li><a href="/cmds/llc.html"><b>llc</b></a> -
+    generate native machine code for a bytecode file</li>
+
+<li><a href="/cmds/lli.html"><b>lli</b></a> -
+    directly run a program compiled to bytecode using a JIT compiler or
+    interpreter</li>
+
+<li><a href="/cmds/llvm-link.html"><b>llvm-link</b></a> -
+    link several bytecode files into one</li>
+
+<li><a href="/cmds/llvm-ar.html"><b>llvm-ar</b></a> -
+    archive bytecode files</li>
+
+<li><a href="/cmds/llvm-ranlib.html"><b>llvm-ranlib</b></a> -
+    create an index for archives made with llvm-ar</li>
+
+<li><a href="/cmds/llvm-nm.html"><b>llvm-nm</b></a> -
+    print out the names and types of symbols in a bytecode file</li>
+
+<li><a href="/cmds/llvm-prof.html"><b>llvm-prof</b></a> -
+    format raw `<tt>llvmprof.out</tt>' data into a human-readable report</li>
+
+<li><a href="/cmds/llvm-ld.html"><b>llvm-ld</b></a> -
+    general purpose linker with loadable runtime optimization support</li>
+
+<li><a href="/cmds/llvm-config.html"><b>llvm-config</b></a> -
+    print out LLVM compilation options, libraries, etc. as configured</li>
+
+<li><a href="/cmds/llvmc.html"><b>llvmc</b></a> -
+    a generic customizable compiler driver</li>
+
+</ul>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="frontend">C and C++ Front-end Commands</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+<ul>
+
+<li><a href="/cmds/llvmgcc.html"><b>llvm-gcc</b></a> -
+    GCC-based C front-end for LLVM
+
+<li><a href="/cmds/llvmgxx.html"><b>llvm-g++</b></a> -
+    GCC-based C++ front-end for LLVM</li>
+
+</ul>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="debug">Debugging Tools</a>
+</div>
+<!-- *********************************************************************** -->
+
+
+<div class="doc_text">
+
+<ul>
+
+<li><a href="/cmds/bugpoint.html"><b>bugpoint</b></a> -
+    automatic test-case reducer</li>
+
+<li><a href="/cmds/llvm-extract.html"><b>llvm-extract</b></a> -
+    extract a function from an LLVM bytecode file</li>
+
+<li><a href="/cmds/llvm-bcanalyzer.html"><b>llvm-bcanalyzer</b></a> -
+    bytecode analyzer (analyzes the binary encoding itself, not the program it
+    represents)</li>
+
+</ul>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="internal">Internal Tools</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+<ul>
+
+<li><a href="/cmds/tblgen.html"><b>tblgen</b></a> -
+    target description reader and generator</li>
+
+</ul>
+</div>
+
+<!-- *********************************************************************** -->
+
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="http://llvm.org">LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+
+</body>
+</html>

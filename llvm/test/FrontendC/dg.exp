@@ -1,0 +1,5 @@
+load_lib llvm.exp
+
+if [ llvm_gcc_supports c ] then {
+  RunLLVMTests [lsort [glob -nocomplain $srcdir/$subdir/*.{ll,c,cpp}]]
+}

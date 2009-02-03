@@ -1,0 +1,1751 @@
+#===-- Makefile.rules - Common make rules for LLVM ---------*- Makefile -*--===#
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
+#
+# This file is included by all of the LLVM makefiles.  For details on how to use
+# it properly, please see the document MakefileGuide.html in the docs directory.
+#
+#===-----------------------------------------------------------------------====#
+
+################################################################################
+# TARGETS: Define standard targets that can be invoked
+################################################################################
+
+#--------------------------------------------------------------------
+# Define the various target sets
+#--------------------------------------------------------------------
+RecursiveTargets := all clean clean-all install uninstall install-bytecode
+LocalTargets     := all-local clean-local clean-all-local check-local \
+                    install-local printvars uninstall-local \
+		    install-bytecode-local unittests
+TopLevelTargets  := check dist dist-check dist-clean dist-gzip dist-bzip2 \
+                    dist-zip unittests
+UserTargets      := $(RecursiveTargets) $(LocalTargets) $(TopLevelTargets)
+InternalTargets  := preconditions distdir dist-hook
+
+################################################################################
+# INITIALIZATION: Basic things the makefile needs
+################################################################################
+
+#--------------------------------------------------------------------
+# Set the VPATH so that we can find source files.
+#--------------------------------------------------------------------
+VPATH=$(PROJ_SRC_DIR)
+
+#--------------------------------------------------------------------
+# Reset the list of suffixes we know how to build.
+#--------------------------------------------------------------------
+.SUFFIXES:
+.SUFFIXES: .c .cpp .cc .h .hpp .lo .o .a .bc .td .ps .dot .ll
+.SUFFIXES: $(SHLIBEXT) $(SUFFIXES)
+
+#--------------------------------------------------------------------
+# Mark all of these targets as phony to avoid implicit rule search
+#--------------------------------------------------------------------
+.PHONY: $(UserTargets) $(InternalTargets)
+
+#--------------------------------------------------------------------
+# Make sure all the user-target rules are double colon rules and
+# they are defined first.
+#--------------------------------------------------------------------
+
+$(UserTargets)::
+
+################################################################################
+# PRECONDITIONS: that which must be built/checked first
+################################################################################
+
+SrcMakefiles       := $(filter %Makefile %Makefile.tests,\
+                      $(wildcard $(PROJ_SRC_DIR)/Makefile*))
+ObjMakefiles       := $(subst $(PROJ_SRC_DIR),$(PROJ_OBJ_DIR),$(SrcMakefiles))
+ConfigureScript    := $(PROJ_SRC_ROOT)/configure
+ConfigStatusScript := $(PROJ_OBJ_ROOT)/config.status
+MakefileConfigIn   := $(strip $(wildcard $(PROJ_SRC_ROOT)/Makefile.config.in))
+MakefileCommonIn   := $(strip $(wildcard $(PROJ_SRC_ROOT)/Makefile.common.in))
+MakefileConfig     := $(PROJ_OBJ_ROOT)/Makefile.config
+MakefileCommon     := $(PROJ_OBJ_ROOT)/Makefile.common
+PreConditions      := $(ConfigStatusScript) $(ObjMakefiles)
+ifneq ($(MakefileCommonIn),)
+PreConditions      += $(MakefileCommon)
+endif
+
+ifneq ($(MakefileConfigIn),)
+PreConditions      += $(MakefileConfig)
+endif
+
+preconditions: $(PreConditions)
+
+#------------------------------------------------------------------------
+# Make sure the BUILT_SOURCES are built first
+#------------------------------------------------------------------------
+$(filter-out clean clean-local,$(UserTargets)):: $(BUILT_SOURCES)
+
+clean-all-local::
+ifneq ($(strip $(BUILT_SOURCES)),)
+	-$(Verb) $(RM) -f $(BUILT_SOURCES)
+endif
+
+ifneq ($(PROJ_OBJ_ROOT),$(PROJ_SRC_ROOT))
+spotless:
+	$(Verb) if test -x config.status ; then \
+	  $(EchoCmd) Wiping out $(PROJ_OBJ_ROOT) ; \
+	  $(MKDIR) .spotless.save ; \
+	  $(MV) config.status .spotless.save ; \
+	  $(MV) mklib  .spotless.save ; \
+	  $(MV) projects  .spotless.save ; \
+	  $(RM) -rf * ; \
+	  $(MV) .spotless.save/config.status . ; \
+	  $(MV) .spotless.save/mklib . ; \
+	  $(MV) .spotless.save/projects . ; \
+	  $(RM) -rf .spotless.save ; \
+	  $(EchoCmd) Rebuilding configuration of $(PROJ_OBJ_ROOT) ; \
+	  $(ConfigStatusScript) --recheck $(ConfigureScriptFLAGS) && \
+	  $(ConfigStatusScript) ; \
+	else \
+	  $(EchoCmd) "make spotless" can only be run from $(PROJ_OBJ_ROOT); \
+	fi
+else
+spotless:
+	$(EchoCmd) "spotless target not supported for objdir == srcdir"
+endif
+
+$(BUILT_SOURCES) : $(ObjMakefiles)
+
+#------------------------------------------------------------------------
+# Make sure we're not using a stale configuration
+#------------------------------------------------------------------------
+reconfigure:
+	$(Echo) Reconfiguring $(PROJ_OBJ_ROOT)
+	$(Verb) cd $(PROJ_OBJ_ROOT) && \
+	  if test -w $(PROJ_OBJ_ROOT)/config.cache ; then \
+	    $(RM) $(PROJ_OBJ_ROOT)/config.cache ; \
+	  fi ; \
+	  $(ConfigStatusScript) --recheck $(ConfigureScriptFLAGS) && \
+	  $(ConfigStatusScript)
+
+.PRECIOUS: $(ConfigStatusScript)
+$(ConfigStatusScript): $(ConfigureScript)
+	$(Echo) Reconfiguring with $<
+	$(Verb) cd $(PROJ_OBJ_ROOT) && \
+	  if test -w $(PROJ_OBJ_ROOT)/config.cache ; then \
+	    $(RM) $(PROJ_OBJ_ROOT)/config.cache ; \
+	  fi ; \
+	  $(ConfigStatusScript) --recheck $(ConfigureScriptFLAGS) && \
+	  $(ConfigStatusScript)
+
+#------------------------------------------------------------------------
+# Make sure the configuration makefile is up to date
+#------------------------------------------------------------------------
+ifneq ($(MakefileConfigIn),)
+$(MakefileConfig): $(MakefileConfigIn) $(ConfigStatusScript)
+	$(Echo) Regenerating $@
+	$(Verb) cd $(PROJ_OBJ_ROOT) ; $(ConfigStatusScript) Makefile.config
+endif
+
+ifneq ($(MakefileCommonIn),)
+$(MakefileCommon): $(MakefileCommonIn) $(ConfigStatusScript)
+	$(Echo) Regenerating $@
+	$(Verb) cd $(PROJ_OBJ_ROOT) ; $(ConfigStatusScript) Makefile.common
+endif
+
+#------------------------------------------------------------------------
+# If the Makefile in the source tree has been updated, copy it over into the
+# build tree. But, only do this if the source and object makefiles differ
+#------------------------------------------------------------------------
+ifneq ($(PROJ_OBJ_DIR),$(PROJ_SRC_DIR))
+
+Makefile: $(PROJ_SRC_DIR)/Makefile $(ExtraMakefiles)
+	$(Echo) "Updating Makefile"
+	$(Verb) $(MKDIR) $(@D)
+	$(Verb) $(CP) -f $< $@
+
+# Copy the Makefile.* files unless we're in the root directory which avoids
+# the copying of Makefile.config.in or other things that should be explicitly
+# taken care of.
+$(PROJ_OBJ_DIR)/Makefile% : $(PROJ_SRC_DIR)/Makefile%
+	@case '$?' in \
+          *Makefile.rules) ;; \
+          *.in) ;; \
+          *) $(EchoCmd) "Updating $(@F)" ; \
+	     $(MKDIR) $(@D) ; \
+	     $(CP) -f $< $@ ;; \
+	esac
+
+endif
+
+#------------------------------------------------------------------------
+# Set up the basic dependencies
+#------------------------------------------------------------------------
+$(UserTargets):: $(PreConditions)
+
+all:: all-local
+clean:: clean-local
+clean-all:: clean-local clean-all-local
+install:: install-local
+uninstall:: uninstall-local
+install-local:: all-local
+install-bytecode:: install-bytecode-local
+
+###############################################################################
+# VARIABLES: Set up various variables based on configuration data
+###############################################################################
+
+# Variable for if this make is for a "cleaning" target
+ifneq ($(strip $(filter clean clean-local dist-clean,$(MAKECMDGOALS))),)
+  IS_CLEANING_TARGET=1
+endif
+
+#--------------------------------------------------------------------
+# Variables derived from configuration we are building
+#--------------------------------------------------------------------
+
+CPP.Defines :=
+# OPTIMIZE_OPTION - The optimization level option we want to build LLVM with
+# this can be overridden on the make command line.
+ifneq ($(OS),MingW)
+  OPTIMIZE_OPTION := -O3
+else
+  OPTIMIZE_OPTION := -O2
+endif
+
+ifdef ENABLE_PROFILING
+  BuildMode := Profile
+  CXX.Flags += $(OPTIMIZE_OPTION) -pg -g
+  C.Flags   += $(OPTIMIZE_OPTION) -pg -g
+  LD.Flags  += $(OPTIMIZE_OPTION) -pg -g
+  KEEP_SYMBOLS := 1
+else
+  ifeq ($(ENABLE_OPTIMIZED),1)
+    BuildMode := Release
+    # Don't use -fomit-frame-pointer on Darwin or FreeBSD.
+    ifneq ($(OS),FreeBSD)
+    ifneq ($(OS),Darwin)
+      OmitFramePointer := -fomit-frame-pointer
+    endif
+    endif
+
+    # Darwin requires -fstrict-aliasing to be explicitly enabled.
+    ifeq ($(OS),Darwin)
+      EXTRA_OPTIONS += -fstrict-aliasing -Wstrict-aliasing
+    endif
+
+    CXX.Flags += $(OPTIMIZE_OPTION) $(OmitFramePointer)
+    C.Flags   += $(OPTIMIZE_OPTION) $(OmitFramePointer)
+    LD.Flags  += $(OPTIMIZE_OPTION)
+  else
+    BuildMode := Debug
+    CXX.Flags += -g
+    C.Flags   += -g
+    LD.Flags  += -g
+    KEEP_SYMBOLS := 1
+  endif
+endif
+
+#ifeq ($(ENABLE_VISIBILITY_INLINES_HIDDEN),1)
+#    CXX.Flags += -fvisibility-inlines-hidden
+#endif
+
+# IF REQUIRES_EH=1 is specified then don't disable exceptions
+ifndef REQUIRES_EH
+  CXX.Flags += -fno-exceptions
+endif
+
+# IF REQUIRES_RTTI=1 is specified then don't disable run-time type id
+ifndef REQUIRES_RTTI
+#  CXX.Flags += -fno-rtti
+endif
+
+# If DISABLE_ASSERTIONS=1 is specified (make command line or configured),
+# then disable assertions by defining the appropriate preprocessor symbols.
+ifdef DISABLE_ASSERTIONS
+  BuildMode := $(BuildMode)-Asserts
+  CPP.Defines += -DNDEBUG
+else
+  CPP.Defines += -D_DEBUG
+endif
+
+# If ENABLE_EXPENSIVE_CHECKS=1 is specified (make command line or
+# configured), then enable expensive checks by defining the
+# appropriate preprocessor symbols.
+ifdef ENABLE_EXPENSIVE_CHECKS
+  BuildMode := $(BuildMode)+Checks
+  CPP.Defines += -D_GLIBCXX_DEBUG -DXDEBUG
+endif
+
+ifeq ($(ENABLE_PIC),1)
+  CXX.Flags += -fPIC
+  C.Flags   += -fPIC
+endif
+
+CXX.Flags     += $(CXXFLAGS) -Woverloaded-virtual
+C.Flags       += $(CFLAGS)
+CPP.Defines   += $(CPPFLAGS)
+CPP.BaseFlags += $(CPP.Defines)
+LD.Flags      += $(LDFLAGS)
+AR.Flags      := cru
+LibTool.Flags := --tag=CXX
+
+# Make Floating point IEEE compliant on Alpha.
+ifeq ($(ARCH),Alpha)
+  CXX.Flags     += -mieee
+  CPP.BaseFlags += -mieee
+ifeq ($(ENABLE_PIC),0)
+  CXX.Flags     += -fPIC
+  CPP.BaseFlags += -fPIC
+endif
+endif
+
+ifeq ($(ARCH),Alpha)
+  LD.Flags += -Wl,--no-relax
+endif
+
+#--------------------------------------------------------------------
+# Directory locations
+#--------------------------------------------------------------------
+TargetMode :=
+ifeq ($(LLVM_CROSS_COMPILING),1)
+  BuildLLVMToolDir := $(LLVM_OBJ_ROOT)/BuildTools/$(BuildMode)/bin
+endif
+
+ObjRootDir  := $(PROJ_OBJ_DIR)/$(BuildMode)
+ObjDir      := $(ObjRootDir)
+LibDir      := $(PROJ_OBJ_ROOT)/$(BuildMode)/lib
+ToolDir     := $(PROJ_OBJ_ROOT)/$(BuildMode)/bin
+ExmplDir    := $(PROJ_OBJ_ROOT)/$(BuildMode)/examples
+LLVMLibDir  := $(LLVM_OBJ_ROOT)/$(BuildMode)/lib
+LLVMToolDir := $(LLVM_OBJ_ROOT)/$(BuildMode)/bin
+LLVMExmplDir:= $(LLVM_OBJ_ROOT)/$(BuildMode)/examples
+CFERuntimeLibDir := $(LLVMGCCDIR)/lib
+
+#--------------------------------------------------------------------
+# Full Paths To Compiled Tools and Utilities
+#--------------------------------------------------------------------
+EchoCmd  = $(ECHO) llvm[$(MAKELEVEL)]:
+Echo     = @$(EchoCmd)
+ifndef LIBTOOL
+LIBTOOL  := $(LLVM_OBJ_ROOT)/mklib
+endif
+ifndef LLVMAS
+LLVMAS   := $(LLVMToolDir)/llvm-as$(EXEEXT)
+endif
+ifndef TBLGEN
+  ifeq ($(LLVM_CROSS_COMPILING),1)
+    TBLGEN   := $(BuildLLVMToolDir)/tblgen$(BUILD_EXEEXT)
+  else
+    TBLGEN   := $(LLVMToolDir)/tblgen$(EXEEXT)
+  endif
+endif
+LLVM_CONFIG := $(LLVMToolDir)/llvm-config
+ifndef LLVMLD
+LLVMLD    := $(LLVMToolDir)/llvm-ld$(EXEEXT)
+endif
+ifndef LLVMDIS
+LLVMDIS  := $(LLVMToolDir)/llvm-dis$(EXEEXT)
+endif
+ifndef LLI
+LLI      := $(LLVMToolDir)/lli$(EXEEXT)
+endif
+ifndef LLC
+LLC      := $(LLVMToolDir)/llc$(EXEEXT)
+endif
+ifndef LOPT
+LOPT     := $(LLVMToolDir)/opt$(EXEEXT)
+endif
+ifndef LBUGPOINT
+LBUGPOINT := $(LLVMToolDir)/bugpoint$(EXEEXT)
+endif
+ifndef LUPGRADE
+LUPGRADE := $(LLVMToolDir)/llvm-upgrade$(EXEEXT)
+endif
+ifeq ($(LLVMGCC_MAJVERS),3)
+UPGRADE_MSG = $(Echo) "Upgrading $(1) assembly to latest."
+UPGRADE_LL  = $(Verb)$(LUPGRADE) $(1) -o $(1).up.tmp -f ; $(MV) $(1).up.tmp $(1)
+LLVMGCCWITHPATH  := PATH="$(LLVMToolDir):$(PATH)" $(LLVMGCC)
+LLVMGXXWITHPATH  := PATH="$(LLVMToolDir):$(PATH)" $(LLVMGXX)
+else
+UPGRADE_MSG =
+UPGRADE_LL  =
+LLVMGCCWITHPATH  := $(LLVMGCC)
+LLVMGXXWITHPATH  := $(LLVMGXX)
+endif
+
+#--------------------------------------------------------------------
+# Adjust to user's request
+#--------------------------------------------------------------------
+
+# Adjust LD.Flags and Libtool.Flags depending on the kind of library that is
+# to be built. Note that if LOADABLE_MODULE is specified then the resulting
+# shared library can be opened with dlopen. Also, LOADABLE_MODULE implies
+# several other things so we force them to be defined/on.
+ifdef LOADABLE_MODULE
+  SHARED_LIBRARY := 1
+  DONT_BUILD_RELINKED := 1
+  LINK_LIBS_IN_SHARED := 1
+  LD.Flags += -module
+endif
+
+ifdef SHARED_LIBRARY
+  LD.Flags += -rpath $(LibDir)
+else
+  LibTool.Flags += --tag=disable-shared
+endif
+
+ifdef TOOL_VERBOSE
+  C.Flags += -v
+  CXX.Flags += -v
+  LD.Flags += -v
+  VERBOSE := 1
+endif
+
+# Adjust settings for verbose mode
+ifndef VERBOSE
+  Verb := @
+  LibTool.Flags += --silent
+  AR.Flags += >/dev/null 2>/dev/null
+  ConfigureScriptFLAGS += >$(PROJ_OBJ_DIR)/configure.out 2>&1
+else
+  ConfigureScriptFLAGS :=
+endif
+
+# By default, strip symbol information from executable
+ifndef KEEP_SYMBOLS
+  Strip := $(PLATFORMSTRIPOPTS)
+  StripWarnMsg := "(without symbols)"
+  Install.StripFlag += -s
+endif
+
+# Adjust linker flags for building an executable
+ifdef TOOLNAME
+ifdef EXAMPLE_TOOL
+  LD.Flags += -rpath $(ExmplDir) -export-dynamic
+else
+  LD.Flags += -rpath $(ToolDir) -export-dynamic
+endif
+endif
+
+#----------------------------------------------------------
+# Options To Invoke Tools
+#----------------------------------------------------------
+
+CompileCommonOpts := -pedantic -Wall -W -Wwrite-strings -Wno-long-long \
+                     -Wunused -Wno-unused-parameter $(EXTRA_OPTIONS)
+
+ifeq ($(OS),HP-UX)
+  CompileCommonOpts := -D_REENTRANT -D_HPUX_SOURCE
+endif
+
+# If we are building a universal binary on Mac OS/X, pass extra options.  This
+# is useful to people that want to link the LLVM libraries into their universal
+# apps.
+#
+# The following can be optionally specified:
+#   UNIVERSAL_SDK_PATH variable can be specified as a path to the SDK to use.
+#      For Mac OS/X 10.4 Intel machines, the traditional one is:
+#      UNIVERSAL_SDK_PATH=/Developer/SDKs/MacOSX10.4u.sdk/
+#   UNIVERSAL_ARCH can be optionally specified to be a list of architectures
+#      to build for, e.g. UNIVERSAL_ARCH="i386 ppc ppc64".  This defaults to
+#      i386/ppc only.
+ifdef UNIVERSAL
+  ifndef UNIVERSAL_ARCH
+    UNIVERSAL_ARCH := i386 ppc
+  endif
+  UNIVERSAL_ARCH_OPTIONS := $(UNIVERSAL_ARCH:%=-arch %)
+  CompileCommonOpts += $(UNIVERSAL_ARCH_OPTIONS)
+  Relink.Flags := $(UNIVERSAL_ARCH_OPTIONS:%=-XCClinker %)
+  ifdef UNIVERSAL_SDK_PATH
+    CompileCommonOpts += -isysroot $(UNIVERSAL_SDK_PATH)
+    Relink.Flags      += -XCClinker -isysroot -XCClinker $(UNIVERSAL_SDK_PATH)
+  endif
+
+  # Building universal cannot compute dependencies automatically.
+  DISABLE_AUTO_DEPENDENCIES=1
+endif
+
+ifeq ($(OS),SunOS)
+CPP.BaseFlags += -include llvm/System/Solaris.h
+endif
+
+LD.Flags      += -L$(LibDir) -L$(LLVMLibDir)
+CPP.BaseFlags += -D_GNU_SOURCE -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+# All -I flags should go here, so that they don't confuse llvm-config.
+CPP.Flags     += $(sort -I$(PROJ_OBJ_DIR) -I$(PROJ_SRC_DIR) \
+	         $(patsubst %,-I%/include,\
+	         $(PROJ_OBJ_ROOT) $(PROJ_SRC_ROOT) \
+	         $(LLVM_OBJ_ROOT) $(LLVM_SRC_ROOT))) \
+	         $(CPP.BaseFlags)
+
+ ifeq ($(BUILD_COMPONENT), 1)
+  Compile.C     = $(BUILD_CC) $(CPP.Flags) $(C.Flags) $(CompileCommonOpts) -c
+  Compile.CXX   = $(BUILD_CXX) $(CPP.Flags) $(CXX.Flags) $(CompileCommonOpts) -c
+  Preprocess.CXX= $(BUILD_CXX) $(CPP.Flags) $(CompileCommonOpts) $(CXX.Flags) -E
+  Link          = $(BUILD_CXX) $(CPP.Flags) $(CXX.Flags) $(CompileCommonOpts) \
+                  $(LD.Flags) $(Strip)
+  Relink        = $(BUILD_CXX) $(CPP.Flags) $(CXX.Flags) $(CompileCommonOpts) \
+		  $(Relink.Flags)
+else
+  Compile.C     = $(CC) $(CPP.Flags) $(C.Flags) $(CompileCommonOpts) -c
+  Compile.CXX   = $(CXX) $(CPP.Flags) $(CXX.Flags) $(CompileCommonOpts) -c
+  Preprocess.CXX= $(CXX) $(CPP.Flags) $(CompileCommonOpts) $(CXX.Flags) -E
+  Link          = $(CXX) $(CPP.Flags) $(CXX.Flags) $(CompileCommonOpts) \
+                  $(LD.Flags) $(Strip)
+  Relink        = $(CXX) $(CPP.Flags) $(CXX.Flags) $(CompileCommonOpts) \
+		  $(Relink.Flags)
+endif
+
+LTCompile.C   = $(LIBTOOL) $(LibTool.Flags) --mode=compile $(Compile.C)
+BCCompile.C   = $(LLVMGCCWITHPATH) $(CPP.Flags) $(C.Flags) $(CompileCommonOpts)
+Preprocess.C  = $(CC) $(CPP.Flags) $(C.Flags) $(CompileCommonOpts) -E
+
+LTCompile.CXX = $(LIBTOOL) $(LibTool.Flags) --mode=compile $(Compile.CXX)
+BCCompile.CXX = $(LLVMGXXWITHPATH) $(CPP.Flags) $(CXX.Flags) \
+                $(CompileCommonOpts)
+
+LTLink        = $(LIBTOOL) $(LibTool.Flags) --mode=link $(Link)
+LTRelink      = $(LIBTOOL) $(LibTool.Flags) --mode=link $(Relink)
+LTInstall     = $(LIBTOOL) $(LibTool.Flags) --mode=install $(INSTALL) \
+		$(Install.Flags)
+ProgInstall   = $(INSTALL) $(Install.StripFlag) -m 0755
+ScriptInstall = $(INSTALL) -m 0755
+DataInstall   = $(INSTALL) -m 0644
+
+# When compiling under Mingw/Cygwin, the tblgen tool expects Windows
+# paths. In this case, the SYSPATH function (defined in
+# Makefile.config) transforms Unix paths into Windows paths.
+TableGen      = $(TBLGEN) -I $(call SYSPATH, $(PROJ_SRC_DIR)) \
+                -I $(call SYSPATH, $(LLVM_SRC_ROOT)/include) \
+                -I $(call SYSPATH, $(PROJ_SRC_ROOT)/include) \
+                -I $(call SYSPATH, $(PROJ_SRC_ROOT)/lib/Target)
+
+Archive       = $(AR) $(AR.Flags)
+LArchive      = $(LLVMToolDir)/llvm-ar rcsf
+ifdef RANLIB
+Ranlib        = $(RANLIB)
+else
+Ranlib        = ranlib
+endif
+
+#----------------------------------------------------------
+# Get the list of source files and compute object file
+# names from them.
+#----------------------------------------------------------
+
+ifndef SOURCES
+  Sources := $(notdir $(wildcard $(PROJ_SRC_DIR)/*.cpp \
+             $(PROJ_SRC_DIR)/*.cc $(PROJ_SRC_DIR)/*.c))
+else
+  Sources := $(SOURCES)
+endif
+
+ifdef BUILT_SOURCES
+Sources += $(filter %.cpp %.c %.cc,$(BUILT_SOURCES))
+endif
+
+BaseNameSources := $(sort $(basename $(Sources)))
+
+ObjectsO  := $(BaseNameSources:%=$(ObjDir)/%.o)
+ObjectsLO := $(BaseNameSources:%=$(ObjDir)/%.lo)
+ObjectsBC := $(BaseNameSources:%=$(ObjDir)/%.bc)
+
+###############################################################################
+# DIRECTORIES: Handle recursive descent of directory structure
+###############################################################################
+
+#---------------------------------------------------------
+# Provide rules to make install dirs. This must be early
+# in the file so they get built before dependencies
+#---------------------------------------------------------
+
+$(PROJ_bindir) $(PROJ_libdir) $(PROJ_includedir) $(PROJ_etcdir):
+	$(Verb) $(MKDIR) $@
+
+# To create other directories, as needed, and timestamp their creation
+%/.dir:
+	$(Verb) $(MKDIR) $* > /dev/null
+	$(Verb) $(DATE) > $@
+
+.PRECIOUS: $(ObjDir)/.dir $(LibDir)/.dir $(ToolDir)/.dir $(ExmplDir)/.dir
+.PRECIOUS: $(LLVMLibDir)/.dir $(LLVMToolDir)/.dir $(LLVMExmplDir)/.dir
+
+#---------------------------------------------------------
+# Handle the DIRS options for sequential construction
+#---------------------------------------------------------
+
+SubDirs :=
+ifdef DIRS
+SubDirs += $(DIRS)
+
+ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
+$(RecursiveTargets)::
+	$(Verb) for dir in $(DIRS); do \
+	  if [ ! -f $$dir/Makefile ]; then \
+	    $(MKDIR) $$dir; \
+	    $(CP) $(PROJ_SRC_DIR)/$$dir/Makefile $$dir/Makefile; \
+	  fi; \
+	  ($(MAKE) -C $$dir $@ ) || exit 1; \
+	done
+else
+$(RecursiveTargets)::
+	$(Verb) for dir in $(DIRS); do \
+	  ($(MAKE) -C $$dir $@ ) || exit 1; \
+	done
+endif
+
+endif
+
+#---------------------------------------------------------
+# Handle the EXPERIMENTAL_DIRS options ensuring success
+# after each directory is built.
+#---------------------------------------------------------
+ifdef EXPERIMENTAL_DIRS
+$(RecursiveTargets)::
+	$(Verb) for dir in $(EXPERIMENTAL_DIRS); do \
+	  if [ ! -f $$dir/Makefile ]; then \
+	    $(MKDIR) $$dir; \
+	    $(CP) $(PROJ_SRC_DIR)/$$dir/Makefile $$dir/Makefile; \
+	  fi; \
+	  ($(MAKE) -C $$dir $@ ) || exit 0; \
+	done
+endif
+
+#-----------------------------------------------------------
+# Handle the OPTIONAL_PARALLEL_DIRS options for optional parallel construction
+#-----------------------------------------------------------
+ifdef OPTIONAL_PARALLEL_DIRS
+  PARALLEL_DIRS += $(foreach T,$(OPTIONAL_PARALLEL_DIRS),$(shell test -d $(PROJ_SRC_DIR)/$(T) && echo "$(T)"))
+endif
+
+#-----------------------------------------------------------
+# Handle the PARALLEL_DIRS options for parallel construction
+#-----------------------------------------------------------
+ifdef PARALLEL_DIRS
+
+SubDirs += $(PARALLEL_DIRS)
+
+# Unfortunately, this list must be maintained if new recursive targets are added
+all      :: $(addsuffix /.makeall      ,$(PARALLEL_DIRS))
+clean    :: $(addsuffix /.makeclean    ,$(PARALLEL_DIRS))
+clean-all:: $(addsuffix /.makeclean-all,$(PARALLEL_DIRS))
+install  :: $(addsuffix /.makeinstall  ,$(PARALLEL_DIRS))
+uninstall:: $(addsuffix /.makeuninstall,$(PARALLEL_DIRS))
+install-bytecode  :: $(addsuffix /.makeinstall-bytecode,$(PARALLEL_DIRS))
+
+ParallelTargets := $(foreach T,$(RecursiveTargets),%/.make$(T))
+
+$(ParallelTargets) :
+	$(Verb) if [ ! -f $(@D)/Makefile ]; then \
+	  $(MKDIR) $(@D); \
+	  $(CP) $(PROJ_SRC_DIR)/$(@D)/Makefile $(@D)/Makefile; \
+	fi; \
+	$(MAKE) -C $(@D) $(subst $(@D)/.make,,$@)
+endif
+
+#---------------------------------------------------------
+# Handle the OPTIONAL_DIRS options for directores that may
+# or may not exist.
+#---------------------------------------------------------
+ifdef OPTIONAL_DIRS
+
+SubDirs += $(OPTIONAL_DIRS)
+
+ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
+$(RecursiveTargets)::
+	$(Verb) for dir in $(OPTIONAL_DIRS); do \
+	  if [ -d $(PROJ_SRC_DIR)/$$dir ]; then\
+	    if [ ! -f $$dir/Makefile ]; then \
+	      $(MKDIR) $$dir; \
+	      $(CP) $(PROJ_SRC_DIR)/$$dir/Makefile $$dir/Makefile; \
+	    fi; \
+	    ($(MAKE) -C$$dir $@ ) || exit 1; \
+	  fi \
+	done
+else
+$(RecursiveTargets)::
+	$(Verb) for dir in $(OPTIONAL_DIRS); do \
+	  ($(MAKE) -C$$dir $@ ) || exit 1; \
+	done
+endif
+endif
+
+#---------------------------------------------------------
+# Handle the CONFIG_FILES options
+#---------------------------------------------------------
+ifdef CONFIG_FILES
+
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) UnInstall circumvented with NO_INSTALL
+else
+install-local:: $(PROJ_etcdir) $(CONFIG_FILES)
+	$(Echo) Installing Configuration Files To $(PROJ_etcdir)
+	$(Verb)for file in $(CONFIG_FILES); do \
+          if test -f $(PROJ_OBJ_DIR)/$${file} ; then \
+            $(DataInstall) $(PROJ_OBJ_DIR)/$${file} $(PROJ_etcdir) ; \
+          elif test -f $(PROJ_SRC_DIR)/$${file} ; then \
+            $(DataInstall) $(PROJ_SRC_DIR)/$${file} $(PROJ_etcdir) ; \
+          else \
+            $(ECHO) Error: cannot find config file $${file}. ; \
+          fi \
+	done
+
+uninstall-local::
+	$(Echo) Uninstalling Configuration Files From $(PROJ_etcdir)
+	$(Verb)for file in $(CONFIG_FILES); do \
+	  $(RM) -f $(PROJ_etcdir)/$${file} ; \
+	done
+endif
+
+endif
+
+###############################################################################
+# Set up variables for building libararies
+###############################################################################
+
+#---------------------------------------------------------
+# Define various command line options pertaining to the
+# libraries needed when linking. There are "Proj" libs
+# (defined by the user's project) and "LLVM" libs (defined
+# by the LLVM project).
+#---------------------------------------------------------
+
+ifdef USEDLIBS
+ProjLibsOptions := $(patsubst %.a.o, -l%, $(addsuffix .o, $(USEDLIBS)))
+ProjLibsOptions := $(patsubst %.o, $(LibDir)/%.o,  $(ProjLibsOptions))
+ProjUsedLibs    := $(patsubst %.a.o, lib%.a, $(addsuffix .o, $(USEDLIBS)))
+ProjLibsPaths   := $(addprefix $(LibDir)/,$(ProjUsedLibs))
+endif
+
+ifdef LLVMLIBS
+LLVMLibsOptions := $(patsubst %.a.o, -l%, $(addsuffix .o, $(LLVMLIBS)))
+LLVMLibsOptions := $(patsubst %.o, $(LLVMLibDir)/%.o, $(LLVMLibsOptions))
+LLVMUsedLibs    := $(patsubst %.a.o, lib%.a, $(addsuffix .o, $(LLVMLIBS)))
+LLVMLibsPaths   := $(addprefix $(LLVMLibDir)/,$(LLVMUsedLibs))
+endif
+
+ifndef IS_CLEANING_TARGET
+ifdef LINK_COMPONENTS
+
+# If LLVM_CONFIG doesn't exist, build it.  This can happen if you do a make
+# clean in tools, then do a make in tools (instead of at the top level).
+$(LLVM_CONFIG):
+	@echo "*** llvm-config doesn't exist - rebuilding it."
+	@$(MAKE) -C $(PROJ_OBJ_ROOT)/tools/llvm-config
+
+$(ToolDir)/$(strip $(TOOLNAME))$(EXEEXT): $(LLVM_CONFIG)
+
+ProjLibsOptions += $(shell $(LLVM_CONFIG) --libs     $(LINK_COMPONENTS))
+ProjLibsPaths   += $(LLVM_CONFIG) \
+                  $(shell $(LLVM_CONFIG) --libfiles $(LINK_COMPONENTS))
+endif
+endif
+
+###############################################################################
+# Library Build Rules: Four ways to build a library
+###############################################################################
+
+#---------------------------------------------------------
+# Bytecode Module Targets:
+#   If the user set MODULE_NAME then they want to build a
+#   bytecode module from the sources. We compile all the
+#   sources and link it together into a single bytecode
+#   module.
+#---------------------------------------------------------
+
+ifdef MODULE_NAME
+ifeq ($(strip $(LLVMGCC)),)
+$(warning Modules require llvm-gcc but no llvm-gcc is available ****)
+else
+
+Module     := $(LibDir)/$(MODULE_NAME).bc
+LinkModule := $(LLVMLD) -L$(CFERuntimeLibDir) -r
+
+
+ifdef EXPORTED_SYMBOL_FILE
+LinkModule += -internalize-public-api-file=$(EXPORTED_SYMBOL_FILE)
+endif
+
+$(Module): $(BUILT_SOURCES) $(ObjectsBC) $(LibDir)/.dir $(LLVMLD)
+	$(Echo) Building $(BuildMode) Bytecode Module $(notdir $@)
+	$(Verb) $(LinkModule) -o $@ $(ObjectsBC)
+
+all-local:: $(Module)
+
+clean-local::
+ifneq ($(strip $(Module)),)
+	-$(Verb) $(RM) -f $(Module)
+endif
+
+ifdef BYTECODE_DESTINATION
+ModuleDestDir := $(BYTECODE_DESTINATION)
+else
+ModuleDestDir := $(PROJ_libdir)
+endif
+
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+DestModule := $(ModuleDestDir)/$(MODULE_NAME).bc
+
+install-module:: $(DestModule)
+install-local:: $(DestModule)
+
+$(DestModule): $(ModuleDestDir) $(Module)
+	$(Echo) Installing $(BuildMode) Bytecode Module $(DestModule)
+	$(Verb) $(DataInstall) $(Module) $(DestModule)
+
+uninstall-local::
+	$(Echo) Uninstalling $(BuildMode) Bytecode Module $(DestModule)
+	-$(Verb) $(RM) -f $(DestModule)
+endif
+
+endif
+endif
+
+# if we're building a library ...
+ifdef LIBRARYNAME
+
+# Make sure there isn't any extranous whitespace on the LIBRARYNAME option
+LIBRARYNAME := $(strip $(LIBRARYNAME))
+ifdef LOADABLE_MODULE
+LibName.LA := $(LibDir)/$(LIBRARYNAME).la
+else
+LibName.LA := $(LibDir)/lib$(LIBRARYNAME).la
+endif
+LibName.A  := $(LibDir)/lib$(LIBRARYNAME).a
+LibName.O  := $(LibDir)/$(LIBRARYNAME).o
+LibName.BCA:= $(LibDir)/lib$(LIBRARYNAME).bca
+
+#---------------------------------------------------------
+# Shared Library Targets:
+#   If the user asked for a shared library to be built
+#   with the SHARED_LIBRARY variable, then we provide
+#   targets for building them.
+#---------------------------------------------------------
+ifdef SHARED_LIBRARY
+
+all-local:: $(LibName.LA)
+
+ifdef LINK_LIBS_IN_SHARED
+ifdef LOADABLE_MODULE
+SharedLibKindMessage := "Loadable Module"
+else
+SharedLibKindMessage := "Shared Library"
+endif
+$(LibName.LA): $(ObjectsLO) $(ProjLibsPaths) $(LLVMLibsPaths) $(LibDir)/.dir
+	$(Echo) Linking $(BuildMode) $(SharedLibKindMessage) \
+	  $(LIBRARYNAME)$(SHLIBEXT)
+	$(Verb) $(LTLink) -o $@ $(ObjectsLO) $(ProjLibsOptions) \
+	  $(LLVMLibsOptions)
+	$(Verb) $(LTInstall) $@ $(LibDir)
+else
+$(LibName.LA): $(ObjectsLO) $(LibDir)/.dir
+	$(Echo) Linking $(BuildMode) Shared Library $(LIBRARYNAME)$(SHLIBEXT)
+	$(Verb) $(LTLink) -o $@ $(ObjectsLO)
+	$(Verb) $(LTInstall) $@ $(LibDir)
+endif
+
+clean-local::
+ifneq ($(strip $(LibName.LA)),)
+	-$(Verb) $(RM) -f $(LibName.LA)
+endif
+
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+DestSharedLib = $(PROJ_libdir)/lib$(LIBRARYNAME)$(SHLIBEXT)
+
+install-local:: $(DestSharedLib)
+
+$(DestSharedLib): $(LibName.LA) | $(PROJ_libdir)
+	$(Echo) Installing $(BuildMode) Shared Library $(DestSharedLib)
+	$(Verb) $(LTInstall) $(LibName.LA) $(DestSharedLib)
+	$(Verb) $(LIBTOOL) --finish $(PROJ_libdir)
+
+uninstall-local::
+	$(Echo) Uninstalling $(BuildMode) Shared Library $(DestSharedLib)
+	-$(Verb) $(RM) -f $(PROJ_libdir)/lib$(LIBRARYNAME).*
+endif
+endif
+
+#---------------------------------------------------------
+# Bytecode Library Targets:
+#   If the user asked for a bytecode library to be built
+#   with the BYTECODE_LIBRARY variable, then we provide
+#   targets for building them.
+#---------------------------------------------------------
+ifdef BYTECODE_LIBRARY
+ifeq ($(strip $(LLVMGCC)),)
+$(warning Bytecode libraries require llvm-gcc which could not be found ****)
+else
+
+all-local:: $(LibName.BCA)
+
+ifdef EXPORTED_SYMBOL_FILE
+BCLinkLib = $(LLVMLD) -L$(CFERuntimeLibDir) \
+                     -internalize-public-api-file=$(EXPORTED_SYMBOL_FILE)
+
+$(LibName.BCA): $(ObjectsBC) $(LibDir)/.dir $(LLVMLD) \
+                $(LLVMToolDir)/llvm-ar
+	$(Echo) Building $(BuildMode) Bytecode Archive $(notdir $@) \
+	  "(internalize)"
+	$(Verb) $(BCLinkLib) -o $(ObjDir)/$(LIBRARYNAME).o $(ObjectsBC)
+	$(Verb) $(RM) -f $@
+	$(Verb) $(LArchive) $@ $(ObjDir)/$(LIBRARYNAME).o
+else
+$(LibName.BCA): $(ObjectsBC) $(LibDir)/.dir \
+                $(LLVMToolDir)/llvm-ar
+	$(Echo) Building $(BuildMode) Bytecode Archive $(notdir $@)
+	$(Verb) $(RM) -f $@
+	$(Verb) $(LArchive) $@ $(ObjectsBC)
+
+endif
+
+clean-local::
+ifneq ($(strip $(LibName.BCA)),)
+	-$(Verb) $(RM) -f $(LibName.BCA)
+endif
+
+ifdef BYTECODE_DESTINATION
+BytecodeDestDir := $(BYTECODE_DESTINATION)
+else
+BytecodeDestDir := $(PROJ_libdir)
+endif
+
+DestBytecodeLib = $(BytecodeDestDir)/lib$(LIBRARYNAME).a
+
+install-bytecode-local:: $(DestBytecodeLib)
+
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+install-local:: $(DestBytecodeLib)
+
+$(DestBytecodeLib): $(LibName.BCA) | $(BytecodeDestDir)
+	$(Echo) Installing $(BuildMode) Bytecode Archive $(DestBytecodeLib)
+	$(Verb) $(DataInstall) $(LibName.BCA) $(DestBytecodeLib)
+
+uninstall-local::
+	$(Echo) Uninstalling $(BuildMode) Bytecode Archive $(DestBytecodeLib)
+	-$(Verb) $(RM) -f $(DestBytecodeLib)
+endif
+endif
+endif
+
+#---------------------------------------------------------
+# ReLinked Library Targets:
+#   If the user explicitly requests a relinked library with
+#   BUILD_RELINKED, provide it.  Otherwise, if they specify
+#   neither of BUILD_ARCHIVE or DONT_BUILD_RELINKED, give
+#   them one.
+#---------------------------------------------------------
+ifndef BUILD_ARCHIVE
+ifndef DONT_BUILD_RELINKED
+BUILD_RELINKED = 1
+endif
+endif
+
+ifdef BUILD_RELINKED
+
+all-local:: $(LibName.O)
+
+$(LibName.O): $(ObjectsO) $(LibDir)/.dir
+	$(Echo) Linking $(BuildMode) Object Library $(notdir $@)
+	$(Verb) $(LTRelink) -o $@ $(ObjectsO)
+
+clean-local::
+ifneq ($(strip $(LibName.O)),)
+	-$(Verb) $(RM) -f $(LibName.O)
+endif
+
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+DestRelinkedLib = $(PROJ_libdir)/$(LIBRARYNAME).o
+
+install-local:: $(DestRelinkedLib)
+
+$(DestRelinkedLib): $(LibName.O) | $(PROJ_libdir)
+	$(Echo) Installing $(BuildMode) Object Library $(DestRelinkedLib)
+	$(Verb) $(LTInstall) $(LibName.O) $(DestRelinkedLib)
+
+uninstall-local::
+	$(Echo) Uninstalling $(BuildMode) Object Library $(DestRelinkedLib)
+	-$(Verb) $(RM) -f $(DestRelinkedLib)
+endif
+endif
+
+#---------------------------------------------------------
+# Archive Library Targets:
+#   If the user wanted a regular archive library built,
+#   then we provide targets for building them.
+#---------------------------------------------------------
+ifdef BUILD_ARCHIVE
+
+all-local:: $(LibName.A)
+
+$(LibName.A): $(ObjectsO) $(LibDir)/.dir
+	$(Echo) Building $(BuildMode) Archive Library $(notdir $@)
+	-$(Verb) $(RM) -f $@
+	$(Verb) $(Archive) $@ $(ObjectsO)
+	$(Verb) $(Ranlib) $@
+
+clean-local::
+ifneq ($(strip $(LibName.A)),)
+	-$(Verb) $(RM) -f $(LibName.A)
+endif
+
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+DestArchiveLib := $(PROJ_libdir)/lib$(LIBRARYNAME).a
+
+install-local:: $(DestArchiveLib)
+
+$(DestArchiveLib): $(LibName.A) | $(PROJ_libdir)
+	$(Echo) Installing $(BuildMode) Archive Library $(DestArchiveLib)
+	$(Verb) $(MKDIR) $(PROJ_libdir)
+	$(Verb) $(LTInstall) $(LibName.A) $(DestArchiveLib)
+
+uninstall-local::
+	$(Echo) Uninstalling $(BuildMode) Archive Library $(DestArchiveLib)
+	-$(Verb) $(RM) -f $(DestArchiveLib)
+endif
+endif
+
+# endif LIBRARYNAME
+endif
+
+###############################################################################
+# Tool Build Rules: Build executable tool based on TOOLNAME option
+###############################################################################
+
+ifdef TOOLNAME
+
+#---------------------------------------------------------
+# Set up variables for building a tool.
+#---------------------------------------------------------
+ifdef EXAMPLE_TOOL
+ToolBuildPath   := $(ExmplDir)/$(strip $(TOOLNAME))$(EXEEXT)
+else
+ToolBuildPath   := $(ToolDir)/$(strip $(TOOLNAME))$(EXEEXT)
+endif
+
+#---------------------------------------------------------
+# Provide targets for building the tools
+#---------------------------------------------------------
+all-local:: $(ToolBuildPath)
+
+clean-local::
+ifneq ($(strip $(ToolBuildPath)),)
+	-$(Verb) $(RM) -f $(ToolBuildPath)
+endif
+
+ifdef EXAMPLE_TOOL
+$(ToolBuildPath): $(ExmplDir)/.dir
+else
+$(ToolBuildPath): $(ToolDir)/.dir
+endif
+
+$(ToolBuildPath): $(ObjectsO) $(ProjLibsPaths) $(LLVMLibsPaths)
+	$(Echo) Linking $(BuildMode) executable $(TOOLNAME) $(StripWarnMsg)
+	$(Verb) $(LTLink) -o $@ $(TOOLLINKOPTS) $(ObjectsO) $(ProjLibsOptions) \
+	$(LLVMLibsOptions) $(ExtraLibs) $(TOOLLINKOPTSB) $(LIBS)
+	$(Echo) ======= Finished Linking $(BuildMode) Executable $(TOOLNAME) \
+          $(StripWarnMsg)
+
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+DestTool = $(PROJ_bindir)/$(TOOLNAME)
+
+install-local:: $(DestTool)
+
+$(DestTool): $(ToolBuildPath) | $(PROJ_bindir)
+	$(Echo) Installing $(BuildMode) $(DestTool)
+	$(Verb) $(ProgInstall) $(ToolBuildPath) $(DestTool)
+
+uninstall-local::
+	$(Echo) Uninstalling $(BuildMode) $(DestTool)
+	-$(Verb) $(RM) -f $(DestTool)
+endif
+endif
+
+###############################################################################
+# Object Build Rules: Build object files based on sources
+###############################################################################
+
+# FIXME: This should be checking for "if not GCC or ICC", not for "if HP-UX"
+ifeq ($(OS),HP-UX)
+  DISABLE_AUTO_DEPENDENCIES=1
+endif
+
+ifdef SHARED_LIBRARY
+PIC_FLAG = "(PIC)"
+MAYBE_PIC_Compile.CXX = $(LTCompile.CXX)
+MAYBE_PIC_Compile.C = $(LTCompile.C)
+else
+MAYBE_PIC_Compile.CXX = $(Compile.CXX)
+MAYBE_PIC_Compile.C = $(Compile.C)
+endif
+
+# Provide rule sets for when dependency generation is enabled
+ifndef DISABLE_AUTO_DEPENDENCIES
+
+#---------------------------------------------------------
+# Create .lo files in the ObjDir directory from the .cpp and .c files...
+#---------------------------------------------------------
+
+DEPEND_OPTIONS = -MMD -MP -MF "$(ObjDir)/$*.d.tmp" \
+         -MT "$(ObjDir)/$*.lo" -MT "$(ObjDir)/$*.o" -MT "$(ObjDir)/$*.d"
+
+# If the build succeeded, move the dependency file over.  If it failed, put an
+# empty file there.
+DEPEND_MOVEFILE = then $(MV) -f "$(ObjDir)/$*.d.tmp" "$(ObjDir)/$*.d"; \
+                  else $(RM) "$(ObjDir)/$*.d.tmp"; exit 1; fi
+
+$(ObjDir)/%.lo $(ObjDir)/%.o: %.cpp $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cpp for $(BuildMode) build " $(PIC_FLAG)
+	$(Verb) if $(MAYBE_PIC_Compile.CXX) $(DEPEND_OPTIONS) $< -o $(ObjDir)/$*.o ; \
+	        $(DEPEND_MOVEFILE)
+
+$(ObjDir)/%.lo $(ObjDir)/%.o: %.cc $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cc for $(BuildMode) build" $(PIC_FLAG)
+	$(Verb) if $(MAYBE_PIC_Compile.CXX) $(DEPEND_OPTIONS) $< -o $(ObjDir)/$*.o ; \
+	        $(DEPEND_MOVEFILE)
+
+$(ObjDir)/%.lo $(ObjDir)/%.o: %.c $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.c for $(BuildMode) build" $(PIC_FLAG)
+	$(Verb) if $(MAYBE_PIC_Compile.C) $(DEPEND_OPTIONS) $< -o $(ObjDir)/$*.o ; \
+	        $(DEPEND_MOVEFILE)
+
+#---------------------------------------------------------
+# Create .bc files in the ObjDir directory from .cpp .cc and .c files...
+#---------------------------------------------------------
+
+$(ObjDir)/%.ll: %.cpp $(ObjDir)/.dir $(BUILT_SOURCES) $(LLVMGXX)
+	$(Echo) "Compiling $*.cpp for $(BuildMode) build (bytecode)"
+	$(Verb) if $(BCCompile.CXX) -MD -MT $@ -MP -MF "$(ObjDir)/$*.BCCXXd" \
+                              $< -o $@ -S -emit-llvm ; \
+	then $(MV) -f "$(ObjDir)/$*.BCCXXd" "$(ObjDir)/$*.d"; \
+	else $(RM) -f "$(ObjDir)/$*.BCCXXd"; exit 1; fi
+	$(call UPGRADE_MSG,$@)
+	$(call UPGRADE_LL,$@)
+
+$(ObjDir)/%.ll: %.cc $(ObjDir)/.dir $(BUILT_SOURCES) $(LLVMGXX)
+	$(Echo) "Compiling $*.cc for $(BuildMode) build (bytecode)"
+	$(Verb) if $(BCCompile.CXX) -MD -MT $@ -MP -MF "$(ObjDir)/$*.BCCXXd" \
+                              $< -o $@ -S -emit-llvm ; \
+	then $(MV) -f "$(ObjDir)/$*.BCCXXd" "$(ObjDir)/$*.d"; \
+	else $(RM) -f "$(ObjDir)/$*.BCCXXd"; exit 1; fi
+	$(call UPGRADE_MSG,$@)
+	$(call UPGRADE_LL,$@)
+
+$(ObjDir)/%.ll: %.c $(ObjDir)/.dir $(BUILT_SOURCES) $(LLVMGCC)
+	$(Echo) "Compiling $*.c for $(BuildMode) build (bytecode)"
+	$(Verb) if $(BCCompile.C) -MD -MT $@ -MP -MF "$(ObjDir)/$*.BCCd" \
+                            $< -o $@ -S -emit-llvm ; \
+	then $(MV) -f "$(ObjDir)/$*.BCCd" "$(ObjDir)/$*.d"; \
+	else $(RM) -f "$(ObjDir)/$*.BCCd"; exit 1; fi
+	$(call UPGRADE_MSG,$@)
+	$(call UPGRADE_LL,$@)
+
+# Provide alternate rule sets if dependencies are disabled
+else
+
+$(ObjDir)/%.lo $(ObjDir)/%.o: %.cpp $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cpp for $(BuildMode) build" $(PIC_FLAG)
+	$(MAYBE_PIC_Compile.CXX) $< -o $@
+
+$(ObjDir)/%.lo $(ObjDir)/%.o: %.cc $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cc for $(BuildMode) build" $(PIC_FLAG)
+	$(MAYBE_PIC_Compile.CXX) $< -o $@
+
+$(ObjDir)/%.lo $(ObjDir)/%.o: %.c $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.c for $(BuildMode) build" $(PIC_FLAG)
+	$(MAYBE_PIC_Compile.C) $< -o $@
+
+$(ObjDir)/%.ll: %.cpp $(ObjDir)/.dir $(BUILT_SOURCES) $(LLVMGXX)
+	$(Echo) "Compiling $*.cpp for $(BuildMode) build (bytecode)"
+	$(BCCompile.CXX) $< -o $@ -S -emit-llvm
+	$(call UPGRADE_MSG,$@)
+	$(call UPGRADE_LL,$@)
+
+$(ObjDir)/%.ll: %.cc $(ObjDir)/.dir $(BUILT_SOURCES) $(LLVMGXX)
+	$(Echo) "Compiling $*.cc for $(BuildMode) build (bytecode)"
+	$(BCCompile.CXX) $< -o $@ -S -emit-llvm
+	$(call UPGRADE_MSG,$@)
+	$(call UPGRADE_LL,$@)
+
+$(ObjDir)/%.ll: %.c $(ObjDir)/.dir $(BUILT_SOURCES) $(LLVMGCC)
+	$(Echo) "Compiling $*.c for $(BuildMode) build (bytecode)"
+	$(BCCompile.C) $< -o $@ -S -emit-llvm
+	$(call UPGRADE_MSG,@)
+	$(call UPGRADE_LL,@)
+
+endif
+
+
+## Rules for building preprocessed (.i/.ii) outputs.
+$(BuildMode)/%.ii: %.cpp $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cpp for $(BuildMode) build to .ii file"
+	$(Verb) $(Preprocess.CXX) $< -o $@
+
+$(BuildMode)/%.ii: %.cc $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cc for $(BuildMode) build to .ii file"
+	$(Verb) $(Preprocess.CXX) $< -o $@
+
+$(BuildMode)/%.i: %.c $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.c for $(BuildMode) build to .i file"
+	$(Verb) $(Preprocess.C) $< -o $@
+
+
+$(ObjDir)/%.s: %.cpp $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cpp to asm for $(BuildMode) build" $(PIC_FLAG)
+	$(MAYBE_PIC_Compile.CXX) $< -o $@ -S
+
+$(ObjDir)/%.s: %.cc $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.cc to asm for $(BuildMode) build" $(PIC_FLAG)
+	$(MAYBE_PIC_Compile.CXX) $< -o $@ -S
+
+$(ObjDir)/%.s: %.c $(ObjDir)/.dir $(BUILT_SOURCES)
+	$(Echo) "Compiling $*.c to asm for $(BuildMode) build" $(PIC_FLAG)
+	$(MAYBE_PIC_Compile.C) $< -o $@ -S
+
+
+# make the C and C++ compilers strip debug info out of bytecode libraries.
+ifdef DEBUG_RUNTIME
+$(ObjectsBC): $(ObjDir)/%.bc: $(ObjDir)/%.ll $(LLVMAS) $(LOPT)
+	$(Echo) "Compiling $*.ll to $*.bc for $(BuildMode) build (bytecode)"
+	$(Verb) $(LLVMAS) $< -o - | $(LOPT) -std-compile-opts -o $@ -f
+else
+$(ObjectsBC): $(ObjDir)/%.bc: $(ObjDir)/%.ll $(LLVMAS) $(LOPT)
+	$(Echo) "Compiling $*.ll to $*.bc for $(BuildMode) build (bytecode)"
+	$(Verb) $(LLVMAS) $< -o - | \
+	   $(LOPT) -std-compile-opts -strip-debug -o $@ -f
+endif
+
+
+#---------------------------------------------------------
+# Provide rule to build .bc files from .ll sources,
+# regardless of dependencies
+#---------------------------------------------------------
+$(ObjDir)/%.bc: %.ll $(ObjDir)/.dir $(LLVMAS)
+	$(Echo) "Compiling $*.ll for $(BuildMode) build"
+	$(Verb) $(LLVMAS) $< -f -o $@
+
+###############################################################################
+# TABLEGEN: Provide rules for running tblgen to produce *.inc files
+###############################################################################
+
+ifdef TARGET
+
+TDFiles := $(strip $(wildcard $(PROJ_SRC_DIR)/*.td) \
+           $(LLVM_SRC_ROOT)/include/llvm/Target/Target.td \
+           $(LLVM_SRC_ROOT)/include/llvm/Target/TargetCallingConv.td \
+           $(LLVM_SRC_ROOT)/include/llvm/Target/TargetSchedule.td \
+           $(LLVM_SRC_ROOT)/include/llvm/Target/TargetSelectionDAG.td \
+           $(LLVM_SRC_ROOT)/include/llvm/CodeGen/ValueTypes.td) \
+           $(wildcard $(LLVM_SRC_ROOT)/include/llvm/Intrinsics*.td)
+INCFiles := $(filter %.inc,$(BUILT_SOURCES))
+INCTMPFiles := $(INCFiles:%=$(ObjDir)/%.tmp)
+.PRECIOUS: $(INCTMPFiles) $(INCFiles)
+
+# All of these files depend on tblgen and the .td files.
+$(INCTMPFiles) : $(TBLGEN) $(TDFiles)
+
+# INCFiles rule: All of the tblgen generated files are emitted to
+# $(ObjDir)/%.inc.tmp, instead of emitting them directly to %.inc.  This allows
+# us to only "touch" the real file if the contents of it change.  IOW, if
+# tblgen is modified, all of the .inc.tmp files are regenerated, but no
+# dependencies of the .inc files are, unless the contents of the .inc file
+# changes.
+$(INCFiles) : %.inc : $(ObjDir)/%.inc.tmp
+	$(Verb) $(CMP) -s $@ $< || $(CP) $< $@
+
+$(TARGET:%=$(ObjDir)/%GenRegisterNames.inc.tmp): \
+$(ObjDir)/%GenRegisterNames.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) register names with tblgen"
+	$(Verb) $(TableGen) -gen-register-enums -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenRegisterInfo.h.inc.tmp): \
+$(ObjDir)/%GenRegisterInfo.h.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) register information header with tblgen"
+	$(Verb) $(TableGen) -gen-register-desc-header -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenRegisterInfo.inc.tmp): \
+$(ObjDir)/%GenRegisterInfo.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) register info implementation with tblgen"
+	$(Verb) $(TableGen) -gen-register-desc -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenInstrNames.inc.tmp): \
+$(ObjDir)/%GenInstrNames.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) instruction names with tblgen"
+	$(Verb) $(TableGen) -gen-instr-enums -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenInstrInfo.inc.tmp): \
+$(ObjDir)/%GenInstrInfo.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) instruction information with tblgen"
+	$(Verb) $(TableGen) -gen-instr-desc -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenAsmWriter.inc.tmp): \
+$(ObjDir)/%GenAsmWriter.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) assembly writer with tblgen"
+	$(Verb) $(TableGen) -gen-asm-writer -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenAsmWriter1.inc.tmp): \
+$(ObjDir)/%GenAsmWriter1.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) assembly writer #1 with tblgen"
+	$(Verb) $(TableGen) -gen-asm-writer -asmwriternum=1 -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenCodeEmitter.inc.tmp): \
+$(ObjDir)/%GenCodeEmitter.inc.tmp: %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) code emitter with tblgen"
+	$(Verb) $(TableGen) -gen-emitter -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenDAGISel.inc.tmp): \
+$(ObjDir)/%GenDAGISel.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) DAG instruction selector implementation with tblgen"
+	$(Verb) $(TableGen) -gen-dag-isel -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenFastISel.inc.tmp): \
+$(ObjDir)/%GenFastISel.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) \"fast\" instruction selector implementation with tblgen"
+	$(Verb) $(TableGen) -gen-fast-isel -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenSubtarget.inc.tmp): \
+$(ObjDir)/%GenSubtarget.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) subtarget information with tblgen"
+	$(Verb) $(TableGen) -gen-subtarget -o $(call SYSPATH, $@) $<
+
+$(TARGET:%=$(ObjDir)/%GenCallingConv.inc.tmp): \
+$(ObjDir)/%GenCallingConv.inc.tmp : %.td $(ObjDir)/.dir
+	$(Echo) "Building $(<F) calling convention information with tblgen"
+	$(Verb) $(TableGen) -gen-callingconv -o $(call SYSPATH, $@) $<
+
+clean-local::
+	-$(Verb) $(RM) -f $(INCFiles)
+
+endif
+
+###############################################################################
+# OTHER RULES: Other rules needed
+###############################################################################
+
+# To create postscript files from dot files...
+ifneq ($(DOT),false)
+%.ps: %.dot
+	$(DOT) -Tps < $< > $@
+else
+%.ps: %.dot
+	$(Echo) "Cannot build $@: The program dot is not installed"
+endif
+
+# This rules ensures that header files that are removed still have a rule for
+# which they can be "generated."  This allows make to ignore them and
+# reproduce the dependency lists.
+%.h:: ;
+%.hpp:: ;
+
+# Define clean-local to clean the current directory. Note that this uses a
+# very conservative approach ensuring that empty variables do not cause
+# errors or disastrous removal.
+clean-local::
+ifneq ($(strip $(ObjRootDir)),)
+	-$(Verb) $(RM) -rf $(ObjRootDir)
+endif
+	-$(Verb) $(RM) -f core core.[0-9][0-9]* *.o *.d *~ *.flc
+ifneq ($(strip $(SHLIBEXT)),) # Extra paranoia - make real sure SHLIBEXT is set
+	-$(Verb) $(RM) -f *$(SHLIBEXT)
+endif
+
+clean-all-local::
+	-$(Verb) $(RM) -rf Debug Release Profile
+
+
+###############################################################################
+# DEPENDENCIES: Include the dependency files if we should
+###############################################################################
+ifndef DISABLE_AUTO_DEPENDENCIES
+
+# If its not one of the cleaning targets
+ifndef IS_CLEANING_TARGET
+
+# Get the list of dependency files
+DependFiles := $(basename $(filter %.cpp %.c %.cc, $(Sources)))
+DependFiles := $(DependFiles:%=$(PROJ_OBJ_DIR)/$(BuildMode)/%.d)
+
+-include $(DependFiles) ""
+
+endif
+
+endif
+
+###############################################################################
+# CHECK: Running the test suite
+###############################################################################
+
+check::
+	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/test" ; then \
+	  if test -f "$(PROJ_OBJ_ROOT)/test/Makefile" ; then \
+	    $(EchoCmd) Running test suite ; \
+	    $(MAKE) -C $(PROJ_OBJ_ROOT)/test check-local \
+	      TESTSUITE=$(TESTSUITE) ; \
+	  else \
+	    $(EchoCmd) No Makefile in test directory ; \
+	  fi ; \
+	else \
+	  $(EchoCmd) No test directory ; \
+	fi
+
+###############################################################################
+# UNITTESTS: Running the unittests test suite
+###############################################################################
+
+unittests::
+	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/unittests" ; then \
+	  if test -f "$(PROJ_OBJ_ROOT)/unittests/Makefile" ; then \
+	    $(EchoCmd) Running unittests test suite ; \
+	    $(MAKE) -C $(PROJ_OBJ_ROOT)/unittests ; \
+	  else \
+	    $(EchoCmd) No Makefile in unittests directory ; \
+	  fi ; \
+	else \
+	  $(EchoCmd) No unittests directory ; \
+	fi
+
+###############################################################################
+# DISTRIBUTION: Handle construction of a distribution tarball
+###############################################################################
+
+#------------------------------------------------------------------------
+# Define distribution related variables
+#------------------------------------------------------------------------
+DistName    := $(PROJECT_NAME)-$(PROJ_VERSION)
+DistDir     := $(PROJ_OBJ_ROOT)/$(DistName)
+TopDistDir  := $(PROJ_OBJ_ROOT)/$(DistName)
+DistTarGZip := $(PROJ_OBJ_ROOT)/$(DistName).tar.gz
+DistZip     := $(PROJ_OBJ_ROOT)/$(DistName).zip
+DistTarBZ2  := $(PROJ_OBJ_ROOT)/$(DistName).tar.bz2
+DistAlways  := CREDITS.TXT LICENSE.TXT README.txt README AUTHORS COPYING \
+	       ChangeLog INSTALL NEWS Makefile Makefile.common Makefile.rules \
+	       Makefile.config.in configure autoconf
+DistOther   := $(notdir $(wildcard \
+               $(PROJ_SRC_DIR)/*.h \
+               $(PROJ_SRC_DIR)/*.td \
+               $(PROJ_SRC_DIR)/*.def \
+               $(PROJ_SRC_DIR)/*.ll \
+               $(PROJ_SRC_DIR)/*.in))
+DistSubDirs := $(SubDirs)
+DistSources  = $(Sources) $(EXTRA_DIST)
+DistFiles    = $(DistAlways) $(DistSources) $(DistOther)
+
+#------------------------------------------------------------------------
+# We MUST build distribution with OBJ_DIR != SRC_DIR
+#------------------------------------------------------------------------
+ifeq ($(PROJ_SRC_DIR),$(PROJ_OBJ_DIR))
+dist dist-check dist-clean dist-gzip dist-bzip2 dist-zip ::
+	$(Echo) ERROR: Target $@ only available with OBJ_DIR != SRC_DIR
+
+else
+
+#------------------------------------------------------------------------
+# Prevent attempt to run dist targets from anywhere but the top level
+#------------------------------------------------------------------------
+ifneq ($(LEVEL),.)
+dist dist-check dist-clean dist-gzip dist-bzip2 dist-zip ::
+	$(Echo) ERROR: You must run $@ from $(PROJ_OBJ_ROOT)
+else
+
+#------------------------------------------------------------------------
+# Provide the top level targets
+#------------------------------------------------------------------------
+
+dist-gzip:: $(DistTarGZip)
+
+$(DistTarGZip) : $(TopDistDir)/.makedistdir
+	$(Echo) Packing gzipped distribution tar file.
+	$(Verb) cd $(PROJ_OBJ_ROOT) ; $(TAR) chf - "$(DistName)" | \
+	  $(GZIP) -c > "$(DistTarGZip)"
+
+dist-bzip2:: $(DistTarBZ2)
+
+$(DistTarBZ2) : $(TopDistDir)/.makedistdir
+	$(Echo) Packing bzipped distribution tar file.
+	$(Verb) cd $(PROJ_OBJ_ROOT) ; $(TAR) chf - $(DistName) | \
+	  $(BZIP2) -c >$(DistTarBZ2)
+
+dist-zip:: $(DistZip)
+
+$(DistZip) : $(TopDistDir)/.makedistdir
+	$(Echo) Packing zipped distribution file.
+	$(Verb) rm -f $(DistZip)
+	$(Verb) cd $(PROJ_OBJ_ROOT) ; $(ZIP) -rq $(DistZip) $(DistName)
+
+dist :: $(DistTarGZip) $(DistTarBZ2) $(DistZip)
+	$(Echo) ===== DISTRIBUTION PACKAGING SUCESSFUL =====
+
+DistCheckDir := $(PROJ_OBJ_ROOT)/_distcheckdir
+
+dist-check:: $(DistTarGZip)
+	$(Echo) Checking distribution tar file.
+	$(Verb) if test -d $(DistCheckDir) ; then \
+	  $(RM) -rf $(DistCheckDir) ; \
+	fi
+	$(Verb) $(MKDIR) $(DistCheckDir)
+	$(Verb) cd $(DistCheckDir) && \
+	  $(MKDIR) $(DistCheckDir)/build && \
+	  $(MKDIR) $(DistCheckDir)/install && \
+	  gunzip -c $(DistTarGZip) | $(TAR) xf - && \
+	  cd build && \
+	  ../$(DistName)/configure --prefix="$(DistCheckDir)/install" \
+	    --srcdir=../$(DistName) $(DIST_CHECK_CONFIG_OPTIONS) && \
+	  $(MAKE) all && \
+	  $(MAKE) check && \
+	  $(MAKE) unittests && \
+	  $(MAKE) install && \
+	  $(MAKE) uninstall && \
+	  $(MAKE) dist-clean && \
+	  $(EchoCmd) ===== $(DistTarGZip) Ready For Distribution =====
+
+dist-clean::
+	$(Echo) Cleaning distribution files
+	-$(Verb) $(RM) -rf $(DistTarGZip) $(DistTarBZ2) $(DistZip) $(DistName) \
+	  $(DistCheckDir)
+
+endif
+
+#------------------------------------------------------------------------
+# Provide the recursive distdir target for building the distribution directory
+#------------------------------------------------------------------------
+distdir: $(DistDir)/.makedistdir
+$(DistDir)/.makedistdir: $(DistSources)
+	$(Verb) if test "$(DistDir)" = "$(TopDistDir)" ; then \
+	  if test -d "$(DistDir)" ; then \
+	    find $(DistDir) -type d ! -perm -200 -exec chmod u+w {} ';'  || \
+	      exit 1 ; \
+	  fi ; \
+	  $(EchoCmd) Removing old $(DistDir) ; \
+	  $(RM) -rf $(DistDir); \
+	  $(EchoCmd) Making 'all' to verify build ; \
+	  $(MAKE) ENABLE_OPTIMIZED=1 all ; \
+	fi
+	$(Echo) Building Distribution Directory $(DistDir)
+	$(Verb) $(MKDIR) $(DistDir)
+	$(Verb) srcdirstrip=`echo "$(PROJ_SRC_DIR)" | sed 's|.|.|g'`; \
+	srcrootstrip=`echo "$(PROJ_SRC_ROOT)" | sed 's|.|.|g'`; \
+	for file in $(DistFiles) ; do \
+	  case "$$file" in \
+	    $(PROJ_SRC_DIR)/*) \
+	      file=`echo "$$file" | sed "s#^$$srcdirstrip/##"` \
+	      ;; \
+	    $(PROJ_SRC_ROOT)/*) \
+	      file=`echo "$$file" | \
+		sed "s#^$$srcrootstrip/##"` \
+	      ;; \
+	  esac; \
+	  if test -f "$(PROJ_SRC_DIR)/$$file" || \
+	     test -d "$(PROJ_SRC_DIR)/$$file" ; then \
+	    from_dir="$(PROJ_SRC_DIR)" ; \
+	  elif test -f "$$file" || test -d "$$file" ; then \
+	    from_dir=. ; \
+	  fi ; \
+	  to_dir=`echo "$$file" | sed -e 's#/[^/]*$$##'` ; \
+	  if test "$$to_dir" != "$$file" && test "$$to_dir" != "."; then \
+	    to_dir="$(DistDir)/$$dir"; \
+	    $(MKDIR) "$$to_dir" ; \
+	  else \
+	    to_dir="$(DistDir)"; \
+	  fi; \
+	  mid_dir=`echo "$$file" | sed -n -e 's#^\(.*\)/[^/]*$$#\1#p'`; \
+	  if test -n "$$mid_dir" ; then \
+            $(MKDIR) "$$to_dir/$$mid_dir" || exit 1; \
+          fi ; \
+	  if test -d "$$from_dir/$$file"; then \
+	    if test -d "$(PROJ_SRC_DIR)/$$file" && \
+	       test "$$from_dir" != "$(PROJ_SRC_DIR)" ; then \
+	       cd $(PROJ_SRC_DIR) ; \
+	       $(TAR) cf - $$file --exclude .svn --exclude CVS | \
+	         ( cd $$to_dir ; $(TAR) xf - ) ; \
+	       cd $(PROJ_OBJ_DIR) ; \
+	    else \
+	       cd $$from_dir ; \
+	       $(TAR) cf - $$file --exclude .svn --exclude CVS | \
+	         ( cd $$to_dir ; $(TAR) xf - ) ; \
+	       cd $(PROJ_OBJ_DIR) ; \
+	    fi; \
+	  elif test -f "$$from_dir/$$file" ; then \
+	    $(CP) -p "$$from_dir/$$file" "$(DistDir)/$$file" || exit 1; \
+	  elif test -L "$$from_dir/$$file" ; then \
+	    $(CP) -pd "$$from_dir/$$file" $(DistDir)/$$file || exit 1; \
+	  elif echo "$(DistAlways)" | grep -v "$$file" >/dev/null ; then \
+	    $(EchoCmd) "===== WARNING: Distribution Source " \
+	      "$$from_dir/$$file Not Found!" ; \
+	  elif test "$(Verb)" != '@' ; then \
+	    $(EchoCmd) "Skipping non-existent $$from_dir/$$file" ; \
+	  fi; \
+	done
+	$(Verb) for subdir in $(DistSubDirs) ; do \
+	  if test "$$subdir" \!= "." ; then \
+	    new_distdir="$(DistDir)/$$subdir" ; \
+	    test -d "$$new_distdir" || $(MKDIR) "$$new_distdir" || exit 1; \
+	    ( cd $$subdir && $(MAKE) ENABLE_OPTIMIZED=1 \
+	      DistDir="$$new_distdir" distdir ) || exit 1; \
+	  fi; \
+	done
+	$(Verb) if test "$(DistDir)" = "$(TopDistDir)" ; then \
+	  $(EchoCmd) Eliminating CVS/.svn directories from distribution ; \
+	  $(RM) -rf `find $(TopDistDir) -type d \( -name CVS -o \
+                                  -name .svn \) -print` ;\
+	  $(MAKE) dist-hook ; \
+	  $(FIND) $(TopDistDir) -type d ! -perm -777 -exec chmod a+rwx {} \; \
+	    -o ! -type d ! -perm -444 -links 1 -exec chmod a+r {} \; \
+	    -o ! -type d ! -perm -400 -exec chmod a+r {} \; \
+	    -o ! -type d ! -perm -444 -exec \
+	      $(SHELL) $(INSTALL_SH) -c -m a+r {} {} \; \
+	    || chmod -R a+r $(DistDir) ; \
+	fi
+
+# This is invoked by distdir target, define it as a no-op to avoid errors if not
+# defined by user.
+dist-hook::
+
+endif
+
+###############################################################################
+# TOP LEVEL - targets only to apply at the top level directory
+###############################################################################
+
+ifeq ($(LEVEL),.)
+
+#------------------------------------------------------------------------
+# Install support for the project's include files:
+#------------------------------------------------------------------------
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+install-local::
+	$(Echo) Installing include files
+	$(Verb) $(MKDIR) $(PROJ_includedir)
+	$(Verb) if test -d "$(PROJ_SRC_ROOT)/include" ; then \
+	  cd $(PROJ_SRC_ROOT)/include && \
+	  for  hdr in `find . -type f '!' '(' -name '*~' \
+	      -o -name '.#*' -o -name '*.in' ')' -print | grep -v CVS | \
+	      grep -v .svn` ; do \
+	    instdir=`dirname "$(PROJ_includedir)/$$hdr"` ; \
+	    if test \! -d "$$instdir" ; then \
+	      $(EchoCmd) Making install directory $$instdir ; \
+	      $(MKDIR) $$instdir ;\
+	    fi ; \
+	    $(DataInstall) $$hdr $(PROJ_includedir)/$$hdr ; \
+	  done ; \
+	fi
+ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
+	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/include" ; then \
+	  cd $(PROJ_OBJ_ROOT)/include && \
+	  for hdr in `find . -type f -print | grep -v CVS` ; do \
+	    $(DataInstall) $$hdr $(PROJ_includedir)/$$hdr ; \
+	  done ; \
+	fi
+endif
+
+uninstall-local::
+	$(Echo) Uninstalling include files
+	$(Verb) if [ -d "$(PROJ_SRC_ROOT)/include" ] ; then \
+	  cd $(PROJ_SRC_ROOT)/include && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f \
+	      '!' '(' -name '*~' -o -name '.#*' \
+        -o -name '*.in' ')' -print ')' | \
+        grep -v CVS | sed 's#^#$(PROJ_includedir)/#'` ; \
+	  cd $(PROJ_SRC_ROOT)/include && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f -name '*.in' \
+      -print ')' | sed 's#\.in$$##;s#^#$(PROJ_includedir)/#'` ; \
+	fi
+endif
+endif
+
+check-line-length:
+	@echo searching for overlength lines in files: $(Sources)
+	@echo
+	@echo
+	egrep -n '.{81}' $(Sources) /dev/null
+
+check-for-tabs:
+	@echo searching for tabs in files: $(Sources)
+	@echo
+	@echo
+	egrep -n '	' $(Sources) /dev/null
+
+check-footprint:
+	@ls -l $(LibDir) | awk '\
+	  BEGIN { sum = 0; } \
+	        { sum += $$5; } \
+	  END   { printf("Libraries: %6.3f MBytes\n", sum/(1024.0*1024.0)); }'
+	@ls -l $(ToolDir) | awk '\
+	  BEGIN { sum = 0; } \
+	        { sum += $$5; } \
+	  END   { printf("Programs:  %6.3f MBytes\n", sum/(1024.0*1024.0)); }'
+#------------------------------------------------------------------------
+# Print out the directories used for building
+#------------------------------------------------------------------------
+printvars::
+	$(Echo) "BuildMode    : " '$(BuildMode)'
+	$(Echo) "PROJ_SRC_ROOT: " '$(PROJ_SRC_ROOT)'
+	$(Echo) "PROJ_SRC_DIR : " '$(PROJ_SRC_DIR)'
+	$(Echo) "PROJ_OBJ_ROOT: " '$(PROJ_OBJ_ROOT)'
+	$(Echo) "PROJ_OBJ_DIR : " '$(PROJ_OBJ_DIR)'
+	$(Echo) "LLVM_SRC_ROOT: " '$(LLVM_SRC_ROOT)'
+	$(Echo) "LLVM_OBJ_ROOT: " '$(LLVM_OBJ_ROOT)'
+	$(Echo) "PROJ_prefix  : " '$(PROJ_prefix)'
+	$(Echo) "PROJ_bindir  : " '$(PROJ_bindir)'
+	$(Echo) "PROJ_libdir  : " '$(PROJ_libdir)'
+	$(Echo) "PROJ_etcdir  : " '$(PROJ_etcdir)'
+	$(Echo) "PROJ_includedir  : " '$(PROJ_includedir)'
+	$(Echo) "UserTargets  : " '$(UserTargets)'
+	$(Echo) "ObjMakefiles : " '$(ObjMakefiles)'
+	$(Echo) "SrcMakefiles : " '$(SrcMakefiles)'
+	$(Echo) "ObjDir       : " '$(ObjDir)'
+	$(Echo) "LibDir       : " '$(LibDir)'
+	$(Echo) "ToolDir      : " '$(ToolDir)'
+	$(Echo) "ExmplDir     : " '$(ExmplDir)'
+	$(Echo) "Sources      : " '$(Sources)'
+	$(Echo) "TDFiles      : " '$(TDFiles)'
+	$(Echo) "INCFiles     : " '$(INCFiles)'
+	$(Echo) "INCTMPFiles  : " '$(INCTMPFiles)'
+	$(Echo) "PreConditions: " '$(PreConditions)'
+	$(Echo) "Compile.CXX  : " '$(Compile.CXX)'
+	$(Echo) "Compile.C    : " '$(Compile.C)'
+	$(Echo) "Archive      : " '$(Archive)'
+	$(Echo) "YaccFiles    : " '$(YaccFiles)'
+	$(Echo) "LexFiles     : " '$(LexFiles)'
+	$(Echo) "Module       : " '$(Module)'
+	$(Echo) "FilesToConfig: " '$(FilesToConfigPATH)'
+	$(Echo) "SubDirs      : " '$(SubDirs)'
+	$(Echo) "ProjLibsPaths: " '$(ProjLibsPaths)'
+	$(Echo) "ProjLibsOptions: " '$(ProjLibsOptions)'

@@ -1,0 +1,3 @@
+load_lib llvm2cpp.exp
+
+llvm2cpp-test [lsort [glob -nocomplain $srcdir/$subdir/*.ll]]

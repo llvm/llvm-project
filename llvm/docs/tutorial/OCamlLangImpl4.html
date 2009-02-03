@@ -1,0 +1,1036 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+  <title>Kaleidoscope: Adding JIT and Optimizer Support</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="author" content="Chris Lattner">
+  <meta name="author" content="Erick Tryzelaar">
+  <link rel="stylesheet" href="../llvm.css" type="text/css">
+</head>
+
+<body>
+
+<div class="doc_title">Kaleidoscope: Adding JIT and Optimizer Support</div>
+
+<ul>
+<li><a href="index.html">Up to Tutorial Index</a></li>
+<li>Chapter 4
+  <ol>
+    <li><a href="#intro">Chapter 4 Introduction</a></li>
+    <li><a href="#trivialconstfold">Trivial Constant Folding</a></li>
+    <li><a href="#optimizerpasses">LLVM Optimization Passes</a></li>
+    <li><a href="#jit">Adding a JIT Compiler</a></li>
+    <li><a href="#code">Full Code Listing</a></li>
+  </ol>
+</li>
+<li><a href="OCamlLangImpl5.html">Chapter 5</a>: Extending the Language: Control
+Flow</li>
+</ul>
+
+<div class="doc_author">
+	<p>
+		Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a>
+		and <a href="mailto:idadesub@users.sourceforge.net">Erick Tryzelaar</a>
+	</p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="intro">Chapter 4 Introduction</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>Welcome to Chapter 4 of the "<a href="index.html">Implementing a language
+with LLVM</a>" tutorial.  Chapters 1-3 described the implementation of a simple
+language and added support for generating LLVM IR.  This chapter describes
+two new techniques: adding optimizer support to your language, and adding JIT
+compiler support.  These additions will demonstrate how to get nice, efficient code
+for the Kaleidoscope language.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="trivialconstfold">Trivial Constant
+Folding</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p><b>Note:</b> the default <tt>IRBuilder</tt> now always includes the constant 
+folding optimisations below.<p>
+
+<p>
+Our demonstration for Chapter 3 is elegant and easy to extend.  Unfortunately,
+it does not produce wonderful code.  For example, when compiling simple code,
+we don't get obvious optimizations:</p>
+
+<div class="doc_code">
+<pre>
+ready&gt; <b>def test(x) 1+2+x;</b>
+Read function definition:
+define double @test(double %x) {
+entry:
+        %addtmp = add double 1.000000e+00, 2.000000e+00
+        %addtmp1 = add double %addtmp, %x
+        ret double %addtmp1
+}
+</pre>
+</div>
+
+<p>This code is a very, very literal transcription of the AST built by parsing
+the input. As such, this transcription lacks optimizations like constant folding
+(we'd like to get "<tt>add x, 3.0</tt>" in the example above) as well as other
+more important optimizations.  Constant folding, in particular, is a very common
+and very important optimization: so much so that many language implementors
+implement constant folding support in their AST representation.</p>
+
+<p>With LLVM, you don't need this support in the AST.  Since all calls to build
+LLVM IR go through the LLVM builder, it would be nice if the builder itself
+checked to see if there was a constant folding opportunity when you call it.
+If so, it could just do the constant fold and return the constant instead of
+creating an instruction.  This is exactly what the <tt>LLVMFoldingBuilder</tt>
+class does.
+
+<p>All we did was switch from <tt>LLVMBuilder</tt> to
+<tt>LLVMFoldingBuilder</tt>.  Though we change no other code, we now have all of our
+instructions implicitly constant folded without us having to do anything
+about it.  For example, the input above now compiles to:</p>
+
+<div class="doc_code">
+<pre>
+ready&gt; <b>def test(x) 1+2+x;</b>
+Read function definition:
+define double @test(double %x) {
+entry:
+        %addtmp = add double 3.000000e+00, %x
+        ret double %addtmp
+}
+</pre>
+</div>
+
+<p>Well, that was easy :).  In practice, we recommend always using
+<tt>LLVMFoldingBuilder</tt> when generating code like this.  It has no
+"syntactic overhead" for its use (you don't have to uglify your compiler with
+constant checks everywhere) and it can dramatically reduce the amount of
+LLVM IR that is generated in some cases (particular for languages with a macro
+preprocessor or that use a lot of constants).</p>
+
+<p>On the other hand, the <tt>LLVMFoldingBuilder</tt> is limited by the fact
+that it does all of its analysis inline with the code as it is built.  If you
+take a slightly more complex example:</p>
+
+<div class="doc_code">
+<pre>
+ready&gt; <b>def test(x) (1+2+x)*(x+(1+2));</b>
+ready&gt; Read function definition:
+define double @test(double %x) {
+entry:
+        %addtmp = add double 3.000000e+00, %x
+        %addtmp1 = add double %x, 3.000000e+00
+        %multmp = mul double %addtmp, %addtmp1
+        ret double %multmp
+}
+</pre>
+</div>
+
+<p>In this case, the LHS and RHS of the multiplication are the same value.  We'd
+really like to see this generate "<tt>tmp = x+3; result = tmp*tmp;</tt>" instead
+of computing "<tt>x*3</tt>" twice.</p>
+
+<p>Unfortunately, no amount of local analysis will be able to detect and correct
+this.  This requires two transformations: reassociation of expressions (to
+make the add's lexically identical) and Common Subexpression Elimination (CSE)
+to  delete the redundant add instruction.  Fortunately, LLVM provides a broad
+range of optimizations that you can use, in the form of "passes".</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="optimizerpasses">LLVM Optimization
+ Passes</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>LLVM provides many optimization passes, which do many different sorts of
+things and have different tradeoffs.  Unlike other systems, LLVM doesn't hold
+to the mistaken notion that one set of optimizations is right for all languages
+and for all situations.  LLVM allows a compiler implementor to make complete
+decisions about what optimizations to use, in which order, and in what
+situation.</p>
+
+<p>As a concrete example, LLVM supports both "whole module" passes, which look
+across as large of body of code as they can (often a whole file, but if run
+at link time, this can be a substantial portion of the whole program).  It also
+supports and includes "per-function" passes which just operate on a single
+function at a time, without looking at other functions.  For more information
+on passes and how they are run, see the <a href="../WritingAnLLVMPass.html">How
+to Write a Pass</a> document and the <a href="../Passes.html">List of LLVM
+Passes</a>.</p>
+
+<p>For Kaleidoscope, we are currently generating functions on the fly, one at
+a time, as the user types them in.  We aren't shooting for the ultimate
+optimization experience in this setting, but we also want to catch the easy and
+quick stuff where possible.  As such, we will choose to run a few per-function
+optimizations as the user types the function in.  If we wanted to make a "static
+Kaleidoscope compiler", we would use exactly the code we have now, except that
+we would defer running the optimizer until the entire file has been parsed.</p>
+
+<p>In order to get per-function optimizations going, we need to set up a
+<a href="../WritingAnLLVMPass.html#passmanager">Llvm.PassManager</a> to hold and
+organize the LLVM optimizations that we want to run.  Once we have that, we can
+add a set of optimizations to run.  The code looks like this:</p>
+
+<div class="doc_code">
+<pre>
+  (* Create the JIT. *)
+  let the_module_provider = ModuleProvider.create Codegen.the_module in
+  let the_execution_engine = ExecutionEngine.create the_module_provider in
+  let the_fpm = PassManager.create_function the_module_provider in
+
+  (* Set up the optimizer pipeline.  Start with registering info about how the
+   * target lays out data structures. *)
+  TargetData.add (ExecutionEngine.target_data the_execution_engine) the_fpm;
+
+  (* Do simple "peephole" optimizations and bit-twiddling optzn. *)
+  add_instruction_combining the_fpm;
+
+  (* reassociate expressions. *)
+  add_reassociation the_fpm;
+
+  (* Eliminate Common SubExpressions. *)
+  add_gvn the_fpm;
+
+  (* Simplify the control flow graph (deleting unreachable blocks, etc). *)
+  add_cfg_simplification the_fpm;
+
+  (* Run the main "interpreter loop" now. *)
+  Toplevel.main_loop the_fpm the_execution_engine stream;
+</pre>
+</div>
+
+<p>This code defines two values, an <tt>Llvm.llmoduleprovider</tt> and a
+<tt>Llvm.PassManager.t</tt>.  The former is basically a wrapper around our
+<tt>Llvm.llmodule</tt> that the <tt>Llvm.PassManager.t</tt> requires.  It
+provides certain flexibility that we're not going to take advantage of here,
+so I won't dive into any details about it.</p>
+
+<p>The meat of the matter here, is the definition of "<tt>the_fpm</tt>".  It
+requires a pointer to the <tt>the_module</tt> (through the
+<tt>the_module_provider</tt>) to construct itself.  Once it is set up, we use a
+series of "add" calls to add a bunch of LLVM passes.  The first pass is
+basically boilerplate, it adds a pass so that later optimizations know how the
+data structures in the program are layed out.  The
+"<tt>the_execution_engine</tt>" variable is related to the JIT, which we will
+get to in the next section.</p>
+
+<p>In this case, we choose to add 4 optimization passes.  The passes we chose
+here are a pretty standard set of "cleanup" optimizations that are useful for
+a wide variety of code.  I won't delve into what they do but, believe me,
+they are a good starting place :).</p>
+
+<p>Once the <tt>Llvm.PassManager.</tt> is set up, we need to make use of it.
+We do this by running it after our newly created function is constructed (in
+<tt>Codegen.codegen_func</tt>), but before it is returned to the client:</p>
+
+<div class="doc_code">
+<pre>
+let codegen_func the_fpm = function
+      ...
+      try
+        let ret_val = codegen_expr body in
+
+        (* Finish off the function. *)
+        let _ = build_ret ret_val builder in
+
+        (* Validate the generated code, checking for consistency. *)
+        Llvm_analysis.assert_valid_function the_function;
+
+        (* Optimize the function. *)
+        let _ = PassManager.run_function the_function the_fpm in
+
+        the_function
+</pre>
+</div>
+
+<p>As you can see, this is pretty straightforward.  The <tt>the_fpm</tt>
+optimizes and updates the LLVM Function* in place, improving (hopefully) its
+body.  With this in place, we can try our test above again:</p>
+
+<div class="doc_code">
+<pre>
+ready&gt; <b>def test(x) (1+2+x)*(x+(1+2));</b>
+ready&gt; Read function definition:
+define double @test(double %x) {
+entry:
+        %addtmp = add double %x, 3.000000e+00
+        %multmp = mul double %addtmp, %addtmp
+        ret double %multmp
+}
+</pre>
+</div>
+
+<p>As expected, we now get our nicely optimized code, saving a floating point
+add instruction from every execution of this function.</p>
+
+<p>LLVM provides a wide variety of optimizations that can be used in certain
+circumstances.  Some <a href="../Passes.html">documentation about the various
+passes</a> is available, but it isn't very complete.  Another good source of
+ideas can come from looking at the passes that <tt>llvm-gcc</tt> or
+<tt>llvm-ld</tt> run to get started.  The "<tt>opt</tt>" tool allows you to
+experiment with passes from the command line, so you can see if they do
+anything.</p>
+
+<p>Now that we have reasonable code coming out of our front-end, lets talk about
+executing it!</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="jit">Adding a JIT Compiler</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>Code that is available in LLVM IR can have a wide variety of tools
+applied to it.  For example, you can run optimizations on it (as we did above),
+you can dump it out in textual or binary forms, you can compile the code to an
+assembly file (.s) for some target, or you can JIT compile it.  The nice thing
+about the LLVM IR representation is that it is the "common currency" between
+many different parts of the compiler.
+</p>
+
+<p>In this section, we'll add JIT compiler support to our interpreter.  The
+basic idea that we want for Kaleidoscope is to have the user enter function
+bodies as they do now, but immediately evaluate the top-level expressions they
+type in.  For example, if they type in "1 + 2;", we should evaluate and print
+out 3.  If they define a function, they should be able to call it from the
+command line.</p>
+
+<p>In order to do this, we first declare and initialize the JIT.  This is done
+by adding a global variable and a call in <tt>main</tt>:</p>
+
+<div class="doc_code">
+<pre>
+...
+let main () =
+  ...
+  <b>(* Create the JIT. *)
+  let the_module_provider = ModuleProvider.create Codegen.the_module in
+  let the_execution_engine = ExecutionEngine.create the_module_provider in</b>
+  ...
+</pre>
+</div>
+
+<p>This creates an abstract "Execution Engine" which can be either a JIT
+compiler or the LLVM interpreter.  LLVM will automatically pick a JIT compiler
+for you if one is available for your platform, otherwise it will fall back to
+the interpreter.</p>
+
+<p>Once the <tt>Llvm_executionengine.ExecutionEngine.t</tt> is created, the JIT
+is ready to be used.  There are a variety of APIs that are useful, but the
+simplest one is the "<tt>Llvm_executionengine.ExecutionEngine.run_function</tt>"
+function.  This method JIT compiles the specified LLVM Function and returns a
+function pointer to the generated machine code.  In our case, this means that we
+can change the code that parses a top-level expression to look like this:</p>
+
+<div class="doc_code">
+<pre>
+            (* Evaluate a top-level expression into an anonymous function. *)
+            let e = Parser.parse_toplevel stream in
+            print_endline "parsed a top-level expr";
+            let the_function = Codegen.codegen_func the_fpm e in
+            dump_value the_function;
+
+            (* JIT the function, returning a function pointer. *)
+            let result = ExecutionEngine.run_function the_function [||]
+              the_execution_engine in
+
+            print_string "Evaluated to ";
+            print_float (GenericValue.as_float double_type result);
+            print_newline ();
+</pre>
+</div>
+
+<p>Recall that we compile top-level expressions into a self-contained LLVM
+function that takes no arguments and returns the computed double.  Because the
+LLVM JIT compiler matches the native platform ABI, this means that you can just
+cast the result pointer to a function pointer of that type and call it directly.
+This means, there is no difference between JIT compiled code and native machine
+code that is statically linked into your application.</p>
+
+<p>With just these two changes, lets see how Kaleidoscope works now!</p>
+
+<div class="doc_code">
+<pre>
+ready&gt; <b>4+5;</b>
+define double @""() {
+entry:
+        ret double 9.000000e+00
+}
+
+<em>Evaluated to 9.000000</em>
+</pre>
+</div>
+
+<p>Well this looks like it is basically working.  The dump of the function
+shows the "no argument function that always returns double" that we synthesize
+for each top level expression that is typed in.  This demonstrates very basic
+functionality, but can we do more?</p>
+
+<div class="doc_code">
+<pre>
+ready&gt; <b>def testfunc(x y) x + y*2; </b>
+Read function definition:
+define double @testfunc(double %x, double %y) {
+entry:
+        %multmp = mul double %y, 2.000000e+00
+        %addtmp = add double %multmp, %x
+        ret double %addtmp
+}
+
+ready&gt; <b>testfunc(4, 10);</b>
+define double @""() {
+entry:
+        %calltmp = call double @testfunc( double 4.000000e+00, double 1.000000e+01 )
+        ret double %calltmp
+}
+
+<em>Evaluated to 24.000000</em>
+</pre>
+</div>
+
+<p>This illustrates that we can now call user code, but there is something a bit
+subtle going on here.  Note that we only invoke the JIT on the anonymous
+functions that <em>call testfunc</em>, but we never invoked it on <em>testfunc
+</em>itself.</p>
+
+<p>What actually happened here is that the anonymous function was JIT'd when
+requested.  When the Kaleidoscope app calls through the function pointer that is
+returned, the anonymous function starts executing.  It ends up making the call
+to the "testfunc" function, and ends up in a stub that invokes the JIT, lazily,
+on testfunc.  Once the JIT finishes lazily compiling testfunc,
+it returns and the code re-executes the call.</p>
+
+<p>In summary, the JIT will lazily JIT code, on the fly, as it is needed.  The
+JIT provides a number of other more advanced interfaces for things like freeing
+allocated machine code, rejit'ing functions to update them, etc.  However, even
+with this simple code, we get some surprisingly powerful capabilities - check
+this out (I removed the dump of the anonymous functions, you should get the idea
+by now :) :</p>
+
+<div class="doc_code">
+<pre>
+ready&gt; <b>extern sin(x);</b>
+Read extern:
+declare double @sin(double)
+
+ready&gt; <b>extern cos(x);</b>
+Read extern:
+declare double @cos(double)
+
+ready&gt; <b>sin(1.0);</b>
+<em>Evaluated to 0.841471</em>
+
+ready&gt; <b>def foo(x) sin(x)*sin(x) + cos(x)*cos(x);</b>
+Read function definition:
+define double @foo(double %x) {
+entry:
+        %calltmp = call double @sin( double %x )
+        %multmp = mul double %calltmp, %calltmp
+        %calltmp2 = call double @cos( double %x )
+        %multmp4 = mul double %calltmp2, %calltmp2
+        %addtmp = add double %multmp, %multmp4
+        ret double %addtmp
+}
+
+ready&gt; <b>foo(4.0);</b>
+<em>Evaluated to 1.000000</em>
+</pre>
+</div>
+
+<p>Whoa, how does the JIT know about sin and cos?  The answer is surprisingly
+simple: in this example, the JIT started execution of a function and got to a
+function call.  It realized that the function was not yet JIT compiled and
+invoked the standard set of routines to resolve the function.  In this case,
+there is no body defined for the function, so the JIT ended up calling
+"<tt>dlsym("sin")</tt>" on the Kaleidoscope process itself.  Since
+"<tt>sin</tt>" is defined within the JIT's address space, it simply patches up
+calls in the module to call the libm version of <tt>sin</tt> directly.</p>
+
+<p>The LLVM JIT provides a number of interfaces (look in the
+<tt>llvm_executionengine.mli</tt> file) for controlling how unknown functions
+get resolved.  It allows you to establish explicit mappings between IR objects
+and addresses (useful for LLVM global variables that you want to map to static
+tables, for example), allows you to dynamically decide on the fly based on the
+function name, and even allows you to have the JIT abort itself if any lazy
+compilation is attempted.</p>
+
+<p>One interesting application of this is that we can now extend the language
+by writing arbitrary C code to implement operations.  For example, if we add:
+</p>
+
+<div class="doc_code">
+<pre>
+/* putchard - putchar that takes a double and returns 0. */
+extern "C"
+double putchard(double X) {
+  putchar((char)X);
+  return 0;
+}
+</pre>
+</div>
+
+<p>Now we can produce simple output to the console by using things like:
+"<tt>extern putchard(x); putchard(120);</tt>", which prints a lowercase 'x' on
+the console (120 is the ASCII code for 'x').  Similar code could be used to
+implement file I/O, console input, and many other capabilities in
+Kaleidoscope.</p>
+
+<p>This completes the JIT and optimizer chapter of the Kaleidoscope tutorial. At
+this point, we can compile a non-Turing-complete programming language, optimize
+and JIT compile it in a user-driven way.  Next up we'll look into <a
+href="OCamlLangImpl5.html">extending the language with control flow
+constructs</a>, tackling some interesting LLVM IR issues along the way.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="code">Full Code Listing</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>
+Here is the complete code listing for our running example, enhanced with the
+LLVM JIT and optimizer.  To build this example, use:
+</p>
+
+<div class="doc_code">
+<pre>
+# Compile
+ocamlbuild toy.byte
+# Run
+./toy.byte
+</pre>
+</div>
+
+<p>Here is the code:</p>
+
+<dl>
+<dt>_tags:</dt>
+<dd class="doc_code">
+<pre>
+&lt;{lexer,parser}.ml&gt;: use_camlp4, pp(camlp4of)
+&lt;*.{byte,native}&gt;: g++, use_llvm, use_llvm_analysis
+&lt;*.{byte,native}&gt;: use_llvm_executionengine, use_llvm_target
+&lt;*.{byte,native}&gt;: use_llvm_scalar_opts, use_bindings
+</pre>
+</dd>
+
+<dt>myocamlbuild.ml:</dt>
+<dd class="doc_code">
+<pre>
+open Ocamlbuild_plugin;;
+
+ocaml_lib ~extern:true "llvm";;
+ocaml_lib ~extern:true "llvm_analysis";;
+ocaml_lib ~extern:true "llvm_executionengine";;
+ocaml_lib ~extern:true "llvm_target";;
+ocaml_lib ~extern:true "llvm_scalar_opts";;
+
+flag ["link"; "ocaml"; "g++"] (S[A"-cc"; A"g++"]);;
+dep ["link"; "ocaml"; "use_bindings"] ["bindings.o"];;
+</pre>
+</dd>
+
+<dt>token.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Lexer Tokens
+ *===----------------------------------------------------------------------===*)
+
+(* The lexer returns these 'Kwd' if it is an unknown character, otherwise one of
+ * these others for known things. *)
+type token =
+  (* commands *)
+  | Def | Extern
+
+  (* primary *)
+  | Ident of string | Number of float
+
+  (* unknown *)
+  | Kwd of char
+</pre>
+</dd>
+
+<dt>lexer.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Lexer
+ *===----------------------------------------------------------------------===*)
+
+let rec lex = parser
+  (* Skip any whitespace. *)
+  | [&lt; ' (' ' | '\n' | '\r' | '\t'); stream &gt;] -&gt; lex stream
+
+  (* identifier: [a-zA-Z][a-zA-Z0-9] *)
+  | [&lt; ' ('A' .. 'Z' | 'a' .. 'z' as c); stream &gt;] -&gt;
+      let buffer = Buffer.create 1 in
+      Buffer.add_char buffer c;
+      lex_ident buffer stream
+
+  (* number: [0-9.]+ *)
+  | [&lt; ' ('0' .. '9' as c); stream &gt;] -&gt;
+      let buffer = Buffer.create 1 in
+      Buffer.add_char buffer c;
+      lex_number buffer stream
+
+  (* Comment until end of line. *)
+  | [&lt; ' ('#'); stream &gt;] -&gt;
+      lex_comment stream
+
+  (* Otherwise, just return the character as its ascii value. *)
+  | [&lt; 'c; stream &gt;] -&gt;
+      [&lt; 'Token.Kwd c; lex stream &gt;]
+
+  (* end of stream. *)
+  | [&lt; &gt;] -&gt; [&lt; &gt;]
+
+and lex_number buffer = parser
+  | [&lt; ' ('0' .. '9' | '.' as c); stream &gt;] -&gt;
+      Buffer.add_char buffer c;
+      lex_number buffer stream
+  | [&lt; stream=lex &gt;] -&gt;
+      [&lt; 'Token.Number (float_of_string (Buffer.contents buffer)); stream &gt;]
+
+and lex_ident buffer = parser
+  | [&lt; ' ('A' .. 'Z' | 'a' .. 'z' | '0' .. '9' as c); stream &gt;] -&gt;
+      Buffer.add_char buffer c;
+      lex_ident buffer stream
+  | [&lt; stream=lex &gt;] -&gt;
+      match Buffer.contents buffer with
+      | "def" -&gt; [&lt; 'Token.Def; stream &gt;]
+      | "extern" -&gt; [&lt; 'Token.Extern; stream &gt;]
+      | id -&gt; [&lt; 'Token.Ident id; stream &gt;]
+
+and lex_comment = parser
+  | [&lt; ' ('\n'); stream=lex &gt;] -&gt; stream
+  | [&lt; 'c; e=lex_comment &gt;] -&gt; e
+  | [&lt; &gt;] -&gt; [&lt; &gt;]
+</pre>
+</dd>
+
+<dt>ast.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Abstract Syntax Tree (aka Parse Tree)
+ *===----------------------------------------------------------------------===*)
+
+(* expr - Base type for all expression nodes. *)
+type expr =
+  (* variant for numeric literals like "1.0". *)
+  | Number of float
+
+  (* variant for referencing a variable, like "a". *)
+  | Variable of string
+
+  (* variant for a binary operator. *)
+  | Binary of char * expr * expr
+
+  (* variant for function calls. *)
+  | Call of string * expr array
+
+(* proto - This type represents the "prototype" for a function, which captures
+ * its name, and its argument names (thus implicitly the number of arguments the
+ * function takes). *)
+type proto = Prototype of string * string array
+
+(* func - This type represents a function definition itself. *)
+type func = Function of proto * expr
+</pre>
+</dd>
+
+<dt>parser.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===---------------------------------------------------------------------===
+ * Parser
+ *===---------------------------------------------------------------------===*)
+
+(* binop_precedence - This holds the precedence for each binary operator that is
+ * defined *)
+let binop_precedence:(char, int) Hashtbl.t = Hashtbl.create 10
+
+(* precedence - Get the precedence of the pending binary operator token. *)
+let precedence c = try Hashtbl.find binop_precedence c with Not_found -&gt; -1
+
+(* primary
+ *   ::= identifier
+ *   ::= numberexpr
+ *   ::= parenexpr *)
+let rec parse_primary = parser
+  (* numberexpr ::= number *)
+  | [&lt; 'Token.Number n &gt;] -&gt; Ast.Number n
+
+  (* parenexpr ::= '(' expression ')' *)
+  | [&lt; 'Token.Kwd '('; e=parse_expr; 'Token.Kwd ')' ?? "expected ')'" &gt;] -&gt; e
+
+  (* identifierexpr
+   *   ::= identifier
+   *   ::= identifier '(' argumentexpr ')' *)
+  | [&lt; 'Token.Ident id; stream &gt;] -&gt;
+      let rec parse_args accumulator = parser
+        | [&lt; e=parse_expr; stream &gt;] -&gt;
+            begin parser
+              | [&lt; 'Token.Kwd ','; e=parse_args (e :: accumulator) &gt;] -&gt; e
+              | [&lt; &gt;] -&gt; e :: accumulator
+            end stream
+        | [&lt; &gt;] -&gt; accumulator
+      in
+      let rec parse_ident id = parser
+        (* Call. *)
+        | [&lt; 'Token.Kwd '(';
+             args=parse_args [];
+             'Token.Kwd ')' ?? "expected ')'"&gt;] -&gt;
+            Ast.Call (id, Array.of_list (List.rev args))
+
+        (* Simple variable ref. *)
+        | [&lt; &gt;] -&gt; Ast.Variable id
+      in
+      parse_ident id stream
+
+  | [&lt; &gt;] -&gt; raise (Stream.Error "unknown token when expecting an expression.")
+
+(* binoprhs
+ *   ::= ('+' primary)* *)
+and parse_bin_rhs expr_prec lhs stream =
+  match Stream.peek stream with
+  (* If this is a binop, find its precedence. *)
+  | Some (Token.Kwd c) when Hashtbl.mem binop_precedence c -&gt;
+      let token_prec = precedence c in
+
+      (* If this is a binop that binds at least as tightly as the current binop,
+       * consume it, otherwise we are done. *)
+      if token_prec &lt; expr_prec then lhs else begin
+        (* Eat the binop. *)
+        Stream.junk stream;
+
+        (* Parse the primary expression after the binary operator. *)
+        let rhs = parse_primary stream in
+
+        (* Okay, we know this is a binop. *)
+        let rhs =
+          match Stream.peek stream with
+          | Some (Token.Kwd c2) -&gt;
+              (* If BinOp binds less tightly with rhs than the operator after
+               * rhs, let the pending operator take rhs as its lhs. *)
+              let next_prec = precedence c2 in
+              if token_prec &lt; next_prec
+              then parse_bin_rhs (token_prec + 1) rhs stream
+              else rhs
+          | _ -&gt; rhs
+        in
+
+        (* Merge lhs/rhs. *)
+        let lhs = Ast.Binary (c, lhs, rhs) in
+        parse_bin_rhs expr_prec lhs stream
+      end
+  | _ -&gt; lhs
+
+(* expression
+ *   ::= primary binoprhs *)
+and parse_expr = parser
+  | [&lt; lhs=parse_primary; stream &gt;] -&gt; parse_bin_rhs 0 lhs stream
+
+(* prototype
+ *   ::= id '(' id* ')' *)
+let parse_prototype =
+  let rec parse_args accumulator = parser
+    | [&lt; 'Token.Ident id; e=parse_args (id::accumulator) &gt;] -&gt; e
+    | [&lt; &gt;] -&gt; accumulator
+  in
+
+  parser
+  | [&lt; 'Token.Ident id;
+       'Token.Kwd '(' ?? "expected '(' in prototype";
+       args=parse_args [];
+       'Token.Kwd ')' ?? "expected ')' in prototype" &gt;] -&gt;
+      (* success. *)
+      Ast.Prototype (id, Array.of_list (List.rev args))
+
+  | [&lt; &gt;] -&gt;
+      raise (Stream.Error "expected function name in prototype")
+
+(* definition ::= 'def' prototype expression *)
+let parse_definition = parser
+  | [&lt; 'Token.Def; p=parse_prototype; e=parse_expr &gt;] -&gt;
+      Ast.Function (p, e)
+
+(* toplevelexpr ::= expression *)
+let parse_toplevel = parser
+  | [&lt; e=parse_expr &gt;] -&gt;
+      (* Make an anonymous proto. *)
+      Ast.Function (Ast.Prototype ("", [||]), e)
+
+(*  external ::= 'extern' prototype *)
+let parse_extern = parser
+  | [&lt; 'Token.Extern; e=parse_prototype &gt;] -&gt; e
+</pre>
+</dd>
+
+<dt>codegen.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Code Generation
+ *===----------------------------------------------------------------------===*)
+
+open Llvm
+
+exception Error of string
+
+let the_module = create_module "my cool jit"
+let builder = builder ()
+let named_values:(string, llvalue) Hashtbl.t = Hashtbl.create 10
+
+let rec codegen_expr = function
+  | Ast.Number n -&gt; const_float double_type n
+  | Ast.Variable name -&gt;
+      (try Hashtbl.find named_values name with
+        | Not_found -&gt; raise (Error "unknown variable name"))
+  | Ast.Binary (op, lhs, rhs) -&gt;
+      let lhs_val = codegen_expr lhs in
+      let rhs_val = codegen_expr rhs in
+      begin
+        match op with
+        | '+' -&gt; build_add lhs_val rhs_val "addtmp" builder
+        | '-' -&gt; build_sub lhs_val rhs_val "subtmp" builder
+        | '*' -&gt; build_mul lhs_val rhs_val "multmp" builder
+        | '&lt;' -&gt;
+            (* Convert bool 0/1 to double 0.0 or 1.0 *)
+            let i = build_fcmp Fcmp.Ult lhs_val rhs_val "cmptmp" builder in
+            build_uitofp i double_type "booltmp" builder
+        | _ -&gt; raise (Error "invalid binary operator")
+      end
+  | Ast.Call (callee, args) -&gt;
+      (* Look up the name in the module table. *)
+      let callee =
+        match lookup_function callee the_module with
+        | Some callee -&gt; callee
+        | None -&gt; raise (Error "unknown function referenced")
+      in
+      let params = params callee in
+
+      (* If argument mismatch error. *)
+      if Array.length params == Array.length args then () else
+        raise (Error "incorrect # arguments passed");
+      let args = Array.map codegen_expr args in
+      build_call callee args "calltmp" builder
+
+let codegen_proto = function
+  | Ast.Prototype (name, args) -&gt;
+      (* Make the function type: double(double,double) etc. *)
+      let doubles = Array.make (Array.length args) double_type in
+      let ft = function_type double_type doubles in
+      let f =
+        match lookup_function name the_module with
+        | None -&gt; declare_function name ft the_module
+
+        (* If 'f' conflicted, there was already something named 'name'. If it
+         * has a body, don't allow redefinition or reextern. *)
+        | Some f -&gt;
+            (* If 'f' already has a body, reject this. *)
+            if block_begin f &lt;&gt; At_end f then
+              raise (Error "redefinition of function");
+
+            (* If 'f' took a different number of arguments, reject. *)
+            if element_type (type_of f) &lt;&gt; ft then
+              raise (Error "redefinition of function with different # args");
+            f
+      in
+
+      (* Set names for all arguments. *)
+      Array.iteri (fun i a -&gt;
+        let n = args.(i) in
+        set_value_name n a;
+        Hashtbl.add named_values n a;
+      ) (params f);
+      f
+
+let codegen_func the_fpm = function
+  | Ast.Function (proto, body) -&gt;
+      Hashtbl.clear named_values;
+      let the_function = codegen_proto proto in
+
+      (* Create a new basic block to start insertion into. *)
+      let bb = append_block "entry" the_function in
+      position_at_end bb builder;
+
+      try
+        let ret_val = codegen_expr body in
+
+        (* Finish off the function. *)
+        let _ = build_ret ret_val builder in
+
+        (* Validate the generated code, checking for consistency. *)
+        Llvm_analysis.assert_valid_function the_function;
+
+        (* Optimize the function. *)
+        let _ = PassManager.run_function the_function the_fpm in
+
+        the_function
+      with e -&gt;
+        delete_function the_function;
+        raise e
+</pre>
+</dd>
+
+<dt>toplevel.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Top-Level parsing and JIT Driver
+ *===----------------------------------------------------------------------===*)
+
+open Llvm
+open Llvm_executionengine
+
+(* top ::= definition | external | expression | ';' *)
+let rec main_loop the_fpm the_execution_engine stream =
+  match Stream.peek stream with
+  | None -&gt; ()
+
+  (* ignore top-level semicolons. *)
+  | Some (Token.Kwd ';') -&gt;
+      Stream.junk stream;
+      main_loop the_fpm the_execution_engine stream
+
+  | Some token -&gt;
+      begin
+        try match token with
+        | Token.Def -&gt;
+            let e = Parser.parse_definition stream in
+            print_endline "parsed a function definition.";
+            dump_value (Codegen.codegen_func the_fpm e);
+        | Token.Extern -&gt;
+            let e = Parser.parse_extern stream in
+            print_endline "parsed an extern.";
+            dump_value (Codegen.codegen_proto e);
+        | _ -&gt;
+            (* Evaluate a top-level expression into an anonymous function. *)
+            let e = Parser.parse_toplevel stream in
+            print_endline "parsed a top-level expr";
+            let the_function = Codegen.codegen_func the_fpm e in
+            dump_value the_function;
+
+            (* JIT the function, returning a function pointer. *)
+            let result = ExecutionEngine.run_function the_function [||]
+              the_execution_engine in
+
+            print_string "Evaluated to ";
+            print_float (GenericValue.as_float double_type result);
+            print_newline ();
+        with Stream.Error s | Codegen.Error s -&gt;
+          (* Skip token for error recovery. *)
+          Stream.junk stream;
+          print_endline s;
+      end;
+      print_string "ready&gt; "; flush stdout;
+      main_loop the_fpm the_execution_engine stream
+</pre>
+</dd>
+
+<dt>toy.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Main driver code.
+ *===----------------------------------------------------------------------===*)
+
+open Llvm
+open Llvm_executionengine
+open Llvm_target
+open Llvm_scalar_opts
+
+let main () =
+  (* Install standard binary operators.
+   * 1 is the lowest precedence. *)
+  Hashtbl.add Parser.binop_precedence '&lt;' 10;
+  Hashtbl.add Parser.binop_precedence '+' 20;
+  Hashtbl.add Parser.binop_precedence '-' 20;
+  Hashtbl.add Parser.binop_precedence '*' 40;    (* highest. *)
+
+  (* Prime the first token. *)
+  print_string "ready&gt; "; flush stdout;
+  let stream = Lexer.lex (Stream.of_channel stdin) in
+
+  (* Create the JIT. *)
+  let the_module_provider = ModuleProvider.create Codegen.the_module in
+  let the_execution_engine = ExecutionEngine.create the_module_provider in
+  let the_fpm = PassManager.create_function the_module_provider in
+
+  (* Set up the optimizer pipeline.  Start with registering info about how the
+   * target lays out data structures. *)
+  TargetData.add (ExecutionEngine.target_data the_execution_engine) the_fpm;
+
+  (* Do simple "peephole" optimizations and bit-twiddling optzn. *)
+  add_instruction_combining the_fpm;
+
+  (* reassociate expressions. *)
+  add_reassociation the_fpm;
+
+  (* Eliminate Common SubExpressions. *)
+  add_gvn the_fpm;
+
+  (* Simplify the control flow graph (deleting unreachable blocks, etc). *)
+  add_cfg_simplification the_fpm;
+
+  (* Run the main "interpreter loop" now. *)
+  Toplevel.main_loop the_fpm the_execution_engine stream;
+
+  (* Print out all the generated code. *)
+  dump_module Codegen.the_module
+;;
+
+main ()
+</pre>
+</dd>
+
+<dt>bindings.c</dt>
+<dd class="doc_code">
+<pre>
+#include &lt;stdio.h&gt;
+
+/* putchard - putchar that takes a double and returns 0. */
+extern double putchard(double X) {
+  putchar((char)X);
+  return 0;
+}
+</pre>
+</dd>
+</dl>
+
+<a href="OCamlLangImpl5.html">Next: Extending the language: control flow</a>
+</div>
+
+<!-- *********************************************************************** -->
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01!"></a>
+
+  <a href="mailto:sabre@nondot.org">Chris Lattner</a><br>
+  <a href="mailto:idadesub@users.sourceforge.net">Erick Tryzelaar</a><br>
+  <a href="http://llvm.org">The LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date: 2007-10-17 11:05:13 -0700 (Wed, 17 Oct 2007) $
+</address>
+</body>
+</html>

@@ -1,0 +1,100 @@
+# This file defines a tcl proc to assist with testing the llvm2cpp. There are
+# no llvm2cpp specific test cases. Instead, it utilizes all the existing test
+# cases and makes sure llvm2cpp can run them. The basic idea is that we find
+# all the LLVM Assembly (*.ll) files, run llvm2cpp on them to generate a C++
+# program, compile those programs, run them and see if what they produce matches
+# the original input to llvm2cpp.
+
+proc llvm2cpp-test { files } {
+  global subdir llvmtoolsdir llvmlibsdir objdir srcdir objroot srcroot 
+  set timeout 30
+  set path [file join $objdir $subdir]
+  set llc [file join $llvmtoolsdir llc ]
+  set llvmas [file join $llvmtoolsdir llvm-as ]
+  set llvmdis [file join $llvmtoolsdir llvm-dis ]
+
+  #Make Output Directory if it does not exist already
+  if { [file exists path] } {
+      cd $path
+  } else {
+      file mkdir $path
+      cd $path
+  }
+  
+  file mkdir Output
+
+  foreach test $files {
+      
+    set filename [file tail $test]
+    set generated [file join Output $filename.cpp]
+    set executable [file join Output $filename.exe]
+    set output [file join Output $filename.gen]
+    set assembly [file join Output $filename.asm]
+    set testname [file rootname $filename]
+    set bytecode [file join Output $filename.bc]
+
+    # Note that the stderr for llvm-as, etc. must be redirected to /dev/null 
+    # because otherwise exec will see the msgs and return 1 even though they 
+    # are only warnings. If real errors are generated on stderr then llvm-as 
+    # will return a non-zero retval anyway so we're good.
+
+    # Scan the test file to see if there's an XFAIL file. If so, don't run it
+    set retval [ catch { 
+      exec -keepnewline grep XFAIL $test 2>/dev/null } msg ]
+    if { $retval == 0 } {
+      continue;
+    }
+
+    # Run llvm-as/llvm-dis
+    set pipeline llvm-as|llvm-dis
+    set retval [ catch { 
+      exec -keepnewline $llvmas < $test -o - | $llvmdis -f -o $assembly 2>/dev/null } msg ]
+
+    if { $retval != 0 } {
+      fail "$test: $pipeline returned $retval\n$msg"
+      continue 
+    }
+
+    # Build bytecode for llvm2cpp input
+    set retval [ catch { 
+      exec -keepnewline $llvmas < $assembly > $bytecode 2>/dev/null } msg ]
+
+    if { $retval != 0 } {
+      fail "$test: llvm-as returned $retval\n$msg"
+      continue 
+    }
+
+    set retval [ catch { 
+      exec -keepnewline $llc -march=cpp -f -o $generated < $bytecode 2>/dev/null } msg]
+
+    if { $retval != 0 } {
+      fail "$test: llvm2cpp returned $retval\n$msg"
+      continue
+    }
+
+    set retval [ catch { 
+      exec -keepnewline gcc -g -D__STDC_LIMIT_MACROS -o $executable $generated -I$srcroot/include -I$objroot/include -L$llvmlibsdir -lLLVMCore -lLLVMSupport -lLLVMbzip2 -lLLVMSystem -lstdc++ } msg ] 
+    if { $retval != 0 } {
+      fail "$test: gcc returned $retval\n$msg"
+      continue
+    }
+
+    set retval [ catch { exec -keepnewline $executable > $output } msg ]
+    if { $retval != 0 } {
+      set execname [file tail $executable]
+      fail "$test: $execname returned $retval:\n$msg"
+      continue
+    } 
+
+    set retval [ catch { 
+      exec -keepnewline diff $assembly $output } msg ]
+
+    if { $retval != 0 } {
+      fail "$test: diff returned $retval:\n$msg"
+      continue
+    }
+    pass "$test"
+  }
+}
+
+

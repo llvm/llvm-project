@@ -1,0 +1,131 @@
+=pod
+
+=head1 NAME
+
+llvm-config - Print LLVM compilation options
+
+=head1 SYNOPSIS
+
+B<llvm-config> I<option> [I<components>...]
+
+=head1 DESCRIPTION
+
+B<llvm-config> makes it easier to build applications that use LLVM.  It can
+print the compiler flags, linker flags and object libraries needed to link
+against LLVM.
+
+=head1 EXAMPLES
+
+To link against the JIT:
+
+  g++ `llvm-config --cxxflags` -o HowToUseJIT.o -c HowToUseJIT.cpp
+  g++ `llvm-config --ldflags` -o HowToUseJIT HowToUseJIT.o \
+      `llvm-config --libs engine bcreader scalaropts`
+
+=head1 OPTIONS
+
+=over
+
+=item B<--version>
+
+Print the version number of LLVM.
+
+=item B<--help>
+
+Print a summary of B<llvm-config> arguments.
+
+=item B<--prefix>
+
+Print the installation prefix for LLVM.
+
+=item B<--src-root>
+
+Print the source root from which LLVM was built.
+
+=item B<--obj-root>
+
+Print the object root used to build LLVM.
+
+=item B<--bindir>
+
+Print the installation directory for LLVM binaries.
+
+=item B<--includedir>
+
+Print the installation directory for LLVM headers.
+
+=item B<--libdir>
+
+Print the installation directory for LLVM libraries.
+
+=item B<--cxxflags>
+
+Print the C++ compiler flags needed to use LLVM headers.
+
+=item B<--ldflags>
+
+Print the flags needed to link against LLVM libraries.
+
+=item B<--libs>
+
+Print all the libraries needed to link against the specified LLVM
+I<components>, including any dependencies.
+
+=item B<--libnames>
+
+Similar to B<--libs>, but prints the bare filenames of the libraries
+without B<-l> or pathnames.  Useful for linking against a not-yet-installed
+copy of LLVM.
+
+=item B<--libfiles>
+
+Similar to B<--libs>, but print the full path to each library file.  This is
+useful when creating makefile dependencies, to ensure that a tool is relinked if
+any library it uses changes.
+
+=item B<--components>
+
+Print all valid component names.
+
+=item B<--targets-built>
+
+Print the component names for all targets supported by this copy of LLVM.
+
+=item B<--build-mode>
+
+Print the build mode used when LLVM was built (e.g. Debug or Release)
+
+=back
+
+=head1 COMPONENTS
+
+To print a list of all available components, run B<llvm-config
+--components>.  In most cases, components correspond directly to LLVM
+libraries.  Useful "virtual" components include:
+
+=over
+
+=item B<all>
+
+Includes all LLVM libaries.  The default if no components are specified.
+
+=item B<backend>
+
+Includes either a native backend or the C backend.
+
+=item B<engine>
+
+Includes either a native JIT or the bitcode interpreter.
+
+=back
+
+=head1 EXIT STATUS
+
+If B<llvm-config> succeeds, it will exit with 0.  Otherwise, if an error
+occurs, it will exit with a non-zero value.
+
+=head1 AUTHORS
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut

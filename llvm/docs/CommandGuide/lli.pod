@@ -1,0 +1,216 @@
+=pod
+
+=head1 NAME
+
+lli - directly execute programs from LLVM bitcode
+
+=head1 SYNOPSIS
+
+B<lli> [I<options>] [I<filename>] [I<program args>]
+
+=head1 DESCRIPTION
+
+B<lli> directly executes programs in LLVM bitcode format.  It takes a program
+in LLVM bitcode format and executes it using a just-in-time compiler, if one is
+available for the current architecture, or an interpreter.  B<lli> takes all of
+the same code generator options as L<llc|llc>, but they are only effective when
+B<lli> is using the just-in-time compiler.
+
+If I<filename> is not specified, then B<lli> reads the LLVM bitcode for the
+program from standard input.
+
+The optional I<args> specified on the command line are passed to the program as
+arguments.
+
+=head1 GENERAL OPTIONS
+
+=over
+
+=item B<-fake-argv0>=I<executable>
+
+Override the C<argv[0]> value passed into the executing program.
+
+=item B<-force-interpreter>=I<{false,true}>
+
+If set to true, use the interpreter even if a just-in-time compiler is available
+for this architecture. Defaults to false.
+
+=item B<-help>
+
+Print a summary of command line options.
+
+=item B<-load>=I<puginfilename>
+
+Causes B<lli> to load the plugin (shared object) named I<pluginfilename> and use
+it for optimization.
+
+=item B<-stats>
+
+Print statistics from the code-generation passes. This is only meaningful for
+the just-in-time compiler, at present.
+
+=item B<-time-passes>
+
+Record the amount of time needed for each code-generation pass and print it to
+standard error.
+
+=item B<-version>
+
+Print out the version of B<lli> and exit without doing anything else.
+
+=back 
+
+=head1 TARGET OPTIONS
+
+=over 
+
+=item B<-mtriple>=I<target triple>
+
+Override the target triple specified in the input bitcode file with the 
+specified string.  This may result in a crash if you pick an
+architecture which is not compatible with the current system.
+
+=item B<-march>=I<arch>
+
+Specify the architecture for which to generate assembly, overriding the target
+encoded in the bitcode file.  See the output of B<llc --help> for a list of
+valid architectures.  By default this is inferred from the target triple or
+autodetected to the current architecture.
+
+=item B<-mcpu>=I<cpuname>
+
+Specify a specific chip in the current architecture to generate code for.
+By default this is inferred from the target triple and autodetected to 
+the current architecture.  For a list of available CPUs, use:
+B<llvm-as E<lt> /dev/null | llc -march=xyz -mcpu=help>
+
+=item B<-mattr>=I<a1,+a2,-a3,...>
+
+Override or control specific attributes of the target, such as whether SIMD
+operations are enabled or not.  The default set of attributes is set by the
+current CPU.  For a list of available attributes, use:
+B<llvm-as E<lt> /dev/null | llc -march=xyz -mattr=help>
+
+=back
+
+
+=head1 FLOATING POINT OPTIONS
+
+=over 
+
+=item B<-disable-excess-fp-precision>
+
+Disable optimizations that may increase floating point precision.
+
+=item B<-enable-finite-only-fp-math>
+
+Enable optimizations that assumes only finite floating point math. That is,
+there is no NAN or Inf values.
+
+=item B<-enable-unsafe-fp-math>
+
+Causes B<lli> to enable optimizations that may decrease floating point
+precision.
+
+=item B<-soft-float>
+
+Causes B<lli> to generate software floating point library calls instead of
+equivalent hardware instructions.
+
+=back
+
+=head1 CODE GENERATION OPTIONS
+
+=over
+
+=item B<-code-model>=I<model>
+
+Choose the code model from:
+
+    default: Target default code model
+    small: Small code model
+    kernel: Kernel code model
+    medium: Medium code model
+    large: Large code model
+
+=item B<-disable-post-RA-scheduler>
+
+Disable scheduling after register allocation.
+
+=item B<-disable-spill-fusing>
+
+Disable fusing of spill code into instructions.
+
+=item B<-enable-correct-eh-support> 
+
+Make the -lowerinvoke pass insert expensive, but correct, EH code.
+
+=item B<-enable-eh> 
+
+Exception handling should be emitted.
+
+=item B<-join-liveintervals> 
+
+Coalesce copies (default=true).
+
+=item B<-nozero-initialized-in-bss>
+Don't place zero-initialized symbols into the BSS section.
+
+=item B<-pre-RA-sched>=I<scheduler>
+
+Instruction schedulers available (before register allocation):
+
+    =default: Best scheduler for the target 
+    =none: No scheduling: breadth first sequencing 
+    =simple: Simple two pass scheduling: minimize critical path and maximize processor utilization 
+    =simple-noitin: Simple two pass scheduling: Same as simple except using generic latency 
+    =list-burr: Bottom-up register reduction list scheduling 
+    =list-tdrr: Top-down register reduction list scheduling 
+    =list-td: Top-down list scheduler -print-machineinstrs - Print generated machine code
+
+=item B<-regalloc>=I<allocator>
+
+Register allocator to use: (default = linearscan)
+
+    =bigblock: Big-block register allocator 
+    =linearscan: linear scan register allocator =local -   local register allocator 
+    =simple: simple register allocator 
+
+=item B<-relocation-model>=I<model> 
+
+Choose relocation model from:
+
+    =default: Target default relocation model 
+    =static: Non-relocatable code =pic -   Fully relocatable, position independent code 
+    =dynamic-no-pic: Relocatable external references, non-relocatable code 
+
+=item B<-spiller>
+
+Spiller to use: (default: local) 
+
+    =simple: simple spiller 
+    =local: local spiller 
+
+=item B<-x86-asm-syntax>=I<syntax>
+
+Choose style of code to emit from X86 backend: 
+
+    =att: Emit AT&T-style assembly 
+    =intel: Emit Intel-style assembly
+
+=back
+
+=head1 EXIT STATUS
+
+If B<lli> fails to load the program, it will exit with an exit code of 1.
+Otherwise, it will return the exit code of the program it executes.
+
+=head1 SEE ALSO
+
+L<llc|llc>
+
+=head1 AUTHOR
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut

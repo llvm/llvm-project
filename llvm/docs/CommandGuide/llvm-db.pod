@@ -1,0 +1,16 @@
+=pod
+
+=head1 NAME
+
+llvm-db - LLVM debugger (alpha)
+
+=head1 SYNOPSIS
+
+Details coming soon. Please see 
+L<http://llvm.org/docs/SourceLevelDebugging.html> in the meantime.
+
+=head1 AUTHORS
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut

@@ -1,0 +1,4 @@
+DepModule: 
+BuildCmd: ./build-for-llvm-top.sh
+CleanCmd: make clean -C ../build.llvm
+InstallCmd: make install -C ../build.llvm

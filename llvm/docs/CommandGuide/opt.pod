@@ -1,0 +1,138 @@
+=pod
+
+=head1 NAME
+
+opt - LLVM optimizer
+
+=head1 SYNOPSIS
+
+B<opt> [I<options>] [I<filename>]
+
+=head1 DESCRIPTION
+
+The B<opt> command is the modular LLVM optimizer and analyzer.  It takes LLVM 
+bitcode as input, runs the specified optimizations or analyses on it, and then
+outputs the optimized LLVM bitcode or the analysis results.  The function of 
+B<opt> depends on whether the B<-analyze> option is given. 
+
+When B<-analyze> is specified, B<opt> performs various analyses of LLVM 
+bitcode.  It will usually print the results on standard output, but in a few 
+cases, it will print output to standard error or generate a file with the 
+analysis output, which is usually done when the output is meant for another 
+program.  
+
+While B<-analyze> is I<not> given, B<opt> attempts to produce an optimized 
+bitcode file.  The optimizations available via B<opt> depend upon what 
+libraries were linked into it as well as any additional libraries that have 
+been loaded with the B<-load> option.  Use the B<-help> option to determine 
+what optimizations you can use.
+
+If I<filename> is omitted from the command line or is I<->, B<opt> reads its
+input from standard input. The input must be an LLVM bitcode file.
+
+If an output filename is not specified with the B<-o> option, B<opt>
+writes its output to the standard output.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-f>
+
+Force overwrite.  Normally, B<opt> will refuse to overwrite an
+output file that already exists.  With this option, B<opt> will
+overwrite the output file and replace it with new bitcode.
+
+=item B<-help>
+
+Print a summary of command line options. 
+
+=item B<-o> I<filename>
+
+Specify the output filename.
+
+=item B<-{passname}>
+
+B<opt> provides the ability to run any of LLVM's optimization or analysis passes
+in any order. The B<-help> option lists all the passes available. The order in
+which the options occur on the command line are the order in which they are
+executed (within pass constraints). 
+
+=item B<-std-compile-opts>
+
+This is short hand for a standard list of I<compile time optimization> passes.
+This is typically used to optimize the output from the llvm-gcc front end. It
+might be useful for other front end compilers as well. To discover the full set
+of options available, use the following command:
+
+   llvm-as < /dev/null | opt -std-compile-opts -disable-output -debug-pass=Arguments
+
+=item B<-disable-inlining>
+
+This option is only meaningful when B<-std-compile-opts> is given. It simply
+removes the inlining pass from the standard list.
+
+=item B<-disable-opt>
+
+This option is only meaningful when B<-std-compile-opts> is given. It disables
+most, but not all, of the B<-std-compile-opts>. The ones that remain are
+B<-verify>, B<-lower-setjmp>, and B<-funcresolve>.
+
+=item B<-strip-debug>
+
+This option causes opt to strip debug information from the module before 
+applying other optimizations. It is essentially the same as B<-strip> but it
+ensures that stripping of debug information is done first.
+
+=item B<-verify-each>
+
+This option causes opt to add a verify pass after every pass otherwise specified
+on the command line (including B<-verify>).  This is useful for cases where it 
+is suspected that a pass is creating an invalid module but it is not clear which
+pass is doing it. The combination of B<-std-compile-opts> and B<-verify-each>
+can quickly track down this kind of problem.
+
+=item B<-profile-info-file> I<filename>
+
+Specify the name of the file loaded by the -profile-loader option.
+
+=item B<-stats>
+
+Print statistics.
+
+=item B<-time-passes>
+
+Record the amount of time needed for each pass and print it to standard
+error.
+
+=item B<-debug>
+
+If this is a debug build, this option will enable debug printouts
+from passes which use the I<DEBUG()> macro.  See the B<LLVM Programmer's
+Manual>, section I<#DEBUG> for more information.
+
+=item B<-load>=I<plugin>
+
+Load the dynamic object I<plugin>.  This object should register new optimization
+or analysis passes. Once loaded, the object will add new command line options to
+enable various optimizations or analyses.  To see the new complete list of 
+optimizations, use the B<-help> and B<-load> options together. For example:
+
+   opt -load=plugin.so -help
+
+=item B<-p>
+
+Print module after each transformation.
+
+=back
+
+=head1 EXIT STATUS
+
+If B<opt> succeeds, it will exit with 0.  Otherwise, if an error
+occurs, it will exit with a non-zero value.
+
+=head1 AUTHORS
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut

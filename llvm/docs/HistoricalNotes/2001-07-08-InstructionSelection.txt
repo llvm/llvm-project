@@ -1,0 +1,51 @@
+Date: Sun, 8 Jul 2001 09:37:22 -0500
+From: Vikram S. Adve <vadve@cs.uiuc.edu>
+To: Ruchira Sasanka <sasanka@students.uiuc.edu>
+Cc: Chris Lattner <lattner@cs.uiuc.edu>
+Subject: machine instruction operands
+
+Ruchira,
+
+When generating machine instructions, I have to make several choices about
+operands.  For cases were a register is required, there are 3 cases:
+
+1. The register is for a Value* that is already in the VM code.
+
+2. The register is for a value that is not in the VM code, usually because 2
+machine instructions get generated for a single VM instruction (and the
+register holds the result of the first m/c instruction and is used by the
+second m/c instruction).
+
+3. The register is a pre-determined machine register.
+
+E.g, for this VM instruction:
+        ptr = alloca type, numElements
+I have to generate 2 machine instructions:
+        reg = mul constant, numElements
+        ptr = add %sp, reg
+
+Each machine instruction is of class MachineInstr.
+It has a vector of operands.  All register operands have type MO_REGISTER.
+The 3 types of register operands are marked using this enum:
+
+ enum VirtualRegisterType {
+    MO_VMVirtualReg,            // virtual register for *value
+    MO_MInstrVirtualReg,        // virtual register for result of *minstr
+    MO_MachineReg               // pre-assigned machine register `regNum'
+  } vregType;
+
+Here's how this affects register allocation:
+
+1. MO_VMVirtualReg is the standard case: you just do the register
+allocation.
+
+2. MO_MInstrVirtualReg is the case where there is a hidden register being
+used.  You should decide how you want to handle it, e.g., do you want do
+create a Value object during the preprocessing phase to make the value
+explicit (like for address register for the RETURN instruction).
+
+3. For case MO_MachineReg, you don't need to do anything, at least for
+SPARC. The only machine regs I am using so far are %g0 and %sp.
+
+--Vikram
+

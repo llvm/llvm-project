@@ -1,0 +1,406 @@
+=pod
+
+=head1 NAME
+
+llvm-ar - LLVM archiver
+
+=head1 SYNOPSIS
+
+B<llvm-ar> [-]{dmpqrtx}[Rabfikouz] [relpos] [count] <archive> [files...]
+
+
+=head1 DESCRIPTION
+
+The B<llvm-ar> command is similar to the common Unix utility, C<ar>. It 
+archives several files together into a single file. The intent for this is
+to produce archive libraries by LLVM bitcode that can be linked into an
+LLVM program. However, the archive can contain any kind of file. By default,
+B<llvm-ar> generates a symbol table that makes linking faster because
+only the symbol table needs to be consulted, not each individual file member
+of the archive. 
+
+The B<llvm-ar> command can be used to I<read> both SVR4 and BSD style archive
+files. However, it cannot be used to write them.  While the B<llvm-ar> command 
+produces files that are I<almost> identical to the format used by other C<ar> 
+implementations, it has two significant departures in order to make the 
+archive appropriate for LLVM. The first departure is that B<llvm-ar> only
+uses BSD4.4 style long path names (stored immediately after the header) and
+never contains a string table for long names. The second departure is that the
+symbol table is formated for efficient construction of an in-memory data
+structure that permits rapid (red-black tree) lookups. Consequently, archives 
+produced with B<llvm-ar> usually won't be readable or editable with any
+C<ar> implementation or useful for linking.  Using the C<f> modifier to flatten
+file names will make the archive readable by other C<ar> implementations
+but not for linking because the symbol table format for LLVM is unique. If an
+SVR4 or BSD style archive is used with the C<r> (replace) or C<q> (quick
+update) operations, the archive will be reconstructed in LLVM format. This 
+means that the string table will be dropped (in deference to BSD 4.4 long names)
+and an LLVM symbol table will be added (by default). The system symbol table
+will be retained.
+
+Here's where B<llvm-ar> departs from previous C<ar> implementations:
+
+=over
+
+=item I<Symbol Table>
+
+Since B<llvm-ar> is intended to archive bitcode files, the symbol table
+won't make much sense to anything but LLVM. Consequently, the symbol table's
+format has been simplified. It consists simply of a sequence of pairs
+of a file member index number as an LSB 4byte integer and a null-terminated 
+string.
+
+=item I<Long Paths>
+
+Some C<ar> implementations (SVR4) use a separate file member to record long
+path names (> 15 characters). B<llvm-ar> takes the BSD 4.4 and Mac OS X 
+approach which is to simply store the full path name immediately preceding
+the data for the file. The path name is null terminated and may contain the
+slash (/) character. 
+
+=item I<Compression>
+
+B<llvm-ar> can compress the members of an archive to save space. The 
+compression used depends on what's available on the platform and what choices
+the LLVM Compressor utility makes. It generally favors bzip2 but will select
+between "no compression" or bzip2 depending on what makes sense for the
+file's content.
+
+=item I<Directory Recursion>
+
+Most C<ar> implementations do not recurse through directories but simply
+ignore directories if they are presented to the program in the F<files> 
+option. B<llvm-ar>, however, can recurse through directory structures and
+add all the files under a directory, if requested.
+
+=item I<TOC Verbose Output>
+
+When B<llvm-ar> prints out the verbose table of contents (C<tv> option), it
+precedes the usual output with a character indicating the basic kind of 
+content in the file. A blank means the file is a regular file. A 'Z' means
+the file is compressed. A 'B' means the file is an LLVM bitcode file. An
+'S' means the file is the symbol table.
+
+=back
+
+=head1 OPTIONS
+
+The options to B<llvm-ar> are compatible with other C<ar> implementations.
+However, there are a few modifiers (F<zR>) that are not found in other
+C<ar>s. The options to B<llvm-ar> specify a single basic operation to 
+perform on the archive, a variety of modifiers for that operation, the
+name of the archive file, and an optional list of file names. These options
+are used to determine how B<llvm-ar> should process the archive file.
+
+The Operations and Modifiers are explained in the sections below. The minimal
+set of options is at least one operator and the name of the archive. Typically
+archive files end with a C<.a> suffix, but this is not required. Following
+the F<archive-name> comes a list of F<files> that indicate the specific members
+of the archive to operate on. If the F<files> option is not specified, it
+generally means either "none" or "all" members, depending on the operation.
+
+=head2 Operations
+
+=over
+
+=item d
+
+Delete files from the archive. No modifiers are applicable to this operation.
+The F<files> options specify which members should be removed from the
+archive. It is not an error if a specified file does not appear in the archive.
+If no F<files> are specified, the archive is not modified.
+
+=item m[abi]
+
+Move files from one location in the archive to another. The F<a>, F<b>, and 
+F<i> modifiers apply to this operation. The F<files> will all be moved
+to the location given by the modifiers. If no modifiers are used, the files
+will be moved to the end of the archive. If no F<files> are specified, the
+archive is not modified.
+
+=item p[k]
+
+Print files to the standard output. The F<k> modifier applies to this
+operation. This operation simply prints the F<files> indicated to the
+standard output. If no F<files> are specified, the entire archive is printed.
+Printing bitcode files is ill-advised as they might confuse your terminal
+settings. The F<p> operation never modifies the archive.
+
+=item q[Rfz]
+
+Quickly append files to the end of the archive. The F<R>, F<f>, and F<z>
+modifiers apply to this operation.  This operation quickly adds the 
+F<files> to the archive without checking for duplicates that should be 
+removed first. If no F<files> are specified, the archive is not modified. 
+Because of the way that B<llvm-ar> constructs the archive file, its dubious 
+whether the F<q> operation is any faster than the F<r> operation.
+
+=item r[Rabfuz]
+
+Replace or insert file members. The F<R>, F<a>, F<b>, F<f>, F<u>, and F<z>
+modifiers apply to this operation. This operation will replace existing
+F<files> or insert them at the end of the archive if they do not exist. If no
+F<files> are specified, the archive is not modified.
+
+=item t[v]
+
+Print the table of contents. Without any modifiers, this operation just prints
+the names of the members to the standard output. With the F<v> modifier,
+B<llvm-ar> also prints out the file type (B=bitcode, Z=compressed, S=symbol
+table, blank=regular file), the permission mode, the owner and group, the
+size, and the date. If any F<files> are specified, the listing is only for
+those files. If no F<files> are specified, the table of contents for the
+whole archive is printed.
+
+=item x[oP]
+
+Extract archive members back to files. The F<o> modifier applies to this
+operation. This operation retrieves the indicated F<files> from the archive 
+and writes them back to the operating system's file system. If no 
+F<files> are specified, the entire archive is extract. 
+
+=back
+
+=head2 Modifiers (operation specific)
+
+The modifiers below are specific to certain operations. See the Operations
+section (above) to determine which modifiers are applicable to which operations.
+
+=over
+
+=item [a] 
+
+When inserting or moving member files, this option specifies the destination of
+the new files as being C<a>fter the F<relpos> member. If F<relpos> is not found,
+the files are placed at the end of the archive.
+
+=item [b] 
+
+When inserting or moving member files, this option specifies the destination of
+the new files as being C<b>efore the F<relpos> member. If F<relpos> is not 
+found, the files are placed at the end of the archive. This modifier is 
+identical to the the F<i> modifier.
+
+=item [f] 
+
+Normally, B<llvm-ar> stores the full path name to a file as presented to it on
+the command line. With this option, truncated (15 characters max) names are
+used. This ensures name compatibility with older versions of C<ar> but may also
+thwart correct extraction of the files (duplicates may overwrite). If used with
+the F<R> option, the directory recursion will be performed but the file names
+will all be C<f>lattened to simple file names.
+
+=item [i] 
+
+A synonym for the F<b> option.
+
+=item [k] 
+
+Normally, B<llvm-ar> will not print the contents of bitcode files when the 
+F<p> operation is used. This modifier defeats the default and allows the 
+bitcode members to be printed.
+
+=item [N] 
+
+This option is ignored by B<llvm-ar> but provided for compatibility.
+
+=item [o] 
+
+When extracting files, this option will cause B<llvm-ar> to preserve the
+original modification times of the files it writes. 
+
+=item [P] 
+
+use full path names when matching
+
+=item [R]
+
+This modifier instructions the F<r> option to recursively process directories.
+Without F<R>, directories are ignored and only those F<files> that refer to
+files will be added to the archive. When F<R> is used, any directories specified
+with F<files> will be scanned (recursively) to find files to be added to the
+archive. Any file whose name begins with a dot will not be added.
+
+=item [u] 
+
+When replacing existing files in the archive, only replace those files that have
+a time stamp than the time stamp of the member in the archive.
+
+=item [z] 
+
+When inserting or replacing any file in the archive, compress the file first.
+This
+modifier is safe to use when (previously) compressed bitcode files are added to
+the archive; the compressed bitcode files will not be doubly compressed.
+
+=back
+
+=head2 Modifiers (generic)
+
+The modifiers below may be applied to any operation.
+
+=over
+
+=item [c]
+
+For all operations, B<llvm-ar> will always create the archive if it doesn't 
+exist. Normally, B<llvm-ar> will print a warning message indicating that the
+archive is being created. Using this modifier turns off that warning.
+
+=item [s]
+
+This modifier requests that an archive index (or symbol table) be added to the
+archive. This is the default mode of operation. The symbol table will contain
+all the externally visible functions and global variables defined by all the
+bitcode files in the archive. Using this modifier is more efficient that using
+L<llvm-ranlib|llvm-ranlib> which also creates the symbol table.
+
+=item [S]
+
+This modifier is the opposite of the F<s> modifier. It instructs B<llvm-ar> to
+not build the symbol table. If both F<s> and F<S> are used, the last modifier to
+occur in the options will prevail. 
+
+=item [v]
+
+This modifier instructs B<llvm-ar> to be verbose about what it is doing. Each
+editing operation taken against the archive will produce a line of output saying
+what is being done.
+
+=back
+
+=head1 STANDARDS
+
+The B<llvm-ar> utility is intended to provide a superset of the IEEE Std 1003.2
+(POSIX.2) functionality for C<ar>. B<llvm-ar> can read both SVR4 and BSD4.4 (or
+Mac OS X) archives. If the C<f> modifier is given to the C<x> or C<r> operations
+then B<llvm-ar> will write SVR4 compatible archives. Without this modifier, 
+B<llvm-ar> will write BSD4.4 compatible archives that have long names
+immediately after the header and indicated using the "#1/ddd" notation for the
+name in the header.
+
+=head1 FILE FORMAT
+
+The file format for LLVM Archive files is similar to that of BSD 4.4 or Mac OSX
+archive files. In fact, except for the symbol table, the C<ar> commands on those
+operating systems should be able to read LLVM archive files. The details of the
+file format follow.
+
+Each archive begins with the archive magic number which is the eight printable
+characters "!<arch>\n" where \n represents the newline character (0x0A). 
+Following the magic number, the file is composed of even length members that 
+begin with an archive header and end with a \n padding character if necessary 
+(to make the length even). Each file member is composed of a header (defined 
+below), an optional newline-terminated "long file name" and the contents of 
+the file. 
+
+The fields of the header are described in the items below. All fields of the
+header contain only ASCII characters, are left justified and are right padded 
+with space characters.
+
+=over
+
+=item name - char[16]
+
+This field of the header provides the name of the archive member. If the name is
+longer than 15 characters or contains a slash (/) character, then this field
+contains C<#1/nnn> where C<nnn> provides the length of the name and the C<#1/>
+is literal.  In this case, the actual name of the file is provided in the C<nnn>
+bytes immediately following the header. If the name is 15 characters or less, it
+is contained directly in this field and terminated with a slash (/) character.
+
+=item date - char[12]
+
+This field provides the date of modification of the file in the form of a
+decimal encoded number that provides the number of seconds since the epoch 
+(since 00:00:00 Jan 1, 1970) per Posix specifications.
+
+=item uid - char[6]
+
+This field provides the user id of the file encoded as a decimal ASCII string.
+This field might not make much sense on non-Unix systems. On Unix, it is the
+same value as the st_uid field of the stat structure returned by the stat(2)
+operating system call.
+
+=item gid - char[6]
+
+This field provides the group id of the file encoded as a decimal ASCII string.
+This field might not make much sense on non-Unix systems. On Unix, it is the
+same value as the st_gid field of the stat structure returned by the stat(2)
+operating system call.
+
+=item mode - char[8]
+
+This field provides the access mode of the file encoded as an octal ASCII 
+string. This field might not make much sense on non-Unix systems. On Unix, it 
+is the same value as the st_mode field of the stat structure returned by the 
+stat(2) operating system call.
+
+=item size - char[10]
+
+This field provides the size of the file, in bytes, encoded as a decimal ASCII
+string. If the size field is negative (starts with a minus sign, 0x02D), then
+the archive member is stored in compressed form. The first byte of the archive
+member's data indicates the compression type used. A value of 0 (0x30) indicates
+that no compression was used. A value of 2 (0x32) indicates that bzip2
+compression was used.
+
+=item fmag - char[2]
+
+This field is the archive file member magic number. Its content is always the
+two characters back tick (0x60) and newline (0x0A). This provides some measure 
+utility in identifying archive files that have been corrupted.
+
+=back 
+
+The LLVM symbol table has the special name "#_LLVM_SYM_TAB_#". It is presumed
+that no regular archive member file will want this name. The LLVM symbol table 
+is simply composed of a sequence of triplets: byte offset, length of symbol, 
+and the symbol itself. Symbols are not null or newline terminated. Here are 
+the details on each of these items:
+
+=over
+
+=item offset - vbr encoded 32-bit integer
+
+The offset item provides the offset into the archive file where the bitcode
+member is stored that is associated with the symbol. The offset value is 0
+based at the start of the first "normal" file member. To derive the actual
+file offset of the member, you must add the number of bytes occupied by the file
+signature (8 bytes) and the symbol tables. The value of this item is encoded
+using variable bit rate encoding to reduce the size of the symbol table.
+Variable bit rate encoding uses the high bit (0x80) of each byte to indicate 
+if there are more bytes to follow. The remaining 7 bits in each byte carry bits
+from the value. The final byte does not have the high bit set.
+
+=item length - vbr encoded 32-bit integer
+
+The length item provides the length of the symbol that follows. Like this
+I<offset> item, the length is variable bit rate encoded.
+
+=item symbol - character array
+
+The symbol item provides the text of the symbol that is associated with the
+I<offset>. The symbol is not terminated by any character. Its length is provided
+by the I<length> field. Note that is allowed (but unwise) to use non-printing
+characters (even 0x00) in the symbol. This allows for multiple encodings of 
+symbol names.
+
+=back
+
+=head1 EXIT STATUS
+
+If B<llvm-ar> succeeds, it will exit with 0.  A usage error, results
+in an exit code of 1. A hard (file system typically) error results in an
+exit code of 2. Miscellaneous or unknown errors result in an
+exit code of 3.
+
+=head1 SEE ALSO
+
+L<llvm-ranlib|llvm-ranlib>, ar(1)
+
+=head1 AUTHORS
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut

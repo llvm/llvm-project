@@ -1,0 +1,285 @@
+#===-- Makefile.config - Local configuration for LLVM ------*- Makefile -*--===#
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
+#
+# This file is included by Makefile.common.  It defines paths and other
+# values specific to a particular installation of LLVM.
+#
+#===------------------------------------------------------------------------===#
+
+# Define LLVM specific info and directories based on the autoconf variables
+LLVMPackageName   := @PACKAGE_NAME@
+LLVMVersion       := @PACKAGE_VERSION@
+LLVM_CONFIGTIME   := @LLVM_CONFIGTIME@
+
+###########################################################################
+# Directory Configuration
+#	This section of the Makefile determines what is where.  To be
+#	specific, there are several locations that need to be defined:
+#
+#	o LLVM_SRC_ROOT  : The root directory of the LLVM source code.
+#	o LLVM_OBJ_ROOT  : The root directory containing the built LLVM code.
+#
+#	o PROJ_SRC_DIR  : The directory containing the code to build.
+#	o PROJ_SRC_ROOT : The root directory of the code to build.
+#
+#	o PROJ_OBJ_DIR  : The directory in which compiled code will be placed.
+#	o PROJ_OBJ_ROOT : The root directory in which compiled code is placed.
+#
+###########################################################################
+
+PWD := @BINPWD@
+# Set the project name to LLVM if its not defined
+ifndef PROJECT_NAME
+PROJECT_NAME := $(LLVMPackageName)
+endif
+
+PROJ_OBJ_DIR  := $(shell $(PWD))
+PROJ_OBJ_ROOT := $(shell cd $(PROJ_OBJ_DIR)/$(LEVEL); $(PWD))
+
+ifeq ($(PROJECT_NAME),llvm)
+LLVM_SRC_ROOT   := $(shell cd @abs_top_srcdir@; $(PWD))
+LLVM_OBJ_ROOT   := $(shell cd @abs_top_builddir@; $(PWD))
+PROJ_SRC_ROOT   := $(shell cd $(LLVM_SRC_ROOT); $(PWD))
+PROJ_SRC_DIR    := $(shell cd $(LLVM_SRC_ROOT)/$(patsubst $(PROJ_OBJ_ROOT)%,%,$(PROJ_OBJ_DIR)); $(PWD))
+prefix          := @prefix@
+PROJ_prefix     := $(prefix)
+PROJ_VERSION    := $(LLVMVersion)
+else
+ifndef PROJ_SRC_ROOT
+$(error Projects must define PROJ_SRC_ROOT)
+endif
+ifndef PROJ_OBJ_ROOT
+$(error Projects must define PROJ_OBJ_ROOT)
+endif
+ifndef PROJ_INSTALL_ROOT
+$(error Projects must define PROJ_INSTALL_ROOT)
+endif
+ifndef LLVM_SRC_ROOT
+$(error Projects must define LLVM_SRC_ROOT)
+endif
+ifndef LLVM_OBJ_ROOT
+$(error Projects must define LLVM_OBJ_ROOT)
+endif
+PROJ_SRC_DIR := $(shell cd $(PROJ_SRC_ROOT)/$(patsubst $(PROJ_OBJ_ROOT)%,%,$(PROJ_OBJ_DIR)); $(PWD))
+prefix          := $(PROJ_INSTALL_ROOT)
+PROJ_prefix     := $(prefix)
+ifndef PROJ_VERSION
+PROJ_VERSION := 1.0
+endif
+endif
+
+LLVMMAKE := $(LLVM_SRC_ROOT)/make
+
+PROJ_bindir     := $(DESTDIR)$(PROJ_prefix)/bin
+PROJ_libdir     := $(DESTDIR)$(PROJ_prefix)/lib
+PROJ_datadir    := $(DESTDIR)$(PROJ_prefix)/share
+PROJ_docsdir    := $(DESTDIR)$(PROJ_prefix)/docs/llvm
+PROJ_etcdir     := $(DESTDIR)$(PROJ_prefix)/etc/llvm
+PROJ_includedir := $(DESTDIR)$(PROJ_prefix)/include
+PROJ_infodir    := $(DESTDIR)$(PROJ_prefix)/info
+PROJ_mandir     := $(DESTDIR)$(PROJ_prefix)/share/man
+
+# Determine if we're on a unix type operating system
+LLVM_ON_UNIX:=@LLVM_ON_UNIX@
+LLVM_ON_WIN32:=@LLVM_ON_WIN32@
+
+# Target operating system for which LLVM will be compiled.
+OS=@OS@
+
+# Target hardware architecture
+ARCH=@ARCH@
+
+# Indicates, whether we're cross-compiling LLVM or not
+LLVM_CROSS_COMPILING=@LLVM_CROSS_COMPILING@
+
+# Executable file extension for build platform (mainly for
+# tablegen call if we're cross-compiling).
+BUILD_EXEEXT=@BUILD_EXEEXT@
+
+# Compilers for the build platflorm (mainly for tablegen
+# call if we're cross-compiling).
+BUILD_CC=@BUILD_CC@
+BUILD_CXX=@BUILD_CXX@
+
+# Target triple (cpu-vendor-os) for which we should generate code
+TARGET_TRIPLE=@target@
+
+# Extra options to compile LLVM with
+EXTRA_OPTIONS=@EXTRA_OPTIONS@
+
+# Endian-ness of the target
+ENDIAN=@ENDIAN@
+
+# Path to the C++ compiler to use.  This is an optional setting, which defaults
+# to whatever your gmake defaults to.
+CXX = @CXX@
+
+# Path to the CC binary, which use used by testcases for native builds.
+CC := @CC@
+
+# Linker flags.
+LDFLAGS+=@LDFLAGS@
+
+# Path to the library archiver program.
+AR_PATH = @AR@
+
+# Path to the nm program
+NM_PATH = @NM@
+
+# The pathnames of the programs we require to build
+BISON      := @BISON@
+CMP        := @CMP@
+CP         := @CP@
+DATE       := @DATE@
+FIND       := @FIND@
+FLEX       := @LEX@
+GREP       := @GREP@
+INSTALL    := @INSTALL@
+MKDIR      := $(LLVM_SRC_ROOT)/autoconf/mkinstalldirs
+MV         := @MV@
+RANLIB     := @RANLIB@
+RM         := @RM@
+SED        := @SED@
+TAR        := @TAR@
+YACC       := @YACC@
+
+# Paths to miscellaneous programs we hope are present but might not be
+PERL       := @PERL@
+BZIP2      := @BZIP2@
+DOT        := @DOT@
+DOXYGEN    := @DOXYGEN@
+GROFF      := @GROFF@
+GZIP       := @GZIP@
+OCAMLC     := @OCAMLC@
+OCAMLOPT   := @OCAMLOPT@
+OCAMLDEP   := @OCAMLDEP@
+OCAMLDOC   := @OCAMLDOC@
+GAS        := @GAS@
+POD2HTML   := @POD2HTML@
+POD2MAN    := @POD2MAN@
+RUNTEST    := @RUNTEST@
+TCLSH      := @TCLSH@
+ZIP        := @ZIP@
+
+HAVE_PERL    := @HAVE_PERL@
+HAVE_PTHREAD := @HAVE_PTHREAD@
+
+LIBS       := @LIBS@
+
+# Targets that we should build
+TARGETS_TO_BUILD=@TARGETS_TO_BUILD@
+
+# Path to location for LLVM C/C++ front-end. You can modify this if you
+# want to override the value set by configure.
+LLVMGCCDIR := @LLVMGCCDIR@
+
+# Determine the target for which LLVM should generate code.
+ifeq (@LLVMGCC_MAJVERS@,3)
+LLVMGCCARCH := @target@/3.4-llvm
+else
+LLVMGCCARCH := @target@/@LLVMGCC_VERSION@
+endif
+
+# Determine the path where the library executables are
+LLVMGCCLIBEXEC := @LLVMGCCLIBEXEC@
+
+# Full pathnames of LLVM C/C++ front-end 'cc1' and 'cc1plus' binaries:
+LLVMGCC  := @LLVMGCC@
+LLVMGXX  := @LLVMGXX@
+LLVMCC1  := @LLVMCC1@
+LLVMCC1PLUS := @LLVMCC1PLUS@
+LLVMGCC_VERSION := @LLVMGCC_VERSION@
+LLVMGCC_MAJVERS := @LLVMGCC_MAJVERS@
+LLVMGCC_LANGS := @LLVMGCC_LANGS@
+
+# Path to directory where object files should be stored during a build.
+# Set OBJ_ROOT to "." if you do not want to use a separate place for
+# object files.
+OBJ_ROOT := .
+
+# These are options that can either be enabled here, or can be enabled on the
+# make command line (ie, make ENABLE_PROFILING=1):
+
+# When ENABLE_OPTIMIZED is enabled, LLVM code is optimized and output is put
+# into the "Release" directories. Otherwise, LLVM code is not optimized and
+# output is put in the "Debug" directories.
+#ENABLE_OPTIMIZED = 1
+@ENABLE_OPTIMIZED@
+
+# When DISABLE_ASSERTIONS is enabled, builds of all of the LLVM code will
+# exclude assertion checks, otherwise they are included.
+#DISABLE_ASSERTIONS = 1
+@DISABLE_ASSERTIONS@
+
+# When ENABLE_EXPENSIVE_CHECKS is enabled, builds of all of the LLVM
+# code will include expensive checks, otherwise they are excluded.
+#ENABLE_EXPENSIVE_CHECKS = 0
+@ENABLE_EXPENSIVE_CHECKS@
+
+# When DEBUG_RUNTIME is enabled, the runtime libraries will retain debug
+# symbols.
+#DEBUG_RUNTIME = 1
+@DEBUG_RUNTIME@
+
+# When ENABLE_PROFILING is enabled, the llvm source base is built with profile
+# information to allow gprof to be used to get execution frequencies.
+#ENABLE_PROFILING = 1
+
+# When ENABLE_DOXYGEN is enabled, the doxygen documentation will be built
+ENABLE_DOXYGEN = @ENABLE_DOXYGEN@
+
+# Do we want to enable threads?
+ENABLE_THREADS := @ENABLE_THREADS@
+
+# Do we want to build with position independent code?
+ENABLE_PIC := @ENABLE_PIC@
+
+# Use -fvisibility-inlines-hidden?
+ENABLE_VISIBILITY_INLINES_HIDDEN := @ENABLE_VISIBILITY_INLINES_HIDDEN@
+
+# This option tells the Makefiles to produce verbose output.
+# It essentially prints the commands that make is executing
+#VERBOSE = 1
+
+# Enable JIT for this platform
+TARGET_HAS_JIT = @TARGET_HAS_JIT@
+
+# Shared library extension for host platform.
+SHLIBEXT = @SHLIBEXT@
+
+# Executable file extension for host platform.
+EXEEXT = @EXEEXT@
+
+# Things we just assume are "there"
+ECHO := echo
+
+# Get the options for causing archives to link all their content instead of
+# just missing symbols, and the inverse of that. This is used for certain LLVM
+# tools that permit loadable modules. It ensures that the LLVM symbols will be
+# available to those loadable modules.
+LINKALL := @LINKALL@
+NOLINKALL := @NOLINKALL@
+
+# Get the value of HUGE_VAL_SANITY which will be either "yes" or "no" depending
+# on the check.
+HUGE_VAL_SANITY = @HUGE_VAL_SANITY@
+
+# Bindings that we should build
+BINDINGS_TO_BUILD := @BINDINGS_TO_BUILD@
+ALL_BINDINGS      := @ALL_BINDINGS@
+OCAML_LIBDIR      := @OCAML_LIBDIR@
+
+# When compiling under Mingw/Cygwin, executables such as tblgen
+# expect Windows paths, whereas the build system uses Unix paths.
+# The function SYSPATH transforms Unix paths into Windows paths.
+ifneq (,$(findstring -mno-cygwin, $(CXX)))
+  SYSPATH = $(shell echo $(1) | cygpath -m -f -)
+else
+  SYSPATH = $(1)
+endif

@@ -1,0 +1,1812 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>Source Level Debugging with LLVM</title>
+  <link rel="stylesheet" href="llvm.css" type="text/css">
+</head>
+<body>
+
+<div class="doc_title">Source Level Debugging with LLVM</div>
+
+<table class="layout" style="width:100%">
+  <tr class="layout">
+    <td class="left">
+<ul>
+  <li><a href="#introduction">Introduction</a>
+  <ol>
+    <li><a href="#phil">Philosophy behind LLVM debugging information</a></li>
+    <li><a href="#consumers">Debug information consumers</a></li>
+    <li><a href="#debugopt">Debugging optimized code</a></li>
+  </ol></li>
+  <li><a href="#format">Debugging information format</a>
+  <ol>
+    <li><a href="#debug_info_descriptors">Debug information descriptors</a>
+    <ul>
+      <li><a href="#format_anchors">Anchor descriptors</a></li>
+      <li><a href="#format_compile_units">Compile unit descriptors</a></li>
+      <li><a href="#format_global_variables">Global variable descriptors</a></li>
+      <li><a href="#format_subprograms">Subprogram descriptors</a></li>
+      <li><a href="#format_blocks">Block descriptors</a></li>
+      <li><a href="#format_basic_type">Basic type descriptors</a></li>
+      <li><a href="#format_derived_type">Derived type descriptors</a></li>
+      <li><a href="#format_composite_type">Composite type descriptors</a></li>
+      <li><a href="#format_subrange">Subrange descriptors</a></li>
+      <li><a href="#format_enumeration">Enumerator descriptors</a></li>
+      <li><a href="#format_variables">Local variables</a></li>
+    </ul></li>
+    <li><a href="#format_common_intrinsics">Debugger intrinsic functions</a>
+      <ul>
+      <li><a href="#format_common_stoppoint">llvm.dbg.stoppoint</a></li>
+      <li><a href="#format_common_func_start">llvm.dbg.func.start</a></li>
+      <li><a href="#format_common_region_start">llvm.dbg.region.start</a></li>
+      <li><a href="#format_common_region_end">llvm.dbg.region.end</a></li>
+      <li><a href="#format_common_declare">llvm.dbg.declare</a></li>
+    </ul></li>
+    <li><a href="#format_common_stoppoints">Representing stopping points in the
+                                           source program</a></li>
+  </ol></li>
+  <li><a href="#ccxx_frontend">C/C++ front-end specific debug information</a>
+  <ol>
+    <li><a href="#ccxx_compile_units">C/C++ source file information</a></li>
+    <li><a href="#ccxx_global_variable">C/C++ global variable information</a></li>
+    <li><a href="#ccxx_subprogram">C/C++ function information</a></li>
+    <li><a href="#ccxx_basic_types">C/C++ basic types</a></li>
+    <li><a href="#ccxx_derived_types">C/C++ derived types</a></li>
+    <li><a href="#ccxx_composite_types">C/C++ struct/union types</a></li>
+    <li><a href="#ccxx_enumeration_types">C/C++ enumeration types</a></li>
+  </ol></li>
+</ul>
+</td>
+<td class="right">
+<img src="img/venusflytrap.jpg" alt="A leafy and green bug eater" width="247"
+height="369">
+</td>
+</tr></table>
+
+<div class="doc_author">
+  <p>Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a>
+            and <a href="mailto:jlaskey@mac.com">Jim Laskey</a></p>
+</div>
+
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="introduction">Introduction</a></div> 
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>This document is the central repository for all information pertaining to
+debug information in LLVM.  It describes the <a href="#format">actual format
+that the LLVM debug information</a> takes, which is useful for those interested
+in creating front-ends or dealing directly with the information.  Further, this
+document provides specifc examples of what debug information for C/C++.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="phil">Philosophy behind LLVM debugging information</a>
+</div>
+
+<div class="doc_text">
+
+<p>The idea of the LLVM debugging information is to capture how the important
+pieces of the source-language's Abstract Syntax Tree map onto LLVM code.
+Several design aspects have shaped the solution that appears here.  The
+important ones are:</p>
+
+<ul>
+<li>Debugging information should have very little impact on the rest of the
+compiler.  No transformations, analyses, or code generators should need to be
+modified because of debugging information.</li>
+
+<li>LLVM optimizations should interact in <a href="#debugopt">well-defined and
+easily described ways</a> with the debugging information.</li>
+
+<li>Because LLVM is designed to support arbitrary programming languages,
+LLVM-to-LLVM tools should not need to know anything about the semantics of the
+source-level-language.</li>
+
+<li>Source-level languages are often <b>widely</b> different from one another.
+LLVM should not put any restrictions of the flavor of the source-language, and
+the debugging information should work with any language.</li>
+
+<li>With code generator support, it should be possible to use an LLVM compiler
+to compile a program to native machine code and standard debugging formats.
+This allows compatibility with traditional machine-code level debuggers, like
+GDB or DBX.</li>
+
+</ul>
+
+<p>The approach used by the LLVM implementation is to use a small set of <a
+href="#format_common_intrinsics">intrinsic functions</a> to define a mapping
+between LLVM program objects and the source-level objects.  The description of
+the source-level program is maintained in LLVM global variables in an <a
+href="#ccxx_frontend">implementation-defined format</a> (the C/C++ front-end
+currently uses working draft 7 of the <a
+href="http://www.eagercon.com/dwarf/dwarf3std.htm">Dwarf 3 standard</a>).</p>
+
+<p>When a program is being debugged, a debugger interacts with the user and
+turns the stored debug information into source-language specific information. 
+As such, a debugger must be aware of the source-language, and is thus tied to
+a specific language or family of languages.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="consumers">Debug information consumers</a>
+</div>
+
+<div class="doc_text">
+<p>The role of debug information is to provide meta information normally
+stripped away during the compilation process.  This meta information provides an
+LLVM user a relationship between generated code and the original program source
+code.</p>
+
+<p>Currently, debug information is consumed by the DwarfWriter to produce dwarf
+information used by the gdb debugger.  Other targets could use the same
+information to produce stabs or other debug forms.</p>
+
+<p>It would also be reasonable to use debug information to feed profiling tools
+for analysis of generated code, or, tools for reconstructing the original source
+from generated code.</p>
+
+<p>TODO - expound a bit more.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="debugopt">Debugging optimized code</a>
+</div>
+
+<div class="doc_text">
+
+<p>An extremely high priority of LLVM debugging information is to make it
+interact well with optimizations and analysis.  In particular, the LLVM debug
+information provides the following guarantees:</p>
+
+<ul>
+
+<li>LLVM debug information <b>always provides information to accurately read the
+source-level state of the program</b>, regardless of which LLVM optimizations
+have been run, and without any modification to the optimizations themselves.
+However, some optimizations may impact the ability to modify the current state
+of the program with a debugger, such as setting program variables, or calling
+functions that have been deleted.</li>
+
+<li>LLVM optimizations gracefully interact with debugging information.  If they
+are not aware of debug information, they are automatically disabled as necessary
+in the cases that would invalidate the debug info.  This retains the LLVM
+features, making it easy to write new transformations.</li>
+
+<li>As desired, LLVM optimizations can be upgraded to be aware of the LLVM
+debugging information, allowing them to update the debugging information as they
+perform aggressive optimizations.  This means that, with effort, the LLVM
+optimizers could optimize debug code just as well as non-debug code.</li>
+
+<li>LLVM debug information does not prevent many important optimizations from
+happening (for example inlining, basic block reordering/merging/cleanup, tail
+duplication, etc), further reducing the amount of the compiler that eventually
+is "aware" of debugging information.</li>
+
+<li>LLVM debug information is automatically optimized along with the rest of the
+program, using existing facilities.  For example, duplicate information is
+automatically merged by the linker, and unused information is automatically
+removed.</li>
+
+</ul>
+
+<p>Basically, the debug information allows you to compile a program with
+"<tt>-O0 -g</tt>" and get full debug information, allowing you to arbitrarily
+modify the program as it executes from a debugger.  Compiling a program with
+"<tt>-O3 -g</tt>" gives you full debug information that is always available and
+accurate for reading (e.g., you get accurate stack traces despite tail call
+elimination and inlining), but you might lose the ability to modify the program
+and call functions where were optimized out of the program, or inlined away
+completely.</p>
+
+<p><a href="TestingGuide.html#quicktestsuite">LLVM test suite</a> provides a
+framework to test optimizer's handling of debugging information. It can be run
+like this:</p>
+
+<div class="doc_code">
+<pre>
+% cd llvm/projects/test-suite/MultiSource/Benchmarks  # or some other level
+% make TEST=dbgopt
+</pre>
+</div>
+
+<p>
+This will test impact of debugging information on optimization passes. If
+debugging information influences optimization passes then it will be reported
+as a failure. See <a href="TestingGuide.html">TestingGuide</a>
+for more information on LLVM test infrastructure and how to run various tests.
+</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="format">Debugging information format</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>LLVM debugging information has been carefully designed to make it possible
+for the optimizer to optimize the program and debugging information without
+necessarily having to know anything about debugging information.  In particular,
+the global constant merging pass automatically eliminates duplicated debugging
+information (often caused by header files), the global dead code elimination
+pass automatically deletes debugging information for a function if it decides to
+delete the function, and the linker eliminates debug information when it merges
+<tt>linkonce</tt> functions.</p>
+
+<p>To do this, most of the debugging information (descriptors for types,
+variables, functions, source files, etc) is inserted by the language front-end
+in the form of LLVM global variables.  These LLVM global variables are no
+different from any other global variables, except that they have a web of LLVM
+intrinsic functions that point to them.  If the last references to a particular
+piece of debugging information are deleted (for example, by the
+<tt>-globaldce</tt> pass), the extraneous debug information will automatically
+become dead and be removed by the optimizer.</p>
+
+<p>Debug information is designed to be agnostic about the target debugger and
+debugging information representation (e.g. DWARF/Stabs/etc).  It uses a generic
+machine debug information pass to decode the information that represents
+variables, types, functions, namespaces, etc: this allows for arbitrary
+source-language semantics and type-systems to be used, as long as there is a
+module written for the target debugger to interpret the information. In
+addition, debug global variables are declared in the <tt>"llvm.metadata"</tt>
+section.  All values declared in this section are stripped away after target
+debug information is constructed and before the program object is emitted.</p>
+
+<p>To provide basic functionality, the LLVM debugger does have to make some
+assumptions about the source-level language being debugged, though it keeps
+these to a minimum.  The only common features that the LLVM debugger assumes
+exist are <a href="#format_compile_units">source files</a>, and <a
+href="#format_global_variables">program objects</a>.  These abstract objects are
+used by a debugger to form stack traces, show information about local
+variables, etc.</p>
+
+<p>This section of the documentation first describes the representation aspects
+common to any source-language.  The <a href="#ccxx_frontend">next section</a>
+describes the data layout conventions used by the C and C++ front-ends.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="debug_info_descriptors">Debug information descriptors</a>
+</div>
+
+<div class="doc_text">
+<p>In consideration of the complexity and volume of debug information, LLVM
+provides a specification for well formed debug global variables.  The constant
+value of each of these globals is one of a limited set of structures, known as
+debug descriptors.</p>
+
+<p>Consumers of LLVM debug information expect the descriptors for program
+objects to start in a canonical format, but the descriptors can include
+additional information appended at the end that is source-language specific. All
+LLVM debugging information is versioned, allowing backwards compatibility in the
+case that the core structures need to change in some way.  Also, all debugging
+information objects start with a tag to indicate what type of object it is.  The
+source-language is allowed to define its own objects, by using unreserved tag
+numbers.  We recommend using with tags in the range 0x1000 thru 0x2000 (there is
+a defined enum DW_TAG_user_base = 0x1000.)</p>
+
+<p>The fields of debug descriptors used internally by LLVM (MachineModuleInfo)
+are restricted to only the simple data types <tt>int</tt>, <tt>uint</tt>,
+<tt>bool</tt>, <tt>float</tt>, <tt>double</tt>, <tt>sbyte*</tt> and <tt> { }*
+</tt>.  References to arbitrary values are handled using a <tt> { }* </tt> and a
+cast to <tt> { }* </tt> expression; typically references to other field
+descriptors, arrays of descriptors or global variables.</p>
+
+<pre>
+  %llvm.dbg.object.type = type {
+    uint,   ;; A tag
+    ...
+  }
+</pre>
+
+<p><a name="LLVMDebugVersion">The first field of a descriptor is always an
+<tt>uint</tt> containing a tag value identifying the content of the descriptor.
+The remaining fields are specific to the descriptor.  The values of tags are
+loosely bound to the tag values of Dwarf information entries.  However, that
+does not restrict the use of the information supplied to Dwarf targets.  To
+facilitate versioning of debug information, the tag is augmented with the
+current debug version (LLVMDebugVersion = 4 << 16 or 0x40000 or 262144.)</a></p>
+
+<p>The details of the various descriptors follow.</p>  
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_anchors">Anchor descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_anchors">llvm.dbg.anchor.type</a> = type {
+    uint,   ;; Tag = 0 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a>
+    uint    ;; Tag of descriptors grouped by the anchor
+  }
+</pre>
+
+<p>One important aspect of the LLVM debug representation is that it allows the
+LLVM debugger to efficiently index all of the global objects without having the
+scan the program.  To do this, all of the global objects use "anchor"
+descriptors with designated names.  All of the global objects of a particular
+type (e.g., compile units) contain a pointer to the anchor.  This pointer allows
+a debugger to use def-use chains to find all global objects of that type.</p>
+
+<p>The following names are recognized as anchors by LLVM:</p>
+
+<pre>
+  %<a href="#format_compile_units">llvm.dbg.compile_units</a>       = linkonce constant %<a href="#format_anchors">llvm.dbg.anchor.type</a>  { uint 0, uint 17 } ;; DW_TAG_compile_unit
+  %<a href="#format_global_variables">llvm.dbg.global_variables</a>    = linkonce constant %<a href="#format_anchors">llvm.dbg.anchor.type</a>  { uint 0, uint 52 } ;; DW_TAG_variable
+  %<a href="#format_subprograms">llvm.dbg.subprograms</a>         = linkonce constant %<a href="#format_anchors">llvm.dbg.anchor.type</a>  { uint 0, uint 46 } ;; DW_TAG_subprogram
+</pre>
+
+<p>Using anchors in this way (where the compile unit descriptor points to the
+anchors, as opposed to having a list of compile unit descriptors) allows for the
+standard dead global elimination and merging passes to automatically remove
+unused debugging information.  If the globals were kept track of through lists,
+there would always be an object pointing to the descriptors, thus would never be
+deleted.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_compile_units">Compile unit descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_compile_units">llvm.dbg.compile_unit.type</a> = type {
+    uint,   ;; Tag = 17 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a> (DW_TAG_compile_unit)
+    {  }*,  ;; Compile unit anchor = cast = (%<a href="#format_anchors">llvm.dbg.anchor.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_units</a> to {  }*)
+    uint,   ;; Dwarf language identifier (ex. DW_LANG_C89) 
+    sbyte*, ;; Source file name
+    sbyte*, ;; Source file directory (includes trailing slash)
+    sbyte*  ;; Producer (ex. "4.0.1 LLVM (LLVM research group)")
+    bool    ;; True if this is a main compile unit. 
+  }
+</pre>
+
+<p>These descriptors contain a source language ID for the file (we use the Dwarf
+3.0 ID numbers, such as <tt>DW_LANG_C89</tt>, <tt>DW_LANG_C_plus_plus</tt>,
+<tt>DW_LANG_Cobol74</tt>, etc), three strings describing the filename, working
+directory of the compiler, and an identifier string for the compiler that
+produced it.</p>
+
+<p> Compile unit descriptors provide the root context for objects declared in a
+specific source file.  Global variables and top level functions would be defined
+using this context.  Compile unit descriptors also provide context for source
+line correspondence.</p>  
+
+<p> Each input file is encoded as a separate compile unit in LLVM debugging
+information output. However, many target specific tool chains prefer to encode
+only one compile unit in an object file. In this situation, the LLVM code
+generator will include  debugging information entities in the compile unit 
+that is marked as main compile unit. The code generator accepts maximum one main
+compile unit per module. If a module does not contain any main compile unit 
+then the code generator will emit multiple compile units in the output object 
+file.
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_global_variables">Global variable descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_global_variables">llvm.dbg.global_variable.type</a> = type {
+    uint,   ;; Tag = 52 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a> (DW_TAG_variable)
+    {  }*,  ;; Global variable anchor = cast (%<a href="#format_anchors">llvm.dbg.anchor.type</a>* %<a href="#format_global_variables">llvm.dbg.global_variables</a> to {  }*),  
+    {  }*,  ;; Reference to context descriptor
+    sbyte*, ;; Name
+    sbyte*, ;; Display name (fully qualified C++ name)
+    sbyte*, ;; MIPS linkage name (for C++)
+    {  }*,  ;; Reference to compile unit where defined
+    uint,   ;; Line number where defined
+    {  }*,  ;; Reference to type descriptor
+    bool,   ;; True if the global is local to compile unit (static)
+    bool,   ;; True if the global is defined in the compile unit (not extern)
+    {  }*   ;; Reference to the global variable
+  }
+</pre>
+
+<p>These descriptors provide debug information about globals variables.  The
+provide details such as name, type and where the variable is defined.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_subprograms">Subprogram descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_subprograms">llvm.dbg.subprogram.type</a> = type {
+    uint,   ;; Tag = 46 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a> (DW_TAG_subprogram)
+    {  }*,  ;; Subprogram anchor = cast (%<a href="#format_anchors">llvm.dbg.anchor.type</a>* %<a href="#format_subprograms">llvm.dbg.subprograms</a> to {  }*),  
+    {  }*,  ;; Reference to context descriptor
+    sbyte*, ;; Name
+    sbyte*, ;; Display name (fully qualified C++ name)
+    sbyte*, ;; MIPS linkage name (for C++)
+    {  }*,  ;; Reference to compile unit where defined
+    uint,   ;; Line number where defined
+    {  }*,  ;; Reference to type descriptor
+    bool,   ;; True if the global is local to compile unit (static)
+    bool    ;; True if the global is defined in the compile unit (not extern)
+  }
+</pre>
+
+<p>These descriptors provide debug information about functions, methods and
+subprograms.  They provide details such as name, return types and the source
+location where the subprogram is defined.</p>
+
+</div>
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_blocks">Block descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_blocks">llvm.dbg.block</a> = type {
+    uint,   ;; Tag = 13 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a> (DW_TAG_lexical_block)
+    {  }*   ;; Reference to context descriptor
+  }
+</pre>
+
+<p>These descriptors provide debug information about nested blocks within a
+subprogram.  The array of member descriptors is used to define local variables
+and deeper nested blocks.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_basic_type">Basic type descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_basic_type">llvm.dbg.basictype.type</a> = type {
+    uint,   ;; Tag = 36 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a> (DW_TAG_base_type)
+    {  }*,  ;; Reference to context (typically a compile unit)
+    sbyte*, ;; Name (may be "" for anonymous types)
+    {  }*,  ;; Reference to compile unit where defined (may be NULL)
+    uint,   ;; Line number where defined (may be 0)
+    uint,   ;; Size in bits
+    uint,   ;; Alignment in bits
+    uint,   ;; Offset in bits
+    uint    ;; Dwarf type encoding
+  }
+</pre>
+
+<p>These descriptors define primitive types used in the code. Example int, bool
+and float.  The context provides the scope of the type, which is usually the top
+level.  Since basic types are not usually user defined the compile unit and line
+number can be left as NULL and 0.  The size, alignment and offset are expressed
+in bits and can be 64 bit values.  The alignment is used to round the offset
+when embedded in a <a href="#format_composite_type">composite type</a>
+(example to keep float doubles on 64 bit boundaries.) The offset is the bit
+offset if embedded in a <a href="#format_composite_type">composite
+type</a>.</p>
+
+<p>The type encoding provides the details of the type.  The values are typically
+one of the following:</p>
+
+<pre>
+  DW_ATE_address = 1
+  DW_ATE_boolean = 2
+  DW_ATE_float = 4
+  DW_ATE_signed = 5
+  DW_ATE_signed_char = 6
+  DW_ATE_unsigned = 7
+  DW_ATE_unsigned_char = 8
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_derived_type">Derived type descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_derived_type">llvm.dbg.derivedtype.type</a> = type {
+    uint,   ;; Tag (see below)
+    {  }*,  ;; Reference to context
+    sbyte*, ;; Name (may be "" for anonymous types)
+    {  }*,  ;; Reference to compile unit where defined (may be NULL)
+    uint,   ;; Line number where defined (may be 0)
+    uint,   ;; Size in bits
+    uint,   ;; Alignment in bits
+    uint,   ;; Offset in bits
+    {  }*   ;; Reference to type derived from
+  }
+</pre>
+
+<p>These descriptors are used to define types derived from other types.  The
+value of the tag varies depending on the meaning.  The following are possible
+tag values:</p>
+
+<pre>
+  DW_TAG_formal_parameter = 5
+  DW_TAG_member = 13
+  DW_TAG_pointer_type = 15
+  DW_TAG_reference_type = 16
+  DW_TAG_typedef = 22
+  DW_TAG_const_type = 38
+  DW_TAG_volatile_type = 53
+  DW_TAG_restrict_type = 55
+</pre>
+
+<p> <tt>DW_TAG_member</tt> is used to define a member of a <a
+href="#format_composite_type">composite type</a> or <a
+href="#format_subprograms">subprogram</a>.  The type of the member is the <a
+href="#format_derived_type">derived type</a>. <tt>DW_TAG_formal_parameter</tt>
+is used to define a member which is a formal argument of a subprogram.</p>
+
+<p><tt>DW_TAG_typedef</tt> is used to
+provide a name for the derived type.</p>
+
+<p><tt>DW_TAG_pointer_type</tt>,
+<tt>DW_TAG_reference_type</tt>, <tt>DW_TAG_const_type</tt>,
+<tt>DW_TAG_volatile_type</tt> and <tt>DW_TAG_restrict_type</tt> are used to
+qualify the <a href="#format_derived_type">derived type</a>. </p>
+
+<p><a href="#format_derived_type">Derived type</a> location can be determined
+from the compile unit and line number.  The size, alignment and offset are
+expressed in bits and can be 64 bit values.  The alignment is used to round the
+offset when embedded in a <a href="#format_composite_type">composite type</a>
+(example to keep float doubles on 64 bit boundaries.) The offset is the bit
+offset if embedded in a <a href="#format_composite_type">composite
+type</a>.</p>
+
+<p>Note that the <tt>void *</tt> type is expressed as a
+<tt>llvm.dbg.derivedtype.type</tt> with tag of <tt>DW_TAG_pointer_type</tt> and
+NULL derived type.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_composite_type">Composite type descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_composite_type">llvm.dbg.compositetype.type</a> = type {
+    uint,   ;; Tag (see below)
+    {  }*,  ;; Reference to context
+    sbyte*, ;; Name (may be "" for anonymous types)
+    {  }*,  ;; Reference to compile unit where defined (may be NULL)
+    uint,   ;; Line number where defined (may be 0)
+    uint,   ;; Size in bits
+    uint,   ;; Alignment in bits
+    uint,   ;; Offset in bits
+    {  }*   ;; Reference to array of member descriptors
+  }
+</pre>
+
+<p>These descriptors are used to define types that are composed of 0 or more
+elements.  The value of the tag varies depending on the meaning.  The following
+are possible tag values:</p>
+
+<pre>
+  DW_TAG_array_type = 1
+  DW_TAG_enumeration_type = 4
+  DW_TAG_structure_type = 19
+  DW_TAG_union_type = 23
+  DW_TAG_vector_type = 259
+  DW_TAG_subroutine_type = 46
+  DW_TAG_inheritance = 26
+</pre>
+
+<p>The vector flag indicates that an array type is a native packed vector.</p>
+
+<p>The members of array types (tag = <tt>DW_TAG_array_type</tt>) or vector types
+(tag = <tt>DW_TAG_vector_type</tt>) are <a href="#format_subrange">subrange
+descriptors</a>, each representing the range of subscripts at that level of
+indexing.</p>
+
+<p>The members of enumeration types (tag = <tt>DW_TAG_enumeration_type</tt>) are
+<a href="#format_enumeration">enumerator descriptors</a>, each representing the
+definition of enumeration value
+for the set.</p>
+
+<p>The members of structure (tag = <tt>DW_TAG_structure_type</tt>) or union (tag
+= <tt>DW_TAG_union_type</tt>) types are any one of the <a
+href="#format_basic_type">basic</a>, <a href="#format_derived_type">derived</a>
+or <a href="#format_composite_type">composite</a> type descriptors, each
+representing a field member of the structure or union.</p>
+
+<p>For C++ classes (tag = <tt>DW_TAG_structure_type</tt>), member descriptors
+provide information about base classes, static members and member functions. If
+a member is a <a href="#format_derived_type">derived type descriptor</a> and has
+a tag of <tt>DW_TAG_inheritance</tt>, then the type represents a base class. If
+the member of is a <a href="#format_global_variables">global variable
+descriptor</a> then it represents a static member.  And, if the member is a <a
+href="#format_subprograms">subprogram descriptor</a> then it represents a member
+function.  For static members and member functions, <tt>getName()</tt> returns
+the members link or the C++ mangled name.  <tt>getDisplayName()</tt> the
+simplied version of the name.</p>
+
+<p>The first member of subroutine (tag = <tt>DW_TAG_subroutine_type</tt>)
+type elements is the return type for the subroutine.  The remaining
+elements are the formal arguments to the subroutine.</p>
+
+<p><a href="#format_composite_type">Composite type</a> location can be
+determined from the compile unit and line number.  The size, alignment and
+offset are expressed in bits and can be 64 bit values.  The alignment is used to
+round the offset when embedded in a <a href="#format_composite_type">composite
+type</a> (as an example, to keep float doubles on 64 bit boundaries.) The offset
+is the bit offset if embedded in a <a href="#format_composite_type">composite
+type</a>.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_subrange">Subrange descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_subrange">llvm.dbg.subrange.type</a> = type {
+    uint,   ;; Tag = 33 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a> (DW_TAG_subrange_type)
+    uint,   ;; Low value
+    uint    ;; High value
+  }
+</pre>
+
+<p>These descriptors are used to define ranges of array subscripts for an array
+<a href="#format_composite_type">composite type</a>.  The low value defines the
+lower bounds typically zero for C/C++.  The high value is the upper bounds. 
+Values are 64 bit.  High - low + 1 is the size of the array.  If
+low == high the array will be unbounded.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_enumeration">Enumerator descriptors</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+  %<a href="#format_enumeration">llvm.dbg.enumerator.type</a> = type {
+    uint,   ;; Tag = 40 + <a href="#LLVMDebugVersion">LLVMDebugVersion</a> (DW_TAG_enumerator)
+    sbyte*, ;; Name
+    uint    ;; Value
+  }
+</pre>
+
+<p>These descriptors are used to define members of an enumeration <a
+href="#format_composite_type">composite type</a>, it associates the name to the
+value.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_variables">Local variables</a>
+</div>
+
+<div class="doc_text">
+<pre>
+  %<a href="#format_variables">llvm.dbg.variable.type</a> = type {
+    uint,    ;; Tag (see below)
+    {  }*,   ;; Context
+    sbyte*,  ;; Name
+    {  }*,   ;; Reference to compile unit where defined
+    uint,    ;; Line number where defined
+    {  }*    ;; Type descriptor
+  }
+</pre>
+
+<p>These descriptors are used to define variables local to a sub program.  The
+value of the tag depends on the usage of the variable:</p>
+
+<pre>
+  DW_TAG_auto_variable = 256
+  DW_TAG_arg_variable = 257
+  DW_TAG_return_variable = 258
+</pre>
+
+<p>An auto variable is any variable declared in the body of the function.  An
+argument variable is any variable that appears as a formal argument to the
+function.  A return variable is used to track the result of a function and has
+no source correspondent.</p>
+
+<p>The context is either the subprogram or block where the variable is defined.
+Name the source variable name.  Compile unit and line indicate where the
+variable was defined. Type descriptor defines the declared type of the
+variable.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="format_common_intrinsics">Debugger intrinsic functions</a>
+</div>
+
+<div class="doc_text">
+
+<p>LLVM uses several intrinsic functions (name prefixed with "llvm.dbg") to
+provide debug information at various points in generated code.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_common_stoppoint">llvm.dbg.stoppoint</a>
+</div>
+
+<div class="doc_text">
+<pre>
+  void %<a href="#format_common_stoppoint">llvm.dbg.stoppoint</a>( uint, uint, { }* )
+</pre>
+
+<p>This intrinsic is used to provide correspondence between the source file and
+the generated code.  The first argument is the line number (base 1), second
+argument is the column number (0 if unknown) and the third argument the source
+<tt>%<a href="#format_compile_units">llvm.dbg.compile_unit</a>*</tt> cast to a
+<tt>{ }*</tt>.  Code following a call to this intrinsic will have been defined
+in close proximity of the line, column and file.  This information holds until
+the next call to <tt>%<a
+href="#format_common_stoppoint">lvm.dbg.stoppoint</a></tt>.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_common_func_start">llvm.dbg.func.start</a>
+</div>
+
+<div class="doc_text">
+<pre>
+  void %<a href="#format_common_func_start">llvm.dbg.func.start</a>( { }* )
+</pre>
+
+<p>This intrinsic is used to link the debug information in <tt>%<a
+href="#format_subprograms">llvm.dbg.subprogram</a></tt> to the function. It
+defines the beginning of the function's declarative region (scope). It also
+implies a call to %<tt><a
+href="#format_common_stoppoint">llvm.dbg.stoppoint</a></tt> which defines a
+source line "stop point". The intrinsic should be called early in the function
+after the all the alloca instructions.  It should be paired off with a closing
+<tt>%<a
+href="#format_common_region_end">llvm.dbg.region.end</a></tt>.  The function's
+single argument is the <tt>%<a
+href="#format_subprograms">llvm.dbg.subprogram.type</a></tt>.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_common_region_start">llvm.dbg.region.start</a>
+</div>
+
+<div class="doc_text">
+<pre>
+  void %<a href="#format_common_region_start">llvm.dbg.region.start</a>( { }* )
+</pre>
+
+<p>This intrinsic is used to define the beginning of a declarative scope (ex.
+block) for local language elements.  It should be paired off with a closing
+<tt>%<a href="#format_common_region_end">llvm.dbg.region.end</a></tt>.  The
+function's single argument is the <tt>%<a
+href="#format_blocks">llvm.dbg.block</a></tt> which is starting.</p>
+
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_common_region_end">llvm.dbg.region.end</a>
+</div>
+
+<div class="doc_text">
+<pre>
+  void %<a href="#format_common_region_end">llvm.dbg.region.end</a>( { }* )
+</pre>
+
+<p>This intrinsic is used to define the end of a declarative scope (ex. block)
+for local language elements.  It should be paired off with an opening <tt>%<a
+href="#format_common_region_start">llvm.dbg.region.start</a></tt> or <tt>%<a
+href="#format_common_func_start">llvm.dbg.func.start</a></tt>.  The function's
+single argument is either the <tt>%<a
+href="#format_blocks">llvm.dbg.block</a></tt> or the <tt>%<a
+href="#format_subprograms">llvm.dbg.subprogram.type</a></tt> which is
+ending.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="format_common_declare">llvm.dbg.declare</a>
+</div>
+
+<div class="doc_text">
+<pre>
+  void %<a href="#format_common_declare">llvm.dbg.declare</a>( { } *, { }* )
+</pre>
+
+<p>This intrinsic provides information about a local element (ex. variable.) The
+first argument is the alloca for the variable, cast to a <tt>{ }*</tt>. The
+second argument is the <tt>%<a
+href="#format_variables">llvm.dbg.variable</a></tt> containing the description
+of the variable, also cast to a <tt>{ }*</tt>.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="format_common_stoppoints">
+     Representing stopping points in the source program
+  </a>
+</div>
+
+<div class="doc_text">
+
+<p>LLVM debugger "stop points" are a key part of the debugging representation
+that allows the LLVM to maintain simple semantics for <a
+href="#debugopt">debugging optimized code</a>.  The basic idea is that the
+front-end inserts calls to the <a
+href="#format_common_stoppoint">%<tt>llvm.dbg.stoppoint</tt></a> intrinsic
+function at every point in the program where a debugger should be able to
+inspect the program (these correspond to places a debugger stops when you
+"<tt>step</tt>" through it).  The front-end can choose to place these as
+fine-grained as it would like (for example, before every subexpression
+evaluated), but it is recommended to only put them after every source statement
+that includes executable code.</p>
+
+<p>Using calls to this intrinsic function to demark legal points for the
+debugger to inspect the program automatically disables any optimizations that
+could potentially confuse debugging information.  To non-debug-information-aware
+transformations, these calls simply look like calls to an external function,
+which they must assume to do anything (including reading or writing to any part
+of reachable memory).  On the other hand, it does not impact many optimizations,
+such as code motion of non-trapping instructions, nor does it impact
+optimization of subexpressions, code duplication transformations, or basic-block
+reordering transformations.</p>
+
+</div>
+
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="format_common_lifetime">Object lifetimes and scoping</a>
+</div>
+
+<div class="doc_text">
+<p>In many languages, the local variables in functions can have their lifetime
+or scope limited to a subset of a function.  In the C family of languages, for
+example, variables are only live (readable and writable) within the source block
+that they are defined in.  In functional languages, values are only readable
+after they have been defined.  Though this is a very obvious concept, it is also
+non-trivial to model in LLVM, because it has no notion of scoping in this sense,
+and does not want to be tied to a language's scoping rules.</p>
+
+<p>In order to handle this, the LLVM debug format uses the notion of "regions"
+of a function, delineated by calls to intrinsic functions.  These intrinsic
+functions define new regions of the program and indicate when the region
+lifetime expires.  Consider the following C fragment, for example:</p>
+
+<pre>
+1.  void foo() {
+2.    int X = ...;
+3.    int Y = ...;
+4.    {
+5.      int Z = ...;
+6.      ...
+7.    }
+8.    ...
+9.  }
+</pre>
+
+<p>Compiled to LLVM, this function would be represented like this:</p>
+
+<pre>
+void %foo() {
+entry:
+    %X = alloca int
+    %Y = alloca int
+    %Z = alloca int
+    
+    ...
+    
+    call void %<a href="#format_common_func_start">llvm.dbg.func.start</a>( %<a href="#format_subprograms">llvm.dbg.subprogram.type</a>* %llvm.dbg.subprogram )
+    
+    call void %<a href="#format_common_stoppoint">llvm.dbg.stoppoint</a>( uint 2, uint 2, %<a href="#format_compile_units">llvm.dbg.compile_unit</a>* %llvm.dbg.compile_unit )
+    
+    call void %<a href="#format_common_declare">llvm.dbg.declare</a>({}* %X, ...)
+    call void %<a href="#format_common_declare">llvm.dbg.declare</a>({}* %Y, ...)
+    
+    <i>;; Evaluate expression on line 2, assigning to X.</i>
+    
+    call void %<a href="#format_common_stoppoint">llvm.dbg.stoppoint</a>( uint 3, uint 2, %<a href="#format_compile_units">llvm.dbg.compile_unit</a>* %llvm.dbg.compile_unit )
+    
+    <i>;; Evaluate expression on line 3, assigning to Y.</i>
+    
+    call void %<a href="#format_common_stoppoint">llvm.region.start</a>()
+    call void %<a href="#format_common_stoppoint">llvm.dbg.stoppoint</a>( uint 5, uint 4, %<a href="#format_compile_units">llvm.dbg.compile_unit</a>* %llvm.dbg.compile_unit )
+    call void %<a href="#format_common_declare">llvm.dbg.declare</a>({}* %X, ...)
+    
+    <i>;; Evaluate expression on line 5, assigning to Z.</i>
+    
+    call void %<a href="#format_common_stoppoint">llvm.dbg.stoppoint</a>( uint 7, uint 2, %<a href="#format_compile_units">llvm.dbg.compile_unit</a>* %llvm.dbg.compile_unit )
+    call void %<a href="#format_common_region_end">llvm.region.end</a>()
+    
+    call void %<a href="#format_common_stoppoint">llvm.dbg.stoppoint</a>( uint 9, uint 2, %<a href="#format_compile_units">llvm.dbg.compile_unit</a>* %llvm.dbg.compile_unit )
+    
+    call void %<a href="#format_common_region_end">llvm.region.end</a>()
+    
+    ret void
+}
+</pre>
+
+<p>This example illustrates a few important details about the LLVM debugging
+information.  In particular, it shows how the various intrinsics are applied
+together to allow a debugger to analyze the relationship between statements,
+variable definitions, and the code used to implement the function.</p>
+
+<p>The first intrinsic <tt>%<a
+href="#format_common_func_start">llvm.dbg.func.start</a></tt> provides
+a link with the <a href="#format_subprograms">subprogram descriptor</a>
+containing the details of this function.  This call also defines the beginning
+of the function region, bounded by the <tt>%<a
+href="#format_common_region_end">llvm.region.end</a></tt> at the end of
+the function.  This region is used to bracket the lifetime of variables declared
+within.  For a function, this outer region defines a new stack frame whose
+lifetime ends when the region is ended.</p>
+
+<p>It is possible to define inner regions for short term variables by using the
+%<a href="#format_common_stoppoint"><tt>llvm.region.start</tt></a> and <a
+href="#format_common_region_end"><tt>%llvm.region.end</tt></a> to bound a
+region.  The inner region in this example would be for the block containing the
+declaration of Z.</p>
+
+<p>Using regions to represent the boundaries of source-level functions allow
+LLVM interprocedural optimizations to arbitrarily modify LLVM functions without
+having to worry about breaking mapping information between the LLVM code and the
+and source-level program.  In particular, the inliner requires no modification
+to support inlining with debugging information: there is no explicit correlation
+drawn between LLVM functions and their source-level counterparts (note however,
+that if the inliner inlines all instances of a non-strong-linkage function into
+its caller that it will not be possible for the user to manually invoke the
+inlined function from a debugger).</p>
+
+<p>Once the function has been defined, the <a
+href="#format_common_stoppoint"><tt>stopping point</tt></a> corresponding to
+line #2 (column #2) of the function is encountered.  At this point in the
+function, <b>no</b> local variables are live.  As lines 2 and 3 of the example
+are executed, their variable definitions are introduced into the program using
+%<a href="#format_common_declare"><tt>llvm.dbg.declare</tt></a>, without the
+need to specify a new region.  These variables do not require new regions to be
+introduced because they go out of scope at the same point in the program: line
+9.</p>
+
+<p>In contrast, the <tt>Z</tt> variable goes out of scope at a different time,
+on line 7.  For this reason, it is defined within the inner region, which kills
+the availability of <tt>Z</tt> before the code for line 8 is executed.  In this
+way, regions can support arbitrary source-language scoping rules, as long as
+they can only be nested (ie, one scope cannot partially overlap with a part of
+another scope).</p>
+
+<p>It is worth noting that this scoping mechanism is used to control scoping of
+all declarations, not just variable declarations.  For example, the scope of a
+C++ using declaration is controlled with this and could change how name lookup is
+performed.</p>
+
+</div>
+
+
+
+<!-- *********************************************************************** -->
+<div class="doc_section">
+  <a name="ccxx_frontend">C/C++ front-end specific debug information</a>
+</div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+
+<p>The C and C++ front-ends represent information about the program in a format
+that is effectively identical to <a
+href="http://www.eagercon.com/dwarf/dwarf3std.htm">Dwarf 3.0</a> in terms of
+information content.  This allows code generators to trivially support native
+debuggers by generating standard dwarf information, and contains enough
+information for non-dwarf targets to translate it as needed.</p>
+
+<p>This section describes the forms used to represent C and C++ programs. Other
+languages could pattern themselves after this (which itself is tuned to
+representing programs in the same way that Dwarf 3 does), or they could choose
+to provide completely different forms if they don't fit into the Dwarf model. 
+As support for debugging information gets added to the various LLVM
+source-language front-ends, the information used should be documented here.</p>
+
+<p>The following sections provide examples of various C/C++ constructs and the
+debug information that would best describe those constructs.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ccxx_compile_units">C/C++ source file information</a>
+</div>
+
+<div class="doc_text">
+
+<p>Given the source files "MySource.cpp" and "MyHeader.h" located in the
+directory "/Users/mine/sources", the following code:</p>
+
+<pre>
+#include "MyHeader.h"
+
+int main(int argc, char *argv[]) {
+  return 0;
+}
+</pre>
+
+<p>a C/C++ front-end would generate the following descriptors:</p>
+
+<pre>
+...
+;;
+;; Define types used.  In this case we need one for compile unit anchors and one
+;; for compile units.
+;;
+%<a href="#format_anchors">llvm.dbg.anchor.type</a> = type { uint, uint }
+%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a> = type { uint, {  }*, uint, uint, sbyte*, sbyte*, sbyte* }
+...
+;;
+;; Define the anchor for compile units.  Note that the second field of the
+;; anchor is 17, which is the same as the tag for compile units
+;; (17 = DW_TAG_compile_unit.)
+;;
+%<a href="#format_compile_units">llvm.dbg.compile_units</a> = linkonce constant %<a href="#format_anchors">llvm.dbg.anchor.type</a> { uint 0, uint 17 }, section "llvm.metadata"
+
+;;
+;; Define the compile unit for the source file "/Users/mine/sources/MySource.cpp".
+;;
+%<a href="#format_compile_units">llvm.dbg.compile_unit1</a> = internal constant %<a href="#format_compile_units">llvm.dbg.compile_unit.type</a> {
+    uint add(uint 17, uint 262144), 
+    {  }* cast (%<a href="#format_anchors">llvm.dbg.anchor.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_units</a> to {  }*), 
+    uint 1, 
+    uint 1, 
+    sbyte* getelementptr ([13 x sbyte]* %str1, int 0, int 0), 
+    sbyte* getelementptr ([21 x sbyte]* %str2, int 0, int 0), 
+    sbyte* getelementptr ([33 x sbyte]* %str3, int 0, int 0) }, section "llvm.metadata"
+    
+;;
+;; Define the compile unit for the header file "/Users/mine/sources/MyHeader.h".
+;;
+%<a href="#format_compile_units">llvm.dbg.compile_unit2</a> = internal constant %<a href="#format_compile_units">llvm.dbg.compile_unit.type</a> {
+    uint add(uint 17, uint 262144), 
+    {  }* cast (%<a href="#format_anchors">llvm.dbg.anchor.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_units</a> to {  }*), 
+    uint 1, 
+    uint 1, 
+    sbyte* getelementptr ([11 x sbyte]* %str4, int 0, int 0), 
+    sbyte* getelementptr ([21 x sbyte]* %str2, int 0, int 0), 
+    sbyte* getelementptr ([33 x sbyte]* %str3, int 0, int 0) }, section "llvm.metadata"
+
+;;
+;; Define each of the strings used in the compile units.
+;;
+%str1 = internal constant [13 x sbyte] c"MySource.cpp\00", section "llvm.metadata";
+%str2 = internal constant [21 x sbyte] c"/Users/mine/sources/\00", section "llvm.metadata";
+%str3 = internal constant [33 x sbyte] c"4.0.1 LLVM (LLVM research group)\00", section "llvm.metadata";
+%str4 = internal constant [11 x sbyte] c"MyHeader.h\00", section "llvm.metadata";
+...
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ccxx_global_variable">C/C++ global variable information</a>
+</div>
+
+<div class="doc_text">
+
+<p>Given an integer global variable declared as follows:</p>
+
+<pre>
+int MyGlobal = 100;
+</pre>
+
+<p>a C/C++ front-end would generate the following descriptors:</p>
+
+<pre>
+;;
+;; Define types used. One for global variable anchors, one for the global
+;; variable descriptor, one for the global's basic type and one for the global's
+;; compile unit.
+;;
+%<a href="#format_anchors">llvm.dbg.anchor.type</a> = type { uint, uint }
+%<a href="#format_global_variables">llvm.dbg.global_variable.type</a> = type { uint, {  }*, {  }*, sbyte*, {  }*, uint, {  }*, bool, bool, {  }*, uint }
+%<a href="#format_basic_type">llvm.dbg.basictype.type</a> = type { uint, {  }*, sbyte*, {  }*, int, uint, uint, uint, uint }
+%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a> = ...
+...
+;;
+;; Define the global itself.
+;;
+%MyGlobal = global int 100
+...
+;;
+;; Define the anchor for global variables.  Note that the second field of the
+;; anchor is 52, which is the same as the tag for global variables
+;; (52 = DW_TAG_variable.)
+;;
+%<a href="#format_global_variables">llvm.dbg.global_variables</a> = linkonce constant %<a href="#format_anchors">llvm.dbg.anchor.type</a> { uint 0, uint 52 }, section "llvm.metadata"
+
+;;
+;; Define the global variable descriptor.  Note the reference to the global
+;; variable anchor and the global variable itself.
+;;
+%<a href="#format_global_variables">llvm.dbg.global_variable</a> = internal constant %<a href="#format_global_variables">llvm.dbg.global_variable.type</a> {
+    uint add(uint 52, uint 262144), 
+    {  }* cast (%<a href="#format_anchors">llvm.dbg.anchor.type</a>* %<a href="#format_global_variables">llvm.dbg.global_variables</a> to {  }*), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([9 x sbyte]* %str1, int 0, int 0), 
+    sbyte* getelementptr ([1 x sbyte]* %str2, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    uint 1,
+    {  }* cast (%<a href="#format_basic_type">llvm.dbg.basictype.type</a>* %<a href="#format_basic_type">llvm.dbg.basictype</a> to {  }*), 
+    bool false, 
+    bool true, 
+    {  }* cast (int* %MyGlobal to {  }*) }, section "llvm.metadata"
+    
+;;
+;; Define the basic type of 32 bit signed integer.  Note that since int is an
+;; intrinsic type the source file is NULL and line 0.
+;;    
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([4 x sbyte]* %str3, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    uint 5 }, section "llvm.metadata"
+
+;;
+;; Define the names of the global variable and basic type.
+;;
+%str1 = internal constant [9 x sbyte] c"MyGlobal\00", section "llvm.metadata"
+%str2 = internal constant [1 x sbyte] c"\00", section "llvm.metadata"
+%str3 = internal constant [4 x sbyte] c"int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ccxx_subprogram">C/C++ function information</a>
+</div>
+
+<div class="doc_text">
+
+<p>Given a function declared as follows:</p>
+
+<pre>
+int main(int argc, char *argv[]) {
+  return 0;
+}
+</pre>
+
+<p>a C/C++ front-end would generate the following descriptors:</p>
+
+<pre>
+;;
+;; Define types used. One for subprogram anchors, one for the subprogram
+;; descriptor, one for the global's basic type and one for the subprogram's
+;; compile unit.
+;;
+%<a href="#format_subprograms">llvm.dbg.subprogram.type</a> = type { uint, {  }*, {  }*, sbyte*, {  }*, bool, bool }
+%<a href="#format_anchors">llvm.dbg.anchor.type</a> = type { uint, uint }
+%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a> = ...
+	
+;;
+;; Define the anchor for subprograms.  Note that the second field of the
+;; anchor is 46, which is the same as the tag for subprograms
+;; (46 = DW_TAG_subprogram.)
+;;
+%<a href="#format_subprograms">llvm.dbg.subprograms</a> = linkonce constant %<a href="#format_anchors">llvm.dbg.anchor.type</a> { uint 0, uint 46 }, section "llvm.metadata"
+
+;;
+;; Define the descriptor for the subprogram.  TODO - more details.
+;;
+%<a href="#format_subprograms">llvm.dbg.subprogram</a> = internal constant %<a href="#format_subprograms">llvm.dbg.subprogram.type</a> {
+    uint add(uint 46, uint 262144), 
+    {  }* cast (%<a href="#format_anchors">llvm.dbg.anchor.type</a>* %<a href="#format_subprograms">llvm.dbg.subprograms</a> to {  }*), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([5 x sbyte]* %str1, int 0, int 0), 
+    sbyte* getelementptr ([1 x sbyte]* %str2, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*),
+    uint 1,
+    {  }* null, 
+    bool false, 
+    bool true }, section "llvm.metadata"
+
+;;
+;; Define the name of the subprogram.
+;;
+%str1 = internal constant [5 x sbyte] c"main\00", section "llvm.metadata"
+%str2 = internal constant [1 x sbyte] c"\00", section "llvm.metadata"
+
+;;
+;; Define the subprogram itself.
+;;
+int %main(int %argc, sbyte** %argv) {
+...
+}
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ccxx_basic_types">C/C++ basic types</a>
+</div>
+
+<div class="doc_text">
+
+<p>The following are the basic type descriptors for C/C++ core types:</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_type_bool">bool</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([5 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    uint 2 }, section "llvm.metadata"
+%str1 = internal constant [5 x sbyte] c"bool\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_char">char</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([5 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 8, 
+    uint 8, 
+    uint 0, 
+    uint 6 }, section "llvm.metadata"
+%str1 = internal constant [5 x sbyte] c"char\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_unsigned_char">unsigned char</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([14 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 8, 
+    uint 8, 
+    uint 0, 
+    uint 8 }, section "llvm.metadata"
+%str1 = internal constant [14 x sbyte] c"unsigned char\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_short">short</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([10 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 16, 
+    uint 16, 
+    uint 0, 
+    uint 5 }, section "llvm.metadata"
+%str1 = internal constant [10 x sbyte] c"short int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_unsigned_short">unsigned short</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([19 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 16, 
+    uint 16, 
+    uint 0, 
+    uint 7 }, section "llvm.metadata"
+%str1 = internal constant [19 x sbyte] c"short unsigned int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_int">int</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([4 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    uint 5 }, section "llvm.metadata"
+%str1 = internal constant [4 x sbyte] c"int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_unsigned_int">unsigned int</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([13 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    uint 7 }, section "llvm.metadata"
+%str1 = internal constant [13 x sbyte] c"unsigned int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_long_long">long long</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([14 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 64, 
+    uint 64, 
+    uint 0, 
+    uint 5 }, section "llvm.metadata"
+%str1 = internal constant [14 x sbyte] c"long long int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_unsigned_long_long">unsigned long long</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([23 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 64, 
+    uint 64, 
+    uint 0, 
+    uint 7 }, section "llvm.metadata"
+%str1 = internal constant [23 x sbyte] c"long long unsigned int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_float">float</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([6 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    uint 4 }, section "llvm.metadata"
+%str1 = internal constant [6 x sbyte] c"float\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="ccxx_basic_double">double</a>
+</div>
+
+<div class="doc_text">
+
+<pre>
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([7 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 64, 
+    uint 64, 
+    uint 0, 
+    uint 4 }, section "llvm.metadata"
+%str1 = internal constant [7 x sbyte] c"double\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ccxx_derived_types">C/C++ derived types</a>
+</div>
+
+<div class="doc_text">
+
+<p>Given the following as an example of C/C++ derived type:</p>
+
+<pre>
+typedef const int *IntPtr;
+</pre>
+
+<p>a C/C++ front-end would generate the following descriptors:</p>
+
+<pre>
+;;
+;; Define the typedef "IntPtr".
+;;
+%<a href="#format_derived_type">llvm.dbg.derivedtype1</a> = internal constant %<a href="#format_derived_type">llvm.dbg.derivedtype.type</a> {
+    uint add(uint 22, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([7 x sbyte]* %str1, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    int 1, 
+    uint 0, 
+    uint 0, 
+    uint 0, 
+    {  }* cast (%<a href="#format_derived_type">llvm.dbg.derivedtype.type</a>* %<a href="#format_derived_type">llvm.dbg.derivedtype2</a> to {  }*) }, section "llvm.metadata"
+%str1 = internal constant [7 x sbyte] c"IntPtr\00", section "llvm.metadata"
+
+;;
+;; Define the pointer type.
+;;
+%<a href="#format_derived_type">llvm.dbg.derivedtype2</a> = internal constant %<a href="#format_derived_type">llvm.dbg.derivedtype.type</a> {
+    uint add(uint 15, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* null, 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    {  }* cast (%<a href="#format_derived_type">llvm.dbg.derivedtype.type</a>* %<a href="#format_derived_type">llvm.dbg.derivedtype3</a> to {  }*) }, section "llvm.metadata"
+
+;;
+;; Define the const type.
+;;
+%<a href="#format_derived_type">llvm.dbg.derivedtype3</a> = internal constant %<a href="#format_derived_type">llvm.dbg.derivedtype.type</a> {
+    uint add(uint 38, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* null, 
+    {  }* null, 
+    int 0, 
+    uint 0, 
+    uint 0, 
+    uint 0, 
+    {  }* cast (%<a href="#format_basic_type">llvm.dbg.basictype.type</a>* %<a href="#format_basic_type">llvm.dbg.basictype1</a> to {  }*) }, section "llvm.metadata"	
+
+;;
+;; Define the int type.
+;;
+%<a href="#format_basic_type">llvm.dbg.basictype1</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([4 x sbyte]* %str2, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    uint 5 }, section "llvm.metadata"
+%str2 = internal constant [4 x sbyte] c"int\00", section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ccxx_composite_types">C/C++ struct/union types</a>
+</div>
+
+<div class="doc_text">
+
+<p>Given the following as an example of C/C++ struct type:</p>
+
+<pre>
+struct Color {
+  unsigned Red;
+  unsigned Green;
+  unsigned Blue;
+};
+</pre>
+
+<p>a C/C++ front-end would generate the following descriptors:</p>
+
+<pre>
+;;
+;; Define basic type for unsigned int.
+;;
+%<a href="#format_basic_type">llvm.dbg.basictype</a> = internal constant %<a href="#format_basic_type">llvm.dbg.basictype.type</a> {
+    uint add(uint 36, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([13 x sbyte]* %str1, int 0, int 0), 
+    {  }* null, 
+    int 0, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    uint 7 }, section "llvm.metadata"
+%str1 = internal constant [13 x sbyte] c"unsigned int\00", section "llvm.metadata"
+
+;;
+;; Define composite type for struct Color.
+;;
+%<a href="#format_composite_type">llvm.dbg.compositetype</a> = internal constant %<a href="#format_composite_type">llvm.dbg.compositetype.type</a> {
+    uint add(uint 19, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([6 x sbyte]* %str2, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    int 1, 
+    uint 96, 
+    uint 32, 
+    uint 0, 
+    {  }* null,
+    {  }* cast ([3 x {  }*]* %llvm.dbg.array to {  }*) }, section "llvm.metadata"
+%str2 = internal constant [6 x sbyte] c"Color\00", section "llvm.metadata"
+
+;;
+;; Define the Red field.
+;;
+%<a href="#format_derived_type">llvm.dbg.derivedtype1</a> = internal constant %<a href="#format_derived_type">llvm.dbg.derivedtype.type</a> {
+    uint add(uint 13, uint 262144), 
+    {  }* null, 
+    sbyte* getelementptr ([4 x sbyte]* %str3, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    int 2, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    {  }* cast (%<a href="#format_basic_type">llvm.dbg.basictype.type</a>* %<a href="#format_basic_type">llvm.dbg.basictype</a> to {  }*) }, section "llvm.metadata"
+%str3 = internal constant [4 x sbyte] c"Red\00", section "llvm.metadata"
+
+;;
+;; Define the Green field.
+;;
+%<a href="#format_derived_type">llvm.dbg.derivedtype2</a> = internal constant %<a href="#format_derived_type">llvm.dbg.derivedtype.type</a> {
+    uint add(uint 13, uint 262144), 
+    {  }* null, 
+    sbyte* getelementptr ([6 x sbyte]* %str4, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    int 3, 
+    uint 32, 
+    uint 32, 
+    uint 32, 
+    {  }* cast (%<a href="#format_basic_type">llvm.dbg.basictype.type</a>* %<a href="#format_basic_type">llvm.dbg.basictype</a> to {  }*) }, section "llvm.metadata"
+%str4 = internal constant [6 x sbyte] c"Green\00", section "llvm.metadata"
+
+;;
+;; Define the Blue field.
+;;
+%<a href="#format_derived_type">llvm.dbg.derivedtype3</a> = internal constant %<a href="#format_derived_type">llvm.dbg.derivedtype.type</a> {
+    uint add(uint 13, uint 262144), 
+    {  }* null, 
+    sbyte* getelementptr ([5 x sbyte]* %str5, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    int 4, 
+    uint 32, 
+    uint 32, 
+    uint 64, 
+    {  }* cast (%<a href="#format_basic_type">llvm.dbg.basictype.type</a>* %<a href="#format_basic_type">llvm.dbg.basictype</a> to {  }*) }, section "llvm.metadata"
+%str5 = internal constant [5 x sbyte] c"Blue\00", section "llvm.metadata"
+
+;;
+;; Define the array of fields used by the composite type Color.
+;;
+%llvm.dbg.array = internal constant [3 x {  }*] [
+      {  }* cast (%<a href="#format_derived_type">llvm.dbg.derivedtype.type</a>* %<a href="#format_derived_type">llvm.dbg.derivedtype1</a> to {  }*),
+      {  }* cast (%<a href="#format_derived_type">llvm.dbg.derivedtype.type</a>* %<a href="#format_derived_type">llvm.dbg.derivedtype2</a> to {  }*),
+      {  }* cast (%<a href="#format_derived_type">llvm.dbg.derivedtype.type</a>* %<a href="#format_derived_type">llvm.dbg.derivedtype3</a> to {  }*) ], section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection">
+  <a name="ccxx_enumeration_types">C/C++ enumeration types</a>
+</div>
+
+<div class="doc_text">
+
+<p>Given the following as an example of C/C++ enumeration type:</p>
+
+<pre>
+enum Trees {
+  Spruce = 100,
+  Oak = 200,
+  Maple = 300
+};
+</pre>
+
+<p>a C/C++ front-end would generate the following descriptors:</p>
+
+<pre>
+;;
+;; Define composite type for enum Trees
+;;
+%<a href="#format_composite_type">llvm.dbg.compositetype</a> = internal constant %<a href="#format_composite_type">llvm.dbg.compositetype.type</a> {
+    uint add(uint 4, uint 262144), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    sbyte* getelementptr ([6 x sbyte]* %str1, int 0, int 0), 
+    {  }* cast (%<a href="#format_compile_units">llvm.dbg.compile_unit.type</a>* %<a href="#format_compile_units">llvm.dbg.compile_unit</a> to {  }*), 
+    int 1, 
+    uint 32, 
+    uint 32, 
+    uint 0, 
+    {  }* null, 
+    {  }* cast ([3 x {  }*]* %llvm.dbg.array to {  }*) }, section "llvm.metadata"
+%str1 = internal constant [6 x sbyte] c"Trees\00", section "llvm.metadata"
+
+;;
+;; Define Spruce enumerator.
+;;
+%<a href="#format_enumeration">llvm.dbg.enumerator1</a> = internal constant %<a href="#format_enumeration">llvm.dbg.enumerator.type</a> {
+    uint add(uint 40, uint 262144), 
+    sbyte* getelementptr ([7 x sbyte]* %str2, int 0, int 0), 
+    int 100 }, section "llvm.metadata"
+%str2 = internal constant [7 x sbyte] c"Spruce\00", section "llvm.metadata"
+
+;;
+;; Define Oak enumerator.
+;;
+%<a href="#format_enumeration">llvm.dbg.enumerator2</a> = internal constant %<a href="#format_enumeration">llvm.dbg.enumerator.type</a> {
+    uint add(uint 40, uint 262144), 
+    sbyte* getelementptr ([4 x sbyte]* %str3, int 0, int 0), 
+    int 200 }, section "llvm.metadata"
+%str3 = internal constant [4 x sbyte] c"Oak\00", section "llvm.metadata"
+
+;;
+;; Define Maple enumerator.
+;;
+%<a href="#format_enumeration">llvm.dbg.enumerator3</a> = internal constant %<a href="#format_enumeration">llvm.dbg.enumerator.type</a> {
+    uint add(uint 40, uint 262144), 
+    sbyte* getelementptr ([6 x sbyte]* %str4, int 0, int 0), 
+    int 300 }, section "llvm.metadata"
+%str4 = internal constant [6 x sbyte] c"Maple\00", section "llvm.metadata"
+
+;;
+;; Define the array of enumerators used by composite type Trees.
+;;
+%llvm.dbg.array = internal constant [3 x {  }*] [
+  {  }* cast (%<a href="#format_enumeration">llvm.dbg.enumerator.type</a>* %<a href="#format_enumeration">llvm.dbg.enumerator1</a> to {  }*),
+  {  }* cast (%<a href="#format_enumeration">llvm.dbg.enumerator.type</a>* %<a href="#format_enumeration">llvm.dbg.enumerator2</a> to {  }*),
+  {  }* cast (%<a href="#format_enumeration">llvm.dbg.enumerator.type</a>* %<a href="#format_enumeration">llvm.dbg.enumerator3</a> to {  }*) ], section "llvm.metadata"
+</pre>
+
+</div>
+
+<!-- *********************************************************************** -->
+
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="mailto:sabre@nondot.org">Chris Lattner</a><br>
+  <a href="http://llvm.org">LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+
+</body>
+</html>

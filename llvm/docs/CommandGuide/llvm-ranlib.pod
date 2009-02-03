@@ -1,0 +1,52 @@
+=pod
+
+=head1 NAME
+
+llvm-ranlib - Generate index for LLVM archive
+
+=head1 SYNOPSIS
+
+B<llvm-ranlib> [--version] [--help] <archive-file>
+
+=head1 DESCRIPTION
+
+The B<llvm-ranlib> command is similar to the common Unix utility, C<ranlib>. It
+adds or updates the symbol table in an LLVM archive file. Note that using the
+B<llvm-ar> modifier F<s> is usually more efficient than running B<llvm-ranlib>
+which is only provided only for completness and compatibility. Unlike other 
+implementations of C<ranlib>, B<llvm-ranlib> indexes LLVM bitcode files, not
+native object modules. You can list the contents of the symbol table with the
+C<llvm-nm -s> command.
+
+=head1 OPTIONS
+
+=over
+
+=item F<archive-file>
+
+Specifies the archive-file to which the symbol table is added or updated.
+
+=item F<--version>
+
+Print the version of B<llvm-ranlib> and exit without building a symbol table.
+
+=item F<--help>
+
+Print usage help for B<llvm-ranlib> and exit without building a symbol table.
+
+=back
+
+=head1 EXIT STATUS
+
+If B<llvm-ranlib> succeeds, it will exit with 0.  If an error occurs, a non-zero
+exit code will be returned.
+
+=head1 SEE ALSO
+
+L<llvm-ar|llvm-ar>, ranlib(1)
+
+=head1 AUTHORS
+
+Maintained by the LLVM Team (L<http://llvm.org>).
+
+=cut

@@ -1,0 +1,6 @@
+load_lib llvm.exp
+
+if [ llvm_gcc_supports fortran ] then {
+    RunLLVMTests [lsort [glob -nocomplain $srcdir/$subdir/*.{f,f90}]]
+}
+

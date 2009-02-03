@@ -1,0 +1,1033 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>LLVM Makefile Guide</title>
+  <link rel="stylesheet" href="llvm.css" type="text/css">
+</head>
+<body>
+
+<div class="doc_title">LLVM Makefile Guide</div>
+
+<ol>
+  <li><a href="#introduction">Introduction</a></li>
+  <li><a href="#general">General Concepts</a>
+    <ol>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#varvals">Variable Values</a></li>
+      <li><a href="#including">Including Makefiles</a>
+        <ol>
+          <li><a href="#Makefile">Makefile</a></li>
+          <li><a href="#Makefile.common">Makefile.common</a></li>
+          <li><a href="#Makefile.config">Makefile.config</a></li>
+          <li><a href="#Makefile.rules">Makefile.rules</a></li>
+        </ol>
+      </li>
+      <li><a href="#Comments">Comments</a></li>
+    </ol>
+  </li>
+  <li><a href="#tutorial">Tutorial</a>
+    <ol>
+      <li><a href="#libraries">Libraries</a>
+        <ol>
+	  <li><a href="#BCModules">Bitcode Modules</a></li>
+	  <li><a href="#LoadableModules">Loadable Modules</a></li>
+	</ol>
+      </li>
+      <li><a href="#tools">Tools</a>
+        <ol>
+	  <li><a href="#JIT">JIT Tools</a></li>
+	</ol>
+      </li>
+      <li><a href="#projects">Projects</a></li>
+    </ol>
+  </li>
+  <li><a href="#targets">Targets Supported</a>
+    <ol>
+      <li><a href="#all">all</a></li>
+      <li><a href="#all-local">all-local</a></li>
+      <li><a href="#check">check</a></li>
+      <li><a href="#check-local">check-local</a></li>
+      <li><a href="#clean">clean</a></li>
+      <li><a href="#clean-local">clean-local</a></li>
+      <li><a href="#dist">dist</a></li>
+      <li><a href="#dist-check">dist-check</a></li>
+      <li><a href="#dist-clean">dist-clean</a></li>
+      <li><a href="#install">install</a></li>
+      <li><a href="#preconditions">preconditions</a></li>
+      <li><a href="#printvars">printvars</a></li>
+      <li><a href="#reconfigure">reconfigure</a></li>
+      <li><a href="#spotless">spotless</a></li>
+      <li><a href="#tags">tags</a></li>
+      <li><a href="#uninstall">uninstall</a></li>
+    </ol>
+  </li>
+  <li><a href="#variables">Using Variables</a>
+    <ol>
+      <li><a href="#setvars">Control Variables</a></li>
+      <li><a href="#overvars">Override Variables</a></li>
+      <li><a href="#getvars">Readable Variables</a></li>
+      <li><a href="#intvars">Internal Variables</a></li>
+    </ol>
+  </li>
+</ol>
+
+<div class="doc_author">    
+  <p>Written by <a href="mailto:reid@x10sys.com">Reid Spencer</a></p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="introduction">Introduction </a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+  <p>This document provides <em>usage</em> information about the LLVM makefile 
+  system. While loosely patterned after the BSD makefile system, LLVM has taken 
+  a departure from BSD in order to implement additional features needed by LLVM.
+  Although makefile systems such as automake were attempted at one point, it
+  has become clear that the features needed by LLVM and the Makefile norm are 
+  too great to use a more limited tool. Consequently, LLVM requires simply GNU 
+  Make 3.79, a widely portable makefile processor. LLVM unabashedly makes heavy 
+  use of the features of GNU Make so the dependency on GNU Make is firm. If 
+  you're not familiar with <tt>make</tt>, it is recommended that you read the 
+  <a href="http://www.gnu.org/software/make/manual/make.html">GNU Makefile 
+  Manual</a>.</p>
+  <p>While this document is rightly part of the 
+  <a href="ProgrammersManual.html">LLVM Programmer's Manual</a>, it is treated
+  separately here because of the volume of content and because it is often an
+  early source of bewilderment for new developers.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="general">General Concepts</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+  <p>The LLVM Makefile System is the component of LLVM that is responsible for
+  building the software, testing it,  generating distributions, checking those
+  distributions, installing and uninstalling, etc. It consists of a several
+  files throughout the source tree. These files and other general concepts are
+  described in this section.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="projects">Projects</a></div>
+<div class="doc_text">
+  <p>The LLVM Makefile System is quite generous. It not only builds its own
+  software, but it can build yours too. Built into the system is knowledge of
+  the <tt>llvm/projects</tt> directory. Any directory under <tt>projects</tt>
+  that has both a <tt>configure</tt> script and a <tt>Makefile</tt> is assumed
+  to be a project that uses the LLVM Makefile system.  Building software that
+  uses LLVM does not require the LLVM Makefile System nor even placement in the
+  <tt>llvm/projects</tt> directory. However, doing so will allow your project
+  to get up and running quickly by utilizing the built-in features that are used
+  to compile LLVM. LLVM compiles itself using the same features of the makefile
+  system as used for projects.</p>
+  <p>For complete details on setting up your projects configuration, simply
+  mimic the <tt>llvm/projects/sample</tt> project or for further details, 
+  consult the <a href="Projects.html">Projects.html</a> page.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="varvalues">Variable Values</a></div>
+<div class="doc_text">
+  <p>To use the makefile system, you simply create a file named 
+  <tt>Makefile</tt> in your directory and declare values for certain variables. 
+  The variables and values that you select determine what the makefile system
+  will do. These variables enable rules and processing in the makefile system
+  that automatically Do The Right Thing&trade;. 
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="including">Including Makefiles</a></div>
+<div class="doc_text">
+  <p>Setting variables alone is not enough. You must include into your Makefile
+  additional files that provide the rules of the LLVM Makefile system. The 
+  various files involved are described in the sections that follow.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection"><a name="Makefile">Makefile</a></div>
+<div class="doc_text">
+  <p>Each directory to participate in the build needs to have a file named
+  <tt>Makefile</tt>. This is the file first read by <tt>make</tt>. It has three
+  sections:</p>
+  <ol>
+    <li><a href="#setvars">Settable Variables</a> - Required that must be set
+    first.</li>
+    <li><a href="#Makefile.common">include <tt>$(LEVEL)/Makefile.common</tt></a>
+    - include the LLVM Makefile system.
+    <li><a href="#overvars">Override Variables</a> - Override variables set by
+    the LLVM Makefile system.
+  </ol>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection"><a name="Makefile.common">Makefile.common</a>
+</div>
+<div class="doc_text">
+  <p>Every project must have a <tt>Makefile.common</tt> file at its top source 
+  directory. This file serves three purposes:</p>
+  <ol>
+    <li>It includes the project's configuration makefile to obtain values
+    determined by the <tt>configure</tt> script. This is done by including the
+    <a href="#Makefile.config"><tt>$(LEVEL)/Makefile.config</tt></a> file.</li>
+    <li>It specifies any other (static) values that are needed throughout the
+    project. Only values that are used in all or a large proportion of the
+    project's directories should be placed here.</li>
+    <li>It includes the standard rules for the LLVM Makefile system,
+    <a href="#Makefile.rules"><tt>$(LLVM_SRC_ROOT)/Makefile.rules</tt></a>. 
+    This file is the "guts" of the LLVM Makefile system.</li>
+  </ol>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection"><a name="Makefile.config">Makefile.config</a>
+</div>
+<div class="doc_text">
+  <p>Every project must have a <tt>Makefile.config</tt> at the top of its
+  <em>build</em> directory. This file is <b>generated</b> by the
+  <tt>configure</tt> script from the pattern provided by the
+  <tt>Makefile.config.in</tt> file located at the top of the project's
+  <em>source</em> directory. The contents of this file depend largely on what
+  configuration items the project uses, however most projects can get what they
+  need by just relying on LLVM's configuration found in
+  <tt>$(LLVM_OBJ_ROOT)/Makefile.config</tt>.
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection"><a name="Makefile.rules">Makefile.rules</a></div>
+<div class="doc_text">
+  <p>This file, located at <tt>$(LLVM_SRC_ROOT)/Makefile.rules</tt> is the heart
+  of the LLVM Makefile System. It provides all the logic, dependencies, and
+  rules for building the targets supported by the system. What it does largely
+  depends on the values of <tt>make</tt> <a href="#variables">variables</a> that
+  have been set <em>before</em> <tt>Makefile.rules</tt> is included.
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="Comments">Comments</a></div>
+<div class="doc_text">
+  <p>User Makefiles need not have comments in them unless the construction is
+  unusual or it does not strictly follow the rules and patterns of the LLVM
+  makefile system. Makefile comments are invoked with the pound (#) character.
+  The # character and any text following it, to the end of the line, are ignored
+  by <tt>make</tt>.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="tutorial">Tutorial</a></div>
+<!-- *********************************************************************** -->
+<div class="doc_text">
+  <p>This section provides some examples of the different kinds of modules you
+  can build with the LLVM makefile system. In general, each directory you 
+  provide will build a single object although that object may be composed of
+  additionally compiled components.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="libraries">Libraries</a></div>
+<div class="doc_text">
+  <p>Only a few variable definitions are needed to build a regular library.
+  Normally, the makefile system will build all the software into a single
+  <tt>libname.o</tt> (pre-linked) object. This means the library is not
+  searchable and that the distinction between compilation units has been
+  dissolved. Optionally, you can ask for a shared library (.so), archive library
+  (.a) or to not have the default (relinked) library built. For example:</p>
+  <pre><tt>
+      LIBRARYNAME = mylib
+      SHARED_LIBRARY = 1
+      ARCHIVE_LIBRARY = 1
+      DONT_BUILD_RELINKED = 1
+  </tt></pre>
+  <p>says to build a library named "mylib" with both a shared library 
+  (<tt>mylib.so</tt>) and an archive library (<tt>mylib.a</tt>) version but
+  not to build the relinked object (<tt>mylib.o</tt>). The contents of all the
+  libraries produced will be the same, they are just constructed differently.
+  Note that you normally do not need to specify the sources involved. The LLVM
+  Makefile system will infer the source files from the contents of the source
+  directory.</p>
+  <p>The <tt>LOADABLE_MODULE=1</tt> directive can be used in conjunction with
+  <tt>SHARED_LIBRARY=1</tt> to indicate that the resulting shared library should
+  be openable with the <tt>dlopen</tt> function and searchable with the
+  <tt>dlsym</tt> function (or your operating system's equivalents). While this
+  isn't strictly necessary on Linux and a few other platforms, it is required
+  on systems like HP-UX and Darwin. You should use <tt>LOADABLE_MODULE</tt> for
+  any shared library that you intend to be loaded into an tool via the
+  <tt>-load</tt> option. See the 
+  <a href="WritingAnLLVMPass.html#makefile">WritingAnLLVMPass.html</a> document
+  for an example of why you might want to do this.
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection"><a name="BCModules">Bitcode Modules</a></div>
+<div class="doc_text">
+  <p>In some situations, it is desireable to build a single bitcode module from
+  a variety of sources, instead of an archive, shared library, or bitcode 
+  library. Bitcode modules can be specified in addition to any of the other
+  types of libraries by defining the <a href="#MODULE_NAME">MODULE_NAME</a>
+  variable. For example:</p>
+  <pre><tt>
+      LIBRARYNAME = mylib
+      BYTECODE_LIBRARY = 1
+      MODULE_NAME = mymod
+  </tt></pre>
+  <p>will build a module named <tt>mymod.bc</tt> from the sources in the
+  directory. This module will be an aggregation of all the bitcode modules 
+  derived from the sources. The example will also build a bitcode archive 
+  containing a bitcode module for each compiled source file. The difference is
+  subtle, but important depending on how the module or library is to be linked.
+  </p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection">
+  <a name="LoadableModules">Loadable Modules</a>
+</div>
+<div class="doc_text">
+  <p>In some situations, you need to create a loadable module. Loadable modules
+  can be loaded into programs like <tt>opt</tt> or <tt>llc</tt> to specify
+  additional passes to run or targets to support.  Loadable modules are also
+  useful for debugging a pass or providing a pass with another package if that
+  pass can't be included in LLVM.</p>
+  <p>LLVM provides complete support for building such a module. All you need to
+  do is use the LOADABLE_MODULE variable in your Makefile. For example, to 
+  build a loadable module named <tt>MyMod</tt> that uses the LLVM libraries
+  <tt>LLVMSupport.a</tt> and <tt>LLVMSystem.a</tt>, you would specify:</p>
+  <pre><tt>
+     LIBRARYNAME := MyMod
+     LOADABLE_MODULE := 1
+     LINK_COMPONENTS := support system
+  </tt></pre>
+  <p>Use of the <tt>LOADABLE_MODULE</tt> facility implies several things:</p>
+  <ol>
+    <li>There will be no "lib" prefix on the module. This differentiates it from
+    a standard shared library of the same name.</li>
+    <li>The <a href="#SHARED_LIBRARY">SHARED_LIBRARY</a> variable is turned 
+    on.</li>
+    <li>The <a href="#LINK_LIBS_IN_SHARED">LINK_LIBS_IN_SHARED</a> variable
+    is turned on.</li>
+    <li>The <a href="#DONT_BUILD_RELINKED">DONT_BUILD_RELINKED</a> variable
+    is turned on.</li>
+  </ol>
+  <p>A loadable module is loaded by LLVM via the facilities of libtool's libltdl
+  library which is part of <tt>lib/System</tt> implementation.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="tools">Tools</a></div>
+<div class="doc_text">
+  <p>For building executable programs (tools), you must provide the name of the
+  tool and the names of the libraries you wish to link with the tool. For
+  example:</p>
+  <pre><tt>
+      TOOLNAME = mytool
+      USEDLIBS = mylib
+      LINK_COMPONENTS = support system
+  </tt></pre>
+  <p>says that we are to build a tool name <tt>mytool</tt> and that it requires
+  three libraries: <tt>mylib</tt>, <tt>LLVMSupport.a</tt> and
+  <tt>LLVMSystem.a</tt>.</p>
+  <p>Note that two different variables are use to indicate which libraries are
+  linked: <tt>USEDLIBS</tt> and <tt>LLVMLIBS</tt>. This distinction is necessary
+  to support projects. <tt>LLVMLIBS</tt> refers to the LLVM libraries found in 
+  the LLVM object directory. <tt>USEDLIBS</tt> refers to the libraries built by 
+  your project. In the case of building LLVM tools, <tt>USEDLIBS</tt> and 
+  <tt>LLVMLIBS</tt> can be used interchangeably since the "project" is LLVM 
+  itself and <tt>USEDLIBS</tt> refers to the same place as <tt>LLVMLIBS</tt>.
+  </p>
+  <p>Also note that there are two different ways of specifying a library: with a
+  <tt>.a</tt> suffix and without. Without the suffix, the entry refers to the
+  re-linked (.o) file which will include <em>all</em> symbols of the library.
+  This is useful, for example, to include all passes from a library of passes.
+  If the <tt>.a</tt> suffix is used then the library is linked as a searchable
+  library (with the <tt>-l</tt> option). In this case, only the symbols that are
+  unresolved <em>at that point</em> will be resolved from the library, if they
+  exist. Other (unreferenced) symbols will not be included when the <tt>.a</tt>
+  syntax is used. Note that in order to use the <tt>.a</tt> suffix, the library
+  in question must have been built with the <tt>ARCHIVE_LIBRARY</tt> option set.
+  </p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsubsection"><a name="JIT">JIT Tools</a></div>
+<div class="doc_text">
+  <p>Many tools will want to use the JIT features of LLVM.  To do this, you
+     simply specify that you want an execution 'engine', and the makefiles will
+     automatically link in the appropriate JIT for the host or an interpreter
+     if none is available:</p>
+  <pre><tt>
+      TOOLNAME = my_jit_tool
+      USEDLIBS = mylib
+      LINK_COMPONENTS = engine
+  </tt></pre>
+  <p>Of course, any additional libraries may be listed as other components.  To
+  get a full understanding of how this changes the linker command, it is
+  recommended that you:</p>
+  <pre><tt>
+      cd examples/Fibonacci
+      make VERBOSE=1
+  </tt></pre>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="targets">Targets Supported</a></div>
+<!-- *********************************************************************** -->
+
+<div class="doc_text">
+  <p>This section describes each of the targets that can be built using the LLVM
+  Makefile system. Any target can be invoked from any directory but not all are
+  applicable to a given directory (e.g. "check", "dist" and "install" will
+  always operate as if invoked from the top level directory).</p>
+
+  <table style="text-align:left">
+    <tr>
+      <th>Target Name</th><th>Implied Targets</th><th>Target Description</th>
+    </tr>
+    <tr><td><a href="#all"><tt>all</tt></a></td><td></td>
+      <td>Compile the software recursively. Default target.
+    </td></tr>
+    <tr><td><a href="#all-local"><tt>all-local</tt></a></td><td></td>
+      <td>Compile the software in the local directory only.
+    </td></tr>
+    <tr><td><a href="#check"><tt>check</tt></a></td><td></td>
+      <td>Change to the <tt>test</tt> directory in a project and run the
+      test suite there.
+    </td></tr>
+    <tr><td><a href="#check-local"><tt>check-local</tt></a></td><td></td>
+      <td>Run a local test suite. Generally this is only defined in the 
+        <tt>Makefile</tt> of the project's <tt>test</tt> directory.
+    </td></tr>
+    <tr><td><a href="#clean"><tt>clean</tt></a></td><td></td>
+      <td>Remove built objects recursively.
+    </td></tr>
+    <tr><td><a href="#clean-local"><tt>clean-local</tt></a></td><td></td>
+      <td>Remove built objects from the local directory only.
+    </td></tr>
+    <tr><td><a href="#dist"><tt>dist</tt></a></td><td>all</td>
+      <td>Prepare a source distribution tarball.
+    </td></tr>
+    <tr><td><a href="#dist-check"><tt>dist-check</tt></a></td><td>all</td>
+      <td>Prepare a source distribution tarball and check that it builds.
+    </td></tr>
+    <tr><td><a href="#dist-clean"><tt>dist-clean</tt></a></td><td>clean</td>
+      <td>Clean source distribution tarball temporary files.
+    </td></tr>
+    <tr><td><a href="#install"><tt>install</tt></a></td><td>all</td>
+      <td>Copy built objects to installation directory.
+    </td></tr>
+    <tr><td><a href="#preconditions"><tt>preconditions</tt></a></td><td>all</td>
+      <td>Check to make sure configuration and makefiles are up to date.
+    </td></tr>
+    <tr><td><a href="#printvars"><tt>printvars</tt></a></td><td>all</td>
+      <td>Prints variables defined by the makefile system (for debugging).
+    </td></tr>
+    <tr><td><a href="#tags"><tt>tags</tt></a></td><td></td>
+      <td>Make C and C++ tags files for emacs and vi.
+    </td></tr>
+    <tr><td><a href="#uninstall"><tt>uninstall</tt></a></td><td></td>
+      <td>Remove built objects from installation directory.
+    </td></tr>
+  </table>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="all">all (default)</a></div>
+<div class="doc_text">
+  <p>When you invoke <tt>make</tt> with no arguments, you are implicitly
+  instructing it to seek the "all" target (goal). This target is used for
+  building the software recursively and will do different things in different 
+  directories.  For example, in a <tt>lib</tt> directory, the "all" target will 
+  compile source files and generate libraries. But, in a <tt>tools</tt> 
+  directory, it will link libraries and generate executables.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="all-local">all-local</a></div>
+<div class="doc_text">
+  <p>This target is the same as <a href="#all">all</a> but it operates only on
+  the current directory instead of recursively.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="check">check</a></div>
+<div class="doc_text">
+  <p>This target can be invoked from anywhere within a project's directories
+  but always invokes the <a href="#check-local"><tt>check-local</tt></a> target 
+  in the project's <tt>test</tt> directory, if it exists and has a 
+  <tt>Makefile</tt>. A warning is produced otherwise.  If 
+  <a href="#TESTSUITE"><tt>TESTSUITE</tt></a> is defined on the <tt>make</tt>
+  command line, it will be passed down to the invocation of 
+  <tt>make check-local</tt> in the <tt>test</tt> directory. The intended usage 
+  for this is to assist in running specific suites of tests. If
+  <tt>TESTSUITE</tt> is not set, the implementation of <tt>check-local</tt> 
+  should run all normal tests.  It is up to the project to define what 
+  different values for <tt>TESTSUTE</tt> will do. See the 
+  <a href="TestingGuide.html">TestingGuide</a> for further details.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="check-local">check-local</a></div>
+<div class="doc_text">
+  <p>This target should be implemented by the <tt>Makefile</tt> in the project's
+  <tt>test</tt> directory. It is invoked by the <tt>check</tt> target elsewhere.
+  Each project is free to define the actions of <tt>check-local</tt> as 
+  appropriate for that project. The LLVM project itself uses dejagnu to run a 
+  suite of feature and regresson tests. Other projects may choose to use 
+  dejagnu or any other testing mechanism.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="clean">clean</a></div>
+<div class="doc_text">
+  <p>This target cleans the build directory, recursively removing all things
+  that the Makefile builds. The cleaning rules have been made guarded so they 
+  shouldn't go awry (via <tt>rm -f $(UNSET_VARIABLE)/*</tt> which will attempt
+  to erase the entire directory structure.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="clean-local">clean-local</a></div>
+<div class="doc_text">
+  <p>This target does the same thing as <tt>clean</tt> but only for the current
+  (local) directory.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="dist">dist</a></div>
+<div class="doc_text">
+  <p>This target builds a distribution tarball. It first builds the entire
+  project using the <tt>all</tt> target and then tars up the necessary files and
+  compresses it. The generated tarball is sufficient for a casual source 
+  distribution, but probably not for a release (see <tt>dist-check</tt>).</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="dist-check">dist-check</a></div>
+<div class="doc_text">
+  <p>This target does the same thing as the <tt>dist</tt> target but also checks
+  the distribution tarball. The check is made by unpacking the tarball to a new
+  directory, configuring it, building it, installing it, and then verifying that
+  the installation results are correct (by comparing to the original build).
+  This target can take a long time to run but should be done before a release
+  goes out to make sure that the distributed tarball can actually be built into
+  a working release.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="dist-clean">dist-clean</a></div>
+<div class="doc_text">
+  <p>This is a special form of the <tt>clean</tt> clean target. It performs a
+  normal <tt>clean</tt> but also removes things pertaining to building the
+  distribution.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="install">install</a></div>
+<div class="doc_text">
+  <p>This target finalizes shared objects and executables and copies all
+  libraries, headers, executables and documentation to the directory given 
+  with the <tt>--prefix</tt> option to <tt>configure</tt>.  When completed, 
+  the prefix directory will have everything needed to <b>use</b> LLVM. </p>
+  <p>The LLVM makefiles can generate complete <b>internal</b> documentation 
+  for all the classes by using <tt>doxygen</tt>. By default, this feature is 
+  <b>not</b> enabled because it takes a long time and generates a massive 
+  amount of data (>100MB). If you want this feature, you must configure LLVM
+  with the --enable-doxygen switch and ensure that a modern version of doxygen
+  (1.3.7 or later) is available in your <tt>PATH</tt>. You can download 
+  doxygen from 
+  <a href="http://www.stack.nl/~dimitri/doxygen/download.html#latestsrc">
+  here</a>.
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="preconditions">preconditions</a></div>
+<div class="doc_text">
+  <p>This utility target checks to see if the <tt>Makefile</tt> in the object
+  directory is older than the <tt>Makefile</tt> in the source directory and
+  copies it if so. It also reruns the <tt>configure</tt> script if that needs to
+  be done and rebuilds the <tt>Makefile.config</tt> file similarly. Users may
+  overload this target to ensure that sanity checks are run <em>before</em> any
+  building of targets as all the targets depend on <tt>preconditions</tt>.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="printvars">printvars</a></div>
+<div class="doc_text">
+  <p>This utility target just causes the LLVM makefiles to print out some of 
+  the makefile variables so that you can double check how things are set. </p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="reconfigure">reconfigure</a></div>
+<div class="doc_text">
+  <p>This utility target will force a reconfigure of LLVM or your project. It 
+  simply runs <tt>$(PROJ_OBJ_ROOT)/config.status --recheck</tt> to rerun the
+  configuration tests and rebuild the configured files. This isn't generally
+  useful as the makefiles will reconfigure themselves whenever its necessary.
+  </p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="spotless">spotless</a></div>
+<div class="doc_text">
+  <p>This utility target, only available when <tt>$(PROJ_OBJ_ROOT)</tt> is not 
+  the same as <tt>$(PROJ_SRC_ROOT)</tt>, will completely clean the
+  <tt>$(PROJ_OBJ_ROOT)</tt> directory by removing its content entirely and 
+  reconfiguring the directory. This returns the <tt>$(PROJ_OBJ_ROOT)</tt> 
+  directory to a completely fresh state. All content in the directory except 
+  configured files and top-level makefiles will be lost.</p>
+  <div class="doc_warning"><p>Use with caution.</p></div>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="tags">tags</a></div>
+<div class="doc_text">
+  <p>This target will generate a <tt>TAGS</tt> file in the top-level source
+  directory. It is meant for use with emacs, XEmacs, or ViM. The TAGS file
+  provides an index of symbol definitions so that the editor can jump you to the
+  definition quickly. </p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="uninstall">uninstall</a></div>
+<div class="doc_text">
+  <p>This target is the opposite of the <tt>install</tt> target. It removes the
+  header, library and executable files from the installation directories. Note
+  that the directories themselves are not removed because it is not guaranteed
+  that LLVM is the only thing installing there (e.g. --prefix=/usr).</p>
+</div>
+
+<!-- *********************************************************************** -->
+<div class="doc_section"><a name="variables">Variables</a></div>
+<!-- *********************************************************************** -->
+<div class="doc_text">
+  <p>Variables are used to tell the LLVM Makefile System what to do and to
+  obtain information from it. Variables are also used internally by the LLVM
+  Makefile System. Variable names that contain only the upper case alphabetic
+  letters and underscore are intended for use by the end user. All other
+  variables are internal to the LLVM Makefile System and should not be relied
+  upon nor modified. The sections below describe how to use the LLVM Makefile 
+  variables.</p>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="setvars">Control Variables</a></div>
+<div class="doc_text">
+  <p>Variables listed in the table below should be set <em>before</em> the 
+  inclusion of <a href="#Makefile.common"><tt>$(LEVEL)/Makefile.common</tt></a>.
+  These variables provide input to the LLVM make system that tell it what to do 
+  for the current directory.</p>
+  <dl>
+    <dt><a name="BUILD_ARCHIVE"><tt>BUILD_ARCHIVE</tt></a></dt>
+    <dd>If set to any value, causes an archive (.a) library to be built.</dd>
+    <dt><a name="BUILT_SOURCES"><tt>BUILT_SOURCES</tt></a></dt>
+    <dd>Specifies a set of source files that are generated from other source
+    files. These sources will be built before any other target processing to 
+    ensure they are present.</dd>
+    <dt><a name="BYTECODE_LIBRARY"><tt>BYTECODE_LIBRARY</tt></a></dt>
+    <dd>If set to any value, causes a bitcode library (.bc) to be built.</dd>
+    <dt><a name="CONFIG_FILES"><tt>CONFIG_FILES</tt></a></dt>
+    <dd>Specifies a set of configuration files to be installed.</dd>
+    <dt><a name="DIRS"><tt>DIRS</tt></a></dt>
+    <dd>Specifies a set of directories, usually children of the current
+    directory, that should also be made using the same goal. These directories 
+    will be built serially.</dd>
+    <dt><a name="DISABLE_AUTO_DEPENDENCIES"><tt>DISABLE_AUTO_DEPENDENCIES</tt></a></dt>
+    <dd>If set to any value, causes the makefiles to <b>not</b> automatically
+    generate dependencies when running the compiler. Use of this feature is
+    discouraged and it may be removed at a later date.</dd>
+    <dt><a name="DONT_BUILD_RELINKED"><tt>DONT_BUILD_RELINKED</tt></a></dt>
+    <dd>If set to any value, causes a relinked library (.o) not to be built. By
+    default, libraries are built as re-linked since most LLVM libraries are
+    needed in their entirety and re-linked libraries will be linked more quickly
+    than equivalent archive libraries.</dd>
+    <dt><a name="ENABLE_OPTIMIZED"><tt>ENABLE_OPTIMIZED</tt></a></dt>
+    <dd>If set to any value, causes the build to generate optimized objects,
+    libraries and executables. This alters the flags specified to the compilers
+    and linkers. Generally debugging won't be a fun experience with an optimized
+    build.</dd>
+    <dt><a name="ENABLE_PROFILING"><tt>ENABLE_PROFILING</tt></a></dt>
+    <dd>If set to any value, causes the build to generate both optimized and 
+    profiled objects, libraries and executables. This alters the flags specified
+    to the compilers and linkers to ensure that profile data can be collected
+    from the tools built. Use the <tt>gprof</tt> tool to analyze the output from
+    the profiled tools (<tt>gmon.out</tt>).</dd>
+    <dt><a name="DISABLE_ASSERTIONS"><tt>DISABLE_ASSERTIONS</tt></a></dt>
+    <dd>If set to any value, causes the build to disable assertions, even if 
+    building a release or profile build.  This will exclude all assertion check
+    code from the build. LLVM will execute faster, but with little help when
+    things go wrong.</dd>
+    <dt><a name="EXPERIMENTAL_DIRS"><tt>EXPERIMENTAL_DIRS</tt></a></dt>
+    <dd>Specify a set of directories that should be built, but if they fail, it
+    should not cause the build to fail. Note that this should only be used 
+    temporarily while code is being written.</dd> 
+    <dt><a name="EXPORTED_SYMBOL_FILE"><tt>EXPORTED_SYMBOL_FILE</tt></a></dt>
+    <dd>Specifies the name of a single file that contains a list of the 
+    symbols to be exported by the linker. One symbol per line.</dd>
+    <dt><a name="EXPORTED_SYMBOL_LIST"><tt>EXPORTED_SYMBOL_LIST</tt></a></dt>
+    <dd>Specifies a set of symbols to be exported by the linker.</dd>
+    <dt><a name="EXTRA_DIST"><tt>EXTRA_DIST</tt></a></dt>
+    <dd>Specifies additional files that should be distributed with LLVM. All
+    source files, all built sources, all Makefiles, and most documentation files
+    will be automatically distributed. Use this variable to distribute any 
+    files that are not automatically distributed.</dd>
+    <dt><a name="KEEP_SYMBOLS"><tt>KEEP_SYMBOLS</tt></a></dt>
+    <dd>If set to any value, specifies that when linking executables the
+    makefiles should retain debug symbols in the executable. Normally, symbols
+    are stripped from the executable.</dd>
+    <dt><a name="LEVEL"><tt>LEVEL</tt></a><small>(required)</small></dt>
+    <dd>Specify the level of nesting from the top level. This variable must be
+    set in each makefile as it is used to find the top level and thus the other
+    makefiles.</dd>
+    <dt><a name="LIBRARYNAME"><tt>LIBRARYNAME</tt></a></dt>
+    <dd>Specify the name of the library to be built. (Required For
+    Libraries)</dd>
+    <dt><a name="LINK_COMPONENTS"><tt>LINK_COMPONENTS</tt></a></dt>
+    <dd>When specified for building a tool, the value of this variable will be
+    passed to the <tt>llvm-config</tt> tool to generate a link line for the
+    tool. Unlike <tt>USEDLIBS</tt> and <tt>LLVMLIBS</tt>, not all libraries need
+    to be specified. The <tt>llvm-config</tt> tool will figure out the library
+    dependencies and add any libraries that are needed. The <tt>USEDLIBS</tt>
+    variable can still be used in conjunction with <tt>LINK_COMPONENTS</tt> so
+    that additional project-specific libraries can be linked with the LLVM 
+    libraries specified by <tt>LINK_COMPONENTS</tt></dd>
+    <dt><a name="LINK_LIBS_IN_SHARED"><tt>LINK_LIBS_IN_SHARED</tt></a></dt>
+    <dd>By default, shared library linking will ignore any libraries specified
+    with the <a href="LLVMLIBS">LLVMLIBS</a> or <a href="USEDLIBS">USEDLIBS</a>.
+    This prevents shared libs from including things that will be in the LLVM
+    tool the shared library will be loaded into. However, sometimes it is useful
+    to link certain libraries into your shared library and this option enables
+    that feature.</dd>
+    <dt><a name="LLVMLIBS"><tt>LLVMLIBS</tt></a></dt>
+    <dd>Specifies the set of libraries from the LLVM $(ObjDir) that will be
+    linked into the tool or library.</dd>
+    <dt><a name="LOADABLE_MODULE"><tt>LOADABLE_MODULE</tt></a></dt>
+    <dd>If set to any value, causes the shared library being built to also be
+    a loadable module. Loadable modules can be opened with the dlopen() function
+    and searched with dlsym (or the operating system's equivalent). Note that
+    setting this variable without also setting <tt>SHARED_LIBRARY</tt> will have
+    no effect.</dd>
+    <dt><a name="MODULE_NAME"><tt>MODULE_NAME</tt></a></dt>
+    <dd>Specifies the name of a bitcode module to be created. A bitcode 
+    module can be specified in conjunction with other kinds of library builds 
+    or by itself. It constructs from the sources a single linked bitcode 
+    file.</dd>
+    <dt><a name="NO_INSTALL"><tt>NO_INSTALL</tt></a></dt>
+    <dd>Specifies that the build products of the directory should not be
+    installed but should be built even if the <tt>install</tt> target is given.
+    This is handy for directories that build libraries or tools that are only
+    used as part of the build process, such as code generators (e.g.
+    <tt>tblgen</tt>).</dd>
+    <dt><a name="OPTIONAL_DIRS"><tt>OPTIONAL_DIRS</tt></a></dt>
+    <dd>Specify a set of directories that may be built, if they exist, but its
+    not an error for them not to exist.</dd>
+    <dt><a name="PARALLEL_DIRS"><tt>PARALLEL_DIRS</tt></a></dt>
+    <dd>Specify a set of directories to build recursively and in parallel if
+    the -j option was used with <tt>make</tt>.</dd>
+    <dt><a name="SHARED_LIBRARY"><tt>SHARED_LIBRARY</tt></a></dt>
+    <dd>If set to any value, causes a shared library (.so) to be built in
+    addition to any other kinds of libraries. Note that this option will cause
+    all source files to be built twice: once with options for position
+    independent code and once without. Use it only where you really need a
+    shared library.</dd>
+    <dt><a name="SOURCES"><tt>SOURCES</tt><small>(optional)</small></a></dt>
+    <dd>Specifies the list of source files in the current directory to be
+    built. Source files of any type may be specified (programs, documentation, 
+    config files, etc.). If not specified, the makefile system will infer the
+    set of source files from the files present in the current directory.</dd>
+    <dt><a name="SUFFIXES"><tt>SUFFIXES</tt></a></dt>
+    <dd>Specifies a set of filename suffixes that occur in suffix match rules.
+    Only set this if your local <tt>Makefile</tt> specifies additional suffix
+    match rules.</dd> 
+    <dt><a name="TARGET"><tt>TARGET</tt></a></dt>
+    <dd>Specifies the name of the LLVM code generation target that the
+    current directory builds. Setting this variable enables additional rules to
+    build <tt>.inc</tt> files from <tt>.td</tt> files. </dd>
+    <dt><a name="TESTSUITE"><tt>TESTSUITE</tt></a></dt>
+    <dd>Specifies the directory of tests to run in <tt>llvm/test</tt>.</dd>
+    <dt><a name="TOOLNAME"><tt>TOOLNAME</tt></a></dt>
+    <dd>Specifies the name of the tool that the current directory should
+    build.</dd>
+    <dt><a name="TOOL_VERBOSE"><tt>TOOL_VERBOSE</tt></a></dt>
+    <dd>Implies VERBOSE and also tells each tool invoked to be verbose. This is
+    handy when you're trying to see the sub-tools invoked by each tool invoked 
+    by the makefile. For example, this will pass <tt>-v</tt> to the GCC 
+    compilers which causes it to print out the command lines it uses to invoke
+    sub-tools (compiler, assembler, linker).</dd>
+    <dt><a name="USEDLIBS"><tt>USEDLIBS</tt></a></dt>
+    <dd>Specifies the list of project libraries that will be linked into the
+    tool or library.</dd>
+    <dt><a name="VERBOSE"><tt>VERBOSE</tt></a></dt>
+    <dd>Tells the Makefile system to produce detailed output of what it is doing
+    instead of just summary comments. This will generate a LOT of output.</dd>
+  </dl>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="overvars">Override Variables</a></div>
+<div class="doc_text">
+  <p>Override variables can be used to override the default
+  values provided by the LLVM makefile system. These variables can be set in 
+  several ways:</p>
+  <ul>
+    <li>In the environment (e.g. setenv, export) -- not recommended.</li>
+    <li>On the <tt>make</tt> command line -- recommended.</li>
+    <li>On the <tt>configure</tt> command line</li>
+    <li>In the Makefile (only <em>after</em> the inclusion of <a
+    href="#Makefile.common"><tt>$(LEVEL)/Makefile.common</tt></a>).</li>
+  </ul>
+  <p>The override variables are given below:</p>
+  <dl>
+    <dt><a name="AR"><tt>AR</tt></a> <small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>ar</tt> tool.</dd>
+    <dt><a name="PROJ_OBJ_DIR"><tt>PROJ_OBJ_DIR</tt></a></dt>
+    <dd>The directory into which the products of build rules will be placed.
+    This might be the same as 
+    <a href="#PROJ_SRC_DIR"><tt>PROJ_SRC_DIR</tt></a> but typically is
+    not.</dd>
+    <dt><a name="PROJ_SRC_DIR"><tt>PROJ_SRC_DIR</tt></a></dt>
+    <dd>The directory which contains the source files to be built.</dd>
+    <dt><a name="BZIP2"><tt>BZIP2</tt></a><small>(configured)</small></dt>
+    <dd>The path to the <tt>bzip2</tt> tool.</dd>
+    <dt><a name="CC"><tt>CC</tt></a><small>(configured)</small></dt>
+    <dd>The path to the 'C' compiler.</dd>
+    <dt><a name="CFLAGS"><tt>CFLAGS</tt></a></dt>
+    <dd>Additional flags to be passed to the 'C' compiler.</dd>
+    <dt><a name="CXX"><tt>CXX</tt></a></dt>
+    <dd>Specifies the path to the C++ compiler.</dd>
+    <dt><a name="CXXFLAGS"><tt>CXXFLAGS</tt></a></dt>
+    <dd>Additional flags to be passed to the C++ compiler.</dd>
+    <dt><a name="DATE"><tt>DATE<small>(configured)</small></tt></a></dt>
+    <dd>Specifies the path to the <tt>date</tt> program or any program that can
+    generate the current date and time on its standard output</dd>
+    <dt><a name="DOT"><tt>DOT</tt></a><small>(configured)</small></dt>
+    <dd>Specifies the path to the <tt>dot</tt> tool or <tt>false</tt> if there
+    isn't one.</dd>
+    <dt><a name="ECHO"><tt>ECHO</tt></a><small>(configured)</small></dt>
+    <dd>Specifies the path to the <tt>echo</tt> tool for printing output.</dd>
+    <dt><a name="EXEEXT"><tt>EXEEXT</tt></a><small>(configured)</small></dt>
+    <dd>Provides the extension to be used on executables built by the makefiles.
+    The value may be empty on platforms that do not use file extensions for
+    executables (e.g. Unix).</dd>
+    <dt><a name="INSTALL"><tt>INSTALL</tt></a><small>(configured)</small></dt>
+    <dd>Specifies the path to the <tt>install</tt> tool.</dd>
+    <dt><a name="LDFLAGS"><tt>LDFLAGS</tt></a><small>(configured)</small></dt>
+    <dd>Allows users to specify additional flags to pass to the linker.</dd>
+    <dt><a name="LIBS"><tt>LIBS</tt></a><small>(configured)</small></dt>
+    <dd>The list of libraries that should be linked with each tool.</dd>
+    <dt><a name="LIBTOOL"><tt>LIBTOOL</tt></a><small>(configured)</small></dt>
+    <dd>Specifies the path to the <tt>libtool</tt> tool. This tool is renamed
+    <tt>mklib</tt> by the <tt>configure</tt> script and always located in the 
+    <dt><a name="LLVMAS"><tt>LLVMAS</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>llvm-as</tt> tool.</dd>
+    <dt><a name="LLVMGCC"><tt>LLVMGCC</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the LLVM version of the GCC 'C' Compiler</dd>
+    <dt><a name="LLVMGXX"><tt>LLVMGXX</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the LLVM version of the GCC C++ Compiler</dd>
+    <dt><a name="LLVMLD"><tt>LLVMLD</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the LLVM bitcode linker tool</dd>
+    <dt><a name="LLVM_OBJ_ROOT"><tt>LLVM_OBJ_ROOT</tt></a><small>(configured)
+    </small></dt>
+    <dd>Specifies the top directory into which the output of the build is
+    placed.</dd>
+    <dt><a name="LLVM_SRC_ROOT"><tt>LLVM_SRC_ROOT</tt></a><small>(configured)
+    </small></dt>
+    <dd>Specifies the top directory in which the sources are found.</dd>
+    <dt><a name="LLVM_TARBALL_NAME"><tt>LLVM_TARBALL_NAME</tt></a>
+    <small>(configured)</small></dt>
+    <dd>Specifies the name of the distribution tarball to create. This is
+    configured from the name of the project and its version number.</dd>
+    <dt><a name="MKDIR"><tt>MKDIR</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>mkdir</tt> tool that creates
+    directories.</dd>
+    <dt><a name="PLATFORMSTRIPOPTS"><tt>PLATFORMSTRIPOPTS</tt></a></dt>
+    <dd>The options to provide to the linker to specify that a stripped (no
+    symbols) executable should be built.</dd>
+    <dt><a name="RANLIB"><tt>RANLIB</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>ranlib</tt> tool.</dd>
+    <dt><a name="RM"><tt>RM</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>rm</tt> tool.</dd>
+    <dt><a name="SED"><tt>SED</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>sed</tt> tool.</dd>
+    <dt><a name="SHLIBEXT"><tt>SHLIBEXT</tt></a><small>(configured)</small></dt>
+    <dd>Provides the filename extension to use for shared libraries.</dd>
+    <dt><a name="TBLGEN"><tt>TBLGEN</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>tblgen</tt> tool.</dd>
+    <dt><a name="TAR"><tt>TAR</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>tar</tt> tool.</dd>
+    <dt><a name="ZIP"><tt>ZIP</tt></a><small>(defaulted)</small></dt>
+    <dd>Specifies the path to the <tt>zip</tt> tool.</dd>
+  </dl>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="getvars">Readable Variables</a></div>
+<div class="doc_text">
+  <p>Variables listed in the table below can be used by the user's Makefile but
+  should not be changed. Changing the value will generally cause the build to go
+  wrong, so don't do it.</p>
+  <dl>
+    <dt><a name="bindir"><tt>bindir</tt></a></dt>
+    <dd>The directory into which executables will ultimately be installed. This
+    value is derived from the <tt>--prefix</tt> option given to
+    <tt>configure</tt>.</dd>
+    <dt><a name="BuildMode"><tt>BuildMode</tt></a></dt>
+    <dd>The name of the type of build being performed: Debug, Release, or 
+    Profile</dd>
+    <dt><a name="bitcode_libdir"><tt>bytecode_libdir</tt></a></dt>
+    <dd>The directory into which bitcode libraries will ultimately be 
+    installed.  This value is derived from the <tt>--prefix</tt> option given to
+    <tt>configure</tt>.</dd>
+    <dt><a name="ConfigureScriptFLAGS"><tt>ConfigureScriptFLAGS</tt></a></dt>
+    <dd>Additional flags given to the <tt>configure</tt> script when
+    reconfiguring.</dd>
+    <dt><a name="DistDir"><tt>DistDir</tt></a></dt>
+    <dd>The <em>current</em> directory for which a distribution copy is being
+    made.</dd>
+    <dt><a name="Echo"><tt>Echo</tt></a></dt>
+    <dd>The LLVM Makefile System output command. This provides the
+    <tt>llvm[n]</tt> prefix and starts with @ so the command itself is not
+    printed by <tt>make</tt>.</dd>
+    <dt><a name="EchoCmd"><tt>EchoCmd</tt></a></dt>
+    <dd> Same as <a href="#Echo"><tt>Echo</tt></a> but without the leading @.
+    </dd>
+    <dt><a name="includedir"><tt>includedir</tt></a></dt>
+    <dd>The directory into which include files will ultimately be installed. 
+    This value is derived from the <tt>--prefix</tt> option given to
+    <tt>configure</tt>.</dd>
+    <dt><a name="libdir"><tt>libdir</tt></a></dt><dd></dd>
+    <dd>The directory into which native libraries will ultimately be installed. 
+    This value is derived from the <tt>--prefix</tt> option given to
+    <tt>configure</tt>.</dd>
+    <dt><a name="LibDir"><tt>LibDir</tt></a></dt>
+    <dd>The configuration specific directory into which libraries are placed
+    before installation.</dd>
+    <dt><a name="MakefileConfig"><tt>MakefileConfig</tt></a></dt>
+    <dd>Full path of the <tt>Makefile.config</tt> file.</dd>
+    <dt><a name="MakefileConfigIn"><tt>MakefileConfigIn</tt></a></dt>
+    <dd>Full path of the <tt>Makefile.config.in</tt> file.</dd>
+    <dt><a name="ObjDir"><tt>ObjDir</tt></a></dt>
+    <dd>The configuration and directory specific directory where build objects
+    (compilation results) are placed.</dd>
+    <dt><a name="SubDirs"><tt>SubDirs</tt></a></dt>
+    <dd>The complete list of sub-directories of the current directory as
+    specified by other variables.</dd>
+    <dt><a name="Sources"><tt>Sources</tt></a></dt>
+    <dd>The complete list of source files.</dd>
+    <dt><a name="sysconfdir"><tt>sysconfdir</tt></a></dt>
+    <dd>The directory into which configuration files will ultimately be
+    installed. This value is derived from the <tt>--prefix</tt> option given to
+    <tt>configure</tt>.</dd>
+    <dt><a name="ToolDir"><tt>ToolDir</tt></a></dt>
+    <dd>The configuration specific directory into which executables are placed
+    before they are installed.</dd>
+    <dt><a name="TopDistDir"><tt>TopDistDir</tt></a></dt>
+    <dd>The top most directory into which the distribution files are copied.
+    </dd>
+    <dt><a name="Verb"><tt>Verb</tt></a></dt>
+    <dd>Use this as the first thing on your build script lines to enable or
+    disable verbose mode. It expands to either an @ (quiet mode) or nothing
+    (verbose mode). </dd>
+  </dl>
+</div>
+
+<!-- ======================================================================= -->
+<div class="doc_subsection"><a name="intvars">Internal Variables</a></div>
+<div class="doc_text">
+  <p>Variables listed below are used by the LLVM Makefile System 
+  and considered internal. You should not use these variables under any
+  circumstances.</p>
+  <p><tt>
+    Archive
+    AR.Flags
+    BaseNameSources
+    BCCompile.C
+    BCCompile.CXX
+    BCLinkLib
+    C.Flags
+    Compile.C
+    CompileCommonOpts
+    Compile.CXX
+    ConfigStatusScript
+    ConfigureScript
+    CPP.Flags
+    CPP.Flags 
+    CXX.Flags
+    DependFiles
+    DestArchiveLib
+    DestBitcodeLib
+    DestModule
+    DestRelinkedLib
+    DestSharedLib
+    DestTool
+    DistAlways
+    DistCheckDir
+    DistCheckTop
+    DistFiles
+    DistName
+    DistOther
+    DistSources
+    DistSubDirs
+    DistTarBZ2
+    DistTarGZip
+    DistZip
+    ExtraLibs
+    FakeSources
+    INCFiles
+    InternalTargets
+    LD.Flags
+    LibName.A
+    LibName.BC
+    LibName.LA
+    LibName.O
+    LibTool.Flags
+    Link
+    LinkModule
+    LLVMLibDir
+    LLVMLibsOptions
+    LLVMLibsPaths
+    LLVMToolDir
+    LLVMUsedLibs
+    LocalTargets
+    LTCompile.C
+    LTCompile.CXX
+    LTInstall
+    Module
+    ObjectsBC
+    ObjectsLO
+    ObjectsO
+    ObjMakefiles
+    ParallelTargets
+    PreConditions
+    ProjLibsOptions
+    ProjLibsPaths
+    ProjUsedLibs
+    Ranlib
+    RecursiveTargets
+    Relink
+    SrcMakefiles
+    Strip
+    StripWarnMsg
+    TableGen
+    TDFiles
+    ToolBuildPath
+    TopLevelTargets
+    UserTargets
+  </tt></p>
+</div>
+
+<!-- *********************************************************************** -->
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="mailto:rspencer@x10sys.com">Reid Spencer</a><br>
+  <a href="http://llvm.org">The LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+</body>
+</html>

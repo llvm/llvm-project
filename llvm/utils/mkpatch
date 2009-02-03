@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# This script makes a patch for LLVM ensuring the correct diff options and
+# putting the files in a standard review order.
+
+
+function error {
+  retcode="$?"
+  echo "mkpatch: error: $1 ($retcode)"
+  exit 1
+}
+
+if [ ! -e llvm.spec.in ] ; then
+  error "Please change directory to the LLVM top source directory"
+fi
+if [ "$#" -ne 1 ] ; then
+  error "usage: utils/mkpatch [PATCH_NAME]"
+fi
+NAME="$1"
+echo "mkpatch: Generating differences on top level files"
+svn diff -N -x -u > "$NAME".patch.raw 2>&1
+echo "mkpatch: Generating differences on all directories"
+svn diff -x -u  >> "$NAME".patch.raw 2>&1 \
+  autoconf docs utils include lib/System lib/Support lib/VMCore lib/AsmParser \
+  lib/Bitcode lib/Analysis lib/Transforms lib/CodeGen lib/Target \
+  lib/ExecutionEngine lib/Debugger lib/Linker \
+  tools test unittests runtime projects examples win32 Xcode
+
+echo "mkpatch: Removing cruft from the patch file"
+sed -e '/^[?] .*/d' -e '/^cvs diff: Diffing/d' "$NAME".patch.raw | awk '\
+BEGIN { deleting = 0; } \
+/^Index: .*[.]cvs$/ { deleting = 1; fname=substr($0,7); \
+  print "Skipping: ", fname > "/dev/stderr"; } \
+/^Index:.*/ && !/^Index: .*[.]cvs$/ { deleting = 0; } \
+{ if (! deleting) { print; } } '  > "$NAME".patch  || \
+  error "sed/awk cleanup failed"
+
