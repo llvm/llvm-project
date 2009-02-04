@@ -53,12 +53,3 @@ entry:
 	ret void
 }
 
-define i32 @test5(float %X) {  ;; should turn into bitcast.
-	%X_addr = alloca [4 x float]
-        %X1 = getelementptr [4 x float]* %X_addr, i32 0, i32 2
-	store float %X, float* %X1
-	%a = bitcast float* %X1 to i32*
-	%tmp = load i32* %a
-	ret i32 %tmp
-}
-

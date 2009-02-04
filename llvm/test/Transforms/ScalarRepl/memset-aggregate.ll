@@ -1,7 +1,6 @@
 ; PR1226
 ; RUN: llvm-as < %s | opt -scalarrepl | llvm-dis | grep {ret i32 16843009}
 ; RUN: llvm-as < %s | opt -scalarrepl | llvm-dis | not grep alloca
-; RUN: llvm-as < %s | opt -scalarrepl -instcombine | llvm-dis | grep {ret i16 514}
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
 target triple = "i686-apple-darwin8"
@@ -49,18 +48,3 @@ entry:
 }
 
 
-	%struct.f = type { i32, i32, i32, i32, i32, i32 }
-
-define i16 @test4() nounwind {
-entry:
-	%A = alloca %struct.f, align 8		; <%struct.f*> [#uses=3]
-	%0 = getelementptr %struct.f* %A, i32 0, i32 0		; <i32*> [#uses=1]
-	store i32 1, i32* %0, align 8
-	%1 = getelementptr %struct.f* %A, i32 0, i32 1		; <i32*> [#uses=1]
-	%2 = bitcast i32* %1 to i8*		; <i8*> [#uses=1]
-	call void @llvm.memset.i32(i8* %2, i8 2, i32 12, i32 4)
-	%3 = getelementptr %struct.f* %A, i32 0, i32 2		; <i32*> [#uses=1]
-	%4 = load i32* %3, align 8		; <i32> [#uses=1]
-	%retval12 = trunc i32 %4 to i16		; <i16> [#uses=1]
-	ret i16 %retval12
-}

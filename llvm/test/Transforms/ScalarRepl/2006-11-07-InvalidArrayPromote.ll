@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | opt -scalarrepl | llvm-dis | not grep alloca
+; RUN: echo disabled
 
 define i32 @func(<4 x float> %v0, <4 x float> %v1) nounwind {
 	%vsiidx = alloca [2 x <4 x i32>], align 16		; <[2 x <4 x i32>]*> [#uses=3]
