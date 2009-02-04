@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llc -march=x86 -mattr=+sse2
+; RUN: echo disabled
 ; PR2620
 
 define void @t(i32 %m_task_id, i32 %start_x, i32 %end_x) nounwind {

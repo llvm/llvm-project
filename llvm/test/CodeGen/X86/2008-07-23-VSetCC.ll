@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llc -march=x86 -mcpu=pentium
+; RUN: echo disabled
 ; PR2575
 
 define void @entry(i32 %m_task_id, i32 %start_x, i32 %end_x) nounwind  {
