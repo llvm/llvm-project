@@ -787,7 +787,7 @@ unsigned SelectionDAG::getMVTAlignment(MVT VT) const {
 }
 
 SelectionDAG::SelectionDAG(TargetLowering &tli, FunctionLoweringInfo &fli)
-  : TLI(tli), FLI(fli),
+  : TLI(tli), FLI(fli), DW(0),
     EntryNode(ISD::EntryToken, getVTList(MVT::Other)),
     Root(getEntryNode()) {
   AllNodes.push_back(&EntryNode);
