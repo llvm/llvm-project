@@ -41,8 +41,7 @@ bool llvm::InlineFunction(InvokeInst *II, CallGraph *CG, const TargetData *TD) {
 /// block of the inlined code (the last block is the end of the function),
 /// and InlineCodeInfo is information about the code that got inlined.
 static void HandleInlinedInvoke(InvokeInst *II, BasicBlock *FirstNewBlock,
-                                ClonedCodeInfo &InlinedCodeInfo,
-                                CallGraph *CG) {
+                                ClonedCodeInfo &InlinedCodeInfo) {
   BasicBlock *InvokeDest = II->getUnwindDest();
   std::vector<Value*> InvokeDestPHIValues;
 
@@ -93,10 +92,6 @@ static void HandleInlinedInvoke(InvokeInst *II, BasicBlock *FirstNewBlock,
 
           // Make sure that anything using the call now uses the invoke!
           CI->replaceAllUsesWith(II);
-
-          // Update the callgraph.
-          if (CG)
-            (*CG)[Caller]->replaceCallSite(CI, II);
 
           // Delete the unconditional branch inserted by splitBasicBlock
           BB->getInstList().pop_back();
@@ -438,7 +433,7 @@ bool llvm::InlineFunction(CallSite CS, CallGraph *CG, const TargetData *TD) {
   // any inlined 'unwind' instructions into branches to the invoke exception
   // destination, and call instructions into invoke instructions.
   if (InvokeInst *II = dyn_cast<InvokeInst>(TheCall))
-    HandleInlinedInvoke(II, FirstNewBlock, InlinedFunctionInfo, CG);
+    HandleInlinedInvoke(II, FirstNewBlock, InlinedFunctionInfo);
 
   // If we cloned in _exactly one_ basic block, and if that block ends in a
   // return instruction, we splice the body of the inlined callee directly into
