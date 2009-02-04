@@ -585,7 +585,17 @@ static SCEVHandle BinomialCoefficient(SCEVHandle It, unsigned K,
   }
 
   // We need at least W + T bits for the multiplication step
-  unsigned CalculationBits = W + T;
+  // FIXME: A temporary hack; we round up the bitwidths
+  // to the nearest power of 2 to be nice to the code generator.
+  unsigned CalculationBits = 1U << Log2_32_Ceil(W + T);
+  // FIXME: Temporary hack to avoid generating integers that are too wide.
+  // Although, it's not completely clear how to determine how much
+  // widening is safe; for example, on X86, we can't really widen
+  // beyond 64 because we need to be able to do multiplication
+  // that's CalculationBits wide, but on X86-64, we can safely widen up to
+  // 128 bits.
+  if (CalculationBits > 64)
+    return new SCEVCouldNotCompute();
 
   // Calcuate 2^T, at width T+W.
   APInt DivFactor = APInt(CalculationBits, 1).shl(T);
