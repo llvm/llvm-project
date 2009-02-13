@@ -282,6 +282,10 @@ namespace llvm {
         I = r2iMap_.insert(std::make_pair(reg, createInterval(reg))).first;
       return *I->second;
     }
+
+    /// dupInterval - Duplicate a live interval. The caller is responsible for
+    /// managing the allocated memory.
+    LiveInterval *dupInterval(LiveInterval *li);
     
     /// addLiveRangeToEndOfBlock - Given a register and an instruction,
     /// adds a live range from that instruction to the end of its MBB.

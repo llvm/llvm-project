@@ -824,9 +824,16 @@ bool LiveIntervals::findReachableMBBs(unsigned Start, unsigned End,
 }
 
 LiveInterval* LiveIntervals::createInterval(unsigned reg) {
-  float Weight = TargetRegisterInfo::isPhysicalRegister(reg) ?
-                       HUGE_VALF : 0.0F;
+  float Weight = TargetRegisterInfo::isPhysicalRegister(reg) ? HUGE_VALF : 0.0F;
   return new LiveInterval(reg, Weight);
+}
+
+/// dupInterval - Duplicate a live interval. The caller is responsible for
+/// managing the allocated memory.
+LiveInterval* LiveIntervals::dupInterval(LiveInterval *li) {
+  LiveInterval *NewLI = createInterval(li->reg);
+  NewLI->Copy(*li, getVNInfoAllocator());
+  return NewLI;
 }
 
 /// getVNInfoSourceReg - Helper function that parses the specified VNInfo

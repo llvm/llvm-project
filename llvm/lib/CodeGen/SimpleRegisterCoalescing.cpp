@@ -1322,6 +1322,15 @@ bool SimpleRegisterCoalescing::JoinCopy(CopyRec &TheCopy, bool &Again) {
   DOUT << " and "; DstInt.print(DOUT, tri_);
   DOUT << ": ";
 
+  // Save a copy of the virtual register live interval. We'll manually
+  // merge this into the "real" physical register live interval this is
+  // coalesced with.
+  LiveInterval *SavedLI = 0;
+  if (RealDstReg)
+    SavedLI = li_->dupInterval(&SrcInt);
+  else if (RealSrcReg)
+    SavedLI = li_->dupInterval(&DstInt);
+
   // Check if it is necessary to propagate "isDead" property.
   if (!isExtSubReg && !isInsSubReg) {
     MachineOperand *mopd = CopyMI->findRegisterDefOperand(DstReg, false);
@@ -1413,21 +1422,17 @@ bool SimpleRegisterCoalescing::JoinCopy(CopyRec &TheCopy, bool &Again) {
     if (RealDstReg || RealSrcReg) {
       LiveInterval &RealInt =
         li_->getOrCreateInterval(RealDstReg ? RealDstReg : RealSrcReg);
-      SmallSet<const VNInfo*, 4> CopiedValNos;
-      for (LiveInterval::Ranges::const_iterator I = ResSrcInt->ranges.begin(),
-             E = ResSrcInt->ranges.end(); I != E; ++I) {
-        const LiveRange *DstLR = ResDstInt->getLiveRangeContaining(I->start);
-        assert(DstLR  && "Invalid joined interval!");
-        const VNInfo *DstValNo = DstLR->valno;
-        if (CopiedValNos.insert(DstValNo)) {
-          VNInfo *ValNo = RealInt.getNextValue(DstValNo->def, DstValNo->copy,
-                                               li_->getVNInfoAllocator());
-          ValNo->hasPHIKill = DstValNo->hasPHIKill;
-          RealInt.addKills(ValNo, DstValNo->kills);
-          RealInt.MergeValueInAsValue(*ResDstInt, DstValNo, ValNo);
-        }
+      for (LiveInterval::const_vni_iterator I = SavedLI->vni_begin(),
+             E = SavedLI->vni_end(); I != E; ++I) {
+        const VNInfo *ValNo = *I;
+        VNInfo *NewValNo = RealInt.getNextValue(ValNo->def, ValNo->copy,
+                                                li_->getVNInfoAllocator());
+        NewValNo->hasPHIKill = ValNo->hasPHIKill;
+        NewValNo->redefByEC = ValNo->redefByEC;
+        RealInt.addKills(NewValNo, ValNo->kills);
+        RealInt.MergeValueInAsValue(*SavedLI, ValNo, NewValNo);
       }
-      
+      RealInt.weight += SavedLI->weight;      
       DstReg = RealDstReg ? RealDstReg : RealSrcReg;
     }
 
@@ -1496,6 +1501,12 @@ bool SimpleRegisterCoalescing::JoinCopy(CopyRec &TheCopy, bool &Again) {
   // SrcReg is guarateed to be the register whose live interval that is
   // being merged.
   li_->removeInterval(SrcReg);
+
+  // Manually deleted the live interval copy.
+  if (SavedLI) {
+    SavedLI->clear();
+    delete SavedLI;
+  }
 
   if (isEmpty) {
     // Now the copy is being coalesced away, the val# previously defined
