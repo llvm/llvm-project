@@ -203,10 +203,10 @@ bool llvm::InlineFunction(CallSite CS, CallGraph *CG, const TargetData *TD) {
       CalledFunc->getFunctionType()->isVarArg()) return false;
 
 
-  // If the call to the callee is a non-tail call, we must clear the 'tail'
+  // If the call to the callee is not a tail call, we must clear the 'tail'
   // flags on any calls that we inline.
   bool MustClearTailCallFlags =
-    isa<CallInst>(TheCall) && !cast<CallInst>(TheCall)->isTailCall();
+    !(isa<CallInst>(TheCall) && cast<CallInst>(TheCall)->isTailCall());
 
   // If the call to the callee cannot throw, set the 'nounwind' flag on any
   // calls that we inline.
