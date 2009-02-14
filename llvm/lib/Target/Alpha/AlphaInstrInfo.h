@@ -83,7 +83,8 @@ public:
   
   bool AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
-                     SmallVectorImpl<MachineOperand> &Cond) const;
+                     SmallVectorImpl<MachineOperand> &Cond,
+                     bool AllowModify) const;
   unsigned RemoveBranch(MachineBasicBlock &MBB) const;
   void insertNoop(MachineBasicBlock &MBB, 
                   MachineBasicBlock::iterator MI) const;

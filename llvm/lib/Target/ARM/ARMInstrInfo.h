@@ -176,7 +176,8 @@ public:
   // Branch analysis.
   virtual bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                              MachineBasicBlock *&FBB,
-                             SmallVectorImpl<MachineOperand> &Cond) const;
+                             SmallVectorImpl<MachineOperand> &Cond,
+                             bool AllowModify) const;
   virtual unsigned RemoveBranch(MachineBasicBlock &MBB) const;
   virtual unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                                 MachineBasicBlock *FBB,

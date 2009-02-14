@@ -104,7 +104,8 @@ namespace llvm {
 
     virtual bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                                MachineBasicBlock *&FBB,
-                               SmallVectorImpl<MachineOperand> &Cond) const;
+                               SmallVectorImpl<MachineOperand> &Cond,
+                               bool AllowModify) const;
 
     virtual unsigned RemoveBranch(MachineBasicBlock &MBB) const;
 

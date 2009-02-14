@@ -191,7 +191,7 @@ bool BranchFolder::runOnMachineFunction(MachineFunction &MF) {
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; I++) {
     MachineBasicBlock *MBB = I, *TBB = 0, *FBB = 0;
     SmallVector<MachineOperand, 4> Cond;
-    if (!TII->AnalyzeBranch(*MBB, TBB, FBB, Cond))
+    if (!TII->AnalyzeBranch(*MBB, TBB, FBB, Cond, true))
       EverMadeChange |= MBB->CorrectExtraCFGEdges(TBB, FBB, !Cond.empty());
     EverMadeChange |= OptimizeImpDefsBlock(MBB);
   }
@@ -434,7 +434,7 @@ static void FixTail(MachineBasicBlock* CurMBB, MachineBasicBlock *SuccBB,
   MachineBasicBlock *TBB = 0, *FBB = 0;
   SmallVector<MachineOperand, 4> Cond;
   if (I != MF->end() &&
-      !TII->AnalyzeBranch(*CurMBB, TBB, FBB, Cond)) {
+      !TII->AnalyzeBranch(*CurMBB, TBB, FBB, Cond, true)) {
     MachineBasicBlock *NextBB = I;
     if (TBB == NextBB && !Cond.empty() && !FBB) {
       if (!TII->ReverseBranchCondition(Cond)) {
@@ -711,7 +711,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
           continue;
         MachineBasicBlock *TBB = 0, *FBB = 0;
         SmallVector<MachineOperand, 4> Cond;
-        if (!TII->AnalyzeBranch(*PBB, TBB, FBB, Cond)) {
+        if (!TII->AnalyzeBranch(*PBB, TBB, FBB, Cond, true)) {
           // Failing case:  IBB is the target of a cbr, and
           // we cannot reverse the branch.
           SmallVector<MachineOperand, 4> NewCond(Cond);
@@ -845,7 +845,7 @@ bool BranchFolder::CanFallThrough(MachineBasicBlock *CurBB,
 bool BranchFolder::CanFallThrough(MachineBasicBlock *CurBB) {
   MachineBasicBlock *TBB = 0, *FBB = 0;
   SmallVector<MachineOperand, 4> Cond;
-  bool CurUnAnalyzable = TII->AnalyzeBranch(*CurBB, TBB, FBB, Cond);
+  bool CurUnAnalyzable = TII->AnalyzeBranch(*CurBB, TBB, FBB, Cond, true);
   return CanFallThrough(CurBB, CurUnAnalyzable, TBB, FBB, Cond);
 }
 
@@ -910,7 +910,7 @@ void BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
   MachineBasicBlock *PriorTBB = 0, *PriorFBB = 0;
   SmallVector<MachineOperand, 4> PriorCond;
   bool PriorUnAnalyzable =
-    TII->AnalyzeBranch(PrevBB, PriorTBB, PriorFBB, PriorCond);
+    TII->AnalyzeBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, true);
   if (!PriorUnAnalyzable) {
     // If the CFG for the prior block has extra edges, remove them.
     MadeChange |= PrevBB.CorrectExtraCFGEdges(PriorTBB, PriorFBB,
@@ -1023,7 +1023,7 @@ void BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
   // Analyze the branch in the current block.
   MachineBasicBlock *CurTBB = 0, *CurFBB = 0;
   SmallVector<MachineOperand, 4> CurCond;
-  bool CurUnAnalyzable = TII->AnalyzeBranch(*MBB, CurTBB, CurFBB, CurCond);
+  bool CurUnAnalyzable= TII->AnalyzeBranch(*MBB, CurTBB, CurFBB, CurCond, true);
   if (!CurUnAnalyzable) {
     // If the CFG for the prior block has extra edges, remove them.
     MadeChange |= MBB->CorrectExtraCFGEdges(CurTBB, CurFBB, !CurCond.empty());

@@ -532,7 +532,8 @@ SPUInstrInfo::foldMemoryOperandImpl(MachineFunction &MF,
 bool
 SPUInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                             MachineBasicBlock *&FBB,
-                            SmallVectorImpl<MachineOperand> &Cond) const {
+                            SmallVectorImpl<MachineOperand> &Cond,
+                            bool AllowModify) const {
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.end();
   if (I == MBB.begin() || !isUnpredicatedTerminator(--I))
@@ -583,7 +584,8 @@ SPUInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
   if (isUncondBranch(SecondLastInst) && isUncondBranch(LastInst)) {
     TBB = SecondLastInst->getOperand(0).getMBB();
     I = LastInst;
-    I->eraseFromParent();
+    if (AllowModify)
+      I->eraseFromParent();
     return false;
   }
 

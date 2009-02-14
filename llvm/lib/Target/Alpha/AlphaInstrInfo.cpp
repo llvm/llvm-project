@@ -321,8 +321,9 @@ static unsigned AlphaRevCondCode(unsigned Opcode) {
 
 // Branch analysis.
 bool AlphaInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
-                                 MachineBasicBlock *&FBB,
-                                 SmallVectorImpl<MachineOperand> &Cond) const {
+                                   MachineBasicBlock *&FBB,
+                                   SmallVectorImpl<MachineOperand> &Cond,
+                                   bool AllowModify) const {
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.end();
   if (I == MBB.begin() || !isUnpredicatedTerminator(--I))
@@ -373,7 +374,8 @@ bool AlphaInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TB
       LastInst->getOpcode() == Alpha::BR) {
     TBB = SecondLastInst->getOperand(0).getMBB();
     I = LastInst;
-    I->eraseFromParent();
+    if (AllowModify)
+      I->eraseFromParent();
     return false;
   }
 

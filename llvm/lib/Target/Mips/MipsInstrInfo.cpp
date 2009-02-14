@@ -453,7 +453,8 @@ Mips::CondCode Mips::GetOppositeBranchCondition(Mips::CondCode CC)
 bool MipsInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB, 
                                   MachineBasicBlock *&TBB,
                                   MachineBasicBlock *&FBB,
-                                  SmallVectorImpl<MachineOperand> &Cond) const 
+                                  SmallVectorImpl<MachineOperand> &Cond,
+                                  bool AllowModify) const 
 {
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.end();
@@ -525,7 +526,8 @@ bool MipsInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   if ((SecondLastOpc == Mips::J) && (LastOpc == Mips::J)) {
     TBB = SecondLastInst->getOperand(0).getMBB();
     I = LastInst;
-    I->eraseFromParent();
+    if (AllowModify)
+      I->eraseFromParent();
     return false;
   }
 

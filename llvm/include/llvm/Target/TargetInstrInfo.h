@@ -195,9 +195,13 @@ public:
   /// Note that RemoveBranch and InsertBranch must be implemented to support
   /// cases where this method returns success.
   ///
+  /// If AllowModify is true, then this routine is allowed to modify the basic
+  /// block (e.g. delete instructions after the unconditional branch).
+  ///
   virtual bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                              MachineBasicBlock *&FBB,
-                             SmallVectorImpl<MachineOperand> &Cond) const {
+                             SmallVectorImpl<MachineOperand> &Cond,
+                             bool AllowModify = false) const {
     return true;
   }
   

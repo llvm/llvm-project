@@ -1488,7 +1488,8 @@ static bool isBrAnalysisUnpredicatedTerminator(const MachineInstr *MI,
 bool X86InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB, 
                                  MachineBasicBlock *&TBB,
                                  MachineBasicBlock *&FBB,
-                                 SmallVectorImpl<MachineOperand> &Cond) const {
+                                 SmallVectorImpl<MachineOperand> &Cond,
+                                 bool AllowModify) const {
   // Start from the bottom of the block and work up, examining the
   // terminator instructions.
   MachineBasicBlock::iterator I = MBB.end();
@@ -1504,6 +1505,11 @@ bool X86InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
       return true;
     // Handle unconditional branches.
     if (I->getOpcode() == X86::JMP) {
+      if (!AllowModify) {
+        TBB = I->getOperand(0).getMBB();
+        return false;
+      }
+
       // If the block has any instructions after a JMP, delete them.
       while (next(I) != MBB.end())
         next(I)->eraseFromParent();
