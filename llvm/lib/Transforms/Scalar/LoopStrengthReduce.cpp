@@ -430,8 +430,8 @@ static bool getSCEVStartAndStride(const SCEVHandle &SH, Loop *L,
   if (!AddRec->isAffine()) return false;
 
   // If Start contains an SCEVAddRecExpr from a different loop, other than an
-  // outer loop of the current loop, reject it.  SCEV has no concept of operating
-  // on one loop at a time so don't confuse it with such expressions.
+  // outer loop of the current loop, reject it.  SCEV has no concept of 
+  // operating on one loop at a time so don't confuse it with such expressions.
   if (containsAddRecFromDifferentLoop(Start, L))
     return false;
 
@@ -774,14 +774,14 @@ void BasedUser::RewriteInstructionToUseNewBase(const SCEVHandle &NewBase,
       // which need not be an immediate predecessor of this PHI.  This way we 
       // need only one copy of it even if it is referenced multiple times in
       // the PHI.  We don't do this when the original expression is inside the
-      // loop because multiple copies sometimes do useful sinking of code in that
-      // case(?).
+      // loop because multiple copies sometimes do useful sinking of code in
+      // that case(?).
       Instruction *OldLoc = dyn_cast<Instruction>(OperandValToReplace);
       if (L->contains(OldLoc->getParent())) {
-        // If this is a critical edge, split the edge so that we do not insert the
-        // code on all predecessor/successor paths.  We do this unless this is the
-        // canonical backedge for this loop, as this can make some inserted code
-        // be in an illegal position.
+        // If this is a critical edge, split the edge so that we do not insert
+        // the code on all predecessor/successor paths.  We do this unless this
+        // is the canonical backedge for this loop, as this can make some
+        // inserted code be in an illegal position.
         BasicBlock *PHIPred = PN->getIncomingBlock(i);
         if (e != 1 && PHIPred->getTerminator()->getNumSuccessors() > 1 &&
             (PN->getParent() != L->getHeader() || !L->contains(PHIPred))) {
@@ -1224,19 +1224,21 @@ bool LoopStrengthReduce::ValidStride(bool HasBaseReg,
   return true;
 }
 
-/// RequiresTypeConversion - Returns true if converting Ty to NewTy is not
+/// RequiresTypeConversion - Returns true if converting Ty1 to Ty2 is not
 /// a nop.
 bool LoopStrengthReduce::RequiresTypeConversion(const Type *Ty1,
                                                 const Type *Ty2) {
   if (Ty1 == Ty2)
     return false;
+  if (Ty1->canLosslesslyBitCastTo(Ty2))
+    return false;
   if (TLI && TLI->isTruncateFree(Ty1, Ty2))
     return false;
-  return (!Ty1->canLosslesslyBitCastTo(Ty2) &&
-          !(isa<PointerType>(Ty2) &&
-            Ty1->canLosslesslyBitCastTo(UIntPtrTy)) &&
-          !(isa<PointerType>(Ty1) &&
-            Ty2->canLosslesslyBitCastTo(UIntPtrTy)));
+  if (isa<PointerType>(Ty2) && Ty1->canLosslesslyBitCastTo(UIntPtrTy))
+    return false;
+  if (isa<PointerType>(Ty1) && Ty2->canLosslesslyBitCastTo(UIntPtrTy))
+    return false;
+  return true;
 }
 
 /// CheckForIVReuse - Returns the multiple if the stride is the multiple
@@ -1661,15 +1663,28 @@ void LoopStrengthReduce::StrengthReduceStridedIVUsers(const SCEVHandle &Stride,
       Rewriter.clear();
 
       // If we are reusing the iv, then it must be multiplied by a constant
-      // factor take advantage of addressing mode scale component.
+      // factor to take advantage of the addressing mode scale component.
       if (!isa<SCEVConstant>(RewriteFactor) ||
           !cast<SCEVConstant>(RewriteFactor)->isZero()) {
         // If we're reusing an IV with a nonzero base (currently this happens
         // only when all reuses are outside the loop) subtract that base here.
         // The base has been used to initialize the PHI node but we don't want
         // it here.
-        if (!ReuseIV.Base->isZero())
-          RewriteExpr = SE->getMinusSCEV(RewriteExpr, ReuseIV.Base);
+        if (!ReuseIV.Base->isZero()) {
+          SCEVHandle typedBase = ReuseIV.Base;
+          if (RewriteExpr->getType()->getPrimitiveSizeInBits() !=
+              ReuseIV.Base->getType()->getPrimitiveSizeInBits()) {
+            // It's possible the original IV is a larger type than the new IV,
+            // in which case we have to truncate the Base.  We checked in
+            // RequiresTypeConversion that this is valid.
+            assert (RewriteExpr->getType()->getPrimitiveSizeInBits() <
+                    ReuseIV.Base->getType()->getPrimitiveSizeInBits() &&
+                    "Unexpected lengthening conversion!");
+            typedBase = SE->getTruncateExpr(ReuseIV.Base, 
+                                            RewriteExpr->getType());
+          }
+          RewriteExpr = SE->getMinusSCEV(RewriteExpr, typedBase);
+        }
 
         // Multiply old variable, with base removed, by new scale factor.
         RewriteExpr = SE->getMulExpr(RewriteFactor,
