@@ -404,11 +404,13 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
         }
       }
 
-      // The EFLAGS implicit def is dead.
-      New->getOperand(3).setIsDead();
+      if (New) {
+        // The EFLAGS implicit def is dead.
+        New->getOperand(3).setIsDead();
 
-      // Replace the pseudo instruction with a new instruction...
-      if (New) MBB.insert(I, New);
+        // Replace the pseudo instruction with a new instruction...
+        MBB.insert(I, New);
+      }
     }
   } else if (I->getOpcode() == getCallFrameDestroyOpcode()) {
     // If we are performing frame pointer elimination and if the callee pops
