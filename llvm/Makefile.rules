@@ -560,7 +560,7 @@ ObjectsBC := $(BaseNameSources:%=$(ObjDir)/%.bc)
 # in the file so they get built before dependencies
 #---------------------------------------------------------
 
-$(PROJ_bindir) $(PROJ_libdir) $(PROJ_includedir) $(PROJ_etcdir):
+$(PROJ_bindir) $(PROJ_libdir) $(PROJ_includedir) $(PROJ_etcdir)::
 	$(Verb) $(MKDIR) $@
 
 # To create other directories, as needed, and timestamp their creation
@@ -868,7 +868,7 @@ DestSharedLib = $(PROJ_libdir)/lib$(LIBRARYNAME)$(SHLIBEXT)
 
 install-local:: $(DestSharedLib)
 
-$(DestSharedLib): $(LibName.LA) | $(PROJ_libdir)
+$(DestSharedLib): $(LibName.LA) $(PROJ_libdir)
 	$(Echo) Installing $(BuildMode) Shared Library $(DestSharedLib)
 	$(Verb) $(LTInstall) $(LibName.LA) $(DestSharedLib)
 	$(Verb) $(LIBTOOL) --finish $(PROJ_libdir)
@@ -935,7 +935,7 @@ uninstall-local::
 else
 install-local:: $(DestBytecodeLib)
 
-$(DestBytecodeLib): $(LibName.BCA) | $(BytecodeDestDir)
+$(DestBytecodeLib): $(LibName.BCA) $(BytecodeDestDir)
 	$(Echo) Installing $(BuildMode) Bytecode Archive $(DestBytecodeLib)
 	$(Verb) $(DataInstall) $(LibName.BCA) $(DestBytecodeLib)
 
@@ -982,7 +982,7 @@ DestRelinkedLib = $(PROJ_libdir)/$(LIBRARYNAME).o
 
 install-local:: $(DestRelinkedLib)
 
-$(DestRelinkedLib): $(LibName.O) | $(PROJ_libdir)
+$(DestRelinkedLib): $(LibName.O) $(PROJ_libdir)
 	$(Echo) Installing $(BuildMode) Object Library $(DestRelinkedLib)
 	$(Verb) $(LTInstall) $(LibName.O) $(DestRelinkedLib)
 
@@ -1022,7 +1022,7 @@ DestArchiveLib := $(PROJ_libdir)/lib$(LIBRARYNAME).a
 
 install-local:: $(DestArchiveLib)
 
-$(DestArchiveLib): $(LibName.A) | $(PROJ_libdir)
+$(DestArchiveLib): $(LibName.A) $(PROJ_libdir)
 	$(Echo) Installing $(BuildMode) Archive Library $(DestArchiveLib)
 	$(Verb) $(MKDIR) $(PROJ_libdir)
 	$(Verb) $(LTInstall) $(LibName.A) $(DestArchiveLib)
@@ -1084,7 +1084,7 @@ DestTool = $(PROJ_bindir)/$(TOOLNAME)
 
 install-local:: $(DestTool)
 
-$(DestTool): $(ToolBuildPath) | $(PROJ_bindir)
+$(DestTool): $(ToolBuildPath) $(PROJ_bindir)
 	$(Echo) Installing $(BuildMode) $(DestTool)
 	$(Verb) $(ProgInstall) $(ToolBuildPath) $(DestTool)
 
