@@ -1993,7 +1993,7 @@ void Test::Run() {
   if (!HasSameFixtureClass()) return;
 
   internal::UnitTestImpl* const impl = internal::GetUnitTestImpl();
-#ifdef GTEST_OS_WINDOWS
+#if defined(GTEST_OS_WINDOWS) && !defined(__MINGW32__)
   // We are on Windows.
   impl->os_stack_trace_getter()->UponLeavingGTest();
   __try {
@@ -2025,7 +2025,7 @@ void Test::Run() {
     AddExceptionThrownFailure(GetExceptionCode(), "TearDown()");
   }
 
-#else  // We are on Linux or Mac - exceptions are disabled.
+#else  // We are on Linux, Mac or MingW - exceptions are disabled.
   impl->os_stack_trace_getter()->UponLeavingGTest();
   SetUp();
 
@@ -2227,7 +2227,7 @@ void TestInfoImpl::Run() {
   const TimeInMillis start = GetTimeInMillis();
 
   impl->os_stack_trace_getter()->UponLeavingGTest();
-#ifdef GTEST_OS_WINDOWS
+#if defined(GTEST_OS_WINDOWS) && !defined(__MINGW32__)
   // We are on Windows.
   Test* test = NULL;
 
@@ -2240,7 +2240,7 @@ void TestInfoImpl::Run() {
                               "the test fixture's constructor");
     return;
   }
-#else  // We are on Linux or Mac OS - exceptions are disabled.
+#else  // We are on Linux, Mac OS or MingW - exceptions are disabled.
 
   // TODO(wan): If test->Run() throws, test won't be deleted.  This is
   // not a problem now as we don't use exceptions.  If we were to
@@ -3271,7 +3271,7 @@ void UnitTest::RecordPropertyForCurrentTest(const char* key,
 // We don't protect this under mutex_, as we only support calling it
 // from the main thread.
 int UnitTest::Run() {
-#ifdef GTEST_OS_WINDOWS
+#if defined(GTEST_OS_WINDOWS) && !defined(__MINGW32__)
 
 #if !defined(_WIN32_WCE)
   // SetErrorMode doesn't exist on CE.
@@ -3294,7 +3294,7 @@ int UnitTest::Run() {
   }
 
 #else
-  // We are on Linux or Mac OS.  There is no exception of any kind.
+  // We are on Linux, Mac OS or MingW.  There is no exception of any kind.
 
   return impl_->RunAllTests();
 #endif  // GTEST_OS_WINDOWS

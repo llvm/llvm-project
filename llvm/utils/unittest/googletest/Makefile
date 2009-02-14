@@ -18,4 +18,8 @@ BUILD_ARCHIVE = 1
 CPP.Flags += -I$(LLVM_SRC_ROOT)/utils/unittest/googletest/include/
 CPP.Flags += $(NO_MISSING_FIELD_INITIALIZERS) $(NO_VARIADIC_MACROS)
 
+ifeq ($(OS),MingW)
+  CPP.Flags += -DGTEST_OS_WINDOWS=1
+endif
+
 include $(LEVEL)/Makefile.common
