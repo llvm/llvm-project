@@ -8,7 +8,7 @@
 ##===----------------------------------------------------------------------===##
 
 LEVEL = ..
-PARALLEL_DIRS := TableGen fpcmp PerfectShuffle
+PARALLEL_DIRS := TableGen fpcmp PerfectShuffle unittest
 
 EXTRA_DIST := cgiplotNLT.pl check-each-file codegen-diff countloc.sh cvsupdate \
               DSAclean.py DSAextract.py emacs findsym.pl GenLibDeps.pl \
