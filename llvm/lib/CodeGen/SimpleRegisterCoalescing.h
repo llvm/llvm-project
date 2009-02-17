@@ -196,6 +196,15 @@ namespace llvm {
     bool RemoveCopyByCommutingDef(LiveInterval &IntA, LiveInterval &IntB,
                                   MachineInstr *CopyMI);
 
+    /// TrimLiveIntervalToLastUse - If there is a last use in the same basic
+    /// block as the copy instruction, trim the ive interval to the last use
+    /// and return true.
+    bool TrimLiveIntervalToLastUse(unsigned CopyIdx,
+                                   MachineBasicBlock *CopyMBB,
+                                   LiveInterval &li, const LiveRange *LR);
+
+    /// ReMaterializeTrivialDef - If the source of a copy is defined by a trivial
+    /// computation, replace the copy by rematerialize the definition.
     bool ReMaterializeTrivialDef(LiveInterval &SrcInt, unsigned DstReg,
                                  MachineInstr *CopyMI);
 
