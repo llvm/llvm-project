@@ -400,7 +400,7 @@ static bool containsAddRecFromDifferentLoop(SCEVHandle S, Loop *L) {
 /// outer loop of the current loop.
 static bool getSCEVStartAndStride(const SCEVHandle &SH, Loop *L,
                                   SCEVHandle &Start, SCEVHandle &Stride,
-                                  ScalarEvolution *SE) {
+                                  ScalarEvolution *SE, DominatorTree *DT) {
   SCEVHandle TheAddRec = Start;   // Initialize to zero.
 
   // If the outer level is an AddExpr, the operands are all start values except
@@ -437,9 +437,21 @@ static bool getSCEVStartAndStride(const SCEVHandle &SH, Loop *L,
 
   Start = SE->getAddExpr(Start, AddRec->getOperand(0));
   
-  if (!isa<SCEVConstant>(AddRec->getOperand(1)))
+  if (!isa<SCEVConstant>(AddRec->getOperand(1))) {
+    // If stride is an instruction, make sure it dominates the loop header.
+    // Otherwise we could end up with a use before def situation.
+    if (SCEVUnknown *SU = dyn_cast<SCEVUnknown>(AddRec->getOperand(1))) {
+      if (Instruction *I = dyn_cast<Instruction>(SU->getValue())) {
+        BasicBlock *StrideBB = I->getParent();
+        BasicBlock *Preheader = L->getLoopPreheader();
+        if (!DT->dominates(StrideBB, Preheader))
+          return false;
+      }
+    }
+
     DOUT << "[" << L->getHeader()->getName()
          << "] Variable stride: " << *AddRec << "\n";
+  }
 
   Stride = AddRec->getOperand(1);
   return true;
@@ -547,7 +559,7 @@ bool LoopStrengthReduce::AddUsersIfInteresting(Instruction *I, Loop *L,
   // Get the start and stride for this expression.
   SCEVHandle Start = SE->getIntegerSCEV(0, ISE->getType());
   SCEVHandle Stride = Start;
-  if (!getSCEVStartAndStride(ISE, L, Start, Stride, SE))
+  if (!getSCEVStartAndStride(ISE, L, Start, Stride, SE, DT))
     return false;  // Non-reducible symbolic expression, bail out.
 
   std::vector<Instruction *> IUsers;
