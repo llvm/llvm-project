@@ -1346,20 +1346,21 @@ unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
   return 1;
 }
 
-static bool ValueHasAtMostOneBitSet(SDValue Val, const SelectionDAG &DAG) {
+static bool ValueHasExactlyOneBitSet(SDValue Val, const SelectionDAG &DAG) {
   // Logical shift right or left won't ever introduce new set bits.
   // We check for this case because we don't care which bits are
   // set, but ComputeMaskedBits won't know anything unless it can
   // determine which specific bits may be set.
   if (Val.getOpcode() == ISD::SHL || Val.getOpcode() == ISD::SRL)
-    return ValueHasAtMostOneBitSet(Val.getOperand(0), DAG);
+    return ValueHasExactlyOneBitSet(Val.getOperand(0), DAG);
 
   MVT OpVT = Val.getValueType();
   unsigned BitWidth = OpVT.getSizeInBits();
   APInt Mask = APInt::getAllOnesValue(BitWidth);
   APInt KnownZero, KnownOne;
   DAG.ComputeMaskedBits(Val, Mask, KnownZero, KnownOne);
-  return KnownZero.countPopulation() == BitWidth - 1;
+  return (KnownZero.countPopulation() == BitWidth - 1) &&
+         (KnownOne.countPopulation() == 1);
 }
 
 /// SimplifySetCC - Try to simplify a setcc built with the specified operands 
@@ -1832,9 +1833,12 @@ TargetLowering::SimplifySetCC(MVT VT, SDValue N0, SDValue N1,
     }
 
     // Simplify x&y == y to x&y != 0 if y has exactly one bit set.
+    // Note that where y is variable and is known to have at most
+    // one bit set (for example, if it is z&1) we cannot do this;
+    // the expressions are not equivalent when y==0.
     if (N0.getOpcode() == ISD::AND)
       if (N0.getOperand(0) == N1 || N0.getOperand(1) == N1) {
-        if (ValueHasAtMostOneBitSet(N1, DAG)) {
+        if (ValueHasExactlyOneBitSet(N1, DAG)) {
           Cond = ISD::getSetCCInverse(Cond, /*isInteger=*/true);
           SDValue Zero = DAG.getConstant(0, N1.getValueType());
           return DAG.getSetCC(dl, VT, N0, Zero, Cond);
@@ -1842,7 +1846,7 @@ TargetLowering::SimplifySetCC(MVT VT, SDValue N0, SDValue N1,
       }
     if (N1.getOpcode() == ISD::AND)
       if (N1.getOperand(0) == N0 || N1.getOperand(1) == N0) {
-        if (ValueHasAtMostOneBitSet(N0, DAG)) {
+        if (ValueHasExactlyOneBitSet(N0, DAG)) {
           Cond = ISD::getSetCCInverse(Cond, /*isInteger=*/true);
           SDValue Zero = DAG.getConstant(0, N0.getValueType());
           return DAG.getSetCC(dl, VT, N1, Zero, Cond);
