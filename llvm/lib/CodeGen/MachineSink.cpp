@@ -208,6 +208,11 @@ bool MachineSinking::SinkInstruction(MachineInstr *MI, bool &SawStore) {
   // If there are no outputs, it must have side-effects.
   if (SuccToSinkTo == 0)
     return false;
+
+  // It's not safe to sink instructions to EH landing pad. Control flow into
+  // landing pad is implicitly defined.
+  if (SuccToSinkTo->isLandingPad())
+    return false;
   
   DEBUG(cerr << "Sink instr " << *MI);
   DEBUG(cerr << "to block " << *SuccToSinkTo);
