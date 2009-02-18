@@ -271,6 +271,17 @@ namespace llvm {
         I = std::lower_bound(kills.begin(), kills.end(), KillIdx);
       return I != kills.end() && *I == KillIdx;
     }
+
+    /// isOnlyLROfValNo - Return true if the specified live range is the only
+    /// one defined by the its val#.
+    bool isOnlyLROfValNo( const LiveRange *LR) {
+      for (const_iterator I = begin(), E = end(); I != E; ++I) {
+        const LiveRange *Tmp = I;
+        if (Tmp != LR && Tmp->valno == LR->valno)
+          return false;
+      }
+      return true;
+    }
     
     /// MergeValueNumberInto - This method is called when two value nubmers
     /// are found to be equivalent.  This eliminates V1, replacing all
