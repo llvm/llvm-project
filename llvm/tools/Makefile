@@ -25,7 +25,8 @@ PARALLEL_DIRS := llvm-config  \
 
 include $(LEVEL)/Makefile.config
 
-ifeq ($(ENABLE_PIC),1)
+# only build new lto project on Darwin for now
+ifeq ($(OS),Darwin)
 PARALLEL_DIRS += lto
 endif
 
