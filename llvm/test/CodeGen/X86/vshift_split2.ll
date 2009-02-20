@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llc
+; RUN: llvm-as < %s | llc -march=x86 -mcpu=yonah
 
 ; Legalization example that requires splitting a large vector into smaller pieces.
 

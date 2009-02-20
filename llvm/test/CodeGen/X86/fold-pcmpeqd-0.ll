@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llc -mtriple=i386-apple-darwin   | grep pcmpeqd | count 1
+; RUN: llvm-as < %s | llc -mtriple=i386-apple-darwin -mcpu=yonah   | grep pcmpeqd | count 1
 ; RUN: llvm-as < %s | llc -mtriple=x86_64-apple-darwin | grep pcmpeqd | count 1
 
 ; This testcase shouldn't need to spill the -1 value,
