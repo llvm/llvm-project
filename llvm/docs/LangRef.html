@@ -207,6 +207,15 @@
           <li><a href="#int_part_set">'<tt>llvm.part.set.*</tt>' Intrinsic </a></li>
         </ol>
       </li>
+      <li><a href="#int_overflow">Arithmetic with Overflow Intrinsics</a>
+        <ol>
+          <li><a href="#int_sadd_ovf">'<tt>llvm.sadd.with.overflow.*</tt> Intrinsics</a></li>
+          <li><a href="#int_uadd_ovf">'<tt>llvm.uadd.with.overflow.*</tt> Intrinsics</a></li>
+          <li><a href="#int_ssub_ovf">'<tt>llvm.ssub.with.overflow.*</tt> Intrinsics</a></li>
+          <li><a href="#int_usub_ovf">'<tt>llvm.usub.with.overflow.*</tt> Intrinsics</a></li>
+          <li><a href="#int_smul_ovf">'<tt>llvm.smul.with.overflow.*</tt> Intrinsics</a></li>
+        </ol>
+      </li>
       <li><a href="#int_debugger">Debugger intrinsics</a></li>
       <li><a href="#int_eh">Exception Handling intrinsics</a></li>
       <li><a href="#int_trampoline">Trampoline Intrinsic</a>
@@ -5573,7 +5582,7 @@ additional even-byte lengths (6 bytes, 8 bytes and more, respectively).
 <p>This is an overloaded intrinsic. You can use llvm.ctpop on any integer bit
 width. Not all targets support all bit widths however.</p>
 <pre>
-  declare i8 @llvm.ctpop.i8 (i8  &lt;src&gt;)
+  declare i8 @llvm.ctpop.i8(i8  &lt;src&gt;)
   declare i16 @llvm.ctpop.i16(i16 &lt;src&gt;)
   declare i32 @llvm.ctpop.i32(i32 &lt;src&gt;)
   declare i64 @llvm.ctpop.i64(i64 &lt;src&gt;)
@@ -5753,8 +5762,8 @@ of bits in an integer value with another integer value. It returns the integer
 with the replaced bits.</p>
 
 <h5>Arguments:</h5>
-<p>The first argument, <tt>%val</tt> and the result may be integer types of 
-any bit width but they must have the same bit width. <tt>%val</tt> is the value
+<p>The first argument, <tt>%val</tt>, and the result may be integer types of 
+any bit width, but they must have the same bit width. <tt>%val</tt> is the value
 whose bits will be replaced.  The second argument, <tt>%repl</tt> may be an
 integer of any bit width. The third and fourth arguments must be <tt>i32</tt> 
 type since they specify only a bit index.</p>
@@ -5764,17 +5773,22 @@ type since they specify only a bit index.</p>
 of operation: forwards and reverse. If <tt>%lo</tt> is greater than
 <tt>%hi</tt> then the intrinsic operates in reverse mode. Otherwise it
 operates in forward mode.</p>
+
 <p>For both modes, the <tt>%repl</tt> value is prepared for use by either
 truncating it down to the size of the replacement area or zero extending it 
 up to that size.</p>
+
 <p>In forward mode, the bits between <tt>%lo</tt> and <tt>%hi</tt> (inclusive)
 are replaced with corresponding bits from <tt>%repl</tt>. That is the 0th bit
 in <tt>%repl</tt> replaces the <tt>%lo</tt>th bit in <tt>%val</tt> and etc. up
 to the <tt>%hi</tt>th bit.</p>
+
 <p>In reverse mode, a similar computation is made except that the bits are
 reversed.  That is, the <tt>0</tt>th bit in <tt>%repl</tt> replaces the 
 <tt>%hi</tt> bit in <tt>%val</tt> and etc. down to the <tt>%lo</tt>th bit.</p>
+
 <h5>Examples:</h5>
+
 <pre>
   llvm.part.set(0xFFFF, 0, 4, 7) -&gt; 0xFF0F
   llvm.part.set(0xFFFF, 0, 7, 4) -&gt; 0xFF0F
@@ -5782,6 +5796,248 @@ reversed.  That is, the <tt>0</tt>th bit in <tt>%repl</tt> replaces the
   llvm.part.set(0xFFFF, F, 8, 3) -&gt; 0xFFE7
   llvm.part.set(0xFFFF, 0, 3, 8) -&gt; 0xFE07
 </pre>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="int_sadd_ovf">'<tt>llvm.sadd.with.overflow.*</tt>' Intrinsics</a>
+</div>
+
+<div class="doc_text">
+
+<h5>Syntax:</h5>
+
+<p>This is an overloaded intrinsic. You can use <tt>llvm.sadd.with.overflow</tt>
+on any integer bit width. However, not all targets support all bit widths.</p>
+
+<pre>
+  declare {i16, i1} @llvm.sadd.with.overflow.i16(i16 %a, i16 %b)
+  declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
+  declare {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
+</pre>
+
+<h5>Overview:</h5>
+
+<p>The '<tt>llvm.sadd.with.overflow</tt>' family of intrinsic functions perform
+a signed addition of the two arguments, and indicate whether an overflow
+occurred during the signed summation.</p>
+
+<h5>Arguments:</h5>
+
+<p>The arguments (%a and %b) and the first element of the result structure may
+be of integer types of any bit width, but they must have the same bit width. The
+second element of the result structure must be of type <tt>i1</tt>. <tt>%a</tt>
+and <tt>%b</tt> are the two values that will undergo signed addition.</p>
+
+<h5>Semantics:</h5>
+
+<p>The '<tt>llvm.sadd.with.overflow</tt>' family of intrinsic functions perform
+a signed addition of the two variables. They return a structure &mdash; the
+first element of which is the signed summation, and the second element of which
+is a bit specifying if the signed summation resulted in an overflow.</p>
+
+<h5>Examples:</h5>
+<pre>
+  %res = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
+  %sum = extractvalue {i32, i1} %res, 0
+  %obit = extractvalue {i32, i1} %res, 1
+  br i1 %obit, label %overflow, label %normal
+</pre>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="int_uadd_ovf">'<tt>llvm.uadd.with.overflow.*</tt>' Intrinsics</a>
+</div>
+
+<div class="doc_text">
+
+<h5>Syntax:</h5>
+
+<p>This is an overloaded intrinsic. You can use <tt>llvm.uadd.with.overflow</tt>
+on any integer bit width. However, not all targets support all bit widths.</p>
+
+<pre>
+  declare {i16, i1} @llvm.uadd.with.overflow.i16(i16 %a, i16 %b)
+  declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  declare {i64, i1} @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+</pre>
+
+<h5>Overview:</h5>
+
+<p>The '<tt>llvm.uadd.with.overflow</tt>' family of intrinsic functions perform
+an unsigned addition of the two arguments, and indicate whether a carry occurred
+during the unsigned summation.</p>
+
+<h5>Arguments:</h5>
+
+<p>The arguments (%a and %b) and the first element of the result structure may
+be of integer types of any bit width, but they must have the same bit width. The
+second element of the result structure must be of type <tt>i1</tt>. <tt>%a</tt>
+and <tt>%b</tt> are the two values that will undergo unsigned addition.</p>
+
+<h5>Semantics:</h5>
+
+<p>The '<tt>llvm.uadd.with.overflow</tt>' family of intrinsic functions perform
+an unsigned addition of the two arguments. They return a structure &mdash; the
+first element of which is the sum, and the second element of which is a bit
+specifying if the unsigned summation resulted in a carry.</p>
+
+<h5>Examples:</h5>
+<pre>
+  %res = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %sum = extractvalue {i32, i1} %res, 0
+  %obit = extractvalue {i32, i1} %res, 1
+  br i1 %obit, label %carry, label %normal
+</pre>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="int_ssub_ovf">'<tt>llvm.ssub.with.overflow.*</tt>' Intrinsics</a>
+</div>
+
+<div class="doc_text">
+
+<h5>Syntax:</h5>
+
+<p>This is an overloaded intrinsic. You can use <tt>llvm.ssub.with.overflow</tt>
+on any integer bit width. However, not all targets support all bit widths.</p>
+
+<pre>
+  declare {i16, i1} @llvm.ssub.with.overflow.i16(i16 %a, i16 %b)
+  declare {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)
+  declare {i64, i1} @llvm.ssub.with.overflow.i64(i64 %a, i64 %b)
+</pre>
+
+<h5>Overview:</h5>
+
+<p>The '<tt>llvm.ssub.with.overflow</tt>' family of intrinsic functions perform
+a signed subtraction of the two arguments, and indicate whether an overflow
+occurred during the signed subtraction.</p>
+
+<h5>Arguments:</h5>
+
+<p>The arguments (%a and %b) and the first element of the result structure may
+be of integer types of any bit width, but they must have the same bit width. The
+second element of the result structure must be of type <tt>i1</tt>. <tt>%a</tt>
+and <tt>%b</tt> are the two values that will undergo signed subtraction.</p>
+
+<h5>Semantics:</h5>
+
+<p>The '<tt>llvm.ssub.with.overflow</tt>' family of intrinsic functions perform
+a signed subtraction of the two arguments. They return a structure &mdash; the
+first element of which is the subtraction, and the second element of which is a bit
+specifying if the signed subtraction resulted in an overflow.</p>
+
+<h5>Examples:</h5>
+<pre>
+  %res = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)
+  %sum = extractvalue {i32, i1} %res, 0
+  %obit = extractvalue {i32, i1} %res, 1
+  br i1 %obit, label %overflow, label %normal
+</pre>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="int_usub_ovf">'<tt>llvm.usub.with.overflow.*</tt>' Intrinsics</a>
+</div>
+
+<div class="doc_text">
+
+<h5>Syntax:</h5>
+
+<p>This is an overloaded intrinsic. You can use <tt>llvm.usub.with.overflow</tt>
+on any integer bit width. However, not all targets support all bit widths.</p>
+
+<pre>
+  declare {i16, i1} @llvm.usub.with.overflow.i16(i16 %a, i16 %b)
+  declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  declare {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
+</pre>
+
+<h5>Overview:</h5>
+
+<p>The '<tt>llvm.usub.with.overflow</tt>' family of intrinsic functions perform
+an unsigned subtraction of the two arguments, and indicate whether an overflow
+occurred during the unsigned subtraction.</p>
+
+<h5>Arguments:</h5>
+
+<p>The arguments (%a and %b) and the first element of the result structure may
+be of integer types of any bit width, but they must have the same bit width. The
+second element of the result structure must be of type <tt>i1</tt>. <tt>%a</tt>
+and <tt>%b</tt> are the two values that will undergo unsigned subtraction.</p>
+
+<h5>Semantics:</h5>
+
+<p>The '<tt>llvm.usub.with.overflow</tt>' family of intrinsic functions perform
+an unsigned subtraction of the two arguments. They return a structure &mdash; the
+first element of which is the subtraction, and the second element of which is a bit
+specifying if the unsigned subtraction resulted in an overflow.</p>
+
+<h5>Examples:</h5>
+<pre>
+  %res = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %sum = extractvalue {i32, i1} %res, 0
+  %obit = extractvalue {i32, i1} %res, 1
+  br i1 %obit, label %overflow, label %normal
+</pre>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<div class="doc_subsubsection">
+  <a name="int_smul_ovf">'<tt>llvm.smul.with.overflow.*</tt>' Intrinsics</a>
+</div>
+
+<div class="doc_text">
+
+<h5>Syntax:</h5>
+
+<p>This is an overloaded intrinsic. You can use <tt>llvm.smul.with.overflow</tt>
+on any integer bit width. However, not all targets support all bit widths.</p>
+
+<pre>
+  declare {i16, i1} @llvm.smul.with.overflow.i16(i16 %a, i16 %b)
+  declare {i32, i1} @llvm.smul.with.overflow.i32(i32 %a, i32 %b)
+  declare {i64, i1} @llvm.smul.with.overflow.i64(i64 %a, i64 %b)
+</pre>
+
+<h5>Overview:</h5>
+
+<p>The '<tt>llvm.smul.with.overflow</tt>' family of intrinsic functions perform
+a signed multiplication of the two arguments, and indicate whether an overflow
+occurred during the signed multiplication.</p>
+
+<h5>Arguments:</h5>
+
+<p>The arguments (%a and %b) and the first element of the result structure may
+be of integer types of any bit width, but they must have the same bit width. The
+second element of the result structure must be of type <tt>i1</tt>. <tt>%a</tt>
+and <tt>%b</tt> are the two values that will undergo signed multiplication.</p>
+
+<h5>Semantics:</h5>
+
+<p>The '<tt>llvm.smul.with.overflow</tt>' family of intrinsic functions perform
+a signed multiplication of the two arguments. They return a structure &mdash;
+the first element of which is the multiplication, and the second element of
+which is a bit specifying if the signed multiplication resulted in an
+overflow.</p>
+
+<h5>Examples:</h5>
+<pre>
+  %res = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %a, i32 %b)
+  %sum = extractvalue {i32, i1} %res, 0
+  %obit = extractvalue {i32, i1} %res, 1
+  br i1 %obit, label %overflow, label %normal
+</pre>
+
 </div>
 
 <!-- ======================================================================= -->
