@@ -8,6 +8,19 @@
 
 @end
 
+@interface I
+- (id) compare: (char) arg1;
+@end
+
+@interface J
+- (id) compare: (id) arg1;
+@end
+
+SEL foo()
+{
+	return @selector(compare:);	// Non warning on multiple selector found.
+}
+
 int main() {
  SEL s = @selector(retain);
  SEL s1 = @selector(meth1:);

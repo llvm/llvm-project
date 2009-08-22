@@ -1355,7 +1355,8 @@ public:
   
   /// LookupInstanceMethodInGlobalPool - Returns the method and warns if
   /// there are multiple signatures.
-  ObjCMethodDecl *LookupInstanceMethodInGlobalPool(Selector Sel, SourceRange R);
+  ObjCMethodDecl *LookupInstanceMethodInGlobalPool(Selector Sel, SourceRange R,
+                                                   bool warn=true);
 
   /// LookupFactoryMethodInGlobalPool - Returns the method and warns if
   /// there are multiple signatures.

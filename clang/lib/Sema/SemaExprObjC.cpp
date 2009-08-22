@@ -132,7 +132,7 @@ Sema::ExprResult Sema::ParseObjCSelectorExpression(Selector Sel,
                                                    SourceLocation LParenLoc,
                                                    SourceLocation RParenLoc) {
   ObjCMethodDecl *Method = LookupInstanceMethodInGlobalPool(Sel, 
-                             SourceRange(LParenLoc, RParenLoc));
+                             SourceRange(LParenLoc, RParenLoc), false);
   if (!Method)
     Method = LookupFactoryMethodInGlobalPool(Sel,
                                           SourceRange(LParenLoc, RParenLoc));

@@ -1264,7 +1264,8 @@ void Sema::AddInstanceMethodToGlobalPool(ObjCMethodDecl *Method) {
 
 // FIXME: Finish implementing -Wno-strict-selector-match.
 ObjCMethodDecl *Sema::LookupInstanceMethodInGlobalPool(Selector Sel, 
-                                                       SourceRange R) {
+                                                       SourceRange R,
+                                                       bool warn) {
   llvm::DenseMap<Selector, ObjCMethodList>::iterator Pos
     = InstanceMethodPool.find(Sel);
   if (Pos == InstanceMethodPool.end()) {
@@ -1281,7 +1282,7 @@ ObjCMethodDecl *Sema::LookupInstanceMethodInGlobalPool(Selector Sel,
     for (ObjCMethodList *Next = MethList.Next; Next; Next = Next->Next)
       // This checks if the methods differ by size & alignment.
       if (!MatchTwoMethodDeclarations(MethList.Method, Next->Method, true))
-        issueWarning = true;
+        issueWarning = warn;
   }
   if (issueWarning && (MethList.Method && MethList.Next)) {
     Diag(R.getBegin(), diag::warn_multiple_method_decl) << Sel << R;
