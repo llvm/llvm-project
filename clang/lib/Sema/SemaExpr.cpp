@@ -4350,31 +4350,33 @@ QualType Sema::CheckCompareOperands(Expr *&lex, Expr *&rex, SourceLocation Loc,
       return ResultTy;
     }
     if (lType->isObjCObjectPointerType() && rType->isObjCObjectPointerType()) {
-      if (!Context.areComparableObjCPointerTypes(lType, rType)) {
+      if (!Context.areComparableObjCPointerTypes(lType, rType))
         Diag(Loc, diag::ext_typecheck_comparison_of_distinct_pointers)
           << lType << rType << lex->getSourceRange() << rex->getSourceRange();
-      }
       ImpCastExprToType(rex, lType);
       return ResultTy;
     }
   }
   if (lType->isAnyPointerType() && rType->isIntegerType()) {
-    if (isRelational)
-      Diag(Loc, diag::ext_typecheck_ordered_comparison_of_pointer_integer)
+    if (!RHSIsNull) {
+      unsigned DiagID = isRelational
+           ? diag::ext_typecheck_ordered_comparison_of_pointer_integer
+           : diag::ext_typecheck_comparison_of_pointer_integer;
+      Diag(Loc, DiagID)
         << lType << rType << lex->getSourceRange() << rex->getSourceRange();
-    else if (!RHSIsNull)
-      Diag(Loc, diag::ext_typecheck_comparison_of_pointer_integer)
-        << lType << rType << lex->getSourceRange() << rex->getSourceRange();
+    }
     ImpCastExprToType(rex, lType); // promote the integer to pointer
     return ResultTy;
   }
   if (lType->isIntegerType() && rType->isAnyPointerType()) {
-    if (isRelational)
-      Diag(Loc, diag::ext_typecheck_ordered_comparison_of_pointer_integer)
+    if (!LHSIsNull) {
+      unsigned DiagID = isRelational
+        ? diag::ext_typecheck_ordered_comparison_of_pointer_integer
+        : diag::ext_typecheck_comparison_of_pointer_integer;
+      
+      Diag(Loc, DiagID)
         << lType << rType << lex->getSourceRange() << rex->getSourceRange();
-    else if (!LHSIsNull)
-      Diag(Loc, diag::ext_typecheck_comparison_of_pointer_integer)
-        << lType << rType << lex->getSourceRange() << rex->getSourceRange();
+    }
     ImpCastExprToType(lex, rType); // promote the integer to pointer
     return ResultTy;
   }
