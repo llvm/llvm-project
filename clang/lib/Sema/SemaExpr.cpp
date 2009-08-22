@@ -3213,9 +3213,9 @@ QualType Sema::CheckConditionalOperands(Expr *&Cond, Expr *&LHS, Expr *&RHS,
     // FIXME: Consider unifying with 'areComparableObjCPointerTypes'.
     // It could return the composite type.
     if (Context.canAssignObjCInterfaces(LHSOPT, RHSOPT)) {
-      compositeType = LHSTy;
+      compositeType = RHSOPT->isObjCBuiltinType() ? RHSTy : LHSTy;
     } else if (Context.canAssignObjCInterfaces(RHSOPT, LHSOPT)) {
-      compositeType = RHSTy;
+      compositeType = LHSOPT->isObjCBuiltinType() ? LHSTy : RHSTy;
     } else if ((LHSTy->isObjCQualifiedIdType() || 
                 RHSTy->isObjCQualifiedIdType()) &&
                 Context.ObjCQualifiedIdTypesAreCompatible(LHSTy, RHSTy, true)) {
