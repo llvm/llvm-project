@@ -26,7 +26,10 @@ class Reader:
       return data
 
    def read32(self):
-      return struct.unpack('><'[self.isLSB] + 'I', self.read(4))[0]
+      # Force to 32-bit, if possible; otherwise these might be long ints on a
+      # big-endian platform. FIXME: Why???
+      Value = struct.unpack('><'[self.isLSB] + 'I', self.read(4))[0]
+      return int(Value)
 
 def dumpmacho(path, opts):
    f = Reader(path)
