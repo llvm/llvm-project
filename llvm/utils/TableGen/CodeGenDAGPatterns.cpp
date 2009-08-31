@@ -100,6 +100,9 @@ bool isExtVectorInVTs(const std::vector<unsigned char> &EVTs) {
 } // end namespace EEVT.
 } // end namespace llvm.
 
+bool RecordPtrCmp::operator()(const Record *LHS, const Record *RHS) const {
+  return LHS->getID() < RHS->getID();
+}
 
 /// Dependent variable map for CodeGenDAGPattern variant generation
 typedef std::map<std::string, int> DepVarMap;

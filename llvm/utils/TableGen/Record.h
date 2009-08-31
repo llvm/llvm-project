@@ -1220,6 +1220,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecordVal &RV) {
 }
 
 class Record {
+  static unsigned LastID;
+
+  // Unique record ID.
+  unsigned ID;
   std::string Name;
   SMLoc Loc;
   std::vector<std::string> TemplateArgs;
@@ -1227,9 +1231,12 @@ class Record {
   std::vector<Record*> SuperClasses;
 public:
 
-  explicit Record(const std::string &N, SMLoc loc) : Name(N), Loc(loc) {}
+  explicit Record(const std::string &N, SMLoc loc) : 
+    ID(LastID++), Name(N), Loc(loc) {}
   ~Record() {}
   
+  unsigned getID() const { return ID; }
+
   const std::string &getName() const { return Name; }
   void setName(const std::string &Name);  // Also updates RecordKeeper.
   

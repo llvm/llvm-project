@@ -462,6 +462,10 @@ struct PatternToMatch {
   std::string getPredicateCheck() const;
 };
 
+// Deterministic comparison of Record*.
+struct RecordPtrCmp {
+  bool operator()(const Record *LHS, const Record *RHS) const;
+};
   
 class CodeGenDAGPatterns {
   RecordKeeper &Records;
@@ -469,12 +473,12 @@ class CodeGenDAGPatterns {
   std::vector<CodeGenIntrinsic> Intrinsics;
   std::vector<CodeGenIntrinsic> TgtIntrinsics;
   
-  std::map<Record*, SDNodeInfo> SDNodes;
-  std::map<Record*, std::pair<Record*, std::string> > SDNodeXForms;
-  std::map<Record*, ComplexPattern> ComplexPatterns;
-  std::map<Record*, TreePattern*> PatternFragments;
-  std::map<Record*, DAGDefaultOperand> DefaultOperands;
-  std::map<Record*, DAGInstruction> Instructions;
+  std::map<Record*, SDNodeInfo, RecordPtrCmp> SDNodes;
+  std::map<Record*, std::pair<Record*, std::string>, RecordPtrCmp> SDNodeXForms;
+  std::map<Record*, ComplexPattern, RecordPtrCmp> ComplexPatterns;
+  std::map<Record*, TreePattern*, RecordPtrCmp> PatternFragments;
+  std::map<Record*, DAGDefaultOperand, RecordPtrCmp> DefaultOperands;
+  std::map<Record*, DAGInstruction, RecordPtrCmp> Instructions;
   
   // Specific SDNode definitions:
   Record *intrinsic_void_sdnode;
