@@ -14,7 +14,7 @@ int A::* aa[2];
 int A::* aaa[2][2];
 
 void f() {
-  // RUN: grep "%.obool = icmp ne i64 %.mp, -1" %t
+  // RUN: grep "%.* = icmp ne i64 %.*, -1" %t
   if (a) { }
   
   // FIXME: This doesn't yet work

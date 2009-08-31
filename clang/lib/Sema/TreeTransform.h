@@ -1164,13 +1164,11 @@ public:
                                                 SourceLocation LParenLoc,
                                                 ExprArg SubExpr,
                                                 SourceLocation RParenLoc) {
-    Expr *Sub = SubExpr.takeAs<Expr>();
+    void *Sub = SubExpr.takeAs<Expr>();
     return getSema().ActOnCXXTypeConstructExpr(TypeRange,
                                                T.getAsOpaquePtr(),
                                                LParenLoc,
-                                               Sema::MultiExprArg(getSema(),
-                                                                  (void **)&Sub,
-                                                                  1),
+                                         Sema::MultiExprArg(getSema(), &Sub, 1),
                                                /*CommaLocs=*/0, 
                                                RParenLoc);
   }

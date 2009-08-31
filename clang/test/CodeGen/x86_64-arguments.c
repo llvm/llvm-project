@@ -72,8 +72,9 @@ void f12_1(struct s12 a0) {}
 // RUN: grep 'define void @f13(.struct.s13_0. noalias sret .agg.result, i32 .a, i32 .b, i32 .c, i32 .d, .struct.s13_1. byval .e, i32 .f)' %t &&
 
 struct s13_0 { long long f0[3]; };
+struct s13_1 { long long f0[2]; };
 struct s13_0 f13(int a, int b, int c, int d, 
-                 struct s13_1 { long long f0[2]; } e, int f) { while (1) {} }
+                 struct s13_1 e, int f) { while (1) {} }
 
 // RUN: grep 'define void @f14(.*, i8 signext .X)' %t &&
 void f14(int a, int b, int c, int d, int e, int f, 
@@ -89,9 +90,10 @@ void f17(float a, float b, float c, float d, float e, float f, float g, float h,
          long double X) {}
 
 // Check for valid coercion.
-// RUN: grep '.1 = bitcast i64. .tmp to .struct.f18_s0.' %t &&
-// RUN: grep '.2 = load .struct.f18_s0. .1, align 1' %t &&
-// RUN: grep 'store .struct.f18_s0 .2, .struct.f18_s0. .f18_arg1' %t &&
-void f18(int a, struct f18_s0 { int f0; } f18_arg1) { while (1) {} }
+// RUN: grep '.. = bitcast i64. .* to .struct.f18_s0.' %t &&
+// RUN: grep '.. = load .struct.f18_s0. .., align 1' %t &&
+// RUN: grep 'store .struct.f18_s0 .., .struct.f18_s0. .f18_arg1' %t &&
+struct f18_s0 { int f0; };
+void f18(int a, struct f18_s0 f18_arg1) { while (1) {} }
 
 // RUN: true
