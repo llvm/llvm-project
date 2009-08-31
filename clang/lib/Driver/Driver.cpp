@@ -37,6 +37,9 @@
 using namespace clang::driver;
 using namespace clang;
 
+// Used to set values for "production" clang, for releases.
+#define USE_PRODUCTION_CLANG
+
 Driver::Driver(const char *_Name, const char *_Dir,
                const char *_DefaultHostTriple,
                const char *_DefaultImageName,
@@ -46,10 +49,20 @@ Driver::Driver(const char *_Name, const char *_Dir,
     DefaultImageName(_DefaultImageName),
     Host(0),
     CCCIsCXX(false), CCCEcho(false), CCCPrintBindings(false),
-    CCCGenericGCCName("gcc"), CCCUseClang(true), CCCUseClangCXX(true), 
+    CCCGenericGCCName("gcc"), CCCUseClang(true),
+#ifdef USE_PRODUCTION_CLANG
+    CCCUseClangCXX(false), 
+#else
+    CCCUseClangCXX(true), 
+#endif
     CCCUseClangCPP(true), CCCUsePCH(true),
     SuppressMissingInputWarning(false)
 {
+#ifdef USE_PRODUCTION_CLANG
+  // Only use clang on i386 and x86_64 by default, in a "production" build.
+  CCCClangArchs.insert("i386");
+  CCCClangArchs.insert("x86_64");
+#endif
 }
 
 Driver::~Driver() {
