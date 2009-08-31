@@ -48,6 +48,12 @@ HTML := $(patsubst $(SRC_DOC_DIR)%.pod, $(DST_HTML_DIR)%.html, $(POD))
 MAN  := $(patsubst $(SRC_DOC_DIR)%.pod, $(DST_MAN_DIR)%.1, $(POD))
 PS   := $(patsubst $(SRC_DOC_DIR)%.pod, $(DST_PS_DIR)%.ps, $(POD))
 
+# The set of man pages we will not install
+NO_INSTALL_MANS = $(DST_MAN_DIR)FileCheck.1
+
+# The set of man pages that we will install
+INSTALL_MANS = $(filter-out $(NO_INSTALL_MANS), $(MAN))
+
 .SUFFIXES:
 .SUFFIXES: .html .pod .1 .ps
 
@@ -75,7 +81,7 @@ HTML_DIR := $(PROJ_docsdir)/html/CommandGuide
 MAN_DIR  := $(PROJ_mandir)/man1
 PS_DIR   := $(PROJ_docsdir)/ps
 
-install-local:: $(HTML) $(MAN) $(PS)
+install-local:: $(HTML) $(INSTALL_MANS) $(PS)
 	$(Echo) Installing HTML CommandGuide Documentation
 	$(Verb) $(MKDIR) $(HTML_DIR)
 	$(Verb) $(DataInstall) $(HTML) $(HTML_DIR)
@@ -83,7 +89,7 @@ install-local:: $(HTML) $(MAN) $(PS)
 	$(Verb) $(DataInstall) $(PROJ_SRC_DIR)/manpage.css $(HTML_DIR)
 	$(Echo) Installing MAN CommandGuide Documentation
 	$(Verb) $(MKDIR) $(MAN_DIR)
-	$(Verb) $(DataInstall) $(MAN) $(MAN_DIR)
+	$(Verb) $(DataInstall) $(INSTALL_MANS) $(MAN_DIR)
 	$(Echo) Installing PS CommandGuide Documentation
 	$(Verb) $(MKDIR) $(PS_DIR)
 	$(Verb) $(DataInstall) $(PS) $(PS_DIR)
