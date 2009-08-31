@@ -18,6 +18,9 @@ LIBRARYNAME := clangLex
 BUILD_ARCHIVE = 1
 CXXFLAGS = -fno-rtti 
 
+# Don't install Clang libraries
+NO_INSTALL = 1
+
 ifeq ($(ARCH),PowerPC)
 CXXFLAGS += -maltivec
 endif

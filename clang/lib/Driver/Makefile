@@ -12,6 +12,8 @@ LIBRARYNAME := clangDriver
 BUILD_ARCHIVE = 1
 CXXFLAGS = -fno-rtti
 
+# Don't install Clang libraries
+NO_INSTALL = 1
 
 include $(LEVEL)/Makefile.common
 
