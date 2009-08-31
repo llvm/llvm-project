@@ -552,6 +552,11 @@ void IndVarSimplify::SinkUnusedInvariants(Loop *L) {
     // dominates the exit block.
     if (I->mayHaveSideEffects() || I->mayReadFromMemory())
       continue;
+    // Don't sink static AllocaInsts out of the entry block, which would
+    // turn them into dynamic allocas!
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(I))
+      if (AI->isStaticAlloca())
+        continue;
     // Determine if there is a use in or before the loop (direct or
     // otherwise).
     bool UsedInLoop = false;
