@@ -504,7 +504,7 @@ namespace {
 
   public:
     JITEmitter(JIT &jit, JITMemoryManager *JMM)
-        : SizeEstimate(0), Resolver(jit), CurFn(0) {
+        : SizeEstimate(0), Resolver(jit), MMI(0), CurFn(0) {
       MemMgr = JMM ? JMM : JITMemoryManager::CreateDefaultMemManager();
       if (jit.getJITInfo().needsGOT()) {
         MemMgr->AllocateGOT();
