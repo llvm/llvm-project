@@ -1,3 +1,6 @@
 load_lib llvm.exp
 
-RunLLVMTests [lsort [glob -nocomplain $srcdir/$subdir/*.{s}]]
+if { [llvm_supports_target X86] } {
+  RunLLVMTests [lsort [glob -nocomplain $srcdir/$subdir/*.{s}]]
+}
+
