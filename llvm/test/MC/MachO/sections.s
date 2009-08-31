@@ -1,4 +1,4 @@
-// RUN: llvm-mc %s -filetype=obj -o - | macho-dump | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | macho-dump | FileCheck %s
 
         .const
         .static_const
