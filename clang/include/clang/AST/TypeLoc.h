@@ -38,7 +38,7 @@ public:
   TypeLoc() : Data(0) { }
 
   bool isNull() const { return Ty.isNull(); }
-  operator bool() const { return isNull(); }
+  operator bool() const { return !isNull(); }
 
   /// \brief Returns the size of type source info data block for the given type.
   static unsigned getFullDataSizeForType(QualType Ty);
