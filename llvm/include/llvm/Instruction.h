@@ -54,6 +54,11 @@ public:
   /// extra information (e.g. load is volatile) agree.
   bool isIdenticalTo(const Instruction *I) const;
 
+  /// isIdenticalToWhenDefined - This is like isIdenticalTo, except that it
+  /// ignores the SubclassOptionalData flags, which specify conditions
+  /// under which the instruction's result is undefined.
+  bool isIdenticalToWhenDefined(const Instruction *I) const;
+
   /// This function determines if the specified instruction executes the same
   /// operation as the current one. This means that the opcodes, type, operand
   /// types and any other factors affecting the operation must be the same. This

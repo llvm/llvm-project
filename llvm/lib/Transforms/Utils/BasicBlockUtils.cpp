@@ -504,11 +504,15 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   // Test if the values are trivially equivalent.
   if (A == B) return true;
   
-  // Test if the values come form identical arithmetic instructions.
+  // Test if the values come from identical arithmetic instructions.
+  // Use isIdenticalToWhenDefined instead of isIdenticalTo because
+  // this function is only used when one address use dominates the
+  // other, which means that they'll always either have the same
+  // value or one of them will have an undefined value.
   if (isa<BinaryOperator>(A) || isa<CastInst>(A) ||
       isa<PHINode>(A) || isa<GetElementPtrInst>(A))
     if (const Instruction *BI = dyn_cast<Instruction>(B))
-      if (cast<Instruction>(A)->isIdenticalTo(BI))
+      if (cast<Instruction>(A)->isIdenticalToWhenDefined(BI))
         return true;
   
   // Otherwise they may not be equivalent.

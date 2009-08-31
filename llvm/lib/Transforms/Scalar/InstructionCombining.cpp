@@ -11815,12 +11815,16 @@ static bool equivalentAddressValues(Value *A, Value *B) {
   if (A == B) return true;
   
   // Test if the values come form identical arithmetic instructions.
+  // This uses isIdenticalToWhenDefined instead of isIdenticalTo because
+  // its only used to compare two uses within the same basic block, which
+  // means that they'll always either have the same value or one of them
+  // will have an undefined value.
   if (isa<BinaryOperator>(A) ||
       isa<CastInst>(A) ||
       isa<PHINode>(A) ||
       isa<GetElementPtrInst>(A))
     if (Instruction *BI = dyn_cast<Instruction>(B))
-      if (cast<Instruction>(A)->isIdenticalTo(BI))
+      if (cast<Instruction>(A)->isIdenticalToWhenDefined(BI))
         return true;
   
   // Otherwise they may not be equivalent.

@@ -168,6 +168,14 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 /// identical to the current one.  This means that all operands match and any
 /// extra information (e.g. load is volatile) agree.
 bool Instruction::isIdenticalTo(const Instruction *I) const {
+  return isIdenticalTo(I) &&
+         SubclassOptionalData == I->SubclassOptionalData;
+}
+
+/// isIdenticalToWenDefined - This is like isIdenticalTo, except that it
+/// ignores the SubclassOptionalData flags, which specify conditions
+/// under which the instruction's result is undefined.
+bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
       getType() != I->getType())

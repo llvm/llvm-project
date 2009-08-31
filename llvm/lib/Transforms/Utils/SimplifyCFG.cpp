@@ -870,7 +870,7 @@ static bool HoistThenElseCodeToIf(BranchInst *BI) {
   while (isa<DbgInfoIntrinsic>(I2))
     I2 = BB2_Itr++;
   if (I1->getOpcode() != I2->getOpcode() || isa<PHINode>(I1) ||
-      !I1->isIdenticalTo(I2) ||
+      !I1->isIdenticalToWhenDefined(I2) ||
       (isa<InvokeInst>(I1) && !isSafeToHoistInvoke(BB1, BB2, I1, I2)))
     return false;
 
@@ -889,6 +889,7 @@ static bool HoistThenElseCodeToIf(BranchInst *BI) {
     BIParent->getInstList().splice(BI, BB1->getInstList(), I1);
     if (!I2->use_empty())
       I2->replaceAllUsesWith(I1);
+    I1->intersectOptionalDataWith(I2);
     BB2->getInstList().erase(I2);
 
     I1 = BB1_Itr++;
@@ -897,7 +898,8 @@ static bool HoistThenElseCodeToIf(BranchInst *BI) {
     I2 = BB2_Itr++;
     while (isa<DbgInfoIntrinsic>(I2))
       I2 = BB2_Itr++;
-  } while (I1->getOpcode() == I2->getOpcode() && I1->isIdenticalTo(I2));
+  } while (I1->getOpcode() == I2->getOpcode() &&
+           I1->isIdenticalToWhenDefined(I2));
 
   return true;
 

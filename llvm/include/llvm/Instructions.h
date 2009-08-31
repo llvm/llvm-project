@@ -99,7 +99,6 @@ public:
 /// MallocInst - an instruction to allocated memory on the heap
 ///
 class MallocInst : public AllocationInst {
-  MallocInst(const MallocInst &MI);
 public:
   explicit MallocInst(const Type *Ty, Value *ArraySize = 0,
                       const Twine &NameStr = "",
@@ -148,7 +147,6 @@ public:
 /// AllocaInst - an instruction to allocate memory on the stack
 ///
 class AllocaInst : public AllocationInst {
-  AllocaInst(const AllocaInst &);
 public:
   explicit AllocaInst(const Type *Ty,
                       Value *ArraySize = 0,
@@ -234,16 +232,6 @@ public:
 /// SubclassData field in Value to store whether or not the load is volatile.
 ///
 class LoadInst : public UnaryInstruction {
-
-  LoadInst(const LoadInst &LI)
-    : UnaryInstruction(LI.getType(), Load, LI.getOperand(0)) {
-    setVolatile(LI.isVolatile());
-    setAlignment(LI.getAlignment());
-
-#ifndef NDEBUG
-    AssertOK();
-#endif
-  }
   void AssertOK();
 public:
   LoadInst(Value *Ptr, const Twine &NameStr, Instruction *InsertBefore);
@@ -308,18 +296,6 @@ public:
 ///
 class StoreInst : public Instruction {
   void *operator new(size_t, unsigned);  // DO NOT IMPLEMENT
-
-  StoreInst(const StoreInst &SI) : Instruction(SI.getType(), Store,
-                                               &Op<0>(), 2) {
-    Op<0>() = SI.Op<0>();
-    Op<1>() = SI.Op<1>();
-    setVolatile(SI.isVolatile());
-    setAlignment(SI.getAlignment());
-
-#ifndef NDEBUG
-    AssertOK();
-#endif
-  }
   void AssertOK();
 public:
   // allocate space for exactly two operands
@@ -1196,10 +1172,6 @@ class SelectInst : public Instruction {
     Op<2>() = S2;
   }
 
-  SelectInst(const SelectInst &SI)
-    : Instruction(SI.getType(), SI.getOpcode(), &Op<0>(), 3) {
-    init(SI.Op<0>(), SI.Op<1>(), SI.Op<2>());
-  }
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
              Instruction *InsertBefore)
     : Instruction(S1->getType(), Instruction::Select,
@@ -1267,8 +1239,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(SelectInst, Value)
 /// an argument of the specified type given a va_list and increments that list
 ///
 class VAArgInst : public UnaryInstruction {
-  VAArgInst(const VAArgInst &VAA)
-    : UnaryInstruction(VAA.getType(), VAArg, VAA.getOperand(0)) {}
 public:
   VAArgInst(Value *List, const Type *Ty, const Twine &NameStr = "",
              Instruction *InsertBefore = 0)
@@ -1301,19 +1271,13 @@ public:
 /// element from a VectorType value
 ///
 class ExtractElementInst : public Instruction {
-  ExtractElementInst(const ExtractElementInst &EE) :
-    Instruction(EE.getType(), ExtractElement, &Op<0>(), 2) {
-    Op<0>() = EE.Op<0>();
-    Op<1>() = EE.Op<1>();
-  }
-
   ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr = "",
                      Instruction *InsertBefore = 0);
   ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr,
                      BasicBlock *InsertAtEnd);
 public:
   static ExtractElementInst *Create(const ExtractElementInst &EE) {
-    return new(EE.getNumOperands()) ExtractElementInst(EE);
+    return Create(EE.getOperand(0), EE.getOperand(1));
   }
 
   static ExtractElementInst *Create(Value *Vec, Value *Idx,
@@ -1360,7 +1324,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ExtractElementInst, Value)
 /// element into a VectorType value
 ///
 class InsertElementInst : public Instruction {
-  InsertElementInst(const InsertElementInst &IE);
   InsertElementInst(Value *Vec, Value *NewElt, Value *Idx,
                     const Twine &NameStr = "",
                     Instruction *InsertBefore = 0);
@@ -1368,7 +1331,7 @@ class InsertElementInst : public Instruction {
                     const Twine &NameStr, BasicBlock *InsertAtEnd);
 public:
   static InsertElementInst *Create(const InsertElementInst &IE) {
-    return new(IE.getNumOperands()) InsertElementInst(IE);
+    return Create(IE.getOperand(0), IE.getOperand(1), IE.getOperand(2));
   }
   static InsertElementInst *Create(Value *Vec, Value *NewElt, Value *Idx,
                                    const Twine &NameStr = "",
@@ -1421,7 +1384,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 /// input vectors.
 ///
 class ShuffleVectorInst : public Instruction {
-  ShuffleVectorInst(const ShuffleVectorInst &IE);
 public:
   // allocate space for exactly three operands
   void *operator new(size_t s) {
@@ -2658,10 +2620,6 @@ private:
 
 /// @brief This class represents a truncation of integer types.
 class TruncInst : public CastInst {
-  /// Private copy constructor
-  TruncInst(const TruncInst &CI)
-    : CastInst(CI.getType(), Trunc, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   TruncInst(
@@ -2698,10 +2656,6 @@ public:
 
 /// @brief This class represents zero extension of integer types.
 class ZExtInst : public CastInst {
-  /// @brief Private copy constructor
-  ZExtInst(const ZExtInst &CI)
-    : CastInst(CI.getType(), ZExt, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   ZExtInst(
@@ -2738,10 +2692,6 @@ public:
 
 /// @brief This class represents a sign extension of integer types.
 class SExtInst : public CastInst {
-  /// @brief Private copy constructor
-  SExtInst(const SExtInst &CI)
-    : CastInst(CI.getType(), SExt, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   SExtInst(
@@ -2778,9 +2728,6 @@ public:
 
 /// @brief This class represents a truncation of floating point types.
 class FPTruncInst : public CastInst {
-  FPTruncInst(const FPTruncInst &CI)
-    : CastInst(CI.getType(), FPTrunc, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   FPTruncInst(
@@ -2817,9 +2764,6 @@ public:
 
 /// @brief This class represents an extension of floating point types.
 class FPExtInst : public CastInst {
-  FPExtInst(const FPExtInst &CI)
-    : CastInst(CI.getType(), FPExt, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   FPExtInst(
@@ -2856,9 +2800,6 @@ public:
 
 /// @brief This class represents a cast unsigned integer to floating point.
 class UIToFPInst : public CastInst {
-  UIToFPInst(const UIToFPInst &CI)
-    : CastInst(CI.getType(), UIToFP, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   UIToFPInst(
@@ -2895,9 +2836,6 @@ public:
 
 /// @brief This class represents a cast from signed integer to floating point.
 class SIToFPInst : public CastInst {
-  SIToFPInst(const SIToFPInst &CI)
-    : CastInst(CI.getType(), SIToFP, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   SIToFPInst(
@@ -2934,9 +2872,6 @@ public:
 
 /// @brief This class represents a cast from floating point to unsigned integer
 class FPToUIInst  : public CastInst {
-  FPToUIInst(const FPToUIInst &CI)
-    : CastInst(CI.getType(), FPToUI, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   FPToUIInst(
@@ -2973,9 +2908,6 @@ public:
 
 /// @brief This class represents a cast from floating point to signed integer.
 class FPToSIInst  : public CastInst {
-  FPToSIInst(const FPToSIInst &CI)
-    : CastInst(CI.getType(), FPToSI, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   FPToSIInst(
@@ -3012,9 +2944,6 @@ public:
 
 /// @brief This class represents a cast from an integer to a pointer.
 class IntToPtrInst : public CastInst {
-  IntToPtrInst(const IntToPtrInst &CI)
-    : CastInst(CI.getType(), IntToPtr, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   IntToPtrInst(
@@ -3051,9 +2980,6 @@ public:
 
 /// @brief This class represents a cast from a pointer to an integer
 class PtrToIntInst : public CastInst {
-  PtrToIntInst(const PtrToIntInst &CI)
-    : CastInst(CI.getType(), PtrToInt, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   PtrToIntInst(
@@ -3090,9 +3016,6 @@ public:
 
 /// @brief This class represents a no-op cast from one type to another.
 class BitCastInst : public CastInst {
-  BitCastInst(const BitCastInst &CI)
-    : CastInst(CI.getType(), BitCast, CI.getOperand(0)) {
-  }
 public:
   /// @brief Constructor with insert-before-instruction semantics
   BitCastInst(

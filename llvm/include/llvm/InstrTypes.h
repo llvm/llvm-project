@@ -90,7 +90,6 @@ public:
 
 class UnaryInstruction : public Instruction {
   void *operator new(size_t, unsigned);      // Do not implement
-  UnaryInstruction(const UnaryInstruction&); // Do not implement
 
 protected:
   UnaryInstruction(const Type *Ty, unsigned iType, Value *V,
@@ -315,12 +314,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BinaryOperator, Value)
 /// if (isa<CastInst>(Instr)) { ... }
 /// @brief Base class of casting instructions.
 class CastInst : public UnaryInstruction {
-  /// @brief Copy constructor
-  CastInst(const CastInst &CI)
-    : UnaryInstruction(CI.getType(), CI.getOpcode(), CI.getOperand(0)) {
-  }
-  /// @brief Do not allow default construction
-  CastInst();
 protected:
   /// @brief Constructor with insert-before-instruction semantics for subclasses
   CastInst(const Type *Ty, unsigned iType, Value *S,

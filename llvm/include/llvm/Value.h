@@ -242,6 +242,18 @@ public:
     return SubclassID;
   }
 
+  /// hasSameSubclassOptionalData - Test whether the optional flags contained
+  /// in this value are equal to the optional flags in the given value.
+  bool hasSameSubclassOptionalData(const Value *V) const {
+    return SubclassOptionalData == V->SubclassOptionalData;
+  }
+
+  /// intersectOptionalDataWith - Clear any optional flags in this value
+  /// that are not also set in the given value.
+  void intersectOptionalDataWith(const Value *V) {
+    SubclassOptionalData &= V->SubclassOptionalData;
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Value *) {
     return true; // Values are always values.

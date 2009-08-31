@@ -188,7 +188,8 @@ static bool
 isEquivalentOperation(const Instruction *I1, const Instruction *I2) {
   if (I1->getOpcode() != I2->getOpcode() ||
       I1->getNumOperands() != I2->getNumOperands() ||
-      !isEquivalentType(I1->getType(), I2->getType()))
+      !isEquivalentType(I1->getType(), I2->getType()) ||
+      !I1->hasSameSubclassOptionalData(I2))
     return false;
 
   // We have two instructions of identical opcode and #operands.  Check to see
