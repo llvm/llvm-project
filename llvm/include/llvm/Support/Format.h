@@ -36,6 +36,10 @@ class format_object_base {
 protected:
   const char *Fmt;
   virtual void home(); // Out of line virtual method.
+
+  /// snprint - Call snprintf() for this object, on the given buffer and size.
+  virtual int snprint(char *Buffer, unsigned BufferSize) const = 0;
+
 public:
   format_object_base(const char *fmt) : Fmt(fmt) {}
   virtual ~format_object_base() {}
@@ -43,7 +47,23 @@ public:
   /// print - Format the object into the specified buffer.  On success, this
   /// returns the length of the formatted string.  If the buffer is too small,
   /// this returns a length to retry with, which will be larger than BufferSize.
-  virtual unsigned print(char *Buffer, unsigned BufferSize) const = 0;
+  unsigned print(char *Buffer, unsigned BufferSize) const {
+    assert(BufferSize && "Invalid buffer size!");
+
+    // Print the string, leaving room for the terminating null.
+    int N = snprint(Buffer, BufferSize);
+
+    // VC++ and old GlibC return negative on overflow, just double the size.
+    if (N < 0)
+      return BufferSize*2;
+
+    // Other impls yield number of bytes needed, not including the final '\0'.
+    if (unsigned(N) >= BufferSize)
+      return N+1;
+
+    // Otherwise N is the length of output (not including the final '\0').
+    return N;
+  }
 };
 
 /// format_object1 - This is a templated helper class used by the format
@@ -58,17 +78,8 @@ public:
     : format_object_base(fmt), Val(val) {
   }
 
-  /// print - Format the object into the specified buffer.  On success, this
-  /// returns the length of the formatted string.  If the buffer is too small,
-  /// this returns a length to retry with, which will be larger than BufferSize.
-  virtual unsigned print(char *Buffer, unsigned BufferSize) const {
-    int N = snprintf(Buffer, BufferSize-1, Fmt, Val);
-    if (N < 0)             // VC++ and old GlibC return negative on overflow.
-      return BufferSize*2;
-    if (unsigned(N) >= BufferSize-1)// Other impls yield number of bytes needed.
-      return N+1;
-    // If N is positive and <= BufferSize-1, then the string fit, yay.
-    return N;
+  virtual int snprint(char *Buffer, unsigned BufferSize) const {
+    return snprintf(Buffer, BufferSize, Fmt, Val);
   }
 };
 
@@ -85,17 +96,8 @@ public:
   : format_object_base(fmt), Val1(val1), Val2(val2) {
   }
 
-  /// print - Format the object into the specified buffer.  On success, this
-  /// returns the length of the formatted string.  If the buffer is too small,
-  /// this returns a length to retry with, which will be larger than BufferSize.
-  virtual unsigned print(char *Buffer, unsigned BufferSize) const {
-    int N = snprintf(Buffer, BufferSize-1, Fmt, Val1, Val2);
-    if (N < 0)             // VC++ and old GlibC return negative on overflow.
-      return BufferSize*2;
-    if (unsigned(N) >= BufferSize-1)// Other impls yield number of bytes needed.
-      return N+1;
-    // If N is positive and <= BufferSize-1, then the string fit, yay.
-    return N;
+  virtual int snprint(char *Buffer, unsigned BufferSize) const {
+    return snprintf(Buffer, BufferSize, Fmt, Val1, Val2);
   }
 };
 
@@ -113,17 +115,8 @@ public:
     : format_object_base(fmt), Val1(val1), Val2(val2), Val3(val3) {
   }
 
-  /// print - Format the object into the specified buffer.  On success, this
-  /// returns the length of the formatted string.  If the buffer is too small,
-  /// this returns a length to retry with, which will be larger than BufferSize.
-  virtual unsigned print(char *Buffer, unsigned BufferSize) const {
-    int N = snprintf(Buffer, BufferSize-1, Fmt, Val1, Val2, Val3);
-    if (N < 0)             // VC++ and old GlibC return negative on overflow.
-      return BufferSize*2;
-    if (unsigned(N) >= BufferSize-1)// Other impls yield number of bytes needed.
-      return N+1;
-    // If N is positive and <= BufferSize-1, then the string fit, yay.
-    return N;
+  virtual int snprint(char *Buffer, unsigned BufferSize) const {
+    return snprintf(Buffer, BufferSize, Fmt, Val1, Val2, Val3);
   }
 };
 

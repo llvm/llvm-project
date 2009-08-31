@@ -253,12 +253,12 @@ raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
   // If we have more than a few bytes left in our output buffer, try
   // formatting directly onto its end.
   size_t NextBufferSize = 127;
-  if (OutBufEnd-OutBufCur > 3) {
-    size_t BufferBytesLeft = OutBufEnd-OutBufCur;
+  size_t BufferBytesLeft = OutBufEnd - OutBufCur;
+  if (BufferBytesLeft > 3) {
     size_t BytesUsed = Fmt.print(OutBufCur, BufferBytesLeft);
     
     // Common case is that we have plenty of space.
-    if (BytesUsed < BufferBytesLeft) {
+    if (BytesUsed <= BufferBytesLeft) {
       OutBufCur += BytesUsed;
       return *this;
     }
@@ -277,11 +277,11 @@ raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
     V.resize(NextBufferSize);
     
     // Try formatting into the SmallVector.
-    size_t BytesUsed = Fmt.print(&V[0], NextBufferSize);
+    size_t BytesUsed = Fmt.print(V.data(), NextBufferSize);
     
     // If BytesUsed fit into the vector, we win.
     if (BytesUsed <= NextBufferSize)
-      return write(&V[0], BytesUsed);
+      return write(V.data(), BytesUsed);
     
     // Otherwise, try again with a new size.
     assert(BytesUsed > NextBufferSize && "Didn't grow buffer!?");

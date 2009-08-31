@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -18,6 +20,23 @@ template<typename T> std::string printToString(const T &Value) {
   std::string res;
   llvm::raw_string_ostream(res) << Value;
   return res;    
+}
+
+/// printToString - Print the given value to a stream which only has \arg
+/// BytesLeftInBuffer bytes left in the buffer. This is useful for testing edge
+/// cases in the buffer handling logic.
+template<typename T> std::string printToString(const T &Value,
+                                               unsigned BytesLeftInBuffer) {
+  // FIXME: This is relying on internal knowledge of how raw_ostream works to
+  // get the buffer position right.
+  SmallString<256> SVec;
+  assert(BytesLeftInBuffer < 256 && "Invalid buffer count!");
+  llvm::raw_svector_ostream OS(SVec);
+  unsigned StartIndex = 256 - BytesLeftInBuffer;
+  for (unsigned i = 0; i != StartIndex; ++i)
+    OS << '?';
+  OS << Value;
+  return OS.str().substr(StartIndex);
 }
 
 template<typename T> std::string printToStringUnbuffered(const T &Value) {
@@ -88,6 +107,14 @@ TEST(raw_ostreamTest, Types_Unbuffered) {
   // Min and max.
   EXPECT_EQ("18446744073709551615", printToStringUnbuffered(UINT64_MAX));
   EXPECT_EQ("-9223372036854775808", printToStringUnbuffered(INT64_MIN));
+}
+
+TEST(raw_ostreamTest, BufferEdge) {  
+  EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 1));
+  EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 2));
+  EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 3));
+  EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 4));
+  EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 10));
 }
 
 }
