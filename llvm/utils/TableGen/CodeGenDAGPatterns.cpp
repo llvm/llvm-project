@@ -1331,7 +1331,7 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R) : Records(R) {
 }
 
 CodeGenDAGPatterns::~CodeGenDAGPatterns() {
-  for (std::map<Record*, TreePattern*>::iterator I = PatternFragments.begin(),
+  for (pf_iterator I = PatternFragments.begin(),
        E = PatternFragments.end(); I != E; ++I)
     delete I->second;
 }
@@ -1983,7 +1983,8 @@ void CodeGenDAGPatterns::ParseInstructions() {
   }
    
   // If we can, convert the instructions to be patterns that are matched!
-  for (std::map<Record*, DAGInstruction>::iterator II = Instructions.begin(),
+  for (std::map<Record*, DAGInstruction, RecordPtrCmp>::iterator II =
+        Instructions.begin(),
        E = Instructions.end(); II != E; ++II) {
     DAGInstruction &TheInst = II->second;
     const TreePattern *I = TheInst.getPattern();

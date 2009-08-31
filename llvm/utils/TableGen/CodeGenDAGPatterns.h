@@ -509,7 +509,8 @@ public:
     return SDNodeXForms.find(R)->second;
   }
   
-  typedef std::map<Record*, NodeXForm>::const_iterator nx_iterator;
+  typedef std::map<Record*, NodeXForm, RecordPtrCmp>::const_iterator
+          nx_iterator;
   nx_iterator nx_begin() const { return SDNodeXForms.begin(); }
   nx_iterator nx_end() const { return SDNodeXForms.end(); }
 
@@ -556,7 +557,8 @@ public:
     assert(PatternFragments.count(R) && "Invalid pattern fragment request!");
     return PatternFragments.find(R)->second;
   }
-  typedef std::map<Record*, TreePattern*>::const_iterator pf_iterator;
+  typedef std::map<Record*, TreePattern*, RecordPtrCmp>::const_iterator
+          pf_iterator;
   pf_iterator pf_begin() const { return PatternFragments.begin(); }
   pf_iterator pf_end() const { return PatternFragments.end(); }
 
