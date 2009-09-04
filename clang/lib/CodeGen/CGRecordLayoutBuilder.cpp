@@ -200,8 +200,15 @@ void CGRecordLayoutBuilder::LayoutUnion(const RecordDecl *D) {
   }
   
   // Now add our field.
-  if (Ty)
+  if (Ty) {
     AppendField(0, Ty);
+
+    if (getTypeAlignment(Ty) > Layout.getAlignment() / 8) {
+      // We need a packed struct.
+      Packed = true;
+      Align = 1;
+    }
+  }
   
   // Append tail padding.
   if (Layout.getSize() / 8 > Size)
