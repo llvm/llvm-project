@@ -172,7 +172,7 @@ static Constant *SymbolicallyEvaluateGEP(Constant* const* Ops, unsigned NumOps,
   do {
     if (const SequentialType *ATy = dyn_cast<SequentialType>(Ty)) {
       // The only pointer indexing we'll do is on the first index of the GEP.
-      if (isa<PointerType>(ATy) && ATy != Ptr->getType())
+      if (isa<PointerType>(ATy) && !NewIdxs.empty())
         break;
       // Determine which element of the array the offset points into.
       APInt ElemSize(BitWidth, TD->getTypeAllocSize(ATy->getElementType()));
