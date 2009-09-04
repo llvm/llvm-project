@@ -28,3 +28,9 @@ entry:
         ret i32 %1
 }
 
+; PR4837
+define <2 x i1> @test5(<2 x i64> %x) {
+entry:
+  %V = icmp eq <2 x i64> %x, undef
+  ret <2 x i1> %V
+}
