@@ -211,7 +211,9 @@ static void DefineTypeSize(const char *MacroName, unsigned TypeWidth,
   else
     MaxVal = ~0LL >> (64-TypeWidth);
   
-  sprintf(MacroBuf, "%s=%llu%s", MacroName, MaxVal, ValSuffix);
+  // FIXME: Switch to using raw_ostream and avoid utostr().
+  sprintf(MacroBuf, "%s=%s%s", MacroName, llvm::utostr(MaxVal).c_str(),
+          ValSuffix);
   DefineBuiltinMacro(Buf, MacroBuf);
 }
 
