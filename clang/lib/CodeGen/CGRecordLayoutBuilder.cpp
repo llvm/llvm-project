@@ -28,14 +28,13 @@ using namespace CodeGen;
 
 void CGRecordLayoutBuilder::Layout(const RecordDecl *D) {
   Alignment = Types.getContext().getASTRecordLayout(D).getAlignment() / 8;
+  Packed = D->hasAttr<PackedAttr>();
 
   if (D->isUnion()) {
     LayoutUnion(D);
     return;
   }
 
-  Packed = D->hasAttr<PackedAttr>();
-  
   if (LayoutFields(D))
     return;
   
