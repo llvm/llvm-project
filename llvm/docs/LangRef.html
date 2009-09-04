@@ -2659,9 +2659,9 @@ Instruction</a> </div>
 <h5>Syntax:</h5>
 <pre>
   &lt;result&gt; = add &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;          <i>; yields {ty}:result</i>
-  &lt;result&gt; = nuw add &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
-  &lt;result&gt; = nsw add &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
-  &lt;result&gt; = nuw nsw add &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;  <i>; yields {ty}:result</i>
+  &lt;result&gt; = add nuw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
+  &lt;result&gt; = add nsw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
+  &lt;result&gt; = add nuw nsw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;  <i>; yields {ty}:result</i>
 </pre>
 
 <h5>Overview:</h5>
@@ -2733,9 +2733,9 @@ Instruction</a> </div>
 <h5>Syntax:</h5>
 <pre>
   &lt;result&gt; = sub &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;          <i>; yields {ty}:result</i>
-  &lt;result&gt; = nuw sub &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
-  &lt;result&gt; = nsw sub &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
-  &lt;result&gt; = nuw nsw sub &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;  <i>; yields {ty}:result</i>
+  &lt;result&gt; = sub nuw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
+  &lt;result&gt; = sub nsw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
+  &lt;result&gt; = sub nuw nsw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;  <i>; yields {ty}:result</i>
 </pre>
 
 <h5>Overview:</h5>
@@ -2820,9 +2820,9 @@ Instruction</a> </div>
 <h5>Syntax:</h5>
 <pre>
   &lt;result&gt; = mul &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;          <i>; yields {ty}:result</i>
-  &lt;result&gt; = nuw mul &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
-  &lt;result&gt; = nsw mul &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
-  &lt;result&gt; = nuw nsw mul &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;  <i>; yields {ty}:result</i>
+  &lt;result&gt; = mul nuw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
+  &lt;result&gt; = mul nsw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;      <i>; yields {ty}:result</i>
+  &lt;result&gt; = mul nuw nsw &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;  <i>; yields {ty}:result</i>
 </pre>
 
 <h5>Overview:</h5>
@@ -2932,7 +2932,7 @@ Instruction</a> </div>
 <h5>Syntax:</h5>
 <pre>
   &lt;result&gt; = sdiv &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;         <i>; yields {ty}:result</i>
-  &lt;result&gt; = exact sdiv &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;   <i>; yields {ty}:result</i>
+  &lt;result&gt; = sdiv exact &lt;ty&gt; &lt;op1&gt;, &lt;op2&gt;   <i>; yields {ty}:result</i>
 </pre>
 
 <h5>Overview:</h5>
