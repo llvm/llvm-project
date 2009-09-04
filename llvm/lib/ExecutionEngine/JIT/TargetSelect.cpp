@@ -43,19 +43,41 @@ MAttrs("mattr",
 /// selectTarget - Pick a target either via -march or by guessing the native
 /// arch.  Add any CPU features specified via -mcpu or -mattr.
 TargetMachine *JIT::selectTarget(ModuleProvider *MP, std::string *ErrorStr) {
-  Triple TheTriple(sys::getHostTriple());
+  Module &Mod = *MP->getModule();
+
+  Triple TheTriple(Mod.getTargetTriple());
+  if (TheTriple.getTriple().empty())
+    TheTriple.setTriple(sys::getHostTriple());
 
   // Adjust the triple to match what the user requested.
-  if (!MArch.empty())
-    TheTriple.setArch(Triple::getArchTypeForLLVMName(MArch));
+  const Target *TheTarget = 0;
+  if (!MArch.empty()) {
+    for (TargetRegistry::iterator it = TargetRegistry::begin(),
+           ie = TargetRegistry::end(); it != ie; ++it) {
+      if (MArch == it->getName()) {
+        TheTarget = &*it;
+        break;
+      }
+    }
 
-  std::string Error;
-  const Target *TheTarget =
-    TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
-  if (TheTarget == 0) {
-    if (ErrorStr)
-      *ErrorStr = Error;
-    return 0;
+    if (!TheTarget) {
+      errs() << "JIT: error: invalid target '" << MArch << "'.\n";
+      return 0;
+    }
+
+    // Adjust the triple to match (if known), otherwise stick with the
+    // module/host triple.
+    Triple::ArchType Type = Triple::getArchTypeForLLVMName(MArch);
+    if (Type != Triple::UnknownArch)
+      TheTriple.setArch(Type);
+  } else {
+    std::string Error;
+    TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
+    if (TheTarget == 0) {
+      if (ErrorStr)
+        *ErrorStr = Error;
+      return 0;
+    }
   }
 
   if (!TheTarget->hasJIT()) {
