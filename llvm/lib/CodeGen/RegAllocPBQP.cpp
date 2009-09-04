@@ -269,7 +269,7 @@ PBQP::Matrix* PBQPRegAlloc::buildInterferenceMatrix(
       unsigned reg2 = *a2Itr;
 
       // If the row/column regs are identical or alias insert an infinity.
-      if ((reg1 == reg2) || tri->areAliases(reg1, reg2)) {
+      if (tri->regsOverlap(reg1, reg2)) {
         (*m)[ri][ci] = std::numeric_limits<PBQP::PBQPNum>::infinity();
         isZeroMatrix = false;
       }

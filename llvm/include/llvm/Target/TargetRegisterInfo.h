@@ -386,9 +386,16 @@ public:
     return NumRegs;
   }
 
-  /// areAliases - Returns true if the two registers alias each other, false
-  /// otherwise
-  bool areAliases(unsigned regA, unsigned regB) const {
+  /// regsOverlap - Returns true if the two registers are equal or alias each
+  /// other. The registers may be virtual register.
+  bool regsOverlap(unsigned regA, unsigned regB) const {
+    if (regA == regB)
+      return true;
+
+    if (isVirtualRegister(regA) || isVirtualRegister(regB))
+      return false;
+
+    // regA and regB are distinct physical registers. Do they alias?
     size_t index = (regA + regB * 37) & (AliasesHashSize-1);
     unsigned ProbeAmt = 0;
     while (AliasesHash[index*2] != 0 &&
@@ -401,17 +408,6 @@ public:
     }
 
     return false;
-  }
-
-  /// regsOverlap - Returns true if the two registers are equal or alias each
-  /// other. The registers may be virtual register.
-  bool regsOverlap(unsigned regA, unsigned regB) const {
-    if (regA == regB)
-      return true;
-
-    if (isVirtualRegister(regA) || isVirtualRegister(regB))
-      return false;
-    return areAliases(regA, regB);
   }
 
   /// isSubRegister - Returns true if regB is a sub-register of regA.
