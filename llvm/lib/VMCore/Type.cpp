@@ -492,7 +492,7 @@ void DerivedType::dropAllTypeUses() {
         tmp = AlwaysOpaqueTy;
         if (!tmp) {
           tmp = OpaqueType::get(getContext());
-          PATypeHolder* tmp2 = new PATypeHolder(AlwaysOpaqueTy);
+          PATypeHolder* tmp2 = new PATypeHolder(tmp);
           sys::MemoryFence();
           AlwaysOpaqueTy = tmp;
           Holder = tmp2;
