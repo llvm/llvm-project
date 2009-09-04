@@ -84,7 +84,7 @@ bool DSE::runOnBasicBlock(BasicBlock &BB) {
 
   bool MadeChange = false;
   
-  // Do a top-down walk on the BB
+  // Do a top-down walk on the BB.
   for (BasicBlock::iterator BBI = BB.begin(), BBE = BB.end(); BBI != BBE; ) {
     Instruction *Inst = BBI++;
     
@@ -125,7 +125,10 @@ bool DSE::runOnBasicBlock(BasicBlock &BB) {
         DeleteDeadInstruction(DepStore);
         NumFastStores++;
         MadeChange = true;
-        
+
+        // DeleteDeadInstruction can delete the current instruction in loop
+        // cases, reset BBI.
+        BBI = Inst;
         if (BBI != BB.begin())
           --BBI;
         continue;
@@ -136,8 +139,15 @@ bool DSE::runOnBasicBlock(BasicBlock &BB) {
     if (LoadInst *DepLoad = dyn_cast<LoadInst>(InstDep.getInst())) {
       if (SI->getPointerOperand() == DepLoad->getPointerOperand() &&
           SI->getOperand(0) == DepLoad) {
+        // DeleteDeadInstruction can delete the current instruction.  Save BBI
+        // in case we need it.
+        WeakVH NextInst(BBI);
+        
         DeleteDeadInstruction(SI);
-        if (BBI != BB.begin())
+        
+        if (NextInst == 0)  // Next instruction deleted.
+          BBI = BB.begin();
+        else if (BBI != BB.begin())  // Revisit this instruction if possible.
           --BBI;
         NumFastStores++;
         MadeChange = true;
