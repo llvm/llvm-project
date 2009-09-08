@@ -213,6 +213,14 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
        I != E; ++I)
     Changed |= processBasicBlock(MF, **I);
 
+  // Process any unreachable blocks in arbitrary order now.
+  if (MF.size() == Processed.size())
+    return Changed;
+
+  for (MachineFunction::iterator BB = MF.begin(), E = MF.end(); BB != E; ++BB)
+    if (Processed.insert(BB))
+      Changed |= processBasicBlock(MF, *BB);
+  
   return Changed;
 }
 
