@@ -2215,6 +2215,7 @@ void PCHReader::InitializeSema(Sema &S) {
   for (unsigned I = 0, N = TentativeDefinitions.size(); I != N; ++I) {
     VarDecl *Var = cast<VarDecl>(GetDecl(TentativeDefinitions[I]));
     SemaObj->TentativeDefinitions[Var->getDeclName()] = Var;
+    SemaObj->TentativeDefinitionList.push_back(Var->getDeclName());
   }
 
   // If there were any locally-scoped external declarations,

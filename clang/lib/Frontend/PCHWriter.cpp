@@ -1799,19 +1799,22 @@ void PCHWriter::WritePCH(Sema &SemaRef, MemorizeStatCalls *StatCalls,
       getIdentifierRef(&Table.get(BuiltinNames[I]));
   }
 
-  // Build a record containing all of the tentative definitions in
-  // this header file. Generally, this record will be empty.
+  // Build a record containing all of the tentative definitions in this file, in
+  // TentativeDefinitionList order.  Generally, this record will be empty for
+  // headers.
   RecordData TentativeDefinitions;
-  for (llvm::DenseMap<DeclarationName, VarDecl *>::iterator 
-         TD = SemaRef.TentativeDefinitions.begin(),
-         TDEnd = SemaRef.TentativeDefinitions.end();
-       TD != TDEnd; ++TD)
-    AddDeclRef(TD->second, TentativeDefinitions);
+  for (unsigned i = 0, e = SemaRef.TentativeDefinitionList.size(); i != e; ++i){
+    VarDecl *VD =
+      SemaRef.TentativeDefinitions.lookup(SemaRef.TentativeDefinitionList[i]);
+    if (VD) AddDeclRef(VD, TentativeDefinitions);
+  }
 
   // Build a record containing all of the locally-scoped external
   // declarations in this header file. Generally, this record will be
   // empty.
   RecordData LocallyScopedExternalDecls;
+  // FIXME: This is filling in the PCH file in densemap order which is
+  // nondeterminstic!
   for (llvm::DenseMap<DeclarationName, NamedDecl *>::iterator 
          TD = SemaRef.LocallyScopedExternalDecls.begin(),
          TDEnd = SemaRef.LocallyScopedExternalDecls.end();

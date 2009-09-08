@@ -3182,11 +3182,8 @@ void Sema::AddInitializerToDecl(DeclPtrTy dcl, ExprArg init, bool DirectInit) {
   // remove it from the set of tentative definitions.
   if (VDecl->getPreviousDeclaration() &&
       VDecl->getPreviousDeclaration()->isTentativeDefinition(Context)) {
-    llvm::DenseMap<DeclarationName, VarDecl *>::iterator Pos 
-      = TentativeDefinitions.find(VDecl->getDeclName());
-    assert(Pos != TentativeDefinitions.end() && 
-           "Unrecorded tentative definition?");
-    TentativeDefinitions.erase(Pos);
+    bool Deleted = TentativeDefinitions.erase(VDecl->getDeclName());
+    assert(Deleted && "Unrecorded tentative definition?"); Deleted=Deleted;
   }
 
   return;
@@ -3204,8 +3201,20 @@ void Sema::ActOnUninitializedDecl(DeclPtrTy dcl,
     QualType Type = Var->getType();
 
     // Record tentative definitions.
-    if (Var->isTentativeDefinition(Context))
-      TentativeDefinitions[Var->getDeclName()] = Var;
+    if (Var->isTentativeDefinition(Context)) {
+      std::pair<llvm::DenseMap<DeclarationName, VarDecl *>::iterator, bool>
+        InsertPair = 
+           TentativeDefinitions.insert(std::make_pair(Var->getDeclName(), Var));
+      
+      // Keep the latest definition in the map.  If we see 'int i; int i;' we
+      // want the second one in the map.
+      InsertPair.first->second = Var;
+
+      // However, for the list, we don't care about the order, just make sure
+      // that there are no dupes for a given declaration name.
+      if (InsertPair.second)
+        TentativeDefinitionList.push_back(Var->getDeclName());
+    }
 
     // C++ [dcl.init.ref]p3:
     //   The initializer can be omitted for a reference only in a
