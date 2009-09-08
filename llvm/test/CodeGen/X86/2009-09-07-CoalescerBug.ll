@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llc -triple=x86_64-unknown-freebsd7.2 -code-model=kernel | FileCheck %s
+; RUN: llvm-as < %s | llc -mtriple=x86_64-unknown-freebsd7.2 -code-model=kernel | FileCheck %s
 ; PR4689
 
 %struct.__s = type { [8 x i8] }
