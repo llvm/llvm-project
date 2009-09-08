@@ -635,6 +635,22 @@ bool SimpleRegisterCoalescing::ReMaterializeTrivialDef(LiveInterval &SrcInt,
       return false;
   }
 
+  // If destination register has a sub-register index on it, make sure it mtches
+  // the instruction register class.
+  if (DstSubIdx) {
+    const TargetInstrDesc &TID = DefMI->getDesc();
+    if (TID.getNumDefs() != 1)
+      return false;
+    const TargetRegisterClass *DstRC = mri_->getRegClass(DstReg);
+    const TargetRegisterClass *DstSubRC =
+      DstRC->getSubRegisterRegClass(DstSubIdx);
+    const TargetRegisterClass *DefRC = TID.OpInfo[0].getRegClass(tri_);
+    if (DefRC == DstRC)
+      DstSubIdx = 0;
+    else if (DefRC != DstSubRC)
+      return false;
+  }
+
   unsigned DefIdx = li_->getDefIndex(CopyIdx);
   const LiveRange *DLR= li_->getInterval(DstReg).getLiveRangeContaining(DefIdx);
   DLR->valno->setCopy(0);
