@@ -30,6 +30,7 @@
 #include "llvm/Target/TargetData.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ValueHandle.h"
 using namespace llvm;
 
 STATISTIC(NumFastStores, "Number of stores deleted");
