@@ -1665,7 +1665,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
 
   // Modified the chain - switch anything that used the old chain to use
   // the new one.
-  ReplaceValueWith(SDValue(N, 1), Chain);
+  ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return Result;
 }
