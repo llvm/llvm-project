@@ -439,8 +439,12 @@ getELFKindForNamedSection(const char *Name, SectionKind K) {
   if (Name[0] != '.') return K;
   
   // Some lame default implementation based on some magic section names.
-  if (strncmp(Name, ".gnu.linkonce.b.", 16) == 0 ||
+  if (strcmp(Name, ".bss") == 0 ||
+      strncmp(Name, ".bss.", 5) == 0 ||
+      strncmp(Name, ".gnu.linkonce.b.", 16) == 0 ||
       strncmp(Name, ".llvm.linkonce.b.", 17) == 0 ||
+      strcmp(Name, ".sbss") == 0 ||
+      strncmp(Name, ".sbss.", 6) == 0 ||
       strncmp(Name, ".gnu.linkonce.sb.", 17) == 0 ||
       strncmp(Name, ".llvm.linkonce.sb.", 18) == 0)
     return SectionKind::getBSS();
