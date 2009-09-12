@@ -31,13 +31,16 @@ PROJ_libocamldir := $(DESTDIR)$(OCAML_LIBDIR)
 OcamlDir := $(LibDir)/ocaml
 
 # Info from llvm-config and similar
+ifndef IS_CLEANING_TARGET
 ifdef UsedComponents
 UsedLibs = $(shell $(LLVM_CONFIG) --libs $(UsedComponents))
 UsedLibNames = $(shell $(LLVM_CONFIG) --libnames $(UsedComponents))
 endif
+endif
 
 # Tools
 OCAMLCFLAGS += -I $(ObjDir) -I $(OcamlDir)
+ifndef IS_CLEANING_TARGET
 ifneq ($(ObjectsO),)
 OCAMLAFLAGS += $(patsubst %,-cclib %, \
                  $(filter-out -L$(LibDir),-l$(LIBRARYNAME) \
@@ -47,6 +50,7 @@ else
 OCAMLAFLAGS += $(patsubst %,-cclib %, \
                  $(filter-out -L$(LibDir),$(shell $(LLVM_CONFIG) --ldflags)) \
                                           $(UsedLibs))
+endif
 endif
  
 # -g was introduced in 3.10.0.
