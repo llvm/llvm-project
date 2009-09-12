@@ -15,6 +15,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/System/Memory.h"
 #include <cstring>
 
 namespace llvm {
@@ -60,6 +61,7 @@ void BumpPtrAllocator::DeallocateSlabs(MemSlab *Slab) {
 #ifndef NDEBUG
     // Poison the memory so stale pointers crash sooner.  Note we must
     // preserve the Size and NextPtr fields at the beginning.
+    sys::Memory::setRangeWritable(Slab + 1, Slab->Size - sizeof(MemSlab));
     memset(Slab + 1, 0xCD, Slab->Size - sizeof(MemSlab));
 #endif
     Allocator.Deallocate(Slab);
