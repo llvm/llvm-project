@@ -142,6 +142,10 @@ ARMJITInfo::getLazyResolverFunction(JITCompilerFn F) {
 void *ARMJITInfo::emitGlobalValueIndirectSym(const GlobalValue *GV, void *Ptr,
                                              JITCodeEmitter &JCE) {
   JCE.startGVStub(GV, 4, 4);
+  intptr_t Addr = (intptr_t)JCE.getCurrentPCValue();
+  if (!sys::Memory::setRangeWritable((void*)Addr, 4)) {
+    llvm_unreachable("ERROR: Unable to mark indirect symbol writable");
+  }
   JCE.emitWordLE((intptr_t)Ptr);
   void *PtrAddr = JCE.finishGVStub(GV);
   addIndirectSymAddr(Ptr, (intptr_t)PtrAddr);
@@ -169,18 +173,30 @@ void *ARMJITInfo::emitFunctionStub(const Function* F, void *Fn,
       }
       JCE.startGVStub(F, 16, 4);
       intptr_t Addr = (intptr_t)JCE.getCurrentPCValue();
+      if (!sys::Memory::setRangeWritable((void*)Addr, 16)) {
+        llvm_unreachable("ERROR: Unable to mark stub writable");
+      }
       JCE.emitWordLE(0xe59fc004);            // ldr pc, [pc, #+4]
       JCE.emitWordLE(0xe08fc00c);            // L_func$scv: add ip, pc, ip
       JCE.emitWordLE(0xe59cf000);            // ldr pc, [ip]
       JCE.emitWordLE(LazyPtr - (Addr+4+8));  // func - (L_func$scv+8)
       sys::Memory::InvalidateInstructionCache((void*)Addr, 16);
+      if (!sys::Memory::setRangeExecutable((void*)Addr, 16)) {
+        llvm_unreachable("ERROR: Unable to mark stub executable");
+      }
     } else {
       // The stub is 8-byte size and 4-aligned.
       JCE.startGVStub(F, 8, 4);
       intptr_t Addr = (intptr_t)JCE.getCurrentPCValue();
+      if (!sys::Memory::setRangeWritable((void*)Addr, 8)) {
+        llvm_unreachable("ERROR: Unable to mark stub writable");
+      }
       JCE.emitWordLE(0xe51ff004);    // ldr pc, [pc, #-4]
       JCE.emitWordLE((intptr_t)Fn);  // addr of function
       sys::Memory::InvalidateInstructionCache((void*)Addr, 8);
+      if (!sys::Memory::setRangeExecutable((void*)Addr, 8)) {
+        llvm_unreachable("ERROR: Unable to mark stub executable");
+      }
     }
   } else {
     // The compilation callback will overwrite the first two words of this
@@ -192,6 +208,9 @@ void *ARMJITInfo::emitFunctionStub(const Function* F, void *Fn,
     // The stub is 16-byte size and 4-byte aligned.
     JCE.startGVStub(F, 16, 4);
     intptr_t Addr = (intptr_t)JCE.getCurrentPCValue();
+    if (!sys::Memory::setRangeWritable((void*)Addr, 16)) {
+      llvm_unreachable("ERROR: Unable to mark stub writable");
+    }
     // Save LR so the callback can determine which stub called it.
     // The compilation callback is responsible for popping this prior
     // to returning.
@@ -203,6 +222,9 @@ void *ARMJITInfo::emitFunctionStub(const Function* F, void *Fn,
     // The address of the compilation callback.
     JCE.emitWordLE((intptr_t)ARMCompilationCallback);
     sys::Memory::InvalidateInstructionCache((void*)Addr, 16);
+    if (!sys::Memory::setRangeExecutable((void*)Addr, 16)) {
+      llvm_unreachable("ERROR: Unable to mark stub executable");
+    }
   }
 
   return JCE.finishGVStub(F);
