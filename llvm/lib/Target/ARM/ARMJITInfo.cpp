@@ -147,6 +147,9 @@ void *ARMJITInfo::emitGlobalValueIndirectSym(const GlobalValue *GV, void *Ptr,
     llvm_unreachable("ERROR: Unable to mark indirect symbol writable");
   }
   JCE.emitWordLE((intptr_t)Ptr);
+  if (!sys::Memory::setRangeExecutable((void*)Addr, 4)) {
+    llvm_unreachable("ERROR: Unable to mark indirect symbol executable");
+  }
   void *PtrAddr = JCE.finishGVStub(GV);
   addIndirectSymAddr(Ptr, (intptr_t)PtrAddr);
   return PtrAddr;
