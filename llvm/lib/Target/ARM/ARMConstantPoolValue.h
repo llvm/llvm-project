@@ -22,14 +22,6 @@ namespace llvm {
 class GlobalValue;
 class LLVMContext;
 
-namespace ARMCP {
-  enum ARMCPKind {
-    CPValue,
-    CPNonLazyPtr,
-    CPStub
-  };
-}
-
 /// ARMConstantPoolValue - ARM specific constantpool value. This is used to
 /// represent PC relative displacement between the address of the load
 /// instruction and the global value being loaded, i.e. (&GV-(LPIC+8)).
@@ -37,7 +29,6 @@ class ARMConstantPoolValue : public MachineConstantPoolValue {
   GlobalValue *GV;         // GlobalValue being loaded.
   const char *S;           // ExtSymbol being loaded.
   unsigned LabelId;        // Label id of the load.
-  ARMCP::ARMCPKind Kind;   // non_lazy_ptr or stub?
   unsigned char PCAdjust;  // Extra adjustment if constantpool is pc relative.
                            // 8 for ARM, 4 for Thumb.
   const char *Modifier;    // GV modifier i.e. (&GV(modifier)-(LPIC+8))
@@ -45,15 +36,12 @@ class ARMConstantPoolValue : public MachineConstantPoolValue {
 
 public:
   ARMConstantPoolValue(GlobalValue *gv, unsigned id,
-                       ARMCP::ARMCPKind Kind = ARMCP::CPValue,
                        unsigned char PCAdj = 0, const char *Modifier = NULL,
                        bool AddCurrentAddress = false);
   ARMConstantPoolValue(LLVMContext &C, const char *s, unsigned id,
-                       ARMCP::ARMCPKind Kind = ARMCP::CPValue,
                        unsigned char PCAdj = 0, const char *Modifier = NULL,
                        bool AddCurrentAddress = false);
-  ARMConstantPoolValue(GlobalValue *GV, ARMCP::ARMCPKind Kind,
-                       const char *Modifier);
+  ARMConstantPoolValue(GlobalValue *GV, const char *Modifier);
   ARMConstantPoolValue();
   ~ARMConstantPoolValue();
 
@@ -64,8 +52,6 @@ public:
   bool hasModifier() const { return Modifier != NULL; }
   bool mustAddCurrentAddress() const { return AddCurrentAddress; }
   unsigned getLabelId() const { return LabelId; }
-  bool isNonLazyPointer() const { return Kind == ARMCP::CPNonLazyPtr; }
-  bool isStub() const { return Kind == ARMCP::CPStub; }
   unsigned char getPCAdjustment() const { return PCAdjust; }
 
   virtual unsigned getRelocationInfo() const {

@@ -19,6 +19,7 @@
 #include <string>
 
 namespace llvm {
+class GlobalValue;
 
 class ARMSubtarget : public TargetSubtarget {
 protected:
@@ -129,6 +130,10 @@ protected:
   /// stack frame on entry to the function and which must be maintained by every
   /// function for this subtarget.
   unsigned getStackAlignment() const { return stackAlignment; }
+
+  /// GVIsIndirectSymbol - true if the GV will be accessed via an indirect
+  /// symbol.
+  bool GVIsIndirectSymbol(GlobalValue *GV, bool isStatic) const;
 };
 } // End llvm namespace
 

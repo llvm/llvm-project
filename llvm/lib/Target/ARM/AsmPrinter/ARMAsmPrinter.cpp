@@ -79,34 +79,6 @@ namespace {
     /// visibility that require non-lazy-pointers for indirect access.
     StringMap<std::string> HiddenGVNonLazyPtrs;
 
-    struct FnStubInfo {
-      std::string Stub, LazyPtr, SLP, SCV;
-      
-      FnStubInfo() {}
-      
-      void Init(const GlobalValue *GV, Mangler *Mang) {
-        // Already initialized.
-        if (!Stub.empty()) return;
-        Stub = Mang->getMangledName(GV, "$stub", true);
-        LazyPtr = Mang->getMangledName(GV, "$lazy_ptr", true);
-        SLP = Mang->getMangledName(GV, "$slp", true);
-        SCV = Mang->getMangledName(GV, "$scv", true);
-      }
-      
-      void Init(const std::string &GV, Mangler *Mang) {
-        // Already initialized.
-        if (!Stub.empty()) return;
-        Stub = Mang->makeNameProper(GV + "$stub", Mangler::Private);
-        LazyPtr = Mang->makeNameProper(GV + "$lazy_ptr", Mangler::Private);
-        SLP = Mang->makeNameProper(GV + "$slp", Mangler::Private);
-        SCV = Mang->makeNameProper(GV + "$scv", Mangler::Private);
-      }
-    };
-    
-    /// FnStubs - Keeps the set of external function GlobalAddresses that the
-    /// asm printer should generate stubs for.
-    StringMap<FnStubInfo> FnStubs;
-
     /// True if asm printer is printing a series of CONSTPOOL_ENTRY.
     bool InCPMode;
   public:
@@ -188,36 +160,26 @@ namespace {
       GlobalValue *GV = ACPV->getGV();
       std::string Name;
       
-      
-      if (ACPV->isNonLazyPointer()) {
-        std::string SymName = Mang->getMangledName(GV);
-        Name = Mang->getMangledName(GV, "$non_lazy_ptr", true);
-        
-        if (GV->hasHiddenVisibility())
-          HiddenGVNonLazyPtrs[SymName] = Name;
-        else
-          GVNonLazyPtrs[SymName] = Name;
-      } else if (ACPV->isStub()) {
-        if (GV) {
-          FnStubInfo &FnInfo = FnStubs[Mang->getMangledName(GV)];
-          FnInfo.Init(GV, Mang);
-          Name = FnInfo.Stub;
-        } else {
-          FnStubInfo &FnInfo = FnStubs[Mang->makeNameProper(ACPV->getSymbol())];
-          FnInfo.Init(ACPV->getSymbol(), Mang);
-          Name = FnInfo.Stub;
-        }
-      } else {
-        if (GV)
+      if (GV) {
+        bool isIndirect = Subtarget->isTargetDarwin() &&
+          Subtarget->GVIsIndirectSymbol(GV,
+                                        TM.getRelocationModel() == Reloc::Static);
+        if (!isIndirect)
           Name = Mang->getMangledName(GV);
-        else if (!strncmp(ACPV->getSymbol(), "L_lsda_", 7))
-          Name = ACPV->getSymbol();
-        else
-          Name = Mang->makeNameProper(ACPV->getSymbol());
-      }
-      O << Name;
-      
-      
+        else {
+          // FIXME: Remove this when Darwin transition to @GOT like syntax.
+          std::string SymName = Mang->getMangledName(GV);
+          Name = Mang->getMangledName(GV, "$non_lazy_ptr", true);
+          if (GV->hasHiddenVisibility())
+            HiddenGVNonLazyPtrs[SymName] = Name;
+          else
+            GVNonLazyPtrs[SymName] = Name;
+        }
+      } else if (!strncmp(ACPV->getSymbol(), "L_lsda_", 7))
+        Name = ACPV->getSymbol();
+      else
+        Name = Mang->makeNameProper(ACPV->getSymbol());
+      O << Name;      
       
       if (ACPV->hasModifier()) O << "(" << ACPV->getModifier() << ")";
       if (ACPV->getPCAdjustment() != 0) {
@@ -372,18 +334,7 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   case MachineOperand::MO_GlobalAddress: {
     bool isCallOp = Modifier && !strcmp(Modifier, "call");
     GlobalValue *GV = MO.getGlobal();
-    std::string Name;
-    bool isExt = GV->isDeclaration() || GV->isWeakForLinker();
-    if (isExt && isCallOp && Subtarget->isTargetDarwin() &&
-        TM.getRelocationModel() != Reloc::Static) {
-      FnStubInfo &FnInfo = FnStubs[Mang->getMangledName(GV)];
-      FnInfo.Init(GV, Mang);
-      Name = FnInfo.Stub;
-    } else {
-      Name = Mang->getMangledName(GV);
-    }
-    
-    O << Name;
+    O << Mang->getMangledName(GV);
 
     printOffset(MO.getOffset());
 
@@ -394,14 +345,7 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   }
   case MachineOperand::MO_ExternalSymbol: {
     bool isCallOp = Modifier && !strcmp(Modifier, "call");
-    std::string Name;
-    if (isCallOp && Subtarget->isTargetDarwin() &&
-        TM.getRelocationModel() != Reloc::Static) {
-      FnStubInfo &FnInfo = FnStubs[Mang->makeNameProper(MO.getSymbolName())];
-      FnInfo.Init(MO.getSymbolName(), Mang);
-      Name = FnInfo.Stub;
-    } else
-      Name = Mang->makeNameProper(MO.getSymbolName());
+    std::string Name = Mang->makeNameProper(MO.getSymbolName());
     
     O << Name;
     if (isCallOp && Subtarget->isTargetELF() &&
@@ -1277,55 +1221,7 @@ bool ARMAsmPrinter::doFinalization(Module &M) {
       static_cast<TargetLoweringObjectFileMachO &>(getObjFileLowering());
     
     O << '\n';
-    
-    if (!FnStubs.empty()) {
-      unsigned StubSize = 12;
-      const char *StubSectionName = "__symbol_stub4";
-      
-      if (TM.getRelocationModel() == Reloc::PIC_) {
-        StubSize = 16;
-        StubSectionName = "__picsymbolstub4";
-      }
-      
-      const MCSection *StubSection
-        = TLOFMacho.getMachOSection("__TEXT", StubSectionName,
-                                    MCSectionMachO::S_SYMBOL_STUBS,
-                                    StubSize, SectionKind::getText());
 
-      const MCSection *LazySymbolPointerSection
-        = TLOFMacho.getLazySymbolPointerSection();
-    
-      // Output stubs for dynamically-linked functions
-      for (StringMap<FnStubInfo>::iterator I = FnStubs.begin(),
-           E = FnStubs.end(); I != E; ++I) {
-        const FnStubInfo &Info = I->second;
-        
-        OutStreamer.SwitchSection(StubSection);
-        EmitAlignment(2);
-        O << "\t.code\t32\n";
-
-        O << Info.Stub << ":\n";
-        O << "\t.indirect_symbol " << I->getKeyData() << '\n';
-        O << "\tldr ip, " << Info.SLP << '\n';
-        if (TM.getRelocationModel() == Reloc::PIC_) {
-          O << Info.SCV << ":\n";
-          O << "\tadd ip, pc, ip\n";
-        }
-        O << "\tldr pc, [ip, #0]\n";
-        O << Info.SLP << ":\n";
-        O << "\t.long\t" << Info.LazyPtr;
-        if (TM.getRelocationModel() == Reloc::PIC_)
-          O << "-(" << Info.SCV << "+8)";
-        O << '\n';
-        
-        OutStreamer.SwitchSection(LazySymbolPointerSection);
-        O << Info.LazyPtr << ":\n";
-        O << "\t.indirect_symbol " << I->getKeyData() << "\n";
-        O << "\t.long\tdyld_stub_binding_helper\n";
-      }
-      O << '\n';
-    }
-    
     // Output non-lazy-pointers for external and common global variables.
     if (!GVNonLazyPtrs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
@@ -1348,7 +1244,6 @@ bool ARMAsmPrinter::doFinalization(Module &M) {
         O << "\t.long " << I->getKeyData() << "\n";
       }
     }
-
 
     // Funny Darwin hack: This flag tells the linker that no global symbols
     // contain code that falls through to other global symbols (e.g. the obvious

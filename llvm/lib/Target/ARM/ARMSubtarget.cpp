@@ -13,6 +13,7 @@
 
 #include "ARMSubtarget.h"
 #include "ARMGenSubtarget.inc"
+#include "llvm/GlobalValue.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
@@ -91,4 +92,14 @@ ARMSubtarget::ARMSubtarget(const std::string &TT, const std::string &FS,
 
   if (isTargetDarwin())
     IsR9Reserved = ReserveR9 | (ARMArchVersion < V6);
+}
+
+/// GVIsIndirectSymbol - true if the GV will be accessed via an indirect symbol.
+bool ARMSubtarget::GVIsIndirectSymbol(GlobalValue *GV, bool isStatic) const {
+  // If symbol visibility is hidden, the extra load is not needed if
+  // the symbol is definitely defined in the current translation unit.
+  bool isDecl = GV->isDeclaration() || GV->hasAvailableExternallyLinkage();
+  if (GV->hasHiddenVisibility() && (!isDecl && !GV->hasCommonLinkage()))
+    return false;
+  return !isStatic && (isDecl || GV->isWeakForLinker());
 }
