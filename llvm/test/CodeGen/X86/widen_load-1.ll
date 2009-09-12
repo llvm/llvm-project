@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -disable-mmx | FileCheck %s
+; RUN: llvm-as < %s | llc -o - -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -disable-mmx | FileCheck %s
 ; PR4891
 
 ; This load should be before the call, not after.

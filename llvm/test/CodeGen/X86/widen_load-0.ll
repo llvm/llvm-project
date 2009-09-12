@@ -1,4 +1,4 @@
-; RUN: llc < %s -o - -march=x86-64 | FileCheck %s
+; RUN: llvm-as < %s | llc -o - -march=x86-64 | FileCheck %s
 ; PR4891
 
 ; Both loads should happen before either store.
