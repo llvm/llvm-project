@@ -963,7 +963,7 @@ static unsigned getAddrModeUPBits(unsigned Mode) {
   // DB - Decrement before - bit U = 0 and bit P = 1
   switch (Mode) {
   default: llvm_unreachable("Unknown addressing sub-mode!");
-  case ARM_AM::da:                      break;
+  case ARM_AM::da:                                     break;
   case ARM_AM::db: Binary |= 0x1 << ARMII::P_BitShift; break;
   case ARM_AM::ia: Binary |= 0x1 << ARMII::U_BitShift; break;
   case ARM_AM::ib: Binary |= 0x3 << ARMII::U_BitShift; break;

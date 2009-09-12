@@ -1070,7 +1070,7 @@ class ASI5<bits<4> opcod1, bits<2> opcod2, dag oops, dag iops,
 }
 
 // Load / store multiple
-class AXSI5<dag oops, dag iops, InstrItinClass itin,
+class AXDI5<dag oops, dag iops, InstrItinClass itin,
             string asm, list<dag> pattern>
   : VFPXI<oops, iops, AddrMode5, Size4Bytes, IndexModeNone,
        VFPLdStMulFrm, itin, asm, "", pattern> {
@@ -1079,7 +1079,7 @@ class AXSI5<dag oops, dag iops, InstrItinClass itin,
   let Inst{11-8}  = 0b1011;
 }
 
-class AXDI5<dag oops, dag iops, InstrItinClass itin,
+class AXSI5<dag oops, dag iops, InstrItinClass itin,
             string asm, list<dag> pattern>
   : VFPXI<oops, iops, AddrMode5, Size4Bytes, IndexModeNone,
        VFPLdStMulFrm, itin, asm, "", pattern> {
@@ -1087,7 +1087,6 @@ class AXDI5<dag oops, dag iops, InstrItinClass itin,
   let Inst{27-25} = 0b110;
   let Inst{11-8}  = 0b1010;
 }
-
 
 // Double precision, unary
 class ADuI<bits<8> opcod1, bits<4> opcod2, bits<4> opcod3, dag oops, dag iops,
