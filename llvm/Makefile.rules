@@ -513,7 +513,10 @@ ifeq ($(HOST_OS),Darwin)
   DARWIN_MAJVERS := $(shell echo $(DARWIN_VERSION)| sed -E 's/10.([0-9]).*/\1/')
 
   SharedLinkOptions=-Wl,-flat_namespace -Wl,-undefined -Wl,suppress \
-                    -dynamiclib -mmacosx-version-min=$(DARWIN_VERSION)
+                    -dynamiclib
+  ifneq ($(ARCH),ARM)
+    SharedLinkOptions += -mmacosx-version-min=$(DARWIN_VERSION)
+  endif
 else
   ifeq ($(HOST_OS),Cygwin)
     SharedLinkOptions=-shared -nostdlib -Wl,--export-all-symbols \
@@ -524,7 +527,9 @@ else
 endif
 
 ifeq ($(TARGET_OS),Darwin)
-  TargetCommonOpts += -mmacosx-version-min=$(DARWIN_VERSION)
+  ifneq ($(ARCH),ARM)
+    TargetCommonOpts += -mmacosx-version-min=$(DARWIN_VERSION)
+  endif
 endif
 
 # Adjust LD.Flags depending on the kind of library that is to be built. Note
