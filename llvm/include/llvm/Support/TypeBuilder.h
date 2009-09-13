@@ -50,15 +50,14 @@ namespace llvm {
 ///   namespace llvm {
 ///   template<bool xcompile> class TypeBuilder<MyType, xcompile> {
 ///   public:
-///     static const StructType *get() {
-///       // Using the static result variable ensures that the type is
-///       // only looked up once.
-///       static const StructType *const result = StructType::get(
-///         TypeBuilder<types::i<32>, xcompile>::get(),
-///         TypeBuilder<types::i<32>*, xcompile>::get(),
-///         TypeBuilder<types::i<8>*[], xcompile>::get(),
+///     static const StructType *get(LLVMContext &Context) {
+///       // If you cache this result, be sure to cache it separately
+///       // for each LLVMContext.
+///       return StructType::get(
+///         TypeBuilder<types::i<32>, xcompile>::get(Context),
+///         TypeBuilder<types::i<32>*, xcompile>::get(Context),
+///         TypeBuilder<types::i<8>*[], xcompile>::get(Context),
 ///         NULL);
-///       return result;
 ///     }
 ///
 ///     // You may find this a convenient place to put some constants
@@ -71,9 +70,6 @@ namespace llvm {
 ///     };
 ///   }
 ///   }  // namespace llvm
-///
-/// Using the static result variable ensures that the type is only looked up
-/// once.
 ///
 /// TypeBuilder cannot handle recursive types or types you only know at runtime.
 /// If you try to give it a recursive type, it will deadlock, infinitely
@@ -106,9 +102,7 @@ template<typename T, bool cross> class TypeBuilder<const volatile T, cross>
 template<typename T, bool cross> class TypeBuilder<T*, cross> {
 public:
   static const PointerType *get(LLVMContext &Context) {
-    static const PointerType *const result =
-      PointerType::getUnqual(TypeBuilder<T,cross>::get(Context));
-    return result;
+    return PointerType::getUnqual(TypeBuilder<T,cross>::get(Context));
   }
 };
 
@@ -119,18 +113,14 @@ template<typename T, bool cross> class TypeBuilder<T&, cross> {};
 template<typename T, size_t N, bool cross> class TypeBuilder<T[N], cross> {
 public:
   static const ArrayType *get(LLVMContext &Context) {
-    static const ArrayType *const result =
-    ArrayType::get(TypeBuilder<T, cross>::get(Context), N);
-    return result;
+    return ArrayType::get(TypeBuilder<T, cross>::get(Context), N);
   }
 };
 /// LLVM uses an array of length 0 to represent an unknown-length array.
 template<typename T, bool cross> class TypeBuilder<T[], cross> {
 public:
   static const ArrayType *get(LLVMContext &Context) {
-    static const ArrayType *const result =
-      ArrayType::get(TypeBuilder<T, cross>::get(Context), 0);
-    return result;
+    return ArrayType::get(TypeBuilder<T, cross>::get(Context), 0);
   }
 };
 
@@ -160,9 +150,7 @@ public:
 template<> class TypeBuilder<T, false> { \
 public: \
   static const IntegerType *get(LLVMContext &Context) { \
-    static const IntegerType *const result = \
-      IntegerType::get(Context, sizeof(T) * CHAR_BIT); \
-    return result; \
+    return IntegerType::get(Context, sizeof(T) * CHAR_BIT); \
   } \
 }; \
 template<> class TypeBuilder<T, true> { \
@@ -191,8 +179,7 @@ template<uint32_t num_bits, bool cross>
 class TypeBuilder<types::i<num_bits>, cross> {
 public:
   static const IntegerType *get(LLVMContext &C) {
-    static const IntegerType *const result = IntegerType::get(C, num_bits);
-    return result;
+    return IntegerType::get(C, num_bits);
   }
 };
 
@@ -248,24 +235,12 @@ template<> class TypeBuilder<void*, false>
 template<typename R, bool cross> class TypeBuilder<R(), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     return FunctionType::get(TypeBuilder<R, cross>::get(Context), false);
   }
 };
 template<typename R, typename A1, bool cross> class TypeBuilder<R(A1), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(1);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -277,12 +252,6 @@ template<typename R, typename A1, typename A2, bool cross>
 class TypeBuilder<R(A1, A2), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(2);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -295,12 +264,6 @@ template<typename R, typename A1, typename A2, typename A3, bool cross>
 class TypeBuilder<R(A1, A2, A3), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(3);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -316,12 +279,6 @@ template<typename R, typename A1, typename A2, typename A3, typename A4,
 class TypeBuilder<R(A1, A2, A3, A4), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(4);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -338,12 +295,6 @@ template<typename R, typename A1, typename A2, typename A3, typename A4,
 class TypeBuilder<R(A1, A2, A3, A4, A5), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(5);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -359,12 +310,6 @@ private:
 template<typename R, bool cross> class TypeBuilder<R(...), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     return FunctionType::get(TypeBuilder<R, cross>::get(Context), true);
   }
 };
@@ -372,12 +317,6 @@ template<typename R, typename A1, bool cross>
 class TypeBuilder<R(A1, ...), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(1);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -388,12 +327,6 @@ template<typename R, typename A1, typename A2, bool cross>
 class TypeBuilder<R(A1, A2, ...), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(2);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -406,12 +339,6 @@ template<typename R, typename A1, typename A2, typename A3, bool cross>
 class TypeBuilder<R(A1, A2, A3, ...), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(3);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -427,12 +354,6 @@ template<typename R, typename A1, typename A2, typename A3, typename A4,
 class TypeBuilder<R(A1, A2, A3, A4, ...), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(4);
     params.push_back(TypeBuilder<A1, cross>::get(Context));
@@ -449,12 +370,6 @@ template<typename R, typename A1, typename A2, typename A3, typename A4,
 class TypeBuilder<R(A1, A2, A3, A4, A5, ...), cross> {
 public:
   static const FunctionType *get(LLVMContext &Context) {
-    static const FunctionType *const result = create(Context);
-    return result;
-  }
-
-private:
-  static const FunctionType *create(LLVMContext &Context) {
     std::vector<const Type*> params;
     params.reserve(5);
     params.push_back(TypeBuilder<A1, cross>::get(Context));

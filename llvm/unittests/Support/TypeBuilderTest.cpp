@@ -147,6 +147,18 @@ TEST(TypeBuilderTest, Functions) {
                          false>::get(getGlobalContext())));
 }
 
+TEST(TypeBuilderTest, Context) {
+  // We used to cache TypeBuilder results in static local variables.  This
+  // produced the same type for different contexts, which of course broke
+  // things.
+  LLVMContext context1;
+  EXPECT_EQ(&context1,
+            &(TypeBuilder<types::i<1>, true>::get(context1))->getContext());
+  LLVMContext context2;
+  EXPECT_EQ(&context2,
+            &(TypeBuilder<types::i<1>, true>::get(context2))->getContext());
+}
+
 class MyType {
   int a;
   int *b;
