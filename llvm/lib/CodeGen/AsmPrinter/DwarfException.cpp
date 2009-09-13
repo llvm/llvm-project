@@ -202,7 +202,7 @@ void DwarfException::EmitEHFrame(const FunctionEHFrameInfo &EHFrameInfo) {
 
     // If there is a personality and landing pads then point to the language
     // specific data area in the exception table.
-    if (EHFrameInfo.PersonalityIndex) {
+    if (MMI->getPersonalities()[0] != NULL) {
       bool is4Byte = TD->getPointerSize() == sizeof(int32_t);
 
       Asm->EmitULEB128Bytes(is4Byte ? 4 : 8);

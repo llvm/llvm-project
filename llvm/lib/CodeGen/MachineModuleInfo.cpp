@@ -45,7 +45,7 @@ MachineModuleInfo::MachineModuleInfo()
 , CallsUnwindInit(0)
 , DbgInfoAvailable(false)
 {
-  // Always emit "no personality" info
+  // Always emit some info, by default "no personality" info.
   Personalities.push_back(NULL);
 }
 MachineModuleInfo::~MachineModuleInfo() {
@@ -149,7 +149,12 @@ void MachineModuleInfo::addPersonality(MachineBasicBlock *LandingPad,
     if (Personalities[i] == Personality)
       return;
   
-  Personalities.push_back(Personality);
+  // If this is the first personality we're adding go
+  // ahead and add it at the beginning.
+  if (Personalities[0] == NULL)
+    Personalities[0] = Personality;
+  else
+    Personalities.push_back(Personality);
 }
 
 /// addCatchTypeInfo - Provide the catch typeinfo for a landing pad.
