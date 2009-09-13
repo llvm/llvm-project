@@ -160,7 +160,7 @@ unsigned X86Subtarget::getSpecialAddressLatency() const {
 /// specified arguments.  If we can't run cpuid on the host, return true.
 bool X86::GetCpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                           unsigned *rECX, unsigned *rEDX) {
-#if defined(__x86_64__) || defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_AMD64) || defined (_M_X64)
   #if defined(__GNUC__)
     // gcc doesn't know cpuid would clobber ebx/rbx. Preseve it manually.
     asm ("movq\t%%rbx, %%rsi\n\t"
