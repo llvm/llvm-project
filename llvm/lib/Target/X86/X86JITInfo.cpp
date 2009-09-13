@@ -52,13 +52,6 @@ static TargetJITInfo::JITCompilerFn JITCompilerFunction;
 #define GETASMPREFIX(X) GETASMPREFIX2(X)
 #define ASMPREFIX GETASMPREFIX(__USER_LABEL_PREFIX__)
 
-// Check if building with -fPIC
-#if defined(__PIC__) && __PIC__ && defined(__linux__)
-#define ASMCALLSUFFIX "@PLT"
-#else
-#define ASMCALLSUFFIX
-#endif
-
 // For ELF targets, use a .size and .type directive, to let tools
 // know the extent of functions defined in assembler.
 #if defined(__ELF__)
@@ -131,7 +124,7 @@ extern "C" {
     // JIT callee
     "movq    %rbp, %rdi\n"    // Pass prev frame and return address
     "movq    8(%rbp), %rsi\n"
-    "call    " ASMPREFIX "X86CompilationCallback2" ASMCALLSUFFIX "\n"
+    "call    " ASMPREFIX "X86CompilationCallback2\n"
     // Restore all XMM arg registers
     "movaps  112(%rsp), %xmm7\n"
     "movaps  96(%rsp), %xmm6\n"
@@ -207,7 +200,7 @@ extern "C" {
     "movl    4(%ebp), %eax\n" // Pass prev frame and return address
     "movl    %eax, 4(%esp)\n"
     "movl    %ebp, (%esp)\n"
-    "call    " ASMPREFIX "X86CompilationCallback2" ASMCALLSUFFIX "\n"
+    "call    " ASMPREFIX "X86CompilationCallback2\n"
     "movl    %ebp, %esp\n"    // Restore ESP
     CFI(".cfi_def_cfa_register %esp\n")
     "subl    $12, %esp\n"
@@ -263,7 +256,7 @@ extern "C" {
     "movl    4(%ebp), %eax\n" // Pass prev frame and return address
     "movl    %eax, 4(%esp)\n"
     "movl    %ebp, (%esp)\n"
-    "call    " ASMPREFIX "X86CompilationCallback2" ASMCALLSUFFIX "\n"
+    "call    " ASMPREFIX "X86CompilationCallback2\n"
     "addl    $16, %esp\n"
     "movaps  48(%esp), %xmm3\n"
     CFI(".cfi_restore %xmm3\n")
@@ -331,7 +324,14 @@ extern "C" {
 /// function stub when we did not know the real target of a call.  This function
 /// must locate the start of the stub or call site and pass it into the JIT
 /// compiler function.
-extern "C" void ATTRIBUTE_USED
+extern "C" {
+#if !(defined (X86_64_JIT) && defined(_MSC_VER))
+ // the following function is called only from this translation unit,
+ // unless we are under 64bit Windows with MSC, where there is 
+ // no support for inline assembly
+static
+#endif
+void ATTRIBUTE_USED
 X86CompilationCallback2(intptr_t *StackPtr, intptr_t RetAddr) {
   intptr_t *RetAddrLoc = &StackPtr[1];
   assert(*RetAddrLoc == RetAddr &&
@@ -402,6 +402,7 @@ X86CompilationCallback2(intptr_t *StackPtr, intptr_t RetAddr) {
 #else
   *RetAddrLoc -= 5;
 #endif
+}
 }
 
 TargetJITInfo::LazyResolverFn
