@@ -37,13 +37,16 @@ void llvm::sys::Memory::InvalidateInstructionCache(const void *Addr,
   
 // icache invalidation for PPC and ARM.
 #if defined(__APPLE__)
-#if (defined(__POWERPC__) || defined (__ppc__) || \
+
+#  if (defined(__POWERPC__) || defined (__ppc__) || \
      defined(_POWER) || defined(_ARCH_PPC)) || defined(__arm__)
   sys_icache_invalidate(Addr, Len);
-#endif
+#  endif
+
 #else
-#if (defined(__POWERPC__) || defined (__ppc__) || \
-     defined(_POWER) || defined(_ARCH_PPC)) && defined(__GNUC__)
+
+#  if (defined(__POWERPC__) || defined (__ppc__) || \
+       defined(_POWER) || defined(_ARCH_PPC)) && defined(__GNUC__)
   const size_t LineSize = 32;
 
   const intptr_t Mask = ~(LineSize - 1);
@@ -57,6 +60,12 @@ void llvm::sys::Memory::InvalidateInstructionCache(const void *Addr,
   for (intptr_t Line = StartLine; Line < EndLine; Line += LineSize)
     asm volatile("icbi 0, %0" : : "r"(Line));
   asm volatile("isync");
-#endif
+#  elif defined(__arm__) && defined(__GNUC__)
+  // FIXME: Can we safely always call this for __GNUC__ everywhere?
+  char *Start = (char*) Addr;
+  char *End = Start + Len;
+  __clear_cache(Start, End);
+#  endif
+
 #endif  // end apple
 }
