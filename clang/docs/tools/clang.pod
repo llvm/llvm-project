@@ -378,8 +378,7 @@ Show commands to run and use verbose output.
 
 =over
 
-=item 
-B<-fshow-column>
+=item B<-fshow-column>
 B<-fshow-source-location>
 B<-fcaret-diagnostics>
 B<-fdiagnostics-fixit-info>
@@ -428,13 +427,14 @@ Do not search the standard system directories for include files.
 =cut
 
 ## TODO, but do we really want people using this stuff?
-=item B<-idirafter>I<directory>
-=item B<-iquote>I<directory>
-=item B<-isystem>I<directory>
-=item B<-iprefix>I<directory>
-=item B<-iwithprefix>I<directory>
-=item B<-iwithprefixbefore>I<directory>
-=item B<-isysroot>
+#=item B<-idirafter>I<directory>
+#=item B<-iquote>I<directory>
+#=item B<-isystem>I<directory>
+#=item B<-iprefix>I<directory>
+#=item B<-iwithprefix>I<directory>
+#=item B<-iwithprefixbefore>I<directory>
+#=item B<-isysroot>
+
 =pod
 
 
@@ -445,21 +445,21 @@ Do not search the standard system directories for include files.
 =cut
 
 ### TODO someday.
-=head2 Warning Control Options
-=over
-=back
-=head2 Code Generation and Optimization Options
-=over
-=back
-=head2 Assembler Options
-=over
-=back
-=head2 Linker Options
-=over
-=back
-=head2 Static Analyzer Options
-=over
-=back
+#=head2 Warning Control Options
+#=over
+#=back
+#=head2 Code Generation and Optimization Options
+#=over
+#=back
+#=head2 Assembler Options
+#=over
+#=back
+#=head2 Linker Options
+#=over
+#=back
+#=head2 Static Analyzer Options
+#=over
+#=back
 
 =pod
 
