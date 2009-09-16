@@ -278,7 +278,7 @@ Function *MachineModuleInfo::getPersonality() const {
 }
 
 /// getPersonalityIndex - Return unique index for current personality
-/// function. NULL personality function should always get zero index.
+/// function. NULL/first personality function should always get zero index.
 unsigned MachineModuleInfo::getPersonalityIndex() const {
   const Function* Personality = NULL;
   
@@ -294,8 +294,8 @@ unsigned MachineModuleInfo::getPersonalityIndex() const {
       return i;
   }
 
-  // This should never happen
-  llvm_unreachable("Personality function should be set!");
+  // This will happen if the current personality function is
+  // in the zero index.
   return 0;
 }
 
