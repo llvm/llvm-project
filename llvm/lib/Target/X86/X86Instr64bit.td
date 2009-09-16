@@ -363,13 +363,15 @@ def MOVZX64rm32 : I<0x8B, MRMSrcMem, (outs GR64:$dst), (ins i32mem:$src),
                     [(set GR64:$dst, (zextloadi64i32 addr:$src))]>;
 
 // Any instruction that defines a 32-bit result leaves the high half of the
-// register. Truncate can be lowered to EXTRACT_SUBREG, and CopyFromReg may
-// be copying from a truncate, but any other 32-bit operation will zero-extend
+// register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
+// be copying from a truncate. And x86's cmov doesn't do anything if the
+// condition is false. But any other 32-bit operation will zero-extend
 // up to 64 bits.
 def def32 : PatLeaf<(i32 GR32:$src), [{
   return N->getOpcode() != ISD::TRUNCATE &&
          N->getOpcode() != TargetInstrInfo::EXTRACT_SUBREG &&
-         N->getOpcode() != ISD::CopyFromReg;
+         N->getOpcode() != ISD::CopyFromReg &&
+         N->getOpcode() != X86ISD::CMOV;
 }]>;
 
 // In the case of a 32-bit def that is known to implicitly zero-extend,
