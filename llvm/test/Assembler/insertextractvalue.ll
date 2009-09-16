@@ -21,3 +21,9 @@ define float @dar({{i32},{float, double}}* %p) nounwind {
   store {{i32},{float, double}} insertvalue ({{i32},{float, double}} zeroinitializer, double 20.0, 1, 1), {{i32},{float, double}}* %p
   ret float extractvalue ({{i32},{float, double}} zeroinitializer, 1, 0)
 }
+
+
+; PR4963
+define <{ i32, i32 }> @test57() {
+  ret <{ i32, i32 }> insertvalue (<{ i32, i32 }> zeroinitializer, i32 4, 1)
+}

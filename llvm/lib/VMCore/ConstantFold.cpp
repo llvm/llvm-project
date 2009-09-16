@@ -499,17 +499,19 @@ Constant *llvm::ConstantFoldInsertValueInstruction(LLVMContext &Context,
 
   if (isa<UndefValue>(Agg)) {
     // Insertion of constant into aggregate undef
-    // Optimize away insertion of undef
+    // Optimize away insertion of undef.
     if (isa<UndefValue>(Val))
       return const_cast<Constant*>(Agg);
+    
     // Otherwise break the aggregate undef into multiple undefs and do
-    // the insertion
+    // the insertion.
     const CompositeType *AggTy = cast<CompositeType>(Agg->getType());
     unsigned numOps;
     if (const ArrayType *AR = dyn_cast<ArrayType>(AggTy))
       numOps = AR->getNumElements();
     else
       numOps = cast<StructType>(AggTy)->getNumElements();
+    
     std::vector<Constant*> Ops(numOps); 
     for (unsigned i = 0; i < numOps; ++i) {
       const Type *MemberTy = AggTy->getTypeAtIndex(i);
@@ -520,24 +522,27 @@ Constant *llvm::ConstantFoldInsertValueInstruction(LLVMContext &Context,
         UndefValue::get(MemberTy);
       Ops[i] = const_cast<Constant*>(Op);
     }
-    if (isa<StructType>(AggTy))
-      return ConstantStruct::get(Context, Ops);
-    else
-      return ConstantArray::get(cast<ArrayType>(AggTy), Ops);
+    
+    if (const StructType* ST = dyn_cast<StructType>(AggTy))
+      return ConstantStruct::get(Context, Ops, ST->isPacked());
+    return ConstantArray::get(cast<ArrayType>(AggTy), Ops);
   }
+  
   if (isa<ConstantAggregateZero>(Agg)) {
     // Insertion of constant into aggregate zero
-    // Optimize away insertion of zero
+    // Optimize away insertion of zero.
     if (Val->isNullValue())
       return const_cast<Constant*>(Agg);
+    
     // Otherwise break the aggregate zero into multiple zeros and do
-    // the insertion
+    // the insertion.
     const CompositeType *AggTy = cast<CompositeType>(Agg->getType());
     unsigned numOps;
     if (const ArrayType *AR = dyn_cast<ArrayType>(AggTy))
       numOps = AR->getNumElements();
     else
       numOps = cast<StructType>(AggTy)->getNumElements();
+    
     std::vector<Constant*> Ops(numOps);
     for (unsigned i = 0; i < numOps; ++i) {
       const Type *MemberTy = AggTy->getTypeAtIndex(i);
@@ -549,13 +554,14 @@ Constant *llvm::ConstantFoldInsertValueInstruction(LLVMContext &Context,
         Constant::getNullValue(MemberTy);
       Ops[i] = const_cast<Constant*>(Op);
     }
-    if (isa<StructType>(AggTy))
-      return ConstantStruct::get(Context, Ops);
-    else
-      return ConstantArray::get(cast<ArrayType>(AggTy), Ops);
+    
+    if (const StructType* ST = dyn_cast<StructType>(AggTy))
+      return ConstantStruct::get(Context, Ops, ST->isPacked());
+    return ConstantArray::get(cast<ArrayType>(AggTy), Ops);
   }
+  
   if (isa<ConstantStruct>(Agg) || isa<ConstantArray>(Agg)) {
-    // Insertion of constant into aggregate constant
+    // Insertion of constant into aggregate constant.
     std::vector<Constant*> Ops(Agg->getNumOperands());
     for (unsigned i = 0; i < Agg->getNumOperands(); ++i) {
       const Constant *Op =
@@ -565,12 +571,10 @@ Constant *llvm::ConstantFoldInsertValueInstruction(LLVMContext &Context,
         Agg->getOperand(i);
       Ops[i] = const_cast<Constant*>(Op);
     }
-    Constant *C;
-    if (isa<StructType>(Agg->getType()))
-      C = ConstantStruct::get(Context, Ops);
-    else
-      C = ConstantArray::get(cast<ArrayType>(Agg->getType()), Ops);
-    return C;
+    
+    if (const StructType* ST = dyn_cast<StructType>(Agg->getType()))
+      return ConstantStruct::get(Context, Ops, ST->isPacked());
+    return ConstantArray::get(cast<ArrayType>(Agg->getType()), Ops);
   }
 
   return 0;
@@ -585,7 +589,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(LLVMContext &Context,
   if (C1->getType() == Type::getPPC_FP128Ty(Context))
     return 0;
 
-  // Handle UndefValue up front
+  // Handle UndefValue up front.
   if (isa<UndefValue>(C1) || isa<UndefValue>(C2)) {
     switch (Opcode) {
     case Instruction::Xor:
