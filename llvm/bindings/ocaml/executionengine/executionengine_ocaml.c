@@ -24,11 +24,15 @@
 #include <string.h>
 #include <assert.h>
 
-/* Force the LLVM interpreter, JIT, and native target to be linked in. */
+/* Force the LLVM interpreter and JIT to be linked in. */
 void llvm_initialize(void) {
   LLVMLinkInInterpreter();
   LLVMLinkInJIT();
-  LLVMInitializeNativeTarget();
+}
+
+/* unit -> bool */
+CAMLprim value llvm_initialize_native_target(value Unit) {
+  return Val_bool(LLVMInitializeNativeTarget());
 }
 
 /* Can't use the recommended caml_named_value mechanism for backwards

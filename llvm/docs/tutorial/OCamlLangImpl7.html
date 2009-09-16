@@ -1816,6 +1816,8 @@ open Llvm_target
 open Llvm_scalar_opts
 
 let main () =
+  ignore (initialize_native_target ());
+
   (* Install standard binary operators.
    * 1 is the lowest precedence. *)
   Hashtbl.add Parser.binop_precedence '=' 2;
