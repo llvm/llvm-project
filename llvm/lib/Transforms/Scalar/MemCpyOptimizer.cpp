@@ -271,6 +271,7 @@ void MemsetRanges::addStore(int64_t Start, StoreInst *SI) {
   if (Start < I->Start) {
     I->Start = Start;
     I->StartPtr = SI->getPointerOperand();
+    I->Alignment = SI->getAlignment();
   }
     
   // Now we know that Start <= I->End and Start >= I->Start (so the startpoint
