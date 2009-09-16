@@ -338,7 +338,7 @@ X86CompilationCallback2(intptr_t *StackPtr, intptr_t RetAddr) {
          "Could not find return address on the stack!");
 
   // It's a stub if there is an interrupt marker after the call.
-  bool isStub = ((unsigned char*)RetAddr)[0] == 0xCD;
+  bool isStub = ((unsigned char*)RetAddr)[0] == 0xCE;
 
   // The call instruction should have pushed the return value onto the stack...
 #if defined (X86_64_JIT)
@@ -377,7 +377,7 @@ X86CompilationCallback2(intptr_t *StackPtr, intptr_t RetAddr) {
     // If this is a stub, rewrite the call into an unconditional branch
     // instruction so that two return addresses are not pushed onto the stack
     // when the requested function finally gets called.  This also makes the
-    // 0xCD byte (interrupt) dead, so the marker doesn't effect anything.
+    // 0xCE byte (interrupt) dead, so the marker doesn't effect anything.
 #if defined (X86_64_JIT)
     // If the target address is within 32-bit range of the stub, use a
     // PC-relative branch instead of loading the actual address.  (This is
@@ -486,7 +486,10 @@ void *X86JITInfo::emitFunctionStub(const Function* F, void *Fn,
   JCE.emitWordLE((intptr_t)Fn-JCE.getCurrentPCValue()-4);
 #endif
 
-  JCE.emitByte(0xCD);   // Interrupt - Just a marker identifying the stub!
+  // This used to use 0xCD, but that value is used by JITMemoryManager to
+  // initialize the buffer with garbage, which means it may follow a
+  // noreturn function call, confusing X86CompilationCallback2.  PR 4929.
+  JCE.emitByte(0xCE);   // Interrupt - Just a marker identifying the stub!
   return JCE.finishGVStub(F);
 }
 
