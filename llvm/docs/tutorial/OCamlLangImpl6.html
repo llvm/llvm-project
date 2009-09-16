@@ -1518,6 +1518,8 @@ let main () =
   (* Simplify the control flow graph (deleting unreachable blocks, etc). *)
   add_cfg_simplification the_fpm;
 
+  ignore (PassManager.initialize the_fpm);
+
   (* Run the main "interpreter loop" now. *)
   Toplevel.main_loop the_fpm the_execution_engine stream;
 
