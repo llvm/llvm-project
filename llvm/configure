@@ -4918,7 +4918,7 @@ else
  ;;
     Alpha)       TARGET_HAS_JIT=1
  ;;
-    ARM)         TARGET_HAS_JIT=0
+    ARM)         TARGET_HAS_JIT=1
  ;;
     Mips)        TARGET_HAS_JIT=0
  ;;
