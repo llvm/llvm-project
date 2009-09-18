@@ -293,6 +293,7 @@ int MemorizeStatCalls::stat(const char *path, struct stat *buf) {
   if (result != 0) { 
     // Cache failed 'stat' results.
     struct stat empty;
+    memset(&empty, 0, sizeof(empty));
     StatCalls[path] = StatResult(result, empty);
   }
   else if (!S_ISDIR(buf->st_mode) || llvm::sys::Path(path).isAbsolute()) {
