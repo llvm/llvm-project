@@ -23,7 +23,7 @@
 #define VISIBILITY_HIDDEN
 #endif
 
-#if (__GNUC__ >= 4)
+#if (__GNUC__ >= 4 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1))
 #define ATTRIBUTE_USED __attribute__((__used__))
 #else
 #define ATTRIBUTE_USED
