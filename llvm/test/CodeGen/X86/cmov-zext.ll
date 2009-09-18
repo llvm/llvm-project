@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llvm-as < %s | llc -march=x86-64 | FileCheck %s
 
 ; x86's 32-bit cmov doesn't clobber the high 32 bits of the destination
 ; if the condition is false. An explicit zero-extend (movl) is needed

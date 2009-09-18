@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -memcpyopt | FileCheck %s
+; RUN: llvm-as < %s | opt -memcpyopt | llvm-dis | FileCheck %s
 
 ; The resulting memset is only 4-byte aligned, despite containing
 ; a 16-byte alignmed store in the middle.
