@@ -130,7 +130,8 @@ bool IPCP::PropagateConstantsIntoArguments(Function &F) {
   Function::arg_iterator AI = F.arg_begin();
   for (unsigned i = 0, e = ArgumentConstants.size(); i != e; ++i, ++AI) {
     // Do we have a constant argument?
-    if (ArgumentConstants[i].second || AI->use_empty())
+    if (ArgumentConstants[i].second || AI->use_empty() || 
+        (AI->hasByValAttr() && isa<PointerType>(AI->getType())))
       continue;
   
     Value *V = ArgumentConstants[i].first;
