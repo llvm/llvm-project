@@ -326,7 +326,10 @@ void Triple::setOS(OSType Kind) {
 }
 
 void Triple::setArchName(const StringRef &Str) {
-  setTriple(Str + "-" + getVendorName() + "-" + getOSAndEnvironmentName());
+  // Work around a miscompilation bug in gcc 4.0.3.
+  Twine a = getVendorName() + "-" + getOSAndEnvironmentName();
+  Twine b = Str + "-" + a;
+  setTriple(b);
 }
 
 void Triple::setVendorName(const StringRef &Str) {
