@@ -41,13 +41,13 @@ public:
   StringRef str() const { return StringRef(this->begin(), this->size()); }
 
   // Extra operators.
-  const SmallString &operator=(const char *RHS) {
+  const SmallString &operator=(StringRef RHS) {
     this->clear();
     return *this += RHS;
   }
 
-  SmallString &operator+=(const char *RHS) {
-    this->append(RHS, RHS+strlen(RHS));
+  SmallString &operator+=(StringRef RHS) {
+    this->append(RHS.begin(), RHS.end());
     return *this;
   }
   SmallString &operator+=(char C) {
