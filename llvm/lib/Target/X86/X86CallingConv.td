@@ -221,6 +221,20 @@ def CC_X86_Win64_C : CallingConv<[
   CCIfType<[v8i8, v4i16, v2i32, v1i64], CCAssignToStack<8, 8>>
 ]>;
 
+def CC_X86_64_GHC : CallingConv<[
+  // Promote i8/i16/i32 arguments to i64.
+  CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
+
+  // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, R6, SpLim
+  CCIfType<[i64],
+            CCAssignToReg<[R13, RBP, R12, RBX, R14, RSI, RDI, R8, R9, R15]>>,
+
+  // Pass in STG registers: F1, F2, F3, F4, D1, D2
+  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+            CCIfSubtarget<"hasSSE1()",
+            CCAssignToReg<[XMM1, XMM2, XMM3, XMM4, XMM5, XMM6]>>>
+]>;
+
 //===----------------------------------------------------------------------===//
 // X86 C Calling Convention
 //===----------------------------------------------------------------------===//
@@ -319,4 +333,12 @@ def CC_X86_32_FastCC : CallingConv<[
 
   // Otherwise, same as everything else.
   CCDelegateTo<CC_X86_32_Common>
+]>;
+
+def CC_X86_32_GHC : CallingConv<[
+  // Promote i8/i16 arguments to i32.
+  CCIfType<[i8, i16], CCPromoteToType<i32>>,
+
+  // Pass in STG registers: Base, Sp, Hp, R1
+  CCIfType<[i32], CCAssignToReg<[EBX, EBP, EDI, ESI]>>
 ]>;

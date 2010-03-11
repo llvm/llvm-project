@@ -44,6 +44,9 @@ namespace CallingConv {
     // call does not break any live ranges in the caller side.
     Cold = 9,
 
+    // GHC - Calling convention used by the Glasgow Haskell Compiler (GHC).
+    GHC = 10,
+
     // Target - This is the start of the target-specific calling conventions,
     // e.g. fastcall and thiscall on X86.
     FirstTargetCC = 64,

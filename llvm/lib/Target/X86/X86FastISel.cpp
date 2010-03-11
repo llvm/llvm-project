@@ -172,7 +172,9 @@ bool X86FastISel::isTypeLegal(const Type *Ty, EVT &VT, bool AllowI1) {
 CCAssignFn *X86FastISel::CCAssignFnForCall(CallingConv::ID CC,
                                            bool isTaillCall) {
   if (Subtarget->is64Bit()) {
-    if (Subtarget->isTargetWin64())
+    if (CC == CallingConv::GHC)
+      return CC_X86_64_GHC;
+    else if (Subtarget->isTargetWin64())
       return CC_X86_Win64_C;
     else
       return CC_X86_64_C;
@@ -182,6 +184,8 @@ CCAssignFn *X86FastISel::CCAssignFnForCall(CallingConv::ID CC,
     return CC_X86_32_FastCall;
   else if (CC == CallingConv::Fast)
     return CC_X86_32_FastCC;
+  else if (CC == CallingConv::GHC)
+    return CC_X86_32_GHC;
   else
     return CC_X86_32_C;
 }

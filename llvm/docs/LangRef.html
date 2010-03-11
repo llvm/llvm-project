@@ -691,9 +691,9 @@ define i32 @main() {                                        <i>; i32()* </i>
       target, without having to conform to an externally specified ABI
       (Application Binary Interface).
       <a href="CodeGenerator.html#tailcallopt">Tail calls can only be optimized
-      when this convention is used.</a>  This calling convention does not
-      support varargs and requires the prototype of all callees to exactly match
-      the prototype of the function definition.</dd>
+      when this or the GHC convention is used.</a>  This calling convention
+      does not support varargs and requires the prototype of all callees to
+      exactly match the prototype of the function definition.</dd>
 
   <dt><b>"<tt>coldcc</tt>" - The cold calling convention</b>:</dt>
   <dd>This calling convention attempts to make code in the caller as efficient
@@ -702,6 +702,26 @@ define i32 @main() {                                        <i>; i32()* </i>
       not break any live ranges in the caller side.  This calling convention
       does not support varargs and requires the prototype of all callees to
       exactly match the prototype of the function definition.</dd>
+
+  <dt><b>"<tt>cc <em>10</em></tt>" - GHC convention</b>:</dt>
+  <dd>This calling convention has been implemented specifically for use by the
+      <a href="http://www.haskell.org/ghc">Glasgow Haskell Compiler (GHC)</a>.
+      It passes everything in registers, going to extremes to achieve this by
+      disabling callee save registers. This calling convention should not be
+      used lightly but only for specific situations such as an alternative to
+      the <em>register pinning</em> performance technique often used when
+      implementing functional programming languages.At the moment only X86
+      supports this convention and it has the following limitations:
+      <ul>
+        <li>On <em>X86-32</em> only supports up to 4 bit type parameters. No
+            floating point types are supported.</li>
+        <li>On <em>X86-64</em> only supports up to 10 bit type parameters and
+            6 floating point parameters.</li>
+      </ul>
+      This calling convention supports
+      <a href="CodeGenerator.html#tailcallopt">tail call optimization</a> but
+      requires both the caller and callee are using it.
+  </dd>
 
   <dt><b>"<tt>cc &lt;<em>n</em>&gt;</tt>" - Numbered convention</b>:</dt>
   <dd>Any calling convention may be specified by number, allowing

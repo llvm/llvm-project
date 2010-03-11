@@ -1678,7 +1678,8 @@ $ llc -regalloc=linearscan file.bc -o ln.s;
    supported on x86/x86-64 and PowerPC. It is performed if:</p>
 
 <ul>
-  <li>Caller and callee have the calling convention <tt>fastcc</tt>.</li>
+  <li>Caller and callee have the calling convention <tt>fastcc</tt> or
+       <tt>cc 10</tt> (GHC call convention).</li>
 
   <li>The call is a tail call - in tail position (ret immediately follows call
       and ret uses value of call or is void).</li>
