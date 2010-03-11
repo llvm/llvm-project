@@ -1329,7 +1329,7 @@ uninstall-local::
 
 # TOOLALIAS install.
 ifdef TOOLALIAS
-DestToolAlias = $(PROJ_bindir)/$(TOOLALIAS)$(EXEEXT)
+DestToolAlias = $(DESTDIR)$(PROJ_bindir)/$(TOOLALIAS)$(EXEEXT)
 
 install-local:: $(DestToolAlias)
 
