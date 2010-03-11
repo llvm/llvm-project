@@ -29,3 +29,14 @@ int f4() {
   static const int g4 = 12;
   return g4;
 }
+
+// PR6537
+typedef union vec3 {
+  struct { double x, y, z; };
+  double component[3];
+} vec3;
+vec3 f5(vec3 value) {
+  return (vec3) {{
+    .x = value.x
+  }};
+}

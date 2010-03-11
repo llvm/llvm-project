@@ -662,6 +662,16 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
     return;
   }
+  
+  // If we're initializing the whole aggregate, just do it in place.
+  // FIXME: This is a hack around an AST bug (PR6537).
+  if (NumInitElements == 1 && E->getType() == E->getInit(0)->getType()) {
+    EmitInitializationToLValue(E->getInit(0),
+                               LValue::MakeAddr(DestPtr, Qualifiers()),
+                               E->getType());
+    return;
+  }
+  
 
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
@@ -680,8 +690,8 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
     // We never generate write-barries for initialized fields.
     LValue::SetObjCNonGC(FieldLoc, true);
     if (CurInitVal < NumInitElements) {
-      // Store the initializer into the field
-      EmitInitializationToLValue(E->getInit(CurInitVal++), FieldLoc, 
+      // Store the initializer into the field.
+      EmitInitializationToLValue(E->getInit(CurInitVal++), FieldLoc,
                                  Field->getType());
     } else {
       // We're out of initalizers; default-initialize to null
