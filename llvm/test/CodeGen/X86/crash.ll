@@ -18,3 +18,18 @@ entry:
   volatile store i32 %conv19.i, i32* undef
   ret i32 undef
 }
+
+; PR6533
+define void @test2(i1 %x, i32 %y) nounwind {
+  %land.ext = zext i1 %x to i32                   ; <i32> [#uses=1]
+  %and = and i32 %y, 1                        ; <i32> [#uses=1]
+  %xor = xor i32 %and, %land.ext                  ; <i32> [#uses=1]
+  %cmp = icmp eq i32 %xor, 1                      ; <i1> [#uses=1]
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:                                          ; preds = %land.end
+  ret void
+
+if.end:                                           ; preds = %land.end
+  ret void
+}

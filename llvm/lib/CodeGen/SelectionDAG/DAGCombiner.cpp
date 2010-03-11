@@ -4605,7 +4605,7 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
 
   SDNode *Trunc = 0;
   if (N1.getOpcode() == ISD::TRUNCATE && N1.hasOneUse()) {
-    // Look pass truncate.
+    // Look past truncate.
     Trunc = N1.getNode();
     N1 = N1.getOperand(0);
   }
@@ -4700,7 +4700,9 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
           Equal = true;
         }
 
-      EVT SetCCVT = N1.getValueType();
+      SDValue NodeToReplace = Trunc ? SDValue(Trunc, 0) : N1;
+      
+      EVT SetCCVT = NodeToReplace.getValueType();
       if (LegalTypes)
         SetCCVT = TLI.getSetCCResultType(SetCCVT);
       SDValue SetCC = DAG.getSetCC(TheXor->getDebugLoc(),
@@ -4709,9 +4711,9 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
                                    Equal ? ISD::SETEQ : ISD::SETNE);
       // Replace the uses of XOR with SETCC
       WorkListRemover DeadNodes(*this);
-      DAG.ReplaceAllUsesOfValueWith(N1, SetCC, &DeadNodes);
-      removeFromWorkList(N1.getNode());
-      DAG.DeleteNode(N1.getNode());
+      DAG.ReplaceAllUsesOfValueWith(NodeToReplace, SetCC, &DeadNodes);
+      removeFromWorkList(NodeToReplace.getNode());
+      DAG.DeleteNode(NodeToReplace.getNode());
       return DAG.getNode(ISD::BRCOND, N->getDebugLoc(),
                          MVT::Other, Chain, SetCC, N2);
     }
