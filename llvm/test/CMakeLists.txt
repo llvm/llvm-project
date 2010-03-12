@@ -7,6 +7,21 @@ set(TARGETS_TO_BUILD ${TARGETS_BUILT})
 set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib/${CMAKE_CFG_INTDIR}")
 set(SHLIBEXT "${LTDL_SHLIB_EXT}")
 
+if(BUILD_SHARED_LIBS)
+  set(LLVM_SHARED_LIBS_ENABLED "1")
+else()
+  set(LLVM_SHARED_LIBS_ENABLED "0")
+endif(BUILD_SHARED_LIBS)
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(SHLIBPATH_VAR "DYLD_LIBRARY_PATH")
+else() # Default for all other unix like systems.
+  # CMake hardcodes the library locaction using rpath.
+  # Therefore LD_LIBRARY_PATH is not required to run binaries in the
+  # build dir. We pass it anyways. 
+  set(SHLIBPATH_VAR "LD_LIBRARY_PATH")
+endif()
+
 include(FindPythonInterp)
 if(PYTHONINTERP_FOUND)
   configure_file(
@@ -27,6 +42,8 @@ if(PYTHONINTERP_FOUND)
                 -e "s#\@LLVM_TOOLS_DIR\@#${LLVM_TOOLS_BINARY_DIR}/${CMAKE_CFG_INTDIR}#"
                 -e "s#\@LLVMGCCDIR\@##"
                 -e "s#\@LLVM_BUILD_MODE\@#${CMAKE_CFG_INTDIR}#"
+                -e "s#\@ENABLE_SHARED\@#${LLVM_SHARED_LIBS_ENABLED}#"
+                -e "s#\@SHLIBPATH_VAR\@#${SHLIBPATH_VAR}#"
                 ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in >
                 ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
     COMMAND ${PYTHON_EXECUTABLE}
