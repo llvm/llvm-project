@@ -5169,8 +5169,11 @@ Loop:       ; Infinite loop that counts from 0 on up...
       a <a href="#i_ret"><tt>ret</tt></a> instruction.  If the "tail" marker is
       present, the function call is eligible for tail call optimization,
       but <a href="CodeGenerator.html#tailcallopt">might not in fact be
-      optimized into a jump</a>.  As of this writing, the extra requirements for
-      a call to actually be optimized are:
+      optimized into a jump</a>.  The code generator may optimize calls marked
+      "tail" with either 1) automatic <a href="CodeGenerator.html#sibcallopt">
+      sibling call optimization</a> when the caller and callee have
+      matching signatures, or 2) forced tail call optimization when the
+      following extra requirements are met:
       <ul>
         <li>Caller and callee both have the calling
             convention <tt>fastcc</tt>.</li>
