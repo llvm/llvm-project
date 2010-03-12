@@ -192,6 +192,13 @@ public:
     return true;
   }
 
+  void swap(DenseMap& RHS) {
+    std::swap(NumBuckets, RHS.NumBuckets);
+    std::swap(Buckets, RHS.Buckets);
+    std::swap(NumEntries, RHS.NumEntries);
+    std::swap(NumTombstones, RHS.NumTombstones);
+  }
+
   value_type& FindAndConstruct(const KeyT &Key) {
     BucketT *TheBucket;
     if (LookupBucketFor(Key, TheBucket))
