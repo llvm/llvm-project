@@ -351,14 +351,10 @@ height="369">
    for source line correspondence.</p>
 
 <p>Each input file is encoded as a separate compile unit in LLVM debugging
-   information output. However, many target specific tool chains prefer to
-   encode only one compile unit in an object file. In this situation, the LLVM
-   code generator will include debugging information entities in the compile
-   unit that is marked as main compile unit. The code generator accepts maximum
-   one main compile unit per module. If a module does not contain any main
-   compile unit then the code generator will emit multiple compile units in the
-   output object file.</p>
-
+   information output. However the code generator emits only one compile unit,
+   marked as main compile unit, in an object file's debugging information section.
+   Most of the, if not all, target specific tool chains expect only one compile 
+   unit entry per object file. </p>
 </div>
 
 <!-- ======================================================================= -->
