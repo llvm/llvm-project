@@ -543,7 +543,7 @@ good codegen once again:</p>
 <pre>
 let main () =
   ...
-  let the_fpm = PassManager.create_function the_module_provider in
+  let the_fpm = PassManager.create_function Codegen.the_module in
 
   (* Set up the optimizer pipeline.  Start with registering info about how the
    * target lays out data structures. *)
@@ -1388,6 +1388,7 @@ let context = global_context ()
 let the_module = create_module context "my cool jit"
 let builder = builder context
 let named_values:(string, llvalue) Hashtbl.t = Hashtbl.create 10
+let double_type = double_type context
 
 (* Create an alloca instruction in the entry block of the function. This
  * is used for mutable variables etc. *)
@@ -1482,7 +1483,7 @@ let rec codegen_expr = function
       let start_bb = insertion_block builder in
       let the_function = block_parent start_bb in
 
-      let then_bb = append_block "then" the_function in
+      let then_bb = append_block context "then" the_function in
 
       (* Emit 'then' value. *)
       position_at_end then_bb builder;
@@ -1494,7 +1495,7 @@ let rec codegen_expr = function
       let new_then_bb = insertion_block builder in
 
       (* Emit 'else' value. *)
-      let else_bb = append_block "else" the_function in
+      let else_bb = append_block context "else" the_function in
       position_at_end else_bb builder;
       let else_val = codegen_expr else_ in
 
@@ -1503,7 +1504,7 @@ let rec codegen_expr = function
       let new_else_bb = insertion_block builder in
 
       (* Emit merge block. *)
-      let merge_bb = append_block "ifcont" the_function in
+      let merge_bb = append_block context "ifcont" the_function in
       position_at_end merge_bb builder;
       let incoming = [(then_val, new_then_bb); (else_val, new_else_bb)] in
       let phi = build_phi incoming "iftmp" builder in
@@ -1555,7 +1556,7 @@ let rec codegen_expr = function
 
       (* Make the new basic block for the loop header, inserting after current
        * block. *)
-      let loop_bb = append_block "loop" the_function in
+      let loop_bb = append_block context "loop" the_function in
 
       (* Insert an explicit fall through from the current block to the
        * loop_bb. *)
@@ -1599,7 +1600,7 @@ let rec codegen_expr = function
       let end_cond = build_fcmp Fcmp.One end_cond zero "loopcond" builder in
 
       (* Create the "after loop" block and insert it. *)
-      let after_bb = append_block "afterloop" the_function in
+      let after_bb = append_block context "afterloop" the_function in
 
       (* Insert the conditional branch into the end of loop_end_bb. *)
       ignore (build_cond_br end_cond loop_bb after_bb builder);
@@ -1723,7 +1724,7 @@ let codegen_func the_fpm = function
       end;
 
       (* Create a new basic block to start insertion into. *)
-      let bb = append_block "entry" the_function in
+      let bb = append_block context "entry" the_function in
       position_at_end bb builder;
 
       try
@@ -1791,7 +1792,7 @@ let rec main_loop the_fpm the_execution_engine stream =
               the_execution_engine in
 
             print_string "Evaluated to ";
-            print_float (GenericValue.as_float double_type result);
+            print_float (GenericValue.as_float Codegen.double_type result);
             print_newline ();
         with Stream.Error s | Codegen.Error s -&gt;
           (* Skip token for error recovery. *)
@@ -1831,9 +1832,8 @@ let main () =
   let stream = Lexer.lex (Stream.of_channel stdin) in
 
   (* Create the JIT. *)
-  let the_module_provider = ModuleProvider.create Codegen.the_module in
-  let the_execution_engine = ExecutionEngine.create the_module_provider in
-  let the_fpm = PassManager.create_function the_module_provider in
+  let the_execution_engine = ExecutionEngine.create Codegen.the_module in
+  let the_fpm = PassManager.create_function Codegen.the_module in
 
   (* Set up the optimizer pipeline.  Start with registering info about how the
    * target lays out data structures. *)
@@ -1843,7 +1843,7 @@ let main () =
   add_memory_to_register_promotion the_fpm;
 
   (* Do simple "peephole" optimizations and bit-twiddling optzn. *)
-  add_instruction_combining the_fpm;
+  add_instruction_combination the_fpm;
 
   (* reassociate expressions. *)
   add_reassociation the_fpm;

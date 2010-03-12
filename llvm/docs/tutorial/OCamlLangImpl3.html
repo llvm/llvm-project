@@ -98,6 +98,7 @@ exception Error of string
 let the_module = create_module (global_context ()) "my cool jit"
 let builder = builder (global_context ())
 let named_values:(string, llvalue) Hashtbl.t = Hashtbl.create 10
+let double_type = double_type context
 </pre>
 </div>
 
@@ -389,7 +390,7 @@ that there is an LLVM Function object that is ready to go for us.</p>
 <div class="doc_code">
 <pre>
       (* Create a new basic block to start insertion into. *)
-      let bb = append_block "entry" the_function in
+      let bb = append_block context "entry" the_function in
       position_at_end bb builder;
 
       try
@@ -903,6 +904,7 @@ let context = global_context ()
 let the_module = create_module context "my cool jit"
 let builder = builder context
 let named_values:(string, llvalue) Hashtbl.t = Hashtbl.create 10
+let double_type = double_type context
 
 let rec codegen_expr = function
   | Ast.Number n -&gt; const_float double_type n
@@ -974,7 +976,7 @@ let codegen_func = function
       let the_function = codegen_proto proto in
 
       (* Create a new basic block to start insertion into. *)
-      let bb = append_block "entry" the_function in
+      let bb = append_block context "entry" the_function in
       position_at_end bb builder;
 
       try

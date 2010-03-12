@@ -186,9 +186,8 @@ add a set of optimizations to run.  The code looks like this:</p>
 <div class="doc_code">
 <pre>
   (* Create the JIT. *)
-  let the_module_provider = ModuleProvider.create Codegen.the_module in
-  let the_execution_engine = ExecutionEngine.create the_module_provider in
-  let the_fpm = PassManager.create_function the_module_provider in
+  let the_execution_engine = ExecutionEngine.create Codegen.the_module in
+  let the_fpm = PassManager.create_function Codegen.the_module in
 
   (* Set up the optimizer pipeline.  Start with registering info about how the
    * target lays out data structures. *)
@@ -213,18 +212,11 @@ add a set of optimizations to run.  The code looks like this:</p>
 </pre>
 </div>
 
-<p>This code defines two values, an <tt>Llvm.llmoduleprovider</tt> and a
-<tt>Llvm.PassManager.t</tt>.  The former is basically a wrapper around our
-<tt>Llvm.llmodule</tt> that the <tt>Llvm.PassManager.t</tt> requires.  It
-provides certain flexibility that we're not going to take advantage of here,
-so I won't dive into any details about it.</p>
-
 <p>The meat of the matter here, is the definition of "<tt>the_fpm</tt>".  It
-requires a pointer to the <tt>the_module</tt> (through the
-<tt>the_module_provider</tt>) to construct itself.  Once it is set up, we use a
-series of "add" calls to add a bunch of LLVM passes.  The first pass is
-basically boilerplate, it adds a pass so that later optimizations know how the
-data structures in the program are laid out.  The
+requires a pointer to the <tt>the_module</tt> to construct itself.  Once it is
+set up, we use a series of "add" calls to add a bunch of LLVM passes.  The
+first pass is basically boilerplate, it adds a pass so that later optimizations
+know how the data structures in the program are laid out.  The
 "<tt>the_execution_engine</tt>" variable is related to the JIT, which we will
 get to in the next section.</p>
 
@@ -320,8 +312,7 @@ by adding a global variable and a call in <tt>main</tt>:</p>
 let main () =
   ...
   <b>(* Create the JIT. *)
-  let the_module_provider = ModuleProvider.create Codegen.the_module in
-  let the_execution_engine = ExecutionEngine.create the_module_provider in</b>
+  let the_execution_engine = ExecutionEngine.create Codegen.the_module in</b>
   ...
 </pre>
 </div>
@@ -351,7 +342,7 @@ can change the code that parses a top-level expression to look like this:</p>
               the_execution_engine in
 
             print_string "Evaluated to ";
-            print_float (GenericValue.as_float double_type result);
+            print_float (GenericValue.as_float Codegen.double_type result);
             print_newline ();
 </pre>
 </div>
@@ -796,6 +787,7 @@ let context = global_context ()
 let the_module = create_module context "my cool jit"
 let builder = builder context
 let named_values:(string, llvalue) Hashtbl.t = Hashtbl.create 10
+let double_type = double_type context
 
 let rec codegen_expr = function
   | Ast.Number n -&gt; const_float double_type n
@@ -867,7 +859,7 @@ let codegen_func the_fpm = function
       let the_function = codegen_proto proto in
 
       (* Create a new basic block to start insertion into. *)
-      let bb = append_block "entry" the_function in
+      let bb = append_block context "entry" the_function in
       position_at_end bb builder;
 
       try
@@ -932,7 +924,7 @@ let rec main_loop the_fpm the_execution_engine stream =
               the_execution_engine in
 
             print_string "Evaluated to ";
-            print_float (GenericValue.as_float double_type result);
+            print_float (GenericValue.as_float Codegen.double_type result);
             print_newline ();
         with Stream.Error s | Codegen.Error s -&gt;
           (* Skip token for error recovery. *)
@@ -971,16 +963,15 @@ let main () =
   let stream = Lexer.lex (Stream.of_channel stdin) in
 
   (* Create the JIT. *)
-  let the_module_provider = ModuleProvider.create Codegen.the_module in
-  let the_execution_engine = ExecutionEngine.create the_module_provider in
-  let the_fpm = PassManager.create_function the_module_provider in
+  let the_execution_engine = ExecutionEngine.create Codegen.the_module in
+  let the_fpm = PassManager.create_function Codegen.the_module in
 
   (* Set up the optimizer pipeline.  Start with registering info about how the
    * target lays out data structures. *)
   TargetData.add (ExecutionEngine.target_data the_execution_engine) the_fpm;
 
   (* Do simple "peephole" optimizations and bit-twiddling optzn. *)
-  add_instruction_combining the_fpm;
+  add_instruction_combination the_fpm;
 
   (* reassociate expressions. *)
   add_reassociation the_fpm;
