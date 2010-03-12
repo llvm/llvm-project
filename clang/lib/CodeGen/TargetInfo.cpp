@@ -268,16 +268,15 @@ llvm::Value *DefaultABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
 ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty,
                                                 ASTContext &Context,
                                           llvm::LLVMContext &VMContext) const {
-  if (CodeGenFunction::hasAggregateLLVMType(Ty)) {
+  if (CodeGenFunction::hasAggregateLLVMType(Ty))
     return ABIArgInfo::getIndirect(0);
-  } else {
-    // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+  
+  // Treat an enum type as its underlying type.
+  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+    Ty = EnumTy->getDecl()->getIntegerType();
 
-    return (Ty->isPromotableIntegerType() ?
-            ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
-  }
+  return (Ty->isPromotableIntegerType() ?
+          ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
 }
 
 /// X86_32ABIInfo - The X86-32 ABI information.
@@ -1367,6 +1366,8 @@ llvm::Value *X86_64ABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
   //   i8* reg_save_area;
   // };
   unsigned neededInt, neededSSE;
+  
+  Ty = CGF.getContext().getCanonicalType(Ty);
   ABIArgInfo AI = classifyArgumentType(Ty, CGF.getContext(), VMContext,
                                        neededInt, neededSSE);
 
