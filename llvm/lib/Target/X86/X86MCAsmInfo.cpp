@@ -71,7 +71,7 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &Triple) {
   AbsoluteEHSectionOffsets = false;
 }
 
-X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &Triple) {
+X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   AsmTransCBE = x86_asm_table;
   AssemblerDialect = AsmWriterFlavor;
 
@@ -91,6 +91,11 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &Triple) {
   // Exceptions handling
   ExceptionsType = ExceptionHandling::Dwarf;
   AbsoluteEHSectionOffsets = false;
+  
+  // OpenBSD has buggy support for .quad in 32-bit mode, just split into two
+  // .words.
+  if (T.getOS() == Triple::OpenBSD && T.getArch() == Triple::x86)
+    Data64bitsDirective = 0;
 }
 
 MCSection *X86ELFMCAsmInfo::getNonexecutableStackSection(MCContext &Ctx) const {
