@@ -9,7 +9,7 @@
 # This configure script is free software; the Free Software Foundation
 # gives unlimited permission to copy, distribute and modify it.
 #
-# Copyright (c) 2003-2009 University of Illinois at Urbana-Champaign.
+# Copyright (c) 2003-2010 University of Illinois at Urbana-Champaign.
 ## --------------------- ##
 ## M4sh Initialization.  ##
 ## --------------------- ##
@@ -1541,7 +1541,7 @@ Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2001,
 This configure script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it.
 
-Copyright (c) 2003-2009 University of Illinois at Urbana-Champaign.
+Copyright (c) 2003-2010 University of Illinois at Urbana-Champaign.
 _ACEOF
   exit
 fi
@@ -1903,7 +1903,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-LLVM_COPYRIGHT="Copyright (c) 2003-2009 University of Illinois at Urbana-Champaign."
+LLVM_COPYRIGHT="Copyright (c) 2003-2010 University of Illinois at Urbana-Champaign."
 
 
 
