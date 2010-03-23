@@ -2327,6 +2327,28 @@ X86TargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
   if (isCalleeStructRet || isCallerStructRet)
     return false;
 
+  // If the call result is in ST0 / ST1, it needs to be popped off the x87 stack.
+  // Therefore if it's not used by the call it is not safe to optimize this into
+  // a sibcall.
+  bool Unused = false;
+  for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
+    if (!Ins[i].Used) {
+      Unused = true;
+      break;
+    }
+  }
+  if (Unused) {
+    SmallVector<CCValAssign, 16> RVLocs;
+    CCState CCInfo(CalleeCC, false, getTargetMachine(),
+                   RVLocs, *DAG.getContext());
+    CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
+    for (unsigned i = 0; i != RVLocs.size(); ++i) {
+      CCValAssign &VA = RVLocs[i];
+      if (VA.getLocReg() == X86::ST0 || VA.getLocReg() == X86::ST1)
+        return false;
+    }
+  }
+
   // If the callee takes no arguments then go on to check the results of the
   // call.
   if (!Outs.empty()) {
