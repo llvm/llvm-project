@@ -594,16 +594,25 @@ unsigned MachineJumpTableInfo::getEntryAlignment(const TargetData &TD) const {
   return ~0;
 }
 
-/// getJumpTableIndex - Create a new jump table entry in the jump table info
-/// or return an existing one.
+/// createJumpTableIndex - Create a new jump table entry in the jump table info.
 ///
-unsigned MachineJumpTableInfo::getJumpTableIndex(
+unsigned MachineJumpTableInfo::createJumpTableIndex(
                                const std::vector<MachineBasicBlock*> &DestBBs) {
   assert(!DestBBs.empty() && "Cannot create an empty jump table!");
   JumpTables.push_back(MachineJumpTableEntry(DestBBs));
   return JumpTables.size()-1;
 }
 
+/// getJumpTableIndex - Return the index for an existing jump table entry in
+/// the jump table info.
+unsigned MachineJumpTableInfo::getJumpTableIndex(
+                               const std::vector<MachineBasicBlock*> &DestBBs) {
+  for (unsigned i = 0, e = JumpTables.size(); i != e; ++i)
+    if (JumpTables[i].MBBs == DestBBs)
+      return i;
+  assert(false && "getJumpTableIndex failed to find matching table");
+  return ~0;
+}
 
 /// ReplaceMBBInJumpTables - If Old is the target of any jump tables, update
 /// the jump tables to branch to New instead.

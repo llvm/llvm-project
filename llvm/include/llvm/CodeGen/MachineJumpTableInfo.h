@@ -79,7 +79,11 @@ public:
   /// getEntryAlignment - Return the alignment of each entry in the jump table.
   unsigned getEntryAlignment(const TargetData &TD) const;
   
-  /// getJumpTableIndex - Create a new jump table or return an existing one.
+  /// createJumpTableIndex - Create a new jump table.
+  ///
+  unsigned createJumpTableIndex(const std::vector<MachineBasicBlock*> &DestBBs);
+  
+  /// getJumpTableIndex - Return the index for an existing jump table.
   ///
   unsigned getJumpTableIndex(const std::vector<MachineBasicBlock*> &DestBBs);
   
