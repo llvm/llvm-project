@@ -779,7 +779,7 @@ unsigned llvm::ComputeNumSignBits(Value *V, const TargetData *TD,
     for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i) {
       if (Tmp == 1) return Tmp;
       Tmp = std::min(Tmp,
-                     ComputeNumSignBits(PN->getIncomingValue(1), TD, Depth+1));
+                     ComputeNumSignBits(PN->getIncomingValue(i), TD, Depth+1));
     }
     return Tmp;
   }

@@ -56,3 +56,23 @@ C:
 ; CHECK: %P = phi i64
 ; CHECK-NEXT: ret i64 %P
 }
+
+; rdar://7732987
+define i32 @test5(i32 %Y) {
+  br i1 undef, label %A, label %C
+A:
+  br i1 undef, label %B, label %D
+B:
+  br label %D
+C:
+  br i1 undef, label %D, label %E
+D:
+  %P = phi i32 [0, %A], [0, %B], [%Y, %C] 
+  %S = ashr i32 %P, 16
+  ret i32 %S
+; CHECK: @test5
+; CHECK: %P = phi i32
+; CHECK-NEXT: ashr i32 %P, 16
+E:
+  ret i32 0
+}
