@@ -603,17 +603,6 @@ unsigned MachineJumpTableInfo::createJumpTableIndex(
   return JumpTables.size()-1;
 }
 
-/// getJumpTableIndex - Return the index for an existing jump table entry in
-/// the jump table info.
-unsigned MachineJumpTableInfo::getJumpTableIndex(
-                               const std::vector<MachineBasicBlock*> &DestBBs) {
-  for (unsigned i = 0, e = JumpTables.size(); i != e; ++i)
-    if (JumpTables[i].MBBs == DestBBs)
-      return i;
-  assert(false && "getJumpTableIndex failed to find matching table");
-  return ~0;
-}
-
 /// ReplaceMBBInJumpTables - If Old is the target of any jump tables, update
 /// the jump tables to branch to New instead.
 bool MachineJumpTableInfo::ReplaceMBBInJumpTables(MachineBasicBlock *Old,

@@ -203,7 +203,7 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
     MadeChange |= MadeChangeThisIteration;
   }
 
-  // See if any jump tables have become mergable or dead as the code generator
+  // See if any jump tables have become dead as the code generator
   // did its thing.
   MachineJumpTableInfo *JTI = MF.getJumpTableInfo();
   if (JTI == 0) {
@@ -211,27 +211,8 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
     return MadeChange;
   }
   
-  const std::vector<MachineJumpTableEntry> &JTs = JTI->getJumpTables();
-  // Figure out how these jump tables should be merged.
-  std::vector<unsigned> JTMapping;
-  JTMapping.reserve(JTs.size());
-
-  // We always keep the 0th jump table.
-  JTMapping.push_back(0);
-
-  // Scan the jump tables, seeing if there are any duplicates.  Note that this
-  // is N^2, which should be fixed someday.
-  for (unsigned i = 1, e = JTs.size(); i != e; ++i) {
-    if (JTs[i].MBBs.empty())
-      JTMapping.push_back(i);
-    else
-      JTMapping.push_back(JTI->getJumpTableIndex(JTs[i].MBBs));
-  }
-
-  // If a jump table was merge with another one, walk the function rewriting
-  // references to jump tables to reference the new JT ID's.  Keep track of
-  // whether we see a jump table idx, if not, we can delete the JT.
-  BitVector JTIsLive(JTs.size());
+  // Walk the function to find jump tables that are live.
+  BitVector JTIsLive(JTI->getJumpTables().size());
   for (MachineFunction::iterator BB = MF.begin(), E = MF.end();
        BB != E; ++BB) {
     for (MachineBasicBlock::iterator I = BB->begin(), E = BB->end();
@@ -239,17 +220,14 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
       for (unsigned op = 0, e = I->getNumOperands(); op != e; ++op) {
         MachineOperand &Op = I->getOperand(op);
         if (!Op.isJTI()) continue;
-        unsigned NewIdx = JTMapping[Op.getIndex()];
-        Op.setIndex(NewIdx);
 
         // Remember that this JT is live.
-        JTIsLive.set(NewIdx);
+        JTIsLive.set(Op.getIndex());
       }
   }
 
-  // Finally, remove dead jump tables.  This happens either because the
-  // indirect jump was unreachable (and thus deleted) or because the jump
-  // table was merged with some other one.
+  // Finally, remove dead jump tables.  This happens when the
+  // indirect jump was unreachable (and thus deleted).
   for (unsigned i = 0, e = JTIsLive.size(); i != e; ++i)
     if (!JTIsLive.test(i)) {
       JTI->RemoveJumpTable(i);

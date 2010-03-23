@@ -83,10 +83,6 @@ public:
   ///
   unsigned createJumpTableIndex(const std::vector<MachineBasicBlock*> &DestBBs);
   
-  /// getJumpTableIndex - Return the index for an existing jump table.
-  ///
-  unsigned getJumpTableIndex(const std::vector<MachineBasicBlock*> &DestBBs);
-  
   /// isEmpty - Return true if there are no jump tables.
   ///
   bool isEmpty() const { return JumpTables.empty(); }
