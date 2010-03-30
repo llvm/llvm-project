@@ -80,7 +80,7 @@ unsigned ARMBaseRegisterInfo::getRegisterNumbering(unsigned RegEnum,
   case D23: return 23;
   case D24: return 24;
   case D25: return 25;
-  case D26: return 27;
+  case D26: return 26;
   case D27: return 27;
   case D28: return 28;
   case D29: return 29;
