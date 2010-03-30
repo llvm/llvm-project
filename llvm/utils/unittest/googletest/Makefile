@@ -16,7 +16,8 @@ BUILD_ARCHIVE = 1
 REQUIRES_RTTI = 1
 
 # Note that these flags are duplicated when building individual tests in
-# unittests/Makefile.unittest; ensure that any changes are made to both.
+# unittests/Makefile.unittest and ../UnitTestMain/Makefile; ensure that any
+# changes are made to both.
 CPP.Flags += -I$(LLVM_SRC_ROOT)/utils/unittest/googletest/include
 CPP.Flags += $(NO_MISSING_FIELD_INITIALIZERS) $(NO_VARIADIC_MACROS)
 CPP.Flags += -DGTEST_HAS_RTTI=0
