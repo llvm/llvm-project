@@ -2307,6 +2307,7 @@ X86TargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
     return false;
 
   // If -tailcallopt is specified, make fastcc functions tail-callable.
+  const MachineFunction &MF = DAG.getMachineFunction();
   const Function *CallerF = DAG.getMachineFunction().getFunction();
   if (GuaranteedTailCallOpt) {
     if (IsTailCallConvention(CalleeCC) &&
@@ -2317,6 +2318,11 @@ X86TargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
 
   // Look for obvious safe cases to perform tail call optimization that does not
   // requite ABI changes. This is what gcc calls sibcall.
+
+  // Can't do sibcall if stack needs to be dynamically re-aligned. PEI needs to
+  // emit a special epilogue.
+  if (RegInfo->needsStackRealignment(MF))
+    return false;
 
   // Do not sibcall optimize vararg calls for now.
   if (isVarArg)

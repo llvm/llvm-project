@@ -216,3 +216,16 @@ entry:
 }
 
 declare fastcc %struct.ns* @foo7(%struct.cp* byval align 4, i8 signext) nounwind ssp
+
+
+
+define void @t19() alignstack(32) nounwind {
+entry:
+; CHECK: t19:
+; CHECK: andl $-32
+; CHECK: call {{_?}}foo
+  tail call void @foo() nounwind
+  ret void
+}
+
+declare void @foo()
