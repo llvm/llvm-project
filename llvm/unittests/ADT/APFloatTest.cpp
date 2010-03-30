@@ -374,6 +374,7 @@ TEST(APFloatTest, makeNaN) {
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
 TEST(APFloatTest, SemanticsDeath) {
   EXPECT_DEATH(APFloat(APFloat::IEEEsingle, 0.0f).convertToDouble(), "Float semantics are not IEEEdouble");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble, 0.0 ).convertToFloat(),  "Float semantics are not IEEEsingle");
@@ -572,6 +573,7 @@ TEST(APFloatTest, StringHexadecimalExponentDeath) {
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1.1p-"), "Exponent has no digits");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1.1p-"), "Exponent has no digits");
 }
+#endif
 #endif
 
 }

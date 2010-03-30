@@ -328,6 +328,7 @@ TEST(APIntTest, Log2) {
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
 TEST(APIntTest, StringDeath) {
   EXPECT_DEATH(APInt(0, "", 0), "Bitwidth too small");
   EXPECT_DEATH(APInt(32, "", 0), "Invalid string length");
@@ -339,6 +340,7 @@ TEST(APIntTest, StringDeath) {
   EXPECT_DEATH(APInt(32, StringRef("1\02", 3), 10), "Invalid character in digit string");
   EXPECT_DEATH(APInt(32, "1L", 10), "Invalid character in digit string");
 }
+#endif
 #endif
 
 }

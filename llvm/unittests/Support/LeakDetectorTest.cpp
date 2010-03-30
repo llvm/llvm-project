@@ -15,6 +15,7 @@ using namespace llvm;
 namespace {
 
 #ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
 TEST(LeakDetector, Death1) {
   LeakDetector::addGarbageObject((void*) 1);
   LeakDetector::addGarbageObject((void*) 2);
@@ -24,6 +25,7 @@ TEST(LeakDetector, Death1) {
   EXPECT_DEATH(LeakDetector::addGarbageObject((void*) 2),
                "Cache != o && \"Object already in set!\"");
 }
+#endif
 #endif
 
 }
