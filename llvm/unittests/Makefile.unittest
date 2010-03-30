@@ -14,18 +14,20 @@
 # Set up variables for building a unit test.
 ifdef TESTNAME
 
-CPP.Flags += -DGTEST_HAS_RTTI=0
-# gcc's TR1 <tuple> header depends on RTTI, so force googletest to use
-# its own tuple implementation.  When we import googletest >=1.4.0, we
-# can drop this line.
-CPP.Flags += -DGTEST_HAS_TR1_TUPLE=0
-
 include $(LEVEL)/Makefile.common
 
 LLVMUnitTestExe = $(BuildMode)/$(TESTNAME)Tests$(EXEEXT)
 
-CPP.Flags += -I$(LLVM_SRC_ROOT)/utils/unittest/googletest/include/
-CPP.Flags += $(NO_VARIADIC_MACROS)
+# Note that these flags are duplicated when building GoogleTest itself in
+# utils/unittest/googletest/Makefile; ensure that any changes are made to both.
+CPP.Flags += -I$(LLVM_SRC_ROOT)/utils/unittest/googletest/include
+CPP.Flags += $(NO_MISSING_FIELD_INITIALIZERS) $(NO_VARIADIC_MACROS)
+CPP.Flags += -DGTEST_HAS_RTTI=0
+# libstdc++'s TR1 <tuple> header depends on RTTI and uses C++'0x features not
+# supported by Clang, so force googletest to use its own tuple implementation.
+# When we import googletest >=1.4.0, we can drop this line.
+CPP.Flags += -DGTEST_HAS_TR1_TUPLE=0
+
 TESTLIBS = -lGoogleTest -lUnitTestMain
 
 ifeq ($(ENABLE_SHARED), 1)
