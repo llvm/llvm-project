@@ -1147,8 +1147,8 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
 
   // Collect the names of referenced protocols
   llvm::SmallVector<std::string, 16> Protocols;
-  const ObjCInterfaceDecl *ClassDecl = OCD->getClassInterface();
-  const ObjCList<ObjCProtocolDecl> &Protos =ClassDecl->getReferencedProtocols();
+  const ObjCCategoryDecl *CatDecl = OCD->getCategoryDecl();
+  const ObjCList<ObjCProtocolDecl> &Protos = CatDecl->getReferencedProtocols();
   for (ObjCList<ObjCProtocolDecl>::iterator I = Protos.begin(),
        E = Protos.end(); I != E; ++I)
     Protocols.push_back((*I)->getNameAsString());
