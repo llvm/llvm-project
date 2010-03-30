@@ -27,7 +27,7 @@ namespace sys {
   /// @brief Memory block abstraction.
   class MemoryBlock {
   public:
-    MemoryBlock() { }
+    MemoryBlock() : Address(0), Size(0) { }
     MemoryBlock(void *addr, size_t size) : Address(addr), Size(size) { }
     void *base() const { return Address; }
     size_t size() const { return Size; }
