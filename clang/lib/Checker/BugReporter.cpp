@@ -40,7 +40,7 @@ BugReporterContext::~BugReporterContext() {
 // Helper routines for walking the ExplodedGraph and fetching statements.
 //===----------------------------------------------------------------------===//
 
-static inline const Stmt* GetStmt(ProgramPoint P) {
+static inline const Stmt* GetStmt(const ProgramPoint &P) {
   if (const StmtPoint* SP = dyn_cast<StmtPoint>(&P))
     return SP->getStmt();
   else if (const BlockEdge* BE = dyn_cast<BlockEdge>(&P))
