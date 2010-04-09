@@ -160,6 +160,7 @@ bool X86TargetMachine::addInstSelector(PassManagerBase &PM,
 
 bool X86TargetMachine::addPreRegAlloc(PassManagerBase &PM,
                                       CodeGenOpt::Level OptLevel) {
+  PM.add(createX86MaxStackAlignmentHeuristicPass());
   return false;  // -print-machineinstr shouldn't print after this.
 }
 

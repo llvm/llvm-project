@@ -66,6 +66,12 @@ TargetAsmBackend *createX86_64AsmBackend(const Target &, MCAssembler &);
 ///
 FunctionPass *createEmitX86CodeToMemory();
 
+/// createX86MaxStackAlignmentHeuristicPass - This function returns a pass
+/// which determines whether the frame pointer register should be
+/// reserved in case dynamic stack alignment is later required.
+///
+FunctionPass *createX86MaxStackAlignmentHeuristicPass();
+
 extern Target TheX86_32Target, TheX86_64Target;
 
 } // End llvm namespace

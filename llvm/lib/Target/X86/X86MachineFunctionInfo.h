@@ -52,6 +52,10 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// relocation models.
   unsigned GlobalBaseReg;
 
+  /// ReserveFP - whether the function should reserve the frame pointer
+  /// when allocating, even if there may not actually be a frame pointer used.
+  bool ReserveFP;
+
 public:
   X86MachineFunctionInfo() : ForceFramePointer(false),
                              CalleeSavedFrameSize(0),
@@ -68,7 +72,8 @@ public:
       ReturnAddrIndex(0),
       TailCallReturnAddrDelta(0),
       SRetReturnReg(0),
-      GlobalBaseReg(0) {}
+      GlobalBaseReg(0),
+      ReserveFP(false) {}
   
   bool getForceFramePointer() const { return ForceFramePointer;} 
   void setForceFramePointer(bool forceFP) { ForceFramePointer = forceFP; }
@@ -90,6 +95,9 @@ public:
 
   unsigned getGlobalBaseReg() const { return GlobalBaseReg; }
   void setGlobalBaseReg(unsigned Reg) { GlobalBaseReg = Reg; }
+
+  bool getReserveFP() const { return ReserveFP; }
+  void setReserveFP(bool reserveFP) { ReserveFP = reserveFP; }
 };
 
 } // End llvm namespace

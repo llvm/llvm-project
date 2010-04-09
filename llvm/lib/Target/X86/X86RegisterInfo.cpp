@@ -1489,3 +1489,46 @@ unsigned getX86SubSuperRegister(unsigned Reg, EVT VT, bool High) {
 }
 
 #include "X86GenRegisterInfo.inc"
+
+namespace {
+  struct MSAH : public MachineFunctionPass {
+    static char ID;
+    MSAH() : MachineFunctionPass(&ID) {}
+
+    virtual bool runOnMachineFunction(MachineFunction &MF) {
+      const X86TargetMachine *TM =
+        static_cast<const X86TargetMachine *>(&MF.getTarget());
+      const X86RegisterInfo *X86RI = TM->getRegisterInfo();
+      MachineRegisterInfo &RI = MF.getRegInfo();
+      X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+      unsigned StackAlignment = X86RI->getStackAlignment();
+
+      // Be over-conservative: scan over all vreg defs and find whether vector
+      // registers are used. If yes, there is a possibility that vector register
+      // will be spilled and thus require dynamic stack realignment.
+      for (unsigned RegNum = TargetRegisterInfo::FirstVirtualRegister;
+           RegNum < RI.getLastVirtReg(); ++RegNum)
+        if (RI.getRegClass(RegNum)->getAlignment() > StackAlignment) {
+          FuncInfo->setReserveFP(true);
+          return true;
+        }
+
+      // Nothing to do
+      return false;
+    }
+
+    virtual const char *getPassName() const {
+      return "X86 Maximal Stack Alignment Check";
+    }
+
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+      AU.setPreservesCFG();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
+  };
+
+  char MSAH::ID = 0;
+}
+
+FunctionPass*
+llvm::createX86MaxStackAlignmentHeuristicPass() { return new MSAH(); }
