@@ -955,7 +955,8 @@ static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(Instruction *V,
       continue; // Otherwise, storing through it, or storing into GV... fine.
     }
     
-    if (isa<GetElementPtrInst>(Inst)) {
+    // Must index into the array and into the struct.
+    if (isa<GetElementPtrInst>(Inst) && Inst->getNumOperands() >= 3) {
       if (!ValueIsOnlyUsedLocallyOrStoredToOneGlobal(Inst, GV, PHIs))
         return false;
       continue;
