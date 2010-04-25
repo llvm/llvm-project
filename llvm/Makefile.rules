@@ -388,7 +388,6 @@ endif
 # If REQUIRES_RTTI=1 is specified then don't disable run-time type id.
 ifneq ($(REQUIRES_RTTI), 1)
   CXX.Flags += -fno-rtti
-  CXXFLAGS += -fno-rtti
 endif
 
 ifdef ENABLE_COVERAGE
