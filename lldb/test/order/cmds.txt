@@ -1,3 +1,0 @@
-b main.c:41
-c
-lines -shlib a.out main.c
