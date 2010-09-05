@@ -880,19 +880,20 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
     }
 
     Value *Mul0 = NULL;
-    Value *Mul1 = NULL;
-    bool M0 = ComputeMultiple(Op0, Base, Mul0,
-                              LookThroughSExt, Depth+1);
-    bool M1 = ComputeMultiple(Op1, Base, Mul1,
-                              LookThroughSExt, Depth+1);
-
-    if (M0) {
-      if (isa<Constant>(Op1) && isa<Constant>(Mul0)) {
-        // V == Base * (Mul0 * Op1), so return (Mul0 * Op1)
-        Multiple = ConstantExpr::getMul(cast<Constant>(Mul0),
-                                        cast<Constant>(Op1));
-        return true;
-      }
+    if (ComputeMultiple(Op0, Base, Mul0, LookThroughSExt, Depth+1)) {
+      if (Constant *Op1C = dyn_cast<Constant>(Op1))
+        if (Constant *MulC = dyn_cast<Constant>(Mul0)) {
+          if (Op1C->getType()->getPrimitiveSizeInBits() < 
+              MulC->getType()->getPrimitiveSizeInBits())
+            Op1C = ConstantExpr::getZExt(Op1C, MulC->getType());
+          if (Op1C->getType()->getPrimitiveSizeInBits() > 
+              MulC->getType()->getPrimitiveSizeInBits())
+            MulC = ConstantExpr::getZExt(MulC, Op1C->getType());
+          
+          // V == Base * (Mul0 * Op1), so return (Mul0 * Op1)
+          Multiple = ConstantExpr::getMul(MulC, Op1C);
+          return true;
+        }
 
       if (ConstantInt *Mul0CI = dyn_cast<ConstantInt>(Mul0))
         if (Mul0CI->getValue() == 1) {
@@ -902,13 +903,21 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
         }
     }
 
-    if (M1) {
-      if (isa<Constant>(Op0) && isa<Constant>(Mul1)) {
-        // V == Base * (Mul1 * Op0), so return (Mul1 * Op0)
-        Multiple = ConstantExpr::getMul(cast<Constant>(Mul1),
-                                        cast<Constant>(Op0));
-        return true;
-      }
+    Value *Mul1 = NULL;
+    if (ComputeMultiple(Op1, Base, Mul1, LookThroughSExt, Depth+1)) {
+      if (Constant *Op0C = dyn_cast<Constant>(Op0))
+        if (Constant *MulC = dyn_cast<Constant>(Mul1)) {
+          if (Op0C->getType()->getPrimitiveSizeInBits() < 
+              MulC->getType()->getPrimitiveSizeInBits())
+            Op0C = ConstantExpr::getZExt(Op0C, MulC->getType());
+          if (Op0C->getType()->getPrimitiveSizeInBits() > 
+              MulC->getType()->getPrimitiveSizeInBits())
+            MulC = ConstantExpr::getZExt(MulC, Op0C->getType());
+          
+          // V == Base * (Mul1 * Op0), so return (Mul1 * Op0)
+          Multiple = ConstantExpr::getMul(MulC, Op0C);
+          return true;
+        }
 
       if (ConstantInt *Mul1CI = dyn_cast<ConstantInt>(Mul1))
         if (Mul1CI->getValue() == 1) {

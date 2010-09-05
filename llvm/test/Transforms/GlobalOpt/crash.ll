@@ -40,3 +40,18 @@ xx:
 }
 
 declare noalias i8* @malloc(i64) nounwind
+
+
+; PR8063
+@permute_bitrev.bitrev = internal global i32* null, align 8
+define void @permute_bitrev() nounwind {
+entry:
+  %tmp = load i32** @permute_bitrev.bitrev, align 8
+  %conv = sext i32 0 to i64
+  %mul = mul i64 %conv, 4
+  %call = call i8* @malloc(i64 %mul)
+  %0 = bitcast i8* %call to i32*
+  store i32* %0, i32** @permute_bitrev.bitrev, align 8
+  ret void
+}
+
