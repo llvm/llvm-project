@@ -694,9 +694,9 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 // Loop instructions
 
-def LOOP   : I<0xE2, RawFrm, (outs), (ins brtarget8:$dst), "loop\t$dst", []>;
-def LOOPE  : I<0xE1, RawFrm, (outs), (ins brtarget8:$dst), "loope\t$dst", []>;
-def LOOPNE : I<0xE0, RawFrm, (outs), (ins brtarget8:$dst), "loopne\t$dst", []>;
+def LOOP   : Ii8PCRel<0xE2, RawFrm, (outs), (ins brtarget8:$dst), "loop\t$dst", []>;
+def LOOPE  : Ii8PCRel<0xE1, RawFrm, (outs), (ins brtarget8:$dst), "loope\t$dst", []>;
+def LOOPNE : Ii8PCRel<0xE0, RawFrm, (outs), (ins brtarget8:$dst), "loopne\t$dst", []>;
 
 //===----------------------------------------------------------------------===//
 //  Call Instructions...
