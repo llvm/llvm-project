@@ -96,17 +96,22 @@ int main(int argc, char **argv) {
   LLVMContext Context;
   
   // Create some module to put our function into it.
-  Module *M = new Module("test", Context);
+  OwningPtr<Module> M(new Module("test", Context));
 
   // We are about to create the "fib" function:
-  Function *FibF = CreateFibFunction(M, Context);
+  Function *FibF = CreateFibFunction(M.get(), Context);
 
   // Now we going to create JIT
   std::string errStr;
-  ExecutionEngine *EE = EngineBuilder(M).setErrorStr(&errStr).setEngineKind(EngineKind::JIT).create();
+  ExecutionEngine *EE =
+    EngineBuilder(M.get())
+    .setErrorStr(&errStr)
+    .setEngineKind(EngineKind::JIT)
+    .create();
 
   if (!EE) {
-    errs() << argv[0] << ": Failed to construct ExecutionEngine: " << errStr << "\n";
+    errs() << argv[0] << ": Failed to construct ExecutionEngine: " << errStr
+           << "\n";
     return 1;
   }
 
@@ -127,5 +132,6 @@ int main(int argc, char **argv) {
 
   // import result of execution
   outs() << "Result: " << GV.IntVal << "\n";
+  
   return 0;
 }
