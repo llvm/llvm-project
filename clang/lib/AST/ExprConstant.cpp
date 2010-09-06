@@ -1008,8 +1008,11 @@ bool IntExprEvaluator::CheckReferencedDecl(const Expr* E, const Decl* D) {
 
         VD->setEvaluatingValue();
 
-        if (Visit(const_cast<Expr*>(Init))) {
+        Expr::EvalResult EResult;
+        if (Init->Evaluate(EResult, Info.Ctx) && !EResult.HasSideEffects &&
+            EResult.Val.isInt()) {
           // Cache the evaluated value in the variable declaration.
+          Result = EResult.Val;
           VD->setEvaluatedValue(Result);
           return true;
         }

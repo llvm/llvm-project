@@ -582,8 +582,17 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // the optimizer, especially with bitfields.
   unsigned NumInitElements = E->getNumInits();
   RecordDecl *SD = E->getType()->getAs<RecordType>()->getDecl();
-  unsigned CurInitVal = 0;
-
+  
+  // If we're initializing the whole aggregate, just do it in place.
+  // FIXME: This is a hack around an AST bug (PR6537).
+  if (NumInitElements == 1 && E->getType() == E->getInit(0)->getType()) {
+    EmitInitializationToLValue(E->getInit(0),
+                               CGF.MakeAddrLValue(DestPtr, E->getType()),
+                               E->getType());
+    return;
+  }
+  
+  
   if (E->getType()->isUnionType()) {
     // Only initialize one field of a union. The field itself is
     // specified by the initializer list.
@@ -615,19 +624,10 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
     return;
   }
-  
-  // If we're initializing the whole aggregate, just do it in place.
-  // FIXME: This is a hack around an AST bug (PR6537).
-  if (NumInitElements == 1 && E->getType() == E->getInit(0)->getType()) {
-    EmitInitializationToLValue(E->getInit(0),
-                               CGF.MakeAddrLValue(DestPtr, E->getType()),
-                               E->getType());
-    return;
-  }
-  
 
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
+  unsigned CurInitVal = 0;
   for (RecordDecl::field_iterator Field = SD->field_begin(),
                                FieldEnd = SD->field_end();
        Field != FieldEnd; ++Field) {

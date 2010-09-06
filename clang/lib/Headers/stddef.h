@@ -34,7 +34,7 @@ typedef __typeof__(sizeof(int)) size_t;
 #ifndef __cplusplus
 #ifndef _WCHAR_T
 #define _WCHAR_T
-typedef __typeof__(*L"") wchar_t;
+typedef __WCHAR_TYPE__ wchar_t;
 #endif
 #endif
 

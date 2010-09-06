@@ -6796,7 +6796,7 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
                               UnaryOperatorKind Opc,
                               Expr *Input) {
   if (getLangOptions().CPlusPlus && Input->getType()->isOverloadableType() &&
-      Opc != UO_Extension) {
+      UnaryOperator::getOverloadedOperator(Opc) != OO_None) {
     // Find all of the overloaded operators visible from this
     // point. We perform both an operator-name lookup from the local
     // scope and an argument-dependent lookup based on the types of

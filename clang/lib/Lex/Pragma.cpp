@@ -384,7 +384,9 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
       Lex(DependencyTok);
     }
 
-    Message.erase(Message.end()-1);
+    // Remove the trailing ' ' if present.
+    if (!Message.empty())
+      Message.erase(Message.end()-1);
     Diag(FilenameTok, diag::pp_out_of_date_dependency) << Message;
   }
 }
