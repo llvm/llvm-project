@@ -25,3 +25,17 @@ for.cond.for.end10_crit_edge:                     ; preds = %for.cond
 for.end10:                                        ; preds = %for.cond.for.end10_crit_edge, %entry
   ret void
 }
+
+; PR8067
+@g_8 = external global i32, align 4
+
+define void @test2() noreturn nounwind ssp {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %tmp7 = load i32* @g_8, align 4
+  store i32* @g_8, i32** undef, align 16
+  store i32 undef, i32* @g_8, align 4
+  br label %for.body
+}

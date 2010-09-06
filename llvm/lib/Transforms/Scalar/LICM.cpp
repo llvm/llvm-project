@@ -696,10 +696,10 @@ void LICM::PromoteAliasSet(AliasSet &AS) {
       // it.
       if (isa<LoadInst>(Use))
         assert(!cast<LoadInst>(Use)->isVolatile() && "AST broken");
-      else if (isa<StoreInst>(Use))
-        assert(!cast<StoreInst>(Use)->isVolatile() && 
-               Use->getOperand(0) != ASIV && "AST broken");
-      else
+      else if (isa<StoreInst>(Use)) {
+        assert(!cast<StoreInst>(Use)->isVolatile() && "AST broken");
+        if (Use->getOperand(0) == ASIV) return;
+      } else
         return; // Not a load or store.
       
       if (!GuaranteedToExecute)
