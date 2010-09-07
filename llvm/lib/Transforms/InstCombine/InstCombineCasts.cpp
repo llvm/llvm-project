@@ -1139,7 +1139,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         Arg->getOperand(0)->getType()->isFloatTy()) {
       Function *Callee = Call->getCalledFunction();
       Module *M = CI.getParent()->getParent()->getParent();
-      Constant* SqrtfFunc = M->getOrInsertFunction("sqrtf", 
+      Constant *SqrtfFunc = M->getOrInsertFunction("sqrtf", 
                                                    Callee->getAttributes(),
                                                    Builder->getFloatTy(),
                                                    Builder->getFloatTy(),
@@ -1147,6 +1147,11 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
       CallInst *ret = CallInst::Create(SqrtfFunc, Arg->getOperand(0),
                                        "sqrtfcall");
       ret->setAttributes(Callee->getAttributes());
+      
+      
+      // Remove the old Call.  With -fmath-errno, it won't get marked readnone.
+      Call->replaceAllUsesWith(UndefValue::get(Call->getType()));
+      EraseInstFromFunction(*Call);
       return ret;
     }
   }
