@@ -4699,7 +4699,7 @@ fi
 if test "${enable_optimized+set}" = set; then
   enableval=$enable_optimized;
 else
-  enableval=$optimize
+  enableval="yes"
 fi
 
 if test ${enableval} = "no" ; then
@@ -4729,7 +4729,7 @@ fi
 if test "${enable_assertions+set}" = set; then
   enableval=$enable_assertions;
 else
-  enableval="yes"
+  enableval="no"
 fi
 
 if test ${enableval} = "yes" ; then
