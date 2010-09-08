@@ -298,7 +298,7 @@ static unsigned T2Morph2LoadLiteral(unsigned Opcode) {
 /// decodeInstruction(insn) is invoked on the original insn.
 ///
 /// Otherwise, decodeThumbInstruction is called with the original insn.
-static unsigned decodeThumbSideEffect(bool IsThumb2, uint32_t &insn) {
+static unsigned decodeThumbSideEffect(bool IsThumb2, unsigned &insn) {
   if (IsThumb2) {
     uint16_t op1 = slice(insn, 28, 27);
     uint16_t op2 = slice(insn, 26, 20);
@@ -436,7 +436,7 @@ bool ThumbDisassembler::getInstruction(MCInst &MI,
   // passed to decodeThumbInstruction().  For 16-bit Thumb instruction, the top
   // halfword of insn is 0x00 0x00; otherwise, the first halfword is moved to
   // the top half followed by the second halfword.
-  uint32_t insn = 0;
+  unsigned insn = 0;
   // Possible second halfword.
   uint16_t insn1 = 0;
 

@@ -126,8 +126,8 @@ static inline unsigned slice(uint32_t Bits, unsigned From, unsigned To) {
 }
 
 /// Utility function for setting [From, To] bits to Val for a uint32_t.
-static inline void setSlice(uint32_t &Bits, unsigned From, unsigned To,
-                            uint32_t Val) {
+static inline void setSlice(unsigned &Bits, unsigned From, unsigned To,
+                            unsigned Val) {
   assert(From < 32 && To < 32 && From >= To);
   uint32_t Mask = ((1 << (From - To + 1)) - 1);
   Bits &= ~(Mask << To);
