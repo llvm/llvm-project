@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -c -O3 -m64 -emit-llvm -o - | llc -march=x86-64 -mtriple=x86_64-apple-darwin | FileCheck %s
+// RUN: %llvmgcc %s -c -O3 -emit-llvm -o - | llc -march=x86-64 -mtriple=x86_64-apple-darwin | FileCheck %s
 // r9 used to be clobbered before its value was moved to r10.  7993104.
 
 void foo(int x, int y) {

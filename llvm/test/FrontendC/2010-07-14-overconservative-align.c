@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -m64 -S -o - | FileCheck %s
+// RUN: %llvmgcc %s -emit-llvm -S -o - | FileCheck %s
 // PR 5995
 struct s {
     int word;
@@ -9,6 +9,6 @@ struct s {
 
 void func (struct s *s)
 {
-// CHECK: load %struct.s** %s_addr, align 8
+// CHECK: load %struct.s** %s_addr, align {{[48]}}
     s->word = 0;
 }
