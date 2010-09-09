@@ -667,8 +667,14 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 }
 
 bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  return (RealignStack && !AFI->isThumb1OnlyFunction());
+  // We can't realign the stack if:
+  // 1. Dynamic stack realignment is explicitly disabled,
+  // 2. This is a Thumb1 function (it's not useful, so we don't bother), or
+  // 3. There are VLAs in the function and the base pointer is disabled.
+  return (RealignStack && !AFI->isThumb1OnlyFunction() &&
+          (!MFI->hasVarSizedObjects() || EnableBasePointer));
 }
 
 bool ARMBaseRegisterInfo::
@@ -1057,8 +1063,11 @@ ARMBaseRegisterInfo::ResolveFrameIndexReference(const MachineFunction &MF,
     if (isFixed) {
       FrameReg = getFrameRegister(MF);
       Offset = FPOffset;
-    } else if (MFI->hasVarSizedObjects())
+    } else if (MFI->hasVarSizedObjects()) {
+      assert(hasBasePointer(MF) &&
+             "VLAs and dynamic stack alignment, but missing base pointer!");
       FrameReg = BasePtr;
+    }
     return Offset;
   }
 
@@ -1068,7 +1077,7 @@ ARMBaseRegisterInfo::ResolveFrameIndexReference(const MachineFunction &MF,
     // there are VLAs (and thus the SP isn't reliable as a base).
     if (isFixed || (MFI->hasVarSizedObjects() && !hasBasePointer(MF))) {
       FrameReg = getFrameRegister(MF);
-      Offset = FPOffset;
+      return FPOffset;
     } else if (MFI->hasVarSizedObjects()) {
       assert(hasBasePointer(MF) && "missing base pointer!");
       // Use the base register since we have it.
@@ -1078,12 +1087,12 @@ ARMBaseRegisterInfo::ResolveFrameIndexReference(const MachineFunction &MF,
       // out of range references.
       if (FPOffset >= -255 && FPOffset < 0) {
         FrameReg = getFrameRegister(MF);
-        Offset = FPOffset;
+        return FPOffset;
       }
     } else if (Offset > (FPOffset < 0 ? -FPOffset : FPOffset)) {
       // Otherwise, use SP or FP, whichever is closer to the stack slot.
       FrameReg = getFrameRegister(MF);
-      Offset = FPOffset;
+      return FPOffset;
     }
   }
   // Use the base pointer if we have one.
@@ -1887,7 +1896,8 @@ emitPrologue(MachineFunction &MF) const {
   AFI->setGPRCalleeSavedArea2Size(GPRCS2Size);
   AFI->setDPRCalleeSavedAreaSize(DPRCSSize);
 
-  // If we need dynamic stack realignment, do it here.
+  // If we need dynamic stack realignment, do it here. Be paranoid and make
+  // sure if we also have VLAs, we have a base pointer for frame access.
   if (needsStackRealignment(MF)) {
     unsigned MaxAlign = MFI->getMaxAlignment();
     assert (!AFI->isThumb1OnlyFunction());

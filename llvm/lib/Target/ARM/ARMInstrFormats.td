@@ -1332,9 +1332,9 @@ class ASI5<bits<4> opcod1, bits<2> opcod2, dag oops, dag iops,
 }
 
 // Load / store multiple
-class AXDI5<dag oops, dag iops, IndexMode im, InstrItinClass itin,
+class AXDI4<dag oops, dag iops, IndexMode im, InstrItinClass itin,
             string asm, string cstr, list<dag> pattern>
-  : VFPXI<oops, iops, AddrMode5, Size4Bytes, im,
+  : VFPXI<oops, iops, AddrMode4, Size4Bytes, im,
           VFPLdStMulFrm, itin, asm, cstr, pattern> {
   // TODO: Mark the instructions with the appropriate subtarget info.
   let Inst{27-25} = 0b110;
@@ -1344,9 +1344,9 @@ class AXDI5<dag oops, dag iops, IndexMode im, InstrItinClass itin,
   let D = VFPNeonDomain;
 }
 
-class AXSI5<dag oops, dag iops, IndexMode im, InstrItinClass itin,
+class AXSI4<dag oops, dag iops, IndexMode im, InstrItinClass itin,
             string asm, string cstr, list<dag> pattern>
-  : VFPXI<oops, iops, AddrMode5, Size4Bytes, im,
+  : VFPXI<oops, iops, AddrMode4, Size4Bytes, im,
           VFPLdStMulFrm, itin, asm, cstr, pattern> {
   // TODO: Mark the instructions with the appropriate subtarget info.
   let Inst{27-25} = 0b110;

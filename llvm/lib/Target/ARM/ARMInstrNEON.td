@@ -133,7 +133,7 @@ def nModImm : Operand<i32> {
 // This is equivalent to VLDMD except that it has a Q register operand
 // instead of a pair of D registers.
 def VLDMQ
-  : AXDI5<(outs QPR:$dst), (ins addrmode4:$addr, pred:$p),
+  : AXDI4<(outs QPR:$dst), (ins addrmode4:$addr, pred:$p),
           IndexModeNone, IIC_fpLoadm,
           "vldm${addr:submode}${p}\t$addr, ${dst:dregpair}", "",
           [(set QPR:$dst, (v2f64 (load addrmode4:$addr)))]>;
@@ -151,7 +151,7 @@ def VLD1q
 // This is equivalent to VSTMD except that it has a Q register operand
 // instead of a pair of D registers.
 def VSTMQ
-  : AXDI5<(outs), (ins QPR:$src, addrmode4:$addr, pred:$p),
+  : AXDI4<(outs), (ins QPR:$src, addrmode4:$addr, pred:$p),
           IndexModeNone, IIC_fpStorem,
           "vstm${addr:submode}${p}\t$addr, ${src:dregpair}", "",
           [(store (v2f64 QPR:$src), addrmode4:$addr)]>;
