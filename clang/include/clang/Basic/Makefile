@@ -16,6 +16,7 @@ INPUT_TDS = $(wildcard $(PROJ_SRC_DIR)/Diagnostic*.td)
 # Compute the Clang version from the LLVM version, unless specified explicitly.
 ifndef CLANG_VERSION
 CLANG_VERSION := $(subst svn,,$(LLVMVersion))
+CLANG_VERSION := $(subst rc,,$(CLANG_VERSION))
 endif
 
 CLANG_VERSION_COMPONENTS := $(subst ., ,$(CLANG_VERSION))
