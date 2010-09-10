@@ -923,6 +923,11 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
 
   unsigned PCLabelId = AFI->createConstPoolEntryUId();
   ARMConstantPoolValue *NewCPV = 0;
+  // FIXME: The below assumes PIC relocation model and that the function
+  // is Thumb mode (t1 or t2). PCAdjustment would be 8 for ARM mode PIC, and
+  // zero for non-PIC in ARM or Thumb. The callers are all of thumb LDR
+  // instructions, so that's probably OK, but is PIC always correct when
+  // we get here?
   if (ACPV->isGlobalValue())
     NewCPV = new ARMConstantPoolValue(ACPV->getGV(), PCLabelId,
                                       ARMCP::CPValue, 4);
@@ -932,6 +937,9 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
   else if (ACPV->isBlockAddress())
     NewCPV = new ARMConstantPoolValue(ACPV->getBlockAddress(), PCLabelId,
                                       ARMCP::CPBlockAddress, 4);
+  else if (ACPV->isLSDA())
+    NewCPV = new ARMConstantPoolValue(MF.getFunction(), PCLabelId,
+                                      ARMCP::CPLSDA, 4);
   else
     llvm_unreachable("Unexpected ARM constantpool value type!!");
   CPI = MCP->getConstantPoolIndex(NewCPV, MCPE.getAlignment());
