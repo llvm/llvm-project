@@ -46,6 +46,7 @@
 #include "llvm/LLVMContext.h"
 #include "llvm/Type.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -71,6 +72,7 @@ namespace {
     AliasAnalysis *AA;
     LoopInfo *LI;
     DominatorTree *DT;
+    ScalarEvolution *SE;
     Loop *L;
     virtual bool runOnLoop(Loop *L, LPPassManager &LPM);
 
@@ -83,7 +85,7 @@ namespace {
       AU.addPreserved<LoopInfo>();
 
       AU.addPreserved<AliasAnalysis>();
-      AU.addPreserved("scalar-evolution");
+      AU.addPreserved<ScalarEvolution>();
       AU.addPreservedID(BreakCriticalEdgesID);  // No critical edges added.
       AU.addPreserved<DominanceFrontier>();
       AU.addPreservedID(LCSSAID);
@@ -121,6 +123,7 @@ bool LoopSimplify::runOnLoop(Loop *l, LPPassManager &LPM) {
   LI = &getAnalysis<LoopInfo>();
   AA = getAnalysisIfAvailable<AliasAnalysis>();
   DT = &getAnalysis<DominatorTree>();
+  SE = getAnalysisIfAvailable<ScalarEvolution>();
 
   Changed |= ProcessLoop(L, LPM);
 
@@ -531,6 +534,12 @@ Loop *LoopSimplify::SeparateNestedLoop(Loop *L, LPPassManager &LPM) {
     }
 
   DEBUG(dbgs() << "LoopSimplify: Splitting out a new outer loop\n");
+
+  // If ScalarEvolution is around and knows anything about values in
+  // this loop, tell it to forget them, because we're about to
+  // substantially change it.
+  if (SE)
+    SE->forgetLoop(L);
 
   BasicBlock *Header = L->getHeader();
   BasicBlock *NewBB = SplitBlockPredecessors(Header, &OuterLoopPreds[0],
