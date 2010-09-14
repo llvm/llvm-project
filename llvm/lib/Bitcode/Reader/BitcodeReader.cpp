@@ -774,7 +774,8 @@ bool BitcodeReader::ParseMetadata() {
     bool IsFunctionLocal = false;
     // Read a record.
     Record.clear();
-    switch (Stream.ReadRecord(Code, Record)) {
+    Code = Stream.ReadRecord(Code, Record);
+    switch (Code) {
     default:  // Default behavior: ignore.
       break;
     case bitc::METADATA_NAME: {
@@ -787,8 +788,12 @@ bool BitcodeReader::ParseMetadata() {
       Record.clear();
       Code = Stream.ReadCode();
 
-      // METADATA_NAME is always followed by METADATA_NAMED_NODE.
-      if (Stream.ReadRecord(Code, Record) != bitc::METADATA_NAMED_NODE)
+      // METADATA_NAME is always followed by METADATA_NAMED_NODE2.
+      // Or METADATA_NAMED_NODE in LLVM 2.7. FIXME: Remove this in LLVM 3.0.
+      unsigned NextBitCode = Stream.ReadRecord(Code, Record);
+      if (NextBitCode == bitc::METADATA_NAMED_NODE) {
+        LLVM2_7MetadataDetected = true;
+      } else if (NextBitCode != bitc::METADATA_NAMED_NODE2)
         assert ( 0 && "Inavlid Named Metadata record");
 
       // Read named metadata elements.
@@ -800,14 +805,29 @@ bool BitcodeReader::ParseMetadata() {
           return Error("Malformed metadata record");
         NMD->addOperand(MD);
       }
+      // Backwards compatibility hack: NamedMDValues used to be Values,
+      // and they got their own slots in the value numbering. They are no
+      // longer Values, however we still need to account for them in the
+      // numbering in order to be able to read old bitcode files.
+      // FIXME: Remove this in LLVM 3.0.
+      if (LLVM2_7MetadataDetected)
+        MDValueList.AssignValue(0, NextMDValueNo++);
       break;
     }
-    case bitc::METADATA_FN_NODE:
+    case bitc::METADATA_FN_NODE: // FIXME: Remove in LLVM 3.0.
+    case bitc::METADATA_FN_NODE2:
       IsFunctionLocal = true;
       // fall-through
-    case bitc::METADATA_NODE: {
+    case bitc::METADATA_NODE:    // FIXME: Remove in LLVM 3.0.
+    case bitc::METADATA_NODE2: {
+
+      // Detect 2.7-era metadata.
+      // FIXME: Remove in LLVM 3.0.
+      if (Code == bitc::METADATA_FN_NODE || Code == bitc::METADATA_NODE)
+        LLVM2_7MetadataDetected = true;
+
       if (Record.size() % 2 == 1)
-        return Error("Invalid METADATA_NODE record");
+        return Error("Invalid METADATA_NODE2 record");
 
       unsigned Size = Record.size();
       SmallVector<Value*, 8> Elts;
@@ -1594,7 +1614,10 @@ bool BitcodeReader::ParseMetadataAttachment() {
     switch (Stream.ReadRecord(Code, Record)) {
     default:  // Default behavior: ignore.
       break;
-    case bitc::METADATA_ATTACHMENT: {
+    // FIXME: Remove in LLVM 3.0.
+    case bitc::METADATA_ATTACHMENT:
+      LLVM2_7MetadataDetected = true;
+    case bitc::METADATA_ATTACHMENT2: {
       unsigned RecordLength = Record.size();
       if (Record.empty() || (RecordLength - 1) % 2 == 1)
         return Error ("Invalid METADATA_ATTACHMENT reader!");
@@ -1707,7 +1730,10 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
       I = 0;
       continue;
         
-    case bitc::FUNC_CODE_DEBUG_LOC: {      // DEBUG_LOC: [line, col, scope, ia]
+    // FIXME: Remove this in LLVM 3.0.
+    case bitc::FUNC_CODE_DEBUG_LOC:
+      LLVM2_7MetadataDetected = true;
+    case bitc::FUNC_CODE_DEBUG_LOC2: {      // DEBUG_LOC: [line, col, scope, ia]
       I = 0;     // Get the last instruction emitted.
       if (CurBB && !CurBB->empty())
         I = &CurBB->back();
@@ -2169,7 +2195,7 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
     }
     case bitc::FUNC_CODE_INST_ALLOCA: { // ALLOCA: [instty, opty, op, align]
       // For backward compatibility, tolerate a lack of an opty, and use i32.
-      // LLVM 3.0: Remove this.
+      // Remove this in LLVM 3.0.
       if (Record.size() < 3 || Record.size() > 4)
         return Error("Invalid ALLOCA record");
       unsigned OpNum = 0;
@@ -2222,7 +2248,10 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
       InstructionList.push_back(I);
       break;
     }
-    case bitc::FUNC_CODE_INST_CALL: {
+    // FIXME: Remove this in LLVM 3.0.
+    case bitc::FUNC_CODE_INST_CALL:
+      LLVM2_7MetadataDetected = true;
+    case bitc::FUNC_CODE_INST_CALL2: {
       // CALL: [paramattrs, cc, fnty, fnid, arg0, arg1...]
       if (Record.size() < 3)
         return Error("Invalid CALL record");
@@ -2341,9 +2370,21 @@ bool BitcodeReader::ParseFunctionBody(Function *F) {
     BlockAddrFwdRefs.erase(BAFRI);
   }
   
+  // FIXME: Remove this in LLVM 3.0.
+  unsigned NewMDValueListSize = MDValueList.size();
+
   // Trim the value list down to the size it was before we parsed this function.
   ValueList.shrinkTo(ModuleValueListSize);
   MDValueList.shrinkTo(ModuleMDValueListSize);
+
+  // Backwards compatibility hack: Function-local metadata numbers
+  // were previously not reset between functions. This is now fixed,
+  // however we still need to understand the old numbering in order
+  // to be able to read old bitcode files.
+  // FIXME: Remove this in LLVM 3.0.
+  if (LLVM2_7MetadataDetected)
+    MDValueList.resize(NewMDValueListSize);
+
   std::vector<BasicBlock*>().swap(FunctionBBs);
 
   return false;

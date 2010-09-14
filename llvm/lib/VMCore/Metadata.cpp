@@ -354,6 +354,22 @@ void MDNode::replaceOperand(MDNodeOperand *Op, Value *To) {
 
   // InsertPoint will have been set by the FindNodeOrInsertPos call.
   pImpl->MDNodeSet.InsertNode(this, InsertPoint);
+
+  // If this MDValue was previously function-local but no longer is, clear
+  // its function-local flag.
+  if (isFunctionLocal() && !isFunctionLocalValue(To)) {
+    bool isStillFunctionLocal = false;
+    for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
+      Value *V = getOperand(i);
+      if (!V) continue;
+      if (isFunctionLocalValue(V)) {
+        isStillFunctionLocal = true;
+        break;
+      }
+    }
+    if (!isStillFunctionLocal)
+      setValueSubclassData(getSubclassDataFromValue() & ~FunctionLocalBit);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -387,6 +403,8 @@ MDNode *NamedMDNode::getOperand(unsigned i) const {
 
 /// addOperand - Add metadata Operand.
 void NamedMDNode::addOperand(MDNode *M) {
+  assert(!M->isFunctionLocal() &&
+         "NamedMDNode operands must not be function-local!");
   getNMDOps(Operands).push_back(TrackingVH<MDNode>(M));
 }
 

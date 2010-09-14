@@ -485,8 +485,8 @@ static void WriteMDNode(const MDNode *N,
       Record.push_back(0);
     }
   }
-  unsigned MDCode = N->isFunctionLocal() ? bitc::METADATA_FN_NODE :
-                                           bitc::METADATA_NODE;
+  unsigned MDCode = N->isFunctionLocal() ? bitc::METADATA_FN_NODE2 :
+                                           bitc::METADATA_NODE2;
   Stream.EmitRecord(MDCode, Record, 0);
   Record.clear();
 }
@@ -549,7 +549,7 @@ static void WriteModuleMetadata(const Module *M,
     // Write named metadata operands.
     for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i)
       Record.push_back(VE.getValueID(NMD->getOperand(i)));
-    Stream.EmitRecord(bitc::METADATA_NAMED_NODE, Record, 0);
+    Stream.EmitRecord(bitc::METADATA_NAMED_NODE2, Record, 0);
     Record.clear();
   }
 
@@ -585,7 +585,7 @@ static void WriteMetadataAttachment(const Function &F,
   SmallVector<uint64_t, 64> Record;
 
   // Write metadata attachments
-  // METADATA_ATTACHMENT - [m x [value, [n x [id, mdnode]]]
+  // METADATA_ATTACHMENT2 - [m x [value, [n x [id, mdnode]]]
   SmallVector<std::pair<unsigned, MDNode*>, 4> MDs;
   
   for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
@@ -603,7 +603,7 @@ static void WriteMetadataAttachment(const Function &F,
         Record.push_back(MDs[i].first);
         Record.push_back(VE.getValueID(MDs[i].second));
       }
-      Stream.EmitRecord(bitc::METADATA_ATTACHMENT, Record, 0);
+      Stream.EmitRecord(bitc::METADATA_ATTACHMENT2, Record, 0);
       Record.clear();
     }
 
@@ -1111,7 +1111,7 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
     const PointerType *PTy = cast<PointerType>(CI.getCalledValue()->getType());
     const FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
 
-    Code = bitc::FUNC_CODE_INST_CALL;
+    Code = bitc::FUNC_CODE_INST_CALL2;
 
     Vals.push_back(VE.getAttributeID(CI.getAttributes()));
     Vals.push_back((CI.getCallingConv() << 1) | unsigned(CI.isTailCall()));
@@ -1255,7 +1255,7 @@ static void WriteFunction(const Function &F, ValueEnumerator &VE,
         Vals.push_back(DL.getCol());
         Vals.push_back(Scope ? VE.getValueID(Scope)+1 : 0);
         Vals.push_back(IA ? VE.getValueID(IA)+1 : 0);
-        Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
+        Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC2, Vals);
         Vals.clear();
         
         LastDL = DL;
