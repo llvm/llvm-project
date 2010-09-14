@@ -164,3 +164,12 @@ imul $12, %eax
 
 // CHECK: imull %ecx, %eax
 imull %ecx, %eax
+
+// PR8114
+// CHECK: outb	%al, %dx
+// CHECK: outw	%ax, %dx
+// CHECK: outl	%eax, %dx
+
+out %al, (%dx)
+out %ax, (%dx)
+outl %eax, (%dx)

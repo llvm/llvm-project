@@ -815,6 +815,20 @@ ParseInstruction(StringRef Name, SMLoc NameLoc,
     Operands.erase(Operands.begin() + 1);
   }
 
+  // FIXME: Hack to handle "out[bwl]? %al, (%dx)" -> "outb %al, %dx".
+  if ((Name == "outb" || Name == "outw" || Name == "outl" || Name == "out") &&
+      Operands.size() == 3) {
+    X86Operand &Op = *(X86Operand*)Operands.back();
+    if (Op.isMem() && Op.Mem.SegReg == 0 &&
+        isa<MCConstantExpr>(Op.Mem.Disp) &&
+        cast<MCConstantExpr>(Op.Mem.Disp)->getValue() == 0 &&
+        Op.Mem.BaseReg == MatchRegisterName("dx") && Op.Mem.IndexReg == 0) {
+      SMLoc Loc = Op.getEndLoc();
+      Operands.back() = X86Operand::CreateReg(Op.Mem.BaseReg, Loc, Loc);
+      delete &Op;
+    }
+  }
+  
   // FIXME: Hack to handle "f{mul*,add*,sub*,div*} $op, st(0)" the same as
   // "f{mul*,add*,sub*,div*} $op"
   if ((Name.startswith("fmul") || Name.startswith("fadd") ||
