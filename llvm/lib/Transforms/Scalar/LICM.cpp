@@ -852,6 +852,17 @@ void LICM::PromoteAliasSet(AliasSet &AS) {
     ReplacedLoads[ALoad] = NewVal;
   }
   
+  // If the preheader load is itself a pointer, we need to tell alias analysis
+  // about the new pointer we created in the preheader block and about any PHI
+  // nodes that just got inserted.
+  if (PreheaderLoad->getType()->isPointerTy()) {
+    // Copy any value stored to or loaded from a must-alias of the pointer.
+    CurAST->copyValue(SomeValue, PreheaderLoad);
+    
+    for (unsigned i = 0, e = NewPHIs.size(); i != e; ++i)
+      CurAST->copyValue(SomeValue, NewPHIs[i]);
+  }
+  
   // Now that everything is rewritten, delete the old instructions from the body
   // of the loop.  They should all be dead now.
   for (unsigned i = 0, e = LoopUses.size(); i != e; ++i) {
@@ -880,17 +891,6 @@ void LICM::PromoteAliasSet(AliasSet &AS) {
     
     CurAST->deleteValue(User);
     User->eraseFromParent();
-  }
-  
-  // If the preheader load is itself a pointer, we need to tell alias analysis
-  // about the new pointer we created in the preheader block and about any PHI
-  // nodes that just got inserted.
-  if (PreheaderLoad->getType()->isPointerTy()) {
-    // Copy any value stored to or loaded from a must-alias of the pointer.
-    CurAST->copyValue(SomeValue, PreheaderLoad);
-
-    for (unsigned i = 0, e = NewPHIs.size(); i != e; ++i)
-      CurAST->copyValue(SomeValue, NewPHIs[i]);
   }
   
   // fwew, we're done!

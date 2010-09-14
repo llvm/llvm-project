@@ -39,3 +39,23 @@ for.body:                                         ; preds = %for.body, %entry
   store i32 undef, i32* @g_8, align 4
   br label %for.body
 }
+
+; PR8102
+define void @test3() {
+entry:
+  %__first = alloca { i32* }
+  br i1 undef, label %for.cond, label %for.end
+
+for.cond:                                         ; preds = %for.cond, %entry
+  %tmp1 = getelementptr { i32*}* %__first, i32 0, i32 0
+  %tmp2 = load i32** %tmp1, align 4
+  %call = tail call i32* @test3helper(i32* %tmp2)
+  %tmp3 = getelementptr { i32*}* %__first, i32 0, i32 0
+  store i32* %call, i32** %tmp3, align 4
+  br i1 false, label %for.cond, label %for.end
+
+for.end:                                          ; preds = %for.cond, %entry
+  ret void
+}
+
+declare i32* @test3helper(i32*)
