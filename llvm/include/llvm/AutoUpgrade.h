@@ -16,6 +16,7 @@
 
 namespace llvm {
   class Module;
+  class GlobalVariable;
   class Function;
   class CallInst;
 
@@ -34,6 +35,10 @@ namespace llvm {
   /// to the new function. This should only be run in a post-processing fashion 
   /// so that it can update all calls to the old function.
   void UpgradeCallsToIntrinsic(Function* F);
+
+  /// This checks for global variables which should be upgraded. It returns true
+  /// if it requires upgrading.
+  bool UpgradeGlobalVariable(GlobalVariable *GV);
 
   /// This function checks debug info intrinsics. If an intrinsic is invalid
   /// then this function simply removes the intrinsic. 
