@@ -272,7 +272,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
            MII = I->begin(), ME = I->end(); MII != ME; ) {
       MachineInstr *MI = &*MII;
 
-      if (MI->getDesc().isCompare()) {
+      if (MI->getDesc().isCompare() &&
+          !MI->getDesc().hasUnmodeledSideEffects()) {
         ++MII; // The iterator may become invalid if the compare is deleted.
         Changed |= OptimizeCmpInstr(MI, MBB);
       } else {
