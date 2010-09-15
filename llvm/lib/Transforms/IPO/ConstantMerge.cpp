@@ -19,10 +19,12 @@
 
 #define DEBUG_TYPE "constmerge"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 using namespace llvm;
 
@@ -46,7 +48,27 @@ INITIALIZE_PASS(ConstantMerge, "constmerge",
 
 ModulePass *llvm::createConstantMergePass() { return new ConstantMerge(); }
 
+
+
+/// Find values that are marked as llvm.used.
+static void FindUsedValues(GlobalVariable *LLVMUsed,
+                           SmallPtrSet<const GlobalValue*, 8> &UsedValues) {
+  if (LLVMUsed == 0) return;
+  ConstantArray *Inits = dyn_cast<ConstantArray>(LLVMUsed->getInitializer());
+  if (Inits == 0) return;
+  
+  for (unsigned i = 0, e = Inits->getNumOperands(); i != e; ++i)
+    if (GlobalValue *GV = 
+        dyn_cast<GlobalValue>(Inits->getOperand(i)->stripPointerCasts()))
+      UsedValues.insert(GV);
+}
+
 bool ConstantMerge::runOnModule(Module &M) {
+  // Find all the globals that are marked "used".  These cannot be merged.
+  SmallPtrSet<const GlobalValue*, 8> UsedGlobals;
+  FindUsedValues(M.getGlobalVariable("llvm.used"), UsedGlobals);
+  FindUsedValues(M.getGlobalVariable("llvm.compiler.used"), UsedGlobals);
+  
   // Map unique constant/section pairs to globals.  We don't want to merge
   // globals in different sections.
   DenseMap<Constant*, GlobalVariable*> CMap;
@@ -79,8 +101,12 @@ bool ConstantMerge::runOnModule(Module &M) {
       
       // Only process constants with initializers in the default addres space.
       if (!GV->isConstant() ||!GV->hasDefinitiveInitializer() ||
-          GV->getType()->getAddressSpace() != 0 || !GV->getSection().empty())
+          GV->getType()->getAddressSpace() != 0 || !GV->getSection().empty() ||
+          // Don't touch values marked with attribute(used).
+          UsedGlobals.count(GV))
         continue;
+      
+      
       
       Constant *Init = GV->getInitializer();
 

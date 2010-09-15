@@ -28,3 +28,17 @@ define void @test2(i32** %P1, i32 addrspace(30)** %P2) {
         store i32 addrspace(30)*  @T2b, i32 addrspace(30)** %P2
         ret void
 }
+
+; PR8144 - Don't merge globals marked attribute(used)
+; CHECK: @T3A = 
+; CHECK: @T3B = 
+
+@T3A = internal constant i32 0
+@T3B = internal constant i32 0
+@llvm.used = appending global [2 x i32*] [i32* @T3A, i32* @T3B], section
+"llvm.metadata"
+
+define void @test3() {
+  call void asm sideeffect "T3A, T3B",""() ; invisible use of T3A and T3B
+  ret void
+}
