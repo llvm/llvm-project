@@ -1394,7 +1394,7 @@ Optional Features:
   --enable-optimized      Compile with optimizations enabled (default is NO)
   --enable-profiling      Compile with profiling enabled (default is NO)
   --enable-assertions     Compile with assertion checks enabled (default is
-                          YES)
+                          NO)
   --enable-expensive-checks
                           Compile with expensive debug checks enabled (default
                           is NO)
