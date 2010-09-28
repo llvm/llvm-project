@@ -323,6 +323,11 @@ expose new optimization opportunities:</p>
   have to dereference the iterators yourself and pass them in.
 </li>
 <li>
+The <tt>Pass(intptr_t)</tt> and <tt>Pass(const void*)</tt> got replaced with a
+<tt>Pass(char&amp;)</tt> constructor. This means you have to use ifdefs if you
+want your pass to work with both LLVM 2.7 and 2.8
+</li>
+<li>
   llvm.memcpy.*, llvm.memset.*, llvm.memmove.* (and possibly other?) intrinsics
   take an extra parameter now (i1 isVolatile), totaling 5 parameters.
   If you were creating these intrinsic calls and prototypes yourself (as opposed
@@ -359,7 +364,7 @@ expose new optimization opportunities:</p>
       <li>llvm_install_error_handler -&gt; install_fatal_error_handler</li>
       <li>llvm::DwarfExceptionHandling -&gt; llvm::JITExceptionHandling</li>
   </ul>
-</li>
+  </li>
 </ul>
 
 </div>
