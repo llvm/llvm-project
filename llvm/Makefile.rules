@@ -941,6 +941,11 @@ ifdef EXPORTED_SYMBOL_FILE
 # First, set up the native export file, which may differ from the source
 # export file.
 
+# The option --version-script is not effective on GNU ld win32.
+ifneq (,$(filter $(HOST_OS),Cygwin MingW))
+  HAVE_LINK_VERSION_SCRIPT := 0
+endif
+
 ifeq ($(HOST_OS),Darwin)
 # Darwin convention prefixes symbols with underscores.
 NativeExportsFile := $(ObjDir)/$(notdir $(EXPORTED_SYMBOL_FILE)).sed
