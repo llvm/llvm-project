@@ -5414,11 +5414,11 @@ X86TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const {
     return getMOVL(DAG, dl, VT, V2, V1);
   }
 
-  if (X86::isUNPCKLMask(SVOp))
+  if (X86::isUNPCKL_v_undef_Mask(SVOp) || X86::isUNPCKLMask(SVOp))
     return (isMMX) ?
       Op : getTargetShuffleNode(getUNPCKLOpcode(VT), dl, VT, V1, V2, DAG);
 
-  if (X86::isUNPCKHMask(SVOp))
+  if (X86::isUNPCKH_v_undef_Mask(SVOp) || X86::isUNPCKHMask(SVOp))
     return (isMMX) ?
       Op : getTargetShuffleNode(getUNPCKHOpcode(VT), dl, VT, V1, V2, DAG);
 
@@ -5443,11 +5443,11 @@ X86TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const {
     SDValue NewOp = CommuteVectorShuffle(SVOp, DAG);
     ShuffleVectorSDNode *NewSVOp = cast<ShuffleVectorSDNode>(NewOp);
 
-    if (X86::isUNPCKLMask(NewSVOp))
+    if (X86::isUNPCKL_v_undef_Mask(NewSVOp) || X86::isUNPCKLMask(NewSVOp))
       return (isMMX) ?
         NewOp : getTargetShuffleNode(getUNPCKLOpcode(VT), dl, VT, V2, V1, DAG);
 
-    if (X86::isUNPCKHMask(NewSVOp))
+    if (X86::isUNPCKH_v_undef_Mask(NewSVOp) || X86::isUNPCKHMask(NewSVOp))
       return (isMMX) ?
         NewOp : getTargetShuffleNode(getUNPCKHOpcode(VT), dl, VT, V2, V1, DAG);
   }
@@ -5493,13 +5493,6 @@ X86TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const {
       return getTargetShuffleNode(X86ISD::SHUFPD, dl, VT, V1, V2,
                                   TargetMask, DAG);
   }
-
-  if (X86::isUNPCKL_v_undef_Mask(SVOp))
-    if (VT != MVT::v2i64 && VT != MVT::v2f64)
-      return getTargetShuffleNode(getUNPCKLOpcode(VT), dl, VT, V1, V1, DAG);
-  if (X86::isUNPCKH_v_undef_Mask(SVOp))
-    if (VT != MVT::v2i64 && VT != MVT::v2f64)
-      return getTargetShuffleNode(getUNPCKHOpcode(VT), dl, VT, V1, V1, DAG);
 
   // Handle v8i16 specifically since SSE can do byte extraction and insertion.
   if (VT == MVT::v8i16) {
