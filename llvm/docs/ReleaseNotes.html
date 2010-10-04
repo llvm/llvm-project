@@ -1012,7 +1012,7 @@ API changes are:</p>
 </li>
   
 <li>
-  Some APIs got renamed:
+  Some APIs were renamed:
   <ul>
   <li>llvm_report_error -&gt; report_fatal_error</li>
   <li>llvm_install_error_handler -&gt; install_fatal_error_handler</li>
@@ -1021,10 +1021,56 @@ API changes are:</p>
   </ul>
 </li>
 
+<li>
+  Some public headers were renamed:
+  <ul>
+    <li><tt>llvm/Assembly/AsmAnnotationWriter.h</tt> was renamed
+    to <tt>llvm/Assembly/AssemblyAnnotationWriter.h</tt>
+    </li>
+  </ul>
 </ul>
 
 </div>
 
+<!--=========================================================================-->
+<div class="doc_subsection">
+<a name="devtree_changes">Development Infrastructure Changes</a>
+</div>
+
+<div class="doc_text">
+
+<p>This section lists changes to the LLVM development infrastructure. This
+mostly impacts users who actively work on LLVM or follow development on
+mainline, but may also impact users who leverage the LLVM build infrastructure
+or are interested in LLVM qualification.</p>
+
+<ul>
+  <li>The default for <tt>make check</tt> is now to use
+  the <a href="http://llvm.org/cmds/lit.html">lit</a> testing tool, which is
+  part of LLVM itself. You can use <tt>lit</tt> directly as well, or use
+  the <tt>llvm-lit</tt> tool which is created as part of a Makefile or CMake
+  build (and knows how to find the appropriate tools). See the <tt>lit</tt>
+  documentation and the <a href="http://blog.llvm.org/2009/12/lit-it.html">blog
+  post</a>, and <a href="http://llvm.org/bugs/show_bug.cgi?id=5217">PR5217</a>
+  for more information.</li>
+
+  <li>The LLVM <tt>test-suite</tt> infrastructure has a new "simple" test format
+  (<tt>make TEST=simple</tt>). The new format is intended to require only a
+  compiler and not a full set of LLVM tools. This makes it useful for testing
+  released compilers, for running the test suite with other compilers (for
+  performance comparisons), and makes sure that we are testing the compiler as
+  users would see it. The new format is also designed to work using reference
+  outputs instead of comparison to a baseline compiler, which makes it run much
+  faster and makes it less system dependent.</li>
+
+  <li>Significant progress has been made on a new interface to running the
+  LLVM <tt>test-suite</tt> (aka the LLVM "nightly tests") using
+  the <a href="http://llvm.org/docs/lnt">LNT</a> infrastructure. The LNT
+  interface to the <tt>test-suite</tt> brings significantly improved reporting
+  capabilities for monitoring the correctness and generated code quality
+  produced by LLVM over time.</li>
+</ul>
+</div>
 
 <!-- *********************************************************************** -->
 <div class="doc_section">
