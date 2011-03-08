@@ -13,7 +13,6 @@
 #===------------------------------------------------------------------------===#
 
 set -e                          # Exit if any command fails
-set -x                          # Show commands as they are executed
 
 Release=""
 Release_no_dot=""
