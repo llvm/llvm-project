@@ -39,6 +39,9 @@ struct CompEnd {
   bool operator()(const LiveRange &A, SlotIndex B) const {
     return A.end < B;
   }
+  bool operator()(const LiveRange &A, const LiveRange &B) const {
+    return A.end < B.end;
+  }
 };
 }
 
