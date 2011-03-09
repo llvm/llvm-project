@@ -61,6 +61,19 @@ function(explicit_map_components_to_libraries out_libs)
   set( link_components ${ARGN} )
   get_property(llvm_libs GLOBAL PROPERTY LLVM_LIBS)
   string(TOUPPER "${llvm_libs}" capitalized_libs)
+
+  # Expand some keywords:
+  list(FIND link_components "engine" engine_required)
+  if( engine_required )
+    # TODO: as we assume we are on X86, this is `jit'.
+    list(APPEND link_components "jit")
+    list(APPEND link_components "native")
+  endif()
+  list(FIND link_components "native" native_required)
+  if( native_required )
+    list(APPEND link_components "X86")
+  endif()
+
   # Translate symbolic component names to real libraries:
   foreach(c ${link_components})
     # add codegen, asmprinter, asmparser, disassembler
@@ -94,14 +107,13 @@ function(explicit_map_components_to_libraries out_libs)
         list(APPEND expanded_components "LLVM${c}Disassembler")
       endif()
     elseif( c STREQUAL "native" )
-      list(APPEND expanded_components "LLVM${LLVM_NATIVE_ARCH}CodeGen")
+      # already processed
     elseif( c STREQUAL "nativecodegen" )
       list(APPEND expanded_components "LLVM${LLVM_NATIVE_ARCH}CodeGen")
     elseif( c STREQUAL "backend" )
       # same case as in `native'.
     elseif( c STREQUAL "engine" )
-      # TODO: as we assume we are on X86, this is `jit'.
-      list(APPEND expanded_components "LLVMJIT")
+      # already processed
     elseif( c STREQUAL "all" )
       list(APPEND expanded_components ${llvm_libs})
     else( NOT idx LESS 0 )
