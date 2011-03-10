@@ -1,9 +1,19 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -mcpu=yonah  | not grep pcmpeqd
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | grep pcmpeqd | count 1
+; RUN: llc < %s -mtriple=i386-apple-darwin -mcpu=yonah | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 
-; This testcase should need to spill the -1 value on x86-32,
+; This testcase should need to spill the -1 value on both x86-32 and x86-64,
 ; so it shouldn't use pcmpeqd to materialize an all-ones vector; it
 ; should use a constant-pool load instead.
+
+; Constant pool all-ones vector:
+; CHECK: .long 4294967295
+; CHECK-NEXT: .long 4294967295
+; CHECK-NEXT: .long 4294967295
+; CHECK-NEXT: .long 4294967295
+
+; No pcmpeqd instructions, everybody uses the constant pool.
+; CHECK: program_1:
+; CHECK-NOT: pcmpeqd
 
 	%struct.__ImageExecInfo = type <{ <4 x i32>, <4 x float>, <2 x i64>, i8*, i8*, i8*, i32, i32, i32, i32, i32 }>
 	%struct._cl_image_format_t = type <{ i32, i32, i32 }>
@@ -57,6 +67,7 @@ forbody:		; preds = %forcond
 	%bitcast11.i6 = bitcast <4 x float> %tmp83 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%not.i7 = xor <4 x i32> zeroinitializer, < i32 -1, i32 -1, i32 -1, i32 -1 >		; <<4 x i32>> [#uses=1]
 	%andnps.i8 = and <4 x i32> %bitcast11.i6, %not.i7		; <<4 x i32>> [#uses=1]
+	call void null(<4 x float> %mul313, <4 x float> %cmpunord.i11, <4 x float> %tmp83, <4 x float> zeroinitializer, %struct.__ImageExecInfo* null, <4 x i32> zeroinitializer) nounwind
 	%orps.i9 = or <4 x i32> %andnps.i8, %andps.i5		; <<4 x i32>> [#uses=1]
 	%bitcast17.i10 = bitcast <4 x i32> %orps.i9 to <4 x float>		; <<4 x float>> [#uses=1]
 	%tmp84 = call <4 x float> @llvm.x86.sse.min.ps(<4 x float> %mul313, <4 x float> zeroinitializer) nounwind		; <<4 x float>> [#uses=1]

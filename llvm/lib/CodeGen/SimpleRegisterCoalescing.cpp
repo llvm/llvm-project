@@ -1038,9 +1038,7 @@ bool SimpleRegisterCoalescing::JoinCopy(CopyRec &TheCopy, bool &Again) {
     const TargetRegisterClass *RC = mri_->getRegClass(CP.getSrcReg());
     unsigned Threshold = allocatableRCRegs_[RC].count() * 2;
     unsigned Length = li_->getApproximateInstructionCount(JoinVInt);
-    if (Length > Threshold &&
-        std::distance(mri_->use_nodbg_begin(CP.getSrcReg()),
-                      mri_->use_nodbg_end()) * Threshold < Length) {
+    if (Length > Threshold) {
       // Before giving up coalescing, if definition of source is defined by
       // trivial computation, try rematerializing it.
       if (!CP.isFlipped() &&
