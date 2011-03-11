@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: llc < %s -mcpu=i486 | grep fstpl | count 5
 ; RUN: llc < %s -mcpu=i486 | grep fstps | count 2
 ; PR1505

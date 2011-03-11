@@ -221,7 +221,13 @@ X86TargetLowering::X86TargetLowering(X86TargetMachine &TM)
 
   // X86 is weird, it always uses i8 for shift amounts and setcc results.
   setBooleanContents(ZeroOrOneBooleanContent);
-  setSchedulingPreference(Sched::ILP);
+    
+  // For 64-bit since we have so many registers use the ILP scheduler, for
+  // 32-bit code use the register pressure specific scheduling.
+  if (Subtarget->is64Bit())
+    setSchedulingPreference(Sched::ILP);
+  else
+    setSchedulingPreference(Sched::RegPressure);
   setStackPointerRegisterToSaveRestore(X86StackPtr);
 
   if (Subtarget->isTargetWindows() && !Subtarget->isTargetCygMing()) {

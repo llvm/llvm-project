@@ -1,6 +1,6 @@
 ; Check that eh_return & unwind_init were properly lowered
 ; RUN: llc < %s | grep %ebp | count 7
-; RUN: llc < %s | grep %edx | count 5
+; RUN: llc < %s | grep %ecx | count 5
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
 target triple = "i386-pc-linux"
