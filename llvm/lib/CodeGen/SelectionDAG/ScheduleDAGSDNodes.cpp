@@ -446,6 +446,10 @@ void ScheduleDAGSDNodes::BuildSchedGraph(AliasAnalysis *AA) {
 
 // Initialize NumNodeDefs for the current Node's opcode.
 void ScheduleDAGSDNodes::RegDefIter::InitNodeNumDefs() {
+  // Check for phys reg copy.
+  if (!Node)
+    return;
+
   if (!Node->isMachineOpcode()) {
     if (Node->getOpcode() == ISD::CopyFromReg)
       NodeNumDefs = 1;

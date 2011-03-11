@@ -1785,7 +1785,7 @@ int RegReductionPQBase::RegPressureDiff(SUnit *SU, unsigned &LiveUses) const {
   }
   const SDNode *N = SU->getNode();
 
-  if (!N->isMachineOpcode() || !SU->NumSuccs)
+  if (!N || !N->isMachineOpcode() || !SU->NumSuccs)
     return PDiff;
 
   unsigned NumDefs = TII->get(N->getMachineOpcode()).getNumDefs();
@@ -1804,6 +1804,9 @@ void RegReductionPQBase::ScheduledNode(SUnit *SU) {
   if (!TracksRegPressure)
     return;
 
+  if (!SU->getNode())
+    return;
+  
   for (SUnit::pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
        I != E; ++I) {
     if (I->isCtrl())
@@ -1870,6 +1873,8 @@ void RegReductionPQBase::UnscheduledNode(SUnit *SU) {
     return;
 
   const SDNode *N = SU->getNode();
+  if (!N) return;
+  
   if (!N->isMachineOpcode()) {
     if (N->getOpcode() != ISD::CopyToReg)
       return;
