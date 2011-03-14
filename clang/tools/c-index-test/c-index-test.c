@@ -990,7 +990,7 @@ void print_completion_result(CXCompletionResult *completion_result,
 
 int my_stricmp(const char *s1, const char *s2) {
   while (*s1 && *s2) {
-    int c1 = tolower(*s1), c2 = tolower(*s2);
+    int c1 = tolower((unsigned char)*s1), c2 = tolower((unsigned char)*s2);
     if (c1 < c2)
       return -1;
     else if (c1 > c2)
