@@ -503,9 +503,8 @@ static Value *foldSelectICmpAnd(const SelectInst &SI, ConstantInt *TrueVal,
   if (!IC || !IC->isEquality())
     return 0;
 
-  if (ConstantInt *C = dyn_cast<ConstantInt>(IC->getOperand(1)))
-    if (!C->isZero())
-      return 0;
+  if (!match(IC->getOperand(1), m_Zero()))
+    return 0;
 
   ConstantInt *AndRHS;
   Value *LHS = IC->getOperand(0);

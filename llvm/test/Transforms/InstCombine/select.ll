@@ -714,3 +714,13 @@ define i32 @test52(i32 %n, i32 %m) nounwind {
   ret i32 %storemerge
 }
 
+; PR9454
+define i32 @test53(i32 %x) nounwind {
+  %and = and i32 %x, 2
+  %cmp = icmp eq i32 %and, %x
+  %sel = select i1 %cmp, i32 2, i32 1
+  ret i32 %sel
+; CHECK: @test53
+; CHECK: select i1 %cmp
+; CHECK: ret
+}
