@@ -2201,8 +2201,9 @@ CFGBlock* CFGBuilder::VisitSwitchStmt(SwitchStmt* Terminator) {
   // Determine if the switch condition can be explicitly evaluated.
   assert(Terminator->getCond() && "switch condition must be non-NULL");
   Expr::EvalResult result;
-  tryEvaluate(Terminator->getCond(), result);
-  SaveAndRestore<Expr::EvalResult*> save_switchCond(switchCond, &result);
+  bool b = tryEvaluate(Terminator->getCond(), result);
+  SaveAndRestore<Expr::EvalResult*> save_switchCond(switchCond,
+                                                    b ? &result : 0);
 
   // If body is not a compound statement create implicit scope
   // and add destructors.
@@ -2239,18 +2240,21 @@ CFGBlock* CFGBuilder::VisitSwitchStmt(SwitchStmt* Terminator) {
 }
   
 static bool shouldAddCase(bool &switchExclusivelyCovered,
-                          const Expr::EvalResult &switchCond,
+                          const Expr::EvalResult *switchCond,
                           const CaseStmt *CS,
                           ASTContext &Ctx) {
+  if (!switchCond)
+    return true;
+
   bool addCase = false;
 
   if (!switchExclusivelyCovered) {
-    if (switchCond.Val.isInt()) {
+    if (switchCond->Val.isInt()) {
       // Evaluate the LHS of the case value.
       Expr::EvalResult V1;
       CS->getLHS()->Evaluate(V1, Ctx);
       assert(V1.Val.isInt());
-      const llvm::APSInt &condInt = switchCond.Val.getInt();
+      const llvm::APSInt &condInt = switchCond->Val.getInt();
       const llvm::APSInt &lhsInt = V1.Val.getInt();
       
       if (condInt == lhsInt) {
@@ -2280,7 +2284,6 @@ CFGBlock* CFGBuilder::VisitCaseStmt(CaseStmt* CS) {
   // CaseStmts are essentially labels, so they are the first statement in a
   // block.
   CFGBlock *TopBlock = 0, *LastBlock = 0;
-  assert(switchCond);
 
   if (Stmt *Sub = CS->getSubStmt()) {
     // For deeply nested chains of CaseStmts, instead of doing a recursion
@@ -2296,7 +2299,7 @@ CFGBlock* CFGBuilder::VisitCaseStmt(CaseStmt* CS) {
         TopBlock = currentBlock;
 
       addSuccessor(SwitchTerminatedBlock,
-                   shouldAddCase(switchExclusivelyCovered, *switchCond,
+                   shouldAddCase(switchExclusivelyCovered, switchCond,
                                  CS, *Context)
                    ? currentBlock : 0);
 
@@ -2323,7 +2326,7 @@ CFGBlock* CFGBuilder::VisitCaseStmt(CaseStmt* CS) {
   // statement.
   assert(SwitchTerminatedBlock);
   addSuccessor(SwitchTerminatedBlock,
-               shouldAddCase(switchExclusivelyCovered, *switchCond,
+               shouldAddCase(switchExclusivelyCovered, switchCond,
                              CS, *Context)
                ? CaseBlock : 0);
 

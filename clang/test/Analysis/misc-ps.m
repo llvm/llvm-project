@@ -1288,3 +1288,16 @@ void test_switch() {
     }
   }
 }
+
+// PR 9467.  Tests various CFG optimizations.  This previously crashed.
+static void test(unsigned int bit_mask)
+{
+  unsigned int bit_index;
+  for (bit_index = 0;
+       bit_index < 24;
+       bit_index++) {
+    switch ((0x01 << bit_index) & bit_mask) {
+    case 0x100000: ;
+    }
+  }
+}
