@@ -162,6 +162,8 @@ def err_using_decl_nested_name_specifier_is_current_class : Error<
   "using declaration refers to its own class">;
 def err_using_decl_nested_name_specifier_is_not_base_class : Error<
   "using declaration refers into '%0', which is not a base class of %1">;
+def err_using_decl_inherited_constructor_unsupported : Error<
+  "inherited constructors are not supported">;
 def err_using_decl_constructor_not_in_direct_base : Error<
   "%0 is not a direct base of %1, can not inherit constructors">;
 def err_using_decl_constructor_conflict : Error<

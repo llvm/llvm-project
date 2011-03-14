@@ -2850,7 +2850,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   //   waste space and performance on classes that are not meant to be
   //   instantiated (e.g. meta-functions). This doesn't apply to classes that
   //   have inherited constructors.
-  DeclareInheritedConstructors(Record);
+  // Disabled for 2.9
+  //DeclareInheritedConstructors(Record);
 }
 
 /// \brief Data used with FindHiddenVirtualMethod
@@ -4226,8 +4227,11 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
 
   // Constructor inheriting using decls get special treatment.
   if (NameInfo.getName().getNameKind() == DeclarationName::CXXConstructorName) {
-    if (CheckInheritedConstructorUsingDecl(UD))
-      UD->setInvalidDecl();
+    // Disabled for 2.9
+    Diag(UD->getLocation(),
+         diag::err_using_decl_inherited_constructor_unsupported);
+    //if (CheckInheritedConstructorUsingDecl(UD))
+    UD->setInvalidDecl();
     return UD;
   }
 
