@@ -1173,8 +1173,8 @@ FunctionProtoType::FunctionProtoType(QualType result, const QualType *args,
                  result->containsUnexpandedParameterPack(),
                  epi.ExtInfo),
     NumArgs(numArgs), NumExceptions(epi.NumExceptions),
-    HasExceptionSpec(isDynamicExceptionSpec(epi.ExceptionSpecType)),
-    HasAnyExceptionSpec(epi.ExceptionSpecType == EST_DynamicAny)
+    HasExceptionSpec(epi.HasExceptionSpec),
+    HasAnyExceptionSpec(epi.HasAnyExceptionSpec)
 {
   // Fill in the trailing argument array.
   QualType *argSlot = reinterpret_cast<QualType*>(this+1);
@@ -1218,8 +1218,8 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   ID.AddBoolean(epi.Variadic);
   ID.AddInteger(epi.TypeQuals);
   ID.AddInteger(epi.RefQualifier);
-  if (isDynamicExceptionSpec(epi.ExceptionSpecType)) {
-    ID.AddBoolean(epi.ExceptionSpecType == EST_DynamicAny);
+  if (epi.HasExceptionSpec) {
+    ID.AddBoolean(epi.HasAnyExceptionSpec);
     for (unsigned i = 0; i != epi.NumExceptions; ++i)
       ID.AddPointer(epi.Exceptions[i].getAsOpaquePtr());
   }

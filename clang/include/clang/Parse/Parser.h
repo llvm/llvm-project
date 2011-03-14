@@ -1114,18 +1114,11 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ 15: C++ Throw Expression
   ExprResult ParseThrowExpression();
-
-  ExceptionSpecificationType MaybeParseExceptionSpecification(
-                    SourceRange &SpecificationRange,
-                    llvm::SmallVectorImpl<ParsedType> &DynamicExceptions,
-                    llvm::SmallVectorImpl<SourceRange> &DynamicExceptionRanges,
-                    ExprResult &NoexceptExpr);
-
   // EndLoc is filled with the location of the last token of the specification.
-  ExceptionSpecificationType ParseDynamicExceptionSpecification(
-                                  SourceRange &SpecificationRange,
-                                  llvm::SmallVectorImpl<ParsedType> &Exceptions,
-                                  llvm::SmallVectorImpl<SourceRange> &Ranges);
+  bool ParseExceptionSpecification(SourceLocation &EndLoc,
+                                   llvm::SmallVectorImpl<ParsedType> &Exns,
+                                   llvm::SmallVectorImpl<SourceRange> &Ranges,
+                                   bool &hasAnyExceptionSpec);
 
   //===--------------------------------------------------------------------===//
   // C++0x 8: Function declaration trailing-return-type

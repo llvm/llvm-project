@@ -2159,9 +2159,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
     // Rebuild the function type 
 
     FunctionProtoType::ExtProtoInfo EPI = Proto->getExtProtoInfo();
-    EPI.ExceptionSpecType = Proto->hasExceptionSpec() ?
-      (Proto->hasAnyExceptionSpec() ? EST_DynamicAny : EST_Dynamic) :
-      EST_None;
+    EPI.HasExceptionSpec = Proto->hasExceptionSpec();
+    EPI.HasAnyExceptionSpec = Proto->hasAnyExceptionSpec();
     EPI.NumExceptions = Exceptions.size();
     EPI.Exceptions = Exceptions.data();
     EPI.ExtInfo = Proto->getExtInfo();

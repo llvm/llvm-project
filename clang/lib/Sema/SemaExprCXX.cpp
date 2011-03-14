@@ -1501,7 +1501,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
   }
 
   FunctionProtoType::ExtProtoInfo EPI;
-  EPI.ExceptionSpecType = EST_Dynamic;
+  EPI.HasExceptionSpec = true;
   if (HasBadAllocExceptionSpec) {
     EPI.NumExceptions = 1;
     EPI.Exceptions = &BadAllocType;

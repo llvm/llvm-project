@@ -15,7 +15,6 @@
 #define LLVM_CLANG_AST_TYPE_H
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -2404,17 +2403,17 @@ public:
   /// ExtProtoInfo - Extra information about a function prototype.
   struct ExtProtoInfo {
     ExtProtoInfo() :
-      Variadic(false), ExceptionSpecType(EST_None), TypeQuals(0),
-      RefQualifier(RQ_None), NumExceptions(0), Exceptions(0), NoexceptExpr(0) {}
+      Variadic(false), HasExceptionSpec(false), HasAnyExceptionSpec(false),
+      TypeQuals(0), RefQualifier(RQ_None), NumExceptions(0), Exceptions(0) {}
 
     FunctionType::ExtInfo ExtInfo;
     bool Variadic;
-    ExceptionSpecificationType ExceptionSpecType;
+    bool HasExceptionSpec;
+    bool HasAnyExceptionSpec;
     unsigned char TypeQuals;
     RefQualifierKind RefQualifier;
     unsigned NumExceptions;
     const QualType *Exceptions;
-    Expr *NoexceptExpr;
   };
 
 private:
@@ -2463,8 +2462,8 @@ public:
     ExtProtoInfo EPI;
     EPI.ExtInfo = getExtInfo();
     EPI.Variadic = isVariadic();
-    EPI.ExceptionSpecType = hasExceptionSpec() ?
-        (hasAnyExceptionSpec() ? EST_DynamicAny : EST_Dynamic) : EST_None;
+    EPI.HasExceptionSpec = hasExceptionSpec();
+    EPI.HasAnyExceptionSpec = hasAnyExceptionSpec();
     EPI.TypeQuals = static_cast<unsigned char>(getTypeQuals());
     EPI.RefQualifier = getRefQualifier();
     EPI.NumExceptions = NumExceptions;

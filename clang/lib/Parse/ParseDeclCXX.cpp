@@ -2001,76 +2001,10 @@ Parser::MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
                                      EllipsisLoc);
 }
 
-/// \brief Parse a C++ exception-specification if present (C++0x [except.spec]).
+/// ParseExceptionSpecification - Parse a C++ exception-specification
+/// (C++ [except.spec]).
 ///
 ///       exception-specification:
-///         dynamic-exception-specification
-///         noexcept-specification
-///
-///       noexcept-specification:
-///         'noexcept'
-///         'noexcept' '(' constant-expression ')'
-ExceptionSpecificationType
-Parser::MaybeParseExceptionSpecification(SourceRange &SpecificationRange,
-                    llvm::SmallVectorImpl<ParsedType> &DynamicExceptions,
-                    llvm::SmallVectorImpl<SourceRange> &DynamicExceptionRanges,
-                    ExprResult &NoexceptExpr) {
-  ExceptionSpecificationType Result = EST_None;
-
-  // See if there's a dynamic specification.
-  if (Tok.is(tok::kw_throw)) {
-    Result = ParseDynamicExceptionSpecification(SpecificationRange,
-                                                DynamicExceptions,
-                                                DynamicExceptionRanges);
-    assert(DynamicExceptions.size() == DynamicExceptionRanges.size() &&
-           "Produced different number of exception types and ranges.");
-  }
-
-  // If there's no noexcept specification, we're done.
-  if (Tok.isNot(tok::kw_noexcept))
-    return Result;
-
-  // If we already had a dynamic specification, parse the noexcept for,
-  // recovery, but emit a diagnostic and don't store the results.
-  SourceRange NoexceptRange;
-  ExceptionSpecificationType NoexceptType = EST_None;
-
-  SourceLocation KeywordLoc = ConsumeToken();
-  if (Tok.is(tok::l_paren)) {
-    // There is an argument.
-    SourceLocation LParenLoc = ConsumeParen();
-    NoexceptType = EST_ComputedNoexcept;
-    NoexceptExpr = ParseConstantExpression();
-    SourceLocation RParenLoc = MatchRHSPunctuation(tok::r_paren, LParenLoc);
-    NoexceptRange = SourceRange(KeywordLoc, RParenLoc);
-  } else {
-    // There is no argument.
-    NoexceptType = EST_BasicNoexcept;
-    NoexceptRange = SourceRange(KeywordLoc, KeywordLoc);
-  }
-
-  if (Result == EST_None) {
-    SpecificationRange = NoexceptRange;
-    Result = NoexceptType;
-
-    // If there's a dynamic specification after a noexcept specification,
-    // parse that and ignore the results.
-    if (Tok.is(tok::kw_throw)) {
-      Diag(Tok.getLocation(), diag::err_dynamic_and_noexcept_specification);
-      ParseDynamicExceptionSpecification(NoexceptRange, DynamicExceptions,
-                                         DynamicExceptionRanges);
-    }
-  } else {
-    Diag(Tok.getLocation(), diag::err_dynamic_and_noexcept_specification);
-  }
-
-  return Result;
-}
-
-/// ParseDynamicExceptionSpecification - Parse a C++
-/// dynamic-exception-specification (C++ [except.spec]).
-///
-///       dynamic-exception-specification:
 ///         'throw' '(' type-id-list [opt] ')'
 /// [MS]    'throw' '(' '...' ')'
 ///
@@ -2078,47 +2012,46 @@ Parser::MaybeParseExceptionSpecification(SourceRange &SpecificationRange,
 ///         type-id ... [opt]
 ///         type-id-list ',' type-id ... [opt]
 ///
-ExceptionSpecificationType Parser::ParseDynamicExceptionSpecification(
-                                  SourceRange &SpecificationRange,
-                                  llvm::SmallVectorImpl<ParsedType> &Exceptions,
-                                  llvm::SmallVectorImpl<SourceRange> &Ranges) {
+bool Parser::ParseExceptionSpecification(SourceLocation &EndLoc,
+                                         llvm::SmallVectorImpl<ParsedType>
+                                             &Exceptions,
+                                         llvm::SmallVectorImpl<SourceRange>
+                                             &Ranges,
+                                         bool &hasAnyExceptionSpec) {
   assert(Tok.is(tok::kw_throw) && "expected throw");
 
-  SpecificationRange.setBegin(ConsumeToken());
+  ConsumeToken();
 
   if (!Tok.is(tok::l_paren)) {
-    Diag(Tok, diag::err_expected_lparen_after) << "throw";
-    SpecificationRange.setEnd(SpecificationRange.getBegin());
-    return EST_Dynamic;
+    return Diag(Tok, diag::err_expected_lparen_after) << "throw";
   }
   SourceLocation LParenLoc = ConsumeParen();
 
   // Parse throw(...), a Microsoft extension that means "this function
   // can throw anything".
   if (Tok.is(tok::ellipsis)) {
+    hasAnyExceptionSpec = true;
     SourceLocation EllipsisLoc = ConsumeToken();
     if (!getLang().Microsoft)
       Diag(EllipsisLoc, diag::ext_ellipsis_exception_spec);
-    SourceLocation RParenLoc = MatchRHSPunctuation(tok::r_paren, LParenLoc);
-    SpecificationRange.setEnd(RParenLoc);
-    return EST_DynamicAny;
+    EndLoc = MatchRHSPunctuation(tok::r_paren, LParenLoc);
+    return false;
   }
 
   // Parse the sequence of type-ids.
   SourceRange Range;
   while (Tok.isNot(tok::r_paren)) {
     TypeResult Res(ParseTypeName(&Range));
-
+    
     if (Tok.is(tok::ellipsis)) {
       // C++0x [temp.variadic]p5:
       //   - In a dynamic-exception-specification (15.4); the pattern is a 
       //     type-id.
       SourceLocation Ellipsis = ConsumeToken();
-      Range.setEnd(Ellipsis);
       if (!Res.isInvalid())
         Res = Actions.ActOnPackExpansion(Res.get(), Ellipsis);
     }
-
+    
     if (!Res.isInvalid()) {
       Exceptions.push_back(Res.get());
       Ranges.push_back(Range);
@@ -2130,8 +2063,8 @@ ExceptionSpecificationType Parser::ParseDynamicExceptionSpecification(
       break;
   }
 
-  SpecificationRange.setEnd(MatchRHSPunctuation(tok::r_paren, LParenLoc));
-  return EST_Dynamic;
+  EndLoc = MatchRHSPunctuation(tok::r_paren, LParenLoc);
+  return false;
 }
 
 /// ParseTrailingReturnType - Parse a trailing return type on a new-style

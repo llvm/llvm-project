@@ -129,7 +129,8 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
        Context.getSourceManager().isInSystemHeader(Old->getLocation())) &&
       Old->isExternC()) {
     FunctionProtoType::ExtProtoInfo EPI = NewProto->getExtProtoInfo();
-    EPI.ExceptionSpecType = EST_Dynamic;
+    EPI.HasExceptionSpec = true;
+    EPI.HasAnyExceptionSpec = false;
     EPI.NumExceptions = 0;
     QualType NewType = Context.getFunctionType(NewProto->getResultType(),
                                                NewProto->arg_type_begin(),
@@ -144,9 +145,8 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
       = Old->getType()->getAs<FunctionProtoType>();
 
     FunctionProtoType::ExtProtoInfo EPI = NewProto->getExtProtoInfo();
-    EPI.ExceptionSpecType = OldProto->hasExceptionSpec() ?
-      (OldProto->hasAnyExceptionSpec() ? EST_DynamicAny : EST_Dynamic) :
-      EST_None;
+    EPI.HasExceptionSpec = OldProto->hasExceptionSpec();
+    EPI.HasAnyExceptionSpec = OldProto->hasAnyExceptionSpec();
     EPI.NumExceptions = OldProto->getNumExceptions();
     EPI.Exceptions = OldProto->exception_begin();
 

@@ -3111,10 +3111,8 @@ QualType ASTReader::ReadTypeRecord(unsigned Index) {
     EPI.Variadic = Record[Idx++];
     EPI.TypeQuals = Record[Idx++];
     EPI.RefQualifier = static_cast<RefQualifierKind>(Record[Idx++]);
-    bool HasExceptionSpec = Record[Idx++];
-    bool HasAnyExceptionSpec = Record[Idx++];
-    EPI.ExceptionSpecType = HasExceptionSpec ?
-        (HasAnyExceptionSpec ? EST_DynamicAny : EST_Dynamic) : EST_None;
+    EPI.HasExceptionSpec = Record[Idx++];
+    EPI.HasAnyExceptionSpec = Record[Idx++];
     EPI.NumExceptions = Record[Idx++];
     llvm::SmallVector<QualType, 2> Exceptions;
     for (unsigned I = 0; I != EPI.NumExceptions; ++I)

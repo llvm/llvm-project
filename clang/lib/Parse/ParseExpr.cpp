@@ -1918,9 +1918,8 @@ ExprResult Parser::ParseBlockLiteralExpression() {
                                                        SourceLocation(),
                                                        0, 0, 0,
                                                        true, SourceLocation(),
-                                                       EST_None,
-                                                       SourceLocation(),
-                                                       0, 0, 0, 0,
+                                                       false, SourceLocation(),
+                                                       false, 0, 0, 0,
                                                        CaretLoc, CaretLoc,
                                                        ParamInfo),
                           CaretLoc);

@@ -300,8 +300,6 @@ def err_expected_lbrace_after_base_specifiers : Error<
   "expected '{' after base class list">;
 def ext_ellipsis_exception_spec : Extension<
   "exception specification of '...' is a Microsoft extension">;
-def err_dynamic_and_noexcept_specification : Error<
-  "cannot have both throw() and noexcept() clause on the same function">;
 def err_expected_catch : Error<"expected catch">;
 def err_expected_lbrace_or_comma : Error<"expected '{' or ','">;
 def err_using_namespace_in_class : Error<

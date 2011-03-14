@@ -142,36 +142,35 @@ DeclaratorChunk DeclaratorChunk::getFunction(const ParsedAttributes &attrs,
                                              unsigned TypeQuals,
                                              bool RefQualifierIsLvalueRef,
                                              SourceLocation RefQualifierLoc,
-                                             ExceptionSpecificationType
-                                                 ESpecType,
-                                             SourceLocation ESpecLoc,
+                                             bool hasExceptionSpec,
+                                             SourceLocation ThrowLoc,
+                                             bool hasAnyExceptionSpec,
                                              ParsedType *Exceptions,
                                              SourceRange *ExceptionRanges,
                                              unsigned NumExceptions,
-                                             Expr *NoexceptExpr,
                                              SourceLocation LPLoc,
                                              SourceLocation RPLoc,
                                              Declarator &TheDeclarator,
                                              ParsedType TrailingReturnType) {
   DeclaratorChunk I;
-  I.Kind                        = Function;
-  I.Loc                         = LPLoc;
-  I.EndLoc                      = RPLoc;
-  I.Fun.AttrList                = attrs.getList();
-  I.Fun.hasPrototype            = hasProto;
-  I.Fun.isVariadic              = isVariadic;
-  I.Fun.EllipsisLoc             = EllipsisLoc.getRawEncoding();
-  I.Fun.DeleteArgInfo           = false;
-  I.Fun.TypeQuals               = TypeQuals;
-  I.Fun.NumArgs                 = NumArgs;
-  I.Fun.ArgInfo                 = 0;
+  I.Kind                 = Function;
+  I.Loc                  = LPLoc;
+  I.EndLoc               = RPLoc;
+  I.Fun.AttrList         = attrs.getList();
+  I.Fun.hasPrototype     = hasProto;
+  I.Fun.isVariadic       = isVariadic;
+  I.Fun.EllipsisLoc      = EllipsisLoc.getRawEncoding();
+  I.Fun.DeleteArgInfo    = false;
+  I.Fun.TypeQuals        = TypeQuals;
+  I.Fun.NumArgs          = NumArgs;
+  I.Fun.ArgInfo          = 0;
   I.Fun.RefQualifierIsLValueRef = RefQualifierIsLvalueRef;
-  I.Fun.RefQualifierLoc         = RefQualifierLoc.getRawEncoding();
-  I.Fun.ExceptionSpecType       = ESpecType;
-  I.Fun.ExceptionSpecLoc        = ESpecLoc.getRawEncoding();
-  I.Fun.NumExceptions           = 0;
-  I.Fun.Exceptions              = 0;
-  I.Fun.NoexceptExpr            = 0;
+  I.Fun.RefQualifierLoc = RefQualifierLoc.getRawEncoding();
+  I.Fun.hasExceptionSpec = hasExceptionSpec;
+  I.Fun.ThrowLoc         = ThrowLoc.getRawEncoding();
+  I.Fun.hasAnyExceptionSpec = hasAnyExceptionSpec;
+  I.Fun.NumExceptions    = NumExceptions;
+  I.Fun.Exceptions       = 0;
   I.Fun.TrailingReturnType   = TrailingReturnType.getAsOpaquePtr();
 
   // new[] an argument array if needed.
@@ -191,25 +190,13 @@ DeclaratorChunk DeclaratorChunk::getFunction(const ParsedAttributes &attrs,
     }
     memcpy(I.Fun.ArgInfo, ArgInfo, sizeof(ArgInfo[0])*NumArgs);
   }
-
-  // Check what exception specification information we should actually store.
-  switch (ESpecType) {
-  default: break; // By default, save nothing.
-  case EST_Dynamic:
-    // new[] an exception array if needed
-    if (NumExceptions) {
-      I.Fun.NumExceptions = NumExceptions;
-      I.Fun.Exceptions = new DeclaratorChunk::TypeAndRange[NumExceptions];
-      for (unsigned i = 0; i != NumExceptions; ++i) {
-        I.Fun.Exceptions[i].Ty = Exceptions[i];
-        I.Fun.Exceptions[i].Range = ExceptionRanges[i];
-      }
+  // new[] an exception array if needed
+  if (NumExceptions) {
+    I.Fun.Exceptions = new DeclaratorChunk::TypeAndRange[NumExceptions];
+    for (unsigned i = 0; i != NumExceptions; ++i) {
+      I.Fun.Exceptions[i].Ty = Exceptions[i];
+      I.Fun.Exceptions[i].Range = ExceptionRanges[i];
     }
-    break;
-
-  case EST_ComputedNoexcept:
-    I.Fun.NoexceptExpr = NoexceptExpr;
-    break;
   }
   return I;
 }
