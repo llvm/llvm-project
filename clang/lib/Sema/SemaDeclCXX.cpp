@@ -1484,7 +1484,10 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo,
   if (!LangOpts.CPlusPlus0x)
     return Diag(Loc, diag::err_delegation_0x_only)
       << TInfo->getTypeLoc().getLocalSourceRange();
-
+  // Disable for 2.9.
+  return Diag(Loc, diag::err_delegation_unimplemented)
+    << TInfo->getTypeLoc().getLocalSourceRange();
+#if 0
   // Initialize the object.
   InitializedEntity DelegationEntity = InitializedEntity::InitializeDelegation(
                                      QualType(ClassDecl->getTypeForDecl(), 0));
@@ -1531,6 +1534,7 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo,
   return new (Context) CXXCtorInitializer(Context, Loc, LParenLoc, Constructor,
                                           DelegationInit.takeAs<Expr>(),
                                           RParenLoc);
+#endif
 }
 
 MemInitResult
