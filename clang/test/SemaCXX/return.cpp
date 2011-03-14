@@ -49,3 +49,7 @@ namespace PR9328 {
     const PCHAR GetName() { return 0; } // expected-warning{{'const' type qualifier on return type has no effect}}
   };
 }
+
+class foo  {
+  operator int * const ();
+};
