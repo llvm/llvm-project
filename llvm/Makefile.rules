@@ -2139,8 +2139,13 @@ install-local::
 	$(Verb) $(MKDIR) $(DESTDIR)$(PROJ_includedir)
 	$(Verb) if test -d "$(PROJ_SRC_ROOT)/include" ; then \
 	  cd $(PROJ_SRC_ROOT)/include && \
-	  for  hdr in `find . -type f '!' '(' -name '*~' \
-	      -o -name '.#*' -o -name '*.in' ')' -print | grep -v CVS | \
+	  for hdr in `find . -type f \
+	      '(' -name LICENSE.TXT \
+	       -o -name '*.def' \
+	       -o -name '*.h' \
+	       -o -name '*.inc' \
+	       -o -name '*.td' \
+	      ')' -print | grep -v CVS | \
 	      grep -v .svn` ; do \
 	    instdir=`dirname "$(DESTDIR)$(PROJ_includedir)/$$hdr"` ; \
 	    if test \! -d "$$instdir" ; then \
@@ -2153,7 +2158,19 @@ install-local::
 ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
 	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/include" ; then \
 	  cd $(PROJ_OBJ_ROOT)/include && \
-	  for hdr in `find . -type f -print | grep -v CVS` ; do \
+	  for hdr in `find . -type f \
+	      '(' -name LICENSE.TXT \
+	       -o -name '*.def' \
+	       -o -name '*.h' \
+	       -o -name '*.inc' \
+	       -o -name '*.td' \
+	      ')' -print | grep -v CVS | \
+	      grep -v .svn` ; do \
+	    instdir=`dirname "$(DESTDIR)$(PROJ_includedir)/$$hdr"` ; \
+	    if test \! -d "$$instdir" ; then \
+	      $(EchoCmd) Making install directory $$instdir ; \
+	      $(MKDIR) $$instdir ;\
+	    fi ; \
 	    $(DataInstall) $$hdr $(DESTDIR)$(PROJ_includedir)/$$hdr ; \
 	  done ; \
 	fi
