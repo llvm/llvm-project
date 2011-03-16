@@ -801,7 +801,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   D.getMutableDeclSpec().abort();
 
   if (Tok.is(tok::kw_try))
-    return ParseFunctionTryBlock(Res);
+    return ParseFunctionTryBlock(Res, BodyScope);
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.
@@ -810,13 +810,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
     // Recover from error.
     if (!Tok.is(tok::l_brace)) {
+      BodyScope.Exit();
       Actions.ActOnFinishFunctionBody(Res, 0);
       return Res;
     }
   } else
     Actions.ActOnDefaultCtorInitializers(Res);
 
-  return ParseFunctionStatementBody(Res);
+  return ParseFunctionStatementBody(Res, BodyScope);
 }
 
 /// ParseKNRParamDeclarations - Parse 'declaration-list[opt]' which provides

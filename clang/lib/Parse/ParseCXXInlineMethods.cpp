@@ -261,7 +261,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
   if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D);
+    ParseFunctionTryBlock(LM.D, FnScope);
     assert(!PP.getSourceManager().isBeforeInTranslationUnit(origLoc,
                                                          Tok.getLocation()) &&
            "ParseFunctionTryBlock went over the cached tokens!");
@@ -276,13 +276,14 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
     // Error recovery.
     if (!Tok.is(tok::l_brace)) {
+      FnScope.Exit();
       Actions.ActOnFinishFunctionBody(LM.D, 0);
       return;
     }
   } else
     Actions.ActOnDefaultCtorInitializers(LM.D);
 
-  ParseFunctionStatementBody(LM.D);
+  ParseFunctionStatementBody(LM.D, FnScope);
 
   if (Tok.getLocation() != origLoc) {
     // Due to parsing error, we either went over the cached tokens or

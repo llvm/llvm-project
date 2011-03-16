@@ -1940,6 +1940,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   }
 
   StmtResult Stmt(ParseCompoundStatementBody());
+  BlockScope.Exit();
   if (!Stmt.isInvalid())
     Result = Actions.ActOnBlockStmtExpr(CaretLoc, Stmt.take(), getCurScope());
   else

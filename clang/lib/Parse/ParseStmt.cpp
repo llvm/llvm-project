@@ -1522,14 +1522,17 @@ bool Parser::ParseAsmOperandsOpt(llvm::SmallVectorImpl<IdentifierInfo *> &Names,
   return true;
 }
 
-Decl *Parser::ParseFunctionStatementBody(Decl *Decl) {
+Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
   assert(Tok.is(tok::l_brace));
   SourceLocation LBraceLoc = Tok.getLocation();
 
-  if (PP.isCodeCompletionEnabled())
-    if (trySkippingFunctionBodyForCodeCompletion())
+  if (PP.isCodeCompletionEnabled()) {
+    if (trySkippingFunctionBodyForCodeCompletion()) {
+      BodyScope.Exit();
       return Actions.ActOnFinishFunctionBody(Decl, 0);
-
+    }
+  }
+  
   PrettyDeclStackTraceEntry CrashInfo(Actions, Decl, LBraceLoc,
                                       "parsing function body");
 
@@ -1543,6 +1546,7 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl) {
     FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc,
                                        MultiStmtArg(Actions), false);
 
+  BodyScope.Exit();
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.take());
 }
 
@@ -1551,7 +1555,7 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl) {
 ///       function-try-block:
 ///         'try' ctor-initializer[opt] compound-statement handler-seq
 ///
-Decl *Parser::ParseFunctionTryBlock(Decl *Decl) {
+Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   assert(Tok.is(tok::kw_try) && "Expected 'try'");
   SourceLocation TryLoc = ConsumeToken();
 
@@ -1562,9 +1566,12 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl) {
   if (Tok.is(tok::colon))
     ParseConstructorInitializer(Decl);
 
-  if (PP.isCodeCompletionEnabled())
-    if (trySkippingFunctionBodyForCodeCompletion())
+  if (PP.isCodeCompletionEnabled()) {
+    if (trySkippingFunctionBodyForCodeCompletion()) {
+      BodyScope.Exit();
       return Actions.ActOnFinishFunctionBody(Decl, 0);
+    }
+  }
 
   SourceLocation LBraceLoc = Tok.getLocation();
   StmtResult FnBody(ParseCXXTryBlockCommon(TryLoc));
@@ -1574,6 +1581,7 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl) {
     FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc,
                                        MultiStmtArg(Actions), false);
 
+  BodyScope.Exit();
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.take());
 }
 
