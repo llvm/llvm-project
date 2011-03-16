@@ -237,15 +237,3 @@ void test_func_template(N0::X0<void *> xvp, void *vp, const void *cvp,
   xvp.ft1(vp, i);
   xvp.ft1(vp, u);
 }
-
-namespace PR8979 {
-  template<typename Z>
-  struct X0 {
-    template <class T, class U> class Inner;
-    struct OtherInner;
-    template<typename T, typename U> void f(Inner<T, U>&);
-
-    typedef Inner<OtherInner, OtherInner> MyInner;
-    template<> void f(MyInner&); // expected-error{{cannot specialize a function 'f' within class scope}}
-  };
-}

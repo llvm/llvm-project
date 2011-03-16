@@ -4067,14 +4067,9 @@ Sema::ActOnFunctionDeclarator(Scope* S, Declarator& D, DeclContext* DC,
                                                        Previous))
         NewFD->setInvalidDecl();
     } else if (isFunctionTemplateSpecialization) {
-      if (CurContext->isDependentContext() && CurContext->isRecord()) {
-        Diag(NewFD->getLocation(), diag::err_function_specialization_in_class)
-          << NewFD->getDeclName();
-        NewFD->setInvalidDecl();
-        return 0;
-      } else if (CheckFunctionTemplateSpecialization(NewFD,
-                                  (HasExplicitTemplateArgs ? &TemplateArgs : 0),
-                                                     Previous))
+      if (CheckFunctionTemplateSpecialization(NewFD,
+                                              (HasExplicitTemplateArgs ? &TemplateArgs : 0),
+                                              Previous))
         NewFD->setInvalidDecl();
     } else if (isExplicitSpecialization && isa<CXXMethodDecl>(NewFD)) {
       if (CheckMemberSpecialization(NewFD, Previous))
