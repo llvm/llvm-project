@@ -127,3 +127,16 @@ namespace PR9226 {
 
   Y<X, int> yxi; // expected-note{{in instantiation of template class 'PR9226::Y<PR9226::X, int>' requested here}}
 }
+
+namespace PR9449 {
+  template <typename T>
+  struct s; // expected-note{{template is declared here}}
+
+  template <typename T>
+  void f() {
+    int s<T>::template n<T>::* f; // expected-error{{implicit instantiation of undefined template 'PR9449::s<int>'}} \
+    // expected-error{{following the 'template' keyword}}
+  }
+
+  template void f<int>(); // expected-note{{in instantiation of}}
+}

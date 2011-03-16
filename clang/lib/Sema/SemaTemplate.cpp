@@ -2028,7 +2028,8 @@ TemplateNameKind Sema::ActOnDependentTemplateName(Scope *S,
                                           MemberOfUnknownSpecialization);
     if (TNK == TNK_Non_template && LookupCtx->isDependentContext() &&
         isa<CXXRecordDecl>(LookupCtx) &&
-        cast<CXXRecordDecl>(LookupCtx)->hasAnyDependentBases()) {
+        (!cast<CXXRecordDecl>(LookupCtx)->hasDefinition() ||
+         cast<CXXRecordDecl>(LookupCtx)->hasAnyDependentBases())) {
       // This is a dependent template. Handle it below.
     } else if (TNK == TNK_Non_template) {
       Diag(Name.getSourceRange().getBegin(),
