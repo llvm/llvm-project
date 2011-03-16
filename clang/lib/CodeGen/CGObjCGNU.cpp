@@ -1993,16 +1993,27 @@ void CGObjCGNU::EmitTryStmt(CodeGen::CodeGenFunction &CGF,
 
       // @catch() and @catch(id) both catch any ObjC exception.
       // Treat them as catch-alls.
-      // FIXME: this is what this code was doing before, but should 'id'
       // really be catching foreign exceptions?
-      if (!CatchDecl
-          || CatchDecl->getType()->isObjCIdType()
-          || CatchDecl->getType()->isObjCQualifiedIdType()) {
-
+      
+      if (!CatchDecl) {
         Handler.TypeInfo = 0; // catch-all
-
         // Don't consider any other catches.
         break;
+      }
+      if (CatchDecl->getType()->isObjCIdType()
+          || CatchDecl->getType()->isObjCQualifiedIdType()) {
+        // With the old ABI, there was only one kind of catchall, which broke
+        // foreign exceptions.  With the new ABI, we use __objc_id_typeinfo as
+        // a pointer indicating object catchalls, and NULL to indicate real
+        // catchalls
+        if (CGM.getLangOptions().ObjCNonFragileABI) {
+          Handler.TypeInfo = MakeConstantString("@id");
+          continue;
+        } else {
+          Handler.TypeInfo = 0; // catch-all
+          // Don't consider any other catches.
+          break;
+        }
       }
 
       // All other types should be Objective-C interface pointer types.
