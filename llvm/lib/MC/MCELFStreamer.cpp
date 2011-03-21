@@ -291,15 +291,18 @@ void  MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     switch (symRef.getKind()) {
     default:
       return;
+    case MCSymbolRefExpr::VK_GOTTPOFF:
+    case MCSymbolRefExpr::VK_INDNTPOFF:
     case MCSymbolRefExpr::VK_NTPOFF:
     case MCSymbolRefExpr::VK_GOTNTPOFF:
     case MCSymbolRefExpr::VK_TLSGD:
+    case MCSymbolRefExpr::VK_TLSLD:
     case MCSymbolRefExpr::VK_TLSLDM:
     case MCSymbolRefExpr::VK_TPOFF:
     case MCSymbolRefExpr::VK_DTPOFF:
-    case MCSymbolRefExpr::VK_GOTTPOFF:
-    case MCSymbolRefExpr::VK_TLSLD:
     case MCSymbolRefExpr::VK_ARM_TLSGD:
+    case MCSymbolRefExpr::VK_ARM_TPOFF:
+    case MCSymbolRefExpr::VK_ARM_GOTTPOFF:
       break;
     }
     MCSymbolData &SD = getAssembler().getOrCreateSymbolData(symRef.getSymbol());
