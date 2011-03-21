@@ -6675,10 +6675,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
       Diag(Loc, diag::err_objc_object_catch);
       Invalid = true;
     } else if (T->isObjCObjectPointerType()) {
-      if (!getLangOptions().NeXTRuntime) {
-        Diag(Loc, diag::err_objc_pointer_cxx_catch_gnu);
-        Invalid = true;
-      } else if (!getLangOptions().ObjCNonFragileABI) {
+      if (!getLangOptions().ObjCNonFragileABI) {
         Diag(Loc, diag::err_objc_pointer_cxx_catch_fragile);
         Invalid = true;
       }

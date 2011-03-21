@@ -41,6 +41,7 @@ public:
   static const EHPersonality GNU_C;
   static const EHPersonality GNU_C_SJLJ;
   static const EHPersonality GNU_ObjC;
+  static const EHPersonality GNU_ObjCXX;
   static const EHPersonality NeXT_ObjC;
   static const EHPersonality GNU_CPlusPlus;
   static const EHPersonality GNU_CPlusPlus_SJLJ;

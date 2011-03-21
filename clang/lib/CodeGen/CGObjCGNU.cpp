@@ -30,6 +30,7 @@
 #include "llvm/LLVMContext.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/CallSite.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetData.h"
 
@@ -141,6 +142,7 @@ private:
     if (V->getType() == Ty) return V;
     return B.CreateBitCast(V, Ty);
   }
+  void EmitObjCXXTryStmt(CodeGen::CodeGenFunction &CGF, const ObjCAtTryStmt &S);
 public:
   CGObjCGNU(CodeGen::CodeGenModule &cgm);
   virtual llvm::Constant *GenerateConstantString(const StringLiteral *);
@@ -416,8 +418,62 @@ llvm::Value *CGObjCGNU::GetSelector(CGBuilderTy &Builder, const ObjCMethodDecl
 }
 
 llvm::Constant *CGObjCGNU::GetEHType(QualType T) {
-  llvm_unreachable("asking for catch type for ObjC type in GNU runtime");
-  return 0;
+  // For Objective-C++, we want to provide the ability to catch both C++ and
+  // Objective-C objects in the same function.
+
+  // There's a particular fixed type info for 'id'.
+  if (T->isObjCIdType() ||
+      T->isObjCQualifiedIdType()) {
+    llvm::Constant *IDEHType =
+      CGM.getModule().getGlobalVariable("__objc_id_type_info");
+    if (!IDEHType)
+      IDEHType =
+        new llvm::GlobalVariable(CGM.getModule(), PtrToInt8Ty,
+                                 false,
+                                 llvm::GlobalValue::ExternalLinkage,
+                                 0, "__objc_id_type_info");
+    return llvm::ConstantExpr::getBitCast(IDEHType, PtrToInt8Ty);
+  }
+
+  const ObjCObjectPointerType *PT =
+    T->getAs<ObjCObjectPointerType>();
+  assert(PT && "Invalid @catch type.");
+  const ObjCInterfaceType *IT = PT->getInterfaceType();
+  assert(IT && "Invalid @catch type.");
+  std::string className = IT->getDecl()->getIdentifier()->getName();
+
+  std::string typeinfoName = "__objc_eh_typeinfo_" + className;
+
+  // Return the existing typeinfo if it exists
+  llvm::Constant *typeinfo = TheModule.getGlobalVariable(typeinfoName);
+  if (typeinfo) return typeinfo;
+
+  // Otherwise create it.
+
+  // vtable for gnustep::libobjc::__objc_class_type_info
+  // It's quite ugly hard-coding this.  Ideally we'd generate it using the host
+  // platform's name mangling.
+  const char *vtableName = "_ZTVN7gnustep7libobjc22__objc_class_type_infoE";
+  llvm::Constant *Vtable = TheModule.getGlobalVariable(vtableName);
+  if (!Vtable) {
+    Vtable = new llvm::GlobalVariable(TheModule, PtrToInt8Ty, true,
+            llvm::GlobalValue::ExternalLinkage, 0, vtableName);
+  }
+  llvm::Constant *Two = llvm::ConstantInt::get(IntTy, 2);
+  Vtable = llvm::ConstantExpr::getGetElementPtr(Vtable, &Two, 1);
+  Vtable = llvm::ConstantExpr::getBitCast(Vtable, PtrToInt8Ty);
+
+  llvm::Constant *typeName =
+    ExportUniqueString(className, "__objc_eh_typename_");
+
+  std::vector<llvm::Constant*> fields;
+  fields.push_back(Vtable);
+  fields.push_back(typeName);
+  llvm::Constant *TI = 
+      MakeGlobal(llvm::StructType::get(VMContext, PtrToInt8Ty, PtrToInt8Ty,
+              NULL), fields, "__objc_eh_typeinfo_" + className,
+          llvm::GlobalValue::LinkOnceODRLinkage);
+  return llvm::ConstantExpr::getBitCast(TI, PtrToInt8Ty);
 }
 
 llvm::Constant *CGObjCGNU::MakeConstantString(const std::string &Str,
@@ -1945,6 +2001,138 @@ namespace {
     llvm::BasicBlock *Block;
     llvm::Value *TypeInfo;
   };
+
+  struct CallObjCEndCatch : EHScopeStack::Cleanup {
+    CallObjCEndCatch(bool MightThrow, llvm::Value *Fn) :
+      MightThrow(MightThrow), Fn(Fn) {}
+    bool MightThrow;
+    llvm::Value *Fn;
+
+    void Emit(CodeGenFunction &CGF, bool IsForEH) {
+      if (!MightThrow) {
+        CGF.Builder.CreateCall(Fn)->setDoesNotThrow();
+        return;
+      }
+
+      CGF.EmitCallOrInvoke(Fn, 0, 0);
+    }
+  };
+}
+
+void CGObjCGNU::EmitObjCXXTryStmt(CodeGen::CodeGenFunction &CGF,
+                                  const ObjCAtTryStmt &S) {
+  std::vector<const llvm::Type*> Args(1, PtrToInt8Ty);
+  llvm::FunctionType *FTy = llvm::FunctionType::get(PtrToInt8Ty, Args, false);
+  const llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
+
+  llvm::Constant *beginCatchFn =
+    CGM.CreateRuntimeFunction(FTy, "__cxa_begin_catch");
+
+  FTy = llvm::FunctionType::get(VoidTy, false);
+  llvm::Constant *endCatchFn =
+    CGM.CreateRuntimeFunction(FTy, "__cxa_end_catch");
+  FTy = llvm::FunctionType::get(VoidTy, Args, false);
+  llvm::Constant *exceptionRethrowFn =
+    CGM.CreateRuntimeFunction(FTy, "_Unwind_Resume_or_Rethrow");
+
+  // Jump destination for falling out of catch bodies.
+  CodeGenFunction::JumpDest Cont;
+  if (S.getNumCatchStmts())
+    Cont = CGF.getJumpDestInCurrentScope("eh.cont");
+
+  CodeGenFunction::FinallyInfo FinallyInfo;
+  if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt())
+    FinallyInfo = CGF.EnterFinallyBlock(Finally->getFinallyBody(),
+                                        beginCatchFn,
+                                        endCatchFn,
+                                        exceptionRethrowFn);
+
+  llvm::SmallVector<CatchHandler, 8> Handlers;
+
+  // Enter the catch, if there is one.
+  if (S.getNumCatchStmts()) {
+    for (unsigned I = 0, N = S.getNumCatchStmts(); I != N; ++I) {
+      const ObjCAtCatchStmt *CatchStmt = S.getCatchStmt(I);
+      const VarDecl *CatchDecl = CatchStmt->getCatchParamDecl();
+
+      Handlers.push_back(CatchHandler());
+      CatchHandler &Handler = Handlers.back();
+      Handler.Variable = CatchDecl;
+      Handler.Body = CatchStmt->getCatchBody();
+      Handler.Block = CGF.createBasicBlock("catch");
+
+      // @catch(...) always matches.
+      if (!CatchDecl) {
+        Handler.TypeInfo = 0; // catch-all
+        // Don't consider any other catches.
+        break;
+      }
+
+      Handler.TypeInfo = GetEHType(CatchDecl->getType());
+    }
+
+    EHCatchScope *Catch = CGF.EHStack.pushCatch(Handlers.size());
+    for (unsigned I = 0, E = Handlers.size(); I != E; ++I)
+      Catch->setHandler(I, Handlers[I].TypeInfo, Handlers[I].Block);
+  }
+  
+  // Emit the try body.
+  CGF.EmitStmt(S.getTryBody());
+
+  // Leave the try.
+  if (S.getNumCatchStmts())
+    CGF.EHStack.popCatch();
+
+  // Remember where we were.
+  CGBuilderTy::InsertPoint SavedIP = CGF.Builder.saveAndClearIP();
+
+  // Emit the handlers.
+  for (unsigned I = 0, E = Handlers.size(); I != E; ++I) {
+    CatchHandler &Handler = Handlers[I];
+
+    CGF.EmitBlock(Handler.Block);
+    llvm::Value *RawExn = CGF.Builder.CreateLoad(CGF.getExceptionSlot());
+
+    // Enter the catch.
+    llvm::CallInst *Exn =
+      CGF.Builder.CreateCall(beginCatchFn, RawExn,
+                             "exn.adjusted");
+    Exn->setDoesNotThrow();
+
+    // Add a cleanup to leave the catch.
+    bool EndCatchMightThrow = (Handler.Variable == 0);
+    CGF.EHStack.pushCleanup<CallObjCEndCatch>(NormalAndEHCleanup,
+                                              EndCatchMightThrow,
+                                              endCatchFn);
+
+    // Bind the catch parameter if it exists.
+    if (const VarDecl *CatchParam = Handler.Variable) {
+      const llvm::Type *CatchType = CGF.ConvertType(CatchParam->getType());
+      llvm::Value *CastExn = CGF.Builder.CreateBitCast(Exn, CatchType);
+
+      CGF.EmitAutoVarDecl(*CatchParam);
+      CGF.Builder.CreateStore(CastExn, CGF.GetAddrOfLocalVar(CatchParam));
+    }
+
+    CGF.ObjCEHValueStack.push_back(Exn);
+    CGF.EmitStmt(Handler.Body);
+    CGF.ObjCEHValueStack.pop_back();
+
+    // Leave the earlier cleanup.
+    CGF.PopCleanupBlock();
+
+    CGF.EmitBranchThroughCleanup(Cont);
+  }  
+
+  // Go back to the try-statement fallthrough.
+  CGF.Builder.restoreIP(SavedIP);
+
+  // Pop out of the normal cleanup on the finally.
+  if (S.getFinallyStmt())
+    CGF.ExitFinallyBlock(FinallyInfo);
+
+  if (Cont.isValid())
+    CGF.EmitBlock(Cont.getBlock());
 }
 
 void CGObjCGNU::EmitTryStmt(CodeGen::CodeGenFunction &CGF,
@@ -1957,6 +2145,13 @@ void CGObjCGNU::EmitTryStmt(CodeGen::CodeGenFunction &CGF,
   // catch handlers with calls to __blah_begin_catch/__blah_end_catch
   // (or even _Unwind_DeleteException), but probably doesn't
   // interoperate very well with foreign exceptions.
+
+  // In Objective-C++ mode, we actually emit something equivalent to the C++
+  // exception handler.
+  if (CGM.getLangOptions().CPlusPlus) {
+    EmitObjCXXTryStmt(CGF, S);
+    return;
+  }
 
   // Jump destination for falling out of catch bodies.
   CodeGenFunction::JumpDest Cont;

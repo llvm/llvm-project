@@ -160,6 +160,7 @@ const EHPersonality EHPersonality::GNU_CPlusPlus("__gxx_personality_v0");
 const EHPersonality EHPersonality::GNU_CPlusPlus_SJLJ("__gxx_personality_sj0");
 const EHPersonality EHPersonality::GNU_ObjC("__gnu_objc_personality_v0",
                                             "objc_exception_throw");
+const EHPersonality EHPersonality::GNU_ObjCXX("__gnustep_objcxx_personality_v0");
 
 static const EHPersonality &getCPersonality(const LangOptions &L) {
   if (L.SjLjExceptions)
@@ -201,7 +202,7 @@ static const EHPersonality &getObjCXXPersonality(const LangOptions &L) {
 
   // The GNU runtime's personality function inherently doesn't support
   // mixed EH.  Use the C++ personality just to avoid returning null.
-  return getCXXPersonality(L);
+  return EHPersonality::GNU_ObjCXX;
 }
 
 const EHPersonality &EHPersonality::get(const LangOptions &L) {

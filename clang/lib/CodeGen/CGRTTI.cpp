@@ -16,6 +16,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Frontend/CodeGenOptions.h"
+#include "CGObjCRuntime.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -976,6 +977,10 @@ llvm::Constant *CodeGenModule::GetAddrOfRTTIDescriptor(QualType Ty,
   if (!ForEH && !getContext().getLangOptions().RTTI) {
     const llvm::Type *Int8PtrTy = llvm::Type::getInt8PtrTy(VMContext);
     return llvm::Constant::getNullValue(Int8PtrTy);
+  }
+  
+  if (ForEH && Ty->isObjCObjectPointerType() && !Features.NeXTRuntime) {
+    return Runtime->GetEHType(Ty);
   }
 
   return RTTIBuilder(*this).BuildTypeInfo(Ty);
