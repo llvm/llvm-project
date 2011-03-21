@@ -3856,7 +3856,8 @@ public:
                           FunctionDecl *&Specialization,
                           sema::TemplateDeductionInfo &Info);
 
-  bool DeduceAutoType(QualType AutoType, Expr *Initializer, QualType &Result);
+  bool DeduceAutoType(TypeSourceInfo *AutoType, Expr *Initializer,
+                      TypeSourceInfo *&Result);
 
   FunctionTemplateDecl *getMoreSpecializedTemplate(FunctionTemplateDecl *FT1,
                                                    FunctionTemplateDecl *FT2,

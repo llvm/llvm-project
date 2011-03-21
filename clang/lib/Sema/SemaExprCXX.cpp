@@ -848,16 +848,18 @@ Sema::BuildCXXNew(SourceLocation StartLoc, bool UseGlobal,
                             diag::err_auto_new_ctor_multiple_expressions)
                        << AllocType << TypeRange);
     }
-    QualType DeducedType;
-    if (!DeduceAutoType(AllocType, ConstructorArgs.get()[0], DeducedType))
+    TypeSourceInfo *DeducedType = 0;
+    if (!DeduceAutoType(AllocTypeInfo, ConstructorArgs.get()[0], DeducedType))
       return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
                        << AllocType
                        << ConstructorArgs.get()[0]->getType()
                        << TypeRange
                        << ConstructorArgs.get()[0]->getSourceRange());
+    if (!DeducedType)
+      return ExprError();
 
-    AllocType = DeducedType;
-    AllocTypeInfo = Context.getTrivialTypeSourceInfo(AllocType, StartLoc);
+    AllocTypeInfo = DeducedType;
+    AllocType = AllocTypeInfo->getType();
   }
   
   // Per C++0x [expr.new]p5, the type being constructed may be a

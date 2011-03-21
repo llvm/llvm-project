@@ -3003,11 +3003,14 @@ namespace {
 ///
 /// \param Result if type deduction was successful, this will be set to the
 /// deduced type. This may still contain undeduced autos if the type is
-/// dependent.
+/// dependent. This will be set to null if deduction succeeded, but auto
+/// substitution failed; the appropriate diagnostic will already have been
+/// produced in that case.
 ///
 /// \returns true if deduction succeeded, false if it failed.
 bool
-Sema::DeduceAutoType(QualType Type, Expr *Init, QualType &Result) {
+Sema::DeduceAutoType(TypeSourceInfo *Type, Expr *Init,
+                     TypeSourceInfo *&Result) {
   if (Init->isTypeDependent()) {
     Result = Type;
     return true;
@@ -3025,8 +3028,10 @@ Sema::DeduceAutoType(QualType Type, Expr *Init, QualType &Result) {
   FixedSizeTemplateParameterList<1> TemplateParams(Loc, Loc, &TemplParamPtr,
                                                    Loc);
 
-  QualType FuncParam =
+  TypeSourceInfo *FuncParamInfo =
     SubstituteAutoTransform(*this, TemplArg).TransformType(Type);
+  assert(FuncParamInfo && "substituting template parameter for 'auto' failed");
+  QualType FuncParam = FuncParamInfo->getType();
 
   // Deduce type of TemplParam in Func(Init)
   llvm::SmallVector<DeducedTemplateArgument, 1> Deduced;

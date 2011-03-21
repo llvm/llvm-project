@@ -2382,12 +2382,6 @@ static void clang_parseTranslationUnit_Impl(void *UserData) {
   }
 
   llvm::SmallVector<const char *, 16> Args;
-
-  // The 'source_filename' argument is optional.  If the caller does not
-  // specify it then it is assumed that the source file is specified
-  // in the actual argument list.
-  if (source_filename)
-    Args.push_back(source_filename);
   
   // Since the Clang C library is primarily used by batch tools dealing with
   // (often very broken) source code, where spell-checking can have a
@@ -2407,6 +2401,14 @@ static void clang_parseTranslationUnit_Impl(void *UserData) {
   
   Args.insert(Args.end(), command_line_args,
               command_line_args + num_command_line_args);
+
+  // The 'source_filename' argument is optional.  If the caller does not
+  // specify it then it is assumed that the source file is specified
+  // in the actual argument list.
+  // Put the source file after command_line_args otherwise if '-x' flag is
+  // present it will be unused.
+  if (source_filename)
+    Args.push_back(source_filename);
 
   // Do we need the detailed preprocessing record?
   if (options & CXTranslationUnit_DetailedPreprocessingRecord) {
