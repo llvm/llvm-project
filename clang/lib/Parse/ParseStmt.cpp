@@ -1267,7 +1267,16 @@ StmtResult Parser::ParseReturnStatement(ParsedAttributes &attrs) {
       return StmtError();
     }
         
-    R = ParseExpression();
+    // FIXME: This is a hack to allow something like C++0x's generalized
+    // initializer lists, but only enough of this feature to allow Clang to
+    // parse libstdc++ 4.5's headers.
+    if (Tok.is(tok::l_brace) && getLang().CPlusPlus) {
+      R = ParseInitializer();
+      if (R.isUsable() && !getLang().CPlusPlus0x)
+        Diag(R.get()->getLocStart(), diag::ext_generalized_initializer_lists)
+          << R.get()->getSourceRange();
+    } else
+        R = ParseExpression();
     if (R.isInvalid()) {  // Skip to the semicolon, but don't consume it.
       SkipUntil(tok::semi, false, true);
       return StmtError();

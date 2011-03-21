@@ -881,8 +881,10 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           // copy.
           const llvm::Type *I8PtrTy = Builder.getInt8PtrTy();
           CharUnits Size = getContext().getTypeSizeInChars(Ty);
-          Builder.CreateMemCpy(Builder.CreateBitCast(AlignedTemp, I8PtrTy),
-                               Builder.CreateBitCast(V, I8PtrTy),
+          llvm::Value *Dst = Builder.CreateBitCast(AlignedTemp, I8PtrTy);
+          llvm::Value *Src = Builder.CreateBitCast(V, I8PtrTy);
+          Builder.CreateMemCpy(Dst,
+                               Src,
                                llvm::ConstantInt::get(IntPtrTy, 
                                                       Size.getQuantity()),
                                ArgI.getIndirectAlign(),

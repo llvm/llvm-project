@@ -178,6 +178,9 @@ def ext_ref_qualifier : ExtWarn<
   "reference qualifiers on functions are a C++0x extension">, InGroup<CXX0x>;
 def ext_inline_namespace : ExtWarn<
   "inline namespaces are a C++0x feature">, InGroup<CXX0x>;
+def ext_generalized_initializer_lists : ExtWarn<
+  "generalized initializer lists are a C++0x extension unsupported in Clang">,
+  InGroup<CXX0x>;
 def err_argument_required_after_attribute : Error<
   "argument required after attribute">;
 def err_missing_param : Error<"expected parameter declarator">;
