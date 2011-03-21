@@ -1662,7 +1662,10 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
     // does make plain ascii ones writable.
     isConstant = true;
   } else {
-    Linkage = llvm::GlobalValue::PrivateLinkage;
+    // FIXME: With OS X ld 123.2 (xcode 4) and LTO we would get a linker error
+    // when using private linkage. It is not clear if this is a bug in ld
+    // or a reasonable new restriction.
+    Linkage = llvm::GlobalValue::LinkerPrivateLinkage;
     isConstant = !Features.WritableStrings;
   }
   
