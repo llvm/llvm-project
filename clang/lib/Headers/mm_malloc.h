@@ -40,6 +40,7 @@ extern "C" int posix_memalign(void **memptr, size_t alignment, size_t size);
 #endif
 #endif
 
+#if !(defined(_WIN32) && defined(_mm_malloc))
 static __inline__ void *__attribute__((__always_inline__, __nodebug__,
                                        __malloc__))
 _mm_malloc(size_t size, size_t align)
@@ -67,5 +68,6 @@ _mm_free(void *p)
 {
   free(p);
 }
+#endif
 
 #endif /* __MM_MALLOC_H */

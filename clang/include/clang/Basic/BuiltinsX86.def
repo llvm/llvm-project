@@ -342,10 +342,10 @@ BUILTIN(__builtin_ia32_pcmpestriz128, "iV16ciV16cic","")
 
 BUILTIN(__builtin_ia32_pcmpgtq, "V2LLiV2LLiV2LLi", "")
 
-BUILTIN(__builtin_ia32_crc32qi, "iic", "")
-BUILTIN(__builtin_ia32_crc32hi, "iis", "")
-BUILTIN(__builtin_ia32_crc32si, "iii", "")
-BUILTIN(__builtin_ia32_crc32di, "LLiLLiLLi", "")
+BUILTIN(__builtin_ia32_crc32qi, "UiUiUc", "")
+BUILTIN(__builtin_ia32_crc32hi, "UiUiUs", "")
+BUILTIN(__builtin_ia32_crc32si, "UiUiUi", "")
+BUILTIN(__builtin_ia32_crc32di, "ULLiULLiULLi", "")
 
 // AES
 BUILTIN(__builtin_ia32_aesenc128, "V2LLiV2LLiV2LLi", "")
