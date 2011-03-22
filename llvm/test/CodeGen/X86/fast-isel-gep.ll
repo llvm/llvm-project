@@ -87,4 +87,23 @@ define i64 @test5(i8* %A, i32 %I, i64 %B) nounwind {
 ; X64-NEXT: ret
 }
 
+; PR9500, rdar://9156159 - Don't do non-local address mode folding,
+; because it may require values which wouldn't otherwise be live out
+; of their blocks.
+define void @test6() {
+if.end:                                           ; preds = %if.then, %invoke.cont
+  %tmp15 = load i64* undef
+  %dec = add i64 %tmp15, 13
+  store i64 %dec, i64* undef
+  %call17 = invoke i8* @_ZNK18G__FastAllocString4dataEv()
+          to label %invoke.cont16 unwind label %lpad
 
+invoke.cont16:                                    ; preds = %if.then14
+  %arrayidx18 = getelementptr inbounds i8* %call17, i64 %dec
+  store i8 0, i8* %arrayidx18
+  unreachable
+
+lpad:                                             ; preds = %if.end19, %if.then14, %if.end, %entry
+  unreachable
+}
+declare i8* @_ZNK18G__FastAllocString4dataEv() nounwind
