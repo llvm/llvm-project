@@ -667,24 +667,29 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
           TmpOffset += SL->getElementOffset(Idx);
         } else {
           uint64_t S = TD.getTypeAllocSize(GTI.getIndexedType());
-          SmallVector<const Value *, 4> Worklist;
-          Worklist.push_back(Op);
-          do {
-            Op = Worklist.pop_back_val();
+          for (;;) {
             if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
               // Constant-offset addressing.
               TmpOffset += CI->getSExtValue() * S;
-            } else if (isa<AddOperator>(Op) &&
-                       isa<ConstantInt>(cast<AddOperator>(Op)->getOperand(1))) {
-              // An add with a constant operand. Fold the constant.
+              break;
+            }
+            if (isa<AddOperator>(Op) &&
+                (!isa<Instruction>(Op) ||
+                 FuncInfo.MBBMap[cast<Instruction>(Op)->getParent()]
+                 == FuncInfo.MBB) &&
+                isa<ConstantInt>(cast<AddOperator>(Op)->getOperand(1))) {
+              // An add (in the same block) with a constant operand. Fold the 
+              // constant.
               ConstantInt *CI =
-                cast<ConstantInt>(cast<AddOperator>(Op)->getOperand(1));
+              cast<ConstantInt>(cast<AddOperator>(Op)->getOperand(1));
               TmpOffset += CI->getSExtValue() * S;
-              // Add the other operand back to the work list.
-              Worklist.push_back(cast<AddOperator>(Op)->getOperand(0));
-            } else
-              goto unsupported_gep;
-          } while (!Worklist.empty());
+              // Iterate on the other operand.
+              Op = cast<AddOperator>(Op)->getOperand(0);
+              continue;
+            } 
+            // Unsupported
+            goto unsupported_gep;
+          }
         }
       }
 
