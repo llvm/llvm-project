@@ -726,7 +726,7 @@ APFloat::bitwiseIsEqual(const APFloat &rhs) const {
 }
 
 APFloat::APFloat(const fltSemantics &ourSemantics, integerPart value)
-{
+  : exponent2(0), sign2(0) {
   assertArithmeticOK(ourSemantics);
   initialize(&ourSemantics);
   sign = 0;
@@ -736,14 +736,15 @@ APFloat::APFloat(const fltSemantics &ourSemantics, integerPart value)
   normalize(rmNearestTiesToEven, lfExactlyZero);
 }
 
-APFloat::APFloat(const fltSemantics &ourSemantics) {
+APFloat::APFloat(const fltSemantics &ourSemantics) : exponent2(0), sign2(0) {
   assertArithmeticOK(ourSemantics);
   initialize(&ourSemantics);
   category = fcZero;
   sign = false;
 }
 
-APFloat::APFloat(const fltSemantics &ourSemantics, uninitializedTag tag) {
+APFloat::APFloat(const fltSemantics &ourSemantics, uninitializedTag tag)
+  : exponent2(0), sign2(0) {
   assertArithmeticOK(ourSemantics);
   // Allocates storage if necessary but does not initialize it.
   initialize(&ourSemantics);
@@ -751,7 +752,7 @@ APFloat::APFloat(const fltSemantics &ourSemantics, uninitializedTag tag) {
 
 APFloat::APFloat(const fltSemantics &ourSemantics,
                  fltCategory ourCategory, bool negative)
-{
+  : exponent2(0), sign2(0) {
   assertArithmeticOK(ourSemantics);
   initialize(&ourSemantics);
   category = ourCategory;
@@ -763,14 +764,13 @@ APFloat::APFloat(const fltSemantics &ourSemantics,
 }
 
 APFloat::APFloat(const fltSemantics &ourSemantics, StringRef text)
-{
+  : exponent2(0), sign2(0) {
   assertArithmeticOK(ourSemantics);
   initialize(&ourSemantics);
   convertFromString(text, rmNearestTiesToEven);
 }
 
-APFloat::APFloat(const APFloat &rhs)
-{
+APFloat::APFloat(const APFloat &rhs) : exponent2(0), sign2(0) {
   initialize(rhs.semantics);
   assign(rhs);
 }
@@ -3257,18 +3257,15 @@ APFloat APFloat::getSmallestNormalized(const fltSemantics &Sem, bool Negative) {
   return Val;
 }
 
-APFloat::APFloat(const APInt& api, bool isIEEE)
-{
+APFloat::APFloat(const APInt& api, bool isIEEE) : exponent2(0), sign2(0) {
   initFromAPInt(api, isIEEE);
 }
 
-APFloat::APFloat(float f)
-{
+APFloat::APFloat(float f) : exponent2(0), sign2(0) {
   initFromAPInt(APInt::floatToBits(f));
 }
 
-APFloat::APFloat(double d)
-{
+APFloat::APFloat(double d) : exponent2(0), sign2(0) {
   initFromAPInt(APInt::doubleToBits(d));
 }
 
