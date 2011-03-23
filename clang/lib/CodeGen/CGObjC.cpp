@@ -238,7 +238,8 @@ void CodeGenFunction::GenerateObjCGetter(ObjCImplementationDecl *IMP,
     CallArgList Args;
     Args.push_back(std::make_pair(RValue::get(SelfAsId), IdTy));
     Args.push_back(std::make_pair(RValue::get(CmdVal), Cmd->getType()));
-    Args.push_back(std::make_pair(RValue::get(Offset), getContext().LongTy));
+    Args.push_back(std::make_pair(RValue::get(Offset),
+                getContext().getPointerDiffType()));
     Args.push_back(std::make_pair(RValue::get(True), getContext().BoolTy));
     // FIXME: We shouldn't need to get the function info here, the
     // runtime already should have computed it to build the function.
@@ -396,7 +397,8 @@ void CodeGenFunction::GenerateObjCSetter(ObjCImplementationDecl *IMP,
     CallArgList Args;
     Args.push_back(std::make_pair(RValue::get(SelfAsId), IdTy));
     Args.push_back(std::make_pair(RValue::get(CmdVal), Cmd->getType()));
-    Args.push_back(std::make_pair(RValue::get(Offset), getContext().LongTy));
+    Args.push_back(std::make_pair(RValue::get(Offset),
+                getContext().getPointerDiffType()));
     Args.push_back(std::make_pair(RValue::get(ArgAsId), IdTy));
     Args.push_back(std::make_pair(RValue::get(IsAtomic ? True : False),
                                   getContext().BoolTy));

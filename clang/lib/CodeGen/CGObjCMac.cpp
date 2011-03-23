@@ -328,7 +328,7 @@ public:
     CanQualType SelType = Ctx.getCanonicalParamType(Ctx.getObjCSelType());
     Params.push_back(IdType);
     Params.push_back(SelType);
-    Params.push_back(Ctx.LongTy);
+    Params.push_back(Ctx.getPointerDiffType()->getCanonicalTypeUnqualified());
     Params.push_back(Ctx.BoolTy);
     const llvm::FunctionType *FTy =
       Types.GetFunctionType(Types.getFunctionInfo(IdType, Params,
@@ -346,7 +346,7 @@ public:
     CanQualType SelType = Ctx.getCanonicalParamType(Ctx.getObjCSelType());
     Params.push_back(IdType);
     Params.push_back(SelType);
-    Params.push_back(Ctx.LongTy);
+    Params.push_back(Ctx.getPointerDiffType()->getCanonicalTypeUnqualified());
     Params.push_back(IdType);
     Params.push_back(Ctx.BoolTy);
     Params.push_back(Ctx.BoolTy);
