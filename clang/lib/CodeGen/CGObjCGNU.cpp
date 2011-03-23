@@ -2451,11 +2451,13 @@ llvm::Value *CGObjCGNU::EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
                          const ObjCIvarDecl *Ivar) {
   if (CGM.getLangOptions().ObjCNonFragileABI) {
     Interface = FindIvarInterface(CGM.getContext(), Interface, Ivar);
-    return CGF.Builder.CreateLoad(CGF.Builder.CreateLoad(
-                ObjCIvarOffsetVariable(Interface, Ivar), false, "ivar"));
+    return CGF.Builder.CreateZExtOrBitCast(
+        CGF.Builder.CreateLoad(CGF.Builder.CreateLoad(
+                ObjCIvarOffsetVariable(Interface, Ivar), false, "ivar")),
+        PtrDiffTy);
   }
   uint64_t Offset = ComputeIvarBaseOffset(CGF.CGM, Interface, Ivar);
-  return llvm::ConstantInt::get(LongTy, Offset, "ivar");
+  return llvm::ConstantInt::get(PtrDiffTy, Offset, "ivar");
 }
 
 CodeGen::CGObjCRuntime *
