@@ -42,7 +42,6 @@
 TYPE("cpp-output",               PP_C,         INVALID,         "i",     "u")
 TYPE("c",                        C,            PP_C,            0,       "u")
 TYPE("cl",                       CL,           PP_C,            0,       "u")
-TYPE("cuda",                     CUDA,         PP_CXX,          0,       "u")
 TYPE("objective-c-cpp-output",   PP_ObjC,      INVALID,         "mi",    "u")
 TYPE("objective-c",              ObjC,         PP_ObjC,         0,       "u")
 TYPE("c++-cpp-output",           PP_CXX,       INVALID,         "ii",    "u")

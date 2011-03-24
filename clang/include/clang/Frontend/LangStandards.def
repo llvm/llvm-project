@@ -80,9 +80,4 @@ LANGSTANDARD(opencl, "cl",
              "OpenCL 1.0",
              BCPLComment | C99 | Digraphs | HexFloat)
 
-// CUDA
-LANGSTANDARD(cuda, "cuda",
-             "NVIDIA CUDA(tm)",
-             BCPLComment | CPlusPlus | Digraphs)
-
 #undef LANGSTANDARD

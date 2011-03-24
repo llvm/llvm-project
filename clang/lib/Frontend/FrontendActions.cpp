@@ -198,7 +198,6 @@ void PrintPreambleAction::ExecuteAction() {
   case IK_ObjC:
   case IK_ObjCXX:
   case IK_OpenCL:
-  case IK_CUDA:
     break;
       
   case IK_None:
