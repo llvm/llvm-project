@@ -602,7 +602,9 @@ bool CodeGenPrepare::DupRetToEnableTailCallOpts(ReturnInst *RI) {
     if (&*BI != RI)
       return false;
   } else {
-    if (&*BB->begin() != RI)
+    BasicBlock::iterator BI = BB->begin();
+    while (isa<DbgInfoIntrinsic>(BI)) ++BI;
+    if (&*BI != RI)
       return false;
   }
 
@@ -626,10 +628,12 @@ bool CodeGenPrepare::DupRetToEnableTailCallOpts(ReturnInst *RI) {
       BasicBlock::InstListType &InstList = (*PI)->getInstList();
       BasicBlock::InstListType::reverse_iterator RI = InstList.rbegin();
       BasicBlock::InstListType::reverse_iterator RE = InstList.rend();
-      if (++RI == RE)
+      do { ++RI; } while (RI != RE && isa<DbgInfoIntrinsic>(&*RI));
+      if (RI == RE)
         continue;
+
       CallInst *CI = dyn_cast<CallInst>(&*RI);
-      if (CI && CI->getType()->isVoidTy() && TLI->mayBeEmittedAsTailCall(CI))
+      if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI))
         TailCalls.push_back(CI);
     }
   }
