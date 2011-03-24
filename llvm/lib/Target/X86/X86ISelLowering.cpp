@@ -45,6 +45,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/VectorExtras.h"
+#include "llvm/Support/CallSite.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1578,6 +1579,18 @@ CreateCopyOfByValArgument(SDValue Src, SDValue Dst, SDValue Chain,
 /// supports tail call optimization.
 static bool IsTailCallConvention(CallingConv::ID CC) {
   return (CC == CallingConv::Fast || CC == CallingConv::GHC);
+}
+
+bool X86TargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
+  if (!CI->isTailCall())
+    return false;
+
+  CallSite CS(CI);
+  CallingConv::ID CalleeCC = CS.getCallingConv();
+  if (!IsTailCallConvention(CalleeCC) && CalleeCC != CallingConv::C)
+    return false;
+
+  return true;
 }
 
 /// FuncIsMadeTailCallSafe - Return true if the function is being made into

@@ -455,6 +455,8 @@ namespace llvm {
 
     virtual bool isUsedByReturnOnly(SDNode *N) const;
 
+    virtual bool mayBeEmittedAsTailCall(CallInst *CI) const;
+
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                       SDValue &ARMcc, SelectionDAG &DAG, DebugLoc dl) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS,

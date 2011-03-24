@@ -843,6 +843,8 @@ namespace llvm {
 
     virtual bool isUsedByReturnOnly(SDNode *N) const;
 
+    virtual bool mayBeEmittedAsTailCall(CallInst *CI) const;
+
     virtual bool
       CanLowerReturn(CallingConv::ID CallConv, bool isVarArg,
                      const SmallVectorImpl<ISD::OutputArg> &Outs,

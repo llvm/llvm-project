@@ -47,16 +47,17 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 STATISTIC(NumBlocksElim, "Number of blocks eliminated");
-STATISTIC(NumPHIsElim, "Number of trivial PHIs eliminated");
-STATISTIC(NumGEPsElim, "Number of GEPs converted to casts");
+STATISTIC(NumPHIsElim,   "Number of trivial PHIs eliminated");
+STATISTIC(NumGEPsElim,   "Number of GEPs converted to casts");
 STATISTIC(NumCmpUses, "Number of uses of Cmp expressions replaced with uses of "
                       "sunken Cmps");
 STATISTIC(NumCastUses, "Number of uses of Cast expressions replaced with uses "
                        "of sunken Casts");
 STATISTIC(NumMemoryInsts, "Number of memory instructions whose address "
                           "computations were sunk");
-STATISTIC(NumExtsMoved, "Number of [s|z]ext instructions combined with loads");
-STATISTIC(NumExtUses, "Number of uses of [s|z]ext instructions optimized");
+STATISTIC(NumExtsMoved,  "Number of [s|z]ext instructions combined with loads");
+STATISTIC(NumExtUses,    "Number of uses of [s|z]ext instructions optimized");
+STATISTIC(NumRetsDup,    "Number of return instructions duplicated");
 
 namespace {
   class CodeGenPrepare : public FunctionPass {
@@ -71,10 +72,14 @@ namespace {
     /// update it.
     BasicBlock::iterator CurInstIterator;
 
-    // Keeps track of non-local addresses that have been sunk into a block. This
-    // allows us to avoid inserting duplicate code for blocks with multiple
-    // load/stores of the same address.
+    /// Keeps track of non-local addresses that have been sunk into a block.
+    /// This allows us to avoid inserting duplicate code for blocks with
+    /// multiple load/stores of the same address.
     DenseMap<Value*, Value*> SunkAddrs;
+
+    /// UpdateDT - If CFG is modified in anyway, dominator tree may need to
+    /// be updated.
+    bool UpdateDT;
 
   public:
     static char ID; // Pass identification, replacement for typeid
@@ -100,6 +105,7 @@ namespace {
     bool OptimizeCallInst(CallInst *CI);
     bool MoveExtToFormExtLoad(Instruction *I);
     bool OptimizeExtUses(Instruction *I);
+    bool DupRetToEnableTailCallOpts(ReturnInst *RI);
   };
 }
 
@@ -114,8 +120,10 @@ FunctionPass *llvm::createCodeGenPreparePass(const TargetLowering *TLI) {
 bool CodeGenPrepare::runOnFunction(Function &F) {
   bool EverMadeChange = false;
 
+  UpdateDT = false;
   DT = getAnalysisIfAvailable<DominatorTree>();
   PFI = getAnalysisIfAvailable<ProfileInfo>();
+
   // First pass, eliminate blocks that contain only PHI nodes and an
   // unconditional branch.
   EverMadeChange |= EliminateMostlyEmptyBlocks(F);
@@ -123,12 +131,17 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   bool MadeChange = true;
   while (MadeChange) {
     MadeChange = false;
-    for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
+    for (Function::iterator I = F.begin(), E = F.end(); I != E; ) {
+      BasicBlock *BB = I++;
       MadeChange |= OptimizeBlock(*BB);
+    }
     EverMadeChange |= MadeChange;
   }
 
   SunkAddrs.clear();
+
+  if (UpdateDT && DT)
+    DT->DT->recalculate(F);
 
   return EverMadeChange;
 }
@@ -531,6 +544,125 @@ bool CodeGenPrepare::OptimizeCallInst(CallInst *CI) {
   // should be left alone.
   CodeGenPrepareFortifiedLibCalls Simplifier;
   return Simplifier.fold(CI, TD);
+}
+
+/// DupRetToEnableTailCallOpts - Look for opportunities to duplicate return
+/// instructions to the predecessor to enable tail call optimizations. The
+/// case it is currently looking for is:
+/// bb0:
+///   %tmp0 = tail call i32 @f0()
+///   br label %return
+/// bb1:
+///   %tmp1 = tail call i32 @f1()
+///   br label %return
+/// bb2:
+///   %tmp2 = tail call i32 @f2()
+///   br label %return
+/// return:
+///   %retval = phi i32 [ %tmp0, %bb0 ], [ %tmp1, %bb1 ], [ %tmp2, %bb2 ]
+///   ret i32 %retval
+///
+/// =>
+///
+/// bb0:
+///   %tmp0 = tail call i32 @f0()
+///   ret i32 %tmp0
+/// bb1:
+///   %tmp1 = tail call i32 @f1()
+///   ret i32 %tmp1
+/// bb2:
+///   %tmp2 = tail call i32 @f2()
+///   ret i32 %tmp2
+///
+bool CodeGenPrepare::DupRetToEnableTailCallOpts(ReturnInst *RI) {
+  if (!TLI)
+    return false;
+
+  Value *V = RI->getReturnValue();
+  PHINode *PN = V ? dyn_cast<PHINode>(V) : NULL;
+  if (V && !PN)
+    return false;
+
+  BasicBlock *BB = RI->getParent();
+  if (PN && PN->getParent() != BB)
+    return false;
+
+  // It's not safe to eliminate the sign / zero extension of the return value.
+  // See llvm::isInTailCallPosition().
+  const Function *F = BB->getParent();
+  unsigned CallerRetAttr = F->getAttributes().getRetAttributes();
+  if ((CallerRetAttr & Attribute::ZExt) || (CallerRetAttr & Attribute::SExt))
+    return false;
+
+  // Make sure there are no instructions between the PHI and return, or that the
+  // return is the first instruction in the block.
+  if (PN) {
+    BasicBlock::iterator BI = BB->begin();
+    do { ++BI; } while (isa<DbgInfoIntrinsic>(BI));
+    if (&*BI != RI)
+      return false;
+  } else {
+    if (&*BB->begin() != RI)
+      return false;
+  }
+
+  /// Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
+  /// call.
+  SmallVector<CallInst*, 4> TailCalls;
+  if (PN) {
+    for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
+      CallInst *CI = dyn_cast<CallInst>(PN->getIncomingValue(I));
+      // Make sure the phi value is indeed produced by the tail call.
+      if (CI && CI->hasOneUse() && CI->getParent() == PN->getIncomingBlock(I) &&
+          TLI->mayBeEmittedAsTailCall(CI))
+        TailCalls.push_back(CI);
+    }
+  } else {
+    SmallPtrSet<BasicBlock*, 4> VisitedBBs;
+    for (pred_iterator PI = pred_begin(BB), PE = pred_end(BB); PI != PE; ++PI) {
+      if (!VisitedBBs.insert(*PI))
+        continue;
+
+      BasicBlock::InstListType &InstList = (*PI)->getInstList();
+      BasicBlock::InstListType::reverse_iterator RI = InstList.rbegin();
+      BasicBlock::InstListType::reverse_iterator RE = InstList.rend();
+      if (++RI == RE)
+        continue;
+      CallInst *CI = dyn_cast<CallInst>(&*RI);
+      if (CI && CI->getType()->isVoidTy() && TLI->mayBeEmittedAsTailCall(CI))
+        TailCalls.push_back(CI);
+    }
+  }
+
+  bool Changed = false;
+  for (unsigned i = 0, e = TailCalls.size(); i != e; ++i) {
+    CallInst *CI = TailCalls[i];
+    CallSite CS(CI);
+
+    // Conservatively require the attributes of the call to match those of the
+    // return. Ignore noalias because it doesn't affect the call sequence.
+    unsigned CalleeRetAttr = CS.getAttributes().getRetAttributes();
+    if ((CalleeRetAttr ^ CallerRetAttr) & ~Attribute::NoAlias)
+      continue;
+
+    // Make sure the call instruction is followed by an unconditional branch to
+    // the return block.
+    BasicBlock *CallBB = CI->getParent();
+    BranchInst *BI = dyn_cast<BranchInst>(CallBB->getTerminator());
+    if (!BI || !BI->isUnconditional() || BI->getSuccessor(0) != BB)
+      continue;
+
+    // Duplicate the return into CallBB.
+    (void)FoldReturnIntoUncondBranch(RI, BB, CallBB);
+    UpdateDT = Changed = true;
+    ++NumRetsDup;
+  }
+
+  // If we eliminated all predecessors of the block, delete the block now.
+  if (Changed && pred_begin(BB) == pred_end(BB))
+    BB->eraseFromParent();
+
+  return Changed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -955,6 +1087,9 @@ bool CodeGenPrepare::OptimizeInst(Instruction *I) {
   
   if (CallInst *CI = dyn_cast<CallInst>(I))
     return OptimizeCallInst(CI);
+
+  if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
+    return DupRetToEnableTailCallOpts(RI);
 
   return false;
 }

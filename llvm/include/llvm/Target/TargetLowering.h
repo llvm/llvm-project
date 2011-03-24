@@ -1287,6 +1287,14 @@ public:
     return false;
   }
 
+  /// mayBeEmittedAsTailCall - Return true if the target may be able emit the
+  /// call instruction as a tail call. This is used by optimization passes to
+  /// determine if it's profitable to duplicate return instructions to enable
+  /// tailcall optimization.
+  virtual bool mayBeEmittedAsTailCall(CallInst *CI) const {
+    return false;
+  }
+
   /// LowerOperationWrapper - This callback is invoked by the type legalizer
   /// to legalize nodes with an illegal operand type but legal result types.
   /// It replaces the LowerOperation callback in the type Legalizer.

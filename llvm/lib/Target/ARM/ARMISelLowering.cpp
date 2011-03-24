@@ -1803,6 +1803,16 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N) const {
   return HasRet;
 }
 
+bool ARMTargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
+  if (!EnableARMTailCalls)
+    return false;
+
+  if (!CI->isTailCall())
+    return false;
+
+  return !Subtarget->isThumb1Only();
+}
+
 // ConstantPool, JumpTable, GlobalAddress, and ExternalSymbol are lowered as
 // their target counterpart wrapped in the ARMISD::Wrapper node. Suppose N is
 // one of the above mentioned nodes. It has to be wrapped because otherwise
