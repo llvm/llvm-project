@@ -1080,11 +1080,18 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr *MI0,
     int CPI1 = MO1.getIndex();
     const MachineConstantPoolEntry &MCPE0 = MCP->getConstants()[CPI0];
     const MachineConstantPoolEntry &MCPE1 = MCP->getConstants()[CPI1];
-    ARMConstantPoolValue *ACPV0 =
-      static_cast<ARMConstantPoolValue*>(MCPE0.Val.MachineCPVal);
-    ARMConstantPoolValue *ACPV1 =
-      static_cast<ARMConstantPoolValue*>(MCPE1.Val.MachineCPVal);
-    return ACPV0->hasSameValue(ACPV1);
+    bool isARMCP0 = MCPE0.isMachineConstantPoolEntry();
+    bool isARMCP1 = MCPE1.isMachineConstantPoolEntry();
+    if (isARMCP0 && isARMCP1) {
+      ARMConstantPoolValue *ACPV0 =
+        static_cast<ARMConstantPoolValue*>(MCPE0.Val.MachineCPVal);
+      ARMConstantPoolValue *ACPV1 =
+        static_cast<ARMConstantPoolValue*>(MCPE1.Val.MachineCPVal);
+      return ACPV0->hasSameValue(ACPV1);
+    } else if (!isARMCP0 && !isARMCP1) {
+      return MCPE0.Val.ConstVal == MCPE1.Val.ConstVal;
+    }
+    return false;
   } else if (Opcode == ARM::PICLDR) {
     if (MI1->getOpcode() != Opcode)
       return false;
