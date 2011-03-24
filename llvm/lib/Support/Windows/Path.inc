@@ -882,7 +882,17 @@ Path::makeUnique(bool reuse_current, std::string* ErrMsg) {
   // Find a numeric suffix that isn't used by an existing file.  Assume there
   // won't be more than 1 million files with the same prefix.  Probably a safe
   // bet.
-  static unsigned FCounter = 0;
+  static int FCounter = -1;
+  if (FCounter < 0) {
+    // Give arbitrary initial seed.
+    // FIXME: We should use sys::fs::unique_file() in future.
+    LARGE_INTEGER cnt64;
+    DWORD x = GetCurrentProcessId();
+    x = (x << 16) | (x >> 16);
+    if (QueryPerformanceCounter(&cnt64))    // RDTSC
+      x ^= cnt64.HighPart ^ cnt64.LowPart;
+    FCounter = x % 1000000;
+  }
   do {
     sprintf(FNBuffer+offset, "-%06u", FCounter);
     if (++FCounter > 999999)
