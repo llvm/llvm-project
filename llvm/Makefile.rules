@@ -719,6 +719,24 @@ BaseNameSources := $(sort $(basename $(Sources)))
 ObjectsO  := $(BaseNameSources:%=$(ObjDir)/%.o)
 ObjectsBC := $(BaseNameSources:%=$(ObjDir)/%.bc)
 
+#----------------------------------------------------------
+# For Mingw MSYS bash and Python/w32:
+#
+# $(ECHOPATH) prints DOSish pathstring.
+#   ex) $(ECHOPATH) /include/sys/types.h
+#   --> C:/mingw/include/sys/types.h
+# built-in "echo" does not transform path to DOSish path.
+#
+# FIXME: It would not be needed when MSYS's python
+# were provided.
+#----------------------------------------------------------
+
+ifeq (-mingw32,$(findstring -mingw32,$(BUILD_TRIPLE)))
+  ECHOPATH := $(Verb)python -u -c "import sys;print ' '.join(sys.argv[1:])"
+else
+  ECHOPATH := $(Verb)$(ECHO)
+endif
+
 ###############################################################################
 # DIRECTORIES: Handle recursive descent of directory structure
 ###############################################################################

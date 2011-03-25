@@ -1,6 +1,9 @@
-; RUN: llc < %s -mtriple=i686-linux | not egrep {\\\$4294967289|-7}
-; RUN: llc < %s -mtriple=i686-linux | egrep {\\\$4294967280|-16}
-; RUN: llc < %s -mtriple=x86_64-linux | grep {\\-16}
+; RUN: llc < %s -mtriple=i686-linux | FileCheck %s -check-prefix=X32
+; X32-NOT:     {{$429496728|-7}}
+; X32:     {{$4294967280|-16}}
+; X32-NOT:     {{$429496728|-7}}
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=X64
+; X64:     -16
 
 define void @t() nounwind {
 A:

@@ -496,6 +496,14 @@ raw_fd_ostream::~raw_fd_ostream() {
         }
   }
 
+#ifdef __MINGW32__
+  // On mingw, global dtors should not call exit().
+  // report_fatal_error() invokes exit(). We know report_fatal_error()
+  // might not write messages to stderr when any errors were detected
+  // on FD == 2.
+  if (FD == 2) return;
+#endif
+
   // If there are any pending errors, report them now. Clients wishing
   // to avoid report_fatal_error calls should check for errors with
   // has_error() and clear the error flag with clear_error() before

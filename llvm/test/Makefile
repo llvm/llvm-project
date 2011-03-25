@@ -173,22 +173,24 @@ site.exp: FORCE
 
 lit.site.cfg: site.exp
 	@echo "Making LLVM 'lit.site.cfg' file..."
-	@sed -e "s#@LLVM_SOURCE_DIR@#$(LLVM_SRC_ROOT)#g" \
-	     -e "s#@LLVM_BINARY_DIR@#$(LLVM_OBJ_ROOT)#g" \
-	     -e "s#@LLVM_TOOLS_DIR@#$(ToolDir)#g" \
-	     -e "s#@LLVMGCCDIR@#$(LLVMGCCDIR)#g" \
-	     -e "s#@ENABLE_SHARED@#$(ENABLE_SHARED)#g" \
-	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
+	@$(ECHOPATH) s=@LLVM_SOURCE_DIR@=$(LLVM_SRC_ROOT)=g > lit.tmp
+	@$(ECHOPATH) s=@LLVM_BINARY_DIR@=$(LLVM_OBJ_ROOT)=g >> lit.tmp
+	@$(ECHOPATH) s=@LLVM_TOOLS_DIR@=$(ToolDir)=g >> lit.tmp
+	@$(ECHOPATH) s=@LLVMGCCDIR@=$(LLVMGCCDIR)=g >> lit.tmp
+	@$(ECHOPATH) s=@PYTHON_EXECUTABLE@=python=g >> lit.tmp
+	@$(ECHOPATH) s=@ENABLE_SHARED@=$(ENABLE_SHARED)=g >> lit.tmp
+	@sed -f lit.tmp $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
+	@-rm -f lit.tmp
 
 Unit/lit.site.cfg: $(PROJ_OBJ_DIR)/Unit/.dir FORCE
 	@echo "Making LLVM unittest 'lit.site.cfg' file..."
-	@sed -e "s#@LLVM_SOURCE_DIR@#$(LLVM_SRC_ROOT)#g" \
-	     -e "s#@LLVM_BINARY_DIR@#$(LLVM_OBJ_ROOT)#g" \
-	     -e "s#@LLVM_TOOLS_DIR@#$(ToolDir)#g" \
-	     -e "s#@LLVMGCCDIR@#$(LLVMGCCDIR)#g" \
-	     -e "s#@LLVM_BUILD_MODE@#$(BuildMode)#g" \
-	     -e "s#@ENABLE_SHARED@#$(ENABLE_SHARED)#g" \
-	     -e "s#@SHLIBDIR@#$(SharedLibDir)#g" \
-	     -e "s#@SHLIBPATH_VAR@#$(SHLIBPATH_VAR)#g" \
-	     $(PROJ_SRC_DIR)/Unit/lit.site.cfg.in > $@
-
+	@$(ECHOPATH) s=@LLVM_SOURCE_DIR@=$(LLVM_SRC_ROOT)=g > unit.tmp
+	@$(ECHOPATH) s=@LLVM_BINARY_DIR@=$(LLVM_OBJ_ROOT)=g >> unit.tmp
+	@$(ECHOPATH) s=@LLVM_TOOLS_DIR@=$(ToolDir)=g >> unit.tmp
+	@$(ECHOPATH) s=@LLVMGCCDIR@=$(LLVMGCCDIR)=g >> unit.tmp
+	@$(ECHOPATH) s=@LLVM_BUILD_MODE@=$(BuildMode)=g >> unit.tmp
+	@$(ECHOPATH) s=@ENABLE_SHARED@=$(ENABLE_SHARED)=g >> unit.tmp
+	@$(ECHOPATH) s=@SHLIBDIR@=$(SharedLibDir)=g >> unit.tmp
+	@$(ECHOPATH) s=@SHLIBPATH_VAR@=$(SHLIBPATH_VAR)=g >> unit.tmp
+	@sed -f unit.tmp $(PROJ_SRC_DIR)/Unit/lit.site.cfg.in > $@
+	@-rm -f unit.tmp
