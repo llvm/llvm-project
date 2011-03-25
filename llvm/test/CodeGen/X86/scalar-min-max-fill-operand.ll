@@ -1,6 +1,13 @@
-; RUN: llc < %s -march=x86-64 | grep min | count 1
-; RUN: llc < %s -march=x86-64 | grep max | count 1
-; RUN: llc < %s -march=x86-64 | grep mov | count 2
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; CHECK-NOT:     {{(min|max|mov)}}
+; CHECK:     mov
+; CHECK-NOT:     {{(min|max|mov)}}
+; CHECK:     min
+; CHECK-NOT:     {{(min|max|mov)}}
+; CHECK:     mov
+; CHECK-NOT:     {{(min|max|mov)}}
+; CHECK:     max
+; CHECK-NOT:     {{(min|max|mov)}}
 
 declare float @bar()
 

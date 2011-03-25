@@ -1,4 +1,5 @@
-; RUN: llc < %s -o - -march=x86-64 | FileCheck %s
+; RUN: llc < %s -o - -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -o - -mtriple=x86_64-win32 | FileCheck %s -check-prefix=WIN64
 ; PR4891
 
 ; Both loads should happen before either store.
@@ -7,6 +8,11 @@
 ; CHECK: movl  (%rsi), %ecx
 ; CHECK: movl  %ecx, (%rdi)
 ; CHECK: movl  %eax, (%rsi)
+
+; WIN64: movl  (%rcx), %eax
+; WIN64: movl  (%rdx), %esi
+; WIN64: movl  %esi, (%rcx)
+; WIN64: movl  %eax, (%rdx)
 
 define void @short2_int_swap(<2 x i16>* nocapture %b, i32* nocapture %c) nounwind {
 entry:

@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s -check-prefix=X86-64
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=X86-64
+; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=WIN64
 ; RUN: llc < %s -march=x86    | FileCheck %s -check-prefix=X86-32
 
 ; Use h registers. On x86-64, codegen doesn't support general allocation
@@ -8,6 +9,12 @@ define void @bar64(i64 inreg %x, i8* inreg %p) nounwind {
 ; X86-64: bar64:
 ; X86-64: shrq $8, %rdi
 ; X86-64: incb %dil
+
+; See FIXME: on regclass GR8.
+; It could be optimally transformed like; incb %ch; movb %ch, (%rdx)
+; WIN64:  bar64:
+; WIN64:  shrq $8, %rcx
+; WIN64:  incb %cl
 
 ; X86-32: bar64:
 ; X86-32: incb %ah
@@ -23,6 +30,10 @@ define void @bar32(i32 inreg %x, i8* inreg %p) nounwind {
 ; X86-64: shrl $8, %edi
 ; X86-64: incb %dil
 
+; WIN64:  bar32:
+; WIN64:  shrl $8, %ecx
+; WIN64:  incb %cl
+
 ; X86-32: bar32:
 ; X86-32: incb %ah
   %t0 = lshr i32 %x, 8
@@ -36,6 +47,10 @@ define void @bar16(i16 inreg %x, i8* inreg %p) nounwind {
 ; X86-64: bar16:
 ; X86-64: shrl $8, %edi
 ; X86-64: incb %dil
+
+; WIN64:  bar16:
+; WIN64:  shrl $8, %ecx
+; WIN64:  incb %cl
 
 ; X86-32: bar16:
 ; X86-32: incb %ah
@@ -51,6 +66,9 @@ define i64 @qux64(i64 inreg %x) nounwind {
 ; X86-64: movq %rdi, %rax
 ; X86-64: movzbl %ah, %eax
 
+; WIN64:  qux64:
+; WIN64:  movzbl %ch, %eax
+
 ; X86-32: qux64:
 ; X86-32: movzbl %ah, %eax
   %t0 = lshr i64 %x, 8
@@ -63,6 +81,9 @@ define i32 @qux32(i32 inreg %x) nounwind {
 ; X86-64: movl %edi, %eax
 ; X86-64: movzbl %ah, %eax
 
+; WIN64:  qux32:
+; WIN64:  movzbl %ch, %eax
+
 ; X86-32: qux32:
 ; X86-32: movzbl %ah, %eax
   %t0 = lshr i32 %x, 8
@@ -74,6 +95,9 @@ define i16 @qux16(i16 inreg %x) nounwind {
 ; X86-64: qux16:
 ; X86-64: movl %edi, %eax
 ; X86-64: movzbl %ah, %eax
+
+; WIN64:  qux16:
+; WIN64:  movzbl %ch, %eax
 
 ; X86-32: qux16:
 ; X86-32: movzbl %ah, %eax

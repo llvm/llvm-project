@@ -1,5 +1,8 @@
-; RUN: llc < %s -march=x86-64 | grep {movd.*%rdi, %xmm0}
-; RUN: llc < %s -march=x86-64 | not grep xor
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
+; CHECK-NOT: xor
+; CHECK: movd {{%rdi|%rcx}}, %xmm0
+; CHECK-NOT: xor
 ; PR2108
 
 define <2 x i64> @doload64(i64 %x) nounwind  {

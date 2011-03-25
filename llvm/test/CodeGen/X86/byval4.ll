@@ -1,5 +1,28 @@
-; RUN: llc < %s -march=x86-64 | grep rep.movsq | count 2
-; RUN: llc < %s -march=x86 | grep rep.movsl	 | count 2
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=X64
+; X64-NOT:     movsq
+; X64:     rep
+; X64-NOT:     rep
+; X64:     movsq
+; X64-NOT:     movsq
+; X64:     rep
+; X64-NOT:     rep
+; X64:     movsq
+; X64-NOT:     rep
+; X64-NOT:     movsq
+
+; Win64 has not supported byval yet.
+
+; RUN: llc < %s -march=x86 | FileCheck %s -check-prefix=X32
+; X32-NOT:     movsl
+; X32:     rep
+; X32-NOT:     rep
+; X32:     movsl
+; X32-NOT:     movsl
+; X32:     rep
+; X32-NOT:     rep
+; X32:     movsl
+; X32-NOT:     rep
+; X32-NOT:     movsl
 
 %struct.s = type { i16, i16, i16, i16, i16, i16, i16, i16,
                    i16, i16, i16, i16, i16, i16, i16, i16,

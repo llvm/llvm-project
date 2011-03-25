@@ -1,5 +1,6 @@
-; RUN: llc < %s -march=x86-64 -mattr=+64bit,+sse3 -print-failed-fuse-candidates |& \
-; RUN:   grep fail | count 1
+; RUN: llc < %s -mtriple=x86_64-linux -mattr=+64bit,+sse3 -print-failed-fuse-candidates |& FileCheck %s
+; CHECK: fail
+; CHECK-NOT: fail
 
 declare float @test_f(float %f)
 declare double @test_d(double %f)

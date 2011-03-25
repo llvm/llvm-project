@@ -1,5 +1,8 @@
-; RUN: llc %s -o - -march=x86-64 | grep {(%rdi,%rax,8)}
-; RUN: llc %s -o - -march=x86-64 | not grep {addq.*8}
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
+; CHECK-NOT: {{addq.*8}}
+; CHECK:     ({{%rdi|%rcx}},%rax,8)
+; CHECK-NOT: {{addq.*8}}
 
 define void @foo(double* %y) nounwind {
 entry:

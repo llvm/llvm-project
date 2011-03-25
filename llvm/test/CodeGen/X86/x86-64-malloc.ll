@@ -1,4 +1,6 @@
-; RUN: llc < %s -march=x86-64 | grep {shll.*3, %edi}
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
+; CHECK: shll $3, {{%edi|%ecx}}
 ; PR3829
 ; The generated code should multiply by 3 (sizeof i8*) as an i32,
 ; not as an i64!

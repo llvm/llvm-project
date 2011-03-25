@@ -1,14 +1,17 @@
-; RUN: llc < %s -march=x86-64 | grep {leal	(%rdi,%rdi,2), %eax}
-define i32 @test(i32 %a) {
-        %tmp2 = mul i32 %a, 3           ; <i32> [#uses=1]
-        ret i32 %tmp2
-}
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
 
-; RUN: llc < %s -march=x86-64 | grep {leaq	(,%rdi,4), %rax}
+; CHECK: leaq (,[[A0:%rdi|%rcx]],4), %rax
 define i64 @test2(i64 %a) {
         %tmp2 = shl i64 %a, 2
 	%tmp3 = or i64 %tmp2, %a
         ret i64 %tmp3
+}
+
+; CHECK: leal ([[A0]],[[A0]],2), %eax
+define i32 @test(i32 %a) {
+        %tmp2 = mul i32 %a, 3           ; <i32> [#uses=1]
+        ret i32 %tmp2
 }
 
 ;; TODO!  LEA instead of shift + copy.

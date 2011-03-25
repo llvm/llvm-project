@@ -1,5 +1,10 @@
-; RUN: llc < %s -march=x86-64 | grep paddw | count 2
-; RUN: llc < %s -march=x86-64 | not grep mov
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; CHECK-NOT:     mov
+; CHECK:     paddw
+; CHECK-NOT:     mov
+; CHECK:     paddw
+; CHECK-NOT:     paddw
+; CHECK-NOT:     mov
 
 ; The 2-addr pass should ensure that identical code is produced for these functions
 ; no extra copy should be generated.

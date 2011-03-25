@@ -1,5 +1,6 @@
-; RUN: llc < %s -march=x86 -relocation-model=static | not grep lea
-; RUN: llc < %s -march=x86-64 | not grep lea
+; RUN: llc < %s -march=x86 -relocation-model=static | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux               | FileCheck %s
+; CHECK-NOT:     lea
 
 ; P should be sunk into the loop and folded into the address mode. There
 ; shouldn't be any lea instructions inside the loop.

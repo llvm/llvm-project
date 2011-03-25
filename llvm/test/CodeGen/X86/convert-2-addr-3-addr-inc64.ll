@@ -1,6 +1,10 @@
-; RUN: llc < %s -march=x86-64 -o %t -stats -info-output-file - | \
-; RUN:   grep {asm-printer} | grep {Number of machine instrs printed} | grep 9
-; RUN: grep {leal	1(\%rsi),} %t
+; RUN: llc < %s -mtriple=x86_64-linux -o /dev/null -stats |& FileCheck %s -check-prefix=STATS
+; RUN: llc < %s -mtriple=x86_64-win32 -o /dev/null -stats |& FileCheck %s -check-prefix=STATS
+; STATS: 9 asm-printer
+
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
+; CHECK: leal 1({{%rsi|%rdx}}),
 
 define fastcc zeroext i8 @fullGtU(i32 %i1, i32 %i2, i8* %ptr) nounwind optsize {
 entry:

@@ -220,6 +220,36 @@ raw_ostream &raw_ostream::operator<<(const void *P) {
 }
 
 raw_ostream &raw_ostream::operator<<(double N) {
+#ifdef _WIN32
+  // On MSVCRT and compatible, output of %e is incompatible to Posix
+  // by default. Number of exponent digits should be at least 2. "%+03d"
+  // FIXME: Implement our formatter to here or Support/Format.h!
+  int fpcl = _fpclass(N);
+
+  // negative zero
+  if (fpcl == _FPCLASS_NZ)
+    return *this << "-0.000000e+00";
+
+  char buf[16];
+  unsigned len;
+  len = snprintf(buf, sizeof(buf), "%e", N);
+  if (len <= sizeof(buf) - 2) {
+    if (len >= 5 && buf[len - 5] == 'e' && buf[len - 3] == '0') {
+      int cs = buf[len - 4];
+      if (cs == '+' || cs == '-') {
+        int c1 = buf[len - 2];
+        int c0 = buf[len - 1];
+        if (isdigit(c1) && isdigit(c0)) {
+          // Trim leading '0': "...e+012" -> "...e+12\0"
+          buf[len - 3] = c1;
+          buf[len - 2] = c0;
+          buf[--len] = 0;
+        }
+      }
+    }
+    return this->operator<<(buf);
+  }
+#endif
   return this->operator<<(format("%e", N));
 }
 

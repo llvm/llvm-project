@@ -1,5 +1,9 @@
-; RUN: llc < %s -march=x86-64           | grep {movq.*(%rsi), %rax}
-; RUN: llc < %s -march=x86 -mattr=+sse2 | grep {movsd.*(%eax),}
+; RUN: llc < %s -mtriple=x86_64-linux   | FileCheck %s -check-prefix=X64
+; RUN: llc < %s -mtriple=x86_64-win32   | FileCheck %s -check-prefix=X64
+; X64: movq ({{%rsi|%rdx}}), %r
+
+; RUN: llc < %s -march=x86 -mattr=+sse2 | FileCheck %s -check-prefix=X32
+; X32: movsd (%eax), %xmm
 
 ; Uses movsd to load / store i64 values if sse2 is available.
 

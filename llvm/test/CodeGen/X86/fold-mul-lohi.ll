@@ -1,5 +1,6 @@
-; RUN: llc < %s -march=x86 | not grep lea
-; RUN: llc < %s -march=x86-64 | not grep lea
+; RUN: llc < %s -march=x86            | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; CHECK-NOT: lea
 
 @B = external global [1000 x i8], align 32
 @A = external global [1000 x i8], align 32

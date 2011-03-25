@@ -1,4 +1,6 @@
-; RUN: llc < %s -march=x86-64 | grep {leal.*-2(\[%\]rdi,\[%\]rdi)}
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
+; CHECK: leal -2({{%rdi,%rdi|%rcx,%rcx}})
 
 define i32 @foo(i32 %x) nounwind readnone {
   %t0 = shl i32 %x, 1

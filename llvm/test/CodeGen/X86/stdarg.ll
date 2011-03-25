@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=x86-64 | grep {testb	\[%\]al, \[%\]al}
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; CHECK: testb %al, %al
 
 %struct.__va_list_tag = type { i32, i32, i8*, i8* }
 
