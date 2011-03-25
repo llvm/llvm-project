@@ -31,12 +31,12 @@ dnl===
 dnl===-----------------------------------------------------------------------===
 dnl Initialize autoconf and define the package name, version number and
 dnl email address for reporting bugs.
-AC_INIT([[llvm]],[[2.9svn]],[llvmbugs@cs.uiuc.edu])
+AC_INIT([[llvm]],[[2.9]],[llvmbugs@cs.uiuc.edu])
 
 dnl Provide a copyright substitution and ensure the copyright notice is included
 dnl in the output of --version option of the generated configure script.
-AC_SUBST(LLVM_COPYRIGHT,["Copyright (c) 2003-2010 University of Illinois at Urbana-Champaign."])
-AC_COPYRIGHT([Copyright (c) 2003-2010 University of Illinois at Urbana-Champaign.])
+AC_SUBST(LLVM_COPYRIGHT,["Copyright (c) 2003-2011 University of Illinois at Urbana-Champaign."])
+AC_COPYRIGHT([Copyright (c) 2003-2011 University of Illinois at Urbana-Champaign.])
 
 dnl Indicate that we require autoconf 2.59 or later. Ths is needed because we
 dnl use some autoconf macros only available in 2.59.
@@ -411,7 +411,7 @@ dnl===-----------------------------------------------------------------------===
 
 dnl --enable-optimized : check whether they want to do an optimized build:
 AC_ARG_ENABLE(optimized, AS_HELP_STRING(
- --enable-optimized,[Compile with optimizations enabled (default is NO)]),,enableval=$optimize)
+ --enable-optimized,[Compile with optimizations enabled (default is YES)]),,enableval=$optimize)
 if test ${enableval} = "no" ; then
   AC_SUBST(ENABLE_OPTIMIZED,[[]])
 else
@@ -429,7 +429,7 @@ fi
 
 dnl --enable-assertions : check whether they want to turn on assertions or not:
 AC_ARG_ENABLE(assertions,AS_HELP_STRING(
-  --enable-assertions,[Compile with assertion checks enabled (default is YES)]),, enableval="yes")
+  --enable-assertions,[Compile with assertion checks enabled (default is NO)]),, enableval="no")
 if test ${enableval} = "yes" ; then
   AC_SUBST(DISABLE_ASSERTIONS,[[]])
 else
