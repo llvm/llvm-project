@@ -499,7 +499,7 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
     // isn't strictly lexical, which breaks name lookup. Be careful to insert
     // the label at the appropriate place in the identifier chain.
     for (I = IdResolver.begin(D->getDeclName()); I != IEnd; ++I) {
-      DeclContext *IDC = (*I)->getLexicalDeclContext();
+      DeclContext *IDC = (*I)->getLexicalDeclContext()->getRedeclContext();
       if (IDC == CurContext) {
         if (!S->isDeclScope(*I))
           continue;
