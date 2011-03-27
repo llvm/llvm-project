@@ -2,11 +2,17 @@
 
 // PR9463
 double *end;
-void f() {
+void f(bool b1, bool b2) {
   {
-    int end = 0;
-    goto end;
-    end = 1;
+    do {
+      int end = 0;
+      if (b2) {
+        do {
+          goto end;
+        } while (b2);
+      }
+      end = 1;
+    } while (b1);
   }
 
  end:
