@@ -172,10 +172,25 @@ void IdentifierResolver::InsertDeclAfter(iterator Pos, NamedDecl *D) {
   DeclarationName Name = D->getDeclName();
   void *Ptr = Name.getFETokenInfo<void>();
   
-  if (Pos == iterator() || isDeclPtr(Ptr)) {
-    // Simple case: insert at the end of the list (which is the
-    // end of the stored vector).
+  if (!Ptr) {
     AddDecl(D);
+    return;
+  }
+
+  if (isDeclPtr(Ptr)) {
+    // We only have a single declaration: insert before or after it,
+    // as appropriate.
+    if (Pos == iterator()) {
+      // Add the new declaration before the existing declaration.
+      NamedDecl *PrevD = static_cast<NamedDecl*>(Ptr);
+      RemoveDecl(PrevD);
+      AddDecl(D);
+      AddDecl(PrevD);
+    } else {
+      // Add new declaration after the existing declaration.
+      AddDecl(D);
+    }
+
     return;
   }
 

@@ -13,6 +13,26 @@ void f() {
   return;
 }
 
+namespace N {
+  float* end;
+  void f(bool b1, bool b2) {
+    {
+      do {
+        int end = 0;
+        if (b2) {
+          do {
+            goto end;
+          } while (b2);
+        }
+        end = 1;
+      } while (b1);
+    }
+
+  end:
+    return;
+  }
+}
+
 void g() {
   end = 1; // expected-error{{assigning to 'double *' from incompatible type 'int'}}
 }
