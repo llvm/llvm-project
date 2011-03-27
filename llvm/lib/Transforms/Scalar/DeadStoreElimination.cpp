@@ -340,24 +340,33 @@ static bool isCompleteOverwrite(const AliasAnalysis::Location &Later,
   // Okay, we have stores to two completely different pointers.  Try to
   // decompose the pointer into a "base + constant_offset" form.  If the base
   // pointers are equal, then we can reason about the two stores.
-  int64_t Off1 = 0, Off2 = 0;
-  const Value *BP1 = GetPointerBaseWithConstantOffset(P1, Off1, TD);
-  const Value *BP2 = GetPointerBaseWithConstantOffset(P2, Off2, TD);
+  int64_t EarlierOff = 0, LaterOff = 0;
+  const Value *BP1 = GetPointerBaseWithConstantOffset(P1, EarlierOff, TD);
+  const Value *BP2 = GetPointerBaseWithConstantOffset(P2, LaterOff, TD);
   
   // If the base pointers still differ, we have two completely different stores.
   if (BP1 != BP2)
     return false;
-  
-  // Otherwise, we might have a situation like:
-  //  store i16 -> P + 1 Byte
-  //  store i32 -> P
-  // In this case, we see if the later store completely overlaps all bytes
-  // stored by the previous store.
-  if (Off1 < Off2 ||                       // Earlier starts before Later.
-      Off1+Earlier.Size > Off2+Later.Size) // Earlier goes beyond Later.
-    return false;
-  // Otherwise, we have complete overlap.
-  return true;
+
+  // The later store completely overlaps the earlier store if:
+  // 
+  // 1. Both start at the same offset and the later one's size is greater than
+  //    or equal to the earlier one's, or
+  //
+  //      |--earlier--|
+  //      |--   later   --|
+  //      
+  // 2. The earlier store has an offset greater than the later offset, but which
+  //    still lies completely within the later store.
+  //
+  //        |--earlier--|
+  //    |-----  later  ------|
+  if (EarlierOff >= LaterOff &&
+      EarlierOff + Earlier.Size <= LaterOff + Later.Size)
+    return true;
+
+  // Otherwise, they don't completely overlap.
+  return false;
 }
 
 /// isPossibleSelfRead - If 'Inst' might be a self read (i.e. a noop copy of a
