@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 > %t
+; RUN: llc < %s -mtriple=x86_64-linux > %t
 ; RUN: grep {movzbl	%\[abcd\]h,} %t | count 8
 ; RUN: grep {%\[abcd\]h} %t | not grep {%r\[\[:digit:\]\]*d}
 
