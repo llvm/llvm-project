@@ -361,8 +361,10 @@ static bool isCompleteOverwrite(const AliasAnalysis::Location &Later,
   //
   //        |--earlier--|
   //    |-----  later  ------|
+  //
+  // We have to be careful here as *Off is signed while *.Size is unsigned.
   if (EarlierOff >= LaterOff &&
-      EarlierOff + Earlier.Size <= LaterOff + Later.Size)
+      uint64_t(EarlierOff - LaterOff) + Earlier.Size <= Later.Size)
     return true;
 
   // Otherwise, they don't completely overlap.
