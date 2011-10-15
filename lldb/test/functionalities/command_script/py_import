@@ -1,6 +1,0 @@
-script import sys, os
-script sys.path.append(os.path.join(os.getcwd(), os.pardir))
-script import welcome
-command script add welcome --function welcome.welcome_impl
-command script add targetname --function welcome.target_name_impl
-command script add longwait --function welcome.print_wait_impl

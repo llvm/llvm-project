@@ -1,6 +1,0 @@
-sys.stderr = open("/tmp/lldbtest-stderr", "w")
-sys.stdout = open("/tmp/lldbtest-stdout", "w")
-compilers = ["gcc", "llvm-gcc"]
-archs = ["x86_64", "i386"]
-split_stderr = True # This will split the stderr into configuration-specific file
-split_stdout = True # This will split the stdout into configuration-specific file

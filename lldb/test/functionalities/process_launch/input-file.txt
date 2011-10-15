@@ -1,2 +1,0 @@
-This should go to stdout.
-This should go to stderr.
