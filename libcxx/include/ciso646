@@ -1,0 +1,23 @@
+// -*- C++ -*-
+//===--------------------------- ciso646 ----------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_CISO646
+#define _LIBCPP_CISO646
+
+/*
+    ciso646 synopsis
+
+*/
+
+#include <__config>
+
+#pragma GCC system_header
+
+#endif  // _LIBCPP_CISO646

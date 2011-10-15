@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+ARCHS='<host>'
+REMOTE=0
+if test `uname` = "Darwin"; then
+  if test "$1" = "armv6"; then
+    ARCHS="armv6"
+    LIBS="-lSystem"
+    REMOTE=1
+    mkdir -p remote
+  else
+    ARCHS="i386 x86_64 ppc"
+    LIBS="-lSystem"
+  fi
+else
+  LIBS="-lc -lm"
+fi
+
+for ARCH in $ARCHS; do
+  CFLAGS="-Os -nodefaultlibs -I../../lib"
+  if test "$ARCH" != '<host>'; then
+    CFLAGS="-arch $ARCH $CFLAGS"
+  fi
+  for FILE in $(ls *.c); do
+    # Use -nodefaultlibs to avoid using libgcc.a
+    # Use -lSystem to link with libSystem.dylb.
+    # Note -lSystem is *after* libcompiler_rt.Optimized.a so that linker will 
+    # prefer our implementation over the ones in libSystem.dylib
+    EXTRA=
+    if test $FILE = gcc_personality_test.c
+    then
+      # the gcc_personality_test.c requires a helper C++ program
+      EXTRA="-fexceptions gcc_personality_test_helper.cxx -lstdc++ /usr/lib/libgcc_s.1.dylib"
+      # the libgcc_s.1.dylib use at the end is a hack until libSystem contains _Unwind_Resume
+    fi
+    if test $FILE = trampoline_setup_test.c
+    then
+      # this test requires an extra compiler option
+      EXTRA="-fnested-functions"
+    fi
+    if test "$REMOTE" = "1"
+    then 
+      if gcc $CFLAGS $FILE ../../darwin_fat/Release/libcompiler_rt.a $LIBS $EXTRA -o ./remote/$FILE.exe
+      then
+        echo "Built $FILE.exe for $ARCH"
+      else
+        echo "$FILE failed to compile"
+      fi
+    else
+      if gcc $CFLAGS $FILE ../../darwin_fat/Release/libcompiler_rt.a $LIBS $EXTRA
+      then
+        echo "Testing $FILE for $ARCH"
+        if ./a.out
+        then
+          rm ./a.out
+        else
+          echo "fail"
+          exit 1
+        fi
+      else
+        echo "$FILE failed to compile"
+        exit 1
+      fi
+    fi
+  done
+done
+echo "pass"
+exit

@@ -1,0 +1,25 @@
+//===-- muldf3vfp.S - Implement muldf3vfp ---------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#include "../assembly.h"
+
+//
+// extern double __muldf3vfp(double a, double b);
+//
+// Multiplies two double precision floating point numbers using the Darwin
+// calling convention where double arguments are passsed in GPR pairs
+//
+	.syntax unified
+	.align 2
+DEFINE_COMPILERRT_FUNCTION(__muldf3vfp)
+	vmov 	d6, r0, r1         // move first param from r0/r1 pair into d6
+	vmov 	d7, r2, r3         // move second param from r2/r3 pair into d7
+	vmul.f64 d6, d6, d7		
+	vmov 	r0, r1, d6         // move result back to r0/r1 pair
+	bx	lr

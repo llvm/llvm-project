@@ -1,0 +1,33 @@
+// -*- C++ -*-
+//===--------------------------- complex.h --------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_COMPLEX_H
+#define _LIBCPP_COMPLEX_H
+
+/*
+    complex.h synopsis
+
+#include <ccomplex>
+
+*/
+
+#ifdef __cplusplus
+
+#include <ccomplex>
+
+#else  // __cplusplus
+
+#include_next <complex.h>
+
+#endif  // __cplusplus
+
+#pragma GCC system_header
+
+#endif  // _LIBCPP_COMPLEX_H
