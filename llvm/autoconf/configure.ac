@@ -420,7 +420,7 @@ dnl===-----------------------------------------------------------------------===
 
 dnl --enable-optimized : check whether they want to do an optimized build:
 AC_ARG_ENABLE(optimized, AS_HELP_STRING(
- --enable-optimized,[Compile with optimizations enabled (default is NO)]),,enableval=$optimize)
+ --enable-optimized,[Compile with optimizations enabled (default is YES)]),,enableval=$optimize)
 if test ${enableval} = "no" ; then
   AC_SUBST(ENABLE_OPTIMIZED,[[]])
 else
@@ -438,7 +438,7 @@ fi
 
 dnl --enable-assertions : check whether they want to turn on assertions or not:
 AC_ARG_ENABLE(assertions,AS_HELP_STRING(
-  --enable-assertions,[Compile with assertion checks enabled (default is YES)]),, enableval="yes")
+  --enable-assertions,[Compile with assertion checks enabled (default is NO)]),, enableval="no")
 if test ${enableval} = "yes" ; then
   AC_SUBST(DISABLE_ASSERTIONS,[[]])
 else
