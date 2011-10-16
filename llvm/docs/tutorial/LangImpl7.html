@@ -102,19 +102,19 @@ The LLVM IR that we want for this example looks like this:</p>
 
 define i32 @test(i1 %Condition) {
 entry:
-	br i1 %Condition, label %cond_true, label %cond_false
+  br i1 %Condition, label %cond_true, label %cond_false
 
 cond_true:
-	%X.0 = load i32* @G
-	br label %cond_next
+  %X.0 = load i32* @G
+  br label %cond_next
 
 cond_false:
-	%X.1 = load i32* @H
-	br label %cond_next
+  %X.1 = load i32* @H
+  br label %cond_next
 
 cond_next:
-	%X.2 = phi i32 [ %X.1, %cond_false ], [ %X.0, %cond_true ]
-	ret i32 %X.2
+  %X.2 = phi i32 [ %X.1, %cond_false ], [ %X.0, %cond_true ]
+  ret i32 %X.2
 }
 </pre>
 </div>
@@ -174,12 +174,12 @@ being declared with global variable definitions, they are declared with the
 <pre>
 define i32 @example() {
 entry:
-	%X = alloca i32           ; type of %X is i32*.
-	...
-	%tmp = load i32* %X       ; load the stack value %X from the stack.
-	%tmp2 = add i32 %tmp, 1   ; increment it
-	store i32 %tmp2, i32* %X  ; store it back
-	...
+  %X = alloca i32           ; type of %X is i32*.
+  ...
+  %tmp = load i32* %X       ; load the stack value %X from the stack.
+  %tmp2 = add i32 %tmp, 1   ; increment it
+  store i32 %tmp2, i32* %X  ; store it back
+  ...
 </pre>
 </div>
 
@@ -196,22 +196,22 @@ example to use the alloca technique to avoid using a PHI node:</p>
 
 define i32 @test(i1 %Condition) {
 entry:
-	%X = alloca i32           ; type of %X is i32*.
-	br i1 %Condition, label %cond_true, label %cond_false
+  %X = alloca i32           ; type of %X is i32*.
+  br i1 %Condition, label %cond_true, label %cond_false
 
 cond_true:
-	%X.0 = load i32* @G
-        store i32 %X.0, i32* %X   ; Update X
-	br label %cond_next
+  %X.0 = load i32* @G
+  store i32 %X.0, i32* %X   ; Update X
+  br label %cond_next
 
 cond_false:
-	%X.1 = load i32* @H
-        store i32 %X.1, i32* %X   ; Update X
-	br label %cond_next
+  %X.1 = load i32* @H
+  store i32 %X.1, i32* %X   ; Update X
+  br label %cond_next
 
 cond_next:
-	%X.2 = load i32* %X       ; Read X
-	ret i32 %X.2
+  %X.2 = load i32* %X       ; Read X
+  ret i32 %X.2
 }
 </pre>
 </div>
@@ -242,19 +242,19 @@ $ <b>llvm-as &lt; example.ll | opt -mem2reg | llvm-dis</b>
 
 define i32 @test(i1 %Condition) {
 entry:
-	br i1 %Condition, label %cond_true, label %cond_false
+  br i1 %Condition, label %cond_true, label %cond_false
 
 cond_true:
-	%X.0 = load i32* @G
-	br label %cond_next
+  %X.0 = load i32* @G
+  br label %cond_next
 
 cond_false:
-	%X.1 = load i32* @H
-	br label %cond_next
+  %X.1 = load i32* @H
+  br label %cond_next
 
 cond_next:
-	%X.01 = phi i32 [ %X.1, %cond_false ], [ %X.0, %cond_true ]
-	ret i32 %X.01
+  %X.01 = phi i32 [ %X.1, %cond_false ], [ %X.0, %cond_true ]
+  ret i32 %X.01
 }
 </pre>
 </div>
@@ -542,30 +542,30 @@ recursive fib function.  Before the optimization:</p>
 <pre>
 define double @fib(double %x) {
 entry:
-	<b>%x1 = alloca double
-	store double %x, double* %x1
-	%x2 = load double* %x1</b>
-	%cmptmp = fcmp ult double %x2, 3.000000e+00
-	%booltmp = uitofp i1 %cmptmp to double
-	%ifcond = fcmp one double %booltmp, 0.000000e+00
-	br i1 %ifcond, label %then, label %else
+  <b>%x1 = alloca double
+  store double %x, double* %x1
+  %x2 = load double* %x1</b>
+  %cmptmp = fcmp ult double %x2, 3.000000e+00
+  %booltmp = uitofp i1 %cmptmp to double
+  %ifcond = fcmp one double %booltmp, 0.000000e+00
+  br i1 %ifcond, label %then, label %else
 
 then:		; preds = %entry
-	br label %ifcont
+  br label %ifcont
 
 else:		; preds = %entry
-	<b>%x3 = load double* %x1</b>
-	%subtmp = fsub double %x3, 1.000000e+00
-	%calltmp = call double @fib(double %subtmp)
-	<b>%x4 = load double* %x1</b>
-	%subtmp5 = fsub double %x4, 2.000000e+00
-	%calltmp6 = call double @fib(double %subtmp5)
-	%addtmp = fadd double %calltmp, %calltmp6
-	br label %ifcont
+  <b>%x3 = load double* %x1</b>
+  %subtmp = fsub double %x3, 1.000000e+00
+  %calltmp = call double @fib(double %subtmp)
+  <b>%x4 = load double* %x1</b>
+  %subtmp5 = fsub double %x4, 2.000000e+00
+  %calltmp6 = call double @fib(double %subtmp5)
+  %addtmp = fadd double %calltmp, %calltmp6
+  br label %ifcont
 
 ifcont:		; preds = %else, %then
-	%iftmp = phi double [ 1.000000e+00, %then ], [ %addtmp, %else ]
-	ret double %iftmp
+  %iftmp = phi double [ 1.000000e+00, %then ], [ %addtmp, %else ]
+  ret double %iftmp
 }
 </pre>
 </div>
@@ -584,25 +584,25 @@ PHI node for it, so we still just make the PHI.</p>
 <pre>
 define double @fib(double %x) {
 entry:
-	%cmptmp = fcmp ult double <b>%x</b>, 3.000000e+00
-	%booltmp = uitofp i1 %cmptmp to double
-	%ifcond = fcmp one double %booltmp, 0.000000e+00
-	br i1 %ifcond, label %then, label %else
+  %cmptmp = fcmp ult double <b>%x</b>, 3.000000e+00
+  %booltmp = uitofp i1 %cmptmp to double
+  %ifcond = fcmp one double %booltmp, 0.000000e+00
+  br i1 %ifcond, label %then, label %else
 
 then:
-	br label %ifcont
+  br label %ifcont
 
 else:
-	%subtmp = fsub double <b>%x</b>, 1.000000e+00
-	%calltmp = call double @fib(double %subtmp)
-	%subtmp5 = fsub double <b>%x</b>, 2.000000e+00
-	%calltmp6 = call double @fib(double %subtmp5)
-	%addtmp = fadd double %calltmp, %calltmp6
-	br label %ifcont
+  %subtmp = fsub double <b>%x</b>, 1.000000e+00
+  %calltmp = call double @fib(double %subtmp)
+  %subtmp5 = fsub double <b>%x</b>, 2.000000e+00
+  %calltmp6 = call double @fib(double %subtmp5)
+  %addtmp = fadd double %calltmp, %calltmp6
+  br label %ifcont
 
 ifcont:		; preds = %else, %then
-	%iftmp = phi double [ 1.000000e+00, %then ], [ %addtmp, %else ]
-	ret double %iftmp
+  %iftmp = phi double [ 1.000000e+00, %then ], [ %addtmp, %else ]
+  ret double %iftmp
 }
 </pre>
 </div>
@@ -617,21 +617,21 @@ such blatent inefficiencies :).</p>
 <pre>
 define double @fib(double %x) {
 entry:
-	%cmptmp = fcmp ult double %x, 3.000000e+00
-	%booltmp = uitofp i1 %cmptmp to double
-	%ifcond = fcmp ueq double %booltmp, 0.000000e+00
-	br i1 %ifcond, label %else, label %ifcont
+  %cmptmp = fcmp ult double %x, 3.000000e+00
+  %booltmp = uitofp i1 %cmptmp to double
+  %ifcond = fcmp ueq double %booltmp, 0.000000e+00
+  br i1 %ifcond, label %else, label %ifcont
 
 else:
-	%subtmp = fsub double %x, 1.000000e+00
-	%calltmp = call double @fib(double %subtmp)
-	%subtmp5 = fsub double %x, 2.000000e+00
-	%calltmp6 = call double @fib(double %subtmp5)
-	%addtmp = fadd double %calltmp, %calltmp6
-	ret double %addtmp
+  %subtmp = fsub double %x, 1.000000e+00
+  %calltmp = call double @fib(double %subtmp)
+  %subtmp5 = fsub double %x, 2.000000e+00
+  %calltmp6 = call double @fib(double %subtmp5)
+  %addtmp = fadd double %calltmp, %calltmp6
+  ret double %addtmp
 
 ifcont:
-	ret double 1.000000e+00
+  ret double 1.000000e+00
 }
 </pre>
 </div>
@@ -988,10 +988,10 @@ variables and var/in support.  To build this example, use:
 
 <div class="doc_code">
 <pre>
-   # Compile
-   g++ -g toy.cpp `llvm-config --cppflags --ldflags --libs core jit native` -O3 -o toy
-   # Run
-   ./toy
+# Compile
+clang++ -g toy.cpp `llvm-config --cppflags --ldflags --libs core jit native` -O3 -o toy
+# Run
+./toy
 </pre>
 </div>
 
@@ -1008,9 +1008,9 @@ variables and var/in support.  To build this example, use:
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Target/TargetData.h"
-#include "llvm/Target/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/TargetSelect.h"
 #include &lt;cstdio&gt;
 #include &lt;string&gt;
 #include &lt;map&gt;
@@ -1686,8 +1686,8 @@ Value *BinaryExprAST::Codegen() {
   Function *F = TheModule-&gt;getFunction(std::string("binary")+Op);
   assert(F &amp;&amp; "binary operator not found!");
   
-  Value *Ops[] = { L, R };
-  return Builder.CreateCall(F, Ops, Ops+2, "binop");
+  Value *Ops[2] = { L, R };
+  return Builder.CreateCall(F, Ops, "binop");
 }
 
 Value *CallExprAST::Codegen() {
@@ -1706,7 +1706,7 @@ Value *CallExprAST::Codegen() {
     if (ArgsV.back() == 0) return 0;
   }
   
-  return Builder.CreateCall(CalleeF, ArgsV.begin(), ArgsV.end(), "calltmp");
+  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
 Value *IfExprAST::Codegen() {
@@ -1907,8 +1907,8 @@ Value *VarExprAST::Codegen() {
 
 Function *PrototypeAST::Codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector&lt;const Type*&gt; Doubles(Args.size(),
-                                   Type::getDoubleTy(getGlobalContext()));
+  std::vector&lt;Type*&gt; Doubles(Args.size(),
+                             Type::getDoubleTy(getGlobalContext()));
   FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
                                        Doubles, false);
   

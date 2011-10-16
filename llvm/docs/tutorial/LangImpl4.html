@@ -343,9 +343,10 @@ code that is statically linked into your application.</p>
 <div class="doc_code">
 <pre>
 ready&gt; <b>4+5;</b>
-define double @""() {
+Read top-level expression:
+define double @0() {
 entry:
-        ret double 9.000000e+00
+  ret double 9.000000e+00
 }
 
 <em>Evaluated to 9.000000</em>
@@ -363,16 +364,17 @@ ready&gt; <b>def testfunc(x y) x + y*2; </b>
 Read function definition:
 define double @testfunc(double %x, double %y) {
 entry:
-        %multmp = fmul double %y, 2.000000e+00
-        %addtmp = fadd double %multmp, %x
-        ret double %addtmp
+  %multmp = fmul double %y, 2.000000e+00
+  %addtmp = fadd double %multmp, %x
+  ret double %addtmp
 }
 
 ready&gt; <b>testfunc(4, 10);</b>
-define double @""() {
+Read top-level expression:
+define double @1() {
 entry:
-        %calltmp = call double @testfunc(double 4.000000e+00, double 1.000000e+01)
-        ret double %calltmp
+  %calltmp = call double @testfunc(double 4.000000e+00, double 1.000000e+01)
+  ret double %calltmp
 }
 
 <em>Evaluated to 24.000000</em>
@@ -404,21 +406,34 @@ Read extern:
 declare double @cos(double)
 
 ready&gt; <b>sin(1.0);</b>
+Read top-level expression:
+define double @2() {
+entry:
+  ret double 0x3FEAED548F090CEE
+}
+
 <em>Evaluated to 0.841471</em>
 
 ready&gt; <b>def foo(x) sin(x)*sin(x) + cos(x)*cos(x);</b>
 Read function definition:
 define double @foo(double %x) {
 entry:
-        %calltmp = call double @sin(double %x)
-        %multmp = fmul double %calltmp, %calltmp
-        %calltmp2 = call double @cos(double %x)
-        %multmp4 = fmul double %calltmp2, %calltmp2
-        %addtmp = fadd double %multmp, %multmp4
-        ret double %addtmp
+  %calltmp = call double @sin(double %x)
+  %multmp = fmul double %calltmp, %calltmp
+  %calltmp2 = call double @cos(double %x)
+  %multmp4 = fmul double %calltmp2, %calltmp2
+  %addtmp = fadd double %multmp, %multmp4
+  ret double %addtmp
 }
 
 ready&gt; <b>foo(4.0);</b>
+Read top-level expression:
+define double @3() {
+entry:
+  %calltmp = call double @foo(double 4.000000e+00)
+  ret double %calltmp
+}
+
 <em>Evaluated to 1.000000</em>
 </pre>
 </div>
@@ -484,10 +499,10 @@ LLVM JIT and optimizer.  To build this example, use:
 
 <div class="doc_code">
 <pre>
-   # Compile
-   g++ -g toy.cpp `llvm-config --cppflags --ldflags --libs core jit native` -O3 -o toy
-   # Run
-   ./toy
+# Compile
+clang++ -g toy.cpp `llvm-config --cppflags --ldflags --libs core jit native` -O3 -o toy
+# Run
+./toy
 </pre>
 </div>
 
@@ -509,9 +524,9 @@ at runtime.</p>
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Target/TargetData.h"
-#include "llvm/Target/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/TargetSelect.h"
 #include &lt;cstdio&gt;
 #include &lt;string&gt;
 #include &lt;map&gt;
@@ -905,13 +920,13 @@ Value *CallExprAST::Codegen() {
     if (ArgsV.back() == 0) return 0;
   }
   
-  return Builder.CreateCall(CalleeF, ArgsV.begin(), ArgsV.end(), "calltmp");
+  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
 Function *PrototypeAST::Codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector&lt;const Type*&gt; Doubles(Args.size(),
-                                   Type::getDoubleTy(getGlobalContext()));
+  std::vector&lt;Type*&gt; Doubles(Args.size(),
+                             Type::getDoubleTy(getGlobalContext()));
   FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
                                        Doubles, false);
   
@@ -1013,6 +1028,9 @@ static void HandleTopLevelExpression() {
   // Evaluate a top-level expression into an anonymous function.
   if (FunctionAST *F = ParseTopLevelExpr()) {
     if (Function *LF = F-&gt;Codegen()) {
+      fprintf(stderr, "Read top-level expression:");
+      LF->dump();
+
       // JIT the function, returning a function pointer.
       void *FPtr = TheExecutionEngine-&gt;getPointerToFunction(LF);
       
@@ -1076,7 +1094,7 @@ int main() {
 
   // Create the JIT.  This takes ownership of the module.
   std::string ErrStr;
-TheExecutionEngine = EngineBuilder(TheModule).setErrorStr(&amp;ErrStr).create();
+  TheExecutionEngine = EngineBuilder(TheModule).setErrorStr(&amp;ErrStr).create();
   if (!TheExecutionEngine) {
     fprintf(stderr, "Could not create ExecutionEngine: %s\n", ErrStr.c_str());
     exit(1);

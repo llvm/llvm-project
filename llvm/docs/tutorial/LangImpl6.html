@@ -293,8 +293,8 @@ Value *BinaryExprAST::Codegen() {
   Function *F = TheModule-&gt;getFunction(std::string("binary")+Op);
   assert(F &amp;&amp; "binary operator not found!");
   
-  Value *Ops[] = { L, R };
-  return Builder.CreateCall(F, Ops, Ops+2, "binop");</b>
+  Value *Ops[2] = { L, R };
+  return Builder.CreateCall(F, Ops, "binop");</b>
 }
 
 </pre>
@@ -505,7 +505,9 @@ defined to print out the specified value and a newline):</p>
 <div class="doc_code">
 <pre>
 ready&gt; <b>extern printd(x);</b>
-Read extern: declare double @printd(double)
+Read extern:
+declare double @printd(double)
+
 ready&gt; <b>def binary : 1 (x y) 0;  # Low-precedence operator that ignores operands.</b>
 ..
 ready&gt; <b>printd(123) : printd(456) : printd(789);</b>
@@ -555,6 +557,9 @@ def binary&amp; 6 (LHS RHS)
 def binary = 9 (LHS RHS)
   !(LHS &lt; RHS | LHS &gt; RHS);
 
+# Define ':' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary : 1 (x y) y;
 </pre>
 </div>
 
@@ -579,9 +584,10 @@ def printdensity(d)
   else
     putchard(42); # '*'</b>
 ...
-ready&gt; <b>printdensity(1): printdensity(2): printdensity(3) : 
-          printdensity(4): printdensity(5): printdensity(9): putchard(10);</b>
-*++.. 
+ready&gt; <b>printdensity(1): printdensity(2): printdensity(3):
+       printdensity(4): printdensity(5): printdensity(9):
+       putchard(10);</b>
+**++.
 Evaluated to 0.000000
 </pre>
 </div>
@@ -593,7 +599,7 @@ converge:</p>
 
 <div class="doc_code">
 <pre>
-# determine whether the specific location diverges.
+# Determine whether the specific location diverges.
 # Solve for z = z^2 + c in the complex plane.
 def mandleconverger(real imag iters creal cimag)
   if iters &gt; 255 | (real*real + imag*imag &gt; 4) then
@@ -603,25 +609,25 @@ def mandleconverger(real imag iters creal cimag)
                     2*real*imag + cimag,
                     iters+1, creal, cimag);
 
-# return the number of iterations required for the iteration to escape
+# Return the number of iterations required for the iteration to escape
 def mandleconverge(real imag)
   mandleconverger(real, imag, 0, real, imag);
 </pre>
 </div>
 
-<p>This "z = z<sup>2</sup> + c" function is a beautiful little creature that is the basis
-for computation of the <a 
-href="http://en.wikipedia.org/wiki/Mandelbrot_set">Mandelbrot Set</a>.  Our
-<tt>mandelconverge</tt> function returns the number of iterations that it takes
-for a complex orbit to escape, saturating to 255.  This is not a very useful
-function by itself, but if you plot its value over a two-dimensional plane,
-you can see the Mandelbrot set.  Given that we are limited to using putchard
-here, our amazing graphical output is limited, but we can whip together
+<p>This "<code>z = z<sup>2</sup> + c</code>" function is a beautiful little
+creature that is the basis for computation of
+the <a href="http://en.wikipedia.org/wiki/Mandelbrot_set">Mandelbrot Set</a>.
+Our <tt>mandelconverge</tt> function returns the number of iterations that it
+takes for a complex orbit to escape, saturating to 255.  This is not a very
+useful function by itself, but if you plot its value over a two-dimensional
+plane, you can see the Mandelbrot set.  Given that we are limited to using
+putchard here, our amazing graphical output is limited, but we can whip together
 something using the density plotter above:</p>
 
 <div class="doc_code">
 <pre>
-# compute and plot the mandlebrot set with the specified 2 dimensional range
+# Compute and plot the mandlebrot set with the specified 2 dimensional range
 # info.
 def mandelhelp(xmin xmax xstep   ymin ymax ystep)
   for y = ymin, y &lt; ymax, ystep in (
@@ -808,10 +814,10 @@ if/then/else and for expressions..  To build this example, use:
 
 <div class="doc_code">
 <pre>
-   # Compile
-   g++ -g toy.cpp `llvm-config --cppflags --ldflags --libs core jit native` -O3 -o toy
-   # Run
-   ./toy
+# Compile
+clang++ -g toy.cpp `llvm-config --cppflags --ldflags --libs core jit native` -O3 -o toy
+# Run
+./toy
 </pre>
 </div>
 
@@ -834,9 +840,9 @@ library, although doing that will cause problems on Windows.</p>
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Target/TargetData.h"
-#include "llvm/Target/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/TargetSelect.h"
 #include &lt;cstdio&gt;
 #include &lt;string&gt;
 #include &lt;map&gt;
@@ -1415,8 +1421,8 @@ Value *BinaryExprAST::Codegen() {
   Function *F = TheModule-&gt;getFunction(std::string("binary")+Op);
   assert(F &amp;&amp; "binary operator not found!");
   
-  Value *Ops[] = { L, R };
-  return Builder.CreateCall(F, Ops, Ops+2, "binop");
+  Value *Ops[2] = { L, R };
+  return Builder.CreateCall(F, Ops, "binop");
 }
 
 Value *CallExprAST::Codegen() {
@@ -1435,7 +1441,7 @@ Value *CallExprAST::Codegen() {
     if (ArgsV.back() == 0) return 0;
   }
   
-  return Builder.CreateCall(CalleeF, ArgsV.begin(), ArgsV.end(), "calltmp");
+  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
 Value *IfExprAST::Codegen() {
@@ -1584,8 +1590,8 @@ Value *ForExprAST::Codegen() {
 
 Function *PrototypeAST::Codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector&lt;const Type*&gt; Doubles(Args.size(),
-                                   Type::getDoubleTy(getGlobalContext()));
+  std::vector&lt;Type*&gt; Doubles(Args.size(),
+                             Type::getDoubleTy(getGlobalContext()));
   FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
                                        Doubles, false);
   

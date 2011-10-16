@@ -266,7 +266,7 @@ Value *CallExprAST::Codegen() {
     if (ArgsV.back() == 0) return 0;
   }
   
-  return Builder.CreateCall(CalleeF, ArgsV.begin(), ArgsV.end(), "calltmp");
+  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 </pre>
 </div>
@@ -308,11 +308,11 @@ bodies and external function declarations.  The code starts with:</p>
 <pre>
 Function *PrototypeAST::Codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector&lt;const Type*&gt; Doubles(Args.size(),
-                                   Type::getDoubleTy(getGlobalContext()));
+  std::vector&lt;Type*&gt; Doubles(Args.size(),
+                             Type::getDoubleTy(getGlobalContext()));
   FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
                                        Doubles, false);
-  
+
   Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
 </pre>
 </div>
@@ -532,9 +532,9 @@ functions.  For example:
 <pre>
 ready> <b>4+5</b>;
 Read top-level expression:
-define double @""() {
+define double @0() {
 entry:
-        ret double 9.000000e+00
+  ret double 9.000000e+00
 }
 </pre>
 </div>
@@ -553,13 +553,13 @@ ready&gt; <b>def foo(a b) a*a + 2*a*b + b*b;</b>
 Read function definition:
 define double @foo(double %a, double %b) {
 entry:
-        %multmp = fmul double %a, %a
-        %multmp1 = fmul double 2.000000e+00, %a
-        %multmp2 = fmul double %multmp1, %b
-        %addtmp = fadd double %multmp, %multmp2
-        %multmp3 = fmul double %b, %b
-        %addtmp4 = fadd double %addtmp, %multmp3
-        ret double %addtmp4
+  %multmp = fmul double %a, %a
+  %multmp1 = fmul double 2.000000e+00, %a
+  %multmp2 = fmul double %multmp1, %b
+  %addtmp = fadd double %multmp, %multmp2
+  %multmp3 = fmul double %b, %b
+  %addtmp4 = fadd double %addtmp, %multmp3
+  ret double %addtmp4
 }
 </pre>
 </div>
@@ -573,10 +573,10 @@ ready&gt; <b>def bar(a) foo(a, 4.0) + bar(31337);</b>
 Read function definition:
 define double @bar(double %a) {
 entry:
-        %calltmp = call double @foo(double %a, double 4.000000e+00)
-        %calltmp1 = call double @bar(double 3.133700e+04)
-        %addtmp = fadd double %calltmp, %calltmp1
-        ret double %addtmp
+  %calltmp = call double @foo(double %a, double 4.000000e+00)
+  %calltmp1 = call double @bar(double 3.133700e+04)
+  %addtmp = fadd double %calltmp, %calltmp1
+  ret double %addtmp
 }
 </pre>
 </div>
@@ -593,10 +593,10 @@ declare double @cos(double)
 
 ready&gt; <b>cos(1.234);</b>
 Read top-level expression:
-define double @""() {
+define double @1() {
 entry:
-        %calltmp = call double @cos(double 1.234000e+00)
-        ret double %calltmp
+  %calltmp = call double @cos(double 1.234000e+00)
+  ret double %calltmp
 }
 </pre>
 </div>
@@ -609,37 +609,37 @@ entry:
 ready&gt; <b>^D</b>
 ; ModuleID = 'my cool jit'
 
-define double @""() {
+define double @0() {
 entry:
-        %addtmp = fadd double 4.000000e+00, 5.000000e+00
-        ret double %addtmp
+  %addtmp = fadd double 4.000000e+00, 5.000000e+00
+  ret double %addtmp
 }
 
 define double @foo(double %a, double %b) {
 entry:
-        %multmp = fmul double %a, %a
-        %multmp1 = fmul double 2.000000e+00, %a
-        %multmp2 = fmul double %multmp1, %b
-        %addtmp = fadd double %multmp, %multmp2
-        %multmp3 = fmul double %b, %b
-        %addtmp4 = fadd double %addtmp, %multmp3
-        ret double %addtmp4
+  %multmp = fmul double %a, %a
+  %multmp1 = fmul double 2.000000e+00, %a
+  %multmp2 = fmul double %multmp1, %b
+  %addtmp = fadd double %multmp, %multmp2
+  %multmp3 = fmul double %b, %b
+  %addtmp4 = fadd double %addtmp, %multmp3
+  ret double %addtmp4
 }
 
 define double @bar(double %a) {
 entry:
-        %calltmp = call double @foo(double %a, double 4.000000e+00)
-        %calltmp1 = call double @bar(double 3.133700e+04)
-        %addtmp = fadd double %calltmp, %calltmp1
-        ret double %addtmp
+  %calltmp = call double @foo(double %a, double 4.000000e+00)
+  %calltmp1 = call double @bar(double 3.133700e+04)
+  %addtmp = fadd double %calltmp, %calltmp1
+  ret double %addtmp
 }
 
 declare double @cos(double)
 
-define double @""() {
+define double @1() {
 entry:
-        %calltmp = call double @cos(double 1.234000e+00)
-        ret double %calltmp
+  %calltmp = call double @cos(double 1.234000e+00)
+  ret double %calltmp
 }
 </pre>
 </div>
@@ -670,10 +670,10 @@ our makefile/command line about which options to use:</p>
 
 <div class="doc_code">
 <pre>
-   # Compile
-   g++ -g -O3 toy.cpp `llvm-config --cppflags --ldflags --libs core` -o toy
-   # Run
-   ./toy
+# Compile
+clang++ -g -O3 toy.cpp `llvm-config --cppflags --ldflags --libs core` -o toy
+# Run
+./toy
 </pre>
 </div>
 
@@ -1081,13 +1081,13 @@ Value *CallExprAST::Codegen() {
     if (ArgsV.back() == 0) return 0;
   }
   
-  return Builder.CreateCall(CalleeF, ArgsV.begin(), ArgsV.end(), "calltmp");
+  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
 Function *PrototypeAST::Codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector&lt;const Type*&gt; Doubles(Args.size(),
-                                   Type::getDoubleTy(getGlobalContext()));
+  std::vector&lt;Type*&gt; Doubles(Args.size(),
+                             Type::getDoubleTy(getGlobalContext()));
   FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
                                        Doubles, false);
   
