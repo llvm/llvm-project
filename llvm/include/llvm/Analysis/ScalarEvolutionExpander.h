@@ -237,8 +237,7 @@ namespace llvm {
 
     bool isNormalAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
-    bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L,
-                                 Type *ExpandTy);
+    bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
     Value *expandAddRecExprLiterally(const SCEVAddRecExpr *);
     PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
