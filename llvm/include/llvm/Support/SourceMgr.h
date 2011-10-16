@@ -78,9 +78,6 @@ public:
     DiagContext = Ctx;
   }
 
-  DiagHandlerTy getDiagHandler() const { return DiagHandler; }
-  void *getDiagContext() const { return DiagContext; }
-
   const SrcBuffer &getBufferInfo(unsigned i) const {
     assert(i < Buffers.size() && "Invalid Buffer ID!");
     return Buffers[i];

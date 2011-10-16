@@ -87,8 +87,6 @@ private:
   MCStreamer &Out;
   const MCAsmInfo &MAI;
   SourceMgr &SrcMgr;
-  SourceMgr::DiagHandlerTy SavedDiagHandler;
-  void *SavedDiagContext;
   MCAsmParserExtension *GenericParser;
   MCAsmParserExtension *PlatformParser;
 
@@ -144,10 +142,8 @@ public:
   virtual MCContext &getContext() { return Ctx; }
   virtual MCStreamer &getStreamer() { return Out; }
 
-  virtual bool Warning(SMLoc L, const Twine &Msg,
-                       ArrayRef<SMRange> Ranges = ArrayRef<SMRange>());
-  virtual bool Error(SMLoc L, const Twine &Msg,
-                     ArrayRef<SMRange> Ranges = ArrayRef<SMRange>());
+  virtual bool Warning(SMLoc L, const Twine &Msg);
+  virtual bool Error(SMLoc L, const Twine &Msg);
 
   const AsmToken &Lex();
 
@@ -173,9 +169,9 @@ private:
   void HandleMacroExit();
 
   void PrintMacroInstantiations();
-  void PrintMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    ArrayRef<SMRange> Ranges = ArrayRef<SMRange>()) const {
-    SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
+  void PrintMessage(SMLoc Loc, const Twine &Msg, const char *Type,
+                    bool ShowLine = true) const {
+    SrcMgr.PrintMessage(Loc, Msg, Type, ShowLine);
   }
   static void DiagHandler(const SMDiagnostic &Diag, void *Context);
 
@@ -355,10 +351,6 @@ AsmParser::AsmParser(SourceMgr &_SM, MCContext &_Ctx,
   : Lexer(_MAI), Ctx(_Ctx), Out(_Out), MAI(_MAI), SrcMgr(_SM),
     GenericParser(new GenericAsmParser), PlatformParser(0),
     CurBuffer(0), MacrosEnabled(true), CppHashLineNumber(0) {
-  // Save the old handler.
-  SavedDiagHandler = SrcMgr.getDiagHandler();
-  SavedDiagContext = SrcMgr.getDiagContext();
-  // Set our own handler which calls the saved handler.
   SrcMgr.setDiagHandler(DiagHandler, this);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer));
 
@@ -397,21 +389,21 @@ void AsmParser::PrintMacroInstantiations() {
   // Print the active macro instantiation stack.
   for (std::vector<MacroInstantiation*>::const_reverse_iterator
          it = ActiveMacros.rbegin(), ie = ActiveMacros.rend(); it != ie; ++it)
-    PrintMessage((*it)->InstantiationLoc, SourceMgr::DK_Note,
-                 "while in macro instantiation");
+    PrintMessage((*it)->InstantiationLoc, "while in macro instantiation",
+                 "note");
 }
 
-bool AsmParser::Warning(SMLoc L, const Twine &Msg, ArrayRef<SMRange> Ranges) {
+bool AsmParser::Warning(SMLoc L, const Twine &Msg) {
   if (FatalAssemblerWarnings)
-    return Error(L, Msg, Ranges);
-  PrintMessage(L, SourceMgr::DK_Warning, Msg, Ranges);
+    return Error(L, Msg);
+  PrintMessage(L, Msg, "warning");
   PrintMacroInstantiations();
   return false;
 }
 
-bool AsmParser::Error(SMLoc L, const Twine &Msg, ArrayRef<SMRange> Ranges) {
+bool AsmParser::Error(SMLoc L, const Twine &Msg) {
   HadError = true;
-  PrintMessage(L, SourceMgr::DK_Error, Msg, Ranges);
+  PrintMessage(L, Msg, "error");
   PrintMacroInstantiations();
   return true;
 }
@@ -503,9 +495,8 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
         // FIXME: We would really like to refer back to where the symbol was
         // first referenced for a source location. We need to add something
         // to track that. Currently, we just point to the end of the file.
-        PrintMessage(getLexer().getLoc(), SourceMgr::DK_Error,
-                     "assembler local symbol '" + Sym->getName() +
-                     "' not defined");
+        PrintMessage(getLexer().getLoc(), "assembler local symbol '" +
+                     Sym->getName() + "' not defined", "error", false);
     }
   }
 
@@ -1208,7 +1199,7 @@ bool AsmParser::ParseStatement() {
     }
     OS << "]";
 
-    PrintMessage(IDLoc, SourceMgr::DK_Note, OS.str());
+    PrintMessage(IDLoc, OS.str(), "note");
   }
 
   // If parsing succeeded, match the instruction.
@@ -1282,7 +1273,7 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   // Like SourceMgr::PrintMessage() we need to print the include stack if any
   // before printing the message.
   int DiagCurBuffer = DiagSrcMgr.FindBufferContainingLoc(DiagLoc);
-  if (!Parser->SavedDiagHandler && DiagCurBuffer > 0) {
+  if (DiagCurBuffer > 0) {
      SMLoc ParentIncludeLoc = DiagSrcMgr.getParentIncludeLoc(DiagCurBuffer);
      DiagSrcMgr.PrintIncludeStack(ParentIncludeLoc, OS);
   }
@@ -1293,10 +1284,7 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   if (!Parser->CppHashLineNumber ||
       &DiagSrcMgr != &Parser->SrcMgr ||
       DiagBuf != CppHashBuf) {
-    if (Parser->SavedDiagHandler)
-      Parser->SavedDiagHandler(Diag, Parser->SavedDiagContext);
-    else
-      Diag.print(0, OS);
+    Diag.Print(0, OS);
     return;
   }
 
@@ -1311,15 +1299,16 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   int LineNo = Parser->CppHashLineNumber - 1 +
                (DiagLocLineNo - CppHashLocLineNo);
 
-  SMDiagnostic NewDiag(*Diag.getSourceMgr(), Diag.getLoc(),
-                       Filename, LineNo, Diag.getColumnNo(),
-                       Diag.getKind(), Diag.getMessage(),
-                       Diag.getLineContents(), Diag.getRanges());
+  SMDiagnostic NewDiag(*Diag.getSourceMgr(),
+                       Diag.getLoc(),
+                       Filename,
+                       LineNo,
+                       Diag.getColumnNo(),
+                       Diag.getMessage(),
+                       Diag.getLineContents(),
+                       Diag.getShowLine());
 
-  if (Parser->SavedDiagHandler)
-    Parser->SavedDiagHandler(NewDiag, Parser->SavedDiagContext);
-  else
-    NewDiag.print(0, OS);
+  NewDiag.Print(0, OS);
 }
 
 bool AsmParser::expandMacro(SmallString<256> &Buf, StringRef Body,
