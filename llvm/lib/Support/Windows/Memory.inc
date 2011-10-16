@@ -32,11 +32,16 @@ MemoryBlock Memory::AllocateRWX(size_t NumBytes,
   static const size_t pageSize = Process::GetPageSize();
   size_t NumPages = (NumBytes+pageSize-1)/pageSize;
 
-  //FIXME: support NearBlock if ever needed on Win64.
+  PVOID start = NearBlock ? static_cast<unsigned char *>(NearBlock->base()) +
+                                NearBlock->size() : NULL;
 
-  void *pa = VirtualAlloc(NULL, NumPages*pageSize, MEM_COMMIT,
+  void *pa = VirtualAlloc(start, NumPages*pageSize, MEM_RESERVE | MEM_COMMIT,
                   PAGE_EXECUTE_READWRITE);
   if (pa == NULL) {
+    if (NearBlock) {
+      // Try again without the NearBlock hint
+      return AllocateRWX(NumBytes, NULL, ErrMsg);
+    }
     MakeErrMsg(ErrMsg, "Can't allocate RWX Memory: ");
     return MemoryBlock();
   }
