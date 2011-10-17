@@ -1694,13 +1694,13 @@ private:
     // up to the lib directory.
     const std::string Suffixes[] = {
       "/gcc/" + CandidateTriple.str(),
-      CandidateTriple.str() + "/gcc/" + CandidateTriple.str(),
+      "/" + CandidateTriple.str() + "/gcc/" + CandidateTriple.str(),
 
       // Ubuntu has a strange mis-matched pair of triples that this happens to
       // match.
       // FIXME: It may be worthwhile to generalize this and look for a second
       // triple.
-      CandidateTriple.str() + "/gcc/i686-linux-gnu"
+      "/" + CandidateTriple.str() + "/gcc/i686-linux-gnu"
     };
     const std::string InstallSuffixes[] = {
       "/../../..",
