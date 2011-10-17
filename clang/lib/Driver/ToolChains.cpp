@@ -1631,14 +1631,12 @@ private:
                                        SmallVectorImpl<StringRef> &LibDirs,
                                        SmallVectorImpl<StringRef> &Triples) {
     if (HostArch == llvm::Triple::arm || HostArch == llvm::Triple::thumb) {
-      static const char *const ARMLibDirs[] = { "/lib/gcc" };
+      static const char *const ARMLibDirs[] = { "/lib" };
       static const char *const ARMTriples[] = { "arm-linux-gnueabi" };
       LibDirs.append(ARMLibDirs, ARMLibDirs + llvm::array_lengthof(ARMLibDirs));
       Triples.append(ARMTriples, ARMTriples + llvm::array_lengthof(ARMTriples));
     } else if (HostArch == llvm::Triple::x86_64) {
-      static const char *const X86_64LibDirs[] = {
-        "/lib64/gcc", "/lib/gcc", "/lib64", "/lib"
-      };
+      static const char *const X86_64LibDirs[] = { "/lib64", "/lib" };
       static const char *const X86_64Triples[] = {
         "x86_64-linux-gnu",
         "x86_64-unknown-linux-gnu",
@@ -1655,9 +1653,7 @@ private:
       Triples.append(X86_64Triples,
                      X86_64Triples + llvm::array_lengthof(X86_64Triples));
     } else if (HostArch == llvm::Triple::x86) {
-      static const char *const X86LibDirs[] = {
-        "/lib32/gcc", "/lib/gcc", "/lib32", "/lib"
-      };
+      static const char *const X86LibDirs[] = { "/lib32", "/lib" };
       static const char *const X86Triples[] = {
         "i686-linux-gnu",
         "i386-linux-gnu",
@@ -1671,9 +1667,7 @@ private:
       LibDirs.append(X86LibDirs, X86LibDirs + llvm::array_lengthof(X86LibDirs));
       Triples.append(X86Triples, X86Triples + llvm::array_lengthof(X86Triples));
     } else if (HostArch == llvm::Triple::ppc) {
-      static const char *const PPCLibDirs[] = {
-        "/lib32/gcc", "/lib/gcc", "/lib32", "/lib"
-      };
+      static const char *const PPCLibDirs[] = { "/lib32", "/lib" };
       static const char *const PPCTriples[] = {
         "powerpc-linux-gnu",
         "powerpc-unknown-linux-gnu"
@@ -1681,9 +1675,7 @@ private:
       LibDirs.append(PPCLibDirs, PPCLibDirs + llvm::array_lengthof(PPCLibDirs));
       Triples.append(PPCTriples, PPCTriples + llvm::array_lengthof(PPCTriples));
     } else if (HostArch == llvm::Triple::ppc64) {
-      static const char *const PPC64LibDirs[] = {
-        "/lib64/gcc", "/lib/gcc", "/lib64", "/lib"
-      };
+      static const char *const PPC64LibDirs[] = { "/lib64", "/lib" };
       static const char *const PPC64Triples[] = {
         "powerpc64-unknown-linux-gnu"
       };
@@ -1697,23 +1689,31 @@ private:
   void ScanLibDirForGCCTriple(const std::string &LibDir,
                               StringRef CandidateTriple,
                               GCCVersion &BestVersion) {
-    const std::string TripleDir = LibDir + "/" + CandidateTriple.str();
-    if (!PathExists(TripleDir))
-      return;
-
-    // There are various different suffixes on the triple directory we
+    // There are various different suffixes involving the triple we
     // check for. We also record what is necessary to walk from each back
     // up to the lib directory.
-    const std::string Suffixes[] = { "", "/gcc/" + CandidateTriple.str(),
-      "/gcc/i686-linux-gnu" };
-    const std::string InstallSuffixes[] = { "/../../..", "/../../../..",
-      "/../../../.." };
+    const std::string Suffixes[] = {
+      "/gcc/" + CandidateTriple.str(),
+      CandidateTriple.str() + "/gcc/" + CandidateTriple.str(),
+
+      // Ubuntu has a strange mis-matched pair of triples that this happens to
+      // match.
+      // FIXME: It may be worthwhile to generalize this and look for a second
+      // triple.
+      CandidateTriple.str() + "/gcc/i686-linux-gnu"
+    };
+    const std::string InstallSuffixes[] = {
+      "/../../..",
+      "/../../../..",
+      "/../../../.."
+    };
+    // Only look at the final, weird Ubuntu suffix for i386-linux-gnu.
     const unsigned NumSuffixes = (llvm::array_lengthof(Suffixes) -
                                   (CandidateTriple != "i386-linux-gnu"));
     for (unsigned i = 0; i < NumSuffixes; ++i) {
       StringRef Suffix = Suffixes[i];
       llvm::error_code EC;
-      for (llvm::sys::fs::directory_iterator LI(TripleDir + Suffix, EC), LE;
+      for (llvm::sys::fs::directory_iterator LI(LibDir + Suffix, EC), LE;
            !EC && LI != LE; LI = LI.increment(EC)) {
         StringRef VersionText = llvm::sys::path::filename(LI->path());
         GCCVersion CandidateVersion = GCCVersion::Parse(VersionText);
@@ -1730,7 +1730,7 @@ private:
         // FIXME: We hack together the directory name here instead of
         // using LI to ensure stable path separators across Windows and
         // Linux.
-        GccInstallPath = TripleDir + Suffixes[i] + "/" + VersionText.str();
+        GccInstallPath = LibDir + Suffixes[i] + "/" + VersionText.str();
         GccParentLibPath = GccInstallPath + InstallSuffixes[i];
         IsValid = true;
       }
@@ -1825,9 +1825,15 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
     }
     addPathIfExists(SysRoot + "/lib/../" + Multilib, Paths);
     addPathIfExists(SysRoot + "/usr/lib/../" + Multilib, Paths);
+
+    // Try walking via the GCC triple path in case of multiarch GCC
+    // installations with strange symlinks.
+    if (GCCInstallation.isValid())
+      addPathIfExists(SysRoot + "/usr/lib/" + GCCInstallation.getTriple() +
+                      "/../../" + Multilib, Paths);
   }
 
-  // Add the non-multiplib suffixed paths (if potentially different).
+  // Add the non-multilib suffixed paths (if potentially different).
   if (GCCInstallation.isValid()) {
     const std::string &LibPath = GCCInstallation.getParentLibPath();
     const std::string &GccTriple = GCCInstallation.getTriple();
@@ -1839,8 +1845,9 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
   addPathIfExists(SysRoot + "/lib", Paths);
   addPathIfExists(SysRoot + "/usr/lib", Paths);
 
-  if (GCCInstallation.isValid() && Arch == getArch() && IsUbuntu(Distro))
-    Paths.push_back(SysRoot + "/usr/lib/" + GCCInstallation.getTriple());
+  // Add a multiarch lib directory whenever it exists and is plausible.
+  if (GCCInstallation.isValid() && Arch == getArch())
+    addPathIfExists(SysRoot + "/usr/lib/" + GCCInstallation.getTriple(), Paths);
 }
 
 bool Linux::HasNativeLLVMSupport() const {
