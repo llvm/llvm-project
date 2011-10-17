@@ -87,6 +87,8 @@ private:
   MCStreamer &Out;
   const MCAsmInfo &MAI;
   SourceMgr &SrcMgr;
+  SourceMgr::DiagHandlerTy SavedDiagHandler;
+  void *SavedDiagContext;
   MCAsmParserExtension *GenericParser;
   MCAsmParserExtension *PlatformParser;
 
@@ -351,6 +353,10 @@ AsmParser::AsmParser(SourceMgr &_SM, MCContext &_Ctx,
   : Lexer(_MAI), Ctx(_Ctx), Out(_Out), MAI(_MAI), SrcMgr(_SM),
     GenericParser(new GenericAsmParser), PlatformParser(0),
     CurBuffer(0), MacrosEnabled(true), CppHashLineNumber(0) {
+  // Save the old handler.
+  SavedDiagHandler = SrcMgr.getDiagHandler();
+  SavedDiagContext = SrcMgr.getDiagContext();
+  // Set our own handler which calls the saved handler.
   SrcMgr.setDiagHandler(DiagHandler, this);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer));
 
@@ -1273,7 +1279,7 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   // Like SourceMgr::PrintMessage() we need to print the include stack if any
   // before printing the message.
   int DiagCurBuffer = DiagSrcMgr.FindBufferContainingLoc(DiagLoc);
-  if (DiagCurBuffer > 0) {
+  if (!Parser->SavedDiagHandler && DiagCurBuffer > 0) {
      SMLoc ParentIncludeLoc = DiagSrcMgr.getParentIncludeLoc(DiagCurBuffer);
      DiagSrcMgr.PrintIncludeStack(ParentIncludeLoc, OS);
   }
@@ -1284,7 +1290,10 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   if (!Parser->CppHashLineNumber ||
       &DiagSrcMgr != &Parser->SrcMgr ||
       DiagBuf != CppHashBuf) {
-    Diag.Print(0, OS);
+    if (Parser->SavedDiagHandler)
+      Parser->SavedDiagHandler(Diag, Parser->SavedDiagContext);
+    else
+      Diag.Print(0, OS);
     return;
   }
 
@@ -1308,7 +1317,10 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
                        Diag.getLineContents(),
                        Diag.getShowLine());
 
-  NewDiag.Print(0, OS);
+  if (Parser->SavedDiagHandler)
+    Parser->SavedDiagHandler(NewDiag, Parser->SavedDiagContext);
+  else
+    NewDiag.Print(0, OS);
 }
 
 bool AsmParser::expandMacro(SmallString<256> &Buf, StringRef Body,
