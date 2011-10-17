@@ -480,11 +480,116 @@ be used to verify some algorithms.
 <p>LLVM IR has several new features for better support of new targets and that
    expose new optimization opportunities:</p>
 
+<p>One of the biggest changes is that 3.0 has a new exception handling
+   system. The old system used LLVM intrinsics to convey the exception handling
+   information to the code generator. It worked in most cases, but not
+   all. Inlining was especially difficult to get right. Also, the intrinsics
+   could be moved away from the <code>invoke</code> instruction, making it hard
+   to recover that information.</p>
+
+<p>The new EH system makes exception handling a first-class member of the IR. It
+   adds two new instructions:</p>
+
 <ul>
-<!--
-<li></li>
--->
+  <li><a href="LangRef.html#i_landingpad"><code>landingpad</code></a> &mdash;
+      this instruction defines a landing pad basic block. It contains all of the
+      information that's needed by the code generator. It's also required to be
+      the first non-PHI instruction in the landing pad. In addition, a landing
+      pad may be jumped to only by the unwind edge of an <code>invoke</code>
+      instruction.</li>
+
+  <li><a href="LangRef.html#i_resume"><code>resume</code></a> &mdash; this
+      instruction causes the current exception to resume traveling up the
+      stack. It replaces the <code>@llvm.eh.resume</code> intrinsic.</li>
 </ul>
+
+<p>Converting from the old EH API to the new EH API is rather simple, because a
+   lot of complexity has been removed. The two intrinsics,
+   <code>@llvm.eh.exception</code> and <code>@llvm.eh.selector</code> have been
+   superceded by the <code>landingpad</code> instruction. Instead of generating
+   a call to <code>@llvm.eh.exception</code> and <code>@llvm.eh.selector</code>:
+
+<div class="doc_code">
+<pre>
+Function *ExcIntr = Intrinsic::getDeclaration(TheModule,
+                                              Intrinsic::eh_exception);
+Function *SlctrIntr = Intrinsic::getDeclaration(TheModule,
+                                                Intrinsic::eh_selector);
+
+// The exception pointer.
+Value *ExnPtr = Builder.CreateCall(ExcIntr, "exc_ptr");
+
+std::vector&lt;Value*&gt; Args;
+Args.push_back(ExnPtr);
+Args.push_back(Builder.CreateBitCast(Personality,
+                                     Type::getInt8PtrTy(Context)));
+
+<i>// Add selector clauses to Args.</i>
+
+// The selector call.
+Builder.CreateCall(SlctrIntr, Args, "exc_sel");
+</pre>
+</div>
+
+<p>You should instead generate a <code>landingpad</code> instruction, that
+   returns an exception object and selector value:</p>
+
+<div class="doc_code">
+<pre>
+LandingPadInst *LPadInst =
+  Builder.CreateLandingPad(StructType::get(Int8PtrTy, Int32Ty, NULL),
+                           Personality, 0);
+
+Value *LPadExn = Builder.CreateExtractValue(LPadInst, 0);
+Builder.CreateStore(LPadExn, getExceptionSlot());
+
+Value *LPadSel = Builder.CreateExtractValue(LPadInst, 1);
+Builder.CreateStore(LPadSel, getEHSelectorSlot());
+</pre>
+</div>
+
+<p>It's now trivial to add the individual clauses to the <code>landingpad</code>
+   instruction.</p>
+
+<div class="doc_code">
+<pre>
+<i><b>// Adding a catch clause</b></i>
+Constant *TypeInfo = getTypeInfo();
+LPadInst-&gt;addClause(TypeInfo);
+
+<i><b>// Adding a C++ catch-all</b></i>
+LPadInst-&gt;addClause(Constant::getNullValue(Builder.getInt8PtrTy()));
+
+<i><b>// Adding a cleanup</b></i>
+LPadInst-&gt;setCleanup(true);
+
+<i><b>// Adding a filter clause</b></i>
+std::vector&lt;Constant*&gt; TypeInfos;
+Constant *TypeInfo = getFilterTypeInfo();
+TypeInfos.push_back(Builder.CreateBitCast(TypeInfo, Builder.getInt8PtrTy()));
+
+ArrayType *FilterTy = ArrayType::get(Int8PtrTy, TypeInfos.size());
+LPadInst-&gt;addClause(ConstantArray::get(FilterTy, TypeInfos));
+</pre>
+</div>
+
+<p>Converting from using the <code>@llvm.eh.resume</code> intrinsic to
+   the <code>resume</code> instruction is trivial. It takes the exception
+   pointer and exception selector values returned by
+   the <code>landingpad</code> instruction:</p>
+
+<div class="doc_code">
+<pre>
+Type *UnwindDataTy = StructType::get(Builder.getInt8PtrTy(),
+                                     Builder.getInt32Ty(), NULL);
+Value *UnwindData = UndefValue::get(UnwindDataTy);
+Value *ExcPtr = Builder.CreateLoad(getExceptionObjSlot());
+Value *ExcSel = Builder.CreateLoad(getExceptionSelSlot());
+UnwindData = Builder.CreateInsertValue(UnwindData, ExcPtr, 0, "exc_ptr");
+UnwindData = Builder.CreateInsertValue(UnwindData, ExcSel, 1, "exc_sel");
+Builder.CreateResume(UnwindData);
+</pre>
+</div>
 
 </div>
 
