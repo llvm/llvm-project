@@ -29,7 +29,7 @@
 <div>
 
 <p>This document contains information about successfully releasing LLVM &mdash;
-   including subprojects: e.g., <tt>llvm-gcc</tt> and <tt>clang</tt> &mdash; to
+   including subprojects: e.g., <tt>clang</tt> and <tt>dragonegg</tt> &mdash; to
    the public. It is the Release Manager's responsibility to ensure that a high
    quality build of LLVM is released.</p>
 
@@ -92,7 +92,6 @@
   <ol>
     <li><a href="#dist">Build the LLVM Source Distributions</a></li>
     <li><a href="#build">Build LLVM</a></li>
-    <li><a href="#llvmgccbin">Build the LLVM-GCC Binary Distribution</a></li>
     <li><a href="#clangbin">Build the Clang Binary Distribution</a></li>
     <li><a href="#target-build">Target Specific Build Details</a></li>
   </ol>
@@ -100,7 +99,6 @@
   <li><a href="#release-qualify">Release Qualification Criteria</a>
   <ol>
     <li><a href="#llvm-qualify">Qualify LLVM</a></li>
-    <li><a href="#llvmgcc-qualify">Qualify LLVM-GCC</a></li>
     <li><a href="#clang-qualify">Qualify Clang</a></li>
     <li><a href="#targets">Specific Target Qualification Details</a></li>
   </ol>
@@ -149,25 +147,25 @@
   <li><p>Verify that the current Subversion trunk is in decent shape by
       examining nightly tester and buildbot results.</p></li>
 
-  <li><p>Create the release branch for <tt>llvm</tt>, <tt>llvm-gcc-4.2</tt>,
-      <tt>clang</tt>, and the <tt>test-suite</tt> from the last known good
-      revision. The branch's name is <tt>release_XY</tt>, where <tt>X</tt> is
-      the major and <tt>Y</tt> the minor release numbers. The branches should be
-      created using the following commands:</p>
+  <li><p>Create the release branch for <tt>llvm</tt>, <tt>clang</tt>,
+      the <tt>test-suite</tt>, and <tt>dragonegg</tt> from the last known good
+      revision. The branch's name is <tt>release_<i>XY</i></tt>,
+      where <tt>X</tt> is the major and <tt>Y</tt> the minor release
+      numbers. The branches should be created using the following commands:</p>
   
 <div class="doc_code">
 <pre>
 $ svn copy https://llvm.org/svn/llvm-project/llvm/trunk \
            https://llvm.org/svn/llvm-project/llvm/branches/release_<i>XY</i>
 
-$ svn copy https://llvm.org/svn/llvm-project/llvm-gcc-4.2/trunk \
-           https://llvm.org/svn/llvm-project/llvm-gcc-4.2/branches/release_<i>XY</i>
+$ svn copy https://llvm.org/svn/llvm-project/cfe/trunk \
+           https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i>
+
+$ svn copy https://llvm.org/svn/llvm-project/dragonegg/trunk \
+           https://llvm.org/svn/llvm-project/dragonegg/branches/release_<i>XY</i>
 
 $ svn copy https://llvm.org/svn/llvm-project/test-suite/trunk \
            https://llvm.org/svn/llvm-project/test-suite/branches/release_<i>XY</i>
-
-$ svn copy https://llvm.org/svn/llvm-project/cfe/trunk \
-           https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i>
 </pre>
 </div></li>
 
@@ -182,11 +180,11 @@ $ svn copy https://llvm.org/svn/llvm-project/cfe/trunk \
 <pre>
 $ svn co https://llvm.org/svn/llvm-project/llvm/branches/release_<i>XY</i> llvm-<i>X.Y</i>
 
-$ svn co https://llvm.org/svn/llvm-project/llvm-gcc-4.2/branches/release_<i>XY</i> llvm-gcc-4.2-<i>X.Y</i>
+$ svn co https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i> clang-<i>X.Y</i>
+
+$ svn co https://llvm.org/svn/llvm-project/dragonegg/branches/release_<i>XY</i> dragonegg-<i>X.Y</i>
 
 $ svn co https://llvm.org/svn/llvm-project/test-suite/branches/release_<i>XY</i> test-suite-<i>X.Y</i>
-
-$ svn co https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i> clang-<i>X.Y</i>
 </pre>
 </div></li>
 </ol>
@@ -214,10 +212,10 @@ $ svn co https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i> clang-
 
 <div>
 
-<p>Create release candidates for <tt>llvm</tt>, <tt>llvm-gcc</tt>,
-   <tt>clang</tt>, and the LLVM <tt>test-suite</tt> by tagging the branch with
-   the respective release candidate number. For instance, to create <b>Release
-   Candidate 1</b> you would issue the following commands:</p>
+<p>Create release candidates for <tt>llvm</tt>, <tt>clang</tt>,
+   <tt>dragonegg</tt>, and the LLVM <tt>test-suite</tt> by tagging the branch
+   with the respective release candidate number. For instance, to
+   create <b>Release Candidate 1</b> you would issue the following commands:</p>
 
 <div class="doc_code">
 <pre>
@@ -225,17 +223,17 @@ $ svn mkdir https://llvm.org/svn/llvm-project/llvm/tags/RELEASE_<i>XY</i>
 $ svn copy https://llvm.org/svn/llvm-project/llvm/branches/release_<i>XY</i> \
            https://llvm.org/svn/llvm-project/llvm/tags/RELEASE_<i>XY</i>/rc1
 
-$ svn mkdir https://llvm.org/svn/llvm-project/llvm-gcc-4.2/tags/RELEASE_<i>XY</i>
-$ svn copy https://llvm.org/svn/llvm-project/llvm-gcc-4.2/branches/release_<i>XY</i> \
-           https://llvm.org/svn/llvm-project/llvm-gcc-4.2/tags/RELEASE_<i>XY</i>/rc1
+$ svn mkdir https://llvm.org/svn/llvm-project/cfe/tags/RELEASE_<i>XY</i>
+$ svn copy https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i> \
+           https://llvm.org/svn/llvm-project/cfe/tags/RELEASE_<i>XY</i>/rc1
+
+$ svn mkdir https://llvm.org/svn/llvm-project/dragonegg/tags/RELEASE_<i>XY</i>
+$ svn copy https://llvm.org/svn/llvm-project/dragonegg/branches/release_<i>XY</i> \
+           https://llvm.org/svn/llvm-project/dragonegg/tags/RELEASE_<i>XY</i>/rc1
 
 $ svn mkdir https://llvm.org/svn/llvm-project/test-suite/tags/RELEASE_<i>XY</i>
 $ svn copy https://llvm.org/svn/llvm-project/test-suite/branches/release_<i>XY</i> \
            https://llvm.org/svn/llvm-project/test-suite/tags/RELEASE_<i>XY</i>/rc1
-
-$ svn mkdir https://llvm.org/svn/llvm-project/cfe/tags/RELEASE_<i>XY</i>
-$ svn copy https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i> \
-           https://llvm.org/svn/llvm-project/cfe/tags/RELEASE_<i>XY</i>/rc1
 </pre>
 </div>
 
@@ -251,14 +249,14 @@ $ svn copy https://llvm.org/svn/llvm-project/cfe/branches/release_<i>XY</i> \
 <div class="doc_code">
 <pre>
 $ svn export https://llvm.org/svn/llvm-project/llvm/tags/RELEASE_<i>XY</i>/rc1 llvm-<i>X.Y</i>rc1
-$ svn export https://llvm.org/svn/llvm-project/llvm-gcc-4.2/tags/RELEASE_<i>XY</i>/rc1 llvm-gcc4.2-<i>X.Y</i>rc1
-$ svn export https://llvm.org/svn/llvm-project/test-suite/tags/RELEASE_<i>XY</i>/rc1 llvm-test-<i>X.Y</i>rc1
 $ svn export https://llvm.org/svn/llvm-project/cfe/tags/RELEASE_<i>XY</i>/rc1 clang-<i>X.Y</i>rc1
+$ svn export https://llvm.org/svn/llvm-project/dragonegg/tags/RELEASE_<i>XY</i>/rc1 dragonegg-<i>X.Y</i>rc1
+$ svn export https://llvm.org/svn/llvm-project/test-suite/tags/RELEASE_<i>XY</i>/rc1 llvm-test-<i>X.Y</i>rc1
 
 $ tar -cvf - llvm-<i>X.Y</i>rc1        | gzip &gt; llvm-<i>X.Y</i>rc1.src.tar.gz
-$ tar -cvf - llvm-test-<i>X.Y</i>rc1   | gzip &gt; llvm-test-<i>X.Y</i>rc1.src.tar.gz
-$ tar -cvf - llvm-gcc4.2-<i>X.Y</i>rc1 | gzip &gt; llvm-gcc-4.2-<i>X.Y</i>rc1.src.tar.gz
 $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.gz
+$ tar -cvf - dragonegg-<i>X.Y</i>rc1   | gzip &gt; dragonegg-<i>X.Y</i>rc1.src.tar.gz
+$ tar -cvf - llvm-test-<i>X.Y</i>rc1   | gzip &gt; llvm-test-<i>X.Y</i>rc1.src.tar.gz
 </pre>
 </div>
 
@@ -271,7 +269,7 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
 
 <div>
 
-<p>The builds of <tt>llvm</tt>, <tt>llvm-gcc</tt>, and <tt>clang</tt>
+<p>The builds of <tt>llvm</tt>, <tt>clang</tt>, and <tt>dragonegg</tt>
    <em>must</em> be free of errors and warnings in Debug, Release+Asserts, and
    Release builds. If all builds are clean, then the release passes Build
    Qualification.</p>
@@ -292,35 +290,7 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
 
 <p>Build <tt>Debug</tt>, <tt>Release+Asserts</tt>, and <tt>Release</tt> versions
    of <tt>llvm</tt> on all supported platforms. Directions to build
-   <tt>llvm</tt> are
-   <a href="GettingStarted.html#quickstart">here</a>.</p>
-
-</div>
-
-<!-- ======================================================================= -->
-<h4><a name="llvmgccbin">Build the LLVM GCC Binary Distribution</a></h4>
-
-<div>
-
-<p>Creating the <tt>llvm-gcc</tt> binary distribution (Release/Optimized)
-   requires performing the following steps for each supported platform:</p>
-
-<ol>
-  <li><p>Build the <tt>llvm-gcc</tt> front-end by following the directions in
-      the <tt>README.LLVM</tt> file. The front-end must be compiled with C, C++,
-      Objective-C (Mac only), Objective-C++ (Mac only), and Fortran
-      support.</p></li>
-
-  <li><p>Boostrapping must be enabled.</p></li>
-
-  <li><p>Be sure to build with <tt>LLVM_VERSION_INFO=X.Y</tt>, where <tt>X</tt>
-      is the major and <tt>Y</tt> is the minor release numbers.</p></li>
-
-  <li><p>Copy the installation directory to a directory named for the specific
-      target. For example on Red Hat Enterprise Linux, the directory would be
-      named <tt>llvm-gcc4.2-2.6-x86-linux-RHEL4</tt>. Archive and compress the
-      new directory.</p></li>
-</ol>
+   <tt>llvm</tt> are <a href="GettingStarted.html#quickstart">here</a>.</p>
 
 </div>
 
@@ -337,8 +307,8 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
   <li>Build clang according to the directions
       <a href="http://clang.llvm.org/get_started.html">here</a>.</li>
 
-  <li>Build both a debug and release version of clang. The binary will be the
-      release build.</lI>
+  <li>Build both a Debug and Release version of clang. The binary will be the
+      Release build.</lI>
 
   <li>Package <tt>clang</tt> (details to follow).</li>
 </ol>
@@ -351,18 +321,18 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
 <div>
 
 <p>The table below specifies which compilers are used for each Arch/OS
-   combination when qualifying the build of <tt>llvm</tt>, <tt>llvm-gcc</tt>,
-   and <tt>clang</tt>.</p>
+   combination when qualifying the build of <tt>llvm</tt>, <tt>clang</tt>,
+   and <tt>dragonegg</tt>.</p>
 
 <table>
-  <tr><th>Architecture</th><th>OS</th><th>compiler</th></tr>
-  <tr><td>x86-32</td><td>Mac OS 10.5</td><td>gcc 4.0.1</td></tr>
-  <tr><td>x86-32</td><td>Linux</td><td>gcc 4.2.X, gcc 4.3.X</td></tr>
-  <tr><td>x86-32</td><td>FreeBSD</td><td>gcc 4.2.X</td></tr>
-  <tr><td>x86-32</td><td>mingw</td><td>gcc 3.4.5</td></tr>
-  <tr><td>x86-64</td><td>Mac OS 10.5</td><td>gcc 4.0.1</td></tr>
-  <tr><td>x86-64</td><td>Linux</td><td>gcc 4.2.X, gcc 4.3.X</td></tr>
-  <tr><td>x86-64</td><td>FreeBSD</td><td>gcc 4.2.X</td></tr>
+  <tr><th>Architecture</th> <th>OS</th>          <th>compiler</th></tr>
+  <tr><td>x86-32</td>       <td>Mac OS 10.5</td> <td>gcc 4.0.1</td></tr>
+  <tr><td>x86-32</td>       <td>Linux</td>       <td>gcc 4.2.X, gcc 4.3.X</td></tr>
+  <tr><td>x86-32</td>       <td>FreeBSD</td>     <td>gcc 4.2.X</td></tr>
+  <tr><td>x86-32</td>       <td>mingw</td>       <td>gcc 3.4.5</td></tr>
+  <tr><td>x86-64</td>       <td>Mac OS 10.5</td> <td>gcc 4.0.1</td></tr>
+  <tr><td>x86-64</td>       <td>Linux</td>       <td>gcc 4.2.X, gcc 4.3.X</td></tr>
+  <tr><td>x86-64</td>       <td>FreeBSD</td>     <td>gcc 4.2.X</td></tr>
 </table> 
 
 </div>
@@ -394,21 +364,8 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
 <div>
 
 <p>LLVM is qualified when it has a clean test run without a front-end. And it
-   has no regressions when using either <tt>llvm-gcc</tt> or <tt>clang</tt> with
-   the <tt>test-suite</tt> from the previous release.</p>
-
-</div>
-
-<!-- ======================================================================= -->
-<h4><a name="llvmgcc-qualify">Qualify LLVM-GCC</a></h4>
-
-<div>
-
-<p><tt>LLVM-GCC</tt> is qualified when front-end specific tests in the
-   <tt>llvm</tt> regression test suite all pass and there are no regressions in
-   the <tt>test-suite</tt>.</p>
-
-<p>We do not use the GCC DejaGNU test suite as release criteria.</p>
+   has no regressions when using either <tt>clang</tt> or <tt>dragonegg</tt>
+   with the <tt>test-suite</tt> from the previous release.</p>
 
 </div>
 
@@ -429,13 +386,13 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
 <div>
 
 <table>
-  <tr><th>Architecture</th><th>OS</th><th>llvm-gcc baseline</th><th>clang baseline</th><th>tests</th></tr>
-  <tr><td>x86-32</td><td>Linux</td><td>last release</td><td>last release</td><td>llvm dejagnu, clang tests, test-suite (including spec)</td></tr>
-  <tr><td>x86-32</td><td>FreeBSD</td><td>none</td><td>last release</td><td>llvm dejagnu, clang tests, test-suite</td></tr>
-  <tr><td>x86-32</td><td>mingw</td><td>last release</td><td>none</td><td>QT</td></tr>
-  <tr><td>x86-64</td><td>Mac OS 10.X</td><td>last release</td><td>last release</td><td>llvm dejagnu, clang tests, test-suite (including spec)</td></tr>
-  <tr><td>x86-64</td><td>Linux</td><td>last release</td><td>last release</td><td>llvm dejagnu, clang tests, test-suite (including spec)</td></tr>
-  <tr><td>x86-64</td><td>FreeBSD</td><td>none</td><td>last release</td><td>llvm dejagnu, clang tests, test-suite</td></tr>
+  <tr><th>Architecture</th> <th>OS</th>          <th>clang baseline</th> <th>tests</th></tr>
+  <tr><td>x86-32</td>       <td>Linux</td>       <td>last release</td>   <td>llvm dejagnu, clang tests, test-suite (including spec)</td></tr>
+  <tr><td>x86-32</td>       <td>FreeBSD</td>     <td>last release</td>   <td>llvm dejagnu, clang tests, test-suite</td></tr>
+  <tr><td>x86-32</td>       <td>mingw</td>       <td>none</td>           <td>QT</td></tr>
+  <tr><td>x86-64</td>       <td>Mac OS 10.X</td> <td>last release</td>   <td>llvm dejagnu, clang tests, test-suite (including spec)</td></tr>
+  <tr><td>x86-64</td>       <td>Linux</td>       <td>last release</td>   <td>llvm dejagnu, clang tests, test-suite (including spec)</td></tr>
+  <tr><td>x86-64</td>       <td>FreeBSD</td>     <td>last release</td>   <td>llvm dejagnu, clang tests, test-suite</td></tr>
 </table>
 
 </div>
@@ -452,14 +409,12 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
 
 <ol>
   <li>Download <tt>llvm-<i>X.Y</i></tt>, <tt>llvm-test-<i>X.Y</i></tt>, and the
-      appropriate <tt>llvm-gcc</tt> and/or <tt>clang</tt> binary. Build
-      LLVM. Run <tt>make check</tt> and the full LLVM test suite (<tt>make
-      TEST=nightly report</tt>).</li>
+      appropriate <tt>clang</tt> binary. Build LLVM. Run <tt>make check</tt> and
+      the full LLVM test suite (<tt>make TEST=nightly report</tt>).</li>
 
   <li>Download <tt>llvm-<i>X.Y</i></tt>, <tt>llvm-test-<i>X.Y</i></tt>, and the
-      <tt>llvm-gcc</tt> and/or <tt>clang</tt> source. Compile everything. Run
-      <tt>make check</tt> and the full LLVM test suite (<tt>make TEST=nightly
-      report</tt>).</li>
+      <tt>clang</tt> sources. Compile everything. Run <tt>make check</tt> and
+      the full LLVM test suite (<tt>make TEST=nightly report</tt>).</li>
 </ol>
 
 <p>Ask LLVM developers to submit the test suite report and <tt>make check</tt>
@@ -538,14 +493,14 @@ $ tar -cvf - clang-<i>X.Y</i>rc1       | gzip &gt; clang-<i>X.Y</i>rc1.src.tar.g
 $ svn copy https://llvm.org/svn/llvm-project/llvm/branches/release_XY \
            https://llvm.org/svn/llvm-project/llvm/tags/RELEASE_<i>XY</i>/Final
 
-$ svn copy https://llvm.org/svn/llvm-project/llvm-gcc-4.2/branches/release_XY \
-           https://llvm.org/svn/llvm-project/llvm-gcc-4.2/tags/RELEASE_<i>XY</i>/Final
+$ svn copy https://llvm.org/svn/llvm-project/cfe/branches/release_XY \
+           https://llvm.org/svn/llvm-project/cfe/tags/RELEASE_<i>XY</i>/Final
+
+$ svn copy https://llvm.org/svn/llvm-project/dragonegg/branches/release_XY \
+           https://llvm.org/svn/llvm-project/dragonegg/tags/RELEASE_<i>XY</i>/Final
 
 $ svn copy https://llvm.org/svn/llvm-project/test-suite/branches/release_XY \
            https://llvm.org/svn/llvm-project/test-suite/tags/RELEASE_<i>XY</i>/Final
-
-$ svn copy https://llvm.org/svn/llvm-project/cfe/branches/release_XY \
-           https://llvm.org/svn/llvm-project/cfe/tags/RELEASE_<i>XY</i>/Final
 </pre>
 </div>
 
@@ -559,7 +514,7 @@ $ svn copy https://llvm.org/svn/llvm-project/cfe/branches/release_XY \
 <div>
 
 <p>The LLVM demo page must be updated to use the new release. This consists of
-   using the new <tt>llvm-gcc</tt> binary and building LLVM.</p>
+   using the new <tt>clang</tt> binary and building LLVM.</p>
 
 <!-- ======================================================================= -->
 <h4><a name="webupdates">Update the LLVM Website</a></h4>
@@ -574,8 +529,8 @@ $ svn copy https://llvm.org/svn/llvm-project/cfe/branches/release_XY \
 
   <li>Create a new subdirectory <tt>X.Y</tt> in the releases directory.</li>
 
-  <li>Commit the <tt>llvm</tt>, <tt>test-suite</tt>, <tt>llvm-gcc</tt> source,
-      <tt>clang source</tt>, <tt>clang binaries</tt>, and <tt>llvm-gcc</tt>
+  <li>Commit the <tt>llvm</tt>, <tt>test-suite</tt>, <tt>clang</tt> source,
+      <tt>clang binaries</tt>, <tt>dragonegg</tt> source, and <tt>dragonegg</tt>
       binaries in this new directory.</li>
 
   <li>Copy and commit the <tt>llvm/docs</tt> and <tt>LICENSE.txt</tt> files
