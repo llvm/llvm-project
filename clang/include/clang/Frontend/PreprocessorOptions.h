@@ -206,7 +206,6 @@ public:
   /// \brief Reset any options that are not considered when building a
   /// module.
   void resetNonModularOptions() {
-    Macros.clear();
     Includes.clear();
     MacroIncludes.clear();
     ChainedIncludes.clear();

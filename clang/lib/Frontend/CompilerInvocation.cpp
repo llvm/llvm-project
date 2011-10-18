@@ -2026,6 +2026,23 @@ std::string CompilerInvocation::getModuleHash() const {
   Signature.add(getPreprocessorOpts().UsePredefines, 1);
   Signature.add(getPreprocessorOpts().DetailedRecord, 1);
   
+  // Hash the preprocessor defines.
+  // FIXME: This is terrible. Use an MD5 sum of the preprocessor defines.
+  std::vector<StringRef> MacroDefs;
+  for (std::vector<std::pair<std::string, bool/*isUndef*/> >::const_iterator 
+            I = getPreprocessorOpts().Macros.begin(),
+         IEnd = getPreprocessorOpts().Macros.end();
+       I != IEnd; ++I) {
+    if (!I->second)
+      MacroDefs.push_back(I->first);
+  }
+  llvm::array_pod_sort(MacroDefs.begin(), MacroDefs.end());
+       
+  unsigned PPHashResult = 0;
+  for (unsigned I = 0, N = MacroDefs.size(); I != N; ++I)
+    PPHashResult = llvm::HashString(MacroDefs[I], PPHashResult);
+  Signature.add(PPHashResult, 32);
+  
   // We've generated the signature. Treat it as one large APInt that we'll
   // encode in base-36 and return.
   Signature.flush();
