@@ -247,11 +247,12 @@ protected:
                             MacroBuilder &Builder) const {
     // FreeBSD defines; list based off of gcc output
 
-    // FIXME: Move version number handling to llvm::Triple.
-    StringRef Release = Triple.getOSName().substr(strlen("freebsd"), 1);
+    unsigned Release = Triple.getOSMajorVersion();
+    if (Release == 0U)
+      Release = 8;
 
-    Builder.defineMacro("__FreeBSD__", Release);
-    Builder.defineMacro("__FreeBSD_cc_version", Release + "00001");
+    Builder.defineMacro("__FreeBSD__", Twine(Release));
+    Builder.defineMacro("__FreeBSD_cc_version", Twine(Release * 100000U + 1U));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
