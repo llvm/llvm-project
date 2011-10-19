@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #===-- test-release.sh - Test the LLVM release candidates ------------------===#
 #
 #                     The LLVM Compiler Infrastructure
