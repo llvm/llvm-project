@@ -1225,7 +1225,8 @@ bool AsmParser::ParseStatement() {
 /// EatToEndOfLine uses the Lexer to eat the characters to the end of the line
 /// since they may not be able to be tokenized to get to the end of line token.
 void AsmParser::EatToEndOfLine() {
- Lexer.LexUntilEndOfLine();
+  if (!Lexer.is(AsmToken::EndOfStatement))
+    Lexer.LexUntilEndOfLine();
  // Eat EOL.
  Lex();
 }
