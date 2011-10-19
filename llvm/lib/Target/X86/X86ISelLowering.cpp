@@ -7526,7 +7526,8 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     // And our return value (tls address) is in the standard call return value
     // location.
     unsigned Reg = Subtarget->is64Bit() ? X86::RAX : X86::EAX;
-    return DAG.getCopyFromReg(Chain, DL, Reg, getPointerTy());
+    return DAG.getCopyFromReg(Chain, DL, Reg, getPointerTy(),
+                              Chain.getValue(1));
   }
 
   assert(false &&
