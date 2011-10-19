@@ -40,6 +40,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const;
 
   bool runOnFunction(Function &F);
+  void print(raw_ostream &O, const Module *M) const;
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the
   /// information. Please note that initial frequency is equal to 1024. It means
