@@ -143,30 +143,38 @@ public:
 
 // Propagate existing explicit probabilities from either profile data or
 // 'expect' intrinsic processing.
-// FIXME: This doesn't correctly extract probabilities for switches.
 bool BranchProbabilityAnalysis::calcMetadataWeights(BasicBlock *BB) {
-  BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  TerminatorInst *TI = BB->getTerminator();
+  if (TI->getNumSuccessors() == 1)
+    return false;
+  if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI))
     return false;
 
-  MDNode *WeightsNode = BI->getMetadata(LLVMContext::MD_prof);
-  if (!WeightsNode || WeightsNode->getNumOperands() < 3)
+  MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
+  if (!WeightsNode)
     return false;
 
-  // Pull the weights out of the metadata. Note that the zero operand is the
-  // name.
-  ConstantInt *Weights[] = {
-    dyn_cast<ConstantInt>(WeightsNode->getOperand(1)),
-    dyn_cast<ConstantInt>(WeightsNode->getOperand(2))
-  };
-  if (!Weights[0] || !Weights[1])
+  // Ensure there are weights for all of the successors. Note that the first
+  // operand to the metadata node is a name, not a weight.
+  if (WeightsNode->getNumOperands() != TI->getNumSuccessors() + 1)
     return false;
 
+  // Build up the final weights that will be used in a temporary buffer, but
+  // don't add them until all weihts are present. Each weight value is clamped
+  // to [1, getMaxWeightFor(BB)].
   uint32_t WeightLimit = getMaxWeightFor(BB);
-  BP->setEdgeWeight(BB, BI->getSuccessor(0),
-                    Weights[0]->getLimitedValue(WeightLimit));
-  BP->setEdgeWeight(BB, BI->getSuccessor(1),
-                    Weights[1]->getLimitedValue(WeightLimit));
+  SmallVector<uint32_t, 2> Weights;
+  Weights.reserve(TI->getNumSuccessors());
+  for (unsigned i = 1, e = WeightsNode->getNumOperands(); i != e; ++i) {
+    ConstantInt *Weight = dyn_cast<ConstantInt>(WeightsNode->getOperand(i));
+    if (!Weight)
+      return false;
+    Weights.push_back(
+      std::max<uint32_t>(1, Weight->getLimitedValue(WeightLimit)));
+  }
+  assert(Weights.size() == TI->getNumSuccessors() && "Checked above");
+  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
+    BP->setEdgeWeight(BB, TI->getSuccessor(i), Weights[i]);
 
   return true;
 }

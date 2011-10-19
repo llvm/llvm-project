@@ -47,3 +47,46 @@ exit:
 }
 
 !0 = metadata !{metadata !"branch_weights", i32 64, i32 4}
+
+define i32 @test3(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+; CHECK: Printing analysis {{.*}} for function 'test3'
+; CHECK: entry = 1024
+entry:
+  switch i32 %i, label %case_a [ i32 1, label %case_b
+                                 i32 2, label %case_c
+                                 i32 3, label %case_d
+                                 i32 4, label %case_e ], !prof !1
+
+; CHECK: case_a = 51
+case_a:
+  br label %exit
+
+; CHECK: case_b = 51
+case_b:
+  br label %exit
+
+; The 'case_c' branch is predicted more likely via branch weight metadata.
+; CHECK: case_c = 819
+case_c:
+  br label %exit
+
+; CHECK: case_d = 51
+case_d:
+  br label %exit
+
+; CHECK: case_e = 51
+case_e:
+  br label %exit
+
+; FIXME: It may be a bug that we don't sum back to 1024.
+; CHECK: exit = 1023
+exit:
+  %result = phi i32 [ %a, %case_a ],
+                    [ %b, %case_b ],
+                    [ %c, %case_c ],
+                    [ %d, %case_d ],
+                    [ %e, %case_e ]
+  ret i32 %result
+}
+
+!1 = metadata !{metadata !"branch_weights", i32 4, i32 4, i32 64, i32 4, i32 4}
