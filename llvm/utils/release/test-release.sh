@@ -141,26 +141,8 @@ LogDir=$BuildDir/logs
 mkdir -p $LogDir
 
 # Find a compilers.
-c_compiler="`which clang`"
-if [ -z "$c_compiler" ]; then
-    c_compiler="`which gcc`"
-    if [ -z "$c_compiler" ]; then
-        c_compiler="`which cc`"
-        if [ -z "$c_compiler" ]; then
-            echo "error: cannot find a working C compiler"
-        fi
-    fi
-fi
-cxx_compiler="`which clang++`"
-if [ -z "$cxx_compiler" ]; then
-    cxx_compiler="`which g++`"
-    if [ -z "$cxx_compiler" ]; then
-        cxx_compiler="`which c++`"
-        if [ -z "$cxx_compiler" ]; then
-            echo "error: cannot find a working C++ compiler"
-        fi
-    fi
-fi
+c_compiler="$CC"
+cxx_compiler="$CXX"
 
 # Make sure that the URLs are valid.
 function check_valid_urls() {
