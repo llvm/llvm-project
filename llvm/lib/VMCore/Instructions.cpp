@@ -785,6 +785,27 @@ BranchInst::BranchInst(const BranchInst &BI) :
   SubclassOptionalData = BI.SubclassOptionalData;
 }
 
+void BranchInst::swapSuccessors() {
+  assert(isConditional() &&
+         "Cannot swap successors of an unconditional branch");
+  Op<-1>().swap(Op<-2>());
+
+  // Update profile metadata if present and it matches our structural
+  // expectations.
+  MDNode *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (!ProfileData || ProfileData->getNumOperands() != 3)
+    return;
+
+  // The first operand is the name. Fetch them backwards and build a new one.
+  Value *Ops[] = {
+    ProfileData->getOperand(0),
+    ProfileData->getOperand(2),
+    ProfileData->getOperand(1)
+  };
+  setMetadata(LLVMContext::MD_prof,
+              MDNode::get(ProfileData->getContext(), Ops));
+}
+
 BasicBlock *BranchInst::getSuccessorV(unsigned idx) const {
   return getSuccessor(idx);
 }

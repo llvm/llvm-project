@@ -1190,8 +1190,7 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
       !isa<Constant>(X)) {
     // Swap Destinations and condition...
     BI.setCondition(X);
-    BI.setSuccessor(0, FalseDest);
-    BI.setSuccessor(1, TrueDest);
+    BI.swapSuccessors();
     return &BI;
   }
 
@@ -1206,8 +1205,7 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
       Cond->setPredicate(FCmpInst::getInversePredicate(FPred));
       
       // Swap Destinations and condition.
-      BI.setSuccessor(0, FalseDest);
-      BI.setSuccessor(1, TrueDest);
+      BI.swapSuccessors();
       Worklist.Add(Cond);
       return &BI;
     }
@@ -1223,8 +1221,7 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
       ICmpInst *Cond = cast<ICmpInst>(BI.getCondition());
       Cond->setPredicate(ICmpInst::getInversePredicate(IPred));
       // Swap Destinations and condition.
-      BI.setSuccessor(0, FalseDest);
-      BI.setSuccessor(1, TrueDest);
+      BI.swapSuccessors();
       Worklist.Add(Cond);
       return &BI;
     }

@@ -2367,6 +2367,13 @@ public:
     *(&Op<-1>() - idx) = (Value*)NewSucc;
   }
 
+  /// \brief Swap the successors of this branch instruction.
+  ///
+  /// Swaps the successors of the branch instruction. This also swaps any
+  /// branch weight metadata associated with the instruction so that it
+  /// continues to map correctly to each operand.
+  void swapSuccessors();
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const BranchInst *) { return true; }
   static inline bool classof(const Instruction *I) {
