@@ -13,6 +13,8 @@
 
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
+#include "llvm/LLVMContext.h"
+#include "llvm/Metadata.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/Debug.h"
@@ -120,6 +122,9 @@ public:
     : Weights(W), BP(BP), LI(LI) {
   }
 
+  // Metadata Weights
+  bool calcMetadataWeights(BasicBlock *BB);
+
   // Return Heuristics
   bool calcReturnHeuristics(BasicBlock *BB);
 
@@ -135,6 +140,36 @@ public:
   bool runOnFunction(Function &F);
 };
 } // end anonymous namespace
+
+// Propagate existing explicit probabilities from either profile data or
+// 'expect' intrinsic processing.
+// FIXME: This doesn't correctly extract probabilities for switches.
+bool BranchProbabilityAnalysis::calcMetadataWeights(BasicBlock *BB) {
+  BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
+  if (!BI || !BI->isConditional())
+    return false;
+
+  MDNode *WeightsNode = BI->getMetadata(LLVMContext::MD_prof);
+  if (!WeightsNode || WeightsNode->getNumOperands() < 3)
+    return false;
+
+  // Pull the weights out of the metadata. Note that the zero operand is the
+  // name.
+  ConstantInt *Weights[] = {
+    dyn_cast<ConstantInt>(WeightsNode->getOperand(1)),
+    dyn_cast<ConstantInt>(WeightsNode->getOperand(2))
+  };
+  if (!Weights[0] || !Weights[1])
+    return false;
+
+  uint32_t WeightLimit = getMaxWeightFor(BB);
+  BP->setEdgeWeight(BB, BI->getSuccessor(0),
+                    Weights[0]->getLimitedValue(WeightLimit));
+  BP->setEdgeWeight(BB, BI->getSuccessor(1),
+                    Weights[1]->getLimitedValue(WeightLimit));
+
+  return true;
+}
 
 // Calculate Edge Weights using "Return Heuristics". Predict a successor which
 // leads directly to Return Instruction will not be taken.
@@ -343,6 +378,9 @@ bool BranchProbabilityAnalysis::runOnFunction(Function &F) {
 
   for (Function::iterator I = F.begin(), E = F.end(); I != E; ) {
     BasicBlock *BB = I++;
+
+    if (calcMetadataWeights(BB))
+      continue;
 
     if (calcLoopBranchHeuristics(BB))
       continue;

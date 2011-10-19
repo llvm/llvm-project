@@ -22,3 +22,28 @@ body:
 exit:
   ret i32 %sum
 }
+
+define i32 @test2(i32 %i, i32 %a, i32 %b) {
+; CHECK: Printing analysis {{.*}} for function 'test2'
+; CHECK: entry = 1024
+entry:
+  %cond = icmp ult i32 %i, 42
+  br i1 %cond, label %then, label %else, !prof !0
+
+; The 'then' branch is predicted more likely via branch weight metadata.
+; CHECK: then = 963
+then:
+  br label %exit
+
+; CHECK: else = 60
+else:
+  br label %exit
+
+; FIXME: It may be a bug that we don't sum back to 1024.
+; CHECK: exit = 1023
+exit:
+  %result = phi i32 [ %a, %then ], [ %b, %else ]
+  ret i32 %result
+}
+
+!0 = metadata !{metadata !"branch_weights", i32 64, i32 4}
