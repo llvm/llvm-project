@@ -41,10 +41,11 @@
  #pragma GCC diagnostic ignored "-Wformat"
  #pragma GCC diagnostic ignored "-Wformat-extra-args"
 
- // MinGW does not have updated support for the 64-bit versions of the DebugHlp
- // APIs. So we will have to load them manually. The structures and method
- // signatures were pulled from DbgHelp.h in the Windows Platform SDK, and
- // adjusted for brevity.
+ #if !defined(__MINGW64_VERSION_MAJOR)
+ // MinGW.org does not have updated support for the 64-bit versions of the
+ // DebugHlp APIs. So we will have to load them manually. The structures and
+ // method signatures were pulled from DbgHelp.h in the Windows Platform SDK,
+ // and adjusted for brevity.
  typedef struct _IMAGEHLP_LINE64 {
    DWORD    SizeOfStruct;
    PVOID    Key;
@@ -147,6 +148,7 @@ static bool load64BitDebugHelp(void) {
   }
   return StackWalk64 != NULL;
 }
+ #endif // !defined(__MINGW64_VERSION_MAJOR)
 #endif // __MINGW32__
 
 // Forward declare.
@@ -207,8 +209,8 @@ static int CRTReportHook(int ReportType, char *Message, int *Return) {
 #endif
 
 static void RegisterHandler() {
-#if __MINGW32__
-  // On MinGW, we need to load up the symbols explicitly, because the
+#if __MINGW32__ && !defined(__MINGW64_VERSION_MAJOR)
+  // On MinGW.org, we need to load up the symbols explicitly, because the
   // Win32 framework they include does not have support for the 64-bit
   // versions of the APIs we need.  If we cannot load up the APIs (which
   // would be unexpected as they should exist on every version of Windows
