@@ -2474,7 +2474,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   size_t numCmps = Clusterify(Cases, SI);
   DEBUG(dbgs() << "Clusterify finished. Total clusters: " << Cases.size()
                << ". Total compares: " << numCmps << '\n');
-  numCmps = 0;
+  (void)numCmps;
 
   // Get the Value to be switched on and default basic blocks, which will be
   // inserted into CaseBlock records, representing basic blocks in the binary

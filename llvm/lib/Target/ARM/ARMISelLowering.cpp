@@ -4900,9 +4900,9 @@ static SDValue LowerAtomicLoadStore(SDValue Op, SelectionDAG &DAG) {
 static void
 ReplaceATOMIC_OP_64(SDNode *Node, SmallVectorImpl<SDValue>& Results,
                     SelectionDAG &DAG, unsigned NewOp) {
-  EVT T = Node->getValueType(0);
   DebugLoc dl = Node->getDebugLoc();
-  assert (T == MVT::i64 && "Only know how to expand i64 atomics");
+  assert (Node->getValueType(0) == MVT::i64 &&
+          "Only know how to expand i64 atomics");
 
   SmallVector<SDValue, 6> Ops;
   Ops.push_back(Node->getOperand(0)); // Chain

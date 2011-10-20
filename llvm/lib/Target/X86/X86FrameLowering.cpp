@@ -1113,9 +1113,7 @@ int X86FrameLowering::getFrameIndexOffset(const MachineFunction &MF, int FI) con
       // Skip the saved EBP.
       Offset += RI->getSlotSize();
     } else {
-      unsigned Align = MFI->getObjectAlignment(FI);
-      assert((-(Offset + StackSize)) % Align == 0);
-      Align = 0;
+      assert((-(Offset + StackSize)) % MFI->getObjectAlignment(FI) == 0);
       return Offset + StackSize;
     }
     // FIXME: Support tail calls
@@ -1267,7 +1265,7 @@ X86FrameLowering::processFunctionBeforeCalleeSavedScan(MachineFunction &MF,
                                           true);
     assert(FrameIdx == MFI->getObjectIndexBegin() &&
            "Slot for EBP register must be last in order to be found!");
-    FrameIdx = 0;
+    (void)FrameIdx;
   }
 }
 

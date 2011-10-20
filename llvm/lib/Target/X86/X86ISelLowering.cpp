@@ -1753,6 +1753,7 @@ X86TargetLowering::LowerFormalArguments(SDValue Chain,
     // places.
     assert(VA.getValNo() != LastVal &&
            "Don't support value assigned to multiple locs yet");
+    (void)LastVal;
     LastVal = VA.getValNo();
 
     if (VA.isRegLoc()) {
@@ -10477,9 +10478,9 @@ static void ReplaceATOMIC_LOAD(SDNode *Node,
 void X86TargetLowering::
 ReplaceATOMIC_BINARY_64(SDNode *Node, SmallVectorImpl<SDValue>&Results,
                         SelectionDAG &DAG, unsigned NewOp) const {
-  EVT T = Node->getValueType(0);
   DebugLoc dl = Node->getDebugLoc();
-  assert (T == MVT::i64 && "Only know how to expand i64 atomics");
+  assert (Node->getValueType(0) == MVT::i64 &&
+          "Only know how to expand i64 atomics");
 
   SDValue Chain = Node->getOperand(0);
   SDValue In1 = Node->getOperand(1);
