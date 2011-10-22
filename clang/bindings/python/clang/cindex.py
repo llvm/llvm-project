@@ -815,7 +815,7 @@ class Cursor(Structure):
     The Cursor class represents a reference to an element within the AST. It
     acts as a kind of iterator.
     """
-    _fields_ = [("_kind_id", c_int), ("data", c_void_p * 3)]
+    _fields_ = [("_kind_id", c_int), ("xdata", c_int), ("data", c_void_p * 3)]
 
     def __eq__(self, other):
         return Cursor_eq(self, other)
