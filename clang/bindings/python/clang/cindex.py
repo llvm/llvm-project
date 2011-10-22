@@ -1019,7 +1019,7 @@ TypeKind.OBJCINTERFACE = TypeKind(108)
 TypeKind.OBJCOBJECTPOINTER = TypeKind(109)
 TypeKind.FUNCTIONNOPROTO = TypeKind(110)
 TypeKind.FUNCTIONPROTO = TypeKind(111)
-
+TypeKind.CONSTANTARRAY = TypeKind(112)
 
 class Type(Structure):
     """
