@@ -22,7 +22,7 @@ entry:
 
 
 ; make sure that bl 0 <foo> (fff7feff) is correctly encoded
-; CHECK: '_section_data', '704700bf 2de90048 fff7feff bde80008'
+; CHECK: '_section_data', '704700bf 2de90048 fff7feff bde80088'
 
 ;  Offset     Info    Type            Sym.Value  Sym. Name
 ; 00000008  0000070a R_ARM_THM_CALL    00000001   foo
