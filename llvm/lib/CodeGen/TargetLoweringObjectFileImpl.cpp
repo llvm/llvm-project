@@ -506,7 +506,9 @@ getExprForDwarfGlobalReference(const GlobalValue *GV, Mangler *Mang,
     // Add information about the stub reference to MachOMMI so that the stub
     // gets emitted by the asmprinter.
     MCSymbol *SSym = getContext().GetOrCreateSymbol(Name.str());
-    MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(SSym);
+    MachineModuleInfoImpl::StubValueTy &StubSym =
+      GV->hasHiddenVisibility() ? MachOMMI.getHiddenGVStubEntry(SSym) :
+                                  MachOMMI.getGVStubEntry(SSym);
     if (StubSym.getPointer() == 0) {
       MCSymbol *Sym = Mang->getSymbol(GV);
       StubSym = MachineModuleInfoImpl::StubValueTy(Sym, !GV->hasLocalLinkage());
@@ -534,7 +536,9 @@ getCFIPersonalitySymbol(const GlobalValue *GV, Mangler *Mang,
   // Add information about the stub reference to MachOMMI so that the stub
   // gets emitted by the asmprinter.
   MCSymbol *SSym = getContext().GetOrCreateSymbol(Name.str());
-  MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(SSym);
+  MachineModuleInfoImpl::StubValueTy &StubSym =
+      GV->hasHiddenVisibility() ? MachOMMI.getHiddenGVStubEntry(SSym) :
+                                  MachOMMI.getGVStubEntry(SSym);
   if (StubSym.getPointer() == 0) {
     MCSymbol *Sym = Mang->getSymbol(GV);
     StubSym = MachineModuleInfoImpl::StubValueTy(Sym, !GV->hasLocalLinkage());
