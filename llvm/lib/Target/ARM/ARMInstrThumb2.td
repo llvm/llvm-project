@@ -1538,8 +1538,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
     let Inst{21}    = 0;        // No writeback
     let Inst{20}    = L_bit;
     let Inst{19-16} = Rn;
-    let Inst{15}    = 0;
-    let Inst{14-0}  = regs{14-0};
+    let Inst{15-0}  = regs;
   }
   def IA_UPD :
     T2XIt<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
@@ -1554,8 +1553,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
     let Inst{21}    = 1;        // Writeback
     let Inst{20}    = L_bit;
     let Inst{19-16} = Rn;
-    let Inst{15}    = 0;
-    let Inst{14-0}  = regs{14-0};
+    let Inst{15-0}  = regs;
   }
   def DB :
     T2XI<(outs), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
@@ -1570,8 +1568,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
     let Inst{21}    = 0;        // No writeback
     let Inst{20}    = L_bit;
     let Inst{19-16} = Rn;
-    let Inst{15}    = 0;
-    let Inst{14-0}  = regs{14-0};
+    let Inst{15-0}  = regs;
   }
   def DB_UPD :
     T2XIt<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
@@ -1586,8 +1583,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
     let Inst{21}    = 1;        // Writeback
     let Inst{20}    = L_bit;
     let Inst{19-16} = Rn;
-    let Inst{15}    = 0;
-    let Inst{14-0}  = regs{14-0};
+    let Inst{15-0}  = regs;
   }
 }
 
