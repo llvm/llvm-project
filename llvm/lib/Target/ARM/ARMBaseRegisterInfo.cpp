@@ -63,6 +63,13 @@ ARMBaseRegisterInfo::ARMBaseRegisterInfo(const ARMBaseInstrInfo &tii,
 
 const unsigned*
 ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+  bool ghcCall = false;
+
+  if (MF) {
+    const Function *F = MF->getFunction();
+    ghcCall = (F ? F->getCallingConv() == CallingConv::GHC : false);
+  }
+
   static const unsigned CalleeSavedRegs[] = {
     ARM::LR, ARM::R11, ARM::R10, ARM::R9, ARM::R8,
     ARM::R7, ARM::R6,  ARM::R5,  ARM::R4,
@@ -82,7 +89,13 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     ARM::D11, ARM::D10, ARM::D9,  ARM::D8,
     0
   };
-  return STI.isTargetDarwin() ? DarwinCalleeSavedRegs : CalleeSavedRegs;
+
+  static const unsigned GhcCalleeSavedRegs[] = {
+    0
+  };
+
+  return ghcCall ? GhcCalleeSavedRegs :
+         STI.isTargetDarwin() ? DarwinCalleeSavedRegs : CalleeSavedRegs;
 }
 
 BitVector ARMBaseRegisterInfo::
