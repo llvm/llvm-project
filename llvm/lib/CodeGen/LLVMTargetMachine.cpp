@@ -119,7 +119,8 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T, StringRef Triple,
   // we'll crash later.
   // Provide the user with a useful error message about what's wrong.
   assert(AsmInfo && "MCAsmInfo not initialized."
-	 "Make sure you include the correct TargetSelect.h!");
+         "Make sure you include the correct TargetSelect.h"
+         "and that InitializeAllTargetMCs() is being invoked!");
 }
 
 bool LLVMTargetMachine::addPassesToEmitFile(PassManagerBase &PM,
