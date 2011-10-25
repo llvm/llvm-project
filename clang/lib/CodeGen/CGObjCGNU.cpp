@@ -1361,8 +1361,8 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
       LongTy,                 // abi_version
       IvarOffsets->getType(), // ivar_offsets
       Properties->getType(),  // properties
-      Int64Ty,                // strong_pointers
-      Int64Ty,                // weak_pointers
+      IntPtrTy,               // strong_pointers
+      IntPtrTy,               // weak_pointers
       NULL);
   llvm::Constant *Zero = llvm::ConstantInt::get(LongTy, 0);
   // Fill in the structure
@@ -1723,12 +1723,14 @@ void CGObjCGNU::GenerateProtocolHolderCategory(void) {
 /// bitfield / with the 63rd bit set will be 1<<64.
 llvm::Constant *CGObjCGNU::MakeBitField(llvm::SmallVectorImpl<bool> &bits) {
   int bitCount = bits.size();
-  if (bitCount < 64) {
+  int ptrBits =
+        (TheModule.getPointerSize() == llvm::Module::Pointer32) ? 32 : 64;
+  if (bitCount < ptrBits) {
     uint64_t val = 1;
     for (int i=0 ; i<bitCount ; ++i) {
       if (bits[i]) val |= 1ULL<<(i+1);
     }
-    return llvm::ConstantInt::get(Int64Ty, val);
+    return llvm::ConstantInt::get(IntPtrTy, val);
   }
   llvm::SmallVector<llvm::Constant*, 8> values;
   int v=0;
@@ -1748,8 +1750,6 @@ llvm::Constant *CGObjCGNU::MakeBitField(llvm::SmallVectorImpl<bool> &bits) {
   llvm::Constant *GS = MakeGlobal(llvm::StructType::get(Int32Ty, arrayTy,
         NULL), fields);
   llvm::Constant *ptr = llvm::ConstantExpr::getPtrToInt(GS, IntPtrTy);
-  if (IntPtrTy != Int64Ty)
-    ptr = llvm::ConstantExpr::getZExt(ptr, Int64Ty);
   return ptr;
 }
 
@@ -2073,12 +2073,12 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
       }
       ++ivarIndex;
   }
-  llvm::Constant *Zero64 = llvm::ConstantInt::get(Int64Ty, 0);
+  llvm::Constant *ZeroPtr = llvm::ConstantInt::get(IntPtrTy, 0);
   //Generate metaclass for class methods
   llvm::Constant *MetaClassStruct = GenerateClassStructure(NULLPtr,
       NULLPtr, 0x12L, ClassName.c_str(), 0, Zeros[0], GenerateIvarList(
         empty, empty, empty), ClassMethodList, NULLPtr,
-      NULLPtr, NULLPtr, Zero64, Zero64, true);
+      NULLPtr, NULLPtr, ZeroPtr, ZeroPtr, true);
 
   // Generate the class structure
   llvm::Constant *ClassStruct =
