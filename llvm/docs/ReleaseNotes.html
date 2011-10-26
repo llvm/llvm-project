@@ -730,6 +730,9 @@ Builder.CreateResume(UnwindData);
       "<code>load volatile</code>"/"<code>store volatile</code>".  The old
       syntax ("<code>volatile load</code>"/"<code>volatile store</code>")
       is still accepted, but is now considered deprecated.</li>
+  <li>The old atomic intrinscs (<code>llvm.memory.barrier</code> and
+      <code>llvm.atomic.*</code>) are now gone.  Please use the new atomic
+      instructions, described in the <a href="Atomics.html">atomics guide</a>.
 </ul>
 
 <h4>Windows (32-bit)</h4>
