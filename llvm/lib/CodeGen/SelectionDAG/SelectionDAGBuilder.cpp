@@ -2034,14 +2034,17 @@ bool SelectionDAGBuilder::handleJTSwitchCase(CaseRec &CR,
     return false;
 
   APInt Range = ComputeRange(First, Last);
-  double Density = TSize.roundToDouble() / Range.roundToDouble();
-  if (Density < 0.4)
+  // The density is TSize / Range. Require at least 40%.
+  // It should not be possible for IntTSize to saturate for sane code, but make
+  // sure we handle Range saturation correctly.
+  uint64_t IntRange = Range.getLimitedValue(UINT64_MAX/10);
+  uint64_t IntTSize = TSize.getLimitedValue(UINT64_MAX/10);
+  if (IntTSize * 10 < IntRange * 4)
     return false;
 
   DEBUG(dbgs() << "Lowering jump table\n"
                << "First entry: " << First << ". Last entry: " << Last << '\n'
-               << "Range: " << Range
-               << ". Size: " << TSize << ". Density: " << Density << "\n\n");
+               << "Range: " << Range << ". Size: " << TSize << ".\n\n");
 
   // Get the MachineFunction which holds the current MBB.  This is used when
   // inserting any additional MBBs necessary to represent the switch.
