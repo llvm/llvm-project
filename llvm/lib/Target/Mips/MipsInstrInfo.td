@@ -153,6 +153,7 @@ def uimm16      : Operand<i32> {
 def mem : Operand<i32> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops CPURegs, simm16);
+  let EncoderMethod = "getMemEncoding";
 }
 
 def mem64 : Operand<i64> {
@@ -163,6 +164,17 @@ def mem64 : Operand<i64> {
 def mem_ea : Operand<i32> {
   let PrintMethod = "printMemOperandEA";
   let MIOperandInfo = (ops CPURegs, simm16);
+  let EncoderMethod = "getMemEncoding";
+}
+
+// size operand of ext instruction
+def size_ext : Operand<i32> {
+  let EncoderMethod = "getSizeExtEncoding";
+}
+
+// size operand of ins instruction
+def size_ins : Operand<i32> {
+  let EncoderMethod = "getSizeInsEncoding";
 }
 
 // Transformation Function - get the lower 16 bits.
@@ -271,14 +283,14 @@ class ArithOverflowR<bits<6> op, bits<6> func, string instr_asm,
 // Arithmetic and logical instructions with 2 register operands.
 class ArithLogicI<bits<6> op, string instr_asm, SDNode OpNode,
                   Operand Od, PatLeaf imm_type, RegisterClass RC> :
-  FI<op, (outs RC:$rt), (ins RC:$rs, Od:$i),
-     !strconcat(instr_asm, "\t$rt, $rs, $i"),
-     [(set RC:$rt, (OpNode RC:$rs, imm_type:$i))], IIAlu>;
+  FI<op, (outs RC:$rt), (ins RC:$rs, Od:$imm16),
+     !strconcat(instr_asm, "\t$rt, $rs, $imm16"),
+     [(set RC:$rt, (OpNode RC:$rs, imm_type:$imm16))], IIAlu>;
 
 class ArithOverflowI<bits<6> op, string instr_asm, SDNode OpNode,
                      Operand Od, PatLeaf imm_type, RegisterClass RC> :
-  FI<op, (outs RC:$rt), (ins RC:$rs, Od:$i),
-     !strconcat(instr_asm, "\t$rt, $rs, $i"), [], IIAlu>;
+  FI<op, (outs RC:$rt), (ins RC:$rs, Od:$imm16),
+     !strconcat(instr_asm, "\t$rt, $rs, $imm16"), [], IIAlu>;
 
 // Arithmetic Multiply ADD/SUB
 let rd = 0, shamt = 0, Defs = [HI, LO], Uses = [HI, LO] in
@@ -319,16 +331,23 @@ class LogicR_shift_rotate_reg<bits<6> func, bits<5> isRotate, string instr_asm,
 
 // Load Upper Imediate
 class LoadUpper<bits<6> op, string instr_asm>:
-  FI<op, (outs CPURegs:$rt), (ins uimm16:$imm),
-     !strconcat(instr_asm, "\t$rt, $imm"), [], IIAlu> {
+  FI<op, (outs CPURegs:$rt), (ins uimm16:$imm16),
+     !strconcat(instr_asm, "\t$rt, $imm16"), [], IIAlu> {
   let rs = 0;
+}
+
+class FMem<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern,
+          InstrItinClass itin>: FFI<op, outs, ins, asmstr, pattern> {
+  bits<21> addr;
+  let Inst{25-21} = addr{20-16};
+  let Inst{15-0}  = addr{15-0};
 }
 
 // Memory Load/Store
 let canFoldAsLoad = 1 in
 class LoadM<bits<6> op, string instr_asm, PatFrag OpNode, RegisterClass RC,
             Operand MemOpnd, bit Pseudo>:
-  FI<op, (outs RC:$rt), (ins MemOpnd:$addr),
+  FMem<op, (outs RC:$rt), (ins MemOpnd:$addr),
      !strconcat(instr_asm, "\t$rt, $addr"),
      [(set RC:$rt, (OpNode addr:$addr))], IILoad> {
   let isPseudo = Pseudo;
@@ -336,7 +355,7 @@ class LoadM<bits<6> op, string instr_asm, PatFrag OpNode, RegisterClass RC,
 
 class StoreM<bits<6> op, string instr_asm, PatFrag OpNode, RegisterClass RC,
              Operand MemOpnd, bit Pseudo>:
-  FI<op, (outs), (ins RC:$rt, MemOpnd:$addr),
+  FMem<op, (outs), (ins RC:$rt, MemOpnd:$addr),
      !strconcat(instr_asm, "\t$rt, $addr"),
      [(OpNode RC:$rt, addr:$addr)], IIStore> {
   let isPseudo = Pseudo;
@@ -380,9 +399,9 @@ multiclass StoreM64<bits<6> op, string instr_asm, PatFrag OpNode,
 
 // Conditional Branch
 class CBranch<bits<6> op, string instr_asm, PatFrag cond_op, RegisterClass RC>:
-  CBranchBase<op, (outs), (ins RC:$rs, RC:$rt, brtarget:$offset),
-              !strconcat(instr_asm, "\t$rs, $rt, $offset"),
-              [(brcond (i32 (cond_op RC:$rs, RC:$rt)), bb:$offset)], IIBranch> {
+  CBranchBase<op, (outs), (ins RC:$rs, RC:$rt, brtarget:$imm16),
+              !strconcat(instr_asm, "\t$rs, $rt, $imm16"),
+              [(brcond (i32 (cond_op RC:$rs, RC:$rt)), bb:$imm16)], IIBranch> {
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
@@ -390,9 +409,9 @@ class CBranch<bits<6> op, string instr_asm, PatFrag cond_op, RegisterClass RC>:
 
 class CBranchZero<bits<6> op, bits<5> _rt, string instr_asm, PatFrag cond_op,
                   RegisterClass RC>:
-  CBranchBase<op, (outs), (ins RC:$rs, brtarget:$offset),
-              !strconcat(instr_asm, "\t$rs, $offset"),
-              [(brcond (i32 (cond_op RC:$rs, 0)), bb:$offset)], IIBranch> {
+  CBranchBase<op, (outs), (ins RC:$rs, brtarget:$imm16),
+              !strconcat(instr_asm, "\t$rs, $imm16"),
+              [(brcond (i32 (cond_op RC:$rs, 0)), bb:$imm16)], IIBranch> {
   let rt = _rt;
   let isBranch = 1;
   let isTerminator = 1;
@@ -411,9 +430,9 @@ class SetCC_R<bits<6> op, bits<6> func, string instr_asm, PatFrag cond_op,
 
 class SetCC_I<bits<6> op, string instr_asm, PatFrag cond_op, Operand Od,
               PatLeaf imm_type, RegisterClass RC>:
-  FI<op, (outs CPURegs:$rd), (ins RC:$rs, Od:$i),
-     !strconcat(instr_asm, "\t$rd, $rs, $i"),
-     [(set CPURegs:$rd, (cond_op RC:$rs, imm_type:$i))],
+  FI<op, (outs CPURegs:$rt), (ins RC:$rs, Od:$imm16),
+     !strconcat(instr_asm, "\t$rt, $rs, $imm16"),
+     [(set CPURegs:$rt, (cond_op RC:$rs, imm_type:$imm16))],
      IIAlu>;
 
 // Unconditional branch
@@ -450,10 +469,8 @@ let isCall=1, hasDelaySlot=1,
   }
 
   class BranchLink<string instr_asm>:
-    FI<0x1, (outs), (ins CPURegs:$rs, brtarget:$target, variable_ops),
-       !strconcat(instr_asm, "\t$rs, $target"), [], IIBranch> {
-    let rt = 0;
-  }
+    FI<0x1, (outs), (ins CPURegs:$rs, brtarget:$imm16, variable_ops),
+       !strconcat(instr_asm, "\t$rs, $imm16"), [], IIBranch>;
 }
 
 // Mul, Div
@@ -493,7 +510,7 @@ class MoveToLOHI<bits<6> func, string instr_asm>:
 }
 
 class EffectiveAddress<string instr_asm> :
-  FI<0x09, (outs CPURegs:$rt), (ins mem_ea:$addr),
+  FMem<0x09, (outs CPURegs:$rt), (ins mem_ea:$addr),
      instr_asm, [(set CPURegs:$rt, addr:$addr)], IIAlu>;
 
 // Count Leading Ones/Zeros in Word
@@ -507,7 +524,7 @@ class CountLeading<bits<6> func, string instr_asm, list<dag> pattern>:
 
 // Sign Extend in Register.
 class SignExtInReg<bits<5> sa, string instr_asm, ValueType vt>:
-  FR<0x3f, 0x20, (outs CPURegs:$rd), (ins CPURegs:$rt),
+  FR<0x1f, 0x20, (outs CPURegs:$rd), (ins CPURegs:$rt),
      !strconcat(instr_asm, "\t$rd, $rt"),
      [(set CPURegs:$rd, (sext_inreg CPURegs:$rt, vt))], NoItinerary> {
   let rs = 0;
@@ -685,20 +702,22 @@ defm USW     : StoreM32<0x2b, "usw", store_u, 1>;
 
 let hasSideEffects = 1 in
 def SYNC : MipsInst<(outs), (ins i32imm:$stype), "sync $stype",
-                    [(MipsSync imm:$stype)], NoItinerary>
+                    [(MipsSync imm:$stype)], NoItinerary, FrmOther>
 {
-  let opcode = 0;
+  bits<5> stype;
+  let Opcode = 0;
   let Inst{25-11} = 0;
+  let Inst{10-6} = stype;
   let Inst{5-0} = 15;
 }
 
 /// Load-linked, Store-conditional
 let mayLoad = 1 in
-  def LL    : FI<0x30, (outs CPURegs:$dst), (ins mem:$addr),
-              "ll\t$dst, $addr", [], IILoad>;
-let mayStore = 1, Constraints = "$src = $dst" in
-  def SC    : FI<0x38, (outs CPURegs:$dst), (ins CPURegs:$src, mem:$addr),
-              "sc\t$src, $addr", [], IIStore>;
+  def LL    : FMem<0x30, (outs CPURegs:$rt), (ins mem:$addr),
+              "ll\t$rt, $addr", [], IILoad>;
+let mayStore = 1, Constraints = "$rt = $dst" in
+  def SC    : FMem<0x38, (outs CPURegs:$dst), (ins CPURegs:$rt, mem:$addr),
+              "sc\t$rt, $addr", [], IIStore>;
 
 /// Jump and Branch Instructions
 def J       : JumpFJ<0x02, "j">;
@@ -710,15 +729,17 @@ def BEQ     : CBranch<0x04, "beq", seteq, CPURegs>;
 def BNE     : CBranch<0x05, "bne", setne, CPURegs>;
 def BGEZ    : CBranchZero<0x01, 1, "bgez", setge, CPURegs>;
 def BGTZ    : CBranchZero<0x07, 0, "bgtz", setgt, CPURegs>;
-def BLEZ    : CBranchZero<0x07, 0, "blez", setle, CPURegs>;
+def BLEZ    : CBranchZero<0x06, 0, "blez", setle, CPURegs>;
 def BLTZ    : CBranchZero<0x01, 0, "bltz", setlt, CPURegs>;
 
-def BGEZAL  : BranchLink<"bgezal">;
-def BLTZAL  : BranchLink<"bltzal">;
+let rt=0x11 in
+  def BGEZAL  : BranchLink<"bgezal">;
+let rt=0x10 in
+  def BLTZAL  : BranchLink<"bltzal">;
 
 let isReturn=1, isTerminator=1, hasDelaySlot=1,
-    isBarrier=1, hasCtrlDep=1, rs=0, rt=0, shamt=0 in
-  def RET : FR <0x00, 0x02, (outs), (ins CPURegs:$target),
+    isBarrier=1, hasCtrlDep=1, rd=0, rt=0, shamt=0 in
+  def RET : FR <0x00, 0x08, (outs), (ins CPURegs:$target),
                 "jr\t$target", [(MipsRet CPURegs:$target)], IIBranch>;
 
 /// Multiply and Divide Instructions.
@@ -797,14 +818,14 @@ def MUL   : ArithLogicR<0x1c, 0x02, "mul", mul, IIImul, CPURegs, 1>,
 def RDHWR : ReadHardware;
 
 def EXT : ExtIns<0, "ext", (outs CPURegs:$rt),
-                 (ins CPURegs:$rs, uimm16:$pos, uimm16:$sz),
+                 (ins CPURegs:$rs, uimm16:$pos, size_ext:$sz),
                  [(set CPURegs:$rt,
                    (MipsExt CPURegs:$rs, immZExt5:$pos, immZExt5:$sz))],
                  NoItinerary>;
 
 let Constraints = "$src = $rt" in
 def INS : ExtIns<4, "ins", (outs CPURegs:$rt),
-                 (ins CPURegs:$rs, uimm16:$pos, uimm16:$sz, CPURegs:$src),
+                 (ins CPURegs:$rs, uimm16:$pos, size_ins:$sz, CPURegs:$src),
                  [(set CPURegs:$rt,
                    (MipsIns CPURegs:$rs, immZExt5:$pos, immZExt5:$sz,
                     CPURegs:$src))],

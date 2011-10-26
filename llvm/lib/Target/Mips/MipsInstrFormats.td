@@ -21,30 +21,55 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Format specifies the encoding used by the instruction.  This is part of the
+// ad-hoc solution used to emit machine instruction encodings by our machine
+// code emitter.
+class Format<bits<4> val> {
+  bits<4> Value = val;
+}
+
+def Pseudo    : Format<0>;
+def FrmR      : Format<1>;
+def FrmI      : Format<2>;
+def FrmJ      : Format<3>;
+def FrmFR     : Format<4>;
+def FrmFI     : Format<5>;
+def FrmOther  : Format<6>; // Instruction w/ a custom format
+
 // Generic Mips Format
 class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
-               InstrItinClass itin>: Instruction
+               InstrItinClass itin, Format f>: Instruction
 {
   field bits<32> Inst;
+  Format Form = f;
 
   let Namespace = "Mips";
 
-  bits<6> opcode;
+  bits<6> Opcode = 0;
 
-  // Top 5 bits are the 'opcode' field
-  let Inst{31-26} = opcode;
+  // Top 6 bits are the 'opcode' field
+  let Inst{31-26} = Opcode;
 
-  dag OutOperandList = outs;
-  dag InOperandList  = ins;
+  let OutOperandList = outs;
+  let InOperandList  = ins;
 
   let AsmString   = asmstr;
   let Pattern     = pattern;
   let Itinerary   = itin;
+
+  //
+  // Attributes specific to Mips instructions...
+  //
+  bits<4> FormBits = Form.Value;
+
+  // TSFlags layout should be kept in sync with MipsInstrInfo.h.
+  let TSFlags{3-0}   = FormBits;
 }
 
 // Mips Pseudo Instructions Format
 class MipsPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>:
-      MipsInst<outs, ins, asmstr, pattern, IIPseudo> {
+      MipsInst<outs, ins, asmstr, pattern, IIPseudo, Pseudo> {
+  let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
 
@@ -54,7 +79,7 @@ class MipsPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>:
 
 class FR<bits<6> op, bits<6> _funct, dag outs, dag ins, string asmstr,
          list<dag> pattern, InstrItinClass itin>:
-      MipsInst<outs, ins, asmstr, pattern, itin>
+      MipsInst<outs, ins, asmstr, pattern, itin, FrmR>
 {
   bits<5>  rd;
   bits<5>  rs;
@@ -62,7 +87,7 @@ class FR<bits<6> op, bits<6> _funct, dag outs, dag ins, string asmstr,
   bits<5>  shamt;
   bits<6>  funct;
 
-  let opcode = op;
+  let Opcode = op;
   let funct  = _funct;
 
   let Inst{25-21} = rs;
@@ -77,13 +102,13 @@ class FR<bits<6> op, bits<6> _funct, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FI<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern,
-         InstrItinClass itin>: MipsInst<outs, ins, asmstr, pattern, itin>
+         InstrItinClass itin>: MipsInst<outs, ins, asmstr, pattern, itin, FrmI>
 {
   bits<5>  rt;
   bits<5>  rs;
   bits<16> imm16;
 
-  let opcode = op;
+  let Opcode = op;
 
   let Inst{25-21} = rs;
   let Inst{20-16} = rt;
@@ -92,13 +117,13 @@ class FI<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern,
 
 class CBranchBase<bits<6> op, dag outs, dag ins, string asmstr,
                   list<dag> pattern, InstrItinClass itin>:
-  MipsInst<outs, ins, asmstr, pattern, itin>
+  MipsInst<outs, ins, asmstr, pattern, itin, FrmI>
 {
   bits<5>  rs;
   bits<5>  rt;
   bits<16> imm16;
 
-  let opcode = op;
+  let Opcode = op;
 
   let Inst{25-21} = rs;
   let Inst{20-16} = rt;
@@ -110,11 +135,11 @@ class CBranchBase<bits<6> op, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FJ<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern,
-         InstrItinClass itin>: MipsInst<outs, ins, asmstr, pattern, itin>
+         InstrItinClass itin>: MipsInst<outs, ins, asmstr, pattern, itin, FrmJ>
 {
   bits<26> addr;
 
-  let opcode = op;
+  let Opcode = op;
 
   let Inst{25-0} = addr;
 }
@@ -138,7 +163,7 @@ class FJ<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern,
 
 class FFR<bits<6> op, bits<6> _funct, bits<5> _fmt, dag outs, dag ins,
           string asmstr, list<dag> pattern> :
-          MipsInst<outs, ins, asmstr, pattern, NoItinerary>
+          MipsInst<outs, ins, asmstr, pattern, NoItinerary, FrmFR>
 {
   bits<5>  fd;
   bits<5>  fs;
@@ -146,7 +171,7 @@ class FFR<bits<6> op, bits<6> _funct, bits<5> _fmt, dag outs, dag ins,
   bits<5>  fmt;
   bits<6>  funct;
 
-  let opcode = op;
+  let Opcode = op;
   let funct  = _funct;
   let fmt    = _fmt;
 
@@ -162,13 +187,13 @@ class FFR<bits<6> op, bits<6> _funct, bits<5> _fmt, dag outs, dag ins,
 //===----------------------------------------------------------------------===//
 
 class FFI<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern>:
-          MipsInst<outs, ins, asmstr, pattern, NoItinerary>
+          MipsInst<outs, ins, asmstr, pattern, NoItinerary, FrmFI>
 {
   bits<5>  ft;
   bits<5>  base;
   bits<16> imm16;
 
-  let opcode = op;
+  let Opcode = op;
 
   let Inst{25-21} = base;
   let Inst{20-16} = ft;
@@ -180,14 +205,14 @@ class FFI<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern>:
 //===----------------------------------------------------------------------===//
 
 class FCC<bits<5> _fmt, dag outs, dag ins, string asmstr, list<dag> pattern> :
-          MipsInst<outs, ins, asmstr, pattern, NoItinerary>
+          MipsInst<outs, ins, asmstr, pattern, NoItinerary, FrmOther>
 {
   bits<5>  fs;
   bits<5>  ft;
   bits<4>  cc;
   bits<5>  fmt;
 
-  let opcode = 0x11;
+  let Opcode = 0x11;
   let fmt    = _fmt;
 
   let Inst{25-21} = fmt;
@@ -201,18 +226,18 @@ class FCC<bits<5> _fmt, dag outs, dag ins, string asmstr, list<dag> pattern> :
 
 class FCMOV<bits<1> _tf, dag outs, dag ins, string asmstr,
             list<dag> pattern> :
-  MipsInst<outs, ins, asmstr, pattern, NoItinerary>
+  MipsInst<outs, ins, asmstr, pattern, NoItinerary, FrmOther>
 {
   bits<5>  rd;
   bits<5>  rs;
-  bits<3>  N;
+  bits<3>  cc;
   bits<1>  tf;
 
-  let opcode = 0;
+  let Opcode = 0;
   let tf = _tf;
 
   let Inst{25-21} = rs;
-  let Inst{20-18} = N;
+  let Inst{20-18} = cc;
   let Inst{17} = 0;
   let Inst{16} = tf;
   let Inst{15-11} = rd;
@@ -222,20 +247,20 @@ class FCMOV<bits<1> _tf, dag outs, dag ins, string asmstr,
 
 class FFCMOV<bits<5> _fmt, bits<1> _tf, dag outs, dag ins, string asmstr,
              list<dag> pattern> :
-  MipsInst<outs, ins, asmstr, pattern, NoItinerary>
+  MipsInst<outs, ins, asmstr, pattern, NoItinerary, FrmOther>
 {
   bits<5>  fd;
   bits<5>  fs;
-  bits<3>  N;
+  bits<3>  cc;
   bits<5>  fmt;
   bits<1>  tf;
 
-  let opcode = 17;
+  let Opcode = 17;
   let fmt = _fmt;
   let tf = _tf;
 
   let Inst{25-21} = fmt;
-  let Inst{20-18} = N;
+  let Inst{20-18} = cc;
   let Inst{17} = 0;
   let Inst{16} = tf;
   let Inst{15-11} = fs;

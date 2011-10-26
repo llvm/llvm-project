@@ -39,51 +39,51 @@ def imm32_63 : ImmLeaf<i64,
 // Shifts
 class LogicR_shift_rotate_imm64<bits<6> func, bits<5> _rs, string instr_asm,
                                 SDNode OpNode, PatFrag PF>:
-  FR<0x00, func, (outs CPU64Regs:$dst), (ins CPU64Regs:$b, shamt_64:$c),
-     !strconcat(instr_asm, "\t$dst, $b, $c"),
-     [(set CPU64Regs:$dst, (OpNode CPU64Regs:$b, (i64 PF:$c)))],
+  FR<0x00, func, (outs CPU64Regs:$rd), (ins CPU64Regs:$rt, shamt_64:$shamt),
+     !strconcat(instr_asm, "\t$rd, $rt, $shamt"),
+     [(set CPU64Regs:$rd, (OpNode CPU64Regs:$rt, (i64 PF:$shamt)))],
      IIAlu> {
   let rs = _rs;
 }
 
 class LogicR_shift_rotate_reg64<bits<6> func, bits<5> _shamt, string instr_asm,
                                 SDNode OpNode>:
-  FR<0x00, func, (outs CPU64Regs:$dst), (ins CPU64Regs:$c, CPU64Regs:$b),
-     !strconcat(instr_asm, "\t$dst, $b, $c"),
-     [(set CPU64Regs:$dst, (OpNode CPU64Regs:$b, CPU64Regs:$c))], IIAlu> {
+  FR<0x00, func, (outs CPU64Regs:$rd), (ins CPU64Regs:$rs, CPU64Regs:$rt),
+     !strconcat(instr_asm, "\t$rd, $rt, $rs"),
+     [(set CPU64Regs:$rd, (OpNode CPU64Regs:$rt, CPU64Regs:$rs))], IIAlu> {
   let shamt = _shamt;
 }
 
 // Mul, Div
-let Defs = [HI64, LO64] in {
+let rd = 0, shamt = 0, Defs = [HI64, LO64] in {
   let isCommutable = 1 in
   class Mul64<bits<6> func, string instr_asm, InstrItinClass itin>:
-    FR<0x00, func, (outs), (ins CPU64Regs:$a, CPU64Regs:$b),
-       !strconcat(instr_asm, "\t$a, $b"), [], itin>;
+    FR<0x00, func, (outs), (ins CPU64Regs:$rs, CPU64Regs:$rt),
+       !strconcat(instr_asm, "\t$rs, $rt"), [], itin>;
 
   class Div64<SDNode op, bits<6> func, string instr_asm, InstrItinClass itin>:
-              FR<0x00, func, (outs), (ins CPU64Regs:$a, CPU64Regs:$b),
-              !strconcat(instr_asm, "\t$$zero, $a, $b"),
-              [(op CPU64Regs:$a, CPU64Regs:$b)], itin>;
+              FR<0x00, func, (outs), (ins CPU64Regs:$rs, CPU64Regs:$rt),
+              !strconcat(instr_asm, "\t$$zero, $rs, $rt"),
+              [(op CPU64Regs:$rs, CPU64Regs:$rt)], itin>;
 }
 
 // Move from Hi/Lo
 let shamt = 0 in {
 let rs = 0, rt = 0 in
 class MoveFromLOHI64<bits<6> func, string instr_asm>:
-  FR<0x00, func, (outs CPU64Regs:$dst), (ins),
-     !strconcat(instr_asm, "\t$dst"), [], IIHiLo>;
+  FR<0x00, func, (outs CPU64Regs:$rd), (ins),
+     !strconcat(instr_asm, "\t$rd"), [], IIHiLo>;
 
 let rt = 0, rd = 0 in
 class MoveToLOHI64<bits<6> func, string instr_asm>:
-  FR<0x00, func, (outs), (ins CPU64Regs:$src),
-     !strconcat(instr_asm, "\t$src"), [], IIHiLo>;
+  FR<0x00, func, (outs), (ins CPU64Regs:$rs),
+     !strconcat(instr_asm, "\t$rs"), [], IIHiLo>;
 }
 
 // Count Leading Ones/Zeros in Word
 class CountLeading64<bits<6> func, string instr_asm, list<dag> pattern>:
-  FR<0x1c, func, (outs CPU64Regs:$dst), (ins CPU64Regs:$src),
-     !strconcat(instr_asm, "\t$dst, $src"), pattern, IIAlu>,
+  FR<0x1c, func, (outs CPU64Regs:$rd), (ins CPU64Regs:$rs),
+     !strconcat(instr_asm, "\t$rd, $rs"), pattern, IIAlu>,
      Requires<[HasBitCount]> {
   let shamt = 0;
   let rt = rd;
@@ -180,9 +180,9 @@ let Uses = [LO64] in
 
 /// Count Leading
 def DCLZ : CountLeading64<0x24, "dclz",
-                          [(set CPU64Regs:$dst, (ctlz CPU64Regs:$src))]>;
+                          [(set CPU64Regs:$rd, (ctlz CPU64Regs:$rs))]>;
 def DCLO : CountLeading64<0x25, "dclo",
-                          [(set CPU64Regs:$dst, (ctlz (not CPU64Regs:$src)))]>;
+                          [(set CPU64Regs:$rd, (ctlz (not CPU64Regs:$rs)))]>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions

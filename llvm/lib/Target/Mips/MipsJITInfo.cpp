@@ -57,11 +57,11 @@ void MipsCompilationCallback();
     ".globl " ASMPREFIX "MipsCompilationCallback\n"
     ASMPREFIX "MipsCompilationCallback:\n"
     ".ent " ASMPREFIX "MipsCompilationCallback\n"
-    ".frame  $29, 32, $31\n"
+    ".frame  $sp, 32, $ra\n"
     ".set  noreorder\n"
     ".cpload $t9\n"
 
-    "addiu $sp, $sp, -60\n"
+    "addiu $sp, $sp, -64\n"
     ".cprestore 16\n"
 
     // Save argument registers a0, a1, a2, a3, f12, f14 since they may contain
@@ -76,8 +76,8 @@ void MipsCompilationCallback();
     "sw $a3, 32($sp)\n"
     "sw $ra, 36($sp)\n"
     "sw $t8, 40($sp)\n"
-    "sdc1 $f12, 44($sp)\n"
-    "sdc1 $f14, 52($sp)\n"
+    "sdc1 $f12, 48($sp)\n"
+    "sdc1 $f14, 56($sp)\n"
 
     // t8 points at the end of function stub. Pass the beginning of the stub
     // to the MipsCompilationCallbackC.
@@ -92,9 +92,9 @@ void MipsCompilationCallback();
     "lw $a3, 32($sp)\n"
     "lw $ra, 36($sp)\n"
     "lw $t8, 40($sp)\n"
-    "ldc1 $f12, 44($sp)\n"
-    "ldc1 $f14, 52($sp)\n"
-    "addiu $sp, $sp, 60\n"
+    "ldc1 $f12, 48($sp)\n"
+    "ldc1 $f14, 56($sp)\n"
+    "addiu $sp, $sp, 64\n"
 
     // Jump to the (newly modified) stub to invoke the real function.
     "addiu $t8, $t8, -16\n"
