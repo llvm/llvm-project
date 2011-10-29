@@ -538,11 +538,12 @@ protected:
                                  llvm::Value *cmd,
                                  llvm::MDNode *node) {
     CGBuilderTy &Builder = CGF.Builder;
-    llvm::Value *imp = Builder.CreateCall2(MsgLookupFn, 
-            EnforceType(Builder, Receiver, IdTy),
-            EnforceType(Builder, cmd, SelectorTy));
-    cast<llvm::CallInst>(imp)->setMetadata(msgSendMDKind, node);
-    return imp;
+    llvm::Value *args[] = {
+      EnforceType(Builder, Receiver, IdTy),
+      EnforceType(Builder, cmd, SelectorTy) };
+    llvm::CallSite imp = CGF.EmitCallOrInvoke(MsgLookupFn, args);
+    imp->setMetadata(msgSendMDKind, node);
+    return imp.getInstruction();
   }
   virtual llvm::Value *LookupIMPSuper(CodeGenFunction &CGF,
                                       llvm::Value *ObjCSuper,
@@ -597,16 +598,17 @@ class CGObjCGNUstep : public CGObjCGNU {
       // The lookup function is guaranteed not to capture the receiver pointer.
       LookupFn->setDoesNotCapture(1);
 
-      llvm::CallInst *slot =
-          Builder.CreateCall3(LookupFn,
-              EnforceType(Builder, ReceiverPtr, PtrToIdTy),
-              EnforceType(Builder, cmd, SelectorTy),
-              EnforceType(Builder, self, IdTy));
-      slot->setOnlyReadsMemory();
+      llvm::Value *args[] = {
+        EnforceType(Builder, ReceiverPtr, PtrToIdTy),
+        EnforceType(Builder, cmd, SelectorTy),
+        EnforceType(Builder, self, IdTy) };
+      llvm::CallSite slot = CGF.EmitCallOrInvoke(LookupFn, args);
+      slot.setOnlyReadsMemory();
       slot->setMetadata(msgSendMDKind, node);
 
       // Load the imp from the slot
-      llvm::Value *imp = Builder.CreateLoad(Builder.CreateStructGEP(slot, 4));
+      llvm::Value *imp =
+        Builder.CreateLoad(Builder.CreateStructGEP(slot.getInstruction(), 4));
 
       // The lookup function may have changed the receiver, so make sure we use
       // the new one.
