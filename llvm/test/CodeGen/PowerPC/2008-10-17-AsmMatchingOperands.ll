@@ -1,3 +1,7 @@
+; PR11218
+; FIXME: This depends on assertion failure for now.
+; REQUIRES: asserts
+
 ; RUN: llc < %s
 ; XFAIL: *
 ; PR2356
