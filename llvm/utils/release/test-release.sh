@@ -171,11 +171,11 @@ function export_sources() {
     echo "# Creating symlinks"
     cd $BuildDir/llvm.src/tools
     if [ ! -h clang ]; then
-        ln -s $BuildDir/cfe.src clang
+        ln -s ../../cfe.src clang
     fi
     cd $BuildDir/llvm.src/projects
     if [ ! -h llvm-test ]; then
-        ln -s $BuildDir/test-suite.src llvm-test
+        ln -s ../../test-suite.src llvm-test
     fi
     cd $BuildDir
 }
