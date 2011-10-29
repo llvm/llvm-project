@@ -29,6 +29,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -858,6 +859,59 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   }
 }
 
+namespace {
+  struct FunctionIsDirectlyRecursive :
+    public RecursiveASTVisitor<FunctionIsDirectlyRecursive> {
+    const StringRef Name;
+    bool Result;
+    FunctionIsDirectlyRecursive(const FunctionDecl *F) :
+      Name(F->getName()), Result(false) {
+    }
+    typedef RecursiveASTVisitor<FunctionIsDirectlyRecursive> Base;
+
+    bool TraverseCallExpr(CallExpr *E) {
+      const Decl *D = E->getCalleeDecl();
+      if (!D)
+        return true;
+      AsmLabelAttr *Attr = D->getAttr<AsmLabelAttr>();
+      if (!Attr)
+        return true;
+      if (Name == Attr->getLabel()) {
+        Result = true;
+        return false;
+      }
+      return true;
+    }
+  };
+}
+
+// isTriviallyRecursiveViaAsm - Check if this function calls another
+// decl that, because of the asm attribute, ends up pointing to itself.
+bool
+CodeGenModule::isTriviallyRecursiveViaAsm(const FunctionDecl *F) {
+  if (getCXXABI().getMangleContext().shouldMangleDeclName(F))
+    return false;
+
+  FunctionIsDirectlyRecursive Walker(F);
+  Walker.TraverseFunctionDecl(const_cast<FunctionDecl*>(F));
+  return Walker.Result;
+}
+
+bool
+CodeGenModule::shouldEmitFunction(const FunctionDecl *F) {
+  if (getFunctionLinkage(F) != llvm::Function::AvailableExternallyLinkage)
+    return true;
+  if (CodeGenOpts.OptimizationLevel == 0 &&
+      !F->hasAttr<AlwaysInlineAttr>())
+    return false;
+  // PR9614. Avoid cases where the source code is lying to us. An available
+  // externally function should have an equivalent function somewhere else,
+  // but a function that calls itself is clearly not equivalent to the real
+  // implementation.
+  // This happens in glibc's btowc and in some configure checks.
+  return !isTriviallyRecursiveViaAsm(F);
+}
+
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD) {
   const ValueDecl *D = cast<ValueDecl>(GD.getDecl());
 
@@ -868,10 +922,7 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD) {
   if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(D)) {
     // At -O0, don't generate IR for functions with available_externally 
     // linkage.
-    if (CodeGenOpts.OptimizationLevel == 0 && 
-        !Function->hasAttr<AlwaysInlineAttr>() &&
-        getFunctionLinkage(Function) 
-                                  == llvm::Function::AvailableExternallyLinkage)
+    if (!shouldEmitFunction(Function))
       return;
 
     if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
