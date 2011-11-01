@@ -2025,9 +2025,10 @@ bool InstCombiner::DoOneIteration(Function &F, unsigned Iteration) {
         BasicBlock *InstParent = I->getParent();
         BasicBlock::iterator InsertPos = I;
 
-        if (!isa<PHINode>(Result))        // If combining a PHI, don't insert
-          while (isa<PHINode>(InsertPos)) // middle of a block of PHIs.
-            ++InsertPos;
+        // If we replace a PHI with something that isn't a PHI, fix up the
+        // insertion point.
+        if (!isa<PHINode>(Result) && isa<PHINode>(InsertPos))
+          InsertPos = InstParent->getFirstInsertionPt();
 
         InstParent->getInstList().insert(InsertPos, Result);
 

@@ -374,3 +374,28 @@ for.inc:                                          ; preds = %for.cond
 return:                                           ; No predecessors!
   ret void
 }
+
+; PR11275
+declare void @test18b() noreturn
+declare void @test18foo(double**)
+declare void @test18a() noreturn
+define fastcc void @test18x(i8* %t0, i1 %b) uwtable align 2 {
+entry:
+  br i1 %b, label %e1, label %e2
+e1:
+  %t2 = bitcast i8* %t0 to double**
+  invoke void @test18b() noreturn
+          to label %u unwind label %lpad
+e2:
+  %t4 = bitcast i8* %t0 to double**
+  invoke void @test18a() noreturn
+          to label %u unwind label %lpad
+lpad:
+  %t5 = phi double** [ %t2, %e1 ], [ %t4, %e2 ]
+  %lpad.nonloopexit262 = landingpad { i8*, i32 } personality i32 (...)* @__gxx_personality_v0
+          cleanup
+  call void @test18foo(double** %t5)
+  unreachable
+u:
+  unreachable
+}
