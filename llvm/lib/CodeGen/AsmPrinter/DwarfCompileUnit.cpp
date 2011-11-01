@@ -527,18 +527,20 @@ bool CompileUnit::addConstantValue(DIE *Die, const ConstantInt *CI,
 
   // Get the raw data form of the large APInt.
   const APInt Val = CI->getValue();
-  const char *Ptr = (const char*)Val.getRawData();
+  const uint64_t *Ptr64 = Val.getRawData();
 
   int NumBytes = Val.getBitWidth() / 8; // 8 bits per byte.
   bool LittleEndian = Asm->getTargetData().isLittleEndian();
-  int Incr = (LittleEndian ? 1 : -1);
-  int Start = (LittleEndian ? 0 : NumBytes - 1);
-  int Stop = (LittleEndian ? NumBytes : -1);
 
   // Output the constant to DWARF one byte at a time.
-  for (; Start != Stop; Start += Incr)
-    addUInt(Block, 0, dwarf::DW_FORM_data1,
-            (unsigned char)0xFF & Ptr[Start]);
+  for (int i = 0; i < NumBytes; i++) {
+    uint8_t c;
+    if (LittleEndian)
+      c = Ptr64[i / 8] >> (8 * (i & 7));
+    else
+      c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
+    addUInt(Block, 0, dwarf::DW_FORM_data1, c);
+  }
 
   addBlock(Die, dwarf::DW_AT_const_value, 0, Block);
   return true;

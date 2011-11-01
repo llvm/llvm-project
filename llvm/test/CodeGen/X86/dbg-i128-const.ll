@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
 
 ; CHECK: DW_AT_const_value
 ; CHECK-NEXT: 42
