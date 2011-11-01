@@ -1744,6 +1744,41 @@ static void addPathIfExists(const std::string &Path,
   if (PathExists(Path)) Paths.push_back(Path);
 }
 
+/// \brief Get our best guess at the multiarch triple for a target.
+///
+/// Debian-based systems are starting to use a multiarch setup where they use
+/// a target-triple directory in the library and header search paths.
+/// Unfortunately, this triple does not align with the vanilla target triple,
+/// so we provide a rough mapping here.
+static std::string getMultiarchTriple(const llvm::Triple TargetTriple,
+                                      StringRef SysRoot) {
+  // For most architectures, just use whatever we have rather than trying to be
+  // clever.
+  switch (TargetTriple.getArch()) {
+  default:
+    return TargetTriple.str();
+
+    // We use the existence of '/lib/<triple>' as a directory to detect some
+    // common linux triples that don't quite match the Clang triple for both
+    // 32-bit and 64-bit targets. This works around annoying discrepancies on
+    // Debian-based systems.
+  case llvm::Triple::x86:
+    if (llvm::sys::fs::exists(SysRoot + "/lib/i686-linux-gnu"))
+      return "i686-linux-gnu";
+    if (llvm::sys::fs::exists(SysRoot + "/lib/i386-linux-gnu"))
+      return "i386-linux-gnu";
+    return TargetTriple.str();
+  case llvm::Triple::x86_64:
+    if (llvm::sys::fs::exists(SysRoot + "/lib/x86_64-linux-gnu"))
+      return "x86_64-linux-gnu";
+    if (llvm::sys::fs::exists(SysRoot + "/lib/x86_64-pc-linux-gnu"))
+      return "x86_64-pc-linux-gnu";
+    if (llvm::sys::fs::exists(SysRoot + "/lib/x86_64-unknown-linux-gnu"))
+      return "x86_64-unknown-linux-gnu";
+    return TargetTriple.str();
+  }
+}
+
 Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
   : Generic_ELF(Host, Triple) {
   llvm::Triple::ArchType Arch =
@@ -1804,6 +1839,7 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
   const std::string Suffix64 = Arch == llvm::Triple::x86_64 ? "" : "/64";
   const std::string Suffix = Is32Bits ? Suffix32 : Suffix64;
   const std::string Multilib = Is32Bits ? "lib32" : "lib64";
+  const std::string MultiarchTriple = getMultiarchTriple(Triple, SysRoot);
 
   // FIXME: Because we add paths only when they exist on the system, I think we
   // should remove the concept of 'HasMultilib'. It's more likely to break the
@@ -1821,9 +1857,12 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
       addPathIfExists(GCCInstallation.getInstallPath() + Suffix, Paths);
       addPathIfExists(LibPath + "/../" + GccTriple + "/lib/../" + Multilib,
                       Paths);
+      addPathIfExists(LibPath + "/" + MultiarchTriple, Paths);
       addPathIfExists(LibPath + "/../" + Multilib, Paths);
     }
+    addPathIfExists(SysRoot + "/lib/" + MultiarchTriple, Paths);
     addPathIfExists(SysRoot + "/lib/../" + Multilib, Paths);
+    addPathIfExists(SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
     addPathIfExists(SysRoot + "/usr/lib/../" + Multilib, Paths);
 
     // Try walking via the GCC triple path in case of multiarch GCC
@@ -1840,14 +1879,13 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
     if (!Suffix.empty() || !HasMultilib(Arch, Distro))
       addPathIfExists(GCCInstallation.getInstallPath(), Paths);
     addPathIfExists(LibPath + "/../" + GccTriple + "/lib", Paths);
+    addPathIfExists(LibPath + "/" + MultiarchTriple, Paths);
     addPathIfExists(LibPath, Paths);
   }
+  addPathIfExists(SysRoot + "/lib/" + MultiarchTriple, Paths);
   addPathIfExists(SysRoot + "/lib", Paths);
+  addPathIfExists(SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
   addPathIfExists(SysRoot + "/usr/lib", Paths);
-
-  // Add a multiarch lib directory whenever it exists and is plausible.
-  if (GCCInstallation.isValid() && Arch == getArch())
-    addPathIfExists(SysRoot + "/usr/lib/" + GCCInstallation.getTriple(), Paths);
 }
 
 bool Linux::HasNativeLLVMSupport() const {
