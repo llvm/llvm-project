@@ -285,7 +285,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
         if (DisAsm->getInstruction(Inst, Size, memoryObject, Index,
                                    DebugOut, nulls())) {
-          outs() << format("%8x:\t", SectionAddr + Index);
+          outs() << format("%8"PRIx64":\t", SectionAddr + Index);
           DumpBytes(StringRef(Bytes.data() + Index, Size));
           IP->printInst(&Inst, outs(), "");
           outs() << "\n";
@@ -306,7 +306,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
           if (error(rel_cur->getTypeName(name))) goto skip_print_rel;
           if (error(rel_cur->getValueString(val))) goto skip_print_rel;
 
-          outs() << format("\t\t\t%8x: ", SectionAddr + addr) << name << "\t"
+          outs() << format("\t\t\t%8"PRIx64": ", SectionAddr + addr) << name << "\t"
                  << val << "\n";
 
         skip_print_rel:

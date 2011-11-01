@@ -192,9 +192,9 @@ static void SortAndPrintSymbolList() {
       strcpy(SymbolSizeStr, "        ");
 
     if (i->Address != object::UnknownAddressOrSize)
-      format("%08x", i->Address).print(SymbolAddrStr, sizeof(SymbolAddrStr));
+      format("%08"PRIx64, i->Address).print(SymbolAddrStr, sizeof(SymbolAddrStr));
     if (i->Size != object::UnknownAddressOrSize)
-      format("%08x", i->Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
+      format("%08"PRIx64, i->Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
 
     if (OutputFormat == posix) {
       outs() << i->Name << " " << i->TypeChar << " "
