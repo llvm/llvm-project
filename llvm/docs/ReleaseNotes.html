@@ -189,13 +189,7 @@ Release Notes</a>.</h1>
 
 <div>
 
-<p><a href="http://lldb.llvm.org/">LLDB</a> is a brand new member of the LLVM
-   umbrella of projects. LLDB is a next generation, high-performance
-   debugger. It is built as a set of reusable components which highly leverage
-   existing libraries in the larger LLVM Project, such as the Clang expression
-   parser, the LLVM disassembler and the LLVM JIT.</p>
-
-<p>LLDB is has advanced by leaps and bounds in the 3.0 timeframe.  It is
+<p>LLDB has advanced by leaps and bounds in the 3.0 timeframe.  It is
    dramatically more stable and useful, and includes both a
    new <a href="http://lldb.llvm.org/tutorial.html">tutorial</a> and
    a <a href="http://lldb.llvm.org/lldb-gdb.html">side-by-side comparison with
@@ -210,13 +204,6 @@ Release Notes</a>.</h1>
 
 <div>
 
-<p><a href="http://libcxx.llvm.org/">libc++</a> is another new member of the
-   LLVM family.  It is an implementation of the C++ standard library, written
-   from the ground up to specifically target the forthcoming C++'0X standard and
-   focus on delivering great performance.</p>
-
-<p>In the LLVM 3.0 timeframe,</p>
-  
 <p>Like compiler_rt, libc++ is now <a href="DeveloperPolicy.html#license">dual
    licensed</a> under the MIT and UIUC license, allowing it to be used more
    permissively.</p>
@@ -290,21 +277,255 @@ be used to verify some algorithms.
    projects that have already been updated to work with LLVM 3.0.</p>
 
 <!--=========================================================================-->
-<h3>Crack Programming Language</h3>
+<h3>AddressSanitizer</h3>
+  
+<div>
+
+<p><a href="http://code.google.com/p/address-sanitizer/">AddressSanitizer</a>
+   uses compiler instrumentation and a specialized malloc library to find C/C++
+   bugs such as use-after-free and out-of-bound accesses to heap, stack, and
+   globals. The key feature of the tool is speed: the average slowdown
+   introduced by AddressSanitizer is less than 2x.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>ClamAV</h3>
+  
+<div>
+
+<p><a href="http://www.clamav.net">Clam AntiVirus</a> is an open source (GPL)
+   anti-virus toolkit for UNIX, designed especially for e-mail scanning on mail
+   gateways.</p>
+
+<p>Since version 0.96 it
+   has <a href="http://vrt-sourcefire.blogspot.com/2010/09/introduction-to-clamavs-low-level.html">bytecode
+   signatures</a> that allow writing detections for complex malware.</p>
+
+<p>It uses LLVM's JIT to speed up the execution of bytecode on X86, X86-64,
+   PPC32/64, falling back to its own interpreter otherwise.  The git version was
+   updated to work with LLVM 3.0.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>clReflect</h3>
 
 <div>
 
-<p><a href="http://code.google.com/p/crack-language/">Crack</a> aims to provide
-   the ease of development of a scripting language with the performance of a
-   compiled language. The language derives concepts from C++, Java and Python,
-   incorporating object-oriented programming, operator overloading and strong
-   typing.</p>
+<p><a href="https://bitbucket.org/dwilliamson/clreflect">clReflect</a> is a C++
+   parser that uses clang/LLVM to derive a light-weight reflection database
+   suitable for use in game development. It comes with a very simple runtime
+   library for loading and querying the database, requiring no external
+   dependencies (including CRT), and an additional utility library for object
+   management and serialisation.</p>
 
 </div>
+
+<!--=========================================================================-->
+<h3>Cling C++ Interpreter</h3>
+
+<div>
+
+<p><a href="http://cern.ch/cling">Cling</a> is an interactive compiler interface
+   (aka C++ interpreter). It uses LLVM's JIT and clang; it currently supports
+   C++ and C. It has a prompt interface, runs source files, calls into shared
+   libraries, prints the value of expressions, even does runtime lookup of
+   identifiers (dynamic scopes). And it just behaves like one would expect from
+   an interpreter.</p>
+
+</div>
+
+<!--=========================================================================-->
+<!-- FIXME: Comment out
+<h3>Crack Programming Language</h3>
+
+<div>
+<p>
+<a href="http://code.google.com/p/crack-language/">Crack</a> aims to provide the
+ease of development of a scripting language with the performance of a compiled
+language. The language derives concepts from C++, Java and Python, incorporating
+object-oriented programming, operator overloading and strong typing.</p>
+</div>
+-->  
   
 <!--=========================================================================-->
-<h3>TTA-based Codesign Environment (TCE)</h3>
+<h3>Glasgow Haskell Compiler (GHC)</h3>
   
+<div>
+
+<p>GHC is an open source, state-of-the-art programming suite for Haskell, a
+   standard lazy functional programming language. It includes an optimizing
+   static compiler generating good code for a variety of platforms, together
+   with an interactive system for convenient, quick development.</p>
+
+<p>GHC 7.0 and onwards include an LLVM code generator, supporting LLVM 2.8 and
+   later. Since LLVM 2.9, GHC now includes experimental support for the ARM
+   platform with LLVM 3.0.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>gwXscript</h3>
+
+<div>
+
+<p><a href="http://botwars.tk/gwscript/">gwXscript</a> is an object oriented,
+   aspect oriented programming language which can create both executables (ELF,
+   EXE) and shared libraries (DLL, SO, DYNLIB). The compiler is implemented in
+   its own language and translates scripts into LLVM-IR which can be optimized
+   and translated into native code by the LLVM framework. Source code in
+   gwScript contains definitions that expand the namespaces. So you can build
+   your project and simply 'plug out' features by removing a file. The remaining
+   project does not leave scars since you directly separate concerns by the
+   'template' feature of gwX. It is also possible to add new features to a
+   project by just adding files and without editing the original project. This
+   language is used for example to create games or content management systems
+   that should be extendable.</p>
+
+<p>gwXscript is strongly typed and offers comfort with its native types string,
+   hash and array. You can easily write new libraries in gwXscript or native
+   code. gwXscript is type safe and users should not be able to crash your
+   program or execute malicious code except code that is eating CPU time.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>include-what-you-use</h3>
+
+<div>
+
+<p><a href="http://code.google.com/p/include-what-you-use">include-what-you-use</a>
+   is a tool to ensure that a file directly <code>#include</code>s
+   all <code>.h</code> files that provide a symbol that the file uses. It also
+   removes superfluous <code>#include</code>s from source files.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>LanguageKit and Pragmatic Smalltalk</h3>
+
+<div>
+
+<p><a href="http://etoileos.com/etoile/features/languagekit/">LanguageKit</a> is
+   a framework for implementing dynamic languages sharing an object model with
+   Objective-C. It provides static and JIT compilation using LLVM along with
+   its own interpreter. Pragmatic Smalltalk is a dialect of Smalltalk, built on
+   top of LanguageKit, that interfaces directly with Objective-C, sharing the
+   same object representation and message sending behaviour. These projects are
+   developed as part of the &Eacute;toi&eacute; desktop environment.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>LuaAV</h3>
+
+<div>
+
+<p><a href="http://lua-av.mat.ucsb.edu/blog/">LuaAV</a> is a real-time
+   audiovisual scripting environment based around the Lua language and a
+   collection of libraries for sound, graphics, and other media protocols. LuaAV
+   uses LLVM and Clang to JIT compile efficient user-defined audio synthesis
+   routines specified in a declarative syntax.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>Mono</h3>
+
+<div>
+
+<p>An open source, cross-platform implementation of C# and the CLR that is
+   binary compatible with Microsoft.NET. Has an optional, dynamically-loaded
+   LLVM code generation backend in Mini, the JIT compiler.</p>
+
+<p>Note that we use a Git mirror of LLVM with some patches. See:
+   https://github.com/mono/llvm</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>Portable OpenCL (pocl)</h3>
+
+<div>
+
+<p>Portable OpenCL is an open source implementation of the OpenCL standard which
+   can be easily adapted for new targets. One of the goals of the project is
+   improving performance portability of OpenCL programs, avoiding the need for
+   target-dependent manual optimizations. A "native" target is included, which
+   allows running OpenCL kernels on the host (CPU).</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>Pure</h3>
+  
+<div>
+<p><a href="http://pure-lang.googlecode.com/">Pure</a> is an
+  algebraic/functional programming language based on term rewriting. Programs
+  are collections of equations which are used to evaluate expressions in a
+  symbolic fashion. The interpreter uses LLVM as a backend to JIT-compile Pure
+  programs to fast native code. Pure offers dynamic typing, eager and lazy
+  evaluation, lexical closures, a hygienic macro system (also based on term
+  rewriting), built-in list and matrix support (including list and matrix
+  comprehensions) and an easy-to-use interface to C and other programming
+  languages (including the ability to load LLVM bitcode modules, and inline C,
+  C++, Fortran and Faust code in Pure programs if the corresponding LLVM-enabled
+  compilers are installed).</p>
+  
+<p>Pure version 0.48 has been tested and is known to work with LLVM 3.0
+  (and continues to work with older LLVM releases &gt;= 2.5).</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>Renderscript</h3>
+
+<div>
+
+<p><a href="http://developer.android.com/guide/topics/renderscript/index.html">Renderscript</a>
+   is Android's advanced 3D graphics rendering and compute API. It provides a
+   portable C99-based language with extensions to facilitate common use cases
+   for enhancing graphics and thread level parallelism. The Renderscript
+   compiler frontend is based on Clang/LLVM. It emits a portable bitcode format
+   for the actual compiled script code, as well as reflects a Java interface for
+   developers to control the execution of the compiled bitcode. Executable
+   machine code is then generated from this bitcode by an LLVM backend on the
+   device. Renderscript is thus able to provide a mechanism by which Android
+   developers can improve performance of their applications while retaining
+   portability.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>SAFECode</h3>
+
+<div>
+
+<p><a href="http://safecode.cs.illinois.edu">SAFECode</a> is a memory safe C/C++
+   compiler built using LLVM.  It takes standard, unannotated C/C++ code,
+   analyzes the code to ensure that memory accesses and array indexing
+   operations are safe, and instruments the code with run-time checks when
+   safety cannot be proven statically.  SAFECode can be used as a debugging aid
+   (like Valgrind) to find and repair memory safety bugs.  It can also be used
+   to protect code from security attacks at run-time.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>The Stupid D Compiler (SDC)</h3>
+
+<div>
+
+<p><a href="https://github.com/bhelyer/SDC">The Stupid D Compiler</a> is a
+   project seeking to write a self-hosting compiler for the D programming
+   language without using the frontend of the reference compiler (DMD).</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>TTA-based Co-design Environment (TCE)</h3>
+
 <div>
 
 <p>TCE is a toolset for designing application-specific processors (ASP) based on
@@ -322,120 +543,140 @@ be used to verify some algorithms.
 </div>
   
 <!--=========================================================================-->
+<h3>Tart Programming Language</h3>
+
+<div>
+
+<p><a href="http://code.google.com/p/tart/">Tart</a> is a general-purpose,
+   strongly typed programming language designed for application
+   developers. Strongly inspired by Python and C#, Tart focuses on practical
+   solutions for the professional software developer, while avoiding the clutter
+   and boilerplate of legacy languages like Java and C++. Although Tart is still
+   in development, the current implementation supports many features expected of
+   a modern programming language, such as garbage collection, powerful
+   bidirectional type inference, a greatly simplified syntax for template
+   metaprogramming, closures and function literals, reflection, operator
+   overloading, explicit mutability and immutability, and much more. Tart is
+   flexible enough to accommodate a broad range of programming styles and
+   philosophies, while maintaining a strong commitment to simplicity, minimalism
+   and elegance in design.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>ThreadSanitizer</h3>
+
+<div>
+
+<p><a href="http://code.google.com/p/data-race-test/">ThreadSanitizer</a> is a
+   data race detector for (mostly) C and C++ code, available for Linux, Mac OS
+   and Windows. On different systems, we use binary instrumentation frameworks
+   (Valgrind and Pin) as frontends that generate the program events for the race
+   detection algorithm. On Linux, there's an option of using LLVM-based
+   compile-time instrumentation.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>The ZooLib C++ Cross-Platform Application Framework</h3>
+
+<div>
+
+<p><a href="http://www.zoolib.org/">ZooLib</a> is Open Source under the MIT
+   License. It provides GUI, filesystem access, TCP networking, thread-safe
+   memory management, threading and locking for Mac OS X, Classic Mac OS,
+   Microsoft Windows, POSIX operating systems with X11, BeOS, Haiku, Apple's iOS
+   and Research in Motion's BlackBerry.</p>
+
+<p>My current work is to use CLang's static analyzer to improve ZooLib's code
+   quality.  I also plan to set up LLVM compiles of the demo programs and test
+   programs using CLang and LLVM on all the platforms that CLang, LLVM and
+   ZooLib all support.</p>
+
+</div>
+
+<!--=========================================================================-->
+<!--
 <h3>PinaVM</h3>
   
 <div>
-
 <p><a href="http://gitorious.org/pinavm/pages/Home">PinaVM</a> is an open
-   source, <a href="http://www.systemc.org/">SystemC</a> front-end. Unlike many
-   other front-ends, PinaVM actually executes the elaboration of the program
-   analyzed using LLVM's JIT infrastructure. It later enriches the bitcode with
-   SystemC-specific information.</p>
-
+source, <a href="http://www.systemc.org/">SystemC</a> front-end. Unlike many
+other front-ends, PinaVM actually executes the elaboration of the
+program analyzed using LLVM's JIT infrastructure. It later enriches the
+bitcode with SystemC-specific information.</p>
 </div>
+-->
+
 
 <!--=========================================================================-->
-<h3>Pure</h3>
-  
-<div>
-
-<p><a href="http://pure-lang.googlecode.com/">Pure</a> is an
-   algebraic/functional programming language based on term rewriting. Programs
-   are collections of equations which are used to evaluate expressions in a
-   symbolic fashion. The interpreter uses LLVM as a backend to JIT-compile Pure
-   programs to fast native code. Pure offers dynamic typing, eager and lazy
-   evaluation, lexical closures, a hygienic macro system (also based on term
-   rewriting), built-in list and matrix support (including list and matrix
-   comprehensions) and an easy-to-use interface to C and other programming
-   languages (including the ability to load LLVM bitcode modules, and inline C,
-   C++, Fortran and Faust code in Pure programs if the corresponding
-   LLVM-enabled compilers are installed).</p>
-  
-<p>Pure version 0.47 has been tested and is known to work with LLVM 3.0 (and
-   continues to work with older LLVM releases &gt;= 2.5).</p>
-
-</div>
-
-<!--=========================================================================-->
+<!--
 <h3 id="icedtea">IcedTea Java Virtual Machine Implementation</h3>
 
 <div>
+<p>
+<a href="http://icedtea.classpath.org/wiki/Main_Page">IcedTea</a> provides a
+harness to build OpenJDK using only free software build tools and to provide
+replacements for the not-yet free parts of OpenJDK.  One of the extensions that
+IcedTea provides is a new JIT compiler named <a
+href="http://icedtea.classpath.org/wiki/ZeroSharkFaq">Shark</a> which uses LLVM
+to provide native code generation without introducing processor-dependent
+code.
+</p>
 
-<p><a href="http://icedtea.classpath.org/wiki/Main_Page">IcedTea</a> provides a
-   harness to build OpenJDK using only free software build tools and to provide
-   replacements for the not-yet free parts of OpenJDK.  One of the extensions
-   that IcedTea provides is a new JIT compiler
-   named <a href="http://icedtea.classpath.org/wiki/ZeroSharkFaq">Shark</a>
-   which uses LLVM to provide native code generation without introducing
-   processor-dependent code.</p>
-
-<p>OpenJDK 7 b112, IcedTea6 1.9 and IcedTea7 1.13 and later have been tested and
-   are known to work with LLVM 3.0 (and continue to work with older LLVM
-   releases &gt;= 2.6 as well).</p>
-
+<p> OpenJDK 7 b112, IcedTea6 1.9 and IcedTea7 1.13 and later have been tested
+and are known to work with LLVM 3.0 (and continue to work with older LLVM
+releases &gt;= 2.6 as well).</p>
 </div>
+-->
 
 <!--=========================================================================-->
-<h3>Glasgow Haskell Compiler (GHC)</h3>
-  
-<div>
-
-<p>GHC is an open source, state-of-the-art programming suite for Haskell, a
-   standard lazy functional programming language. It includes an optimizing
-   static compiler generating good code for a variety of platforms, together
-   with an interactive system for convenient, quick development.</p>
-
-<p>In addition to the existing C and native code generators, GHC 7.0 now
-   supports an LLVM code generator. GHC supports LLVM 2.7 and later.</p>
-
-</div>
-
-<!--=========================================================================-->
+<!--
 <h3>Polly - Polyhedral optimizations for LLVM</h3>
   
 <div>
-
 <p>Polly is a project that aims to provide advanced memory access optimizations
-   to better take advantage of SIMD units, cache hierarchies, multiple cores or
-   even vector accelerators for LLVM. Built around an abstract mathematical
-   description based on Z-polyhedra, it provides the infrastructure to develop
-   advanced optimizations in LLVM and to connect complex external optimizers. In
-   its first year of existence Polly already provides an exact value-based
-   dependency analysis as well as basic SIMD and OpenMP code generation support.
-   Furthermore, Polly can use PoCC(Pluto) an advanced optimizer for
-   data-locality and parallelism.</p>
-
+to better take advantage of SIMD units, cache hierarchies, multiple cores or
+even vector accelerators for LLVM. Built around an abstract mathematical
+description based on Z-polyhedra, it provides the infrastructure to develop
+advanced optimizations in LLVM and to connect complex external optimizers. In
+its first year of existence Polly already provides an exact value-based
+dependency analysis as well as basic SIMD and OpenMP code generation support.
+Furthermore, Polly can use PoCC(Pluto) an advanced optimizer for data-locality
+and parallelism.</p>
 </div>
+-->
 
 <!--=========================================================================-->
+<!--
 <h3>Rubinius</h3>
 
 <div>
-
-<p><a href="http://github.com/evanphx/rubinius">Rubinius</a> is an environment
-   for running Ruby code which strives to write as much of the implementation in
-   Ruby as possible. Combined with a bytecode interpreting VM, it uses LLVM to
-   optimize and compile ruby code down to machine code. Techniques such as type
-   feedback, method inlining, and deoptimization are all used to remove dynamism
-   from ruby execution and increase performance.</p>
-
+  <p><a href="http://github.com/evanphx/rubinius">Rubinius</a> is an environment
+  for running Ruby code which strives to write as much of the implementation in
+  Ruby as possible. Combined with a bytecode interpreting VM, it uses LLVM to
+  optimize and compile ruby code down to machine code. Techniques such as type
+  feedback, method inlining, and deoptimization are all used to remove dynamism
+  from ruby execution and increase performance.</p>
 </div>
+-->
 
 <!--=========================================================================-->
+<!--
 <h3>
 <a name="FAUST">FAUST Real-Time Audio Signal Processing Language</a>
 </h3>
 
 <div>
-
-<p><a href="http://faust.grame.fr">FAUST</a> is a compiled language for
-   real-time audio signal processing. The name FAUST stands for Functional AUdio
-   STream. Its programming model combines two approaches: functional programming
-   and block diagram composition. In addition with the C, C++, JAVA output
-   formats, the Faust compiler can now generate LLVM bitcode, and works with
-   LLVM 2.7-3.0.</p>
+<p>
+<a href="http://faust.grame.fr">FAUST</a> is a compiled language for real-time
+audio signal processing. The name FAUST stands for Functional AUdio STream. Its
+programming model combines two approaches: functional programming and block
+diagram composition. In addition with the C, C++, JAVA output formats, the
+Faust compiler can now generate LLVM bitcode, and works with LLVM 2.7-3.0.</p>
 
 </div>
+-->
   
 </div>
 
@@ -698,6 +939,9 @@ Builder.CreateResume(UnwindData);
 <a name="OtherTS">Other Target Specific Improvements</a>
 </h3>
 
+<p>PPC32/ELF va_arg was implemented.</p>
+<p>PPC32 initial support for .o file writing was implemented.</p>
+
 <div>
 
 <ul>
@@ -946,8 +1190,7 @@ Builder.CreateResume(UnwindData);
 <div>
 
 <ul>
-  <li>The Linux PPC32/ABI support needs testing for the interpreter and static
-      compilation, and lacks support for debug information.</li>
+  <li>The PPC32/ELF support lacks PIC support.</li>
 </ul>
 
 </div>
