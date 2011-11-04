@@ -226,11 +226,8 @@ perl -e '$/ = undef; for (split(/\n/, <>)) { s:^ *///? ?::; print "  <p>\n" if !
   <a name="basicaa">-basicaa: Basic Alias Analysis (stateless AA impl)</a>
 </h3>
 <div>
-  <p>
-  This is the default implementation of the Alias Analysis interface
-  that simply implements a few identities (two different globals cannot alias,
-  etc), but otherwise does no analysis.
-  </p>
+  <p>A basic alias analysis pass that implements identities (two different
+  globals cannot alias, etc), but does no stateful analysis.</p>
 </div>
 
 <!-------------------------------------------------------------------------- -->
@@ -527,9 +524,10 @@ perl -e '$/ = undef; for (split(/\n/, <>)) { s:^ *///? ?::; print "  <p>\n" if !
 </h3>
 <div>
   <p>
-  Always returns "I don't know" for alias queries.  NoAA is unlike other alias
-  analysis implementations, in that it does not chain to a previous analysis. As
-  such it doesn't follow many of the rules that other alias analyses must.
+  This is the default implementation of the Alias Analysis interface. It always
+  returns "I don't know" for alias queries.  NoAA is unlike other alias analysis
+  implementations, in that it does not chain to a previous analysis. As such it
+  doesn't follow many of the rules that other alias analyses must.
   </p>
 </div>
 
