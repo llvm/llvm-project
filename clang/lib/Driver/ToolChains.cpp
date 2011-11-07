@@ -2017,6 +2017,14 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  // Check if libc++ has been enabled and provide its include paths if so.
+  if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx) {
+    // libc++ is always installed at a fixed path on Linux currently.
+    addSystemInclude(DriverArgs, CC1Args,
+                     getDriver().SysRoot + "/usr/include/c++/v1");
+    return;
+  }
+
   const llvm::Triple &TargetTriple = getTriple();
   const llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
   bool IsTarget64Bit = (TargetArch == llvm::Triple::x86_64 ||
