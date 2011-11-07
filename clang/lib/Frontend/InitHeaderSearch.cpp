@@ -248,8 +248,9 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   }
 
   switch (os) {
+  case llvm::Triple::Linux:
   case llvm::Triple::Win32:
-    llvm_unreachable("Windows include management is handled in the driver.");
+    llvm_unreachable("Include management is handled in the driver.");
 
   case llvm::Triple::Haiku:
     AddPath("/boot/common/include", System, true, false, false);
@@ -316,20 +317,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     }
     break;
       
-  case llvm::Triple::Linux:
-    // Generic Debian multiarch support:
-    if (triple.getArch() == llvm::Triple::x86_64) {
-      AddPath("/usr/include/x86_64-linux-gnu", System, false, false, false);
-      AddPath("/usr/include/i686-linux-gnu/64", System, false, false, false);
-      AddPath("/usr/include/i486-linux-gnu/64", System, false, false, false);
-    } else if (triple.getArch() == llvm::Triple::x86) {
-      AddPath("/usr/include/x86_64-linux-gnu/32", System, false, false, false);
-      AddPath("/usr/include/i686-linux-gnu", System, false, false, false);
-      AddPath("/usr/include/i486-linux-gnu", System, false, false, false);
-      AddPath("/usr/include/i386-linux-gnu", System, false, false, false);
-    } else if (triple.getArch() == llvm::Triple::arm) {
-      AddPath("/usr/include/arm-linux-gnueabi", System, false, false, false);
-    }
   default:
     break;
   }
@@ -390,6 +377,10 @@ AddDefaultCPlusPlusIncludePaths(const llvm::Triple &triple, const HeaderSearchOp
   }
 
   switch (os) {
+  case llvm::Triple::Linux:
+  case llvm::Triple::Win32:
+    llvm_unreachable("Include management is handled in the driver.");
+
   case llvm::Triple::Cygwin:
     // Cygwin-1.7
     AddMinGWCPlusPlusIncludePaths("/usr/lib/gcc", "i686-pc-cygwin", "4.3.4");
@@ -416,257 +407,6 @@ AddDefaultCPlusPlusIncludePaths(const llvm::Triple &triple, const HeaderSearchOp
     break;
   case llvm::Triple::DragonFly:
     AddPath("/usr/include/c++/4.1", CXXSystem, true, false, false);
-    break;
-  case llvm::Triple::Linux:
-    //===------------------------------------------------------------------===//
-    // Debian based distros.
-    // Note: these distros symlink /usr/include/c++/X.Y.Z -> X.Y
-    //===------------------------------------------------------------------===//
-
-    // Ubuntu 11.11 "Oneiric Ocelot" -- gcc-4.6.0
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6",
-                                "x86_64-linux-gnu", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6",
-                                "i686-linux-gnu", "", "64", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6",
-                                "i486-linux-gnu", "", "64", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6",
-                                "arm-linux-gnueabi", "", "", triple);
-
-    // Ubuntu 11.04 "Natty Narwhal" -- gcc-4.5.2
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5",
-                                "x86_64-linux-gnu", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5",
-                                "i686-linux-gnu", "", "64", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5",
-                                "i486-linux-gnu", "", "64", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5",
-                                "arm-linux-gnueabi", "", "", triple);
-
-    // Ubuntu 10.10 "Maverick Meerkat" -- gcc-4.4.5
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4",
-                                "i686-linux-gnu", "", "64", triple);
-    // The rest of 10.10 is the same as previous versions.
-
-    // Ubuntu 10.04 LTS "Lucid Lynx" -- gcc-4.4.3
-    // Ubuntu 9.10 "Karmic Koala"    -- gcc-4.4.1
-    // Debian 6.0 "squeeze"          -- gcc-4.4.2
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4",
-                                "x86_64-linux-gnu", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4",
-                                "i486-linux-gnu", "", "64", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4",
-                                "arm-linux-gnueabi", "", "", triple);
-    // Ubuntu 9.04 "Jaunty Jackalope" -- gcc-4.3.3
-    // Ubuntu 8.10 "Intrepid Ibex"    -- gcc-4.3.2
-    // Debian 5.0 "lenny"             -- gcc-4.3.2
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3",
-                                "x86_64-linux-gnu", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3",
-                                "i486-linux-gnu", "", "64", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3",
-                                "arm-linux-gnueabi", "", "", triple);
-    // Ubuntu 8.04.4 LTS "Hardy Heron"     -- gcc-4.2.4
-    // Ubuntu 8.04.[0-3] LTS "Hardy Heron" -- gcc-4.2.3
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.2",
-                                "x86_64-linux-gnu", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.2",
-                                "i486-linux-gnu", "", "64", triple);
-    // Ubuntu 7.10 "Gutsy Gibbon" -- gcc-4.1.3
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.1",
-                                "x86_64-linux-gnu", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.1",
-                                "i486-linux-gnu", "", "64", triple);
-
-    //===------------------------------------------------------------------===//
-    // Redhat based distros.
-    //===------------------------------------------------------------------===//
-    // Fedora 15 (GCC 4.6.1)
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.1",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.1",
-                                "i686-redhat-linux", "", "", triple);
-    // Fedora 15 (GCC 4.6.0)
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.0",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.0",
-                                "i686-redhat-linux", "", "", triple);
-    // Fedora 14
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5.1",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5.1",
-                                "i686-redhat-linux", "", "", triple);
-    // RHEL5(gcc44)
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.4",
-                                "x86_64-redhat-linux6E", "32", "", triple);
-    // Fedora 13
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.4",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.4",
-                                "i686-redhat-linux","", "", triple);
-    // Fedora 12
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.3",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.3",
-                                "i686-redhat-linux","", "", triple);
-    // Fedora 12 (pre-FEB-2010)
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.2",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.2",
-                                "i686-redhat-linux","", "", triple);
-    // Fedora 11
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.1",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.1",
-                                "i586-redhat-linux","", "", triple);
-    // Fedora 10
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3.2",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3.2",
-                                "i386-redhat-linux","", "", triple);
-    // Fedora 9
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3.0",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3.0",
-                                "i386-redhat-linux", "", "", triple);
-    // Fedora 8
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.1.2",
-                                "x86_64-redhat-linux", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.1.2",
-                                "i386-redhat-linux", "", "", triple);
-      
-    // RHEL 5
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.1.1",
-                                "x86_64-redhat-linux", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.1.1",
-                                "i386-redhat-linux", "", "", triple);
-
-
-    //===------------------------------------------------------------------===//
-
-    // Exherbo (2010-01-25)
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.3",
-                                "x86_64-pc-linux-gnu", "32", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4.3",
-                                "i686-pc-linux-gnu", "", "", triple);
-
-    // openSUSE 11.1 32 bit
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3",
-                                "i586-suse-linux", "", "", triple);
-    // openSUSE 11.1 64 bit
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3",
-                                "x86_64-suse-linux", "32", "", triple);
-    // openSUSE 11.2
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4",
-                                "i586-suse-linux", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.4",
-                                "x86_64-suse-linux", "", "", triple);
-
-    // openSUSE 11.4
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5",
-                                "i586-suse-linux", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5",
-                                "x86_64-suse-linux", "", "", triple);
-
-    // openSUSE 12.1
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6",
-                                "i586-suse-linux", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6",
-                                "x86_64-suse-linux", "", "", triple);
-    // Arch Linux 2008-06-24
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3.1",
-                                "i686-pc-linux-gnu", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.3.1",
-                                "x86_64-unknown-linux-gnu", "", "", triple);
-
-    // Arch Linux gcc 4.6
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.1",
-                                "i686-pc-linux-gnu", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.1",
-                                "x86_64-unknown-linux-gnu", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.0",
-                                "i686-pc-linux-gnu", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.6.0",
-                                "x86_64-unknown-linux-gnu", "", "", triple);
-
-    // Slackware gcc 4.5.2 (13.37)
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5.2",
-                                "i486-slackware-linux", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5.2",
-                                "x86_64-slackware-linux", "", "", triple);
-    // Slackware gcc 4.5.3 (-current)
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5.3",
-                                "i486-slackware-linux", "", "", triple);
-    AddGnuCPlusPlusIncludePaths("/usr/include/c++/4.5.3",
-                                "x86_64-slackware-linux", "", "", triple);
-
-    // Gentoo x86 gcc 4.5.2
-    AddGnuCPlusPlusIncludePaths(
-      "/usr/lib/gcc/i686-pc-linux-gnu/4.5.2/include/g++-v4",
-      "i686-pc-linux-gnu", "", "", triple);
-    // Gentoo x86 gcc 4.4.5
-    AddGnuCPlusPlusIncludePaths(
-      "/usr/lib/gcc/i686-pc-linux-gnu/4.4.5/include/g++-v4",
-      "i686-pc-linux-gnu", "", "", triple);
-    // Gentoo x86 gcc 4.4.4
-    AddGnuCPlusPlusIncludePaths(
-      "/usr/lib/gcc/i686-pc-linux-gnu/4.4.4/include/g++-v4",
-      "i686-pc-linux-gnu", "", "", triple);
-   // Gentoo x86 2010.0 stable
-    AddGnuCPlusPlusIncludePaths(
-      "/usr/lib/gcc/i686-pc-linux-gnu/4.4.3/include/g++-v4",
-      "i686-pc-linux-gnu", "", "", triple);
-    // Gentoo x86 2009.1 stable
-    AddGnuCPlusPlusIncludePaths(
-      "/usr/lib/gcc/i686-pc-linux-gnu/4.3.4/include/g++-v4",
-      "i686-pc-linux-gnu", "", "", triple);
-    // Gentoo x86 2009.0 stable
-    AddGnuCPlusPlusIncludePaths(
-      "/usr/lib/gcc/i686-pc-linux-gnu/4.3.2/include/g++-v4",
-      "i686-pc-linux-gnu", "", "", triple);
-    // Gentoo x86 2008.0 stable
-    AddGnuCPlusPlusIncludePaths(
-      "/usr/lib/gcc/i686-pc-linux-gnu/4.1.2/include/g++-v4",
-      "i686-pc-linux-gnu", "", "", triple);
-    // Gentoo x86 llvm-gcc trunk
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/llvm-gcc-4.2-9999/include/c++/4.2.1",
-        "i686-pc-linux-gnu", "", "", triple);
-
-    // Gentoo amd64 gcc 4.5.2
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4",
-        "x86_64-pc-linux-gnu", "32", "", triple);
-    // Gentoo amd64 gcc 4.4.5
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/4.4.5/include/g++-v4",
-        "x86_64-pc-linux-gnu", "32", "", triple);
-    // Gentoo amd64 gcc 4.4.4
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/4.4.4/include/g++-v4",
-        "x86_64-pc-linux-gnu", "32", "", triple);
-    // Gentoo amd64 gcc 4.4.3
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/4.4.3/include/g++-v4",
-        "x86_64-pc-linux-gnu", "32", "", triple);
-    // Gentoo amd64 gcc 4.3.4
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/4.3.4/include/g++-v4",
-        "x86_64-pc-linux-gnu", "", "", triple);
-    // Gentoo amd64 gcc 4.3.2
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/4.3.2/include/g++-v4",
-        "x86_64-pc-linux-gnu", "", "", triple);
-    // Gentoo amd64 stable
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/4.1.2/include/g++-v4",
-        "x86_64-pc-linux-gnu", "", "", triple);
-
-    // Gentoo amd64 llvm-gcc trunk
-    AddGnuCPlusPlusIncludePaths(
-        "/usr/lib/llvm-gcc-4.2-9999/include/c++/4.2.1",
-        "x86_64-pc-linux-gnu", "", "", triple);
-
     break;
   case llvm::Triple::FreeBSD:
     // FreeBSD 8.0
@@ -711,6 +451,7 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
   default:
     break; // Everything else continues to use this routine's logic.
 
+  case llvm::Triple::Linux:
   case llvm::Triple::Win32:
     return;
   }
