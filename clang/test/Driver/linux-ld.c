@@ -137,3 +137,11 @@
 // CHECK-GCC-VERSION3: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-GCC-VERSION3: "{{.*}}/Inputs/gcc_version_parsing3/bin/../lib/gcc/i386-unknown-linux/4.7.99-rc5/crtbegin.o"
 // CHECK-GCC-VERSION3: "-L{{.*}}/Inputs/gcc_version_parsing3/bin/../lib/gcc/i386-unknown-linux/4.7.99-rc5"
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -ccc-host-triple i386-unknown-linux -m32 \
+// RUN:     -ccc-install-dir %S/Inputs/gcc_version_parsing4/bin \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-GCC-VERSION4 %s
+// CHECK-GCC-VERSION4: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-GCC-VERSION4: "{{.*}}/Inputs/gcc_version_parsing4/bin/../lib/gcc/i386-unknown-linux/4.7.99/crtbegin.o"
+// CHECK-GCC-VERSION4: "-L{{.*}}/Inputs/gcc_version_parsing4/bin/../lib/gcc/i386-unknown-linux/4.7.99"

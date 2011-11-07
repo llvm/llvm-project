@@ -1525,34 +1525,78 @@ static LinuxDistro DetectLinuxDistro(llvm::Triple::ArchType Arch) {
 ///
 /// We rely on assumptions about the form and structure of GCC version
 /// numbers: they consist of at most three '.'-separated components, and each
-/// component is a non-negative integer.
+/// component is a non-negative integer except for the last component. For the
+/// last component we are very flexible in order to tolerate release candidates
+/// or 'x' wildcards.
+///
+/// Note that the ordering established among GCCVersions is based on the
+/// preferred version string to use. For example we prefer versions without
+/// a hard-coded patch number to those with a hard coded patch number.
+///
+/// Currently this doesn't provide any logic for textual suffixes to patches in
+/// the way that (for example) Debian's version format does. If that ever
+/// becomes necessary, it can be added.
 struct Linux::GCCVersion {
-  unsigned Major, Minor, Patch;
+  /// \brief The unparsed text of the version.
+  StringRef Text;
+
+  /// \brief The parsed major, minor, and patch numbers.
+  int Major, Minor, Patch;
+
+  /// \brief Any textual suffix on the patch number.
+  StringRef PatchSuffix;
 
   static GCCVersion Parse(StringRef VersionText) {
-    const GCCVersion BadVersion = {0, 0, 0};
+    const GCCVersion BadVersion = { VersionText, -1, -1, -1, "" };
     std::pair<StringRef, StringRef> First = VersionText.split('.');
     std::pair<StringRef, StringRef> Second = First.second.split('.');
 
-    GCCVersion GoodVersion = {0, 0, 0};
-    if (First.first.getAsInteger(10, GoodVersion.Major))
+    GCCVersion GoodVersion = { VersionText, -1, -1, -1, "" };
+    if (First.first.getAsInteger(10, GoodVersion.Major) ||
+        GoodVersion.Major < 0)
       return BadVersion;
-    if (Second.first.getAsInteger(10, GoodVersion.Minor))
+    if (Second.first.getAsInteger(10, GoodVersion.Minor) ||
+        GoodVersion.Minor < 0)
       return BadVersion;
-    // We accept a number, or a string for the patch version, in case there
-    // is a strang suffix, or other mangling: '4.1.x', '4.1.2-rc3'. When it
-    // isn't a number, we just use '0' as the number but accept it.
-    if (Second.first.getAsInteger(10, GoodVersion.Patch))
-      GoodVersion.Patch = 0;
+
+    // First look for a number prefix and parse that if present. Otherwise just
+    // stash the entire patch string in the suffix, and leave the number
+    // unspecified. This covers versions strings such as:
+    //   4.4
+    //   4.4.0
+    //   4.4.x
+    //   4.4.2-rc4
+    //   4.4.x-patched
+    // And retains any patch number it finds.
+    StringRef PatchText = GoodVersion.PatchSuffix = Second.second;
+    if (!PatchText.empty()) {
+      if (unsigned EndNumber = PatchText.find_first_not_of("0123456789")) {
+        // Try to parse the number and any suffix.
+        if (PatchText.slice(0, EndNumber).getAsInteger(10, GoodVersion.Patch) ||
+            GoodVersion.Patch < 0)
+          return BadVersion;
+        GoodVersion.PatchSuffix = PatchText.substr(EndNumber);
+      }
+    }
+
     return GoodVersion;
   }
 
   bool operator<(const GCCVersion &RHS) const {
-    if (Major < RHS.Major) return true;
-    if (Major > RHS.Major) return false;
-    if (Minor < RHS.Minor) return true;
-    if (Minor > RHS.Minor) return false;
-    return Patch < RHS.Patch;
+    if (Major < RHS.Major) return true; if (Major > RHS.Major) return false;
+    if (Minor < RHS.Minor) return true; if (Minor > RHS.Minor) return false;
+
+    // Note that we rank versions with *no* patch specified is better than ones
+    // hard-coding a patch version. Thus if the RHS has no patch, it always
+    // wins, and the LHS only wins if it has no patch and the RHS does have
+    // a patch.
+    if (RHS.Patch == -1) return true;   if (Patch == -1) return false;
+    if (Patch < RHS.Patch) return true; if (Patch > RHS.Patch) return false;
+
+    // Finally, between completely tied version numbers, the version with the
+    // suffix loses as we prefer full releases.
+    if (RHS.PatchSuffix.empty()) return true;
+    return false;
   }
   bool operator>(const GCCVersion &RHS) const { return RHS < *this; }
   bool operator<=(const GCCVersion &RHS) const { return !(*this > RHS); }
@@ -1614,7 +1658,7 @@ Linux::GCCInstallationDetector::GCCInstallationDetector(const Driver &D)
 
   // Loop over the various components which exist and select the best GCC
   // installation available. GCC installs are ranked by version number.
-  GCCVersion BestVersion = {0, 0, 0};
+  GCCVersion BestVersion = GCCVersion::Parse("0.0.0");
   for (unsigned i = 0, ie = Prefixes.size(); i < ie; ++i) {
     if (!llvm::sys::fs::exists(Prefixes[i]))
       continue;
@@ -1718,7 +1762,7 @@ void Linux::GCCInstallationDetector::ScanLibDirForGCCTriple(
          !EC && LI != LE; LI = LI.increment(EC)) {
       StringRef VersionText = llvm::sys::path::filename(LI->path());
       GCCVersion CandidateVersion = GCCVersion::Parse(VersionText);
-      static const GCCVersion MinVersion = { 4, 1, 1 };
+      static const GCCVersion MinVersion = { "4.1.1", 4, 1, 1, "" };
       if (CandidateVersion < MinVersion)
         continue;
       if (CandidateVersion <= BestVersion)
