@@ -372,7 +372,38 @@ public:
 };
 
 class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
-  struct GCCVersion;
+  /// \brief Struct to store and manipulate GCC versions.
+  ///
+  /// We rely on assumptions about the form and structure of GCC version
+  /// numbers: they consist of at most three '.'-separated components, and each
+  /// component is a non-negative integer except for the last component. For
+  /// the last component we are very flexible in order to tolerate release
+  /// candidates or 'x' wildcards.
+  ///
+  /// Note that the ordering established among GCCVersions is based on the
+  /// preferred version string to use. For example we prefer versions without
+  /// a hard-coded patch number to those with a hard coded patch number.
+  ///
+  /// Currently this doesn't provide any logic for textual suffixes to patches
+  /// in the way that (for example) Debian's version format does. If that ever
+  /// becomes necessary, it can be added.
+  struct GCCVersion {
+    /// \brief The unparsed text of the version.
+    StringRef Text;
+
+    /// \brief The parsed major, minor, and patch numbers.
+    int Major, Minor, Patch;
+
+    /// \brief Any textual suffix on the patch number.
+    StringRef PatchSuffix;
+
+    static GCCVersion Parse(StringRef VersionText);
+    bool operator<(const GCCVersion &RHS) const;
+    bool operator>(const GCCVersion &RHS) const { return RHS < *this; }
+    bool operator<=(const GCCVersion &RHS) const { return !(*this > RHS); }
+    bool operator>=(const GCCVersion &RHS) const { return !(*this < RHS); }
+  };
+
 
   /// \brief This is a class to find a viable GCC installation for Clang to
   /// use.
@@ -389,6 +420,8 @@ class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
     std::string GccInstallPath;
     std::string GccParentLibPath;
 
+    GCCVersion Version;
+
   public:
     GCCInstallationDetector(const Driver &D);
 
@@ -404,14 +437,16 @@ class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
     /// \brief Get the detected GCC parent lib path.
     StringRef getParentLibPath() const { return GccParentLibPath; }
 
+    /// \brief Get the detected GCC version string.
+    StringRef getVersion() const { return Version.Text; }
+
   private:
     static void CollectLibDirsAndTriples(llvm::Triple::ArchType HostArch,
                                          SmallVectorImpl<StringRef> &LibDirs,
                                          SmallVectorImpl<StringRef> &Triples);
 
     void ScanLibDirForGCCTriple(const std::string &LibDir,
-                                StringRef CandidateTriple,
-                                GCCVersion &BestVersion);
+                                StringRef CandidateTriple);
   };
 
   GCCInstallationDetector GCCInstallation;
