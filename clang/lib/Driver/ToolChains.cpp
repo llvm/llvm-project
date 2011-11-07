@@ -1848,11 +1848,6 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
   if (GCCInstallation.isValid()) {
     const std::string &LibPath = GCCInstallation.getParentLibPath();
     const std::string &GccTriple = GCCInstallation.getTriple();
-    // FIXME: This OpenSuse-specific path shouldn't be needed any more, but
-    // I don't want to remove it without finding someone to test.
-    if (IsOpenSuse(Distro) && Is32Bits)
-      Paths.push_back(LibPath + "/../" + GccTriple + "/lib/../lib");
-
     addPathIfExists(GCCInstallation.getInstallPath() + Suffix, Paths);
     addPathIfExists(LibPath + "/../" + GccTriple + "/lib/../" + Multilib,
                     Paths);
