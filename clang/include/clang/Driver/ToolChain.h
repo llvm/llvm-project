@@ -195,6 +195,13 @@ public:
   /// FIXME: this really belongs on some sort of DeploymentTarget abstraction
   virtual bool hasBlocksRuntime() const { return true; }
 
+  /// \brief Add the clang cc1 arguments for system include paths.
+  ///
+  /// This routine is responsible for adding the necessary cc1 arguments to
+  /// include headers from standard system header directories.
+  virtual void AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                         ArgStringList &CC1Args) const;
+
   // GetCXXStdlibType - Determine the C++ standard library type to use with the
   // given compilation arguments.
   virtual CXXStdlibType GetCXXStdlibType(const ArgList &Args) const;

@@ -211,6 +211,11 @@ std::string ToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
   return ComputeLLVMTriple(Args, InputType);
 }
 
+void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                          ArgStringList &CC1Args) const {
+  // Each toolchain should provide the appropriate include flags.
+}
+
 ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
     StringRef Value = A->getValue(Args);
@@ -230,7 +235,7 @@ void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                              bool ObjCXXAutoRefCount) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);
 
-  // Header search paths are handled by the mass of goop in InitHeaderSearch.
+  // Header search paths are handled by each of the subclasses.
 
   switch (Type) {
   case ToolChain::CST_Libcxx:

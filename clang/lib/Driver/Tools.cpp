@@ -364,16 +364,6 @@ void Clang::AddPreprocessingOptions(const Driver &D,
   Args.AddAllArgs(CmdArgs, options::OPT_I_Group, options::OPT_F,
                   options::OPT_index_header_map);
 
-  // Add C++ include arguments, if needed.
-  types::ID InputType = Inputs[0].getType();
-  if (types::isCXX(InputType)) {
-    bool ObjCXXAutoRefCount
-      = types::isObjC(InputType) && isObjCAutoRefCount(Args);
-    getToolChain().AddClangCXXStdlibIncludeArgs(Args, CmdArgs,
-                                                ObjCXXAutoRefCount);
-    Args.AddAllArgs(CmdArgs, options::OPT_stdlib_EQ);
-  }
-
   // Add -Wp, and -Xassembler if using the preprocessor.
 
   // FIXME: There is a very unfortunate problem here, some troubled
@@ -428,6 +418,19 @@ void Clang::AddPreprocessingOptions(const Driver &D,
   // OBJCPLUS_INCLUDE_PATH - system includes enabled when compiling ObjC++.
   AddIncludeDirectoryList(Args, CmdArgs, "-objcxx-isystem",
                           ::getenv("OBJCPLUS_INCLUDE_PATH"));
+
+  // Add system include arguments.
+  getToolChain().AddClangSystemIncludeArgs(Args, CmdArgs);
+
+  // Add C++ include arguments, if needed.
+  types::ID InputType = Inputs[0].getType();
+  if (types::isCXX(InputType)) {
+    bool ObjCXXAutoRefCount
+      = types::isObjC(InputType) && isObjCAutoRefCount(Args);
+    getToolChain().AddClangCXXStdlibIncludeArgs(Args, CmdArgs,
+                                                ObjCXXAutoRefCount);
+    Args.AddAllArgs(CmdArgs, options::OPT_stdlib_EQ);
+  }
 }
 
 /// getARMTargetCPU - Get the (LLVM) name of the ARM cpu we are targeting.
