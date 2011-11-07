@@ -2261,6 +2261,21 @@ static void addSystemIncludes(const ArgList &DriverArgs,
 
 void Windows::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    // Ignore the sysroot, we *always* look for clang headers relative to
+    // supplied path.
+    llvm::sys::Path P(getDriver().ResourceDir);
+    P.appendComponent("include");
+    CC1Args.push_back("-internal-nosysroot-isystem");
+    CC1Args.push_back(DriverArgs.MakeArgString(P.str()));
+  }
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
   std::string VSDir;
   std::string WindowsSDKDir;
 

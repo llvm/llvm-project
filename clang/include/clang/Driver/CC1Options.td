@@ -653,6 +653,12 @@ def internal_externc_isystem : JoinedOrSeparate<"-internal-externc-isystem">,
            "implicit extern \"C\" semantics; these are assumed to not be "
            "user-provided and are used to model system and standard headers' "
            "paths.">;
+def internal_nosysroot_isystem : JoinedOrSeparate<"-internal-nosysroot-isystem">,
+  MetaVarName<"<directory>">,
+  HelpText<"Add directory to the internal system include search path without "
+           "applying a sysroot to it; these are assumed to not be "
+           "user-provided and are used to model system and standard headers' "
+           "paths.">;
 def iprefix : JoinedOrSeparate<"-iprefix">, MetaVarName<"<prefix>">,
   HelpText<"Set the -iwithprefix/-iwithprefixbefore prefix">;
 def iwithprefix : JoinedOrSeparate<"-iwithprefix">, MetaVarName<"<dir>">,

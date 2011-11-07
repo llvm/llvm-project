@@ -571,8 +571,12 @@ static void HeaderSearchOptsToArgs(const HeaderSearchOptions &Opts,
     } else {
       if (E.IsInternal) {
         assert(E.Group == frontend::System && "Unexpected header search group");
-        Res.push_back(E.ImplicitExternC ? "-internal-externc-isystem"
-                                        : "-internal-isystem");
+        if (E.IgnoreSysRoot)
+          Res.push_back("-internal-nosysroot-isystem");
+        else if (E.ImplicitExternC)
+          Res.push_back("-internal-externc-isystem");
+        else
+          Res.push_back("-internal-isystem");
       } else {
         if (E.Group != frontend::Angled && E.Group != frontend::System)
           llvm::report_fatal_error("Invalid option set!");
@@ -1471,11 +1475,14 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
 
   // Add the internal paths from a driver that detects standard include paths.
   for (arg_iterator I = Args.filtered_begin(OPT_internal_isystem,
-                                            OPT_internal_externc_isystem),
+                                            OPT_internal_externc_isystem,
+                                            OPT_internal_nosysroot_isystem),
                     E = Args.filtered_end();
        I != E; ++I)
     Opts.AddPath((*I)->getValue(Args), frontend::System,
-                 false, false, false, /*IsInternal=*/true,
+                 false, false,
+                 (*I)->getOption().matches(OPT_internal_nosysroot_isystem),
+                 /*IsInternal=*/true,
                  (*I)->getOption().matches(OPT_internal_externc_isystem));
 }
 
