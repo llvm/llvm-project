@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-pch -o %t -relocatable-pch -isysroot %S/libroot %S/libroot/usr/include/reloc.h
-// RUN: %clang_cc1 -include-pch %t -isysroot %S/libroot %s -verify
-// RUN: not %clang_cc1 -include-pch %t %s
+// RUN: %clang --relocatable-pch -o %t -isysroot %S/libroot %S/libroot/usr/include/reloc.h
+// RUN: %clang -fsyntax-only -include-pch %t -isysroot %S/libroot %s -Xclang -verify
+// RUN: not %clang -include-pch %t %s
 
 #include <reloc.h>
 
