@@ -2023,23 +2023,15 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addExternCSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/usr/include");
 }
 
-static void AddLibStdCXXIncludePaths(StringRef Base, StringRef ArchDir,
-                                     StringRef Dir32, StringRef Dir64,
-                                     const llvm::Triple &Triple,
+static bool addLibStdCXXIncludePaths(Twine Base, Twine TargetArchDir,
                                      const ArgList &DriverArgs,
                                      ArgStringList &CC1Args) {
+  if (!llvm::sys::fs::exists(Base))
+    return false;
   addSystemInclude(DriverArgs, CC1Args, Base);
-
-  // Add the multilib dirs
-  llvm::Triple::ArchType Arch = Triple.getArch();
-  bool Is64bit = Arch == llvm::Triple::ppc64 || Arch == llvm::Triple::x86_64;
-  if (Is64bit)
-    addSystemInclude(DriverArgs, CC1Args, Base + "/" + ArchDir + "/" + Dir64);
-  else
-    addSystemInclude(DriverArgs, CC1Args, Base + "/" + ArchDir + "/" + Dir32);
-
-  // Add the backward dir
+  addSystemInclude(DriverArgs, CC1Args, Base + "/" + TargetArchDir);
   addSystemInclude(DriverArgs, CC1Args, Base + "/backward");
+  return true;
 }
 
 void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
@@ -2048,331 +2040,53 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
-  const llvm::Triple &Triple = getTriple();
+  const llvm::Triple &TargetTriple = getTriple();
+  const llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
+  bool IsTarget64Bit = (TargetArch == llvm::Triple::x86_64 ||
+                        TargetArch == llvm::Triple::ppc64);
+
   StringRef CxxIncludeRoot(CXX_INCLUDE_ROOT);
-  if (CxxIncludeRoot != "") {
+  if (!CxxIncludeRoot.empty()) {
     StringRef CxxIncludeArch(CXX_INCLUDE_ARCH);
-    if (CxxIncludeArch == "")
-      AddLibStdCXXIncludePaths(CxxIncludeRoot, Triple.str().c_str(),
-                               CXX_INCLUDE_32BIT_DIR, CXX_INCLUDE_64BIT_DIR,
-                               Triple, DriverArgs, CC1Args);
-    else
-      AddLibStdCXXIncludePaths(CxxIncludeRoot, CXX_INCLUDE_ARCH,
-                               CXX_INCLUDE_32BIT_DIR, CXX_INCLUDE_64BIT_DIR,
-                               Triple, DriverArgs, CC1Args);
+    if (CxxIncludeArch.empty())
+      CxxIncludeArch = TargetTriple.str();
+
+    addLibStdCXXIncludePaths(
+      CxxIncludeRoot,
+      CxxIncludeArch + (IsTarget64Bit ? CXX_INCLUDE_64BIT_DIR
+                                      : CXX_INCLUDE_32BIT_DIR),
+      DriverArgs, CC1Args);
     return;
   }
-  // FIXME: temporary hack: hard-coded paths.
 
-  //===------------------------------------------------------------------===//
-  // Debian based distros.
-  // Note: these distros symlink /usr/include/c++/X.Y.Z -> X.Y
-  //===------------------------------------------------------------------===//
+  // Check if the target architecture specific dirs need a suffix. Note that we
+  // only support the suffix-based bi-arch-like header scheme for host/target
+  // mismatches of just bit width.
+  llvm::Triple::ArchType HostArch =
+    llvm::Triple(getDriver().DefaultHostTriple).getArch();
+  StringRef Suffix;
+  if ((HostArch == llvm::Triple::x86 && TargetArch == llvm::Triple::x86_64) ||
+      (HostArch == llvm::Triple::ppc && TargetArch == llvm::Triple::ppc64))
+    Suffix = "/64";
+  if ((HostArch == llvm::Triple::x86_64 && TargetArch == llvm::Triple::x86) ||
+      (HostArch == llvm::Triple::ppc64 && TargetArch == llvm::Triple::ppc))
+    Suffix = "/32";
 
-  // Ubuntu 11.11 "Oneiric Ocelot" -- gcc-4.6.0
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6",
-    "x86_64-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6",
-    "i686-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6",
-    "i486-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6",
-    "arm-linux-gnueabi", "", "", Triple, DriverArgs, CC1Args);
-
-  // Ubuntu 11.04 "Natty Narwhal" -- gcc-4.5.2
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5",
-    "x86_64-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5",
-    "i686-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5",
-    "i486-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5",
-    "arm-linux-gnueabi", "", "", Triple, DriverArgs, CC1Args);
-
-  // Ubuntu 10.10 "Maverick Meerkat" -- gcc-4.4.5
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4",
-    "i686-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  // The rest of 10.10 is the same as previous versions.
-
-  // Ubuntu 10.04 LTS "Lucid Lynx" -- gcc-4.4.3
-  // Ubuntu 9.10 "Karmic Koala"    -- gcc-4.4.1
-  // Debian 6.0 "squeeze"          -- gcc-4.4.2
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4",
-    "x86_64-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4",
-    "i486-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4",
-    "arm-linux-gnueabi", "", "", Triple, DriverArgs, CC1Args);
-  // Ubuntu 9.04 "Jaunty Jackalope" -- gcc-4.3.3
-  // Ubuntu 8.10 "Intrepid Ibex"    -- gcc-4.3.2
-  // Debian 5.0 "lenny"             -- gcc-4.3.2
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3",
-    "x86_64-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3",
-    "i486-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3",
-    "arm-linux-gnueabi", "", "", Triple, DriverArgs, CC1Args);
-  // Ubuntu 8.04.4 LTS "Hardy Heron"     -- gcc-4.2.4
-  // Ubuntu 8.04.[0-3] LTS "Hardy Heron" -- gcc-4.2.3
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.2",
-    "x86_64-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.2",
-    "i486-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-  // Ubuntu 7.10 "Gutsy Gibbon" -- gcc-4.1.3
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.1",
-    "x86_64-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.1",
-    "i486-linux-gnu", "", "64", Triple, DriverArgs, CC1Args);
-
-  //===------------------------------------------------------------------===//
-  // Redhat based distros.
-  //===------------------------------------------------------------------===//
-  // Fedora 15 (GCC 4.6.1)
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.1",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.1",
-    "i686-redhat-linux", "", "", Triple, DriverArgs, CC1Args);
-  // Fedora 15 (GCC 4.6.0)
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.0",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.0",
-    "i686-redhat-linux", "", "", Triple, DriverArgs, CC1Args);
-  // Fedora 14
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5.1",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5.1",
-    "i686-redhat-linux", "", "", Triple, DriverArgs, CC1Args);
-  // RHEL5(gcc44)
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.4",
-    "x86_64-redhat-linux6E", "32", "", Triple, DriverArgs, CC1Args);
-  // Fedora 13
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.4",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.4",
-    "i686-redhat-linux","", "", Triple, DriverArgs, CC1Args);
-  // Fedora 12
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.3",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.3",
-    "i686-redhat-linux","", "", Triple, DriverArgs, CC1Args);
-  // Fedora 12 (pre-FEB-2010)
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.2",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.2",
-    "i686-redhat-linux","", "", Triple, DriverArgs, CC1Args);
-  // Fedora 11
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.1",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.1",
-    "i586-redhat-linux","", "", Triple, DriverArgs, CC1Args);
-  // Fedora 10
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3.2",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3.2",
-    "i386-redhat-linux","", "", Triple, DriverArgs, CC1Args);
-  // Fedora 9
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3.0",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3.0",
-    "i386-redhat-linux", "", "", Triple, DriverArgs, CC1Args);
-  // Fedora 8
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.1.2",
-    "x86_64-redhat-linux", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.1.2",
-    "i386-redhat-linux", "", "", Triple, DriverArgs, CC1Args);
-
-  // RHEL 5
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.1.1",
-    "x86_64-redhat-linux", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.1.1",
-    "i386-redhat-linux", "", "", Triple, DriverArgs, CC1Args);
-
-
-  //===------------------------------------------------------------------===//
-
-  // Exherbo (2010-01-25)
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.3",
-    "x86_64-pc-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4.3",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-
-  // openSUSE 11.1 32 bit
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3",
-    "i586-suse-linux", "", "", Triple, DriverArgs, CC1Args);
-  // openSUSE 11.1 64 bit
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3",
-    "x86_64-suse-linux", "32", "", Triple, DriverArgs, CC1Args);
-  // openSUSE 11.2
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4",
-    "i586-suse-linux", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.4",
-    "x86_64-suse-linux", "", "", Triple, DriverArgs, CC1Args);
-
-  // openSUSE 11.4
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5",
-    "i586-suse-linux", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5",
-    "x86_64-suse-linux", "", "", Triple, DriverArgs, CC1Args);
-
-  // openSUSE 12.1
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6",
-    "i586-suse-linux", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6",
-    "x86_64-suse-linux", "", "", Triple, DriverArgs, CC1Args);
-  // Arch Linux 2008-06-24
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3.1",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.3.1",
-    "x86_64-unknown-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-
-  // Arch Linux gcc 4.6
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.1",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.1",
-    "x86_64-unknown-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.0",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.6.0",
-    "x86_64-unknown-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-
-  // Slackware gcc 4.5.2 (13.37)
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5.2",
-    "i486-slackware-linux", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5.2",
-    "x86_64-slackware-linux", "", "", Triple, DriverArgs, CC1Args);
-  // Slackware gcc 4.5.3 (-current)
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5.3",
-    "i486-slackware-linux", "", "", Triple, DriverArgs, CC1Args);
-  AddLibStdCXXIncludePaths(
-    "/usr/include/c++/4.5.3",
-    "x86_64-slackware-linux", "", "", Triple, DriverArgs, CC1Args);
-
-  // Gentoo x86 gcc 4.5.3
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.5.3/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 gcc 4.5.2
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.5.2/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 gcc 4.4.5
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.4.5/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 gcc 4.4.4
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.4.4/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 2010.0 stable
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.4.3/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 2009.1 stable
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.3.4/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 2009.0 stable
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.3.2/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 2008.0 stable
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/i686-pc-linux-gnu/4.1.2/include/g++-v4",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-
-  // Gentoo amd64 gcc 4.5.3
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.5.3/include/g++-v4",
-    "x86_64-pc-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  // Gentoo amd64 gcc 4.5.2
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4",
-    "x86_64-pc-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  // Gentoo amd64 gcc 4.4.5
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.4.5/include/g++-v4",
-    "x86_64-pc-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  // Gentoo amd64 gcc 4.4.4
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.4.4/include/g++-v4",
-    "x86_64-pc-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  // Gentoo amd64 gcc 4.4.3
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.4.3/include/g++-v4",
-    "x86_64-pc-linux-gnu", "32", "", Triple, DriverArgs, CC1Args);
-  // Gentoo amd64 gcc 4.3.4
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.3.4/include/g++-v4",
-    "x86_64-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo amd64 gcc 4.3.2
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.3.2/include/g++-v4",
-    "x86_64-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo amd64 stable
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/4.1.2/include/g++-v4",
-    "x86_64-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
+  // By default, look for the C++ headers in an include directory adjacent to
+  // the lib directory of the GCC installation. Note that this is expect to be
+  // equivalent to '/usr/include/c++/X.Y' in almost all cases.
+  StringRef LibDir = GCCInstallation.getParentLibPath();
+  StringRef InstallDir = GCCInstallation.getInstallPath();
+  StringRef Version = GCCInstallation.getVersion();
+  if (!addLibStdCXXIncludePaths(LibDir + "/../include/c++/" + Version,
+                                GCCInstallation.getTriple() + Suffix,
+                                DriverArgs, CC1Args)) {
+    // Gentoo is weird and places its headers inside the GCC install, so if the
+    // first attempt to find the headers fails, try this pattern.
+    addLibStdCXXIncludePaths(InstallDir + "/include/g++-v4",
+                             GCCInstallation.getTriple() + Suffix,
+                             DriverArgs, CC1Args);
+  }
 }
 
 /// DragonFly - DragonFly tool chain which can call as(1) and ld(1) directly.
