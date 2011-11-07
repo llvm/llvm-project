@@ -231,23 +231,8 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
 }
 
 void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
-                                             ArgStringList &CmdArgs,
-                                             bool ObjCXXAutoRefCount) const {
-  CXXStdlibType Type = GetCXXStdlibType(Args);
-
+                                             ArgStringList &CmdArgs) const {
   // Header search paths are handled by each of the subclasses.
-
-  switch (Type) {
-  case ToolChain::CST_Libcxx:
-    if (ObjCXXAutoRefCount)
-      CmdArgs.push_back("-fobjc-arc-cxxlib=libc++");
-    break;
-
-  case ToolChain::CST_Libstdcxx:
-    if (ObjCXXAutoRefCount)
-      CmdArgs.push_back("-fobjc-arc-cxxlib=libstdc++");
-    break;
-  }
 }
 
 void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,

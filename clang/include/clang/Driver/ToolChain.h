@@ -209,8 +209,7 @@ public:
   /// AddClangCXXStdlibIncludeArgs - Add the clang -cc1 level arguments to set
   /// the include paths to use for the given C++ standard library type.
   virtual void AddClangCXXStdlibIncludeArgs(const ArgList &Args,
-                                            ArgStringList &CmdArgs,
-                                            bool ObjCXXAutoRefCount) const;
+                                            ArgStringList &CmdArgs) const;
 
   /// AddCXXStdlibLibArgs - Add the system specific linker arguments to use
   /// for the given C++ standard library type.

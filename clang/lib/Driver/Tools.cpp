@@ -425,10 +425,7 @@ void Clang::AddPreprocessingOptions(const Driver &D,
   // Add C++ include arguments, if needed.
   types::ID InputType = Inputs[0].getType();
   if (types::isCXX(InputType)) {
-    bool ObjCXXAutoRefCount
-      = types::isObjC(InputType) && isObjCAutoRefCount(Args);
-    getToolChain().AddClangCXXStdlibIncludeArgs(Args, CmdArgs,
-                                                ObjCXXAutoRefCount);
+    getToolChain().AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
     Args.AddAllArgs(CmdArgs, options::OPT_stdlib_EQ);
   }
 }
@@ -1967,6 +1964,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool ARC = isObjCAutoRefCount(Args);
   if (ARC) {
     CmdArgs.push_back("-fobjc-arc");
+
+    // FIXME: It seems like this entire block, and several around it should be
+    // wrapped in isObjC, but for now we just use it here as this is where it
+    // was being used previously.
+    if (types::isCXX(InputType) && types::isObjC(InputType)) {
+      if (getToolChain().GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
+        CmdArgs.push_back("-fobjc-arc-cxxlib=libc++");
+      else
+        CmdArgs.push_back("-fobjc-arc-cxxlib=libstdc++");
+    }
 
     // Allow the user to enable full exceptions code emission.
     // We define off for Objective-CC, on for Objective-C++.
