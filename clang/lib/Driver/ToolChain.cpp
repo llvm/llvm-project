@@ -232,7 +232,16 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
 
 void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                              ArgStringList &CmdArgs) const {
-  // Header search paths are handled by each of the subclasses.
+  // Header search paths should be handled by each of the subclasses.
+  // Historically, they have not been, and instead have been handled inside of
+  // the CC1-layer frontend. As the logic is hoisted out, this generic function
+  // will slowly stop being called.
+  //
+  // While it is being called, replicate a bit of a hack to propagate the
+  // '-stdlib=' flag down to CC1 so that it can in turn customize the C++
+  // header search paths with it. Once all systems are overriding this
+  // function, the CC1 flag and this line can be removed.
+  Args.AddAllArgs(CmdArgs, options::OPT_stdlib_EQ);
 }
 
 void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,

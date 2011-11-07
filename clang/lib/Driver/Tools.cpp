@@ -423,11 +423,8 @@ void Clang::AddPreprocessingOptions(const Driver &D,
   getToolChain().AddClangSystemIncludeArgs(Args, CmdArgs);
 
   // Add C++ include arguments, if needed.
-  types::ID InputType = Inputs[0].getType();
-  if (types::isCXX(InputType)) {
+  if (types::isCXX(Inputs[0].getType()))
     getToolChain().AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
-    Args.AddAllArgs(CmdArgs, options::OPT_stdlib_EQ);
-  }
 }
 
 /// getARMTargetCPU - Get the (LLVM) name of the ARM cpu we are targeting.
