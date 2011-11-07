@@ -396,13 +396,13 @@ class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
     bool isValid() const { return IsValid; }
 
     /// \brief Get the GCC triple for the detected install.
-    const std::string &getTriple() const { return GccTriple; }
+    StringRef getTriple() const { return GccTriple; }
 
     /// \brief Get the detected GCC installation path.
-    const std::string &getInstallPath() const { return GccInstallPath; }
+    StringRef getInstallPath() const { return GccInstallPath; }
 
     /// \brief Get the detected GCC parent lib path.
-    const std::string &getParentLibPath() const { return GccParentLibPath; }
+    StringRef getParentLibPath() const { return GccParentLibPath; }
 
   private:
     static void CollectLibDirsAndTriples(llvm::Triple::ArchType HostArch,

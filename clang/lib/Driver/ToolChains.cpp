@@ -1782,9 +1782,8 @@ void Linux::GCCInstallationDetector::ScanLibDirForGCCTriple(
   }
 }
 
-static void addPathIfExists(const std::string &Path,
-                            ToolChain::path_list &Paths) {
-  if (llvm::sys::fs::exists(Path)) Paths.push_back(Path);
+static void addPathIfExists(Twine Path, ToolChain::path_list &Paths) {
+  if (llvm::sys::fs::exists(Path)) Paths.push_back(Path.str());
 }
 
 /// \brief Get our best guess at the multiarch triple for a target.
@@ -1831,8 +1830,8 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
   // OpenSuse stores the linker with the compiler, add that to the search
   // path.
   ToolChain::path_list &PPaths = getProgramPaths();
-  PPaths.push_back(GCCInstallation.getParentLibPath() + "/../" +
-                   GCCInstallation.getTriple() + "/bin");
+  PPaths.push_back(Twine(GCCInstallation.getParentLibPath() + "/../" +
+                         GCCInstallation.getTriple() + "/bin").str());
 
   Linker = GetProgramPath("ld");
 
