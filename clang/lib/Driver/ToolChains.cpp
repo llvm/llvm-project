@@ -1424,19 +1424,6 @@ static bool IsUbuntu(enum LinuxDistro Distro) {
          Distro == UbuntuNatty  || Distro == UbuntuOneiric;
 }
 
-// FIXME: This should be deleted. We should assume a multilib environment, and
-// fallback gracefully if any parts of it are absent.
-static bool HasMultilib(llvm::Triple::ArchType Arch, enum LinuxDistro Distro) {
-  if (Arch == llvm::Triple::x86_64) {
-    bool Exists;
-    if (Distro == Exherbo &&
-        (llvm::sys::fs::exists("/usr/lib32/libc.so", Exists) || !Exists))
-      return false;
-  }
-
-  return true;
-}
-
 static LinuxDistro DetectLinuxDistro(llvm::Triple::ArchType Arch) {
   llvm::OwningPtr<llvm::MemoryBuffer> File;
   if (!llvm::MemoryBuffer::getFile("/etc/lsb-release", File)) {
@@ -1857,42 +1844,37 @@ Linux::Linux(const HostInfo &Host, const llvm::Triple &Triple)
   const std::string Multilib = Is32Bits ? "lib32" : "lib64";
   const std::string MultiarchTriple = getMultiarchTriple(Triple, SysRoot);
 
-  // FIXME: Because we add paths only when they exist on the system, I think we
-  // should remove the concept of 'HasMultilib'. It's more likely to break the
-  // behavior than to preserve any useful invariant on the system.
-  if (HasMultilib(Arch, Distro)) {
-    // Add the multilib suffixed paths.
-    if (GCCInstallation.isValid()) {
-      const std::string &LibPath = GCCInstallation.getParentLibPath();
-      const std::string &GccTriple = GCCInstallation.getTriple();
-      // FIXME: This OpenSuse-specific path shouldn't be needed any more, but
-      // I don't want to remove it without finding someone to test.
-      if (IsOpenSuse(Distro) && Is32Bits)
-        Paths.push_back(LibPath + "/../" + GccTriple + "/lib/../lib");
+  // Add the multilib suffixed paths where they are available.
+  if (GCCInstallation.isValid()) {
+    const std::string &LibPath = GCCInstallation.getParentLibPath();
+    const std::string &GccTriple = GCCInstallation.getTriple();
+    // FIXME: This OpenSuse-specific path shouldn't be needed any more, but
+    // I don't want to remove it without finding someone to test.
+    if (IsOpenSuse(Distro) && Is32Bits)
+      Paths.push_back(LibPath + "/../" + GccTriple + "/lib/../lib");
 
-      addPathIfExists(GCCInstallation.getInstallPath() + Suffix, Paths);
-      addPathIfExists(LibPath + "/../" + GccTriple + "/lib/../" + Multilib,
-                      Paths);
-      addPathIfExists(LibPath + "/" + MultiarchTriple, Paths);
-      addPathIfExists(LibPath + "/../" + Multilib, Paths);
-    }
-    addPathIfExists(SysRoot + "/lib/" + MultiarchTriple, Paths);
-    addPathIfExists(SysRoot + "/lib/../" + Multilib, Paths);
-    addPathIfExists(SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
-    addPathIfExists(SysRoot + "/usr/lib/../" + Multilib, Paths);
-
-    // Try walking via the GCC triple path in case of multiarch GCC
-    // installations with strange symlinks.
-    if (GCCInstallation.isValid())
-      addPathIfExists(SysRoot + "/usr/lib/" + GCCInstallation.getTriple() +
-                      "/../../" + Multilib, Paths);
+    addPathIfExists(GCCInstallation.getInstallPath() + Suffix, Paths);
+    addPathIfExists(LibPath + "/../" + GccTriple + "/lib/../" + Multilib,
+                    Paths);
+    addPathIfExists(LibPath + "/" + MultiarchTriple, Paths);
+    addPathIfExists(LibPath + "/../" + Multilib, Paths);
   }
+  addPathIfExists(SysRoot + "/lib/" + MultiarchTriple, Paths);
+  addPathIfExists(SysRoot + "/lib/../" + Multilib, Paths);
+  addPathIfExists(SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
+  addPathIfExists(SysRoot + "/usr/lib/../" + Multilib, Paths);
+
+  // Try walking via the GCC triple path in case of multiarch GCC
+  // installations with strange symlinks.
+  if (GCCInstallation.isValid())
+    addPathIfExists(SysRoot + "/usr/lib/" + GCCInstallation.getTriple() +
+                    "/../../" + Multilib, Paths);
 
   // Add the non-multilib suffixed paths (if potentially different).
   if (GCCInstallation.isValid()) {
     const std::string &LibPath = GCCInstallation.getParentLibPath();
     const std::string &GccTriple = GCCInstallation.getTriple();
-    if (!Suffix.empty() || !HasMultilib(Arch, Distro))
+    if (!Suffix.empty())
       addPathIfExists(GCCInstallation.getInstallPath(), Paths);
     addPathIfExists(LibPath + "/../" + GccTriple + "/lib", Paths);
     addPathIfExists(LibPath + "/" + MultiarchTriple, Paths);
