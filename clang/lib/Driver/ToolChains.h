@@ -389,13 +389,13 @@ class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
   /// becomes necessary, it can be added.
   struct GCCVersion {
     /// \brief The unparsed text of the version.
-    StringRef Text;
+    std::string Text;
 
     /// \brief The parsed major, minor, and patch numbers.
     int Major, Minor, Patch;
 
     /// \brief Any textual suffix on the patch number.
-    StringRef PatchSuffix;
+    std::string PatchSuffix;
 
     static GCCVersion Parse(StringRef VersionText);
     bool operator<(const GCCVersion &RHS) const;

@@ -1525,11 +1525,11 @@ static LinuxDistro DetectLinuxDistro(llvm::Triple::ArchType Arch) {
 ///
 /// This is the primary means of forming GCCVersion objects.
 /*static*/ Linux::GCCVersion Linux::GCCVersion::Parse(StringRef VersionText) {
-  const GCCVersion BadVersion = { VersionText, -1, -1, -1, "" };
+  const GCCVersion BadVersion = { VersionText.str(), -1, -1, -1, "" };
   std::pair<StringRef, StringRef> First = VersionText.split('.');
   std::pair<StringRef, StringRef> Second = First.second.split('.');
 
-  GCCVersion GoodVersion = { VersionText, -1, -1, -1, "" };
+  GCCVersion GoodVersion = { VersionText.str(), -1, -1, -1, "" };
   if (First.first.getAsInteger(10, GoodVersion.Major) ||
       GoodVersion.Major < 0)
     return BadVersion;
@@ -1546,14 +1546,14 @@ static LinuxDistro DetectLinuxDistro(llvm::Triple::ArchType Arch) {
   //   4.4.2-rc4
   //   4.4.x-patched
   // And retains any patch number it finds.
-  StringRef PatchText = GoodVersion.PatchSuffix = Second.second;
+  StringRef PatchText = GoodVersion.PatchSuffix = Second.second.str();
   if (!PatchText.empty()) {
     if (unsigned EndNumber = PatchText.find_first_not_of("0123456789")) {
       // Try to parse the number and any suffix.
       if (PatchText.slice(0, EndNumber).getAsInteger(10, GoodVersion.Patch) ||
           GoodVersion.Patch < 0)
         return BadVersion;
-      GoodVersion.PatchSuffix = PatchText.substr(EndNumber);
+      GoodVersion.PatchSuffix = PatchText.substr(EndNumber).str();
     }
   }
 
