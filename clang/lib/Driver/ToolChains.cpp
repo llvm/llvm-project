@@ -2242,7 +2242,7 @@ static bool getVisualStudioDir(std::string &path) {
 // it.
 static void addSystemInclude(const ArgList &DriverArgs, ArgStringList &CC1Args,
                              const Twine &Path) {
-  CC1Args.push_back("-isystem");
+  CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
@@ -2254,7 +2254,7 @@ static void addSystemIncludes(const ArgList &DriverArgs,
                               ArrayRef<StringRef> Paths) {
   for (ArrayRef<StringRef>::iterator I = Paths.begin(), E = Paths.end();
        I != E; ++I) {
-    CC1Args.push_back("-isystem");
+    CC1Args.push_back("-internal-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(*I));
   }
 }

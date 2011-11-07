@@ -642,6 +642,17 @@ def isystem : JoinedOrSeparate<"-isystem">, MetaVarName<"<directory>">,
 def iwithsysroot : JoinedOrSeparate<"-iwithsysroot">,MetaVarName<"<directory>">,
   HelpText<"Add directory to SYSTEM include search path, "
            "absolute paths are relative to -isysroot">;
+def internal_isystem : JoinedOrSeparate<"-internal-isystem">,
+  MetaVarName<"<directory>">,
+  HelpText<"Add directory to the internal system include search path; these "
+           "are assumed to not be user-provided and are used to model system "
+           "and standard headers' paths.">;
+def internal_externc_isystem : JoinedOrSeparate<"-internal-externc-isystem">,
+  MetaVarName<"<directory>">,
+  HelpText<"Add directory to the internal system include search path with "
+           "implicit extern \"C\" semantics; these are assumed to not be "
+           "user-provided and are used to model system and standard headers' "
+           "paths.">;
 def iprefix : JoinedOrSeparate<"-iprefix">, MetaVarName<"<prefix>">,
   HelpText<"Set the -iwithprefix/-iwithprefixbefore prefix">;
 def iwithprefix : JoinedOrSeparate<"-iwithprefix">, MetaVarName<"<dir>">,

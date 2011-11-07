@@ -569,10 +569,16 @@ static void HeaderSearchOptsToArgs(const HeaderSearchOptions &Opts,
         break;
       }
     } else {
-      if (E.Group != frontend::Angled && E.Group != frontend::System)
-        llvm::report_fatal_error("Invalid option set!");
-      Res.push_back(E.Group == frontend::Angled ? "-iwithprefixbefore" :
-                    "-iwithprefix");
+      if (E.IsInternal) {
+        assert(E.Group == frontend::System && "Unexpected header search group");
+        Res.push_back(E.ImplicitExternC ? "-internal-externc-isystem"
+                                        : "-internal-isystem");
+      } else {
+        if (E.Group != frontend::Angled && E.Group != frontend::System)
+          llvm::report_fatal_error("Invalid option set!");
+        Res.push_back(E.Group == frontend::Angled ? "-iwithprefixbefore" :
+                      "-iwithprefix");
+      }
     }
     Res.push_back(E.Path);
   }
@@ -1462,6 +1468,15 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
        ie = Args.filtered_end(); it != ie; ++it)
     Opts.AddPath((*it)->getValue(Args), frontend::ObjCXXSystem, true, false,
                  true);
+
+  // Add the internal paths from a driver that detects standard include paths.
+  for (arg_iterator I = Args.filtered_begin(OPT_internal_isystem,
+                                            OPT_internal_externc_isystem),
+                    E = Args.filtered_end();
+       I != E; ++I)
+    Opts.AddPath((*I)->getValue(Args), frontend::System,
+                 false, false, false, /*IsInternal=*/true,
+                 (*I)->getOption().matches(OPT_internal_externc_isystem));
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,

@@ -49,10 +49,24 @@ public:
     /// path.
     unsigned IgnoreSysRoot : 1;
 
+    /// \brief True if this entry is an internal search path.
+    ///
+    /// This typically indicates that users didn't directly provide it, but
+    /// instead it was provided by a compatibility layer for a particular
+    /// system. This isn't redundant with IsUserSupplied (even though perhaps
+    /// it should be) because that is false for user provided '-iwithprefix'
+    /// header search entries.
+    unsigned IsInternal : 1;
+
+    /// \brief True if this entry's headers should be wrapped in extern "C".
+    unsigned ImplicitExternC : 1;
+
     Entry(StringRef path, frontend::IncludeDirGroup group,
-          bool isUserSupplied, bool isFramework, bool ignoreSysRoot)
+          bool isUserSupplied, bool isFramework, bool ignoreSysRoot,
+          bool isInternal, bool implicitExternC)
       : Path(path), Group(group), IsUserSupplied(isUserSupplied),
-        IsFramework(isFramework), IgnoreSysRoot(ignoreSysRoot) {}
+        IsFramework(isFramework), IgnoreSysRoot(ignoreSysRoot),
+        IsInternal(isInternal), ImplicitExternC(implicitExternC) {}
   };
 
   /// If non-empty, the directory to use as a "virtual system root" for include
@@ -98,9 +112,10 @@ public:
 
   /// AddPath - Add the \arg Path path to the specified \arg Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,
-               bool IsUserSupplied, bool IsFramework, bool IgnoreSysRoot) {
+               bool IsUserSupplied, bool IsFramework, bool IgnoreSysRoot,
+               bool IsInternal = false, bool ImplicitExternC = false) {
     UserEntries.push_back(Entry(Path, Group, IsUserSupplied, IsFramework,
-                                IgnoreSysRoot));
+                                IgnoreSysRoot, IsInternal, ImplicitExternC));
   }
 };
 
