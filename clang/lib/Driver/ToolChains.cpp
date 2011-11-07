@@ -1676,10 +1676,11 @@ Linux::GCCInstallationDetector::GCCInstallationDetector(const Driver &D)
     static const char *const X86LibDirs[] = { "/lib32", "/lib" };
     static const char *const X86Triples[] = {
       "i686-linux-gnu",
-      "i386-linux-gnu",
       "i686-pc-linux-gnu",
       "i486-linux-gnu",
+      "i386-linux-gnu",
       "i686-redhat-linux",
+      "i586-redhat-linux",
       "i386-redhat-linux",
       "i586-suse-linux",
       "i486-slackware-linux"
