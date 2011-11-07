@@ -2003,23 +2003,44 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // Lacking those, try to detect the correct set of system includes for the
   // target triple.
 
-  // Generic Debian multiarch support:
+  // Implement generic Debian multiarch support.
+  const StringRef X86_64MultiarchIncludeDirs[] = {
+    "/usr/include/x86_64-linux-gnu",
+
+    // FIXME: These are older forms of multiarch. It's not clear that they're
+    // in use in any released version of Debian, so we should consider
+    // removing them.
+    "/usr/include/i686-linux-gnu/64",
+    "/usr/include/i486-linux-gnu/64"
+  };
+  const StringRef X86MultiarchIncludeDirs[] = {
+    "/usr/include/i386-linux-gnu",
+
+    // FIXME: These are older forms of multiarch. It's not clear that they're
+    // in use in any released version of Debian, so we should consider
+    // removing them.
+    "/usr/include/x86_64-linux-gnu/32",
+    "/usr/include/i686-linux-gnu",
+    "/usr/include/i486-linux-gnu"
+  };
+  const StringRef ARMMultiarchIncludeDirs[] = {
+    "/usr/include/arm-linux-gnueabi"
+  };
+  ArrayRef<StringRef> MultiarchIncludeDirs;
   if (getTriple().getArch() == llvm::Triple::x86_64) {
-    addExternCSystemInclude(DriverArgs, CC1Args,
-                            "/usr/include/x86_64-linux-gnu");
-    addExternCSystemInclude(DriverArgs, CC1Args,
-                            "/usr/include/i686-linux-gnu/64");
-    addExternCSystemInclude(DriverArgs, CC1Args,
-                            "/usr/include/i486-linux-gnu/64");
+    MultiarchIncludeDirs = X86_64MultiarchIncludeDirs;
   } else if (getTriple().getArch() == llvm::Triple::x86) {
-    addExternCSystemInclude(DriverArgs, CC1Args,
-                            "/usr/include/x86_64-linux-gnu/32");
-    addExternCSystemInclude(DriverArgs, CC1Args, "/usr/include/i686-linux-gnu");
-    addExternCSystemInclude(DriverArgs, CC1Args, "/usr/include/i486-linux-gnu");
-    addExternCSystemInclude(DriverArgs, CC1Args, "/usr/include/i386-linux-gnu");
+    MultiarchIncludeDirs = X86MultiarchIncludeDirs;
   } else if (getTriple().getArch() == llvm::Triple::arm) {
-    addExternCSystemInclude(DriverArgs, CC1Args,
-                            "/usr/include/arm-linux-gnueabi");
+    MultiarchIncludeDirs = ARMMultiarchIncludeDirs;
+  }
+  for (ArrayRef<StringRef>::iterator I = MultiarchIncludeDirs.begin(),
+                                     E = MultiarchIncludeDirs.end();
+       I != E; ++I) {
+    if (llvm::sys::fs::exists(*I)) {
+      addExternCSystemInclude(DriverArgs, CC1Args, D.SysRoot + *I);
+      break;
+    }
   }
 
   if (getTriple().getOS() == llvm::Triple::RTEMS)
