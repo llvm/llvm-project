@@ -372,6 +372,52 @@ public:
 };
 
 class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
+  struct GCCVersion;
+
+  /// \brief This is a class to find a viable GCC installation for Clang to
+  /// use.
+  ///
+  /// This class tries to find a GCC installation on the system, and report
+  /// information about it. It starts from the host information provided to the
+  /// Driver, and has logic for fuzzing that where appropriate.
+  class GCCInstallationDetector {
+
+    bool IsValid;
+    std::string GccTriple;
+
+    // FIXME: These might be better as path objects.
+    std::string GccInstallPath;
+    std::string GccParentLibPath;
+
+    llvm::SmallString<128> CxxIncludeRoot;
+
+  public:
+    GCCInstallationDetector(const Driver &D);
+
+    /// \brief Check whether we detected a valid GCC install.
+    bool isValid() const { return IsValid; }
+
+    /// \brief Get the GCC triple for the detected install.
+    const std::string &getTriple() const { return GccTriple; }
+
+    /// \brief Get the detected GCC installation path.
+    const std::string &getInstallPath() const { return GccInstallPath; }
+
+    /// \brief Get the detected GCC parent lib path.
+    const std::string &getParentLibPath() const { return GccParentLibPath; }
+
+  private:
+    static void CollectLibDirsAndTriples(llvm::Triple::ArchType HostArch,
+                                         SmallVectorImpl<StringRef> &LibDirs,
+                                         SmallVectorImpl<StringRef> &Triples);
+
+    void ScanLibDirForGCCTriple(const std::string &LibDir,
+                                StringRef CandidateTriple,
+                                GCCVersion &BestVersion);
+  };
+
+  GCCInstallationDetector GCCInstallation;
+
 public:
   Linux(const HostInfo &Host, const llvm::Triple& Triple);
 
