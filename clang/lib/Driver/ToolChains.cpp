@@ -2342,10 +2342,6 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   AddLibStdCXXIncludePaths(
     "/usr/lib/gcc/i686-pc-linux-gnu/4.1.2/include/g++-v4",
     "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-  // Gentoo x86 llvm-gcc trunk
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/llvm-gcc-4.2-9999/include/c++/4.2.1",
-    "i686-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
 
   // Gentoo amd64 gcc 4.5.3
   AddLibStdCXXIncludePaths(
@@ -2378,11 +2374,6 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   // Gentoo amd64 stable
   AddLibStdCXXIncludePaths(
     "/usr/lib/gcc/x86_64-pc-linux-gnu/4.1.2/include/g++-v4",
-    "x86_64-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
-
-  // Gentoo amd64 llvm-gcc trunk
-  AddLibStdCXXIncludePaths(
-    "/usr/lib/llvm-gcc-4.2-9999/include/c++/4.2.1",
     "x86_64-pc-linux-gnu", "", "", Triple, DriverArgs, CC1Args);
 }
 
