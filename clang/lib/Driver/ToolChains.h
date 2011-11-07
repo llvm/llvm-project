@@ -389,8 +389,6 @@ class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
     std::string GccInstallPath;
     std::string GccParentLibPath;
 
-    llvm::SmallString<128> CxxIncludeRoot;
-
   public:
     GCCInstallationDetector(const Driver &D);
 

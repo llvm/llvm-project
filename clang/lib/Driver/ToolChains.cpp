@@ -1565,8 +1565,7 @@ struct Linux::GCCVersion {
 /// Once constructed, a GCCInstallation is esentially immutable.
 Linux::GCCInstallationDetector::GCCInstallationDetector(const Driver &D)
   : IsValid(false),
-    GccTriple(D.DefaultHostTriple),
-    CxxIncludeRoot(CXX_INCLUDE_ROOT) {
+    GccTriple(D.DefaultHostTriple) {
   // FIXME: Using CXX_INCLUDE_ROOT is here is a bit of a hack, but
   // avoids adding yet another option to configure/cmake.
   // It would probably be cleaner to break it in two variables
@@ -1576,6 +1575,7 @@ Linux::GCCInstallationDetector::GCCInstallationDetector(const Driver &D)
   // CXX_INCLUDE_ROOT = CXX_GCC_ROOT/include/c++/CXX_GCC_VER
   // and this function would return
   // CXX_GCC_ROOT/lib/gcc/CXX_INCLUDE_ARCH/CXX_GCC_VER
+  llvm::SmallString<128> CxxIncludeRoot(CXX_INCLUDE_ROOT);
   if (CxxIncludeRoot != "") {
     // This is of the form /foo/bar/include/c++/4.5.2/
     if (CxxIncludeRoot.back() == '/')
