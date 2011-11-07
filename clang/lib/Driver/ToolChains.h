@@ -417,6 +417,12 @@ public:
   virtual bool IsUnwindTablesDefault() const;
   virtual const char *GetDefaultRelocationModel() const;
   virtual const char *GetForcedPicModel() const;
+
+  virtual void AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                         ArgStringList &CC1Args) const;
+  virtual void AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args) const;
+
 };
 
 } // end namespace toolchains

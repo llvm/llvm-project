@@ -27,12 +27,9 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Config/config.h"
-#ifdef _MSC_VER
-  #define WIN32_LEAN_AND_MEAN 1
-  #include <windows.h>
-#endif
 using namespace clang;
 using namespace clang::frontend;
 
@@ -207,219 +204,6 @@ void InitHeaderSearch::AddMinGW64CXXPaths(StringRef Base,
           CXXSystem, true, false, false);
 }
 
-  // FIXME: This probably should goto to some platform utils place.
-#ifdef _MSC_VER
-
-  // Read registry string.
-  // This also supports a means to look for high-versioned keys by use
-  // of a $VERSION placeholder in the key path.
-  // $VERSION in the key path is a placeholder for the version number,
-  // causing the highest value path to be searched for and used.
-  // I.e. "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VisualStudio\\$VERSION".
-  // There can be additional characters in the component.  Only the numberic
-  // characters are compared.
-static bool getSystemRegistryString(const char *keyPath, const char *valueName,
-                                    char *value, size_t maxLength) {
-  HKEY hRootKey = NULL;
-  HKEY hKey = NULL;
-  const char* subKey = NULL;
-  DWORD valueType;
-  DWORD valueSize = maxLength - 1;
-  long lResult;
-  bool returnValue = false;
-  
-  if (strncmp(keyPath, "HKEY_CLASSES_ROOT\\", 18) == 0) {
-    hRootKey = HKEY_CLASSES_ROOT;
-    subKey = keyPath + 18;
-  } else if (strncmp(keyPath, "HKEY_USERS\\", 11) == 0) {
-    hRootKey = HKEY_USERS;
-    subKey = keyPath + 11;
-  } else if (strncmp(keyPath, "HKEY_LOCAL_MACHINE\\", 19) == 0) {
-    hRootKey = HKEY_LOCAL_MACHINE;
-    subKey = keyPath + 19;
-  } else if (strncmp(keyPath, "HKEY_CURRENT_USER\\", 18) == 0) {
-    hRootKey = HKEY_CURRENT_USER;
-    subKey = keyPath + 18;
-  }
-  else
-    return false;
-  
-  const char *placeHolder = strstr(subKey, "$VERSION");
-  char bestName[256];
-  bestName[0] = '\0';
-  // If we have a $VERSION placeholder, do the highest-version search.
-  if (placeHolder) {
-    const char *keyEnd = placeHolder - 1;
-    const char *nextKey = placeHolder;
-    // Find end of previous key.
-    while ((keyEnd > subKey) && (*keyEnd != '\\'))
-      keyEnd--;
-    // Find end of key containing $VERSION.
-    while (*nextKey && (*nextKey != '\\'))
-      nextKey++;
-    size_t partialKeyLength = keyEnd - subKey;
-    char partialKey[256];
-    if (partialKeyLength > sizeof(partialKey))
-      partialKeyLength = sizeof(partialKey);
-    strncpy(partialKey, subKey, partialKeyLength);
-    partialKey[partialKeyLength] = '\0';
-    HKEY hTopKey = NULL;
-    lResult = RegOpenKeyEx(hRootKey, partialKey, 0, KEY_READ, &hTopKey);
-    if (lResult == ERROR_SUCCESS) {
-      char keyName[256];
-      int bestIndex = -1;
-      double bestValue = 0.0;
-      DWORD index, size = sizeof(keyName) - 1;
-      for (index = 0; RegEnumKeyEx(hTopKey, index, keyName, &size, NULL,
-          NULL, NULL, NULL) == ERROR_SUCCESS; index++) {
-        const char *sp = keyName;
-        while (*sp && !isdigit(*sp))
-          sp++;
-        if (!*sp)
-          continue;
-        const char *ep = sp + 1;
-        while (*ep && (isdigit(*ep) || (*ep == '.')))
-          ep++;
-        char numBuf[32];
-        strncpy(numBuf, sp, sizeof(numBuf) - 1);
-        numBuf[sizeof(numBuf) - 1] = '\0';
-        double value = strtod(numBuf, NULL);
-        if (value > bestValue) {
-          bestIndex = (int)index;
-          bestValue = value;
-          strcpy(bestName, keyName);
-        }
-        size = sizeof(keyName) - 1;
-      }
-      // If we found the highest versioned key, open the key and get the value.
-      if (bestIndex != -1) {
-        // Append rest of key.
-        strncat(bestName, nextKey, sizeof(bestName) - 1);
-        bestName[sizeof(bestName) - 1] = '\0';
-        // Open the chosen key path remainder.
-        lResult = RegOpenKeyEx(hTopKey, bestName, 0, KEY_READ, &hKey);
-        if (lResult == ERROR_SUCCESS) {
-          lResult = RegQueryValueEx(hKey, valueName, NULL, &valueType,
-            (LPBYTE)value, &valueSize);
-          if (lResult == ERROR_SUCCESS)
-            returnValue = true;
-          RegCloseKey(hKey);
-        }
-      }
-      RegCloseKey(hTopKey);
-    }
-  }
-  else {
-    lResult = RegOpenKeyEx(hRootKey, subKey, 0, KEY_READ, &hKey);
-    if (lResult == ERROR_SUCCESS) {
-      lResult = RegQueryValueEx(hKey, valueName, NULL, &valueType,
-        (LPBYTE)value, &valueSize);
-      if (lResult == ERROR_SUCCESS)
-        returnValue = true;
-      RegCloseKey(hKey);
-    }
-  }
-  return returnValue;
-}
-#else // _MSC_VER
-  // Read registry string.
-static bool getSystemRegistryString(const char*, const char*, char*, size_t) {
-  return(false);
-}
-#endif // _MSC_VER
-
-  // Get Visual Studio installation directory.
-static bool getVisualStudioDir(std::string &path) {
-  // First check the environment variables that vsvars32.bat sets.
-  const char* vcinstalldir = getenv("VCINSTALLDIR");
-  if (vcinstalldir) {
-    char *p = const_cast<char *>(strstr(vcinstalldir, "\\VC"));
-    if (p)
-      *p = '\0';
-    path = vcinstalldir;
-    return true;
-  }
-
-  char vsIDEInstallDir[256];
-  char vsExpressIDEInstallDir[256];
-  // Then try the windows registry.
-  bool hasVCDir = getSystemRegistryString(
-    "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VisualStudio\\$VERSION",
-    "InstallDir", vsIDEInstallDir, sizeof(vsIDEInstallDir) - 1);
-  bool hasVCExpressDir = getSystemRegistryString(
-    "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VCExpress\\$VERSION",
-    "InstallDir", vsExpressIDEInstallDir, sizeof(vsExpressIDEInstallDir) - 1);
-    // If we have both vc80 and vc90, pick version we were compiled with.
-  if (hasVCDir && vsIDEInstallDir[0]) {
-    char *p = (char*)strstr(vsIDEInstallDir, "\\Common7\\IDE");
-    if (p)
-      *p = '\0';
-    path = vsIDEInstallDir;
-    return true;
-  }
-  
-  if (hasVCExpressDir && vsExpressIDEInstallDir[0]) {
-    char *p = (char*)strstr(vsExpressIDEInstallDir, "\\Common7\\IDE");
-    if (p)
-      *p = '\0';
-    path = vsExpressIDEInstallDir;
-    return true;
-  }
-
-  // Try the environment.
-  const char *vs100comntools = getenv("VS100COMNTOOLS");
-  const char *vs90comntools = getenv("VS90COMNTOOLS");
-  const char *vs80comntools = getenv("VS80COMNTOOLS");
-  const char *vscomntools = NULL;
-
-  // Try to find the version that we were compiled with
-  if(false) {}
-  #if (_MSC_VER >= 1600)  // VC100
-  else if(vs100comntools) {
-    vscomntools = vs100comntools;
-  }
-  #elif (_MSC_VER == 1500) // VC80
-  else if(vs90comntools) {
-    vscomntools = vs90comntools;
-  }
-  #elif (_MSC_VER == 1400) // VC80
-  else if(vs80comntools) {
-    vscomntools = vs80comntools;
-  }
-  #endif
-  // Otherwise find any version we can
-  else if (vs100comntools)
-    vscomntools = vs100comntools;
-  else if (vs90comntools)
-    vscomntools = vs90comntools;
-  else if (vs80comntools)
-    vscomntools = vs80comntools;
-
-  if (vscomntools && *vscomntools) {
-    const char *p = strstr(vscomntools, "\\Common7\\Tools");
-    path = p ? std::string(vscomntools, p) : vscomntools;
-    return true;
-  }
-  return false;
-}
-
-  // Get Windows SDK installation directory.
-static bool getWindowsSDKDir(std::string &path) {
-  char windowsSDKInstallDir[256];
-  // Try the Windows registry.
-  bool hasSDKDir = getSystemRegistryString(
-   "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Microsoft SDKs\\Windows\\$VERSION",
-                                           "InstallationFolder",
-                                           windowsSDKInstallDir,
-                                           sizeof(windowsSDKInstallDir) - 1);
-    // If we have both vc80 and vc90, pick version we were compiled with.
-  if (hasSDKDir && windowsSDKInstallDir[0]) {
-    path = windowsSDKInstallDir;
-    return(true);
-  }
-  return(false);
-}
-
 void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
                                             const HeaderSearchOptions &HSOpts) {
   llvm::Triple::OSType os = triple.getOS();
@@ -464,33 +248,9 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   }
 
   switch (os) {
-  case llvm::Triple::Win32: {
-    std::string VSDir;
-    std::string WindowsSDKDir;
-    if (getVisualStudioDir(VSDir)) {
-      AddPath(VSDir + "\\VC\\include", System, false, false, false);
-      if (getWindowsSDKDir(WindowsSDKDir))
-        AddPath(WindowsSDKDir + "\\include", System, false, false, false);
-      else
-        AddPath(VSDir + "\\VC\\PlatformSDK\\Include",
-                System, false, false, false);
-    } else {
-      // Default install paths.
-      AddPath("C:/Program Files/Microsoft Visual Studio 10.0/VC/include",
-              System, false, false, false);
-      AddPath("C:/Program Files/Microsoft Visual Studio 9.0/VC/include",
-              System, false, false, false);
-      AddPath(
-        "C:/Program Files/Microsoft Visual Studio 9.0/VC/PlatformSDK/Include",
-        System, false, false, false);
-      AddPath("C:/Program Files/Microsoft Visual Studio 8/VC/include",
-              System, false, false, false);
-      AddPath(
-        "C:/Program Files/Microsoft Visual Studio 8/VC/PlatformSDK/Include",
-        System, false, false, false);
-    }
-    break;
-  }
+  case llvm::Triple::Win32:
+    llvm_unreachable("Windows include management is handled in the driver.");
+
   case llvm::Triple::Haiku:
     AddPath("/boot/common/include", System, true, false, false);
     AddPath("/boot/develop/headers/os", System, true, false, false);
@@ -943,6 +703,18 @@ AddDefaultCPlusPlusIncludePaths(const llvm::Triple &triple, const HeaderSearchOp
 void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
                                               const llvm::Triple &triple,
                                             const HeaderSearchOptions &HSOpts) {
+  // NB: This code path is going away. All of the logic is moving into the
+  // driver which has the information necessary to do target-specific
+  // selections of default include paths. Each target which moves there will be
+  // exempted from this logic here until we can delete the entire pile of code.
+  switch (triple.getOS()) {
+  default:
+    break; // Everything else continues to use this routine's logic.
+
+  case llvm::Triple::Win32:
+    return;
+  }
+
   if (Lang.CPlusPlus && HSOpts.UseStandardCXXIncludes &&
       HSOpts.UseStandardSystemIncludes) {
     if (HSOpts.UseLibcxx) {
