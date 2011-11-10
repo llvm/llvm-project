@@ -170,7 +170,7 @@ void test_strcat() {
 //===----------------------------------------------------------------------===
 typedef int __int32_t;
 typedef __int32_t pid_t;
-pid_t vfork(void); //expected-warning{{declaration of built-in function 'vfork' requires inclusion of the header <setjmp.h>}}
+pid_t vfork(void);
 
 void test_vfork() {
   vfork(); //expected-warning{{Call to function 'vfork' is insecure as it can lead to denial of service situations in the parent process.}}

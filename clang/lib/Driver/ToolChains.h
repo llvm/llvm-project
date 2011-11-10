@@ -445,7 +445,8 @@ class LLVM_LIBRARY_VISIBILITY Linux : public Generic_ELF {
                                          SmallVectorImpl<StringRef> &LibDirs,
                                          SmallVectorImpl<StringRef> &Triples);
 
-    void ScanLibDirForGCCTriple(const std::string &LibDir,
+    void ScanLibDirForGCCTriple(llvm::Triple::ArchType HostArch,
+                                const std::string &LibDir,
                                 StringRef CandidateTriple);
   };
 
