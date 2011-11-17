@@ -44,7 +44,9 @@
 // environment.
 #ifdef _MSC_VER
   #define WIN32_LEAN_AND_MEAN 1
-  #include <windows.h>
+  #include <Windows.h>
+  #undef min
+  #undef max
 #endif
 
 using namespace clang::driver;
@@ -2334,7 +2336,7 @@ static bool getVisualStudioDir(std::string &path) {
     path = vsIDEInstallDir;
     return true;
   }
-  
+
   if (hasVCExpressDir && vsExpressIDEInstallDir[0]) {
     char *p = (char*)strstr(vsExpressIDEInstallDir, "\\Common7\\IDE");
     if (p)
