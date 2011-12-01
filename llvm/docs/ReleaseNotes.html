@@ -45,7 +45,8 @@ Release Notes</a>.</h1>
 
 <p>This document contains the release notes for the LLVM Compiler
    Infrastructure, release 3.0.  Here we describe the status of LLVM, including
-   major improvements from the previous release and significant known problems.
+   major improvements from the previous release, improvements in various
+   subprojects of LLVM, and some of the current users of the code.
    All LLVM releases may be downloaded from
    the <a href="http://llvm.org/releases/">LLVM releases web site</a>.</p>
 
@@ -61,16 +62,8 @@ Release Notes</a>.</h1>
    <a href="http://llvm.org/releases/">releases page</a>.</p>
 
 </div>
-   
-<!-- Features that need text if they're finished for 3.1:
-  ARM EHABI
-  combiner-aa?
-  strong phi elim
-  loop dependence analysis
-  CorrelatedValuePropagation
-  lib/Transforms/IPO/MergeFunctions.cpp => consider for 3.1.
- -->
- 
+
+
 <!-- *********************************************************************** -->
 <h2>
   <a name="subproj">Sub-project Status Update</a>
@@ -81,7 +74,7 @@ Release Notes</a>.</h1>
 
 <p>The LLVM 3.0 distribution currently consists of code from the core LLVM
    repository (which roughly includes the LLVM optimizers, code generators and
-   supporting tools), the Clang repository and the llvm-gcc repository.  In
+   supporting tools), and the Clang repository.  In
    addition to this code, the LLVM Project includes other sub-projects that are
    in development.  Here we include updates on these subprojects.</p>
 
@@ -99,37 +92,55 @@ Release Notes</a>.</h1>
    provides a modular, library-based architecture that makes it suitable for
    creating or integrating with other development tools. Clang is considered a
    production-quality compiler for C, Objective-C, C++ and Objective-C++ on x86
-   (32- and 64-bit), and for darwin/arm targets.</p>
+   (32- and 64-bit), and for Darwin/ARM targets.</p>
 
-<p>In the LLVM 3.0 time-frame, the Clang team has made many improvements:</p>
-
+<p>In the LLVM 3.0 time-frame, the Clang team has made many improvements:
 <ul>
   <li>Greatly improved support for building C++ applications, with greater
       stability and better diagnostics.</li>
-  
+
   <li><a href="http://clang.llvm.org/cxx_status.html">Improved support</a> for
       the <a href="http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=50372">C++
-      2011</a> standard, including implementations of non-static data member
-      initializers, alias templates, delegating constructors, the range-based
-      for loop, and implicitly-generated move constructors and move assignment
+      2011</a> standard (aka "C++'0x"), including implementations of non-static data member
+      initializers, alias templates, delegating constructors, range-based
+      for loops, and implicitly-generated move constructors and move assignment
       operators, among others.</li>
 
   <li>Implemented support for some features of the upcoming C1x standard,
       including static assertions and generic selections.</li>
-  
+
   <li>Better detection of include and linking paths for system headers and
       libraries, especially for Linux distributions.</li>
 
-  <li>Implemented support
-      for <a href="http://clang.llvm.org/docs/AutomaticReferenceCounting.html">Automatic
-      Reference Counting</a> for Objective-C.</li>
+  <li>Several improvements to Objective-C support, including:
+
+    <ul>
+      <li><a href="http://clang.llvm.org/docs/AutomaticReferenceCounting.html">
+          Automatic Reference Counting</a> (ARC) and an improved memory model
+          cleanly separating object and C memory.</li>
+
+      <li>A migration tool for moving manual retain/release code to ARC</li>
+
+      <li>Better support for data hiding, allowing instance variables to be
+          declared in implementation contexts or class extensions</li>
+      <li>Weak linking support for Objective-C classes</li>
+      <li>Improved static type checking by inferring the return type of methods
+      such as +alloc and -init.</li>
+    </ul>
+
+    Some new Objective-C features require either the Mac OS X 10.7 / iOS 5
+    Objective-C runtime, or version 1.6 or later of the GNUstep Objective-C
+    runtime version.</li>
 
   <li>Implemented a number of optimizations in <tt>libclang</tt>, the Clang C
       interface, to improve the performance of code completion and the mapping
       from source locations to abstract syntax tree nodes.</li>
 </ul>
+For more details about the changes to Clang since the 2.9 release, see the
+<a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang release notes</a>
+</p>
 
-  
+
 <p>If Clang rejects your code but another compiler accepts it, please take a
    look at the <a href="http://clang.llvm.org/compatibility.html">language
    compatibility</a> guide to make sure this is not intentional or a known
@@ -145,19 +156,31 @@ Release Notes</a>.</h1>
 <div>
 <p><a href="http://dragonegg.llvm.org/">DragonEgg</a> is a
    <a href="http://gcc.gnu.org/wiki/plugins">gcc plugin</a> that replaces GCC's
-   optimizers and code generators with LLVM's. Currently it requires a patched
-   version of gcc-4.5.  The plugin can target the x86-32 and x86-64 processor
-   families and has been used successfully on the Darwin, FreeBSD and Linux
-   platforms.  The Ada, C, C++ and Fortran languages work well.  The plugin is
-   capable of compiling plenty of Obj-C, Obj-C++ and Java but it is not known
-   whether the compiled code actually works or not!</p>
+   optimizers and code generators with LLVM's. It works with gcc-4.5 or gcc-4.6,
+   targets the x86-32 and x86-64 processor families, and has been successfully
+   used on the Darwin, FreeBSD, KFreeBSD, Linux and OpenBSD platforms.  It fully
+   supports Ada, C, C++ and Fortran.  It has partial support for Go, Java, Obj-C
+   and Obj-C++.</p>
 
 <p>The 3.0 release has the following notable changes:</p>
 
-<ul>
-<!--
-<li></li>
--->
+  <ul>
+  <li>GCC version 4.6 is now fully supported.</li>
+
+  <li>Patching and building GCC is no longer required: the plugin should work
+      with your system GCC (version 4.5 or 4.6; on Debian/Ubuntu systems the
+      gcc-4.5-plugin-dev or gcc-4.6-plugin-dev package is also needed).</li>
+
+  <li>The <tt>-fplugin-arg-dragonegg-enable-gcc-optzns</tt> option, which runs
+      GCC's optimizers as well as LLVM's, now works much better.  This is the
+      option to use if you want ultimate performance! It is still experimental
+      though: it may cause the plugin to crash.  Setting the optimization level
+      to <tt>-O4</tt> when using this option will optimize even harder, though
+      this usually doesn't result in any improvement over <tt>-O3<tt>.</li>
+
+  <li>The type and constant conversion logic has been almost entirely rewritten,
+      fixing a multitude of obscure bugs.</li>
+
 </ul>
 
 </div>
@@ -178,7 +201,9 @@ Release Notes</a>.</h1>
    implementations of this and other low-level routines (some are 3x faster than
    the equivalent libgcc routines).</p>
 
-<p>In the LLVM 3.0 timeframe,</p>
+<p>In the LLVM 3.0 timeframe, the target specific ARM code has converted to
+   "unified" assembly syntax, and several new functions have been added to the
+   library.</p>
 
 </div>
 
@@ -188,6 +213,11 @@ Release Notes</a>.</h1>
 </h3>
 
 <div>
+
+<p>LLDB is a ground-up implementation of a command line debugger, as well as a
+   debugger API that can be used from other applications.  LLDB makes use of the
+   Clang parser to provide high-fidelity expression parsing (particularly for
+   C++) and uses the LLVM JIT for target support.</p>
 
 <p>LLDB has advanced by leaps and bounds in the 3.0 timeframe.  It is
    dramatically more stable and useful, and includes both a
@@ -208,6 +238,44 @@ Release Notes</a>.</h1>
    licensed</a> under the MIT and UIUC license, allowing it to be used more
    permissively.</p>
 
+<p>Libc++ has been ported to FreeBSD and imported into the base system.  It is
+   planned to be the default STL implementation for FreeBSD 10.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="vmkit">VMKit</a>
+</h3>
+
+<div>
+
+  <p>The <a href="http://vmkit.llvm.org/">VMKit project</a> is an
+  implementation of a Java Virtual Machine (Java VM or JVM) that uses LLVM for
+  static and just-in-time compilation.
+
+  <p>In the LLVM 3.0 time-frame, VMKit has had significant improvements on both
+  runtime and startup performance:</p>
+
+  <ul>
+  <li>Precompilation: by compiling ahead of time a small subset of Java's core
+  library, the startup performance have been highly optimized to the point that
+  running a 'Hello World' program takes less than 30 milliseconds.</li>
+
+  <li>Customization: by customizing virtual methods for individual classes,
+  the VM can statically determine the target of a virtual call, and decide to
+  inline it.</li>
+
+  <li>Inlining: the VM does more inlining than it did before, by allowing more
+  bytecode instructions to be inlined, and thanks to customization. It also
+  inlines GC barriers, and object allocations.</li>
+
+  <li>New exception model: the generated code for a method that does not do
+  any try/catch is not penalized anymore by the eventuality of calling a
+  method that throws an exception. Instead, the method that throws the
+  exception jumps directly to the method that could catch it.</li>
+  </ul>
+
 </div>
 
 
@@ -227,23 +295,7 @@ Release Notes</a>.</h1>
 
 </div>
 
-<!--=========================================================================-->
-<h3>
-<a name="vmkit">VMKit</a>
-</h3>
 
-<div>
-
-<p>The <a href="http://vmkit.llvm.org/">VMKit project</a> is an implementation
-   of a Java Virtual Machine (Java VM or JVM) that uses LLVM for static and
-   just-in-time compilation. As of LLVM 3.0, VMKit now supports generational
-   garbage collectors. The garbage collectors are provided by the MMTk
-   framework, and VMKit can be configured to use one of the numerous implemented
-   collectors of MMTk.</p>
-
-</div>
-  
-  
 <!--=========================================================================-->
 <!--
 <h3>
@@ -278,7 +330,7 @@ be used to verify some algorithms.
 
 <!--=========================================================================-->
 <h3>AddressSanitizer</h3>
-  
+
 <div>
 
 <p><a href="http://code.google.com/p/address-sanitizer/">AddressSanitizer</a>
@@ -291,7 +343,7 @@ be used to verify some algorithms.
 
 <!--=========================================================================-->
 <h3>ClamAV</h3>
-  
+
 <div>
 
 <p><a href="http://www.clamav.net">Clam AntiVirus</a> is an open source (GPL)
@@ -300,11 +352,22 @@ be used to verify some algorithms.
 
 <p>Since version 0.96 it
    has <a href="http://vrt-sourcefire.blogspot.com/2010/09/introduction-to-clamavs-low-level.html">bytecode
-   signatures</a> that allow writing detections for complex malware.</p>
-
-<p>It uses LLVM's JIT to speed up the execution of bytecode on X86, X86-64,
+   signatures</a> that allow writing detections for complex malware.
+   It uses LLVM's JIT to speed up the execution of bytecode on X86, X86-64,
    PPC32/64, falling back to its own interpreter otherwise.  The git version was
    updated to work with LLVM 3.0.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>clang_complete for VIM</h3>
+
+<div>
+
+<p><a href="https://github.com/Rip-Rip/clang_complete">clang_complete</a> is a
+   VIM plugin, that provides accurate C/C++ autocompletion using the clang front
+   end. The development version of clang complete, can directly use libclang
+   which can maintain a cache to speed up auto completion.</p>
 
 </div>
 
@@ -328,8 +391,8 @@ be used to verify some algorithms.
 <div>
 
 <p><a href="http://cern.ch/cling">Cling</a> is an interactive compiler interface
-   (aka C++ interpreter). It uses LLVM's JIT and clang; it currently supports
-   C++ and C. It has a prompt interface, runs source files, calls into shared
+  (aka C++ interpreter). It supports C++ and C, and uses LLVM's JIT and the
+  Clang parser. It has a prompt interface, runs source files, calls into shared
    libraries, prints the value of expressions, even does runtime lookup of
    identifiers (dynamic scopes). And it just behaves like one would expect from
    an interpreter.</p>
@@ -337,21 +400,52 @@ be used to verify some algorithms.
 </div>
 
 <!--=========================================================================-->
-<!-- FIXME: Comment out
 <h3>Crack Programming Language</h3>
 
 <div>
-<p>
-<a href="http://code.google.com/p/crack-language/">Crack</a> aims to provide the
-ease of development of a scripting language with the performance of a compiled
-language. The language derives concepts from C++, Java and Python, incorporating
-object-oriented programming, operator overloading and strong typing.</p>
+
+<p><a href="http://code.google.com/p/crack-language/">Crack</a> aims to provide
+   the ease of development of a scripting language with the performance of a
+   compiled language. The language derives concepts from C++, Java and Python,
+   incorporating object-oriented programming, operator overloading and strong
+   typing.</p>
+
 </div>
--->  
-  
+
+<!--=========================================================================-->
+<h3>Eero</h3>
+
+<div>
+
+<p><a href="http://eerolanguage.org/">Eero</a> is a fully
+   header-and-binary-compatible dialect of Objective-C 2.0, implemented with a
+   patched version of the Clang/LLVM compiler. It features a streamlined syntax,
+   Python-like indentation, and new operators, for improved readability and
+   reduced code clutter. It also has new features such as limited forms of
+   operator overloading and namespaces, and strict (type-and-operator-safe)
+   enumerations. It is inspired by languages such as Smalltalk, Python, and
+   Ruby.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>FAUST Real-Time Audio Signal Processing Language</h3>
+
+<div>
+
+<p><a href="http://faust.grame.fr/">FAUST</a> is a compiled language for
+  real-time audio signal processing. The name FAUST stands for Functional
+  AUdio STream. Its programming model combines two approaches: functional
+  programming and block diagram composition. In addition with the C, C++, Java
+  output formats, the Faust compiler can now generate LLVM bitcode, and works
+  with LLVM 2.7-3.0.
+  </p>
+
+</div>
+
 <!--=========================================================================-->
 <h3>Glasgow Haskell Compiler (GHC)</h3>
-  
+
 <div>
 
 <p>GHC is an open source, state-of-the-art programming suite for Haskell, a
@@ -403,6 +497,38 @@ object-oriented programming, operator overloading and strong typing.</p>
 </div>
 
 <!--=========================================================================-->
+<h3>ispc: The Intel SPMD Program Compiler</h3>
+
+<div>
+
+<p><a href="http://ispc.github.com">ispc</a> is a compiler for "single program,
+   multiple data" (SPMD) programs. It compiles a C-based SPMD programming
+   language to run on the SIMD units of CPUs; it often delivers 5-6x speedups on
+   a single core of a CPU with an 8-wide SIMD unit compared to serial code,
+   while still providing a clean and easy-to-understand programming model.  For
+   an introduction to the language and its performance,
+   see <a href="http://ispc.github.com/example.html">the walkthrough</a> of a short
+   example program.  ispc is licensed under the BSD license.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>The Julia Programming Language</h3>
+
+<div>
+
+<p><a href="http://github.com/JuliaLang/julia">Julia</a> is a high-level,
+  high-performance dynamic language for technical
+  computing. It provides a sophisticated compiler, distributed parallel
+  execution, numerical accuracy, and an extensive mathematical function
+  library. The compiler uses type inference to generate fast code
+  without any type declarations, and uses LLVM's optimization passes and
+  JIT compiler. The language is designed around multiple dispatch,
+  giving programs a large degree of flexibility. It is ready for use on many
+  kinds of problems.</p>
+</div>
+
+<!--=========================================================================-->
 <h3>LanguageKit and Pragmatic Smalltalk</h3>
 
 <div>
@@ -413,7 +539,7 @@ object-oriented programming, operator overloading and strong typing.</p>
    its own interpreter. Pragmatic Smalltalk is a dialect of Smalltalk, built on
    top of LanguageKit, that interfaces directly with Objective-C, sharing the
    same object representation and message sending behaviour. These projects are
-   developed as part of the &Eacute;toi&eacute; desktop environment.</p>
+   developed as part of the &Eacute;toil&eacute; desktop environment.</p>
 
 </div>
 
@@ -439,8 +565,24 @@ object-oriented programming, operator overloading and strong typing.</p>
    binary compatible with Microsoft.NET. Has an optional, dynamically-loaded
    LLVM code generation backend in Mini, the JIT compiler.</p>
 
-<p>Note that we use a Git mirror of LLVM with some patches. See:
-   https://github.com/mono/llvm</p>
+<p>Note that we use a Git mirror of LLVM <a
+    href="https://github.com/mono/llvm">with some patches</a>.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>Polly</h3>
+
+<div>
+
+<p><a href="http://polly.grosser.es">Polly</a> is an advanced data-locality
+   optimizer and automatic parallelizer. It uses an advanced, mathematical
+   model to calculate detailed data dependency information which it uses to
+   optimize the loop structure of a program. Polly can speed up sequential code
+   by improving memory locality and consequently the cache use. Furthermore,
+   Polly is able to expose different kind of parallelism which it exploits by
+   introducing (basic) OpenMP and SIMD code. A mid-term goal of Polly is to
+   automatically create optimized GPU code.</p>
 
 </div>
 
@@ -459,7 +601,7 @@ object-oriented programming, operator overloading and strong typing.</p>
 
 <!--=========================================================================-->
 <h3>Pure</h3>
-  
+
 <div>
 <p><a href="http://pure-lang.googlecode.com/">Pure</a> is an
   algebraic/functional programming language based on term rewriting. Programs
@@ -472,7 +614,7 @@ object-oriented programming, operator overloading and strong typing.</p>
   languages (including the ability to load LLVM bitcode modules, and inline C,
   C++, Fortran and Faust code in Pure programs if the corresponding LLVM-enabled
   compilers are installed).</p>
-  
+
 <p>Pure version 0.48 has been tested and is known to work with LLVM 3.0
   (and continues to work with older LLVM releases &gt;= 2.5).</p>
 
@@ -533,7 +675,7 @@ object-oriented programming, operator overloading and strong typing.</p>
    co-design flow from C/C++ programs down to synthesizable VHDL and parallel
    program binaries. Processor customization points include the register files,
    function units, supported operations, and the interconnection network.</p>
-  
+
 <p>TCE uses Clang and LLVM for C/C++ language support, target independent
    optimizations and also for parts of code generation. It generates new
    LLVM-based code generators "on the fly" for the designed TTA processors and
@@ -541,7 +683,7 @@ object-oriented programming, operator overloading and strong typing.</p>
    per-target recompilation of larger parts of the compiler chain.</p>
 
 </div>
-  
+
 <!--=========================================================================-->
 <h3>Tart Programming Language</h3>
 
@@ -577,107 +719,6 @@ object-oriented programming, operator overloading and strong typing.</p>
 
 </div>
 
-<!--=========================================================================-->
-<h3>The ZooLib C++ Cross-Platform Application Framework</h3>
-
-<div>
-
-<p><a href="http://www.zoolib.org/">ZooLib</a> is Open Source under the MIT
-   License. It provides GUI, filesystem access, TCP networking, thread-safe
-   memory management, threading and locking for Mac OS X, Classic Mac OS,
-   Microsoft Windows, POSIX operating systems with X11, BeOS, Haiku, Apple's iOS
-   and Research in Motion's BlackBerry.</p>
-
-<p>My current work is to use CLang's static analyzer to improve ZooLib's code
-   quality.  I also plan to set up LLVM compiles of the demo programs and test
-   programs using CLang and LLVM on all the platforms that CLang, LLVM and
-   ZooLib all support.</p>
-
-</div>
-
-<!--=========================================================================-->
-<!--
-<h3>PinaVM</h3>
-  
-<div>
-<p><a href="http://gitorious.org/pinavm/pages/Home">PinaVM</a> is an open
-source, <a href="http://www.systemc.org/">SystemC</a> front-end. Unlike many
-other front-ends, PinaVM actually executes the elaboration of the
-program analyzed using LLVM's JIT infrastructure. It later enriches the
-bitcode with SystemC-specific information.</p>
-</div>
--->
-
-
-<!--=========================================================================-->
-<!--
-<h3 id="icedtea">IcedTea Java Virtual Machine Implementation</h3>
-
-<div>
-<p>
-<a href="http://icedtea.classpath.org/wiki/Main_Page">IcedTea</a> provides a
-harness to build OpenJDK using only free software build tools and to provide
-replacements for the not-yet free parts of OpenJDK.  One of the extensions that
-IcedTea provides is a new JIT compiler named <a
-href="http://icedtea.classpath.org/wiki/ZeroSharkFaq">Shark</a> which uses LLVM
-to provide native code generation without introducing processor-dependent
-code.
-</p>
-
-<p> OpenJDK 7 b112, IcedTea6 1.9 and IcedTea7 1.13 and later have been tested
-and are known to work with LLVM 3.0 (and continue to work with older LLVM
-releases &gt;= 2.6 as well).</p>
-</div>
--->
-
-<!--=========================================================================-->
-<!--
-<h3>Polly - Polyhedral optimizations for LLVM</h3>
-  
-<div>
-<p>Polly is a project that aims to provide advanced memory access optimizations
-to better take advantage of SIMD units, cache hierarchies, multiple cores or
-even vector accelerators for LLVM. Built around an abstract mathematical
-description based on Z-polyhedra, it provides the infrastructure to develop
-advanced optimizations in LLVM and to connect complex external optimizers. In
-its first year of existence Polly already provides an exact value-based
-dependency analysis as well as basic SIMD and OpenMP code generation support.
-Furthermore, Polly can use PoCC(Pluto) an advanced optimizer for data-locality
-and parallelism.</p>
-</div>
--->
-
-<!--=========================================================================-->
-<!--
-<h3>Rubinius</h3>
-
-<div>
-  <p><a href="http://github.com/evanphx/rubinius">Rubinius</a> is an environment
-  for running Ruby code which strives to write as much of the implementation in
-  Ruby as possible. Combined with a bytecode interpreting VM, it uses LLVM to
-  optimize and compile ruby code down to machine code. Techniques such as type
-  feedback, method inlining, and deoptimization are all used to remove dynamism
-  from ruby execution and increase performance.</p>
-</div>
--->
-
-<!--=========================================================================-->
-<!--
-<h3>
-<a name="FAUST">FAUST Real-Time Audio Signal Processing Language</a>
-</h3>
-
-<div>
-<p>
-<a href="http://faust.grame.fr">FAUST</a> is a compiled language for real-time
-audio signal processing. The name FAUST stands for Functional AUdio STream. Its
-programming model combines two approaches: functional programming and block
-diagram composition. In addition with the C, C++, JAVA output formats, the
-Faust compiler can now generate LLVM bitcode, and works with LLVM 2.7-3.0.</p>
-
-</div>
--->
-  
 </div>
 
 <!-- *********************************************************************** -->
@@ -699,17 +740,70 @@ Faust compiler can now generate LLVM bitcode, and works with LLVM 2.7-3.0.</p>
 
 <div>
 
-<p>LLVM 3.0 includes several major new capabilities:</p>
+  <!-- Features that need text if they're finished for 3.1:
+   ARM EHABI
+   combiner-aa?
+   strong phi elim
+   loop dependence analysis
+   CorrelatedValuePropagation
+   lib/Transforms/IPO/MergeFunctions.cpp => consider for 3.1.
+   Integrated assembler on by default for arm/thumb?
+
+   -->
+
+  <!-- Near dead:
+   Analysis/RegionInfo.h + Dom Frontiers
+   SparseBitVector: used in LiveVar.
+   llvm/lib/Archive - replace with lib object?
+   -->
+
+<p>LLVM 3.0 includes several major changes and big features:</p>
 
 <ul>
+<li>llvm-gcc is no longer supported, and not included in the release.  We
+    recommend switching to <a
+       href="http://clang.llvm.org/">Clang</a> or <a
+       href="http://dragonegg.llvm.org/">DragonEgg</a>.</li>
 
-<!--
-<li></li>
--->
-  
+<li>The linear scan register allocator has been replaced with a new "greedy"
+    register allocator, enabling live range splitting and many other
+    optimizations that lead to better code quality.  Please see its <a
+    href="http://blog.llvm.org/2011/09/greedy-register-allocation-in-llvm-30.html">blog post</a> or its talk at the <a
+      href="http://llvm.org/devmtg/2011-11/">Developer Meeting</a>
+    for more information.</li>
+<li>LLVM IR now includes full support for <a href="Atomics.html">atomics
+    memory operations</a> intended to support the C++'11 and C'1x memory models.
+    This includes <a href="LangRef.html#memoryops">atomic load and store,
+    compare and exchange, and read/modify/write instructions</a> as well as a
+    full set of <a href="LangRef.html#ordering">memory ordering constraints</a>.
+    Please see the <a href="Atomics.html">Atomics Guide</a> for more
+    information.
+</li>
+<li>The LLVM IR exception handling representation has been redesigned and
+    reimplemented, making it more elegant, fixing a huge number of bugs, and
+    enabling inlining and other optimizations.  Please see its <a href=
+    "http://blog.llvm.org/2011/11/llvm-30-exception-handling-redesign.html">blog
+    post</a> and the <a href="ExceptionHandling.html">Exception Handling
+    documentation</a> for more information.</li>
+<li>The LLVM IR Type system has been redesigned and reimplemented, making it
+    faster and solving some long-standing problems.
+    Please see its <a
+    href="http://blog.llvm.org/2011/11/llvm-30-type-system-rewrite.html">blog
+    post</a> for more information.</li>
+
+<li>The MIPS backend has made major leaps in this release, going from an
+    experimental target to being virtually production quality and supporting a
+    wide variety of MIPS subtargets.  See the <a href="#MIPS">MIPS section</a>
+    below for more information.</li>
+
+<li>The optimizer and code generator now supports gprof and gcov-style coverage
+    and profiling information, and includes a new llvm-cov tool (but also works
+    with gcov).  Clang exposes coverage and profiling through GCC-compatible
+    command line options.</li>
 </ul>
-  
+
 </div>
+
 
 <!--=========================================================================-->
 <h3>
@@ -720,6 +814,508 @@ Faust compiler can now generate LLVM bitcode, and works with LLVM 2.7-3.0.</p>
 
 <p>LLVM IR has several new features for better support of new targets and that
    expose new optimization opportunities:</p>
+
+  <ul>
+  <li><a href="Atomics.html">Atomic memory accesses and memory ordering</a> are
+      now directly expressible in the IR.</li>
+  <li>A new <a href="LangRef.html#int_fma">llvm.fma intrinsic</a> directly
+    represents floating point multiply accumulate operations without an
+    intermediate rounding stage.</li>
+  <li>A new llvm.expect intrinsic allows a frontend to express expected control
+     flow (and the __builtin_expect builtin from GNU C).</li>
+  <li>The <a href="LangRef.html#int_prefetch">llvm.prefetch intrinsic</a> now
+    takes a 4th argument that specifies whether the prefetch happens from the
+    icache or dcache.</li>
+  <li>The new <a href="LangRef.html#uwtable">uwtable function attribute</a>
+    allows a frontend to control emission of unwind tables.</li>
+  <li>The new <a href="LangRef.html#fnattrs">nonlazybind function
+    attribute</a> allow optimization of Global Offset Table (GOT) accesses.</li>
+  <li>The new <a href="LangRef.html#returns_twice">returns_twice attribute</a>
+    allows better modeling of functions like setjmp.</li>
+  <li>The <a href="LangRef.html#datalayout">target datalayout</a> string can now
+    encode the natural alignment of the target's stack for better optimization.
+    </li>
+  </ul>
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="optimizer">Optimizer Improvements</a>
+</h3>
+
+<div>
+
+<p>In addition to many minor performance tweaks and bug fixes, this
+   release includes a few major enhancements and additions to the
+   optimizers:</p>
+
+<ul>
+<li>The pass manager now has an extension API that allows front-ends and plugins
+    to insert their own optimizations in the well-known places in the standard
+    pass optimization pipeline.</li>
+
+<li>Information about <a href="BranchWeightMetadata.html">branch probability</a>
+    and basic block frequency is now available within LLVM, based on a
+    combination of static branch prediction heuristics and
+    <code>__builtin_expect</code> calls.  That information is currently used for
+    register spill placement and if-conversion, with additional optimizations
+    planned for future releases.  The same framework is intended for eventual
+    use with profile-guided optimization.</li>
+
+<li>The "-indvars" induction variable simplification pass only modifies
+    induction variables when profitable. Sign and zero extension
+    elimination, linear function test replacement, loop unrolling, and
+    other simplifications that require induction variable analysis have
+    been generalized so they no longer require loops to be rewritten into
+    canonical form prior to optimization. This new design
+    preserves more IR level information, avoids undoing earlier loop
+    optimizations (particularly hand-optimized loops), and no longer
+    requires the code generator to reconstruct loops into an optimal form -
+    an intractable problem.</li>
+
+<li>LLVM now includes a pass to optimize retain/release calls for the
+  <a href="http://clang.llvm.org/docs/AutomaticReferenceCounting.html">Automatic
+    Reference Counting</a> (ARC) Objective-C language feature (in
+    lib/Transforms/Scalar/ObjCARC.cpp).  It is a decent example of implementing
+    a source-language-specific optimization in LLVM.</li>
+
+</ul>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="mc">MC Level Improvements</a>
+</h3>
+
+<div>
+
+<p>The LLVM Machine Code (aka MC) subsystem was created to solve a number of
+   problems in the realm of assembly, disassembly, object file format handling,
+   and a number of other related areas that CPU instruction-set level tools work
+   in. For more information, please see
+  the <a href="http://blog.llvm.org/2010/04/intro-to-llvm-mc-project.html">Intro
+    to the LLVM MC Project Blog Post</a>.</p>
+
+<ul>
+  <li>The MC layer has undergone significant refactoring to eliminate layering
+    violations that caused it to pull in the LLVM compiler backend code.</li>
+  <li>The ELF object file writers are much more full featured.</li>
+  <li>The integrated assembler now supports #line directives.</li>
+  <li>An early implementation of a JIT built on top of the MC framework (known
+      as MC-JIT) has been implemented and will eventually replace the old JIT.
+    It emits object files direct to memory and uses a runtime dynamic linker to
+    resolve references and drive lazy compilation.  The MC-JIT enables much
+    greater code reuse between the JIT and the static compiler and provides
+    better integration with the platform ABI as a result.
+  </li>
+  <li>The assembly printer now makes uses of assemblers instruction aliases
+    (InstAliases) to print simplified mneumonics when possible.</li>
+  <li>TableGen can now autogenerate MC expansion logic for pseudo
+    instructions that expand to multiple MC instructions (through the
+    PseudoInstExpansion class).</li>
+  <li>A new llvm-dwarfdump tool provides a start of a drop-in
+    replacement for the corresponding tool that use LLVM libraries.  As part of
+    this, LLVM has the beginnings of a dwarf parsing library.</li>
+  <li>llvm-objdump has more output including, symbol by symbol disassembly,
+      inline relocations, section headers, symbol tables, and section contents.
+      Support for archive files has also been added.</li>
+  <li>llvm-nm has gained support for archives of binary files.</li>
+  <li>llvm-size has been added. This tool prints out section sizes.</li>
+</ul>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="codegen">Target Independent Code Generator Improvements</a>
+</h3>
+
+<div>
+
+<p>We have put a significant amount of work into the code generator
+   infrastructure, which allows us to implement more aggressive algorithms and
+   make it run faster:</p>
+
+<ul>
+<li>LLVM can now produce code that works with libgcc
+    to <a href="SegmentedStacks.html">dynamically allocate stack
+    segments</a>, as opposed to allocating a worst-case chunk of
+    virtual memory for each thread.</li>
+<li>LLVM generates substantially better code for indirect gotos due to a new
+    tail duplication pass, which can be a substantial performance win for
+    interpreter loops that use them.</li>
+<li>Exception handling and debug frame information is now emitted with CFI
+    directives. This lets the assembler produce more compact info as it knows
+    the final offsets, yielding <a href="http://blog.mozilla.com/respindola/2011/05/12/cfi-directives/">much smaller executables</a> for some C++ applications.
+    If the system assembler doesn't support it, MC exands the directives when
+    the integrated assembler is not used.
+</li>
+
+<li>The code generator now supports vector "select" operations on vector
+    comparisons, turning them into various optimized code sequences (e.g.
+    using the SSE4/AVX "blend" instructions).</li>
+<li>The SSE execution domain fix pass and the ARM NEON move fix pass have been
+    merged to a target independent execution dependency fix pass. This pass is
+    used to select alternative equivalent opcodes in a way that minimizes
+    execution domain crossings. Closely connected instructions are moved to
+    the same execution domain when possible. Targets can override the
+    <code>getExecutionDomain</code> and <code>setExecutionDomain</code> hooks
+    to use the pass.</li>
+</ul>
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="x86">X86-32 and X86-64 Target Improvements</a>
+</h3>
+
+<div>
+
+<p>New features and major changes in the X86 target include:</p>
+
+<ul>
+<li>The X86 backend, assembler and disassembler now have full support for AVX 1.
+    To enable it pass <code>-mavx</code> to the compiler. AVX2 implementation is
+    underway on mainline.</li>
+<li>The integrated assembler and disassembler now support a broad range of new
+    instructions including Atom, Ivy Bridge, <a
+    href="http://en.wikipedia.org/wiki/SSE4a">SSE4a/BMI</a> instructions, <a
+   href="http://en.wikipedia.org/wiki/RdRand">rdrand</a> and many others.</li>
+<li>The X86 backend now fully supports the <a href="http://llvm.org/PR879">X87
+  floating point stack inline assembly constraints</a>.</li>
+<li>The integrated assembler now supports the <tt>.code32</tt> and
+    <tt>.code64</tt> directives to switch between 32-bit and 64-bit
+    instructions.</li>
+<li>The X86 backend now synthesizes horizontal add/sub instructions from generic
+    vector code when the appropriate instructions are enabled.</li>
+<li>The X86-64 backend generates smaller and faster code at -O0 due to
+    improvements in fast instruction selection.</li>
+<li><a href="http://code.google.com/p/nativeclient/">Native Client</a>
+    subtarget support has been added.</li>
+
+<li>The CRC32 intrinsics have been renamed.  The intrinsics were previously
+    <code>@llvm.x86.sse42.crc32.[8|16|32]</code>
+    and <code>@llvm.x86.sse42.crc64.[8|64]</code>. They have been renamed to
+    <code>@llvm.x86.sse42.crc32.32.[8|16|32]</code> and
+    <code>@llvm.x86.sse42.crc32.64.[8|64]</code>.</li>
+</ul>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="ARM">ARM Target Improvements</a>
+</h3>
+
+<div>
+
+<p>New features of the ARM target include:</p>
+
+<ul>
+<li>The ARM backend generates much faster code for Cortex-A9 chips.</li>
+<li>The ARM backend has improved support for Cortex-M series processors.</li>
+<li>The ARM inline assembly constraints have been implemented and are now fully
+    supported.</li>
+<li>NEON code produced by Clang often runs much faster due to improvements in
+    the Scalar Replacement of Aggregates pass.</li>
+<li>The old ARM disassembler is replaced with a new one based on autogenerated
+    encoding information from ARM .td files.</li>
+<li>The integrated assembler has made major leaps forward, but is still beta quality in LLVM 3.0.</li>
+</ul>
+</div>
+
+
+<!--=========================================================================-->
+<h3>
+<a name="MIPS">MIPS Target Improvements</a>
+</h3>
+
+<div>
+
+<p>This release has seen major new work on just about every aspect of the MIPS
+  backend.  Some of the major new features include:</p>
+
+<ul>
+  <li>Most MIPS32r1 and r2 instructions are now supported.</li>
+  <li>LE/BE MIPS32r1/r2 has been tested extensively.</li>
+  <li>O32 ABI has been fully tested.</li>
+  <li>MIPS backend has migrated to using the MC infrastructure for assembly printing. Initial support for direct object code emission has been implemented too.</li>
+  <li>Delay slot filler has been updated. Now it tries to fill delay slots with useful instructions instead of always filling them with NOPs.</li>
+  <li>Support for old-style JIT is complete.</li>
+  <li>Support for old architectures (MIPS1 and MIPS2) has been removed.</li>
+  <li>Initial support for MIPS64 has been added.</li>
+</ul>
+</div>
+
+<!--=========================================================================-->
+<h3>
+  <a name="PTX">PTX Target Improvements</a>
+</h3>
+
+<div>
+
+  <p>
+  The PTX back-end is still experimental, but is fairly usable for compute kernels
+  in LLVM 3.0.  Most scalar arithmetic is implemented, as well as intrinsics to
+  access the special PTX registers and sync instructions.  The major missing
+  pieces are texture/sampler support and some vector operations.</p>
+
+  <p>That said, the backend is already being used for domain-specific languages
+  and can be used by Clang to
+  <a href="http://clang.llvm.org/docs/ReleaseNotes.html#opencl">compile OpenCL
+  C code</a> into PTX.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="OtherTS">Other Target Specific Improvements</a>
+</h3>
+
+<div>
+
+<ul>
+<li>Many PowerPC improvements have been implemented for ELF targets, including
+   support for varargs and initial support for direct .o file emission.</li>
+
+<li>MicroBlaze scheduling itineraries were added that model the
+   3-stage and the 5-stage pipeline architectures. The 3-stage
+   pipeline model can be selected with <code>-mcpu=mblaze3</code>
+   and the 5-stage pipeline model can be selected with
+   <code>-mcpu=mblaze5</code>.</li>
+
+</ul>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="changes">Major Changes and Removed Features</a>
+</h3>
+
+<div>
+
+<p>If you're already an LLVM user or developer with out-of-tree changes based on
+   LLVM 2.9, this section lists some "gotchas" that you may run into upgrading
+   from the previous release.</p>
+
+<ul>
+<li>LLVM 3.0 removes support for reading LLVM 2.8 and earlier files, and LLVM
+    3.1 will eliminate support for reading LLVM 2.9 files.  Going forward, we
+    aim for all future versions of LLVM to read bitcode files and .ll files
+    produced by LLVM 3.0.</li>
+<li>Tablegen has been split into a library, allowing the clang tblgen pieces
+    to now live in the clang tree.  The llvm version has been renamed to
+    llvm-tblgen instead of tblgen.</li>
+  <li>The <code>LLVMC</code> meta compiler driver was removed.</li>
+  <li>The unused PostOrder Dominator Frontiers and LowerSetJmp passes were removed.</li>
+
+
+  <li>The old <code>TailDup</code> pass was not used in the standard pipeline
+      and was unable to update ssa form, so it has been removed.
+  <li>The syntax of volatile loads and stores in IR has been changed to
+      "<code>load volatile</code>"/"<code>store volatile</code>".  The old
+      syntax ("<code>volatile load</code>"/"<code>volatile store</code>")
+      is still accepted, but is now considered deprecated and will be removed in
+      3.1.</li>
+  <li>llvm-gcc's frontend tests have been removed from llvm/test/Frontend*, sunk
+    into the clang and dragonegg testsuites.</li>
+  <li>The old atomic intrinsics (<code>llvm.memory.barrier</code> and
+      <code>llvm.atomic.*</code>) are now gone.  Please use the new atomic
+      instructions, described in the <a href="Atomics.html">atomics guide</a>.
+  <li>LLVM's configure script doesn't depend on llvm-gcc anymore, eliminating a
+      strange circular dependence between projects.</li>
+</ul>
+
+<h4>Windows (32-bit)</h4>
+<div>
+
+<ul>
+  <li>On Win32(MinGW32 and MSVC), Windows 2000 will not be supported.
+      Windows XP or higher is required.</li>
+</ul>
+
+</div>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="api_changes">Internal API Changes</a>
+</h3>
+
+<div>
+
+<p>In addition, many APIs have changed in this release.  Some of the major
+   LLVM API changes are:</p>
+
+<ul>
+  <li>The biggest and most pervasive change is that the type system has been
+      rewritten: <code>PATypeHolder</code> and <code>OpaqueType</code> are gone,
+      and all APIs deal with <code>Type*</code> instead of <code>const
+      Type*</code>.  If you need to create recursive structures, then create a
+      named structure, and use <code>setBody()</code> when all its elements are
+      built.  Type merging and refining is gone too: named structures are not
+      merged with other structures, even if their layout is identical.  (of
+      course anonymous structures are still uniqued by layout).</li>
+
+  <li><code>PHINode::reserveOperandSpace</code> has been removed. Instead, you
+      must specify how many operands to reserve space for when you create the
+      PHINode, by passing an extra argument
+      into <code>PHINode::Create</code>.</li>
+
+  <li>PHINodes no longer store their incoming BasicBlocks as operands. Instead,
+      the list of incoming BasicBlocks is stored separately, and can be accessed
+      with new functions <code>PHINode::block_begin</code>
+      and <code>PHINode::block_end</code>.</li>
+
+  <li>Various functions now take an <code>ArrayRef</code> instead of either a
+      pair of pointers (or iterators) to the beginning and end of a range, or a
+      pointer and a length. Others now return an <code>ArrayRef</code> instead
+      of a reference to a <code>SmallVector</code>
+      or <code>std::vector</code>. These include:
+<ul>
+<!-- Please keep this list sorted. -->
+<li><code>CallInst::Create</code></li>
+<li><code>ComputeLinearIndex</code> (in <code>llvm/CodeGen/Analysis.h</code>)</li>
+<li><code>ConstantArray::get</code></li>
+<li><code>ConstantExpr::getExtractElement</code></li>
+<li><code>ConstantExpr::getGetElementPtr</code></li>
+<li><code>ConstantExpr::getInBoundsGetElementPtr</code></li>
+<li><code>ConstantExpr::getIndices</code></li>
+<li><code>ConstantExpr::getInsertElement</code></li>
+<li><code>ConstantExpr::getWithOperands</code></li>
+<li><code>ConstantFoldCall</code> (in <code>llvm/Analysis/ConstantFolding.h</code>)</li>
+<li><code>ConstantFoldInstOperands</code> (in <code>llvm/Analysis/ConstantFolding.h</code>)</li>
+<li><code>ConstantVector::get</code></li>
+<li><code>DIBuilder::createComplexVariable</code></li>
+<li><code>DIBuilder::getOrCreateArray</code></li>
+<li><code>ExtractValueInst::Create</code></li>
+<li><code>ExtractValueInst::getIndexedType</code></li>
+<li><code>ExtractValueInst::getIndices</code></li>
+<li><code>FindInsertedValue</code> (in <code>llvm/Analysis/ValueTracking.h</code>)</li>
+<li><code>gep_type_begin</code> (in <code>llvm/Support/GetElementPtrTypeIterator.h</code>)</li>
+<li><code>gep_type_end</code> (in <code>llvm/Support/GetElementPtrTypeIterator.h</code>)</li>
+<li><code>GetElementPtrInst::Create</code></li>
+<li><code>GetElementPtrInst::CreateInBounds</code></li>
+<li><code>GetElementPtrInst::getIndexedType</code></li>
+<li><code>InsertValueInst::Create</code></li>
+<li><code>InsertValueInst::getIndices</code></li>
+<li><code>InvokeInst::Create</code></li>
+<li><code>IRBuilder::CreateCall</code></li>
+<li><code>IRBuilder::CreateExtractValue</code></li>
+<li><code>IRBuilder::CreateGEP</code></li>
+<li><code>IRBuilder::CreateInBoundsGEP</code></li>
+<li><code>IRBuilder::CreateInsertValue</code></li>
+<li><code>IRBuilder::CreateInvoke</code></li>
+<li><code>MDNode::get</code></li>
+<li><code>MDNode::getIfExists</code></li>
+<li><code>MDNode::getTemporary</code></li>
+<li><code>MDNode::getWhenValsUnresolved</code></li>
+<li><code>SimplifyGEPInst</code> (in <code>llvm/Analysis/InstructionSimplify.h</code>)</li>
+<li><code>TargetData::getIndexedOffset</code></li>
+</ul></li>
+
+  <li>All forms of <code>StringMap::getOrCreateValue</code> have been remove
+      except for the one which takes a <code>StringRef</code>.</li>
+
+  <li>The <code>LLVMBuildUnwind</code> function from the C API was removed. The
+      LLVM <code>unwind</code> instruction has been deprecated for a long time
+      and isn't used by the current front-ends. So this was removed during the
+      exception handling rewrite.</li>
+
+  <li>The <code>LLVMAddLowerSetJmpPass</code> function from the C API was
+      removed because the <code>LowerSetJmp</code> pass was removed.</li>
+
+  <li>The <code>DIBuilder</code> interface used by front ends to encode
+      debugging information in the LLVM IR now expects clients to
+      use <code>DIBuilder::finalize()</code> at the end of translation unit to
+      complete debugging information encoding.</li>
+
+  <li>TargetSelect.h moved to Support/ from Target/</li>
+
+  <li>UpgradeIntrinsicCall no longer upgrades pre-2.9 intrinsic calls (for
+      example <code>llvm.memset.i32</code>).</li>
+
+  <li>It is mandatory to initialize all out-of-tree passes too and their dependencies now with
+      <code>INITIALIZE_PASS{BEGIN,END,}</code>
+      and <code>INITIALIZE_{PASS,AG}_DEPENDENCY</code>.</li>
+
+  <li>The interface for MemDepResult in MemoryDependenceAnalysis has been
+      enhanced with new return types Unknown and NonFuncLocal, in addition to
+      the existing types Clobber, Def, and NonLocal.</li>
+</ul>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="knownproblems">Known Problems</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>LLVM is generally a production quality compiler, and is used by a broad range
+   of applications and shipping in many products.  That said, not every
+   subsystem is as mature as the aggregate, particularly the more obscure
+   targets.  If you run into a problem, please check the <a
+   href="http://llvm.org/bugs/">LLVM bug database</a> and submit a bug if
+   there isn't already one or ask on the <a
+    href="http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev">LLVMdev
+    list</a>.</p>
+
+  <p>Known problem areas include:</p>
+
+<ul>
+  <li>The Alpha, Blackfin, CellSPU, MSP430, PTX, SystemZ and
+      XCore backends are experimental, and the Alpha, Blackfin and SystemZ
+      targets have already been removed from mainline.</li>
+
+  <li>The integrated assembler, disassembler, and JIT is not supported by
+      several targets.  If an integrated assembler is not supported, then a
+      system assembler is required.  For more details, see the <a
+      href="CodeGenerator.html#targetfeatures">Target Features Matrix</a>.
+  </li>
+
+  <li>The C backend has numerous problems and is not being actively maintained.
+    Depending on it for anything serious is not advised.</li>
+</ul>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="additionalinfo">Additional Information</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>A wide variety of additional information is available on
+   the <a href="http://llvm.org/">LLVM web page</a>, in particular in
+   the <a href="http://llvm.org/docs/">documentation</a> section.  The web page
+   also contains versions of the API documentation which is up-to-date with the
+   Subversion version of the source code.  You can access versions of these
+   documents specific to this release by going into the "<tt>llvm/doc/</tt>"
+   directory in the LLVM tree.</p>
+
+<p>If you have any questions or comments about LLVM, please feel free to contact
+   us via the <a href="http://llvm.org/docs/#maillist"> mailing lists</a>.</p>
+
+</div>
+
+<!--=========================================================================-->
+
+<!-- EH details: to be moved to a blog post:
+
+
+
 
 <p>One of the biggest changes is that 3.0 has a new exception handling
    system. The old system used LLVM intrinsics to convey the exception handling
@@ -747,7 +1343,7 @@ Faust compiler can now generate LLVM bitcode, and works with LLVM 2.7-3.0.</p>
 <p>Converting from the old EH API to the new EH API is rather simple, because a
    lot of complexity has been removed. The two intrinsics,
    <code>@llvm.eh.exception</code> and <code>@llvm.eh.selector</code> have been
-   superceded by the <code>landingpad</code> instruction. Instead of generating
+   superseded by the <code>landingpad</code> instruction. Instead of generating
    a call to <code>@llvm.eh.exception</code> and <code>@llvm.eh.selector</code>:
 
 <div class="doc_code">
@@ -832,505 +1428,11 @@ Builder.CreateResume(UnwindData);
 </pre>
 </div>
 
-</div>
 
-<!--=========================================================================-->
-<h3>
-<a name="optimizer">Optimizer Improvements</a>
-</h3>
 
-<div>
 
-<p>In addition to a large array of minor performance tweaks and bug fixes, this
-   release includes a few major enhancements and additions to the
-   optimizers:</p>
+ -->
 
-<ul>
-<!--
-<li></li>
--->
-</li>
-  
-</ul>
-
-</div>
-
-<!--=========================================================================-->
-<h3>
-<a name="mc">MC Level Improvements</a>
-</h3>
-
-<div>
-
-<p>The LLVM Machine Code (aka MC) subsystem was created to solve a number of
-   problems in the realm of assembly, disassembly, object file format handling,
-   and a number of other related areas that CPU instruction-set level tools work
-   in.</p>
-
-<ul>
-<!--
-<li></li>
--->
-</ul>
-
-<p>For more information, please see
-   the <a href="http://blog.llvm.org/2010/04/intro-to-llvm-mc-project.html">Intro
-   to the LLVM MC Project Blog Post</a>.</p>
-
-</div>
-
-<!--=========================================================================-->
-<h3>
-<a name="codegen">Target Independent Code Generator Improvements</a>
-</h3>
-
-<div>
-
-<p>We have put a significant amount of work into the code generator
-   infrastructure, which allows us to implement more aggressive algorithms and
-   make it run faster:</p>
-
-<ul>
-<!--
-<li></li>
--->
-</ul>
-</div>
-
-<!--=========================================================================-->
-<h3>
-<a name="x86">X86-32 and X86-64 Target Improvements</a>
-</h3>
-
-<div>
-
-<p>New features and major changes in the X86 target include:</p>
-
-<ul>
-
-  <li>The CRC32 intrinsics have been renamed.  The intrinsics were previously
-      <code>@llvm.x86.sse42.crc32.[8|16|32]</code>
-      and <code>@llvm.x86.sse42.crc64.[8|64]</code>. They have been renamed to
-      <code>@llvm.x86.sse42.crc32.32.[8|16|32]</code> and
-      <code>@llvm.x86.sse42.crc32.64.[8|64]</code>.</li>
-
-</ul>
-
-</div>
-
-<!--=========================================================================-->
-<h3>
-<a name="ARM">ARM Target Improvements</a>
-</h3>
-
-<div>
-
-<p>New features of the ARM target include:</p>
-
-<ul>
-<!--
-<li></li>
--->
-</ul>
-</div>
-  
-<!--=========================================================================-->
-<h3>
-<a name="OtherTS">Other Target Specific Improvements</a>
-</h3>
-
-<p>PPC32/ELF va_arg was implemented.</p>
-<p>PPC32 initial support for .o file writing was implemented.</p>
-
-<div>
-
-<ul>
-<!--
-<li></li>
--->
-</ul>
-
-</div>
-
-<!--=========================================================================-->
-<h3>
-<a name="changes">Major Changes and Removed Features</a>
-</h3>
-
-<div>
-
-<p>If you're already an LLVM user or developer with out-of-tree changes based on
-   LLVM 2.9, this section lists some "gotchas" that you may run into upgrading
-   from the previous release.</p>
-
-<ul>
-  <li>The <code>LLVMC</code> front end code was removed while separating
-      out language independence.</li>
-  <li>The <code>LowerSetJmp</code> pass wasn't used effectively by any
-      target and has been removed.</li>
-  <li>The old <code>TailDup</code> pass was not used in the standard pipeline
-      and was unable to update ssa form, so it has been removed.
-  <li>The syntax of volatile loads and stores in IR has been changed to
-      "<code>load volatile</code>"/"<code>store volatile</code>".  The old
-      syntax ("<code>volatile load</code>"/"<code>volatile store</code>")
-      is still accepted, but is now considered deprecated.</li>
-  <li>The old atomic intrinscs (<code>llvm.memory.barrier</code> and
-      <code>llvm.atomic.*</code>) are now gone.  Please use the new atomic
-      instructions, described in the <a href="Atomics.html">atomics guide</a>.
-</ul>
-
-<h4>Windows (32-bit)</h4>
-<div>
-
-<ul>
-  <li>On Win32(MinGW32 and MSVC), Windows 2000 will not be supported.
-      Windows XP or higher is required.</li>
-</ul>
-
-</div>
-
-</div>
-
-<!--=========================================================================-->
-<h3>
-<a name="api_changes">Internal API Changes</a>
-</h3>
-
-<div>
-
-<p>In addition, many APIs have changed in this release.  Some of the major
-   LLVM API changes are:</p>
-
-<ul>
-  <li>The biggest and most pervasive change is that llvm::Type's are no longer
-      returned or accepted as 'const' values.  Instead, just pass around
-      non-const Type's.</li>
-  
-  <li><code>PHINode::reserveOperandSpace</code> has been removed. Instead, you
-      must specify how many operands to reserve space for when you create the
-      PHINode, by passing an extra argument
-      into <code>PHINode::Create</code>.</li>
-
-  <li>PHINodes no longer store their incoming BasicBlocks as operands. Instead,
-      the list of incoming BasicBlocks is stored separately, and can be accessed
-      with new functions <code>PHINode::block_begin</code>
-      and <code>PHINode::block_end</code>.</li>
-
-  <li>Various functions now take an <code>ArrayRef</code> instead of either a
-      pair of pointers (or iterators) to the beginning and end of a range, or a
-      pointer and a length. Others now return an <code>ArrayRef</code> instead
-      of a reference to a <code>SmallVector</code>
-      or <code>std::vector</code>. These include:
-<ul>
-<!-- Please keep this list sorted. -->
-<li><code>CallInst::Create</code></li>
-<li><code>ComputeLinearIndex</code> (in <code>llvm/CodeGen/Analysis.h</code>)</li>
-<li><code>ConstantArray::get</code></li>
-<li><code>ConstantExpr::getExtractElement</code></li>
-<li><code>ConstantExpr::getGetElementPtr</code></li>
-<li><code>ConstantExpr::getInBoundsGetElementPtr</code></li>
-<li><code>ConstantExpr::getIndices</code></li>
-<li><code>ConstantExpr::getInsertElement</code></li>
-<li><code>ConstantExpr::getWithOperands</code></li>
-<li><code>ConstantFoldCall</code> (in <code>llvm/Analysis/ConstantFolding.h</code>)</li>
-<li><code>ConstantFoldInstOperands</code> (in <code>llvm/Analysis/ConstantFolding.h</code>)</li>
-<li><code>ConstantVector::get</code></li>
-<li><code>DIBuilder::createComplexVariable</code></li>
-<li><code>DIBuilder::getOrCreateArray</code></li>
-<li><code>ExtractValueInst::Create</code></li>
-<li><code>ExtractValueInst::getIndexedType</code></li>
-<li><code>ExtractValueInst::getIndices</code></li>
-<li><code>FindInsertedValue</code> (in <code>llvm/Analysis/ValueTracking.h</code>)</li>
-<li><code>gep_type_begin</code> (in <code>llvm/Support/GetElementPtrTypeIterator.h</code>)</li>
-<li><code>gep_type_end</code> (in <code>llvm/Support/GetElementPtrTypeIterator.h</code>)</li>
-<li><code>GetElementPtrInst::Create</code></li>
-<li><code>GetElementPtrInst::CreateInBounds</code></li>
-<li><code>GetElementPtrInst::getIndexedType</code></li>
-<li><code>InsertValueInst::Create</code></li>
-<li><code>InsertValueInst::getIndices</code></li>
-<li><code>InvokeInst::Create</code></li>
-<li><code>IRBuilder::CreateCall</code></li>
-<li><code>IRBuilder::CreateExtractValue</code></li>
-<li><code>IRBuilder::CreateGEP</code></li>
-<li><code>IRBuilder::CreateInBoundsGEP</code></li>
-<li><code>IRBuilder::CreateInsertValue</code></li>
-<li><code>IRBuilder::CreateInvoke</code></li>
-<li><code>MDNode::get</code></li>
-<li><code>MDNode::getIfExists</code></li>
-<li><code>MDNode::getTemporary</code></li>
-<li><code>MDNode::getWhenValsUnresolved</code></li>
-<li><code>SimplifyGEPInst</code> (in <code>llvm/Analysis/InstructionSimplify.h</code>)</li>
-<li><code>TargetData::getIndexedOffset</code></li>
-</ul></li>
-
-  <li>All forms of <code>StringMap::getOrCreateValue</code> have been remove
-      except for the one which takes a <code>StringRef</code>.</li>
-
-  <li>The <code>LLVMBuildUnwind</code> function from the C API was removed. The
-      LLVM <code>unwind</code> instruction has been deprecated for a long time
-      and isn't used by the current front-ends. So this was removed during the
-      exception handling rewrite.</li>
-
-  <li>The <code>LLVMAddLowerSetJmpPass</code> function from the C API was
-      removed because the <code>LowerSetJmp</code> pass was removed.</li>
-
-  <li>The <code>DIBuilder</code> interface used by front ends to encode
-      debugging information in the LLVM IR now expects clients to
-      use <code>DIBuilder::finalize()</code> at the end of translation unit to
-      complete debugging information encoding.</li>
-
-  <li>The way the type system works has been
-      rewritten: <code>PATypeHolder</code> and <code>OpaqueType</code> are gone,
-      and all APIs deal with <code>Type*</code> instead of <code>const
-      Type*</code>.  If you need to create recursive structures, then create a
-      named structure, and use <code>setBody()</code> when all its elements are
-      built.  Type merging and refining is gone too: named structures are not
-      merged with other structures, even if their layout is identical.  (of
-      course anonymous structures are still uniqued by layout).</li>
-
-  <li>TargetSelect.h moved to Support/ from Target/</li>
-
-  <li>UpgradeIntrinsicCall no longer upgrades pre-2.9 intrinsic calls (for
-      example <code>llvm.memset.i32</code>).</li>
-
-  <li>It is mandatory to initialize all out-of-tree passes too and their dependencies now with
-      <code>INITIALIZE_PASS{BEGIN,END,}</code>
-      and <code>INITIALIZE_{PASS,AG}_DEPENDENCY</code>.</li>
-
-  <li>The interface for MemDepResult in MemoryDependenceAnalysis has been
-      enhanced with new return types Unknown and NonFuncLocal, in addition to
-      the existing types Clobber, Def, and NonLocal.</li>
-</ul>
-
-</div>
-
-</div>
-
-<!-- *********************************************************************** -->
-<h2>
-  <a name="knownproblems">Known Problems</a>
-</h2>
-<!-- *********************************************************************** -->
-
-<div>
-
-<p>This section contains significant known problems with the LLVM system, listed
-   by component.  If you run into a problem, please check
-   the <a href="http://llvm.org/bugs/">LLVM bug database</a> and submit a bug if
-   there isn't already one.</p>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="experimental">Experimental features included with this release</a>
-</h3>
-
-<div>
-
-<p>The following components of this LLVM release are either untested, known to
-   be broken or unreliable, or are in early development.  These components
-   should not be relied on, and bugs should not be filed against them, but they
-   may be useful to some people.  In particular, if you would like to work on
-   one of these components, please contact us on
-   the <a href="http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev">LLVMdev
-   list</a>.</p>
-
-<ul>
-  <li>The Alpha, Blackfin, CellSPU, MicroBlaze, MSP430, MIPS, PTX, SystemZ and
-      XCore backends are experimental.</li>
-
-  <li><tt>llc</tt> "<tt>-filetype=obj</tt>" is experimental on all targets other
-      than darwin and ELF X86 systems.</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="x86-be">Known problems with the X86 back-end</a>
-</h3>
-
-<div>
-
-<ul>
-  <li>The X86 backend does not yet support
-      all <a href="http://llvm.org/PR879">inline assembly that uses the X86
-      floating point stack</a>.  It supports the 'f' and 't' constraints, but
-      not 'u'.</li>
-
-  <li>The X86-64 backend does not yet support the LLVM IR instruction
-      <tt>va_arg</tt>. Currently, front-ends support variadic argument
-      constructs on X86-64 by lowering them manually.</li>
-
-  <li>Windows x64 (aka Win64) code generator has a few issues.
-    <ul>
-      <li>llvm-gcc cannot build the mingw-w64 runtime currently due to lack of
-          support for the 'u' inline assembly constraint and for X87 floating
-          point inline assembly.</li>
-
-      <li>On mingw-w64, you will see unresolved symbol <tt>__chkstk</tt> due
-          to <a href="http://llvm.org/bugs/show_bug.cgi?id=8919">Bug 8919</a>.
-          It is fixed
-          in <a href="http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20110321/118499.html">r128206</a>.</li>
-
-      <li>Miss-aligned MOVDQA might crash your program. It is due to
-          <a href="http://llvm.org/bugs/show_bug.cgi?id=9483">Bug 9483</a>, lack
-          of handling aligned internal globals.</li>
-      </ul>
-  </li>
-
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="ppc-be">Known problems with the PowerPC back-end</a>
-</h3>
-
-<div>
-
-<ul>
-  <li>The PPC32/ELF support lacks PIC support.</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="arm-be">Known problems with the ARM back-end</a>
-</h3>
-
-<div>
-
-<ul>
-  <li>Thumb mode works only on ARMv6 or higher processors. On sub-ARMv6
-      processors, thumb programs can crash or produce wrong results
-      (<a href="http://llvm.org/PR1388">PR1388</a>).</li>
-
-  <li>Compilation for ARM Linux OABI (old ABI) is supported but not fully
-      tested.</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="sparc-be">Known problems with the SPARC back-end</a>
-</h3>
-
-<div>
-
-<ul>
-  <li>The SPARC backend only supports the 32-bit SPARC ABI (-m32); it does not
-      support the 64-bit SPARC ABI (-m64).</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="mips-be">Known problems with the MIPS back-end</a>
-</h3>
-
-<div>
-
-<ul>
-  <li>64-bit MIPS targets are not supported yet.</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="alpha-be">Known problems with the Alpha back-end</a>
-</h3>
-
-<div>
-
-<ul>
-  <li>On 21164s, some rare FP arithmetic sequences which may trap do not have
-      the appropriate nops inserted to ensure restartability.</li>
-</ul>
-
-</div>
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="c-be">Known problems with the C back-end</a>
-</h3>
-
-<div>
-
-<p>The C backend has numerous problems and is not being actively maintained.
-   Depending on it for anything serious is not advised.</p>
-
-<ul>
-  <li><a href="http://llvm.org/PR802">The C backend has only basic support for
-      inline assembly code</a>.</li>
-
-  <li><a href="http://llvm.org/PR1658">The C backend violates the ABI of common
-      C++ programs</a>, preventing intermixing between C++ compiled by the CBE
-      and C++ code compiled with <tt>llc</tt> or native compilers.</li>
-
-  <li>The C backend does not support all exception handling constructs.</li>
-
-  <li>The C backend does not support arbitrary precision integers.</li>
-</ul>
-
-</div>
-
-
-<!-- ======================================================================= -->
-<h3>
-  <a name="llvm-gcc">Known problems with the llvm-gcc front-end</a>
-</h3>
-
-<div>
-
-<p><b>LLVM 2.9 was the last release of llvm-gcc.</b></p>
-
-<p>llvm-gcc is generally very stable for the C family of languages.  The only
-   major language feature of GCC not supported by llvm-gcc is the
-   <tt>__builtin_apply</tt> family of builtins.   However, some extensions
-   are only supported on some targets.  For example, trampolines are only
-   supported on some targets (these are used when you take the address of a
-   nested function).</p>
-
-<p>Fortran support generally works, but there are still several unresolved bugs
-   in <a href="http://llvm.org/bugs/">Bugzilla</a>.  Please see the
-   tools/gfortran component for details.  Note that llvm-gcc is missing major
-   Fortran performance work in the frontend and library that went into GCC after
-   4.2.  If you are interested in Fortran, we recommend that you consider using
-   <a href="#dragonegg">dragonegg</a> instead.</p>
-
-<p>The llvm-gcc 4.2 Ada compiler has basic functionality, but is no longer being
-   actively maintained.  If you are interested in Ada, we recommend that you
-   consider using <a href="#dragonegg">dragonegg</a> instead.</p>
-
-</div>
-
-</div>
-
-<!-- *********************************************************************** -->
-<h2>
-  <a name="additionalinfo">Additional Information</a>
-</h2>
-<!-- *********************************************************************** -->
-
-<div>
-
-<p>A wide variety of additional information is available on
-   the <a href="http://llvm.org/">LLVM web page</a>, in particular in
-   the <a href="http://llvm.org/docs/">documentation</a> section.  The web page
-   also contains versions of the API documentation which is up-to-date with the
-   Subversion version of the source code.  You can access versions of these
-   documents specific to this release by going into the "<tt>llvm/doc/</tt>"
-   directory in the LLVM tree.</p>
-
-<p>If you have any questions or comments about LLVM, please feel free to contact
-   us via the <a href="http://llvm.org/docs/#maillist"> mailing lists</a>.</p>
-
-</div>
 
 <!-- *********************************************************************** -->
 
