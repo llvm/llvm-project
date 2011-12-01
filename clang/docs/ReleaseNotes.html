@@ -1,0 +1,383 @@
+<html>
+<head>
+<title>Clang 3.0 Release Notes</title>
+<link type="text/css" rel="stylesheet" href="../menu.css" />
+<link type="text/css" rel="stylesheet" href="../content.css" />
+<style type="text/css">
+td {
+	vertical-align: top;
+}
+</style>
+</head>
+<body>
+
+<!--#include virtual="../menu.html.incl"-->
+
+<div id="content">
+
+<h1>Clang 3.0 Release Notes</h1>
+
+<img align=right src="http://llvm.org/img/DragonSmall.png"
+     width="136" height="136" alt="LLVM Dragon Logo">
+
+<ul>
+  <li><a href="#intro">Introduction</a></li>
+  <li><a href="#whatsnew">What's New in Clang 3.0?</a>
+    <ul>
+      <li><a href="#majorfeatures">Major New Features</a></li>
+      <li><a href="#cchanges">C Language Changes</a></li>
+      <li><a href="#cxxhanges">C++ Language Changes</a></li>
+      <li><a href="#objchanges">Objective-C Language Changes</a></li>
+      <li><a href="#apichanges">Internal API Changes</a></li>
+    </ul>
+  </li>
+  <li><a href="#knownproblems">Known Problems</a></li>
+  <li><a href="#additionalinfo">Additional Information</a></li>
+</ul>
+
+<div class="doc_author">
+  <p>Written by the <a href="http://llvm.org/">LLVM Team</a></p>
+</div>
+
+<!--
+<h1 style="color:red">These are in-progress notes for the upcoming LLVM 3.0
+release.<br>
+You may prefer the
+<a href="http://llvm.org/releases/2.9/docs/ReleaseNotes.html">LLVM 2.9
+Release Notes</a>.</h1>
+ -->
+
+<!-- ======================================================================= -->
+<h2 id="intro">Introduction</h2>
+<!-- ======================================================================= -->
+
+<p>This document contains the release notes for the Clang C/C++/Objective-C
+frontend, part of the LLVM Compiler Infrastructure, release 3.0.  Here we
+describe the status of Clang in some detail, including major improvements from
+the previous release and new feature work. For the general LLVM release notes,
+see <a href="http://llvm.org/docs/ReleaseNotes.html">the LLVM
+ documentation</a>. All LLVM releases may be downloaded from the
+<a href="http://llvm.org/releases/">LLVM releases web site</a>.</p>
+
+<p>For more information about Clang or LLVM, including information about the
+latest release, please check out the main please see the
+<a href="http://clang.llvm.org">Clang Web Site</a> or the
+<a href="http://llvm.org">LLVM Web Site</a>.
+
+<p>Note that if you are reading this file from a Subversion checkout or the main
+Clang web page, this document applies to the <i>next</i> release, not the
+current one.  To see the release notes for a specific release, please see the
+<a href="http://llvm.org/releases/">releases page</a>.</p>
+
+<!-- ======================================================================= -->
+<h2 id="whatsnew">What's New in Clang 3.0?</h2>
+<!-- ======================================================================= -->
+
+<p>Some of the major new features and improvements to Clang are listed here.
+Generic improvements to Clang as a whole or two its underlying infrastructure
+are described first, followed by language-specific sections with improvements to
+Clang's support for those languages.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="majorfeatures">Major New Features</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<h4 id="diagnostics">A multitude of improvements to Clang's diagnostics</h4>
+Clang's diagnostics are constantly being improved to catch more issues, explain
+them more clearly, and provide more accurate source information about them.
+A few improvements since the 2.9 release that have a particularly high impact:
+<ul>
+  <li>Substantially shorter messages due to better recovery, fewer include
+  stacks, and tuning verbose features such as 'a.k.a.' type printing.</li>
+  <li>
+    Able to recover and correct from misspelled type names at the beging of
+    statements. For example, Clang now emits:
+<pre><b>t.c:6:3: <span class="error">error:</span> use of undeclared identifier 'integer'; did you mean 'Integer'?</b>
+  integer *i = 0;
+  <span class="caret">^~~~~~~</span>
+  Integer
+<b>t.c:1:13: note:</b> 'Integer' declared here
+typedef int Integer;
+            <span class="caret">^</span></pre>
+  </li>
+  <li>Expanded typo correction to (among other improvements) look across
+  namespaces and suggest namespace qualifiers in addition to misspellings of the
+  identifier itself.</li>
+  <li>More rich macro expansion backtraces and some (limited) fix-it hints when
+  diagnostics stem from macro arguments.</li>
+  <li>Many new warnings have been added to catch common, bug-prone code
+  patterns.</li>
+  <li>Uninitialized values Clang warning was rewritten to be more accurate,
+  faster, and able to differentiate between the <em>possibility</em> of an
+  uninitialized use and the <em>certainty</em> of an uninitialized use.</li>
+</ul>
+
+<h4 id="libclang">This release saw significant improvements to <code>libclang</code></h4>
+<ul>
+  <li>A broader set of the <code>libclang</code> API is exposed in the Python
+  bindings.</li>
+  <li>Much more of the Clang AST is exposed through <code>libclang</code>'s APIs
+  and cursors.</li>
+  <li>Cursors can now walk more effectively through macros, especially arguments
+  to function-style macros, and resolve to the underlying AST.</li>
+  <li>Improved code completion surrounding macros, macro arguments, and
+  token pasting.</li>
+  <li>Improved code completion for in-class member functions.</li>
+  <li>Crash recovery for <code>libclang</code> clients.</li>
+  <!-- Doug or Ted may want to flesh this out if there are relevant details I'm
+  glossing over... -->
+</ul>
+
+<h4 id="driver">The Clang GCC-compatible command-line driver improved dramatically</h4>
+A great deal of work went into the GCC-compatible driver for the 3.0 release
+making it support more operating systems, emulate GCC behavior more accurately,
+and support a much broader range of Linux distributions out of the box.
+<ul>
+  <li>More accurate support for hardware architecture pre-defined macros (e.g.,
+  __i686__).</li>
+  <li>Robust library and header search paths for the vast majority of x86 and
+  x86-64 Linux distributions.</li>
+  <li>Improved support for newer Darwin platforms.</li>
+  <li>Partial support for <code>--sysroot=...</code> based cross-compiling on
+  Linux (and similar) host systems.</li>
+  <li>Improved support for locating and using libcxx when installed, especially
+  on Darwin.</li>
+  <!-- There are likely more Darwin-specific improvements to mention here? -->
+  <!-- What support was added for FreeBSD? NetBSD? Anything noteworthy? -->
+  <li>Automatic detection of Clang crashes in the driver and preparation of
+  reproduction steps for filing bug reports.</li><!-- Chad, feel free to add
+  more details here. -->
+</ul>
+
+<h4 id="ppcallbacks">Expanded support for instrumenting the preprocessor through
+  callbacks</h4>
+Several enhancements were made to the <code>PPCallbacks</code> interface to
+expand the information available to tools and library users of Clang that wish
+to introspect the preprocessing.
+<ul>
+  <li>The exact text used between the <code>""</code>s or <code>&lt;&gt;</code>s is reported.</li>
+  <li>The header search path used to locate the header is reported.</li>
+  <li>Missing files during including headers reported.</li>
+  <li>The exact source range for expanded macros can be retrieved.</li>
+</ul>
+
+<h4 id="windows">Clang is building and tested regularly on Windows and can
+  compile limited subsets of code on Windows</h4>
+Clang is regularly built and tested on a variety of Windows platforms including
+MinGW 32-bit and 64-bit, Cygwin, and natively with MSVC. In addition, Clang can
+be used as a compiler in a few Windows contexts.
+<ul>
+  <li>Normal compilation supported for the MinGW target platform, in both 32-bit
+  and 64-bit, and the Cygwin target platform.</li>
+  <li>Parsing and AST support for Windows Structured Exception Handling.</li>
+  <li>New -fms-compatibility flag to handle MSVC constructs that could change 
+  the meaning of an otherwise well formed program</li>
+  <li>clang can now parse all the MSVC 2010 standard C++ header files
+  in the nominal case, (still need to specifiy -nobuiltininc for some headers).</li>
+  <li>Improved support for MFC code parsing, (still a work in progress).</li>
+  <li>Add support for function template specialization at class scope (-fms-extensions mode).</li>
+  <li>Add support for Microsoft __if_exists/__if_not_exists statements (-fms-extensions mode).</li>
+</ul>
+
+<h4 id="availability">New availability attribute to detect and warn about API
+usage across OS X and iOS versions</h4>
+Clang now supports an attribute which documents the availability of an API
+across various platforms and releases, allowing interfaces to include
+information about what OS versions support the relevant features. Based on the
+targeted version of a compile, warnings for deprecated and unavailable
+interfaces will automatically be provided by Clang.
+
+<h4 id="threadsafety">Thread Safety annotations and analysis-based warnings</h4>
+A set of annotations were introduced to Clang to describe the various
+thread-safety concerns of a program, and an accompanying set of analysis based
+warnings will diagnose clearly unsafe code patterns. The annotations are
+described in the
+<a href="http://clang.llvm.org/docs/LanguageExtensions.html#threadsafety">extension specification</a>,
+and the warnings currently supported include:
+<ul>
+  <li>Calling functions without the required locks</li>
+  <li>Reading variables without the required locks</li>
+  <li>Writing to variables without an exclusive lock (even if holding a shared
+  lock)</li>
+  <li>Imbalance between locks and unlocks across loop entries and exits</li>
+  <li>Acquiring or releasing locks out of order</li>
+</ul>
+
+<h4 id="incompleteast">Improved support for partially constructed and/or
+incomplete ASTs</h4>
+For users such as LLDB that are dynamically forming C++ ASTs, sometimes it is
+either necessary or useful to form a partial or incomplete AST. Support for
+these use cases have improved through the introduction of "unknown" types and
+other AST constructs designed specifically for use cases without complete
+information about the C++ construct being formed.
+
+<h4 id="opencl">Initial work to support compiling OpenCL C with Clang</h4>
+<p>Clang has some (limited) support for compiling OpenCL C.  The 3.0
+release adds support for the <tt>vec_step</tt> operator, address space
+qualifiers (<tt>__private</tt>, <tt>__global</tt>, <tt>__local</tt> and
+<tt>__constant</tt>), improved vector literal support and code generation
+support for the <a href="http://llvm.org/docs/ReleaseNotes.html#PTX">PTX
+target</a>.</p>
+
+<p>Using the <a href="http://www.pcc.me.uk/~peter/libclc/">libclc library</a>
+to supply OpenCL C built-ins, you can use Clang to compile OpenCL C code
+into PTX and execute it by loading the resulting PTX as a binary blob using
+the nVidia OpenCL library.  It has been tested with several OpenCL programs,
+including some from the nVidia GPU Computing SDK, and the performance is on
+par with the nVidia compiler.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="cchanges">C Language Changes in Clang</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<h4 id="c1xchanges">C1X Feature Support</h4>
+
+<p>Clang 3.0 adds support for the
+<a href="http://clang.llvm.org/docs/LanguageExtensions.html#c1x">
+<code>_Alignas</code>, <code>_Generic</code>, and <code>_Static_assert</code>
+keywords</a>, drafted for inclusion in the next C standard, which is
+provisionally known as C1X. Use <code>-std=c1x</code> or <code>-std=gnu1x</code>
+to enable support for the new language standard. These features are
+backwards-compatible and are available as an extension in all language
+modes.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="cxxchanges">C++ Language Changes in Clang</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<h4 id="cxx11changes">C++11 Feature Support</h4>
+<p>Clang 3.0 adds support for
+<a href="http://clang.llvm.org/cxx_status.html#cxx11">more of the language
+features</a> added in the latest ISO C++ standard,
+<a href="http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=50372">C++ 2011</a>.
+Use <code>-std=c++11</code> or <code>-std=gnu++11</code> to enable support for
+these features. The following are now considered to be of production quality:
+<ul>
+  <li>Range-based <code>for</code> loops</li>
+  <li>Alias declarations (a new syntax for <code>typedef</code> declarations),
+  including their <code>template</code> forms</li>
+  <li>Specifying default values for class data members within a class
+  definition</li>
+  <li>Constructors delegating to other constructors of the same class</li>
+  <li>The <code>override</code> context-sensitive keyword for virtual member
+  function declarations</li>
+  <li>Explicitly generating default function definitions with
+  <code>= default</code></li>
+  <li>The <code>nullptr</code> keyword, and the corresponding type</li>
+  <li>Raw string literals with arbitary delimiters (for instance,
+  <code>R"delim(str"ing)delim"</code>)</li>
+  <li>Unicode string literals (for instance, <code>U"\u1234"</code>) and the
+  <code>char16_t</code> and <code>char32_t</code> built-in types
+  <li><code>noexcept</code> expressions and the <code>noexcept</code> specifier
+  on function declarations</li>
+  <li><code>alignof</code> expressions and the <code>alignas</code> specifier on
+  variable declarations</li>
+  <li>A full set of <a href="http://clang.llvm.org/docs/LanguageExtensions.html#checking_type_traits">type traits</a>,
+  sufficient to support C++11 standard libraries</li>
+</ul>
+All warning and language selection flags which previously accepted
+<code>c++0x</code> now accept <code>c++11</code>. The old <code>c++0x</code>
+form remains as an alias.
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="objcchanges">Objective-C Language Changes in Clang</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+Clang 3.0 introduces several new Objective-C language features and improvements.
+
+<h4 id="objc_arc">Objective-C Automatic Reference Counting</h4>
+<!-- This is really just a stub for John to flesh out regarding ARC. -->
+ARC provides automated memory management for Objective-C programs that is
+compatible with existing retain/release code.  ARC is carefully built to
+be a reliable programming model that errs on the side of producing a
+compiler error instead of silently producing a runtime memory problem.
+ARC automates Objective-C objects, not malloc data, file descriptors,
+CoreFoundation datatypes or anything else. For more details, see the
+<a href="http://clang.llvm.org/docs/AutomaticReferenceCounting.html">full specification</a>.
+
+<h4 id="objc_instancetype">Objective-C Related Result Types / Instance
+Types</h4>
+Allows declaring new methods which follow the Cocoa conventions for methods
+such as <code>init</code> which always return objects that are an instance of
+the receiving class's type. For more details, see the
+<a href="http://clang.llvm.org/docs/LanguageExtensions.html#objc_instancetype">language extension documentation</a>.
+
+<!--
+This is a stub for David Chisnall to fill out.
+
+<h4 id="objc_gnuruntime">Improved support for the GNU Runtime</h4>
+....
+-->
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="apichanges">Internal API Changes</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+These are major API changes that have happened since the 2.9 release of Clang.
+If upgrading an external codebase that uses Clang as a library, this section
+should help get you past the largest hurdles of upgrading.
+
+<h4 id="macroexpansion">Switched terminology from "instantiation" to "expansion"
+  for macros</h4>
+A great deal of comments and code changes fell out of this, but also every API
+relating to macros with the word "instantiation" (or some variant thereof) was
+renamed. An incomplete list of the most note-worthy ones is here:
+<ul>
+  <li><code>MacroInstantiation</code> became <code>MacroExpansion</code></li>
+  <li><code>SourceManager::getInstantiationLoc</code> became
+  <code>SourceManager::getExpansionLoc</code></li>
+  <li><code>SourceManager::getInstantiationRange</code> became
+  <code>SourceManager::getExpansionRange</code></li>
+  <li><code>SourceManager::getImmediateInstantiationRange</code> became
+  <code>SourceManager::getImmediateExpansionRange</code></li>
+  <li><code>SourceManager::getDecomposedInstantiationLoc</code> became
+  <code>SourceManager::getDecomposedExpansionLoc</code></li>
+  <li><code>SourceManager::getInstantiationColumnNumber</code> became
+  <code>SourceManager::getExpansionColumnNumber</code></li>
+  <li><code>SourceManager::getInstantiationLineNumber</code> became
+  <code>SourceManager::getExpansionLineNumber</code></li>
+  <!-- TODO: Make this more complete! -->
+</ul>
+
+<h4 id="diagnosticrename">Diagnostic class names were shuffled</h4>
+<ul>
+  <li><code>Diagnostic</code> became <code>DiagnosticEngine</code></li>
+  <li><code>DiagnosticClient</code> became <code>DiagnosticConsumer</code></li>
+  <li><code>DiagnosticInfo</code> became <code>Diagnostic</code></li>
+</ul>
+Subclasses of <code>DiagnosticConsumer</code> were also then renamed to end with
+<code>Consumer</code>.
+
+<!-- ======================================================================= -->
+<h2 id="knownproblems">Significant Known Problems</h2>
+<!-- ======================================================================= -->
+
+<!-- ======================================================================= -->
+<h2 id="additionalinfo">Additional Information</h2>
+<!-- ======================================================================= -->
+
+<p>A wide variety of additional information is available on the
+<a href="http://clang.llvm.org/">Clang web page</a>.  The web page contains
+versions of the API documentation which are up-to-date with the Subversion
+version of the source code.  You can access versions of these documents specific
+to this release by going into the "<tt>clang/doc/</tt>" directory in the Clang
+tree.</p>
+
+<p>If you have any questions or comments about Clang, please feel free to
+contact us via the <a href="http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev">
+mailing list</a>.</p>
+
+
+<!-- ======================================================================= -->
+<!-- Likely 3.1 release notes -->
+<!-- ======================================================================= -->
+<!--
+This is just a section to hold things that have already gotten started and
+should likely pick up proper release notes in 3.1.
+
+- C1X and C++11 atomics infrastructure and support
+- CUDA support?
+
+-->
+
+</body>
+</html>
