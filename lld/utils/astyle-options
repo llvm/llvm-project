@@ -1,7 +1,0 @@
-style=java
-indent=spaces=2
-pad-oper
-pad-header
-unpad-paren
-convert-tabs
-align-pointer=name

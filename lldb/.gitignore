@@ -1,6 +1,0 @@
-*.pyc
-build/
-llvm-build/
-*xcuserdata
-test/20*
-source/LLDBWrapPython.cpp

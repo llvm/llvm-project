@@ -1,1 +1,0 @@
-_CLC_OVERLOAD _CLC_DECL float length(FLOATN p0);

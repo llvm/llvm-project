@@ -1,2 +1,0 @@
-breakpoint set -n a_function
-run
