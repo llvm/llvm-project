@@ -9776,9 +9776,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func) {
 
   // Instantiate the exception specification for any function which is
   // used: CodeGen will need it.
-  if (Func->getTemplateInstantiationPattern() &&
-      Func->getType()->castAs<FunctionProtoType>()->getExceptionSpecType()
-        == EST_Uninstantiated)
+  const FunctionProtoType *FPT = Func->getType()->getAs<FunctionProtoType>();
+  if (FPT && FPT->getExceptionSpecType() == EST_Uninstantiated)
     InstantiateExceptionSpec(Loc, Func);
 
   // Implicit instantiation of function templates and member functions of

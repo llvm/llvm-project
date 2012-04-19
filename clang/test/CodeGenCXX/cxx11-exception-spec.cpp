@@ -3,9 +3,11 @@
 void h();
 
 template<typename T> void f() noexcept(sizeof(T) == 4) { h(); }
+template<typename T> void g() noexcept(sizeof(T) == 4);
 
 template<typename T> struct S {
   static void f() noexcept(sizeof(T) == 4) { h(); }
+  static void g() noexcept(sizeof(T) == 4);
 };
 
 // CHECK: define {{.*}} @_Z1fIsEvv() {
@@ -30,7 +32,7 @@ template void S<char16_t>::f();
 // CHECK: define {{.*}} @_ZN1SIA2_DsE1fEv() nounwind
 template void S<char16_t[2]>::f();
 
-void g() {
+void h() {
   // CHECK: define {{.*}} @_Z1fIiEvv() nounwind {
   f<int>();
   // CHECK: define {{.*}} @_Z1fIA2_iEvv() {
@@ -63,4 +65,56 @@ void g() {
   // CHECK: define {{.*}} @_ZN1SIcE1fEv()
   // CHECK-NOT: nounwind
   (void)&S<char>::f;
+}
+
+// CHECK: define {{.*}} @_Z1iv
+void i() {
+  // CHECK: declare {{.*}} @_Z1gIiEvv() nounwind
+  g<int>();
+  // CHECK: declare {{.*}} @_Z1gIA2_iEvv()
+  // CHECK-NOT: nounwind
+  g<int[2]>();
+
+  // CHECK: declare {{.*}} @_ZN1SIiE1gEv() nounwind
+  S<int>::g();
+  // CHECK: declare {{.*}} @_ZN1SIA2_iE1gEv()
+  // CHECK-NOT: nounwind
+  S<int[2]>::g();
+
+  // CHECK: declare {{.*}} @_Z1gIfEvv() nounwind
+  void (*g1)() = &g<float>;
+  // CHECK: declare {{.*}} @_Z1gIdEvv()
+  // CHECK-NOT: nounwind
+  void (*g2)() = &g<double>;
+
+  // CHECK: declare {{.*}} @_ZN1SIfE1gEv() nounwind
+  void (*g3)() = &S<float>::g;
+  // CHECK: declare {{.*}} @_ZN1SIdE1gEv()
+  // CHECK-NOT: nounwind
+  void (*g4)() = &S<double>::g;
+
+  // CHECK: declare {{.*}} @_Z1gIA4_cEvv() nounwind
+  (void)&g<char[4]>;
+  // CHECK: declare {{.*}} @_Z1gIcEvv()
+  // CHECK-NOT: nounwind
+  (void)&g<char>;
+
+  // CHECK: declare {{.*}} @_ZN1SIA4_cE1gEv() nounwind
+  (void)&S<char[4]>::g;
+  // CHECK: declare {{.*}} @_ZN1SIcE1gEv()
+  // CHECK-NOT: nounwind
+  (void)&S<char>::g;
+}
+
+template<typename T> struct Nested {
+  template<bool b, typename U> void f() noexcept(sizeof(T) == sizeof(U));
+};
+
+// CHECK: define {{.*}} @_Z1jv
+void j() {
+  // CHECK: declare {{.*}} @_ZN6NestedIiE1fILb1EcEEvv(
+  // CHECK-NOT: nounwind
+  Nested<int>().f<true, char>();
+  // CHECK: declare {{.*}} @_ZN6NestedIlE1fILb0ElEEvv({{.*}}) nounwind
+  Nested<long>().f<false, long>();
 }

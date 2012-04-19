@@ -2251,6 +2251,8 @@ static void addInstantiatedParametersToScope(Sema &S, FunctionDecl *Function,
 static void InstantiateExceptionSpec(Sema &SemaRef, FunctionDecl *New,
                                      const FunctionProtoType *Proto,
                            const MultiLevelTemplateArgumentList &TemplateArgs) {
+  assert(Proto->getExceptionSpecType() != EST_Uninstantiated);
+
   // C++11 [expr.prim.general]p3:
   //   If a declaration declares a member function or member function 
   //   template of a class X, the expression this is a prvalue of type 
@@ -2377,20 +2379,8 @@ static void InstantiateExceptionSpec(Sema &SemaRef, FunctionDecl *New,
 
 void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
                                     FunctionDecl *Decl) {
-  // Find the template declaration which contains the exception specification.
-  // Per [except.spec]p4, prefer the exception spec on the primary template
-  // if this is an explicit instantiation.
-  FunctionDecl *Tmpl = 0;
-  if (Decl->getPrimaryTemplate())
-    Tmpl = Decl->getPrimaryTemplate()->getTemplatedDecl();
-  else if (FunctionDecl *MemTmpl = Decl->getInstantiatedFromMemberFunction())
-    Tmpl = MemTmpl;
-  else
-    Tmpl = Decl->getTemplateInstantiationPattern();
-  assert(Tmpl && "can't instantiate non-template");
-
-  if (Decl->getType()->castAs<FunctionProtoType>()->getExceptionSpecType()
-        != EST_Uninstantiated)
+  const FunctionProtoType *Proto = Decl->getType()->castAs<FunctionProtoType>();
+  if (Proto->getExceptionSpecType() != EST_Uninstantiated)
     return;
 
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Decl,
@@ -2406,10 +2396,12 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   MultiLevelTemplateArgumentList TemplateArgs =
     getTemplateInstantiationArgs(Decl, 0, /*RelativeToPrimary*/true);
 
-  addInstantiatedParametersToScope(*this, Decl, Tmpl, Scope, TemplateArgs);
+  FunctionDecl *Template = Proto->getExceptionSpecTemplate();
+  addInstantiatedParametersToScope(*this, Decl, Template, Scope, TemplateArgs);
 
-  const FunctionProtoType *Proto = Tmpl->getType()->castAs<FunctionProtoType>();
-  ::InstantiateExceptionSpec(*this, Decl, Proto, TemplateArgs);
+  ::InstantiateExceptionSpec(*this, Decl,
+                             Template->getType()->castAs<FunctionProtoType>(),
+                             TemplateArgs);
 }
 
 /// \brief Initializes the common fields of an instantiation function
@@ -2457,6 +2449,10 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
         EPI.ExceptionSpecType != EST_None &&
         EPI.ExceptionSpecType != EST_DynamicNone &&
         EPI.ExceptionSpecType != EST_BasicNoexcept) {
+      FunctionDecl *ExceptionSpecTemplate = Tmpl;
+      if (EPI.ExceptionSpecType == EST_Uninstantiated)
+        ExceptionSpecTemplate = EPI.ExceptionSpecTemplate;
+
       // Mark the function has having an uninstantiated exception specification.
       const FunctionProtoType *NewProto
         = New->getType()->getAs<FunctionProtoType>();
@@ -2464,6 +2460,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
       EPI = NewProto->getExtProtoInfo();
       EPI.ExceptionSpecType = EST_Uninstantiated;
       EPI.ExceptionSpecDecl = New;
+      EPI.ExceptionSpecTemplate = ExceptionSpecTemplate;
       New->setType(SemaRef.Context.getFunctionType(NewProto->getResultType(),
                                                    NewProto->arg_type_begin(),
                                                    NewProto->getNumArgs(),

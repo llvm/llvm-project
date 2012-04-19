@@ -1550,7 +1550,8 @@ FunctionProtoType::FunctionProtoType(QualType result, const QualType *args,
     // Store the function decl from which we will resolve our
     // exception specification.
     FunctionDecl **slot = reinterpret_cast<FunctionDecl**>(argSlot + numArgs);
-    *slot = epi.ExceptionSpecDecl;
+    slot[0] = epi.ExceptionSpecDecl;
+    slot[1] = epi.ExceptionSpecTemplate;
     // This exception specification doesn't make the type dependent, because
     // it's not instantiated as part of instantiating the type.
   }

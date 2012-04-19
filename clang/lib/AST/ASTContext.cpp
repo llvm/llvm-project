@@ -2195,7 +2195,7 @@ ASTContext::getFunctionType(QualType ResultTy,
   else if (EPI.ExceptionSpecType == EST_ComputedNoexcept) {
     Size += sizeof(Expr*);
   } else if (EPI.ExceptionSpecType == EST_Uninstantiated) {
-    Size += sizeof(FunctionDecl*);
+    Size += 2 * sizeof(FunctionDecl*);
   }
   if (EPI.ConsumedArguments)
     Size += NumArgs * sizeof(bool);

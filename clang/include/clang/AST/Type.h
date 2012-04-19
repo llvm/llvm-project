@@ -2701,7 +2701,8 @@ public:
     ExtProtoInfo() :
       Variadic(false), HasTrailingReturn(false), TypeQuals(0),
       ExceptionSpecType(EST_None), RefQualifier(RQ_None),
-      NumExceptions(0), Exceptions(0), NoexceptExpr(0), ExceptionSpecDecl(0),
+      NumExceptions(0), Exceptions(0), NoexceptExpr(0),
+      ExceptionSpecDecl(0), ExceptionSpecTemplate(0),
       ConsumedArguments(0) {}
 
     FunctionType::ExtInfo ExtInfo;
@@ -2714,6 +2715,7 @@ public:
     const QualType *Exceptions;
     Expr *NoexceptExpr;
     FunctionDecl *ExceptionSpecDecl;
+    FunctionDecl *ExceptionSpecTemplate;
     const bool *ConsumedArguments;
   };
 
@@ -2759,9 +2761,10 @@ private:
   // NoexceptExpr - Instead of Exceptions, there may be a single Expr* pointing
   // to the expression in the noexcept() specifier.
 
-  // ExceptionSpecDecl - Instead of Exceptions, there may be a single
-  // FunctionDecl* pointing to the function which should be used to resolve
-  // this function type's exception specification.
+  // ExceptionSpecDecl, ExceptionSpecTemplate - Instead of Exceptions, there may
+  // be a pair of FunctionDecl* pointing to the function which should be used to
+  // instantiate this function type's exception specification, and the function
+  // from which it should be instantiated.
 
   // ConsumedArgs - A variable size array, following Exceptions
   // and of length NumArgs, holding flags indicating which arguments
@@ -2804,6 +2807,7 @@ public:
       EPI.NoexceptExpr = getNoexceptExpr();
     } else if (EPI.ExceptionSpecType == EST_Uninstantiated) {
       EPI.ExceptionSpecDecl = getExceptionSpecDecl();
+      EPI.ExceptionSpecTemplate = getExceptionSpecTemplate();
     }
     if (hasAnyConsumedArgs())
       EPI.ConsumedArguments = getConsumedArgsBuffer();
@@ -2847,10 +2851,22 @@ public:
     // NoexceptExpr sits where the arguments end.
     return *reinterpret_cast<Expr *const *>(arg_type_end());
   }
+  /// \brief If this function type has an uninstantiated exception
+  /// specification, this is the function whose exception specification
+  /// is represented by this type.
   FunctionDecl *getExceptionSpecDecl() const {
     if (getExceptionSpecType() != EST_Uninstantiated)
       return 0;
-    return *reinterpret_cast<FunctionDecl * const *>(arg_type_end());
+    return reinterpret_cast<FunctionDecl * const *>(arg_type_end())[0];
+  }
+  /// \brief If this function type has an uninstantiated exception
+  /// specification, this is the function whose exception specification
+  /// should be instantiated to find the exception specification for
+  /// this type.
+  FunctionDecl *getExceptionSpecTemplate() const {
+    if (getExceptionSpecType() != EST_Uninstantiated)
+      return 0;
+    return reinterpret_cast<FunctionDecl * const *>(arg_type_end())[1];
   }
   bool isNothrow(ASTContext &Ctx) const {
     ExceptionSpecificationType EST = getExceptionSpecType();

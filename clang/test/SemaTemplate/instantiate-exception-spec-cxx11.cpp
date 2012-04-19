@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -ftemplate-depth 16 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -ftemplate-depth 16 -fcxx-exceptions -fexceptions %s
 
 // DR1330: an exception specification for a function template is only
 // instantiated when it is needed.
@@ -31,7 +31,7 @@ decltype(S<0>::recurse()) *pVoid1 = 0; // ok, exception spec not needed
 decltype(&S<0>::recurse) pFn = 0; // ok, exception spec not needed
 
 template<> struct S<10> {};
-void (*pFn2)() noexcept = &S<0>::recurse; // expected-note {{instantiation of exception spec}}
+void (*pFn2)() noexcept = &S<0>::recurse; // expected-note {{instantiation of exception spec}} expected-error {{not superset}}
 
 
 template<typename T> T go(T a) noexcept(noexcept(go(a))); // \
@@ -118,3 +118,16 @@ namespace pr9485 {
     f2(0); // expected-error {{ambiguous}}
   }
 }
+
+struct Exc1 { char c[4]; };
+struct Exc2 { double x, y, z; };
+struct Base {
+  virtual void f() noexcept; // expected-note {{overridden}}
+};
+template<typename T> struct Derived : Base {
+  void f() noexcept (sizeof(T) == 4); // expected-error {{is more lax}}
+  void g() noexcept (T::error);
+};
+
+Derived<Exc1> d1; // ok
+Derived<Exc2> d2; // expected-note {{in instantiation of}}
