@@ -11091,7 +11091,7 @@ bool Sema::checkThisInStaticMemberFunctionType(CXXMethodDecl *Method) {
   //   static member function (although its type and value category are defined
   //   within a static member function as they are within a non-static member
   //   function). [ Note: this is because declaration matching does not occur
-  //  until the complete declarator is known. — end note ] 
+  //  until the complete declarator is known. - end note ]
   const FunctionProtoType *Proto = ProtoTL->getTypePtr();
   FindCXXThisExpr Finder(*this);
   
