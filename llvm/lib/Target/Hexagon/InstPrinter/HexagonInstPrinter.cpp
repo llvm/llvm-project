@@ -113,24 +113,21 @@ void HexagonInstPrinter::printFrameIndexOperand
 
 void HexagonInstPrinter::printGlobalOperand(const MCInst *MI, unsigned OpNo,
                                             raw_ostream &O) const {
-  const MCOperand& MO = MI->getOperand(OpNo);
-  assert(MO.isExpr() && "Expecting expression");
+  assert(MI->getOperand(OpNo).isExpr() && "Expecting expression");
 
   printOperand(MI, OpNo, O);
 }
 
 void HexagonInstPrinter::printJumpTable(const MCInst *MI, unsigned OpNo,
                                         raw_ostream &O) const {
-  const MCOperand& MO = MI->getOperand(OpNo);
-  assert(MO.isExpr() && "Expecting expression");
+  assert(MI->getOperand(OpNo).isExpr() && "Expecting expression");
 
   printOperand(MI, OpNo, O);
 }
 
 void HexagonInstPrinter::printConstantPool(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &O) const {
-  const MCOperand& MO = MI->getOperand(OpNo);
-  assert(MO.isExpr() && "Expecting expression");
+  assert(MI->getOperand(OpNo).isExpr() && "Expecting expression");
 
   printOperand(MI, OpNo, O);
 }
