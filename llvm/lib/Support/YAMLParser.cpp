@@ -1732,7 +1732,7 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
           if (UnquotedValue.size() < 3)
             // TODO: Report error.
             break;
-          unsigned int UnicodeScalarValue;
+          unsigned int UnicodeScalarValue = 0;
           UnquotedValue.substr(1, 2).getAsInteger(16, UnicodeScalarValue);
           encodeUTF8(UnicodeScalarValue, Storage);
           UnquotedValue = UnquotedValue.substr(2);
@@ -1742,7 +1742,7 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
           if (UnquotedValue.size() < 5)
             // TODO: Report error.
             break;
-          unsigned int UnicodeScalarValue;
+          unsigned int UnicodeScalarValue = 0;
           UnquotedValue.substr(1, 4).getAsInteger(16, UnicodeScalarValue);
           encodeUTF8(UnicodeScalarValue, Storage);
           UnquotedValue = UnquotedValue.substr(4);
@@ -1752,7 +1752,7 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
           if (UnquotedValue.size() < 9)
             // TODO: Report error.
             break;
-          unsigned int UnicodeScalarValue;
+          unsigned int UnicodeScalarValue = 0;
           UnquotedValue.substr(1, 8).getAsInteger(16, UnicodeScalarValue);
           encodeUTF8(UnicodeScalarValue, Storage);
           UnquotedValue = UnquotedValue.substr(8);
