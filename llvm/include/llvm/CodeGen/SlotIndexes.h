@@ -73,19 +73,6 @@ namespace llvm {
     void createNode(const IndexListEntry &);
   };
 
-  // Specialize PointerLikeTypeTraits for IndexListEntry.
-  template <>
-  class PointerLikeTypeTraits<IndexListEntry*> {
-  public:
-    static inline void* getAsVoidPointer(IndexListEntry *p) {
-      return p;
-    }
-    static inline IndexListEntry* getFromVoidPointer(void *p) {
-      return static_cast<IndexListEntry*>(p);
-    }
-    enum { NumLowBitsAvailable = 3 };
-  };
-
   /// SlotIndex - An opaque wrapper around machine indexes.
   class SlotIndex {
     friend class SlotIndexes;
