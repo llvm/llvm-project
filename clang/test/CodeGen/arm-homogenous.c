@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple armv7---eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | FileCheck %s
-#include <stdint.h>
+
+typedef long long int64_t;
+typedef unsigned int uint32_t;
 
 /* This is not a homogenous aggregate - fundamental types are different */
 typedef union {
