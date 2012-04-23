@@ -213,15 +213,6 @@ if( WIN32 AND NOT CYGWIN )
   set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
 endif()
 
-# On Win32 using MS tools, provide an option to set the number of parallel jobs
-# to use.
-if( MSVC_IDE AND ( MSVC90 OR MSVC10 ) )
-  # Only Visual Studio 2008 and 2010 officially supports /MP.  Visual Studio
-  # 2005 supports it but it is experimental.
-  set(LLVM_COMPILER_JOBS "0" CACHE STRING
-    "Number of parallel compiler jobs. 0 means use all processors. Default is 0.")
-endif()
-
 # Define options to control the inclusion and default build behavior for
 # components which may not strictly be necessary (tools, runtime, examples, and
 # tests).
