@@ -681,6 +681,7 @@ static Constant *SymbolicallyEvaluateGEP(ArrayRef<Constant *> Ops,
   // This makes it easy to determine if the getelementptr is "inbounds".
   // Also, this helps GlobalOpt do SROA on GlobalVariables.
   Type *Ty = Ptr->getType();
+  assert(Ty->isPointerTy() && "Forming regular GEP of non-pointer type");
   SmallVector<Constant*, 32> NewIdxs;
   do {
     if (SequentialType *ATy = dyn_cast<SequentialType>(Ty)) {
@@ -711,10 +712,17 @@ static Constant *SymbolicallyEvaluateGEP(ArrayRef<Constant *> Ops,
       }
       Ty = ATy->getElementType();
     } else if (StructType *STy = dyn_cast<StructType>(Ty)) {
-      // Determine which field of the struct the offset points into. The
-      // getZExtValue is at least as safe as the StructLayout API because we
-      // know the offset is within the struct at this point.
+      // If we end up with an offset that isn't valid for this struct type, we
+      // can't re-form this GEP in a regular form, so bail out. The pointer
+      // operand likely went through casts that are necessary to make the GEP
+      // sensible.
       const StructLayout &SL = *TD->getStructLayout(STy);
+      if (Offset.uge(SL.getSizeInBytes()))
+        break;
+
+      // Determine which field of the struct the offset points into. The
+      // getZExtValue is fine as we've already ensured that the offset is
+      // within the range representable by the StructLayout API.
       unsigned ElIdx = SL.getElementContainingOffset(Offset.getZExtValue());
       NewIdxs.push_back(ConstantInt::get(Type::getInt32Ty(Ty->getContext()),
                                          ElIdx));

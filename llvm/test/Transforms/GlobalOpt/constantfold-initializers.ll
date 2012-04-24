@@ -12,6 +12,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @xs = global [2 x i32] zeroinitializer, align 4
 ; CHECK: @xs = global [2 x i32] [i32 1, i32 1]
 
+; PR12642
+%PR12642.struct = type { i8 }
+@PR12642.s = global <{}> zeroinitializer, align 1
+@PR12642.p = constant %PR12642.struct* bitcast (i8* getelementptr (i8* bitcast (<{}>* @PR12642.s to i8*), i64 1) to %PR12642.struct*), align 8
+
 define internal void @test1() {
 entry:
   store i32 1, i32* getelementptr inbounds ([2 x i32]* @xs, i64 0, i64 0)
