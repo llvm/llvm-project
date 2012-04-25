@@ -67,6 +67,9 @@ ifeq ($(HOST_OS), $(filter $(HOST_OS), Linux FreeBSD OpenBSD GNU))
     # Include everything from the .a's into the shared library.
     LLVMLibsOptions := -Wl,--whole-archive $(LLVMLibsOptions) \
                        -Wl,--no-whole-archive
+endif
+
+ifeq ($(HOST_OS), $(filter $(HOST_OS), Linux FreeBSD GNU))
     # Add soname to the library.
     LLVMLibsOptions += -Wl,--soname,lib$(LIBRARYNAME)$(SHLIBEXT)
 endif
