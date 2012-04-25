@@ -2496,6 +2496,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                                      Converted.size(),
                                      SourceRange(TemplateLoc, RAngleLoc));
 
+    Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext());
     ArgType = SemaRef.SubstType(ArgType, AllTemplateArgs,
                                 Param->getDefaultArgumentLoc(),
                                 Param->getDeclName());
@@ -2544,6 +2545,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                                    Converted.size(),
                                    SourceRange(TemplateLoc, RAngleLoc));
 
+  Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext());
   return SemaRef.SubstExpr(Param->getDefaultArgument(), AllTemplateArgs);
 }
 
@@ -2591,6 +2593,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                                    Converted.size(),
                                    SourceRange(TemplateLoc, RAngleLoc));
 
+  Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext());
   // Substitute into the nested-name-specifier first, 
   QualifierLoc = Param->getDefaultArgument().getTemplateQualifierLoc();
   if (QualifierLoc) {

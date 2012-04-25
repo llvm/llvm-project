@@ -292,3 +292,35 @@ namespace PR10187 {
     template void f<S>(); // expected-note {{here}}
   }
 }
+
+namespace rdar11242625 {
+
+template <typename T>
+struct Main {
+  struct default_names {
+    typedef int id;
+  };
+
+  template <typename T2 = typename default_names::id>
+  struct TS {
+    T2 q;
+  };
+};
+
+struct Sub : public Main<int> {
+  TS<> ff;
+};
+
+int arr[sizeof(Sub)];
+
+}
+
+namespace PR11421 {
+template < unsigned > struct X {
+  static const unsigned dimension = 3;
+  template<unsigned dim=dimension> 
+  struct Y: Y<dim> { }; // expected-error {{incomplete type}} expected-note {{is not complete until the closing}}
+};
+typedef X<3> X3;
+X3::Y<>::iterator it; // expected-note {{requested here}}
+}
