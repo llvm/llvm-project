@@ -138,9 +138,11 @@ static void AddGlue(SDNode *N, SDValue Glue, bool AddGlue, SelectionDAG *DAG) {
   // Don't add glue from a node to itself.
   if (GlueDestNode == N) return;
 
-  // Don't add glue to something which already has glue.
-  if (N->getValueType(N->getNumValues() - 1) == MVT::Glue) return;
-
+  // Don't add glue to something that already has it, either as a use or value.
+  if (N->getOperand(N->getNumOperands()-1).getValueType() == MVT::Glue ||
+      N->getValueType(N->getNumValues() - 1) == MVT::Glue) {
+    return;
+  }
   for (unsigned I = 0, E = N->getNumValues(); I != E; ++I)
     VTs.push_back(N->getValueType(I));
 
