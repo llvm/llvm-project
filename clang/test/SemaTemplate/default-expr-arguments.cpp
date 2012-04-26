@@ -292,3 +292,14 @@ namespace PR8401 {
     f();
   }
 }
+
+namespace PR12581 {
+  const int a = 0;
+  template < typename > struct A;
+  template < typename MatrixType, int =
+  A < MatrixType >::Flags ? : A < MatrixType >::Flags & a > class B;
+  void
+  fn1 ()
+  {
+  }
+}

@@ -652,6 +652,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
     //   end of the template-parameter-list rather than a greater-than
     //   operator.
     GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
+    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated);
 
     DefaultArg = ParseAssignmentExpression();
     if (DefaultArg.isInvalid())

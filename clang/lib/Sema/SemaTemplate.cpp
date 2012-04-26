@@ -2546,6 +2546,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                                    SourceRange(TemplateLoc, RAngleLoc));
 
   Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext());
+  EnterExpressionEvaluationContext Unevaluated(SemaRef, Sema::Unevaluated);
   return SemaRef.SubstExpr(Param->getDefaultArgument(), AllTemplateArgs);
 }
 
