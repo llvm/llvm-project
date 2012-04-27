@@ -231,9 +231,13 @@ def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration can not refer to namespace">;
 def err_using_decl_constructor : Error<
   "using declaration can not refer to a constructor">;
-def warn_cxx98_compat_using_decl_constructor : Warning<
-  "inherited constructors are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
+def err_using_decl_constructor_unsupported : Error<
+  "inheriting constructors are not supported">;
+// FIXME: Replace the above error with this warning if support for
+//        inheriting constructors is implemented.
+//def warn_cxx98_compat_using_decl_constructor : Warning<
+//  "inheriting constructors are incompatible with C++98">,
+//  InGroup<CXX98Compat>, DefaultIgnore;
 def err_using_decl_destructor : Error<
   "using declaration can not refer to a destructor">;
 def err_using_decl_template_id : Error<

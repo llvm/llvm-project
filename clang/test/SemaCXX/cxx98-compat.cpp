@@ -114,12 +114,16 @@ bool no_except_expr = noexcept(1 + 1); // expected-warning {{noexcept expression
 void *null = nullptr; // expected-warning {{'nullptr' is incompatible with C++98}}
 static_assert(true, "!"); // expected-warning {{static_assert declarations are incompatible with C++98}}
 
+// FIXME: Reintroduce this test if support for inheriting constructors is
+//        implemented.
+#if 0
 struct InhCtorBase {
   InhCtorBase(int);
 };
 struct InhCtorDerived : InhCtorBase {
-  using InhCtorBase::InhCtorBase; // expected-warning {{inherited constructors are incompatible with C++98}}
+  using InhCtorBase::InhCtorBase; // xpected-warning {{inheriting constructors are incompatible with C++98}}
 };
+#endif
 
 struct FriendMember {
   static void MemberFn();

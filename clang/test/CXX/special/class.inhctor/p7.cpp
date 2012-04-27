@@ -8,12 +8,12 @@ struct B2 {
   B2(int); // expected-note {{conflicting constructor}}
 };
 struct D1 : B1, B2 {
-  using B1::B1; // expected-note {{inherited here}}
-  using B2::B2; // expected-error {{already inherited constructor with the same signature}}
+  using B1::B1; // expected-note {{inherited here}} expected-error {{not supported}}
+  using B2::B2; // expected-error {{already inherited constructor with the same signature}} expected-error {{not supported}}
 };
 struct D2 : B1, B2 {
-  using B1::B1;
-  using B2::B2;
+  using B1::B1; // expected-error {{not supported}}
+  using B2::B2; // expected-error {{not supported}}
   D2(int);
 };
 
@@ -22,8 +22,8 @@ template<typename T> struct B3 {
 };
 template<typename T> struct B4 : B3<T>, B1 {
   B4();
-  using B3<T>::B3; // expected-note {{inherited here}}
-  using B1::B1; // expected-error {{already inherited}}
+  using B3<T>::B3; // expected-note {{inherited here}} expected-error {{not supported}}
+  using B1::B1; // expected-error {{already inherited}} expected-error {{not supported}}
 };
 B4<char> b4c;
 B4<int> b4i; // expected-note {{here}}
