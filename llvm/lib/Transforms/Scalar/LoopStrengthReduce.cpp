@@ -4108,7 +4108,7 @@ LSRInstance::HoistInsertPosition(BasicBlock::iterator IP,
       // Attempt to find an insert position in the middle of the block,
       // instead of at the end, so that it can be used for other expansions.
       if (IDom == Inst->getParent() &&
-          (!BetterPos || DT.dominates(BetterPos, Inst)))
+          (!BetterPos || !DT.dominates(Inst, BetterPos)))
         BetterPos = llvm::next(BasicBlock::iterator(Inst));
     }
     if (!AllDominate)
