@@ -838,7 +838,7 @@ AC_ARG_WITH(gcc-toolchain,
 AC_DEFINE_UNQUOTED(GCC_INSTALL_PREFIX,"$withval",
                    [Directory where gcc is installed.])
 
-AC_ARG_WITH(sysroot,
+AC_ARG_WITH(default-sysroot,
   AS_HELP_STRING([--with-default-sysroot],
     [Add --sysroot=<path> to all compiler invocations.]),,
     withval="")

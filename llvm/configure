@@ -5584,9 +5584,9 @@ _ACEOF
 
 
 
-# Check whether --with-sysroot was given.
-if test "${with_sysroot+set}" = set; then
-  withval=$with_sysroot;
+# Check whether --with-default-sysroot was given.
+if test "${with_default_sysroot+set}" = set; then
+  withval=$with_default_sysroot;
 else
   withval=""
 fi
