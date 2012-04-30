@@ -110,7 +110,8 @@ bool isCriticalEdge(const TerminatorInst *TI, unsigned SuccNum,
 ///
 BasicBlock *SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
                               Pass *P = 0, bool MergeIdenticalEdges = false,
-                              bool DontDeleteUselessPHIs = false);
+                              bool DontDeleteUselessPHIs = false,
+                              bool SplitLandingPads = false);
 
 inline BasicBlock *SplitCriticalEdge(BasicBlock *BB, succ_iterator SI,
                                      Pass *P = 0) {
