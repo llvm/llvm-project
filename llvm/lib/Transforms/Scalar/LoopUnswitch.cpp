@@ -420,15 +420,6 @@ bool LoopUnswitch::processCurrentLoop() {
   if (!BranchesInfo.countLoop(currentLoop))
     return false;
 
-  // Loops with invokes, whose unwind edge escapes the loop, cannot be
-  // unswitched because splitting their edges are non-trivial and don't preserve
-  // loop simplify information.
-  for (Loop::block_iterator I = currentLoop->block_begin(),
-         E = currentLoop->block_end(); I != E; ++I)
-    if (const InvokeInst *II = dyn_cast<InvokeInst>((*I)->getTerminator()))
-      if (!currentLoop->contains(II->getUnwindDest()))
-        return false;
-
   // Loop over all of the basic blocks in the loop.  If we find an interior
   // block that is branching on a loop-invariant condition, we can unswitch this
   // loop.
@@ -633,11 +624,10 @@ bool LoopUnswitch::IsTrivialUnswitchCondition(Value *Cond, Constant **Val,
 /// LoopCond == Val to simplify the loop.  If we decide that this is profitable,
 /// unswitch the loop, reprocess the pieces, then return true.
 bool LoopUnswitch::UnswitchIfProfitable(Value *LoopCond, Constant *Val) {
-
   Function *F = loopHeader->getParent();
-
   Constant *CondVal = 0;
   BasicBlock *ExitBlock = 0;
+
   if (IsTrivialUnswitchCondition(LoopCond, &CondVal, &ExitBlock)) {
     // If the condition is trivial, always unswitch. There is no code growth
     // for this case.
