@@ -2,6 +2,9 @@
 // RUN: %clang_cc1 -fsyntax-only -Werror -Wno-address-of-temporary -Wno-attributes -D"Class=void*" -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-rw.cpp
 // rdar://11131490
 
+// XFAIL: mingw
+// FIXME: __declspec(X) is predefined on mingw.
+
 extern "C" __declspec(dllexport) void BreakTheRewriter(void) {
         __block int aBlockVariable = 0;
         void (^aBlock)(void) = ^ {
