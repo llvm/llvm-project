@@ -68,7 +68,7 @@ TargetPassConfig *MBlazeTargetMachine::createPassConfig(PassManagerBase &PM) {
 // Install an instruction selector pass using
 // the ISelDag to gen MBlaze code.
 bool MBlazePassConfig::addInstSelector() {
-  PM.add(createMBlazeISelDag(getMBlazeTargetMachine()));
+  PM->add(createMBlazeISelDag(getMBlazeTargetMachine()));
   return false;
 }
 
@@ -76,6 +76,6 @@ bool MBlazePassConfig::addInstSelector() {
 // machine code is emitted. return true if -print-machineinstrs should
 // print out the code after the passes.
 bool MBlazePassConfig::addPreEmitPass() {
-  PM.add(createMBlazeDelaySlotFillerPass(getMBlazeTargetMachine()));
+  PM->add(createMBlazeDelaySlotFillerPass(getMBlazeTargetMachine()));
   return true;
 }

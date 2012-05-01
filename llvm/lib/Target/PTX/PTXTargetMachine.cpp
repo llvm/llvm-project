@@ -130,7 +130,7 @@ TargetPassConfig *PTXTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 bool PTXPassConfig::addInstSelector() {
-  PM.add(createPTXISelDag(getPTXTargetMachine(), getOptLevel()));
+  PM->add(createPTXISelDag(getPTXTargetMachine(), getOptLevel()));
   return false;
 }
 
@@ -145,7 +145,7 @@ void PTXPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
 
 bool PTXPassConfig::addPostRegAlloc() {
   // PTXMFInfoExtract must after register allocation!
-  //PM.add(createPTXMFInfoExtract(getPTXTargetMachine()));
+  //PM->add(createPTXMFInfoExtract(getPTXTargetMachine()));
   return false;
 }
 
@@ -159,7 +159,7 @@ void PTXPassConfig::addMachineLateOptimization() {
 }
 
 bool PTXPassConfig::addPreEmitPass() {
-  PM.add(createPTXMFInfoExtract(getPTXTargetMachine(), getOptLevel()));
-  PM.add(createPTXFPRoundingModePass(getPTXTargetMachine(), getOptLevel()));
+  PM->add(createPTXMFInfoExtract(getPTXTargetMachine(), getOptLevel()));
+  PM->add(createPTXFPRoundingModePass(getPTXTargetMachine(), getOptLevel()));
   return true;
 }

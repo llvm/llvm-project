@@ -145,34 +145,34 @@ TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 bool X86PassConfig::addInstSelector() {
   // Install an instruction selector.
-  PM.add(createX86ISelDag(getX86TargetMachine(), getOptLevel()));
+  PM->add(createX86ISelDag(getX86TargetMachine(), getOptLevel()));
 
   // For 32-bit, prepend instructions to set the "global base reg" for PIC.
   if (!getX86Subtarget().is64Bit())
-    PM.add(createGlobalBaseRegPass());
+    PM->add(createGlobalBaseRegPass());
 
   return false;
 }
 
 bool X86PassConfig::addPreRegAlloc() {
-  PM.add(createX86MaxStackAlignmentHeuristicPass());
+  PM->add(createX86MaxStackAlignmentHeuristicPass());
   return false;  // -print-machineinstr shouldn't print after this.
 }
 
 bool X86PassConfig::addPostRegAlloc() {
-  PM.add(createX86FloatingPointStackifierPass());
+  PM->add(createX86FloatingPointStackifierPass());
   return true;  // -print-machineinstr should print after this.
 }
 
 bool X86PassConfig::addPreEmitPass() {
   bool ShouldPrint = false;
   if (getOptLevel() != CodeGenOpt::None && getX86Subtarget().hasSSE2()) {
-    PM.add(createExecutionDependencyFixPass(&X86::VR128RegClass));
+    PM->add(createExecutionDependencyFixPass(&X86::VR128RegClass));
     ShouldPrint = true;
   }
 
   if (getX86Subtarget().hasAVX() && UseVZeroUpper) {
-    PM.add(createX86IssueVZeroUpperPass());
+    PM->add(createX86IssueVZeroUpperPass());
     ShouldPrint = true;
   }
 

@@ -60,12 +60,12 @@ TargetPassConfig *MSP430TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 bool MSP430PassConfig::addInstSelector() {
   // Install an instruction selector.
-  PM.add(createMSP430ISelDag(getMSP430TargetMachine(), getOptLevel()));
+  PM->add(createMSP430ISelDag(getMSP430TargetMachine(), getOptLevel()));
   return false;
 }
 
 bool MSP430PassConfig::addPreEmitPass() {
   // Must run branch selection immediately preceding the asm printer.
-  PM.add(createMSP430BranchSelectionPass());
+  PM->add(createMSP430BranchSelectionPass());
   return false;
 }

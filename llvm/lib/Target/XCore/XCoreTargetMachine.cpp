@@ -55,7 +55,7 @@ TargetPassConfig *XCoreTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 bool XCorePassConfig::addInstSelector() {
-  PM.add(createXCoreISelDag(getXCoreTargetMachine(), getOptLevel()));
+  PM->add(createXCoreISelDag(getXCoreTargetMachine(), getOptLevel()));
   return false;
 }
 

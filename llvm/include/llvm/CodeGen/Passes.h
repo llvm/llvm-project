@@ -56,7 +56,7 @@ public:
 
 protected:
   TargetMachine *TM;
-  PassManagerBase &PM;
+  PassManagerBase *PM;
   PassConfigImpl *Impl; // Internal data structures
   bool Initialized;     // Flagged after all passes are configured.
 

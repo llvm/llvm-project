@@ -98,13 +98,13 @@ TargetPassConfig *PPCTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 bool PPCPassConfig::addInstSelector() {
   // Install an instruction selector.
-  PM.add(createPPCISelDag(getPPCTargetMachine()));
+  PM->add(createPPCISelDag(getPPCTargetMachine()));
   return false;
 }
 
 bool PPCPassConfig::addPreEmitPass() {
   // Must run branch selection immediately preceding the asm printer.
-  PM.add(createPPCBranchSelectionPass());
+  PM->add(createPPCBranchSelectionPass());
   return false;
 }
 
