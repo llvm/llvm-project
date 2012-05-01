@@ -5050,7 +5050,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   }
   case Intrinsic::gcroot:
     if (GFI) {
-      const Value *Alloca = I.getArgOperand(0);
+      const Value *Alloca = I.getArgOperand(0)->stripPointerCasts();
       const Constant *TypeMap = cast<Constant>(I.getArgOperand(1));
 
       FrameIndexSDNode *FI = cast<FrameIndexSDNode>(getValue(Alloca).getNode());
