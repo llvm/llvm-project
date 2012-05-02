@@ -559,7 +559,8 @@ static unsigned FindInOperandList(SmallVectorImpl<ValueEntry> &Ops, unsigned i,
 
 /// EmitAddTreeOfValues - Emit a tree of add instructions, summing Ops together
 /// and returning the result.  Insert the tree before I.
-static Value *EmitAddTreeOfValues(Instruction *I, SmallVectorImpl<Value*> &Ops){
+static Value *EmitAddTreeOfValues(Instruction *I,
+                                  SmallVectorImpl<WeakVH> &Ops){
   if (Ops.size() == 1) return Ops.back();
   
   Value *V1 = Ops.back();
@@ -833,7 +834,7 @@ Value *Reassociate::OptimizeAdd(Instruction *I,
     // from an expression will drop a use of maxocc, and this can cause 
     // RemoveFactorFromExpression on successive values to behave differently.
     Instruction *DummyInst = BinaryOperator::CreateAdd(MaxOccVal, MaxOccVal);
-    SmallVector<Value*, 4> NewMulOps;
+    SmallVector<WeakVH, 4> NewMulOps;
     for (unsigned i = 0; i != Ops.size(); ++i) {
       // Only try to remove factors from expressions we're allowed to.
       BinaryOperator *BOp = dyn_cast<BinaryOperator>(Ops[i].Op);
