@@ -131,30 +131,16 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
   }
 }
 
-static void AddGlue(SDNode *N, SDValue Glue, bool AddGlue, SelectionDAG *DAG) {
-  SmallVector<EVT, 4> VTs;
-  SDNode *GlueDestNode = Glue.getNode();
-
-  // Don't add glue from a node to itself.
-  if (GlueDestNode == N) return;
-
-  // Don't add glue to something that already has it, either as a use or value.
-  if (N->getOperand(N->getNumOperands()-1).getValueType() == MVT::Glue ||
-      N->getValueType(N->getNumValues() - 1) == MVT::Glue) {
-    return;
-  }
-  for (unsigned I = 0, E = N->getNumValues(); I != E; ++I)
-    VTs.push_back(N->getValueType(I));
-
-  if (AddGlue)
-    VTs.push_back(MVT::Glue);
-
+// Helper for AddGlue to clone node operands.
+static void CloneNodeWithValues(SDNode *N, SelectionDAG *DAG,
+                                SmallVectorImpl<EVT> &VTs,
+                                SDValue ExtraOper = SDValue()) {
   SmallVector<SDValue, 4> Ops;
   for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I)
     Ops.push_back(N->getOperand(I));
 
-  if (GlueDestNode)
-    Ops.push_back(Glue);
+  if (ExtraOper.getNode())
+    Ops.push_back(ExtraOper);
 
   SDVTList VTList = DAG->getVTList(&VTs[0], VTs.size());
   MachineSDNode::mmo_iterator Begin = 0, End = 0;
@@ -171,6 +157,46 @@ static void AddGlue(SDNode *N, SDValue Glue, bool AddGlue, SelectionDAG *DAG) {
   // Reset the memory references
   if (MN)
     MN->setMemRefs(Begin, End);
+}
+
+static bool AddGlue(SDNode *N, SDValue Glue, bool AddGlue, SelectionDAG *DAG) {
+  SmallVector<EVT, 4> VTs;
+  SDNode *GlueDestNode = Glue.getNode();
+
+  // Don't add glue from a node to itself.
+  if (GlueDestNode == N) return false;
+
+  // Don't add a glue operand to something that already uses glue.
+  if (GlueDestNode &&
+      N->getOperand(N->getNumOperands()-1).getValueType() == MVT::Glue) {
+    return false;
+  }
+  // Don't add glue to something that already has a glue value.
+  if (N->getValueType(N->getNumValues() - 1) == MVT::Glue) return false;
+
+  for (unsigned I = 0, E = N->getNumValues(); I != E; ++I)
+    VTs.push_back(N->getValueType(I));
+
+  if (AddGlue)
+    VTs.push_back(MVT::Glue);
+
+  CloneNodeWithValues(N, DAG, VTs, Glue);
+
+  return true;
+}
+
+// Cleanup after unsuccessful AddGlue. Use the standard method of morphing the
+// node even though simply shrinking the value list is sufficient.
+static void RemoveUnusedGlue(SDNode *N, SelectionDAG *DAG) {
+  assert((N->getValueType(N->getNumValues() - 1) == MVT::Glue &&
+          !N->hasAnyUseOfValue(N->getNumValues() - 1)) &&
+         "expected an unused glue value");
+
+  SmallVector<EVT, 4> VTs;
+  for (unsigned I = 0, E = N->getNumValues()-1; I != E; ++I)
+    VTs.push_back(N->getValueType(I));
+
+  CloneNodeWithValues(N, DAG, VTs);
 }
 
 /// ClusterNeighboringLoads - Force nearby loads together by "gluing" them.
@@ -240,19 +266,23 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
   // Cluster loads by adding MVT::Glue outputs and inputs. This also
   // ensure they are scheduled in order of increasing addresses.
   SDNode *Lead = Loads[0];
-  AddGlue(Lead, SDValue(0, 0), true, DAG);
-
-  SDValue InGlue = SDValue(Lead, Lead->getNumValues() - 1);
+  SDValue InGlue = SDValue(0, 0);
+  if (AddGlue(Lead, InGlue, true, DAG))
+    InGlue = SDValue(Lead, Lead->getNumValues() - 1);
   for (unsigned I = 1, E = Loads.size(); I != E; ++I) {
     bool OutGlue = I < E - 1;
     SDNode *Load = Loads[I];
 
-    AddGlue(Load, InGlue, OutGlue, DAG);
+    // If AddGlue fails, we could leave an unsused glue value. This should not
+    // cause any
+    if (AddGlue(Load, InGlue, OutGlue, DAG)) {
+      if (OutGlue)
+        InGlue = SDValue(Load, Load->getNumValues() - 1);
 
-    if (OutGlue)
-      InGlue = SDValue(Load, Load->getNumValues() - 1);
-
-    ++LoadsClustered;
+      ++LoadsClustered;
+    }
+    else if (!OutGlue && InGlue.getNode())
+      RemoveUnusedGlue(InGlue.getNode(), DAG);
   }
 }
 
