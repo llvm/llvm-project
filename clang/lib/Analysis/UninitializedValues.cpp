@@ -168,7 +168,8 @@ static const BinaryOperator *getLogicalOperatorInChain(const CFGBlock *block) {
   if (block->empty())
     return 0;
 
-  const CFGStmt *cstmt = block->front().getAs<CFGStmt>();
+  CFGElement front = block->front();
+  const CFGStmt *cstmt = front.getAs<CFGStmt>();
   if (!cstmt)
     return 0;
 
