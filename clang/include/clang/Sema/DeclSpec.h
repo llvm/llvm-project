@@ -1150,10 +1150,6 @@ struct DeclaratorChunk {
       /// \brief Pointer to the expression in the noexcept-specifier of this
       /// function, if it has one.
       Expr *NoexceptExpr;
-  
-      /// \brief Pointer to the cached tokens for an exception-specification
-      /// that has not yet been parsed.
-      CachedTokens *ExceptionSpecTokens;
     };
 
     /// TrailingReturnType - If this isn't null, it's the trailing return type
@@ -1176,8 +1172,6 @@ struct DeclaratorChunk {
         delete[] ArgInfo;
       if (getExceptionSpecType() == EST_Dynamic)
         delete[] Exceptions;
-      else if (getExceptionSpecType() == EST_Delayed)
-        delete ExceptionSpecTokens;
     }
 
     /// isKNRPrototype - Return true if this is a K&R style identifier list,
@@ -1353,7 +1347,6 @@ struct DeclaratorChunk {
                                      SourceRange *ExceptionRanges,
                                      unsigned NumExceptions,
                                      Expr *NoexceptExpr,
-                                     CachedTokens *ExceptionSpecTokens,
                                      SourceLocation LocalRangeBegin,
                                      SourceLocation LocalRangeEnd,
                                      Declarator &TheDeclarator,

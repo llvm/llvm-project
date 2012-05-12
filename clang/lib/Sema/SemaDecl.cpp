@@ -7635,7 +7635,7 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                                              SourceLocation(), SourceLocation(),
                                              SourceLocation(),
                                              EST_None, SourceLocation(),
-                                             0, 0, 0, 0, 0, Loc, Loc, D),
+                                             0, 0, 0, 0, Loc, Loc, D),
                 DS.getAttributes(),
                 SourceLocation());
   D.SetIdentifier(&II, Loc);

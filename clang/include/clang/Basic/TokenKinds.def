@@ -105,7 +105,6 @@ TOK(eod)                 // End of preprocessing directive (end of line inside a
                          // directive).
 TOK(code_completion)     // Code completion marker
 TOK(cxx_defaultarg_end)  // C++ default argument end marker
-TOK(cxx_exceptspec_end)  // C++ exception-specification end marker
 
 // C99 6.4.9: Comments.
 TOK(comment)             // Comment (only in -E -C[C] mode)

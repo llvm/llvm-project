@@ -162,7 +162,6 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto, bool isVariadic,
                                              SourceRange *ExceptionRanges,
                                              unsigned NumExceptions,
                                              Expr *NoexceptExpr,
-                                             CachedTokens *ExceptionSpecTokens,
                                              SourceLocation LocalRangeBegin,
                                              SourceLocation LocalRangeEnd,
                                              Declarator &TheDeclarator,
@@ -226,10 +225,6 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto, bool isVariadic,
 
   case EST_ComputedNoexcept:
     I.Fun.NoexceptExpr = NoexceptExpr;
-    break;
-      
-  case EST_Delayed:
-    I.Fun.ExceptionSpecTokens = ExceptionSpecTokens;
     break;
   }
   return I;

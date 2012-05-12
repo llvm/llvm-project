@@ -410,8 +410,6 @@ def ext_ellipsis_exception_spec : Extension<
   "exception specification of '...' is a Microsoft extension">;
 def err_dynamic_and_noexcept_specification : Error<
   "cannot have both throw() and noexcept() clause on the same function">;
-def err_except_spec_unparsed : Error<
-  "unexpected end of exception specification">;
 def warn_cxx98_compat_noexcept_decl : Warning<
   "noexcept specifications are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;

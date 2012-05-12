@@ -1429,12 +1429,10 @@ private:
   ExprResult ParseThrowExpression();
 
   ExceptionSpecificationType tryParseExceptionSpecification(
-                    bool Delayed,
                     SourceRange &SpecificationRange,
                     SmallVectorImpl<ParsedType> &DynamicExceptions,
                     SmallVectorImpl<SourceRange> &DynamicExceptionRanges,
-                    ExprResult &NoexceptExpr,
-                    CachedTokens *&ExceptionSpecTokens);
+                    ExprResult &NoexceptExpr);
 
   // EndLoc is filled with the location of the last token of the specification.
   ExceptionSpecificationType ParseDynamicExceptionSpecification(

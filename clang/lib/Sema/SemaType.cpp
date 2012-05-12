@@ -561,7 +561,7 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
                              /*const qualifier*/SourceLocation(),
                              /*volatile qualifier*/SourceLocation(),
                              /*mutable qualifier*/SourceLocation(),
-                             /*EH*/ EST_None, SourceLocation(), 0, 0, 0, 0, 0,
+                             /*EH*/ EST_None, SourceLocation(), 0, 0, 0, 0,
                              /*parens*/ loc, loc,
                              declarator));
 

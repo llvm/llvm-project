@@ -3154,16 +3154,6 @@ public:
                                    llvm::SmallVectorImpl<QualType> &Exceptions,
                                    FunctionProtoType::ExtProtoInfo &EPI);
 
-  /// \brief Add an exception-specification to the given member function
-  /// (or member function template). The exception-specification was parsed
-  /// after the method itself was declared.
-  void actOnDelayedExceptionSpecification(Decl *Method,
-         ExceptionSpecificationType EST,
-         SourceRange SpecificationRange,
-         ArrayRef<ParsedType> DynamicExceptions,
-         ArrayRef<SourceRange> DynamicExceptionRanges,
-         Expr *NoexceptExpr);
-
   /// \brief Determine if a special member function should have a deleted
   /// definition when it is defaulted.
   bool ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
