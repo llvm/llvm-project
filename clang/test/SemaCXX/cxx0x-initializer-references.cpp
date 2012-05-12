@@ -85,3 +85,8 @@ namespace PR12182 {
       f({1, 2});
   }
 }
+
+namespace PR12660 {
+  const int &i { 1 };
+  struct S { S(int); } const &s { 2 };
+}

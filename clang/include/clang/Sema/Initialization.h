@@ -225,7 +225,9 @@ public:
   
   /// \brief Create the initialization entity for a temporary.
   static InitializedEntity InitializeTemporary(QualType Type) {
-    return InitializedEntity(EK_Temporary, SourceLocation(), Type);
+    InitializedEntity Result(EK_Temporary, SourceLocation(), Type);
+    Result.TypeInfo = 0;
+    return Result;
   }
 
   /// \brief Create the initialization entity for a temporary.
