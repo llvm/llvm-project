@@ -584,11 +584,15 @@ private:
   class TentativeParsingAction {
     Parser &P;
     Token PrevTok;
+    unsigned short PrevParenCount, PrevBracketCount, PrevBraceCount;
     bool isActive;
 
   public:
     explicit TentativeParsingAction(Parser& p) : P(p) {
       PrevTok = P.Tok;
+      PrevParenCount = P.ParenCount;
+      PrevBracketCount = P.BracketCount;
+      PrevBraceCount = P.BraceCount;
       P.PP.EnableBacktrackAtThisPos();
       isActive = true;
     }
@@ -601,6 +605,9 @@ private:
       assert(isActive && "Parsing action was finished!");
       P.PP.Backtrack();
       P.Tok = PrevTok;
+      P.ParenCount = PrevParenCount;
+      P.BracketCount = PrevBracketCount;
+      P.BraceCount = PrevBraceCount;
       isActive = false;
     }
     ~TentativeParsingAction() {
