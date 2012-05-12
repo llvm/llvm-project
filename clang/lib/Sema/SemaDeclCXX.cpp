@@ -11279,11 +11279,9 @@ void Sema::actOnDelayedExceptionSpecification(Decl *MethodD,
   if (!Method)
     return;
   
-  // Dig out the prototype. This should never fail.
+  // Dig out the prototype, looking through only parens. This should never fail.
   const FunctionProtoType *Proto
-    = dyn_cast<FunctionProtoType>(Method->getType());
-  if (!Proto)
-    return;
+    = cast<FunctionProtoType>(Method->getType().IgnoreParens());
   
   // Check the exception specification.
   llvm::SmallVector<QualType, 4> Exceptions;
@@ -11296,6 +11294,12 @@ void Sema::actOnDelayedExceptionSpecification(Decl *MethodD,
                                        Proto->arg_type_begin(),
                                        Proto->getNumArgs(),
                                        EPI);
+
+  // Rebuild any parens around the function type.
+  for (const ParenType *PT = dyn_cast<ParenType>(Method->getType()); PT;
+       PT = dyn_cast<ParenType>(PT->getInnerType()))
+    T = Context.getParenType(T);
+
   if (TypeSourceInfo *TSInfo = Method->getTypeSourceInfo()) {
     // FIXME: When we get proper type location information for exceptions,
     // we'll also have to rebuild the TypeSourceInfo. For now, we just patch

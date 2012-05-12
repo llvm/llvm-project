@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // C++11 [class.mem]p2:
 //   A class is considered a completely-defined object type (or
@@ -55,4 +55,13 @@ namespace test3 {
   };
 
   template struct A2<int>;
+}
+
+namespace PR12629 {
+  struct S {
+    static int (f)() throw();
+    static int ((((((g))))() throw(int)));
+  };
+  static_assert(noexcept(S::f()), "");
+  static_assert(!noexcept(S::g()), "");
 }
