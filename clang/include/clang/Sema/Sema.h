@@ -653,23 +653,19 @@ public:
   /// SpecialMemberOverloadResult - The overloading result for a special member
   /// function.
   ///
-  /// This is basically a wrapper around PointerIntPair. The lowest bit of the
-  /// integer is used to determine whether we have a parameter qualification
-  /// match, the second-lowest is whether we had success in resolving the
-  /// overload to a unique non-deleted function.
-  ///
-  /// The ConstParamMatch bit represents whether, when looking up a copy
-  /// constructor or assignment operator, we found a potential copy
-  /// constructor/assignment operator whose first parameter is const-qualified.
-  /// This is used for determining parameter types of other objects and is
-  /// utterly meaningless on other types of special members.
+  /// This is basically a wrapper around PointerIntPair. The lowest bits of the
+  /// integer are used to determine whether overload resolution succeeded, and
+  /// whether, when looking up a copy constructor or assignment operator, we
+  /// found a potential copy constructor/assignment operator whose first
+  /// parameter is const-qualified. This is used for determining parameter types
+  /// of other objects and is utterly meaningless on other types of special
+  /// members.
   class SpecialMemberOverloadResult : public llvm::FastFoldingSetNode {
   public:
     enum Kind {
       NoMemberOrDeleted,
       Ambiguous,
-      SuccessNonConst,
-      SuccessConst
+      Success
     };
 
   private:
@@ -685,9 +681,6 @@ public:
 
     Kind getKind() const { return static_cast<Kind>(Pair.getInt()); }
     void setKind(Kind K) { Pair.setInt(K); }
-
-    bool hasSuccess() const { return getKind() >= SuccessNonConst; }
-    bool hasConstParamMatch() const { return getKind() == SuccessConst; }
   };
 
   /// \brief A cache of special member function overload resolution results
@@ -1909,11 +1902,9 @@ public:
   DeclContextLookupResult LookupConstructors(CXXRecordDecl *Class);
   CXXConstructorDecl *LookupDefaultConstructor(CXXRecordDecl *Class);
   CXXConstructorDecl *LookupCopyingConstructor(CXXRecordDecl *Class,
-                                               unsigned Quals,
-                                               bool *ConstParam = 0);
+                                               unsigned Quals);
   CXXMethodDecl *LookupCopyingAssignment(CXXRecordDecl *Class, unsigned Quals,
-                                         bool RValueThis, unsigned ThisQuals,
-                                         bool *ConstParam = 0);
+                                         bool RValueThis, unsigned ThisQuals);
   CXXConstructorDecl *LookupMovingConstructor(CXXRecordDecl *Class);
   CXXMethodDecl *LookupMovingAssignment(CXXRecordDecl *Class, bool RValueThis,
                                         unsigned ThisQuals);

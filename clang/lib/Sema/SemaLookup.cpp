@@ -2277,7 +2277,7 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
     Result->setMethod(DD);
     Result->setKind(DD->isDeleted() ?
                     SpecialMemberOverloadResult::NoMemberOrDeleted :
-                    SpecialMemberOverloadResult::SuccessNonConst);
+                    SpecialMemberOverloadResult::Success);
     return Result;
   }
 
@@ -2287,6 +2287,9 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
   DeclarationName Name;
   Expr *Arg = 0;
   unsigned NumArgs;
+
+  QualType ArgType = CanTy;
+  ExprValueKind VK = VK_LValue;
 
   if (SM == CXXDefaultConstructor) {
     Name = Context.DeclarationNames.getCXXConstructorName(CanTy);
@@ -2308,7 +2311,6 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
         DeclareImplicitMoveAssignment(RD);
     }
 
-    QualType ArgType = CanTy;
     if (ConstArg)
       ArgType.addConst();
     if (VolatileArg)
@@ -2321,14 +2323,17 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
     // Possibly an XValue is actually correct in the case of move, but
     // there is no semantic difference for class types in this restricted
     // case.
-    ExprValueKind VK;
     if (SM == CXXCopyConstructor || SM == CXXCopyAssignment)
       VK = VK_LValue;
     else
       VK = VK_RValue;
+  }
 
+  OpaqueValueExpr FakeArg(SourceLocation(), ArgType, VK);
+
+  if (SM != CXXDefaultConstructor) {
     NumArgs = 1;
-    Arg = new (Context) OpaqueValueExpr(SourceLocation(), ArgType, VK);
+    Arg = &FakeArg;
   }
 
   // Create the object argument
@@ -2338,17 +2343,14 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
   if (VolatileThis)
     ThisTy.addVolatile();
   Expr::Classification Classification =
-    (new (Context) OpaqueValueExpr(SourceLocation(), ThisTy,
-                                   RValueThis ? VK_RValue : VK_LValue))->
-        Classify(Context);
+    OpaqueValueExpr(SourceLocation(), ThisTy,
+                    RValueThis ? VK_RValue : VK_LValue).Classify(Context);
 
   // Now we perform lookup on the name we computed earlier and do overload
   // resolution. Lookup is only performed directly into the class since there
   // will always be a (possibly implicit) declaration to shadow any others.
   OverloadCandidateSet OCS((SourceLocation()));
   DeclContext::lookup_iterator I, E;
-  SpecialMemberOverloadResult::Kind SuccessKind =
-      SpecialMemberOverloadResult::SuccessNonConst;
 
   llvm::tie(I, E) = RD->lookup(Name);
   assert((I != E) &&
@@ -2378,17 +2380,6 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
       else
         AddOverloadCandidate(M, DeclAccessPair::make(M, AS_public),
                              llvm::makeArrayRef(&Arg, NumArgs), OCS, true);
-
-      // Here we're looking for a const parameter to speed up creation of
-      // implicit copy methods.
-      if ((SM == CXXCopyAssignment && M->isCopyAssignmentOperator()) ||
-          (SM == CXXCopyConstructor &&
-            cast<CXXConstructorDecl>(M)->isCopyConstructor())) {
-        QualType ArgType = M->getType()->getAs<FunctionProtoType>()->getArgType(0);
-        if (!ArgType->isReferenceType() ||
-            ArgType->getPointeeType().isConstQualified())
-          SuccessKind = SpecialMemberOverloadResult::SuccessConst;
-      }
     } else if (FunctionTemplateDecl *Tmpl =
                  dyn_cast<FunctionTemplateDecl>(Cand)) {
       if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)
@@ -2409,7 +2400,7 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
   switch (OCS.BestViableFunction(*this, SourceLocation(), Best)) {
     case OR_Success:
       Result->setMethod(cast<CXXMethodDecl>(Best->Function));
-      Result->setKind(SuccessKind);
+      Result->setKind(SpecialMemberOverloadResult::Success);
       break;
 
     case OR_Deleted:
@@ -2442,16 +2433,12 @@ CXXConstructorDecl *Sema::LookupDefaultConstructor(CXXRecordDecl *Class) {
 
 /// \brief Look up the copying constructor for the given class.
 CXXConstructorDecl *Sema::LookupCopyingConstructor(CXXRecordDecl *Class,
-                                                   unsigned Quals,
-                                                   bool *ConstParamMatch) {
+                                                   unsigned Quals) {
   assert(!(Quals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy ctor arg");
   SpecialMemberOverloadResult *Result =
     LookupSpecialMember(Class, CXXCopyConstructor, Quals & Qualifiers::Const,
                         Quals & Qualifiers::Volatile, false, false, false);
-
-  if (ConstParamMatch)
-    *ConstParamMatch = Result->hasConstParamMatch();
 
   return cast_or_null<CXXConstructorDecl>(Result->getMethod());
 }
@@ -2485,8 +2472,7 @@ DeclContext::lookup_result Sema::LookupConstructors(CXXRecordDecl *Class) {
 /// \brief Look up the copying assignment operator for the given class.
 CXXMethodDecl *Sema::LookupCopyingAssignment(CXXRecordDecl *Class,
                                              unsigned Quals, bool RValueThis,
-                                             unsigned ThisQuals,
-                                             bool *ConstParamMatch) {
+                                             unsigned ThisQuals) {
   assert(!(Quals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy assignment arg");
   assert(!(ThisQuals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
@@ -2496,9 +2482,6 @@ CXXMethodDecl *Sema::LookupCopyingAssignment(CXXRecordDecl *Class,
                         Quals & Qualifiers::Volatile, RValueThis,
                         ThisQuals & Qualifiers::Const,
                         ThisQuals & Qualifiers::Volatile);
-
-  if (ConstParamMatch)
-    *ConstParamMatch = Result->hasConstParamMatch();
 
   return Result->getMethod();
 }

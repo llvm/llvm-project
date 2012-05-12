@@ -7579,8 +7579,9 @@ Sema::ComputeDefaultedCopyAssignmentExceptionSpecAndConst(
     assert(!Base->getType()->isDependentType() &&
            "Cannot generate implicit members for class with dependent bases.");
     CXXRecordDecl *BaseClassDecl = Base->getType()->getAsCXXRecordDecl();
-    LookupCopyingAssignment(BaseClassDecl, Qualifiers::Const, false, 0,
-                            &HasConstCopyAssignment);
+    HasConstCopyAssignment &=
+      (bool)LookupCopyingAssignment(BaseClassDecl, Qualifiers::Const,
+                                    false, 0);
   }
 
   // In C++11, the above citation has "or virtual" added
@@ -7591,8 +7592,9 @@ Sema::ComputeDefaultedCopyAssignmentExceptionSpecAndConst(
       assert(!Base->getType()->isDependentType() &&
              "Cannot generate implicit members for class with dependent bases.");
       CXXRecordDecl *BaseClassDecl = Base->getType()->getAsCXXRecordDecl();
-      LookupCopyingAssignment(BaseClassDecl, Qualifiers::Const, false, 0,
-                              &HasConstCopyAssignment);
+      HasConstCopyAssignment &=
+        (bool)LookupCopyingAssignment(BaseClassDecl, Qualifiers::Const,
+                                      false, 0);
     }
   }
   
@@ -7606,8 +7608,9 @@ Sema::ComputeDefaultedCopyAssignmentExceptionSpecAndConst(
        ++Field) {
     QualType FieldType = Context.getBaseElementType((*Field)->getType());
     if (CXXRecordDecl *FieldClassDecl = FieldType->getAsCXXRecordDecl()) {
-      LookupCopyingAssignment(FieldClassDecl, Qualifiers::Const, false, 0,
-                              &HasConstCopyAssignment);
+      HasConstCopyAssignment &=
+        (bool)LookupCopyingAssignment(FieldClassDecl, Qualifiers::Const,
+                                      false, 0);
     }
   }
   
@@ -8610,8 +8613,8 @@ Sema::ComputeDefaultedCopyCtorExceptionSpecAndConst(CXXRecordDecl *ClassDecl) {
     
     CXXRecordDecl *BaseClassDecl
       = cast<CXXRecordDecl>(Base->getType()->getAs<RecordType>()->getDecl());
-    LookupCopyingConstructor(BaseClassDecl, Qualifiers::Const,
-                             &HasConstCopyConstructor);
+    HasConstCopyConstructor &=
+      (bool)LookupCopyingConstructor(BaseClassDecl, Qualifiers::Const);
   }
 
   for (CXXRecordDecl::base_class_iterator Base = ClassDecl->vbases_begin(),
@@ -8620,8 +8623,8 @@ Sema::ComputeDefaultedCopyCtorExceptionSpecAndConst(CXXRecordDecl *ClassDecl) {
        ++Base) {
     CXXRecordDecl *BaseClassDecl
       = cast<CXXRecordDecl>(Base->getType()->getAs<RecordType>()->getDecl());
-    LookupCopyingConstructor(BaseClassDecl, Qualifiers::Const,
-                             &HasConstCopyConstructor);
+    HasConstCopyConstructor &=
+      (bool)LookupCopyingConstructor(BaseClassDecl, Qualifiers::Const);
   }
   
   //     -- for all the nonstatic data members of X that are of a
@@ -8634,8 +8637,8 @@ Sema::ComputeDefaultedCopyCtorExceptionSpecAndConst(CXXRecordDecl *ClassDecl) {
        ++Field) {
     QualType FieldType = Context.getBaseElementType((*Field)->getType());
     if (CXXRecordDecl *FieldClassDecl = FieldType->getAsCXXRecordDecl()) {
-      LookupCopyingConstructor(FieldClassDecl, Qualifiers::Const,
-                               &HasConstCopyConstructor);
+      HasConstCopyConstructor &=
+        (bool)LookupCopyingConstructor(FieldClassDecl, Qualifiers::Const);
     }
   }
   //   Otherwise, the implicitly declared copy constructor will have

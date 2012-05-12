@@ -198,15 +198,15 @@ namespace DR1402 {
   struct NoMove4 : NonTrivialCopyAssign {}; // expected-note 2{{'const DR1402::NoMove4 &'}}
   struct NoMove5 : virtual NonTrivialCopyCtor {}; // expected-note 2{{'const DR1402::NoMove5 &'}}
   struct NoMove6 : virtual NonTrivialCopyAssign {}; // expected-note 2{{'const DR1402::NoMove6 &'}}
-  struct NoMove7 : NonTrivialCopyCtorVBase {}; // expected-note 2{{'DR1402::NoMove7 &'}}
-  struct NoMove8 : NonTrivialCopyAssignVBase {}; // expected-note 2{{'DR1402::NoMove8 &'}}
+  struct NoMove7 : NonTrivialCopyCtorVBase {}; // expected-note 2{{'const DR1402::NoMove7 &'}}
+  struct NoMove8 : NonTrivialCopyAssignVBase {}; // expected-note 2{{'const DR1402::NoMove8 &'}}
 
   // A non-trivially-move-assignable virtual base class inhibits the declaration
   // of a move assignment (which might move-assign the base class multiple
   // times).
   struct NoMove9 : NonTrivialMoveAssign {};
-  struct NoMove10 : virtual NonTrivialMoveAssign {}; // expected-note {{'DR1402::NoMove10 &'}}
-  struct NoMove11 : NonTrivialMoveAssignVBase {}; // expected-note {{'DR1402::NoMove11 &'}}
+  struct NoMove10 : virtual NonTrivialMoveAssign {}; // expected-note {{'const DR1402::NoMove10 &'}}
+  struct NoMove11 : NonTrivialMoveAssignVBase {}; // expected-note {{'const DR1402::NoMove11 &'}}
 
   struct Test {
     friend NoMove1::NoMove1(NoMove1 &&); // expected-error {{no matching function}}
