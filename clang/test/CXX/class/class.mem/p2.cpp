@@ -60,8 +60,16 @@ namespace test3 {
 namespace PR12629 {
   struct S {
     static int (f)() throw();
-    static int ((((((g))))() throw(int)));
+    static int ((((((g))))() throw(U)));
+    int (*h)() noexcept(false);
+    static int (&i)() noexcept(true);
+    static int (*j)() throw(U); // expected-error {{type name}} \
+    // expected-error {{expected ')'}} expected-note {{to match}}
+
+    struct U {};
   };
   static_assert(noexcept(S::f()), "");
   static_assert(!noexcept(S::g()), "");
+  static_assert(!noexcept(S().h()), "");
+  static_assert(noexcept(S::i()), "");
 }
