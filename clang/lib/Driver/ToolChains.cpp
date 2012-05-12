@@ -1830,6 +1830,7 @@ enum LinuxDistro {
   OpenSuse11_3,
   OpenSuse11_4,
   OpenSuse12_1,
+  OpenSuse12_2,
   UbuntuHardy,
   UbuntuIntrepid,
   UbuntuJaunty,
@@ -1848,7 +1849,7 @@ static bool IsRedhat(enum LinuxDistro Distro) {
 }
 
 static bool IsOpenSuse(enum LinuxDistro Distro) {
-  return Distro >= OpenSuse11_3 && Distro <= OpenSuse12_1;
+  return Distro >= OpenSuse11_3 && Distro <= OpenSuse12_2;
 }
 
 static bool IsDebian(enum LinuxDistro Distro) {
@@ -1925,6 +1926,7 @@ static LinuxDistro DetectLinuxDistro(llvm::Triple::ArchType Arch) {
       .StartsWith("openSUSE 11.3", OpenSuse11_3)
       .StartsWith("openSUSE 11.4", OpenSuse11_4)
       .StartsWith("openSUSE 12.1", OpenSuse12_1)
+      .StartsWith("openSUSE 12.2", OpenSuse12_2)
       .Default(UnknownDistro);
 
   bool Exists;
