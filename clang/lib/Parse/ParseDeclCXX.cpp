@@ -2065,7 +2065,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       DeclsInGroup.push_back(ThisDecl);
     }
     
-    if (DeclaratorInfo.isFunctionDeclarator() &&
+    if (ThisDecl && DeclaratorInfo.isFunctionDeclarator() &&
         DeclaratorInfo.getDeclSpec().getStorageClassSpec()
           != DeclSpec::SCS_typedef) {
       HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl);
