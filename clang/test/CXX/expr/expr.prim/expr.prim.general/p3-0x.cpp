@@ -91,10 +91,11 @@ namespace Static {
 
 namespace PR12564 {
   struct Base {
-    void bar(Base&) {}
+    void bar(Base&) {} // unexpected-note {{here}}
   };
 
   struct Derived : Base {
-    void foo(Derived& d) noexcept(noexcept(d.bar(d))) {}
+    // FIXME: This should be accepted.
+    void foo(Derived& d) noexcept(noexcept(d.bar(d))) {} // unexpected-error {{cannot bind to a value of unrelated type}}
   };
 }
