@@ -7319,15 +7319,42 @@ void Sema::DefineImplicitDestructor(SourceLocation CurrentLocation,
   }
 }
 
+/// \brief Perform any semantic analysis which needs to be delayed until all
+/// pending class member declarations have been parsed.
+void Sema::ActOnFinishCXXMemberDecls() {
+  // Now we have parsed all exception specifications, determine the implicit
+  // exception specifications for destructors.
+  for (unsigned i = 0, e = DelayedDestructorExceptionSpecs.size();
+       i != e; ++i) {
+    CXXDestructorDecl *Dtor = DelayedDestructorExceptionSpecs[i];
+    AdjustDestructorExceptionSpec(Dtor->getParent(), Dtor, true);
+  }
+  DelayedDestructorExceptionSpecs.clear();
+
+  // Perform any deferred checking of exception specifications for virtual
+  // destructors.
+  for (unsigned i = 0, e = DelayedDestructorExceptionSpecChecks.size();
+       i != e; ++i) {
+    const CXXDestructorDecl *Dtor =
+        DelayedDestructorExceptionSpecChecks[i].first;
+    assert(!Dtor->getParent()->isDependentType() &&
+           "Should not ever add destructors of templates into the list.");
+    CheckOverridingFunctionExceptionSpec(Dtor,
+        DelayedDestructorExceptionSpecChecks[i].second);
+  }
+  DelayedDestructorExceptionSpecChecks.clear();
+}
+
 void Sema::AdjustDestructorExceptionSpec(CXXRecordDecl *classDecl,
-                                         CXXDestructorDecl *destructor) {
+                                         CXXDestructorDecl *destructor,
+                                         bool WasDelayed) {
   // C++11 [class.dtor]p3:
   //   A declaration of a destructor that does not have an exception-
   //   specification is implicitly considered to have the same exception-
   //   specification as an implicit declaration.
   const FunctionProtoType *dtorType = destructor->getType()->
                                         getAs<FunctionProtoType>();
-  if (dtorType->hasExceptionSpec())
+  if (!WasDelayed && dtorType->hasExceptionSpec())
     return;
 
   ImplicitExceptionSpecification exceptSpec =
@@ -7343,6 +7370,14 @@ void Sema::AdjustDestructorExceptionSpec(CXXRecordDecl *classDecl,
   QualType ty = Context.getFunctionType(Context.VoidTy, 0, 0, epi);
 
   destructor->setType(ty);
+
+  // If we can't compute the exception specification for this destructor yet
+  // (because it depends on an exception specification which we have not parsed
+  // yet), make a note that we need to try again when the class is complete.
+  if (epi.ExceptionSpecType == EST_Delayed) {
+    assert(!WasDelayed && "couldn't compute destructor exception spec");
+    DelayedDestructorExceptionSpecs.push_back(destructor);
+  }
 
   // FIXME: If the destructor has a body that could throw, and the newly created
   // spec doesn't allow exceptions, we should emit a warning, because this

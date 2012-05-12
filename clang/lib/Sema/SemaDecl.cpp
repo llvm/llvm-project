@@ -9784,21 +9784,6 @@ void Sema::ActOnFields(Scope* S,
     if (!Completed)
       Record->completeDefinition();
 
-    // Now that the record is complete, do any delayed exception spec checks
-    // we were missing.
-    while (!DelayedDestructorExceptionSpecChecks.empty()) {
-      const CXXDestructorDecl *Dtor =
-              DelayedDestructorExceptionSpecChecks.back().first;
-      if (Dtor->getParent() != Record)
-        break;
-
-      assert(!Dtor->getParent()->isDependentType() &&
-          "Should not ever add destructors of templates into the list.");
-      CheckOverridingFunctionExceptionSpec(Dtor,
-          DelayedDestructorExceptionSpecChecks.back().second);
-      DelayedDestructorExceptionSpecChecks.pop_back();
-    }
-
   } else {
     ObjCIvarDecl **ClsFields =
       reinterpret_cast<ObjCIvarDecl**>(RecFields.data());

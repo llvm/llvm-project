@@ -57,3 +57,33 @@ namespace DefaultArgument {
     } t; // expected-note {{has no default constructor}}
   };
 }
+
+namespace ImplicitDtorExceptionSpec {
+  struct A {
+    virtual ~A();
+
+    struct Inner {
+      ~Inner() throw();
+    };
+    Inner inner;
+  };
+
+  struct B {
+    virtual ~B() {} // expected-note {{here}}
+  };
+
+  struct C : B {
+    virtual ~C() {}
+    A a;
+  };
+
+  struct D : B {
+    ~D(); // expected-error {{more lax than base}}
+    struct E {
+      ~E();
+      struct F {
+        ~F() throw(A);
+      } f;
+    } e;
+  };
+}
