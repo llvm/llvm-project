@@ -1,9 +1,6 @@
-// RUN: %clang_cc1 -fms-extensions -rewrite-objc -x objective-c++ -fblocks -o %t-rw.cpp %s
-// RUN: %clang_cc1 -fsyntax-only -Werror -Wno-address-of-temporary -Wno-attributes -D"Class=void*" -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-rw.cpp
+// RUN: %clang_cc1 -fms-extensions -U__declspec -rewrite-objc -x objective-c++ -fblocks -o %t-rw.cpp %s
+// RUN: %clang_cc1 -fsyntax-only -Werror -Wno-address-of-temporary -Wno-attributes -D"Class=void*" -D"id=void*" -D"SEL=void*" -U__declspec -D"__declspec(X)=" %t-rw.cpp
 // rdar://11131490
-
-// XFAIL: mingw
-// FIXME: __declspec(X) is predefined on mingw.
 
 extern "C" __declspec(dllexport) void BreakTheRewriter(void) {
         __block int aBlockVariable = 0;
