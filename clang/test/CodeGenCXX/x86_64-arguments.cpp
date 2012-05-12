@@ -56,6 +56,7 @@ namespace PR7742 { // Also rdar://8250764
   
   // CHECK: define <2 x float> @_ZN6PR77423fooEPNS_2c2E(%"struct.PR7742::c2"* %P)
   c2 foo(c2 *P) {
+    return c2();
   }
   
 }
@@ -147,5 +148,36 @@ namespace test8 {
   void bar() {
    B b;
    foo(b);
+  }
+}
+
+// PR4242
+namespace test9 {
+  // Large enough to be passed indirectly.
+  struct S { void *data[3]; };
+
+  struct T { void *data[2]; };
+
+  // CHECK: define void @_ZN5test93fooEPNS_1SEPNS_1TE([[S:%.*]]*, [[T:%.*]]*)
+  void foo(S*, T*) {}
+
+  // CHECK: define void @_ZN5test91aEiiiiNS_1TEPv([[S]]* noalias sret {{%.*}}, i32, i32, i32, i32, [[T]]* byval align 8, i8*)
+  S a(int, int, int, int, T, void*) {
+    return S();
+  }
+
+  // CHECK: define [[S]]* @_ZN5test91bEPNS_1SEiiiiNS_1TEPv([[S]]* {{%.*}}, i32, i32, i32, i32, [[T:%.*]]* byval align 8, i8*)
+  S* b(S* sret, int, int, int, int, T, void*) {
+    return sret;
+  }
+
+  // CHECK: define void @_ZN5test91cEiiiNS_1TEPv([[S]]* noalias sret {{%.*}}, i32, i32, i32, i8* {{%.*}}, i8* {{%.*}}, i8*)
+  S c(int, int, int, T, void*) {
+    return S();
+  }
+
+  // CHECK: define [[S]]* @_ZN5test91dEPNS_1SEiiiNS_1TEPv([[S]]* {{%.*}}, i32, i32, i32, i8* {{%.*}}, i8* {{%.*}}, i8*)
+  S* d(S* sret, int, int, int, T, void*) {
+    return sret;
   }
 }
