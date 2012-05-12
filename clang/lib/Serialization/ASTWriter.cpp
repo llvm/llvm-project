@@ -195,6 +195,9 @@ void ASTTypeWriter::VisitFunctionProtoType(const FunctionProtoType *T) {
       Writer.AddTypeRef(T->getExceptionType(I), Record);
   } else if (T->getExceptionSpecType() == EST_ComputedNoexcept) {
     Writer.AddStmt(T->getNoexceptExpr());
+  } else if (T->getExceptionSpecType() == EST_Uninstantiated) {
+    Writer.AddDeclRef(T->getExceptionSpecDecl(), Record);
+    Writer.AddDeclRef(T->getExceptionSpecTemplate(), Record);
   }
   Code = TYPE_FUNCTION_PROTO;
 }
