@@ -3,7 +3,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <link rel="stylesheet" href="llvm.css" type="text/css">
+  <link rel="stylesheet" href="_static/llvm.css" type="text/css">
   <title>LLVM 3.1 Release Notes</title>
 </head>
 <body>
@@ -96,6 +96,7 @@ Release Notes</a>.</h1>
 
 <p>In the LLVM 3.1 time-frame, the Clang team has made many improvements:</p>
 <ul>
+  <li>C++11 support is greatly expanded including lambdas, initializer lists, constexpr, user-defined literals, and atomics.</li>
   <li>...</li>
 </ul>
 
@@ -119,17 +120,30 @@ Release Notes</a>.</h1>
 <div>
 <p><a href="http://dragonegg.llvm.org/">DragonEgg</a> is a
    <a href="http://gcc.gnu.org/wiki/plugins">gcc plugin</a> that replaces GCC's
-   optimizers and code generators with LLVM's. It works with gcc-4.5 or gcc-4.6,
-   targets the x86-32 and x86-64 processor families, and has been successfully
-   used on the Darwin, FreeBSD, KFreeBSD, Linux and OpenBSD platforms.  It fully
-   supports Ada, C, C++ and Fortran.  It has partial support for Go, Java, Obj-C
-   and Obj-C++.</p>
+   optimizers and code generators with LLVM's. It works with gcc-4.5 and gcc-4.6
+   (and partially with gcc-4.7), can target the x86-32/x86-64 and ARM processor
+   families, and has been successfully used on the Darwin, FreeBSD, KFreeBSD,
+   Linux and OpenBSD platforms.  It fully supports Ada, C, C++ and Fortran.  It
+   has partial support for Go, Java, Obj-C and Obj-C++.</p>
 
 <p>The 3.1 release has the following notable changes:</p>
 
   <ul>
 
-  <li>...</li>
+  <li>Partial support for gcc-4.7. Ada support is poor, but other languages work
+      fairly well.</li>
+
+  <li>Support for ARM processors. Some essential gcc headers that are needed to
+      build DragonEgg for ARM are not installed by gcc. To work around this,
+      copy the missing headers from the gcc source tree.</li>
+
+  <li>Better optimization for Fortran by exploiting the fact that Fortran scalar
+      arguments have 'restrict' semantics.</li>
+
+  <li>Better optimization for all languages by passing information about type
+      aliasing and type ranges to the LLVM optimizers.</li>
+
+  <li>A regression test-suite was added.</li>
 
 </ul>
 
@@ -250,7 +264,21 @@ Release Notes</a>.</h1>
    a lot of other language and tools projects.  This section lists some of the
    projects that have already been updated to work with LLVM 3.1.</p>
 
-  ... to be filled in right before the release ...
+<h3>Pure</h3>
+
+<p>Pure (http://pure-lang.googlecode.com/) is an algebraic/functional
+programming language based on term rewriting. Programs are collections of
+equations which are used to evaluate expressions in a symbolic fashion. The
+interpreter uses LLVM as a backend to JIT-compile Pure programs to fast native
+code. Pure offers dynamic typing, eager and lazy evaluation, lexical closures, a
+hygienic macro system (also based on term rewriting), built-in list and matrix
+support (including list and matrix comprehensions) and an easy-to-use interface
+to C and other programming languages (including the ability to load LLVM bitcode
+modules, and inline C, C++, Fortran and Faust code in Pure programs if the
+corresponding LLVM-enabled compilers are installed).</p>
+
+<p>Pure version 0.54 has been tested and is known to work with LLVM 3.1 (and
+continues to work with older LLVM releases >= 2.5).</p>
 
 </div>
 
@@ -536,6 +564,9 @@ syntax, there are still significant gaps in that support.</p>
   <li>The <tt>unwind</tt> instruction is now gone. With the introduction of the
       new exception handling system in LLVM 3.0, the <tt>unwind</tt> instruction
       became obsolete.</li>
+  <li>LLVM 3.0 and earlier automatically added the returns_twice fo functions
+      like setjmp based on the name. This functionality was removed in 3.1.
+      This affects Clang users, if -ffreestanding is used.</li>
   <li>....</li>
 </ul>
 
@@ -604,6 +635,7 @@ syntax, there are still significant gaps in that support.</p>
 <ul>
   <li>llvm-stress is a command line tool for generating random .ll files to fuzz
       different LLVM components. </li>
+  <li>llvm-ld has been removed.  Use llvm-link or Clang instead.</li>
   <li>....</li>
 </ul>
 
