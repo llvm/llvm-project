@@ -26,26 +26,18 @@ td {
   <li><a href="#intro">Introduction</a></li>
   <li><a href="#whatsnew">What's New in Clang 3.1?</a>
     <ul>
-      <li><a href="#majorfeatures">Major New Features</a></li>
       <li><a href="#cchanges">C Language Changes</a></li>
       <li><a href="#cxxchanges">C++ Language Changes</a></li>
       <li><a href="#objcchanges">Objective-C Language Changes</a></li>
-      <li><a href="#apichanges">Internal API Changes</a></li>
+      <li><a href="#pythonchanges">Python Binding Changes</a></li>
     </ul>
   </li>
-  <li><a href="#knownproblems">Known Problems</a></li>
   <li><a href="#additionalinfo">Additional Information</a></li>
 </ul>
 
 <div class="doc_author">
   <p>Written by the <a href="http://llvm.org/">LLVM Team</a></p>
 </div>
-
-<h1 style="color:red">These are in-progress notes for the upcoming Clang 3.1
-release.<br>
-You may prefer the
-<a href="http://llvm.org/releases/3.0/docs/ClangReleaseNotes.html">Clang 3.0
-Release Notes</a>.</h1>
 
 <!-- ======================================================================= -->
 <h2 id="intro">Introduction</h2>
@@ -77,25 +69,6 @@ current one.  To see the release notes for a specific release, please see the
 Generic improvements to Clang as a whole or two its underlying infrastructure
 are described first, followed by language-specific sections with improvements to
 Clang's support for those languages.</p>
-
-<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-<h3 id="majorfeatures">Major New Features</h3>
-<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-
-<h4 id="majorfeature1">Feature 1</h4>
-...
-
-<h4 id="diagnostics">New and better diagnostics</h4>
-
-<p>New: <code>-Wdangling-else</code>, <code>-Wstrncat-size</code>, ...</p>
-
-<p>Improved: <code>-Wformat</code>, <code>-Wempty-body</code>,
-<code>-Wliteral-conversion</code>, ...</p>
-
-<h4 id="tooling">Tooling</h4>
-<!-- FIXME: add a link to the tooling documentation once that's written. -->
-<p>Added an API to enable clang-based standalone tools, including initial build
-system integration.</p>
 
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 <h3 id="cchanges">C Language Changes in Clang</h3>
@@ -141,24 +114,47 @@ following are now considered to be of production quality:
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 Clang 3.1 introduces several new Objective-C language features and improvements.
 
+<h4 id="literals-subscripting">Objective-C literals and subscripting</h3>
+
+<p>Objective-C now provides additional literal expressions, including numeric, array, and dictionary literals. Additionally, array and dictionary elements can be accesses via the subscripting operator. For more information about the new literals, see the <a href="ObjectiveCLiterals.html">documentation for Objective-C literals and subscripting</a>.
+
 <h4 id="objcwformat">Format string checking for NSString literals</h4>
 
-<code>-Wformat</code> now checks <code>@"nsstring literals"</code>.
+<code>-Wformat</code> now checks <code>@"NSString literals"</code>.
 
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-<h3 id="apichanges">Internal API Changes</h3>
+<h3 id="pythonchanges">Python Binding Changes</h3>
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 
-These are major API changes that have happened since the 3.0 release of Clang.
-If upgrading an external codebase that uses Clang as a library, this section
-should help get you past the largest hurdles of upgrading.
-
-<h4 id="api1">API change 1</h4>
-...
-
-<!-- ======================================================================= -->
-<h2 id="knownproblems">Significant Known Problems</h2>
-<!-- ======================================================================= -->
+The following methods have been added:
+<ul>
+  <li>SourceLocation.from_position (static)</li>
+  <li>SourceLocation.__eq__ and SourceLocation.__ne__</li>
+  <li>SourceRange.__eq__ and SourceRange.__ne__</li>
+  <li>Diagnostic.category_number (property)</li>
+  <li>Diagnostic.category_name (property)</li>
+  <li>Diagnostic.option (property)</li>
+  <li>Diagnostic.disable_option (property)</li>
+  <li>CursorKind.is_translation_unit</li>
+  <li>CursorKind.is_preprocessing</li>
+  <li>CursorKind.is_unexposed</li>
+  <li>Cursor.from_location (static)</li>
+  <li>Cursor.underlying_typedef_type (property)</li>
+  <li>Cursor.enum_type (property)</li>
+  <li>Cursor.objc_type_encoding (property)</li>
+  <li>Cursor.hash</li>
+  <li>TypeKind.spelling</li>
+  <li>Type.argument_types</li>
+  <li>Type.element_type (property)</li>
+  <li>Type.element_count (property)</li>
+  <li>Type.is_function_variadic</li>
+  <li>Type.is_pod</li>
+  <li>Type.get_array_element_type</li>
+  <li>Type.get_array_size</li>
+  <li>Type.__eq__ and Type.__ne__</li>
+  <li>File.from_name (static)</li>
+  <li>File.__str__ and File.__repr__</li>
+</ul>
 
 <!-- ======================================================================= -->
 <h2 id="additionalinfo">Additional Information</h2>
@@ -175,18 +171,6 @@ tree.</p>
 contact us via the <a href="http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev">
 mailing list</a>.</p>
 
-
-<!-- ======================================================================= -->
-<!-- Likely 3.1 release notes -->
-<!-- ======================================================================= -->
-<!--
-This is just a section to hold things that have already gotten started and
-should likely pick up proper release notes in 3.1.
-
-- C1X and C++11 atomics infrastructure and support
-- CUDA support?
-
--->
 
 </div>
 </body>
