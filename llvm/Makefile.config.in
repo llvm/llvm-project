@@ -351,3 +351,10 @@ INTEL_JITEVENTS_LIBDIR := @INTEL_JITEVENTS_LIBDIR@
 
 # Flags to control building support for OProfile JIT API
 USE_OPROFILE := @USE_OPROFILE@
+
+ifeq ($(USE_INTEL_JITEVENTS), 1)
+  OPTIONAL_COMPONENTS += IntelJITEvents
+endif
+ifeq ($(USE_OPROFILE), 1)
+  OPTIONAL_COMPONENTS += OProfileJIT
+endif

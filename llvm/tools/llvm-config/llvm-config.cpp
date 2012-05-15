@@ -54,7 +54,8 @@ using namespace llvm;
 static void VisitComponent(StringRef Name,
                            const StringMap<AvailableComponent*> &ComponentMap,
                            std::set<AvailableComponent*> &VisitedComponents,
-                           std::vector<StringRef> &RequiredLibs) {
+                           std::vector<StringRef> &RequiredLibs,
+                           bool IncludeNonInstalled) {
   // Lookup the component.
   AvailableComponent *AC = ComponentMap.lookup(Name);
   assert(AC && "Invalid component name!");
@@ -65,10 +66,14 @@ static void VisitComponent(StringRef Name,
     return;
   }
 
+  // Only include non-installed components if requested.
+  if (!AC->IsInstalled && !IncludeNonInstalled)
+    return;
+
   // Otherwise, visit all the dependencies.
   for (unsigned i = 0; AC->RequiredLibraries[i]; ++i) {
     VisitComponent(AC->RequiredLibraries[i], ComponentMap, VisitedComponents,
-                   RequiredLibs);
+                   RequiredLibs, IncludeNonInstalled);
   }
 
   // Add to the required library list.
@@ -83,8 +88,11 @@ static void VisitComponent(StringRef Name,
 /// \param Components - The names of the components to find libraries for.
 /// \param RequiredLibs [out] - On return, the ordered list of libraries that
 /// are required to link the given components.
+/// \param IncludeNonInstalled - Whether non-installed components should be
+/// reported.
 void ComputeLibsForComponents(const std::vector<StringRef> &Components,
-                              std::vector<StringRef> &RequiredLibs) {
+                              std::vector<StringRef> &RequiredLibs,
+                              bool IncludeNonInstalled) {
   std::set<AvailableComponent*> VisitedComponents;
 
   // Build a map of component names to information.
@@ -107,7 +115,7 @@ void ComputeLibsForComponents(const std::vector<StringRef> &Components,
     }
 
     VisitComponent(ComponentLower, ComponentMap, VisitedComponents,
-                   RequiredLibs);
+                   RequiredLibs, IncludeNonInstalled);
   }
 
   // The list is now ordered with leafs first, we want the libraries to printed
@@ -278,6 +286,10 @@ int main(int argc, char **argv) {
         PrintLibFiles = true;
       } else if (Arg == "--components") {
         for (unsigned j = 0; j != array_lengthof(AvailableComponents); ++j) {
+          // Only include non-installed components when in a development tree.
+          if (!AvailableComponents[j].IsInstalled && !IsInDevelopmentTree)
+            continue;
+
           OS << ' ';
           OS << AvailableComponents[j].Name;
         }
@@ -310,7 +322,8 @@ int main(int argc, char **argv) {
 
     // Construct the list of all the required libraries.
     std::vector<StringRef> RequiredLibs;
-    ComputeLibsForComponents(Components, RequiredLibs);
+    ComputeLibsForComponents(Components, RequiredLibs,
+                             /*IncludeNonInstalled=*/IsInDevelopmentTree);
 
     for (unsigned i = 0, e = RequiredLibs.size(); i != e; ++i) {
       StringRef Lib = RequiredLibs[i];

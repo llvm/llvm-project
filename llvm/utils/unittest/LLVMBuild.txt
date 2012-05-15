@@ -20,9 +20,11 @@ type = Library
 name = gtest
 parent = Libraries
 required_libraries = Support
+installed = 0
 
 [component_1]
 type = Library
 name = gtest_main
 parent = Libraries
 required_libraries = gtest
+installed = 0

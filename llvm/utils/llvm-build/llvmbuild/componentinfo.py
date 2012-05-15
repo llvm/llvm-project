@@ -68,6 +68,21 @@ class ComponentInfo(object):
     def get_llvmbuild_fragment(self):
         abstract
 
+    def get_parent_target_group(self):
+        """get_parent_target_group() -> ComponentInfo or None
+
+        Return the nearest parent target group (if any), or None if the
+        component is not part of any target group.
+        """
+
+        # If this is a target group, return it.
+        if self.type_name == 'TargetGroup':
+            return self
+
+        # Otherwise recurse on the parent, if any.
+        if self.parent_instance:
+            return self.parent_instance.get_parent_target_group()
+
 class GroupComponentInfo(ComponentInfo):
     """
     Group components have no semantics as far as the build system are concerned,
@@ -95,16 +110,22 @@ class LibraryComponentInfo(ComponentInfo):
     type_name = 'Library'
 
     @staticmethod
-    def parse(subpath, items):
+    def parse_items(items):
         kwargs = ComponentInfo.parse_items(items)
         kwargs['library_name'] = items.get_optional_string('library_name')
         kwargs['required_libraries'] = items.get_list('required_libraries')
         kwargs['add_to_library_groups'] = items.get_list(
             'add_to_library_groups')
+        kwargs['installed'] = items.get_optional_bool('installed', True)
+        return kwargs
+
+    @staticmethod
+    def parse(subpath, items):
+        kwargs = LibraryComponentInfo.parse_items(items)
         return LibraryComponentInfo(subpath, **kwargs)
 
     def __init__(self, subpath, name, dependencies, parent, library_name,
-                 required_libraries, add_to_library_groups):
+                 required_libraries, add_to_library_groups, installed):
         ComponentInfo.__init__(self, subpath, name, dependencies, parent)
 
         # If given, the name to use for the library instead of deriving it from
@@ -118,6 +139,9 @@ class LibraryComponentInfo(ComponentInfo):
         # The names of the library group components this component should be
         # considered part of.
         self.add_to_library_groups = list(add_to_library_groups)
+
+        # Whether or not this library is installed.
+        self.installed = installed
 
     def get_component_references(self):
         for r in ComponentInfo.get_component_references(self):
@@ -140,6 +164,8 @@ class LibraryComponentInfo(ComponentInfo):
         if self.add_to_library_groups:
             print >>result, 'add_to_library_groups = %s' % ' '.join(
                 self.add_to_library_groups)
+        if not self.installed:
+            print >>result, 'installed = 0'
         return result.getvalue()
 
     def get_library_name(self):
@@ -164,6 +190,20 @@ class LibraryComponentInfo(ComponentInfo):
 
     def get_llvmconfig_component_name(self):
         return self.get_library_name().lower()
+
+class OptionalLibraryComponentInfo(LibraryComponentInfo):
+    type_name = "OptionalLibrary"
+
+    @staticmethod
+    def parse(subpath, items):
+      kwargs = LibraryComponentInfo.parse_items(items)
+      return OptionalLibraryComponentInfo(subpath, **kwargs)
+
+    def __init__(self, subpath, name, dependencies, parent, library_name,
+                 required_libraries, add_to_library_groups, installed):
+      LibraryComponentInfo.__init__(self, subpath, name, dependencies, parent,
+                                    library_name, required_libraries,
+                                    add_to_library_groups, installed)
 
 class LibraryGroupComponentInfo(ComponentInfo):
     type_name = 'LibraryGroup'
@@ -375,7 +415,7 @@ _component_type_map = dict(
     for t in (GroupComponentInfo,
               LibraryComponentInfo, LibraryGroupComponentInfo,
               ToolComponentInfo, BuildToolComponentInfo,
-              TargetGroupComponentInfo))
+              TargetGroupComponentInfo, OptionalLibraryComponentInfo))
 def load_from_path(path, subpath):
     # Load the LLVMBuild.txt file as an .ini format file.
     parser = ConfigParser.RawConfigParser()

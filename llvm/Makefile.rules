@@ -100,6 +100,7 @@ $(LLVMBuildMakeFrag): $(PROJ_SRC_ROOT)/Makefile.rules \
 	$(Verb) $(LLVMBuildTool) \
 	  --native-target "$(TARGET_NATIVE_ARCH)" \
 	  --enable-targets "$(TARGETS_TO_BUILD)" \
+	  --enable-optional-components "$(OPTIONAL_COMPONENTS)" \
 	  --write-library-table $(LLVMConfigLibraryDependenciesInc) \
 	  --write-make-fragment $(LLVMBuildMakeFrag)
 

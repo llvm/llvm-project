@@ -272,6 +272,11 @@ required_libraries = Archive BitReader Core Support TransformUtils
           components. For example, the <i>X86</i> target might define a library
           group for all of the <i>X86</i> components. That library group might
           then be included in the <i>all-targets</i> library group.</p></li>
+
+        <li><i>installed</i> <b>[optional]</b> <b>[boolean]</b>
+          <p>Whether this library is installed. Libraries that are not installed
+          are only reported by <tt>llvm-config</tt> when it is run as part of a
+          development directory.</p></li>
       </ul>
     </li>
 

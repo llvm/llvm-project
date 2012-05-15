@@ -268,11 +268,21 @@ set(LLVMCONFIGLIBRARYDEPENDENCIESINC
   "${LLVM_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc")
 set(LLVMBUILDCMAKEFRAG
   "${LLVM_BINARY_DIR}/LLVMBuild.cmake")
+
+# Create the list of optional components that are enabled
+if (LLVM_USE_INTEL_JITEVENTS)
+  set(LLVMOPTIONALCOMPONENTS IntelJITEvents)
+endif (LLVM_USE_INTEL_JITEVENTS)
+if (LLVM_USE_OPROFILE)
+  set(LLVMOPTIONALCOMPONENTS ${LLVMOPTIONALCOMPONENTS} OProfileJIT)
+endif (LLVM_USE_OPROFILE)
+
 message(STATUS "Constructing LLVMBuild project information")
 execute_process(
   COMMAND ${PYTHON_EXECUTABLE} ${LLVMBUILDTOOL}
             --native-target "${LLVM_NATIVE_ARCH}"
             --enable-targets "${LLVM_TARGETS_TO_BUILD}"
+            --enable-optional-components "${LLVMOPTIONALCOMPONENTS}"
             --write-library-table ${LLVMCONFIGLIBRARYDEPENDENCIESINC}
             --write-cmake-fragment ${LLVMBUILDCMAKEFRAG}
             ERROR_VARIABLE LLVMBUILDOUTPUT

@@ -18,6 +18,6 @@
 [common]
 
 [component_0]
-type = Library
+type = OptionalLibrary
 name = OProfileJIT
 parent = ExecutionEngine
