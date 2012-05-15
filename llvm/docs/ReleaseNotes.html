@@ -29,12 +29,6 @@
   <p>Written by the <a href="http://llvm.org/">LLVM Team</a></p>
 </div>
 
-<h1 style="color:red">These are in-progress notes for the upcoming LLVM 3.1
-release.<br>
-You may prefer the
-<a href="http://llvm.org/releases/3.0/docs/ReleaseNotes.html">LLVM 3.0
-Release Notes</a>.</h1>
-
 <!-- *********************************************************************** -->
 <h2>
   <a name="intro">Introduction</a>
@@ -74,9 +68,9 @@ Release Notes</a>.</h1>
 
 <p>The LLVM 3.1 distribution currently consists of code from the core LLVM
    repository (which roughly includes the LLVM optimizers, code generators and
-   supporting tools), and the Clang repository.  In
-   addition to this code, the LLVM Project includes other sub-projects that are
-   in development.  Here we include updates on these subprojects.</p>
+   supporting tools), and the Clang repository. In addition to this code, the
+   LLVM Project includes other sub-projects that are in development.  Here we
+   include updates on these subprojects.</p>
 
 <!--=========================================================================-->
 <h3>
@@ -94,7 +88,8 @@ Release Notes</a>.</h1>
    production-quality compiler for C, Objective-C, C++ and Objective-C++ on x86
    (32- and 64-bit), and for Darwin/ARM targets.</p>
 
-<p>In the LLVM 3.1 time-frame, the Clang team has made many improvements:</p>
+<p>In the LLVM 3.1 time-frame, the Clang team has made many improvements.
+   Highlights include:</p>
 <ul>
   <li>Greatly expanded <a href="http://clang.llvm.org/cxx_status.html">C++11
       support</a> including lambdas, initializer lists, constexpr, user-defined
@@ -106,10 +101,9 @@ Release Notes</a>.</h1>
       Objective C</a>.</li>
 </ul>
 
-  <p>For more details about the changes to Clang since the 3.0 release, see the
-<a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang release notes</a>
-</p>
-
+<p>For more details about the changes to Clang since the 3.0 release, see the
+   <a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang release
+   notes.</a></p>
 
 <p>If Clang rejects your code but another compiler accepts it, please take a
    look at the <a href="http://clang.llvm.org/compatibility.html">language
@@ -124,6 +118,7 @@ Release Notes</a>.</h1>
 </h3>
 
 <div>
+
 <p><a href="http://dragonegg.llvm.org/">DragonEgg</a> is a
    <a href="http://gcc.gnu.org/wiki/plugins">gcc plugin</a> that replaces GCC's
    optimizers and code generators with LLVM's. It works with gcc-4.5 and gcc-4.6
@@ -134,8 +129,7 @@ Release Notes</a>.</h1>
 
 <p>The 3.1 release has the following notable changes:</p>
 
-  <ul>
-
+<ul>
   <li>Partial support for gcc-4.7. Ada support is poor, but other languages work
       fairly well.</li>
 
@@ -150,7 +144,6 @@ Release Notes</a>.</h1>
       aliasing and type ranges to the LLVM optimizers.</li>
 
   <li>A regression test-suite was added.</li>
-
 </ul>
 
 </div>
@@ -171,7 +164,9 @@ Release Notes</a>.</h1>
    implementations of this and other low-level routines (some are 3x faster than
    the equivalent libgcc routines).</p>
 
-<p>....</p>
+<p>As of 3.1, compiler-rt includes the helper functions for atomic operations,
+   allowing atomic operations on arbitrary-sized quantities to work.  These
+   functions follow the specification defined by gcc and are used by clang.</p>
 
 </div>
 
@@ -182,12 +177,11 @@ Release Notes</a>.</h1>
 
 <div>
 
-<p>LLDB is a ground-up implementation of a command line debugger, as well as a
-   debugger API that can be used from other applications.  LLDB makes use of the
-   Clang parser to provide high-fidelity expression parsing (particularly for
-   C++) and uses the LLVM JIT for target support.</p>
-
-<p>...</p>
+<p><a href="http://lldb.llvm.org">LLDB</a> is a ground-up implementation of a
+   command line debugger, as well as a debugger API that can be used from other
+   applications.  LLDB makes use of the Clang parser to provide high-fidelity
+   expression parsing (particularly for C++) and uses the LLVM JIT for target
+   support.</p>
 
 </div>
 
@@ -202,7 +196,16 @@ Release Notes</a>.</h1>
    licensed</a> under the MIT and UIUC license, allowing it to be used more
    permissively.</p>
 
-<p>...</p>
+<p>Within the LLVM 3.1 time-frame there were the following highlights:</p>
+
+<ul>
+  <li>The <code>&lt;atomic&gt;</code> header is now passing all tests, when
+      compiling with clang and linking against the support code from
+      compiler-rt.</li>
+  <li>FreeBSD now includes libc++ as part of the base system.</li>
+  <li>libc++ has been ported to Solaris and, in combination with libcxxrt and
+      clang, is working with a large body of existing code.</li>
+</ul>
 
 </div>
 
@@ -213,16 +216,12 @@ Release Notes</a>.</h1>
 
 <div>
 
-  <p>The <a href="http://vmkit.llvm.org/">VMKit project</a> is an
-  implementation of a Java Virtual Machine (Java VM or JVM) that uses LLVM for
-  static and just-in-time compilation.
+<p>The <a href="http://vmkit.llvm.org/">VMKit project</a> is an implementation
+  of a Java Virtual Machine (Java VM or JVM) that uses LLVM for static and
+  just-in-time compilation.</p>
 
-  <p>In the LLVM 3.1 time-frame, VMKit has had significant improvements on both
-  runtime and startup performance:</p>
-
-  <ul>
-  <li>...</li>
-  </ul>
+<p>In the LLVM 3.1 time-frame, VMKit has had significant improvements on both
+   runtime and startup performance.</p>
 
 </div>
 
@@ -234,25 +233,23 @@ Release Notes</a>.</h1>
 
 <div>
 
-  <p><a href="http://polly.llvm.org/">Polly</a> is an <em>experimental</em>
+<p><a href="http://polly.llvm.org/">Polly</a> is an <em>experimental</em>
   optimizer for data locality and parallelism. It currently provides high-level
   loop optimizations and automatic parallelisation (using the OpenMP run time).
   Work in the area of automatic SIMD and accelerator code generation was
-  started.
+  started.</p>
 
-  <p>Within the LLVM 3.1 time-frame there were the following highlights:</p>
+<p>Within the LLVM 3.1 time-frame there were the following highlights:</p>
 
-  <ul>
+<ul>
   <li>Polly became an official LLVM project</li>
-  <li>Polly can be loaded directly into clang (Enabled by '-O3 -mllvm -polly'
-  )</li>
-  <li>An automatic scheduling optimizer (derived from <a
-  href="http://pluto-compiler.sourceforge.net/">Pluto</a>) was integrated. It
-  performs loop transformations to optimize for data-locality and parallelism.
-  The transformations include, but are not limited to interchange, fusion,
-  fission, skewing and tiling.
-  </li>
-  </ul>
+  <li>Polly can be loaded directly into clang (enabled by '-O3 -mllvm -polly')</li>
+  <li>An automatic scheduling optimizer (derived
+      from <a href="http://pluto-compiler.sourceforge.net/">Pluto</a>) was
+      integrated. It performs loop transformations to optimize for data-locality
+      and parallelism.  The transformations include, but are not limited to
+      interchange, fusion, fission, skewing and tiling.</li>
+</ul>
 
 </div>
 
@@ -270,21 +267,143 @@ Release Notes</a>.</h1>
    a lot of other language and tools projects.  This section lists some of the
    projects that have already been updated to work with LLVM 3.1.</p>
 
+<h3>Crack</h3>
+
+<div>
+
+<p><a href="http://code.google.com/p/crack-language/">Crack</a> aims to provide
+   the ease of development of a scripting language with the performance of a
+   compiled language. The language derives concepts from C++, Java and Python,
+   incorporating object-oriented programming, operator overloading and strong
+   typing.</p>
+
+</div>
+
+<h3>FAUST</h3>
+
+<div>
+
+<p><a href="http://faust.grame.fr/">FAUST</a> is a compiled language for
+   real-time audio signal processing. The name FAUST stands for Functional
+   AUdio STream. Its programming model combines two approaches: functional
+   programming and block diagram composition. In addition with the C, C++, Java,
+   JavaScript output formats, the Faust compiler can generate LLVM bitcode, and
+   works with LLVM 2.7-3.1.</p>
+
+</div>
+
+<h3>Glasgow Haskell Compiler (GHC)</h3>
+
+<div>
+
+<p><a href="http://www.haskell.org/ghc/">GHC</a> is an open source compiler and
+   programming suite for Haskell, a lazy functional programming language. It
+   includes an optimizing static compiler generating good code for a variety of
+   platforms, together with an interactive system for convenient, quick
+   development.</p>
+
+<p>GHC 7.0 and onwards include an LLVM code generator, supporting LLVM 2.8 and
+   later.</p>
+
+</div>
+
+<h3>Julia</h3>
+
+<div>
+
+<p><a href="https://github.com/JuliaLang/julia">Julia</a> is a high-level,
+   high-performance dynamic language for technical computing. It provides a
+   sophisticated compiler, distributed parallel execution, numerical accuracy,
+   and an extensive mathematical function library. The compiler uses type
+   inference to generate fast code without any type declarations, and uses
+   LLVM's optimization passes and JIT compiler. The
+   <a href="http://julialang.org/"> Julia Language</a> is designed
+   around multiple dispatch, giving programs a large degree of flexibility. It
+   is ready for use on many kinds of problems.</p>
+
+</div>
+
+<h3>LLVM D Compiler</h3>
+
+<div>
+
+<p><a href="https://github.com/ldc-developers/ldc">LLVM D Compiler</a> (LDC) is
+   a compiler for the D programming Language. It is based on the DMD frontend
+   and uses LLVM as backend.</p>
+
+</div>
+
+<h3>Open Shading Language</h3>
+
+<div>
+
+<p><a href="https://github.com/imageworks/OpenShadingLanguage/">Open Shading
+   Language (OSL)</a> is a small but rich language for programmable shading in
+   advanced global illumination renderers and other applications, ideal for
+   describing materials, lights, displacement, and pattern generation. It uses
+   LLVM to JIT complex shader networks to x86 code at runtime.</p>
+
+<p>OSL was developed by Sony Pictures Imageworks for use in its in-house
+   renderer used for feature film animation and visual effects, and is
+   distributed as open source software with the "New BSD" license.</p>
+
+</div>
+
+<h3>Portable OpenCL (pocl)</h3>
+
+<div>
+
+<p>In addition to producing an easily portable open source OpenCL
+   implementation, another major goal of <a href="http://pocl.sourceforge.net/">
+   pocl</a> is improving performance portability of OpenCL programs with
+   compiler optimizations, reducing the need for target-dependent manual
+   optimizations. An important part of pocl is a set of LLVM passes used to
+   statically parallelize multiple work-items with the kernel compiler, even in
+   the presence of work-group barriers. This enables static parallelization of
+   the fine-grained static concurrency in the work groups in multiple ways
+   (SIMD, VLIW, superscalar,...).</p>
+
+</div>
+
 <h3>Pure</h3>
 
-<p>Pure (http://pure-lang.googlecode.com/) is an algebraic/functional
-programming language based on term rewriting. Programs are collections of
-equations which are used to evaluate expressions in a symbolic fashion. The
-interpreter uses LLVM as a backend to JIT-compile Pure programs to fast native
-code. Pure offers dynamic typing, eager and lazy evaluation, lexical closures, a
-hygienic macro system (also based on term rewriting), built-in list and matrix
-support (including list and matrix comprehensions) and an easy-to-use interface
-to C and other programming languages (including the ability to load LLVM bitcode
-modules, and inline C, C++, Fortran and Faust code in Pure programs if the
-corresponding LLVM-enabled compilers are installed).</p>
+<div>
+
+<p><a href="http://pure-lang.googlecode.com/">Pure</a> is an
+   algebraic/functional programming language based on term rewriting. Programs
+   are collections of equations which are used to evaluate expressions in a
+   symbolic fashion. The interpreter uses LLVM as a backend to JIT-compile Pure
+   programs to fast native code. Pure offers dynamic typing, eager and lazy
+   evaluation, lexical closures, a hygienic macro system (also based on term
+   rewriting), built-in list and matrix support (including list and matrix
+   comprehensions) and an easy-to-use interface to C and other programming
+   languages (including the ability to load LLVM bitcode modules, and inline C,
+   C++, Fortran and Faust code in Pure programs if the corresponding
+   LLVM-enabled compilers are installed).</p>
 
 <p>Pure version 0.54 has been tested and is known to work with LLVM 3.1 (and
-continues to work with older LLVM releases >= 2.5).</p>
+   continues to work with older LLVM releases >= 2.5).</p>
+
+</div>
+
+<h3>TTA-based Co-design Environment (TCE)</h3>
+
+<div>
+
+<p><a href="http://tce.cs.tut.fi/">TCE</a> is a toolset for designing
+   application-specific processors (ASP) based on the Transport triggered
+   architecture (TTA). The toolset provides a complete co-design flow from C/C++
+   programs down to synthesizable VHDL/Verilog and parallel program binaries.
+   Processor customization points include the register files, function units,
+   supported operations, and the interconnection network.</p>
+
+<p>TCE uses Clang and LLVM for C/C++ language support, target independent
+   optimizations and also for parts of code generation. It generates new
+   LLVM-based code generators "on the fly" for the designed TTA processors and
+   loads them in to the compiler backend as runtime libraries to avoid
+   per-target recompilation of larger parts of the compiler chain.</p>
+
+</div>
 
 </div>
 
@@ -335,7 +454,6 @@ continues to work with older LLVM releases >= 2.5).</p>
       A full featured assembler and direct-to-object support for ARM.</li>
   <li><a href="#blockplacement">Basic Block Placement</a>
       Probability driven basic block placement.</li>
-  <li>....</li>
 </ul>
 
 </div>
@@ -351,18 +469,22 @@ continues to work with older LLVM releases >= 2.5).</p>
 <p>LLVM IR has several new features for better support of new targets and that
    expose new optimization opportunities:</p>
 
-  <ul>
-    <li>IR support for half float</li>
-    <li>IR support for vectors of pointers, including vector GEPs.</li>
-    <li>Module flags have been introduced. They convey information about the
-        module as a whole to LLVM subsystems.</li>
-    <li>Loads can now have range metadata attached to them to describe the
-        possible values being loaded.</li>
-    <li>Inline cost heuristics have been completely overhauled and now closely
-        model constant propagation through call sites, disregard trivially dead
-        code costs, and can model C++ STL iterator patterns.</li>
-    <li>....</li>
-  </ul>
+<ul>
+  <li>A new type representing 16 bit <i>half</i> floating point values has
+      been added.</li>
+  <li>IR now supports vectors of pointers, including vector GEPs.</li>
+  <li>Module flags have been introduced. They convey information about the
+      module as a whole to LLVM subsystems. This is currently used to encode
+      Objective C ABI information.</li>
+  <li>Loads can now have range metadata attached to them to describe the
+      possible values being loaded.</li>
+  <li>The <tt>llvm.ctlz</tt> and <tt>llvm.cttz</tt> intrinsics now have an
+    additional argument which indicates whether the behavior of the intrinsic
+    is undefined on a zero input. This can be used to generate more efficient
+    code on platforms that only have instructions which don't return the type
+    size when counting bits in 0.</li>
+</ul>
+
 </div>
 
 <!--=========================================================================-->
@@ -385,7 +507,9 @@ continues to work with older LLVM releases >= 2.5).</p>
       post-vectorization cleanup passes. For more information, see the EuroLLVM
       2012 slides: <a href="http://llvm.org/devmtg/2012-04-12/Slides/Hal_Finkel.pdf">
       Autovectorization with LLVM</a>.</li>
-  <li>....</li>
+  <li>Inline cost heuristics have been completely overhauled and now closely
+      model constant propagation through call sites, disregard trivially dead
+      code costs, and can model C++ STL iterator patterns.</li>
 </ul>
 
 </div>
@@ -405,7 +529,9 @@ continues to work with older LLVM releases >= 2.5).</p>
     to the LLVM MC Project Blog Post</a>.</p>
 
 <ul>
-  <li>....</li>
+  <li>The integrated assembler can optionally emit debug information when
+      assembling a </tt>.s</tt> file. It can be enabled by passing the
+      <tt>-g</tt> option to <tt>llvm-mc</tt>.</li>
 </ul>
 
 </div>
@@ -442,6 +568,9 @@ continues to work with older LLVM releases >= 2.5).</p>
       representation of large clobber lists on call instructions.  The register
       mask operand references a bit mask of preserved registers. Everything else
       is clobbered.</li>
+  <li>The DWARF debug info writer gained support for emitting data for the
+      <a href="SourceLevelDebugging.html#acceltable">name accelerator tables
+      DWARF extension</a>. It is used by LLDB to speed up name lookup.</li>
 </ul>
 
 <p> We added new TableGen infrastructure to support bundling for
@@ -475,13 +604,14 @@ static heuristics as well as source code annotations such as
 <p>New features and major changes in the X86 target include:</p>
 
 <ul>
-  <li>Bug fixes and improved support for AVX1</li>
-  <li>Support for AVX2 (still incomplete at this point)</li>
+  <li>Greatly improved support for AVX2.</li>
+  <li>Lots of bug fixes and improvements for AVX1.</li>
+  <li>Support for the FMA4 and XOP instruction set extensions.</li>
   <li>Call instructions use the new register mask operands for faster compile
   times and better support for different calling conventions.  The old WINCALL
   instructions are no longer needed.</li>
   <li>DW2 Exception Handling is enabled on Cygwin and MinGW.</li>
-  <li>Support for implicit TLS model used with MS VC runtime</li>
+  <li>Support for implicit TLS model used with MSVC runtime.</li>
 </ul>
 
 </div>
@@ -526,13 +656,36 @@ syntax, there are still significant gaps in that support.</p>
 </h3>
 
 <div>
-
-<p>This release has seen major new work on just about every aspect of the MIPS
-  backend.  Some of the major new features include:</p>
+New features and major changes in the MIPS target include:</p>
 
 <ul>
-  <li>....</li>
+  <li>MIPS32 little-endian direct object code emission is functional.</li>
+  <li>MIPS64 little-endian code generation is largely functional for N64 ABI in assembly printing mode with the exception of handling of long double (f128) type.</li>
+  <li>Support for new instructions has been added, which includes swap-bytes
+   instructions (WSBH and DSBH), floating point multiply-add/subtract and
+   negative multiply-add/subtract instructions, and floating
+   point load/store instructions with reg+reg addressing (LWXC1, etc.)</li>
+  <li>Various fixes to improve performance have been implemented.</li>
+  <li>Post-RA scheduling is now enabled at -O3.</li>
+  <li>Support for soft-float code generation has been added.</li>
+  <li>clang driver's support for MIPS 64-bits targets.</li>
+  <li>Support for MIPS floating point ABI option in clang driver.</li>
 </ul>
+</div>
+
+<!--=========================================================================-->
+<h3>
+<a name="PTX">PTX Target Improvements</a>
+</h3>
+
+<div>
+
+<p>An outstanding conditional inversion bug was fixed in this release.</p>
+
+<p><b>NOTE</b>: LLVM 3.1 marks the last release of the PTX back-end, in its
+  current form. The back-end is currently being replaced by the NVPTX
+  back-end, currently in SVN ToT.</p>
+
 </div>
 
 <!--=========================================================================-->
@@ -542,12 +695,8 @@ syntax, there are still significant gaps in that support.</p>
 
 <div>
 
-<p>Support for Qualcomm's Hexagon VLIW processor has been added.</p>
-
 <ul>
-  <li>....</li>
-
-
+  <li>Support for Qualcomm's Hexagon VLIW processor has been added.</li>
 </ul>
 
 </div>
@@ -564,6 +713,12 @@ syntax, there are still significant gaps in that support.</p>
    from the previous release.</p>
 
 <ul>
+  <li>LLVM's build system now requires a python 2 interpreter to be present at
+      build time. A perl interpreter is no longer required.</li>
+  <li>The C backend has been removed.  It had numerous problems, to the point of
+      not being able to compile any nontrivial program.</li>
+  <li>The Alpha, Blackfin and SystemZ targets have been removed due to lack of
+      maintenance.</li>
   <li>LLVM 3.1 removes support for reading LLVM 2.9 bitcode files. Going
       forward, we aim for all future versions of LLVM to read bitcode files and
       <tt>.ll</tt> files produced by LLVM 3.0 and later.</li>
@@ -573,7 +728,6 @@ syntax, there are still significant gaps in that support.</p>
   <li>LLVM 3.0 and earlier automatically added the returns_twice fo functions
       like setjmp based on the name. This functionality was removed in 3.1.
       This affects Clang users, if -ffreestanding is used.</li>
-  <li>....</li>
 </ul>
 
 </div>
@@ -620,9 +774,9 @@ syntax, there are still significant gaps in that support.</p>
 <li><code>llvm::getTrapFunctionName()</code></li>
 <li><code>llvm::EnableSegmentedStacks</code></li>
 </ul></li>
-  <li>The MDBuilder class has been added to simplify the creation of
-      metadata.</li>
-  <li>....</li>
+
+  <li>The <code>MDBuilder</code> class has been added to simplify the creation
+      of metadata.</li>
 </ul>
 
 </div>
@@ -639,15 +793,36 @@ syntax, there are still significant gaps in that support.</p>
 
 
 <ul>
-  <li>llvm-stress is a command line tool for generating random .ll files to fuzz
-      different LLVM components. </li>
-  <li>llvm-ld has been removed.  Use llvm-link or Clang instead.</li>
-  <li>....</li>
+  <li><tt>llvm-stress</tt> is a command line tool for generating random
+      <tt>.ll</tt> files to fuzz different LLVM components. </li>
+  <li>The <tt>llvm-ld</tt> tool has been removed.  The clang driver provides a
+      more reliable solution for turning a set of bitcode files into a binary.
+      To merge bitcode files <tt>llvm-link</tt> can be used instead.</li>
 </ul>
 
+</div>
+
+
+<!--=========================================================================-->
+<h3>
+<a name="python">Python Bindings</a>
+</h3>
+
+<div>
+
+<p>Officially supported Python bindings have been added! Feature support is far
+from complete. The current bindings support interfaces to:</p>
 <ul>
-  <li>....</li>
+  <li>Object File Interface</li>
+  <li>Disassembler</li>
 </ul>
+
+<p>Using the Object File Interface, it is possible to inspect binary object files.
+Think of it as a Python version of readelf or llvm-objdump.</p>
+
+<p>Support for additional features is currently being developed by community
+contributors. If you are interested in shaping the direction of the Python
+bindings, please express your intent on IRC or the developers list.</p>
 
 </div>
 
@@ -673,18 +848,13 @@ syntax, there are still significant gaps in that support.</p>
   <p>Known problem areas include:</p>
 
 <ul>
-  <li>The Alpha, Blackfin, CellSPU, MSP430, PTX, SystemZ and
-      XCore backends are experimental, and the Alpha, Blackfin and SystemZ
-      targets have already been removed from mainline.</li>
+  <li>The CellSPU, MSP430, PTX and XCore backends are experimental.</li>
 
   <li>The integrated assembler, disassembler, and JIT is not supported by
       several targets.  If an integrated assembler is not supported, then a
       system assembler is required.  For more details, see the <a
       href="CodeGenerator.html#targetfeatures">Target Features Matrix</a>.
   </li>
-
-  <li>The C backend has numerous problems and is not being actively maintained.
-    Depending on it for anything serious is not advised.</li>
 </ul>
 
 </div>
