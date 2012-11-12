@@ -1,9 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-name: Mark McGwire
-accomplishment: >
-  Mark set a major league
-  home run record in 1998.
-stats: |
-  65 Home Runs
-  0.278 Batting Average

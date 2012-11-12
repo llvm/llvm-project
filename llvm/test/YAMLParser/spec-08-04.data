@@ -1,9 +1,0 @@
-# RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s
-#
-# We don't currently look at the content of literal tags.
-# XFAIL: *
-
-- !<!> foo
-- !<$:?> bar
-
-# CHECK: error

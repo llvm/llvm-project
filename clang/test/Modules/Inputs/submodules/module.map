@@ -1,5 +1,0 @@
-module std {
-  module vector { header "vector.h" }
-  module type_traits { header "type_traits.h" }
-  explicit module hash_map { header "hash_map.h" }
-}

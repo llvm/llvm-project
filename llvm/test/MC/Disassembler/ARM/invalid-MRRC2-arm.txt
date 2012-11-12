@@ -1,4 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=armv7-linux-gnueabi 2>&1 | FileCheck %s
-
-# CHECK: invalid instruction encoding
-0x00 0x1a 0x50 0xfc

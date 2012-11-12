@@ -1,7 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-- "flow in block"
-- >
- Block scalar
-- !!map # Block collection
-  foo : bar

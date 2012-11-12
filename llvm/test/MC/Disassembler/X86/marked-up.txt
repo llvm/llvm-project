@@ -1,6 +1,0 @@
-# RUN: llvm-mc --mdis %s -triple=x86_64-apple-darwin9 2>&1 | FileCheck %s
-
-# CHECK: movq	<mem:<reg:%gs>:8>, <reg:%rcx>
-0x65 0x48 0x8b 0x0c 0x25 0x08 0x00 0x00 0x00
-# CHECK: xorps	<reg:%xmm1>, <reg:%xmm2>
-0x0f 0x57 0xd1

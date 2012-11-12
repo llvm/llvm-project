@@ -1,7 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-- 'first
-  	'
-- 'first
-
-  	last'

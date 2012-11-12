@@ -1,5 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-block: # Block
-    # mapping
- key: value

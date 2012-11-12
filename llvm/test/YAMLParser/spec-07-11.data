@@ -1,4 +1,0 @@
-﻿# RUN: yaml-bench -canonical %s
-
-# A stream may contain
-# no documents.

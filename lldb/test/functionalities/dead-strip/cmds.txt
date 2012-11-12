@@ -1,4 +1,0 @@
-b main.c:21
-b main.c:41
-lines -shlib a.out main.c
-c

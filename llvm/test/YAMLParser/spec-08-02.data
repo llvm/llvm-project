@@ -1,4 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-First occurrence: &anchor Value
-Second occurrence: *anchor

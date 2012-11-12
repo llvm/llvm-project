@@ -1,7 +1,0 @@
-RUN: lld-core -reader ELF -writer ELF -o %t1 %p/Inputs/rodata-test.i386 | llvm-objdump -section-headers %t1 |  FileCheck -check-prefix=i386 %s
-RUN: lld-core -arch hexagon -reader ELF -writer ELF -o %t2 %p/Inputs/rodata-test.hexagon | llvm-objdump -section-headers %t2 |  FileCheck -check-prefix=hexagon %s
-
-  i386: 1 .rodata       000000004
-
-  hexagon: 1 .rodata       000000004
-

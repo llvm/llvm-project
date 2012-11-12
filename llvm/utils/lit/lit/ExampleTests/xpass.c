@@ -1,2 +1,0 @@
-// RUN: true
-// XFAIL

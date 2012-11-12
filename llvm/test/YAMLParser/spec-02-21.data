@@ -1,6 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-null: ~
-true: y
-false: n
-string: '12345'

@@ -1,3 +1,0 @@
-PR11760
-RUN: llvm-cov -gcda=%S/Inputs/llvm-cov.gcda -gcno=%S/Inputs/llvm-cov.gcno
-

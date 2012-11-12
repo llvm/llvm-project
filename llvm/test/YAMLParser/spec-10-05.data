@@ -1,9 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-- # Empty
-- |
- block node
-- - one # in-line
-  - two # sequence
-- one: two # in-line
-           # mapping

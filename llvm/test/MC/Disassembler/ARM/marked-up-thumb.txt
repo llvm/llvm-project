@@ -1,7 +1,0 @@
-# RUN: llvm-mc -triple=thumbv7-apple-darwin -mcpu=cortex-a8 -mdis < %s | FileCheck %s
-# CHECK: ldr  <reg:r4>, <mem:[pc, <imm:#32>]>
-0x08 0x4c
-# CHECK: push	{<reg:r1>, <reg:r2>, <reg:r7>}
-0x86 0xb4
-# CHECK: sub	<reg:sp>, <imm:#132>
-0xa1 0xb0

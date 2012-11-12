@@ -1,7 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-? explicit key # implicit value
-? |
-  block key
-: - one # explicit in-line
-  - two # block value

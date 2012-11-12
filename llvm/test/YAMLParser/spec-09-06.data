@@ -1,3 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
- 'here''s to "quotes"'

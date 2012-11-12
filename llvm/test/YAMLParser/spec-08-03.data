@@ -1,4 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-!<tag:yaml.org,2002:str> foo :
-  !<!bar> baz

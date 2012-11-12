@@ -1,9 +1,0 @@
-RUN: printf "a\nb" | FileCheck %s -check-prefix=TEST1
-RUN: echo oo | FileCheck %s -check-prefix=TEST2
-
-Check that CHECK-NEXT without a space after the colon works.
-TEST1:a
-TEST1-NEXT:b
-
-Check that CHECK-NOT without a space after the colon works.
-TEST2-NOT:foo

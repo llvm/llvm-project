@@ -1,6 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-%YAML 1.2 # Attempt parsing
-           # with a warning
----
-"foo"

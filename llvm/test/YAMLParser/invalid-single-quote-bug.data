@@ -1,4 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-- "foo 'bar'"
-- "foo\n'bar'"

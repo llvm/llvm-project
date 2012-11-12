@@ -1,4 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=arm-apple-darwin9 2>&1 | grep "potentially undefined instruction encoding"
-
-# invalid (imod, M, iflags) combination
-0x93 0x00 0x02 0xf1

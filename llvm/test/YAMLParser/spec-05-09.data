@@ -1,4 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-%YAML 1.1
---- text

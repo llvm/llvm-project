@@ -1,7 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=thumbv7-apple-darwin9 -mcpu cortex-m3 | FileCheck %s
-
-# CHECK: msr    primask, r0
-0x80 0xf3 0x10 0x80
-
-# CHECK: mrs    r0, primask
-0xef 0xf3 0x10 0x80

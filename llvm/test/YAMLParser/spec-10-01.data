@@ -1,4 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-- [ inner, inner, ]
-- [inner,last]

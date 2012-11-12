@@ -1,5 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
-| # Simple block scalar
- literal
- 	text

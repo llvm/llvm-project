@@ -1,2 +1,0 @@
-
-#define STR "nexus"

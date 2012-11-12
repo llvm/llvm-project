@@ -1,3 +1,0 @@
-
-  int z;
-  int w;

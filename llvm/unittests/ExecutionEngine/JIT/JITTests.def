@@ -1,4 +1,0 @@
-EXPORTS
-getPointerToNamedFunction
-JITTest_AvailableExternallyFunction
-JITTest_AvailableExternallyGlobal

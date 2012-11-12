@@ -1,3 +1,0 @@
-# RUN: yaml-bench -canonical %s
-
---- !!str "ascii string"
