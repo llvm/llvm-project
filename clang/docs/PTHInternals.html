@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+  <title>Pretokenized Headers (PTH)</title>
+  <link type="text/css" rel="stylesheet" href="../menu.css">
+  <link type="text/css" rel="stylesheet" href="../content.css">
+  <style type="text/css">
+    td {
+    vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+
+<!--#include virtual="../menu.html.incl"-->
+
+<div id="content">
+
+<h1>Pretokenized Headers (PTH)</h1>
+
+<p>This document first describes the low-level
+interface for using PTH and then briefly elaborates on its design and
+implementation.  If you are interested in the end-user view, please see the
+<a href="UsersManual.html#precompiledheaders">User's Manual</a>.</p>
+
+
+<h2>Using Pretokenized Headers with <tt>clang</tt> (Low-level Interface)</h2>
+
+<p>The Clang compiler frontend, <tt>clang -cc1</tt>, supports three command line
+options for generating and using PTH files.<p>
+
+<p>To generate PTH files using <tt>clang -cc1</tt>, use the option
+<b><tt>-emit-pth</tt></b>:
+
+<pre> $ clang -cc1 test.h -emit-pth -o test.h.pth </pre>
+
+<p>This option is transparently used by <tt>clang</tt> when generating PTH
+files. Similarly, PTH files can be used as prefix headers using the
+<b><tt>-include-pth</tt></b> option:</p>
+
+<pre>
+  $ clang -cc1 -include-pth test.h.pth test.c -o test.s
+</pre>
+
+<p>Alternatively, Clang's PTH files can be used as a raw &quot;token-cache&quot;
+(or &quot;content&quot; cache) of the source included by the original header
+file. This means that the contents of the PTH file are searched as substitutes
+for <em>any</em> source files that are used by <tt>clang -cc1</tt> to process a
+source file. This is done by specifying the <b><tt>-token-cache</tt></b>
+option:</p>
+
+<pre>
+  $ cat test.h
+  #include &lt;stdio.h&gt;
+  $ clang -cc1 -emit-pth test.h -o test.h.pth
+  $ cat test.c
+  #include "test.h"
+  $ clang -cc1 test.c -o test -token-cache test.h.pth
+</pre>
+
+<p>In this example the contents of <tt>stdio.h</tt> (and the files it includes)
+will be retrieved from <tt>test.h.pth</tt>, as the PTH file is being used in
+this case as a raw cache of the contents of <tt>test.h</tt>. This is a low-level
+interface used to both implement the high-level PTH interface as well as to
+provide alternative means to use PTH-style caching.</p>
+
+<h2>PTH Design and Implementation</h2>
+
+<p>Unlike GCC's precompiled headers, which cache the full ASTs and preprocessor
+state of a header file, Clang's pretokenized header files mainly cache the raw
+lexer <em>tokens</em> that are needed to segment the stream of characters in a
+source file into keywords, identifiers, and operators. Consequently, PTH serves
+to mainly directly speed up the lexing and preprocessing of a source file, while
+parsing and type-checking must be completely redone every time a PTH file is
+used.</p>
+
+<h3>Basic Design Tradeoffs</h3>
+
+<p>In the long term there are plans to provide an alternate PCH implementation
+for Clang that also caches the work for parsing and type checking the contents
+of header files. The current implementation of PCH in Clang as pretokenized
+header files was motivated by the following factors:<p>
+
+<ul>
+
+<li><p><b>Language independence</b>: PTH files work with any language that
+Clang's lexer can handle, including C, Objective-C, and (in the early stages)
+C++. This means development on language features at the parsing level or above
+(which is basically almost all interesting pieces) does not require PTH to be
+modified.</p></li>
+
+<li><b>Simple design</b>: Relatively speaking, PTH has a simple design and
+implementation, making it easy to test. Further, because the machinery for PTH
+resides at the lower-levels of the Clang library stack it is fairly
+straightforward to profile and optimize.</li>
+</ul>
+
+<p>Further, compared to GCC's PCH implementation (which is the dominate
+precompiled header file implementation that Clang can be directly compared
+against) the PTH design in Clang yields several attractive features:</p>
+
+<ul>
+
+<li><p><b>Architecture independence</b>: In contrast to GCC's PCH files (and
+those of several other compilers), Clang's PTH files are architecture
+independent, requiring only a single PTH file when building an program for
+multiple architectures.</p>
+
+<p>For example, on Mac OS X one may wish to
+compile a &quot;universal binary&quot; that runs on PowerPC, 32-bit Intel
+(i386), and 64-bit Intel architectures. In contrast, GCC requires a PCH file for
+each architecture, as the definitions of types in the AST are
+architecture-specific. Since a Clang PTH file essentially represents a lexical
+cache of header files, a single PTH file can be safely used when compiling for
+multiple architectures. This can also reduce compile times because only a single
+PTH file needs to be generated during a build instead of several.</p></li>
+
+<li><p><b>Reduced memory pressure</b>: Similar to GCC,
+Clang reads PTH files via the use of memory mapping (i.e., <tt>mmap</tt>).
+Clang, however, memory maps PTH files as read-only, meaning that multiple
+invocations of <tt>clang -cc1</tt> can share the same pages in memory from a
+memory-mapped PTH file. In comparison, GCC also memory maps its PCH files but
+also modifies those pages in memory, incurring the copy-on-write costs. The
+read-only nature of PTH can greatly reduce memory pressure for builds involving
+multiple cores, thus improving overall scalability.</p></li>
+
+<li><p><b>Fast generation</b>: PTH files can be generated in a small fraction
+of the time needed to generate GCC's PCH files. Since PTH/PCH generation is a
+serial operation that typically blocks progress during a build, faster
+generation time leads to improved processor utilization with parallel builds on
+multicore machines.</p></li>
+
+</ul>
+
+<p>Despite these strengths, PTH's simple design suffers some algorithmic
+handicaps compared to other PCH strategies such as those used by GCC. While PTH
+can greatly speed up the processing time of a header file, the amount of work
+required to process a header file is still roughly linear in the size of the
+header file. In contrast, the amount of work done by GCC to process a
+precompiled header is (theoretically) constant (the ASTs for the header are
+literally memory mapped into the compiler). This means that only the pieces of
+the header file that are referenced by the source file including the header are
+the only ones the compiler needs to process during actual compilation. While
+GCC's particular implementation of PCH mitigates some of these algorithmic
+strengths via the use of copy-on-write pages, the approach itself can
+fundamentally dominate at an algorithmic level, especially when one considers
+header files of arbitrary size.</p>
+
+<p>There are plans to potentially implement an complementary PCH implementation
+for Clang based on the lazy deserialization of ASTs. This approach would
+theoretically have the same constant-time algorithmic advantages just mentioned
+but would also retain some of the strengths of PTH such as reduced memory
+pressure (ideal for multi-core builds).</p>
+
+<h3>Internal PTH Optimizations</h3>
+
+<p>While the main optimization employed by PTH is to reduce lexing time of
+header files by caching pre-lexed tokens, PTH also employs several other
+optimizations to speed up the processing of header files:</p>
+
+<ul>
+
+<li><p><em><tt>stat</tt> caching</em>: PTH files cache information obtained via
+calls to <tt>stat</tt> that <tt>clang -cc1</tt> uses to resolve which files are
+included by <tt>#include</tt> directives. This greatly reduces the overhead
+involved in context-switching to the kernel to resolve included files.</p></li>
+
+<li><p><em>Fasting skipping of <tt>#ifdef</tt>...<tt>#endif</tt> chains</em>:
+PTH files record the basic structure of nested preprocessor blocks. When the
+condition of the preprocessor block is false, all of its tokens are immediately
+skipped instead of requiring them to be handled by Clang's
+preprocessor.</p></li>
+
+</ul>
+
+</div>
+</body>
+</html>

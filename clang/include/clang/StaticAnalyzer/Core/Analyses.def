@@ -1,0 +1,67 @@
+//===-- Analyses.def - Metadata about Static Analyses -----------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines the set of static analyses used by AnalysisConsumer.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef ANALYSIS_STORE
+#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN)
+#endif
+
+ANALYSIS_STORE(RegionStore, "region", "Use region-based analyzer store", CreateRegionStoreManager)
+
+#ifndef ANALYSIS_CONSTRAINTS
+#define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN)
+#endif
+
+ANALYSIS_CONSTRAINTS(RangeConstraints, "range", "Use constraint tracking of concrete value ranges", CreateRangeConstraintManager)
+
+#ifndef ANALYSIS_DIAGNOSTICS
+#define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN, AUTOCREATE)
+#endif
+
+ANALYSIS_DIAGNOSTICS(HTML,  "html",  "Output analysis results using HTML",   createHTMLDiagnosticConsumer, false)
+ANALYSIS_DIAGNOSTICS(PLIST, "plist", "Output analysis results using Plists", createPlistDiagnosticConsumer, true)
+ANALYSIS_DIAGNOSTICS(PLIST_MULTI_FILE, "plist-multi-file", "Output analysis results using Plists (allowing for mult-file bugs)", createPlistMultiFileDiagnosticConsumer, true)
+ANALYSIS_DIAGNOSTICS(PLIST_HTML, "plist-html", "Output analysis results using HTML wrapped with Plists", createPlistHTMLDiagnosticConsumer, true)
+ANALYSIS_DIAGNOSTICS(TEXT, "text", "Text output of analysis results", createTextPathDiagnosticConsumer, true)
+
+#ifndef ANALYSIS_PURGE
+#define ANALYSIS_PURGE(NAME, CMDFLAG, DESC)
+#endif
+
+ANALYSIS_PURGE(PurgeStmt,  "statement", "Purge symbols, bindings, and constraints before every statement")
+ANALYSIS_PURGE(PurgeBlock, "block", "Purge symbols, bindings, and constraints before every basic block")
+ANALYSIS_PURGE(PurgeNone,  "none", "Do not purge symbols, bindings, or constraints")
+
+#ifndef ANALYSIS_IPA
+#define ANALYSIS_IPA(NAME, CMDFLAG, DESC)
+#endif
+
+ANALYSIS_IPA(None, "none", "Perform only intra-procedural analysis")
+ANALYSIS_IPA(BasicInlining, "basic-inlining", "Inline C functions and blocks when their definitions are available")
+ANALYSIS_IPA(Inlining, "inlining", "Inline callees when their definitions are available")
+ANALYSIS_IPA(DynamicDispatch, "dynamic", "Experimental: Enable inlining of dynamically dispatched methods")
+ANALYSIS_IPA(DynamicDispatchBifurcate, "dynamic-bifurcate", "Experimental: Enable inlining of dynamically dispatched methods, bifurcate paths when exact type info is unavailable")
+
+#ifndef ANALYSIS_INLINING_MODE
+#define ANALYSIS_INLINING_MODE(NAME, CMDFLAG, DESC)
+#endif
+
+ANALYSIS_INLINING_MODE(All,  "all", "Analyze all functions in the order defined in the TU")
+ANALYSIS_INLINING_MODE(NoRedundancy, "noredundancy", "Do not analyze a function which has been previously inlined, use call graph to order")
+
+#undef ANALYSIS_STORE
+#undef ANALYSIS_CONSTRAINTS
+#undef ANALYSIS_DIAGNOSTICS
+#undef ANALYSIS_PURGE
+#undef ANALYSIS_INLINING_MODE
+#undef ANALYSIS_IPA
+

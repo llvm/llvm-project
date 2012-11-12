@@ -1,0 +1,206 @@
+config: MacBook Pro (10.7.2)
+        2.8 GHz Intel Core 2 Duo
+        4 GB 1067 MHz DDR3
+
+r142707 (Oct 21, 2011):
+[17:45:55] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.104274 (Laps: 30, Total Elapsed Time: 3.128214)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102216 (Laps: 30, Total Elapsed Time: 3.066470)
+lldb frame variable benchmark: Avg: 1.649162 (Laps: 20, Total Elapsed Time: 32.983245)
+lldb stepping benchmark: Avg: 0.104409 (Laps: 50, Total Elapsed Time: 5.220461)
+lldb expr cmd benchmark: Avg: 0.206774 (Laps: 25, Total Elapsed Time: 5.169350)
+lldb disassembly benchmark: Avg: 0.089086 (Laps: 10, Total Elapsed Time: 0.890859)
+
+r142868 (Oct 24, 2011):
+[15:53:34] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.105384 (Laps: 30, Total Elapsed Time: 3.161530)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102334 (Laps: 30, Total Elapsed Time: 3.070012)
+lldb frame variable benchmark: Avg: 1.661701 (Laps: 20, Total Elapsed Time: 33.234026)
+lldb stepping benchmark: Avg: 0.107101 (Laps: 50, Total Elapsed Time: 5.355043)
+lldb expr cmd benchmark: Avg: 0.209475 (Laps: 25, Total Elapsed Time: 5.236863)
+lldb disassembly benchmark: Avg: 0.005543 (Laps: 10, Total Elapsed Time: 0.055426)
+[16:09:20] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103826 (Laps: 30, Total Elapsed Time: 3.114768)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102312 (Laps: 30, Total Elapsed Time: 3.069371)
+lldb frame variable benchmark: Avg: 1.602898 (Laps: 20, Total Elapsed Time: 32.057950)
+lldb stepping benchmark: Avg: 0.104091 (Laps: 50, Total Elapsed Time: 5.204557)
+lldb expr cmd benchmark: Avg: 0.207095 (Laps: 25, Total Elapsed Time: 5.177363)
+lldb disassembly benchmark: Avg: 0.001531 (Laps: 10, Total Elapsed Time: 0.015311)
+
+r143065 (Oct 26, 2011):
+# Establish a baseline by using a fixed lldb executable as the inferior program
+# for the lldb debugger to operate on.  The fixed lldb executable corresponds to
+# r142902.
+[15:50:34] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103774 (Laps: 30, Total Elapsed Time: 3.113226)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102230 (Laps: 30, Total Elapsed Time: 3.066896)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.448635 (Laps: 30, Total Elapsed Time: 13.459048)
+lldb frame variable benchmark: Avg: 1.615647 (Laps: 20, Total Elapsed Time: 32.312934)
+lldb stepping benchmark: Avg: 0.138386 (Laps: 50, Total Elapsed Time: 6.919313)
+lldb expr cmd benchmark: Avg: 0.218967 (Laps: 25, Total Elapsed Time: 5.474171)
+lldb disassembly benchmark: Avg: 0.092677 (Laps: 10, Total Elapsed Time: 0.926766)
+
+# With patch to lldbbench.py to display min and max of samples.
+[17:27:09] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103625 (Laps: 30, Total Elapsed Time: 3.108748, min=0.101225, max=0.136308)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102321 (Laps: 30, Total Elapsed Time: 3.069623, min=0.101270, max=0.102824)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.445943 (Laps: 30, Total Elapsed Time: 13.378290, min=0.438535, max=0.475691)
+lldb frame variable benchmark: Avg: 1.612034 (Laps: 20, Total Elapsed Time: 32.240689, min=1.591328, max=1.649720)
+lldb stepping benchmark: Avg: 0.155064 (Laps: 50, Total Elapsed Time: 7.753182, min=0.101287, max=2.028978)
+lldb expr cmd benchmark: Avg: 0.206160 (Laps: 25, Total Elapsed Time: 5.154005, min=0.203282, max=0.224982)
+lldb disassembly benchmark: Avg: 0.032946 (Laps: 10, Total Elapsed Time: 0.329464, min=0.031380, max=0.039198)
+
+r143118 (Oct 27, 2011):
+# No performance regression.
+[11:30:10] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.109056 (Laps: 30, Total Elapsed Time: 3.271690, min=0.101212, max=0.296496)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102844 (Laps: 30, Total Elapsed Time: 3.085306, min=0.101028, max=0.112504)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.467196 (Laps: 30, Total Elapsed Time: 14.015870, min=0.430639, max=1.059366)
+lldb frame variable benchmark: Avg: 1.615098 (Laps: 20, Total Elapsed Time: 32.301958, min=1.599064, max=1.665124)
+lldb stepping benchmark: Avg: 0.158506 (Laps: 50, Total Elapsed Time: 7.925285, min=0.101469, max=1.724667)
+lldb expr cmd benchmark: Avg: 0.232584 (Laps: 25, Total Elapsed Time: 5.814609, min=0.202931, max=0.782470)
+lldb disassembly benchmark: Avg: 0.090124 (Laps: 10, Total Elapsed Time: 0.901241, min=0.087497, max=0.099313)
+[11:37:23] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103782 (Laps: 30, Total Elapsed Time: 3.113456, min=0.101887, max=0.136767)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102348 (Laps: 30, Total Elapsed Time: 3.070431, min=0.101648, max=0.102756)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.445628 (Laps: 30, Total Elapsed Time: 13.368829, min=0.438276, max=0.455466)
+lldb frame variable benchmark: Avg: 1.583635 (Laps: 20, Total Elapsed Time: 31.672710, min=0.133858, max=2.073698)
+lldb stepping benchmark: Avg: 0.157824 (Laps: 50, Total Elapsed Time: 7.891186, min=0.101352, max=2.172388)
+lldb expr cmd benchmark: Avg: 0.207600 (Laps: 25, Total Elapsed Time: 5.189992, min=0.203037, max=0.241189)
+lldb disassembly benchmark: Avg: 0.006725 (Laps: 10, Total Elapsed Time: 0.067249, min=0.002470, max=0.042690)
+
+r143199 (Oct 28, 2011):
+# No performance regression.
+[11:11:54] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.104717 (Laps: 30, Total Elapsed Time: 3.141521, min=0.101881, max=0.162480)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.116985 (Laps: 30, Total Elapsed Time: 3.509554, min=0.101890, max=0.537634)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.462864 (Laps: 30, Total Elapsed Time: 13.885922, min=0.434867, max=0.877184)
+lldb frame variable benchmark: Avg: 1.749605 (Laps: 20, Total Elapsed Time: 34.992090, min=1.604043, max=2.365440)
+lldb stepping benchmark: Avg: 0.147439 (Laps: 50, Total Elapsed Time: 7.371955, min=0.101088, max=2.360912)
+lldb expr cmd benchmark: Avg: 0.210252 (Laps: 25, Total Elapsed Time: 5.256302, min=0.202591, max=0.258185)
+lldb disassembly benchmark: Avg: 0.028243 (Laps: 10, Total Elapsed Time: 0.282434, min=0.027451, max=0.031222)
+[11:16:16] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103913 (Laps: 30, Total Elapsed Time: 3.117384, min=0.101510, max=0.136605)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102452 (Laps: 30, Total Elapsed Time: 3.073559, min=0.101508, max=0.105250)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.461532 (Laps: 30, Total Elapsed Time: 13.845950, min=0.436977, max=0.676502)
+lldb frame variable benchmark: Avg: 1.640990 (Laps: 20, Total Elapsed Time: 32.819801, min=1.583961, max=2.031209)
+lldb stepping benchmark: Avg: 0.104966 (Laps: 50, Total Elapsed Time: 5.248294, min=0.101296, max=0.240781)
+lldb expr cmd benchmark: Avg: 0.211872 (Laps: 25, Total Elapsed Time: 5.296811, min=0.203827, max=0.259524)
+lldb disassembly benchmark: Avg: 0.104108 (Laps: 10, Total Elapsed Time: 1.041076, min=0.089751, max=0.227173)
+
+r143260
+# No performance regression.
+[16:51:27] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103818 (Laps: 30, Total Elapsed Time: 3.114534, min=0.101654, max=0.135579)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102786 (Laps: 30, Total Elapsed Time: 3.083594, min=0.101567, max=0.115159)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.444478 (Laps: 30, Total Elapsed Time: 13.334348, min=0.429840, max=0.514523)
+lldb frame variable benchmark: Avg: 1.627282 (Laps: 20, Total Elapsed Time: 32.545639, min=1.596098, max=1.768229)
+lldb stepping benchmark: Avg: 0.134925 (Laps: 50, Total Elapsed Time: 6.746272, min=0.101132, max=1.743882)
+lldb expr cmd benchmark: Avg: 0.209595 (Laps: 25, Total Elapsed Time: 5.239863, min=0.203182, max=0.255394)
+lldb disassembly benchmark: Avg: 0.091296 (Laps: 10, Total Elapsed Time: 0.912963, min=0.089690, max=0.103690)
+[17:31:27] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.104030 (Laps: 30, Total Elapsed Time: 3.120891, min=0.101980, max=0.136737)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102375 (Laps: 30, Total Elapsed Time: 3.071264, min=0.101454, max=0.103283)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.443155 (Laps: 30, Total Elapsed Time: 13.294637, min=0.434646, max=0.459273)
+lldb frame variable benchmark: Avg: 1.608266 (Laps: 20, Total Elapsed Time: 32.165314, min=1.596172, max=1.620366)
+lldb stepping benchmark: Avg: 0.104140 (Laps: 50, Total Elapsed Time: 5.207003, min=0.101436, max=0.196166)
+lldb expr cmd benchmark: Avg: 0.208264 (Laps: 25, Total Elapsed Time: 5.206604, min=0.204082, max=0.258287)
+lldb disassembly benchmark: Avg: 0.091677 (Laps: 10, Total Elapsed Time: 0.916773, min=0.090101, max=0.099648)
+
+r143359
+# No performance regression.
+[13:20:01] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.106920 (Laps: 30, Total Elapsed Time: 3.207593, min=0.101197, max=0.197640)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.147324 (Laps: 30, Total Elapsed Time: 4.419733, min=0.101534, max=0.900991)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.463680 (Laps: 30, Total Elapsed Time: 13.910386, min=0.429071, max=0.872424)
+lldb frame variable benchmark: Avg: 1.655778 (Laps: 20, Total Elapsed Time: 33.115570, min=1.597218, max=1.779512)
+lldb stepping benchmark: Avg: 0.145967 (Laps: 50, Total Elapsed Time: 7.298373, min=0.101121, max=2.288423)
+lldb expr cmd benchmark: Avg: 0.207389 (Laps: 25, Total Elapsed Time: 5.184725, min=0.203226, max=0.240773)
+lldb disassembly benchmark: Avg: 0.091902 (Laps: 10, Total Elapsed Time: 0.919019, min=0.088413, max=0.115076)
+[13:24:24] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.150258 (Laps: 30, Total Elapsed Time: 4.507753, min=0.101110, max=1.296165)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.192823 (Laps: 30, Total Elapsed Time: 5.784686, min=0.101897, max=0.697168)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.451879 (Laps: 30, Total Elapsed Time: 13.556380, min=0.428884, max=0.536964)
+lldb frame variable benchmark: Avg: 1.725232 (Laps: 20, Total Elapsed Time: 34.504649, min=1.596926, max=2.303283)
+lldb stepping benchmark: Avg: 0.111959 (Laps: 50, Total Elapsed Time: 5.597941, min=0.101375, max=0.586357)
+lldb expr cmd benchmark: Avg: 0.207557 (Laps: 25, Total Elapsed Time: 5.188913, min=0.203918, max=0.241022)
+lldb disassembly benchmark: Avg: 0.092959 (Laps: 10, Total Elapsed Time: 0.929594, min=0.089094, max=0.109135)
+
+r143469
+# No performance regression.
+[11:45:27] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.112890 (Laps: 30, Total Elapsed Time: 3.386693, min=0.101696, max=0.414717)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.133955 (Laps: 30, Total Elapsed Time: 4.018643, min=0.101611, max=1.050222)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.470838 (Laps: 30, Total Elapsed Time: 14.125148, min=0.425866, max=1.437070)
+lldb frame variable benchmark: Avg: 1.608339 (Laps: 20, Total Elapsed Time: 32.166771, min=1.579538, max=1.721902)
+lldb stepping benchmark: Avg: 0.136881 (Laps: 50, Total Elapsed Time: 6.844043, min=0.101149, max=1.835094)
+lldb expr cmd benchmark: Avg: 0.207529 (Laps: 25, Total Elapsed Time: 5.188236, min=0.203476, max=0.241281)
+lldb disassembly benchmark: Avg: 0.036412 (Laps: 10, Total Elapsed Time: 0.364124, min=0.031895, max=0.069457)
+[12:14:54] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103313 (Laps: 30, Total Elapsed Time: 3.099402, min=0.101813, max=0.126989)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102558 (Laps: 30, Total Elapsed Time: 3.076735, min=0.101576, max=0.107419)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.438302 (Laps: 30, Total Elapsed Time: 13.149063, min=0.431972, max=0.449742)
+lldb frame variable benchmark: Avg: 1.610409 (Laps: 20, Total Elapsed Time: 32.208184, min=1.575063, max=1.724046)
+lldb stepping benchmark: Avg: 0.103874 (Laps: 50, Total Elapsed Time: 5.193698, min=0.101364, max=0.186751)
+lldb expr cmd benchmark: Avg: 0.207476 (Laps: 25, Total Elapsed Time: 5.186895, min=0.203365, max=0.240869)
+lldb disassembly benchmark: Avg: 0.090917 (Laps: 10, Total Elapsed Time: 0.909167, min=0.089431, max=0.099787)
+
+r144546
+# Observed possible performance regression in lldb startup delay (run to breakpoint)?
+# Need more investigation.
+[11:27:23] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.112386 (Laps: 30, Total Elapsed Time: 3.371577, min=0.101772, max=0.393109)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.108774 (Laps: 30, Total Elapsed Time: 3.263209, min=0.101605, max=0.292425)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.529530 (Laps: 30, Total Elapsed Time: 15.885899, min=0.468891, max=1.747227)
+lldb frame variable benchmark: Avg: 1.631610 (Laps: 20, Total Elapsed Time: 32.632193, min=1.575342, max=1.775941)
+lldb stepping benchmark: Avg: 0.146749 (Laps: 50, Total Elapsed Time: 7.337451, min=0.100780, max=2.165057)
+lldb expr cmd benchmark: Avg: 0.217782 (Laps: 25, Total Elapsed Time: 5.444553, min=0.203476, max=0.467801)
+lldb disassembly benchmark: Avg: 0.091264 (Laps: 10, Total Elapsed Time: 0.912644, min=0.088928, max=0.101681)
+[14:58:21] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.105535 (Laps: 30, Total Elapsed Time: 3.166062, min=0.101935, max=0.147107)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102372 (Laps: 30, Total Elapsed Time: 3.071164, min=0.100945, max=0.102721)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.483826 (Laps: 30, Total Elapsed Time: 14.514786, min=0.471770, max=0.532260)
+lldb frame variable benchmark: Avg: 1.576992 (Laps: 20, Total Elapsed Time: 31.539838, min=0.102487, max=2.098732)
+lldb stepping benchmark: Avg: 0.102836 (Laps: 50, Total Elapsed Time: 5.141815, min=0.101461, max=0.122378)
+lldb expr cmd benchmark: Avg: 0.206334 (Laps: 25, Total Elapsed Time: 5.158355, min=0.203804, max=0.241043)
+lldb disassembly benchmark: Avg: 0.033536 (Laps: 10, Total Elapsed Time: 0.335359, min=0.031975, max=0.041612)
+[15:01:59] johnny:/Volumes/data/lldb/svn/trunk/test $ 
+
+# Redid the r143469 measurements (svn/regress dir) right before the r145371 measurements (svn/trunk dir) on 10.7.2 (build 11C74).
+# The lldb startup delay (run to breakpoint) in avg is not as significant.  The min still shows some possible regression.
+# The frame variable benchmark shows some possible regression.
+[10:51:56] johnny:/Volumes/data/lldb/svn/regress/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.109821 (Laps: 30, Total Elapsed Time: 3.294643, min=0.101836, max=0.297468)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.121465 (Laps: 30, Total Elapsed Time: 3.643950, min=0.100776, max=0.665900)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.501870 (Laps: 30, Total Elapsed Time: 15.056112, min=0.469871, max=0.718775)
+lldb frame variable benchmark: Avg: 1.663890 (Laps: 20, Total Elapsed Time: 33.277791, min=1.584265, max=1.999998)
+lldb stepping benchmark: Avg: 0.105434 (Laps: 50, Total Elapsed Time: 5.271683, min=0.101120, max=0.256289)
+lldb expr cmd benchmark: Avg: 0.240440 (Laps: 25, Total Elapsed Time: 6.011000, min=0.203547, max=0.956405)
+lldb disassembly benchmark: Avg: 0.096988 (Laps: 10, Total Elapsed Time: 0.969877, min=0.089511, max=0.147797)
+[10:55:38] johnny:/Volumes/data/lldb/svn/regress/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.107368 (Laps: 30, Total Elapsed Time: 3.221026, min=0.101374, max=0.163785)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.153588 (Laps: 30, Total Elapsed Time: 4.607645, min=0.101554, max=0.776372)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.510726 (Laps: 30, Total Elapsed Time: 15.321779, min=0.468395, max=0.643357)
+lldb frame variable benchmark: Avg: 1.715136 (Laps: 20, Total Elapsed Time: 34.302718, min=1.527872, max=3.125777)
+lldb stepping benchmark: Avg: 0.116140 (Laps: 50, Total Elapsed Time: 5.807012, min=0.100857, max=0.796673)
+lldb expr cmd benchmark: Avg: 0.206397 (Laps: 25, Total Elapsed Time: 5.159914, min=0.203491, max=0.241283)
+lldb disassembly benchmark: Avg: 0.036542 (Laps: 10, Total Elapsed Time: 0.365422, min=0.031872, max=0.060183)
+[10:59:43] johnny:/Volumes/data/lldb/svn/regress/test $ pushd +1
+/Volumes/data/lldb/svn/trunk/test /Volumes/data/lldb/llvm /Volumes/data/lldb/svn/regress/test
+[10:59:48] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103919 (Laps: 30, Total Elapsed Time: 3.117560, min=0.101766, max=0.137548)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.102705 (Laps: 30, Total Elapsed Time: 3.081165, min=0.101311, max=0.114192)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.504830 (Laps: 30, Total Elapsed Time: 15.144906, min=0.483528, max=0.627122)
+lldb frame variable benchmark: Avg: 1.924774 (Laps: 20, Total Elapsed Time: 38.495475, min=1.798745, max=2.248269)
+lldb stepping benchmark: Avg: 0.102595 (Laps: 50, Total Elapsed Time: 5.129757, min=0.100690, max=0.125930)
+lldb expr cmd benchmark: Avg: 0.205395 (Laps: 25, Total Elapsed Time: 5.134883, min=0.202864, max=0.210484)
+lldb disassembly benchmark: Avg: 0.033576 (Laps: 10, Total Elapsed Time: 0.335765, min=0.032021, max=0.039222)
+[11:03:46] johnny:/Volumes/data/lldb/svn/trunk/test $ ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
+lldb startup delay (create fresh target) benchmark: Avg: 0.103371 (Laps: 30, Total Elapsed Time: 3.101121, min=0.101556, max=0.127819)
+lldb startup delay (set first breakpoint) benchmark: Avg: 0.103174 (Laps: 30, Total Elapsed Time: 3.095230, min=0.101763, max=0.114733)
+lldb startup delay (run to breakpoint) benchmark: Avg: 0.513848 (Laps: 30, Total Elapsed Time: 15.415439, min=0.490004, max=0.748310)
+lldb frame variable benchmark: Avg: 1.906068 (Laps: 20, Total Elapsed Time: 38.121364, min=1.872328, max=2.044472)
+lldb stepping benchmark: Avg: 0.254817 (Laps: 50, Total Elapsed Time: 12.740872, min=0.100743, max=7.628899)
+lldb expr cmd benchmark: Avg: 0.207850 (Laps: 25, Total Elapsed Time: 5.196255, min=0.203986, max=0.257482)
+lldb disassembly benchmark: Avg: 0.092003 (Laps: 10, Total Elapsed Time: 0.920026, min=0.089568, max=0.100374)
+[11:07:53] johnny:/Volumes/data/lldb/svn/trunk/test $ 

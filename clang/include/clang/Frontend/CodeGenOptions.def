@@ -1,0 +1,132 @@
+//===--- CodeGenOptions.def - Code generation option database ------ C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the code generation options. Users of this file
+// must define the CODEGENOPT macro to make use of this information.
+// Optionally, the user may also define ENUM_CODEGENOPT (for options
+// that have enumeration type and VALUE_CODEGENOPT is a code
+// generation option that describes a value rather than a flag.
+//
+//===----------------------------------------------------------------------===//
+#ifndef CODEGENOPT
+#  error Define the CODEGENOPT macro to handle language options
+#endif
+
+#ifndef VALUE_CODEGENOPT
+#  define VALUE_CODEGENOPT(Name, Bits, Default) \
+CODEGENOPT(Name, Bits, Default)
+#endif
+
+#ifndef ENUM_CODEGENOPT
+#  define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
+CODEGENOPT(Name, Bits, Default)
+#endif
+
+CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
+CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe.
+CODEGENOPT(CUDAIsDevice      , 1, 0) ///< Set when compiling for CUDA device.
+CODEGENOPT(CXAAtExit         , 1, 1) ///< Use __cxa_atexit for calling destructors.
+CODEGENOPT(CXXCtorDtorAliases, 1, 0) ///< Emit complete ctors/dtors as linker
+                                     ///< aliases to base ctors when possible.
+CODEGENOPT(DataSections      , 1, 0) ///< Set when -fdata-sections is enabled.
+CODEGENOPT(DisableFPElim     , 1, 0) ///< Set when -fomit-frame-pointer is enabled.
+CODEGENOPT(DisableLLVMOpts   , 1, 0) ///< Don't run any optimizations, for use in
+                                     ///< getting .bc files that correspond to the
+                                     ///< internal state before optimizations are
+                                     ///< done.
+CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
+CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
+CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what
+                                     ///< Decl* various IR entities came from. 
+                                     ///< Only useful when running CodeGen as a
+                                     ///< subroutine.
+CODEGENOPT(EmitGcovArcs      , 1, 0) ///< Emit coverage data files, aka. GCDA.
+CODEGENOPT(EmitGcovNotes     , 1, 0) ///< Emit coverage "notes" files, aka GCNO.
+CODEGENOPT(EmitOpenCLArgMetadata , 1, 0) ///< Emit OpenCL kernel arg metadata.
+CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
+                                        ///< are required.
+CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
+CODEGENOPT(HiddenWeakVTables , 1, 0) ///< Emit weak vtables, RTTI, and thunks with
+                                     ///< hidden visibility.
+CODEGENOPT(InstrumentFunctions , 1, 0) ///< Set when -finstrument-functions is
+                                       ///< enabled.
+CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
+CODEGENOPT(LessPreciseFPMAD  , 1, 0) ///< Enable less precise MAD instructions to
+                                     ///< be generated.
+CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
+CODEGENOPT(NoCommon          , 1, 0) ///< Set when -fno-common or C++ is enabled.
+CODEGENOPT(NoDwarf2CFIAsm    , 1, 0) ///< Set when -fno-dwarf2-cfi-asm is enabled.
+CODEGENOPT(NoDwarfDirectoryAsm , 1, 0) ///< Set when -fno-dwarf-directory-asm is
+                                       ///< enabled.
+CODEGENOPT(NoExecStack       , 1, 0) ///< Set when -Wa,--noexecstack is enabled.
+CODEGENOPT(NoGlobalMerge     , 1, 0) ///< Set when -mno-global-merge is enabled.
+CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.
+CODEGENOPT(NoInfsFPMath      , 1, 0) ///< Assume FP arguments, results not +-Inf.
+CODEGENOPT(NoInline          , 1, 0) ///< Set when -fno-inline is enabled. 
+                                     ///< Disables use of the inline keyword.
+CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
+CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
+/// \brief Method of Objective-C dispatch to use.
+ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy) 
+CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer is
+                                        ///< enabled.
+VALUE_CODEGENOPT(OptimizationLevel, 3, 0) ///< The -O[0-4] option specified.
+VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
+CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
+CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
+CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
+CODEGENOPT(SimplifyLibCalls  , 1, 1) ///< Set when -fbuiltin is enabled.
+CODEGENOPT(SoftFloat         , 1, 0) ///< -soft-float.
+CODEGENOPT(StrictEnums       , 1, 0) ///< Optimize based on strict enum definition.
+CODEGENOPT(TimePasses        , 1, 0) ///< Set when -ftime-report is enabled.
+CODEGENOPT(UnitAtATime       , 1, 1) ///< Unused. For mirroring GCC optimization
+                                     ///< selection.
+CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
+CODEGENOPT(UnsafeFPMath      , 1, 0) ///< Allow unsafe floating point optzns.
+CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
+
+  /// Attempt to use register sized accesses to bit-fields in structures, when
+  /// possible.
+CODEGENOPT(UseRegisterSizedBitfieldAccess , 1, 0)
+
+CODEGENOPT(VerifyModule      , 1, 1) ///< Control whether the module should be run
+                                     ///< through the LLVM Verifier.
+
+CODEGENOPT(StackRealignment  , 1, 0) ///< Control whether to permit stack
+                                     ///< realignment.
+CODEGENOPT(UseInitArray      , 1, 0) ///< Control whether to use .init_array or
+                                     ///< .ctors.
+VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack 
+                                            ///< alignment, if not 0.
+CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
+                                  ///< in debug info.
+
+/// The user specified number of registers to be used for integral arguments,
+/// or 0 if unspecified.
+VALUE_CODEGENOPT(NumRegisterParameters, 32, 0)
+
+/// The run-time penalty for bounds checking, or 0 to disable.
+VALUE_CODEGENOPT(BoundsChecking, 8, 0)
+
+/// The lower bound for a buffer to be considered for stack protection.
+VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
+
+/// The kind of generated debug info.
+ENUM_CODEGENOPT(DebugInfo, DebugInfoKind, 2, NoDebugInfo)
+
+/// The kind of inlining to perform.
+ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NoInlining)
+
+/// The default TLS model to use.
+ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
+
+#undef CODEGENOPT
+#undef ENUM_CODEGENOPT
+#undef VALUE_CODEGENOPT
+

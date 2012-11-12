@@ -1,0 +1,76 @@
+This file is a partial list of people who have contributed to the LLVM/libc++
+project.  If you have contributed a patch or made some other contribution to
+LLVM/libc++, please submit a patch to this file to add yourself, and it will be
+done!
+
+The list is sorted by surname and formatted to allow easy grepping and
+beautification by scripts.  The fields are: name (N), email (E), web-address
+(W), PGP key ID and fingerprint (P), description (D), and snail-mail address
+(S).
+
+N: Howard Hinnant
+E: hhinnant@apple.com
+D: Architect and primary author of libc++
+
+N: Marshall Clow
+E: mclow.lists@gmail.com
+E: marshall@idio.com
+D: Minor patches and bug fixes.
+
+N: Bjorn Reese
+E: breese@users.sourceforge.net
+D: Initial regex prototype
+
+N: David Chisnall
+E: theraven at theravensnest dot org
+D: FreeBSD and Solaris ports, libcxxrt support, some atomics work.
+
+N: Ruben Van Boxem
+E: vanboxem dot ruben at gmail dot com
+D: Initial Windows patches.
+
+N: Arvid Picciani
+E: aep at exys dot org
+D: Minor patches and musl port.
+
+N: Craig Silverstein
+E: csilvers@google.com
+D: Implemented Cityhash as the string hash function on 64-bit machines
+
+N: Google Inc.
+D: Copyright owner and contributor of the CityHash algorithm
+
+N: Jeffrey Yasskin
+E: jyasskin@gmail.com
+E: jyasskin@google.com
+D: Linux fixes.
+
+N: Jonathan Sauer
+D: Minor patches, mostly related to constexpr
+
+N: Richard Smith
+D: Minor patches.
+
+N: Andrew Morrow
+E: andrew.c.morrow@gmail.com
+D: Minor patches and Linux fixes.
+
+N: Hyeon-bin Jeong
+E: tuhertz@gmail.com
+D: Minor patches and bug fixes.
+
+N: Michel Morin
+E: mimomorin@gmail.com
+D: Minor patches to is_convertible.
+
+N: Dimitry Andric
+E: dimitry@andric.com
+D: Visibility fixes, minor FreeBSD portability patches.
+
+N: Holger Arnold
+E: holgerar@gmail.com
+D: Minor fix.
+
+N: Argyrios Kyrtzidis
+E: kyrtzidis@apple.com
+D: Bug fixes.

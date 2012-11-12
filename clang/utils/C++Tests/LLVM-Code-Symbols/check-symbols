@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import subprocess
+import difflib
+
+def capture_2(args0, args1):
+    import subprocess
+    p0 = subprocess.Popen(args0, stdin=None, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
+    p1 = subprocess.Popen(args1, stdin=p0.stdout, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
+    out,_ = p1.communicate()
+    return out
+
+def normalize_nm(data):    
+    lines = data.split('\n')
+    lines.sort()
+
+    # FIXME: Ignore common symbols for now.
+    lines = [ln for ln in lines
+             if not ln.startswith('         C')]
+
+    return lines
+
+def main():
+    import sys
+    clang = sys.argv[1]
+    flags = sys.argv[2:]
+
+    # FIXME: Relax to include undefined symbols.
+    nm_args = ["llvm-nm", "-extern-only", "-defined-only"]
+
+    llvmgcc_args = ["llvm-gcc"] + flags + ["-emit-llvm","-c","-o","-"]
+    clang_args = [clang] + flags + ["-emit-llvm","-c","-o","-"]
+
+    llvmgcc_nm = capture_2(llvmgcc_args, nm_args)
+    clang_nm = capture_2(clang_args, nm_args)
+
+    llvmgcc_nm = normalize_nm(llvmgcc_nm)
+    clang_nm = normalize_nm(clang_nm)
+
+    if llvmgcc_nm == clang_nm:
+        sys.exit(0)
+
+    print ' '.join(llvmgcc_args), '|', ' '.join(nm_args)
+    print ' '.join(clang_args), '|', ' '.join(nm_args)
+    for line in difflib.unified_diff(llvmgcc_nm, clang_nm,
+                                     fromfile="llvm-gcc symbols",
+                                     tofile="clang symbols"):
+        print line
+    sys.exit(1)
+
+if __name__ == '__main__':
+    main()

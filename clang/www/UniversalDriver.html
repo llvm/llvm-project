@@ -1,0 +1,87 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>Clang - Universal Driver</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+<h1>The Clang Universal Driver Project</h1>
+
+<p>Clang is inherently a cross compiler, in that it is always capable of
+building code for targets which are a different architecture or even operating
+system from the one running the compiler. However, actually cross compiling in
+practice involves much more than just generating the right assembly code for a
+target, it also requires having an appropriate tool chain (assemblers, linkers),
+access to header files and libraries for the target, and many other details (for
+example, the calling convention or whether software floating point is in
+use). Traditionally, compilers and development environments provide little
+assistance with this process, so users do not have easy access to the powerful
+underlying cross-compilation abilities of clang.</p>
+
+<p>We would like to solve this problem by defining a new model for how cross
+compilation is done, based on the idea of a <i>universal driver</i>. The key
+point of this model is that the user would always access the compiler through a
+single entry point (e.g., <tt>/usr/bin/cc</tt>) and provide an argument
+specifying the <i>configuration</i> they would like to target. Under the hood
+this entry point (the universal driver) would have access to all the information
+that the driver, compiler, and other tools need to build applications for that
+target.</p>
+
+<p>This is a large and open-ended project. It's eventual success depends not
+just on implementing the model, but also on getting buy-in from compiler
+developers, operating system distribution vendors and the development community
+at large. Our plan is to begin by defining a clear list of the problems we want
+to solve and a proposed implementation (from the user perspective).</p>
+
+<p>This project is in the very early (i.e., thought experiment) stages of
+development. Stay tuned for more information, and of course, patches
+welcome!</p>
+
+<p>See also <a href="http://llvm.org/PR4127">PR4127</a>.</p>
+
+<h2>Existing Solutions and Related Work</h2>
+
+<ul>
+  <li>gcc's command line arguments <tt>-V</tt>, <tt>-B</tt>, <tt>-b</tt> are
+    generic but limited solutions to related problems. Similarly, <tt>-m32</tt>
+    and <tt>-m64</tt> solve a small subset of the problem for specific
+    architectures.</li>
+
+  <li>gcc's <a href="http://www.airs.com/ian/configure/configure_8.html">multilibs</a>
+    solve the part of the problem that relates to finding appropriate libraries
+    and include files based on particular feature support (soft float,
+    etc.).</li>
+
+  <li>Apple's "driver driver" supported by gcc and clang solve a subset of the
+    problem by supporting <tt>-arch</tt>. Apple also provides a tool chain which
+    supports <a href="http://en.wikipedia.org/wiki/Universal_binary">universal
+    binaries</a> and object files which may include data for multiple
+    architectures. See <a href="http://developer.apple.com/mac/library/technotes/tn2005/tn2137.html">TN2137</a>
+    for an example of how this is used.</li>
+
+  <li>Many operating systems and environments solve the problem by installing
+    complete development environments (including the IDE, tools, header files,
+    and libraries) for a single tool chain. This is cumbersome for users and
+    does not match well with tools which are inherently capable of cross
+    compiling.</li>
+
+  <li>The Debian <a href="http://wiki.debian.org/ArmEabiPort">ArmEabiPort</a>
+    wiki page for their work to support the ARM EABI provide an interesting
+    glimpse into how related issues impact the operating system distribution.</li>
+
+  <li><a href="http://icculus.org/fatelf/">FatELF</a> is a proposal for bringing
+    Mac OS X like "Universal Binary" support to ELF based platforms.</li>
+
+</ul>
+
+</div>
+</body>
+</html>

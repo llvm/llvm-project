@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>Analyzer Development: C++ Support</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+  <script type="text/javascript" src="scripts/menu.js"></script>  
+</head>
+<body>
+
+<div id="page">
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+
+<h1>C++ Support</h1>
+
+<p>The Clang frontend
+now <a href="http://clang.llvm.org/cxx_status.html">supports the
+majority of C++</a>.  Support in the frontend for C++ language
+features, however, does not automatically translate into support for
+those features in the static analyzer.  Language features need to be
+specifically modeled in the static analyzer so their semantics can be
+properly analyzed.  Support for analyzing C++ and Objective-C++ files
+is currently extremely limited, and we are only encouraging those who
+are interested in contributing to the development of the analyzer to
+try this functionality out at this time.</p>
+
+<p>Listed here are a set of open tasks that are prerequisites for
+decent analysis of C++.  This list is also not complete; new tasks
+will be added as deemed necessary.</p>
+
+<ul>
+  <li>Control-Flow Graph Enhancements:
+  <ul>
+    <li>Model C++ destructors</li>
+    <li>Model C++ initializers (in constructors)</li>
+  </ul>
+  </li>
+  <li>Path-Sensitive Analysis Engine (GRExprEngine):
+  <ul>
+    <li>Model C++ casts</li>
+    <li>Model C++ constructors</li>
+    <li>Model C++ destructors</li>
+    <li>Model <tt>new</tt> and <tt>delete</tt></li>
+  </ul>
+  </li>
+</ul>
+
+</div>
+</div>
+</body>
+</html>
+

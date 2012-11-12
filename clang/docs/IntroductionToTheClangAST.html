@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Introduction to the Clang AST</title>
+<link type="text/css" rel="stylesheet" href="../menu.css" />
+<link type="text/css" rel="stylesheet" href="../content.css" />
+</head>
+<body>
+
+<!--#include virtual="../menu.html.incl"-->
+
+<div id="content">
+
+<h1>Introduction to the Clang AST</h1>
+<p>This document gives a gentle introduction to the mysteries of the Clang AST.
+It is targeted at developers who either want to contribute to Clang, or use
+tools that work based on Clang's AST, like the AST matchers.</p>
+<!-- FIXME: Add link once we have an AST matcher document -->
+
+<!-- ======================================================================= -->
+<h2 id="intro">Introduction</h2>
+<!-- ======================================================================= -->
+
+<p>Clang's AST is different from ASTs produced by some other compilers in that it closely
+resembles both the written C++ code and the C++ standard. For example,
+parenthesis expressions and compile time constants are available in an unreduced
+form in the AST. This makes Clang's AST a good fit for refactoring tools.</p>
+
+<p>Documentation for all Clang AST nodes is available via the generated
+<a href="http://clang.llvm.org/doxygen">Doxygen</a>. The doxygen online
+documentation is also indexed by your favorite search engine, which will make
+a search for clang and the AST node's class name usually turn up the doxygen
+of the class you're looking for (for example, search for: clang ParenExpr).</p>
+
+<!-- ======================================================================= -->
+<h2 id="examine">Examining the AST</h2>
+<!-- ======================================================================= -->
+
+<p>A good way to familarize yourself with the Clang AST is to actually look
+at it on some simple example code. Clang has a builtin AST-dump modes, which
+can be enabled with the flags -ast-dump and -ast-dump-xml. Note that -ast-dump-xml
+currently only works with debug-builds of clang.</p>
+
+<p>Let's look at a simple example AST:</p>
+<pre>
+# cat test.cc
+int f(int x) {
+  int result = (x / 42);
+  return result;
+}
+
+# Clang by default is a frontend for many tools; -cc1 tells it to directly
+# use the C++ compiler mode. -undef leaves out some internal declarations.
+$ clang -cc1 -undef -ast-dump-xml test.cc
+... cutting out internal declarations of clang ...
+&lt;TranslationUnit ptr="0x4871160">
+ &lt;Function ptr="0x48a5800" name="f" prototype="true">
+  &lt;FunctionProtoType ptr="0x4871de0" canonical="0x4871de0">
+   &lt;BuiltinType ptr="0x4871250" canonical="0x4871250"/>
+   &lt;parameters>
+    &lt;BuiltinType ptr="0x4871250" canonical="0x4871250"/>
+   &lt;/parameters>
+  &lt;/FunctionProtoType>
+  &lt;ParmVar ptr="0x4871d80" name="x" initstyle="c">
+   &lt;BuiltinType ptr="0x4871250" canonical="0x4871250"/>
+  &lt;/ParmVar>
+  &lt;Stmt>
+(CompoundStmt 0x48a5a38 &lt;t2.cc:1:14, line:4:1>
+  (DeclStmt 0x48a59c0 &lt;line:2:3, col:24>
+    0x48a58c0 "int result =
+      (ParenExpr 0x48a59a0 &lt;col:16, col:23> 'int'
+        (BinaryOperator 0x48a5978 &lt;col:17, col:21> 'int' '/'
+          (ImplicitCastExpr 0x48a5960 &lt;col:17> 'int' &lt;LValueToRValue>
+            (DeclRefExpr 0x48a5918 &lt;col:17> 'int' lvalue ParmVar 0x4871d80 'x' 'int'))
+          (IntegerLiteral 0x48a5940 &lt;col:21> 'int' 42)))")
+  (ReturnStmt 0x48a5a18 &lt;line:3:3, col:10>
+    (ImplicitCastExpr 0x48a5a00 &lt;col:10> 'int' &lt;LValueToRValue>
+      (DeclRefExpr 0x48a59d8 &lt;col:10> 'int' lvalue Var 0x48a58c0 'result' 'int'))))
+
+  &lt;/Stmt>
+ &lt;/Function>
+&lt;/TranslationUnit>
+</pre>
+<p>In general, -ast-dump-xml dumps declarations in an XML-style format and
+statements in an S-expression-style format.
+The toplevel declaration in a translation unit is always the
+<a href="http://clang.llvm.org/doxygen/classclang_1_1TranslationUnitDecl.html">translation unit declaration</a>.
+In this example, our first user written declaration is the
+<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">function declaration</a>
+of 'f'. The body of 'f' is a <a href="http://clang.llvm.org/doxygen/classclang_1_1CompoundStmt.html">compound statement</a>,
+whose child nodes are a <a href="http://clang.llvm.org/doxygen/classclang_1_1DeclStmt.html">declaration statement</a>
+that declares our result variable, and the
+<a href="http://clang.llvm.org/doxygen/classclang_1_1ReturnStmt.html">return statement</a>.</p>
+
+<!-- ======================================================================= -->
+<h2 id="context">AST Context</h2>
+<!-- ======================================================================= -->
+
+<p>All information about the AST for a translation unit is bundled up in the class
+<a href="http://clang.llvm.org/doxygen/classclang_1_1ASTContext.html">ASTContext</a>.
+It allows traversal of the whole translation unit starting from
+<a href="http://clang.llvm.org/doxygen/classclang_1_1ASTContext.html#abd909fb01ef10cfd0244832a67b1dd64">getTranslationUnitDecl</a>,
+or to access Clang's <a href="http://clang.llvm.org/doxygen/classclang_1_1ASTContext.html#a4f95adb9958e22fbe55212ae6482feb4">table of identifiers</a>
+for the parsed translation unit.</p>
+
+<!-- ======================================================================= -->
+<h2 id="nodes">AST Nodes</h2>
+<!-- ======================================================================= -->
+
+<p>Clang's AST nodes are modeled on a class hierarchy that does not have a common
+ancestor. Instead, there are multiple larger hierarchies for basic node types like
+<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a> and
+<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>. Many
+important AST nodes derive from <a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>,
+<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>,
+<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclContext.html">DeclContext</a> or
+<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>,
+with some classes deriving from both Decl and DeclContext.</p>
+<p>There are also a multitude of nodes in the AST that are not part of a
+larger hierarchy, and are only reachable from specific other nodes,
+like <a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>.
+</p>
+
+<p>Thus, to traverse the full AST, one starts from the <a href="http://clang.llvm.org/doxygen/classclang_1_1TranslationUnitDecl.html">TranslationUnitDecl</a>
+and then recursively traverses everything that can be reached from that node
+- this information has to be encoded for each specific node type. This algorithm
+is encoded in the <a href="http://clang.llvm.org/doxygen/classclang_1_1RecursiveASTVisitor.html">RecursiveASTVisitor</a>.
+See the <a href="http://clang.llvm.org/docs/RAVFrontendAction.html">RecursiveASTVisitor tutorial</a>.</p>
+
+<p>The two most basic nodes in the Clang AST are statements (<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>)
+and declarations (<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>).
+Note that expressions (<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>)
+are also statements in Clang's AST.</p>
+
+</div>
+</body>
+</html>
+

@@ -1,0 +1,119 @@
+module diamond_top { header "diamond_top.h" }
+module diamond_left { 
+  header "diamond_left.h" 
+  export diamond_top
+}
+module diamond_right { 
+  header "diamond_right.h" 
+  export diamond_top
+}
+module diamond_bottom { 
+  header "diamond_bottom.h" 
+  export *
+}
+module irgen { header "irgen.h" }
+module lookup_left_objc { header "lookup_left.h" }
+module lookup_right_objc { header "lookup_right.h" }
+module lookup_left_cxx { header "lookup_left.hpp" }
+module lookup_right_cxx { header "lookup_right.hpp" }
+module module_private_left { header "module_private_left.h" }
+module module_private_right { header "module_private_right.h" }
+module macros_top { 
+  header "macros_top.h" 
+}
+module macros_left { 
+  header "macros_left.h" 
+  export *
+}
+module macros_right { 
+  header "macros_right.h" 
+  export *
+  explicit module undef {
+    header "macros_right_undef.h"
+  }
+}
+module macros { header "macros.h" }
+module category_top { header "category_top.h" }
+module category_left { 
+  header "category_left.h" 
+  export category_top
+}
+module category_right { 
+  header "category_right.h" 
+  export category_top
+}
+module category_bottom { 
+  header "category_bottom.h" 
+  export category_left
+  export category_right
+}
+module category_other { header "category_other.h" }
+module redeclarations_left { header "redeclarations_left.h" }
+module redeclarations_right { header "redeclarations_right.h" }
+module redecl_namespaces_left { header "redecl_namespaces_left.h" }
+module redecl_namespaces_right { header "redecl_namespaces_right.h" }
+module load_failure { header "load_failure.h" }
+
+module decldef {
+  explicit module Decl { header "decl.h" }
+  explicit module Decl2 { header "decl2.h" }
+  explicit module Def { header "def.h" }
+}
+
+module redecl_merge_top { 
+  header "redecl-merge-top.h"
+  explicit module Explicit { header "redecl-merge-top-explicit.h" }
+}
+module redecl_merge_left { 
+  header "redecl-merge-left.h" 
+  export *
+}
+module redecl_merge_left_left { 
+  header "redecl-merge-left-left.h" 
+  export *
+}
+module redecl_merge_right { 
+  header "redecl-merge-right.h" 
+  export *
+}
+module redecl_merge_bottom { 
+  header "redecl-merge-bottom.h" 
+  export *
+}
+module namespaces_top { 
+  header "namespaces-top.h"
+  export *
+}
+module namespaces_left { 
+  header "namespaces-left.h"
+  export *
+}
+module namespaces_right { 
+  header "namespaces-right.h"
+  export *
+}
+module templates_top { 
+  header "templates-top.h"
+  export *
+}
+module templates_left { 
+  header "templates-left.h"
+  export *
+}
+module templates_right { 
+  header "templates-right.h"
+  export *
+}
+module MethodPoolA {
+  header "MethodPoolA.h"
+}
+module MethodPoolB {
+  header "MethodPoolB.h"
+}
+module import_decl {
+  header "import-decl.h"
+}
+
+framework module * { 
+  exclude NotAModule
+}

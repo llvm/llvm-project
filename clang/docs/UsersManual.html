@@ -1,0 +1,1309 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Clang Compiler User's Manual</title>
+<link type="text/css" rel="stylesheet" href="../menu.css">
+<link type="text/css" rel="stylesheet" href="../content.css">
+<style type="text/css">
+td {
+	vertical-align: top;
+}
+</style>
+</head>
+<body>
+
+<!--#include virtual="../menu.html.incl"-->
+
+<div id="content">
+
+<h1>Clang Compiler User's Manual</h1>
+
+<ul>
+<li><a href="#intro">Introduction</a>
+  <ul>
+  <li><a href="#terminology">Terminology</a></li>
+  <li><a href="#basicusage">Basic Usage</a></li>
+  </ul>
+</li>
+<li><a href="#commandline">Command Line Options</a>
+  <ul>
+  <li><a href="#cl_diagnostics">Options to Control Error and Warning
+      Messages</a></li>
+  <li><a href="#cl_crash_diagnostics">Options to Control Clang Crash
+      Diagnostics</a></li>
+  </ul>
+</li>
+<li><a href="#general_features">Language and Target-Independent Features</a>
+ <ul>
+  <li><a href="#diagnostics">Controlling Errors and Warnings</a>
+   <ul>
+   <li><a href="#diagnostics_display">Controlling How Clang Displays Diagnostics</a></li>
+   <li><a href="#diagnostics_mappings">Diagnostic Mappings</a></li>
+   <li><a href="#diagnostics_categories">Diagnostic Categories</a></li>
+   <li><a href="#diagnostics_commandline">Controlling Diagnostics via Command Line Flags</a></li>
+   <li><a href="#diagnostics_pragmas">Controlling Diagnostics via Pragmas</a></li>
+   <li><a href="#diagnostics_systemheader">Controlling Diagnostics in System Headers</a></li>
+   <li><a href="#diagnostics_enable_everything">Enabling All Warnings</a></li>
+   <li><a href="#analyzer_diagnositics">Controlling Static Analyzer Diagnostics</a></li>
+   </ul>
+  </li>
+  <li><a href="#precompiledheaders">Precompiled Headers</a></li>
+  <li><a href="#codegen">Controlling Code Generation</a></li>
+  <li><a href="#debuginfosize">Controlling Size of Debug Information</a></li>
+ </ul>
+</li>
+<li><a href="#c">C Language Features</a>
+  <ul>
+  <li><a href="#c_ext">Extensions supported by clang</a></li>
+  <li><a href="#c_modes">Differences between various standard modes</a></li>
+  <li><a href="#c_unimpl_gcc">GCC extensions not implemented yet</a></li>
+  <li><a href="#c_unsupp_gcc">Intentionally unsupported GCC extensions</a></li>
+  <li><a href="#c_ms">Microsoft extensions</a></li>
+  </ul>
+</li>
+<li><a href="#cxx">C++ Language Features</a>
+  <ul>
+  <li><a href="#cxx_implimits">Controlling implementation limits</a></li>
+  </ul>
+</li>
+<li><a href="#target_features">Target-Specific Features and Limitations</a>
+  <ul>
+  <li><a href="#target_arch">CPU Architectures Features and Limitations</a>
+    <ul>
+    <li><a href="#target_arch_x86">X86</a></li>
+    <li><a href="#target_arch_arm">ARM</a></li>
+    <li><a href="#target_arch_other">Other platforms</a></li>
+    </ul>
+  </li>
+  <li><a href="#target_os">Operating System Features and Limitations</a>
+    <ul>
+    <li><a href="#target_os_darwin">Darwin (Mac OS/X)</a></li>
+    <li>Linux, etc.</li>
+    <li><a href="#target_os_win32">Windows</a></li>
+    </ul>
+  </li>
+  </ul>
+</li>
+</ul>
+
+
+<!-- ======================================================================= -->
+<h2 id="intro">Introduction</h2>
+<!-- ======================================================================= -->
+
+<p>The Clang Compiler is an open-source compiler for the C family of programming
+languages, aiming to be the best in class implementation of these languages.
+Clang builds on the LLVM optimizer and code generator, allowing it to provide
+high-quality optimization and code generation support for many targets.  For
+more general information, please see the <a href="http://clang.llvm.org">Clang
+Web Site</a> or the <a href="http://llvm.org">LLVM Web Site</a>.</p>
+
+<p>This document describes important notes about using Clang as a compiler for
+an end-user, documenting the supported features, command line options, etc.  If
+you are interested in using Clang to build a tool that processes code, please
+see <a href="InternalsManual.html">the Clang Internals Manual</a>.  If you are
+interested in the <a href="http://clang-analyzer.llvm.org">Clang
+Static Analyzer</a>, please see its web page.</p>
+
+<p>Clang is designed to support the C family of programming languages, which
+includes <a href="#c">C</a>, <a href="#objc">Objective-C</a>, <a
+href="#cxx">C++</a>, and <a href="#objcxx">Objective-C++</a> as well as many
+dialects of those.  For language-specific information, please see the
+corresponding language specific section:</p>
+
+<ul>
+<li><a href="#c">C Language</a>: K&amp;R C, ANSI C89, ISO C90, ISO C94
+    (C89+AMD1), ISO C99 (+TC1, TC2, TC3). </li>
+<li><a href="#objc">Objective-C Language</a>: ObjC 1, ObjC 2, ObjC 2.1, plus
+    variants depending on base language.</li>
+<li><a href="#cxx">C++ Language</a></li>
+<li><a href="#objcxx">Objective C++ Language</a></li>
+</ul>
+
+<p>In addition to these base languages and their dialects, Clang supports a
+broad variety of language extensions, which are documented in the corresponding
+language section.  These extensions are provided to be compatible with the GCC,
+Microsoft, and other popular compilers as well as to improve functionality
+through Clang-specific features.  The Clang driver and language features are
+intentionally designed to be as compatible with the GNU GCC compiler as
+reasonably possible, easing migration from GCC to Clang.  In most cases, code
+"just works".</p>
+
+<p>In addition to language specific features, Clang has a variety of features
+that depend on what CPU architecture or operating system is being compiled for.
+Please see the <a href="#target_features">Target-Specific Features and
+Limitations</a> section for more details.</p>
+
+<p>The rest of the introduction introduces some basic <a
+href="#terminology">compiler terminology</a> that is used throughout this manual
+and contains a basic <a href="#basicusage">introduction to using Clang</a>
+as a command line compiler.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="terminology">Terminology</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>Front end, parser, backend, preprocessor, undefined behavior, diagnostic,
+ optimizer</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="basicusage">Basic Usage</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>Intro to how to use a C compiler for newbies.</p>
+<p>
+compile + link
+
+compile then link
+
+debug info
+
+enabling optimizations
+
+picking a language to use, defaults to C99 by default.  Autosenses based on
+extension.
+
+using a makefile
+</p>
+
+
+<!-- ======================================================================= -->
+<h2 id="commandline">Command Line Options</h2>
+<!-- ======================================================================= -->
+
+<p>
+This section is generally an index into other sections.  It does not go into
+depth on the ones that are covered by other sections.  However, the first part
+introduces the language selection and other high level options like -c, -g, etc.
+</p>
+
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="cl_diagnostics">Options to Control Error and Warning Messages</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p><b>-Werror</b>: Turn warnings into errors.</p>
+<p><b>-Werror=foo</b>: Turn warning "foo" into an error.</p>
+<p><b>-Wno-error=foo</b>: Turn warning "foo" into an warning even if -Werror is
+   specified.</p>
+<p><b>-Wfoo</b>: Enable warning "foo".</p>
+<p><b>-Wno-foo</b>: Disable warning "foo".</p>
+<p><b>-w</b>: Disable all warnings.</p>
+<p><b>-Weverything</b>: <a href="#diagnostics_enable_everything">Enable <b>all</b> warnings.</a></p>
+<p><b>-pedantic</b>: Warn on language extensions.</p>
+<p><b>-pedantic-errors</b>: Error on language extensions.</p>
+<p><b>-Wsystem-headers</b>: Enable warnings from system headers.</p>
+
+<p><b>-ferror-limit=123</b>: Stop emitting diagnostics after 123 errors have
+   been produced.  The default is 20, and the error limit can be disabled with
+   -ferror-limit=0.</p>
+
+<p><b>-ftemplate-backtrace-limit=123</b>: Only emit up to 123 template instantiation notes within the template instantiation backtrace for a single warning or error. The default is 10, and the limit can be disabled with -ftemplate-backtrace-limit=0.</p>
+
+<!-- ================================================= -->
+<h4 id="cl_diag_formatting">Formatting of Diagnostics</h4>
+<!-- ================================================= -->
+
+<p>Clang aims to produce beautiful diagnostics by default, particularly for new
+users that first come to Clang.  However, different people have different
+preferences, and sometimes Clang is driven by another program that wants to
+parse simple and consistent output, not a person. For these cases, Clang
+provides a wide range of options to control the exact output format of the
+diagnostics that it generates.</p>
+
+<dl>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fshow-column"><b>-f[no-]show-column</b>: Print column number in
+diagnostic.</dt>
+<dd>This option, which defaults to on, controls whether or not Clang prints the
+column number of a diagnostic.  For example, when this is enabled, Clang will
+print something like:
+
+<pre>
+  test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+  #endif bad
+         ^
+         //
+</pre>
+
+<p>When this is disabled, Clang will print "test.c:28: warning..." with no
+column number.</p>
+
+<p>The printed column numbers count bytes from the beginning of the line; take
+care if your source contains multibyte characters.</p>
+</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fshow-source-location"><b>-f[no-]show-source-location</b>: Print
+source file/line/column information in diagnostic.</dt>
+<dd>This option, which defaults to on, controls whether or not Clang prints the
+filename, line number and column number of a diagnostic.  For example,
+when this is enabled, Clang will print something like:
+
+<pre>
+  test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+  #endif bad
+         ^
+         //
+</pre>
+
+<p>When this is disabled, Clang will not print the "test.c:28:8: " part.</p>
+</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fcaret-diagnostics"><b>-f[no-]caret-diagnostics</b>: Print source
+line and ranges from source code in diagnostic.</dt>
+<dd>This option, which defaults to on, controls whether or not Clang prints the
+source line, source ranges, and caret when emitting a diagnostic.  For example,
+when this is enabled, Clang will print something like:
+
+<pre>
+  test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+  #endif bad
+         ^
+         //
+</pre>
+</dd>
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fcolor_diagnostics"><b>-f[no-]color-diagnostics</b>: </dt>
+<dd>This option, which defaults to on when a color-capable terminal is
+  detected, controls whether or not Clang prints diagnostics in color.
+  When this option is enabled, Clang will use colors to highlight
+  specific parts of the diagnostic, e.g.,
+ <pre>
+  <b><span style="color:black">test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</span></b>
+  #endif bad
+         <span style="color:green">^</span>
+         <span style="color:green">//</span>
+</pre>
+
+<p>When this is disabled, Clang will just print:</p>
+
+<pre>
+  test.c:2:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+  #endif bad
+         ^
+         //
+</pre>
+</dd>
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fdiagnostics-format"><b>-fdiagnostics-format=clang/msvc/vi</b>:
+Changes diagnostic output format to better match IDEs and command line tools.</dt>
+<dd>This option controls the output format of the filename, line number, and column printed in diagnostic messages. The options, and their affect on formatting a simple conversion diagnostic, follow:
+
+  <dl>
+    <dt><b>clang</b> (default)</dt>
+    <dd>
+      <pre>t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int'</pre>
+    </dd>
+
+    <dt><b>msvc</b></dt>
+    <dd>
+      <pre>t.c(3,11) : warning: conversion specifies type 'char *' but the argument has type 'int'</pre>
+    </dd>
+
+    <dt><b>vi</b></dt>
+    <dd>
+      <pre>t.c +3:11: warning: conversion specifies type 'char *' but the argument has type 'int'</pre>
+    </dd>
+  </dl>
+</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fdiagnostics-show-name"><b>-f[no-]diagnostics-show-name</b>:
+Enable the display of the diagnostic name.</dt>
+<dd>This option, which defaults to off, controls whether or not
+Clang prints the associated name.<p></p></dd>
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fdiagnostics-show-option"><b>-f[no-]diagnostics-show-option</b>:
+Enable <tt>[-Woption]</tt> information in diagnostic line.</dt>
+<dd>This option, which defaults to on,
+controls whether or not Clang prints the associated <A
+href="#cl_diag_warning_groups">warning group</a> option name when outputting
+a warning diagnostic.  For example, in this output:
+
+<pre>
+  test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+  #endif bad
+         ^
+         //
+</pre>
+
+<p>Passing <b>-fno-diagnostics-show-option</b> will prevent Clang from printing
+the [<a href="#opt_Wextra-tokens">-Wextra-tokens</a>] information in the
+diagnostic.  This information tells you the flag needed to enable or disable the
+diagnostic, either from the command line or through <a 
+href="#pragma_GCC_diagnostic">#pragma GCC diagnostic</a>.</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fdiagnostics-show-category"><b>-fdiagnostics-show-category=none/id/name</b>:
+Enable printing category information in diagnostic line.</dt>
+<dd>This option, which defaults to "none",
+controls whether or not Clang prints the category associated with a diagnostic
+when emitting it.  Each diagnostic may or many not have an associated category,
+if it has one, it is listed in the diagnostic categorization field of the
+diagnostic line (in the []'s).
+
+<p>For example, a format string warning will produce these three renditions
+based on the setting of this option:</p>
+
+<pre>
+  t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat]
+  t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat<b>,1</b>]
+  t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat<b>,Format String</b>]
+</pre>
+
+<p>This category can be used by clients that want to group diagnostics by
+category, so it should be a high level category.  We want dozens of these, not
+hundreds or thousands of them.</p>
+</dd>
+
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fdiagnostics-fixit-info"><b>-f[no-]diagnostics-fixit-info</b>:
+Enable "FixIt" information in the diagnostics output.</dt>
+<dd>This option, which defaults to on, controls whether or not Clang prints the
+information on how to fix a specific diagnostic underneath it when it knows.
+For example, in this output:
+
+<pre>
+  test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+  #endif bad
+         ^
+         //
+</pre>
+
+<p>Passing <b>-fno-diagnostics-fixit-info</b> will prevent Clang from printing
+the "//" line at the end of the message.  This information is useful for users
+who may not understand what is wrong, but can be confusing for machine
+parsing.</p>
+</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fdiagnostics-print-source-range-info">
+<b>-f[no-]diagnostics-print-source-range-info</b>:
+Print machine parsable information about source ranges.</dt>
+<dd>This option, which defaults to off, controls whether or not Clang prints
+information about source ranges in a machine parsable format after the
+file/line/column number information.  The information is a simple sequence of
+brace enclosed ranges, where each range lists the start and end line/column
+locations.  For example, in this output:
+
+<pre>
+exprs.c:47:15:{47:8-47:14}{47:17-47:24}: error: invalid operands to binary expression ('int *' and '_Complex float')
+   P = (P-42) + Gamma*4;
+       ~~~~~~ ^ ~~~~~~~
+</pre>
+
+<p>The {}'s are generated by -fdiagnostics-print-source-range-info.</p>
+
+<p>The printed column numbers count bytes from the beginning of the line; take
+care if your source contains multibyte characters.</p>
+</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_fdiagnostics-parseable-fixits">
+<b>-fdiagnostics-parseable-fixits</b>:
+Print Fix-Its in a machine parseable form.</dt>
+<dd><p>This option makes Clang print available Fix-Its in a machine parseable format at the end of diagnostics. The following example illustrates the format:</p>
+
+<pre>
+ fix-it:"t.cpp":{7:25-7:29}:"Gamma"
+</pre>
+
+<p>The range printed is a half-open range, so in this example the characters at
+column 25 up to but not including column 29 on line 7 in t.cpp should be
+replaced with the string &quot;Gamma&quot;. Either the range or the replacement
+string may be empty (representing strict insertions and strict erasures,
+respectively). Both the file name and the insertion string escape backslash (as
+&quot;\\&quot;), tabs (as &quot;\t&quot;), newlines (as &quot;\n&quot;), double
+quotes(as &quot;\&quot;&quot;) and non-printable characters (as octal
+&quot;\xxx&quot;).</p>
+
+<p>The printed column numbers count bytes from the beginning of the line; take
+care if your source contains multibyte characters.</p>
+</dd>
+
+<dt id="opt_fno-elide-type">
+<b>-fno-elide-type</b>:
+Turns off elision in template type printing.</dt>
+<dd><p>The default for template type printing is to elide as many template
+arguments as possible, removing those which are the same in both template types,
+leaving only the differences.  Adding this flag will print all the template
+arguments.  If supported by the terminal, highlighting will still appear on
+differing arguments.</p>
+
+Default:
+<pre>
+t.cc:4:5: <span class="note">note</span>: candidate function not viable: no known conversion from 'vector&lt;map&lt;[...], map&lt;<span class="template-highlight">float</span>, [...]&gt;&gt;&gt;' to 'vector&lt;map&lt;[...], map&lt;<span class="template-highlight">double</span>, [...]&gt;&gt;&gt;' for 1st argument;
+</pre>
+-fno-elide-type:
+<pre>
+t.cc:4:5: <span class="note">note</span>: candidate function not viable: no known conversion from 'vector&lt;map&lt;int, map&lt;<span class="template-highlight">float</span>, int&gt;&gt;&gt;' to 'vector&lt;map&lt;int, map&lt;<span class="template-highlight">double</span>, int&gt;&gt;&gt;' for 1st argument;
+</pre>
+</dd>
+
+<dt id="opt_fdiagnostics-show-template-tree">
+<b>-fdiagnostics-show-template-tree</b>:
+Template type diffing prints a text tree.</dt>
+<dd><p>For diffing large templated types, this option will cause Clang to
+display the templates as an indented text tree, one argument per line, with
+differences marked inline.  This is compatible with -fno-elide-type.</p>
+
+Default:
+<pre>
+t.cc:4:5: <span class="note">note</span>: candidate function not viable: no known conversion from 'vector&lt;map&lt;[...], map&lt;<span class="template-highlight">float</span>, [...]&gt;&gt;&gt;' to 'vector&lt;map&lt;[...], map&lt;<span class="template-highlight">double</span>, [...]&gt;&gt;&gt;' for 1st argument;
+</pre>
+-fdiagnostics-show-template-tree
+<pre>
+t.cc:4:5: <span class="note">note</span>: candidate function not viable: no known conversion for 1st argument;
+  vector&lt;
+    map&lt;
+      [...],
+      map&lt;
+        [<span class="template-highlight">float</span> != <span class="template-highlight">float</span>],
+        [...]&gt;&gt;&gt;
+</pre>
+</dd>
+
+</dl>
+
+
+
+<!-- ===================================================== -->
+<h4 id="cl_diag_warning_groups">Individual Warning Groups</h4>
+<!-- ===================================================== -->
+
+<p>TODO: Generate this from tblgen.  Define one anchor per warning group.</p>
+
+
+<dl>
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_Wextra-tokens"><b>-Wextra-tokens</b>: Warn about excess tokens at
+    the end of a preprocessor directive.</dt>
+<dd>This option, which defaults to on, enables warnings about extra tokens at
+the end of preprocessor directives.  For example:
+
+<pre>
+  test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+  #endif bad
+         ^
+</pre>
+
+<p>These extra tokens are not strictly conforming, and are usually best handled
+by commenting them out.</p>
+</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_Wambiguous-member-template"><b>-Wambiguous-member-template</b>:
+Warn about unqualified uses of a member template whose name resolves
+to another template at the location of the use.</dt>
+<dd>This option, which defaults to on, enables a warning in the
+following code:
+
+<pre>
+template&lt;typename T> struct set{};
+template&lt;typename T> struct trait { typedef const T& type; };
+struct Value {
+  template&lt;typename T> void set(typename trait&lt;T>::type value) {}
+};
+void foo() {
+  Value v;
+  v.set&lt;double>(3.2);
+}
+</pre>
+
+<p>C++ [basic.lookup.classref] requires this to be an error, but,
+because it's hard to work around, Clang downgrades it to a warning as
+an extension.</p>
+</dd>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dt id="opt_Wbind-to-temporary-copy"><b>-Wbind-to-temporary-copy</b>: Warn about
+an unusable copy constructor when binding a reference to a temporary.</dt>
+<dd>This option, which defaults to on, enables warnings about binding a
+reference to a temporary when the temporary doesn't have a usable copy
+constructor.  For example:
+
+<pre>
+  struct NonCopyable {
+    NonCopyable();
+  private:
+    NonCopyable(const NonCopyable&);
+  };
+  void foo(const NonCopyable&);
+  void bar() {
+    foo(NonCopyable());  // Disallowed in C++98; allowed in C++11.
+  }
+</pre>
+<pre>
+  struct NonCopyable2 {
+    NonCopyable2();
+    NonCopyable2(NonCopyable2&);
+  };
+  void foo(const NonCopyable2&);
+  void bar() {
+    foo(NonCopyable2());  // Disallowed in C++98; allowed in C++11.
+  }
+</pre>
+
+<p>Note that if <tt>NonCopyable2::NonCopyable2()</tt> has a default
+argument whose instantiation produces a compile error, that error will
+still be a hard error in C++98 mode even if this warning is turned
+off.</p>
+
+</dd>
+
+</dl>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="cl_crash_diagnostics">Options to Control Clang Crash Diagnostics</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>As unbelievable as it may sound, Clang does crash from time to time.  
+Generally, this only occurs to those living on the 
+<a href="http://llvm.org/releases/download.html#svn">bleeding edge</a>.  Clang
+goes to great lengths to assist you in filing a bug report.  Specifically, Clang
+generates preprocessed source file(s) and associated run script(s) upon a
+crash.  These files should be attached to a bug report to ease reproducibility
+of the failure.  Below are the command line options to control the crash
+diagnostics.
+</p>
+
+<p><b>-fno-crash-diagnostics</b>: Disable auto-generation of preprocessed 
+source files during a clang crash.</p>
+
+<p>The -fno-crash-diagnostics flag can be helpful for speeding the process of
+generating a delta reduced test case.</p>
+
+
+<!-- ======================================================================= -->
+<h2 id="general_features">Language and Target-Independent Features</h2>
+<!-- ======================================================================= -->
+
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="diagnostics">Controlling Errors and Warnings</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>Clang provides a number of ways to control which code constructs cause it to
+emit errors and warning messages, and how they are displayed to the console.</p>
+
+<h4 id="diagnostics_display">Controlling How Clang Displays Diagnostics</h4>
+
+<p>When Clang emits a diagnostic, it includes rich information in the output,
+and gives you fine-grain control over which information is printed.  Clang has
+the ability to print this information, and these are the options that control
+it:</p>
+
+<ol>
+<li>A file/line/column indicator that shows exactly where the diagnostic occurs
+    in your code [<a href="#opt_fshow-column">-fshow-column</a>, <a
+    href="#opt_fshow-source-location">-fshow-source-location</a>].</li>
+<li>A categorization of the diagnostic as a note, warning, error, or fatal
+    error.</li>
+<li>A text string that describes what the problem is.</li>
+<li>An option that indicates how to control the diagnostic (for diagnostics that
+    support it) [<a 
+   href="#opt_fdiagnostics-show-option">-fdiagnostics-show-option</a>].</li>
+<li>A <a href="#diagnostics_categories">high-level category</a> for the
+    diagnostic for clients that want to group diagnostics by class (for
+    diagnostics that support it) [<a 
+   href="#opt_fdiagnostics-show-category">-fdiagnostics-show-category</a>].</li>
+<li>The line of source code that the issue occurs on, along with a caret and
+    ranges that indicate the important locations [<a
+    href="opt_fcaret-diagnostics">-fcaret-diagnostics</a>].</li>
+<li>"FixIt" information, which is a concise explanation of how to fix the
+    problem (when Clang is certain it knows) [<a
+    href="opt_fdiagnostics-fixit-info">-fdiagnostics-fixit-info</a>].</li>
+<li>A machine-parsable representation of the ranges involved (off by
+    default) [<a
+      href="opt_fdiagnostics-print-source-range-info">-fdiagnostics-print-source-range-info</a>].</li>
+</ol>
+
+<p>For more information please see <a href="#cl_diag_formatting">Formatting of
+Diagnostics</a>.</p>
+
+
+<h4 id="diagnostics_mappings">Diagnostic Mappings</h4>
+
+<p>All diagnostics are mapped into one of these 5 classes:</p>
+
+<ul>
+<li>Ignored</li>
+<li>Note</li>
+<li>Warning</li>
+<li>Error</li>
+<li>Fatal</li>
+</ul>
+
+<h4 id="diagnostics_categories">Diagnostic Categories</h4>
+
+<p>Though not shown by default, diagnostics may each be associated with a
+   high-level category.  This category is intended to make it possible to triage
+   builds that produce a large number of errors or warnings in a grouped way.
+</p>
+
+<p>Categories are not shown by default, but they can be turned on with the
+<a href="#opt_fdiagnostics-show-category">-fdiagnostics-show-category</a> option.
+When set to "<tt>name</tt>", the category is printed textually in the diagnostic
+output.  When it is set to "<tt>id</tt>", a category number is printed.  The
+mapping of category names to category id's can be obtained by running '<tt>clang
+  --print-diagnostic-categories</tt>'.
+</p>
+
+<h4 id="diagnostics_commandline">Controlling Diagnostics via Command Line
+ Flags</h4>
+
+<p>TODO: -W flags, -pedantic, etc</p>
+
+<h4 id="diagnostics_pragmas">Controlling Diagnostics via Pragmas</h4>
+
+<p>Clang can also control what diagnostics are enabled through the use of
+pragmas in the source code. This is useful for turning off specific warnings
+in a section of source code. Clang supports GCC's pragma for compatibility
+with existing source code, as well as several extensions. </p>
+
+<p>The pragma may control any warning that can be used from the command line.
+Warnings may be set to ignored, warning, error, or fatal. The following 
+example code will tell Clang or GCC to ignore the -Wall warnings:</p>
+
+<pre>
+#pragma GCC diagnostic ignored "-Wall"
+</pre>
+
+<p>In addition to all of the functionality provided by GCC's pragma, Clang 
+also allows you to push and pop the current warning state.  This is particularly
+useful when writing a header file that will be compiled by other people, because 
+you don't know what warning flags they build with.</p>
+
+<p>In the below example
+-Wmultichar is ignored for only a single line of code, after which the
+diagnostics return to whatever state had previously existed.</p>
+
+<pre>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmultichar"
+
+char b = 'df'; // no warning.
+
+#pragma clang diagnostic pop
+</pre>
+
+<p>The push and pop pragmas will save and restore the full diagnostic state of
+the compiler, regardless of how it was set. That means that it is possible to
+use push and pop around GCC compatible diagnostics and Clang will push and pop
+them appropriately, while GCC will ignore the pushes and pops as unknown 
+pragmas. It should be noted that while Clang supports the GCC pragma, Clang and
+GCC do not support the exact same set of warnings, so even when using GCC
+compatible #pragmas there is no guarantee that they will have identical behaviour
+on both compilers. </p>
+
+<h4 id="diagnostics_systemheader">Controlling Diagnostics in System Headers</h4>
+
+<p>Warnings are suppressed when they occur in system headers. By default, an
+included file is treated as a system header if it is found in an include path
+specified by <tt>-isystem</tt>, but this can be overridden in several ways.</p>
+
+<p>The <tt>system_header</tt> pragma can be used to mark the current file as
+being a system header. No warnings will be produced from the location of the
+pragma onwards within the same file.</p>
+
+<pre>
+char a = 'xy'; // warning
+
+#pragma clang system_header
+
+char b = 'ab'; // no warning
+</pre>
+
+<p>The <tt>-isystem-prefix</tt> and <tt>-ino-system-prefix</tt> command-line
+arguments can be used to override whether subsets of an include path are treated
+as system headers. When the name in a <tt>#include</tt> directive is found
+within a header search path and starts with a system prefix, the header is
+treated as a system header. The last prefix on the command-line which matches
+the specified header name takes precedence. For instance:</p>
+
+<pre>
+clang -Ifoo -isystem bar -isystem-prefix x/ -ino-system-prefix x/y/
+</pre>
+
+<p>Here, <tt>#include "x/a.h"</tt> is treated as including a system header, even
+if the header is found in <tt>foo</tt>, and <tt>#include "x/y/b.h"</tt> is
+treated as not including a system header, even if the header is found in
+<tt>bar</tt>.
+</p>
+
+<p>A <tt>#include</tt> directive which finds a file relative to the current
+directory is treated as including a system header if the including file is
+treated as a system header.</p>
+
+<h4 id="diagnostics_enable_everything">Enabling All Warnings</h4>
+
+<p>In addition to the traditional <tt>-W</tt> flags, one can enable <b>all</b>
+   warnings by passing <tt>-Weverything</tt>. 
+   This works as expected with <tt>-Werror</tt>,
+   and also includes the warnings from <tt>-pedantic</tt>.</p>
+   
+<p>Note that when combined with <tt>-w</tt> (which disables all warnings), that
+  flag wins.</p>
+
+<h4 id="analyzer_diagnositics">Controlling Static Analyzer Diagnostics</h4>
+
+<p>While not strictly part of the compiler, the diagnostics from Clang's <a
+href="http://clang-analyzer.llvm.org">static analyzer</a> can also be influenced
+by the user via changes to the source code. See the available 
+<a href = "http://clang-analyzer.llvm.org/annotations.html" >annotations</a> and 
+the analyzer's 
+<a href= "http://clang-analyzer.llvm.org/faq.html#exclude_code" >FAQ page</a> for 
+more information.
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="precompiledheaders">Precompiled Headers</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p><a href="http://en.wikipedia.org/wiki/Precompiled_header">Precompiled
+headers</a> are a general approach employed by many compilers to reduce
+compilation time. The underlying motivation of the approach is that it is
+common for the same (and often large) header files to be included by
+multiple source files. Consequently, compile times can often be greatly improved
+by caching some of the (redundant) work done by a compiler to process headers.
+Precompiled header files, which represent one of many ways to implement
+this optimization, are literally files that represent an on-disk cache that
+contains the vital information necessary to reduce some of the work
+needed to process a corresponding header file. While details of precompiled
+headers vary between compilers, precompiled headers have been shown to be
+highly effective at speeding up program compilation on systems with very large
+system headers (e.g., Mac OS/X).</p>
+
+<h4>Generating a PCH File</h4>
+
+<p>To generate a PCH file using Clang, one invokes Clang with
+the <b><tt>-x <i>&lt;language&gt;</i>-header</tt></b> option. This mirrors the
+interface in GCC for generating PCH files:</p>
+
+<pre>
+  $ gcc -x c-header test.h -o test.h.gch
+  $ clang -x c-header test.h -o test.h.pch
+</pre>
+
+<h4>Using a PCH File</h4>
+
+<p>A PCH file can then be used as a prefix header when a
+<b><tt>-include</tt></b> option is passed to <tt>clang</tt>:</p>
+
+<pre>
+  $ clang -include test.h test.c -o test
+</pre>
+
+<p>The <tt>clang</tt> driver will first check if a PCH file for <tt>test.h</tt>
+is available; if so, the contents of <tt>test.h</tt> (and the files it includes)
+will be processed from the PCH file. Otherwise, Clang falls back to
+directly processing the content of <tt>test.h</tt>. This mirrors the behavior of
+GCC.</p>
+
+<p><b>NOTE:</b> Clang does <em>not</em> automatically use PCH files
+for headers that are directly included within a source file. For example:</p>
+
+<pre>
+  $ clang -x c-header test.h -o test.h.pch
+  $ cat test.c
+  #include "test.h"
+  $ clang test.c -o test
+</pre>
+
+<p>In this example, <tt>clang</tt> will not automatically use the PCH file for
+<tt>test.h</tt> since <tt>test.h</tt> was included directly in the source file
+and not specified on the command line using <tt>-include</tt>.</p>
+
+<h4>Relocatable PCH Files</h4>
+<p>It is sometimes necessary to build a precompiled header from headers that
+are not yet in their final, installed locations. For example, one might build a
+precompiled header within the build tree that is then meant to be installed
+alongside the headers. Clang permits the creation of "relocatable" precompiled
+headers, which are built with a given path (into the build directory) and can 
+later be used from an installed location.</p>
+
+<p>To build a relocatable precompiled header, place your headers into a
+subdirectory whose structure mimics the installed location. For example, if you
+want to build a precompiled header for the header <code>mylib.h</code> that
+will be installed into <code>/usr/include</code>, create a subdirectory 
+<code>build/usr/include</code> and place the header <code>mylib.h</code> into
+that subdirectory. If <code>mylib.h</code> depends on other headers, then 
+they can be stored within <code>build/usr/include</code> in a way that mimics
+the installed location.</p>
+
+<p>Building a relocatable precompiled header requires two additional arguments.
+First, pass the <code>--relocatable-pch</code> flag to indicate that the
+resulting PCH file should be relocatable. Second, pass 
+<code>-isysroot /path/to/build</code>, which makes all includes for your
+library relative to the build directory. For example:</p>
+
+<pre>
+  # clang -x c-header --relocatable-pch -isysroot /path/to/build /path/to/build/mylib.h mylib.h.pch
+</pre>
+
+<p>When loading the relocatable PCH file, the various headers used in the PCH
+file are found from the system header root. For example, <code>mylib.h</code>
+can be found in <code>/usr/include/mylib.h</code>. If the headers are installed
+in some other system root, the <code>-isysroot</code> option can be used provide
+a different system root from which the headers will be based. For example,
+<code>-isysroot /Developer/SDKs/MacOSX10.4u.sdk</code> will look for 
+<code>mylib.h</code> in 
+<code>/Developer/SDKs/MacOSX10.4u.sdk/usr/include/mylib.h</code>.</p>
+
+<p>Relocatable precompiled headers are intended to be used in a limited number
+of cases where the compilation environment is tightly controlled and the
+precompiled header cannot be generated after headers have been installed. 
+Relocatable precompiled headers also have some performance impact, because
+the difference in location between the header locations at PCH build time vs. 
+at the time of PCH use requires one of the PCH optimizations,
+<code>stat()</code> caching, to be disabled. However, this change is only 
+likely to affect PCH files that reference a large number of headers.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="codegen">Controlling Code Generation</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>Clang provides a number of ways to control code generation.  The options are listed below.</p>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dl>
+<dt id="opt_fsanitize"><b>-fsanitize=check1,check2</b>: Turn on runtime checks
+for various forms of undefined behavior.</dt>
+
+<dd>This option controls whether Clang adds runtime checks for various forms of
+undefined behavior, and is disabled by default. If a check fails, a diagnostic
+message is produced at runtime explaining the problem. The main checks are:
+
+<ul>
+<li id="opt_fsanitize_address"><tt>-fsanitize=address</tt>:
+    <a href="AddressSanitizer.html">AddressSanitizer</a>, a memory error
+    detector.</li>
+<li id="opt_fsanitize_thread"><tt>-fsanitize=thread</tt>:
+    <a href="ThreadSanitizer.html">ThreadSanitizer</a>, an <em>experimental</em>
+    data race detector.  Not ready for widespread use.</li>
+<li id="opt_fsanitize_undefined"><tt>-fsanitize=undefined</tt>:
+    Enables all the checks listed below.</li>
+</ul>
+
+The following more fine-grained checks are also available:
+
+<ul>
+<li id="opt_fsanitize_alignment"><tt>-fsanitize=alignment</tt>:
+    Use of a misaligned pointer or creation of a misaligned reference.</li>
+<li id="opt_fsanitize_divide-by-zero"><tt>-fsanitize=divide-by-zero</tt>:
+    Division by zero.</li>
+<li id="opt_fsanitize_float-cast-overflow"><tt>-fsanitize=float-cast-overflow</tt>:
+    Conversion to, from, or between floating-point types which would overflow
+    the destination.</li>
+<li id="opt_fsanitize_null"><tt>-fsanitize=null</tt>:
+    Use of a null pointer or creation of a null reference.</li>
+<li id="opt_fsanitize_object-size"><tt>-fsanitize=object-size</tt>:
+    An attempt to use bytes which the optimizer can determine are not part of
+    the object being accessed.
+    The sizes of objects are determined using <tt>__builtin_object_size</tt>, and
+    consequently may be able to detect more problems at higher optimization
+    levels.</li>
+<li id="opt_fsanitize_return"><tt>-fsanitize=return</tt>:
+    In C++, reaching the end of a value-returning function without returning a
+    value.</li>
+<li id="opt_fsanitize_shift"><tt>-fsanitize=shift</tt>:
+    Shift operators where the amount shifted is greater or equal to the
+    promoted bit-width of the left hand side or less than zero, or where
+    the left hand side is negative. For a signed left shift, also checks
+    for signed overflow in C, and for unsigned overflow in C++.</li>
+<li id="opt_fsanitize_signed-integer-overflow"><tt>-fsanitize=signed-integer-overflow</tt>:
+    Signed integer overflow, including all the checks added by <tt>-ftrapv</tt>,
+    and checking for overflow in signed division (<tt>INT_MIN / -1</tt>).</li>
+<li id="opt_fsanitize_unreachable"><tt>-fsanitize=unreachable</tt>:
+    If control flow reaches __builtin_unreachable.</li>
+<li id="opt_fsanitize_vla-bound"><tt>-fsanitize=vla-bound</tt>:
+    A variable-length array whose bound does not evaluate to a positive value.</li>
+<li id="opt_fsanitize_vptr"><tt>-fsanitize=vptr</tt>:
+    Use of an object whose vptr indicates that it is of the wrong dynamic type,
+    or that its lifetime has not begun or has ended. Incompatible with
+    <tt>-fno-rtti</tt>.</li>
+</ul>
+
+The <tt>-fsanitize=</tt> argument must also be provided when linking, in order
+to link to the appropriate runtime library. It is not possible to combine the
+<tt>-fsanitize=address</tt> and <tt>-fsanitize=thread</tt> checkers in the same
+program.
+</dd>
+
+<dt id="opt_faddress-sanitizer"><b>-f[no-]address-sanitizer</b>:
+Deprecated synonym for <a href="#opt_fsanitize_address"><tt>-f[no-]sanitize=address</tt></a>.
+
+<dt id="opt_fthread-sanitizer"><b>-f[no-]thread-sanitizer</b>:
+Deprecated synonym for <a href="#opt_fsanitize_address"><tt>-f[no-]sanitize=thread</tt></a>.
+
+<dt id="opt_fcatch-undefined-behavior"><b>-fcatch-undefined-behavior</b>:
+Deprecated synonym for <a href="#opt_fsanitize_undefined"><tt>-fsanitize=undefined</tt></a>.
+
+<dt id="opt_fno-assume-sane-operator-new"><b>-fno-assume-sane-operator-new</b>:
+Don't assume that the C++'s new operator is sane.</dt>
+<dd>This option tells the compiler to do not assume that C++'s global new
+operator will always return a pointer that does not
+alias any other pointer when the function returns.</dd>
+
+<dt id="opt_ftrap-function"><b>-ftrap-function=[name]</b>: Instruct code
+generator to emit a function call to the specified function name for
+<tt>__builtin_trap()</tt>.</dt>
+
+<dd>LLVM code generator translates <tt>__builtin_trap()</tt> to a trap
+instruction if it is supported by the target ISA. Otherwise, the builtin is
+translated into a call to <tt>abort</tt>. If this option is set, then the code
+generator will always lower the builtin to a call to the specified function
+regardless of whether the target ISA has a trap instruction. This option is
+useful for environments (e.g. deeply embedded) where a trap cannot be properly
+handled, or when some custom behavior is desired.</dd>
+
+<dt id="opt_ftls-model"><b>-ftls-model=[model]</b>: Select which TLS model to
+use.</dt>
+<dd>Valid values are: <tt>global-dynamic</tt>, <tt>local-dynamic</tt>,
+<tt>initial-exec</tt> and <tt>local-exec</tt>. The default value is
+<tt>global-dynamic</tt>. The compiler may use a different model if the selected
+model is not supported by the target, or if a more efficient model can be used.
+The TLS model can be overridden per variable using the <tt>tls_model</tt>
+attribute.
+</dd>
+</dl>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="debuginfosize">Controlling Size of Debug Information</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>Debug info kind generated by Clang can be set by one of the flags listed
+below. If multiple flags are present, the last one is used.</p>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<dl>
+<dt id="opt_g0"><b>-g0</b>: Don't generate any debug info (default).
+
+<dt id="opt_gline-tables-only"><b>-gline-tables-only</b>:
+Generate line number tables only.
+<dd>
+This kind of debug info allows to obtain stack traces with function
+names, file names and line numbers (by such tools as
+gdb or addr2line). It doesn't contain any other data (e.g.
+description of local variables or function parameters).
+</dd>
+
+<dt id="opt_g"><b>-g</b>: Generate complete debug info.
+</dl>
+
+<!-- ======================================================================= -->
+<h2 id="c">C Language Features</h2>
+<!-- ======================================================================= -->
+
+<p>The support for standard C in clang is feature-complete except for the C99
+floating-point pragmas.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="c_ext">Extensions supported by clang</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>See <a href="LanguageExtensions.html">clang language extensions</a>.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="c_modes">Differences between various standard modes</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>clang supports the -std option, which changes what language mode clang uses.
+The supported modes for C are c89, gnu89, c94, c99, gnu99 and various aliases
+for those modes.  If no -std option is specified, clang defaults to gnu99 mode.
+</p>
+
+<p>Differences between all c* and gnu* modes:</p>
+<ul>
+<li>c* modes define "__STRICT_ANSI__".</li>
+<li>Target-specific defines not prefixed by underscores, like "linux", are
+defined in gnu* modes.</li>
+<li>Trigraphs default to being off in gnu* modes; they can be enabled by the
+-trigraphs option.</li>
+<li>The parser recognizes "asm" and "typeof" as keywords in gnu* modes; the
+variants "__asm__" and "__typeof__" are recognized in all modes.</li>
+<li>The Apple "blocks" extension is recognized by default in gnu* modes
+on some platforms; it can be enabled in any mode with the "-fblocks"
+option.</li>
+<li>Arrays that are VLA's according to the standard, but which can be constant
+    folded by the frontend are treated as fixed size arrays.  This occurs for
+    things like "int X[(1, 2)];", which is technically a VLA.  c* modes are
+    strictly compliant and treat these as VLAs.</li>
+</ul>
+
+<p>Differences between *89 and *99 modes:</p>
+<ul>
+<li>The *99 modes default to implementing "inline" as specified in C99, while
+the *89 modes implement the GNU version.  This can be overridden for individual
+functions with the __gnu_inline__ attribute.</li>
+<li>Digraphs are not recognized in c89 mode.</li>
+<li>The scope of names defined inside a "for", "if", "switch", "while", or "do"
+statement is different. (example: "if ((struct x {int x;}*)0) {}".)</li>
+<li>__STDC_VERSION__ is not defined in *89 modes.</li>
+<li>"inline" is not recognized as a keyword in c89 mode.</li>
+<li>"restrict" is not recognized as a keyword in *89 modes.</li>
+<li>Commas are allowed in integer constant expressions in *99 modes.</li>
+<li>Arrays which are not lvalues are not implicitly promoted to pointers in
+*89 modes.</li>
+<li>Some warnings are different.</li>
+</ul>
+
+<p>c94 mode is identical to c89 mode except that digraphs are enabled in
+c94 mode (FIXME: And __STDC_VERSION__ should be defined!).</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="c_unimpl_gcc">GCC extensions not implemented yet</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>clang tries to be compatible with gcc as much as possible, but some gcc
+extensions are not implemented yet:</p>
+
+<ul>
+
+<li>clang does not support #pragma weak
+(<a href="http://llvm.org/bugs/show_bug.cgi?id=3679">bug 3679</a>). Due to
+the uses described in the bug, this is likely to be implemented at some
+point, at least partially.</li>
+
+<li>clang does not support decimal floating point types (_Decimal32 and
+friends) or fixed-point types (_Fract and friends); nobody has expressed
+interest in these features yet, so it's hard to say when they will be
+implemented.</li>
+
+<li>clang does not support nested functions; this is a complex feature which
+is infrequently used, so it is unlikely to be implemented anytime soon. In C++11
+it can be emulated by assigning lambda functions to local variables, e.g:
+<pre>
+  auto const local_function = [&](int parameter) {
+    // Do something
+  };
+  ...
+  local_function(1);
+</pre>
+</li>
+
+<li>clang does not support global register variables; this is unlikely
+to be implemented soon because it requires additional LLVM backend support.
+</li>
+
+<li>clang does not support static initialization of flexible array
+members. This appears to be a rarely used extension, but could be
+implemented pending user demand.</li>
+
+<li>clang does not support __builtin_va_arg_pack/__builtin_va_arg_pack_len. 
+This is used rarely, but in some potentially interesting places, like the
+glibc headers, so it may be implemented pending user demand.  Note that
+because clang pretends to be like GCC 4.2, and this extension was introduced
+in 4.3, the glibc headers will not try to use this extension with clang at
+the moment.</li>
+
+<li>clang does not support the gcc extension for forward-declaring function
+parameters; this has not shown up in any real-world code yet, though, so it
+might never be implemented.</li>
+
+</ul>
+
+<p>This is not a complete list; if you find an unsupported extension
+missing from this list, please send an e-mail to cfe-dev.  This list
+currently excludes C++; see <a href="#cxx">C++ Language Features</a>.
+Also, this list does not include bugs in mostly-implemented features; please
+see the <a href="http://llvm.org/bugs/buglist.cgi?quicksearch=product%3Aclang+component%3A-New%2BBugs%2CAST%2CBasic%2CDriver%2CHeaders%2CLLVM%2BCodeGen%2Cparser%2Cpreprocessor%2CSemantic%2BAnalyzer">
+bug tracker</a> for known existing bugs (FIXME: Is there a section for
+bug-reporting guidelines somewhere?).</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="c_unsupp_gcc">Intentionally unsupported GCC extensions</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<ul>
+
+<li>clang does not support the gcc extension that allows variable-length arrays
+in structures.  This is for a few reasons: one, it is tricky
+to implement, two, the extension is completely undocumented, and three, the
+extension appears to be rarely used.  Note that clang <em>does</em> support
+flexible array members (arrays with a zero or unspecified size at the end of
+a structure).</li>
+
+<li>clang does not have an equivalent to gcc's "fold"; this means that
+clang doesn't accept some constructs gcc might accept in contexts where a
+constant expression is required, like "x-x" where x is a variable.</li>
+
+<li>clang does not support __builtin_apply and friends; this extension is
+extremely obscure and difficult to implement reliably.</li>
+
+</ul>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="c_ms">Microsoft extensions</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p>clang has some experimental support for extensions from
+Microsoft Visual C++; to enable it, use the -fms-extensions command-line
+option.  This is the default for Windows targets.  Note that the
+support is incomplete; enabling Microsoft extensions will silently drop
+certain constructs (including __declspec and Microsoft-style asm statements).
+</p>
+
+<p>clang has a -fms-compatibility flag that makes clang accept enough
+invalid C++ to be able to parse most Microsoft headers. This flag is enabled by
+default for Windows targets.</p>
+
+<p>-fdelayed-template-parsing lets clang delay all template instantiation until
+the end of a translation unit. This flag is enabled by default for Windows
+targets.</p>
+
+<ul>
+<li>clang allows setting _MSC_VER with -fmsc-version=. It defaults to 1300 which
+is the same as Visual C/C++ 2003. Any number is supported and can greatly affect
+what Windows SDK and c++stdlib headers clang can compile. This option will be
+removed when clang supports the full set of MS extensions required for these
+headers.</li>
+
+<li>clang does not support the Microsoft extension where anonymous
+record members can be declared using user defined typedefs.</li>
+
+<li>clang supports the Microsoft "#pragma pack" feature for
+controlling record layout. GCC also contains support for this feature,
+however where MSVC and GCC are incompatible clang follows the MSVC
+definition.</li>
+
+<li>clang defaults to C++11 for Windows targets.</li>
+</ul>
+
+<!-- ======================================================================= -->
+<h2 id="cxx">C++ Language Features</h2>
+<!-- ======================================================================= -->
+
+<p>clang fully implements all of standard C++98 except for exported templates
+(which were removed in C++11), and
+<a href="http://clang.llvm.org/cxx_status.html">many C++11 features</a> are also
+implemented.</p>
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="cxx_implimits">Controlling implementation limits</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<p><b>-fconstexpr-depth=N</b>: Sets the limit for recursive constexpr function
+invocations to N. The default is 512.</p>
+
+<p><b>-ftemplate-depth=N</b>: Sets the limit for recursively nested template
+instantiations to N. The default is 1024.</p>
+
+<!-- ======================================================================= -->
+<h2 id="target_features">Target-Specific Features and Limitations</h2>
+<!-- ======================================================================= -->
+
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="target_arch">CPU Architectures Features and Limitations</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<!-- ======================== -->
+<h4 id="target_arch_x86">X86</h4>
+<!-- ======================== -->
+
+<p>The support for X86 (both 32-bit and 64-bit) is considered stable on Darwin
+(Mac OS/X), Linux, FreeBSD, and Dragonfly BSD: it has been tested to correctly
+compile many large C, C++, Objective-C, and Objective-C++ codebases.</p>
+
+<p>On x86_64-mingw32, passing i128(by value) is incompatible to Microsoft x64
+calling conversion. You might need to tweak WinX86_64ABIInfo::classify()
+in lib/CodeGen/TargetInfo.cpp.</p>
+
+<!-- ======================== -->
+<h4 id="target_arch_arm">ARM</h4>
+<!-- ======================== -->
+
+<p>The support for ARM (specifically ARMv6 and ARMv7) is considered stable on
+Darwin (iOS): it has been tested to correctly compile many large C, C++,
+Objective-C, and Objective-C++ codebases.  Clang only supports a limited number
+of ARM architectures. It does not yet fully support ARMv5, for example.</p>
+
+<!-- ======================== -->
+<h4 id="target_arch_other">Other platforms</h4>
+<!-- ======================== -->
+clang currently contains some support for PPC and Sparc; however, significant
+pieces of code generation are still missing, and they haven't undergone
+significant testing.
+
+<p>clang contains limited support for the MSP430 embedded processor, but both
+the clang support and the LLVM backend support are highly experimental.
+
+<p>Other platforms are completely unsupported at the moment.  Adding the
+minimal support needed for parsing and semantic analysis on a new platform
+is quite easy; see lib/Basic/Targets.cpp in the clang source tree. This level
+of support is also sufficient for conversion to LLVM IR for simple programs.
+Proper support for conversion to LLVM IR requires adding code to
+lib/CodeGen/CGCall.cpp at the moment; this is likely to change soon, though.
+Generating assembly requires a suitable LLVM backend. 
+
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+<h3 id="target_os">Operating System Features and Limitations</h3>
+<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+
+<!-- ======================================= -->
+<h4 id="target_os_darwin">Darwin (Mac OS/X)</h4>
+<!-- ======================================= -->
+
+<p>None</p>
+
+<!-- ======================================= -->
+<h4 id="target_os_win32">Windows</h4>
+<!-- ======================================= -->
+
+<p>Experimental supports are on Cygming.</p>
+
+<p>See also <a href="#c_ms">Microsoft Extensions</a>.</p>
+
+<h5>Cygwin</h5>
+
+<p>Clang works on Cygwin-1.7.</p>
+
+<h5>MinGW32</h5>
+
+<p>Clang works on some mingw32 distributions.
+Clang assumes directories as below;</p>
+
+<ul>
+<li><tt>C:/mingw/include</tt></li>
+<li><tt>C:/mingw/lib</tt></li>
+<li><tt>C:/mingw/lib/gcc/mingw32/4.[3-5].0/include/c++</tt></li>
+</ul>
+
+<p>On MSYS, a few tests might fail.</p>
+
+<h5>MinGW-w64</h5>
+
+<p>For 32-bit (i686-w64-mingw32), and 64-bit (x86_64-w64-mingw32), Clang assumes as below;<p>
+
+<ul>
+<li><tt>GCC versions 4.5.0 to 4.5.3, 4.6.0 to 4.6.2, or 4.7.0 (for the C++ header search path)</tt></li>
+<li><tt>some_directory/bin/gcc.exe</tt></li>
+<li><tt>some_directory/bin/clang.exe</tt></li>
+<li><tt>some_directory/bin/clang++.exe</tt></li>
+<li><tt>some_directory/bin/../include/c++/GCC_version</tt></li>
+<li><tt>some_directory/bin/../include/c++/GCC_version/x86_64-w64-mingw32</tt></li>
+<li><tt>some_directory/bin/../include/c++/GCC_version/i686-w64-mingw32</tt></li>
+<li><tt>some_directory/bin/../include/c++/GCC_version/backward</tt></li>
+<li><tt>some_directory/bin/../x86_64-w64-mingw32/include</tt></li>
+<li><tt>some_directory/bin/../i686-w64-mingw32/include</tt></li>
+<li><tt>some_directory/bin/../include</tt></li>
+</ul>
+
+<p>This directory layout is standard for any toolchain you will find on the official <a href="http://mingw-w64.sourceforge.net">MinGW-w64 website</a>.
+
+<p>Clang expects the GCC executable &quot;gcc.exe&quot; compiled for i686-w64-mingw32 (or x86_64-w64-mingw32) to be present on PATH.</p>
+
+<p><a href="http://llvm.org/bugs/show_bug.cgi?id=9072">Some tests might fail</a>
+on x86_64-w64-mingw32.</p>
+
+</div>
+</body>
+</html>

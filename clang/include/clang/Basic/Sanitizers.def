@@ -1,0 +1,69 @@
+//===--- Sanitizers.def - Runtime sanitizer options -------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the options for specifying which runtime sanitizers to
+// enable. Users of this file must define the SANITIZER macro to make use of
+// this information. Users of this file can also define the SANITIZER_GROUP
+// macro to get information on options which refer to sets of sanitizers.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SANITIZER
+#error "Define SANITIZER prior to including this file!"
+#endif
+
+// SANITIZER(NAME, ID)
+
+// The first value is the name of the sanitizer as a string. The sanitizer can
+// be enabled by specifying -fsanitize=NAME.
+
+// The second value is an identifier which can be used to refer to the
+// sanitizer.
+
+
+// SANITIZER_GROUP(NAME, ID, ALIAS)
+
+// The first two values have the same semantics as the corresponding SANITIZER
+// values. The third value is an expression ORing together the IDs of individual
+// sanitizers in this group.
+
+#ifndef SANITIZER_GROUP
+#define SANITIZER_GROUP(NAME, ID, ALIAS)
+#endif
+
+
+// AddressSanitizer
+SANITIZER("address", Address)
+
+// ThreadSanitizer
+SANITIZER("thread", Thread)
+
+// UndefinedBehaviorSanitizer
+SANITIZER("signed-integer-overflow", SignedIntegerOverflow)
+SANITIZER("divide-by-zero", DivideByZero)
+SANITIZER("shift", Shift)
+SANITIZER("unreachable", Unreachable)
+SANITIZER("return", Return)
+SANITIZER("vla-bound", VLABound)
+SANITIZER("alignment", Alignment)
+SANITIZER("null", Null)
+SANITIZER("vptr", Vptr)
+SANITIZER("object-size", ObjectSize)
+SANITIZER("float-cast-overflow", FloatCastOverflow)
+
+// -fsanitize=undefined (and its alias -fcatch-undefined-behavior). This should
+// include all the sanitizers which have low overhead, no ABI or address space
+// layout implications, and only catch undefined behavior.
+SANITIZER_GROUP("undefined", Undefined,
+                SignedIntegerOverflow | DivideByZero | Shift | Unreachable |
+                Return | VLABound | Alignment | Null | Vptr | ObjectSize |
+                FloatCastOverflow)
+
+#undef SANITIZER
+#undef SANITIZER_GROUP

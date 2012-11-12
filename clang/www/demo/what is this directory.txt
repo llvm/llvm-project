@@ -1,0 +1,15 @@
+This is for the LLVM+Clang browser based demo.
+It is supposed to work like the LLVM+GCC demo here: http://llvm.org/demo/ but for the BSD licensed Clang instead.
+
+Perhaps it could also be used for getting crash information and details on errors....  I'm not sure if this would require some major changes or not to report this info.  Maybe also adding ways that people can use it to test for errors and a way to report such errors would also be good.
+
+Status:
+Anyways, right now, these file a basically just a copy of the LLVM+GCC demo (no changes have been made).  The files don't even work right in this location on the server.  As such, someone will need to edit the file or rewrite it.
+
+If nobody in the LLVM community has the skills, one suggestion would be to post a request on a friendly Perl forum and see if anybody might be interested in taking on the challenge.
+
+Alternatively, you could try a PHP, Python, Ruby, or Lisp mailing list and see if there are any takers who would be interested (and willing to do a rewrite to their language of choice).
+
+--
+BTW, once this feature was working, my intention was to link to it from the index.html page in the section entitled:
+Try Clang

@@ -1,0 +1,18 @@
+A example usage of the Python script run-until-faulted.py:
+
+[18:20:29] johnny:/Volumes/data/lldb/svn/trunk/utils/test $ ./run-until-faulted.py -l /Volumes/data/lldb/svn/trunk/build/Debug/lldb -e './a.out'
+lldb command: /Volumes/data/lldb/svn/trunk/build/Debug/lldb
+executable: ./a.out
+executable options: 
+sending file command....
+sending process launch --  (iteration: 0)
+
+* thread #1: tid = 0x2d03, 0x0000000100000eef a.out`main + 39 at main.c:7, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+   4   	{
+   5   	    int *null_ptr = 0;
+   6   	    printf("Hello, fault!\n");
+-> 7   	    printf("Now segfault %d\n", *null_ptr);
+   8   	}
+
+(lldb) q
+[18:20:40] johnny:/Volumes/data/lldb/svn/trunk/utils/test $ 

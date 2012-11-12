@@ -1,0 +1,10 @@
+<hr>
+<p class="footer">
+Generated on $datetime by <a href="http://www.doxygen.org">Doxygen 
+$doxygenversion</a>.</p>
+
+<p class="footer">
+See the <a href="http://clang.llvm.org">Main Clang Web Page</a> for more 
+information.</p>
+</body>
+</html>

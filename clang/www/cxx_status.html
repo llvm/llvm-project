@@ -1,0 +1,383 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>Clang - C++98 and C++11 Status</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+  <style type="text/css">
+    .none { background-color: #FFCCCC }
+    .svn  { background-color: #FFFF99 }
+    .full { background-color: #CCFF99 }
+    .na { background-color: #DDDDDD }
+    th { background-color: #FFDDAA }
+  </style>
+</head>
+<body>
+
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+<!--*************************************************************************-->
+<h1>C++98 and C++11 Support in Clang</h1>
+<!--*************************************************************************-->
+<p>Last updated: $Date$</p>
+
+<h2 id="cxx98">C++98 implementation status</h2>
+
+<p>Clang currently implements all of the ISO C++ 1998 standard
+  (including the defects addressed in the ISO C++ 2003 standard)
+  except for 'export' (which has been removed in C++11)
+  and is considered a production-quality C++ compiler.  The <a
+   href="http://llvm.org/bugs/">LLVM bug tracker</a> contains a Clang
+  C++ component that tracks known Clang C++ bugs.</p>
+
+<h2 id="cxx11">C++11 implementation status</h2>
+
+  <p>Clang provides support for a number of features included in the new <a href="http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=50372">ISO C++ Standard, ISO/IEC 14882:2011</a>. The following table describes which C++11 features have been implemented in Clang and in which Clang versions they became available.</p>
+
+<p>You can use Clang in C++11 mode either
+with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
+Patches are needed to make <a href="libstdc++4.4-clang0x.patch">libstdc++-4.4</a>
+work with Clang in C++11 mode. Patches are also needed to make
+<a href="libstdc++4.6-clang11.patch">libstdc++-4.6</a>,
+and <a href="libstdc++4.7-clang11.patch">libstdc++-4.7</a> work with Clang
+releases prior to version 3.2 in C++11 mode.</p>
+
+<table width="689" border="1" cellspacing="0">
+ <tr>
+    <th>Language Feature</th>
+    <th>C++11 Proposal</th>
+    <th>Available in Clang?</th>
+ </tr>
+     <tr>
+      <td>Rvalue references</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2118.html">N2118</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;Rvalue references for <code>*this</code></td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2439.htm">N2439</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Initialization of class objects by rvalues</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1610.html">N1610</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Non-static data member initializers</td>
+      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2008/n2756.htm">N2756</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Variadic templates</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2242.pdf">N2242</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;Extending variadic template template parameters</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2555.pdf">N2555</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Initializer lists</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2672.htm">N2672</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Static assertions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1720.html">N1720</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td><code>auto</code>-typed variables</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1984.pdf">N1984</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;Multi-declarator <code>auto</code></td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1737.pdf">N1737</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;Removal of auto as a storage-class specifier</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2546.htm">N2546</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;New function declarator syntax</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2541.htm">N2541</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Lambda expressions</td>
+      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2927.pdf">N2927</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Declared type of an expression</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2343.pdf">N2343</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;Incomplete return types</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2011/n3276.pdf">N3276</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Right angle brackets</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1757.html">N1757</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Default template arguments for function templates</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#226">DR226</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Solving the SFINAE problem for expressions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2634.html">DR339</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Alias templates</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2258.pdf">N2258</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Extern templates</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1987.htm">N1987</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Null pointer constant</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2431.pdf">N2431</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Strongly-typed enums</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2347.pdf">N2347</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Forward declarations for enums</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2764.pdf">N2764</a>
+      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1206">DR1206</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Generalized attributes</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2761.pdf">N2761</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Generalized constant expressions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2235.pdf">N2235</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Alignment support</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2341.pdf">N2341</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <!-- Skipped N1627: Conditionally-support behavior -->
+    <!-- Skipped N1727: Changing Undefined Behavior into Diagnosable Errors -->
+    <tr>
+      <td>Delegating constructors</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1986.pdf">N1986</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Inheriting constructors</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2540.htm">N2540</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Explicit conversion operators</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2437.pdf">N2437</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>New character types</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2249.html">N2249</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Unicode string literals</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2442.htm">N2442</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Raw string literals</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2442.htm">N2442</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Universal character names in literals</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2170.html">N2170</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>User-defined literals</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2765.pdf">N2765</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Standard Layout Types</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2342.htm">N2342</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Defaulted functions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2346.htm">N2346</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Deleted functions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2346.htm">N2346</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Extended friend declarations</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1791.pdf">N1791</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Extending <code>sizeof</code></td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2253.html">N2253</a>
+      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#850">DR850</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Inline namespaces</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2535.htm">N2535</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Unrestricted unions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2544.pdf">N2544</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Local and unnamed types as template arguments</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2657.htm">N2657</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Range-based for</td>
+      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2930.html">N2930</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Explicit virtual overrides</td>
+      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2928.htm">N2928</a>
+      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3206.htm">N3206</a>
+      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2011/n3272.htm">N3272</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Minimal support for garbage collection and reachability-based leak detection</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2670.htm">N2670</a></td>
+      <td class="na" align="center">N/A</td>
+    </tr>
+    <tr>
+      <td>Allowing move constructors to throw [noexcept]</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3050.html">N3050</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+    <tr>
+      <td>Defining move special member functions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3053.html">N3053</a></td>
+      <td class="full" align="center">Clang 3.0</td>
+    </tr>
+
+    <tr class="separator">
+      <th align="center" colspan="3">Concurrency</th>
+    </tr>
+    <tr>
+      <td>Sequence points</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2239.html">N2239</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Atomic operations</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2427.html">N2427</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Strong Compare and Exchange</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2748.html">N2748</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Bidirectional Fences</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2752.htm">N2752</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+
+    <tr>
+      <td>Memory model</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2429.htm">N2429</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Data-dependency ordering: atomics and memory model</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2664.htm">N2664</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Propagating exceptions</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2179.html">N2179</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Abandoning a process and at_quick_exit</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2440.htm">N2440</a></td>
+      <td class="na" align="center">N/A</td>
+    </tr>
+    <tr>
+      <td>Allow atomics use in signal handlers</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2547.htm">N2547</a></td>
+      <td class="full" align="center">Clang 3.1</td>
+    </tr>
+    <tr>
+      <td>Thread-local storage</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2659.htm">N2659</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Dynamic initialization and destruction with concurrency</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2660.htm">N2660</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+
+    <tr class="separator">
+      <th align="center" colspan="3">C99 Features in C++11</th>
+    </tr>
+    <tr>
+      <td><code>__func__</code> predefined identifier</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2340.htm">N2340</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>C99 preprocessor</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1653.htm">N1653</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td><code>long long</code></td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1811.pdf">N1811</a></td>
+      <td class="full" align="center">Clang 2.9</td>
+    </tr>
+    <tr>
+      <td>Extended integral types</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1988.pdf">N1988</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+</table>
+</div>
+</body>
+</html>

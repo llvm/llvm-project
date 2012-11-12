@@ -1,0 +1,1 @@
+#define FOOBAR void f();

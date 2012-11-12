@@ -1,0 +1,11 @@
+-Dfoo1=bar1 -Dfoo2="bar2 zed2"
+-Dfoo3='bar3 zed3'
+"-Dfoo4=bar4 zed4"
+'-Dfoo5=bar5 zed5'
+-Dfoo6="'bar6 zed6'"
+-Dfoo7='"bar7 zed7"'
+-Dfoo8=foo8"bar8"zed8
+-Dfoo9=foo9\'bar9\'zed9
+-Dfoo10=foo10\"bar10\"zed10
+-D foo11
+-Dfoo12=zed12\

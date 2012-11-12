@@ -1,0 +1,11 @@
+// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// XFAIL: sparc
+// rdar://7536390
+
+typedef unsigned __INT32_TYPE__ uint32_t;
+
+unsigned t(uint32_t *ptr, uint32_t val) {
+  // CHECK:      @t
+  // CHECK: atomicrmw xchg i32* {{.*}} seq_cst
+  return __sync_lock_test_and_set(ptr, val);
+}

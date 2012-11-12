@@ -1,0 +1,21 @@
+module cstd [system] {
+  // Only in compiler support directory
+  module float_constants {
+    header "float.h"
+  }
+
+  // Only in system headers directory
+  module stdio {
+    header "stdio.h"
+  }
+
+  // In both directories (compiler support version wins, does not forward)
+  module stdbool {
+    header "stdbool.h"
+  }
+
+  // In both directories (compiler support version wins, forwards)
+  module stdint {
+    header "stdint.h"
+  }
+}

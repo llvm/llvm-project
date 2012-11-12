@@ -1,0 +1,13 @@
+Index: include/std/type_traits
+===================================================================
+--- include/std/type_traits	(revision 185724)
++++ include/std/type_traits	(working copy)
+@@ -1746,7 +1746,7 @@
+ 
+   template<typename _Tp, typename _Up>
+     struct common_type<_Tp, _Up>
+-    { typedef decltype(true ? declval<_Tp>() : declval<_Up>()) type; };
++    { typedef typename decay<decltype(true ? declval<_Tp>() : declval<_Up>())>::type type; };
+ 
+   template<typename _Tp, typename _Up, typename... _Vp>
+     struct common_type<_Tp, _Up, _Vp...>

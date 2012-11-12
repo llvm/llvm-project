@@ -1,0 +1,1651 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>List of potential checkers</title>
+  <link type="text/css" rel="stylesheet" href="content.css">
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <script type="text/javascript" src="scripts/menu.js"></script>
+  <script type="text/javascript" src="scripts/dbtree.js"></script>
+</head>
+<body>
+
+<div id="page">
+
+<!-- menu -->
+<!--#include virtual="menu.html.incl"-->
+<!-- page content -->
+<div id="content">
+<h1>List of potential checkers</h1>
+
+<p>This page contains a list of potential checkers to implement in the static analyzer.  If you are interested in contributing to the analyzer's development, this is a good resource to help you get started.  The specific names of the checkers are subject to review, and are provided here as suggestions.</p>
+
+<!-- ========================= allocation/deallocation ======================= -->
+<h3>allocation/deallocation</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
+
+<tr><td><span class="name">memory.LeakNeverReleased<br>
+(C, C++)</span><br><br>
+Memory may be never released, potential leak of memory
+</td><td>
+<pre>
+#include &lt;stdlib.h&gt;
+
+int f() {};
+
+void test() { 
+  int *p1 = (int*)malloc(sizeof(int)); // warn
+  int *p2 = new int; // warn
+  int x = f();
+  if (x==1)
+    return;
+  delete p2;
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.MismatchedFree
+<br>enhancement to unix.Malloc<br>(C, C++)</span><br><br>
+Mismatched deallocation function is used
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+void test() {
+  int *p1 = new int;
+  int *p2 = new int[1];
+
+  free(p1); // warn
+  free(p2); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.MismatchedDelete
+<br>(C, C++)</span><br><br>
+Mismatched deallocation function is used
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+void test() {
+  int *p1 = new int;
+  int *p2 = new int[1];
+  int *p3 = (int*)malloc(sizeof(int));
+
+  delete[] p1; // warn
+  delete p2; // warn
+  delete p3; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.MultipleDelete
+<br>(C++)</span><br><br>
+Attempt to deallocate released memory
+</td><td><pre>
+#include &lt;new&gt;
+
+void test() {
+  int *p1 = new int;
+  int *p2 = new(p1) int;
+  int *p3 = p1;
+  delete p1;
+  delete p1; // warn
+  delete p2; // warn
+  delete p3; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.LeakPtrValChanged
+<br>enhancement to unix.Malloc<br>(C, C++)</span><br><br>
+Potential memory leak: a pointer to newly allocated data loses its original 
+value
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+void f(const int *);
+void g(int *);
+
+void test() {
+  int *p1 = new int;
+  p1++; // warn
+  int *p2 = (int *)malloc(sizeof(int));
+  p2 = p1; // warn
+  int *p3 = new int;
+  f(p3);
+  p3++; // warn
+  int *p4 = new int;
+  f(p4);
+  p4++; // ok
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.DeallocateNonPtr
+<br>enhancement to unix.Malloc<br>(C, C++)</span><br><br>
+Deallocation function is applied to non-pointer
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+class A {
+  int *p;
+public:
+  operator int *() { return p; }  
+};
+
+void test() {
+  A a;
+  delete a; // warn
+  free(a); // warn
+  const char *s = "text";
+  delete s; // warn
+  free(s); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.LeakEvalOrder<br>
+(C, C++)</span><br><br>
+Potential memory leak: argument evaluation order is undefined, g() may never be called
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+void f1(int, int);
+void f2(int*, int*);
+int g(int *) { throw 1; };
+int h();
+
+void test() {
+  f1(g(new int), h()); // warn
+  f1(g((int *)malloc(sizeof(int))), h()); // warn
+  f2(new int, new int);
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.DstBufferTooSmall
+<br>(C, C++)</span><br><br>
+Destination buffer too small
+</td><td><pre>
+#include &lt;string.h&gt;
+
+void test() {
+  const char* s1 = "abc";
+  char *s2 = new char;
+  strcpy(s2, s1); // warn
+
+  int* p1 = new int[3];
+  int* p2 = new int;
+  memcpy(p2, p1, 3); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">memory.NegativeArraySize
+<br>enhancement to experimental.security.MallocOverflow<br>(C, C++)
+</span><br><br>
+'n' is used to specify the buffer size may be negative
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+void test() {
+  int *p;
+  int n1 = -1;
+  p = new int[n1]; // warn
+}
+</pre></td><td></td></tr>
+
+</table>
+
+<!-- ======================= constructors/destructors ====================== -->
+<h3>constructors/destructors</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
+
+<tr><td><span class="name">ctordtor.ExptInsideDtorExplicit<br>
+(C++)</span><br><br>
+It is dangerous to let an exception leave a destructor. Using try..catch will 
+solve the problem.
+</td><td><pre>
+void f();
+
+class A {
+  A() {}
+  ~A() { throw 1; } // warn
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">ctordtor.ExptInsideDtorImplicit<br>
+(C++)</span><br><br>
+Calls to functions inside a destructor that are known to throw exceptions is 
+dangerous. Using try..catch will solve the problem.
+</td><td><pre>
+void f() { throw 1; };
+
+class A {
+  A() {}
+  ~A() { f(); } // warn
+};
+</pre></td><td></td></tr>
+
+</table>
+
+<!-- ============================== exceptions ============================= -->
+<h3>exceptions</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
+
+<tr><td><span class="name">exceptions.ThrowSpecButNotThrow
+<br>(C++)</span><br><br>
+Function prototype has throw(T) specifier but the function do not throw
+</td><td><pre>
+void f() throw(int) { // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">exceptions.NoThrowSpecButThrows
+<br>(C++)</span><br><br>
+An exception is throw from a function having the throw() specifier
+</td><td><pre>
+void f() throw() {
+  throw(1); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">exceptions.ThrownTypeDiffersSpec
+<br>(C++)</span><br><br>
+The type of a thrown exception differs from those specified in the throw(T) 
+specifier
+</td><td><pre>
+struct S{};
+void f() throw(int) {
+  S s;
+  throw (s); // warn
+}
+</pre></td><td></td></tr>
+
+</table>
+
+<!-- ========================= smart pointers ============================== -->
+<h3>smart pointers</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
+
+<tr><td><span class="name">smartptr.SmartPtrInit<br>
+(C++)</span><br><br>
+C++03: auto_ptr should store a pointer to an object obtained via new as allocated
+memory will be cleaned using delete<br>
+C++11: one should use unique_ptr&lt;T[]&gt; to keep a pointer to memory
+allocated by new[]<br>
+C++11: to keep a pointer to memory allocated by new[] in a shared_ptr one
+should use a custom deleter that calls delete[]
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+#include &lt;memory&gt;
+
+void test() {
+  std::auto_ptr&lt;int&gt; p1(new int); // Ok
+  std::auto_ptr&lt;int&gt; p2(new int[3]); // warn
+  std::auto_ptr&lt;int&gt; 
+         p3((int *)malloc(sizeof(int))); // warn
+}
+</pre></td><td></td></tr>
+
+</table>
+
+<!-- ========================= undefined behavior ========================== -->
+<h3>undefined behavior</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
+
+<tr><td><span class="name">undefbehavior.ExitInDtor
+<br>(C++)</span><br><br>
+Undefined behavior: std::exit is called to end the program during the 
+destruction of an object with static storage duration
+</td><td><pre>
+#include &lt;cstdlib&gt;
+
+class A {
+public:
+  ~A() {
+    std::exit(1); // warn
+  }
+};
+
+A a;
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.LocalStaticDestroyed
+<br>(C++)</span><br><br>
+Undefined behavior: function containing a definition of static local object is 
+called during the destruction of an object with static storage duration so that 
+flow of control passes through the definition of the previously destroyed 
+static local object
+</td><td><pre>
+void f();
+
+class A {
+public:
+  ~A() {
+    f(); // warn
+  }
+};
+
+class B {};
+
+A a;
+
+void f() {
+  static B b; // &lt;-
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.UseAfterRelease
+<br>enhancement to unix.Malloc<br>(C, C++)</span><br><br>
+Pointer to deleted object is referenced (The effect of using an invalid pointer 
+value is undefined)
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+void test() {
+  int *p = new int;
+  delete p;
+  int i = *p; // warn
+}
+
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ZeroAllocDereference
+<br>enhancement to unix.Malloc<br>(C, C++)</span><br><br>
+The effect of dereferencing a pointer returned as a request for zero size is 
+undefined
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+int *p = new int[0];
+int i = p[0]; // warn
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.DeadReferenced
+<br>(C++)</span><br><br>
+Undefined behavior: the following usage of the pointer to the object whose 
+lifetime has ended can result in undefined behavior
+</td><td><pre>
+// C++03
+#include &lt;new&gt;
+
+class A {
+public:
+  int i;
+  void f() {};
+};
+
+class B : public A {
+};
+
+void test() {
+  B *b = new B;
+  new(b) A;
+  b->i; // warn
+  b->f(); // warn
+  static_cast&lt;A*&gt;(b); // warn
+  dynamic_cast&lt;A*&gt;(b); // warn
+  delete b; // warn
+}
+
+// C++11
+#include &lt;new&gt;
+
+class A {
+public:
+  int i;
+  void f() {};
+};
+
+class B : public A {
+public:
+  ~B() {};
+};
+
+void test() {
+  A *a = new A;
+  new(a) B;
+  a->i; // warn
+  a->f(); // warn
+  B *b = new B;
+  new(b) A;
+  b->i; // warn
+  b->f(); // warn
+  static_cast&lt;A*&gt;(b); // warn
+  dynamic_cast&lt;A*&gt;(b); // warn
+  delete b; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ObjLocChanges
+<br>(C++)</span><br><br>
+Undefined behavior: the program must ensure that an object occupies the same 
+storage location when the implicit or explicit destructor call takes place
+</td><td><pre>
+#include &lt;new&gt;
+
+class T { };
+struct B {
+  ~B();
+};
+
+void test() {
+  B *b1 = new B;
+  B b2;
+  new (b1) T;
+  new (&amp;b2) T;
+  delete b1; // warn
+} // warn
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ExprEvalOrderUndef
+<br>(C, C++03)</span><br><br>
+Undefined behavior: a scalar object shall have its stored value modified at 
+most once by the evaluation of an expression
+</td><td><pre>
+void test () {
+  int i = 0;
+  int v[1] = {0};
+  i = v[i++]; // warn
+  i = ++i + 1; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.StaticInitReentered
+<br>(C)</span><br><br>
+Undefined behavior: static declaration is re-entered while the object is being 
+initialized
+</td><td><pre>
+int test(int i) {
+  static int s = test(2*i); // warn
+  return i+1;
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ConstModified
+<br>(C, C++)</span><br><br>
+Undefined behavior: const object is being modified
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+class X {
+public :
+  mutable int i;
+  int j;
+};
+class Y {
+public :
+  X x;
+  Y();
+};
+
+void test() {
+  const int *ciq = 
+    (int *)malloc(sizeof(int));
+  int *iq = const_cast&lt;int *&gt;(ciq);
+  *iq = 1; // warn
+
+  const Y y;
+  Y* p = const_cast&lt;Y*&gt;(&amp;y);
+  p-&gt;x.i = 1; // ok
+  p-&gt;x.j = 1; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.DeadDestructed
+<br>(C++)</span><br><br>
+Undefined behavior: the destructor is invoked for an object whose lifetime 
+has ended
+</td><td><pre>
+class A {
+public:
+  void f() {};
+  A() {};
+  ~A() {};
+};
+
+void test() {
+  A a;
+  a.~A();
+} // warn
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.MethodCallBeforeBaseInit
+<br>(C++)</span><br><br>
+Undefined behavior: calls member function but base not yet initialized
+</td><td><pre>
+class A {
+public :
+  A(int );
+};
+class B : public A {
+public :
+  int f();
+  B() : A(f()) {} // warn
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.MemberOrBaseRefBeforeCtor
+<br>(C++)</span><br><br>
+C++ Undefined behavior: non-static member or base class of non-POD class type 
+is referred before constructor begins execution<br>
+C++11 Undefined behavior: non-static member or base class of a class with a 
+non-trivial constructor is referred before constructor begins execution
+</td><td><pre>
+// C++03
+struct POD { 
+  int i; 
+};
+
+struct non_POD : public POD { 
+  int j; 
+  POD pod;
+};
+
+extern POD pod;
+extern non_POD non_pod;
+
+int *p1 = &amp;non_pod.j; // warn
+int *p2 = &amp;non_pod.pod.i; // warn
+int *p3 = &amp;pod.i; // ok
+POD *p4 = &amp;non_pod; // warn
+
+POD a;
+non_POD b;
+
+struct S {
+  int *k;
+  non_POD non_pod;
+  S() : k(&amp;non_pod.j) {} // warn
+};
+
+// C++11
+struct trivial { 
+  int i; 
+};
+
+struct non_trivial: public trivial { 
+  non_trivial() {};
+  int j; 
+  trivial pod;
+};
+
+extern trivial t;
+extern non_trivial nt;
+
+int *p1 = &amp;nt.j; // warn
+int *p2 = &amp;nt.i; // warn
+int *p3 = &amp;t.i; // ok
+trivial *p4 = &amp;nt;
+
+trivial t;
+non_trivial nt;
+
+struct S {
+  int *k;
+  non_trivial nt;
+  S() : k(&amp;nt.j) {} // warn
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.MemberRefAfterDtor
+<br>(C++)</span><br><br>
+C++03: Undefined behavior: non-static member of non-POD class type is referred 
+after destructor ends execution<br>
+C++11: Undefined behavior: non-static member of a class with a non-trivial 
+destructor is referred after destructor ends execution
+</td><td><pre>
+// C++03
+struct non_POD {
+  virtual void f() {};
+};
+
+void test() {
+  non_POD *non_pod = new non_POD();
+  non_pod->~non_POD();  
+  non_pod->f(); // warn
+}
+
+// C++11
+struct S {
+  ~S() {};
+  void f() {};
+};
+
+void test() {
+  S *s = new S();
+  s->~S();  
+  s->f(); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.CtorForeignCall
+<br>(C++)</span><br><br>
+Undefined behavior: call to virtual function of an object under construction 
+whose type is neither the constructors own class or one of its bases
+</td><td><pre>
+class A {
+public:
+  virtual void f() {};
+};
+
+class B {
+public:
+  B(A* a) { a-&gt;f(); } // warn
+};
+
+class C : public A, B {
+public:
+  C() : B((A*)this) {}
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.CtorForeignCast 
+undefbehavior.CtorForeignTypeid
+<br>(C++)</span><br><br>
+Undefined behavior: the operand of typeid/dynamic_cast is an object under 
+construction whose type is neither the constructors own class or one of its 
+bases
+</td><td><pre>
+#include &lt;typeinfo&gt;
+
+class A {
+public:
+  virtual void f() {};
+};
+
+class B {
+public:
+  B(A* a) { 
+    typeid(*a); // warn
+    dynamic_cast&lt;B*&gt;(a); //warn
+  }
+};
+
+class C : public A, B {
+public:
+  C() : B((A*)this) {}
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.MemberRefInCatch 
+undefbehavior.BaseRefInCatch
+<br>(C++)</span><br><br>
+Undefined behavior: referring to any non-static member or base class of an 
+object in the handler for a function-try-block of a constructor or destructor 
+for that object results in undefined behavior
+</td><td><pre>
+class C {
+  int i;
+public :
+  C()
+  try
+  : i(1) {}
+  catch (...)
+  {
+    i=2; // warn
+  }
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ReturnAtCatchEnd
+<br>(C++)</span><br><br>
+Undefined behavior: a function returns when control reaches the end of a 
+handler. This results in undefined behavior in a value-returning 
+function
+</td><td><pre>
+int test() try {
+}
+catch(int) {
+} // warn
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.AutoptrsOwnSameObj
+<br>(C++03)</span><br><br>
+Undefined behavior: if more than one auto_ptr owns the same object at the same 
+time the behavior of the program is undefined.
+</td><td><pre>
+#include &lt;memory&gt;
+
+void test() {
+  int *data = new int;
+  std::auto_ptr&lt;int&gt; p(data);
+  std::auto_ptr&lt;int&gt; q(data); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.BasicStringBoundAccess
+<br>(C++03)</span><br><br>
+Undefined behavior: out-of-bound basic_string access
+</td><td><pre>
+void test() {
+  std::basic_string&lt;char&gt; s;
+  char c = s[10]; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.BasicStringBoundModification
+<br>(C++)</span><br><br>
+Undefined behavior: out-of-bound basic_string modification
+</td><td><pre>
+void test() {
+  std::basic_string&lt;char&gt; s;
+  s[10] = 0; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.EosDereference
+<br>(C++)</span><br><br>
+Undefined behavior: the result of operator*() on an end of stream is 
+undefined
+</td><td><pre>
+#include &lt;vector&gt;
+
+void test() {
+  std::vector&lt;int&gt; v;
+  int i = *v.end(); // warn
+  *v.end() = 0; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.QsortNonPOD 
+undefbehavior.QsortNonTrivial
+<br>C++</span><br><br>
+C++03: Undefined behavior: the objects in the array passed to qsort are of 
+non-POD type<br>
+C++11: Undefined behavior: the objects in the array passed to qsort are of 
+non-trivial type
+</td><td><pre>
+// C++03
+#include &lt;cstdlib&gt;
+
+struct non_POD {
+  int i;
+  non_POD(int ii) : i(ii) {}
+};
+
+non_POD values[] = { non_POD(2), non_POD(1) };
+
+int compare(const void *a, 
+            const void *b) {
+  return ( (*(non_POD*)a).i -
+           (*(non_POD*)b).i );
+}
+
+void test() {
+  qsort(values, 2, sizeof(non_POD), 
+        compare); // warn
+}
+
+// C++11
+#include &lt;cstdlib&gt;
+
+struct S {};
+
+struct trivial_non_POD : public S {
+  int i;
+};
+
+struct non_trivial {
+  int i;
+  non_trivial() {}
+};
+
+trivial_non_POD tnp[2];
+non_trivial nt[2];
+
+int compare1(const void *a, 
+             const void *b) {
+  return ( (*(trivial_non_POD *)a).i -
+           (*(trivial_non_POD *)b).i );
+}
+
+int compare2(const void *a, 
+             const void *b) {
+  return ( (*(non_trivial *)a).i -
+           (*(non_trivial *)b).i );
+}
+
+void test() {
+  qsort(tnp, 2, sizeof(trivial_non_POD), 
+        compare1); // ok
+  qsort(nt, 2, sizeof(non_trivial), 
+        compare2); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ThrowWhileCopy
+<br>C++</span><br><br>
+Undefined behavior: copy constructor/assignment operator can throw an exception.
+The effects are undefined if an exception is thrown.
+</td><td><pre>
+struct S {
+  int i, j;
+  S (const S &amp;s) {
+    i = s.i;
+    throw 1; // warn
+    j = s.j;
+  };
+  S &amp;operator=(const S &amp;s) {
+    i = s.i;
+    throw 1; // warn
+    j = s.j;
+  }
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ValarrayArgBound
+<br>(C++)</span><br><br>
+Undefined behavior: the value of the second argument is greater than the number 
+of values pointed to by the first argument
+</td><td><pre>
+#include &lt;valarray&gt;
+
+struct S {
+  int i;
+  S(int ii) : i(ii) {};
+};
+
+void test(void) {
+  S s[] = { S(1), S(2) };
+  std::valarray&lt;S&gt; v(s,3); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ValarrayLengthDiffer
+<br>(C++)</span><br><br>
+Undefined behavior: valarray operands are of different length
+</td><td><pre>
+// C++03
+#include &lt;valarray&gt;
+
+void test(void) {
+  std::valarray&lt;int&gt; a(0, 1), b(0, 2);
+  std::valarray&lt;bool&gt; c(false, 1);
+  a = b; // warn
+  a *= b; // warn
+  a = a * b; // warn
+  c = a == b; // warn
+  b.resize(1);
+  a = b; // OK
+}
+
+// C++11
+#include &lt;valarray&gt;
+
+void test(void) {
+  std::valarray&lt;int&gt; a(0, 1), b(0, 2);
+  std::valarray&lt;bool&gt; c(false, 1);
+  a = b; // ok
+  a *= b; // ok
+  a = a * b; // warn
+  c = a == b; // warn
+  b.resize(1);
+  a = b; // OK
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ValarrayZeroLength
+<br>(C++)</span><br><br>
+Undefined behavior: calling sum()/min()/max() method of an array having zero 
+length, the behavior is undefined
+</td><td><pre>
+#include &lt;valarray&gt;
+
+void test(void) {
+  std::valarray&lt;int&gt; v(0, 0);
+  v.sum(); // warn
+  v.min(); // warn
+  v.max(); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.ValarrayBadIndirection
+<br>(C++)</span><br><br>
+Undefined behavior: element N is specified more than once in the 
+indirection
+</td><td><pre>
+#include &lt;valarray&gt;
+
+void test() {
+  size_t addr[] = {0, 1, 1}; // N is 1
+  std::valarray&lt;size_t&gt;indirect(addr, 3);
+  std::valarray&lt;int&gt; a(0, 5), b(1, 3);
+  a[indirect] = b; //warn
+  a[indirect] *= b; //warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.IosBaseDestroyedBeforeInit
+<br>(C++)</span><br>
+<br>Undefined behavior: ios_base object is destroyed before initialization have 
+taken place. basic_ios::init should be call to initialize ios_base 
+members
+</td><td><pre>
+#include &lt;ios&gt;
+
+using namespace std;
+template &lt;class T, class Traits = std::char_traits&lt;T&gt;&gt;
+class my_stream1 : public std::basic_ios&lt;T, Traits&gt; {
+};
+
+template &lt;class T, class Traits = std::char_traits&lt;T&gt;&gt;
+class my_stream2 : public std::basic_ios&lt;T, Traits&gt; {
+  class my_streambuf : public std::basic_streambuf&lt;T, Traits&gt; {
+  };
+public:
+  my_stream2() {
+    this->init(new my_streambuf);
+  }
+};
+
+void test() {
+  my_stream1&lt;char&gt; *p1 = new my_stream1&lt;char&gt;
+  my_stream2&lt;char&gt; *p2 = new my_stream2&lt;char&gt;
+  delete p1; // warn
+  delete p2; // ok
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.IosBaseUsedBeforeInit
+<br>(C++11)</span><br><br>
+Undefined behavior: ios_base object is used before initialization have taken 
+place. basic_ios::init should be call to initialize ios_base members
+</td><td><pre>
+#include &lt;ios&gt;
+
+using namespace std;
+template &lt;class T, class Traits = std::char_traits&lt;T&gt;&gt;
+class my_stream1 : public std::basic_ios&lt;T, Traits&gt; {
+};
+
+template &lt;class T, class Traits = std::char_traits&lt;T&gt;&gt;
+class my_stream2 : public std::basic_ios&lt;T, Traits&gt; {
+  class my_streambuf : public std::basic_streambuf&lt;T, Traits&gt; {
+  };
+public:
+  my_stream2() {
+    this->init(new my_streambuf);
+  }
+};
+
+void test() {
+  my_stream1&lt;char&gt; *p1 = new my_stream1&lt;char&gt;
+  my_stream2&lt;char&gt; *p2 = new my_stream2&lt;char&gt;
+  p1->narrow('a', 'b'); // warn
+  p2->narrow('a', 'b'); // ok
+  delete p1; // warn
+  delete p2; // ok
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">undefbehavior.MinusOnePosType
+<br>(C++)</span><br><br>
+Undefined behavior: passing -1 to any streambuf/istream/ostream member that 
+accepts a value of type traits::pos_type result in undefined behavior
+</td><td><pre>
+#include &lt;fstream&gt;
+
+class my_streambuf : public std::streambuf {
+  void f() {
+    seekpos(-1); // warn
+  }
+};
+
+void test() {
+  std::filebuf fb;
+  std::istream in(&amp;fb);
+  std::ostream out(&amp;fb);
+  std::filebuf::off_type pos(-1);
+  in.seekg(pos); // warn
+  out.seekp(-1); // warn
+}
+</pre></td><td></td></tr>
+</table>
+
+<!-- ============================ different ================================ -->
+<h3>different</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr>
+</thead>
+
+<tr><td><span class="name">different.ArgEvalOrderUndef
+<br>(C)</span><br><br>
+Errors because of the order of evaluation of function arguments is undefined
+</td><td><pre>
+void f(int, int);
+
+void test() {
+  int i = 0;
+  int v[1] = {0};
+  f(v[i], i++); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.IdenticalExprBinOp
+<br>(C)</span><br><br>
+There are identical sub-expressions to the left and to the right of the 
+operator
+</td><td><pre>
+#define A 1
+#define B 1
+
+bool isNan(double d) { 
+  return d != d; // ok
+}
+
+int f();
+
+void test() {
+  int i = 0;
+  if (i != 0 && i != 0) {} // warn
+
+  if(i == A || i == B) {} // ok
+
+  if (++i != 0 && ++i != 0) {} // ok
+
+  if (f() && f()) {} // ok
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.FuncPtrInsteadOfCall
+<br>(C)</span><br><br>
+Possibly a function call should be used instead of a pointer to function
+</td><td><pre>
+int f();
+
+void test() {
+  if (f == 0) {} // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.IdenticalCondIfElseIf
+<br>(C)</span><br><br>
+The use of 'if (A) {...} else if (A) {...}' pattern was detected. There is a 
+probability of logical error presence
+</td><td><pre>
+void test() { 
+  int i = 7;
+  if (i == 1) {}
+  else if (i == 1) {} // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">SuccessiveAssign
+<br>(C)</span><br><br>
+Successive assign to a variable
+</td><td><pre>
+void test() { 
+  int i=0;
+  i=1;
+  i=2; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.NullDerefStmtOrder
+<br>enhancement to core.NullDereference<br>(C)</span><br><br>
+Dereferencing of the null pointer might take place. Checking the pointer for 
+null should be performed first
+</td><td><pre>
+struct S {
+  int x;
+};
+
+S* f();
+
+void test() {
+  S *p1 = f();
+  int x1 = p1-&gt;x; // warn
+  if (p1) {};
+
+  S *p2 = f();
+  int x2 = p2-&gt;x; // ok
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.NullDerefCondOrder
+<br>enhancement to core.NullDereference<br>(C)</span><br><br>
+Dereferencing of the null pointer might take place. Checking the pointer for 
+null should be performed first
+</td><td><pre>
+struct S{bool b;};
+
+S* f();
+
+void test() {
+  S *p = f();
+  if (p-&gt;b && p) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.IdenticalStmtThenElse
+<br>(C)</span><br><br>
+The 'else' statement is equivalent to the 'then' statement
+</td><td><pre>
+void test() {
+  int i;
+  if (i==1) {
+    i++;
+  }
+  else { // warn
+    i++;
+  }
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.MultipleAccessors
+<br>(C++)</span><br><br>
+multiple accessors met for 'class::field'
+</td><td><pre>
+class A {
+  int i;
+  int j;
+public:
+  int getI() { return i; }
+  int getJ() { return i; } // warn
+  void setI(int& ii) { i = ii; }
+  void setJ(int& jj) { i = jj; } // warn
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.AccessorsForPublic
+<br>(C++)</span><br><br>
+Accessors exist for 'class::field'. Should this field really be public?
+</td><td><pre>
+class A {
+public:
+  int i; // warn
+  int getI() { return i; }
+  void setI(int& ii) { i = ii; }
+};
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.LibFuncResultUnised
+<br>(C, C++)</span><br><br>
+Calling 'f' ignoring its return value is of no use (* create the list of known 
+system/library/API functions falling into this category)
+</td><td><pre>
+#include &lt;vector&gt;
+
+void test() {
+  std::vector&lt;int&gt; v;
+  v.empty(); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.WrongVarForStmt
+<br>(C, C++)</span><br><br>
+Possibly wrong variable is used in the loop/cond-expression of the 'for'
+statement. Did you mean 'proper_variable_name'?
+</td><td><pre>
+void test() {
+  int i;
+  int j;
+  for (j=0; j&lt;3; ++i); // warn
+  for (int j=0; i&lt;3; ++j); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.FloatingCompare
+<br>(C)</span><br><br>
+Comparing floating point numbers may be not precise
+</td><td><pre>
+#include &lt;math.h&gt;
+
+void test() {
+  double b = sin(M_PI / 6.0);
+  if (b == 0.5) // warn
+    b = 0;
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.BoolCompare
+<br>maybe merge with experimental.core.BoolAssignment<br>(C, C++)</span><br><br>
+Comparing boolean to a value other then 0 or 1
+</td><td><pre>
+void test() {
+  int i;
+  if (0 < i < 3) {}; // warn
+  bool b;
+  if (b == 3) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.BitwiseOpBoolArg
+<br>maybe join with experimental.core.BoolAssignment<br>(C, C++)</span><br><br>
+bool value is used at the left/right part of the &amp; (|) operator. Did you mean 
+&amp;&amp; (||) ?
+</td><td><pre>
+int f();
+
+void test() {
+  bool b = true;
+  if (b &amp; f()) {} // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.LabelInsideSwitch
+<br>(C)</span><br><br>
+Possible misprint: label found inside the switch() statement. (* did you mean 
+'default'?)
+</td><td><pre>
+void test() {
+  int c = 7;
+  switch(c){
+  case 1:
+    c += 1; break;
+  defalt: // warn
+    c -= 1; break;
+  }
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.IdenticalCondIfIf
+<br>(C)</span><br><br>
+The conditions of two subsequent 'if' statements are identical
+</td><td><pre>
+void test() {
+  int c = 7;
+  if (c &gt; 5) // &lt;-
+    c += 1;
+  if (c &gt; 5) // warn
+    c -= 1;
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.CondOpIdenticalReturn
+<br>(C)</span><br><br>
+The return expressions of the '?:' operator are identical
+</td><td><pre>
+void test() {
+  unsigned a;
+  a = a > 5 ? a : a; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.UnaryPlusWithUnsigned
+<br>(C)</span><br><br>
+Using 'unary +' with unsigned is meaningless
+</td><td><pre>
+void test() {
+  unsigned a;
+  a = +a; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.LogicalOpUselessArg
+<br>(C)</span><br><br>
+The second operand of the &amp;&amp; operator has no impact on expression result
+</td><td><pre>
+void test() {
+  unsigned a;
+  if (a&lt;7 &amp;&amp; a&lt;10) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.SameResLogicalExpr
+<br>(C)</span><br><br>
+The expression always evaluates to true/false
+</td><td><pre>
+void test() {
+  int i=0;
+  if (i!=0) {}; // warn
+  if (i==0 &amp;&amp; i==1) {}; // warn
+  if (i<0 || i>=0) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.SameResUnsignedCmp
+<br>(C)</span><br><br>
+Comparison of unsigned expression 'op expr' is always true/false
+</td><td><pre>
+void test() {
+  unsigned u;
+  if (u &lt; -1) {}; // warn
+  if (u &gt;= 0) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.OpPrecedenceAssignCmp
+<br>(C)</span><br><br>
+Comparison operation has higher precedence then assignment. Bool value is 
+assigned to variable of type 'type'. Parenthesis may bee required around an 
+assignment
+</td><td><pre>
+int f();
+
+void test() {
+  bool b;
+  int x, y;
+  if((b = x != y)) {} // ok
+  if((x = f() != y)) {} // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.OpPrecedenceIifShift
+<br>(C)</span><br><br>
+?: has lower precedence then &lt;&lt;
+</td><td><pre>
+#include &lt;iostream&gt;
+
+void test() {
+  int a;
+  std::cout &lt;&lt; a ? "a" : "b"; // warn
+  a &lt;&lt; a&gt;7 ? 1 : 2; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.ObjectUnused
+<br>(C++)</span><br><br>
+The object was created but is not being used<br><br>
+The exception object was created but is not being used. Did you mean 
+'throw std::exception();'?
+</td><td><pre>
+#include &lt;exception&gt;
+
+struct S {
+  int x, y;
+  S(int xx, int yy) : x(xx), y(yy) {
+  }
+  S(int xx) {
+    S(xx, 0); // warn
+  }
+};
+
+void test() {
+  S(0, 0); // warn
+  std::exception(); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.StaticArrayPtrCompare
+<br>(C)</span><br><br>
+Pointer to static array is being compared to NULL. May the subscripting is 
+missing
+</td><td><pre>
+void test() {
+  int a1[1];
+  if (a1 == 0) {}; // warn
+
+  int a2[1][1];
+  if (a2[0]) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.ConversionToBool
+<br>maybe join with experimental.core.BoolAssignment<br>(C, C++)</span><br><br>
+Odd implicit conversion from 'type' to 'bool'
+</td><td><pre>
+bool test() {
+  return 1.; // warn
+  return ""; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.ArrayBound
+<br>enhancement to experimental.security.ArrayBound[v2]<br>(C, C++)</span><br><br>
+Out-of-bound dynamic array access
+</td><td><pre>
+#include &lt;stdlib.h&gt;
+
+void test() {
+  int *p2 = new int[1];
+  if(p2[1]) {}; // warn
+  int i = 1;
+  if(p2[i]) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.StrcpyInputSize
+<BR>enhancement to experimental.unix.cstring.OutOfBounds<br>(C)</span><br><br>
+Buffer copy without checking size of input
+</td><td><pre>
+void test(char* string) {
+  char buf[24];
+  strcpy(buf, string); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.IntegerOverflow
+<br>(C)</span><br><br>
+Integer overflow
+</td><td><pre>
+#include &lt;limits.h&gt;
+
+int f(int x) {
+  return INT_MAX+1; // warn
+}
+
+void test() {
+  int x = INT_MAX+1; // warn
+  f(INT_MAX+1); // warn
+
+  int y = INT_MAX/2+1; // warn
+  x = y*2; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.SignExtension
+<br>(C)</span><br><br>
+Unexpected sign extension might take place
+</td><td><pre>
+void f(unsigned int i);
+int g();
+
+unsigned int test() {
+  long long sll;
+  unsigned long long ull = sll; // warn
+  long sl;
+  unsigned long ul = sl; // warn
+  int si;
+  unsigned int ui = si; // warn
+  short ss;
+  unsigned short us = ss; // warn
+  signed char sc;
+  unsigned char uc = sc; // warn
+  f(si); // warn
+  ui = g(); // warn
+  return si; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.NumericTruncation
+<br>(C)</span><br><br>
+Numeric truncation might take place
+</td><td><pre>
+void f(int i);
+int g();
+
+int test() {
+  unsigned long long ull;
+  long long sll;
+  unsigned long ul = ull; // warn
+  long sl = sll; // warn
+  unsigned int ui = ul; // warn
+  int si = sl; // warn
+  unsigned short us = ui; // warn
+  short ss = si; // warn
+  unsigned char uc = us; // warn
+  signed char sc = uc; // warn
+  f(sll); // warn
+  ss = g(); // warn
+  return sll; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">different.MissingCopyCtorAssignOp
+<br>(C, C++)</span><br><br>
+The class has dynamically allocated data members but do not define a copy 
+constructor/assignment operator
+</td><td><pre>
+class C { // warn
+  int *p; // &lt;-
+public:
+  C() { p = new int; }
+  ~C() { delete p; }
+};
+</pre></td><td></td></tr>
+
+</table>
+
+<!-- ============================ WinAPI =================================== -->
+<h3>WinAPI</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
+
+<tr><td><span class="name">WinAPI.CreateProcess
+<br>(C)</span><br><br>
+After calling CreateProcess(), ensure that process and thread handles get closed
+(* for the given example: examine data flow from pi, pi.hProcess and pi.hThread)
+</td><td><pre>
+#include &lt;windows.h&gt;
+
+void test() {
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
+  BOOL fSuccess;
+  fSuccess = CreateProcess(
+    NULL, TEXT("MyProgram.exe"), NULL, NULL, 
+    TRUE, 0, NULL, NULL, &amp;si, &amp;pi);
+} // warn
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">WinAPI.LoadLibrary
+<br>(C)</span><br><br>
+Calling LoadLibrary without a fully qualified path may allow to load a DLL from 
+arbitrary location
+</td><td><pre>
+#include &lt;windows.h&gt;
+
+void test() {
+  HINSTANCE h = LoadLibrary("X.dll"); // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">WinAPI.WideCharToMultiByte
+<br>(C)</span><br><br>
+Buffer overrun while calling WideCharToMultiByte
+</td><td><pre>
+#include &lt;windows.h&gt;
+
+void test() 
+{
+  wchar_t ws[] = L"abc";
+  char s[3];
+  int res1 = WideCharToMultiByte(
+               CP_UTF8, 0, ws, -1, s, 
+               3, NULL, NULL); // warn
+  int res2 = WideCharToMultiByte(
+               CP_UTF8, 0, ws, -1, s, 
+               3, NULL, NULL); // ok
+  if (res2 == sizeof(s))
+    s[res2-1] = 0;
+  else
+   s[res2] = 0;
+}
+</pre></td><td></td></tr>
+
+</table>
+
+<!-- =========================== optimization ============================== -->
+<h3>optimization</h3>
+<table class="checkers">
+<col class="namedescr"><col class="example"><col class="progress">
+<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
+
+<tr><td><span class="name">optimization.PassConstObjByValue
+<br>(C, C++)</span><br><br>
+Optimization: It is more effective to pass const n-th parameter by reference to 
+avoid unnecessary object copying
+</td><td><pre>
+struct A {
+  int a[20];
+  int b;
+};
+
+bool FirstIsZero(const struct A a) { // warn
+  return a.a[0] == 0;
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">optimization.PostfixIncIter
+<br>(C++)</span><br><br>
+Optimization: It is more effective to use prefix ++ with iterator here
+</td><td><pre>
+#include &lt;vector&gt;
+
+void test() {
+  std::vector&lt;int&gt; v;
+  std::vector&lt;int&gt;::const_iterator it;
+  for(it = v.begin(); 
+      it != v.end(); it++) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">optimization.MultipleCallsStrlen
+<br>(C)</span><br><br>
+Optimization: multiple calls to strlen for a given string in the given 
+expression. It is more effective to hold strlen result in a temporary 
+variable
+</td><td><pre>
+#include &lt;string.h&gt;
+
+void test() {
+  const char* s = "abc";
+  if (strlen(s) &gt; 0 &amp;&amp;
+      strlen(s) &lt; 7) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">optimization.EmptyCstrDetect
+<br>(C)</span><br><br>
+Optimization: it is more efficient to use "str[0] != '\0'" to identify an empty 
+string
+</td><td><pre>
+#include &lt;string.h&gt;
+
+void test() {
+  const char* s = "abc";
+  if (strlen(s) &gt; 0) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">optimization.StrLengthCalculation
+<br>(C, C++)</span><br><br>
+Optimization: it is more efficient to use string::length() method to calculate 
+string length
+</td><td><pre>
+#include &lt;string&gt;
+#include &lt;string.h&gt;
+
+void test() {
+  std::string s;
+  if (strlen(s.c_str()) != 0) {}; // warn
+}
+</pre></td><td></td></tr>
+
+<tr><td><span class="name">optimization.EmptyContainerDetect
+<br>(C, C++)</span><br><br>
+Optimization: It is more efficient to use container.empty() to identify an 
+empty container
+</td><td><pre>
+#include &lt;list&gt;
+
+void test() {
+  std::list&lt;int&gt; l;
+  if (l.size() != 0) {}; // warn
+}
+</pre></td><td></td></tr>
+
+</table>
+
+<br>
+</div> <!-- page -->
+</div> <!-- content -->
+</body>
+</html>

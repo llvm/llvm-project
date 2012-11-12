@@ -1,0 +1,9 @@
+LLDB Installation Instructions
+==============================
+
+Note that LLDB currently only builds out of the box on Mac OS X with Xcode, but
+patches to improve portability are definitely welcome.
+
+In addition to using Xcode you'll need to enable code signing on your system
+to either build lldb or debug using lldb.  Please see the code signing
+documentation in docs/code-signing.txt for more detailed directions.

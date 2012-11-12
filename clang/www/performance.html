@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>Clang - Performance</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+  <style type="text/css">
+</style>
+</head>
+<body>
+
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+<!--*************************************************************************-->
+<h1>Clang - Performance</h1>
+<!--*************************************************************************-->
+
+<p>This page shows the compile time performance of Clang on two
+interesting benchmarks:</p>
+<ul>
+  <li><i>Sketch</i>: The Objective-C example application shipped on
+    Mac OS X as part of Xcode. <i>Sketch</i> is indicative of a
+    "typical" Objective-C app. The source itself has a relatively
+    small amount of code (~7,500 lines of source code), but it relies
+    on the extensive Cocoa APIs to build its functionality. Like many
+    Objective-C applications, it includes <tt>Cocoa/Cocoa.h</tt> in
+    all of its source files, which represents a significant stress
+    test of the front-end's performance on lexing, preprocessing,
+    parsing, and syntax analysis.</li>
+  <li><i>176.gcc</i>: This is the gcc-2.7.2.2 code base as present in
+    SPECINT 2000. In contrast to Sketch, <i>176.gcc</i> consists of a
+    large amount of C source code (~200,000 lines) with few system
+    dependencies. This stresses the back-end's performance on generating
+    assembly code and debug information.</li>
+</ul>
+
+<p>
+For previous performance numbers, please
+go <a href="performance-2009-03-02.html">here</a>.
+</p>
+
+<!--*************************************************************************-->
+<h2><a name="experiments">Experiments</a></h2>
+<!--*************************************************************************-->
+
+<p>Measurements are done by running a full build (using xcodebuild or
+make for Sketch and 176.gcc respectively) using Clang and gcc 4.2 as
+compilers.</p>
+
+<p>In order to track the performance of various subsystems the timings
+have been broken down into separate stages where possible. This is
+done by over-riding the CC environment variable used during the build
+to point to one of a few simple shell scripts which may skip part of
+the build.</p>
+
+<ul>
+  <li><tt>non-compiler</tt>: The overhead of the build system itself;
+    for Sketch this also includes the time to build/copy various
+    non-source code resource files.</li>
+  <li><tt>+ driver</tt>: Add execution of the driver, but do not execute any
+    commands (by using the -### driver option).</li>
+  <li><tt>+ pch gen</tt>: Add generation of PCH files (if used).</li>
+  <li><tt>+ syntax</tt>: Add preprocessing, parsing, and semantic checking of
+    source files.</li>
+  <li><tt>+ IRgen</tt>: Add generation of LLVM IR (gcc has no
+    corresponding phase).</li>
+  <li><tt>+ codegen</tt>: Add generation of assembler files.</li>
+  <li><tt>+ assembler</tt>: Add assembler time to generate .o files.</li>
+  <li><tt>+ linker</tt>: Add linker time.</li>
+</ul>
+
+<p>This set of stages is chosen to be approximately additive, that is each
+subsequent stage simply adds some additional processing. The timings measure the
+delta of the given stage from the previous one. For example, the timings
+for <tt>+ syntax</tt> below show the difference of running with <tt>+
+syntax</tt> versus the times for <tt>+ pch gen</tt>. This amounts to a fairly
+accurate measure of only the time to perform preprocessing, parsing, and
+semantic analysis after PCH generation is done.</p>
+
+<!--*************************************************************************-->
+<h2><a name="timings">Timing Results</a></h2>
+<!--*************************************************************************-->
+
+<!--=======================================================================-->
+<h3><a name="2009-06-26">2009-06-26</a></h3>
+<!--=======================================================================-->
+
+<a href="timing-data/2009-06-26/sketch.pdf">
+<img class="img_slide" 
+     src="timing-data/2009-06-26/sketch.png" alt="Sketch Timings">
+</a>
+
+<a href="timing-data/2009-06-26/176.gcc.pdf">
+<img class="img_slide" 
+     src="timing-data/2009-06-26/176.gcc.png" alt="176.gcc Timings">
+</a>
+
+</div>
+</body>
+</html>

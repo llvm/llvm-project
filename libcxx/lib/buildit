@@ -1,0 +1,125 @@
+#! /bin/sh
+#
+# Set the $TRIPLE environment variable to your system's triple before
+# running this script.  If you set $CXX, that will be used to compile
+# the library.  Otherwise we'll use clang++.
+
+set -e
+
+if [ `basename $(pwd)` != "lib" ]
+then
+	echo "current directory must be lib"
+	exit 1
+fi
+
+if [ -z "$CXX" ]
+then
+	CXX=clang++
+fi
+
+if [ -z "$CC" ]
+then
+    CC=clang
+fi
+
+if [ -z $MACOSX_DEPLOYMENT_TARGET ]
+then
+	if [ -z $IPHONEOS_DEPLOYMENT_TARGET ]
+	then
+		MACOSX_DEPLOYMENT_TARGET=10.7
+	fi
+fi
+
+if [ -z $RC_ProjectSourceVersion ]
+then
+  RC_ProjectSourceVersion=1
+fi
+
+EXTRA_FLAGS="-std=c++0x -fstrict-aliasing -Wall -Wextra -Wshadow -Wconversion \
+             -Wnewline-eof -Wpadded -Wmissing-prototypes -Wstrict-aliasing=2 \
+             -Wstrict-overflow=4"
+
+case $TRIPLE in
+  *-apple-*)
+    if [ -z $RC_XBS ]
+    then
+      RC_CFLAGS="-arch i386 -arch x86_64"
+    fi
+    SOEXT=dylib
+	if [ "$MACOSX_DEPLOYMENT_TARGET" == "10.6" ]
+	then
+	    EXTRA_FLAGS="-std=c++0x -U__STRICT_ANSI__"
+		LDSHARED_FLAGS="-o libc++.1.dylib \
+			-dynamiclib -nodefaultlibs -current_version 1 \
+			-compatibility_version 1 \
+			-install_name /usr/lib/libc++.1.dylib \
+			-Wl,-reexport_library,/usr/lib/libc++abi.dylib \
+			-Wl,-unexported_symbols_list,libc++unexp.exp  \
+			/usr/lib/libSystem.B.dylib"
+	else
+		RE_EXPORT_LINE="/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,libc++abi.exp"
+		if [ -n "$SDKROOT" ]
+		then
+			EXTRA_FLAGS+="-isysroot ${SDKROOT}"
+			if echo "${RC_ARCHS}" | grep -q "armv7"  
+			then
+				RE_EXPORT_LINE="${SDKROOT}/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,libc++sjlj-abi.exp"
+			else
+				RE_EXPORT_LINE="-Wl,-reexport_library,${SDKROOT}/usr/lib/libc++abi.dylib"
+			fi
+			CXX=`xcrun -sdk "${SDKROOT}"  -find clang++`
+			CC=`xcrun -sdk "${SDKROOT}"  -find clang`
+		fi
+	    LDSHARED_FLAGS="-o libc++.1.dylib \
+			-dynamiclib -nodefaultlibs  \
+			-current_version ${RC_ProjectSourceVersion} \
+			-compatibility_version 1 \
+			-install_name /usr/lib/libc++.1.dylib \
+			-lSystem  \
+			-Wl,-unexported_symbols_list,libc++unexp.exp  \
+			${RE_EXPORT_LINE}  \
+			-Wl,-force_symbols_not_weak_list,notweak.exp \
+			-Wl,-force_symbols_weak_list,weak.exp"
+	fi
+    ;;
+  *-*-mingw*)
+    # FIXME: removing libgcc and libsupc++ dependencies means porting libcxxrt and LLVM/compiler-rt
+    SOEXT=dll
+    LDSHARED_FLAGS="-o libc++.dll \
+        -shared -nodefaultlibs -Wl,--export-all-symbols -Wl,--allow-multiple-definition -Wl,--out-implib,libc++.dll.a \
+        -lsupc++ -lpthread -lmingw32 -lgcc_s -lgcc -lmoldname -lmingwex -lmsvcr100 -ladvapi32 -lshell32 -luser32 -lkernel32 -lmingw32 -lgcc_s -lgcc -lmoldname -lmingwex -lmsvcrt"
+	;;
+  *)
+    RC_CFLAGS="-fPIC"
+    SOEXT=so
+    LDSHARED_FLAGS="-o libc++.so.1.0 \
+        -shared -nodefaultlibs -Wl,-soname,libc++.so.1 \
+        -lpthread -lrt -lc -lstdc++"
+    ;;
+esac
+
+if [ -z $RC_XBS ]
+then
+    rm -f libc++.1.$SOEXT*
+fi
+
+set -x
+
+for FILE in ../src/*.cpp; do
+	$CXX -c -g -Os $RC_CFLAGS $EXTRA_FLAGS -nostdinc++ -I../include $FILE
+done
+case $TRIPLE in
+  *-*-mingw*)
+  for FILE in ../src/support/win32/*.cpp; do
+    $CXX -c -g -Os $RC_CFLAGS $EXTRA_FLAGS -nostdinc++ -I../include $FILE
+  done
+  ;;
+esac
+$CC *.o $RC_CFLAGS $LDSHARED_FLAGS $EXTRA_FLAGS
+
+#libtool -static -o libc++.a *.o
+
+if [ -z $RC_XBS ]
+then
+    rm *.o
+fi

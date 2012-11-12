@@ -1,0 +1,6 @@
+#define PART2
+#include "test.h"
+
+void test2(id p) {
+  [p release];
+}

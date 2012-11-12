@@ -1,0 +1,7 @@
+file a.out
+breakpoint set -n c
+script import sys, os
+script sys.path.append(os.path.join(os.getcwd(), os.pardir))
+script import conditional_break
+breakpoint command add -s python 1 -o "conditional_break.stop_if_called_from_a()"
+

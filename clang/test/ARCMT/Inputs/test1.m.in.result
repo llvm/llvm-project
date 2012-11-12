@@ -1,0 +1,5 @@
+#define PART1
+#include "test.h"
+
+void test1(id p) {
+}

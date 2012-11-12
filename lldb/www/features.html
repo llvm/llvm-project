@@ -1,0 +1,60 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>LLDB Features</title>
+</head>
+
+<body>
+    <div class="www_title">
+      The <strong>LLDB</strong> Debugger
+    </div>
+    
+<div id="container">
+	<div id="content">
+       <!--#include virtual="sidebar.incl"-->
+
+		<div id="middle">
+			<div class="post">
+				<h1 class ="postheader">Features</h1>
+				<div class="postcontent">
+				   <p>LLDB supports a broad variety of basic debugging features such as
+				      reading DWARF, supporting step, next, finish, backtraces, etc.  Some
+				      more interested bits are:</p>
+
+				   <ul>
+				       <li>Plug-in architecture for portability and extensibility:</li>
+					   <ul>
+    					   <li>Object file parsers for executable file formats. Support currently
+    					       includes Mach-O (32 and 64-bit) &amp; ELF (32-bit).</li>
+    					   <li>Object container parsers to extract object files contained within a file.
+    					       Support currently includes universal Mach-O files &amp; BSD Archives.
+    					       </li>
+    					   <li>Debug symbol file parsers to incrementally extract debug information from
+    					       object files. Support currently includes DWARF &amp; Mach-O symbol
+    					       tables.</li>
+    					   <li>Symbol vendor plug-ins collect data from a variety of different sources
+    					       for an executable object.</li>
+    					   <li>Disassembly plug-ins for each architecture. Support currently includes
+    					       an LLVM disassembler for <a href="http://blog.llvm.org/2010/01/x86-disassembler.html">i386, x86-64</a>
+    					       , &amp; ARM/Thumb.</li>
+    					    <li>Debugger plug-ins implement the host and target specific functions
+    					        required to debug.</li>
+					    </ul>
+				    <li>SWIG-generated script bridging allows Python to access and control the
+				        public API of the debugger library.</li>
+				    <li>A remote protocol server, debugserver, implements Mac OS X debugging on
+				        i386 and x86-64.</li>
+				    <li>A command line debugger - the lldb executable itself.</li>
+				    <li>A framework API to the library.</li>
+				   </ul>
+				</div>
+				<div class="postfooter"></div>
+		    </div>
+
+		</div>
+	</div>
+</div>
+</body>
+</html>

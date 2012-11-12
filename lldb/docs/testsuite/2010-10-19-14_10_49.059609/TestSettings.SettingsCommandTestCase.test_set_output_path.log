@@ -1,0 +1,43 @@
+
+os command: [['/bin/sh', '-c', 'make clean; make']]
+stdout: rm -rf "a.out" "a.out.dSYM"  main.o main.d
+g++ -arch x86_64 -gdwarf-2 -O0   -c -o main.o main.cpp
+g++ -arch x86_64 -gdwarf-2 -O0  main.o -o "a.out"
+/usr/bin/dsymutil  -o "a.out.dSYM" "a.out"
+
+stderr: None
+retcode: 0
+
+
+runCmd: file /Volumes/data/lldb/svn/trunk/test/settings/a.out
+output: Current executable set to '/Volumes/data/lldb/svn/trunk/test/settings/a.out' (x86_64).
+
+
+runCmd: settings set target.process.output-path 'stdout.txt'
+output: 
+
+runCmd: settings show target.process.output-path
+output: target.process.output-path (string) = 'stdout.txt'
+
+
+Expecting start string: target.process.output-path (string) = 'stdout.txt'
+Matched
+
+runCmd: run
+output: Process 43533 launched: '/Volumes/data/lldb/svn/trunk/test/settings/a.out' (x86_64)
+
+
+FAIL
+
+runCmd: process kill
+check of return status not required
+runCmd failed!
+error: Process must be launched.
+
+
+Traceback (most recent call last):
+  File "/Volumes/data/lldb/svn/trunk/test/settings/TestSettings.py", line 125, in test_set_output_path
+    "'stdout.txt' exists due to target.process.output-path.")
+AssertionError: False is not True : 'stdout.txt' exists due to target.process.output-path.
+
+

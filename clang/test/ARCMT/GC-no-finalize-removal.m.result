@@ -1,0 +1,98 @@
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7 -fsyntax-only -fobjc-runtime-has-weak -fobjc-arc -x objective-c %s.result
+// RUN: arcmt-test --args -triple x86_64-apple-macosx10.7 -fsyntax-only -fobjc-gc-only -no-finalize-removal -x objective-c %s > %t
+// RUN: diff %t %s.result
+// RUN: arcmt-test --args -triple x86_64-apple-macosx10.7 -fsyntax-only -fobjc-gc-only -no-finalize-removal -x objective-c++ %s > %t
+// RUN: diff %t %s.result
+// DISABLE: mingw32
+
+#include "Common.h"
+#include "GC.h"
+
+void test1(CFTypeRef *cft) {
+  id x = CFBridgingRelease(cft);
+}
+
+@interface I1
+@end
+
+@implementation I1
+-(void)dealloc {
+  // dealloc
+  test1(0);
+}
+
+#if !__has_feature(objc_arc)
+-(void)finalize {
+  // finalize
+  test1(0);
+}
+#endif
+@end
+
+@interface I2
+@property (strong) id prop;
+@end
+
+@implementation I2
+@synthesize prop;
+
+#if !__has_feature(objc_arc)
+-(void)finalize {
+  self.prop = 0;
+  // finalize
+  test1(0);
+}
+#endif
+-(void)dealloc {
+  // finalize
+  test1(0);
+}
+@end
+
+__attribute__((objc_arc_weak_reference_unavailable))
+@interface QQ {
+  __weak id s;
+  __unsafe_unretained QQ *q;
+}
+@end
+
+@interface I3
+@property (weak) I3 * pw1, * pw2;
+@property (strong) I3 * ps;
+@property (assign) I3 * pds;
+@end
+
+@interface I4Impl {
+  I4Impl *__strong pds2;
+  I4Impl *pds3;
+  __weak I4Impl *pw3;
+  __weak I4Impl *pw4;
+}
+@property (weak) I4Impl * pw1, * pw2;
+@property (strong) I4Impl * ps;
+@property (strong) I4Impl * pds;
+@property (strong) I4Impl * pds2;
+@property (readwrite) I4Impl * pds3;
+@property (readonly) I4Impl * pds4;
+@property (weak, readonly)  I4Impl *pw3;
+@property (weak)  I4Impl *pw4;
+@end
+
+@implementation I4Impl
+@synthesize pw1, pw2, pw3, pw4, ps, pds, pds2, pds3, pds4;
+
+-(void)test1:(CFTypeRef *)cft {
+  id x = CFBridgingRelease(cft);
+}
+@end
+
+// rdar://10532449
+@interface rdar10532449
+@property (strong) id assign_prop;
+@property (strong, readonly) id  strong_readonly_prop;
+@property (weak) id  weak_prop;
+@end
+
+@implementation rdar10532449
+@synthesize assign_prop, strong_readonly_prop, weak_prop;
+@end

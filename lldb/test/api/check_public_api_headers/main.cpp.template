@@ -1,0 +1,24 @@
+//===-- main.cpp ------------------------------------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#include <stdio.h>
+%include_SB_APIs%
+
+using namespace lldb;
+int
+main(int argc, char const *argv[])
+{
+    SBDebugger::Initialize();
+    SBDebugger dbg = SBDebugger::Create();
+
+    printf("Hello SBDebugger %llu\n", dbg.GetID()); // Set breakpoint here.
+
+    SBDebugger::Terminate();
+    return 0;
+}
