@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 -Wimplicit-fallthrough %s
+// XFAIL: *
 
+// NOTE: This test is marked XFAIL until we come up with a good language design
+// for a worfklow to use this warning outside of C++11.
 
 int fallthrough(int n) {
   switch (n / 10) {
