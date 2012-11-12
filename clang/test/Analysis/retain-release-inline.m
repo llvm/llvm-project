@@ -343,5 +343,21 @@ void test_test_return_inline_2(char *bytes) {
   CFRelease(str);
 }
 
+extern CFStringRef getString(void);
+CFStringRef testCovariantReturnType(void) __attribute__((cf_returns_retained));
 
+void usetestCovariantReturnType() {
+  CFStringRef S = ((void*)0);
+  S = testCovariantReturnType();
+  if (S)
+    CFRelease(S);
+} 
 
+CFStringRef testCovariantReturnType() {
+  CFStringRef Str = ((void*)0);
+  Str = getString();
+  if (Str) {
+    CFRetain(Str);
+  }
+  return Str;
+}

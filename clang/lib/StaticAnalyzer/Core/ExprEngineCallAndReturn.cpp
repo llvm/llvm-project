@@ -137,6 +137,8 @@ static SVal adjustReturnValue(SVal V, QualType ExpectedTy, QualType ActualTy,
     return V;
 
   // If the types already match, don't do any unnecessary work.
+  ExpectedTy = ExpectedTy.getCanonicalType();
+  ActualTy = ActualTy.getCanonicalType();
   if (ExpectedTy == ActualTy)
     return V;
 
