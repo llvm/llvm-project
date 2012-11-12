@@ -1,0 +1,13 @@
+# RUN: yaml-bench -canonical %s
+
+- |
+ detected
+- >
+ 
+  
+  # detected
+- |1
+  explicit
+- >
+ 	
+ detected

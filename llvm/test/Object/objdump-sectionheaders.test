@@ -1,0 +1,16 @@
+; RUN: llvm-objdump -h %p/Inputs/trivial-object-test.elf-x86-64 \
+; RUN:              | FileCheck %s
+
+; To verify this, use readelf -S, not objdump -h. Binutils objdump filters the
+; results in a way that we don't emulate.
+
+; CHECK: Sections:
+; CHECK: Idx Name          Size      Address          Type
+; CHECK:   0               000000000 00000000000000000 
+; CHECK:   1 .text         000000026 00000000000000000 TEXT DATA 
+; CHECK:   2 .rodata.str1.1 00000000d 00000000000000026 DATA 
+; CHECK:   3 .note.GNU-stack 000000000 00000000000000033 
+; CHECK:   4 .rela.text    000000048 00000000000000038 
+; CHECK:   5 .symtab       0000000c0 00000000000000080 
+; CHECK:   6 .strtab       000000033 00000000000000140 
+; CHECK:   7 .shstrtab     00000004b 00000000000000173 

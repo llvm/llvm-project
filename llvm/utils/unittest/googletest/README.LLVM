@@ -1,0 +1,33 @@
+LLVM notes
+----------
+
+This directory contains Google Test 1.6.0, with all elements removed except for
+the actual source code, to minimize the addition to the LLVM distribution.
+
+Cleaned up as follows:
+
+# Remove all the unnecessary files and directories
+$ rm -f aclocal* CMakeLists.txt configure* Makefile* CHANGES CONTRIBUTORS README
+$ rm -rf build-aux cmake codegear fused-src m4 make msvc samples scripts test xcode
+$ rm -f `find . -name \*\.pump`
+
+# Move all the source files to the current directory
+$ mv src/* .
+$ rmdir src
+
+# Move extra headers into the already-existing internal headers dir
+$ mv *.h include/gtest/internal/
+
+# Update paths to the included files
+$ perl -pi -e 's|^#include "src/|#include "gtest/internal/|' *.cc
+
+$ rm -f gtest-all.cc gtest_main.cc
+
+$ mv COPYING LICENSE.TXT
+
+
+Modified as follows:
+* To GTestStreamToHelper in include/gtest/internal/gtest-internal.h,
+  added the ability to stream with raw_os_ostream.
+* To refresh Haiku support in include/gtest/internal/gtest-port.h,
+  see http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20100621/102898.html

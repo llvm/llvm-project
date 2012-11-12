@@ -1,0 +1,1954 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Writing an LLVM Pass</title>
+  <link rel="stylesheet" href="_static/llvm.css" type="text/css">
+</head>
+<body>
+
+<h1>
+  Writing an LLVM Pass
+</h1>
+
+<ol>
+  <li><a href="#introduction">Introduction - What is a pass?</a></li>
+  <li><a href="#quickstart">Quick Start - Writing hello world</a>
+    <ul>
+    <li><a href="#makefile">Setting up the build environment</a></li>
+    <li><a href="#basiccode">Basic code required</a></li>
+    <li><a href="#running">Running a pass with <tt>opt</tt></a></li>
+    </ul></li>
+  <li><a href="#passtype">Pass classes and requirements</a>
+     <ul>
+     <li><a href="#ImmutablePass">The <tt>ImmutablePass</tt> class</a></li>
+     <li><a href="#ModulePass">The <tt>ModulePass</tt> class</a>
+        <ul>
+        <li><a href="#runOnModule">The <tt>runOnModule</tt> method</a></li>
+        </ul></li>
+     <li><a href="#CallGraphSCCPass">The <tt>CallGraphSCCPass</tt> class</a>
+        <ul>
+        <li><a href="#doInitialization_scc">The <tt>doInitialization(CallGraph
+                                           &amp;)</tt> method</a></li>
+        <li><a href="#runOnSCC">The <tt>runOnSCC</tt> method</a></li>
+        <li><a href="#doFinalization_scc">The <tt>doFinalization(CallGraph
+                                           &amp;)</tt> method</a></li>
+        </ul></li>
+     <li><a href="#FunctionPass">The <tt>FunctionPass</tt> class</a>
+        <ul>
+        <li><a href="#doInitialization_mod">The <tt>doInitialization(Module
+                                            &amp;)</tt> method</a></li>
+        <li><a href="#runOnFunction">The <tt>runOnFunction</tt> method</a></li>
+        <li><a href="#doFinalization_mod">The <tt>doFinalization(Module
+                                            &amp;)</tt> method</a></li>
+        </ul></li>
+     <li><a href="#LoopPass">The <tt>LoopPass</tt> class</a>
+        <ul>
+        <li><a href="#doInitialization_loop">The <tt>doInitialization(Loop *,
+                                            LPPassManager &amp;)</tt> method</a></li>
+        <li><a href="#runOnLoop">The <tt>runOnLoop</tt> method</a></li>
+        <li><a href="#doFinalization_loop">The <tt>doFinalization()
+                                            </tt> method</a></li>
+        </ul></li>
+     <li><a href="#RegionPass">The <tt>RegionPass</tt> class</a>
+        <ul>
+        <li><a href="#doInitialization_region">The <tt>doInitialization(Region *,
+                                            RGPassManager &amp;)</tt> method</a></li>
+        <li><a href="#runOnRegion">The <tt>runOnRegion</tt> method</a></li>
+        <li><a href="#doFinalization_region">The <tt>doFinalization()
+                                            </tt> method</a></li>
+        </ul></li>
+     <li><a href="#BasicBlockPass">The <tt>BasicBlockPass</tt> class</a>
+        <ul>
+        <li><a href="#doInitialization_fn">The <tt>doInitialization(Function
+                                             &amp;)</tt> method</a></li>
+        <li><a href="#runOnBasicBlock">The <tt>runOnBasicBlock</tt>
+                                       method</a></li>
+        <li><a href="#doFinalization_fn">The <tt>doFinalization(Function
+                                         &amp;)</tt> method</a></li>
+        </ul></li>
+     <li><a href="#MachineFunctionPass">The <tt>MachineFunctionPass</tt>
+                                        class</a>
+        <ul>
+        <li><a href="#runOnMachineFunction">The
+            <tt>runOnMachineFunction(MachineFunction &amp;)</tt> method</a></li>
+        </ul></li>
+     </ul>
+  <li><a href="#registration">Pass Registration</a>
+     <ul>
+     <li><a href="#print">The <tt>print</tt> method</a></li>
+     </ul></li>
+  <li><a href="#interaction">Specifying interactions between passes</a>
+     <ul>
+     <li><a href="#getAnalysisUsage">The <tt>getAnalysisUsage</tt> 
+                                     method</a></li>
+     <li><a href="#AU::addRequired">The <tt>AnalysisUsage::addRequired&lt;&gt;</tt> and <tt>AnalysisUsage::addRequiredTransitive&lt;&gt;</tt> methods</a></li>
+     <li><a href="#AU::addPreserved">The <tt>AnalysisUsage::addPreserved&lt;&gt;</tt> method</a></li>
+     <li><a href="#AU::examples">Example implementations of <tt>getAnalysisUsage</tt></a></li>
+     <li><a href="#getAnalysis">The <tt>getAnalysis&lt;&gt;</tt> and
+<tt>getAnalysisIfAvailable&lt;&gt;</tt> methods</a></li>
+     </ul></li>
+  <li><a href="#analysisgroup">Implementing Analysis Groups</a>
+     <ul>
+     <li><a href="#agconcepts">Analysis Group Concepts</a></li>
+     <li><a href="#registerag">Using <tt>RegisterAnalysisGroup</tt></a></li>
+     </ul></li>
+  <li><a href="#passStatistics">Pass Statistics</a>
+  <li><a href="#passmanager">What PassManager does</a>
+    <ul>
+    <li><a href="#releaseMemory">The <tt>releaseMemory</tt> method</a></li>
+    </ul></li>
+  <li><a href="#registering">Registering dynamically loaded passes</a>
+    <ul>
+      <li><a href="#registering_existing">Using existing registries</a></li>
+      <li><a href="#registering_new">Creating new registries</a></li>
+    </ul></li>
+  <li><a href="#debughints">Using GDB with dynamically loaded passes</a>
+    <ul>
+    <li><a href="#breakpoint">Setting a breakpoint in your pass</a></li>
+    <li><a href="#debugmisc">Miscellaneous Problems</a></li>
+    </ul></li>
+  <li><a href="#future">Future extensions planned</a>
+    <ul>
+    <li><a href="#SMP">Multithreaded LLVM</a></li>
+    </ul></li>
+</ol>
+
+<div class="doc_author">
+  <p>Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a> and
+  <a href="mailto:jlaskey@mac.com">Jim Laskey</a></p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="introduction">Introduction - What is a pass?</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>The LLVM Pass Framework is an important part of the LLVM system, because LLVM
+passes are where most of the interesting parts of the compiler exist.  Passes
+perform the transformations and optimizations that make up the compiler, they
+build the analysis results that are used by these transformations, and they are,
+above all, a structuring technique for compiler code.</p>
+
+<p>All LLVM passes are subclasses of the <tt><a
+href="http://llvm.org/doxygen/classllvm_1_1Pass.html">Pass</a></tt>
+class, which implement functionality by overriding virtual methods inherited
+from <tt>Pass</tt>.  Depending on how your pass works, you should inherit from
+the <tt><a href="#ModulePass">ModulePass</a></tt>, <tt><a
+href="#CallGraphSCCPass">CallGraphSCCPass</a></tt>, <tt><a
+href="#FunctionPass">FunctionPass</a></tt>, or <tt><a
+href="#LoopPass">LoopPass</a></tt>, or <tt><a
+href="#RegionPass">RegionPass</a></tt>, or <tt><a
+href="#BasicBlockPass">BasicBlockPass</a></tt> classes, which gives the system
+more information about what your pass does, and how it can be combined with
+other passes.  One of the main features of the LLVM Pass Framework is that it
+schedules passes to run in an efficient way based on the constraints that your
+pass meets (which are indicated by which class they derive from).</p>
+
+<p>We start by showing you how to construct a pass, everything from setting up
+the code, to compiling, loading, and executing it.  After the basics are down,
+more advanced features are discussed.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="quickstart">Quick Start - Writing hello world</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>Here we describe how to write the "hello world" of passes.  The "Hello" pass
+is designed to simply print out the name of non-external functions that exist in
+the program being compiled.  It does not modify the program at all, it just
+inspects it.  The source code and files for this pass are available in the LLVM
+source tree in the <tt>lib/Transforms/Hello</tt> directory.</p>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="makefile">Setting up the build environment</a>
+</h3>
+
+<div>
+
+  <p>First, configure and build LLVM.  This needs to be done directly inside the
+  LLVM source tree rather than in a separate objects directory.
+  Next, you need to create a new directory somewhere in the LLVM source 
+  base.  For this example, we'll assume that you made 
+  <tt>lib/Transforms/Hello</tt>.  Finally, you must set up a build script 
+  (Makefile) that will compile the source code for the new pass.  To do this, 
+  copy the following into <tt>Makefile</tt>:</p>
+  <hr>
+
+<div class="doc_code"><pre>
+# Makefile for hello pass
+
+# Path to top level of LLVM hierarchy
+LEVEL = ../../..
+
+# Name of the library to build
+LIBRARYNAME = Hello
+
+# Make the shared library become a loadable module so the tools can 
+# dlopen/dlsym on the resulting library.
+LOADABLE_MODULE = 1
+
+# Include the makefile implementation stuff
+include $(LEVEL)/Makefile.common
+</pre></div>
+
+<p>This makefile specifies that all of the <tt>.cpp</tt> files in the current
+directory are to be compiled and linked together into a shared object
+<tt>$(LEVEL)/Debug+Asserts/lib/Hello.so</tt> that can be dynamically loaded by
+the <tt>opt</tt> or <tt>bugpoint</tt> tools via their <tt>-load</tt> options.  
+If your operating system uses a suffix other than .so (such as windows or 
+Mac OS/X), the appropriate extension will be used.</p>
+
+<p>If you are used CMake to build LLVM, see
+<a href="CMake.html#passdev">Developing an LLVM pass with CMake</a>.</p>
+
+<p>Now that we have the build scripts set up, we just need to write the code for
+the pass itself.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="basiccode">Basic code required</a>
+</h3>
+
+<div>
+
+<p>Now that we have a way to compile our new pass, we just have to write it.
+Start out with:</p>
+
+<div class="doc_code">
+<pre>
+<b>#include</b> "<a href="http://llvm.org/doxygen/Pass_8h-source.html">llvm/Pass.h</a>"
+<b>#include</b> "<a href="http://llvm.org/doxygen/Function_8h-source.html">llvm/Function.h</a>"
+<b>#include</b> "<a href="http://llvm.org/doxygen/raw__ostream_8h.html">llvm/Support/raw_ostream.h</a>"
+</pre>
+</div>
+
+<p>Which are needed because we are writing a <tt><a
+href="http://llvm.org/doxygen/classllvm_1_1Pass.html">Pass</a></tt>,
+we are operating on <tt><a
+href="http://llvm.org/doxygen/classllvm_1_1Function.html">Function</a></tt>'s,
+and we will be doing some printing.</p>
+
+<p>Next we have:</p>
+
+<div class="doc_code">
+<pre>
+<b>using namespace llvm;</b>
+</pre>
+</div>
+
+<p>... which is required because the functions from the include files 
+live in the llvm namespace.</p>
+
+<p>Next we have:</p>
+
+<div class="doc_code">
+<pre>
+<b>namespace</b> {
+</pre>
+</div>
+
+<p>... which starts out an anonymous namespace.  Anonymous namespaces are to C++
+what the "<tt>static</tt>" keyword is to C (at global scope).  It makes the
+things declared inside of the anonymous namespace visible only to the current
+file.  If you're not familiar with them, consult a decent C++ book for more
+information.</p>
+
+<p>Next, we declare our pass itself:</p>
+
+<div class="doc_code">
+<pre>
+  <b>struct</b> Hello : <b>public</b> <a href="#FunctionPass">FunctionPass</a> {
+</pre>
+</div>
+
+<p>This declares a "<tt>Hello</tt>" class that is a subclass of <tt><a
+href="http://llvm.org/doxygen/classllvm_1_1FunctionPass.html">FunctionPass</a></tt>.
+The different builtin pass subclasses are described in detail <a
+href="#passtype">later</a>, but for now, know that <a
+href="#FunctionPass"><tt>FunctionPass</tt></a>'s operate on a function at a
+time.</p>
+
+<div class="doc_code">
+<pre>
+    static char ID;
+    Hello() : FunctionPass(ID) {}
+</pre>
+</div>
+
+<p>This declares pass identifier used by LLVM to identify pass. This allows LLVM
+to avoid using expensive C++ runtime information.</p>
+
+<div class="doc_code">
+<pre>
+    <b>virtual bool</b> <a href="#runOnFunction">runOnFunction</a>(Function &amp;F) {
+      errs() &lt;&lt; "<i>Hello: </i>";
+      errs().write_escaped(F.getName()) &lt;&lt; "\n";
+      <b>return false</b>;
+    }
+  };  <i>// end of struct Hello</i>
+}  <i>// end of anonymous namespace</i>
+</pre>
+</div>
+
+<p>We declare a "<a href="#runOnFunction"><tt>runOnFunction</tt></a>" method,
+which overloads an abstract virtual method inherited from <a
+href="#FunctionPass"><tt>FunctionPass</tt></a>.  This is where we are supposed
+to do our thing, so we just print out our message with the name of each
+function.</p>
+
+<div class="doc_code">
+<pre>
+char Hello::ID = 0;
+</pre>
+</div>
+
+<p>We initialize pass ID here. LLVM uses ID's address to identify a pass, so
+initialization value is not important.</p>
+
+<div class="doc_code">
+<pre>
+static RegisterPass&lt;Hello&gt; X("<i>hello</i>", "<i>Hello World Pass</i>",
+                             false /* Only looks at CFG */,
+                             false /* Analysis Pass */);
+</pre>
+</div>
+
+<p>Lastly, we <a href="#registration">register our class</a> <tt>Hello</tt>,
+giving it a command line argument "<tt>hello</tt>", and a name "<tt>Hello World
+Pass</tt>". The last two arguments describe its behavior: if a pass walks CFG
+without modifying it then the third argument is set to <tt>true</tt>; if a pass
+is an analysis pass, for example dominator tree pass, then <tt>true</tt> is
+supplied as the fourth argument.</p>
+
+<p>As a whole, the <tt>.cpp</tt> file looks like:</p>
+
+<div class="doc_code">
+<pre>
+<b>#include</b> "<a href="http://llvm.org/doxygen/Pass_8h-source.html">llvm/Pass.h</a>"
+<b>#include</b> "<a href="http://llvm.org/doxygen/Function_8h-source.html">llvm/Function.h</a>"
+<b>#include</b> "<a href="http://llvm.org/doxygen/raw__ostream_8h.html">llvm/Support/raw_ostream.h</a>"
+
+<b>using namespace llvm;</b>
+
+<b>namespace</b> {
+  <b>struct Hello</b> : <b>public</b> <a href="#FunctionPass">FunctionPass</a> {
+    
+    static char ID;
+    Hello() : FunctionPass(ID) {}
+
+    <b>virtual bool</b> <a href="#runOnFunction">runOnFunction</a>(Function &amp;F) {
+      errs() &lt;&lt; "<i>Hello: </i>";
+      errs().write_escaped(F.getName()) &lt;&lt; '\n';
+      <b>return false</b>;
+    }
+
+  };
+}
+  
+char Hello::ID = 0;
+static RegisterPass&lt;Hello&gt; X("hello", "Hello World Pass", false, false);
+</pre>
+</div>
+
+<p>Now that it's all together, compile the file with a simple "<tt>gmake</tt>"
+command in the local directory and you should get a new file
+"<tt>Debug+Asserts/lib/Hello.so</tt>" under the top level directory of the LLVM
+source tree (not in the local directory).  Note that everything in this file is
+contained in an anonymous namespace &mdash; this reflects the fact that passes
+are self contained units that do not need external interfaces (although they can
+have them) to be useful.</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="running">Running a pass with <tt>opt</tt></a>
+</h3>
+
+<div>
+
+<p>Now that you have a brand new shiny shared object file, we can use the
+<tt>opt</tt> command to run an LLVM program through your pass.  Because you
+registered your pass with <tt>RegisterPass</tt>, you will be able to
+use the <tt>opt</tt> tool to access it, once loaded.</p>
+
+<p>To test it, follow the example at the end of the <a
+href="GettingStarted.html">Getting Started Guide</a> to compile "Hello World" to
+LLVM.  We can now run the bitcode file (<tt>hello.bc</tt>) for the program
+through our transformation like this (or course, any bitcode file will
+work):</p>
+
+<div class="doc_code"><pre>
+$ opt -load ../../../Debug+Asserts/lib/Hello.so -hello &lt; hello.bc &gt; /dev/null
+Hello: __main
+Hello: puts
+Hello: main
+</pre></div>
+
+<p>The '<tt>-load</tt>' option specifies that '<tt>opt</tt>' should load your
+pass as a shared object, which makes '<tt>-hello</tt>' a valid command line
+argument (which is one reason you need to <a href="#registration">register your
+pass</a>).  Because the hello pass does not modify the program in any
+interesting way, we just throw away the result of <tt>opt</tt> (sending it to
+<tt>/dev/null</tt>).</p>
+
+<p>To see what happened to the other string you registered, try running
+<tt>opt</tt> with the <tt>-help</tt> option:</p>
+
+<div class="doc_code"><pre>
+$ opt -load ../../../Debug+Asserts/lib/Hello.so -help
+OVERVIEW: llvm .bc -&gt; .bc modular optimizer
+
+USAGE: opt [options] &lt;input bitcode&gt;
+
+OPTIONS:
+  Optimizations available:
+...
+    -globalopt                - Global Variable Optimizer
+    -globalsmodref-aa         - Simple mod/ref analysis for globals
+    -gvn                      - Global Value Numbering
+    <b>-hello                    - Hello World Pass</b>
+    -indvars                  - Induction Variable Simplification
+    -inline                   - Function Integration/Inlining
+    -insert-edge-profiling    - Insert instrumentation for edge profiling
+...
+</pre></div>
+
+<p>The pass name gets added as the information string for your pass, giving some
+documentation to users of <tt>opt</tt>.  Now that you have a working pass, you
+would go ahead and make it do the cool transformations you want.  Once you get
+it all working and tested, it may become useful to find out how fast your pass
+is.  The <a href="#passManager"><tt>PassManager</tt></a> provides a nice command
+line option (<tt>--time-passes</tt>) that allows you to get information about
+the execution time of your pass along with the other passes you queue up.  For
+example:</p>
+
+<div class="doc_code"><pre>
+$ opt -load ../../../Debug+Asserts/lib/Hello.so -hello -time-passes &lt; hello.bc &gt; /dev/null
+Hello: __main
+Hello: puts
+Hello: main
+===============================================================================
+                      ... Pass execution timing report ...
+===============================================================================
+  Total Execution Time: 0.02 seconds (0.0479059 wall clock)
+
+   ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Pass Name ---
+   0.0100 (100.0%)   0.0000 (  0.0%)   0.0100 ( 50.0%)   0.0402 ( 84.0%)  Bitcode Writer
+   0.0000 (  0.0%)   0.0100 (100.0%)   0.0100 ( 50.0%)   0.0031 (  6.4%)  Dominator Set Construction
+   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0013 (  2.7%)  Module Verifier
+ <b>  0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0033 (  6.9%)  Hello World Pass</b>
+   0.0100 (100.0%)   0.0100 (100.0%)   0.0200 (100.0%)   0.0479 (100.0%)  TOTAL
+</pre></div>
+
+<p>As you can see, our implementation above is pretty fast :).  The additional
+passes listed are automatically inserted by the '<tt>opt</tt>' tool to verify
+that the LLVM emitted by your pass is still valid and well formed LLVM, which
+hasn't been broken somehow.</p>
+
+<p>Now that you have seen the basics of the mechanics behind passes, we can talk
+about some more details of how they work and how to use them.</p>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="passtype">Pass classes and requirements</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>One of the first things that you should do when designing a new pass is to
+decide what class you should subclass for your pass.  The <a
+href="#basiccode">Hello World</a> example uses the <tt><a
+href="#FunctionPass">FunctionPass</a></tt> class for its implementation, but we
+did not discuss why or when this should occur.  Here we talk about the classes
+available, from the most general to the most specific.</p>
+
+<p>When choosing a superclass for your Pass, you should choose the <b>most
+specific</b> class possible, while still being able to meet the requirements
+listed.  This gives the LLVM Pass Infrastructure information necessary to
+optimize how passes are run, so that the resultant compiler isn't unnecessarily
+slow.</p>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="ImmutablePass">The <tt>ImmutablePass</tt> class</a>
+</h3>
+
+<div>
+
+<p>The most plain and boring type of pass is the "<tt><a
+href="http://llvm.org/doxygen/classllvm_1_1ImmutablePass.html">ImmutablePass</a></tt>"
+class.  This pass type is used for passes that do not have to be run, do not
+change state, and never need to be updated.  This is not a normal type of
+transformation or analysis, but can provide information about the current
+compiler configuration.</p>
+
+<p>Although this pass class is very infrequently used, it is important for
+providing information about the current target machine being compiled for, and
+other static information that can affect the various transformations.</p>
+
+<p><tt>ImmutablePass</tt>es never invalidate other transformations, are never
+invalidated, and are never "run".</p>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="ModulePass">The <tt>ModulePass</tt> class</a>
+</h3>
+
+<div>
+
+<p>The "<tt><a
+href="http://llvm.org/doxygen/classllvm_1_1ModulePass.html">ModulePass</a></tt>"
+class is the most general of all superclasses that you can use.  Deriving from
+<tt>ModulePass</tt> indicates that your pass uses the entire program as a unit,
+referring to function bodies in no predictable order, or adding and removing
+functions.  Because nothing is known about the behavior of <tt>ModulePass</tt>
+subclasses, no optimization can be done for their execution.</p>
+
+<p>A module pass can use function level passes (e.g. dominators) using
+the getAnalysis interface
+<tt>getAnalysis&lt;DominatorTree&gt;(llvm::Function *)</tt> to provide the
+function to retrieve analysis result for, if the function pass does not require
+any module or immutable passes. Note that this can only be done for functions for which the
+analysis ran, e.g. in the case of dominators you should only ask for the
+DominatorTree for function definitions, not declarations.</p>
+
+<p>To write a correct <tt>ModulePass</tt> subclass, derive from
+<tt>ModulePass</tt> and overload the <tt>runOnModule</tt> method with the
+following signature:</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="runOnModule">The <tt>runOnModule</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> runOnModule(Module &amp;M) = 0;
+</pre></div>
+
+<p>The <tt>runOnModule</tt> method performs the interesting work of the pass.
+It should return true if the module was modified by the transformation and
+false otherwise.</p>
+
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="CallGraphSCCPass">The <tt>CallGraphSCCPass</tt> class</a>
+</h3>
+
+<div>
+
+<p>The "<tt><a
+href="http://llvm.org/doxygen/classllvm_1_1CallGraphSCCPass.html">CallGraphSCCPass</a></tt>"
+is used by passes that need to traverse the program bottom-up on the call graph
+(callees before callers).  Deriving from CallGraphSCCPass provides some
+mechanics for building and traversing the CallGraph, but also allows the system
+to optimize execution of CallGraphSCCPass's.  If your pass meets the
+requirements outlined below, and doesn't meet the requirements of a <tt><a
+href="#FunctionPass">FunctionPass</a></tt> or <tt><a
+href="#BasicBlockPass">BasicBlockPass</a></tt>, you should derive from
+<tt>CallGraphSCCPass</tt>.</p>
+
+<p><b>TODO</b>: explain briefly what SCC, Tarjan's algo, and B-U mean.</p>
+
+<p>To be explicit, <tt>CallGraphSCCPass</tt> subclasses are:</p>
+
+<ol>
+
+<li>... <em>not allowed</em> to inspect or modify any <tt>Function</tt>s other
+than those in the current SCC and the direct callers and direct callees of the
+SCC.</li>
+
+<li>... <em>required</em> to preserve the current CallGraph object, updating it
+to reflect any changes made to the program.</li>
+
+<li>... <em>not allowed</em> to add or remove SCC's from the current Module,
+though they may change the contents of an SCC.</li>
+
+<li>... <em>allowed</em> to add or remove global variables from the current
+Module.</li>
+
+<li>... <em>allowed</em> to maintain state across invocations of
+    <a href="#runOnSCC"><tt>runOnSCC</tt></a> (including global data).</li>
+</ol>
+
+<p>Implementing a <tt>CallGraphSCCPass</tt> is slightly tricky in some cases
+because it has to handle SCCs with more than one node in it.  All of the virtual
+methods described below should return true if they modified the program, or
+false if they didn't.</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doInitialization_scc">
+    The <tt>doInitialization(CallGraph &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doInitialization(CallGraph &amp;CG);
+</pre></div>
+
+<p>The <tt>doIninitialize</tt> method is allowed to do most of the things that
+<tt>CallGraphSCCPass</tt>'s are not allowed to do.  They can add and remove
+functions, get pointers to functions, etc.  The <tt>doInitialization</tt> method
+is designed to do simple initialization type of stuff that does not depend on
+the SCCs being processed.  The <tt>doInitialization</tt> method call is not
+scheduled to overlap with any other pass executions (thus it should be very
+fast).</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="runOnSCC">The <tt>runOnSCC</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> runOnSCC(CallGraphSCC &amp;SCC) = 0;
+</pre></div>
+
+<p>The <tt>runOnSCC</tt> method performs the interesting work of the pass, and
+should return true if the module was modified by the transformation, false
+otherwise.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doFinalization_scc">
+    The <tt>doFinalization(CallGraph &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doFinalization(CallGraph &amp;CG);
+</pre></div>
+
+<p>The <tt>doFinalization</tt> method is an infrequently used method that is
+called when the pass framework has finished calling <a
+href="#runOnFunction"><tt>runOnFunction</tt></a> for every function in the
+program being compiled.</p>
+
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="FunctionPass">The <tt>FunctionPass</tt> class</a>
+</h3>
+
+<div>
+
+<p>In contrast to <tt>ModulePass</tt> subclasses, <tt><a
+href="http://llvm.org/doxygen/classllvm_1_1Pass.html">FunctionPass</a></tt>
+subclasses do have a predictable, local behavior that can be expected by the
+system.  All <tt>FunctionPass</tt> execute on each function in the program
+independent of all of the other functions in the program.
+<tt>FunctionPass</tt>'s do not require that they are executed in a particular
+order, and <tt>FunctionPass</tt>'s do not modify external functions.</p>
+
+<p>To be explicit, <tt>FunctionPass</tt> subclasses are not allowed to:</p>
+
+<ol>
+<li>Modify a Function other than the one currently being processed.</li>
+<li>Add or remove Function's from the current Module.</li>
+<li>Add or remove global variables from the current Module.</li>
+<li>Maintain state across invocations of
+    <a href="#runOnFunction"><tt>runOnFunction</tt></a> (including global data)</li>
+</ol>
+
+<p>Implementing a <tt>FunctionPass</tt> is usually straightforward (See the <a
+href="#basiccode">Hello World</a> pass for example).  <tt>FunctionPass</tt>'s
+may overload three virtual methods to do their work.  All of these methods
+should return true if they modified the program, or false if they didn't.</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doInitialization_mod">
+    The <tt>doInitialization(Module &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doInitialization(Module &amp;M);
+</pre></div>
+
+<p>The <tt>doIninitialize</tt> method is allowed to do most of the things that
+<tt>FunctionPass</tt>'s are not allowed to do.  They can add and remove
+functions, get pointers to functions, etc.  The <tt>doInitialization</tt> method
+is designed to do simple initialization type of stuff that does not depend on
+the functions being processed.  The <tt>doInitialization</tt> method call is not
+scheduled to overlap with any other pass executions (thus it should be very
+fast).</p>
+
+<p>A good example of how this method should be used is the <a
+href="http://llvm.org/doxygen/LowerAllocations_8cpp-source.html">LowerAllocations</a>
+pass.  This pass converts <tt>malloc</tt> and <tt>free</tt> instructions into
+platform dependent <tt>malloc()</tt> and <tt>free()</tt> function calls.  It
+uses the <tt>doInitialization</tt> method to get a reference to the malloc and
+free functions that it needs, adding prototypes to the module if necessary.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="runOnFunction">The <tt>runOnFunction</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> runOnFunction(Function &amp;F) = 0;
+</pre></div><p>
+
+<p>The <tt>runOnFunction</tt> method must be implemented by your subclass to do
+the transformation or analysis work of your pass.  As usual, a true value should
+be returned if the function is modified.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doFinalization_mod">
+    The <tt>doFinalization(Module &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doFinalization(Module &amp;M);
+</pre></div>
+
+<p>The <tt>doFinalization</tt> method is an infrequently used method that is
+called when the pass framework has finished calling <a
+href="#runOnFunction"><tt>runOnFunction</tt></a> for every function in the
+program being compiled.</p>
+
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="LoopPass">The <tt>LoopPass</tt> class </a>
+</h3>
+
+<div>
+
+<p> All <tt>LoopPass</tt> execute on each loop in the function independent of
+all of the other loops in the function. <tt>LoopPass</tt> processes loops in
+loop nest order such that outer most loop is processed last. </p>
+
+<p> <tt>LoopPass</tt> subclasses are allowed to update loop nest using
+<tt>LPPassManager</tt> interface. Implementing a loop pass is usually
+straightforward. <tt>LoopPass</tt>'s may overload three virtual methods to
+do their work. All these methods should return true if they modified the 
+program, or false if they didn't. </p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doInitialization_loop">
+    The <tt>doInitialization(Loop *,LPPassManager &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doInitialization(Loop *, LPPassManager &amp;LPM);
+</pre></div>
+
+<p>The <tt>doInitialization</tt> method is designed to do simple initialization 
+type of stuff that does not depend on the functions being processed.  The 
+<tt>doInitialization</tt> method call is not scheduled to overlap with any 
+other pass executions (thus it should be very fast). LPPassManager 
+interface should be used to access Function or Module level analysis
+information.</p>
+
+</div>
+
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="runOnLoop">The <tt>runOnLoop</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> runOnLoop(Loop *, LPPassManager &amp;LPM) = 0;
+</pre></div><p>
+
+<p>The <tt>runOnLoop</tt> method must be implemented by your subclass to do
+the transformation or analysis work of your pass.  As usual, a true value should
+be returned if the function is modified. <tt>LPPassManager</tt> interface
+should be used to update loop nest.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doFinalization_loop">The <tt>doFinalization()</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doFinalization();
+</pre></div>
+
+<p>The <tt>doFinalization</tt> method is an infrequently used method that is
+called when the pass framework has finished calling <a
+href="#runOnLoop"><tt>runOnLoop</tt></a> for every loop in the
+program being compiled. </p>
+
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="RegionPass">The <tt>RegionPass</tt> class </a>
+</h3>
+
+<div>
+
+<p> <tt>RegionPass</tt> is similar to <a href="#LoopPass"><tt>LoopPass</tt></a>,
+but executes on each single entry single exit region in the function.
+<tt>RegionPass</tt> processes regions in nested order such that the outer most
+region is processed last.  </p>
+
+<p> <tt>RegionPass</tt> subclasses are allowed to update the region tree by using
+the <tt>RGPassManager</tt> interface. You may overload three virtual methods of
+<tt>RegionPass</tt> to implement your own region pass. All these
+methods should return true if they modified the program, or false if they didn not.
+</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doInitialization_region">
+    The <tt>doInitialization(Region *, RGPassManager &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doInitialization(Region *, RGPassManager &amp;RGM);
+</pre></div>
+
+<p>The <tt>doInitialization</tt> method is designed to do simple initialization
+type of stuff that does not depend on the functions being processed.  The
+<tt>doInitialization</tt> method call is not scheduled to overlap with any
+other pass executions (thus it should be very fast). RPPassManager
+interface should be used to access Function or Module level analysis
+information.</p>
+
+</div>
+
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="runOnRegion">The <tt>runOnRegion</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> runOnRegion(Region *, RGPassManager &amp;RGM) = 0;
+</pre></div><p>
+
+<p>The <tt>runOnRegion</tt> method must be implemented by your subclass to do
+the transformation or analysis work of your pass.  As usual, a true value should
+be returned if the region is modified. <tt>RGPassManager</tt> interface
+should be used to update region tree.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doFinalization_region">The <tt>doFinalization()</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doFinalization();
+</pre></div>
+
+<p>The <tt>doFinalization</tt> method is an infrequently used method that is
+called when the pass framework has finished calling <a
+href="#runOnRegion"><tt>runOnRegion</tt></a> for every region in the
+program being compiled. </p>
+
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="BasicBlockPass">The <tt>BasicBlockPass</tt> class</a>
+</h3>
+
+<div>
+
+<p><tt>BasicBlockPass</tt>'s are just like <a
+href="#FunctionPass"><tt>FunctionPass</tt></a>'s, except that they must limit
+their scope of inspection and modification to a single basic block at a time.
+As such, they are <b>not</b> allowed to do any of the following:</p>
+
+<ol>
+<li>Modify or inspect any basic blocks outside of the current one</li>
+<li>Maintain state across invocations of
+    <a href="#runOnBasicBlock"><tt>runOnBasicBlock</tt></a></li>
+<li>Modify the control flow graph (by altering terminator instructions)</li>
+<li>Any of the things forbidden for
+    <a href="#FunctionPass"><tt>FunctionPass</tt></a>es.</li>
+</ol>
+
+<p><tt>BasicBlockPass</tt>es are useful for traditional local and "peephole"
+optimizations.  They may override the same <a
+href="#doInitialization_mod"><tt>doInitialization(Module &amp;)</tt></a> and <a
+href="#doFinalization_mod"><tt>doFinalization(Module &amp;)</tt></a> methods that <a
+href="#FunctionPass"><tt>FunctionPass</tt></a>'s have, but also have the following virtual methods that may also be implemented:</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doInitialization_fn">
+    The <tt>doInitialization(Function &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doInitialization(Function &amp;F);
+</pre></div>
+
+<p>The <tt>doIninitialize</tt> method is allowed to do most of the things that
+<tt>BasicBlockPass</tt>'s are not allowed to do, but that
+<tt>FunctionPass</tt>'s can.  The <tt>doInitialization</tt> method is designed
+to do simple initialization that does not depend on the
+BasicBlocks being processed.  The <tt>doInitialization</tt> method call is not
+scheduled to overlap with any other pass executions (thus it should be very
+fast).</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="runOnBasicBlock">The <tt>runOnBasicBlock</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> runOnBasicBlock(BasicBlock &amp;BB) = 0;
+</pre></div>
+
+<p>Override this function to do the work of the <tt>BasicBlockPass</tt>.  This
+function is not allowed to inspect or modify basic blocks other than the
+parameter, and are not allowed to modify the CFG.  A true value must be returned
+if the basic block is modified.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="doFinalization_fn">
+    The <tt>doFinalization(Function &amp;)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> doFinalization(Function &amp;F);
+</pre></div>
+
+<p>The <tt>doFinalization</tt> method is an infrequently used method that is
+called when the pass framework has finished calling <a
+href="#runOnBasicBlock"><tt>runOnBasicBlock</tt></a> for every BasicBlock in the
+program being compiled.  This can be used to perform per-function
+finalization.</p>
+
+</div>
+
+</div>
+
+<!-- ======================================================================= -->
+<h3>
+  <a name="MachineFunctionPass">The <tt>MachineFunctionPass</tt> class</a>
+</h3>
+
+<div>
+
+<p>A <tt>MachineFunctionPass</tt> is a part of the LLVM code generator that
+executes on the machine-dependent representation of each LLVM function in the
+program.</p>
+
+<p>Code generator passes are registered and initialized specially by
+<tt>TargetMachine::addPassesToEmitFile</tt> and similar routines, so they
+cannot generally be run from the <tt>opt</tt> or <tt>bugpoint</tt>
+commands.</p>
+
+<p>A <tt>MachineFunctionPass</tt> is also a <tt>FunctionPass</tt>, so all
+the restrictions that apply to a <tt>FunctionPass</tt> also apply to it.
+<tt>MachineFunctionPass</tt>es also have additional restrictions. In particular,
+<tt>MachineFunctionPass</tt>es are not allowed to do any of the following:</p>
+
+<ol>
+<li>Modify or create any LLVM IR Instructions, BasicBlocks, Arguments,
+    Functions, GlobalVariables, GlobalAliases, or Modules.</li>
+<li>Modify a MachineFunction other than the one currently being processed.</li>
+<li>Maintain state across invocations of <a
+href="#runOnMachineFunction"><tt>runOnMachineFunction</tt></a> (including global
+data)</li>
+</ol>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="runOnMachineFunction">
+    The <tt>runOnMachineFunction(MachineFunction &amp;MF)</tt> method
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual bool</b> runOnMachineFunction(MachineFunction &amp;MF) = 0;
+</pre></div>
+
+<p><tt>runOnMachineFunction</tt> can be considered the main entry point of a
+<tt>MachineFunctionPass</tt>; that is, you should override this method to do the
+work of your <tt>MachineFunctionPass</tt>.</p>
+
+<p>The <tt>runOnMachineFunction</tt> method is called on every
+<tt>MachineFunction</tt> in a <tt>Module</tt>, so that the
+<tt>MachineFunctionPass</tt> may perform optimizations on the machine-dependent
+representation of the function. If you want to get at the LLVM <tt>Function</tt>
+for the <tt>MachineFunction</tt> you're working on, use
+<tt>MachineFunction</tt>'s <tt>getFunction()</tt> accessor method -- but
+remember, you may not modify the LLVM <tt>Function</tt> or its contents from a
+<tt>MachineFunctionPass</tt>.</p>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="registration">Pass registration</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>In the <a href="#basiccode">Hello World</a> example pass we illustrated how
+pass registration works, and discussed some of the reasons that it is used and
+what it does.  Here we discuss how and why passes are registered.</p>
+
+<p>As we saw above, passes are registered with the <b><tt>RegisterPass</tt></b>
+template.  The template parameter is the name of the pass that is to be used on
+the command line to specify that the pass should be added to a program (for
+example, with <tt>opt</tt> or <tt>bugpoint</tt>).  The first argument is the
+name of the pass, which is to be used for the <tt>-help</tt> output of
+programs, as
+well as for debug output generated by the <tt>--debug-pass</tt> option.</p>
+
+<p>If you want your pass to be easily dumpable, you should 
+implement the virtual <tt>print</tt> method:</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="print">The <tt>print</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual void</b> print(std::ostream &amp;O, <b>const</b> Module *M) <b>const</b>;
+</pre></div>
+
+<p>The <tt>print</tt> method must be implemented by "analyses" in order to print
+a human readable version of the analysis results.  This is useful for debugging
+an analysis itself, as well as for other people to figure out how an analysis
+works.  Use the <tt>opt -analyze</tt> argument to invoke this method.</p>
+
+<p>The <tt>llvm::OStream</tt> parameter specifies the stream to write the results on,
+and the <tt>Module</tt> parameter gives a pointer to the top level module of the
+program that has been analyzed.  Note however that this pointer may be null in
+certain circumstances (such as calling the <tt>Pass::dump()</tt> from a
+debugger), so it should only be used to enhance debug output, it should not be
+depended on.</p>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="interaction">Specifying interactions between passes</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>One of the main responsibilities of the <tt>PassManager</tt> is to make sure
+that passes interact with each other correctly.  Because <tt>PassManager</tt>
+tries to <a href="#passmanager">optimize the execution of passes</a> it must
+know how the passes interact with each other and what dependencies exist between
+the various passes.  To track this, each pass can declare the set of passes that
+are required to be executed before the current pass, and the passes which are
+invalidated by the current pass.</p>
+
+<p>Typically this functionality is used to require that analysis results are
+computed before your pass is run.  Running arbitrary transformation passes can
+invalidate the computed analysis results, which is what the invalidation set
+specifies.  If a pass does not implement the <tt><a
+href="#getAnalysisUsage">getAnalysisUsage</a></tt> method, it defaults to not
+having any prerequisite passes, and invalidating <b>all</b> other passes.</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="getAnalysisUsage">The <tt>getAnalysisUsage</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<b>virtual void</b> getAnalysisUsage(AnalysisUsage &amp;Info) <b>const</b>;
+</pre></div>
+
+<p>By implementing the <tt>getAnalysisUsage</tt> method, the required and
+invalidated sets may be specified for your transformation.  The implementation
+should fill in the <tt><a
+href="http://llvm.org/doxygen/classllvm_1_1AnalysisUsage.html">AnalysisUsage</a></tt>
+object with information about which passes are required and not invalidated.  To
+do this, a pass may call any of the following methods on the AnalysisUsage
+object:</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="AU::addRequired">
+    The <tt>AnalysisUsage::addRequired&lt;&gt;</tt>
+    and <tt>AnalysisUsage::addRequiredTransitive&lt;&gt;</tt> methods
+  </a>
+</h4>
+
+<div>
+<p>
+If your pass requires a previous pass to be executed (an analysis for example),
+it can use one of these methods to arrange for it to be run before your pass.
+LLVM has many different types of analyses and passes that can be required,
+spanning the range from <tt>DominatorSet</tt> to <tt>BreakCriticalEdges</tt>.
+Requiring <tt>BreakCriticalEdges</tt>, for example, guarantees that there will
+be no critical edges in the CFG when your pass has been run.
+</p>
+
+<p>
+Some analyses chain to other analyses to do their job.  For example, an <a
+href="AliasAnalysis.html">AliasAnalysis</a> implementation is required to <a
+href="AliasAnalysis.html#chaining">chain</a> to other alias analysis passes.  In
+cases where analyses chain, the <tt>addRequiredTransitive</tt> method should be
+used instead of the <tt>addRequired</tt> method.  This informs the PassManager
+that the transitively required pass should be alive as long as the requiring
+pass is.
+</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="AU::addPreserved">
+    The <tt>AnalysisUsage::addPreserved&lt;&gt;</tt> method
+  </a>
+</h4>
+
+<div>
+<p>
+One of the jobs of the PassManager is to optimize how and when analyses are run.
+In particular, it attempts to avoid recomputing data unless it needs to.  For
+this reason, passes are allowed to declare that they preserve (i.e., they don't
+invalidate) an existing analysis if it's available.  For example, a simple
+constant folding pass would not modify the CFG, so it can't possibly affect the
+results of dominator analysis.  By default, all passes are assumed to invalidate
+all others.
+</p>
+
+<p>
+The <tt>AnalysisUsage</tt> class provides several methods which are useful in
+certain circumstances that are related to <tt>addPreserved</tt>.  In particular,
+the <tt>setPreservesAll</tt> method can be called to indicate that the pass does
+not modify the LLVM program at all (which is true for analyses), and the
+<tt>setPreservesCFG</tt> method can be used by transformations that change
+instructions in the program but do not modify the CFG or terminator instructions
+(note that this property is implicitly set for <a
+href="#BasicBlockPass">BasicBlockPass</a>'s).
+</p>
+
+<p>
+<tt>addPreserved</tt> is particularly useful for transformations like
+<tt>BreakCriticalEdges</tt>.  This pass knows how to update a small set of loop
+and dominator related analyses if they exist, so it can preserve them, despite
+the fact that it hacks on the CFG.
+</p>
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="AU::examples">
+    Example implementations of <tt>getAnalysisUsage</tt>
+  </a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+<i>// This example modifies the program, but does not modify the CFG</i>
+<b>void</b> <a href="http://llvm.org/doxygen/structLICM.html">LICM</a>::getAnalysisUsage(AnalysisUsage &amp;AU) <b>const</b> {
+  AU.setPreservesCFG();
+  AU.addRequired&lt;<a href="http://llvm.org/doxygen/classllvm_1_1LoopInfo.html">LoopInfo</a>&gt;();
+}
+</pre></div>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="getAnalysis">
+    The <tt>getAnalysis&lt;&gt;</tt> and
+    <tt>getAnalysisIfAvailable&lt;&gt;</tt> methods
+  </a>
+</h4>
+
+<div>
+
+<p>The <tt>Pass::getAnalysis&lt;&gt;</tt> method is automatically inherited by
+your class, providing you with access to the passes that you declared that you
+required with the <a href="#getAnalysisUsage"><tt>getAnalysisUsage</tt></a>
+method.  It takes a single template argument that specifies which pass class you
+want, and returns a reference to that pass.  For example:</p>
+
+<div class="doc_code"><pre>
+bool LICM::runOnFunction(Function &amp;F) {
+  LoopInfo &amp;LI = getAnalysis&lt;LoopInfo&gt;();
+  ...
+}
+</pre></div>
+
+<p>This method call returns a reference to the pass desired.  You may get a
+runtime assertion failure if you attempt to get an analysis that you did not
+declare as required in your <a
+href="#getAnalysisUsage"><tt>getAnalysisUsage</tt></a> implementation.  This
+method can be called by your <tt>run*</tt> method implementation, or by any
+other local method invoked by your <tt>run*</tt> method.
+
+A module level pass can use function level analysis info using this interface.
+For example:</p>
+
+<div class="doc_code"><pre>
+bool ModuleLevelPass::runOnModule(Module &amp;M) {
+  ...
+  DominatorTree &amp;DT = getAnalysis&lt;DominatorTree&gt;(Func);
+  ...
+}
+</pre></div>
+
+<p>In above example, runOnFunction for DominatorTree is called by pass manager
+before returning a reference to the desired pass.</p>
+
+<p>
+If your pass is capable of updating analyses if they exist (e.g.,
+<tt>BreakCriticalEdges</tt>, as described above), you can use the
+<tt>getAnalysisIfAvailable</tt> method, which returns a pointer to the analysis
+if it is active.  For example:</p>
+
+<div class="doc_code"><pre>
+...
+if (DominatorSet *DS = getAnalysisIfAvailable&lt;DominatorSet&gt;()) {
+  <i>// A DominatorSet is active.  This code will update it.</i>
+}
+...
+</pre></div>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="analysisgroup">Implementing Analysis Groups</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>Now that we understand the basics of how passes are defined, how they are
+used, and how they are required from other passes, it's time to get a little bit
+fancier.  All of the pass relationships that we have seen so far are very
+simple: one pass depends on one other specific pass to be run before it can run.
+For many applications, this is great, for others, more flexibility is
+required.</p>
+
+<p>In particular, some analyses are defined such that there is a single simple
+interface to the analysis results, but multiple ways of calculating them.
+Consider alias analysis for example.  The most trivial alias analysis returns
+"may alias" for any alias query.  The most sophisticated analysis a
+flow-sensitive, context-sensitive interprocedural analysis that can take a
+significant amount of time to execute (and obviously, there is a lot of room
+between these two extremes for other implementations).  To cleanly support
+situations like this, the LLVM Pass Infrastructure supports the notion of
+Analysis Groups.</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="agconcepts">Analysis Group Concepts</a>
+</h4>
+
+<div>
+
+<p>An Analysis Group is a single simple interface that may be implemented by
+multiple different passes.  Analysis Groups can be given human readable names
+just like passes, but unlike passes, they need not derive from the <tt>Pass</tt>
+class.  An analysis group may have one or more implementations, one of which is
+the "default" implementation.</p>
+
+<p>Analysis groups are used by client passes just like other passes are: the
+<tt>AnalysisUsage::addRequired()</tt> and <tt>Pass::getAnalysis()</tt> methods.
+In order to resolve this requirement, the <a href="#passmanager">PassManager</a>
+scans the available passes to see if any implementations of the analysis group
+are available.  If none is available, the default implementation is created for
+the pass to use.  All standard rules for <A href="#interaction">interaction
+between passes</a> still apply.</p>
+
+<p>Although <a href="#registration">Pass Registration</a> is optional for normal
+passes, all analysis group implementations must be registered, and must use the
+<A href="#registerag"><tt>INITIALIZE_AG_PASS</tt></a> template to join the
+implementation pool.  Also, a default implementation of the interface
+<b>must</b> be registered with <A
+href="#registerag"><tt>RegisterAnalysisGroup</tt></a>.</p>
+
+<p>As a concrete example of an Analysis Group in action, consider the <a
+href="http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html">AliasAnalysis</a>
+analysis group.  The default implementation of the alias analysis interface (the
+<tt><a
+href="http://llvm.org/doxygen/structBasicAliasAnalysis.html">basicaa</a></tt>
+pass) just does a few simple checks that don't require significant analysis to
+compute (such as: two different globals can never alias each other, etc).
+Passes that use the <tt><a
+href="http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html">AliasAnalysis</a></tt>
+interface (for example the <tt><a
+href="http://llvm.org/doxygen/structGCSE.html">gcse</a></tt> pass), do
+not care which implementation of alias analysis is actually provided, they just
+use the designated interface.</p>
+
+<p>From the user's perspective, commands work just like normal.  Issuing the
+command '<tt>opt -gcse ...</tt>' will cause the <tt>basicaa</tt> class to be
+instantiated and added to the pass sequence.  Issuing the command '<tt>opt
+-somefancyaa -gcse ...</tt>' will cause the <tt>gcse</tt> pass to use the
+<tt>somefancyaa</tt> alias analysis (which doesn't actually exist, it's just a
+hypothetical example) instead.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="registerag">Using <tt>RegisterAnalysisGroup</tt></a>
+</h4>
+
+<div>
+
+<p>The <tt>RegisterAnalysisGroup</tt> template is used to register the analysis
+group itself, while the <tt>INITIALIZE_AG_PASS</tt> is used to add pass
+implementations to the analysis group.  First,
+an analysis group should be registered, with a human readable name
+provided for it.
+Unlike registration of passes, there is no command line argument to be specified
+for the Analysis Group Interface itself, because it is "abstract":</p>
+
+<div class="doc_code"><pre>
+<b>static</b> RegisterAnalysisGroup&lt;<a href="http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html">AliasAnalysis</a>&gt; A("<i>Alias Analysis</i>");
+</pre></div>
+
+<p>Once the analysis is registered, passes can declare that they are valid
+implementations of the interface by using the following code:</p>
+
+<div class="doc_code"><pre>
+<b>namespace</b> {
+  //<i> Declare that we implement the AliasAnalysis interface</i>
+  INITIALIZE_AG_PASS(FancyAA, <a href="http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html">AliasAnalysis</a>, "<i>somefancyaa</i>",
+                     "<i>A more complex alias analysis implementation</i>",
+                     false,  // <i>Is CFG Only?</i>
+                     true,   // <i>Is Analysis?</i>
+                     false); // <i>Is default Analysis Group implementation?</i>
+}
+</pre></div>
+
+<p>This just shows a class <tt>FancyAA</tt> that 
+uses the <tt>INITIALIZE_AG_PASS</tt> macro both to register and
+to "join" the <tt><a href="http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html">AliasAnalysis</a></tt>
+analysis group.  Every implementation of an analysis group should join using
+this macro.</p>
+
+<div class="doc_code"><pre>
+<b>namespace</b> {
+  //<i> Declare that we implement the AliasAnalysis interface</i>
+  INITIALIZE_AG_PASS(BasicAA, <a href="http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html">AliasAnalysis</a>, "<i>basicaa</i>",
+                     "<i>Basic Alias Analysis (default AA impl)</i>",
+                     false, // <i>Is CFG Only?</i>
+                     true,  // <i>Is Analysis?</i>
+                     true); // <i>Is default Analysis Group implementation?</i>
+}
+</pre></div>
+
+<p>Here we show how the default implementation is specified (using the final
+argument to the <tt>INITIALIZE_AG_PASS</tt> template).  There must be exactly
+one default implementation available at all times for an Analysis Group to be
+used.  Only default implementation can derive from <tt>ImmutablePass</tt>. 
+Here we declare that the
+ <tt><a href="http://llvm.org/doxygen/structBasicAliasAnalysis.html">BasicAliasAnalysis</a></tt>
+pass is the default implementation for the interface.</p>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="passStatistics">Pass Statistics</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+<p>The <a
+href="http://llvm.org/doxygen/Statistic_8h-source.html"><tt>Statistic</tt></a>
+class is designed to be an easy way to expose various success
+metrics from passes.  These statistics are printed at the end of a
+run, when the -stats command line option is enabled on the command
+line. See the <a href="http://llvm.org/docs/ProgrammersManual.html#Statistic">Statistics section</a> in the Programmer's Manual for details. 
+
+</div>
+
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="passmanager">What PassManager does</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>The <a
+href="http://llvm.org/doxygen/PassManager_8h-source.html"><tt>PassManager</tt></a>
+<a
+href="http://llvm.org/doxygen/classllvm_1_1PassManager.html">class</a>
+takes a list of passes, ensures their <a href="#interaction">prerequisites</a>
+are set up correctly, and then schedules passes to run efficiently.  All of the
+LLVM tools that run passes use the <tt>PassManager</tt> for execution of these
+passes.</p>
+
+<p>The <tt>PassManager</tt> does two main things to try to reduce the execution
+time of a series of passes:</p>
+
+<ol>
+<li><b>Share analysis results</b> - The PassManager attempts to avoid
+recomputing analysis results as much as possible.  This means keeping track of
+which analyses are available already, which analyses get invalidated, and which
+analyses are needed to be run for a pass.  An important part of work is that the
+<tt>PassManager</tt> tracks the exact lifetime of all analysis results, allowing
+it to <a href="#releaseMemory">free memory</a> allocated to holding analysis
+results as soon as they are no longer needed.</li>
+
+<li><b>Pipeline the execution of passes on the program</b> - The
+<tt>PassManager</tt> attempts to get better cache and memory usage behavior out
+of a series of passes by pipelining the passes together.  This means that, given
+a series of consecutive <a href="#FunctionPass"><tt>FunctionPass</tt></a>'s, it
+will execute all of the <a href="#FunctionPass"><tt>FunctionPass</tt></a>'s on
+the first function, then all of the <a
+href="#FunctionPass"><tt>FunctionPass</tt></a>es on the second function,
+etc... until the entire program has been run through the passes.
+
+<p>This improves the cache behavior of the compiler, because it is only touching
+the LLVM program representation for a single function at a time, instead of
+traversing the entire program.  It reduces the memory consumption of compiler,
+because, for example, only one <a
+href="http://llvm.org/doxygen/classllvm_1_1DominatorSet.html"><tt>DominatorSet</tt></a>
+needs to be calculated at a time.  This also makes it possible to implement
+some <a
+href="#SMP">interesting enhancements</a> in the future.</p></li>
+
+</ol>
+
+<p>The effectiveness of the <tt>PassManager</tt> is influenced directly by how
+much information it has about the behaviors of the passes it is scheduling.  For
+example, the "preserved" set is intentionally conservative in the face of an
+unimplemented <a href="#getAnalysisUsage"><tt>getAnalysisUsage</tt></a> method.
+Not implementing when it should be implemented will have the effect of not
+allowing any analysis results to live across the execution of your pass.</p>
+
+<p>The <tt>PassManager</tt> class exposes a <tt>--debug-pass</tt> command line
+options that is useful for debugging pass execution, seeing how things work, and
+diagnosing when you should be preserving more analyses than you currently are
+(To get information about all of the variants of the <tt>--debug-pass</tt>
+option, just type '<tt>opt -help-hidden</tt>').</p>
+
+<p>By using the <tt>--debug-pass=Structure</tt> option, for example, we can see
+how our <a href="#basiccode">Hello World</a> pass interacts with other passes.
+Lets try it out with the <tt>gcse</tt> and <tt>licm</tt> passes:</p>
+
+<div class="doc_code"><pre>
+$ opt -load ../../../Debug+Asserts/lib/Hello.so -gcse -licm --debug-pass=Structure &lt; hello.bc &gt; /dev/null
+Module Pass Manager
+  Function Pass Manager
+    Dominator Set Construction
+    Immediate Dominators Construction
+    Global Common Subexpression Elimination
+--  Immediate Dominators Construction
+--  Global Common Subexpression Elimination
+    Natural Loop Construction
+    Loop Invariant Code Motion
+--  Natural Loop Construction
+--  Loop Invariant Code Motion
+    Module Verifier
+--  Dominator Set Construction
+--  Module Verifier
+  Bitcode Writer
+--Bitcode Writer
+</pre></div>
+
+<p>This output shows us when passes are constructed and when the analysis
+results are known to be dead (prefixed with '<tt>--</tt>').  Here we see that
+GCSE uses dominator and immediate dominator information to do its job.  The LICM
+pass uses natural loop information, which uses dominator sets, but not immediate
+dominators.  Because immediate dominators are no longer useful after the GCSE
+pass, it is immediately destroyed.  The dominator sets are then reused to
+compute natural loop information, which is then used by the LICM pass.</p>
+
+<p>After the LICM pass, the module verifier runs (which is automatically added
+by the '<tt>opt</tt>' tool), which uses the dominator set to check that the
+resultant LLVM code is well formed.  After it finishes, the dominator set
+information is destroyed, after being computed once, and shared by three
+passes.</p>
+
+<p>Lets see how this changes when we run the <a href="#basiccode">Hello
+World</a> pass in between the two passes:</p>
+
+<div class="doc_code"><pre>
+$ opt -load ../../../Debug+Asserts/lib/Hello.so -gcse -hello -licm --debug-pass=Structure &lt; hello.bc &gt; /dev/null
+Module Pass Manager
+  Function Pass Manager
+    Dominator Set Construction
+    Immediate Dominators Construction
+    Global Common Subexpression Elimination
+<b>--  Dominator Set Construction</b>
+--  Immediate Dominators Construction
+--  Global Common Subexpression Elimination
+<b>    Hello World Pass
+--  Hello World Pass
+    Dominator Set Construction</b>
+    Natural Loop Construction
+    Loop Invariant Code Motion
+--  Natural Loop Construction
+--  Loop Invariant Code Motion
+    Module Verifier
+--  Dominator Set Construction
+--  Module Verifier
+  Bitcode Writer
+--Bitcode Writer
+Hello: __main
+Hello: puts
+Hello: main
+</pre></div>
+
+<p>Here we see that the <a href="#basiccode">Hello World</a> pass has killed the
+Dominator Set pass, even though it doesn't modify the code at all!  To fix this,
+we need to add the following <a
+href="#getAnalysisUsage"><tt>getAnalysisUsage</tt></a> method to our pass:</p>
+
+<div class="doc_code"><pre>
+<i>// We don't modify the program, so we preserve all analyses</i>
+<b>virtual void</b> getAnalysisUsage(AnalysisUsage &amp;AU) <b>const</b> {
+  AU.setPreservesAll();
+}
+</pre></div>
+
+<p>Now when we run our pass, we get this output:</p>
+
+<div class="doc_code"><pre>
+$ opt -load ../../../Debug+Asserts/lib/Hello.so -gcse -hello -licm --debug-pass=Structure &lt; hello.bc &gt; /dev/null
+Pass Arguments:  -gcse -hello -licm
+Module Pass Manager
+  Function Pass Manager
+    Dominator Set Construction
+    Immediate Dominators Construction
+    Global Common Subexpression Elimination
+--  Immediate Dominators Construction
+--  Global Common Subexpression Elimination
+    Hello World Pass
+--  Hello World Pass
+    Natural Loop Construction
+    Loop Invariant Code Motion
+--  Loop Invariant Code Motion
+--  Natural Loop Construction
+    Module Verifier
+--  Dominator Set Construction
+--  Module Verifier
+  Bitcode Writer
+--Bitcode Writer
+Hello: __main
+Hello: puts
+Hello: main
+</pre></div>
+
+<p>Which shows that we don't accidentally invalidate dominator information
+anymore, and therefore do not have to compute it twice.</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="releaseMemory">The <tt>releaseMemory</tt> method</a>
+</h4>
+
+<div>
+
+<div class="doc_code"><pre>
+  <b>virtual void</b> releaseMemory();
+</pre></div>
+
+<p>The <tt>PassManager</tt> automatically determines when to compute analysis
+results, and how long to keep them around for.  Because the lifetime of the pass
+object itself is effectively the entire duration of the compilation process, we
+need some way to free analysis results when they are no longer useful.  The
+<tt>releaseMemory</tt> virtual method is the way to do this.</p>
+
+<p>If you are writing an analysis or any other pass that retains a significant
+amount of state (for use by another pass which "requires" your pass and uses the
+<a href="#getAnalysis">getAnalysis</a> method) you should implement
+<tt>releaseMemory</tt> to, well, release the memory allocated to maintain this
+internal state.  This method is called after the <tt>run*</tt> method for the
+class, before the next call of <tt>run*</tt> in your pass.</p>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="registering">Registering dynamically loaded passes</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p><i>Size matters</i> when constructing production quality tools using llvm, 
+both for the purposes of distribution, and for regulating the resident code size
+when running on the target system. Therefore, it becomes desirable to
+selectively use some passes, while omitting others and maintain the flexibility
+to change configurations later on. You want to be able to do all this, and,
+provide feedback to the user. This is where pass registration comes into
+play.</p>
+
+<p>The fundamental mechanisms for pass registration are the
+<tt>MachinePassRegistry</tt> class and subclasses of
+<tt>MachinePassRegistryNode</tt>.</p>
+
+<p>An instance of <tt>MachinePassRegistry</tt> is used to maintain a list of
+<tt>MachinePassRegistryNode</tt> objects.  This instance maintains the list and
+communicates additions and deletions to the command line interface.</p>
+
+<p>An instance of <tt>MachinePassRegistryNode</tt> subclass is used to maintain
+information provided about a particular pass.  This information includes the
+command line name, the command help string and the address of the function used
+to create an instance of the pass.  A global static constructor of one of these
+instances <i>registers</i> with a corresponding <tt>MachinePassRegistry</tt>,
+the static destructor <i>unregisters</i>. Thus a pass that is statically linked
+in the tool will be registered at start up. A dynamically loaded pass will
+register on load and unregister at unload.</p>
+
+<!-- _______________________________________________________________________ -->
+<h3>
+  <a name="registering_existing">Using existing registries</a>
+</h3>
+
+<div>
+
+<p>There are predefined registries to track instruction scheduling
+(<tt>RegisterScheduler</tt>) and register allocation (<tt>RegisterRegAlloc</tt>)
+machine passes.  Here we will describe how to <i>register</i> a register
+allocator machine pass.</p>
+
+<p>Implement your register allocator machine pass.  In your register allocator
+<tt>.cpp</tt> file add the following include;</p>
+
+<div class="doc_code"><pre>
+#include "llvm/CodeGen/RegAllocRegistry.h"
+</pre></div>
+
+<p>Also in your register allocator .cpp file, define a creator function in the
+form; </p>
+
+<div class="doc_code"><pre>
+FunctionPass *createMyRegisterAllocator() {
+  return new MyRegisterAllocator();
+}
+</pre></div>
+
+<p>Note that the signature of this function should match the type of
+<tt>RegisterRegAlloc::FunctionPassCtor</tt>.  In the same file add the
+"installing" declaration, in the form;</p>
+
+<div class="doc_code"><pre>
+static RegisterRegAlloc myRegAlloc("myregalloc",
+                                   "my register allocator help string",
+                                   createMyRegisterAllocator);
+</pre></div>
+
+<p>Note the two spaces prior to the help string produces a tidy result on the
+-help query.</p>
+
+<div class="doc_code"><pre>
+$ llc -help
+  ...
+  -regalloc                    - Register allocator to use (default=linearscan)
+    =linearscan                -   linear scan register allocator
+    =local                     -   local register allocator
+    =simple                    -   simple register allocator
+    =myregalloc                -   my register allocator help string
+  ...
+</pre></div>
+
+<p>And that's it.  The user is now free to use <tt>-regalloc=myregalloc</tt> as
+an option.  Registering instruction schedulers is similar except use the
+<tt>RegisterScheduler</tt> class.  Note that the
+<tt>RegisterScheduler::FunctionPassCtor</tt> is significantly different from
+<tt>RegisterRegAlloc::FunctionPassCtor</tt>.</p>
+
+<p>To force the load/linking of your register allocator into the llc/lli tools,
+add your creator function's global declaration to "Passes.h" and add a "pseudo"
+call line to <tt>llvm/Codegen/LinkAllCodegenComponents.h</tt>.</p>
+
+</div>
+
+
+<!-- _______________________________________________________________________ -->
+<h3>
+  <a name="registering_new">Creating new registries</a>
+</h3>
+
+<div>
+
+<p>The easiest way to get started is to clone one of the existing registries; we
+recommend <tt>llvm/CodeGen/RegAllocRegistry.h</tt>.  The key things to modify
+are the class name and the <tt>FunctionPassCtor</tt> type.</p>
+
+<p>Then you need to declare the registry.  Example: if your pass registry is
+<tt>RegisterMyPasses</tt> then define;</p>
+
+<div class="doc_code"><pre>
+MachinePassRegistry RegisterMyPasses::Registry;
+</pre></div>
+
+<p>And finally, declare the command line option for your passes.  Example:</p> 
+
+<div class="doc_code"><pre>
+cl::opt&lt;RegisterMyPasses::FunctionPassCtor, false,
+        RegisterPassParser&lt;RegisterMyPasses&gt; &gt;
+MyPassOpt("mypass",
+          cl::init(&amp;createDefaultMyPass),
+          cl::desc("my pass option help")); 
+</pre></div>
+
+<p>Here the command option is "mypass", with createDefaultMyPass as the default
+creator.</p>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="debughints">Using GDB with dynamically loaded passes</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>Unfortunately, using GDB with dynamically loaded passes is not as easy as it
+should be.  First of all, you can't set a breakpoint in a shared object that has
+not been loaded yet, and second of all there are problems with inlined functions
+in shared objects.  Here are some suggestions to debugging your pass with
+GDB.</p>
+
+<p>For sake of discussion, I'm going to assume that you are debugging a
+transformation invoked by <tt>opt</tt>, although nothing described here depends
+on that.</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="breakpoint">Setting a breakpoint in your pass</a>
+</h4>
+
+<div>
+
+<p>First thing you do is start <tt>gdb</tt> on the <tt>opt</tt> process:</p>
+
+<div class="doc_code"><pre>
+$ <b>gdb opt</b>
+GNU gdb 5.0
+Copyright 2000 Free Software Foundation, Inc.
+GDB is free software, covered by the GNU General Public License, and you are
+welcome to change it and/or distribute copies of it under certain conditions.
+Type "show copying" to see the conditions.
+There is absolutely no warranty for GDB.  Type "show warranty" for details.
+This GDB was configured as "sparc-sun-solaris2.6"...
+(gdb)
+</pre></div>
+
+<p>Note that <tt>opt</tt> has a lot of debugging information in it, so it takes
+time to load.  Be patient.  Since we cannot set a breakpoint in our pass yet
+(the shared object isn't loaded until runtime), we must execute the process, and
+have it stop before it invokes our pass, but after it has loaded the shared
+object.  The most foolproof way of doing this is to set a breakpoint in
+<tt>PassManager::run</tt> and then run the process with the arguments you
+want:</p>
+
+<div class="doc_code"><pre>
+(gdb) <b>break llvm::PassManager::run</b>
+Breakpoint 1 at 0x2413bc: file Pass.cpp, line 70.
+(gdb) <b>run test.bc -load $(LLVMTOP)/llvm/Debug+Asserts/lib/[libname].so -[passoption]</b>
+Starting program: opt test.bc -load $(LLVMTOP)/llvm/Debug+Asserts/lib/[libname].so -[passoption]
+Breakpoint 1, PassManager::run (this=0xffbef174, M=@0x70b298) at Pass.cpp:70
+70      bool PassManager::run(Module &amp;M) { return PM-&gt;run(M); }
+(gdb)
+</pre></div>
+
+<p>Once the <tt>opt</tt> stops in the <tt>PassManager::run</tt> method you are
+now free to set breakpoints in your pass so that you can trace through execution
+or do other standard debugging stuff.</p>
+
+</div>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="debugmisc">Miscellaneous Problems</a>
+</h4>
+
+<div>
+
+<p>Once you have the basics down, there are a couple of problems that GDB has,
+some with solutions, some without.</p>
+
+<ul>
+<li>Inline functions have bogus stack information.  In general, GDB does a
+pretty good job getting stack traces and stepping through inline functions.
+When a pass is dynamically loaded however, it somehow completely loses this
+capability.  The only solution I know of is to de-inline a function (move it
+from the body of a class to a .cpp file).</li>
+
+<li>Restarting the program breaks breakpoints.  After following the information
+above, you have succeeded in getting some breakpoints planted in your pass.  Nex
+thing you know, you restart the program (i.e., you type '<tt>run</tt>' again),
+and you start getting errors about breakpoints being unsettable.  The only way I
+have found to "fix" this problem is to <tt>delete</tt> the breakpoints that are
+already set in your pass, run the program, and re-set the breakpoints once
+execution stops in <tt>PassManager::run</tt>.</li>
+
+</ul>
+
+<p>Hopefully these tips will help with common case debugging situations.  If
+you'd like to contribute some tips of your own, just contact <a
+href="mailto:sabre@nondot.org">Chris</a>.</p>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="future">Future extensions planned</a>
+</h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>Although the LLVM Pass Infrastructure is very capable as it stands, and does
+some nifty stuff, there are things we'd like to add in the future.  Here is
+where we are going:</p>
+
+<!-- _______________________________________________________________________ -->
+<h4>
+  <a name="SMP">Multithreaded LLVM</a>
+</h4>
+
+<div>
+
+<p>Multiple CPU machines are becoming more common and compilation can never be
+fast enough: obviously we should allow for a multithreaded compiler.  Because of
+the semantics defined for passes above (specifically they cannot maintain state
+across invocations of their <tt>run*</tt> methods), a nice clean way to
+implement a multithreaded compiler would be for the <tt>PassManager</tt> class
+to create multiple instances of each pass object, and allow the separate
+instances to be hacking on different parts of the program at the same time.</p>
+
+<p>This implementation would prevent each of the passes from having to implement
+multithreaded constructs, requiring only the LLVM core to have locking in a few
+places (for global resources).  Although this is a simple extension, we simply
+haven't had time (or multiprocessor machines, thus a reason) to implement this.
+Despite that, we have kept the LLVM passes SMP ready, and you should too.</p>
+
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="mailto:sabre@nondot.org">Chris Lattner</a><br>
+  <a href="http://llvm.org/">The LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+
+</body>
+</html>

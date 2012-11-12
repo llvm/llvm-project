@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+
+import llvmbuild
+
+if __name__ == '__main__':
+   llvmbuild.main()

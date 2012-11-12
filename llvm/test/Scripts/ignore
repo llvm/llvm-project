@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# Program: ignore
+#
+# Synopsis: Ignore the result code of the command and always return 0
+#
+# Syntax:   ignore command <arguments>
+
+"$@" || exit 0 && exit 0
+exit 0

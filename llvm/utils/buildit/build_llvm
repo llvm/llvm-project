@@ -1,0 +1,316 @@
+#!/bin/sh
+# LLVM LOCAL file B&I
+
+set -x
+
+# Build LLVM the "Apple way".
+# Parameters:
+
+# The first parameter is a space-separated list of the architectures the
+# compilers will run on. For instance, "ppc i386". If the current machine
+# isn't in the list, it will (effectively) be added.
+HOSTS="$1"
+
+# The second parameter is a space-separated list of the architectures the
+# compilers will generate code for. If the current machine isn't in the list, a
+# compiler for it will get built anyway, but won't be installed.
+# FIXME: The list of targets is currently hard-coded and TARGETS is not used.
+TARGETS="$2"
+
+# The third parameter is the path to the compiler sources. There should be a
+# shell script named 'configure' in this directory. This script makes a copy...
+ORIG_SRC_DIR="$3"
+
+# The fourth parameter is the location where the LLVM will be installed. You can
+# move it once it's built, so this mostly controls the layout of $DEST_DIR.
+DEST_ROOT="$4"
+
+# The fifth parameter is the place where the compiler will be copied once it's
+# built.
+DEST_DIR="$5"
+
+# The sixth parameter is a directory in which to place information (like
+# unstripped executables and generated source files) helpful in debugging the
+# resulting compiler.
+SYM_DIR="$6"
+
+# The seventh parameter is a yes/no that indicates whether assertions should be
+# enabled in the LLVM libs/tools.
+LLVM_ASSERTIONS="$7"
+
+# The eighth parameter is a yes/no that indicates whether this is an optimized
+# build.
+LLVM_OPTIMIZED="$8"
+
+# A yes/no parameter that controls whether to cross-build for an ARM host.
+ARM_HOSTED_BUILD="$9"
+
+# A yes/no parameter that controls whether to cross-build for the iOS simulator
+IOS_SIM_BUILD="${10}"
+
+# The version number of the submission, e.g. 1007.
+LLVM_SUBMIT_VERSION="${11}"
+
+# The subversion number of the submission, e.g. 03.
+LLVM_SUBMIT_SUBVERSION="${12}"
+
+# The current working directory is where the build will happen. It may already
+# contain a partial result of an interrupted build, in which case this script
+# will continue where it left off.
+DIR=`pwd`
+
+DARWIN_VERS=`uname -r | sed 's/\..*//'`
+echo DARWIN_VERS = $DARWIN_VERS
+
+################################################################################
+# Run the build.
+
+# Create the source tree we'll actually use to build, deleting
+# tcl since it doesn't actually build properly in a cross environment
+# and we don't really need it.
+SRC_DIR=$DIR/src
+rm -rf $SRC_DIR || exit 1
+mkdir $SRC_DIR || exit 1
+ln -s $ORIG_SRC_DIR/* $SRC_DIR/ || exit 1
+# We can't use the top-level Makefile as-is.  Remove the soft link:
+rm $SRC_DIR/Makefile || exit 1
+# Now create our own by editing the top-level Makefile, deleting every line marked "Apple-style":
+sed -e '/[Aa]pple-style/d' -e '/include.*GNUmakefile/d' $ORIG_SRC_DIR/Makefile > $SRC_DIR/Makefile || exit 1
+
+# Build the LLVM tree universal.
+mkdir -p $DIR/obj-llvm || exit 1
+cd $DIR/obj-llvm || exit 1
+
+if [ "$ARM_HOSTED_BUILD" = yes ]; then
+  # The cross-tools' build process expects to find an existing cross toolchain
+  # under names like 'arm-apple-darwin$DARWIN_VERS-as'; so make them.
+  rm -rf $DIR/bin || exit 1
+  mkdir $DIR/bin || exit 1
+  for prog in ar nm ranlib strip lipo ld as ; do
+    P=$DIR/bin/arm-apple-darwin$DARWIN_VERS-${prog}
+    T=`xcrun -sdk $SDKROOT -find ${prog}`
+    echo '#!/bin/sh' > $P || exit 1
+    echo 'exec '$T' "$@"' >> $P || exit 1
+    chmod a+x $P || exit 1
+  done
+  # Set up the links for clang.
+  for prog in clang clang++ ; do
+    P=$DIR/bin/arm-apple-darwin$DARWIN_VERS-${prog}
+    T=`xcrun -sdk $SDKROOT -find ${prog}`
+    echo '#!/bin/sh' > $P || exit 1
+    echo 'exec '$T' -arch armv7 -isysroot '${SDKROOT}' "$@"' >> $P || exit 1
+    chmod a+x $P || exit 1
+  done
+
+  PATH=$DIR/bin:$PATH
+fi
+
+if [ "$ARM_HOSTED_BUILD" = yes ]; then
+  configure_opts="--enable-targets=arm --host=arm-apple-darwin10 \
+                  --target=arm-apple-darwin10 --build=i686-apple-darwin10"
+elif [ "$IOS_SIM_BUILD" = yes ]; then
+  # Use a non-standard "darwin_sim" host triple to trigger a cross-build.
+  configure_opts="--enable-targets=x86 --host=i686-apple-darwin_sim \
+                  --build=i686-apple-darwin10"
+else
+  configure_opts="--enable-targets=arm,x86"
+fi
+
+if [ "$ARM_HOSTED_BUILD" != yes ]; then
+  if [ $SDKROOT ]; then
+    CPPFLAGS="$CPPFLAGS -isysroot $SDKROOT"
+  fi
+  for host in $HOSTS; do :; done
+  CPPFLAGS="$CPPFLAGS -arch $host"
+fi
+
+if [ \! -f Makefile.config ]; then
+  $SRC_DIR/configure --prefix=$DEST_DIR$DEST_ROOT $configure_opts \
+    --enable-assertions=$LLVM_ASSERTIONS \
+    --enable-optimized=$LLVM_OPTIMIZED \
+    --disable-bindings \
+    CPPFLAGS="$CPPFLAGS" \
+    || exit 1
+fi
+
+SUBVERSION=`echo $RC_ProjectSourceVersion | sed -e 's/.*\.\([0-9]*\).*/\1/'`
+
+if [ "x$SUBVERSION" != "x$RC_ProjectSourceVersion" ]; then
+    LLVM_SUBMIT_SUBVERSION=`printf "%02d" $SUBVERSION`
+    RC_ProjectSourceVersion=`echo $RC_ProjectSourceVersion | sed -e 's/\..*//'`
+    LLVM_SUBMIT_VERSION=$RC_ProjectSourceVersion
+fi
+
+if [ "x$LLVM_SUBMIT_SUBVERSION" = "x00" -o "x$LLVM_SUBMIT_SUBVERSION" = "x0" ]; then
+    LLVM_VERSION="$LLVM_SUBMIT_VERSION"
+else
+    LLVM_VERSION="$LLVM_SUBMIT_VERSION-$LLVM_SUBMIT_SUBVERSION"
+fi
+
+# Figure out how many make processes to run.
+SYSCTL=`sysctl -n hw.activecpu`
+# sysctl -n hw.* does not work when invoked via B&I chroot /BuildRoot.
+# Builders can default to 2, since even if they are single processor,
+# nothing else is running on the machine.
+if [ -z "$SYSCTL" ]; then
+    SYSCTL=2
+fi
+JOBS_FLAG="-j $SYSCTL"
+
+make $JOBS_FLAG $OPTIMIZE_OPTS UNIVERSAL=1 UNIVERSAL_ARCH="$HOSTS" \
+    UNIVERSAL_SDK_PATH=$SDKROOT \
+    NO_RUNTIME_LIBS=1 \
+    DISABLE_EDIS=1 \
+    REQUIRES_RTTI=1 \
+    DEBUG_SYMBOLS=1 \
+    LLVM_SUBMIT_VERSION=$LLVM_SUBMIT_VERSION \
+    LLVM_SUBMIT_SUBVERSION=$LLVM_SUBMIT_SUBVERSION \
+    CXXFLAGS="-DLLVM_VERSION_INFO='\" Apple Build #$LLVM_VERSION\"'" \
+    VERBOSE=1
+
+if [ $? != 0 ] ; then
+    echo "error: LLVM 'make' failed!"
+    exit 1
+fi 
+
+################################################################################
+# Construct the actual destination root, by copying stuff from $DIR/dst-* to
+# $DEST_DIR, with occasional 'lipo' commands.
+
+cd $DEST_DIR || exit 1
+
+# Clean out DEST_DIR in case -noclean was passed to buildit.
+rm -rf * || exit 1
+
+cd $DIR/obj-llvm || exit 1
+
+# Install the tree into the destination directory.
+make $LOCAL_MAKEFLAGS $OPTIMIZE_OPTS UNIVERSAL=1 UNIVERSAL_ARCH="$HOSTS" \
+    NO_RUNTIME_LIBS=1 \
+    DISABLE_EDIS=1 \
+    DEBUG_SYMBOLS=1 \
+    LLVM_SUBMIT_VERSION=$LLVM_SUBMIT_VERSION \
+    LLVM_SUBMIT_SUBVERSION=$LLVM_SUBMIT_SUBVERSION \
+    OPTIMIZE_OPTION='-O3' VERBOSE=1 install
+
+if ! test $? == 0 ; then
+    echo "error: LLVM 'make install' failed!"
+    exit 1
+fi 
+
+# Install Version.h
+LLVM_MINOR_VERSION=`echo $LLVM_SUBMIT_SUBVERSION | sed -e 's,0*\([1-9][0-9]*\),\1,'`
+if [ "x$LLVM_MINOR_VERSION" = "x" ]; then
+    LLVM_MINOR_VERSION=0
+fi
+RC_ProjectSourceSubversion=`printf "%d" $LLVM_MINOR_VERSION`
+echo "#define LLVM_VERSION ${RC_ProjectSourceVersion}" > $DEST_DIR$DEST_ROOT/include/llvm/Version.h
+echo "#define LLVM_MINOR_VERSION ${RC_ProjectSourceSubversion}" >> $DEST_DIR$DEST_ROOT/include/llvm/Version.h
+
+# Find the right version of strip to use.
+STRIP=strip
+if [ -n "$SDKROOT" ]; then
+  STRIP=`xcrun -sdk $SDKROOT -find strip`
+fi
+
+if [ "x$LLVM_DEBUG" != "x1" ]; then
+    # Strip local symbols from llvm libraries.
+    #
+    # Use '-l' to strip i386 modules. N.B. that flag doesn't work with kext or
+    # PPC objects!
+    $STRIP -Sl $DEST_DIR$DEST_ROOT/lib/*.[oa]
+    for f in `ls $DEST_DIR$DEST_ROOT/lib/*.so`; do
+        $STRIP -Sxl $f
+    done
+fi
+
+# Remove .dir files 
+cd $DEST_DIR$DEST_ROOT
+rm -f bin/.dir etc/llvm/.dir lib/.dir
+
+# The Hello dylib is an example of how to build a pass.
+# The BugpointPasses module is only used to test bugpoint.
+# These unversioned dylibs cause verification failures, so do not install them.
+# (The wildcards are used to match a "lib" prefix if it is present.)
+rm $DEST_DIR$DEST_ROOT/lib/*LLVMHello.dylib
+rm $DEST_DIR$DEST_ROOT/lib/*BugpointPasses.dylib
+
+# Compress manpages
+MDIR=$DEST_DIR$DEST_ROOT/share/man/man1
+gzip -f $MDIR/*
+
+################################################################################
+# Create SYM_DIR with information required for debugging.
+
+# Figure out how many make processes to run.
+SYSCTL=`sysctl -n hw.activecpu`
+
+# hw.activecpu only available in 10.2.6 and later
+if [ -z "$SYSCTL" ]; then
+  SYSCTL=`sysctl -n hw.ncpu`
+fi
+
+# sysctl -n hw.* does not work when invoked via B&I chroot /BuildRoot. Builders
+# can default to 2, since even if they are single processor, nothing else is
+# running on the machine.
+if [ -z "$SYSCTL" ]; then
+  SYSCTL=2
+fi
+
+cd $SYM_DIR || exit 1
+
+# Clean out SYM_DIR in case -noclean was passed to buildit.
+rm -rf * || exit 1
+
+# Generate .dSYM files
+find $DEST_DIR -perm -0111 -type f \
+    ! \( -name '*.la' -o -name gccas -o -name gccld -o -name llvm-config -o -name '*.a' \) \
+    -print | xargs -n 1 -P ${SYSCTL} dsymutil
+
+# Save .dSYM files and .a archives
+cd $DEST_DIR || exit 1
+find . \( -path \*.dSYM/\* -or -name \*.a \) -print \
+    | cpio -pdml $SYM_DIR || exit 1
+
+# Save source files.
+mkdir $SYM_DIR/src || exit 1
+cd $DIR || exit 1
+find obj-* -name \*.\[chy\] -o -name \*.cpp -print \
+    | cpio -pdml $SYM_DIR/src || exit 1
+
+################################################################################
+# Remove libLTO.dylib and lto.h.  Those are installed by clang.
+
+cd $DEST_DIR$DEST_ROOT
+rm -f lib/libLTO.dylib
+rm -f lib/libLTO.a lib/libLTO.la
+find $DEST_DIR$DEST_ROOT -name lto.h -delete
+
+################################################################################
+# Remove debugging information from DEST_DIR.
+
+cd $DIR || exit 1
+
+find $DEST_DIR -name \*.a -print | xargs ranlib || exit 1
+find $DEST_DIR -name \*.dSYM -print | xargs rm -r || exit 1
+
+# Strip debugging information from files
+#
+# Use '-l' to strip i386 modules. N.B. that flag doesn't work with kext or
+# PPC objects!
+find $DEST_DIR -perm -0111 -type f \
+    ! \( -name '*.la' -o -name gccas -o -name gccld -o -name llvm-config \) \
+    -print | xargs -n 1 -P ${SYSCTL} $STRIP -arch all -Sl
+
+chgrp -h -R wheel $DEST_DIR
+chgrp -R wheel $DEST_DIR
+
+################################################################################
+# Remove the docs directory
+
+rm -rf $DEST_DIR$DEST_ROOT/docs
+
+################################################################################
+# w00t! Done!
+
+exit 0

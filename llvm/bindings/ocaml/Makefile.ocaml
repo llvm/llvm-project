@@ -1,0 +1,415 @@
+##===- tools/ml/Makefile -----------------------------------*- Makefile -*-===##
+# 
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+# 
+##===----------------------------------------------------------------------===##
+# 
+# An ocaml library is a unique project type in the context of LLVM, so rules are
+# here rather than in Makefile.rules.
+# 
+# Reference materials on installing ocaml libraries:
+# 
+#   https://fedoraproject.org/wiki/Packaging/OCaml
+#   http://pkg-ocaml-maint.alioth.debian.org/ocaml_packaging_policy.txt
+# 
+##===----------------------------------------------------------------------===##
+
+include $(LEVEL)/Makefile.config
+
+# CFLAGS needs to be set before Makefile.rules is included.
+CXX.Flags += -I"$(shell $(OCAMLC) -where)"
+C.Flags += -I"$(shell $(OCAMLC) -where)"
+
+include $(LEVEL)/Makefile.common
+
+# Intentionally ignore PROJ_prefix here. We want the ocaml stdlib. However, the
+# user can override this with OCAML_LIBDIR or configure --with-ocaml-libdir=.
+PROJ_libocamldir := $(DESTDIR)$(OCAML_LIBDIR)
+OcamlDir := $(LibDir)/ocaml
+
+# Info from llvm-config and similar
+ifndef IS_CLEANING_TARGET
+ifdef UsedComponents
+UsedLibs = $(shell $(LLVM_CONFIG) --libs $(UsedComponents))
+UsedLibNames = $(shell $(LLVM_CONFIG) --libnames $(UsedComponents))
+endif
+endif
+
+# Tools
+OCAMLCFLAGS += -I $(ObjDir) -I $(OcamlDir)
+ifndef IS_CLEANING_TARGET
+ifneq ($(ObjectsO),)
+OCAMLAFLAGS += $(patsubst %,-cclib %, \
+                 $(filter-out -L$(LibDir),-l$(LIBRARYNAME) \
+                                          $(shell $(LLVM_CONFIG) --ldflags)) \
+                                          $(UsedLibs))
+else
+OCAMLAFLAGS += $(patsubst %,-cclib %, \
+                 $(filter-out -L$(LibDir),$(shell $(LLVM_CONFIG) --ldflags)) \
+                                          $(UsedLibs))
+endif
+endif
+ 
+# -g was introduced in 3.10.0.
+#ifneq ($(ENABLE_OPTIMIZED),1)
+#  OCAMLDEBUGFLAG := -g
+#endif
+
+Compile.CMI  := $(strip $(OCAMLC) -c $(OCAMLCFLAGS) $(OCAMLDEBUGFLAG) -o)
+Compile.CMO  := $(strip $(OCAMLC) -c $(OCAMLCFLAGS) $(OCAMLDEBUGFLAG) -o)
+Archive.CMA  := $(strip $(OCAMLC) -a -custom $(OCAMLAFLAGS) $(OCAMLDEBUGFLAG) \
+                                  -o)
+
+Compile.CMX  := $(strip $(OCAMLOPT) -c $(OCAMLCFLAGS) $(OCAMLDEBUGFLAG) -o)
+Archive.CMXA := $(strip $(OCAMLOPT) -a $(OCAMLAFLAGS) $(OCAMLDEBUGFLAG) -o)
+
+ifdef OCAMLOPT
+Archive.EXE := $(strip $(OCAMLOPT) -cc $(CXX) $(OCAMLCFLAGS) $(UsedOcamLibs:%=%.cmxa) $(OCAMLDEBUGFLAG) -o)
+else
+Archive.EXE := $(strip $(OCAMLC) -cc $(CXX) $(OCAMLCFLAGS) $(OCAMLDEBUGFLAG:%=%.cma) -o)
+endif
+
+# Source files
+ifndef OcamlSources1
+OcamlSources1 := $(sort $(wildcard $(PROJ_SRC_DIR)/*.ml))
+endif
+
+ifndef OcamlHeaders1
+OcamlHeaders1 := $(sort $(wildcard $(PROJ_SRC_DIR)/*.mli))
+endif
+
+OcamlSources2 := $(filter-out $(ExcludeSources),$(OcamlSources1))
+OcamlHeaders2 := $(filter-out $(ExcludeHeaders),$(OcamlHeaders1))
+
+OcamlSources := $(OcamlSources2:$(PROJ_SRC_DIR)/%=$(ObjDir)/%)
+OcamlHeaders := $(OcamlHeaders2:$(PROJ_SRC_DIR)/%=$(ObjDir)/%)
+
+# Intermediate files
+ObjectsCMI   := $(OcamlSources:%.ml=%.cmi)
+ObjectsCMO   := $(OcamlSources:%.ml=%.cmo)
+ObjectsCMX   := $(OcamlSources:%.ml=%.cmx)
+
+ifdef LIBRARYNAME
+LibraryCMA   := $(ObjDir)/$(LIBRARYNAME).cma
+LibraryCMXA  := $(ObjDir)/$(LIBRARYNAME).cmxa
+endif
+
+ifdef TOOLNAME
+ToolEXE      := $(ObjDir)/$(TOOLNAME)$(EXEEXT)
+endif
+
+# Output files
+#   The .cmo files are the only intermediates; all others are to be installed.
+OutputsCMI := $(ObjectsCMI:$(ObjDir)/%.cmi=$(OcamlDir)/%.cmi)
+OutputsCMX := $(ObjectsCMX:$(ObjDir)/%.cmx=$(OcamlDir)/%.cmx)
+OutputLibs := $(UsedLibNames:%=$(OcamlDir)/%)
+
+ifdef LIBRARYNAME
+LibraryA   := $(OcamlDir)/lib$(LIBRARYNAME).a
+OutputCMA  := $(LibraryCMA:$(ObjDir)/%.cma=$(OcamlDir)/%.cma)
+OutputCMXA := $(LibraryCMXA:$(ObjDir)/%.cmxa=$(OcamlDir)/%.cmxa)
+endif
+
+ifdef TOOLNAME
+ifdef EXAMPLE_TOOL
+OutputEXE := $(ExmplDir)/$(strip $(TOOLNAME))$(EXEEXT)
+else
+OutputEXE := $(ToolDir)/$(strip $(TOOLNAME))$(EXEEXT)
+endif
+endif
+
+# Installation targets
+DestLibs := $(UsedLibNames:%=$(PROJ_libocamldir)/%)
+
+ifdef LIBRARYNAME
+DestA    := $(PROJ_libocamldir)/lib$(LIBRARYNAME).a
+DestCMA  := $(PROJ_libocamldir)/$(LIBRARYNAME).cma
+DestCMXA := $(PROJ_libocamldir)/$(LIBRARYNAME).cmxa
+endif
+
+##===- Dependencies -------------------------------------------------------===##
+# Copy the sources into the intermediate directory because older ocamlc doesn't
+# support -o except when linking (outputs are placed next to inputs).
+
+$(ObjDir)/%.mli: $(PROJ_SRC_DIR)/%.mli $(ObjDir)/.dir
+	$(Verb) $(CP) -f $< $@
+
+$(ObjDir)/%.ml: $(PROJ_SRC_DIR)/%.ml $(ObjDir)/.dir
+	$(Verb) $(CP) -f $< $@
+
+$(ObjectsCMI): $(UsedOcamlInterfaces:%=$(OcamlDir)/%.cmi)
+
+ifdef LIBRARYNAME
+$(ObjDir)/$(LIBRARYNAME).ocamldep: $(OcamlSources) $(OcamlHeaders) \
+                                   $(OcamlDir)/.dir $(ObjDir)/.dir
+	$(Verb) $(OCAMLDEP) $(OCAMLCFLAGS) $(OcamlSources) $(OcamlHeaders) > $@
+
+-include $(ObjDir)/$(LIBRARYNAME).ocamldep
+endif
+
+ifdef TOOLNAME
+$(ObjDir)/$(TOOLNAME).ocamldep: $(OcamlSources) $(OcamlHeaders) \
+                                $(OcamlDir)/.dir $(ObjDir)/.dir
+	$(Verb) $(OCAMLDEP) $(OCAMLCFLAGS) $(OcamlSources) $(OcamlHeaders) > $@
+
+-include $(ObjDir)/$(TOOLNAME).ocamldep
+endif
+
+##===- Build static library from C sources --------------------------------===##
+
+ifdef LibraryA
+all-local:: $(LibraryA)
+clean-local:: clean-a
+install-local:: install-a
+uninstall-local:: uninstall-a
+
+$(LibraryA): $(ObjectsO) $(OcamlDir)/.dir
+	$(Echo) "Building $(BuildMode) $(notdir $@)"
+	-$(Verb) $(RM) -f $@
+	$(Verb) $(Archive) $@ $(ObjectsO)
+	$(Verb) $(Ranlib) $@
+
+clean-a::
+	-$(Verb) $(RM) -f $(LibraryA)
+
+install-a:: $(LibraryA)
+	$(Echo) "Installing $(BuildMode) $(DestA)"
+	$(Verb) $(MKDIR) $(PROJ_libocamldir)
+	$(Verb) $(INSTALL) $(LibraryA) $(DestA)
+	$(Verb) 
+
+uninstall-a::
+	$(Echo) "Uninstalling $(DestA)"
+	-$(Verb) $(RM) -f $(DestA)
+endif
+
+
+##===- Deposit dependent libraries adjacent to Ocaml libs -----------------===##
+
+all-local:: build-deplibs
+clean-local:: clean-deplibs
+install-local:: install-deplibs
+uninstall-local:: uninstall-deplibs
+
+build-deplibs: $(OutputLibs)
+
+$(OcamlDir)/%.a: $(LibDir)/%.a
+	$(Verb) ln -sf $< $@
+
+$(OcamlDir)/%.o: $(LibDir)/%.o
+	$(Verb) ln -sf $< $@
+
+clean-deplibs:
+	$(Verb) $(RM) -f $(OutputLibs)
+
+install-deplibs:
+	$(Verb) $(MKDIR) $(PROJ_libocamldir)
+	$(Verb) for i in $(DestLibs:$(PROJ_libocamldir)/%=%); do \
+	  ln -sf "$(PROJ_libdir)/$$i" "$(PROJ_libocamldir)/$$i"; \
+	done
+
+uninstall-deplibs:
+	$(Verb) $(RM) -f $(DestLibs)
+
+
+##===- Build ocaml interfaces (.mli's -> .cmi's) --------------------------===##
+
+ifneq ($(OcamlHeaders),)
+all-local:: build-cmis
+clean-local:: clean-cmis
+install-local:: install-cmis
+uninstall-local:: uninstall-cmis
+
+build-cmis: $(OutputsCMI)
+
+$(OcamlDir)/%.cmi: $(ObjDir)/%.cmi $(OcamlDir)/.dir
+	$(Verb) $(CP) -f $< $@
+
+$(ObjDir)/%.cmi: $(ObjDir)/%.mli $(ObjDir)/.dir
+	$(Echo) "Compiling $(notdir $<) for $(BuildMode) build"
+	$(Verb) $(Compile.CMI) $@ $<
+
+clean-cmis::
+	-$(Verb) $(RM) -f $(OutputsCMI)
+
+# Also install the .mli's (headers) as documentation.
+install-cmis: $(OutputsCMI) $(OcamlHeaders)
+	$(Verb) $(MKDIR) $(PROJ_libocamldir)
+	$(Verb) for i in $(OcamlHeaders:$(ObjDir)/%=%); do \
+	  $(EchoCmd) "Installing $(BuildMode) $(PROJ_libocamldir)/$$i"; \
+	  $(DataInstall) $(ObjDir)/$$i "$(PROJ_libocamldir)/$$i"; \
+	done
+	$(Verb) for i in $(OutputsCMI:$(OcamlDir)/%=%); do \
+	  $(EchoCmd) "Installing $(BuildMode) $(PROJ_libocamldir)/$$i"; \
+	  $(DataInstall) $(OcamlDir)/$$i "$(PROJ_libocamldir)/$$i"; \
+	done
+
+uninstall-cmis::
+	$(Verb) for i in $(OutputsCMI:$(OcamlDir)/%=%); do \
+	  $(EchoCmd) "Uninstalling $(PROJ_libocamldir)/$$i"; \
+	  $(RM) -f "$(PROJ_libocamldir)/$$i"; \
+	done
+	$(Verb) for i in $(OcamlHeaders:$(ObjDir)/%=%); do \
+	  $(EchoCmd) "Uninstalling $(PROJ_libocamldir)/$$i"; \
+	  $(RM) -f "$(PROJ_libocamldir)/$$i"; \
+	done
+endif
+
+
+##===- Build ocaml bytecode archive (.ml's -> .cmo's -> .cma) -------------===##
+
+$(ObjDir)/%.cmo: $(ObjDir)/%.ml
+	$(Echo) "Compiling $(notdir $<) for $(BuildMode) build"
+	$(Verb) $(Compile.CMO) $@ $<
+
+ifdef LIBRARYNAME
+all-local:: $(OutputCMA)
+clean-local:: clean-cma
+install-local:: install-cma
+uninstall-local:: uninstall-cma
+
+$(OutputCMA): $(LibraryCMA) $(OcamlDir)/.dir
+	$(Verb) $(CP) -f $< $@
+
+$(LibraryCMA): $(ObjectsCMO) $(OcamlDir)/.dir
+	$(Echo) "Archiving $(notdir $@) for $(BuildMode) build"
+	$(Verb) $(Archive.CMA) $@ $(ObjectsCMO)
+
+clean-cma::
+	$(Verb) $(RM) -f $(OutputCMA) $(UsedLibNames:%=$(OcamlDir)/%)
+
+install-cma:: $(OutputCMA)
+	$(Echo) "Installing $(BuildMode) $(DestCMA)"
+	$(Verb) $(MKDIR) $(PROJ_libocamldir)
+	$(Verb) $(DataInstall) $(OutputCMA) "$(DestCMA)"
+
+uninstall-cma::
+	$(Echo) "Uninstalling $(DestCMA)"
+	-$(Verb) $(RM) -f $(DestCMA)
+endif
+
+##===- Build optimized ocaml archive (.ml's -> .cmx's -> .cmxa, .a) -------===##
+
+# The ocamlopt compiler is supported on a set of targets disjoint from LLVM's.
+# If unavailable, 'configure' will not define OCAMLOPT in Makefile.config.
+ifdef OCAMLOPT
+
+$(OcamlDir)/%.cmx: $(ObjDir)/%.cmx
+	$(Verb) $(CP) -f $< $@
+
+$(ObjDir)/%.cmx: $(ObjDir)/%.ml
+	$(Echo) "Compiling optimized $(notdir $<) for $(BuildMode) build"
+	$(Verb) $(Compile.CMX) $@ $<
+
+ifdef LIBRARYNAME
+all-local:: $(OutputCMXA) $(OutputsCMX)
+clean-local:: clean-cmxa
+install-local:: install-cmxa
+uninstall-local:: uninstall-cmxa
+
+$(OutputCMXA): $(LibraryCMXA)
+	$(Verb) $(CP) -f $< $@
+	$(Verb) $(CP) -f $(<:.cmxa=.a) $(@:.cmxa=.a)
+
+$(LibraryCMXA): $(ObjectsCMX)
+	$(Echo) "Archiving $(notdir $@) for $(BuildMode) build"
+	$(Verb) $(Archive.CMXA) $@ $(ObjectsCMX)
+	$(Verb) $(RM) -f $(@:.cmxa=.o)
+
+clean-cmxa::
+	$(Verb) $(RM) -f $(OutputCMXA) $(OutputCMXA:.cmxa=.a) $(OutputsCMX)
+
+install-cmxa:: $(OutputCMXA) $(OutputsCMX)
+	$(Verb) $(MKDIR) $(PROJ_libocamldir)
+	$(Echo) "Installing $(BuildMode) $(DestCMXA)"
+	$(Verb) $(DataInstall) $(OutputCMXA) $(DestCMXA)
+	$(Echo) "Installing $(BuildMode) $(DestCMXA:.cmxa=.a)"
+	$(Verb) $(DataInstall) $(OutputCMXA:.cmxa=.a) $(DestCMXA:.cmxa=.a)
+	$(Verb) for i in $(OutputsCMX:$(OcamlDir)/%=%); do \
+	  $(EchoCmd) "Installing $(BuildMode) $(PROJ_libocamldir)/$$i"; \
+	  $(DataInstall) $(OcamlDir)/$$i "$(PROJ_libocamldir)/$$i"; \
+	done
+
+uninstall-cmxa::
+	$(Echo) "Uninstalling $(DestCMXA)"
+	$(Verb) $(RM) -f $(DestCMXA)
+	$(Echo) "Uninstalling $(DestCMXA:.cmxa=.a)"
+	$(Verb) $(RM) -f $(DestCMXA:.cmxa=.a)
+	$(Verb) for i in $(OutputsCMX:$(OcamlDir)/%=%); do \
+	  $(EchoCmd) "Uninstalling $(PROJ_libocamldir)/$$i"; \
+	  $(RM) -f $(PROJ_libocamldir)/$$i; \
+	done
+endif
+endif
+
+##===- Build executables --------------------------------------------------===##
+
+ifdef TOOLNAME
+all-local:: $(OutputEXE)
+clean-local:: clean-exe
+
+$(OutputEXE): $(ToolEXE) $(OcamlDir)/.dir
+	$(Verb) $(CP) -f $< $@
+
+ifndef OCAMLOPT
+$(ToolEXE): $(ObjectsCMO) $(OcamlDir)/.dir
+	$(Echo) "Archiving $(notdir $@) for $(BuildMode) build"
+	$(Verb) $(Archive.EXE) $@ $(ObjectsCMO)
+else
+$(ToolEXE): $(ObjectsCMX) $(OcamlDir)/.dir
+	$(Echo) "Archiving $(notdir $@) for $(BuildMode) build"
+	$(Verb) $(Archive.EXE) $@ $(ObjectsCMX)
+endif
+endif
+
+##===- Generate documentation ---------------------------------------------===##
+
+$(ObjDir)/$(LIBRARYNAME).odoc: $(ObjectsCMI)
+	$(Echo) "Documenting $(notdir $@)"
+	$(Verb) $(OCAMLDOC) -I $(ObjDir) -I $(OcamlDir) -dump $@ $(OcamlHeaders)
+
+ocamldoc: $(ObjDir)/$(LIBRARYNAME).odoc
+
+##===- Debugging gunk -----------------------------------------------------===##
+printvars:: printcamlvars
+
+printcamlvars::
+	$(Echo) "LLVM_CONFIG  : " '$(LLVM_CONFIG)'
+	$(Echo) "OCAMLCFLAGS  : " '$(OCAMLCFLAGS)'
+	$(Echo) "OCAMLAFLAGS  : " '$(OCAMLAFLAGS)'
+	$(Echo) "OCAMLC       : " '$(OCAMLC)'
+	$(Echo) "OCAMLOPT     : " '$(OCAMLOPT)'
+	$(Echo) "OCAMLDEP     : " '$(OCAMLDEP)'
+	$(Echo) "Compile.CMI  : " '$(Compile.CMI)'
+	$(Echo) "Compile.CMO  : " '$(Compile.CMO)'
+	$(Echo) "Archive.CMA  : " '$(Archive.CMA)'
+	$(Echo) "Compile.CMX  : " '$(Compile.CMX)'
+	$(Echo) "Archive.CMXA : " '$(Archive.CMXA)'
+	$(Echo) "CAML_LIBDIR  : " '$(CAML_LIBDIR)'
+	$(Echo) "LibraryCMA   : " '$(LibraryCMA)'
+	$(Echo) "LibraryCMXA  : " '$(LibraryCMXA)'
+	$(Echo) "OcamlSources1: " '$(OcamlSources1)'
+	$(Echo) "OcamlSources2: " '$(OcamlSources2)'
+	$(Echo) "OcamlSources : " '$(OcamlSources)'
+	$(Echo) "OcamlHeaders1: " '$(OcamlHeaders1)'
+	$(Echo) "OcamlHeaders2: " '$(OcamlHeaders2)'
+	$(Echo) "OcamlHeaders : " '$(OcamlHeaders)'
+	$(Echo) "ObjectsCMI   : " '$(ObjectsCMI)'
+	$(Echo) "ObjectsCMO   : " '$(ObjectsCMO)'
+	$(Echo) "ObjectsCMX   : " '$(ObjectsCMX)'
+	$(Echo) "OCAML_LIBDIR : " '$(OCAML_LIBDIR)'
+	$(Echo) "DestA        : " '$(DestA)'
+	$(Echo) "DestCMA      : " '$(DestCMA)'
+	$(Echo) "DestCMXA     : " '$(DestCMXA)'
+	$(Echo) "UsedLibs     : " '$(UsedLibs)'
+	$(Echo) "UsedLibNames : " '$(UsedLibNames)'
+
+.PHONY: printcamlvars   build-cmis \
+            clean-a     clean-cmis     clean-cma     clean-cmxa \
+          install-a   install-cmis   install-cma   install-cmxa \
+          install-exe \
+		uninstall-a uninstall-cmis uninstall-cma uninstall-cmxa \
+		uninstall-exe

@@ -1,0 +1,4 @@
+# RUN: llvm-mc -triple thumbv7 -show-encoding -disassemble < %s 2>&1 | FileCheck %s
+
+0xa0 0xf9 0xc0 0x0f
+# CHECK: invalid instruction encoding

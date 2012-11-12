@@ -1,0 +1,4563 @@
+//===-- ARMDisassembler.cpp - Disassembler for ARM/Thumb ISA --------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#define DEBUG_TYPE "arm-disassembler"
+
+#include "MCTargetDesc/ARMAddressingModes.h"
+#include "MCTargetDesc/ARMMCExpr.h"
+#include "MCTargetDesc/ARMBaseInfo.h"
+#include "llvm/MC/EDInstInfo.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCFixedLenDisassembler.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/MemoryObject.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
+#include <vector>
+
+using namespace llvm;
+
+typedef MCDisassembler::DecodeStatus DecodeStatus;
+
+namespace {
+  // Handles the condition code status of instructions in IT blocks
+  class ITStatus
+  {
+    public:
+      // Returns the condition code for instruction in IT block
+      unsigned getITCC() {
+        unsigned CC = ARMCC::AL;
+        if (instrInITBlock())
+          CC = ITStates.back();
+        return CC;
+      }
+
+      // Advances the IT block state to the next T or E
+      void advanceITState() {
+        ITStates.pop_back();
+      }
+
+      // Returns true if the current instruction is in an IT block
+      bool instrInITBlock() {
+        return !ITStates.empty();
+      }
+
+      // Returns true if current instruction is the last instruction in an IT block
+      bool instrLastInITBlock() {
+        return ITStates.size() == 1;
+      }
+
+      // Called when decoding an IT instruction. Sets the IT state for the following
+      // instructions that for the IT block. Firstcond and Mask correspond to the 
+      // fields in the IT instruction encoding.
+      void setITState(char Firstcond, char Mask) {
+        // (3 - the number of trailing zeros) is the number of then / else.
+        unsigned CondBit0 = Firstcond & 1;
+        unsigned NumTZ = CountTrailingZeros_32(Mask);
+        unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
+        assert(NumTZ <= 3 && "Invalid IT mask!");
+        // push condition codes onto the stack the correct order for the pops
+        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
+          bool T = ((Mask >> Pos) & 1) == CondBit0;
+          if (T)
+            ITStates.push_back(CCBits);
+          else
+            ITStates.push_back(CCBits ^ 1);
+        }
+        ITStates.push_back(CCBits);
+      }
+
+    private:
+      std::vector<unsigned char> ITStates;
+  };
+}
+
+namespace {
+/// ARMDisassembler - ARM disassembler for all ARM platforms.
+class ARMDisassembler : public MCDisassembler {
+public:
+  /// Constructor     - Initializes the disassembler.
+  ///
+  ARMDisassembler(const MCSubtargetInfo &STI) :
+    MCDisassembler(STI) {
+  }
+
+  ~ARMDisassembler() {
+  }
+
+  /// getInstruction - See MCDisassembler.
+  DecodeStatus getInstruction(MCInst &instr,
+                              uint64_t &size,
+                              const MemoryObject &region,
+                              uint64_t address,
+                              raw_ostream &vStream,
+                              raw_ostream &cStream) const;
+
+  /// getEDInfo - See MCDisassembler.
+  const EDInstInfo *getEDInfo() const;
+private:
+};
+
+/// ThumbDisassembler - Thumb disassembler for all Thumb platforms.
+class ThumbDisassembler : public MCDisassembler {
+public:
+  /// Constructor     - Initializes the disassembler.
+  ///
+  ThumbDisassembler(const MCSubtargetInfo &STI) :
+    MCDisassembler(STI) {
+  }
+
+  ~ThumbDisassembler() {
+  }
+
+  /// getInstruction - See MCDisassembler.
+  DecodeStatus getInstruction(MCInst &instr,
+                              uint64_t &size,
+                              const MemoryObject &region,
+                              uint64_t address,
+                              raw_ostream &vStream,
+                              raw_ostream &cStream) const;
+
+  /// getEDInfo - See MCDisassembler.
+  const EDInstInfo *getEDInfo() const;
+private:
+  mutable ITStatus ITBlock;
+  DecodeStatus AddThumbPredicate(MCInst&) const;
+  void UpdateThumbVFPPredicate(MCInst&) const;
+};
+}
+
+static bool Check(DecodeStatus &Out, DecodeStatus In) {
+  switch (In) {
+    case MCDisassembler::Success:
+      // Out stays the same.
+      return true;
+    case MCDisassembler::SoftFail:
+      Out = In;
+      return true;
+    case MCDisassembler::Fail:
+      Out = In;
+      return false;
+  }
+  llvm_unreachable("Invalid DecodeStatus!");
+}
+
+
+// Forward declare these because the autogenerated code will reference them.
+// Definitions are further down.
+static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeGPRnopcRegisterClass(MCInst &Inst,
+                                               unsigned RegNo, uint64_t Address,
+                                               const void *Decoder);
+static DecodeStatus DecodetGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodetcGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDPR_8RegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDPR_VFP2RegisterClass(MCInst &Inst,
+                                                unsigned RegNo,
+                                                uint64_t Address,
+                                                const void *Decoder);
+static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDPairSpacedRegisterClass(MCInst &Inst,
+                               unsigned RegNo, uint64_t Address,
+                               const void *Decoder);
+
+static DecodeStatus DecodePredicateOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeCCOutOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSOImmOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSPRRegListOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDPRRegListOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+
+static DecodeStatus DecodeBitfieldMaskOperand(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrMode2IdxInstruction(MCInst &Inst,
+                                                  unsigned Insn,
+                                                  uint64_t Address,
+                                                  const void *Decoder);
+static DecodeStatus DecodeSORegMemOperand(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrMode3Instruction(MCInst &Inst,unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSORegImmOperand(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSORegRegOperand(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+
+static DecodeStatus DecodeMemMultipleWritebackInstruction(MCInst & Inst,
+                                                  unsigned Insn,
+                                                  uint64_t Adddress,
+                                                  const void *Decoder);
+static DecodeStatus DecodeT2MOVTWInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeArmMOVTWInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSMLAInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeCPSInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2CPSInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrModeImm12Operand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrMode7Operand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2BInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeBranchImmInstruction(MCInst &Inst,unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrMode6Operand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD1DupInstruction(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD2DupInstruction(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD3DupInstruction(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD4DupInstruction(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeNEONModImmInstruction(MCInst &Inst,unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVSHLMaxInstruction(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeShiftRight8Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeShiftRight16Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeShiftRight32Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeShiftRight64Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeTBLInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodePostIdxReg(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeCoprocessor(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMemBarrierOption(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDoubleRegLoad(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeDoubleRegStore(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeLDRPreImm(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeLDRPreReg(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSTRPreImm(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSTRPreReg(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD1LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD2LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD3LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVLD4LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVST1LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVST2LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVST3LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVST4LN(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVMOVSRR(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVMOVRRS(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSwap(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVCVTQ(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder);
+
+
+static DecodeStatus DecodeThumbAddSpecialReg(MCInst &Inst, uint16_t Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbBROperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2BROperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbCmpBROperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbAddrModeRR(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbAddrModeIS(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbAddrModePC(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbAddrModeSP(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2AddrModeSOReg(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2LoadShift(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2Imm8S4(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2AddrModeImm8s4(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2AddrModeImm0_1020s4(MCInst &Inst,unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2Imm8(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2AddrModeImm8(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbAddSPImm(MCInst &Inst, uint16_t Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbAddSPReg(MCInst &Inst, uint16_t Insn,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbCPS(MCInst &Inst, uint16_t Insn,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbBLXOffset(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2AddrModeImm12(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbTableBranch(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumb2BCCInstruction(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2SOImm(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbBCCTargetOperand(MCInst &Inst,unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeThumbBLTargetOperand(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeIT(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2LDRDPreInstruction(MCInst &Inst,unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2STRDPreInstruction(MCInst &Inst,unsigned Insn,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2Adr(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2LdStPre(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeT2ShifterImmOperand(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+
+static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder);
+#include "ARMGenDisassemblerTables.inc"
+#include "ARMGenEDInfo.inc"
+
+static MCDisassembler *createARMDisassembler(const Target &T, const MCSubtargetInfo &STI) {
+  return new ARMDisassembler(STI);
+}
+
+static MCDisassembler *createThumbDisassembler(const Target &T, const MCSubtargetInfo &STI) {
+  return new ThumbDisassembler(STI);
+}
+
+const EDInstInfo *ARMDisassembler::getEDInfo() const {
+  return instInfoARM;
+}
+
+const EDInstInfo *ThumbDisassembler::getEDInfo() const {
+  return instInfoARM;
+}
+
+DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
+                                             const MemoryObject &Region,
+                                             uint64_t Address,
+                                             raw_ostream &os,
+                                             raw_ostream &cs) const {
+  CommentStream = &cs;
+
+  uint8_t bytes[4];
+
+  assert(!(STI.getFeatureBits() & ARM::ModeThumb) &&
+         "Asked to disassemble an ARM instruction but Subtarget is in Thumb mode!");
+
+  // We want to read exactly 4 bytes of data.
+  if (Region.readBytes(Address, 4, (uint8_t*)bytes, NULL) == -1) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  // Encoded as a small-endian 32-bit word in the stream.
+  uint32_t insn = (bytes[3] << 24) |
+                  (bytes[2] << 16) |
+                  (bytes[1] <<  8) |
+                  (bytes[0] <<  0);
+
+  // Calling the auto-generated decoder function.
+  DecodeStatus result = decodeInstruction(DecoderTableARM32, MI, insn,
+                                          Address, this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    return result;
+  }
+
+  // VFP and NEON instructions, similarly, are shared between ARM
+  // and Thumb modes.
+  MI.clear();
+  result = decodeInstruction(DecoderTableVFP32, MI, insn, Address, this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableNEONData32, MI, insn, Address,
+                             this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    // Add a fake predicate operand, because we share these instruction
+    // definitions with Thumb2 where these instructions are predicable.
+    if (!DecodePredicateOperand(MI, 0xE, Address, this))
+      return MCDisassembler::Fail;
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableNEONLoadStore32, MI, insn, Address,
+                             this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    // Add a fake predicate operand, because we share these instruction
+    // definitions with Thumb2 where these instructions are predicable.
+    if (!DecodePredicateOperand(MI, 0xE, Address, this))
+      return MCDisassembler::Fail;
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableNEONDup32, MI, insn, Address,
+                             this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    // Add a fake predicate operand, because we share these instruction
+    // definitions with Thumb2 where these instructions are predicable.
+    if (!DecodePredicateOperand(MI, 0xE, Address, this))
+      return MCDisassembler::Fail;
+    return result;
+  }
+
+  MI.clear();
+
+  Size = 0;
+  return MCDisassembler::Fail;
+}
+
+namespace llvm {
+extern const MCInstrDesc ARMInsts[];
+}
+
+/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
+/// immediate Value in the MCInst.  The immediate Value has had any PC
+/// adjustment made by the caller.  If the instruction is a branch instruction
+/// then isBranch is true, else false.  If the getOpInfo() function was set as
+/// part of the setupForSymbolicDisassembly() call then that function is called
+/// to get any symbolic information at the Address for this instruction.  If
+/// that returns non-zero then the symbolic information it returns is used to
+/// create an MCExpr and that is added as an operand to the MCInst.  If
+/// getOpInfo() returns zero and isBranch is true then a symbol look up for
+/// Value is done and if a symbol is found an MCExpr is created with that, else
+/// an MCExpr with Value is created.  This function returns true if it adds an
+/// operand to the MCInst and false otherwise.
+static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
+                                     bool isBranch, uint64_t InstSize,
+                                     MCInst &MI, const void *Decoder) {
+  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
+  LLVMOpInfoCallback getOpInfo = Dis->getLLVMOpInfoCallback();
+  struct LLVMOpInfo1 SymbolicOp;
+  memset(&SymbolicOp, '\0', sizeof(struct LLVMOpInfo1));
+  SymbolicOp.Value = Value;
+  void *DisInfo = Dis->getDisInfoBlock();
+
+  if (!getOpInfo ||
+      !getOpInfo(DisInfo, Address, 0 /* Offset */, InstSize, 1, &SymbolicOp)) {
+    // Clear SymbolicOp.Value from above and also all other fields.
+    memset(&SymbolicOp, '\0', sizeof(struct LLVMOpInfo1));
+    LLVMSymbolLookupCallback SymbolLookUp = Dis->getLLVMSymbolLookupCallback();
+    if (!SymbolLookUp)
+      return false;
+    uint64_t ReferenceType;
+    if (isBranch)
+       ReferenceType = LLVMDisassembler_ReferenceType_In_Branch;
+    else
+       ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
+    const char *ReferenceName;
+    uint64_t SymbolValue = 0x00000000ffffffffULL & Value;
+    const char *Name = SymbolLookUp(DisInfo, SymbolValue, &ReferenceType,
+                                    Address, &ReferenceName);
+    if (Name) {
+      SymbolicOp.AddSymbol.Name = Name;
+      SymbolicOp.AddSymbol.Present = true;
+    }
+    // For branches always create an MCExpr so it gets printed as hex address.
+    else if (isBranch) {
+      SymbolicOp.Value = Value;
+    }
+    if(ReferenceType == LLVMDisassembler_ReferenceType_Out_SymbolStub)
+      (*Dis->CommentStream) << "symbol stub for: " << ReferenceName;
+    if (!Name && !isBranch)
+      return false;
+  }
+
+  MCContext *Ctx = Dis->getMCContext();
+  const MCExpr *Add = NULL;
+  if (SymbolicOp.AddSymbol.Present) {
+    if (SymbolicOp.AddSymbol.Name) {
+      StringRef Name(SymbolicOp.AddSymbol.Name);
+      MCSymbol *Sym = Ctx->GetOrCreateSymbol(Name);
+      Add = MCSymbolRefExpr::Create(Sym, *Ctx);
+    } else {
+      Add = MCConstantExpr::Create(SymbolicOp.AddSymbol.Value, *Ctx);
+    }
+  }
+
+  const MCExpr *Sub = NULL;
+  if (SymbolicOp.SubtractSymbol.Present) {
+    if (SymbolicOp.SubtractSymbol.Name) {
+      StringRef Name(SymbolicOp.SubtractSymbol.Name);
+      MCSymbol *Sym = Ctx->GetOrCreateSymbol(Name);
+      Sub = MCSymbolRefExpr::Create(Sym, *Ctx);
+    } else {
+      Sub = MCConstantExpr::Create(SymbolicOp.SubtractSymbol.Value, *Ctx);
+    }
+  }
+
+  const MCExpr *Off = NULL;
+  if (SymbolicOp.Value != 0)
+    Off = MCConstantExpr::Create(SymbolicOp.Value, *Ctx);
+
+  const MCExpr *Expr;
+  if (Sub) {
+    const MCExpr *LHS;
+    if (Add)
+      LHS = MCBinaryExpr::CreateSub(Add, Sub, *Ctx);
+    else
+      LHS = MCUnaryExpr::CreateMinus(Sub, *Ctx);
+    if (Off != 0)
+      Expr = MCBinaryExpr::CreateAdd(LHS, Off, *Ctx);
+    else
+      Expr = LHS;
+  } else if (Add) {
+    if (Off != 0)
+      Expr = MCBinaryExpr::CreateAdd(Add, Off, *Ctx);
+    else
+      Expr = Add;
+  } else {
+    if (Off != 0)
+      Expr = Off;
+    else
+      Expr = MCConstantExpr::Create(0, *Ctx);
+  }
+
+  if (SymbolicOp.VariantKind == LLVMDisassembler_VariantKind_ARM_HI16)
+    MI.addOperand(MCOperand::CreateExpr(ARMMCExpr::CreateUpper16(Expr, *Ctx)));
+  else if (SymbolicOp.VariantKind == LLVMDisassembler_VariantKind_ARM_LO16)
+    MI.addOperand(MCOperand::CreateExpr(ARMMCExpr::CreateLower16(Expr, *Ctx)));
+  else if (SymbolicOp.VariantKind == LLVMDisassembler_VariantKind_None)
+    MI.addOperand(MCOperand::CreateExpr(Expr));
+  else
+    llvm_unreachable("bad SymbolicOp.VariantKind");
+
+  return true;
+}
+
+/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
+/// referenced by a load instruction with the base register that is the Pc.
+/// These can often be values in a literal pool near the Address of the
+/// instruction.  The Address of the instruction and its immediate Value are
+/// used as a possible literal pool entry.  The SymbolLookUp call back will
+/// return the name of a symbol referenced by the literal pool's entry if
+/// the referenced address is that of a symbol.  Or it will return a pointer to
+/// a literal 'C' string if the referenced address of the literal pool's entry
+/// is an address into a section with 'C' string literals.
+static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
+                                            const void *Decoder) {
+  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
+  LLVMSymbolLookupCallback SymbolLookUp = Dis->getLLVMSymbolLookupCallback();
+  if (SymbolLookUp) {
+    void *DisInfo = Dis->getDisInfoBlock();
+    uint64_t ReferenceType;
+    ReferenceType = LLVMDisassembler_ReferenceType_In_PCrel_Load;
+    const char *ReferenceName;
+    (void)SymbolLookUp(DisInfo, Value, &ReferenceType, Address, &ReferenceName);
+    if(ReferenceType == LLVMDisassembler_ReferenceType_Out_LitPool_SymAddr ||
+       ReferenceType == LLVMDisassembler_ReferenceType_Out_LitPool_CstrAddr)
+      (*Dis->CommentStream) << "literal pool for: " << ReferenceName;
+  }
+}
+
+// Thumb1 instructions don't have explicit S bits.  Rather, they
+// implicitly set CPSR.  Since it's not represented in the encoding, the
+// auto-generated decoder won't inject the CPSR operand.  We need to fix
+// that as a post-pass.
+static void AddThumb1SBit(MCInst &MI, bool InITBlock) {
+  const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
+  unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
+  MCInst::iterator I = MI.begin();
+  for (unsigned i = 0; i < NumOps; ++i, ++I) {
+    if (I == MI.end()) break;
+    if (OpInfo[i].isOptionalDef() && OpInfo[i].RegClass == ARM::CCRRegClassID) {
+      if (i > 0 && OpInfo[i-1].isPredicate()) continue;
+      MI.insert(I, MCOperand::CreateReg(InITBlock ? 0 : ARM::CPSR));
+      return;
+    }
+  }
+
+  MI.insert(I, MCOperand::CreateReg(InITBlock ? 0 : ARM::CPSR));
+}
+
+// Most Thumb instructions don't have explicit predicates in the
+// encoding, but rather get their predicates from IT context.  We need
+// to fix up the predicate operands using this context information as a
+// post-pass.
+MCDisassembler::DecodeStatus
+ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
+  MCDisassembler::DecodeStatus S = Success;
+
+  // A few instructions actually have predicates encoded in them.  Don't
+  // try to overwrite it if we're seeing one of those.
+  switch (MI.getOpcode()) {
+    case ARM::tBcc:
+    case ARM::t2Bcc:
+    case ARM::tCBZ:
+    case ARM::tCBNZ:
+    case ARM::tCPS:
+    case ARM::t2CPS3p:
+    case ARM::t2CPS2p:
+    case ARM::t2CPS1p:
+    case ARM::tMOVSr:
+    case ARM::tSETEND:
+      // Some instructions (mostly conditional branches) are not
+      // allowed in IT blocks.
+      if (ITBlock.instrInITBlock())
+        S = SoftFail;
+      else
+        return Success;
+      break;
+    case ARM::tB:
+    case ARM::t2B:
+    case ARM::t2TBB:
+    case ARM::t2TBH:
+      // Some instructions (mostly unconditional branches) can
+      // only appears at the end of, or outside of, an IT.
+      if (ITBlock.instrInITBlock() && !ITBlock.instrLastInITBlock())
+        S = SoftFail;
+      break;
+    default:
+      break;
+  }
+
+  // If we're in an IT block, base the predicate on that.  Otherwise,
+  // assume a predicate of AL.
+  unsigned CC;
+  CC = ITBlock.getITCC();
+  if (CC == 0xF) 
+    CC = ARMCC::AL;
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
+
+  const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
+  unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
+  MCInst::iterator I = MI.begin();
+  for (unsigned i = 0; i < NumOps; ++i, ++I) {
+    if (I == MI.end()) break;
+    if (OpInfo[i].isPredicate()) {
+      I = MI.insert(I, MCOperand::CreateImm(CC));
+      ++I;
+      if (CC == ARMCC::AL)
+        MI.insert(I, MCOperand::CreateReg(0));
+      else
+        MI.insert(I, MCOperand::CreateReg(ARM::CPSR));
+      return S;
+    }
+  }
+
+  I = MI.insert(I, MCOperand::CreateImm(CC));
+  ++I;
+  if (CC == ARMCC::AL)
+    MI.insert(I, MCOperand::CreateReg(0));
+  else
+    MI.insert(I, MCOperand::CreateReg(ARM::CPSR));
+
+  return S;
+}
+
+// Thumb VFP instructions are a special case.  Because we share their
+// encodings between ARM and Thumb modes, and they are predicable in ARM
+// mode, the auto-generated decoder will give them an (incorrect)
+// predicate operand.  We need to rewrite these operands based on the IT
+// context as a post-pass.
+void ThumbDisassembler::UpdateThumbVFPPredicate(MCInst &MI) const {
+  unsigned CC;
+  CC = ITBlock.getITCC();
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
+
+  const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
+  MCInst::iterator I = MI.begin();
+  unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
+  for (unsigned i = 0; i < NumOps; ++i, ++I) {
+    if (OpInfo[i].isPredicate() ) {
+      I->setImm(CC);
+      ++I;
+      if (CC == ARMCC::AL)
+        I->setReg(0);
+      else
+        I->setReg(ARM::CPSR);
+      return;
+    }
+  }
+}
+
+DecodeStatus ThumbDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
+                                               const MemoryObject &Region,
+                                               uint64_t Address,
+                                               raw_ostream &os,
+                                               raw_ostream &cs) const {
+  CommentStream = &cs;
+
+  uint8_t bytes[4];
+
+  assert((STI.getFeatureBits() & ARM::ModeThumb) &&
+         "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
+
+  // We want to read exactly 2 bytes of data.
+  if (Region.readBytes(Address, 2, (uint8_t*)bytes, NULL) == -1) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  uint16_t insn16 = (bytes[1] << 8) | bytes[0];
+  DecodeStatus result = decodeInstruction(DecoderTableThumb16, MI, insn16,
+                                          Address, this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 2;
+    Check(result, AddThumbPredicate(MI));
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableThumbSBit16, MI, insn16,
+                             Address, this, STI);
+  if (result) {
+    Size = 2;
+    bool InITBlock = ITBlock.instrInITBlock();
+    Check(result, AddThumbPredicate(MI));
+    AddThumb1SBit(MI, InITBlock);
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableThumb216, MI, insn16,
+                             Address, this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 2;
+
+    // Nested IT blocks are UNPREDICTABLE.  Must be checked before we add
+    // the Thumb predicate.
+    if (MI.getOpcode() == ARM::t2IT && ITBlock.instrInITBlock())
+      result = MCDisassembler::SoftFail;
+
+    Check(result, AddThumbPredicate(MI));
+
+    // If we find an IT instruction, we need to parse its condition
+    // code and mask operands so that we can apply them correctly
+    // to the subsequent instructions.
+    if (MI.getOpcode() == ARM::t2IT) {
+
+      unsigned Firstcond = MI.getOperand(0).getImm();
+      unsigned Mask = MI.getOperand(1).getImm();
+      ITBlock.setITState(Firstcond, Mask);
+    }
+
+    return result;
+  }
+
+  // We want to read exactly 4 bytes of data.
+  if (Region.readBytes(Address, 4, (uint8_t*)bytes, NULL) == -1) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  uint32_t insn32 = (bytes[3] <<  8) |
+                    (bytes[2] <<  0) |
+                    (bytes[1] << 24) |
+                    (bytes[0] << 16);
+  MI.clear();
+  result = decodeInstruction(DecoderTableThumb32, MI, insn32, Address,
+                             this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    bool InITBlock = ITBlock.instrInITBlock();
+    Check(result, AddThumbPredicate(MI));
+    AddThumb1SBit(MI, InITBlock);
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableThumb232, MI, insn32, Address,
+                             this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    Check(result, AddThumbPredicate(MI));
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableVFP32, MI, insn32, Address, this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    UpdateThumbVFPPredicate(MI);
+    return result;
+  }
+
+  MI.clear();
+  result = decodeInstruction(DecoderTableNEONDup32, MI, insn32, Address,
+                             this, STI);
+  if (result != MCDisassembler::Fail) {
+    Size = 4;
+    Check(result, AddThumbPredicate(MI));
+    return result;
+  }
+
+  if (fieldFromInstruction(insn32, 24, 8) == 0xF9) {
+    MI.clear();
+    uint32_t NEONLdStInsn = insn32;
+    NEONLdStInsn &= 0xF0FFFFFF;
+    NEONLdStInsn |= 0x04000000;
+    result = decodeInstruction(DecoderTableNEONLoadStore32, MI, NEONLdStInsn,
+                               Address, this, STI);
+    if (result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(result, AddThumbPredicate(MI));
+      return result;
+    }
+  }
+
+  if (fieldFromInstruction(insn32, 24, 4) == 0xF) {
+    MI.clear();
+    uint32_t NEONDataInsn = insn32;
+    NEONDataInsn &= 0xF0FFFFFF; // Clear bits 27-24
+    NEONDataInsn |= (NEONDataInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
+    NEONDataInsn |= 0x12000000; // Set bits 28 and 25
+    result = decodeInstruction(DecoderTableNEONData32, MI, NEONDataInsn,
+                               Address, this, STI);
+    if (result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(result, AddThumbPredicate(MI));
+      return result;
+    }
+  }
+
+  Size = 0;
+  return MCDisassembler::Fail;
+}
+
+
+extern "C" void LLVMInitializeARMDisassembler() {
+  TargetRegistry::RegisterMCDisassembler(TheARMTarget,
+                                         createARMDisassembler);
+  TargetRegistry::RegisterMCDisassembler(TheThumbTarget,
+                                         createThumbDisassembler);
+}
+
+static const uint16_t GPRDecoderTable[] = {
+  ARM::R0, ARM::R1, ARM::R2, ARM::R3,
+  ARM::R4, ARM::R5, ARM::R6, ARM::R7,
+  ARM::R8, ARM::R9, ARM::R10, ARM::R11,
+  ARM::R12, ARM::SP, ARM::LR, ARM::PC
+};
+
+static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+
+  unsigned Register = GPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::CreateReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus
+DecodeGPRnopcRegisterClass(MCInst &Inst, unsigned RegNo,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  
+  if (RegNo == 15) 
+    S = MCDisassembler::SoftFail;
+
+  Check(S, DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder));
+
+  return S;
+}
+
+static DecodeStatus DecodetGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 7)
+    return MCDisassembler::Fail;
+  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodetcGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  unsigned Register = 0;
+  switch (RegNo) {
+    case 0:
+      Register = ARM::R0;
+      break;
+    case 1:
+      Register = ARM::R1;
+      break;
+    case 2:
+      Register = ARM::R2;
+      break;
+    case 3:
+      Register = ARM::R3;
+      break;
+    case 9:
+      Register = ARM::R9;
+      break;
+    case 12:
+      Register = ARM::R12;
+      break;
+    default:
+      return MCDisassembler::Fail;
+    }
+
+  Inst.addOperand(MCOperand::CreateReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo == 13 || RegNo == 15) return MCDisassembler::Fail;
+  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static const uint16_t SPRDecoderTable[] = {
+     ARM::S0,  ARM::S1,  ARM::S2,  ARM::S3,
+     ARM::S4,  ARM::S5,  ARM::S6,  ARM::S7,
+     ARM::S8,  ARM::S9, ARM::S10, ARM::S11,
+    ARM::S12, ARM::S13, ARM::S14, ARM::S15,
+    ARM::S16, ARM::S17, ARM::S18, ARM::S19,
+    ARM::S20, ARM::S21, ARM::S22, ARM::S23,
+    ARM::S24, ARM::S25, ARM::S26, ARM::S27,
+    ARM::S28, ARM::S29, ARM::S30, ARM::S31
+};
+
+static DecodeStatus DecodeSPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+
+  unsigned Register = SPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::CreateReg(Register));
+  return MCDisassembler::Success;
+}
+
+static const uint16_t DPRDecoderTable[] = {
+     ARM::D0,  ARM::D1,  ARM::D2,  ARM::D3,
+     ARM::D4,  ARM::D5,  ARM::D6,  ARM::D7,
+     ARM::D8,  ARM::D9, ARM::D10, ARM::D11,
+    ARM::D12, ARM::D13, ARM::D14, ARM::D15,
+    ARM::D16, ARM::D17, ARM::D18, ARM::D19,
+    ARM::D20, ARM::D21, ARM::D22, ARM::D23,
+    ARM::D24, ARM::D25, ARM::D26, ARM::D27,
+    ARM::D28, ARM::D29, ARM::D30, ARM::D31
+};
+
+static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+
+  unsigned Register = DPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::CreateReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeDPR_8RegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 7)
+    return MCDisassembler::Fail;
+  return DecodeDPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus
+DecodeDPR_VFP2RegisterClass(MCInst &Inst, unsigned RegNo,
+                            uint64_t Address, const void *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+  return DecodeDPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static const uint16_t QPRDecoderTable[] = {
+     ARM::Q0,  ARM::Q1,  ARM::Q2,  ARM::Q3,
+     ARM::Q4,  ARM::Q5,  ARM::Q6,  ARM::Q7,
+     ARM::Q8,  ARM::Q9, ARM::Q10, ARM::Q11,
+    ARM::Q12, ARM::Q13, ARM::Q14, ARM::Q15
+};
+
+
+static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+  RegNo >>= 1;
+
+  unsigned Register = QPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::CreateReg(Register));
+  return MCDisassembler::Success;
+}
+
+static const uint16_t DPairDecoderTable[] = {
+  ARM::Q0,  ARM::D1_D2,   ARM::Q1,  ARM::D3_D4,   ARM::Q2,  ARM::D5_D6,
+  ARM::Q3,  ARM::D7_D8,   ARM::Q4,  ARM::D9_D10,  ARM::Q5,  ARM::D11_D12,
+  ARM::Q6,  ARM::D13_D14, ARM::Q7,  ARM::D15_D16, ARM::Q8,  ARM::D17_D18,
+  ARM::Q9,  ARM::D19_D20, ARM::Q10, ARM::D21_D22, ARM::Q11, ARM::D23_D24,
+  ARM::Q12, ARM::D25_D26, ARM::Q13, ARM::D27_D28, ARM::Q14, ARM::D29_D30,
+  ARM::Q15
+};
+
+static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 30)
+    return MCDisassembler::Fail;
+
+  unsigned Register = DPairDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::CreateReg(Register));
+  return MCDisassembler::Success;
+}
+
+static const uint16_t DPairSpacedDecoderTable[] = {
+  ARM::D0_D2,   ARM::D1_D3,   ARM::D2_D4,   ARM::D3_D5,
+  ARM::D4_D6,   ARM::D5_D7,   ARM::D6_D8,   ARM::D7_D9,
+  ARM::D8_D10,  ARM::D9_D11,  ARM::D10_D12, ARM::D11_D13,
+  ARM::D12_D14, ARM::D13_D15, ARM::D14_D16, ARM::D15_D17,
+  ARM::D16_D18, ARM::D17_D19, ARM::D18_D20, ARM::D19_D21,
+  ARM::D20_D22, ARM::D21_D23, ARM::D22_D24, ARM::D23_D25,
+  ARM::D24_D26, ARM::D25_D27, ARM::D26_D28, ARM::D27_D29,
+  ARM::D28_D30, ARM::D29_D31
+};
+
+static DecodeStatus DecodeDPairSpacedRegisterClass(MCInst &Inst,
+                                                   unsigned RegNo,
+                                                   uint64_t Address,
+                                                   const void *Decoder) {
+  if (RegNo > 29)
+    return MCDisassembler::Fail;
+
+  unsigned Register = DPairSpacedDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::CreateReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodePredicateOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  if (Val == 0xF) return MCDisassembler::Fail;
+  // AL predicate is not allowed on Thumb1 branches.
+  if (Inst.getOpcode() == ARM::tBcc && Val == 0xE)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(Val));
+  if (Val == ARMCC::AL) {
+    Inst.addOperand(MCOperand::CreateReg(0));
+  } else
+    Inst.addOperand(MCOperand::CreateReg(ARM::CPSR));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeCCOutOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  if (Val)
+    Inst.addOperand(MCOperand::CreateReg(ARM::CPSR));
+  else
+    Inst.addOperand(MCOperand::CreateReg(0));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeSOImmOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  uint32_t imm = Val & 0xFF;
+  uint32_t rot = (Val & 0xF00) >> 7;
+  uint32_t rot_imm = (imm >> rot) | (imm << ((32-rot) & 0x1F));
+  Inst.addOperand(MCOperand::CreateImm(rot_imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeSORegImmOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rm = fieldFromInstruction(Val, 0, 4);
+  unsigned type = fieldFromInstruction(Val, 5, 2);
+  unsigned imm = fieldFromInstruction(Val, 7, 5);
+
+  // Register-immediate
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  ARM_AM::ShiftOpc Shift = ARM_AM::lsl;
+  switch (type) {
+    case 0:
+      Shift = ARM_AM::lsl;
+      break;
+    case 1:
+      Shift = ARM_AM::lsr;
+      break;
+    case 2:
+      Shift = ARM_AM::asr;
+      break;
+    case 3:
+      Shift = ARM_AM::ror;
+      break;
+  }
+
+  if (Shift == ARM_AM::ror && imm == 0)
+    Shift = ARM_AM::rrx;
+
+  unsigned Op = Shift | (imm << 3);
+  Inst.addOperand(MCOperand::CreateImm(Op));
+
+  return S;
+}
+
+static DecodeStatus DecodeSORegRegOperand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rm = fieldFromInstruction(Val, 0, 4);
+  unsigned type = fieldFromInstruction(Val, 5, 2);
+  unsigned Rs = fieldFromInstruction(Val, 8, 4);
+
+  // Register-register
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rs, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  ARM_AM::ShiftOpc Shift = ARM_AM::lsl;
+  switch (type) {
+    case 0:
+      Shift = ARM_AM::lsl;
+      break;
+    case 1:
+      Shift = ARM_AM::lsr;
+      break;
+    case 2:
+      Shift = ARM_AM::asr;
+      break;
+    case 3:
+      Shift = ARM_AM::ror;
+      break;
+  }
+
+  Inst.addOperand(MCOperand::CreateImm(Shift));
+
+  return S;
+}
+
+static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  bool writebackLoad = false;
+  unsigned writebackReg = 0;
+  switch (Inst.getOpcode()) {
+    default:
+      break;
+    case ARM::LDMIA_UPD:
+    case ARM::LDMDB_UPD:
+    case ARM::LDMIB_UPD:
+    case ARM::LDMDA_UPD:
+    case ARM::t2LDMIA_UPD:
+    case ARM::t2LDMDB_UPD:
+      writebackLoad = true;
+      writebackReg = Inst.getOperand(0).getReg();
+      break;
+  }
+
+  // Empty register lists are not allowed.
+  if (CountPopulation_32(Val) == 0) return MCDisassembler::Fail;
+  for (unsigned i = 0; i < 16; ++i) {
+    if (Val & (1 << i)) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, i, Address, Decoder)))
+        return MCDisassembler::Fail;
+      // Writeback not allowed if Rn is in the target list.
+      if (writebackLoad && writebackReg == Inst.end()[-1].getReg())
+        Check(S, MCDisassembler::SoftFail);
+    }
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeSPRRegListOperand(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Vd = fieldFromInstruction(Val, 8, 5);
+  unsigned regs = fieldFromInstruction(Val, 0, 8);
+
+  if (!Check(S, DecodeSPRRegisterClass(Inst, Vd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  for (unsigned i = 0; i < (regs - 1); ++i) {
+    if (!Check(S, DecodeSPRRegisterClass(Inst, ++Vd, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeDPRRegListOperand(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Vd = fieldFromInstruction(Val, 8, 5);
+  unsigned regs = fieldFromInstruction(Val, 0, 8);
+
+  regs = regs >> 1;
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Vd, Address, Decoder)))
+      return MCDisassembler::Fail;
+  for (unsigned i = 0; i < (regs - 1); ++i) {
+    if (!Check(S, DecodeDPRRegisterClass(Inst, ++Vd, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeBitfieldMaskOperand(MCInst &Inst, unsigned Val,
+                                      uint64_t Address, const void *Decoder) {
+  // This operand encodes a mask of contiguous zeros between a specified MSB
+  // and LSB.  To decode it, we create the mask of all bits MSB-and-lower,
+  // the mask of all bits LSB-and-lower, and then xor them to create
+  // the mask of that's all ones on [msb, lsb].  Finally we not it to
+  // create the final mask.
+  unsigned msb = fieldFromInstruction(Val, 5, 5);
+  unsigned lsb = fieldFromInstruction(Val, 0, 5);
+
+  DecodeStatus S = MCDisassembler::Success;
+  if (lsb > msb) Check(S, MCDisassembler::SoftFail);
+
+  uint32_t msb_mask = 0xFFFFFFFF;
+  if (msb != 31) msb_mask = (1U << (msb+1)) - 1;
+  uint32_t lsb_mask = (1U << lsb) - 1;
+
+  Inst.addOperand(MCOperand::CreateImm(~(msb_mask ^ lsb_mask)));
+  return S;
+}
+
+static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned CRd = fieldFromInstruction(Insn, 12, 4);
+  unsigned coproc = fieldFromInstruction(Insn, 8, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 8);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned U = fieldFromInstruction(Insn, 23, 1);
+
+  switch (Inst.getOpcode()) {
+    case ARM::LDC_OFFSET:
+    case ARM::LDC_PRE:
+    case ARM::LDC_POST:
+    case ARM::LDC_OPTION:
+    case ARM::LDCL_OFFSET:
+    case ARM::LDCL_PRE:
+    case ARM::LDCL_POST:
+    case ARM::LDCL_OPTION:
+    case ARM::STC_OFFSET:
+    case ARM::STC_PRE:
+    case ARM::STC_POST:
+    case ARM::STC_OPTION:
+    case ARM::STCL_OFFSET:
+    case ARM::STCL_PRE:
+    case ARM::STCL_POST:
+    case ARM::STCL_OPTION:
+    case ARM::t2LDC_OFFSET:
+    case ARM::t2LDC_PRE:
+    case ARM::t2LDC_POST:
+    case ARM::t2LDC_OPTION:
+    case ARM::t2LDCL_OFFSET:
+    case ARM::t2LDCL_PRE:
+    case ARM::t2LDCL_POST:
+    case ARM::t2LDCL_OPTION:
+    case ARM::t2STC_OFFSET:
+    case ARM::t2STC_PRE:
+    case ARM::t2STC_POST:
+    case ARM::t2STC_OPTION:
+    case ARM::t2STCL_OFFSET:
+    case ARM::t2STCL_PRE:
+    case ARM::t2STCL_POST:
+    case ARM::t2STCL_OPTION:
+      if (coproc == 0xA || coproc == 0xB)
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  Inst.addOperand(MCOperand::CreateImm(coproc));
+  Inst.addOperand(MCOperand::CreateImm(CRd));
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  switch (Inst.getOpcode()) {
+    case ARM::t2LDC2_OFFSET:
+    case ARM::t2LDC2L_OFFSET:
+    case ARM::t2LDC2_PRE:
+    case ARM::t2LDC2L_PRE:
+    case ARM::t2STC2_OFFSET:
+    case ARM::t2STC2L_OFFSET:
+    case ARM::t2STC2_PRE:
+    case ARM::t2STC2L_PRE:
+    case ARM::LDC2_OFFSET:
+    case ARM::LDC2L_OFFSET:
+    case ARM::LDC2_PRE:
+    case ARM::LDC2L_PRE:
+    case ARM::STC2_OFFSET:
+    case ARM::STC2L_OFFSET:
+    case ARM::STC2_PRE:
+    case ARM::STC2L_PRE:
+    case ARM::t2LDC_OFFSET:
+    case ARM::t2LDCL_OFFSET:
+    case ARM::t2LDC_PRE:
+    case ARM::t2LDCL_PRE:
+    case ARM::t2STC_OFFSET:
+    case ARM::t2STCL_OFFSET:
+    case ARM::t2STC_PRE:
+    case ARM::t2STCL_PRE:
+    case ARM::LDC_OFFSET:
+    case ARM::LDCL_OFFSET:
+    case ARM::LDC_PRE:
+    case ARM::LDCL_PRE:
+    case ARM::STC_OFFSET:
+    case ARM::STCL_OFFSET:
+    case ARM::STC_PRE:
+    case ARM::STCL_PRE:
+      imm = ARM_AM::getAM5Opc(U ? ARM_AM::add : ARM_AM::sub, imm);
+      Inst.addOperand(MCOperand::CreateImm(imm));
+      break;
+    case ARM::t2LDC2_POST:
+    case ARM::t2LDC2L_POST:
+    case ARM::t2STC2_POST:
+    case ARM::t2STC2L_POST:
+    case ARM::LDC2_POST:
+    case ARM::LDC2L_POST:
+    case ARM::STC2_POST:
+    case ARM::STC2L_POST:
+    case ARM::t2LDC_POST:
+    case ARM::t2LDCL_POST:
+    case ARM::t2STC_POST:
+    case ARM::t2STCL_POST:
+    case ARM::LDC_POST:
+    case ARM::LDCL_POST:
+    case ARM::STC_POST:
+    case ARM::STCL_POST:
+      imm |= U << 8;
+      // fall through.
+    default:
+      // The 'option' variant doesn't encode 'U' in the immediate since
+      // the immediate is unsigned [0,255].
+      Inst.addOperand(MCOperand::CreateImm(imm));
+      break;
+  }
+
+  switch (Inst.getOpcode()) {
+    case ARM::LDC_OFFSET:
+    case ARM::LDC_PRE:
+    case ARM::LDC_POST:
+    case ARM::LDC_OPTION:
+    case ARM::LDCL_OFFSET:
+    case ARM::LDCL_PRE:
+    case ARM::LDCL_POST:
+    case ARM::LDCL_OPTION:
+    case ARM::STC_OFFSET:
+    case ARM::STC_PRE:
+    case ARM::STC_POST:
+    case ARM::STC_OPTION:
+    case ARM::STCL_OFFSET:
+    case ARM::STCL_PRE:
+    case ARM::STCL_POST:
+    case ARM::STCL_OPTION:
+      if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  return S;
+}
+
+static DecodeStatus
+DecodeAddrMode2IdxInstruction(MCInst &Inst, unsigned Insn,
+                              uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 12);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned reg = fieldFromInstruction(Insn, 25, 1);
+  unsigned P = fieldFromInstruction(Insn, 24, 1);
+  unsigned W = fieldFromInstruction(Insn, 21, 1);
+
+  // On stores, the writeback operand precedes Rt.
+  switch (Inst.getOpcode()) {
+    case ARM::STR_POST_IMM:
+    case ARM::STR_POST_REG:
+    case ARM::STRB_POST_IMM:
+    case ARM::STRB_POST_REG:
+    case ARM::STRT_POST_REG:
+    case ARM::STRT_POST_IMM:
+    case ARM::STRBT_POST_REG:
+    case ARM::STRBT_POST_IMM:
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  // On loads, the writeback operand comes after Rt.
+  switch (Inst.getOpcode()) {
+    case ARM::LDR_POST_IMM:
+    case ARM::LDR_POST_REG:
+    case ARM::LDRB_POST_IMM:
+    case ARM::LDRB_POST_REG:
+    case ARM::LDRBT_POST_REG:
+    case ARM::LDRBT_POST_IMM:
+    case ARM::LDRT_POST_REG:
+    case ARM::LDRT_POST_IMM:
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  ARM_AM::AddrOpc Op = ARM_AM::add;
+  if (!fieldFromInstruction(Insn, 23, 1))
+    Op = ARM_AM::sub;
+
+  bool writeback = (P == 0) || (W == 1);
+  unsigned idx_mode = 0;
+  if (P && writeback)
+    idx_mode = ARMII::IndexModePre;
+  else if (!P && writeback)
+    idx_mode = ARMII::IndexModePost;
+
+  if (writeback && (Rn == 15 || Rn == Rt))
+    S = MCDisassembler::SoftFail; // UNPREDICTABLE
+
+  if (reg) {
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rm, Address, Decoder)))
+      return MCDisassembler::Fail;
+    ARM_AM::ShiftOpc Opc = ARM_AM::lsl;
+    switch( fieldFromInstruction(Insn, 5, 2)) {
+      case 0:
+        Opc = ARM_AM::lsl;
+        break;
+      case 1:
+        Opc = ARM_AM::lsr;
+        break;
+      case 2:
+        Opc = ARM_AM::asr;
+        break;
+      case 3:
+        Opc = ARM_AM::ror;
+        break;
+      default:
+        return MCDisassembler::Fail;
+    }
+    unsigned amt = fieldFromInstruction(Insn, 7, 5);
+    if (Opc == ARM_AM::ror && amt == 0)
+      Opc = ARM_AM::rrx;
+    unsigned imm = ARM_AM::getAM2Opc(Op, amt, Opc, idx_mode);
+
+    Inst.addOperand(MCOperand::CreateImm(imm));
+  } else {
+    Inst.addOperand(MCOperand::CreateReg(0));
+    unsigned tmp = ARM_AM::getAM2Opc(Op, imm, ARM_AM::lsl, idx_mode);
+    Inst.addOperand(MCOperand::CreateImm(tmp));
+  }
+
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeSORegMemOperand(MCInst &Inst, unsigned Val,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 13, 4);
+  unsigned Rm = fieldFromInstruction(Val,  0, 4);
+  unsigned type = fieldFromInstruction(Val, 5, 2);
+  unsigned imm = fieldFromInstruction(Val, 7, 5);
+  unsigned U = fieldFromInstruction(Val, 12, 1);
+
+  ARM_AM::ShiftOpc ShOp = ARM_AM::lsl;
+  switch (type) {
+    case 0:
+      ShOp = ARM_AM::lsl;
+      break;
+    case 1:
+      ShOp = ARM_AM::lsr;
+      break;
+    case 2:
+      ShOp = ARM_AM::asr;
+      break;
+    case 3:
+      ShOp = ARM_AM::ror;
+      break;
+  }
+
+  if (ShOp == ARM_AM::ror && imm == 0)
+    ShOp = ARM_AM::rrx;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  unsigned shift;
+  if (U)
+    shift = ARM_AM::getAM2Opc(ARM_AM::add, imm, ShOp);
+  else
+    shift = ARM_AM::getAM2Opc(ARM_AM::sub, imm, ShOp);
+  Inst.addOperand(MCOperand::CreateImm(shift));
+
+  return S;
+}
+
+static DecodeStatus
+DecodeAddrMode3Instruction(MCInst &Inst, unsigned Insn,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned type = fieldFromInstruction(Insn, 22, 1);
+  unsigned imm = fieldFromInstruction(Insn, 8, 4);
+  unsigned U = ((~fieldFromInstruction(Insn, 23, 1)) & 1) << 8;
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned W = fieldFromInstruction(Insn, 21, 1);
+  unsigned P = fieldFromInstruction(Insn, 24, 1);
+  unsigned Rt2 = Rt + 1;
+
+  bool writeback = (W == 1) | (P == 0);
+
+  // For {LD,ST}RD, Rt must be even, else undefined.
+  switch (Inst.getOpcode()) {
+    case ARM::STRD:
+    case ARM::STRD_PRE:
+    case ARM::STRD_POST:
+    case ARM::LDRD:
+    case ARM::LDRD_PRE:
+    case ARM::LDRD_POST:
+      if (Rt & 0x1) S = MCDisassembler::SoftFail;
+      break;
+    default:
+      break;
+  }
+  switch (Inst.getOpcode()) {
+    case ARM::STRD:
+    case ARM::STRD_PRE:
+    case ARM::STRD_POST:
+      if (P == 0 && W == 1)
+        S = MCDisassembler::SoftFail;
+      
+      if (writeback && (Rn == 15 || Rn == Rt || Rn == Rt2))
+        S = MCDisassembler::SoftFail;
+      if (type && Rm == 15)
+        S = MCDisassembler::SoftFail;
+      if (Rt2 == 15)
+        S = MCDisassembler::SoftFail;
+      if (!type && fieldFromInstruction(Insn, 8, 4))
+        S = MCDisassembler::SoftFail;
+      break;
+    case ARM::STRH:
+    case ARM::STRH_PRE:
+    case ARM::STRH_POST:
+      if (Rt == 15)
+        S = MCDisassembler::SoftFail;
+      if (writeback && (Rn == 15 || Rn == Rt))
+        S = MCDisassembler::SoftFail;
+      if (!type && Rm == 15)
+        S = MCDisassembler::SoftFail;
+      break;
+    case ARM::LDRD:
+    case ARM::LDRD_PRE:
+    case ARM::LDRD_POST:
+      if (type && Rn == 15){
+        if (Rt2 == 15)
+          S = MCDisassembler::SoftFail;
+        break;
+      }
+      if (P == 0 && W == 1)
+        S = MCDisassembler::SoftFail;
+      if (!type && (Rt2 == 15 || Rm == 15 || Rm == Rt || Rm == Rt2))
+        S = MCDisassembler::SoftFail;
+      if (!type && writeback && Rn == 15)
+        S = MCDisassembler::SoftFail;
+      if (writeback && (Rn == Rt || Rn == Rt2))
+        S = MCDisassembler::SoftFail;
+      break;
+    case ARM::LDRH:
+    case ARM::LDRH_PRE:
+    case ARM::LDRH_POST:
+      if (type && Rn == 15){
+        if (Rt == 15)
+          S = MCDisassembler::SoftFail;
+        break;
+      }
+      if (Rt == 15)
+        S = MCDisassembler::SoftFail;
+      if (!type && Rm == 15)
+        S = MCDisassembler::SoftFail;
+      if (!type && writeback && (Rn == 15 || Rn == Rt))
+        S = MCDisassembler::SoftFail;
+      break;
+    case ARM::LDRSH:
+    case ARM::LDRSH_PRE:
+    case ARM::LDRSH_POST:
+    case ARM::LDRSB:
+    case ARM::LDRSB_PRE:
+    case ARM::LDRSB_POST:
+      if (type && Rn == 15){
+        if (Rt == 15)
+          S = MCDisassembler::SoftFail;
+        break;
+      }
+      if (type && (Rt == 15 || (writeback && Rn == Rt)))
+        S = MCDisassembler::SoftFail;
+      if (!type && (Rt == 15 || Rm == 15))
+        S = MCDisassembler::SoftFail;
+      if (!type && writeback && (Rn == 15 || Rn == Rt))
+        S = MCDisassembler::SoftFail;
+      break;
+    default:
+      break;
+  }
+
+  if (writeback) { // Writeback
+    if (P)
+      U |= ARMII::IndexModePre << 9;
+    else
+      U |= ARMII::IndexModePost << 9;
+
+    // On stores, the writeback operand precedes Rt.
+    switch (Inst.getOpcode()) {
+    case ARM::STRD:
+    case ARM::STRD_PRE:
+    case ARM::STRD_POST:
+    case ARM::STRH:
+    case ARM::STRH_PRE:
+    case ARM::STRH_POST:
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  switch (Inst.getOpcode()) {
+    case ARM::STRD:
+    case ARM::STRD_PRE:
+    case ARM::STRD_POST:
+    case ARM::LDRD:
+    case ARM::LDRD_PRE:
+    case ARM::LDRD_POST:
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rt+1, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  if (writeback) {
+    // On loads, the writeback operand comes after Rt.
+    switch (Inst.getOpcode()) {
+    case ARM::LDRD:
+    case ARM::LDRD_PRE:
+    case ARM::LDRD_POST:
+    case ARM::LDRH:
+    case ARM::LDRH_PRE:
+    case ARM::LDRH_POST:
+    case ARM::LDRSH:
+    case ARM::LDRSH_PRE:
+    case ARM::LDRSH_POST:
+    case ARM::LDRSB:
+    case ARM::LDRSB_PRE:
+    case ARM::LDRSB_POST:
+    case ARM::LDRHTr:
+    case ARM::LDRSBTr:
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (type) {
+    Inst.addOperand(MCOperand::CreateReg(0));
+    Inst.addOperand(MCOperand::CreateImm(U | (imm << 4) | Rm));
+  } else {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+    Inst.addOperand(MCOperand::CreateImm(U));
+  }
+
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeRFEInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned mode = fieldFromInstruction(Insn, 23, 2);
+
+  switch (mode) {
+    case 0:
+      mode = ARM_AM::da;
+      break;
+    case 1:
+      mode = ARM_AM::ia;
+      break;
+    case 2:
+      mode = ARM_AM::db;
+      break;
+    case 3:
+      mode = ARM_AM::ib;
+      break;
+  }
+
+  Inst.addOperand(MCOperand::CreateImm(mode));
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeMemMultipleWritebackInstruction(MCInst &Inst,
+                                  unsigned Insn,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned reglist = fieldFromInstruction(Insn, 0, 16);
+
+  if (pred == 0xF) {
+    switch (Inst.getOpcode()) {
+      case ARM::LDMDA:
+        Inst.setOpcode(ARM::RFEDA);
+        break;
+      case ARM::LDMDA_UPD:
+        Inst.setOpcode(ARM::RFEDA_UPD);
+        break;
+      case ARM::LDMDB:
+        Inst.setOpcode(ARM::RFEDB);
+        break;
+      case ARM::LDMDB_UPD:
+        Inst.setOpcode(ARM::RFEDB_UPD);
+        break;
+      case ARM::LDMIA:
+        Inst.setOpcode(ARM::RFEIA);
+        break;
+      case ARM::LDMIA_UPD:
+        Inst.setOpcode(ARM::RFEIA_UPD);
+        break;
+      case ARM::LDMIB:
+        Inst.setOpcode(ARM::RFEIB);
+        break;
+      case ARM::LDMIB_UPD:
+        Inst.setOpcode(ARM::RFEIB_UPD);
+        break;
+      case ARM::STMDA:
+        Inst.setOpcode(ARM::SRSDA);
+        break;
+      case ARM::STMDA_UPD:
+        Inst.setOpcode(ARM::SRSDA_UPD);
+        break;
+      case ARM::STMDB:
+        Inst.setOpcode(ARM::SRSDB);
+        break;
+      case ARM::STMDB_UPD:
+        Inst.setOpcode(ARM::SRSDB_UPD);
+        break;
+      case ARM::STMIA:
+        Inst.setOpcode(ARM::SRSIA);
+        break;
+      case ARM::STMIA_UPD:
+        Inst.setOpcode(ARM::SRSIA_UPD);
+        break;
+      case ARM::STMIB:
+        Inst.setOpcode(ARM::SRSIB);
+        break;
+      case ARM::STMIB_UPD:
+        Inst.setOpcode(ARM::SRSIB_UPD);
+        break;
+      default:
+        if (!Check(S, MCDisassembler::Fail)) return MCDisassembler::Fail;
+    }
+
+    // For stores (which become SRS's, the only operand is the mode.
+    if (fieldFromInstruction(Insn, 20, 1) == 0) {
+      Inst.addOperand(
+          MCOperand::CreateImm(fieldFromInstruction(Insn, 0, 4)));
+      return S;
+    }
+
+    return DecodeRFEInstruction(Inst, Insn, Address, Decoder);
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail; // Tied
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeRegListOperand(Inst, reglist, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeCPSInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  unsigned imod = fieldFromInstruction(Insn, 18, 2);
+  unsigned M = fieldFromInstruction(Insn, 17, 1);
+  unsigned iflags = fieldFromInstruction(Insn, 6, 3);
+  unsigned mode = fieldFromInstruction(Insn, 0, 5);
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  // imod == '01' --> UNPREDICTABLE
+  // NOTE: Even though this is technically UNPREDICTABLE, we choose to
+  // return failure here.  The '01' imod value is unprintable, so there's
+  // nothing useful we could do even if we returned UNPREDICTABLE.
+
+  if (imod == 1) return MCDisassembler::Fail;
+
+  if (imod && M) {
+    Inst.setOpcode(ARM::CPS3p);
+    Inst.addOperand(MCOperand::CreateImm(imod));
+    Inst.addOperand(MCOperand::CreateImm(iflags));
+    Inst.addOperand(MCOperand::CreateImm(mode));
+  } else if (imod && !M) {
+    Inst.setOpcode(ARM::CPS2p);
+    Inst.addOperand(MCOperand::CreateImm(imod));
+    Inst.addOperand(MCOperand::CreateImm(iflags));
+    if (mode) S = MCDisassembler::SoftFail;
+  } else if (!imod && M) {
+    Inst.setOpcode(ARM::CPS1p);
+    Inst.addOperand(MCOperand::CreateImm(mode));
+    if (iflags) S = MCDisassembler::SoftFail;
+  } else {
+    // imod == '00' && M == '0' --> UNPREDICTABLE
+    Inst.setOpcode(ARM::CPS1p);
+    Inst.addOperand(MCOperand::CreateImm(mode));
+    S = MCDisassembler::SoftFail;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeT2CPSInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  unsigned imod = fieldFromInstruction(Insn, 9, 2);
+  unsigned M = fieldFromInstruction(Insn, 8, 1);
+  unsigned iflags = fieldFromInstruction(Insn, 5, 3);
+  unsigned mode = fieldFromInstruction(Insn, 0, 5);
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  // imod == '01' --> UNPREDICTABLE
+  // NOTE: Even though this is technically UNPREDICTABLE, we choose to
+  // return failure here.  The '01' imod value is unprintable, so there's
+  // nothing useful we could do even if we returned UNPREDICTABLE.
+
+  if (imod == 1) return MCDisassembler::Fail;
+
+  if (imod && M) {
+    Inst.setOpcode(ARM::t2CPS3p);
+    Inst.addOperand(MCOperand::CreateImm(imod));
+    Inst.addOperand(MCOperand::CreateImm(iflags));
+    Inst.addOperand(MCOperand::CreateImm(mode));
+  } else if (imod && !M) {
+    Inst.setOpcode(ARM::t2CPS2p);
+    Inst.addOperand(MCOperand::CreateImm(imod));
+    Inst.addOperand(MCOperand::CreateImm(iflags));
+    if (mode) S = MCDisassembler::SoftFail;
+  } else if (!imod && M) {
+    Inst.setOpcode(ARM::t2CPS1p);
+    Inst.addOperand(MCOperand::CreateImm(mode));
+    if (iflags) S = MCDisassembler::SoftFail;
+  } else {
+    // imod == '00' && M == '0' --> UNPREDICTABLE
+    Inst.setOpcode(ARM::t2CPS1p);
+    Inst.addOperand(MCOperand::CreateImm(mode));
+    S = MCDisassembler::SoftFail;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeT2MOVTWInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 8, 4);
+  unsigned imm = 0;
+
+  imm |= (fieldFromInstruction(Insn, 0, 8) << 0);
+  imm |= (fieldFromInstruction(Insn, 12, 3) << 8);
+  imm |= (fieldFromInstruction(Insn, 16, 4) << 12);
+  imm |= (fieldFromInstruction(Insn, 26, 1) << 11);
+
+  if (Inst.getOpcode() == ARM::t2MOVTi16)
+    if (!Check(S, DecoderGPRRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (!tryAddingSymbolicOperand(Address, imm, false, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(imm));
+
+  return S;
+}
+
+static DecodeStatus DecodeArmMOVTWInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned imm = 0;
+
+  imm |= (fieldFromInstruction(Insn, 0, 12) << 0);
+  imm |= (fieldFromInstruction(Insn, 16, 4) << 12);
+
+  if (Inst.getOpcode() == ARM::MOVTi16)
+    if (!Check(S, DecoderGPRRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (!tryAddingSymbolicOperand(Address, imm, false, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(imm));
+
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeSMLAInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 8, 4);
+  unsigned Ra = fieldFromInstruction(Insn, 12, 4);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+
+  if (pred == 0xF)
+    return DecodeCPSInstruction(Inst, Insn, Address, Decoder);
+
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Ra, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeAddrModeImm12Operand(MCInst &Inst, unsigned Val,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned add = fieldFromInstruction(Val, 12, 1);
+  unsigned imm = fieldFromInstruction(Val, 0, 12);
+  unsigned Rn = fieldFromInstruction(Val, 13, 4);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (!add) imm *= -1;
+  if (imm == 0 && !add) imm = INT32_MIN;
+  Inst.addOperand(MCOperand::CreateImm(imm));
+  if (Rn == 15)
+    tryAddingPcLoadReferenceComment(Address, Address + imm + 8, Decoder);
+
+  return S;
+}
+
+static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 9, 4);
+  unsigned U = fieldFromInstruction(Val, 8, 1);
+  unsigned imm = fieldFromInstruction(Val, 0, 8);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (U)
+    Inst.addOperand(MCOperand::CreateImm(ARM_AM::getAM5Opc(ARM_AM::add, imm)));
+  else
+    Inst.addOperand(MCOperand::CreateImm(ARM_AM::getAM5Opc(ARM_AM::sub, imm)));
+
+  return S;
+}
+
+static DecodeStatus DecodeAddrMode7Operand(MCInst &Inst, unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  return DecodeGPRRegisterClass(Inst, Val, Address, Decoder);
+}
+
+static DecodeStatus
+DecodeT2BInstruction(MCInst &Inst, unsigned Insn,
+                     uint64_t Address, const void *Decoder) {
+  DecodeStatus Status = MCDisassembler::Success;
+
+  // Note the J1 and J2 values are from the encoded instruction.  So here
+  // change them to I1 and I2 values via as documented:
+  // I1 = NOT(J1 EOR S);
+  // I2 = NOT(J2 EOR S);
+  // and build the imm32 with one trailing zero as documented:
+  // imm32 = SignExtend(S:I1:I2:imm10:imm11:'0', 32);
+  unsigned S = fieldFromInstruction(Insn, 26, 1);
+  unsigned J1 = fieldFromInstruction(Insn, 13, 1);
+  unsigned J2 = fieldFromInstruction(Insn, 11, 1);
+  unsigned I1 = !(J1 ^ S);
+  unsigned I2 = !(J2 ^ S);
+  unsigned imm10 = fieldFromInstruction(Insn, 16, 10);
+  unsigned imm11 = fieldFromInstruction(Insn, 0, 11);
+  unsigned tmp = (S << 23) | (I1 << 22) | (I2 << 21) | (imm10 << 11) | imm11;
+  int imm32 = SignExtend32<24>(tmp << 1);
+  if (!tryAddingSymbolicOperand(Address, Address + imm32 + 4,
+                                true, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(imm32));
+
+  return Status;
+}
+
+static DecodeStatus
+DecodeBranchImmInstruction(MCInst &Inst, unsigned Insn,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 24) << 2;
+
+  if (pred == 0xF) {
+    Inst.setOpcode(ARM::BLXi);
+    imm |= fieldFromInstruction(Insn, 24, 1) << 1;
+    if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<26>(imm) + 8,
+                                  true, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(SignExtend32<26>(imm)));
+    return S;
+  }
+
+  if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<26>(imm) + 8,
+                                true, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(SignExtend32<26>(imm)));
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+
+static DecodeStatus DecodeAddrMode6Operand(MCInst &Inst, unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rm = fieldFromInstruction(Val, 0, 4);
+  unsigned align = fieldFromInstruction(Val, 4, 2);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!align)
+    Inst.addOperand(MCOperand::CreateImm(0));
+  else
+    Inst.addOperand(MCOperand::CreateImm(4 << align));
+
+  return S;
+}
+
+static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
+                                   uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned wb = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  Rn |= fieldFromInstruction(Insn, 4, 2) << 4;
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+
+  // First output register
+  switch (Inst.getOpcode()) {
+  case ARM::VLD1q16: case ARM::VLD1q32: case ARM::VLD1q64: case ARM::VLD1q8:
+  case ARM::VLD1q16wb_fixed: case ARM::VLD1q16wb_register:
+  case ARM::VLD1q32wb_fixed: case ARM::VLD1q32wb_register:
+  case ARM::VLD1q64wb_fixed: case ARM::VLD1q64wb_register:
+  case ARM::VLD1q8wb_fixed: case ARM::VLD1q8wb_register:
+  case ARM::VLD2d16: case ARM::VLD2d32: case ARM::VLD2d8:
+  case ARM::VLD2d16wb_fixed: case ARM::VLD2d16wb_register:
+  case ARM::VLD2d32wb_fixed: case ARM::VLD2d32wb_register:
+  case ARM::VLD2d8wb_fixed: case ARM::VLD2d8wb_register:
+    if (!Check(S, DecodeDPairRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  case ARM::VLD2b16:
+  case ARM::VLD2b32:
+  case ARM::VLD2b8:
+  case ARM::VLD2b16wb_fixed:
+  case ARM::VLD2b16wb_register:
+  case ARM::VLD2b32wb_fixed:
+  case ARM::VLD2b32wb_register:
+  case ARM::VLD2b8wb_fixed:
+  case ARM::VLD2b8wb_register:
+    if (!Check(S, DecodeDPairSpacedRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  default:
+    if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  // Second output register
+  switch (Inst.getOpcode()) {
+    case ARM::VLD3d8:
+    case ARM::VLD3d16:
+    case ARM::VLD3d32:
+    case ARM::VLD3d8_UPD:
+    case ARM::VLD3d16_UPD:
+    case ARM::VLD3d32_UPD:
+    case ARM::VLD4d8:
+    case ARM::VLD4d16:
+    case ARM::VLD4d32:
+    case ARM::VLD4d8_UPD:
+    case ARM::VLD4d16_UPD:
+    case ARM::VLD4d32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+1)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    case ARM::VLD3q8:
+    case ARM::VLD3q16:
+    case ARM::VLD3q32:
+    case ARM::VLD3q8_UPD:
+    case ARM::VLD3q16_UPD:
+    case ARM::VLD3q32_UPD:
+    case ARM::VLD4q8:
+    case ARM::VLD4q16:
+    case ARM::VLD4q32:
+    case ARM::VLD4q8_UPD:
+    case ARM::VLD4q16_UPD:
+    case ARM::VLD4q32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+    default:
+      break;
+  }
+
+  // Third output register
+  switch(Inst.getOpcode()) {
+    case ARM::VLD3d8:
+    case ARM::VLD3d16:
+    case ARM::VLD3d32:
+    case ARM::VLD3d8_UPD:
+    case ARM::VLD3d16_UPD:
+    case ARM::VLD3d32_UPD:
+    case ARM::VLD4d8:
+    case ARM::VLD4d16:
+    case ARM::VLD4d32:
+    case ARM::VLD4d8_UPD:
+    case ARM::VLD4d16_UPD:
+    case ARM::VLD4d32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    case ARM::VLD3q8:
+    case ARM::VLD3q16:
+    case ARM::VLD3q32:
+    case ARM::VLD3q8_UPD:
+    case ARM::VLD3q16_UPD:
+    case ARM::VLD3q32_UPD:
+    case ARM::VLD4q8:
+    case ARM::VLD4q16:
+    case ARM::VLD4q32:
+    case ARM::VLD4q8_UPD:
+    case ARM::VLD4q16_UPD:
+    case ARM::VLD4q32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+4)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  // Fourth output register
+  switch (Inst.getOpcode()) {
+    case ARM::VLD4d8:
+    case ARM::VLD4d16:
+    case ARM::VLD4d32:
+    case ARM::VLD4d8_UPD:
+    case ARM::VLD4d16_UPD:
+    case ARM::VLD4d32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+3)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    case ARM::VLD4q8:
+    case ARM::VLD4q16:
+    case ARM::VLD4q32:
+    case ARM::VLD4q8_UPD:
+    case ARM::VLD4q16_UPD:
+    case ARM::VLD4q32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+6)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  // Writeback operand
+  switch (Inst.getOpcode()) {
+    case ARM::VLD1d8wb_fixed:
+    case ARM::VLD1d16wb_fixed:
+    case ARM::VLD1d32wb_fixed:
+    case ARM::VLD1d64wb_fixed:
+    case ARM::VLD1d8wb_register:
+    case ARM::VLD1d16wb_register:
+    case ARM::VLD1d32wb_register:
+    case ARM::VLD1d64wb_register:
+    case ARM::VLD1q8wb_fixed:
+    case ARM::VLD1q16wb_fixed:
+    case ARM::VLD1q32wb_fixed:
+    case ARM::VLD1q64wb_fixed:
+    case ARM::VLD1q8wb_register:
+    case ARM::VLD1q16wb_register:
+    case ARM::VLD1q32wb_register:
+    case ARM::VLD1q64wb_register:
+    case ARM::VLD1d8Twb_fixed:
+    case ARM::VLD1d8Twb_register:
+    case ARM::VLD1d16Twb_fixed:
+    case ARM::VLD1d16Twb_register:
+    case ARM::VLD1d32Twb_fixed:
+    case ARM::VLD1d32Twb_register:
+    case ARM::VLD1d64Twb_fixed:
+    case ARM::VLD1d64Twb_register:
+    case ARM::VLD1d8Qwb_fixed:
+    case ARM::VLD1d8Qwb_register:
+    case ARM::VLD1d16Qwb_fixed:
+    case ARM::VLD1d16Qwb_register:
+    case ARM::VLD1d32Qwb_fixed:
+    case ARM::VLD1d32Qwb_register:
+    case ARM::VLD1d64Qwb_fixed:
+    case ARM::VLD1d64Qwb_register:
+    case ARM::VLD2d8wb_fixed:
+    case ARM::VLD2d16wb_fixed:
+    case ARM::VLD2d32wb_fixed:
+    case ARM::VLD2q8wb_fixed:
+    case ARM::VLD2q16wb_fixed:
+    case ARM::VLD2q32wb_fixed:
+    case ARM::VLD2d8wb_register:
+    case ARM::VLD2d16wb_register:
+    case ARM::VLD2d32wb_register:
+    case ARM::VLD2q8wb_register:
+    case ARM::VLD2q16wb_register:
+    case ARM::VLD2q32wb_register:
+    case ARM::VLD2b8wb_fixed:
+    case ARM::VLD2b16wb_fixed:
+    case ARM::VLD2b32wb_fixed:
+    case ARM::VLD2b8wb_register:
+    case ARM::VLD2b16wb_register:
+    case ARM::VLD2b32wb_register:
+      Inst.addOperand(MCOperand::CreateImm(0));
+      break;
+    case ARM::VLD3d8_UPD:
+    case ARM::VLD3d16_UPD:
+    case ARM::VLD3d32_UPD:
+    case ARM::VLD3q8_UPD:
+    case ARM::VLD3q16_UPD:
+    case ARM::VLD3q32_UPD:
+    case ARM::VLD4d8_UPD:
+    case ARM::VLD4d16_UPD:
+    case ARM::VLD4d32_UPD:
+    case ARM::VLD4q8_UPD:
+    case ARM::VLD4q16_UPD:
+    case ARM::VLD4q32_UPD:
+      if (!Check(S, DecodeGPRRegisterClass(Inst, wb, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  // AddrMode6 Base (register+alignment)
+  if (!Check(S, DecodeAddrMode6Operand(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  // AddrMode6 Offset (register)
+  switch (Inst.getOpcode()) {
+  default:
+    // The below have been updated to have explicit am6offset split
+    // between fixed and register offset. For those instructions not
+    // yet updated, we need to add an additional reg0 operand for the
+    // fixed variant.
+    //
+    // The fixed offset encodes as Rm == 0xd, so we check for that.
+    if (Rm == 0xd) {
+      Inst.addOperand(MCOperand::CreateReg(0));
+      break;
+    }
+    // Fall through to handle the register offset variant.
+  case ARM::VLD1d8wb_fixed:
+  case ARM::VLD1d16wb_fixed:
+  case ARM::VLD1d32wb_fixed:
+  case ARM::VLD1d64wb_fixed:
+  case ARM::VLD1d8Twb_fixed:
+  case ARM::VLD1d16Twb_fixed:
+  case ARM::VLD1d32Twb_fixed:
+  case ARM::VLD1d64Twb_fixed:
+  case ARM::VLD1d8Qwb_fixed:
+  case ARM::VLD1d16Qwb_fixed:
+  case ARM::VLD1d32Qwb_fixed:
+  case ARM::VLD1d64Qwb_fixed:
+  case ARM::VLD1d8wb_register:
+  case ARM::VLD1d16wb_register:
+  case ARM::VLD1d32wb_register:
+  case ARM::VLD1d64wb_register:
+  case ARM::VLD1q8wb_fixed:
+  case ARM::VLD1q16wb_fixed:
+  case ARM::VLD1q32wb_fixed:
+  case ARM::VLD1q64wb_fixed:
+  case ARM::VLD1q8wb_register:
+  case ARM::VLD1q16wb_register:
+  case ARM::VLD1q32wb_register:
+  case ARM::VLD1q64wb_register:
+    // The fixed offset post-increment encodes Rm == 0xd. The no-writeback
+    // variant encodes Rm == 0xf. Anything else is a register offset post-
+    // increment and we need to add the register operand to the instruction.
+    if (Rm != 0xD && Rm != 0xF &&
+        !Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  case ARM::VLD2d8wb_fixed:
+  case ARM::VLD2d16wb_fixed:
+  case ARM::VLD2d32wb_fixed:
+  case ARM::VLD2b8wb_fixed:
+  case ARM::VLD2b16wb_fixed:
+  case ARM::VLD2b32wb_fixed:
+  case ARM::VLD2q8wb_fixed:
+  case ARM::VLD2q16wb_fixed:
+  case ARM::VLD2q32wb_fixed:
+    break;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned wb = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  Rn |= fieldFromInstruction(Insn, 4, 2) << 4;
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+
+  // Writeback Operand
+  switch (Inst.getOpcode()) {
+    case ARM::VST1d8wb_fixed:
+    case ARM::VST1d16wb_fixed:
+    case ARM::VST1d32wb_fixed:
+    case ARM::VST1d64wb_fixed:
+    case ARM::VST1d8wb_register:
+    case ARM::VST1d16wb_register:
+    case ARM::VST1d32wb_register:
+    case ARM::VST1d64wb_register:
+    case ARM::VST1q8wb_fixed:
+    case ARM::VST1q16wb_fixed:
+    case ARM::VST1q32wb_fixed:
+    case ARM::VST1q64wb_fixed:
+    case ARM::VST1q8wb_register:
+    case ARM::VST1q16wb_register:
+    case ARM::VST1q32wb_register:
+    case ARM::VST1q64wb_register:
+    case ARM::VST1d8Twb_fixed:
+    case ARM::VST1d16Twb_fixed:
+    case ARM::VST1d32Twb_fixed:
+    case ARM::VST1d64Twb_fixed:
+    case ARM::VST1d8Twb_register:
+    case ARM::VST1d16Twb_register:
+    case ARM::VST1d32Twb_register:
+    case ARM::VST1d64Twb_register:
+    case ARM::VST1d8Qwb_fixed:
+    case ARM::VST1d16Qwb_fixed:
+    case ARM::VST1d32Qwb_fixed:
+    case ARM::VST1d64Qwb_fixed:
+    case ARM::VST1d8Qwb_register:
+    case ARM::VST1d16Qwb_register:
+    case ARM::VST1d32Qwb_register:
+    case ARM::VST1d64Qwb_register:
+    case ARM::VST2d8wb_fixed:
+    case ARM::VST2d16wb_fixed:
+    case ARM::VST2d32wb_fixed:
+    case ARM::VST2d8wb_register:
+    case ARM::VST2d16wb_register:
+    case ARM::VST2d32wb_register:
+    case ARM::VST2q8wb_fixed:
+    case ARM::VST2q16wb_fixed:
+    case ARM::VST2q32wb_fixed:
+    case ARM::VST2q8wb_register:
+    case ARM::VST2q16wb_register:
+    case ARM::VST2q32wb_register:
+    case ARM::VST2b8wb_fixed:
+    case ARM::VST2b16wb_fixed:
+    case ARM::VST2b32wb_fixed:
+    case ARM::VST2b8wb_register:
+    case ARM::VST2b16wb_register:
+    case ARM::VST2b32wb_register:
+      if (Rm == 0xF)
+        return MCDisassembler::Fail;
+      Inst.addOperand(MCOperand::CreateImm(0));
+      break;
+    case ARM::VST3d8_UPD:
+    case ARM::VST3d16_UPD:
+    case ARM::VST3d32_UPD:
+    case ARM::VST3q8_UPD:
+    case ARM::VST3q16_UPD:
+    case ARM::VST3q32_UPD:
+    case ARM::VST4d8_UPD:
+    case ARM::VST4d16_UPD:
+    case ARM::VST4d32_UPD:
+    case ARM::VST4q8_UPD:
+    case ARM::VST4q16_UPD:
+    case ARM::VST4q32_UPD:
+      if (!Check(S, DecodeGPRRegisterClass(Inst, wb, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  // AddrMode6 Base (register+alignment)
+  if (!Check(S, DecodeAddrMode6Operand(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  // AddrMode6 Offset (register)
+  switch (Inst.getOpcode()) {
+    default:
+      if (Rm == 0xD)
+        Inst.addOperand(MCOperand::CreateReg(0));
+      else if (Rm != 0xF) {
+        if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+          return MCDisassembler::Fail;
+      }
+      break;
+    case ARM::VST1d8wb_fixed:
+    case ARM::VST1d16wb_fixed:
+    case ARM::VST1d32wb_fixed:
+    case ARM::VST1d64wb_fixed:
+    case ARM::VST1q8wb_fixed:
+    case ARM::VST1q16wb_fixed:
+    case ARM::VST1q32wb_fixed:
+    case ARM::VST1q64wb_fixed:
+    case ARM::VST1d8Twb_fixed:
+    case ARM::VST1d16Twb_fixed:
+    case ARM::VST1d32Twb_fixed:
+    case ARM::VST1d64Twb_fixed:
+    case ARM::VST1d8Qwb_fixed:
+    case ARM::VST1d16Qwb_fixed:
+    case ARM::VST1d32Qwb_fixed:
+    case ARM::VST1d64Qwb_fixed:
+    case ARM::VST2d8wb_fixed:
+    case ARM::VST2d16wb_fixed:
+    case ARM::VST2d32wb_fixed:
+    case ARM::VST2q8wb_fixed:
+    case ARM::VST2q16wb_fixed:
+    case ARM::VST2q32wb_fixed:
+    case ARM::VST2b8wb_fixed:
+    case ARM::VST2b16wb_fixed:
+    case ARM::VST2b32wb_fixed:
+      break;
+  }
+
+
+  // First input register
+  switch (Inst.getOpcode()) {
+  case ARM::VST1q16:
+  case ARM::VST1q32:
+  case ARM::VST1q64:
+  case ARM::VST1q8:
+  case ARM::VST1q16wb_fixed:
+  case ARM::VST1q16wb_register:
+  case ARM::VST1q32wb_fixed:
+  case ARM::VST1q32wb_register:
+  case ARM::VST1q64wb_fixed:
+  case ARM::VST1q64wb_register:
+  case ARM::VST1q8wb_fixed:
+  case ARM::VST1q8wb_register:
+  case ARM::VST2d16:
+  case ARM::VST2d32:
+  case ARM::VST2d8:
+  case ARM::VST2d16wb_fixed:
+  case ARM::VST2d16wb_register:
+  case ARM::VST2d32wb_fixed:
+  case ARM::VST2d32wb_register:
+  case ARM::VST2d8wb_fixed:
+  case ARM::VST2d8wb_register:
+    if (!Check(S, DecodeDPairRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  case ARM::VST2b16:
+  case ARM::VST2b32:
+  case ARM::VST2b8:
+  case ARM::VST2b16wb_fixed:
+  case ARM::VST2b16wb_register:
+  case ARM::VST2b32wb_fixed:
+  case ARM::VST2b32wb_register:
+  case ARM::VST2b8wb_fixed:
+  case ARM::VST2b8wb_register:
+    if (!Check(S, DecodeDPairSpacedRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  default:
+    if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  // Second input register
+  switch (Inst.getOpcode()) {
+    case ARM::VST3d8:
+    case ARM::VST3d16:
+    case ARM::VST3d32:
+    case ARM::VST3d8_UPD:
+    case ARM::VST3d16_UPD:
+    case ARM::VST3d32_UPD:
+    case ARM::VST4d8:
+    case ARM::VST4d16:
+    case ARM::VST4d32:
+    case ARM::VST4d8_UPD:
+    case ARM::VST4d16_UPD:
+    case ARM::VST4d32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+1)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    case ARM::VST3q8:
+    case ARM::VST3q16:
+    case ARM::VST3q32:
+    case ARM::VST3q8_UPD:
+    case ARM::VST3q16_UPD:
+    case ARM::VST3q32_UPD:
+    case ARM::VST4q8:
+    case ARM::VST4q16:
+    case ARM::VST4q32:
+    case ARM::VST4q8_UPD:
+    case ARM::VST4q16_UPD:
+    case ARM::VST4q32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  // Third input register
+  switch (Inst.getOpcode()) {
+    case ARM::VST3d8:
+    case ARM::VST3d16:
+    case ARM::VST3d32:
+    case ARM::VST3d8_UPD:
+    case ARM::VST3d16_UPD:
+    case ARM::VST3d32_UPD:
+    case ARM::VST4d8:
+    case ARM::VST4d16:
+    case ARM::VST4d32:
+    case ARM::VST4d8_UPD:
+    case ARM::VST4d16_UPD:
+    case ARM::VST4d32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    case ARM::VST3q8:
+    case ARM::VST3q16:
+    case ARM::VST3q32:
+    case ARM::VST3q8_UPD:
+    case ARM::VST3q16_UPD:
+    case ARM::VST3q32_UPD:
+    case ARM::VST4q8:
+    case ARM::VST4q16:
+    case ARM::VST4q32:
+    case ARM::VST4q8_UPD:
+    case ARM::VST4q16_UPD:
+    case ARM::VST4q32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+4)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  // Fourth input register
+  switch (Inst.getOpcode()) {
+    case ARM::VST4d8:
+    case ARM::VST4d16:
+    case ARM::VST4d32:
+    case ARM::VST4d8_UPD:
+    case ARM::VST4d16_UPD:
+    case ARM::VST4d32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+3)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    case ARM::VST4q8:
+    case ARM::VST4q16:
+    case ARM::VST4q32:
+    case ARM::VST4q8_UPD:
+    case ARM::VST4q16_UPD:
+    case ARM::VST4q32_UPD:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+6)%32, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeVLD1DupInstruction(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned align = fieldFromInstruction(Insn, 4, 1);
+  unsigned size = fieldFromInstruction(Insn, 6, 2);
+
+  if (size == 0 && align == 1)
+    return MCDisassembler::Fail;
+  align *= (1 << size);
+
+  switch (Inst.getOpcode()) {
+  case ARM::VLD1DUPq16: case ARM::VLD1DUPq32: case ARM::VLD1DUPq8:
+  case ARM::VLD1DUPq16wb_fixed: case ARM::VLD1DUPq16wb_register:
+  case ARM::VLD1DUPq32wb_fixed: case ARM::VLD1DUPq32wb_register:
+  case ARM::VLD1DUPq8wb_fixed: case ARM::VLD1DUPq8wb_register:
+    if (!Check(S, DecodeDPairRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  default:
+    if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  }
+  if (Rm != 0xF) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+
+  // The fixed offset post-increment encodes Rm == 0xd. The no-writeback
+  // variant encodes Rm == 0xf. Anything else is a register offset post-
+  // increment and we need to add the register operand to the instruction.
+  if (Rm != 0xD && Rm != 0xF &&
+      !Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeVLD2DupInstruction(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned align = fieldFromInstruction(Insn, 4, 1);
+  unsigned size = 1 << fieldFromInstruction(Insn, 6, 2);
+  align *= 2*size;
+
+  switch (Inst.getOpcode()) {
+  case ARM::VLD2DUPd16: case ARM::VLD2DUPd32: case ARM::VLD2DUPd8:
+  case ARM::VLD2DUPd16wb_fixed: case ARM::VLD2DUPd16wb_register:
+  case ARM::VLD2DUPd32wb_fixed: case ARM::VLD2DUPd32wb_register:
+  case ARM::VLD2DUPd8wb_fixed: case ARM::VLD2DUPd8wb_register:
+    if (!Check(S, DecodeDPairRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  case ARM::VLD2DUPd16x2: case ARM::VLD2DUPd32x2: case ARM::VLD2DUPd8x2:
+  case ARM::VLD2DUPd16x2wb_fixed: case ARM::VLD2DUPd16x2wb_register:
+  case ARM::VLD2DUPd32x2wb_fixed: case ARM::VLD2DUPd32x2wb_register:
+  case ARM::VLD2DUPd8x2wb_fixed: case ARM::VLD2DUPd8x2wb_register:
+    if (!Check(S, DecodeDPairSpacedRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  default:
+    if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  }
+
+  if (Rm != 0xF)
+    Inst.addOperand(MCOperand::CreateImm(0));
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+
+  if (Rm != 0xD && Rm != 0xF) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeVLD3DupInstruction(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned inc = fieldFromInstruction(Insn, 5, 1) + 1;
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+inc)%32, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2*inc)%32, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (Rm != 0xF) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(0));
+
+  if (Rm == 0xD)
+    Inst.addOperand(MCOperand::CreateReg(0));
+  else if (Rm != 0xF) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeVLD4DupInstruction(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned size = fieldFromInstruction(Insn, 6, 2);
+  unsigned inc = fieldFromInstruction(Insn, 5, 1) + 1;
+  unsigned align = fieldFromInstruction(Insn, 4, 1);
+
+  if (size == 0x3) {
+    if (align == 0)
+      return MCDisassembler::Fail;
+    size = 4;
+    align = 16;
+  } else {
+    if (size == 2) {
+      size = 1 << size;
+      align *= 8;
+    } else {
+      size = 1 << size;
+      align *= 4*size;
+    }
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+inc)%32, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2*inc)%32, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+3*inc)%32, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (Rm != 0xF) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+
+  if (Rm == 0xD)
+    Inst.addOperand(MCOperand::CreateReg(0));
+  else if (Rm != 0xF) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  return S;
+}
+
+static DecodeStatus
+DecodeNEONModImmInstruction(MCInst &Inst, unsigned Insn,
+                            uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned imm = fieldFromInstruction(Insn, 0, 4);
+  imm |= fieldFromInstruction(Insn, 16, 3) << 4;
+  imm |= fieldFromInstruction(Insn, 24, 1) << 7;
+  imm |= fieldFromInstruction(Insn, 8, 4) << 8;
+  imm |= fieldFromInstruction(Insn, 5, 1) << 12;
+  unsigned Q = fieldFromInstruction(Insn, 6, 1);
+
+  if (Q) {
+    if (!Check(S, DecodeQPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  } else {
+    if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  }
+
+  Inst.addOperand(MCOperand::CreateImm(imm));
+
+  switch (Inst.getOpcode()) {
+    case ARM::VORRiv4i16:
+    case ARM::VORRiv2i32:
+    case ARM::VBICiv4i16:
+    case ARM::VBICiv2i32:
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    case ARM::VORRiv8i16:
+    case ARM::VORRiv4i32:
+    case ARM::VBICiv8i16:
+    case ARM::VBICiv4i32:
+      if (!Check(S, DecodeQPRRegisterClass(Inst, Rd, Address, Decoder)))
+        return MCDisassembler::Fail;
+      break;
+    default:
+      break;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeVSHLMaxInstruction(MCInst &Inst, unsigned Insn,
+                                        uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  Rm |= fieldFromInstruction(Insn, 5, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 18, 2);
+
+  if (!Check(S, DecodeQPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(8 << size));
+
+  return S;
+}
+
+static DecodeStatus DecodeShiftRight8Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  Inst.addOperand(MCOperand::CreateImm(8 - Val));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeShiftRight16Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  Inst.addOperand(MCOperand::CreateImm(16 - Val));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeShiftRight32Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  Inst.addOperand(MCOperand::CreateImm(32 - Val));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeShiftRight64Imm(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder) {
+  Inst.addOperand(MCOperand::CreateImm(64 - Val));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTBLInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  Rn |= fieldFromInstruction(Insn, 7, 1) << 4;
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  Rm |= fieldFromInstruction(Insn, 5, 1) << 4;
+  unsigned op = fieldFromInstruction(Insn, 6, 1);
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (op) {
+    if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail; // Writeback
+  }
+
+  switch (Inst.getOpcode()) {
+  case ARM::VTBL2:
+  case ARM::VTBX2:
+    if (!Check(S, DecodeDPairRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+    break;
+  default:
+    if (!Check(S, DecodeDPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeThumbAddSpecialReg(MCInst &Inst, uint16_t Insn,
+                                     uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned dst = fieldFromInstruction(Insn, 8, 3);
+  unsigned imm = fieldFromInstruction(Insn, 0, 8);
+
+  if (!Check(S, DecodetGPRRegisterClass(Inst, dst, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  switch(Inst.getOpcode()) {
+    default:
+      return MCDisassembler::Fail;
+    case ARM::tADR:
+      break; // tADR does not explicitly represent the PC as an operand.
+    case ARM::tADDrSPi:
+      Inst.addOperand(MCOperand::CreateReg(ARM::SP));
+      break;
+  }
+
+  Inst.addOperand(MCOperand::CreateImm(imm));
+  return S;
+}
+
+static DecodeStatus DecodeThumbBROperand(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<12>(Val<<1) + 4,
+                                true, 2, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(SignExtend32<12>(Val << 1)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeT2BROperand(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<21>(Val) + 4,
+                                true, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(SignExtend32<21>(Val)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeThumbCmpBROperand(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<7>(Val<<1) + 4,
+                                true, 2, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(SignExtend32<7>(Val << 1)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeThumbAddrModeRR(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 0, 3);
+  unsigned Rm = fieldFromInstruction(Val, 3, 3);
+
+  if (!Check(S, DecodetGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodetGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeThumbAddrModeIS(MCInst &Inst, unsigned Val,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 0, 3);
+  unsigned imm = fieldFromInstruction(Val, 3, 5);
+
+  if (!Check(S, DecodetGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(imm));
+
+  return S;
+}
+
+static DecodeStatus DecodeThumbAddrModePC(MCInst &Inst, unsigned Val,
+                                  uint64_t Address, const void *Decoder) {
+  unsigned imm = Val << 2;
+
+  Inst.addOperand(MCOperand::CreateImm(imm));
+  tryAddingPcLoadReferenceComment(Address, (Address & ~2u) + imm + 4, Decoder);
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeThumbAddrModeSP(MCInst &Inst, unsigned Val,
+                                  uint64_t Address, const void *Decoder) {
+  Inst.addOperand(MCOperand::CreateReg(ARM::SP));
+  Inst.addOperand(MCOperand::CreateImm(Val));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeT2AddrModeSOReg(MCInst &Inst, unsigned Val,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 6, 4);
+  unsigned Rm = fieldFromInstruction(Val, 2, 4);
+  unsigned imm = fieldFromInstruction(Val, 0, 2);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(imm));
+
+  return S;
+}
+
+static DecodeStatus DecodeT2LoadShift(MCInst &Inst, unsigned Insn,
+                              uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  switch (Inst.getOpcode()) {
+    case ARM::t2PLDs:
+    case ARM::t2PLDWs:
+    case ARM::t2PLIs:
+      break;
+    default: {
+      unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+      if (!Check(S, DecoderGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+    }
+  }
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  if (Rn == 0xF) {
+    switch (Inst.getOpcode()) {
+      case ARM::t2LDRBs:
+        Inst.setOpcode(ARM::t2LDRBpci);
+        break;
+      case ARM::t2LDRHs:
+        Inst.setOpcode(ARM::t2LDRHpci);
+        break;
+      case ARM::t2LDRSHs:
+        Inst.setOpcode(ARM::t2LDRSHpci);
+        break;
+      case ARM::t2LDRSBs:
+        Inst.setOpcode(ARM::t2LDRSBpci);
+        break;
+      case ARM::t2PLDs:
+        Inst.setOpcode(ARM::t2PLDi12);
+        Inst.addOperand(MCOperand::CreateReg(ARM::PC));
+        break;
+      default:
+        return MCDisassembler::Fail;
+    }
+
+    int imm = fieldFromInstruction(Insn, 0, 12);
+    if (!fieldFromInstruction(Insn, 23, 1)) imm *= -1;
+    Inst.addOperand(MCOperand::CreateImm(imm));
+
+    return S;
+  }
+
+  unsigned addrmode = fieldFromInstruction(Insn, 4, 2);
+  addrmode |= fieldFromInstruction(Insn, 0, 4) << 2;
+  addrmode |= fieldFromInstruction(Insn, 16, 4) << 6;
+  if (!Check(S, DecodeT2AddrModeSOReg(Inst, addrmode, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeT2Imm8S4(MCInst &Inst, unsigned Val,
+                           uint64_t Address, const void *Decoder) {
+  if (Val == 0)
+    Inst.addOperand(MCOperand::CreateImm(INT32_MIN));
+  else {
+    int imm = Val & 0xFF;
+
+    if (!(Val & 0x100)) imm *= -1;
+    Inst.addOperand(MCOperand::CreateImm(imm * 4));
+  }
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeT2AddrModeImm8s4(MCInst &Inst, unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 9, 4);
+  unsigned imm = fieldFromInstruction(Val, 0, 9);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeT2Imm8S4(Inst, imm, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeT2AddrModeImm0_1020s4(MCInst &Inst,unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 8, 4);
+  unsigned imm = fieldFromInstruction(Val, 0, 8);
+
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::CreateImm(imm));
+
+  return S;
+}
+
+static DecodeStatus DecodeT2Imm8(MCInst &Inst, unsigned Val,
+                         uint64_t Address, const void *Decoder) {
+  int imm = Val & 0xFF;
+  if (Val == 0)
+    imm = INT32_MIN;
+  else if (!(Val & 0x100))
+    imm *= -1;
+  Inst.addOperand(MCOperand::CreateImm(imm));
+
+  return MCDisassembler::Success;
+}
+
+
+static DecodeStatus DecodeT2AddrModeImm8(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 9, 4);
+  unsigned imm = fieldFromInstruction(Val, 0, 9);
+
+  // Some instructions always use an additive offset.
+  switch (Inst.getOpcode()) {
+    case ARM::t2LDRT:
+    case ARM::t2LDRBT:
+    case ARM::t2LDRHT:
+    case ARM::t2LDRSBT:
+    case ARM::t2LDRSHT:
+    case ARM::t2STRT:
+    case ARM::t2STRBT:
+    case ARM::t2STRHT:
+      imm |= 0x100;
+      break;
+    default:
+      break;
+  }
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeT2Imm8(Inst, imm, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeT2LdStPre(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned addr = fieldFromInstruction(Insn, 0, 8);
+  addr |= fieldFromInstruction(Insn, 9, 1) << 8;
+  addr |= Rn << 9;
+  unsigned load = fieldFromInstruction(Insn, 20, 1);
+
+  if (!load) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (load) {
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+
+  if (!Check(S, DecodeT2AddrModeImm8(Inst, addr, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeT2AddrModeImm12(MCInst &Inst, unsigned Val,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 13, 4);
+  unsigned imm = fieldFromInstruction(Val, 0, 12);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(imm));
+
+  return S;
+}
+
+
+static DecodeStatus DecodeThumbAddSPImm(MCInst &Inst, uint16_t Insn,
+                                uint64_t Address, const void *Decoder) {
+  unsigned imm = fieldFromInstruction(Insn, 0, 7);
+
+  Inst.addOperand(MCOperand::CreateReg(ARM::SP));
+  Inst.addOperand(MCOperand::CreateReg(ARM::SP));
+  Inst.addOperand(MCOperand::CreateImm(imm));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeThumbAddSPReg(MCInst &Inst, uint16_t Insn,
+                                uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  if (Inst.getOpcode() == ARM::tADDrSP) {
+    unsigned Rdm = fieldFromInstruction(Insn, 0, 3);
+    Rdm |= fieldFromInstruction(Insn, 7, 1) << 3;
+
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rdm, Address, Decoder)))
+    return MCDisassembler::Fail;
+    Inst.addOperand(MCOperand::CreateReg(ARM::SP));
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rdm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  } else if (Inst.getOpcode() == ARM::tADDspr) {
+    unsigned Rm = fieldFromInstruction(Insn, 3, 4);
+
+    Inst.addOperand(MCOperand::CreateReg(ARM::SP));
+    Inst.addOperand(MCOperand::CreateReg(ARM::SP));
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  }
+
+  return S;
+}
+
+static DecodeStatus DecodeThumbCPS(MCInst &Inst, uint16_t Insn,
+                           uint64_t Address, const void *Decoder) {
+  unsigned imod = fieldFromInstruction(Insn, 4, 1) | 0x2;
+  unsigned flags = fieldFromInstruction(Insn, 0, 3);
+
+  Inst.addOperand(MCOperand::CreateImm(imod));
+  Inst.addOperand(MCOperand::CreateImm(flags));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodePostIdxReg(MCInst &Inst, unsigned Insn,
+                             uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned add = fieldFromInstruction(Insn, 4, 1);
+
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(add));
+
+  return S;
+}
+
+static DecodeStatus DecodeThumbBLXOffset(MCInst &Inst, unsigned Val,
+                                 uint64_t Address, const void *Decoder) {
+  // Val is passed in as S:J1:J2:imm10H:imm10L:'0'
+  // Note only one trailing zero not two.  Also the J1 and J2 values are from
+  // the encoded instruction.  So here change to I1 and I2 values via:
+  // I1 = NOT(J1 EOR S);
+  // I2 = NOT(J2 EOR S);
+  // and build the imm32 with two trailing zeros as documented:
+  // imm32 = SignExtend(S:I1:I2:imm10H:imm10L:'00', 32);
+  unsigned S = (Val >> 23) & 1;
+  unsigned J1 = (Val >> 22) & 1;
+  unsigned J2 = (Val >> 21) & 1;
+  unsigned I1 = !(J1 ^ S);
+  unsigned I2 = !(J2 ^ S);
+  unsigned tmp = (Val & ~0x600000) | (I1 << 22) | (I2 << 21);
+  int imm32 = SignExtend32<25>(tmp << 1);
+
+  if (!tryAddingSymbolicOperand(Address,
+                                (Address & ~2u) + imm32 + 4,
+                                true, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(imm32));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeCoprocessor(MCInst &Inst, unsigned Val,
+                              uint64_t Address, const void *Decoder) {
+  if (Val == 0xA || Val == 0xB)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::CreateImm(Val));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus
+DecodeThumbTableBranch(MCInst &Inst, unsigned Insn,
+                       uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+
+  if (Rn == ARM::SP) S = MCDisassembler::SoftFail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  return S;
+}
+
+static DecodeStatus
+DecodeThumb2BCCInstruction(MCInst &Inst, unsigned Insn,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned pred = fieldFromInstruction(Insn, 22, 4);
+  if (pred == 0xE || pred == 0xF) {
+    unsigned opc = fieldFromInstruction(Insn, 4, 28);
+    switch (opc) {
+      default:
+        return MCDisassembler::Fail;
+      case 0xf3bf8f4:
+        Inst.setOpcode(ARM::t2DSB);
+        break;
+      case 0xf3bf8f5:
+        Inst.setOpcode(ARM::t2DMB);
+        break;
+      case 0xf3bf8f6:
+        Inst.setOpcode(ARM::t2ISB);
+        break;
+    }
+
+    unsigned imm = fieldFromInstruction(Insn, 0, 4);
+    return DecodeMemBarrierOption(Inst, imm, Address, Decoder);
+  }
+
+  unsigned brtarget = fieldFromInstruction(Insn, 0, 11) << 1;
+  brtarget |= fieldFromInstruction(Insn, 11, 1) << 19;
+  brtarget |= fieldFromInstruction(Insn, 13, 1) << 18;
+  brtarget |= fieldFromInstruction(Insn, 16, 6) << 12;
+  brtarget |= fieldFromInstruction(Insn, 26, 1) << 20;
+
+  if (!Check(S, DecodeT2BROperand(Inst, brtarget, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+// Decode a shifted immediate operand.  These basically consist
+// of an 8-bit value, and a 4-bit directive that specifies either
+// a splat operation or a rotation.
+static DecodeStatus DecodeT2SOImm(MCInst &Inst, unsigned Val,
+                          uint64_t Address, const void *Decoder) {
+  unsigned ctrl = fieldFromInstruction(Val, 10, 2);
+  if (ctrl == 0) {
+    unsigned byte = fieldFromInstruction(Val, 8, 2);
+    unsigned imm = fieldFromInstruction(Val, 0, 8);
+    switch (byte) {
+      case 0:
+        Inst.addOperand(MCOperand::CreateImm(imm));
+        break;
+      case 1:
+        Inst.addOperand(MCOperand::CreateImm((imm << 16) | imm));
+        break;
+      case 2:
+        Inst.addOperand(MCOperand::CreateImm((imm << 24) | (imm << 8)));
+        break;
+      case 3:
+        Inst.addOperand(MCOperand::CreateImm((imm << 24) | (imm << 16) |
+                                             (imm << 8)  |  imm));
+        break;
+    }
+  } else {
+    unsigned unrot = fieldFromInstruction(Val, 0, 7) | 0x80;
+    unsigned rot = fieldFromInstruction(Val, 7, 5);
+    unsigned imm = (unrot >> rot) | (unrot << ((32-rot)&31));
+    Inst.addOperand(MCOperand::CreateImm(imm));
+  }
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus
+DecodeThumbBCCTargetOperand(MCInst &Inst, unsigned Val,
+                            uint64_t Address, const void *Decoder){
+  if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<9>(Val<<1) + 4,
+                                true, 2, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(SignExtend32<9>(Val << 1)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeThumbBLTargetOperand(MCInst &Inst, unsigned Val,
+                                       uint64_t Address, const void *Decoder){
+  // Val is passed in as S:J1:J2:imm10:imm11
+  // Note no trailing zero after imm11.  Also the J1 and J2 values are from
+  // the encoded instruction.  So here change to I1 and I2 values via:
+  // I1 = NOT(J1 EOR S);
+  // I2 = NOT(J2 EOR S);
+  // and build the imm32 with one trailing zero as documented:
+  // imm32 = SignExtend(S:I1:I2:imm10:imm11:'0', 32);
+  unsigned S = (Val >> 23) & 1;
+  unsigned J1 = (Val >> 22) & 1;
+  unsigned J2 = (Val >> 21) & 1;
+  unsigned I1 = !(J1 ^ S);
+  unsigned I2 = !(J2 ^ S);
+  unsigned tmp = (Val & ~0x600000) | (I1 << 22) | (I2 << 21);
+  int imm32 = SignExtend32<25>(tmp << 1);
+
+  if (!tryAddingSymbolicOperand(Address, Address + imm32 + 4,
+                                true, 4, Inst, Decoder))
+    Inst.addOperand(MCOperand::CreateImm(imm32));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeMemBarrierOption(MCInst &Inst, unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  if (Val & ~0xf)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::CreateImm(Val));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val,
+                          uint64_t Address, const void *Decoder) {
+  if (!Val) return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(Val));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeDoubleRegLoad(MCInst &Inst, unsigned Insn,
+                                        uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+
+  if ((Rt & 1) || Rt == 0xE || Rn == 0xF) return MCDisassembler::Fail;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt+1, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+
+static DecodeStatus DecodeDoubleRegStore(MCInst &Inst, unsigned Insn,
+                                         uint64_t Address, const void *Decoder){
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rt = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if ((Rt & 1) || Rt == 0xE || Rn == 0xF) return MCDisassembler::Fail;
+  if (Rd == Rn || Rd == Rt || Rd == Rt+1) return MCDisassembler::Fail;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt+1, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeLDRPreImm(MCInst &Inst, unsigned Insn,
+                            uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 12);
+  imm |= fieldFromInstruction(Insn, 16, 4) << 13;
+  imm |= fieldFromInstruction(Insn, 23, 1) << 12;
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+
+  if (Rn == 0xF || Rn == Rt) S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeAddrModeImm12Operand(Inst, imm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeLDRPreReg(MCInst &Inst, unsigned Insn,
+                            uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 12);
+  imm |= fieldFromInstruction(Insn, 16, 4) << 13;
+  imm |= fieldFromInstruction(Insn, 23, 1) << 12;
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+
+  if (Rn == 0xF || Rn == Rt) S = MCDisassembler::SoftFail;
+  if (Rm == 0xF) S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeSORegMemOperand(Inst, imm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+
+static DecodeStatus DecodeSTRPreImm(MCInst &Inst, unsigned Insn,
+                            uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 12);
+  imm |= fieldFromInstruction(Insn, 16, 4) << 13;
+  imm |= fieldFromInstruction(Insn, 23, 1) << 12;
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+
+  if (Rn == 0xF || Rn == Rt) S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeAddrModeImm12Operand(Inst, imm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeSTRPreReg(MCInst &Inst, unsigned Insn,
+                            uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 12);
+  imm |= fieldFromInstruction(Insn, 16, 4) << 13;
+  imm |= fieldFromInstruction(Insn, 23, 1) << 12;
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+
+  if (Rn == 0xF || Rn == Rt) S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeSORegMemOperand(Inst, imm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeVLD1LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      if (fieldFromInstruction(Insn, 4, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 5, 3);
+      break;
+    case 1:
+      if (fieldFromInstruction(Insn, 5, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 2;
+      break;
+    case 2:
+      if (fieldFromInstruction(Insn, 6, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 7, 1);
+
+      switch (fieldFromInstruction(Insn, 4, 2)) {
+        case 0 :
+          align = 0; break;
+        case 3:
+          align = 4; break;
+        default:
+          return MCDisassembler::Fail;
+      }
+      break;
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+        return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+static DecodeStatus DecodeVST1LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      if (fieldFromInstruction(Insn, 4, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 5, 3);
+      break;
+    case 1:
+      if (fieldFromInstruction(Insn, 5, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 2;
+      break;
+    case 2:
+      if (fieldFromInstruction(Insn, 6, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 7, 1);
+
+      switch (fieldFromInstruction(Insn, 4, 2)) {
+        case 0: 
+          align = 0; break;
+        case 3:
+          align = 4; break;
+        default:
+          return MCDisassembler::Fail;
+      }
+      break;
+  }
+
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+
+static DecodeStatus DecodeVLD2LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  unsigned inc = 1;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      index = fieldFromInstruction(Insn, 5, 3);
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 2;
+      break;
+    case 1:
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 4;
+      if (fieldFromInstruction(Insn, 5, 1))
+        inc = 2;
+      break;
+    case 2:
+      if (fieldFromInstruction(Insn, 5, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 7, 1);
+      if (fieldFromInstruction(Insn, 4, 1) != 0)
+        align = 8;
+      if (fieldFromInstruction(Insn, 6, 1))
+        inc = 2;
+      break;
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+        return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+static DecodeStatus DecodeVST2LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  unsigned inc = 1;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      index = fieldFromInstruction(Insn, 5, 3);
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 2;
+      break;
+    case 1:
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 4;
+      if (fieldFromInstruction(Insn, 5, 1))
+        inc = 2;
+      break;
+    case 2:
+      if (fieldFromInstruction(Insn, 5, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 7, 1);
+      if (fieldFromInstruction(Insn, 4, 1) != 0)
+        align = 8;
+      if (fieldFromInstruction(Insn, 6, 1))
+        inc = 2;
+      break;
+  }
+
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+        return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+
+static DecodeStatus DecodeVLD3LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  unsigned inc = 1;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      if (fieldFromInstruction(Insn, 4, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 5, 3);
+      break;
+    case 1:
+      if (fieldFromInstruction(Insn, 4, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 5, 1))
+        inc = 2;
+      break;
+    case 2:
+      if (fieldFromInstruction(Insn, 4, 2))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 7, 1);
+      if (fieldFromInstruction(Insn, 6, 1))
+        inc = 2;
+      break;
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+2*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+2*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+static DecodeStatus DecodeVST3LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  unsigned inc = 1;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      if (fieldFromInstruction(Insn, 4, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 5, 3);
+      break;
+    case 1:
+      if (fieldFromInstruction(Insn, 4, 1))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 5, 1))
+        inc = 2;
+      break;
+    case 2:
+      if (fieldFromInstruction(Insn, 4, 2))
+        return MCDisassembler::Fail; // UNDEFINED
+      index = fieldFromInstruction(Insn, 7, 1);
+      if (fieldFromInstruction(Insn, 6, 1))
+        inc = 2;
+      break;
+  }
+
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+2*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+
+static DecodeStatus DecodeVLD4LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  unsigned inc = 1;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 4;
+      index = fieldFromInstruction(Insn, 5, 3);
+      break;
+    case 1:
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 8;
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 5, 1))
+        inc = 2;
+      break;
+    case 2:
+      switch (fieldFromInstruction(Insn, 4, 2)) {
+        case 0:
+          align = 0; break;
+        case 3:
+          return MCDisassembler::Fail;
+        default:
+          align = 4 << fieldFromInstruction(Insn, 4, 2); break;
+      }
+
+      index = fieldFromInstruction(Insn, 7, 1);
+      if (fieldFromInstruction(Insn, 6, 1))
+        inc = 2;
+      break;
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+2*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+3*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+        return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+2*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+3*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+static DecodeStatus DecodeVST4LN(MCInst &Inst, unsigned Insn,
+                         uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm = fieldFromInstruction(Insn, 0, 4);
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4);
+  Rd |= fieldFromInstruction(Insn, 22, 1) << 4;
+  unsigned size = fieldFromInstruction(Insn, 10, 2);
+
+  unsigned align = 0;
+  unsigned index = 0;
+  unsigned inc = 1;
+  switch (size) {
+    default:
+      return MCDisassembler::Fail;
+    case 0:
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 4;
+      index = fieldFromInstruction(Insn, 5, 3);
+      break;
+    case 1:
+      if (fieldFromInstruction(Insn, 4, 1))
+        align = 8;
+      index = fieldFromInstruction(Insn, 6, 2);
+      if (fieldFromInstruction(Insn, 5, 1))
+        inc = 2;
+      break;
+    case 2:
+      switch (fieldFromInstruction(Insn, 4, 2)) {
+        case 0:
+          align = 0; break;
+        case 3:
+          return MCDisassembler::Fail;
+        default:
+          align = 4 << fieldFromInstruction(Insn, 4, 2); break;
+      }
+
+      index = fieldFromInstruction(Insn, 7, 1);
+      if (fieldFromInstruction(Insn, 6, 1))
+        inc = 2;
+      break;
+  }
+
+  if (Rm != 0xF) { // Writeback
+    if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  }
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(align));
+  if (Rm != 0xF) {
+    if (Rm != 0xD) {
+      if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+    } else
+      Inst.addOperand(MCOperand::CreateReg(0));
+  }
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+2*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd+3*inc, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(index));
+
+  return S;
+}
+
+static DecodeStatus DecodeVMOVSRR(MCInst &Inst, unsigned Insn,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  unsigned Rt  = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rt2 = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm  = fieldFromInstruction(Insn,  5, 1);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  Rm |= fieldFromInstruction(Insn, 0, 4) << 1;
+
+  if (Rt == 0xF || Rt2 == 0xF || Rm == 0x1F)
+    S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeSPRRegisterClass(Inst, Rm  , Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeSPRRegisterClass(Inst, Rm+1, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt  , Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt2 , Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeVMOVRRS(MCInst &Inst, unsigned Insn,
+                                  uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  unsigned Rt  = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rt2 = fieldFromInstruction(Insn, 16, 4);
+  unsigned Rm  = fieldFromInstruction(Insn,  5, 1);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  Rm |= fieldFromInstruction(Insn, 0, 4) << 1;
+
+  if (Rt == 0xF || Rt2 == 0xF || Rm == 0x1F)
+    S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt  , Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rt2 , Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeSPRRegisterClass(Inst, Rm  , Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeSPRRegisterClass(Inst, Rm+1, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeIT(MCInst &Inst, unsigned Insn,
+                             uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  unsigned pred = fieldFromInstruction(Insn, 4, 4);
+  unsigned mask = fieldFromInstruction(Insn, 0, 4);
+
+  if (pred == 0xF) {
+    pred = 0xE;
+    S = MCDisassembler::SoftFail;
+  }
+
+  if (mask == 0x0) {
+    mask |= 0x8;
+    S = MCDisassembler::SoftFail;
+  }
+
+  Inst.addOperand(MCOperand::CreateImm(pred));
+  Inst.addOperand(MCOperand::CreateImm(mask));
+  return S;
+}
+
+static DecodeStatus
+DecodeT2LDRDPreInstruction(MCInst &Inst, unsigned Insn,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rt2 = fieldFromInstruction(Insn, 8, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned addr = fieldFromInstruction(Insn, 0, 8);
+  unsigned W = fieldFromInstruction(Insn, 21, 1);
+  unsigned U = fieldFromInstruction(Insn, 23, 1);
+  unsigned P = fieldFromInstruction(Insn, 24, 1);
+  bool writeback = (W == 1) | (P == 0);
+
+  addr |= (U << 8) | (Rn << 9);
+
+  if (writeback && (Rn == Rt || Rn == Rt2))
+    Check(S, MCDisassembler::SoftFail);
+  if (Rt == Rt2)
+    Check(S, MCDisassembler::SoftFail);
+
+  // Rt
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  // Rt2
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rt2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  // Writeback operand
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  // addr
+  if (!Check(S, DecodeT2AddrModeImm8s4(Inst, addr, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus
+DecodeT2STRDPreInstruction(MCInst &Inst, unsigned Insn,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rt = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rt2 = fieldFromInstruction(Insn, 8, 4);
+  unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  unsigned addr = fieldFromInstruction(Insn, 0, 8);
+  unsigned W = fieldFromInstruction(Insn, 21, 1);
+  unsigned U = fieldFromInstruction(Insn, 23, 1);
+  unsigned P = fieldFromInstruction(Insn, 24, 1);
+  bool writeback = (W == 1) | (P == 0);
+
+  addr |= (U << 8) | (Rn << 9);
+
+  if (writeback && (Rn == Rt || Rn == Rt2))
+    Check(S, MCDisassembler::SoftFail);
+
+  // Writeback operand
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  // Rt
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  // Rt2
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rt2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  // addr
+  if (!Check(S, DecodeT2AddrModeImm8s4(Inst, addr, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeT2Adr(MCInst &Inst, uint32_t Insn,
+                                uint64_t Address, const void *Decoder) {
+  unsigned sign1 = fieldFromInstruction(Insn, 21, 1);
+  unsigned sign2 = fieldFromInstruction(Insn, 23, 1);
+  if (sign1 != sign2) return MCDisassembler::Fail;
+
+  unsigned Val = fieldFromInstruction(Insn, 0, 8);
+  Val |= fieldFromInstruction(Insn, 12, 3) << 8;
+  Val |= fieldFromInstruction(Insn, 26, 1) << 11;
+  Val |= sign1 << 12;
+  Inst.addOperand(MCOperand::CreateImm(SignExtend32<13>(Val)));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeT2ShifterImmOperand(MCInst &Inst, uint32_t Val,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  // Shift of "asr #32" is not allowed in Thumb2 mode.
+  if (Val == 0x20) S = MCDisassembler::SoftFail;
+  Inst.addOperand(MCOperand::CreateImm(Val));
+  return S;
+}
+
+static DecodeStatus DecodeSwap(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder) {
+  unsigned Rt   = fieldFromInstruction(Insn, 12, 4);
+  unsigned Rt2  = fieldFromInstruction(Insn, 0,  4);
+  unsigned Rn   = fieldFromInstruction(Insn, 16, 4);
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+
+  if (pred == 0xF)
+    return DecodeCPSInstruction(Inst, Insn, Address, Decoder);
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  if (Rt == Rn || Rn == Rt2)
+    S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder) {
+  unsigned Vd = (fieldFromInstruction(Insn, 12, 4) << 0);
+  Vd |= (fieldFromInstruction(Insn, 22, 1) << 4);
+  unsigned Vm = (fieldFromInstruction(Insn, 0, 4) << 0);
+  Vm |= (fieldFromInstruction(Insn, 5, 1) << 4);
+  unsigned imm = fieldFromInstruction(Insn, 16, 6);
+  unsigned cmode = fieldFromInstruction(Insn, 8, 4);
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  // VMOVv2f32 is ambiguous with these decodings.
+  if (!(imm & 0x38) && cmode == 0xF) {
+    Inst.setOpcode(ARM::VMOVv2f32);
+    return DecodeNEONModImmInstruction(Inst, Insn, Address, Decoder);
+  }
+
+  if (!(imm & 0x20)) Check(S, MCDisassembler::SoftFail);
+
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Vd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Vm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(64 - imm));
+
+  return S;
+}
+
+static DecodeStatus DecodeVCVTQ(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder) {
+  unsigned Vd = (fieldFromInstruction(Insn, 12, 4) << 0);
+  Vd |= (fieldFromInstruction(Insn, 22, 1) << 4);
+  unsigned Vm = (fieldFromInstruction(Insn, 0, 4) << 0);
+  Vm |= (fieldFromInstruction(Insn, 5, 1) << 4);
+  unsigned imm = fieldFromInstruction(Insn, 16, 6);
+  unsigned cmode = fieldFromInstruction(Insn, 8, 4);
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  // VMOVv4f32 is ambiguous with these decodings.
+  if (!(imm & 0x38) && cmode == 0xF) {
+    Inst.setOpcode(ARM::VMOVv4f32);
+    return DecodeNEONModImmInstruction(Inst, Insn, Address, Decoder);
+  }
+
+  if (!(imm & 0x20)) Check(S, MCDisassembler::SoftFail);
+
+  if (!Check(S, DecodeQPRRegisterClass(Inst, Vd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeQPRRegisterClass(Inst, Vm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(64 - imm));
+
+  return S;
+}
+
+static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 16, 4);
+  unsigned Rt = fieldFromInstruction(Val, 12, 4);
+  unsigned Rm = fieldFromInstruction(Val, 0, 4);
+  Rm |= (fieldFromInstruction(Val, 23, 1) << 4);
+  unsigned Cond = fieldFromInstruction(Val, 28, 4);
+ 
+  if (fieldFromInstruction(Val, 8, 4) != 0 || Rn == Rt)
+    S = MCDisassembler::SoftFail;
+
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeAddrMode7Operand(Inst, Rn, Address, Decoder))) 
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePostIdxReg(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodePredicateOperand(Inst, Cond, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  return S;
+}
+
+static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
+                                uint64_t Address, const void *Decoder) {
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned CRm = fieldFromInstruction(Val, 0, 4);
+  unsigned opc1 = fieldFromInstruction(Val, 4, 4);
+  unsigned cop = fieldFromInstruction(Val, 8, 4);
+  unsigned Rt = fieldFromInstruction(Val, 12, 4);
+  unsigned Rt2 = fieldFromInstruction(Val, 16, 4);
+
+  if ((cop & ~0x1) == 0xa)
+    return MCDisassembler::Fail;
+
+  if (Rt == Rt2)
+    S = MCDisassembler::SoftFail;
+
+  Inst.addOperand(MCOperand::CreateImm(cop));
+  Inst.addOperand(MCOperand::CreateImm(opc1));
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::CreateImm(CRm));
+
+  return S;
+}
+

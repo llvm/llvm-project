@@ -1,0 +1,10 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 2>&1 | grep "invalid instruction encoding"
+
+# This instruction would decode as cmpordps if the immediate byte was less than 8.
+0x0f 0xc2 0xc7 0x08
+# This instruction would decode as cmpordpd if the immediate byte was less than 8.
+0x66 0x0f 0xc2 0xc7 0x08
+# This instruction would decode as cmpordss if the immediate byte was less than 8.
+0xf3 0x0f 0xc2 0xc7 0x08
+# This instruction would decode as cmpordsd if the immediate byte was less than 8.
+0xf2 0x0f 0xc2 0xc7 0x08

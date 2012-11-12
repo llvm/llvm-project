@@ -1,0 +1,9 @@
+ - Move temp directory name into local test config.
+
+ - Add --show-unsupported, don't show by default?
+
+ - Optionally use multiprocessing.
+
+ - Support valgrind in all configs, and LLVM style valgrind.
+
+ - Support a timeout / ulimit.

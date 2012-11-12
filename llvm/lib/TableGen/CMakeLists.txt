@@ -1,0 +1,9 @@
+add_llvm_library(LLVMTableGen
+  Error.cpp
+  Main.cpp
+  Record.cpp
+  StringMatcher.cpp
+  TableGenBackend.cpp
+  TGLexer.cpp
+  TGParser.cpp
+  )

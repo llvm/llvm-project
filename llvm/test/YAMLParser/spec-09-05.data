@@ -1,0 +1,10 @@
+# RUN: yaml-bench -canonical %s
+
+- "first
+  	"
+- "first
+
+  	last"
+- "first
+ inner
+ \ 	last"

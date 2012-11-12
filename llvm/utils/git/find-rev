@@ -1,0 +1,50 @@
+#!/usr/bin/python
+
+import os, sys, subprocess
+
+def main():
+    from optparse import OptionParser, OptionGroup
+    parser = OptionParser("usage: %prog [options] <repo> <revision>")
+    parser.add_option("", "--dump-section-data", dest="dumpSectionData",
+                      help="Dump the contents of sections",
+                      action="store_true", default=False)    
+    (opts, args) = parser.parse_args()
+
+    if len(args) != 2:
+        parser.error("invalid number of arguments")
+
+    repo,rev = args
+
+    try:
+        rev = int(rev)
+    except:
+        parser.error("invalid revision argument (not an integer)")
+
+    os.chdir(repo)
+    p = subprocess.Popen(['git', 'rev-list', 'git-svn', '--pretty'],
+                         stdout=subprocess.PIPE)
+
+    bestRev = bestCommit = None
+    lastCommit = None
+    for ln in p.stdout:
+        if ln.startswith('commit '):
+            lastCommit = ln.split(' ',2)[1]
+        elif ln.startswith('    git-svn-id: '):
+            _,repo,_ = ln.strip().split(' ')
+            _,lrev = repo.rsplit('@',1)
+            lrev = int(lrev)
+            if lrev<=rev:
+                if bestRev is None or lrev>bestRev:
+                    assert lastCommit
+                    bestCommit = lastCommit
+                    bestRev = lrev
+                    if lrev == rev:
+                        break
+    
+    if bestCommit is not None:
+        print bestCommit
+        sys.exit(0)
+    sys.exit(1)
+
+if __name__=='__main__':
+    main()

@@ -1,0 +1,5 @@
+# RUN: yaml-bench -canonical %s
+
+  "Text containing   
+  both space and	
+  	tab	characters"

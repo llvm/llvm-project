@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s
+
+commercial-at: @text
+grave-accent: `text
+
+# CHECK: error

@@ -1,0 +1,7 @@
+{
+	global: main;
+		__progname;
+		environ;
+
+	local: *;
+};

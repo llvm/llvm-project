@@ -1,0 +1,3 @@
+# RUN: yaml-bench -canonical %s
+
+ 'as space	 trimmed  specific  none'

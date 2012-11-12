@@ -1,0 +1,5 @@
+# RUN: yaml-bench -canonical %s
+
+- Mark McGwire
+- Sammy Sosa
+- Ken Griffey

@@ -1,0 +1,63 @@
+name = "llvm"
+version = "@PACKAGE_VERSION@"
+description = "LLVM OCaml bindings"
+archive(byte) = "llvm.cma"
+archive(native) = "llvm.cmxa"
+directory = "."
+linkopts = "-ccopt -lstdc++"
+
+package "analysis" (
+    requires = "llvm"
+    version = "@PACKAGE_VERSION@"
+    description = "Intermediate representation analysis for LLVM"
+    archive(byte) = "llvm_analysis.cma"
+    archive(native) = "llvm_analysis.cmxa"
+)
+
+package "bitreader" (
+    requires = "llvm"
+    version  = "@PACKAGE_VERSION@"
+    description = "Bitcode reader for LLVM"
+    archive(byte) = "llvm_bitreader.cma"
+    archive(native) = "llvm_bitreader.cmxa"
+)
+
+package "bitwriter" (
+    requires = "llvm,unix"
+    version = "@PACKAGE_VERSION@"
+    description = "Bitcode writer for LLVM"
+    archive(byte) = "llvm_bitwriter.cma"
+    archive(native) = "llvm_bitwriter.cmxa"
+)
+
+package "executionengine" (
+    requires = "llvm,llvm.target"
+    version = "@PACKAGE_VERSION@"
+    description = "JIT and Interpreter for LLVM"
+    archive(byte) = "llvm_executionengine.cma"
+    archive(native) = "llvm_executionengine.cmxa"
+)
+
+package "ipo" (
+    requires = "llvm"
+    version  = "@PACKAGE_VERSION@"
+    description = "IPO Transforms for LLVM"
+    archive(byte) = "llvm_ipo.cma"
+    archive(native) = "llvm_ipo.cmxa"
+)
+
+package "scalar_opts" (
+    requires = "llvm"
+    version = "@PACKAGE_VERSION@"
+    description = "Scalar Transforms for LLVM"
+    archive(byte) = "llvm_scalar_opts.cma"
+    archive(native) = "llvm_scalar_opts.cmxa"
+)
+
+package "target" (
+    requires = "llvm"
+    version  = "@PACKAGE_VERSION@"
+    description = "Target Information for LLVM"
+    archive(byte) = "llvm_target.cma"
+    archive(native) = "llvm_target.cmxa"
+)

@@ -1,0 +1,15 @@
+# `Support' and `TableGen' libraries are added on the top-level CMakeLists.txt
+
+add_subdirectory(VMCore)
+add_subdirectory(CodeGen)
+add_subdirectory(Bitcode)
+add_subdirectory(Transforms)
+add_subdirectory(Linker)
+add_subdirectory(Analysis)
+add_subdirectory(MC)
+add_subdirectory(Object)
+add_subdirectory(DebugInfo)
+add_subdirectory(ExecutionEngine)
+add_subdirectory(Target)
+add_subdirectory(AsmParser)
+add_subdirectory(Archive)

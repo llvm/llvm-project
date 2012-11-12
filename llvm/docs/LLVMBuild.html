@@ -1,0 +1,368 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>LLVMBuild Documentation</title>
+  <link rel="stylesheet" href="_static/llvm.css" type="text/css">
+</head>
+<body>
+
+<h1>LLVMBuild Guide</h1>
+
+<ol>
+  <li><a href="#introduction">Introduction</a></li>
+  <li><a href="#projectorg">Project Organization</a></li>
+  <li><a href="#buildintegration">Build Integration</a></li>
+  <li><a href="#componentoverview">Component Overview</a></li>
+  <li><a href="#formatreference">Format Reference</a></li>
+</ol>
+
+<!-- *********************************************************************** -->
+<h2><a name="introduction">Introduction</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+  <p>This document describes the <tt>LLVMBuild</tt> organization and files which
+  we use to describe parts of the LLVM ecosystem. For description of specific
+  LLVMBuild related tools, please see the command guide.</p>
+
+  <p>LLVM is designed to be a modular set of libraries which can be flexibly
+  mixed together in order to build a variety of tools, like compilers, JITs,
+  custom code generators, optimization passes, interpreters, and so on. Related
+  projects in the LLVM system like Clang and LLDB also tend to follow this
+  philosophy.</p>
+
+  <p>In order to support this usage style, LLVM has a fairly strict structure as
+  to how the source code and various components are organized. The
+  <tt>LLVMBuild.txt</tt> files are the explicit specification of that structure,
+  and are used by the build systems and other tools in order to develop the LLVM
+  project.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="projectorg">Project Organization</a></h2>
+<!-- *********************************************************************** -->
+
+<!-- FIXME: We should probably have an explicit top level project object. Good
+place to hang project level data, name, etc. Also useful for serving as the
+$ROOT of project trees for things which can be checked out separately. -->
+
+<div>
+  <p>The source code for LLVM projects using the LLVMBuild system (LLVM, Clang,
+  and LLDB) is organized into <em>components</em>, which define the separate
+  pieces of functionality that make up the project. These projects may consist
+  of many libraries, associated tools, build tools, or other utility tools (for
+  example, testing tools).</p>
+
+  <p>For the most part, the project contents are organized around defining one
+  main component per each subdirectory. Each such directory contains
+  an <tt>LLVMBuild.txt</tt> which contains the component definitions.</p>
+
+  <p>The component descriptions for the project as a whole are automatically
+  gathered by the LLVMBuild tools. The tools automatically traverse the source
+  directory structure to find all of the component description files. NOTE: For
+  performance/sanity reasons, we only traverse into subdirectories when the
+  parent itself contains an <tt>LLVMBuild.txt</tt> description file.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="buildintegration">Build Integration</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+  <p>The LLVMBuild files themselves are just a declarative way to describe the
+  project structure. The actual building of the LLVM project is handled by
+  another build system (currently we support
+  both <a href="MakefileGuide.html">Makefiles</a>
+  and <a href="CMake.html">CMake</a>.</p>
+
+  <p>The build system implementation will load the relevant contents of the
+  LLVMBuild files and use that to drive the actual project build. Typically, the
+  build system will only need to load this information at "configure" time, and
+  use it to generative native information. Build systems will also handle
+  automatically reconfiguring their information when the contents of
+  the <i>LLVMBuild.txt</i> files change.</p>
+
+  <p>Developers generally are not expected to need to be aware of the details of
+  how the LLVMBuild system is integrated into their build. Ideally, LLVM
+  developers who are not working on the build system would only ever need to
+  modify the contents of the <i>LLVMBuild.txt</i> description files (although we
+  have not reached this goal yet).</p>
+
+  <p>For more information on the utility tool we provide to help interfacing
+  with the build system, please see
+  the <a href="CommandGuide/html/llvm-build.html">llvm-build</a>
+  documentation.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="componentoverview">Component Overview</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+  <p>As mentioned earlier, LLVM projects are organized into
+  logical <em>components</em>. Every component is typically grouped into its
+  own subdirectory. Generally, a component is organized around a coherent group
+  of sources which have some kind of clear API separation from other parts of
+  the code.</p>
+
+  <p>LLVM primarily uses the following types of components:</p>
+  <ul>
+    <li><em>Libraries</em> - Library components define a distinct API which can
+    be independently linked into LLVM client applications. Libraries typically
+    have private and public header files, and may specify a link of required
+    libraries that they build on top of.</li>
+
+    <li><em>Build Tools</em> - Build tools are applications which are designed
+    to be run as part of the build process (typically to generate other source
+    files). Currently, LLVM uses one main build tool
+    called <a href="TableGenFundamentals.html">TableGen</a> to generate a
+    variety of source files.</li>
+
+    <li><em>Tools</em> - Command line applications which are built using the
+    LLVM component libraries. Most LLVM tools are small and are primarily
+    frontends to the library interfaces.</li>
+
+<!-- FIXME: We also need shared libraries as a first class component, but this
+     is not yet implemented. -->
+  </ul>
+
+  <p>Components are described using <em>LLVMBuild.txt</em> files in the
+  directories that define the component. See
+  the <a href="#formatreference">Format Reference</a> section for information on
+  the exact format of these files.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="formatreference">LLVMBuild Format Reference</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+  <p>LLVMBuild files are written in a simple variant of the INI or configuration
+  file format (<a href="http://en.wikipedia.org/wiki/INI_file">Wikipedia
+  entry</a>). The format defines a list of sections each of which may contain
+  some number of properties. A simple example of the file format is below:</p>
+  <div class="doc_code">
+  <pre>
+<i>; Comments start with a semi-colon.</i>
+
+<i>; Sections are declared using square brackets.</i>
+[component_0]
+
+<i>; Properties are declared using '=' and are contained in the previous section.
+;
+; We support simple string and boolean scalar values and list values, where
+; items are separated by spaces. There is no support for quoting, and so
+; property values may not contain spaces.</i>
+property_name = property_value
+list_property_name = value_1 value_2 <em>...</em> value_n
+boolean_property_name = 1 <em>(or 0)</em>
+</pre>
+  </div>
+
+  <p>LLVMBuild files are expected to define a strict set of sections and
+  properties. An typical component description file for a library
+  component would look typically look like the following example:</p>
+  <div class="doc_code">
+  <pre>
+[component_0]
+type = Library
+name = Linker
+parent = Libraries
+required_libraries = Archive BitReader Core Support TransformUtils
+</pre>
+  </div>
+
+  <p>A full description of the exact sections and properties which are allowed
+ follows.</p>
+
+  <p>Each file may define exactly one common component, named "common". The
+  common component may define the following properties:</p>
+  <ul>
+    <li><i>subdirectories</i> <b>[optional]</b>
+      <p>If given, a list of the names of the subdirectories from the current
+        subpath to search for additional LLVMBuild files.</p></li>
+  </ul>
+
+  <p>Each file may define multiple components. Each component is described by a
+  section who name starts with "component". The remainder of the section name is
+  ignored, but each section name must be unique. Typically components are just
+  number in order for files with multiple components ("component_0",
+  "component_1", and so on).<p>
+
+  <p><b>Section names not matching this format (or the "common" section) are
+  currently unused and are disallowed.</b></p>
+
+  <p>Every component is defined by the properties in the section. The exact list
+  of properties that are allowed depends on the component
+  type. Components <b>may not</b> define any properties other than those
+  expected by the component type.</p>
+
+  <p>Every component must define the following properties:</p>
+  <ul>
+    <li><i>type</i> <b>[required]</b>
+      <p>The type of the component. Supported component types are
+      detailed below. Most components will define additional properties which
+      may be required or optional.</p></li>
+
+    <li><i>name</i> <b>[required]</b>
+      <p>The name of the component. Names are required to be unique
+      across the entire project.</p></li>
+
+    <li><i>parent</i> <b>[required]</b>
+      <p>The name of the logical parent of the component. Components are
+      organized into a logical tree to make it easier to navigate and organize
+      groups of components. The parents have no semantics as far as the project
+      build is concerned, however. Typically, the parent will be the main
+      component of the parent directory.</p>
+
+      <!-- FIXME: Should we make the parent optional, and default to parent
+      directories component? -->
+
+      <p>Components may reference the root pseudo component using '$ROOT' to
+      indicate they should logically be grouped at the top-level.</p>
+    </li>
+  </ul>
+
+  <p>Components may define the following properties:</p>
+  <ul>
+    <li><i>dependencies</i> <b>[optional]</b>
+      <p>If specified, a list of names of components which <i>must</i> be built
+      prior to this one. This should only be exactly those components which
+      produce some tool or source code required for building the
+      component.</p>
+
+      <p><em>NOTE:</em> Group and LibraryGroup components have no semantics for
+      the actual build, and are not allowed to specify dependencies.</p></li>
+  </ul>
+
+  <p>The following section lists the available component types, as well as the
+  properties which are associated with that component.</p>
+
+  <ul>
+    <li><i>type = Group</i>
+      <p>Group components exist purely to allow additional arbitrary structuring
+      of the logical components tree. For example, one might define a
+      "Libraries" group to hold all of the root library components.</p>
+
+      <p>Group components have no additionally properties.</p>
+    </li>
+
+    <li><i>type = Library</i>
+      <p>Library components define an individual library which should be built
+      from the source code in the component directory.</p>
+
+      <p>Components with this type use the following properties:</p>
+      <ul>
+        <li><i>library_name</i> <b>[optional]</b>
+          <p>If given, the name to use for the actual library file on disk. If
+          not given, the name is derived from the component name
+          itself.</p></li>
+
+        <li><i>required_libraries</i> <b>[optional]</b>
+          <p>If given, a list of the names of Library or LibraryGroup components
+          which must also be linked in whenever this library is used. That is,
+          the link time dependencies for this component. When tools are built,
+          the build system will include the transitive closure of
+          all <i>required_libraries</i> for the components the tool needs.</p></li>
+
+        <li><i>add_to_library_groups</i> <b>[optional]</b>
+          <p>If given, a list of the names of LibraryGroup components which this
+          component is also part of. This allows nesting groups of
+          components. For example, the <i>X86</i> target might define a library
+          group for all of the <i>X86</i> components. That library group might
+          then be included in the <i>all-targets</i> library group.</p></li>
+
+        <li><i>installed</i> <b>[optional]</b> <b>[boolean]</b>
+          <p>Whether this library is installed. Libraries that are not installed
+          are only reported by <tt>llvm-config</tt> when it is run as part of a
+          development directory.</p></li>
+      </ul>
+    </li>
+
+    <li><i>type = LibraryGroup</i>
+      <p>LibraryGroup components are a mechanism to allow easy definition of
+      useful sets of related components. In particular, we use them to easily
+      specify things like "all targets", or "all assembly printers".</p>
+
+      <p>Components with this type use the following properties:</p>
+      <ul>
+        <li><i>required_libraries</i> <b>[optional]</b>
+          <p>See the Library type for a description of this property.</p></li>
+
+        <li><i>add_to_library_groups</i> <b>[optional]</b>
+          <p>See the Library type for a description of this property.</p></li>
+      </ul>
+    </li>
+
+    <li><i>type = TargetGroup</i>
+      <p>TargetGroup components are an extension of LibraryGroups, specifically
+      for defining LLVM targets (which are handled specially in a few
+      places).</p>
+
+      <p>The name of the component should always be the name of the target.</p>
+
+      <p>Components with this type use the LibraryGroup properties in addition
+      to:</p>
+      <ul>
+        <li><i>has_asmparser</i> <b>[optional]</b> <b>[boolean]</b>
+          <p>Whether this target defines an assembly parser.</p></li>
+        <li><i>has_asmprinter</i> <b>[optional]</b> <b>[boolean]</b>
+          <p>Whether this target defines an assembly printer.</p></li>
+        <li><i>has_disassembler</i> <b>[optional]</b> <b>[boolean]</b>
+          <p>Whether this target defines a disassembler.</p></li>
+        <li><i>has_jit</i> <b>[optional]</b> <b>[boolean]</b>
+          <p>Whether this target supports JIT compilation.</p></li>
+      </ul>
+    </li>
+
+    <li><i>type = Tool</i>
+      <p>Tool components define standalone command line tools which should be
+      built from the source code in the component directory and linked.</p>
+
+      <p>Components with this type use the following properties:</p>
+      <ul>
+        <li><i>required_libraries</i> <b>[optional]</b>
+
+          <p>If given, a list of the names of Library or LibraryGroup components
+          which this tool is required to be linked with. <b>NOTE:</b> The values
+          should be the component names, which may not always match up with the
+          actual library names on disk.</p>
+
+          <p>Build systems are expected to properly include all of the libraries
+          required by the linked components (i.e., the transitive closer
+          of <em>required_libraries</em>).</p>
+
+          <p>Build systems are also expected to understand that those library
+          components must be built prior to linking -- they do not also need to
+          be listed under <i>dependencies</i>.</p></li>
+      </ul>
+    </li>
+
+    <li><i>type = BuildTool</i>
+      <p>BuildTool components are like Tool components, except that the tool is
+      supposed to be built for the platform where the build is running (instead
+      of that platform being targetted). Build systems are expected to handle
+      the fact that required libraries may need to be built for multiple
+      platforms in order to be able to link this tool.</p>
+
+      <p>BuildTool components currently use the exact same properties as Tool
+      components, the type distinction is only used to differentiate what the
+      tool is built for.</p>
+    </li>
+  </ul>
+</div>
+
+<!-- *********************************************************************** -->
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="http://llvm.org/">The LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+</body>
+</html>

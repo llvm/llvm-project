@@ -1,0 +1,5 @@
+# RUN: llvm-mc --disassemble %s -triple=thumbv7-apple-darwin9 2>&1 | grep "invalid instruction encoding"
+
+# SP and PC are not allowed in the register list on STM instructions in Thumb2.
+
+0x2d 0xe9 0xf7 0xb6

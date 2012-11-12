@@ -1,0 +1,316 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>System Library</title>
+  <link rel="stylesheet" href="_static/llvm.css" type="text/css">
+</head>
+<body>
+
+<h1>System Library</h1>
+<ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#requirements">Keeping LLVM Portable</a>
+  <ol>
+    <li><a href="#headers">Don't Include System Headers</a></li>
+    <li><a href="#expose">Don't Expose System Headers</a></li>
+    <li><a href="#c_headers">Allow Standard C Header Files</a></li>
+    <li><a href="#cpp_headers">Allow Standard C++ Header Files</a></li>
+    <li><a href="#highlev">High-Level Interface</a></li>
+    <li><a href="#nofunc">No Exposed Functions</a></li>
+    <li><a href="#nodata">No Exposed Data</a></li>
+    <li><a href="#nodupl">No Duplicate Implementations</a></li>
+    <li><a href="#nounused">No Unused Functionality</a></li>
+    <li><a href="#virtuals">No Virtual Methods</a></li>
+    <li><a href="#softerrors">Minimize Soft Errors</a></li>
+    <li><a href="#throw_spec">No throw() Specifications</a></li>
+    <li><a href="#organization">Code Organization</a></li>
+    <li><a href="#semantics">Consistent Semantics</a></li>
+    <li><a href="#bug">Tracking Bugzilla Bug: 351</a></li>
+  </ol></li>
+</ul>
+
+<div class="doc_author">
+  <p>Written by <a href="mailto:rspencer@x10sys.com">Reid Spencer</a></p>
+</div>
+
+
+<!-- *********************************************************************** -->
+<h2><a name="abstract">Abstract</a></h2>
+<div>
+  <p>This document provides some details on LLVM's System Library, located in
+  the source at <tt>lib/System</tt> and <tt>include/llvm/System</tt>. The
+  library's purpose is to shield LLVM from the differences between operating
+  systems for the few services LLVM needs from the operating system. Much of
+  LLVM is written using portability features of standard C++. However, in a few
+  areas, system dependent facilities are needed and the System Library is the
+  wrapper around those system calls.</p>
+  <p>By centralizing LLVM's use of operating system interfaces, we make it 
+  possible for the LLVM tool chain and runtime libraries to be more easily 
+  ported to new platforms since (theoretically) only <tt>lib/System</tt> needs 
+  to be ported.  This library also unclutters the rest of LLVM from #ifdef use 
+  and special cases for specific operating systems. Such uses are replaced 
+  with simple calls to the interfaces provided in <tt>include/llvm/System</tt>.
+  </p> 
+  <p>Note that the System Library is not intended to be a complete operating 
+  system wrapper (such as the Adaptive Communications Environment (ACE) or 
+  Apache Portable Runtime (APR)), but only provides the functionality necessary
+  to support LLVM.
+  <p>The System Library was written by Reid Spencer who formulated the
+  design based on similar work originating from the eXtensible Programming 
+  System (XPS). Several people helped with the effort; especially,
+  Jeff Cohen and Henrik Bach on the Win32 port.</p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2>
+  <a name="requirements">Keeping LLVM Portable</a>
+</h2>
+<div>
+  <p>In order to keep LLVM portable, LLVM developers should adhere to a set of
+  portability rules associated with the System Library. Adherence to these rules
+  should help the System Library achieve its goal of shielding LLVM from the
+  variations in operating system interfaces and doing so efficiently.  The 
+  following sections define the rules needed to fulfill this objective.</p>
+
+<!-- ======================================================================= -->
+<h3><a name="headers">Don't Include System Headers</a></h3>
+<div>
+  <p>Except in <tt>lib/System</tt>, no LLVM source code should directly
+  <tt>#include</tt> a system header. Care has been taken to remove all such
+  <tt>#includes</tt> from LLVM while <tt>lib/System</tt> was being
+  developed.  Specifically this means that header files like "unistd.h", 
+  "windows.h", "stdio.h", and "string.h" are forbidden to be included by LLVM 
+  source code outside the implementation of <tt>lib/System</tt>.</p>
+  <p>To obtain system-dependent functionality, existing interfaces to the system
+  found in <tt>include/llvm/System</tt> should be used. If an appropriate 
+  interface is not available, it should be added to <tt>include/llvm/System</tt>
+  and implemented in <tt>lib/System</tt> for all supported platforms.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="expose">Don't Expose System Headers</a></h3>
+<div>
+  <p>The System Library must shield LLVM from <em>all</em> system headers. To 
+  obtain system level functionality, LLVM source must 
+  <tt>#include "llvm/System/Thing.h"</tt> and nothing else. This means that 
+  <tt>Thing.h</tt> cannot expose any system header files. This protects LLVM 
+  from accidentally using system specific functionality and only allows it
+  via the <tt>lib/System</tt> interface.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="c_headers">Use Standard C Headers</a></h3>
+<div>
+  <p>The <em>standard</em> C headers (the ones beginning with "c") are allowed
+  to be exposed through the <tt>lib/System</tt> interface. These headers and 
+  the things they declare are considered to be platform agnostic. LLVM source 
+  files may include them directly or obtain their inclusion through 
+  <tt>lib/System</tt> interfaces.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="cpp_headers">Use Standard C++ Headers</a></h3>
+<div>
+  <p>The <em>standard</em> C++ headers from the standard C++ library and
+  standard template library may be exposed through the <tt>lib/System</tt>
+  interface. These headers and the things they declare are considered to be
+  platform agnostic. LLVM source files may include them or obtain their
+  inclusion through lib/System interfaces.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="highlev">High Level Interface</a></h3>
+<div>
+  <p>The entry points specified in the interface of lib/System must be aimed at 
+  completing some reasonably high level task needed by LLVM. We do not want to
+  simply wrap each operating system call. It would be preferable to wrap several
+  operating system calls that are always used in conjunction with one another by
+  LLVM.</p>
+  <p>For example, consider what is needed to execute a program, wait for it to
+  complete, and return its result code. On Unix, this involves the following
+  operating system calls: <tt>getenv, fork, execve,</tt> and <tt>wait</tt>. The
+  correct thing for lib/System to provide is a function, say
+  <tt>ExecuteProgramAndWait</tt>, that implements the functionality completely.
+  what we don't want is wrappers for the operating system calls involved.</p>
+  <p>There must <em>not</em> be a one-to-one relationship between operating
+  system calls and the System library's interface. Any such interface function
+  will be suspicious.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="nounused">No Unused Functionality</a></h3>
+<div>
+  <p>There must be no functionality specified in the interface of lib/System 
+  that isn't actually used by LLVM. We're not writing a general purpose
+  operating system wrapper here, just enough to satisfy LLVM's needs. And, LLVM
+  doesn't need much. This design goal aims to keep the lib/System interface
+  small and understandable which should foster its actual use and adoption.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="nodupl">No Duplicate Implementations</a></h3>
+<div>
+  <p>The implementation of a function for a given platform must be written
+  exactly once. This implies that it must be possible to apply a function's 
+  implementation to multiple operating systems if those operating systems can
+  share the same implementation. This rule applies to the set of operating
+  systems supported for a given class of operating system (e.g. Unix, Win32).
+  </p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="virtuals">No Virtual Methods</a></h3>
+<div>
+  <p>The System Library interfaces can be called quite frequently by LLVM. In
+  order to make those calls as efficient as possible, we discourage the use of
+  virtual methods. There is no need to use inheritance for implementation
+  differences, it just adds complexity. The <tt>#include</tt> mechanism works
+  just fine.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="nofunc">No Exposed Functions</a></h3>
+<div>
+  <p>Any functions defined by system libraries (i.e. not defined by lib/System) 
+  must not be exposed through the lib/System interface, even if the header file 
+  for that function is not exposed. This prevents inadvertent use of system
+  specific functionality.</p>
+  <p>For example, the <tt>stat</tt> system call is notorious for having
+  variations in the data it provides. <tt>lib/System</tt> must not declare 
+  <tt>stat</tt> nor allow it to be declared. Instead it should provide its own 
+  interface to discovering information about files and directories. Those 
+  interfaces may be implemented in terms of <tt>stat</tt> but that is strictly 
+  an implementation detail. The interface provided by the System Library must
+  be implemented on all platforms (even those without <tt>stat</tt>).</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="nodata">No Exposed Data</a></h3>
+<div>
+  <p>Any data defined by system libraries (i.e. not defined by lib/System) must
+  not be exposed through the lib/System interface, even if the header file for
+  that function is not exposed. As with functions, this prevents inadvertent use
+  of data that might not exist on all platforms.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="softerrors">Minimize Soft Errors</a></h3>
+<div>
+  <p>Operating system interfaces will generally provide error results for every
+  little thing that could go wrong. In almost all cases, you can divide these
+  error results into two groups: normal/good/soft and abnormal/bad/hard. That
+  is, some of the errors are simply information like "file not found", 
+  "insufficient privileges", etc. while other errors are much harder like
+  "out of space", "bad disk sector", or "system call interrupted". We'll call 
+  the first group "<i>soft</i>" errors and the second group "<i>hard</i>" 
+  errors.<p>
+  <p>lib/System must always attempt to minimize soft errors.
+  This is a design requirement because the
+  minimization of soft errors can affect the granularity and the nature of the
+  interface. In general, if you find that you're wanting to throw soft errors,
+  you must review the granularity of the interface because it is likely you're
+  trying to implement something that is too low level. The rule of thumb is to
+  provide interface functions that <em>can't</em> fail, except when faced with 
+  hard errors.</p>
+  <p>For a trivial example, suppose we wanted to add an "OpenFileForWriting" 
+  function. For many operating systems, if the file doesn't exist, attempting 
+  to open the file will produce an error.  However, lib/System should not
+  simply throw that error if it occurs because its a soft error. The problem
+  is that the interface function, OpenFileForWriting is too low level. It should
+  be OpenOrCreateFileForWriting. In the case of the soft "doesn't exist" error, 
+  this function would just create it and then open it for writing.</p>
+  <p>This design principle needs to be maintained in lib/System because it
+  avoids the propagation of soft error handling throughout the rest of LLVM.
+  Hard errors will generally just cause a termination for an LLVM tool so don't
+  be bashful about throwing them.</p>
+  <p>Rules of thumb:</p>
+  <ol>
+    <li>Don't throw soft errors, only hard errors.</li>
+    <li>If you're tempted to throw a soft error, re-think the interface.</li>
+    <li>Handle internally the most common normal/good/soft error conditions
+    so the rest of LLVM doesn't have to.</li>
+  </ol>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="throw_spec">No throw Specifications</a></h3>
+<div>
+  <p>None of the lib/System interface functions may be declared with C++ 
+  <tt>throw()</tt> specifications on them. This requirement makes sure that the
+  compiler does not insert additional exception handling code into the interface
+  functions. This is a performance consideration: lib/System functions are at
+  the bottom of many call chains and as such can be frequently called. We
+  need them to be as efficient as possible.  However, no routines in the
+  system library should actually throw exceptions.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="organization">Code Organization</a></h3>
+<div>
+  <p>Implementations of the System Library interface are separated by their
+  general class of operating system. Currently only Unix and Win32 classes are
+  defined but more could be added for other operating system classifications.
+  To distinguish which implementation to compile, the code in lib/System uses
+  the LLVM_ON_UNIX and LLVM_ON_WIN32 #defines provided via configure through the
+  llvm/Config/config.h file. Each source file in lib/System, after implementing
+  the generic (operating system independent) functionality needs to include the
+  correct implementation using a set of <tt>#if defined(LLVM_ON_XYZ)</tt> 
+  directives. For example, if we had lib/System/File.cpp, we'd expect to see in
+  that file:</p>
+  <pre><tt>
+  #if defined(LLVM_ON_UNIX)
+  #include "Unix/File.cpp"
+  #endif
+  #if defined(LLVM_ON_WIN32)
+  #include "Win32/File.cpp"
+  #endif
+  </tt></pre>
+  <p>The implementation in lib/System/Unix/File.cpp should handle all Unix
+  variants. The implementation in lib/System/Win32/File.cpp should handle all
+  Win32 variants.  What this does is quickly differentiate the basic class of 
+  operating system that will provide the implementation. The specific details
+  for a given platform must still be determined through the use of
+  <tt>#ifdef</tt>.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="semantics">Consistent Semantics</a></h3>
+<div>
+  <p>The implementation of a lib/System interface can vary drastically between
+  platforms. That's okay as long as the end result of the interface function 
+  is the same. For example, a function to create a directory is pretty straight
+  forward on all operating system. System V IPC on the other hand isn't even
+  supported on all platforms. Instead of "supporting" System V IPC, lib/System
+  should provide an interface to the basic concept of inter-process 
+  communications. The implementations might use System V IPC if that was 
+  available or named pipes, or whatever gets the job done effectively for a 
+  given operating system.  In all cases, the interface and the implementation 
+  must be semantically consistent. </p>
+</div>
+
+<!-- ======================================================================= -->
+<h3><a name="bug">Bug 351</a></h3>
+<div>
+  <p>See <a href="http://llvm.org/PR351">bug 351</a>
+  for further details on the progress of this work</p>
+</div>
+
+</div>
+
+<!-- *********************************************************************** -->
+
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="mailto:rspencer@x10sys.com">Reid Spencer</a><br>
+  <a href="http://llvm.org/">LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+</body>
+</html>

@@ -1,0 +1,35 @@
+;===- ./lib/Target/ARM/LLVMBuild.txt ---------------------------*- Conf -*--===;
+;
+;                     The LLVM Compiler Infrastructure
+;
+; This file is distributed under the University of Illinois Open Source
+; License. See LICENSE.TXT for details.
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[common]
+subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
+
+[component_0]
+type = TargetGroup
+name = ARM
+parent = Target
+has_asmparser = 1
+has_asmprinter = 1
+has_disassembler = 1
+has_jit = 1
+
+[component_1]
+type = Library
+name = ARMCodeGen
+parent = ARM
+required_libraries = ARMAsmPrinter ARMDesc ARMInfo Analysis AsmPrinter CodeGen Core MC SelectionDAG Support Target
+add_to_library_groups = ARM

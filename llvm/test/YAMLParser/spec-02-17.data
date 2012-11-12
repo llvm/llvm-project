@@ -1,0 +1,16 @@
+# RUN: yaml-bench -canonical %s
+
+unicode: "Sosa did fine.\u263A"
+control: "\b1998\t1999\t2000\n"
+hexesc:  "\x13\x10 is \r\n"
+
+single: '"Howdy!" he cried.'
+quoted: ' # not a ''comment''.'
+tie-fighter: '|\-*-/|'
+
+# CHECK: !!str "Sosa did fine.\u263A"
+# CHECK: !!str "\b1998\t1999\t2000\n"
+# CHECK: !!str "\x13\x10 is \r\n"
+# CHECK: !!str "\"Howdy!\" he cried."
+# CHECK: !!str " # not a 'comment'."
+# CHECK: !!str "|\\-*-/|"

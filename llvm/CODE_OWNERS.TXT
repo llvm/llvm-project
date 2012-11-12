@@ -1,0 +1,51 @@
+This file is a list of the people responsible for ensuring that patches for a
+particular part of LLVM are reviewed, either by themself or by someone else.
+They are also the gatekeepers for their part of LLVM, with the final word on
+what goes in or not.
+
+The list is sorted by surname and formatted to allow easy grepping and
+beautification by scripts.  The fields are: name (N), email (E), web-address
+(W), PGP key ID and fingerprint (P), description (D), and snail-mail address
+(S).
+
+N: Evan Cheng
+E: evan.cheng@apple.com
+D: Code generator and all targets
+
+N: Greg Clayton
+D: LLDB
+
+N: Peter Collingbourne
+D: libclc
+
+N: Doug Gregor
+D: Clang Frontend Libraries
+
+N: Tobias Grosser
+D: Polly
+
+N: Howard Hinnant
+D: libc++
+
+N: Anton Korobeynikov
+E: asl@math.spbu.ru
+D: Exception handling, debug information, and Windows codegen
+
+N: Ted Kremenek
+D: Clang Static Analyzer
+
+N: Chris Lattner
+E: sabre@nondot.org
+W: http://nondot.org/~sabre/
+D: Everything not covered by someone else
+
+N: John McCall
+E: rjmccall@apple.com
+D: Clang LLVM IR generation
+
+N: Jakob Olesen
+D: Register allocators and TableGen
+
+N: Duncan Sands
+E: baldrick@free.fr
+D: DragonEgg

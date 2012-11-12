@@ -1,0 +1,13 @@
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
+
+	.code64
+	movb	$0x0, (%esi)
+// CHECK: encoding: [0x67,0xc6,0x06,0x00]
+	movb	$0x0, (%rsi)
+// CHECK: encoding: [0xc6,0x06,0x00]
+
+	.code32
+	movb	$0x0, (%si)
+// CHECK: encoding: [0x67,0xc6,0x06,0x00]
+	movb	$0x0, (%esi)
+// CHECK: encoding: [0xc6,0x06,0x00]

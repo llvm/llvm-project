@@ -1,0 +1,3 @@
+# RUN: llvm-mc --disassemble %s -triple=thumbv7-unknown-unknown 2>&1 | grep "potentially undefined instruction encoding"
+
+0xff 0xbf 0x6b 0x80 0x00 0x75

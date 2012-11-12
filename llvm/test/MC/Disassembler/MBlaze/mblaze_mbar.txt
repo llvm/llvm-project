@@ -1,0 +1,14 @@
+# RUN: llvm-mc --disassemble %s -triple=mblaze-unknown-unknown | FileCheck %s
+
+################################################################################
+# Memory Barrier instructions
+################################################################################
+
+# CHECK:    mbar        0
+0xB8 0x02 0x00 0x04
+
+# CHECK:    mbar        1
+0xB8 0x22 0x00 0x04
+
+# CHECK:    mbar        2
+0xB8 0x42 0x00 0x04

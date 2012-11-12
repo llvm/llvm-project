@@ -1,0 +1,577 @@
+#!/usr/bin/python3
+##===- utils/llvmbuild - Build the LLVM project ----------------*-python-*-===##
+# 
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+# 
+##===----------------------------------------------------------------------===##
+#
+# This script builds many different flavors of the LLVM ecosystem.  It
+# will build LLVM, Clang and dragonegg as well as run tests on them.
+# This script is convenient to use to check builds and tests before
+# committing changes to the upstream repository
+#
+# A typical source setup uses three trees and looks like this:
+#
+# official
+#   dragonegg
+#   llvm
+#     tools
+#       clang
+# staging
+#   dragonegg
+#   llvm
+#     tools
+#       clang
+# commit
+#   dragonegg
+#   llvm
+#     tools
+#       clang
+#
+# In a typical workflow, the "official" tree always contains unchanged
+# sources from the main LLVM project repositories.  The "staging" tree
+# is where local work is done.  A set of changes resides there waiting
+# to be moved upstream.  The "commit" tree is where changes from
+# "staging" make their way upstream.  Individual incremental changes
+# from "staging" are applied to "commit" and committed upstream after
+# a successful build and test run.  A successful build is one in which
+# testing results in no more failures than seen in the testing of the
+# "official" tree.
+# 
+# A build may be invoked as such:
+#
+# llvmbuild --src=~/llvm/commit --src=~/llvm/staging --src=~/llvm/official
+#   --build=debug --build=release --build=paranoid
+#   --prefix=/home/greened/install --builddir=/home/greened/build
+#
+# This will build the LLVM ecosystem, including LLVM, Clangand
+# dragonegg, putting build results in ~/build and installing tools in
+# ~/install.  llvm-compilers-check creates separate build and install
+# directories for each source/build flavor.  In the above example,
+# llvmbuild will build debug, release and paranoid (debug+checks)
+# flavors from each source tree (official, staging and commit) for a
+# total of nine builds.  All builds will be run in parallel.
+#
+# The user may control parallelism via the --jobs and --threads
+# switches.  --jobs tells llvm-compilers-checl the maximum total
+# number of builds to activate in parallel.  The user may think of it
+# as equivalent to the GNU make -j switch.  --threads tells
+# llvm-compilers-check how many worker threads to use to accomplish
+# those builds.  If --threads is less than --jobs, --threads workers
+# will be launched and each one will pick a source/flavor combination
+# to build.  Then llvm-compilers-check will invoke GNU make with -j
+# (--jobs / --threads) to use up the remaining job capacity.  Once a
+# worker is finished with a build, it will pick another combination
+# off the list and start building it.
+#
+##===----------------------------------------------------------------------===##
+
+import optparse
+import os
+import sys
+import threading
+import queue
+import logging
+import traceback
+import subprocess
+import re
+
+# TODO: Use shutil.which when it is available (3.2 or later)
+def find_executable(executable, path=None):
+    """Try to find 'executable' in the directories listed in 'path' (a
+    string listing directories separated by 'os.pathsep'; defaults to
+    os.environ['PATH']).  Returns the complete filename or None if not
+    found
+    """
+    if path is None:
+        path = os.environ['PATH']
+    paths = path.split(os.pathsep)
+    extlist = ['']
+    if os.name == 'os2':
+        (base, ext) = os.path.splitext(executable)
+        # executable files on OS/2 can have an arbitrary extension, but
+        # .exe is automatically appended if no dot is present in the name
+        if not ext:
+            executable = executable + ".exe"
+    elif sys.platform == 'win32':
+        pathext = os.environ['PATHEXT'].lower().split(os.pathsep)
+        (base, ext) = os.path.splitext(executable)
+        if ext.lower() not in pathext:
+            extlist = pathext
+    for ext in extlist:
+        execname = executable + ext
+        if os.path.isfile(execname):
+            return execname
+        else:
+            for p in paths:
+                f = os.path.join(p, execname)
+                if os.path.isfile(f):
+                    return f
+    else:
+        return None
+
+def is_executable(fpath):
+    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+def add_options(parser):
+    parser.add_option("-v", "--verbose", action="store_true",
+                      default=False,
+                      help=("Output informational messages"
+                            " [default: %default]"))
+    parser.add_option("--src", action="append",
+                      help=("Top-level source directory [default: %default]"))
+    parser.add_option("--build", action="append",
+                      help=("Build types to run [default: %default]"))
+    parser.add_option("--cc", default=find_executable("cc"),
+                      help=("The C compiler to use [default: %default]"))
+    parser.add_option("--cxx", default=find_executable("c++"),
+                      help=("The C++ compiler to use [default: %default]"))
+    parser.add_option("--threads", default=4, type="int",
+                      help=("The number of worker threads to use "
+                            "[default: %default]"))
+    parser.add_option("--jobs", "-j", default=8, type="int",
+                      help=("The number of simultaneous build jobs "
+                            "[default: %default]"))
+    parser.add_option("--prefix",
+                      help=("Root install directory [default: %default]"))
+    parser.add_option("--builddir",
+                      help=("Root build directory [default: %default]"))
+    parser.add_option("--extra-llvm-config-flags", default="",
+                      help=("Extra flags to pass to llvm configure [default: %default]"))
+    parser.add_option("--force-configure", default=False, action="store_true",
+                      help=("Force reconfigure of all components"))
+    parser.add_option("--no-dragonegg", default=False, action="store_true",
+                      help=("Do not build dragonegg"))
+    parser.add_option("--no-install", default=False, action="store_true",
+                      help=("Do not do installs"))
+    return
+
+def check_options(parser, options, valid_builds):
+    # See if we're building valid flavors.
+    for build in options.build:
+        if (build not in valid_builds):
+            parser.error("'" + build + "' is not a valid build flavor "
+                         + str(valid_builds))
+
+    # See if we can find source directories.
+    for src in options.src:
+        for component in components:
+            component = component.rstrip("2")
+            compsrc = src + "/" + component
+            if (not os.path.isdir(compsrc)):
+                parser.error("'" + compsrc + "' does not exist")
+
+    # See if we can find the compilers
+    options.cc = find_executable(options.cc)
+    options.cxx = find_executable(options.cxx)
+
+    return
+
+# Find a unique short name for the given set of paths.  This searches
+# back through path components until it finds unique component names
+# among all given paths.
+def get_path_abbrevs(paths):
+    # Find the number of common starting characters in the last component
+    # of the paths.
+    unique_paths = list(paths)
+
+    class NotFoundException(Exception): pass
+
+    # Find a unique component of each path.
+    unique_bases = unique_paths[:]
+    found = 0
+    while len(unique_paths) > 0:
+        bases = [os.path.basename(src) for src in unique_paths]
+        components = { c for c in bases }
+        # Account for single entry in paths.
+        if len(components) > 1 or len(components) == len(bases):
+            # We found something unique.
+            for c in components:
+                if bases.count(c) == 1:
+                   index = bases.index(c)
+                   unique_bases[index] = c
+                   # Remove the corresponding path from the set under
+                   # consideration.
+                   unique_paths[index] = None
+            unique_paths = [ p for p in unique_paths if p is not None ]
+        unique_paths = [os.path.dirname(src) for src in unique_paths]
+
+    if len(unique_paths) > 0:
+        raise NotFoundException()
+
+    abbrevs = dict(zip(paths, [base for base in unique_bases]))
+
+    return abbrevs
+
+# Given a set of unique names, find a short character sequence that
+# uniquely identifies them.
+def get_short_abbrevs(unique_bases):
+    # Find a unique start character for each path base.
+    my_unique_bases = unique_bases[:]
+    unique_char_starts = unique_bases[:]
+    while len(my_unique_bases) > 0:
+        for start, char_tuple in enumerate(zip(*[base
+                                                 for base in my_unique_bases])):
+            chars = { c for c in char_tuple }
+            # Account for single path.
+            if len(chars) > 1 or len(chars) == len(char_tuple):
+                # We found something unique.
+                for c in chars:
+                    if char_tuple.count(c) == 1:
+                        index = char_tuple.index(c)
+                        unique_char_starts[index] = start
+                        # Remove the corresponding path from the set under
+                        # consideration.
+                        my_unique_bases[index] = None
+                my_unique_bases = [ b for b in my_unique_bases
+                                    if b is not None ]
+                break
+
+    if len(my_unique_bases) > 0:
+        raise NotFoundException()
+
+    abbrevs = [abbrev[start_index:start_index+3]
+               for abbrev, start_index
+               in zip([base for base in unique_bases],
+                      [index for index in unique_char_starts])]
+
+    abbrevs = dict(zip(unique_bases, abbrevs))
+
+    return abbrevs
+
+class Builder(threading.Thread):
+    class ExecutableNotFound(Exception): pass
+    class FileNotExecutable(Exception): pass
+
+    def __init__(self, work_queue, jobs,
+                 build_abbrev, source_abbrev,
+                 options):
+        super().__init__()
+        self.work_queue = work_queue
+        self.jobs = jobs
+        self.cc = options.cc
+        self.cxx = options.cxx
+        self.build_abbrev = build_abbrev
+        self.source_abbrev = source_abbrev
+        self.build_prefix = options.builddir
+        self.install_prefix = options.prefix
+        self.options = options
+        self.component_abbrev = dict(
+            llvm="llvm",
+            dragonegg="degg")
+    def run(self):
+        while True:
+            try:
+                source, build = self.work_queue.get()
+                self.dobuild(source, build)
+            except:
+                traceback.print_exc()
+            finally:
+                self.work_queue.task_done()
+
+    def execute(self, command, execdir, env, component):
+        prefix = self.component_abbrev[component.replace("-", "_")]
+        pwd = os.getcwd()
+        if not os.path.exists(execdir):
+            os.makedirs(execdir)
+
+        execenv = os.environ.copy()
+
+        for key, value in env.items():
+            execenv[key] = value
+ 
+        self.logger.debug("[" + prefix + "] " + "env " + str(env) + " "
+                          + " ".join(command));
+
+        try:
+            proc = subprocess.Popen(command,
+                                    cwd=execdir,
+                                    env=execenv,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+
+            line = proc.stdout.readline()
+            while line:
+                self.logger.info("[" + prefix + "] "
+                                 + str(line, "utf-8").rstrip())
+                line = proc.stdout.readline()
+
+        except:
+            traceback.print_exc()
+
+    # Get a list of C++ include directories to pass to clang.
+    def get_includes(self):
+        # Assume we're building with g++ for now.
+        command = [self.cxx]
+        command += ["-v", "-x", "c++", "/dev/null", "-fsyntax-only"]
+        includes = []
+        self.logger.debug(command)
+        try:
+            proc = subprocess.Popen(command,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+
+            gather = False
+            line = proc.stdout.readline()
+            while line:
+                self.logger.debug(line)
+                if re.search("End of search list", str(line)) is not None:
+                    self.logger.debug("Stop Gather")
+                    gather = False
+                if gather:
+                    includes.append(str(line, "utf-8").strip())
+                if re.search("#include <...> search starts", str(line)) is not None:
+                    self.logger.debug("Start Gather")
+                    gather = True
+                line = proc.stdout.readline()
+        except:
+            traceback.print_exc()
+        self.logger.debug(includes)
+        return includes
+
+    def dobuild(self, source, build):
+        build_suffix = ""
+
+        ssabbrev = get_short_abbrevs([ab for ab in self.source_abbrev.values()])
+
+        prefix = "[" + ssabbrev[self.source_abbrev[source]] + "-" + self.build_abbrev[build] + "]"
+        self.install_prefix += "/" + self.source_abbrev[source] + "/" + build
+        build_suffix += "/" + self.source_abbrev[source] + "/" + build
+
+        self.logger = logging.getLogger(prefix)
+
+        self.logger.debug(self.install_prefix)
+
+        # Assume we're building with gcc for now.
+        cxxincludes = self.get_includes()
+        cxxroot = os.path.dirname(cxxincludes[0]) # Remove the version
+        cxxroot = os.path.dirname(cxxroot)        # Remove the c++
+        cxxroot = os.path.dirname(cxxroot)        # Remove the include
+
+        configure_flags = dict(
+            llvm=dict(debug=["--prefix=" + self.install_prefix,
+                             "--with-extra-options=-Werror",
+                             "--enable-assertions",
+                             "--disable-optimized",
+                             "--with-gcc-toolchain=" + cxxroot],
+                      release=["--prefix=" + self.install_prefix,
+                               "--with-extra-options=-Werror",
+                               "--enable-optimized",
+                               "--with-gcc-toolchain=" + cxxroot],
+                      paranoid=["--prefix=" + self.install_prefix,
+                                "--with-extra-options=-Werror",
+                                "--enable-assertions",
+                                "--enable-expensive-checks",
+                                "--disable-optimized",
+                                "--with-gcc-toolchain=" + cxxroot]),
+            dragonegg=dict(debug=[],
+                           release=[],
+                           paranoid=[]))
+
+        configure_env = dict(
+            llvm=dict(debug=dict(CC=self.cc,
+                                 CXX=self.cxx),
+                      release=dict(CC=self.cc,
+                                   CXX=self.cxx),
+                      paranoid=dict(CC=self.cc,
+                                    CXX=self.cxx)),
+            dragonegg=dict(debug=dict(CC=self.cc,
+                                      CXX=self.cxx),
+                           release=dict(CC=self.cc,
+                                        CXX=self.cxx),
+                           paranoid=dict(CC=self.cc,
+                                         CXX=self.cxx)))
+
+        make_flags = dict(
+            llvm=dict(debug=["-j" + str(self.jobs)],
+                      release=["-j" + str(self.jobs)],
+                      paranoid=["-j" + str(self.jobs)]),
+            dragonegg=dict(debug=["-j" + str(self.jobs)],
+                           release=["-j" + str(self.jobs)],
+                           paranoid=["-j" + str(self.jobs)]))
+
+        make_env = dict(
+            llvm=dict(debug=dict(),
+                      release=dict(),
+                      paranoid=dict()),
+            dragonegg=dict(debug=dict(GCC=self.cc,
+                                      LLVM_CONFIG=self.install_prefix + "/bin/llvm-config"),
+                           release=dict(GCC=self.cc,
+                                        LLVM_CONFIG=self.install_prefix + "/bin/llvm-config"),
+                           paranoid=dict(GCC=self.cc,
+                                         LLVM_CONFIG=self.install_prefix + "/bin/llvm-config")))
+
+        make_install_flags = dict(
+            llvm=dict(debug=["install"],
+                      release=["install"],
+                      paranoid=["install"]),
+            dragonegg=dict(debug=["install"],
+                           release=["install"],
+                           paranoid=["install"]))
+
+        make_install_env = dict(
+            llvm=dict(debug=dict(),
+                      release=dict(),
+                      paranoid=dict()),
+            dragonegg=dict(debug=dict(),
+                           release=dict(),
+                           paranoid=dict()))
+
+        make_check_flags = dict(
+            llvm=dict(debug=["check"],
+                      release=["check"],
+                      paranoid=["check"]),
+            dragonegg=dict(debug=["check"],
+                           release=["check"],
+                           paranoid=["check"]))
+
+        make_check_env = dict(
+            llvm=dict(debug=dict(),
+                      release=dict(),
+                      paranoid=dict()),
+            dragonegg=dict(debug=dict(),
+                           release=dict(),
+                           paranoid=dict()))
+
+        for component in components:
+            comp = component[:]
+            
+            if (self.options.no_dragonegg):
+                if (comp == 'dragonegg'):
+                    self.logger.info("Skipping " + component + " in "
+                                     + builddir)
+                    continue
+
+            srcdir = source + "/" + comp.rstrip("2")
+            builddir = self.build_prefix + "/" + comp + "/" + build_suffix
+            installdir = self.install_prefix
+
+            comp_key = comp.replace("-", "_")
+
+            config_args = configure_flags[comp_key][build][:]
+            config_args.extend(getattr(self.options,
+                                       "extra_" + comp_key.rstrip("2")
+                                       + "_config_flags",
+                                       "").split())
+
+            self.logger.info("Configuring " + component + " in " + builddir)
+            self.configure(component, srcdir, builddir,
+                           config_args,
+                           configure_env[comp_key][build])
+
+            self.logger.info("Building " + component + " in " + builddir)
+            self.logger.info("Build: make " + str(make_flags[comp_key][build]))
+            self.make(component, srcdir, builddir,
+                      make_flags[comp_key][build],
+                      make_env[comp_key][build])
+
+            if (not self.options.no_install):
+                self.logger.info("Installing " + component + " in " + installdir)
+                self.make(component, srcdir, builddir,
+                          make_install_flags[comp_key][build],
+                          make_install_env[comp_key][build])
+
+            self.logger.info("Testing " + component + " in " + builddir)
+            self.logger.info("Test: make "
+                             + str(make_check_flags[comp_key][build]))
+            self.make(component, srcdir, builddir,
+                      make_check_flags[comp_key][build],
+                      make_check_env[comp_key][build])
+
+
+    def configure(self, component, srcdir, builddir, flags, env):
+        self.logger.debug("Configure " + str(flags) + " " + str(srcdir) + " -> "
+                          + str(builddir))
+
+        configure_files = dict(
+            llvm=[(srcdir + "/configure", builddir + "/Makefile")],
+            dragonegg=[("","")])
+
+
+        doconfig = False
+        for conf, mf in configure_files[component.replace("-", "_")]:
+            if not os.path.exists(conf):
+                return
+            if os.path.exists(conf) and os.path.exists(mf):
+                confstat = os.stat(conf)
+                makestat = os.stat(mf)
+                if confstat.st_mtime > makestat.st_mtime:
+                    doconfig = True
+                    break
+            else:
+                doconfig = True
+                break
+
+        if not doconfig and not self.options.force_configure:
+            return
+
+        program = srcdir + "/configure"
+        if not is_executable(program):
+            return
+
+        args = [program]
+        args += ["--verbose"]
+        args += flags
+        self.execute(args, builddir, env, component)
+
+    def make(self, component, srcdir, builddir, flags, env):
+        program = find_executable("make")
+        if program is None:
+            raise ExecutableNotFound
+
+        if not is_executable(program):
+            raise FileNotExecutable
+
+        args = [program]
+        args += flags
+        self.execute(args, builddir, env, component)
+
+# Global constants
+build_abbrev = dict(debug="dbg", release="opt", paranoid="par")
+components = ["llvm", "dragonegg"]
+
+# Parse options
+parser = optparse.OptionParser(version="%prog 1.0")
+add_options(parser)
+(options, args) = parser.parse_args()
+check_options(parser, options, build_abbrev.keys());
+
+if options.verbose:
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(name)-13s: %(message)s')
+else:
+    logging.basicConfig(level=logging.INFO,
+                        format='%(name)-13s: %(message)s')
+
+source_abbrev = get_path_abbrevs(set(options.src))
+
+work_queue = queue.Queue()
+
+jobs = options.jobs // options.threads
+if jobs == 0:
+    jobs = 1
+
+numthreads = options.threads
+
+logging.getLogger().info("Building with " + str(options.jobs) + " jobs and "
+                         + str(numthreads) + " threads using " + str(jobs)
+                         + " make jobs")
+
+logging.getLogger().info("CC  = " + str(options.cc))
+logging.getLogger().info("CXX = " + str(options.cxx))
+
+for t in range(numthreads):
+    builder = Builder(work_queue, jobs,
+                      build_abbrev, source_abbrev,
+                      options)
+    builder.daemon = True
+    builder.start()
+
+for build in set(options.build):
+    for source in set(options.src):
+        work_queue.put((source, build))
+
+work_queue.join()

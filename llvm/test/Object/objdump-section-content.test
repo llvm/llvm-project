@@ -1,0 +1,19 @@
+RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-objdump -s - | FileCheck %s -check-prefix COFF-i386
+RUN: llvm-objdump -s %p/Inputs/trivial-object-test.elf-i386 \
+RUN:              | FileCheck %s -check-prefix ELF-i386
+
+COFF-i386: file format
+COFF-i386: Contents of section .text:
+COFF-i386:  0000 83ec0cc7 44240800 000000c7 04240000  ....D$.......$..
+COFF-i386:  0010 0000e800 000000e8 00000000 8b442408  .............D$.
+COFF-i386:  0020 83c40cc3                             ....
+COFF-i386: Contents of section .data:
+COFF-i386:  0000 48656c6c 6f20576f 726c6421 00        Hello World!.
+
+ELF-i386: trivial-object-test.elf-i386:     file format
+ELF-i386: Contents of section .text:
+ELF-i386:  0000 83ec0cc7 44240800 000000c7 04240000  ....D$.......$..
+ELF-i386:  0010 0000e8fc ffffffe8 fcffffff 8b442408  .............D$.
+ELF-i386:  0020 83c40cc3                             ....
+ELF-i386: Contents of section .rodata.str1.1:
+ELF-i386:  0024 48656c6c 6f20576f 726c6421 00        Hello World!.

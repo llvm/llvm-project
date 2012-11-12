@@ -1,0 +1,279 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" href="_static/llvm.css" type="text/css" media="screen">
+  <title>Building the LLVM GCC Front-End</title>
+</head>
+<body>
+
+<h1>
+  Building the LLVM GCC Front-End
+</h1>
+
+<ol>
+  <li><a href="#instructions">Building llvm-gcc from Source</a></li>
+  <li><a href="#ada">Building the Ada front-end</a></li>
+  <li><a href="#fortran">Building the Fortran front-end</a></li>
+  <li><a href="#license">License Information</a></li>
+</ol>
+
+<div class="doc_author">    
+  <p>Written by the LLVM Team</p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="instructions">Building llvm-gcc from Source</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>This section describes how to acquire and build llvm-gcc 4.2, which is based
+on the GCC 4.2.1 front-end.  Supported languages are Ada, C, C++, Fortran,
+Objective-C and Objective-C++.  Note that the instructions for building these
+front-ends are completely different (and much easier!) than those for building
+llvm-gcc3 in the past.</p>
+
+<ol>
+  <li><p>Retrieve the appropriate llvm-gcc-4.2-<i>version</i>.source.tar.gz
+         archive from the <a href="http://llvm.org/releases/">LLVM web
+         site</a>.</p>
+
+      <p>It is also possible to download the sources of the llvm-gcc front end
+         from a read-only mirror using subversion.  To check out the 4.2 code
+         for first time use:</p>
+
+<div class="doc_code">
+<pre>
+svn co http://llvm.org/svn/llvm-project/llvm-gcc-4.2/trunk <i>dst-directory</i>
+</pre>
+</div>
+
+      <p>After that, the code can be be updated in the destination directory
+         using:</p>
+
+<div class="doc_code">
+<pre>svn update</pre>
+</div>
+
+      <p>The mirror is brought up to date every evening.</p></li>
+
+  <li>Follow the directions in the top-level <tt>README.LLVM</tt> file for
+      up-to-date instructions on how to build llvm-gcc.  See below for building
+      with support for Ada or Fortran.
+</ol>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="ada">Building the Ada front-end</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+<p>Building with support for Ada amounts to following the directions in the
+top-level <tt>README.LLVM</tt> file, adding ",ada" to EXTRALANGS, for example:
+<tt>EXTRALANGS=,ada</tt></p>
+
+<p>There are some complications however:</p>
+
+<ol>
+  <li><p>The only platform for which the Ada front-end is known to build is
+      32 bit intel x86 running linux.  It is unlikely to build for other
+      systems without some work.</p></li>
+  <li><p>The build requires having a compiler that supports Ada, C and C++.
+      The Ada front-end is written in Ada so an Ada compiler is needed to
+      build it.  Compilers known to work with the
+      <a href="http://llvm.org/releases/download.html">LLVM 2.7 release</a>
+      are <a href="http://gcc.gnu.org/releases.html">gcc-4.2</a> and the
+      2005, 2006 and 2007 versions of the
+      <a href="http://libre.adacore.com/">GNAT GPL Edition</a>.
+      <b>GNAT GPL 2008, gcc-4.3 and later will not work</b>.
+      The LLVM parts of llvm-gcc are written in C++ so a C++ compiler is
+      needed to build them.  The rest of gcc is written in C.
+      Some linux distributions provide a version of gcc that supports all
+      three languages (the Ada part often comes as an add-on package to
+      the rest of gcc).  Otherwise it is possible to combine two versions
+      of gcc, one that supports Ada and C (such as the
+      <a href="http://libre.adacore.com/">2007 GNAT GPL Edition</a>)
+      and another which supports C++, see below.</p></li>
+  <li><p>Because the Ada front-end is experimental, it is wise to build the
+      compiler with checking enabled.  This causes it to run much slower, but
+      helps catch mistakes in the compiler (please report any problems using
+      <a href="http://llvm.org/bugs/">LLVM bugzilla</a>).</p></li>
+  <li><p>The Ada front-end <a href="http://llvm.org/PR2007">fails to
+      bootstrap</a>, due to lack of LLVM support for
+      <tt>setjmp</tt>/<tt>longjmp</tt> style exception handling (used
+      internally by the compiler), so you must specify
+      <tt>--disable-bootstrap</tt>.</p></li>
+</ol>
+
+<p>Supposing appropriate compilers are available, llvm-gcc with Ada support can
+   be built on an x86-32 linux box using the following recipe:</p>
+
+<ol>
+  <li><p>Download the <a href="http://llvm.org/releases/download.html">LLVM source</a>
+      and unpack it:</p>
+
+<pre class="doc_code">
+wget http://llvm.org/releases/2.7/llvm-2.7.tgz
+tar xzf llvm-2.7.tgz
+mv llvm-2.7 llvm
+</pre>
+
+      <p>or <a href="GettingStarted.html#checkout">check out the
+      latest version from subversion</a>:</p>
+
+<pre class="doc_code">svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm</pre>
+
+      </li>
+
+  <li><p>Download the
+      <a href="http://llvm.org/releases/download.html">llvm-gcc-4.2 source</a>
+      and unpack it:</p>
+
+<pre class="doc_code">
+wget http://llvm.org/releases/2.7/llvm-gcc-4.2-2.7.source.tgz
+tar xzf llvm-gcc-4.2-2.7.source.tgz
+mv llvm-gcc-4.2-2.7.source llvm-gcc-4.2
+</pre>
+
+      <p>or <a href="GettingStarted.html#checkout">check out the
+      latest version from subversion</a>:</p>
+
+<pre class="doc_code">
+svn co http://llvm.org/svn/llvm-project/llvm-gcc-4.2/trunk llvm-gcc-4.2
+</pre>
+      </li>
+
+  <li><p>Make a build directory <tt>llvm-objects</tt> for llvm and make it the
+      current directory:</p>
+
+<pre class="doc_code">
+mkdir llvm-objects
+cd llvm-objects
+</pre>
+      </li>
+
+  <li><p>Configure LLVM (here it is configured to install into <tt>/usr/local</tt>):</p>
+
+<pre class="doc_code">
+../llvm/configure --prefix=<b>/usr/local</b> --enable-optimized --enable-assertions
+</pre>
+
+      <p>If you have a multi-compiler setup and the C++ compiler is not the
+      default, then you can configure like this:</p>
+
+<pre class="doc_code">
+CXX=<b>PATH_TO_C++_COMPILER</b> ../llvm/configure --prefix=<b>/usr/local</b> --enable-optimized --enable-assertions
+</pre>
+
+      <p>To compile without checking (not recommended), replace
+      <tt>--enable-assertions</tt> with <tt>--disable-assertions</tt>.</p>
+
+      </li>
+
+  <li><p>Build LLVM:</p>
+
+<pre class="doc_code">
+make
+</pre>
+      </li>
+
+  <li><p>Install LLVM (optional):</p>
+
+<pre class="doc_code">
+make install
+</pre>
+      </li>
+
+  <li><p>Make a build directory <tt>llvm-gcc-4.2-objects</tt> for llvm-gcc and make it the
+      current directory:</p>
+
+<pre class="doc_code">
+cd ..
+mkdir llvm-gcc-4.2-objects
+cd llvm-gcc-4.2-objects
+</pre>
+      </li>
+
+  <li><p>Configure llvm-gcc (here it is configured to install into <tt>/usr/local</tt>).
+      The <tt>--enable-checking</tt> flag turns on sanity checks inside the compiler.
+      To turn off these checks (not recommended), replace <tt>--enable-checking</tt>
+      with <tt>--disable-checking</tt>.
+      Additional languages can be appended to the <tt>--enable-languages</tt> switch,
+      for example <tt>--enable-languages=ada,c,c++</tt>.</p>
+
+<pre class="doc_code">
+../llvm-gcc-4.2/configure --prefix=<b>/usr/local</b> --enable-languages=ada,c \
+                          --enable-checking --enable-llvm=$PWD/../llvm-objects \
+			  --disable-bootstrap --disable-multilib
+</pre>
+
+      <p>If you have a multi-compiler setup, then you can configure like this:</p>
+
+<pre class="doc_code">
+export CC=<b>PATH_TO_C_AND_ADA_COMPILER</b>
+export CXX=<b>PATH_TO_C++_COMPILER</b>
+../llvm-gcc-4.2/configure --prefix=<b>/usr/local</b> --enable-languages=ada,c \
+                          --enable-checking --enable-llvm=$PWD/../llvm-objects \
+			  --disable-bootstrap --disable-multilib
+</pre>
+      </li>
+
+  <li><p>Build and install the compiler:</p>
+
+<pre class="doc_code">
+make
+make install
+</pre>
+      </li>
+</ol>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="fortran">Building the Fortran front-end</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+<p>To build with support for Fortran, follow the directions in the top-level
+<tt>README.LLVM</tt> file, adding ",fortran" to EXTRALANGS, for example:</p>
+
+<pre class="doc_code">
+EXTRALANGS=,fortran
+</pre>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="license">License Information</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+<p>
+The LLVM GCC frontend is licensed to you under the GNU General Public License
+and the GNU Lesser General Public License.  Please see the files COPYING and
+COPYING.LIB for more details.
+</p>
+
+<p>
+More information is <a href="FAQ.html#license">available in the FAQ</a>.
+</p>
+</div>
+
+<!-- *********************************************************************** -->
+
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss-blue" alt="Valid CSS"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401-blue" alt="Valid HTML 4.01"></a>
+
+  <a href="http://llvm.org/">LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+
+</body>
+</html>

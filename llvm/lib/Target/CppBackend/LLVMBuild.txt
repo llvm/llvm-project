@@ -1,0 +1,31 @@
+;===- ./lib/Target/CppBackend/LLVMBuild.txt --------------------*- Conf -*--===;
+;
+;                     The LLVM Compiler Infrastructure
+;
+; This file is distributed under the University of Illinois Open Source
+; License. See LICENSE.TXT for details.
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[common]
+subdirectories = TargetInfo
+
+[component_0]
+type = TargetGroup
+name = CppBackend
+parent = Target
+
+[component_1]
+type = Library
+name = CppBackendCodeGen
+parent = CppBackend
+required_libraries = Core CppBackendInfo Support Target
+add_to_library_groups = CppBackend

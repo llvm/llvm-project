@@ -1,0 +1,41 @@
+RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-objdump -t - \
+RUN:              | FileCheck %s -check-prefix COFF-i386
+RUN: llvm-objdump -t %p/Inputs/trivial-object-test.elf-i386 \
+RUN:              | FileCheck %s -check-prefix ELF-i386
+RUN: llvm-objdump -t %p/Inputs/trivial-object-test.macho-i386 \
+RUN:              | FileCheck %s -check-prefix macho-i386
+RUN: llvm-objdump -t %p/Inputs/shared-object-test.elf-i386 \
+RUN:              | FileCheck %s -check-prefix ELF-shared
+
+COFF-i386: file format
+COFF-i386: SYMBOL TABLE:
+COFF-i386: [  0](sec  1)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .text
+COFF-i386: AUX scnlen 0x24 nreloc 3 nlnno 0 checksum 0x0 assoc 1 comdat 0
+COFF-i386: [  2](sec  2)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .data
+COFF-i386: AUX scnlen 0xd nreloc 0 nlnno 0 checksum 0x0 assoc 2 comdat 0
+COFF-i386: [  4](sec  1)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 _main
+COFF-i386: [  5](sec  2)(fl 0x00)(ty   0)(scl   3) (nx 0) 0x00000000 L_.str
+COFF-i386: [  6](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 _puts
+COFF-i386: [  7](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 _SomeOtherFunction
+
+ELF-i386: trivial-object-test.elf-i386:     file format
+ELF-i386: SYMBOL TABLE:
+ELF-i386: 00000000 l    df *ABS*  00000000 trivial-object-test.s
+ELF-i386: 00000000 l    d  .text  00000000 .text
+ELF-i386: 00000024 l    d  .rodata.str1.1 00000000 .rodata.str1.1
+ELF-i386: 00000031 l    d  .note.GNU-stack        00000000 .note.GNU-stack
+ELF-i386: 00000000 g     F .text  00000024 main
+ELF-i386: 00000000         *UND*  00000000 SomeOtherFunction
+ELF-i386: 00000000         *UND*  00000000 puts
+
+macho-i386: trivial-object-test.macho-i386:        file format Mach-O 32-bit i386
+macho-i386: SYMBOL TABLE:
+macho-i386: 00000000 g     F __TEXT,__text  00000024 _main
+macho-i386: 00000000         *UND*  00000000 _SomeOtherFunction
+macho-i386: 00000000         *UND*  00000000 _puts
+
+ELF-shared: shared-object-test.elf-i386:     file format
+ELF-shared: SYMBOL TABLE:
+ELF-shared: 00000200 l     F .text 00000003 local_func
+ELF-shared: 000012c4 g       .data 00000004 defined_sym
+ELF-shared: 000001f0 g     F .text 00000003 global_func

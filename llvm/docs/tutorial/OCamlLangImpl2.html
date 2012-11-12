@@ -1,0 +1,1043 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+                      "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+  <title>Kaleidoscope: Implementing a Parser and AST</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="author" content="Chris Lattner">
+  <meta name="author" content="Erick Tryzelaar">
+  <link rel="stylesheet" href="../_static/llvm.css" type="text/css">
+</head>
+
+<body>
+
+<h1>Kaleidoscope: Implementing a Parser and AST</h1>
+
+<ul>
+<li><a href="index.html">Up to Tutorial Index</a></li>
+<li>Chapter 2
+  <ol>
+    <li><a href="#intro">Chapter 2 Introduction</a></li>
+    <li><a href="#ast">The Abstract Syntax Tree (AST)</a></li>
+    <li><a href="#parserbasics">Parser Basics</a></li>
+    <li><a href="#parserprimexprs">Basic Expression Parsing</a></li>
+    <li><a href="#parserbinops">Binary Expression Parsing</a></li>
+    <li><a href="#parsertop">Parsing the Rest</a></li>
+    <li><a href="#driver">The Driver</a></li>
+    <li><a href="#conclusions">Conclusions</a></li>
+    <li><a href="#code">Full Code Listing</a></li>
+  </ol>
+</li>
+<li><a href="OCamlLangImpl3.html">Chapter 3</a>: Code generation to LLVM IR</li>
+</ul>
+
+<div class="doc_author">
+	<p>
+		Written by <a href="mailto:sabre@nondot.org">Chris Lattner</a>
+		and <a href="mailto:idadesub@users.sourceforge.net">Erick Tryzelaar</a>
+	</p>
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="intro">Chapter 2 Introduction</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>Welcome to Chapter 2 of the "<a href="index.html">Implementing a language
+with LLVM in Objective Caml</a>" tutorial.  This chapter shows you how to use
+the lexer, built in <a href="OCamlLangImpl1.html">Chapter 1</a>, to build a
+full <a href="http://en.wikipedia.org/wiki/Parsing">parser</a> for our
+Kaleidoscope language.  Once we have a parser, we'll define and build an <a
+href="http://en.wikipedia.org/wiki/Abstract_syntax_tree">Abstract Syntax
+Tree</a> (AST).</p>
+
+<p>The parser we will build uses a combination of <a
+href="http://en.wikipedia.org/wiki/Recursive_descent_parser">Recursive Descent
+Parsing</a> and <a href=
+"http://en.wikipedia.org/wiki/Operator-precedence_parser">Operator-Precedence
+Parsing</a> to parse the Kaleidoscope language (the latter for
+binary expressions and the former for everything else).  Before we get to
+parsing though, lets talk about the output of the parser: the Abstract Syntax
+Tree.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="ast">The Abstract Syntax Tree (AST)</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>The AST for a program captures its behavior in such a way that it is easy for
+later stages of the compiler (e.g. code generation) to interpret.  We basically
+want one object for each construct in the language, and the AST should closely
+model the language.  In Kaleidoscope, we have expressions, a prototype, and a
+function object.  We'll start with expressions first:</p>
+
+<div class="doc_code">
+<pre>
+(* expr - Base type for all expression nodes. *)
+type expr =
+  (* variant for numeric literals like "1.0". *)
+  | Number of float
+</pre>
+</div>
+
+<p>The code above shows the definition of the base ExprAST class and one
+subclass which we use for numeric literals.  The important thing to note about
+this code is that the Number variant captures the numeric value of the
+literal as an instance variable. This allows later phases of the compiler to
+know what the stored numeric value is.</p>
+
+<p>Right now we only create the AST,  so there are no useful functions on
+them.  It would be very easy to add a function to pretty print the code,
+for example.  Here are the other expression AST node definitions that we'll use
+in the basic form of the Kaleidoscope language:
+</p>
+
+<div class="doc_code">
+<pre>
+  (* variant for referencing a variable, like "a". *)
+  | Variable of string
+
+  (* variant for a binary operator. *)
+  | Binary of char * expr * expr
+
+  (* variant for function calls. *)
+  | Call of string * expr array
+</pre>
+</div>
+
+<p>This is all (intentionally) rather straight-forward: variables capture the
+variable name, binary operators capture their opcode (e.g. '+'), and calls
+capture a function name as well as a list of any argument expressions.  One thing
+that is nice about our AST is that it captures the language features without
+talking about the syntax of the language.  Note that there is no discussion about
+precedence of binary operators, lexical structure, etc.</p>
+
+<p>For our basic language, these are all of the expression nodes we'll define.
+Because it doesn't have conditional control flow, it isn't Turing-complete;
+we'll fix that in a later installment.  The two things we need next are a way
+to talk about the interface to a function, and a way to talk about functions
+themselves:</p>
+
+<div class="doc_code">
+<pre>
+(* proto - This type represents the "prototype" for a function, which captures
+ * its name, and its argument names (thus implicitly the number of arguments the
+ * function takes). *)
+type proto = Prototype of string * string array
+
+(* func - This type represents a function definition itself. *)
+type func = Function of proto * expr
+</pre>
+</div>
+
+<p>In Kaleidoscope, functions are typed with just a count of their arguments.
+Since all values are double precision floating point, the type of each argument
+doesn't need to be stored anywhere.  In a more aggressive and realistic
+language, the "expr" variants would probably have a type field.</p>
+
+<p>With this scaffolding, we can now talk about parsing expressions and function
+bodies in Kaleidoscope.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="parserbasics">Parser Basics</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>Now that we have an AST to build, we need to define the parser code to build
+it.  The idea here is that we want to parse something like "x+y" (which is
+returned as three tokens by the lexer) into an AST that could be generated with
+calls like this:</p>
+
+<div class="doc_code">
+<pre>
+  let x = Variable "x" in
+  let y = Variable "y" in
+  let result = Binary ('+', x, y) in
+  ...
+</pre>
+</div>
+
+<p>
+The error handling routines make use of the builtin <tt>Stream.Failure</tt> and
+<tt>Stream.Error</tt>s.  <tt>Stream.Failure</tt> is raised when the parser is
+unable to find any matching token in the first position of a pattern.
+<tt>Stream.Error</tt> is raised when the first token matches, but the rest do
+not.  The error recovery in our parser will not be the best and is not
+particular user-friendly, but it will be enough for our tutorial.  These
+exceptions make it easier to handle errors in routines that have various return
+types.</p>
+
+<p>With these basic types and exceptions, we can implement the first
+piece of our grammar: numeric literals.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="parserprimexprs">Basic Expression Parsing</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>We start with numeric literals, because they are the simplest to process.
+For each production in our grammar, we'll define a function which parses that
+production.  We call this class of expressions "primary" expressions, for
+reasons that will become more clear <a href="OCamlLangImpl6.html#unary">
+later in the tutorial</a>.  In order to parse an arbitrary primary expression,
+we need to determine what sort of expression it is.  For numeric literals, we
+have:</p>
+
+<div class="doc_code">
+<pre>
+(* primary
+ *   ::= identifier
+ *   ::= numberexpr
+ *   ::= parenexpr *)
+parse_primary = parser
+  (* numberexpr ::= number *)
+  | [&lt; 'Token.Number n &gt;] -&gt; Ast.Number n
+</pre>
+</div>
+
+<p>This routine is very simple: it expects to be called when the current token
+is a <tt>Token.Number</tt> token.  It takes the current number value, creates
+a <tt>Ast.Number</tt> node, advances the lexer to the next token, and finally
+returns.</p>
+
+<p>There are some interesting aspects to this.  The most important one is that
+this routine eats all of the tokens that correspond to the production and
+returns the lexer buffer with the next token (which is not part of the grammar
+production) ready to go.  This is a fairly standard way to go for recursive
+descent parsers.  For a better example, the parenthesis operator is defined like
+this:</p>
+
+<div class="doc_code">
+<pre>
+  (* parenexpr ::= '(' expression ')' *)
+  | [&lt; 'Token.Kwd '('; e=parse_expr; 'Token.Kwd ')' ?? "expected ')'" &gt;] -&gt; e
+</pre>
+</div>
+
+<p>This function illustrates a number of interesting things about the
+parser:</p>
+
+<p>
+1) It shows how we use the <tt>Stream.Error</tt> exception.  When called, this
+function expects that the current token is a '(' token, but after parsing the
+subexpression, it is possible that there is no ')' waiting.  For example, if
+the user types in "(4 x" instead of "(4)", the parser should emit an error.
+Because errors can occur, the parser needs a way to indicate that they
+happened. In our parser, we use the camlp4 shortcut syntax <tt>token ?? "parse
+error"</tt>, where if the token before the <tt>??</tt> does not match, then
+<tt>Stream.Error "parse error"</tt> will be raised.</p>
+
+<p>2) Another interesting aspect of this function is that it uses recursion by
+calling <tt>Parser.parse_primary</tt> (we will soon see that
+<tt>Parser.parse_primary</tt> can call <tt>Parser.parse_primary</tt>).  This is
+powerful because it allows us to handle recursive grammars, and keeps each
+production very simple.  Note that parentheses do not cause construction of AST
+nodes themselves.  While we could do it this way, the most important role of
+parentheses are to guide the parser and provide grouping.  Once the parser
+constructs the AST, parentheses are not needed.</p>
+
+<p>The next simple production is for handling variable references and function
+calls:</p>
+
+<div class="doc_code">
+<pre>
+  (* identifierexpr
+   *   ::= identifier
+   *   ::= identifier '(' argumentexpr ')' *)
+  | [&lt; 'Token.Ident id; stream &gt;] -&gt;
+      let rec parse_args accumulator = parser
+        | [&lt; e=parse_expr; stream &gt;] -&gt;
+            begin parser
+              | [&lt; 'Token.Kwd ','; e=parse_args (e :: accumulator) &gt;] -&gt; e
+              | [&lt; &gt;] -&gt; e :: accumulator
+            end stream
+        | [&lt; &gt;] -&gt; accumulator
+      in
+      let rec parse_ident id = parser
+        (* Call. *)
+        | [&lt; 'Token.Kwd '(';
+             args=parse_args [];
+             'Token.Kwd ')' ?? "expected ')'"&gt;] -&gt;
+            Ast.Call (id, Array.of_list (List.rev args))
+
+        (* Simple variable ref. *)
+        | [&lt; &gt;] -&gt; Ast.Variable id
+      in
+      parse_ident id stream
+</pre>
+</div>
+
+<p>This routine follows the same style as the other routines.  (It expects to be
+called if the current token is a <tt>Token.Ident</tt> token).  It also has
+recursion and error handling.  One interesting aspect of this is that it uses
+<em>look-ahead</em> to determine if the current identifier is a stand alone
+variable reference or if it is a function call expression.  It handles this by
+checking to see if the token after the identifier is a '(' token, constructing
+either a <tt>Ast.Variable</tt> or <tt>Ast.Call</tt> node as appropriate.
+</p>
+
+<p>We finish up by raising an exception if we received a token we didn't
+expect:</p>
+
+<div class="doc_code">
+<pre>
+  | [&lt; &gt;] -&gt; raise (Stream.Error "unknown token when expecting an expression.")
+</pre>
+</div>
+
+<p>Now that basic expressions are handled, we need to handle binary expressions.
+They are a bit more complex.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="parserbinops">Binary Expression Parsing</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>Binary expressions are significantly harder to parse because they are often
+ambiguous.  For example, when given the string "x+y*z", the parser can choose
+to parse it as either "(x+y)*z" or "x+(y*z)".  With common definitions from
+mathematics, we expect the later parse, because "*" (multiplication) has
+higher <em>precedence</em> than "+" (addition).</p>
+
+<p>There are many ways to handle this, but an elegant and efficient way is to
+use <a href=
+"http://en.wikipedia.org/wiki/Operator-precedence_parser">Operator-Precedence
+Parsing</a>.  This parsing technique uses the precedence of binary operators to
+guide recursion.  To start with, we need a table of precedences:</p>
+
+<div class="doc_code">
+<pre>
+(* binop_precedence - This holds the precedence for each binary operator that is
+ * defined *)
+let binop_precedence:(char, int) Hashtbl.t = Hashtbl.create 10
+
+(* precedence - Get the precedence of the pending binary operator token. *)
+let precedence c = try Hashtbl.find binop_precedence c with Not_found -&gt; -1
+
+...
+
+let main () =
+  (* Install standard binary operators.
+   * 1 is the lowest precedence. *)
+  Hashtbl.add Parser.binop_precedence '&lt;' 10;
+  Hashtbl.add Parser.binop_precedence '+' 20;
+  Hashtbl.add Parser.binop_precedence '-' 20;
+  Hashtbl.add Parser.binop_precedence '*' 40;    (* highest. *)
+  ...
+</pre>
+</div>
+
+<p>For the basic form of Kaleidoscope, we will only support 4 binary operators
+(this can obviously be extended by you, our brave and intrepid reader).  The
+<tt>Parser.precedence</tt> function returns the precedence for the current
+token, or -1 if the token is not a binary operator.  Having a <tt>Hashtbl.t</tt>
+makes it easy to add new operators and makes it clear that the algorithm doesn't
+depend on the specific operators involved, but it would be easy enough to
+eliminate the <tt>Hashtbl.t</tt> and do the comparisons in the
+<tt>Parser.precedence</tt> function.  (Or just use a fixed-size array).</p>
+
+<p>With the helper above defined, we can now start parsing binary expressions.
+The basic idea of operator precedence parsing is to break down an expression
+with potentially ambiguous binary operators into pieces.  Consider ,for example,
+the expression "a+b+(c+d)*e*f+g".  Operator precedence parsing considers this
+as a stream of primary expressions separated by binary operators.  As such,
+it will first parse the leading primary expression "a", then it will see the
+pairs [+, b] [+, (c+d)] [*, e] [*, f] and [+, g].  Note that because parentheses
+are primary expressions, the binary expression parser doesn't need to worry
+about nested subexpressions like (c+d) at all.
+</p>
+
+<p>
+To start, an expression is a primary expression potentially followed by a
+sequence of [binop,primaryexpr] pairs:</p>
+
+<div class="doc_code">
+<pre>
+(* expression
+ *   ::= primary binoprhs *)
+and parse_expr = parser
+  | [&lt; lhs=parse_primary; stream &gt;] -&gt; parse_bin_rhs 0 lhs stream
+</pre>
+</div>
+
+<p><tt>Parser.parse_bin_rhs</tt> is the function that parses the sequence of
+pairs for us.  It takes a precedence and a pointer to an expression for the part
+that has been parsed so far.   Note that "x" is a perfectly valid expression: As
+such, "binoprhs" is allowed to be empty, in which case it returns the expression
+that is passed into it. In our example above, the code passes the expression for
+"a" into <tt>Parser.parse_bin_rhs</tt> and the current token is "+".</p>
+
+<p>The precedence value passed into <tt>Parser.parse_bin_rhs</tt> indicates the
+<em>minimal operator precedence</em> that the function is allowed to eat.  For
+example, if the current pair stream is [+, x] and <tt>Parser.parse_bin_rhs</tt>
+is passed in a precedence of 40, it will not consume any tokens (because the
+precedence of '+' is only 20).  With this in mind, <tt>Parser.parse_bin_rhs</tt>
+starts with:</p>
+
+<div class="doc_code">
+<pre>
+(* binoprhs
+ *   ::= ('+' primary)* *)
+and parse_bin_rhs expr_prec lhs stream =
+  match Stream.peek stream with
+  (* If this is a binop, find its precedence. *)
+  | Some (Token.Kwd c) when Hashtbl.mem binop_precedence c -&gt;
+      let token_prec = precedence c in
+
+      (* If this is a binop that binds at least as tightly as the current binop,
+       * consume it, otherwise we are done. *)
+      if token_prec &lt; expr_prec then lhs else begin
+</pre>
+</div>
+
+<p>This code gets the precedence of the current token and checks to see if if is
+too low.  Because we defined invalid tokens to have a precedence of -1, this
+check implicitly knows that the pair-stream ends when the token stream runs out
+of binary operators.  If this check succeeds, we know that the token is a binary
+operator and that it will be included in this expression:</p>
+
+<div class="doc_code">
+<pre>
+        (* Eat the binop. *)
+        Stream.junk stream;
+
+        (* Okay, we know this is a binop. *)
+        let rhs =
+          match Stream.peek stream with
+          | Some (Token.Kwd c2) -&gt;
+</pre>
+</div>
+
+<p>As such, this code eats (and remembers) the binary operator and then parses
+the primary expression that follows.  This builds up the whole pair, the first of
+which is [+, b] for the running example.</p>
+
+<p>Now that we parsed the left-hand side of an expression and one pair of the
+RHS sequence, we have to decide which way the expression associates.  In
+particular, we could have "(a+b) binop unparsed"  or "a + (b binop unparsed)".
+To determine this, we look ahead at "binop" to determine its precedence and
+compare it to BinOp's precedence (which is '+' in this case):</p>
+
+<div class="doc_code">
+<pre>
+              (* If BinOp binds less tightly with rhs than the operator after
+               * rhs, let the pending operator take rhs as its lhs. *)
+              let next_prec = precedence c2 in
+              if token_prec &lt; next_prec
+</pre>
+</div>
+
+<p>If the precedence of the binop to the right of "RHS" is lower or equal to the
+precedence of our current operator, then we know that the parentheses associate
+as "(a+b) binop ...".  In our example, the current operator is "+" and the next
+operator is "+", we know that they have the same precedence.  In this case we'll
+create the AST node for "a+b", and then continue parsing:</p>
+
+<div class="doc_code">
+<pre>
+          ... if body omitted ...
+        in
+
+        (* Merge lhs/rhs. *)
+        let lhs = Ast.Binary (c, lhs, rhs) in
+        parse_bin_rhs expr_prec lhs stream
+      end
+</pre>
+</div>
+
+<p>In our example above, this will turn "a+b+" into "(a+b)" and execute the next
+iteration of the loop, with "+" as the current token.  The code above will eat,
+remember, and parse "(c+d)" as the primary expression, which makes the
+current pair equal to [+, (c+d)].  It will then evaluate the 'if' conditional above with
+"*" as the binop to the right of the primary.  In this case, the precedence of "*" is
+higher than the precedence of "+" so the if condition will be entered.</p>
+
+<p>The critical question left here is "how can the if condition parse the right
+hand side in full"?  In particular, to build the AST correctly for our example,
+it needs to get all of "(c+d)*e*f" as the RHS expression variable.  The code to
+do this is surprisingly simple (code from the above two blocks duplicated for
+context):</p>
+
+<div class="doc_code">
+<pre>
+          match Stream.peek stream with
+          | Some (Token.Kwd c2) -&gt;
+              (* If BinOp binds less tightly with rhs than the operator after
+               * rhs, let the pending operator take rhs as its lhs. *)
+              if token_prec &lt; precedence c2
+              then <b>parse_bin_rhs (token_prec + 1) rhs stream</b>
+              else rhs
+          | _ -&gt; rhs
+        in
+
+        (* Merge lhs/rhs. *)
+        let lhs = Ast.Binary (c, lhs, rhs) in
+        parse_bin_rhs expr_prec lhs stream
+      end
+</pre>
+</div>
+
+<p>At this point, we know that the binary operator to the RHS of our primary
+has higher precedence than the binop we are currently parsing.  As such, we know
+that any sequence of pairs whose operators are all higher precedence than "+"
+should be parsed together and returned as "RHS".  To do this, we recursively
+invoke the <tt>Parser.parse_bin_rhs</tt> function specifying "token_prec+1" as
+the minimum precedence required for it to continue.  In our example above, this
+will cause it to return the AST node for "(c+d)*e*f" as RHS, which is then set
+as the RHS of the '+' expression.</p>
+
+<p>Finally, on the next iteration of the while loop, the "+g" piece is parsed
+and added to the AST.  With this little bit of code (14 non-trivial lines), we
+correctly handle fully general binary expression parsing in a very elegant way.
+This was a whirlwind tour of this code, and it is somewhat subtle.  I recommend
+running through it with a few tough examples to see how it works.
+</p>
+
+<p>This wraps up handling of expressions.  At this point, we can point the
+parser at an arbitrary token stream and build an expression from it, stopping
+at the first token that is not part of the expression.  Next up we need to
+handle function definitions, etc.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="parsertop">Parsing the Rest</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>
+The next thing missing is handling of function prototypes.  In Kaleidoscope,
+these are used both for 'extern' function declarations as well as function body
+definitions.  The code to do this is straight-forward and not very interesting
+(once you've survived expressions):
+</p>
+
+<div class="doc_code">
+<pre>
+(* prototype
+ *   ::= id '(' id* ')' *)
+let parse_prototype =
+  let rec parse_args accumulator = parser
+    | [&lt; 'Token.Ident id; e=parse_args (id::accumulator) &gt;] -&gt; e
+    | [&lt; &gt;] -&gt; accumulator
+  in
+
+  parser
+  | [&lt; 'Token.Ident id;
+       'Token.Kwd '(' ?? "expected '(' in prototype";
+       args=parse_args [];
+       'Token.Kwd ')' ?? "expected ')' in prototype" &gt;] -&gt;
+      (* success. *)
+      Ast.Prototype (id, Array.of_list (List.rev args))
+
+  | [&lt; &gt;] -&gt;
+      raise (Stream.Error "expected function name in prototype")
+</pre>
+</div>
+
+<p>Given this, a function definition is very simple, just a prototype plus
+an expression to implement the body:</p>
+
+<div class="doc_code">
+<pre>
+(* definition ::= 'def' prototype expression *)
+let parse_definition = parser
+  | [&lt; 'Token.Def; p=parse_prototype; e=parse_expr &gt;] -&gt;
+      Ast.Function (p, e)
+</pre>
+</div>
+
+<p>In addition, we support 'extern' to declare functions like 'sin' and 'cos' as
+well as to support forward declaration of user functions.  These 'extern's are just
+prototypes with no body:</p>
+
+<div class="doc_code">
+<pre>
+(*  external ::= 'extern' prototype *)
+let parse_extern = parser
+  | [&lt; 'Token.Extern; e=parse_prototype &gt;] -&gt; e
+</pre>
+</div>
+
+<p>Finally, we'll also let the user type in arbitrary top-level expressions and
+evaluate them on the fly.  We will handle this by defining anonymous nullary
+(zero argument) functions for them:</p>
+
+<div class="doc_code">
+<pre>
+(* toplevelexpr ::= expression *)
+let parse_toplevel = parser
+  | [&lt; e=parse_expr &gt;] -&gt;
+      (* Make an anonymous proto. *)
+      Ast.Function (Ast.Prototype ("", [||]), e)
+</pre>
+</div>
+
+<p>Now that we have all the pieces, let's build a little driver that will let us
+actually <em>execute</em> this code we've built!</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="driver">The Driver</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>The driver for this simply invokes all of the parsing pieces with a top-level
+dispatch loop.  There isn't much interesting here, so I'll just include the
+top-level loop.  See <a href="#code">below</a> for full code in the "Top-Level
+Parsing" section.</p>
+
+<div class="doc_code">
+<pre>
+(* top ::= definition | external | expression | ';' *)
+let rec main_loop stream =
+  match Stream.peek stream with
+  | None -&gt; ()
+
+  (* ignore top-level semicolons. *)
+  | Some (Token.Kwd ';') -&gt;
+      Stream.junk stream;
+      main_loop stream
+
+  | Some token -&gt;
+      begin
+        try match token with
+        | Token.Def -&gt;
+            ignore(Parser.parse_definition stream);
+            print_endline "parsed a function definition.";
+        | Token.Extern -&gt;
+            ignore(Parser.parse_extern stream);
+            print_endline "parsed an extern.";
+        | _ -&gt;
+            (* Evaluate a top-level expression into an anonymous function. *)
+            ignore(Parser.parse_toplevel stream);
+            print_endline "parsed a top-level expr";
+        with Stream.Error s -&gt;
+          (* Skip token for error recovery. *)
+          Stream.junk stream;
+          print_endline s;
+      end;
+      print_string "ready&gt; "; flush stdout;
+      main_loop stream
+</pre>
+</div>
+
+<p>The most interesting part of this is that we ignore top-level semicolons.
+Why is this, you ask?  The basic reason is that if you type "4 + 5" at the
+command line, the parser doesn't know whether that is the end of what you will type
+or not.  For example, on the next line you could type "def foo..." in which case
+4+5 is the end of a top-level expression.  Alternatively you could type "* 6",
+which would continue the expression.  Having top-level semicolons allows you to
+type "4+5;", and the parser will know you are done.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="conclusions">Conclusions</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>With just under 300 lines of commented code (240 lines of non-comment,
+non-blank code), we fully defined our minimal language, including a lexer,
+parser, and AST builder.  With this done, the executable will validate
+Kaleidoscope code and tell us if it is grammatically invalid.  For
+example, here is a sample interaction:</p>
+
+<div class="doc_code">
+<pre>
+$ <b>./toy.byte</b>
+ready&gt; <b>def foo(x y) x+foo(y, 4.0);</b>
+Parsed a function definition.
+ready&gt; <b>def foo(x y) x+y y;</b>
+Parsed a function definition.
+Parsed a top-level expr
+ready&gt; <b>def foo(x y) x+y );</b>
+Parsed a function definition.
+Error: unknown token when expecting an expression
+ready&gt; <b>extern sin(a);</b>
+ready&gt; Parsed an extern
+ready&gt; <b>^D</b>
+$
+</pre>
+</div>
+
+<p>There is a lot of room for extension here.  You can define new AST nodes,
+extend the language in many ways, etc.  In the <a href="OCamlLangImpl3.html">
+next installment</a>, we will describe how to generate LLVM Intermediate
+Representation (IR) from the AST.</p>
+
+</div>
+
+<!-- *********************************************************************** -->
+<h2><a name="code">Full Code Listing</a></h2>
+<!-- *********************************************************************** -->
+
+<div>
+
+<p>
+Here is the complete code listing for this and the previous chapter.
+Note that it is fully self-contained: you don't need LLVM or any external
+libraries at all for this.  (Besides the ocaml standard libraries, of
+course.)  To build this, just compile with:</p>
+
+<div class="doc_code">
+<pre>
+# Compile
+ocamlbuild toy.byte
+# Run
+./toy.byte
+</pre>
+</div>
+
+<p>Here is the code:</p>
+
+<dl>
+<dt>_tags:</dt>
+<dd class="doc_code">
+<pre>
+&lt;{lexer,parser}.ml&gt;: use_camlp4, pp(camlp4of)
+</pre>
+</dd>
+
+<dt>token.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Lexer Tokens
+ *===----------------------------------------------------------------------===*)
+
+(* The lexer returns these 'Kwd' if it is an unknown character, otherwise one of
+ * these others for known things. *)
+type token =
+  (* commands *)
+  | Def | Extern
+
+  (* primary *)
+  | Ident of string | Number of float
+
+  (* unknown *)
+  | Kwd of char
+</pre>
+</dd>
+
+<dt>lexer.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Lexer
+ *===----------------------------------------------------------------------===*)
+
+let rec lex = parser
+  (* Skip any whitespace. *)
+  | [&lt; ' (' ' | '\n' | '\r' | '\t'); stream &gt;] -&gt; lex stream
+
+  (* identifier: [a-zA-Z][a-zA-Z0-9] *)
+  | [&lt; ' ('A' .. 'Z' | 'a' .. 'z' as c); stream &gt;] -&gt;
+      let buffer = Buffer.create 1 in
+      Buffer.add_char buffer c;
+      lex_ident buffer stream
+
+  (* number: [0-9.]+ *)
+  | [&lt; ' ('0' .. '9' as c); stream &gt;] -&gt;
+      let buffer = Buffer.create 1 in
+      Buffer.add_char buffer c;
+      lex_number buffer stream
+
+  (* Comment until end of line. *)
+  | [&lt; ' ('#'); stream &gt;] -&gt;
+      lex_comment stream
+
+  (* Otherwise, just return the character as its ascii value. *)
+  | [&lt; 'c; stream &gt;] -&gt;
+      [&lt; 'Token.Kwd c; lex stream &gt;]
+
+  (* end of stream. *)
+  | [&lt; &gt;] -&gt; [&lt; &gt;]
+
+and lex_number buffer = parser
+  | [&lt; ' ('0' .. '9' | '.' as c); stream &gt;] -&gt;
+      Buffer.add_char buffer c;
+      lex_number buffer stream
+  | [&lt; stream=lex &gt;] -&gt;
+      [&lt; 'Token.Number (float_of_string (Buffer.contents buffer)); stream &gt;]
+
+and lex_ident buffer = parser
+  | [&lt; ' ('A' .. 'Z' | 'a' .. 'z' | '0' .. '9' as c); stream &gt;] -&gt;
+      Buffer.add_char buffer c;
+      lex_ident buffer stream
+  | [&lt; stream=lex &gt;] -&gt;
+      match Buffer.contents buffer with
+      | "def" -&gt; [&lt; 'Token.Def; stream &gt;]
+      | "extern" -&gt; [&lt; 'Token.Extern; stream &gt;]
+      | id -&gt; [&lt; 'Token.Ident id; stream &gt;]
+
+and lex_comment = parser
+  | [&lt; ' ('\n'); stream=lex &gt;] -&gt; stream
+  | [&lt; 'c; e=lex_comment &gt;] -&gt; e
+  | [&lt; &gt;] -&gt; [&lt; &gt;]
+</pre>
+</dd>
+
+<dt>ast.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Abstract Syntax Tree (aka Parse Tree)
+ *===----------------------------------------------------------------------===*)
+
+(* expr - Base type for all expression nodes. *)
+type expr =
+  (* variant for numeric literals like "1.0". *)
+  | Number of float
+
+  (* variant for referencing a variable, like "a". *)
+  | Variable of string
+
+  (* variant for a binary operator. *)
+  | Binary of char * expr * expr
+
+  (* variant for function calls. *)
+  | Call of string * expr array
+
+(* proto - This type represents the "prototype" for a function, which captures
+ * its name, and its argument names (thus implicitly the number of arguments the
+ * function takes). *)
+type proto = Prototype of string * string array
+
+(* func - This type represents a function definition itself. *)
+type func = Function of proto * expr
+</pre>
+</dd>
+
+<dt>parser.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===---------------------------------------------------------------------===
+ * Parser
+ *===---------------------------------------------------------------------===*)
+
+(* binop_precedence - This holds the precedence for each binary operator that is
+ * defined *)
+let binop_precedence:(char, int) Hashtbl.t = Hashtbl.create 10
+
+(* precedence - Get the precedence of the pending binary operator token. *)
+let precedence c = try Hashtbl.find binop_precedence c with Not_found -&gt; -1
+
+(* primary
+ *   ::= identifier
+ *   ::= numberexpr
+ *   ::= parenexpr *)
+let rec parse_primary = parser
+  (* numberexpr ::= number *)
+  | [&lt; 'Token.Number n &gt;] -&gt; Ast.Number n
+
+  (* parenexpr ::= '(' expression ')' *)
+  | [&lt; 'Token.Kwd '('; e=parse_expr; 'Token.Kwd ')' ?? "expected ')'" &gt;] -&gt; e
+
+  (* identifierexpr
+   *   ::= identifier
+   *   ::= identifier '(' argumentexpr ')' *)
+  | [&lt; 'Token.Ident id; stream &gt;] -&gt;
+      let rec parse_args accumulator = parser
+        | [&lt; e=parse_expr; stream &gt;] -&gt;
+            begin parser
+              | [&lt; 'Token.Kwd ','; e=parse_args (e :: accumulator) &gt;] -&gt; e
+              | [&lt; &gt;] -&gt; e :: accumulator
+            end stream
+        | [&lt; &gt;] -&gt; accumulator
+      in
+      let rec parse_ident id = parser
+        (* Call. *)
+        | [&lt; 'Token.Kwd '(';
+             args=parse_args [];
+             'Token.Kwd ')' ?? "expected ')'"&gt;] -&gt;
+            Ast.Call (id, Array.of_list (List.rev args))
+
+        (* Simple variable ref. *)
+        | [&lt; &gt;] -&gt; Ast.Variable id
+      in
+      parse_ident id stream
+
+  | [&lt; &gt;] -&gt; raise (Stream.Error "unknown token when expecting an expression.")
+
+(* binoprhs
+ *   ::= ('+' primary)* *)
+and parse_bin_rhs expr_prec lhs stream =
+  match Stream.peek stream with
+  (* If this is a binop, find its precedence. *)
+  | Some (Token.Kwd c) when Hashtbl.mem binop_precedence c -&gt;
+      let token_prec = precedence c in
+
+      (* If this is a binop that binds at least as tightly as the current binop,
+       * consume it, otherwise we are done. *)
+      if token_prec &lt; expr_prec then lhs else begin
+        (* Eat the binop. *)
+        Stream.junk stream;
+
+        (* Parse the primary expression after the binary operator. *)
+        let rhs = parse_primary stream in
+
+        (* Okay, we know this is a binop. *)
+        let rhs =
+          match Stream.peek stream with
+          | Some (Token.Kwd c2) -&gt;
+              (* If BinOp binds less tightly with rhs than the operator after
+               * rhs, let the pending operator take rhs as its lhs. *)
+              let next_prec = precedence c2 in
+              if token_prec &lt; next_prec
+              then parse_bin_rhs (token_prec + 1) rhs stream
+              else rhs
+          | _ -&gt; rhs
+        in
+
+        (* Merge lhs/rhs. *)
+        let lhs = Ast.Binary (c, lhs, rhs) in
+        parse_bin_rhs expr_prec lhs stream
+      end
+  | _ -&gt; lhs
+
+(* expression
+ *   ::= primary binoprhs *)
+and parse_expr = parser
+  | [&lt; lhs=parse_primary; stream &gt;] -&gt; parse_bin_rhs 0 lhs stream
+
+(* prototype
+ *   ::= id '(' id* ')' *)
+let parse_prototype =
+  let rec parse_args accumulator = parser
+    | [&lt; 'Token.Ident id; e=parse_args (id::accumulator) &gt;] -&gt; e
+    | [&lt; &gt;] -&gt; accumulator
+  in
+
+  parser
+  | [&lt; 'Token.Ident id;
+       'Token.Kwd '(' ?? "expected '(' in prototype";
+       args=parse_args [];
+       'Token.Kwd ')' ?? "expected ')' in prototype" &gt;] -&gt;
+      (* success. *)
+      Ast.Prototype (id, Array.of_list (List.rev args))
+
+  | [&lt; &gt;] -&gt;
+      raise (Stream.Error "expected function name in prototype")
+
+(* definition ::= 'def' prototype expression *)
+let parse_definition = parser
+  | [&lt; 'Token.Def; p=parse_prototype; e=parse_expr &gt;] -&gt;
+      Ast.Function (p, e)
+
+(* toplevelexpr ::= expression *)
+let parse_toplevel = parser
+  | [&lt; e=parse_expr &gt;] -&gt;
+      (* Make an anonymous proto. *)
+      Ast.Function (Ast.Prototype ("", [||]), e)
+
+(*  external ::= 'extern' prototype *)
+let parse_extern = parser
+  | [&lt; 'Token.Extern; e=parse_prototype &gt;] -&gt; e
+</pre>
+</dd>
+
+<dt>toplevel.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Top-Level parsing and JIT Driver
+ *===----------------------------------------------------------------------===*)
+
+(* top ::= definition | external | expression | ';' *)
+let rec main_loop stream =
+  match Stream.peek stream with
+  | None -&gt; ()
+
+  (* ignore top-level semicolons. *)
+  | Some (Token.Kwd ';') -&gt;
+      Stream.junk stream;
+      main_loop stream
+
+  | Some token -&gt;
+      begin
+        try match token with
+        | Token.Def -&gt;
+            ignore(Parser.parse_definition stream);
+            print_endline "parsed a function definition.";
+        | Token.Extern -&gt;
+            ignore(Parser.parse_extern stream);
+            print_endline "parsed an extern.";
+        | _ -&gt;
+            (* Evaluate a top-level expression into an anonymous function. *)
+            ignore(Parser.parse_toplevel stream);
+            print_endline "parsed a top-level expr";
+        with Stream.Error s -&gt;
+          (* Skip token for error recovery. *)
+          Stream.junk stream;
+          print_endline s;
+      end;
+      print_string "ready&gt; "; flush stdout;
+      main_loop stream
+</pre>
+</dd>
+
+<dt>toy.ml:</dt>
+<dd class="doc_code">
+<pre>
+(*===----------------------------------------------------------------------===
+ * Main driver code.
+ *===----------------------------------------------------------------------===*)
+
+let main () =
+  (* Install standard binary operators.
+   * 1 is the lowest precedence. *)
+  Hashtbl.add Parser.binop_precedence '&lt;' 10;
+  Hashtbl.add Parser.binop_precedence '+' 20;
+  Hashtbl.add Parser.binop_precedence '-' 20;
+  Hashtbl.add Parser.binop_precedence '*' 40;    (* highest. *)
+
+  (* Prime the first token. *)
+  print_string "ready&gt; "; flush stdout;
+  let stream = Lexer.lex (Stream.of_channel stdin) in
+
+  (* Run the main "interpreter loop" now. *)
+  Toplevel.main_loop stream;
+;;
+
+main ()
+</pre>
+</dd>
+</dl>
+
+<a href="OCamlLangImpl3.html">Next: Implementing Code Generation to LLVM IR</a>
+</div>
+
+<!-- *********************************************************************** -->
+<hr>
+<address>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+  src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a>
+  <a href="http://validator.w3.org/check/referer"><img
+  src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01!"></a>
+
+  <a href="mailto:sabre@nondot.org">Chris Lattner</a>
+  <a href="mailto:erickt@users.sourceforge.net">Erick Tryzelaar</a><br>
+  <a href="http://llvm.org/">The LLVM Compiler Infrastructure</a><br>
+  Last modified: $Date$
+</address>
+</body>
+</html>

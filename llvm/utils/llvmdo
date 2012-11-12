@@ -1,0 +1,184 @@
+#!/bin/sh
+##===- utils/llvmdo - Counts Lines Of Code -------------------*- Script -*-===##
+# 
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+# 
+##===----------------------------------------------------------------------===##
+#
+# This script is a general purpose "apply" function for the source files in LLVM
+# It uses "find" to locate all the source files and then applies the user's 
+# command to them. As such, this command is often not used by itself much but
+# the other find related tools (countloc.sh,llvmgrep,getsrcs.sh,userloc.sh) are
+# all based on this script.  This script defines "what is a source file" in 
+# LLVM and so should be maintained if new directories, new file extensions, 
+# etc. are used in LLVM as it progresses.
+#
+# Usage:
+#  llvmdo [-topdir DIR] [-dirs "DIRNAMES..."] [-code-only] PROGRAM ARGS...
+#
+# The -topdir option allows you to specify the llvm source root directly. If it
+# is not specified then it will be obtained with llvm-config which must be built
+# and in your path.
+#
+# The -dirs argument allows you to specify the set of directories that are 
+# searched. The default list of directories searched is:
+#   include lib tools utils runtime autoconf docs test examples projects
+# Note that you must use quotes around the list of directory names. 
+#
+# The -code-only option specifies that only those files that are considered 
+# "code" should be visited. HTML documentation is considered code, but things 
+# like README files, etc. are not.
+#
+# Finally, you simply specify whatever program you want to run against each 
+# file and the arguments to give it. The PROGRAM will be given the file name 
+# as its last argument.
+##===----------------------------------------------------------------------===##
+
+if test $# -lt 1 ; then
+  echo "Usage: llvmdo [-topdir DIR] [-dirs "DIRNAMES..."] [-code-only] PROGRAM ARGS..."
+  exit 1
+fi
+
+if test "$1" = "-topdir" ; then
+  TOPDIR="$2"
+  shift; shift;
+else
+  TOPDIR=`llvm-config --src-root`
+fi
+
+if test "$1" = "-dirs" ; then
+  LLVMDO_DIRS="$2"
+  shift ; shift
+elif test -z "$LLVMDO_DIRS" ; then
+  LLVMDO_DIRS="include lib tools utils runtime autoconf docs test examples projects cmake"
+fi
+
+if test "$1" = "-code-only" ; then
+  CODE_ONLY="set"
+  shift
+else
+  CODE_ONLY=""
+fi
+
+if test "$1" = "" ; then
+  echo "Missing program name to run"
+  exit 1
+fi
+
+PROGRAM=`which $1`
+if test ! -x "$PROGRAM" ; then
+  echo "Can't execute $1"
+  exit 1
+fi
+shift;
+
+paths_to_ignore="\
+  -path */.svn/ -o \
+  -path */.svn/* -o \
+  -path docs/doxygen/* -o \
+  -path docs/CommandGuide/html/* -o \
+  -path docs/CommandGuide/man/* -o \
+  -path docs/CommandGuide/ps/* -o \
+  -path docs/CommandGuide/man/* -o \
+  -path docs/HistoricalNotes/* -o \
+  -path docs/img/* -o \
+  -path */.libs/* -o \
+  -path lib/Support/bzip2/* -o \
+  -path projects/llvm-test/* \
+"
+files_to_match="\
+     -name *.ac \
+  -o -name *.b \
+  -o -name *.c \
+  -o -name *.cc \
+  -o -name *.cfg \
+  -o -name *.cpp \
+  -o -name *.css \
+  -o -name *.def \
+  -o -name *.el \
+  -o -name *.exp \
+  -o -name *.footer \
+  -o -name *.gnuplot' \
+  -o -name *.h \
+  -o -name *.header \
+  -o -name *.html \
+  -o -name *.in \
+  -o -name *.inc \
+  -o -name *.intro \
+  -o -name *.l \
+  -o -name *.ll \
+  -o -name *.lst \
+  -o -name *.m4 \
+  -o -name *.pod \
+  -o -name *.pl \
+  -o -name *.py \
+  -o -name *.sh \
+  -o -name *.schema \
+  -o -name *.st \
+  -o -name *.tcl \
+  -o -name *.td \
+  -o -name *.tr \
+  -o -name *.y \
+  -o -name Make* \
+  -o -name *.cmake \
+  -o -name llvmdo \
+  -o -name llvmgrep \
+  -o -name check-each-file \
+  -o -name codgen-diff \
+  -o -name llvm-native-gcc \
+  -o -name llvm-native-gxx \
+  -o -name makellvm \
+  -o -path include/llvm/ADT/ilist \
+  -o -path test/\*.ll \
+  -o -path test/Scripts/not \
+  -o -path runtime/\*.ll \
+"
+if test -z "$CODE_ONLY" ; then
+  files_to_match="$files_to_match \
+    -o -name *.txt \
+    -o -name *.TXT \
+    -o -name *.vim \
+    -o -name vimrc \
+    -o -name README \
+    -o -name COPYING.LIB \
+    -o -name LICENSE* "
+fi
+files_to_ignore="\
+     -name \.* \
+  -o -name *~ \
+  -o -name #* \
+  -o -name configure \
+  -o -name slow.ll \
+  -o -name *libtool* \
+  -o -name ltdl* \
+  -o -name ltdl.m4 \
+  -o -name ltmain.m4 \
+  -o -name ltmain.sh \
+  -o -name aclocal.m4 \
+  -o -name acinclude.m4 \
+  -o -name *LoopSimplifyCrash.ll \
+  -o -name *AST-Remove.ll \
+  -o -name PPCPerfectShuffle.h \
+"
+
+if test -d "$TOPDIR" ; then
+  cd $TOPDIR
+  # Have to use the right "find" on a per-platform basis. Most platforms have
+  # Gnu find as "find", but Solaris does not.
+  case `uname -s` in
+    SunOS) find_prog=gfind ;;
+    *) find_prog=find ;;
+  esac
+  # Turn off file name generation (globbing) so that substitution of the
+  # variables doesn't cause the shell to create lists of file names
+  set -f
+  $find_prog $LLVMDO_DIRS -type f \
+    \( $paths_to_ignore \) -prune \
+    -o \( \( $files_to_match \) \! \( $files_to_ignore \) \
+    -exec $PROGRAM "$@" {} \; \)
+else
+  echo "Can't find LLVM top directory in $TOPDIR"
+fi

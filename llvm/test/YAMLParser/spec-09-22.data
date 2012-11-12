@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+strip: |-
+  text clip: |
+  textkeep: |+
+  text 

@@ -1,0 +1,10 @@
+VER1 {
+  global:
+    foo;
+};
+
+VER2 {
+  global:
+    foo;
+} VER1;
+

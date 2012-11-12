@@ -1,0 +1,4 @@
+<{lexer,parser}.ml>: use_camlp4, pp(camlp4of)
+<*.{byte,native}>: g++, use_llvm, use_llvm_analysis
+<*.{byte,native}>: use_llvm_executionengine, use_llvm_target
+<*.{byte,native}>: use_llvm_scalar_opts, use_bindings
