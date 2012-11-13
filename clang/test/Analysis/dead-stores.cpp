@@ -126,3 +126,26 @@ int test_5() {
   return 1;
 }
 
+
+int test_6_aux(unsigned x);
+
+void test_6() {
+  unsigned currDestLen = 0;  // no-warning
+  try {
+    while (test_6_aux(currDestLen)) {
+      currDestLen += 2; // no-warning
+    } 
+  }
+  catch (void *) {}
+}
+
+void test_6b() {
+  unsigned currDestLen = 0;  // no-warning
+  try {
+    while (test_6_aux(currDestLen)) {
+      currDestLen += 2; // expected-warning {{Value stored to 'currDestLen' is never read}}
+      break;
+    } 
+  }
+  catch (void *) {}
+}

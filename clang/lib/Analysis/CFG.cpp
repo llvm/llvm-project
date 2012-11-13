@@ -1648,8 +1648,10 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
 
   // If the type of VD is a VLA, then we must process its size expressions.
   for (const VariableArrayType* VA = FindVA(VD->getType().getTypePtr());
-       VA != 0; VA = FindVA(VA->getElementType().getTypePtr()))
-    Block = addStmt(VA->getSizeExpr());
+       VA != 0; VA = FindVA(VA->getElementType().getTypePtr())) {
+    if (CFGBlock *newBlock = addStmt(VA->getSizeExpr()))
+      LastBlock = newBlock;
+  }
 
   // Remove variable from local scope.
   if (ScopePos && VD == *ScopePos)
@@ -1767,7 +1769,7 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
   // Add the condition as the last statement in the new block.  This may create
   // new blocks as the condition may contain control-flow.  Any newly created
   // blocks will be pointed to be "Block".
-  Block = addStmt(I->getCond());
+  CFGBlock *LastBlock = addStmt(I->getCond());
 
   // Finally, if the IfStmt contains a condition variable, add both the IfStmt
   // and the condition variable initialization to the CFG.
@@ -1775,11 +1777,11 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
     if (Expr *Init = VD->getInit()) {
       autoCreateBlock();
       appendStmt(Block, I->getConditionVariableDeclStmt());
-      addStmt(Init);
+      LastBlock = addStmt(Init);
     }
   }
 
-  return Block;
+  return LastBlock;
 }
 
 
@@ -2611,7 +2613,7 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   // Add the terminator and condition in the switch block.
   SwitchTerminatedBlock->setTerminator(Terminator);
   Block = SwitchTerminatedBlock;
-  Block = addStmt(Terminator->getCond());
+  CFGBlock *LastBlock = addStmt(Terminator->getCond());
 
   // Finally, if the SwitchStmt contains a condition variable, add both the
   // SwitchStmt and the condition variable initialization to the CFG.
@@ -2619,11 +2621,11 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
     if (Expr *Init = VD->getInit()) {
       autoCreateBlock();
       appendStmt(Block, Terminator->getConditionVariableDeclStmt());
-      addStmt(Init);
+      LastBlock = addStmt(Init);
     }
   }
 
-  return Block;
+  return LastBlock;
 }
   
 static bool shouldAddCase(bool &switchExclusivelyCovered,
@@ -2807,8 +2809,7 @@ CFGBlock *CFGBuilder::VisitCXXTryStmt(CXXTryStmt *Terminator) {
 
   assert(Terminator->getTryBlock() && "try must contain a non-NULL body");
   Block = NULL;
-  Block = addStmt(Terminator->getTryBlock());
-  return Block;
+  return addStmt(Terminator->getTryBlock());
 }
 
 CFGBlock *CFGBuilder::VisitCXXCatchStmt(CXXCatchStmt *CS) {
@@ -2949,15 +2950,15 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
     addLocalScopeAndDtors(S->getLoopVarStmt());
 
     // Populate a new block to contain the loop body and loop variable.
-    Block = addStmt(S->getBody());
+    addStmt(S->getBody());
     if (badCFG)
       return 0;
-    Block = addStmt(S->getLoopVarStmt());
+    CFGBlock *LoopVarStmtBlock = addStmt(S->getLoopVarStmt());
     if (badCFG)
       return 0;
     
     // This new body block is a successor to our condition block.
-    addSuccessor(ConditionBlock, KnownVal.isFalse() ? 0 : Block);
+    addSuccessor(ConditionBlock, KnownVal.isFalse() ? 0 : LoopVarStmtBlock);
   }
 
   // Link up the condition block with the code that follows the loop (the
