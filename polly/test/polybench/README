@@ -1,0 +1,87 @@
+* * * * * * * * * *
+* PolyBenchs 1.0  *
+* * * * * * * * * *
+
+
+* Available benchmarks:
+
+::linear-algebra::
+linear-algebra/kernels:
+linear-algebra/kernels/atax/2mm.c
+linear-algebra/kernels/atax/3mm.c
+linear-algebra/kernels/atax/atax.c
+linear-algebra/kernels/bicg/bicg.c
+linear-algebra/kernels/doitgen/doitgen.c
+linear-algebra/kernels/gemm/gemm.c
+linear-algebra/kernels/gemver/gemver.c
+linear-algebra/kernels/gesummv/gesummv.c
+
+linear-algebra/solvers:
+linear-algebra/solvers/gramschmidt/gramschmidt.c
+linear-algebra/solvers/lu/lu.c
+linear-algebra/solvers/ludcmp/ludcmp.c
+
+::datamining::
+datamining/correlation/correlation.c
+datamining/covariance/covariance.c
+
+::stencils::
+stencils/adi/adi.c
+stencils/jacobi-2d-imper/jacobi-2d-imper.c
+stencils/seidel/seidel.c
+
+
+* To compile a benchmark without any monitoring:
+
+$> gcc -I utilities utilities/instrument.c linear-algebra/kernels/atax/atax.c
+
+
+
+* To compile a benchmark with execution time reporting:
+
+$> gcc -I utilities utilities/instrument.c linear-algebra/kernels/atax/atax.c -DPOLYBENCH_TIME
+
+
+* Available options
+
+They are all passed as macro definitions during compilation time. The
+current list is:
+- POLYBENCH_TIME: output execution time (gettimeofday) [default: off]
+- POLYBENCH_NO_FLUSH_CACHE: don't flush the cache before calling the
+  timer [default: flush the cache]
+- POLYBENCH_LINUX_FIFO_SCHEDULER: use FIFO real-time scheduler for the
+  kernel execution, the program must be run as root, under linux only,
+  and compiled with -lc [default: off]
+- POLYBENCH_CACHE_SIZE_KB: cache size to flush, in kB [default: 8192]
+- POLYBENCH_TEST_MALLOC: use malloc instead of stack allocation [default: off]
+- POLYBENCH_DUMP_ARRAYS: dump all live-out arrays on stderr [default: off]
+
+- Nxx: override the default dataset values
+
+
+* Collecting the execution time of all files
+
+$> scripts/runall.sh <machine-name>
+
+Note: the script runall must be run from the root directory of the archive.
+
+
+** Specifying different dataset size for one file in particular
+
+- Create a compiler.opts file under the directory of the benchmark
+- Specify a set of options, e.g. -DX=1024 -DY=1024 (see gemm for an example)
+
+
+** To specify another compiler
+
+- Simplest is to edit scripts/runall.sh, and change the
+  COMPILER_COMMAND variable. One can also export the adequate
+  COMPILER_COMMAND variable in the shell environment.
+
+
+
+* Author
+Louis-Noel Pouchet <pouchet@cse.ohio-state.edu>
+
+* Contributors
+Uday Bondhugula <ubondhug@us.ibm.com>

@@ -1,0 +1,47 @@
+digraph "Scop Graph for 'init_array' function" {
+	label="Scop Graph for 'init_array' function";
+
+	Node0x26ade30 [shape=record,label="{%0:\l\l  br label %1\l}"];
+	Node0x26ade30 -> Node0x26acdd0;
+	Node0x26acdd0 [shape=record,label="{%1:\l\l  %2 = phi i64 [ %indvar.next2, %18 ], [ 0, %0 ]\l  %exitcond5 = icmp ne i64 %2, 1536\l  br i1 %exitcond5, label %3, label %19\l}"];
+	Node0x26acdd0 -> Node0x26acdf0;
+	Node0x26acdd0 -> Node0x26adce0;
+	Node0x26acdf0 [shape=record,label="{%3:\l\l  br label %4\l}"];
+	Node0x26acdf0 -> Node0x26addc0;
+	Node0x26addc0 [shape=record,label="{%4:\l\l  %indvar = phi i64 [ %indvar.next, %16 ], [ 0, %3 ]\l  %scevgep4 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %2, i64 %indvar\l  %scevgep = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %2, i64 %indvar\l  %tmp = mul i64 %2, %indvar\l  %tmp3 = trunc i64 %tmp to i32\l  %exitcond = icmp ne i64 %indvar, 1536\l  br i1 %exitcond, label %5, label %17\l}"];
+	Node0x26addc0 -> Node0x26ace70;
+	Node0x26addc0 -> Node0x26ad010;
+	Node0x26ace70 [shape=record,label="{%5:\l\l  %6 = srem i32 %tmp3, 1024\l  %7 = add nsw i32 1, %6\l  %8 = sitofp i32 %7 to double\l  %9 = fdiv double %8, 2.000000e+00\l  %10 = fptrunc double %9 to float\l  store float %10, float* %scevgep4\l  %11 = srem i32 %tmp3, 1024\l  %12 = add nsw i32 1, %11\l  %13 = sitofp i32 %12 to double\l  %14 = fdiv double %13, 2.000000e+00\l  %15 = fptrunc double %14 to float\l  store float %15, float* %scevgep\l  br label %16\l}"];
+	Node0x26ace70 -> Node0x26ace90;
+	Node0x26ace90 [shape=record,label="{%16:\l\l  %indvar.next = add i64 %indvar, 1\l  br label %4\l}"];
+	Node0x26ace90 -> Node0x26addc0[constraint=false];
+	Node0x26ad010 [shape=record,label="{%17:\l\l  br label %18\l}"];
+	Node0x26ad010 -> Node0x26ad6c0;
+	Node0x26ad6c0 [shape=record,label="{%18:\l\l  %indvar.next2 = add i64 %2, 1\l  br label %1\l}"];
+	Node0x26ad6c0 -> Node0x26acdd0[constraint=false];
+	Node0x26adce0 [shape=record,label="{%19:\l\l  ret void\l}"];
+	colorscheme = "paired12"
+        subgraph cluster_0x26a94c0 {
+          label = "";
+          style = solid;
+          color = 1
+          subgraph cluster_0x26aa4e0 {
+            label = "";
+            style = filled;
+            color = 3            subgraph cluster_0x26a9780 {
+              label = "";
+              style = solid;
+              color = 5
+              Node0x26addc0;
+              Node0x26ace70;
+              Node0x26ace90;
+            }
+            Node0x26acdd0;
+            Node0x26acdf0;
+            Node0x26ad010;
+            Node0x26ad6c0;
+          }
+          Node0x26ade30;
+          Node0x26adce0;
+        }
+}

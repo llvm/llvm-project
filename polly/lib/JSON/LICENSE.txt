@@ -1,0 +1,1 @@
+The json-cpp library and this documentation are in Public Domain.

@@ -1,0 +1,17 @@
+{
+   "context" : "{ [] }",
+   "name" : "for.cond => for.end",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_for_body[i0] -> MemRef_A[0] }"
+            }
+         ],
+         "domain" : "{ Stmt_for_body[i0] : i0 >= 0 and i0 <= 11 }",
+         "name" : "Stmt_for_body",
+         "schedule" : "{ Stmt_for_body[i0] -> scattering[0, i0, 0] }"
+      }
+   ]
+}
