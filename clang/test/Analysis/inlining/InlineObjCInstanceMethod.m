@@ -1,15 +1,32 @@
-// RUN: %clang --analyze -Xanalyzer -analyzer-checker=osx.cocoa.IncompatibleMethodTypes -Xclang -verify %s
+// RUN: %clang --analyze -Xanalyzer -analyzer-checker=osx.cocoa.IncompatibleMethodTypes,osx.coreFoundation.CFRetainRelease -Xclang -verify %s
 
 #include "InlineObjCInstanceMethod.h"
+
+typedef const struct __CFString * CFStringRef;
+typedef const void * CFTypeRef;
+extern CFTypeRef CFRetain(CFTypeRef cf);
+extern void CFRelease(CFTypeRef cf);
+extern CFStringRef getString(void);
 
 // Method is defined in the parent; called through self.
 @interface MyParent : NSObject
 - (int)getInt;
+- (const struct __CFString *) testCovariantReturnType __attribute__((cf_returns_retained));
 @end
 @implementation MyParent
 - (int)getInt {
     return 0;
 }
+
+- (CFStringRef) testCovariantReturnType __attribute__((cf_returns_retained)) {
+  CFStringRef Str = ((void*)0);
+  Str = getString();
+  if (Str) {
+    CFRetain(Str);
+  }
+  return Str;
+}
+
 @end
 
 @interface MyClass : MyParent
@@ -88,12 +105,22 @@ void randomlyMessageAnObject(MyClass *arr[], int i) {
 
 @interface EvilChild : MyParent
 - (id)getInt;
+- (const struct __CFString *) testCovariantReturnType __attribute__((cf_returns_retained));
 @end
 
 @implementation EvilChild
 - (id)getInt { // expected-warning {{types are incompatible}}
   return self;
 }
+- (CFStringRef) testCovariantReturnType __attribute__((cf_returns_retained)) {
+  CFStringRef Str = ((void*)0);
+  Str = getString();
+  if (Str) {
+    CFRetain(Str);
+  }
+  return Str;
+}
+
 @end
 
 int testNonCovariantReturnType() {
@@ -108,4 +135,14 @@ int testNonCovariantReturnType() {
 
   [obj release];
   return 5/(x-1); // no-warning
+}
+
+int testCovariantReturnTypeNoErrorSinceTypesMatch() {
+  MyParent *obj = [[EvilChild alloc] init];
+
+  CFStringRef S = ((void*)0);
+  S = [obj testCovariantReturnType];
+  if (S)
+    CFRelease(S);
+  CFRelease(obj);
 }
