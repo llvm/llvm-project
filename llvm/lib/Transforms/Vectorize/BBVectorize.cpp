@@ -28,6 +28,7 @@
 #include "llvm/Type.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/STLExtras.h"
@@ -483,6 +484,10 @@ namespace {
 
       if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
         T2 = SI->getCondition()->getType();
+      } else if (ShuffleVectorInst *SI = dyn_cast<ShuffleVectorInst>(I)) {
+        T2 = SI->getOperand(0)->getType();
+      } else if (CmpInst *CI = dyn_cast<CmpInst>(I)) {
+        T2 = CI->getOperand(0)->getType();
       }
     }
 
@@ -670,6 +675,19 @@ namespace {
         if (K->second == J) return true;
 
       return false;
+    }
+
+    bool isPureIEChain(InsertElementInst *IE) {
+      InsertElementInst *IENext = IE;
+      do {
+        if (!isa<UndefValue>(IENext->getOperand(0)) &&
+            !isa<InsertElementInst>(IENext->getOperand(0))) {
+          return false;
+        }
+      } while ((IENext =
+                 dyn_cast<InsertElementInst>(IENext->getOperand(0))));
+
+      return true;
     }
   };
 
@@ -987,10 +1005,11 @@ namespace {
       // We don't want to fuse to a type that will be split, even
       // if the two input types will also be split and there is no other
       // associated cost.
-      unsigned VParts = VTTI->getNumberOfParts(VT1);
-      if (VParts > 1)
+      unsigned VParts1 = VTTI->getNumberOfParts(VT1),
+               VParts2 = VTTI->getNumberOfParts(VT2);
+      if (VParts1 > 1 || VParts2 > 1)
         return false;
-      else if (!VParts && VCost == ICost + JCost)
+      else if ((!VParts1 || !VParts2) && VCost == ICost + JCost)
         return false;
 
       CostSavings = ICost + JCost - VCost;
@@ -1683,10 +1702,20 @@ namespace {
         // The set of pairs that have already contributed to the total cost.
         DenseSet<ValuePair> IncomingPairs;
 
+        // If the cost model were perfect, this might not be necessary; but we
+        // need to make sure that we don't get stuck vectorizing our own
+        // shuffle chains.
+        bool HasNontrivialInsts = false;
+
         // The node weights represent the cost savings associated with
         // fusing the pair of instructions.
         for (DenseSet<ValuePair>::iterator S = PrunedTree.begin(),
              E = PrunedTree.end(); S != E; ++S) {
+          if (!isa<ShuffleVectorInst>(S->first) &&
+              !isa<InsertElementInst>(S->first) &&
+              !isa<ExtractElementInst>(S->first))
+            HasNontrivialInsts = true;
+
           bool FlipOrder = false;
 
           if (getDepthFactor(S->first)) {
@@ -1760,9 +1789,12 @@ namespace {
             bool NeedsExtraction = false;
             for (Value::use_iterator I = S->first->use_begin(),
                  IE = S->first->use_end(); I != IE; ++I) {
-              if (isa<ShuffleVectorInst>(*I) ||
-                  isa<InsertElementInst>(*I) ||
-                  isa<ExtractElementInst>(*I))
+              if (ShuffleVectorInst *SI = dyn_cast<ShuffleVectorInst>(*I)) {
+                // Shuffle can be folded if it has no other input
+                if (isa<UndefValue>(SI->getOperand(1)))
+                  continue;
+              }
+              if (isa<ExtractElementInst>(*I))
                 continue;
               if (PrunedTreeInstrs.count(*I))
                 continue;
@@ -1787,9 +1819,12 @@ namespace {
             NeedsExtraction = false;
             for (Value::use_iterator I = S->second->use_begin(),
                  IE = S->second->use_end(); I != IE; ++I) {
-              if (isa<ShuffleVectorInst>(*I) ||
-                  isa<InsertElementInst>(*I) ||
-                  isa<ExtractElementInst>(*I))
+              if (ShuffleVectorInst *SI = dyn_cast<ShuffleVectorInst>(*I)) {
+                // Shuffle can be folded if it has no other input
+                if (isa<UndefValue>(SI->getOperand(1)))
+                  continue;
+              }
+              if (isa<ExtractElementInst>(*I))
                 continue;
               if (PrunedTreeInstrs.count(*I))
                 continue;
@@ -1839,14 +1874,37 @@ namespace {
 
               // Combining vector operations of the same type is also assumed
               // folded with other operations.
-              if (Ty1 == Ty2 &&
-                  (isa<ShuffleVectorInst>(O1) ||
-                   isa<InsertElementInst>(O1) ||
-                   isa<InsertElementInst>(O1)) &&
-                  (isa<ShuffleVectorInst>(O2) ||
-                   isa<InsertElementInst>(O2) ||
-                   isa<InsertElementInst>(O2)))
-                continue;
+              if (Ty1 == Ty2) {
+                // If both are insert elements, then both can be widened.
+                InsertElementInst *IEO1 = dyn_cast<InsertElementInst>(O1),
+                                  *IEO2 = dyn_cast<InsertElementInst>(O2);
+                if (IEO1 && IEO2 && isPureIEChain(IEO1) && isPureIEChain(IEO2))
+                  continue;
+                // If both are extract elements, and both have the same input
+                // type, then they can be replaced with a shuffle
+                ExtractElementInst *EIO1 = dyn_cast<ExtractElementInst>(O1),
+                                   *EIO2 = dyn_cast<ExtractElementInst>(O2);
+                if (EIO1 && EIO2 &&
+                    EIO1->getOperand(0)->getType() ==
+                      EIO2->getOperand(0)->getType())
+                  continue;
+                // If both are a shuffle with equal operand types and only two
+                // unqiue operands, then they can be replaced with a single
+                // shuffle
+                ShuffleVectorInst *SIO1 = dyn_cast<ShuffleVectorInst>(O1),
+                                  *SIO2 = dyn_cast<ShuffleVectorInst>(O2);
+                if (SIO1 && SIO2 &&
+                    SIO1->getOperand(0)->getType() ==
+                      SIO2->getOperand(0)->getType()) {
+                  SmallSet<Value *, 4> SIOps;
+                  SIOps.insert(SIO1->getOperand(0));
+                  SIOps.insert(SIO1->getOperand(1));
+                  SIOps.insert(SIO2->getOperand(0));
+                  SIOps.insert(SIO2->getOperand(1));
+                  if (SIOps.size() <= 2)
+                    continue;
+                }
+              }
 
               int ESContrib;
               // This pair has already been formed.
@@ -1893,6 +1951,13 @@ namespace {
               IncomingPairs.insert(VP);
             }
           }
+        }
+
+        if (!HasNontrivialInsts) {
+          DEBUG(if (DebugPairSelection) dbgs() <<
+                "\tNo non-trivial instructions in tree;"
+                " override to zero effective size\n");
+          EffSize = 0;
         }
       } else {
         for (DenseSet<ValuePair>::iterator S = PrunedTree.begin(),
@@ -2092,18 +2157,7 @@ namespace {
     if (InsertElementInst *LIE = dyn_cast<InsertElementInst>(LOp)) {
       // If we have a pure insertelement chain, then this can be rewritten
       // into a chain that directly builds the larger type.
-      bool PureChain = true;
-      InsertElementInst *LIENext = LIE;
-      do {
-        if (!isa<UndefValue>(LIENext->getOperand(0)) &&
-            !isa<InsertElementInst>(LIENext->getOperand(0))) {
-          PureChain = false;
-          break;
-        }
-      } while ((LIENext =
-                 dyn_cast<InsertElementInst>(LIENext->getOperand(0))));
-
-      if (PureChain) {
+      if (isPureIEChain(LIE)) {
         SmallVector<Value *, 8> VectElemts(numElemL,
           UndefValue::get(ArgTypeL->getScalarType()));
         InsertElementInst *LIENext = LIE;
