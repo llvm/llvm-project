@@ -1485,7 +1485,7 @@ namespace {
       PrunedTree.insert(QTop.first);
 
       // Visit each child, pruning as necessary...
-      DenseMap<ValuePair, size_t> BestChildren;
+      SmallVector<ValuePairWithDepth, 8> BestChildren;
       VPPIteratorPair QTopRange = ConnectedPairs.equal_range(QTop.first);
       for (std::multimap<ValuePair, ValuePair>::iterator K = QTopRange.first;
            K != QTopRange.second; ++K) {
@@ -1517,7 +1517,7 @@ namespace {
         DenseSet<ValuePair> CurrentPairs;
 
         bool CanAdd = true;
-        for (DenseMap<ValuePair, size_t>::iterator C2
+        for (SmallVector<ValuePairWithDepth, 8>::iterator C2
               = BestChildren.begin(), E2 = BestChildren.end();
              C2 != E2; ++C2) {
           if (C2->first.first == C->first.first ||
@@ -1602,22 +1602,22 @@ namespace {
         // to an already-selected child. Check for this here, and if a
         // conflict is found, then remove the previously-selected child
         // before adding this one in its place.
-        for (DenseMap<ValuePair, size_t>::iterator C2
+        for (SmallVector<ValuePairWithDepth, 8>::iterator C2
               = BestChildren.begin(); C2 != BestChildren.end();) {
           if (C2->first.first == C->first.first ||
               C2->first.first == C->first.second ||
               C2->first.second == C->first.first ||
               C2->first.second == C->first.second ||
               pairsConflict(C2->first, C->first, PairableInstUsers))
-            BestChildren.erase(C2++);
+            C2 = BestChildren.erase(C2);
           else
             ++C2;
         }
 
-        BestChildren.insert(ValuePairWithDepth(C->first, C->second));
+        BestChildren.push_back(ValuePairWithDepth(C->first, C->second));
       }
 
-      for (DenseMap<ValuePair, size_t>::iterator C
+      for (SmallVector<ValuePairWithDepth, 8>::iterator C
             = BestChildren.begin(), E2 = BestChildren.end();
            C != E2; ++C) {
         size_t DepthF = getDepthFactor(C->first.first);
