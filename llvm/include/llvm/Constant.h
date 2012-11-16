@@ -65,6 +65,9 @@ public:
   /// true for things like constant expressions that could divide by zero.
   bool canTrap() const;
 
+  /// isThreadDependent - Return true if the value can vary between threads.
+  bool isThreadDependent() const;
+
   /// isConstantUsed - Return true if the constant has users other than constant
   /// exprs and other dangling things.
   bool isConstantUsed() const;

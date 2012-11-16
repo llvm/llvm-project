@@ -245,6 +245,31 @@ bool Constant::canTrap() const {
   }
 }
 
+/// isThreadDependent - Return true if the value can vary between threads.
+bool Constant::isThreadDependent() const {
+  SmallPtrSet<const Constant*, 64> Visited;
+  SmallVector<const Constant*, 64> WorkList;
+  WorkList.push_back(this);
+  Visited.insert(this);
+
+  while (!WorkList.empty()) {
+    const Constant *C = WorkList.pop_back_val();
+
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C)) {
+      if (GV->isThreadLocal())
+        return true;
+    }
+
+    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
+      const Constant *D = cast<Constant>(C->getOperand(I));
+      if (Visited.insert(D))
+        WorkList.push_back(D);
+    }
+  }
+
+  return false;
+}
+
 /// isConstantUsed - Return true if the constant has users other than constant
 /// exprs and other dangling things.
 bool Constant::isConstantUsed() const {

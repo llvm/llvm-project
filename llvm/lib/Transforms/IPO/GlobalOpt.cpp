@@ -225,6 +225,7 @@ static bool AnalyzeGlobal(const Value *V, GlobalStatus &GS,
 
         // Don't hack on volatile stores.
         if (SI->isVolatile()) return true;
+
         GS.Ordering = StrongerOrdering(GS.Ordering, SI->getOrdering());
 
         // If this is a direct store to the global (i.e., the global is a scalar
@@ -234,6 +235,14 @@ static bool AnalyzeGlobal(const Value *V, GlobalStatus &GS,
           if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(
                                                            SI->getOperand(1))) {
             Value *StoredVal = SI->getOperand(0);
+
+            if (Constant *C = dyn_cast<Constant>(StoredVal)) {
+              if (C->isThreadDependent()) {
+                // The stored value changes between threads; don't track it.
+                return true;
+              }
+            }
+
             if (StoredVal == GV->getInitializer()) {
               if (GS.StoredType < GlobalStatus::isInitializerStored)
                 GS.StoredType = GlobalStatus::isInitializerStored;
