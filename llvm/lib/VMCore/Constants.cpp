@@ -261,7 +261,9 @@ bool Constant::isThreadDependent() const {
     }
 
     for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
-      const Constant *D = cast<Constant>(C->getOperand(I));
+      const Constant *D = dyn_cast<Constant>(C->getOperand(I));
+      if (!D)
+        continue;
       if (Visited.insert(D))
         WorkList.push_back(D);
     }
