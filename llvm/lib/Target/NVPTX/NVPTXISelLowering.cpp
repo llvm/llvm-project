@@ -174,10 +174,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(NVPTXTargetMachine &TM)
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   // PTX does not support load / store predicate registers
-  setOperationAction(ISD::LOAD, MVT::i1, Expand);
+  setOperationAction(ISD::LOAD, MVT::i1, Custom);
+  setOperationAction(ISD::STORE, MVT::i1, Custom);
+
   setLoadExtAction(ISD::SEXTLOAD, MVT::i1, Promote);
   setLoadExtAction(ISD::ZEXTLOAD, MVT::i1, Promote);
-  setOperationAction(ISD::STORE, MVT::i1, Expand);
   setTruncStoreAction(MVT::i64, MVT::i1, Expand);
   setTruncStoreAction(MVT::i32, MVT::i1, Expand);
   setTruncStoreAction(MVT::i16, MVT::i1, Expand);
@@ -856,10 +857,65 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::EXTRACT_SUBVECTOR:
     return Op;
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG);
+  case ISD::STORE: return LowerSTORE(Op, DAG);
+  case ISD::LOAD: return LowerLOAD(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
 }
+
+
+// v = ld i1* addr
+//   =>
+// v1 = ld i8* addr
+// v = trunc v1 to i1
+SDValue NVPTXTargetLowering::
+LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
+  SDNode *Node = Op.getNode();
+  LoadSDNode *LD = cast<LoadSDNode>(Node);
+  DebugLoc dl = Node->getDebugLoc();
+  ISD::LoadExtType ExtType = LD->getExtensionType();
+  assert(ExtType == ISD::NON_EXTLOAD) ;
+  EVT VT = Node->getValueType(0);
+  assert(VT == MVT::i1 && "Custom lowering for i1 load only");
+  SDValue newLD = DAG.getLoad(MVT::i8, dl, LD->getChain(), LD->getBasePtr(),
+                              LD->getPointerInfo(),
+                              LD->isVolatile(), LD->isNonTemporal(),
+                              LD->isInvariant(),
+                              LD->getAlignment());
+  SDValue result = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, newLD);
+  // The legalizer (the caller) is expecting two values from the legalized
+  // load, so we build a MergeValues node for it. See ExpandUnalignedLoad()
+  // in LegalizeDAG.cpp which also uses MergeValues.
+  SDValue Ops[] = {result, LD->getChain()};
+  return DAG.getMergeValues(Ops, 2, dl);
+}
+
+// st i1 v, addr
+//    =>
+// v1 = zxt v to i8
+// st i8, addr
+SDValue NVPTXTargetLowering::
+LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
+  SDNode *Node = Op.getNode();
+  DebugLoc dl = Node->getDebugLoc();
+  StoreSDNode *ST = cast<StoreSDNode>(Node);
+  SDValue Tmp1 = ST->getChain();
+  SDValue Tmp2 = ST->getBasePtr();
+  SDValue Tmp3 = ST->getValue();
+  EVT VT = Tmp3.getValueType();
+  assert(VT == MVT::i1 && "Custom lowering for i1 store only");
+  unsigned Alignment = ST->getAlignment();
+  bool isVolatile = ST->isVolatile();
+  bool isNonTemporal = ST->isNonTemporal();
+  Tmp3 = DAG.getNode(ISD::ZERO_EXTEND, dl,
+                     MVT::i8, Tmp3);
+  SDValue Result = DAG.getStore(Tmp1, dl, Tmp3, Tmp2,
+                                ST->getPointerInfo(), isVolatile,
+                                isNonTemporal, Alignment);
+  return Result;
+}
+
 
 SDValue
 NVPTXTargetLowering::getExtSymb(SelectionDAG &DAG, const char *inname, int idx,

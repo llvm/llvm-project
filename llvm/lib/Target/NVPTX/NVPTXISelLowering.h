@@ -138,6 +138,9 @@ private:
   SDValue getParamHelpSymbol(SelectionDAG &DAG, int idx);
 
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
 };
 } // namespace llvm
 

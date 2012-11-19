@@ -68,7 +68,54 @@ static cl::opt<bool, true>InterleaveSrc("nvptx-emit-src",
                                         cl::location(llvm::InterleaveSrcInPtx));
 
 
+namespace {
+/// DiscoverDependentGlobals - Return a set of GlobalVariables on which \p V
+/// depends.
+void DiscoverDependentGlobals(Value *V,
+                              DenseSet<GlobalVariable*> &Globals) {
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+    Globals.insert(GV);
+  else {
+    if (User *U = dyn_cast<User>(V)) {
+      for (unsigned i = 0, e = U->getNumOperands(); i != e; ++i) {
+        DiscoverDependentGlobals(U->getOperand(i), Globals);
+      }
+    }
+  }
+}
 
+/// VisitGlobalVariableForEmission - Add \p GV to the list of GlobalVariable
+/// instances to be emitted, but only after any dependents have been added
+/// first.
+void VisitGlobalVariableForEmission(GlobalVariable *GV,
+                                    SmallVectorImpl<GlobalVariable*> &Order,
+                                    DenseSet<GlobalVariable*> &Visited,
+                                    DenseSet<GlobalVariable*> &Visiting) {
+  // Have we already visited this one?
+  if (Visited.count(GV)) return;
+
+  // Do we have a circular dependency?
+  if (Visiting.count(GV))
+    report_fatal_error("Circular dependency found in global variable set");
+
+  // Start visiting this global
+  Visiting.insert(GV);
+
+  // Make sure we visit all dependents first
+  DenseSet<GlobalVariable*> Others;
+  for (unsigned i = 0, e = GV->getNumOperands(); i != e; ++i)
+    DiscoverDependentGlobals(GV->getOperand(i), Others);
+  
+  for (DenseSet<GlobalVariable*>::iterator I = Others.begin(),
+       E = Others.end(); I != E; ++I)
+    VisitGlobalVariableForEmission(*I, Order, Visited, Visiting);
+
+  // Now we can visit ourself
+  Order.push_back(GV);
+  Visited.insert(GV);
+  Visiting.erase(GV);
+}
+}
 
 // @TODO: This is a copy from AsmPrinter.cpp.  The function is static, so we
 // cannot just link to the existing version.
@@ -893,10 +940,27 @@ bool NVPTXAsmPrinter::doInitialization (Module &M) {
 
   emitDeclarations(M, OS2);
 
-  // Print out module-level global variables here.
+  // As ptxas does not support forward references of globals, we need to first
+  // sort the list of module-level globals in def-use order. We visit each
+  // global variable in order, and ensure that we emit it *after* its dependent
+  // globals. We use a little extra memory maintaining both a set and a list to
+  // have fast searches while maintaining a strict ordering.
+  SmallVector<GlobalVariable*,8> Globals;
+  DenseSet<GlobalVariable*> GVVisited;
+  DenseSet<GlobalVariable*> GVVisiting;
+
+  // Visit each global variable, in order
   for (Module::global_iterator I = M.global_begin(), E = M.global_end();
-      I != E; ++I)
-    printModuleLevelGV(I, OS2);
+       I != E; ++I)
+    VisitGlobalVariableForEmission(I, Globals, GVVisited, GVVisiting);
+
+  assert(GVVisited.size() == M.getGlobalList().size() && 
+         "Missed a global variable");
+  assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
+
+  // Print out module-level global variables in proper order
+  for (unsigned i = 0, e = Globals.size(); i != e; ++i)
+    printModuleLevelGV(Globals[i], OS2);
 
   OS2 << '\n';
 
