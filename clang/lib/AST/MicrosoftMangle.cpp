@@ -373,7 +373,7 @@ isTemplate(const NamedDecl *ND,
       dyn_cast<ClassTemplateSpecializationDecl>(ND)) {
     TypeSourceInfo *TSI = Spec->getTypeAsWritten();
     if (TSI) {
-      TemplateSpecializationTypeLoc &TSTL =
+      TemplateSpecializationTypeLoc TSTL =
         cast<TemplateSpecializationTypeLoc>(TSI->getTypeLoc());
       TemplateArgumentListInfo LI(TSTL.getLAngleLoc(), TSTL.getRAngleLoc());
       for (unsigned i = 0, e = TSTL.getNumArgs(); i != e; ++i)
