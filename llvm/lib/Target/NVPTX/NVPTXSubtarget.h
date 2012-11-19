@@ -28,7 +28,6 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   
   std::string TargetName;
   NVPTX::DrvInterface drvInterface;
-  bool dummy; // For the 'dummy' feature, see NVPTX.td
   bool Is64Bit;
 
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
