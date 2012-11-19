@@ -12729,8 +12729,8 @@ X86TargetLowering::EmitAtomicLoadArith6432(MachineInstr *MI,
   case X86::ATOMSUB6432: {
     unsigned HiOpc;
     unsigned LoOpc = getNonAtomic6432Opcode(Opc, HiOpc);
-    BuildMI(mainMBB, DL, TII->get(LoOpc), t1L).addReg(SrcLoReg).addReg(LoReg);
-    BuildMI(mainMBB, DL, TII->get(HiOpc), t1H).addReg(SrcHiReg).addReg(HiReg);
+    BuildMI(mainMBB, DL, TII->get(LoOpc), t1L).addReg(LoReg).addReg(SrcLoReg);
+    BuildMI(mainMBB, DL, TII->get(HiOpc), t1H).addReg(HiReg).addReg(SrcHiReg);
     break;
   }
   case X86::ATOMNAND6432: {

@@ -10,10 +10,10 @@ entry:
 ; CHECK: movl ([[REG:%[a-z]+]]), %eax
 ; CHECK: movl 4([[REG]]), %edx
 ; CHECK: LBB0_1:
-; CHECK: movl $1
-; CHECK: addl
-; CHECK: movl $0
-; CHECK: adcl
+; CHECK: movl %eax, %ebx
+; CHECK: addl {{%[a-z]+}}, %ebx
+; CHECK: movl %edx, %ecx
+; CHECK: adcl {{%[a-z]+}}, %ecx
 ; CHECK: lock
 ; CHECK-NEXT: cmpxchg8b ([[REG]])
 ; CHECK-NEXT: jne
