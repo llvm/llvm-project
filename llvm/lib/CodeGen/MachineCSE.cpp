@@ -84,7 +84,8 @@ namespace {
     bool hasLivePhysRegDefUses(const MachineInstr *MI,
                                const MachineBasicBlock *MBB,
                                SmallSet<unsigned,8> &PhysRefs,
-                               SmallVector<unsigned,2> &PhysDefs) const;
+                               SmallVector<unsigned,2> &PhysDefs,
+                               bool &PhysUseDef) const;
     bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
                           SmallSet<unsigned,8> &PhysRefs,
                           SmallVector<unsigned,2> &PhysDefs,
@@ -194,30 +195,51 @@ MachineCSE::isPhysDefTriviallyDead(unsigned Reg,
 bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
                                        const MachineBasicBlock *MBB,
                                        SmallSet<unsigned,8> &PhysRefs,
-                                       SmallVector<unsigned,2> &PhysDefs) const{
-  MachineBasicBlock::const_iterator I = MI; I = llvm::next(I);
+                                       SmallVector<unsigned,2> &PhysDefs,
+                                       bool &PhysUseDef) const{
+  // First, add all uses to PhysRefs.
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
-    if (!MO.isReg())
+    if (!MO.isReg() || MO.isDef())
       continue;
     unsigned Reg = MO.getReg();
     if (!Reg)
       continue;
     if (TargetRegisterInfo::isVirtualRegister(Reg))
       continue;
-    // If the def is dead, it's ok. But the def may not marked "dead". That's
-    // common since this pass is run before livevariables. We can scan
-    // forward a few instructions and check if it is obviously dead.
-    if (MO.isDef() &&
-        (MO.isDead() || isPhysDefTriviallyDead(Reg, I, MBB->end())))
-      continue;
     // Reading constant physregs is ok.
     if (!MRI->isConstantPhysReg(Reg, *MBB->getParent()))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
-    if (MO.isDef())
+  }
+
+  // Next, collect all defs into PhysDefs.  If any is already in PhysRefs
+  // (which currently contains only uses), set the PhysUseDef flag.
+  PhysUseDef = false;
+  MachineBasicBlock::const_iterator I = MI; I = llvm::next(I);
+  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI->getOperand(i);
+    if (!MO.isReg() || !MO.isDef())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    if (TargetRegisterInfo::isVirtualRegister(Reg))
+      continue;
+    // Check against PhysRefs even if the def is "dead".
+    if (PhysRefs.count(Reg))
+      PhysUseDef = true;
+    // If the def is dead, it's ok. But the def may not marked "dead". That's
+    // common since this pass is run before livevariables. We can scan
+    // forward a few instructions and check if it is obviously dead.
+    if (!MO.isDead() && !isPhysDefTriviallyDead(Reg, I, MBB->end()))
       PhysDefs.push_back(Reg);
   }
+
+  // Finally, add all defs to PhysRefs as well.
+  for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i)
+    for (MCRegAliasIterator AI(PhysDefs[i], TRI, true); AI.isValid(); ++AI)
+      PhysRefs.insert(*AI);
 
   return !PhysRefs.empty();
 }
@@ -459,16 +481,22 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
     bool CrossMBBPhysDef = false;
     SmallSet<unsigned, 8> PhysRefs;
     SmallVector<unsigned, 2> PhysDefs;
-    if (FoundCSE && hasLivePhysRegDefUses(MI, MBB, PhysRefs, PhysDefs)) {
+    bool PhysUseDef = false;
+    if (FoundCSE && hasLivePhysRegDefUses(MI, MBB, PhysRefs,
+                                          PhysDefs, PhysUseDef)) {
       FoundCSE = false;
 
       // ... Unless the CS is local or is in the sole predecessor block
       // and it also defines the physical register which is not clobbered
       // in between and the physical register uses were not clobbered.
-      unsigned CSVN = VNT.lookup(MI);
-      MachineInstr *CSMI = Exps[CSVN];
-      if (PhysRegDefsReach(CSMI, MI, PhysRefs, PhysDefs, CrossMBBPhysDef))
-        FoundCSE = true;
+      // This can never be the case if the instruction both uses and
+      // defines the same physical register, which was detected above.
+      if (!PhysUseDef) {
+        unsigned CSVN = VNT.lookup(MI);
+        MachineInstr *CSMI = Exps[CSVN];
+        if (PhysRegDefsReach(CSMI, MI, PhysRefs, PhysDefs, CrossMBBPhysDef))
+          FoundCSE = true;
+      }
     }
 
     if (!FoundCSE) {
