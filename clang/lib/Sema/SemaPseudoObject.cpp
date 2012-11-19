@@ -198,7 +198,14 @@ namespace {
     }
 
     /// Return true if assignments have a non-void result.
-    virtual bool assignmentsHaveResult() { return true; }
+    bool CanCaptureValueOfType(QualType ty) {
+      assert(!ty->isIncompleteType());
+      assert(!ty->isDependentType());
+
+      if (const CXXRecordDecl *ClassDecl = ty->getAsCXXRecordDecl())
+        return ClassDecl->isTriviallyCopyable();
+      return true;
+    }
 
     virtual Expr *rebuildAndCaptureObject(Expr *) = 0;
     virtual ExprResult buildGet() = 0;
@@ -380,7 +387,7 @@ PseudoOpBuilder::buildAssignmentOperation(Scope *Sc, SourceLocation opcLoc,
 
   // The result of the assignment, if not void, is the value set into
   // the l-value.
-  result = buildSet(result.take(), opcLoc, assignmentsHaveResult());
+  result = buildSet(result.take(), opcLoc, /*captureSetValueAsResult*/ true);
   if (result.isInvalid()) return ExprError();
   addSemanticExpr(result.take());
 
@@ -404,7 +411,7 @@ PseudoOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
   QualType resultType = result.get()->getType();
 
   // That's the postfix result.
-  if (UnaryOperator::isPostfix(opcode) && assignmentsHaveResult()) {
+  if (UnaryOperator::isPostfix(opcode) && CanCaptureValueOfType(resultType)) {
     result = capture(result.take());
     setResultToLastSemantic();
   }
@@ -423,8 +430,7 @@ PseudoOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
 
   // Store that back into the result.  The value stored is the result
   // of a prefix operation.
-  result = buildSet(result.take(), opcLoc,
-             UnaryOperator::isPrefix(opcode) && assignmentsHaveResult());
+  result = buildSet(result.take(), opcLoc, UnaryOperator::isPrefix(opcode));
   if (result.isInvalid()) return ExprError();
   addSemanticExpr(result.take());
 
@@ -696,7 +702,8 @@ ExprResult ObjCPropertyOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
     ObjCMessageExpr *msgExpr =
       cast<ObjCMessageExpr>(msg.get()->IgnoreImplicit());
     Expr *arg = msgExpr->getArg(0);
-    msgExpr->setArg(0, captureValueAsResult(arg));
+    if (CanCaptureValueOfType(arg->getType()))
+      msgExpr->setArg(0, captureValueAsResult(arg));
   }
 
   return msg;
@@ -1312,7 +1319,8 @@ ExprResult ObjCSubscriptOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
     ObjCMessageExpr *msgExpr =
       cast<ObjCMessageExpr>(msg.get()->IgnoreImplicit());
     Expr *arg = msgExpr->getArg(0);
-    msgExpr->setArg(0, captureValueAsResult(arg));
+    if (CanCaptureValueOfType(arg->getType()))
+      msgExpr->setArg(0, captureValueAsResult(arg));
   }
   
   return msg;

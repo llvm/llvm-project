@@ -106,3 +106,26 @@ void test7(Test7 *ptr) {
   delete ptr.implicit_struct_property;
   delete ptr.explicit_struct_property;
 }
+
+// Make sure the returned value from property assignment is void,
+// because there isn't any other viable way to handle it for
+// non-trivial classes.
+class NonTrivial1 {
+public:
+	~NonTrivial1();
+};
+class NonTrivial2 {
+public:
+	NonTrivial2();
+	NonTrivial2(const NonTrivial2&);
+};
+@interface TestNonTrivial
+@property(assign, nonatomic) NonTrivial1 p1;
+@property(assign, nonatomic) NonTrivial2 p2;
+@end
+TestNonTrivial *TestNonTrivialObj;
+
+extern void* VoidType;
+extern decltype(TestNonTrivialObj.p1 = NonTrivial1())* VoidType;
+extern decltype(TestNonTrivialObj.p2 = NonTrivial2())* VoidType;
+

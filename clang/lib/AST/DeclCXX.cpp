@@ -240,10 +240,13 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //    -- the constructor selected to copy/move each direct base class
       //       subobject is trivial, and
       // FIXME: C++0x: We need to only consider the selected constructor
-      // instead of all of them.
+      // instead of all of them. For now, we treat a move constructor as being
+      // non-trivial if it calls anything other than a trivial move constructor.
       if (!BaseClassDecl->hasTrivialCopyConstructor())
         data().HasTrivialCopyConstructor = false;
-      if (!BaseClassDecl->hasTrivialMoveConstructor())
+      if (!BaseClassDecl->hasTrivialMoveConstructor() ||
+          !(BaseClassDecl->hasDeclaredMoveConstructor() ||
+            BaseClassDecl->needsImplicitMoveConstructor()))
         data().HasTrivialMoveConstructor = false;
 
       // C++0x [class.copy]p27:
@@ -255,7 +258,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       // of all of them.
       if (!BaseClassDecl->hasTrivialCopyAssignment())
         data().HasTrivialCopyAssignment = false;
-      if (!BaseClassDecl->hasTrivialMoveAssignment())
+      if (!BaseClassDecl->hasTrivialMoveAssignment() ||
+          !(BaseClassDecl->hasDeclaredMoveAssignment() ||
+            BaseClassDecl->needsImplicitMoveAssignment()))
         data().HasTrivialMoveAssignment = false;
 
       // C++11 [class.ctor]p6:
@@ -830,7 +835,9 @@ NotASpecialMember:;
         // FIXME: C++0x: We don't correctly model 'selected' constructors.
         if (!FieldRec->hasTrivialCopyConstructor())
           data().HasTrivialCopyConstructor = false;
-        if (!FieldRec->hasTrivialMoveConstructor())
+        if (!FieldRec->hasTrivialMoveConstructor() ||
+            !(FieldRec->hasDeclaredMoveConstructor() ||
+              FieldRec->needsImplicitMoveConstructor()))
           data().HasTrivialMoveConstructor = false;
 
         // C++0x [class.copy]p27:
@@ -842,7 +849,9 @@ NotASpecialMember:;
         // FIXME: C++0x: We don't correctly model 'selected' operators.
         if (!FieldRec->hasTrivialCopyAssignment())
           data().HasTrivialCopyAssignment = false;
-        if (!FieldRec->hasTrivialMoveAssignment())
+        if (!FieldRec->hasTrivialMoveAssignment() ||
+            !(FieldRec->hasDeclaredMoveAssignment() ||
+              FieldRec->needsImplicitMoveAssignment()))
           data().HasTrivialMoveAssignment = false;
 
         if (!FieldRec->hasTrivialDestructor())
