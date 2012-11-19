@@ -3164,11 +3164,10 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, llvm::Value *Dest) {
   uint64_t Size = sizeChars.getQuantity();
   CharUnits alignChars = getContext().getTypeAlignInChars(AtomicTy);
   unsigned Align = alignChars.getQuantity();
-  unsigned MaxInlineWidth =
-      getContext().getTargetInfo().getMaxAtomicInlineWidth();
-  bool UseLibcall = (Size != Align || Size > MaxInlineWidth);
-
-
+  unsigned MaxInlineWidthInBits =
+    getContext().getTargetInfo().getMaxAtomicInlineWidth();
+  bool UseLibcall = (Size != Align ||
+                     getContext().toBits(sizeChars) > MaxInlineWidthInBits);
 
   llvm::Value *Ptr, *Order, *OrderFail = 0, *Val1 = 0, *Val2 = 0;
   Ptr = EmitScalarExpr(E->getPtr());
