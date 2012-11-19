@@ -1731,6 +1731,22 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
   return *TC;
 }
 
+bool Driver::ShouldUseClangCompiler(const Compilation &C, const JobAction &JA,
+                                    const llvm::Triple &Triple) const {
+  // Check if user requested no clang, or clang doesn't understand this type (we
+  // only handle single inputs for now).
+  if (JA.size() != 1 ||
+      !types::isAcceptedByClang((*JA.begin())->getType()))
+    return false;
+
+  // Otherwise make sure this is an action clang understands.
+  if (!isa<PreprocessJobAction>(JA) && !isa<PrecompileJobAction>(JA) &&
+      !isa<CompileJobAction>(JA))
+    return false;
+
+  return true;
+}
+
 /// GetReleaseVersion - Parse (([0-9]+)(.([0-9]+)(.([0-9]+)?))?)? and return the
 /// grouped values as integers. Numbers which are not provided are set to 0.
 ///

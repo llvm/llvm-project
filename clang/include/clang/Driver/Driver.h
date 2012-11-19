@@ -363,6 +363,11 @@ public:
   /// GCC goes to extra lengths here to be a bit more robust.
   std::string GetTemporaryPath(StringRef Prefix, const char *Suffix) const;
 
+  /// ShouldUseClangCompilar - Should the clang compiler be used to
+  /// handle this action.
+  bool ShouldUseClangCompiler(const Compilation &C, const JobAction &JA,
+                              const llvm::Triple &ArchName) const;
+
   bool IsUsingLTO(const ArgList &Args) const;
 
 private:

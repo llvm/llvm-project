@@ -31,13 +31,6 @@ namespace tools {
 
   /// \brief Clang compiler tool.
   class LLVM_LIBRARY_VISIBILITY Clang : public Tool {
-    static const char *getBaseInputName(const ArgList &Args,
-                                        const InputInfoList &Inputs);
-    static const char *getBaseInputStem(const ArgList &Args,
-                                        const InputInfoList &Inputs);
-    static const char *getDependencyFileName(const ArgList &Args,
-                                             const InputInfoList &Inputs);
-
     void AddPreprocessingOptions(Compilation &C,
                                  const Driver &D,
                                  const ArgList &Args,
@@ -223,6 +216,63 @@ namespace darwin {
   public:
     DarwinTool(const char *Name, const char *ShortName,
                const ToolChain &TC) : Tool(Name, ShortName, TC) {}
+  };
+
+  class LLVM_LIBRARY_VISIBILITY CC1 : public DarwinTool  {
+    virtual void anchor();
+  public:
+    static const char *getBaseInputName(const ArgList &Args,
+                                 const InputInfoList &Input);
+    static const char *getBaseInputStem(const ArgList &Args,
+                                 const InputInfoList &Input);
+    static const char *getDependencyFileName(const ArgList &Args,
+                                             const InputInfoList &Inputs);
+
+  protected:
+    const char *getCC1Name(types::ID Type) const;
+
+    void AddCC1Args(const ArgList &Args, ArgStringList &CmdArgs) const;
+    void RemoveCC1UnsupportedArgs(ArgStringList &CmdArgs) const;
+    void AddCC1OptionsArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                           const InputInfoList &Inputs,
+                           const ArgStringList &OutputArgs) const;
+    void AddCPPOptionsArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                           const InputInfoList &Inputs,
+                           const ArgStringList &OutputArgs) const;
+    void AddCPPUniqueOptionsArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs,
+                                 const InputInfoList &Inputs) const;
+    void AddCPPArgs(const ArgList &Args, ArgStringList &CmdArgs) const;
+
+  public:
+    CC1(const char *Name, const char *ShortName,
+        const ToolChain &TC) : DarwinTool(Name, ShortName, TC) {}
+
+    virtual bool hasGoodDiagnostics() const { return true; }
+    virtual bool hasIntegratedCPP() const { return true; }
+  };
+
+  class LLVM_LIBRARY_VISIBILITY Preprocess : public CC1  {
+  public:
+    Preprocess(const ToolChain &TC) : CC1("darwin::Preprocess",
+                                          "gcc preprocessor", TC) {}
+
+    virtual void ConstructJob(Compilation &C, const JobAction &JA,
+                              const InputInfo &Output,
+                              const InputInfoList &Inputs,
+                              const ArgList &TCArgs,
+                              const char *LinkingOutput) const;
+  };
+
+  class LLVM_LIBRARY_VISIBILITY Compile : public CC1  {
+  public:
+    Compile(const ToolChain &TC) : CC1("darwin::Compile", "gcc frontend", TC) {}
+
+    virtual void ConstructJob(Compilation &C, const JobAction &JA,
+                              const InputInfo &Output,
+                              const InputInfoList &Inputs,
+                              const ArgList &TCArgs,
+                              const char *LinkingOutput) const;
   };
 
   class LLVM_LIBRARY_VISIBILITY Assemble : public DarwinTool  {
