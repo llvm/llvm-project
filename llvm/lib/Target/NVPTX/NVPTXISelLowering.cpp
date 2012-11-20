@@ -874,10 +874,9 @@ LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDNode *Node = Op.getNode();
   LoadSDNode *LD = cast<LoadSDNode>(Node);
   DebugLoc dl = Node->getDebugLoc();
-  ISD::LoadExtType ExtType = LD->getExtensionType();
-  assert(ExtType == ISD::NON_EXTLOAD) ;
-  EVT VT = Node->getValueType(0);
-  assert(VT == MVT::i1 && "Custom lowering for i1 load only");
+  assert(LD->getExtensionType() == ISD::NON_EXTLOAD) ;
+  assert(Node->getValueType(0) == MVT::i1 &&
+         "Custom lowering for i1 load only");
   SDValue newLD = DAG.getLoad(MVT::i8, dl, LD->getChain(), LD->getBasePtr(),
                               LD->getPointerInfo(),
                               LD->isVolatile(), LD->isNonTemporal(),
@@ -903,8 +902,7 @@ LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDValue Tmp1 = ST->getChain();
   SDValue Tmp2 = ST->getBasePtr();
   SDValue Tmp3 = ST->getValue();
-  EVT VT = Tmp3.getValueType();
-  assert(VT == MVT::i1 && "Custom lowering for i1 store only");
+  assert(Tmp3.getValueType() == MVT::i1 && "Custom lowering for i1 store only");
   unsigned Alignment = ST->getAlignment();
   bool isVolatile = ST->isVolatile();
   bool isNonTemporal = ST->isNonTemporal();
