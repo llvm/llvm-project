@@ -647,6 +647,46 @@ Release Notes</a>.</h1>
 
 <!--=========================================================================-->
 <h3>
+<a name="PowerPC">PowerPC Target Improvements</a>
+</h3>
+
+<div>
+
+<ul>
+<p>Many fixes and changes across LLVM (and Clang) for better compliance with
+   the 64-bit PowerPC ELF Application Binary Interface, interoperability with
+   GCC, and overall 64-bit PowerPC support.   Some highlights include:</p>
+<ul>
+  <li>  MCJIT support added.</li>
+  <li>  PPC64 relocation support and (small code model) TOC handling
+        added.</li>
+  <li>  Parameter passing and return value fixes (alignment issues,
+        padding, varargs support, proper register usage, odd-sized
+        structure support, float support, extension of return values
+        for i32 return values).</li>
+  <li>  Fixes in spill and reload code for vector registers.</li>
+  <li>  C++ exception handling enabled.</li>
+  <li>  Changes to remediate double-rounding compatibility issues with
+        respect to GCC behavior.</li>
+  <li>  Refactoring to disentangle ppc64-elf-linux ABI from Darwin
+        ppc64 ABI support.</li>
+  <li>  Assorted new test cases and test case fixes (endian and word
+        size issues).</li>
+  <li>  Fixes for big-endian codegen bugs, instruction encodings, and
+        instruction constraints.</li>
+  <li>  Implemented -integrated-as support.</li>
+  <li>  Additional support for Altivec compare operations.</li>
+  <li>  IBM long double support.</li>
+</ul>
+<p>There have also been code generation improvements for both 32- and 64-bit
+   code. Instruction scheduling support for the Freescale e500mc and e5500
+   cores has been added.</p>
+</ul>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
 <a name="OtherTS">Other Target Specific Improvements</a>
 </h3>
 
