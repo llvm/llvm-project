@@ -54,12 +54,13 @@
 #include "llvm/Support/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/MapVector.h"
 using namespace llvm;
 
 namespace {
   class PPCAsmPrinter : public AsmPrinter {
   protected:
-    DenseMap<MCSymbol*, MCSymbol*> TOC;
+    MapVector<MCSymbol*, MCSymbol*> TOC;
     const PPCSubtarget &Subtarget;
     uint64_t TOCLabelID;
   public:
@@ -465,8 +466,7 @@ bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
         SectionKind::getReadOnly());
     OutStreamer.SwitchSection(Section);
 
-    // FIXME: This is nondeterminstic!
-    for (DenseMap<MCSymbol*, MCSymbol*>::iterator I = TOC.begin(),
+    for (MapVector<MCSymbol*, MCSymbol*>::iterator I = TOC.begin(),
          E = TOC.end(); I != E; ++I) {
       OutStreamer.EmitLabel(I->second);
       MCSymbol *S = OutContext.GetOrCreateSymbol(I->first->getName());
