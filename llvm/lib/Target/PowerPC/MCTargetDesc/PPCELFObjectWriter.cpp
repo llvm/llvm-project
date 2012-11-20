@@ -74,10 +74,26 @@ unsigned PPCELFObjectWriter::getRelocTypeInner(const MCValue &Target,
       Type = ELF::R_PPC_ADDR14; // XXX: or BRNTAKEN?_
       break;
     case PPC::fixup_ppc_ha16:
-      Type = ELF::R_PPC_ADDR16_HA;
+      switch (Modifier) {
+      default: llvm_unreachable("Unsupported Modifier");
+      case MCSymbolRefExpr::VK_PPC_TPREL16_HA:
+        Type = ELF::R_PPC_TPREL16_HA;
+        break;
+      case MCSymbolRefExpr::VK_None:
+        Type = ELF::R_PPC_ADDR16_HA;
+	break;
+      }
       break;
     case PPC::fixup_ppc_lo16:
-      Type = ELF::R_PPC_ADDR16_LO;
+      switch (Modifier) {
+      default: llvm_unreachable("Unsupported Modifier");
+      case MCSymbolRefExpr::VK_PPC_TPREL16_LO:
+        Type = ELF::R_PPC_TPREL16_LO;
+        break;
+      case MCSymbolRefExpr::VK_None:
+        Type = ELF::R_PPC_ADDR16_LO;
+	break;
+      }
       break;
     case PPC::fixup_ppc_lo14:
       Type = ELF::R_PPC_ADDR14;

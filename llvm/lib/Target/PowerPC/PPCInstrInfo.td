@@ -446,10 +446,10 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
                     /*[(PPCcondbranch CRRC:$crS, imm:$opc, bb:$dst)]*/>;
 
   let Defs = [CTR], Uses = [CTR] in {
-    def BDZ  : IForm_ext<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
-                         "bdz $dst",  BrB, []>;
-    def BDNZ : IForm_ext<16, 16, 0, 0, (outs), (ins condbrtarget:$dst),
-                         "bdnz $dst", BrB, []>;
+    def BDZ  : BForm_1<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
+                       "bdz $dst">;
+    def BDNZ : BForm_1<16, 16, 0, 0, (outs), (ins condbrtarget:$dst),
+                       "bdnz $dst">;
   }
 }
 
@@ -732,7 +732,7 @@ def LHAUX : XForm_1<31, 375, (outs GPRC:$rD, ptr_rc:$ea_result),
                    []>, RegConstraint<"$addr.offreg = $ea_result">,
                    NoEncode<"$ea_result">;
 
-def LHZUX : XForm_1<31, 331, (outs GPRC:$rD, ptr_rc:$ea_result),
+def LHZUX : XForm_1<31, 311, (outs GPRC:$rD, ptr_rc:$ea_result),
                    (ins memrr:$addr),
                    "lhzux $rD, $addr", LdStLoadUpd,
                    []>, RegConstraint<"$addr.offreg = $ea_result">,
@@ -1395,13 +1395,13 @@ let Uses = [RM] in {
                       "fdivs $FRT, $FRA, $FRB", FPDivS,
                       [(set F4RC:$FRT, (fdiv F4RC:$FRA, F4RC:$FRB))]>;
   def FMUL  : AForm_3<63, 25,
-                      (outs F8RC:$FRT), (ins F8RC:$FRA, F8RC:$FRB),
-                      "fmul $FRT, $FRA, $FRB", FPFused,
-                      [(set F8RC:$FRT, (fmul F8RC:$FRA, F8RC:$FRB))]>;
+                      (outs F8RC:$FRT), (ins F8RC:$FRA, F8RC:$FRC),
+                      "fmul $FRT, $FRA, $FRC", FPFused,
+                      [(set F8RC:$FRT, (fmul F8RC:$FRA, F8RC:$FRC))]>;
   def FMULS : AForm_3<59, 25,
-                      (outs F4RC:$FRT), (ins F4RC:$FRA, F4RC:$FRB),
-                      "fmuls $FRT, $FRA, $FRB", FPGeneral,
-                      [(set F4RC:$FRT, (fmul F4RC:$FRA, F4RC:$FRB))]>;
+                      (outs F4RC:$FRT), (ins F4RC:$FRA, F4RC:$FRC),
+                      "fmuls $FRT, $FRA, $FRC", FPGeneral,
+                      [(set F4RC:$FRT, (fmul F4RC:$FRA, F4RC:$FRC))]>;
   def FSUB  : AForm_2<63, 20,
                       (outs F8RC:$FRT), (ins F8RC:$FRA, F8RC:$FRB),
                       "fsub $FRT, $FRA, $FRB", FPAddSub,
@@ -1414,7 +1414,7 @@ let Uses = [RM] in {
 }
 
 let PPC970_Unit = 1 in {  // FXU Operations.
-  def ISEL  : AForm_1<31, 15,
+  def ISEL  : AForm_4<31, 15,
                      (outs GPRC:$rT), (ins GPRC:$rA, GPRC:$rB, pred:$cond),
                      "isel $rT, $rA, $rB, $cond", IntGeneral,
                      []>;

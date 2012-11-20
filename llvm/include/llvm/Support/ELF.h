@@ -457,7 +457,9 @@ enum {
   R_PPC_REL14                 = 11,
   R_PPC_REL14_BRTAKEN         = 12,
   R_PPC_REL14_BRNTAKEN        = 13,
-  R_PPC_REL32                 = 26
+  R_PPC_REL32                 = 26,
+  R_PPC_TPREL16_LO            = 70,
+  R_PPC_TPREL16_HA            = 72
 };
 
 // ELF Relocation types for PPC64

@@ -234,10 +234,10 @@ def : Pat<(PPCtc_return CTRRC8:$dst, imm:$imm),
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
   let Defs = [CTR8], Uses = [CTR8] in {
-    def BDZ8  : IForm_ext<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
-                         "bdz $dst",  BrB, []>;
-    def BDNZ8 : IForm_ext<16, 16, 0, 0, (outs), (ins condbrtarget:$dst),
-                         "bdnz $dst", BrB, []>;
+    def BDZ8  : BForm_1<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
+                        "bdz $dst">;
+    def BDNZ8 : BForm_1<16, 16, 0, 0, (outs), (ins condbrtarget:$dst),
+                        "bdnz $dst">;
   }
 }
 
@@ -511,7 +511,7 @@ def RLWINM8 : MForm_2<21,
                      "rlwinm $rA, $rS, $SH, $MB, $ME", IntGeneral,
                      []>;
 
-def ISEL8   : AForm_1<31, 15,
+def ISEL8   : AForm_4<31, 15,
                      (outs G8RC:$rT), (ins G8RC:$rA, G8RC:$rB, pred:$cond),
                      "isel $rT, $rA, $rB, $cond", IntGeneral,
                      []>;
@@ -556,7 +556,7 @@ def LHAUX8 : XForm_1<31, 375, (outs G8RC:$rD, ptr_rc:$ea_result),
                     "lhaux $rD, $addr", LdStLHAU,
                     []>, RegConstraint<"$addr.offreg = $ea_result">,
                     NoEncode<"$ea_result">;
-def LWAUX : XForm_1<31, 375, (outs G8RC:$rD, ptr_rc:$ea_result),
+def LWAUX : XForm_1<31, 373, (outs G8RC:$rD, ptr_rc:$ea_result),
                     (ins memrr:$addr),
                     "lwaux $rD, $addr", LdStLHAU,
                     []>, RegConstraint<"$addr.offreg = $ea_result">,
@@ -606,7 +606,7 @@ def LBZUX8 : XForm_1<31, 119, (outs G8RC:$rD, ptr_rc:$ea_result),
                    "lbzux $rD, $addr", LdStLoadUpd,
                    []>, RegConstraint<"$addr.offreg = $ea_result">,
                    NoEncode<"$ea_result">;
-def LHZUX8 : XForm_1<31, 331, (outs G8RC:$rD, ptr_rc:$ea_result),
+def LHZUX8 : XForm_1<31, 311, (outs G8RC:$rD, ptr_rc:$ea_result),
                    (ins memrr:$addr),
                    "lhzux $rD, $addr", LdStLoadUpd,
                    []>, RegConstraint<"$addr.offreg = $ea_result">,
@@ -706,7 +706,7 @@ def STDX  : XForm_8<31, 149, (outs), (ins G8RC:$rS, memrr:$dst),
 
 let PPC970_Unit = 2 in {
 
-def STBU8 : DForm_1a<38, (outs ptr_rc:$ea_res), (ins G8RC:$rS,
+def STBU8 : DForm_1a<39, (outs ptr_rc:$ea_res), (ins G8RC:$rS,
                              symbolLo:$ptroff, ptr_rc:$ptrreg),
                     "stbu $rS, $ptroff($ptrreg)", LdStStoreUpd,
                     [(set ptr_rc:$ea_res,
