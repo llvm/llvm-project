@@ -355,8 +355,62 @@ uint64_t AttributesImpl::getStackAlignment() const {
 // AttributeListImpl Definition
 //===----------------------------------------------------------------------===//
 
-AttrListPtr AttrListPtr::get(LLVMContext &C,
-                             ArrayRef<AttributeWithIndex> Attrs) {
+namespace llvm {
+  class AttributeListImpl;
+}
+
+static ManagedStatic<FoldingSet<AttributeListImpl> > AttributesLists;
+
+namespace llvm {
+static ManagedStatic<sys::SmartMutex<true> > ALMutex;
+
+class AttributeListImpl : public FoldingSetNode {
+  sys::cas_flag RefCount;
+
+  // AttributesList is uniqued, these should not be publicly available.
+  void operator=(const AttributeListImpl &) LLVM_DELETED_FUNCTION;
+  AttributeListImpl(const AttributeListImpl &) LLVM_DELETED_FUNCTION;
+  ~AttributeListImpl();                        // Private implementation
+public:
+  SmallVector<AttributeWithIndex, 4> Attrs;
+
+  AttributeListImpl(ArrayRef<AttributeWithIndex> attrs)
+    : Attrs(attrs.begin(), attrs.end()) {
+    RefCount = 0;
+  }
+
+  void AddRef() {
+    sys::SmartScopedLock<true> Lock(*ALMutex);
+    ++RefCount;
+  }
+  void DropRef() {
+    sys::SmartScopedLock<true> Lock(*ALMutex);
+    if (!AttributesLists.isConstructed())
+      return;
+    sys::cas_flag new_val = --RefCount;
+    if (new_val == 0)
+      delete this;
+  }
+
+  void Profile(FoldingSetNodeID &ID) const {
+    Profile(ID, Attrs);
+  }
+  static void Profile(FoldingSetNodeID &ID, ArrayRef<AttributeWithIndex> Attrs){
+    for (unsigned i = 0, e = Attrs.size(); i != e; ++i) {
+      ID.AddInteger(Attrs[i].Attrs.Raw());
+      ID.AddInteger(Attrs[i].Index);
+    }
+  }
+};
+
+} // end llvm namespace
+
+AttributeListImpl::~AttributeListImpl() {
+  // NOTE: Lock must be acquired by caller.
+  AttributesLists->RemoveNode(this);
+}
+
+AttrListPtr AttrListPtr::get(ArrayRef<AttributeWithIndex> Attrs) {
   // If there are no attributes then return a null AttributesList pointer.
   if (Attrs.empty())
     return AttrListPtr();
@@ -371,34 +425,49 @@ AttrListPtr AttrListPtr::get(LLVMContext &C,
 #endif
 
   // Otherwise, build a key to look up the existing attributes.
-  LLVMContextImpl *pImpl = C.pImpl;
   FoldingSetNodeID ID;
   AttributeListImpl::Profile(ID, Attrs);
+  void *InsertPos;
 
-  void *InsertPoint;
-  AttributeListImpl *PA = pImpl->AttrsLists.FindNodeOrInsertPos(ID,
-                                                                InsertPoint);
+  sys::SmartScopedLock<true> Lock(*ALMutex);
+
+  AttributeListImpl *PAL =
+    AttributesLists->FindNodeOrInsertPos(ID, InsertPos);
 
   // If we didn't find any existing attributes of the same shape then
   // create a new one and insert it.
-  if (!PA) {
-    PA = new AttributeListImpl(Attrs);
-    pImpl->AttrsLists.InsertNode(PA, InsertPoint);
+  if (!PAL) {
+    PAL = new AttributeListImpl(Attrs);
+    AttributesLists->InsertNode(PAL, InsertPos);
   }
 
   // Return the AttributesList that we found or created.
-  return AttrListPtr(PA);
+  return AttrListPtr(PAL);
 }
 
 //===----------------------------------------------------------------------===//
 // AttrListPtr Method Implementations
 //===----------------------------------------------------------------------===//
 
-const AttrListPtr &AttrListPtr::operator=(const AttrListPtr &RHS) {
-  if (AttrList == RHS.AttrList) return *this;
+AttrListPtr::AttrListPtr(AttributeListImpl *LI) : AttrList(LI) {
+  if (LI) LI->AddRef();
+}
 
+AttrListPtr::AttrListPtr(const AttrListPtr &P) : AttrList(P.AttrList) {
+  if (AttrList) AttrList->AddRef();
+}
+
+const AttrListPtr &AttrListPtr::operator=(const AttrListPtr &RHS) {
+  sys::SmartScopedLock<true> Lock(*ALMutex);
+  if (AttrList == RHS.AttrList) return *this;
+  if (AttrList) AttrList->DropRef();
   AttrList = RHS.AttrList;
+  if (AttrList) AttrList->AddRef();
   return *this;
+}
+
+AttrListPtr::~AttrListPtr() {
+  if (AttrList) AttrList->DropRef();
 }
 
 /// getNumSlots - Return the number of slots used in this attribute list.
@@ -438,7 +507,6 @@ bool AttrListPtr::hasAttrSomewhere(Attributes::AttrVal Attr) const {
   for (unsigned i = 0, e = Attrs.size(); i != e; ++i)
     if (Attrs[i].Attrs.hasAttribute(Attr))
       return true;
-
   return false;
 }
 
@@ -494,7 +562,7 @@ AttrListPtr AttrListPtr::addAttr(LLVMContext &C, unsigned Idx,
                        OldAttrList.begin()+i, OldAttrList.end());
   }
 
-  return get(C, NewAttrList);
+  return get(NewAttrList);
 }
 
 AttrListPtr AttrListPtr::removeAttr(LLVMContext &C, unsigned Idx,
@@ -533,7 +601,7 @@ AttrListPtr AttrListPtr::removeAttr(LLVMContext &C, unsigned Idx,
   NewAttrList.insert(NewAttrList.end(),
                      OldAttrList.begin()+i, OldAttrList.end());
 
-  return get(C, NewAttrList);
+  return get(NewAttrList);
 }
 
 void AttrListPtr::dump() const {

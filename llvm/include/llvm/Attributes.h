@@ -318,26 +318,21 @@ public:
     FunctionIndex = ~0U
   };
 private:
-  /// @brief The attributes that we are managing.  This can be null to represent
-  /// the empty attributes list.
+  /// AttrList - The attributes that we are managing.  This can be null to
+  /// represent the empty attributes list.
   AttributeListImpl *AttrList;
-
-  /// @brief The attributes for the specified index are returned.  Attributes
-  /// for the result are denoted with Idx = 0.
-  Attributes getAttributes(unsigned Idx) const;
-
-  explicit AttrListPtr(AttributeListImpl *LI) : AttrList(LI) {}
 public:
   AttrListPtr() : AttrList(0) {}
-  AttrListPtr(const AttrListPtr &P) : AttrList(P.AttrList) {}
+  AttrListPtr(const AttrListPtr &P);
   const AttrListPtr &operator=(const AttrListPtr &RHS);
+  ~AttrListPtr();
 
   //===--------------------------------------------------------------------===//
   // Attribute List Construction and Mutation
   //===--------------------------------------------------------------------===//
 
   /// get - Return a Attributes list with the specified parameters in it.
-  static AttrListPtr get(LLVMContext &C, ArrayRef<AttributeWithIndex> Attrs);
+  static AttrListPtr get(ArrayRef<AttributeWithIndex> Attrs);
 
   /// addAttr - Add the specified attribute at the specified index to this
   /// attribute list.  Since attribute lists are immutable, this
@@ -424,6 +419,13 @@ public:
   const AttributeWithIndex &getSlot(unsigned Slot) const;
 
   void dump() const;
+
+private:
+  explicit AttrListPtr(AttributeListImpl *L);
+
+  /// getAttributes - The attributes for the specified index are
+  /// returned.  Attributes for the result are denoted with Idx = 0.
+  Attributes getAttributes(unsigned Idx) const;
 };
 
 } // End llvm namespace

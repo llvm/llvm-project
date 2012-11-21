@@ -1177,8 +1177,7 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   if (NewRetTy->isVoidTy())
     Caller->setName("");   // Void type should not have a name.
 
-  const AttrListPtr &NewCallerPAL = AttrListPtr::get(Callee->getContext(),
-                                                     attrVec);
+  const AttrListPtr &NewCallerPAL = AttrListPtr::get(attrVec);
 
   Instruction *NC;
   if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
@@ -1356,7 +1355,7 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
         NestF->getType() == PointerType::getUnqual(NewFTy) ?
         NestF : ConstantExpr::getBitCast(NestF,
                                          PointerType::getUnqual(NewFTy));
-      const AttrListPtr &NewPAL = AttrListPtr::get(FTy->getContext(), NewAttrs);
+      const AttrListPtr &NewPAL = AttrListPtr::get(NewAttrs);
 
       Instruction *NewCaller;
       if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {

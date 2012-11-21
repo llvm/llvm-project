@@ -487,7 +487,7 @@ bool BitcodeReader::ParseAttributeBlock() {
                                                   Attributes::get(Context, B)));
       }
 
-      MAttributes.push_back(AttrListPtr::get(Context, Attrs));
+      MAttributes.push_back(AttrListPtr::get(Attrs));
       Attrs.clear();
       break;
     }
