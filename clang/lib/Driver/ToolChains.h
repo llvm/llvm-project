@@ -129,8 +129,8 @@ public:
                            const ActionList &Inputs) const;
 
   virtual bool IsUnwindTablesDefault() const;
-  virtual const char *GetDefaultRelocationModel() const;
-  virtual const char *GetForcedPicModel() const;
+  virtual bool isPICDefault() const;
+  virtual bool isPICDefaultForced() const;
 
 protected:
   /// \name ToolChain Implementation Helper Functions
@@ -156,8 +156,8 @@ public:
   virtual Tool &SelectTool(const Compilation &C, const JobAction &JA,
                            const ActionList &Inputs) const;
 
-  virtual const char *GetDefaultRelocationModel() const;
-  virtual const char *GetForcedPicModel() const;
+  virtual bool isPICDefault() const;
+  virtual bool isPICDefaultForced() const;
 };
 
   /// Darwin - The base Darwin tool chain.
@@ -340,8 +340,8 @@ public:
   virtual RuntimeLibType GetDefaultRuntimeLibType() const {
     return ToolChain::RLT_CompilerRT;
   }
-  virtual const char *GetDefaultRelocationModel() const;
-  virtual const char *GetForcedPicModel() const;
+  virtual bool isPICDefault() const;
+  virtual bool isPICDefaultForced() const;
 
   virtual bool SupportsProfiling() const;
 
@@ -389,7 +389,7 @@ public:
   std::string ComputeEffectiveClangTriple(const ArgList &Args,
                                           types::ID InputType) const;
 
-  virtual const char *GetDefaultRelocationModel() const { return "pic"; }
+  virtual bool isPICDefault() const { return false; };
 };
 
 class LLVM_LIBRARY_VISIBILITY Generic_ELF : public Generic_GCC {
@@ -530,8 +530,8 @@ public:
   virtual Tool &SelectTool(const Compilation &C, const JobAction &JA,
                            const ActionList &Inputs) const;
   bool IsMathErrnoDefault() const;
-  const char* GetDefaultRelocationModel() const;
-  const char* GetForcedPicModel() const;
+  bool isPICDefault() const;
+  bool isPICDefaultForced() const;
 
 private:
   mutable llvm::DenseMap<unsigned, Tool*> Tools;
@@ -553,8 +553,8 @@ public:
 
   virtual bool IsIntegratedAssemblerDefault() const;
   virtual bool IsUnwindTablesDefault() const;
-  virtual const char *GetDefaultRelocationModel() const;
-  virtual const char *GetForcedPicModel() const;
+  virtual bool isPICDefault() const;
+  virtual bool isPICDefaultForced() const;
 
   virtual void AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                          ArgStringList &CC1Args) const;

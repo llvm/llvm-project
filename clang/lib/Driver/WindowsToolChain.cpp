@@ -84,14 +84,12 @@ bool Windows::IsUnwindTablesDefault() const {
   return getArch() == llvm::Triple::x86_64;
 }
 
-const char *Windows::GetDefaultRelocationModel() const {
-  return "static";
+bool Windows::isPICDefault() const {
+  return getArch() == llvm::Triple::x86_64;
 }
 
-const char *Windows::GetForcedPicModel() const {
-  if (getArch() == llvm::Triple::x86_64)
-    return "pic";
-  return 0;
+bool Windows::isPICDefaultForced() const {
+  return getArch() == llvm::Triple::x86_64;
 }
 
 // FIXME: This probably should goto to some platform utils place.

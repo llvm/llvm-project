@@ -172,14 +172,13 @@ public:
   /// by default.
   virtual bool IsUnwindTablesDefault() const;
 
-  /// GetDefaultRelocationModel - Return the LLVM name of the default
-  /// relocation model for this tool chain.
-  virtual const char *GetDefaultRelocationModel() const = 0;
+  /// \brief Test whether this toolchain defaults to PIC.
+  virtual bool isPICDefault() const = 0;
 
-  /// GetForcedPicModel - Return the LLVM name of the forced PIC model
-  /// for this tool chain, or 0 if this tool chain does not force a
-  /// particular PIC mode.
-  virtual const char *GetForcedPicModel() const = 0;
+  /// \brief Tests whether this toolchain forces its default for PIC or non-PIC.
+  /// If this returns true, any PIC related flags should be ignored and instead
+  /// the result of \c isPICDefault() is used exclusively.
+  virtual bool isPICDefaultForced() const = 0;
 
   /// SupportsProfiling - Does this tool chain support -pg.
   virtual bool SupportsProfiling() const { return true; }

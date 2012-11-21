@@ -1769,30 +1769,46 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CheckCodeGenerationOptions(D, Args);
 
-  // Perform argument translation for LLVM backend. This
-  // takes some care in reconciling with llvm-gcc. The
-  // issue is that llvm-gcc translates these options based on
-  // the values in cc1, whereas we are processing based on
-  // the driver arguments.
-
-  // This comes from the default translation the driver + cc1
-  // would do to enable flag_pic.
-
-  Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
-                                    options::OPT_fpic, options::OPT_fno_pic,
-                                    options::OPT_fPIE, options::OPT_fno_PIE,
-                                    options::OPT_fpie, options::OPT_fno_pie);
-  bool PICDisabled = false;
-  bool PICEnabled = false;
-  bool PICForPIE = false;
-  if (LastPICArg) {
-    PICForPIE = (LastPICArg->getOption().matches(options::OPT_fPIE) ||
-                 LastPICArg->getOption().matches(options::OPT_fpie));
-    PICEnabled = (PICForPIE ||
-                  LastPICArg->getOption().matches(options::OPT_fPIC) ||
-                  LastPICArg->getOption().matches(options::OPT_fpic));
-    PICDisabled = !PICEnabled;
+  // For the PIC and PIE flag options, this logic is different from the legacy
+  // logic in very old versions of GCC, as that logic was just a bug no one had
+  // ever fixed. This logic is both more rational and consistent with GCC's new
+  // logic now that the bugs are fixed. The last argument relating to either
+  // PIC or PIE wins, and no other argument is used. If the last argument is
+  // any flavor of the '-fno-...' arguments, both PIC and PIE are disabled. Any
+  // PIE option implicitly enables PIC at the same level.
+  bool PIE = false;
+  bool PIC = getToolChain().isPICDefault();
+  bool IsPICLevelTwo = PIC;
+  if (Arg *A = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
+                               options::OPT_fpic, options::OPT_fno_pic,
+                               options::OPT_fPIE, options::OPT_fno_PIE,
+                               options::OPT_fpie, options::OPT_fno_pie)) {
+    Option O = A->getOption();
+    if (O.matches(options::OPT_fPIC) || O.matches(options::OPT_fpic) ||
+        O.matches(options::OPT_fPIE) || O.matches(options::OPT_fpie)) {
+      PIE = O.matches(options::OPT_fPIE) || O.matches(options::OPT_fpie);
+      PIC = PIE || O.matches(options::OPT_fPIC) || O.matches(options::OPT_fpic);
+      IsPICLevelTwo = O.matches(options::OPT_fPIE) ||
+                      O.matches(options::OPT_fPIC);
+    } else {
+      PIE = PIC = false;
+    }
   }
+  // Check whether the tool chain trumps the PIC-ness decision. If the PIC-ness
+  // is forced, then neither PIC nor PIE flags will have no effect.
+  if (getToolChain().isPICDefaultForced()) {
+    PIE = false;
+    PIC = getToolChain().isPICDefault();
+    IsPICLevelTwo = PIC;
+  }
+
+  // Inroduce a Darwin-specific hack. If the default is PIC but the flags
+  // specified while enabling PIC enabled level 1 PIC, just force it back to
+  // level 2 PIC instead. This matches the behavior of Darwin GCC (based on my
+  // informal testing).
+  if (PIC && getToolChain().getTriple().isOSDarwin())
+    IsPICLevelTwo |= getToolChain().isPICDefault();
+
   // Note that these flags are trump-cards. Regardless of the order w.r.t. the
   // PIC or PIE options above, if these show up, PIC is disabled.
   llvm::Triple Triple(TripleStr);
@@ -1800,40 +1816,43 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
        Args.hasArg(options::OPT_fapple_kext)) &&
       (Triple.getOS() != llvm::Triple::IOS ||
        Triple.isOSVersionLT(6)))
-    PICDisabled = true;
+    PIC = PIE = false;
   if (Args.hasArg(options::OPT_static))
-    PICDisabled = true;
-  bool DynamicNoPIC = Args.hasArg(options::OPT_mdynamic_no_pic);
+    PIC = PIE = false;
 
-  // Select the relocation model.
-  const char *Model = getToolChain().GetForcedPicModel();
-  if (!Model) {
-    if (DynamicNoPIC)
-      Model = "dynamic-no-pic";
-    else if (PICDisabled)
-      Model = "static";
-    else if (PICEnabled)
-      Model = "pic";
-    else
-      Model = getToolChain().GetDefaultRelocationModel();
-  }
-  StringRef ModelStr = Model ? Model : "";
-  if (Model && ModelStr != "pic") {
+  if (Arg *A = Args.getLastArg(options::OPT_mdynamic_no_pic)) {
+    // This is a very special mode. It trumps the other modes, almost no one
+    // uses it, and it isn't even valid on any OS but Darwin.
+    if (!getToolChain().getTriple().isOSDarwin())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << getToolChain().getTriple().str();
+
+    // FIXME: Warn when this flag trumps some other PIC or PIE flag.
+
     CmdArgs.push_back("-mrelocation-model");
-    CmdArgs.push_back(Model);
-  }
+    CmdArgs.push_back("dynamic-no-pic");
 
-  // Infer the __PIC__ and __PIE__ values.
-  if (ModelStr == "pic" && PICForPIE) {
-    CmdArgs.push_back("-pie-level");
-    CmdArgs.push_back((LastPICArg &&
-                       LastPICArg->getOption().matches(options::OPT_fPIE)) ?
-                      "2" : "1");
-  } else if (ModelStr == "pic" || ModelStr == "dynamic-no-pic") {
-    CmdArgs.push_back("-pic-level");
-    CmdArgs.push_back(((ModelStr != "dynamic-no-pic" && LastPICArg &&
-                        LastPICArg->getOption().matches(options::OPT_fPIC)) ||
-                       getToolChain().getTriple().isOSDarwin()) ? "2" : "1");
+    // Only a forced PIC mode can cause the actual compile to have PIC defines
+    // etc., no flags are sufficient. This behavior was selected to closely
+    // match that of llvm-gcc and Apple GCC before that.
+    if (getToolChain().isPICDefault() && getToolChain().isPICDefaultForced()) {
+      CmdArgs.push_back("-pic-level");
+      CmdArgs.push_back("2");
+    }
+  } else {
+    // Currently, LLVM only knows about PIC vs. static; the PIE differences are
+    // handled in Clang's IRGen by the -pie-level flag.
+    CmdArgs.push_back("-mrelocation-model");
+    CmdArgs.push_back(PIC ? "pic" : "static");
+
+    if (PIC) {
+      CmdArgs.push_back("-pic-level");
+      CmdArgs.push_back(IsPICLevelTwo ? "2" : "1");
+      if (PIE) {
+        CmdArgs.push_back("-pie-level");
+        CmdArgs.push_back(IsPICLevelTwo ? "2" : "1");
+      }
+    }
   }
 
   if (!Args.hasFlag(options::OPT_fmerge_all_constants,
@@ -2715,6 +2734,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fobjc-default-synthesize-properties");
   }
 
+  // -fencode-extended-block-signature=1 is default.
+  if (getToolChain().IsEncodeExtendedBlockSignatureDefault()) {
+    CmdArgs.push_back("-fencode-extended-block-signature");
+  }
+  
   // Allow -fno-objc-arr to trump -fobjc-arr/-fobjc-arc.
   // NOTE: This logic is duplicated in ToolChains.cpp.
   bool ARC = isObjCAutoRefCount(Args);
@@ -4686,10 +4710,11 @@ void darwin::Link::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
 
   SanitizerArgs Sanitize(getToolChain().getDriver(), Args);
-  // If we're building a dynamic lib with -fsanitize=address, unresolved
-  // symbols may appear. Mark all of them as dynamic_lookup.
-  // Linking executables is handled in lib/Driver/ToolChains.cpp.
-  if (Sanitize.needsAsanRt()) {
+  // If we're building a dynamic lib with -fsanitize=address, or
+  // -fsanitize=undefined, unresolved symbols may appear. Mark all
+  // of them as dynamic_lookup. Linking executables is handled in
+  // lib/Driver/ToolChains.cpp.
+  if (Sanitize.needsAsanRt() || Sanitize.needsUbsanRt()) {
     if (Args.hasArg(options::OPT_dynamiclib) ||
         Args.hasArg(options::OPT_bundle)) {
       CmdArgs.push_back("-undefined");

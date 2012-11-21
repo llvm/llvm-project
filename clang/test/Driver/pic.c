@@ -55,9 +55,11 @@
 // RUN: %clang -c %s -target i386-unknown-unknown -fPIE -fno-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 // RUN: %clang -c %s -target i386-unknown-unknown -fpie -fno-pic -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target i386-unknown-unknown -fpie -fno-pic -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 // RUN: %clang -c %s -target i386-unknown-unknown -fpic -fno-pie -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
 // RUN: %clang -c %s -target i386-unknown-unknown -fpic -fPIC -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
 // RUN: %clang -c %s -target i386-unknown-unknown -fPIC -fpic -### 2>&1 \
@@ -65,6 +67,48 @@
 // RUN: %clang -c %s -target i386-unknown-unknown -fpic -fPIE -fpie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 // RUN: %clang -c %s -target i386-unknown-unknown -fpie -fPIC -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+//
+// Cases where both pic and pie are specified
+// RUN: %clang -c %s -target i386-unknown-unknown -fpic -fpie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target i386-unknown-unknown -fpic -fpie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
+// RUN: %clang -c %s -target i386-unknown-unknown -fpie -fpic -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target i386-unknown-unknown -fpie -fpic -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
+// RUN: %clang -c %s -target i386-unknown-unknown -fpic -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target i386-unknown-unknown -fpic -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i386-unknown-unknown -fpie -fPIC -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target i386-unknown-unknown -fpie -fPIC -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
+// RUN: %clang -c %s -target i386-unknown-unknown -fpie -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target i386-unknown-unknown -fpie -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIC -fpie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIC -fpie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIC -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIC -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIE -fpic -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIE -fpic -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIE -fpie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIE -fpie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIE -fPIC -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target i386-unknown-unknown -fPIE -fPIC -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 //
 // Defaults change for Darwin.
