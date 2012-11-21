@@ -339,36 +339,6 @@ static void IncorporateWeight(APInt &LHS, const APInt &RHS, unsigned Opcode) {
   }
 }
 
-/// EvaluateRepeatedConstant - Compute C op C op ... op C where the constant C
-/// is repeated Weight times.
-static Constant *EvaluateRepeatedConstant(unsigned Opcode, Constant *C,
-                                          APInt Weight) {
-  // For addition the result can be efficiently computed as the product of the
-  // constant and the weight.
-  if (Opcode == Instruction::Add)
-    return ConstantExpr::getMul(C, ConstantInt::get(C->getContext(), Weight));
-
-  // The weight might be huge, so compute by repeated squaring to ensure that
-  // compile time is proportional to the logarithm of the weight.
-  Constant *Result = 0;
-  Constant *Power = C; // Successively C, C op C, (C op C) op (C op C) etc.
-  // Visit the bits in Weight.
-  while (Weight != 0) {
-    // If the current bit in Weight is non-zero do Result = Result op Power.
-    if (Weight[0])
-      Result = Result ? ConstantExpr::get(Opcode, Result, Power) : Power;
-    // Move on to the next bit if any more are non-zero.
-    Weight = Weight.lshr(1);
-    if (Weight.isMinValue())
-      break;
-    // Square the power.
-    Power = ConstantExpr::get(Opcode, Power, Power);
-  }
-
-  assert(Result && "Only positive weights supported!");
-  return Result;
-}
-
 typedef std::pair<Value*, APInt> RepeatedValue;
 
 /// LinearizeExprTree - Given an associative binary expression, return the leaf
@@ -382,9 +352,7 @@ typedef std::pair<Value*, APInt> RepeatedValue;
 /// op
 ///   (Ops[N].first op Ops[N].first op ... Ops[N].first)  <- Ops[N].second times
 ///
-/// Note that the values Ops[0].first, ..., Ops[N].first are all distinct, and
-/// they are all non-constant except possibly for the last one, which if it is
-/// constant will have weight one (Ops[N].second === 1).
+/// Note that the values Ops[0].first, ..., Ops[N].first are all distinct.
 ///
 /// This routine may modify the function, in which case it returns 'true'.  The
 /// changes it makes may well be destructive, changing the value computed by 'I'
@@ -604,7 +572,6 @@ static bool LinearizeExprTree(BinaryOperator *I,
 
   // The leaves, repeated according to their weights, represent the linearized
   // form of the expression.
-  Constant *Cst = 0; // Accumulate constants here.
   for (unsigned i = 0, e = LeafOrder.size(); i != e; ++i) {
     Value *V = LeafOrder[i];
     LeafMap::iterator It = Leaves.find(V);
@@ -618,31 +585,14 @@ static bool LinearizeExprTree(BinaryOperator *I,
       continue;
     // Ensure the leaf is only output once.
     It->second = 0;
-    // Glob all constants together into Cst.
-    if (Constant *C = dyn_cast<Constant>(V)) {
-      C = EvaluateRepeatedConstant(Opcode, C, Weight);
-      Cst = Cst ? ConstantExpr::get(Opcode, Cst, C) : C;
-      continue;
-    }
-    // Add non-constant
     Ops.push_back(std::make_pair(V, Weight));
-  }
-
-  // Add any constants back into Ops, all globbed together and reduced to having
-  // weight 1 for the convenience of users.
-  Constant *Identity = ConstantExpr::getBinOpIdentity(Opcode, I->getType());
-  if (Cst && Cst != Identity) {
-    // If combining multiple constants resulted in the absorber then the entire
-    // expression must evaluate to the absorber.
-    if (Cst == Absorber)
-      Ops.clear();
-    Ops.push_back(std::make_pair(Cst, APInt(Bitwidth, 1)));
   }
 
   // For nilpotent operations or addition there may be no operands, for example
   // because the expression was "X xor X" or consisted of 2^Bitwidth additions:
   // in both cases the weight reduces to 0 causing the value to be skipped.
   if (Ops.empty()) {
+    Constant *Identity = ConstantExpr::getBinOpIdentity(Opcode, I->getType());
     assert(Identity && "Associative operation without identity!");
     Ops.push_back(std::make_pair(Identity, APInt(Bitwidth, 1)));
   }
@@ -1446,9 +1396,26 @@ Value *Reassociate::OptimizeExpression(BinaryOperator *I,
                                        SmallVectorImpl<ValueEntry> &Ops) {
   // Now that we have the linearized expression tree, try to optimize it.
   // Start by folding any constants that we found.
-  if (Ops.size() == 1) return Ops[0].Op;
-
+  Constant *Cst = 0;
   unsigned Opcode = I->getOpcode();
+  while (!Ops.empty() && isa<Constant>(Ops.back().Op)) {
+    Constant *C = cast<Constant>(Ops.pop_back_val().Op);
+    Cst = Cst ? ConstantExpr::get(Opcode, C, Cst) : C;
+  }
+  // If there was nothing but constants then we are done.
+  if (Ops.empty())
+    return Cst;
+
+  // Put the combined constant back at the end of the operand list, except if
+  // there is no point.  For example, an add of 0 gets dropped here, while a
+  // multiplication by zero turns the whole expression into zero.
+  if (Cst && Cst != ConstantExpr::getBinOpIdentity(Opcode, I->getType())) {
+    if (Cst == ConstantExpr::getBinOpAbsorber(Opcode, I->getType()))
+      return Cst;
+    Ops.push_back(ValueEntry(0, Cst));
+  }
+
+  if (Ops.size() == 1) return Ops[0].Op;
 
   // Handle destructive annihilation due to identities between elements in the
   // argument list here.

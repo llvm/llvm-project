@@ -144,3 +144,12 @@ define i32 @sozefx_(i32 %x, i32 %y) {
   %t6 = add i32 %t4, %t5
   ret i32 %t6
 }
+
+define i32 @bar(i32 %arg, i32 %arg1, i32 %arg2) {
+  %tmp1 = mul i32 %arg1, 2
+  %tmp2 = mul i32 %tmp1, 3
+  %tmp3 = mul i32 %arg2, 2
+  %tmp4 = add i32 %tmp1, 1 ; dead code
+  %ret = add i32 %tmp2, %tmp3
+  ret i32 %ret
+}
