@@ -390,3 +390,38 @@ if.then:
   %tmpcast.d.0 = select i1 undef, i32* %c, i32* %d.0
   br label %for.cond
 }
+
+define i64 @PR14132(i1 %flag) {
+; CHECK: @PR14132
+; Here we form a PHI-node by promoting the pointer alloca first, and then in
+; order to promote the other two allocas, we speculate the load of the
+; now-phi-node-pointer. In doing so we end up loading a 64-bit value from an i8
+; alloca, which is completely bogus. However, we were asserting on trying to
+; rewrite it. Now it is replaced with undef. Eventually we may replace it with
+; unrechable and even the CFG will go away here.
+entry:
+  %a = alloca i64
+  %b = alloca i8
+  %ptr = alloca i64*
+; CHECK-NOT: alloca
+
+  %ptr.cast = bitcast i64** %ptr to i8**
+  store i64 0, i64* %a
+  store i8 1, i8* %b
+  store i64* %a, i64** %ptr
+  br i1 %flag, label %if.then, label %if.end
+
+if.then:
+  store i8* %b, i8** %ptr.cast
+  br label %if.end
+
+if.end:
+  %tmp = load i64** %ptr
+  %result = load i64* %tmp
+; CHECK-NOT: store
+; CHECK-NOT: load
+; CHECK: %[[result:.*]] = phi i64 [ undef, %if.then ], [ 0, %entry ]
+
+  ret i64 %result
+; CHECK-NEXT: ret i64 %[[result]]
+}

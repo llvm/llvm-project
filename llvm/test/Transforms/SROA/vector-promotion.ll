@@ -220,3 +220,48 @@ entry:
   ret i32 %load
 ; CHECK: ret i32
 }
+
+define <2 x i8> @PR14349.1(i32 %x) {
+; CEHCK: @PR14349.1
+; The first testcase for broken SROA rewriting of split integer loads and
+; stores due to smaller vector loads and stores. This particular test ensures
+; that we can rewrite a split store of an integer to a store of a vector.
+entry:
+  %a = alloca i32
+; CHECK-NOT: alloca
+
+  store i32 %x, i32* %a
+; CHECK-NOT: store
+
+  %cast = bitcast i32* %a to <2 x i8>*
+  %vec = load <2 x i8>* %cast
+; CHECK-NOT: load
+
+  ret <2 x i8> %vec
+; CHECK: %[[trunc:.*]] = trunc i32 %x to i16
+; CHECK: %[[cast:.*]] = bitcast i16 %[[trunc]] to <2 x i8>
+; CHECK: ret <2 x i8> %[[cast]]
+}
+
+define i32 @PR14349.2(<2 x i8> %x) {
+; CEHCK: @PR14349.2
+; The first testcase for broken SROA rewriting of split integer loads and
+; stores due to smaller vector loads and stores. This particular test ensures
+; that we can rewrite a split load of an integer to a load of a vector.
+entry:
+  %a = alloca i32
+; CHECK-NOT: alloca
+
+  %cast = bitcast i32* %a to <2 x i8>*
+  store <2 x i8> %x, <2 x i8>* %cast
+; CHECK-NOT: store
+
+  %int = load i32* %a
+; CHECK-NOT: load
+
+  ret i32 %int
+; CHECK: %[[cast:.*]] = bitcast <2 x i8> %x to i16
+; CHECK: %[[trunc:.*]] = zext i16 %[[cast]] to i32
+; CHECK: %[[insert:.*]] = or i32 %{{.*}}, %[[trunc]]
+; CHECK: ret i32 %[[insert]]
+}
