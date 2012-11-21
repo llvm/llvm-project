@@ -318,6 +318,10 @@ public:
     return true;
   }
 
+  virtual bool IsEncodeExtendedBlockSignatureDefault() const {
+    return true;
+  }
+  
   virtual bool IsObjCNonFragileABIDefault() const {
     // Non-fragile ABI is default for everything but i386.
     return getTriple().getArch() != llvm::Triple::x86;

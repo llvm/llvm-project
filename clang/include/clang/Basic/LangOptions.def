@@ -53,6 +53,8 @@ LANGOPT(ObjC1             , 1, 0, "Objective-C 1")
 LANGOPT(ObjC2             , 1, 0, "Objective-C 2")
 BENIGN_LANGOPT(ObjCDefaultSynthProperties , 1, 0, 
                "Objective-C auto-synthesized properties")
+BENIGN_LANGOPT(EncodeExtendedBlockSig , 1, 0, 
+               "Encoding extended block type signature")
 BENIGN_LANGOPT(ObjCInferRelatedResultType , 1, 1, 
                "Objective-C related result type inference")
 LANGOPT(Trigraphs         , 1, 0,"trigraphs")
