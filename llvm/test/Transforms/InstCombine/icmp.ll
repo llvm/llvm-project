@@ -659,3 +659,21 @@ define i1 @test64(i8 %a, i32 %b) nounwind {
 ; CHECK-NEXT: %c = icmp eq i8 %1, %a
 ; CHECK-NEXT: ret i1 %c
 }
+
+define i1 @test65(i64 %A, i64 %B) {
+  %s1 = add i64 %A, %B
+  %s2 = add i64 %A, %B
+  %cmp = icmp eq i64 %s1, %s2
+; CHECK: @test65
+; CHECK-NEXT: ret i1 true
+  ret i1 %cmp
+}
+
+define i1 @test66(i64 %A, i64 %B) {
+  %s1 = add i64 %A, %B
+  %s2 = add i64 %B, %A
+  %cmp = icmp eq i64 %s1, %s2
+; CHECK: @test66
+; CHECK-NEXT: ret i1 true
+  ret i1 %cmp
+}

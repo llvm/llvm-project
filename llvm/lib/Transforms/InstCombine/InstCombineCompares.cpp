@@ -2356,8 +2356,20 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
         // Try not to increase register pressure.
         BO0->hasOneUse() && BO1->hasOneUse()) {
       // Determine Y and Z in the form icmp (X+Y), (X+Z).
-      Value *Y = (A == C || A == D) ? B : A;
-      Value *Z = (C == A || C == B) ? D : C;
+      Value *Y, *Z;
+      if (A == C) {
+        Y = B;
+        Z = D;
+      } else if (A == D) {
+        Y = B;
+        Z = C;
+      } else if (B == C) {
+        Y = A;
+        Z = D;
+      } else if (B == D) {
+        Y = A;
+        Z = C;
+      }
       return new ICmpInst(Pred, Y, Z);
     }
 
