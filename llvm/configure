@@ -704,6 +704,7 @@ ENABLE_PIC
 ENABLE_SHARED
 ENABLE_EMBED_STDCXX
 ENABLE_TIMESTAMPS
+ENABLE_BACKTRACES
 TARGETS_TO_BUILD
 LLVM_ENUM_TARGETS
 LLVM_ENUM_ASM_PRINTERS
@@ -5390,11 +5391,11 @@ else
 fi
 
 case "$enableval" in
-  yes) ENABLE_TIMESTAMPS=1
+  yes) ENABLE_BACKTRACES=1
  ;;
-  no)  ENABLE_TIMESTAMPS=0
+  no)  ENABLE_BACKTRACES=0
  ;;
-  default) ENABLE_TIMESTAMPS=1
+  default) ENABLE_BACKTRACES=1
  ;;
   *) { { echo "$as_me:$LINENO: error: Invalid setting for --enable-backtraces. Use \"yes\" or \"no\"" >&5
 echo "$as_me: error: Invalid setting for --enable-backtraces. Use \"yes\" or \"no\"" >&2;}
@@ -10315,7 +10316,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 10318 "configure"
+#line 10317 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -21971,6 +21972,7 @@ ENABLE_PIC!$ENABLE_PIC$ac_delim
 ENABLE_SHARED!$ENABLE_SHARED$ac_delim
 ENABLE_EMBED_STDCXX!$ENABLE_EMBED_STDCXX$ac_delim
 ENABLE_TIMESTAMPS!$ENABLE_TIMESTAMPS$ac_delim
+ENABLE_BACKTRACES!$ENABLE_BACKTRACES$ac_delim
 TARGETS_TO_BUILD!$TARGETS_TO_BUILD$ac_delim
 LLVM_ENUM_TARGETS!$LLVM_ENUM_TARGETS$ac_delim
 LLVM_ENUM_ASM_PRINTERS!$LLVM_ENUM_ASM_PRINTERS$ac_delim
@@ -22062,7 +22064,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 94; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 95; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
