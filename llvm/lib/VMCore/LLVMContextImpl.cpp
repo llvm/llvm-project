@@ -97,8 +97,15 @@ LLVMContextImpl::~LLVMContextImpl() {
 
   // Destroy attributes.
   for (FoldingSetIterator<AttributesImpl> I = AttrsSet.begin(),
-         E = AttrsSet.end(); I != E;) {
+         E = AttrsSet.end(); I != E; ) {
     FoldingSetIterator<AttributesImpl> Elem = I++;
+    delete &*Elem;
+  }
+
+  // Destroy attribute lists.
+  for (FoldingSetIterator<AttributeListImpl> I = AttrsLists.begin(),
+         E = AttrsLists.end(); I != E; ) {
+    FoldingSetIterator<AttributeListImpl> Elem = I++;
     delete &*Elem;
   }
 

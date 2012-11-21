@@ -256,7 +256,8 @@ public:
   FPMapTy FPConstants;
 
   FoldingSet<AttributesImpl> AttrsSet;
-  
+  FoldingSet<AttributeListImpl> AttrsLists;
+
   StringMap<Value*> MDStringCache;
 
   FoldingSet<MDNode> MDNodeSet;

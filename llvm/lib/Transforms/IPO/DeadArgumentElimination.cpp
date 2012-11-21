@@ -280,7 +280,7 @@ bool DAE::DeleteDeadVarargs(Function &Fn) {
       if (FnAttrs.hasAttributes())
         AttributesVec.push_back(AttributeWithIndex::get(AttrListPtr::FunctionIndex,
                                                         FnAttrs));
-      PAL = AttrListPtr::get(AttributesVec);
+      PAL = AttrListPtr::get(Fn.getContext(), AttributesVec);
     }
 
     Instruction *New;
@@ -806,7 +806,7 @@ bool DAE::RemoveDeadStuffFromFunction(Function *F) {
                                                     FnAttrs));
 
   // Reconstruct the AttributesList based on the vector we constructed.
-  AttrListPtr NewPAL = AttrListPtr::get(AttributesVec);
+  AttrListPtr NewPAL = AttrListPtr::get(F->getContext(), AttributesVec);
 
   // Create the new function type based on the recomputed parameters.
   FunctionType *NFTy = FunctionType::get(NRetTy, Params, FTy->isVarArg());
@@ -874,7 +874,7 @@ bool DAE::RemoveDeadStuffFromFunction(Function *F) {
                                                       FnAttrs));
 
     // Reconstruct the AttributesList based on the vector we constructed.
-    AttrListPtr NewCallPAL = AttrListPtr::get(AttributesVec);
+    AttrListPtr NewCallPAL = AttrListPtr::get(F->getContext(), AttributesVec);
 
     Instruction *New;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
