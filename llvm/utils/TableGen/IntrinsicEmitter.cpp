@@ -621,7 +621,7 @@ EmitAttributes(const std::vector<CodeGenIntrinsic> &Ints, raw_ostream &OS) {
   
   OS << "    }\n";
   OS << "  }\n";
-  OS << "  return AttrListPtr::get(ArrayRef<AttributeWithIndex>(AWI, "
+  OS << "  return AttrListPtr::get(C, ArrayRef<AttributeWithIndex>(AWI, "
              "NumAttrs));\n";
   OS << "}\n";
   OS << "#endif // GET_INTRINSIC_ATTRIBUTES\n\n";

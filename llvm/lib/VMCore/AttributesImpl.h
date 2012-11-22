@@ -15,11 +15,10 @@
 #ifndef LLVM_ATTRIBUTESIMPL_H
 #define LLVM_ATTRIBUTESIMPL_H
 
+#include "llvm/Attributes.h"
 #include "llvm/ADT/FoldingSet.h"
 
 namespace llvm {
-
-class Attributes;
 
 class AttributesImpl : public FoldingSetNode {
   uint64_t Bits;                // FIXME: We will be expanding this.
@@ -43,6 +42,27 @@ public:
   }
   static void Profile(FoldingSetNodeID &ID, uint64_t Bits) {
     ID.AddInteger(Bits);
+  }
+};
+
+class AttributeListImpl : public FoldingSetNode {
+  // AttributesList is uniqued, these should not be publicly available.
+  void operator=(const AttributeListImpl &) LLVM_DELETED_FUNCTION;
+  AttributeListImpl(const AttributeListImpl &) LLVM_DELETED_FUNCTION;
+public:
+  SmallVector<AttributeWithIndex, 4> Attrs;
+
+  AttributeListImpl(ArrayRef<AttributeWithIndex> attrs)
+    : Attrs(attrs.begin(), attrs.end()) {}
+
+  void Profile(FoldingSetNodeID &ID) const {
+    Profile(ID, Attrs);
+  }
+  static void Profile(FoldingSetNodeID &ID, ArrayRef<AttributeWithIndex> Attrs){
+    for (unsigned i = 0, e = Attrs.size(); i != e; ++i) {
+      ID.AddInteger(Attrs[i].Attrs.Raw());
+      ID.AddInteger(Attrs[i].Index);
+    }
   }
 };
 
