@@ -606,8 +606,8 @@ void Reassociate::RewriteExprTree(BinaryOperator *I,
                                   SmallVectorImpl<ValueEntry> &Ops) {
   assert(Ops.size() > 1 && "Single values should be used directly!");
 
-  // Since our optimizations never increase the number of operations, the new
-  // expression can always be written by reusing the existing binary operators
+  // Since our optimizations should never increase the number of operations, the
+  // new expression can usually be written reusing the existing binary operators
   // from the original expression tree, without creating any new instructions,
   // though the rewritten expression may have a completely different topology.
   // We take care to not change anything if the new expression will be the same
@@ -620,6 +620,20 @@ void Reassociate::RewriteExprTree(BinaryOperator *I,
   SmallVector<BinaryOperator*, 8> NodesToRewrite;
   unsigned Opcode = I->getOpcode();
   BinaryOperator *Op = I;
+
+  /// NotRewritable - The operands being written will be the leaves of the new
+  /// expression and must not be used as inner nodes (via NodesToRewrite) by
+  /// mistake.  Inner nodes are always reassociable, and usually leaves are not
+  /// (if they were they would have been incorporated into the expression and so
+  /// would not be leaves), so most of the time there is no danger of this.  But
+  /// in rare cases a leaf may become reassociable if an optimization kills uses
+  /// of it, or it may momentarily become reassociable during rewriting (below)
+  /// due it being removed as an operand of one of its uses.  Ensure that misuse
+  /// of leaf nodes as inner nodes cannot occur by remembering all of the future
+  /// leaves and refusing to reuse any of them as inner nodes.
+  SmallPtrSet<Value*, 8> NotRewritable;
+  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
+    NotRewritable.insert(Ops[i].Op);
 
   // ExpressionChanged - Non-null if the rewritten expression differs from the
   // original in some non-trivial way, requiring the clearing of optional flags.
@@ -653,12 +667,14 @@ void Reassociate::RewriteExprTree(BinaryOperator *I,
       // the old operands with the new ones.
       DEBUG(dbgs() << "RA: " << *Op << '\n');
       if (NewLHS != OldLHS) {
-        if (BinaryOperator *BO = isReassociableOp(OldLHS, Opcode))
+        BinaryOperator *BO = isReassociableOp(OldLHS, Opcode);
+        if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
         Op->setOperand(0, NewLHS);
       }
       if (NewRHS != OldRHS) {
-        if (BinaryOperator *BO = isReassociableOp(OldRHS, Opcode))
+        BinaryOperator *BO = isReassociableOp(OldRHS, Opcode);
+        if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
         Op->setOperand(1, NewRHS);
       }
@@ -682,7 +698,8 @@ void Reassociate::RewriteExprTree(BinaryOperator *I,
         Op->swapOperands();
       } else {
         // Overwrite with the new right-hand side.
-        if (BinaryOperator *BO = isReassociableOp(Op->getOperand(1), Opcode))
+        BinaryOperator *BO = isReassociableOp(Op->getOperand(1), Opcode);
+        if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
         Op->setOperand(1, NewRHS);
         ExpressionChanged = Op;
@@ -695,7 +712,8 @@ void Reassociate::RewriteExprTree(BinaryOperator *I,
     // Now deal with the left-hand side.  If this is already an operation node
     // from the original expression then just rewrite the rest of the expression
     // into it.
-    if (BinaryOperator *BO = isReassociableOp(Op->getOperand(0), Opcode)) {
+    BinaryOperator *BO = isReassociableOp(Op->getOperand(0), Opcode);
+    if (BO && !NotRewritable.count(BO)) {
       Op = BO;
       continue;
     }
