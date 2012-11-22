@@ -164,7 +164,8 @@ static unsigned getPointeeAlignment(Value *V, const DataLayout &TD) {
       return TD.getPreferredAlignment(GV);
 
   if (PointerType *PT = dyn_cast<PointerType>(V->getType()))
-    return TD.getABITypeAlignment(PT->getElementType());
+    if (PT->getElementType()->isSized())
+      return TD.getABITypeAlignment(PT->getElementType());
 
   return 0;
 }

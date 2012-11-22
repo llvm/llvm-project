@@ -94,3 +94,19 @@ entry:
   tail call void @f(i32* %b)
   ret void
 }
+
+; PR14371
+%opaque_type = type opaque
+%real_type = type { { i32, i32* } }
+
+@opaque_global = external constant %opaque_type, align 4
+
+define void @test7() {
+entry:
+  %0 = alloca %real_type, align 4
+  %1 = bitcast %real_type* %0 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* bitcast (%opaque_type* @opaque_global to i8*), i32 8, i32 1, i1 false)
+  ret void
+}
+
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
