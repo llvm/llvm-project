@@ -59,8 +59,16 @@ VNInfo *LiveInterval::createDeadDef(SlotIndex Def,
     return VNI;
   }
   if (SlotIndex::isSameInstr(Def, I->start)) {
-    assert(I->start == Def && "Cannot insert def, already live");
-    assert(I->valno->def == Def && "Inconsistent existing value def");
+    assert(I->valno->def == I->start && "Inconsistent existing value def");
+
+    // It is possible to have both normal and early-clobber defs of the same
+    // register on an instruction. It doesn't make a lot of sense, but it is
+    // possible to specify in inline assembly.
+    //
+    // Just convert everything to early-clobber.
+    Def = std::min(Def, I->start);
+    if (Def != I->start)
+      I->start = I->valno->def = Def;
     return I->valno;
   }
   assert(SlotIndex::isEarlierInstr(Def, I->start) && "Already live at def");

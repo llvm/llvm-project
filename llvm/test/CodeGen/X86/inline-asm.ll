@@ -52,3 +52,10 @@ entry:
   %0 = call { i32, i32, i32, i32, i32 } asm sideeffect "", "=&r,=&r,=&r,=&r,=&q,r,~{ecx},~{memory},~{dirflag},~{fpsr},~{flags}"(i8* %h) nounwind
   ret void
 }
+
+; Mix normal and EC defs of the same register.
+define i32 @pr14376() nounwind noinline {
+entry:
+  %asm = tail call i32 asm sideeffect "", "={ax},i,~{eax},~{flags},~{rax}"(i64 61) nounwind
+  ret i32 %asm
+}
