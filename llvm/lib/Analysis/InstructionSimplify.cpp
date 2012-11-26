@@ -2067,15 +2067,20 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       // Determine Y and Z in the form icmp (X+Y), (X+Z).
       Value *Y, *Z;
       if (A == C) {
+        // C + B == C + D  ->  B == D
         Y = B;
         Z = D;
       } else if (A == D) {
+        // D + B == C + D  ->  B == C
         Y = B;
         Z = C;
       } else if (B == C) {
+        // A + C == C + D  ->  A == D
         Y = A;
         Z = D;
-      } else if (B == D) {
+      } else {
+        assert(B == D);
+        // A + D == C + D  ->  A == C
         Y = A;
         Z = C;
       }
