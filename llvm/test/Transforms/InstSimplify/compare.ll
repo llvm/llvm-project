@@ -266,6 +266,15 @@ define i1 @add5(i32 %x, i32 %y) {
 ; CHECK: ret i1 true
 }
 
+define i1 @add6(i64 %A, i64 %B) {
+; CHECK: @add6
+  %s1 = add i64 %A, %B
+  %s2 = add i64 %B, %A
+  %cmp = icmp eq i64 %s1, %s2
+  ret i1 %cmp
+; CHECK: ret i1 true
+}
+
 define i1 @addpowtwo(i32 %x, i32 %y) {
 ; CHECK: @addpowtwo
   %l = lshr i32 %x, 1

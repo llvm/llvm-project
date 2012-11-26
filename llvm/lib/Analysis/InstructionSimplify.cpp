@@ -2065,8 +2065,20 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     if (A && C && (A == C || A == D || B == C || B == D) &&
         NoLHSWrapProblem && NoRHSWrapProblem) {
       // Determine Y and Z in the form icmp (X+Y), (X+Z).
-      Value *Y = (A == C || A == D) ? B : A;
-      Value *Z = (C == A || C == B) ? D : C;
+      Value *Y, *Z;
+      if (A == C) {
+        Y = B;
+        Z = D;
+      } else if (A == D) {
+        Y = B;
+        Z = C;
+      } else if (B == C) {
+        Y = A;
+        Z = D;
+      } else if (B == D) {
+        Y = A;
+        Z = C;
+      }
       if (Value *V = SimplifyICmpInst(Pred, Y, Z, Q, MaxRecurse-1))
         return V;
     }
