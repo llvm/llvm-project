@@ -600,6 +600,8 @@ class CGObjCGNUstep : public CGObjCGNU {
     /// Type of an slot structure pointer.  This is returned by the various
     /// lookup functions.
     llvm::Type *SlotTy;
+  public:
+    virtual llvm::Constant *GetEHType(QualType T);
   protected:
     virtual llvm::Value *LookupIMP(CodeGenFunction &CGF,
                                    llvm::Value *&Receiver,
@@ -966,29 +968,30 @@ llvm::Value *CGObjCGNU::GetSelector(CGBuilderTy &Builder, const ObjCMethodDecl
 }
 
 llvm::Constant *CGObjCGNU::GetEHType(QualType T) {
-  if (!CGM.getLangOpts().CPlusPlus) {
-      if (T->isObjCIdType()
-          || T->isObjCQualifiedIdType()) {
-        // With the old ABI, there was only one kind of catchall, which broke
-        // foreign exceptions.  With the new ABI, we use __objc_id_typeinfo as
-        // a pointer indicating object catchalls, and NULL to indicate real
-        // catchalls
-        if (CGM.getLangOpts().ObjCRuntime.isNonFragile()) {
-          return MakeConstantString("@id");
-        } else {
-          return 0;
-        }
-      }
-
-      // All other types should be Objective-C interface pointer types.
-      const ObjCObjectPointerType *OPT =
-        T->getAs<ObjCObjectPointerType>();
-      assert(OPT && "Invalid @catch type.");
-      const ObjCInterfaceDecl *IDecl =
-        OPT->getObjectType()->getInterface();
-      assert(IDecl && "Invalid @catch type.");
-      return MakeConstantString(IDecl->getIdentifier()->getName());
+  if (T->isObjCIdType() || T->isObjCQualifiedIdType()) {
+    // With the old ABI, there was only one kind of catchall, which broke
+    // foreign exceptions.  With the new ABI, we use __objc_id_typeinfo as
+    // a pointer indicating object catchalls, and NULL to indicate real
+    // catchalls
+    if (CGM.getLangOpts().ObjCRuntime.isNonFragile()) {
+      return MakeConstantString("@id");
+    } else {
+      return 0;
+    }
   }
+
+  // All other types should be Objective-C interface pointer types.
+  const ObjCObjectPointerType *OPT = T->getAs<ObjCObjectPointerType>();
+  assert(OPT && "Invalid @catch type.");
+  const ObjCInterfaceDecl *IDecl = OPT->getObjectType()->getInterface();
+  assert(IDecl && "Invalid @catch type.");
+  return MakeConstantString(IDecl->getIdentifier()->getName());
+}
+
+llvm::Constant *CGObjCGNUstep::GetEHType(QualType T) {
+  if (!CGM.getLangOpts().CPlusPlus)
+    return CGObjCGNU::GetEHType(T);
+
   // For Objective-C++, we want to provide the ability to catch both C++ and
   // Objective-C objects in the same function.
 
