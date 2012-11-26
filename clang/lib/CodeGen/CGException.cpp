@@ -307,12 +307,13 @@ static bool PersonalityHasOnlyCXXUses(llvm::Constant *Fn) {
 /// aggressive about only using the ObjC++ personality in a function
 /// when it really needs it.
 void CodeGenModule::SimplifyPersonality() {
-  // For now, this is really a Darwin-specific operation.
-  if (!Context.getTargetInfo().getTriple().isOSDarwin())
-    return;
-
   // If we're not in ObjC++ -fexceptions, there's nothing to do.
   if (!LangOpts.CPlusPlus || !LangOpts.ObjC1 || !LangOpts.Exceptions)
+    return;
+
+  // Both the problem this endeavors to fix and the way the logic
+  // above works is specific to the NeXT runtime.
+  if (!LangOpts.ObjCRuntime.isNeXTFamily())
     return;
 
   const EHPersonality &ObjCXX = EHPersonality::get(LangOpts);
