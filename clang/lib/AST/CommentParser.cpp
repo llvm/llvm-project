@@ -554,6 +554,14 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
           return parseBlockCommand();
         break; // Block command ahead, finish this parapgaph.
       }
+      if (Info->IsVerbatimBlockEndCommand) {
+        Diag(Tok.getLocation(),
+             diag::warn_verbatim_block_end_without_start)
+          << Info->Name
+          << SourceRange(Tok.getLocation(), Tok.getEndLocation());
+        consumeToken();
+        continue;
+      }
       if (Info->IsUnknownCommand) {
         Content.push_back(S.actOnUnknownCommand(Tok.getLocation(),
                                                 Tok.getEndLocation(),

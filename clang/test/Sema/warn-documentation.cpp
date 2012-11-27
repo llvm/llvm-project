@@ -502,6 +502,24 @@ enum test_returns_wrong_decl_8 {
 namespace test_returns_wrong_decl_10 { };
 
 
+// expected-warning@+1 {{'\endverbatim' command does not terminate a verbatim text block}}
+/// \endverbatim
+int test_verbatim_1();
+
+// expected-warning@+1 {{'\endcode' command does not terminate a verbatim text block}}
+/// \endcode
+int test_verbatim_2();
+
+// FIXME: we give a bad diagnostic here because we throw away non-documentation
+// comments early.
+//
+// expected-warning@+2 {{'\endcode' command does not terminate a verbatim text block}}
+/// \code
+//  foo
+/// \endcode
+int test_verbatim_3();
+
+
 // expected-warning@+1 {{empty paragraph passed to '\brief' command}}
 int test1; ///< \brief\author Aaa
 

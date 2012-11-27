@@ -131,5 +131,11 @@ def warn_doc_deprecated_not_sync : Warning<
 def note_add_deprecation_attr : Note<
   "add a deprecation attribute to the declaration to silence this warning">;
 
+// verbatim block commands
+
+def warn_verbatim_block_end_without_start : Warning<
+  "'\\%0' command does not terminate a verbatim text block">,
+  InGroup<Documentation>, DefaultIgnore;
+
 } // end of documentation issue category
 } // end of AST component
