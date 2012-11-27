@@ -513,7 +513,7 @@ int test_verbatim_2();
 // FIXME: we give a bad diagnostic here because we throw away non-documentation
 // comments early.
 //
-// expected-warning@+2 {{'\endcode' command does not terminate a verbatim text block}}
+// expected-warning@+3 {{'\endcode' command does not terminate a verbatim text block}}
 /// \code
 //  foo
 /// \endcode
