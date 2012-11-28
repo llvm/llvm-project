@@ -41,6 +41,7 @@
 //  J -> jmp_buf
 //  SJ -> sigjmp_buf
 //  K -> ucontext_t
+//  p -> pid_t
 //  . -> "...".  This may only occur at the end of the function list.
 //
 // Types may be prefixed with the following modifiers:
@@ -737,7 +738,7 @@ LIBBUILTIN(strcasecmp, "icC*cC*", "f",     "strings.h", ALL_LANGUAGES)
 LIBBUILTIN(strncasecmp, "icC*cC*z", "f",   "strings.h", ALL_LANGUAGES)
 // POSIX unistd.h
 LIBBUILTIN(_exit, "vi",           "fr",    "unistd.h", ALL_LANGUAGES)
-LIBBUILTIN(vfork, "i",            "fj",    "unistd.h", ALL_LANGUAGES)
+LIBBUILTIN(vfork, "p",            "fj",    "unistd.h", ALL_LANGUAGES)
 // POSIX setjmp.h
 
 // In some systems setjmp is a macro that expands to _setjmp. We undefine

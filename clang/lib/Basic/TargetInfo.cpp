@@ -60,6 +60,7 @@ TargetInfo::TargetInfo(const std::string &T) : TargetOpts(), Triple(T)
   Char32Type = UnsignedInt;
   Int64Type = SignedLongLong;
   SigAtomicType = SignedInt;
+  ProcessIDType = SignedInt;
   UseSignedCharForObjCBool = true;
   UseBitFieldTypeAlignment = true;
   UseZeroLengthBitfieldAlignment = false;

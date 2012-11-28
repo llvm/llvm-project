@@ -3534,6 +3534,12 @@ QualType ASTContext::getPointerDiffType() const {
   return getFromTargetType(Target->getPtrDiffType(0));
 }
 
+/// \brief Return the unique type for "pid_t" defined in
+/// <sys/types.h>. We need this to compute the correct type for vfork().
+QualType ASTContext::getProcessIDType() const {
+  return getFromTargetType(Target->getProcessIDType());
+}
+
 //===----------------------------------------------------------------------===//
 //                              Type Operators
 //===----------------------------------------------------------------------===//
@@ -7216,6 +7222,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Error = ASTContext::GE_Missing_ucontext;
       return QualType();
     }
+    break;
+  case 'p':
+    Type = Context.getProcessIDType();
     break;
   }
 

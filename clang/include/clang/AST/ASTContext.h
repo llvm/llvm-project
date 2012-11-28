@@ -1098,6 +1098,10 @@ public:
   /// <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
   QualType getPointerDiffType() const;
 
+  /// \brief Return the unique type for "pid_t" defined in
+  /// <sys/types.h>. We need this to compute the correct type for vfork().
+  QualType getProcessIDType() const;
+
   /// \brief Return the C structure type used to represent constant CFStrings.
   QualType getCFConstantStringType() const;
 
