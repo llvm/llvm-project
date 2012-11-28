@@ -19,3 +19,34 @@ template <typename T> S_<NoDefinition>::type f(T*, NoDefinition*); // expected-n
 void test(int x) {
   f(&x, 0);
 }
+
+// Ensure that we instantiate an overloaded function if it's selected by
+// overload resolution when initializing a function pointer.
+template<typename T> struct X {
+  static T f() { T::error; } // expected-error {{has no members}}
+  static T f(bool);
+};
+void (*p)() = &X<void>().f; // expected-note {{instantiation of}}
+
+namespace PR13098 {
+  struct A {
+    A(int);
+    void operator++() {}
+    void operator+(int) {}
+    void operator+(A) {}
+    void operator[](int) {}
+    void operator[](A) {}
+  };
+  struct B : A {
+    using A::operator++;
+    using A::operator+;
+    using A::operator[];
+  };
+  template<typename T> void f(B b) {
+    ++b;
+    b + 0;
+    b[0];
+  }
+  template void f<void>(B);
+}
+

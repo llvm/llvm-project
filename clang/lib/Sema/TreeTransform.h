@@ -9179,7 +9179,12 @@ TreeTransform<Derived>::RebuildCXXOperatorCallExpr(OverloadedOperatorKind Op,
     // IsAcceptableNonMemberOperatorCandidate for each of these?
     Functions.append(ULE->decls_begin(), ULE->decls_end());
   } else {
-    Functions.addDecl(cast<DeclRefExpr>(Callee)->getDecl());
+    // If we've resolved this to a particular non-member function, just call
+    // that function. If we resolved it to a member function,
+    // CreateOverloaded* will find that function for us.
+    NamedDecl *ND = cast<DeclRefExpr>(Callee)->getDecl();
+    if (!isa<CXXMethodDecl>(ND))
+      Functions.addDecl(ND);
   }
 
   // Add any functions found via argument-dependent lookup.
