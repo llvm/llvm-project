@@ -1816,17 +1816,18 @@ void Lexer::LexCharConstant(Token &Result, const char *CurPtr,
 
   while (C != '\'') {
     // Skip escaped characters.
-    if (C == '\\') {
-      // Skip the escaped character.
-      // FIXME: UCN's
-      getAndAdvanceChar(CurPtr, Result);
-    } else if (C == '\n' || C == '\r' ||             // Newline.
-               (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
+    if (C == '\\')
+      C = getAndAdvanceChar(CurPtr, Result);
+
+    if (C == '\n' || C == '\r' ||             // Newline.
+        (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
       if (!isLexingRawMode() && !LangOpts.AsmPreprocessor)
         Diag(BufferPtr, diag::ext_unterminated_char);
       FormTokenWithChars(Result, CurPtr-1, tok::unknown);
       return;
-    } else if (C == 0) {
+    }
+
+    if (C == 0) {
       if (isCodeCompletionPoint(CurPtr-1)) {
         PP->CodeCompleteNaturalLanguage();
         FormTokenWithChars(Result, CurPtr-1, tok::unknown);
