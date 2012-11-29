@@ -70,7 +70,7 @@ static MCAsmInfo *createPPCMCAsmInfo(const Target &T, StringRef TT) {
 
   // Initial state of the frame pointer is R1.
   MachineLocation Dst(MachineLocation::VirtualFP);
-  MachineLocation Src(PPC::R1, 0);
+  MachineLocation Src(isPPC64? PPC::X1 : PPC::R1, 0);
   MAI->addInitialFrameState(0, Dst, Src);
 
   return MAI;
