@@ -429,8 +429,8 @@ void MachineCSE::ExitScope(MachineBasicBlock *MBB) {
   DEBUG(dbgs() << "Exiting: " << MBB->getName() << '\n');
   DenseMap<MachineBasicBlock*, ScopeType*>::iterator SI = ScopeMap.find(MBB);
   assert(SI != ScopeMap.end());
-  ScopeMap.erase(SI);
   delete SI->second;
+  ScopeMap.erase(SI);
 }
 
 bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
