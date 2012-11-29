@@ -173,3 +173,27 @@ define double @test7(double %A1, double %A2, double %B1, double %B2) {
 ; CHECK: ret double %R
 }
 
+; Basic depth-3 chain (subclass data)
+define i64 @test8(i64 %A1, i64 %A2, i64 %B1, i64 %B2) {
+; CHECK: @test8
+; CHECK: %X1.v.i1.1 = insertelement <2 x i64> undef, i64 %B1, i32 0
+; CHECK: %X1.v.i1.2 = insertelement <2 x i64> %X1.v.i1.1, i64 %B2, i32 1
+; CHECK: %X1.v.i0.1 = insertelement <2 x i64> undef, i64 %A1, i32 0
+; CHECK: %X1.v.i0.2 = insertelement <2 x i64> %X1.v.i0.1, i64 %A2, i32 1
+	%X1 = sub nsw i64 %A1, %B1
+	%X2 = sub i64 %A2, %B2
+; CHECK: %X1 = sub <2 x i64> %X1.v.i0.2, %X1.v.i1.2
+	%Y1 = mul i64 %X1, %A1
+	%Y2 = mul i64 %X2, %A2
+; CHECK: %Y1 = mul <2 x i64> %X1, %X1.v.i0.2
+	%Z1 = add i64 %Y1, %B1
+	%Z2 = add i64 %Y2, %B2
+; CHECK: %Z1 = add <2 x i64> %Y1, %X1.v.i1.2
+	%R  = mul i64 %Z1, %Z2
+; CHECK: %Z1.v.r1 = extractelement <2 x i64> %Z1, i32 0
+; CHECK: %Z1.v.r2 = extractelement <2 x i64> %Z1, i32 1
+; CHECK: %R = mul i64 %Z1.v.r1, %Z1.v.r2
+	ret i64 %R
+; CHECK: ret i64 %R
+}
+

@@ -2903,6 +2903,7 @@ namespace {
         K->mutateType(getVecTypeForPair(L->getType(), H->getType()));
 
       combineMetadata(K, H);
+      K->intersectOptionalDataWith(H);
 
       for (unsigned o = 0; o < NumOperands; ++o)
         K->setOperand(o, ReplacedOperands[o]);
