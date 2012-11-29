@@ -317,3 +317,44 @@ if.end4:                                          ; preds = %if.else3, %if.then2
   store <2 x i64> %result.2, <2 x i64>* %agg.result, align 128
   ret void
 }
+
+; <rdar://problem/12758887>
+; RegisterCoalescer::updateRegDefsUses() could visit an instruction more than
+; once under rare circumstances. When widening a register from QPR to DTriple
+; with the original virtual register in dsub_1_dsub_2, the double rewrite would
+; produce an invalid sub-register.
+;
+; This is because dsub_1_dsub_2 is not an idempotent sub-register index.
+; It will translate %vr:dsub_0 -> %vr:dsub_1.
+define hidden fastcc void @radar12758887() nounwind optsize ssp {
+entry:
+  br i1 undef, label %for.body, label %for.end70
+
+for.body:                                         ; preds = %for.end, %entry
+  br i1 undef, label %for.body29, label %for.end
+
+for.body29:                                       ; preds = %for.body29, %for.body
+  %0 = load <2 x double>* null, align 1
+  %splat40 = shufflevector <2 x double> %0, <2 x double> undef, <2 x i32> zeroinitializer
+  %mul41 = fmul <2 x double> undef, %splat40
+  %add42 = fadd <2 x double> undef, %mul41
+  %splat44 = shufflevector <2 x double> %0, <2 x double> undef, <2 x i32> <i32 1, i32 1>
+  %mul45 = fmul <2 x double> undef, %splat44
+  %add46 = fadd <2 x double> undef, %mul45
+  br i1 undef, label %for.end, label %for.body29
+
+for.end:                                          ; preds = %for.body29, %for.body
+  %accumR2.0.lcssa = phi <2 x double> [ zeroinitializer, %for.body ], [ %add42, %for.body29 ]
+  %accumI2.0.lcssa = phi <2 x double> [ zeroinitializer, %for.body ], [ %add46, %for.body29 ]
+  %1 = shufflevector <2 x double> %accumI2.0.lcssa, <2 x double> undef, <2 x i32> <i32 1, i32 0>
+  %add58 = fadd <2 x double> undef, %1
+  %mul61 = fmul <2 x double> %add58, undef
+  %add63 = fadd <2 x double> undef, %mul61
+  %add64 = fadd <2 x double> undef, %add63
+  %add67 = fadd <2 x double> undef, %add64
+  store <2 x double> %add67, <2 x double>* undef, align 1
+  br i1 undef, label %for.end70, label %for.body
+
+for.end70:                                        ; preds = %for.end, %entry
+  ret void
+}
