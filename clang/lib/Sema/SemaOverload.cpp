@@ -11531,6 +11531,7 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
                                         TemplateArgs,
                                         type, valueKind, OK_Ordinary);
     ME->setHadMultipleCandidates(true);
+    MarkMemberReferenced(ME);
     return ME;
   }
 

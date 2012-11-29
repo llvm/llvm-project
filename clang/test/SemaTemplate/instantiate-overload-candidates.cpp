@@ -49,4 +49,3 @@ namespace PR13098 {
   }
   template void f<void>(B);
 }
-
