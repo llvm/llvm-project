@@ -106,3 +106,57 @@ loop:
 return:
   ret void
 }
+
+; PR14432
+; Indvars should not turn the second loop into an infinite one.
+
+; CHECK: @func_11
+; CHECK: %tmp5 = icmp slt i32 %__key6.0, 10
+; CHECK-NOT: br i1 true, label %noassert68, label %unrolledend
+
+define i32 @func_11() nounwind uwtable {
+entry:
+  br label %forcond
+
+forcond:                                          ; preds = %noassert, %entry
+  %__key6.0 = phi i32 [ 2, %entry ], [ %tmp37, %noassert ]
+  %tmp5 = icmp slt i32 %__key6.0, 10
+  br i1 %tmp5, label %noassert, label %forcond38.preheader
+
+forcond38.preheader:                              ; preds = %forcond
+  br label %forcond38
+
+noassert:                                         ; preds = %forbody
+  %tmp13 = sdiv i32 -32768, %__key6.0
+  %tmp2936 = shl i32 %tmp13, 24
+  %sext23 = shl i32 %tmp13, 24
+  %tmp32 = icmp eq i32 %tmp2936, %sext23
+  %tmp37 = add i32 %__key6.0, 1
+  br i1 %tmp32, label %forcond, label %assert33
+
+assert33:                                         ; preds = %noassert
+  tail call void @llvm.trap()
+  unreachable
+
+forcond38:                                        ; preds = %noassert68, %forcond38.preheader
+  %__key8.0 = phi i32 [ %tmp81, %noassert68 ], [ 2, %forcond38.preheader ]
+  %tmp46 = icmp slt i32 %__key8.0, 10
+  br i1 %tmp46, label %noassert68, label %unrolledend
+
+noassert68:                                       ; preds = %forbody39
+  %tmp57 = sdiv i32 -32768, %__key8.0
+  %sext34 = shl i32 %tmp57, 16
+  %sext21 = shl i32 %tmp57, 16
+  %tmp76 = icmp eq i32 %sext34, %sext21
+  %tmp81 = add i32 %__key8.0, 1
+  br i1 %tmp76, label %forcond38, label %assert77
+
+assert77:                                         ; preds = %noassert68
+  tail call void @llvm.trap()
+  unreachable
+
+unrolledend:                                      ; preds = %forcond38
+  ret i32 0
+}
+
+declare void @llvm.trap() noreturn nounwind

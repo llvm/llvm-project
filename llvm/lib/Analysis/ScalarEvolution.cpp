@@ -6149,9 +6149,10 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred,
   if (SimplifyICmpOperands(Pred, LHS, RHS))
     if (LHS == RHS)
       return CmpInst::isTrueWhenEqual(Pred);
-  if (SimplifyICmpOperands(FoundPred, FoundLHS, FoundRHS))
-    if (FoundLHS == FoundRHS)
-      return CmpInst::isFalseWhenEqual(Pred);
+
+  // Canonicalize the found cond too.  We can't conclude a result from the
+  // simplified values.
+  SimplifyICmpOperands(FoundPred, FoundLHS, FoundRHS);
 
   // Check to see if we can make the LHS or RHS match.
   if (LHS == FoundRHS || RHS == FoundLHS) {
