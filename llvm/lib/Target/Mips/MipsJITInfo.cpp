@@ -222,10 +222,17 @@ void *MipsJITInfo::emitFunctionStub(const Function *F, void *Fn,
   // addiu t9, t9, %lo(EmittedAddr)
   // jalr t8, t9
   // nop
-  JCE.emitWordLE(0xf << 26 | 25 << 16 | Hi);
-  JCE.emitWordLE(9 << 26 | 25 << 21 | 25 << 16 | Lo);
-  JCE.emitWordLE(25 << 21 | 24 << 11 | 9);
-  JCE.emitWordLE(0);
+  if (IsLittleEndian) {
+    JCE.emitWordLE(0xf << 26 | 25 << 16 | Hi);
+    JCE.emitWordLE(9 << 26 | 25 << 21 | 25 << 16 | Lo);
+    JCE.emitWordLE(25 << 21 | 24 << 11 | 9);
+    JCE.emitWordLE(0);
+  } else {
+    JCE.emitWordBE(0xf << 26 | 25 << 16 | Hi);
+    JCE.emitWordBE(9 << 26 | 25 << 21 | 25 << 16 | Lo);
+    JCE.emitWordBE(25 << 21 | 24 << 11 | 9);
+    JCE.emitWordBE(0);
+  }
 
   sys::Memory::InvalidateInstructionCache(Addr, 16);
   if (!sys::Memory::setRangeExecutable(Addr, 16))

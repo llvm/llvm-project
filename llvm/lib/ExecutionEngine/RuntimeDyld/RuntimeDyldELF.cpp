@@ -676,7 +676,8 @@ void RuntimeDyldELF::processRelocationRef(const ObjRelocationInfo &Rel,
                         RelType, 0);
       Section.StubOffset += getMaxStubSize();
     }
-  } else if (Arch == Triple::mipsel && RelType == ELF::R_MIPS_26) {
+  } else if ((Arch == Triple::mipsel || Arch == Triple::mips) &&
+             RelType == ELF::R_MIPS_26) {
     // This is an Mips branch relocation, need to use a stub function.
     DEBUG(dbgs() << "\t\tThis is a Mips branch relocation.");
     SectionEntry &Section = Sections[Rel.SectionID];

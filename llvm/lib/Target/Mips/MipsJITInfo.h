@@ -26,10 +26,11 @@ class MipsTargetMachine;
 class MipsJITInfo : public TargetJITInfo {
 
   bool IsPIC;
+  bool IsLittleEndian;
 
   public:
     explicit MipsJITInfo() :
-      IsPIC(false) {}
+      IsPIC(false), IsLittleEndian(true) {}
 
     /// replaceMachineCodeForFunction - Make it so that calling the function
     /// whose machine code is at OLD turns into a call to NEW, perhaps by
@@ -58,8 +59,10 @@ class MipsJITInfo : public TargetJITInfo {
                           unsigned NumRelocs, unsigned char *GOTBase);
 
     /// Initialize - Initialize internal stage for the function being JITted.
-    void Initialize(const MachineFunction &MF, bool isPIC) {
+    void Initialize(const MachineFunction &MF, bool isPIC,
+                    bool isLittleEndian) {
       IsPIC = isPIC;
+      IsLittleEndian = isLittleEndian;
     }
 
 };

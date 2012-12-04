@@ -346,7 +346,7 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr) {
     uint32_t *StubAddr = (uint32_t*)Addr;
     *StubAddr = 0xe51ff004; // ldr pc,<label>
     return (uint8_t*)++StubAddr;
-  } else if (Arch == Triple::mipsel) {
+  } else if (Arch == Triple::mipsel || Arch == Triple::mips) {
     uint32_t *StubAddr = (uint32_t*)Addr;
     // 0:   3c190000        lui     t9,%hi(addr).
     // 4:   27390000        addiu   t9,t9,%lo(addr).

@@ -85,7 +85,7 @@ class MipsCodeEmitter : public MachineFunctionPass {
 
   private:
 
-    void emitWordLE(unsigned Word);
+    void emitWord(unsigned Word);
 
     /// Routines that handle operands which add machine relocations which are
     /// fixed up by the relocation stage.
@@ -112,12 +112,6 @@ class MipsCodeEmitter : public MachineFunctionPass {
     unsigned getSizeExtEncoding(const MachineInstr &MI, unsigned OpNo) const;
     unsigned getSizeInsEncoding(const MachineInstr &MI, unsigned OpNo) const;
 
-    int emitULW(const MachineInstr &MI);
-    int emitUSW(const MachineInstr &MI);
-    int emitULH(const MachineInstr &MI);
-    int emitULHu(const MachineInstr &MI);
-    int emitUSH(const MachineInstr &MI);
-
     void emitGlobalAddressUnaligned(const GlobalValue *GV, unsigned Reloc,
                                     int Offset) const;
   };
@@ -133,7 +127,7 @@ bool MipsCodeEmitter::runOnMachineFunction(MachineFunction &MF) {
   MCPEs = &MF.getConstantPool()->getConstants();
   MJTEs = 0;
   if (MF.getJumpTableInfo()) MJTEs = &MF.getJumpTableInfo()->getJumpTables();
-  JTI->Initialize(MF, IsPIC);
+  JTI->Initialize(MF, IsPIC, Subtarget->isLittle());
   MCE.setModuleInfo(&getAnalysis<MachineModuleInfo> ());
 
   do {
@@ -271,103 +265,6 @@ void MipsCodeEmitter::emitMachineBasicBlock(MachineBasicBlock *BB,
                                              Reloc, BB));
 }
 
-int MipsCodeEmitter::emitUSW(const MachineInstr &MI) {
-  unsigned src = getMachineOpValue(MI, MI.getOperand(0));
-  unsigned base = getMachineOpValue(MI, MI.getOperand(1));
-  unsigned offset = getMachineOpValue(MI, MI.getOperand(2));
-  // swr src, offset(base)
-  // swl src, offset+3(base)
-  MCE.emitWordLE(
-    (0x2e << 26) | (base << 21) | (src << 16) | (offset & 0xffff));
-  MCE.emitWordLE(
-    (0x2a << 26) | (base << 21) | (src << 16) | ((offset+3) & 0xffff));
-  return 2;
-}
-
-int MipsCodeEmitter::emitULW(const MachineInstr &MI) {
-  unsigned dst = getMachineOpValue(MI, MI.getOperand(0));
-  unsigned base = getMachineOpValue(MI, MI.getOperand(1));
-  unsigned offset = getMachineOpValue(MI, MI.getOperand(2));
-  unsigned at = 1;
-  if (dst != base) {
-    // lwr dst, offset(base)
-    // lwl dst, offset+3(base)
-    MCE.emitWordLE(
-      (0x26 << 26) | (base << 21) | (dst << 16) | (offset & 0xffff));
-    MCE.emitWordLE(
-      (0x22 << 26) | (base << 21) | (dst << 16) | ((offset+3) & 0xffff));
-    return 2;
-  } else {
-    // lwr at, offset(base)
-    // lwl at, offset+3(base)
-    // addu dst, at, $zero
-    MCE.emitWordLE(
-      (0x26 << 26) | (base << 21) | (at << 16) | (offset & 0xffff));
-    MCE.emitWordLE(
-      (0x22 << 26) | (base << 21) | (at << 16) | ((offset+3) & 0xffff));
-    MCE.emitWordLE(
-      (0x0 << 26) | (at << 21) | (0x0 << 16) | (dst << 11) | (0x0 << 6) | 0x21);
-    return 3;
-  }
-}
-
-int MipsCodeEmitter::emitUSH(const MachineInstr &MI) {
-  unsigned src = getMachineOpValue(MI, MI.getOperand(0));
-  unsigned base = getMachineOpValue(MI, MI.getOperand(1));
-  unsigned offset = getMachineOpValue(MI, MI.getOperand(2));
-  unsigned at = 1;
-  // sb src, offset(base)
-  // srl at,src,8
-  // sb at, offset+1(base)
-  MCE.emitWordLE(
-    (0x28 << 26) | (base << 21) | (src << 16) | (offset & 0xffff));
-  MCE.emitWordLE(
-    (0x0 << 26) | (0x0 << 21) | (src << 16) | (at << 11) | (0x8 << 6) | 0x2);
-  MCE.emitWordLE(
-    (0x28 << 26) | (base << 21) | (at << 16) | ((offset+1) & 0xffff));
-  return 3;
-}
-
-int MipsCodeEmitter::emitULH(const MachineInstr &MI) {
-  unsigned dst = getMachineOpValue(MI, MI.getOperand(0));
-  unsigned base = getMachineOpValue(MI, MI.getOperand(1));
-  unsigned offset = getMachineOpValue(MI, MI.getOperand(2));
-  unsigned at = 1;
-  // lbu at, offset(base)
-  // lb dst, offset+1(base)
-  // sll dst,dst,8
-  // or dst,dst,at
-  MCE.emitWordLE(
-    (0x24 << 26) | (base << 21) | (at << 16) | (offset & 0xffff));
-  MCE.emitWordLE(
-    (0x20 << 26) | (base << 21) | (dst << 16) | ((offset+1) & 0xffff));
-  MCE.emitWordLE(
-    (0x0 << 26) | (0x0 << 21) | (dst << 16) | (dst << 11) | (0x8 << 6) | 0x0);
-  MCE.emitWordLE(
-    (0x0 << 26) | (dst << 21) | (at << 16) | (dst << 11) | (0x0 << 6) | 0x25);
-  return 4;
-}
-
-int MipsCodeEmitter::emitULHu(const MachineInstr &MI) {
-  unsigned dst = getMachineOpValue(MI, MI.getOperand(0));
-  unsigned base = getMachineOpValue(MI, MI.getOperand(1));
-  unsigned offset = getMachineOpValue(MI, MI.getOperand(2));
-  unsigned at = 1;
-  // lbu at, offset(base)
-  // lbu dst, offset+1(base)
-  // sll dst,dst,8
-  // or dst,dst,at
-  MCE.emitWordLE(
-    (0x24 << 26) | (base << 21) | (at << 16) | (offset & 0xffff));
-  MCE.emitWordLE(
-    (0x24 << 26) | (base << 21) | (dst << 16) | ((offset+1) & 0xffff));
-  MCE.emitWordLE(
-    (0x0 << 26) | (0x0 << 21) | (dst << 16) | (dst << 11) | (0x8 << 6) | 0x0);
-  MCE.emitWordLE(
-    (0x0 << 26) | (dst << 21) | (at << 16) | (dst << 11) | (0x0 << 6) | 0x25);
-  return 4;
-}
-
 void MipsCodeEmitter::emitInstruction(const MachineInstr &MI) {
   DEBUG(errs() << "JIT: " << (void*)MCE.getCurrentPCValue() << ":\t" << MI);
 
@@ -377,16 +274,19 @@ void MipsCodeEmitter::emitInstruction(const MachineInstr &MI) {
   if ((MI.getDesc().TSFlags & MipsII::FormMask) == MipsII::Pseudo)
     return;
 
-  emitWordLE(getBinaryCodeForInstr(MI));
+  emitWord(getBinaryCodeForInstr(MI));
   ++NumEmitted;  // Keep track of the # of mi's emitted
 
   MCE.processDebugLoc(MI.getDebugLoc(), false);
 }
 
-void MipsCodeEmitter::emitWordLE(unsigned Word) {
+void MipsCodeEmitter::emitWord(unsigned Word) {
   DEBUG(errs() << "  0x";
         errs().write_hex(Word) << "\n");
-  MCE.emitWordLE(Word);
+  if (Subtarget->isLittle())
+    MCE.emitWordLE(Word);
+  else
+    MCE.emitWordBE(Word);
 }
 
 /// createMipsJITCodeEmitterPass - Return a pass that emits the collected Mips
