@@ -433,6 +433,8 @@ Release Notes</a>.</h1>
 
 <ul>
   <li>...</li>
+  <li>New NVPTX back-end (replacing existing PTX back-end) based on NVIDIA
+      sources</li>
 </ul>
 
 </div>
@@ -687,6 +689,27 @@ Release Notes</a>.</h1>
 
 <!--=========================================================================-->
 <h3>
+<a name="NVPTX">PTX/NVPTX Target Improvements</a>
+</h3>
+
+<div>
+
+<p>The PTX back-end has been replaced by the NVPTX back-end, which is based on
+   the LLVM back-end used by NVIDIA in their CUDA (nvcc) and OpenCL compiler.
+   Some highlights include:</p>
+<ul>
+  <li>Compatibility with PTX 3.1 and SM 3.5</li>
+  <li>Support for NVVM intrinsics as defined in the NVIDIA Compiler SDK</li>
+  <li>Full compatibility with old PTX back-end, with much greater coverage of
+      LLVM IR</li>
+</ul>
+
+<p>Please submit any back-end bugs to the LLVM Bugzilla site.</p>
+
+</div>
+
+<!--=========================================================================-->
+<h3>
 <a name="OtherTS">Other Target Specific Improvements</a>
 </h3>
 
@@ -794,7 +817,7 @@ to remove a dependency on Target. </p>
   <p>Known problem areas include:</p>
 
 <ul>
-  <li>The CellSPU, MSP430, PTX and XCore backends are experimental.</li>
+  <li>The CellSPU, MSP430, and XCore backends are experimental.</li>
 
   <li>The integrated assembler, disassembler, and JIT is not supported by
       several targets. If an integrated assembler is not supported, then a
