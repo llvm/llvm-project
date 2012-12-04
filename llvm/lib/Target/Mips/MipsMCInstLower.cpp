@@ -62,6 +62,10 @@ MCOperand MipsMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case MipsII::MO_GOT_OFST:  Kind = MCSymbolRefExpr::VK_Mips_GOT_OFST; break;
   case MipsII::MO_HIGHER:    Kind = MCSymbolRefExpr::VK_Mips_HIGHER; break;
   case MipsII::MO_HIGHEST:   Kind = MCSymbolRefExpr::VK_Mips_HIGHEST; break;
+  case MipsII::MO_GOT_HI16:  Kind = MCSymbolRefExpr::VK_Mips_GOT_HI16; break;
+  case MipsII::MO_GOT_LO16:  Kind = MCSymbolRefExpr::VK_Mips_GOT_LO16; break;
+  case MipsII::MO_CALL_HI16: Kind = MCSymbolRefExpr::VK_Mips_CALL_HI16; break;
+  case MipsII::MO_CALL_LO16: Kind = MCSymbolRefExpr::VK_Mips_CALL_LO16; break;
   }
 
   switch (MOTy) {

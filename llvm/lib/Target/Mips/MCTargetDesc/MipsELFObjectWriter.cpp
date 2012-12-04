@@ -179,6 +179,18 @@ unsigned MipsELFObjectWriter::GetRelocType(const MCValue &Target,
   case Mips::fixup_Mips_HIGHEST:
     Type = ELF::R_MIPS_HIGHEST;
     break;
+  case Mips::fixup_Mips_GOT_HI16:
+    Type = ELF::R_MIPS_GOT_HI16;
+    break;
+  case Mips::fixup_Mips_GOT_LO16:
+    Type = ELF::R_MIPS_GOT_LO16;
+    break;
+  case Mips::fixup_Mips_CALL_HI16:
+    Type = ELF::R_MIPS_CALL_HI16;
+    break;
+  case Mips::fixup_Mips_CALL_LO16:
+    Type = ELF::R_MIPS_CALL_LO16;
+    break;
   }
   return Type;
 }

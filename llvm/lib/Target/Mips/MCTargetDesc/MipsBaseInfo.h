@@ -84,7 +84,13 @@ namespace MipsII {
     /// MO_HIGHER/HIGHEST - Represents the highest or higher half word of a
     /// 64-bit symbol address.
     MO_HIGHER,
-    MO_HIGHEST
+    MO_HIGHEST,
+
+    /// MO_GOT_HI16/LO16, MO_CALL_HI16/LO16 - Relocations used for large GOTs.
+    MO_GOT_HI16,
+    MO_GOT_LO16,
+    MO_CALL_HI16,
+    MO_CALL_LO16
   };
 
   enum {

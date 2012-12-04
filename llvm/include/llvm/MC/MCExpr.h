@@ -197,7 +197,11 @@ public:
     VK_Mips_GOT_PAGE,
     VK_Mips_GOT_OFST,
     VK_Mips_HIGHER,
-    VK_Mips_HIGHEST
+    VK_Mips_HIGHEST,
+    VK_Mips_GOT_HI16,
+    VK_Mips_GOT_LO16,
+    VK_Mips_CALL_HI16,
+    VK_Mips_CALL_LO16
   };
 
 private:

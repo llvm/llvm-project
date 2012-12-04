@@ -1154,12 +1154,14 @@ def : MipsPat<(MipsHi tblockaddress:$in), (LUi tblockaddress:$in)>;
 def : MipsPat<(MipsHi tjumptable:$in), (LUi tjumptable:$in)>;
 def : MipsPat<(MipsHi tconstpool:$in), (LUi tconstpool:$in)>;
 def : MipsPat<(MipsHi tglobaltlsaddr:$in), (LUi tglobaltlsaddr:$in)>;
+def : MipsPat<(MipsHi texternalsym:$in), (LUi texternalsym:$in)>;
 
 def : MipsPat<(MipsLo tglobaladdr:$in), (ADDiu ZERO, tglobaladdr:$in)>;
 def : MipsPat<(MipsLo tblockaddress:$in), (ADDiu ZERO, tblockaddress:$in)>;
 def : MipsPat<(MipsLo tjumptable:$in), (ADDiu ZERO, tjumptable:$in)>;
 def : MipsPat<(MipsLo tconstpool:$in), (ADDiu ZERO, tconstpool:$in)>;
 def : MipsPat<(MipsLo tglobaltlsaddr:$in), (ADDiu ZERO, tglobaltlsaddr:$in)>;
+def : MipsPat<(MipsLo texternalsym:$in), (ADDiu ZERO, texternalsym:$in)>;
 
 def : MipsPat<(add CPURegs:$hi, (MipsLo tglobaladdr:$lo)),
               (ADDiu CPURegs:$hi, tglobaladdr:$lo)>;

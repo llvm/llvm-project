@@ -255,6 +255,7 @@ def : MipsPat<(MipsHi tblockaddress:$in), (LUi64 tblockaddress:$in)>;
 def : MipsPat<(MipsHi tjumptable:$in), (LUi64 tjumptable:$in)>;
 def : MipsPat<(MipsHi tconstpool:$in), (LUi64 tconstpool:$in)>;
 def : MipsPat<(MipsHi tglobaltlsaddr:$in), (LUi64 tglobaltlsaddr:$in)>;
+def : MipsPat<(MipsHi texternalsym:$in), (LUi64 texternalsym:$in)>;
 
 def : MipsPat<(MipsLo tglobaladdr:$in), (DADDiu ZERO_64, tglobaladdr:$in)>;
 def : MipsPat<(MipsLo tblockaddress:$in), (DADDiu ZERO_64, tblockaddress:$in)>;
@@ -262,6 +263,7 @@ def : MipsPat<(MipsLo tjumptable:$in), (DADDiu ZERO_64, tjumptable:$in)>;
 def : MipsPat<(MipsLo tconstpool:$in), (DADDiu ZERO_64, tconstpool:$in)>;
 def : MipsPat<(MipsLo tglobaltlsaddr:$in),
               (DADDiu ZERO_64, tglobaltlsaddr:$in)>;
+def : MipsPat<(MipsLo texternalsym:$in), (DADDiu ZERO_64, texternalsym:$in)>;
 
 def : MipsPat<(add CPU64Regs:$hi, (MipsLo tglobaladdr:$lo)),
               (DADDiu CPU64Regs:$hi, tglobaladdr:$lo)>;
