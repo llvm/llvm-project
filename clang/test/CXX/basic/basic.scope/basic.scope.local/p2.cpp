@@ -35,3 +35,26 @@ void func7() {
     int i; // expected-error{{redefinition of 'i'}}
   }
 }
+
+void func8() {
+  int i;
+  try {
+    int i;
+  } catch (...) {
+  }
+}
+
+void func9() {
+  if (bool b = true)
+    try {
+      int b; // FIXME: this probably should be invalid, maybe
+    } catch (...) {
+    }
+}
+
+void func10() {
+  if (bool b = true)
+    if (true) {
+      int b; // FIXME: decide whether this is valid
+    }
+}
