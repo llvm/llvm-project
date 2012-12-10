@@ -4,3 +4,6 @@ decltype(;
 struct{
   a
 }
+
+// PR14549. Must be at end of file.
+decltype(

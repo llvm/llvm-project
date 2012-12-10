@@ -706,8 +706,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
       if (SkipUntil(tok::r_paren, /*StopAtSemi=*/true, /*DontConsume=*/true)) {
         EndLoc = ConsumeParen();
       } else {
-        assert(Tok.is(tok::semi));
-        if (PP.isBacktrackEnabled()) {
+        if (PP.isBacktrackEnabled() && Tok.is(tok::semi)) {
           // Backtrack to get the location of the last token before the semi.
           PP.RevertCachedTokens(2);
           ConsumeToken(); // the semi.
