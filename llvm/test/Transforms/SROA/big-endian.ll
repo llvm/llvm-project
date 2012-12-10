@@ -82,14 +82,9 @@ entry:
 
   %a0i16ptr = bitcast i8* %a0ptr to i16*
   store i16 1, i16* %a0i16ptr
-; CHECK:      %[[mask0:.*]] = and i16 1, -16
-
-  %a1i4ptr = bitcast i8* %a1ptr to i4*
-  store i4 1, i4* %a1i4ptr
-; CHECK-NEXT: %[[insert0:.*]] = or i16 %[[mask0]], 1
 
   store i8 1, i8* %a2ptr
-; CHECK-NEXT: %[[mask1:.*]] = and i40 undef, 4294967295
+; CHECK:      %[[mask1:.*]] = and i40 undef, 4294967295
 ; CHECK-NEXT: %[[insert1:.*]] = or i40 %[[mask1]], 4294967296
 
   %a3i24ptr = bitcast i8* %a3ptr to i24*
@@ -110,7 +105,7 @@ entry:
   %ai = load i56* %aiptr
   %ret = zext i56 %ai to i64
   ret i64 %ret
-; CHECK-NEXT: %[[ext4:.*]] = zext i16 %[[insert0]] to i56
+; CHECK-NEXT: %[[ext4:.*]] = zext i16 1 to i56
 ; CHECK-NEXT: %[[shift4:.*]] = shl i56 %[[ext4]], 40
 ; CHECK-NEXT: %[[mask4:.*]] = and i56 %[[insert3]], 1099511627775
 ; CHECK-NEXT: %[[insert4:.*]] = or i56 %[[mask4]], %[[shift4]]
