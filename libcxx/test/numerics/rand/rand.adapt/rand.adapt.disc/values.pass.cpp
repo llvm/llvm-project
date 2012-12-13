@@ -26,6 +26,9 @@
 #include <type_traits>
 #include <cassert>
 
+template <class _Tp>
+void where(const _Tp &) {}
+
 void
 test1()
 {
@@ -34,6 +37,8 @@ test1()
     static_assert((E::used_block == 23), "");
     /*static_*/assert((E::min() == 0)/*, ""*/);
     /*static_*/assert((E::max() == 0xFFFFFF)/*, ""*/);
+    where(E::block_size);
+    where(E::used_block);
 }
 
 void
@@ -44,6 +49,8 @@ test2()
     static_assert((E::used_block == 11), "");
     /*static_*/assert((E::min() == 0)/*, ""*/);
     /*static_*/assert((E::max() == 0xFFFFFFFFFFFFull)/*, ""*/);
+    where(E::block_size);
+    where(E::used_block);
 }
 
 int main()

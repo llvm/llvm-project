@@ -28,6 +28,9 @@
 #include <regex>
 #include <type_traits>
 
+template <class _Tp>
+void where(const _Tp &) {}
+
 template <class CharT>
 void
 test()
@@ -43,6 +46,16 @@ test()
     static_assert((BR::awk == std::regex_constants::awk), "");
     static_assert((BR::grep == std::regex_constants::grep), "");
     static_assert((BR::egrep == std::regex_constants::egrep), "");
+    where(BR::icase);
+    where(BR::nosubs);
+    where(BR::optimize);
+    where(BR::collate);
+    where(BR::ECMAScript);
+    where(BR::basic);
+    where(BR::extended);
+    where(BR::awk);
+    where(BR::grep);
+    where(BR::egrep);
 }
 
 int main()

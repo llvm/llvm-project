@@ -25,6 +25,9 @@
 #include <type_traits>
 #include <cassert>
 
+template <class _Tp>
+void where(const _Tp &) {}
+
 template <class T, T a, T c, T m>
 void
 test1()
@@ -37,6 +40,10 @@ test1()
     /*static_*/assert((LCE::min() == (c == 0u ? 1u: 0u))/*, ""*/);
     /*static_*/assert((LCE::max() == result_type(m - 1u))/*, ""*/);
     static_assert((LCE::default_seed == 1), "");
+    where(LCE::multiplier);
+    where(LCE::increment);
+    where(LCE::modulus);
+    where(LCE::default_seed);
 }
 
 template <class T>

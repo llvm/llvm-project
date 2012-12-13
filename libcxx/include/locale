@@ -2885,6 +2885,10 @@ template <class _CharT, bool _International>
 locale::id
 moneypunct<_CharT, _International>::id;
 
+template <class _CharT, bool _International>
+const bool
+moneypunct<_CharT, _International>::intl;
+
 _LIBCPP_EXTERN_TEMPLATE(class moneypunct<char, false>)
 _LIBCPP_EXTERN_TEMPLATE(class moneypunct<char, true>)
 _LIBCPP_EXTERN_TEMPLATE(class moneypunct<wchar_t, false>)

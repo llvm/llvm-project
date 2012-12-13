@@ -17,9 +17,13 @@
 // public:
 //     typedef _CharT                  char_type;
 //     typedef basic_string<char_type> string_type;
+//     static const bool intl = International;
 
 #include <locale>
 #include <type_traits>
+
+template <class _Tp>
+void test(const _Tp &) {}
 
 int main()
 {
@@ -31,4 +35,9 @@ int main()
     static_assert((std::is_same<std::moneypunct<wchar_t>::char_type, wchar_t>::value), "");
     static_assert((std::is_same<std::moneypunct<char>::string_type, std::string>::value), "");
     static_assert((std::is_same<std::moneypunct<wchar_t>::string_type, std::wstring>::value), "");
+
+    test(std::moneypunct<char, false>::intl);
+    test(std::moneypunct<char, true>::intl);
+    test(std::moneypunct<wchar_t, false>::intl);
+    test(std::moneypunct<wchar_t, true>::intl);
 }

@@ -28,6 +28,9 @@
 #include <type_traits>
 #include <cassert>
 
+template <class _Tp>
+void where(const _Tp &) {}
+
 void
 test1()
 {
@@ -38,6 +41,10 @@ test1()
     /*static_*/assert((E::min() == 0)/*, ""*/);
     /*static_*/assert((E::max() == 0xFFFFFF)/*, ""*/);
     static_assert((E::default_seed == 19780503u), "");
+    where(E::word_size);
+    where(E::short_lag);
+    where(E::long_lag);
+    where(E::default_seed);
 }
 
 void
@@ -50,6 +57,10 @@ test2()
     /*static_*/assert((E::min() == 0)/*, ""*/);
     /*static_*/assert((E::max() == 0xFFFFFFFFFFFFull)/*, ""*/);
     static_assert((E::default_seed == 19780503u), "");
+    where(E::word_size);
+    where(E::short_lag);
+    where(E::long_lag);
+    where(E::default_seed);
 }
 
 int main()

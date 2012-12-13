@@ -40,6 +40,9 @@
 #include <type_traits>
 #include <cassert>
 
+template <class _Tp>
+void where(const _Tp &) {}
+
 void
 test1()
 {
@@ -60,6 +63,20 @@ test1()
     /*static_*/assert((E::min() == 0)/*, ""*/);
     /*static_*/assert((E::max() == 0xFFFFFFFF)/*, ""*/);
     static_assert((E::default_seed == 5489u), "");
+    where(E::word_size);
+    where(E::state_size);
+    where(E::shift_size);
+    where(E::mask_bits);
+    where(E::xor_mask);
+    where(E::tempering_u);
+    where(E::tempering_d);
+    where(E::tempering_s);
+    where(E::tempering_b);
+    where(E::tempering_t);
+    where(E::tempering_c);
+    where(E::tempering_l);
+    where(E::initialization_multiplier);
+    where(E::default_seed);
 }
 
 void
@@ -82,6 +99,20 @@ test2()
     /*static_*/assert((E::min() == 0)/*, ""*/);
     /*static_*/assert((E::max() == 0xFFFFFFFFFFFFFFFFull)/*, ""*/);
     static_assert((E::default_seed == 5489u), "");
+    where(E::word_size);
+    where(E::state_size);
+    where(E::shift_size);
+    where(E::mask_bits);
+    where(E::xor_mask);
+    where(E::tempering_u);
+    where(E::tempering_d);
+    where(E::tempering_s);
+    where(E::tempering_b);
+    where(E::tempering_t);
+    where(E::tempering_c);
+    where(E::tempering_l);
+    where(E::initialization_multiplier);
+    where(E::default_seed);
 }
 
 int main()

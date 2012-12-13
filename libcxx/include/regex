@@ -2843,6 +2843,27 @@ private:
 };
 
 template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::icase;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::nosubs;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::optimize;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::collate;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::ECMAScript;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::basic;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::extended;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::awk;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::grep;
+template <class _CharT, class _Traits>
+    const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::egrep;
+
+template <class _CharT, class _Traits>
 void
 basic_regex<_CharT, _Traits>::swap(basic_regex& __r)
 {

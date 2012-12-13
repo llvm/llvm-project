@@ -25,6 +25,9 @@
 #include <type_traits>
 #include <cassert>
 
+template <class _Tp>
+void where(const _Tp &) {}
+
 void
 test1()
 {
@@ -32,6 +35,7 @@ test1()
     static_assert(E::table_size == 256, "");
     /*static_*/assert((E::min() == 1)/*, ""*/);
     /*static_*/assert((E::max() == 2147483646)/*, ""*/);
+    where(E::table_size);
 }
 
 int main()

@@ -15,6 +15,10 @@
 #include <type_traits>
 #include <cassert>
 
+template <class _Tp>
+void test(const _Tp &) {}
+
+
 int main()
 {
     static_assert((std::is_same<std::locale::category, int>::value), "");
@@ -38,4 +42,13 @@ int main()
           | std::locale::time
           | std::locale::messages)
          == std::locale::all);
+
+    test(std::locale::none);
+    test(std::locale::collate);
+    test(std::locale::ctype);
+    test(std::locale::monetary);
+    test(std::locale::numeric);
+    test(std::locale::time);
+    test(std::locale::messages);
+    test(std::locale::all);
 }

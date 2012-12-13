@@ -83,6 +83,15 @@ make(A0 a0, A1 a1, A2 a2)
 
 }
 
+const locale::category locale::none;
+const locale::category locale::collate;
+const locale::category locale::ctype;
+const locale::category locale::monetary;
+const locale::category locale::numeric;
+const locale::category locale::time;
+const locale::category locale::messages;
+const locale::category locale::all;
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpadded"
 
@@ -691,6 +700,19 @@ collate_byname<wchar_t>::do_transform(const char_type* lo, const char_type* hi) 
 
 // template <> class ctype<wchar_t>;
 
+const ctype_base::mask ctype_base::space;
+const ctype_base::mask ctype_base::print;
+const ctype_base::mask ctype_base::cntrl;
+const ctype_base::mask ctype_base::upper;
+const ctype_base::mask ctype_base::lower;
+const ctype_base::mask ctype_base::alpha;
+const ctype_base::mask ctype_base::digit;
+const ctype_base::mask ctype_base::punct;
+const ctype_base::mask ctype_base::xdigit;
+const ctype_base::mask ctype_base::blank;
+const ctype_base::mask ctype_base::alnum;
+const ctype_base::mask ctype_base::graph;
+    
 locale::id ctype<wchar_t>::id;
 
 ctype<wchar_t>::~ctype()

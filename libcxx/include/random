@@ -1931,6 +1931,22 @@ private:
 };
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
+    _LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+    linear_congruential_engine<_UIntType, __a, __c, __m>::multiplier;
+
+template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
+    _LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+    linear_congruential_engine<_UIntType, __a, __c, __m>::increment;
+
+template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
+    _LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+    linear_congruential_engine<_UIntType, __a, __c, __m>::modulus;
+
+template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
+    _LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+    linear_congruential_engine<_UIntType, __a, __c, __m>::default_seed;
+
+template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
 template<class _Sseq>
 void
 linear_congruential_engine<_UIntType, __a, __c, __m>::__seed(_Sseq& __q,
@@ -2226,6 +2242,90 @@ private:
         >::type
         __rshift(result_type) {return result_type(0);}
 };
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::word_size;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t 
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::state_size;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t 
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::shift_size;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t 
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::mask_bits;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const typename mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::result_type
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::xor_mask;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t 
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_u;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const typename mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::result_type
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_d;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t 
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_s;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const typename mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::result_type
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_b;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t 
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_t;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const typename mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::result_type
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_c;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const size_t 
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::tempering_l;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const typename mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::result_type
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::initialization_multiplier;
+
+template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
+          _UIntType __a, size_t __u, _UIntType __d, size_t __s,
+          _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
+    _LIBCPP_CONSTEXPR const typename mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::result_type
+    mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::default_seed;
 
 template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
           _UIntType __a, size_t __u, _UIntType __d, size_t __s,
@@ -2552,6 +2652,19 @@ private:
 };
 
 template<class _UIntType, size_t __w, size_t __s, size_t __r>
+    _LIBCPP_CONSTEXPR const size_t subtract_with_carry_engine<_UIntType, __w, __s, __r>::word_size;
+
+template<class _UIntType, size_t __w, size_t __s, size_t __r>
+    _LIBCPP_CONSTEXPR const size_t subtract_with_carry_engine<_UIntType, __w, __s, __r>::short_lag;
+
+template<class _UIntType, size_t __w, size_t __s, size_t __r>
+    _LIBCPP_CONSTEXPR const size_t subtract_with_carry_engine<_UIntType, __w, __s, __r>::long_lag;
+
+template<class _UIntType, size_t __w, size_t __s, size_t __r>
+    _LIBCPP_CONSTEXPR const typename subtract_with_carry_engine<_UIntType, __w, __s, __r>::result_type
+    subtract_with_carry_engine<_UIntType, __w, __s, __r>::default_seed;
+
+template<class _UIntType, size_t __w, size_t __s, size_t __r>
 void
 subtract_with_carry_engine<_UIntType, __w, __s, __r>::seed(result_type __sd,
         integral_constant<unsigned, 1>)
@@ -2821,6 +2934,12 @@ public:
     operator>>(basic_istream<_CharT, _Traits>& __is,
                discard_block_engine<_Eng, _Pp, _Rp>& __x);
 };
+
+template<class _Engine, size_t __p, size_t __r>
+    _LIBCPP_CONSTEXPR const size_t discard_block_engine<_Engine, __p, __r>::block_size;
+
+template<class _Engine, size_t __p, size_t __r>
+    _LIBCPP_CONSTEXPR const size_t discard_block_engine<_Engine, __p, __r>::used_block;
 
 template<class _Engine, size_t __p, size_t __r>
 typename discard_block_engine<_Engine, __p, __r>::result_type
@@ -3313,6 +3432,9 @@ private:
             return _Y_;
         }
 };
+
+template<class _Engine, size_t __k>
+    _LIBCPP_CONSTEXPR const size_t shuffle_order_engine<_Engine, __k>::table_size;
 
 template<class _Eng, size_t _Kp>
 bool
