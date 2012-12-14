@@ -40,7 +40,7 @@
 <p>This document contains the release notes for the LLVM Compiler
    Infrastructure, release 3.2.  Here we describe the status of LLVM, including
    major improvements from the previous release, improvements in various
-   subprojects of LLVM, and some of the current users of the code.  All LLVM
+   sub-projects of LLVM, and some of the current users of the code.  All LLVM
    releases may be downloaded from the <a href="http://llvm.org/releases/">LLVM
    releases web site</a>.</p>
 
@@ -71,7 +71,7 @@
    code generators and supporting tools, as well as Clang, DragonEgg and 
    compiler-rt sub-project repositories. In addition to this code, the LLVM 
    Project includes other sub-projects that are in development. Here we 
-   include updates on these subprojects.</p>
+   include updates on these sub-projects.</p>
 
 <!--=========================================================================-->
 <h3>
@@ -85,9 +85,7 @@
    experience through expressive diagnostics, a high level of conformance to
    language standards, fast compilation, and low memory use. Like LLVM, Clang
    provides a modular, library-based architecture that makes it suitable for
-   creating or integrating with other development tools. Clang is considered a
-   production-quality compiler for C, Objective-C, C++ and Objective-C++ on x86
-   (32- and 64-bit), and for Darwin/ARM targets.</p>
+   creating or integrating with other development tools.</p>
 
 <p>In the LLVM 3.2 time-frame, the Clang team has made many improvements.
    Highlights include:</p>
@@ -98,7 +96,7 @@
 </ul>
 
 <p>For more details about the changes to Clang since the 3.1 release, see the
-   <a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang release
+   <a href="http://llvm.org/releases/3.2/tools/clang/docs/ReleaseNotes.html">Clang 3.2 release
    notes.</a></p>
 
 <p>If Clang rejects your code but another compiler accepts it, please take a
@@ -152,8 +150,8 @@
 
 <ul>
   <li><a href="http://llvm.org/releases/3.2/tools/clang/docs/ThreadSanitizer.html">ThreadSanitizer (TSan)</a> - data race detector run-time library for C/C++ has been added.</li>
-  <li>Improvemens to <a href="http://llvm.org/releases/3.2/tools/clang/docs/AddressSanitizer.html">AddressSanitizer</a> including: increasing stack size limit to 256M,
-          better portability (iOS6,Windows,Android NDK), support for cmake based builds, enhanced error reporting.</li>
+  <li>Improvemens to <a href="http://llvm.org/releases/3.2/tools/clang/docs/AddressSanitizer.html">AddressSanitizer</a> including: increasing stack size limit to 256MB,
+          better portability (Android NDK), support for cmake based builds, enhanced error reporting.</li>
 
   <li>Added support for A6 'Swift' CPU.</li>
   <li><code>divsi3</code> function has been enhanced to take advantage of a hardware unsigned divide when it is available.</li>
@@ -230,19 +228,19 @@
 
 <p><a href="http://polly.llvm.org/">Polly</a> is an <em>experimental</em>
   optimizer for data locality and parallelism. It currently provides high-level
-  loop optimizations and automatic parallelisation (using the OpenMP run time).
+  loop optimizations and automatic parallelization (using the OpenMP run time).
   Work in the area of automatic SIMD and accelerator code generation was
   started.</p>
 
 <p>Within the LLVM 3.2 time-frame there were the following highlights:</p>
 
 <ul>
-  <li>isl, the integer set library used by Polly, was relicensed to the MIT license</li>
-  <li>isl based code generation</li>
-  <li>MIT licensed replacement for CLooG (LGPLv2)</li>
-  <li>Fine grained option handling (separation of core and border computations, control overhead vs. code size)</li>
-  <li>Support for FORTRAN and dragonegg</li>
-  <li>OpenMP code generation fixes</li>
+  <li>isl, the integer set library used by Polly, was relicensed under the MIT license.</li>
+  <li>isl based code generation.</li>
+  <li>MIT licensed replacement for CLooG (LGPLv2).</li>
+  <li>Fine grained option handling (separation of core and border computations, control overhead vs. code size).</li>
+  <li>Support for FORTRAN and Dragonegg.</li>
+  <li>OpenMP code generation fixes.</li>
 </ul>
 
 </div>
@@ -282,7 +280,7 @@
    AUdio STream. Its programming model combines two approaches: functional
    programming and block diagram composition. In addition with the C, C++, Java,
    JavaScript output formats, the Faust compiler can generate LLVM bitcode, and
-   works with LLVM 2.7-3.1.</p>
+   works with LLVM 2.7-3.2.</p>
 
 </div>
 
@@ -672,20 +670,18 @@
    <li>Support for Android MIPS toolchain has been added to clang driver.</li>
    <li>Added clang driver support for MIPS N32 ABI through "-mabi=n32" option.</li>
    <li>MIPS32 and MIPS64 disassembler has been implemented.</li>
-   <li>Support for compiling programs with large GOTs (exceeding 64kB in size) has be added 
-           through llc option "-mxgot".</li>
-  <li>Experimental support for MIPS32 DSP intrinsics has been added</li>
+   <li>Support for compiling programs with large GOTs (exceeding 64kB in size) has been added 
+	through llc option "-mxgot".</li>
+  <li>Added experimental support for MIPS32 DSP intrinsics.</li>
   <li>Experimental support for MIPS16 with following limitations: only soft float is supported,
          C++ exceptions are not supported, large stack frames (> 32000 bytes) are not supported,
-         direct object code emission is not supported yet (only .s).</li>
-  <li>Standalone assembler (llvm-mc):  implementation is in progress and assembler should be 
-         considered experimental</li>
+         direct object code emission is not supported only .s .</li>
+  <li>Standalone assembler (llvm-mc):  implementation is in progress and considered experimental.</li>
   <li>All classic JIT and MCJIT tests pass on Little and Big Endian MIPS32 platforms.</li>
-  <li>Inline asm support: all  common constraints and operand modifiers
-      have been implemented.</li>
-  <li>Tail call optimization support has been added, use llc option "-enable-mips-tail-calls"
+  <li>Inline asm support: all common constraints and operand modifiers have been implemented.</li>
+  <li>Added tail call optimization support, use llc option "-enable-mips-tail-calls"
       or clang options "-mllvm -enable-mips-tail-calls"to enable it.</li>
-  <li>Improved register allocation by removing registers 'FP', 'GP', 'RA' and 'AT' from the list of reserved registers.</li>
+  <li>Improved register allocation by removing registers $fp, $gp, $ra and $at from the list of reserved registers.</li>
   <li>Long branch expansion pass has been implemented, which expands branch
       instructions with offsets that do not fit in the 16-bit field.</li>
   <li>Cavium Octeon II board is used for testing builds (llvm-mips-linux builder).</li>
@@ -777,9 +773,11 @@
    from the previous release.</p>
 
 <ul>
-  <li>...</li>
-</ul>
-
+<li>llvm-ld and llvm-stub have been removed, llvm-ld functionality can be partially replaced by 
+        llvm-link | opt | {llc | as, llc -filetype=obj} | ld, or fully replaced by Clang. </li>
+<li>MCJIT: added support for inline assembly (requires asm parser), added faux remote target execution to lli option '-remote-mcjit'.</li>
+</ul> 
+ 
 </div>
 
 <!--=========================================================================-->
@@ -813,33 +811,21 @@ to remove a dependency on Target. </p>
 
 <div>
 
-<p>In addition, some tools have changed in this release. Some of the changes
-   are:</p>
+<p>In addition, some tools have changed in this release. Some of the changes are:</p>
 
 <ul>
-  <li>...</li>
+<li>opt: added support for '-mtriple' option.</li>
+<li>llvm-mc : - added '-disassemble' support for '-show-inst' and '-show-encoding' options, added '-edis' option to produce annotated 
+        disassembly output for X86 and ARM targets.</li>
+<li>libprofile: allows the profile data file name to be specified by the LLVMPROF_OUTPUT environment variable.</li>
+<li>llvm-objdump: has been changed to display available targets, '-arch' option accepts x86 and x86-64 as valid arch names.</li>
+<li>llc and opt: added FMA formation from pairs of FADD + FMUL or FSUB + FMUL enabled by option '-enable-excess-fp-precision' or option '-enable-unsafe-fp-math',
+       option '-fp-contract' controls the creation by optimizations of fused FP by selecting Fast, Standard, or Strict mode.</li>
+<li>llc: object file output from llc is no longer considered experimental.</li>
 </ul>
 
 </div>
 
-
-<!--=========================================================================-->
-<h3>
-<a name="python">Python Bindings</a>
-</h3>
-
-<div>
-
-<p>Officially supported Python bindings have been added! Feature support is far
-   from complete. The current bindings support interfaces to:</p>
-
-<ul>
-  <li>...</li>
-</ul>
-
-</div>
-
-</div>
 
 <!-- *********************************************************************** -->
 <h2>
@@ -861,7 +847,7 @@ to remove a dependency on Target. </p>
   <p>Known problem areas include:</p>
 
 <ul>
-  <li>The CellSPU, MSP430, and XCore backends are experimental.</li>
+  <li>The CellSPU, MSP430, and XCore backends are experimental, and the CellSPU backend will be removed in LLVM 3.3.</li>
 
   <li>The integrated assembler, disassembler, and JIT is not supported by
       several targets. If an integrated assembler is not supported, then a
