@@ -247,6 +247,46 @@
 
 </div>
 
+<!--=========================================================================-->
+<h3>
+<a name="StaticAnalyzer">Clang Static Analyzer</a>
+</h3>
+
+<div>
+
+<p>The <a href="http://clang-analyzer.llvm.org/">Clang Static Analyzer</a> 
+    is an advanced source code analysis tool integrated into Clang that performs
+    a deep analysis of code to find potential bugs.</p>
+    
+<p>In the LLVM 3.2 release, the static analyzer has made significant improvements
+    in many areas, with notable highlights such as:</p>
+    
+<ul>
+    <li>Improved interprocedural analysis within a translation unit (see details below), which greatly amplified the analyzer's ability to find bugs.</li>
+    <li>New infrastructure to model &quot;well-known&quot; APIs, allowing the analyzer to do a much better job when modeling calls to such functions.</li>
+    <li>Significant improvements to the APIs to write static analyzer checkers, with a more unified way of representing function/method calls in the checker API.  Details can be found in the <a href="http://llvm.org/devmtg/2012-11#talk13">Building a Checker in 24 hours</a> talk.
+</ul>
+
+<p>The release specifically includes notable improvements for Objective-C analysis, including:</p>
+
+<ul>
+    <li>Interprocedural analysis for Objective-C methods.</li>
+    <li>Interprocedural analysis of calls to &quot;blocks&quot;.</li>
+    <li>Precise modeling of GCD APIs such as <tt>dispatch_once</tt> and friends.</li>
+    <li>Improved support for recently added Objective-C constructs such as array and dictionary literals.</li>
+</ul>
+
+<p>The release specifically includes notable improvements for C++ analysis, including:</p>
+
+<ul>
+    <li>Interprocedural analysis for C++ methods (within a translation unit).</li>
+    <li>More precise modeling of C++ initializers and destructors.</li>
+</ul>
+
+<p>Finally, this release includes many small improvements to <tt>scan-build</tt>, which can be used to drive the analyzer from the command line or a continuous integration system.  This includes a directory-traversal issue, which could cause potential security problems in some cases.  We would like to acknowledge Tim Brown of Portcullis Computer Security Ltd for reporting this issue.</p>
+    
+</div>
+
 </div>
 
 <!-- *********************************************************************** -->
