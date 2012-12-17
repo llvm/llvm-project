@@ -124,7 +124,10 @@
 <p>The 3.2 release has the following notable changes:</p>
 
 <ul>
-  <li>...</li>
+ <li>Able to load LLVM plugins such as Polly.</li>
+ <li>Supports thread-local storage models.</li>
+ <li>Passes knowledge of variable lifetimes to the LLVM optimizers.</li>
+ <li>No longer requires GCC to be built with LTO support.</li>
 </ul>
 
 </div>
@@ -150,9 +153,8 @@
 
 <ul>
   <li><a href="http://llvm.org/releases/3.2/tools/clang/docs/ThreadSanitizer.html">ThreadSanitizer (TSan)</a> - data race detector run-time library for C/C++ has been added.</li>
-  <li>Improvemens to <a href="http://llvm.org/releases/3.2/tools/clang/docs/AddressSanitizer.html">AddressSanitizer</a> including: increasing stack size limit to 256MB,
-          better portability (Android NDK), support for cmake based builds, enhanced error reporting.</li>
-
+  <li>Improvemens to <a href="http://llvm.org/releases/3.2/tools/clang/docs/AddressSanitizer.html">AddressSanitizer</a> including: better portability 
+  (OSX, Android NDK), support for cmake based builds, enhanced error reporting and lots of bug fixes.</li>
   <li>Added support for A6 'Swift' CPU.</li>
   <li><code>divsi3</code> function has been enhanced to take advantage of a hardware unsigned divide when it is available.</li>
 </ul>
@@ -313,6 +315,19 @@
 
 </div>
 
+<h3>EmbToolkit</h3>
+
+<div>
+
+<p><a href="http://www.embtoolkit.org/">EmbToolkit</a> provides Linux cross-compiler 
+    toolchain/SDK (GCC/binutils/C library (uclibc,eglibc,musl)), a build system for 
+    package cross-compilation and optionally various root filesystems. 
+    It supports ARM and MIPS. There is an ongoing effort to provide a clang+llvm 
+    environment for the 3.2 releases, 
+</p>
+
+</div>
+
 <h3>FAUST</h3>
 
 <div>
@@ -379,7 +394,11 @@
 
 <p>OSL was developed by Sony Pictures Imageworks for use in its in-house
    renderer used for feature film animation and visual effects, and is
-   distributed as open source software with the "New BSD" license.</p>
+   distributed as open source software with the "New BSD" license.
+   It has been used for all the shading on such films as The Amazing Spider-Man,
+   Men in Black III, Hotel Transylvania, and may other films in-progress, 
+   and also has been incorporated into several commercial and open source 
+   rendering products such as Blender, VRay, and Autodesk Beast.</p>
 
 </div>
 
@@ -614,10 +633,6 @@
    infrastructure, which allows us to implement more aggressive algorithms and
    make it run faster:</p>
 
-<ul>
-  <li>...</li>
-</ul>
-
 <p> We added new TableGen infrastructure to support bundling for
     Very Long Instruction Word (VLIW) architectures. TableGen can now
     automatically generate a deterministic finite automaton from a VLIW
@@ -626,6 +641,13 @@
 
 <p> We have added a new target independent VLIW packetizer based on the
     DFA infrastructure to group machine instructions into bundles.</p>
+
+<p> We have added new TableGen infrastructure to support relationship maps
+    between instructions. This feature enables TableGen to automatically
+    construct a set of relation tables and query functions that can be used
+    to switch between various forms of instructions. For more information,
+    please refer to <a href="http://llvm.org/docs/HowToUseInstrMappings.html">
+    How To Use Instruction Mappings</a>.</p> 
 
 </div>
 
@@ -864,6 +886,7 @@ to remove a dependency on Target. </p>
 <li>llc and opt: added FMA formation from pairs of FADD + FMUL or FSUB + FMUL enabled by option '-enable-excess-fp-precision' or option '-enable-unsafe-fp-math',
        option '-fp-contract' controls the creation by optimizations of fused FP by selecting Fast, Standard, or Strict mode.</li>
 <li>llc: object file output from llc is no longer considered experimental.</li>
+<li>gold plugin: handles Position Independent Executables.</li>
 </ul>
 
 </div>
