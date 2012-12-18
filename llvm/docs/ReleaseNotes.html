@@ -198,7 +198,15 @@
 <p>Within the LLVM 3.2 time-frame there were the following highlights:</p>
 
 <ul>
-  <li>...</li>
+  <li> C++11 shared_ptr atomic access API (20.7.2.5) has been implemented.</li>
+  <li>Applied noexcept and constexpr throughout library.</li>
+  <li>Improved C++11 conformance in associative container emplace.</li>
+  <li>Performance improvements in: std::rotate algorithm and I/O.</li>
+  <li>Operator new/delete and type_infos for exception types moved from libc++ to libc++abi.</li>
+  <li>Bug fixes in: <code>&lt;atomic&gt;</code>; vector<code>&lt;bool&gt;</code> algorithms,
+    <code>&lt;future&gt;</code>,<code>&lt;tuple&gt;</code>,
+    <code>&lt;type_traits&gt;</code>,<code>&lt;fstream&gt;</code>,<code>&lt;istream&gt;</code>,
+    <code>&lt;iterator&gt;</code>, <code>&lt;condition_variable&gt;</code>,<code>&lt;complex&gt;</code> as well as visibility fixes.
 </ul>
 
 </div>
@@ -567,7 +575,6 @@
     <li>The induction variable can be used inside the loop.</li>
     <li>Loop reductions are supported.</li>
     <li>Arrays with affine access pattern do <b>not</b> need to be marked as 'noalias' and are checked at runtime.</li>
-    <li>...</li>
     </ul>
 
 </p>
