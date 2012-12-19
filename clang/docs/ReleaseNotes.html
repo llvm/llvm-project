@@ -43,12 +43,6 @@ td {
   <p>Written by the <a href="http://llvm.org/">LLVM Team</a></p>
 </div>
 
-<h1 style="color:red">These are in-progress notes for the upcoming Clang 3.2
-release.<br>
-You may prefer the
-<a href="http://llvm.org/releases/3.1/docs/ClangReleaseNotes.html">Clang 3.1
-Release Notes</a>.</h1>
-
 <!-- ======================================================================= -->
 <h2 id="intro">Introduction</h2>
 <!-- ======================================================================= -->
@@ -239,7 +233,8 @@ attributes in Clang language extensions documentation.</p>
 
 <h4 id="c11changes">C11 Feature Support</h4>
 
-<p>...</p>
+<p>Clang 3.2 adds support for the C11 <code>_Alignof</code> keyword, pedantic warning through option
+       <code>-Wempty-translation-unit</code> (C11 6.9p1) </p>
 
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 <h3 id="cxxchanges">C++ Language Changes in Clang</h3>
@@ -247,7 +242,18 @@ attributes in Clang language extensions documentation.</p>
 
 <h4 id="cxx11changes">C++11 Feature Support</h4>
 
-<p>...</p>
+<p>Clang 3.2 supports <a href="http://clang.llvm.org/cxx_status.html#cxx11">most of the language features</a> 
+       added in the latest ISO C++ standard,<a href="http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=50372">C++ 2011</a>.
+       Use <code>-std=c++11</code> or <code>-std=gnu++11</code> to enable support for these features. In addition to the features supported by Clang 3.1, the
+       following features have been added:</p>
+
+<ul>
+ <li>Implemented the C++11 discarded value expression rules for volatile lvalues.</li>
+ <li>Support for the C++11 enum forward declarations.</li>
+ <li>Handling of C++11 attribute namespaces (automatically).</li>
+ <li>Implemented C++11 [conv.prom]p4: an enumeration with a fixed underlying type has integral promotions 
+         to both its underlying type and to its underlying type's promoted type.</li>
+</ul>
 
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 <h3 id="objcchanges">Objective-C Language Changes in Clang</h3>
@@ -255,25 +261,24 @@ attributes in Clang language extensions documentation.</p>
 
 <p>...</p>
 
-<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-<h3 id="apichanges">Internal API Changes</h3>
-<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-
-<p>These are major API changes that have happened since the 3.1 release of
-   Clang. If upgrading an external codebase that uses Clang as a library, this
-   section should help get you past the largest hurdles of upgrading.</p>
-
-<h4 id="api1">API change 1</h4>
-
-<p>...</p>
+<ul>
+  <li> </li>
+</ul>
 
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 <h3 id="pythonchanges">Python Binding Changes</h3>
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 
-The following methods have been added:
+The following classes and methods have been added:
 <ul>
-  <li>...</li>
+   <li>class CompilationDatabaseError(Exception)</li>
+   <li>class CompileCommand(object)</li>
+   <li>class CompileCommands(object)</li>
+   <li>class CompilationDatabase(ClangObject)</li>
+  <li>Cursor.is_static_method</li>
+  <li>Cursor.is_static_method</li>
+  <li>SourceLocation.from_offset</li>
+  <li>Cursor.is_static_method</li>
 </ul>
 
 <!-- ======================================================================= -->
@@ -296,17 +301,6 @@ The following methods have been added:
    the <a href="http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev"> mailing
    list</a>.</p>
 
-<!-- ======================================================================= -->
-<!-- Likely 3.1 release notes -->
-<!-- ======================================================================= -->
-<!--
-This is just a section to hold things that have already gotten started and
-should likely pick up proper release notes in 3.1.
-
-- C1X and C++11 atomics infrastructure and support
-- CUDA support?
-
--->
 
 </div>
 </body>
