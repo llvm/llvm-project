@@ -1,6 +1,6 @@
-From 6cf5becb06fc6c960e3862577e2280610d301fba Mon Sep 17 00:00:00 2001
+From 7e36390f24f6ceaea7bc2ba4adcd55d06cf73439 Mon Sep 17 00:00:00 2001
 From: Yabin Hu <yabin.hwu@gmail.com>
-Date: Tue, 3 Jul 2012 11:21:45 +0800
+Date: Thu, 29 Nov 2012 16:08:29 +0800
 Subject: [PATCH] Add llvm.codegen intrinsic.
 
 The llvm.codegen intrinsic generates code for embedded LLVM-IR
@@ -14,23 +14,23 @@ different to the one of the parent module.
  include/llvm/Intrinsics.td                         |    4 +
  lib/CodeGen/CMakeLists.txt                         |    1 +
  lib/CodeGen/CodeGen.cpp                            |    1 +
- lib/CodeGen/CodeGenIntrinsic.cpp                   |  229 ++++++++++++++++++++
+ lib/CodeGen/CodeGenIntrinsic.cpp                   |  227 ++++++++++++++++++++
  lib/CodeGen/Passes.cpp                             |    3 +
  lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp   |    2 +
  lib/Target/LLVMBuild.txt                           |    2 +-
  lib/VMCore/Verifier.cpp                            |   10 +
  .../CodeGen/X86/EmbeddedCG/embedded-codegen-ptx.ll |   28 +++
  test/CodeGen/X86/EmbeddedCG/lit.local.cfg          |    5 +
- 13 files changed, 324 insertions(+), 1 deletions(-)
+ 13 files changed, 322 insertions(+), 1 deletions(-)
  create mode 100644 lib/CodeGen/CodeGenIntrinsic.cpp
  create mode 100644 test/CodeGen/X86/EmbeddedCG/embedded-codegen-ptx.ll
  create mode 100644 test/CodeGen/X86/EmbeddedCG/lit.local.cfg
 
 diff --git a/docs/LangRef.html b/docs/LangRef.html
-index ef58b98..274a4d3 100644
+index cfc1c7d..eae069e 100644
 --- a/docs/LangRef.html
 +++ b/docs/LangRef.html
-@@ -242,6 +242,7 @@
+@@ -243,6 +243,7 @@
            <li><a href="#int_prefetch">'<tt>llvm.prefetch</tt>' Intrinsic</a></li>
            <li><a href="#int_pcmarker">'<tt>llvm.pcmarker</tt>' Intrinsic</a></li>
            <li><a href="#int_readcyclecounter">'<tt>llvm.readcyclecounter</tt>' Intrinsic</a></li>
@@ -38,7 +38,7 @@ index ef58b98..274a4d3 100644
          </ol>
        </li>
        <li><a href="#int_libc">Standard C Library Intrinsics</a>
-@@ -7060,6 +7061,41 @@ LLVM</a>.</p>
+@@ -7249,6 +7250,41 @@ LLVM</a>.</p>
  
  </div>
  
@@ -81,10 +81,10 @@ index ef58b98..274a4d3 100644
  
  <!-- ======================================================================= -->
 diff --git a/include/llvm/CodeGen/Passes.h b/include/llvm/CodeGen/Passes.h
-index 0cddff8..047f48a 100644
+index 44c9676..57b3aa2 100644
 --- a/include/llvm/CodeGen/Passes.h
 +++ b/include/llvm/CodeGen/Passes.h
-@@ -427,6 +427,9 @@ namespace llvm {
+@@ -432,6 +432,9 @@ namespace llvm {
    /// branch folding).
    extern char &GCMachineCodeAnalysisID;
  
@@ -95,10 +95,10 @@ index 0cddff8..047f48a 100644
    ///
    FunctionPass *createGCInfoDeleter();
 diff --git a/include/llvm/InitializePasses.h b/include/llvm/InitializePasses.h
-index de97957..9f32374 100644
+index e06b892..fe8655e 100644
 --- a/include/llvm/InitializePasses.h
 +++ b/include/llvm/InitializePasses.h
-@@ -91,6 +91,7 @@ void initializeCorrelatedValuePropagationPass(PassRegistry&);
+@@ -93,6 +93,7 @@ void initializeCorrelatedValuePropagationPass(PassRegistry&);
  void initializeDAEPass(PassRegistry&);
  void initializeDAHPass(PassRegistry&);
  void initializeDCEPass(PassRegistry&);
@@ -107,10 +107,10 @@ index de97957..9f32374 100644
  void initializeDeadInstEliminationPass(PassRegistry&);
  void initializeDeadMachineInstructionElimPass(PassRegistry&);
 diff --git a/include/llvm/Intrinsics.td b/include/llvm/Intrinsics.td
-index d1a0fee..11d7a02 100644
+index d3a548c..a60d2bb 100644
 --- a/include/llvm/Intrinsics.td
 +++ b/include/llvm/Intrinsics.td
-@@ -232,6 +232,10 @@ def int_readcyclecounter : Intrinsic<[llvm_i64_ty]>;
+@@ -238,6 +238,10 @@ def int_readcyclecounter : Intrinsic<[llvm_i64_ty]>;
  // guard to the correct place on the stack frame.
  def int_stackprotector : Intrinsic<[], [llvm_ptr_ty, llvm_ptrptr_ty], []>;
  
@@ -122,7 +122,7 @@ index d1a0fee..11d7a02 100644
  //
  
 diff --git a/lib/CodeGen/CMakeLists.txt b/lib/CodeGen/CMakeLists.txt
-index 2e189ad..9f01b40 100644
+index 7a20ff6..8e1ab9a 100644
 --- a/lib/CodeGen/CMakeLists.txt
 +++ b/lib/CodeGen/CMakeLists.txt
 @@ -6,6 +6,7 @@ add_llvm_library(LLVMCodeGen
@@ -134,7 +134,7 @@ index 2e189ad..9f01b40 100644
    CriticalAntiDepBreaker.cpp
    DeadMachineInstructionElim.cpp
 diff --git a/lib/CodeGen/CodeGen.cpp b/lib/CodeGen/CodeGen.cpp
-index fb2c2e8..47895c3 100644
+index a53f6f8..702ee18 100644
 --- a/lib/CodeGen/CodeGen.cpp
 +++ b/lib/CodeGen/CodeGen.cpp
 @@ -21,6 +21,7 @@ using namespace llvm;
@@ -147,10 +147,10 @@ index fb2c2e8..47895c3 100644
    initializeEarlyIfConverterPass(Registry);
 diff --git a/lib/CodeGen/CodeGenIntrinsic.cpp b/lib/CodeGen/CodeGenIntrinsic.cpp
 new file mode 100644
-index 0000000..8b43754
+index 0000000..cf8aa54
 --- /dev/null
 +++ b/lib/CodeGen/CodeGenIntrinsic.cpp
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,227 @@
 +//===-- CodeGenIntrinsic.cpp - CodeGen Intrinsic --------------------------===//
 +//
 +//                     The LLVM Compiler Infrastructure
@@ -172,7 +172,6 @@ index 0000000..8b43754
 +#include "llvm/Module.h"
 +#include "llvm/PassManager.h"
 +#include "llvm/Assembly/Parser.h"
-+#include "llvm/Target/TargetData.h"
 +#include "llvm/Target/TargetMachine.h"
 +#include "llvm/Target/TargetRegisterInfo.h"
 +#include "llvm/Support/Debug.h"
@@ -241,11 +240,10 @@ index 0000000..8b43754
 +  // Build up all of the passes that we want to do to the module.
 +  PassManager PM;
 +
-+  // Add the target data from the target machine, if it exists, or the module.
-+  if (const TargetData *TD = Target->getTargetData())
-+    PM.add(new TargetData(*TD));
-+  else
-+    PM.add(new TargetData(New));
++  // Get the data layout of the new module. If it is empty, return false.
++  const std::string &ModuleDataLayout = New->getDataLayout();
++  if (ModuleDataLayout.empty())
++    return false;
 +
 +  {
 +    raw_string_ostream NameROS(ASM);
@@ -381,10 +379,10 @@ index 0000000..8b43754
 +  return MadeChange;
 +}
 diff --git a/lib/CodeGen/Passes.cpp b/lib/CodeGen/Passes.cpp
-index 69d6d00..c053aba 100644
+index 526d994..1de0c63 100644
 --- a/lib/CodeGen/Passes.cpp
 +++ b/lib/CodeGen/Passes.cpp
-@@ -362,6 +362,9 @@ void TargetPassConfig::addIRPasses() {
+@@ -369,6 +369,9 @@ void TargetPassConfig::addIRPasses() {
  
    addPass(createGCLoweringPass());
  
@@ -395,10 +393,10 @@ index 69d6d00..c053aba 100644
    addPass(createUnreachableBlockEliminationPass());
  }
 diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
-index 2cdc41b..68b9161 100644
+index 56e774c..97006c0 100644
 --- a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
 +++ b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
-@@ -5190,6 +5190,8 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
+@@ -5169,6 +5169,8 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
    case Intrinsic::donothing:
      // ignore
      return 0;
@@ -408,7 +406,7 @@ index 2cdc41b..68b9161 100644
  }
  
 diff --git a/lib/Target/LLVMBuild.txt b/lib/Target/LLVMBuild.txt
-index 8995080..c5fb7d3 100644
+index eb6c779..a54f57c 100644
 --- a/lib/Target/LLVMBuild.txt
 +++ b/lib/Target/LLVMBuild.txt
 @@ -45,7 +45,7 @@ parent = Libraries
@@ -421,10 +419,10 @@ index 8995080..c5fb7d3 100644
  ; This is a special group whose required libraries are extended (by llvm-build)
  ; with every built target, which makes it easy for tools to include every
 diff --git a/lib/VMCore/Verifier.cpp b/lib/VMCore/Verifier.cpp
-index 5d51f41..501fe08 100644
+index 3782957..896772a 100644
 --- a/lib/VMCore/Verifier.cpp
 +++ b/lib/VMCore/Verifier.cpp
-@@ -1872,6 +1872,16 @@ void Verifier::visitIntrinsicFunctionCall(Intrinsic::ID ID, CallInst &CI) {
+@@ -1952,6 +1952,16 @@ void Verifier::visitIntrinsicFunctionCall(Intrinsic::ID ID, CallInst &CI) {
      Assert1(isa<ConstantInt>(CI.getArgOperand(1)),
              "llvm.invariant.end parameter #2 must be a constant integer", &CI);
      break;
@@ -487,5 +485,5 @@ index 0000000..7180c84
 +if not 'NVPTX' in targets:
 +    config.unsupported = True
 -- 
-1.7.3.4
+1.7.6.5
 
