@@ -86,7 +86,7 @@ CXXFLAGS=$saved_CXXFLAGS
 dnl Check that we have cloog.
 saved_CXXFLAGS=$CXXFLAGS
 CXXFLAGS="$CXXFLAGS $gmp_inc $isl_inc"
-find_lib_and_headers([cloog], [cloog/isl/cloog.h], [cloog-isl], [required])
+find_lib_and_headers([cloog], [cloog/isl/cloog.h], [cloog-isl])
 CXXFLAGS=$saved_CXXFLAGS
 AS_IF([test "x$cloog_found" = "xyes"],
   [AC_DEFINE([CLOOG_FOUND],[1],[Define if cloog found])])

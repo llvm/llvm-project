@@ -2618,7 +2618,7 @@ fi
 
 fi
 else
-  if test "xrequired" = "xrequired"; then :
+  if test "x" = "xrequired"; then :
   as_fn_error "cloog required but not found" "$LINENO" 5
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
