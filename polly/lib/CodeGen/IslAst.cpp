@@ -187,7 +187,7 @@ __isl_give isl_ast_node *IslAstInfo::getAst() {
 void IslAstInfo::printScop(raw_ostream &OS) const {
   Function *F = S->getRegion().getEntry()->getParent();
 
-  OS << "isl ast for function '" << F->getName() << "':\n";
+  OS << F->getName() << "():\n";
 
   Ast->pprint(OS);
 }
