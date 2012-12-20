@@ -150,7 +150,6 @@ void IslAst::pprint(llvm::raw_ostream &OS) {
   OS << result << "\n";
   isl_printer_free(P);
   isl_ast_node_free(Root);
-  isl_ast_print_options_free(Options);
 }
 
 /// Create the isl_ast from this program.
