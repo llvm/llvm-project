@@ -707,7 +707,8 @@ void ClastStmtCodeGen::codegenForGPGPU(const clast_for *F) {
     LowerBound = ExpGen.codegen(InnerFor->LB, IntPtrTy);
     UpperBound = ExpGen.codegen(InnerFor->UB, IntPtrTy);
     Stride = Builder.getInt(APInt_from_MPZ(InnerFor->stride));
-    IV = createLoop(LowerBound, UpperBound, Stride, Builder, P, AfterBB);
+    IV = createLoop(LowerBound, UpperBound, Stride, Builder, P, AfterBB,
+                    CmpInst::ICMP_SLE);
     const Value *OldIV_ = Statement->getInductionVariableForDimension(2);
     Value *OldIV = const_cast<Value *>(OldIV_);
     VMap.insert(std::make_pair<Value*, Value*>(OldIV, IV));
