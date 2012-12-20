@@ -1,7 +1,7 @@
 #!/bin/sh
 
-CLOOG_HASH="c7721fc941db89dd1afc6240eaceea46d0bcad17"
-ISL_HASH="9f82ab3cd18ac34f883c30594111e4eb17426e11"
+CLOOG_HASH="bd03afe7c4045c325b07ed1eede1aaa7c72f1620"
+ISL_HASH="00adaf6b43bc6877e286441be25101e64cea07ef"
 
 PWD=`pwd`
 
