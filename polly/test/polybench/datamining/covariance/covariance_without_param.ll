@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly  %defaultOpts -polly-detect -polly-cloog -analyze  %s | FileCheck %s
+; RUN: opt %loadPolly  %defaultOpts -polly-detect -polly-ast -analyze  %s | FileCheck %s
 ; region-simplify make polly fail to detect the canonical induction variable.
 ; XFAIL:*
 
