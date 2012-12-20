@@ -13,7 +13,6 @@
 #define POLLY_CODEGENERATION_H
 
 #include "polly/Config/config.h"
-#ifdef CLOOG_FOUND
 
 namespace polly {
   enum VectorizerChoice {
@@ -26,6 +25,5 @@ namespace polly {
   extern VectorizerChoice PollyVectorizerChoice;
 }
 
-#endif // CLOOG_FOUND
 #endif // POLLY_CODEGENERATION_H
 
