@@ -85,7 +85,7 @@ explain them more clearly, and provide more accurate source information about
 them. The improvements since the 3.1 release include:</p>
 
 <ul>
-  <li><tt>-Wuninitialized</tt> has been taught to recognise uninitialized uses
+  <li><tt>-Wuninitialized</tt> has been taught to recognize uninitialized uses
   which always occur when an explicitly-written non-constant condition is either
   <tt>true</tt> or <tt>false</tt>. For example:
 
@@ -164,14 +164,11 @@ int f(vector&lt;map&lt;int, double&gt;&gt;);
 
   </li>
 
-  <li>Clang's <tt>-fcatch-undefined-behavior</tt> option has been renamed to
-  <tt>-fsanitize=undefined</tt> and has grown the ability to check for several
-  new types of undefined behavior. See the Users Manual for more information.
-
-  <!-- Flesh this out prior to release. -->
-
-  <!-- Document renaming of -faddress-sanitizer and -fthread-sanitizer. -->
-
+  <li>The Address Sanitizer feature and Clang's <tt>-fcatch-undefined-behavior</tt> option have been moved to a unified flag set: 
+  <tt>-fsanitize</tt>. This flag can be used to enable the different dynamic checking tools when building. For example,
+  <tt>-faddress-sanitizer</tt> is now <tt>-fsanitize=address</tt>, and <tt>-fcatch-undefined-behavior</tt> is now 
+  <tt>-fsanitize=undefined</tt>. With this release the set of checks available continues to grow, see the Clang
+  documentation and specific sanitizer notes below for details.
   </li>
 
 </ul>
@@ -208,6 +205,35 @@ function call.</p>
 <p>See entries for <code>argument_with_type_tag</code>,
 <code>pointer_with_type_tag</code> and <code>type_tag_for_datatype</code>
 attributes in Clang language extensions documentation.</p>
+
+<h4>Documentation comment support</h4>
+<p>Clang now supports documentation comments written in a Doxygen-like syntax.
+Clang parses the comments and can detect syntactic and semantic errors in
+comments.  These warnings are off by default.  Pass <tt>-Wdocumentation</tt>
+flag to enable warnings about documentation comments.</p>
+
+<p>For example, given:</p>
+
+<pre>/// \param [in] Str the string.
+/// \returns a modified string.
+void do_something(const std::string &amp;str);</pre>
+
+<p><tt>clang -Wdocumentation</tt> will emit two warnings:</p>
+
+<pre><b>doc-test.cc:3:6: <span class="warning">warning:</span></b> '\returns' command used in a comment that is attached to a function returning void [-Wdocumentation]
+/// \returns a modified string.
+    <span class="caret">~^~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+<b>doc-test.cc:2:17: <span class="warning">warning:</span></b> parameter 'Str' not found in the function declaration [-Wdocumentation]
+/// \param [in] Str the string.
+                <span class="caret">^~~</span>
+<b>doc-test.cc:2:17: <span class="note">note:</span></b> did you mean 'str'?
+/// \param [in] Str the string.
+                <span class="caret">^~~</span>
+                <span class="caret">str</span></pre>
+
+<p>libclang includes a new API, <tt>clang_FullComment_getAsXML</tt>, to convert
+comments to XML documents.  This API can be used to build documentation
+extraction tools.</p>
 
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 <h3 id="newflags">New Compiler Flags</h3>
@@ -259,11 +285,7 @@ attributes in Clang language extensions documentation.</p>
 <h3 id="objcchanges">Objective-C Language Changes in Clang</h3>
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 
-<p>...</p>
-
-<ul>
-  <li> </li>
-</ul>
+<p>Bug-fixes, no functionality changes.</p>
 
 <!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
 <h3 id="pythonchanges">Python Binding Changes</h3>
@@ -280,10 +302,6 @@ The following classes and methods have been added:
   <li>SourceLocation.from_offset</li>
   <li>Cursor.is_static_method</li>
 </ul>
-
-<!-- ======================================================================= -->
-<h2 id="knownproblems">Significant Known Problems</h2>
-<!-- ======================================================================= -->
 
 <!-- ======================================================================= -->
 <h2 id="additionalinfo">Additional Information</h2>
