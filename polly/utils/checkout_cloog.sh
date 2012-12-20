@@ -67,9 +67,9 @@ then
   echo :: Performing initial checkout
   # Remove the existing CLooG and ISL dirs to avoid crashing older git versions.
   cd ${CLOOG_DIR}/..
-  run rm -rf ${CLOOG_DIR}
+  run rmdir "${CLOOG_DIR}"
   run git clone http://repo.or.cz/r/cloog.git ${CLOOG_DIR}
-  run rm -rf ${ISL_DIR}
+  run rmdir "${ISL_DIR}"
   run git clone http://repo.or.cz/r/isl.git ${ISL_DIR}
 fi
 
