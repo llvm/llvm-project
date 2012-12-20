@@ -658,13 +658,6 @@ const Loop *ScopStmt::getLoopForDimension(unsigned Dimension) const {
   return IVS[Dimension].second;
 }
 
-const SCEVAddRecExpr *ScopStmt::getSCEVForDimension(unsigned Dimension)
-  const {
-  PHINode *PN =
-    const_cast<PHINode*>(getInductionVariableForDimension(Dimension));
-  return cast<SCEVAddRecExpr>(getParent()->getSE()->getSCEV(PN));
-}
-
 isl_ctx *ScopStmt::getIslCtx() const {
   return Parent.getIslCtx();
 }

@@ -367,9 +367,6 @@ public:
   /// @return The loop at a certain dimension.
   const Loop *getLoopForDimension(unsigned Dimension) const;
 
-  /// @brief Return the SCEV for a loop dimension.
-  const SCEVAddRecExpr *getSCEVForDimension(unsigned Dimension) const;
-
   /// @brief Align the parameters in the statement to the scop context
   void realignParams();
 
