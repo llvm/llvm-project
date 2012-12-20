@@ -74,7 +74,7 @@ enum CodeGenChoice {
 #ifdef CLOOG_FOUND
 enum CodeGenChoice DefaultCodeGen = CODEGEN_CLOOG;
 #else
-enum CodegenChoice DefaultCodeGen = CODEGEN_ISL;
+enum CodeGenChoice DefaultCodeGen = CODEGEN_ISL;
 #endif
 
 
