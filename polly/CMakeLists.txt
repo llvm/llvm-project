@@ -131,7 +131,7 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/include
   )
 
-install(DIRECTORY include
+install(DIRECTORY ${POLLY_BINARY_DIR}/include
   DESTINATION .
   PATTERN ".svn" EXCLUDE
   )
