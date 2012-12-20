@@ -714,16 +714,9 @@ void ClastStmtCodeGen::codegenForGPGPU(const clast_for *F) {
     VMap.insert(std::make_pair<Value*, Value*>(OldIV, IV));
   }
 
-  // Preserve the current values.
-  const ValueMapT ValueMapCopy = ValueMap;
-  const CharMapT ClastVarsCopy = ClastVars;
-  updateWithVMap(VMap);
+  updateWithValueMap(VMap);
 
   BlockGenerator::generate(Builder, *Statement, ValueMap, P);
-
-  // Restore the original values.
-  ValueMap = ValueMapCopy;
-  ClastVars = ClastVarsCopy;
 
   if (AfterBB)
     Builder.SetInsertPoint(AfterBB->begin());
