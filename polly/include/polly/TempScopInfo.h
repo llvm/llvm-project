@@ -250,12 +250,10 @@ class TempScopInfo : public FunctionPass {
   /// @param BB           The BasicBlock to build condition constrains
   /// @param RegionEntry  The entry block of the Smallest Region that containing
   ///                     BB
-  /// @param Cond         The built condition
-  void buildCondition(BasicBlock *BB, BasicBlock *Region, TempScop &Scop);
+  void buildCondition(BasicBlock *BB, BasicBlock *RegionEntry);
 
   // Build the affine function of the given condition
-  void buildAffineCondition(Value &V, bool inverted, Comparison **Comp,
-                            TempScop &Scop) const;
+  void buildAffineCondition(Value &V, bool inverted, Comparison **Comp) const;
 
   // Return the temporary Scop information of Region R, where R must be a valid
   // part of Scop

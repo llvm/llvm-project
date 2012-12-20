@@ -321,7 +321,7 @@ private:
   ///
   /// Detect if a clast_for loop can be executed in parallel.
   ///
-  /// @param f The clast for loop to check.
+  /// @param For The clast for loop to check.
   ///
   /// @return bool Returns true if the incoming clast_for statement can
   ///              execute in parallel.

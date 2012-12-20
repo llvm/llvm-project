@@ -146,8 +146,7 @@ void TempScopInfo::buildLoopBounds(TempScop &Scop) {
 }
 
 void TempScopInfo::buildAffineCondition(Value &V, bool inverted,
-                                         Comparison **Comp,
-                                         TempScop &Scop) const {
+                                         Comparison **Comp) const {
   if (ConstantInt *C = dyn_cast<ConstantInt>(&V)) {
     // If this is always true condition, we will create 1 >= 0,
     // otherwise we will create 1 == 0.
@@ -191,8 +190,7 @@ void TempScopInfo::buildAffineCondition(Value &V, bool inverted,
   *Comp = new Comparison(LHS, RHS, Pred);
 }
 
-void TempScopInfo::buildCondition(BasicBlock *BB, BasicBlock *RegionEntry,
-                                  TempScop &Scop) {
+void TempScopInfo::buildCondition(BasicBlock *BB, BasicBlock *RegionEntry) {
   BBCond Cond;
 
   DomTreeNode *BBNode = DT->getNode(BB), *EntryNode = DT->getNode(RegionEntry);
@@ -219,7 +217,7 @@ void TempScopInfo::buildCondition(BasicBlock *BB, BasicBlock *RegionEntry,
     bool inverted = DT->dominates(Br->getSuccessor(1), BB);
 
     Comparison *Cmp;
-    buildAffineCondition(*(Br->getCondition()), inverted, &Cmp, Scop);
+    buildAffineCondition(*(Br->getCondition()), inverted, &Cmp);
     Cond.push_back(*Cmp);
   }
 
@@ -233,7 +231,7 @@ TempScop *TempScopInfo::buildTempScop(Region &R) {
   for (Region::block_iterator I = R.block_begin(), E = R.block_end();
        I != E; ++I) {
     buildAccessFunctions(R, **I);
-    buildCondition(*I, R.getEntry(), *TScop);
+    buildCondition(*I, R.getEntry());
   }
 
   buildLoopBounds(*TScop);

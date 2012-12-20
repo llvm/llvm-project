@@ -169,7 +169,7 @@ class ScopDetection : public FunctionPass {
   /// @param Context The context of scop detection.
   ///
   /// @return True if the instruction is valid, false otherwise.
-  bool isValidInstruction(Instruction &I, DetectionContext &Context) const;
+  bool isValidInstruction(Instruction &Inst, DetectionContext &Context) const;
 
   /// @brief Check if the BB can be part of a Scop.
   ///

@@ -44,7 +44,6 @@ namespace Json {
                   bool collectComments = true );
 
       /** \brief Read a Value from a <a HREF="http://www.json.org">JSON</a> document.
-       * \param document UTF-8 encoded string containing the document to read.
        * \param root [out] Contains the root value of the document if it was
        *             successfully parsed.
        * \param collectComments \c true to collect comment and allow writing them back during

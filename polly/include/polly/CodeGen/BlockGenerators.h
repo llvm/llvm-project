@@ -145,9 +145,6 @@ public:
   /// instructions, but e.g. for address calculation instructions we currently
   /// generate scalar instructions for each vector lane.
   ///
-  /// @param Builder    The LLVM-IR Builder used to generate the statement. The
-  ///                   code is generated at the location, the builder points
-  ///                   to.
   /// @param Stmt       The statement to code generate.
   /// @param GlobalMaps A vector of maps that define for certain Values
   ///                   referenced from the original code new Values they should
