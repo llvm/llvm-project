@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CLOOG_HASH="57470e76bfd58a0c38c598e816411663193e0f45"
+CLOOG_HASH="c7721fc941db89dd1afc6240eaceea46d0bcad17"
 ISL_HASH="isl-0.11"
 
 PWD=`pwd`
