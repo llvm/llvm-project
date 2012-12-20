@@ -8,6 +8,7 @@ config.polly_obj_root = "@POLLY_BINARY_DIR@"
 config.polly_lib_dir = "@POLLY_LIB_DIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.enable_gpgpu_codegen = "@CUDALIB_FOUND@"
+config.cloog_found = "@CLOOG_FOUND@"
 lit.params['build_config'] = "@POLLY_SOURCE_DIR@/test"
 
 ## Check the current platform with regex
