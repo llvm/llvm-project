@@ -79,13 +79,6 @@ GPUTriple("polly-gpgpu-triple",
        cl::Hidden, cl::init(""));
 #endif /* GPU_CODEGEN */
 
-static cl::opt<bool>
-AtLeastOnce("enable-polly-atLeastOnce",
-       cl::desc("Give polly the hint, that every loop is executed at least"
-                "once"), cl::Hidden,
-       cl::value_desc("OpenMP code generation enabled if true"),
-       cl::init(false), cl::ZeroOrMore);
-
 typedef DenseMap<const char*, Value*> CharMapT;
 
 /// Class to generate LLVM-IR that calculates the value of a clast_expr.
