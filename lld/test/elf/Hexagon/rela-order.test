@@ -1,9 +1,0 @@
-RUN: lld -flavor gnu -target hexagon %p/Inputs/dynobj.o -shared \
-RUN:  --noinhibit-exec -o %t 
-RUN: llvm-objdump -section-headers %t | FileCheck %s
-
-CHECK: .dynsym
-CHECK-NEXT: .dynstr
-CHECK-NEXT: .rela.dyn
-CHECK-NEXT: .rela.plt
-CHECK-NEXT: .plt

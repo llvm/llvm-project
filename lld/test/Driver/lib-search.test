@@ -1,6 +1,0 @@
-RUN: not lld -flavor gnu -t -L%p/../elf/Inputs -lfnarchive  2> %t.err \
-RUN:  | FileCheck %s
-
-# run linker with -t mode to dump full paths to input files
-
-CHECK: {{[^ ]+}}elf/Inputs{{[\\/]}}libfnarchive.a

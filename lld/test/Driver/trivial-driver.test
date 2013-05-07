@@ -1,5 +1,0 @@
-RUN: lld -flavor gnu --help | FileCheck %s
-
-CHECK: -L
-CHECK: -emit-yaml
-CHECK: --noinhibit-exec
