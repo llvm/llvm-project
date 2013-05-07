@@ -1,0 +1,124 @@
+// -*- C++ -*-
+//===-------------------------- typeinfo ----------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef __LIBCPP_TYPEINFO
+#define __LIBCPP_TYPEINFO
+
+/*
+
+    typeinfo synopsis
+
+namespace std {
+
+class type_info
+{
+public:
+    virtual ~type_info();
+
+    bool operator==(const type_info& rhs) const noexcept;
+    bool operator!=(const type_info& rhs) const noexcept;
+
+    bool before(const type_info& rhs) const noexcept;
+    size_t hash_code() const noexcept;
+    const char* name() const noexcept;
+
+    type_info(const type_info& rhs) = delete;
+    type_info& operator=(const type_info& rhs) = delete;
+};
+
+class bad_cast
+    : public exception
+{
+public:
+    bad_cast() noexcept;
+    bad_cast(const bad_cast&) noexcept;
+    bad_cast& operator=(const bad_cast&) noexcept;
+    virtual const char* what() const noexcept;
+};
+
+class bad_typeid
+    : public exception
+{
+public:
+    bad_typeid() noexcept;
+    bad_typeid(const bad_typeid&) noexcept;
+    bad_typeid& operator=(const bad_typeid&) noexcept;
+    virtual const char* what() const noexcept;
+};
+
+}  // std
+
+*/
+
+#include <__config>
+#include <exception>
+#include <cstddef>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+namespace std  // purposefully not using versioning namespace
+{
+
+class _LIBCPP_EXCEPTION_ABI type_info
+{
+    type_info& operator=(const type_info&);
+    type_info(const type_info&);
+protected:
+    const char* __type_name;
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit type_info(const char* __n)
+        : __type_name(__n) {}
+
+public:
+    virtual ~type_info();
+
+    _LIBCPP_INLINE_VISIBILITY
+    const char* name() const _NOEXCEPT {return __type_name;}
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool before(const type_info& __arg) const _NOEXCEPT
+        {return __type_name < __arg.__type_name;}
+    _LIBCPP_INLINE_VISIBILITY
+    size_t hash_code() const _NOEXCEPT
+        {return *reinterpret_cast<const size_t*>(&__type_name);}
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator==(const type_info& __arg) const _NOEXCEPT
+        {return __type_name == __arg.__type_name;}
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator!=(const type_info& __arg) const _NOEXCEPT
+        {return !operator==(__arg);}
+
+};
+
+class _LIBCPP_EXCEPTION_ABI bad_cast
+    : public exception
+{
+public:
+    bad_cast() _NOEXCEPT;
+    virtual ~bad_cast() _NOEXCEPT;
+    virtual const char* what() const _NOEXCEPT;
+};
+
+class _LIBCPP_EXCEPTION_ABI bad_typeid
+    : public exception
+{
+public:
+    bad_typeid() _NOEXCEPT;
+    virtual ~bad_typeid() _NOEXCEPT;
+    virtual const char* what() const _NOEXCEPT;
+};
+
+}  // std
+
+#endif  // __LIBCPP_TYPEINFO
