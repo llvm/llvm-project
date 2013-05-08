@@ -35,7 +35,7 @@ do_objc="yes"
 do_64bit="yes"
 do_debug="no"
 do_asserts="no"
-do_compare="yes"
+do_compare="no"
 BuildDir="`pwd`"
 
 function usage() {
