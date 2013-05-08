@@ -19,8 +19,8 @@
     (if mark-active
         (setq beg (region-beginning)
               end (region-end))
-      (setq beg (line-beginning-position)
-            end (line-end-position)))
+      (setq beg (min (line-beginning-position) (1- (point-max)))
+            end (min (line-end-position) (1- (point-max)))))
     (call-process-region (point-min) (point-max) binary t t nil
                          "-offset" (number-to-string (1- beg))
                          "-length" (number-to-string (- end beg))
