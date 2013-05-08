@@ -1794,6 +1794,7 @@ Here is the table:
 :raw-html:`<th>NVPTX</th>`
 :raw-html:`<th>PowerPC</th>`
 :raw-html:`<th>Sparc</th>`
+:raw-html:`<th>SystemZ</th>`
 :raw-html:`<th>X86</th>`
 :raw-html:`<th>XCore</th>`
 :raw-html:`</tr>`
@@ -1808,6 +1809,7 @@ Here is the table:
 :raw-html:`<td class="yes"></td> <!-- NVPTX -->`
 :raw-html:`<td class="yes"></td> <!-- PowerPC -->`
 :raw-html:`<td class="yes"></td> <!-- Sparc -->`
+:raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="yes"></td> <!-- XCore -->`
 :raw-html:`</tr>`
@@ -1822,6 +1824,7 @@ Here is the table:
 :raw-html:`<td class="no"></td> <!-- NVPTX -->`
 :raw-html:`<td class="no"></td> <!-- PowerPC -->`
 :raw-html:`<td class="no"></td> <!-- Sparc -->`
+:raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
 :raw-html:`</tr>`
@@ -1835,6 +1838,7 @@ Here is the table:
 :raw-html:`<td class="no"></td> <!-- Mips -->`
 :raw-html:`<td class="na"></td> <!-- NVPTX -->`
 :raw-html:`<td class="no"></td> <!-- PowerPC -->`
+:raw-html:`<td class="no"></td> <!-- SystemZ -->`
 :raw-html:`<td class="no"></td> <!-- Sparc -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="yes"></td> <!-- XCore -->`
@@ -1850,6 +1854,7 @@ Here is the table:
 :raw-html:`<td class="yes"></td> <!-- NVPTX -->`
 :raw-html:`<td class="yes"></td> <!-- PowerPC -->`
 :raw-html:`<td class="unknown"></td> <!-- Sparc -->`
+:raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="yes"></td> <!-- XCore -->`
 :raw-html:`</tr>`
@@ -1864,6 +1869,7 @@ Here is the table:
 :raw-html:`<td class="na"></td> <!-- NVPTX -->`
 :raw-html:`<td class="yes"></td> <!-- PowerPC -->`
 :raw-html:`<td class="unknown"></td> <!-- Sparc -->`
+:raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
 :raw-html:`</tr>`
@@ -1878,6 +1884,7 @@ Here is the table:
 :raw-html:`<td class="na"></td> <!-- NVPTX -->`
 :raw-html:`<td class="no"></td> <!-- PowerPC -->`
 :raw-html:`<td class="no"></td> <!-- Sparc -->`
+:raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
 :raw-html:`</tr>`
@@ -1892,6 +1899,7 @@ Here is the table:
 :raw-html:`<td class="no"></td> <!-- NVPTX -->`
 :raw-html:`<td class="yes"></td> <!-- PowerPC -->`
 :raw-html:`<td class="unknown"></td> <!-- Sparc -->`
+:raw-html:`<td class="no"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
 :raw-html:`</tr>`
@@ -1906,6 +1914,7 @@ Here is the table:
 :raw-html:`<td class="no"></td> <!-- NVPTX -->`
 :raw-html:`<td class="no"></td> <!-- PowerPC -->`
 :raw-html:`<td class="no"></td> <!-- Sparc -->`
+:raw-html:`<td class="no"></td> <!-- SystemZ -->`
 :raw-html:`<td class="partial"><a href="#feat_segstacks_x86">*</a></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
 :raw-html:`</tr>`
