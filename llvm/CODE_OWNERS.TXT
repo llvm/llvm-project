@@ -109,6 +109,10 @@ N: Nadav Rotem
 E: nrotem@apple.com
 D: X86 Backend, Loop Vectorizer
 
+N: Richard Sandiford
+E: rsandifo@linux.vnet.ibm.com
+D: SystemZ Backend
+
 N: Duncan Sands
 E: baldrick@free.fr
 D: DragonEgg
