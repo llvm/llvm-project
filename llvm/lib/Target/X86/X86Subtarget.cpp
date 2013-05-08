@@ -171,7 +171,8 @@ bool X86Subtarget::IsLegalToCallImmediateAddr(const TargetMachine &TM) const {
 }
 
 static bool OSHasAVXSupport() {
-#if defined(i386) || defined(__i386__) || defined(__x86__) || defined(_M_IX86)
+#if defined(i386) || defined(__i386__) || defined(__x86__) || defined(_M_IX86)\
+    || defined(__x86_64__) || defined(_M_AMD64) || defined (_M_X64)
 #if defined(__GNUC__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
   // directly because older assemblers do not include support for xgetbv and
