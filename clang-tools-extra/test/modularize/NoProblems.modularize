@@ -1,0 +1,5 @@
+# RUN: modularize %s -x c++
+# RUN: modularize -prefix=%p %s -x c++
+
+Inputs/SomeTypes.h
+Inputs/SomeDecls.h

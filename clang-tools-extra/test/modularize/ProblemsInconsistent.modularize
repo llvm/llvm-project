@@ -1,0 +1,12 @@
+# RUN: modularize %s -x c++ 2>&1 | FileCheck %s
+
+Inputs/InconsistentHeader1.h
+Inputs/InconsistentHeader2.h
+
+# CHECK: error: macro 'SYMBOL' defined at multiple locations:
+# CHECK-NEXT:    {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:3:9
+# CHECK-NEXT:    {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:6:9
+# CHECK-NEXT: error: header '{{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h' has different contents dependening on how it was included
+# CHECK-NEXT: note: 'SYMBOL' in {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h at 3:9 not always provided
+# CHECK-NEXT: note: 'SYMBOL' in {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h at 6:9 not always provided
+# CHECK-NEXT: note: 'TypeInt' in {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h at 10:13 not always provided

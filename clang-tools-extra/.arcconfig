@@ -1,0 +1,4 @@
+{
+  "project_id" : "clang-tools-extra",
+  "conduit_uri" : "http://llvm-reviews.chandlerc.com/"
+}
