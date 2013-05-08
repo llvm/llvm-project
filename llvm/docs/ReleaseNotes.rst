@@ -137,6 +137,13 @@ The R600 backend was added in this release, it supports AMD GPUs
 graphics / compute drivers which are developed as part of the `Mesa3D
 <http://www.mesa3d.org>`_ project.
 
+SystemZ/s390x Backend
+---------------------
+
+LLVM and clang now support IBM's z/Architecture.  At present this support
+is restricted to GNU/Linux (GNU triplet s390x-linux-gnu) and requires
+z10 or greater.
+
 
 External Open Source Projects Using LLVM 3.3
 ============================================
