@@ -216,7 +216,7 @@ private:
   /// This function adds 0, 1, 2 ... to each vector element, starting at zero.
   /// If Negate is set then negative numbers are added e.g. (0, -1, -2, ...).
   /// The sequence starts at StartIndex.
-  Value *getConsecutiveVector(Value* Val, unsigned StartIdx, bool Negate);
+  Value *getConsecutiveVector(Value* Val, int StartIdx, bool Negate);
 
   /// When we go over instructions in the basic block we rely on previous
   /// values within the current basic block or on loop invariant values.
@@ -829,7 +829,7 @@ Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
   return Shuf;
 }
 
-Value *InnerLoopVectorizer::getConsecutiveVector(Value* Val, unsigned StartIdx,
+Value *InnerLoopVectorizer::getConsecutiveVector(Value* Val, int StartIdx,
                                                  bool Negate) {
   assert(Val->getType()->isVectorTy() && "Must be a vector");
   assert(Val->getType()->getScalarType()->isIntegerTy() &&
@@ -842,8 +842,8 @@ Value *InnerLoopVectorizer::getConsecutiveVector(Value* Val, unsigned StartIdx,
 
   // Create a vector of consecutive numbers from zero to VF.
   for (int i = 0; i < VLen; ++i) {
-    int Idx = Negate ? (-i): i;
-    Indices.push_back(ConstantInt::get(ITy, StartIdx + Idx));
+    int64_t Idx = Negate ? (-i) : i;
+    Indices.push_back(ConstantInt::get(ITy, StartIdx + Idx, Negate));
   }
 
   // Add the consecutive indices to the vector value.
@@ -2072,7 +2072,8 @@ InnerLoopVectorizer::vectorizeBlockInLoop(LoopVectorizationLegality *Legal,
           // After broadcasting the induction variable we need to make the
           // vector consecutive by adding  ... -3, -2, -1, 0.
           for (unsigned part = 0; part < UF; ++part)
-            Entry[part] = getConsecutiveVector(Broadcasted, -VF * part, true);
+            Entry[part] = getConsecutiveVector(Broadcasted, -(int)VF * part,
+                                               true);
           continue;
         }
 
