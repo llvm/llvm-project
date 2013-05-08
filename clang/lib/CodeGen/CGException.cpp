@@ -419,14 +419,16 @@ llvm::Value *CodeGenFunction::getSelectorFromSlot() {
   return Builder.CreateLoad(getEHSelectorSlot(), "sel");
 }
 
-void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E) {
+void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
+                                       bool KeepInsertionPoint) {
   if (!E->getSubExpr()) {
     EmitNoreturnRuntimeCallOrInvoke(getReThrowFn(CGM),
                                     ArrayRef<llvm::Value*>());
 
     // throw is an expression, and the expression emitters expect us
     // to leave ourselves at a valid insertion point.
-    EmitBlock(createBasicBlock("throw.cont"));
+    if (KeepInsertionPoint)
+      EmitBlock(createBasicBlock("throw.cont"));
 
     return;
   }
@@ -440,7 +442,8 @@ void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E) {
     CGM.getObjCRuntime().EmitThrowStmt(*this, S, false);
     // This will clear insertion point which was not cleared in
     // call to EmitThrowStmt.
-    EmitBlock(createBasicBlock("throw.cont"));
+    if (KeepInsertionPoint)
+      EmitBlock(createBasicBlock("throw.cont"));
     return;
   }
   
@@ -478,7 +481,8 @@ void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E) {
 
   // throw is an expression, and the expression emitters expect us
   // to leave ourselves at a valid insertion point.
-  EmitBlock(createBasicBlock("throw.cont"));
+  if (KeepInsertionPoint)
+    EmitBlock(createBasicBlock("throw.cont"));
 }
 
 void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
