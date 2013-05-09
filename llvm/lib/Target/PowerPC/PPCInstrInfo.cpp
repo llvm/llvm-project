@@ -1096,8 +1096,11 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
 
   int OpC = CmpInstr->getOpcode();
   unsigned CRReg = CmpInstr->getOperand(0).getReg();
-  bool isFP = OpC == PPC::FCMPUS || OpC == PPC::FCMPUD;
-  unsigned CRRecReg = isFP ? PPC::CR1 : PPC::CR0;
+
+  // FP record forms set CR1 based on the execption status bits, not a
+  // comparison with zero.
+  if (OpC == PPC::FCMPUS || OpC == PPC::FCMPUD)
+    return false;
 
   // The record forms set the condition register based on a signed comparison
   // with zero (so says the ISA manual). This is not as straightforward as it
@@ -1140,9 +1143,9 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
         equalityOnly = true;
       } else
         return false;
-    } else if (!isFP)
+    } else
       equalityOnly = is64BitUnsignedCompare;
-  } else if (!isFP)
+  } else
     equalityOnly = is32BitUnsignedCompare;
 
   if (equalityOnly) {
@@ -1215,8 +1218,8 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
     unsigned IOpC = Instr.getOpcode();
 
     if (&*I != CmpInstr && (
-        Instr.modifiesRegister(CRRecReg, TRI) ||
-        Instr.readsRegister(CRRecReg, TRI)))
+        Instr.modifiesRegister(PPC::CR0, TRI) ||
+        Instr.readsRegister(PPC::CR0, TRI)))
       // This instruction modifies or uses the record condition register after
       // the one we want to change. While we could do this transformation, it
       // would likely not be profitable. This transformation removes one
@@ -1228,15 +1231,6 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
     if ((OpC == PPC::CMPW || OpC == PPC::CMPLW ||
          OpC == PPC::CMPD || OpC == PPC::CMPLD) &&
         (IOpC == PPC::SUBF || IOpC == PPC::SUBF8) &&
-        ((Instr.getOperand(1).getReg() == SrcReg &&
-          Instr.getOperand(2).getReg() == SrcReg2) ||
-        (Instr.getOperand(1).getReg() == SrcReg2 &&
-         Instr.getOperand(2).getReg() == SrcReg))) {
-      Sub = &*I;
-      break;
-    }
-
-    if (isFP && (IOpC == PPC::FSUB || IOpC == PPC::FSUBS) &&
         ((Instr.getOperand(1).getReg() == SrcReg &&
           Instr.getOperand(2).getReg() == SrcReg2) ||
         (Instr.getOperand(1).getReg() == SrcReg2 &&
@@ -1290,8 +1284,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
 
     // The operands to subf are the opposite of sub, so only in the fixed-point
     // case, invert the order.
-    if (!isFP)
-      ShouldSwap = !ShouldSwap;
+    ShouldSwap = !ShouldSwap;
   }
 
   if (ShouldSwap)
@@ -1330,7 +1323,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
   MachineBasicBlock::iterator MII = MI;
   BuildMI(*MI->getParent(), llvm::next(MII), MI->getDebugLoc(),
           get(TargetOpcode::COPY), CRReg)
-    .addReg(CRRecReg, MIOpC != NewOpC ? RegState::Kill : 0);
+    .addReg(PPC::CR0, MIOpC != NewOpC ? RegState::Kill : 0);
 
   if (MIOpC != NewOpC) {
     // We need to be careful here: we're replacing one instruction with

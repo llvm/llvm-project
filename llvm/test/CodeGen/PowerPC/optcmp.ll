@@ -118,7 +118,7 @@ entry:
   ret double %cond
 
 ; CHECK: @food
-; CHECK: fsub. 0, 1, 2
+; CHECK-NOT: fsub. 0, 1, 2
 ; CHECK: stfd 0, 0(5)
 }
 
@@ -131,7 +131,7 @@ entry:
   ret float %cond
 
 ; CHECK: @foof
-; CHECK: fsubs. 0, 1, 2
+; CHECK-NOT: fsubs. 0, 1, 2
 ; CHECK: stfs 0, 0(5)
 }
 
