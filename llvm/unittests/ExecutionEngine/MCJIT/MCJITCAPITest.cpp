@@ -48,6 +48,8 @@ TEST_F(MCJITCAPITest, simple_function) {
   // Creates a function that returns 42, compiles it, and runs it.
   
   LLVMModuleRef module = LLVMModuleCreateWithName("simple_module");
+
+  LLVMSetTarget(module, HostTriple.c_str());
   
   LLVMValueRef function = LLVMAddFunction(
     module, "simple_function", LLVMFunctionType(LLVMInt32Type(), 0, 0, 0));
