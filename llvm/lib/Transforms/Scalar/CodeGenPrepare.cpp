@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/ValueMap.h"
 #include "llvm/Analysis/DominatorInternals.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -88,7 +89,7 @@ namespace {
     /// Keeps track of non-local addresses that have been sunk into a block.
     /// This allows us to avoid inserting duplicate code for blocks with
     /// multiple load/stores of the same address.
-    DenseMap<Value*, Value*> SunkAddrs;
+    ValueMap<Value*, Value*> SunkAddrs;
 
     /// ModifiedDT - If CFG is modified in anyway, dominator tree may need to
     /// be updated.
@@ -1653,10 +1654,6 @@ bool CodeGenPrepare::OptimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       // start of the block.
       CurInstIterator = BB->begin();
       SunkAddrs.clear();
-    } else {
-      // This address is now available for reassignment, so erase the table
-      // entry; we don't want to match some completely different instruction.
-      SunkAddrs[Addr] = 0;
     }
   }
   ++NumMemoryInsts;
