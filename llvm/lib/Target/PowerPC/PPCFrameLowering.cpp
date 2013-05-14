@@ -1170,6 +1170,7 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
         FuncInfo->addMustSaveCR(Reg);
       } else {
         CRSpilled = true;
+        FuncInfo->setSpillsCR();
 
 	// 32-bit:  FP-relative.  Note that we made sure CR2-CR4 all have
 	// the same frame index in PPCRegisterInfo::hasReservedSpillSlot.
