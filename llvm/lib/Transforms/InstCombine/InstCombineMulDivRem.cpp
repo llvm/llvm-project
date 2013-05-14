@@ -525,31 +525,32 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     }
 
     // B * (uitofp i1 C) -> select C, B, 0
-    if(I.hasNoNaNs() && I.hasNoInfs() && I.hasNoSignedZeros()) {
-        Value *LHS=Op0, *RHS=Op1;
-        Value *B, *C;
-        if (!match(RHS, m_UIToFp(m_Value(C))))
-            std::swap(LHS, RHS);
+    if (I.hasNoNaNs() && I.hasNoInfs() && I.hasNoSignedZeros()) {
+      Value *LHS = Op0, *RHS = Op1;
+      Value *B, *C;
+      if (!match(RHS, m_UIToFp(m_Value(C))))
+        std::swap(LHS, RHS);
 
-        if (match(RHS, m_UIToFp(m_Value(C)))) {
-            B=LHS;
-            Value *Zero = ConstantFP::getNegativeZero(B->getType());
-            return SelectInst::Create(C, B, Zero);
-        }
+      if (match(RHS, m_UIToFp(m_Value(C))) && C->getType()->isIntegerTy(1)) {
+        B = LHS;
+        Value *Zero = ConstantFP::getNegativeZero(B->getType());
+        return SelectInst::Create(C, B, Zero);
+      }
     }
 
     // A * (1 - uitofp i1 C) -> select C, 0, A
-    if(I.hasNoNaNs() && I.hasNoInfs() && I.hasNoSignedZeros()) { 
-        Value *LHS=Op0, *RHS=Op1;
-        Value *A, *C;
-        if (!match(RHS, m_FSub(m_FPOne(), m_UIToFp(m_Value(C)))))
-            std::swap(LHS, RHS);
+    if (I.hasNoNaNs() && I.hasNoInfs() && I.hasNoSignedZeros()) {
+      Value *LHS = Op0, *RHS = Op1;
+      Value *A, *C;
+      if (!match(RHS, m_FSub(m_FPOne(), m_UIToFp(m_Value(C)))))
+        std::swap(LHS, RHS);
 
-        if (match(RHS, m_FSub(m_FPOne(), m_UIToFp(m_Value(C))))) {
-            A=LHS;
-            Value *Zero = ConstantFP::getNegativeZero(A->getType());
-            return SelectInst::Create(C, Zero, A);
-        }
+      if (match(RHS, m_FSub(m_FPOne(), m_UIToFp(m_Value(C)))) &&
+          C->getType()->isIntegerTy(1)) {
+        A = LHS;
+        Value *Zero = ConstantFP::getNegativeZero(A->getType());
+        return SelectInst::Create(C, Zero, A);
+      }
     }
 
     if (!isa<Constant>(Op1))

@@ -38,3 +38,21 @@ EntryBlock:
 ; CHECK: select i1 %C, float %B, float %A
 }
 
+; PR15952
+define float @test4(float %A, float %B, i32 %C) {
+  %cf = uitofp i32 %C to float
+  %mc = fsub float 1.000000e+00, %cf
+  %p1 = fmul fast float %A, %mc
+  ret float %p1
+; CHECK: @test4
+; CHECK: uitofp
+}
+
+define float @test5(float %A, float %B, i32 %C) {
+  %cf = uitofp i32 %C to float
+  %p2 = fmul fast float %B, %cf
+  ret float %p2
+; CHECK: @test5
+; CHECK: uitofp
+}
+
