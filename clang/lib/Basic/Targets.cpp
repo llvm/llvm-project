@@ -3536,9 +3536,23 @@ class ARMTargetInfo : public TargetInfo {
     if (T.getOS() != llvm::Triple::Linux)
      return false;
     StringRef ArchName = T.getArchName();
-    if (ArchName.startswith("armv6") || ArchName.startswith("armv7"))
-      return true;
-    return false;
+    if (T.getArch() == llvm::Triple::arm) {
+      if (!ArchName.startswith("armv"))
+        return false;
+      StringRef VersionStr = ArchName.substr(4);
+      unsigned Version;
+      if (VersionStr.getAsInteger(10, Version))
+        return false;
+      return Version >= 6;
+    }
+    assert(T.getArch() == llvm::Triple::thumb);
+    if (!ArchName.startswith("thumbv"))
+      return false;
+    StringRef VersionStr = ArchName.substr(6);
+    unsigned Version;
+    if (VersionStr.getAsInteger(10, Version))
+      return false;
+    return Version >= 7;
   }
 
 public:
