@@ -1,0 +1,21 @@
+{
+   "context" : "{ [] }",
+   "name" : "%1 => %19",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_5[i0, i1] -> MemRef_A[1536i0 + i1] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_5[i0, i1] -> MemRef_B[1536i0 + i1] }"
+            }
+         ],
+         "domain" : "{ Stmt_5[i0, i1] : i0 >= 0 and i0 <= 1535 and i1 >= 0 and i1 <= 1535 }",
+         "name" : "Stmt_5",
+         "schedule" : "{ Stmt_5[i0, i1] -> scattering[0, i0, 0, i1, 0] }"
+      }
+   ]
+}

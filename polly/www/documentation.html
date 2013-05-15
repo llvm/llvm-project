@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>Polly - Documentation</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>Polly: Documentation</h1>
+  <!--*********************************************************************-->
+
+<ul>
+<li><h2><a href="documentation/architecture.html">The architecture
+</a></h2></li>
+<li><h2><a href="example_load_Polly_into_clang.html">Load Polly into clang and automatically
+run it at -O3</a></h2>
+
+This example is for users of Polly. It explains how you can load Polly into
+clang such that the polyhedral optimzations are available during normal
+compilation. Using Polly is not more complicated than just adding a new flag
+to CFLAGS.
+</li>
+<li><h2><a href="example_load_Polly_into_dragonegg.html">Use Polly in dragonegg</a></h2>
+How to load and use Polly within dragonegg.
+</li>
+
+<li>
+<h2><a href="example_manual_matmul.html">Execute the individual Polly passes
+manually</a></h2>
+
+This example presents the individual passes that are involved when optimizing
+code with Polly. We show how to execute them individually and explain for each
+which analysis is performed or what transformation is applied. In this example
+the polyhedral transformation is user-provided to show how much performance
+improvement can be expected by an optimal automatic optimizer.
+</li>
+<li><h2><a href="documentation/passes.html">The LLVM passes available in
+Polly</a></h2></li>
+<li><h2><a href="documentation/memaccess.html">Polly - Memory access optimizations
+</a></h2></li>
+</ul>
+</div>
+</body>
+</html>

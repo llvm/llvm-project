@@ -1,0 +1,93 @@
+This document attempts to point out some best practices that prove to be helpful
+when building new test cases in the tot/test directory.  Everyone is welcomed to
+add/modify contents into this file.
+
+o Do not use hard-coded line numbers in your test case.  Instead, try to tag the
+  line with some distinguishing pattern, and use the function line_number()
+  defined in lldbtest.py which takes filename and string_to_match as arguments
+  and returns the line number.
+
+As an example, take a look at test/breakpoint_conditions/main.c which has these
+two lines:
+
+        return c(val); // Find the line number of c's parent call here.
+
+and
+
+    return val + 3; // Find the line number of function "c" here.
+
+The Python test case TestBreakpointConditions.py uses the comment strings to
+find the line numbers during setUp(self) and use them later on to verify that
+the correct breakpoint is being stopped on and that its parent frame also has
+the correct line number as intended through the breakpoint condition.
+
+o Take advantage of the unittest framework's decorator features to properly
+  mark your test class or method for platform-specific tests.
+
+As an example, take a look at test/forward/TestForwardDeclaration.py which has
+these lines:
+
+    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
+    def test_with_dsym_and_run_command(self):
+        """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
+        self.buildDsym()
+        self.forward_declaration()
+
+This tells the test harness that unless we are running "darwin", the test should
+be skipped.  This is because we are asking to build the binaries with dsym debug
+info, which is only available on the darwin platforms.
+
+o Cleanup after yourself.  A classic example of this can be found in test/types/
+  TestFloatTypes.py:
+
+    def test_float_types_with_dsym(self):
+        """Test that float-type variables are displayed correctly."""
+        d = {'CXX_SOURCES': 'float.cpp'}
+        self.buildDsym(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        self.float_type()
+
+    ...
+
+    def test_double_type_with_dsym(self):
+        """Test that double-type variables are displayed correctly."""
+        d = {'CXX_SOURCES': 'double.cpp'}
+        self.buildDsym(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        self.double_type()
+
+This tests different data structures composed of float types to verify that what
+the debugger prints out matches what the compiler does for different variables
+of these types.  We're using a dictionary to pass the build parameters to the
+build system.  After a particular test instance is done, it is a good idea to
+clean up the files built.  This eliminates the chance that some leftover files
+can interfere with the build phase for the next test instance and render it
+invalid.
+
+TestBase.setTearDownCleanup(self, dictionary) defined in lldbtest.py is created
+to cope with this use case by taking the same build parameters in order to do
+the cleanup when we are finished with a test instance, during
+TestBase.tearDown(self).
+
+o Class-wise cleanup after yourself.
+
+TestBase.tearDownClass(cls) provides a mechanism to invoke the platform-specific
+cleanup after finishing with a test class. A test class can have more than one
+test methods, so the tearDownClass(cls) method gets run after all the test
+methods have been executed by the test harness.
+
+The default cleanup action performed by the plugins/darwin.py module invokes the
+"make clean" os command.
+
+If this default cleanup is not enough, individual class can provide an extra
+cleanup hook with a class method named classCleanup , for example,
+in test/breakpoint_command/TestBreakpointCommand.py:
+
+    @classmethod
+    def classCleanup(cls):
+        system(["/bin/sh", "-c", "rm -f output.txt"])
+
+The 'output.txt' file gets generated during the test run, so it makes sense to
+explicitly spell out the action in the same TestBreakpointCommand.py file to do
+the cleanup instead of artificially adding it as part of the default cleanup
+action which serves to cleanup those intermediate and a.out files. 

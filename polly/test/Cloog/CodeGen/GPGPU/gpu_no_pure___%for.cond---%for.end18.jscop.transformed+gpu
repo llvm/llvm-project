@@ -1,0 +1,21 @@
+{
+   "context" : "{  :  }",
+   "name" : "for.cond => for.end18",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_for_body6[i0, i1, i2] -> MemRef_A[128i0 + i1] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_for_body6[i0, i1, i2] -> MemRef_A[128i0 + i1] }"
+            }
+         ],
+         "domain" : "{ Stmt_for_body6[i0, i1, i2] : i0 >= 0 and i0 <= 127 and i1 >= 0 and i1 <= 127 and i2 >= 0 and i2 <= 255 }",
+         "name" : "Stmt_for_body6",
+         "schedule" : "{ Stmt_for_body6[i0, i1, i2] -> scattering[0, o0, o1, o2, o3, i2, 0] : o0 >= 0 and o0 <= 7 and o1 >= 0 and o1 <= 15 and o2 >= 0 and o2 <= 7 and o3 >= 0 and o3 <= 15 and i0 = 16o0 + o1 and i1 = 16o2 + o3 }"
+      }
+   ]
+}

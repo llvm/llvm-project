@@ -1,0 +1,13 @@
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  add_subdirectory(Linux)
+  add_subdirectory(POSIX)
+elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  #add_subdirectory(FreeBSD)
+  add_subdirectory(POSIX)
+elseif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  add_subdirectory(MacOSX-Kernel)
+endif()
+
+add_subdirectory(gdb-remote)
+add_subdirectory(Utility)
+add_subdirectory(mach-core)

@@ -1,0 +1,295 @@
+ The lldb-perf infrastructure for LLDB performance testing
+===========================================================
+
+lldb-perf is an infrastructure meant to simplify the creation of performance 
+tests for the LLDB debugger. It is contained in liblldbperf.a which is part of
+the standard opensource checkout of LLDB
+
+Its main concepts are:
+- Gauges: a gauge is a thing that takes a sample. Samples include elapsed time,
+  memory used, and energy consumed.
+- Metrics: a metric is a collection of samples that knows how to do statistics
+  like sum() and average(). Metrics can be extended as needed.
+- Measurements: a measurement is the thing that stores an action, a gauge and
+  a metric. You define measurements as in “take the time to run this function”,
+  “take the memory to run this block of code”, and then after you invoke it, 
+  your stats will automagically be there.
+- Tests: a test is a sequence of steps and measurements.
+
+Tests cases should be added as targets to the lldbperf.xcodeproj project. It 
+is probably easiest to duplicate one of the existing targets. In order to 
+write a test based on lldb-perf, you need to subclass  lldb_perf::TestCase:
+
+using namespace lldb_perf;
+
+class FormattersTest : public TestCase
+{
+
+Usually, you will define measurements as variables of your test case class:
+
+private:
+    // C++ formatters
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_std_vector_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_std_list_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_std_map_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_std_string_measurement;
+
+    // Cocoa formatters
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_nsstring_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_nsarray_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_nsdictionary_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_nsset_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_nsbundle_measurement;
+    TimeMeasurement<std::function<void(SBValue)>> m_dump_nsdate_measurement;
+
+A TimeMeasurement is, obviously, a class that measures “how much time to run 
+this block of code”. The block of code is passed as an std::function which you
+can construct with a lambda! You need to give the prototype of your block of
+code. In this example, we run blocks of code that take an SBValue and return
+nothing.
+
+These blocks look like:
+
+    m_dump_std_vector_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "std-vector", "time to dump an std::vector");
+
+Here we are saying: make me a measurement named “std-vector”, whose 
+description is “time to dump an std::vector” and that takes the time required
+to call lldb_perf::Xcode::FetchVariable(value,1,false).
+
+The Xcode class is a collection of utility functions that replicate common
+Xcode patterns (FetchVariable unsurprisingly calls API functions that Xcode
+could use when populating a variables view entry - the 1 means “expand 1 level
+of depth” and the false means “do not dump the data to stdout”)
+
+A full constructor for a TestCase looks like:
+
+FormattersTest () : TestCase()
+{
+    m_dump_std_vector_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "std-vector", "time to dump an std::vector");
+    m_dump_std_list_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "std-list", "time to dump an std::list");
+    m_dump_std_map_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "std-map", "time to dump an std::map");
+    m_dump_std_string_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "std-string", "time to dump an std::string");
+    
+    m_dump_nsstring_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,0,false);
+    }, "ns-string", "time to dump an NSString");
+    
+    m_dump_nsarray_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "ns-array", "time to dump an NSArray");
+    
+    m_dump_nsdictionary_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "ns-dictionary", "time to dump an NSDictionary");
+    
+    m_dump_nsset_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "ns-set", "time to dump an NSSet");
+    
+    m_dump_nsbundle_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,1,false);
+    }, "ns-bundle", "time to dump an NSBundle");
+    
+    m_dump_nsdate_measurement = CreateTimeMeasurement([] (SBValue value) -> void {
+        lldb_perf::Xcode::FetchVariable (value,0,false);
+    }, "ns-date", "time to dump an NSDate");
+}
+
+Once your test case is constructed, Setup() is called on it:
+
+    virtual bool
+	Setup (int argc, const char** argv)
+    {
+        m_app_path.assign(argv[1]);
+        m_out_path.assign(argv[2]);
+        m_target = m_debugger.CreateTarget(m_app_path.c_str());
+        m_target.BreakpointCreateByName("main");
+        SBLaunchInfo launch_info (argv);
+        return Launch (launch_info);
+    }
+    
+Setup() returns a boolean value that indicates if setup was successful.
+In Setup() you fill out a SBLaunchInfo with any needed settings for launching
+your process like arguments, environment variables, working directory, and
+much more.
+
+The last thing you want to do in setup is call Launch():
+
+	bool
+	Launch (coSBLaunchInfo &launch_info);
+
+This ensures your target is now alive. Make sure to have a breakpoint created.
+
+Once you launched, the event loop is entered. The event loop waits for stops, 
+and when it gets one, it calls your test case’s TestStep() function:
+
+    virtual void
+	TestStep (int counter, ActionWanted &next_action)
+
+the counter is the step id (a monotonically increasing counter). In TestStep()
+you will essentially run your measurements and then return what you want the
+driver to do by filling in the ActionWanted object named "next_action".
+
+Possible options are:
+- continue process          next_action.Continue();
+- kill process              next_action.Kill();
+- Step-out on a thread      next_action.StepOut(SBThread)
+- step-over on a thread.    next_action.StepOver(SBThread)
+
+If you use ActionWanted::Next() or ActionWanted::Finish() you need to specify
+a thread to use. By default the TestCase class will select the first thread
+that had a stop reason other than eStopReasonNone and place it into the 
+m_thread member variable of TestCase. This means if your test case hits a
+breakpoint or steps, the thread that hit the breakpoint or finished the step
+will automatically be selected in the process (m_process) and m_thread will
+be set to this thread. If you have one or more threads that will stop with a
+reason simultaneously, you will need to find those threads manually by 
+iterating through the process list and determine what to do next.
+
+For your convenience TestCase has m_debugger, m_target and m_process as member
+variables. As state above m_thread will be filled in with the first thread 
+that has a stop reason.
+
+An example:
+
+    virtual void
+	TestStep (int counter, ActionWanted &next_action)
+    {
+        case 0:
+            m_target.BreakpointCreateByLocation("fmts_tester.mm", 68);
+            next_action.Continue();
+            break;
+        case 1:
+            DoTest ();
+            next_action.Continue();
+            break;
+        case 2:
+            DoTest ();
+            next_action.StepOver(m_thread);
+            break;
+
+DoTest() is a function I define in my own class that calls the measurements:
+    void
+    DoTest ()
+    {
+        SBThread thread_main(m_thread);
+        SBFrame frame_zero(thread_main.GetFrameAtIndex(0));
+        
+        m_dump_nsarray_measurement(frame_zero.FindVariable("nsarray", lldb::eDynamicCanRunTarget));
+        m_dump_nsarray_measurement(frame_zero.FindVariable("nsmutablearray", lldb::eDynamicCanRunTarget));
+
+        m_dump_nsdictionary_measurement(frame_zero.FindVariable("nsdictionary", lldb::eDynamicCanRunTarget));
+        m_dump_nsdictionary_measurement(frame_zero.FindVariable("nsmutabledictionary", lldb::eDynamicCanRunTarget));
+        
+        m_dump_nsstring_measurement(frame_zero.FindVariable("str0", lldb::eDynamicCanRunTarget));
+        m_dump_nsstring_measurement(frame_zero.FindVariable("str1", lldb::eDynamicCanRunTarget));
+        m_dump_nsstring_measurement(frame_zero.FindVariable("str2", lldb::eDynamicCanRunTarget));
+        m_dump_nsstring_measurement(frame_zero.FindVariable("str3", lldb::eDynamicCanRunTarget));
+        m_dump_nsstring_measurement(frame_zero.FindVariable("str4", lldb::eDynamicCanRunTarget));
+        
+        m_dump_nsdate_measurement(frame_zero.FindVariable("me", lldb::eDynamicCanRunTarget));
+        m_dump_nsdate_measurement(frame_zero.FindVariable("cutie", lldb::eDynamicCanRunTarget));
+        m_dump_nsdate_measurement(frame_zero.FindVariable("mom", lldb::eDynamicCanRunTarget));
+        m_dump_nsdate_measurement(frame_zero.FindVariable("dad", lldb::eDynamicCanRunTarget));
+        m_dump_nsdate_measurement(frame_zero.FindVariable("today", lldb::eDynamicCanRunTarget));
+        
+        m_dump_nsbundle_measurement(frame_zero.FindVariable("bundles", lldb::eDynamicCanRunTarget));
+        m_dump_nsbundle_measurement(frame_zero.FindVariable("frameworks", lldb::eDynamicCanRunTarget));
+        
+        m_dump_nsset_measurement(frame_zero.FindVariable("nsset", lldb::eDynamicCanRunTarget));
+        m_dump_nsset_measurement(frame_zero.FindVariable("nsmutableset", lldb::eDynamicCanRunTarget));
+        
+        m_dump_std_vector_measurement(frame_zero.FindVariable("vector", lldb::eDynamicCanRunTarget));
+        m_dump_std_list_measurement(frame_zero.FindVariable("list", lldb::eDynamicCanRunTarget));
+        m_dump_std_map_measurement(frame_zero.FindVariable("map", lldb::eDynamicCanRunTarget));
+
+        m_dump_std_string_measurement(frame_zero.FindVariable("sstr0", lldb::eDynamicCanRunTarget));
+        m_dump_std_string_measurement(frame_zero.FindVariable("sstr1", lldb::eDynamicCanRunTarget));
+        m_dump_std_string_measurement(frame_zero.FindVariable("sstr2", lldb::eDynamicCanRunTarget));
+        m_dump_std_string_measurement(frame_zero.FindVariable("sstr3", lldb::eDynamicCanRunTarget));
+        m_dump_std_string_measurement(frame_zero.FindVariable("sstr4", lldb::eDynamicCanRunTarget));
+    }
+
+Essentially, you call your measurements as if they were functions, passing 
+them arguments and all, and they will do the right thing with gathering stats.
+
+The last step is usually to KILL the inferior and bail out:
+
+    virtual ActionWanted
+	TestStep (int counter)
+    {
+...     
+        case 9:
+            DoTest ();
+            next_action.Continue();
+            break;
+        case 10:
+            DoTest ();
+            next_action.Continue();
+            break;
+        default:
+            next_action.Kill();
+            break;
+    }
+
+
+At the end, you define a Results() function:
+
+    void
+    Results ()
+    {
+        CFCMutableArray array;
+        m_dump_std_vector_measurement.Write(array);
+        m_dump_std_list_measurement.Write(array);
+        m_dump_std_map_measurement.Write(array);
+        m_dump_std_string_measurement.Write(array);
+
+        m_dump_nsstring_measurement.Write(array);
+        m_dump_nsarray_measurement.Write(array);
+        m_dump_nsdictionary_measurement.Write(array);
+        m_dump_nsset_measurement.Write(array);
+        m_dump_nsbundle_measurement.Write(array);
+        m_dump_nsdate_measurement.Write(array);
+
+        CFDataRef xmlData = CFPropertyListCreateData (kCFAllocatorDefault, 
+                                                      array.get(), 
+                                                      kCFPropertyListXMLFormat_v1_0, 
+                                                      0, 
+                                                      NULL);
+        
+        CFURLRef file = CFURLCreateFromFileSystemRepresentation (NULL, 
+                                                                 (const UInt8*)m_out_path.c_str(), 
+                                                                 m_out_path.size(), 
+                                                                 FALSE);
+        
+        CFURLWriteDataAndPropertiesToResource(file,xmlData,NULL,NULL);
+    }
+
+For now, pretty much copy this and just call Write() on all your measurements.
+I plan to move this higher in the hierarchy (e.g. make a 
+TestCase::Write(filename) fairly soon).
+
+Your main() will look like:
+
+int main(int argc, const char * argv[])
+{
+    MyTest test;
+    TestCase::Run (test, argc, argv);
+    return 0;
+}
+
+If you are debugging your test, before Run() call
+
+    test.SetVerbose(true);
+
+Feel free to send any questions and ideas for improvements.

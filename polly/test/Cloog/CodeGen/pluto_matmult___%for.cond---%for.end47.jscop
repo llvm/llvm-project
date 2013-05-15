@@ -1,0 +1,25 @@
+{
+	"name": "for.cond => for.end47",
+	"context": "{ [] }",
+	"statements": [{
+		"name": "Stmt_for_body8",
+		"domain": "{ Stmt_for_body8[i0, i1, i2] : i0 >= 0 and i0 <= 2047 and i1 >= 0 and i1 <= 2047 and i2 >= 0 and i2 <= 2047 }",
+		"schedule": "{ Stmt_for_body8[i0, i1, i2] -> scattering[0, o1, i0, o3, 0, o5, i1, o7, 0, o9, i2, o11, 0] : 64o7 = o5 and 64o11 = o9 and 64o3 = o1 and o1 <= i0 and o1 >= -63 + i0 and o5 <= i1 and o5 >= -63 + i1 and o9 <= i2 and o9 >= -63 + i2 }",
+		"accesses": [{
+			"kind": "read",
+			"relation": "{ Stmt_for_body8[i0, i1, i2] -> MemRef_C[2061i0 + i1] }"
+		},
+		{
+			"kind": "read",
+			"relation": "{ Stmt_for_body8[i0, i1, i2] -> MemRef_A[2061i0 + i2] }"
+		},
+		{
+			"kind": "read",
+			"relation": "{ Stmt_for_body8[i0, i1, i2] -> MemRef_B[i1 + 2061i2] }"
+		},
+		{
+			"kind": "write",
+			"relation": "{ Stmt_for_body8[i0, i1, i2] -> MemRef_C[2061i0 + i1] }"
+		}]
+	}]
+}

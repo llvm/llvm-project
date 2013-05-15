@@ -1,0 +1,11 @@
+#if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  add_subdirectory(Linux)
+#elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  add_subdirectory(FreeBSD)
+#elseif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  add_subdirectory(MacOSX)
+#elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
+#  add_subdirectory(Windows)
+#endif()
+
+add_subdirectory(gdb-server)

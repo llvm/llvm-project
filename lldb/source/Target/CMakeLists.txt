@@ -1,0 +1,44 @@
+set(LLVM_NO_RTTI 1)
+
+include_directories(../Plugins/Process/Utility)
+
+add_lldb_library(lldbTarget
+  ABI.cpp
+  CPPLanguageRuntime.cpp
+  ExecutionContext.cpp
+  LanguageRuntime.cpp
+  Memory.cpp
+  ObjCLanguageRuntime.cpp
+  OperatingSystem.cpp
+  PathMappingList.cpp
+  Platform.cpp
+  Process.cpp
+  RegisterContext.cpp
+  SectionLoadList.cpp
+  StackFrame.cpp
+  StackFrameList.cpp
+  StackID.cpp
+  StopInfo.cpp
+  Target.cpp
+  TargetList.cpp
+  Thread.cpp
+  ThreadList.cpp
+  ThreadPlan.cpp
+  ThreadPlanBase.cpp
+  ThreadPlanCallFunction.cpp
+  ThreadPlanCallUserExpression.cpp
+  ThreadPlanRunToAddress.cpp
+  ThreadPlanShouldStopHere.cpp
+  ThreadPlanStepInRange.cpp
+  ThreadPlanStepInstruction.cpp
+  ThreadPlanStepOut.cpp
+  ThreadPlanStepOverBreakpoint.cpp
+  ThreadPlanStepOverRange.cpp
+  ThreadPlanStepRange.cpp
+  ThreadPlanStepThrough.cpp
+  ThreadPlanStepUntil.cpp
+  ThreadPlanTracer.cpp
+  ThreadSpec.cpp
+  UnixSignals.cpp
+  UnwindAssembly.cpp
+  )

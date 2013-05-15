@@ -1,0 +1,65 @@
+digraph "Scop Graph for 'main' function" {
+	label="Scop Graph for 'main' function";
+
+	Node0x26ace10 [shape=record,label="{%0:\l\l  call void @init_array()\l  br label %1\l}"];
+	Node0x26ace10 -> Node0x26acd60;
+	Node0x26acd60 [shape=record,label="{%1:\l\l  %indvar3 = phi i64 [ %indvar.next4, %16 ], [ 0, %0 ]\l  %exitcond9 = icmp ne i64 %indvar3, 1536\l  br i1 %exitcond9, label %2, label %17\l}"];
+	Node0x26acd60 -> Node0x26acd80;
+	Node0x26acd60 -> Node0x26af2e0;
+	Node0x26acd80 [shape=record,label="{%2:\l\l  br label %3\l}"];
+	Node0x26acd80 -> Node0x26aee80;
+	Node0x26aee80 [shape=record,label="{%3:\l\l  %indvar1 = phi i64 [ %indvar.next2, %14 ], [ 0, %2 ]\l  %scevgep8 = getelementptr [1536 x [1536 x float]]* @C, i64 0, i64 %indvar3, i64 %indvar1\l  %exitcond6 = icmp ne i64 %indvar1, 1536\l  br i1 %exitcond6, label %4, label %15\l}"];
+	Node0x26aee80 -> Node0x26aeea0;
+	Node0x26aee80 -> Node0x26aeec0;
+	Node0x26aeea0 [shape=record,label="{%4:\l\l  store float 0.000000e+00, float* %scevgep8\l  br label %5\l}"];
+	Node0x26aeea0 -> Node0x26aced0;
+	Node0x26aced0 [shape=record,label="{%5:\l\l  %indvar = phi i64 [ %indvar.next, %12 ], [ 0, %4 ]\l  %scevgep5 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %indvar3, i64 %indvar\l  %scevgep = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %indvar, i64 %indvar1\l  %exitcond = icmp ne i64 %indvar, 1536\l  br i1 %exitcond, label %6, label %13\l}"];
+	Node0x26aced0 -> Node0x26ace60;
+	Node0x26aced0 -> Node0x26af5e0;
+	Node0x26ace60 [shape=record,label="{%6:\l\l  %7 = load float* %scevgep8\l  %8 = load float* %scevgep5\l  %9 = load float* %scevgep\l  %10 = fmul float %8, %9\l  %11 = fadd float %7, %10\l  store float %11, float* %scevgep8\l  br label %12\l}"];
+	Node0x26ace60 -> Node0x26af640;
+	Node0x26af640 [shape=record,label="{%12:\l\l  %indvar.next = add i64 %indvar, 1\l  br label %5\l}"];
+	Node0x26af640 -> Node0x26aced0[constraint=false];
+	Node0x26af5e0 [shape=record,label="{%13:\l\l  br label %14\l}"];
+	Node0x26af5e0 -> Node0x26af6e0;
+	Node0x26af6e0 [shape=record,label="{%14:\l\l  %indvar.next2 = add i64 %indvar1, 1\l  br label %3\l}"];
+	Node0x26af6e0 -> Node0x26aee80[constraint=false];
+	Node0x26aeec0 [shape=record,label="{%15:\l\l  br label %16\l}"];
+	Node0x26aeec0 -> Node0x26af740;
+	Node0x26af740 [shape=record,label="{%16:\l\l  %indvar.next4 = add i64 %indvar3, 1\l  br label %1\l}"];
+	Node0x26af740 -> Node0x26acd60[constraint=false];
+	Node0x26af2e0 [shape=record,label="{%17:\l\l  ret i32 0\l}"];
+	colorscheme = "paired12"
+        subgraph cluster_0x26a8b20 {
+          label = "";
+          style = solid;
+          color = 1
+          subgraph cluster_0x26a9220 {
+            label = "";
+            style = filled;
+            color = 3            subgraph cluster_0x26ad500 {
+              label = "";
+              style = solid;
+              color = 5
+              subgraph cluster_0x26ad480 {
+                label = "";
+                style = solid;
+                color = 7
+                Node0x26aced0;
+                Node0x26ace60;
+                Node0x26af640;
+              }
+              Node0x26aee80;
+              Node0x26aeea0;
+              Node0x26af5e0;
+              Node0x26af6e0;
+            }
+            Node0x26acd60;
+            Node0x26acd80;
+            Node0x26aeec0;
+            Node0x26af740;
+          }
+          Node0x26ace10;
+          Node0x26af2e0;
+        }
+}

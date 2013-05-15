@@ -1,0 +1,60 @@
+digraph "Scop Graph for 'print_array' function" {
+	label="Scop Graph for 'print_array' function";
+
+	Node0x24df2c0 [shape=record,label="{%0}"];
+	Node0x24df2c0 -> Node0x24df2a0;
+	Node0x24df2a0 [shape=record,label="{%1}"];
+	Node0x24df2a0 -> Node0x24dee90;
+	Node0x24df2a0 -> Node0x24dee20;
+	Node0x24dee90 [shape=record,label="{%2}"];
+	Node0x24dee90 -> Node0x24debd0;
+	Node0x24debd0 [shape=record,label="{%3}"];
+	Node0x24debd0 -> Node0x24df150;
+	Node0x24debd0 -> Node0x24de990;
+	Node0x24df150 [shape=record,label="{%4}"];
+	Node0x24df150 -> Node0x24df3a0;
+	Node0x24df150 -> Node0x24defb0;
+	Node0x24df3a0 [shape=record,label="{%11}"];
+	Node0x24df3a0 -> Node0x24defb0;
+	Node0x24defb0 [shape=record,label="{%14}"];
+	Node0x24defb0 -> Node0x24df530;
+	Node0x24df530 [shape=record,label="{%15}"];
+	Node0x24df530 -> Node0x24debd0[constraint=false];
+	Node0x24de990 [shape=record,label="{%16}"];
+	Node0x24de990 -> Node0x24df9a0;
+	Node0x24df9a0 [shape=record,label="{%19}"];
+	Node0x24df9a0 -> Node0x24df2a0[constraint=false];
+	Node0x24dee20 [shape=record,label="{%20}"];
+	colorscheme = "paired12"
+        subgraph cluster_0x24dbe40 {
+          label = "";
+          style = solid;
+          color = 1
+          subgraph cluster_0x24db6e0 {
+            label = "";
+            style = solid;
+            color = 6
+            subgraph cluster_0x24db660 {
+              label = "";
+              style = solid;
+              color = 5
+              subgraph cluster_0x24db5e0 {
+                label = "";
+                style = solid;
+                color = 7
+                Node0x24df150;
+                Node0x24df3a0;
+              }
+              Node0x24debd0;
+              Node0x24defb0;
+              Node0x24df530;
+            }
+            Node0x24df2a0;
+            Node0x24dee90;
+            Node0x24de990;
+            Node0x24df9a0;
+          }
+          Node0x24df2c0;
+          Node0x24dee20;
+        }
+}

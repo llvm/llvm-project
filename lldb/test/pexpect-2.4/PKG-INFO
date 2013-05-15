@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: pexpect
+Version: 2.4
+Summary: Pexpect is a pure Python Expect. It allows easy control of other applications.
+Home-page: http://pexpect.sourceforge.net/
+Author: Noah Spurrier
+Author-email: noah@noah.org
+License: MIT license
+Description: UNKNOWN
+Platform: UNIX

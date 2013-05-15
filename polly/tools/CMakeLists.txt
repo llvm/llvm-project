@@ -1,0 +1,5 @@
+if (CUDALIB_FOUND)
+  add_subdirectory(GPURuntime)
+endif (CUDALIB_FOUND)
+
+set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)

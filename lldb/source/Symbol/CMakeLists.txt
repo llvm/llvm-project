@@ -1,0 +1,32 @@
+set(LLVM_NO_RTTI 1)
+
+add_lldb_library(lldbSymbol
+  Block.cpp
+  ClangASTContext.cpp
+  ClangASTImporter.cpp
+  ClangASTType.cpp
+  ClangExternalASTSourceCallbacks.cpp
+  ClangExternalASTSourceCommon.cpp
+  ClangNamespaceDecl.cpp
+  CompileUnit.cpp
+  Declaration.cpp
+  DWARFCallFrameInfo.cpp
+  Function.cpp
+  FuncUnwinders.cpp
+  LineEntry.cpp
+  LineTable.cpp
+  ObjectFile.cpp
+  Symbol.cpp
+  SymbolContext.cpp
+  SymbolFile.cpp
+  SymbolVendor.cpp
+  Symtab.cpp
+  Type.cpp
+  TypeHierarchyNavigator.cpp
+  TypeList.cpp
+  UnwindPlan.cpp
+  UnwindTable.cpp
+  Variable.cpp
+  VariableList.cpp
+  VerifyDecl.cpp
+  )

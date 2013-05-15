@@ -1,0 +1,25 @@
+{
+	"name": "%1 => %17",
+	"context": "{ [] }",
+	"statements": [{
+		"name": "Stmt_6",
+		"domain": "{ Stmt_6[i0, i1, i2] : i0 >= 0 and i0 <= 1023 and i1 >= 0 and i1 <= 1023 and i2 >= 0 and i2 <= 1023 }",
+		"schedule": "{ Stmt_6[i0,  i2, i1] -> scattering[i0, i1, o, i2] : exists (e0 = [(o)/4]: 4e0 = o and o <= i2 and o >= -3 + i2) }",
+		"accesses": [{
+			"kind": "read",
+			"relation": "{ Stmt_6[i0, i1, i2] -> MemRef_A[i0 + 1024i2] }"
+		},
+		{
+			"kind": "read",
+			"relation": "{ Stmt_6[i0, i1, i2] -> MemRef_B[1024i1 + i2] }"
+		},
+		{
+			"kind": "read",
+			"relation": "{ Stmt_6[i0, i1, i2] -> MemRef_C[1024i0 + i1] }"
+		},
+		{
+			"kind": "write",
+			"relation": "{ Stmt_6[i0, i1, i2] -> MemRef_C[1024i0 + i1] }"
+		}]
+	}]
+}

@@ -1,0 +1,42 @@
+{
+	"name": "bb18 => bb50",
+	"context": "{ [] }",
+	"statements": [{
+		"name": "Stmt_bb23",
+		"domain": "{ Stmt_bb23[i0, i1, i2] : i0 >= 0 and i0 <= 1023 and i1 >= 0 and i1 <= 1023 and i2 >= 0 and i2 <= 1023 }",
+		"schedule": "{ Stmt_bb23[i0, i1, i2] -> scattering[0, o0, 0, o1, 0, o2, 0, i0, i1, i2] : (exists e0, e1, e2: 4e0 = o0 and 4e1 = o1 and 4e2 = o2 and o0 <= i0 <= 3 + o0 and o1 <= i1 <= 3 + o1 and o2 <= i2 <= 3 + o2)}",
+		"accesses": [{
+			"kind": "read",
+			"relation": "{ Stmt_bb23[i0, i1, i2] -> MemRef_A[1024i0 + i2] }"
+		},
+		{
+			"kind": "read",
+			"relation": "{ Stmt_bb23[i0, i1, i2] -> MemRef_B[i1 + 1024i2] }"
+		},
+		{
+			"kind": "read",
+			"relation": "{ Stmt_bb23[i0, i1, i2] -> MemRef_C[1024i0 + i1] }"
+		},
+		{
+			"kind": "write",
+			"relation": "{ Stmt_bb23[i0, i1, i2] -> MemRef_C[1024i0 + i1] }"
+		}]
+	},
+	{
+		"name": "Stmt_bb39",
+		"domain": "{ Stmt_bb39[i0, i1, i2] : i0 >= 0 and i0 <= 1023 and i1 >= 0 and i1 <= 1023 and i2 >= 0 and i2 <= 1023 }",
+		"schedule": "{ Stmt_bb39[i0, i1, i2] -> scattering[1, o0, 0, o1, 0, o2, 0, i0, i1, i2] : (exists e0, e1, e2: 4e0 = o0 and 4e1 = o1 and 4e2 = o2 and o0 <= i0 <= 3 + o0 and o1 <= i1 <= 3 + o1 and o2 <= i2 <= 3 + o2)}",
+		"accesses": [{
+			"kind": "read",
+			"relation": "{ Stmt_bb39[i0, i1, i2] -> MemRef_X[i2] }"
+		},
+		{
+			"kind": "read",
+			"relation": "{ Stmt_bb39[i0, i1, i2] -> MemRef_X[i2] }"
+		},
+		{
+			"kind": "write",
+			"relation": "{ Stmt_bb39[i0, i1, i2] -> MemRef_X[i2] }"
+		}]
+	}]
+}

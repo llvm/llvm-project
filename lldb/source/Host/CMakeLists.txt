@@ -1,0 +1,11 @@
+add_subdirectory(common)
+
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  add_subdirectory(macosx)
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  add_subdirectory(linux)
+elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  add_subdirectory(freebsd)
+#elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
+#  add_subdirectory(windows)
+endif()
