@@ -599,3 +599,27 @@ for.end179:                                       ; preds = %for.cond.loopexit, 
 declare <8 x i16> @llvm.arm.neon.vrshiftu.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 declare <8 x i16> @llvm.arm.neon.vqsubu.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 declare <8 x i8> @llvm.arm.neon.vqmovnu.v8i8(<8 x i16>) nounwind readnone
+
+; vmull lowering would create a zext(v4i8 load()) instead of a zextload(v4i8),
+; creating an illegal type during legalization and causing an assert.
+; PR15970
+define void @no_illegal_types_vmull_sext(<4 x i32> %a) {
+entry:
+  %wide.load283.i = load <4 x i8>* undef, align 1
+  %0 = sext <4 x i8> %wide.load283.i to <4 x i32>
+  %1 = sub nsw <4 x i32> %0, %a
+  %2 = mul nsw <4 x i32> %1, %1
+  %predphi290.v.i = select <4 x i1> undef, <4 x i32> undef, <4 x i32> %2
+  store <4 x i32> %predphi290.v.i, <4 x i32>* undef, align 4
+  ret void
+}
+define void @no_illegal_types_vmull_zext(<4 x i32> %a) {
+entry:
+  %wide.load283.i = load <4 x i8>* undef, align 1
+  %0 = zext <4 x i8> %wide.load283.i to <4 x i32>
+  %1 = sub nsw <4 x i32> %0, %a
+  %2 = mul nsw <4 x i32> %1, %1
+  %predphi290.v.i = select <4 x i1> undef, <4 x i32> undef, <4 x i32> %2
+  store <4 x i32> %predphi290.v.i, <4 x i32>* undef, align 4
+  ret void
+}
