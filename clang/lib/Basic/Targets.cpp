@@ -3527,6 +3527,20 @@ class ARMTargetInfo : public TargetInfo {
 
   static const Builtin::Info BuiltinInfo[];
 
+  static bool shouldUseInlineAtomic(const llvm::Triple &T) {
+    // On linux, binaries targeting old cpus call functions in libgcc to
+    // perform atomic operations. The implementation in libgcc then calls into
+    // the kernel which on armv6 and newer uses ldrex and strex. The net result
+    // is that if we assume the kernel is at least as recent as the hardware,
+    // it is safe to use atomic instructions on armv6 and newer.
+    if (T.getOS() != llvm::Triple::Linux)
+     return false;
+    StringRef ArchName = T.getArchName();
+    if (ArchName.startswith("armv6") || ArchName.startswith("armv7"))
+      return true;
+    return false;
+  }
+
 public:
   ARMTargetInfo(const std::string &TripleStr)
     : TargetInfo(TripleStr), ABI("aapcs-linux"), CPU("arm1136j-s"), IsAAPCS(true)
@@ -3559,8 +3573,9 @@ public:
     TheCXXABI.set(TargetCXXABI::GenericARM);
 
     // ARM has atomics up to 8 bytes
-    // FIXME: Set MaxAtomicInlineWidth if we have the feature v6e
     MaxAtomicPromoteWidth = 64;
+    if (shouldUseInlineAtomic(getTriple()))
+      MaxAtomicInlineWidth = 64;
 
     // Do force alignment of members that follow zero length bitfields.  If
     // the alignment of the zero-length bitfield is greater than the member 
