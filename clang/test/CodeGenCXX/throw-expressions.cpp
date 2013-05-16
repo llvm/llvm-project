@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -Wno-unreachable-code -Werror -emit-llvm -o - %s | FileCheck %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -Wno-unreachable-code -Werror -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 int val = 42;
 int& test1() {
