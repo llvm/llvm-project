@@ -78,6 +78,9 @@ R600TargetLowering::R600TargetLowering(TargetMachine &TM) :
   setOperationAction(ISD::SELECT, MVT::i32, Custom);
   setOperationAction(ISD::SELECT, MVT::f32, Custom);
 
+  setOperationAction(ISD::VSELECT, MVT::v4i32, Expand);
+  setOperationAction(ISD::VSELECT, MVT::v2i32, Expand);
+
   // Legalize loads and stores to the private address space.
   setOperationAction(ISD::LOAD, MVT::i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
