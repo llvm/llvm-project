@@ -115,7 +115,6 @@ AMDGPUPassConfig::addPreISel() {
 }
 
 bool AMDGPUPassConfig::addInstSelector() {
-  addPass(createAMDGPUPeepholeOpt(*TM));
   addPass(createAMDGPUISelDag(getAMDGPUTargetMachine()));
 
   const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>();

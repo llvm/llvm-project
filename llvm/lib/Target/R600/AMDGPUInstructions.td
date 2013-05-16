@@ -284,6 +284,17 @@ class SHA256MaPattern <Instruction BFI_INT, Instruction XOR> : Pat <
   (BFI_INT (XOR i32:$x, i32:$y), i32:$z, i32:$y)
 >;
 
+// Bitfield extract patterns
+
+def legalshift32 : ImmLeaf <i32, [{return Imm >=0 && Imm < 32;}]>;
+def bfemask : PatLeaf <(imm), [{return isMask_32(N->getZExtValue());}],
+                            SDNodeXForm<imm, [{ return CurDAG->getTargetConstant(CountTrailingOnes_32(N->getZExtValue()), MVT::i32);}]>>;
+
+class BFEPattern <Instruction BFE> : Pat <
+  (and (srl i32:$x, legalshift32:$y), bfemask:$z),
+  (BFE $x, $y, $z)
+>;
+
 include "R600Instructions.td"
 
 include "SIInstrInfo.td"
