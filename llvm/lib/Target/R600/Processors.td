@@ -45,3 +45,4 @@ def : Proc<"tahiti",     SI_Itin, [Feature64BitPtr, FeatureFP64]>;
 def : Proc<"pitcairn",   SI_Itin, [Feature64BitPtr, FeatureFP64]>;
 def : Proc<"verde",      SI_Itin, [Feature64BitPtr, FeatureFP64]>;
 def : Proc<"oland",      SI_Itin, [Feature64BitPtr, FeatureFP64]>;
+def : Proc<"hainan",     SI_Itin, [Feature64BitPtr, FeatureFP64]>;
