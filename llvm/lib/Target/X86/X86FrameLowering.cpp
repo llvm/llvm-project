@@ -534,6 +534,12 @@ uint32_t X86FrameLowering::getCompactUnwindEncoding(MachineFunction &MF) const {
       // If there are too many saved registers, we cannot use compact encoding.
       if (SavedRegIdx >= CU_NUM_SAVED_REGS) return CU::UNWIND_MODE_DWARF;
 
+      unsigned Reg = MI.getOperand(0).getReg();
+      if (Reg == (Is64Bit ? X86::RAX : X86::EAX)) {
+        ExpectEnd = true;
+        continue;
+      }
+
       SavedRegs[SavedRegIdx++] = MI.getOperand(0).getReg();
       StackAdjust += OffsetSize;
       InstrOffset += PushInstrSize;
