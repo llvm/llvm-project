@@ -35,14 +35,11 @@ class R600MCCodeEmitter : public AMDGPUMCCodeEmitter {
   void operator=(const R600MCCodeEmitter &) LLVM_DELETED_FUNCTION;
   const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
-  const MCSubtargetInfo &STI;
-  MCContext &Ctx;
 
 public:
 
-  R600MCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
-                    const MCSubtargetInfo &sti, MCContext &ctx)
-    : MCII(mcii), MRI(mri), STI(sti), Ctx(ctx) { }
+  R600MCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri)
+    : MCII(mcii), MRI(mri) { }
 
   /// \brief Encode the instruction and write it to the OS.
   virtual void EncodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -98,10 +95,8 @@ enum TextureTypes {
 };
 
 MCCodeEmitter *llvm::createR600MCCodeEmitter(const MCInstrInfo &MCII,
-                                           const MCRegisterInfo &MRI,
-                                           const MCSubtargetInfo &STI,
-                                           MCContext &Ctx) {
-  return new R600MCCodeEmitter(MCII, MRI, STI, Ctx);
+                                           const MCRegisterInfo &MRI) {
+  return new R600MCCodeEmitter(MCII, MRI);
 }
 
 void R600MCCodeEmitter::EncodeInstruction(const MCInst &MI, raw_ostream &OS,

@@ -78,7 +78,7 @@ static MCCodeEmitter *createAMDGPUMCCodeEmitter(const MCInstrInfo &MCII,
   if (STI.getFeatureBits() & AMDGPU::Feature64BitPtr) {
     return createSIMCCodeEmitter(MCII, MRI, STI, Ctx);
   } else {
-    return createR600MCCodeEmitter(MCII, MRI, STI, Ctx);
+    return createR600MCCodeEmitter(MCII, MRI);
   }
 }
 
