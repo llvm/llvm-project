@@ -1558,10 +1558,36 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
                                         Constructor->isExplicit(),
                                         Constructor->isInlineSpecified(),
                                         false, Constructor->isConstexpr());
+
     // Claim that the instantiation of a constructor or constructor template
     // inherits the same constructor that the template does.
-    if (const CXXConstructorDecl *Inh = Constructor->getInheritedConstructor())
+    if (CXXConstructorDecl *Inh = const_cast<CXXConstructorDecl *>(
+            Constructor->getInheritedConstructor())) {
+      // If we're instantiating a specialization of a function template, our
+      // "inherited constructor" will actually itself be a function template.
+      // Instantiate a declaration of it, too.
+      if (FunctionTemplate) {
+        assert(!TemplateParams && Inh->getDescribedFunctionTemplate() &&
+               !Inh->getParent()->isDependentContext() &&
+               "inheriting constructor template in dependent context?");
+        Sema::InstantiatingTemplate Inst(SemaRef, Constructor->getLocation(),
+                                         Inh);
+        if (Inst)
+          return 0;
+        Sema::ContextRAII SavedContext(SemaRef, Inh->getDeclContext());
+        LocalInstantiationScope LocalScope(SemaRef);
+
+        // Use the same template arguments that we deduced for the inheriting
+        // constructor. There's no way they could be deduced differently.
+        MultiLevelTemplateArgumentList InheritedArgs;
+        InheritedArgs.addOuterTemplateArguments(TemplateArgs.getInnermost());
+        Inh = cast_or_null<CXXConstructorDecl>(
+            SemaRef.SubstDecl(Inh, Inh->getDeclContext(), InheritedArgs));
+        if (!Inh)
+          return 0;
+      }
       cast<CXXConstructorDecl>(Method)->setInheritedConstructor(Inh);
+    }
   } else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(D)) {
     Method = CXXDestructorDecl::Create(SemaRef.Context, Record,
                                        StartLoc, NameInfo, T, TInfo,
