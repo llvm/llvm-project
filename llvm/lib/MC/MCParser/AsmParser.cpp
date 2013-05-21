@@ -1092,7 +1092,7 @@ bool AsmParser::ParseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
     MCBinaryExpr::Opcode Dummy;
     unsigned NextTokPrec = getBinOpPrecedence(Lexer.getKind(), Dummy);
     if (TokPrec < NextTokPrec) {
-      if (ParseBinOpRHS(Precedence+1, RHS, EndLoc)) return true;
+      if (ParseBinOpRHS(TokPrec+1, RHS, EndLoc)) return true;
     }
 
     // Merge LHS and RHS according to operator.

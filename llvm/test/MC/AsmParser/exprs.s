@@ -45,6 +45,7 @@ k:
         check_expr 0 || 0, 0
         check_expr 1 + 2 < 3 + 4, 1
         check_expr 1 << 8 - 1, 128
+        check_expr 3 * 9 - 2 * 9 + 1, 10
 
         .set c, 10
         check_expr c + 1, 11
