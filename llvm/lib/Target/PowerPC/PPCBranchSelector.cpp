@@ -112,15 +112,21 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
       unsigned MBBStartOffset = 0;
       for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
            I != E; ++I) {
-        if (I->getOpcode() != PPC::BCC || I->getOperand(2).isImm()) {
+        MachineBasicBlock *Dest = 0;
+        if (I->getOpcode() == PPC::BCC && !I->getOperand(2).isImm())
+          Dest = I->getOperand(2).getMBB();
+        else if ((I->getOpcode() == PPC::BDNZ8 || I->getOpcode() == PPC::BDNZ ||
+                  I->getOpcode() == PPC::BDZ8  || I->getOpcode() == PPC::BDZ) &&
+                 !I->getOperand(0).isImm())
+          Dest = I->getOperand(0).getMBB();
+
+        if (!Dest) {
           MBBStartOffset += TII->GetInstSizeInBytes(I);
           continue;
         }
         
         // Determine the offset from the current branch to the destination
         // block.
-        MachineBasicBlock *Dest = I->getOperand(2).getMBB();
-        
         int BranchSize;
         if (Dest->getNumber() <= MBB.getNumber()) {
           // If this is a backwards branch, the delta is the offset from the
