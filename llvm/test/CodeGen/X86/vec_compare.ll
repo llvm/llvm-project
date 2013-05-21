@@ -131,9 +131,15 @@ define <2 x i64> @test10(<2 x i64> %A, <2 x i64> %B) nounwind {
 }
 
 define <2 x i64> @test11(<2 x i64> %A, <2 x i64> %B) nounwind {
+; CHECK: [[CONSTSEG:[A-Z0-9_]*]]:
+; CHECK:      .long	2147483648
+; CHECK-NEXT: .long	2147483648
+; CHECK-NEXT: .long	2147483648
+; CHECK-NEXT: .long	2147483648
 ; CHECK: test11:
-; CHECK: pxor
-; CHECK: pxor
+; CHECK: movdqa [[CONSTSEG]], [[CONSTREG:%xmm[0-9]*]]
+; CHECK: pxor [[CONSTREG]]
+; CHECK: pxor [[CONSTREG]]
 ; CHECK: pcmpgtd %xmm1
 ; CHECK: pshufd $-96
 ; CHECK: pcmpeqd

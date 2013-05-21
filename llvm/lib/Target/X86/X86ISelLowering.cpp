@@ -9336,28 +9336,23 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget *Subtarget,
   if (Swap)
     std::swap(Op0, Op1);
 
-  // Since SSE has no unsigned integer comparisons, we need to flip  the sign
-  // bits of the inputs before performing those operations.
-  if (FlipSigns) {
-    EVT EltVT = VT.getVectorElementType();
-    SDValue SignBit = DAG.getConstant(APInt::getSignBit(EltVT.getSizeInBits()),
-                                      EltVT);
-    std::vector<SDValue> SignBits(VT.getVectorNumElements(), SignBit);
-    SDValue SignVec = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, &SignBits[0],
-                                    SignBits.size());
-    Op0 = DAG.getNode(ISD::XOR, dl, VT, Op0, SignVec);
-    Op1 = DAG.getNode(ISD::XOR, dl, VT, Op1, SignVec);
-  }
-
   // Check that the operation in question is available (most are plain SSE2,
   // but PCMPGTQ and PCMPEQQ have different requirements).
   if (VT == MVT::v2i64) {
     if (Opc == X86ISD::PCMPGT && !Subtarget->hasSSE42()) {
       assert(Subtarget->hasSSE2() && "Don't know how to lower!");
 
-      // First cast everything to the right type,
+      // First cast everything to the right type.
       Op0 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, Op0);
       Op1 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, Op1);
+
+      // Since SSE has no unsigned integer comparisons, we need to flip the sign
+      // bits of the inputs before performing those operations.
+      if (FlipSigns) {
+        SDValue SB = DAG.getConstant(0x80000000U, MVT::v4i32);
+        Op0 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op0, SB);
+        Op1 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op1, SB);
+      }
 
       // Emulate PCMPGTQ with (hi1 > hi2) | ((hi1 == hi2) & (lo1 > lo2))
       SDValue GT = DAG.getNode(X86ISD::PCMPGT, dl, MVT::v4i32, Op0, Op1);
@@ -9384,7 +9379,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget *Subtarget,
       // pcmpeqd + pshufd + pand.
       assert(Subtarget->hasSSE2() && !FlipSigns && "Don't know how to lower!");
 
-      // First cast everything to the right type,
+      // First cast everything to the right type.
       Op0 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, Op0);
       Op1 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, Op1);
 
@@ -9401,6 +9396,15 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget *Subtarget,
 
       return DAG.getNode(ISD::BITCAST, dl, VT, Result);
     }
+  }
+
+  // Since SSE has no unsigned integer comparisons, we need to flip the sign
+  // bits of the inputs before performing those operations.
+  if (FlipSigns) {
+    EVT EltVT = VT.getVectorElementType();
+    SDValue SB = DAG.getConstant(APInt::getSignBit(EltVT.getSizeInBits()), VT);
+    Op0 = DAG.getNode(ISD::XOR, dl, VT, Op0, SB);
+    Op1 = DAG.getNode(ISD::XOR, dl, VT, Op1, SB);
   }
 
   SDValue Result = DAG.getNode(Opc, dl, VT, Op0, Op1);
