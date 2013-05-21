@@ -47,3 +47,9 @@ int no_local_type_template_args();
 #endif
 
 // CHECK: has_local_type_template_args
+
+#if __has_extension(cxx_binary_literals)
+int has_binary_literals();
+#endif
+
+// CHECK: has_binary_literals

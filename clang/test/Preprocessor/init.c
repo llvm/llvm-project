@@ -8,7 +8,17 @@
 // BLOCKS:#define __BLOCKS__ 1
 // BLOCKS:#define __block __attribute__((__blocks__(byref)))
 //
-// 
+//
+// RUN: %clang_cc1 -x c++ -std=c++1y -E -dM < /dev/null | FileCheck -check-prefix CXX1Y %s
+//
+// CXX1Y:#define __GNUG__
+// CXX1Y:#define __GXX_EXPERIMENTAL_CXX0X__ 1
+// CXX1Y:#define __GXX_RTTI 1
+// CXX1Y:#define __GXX_WEAK__ 1
+// CXX1Y:#define __cplusplus 201305L
+// CXX1Y:#define __private_extern__ extern
+//
+//
 // RUN: %clang_cc1 -x c++ -std=c++11 -E -dM < /dev/null | FileCheck -check-prefix CXX11 %s
 //
 // CXX11:#define __GNUG__
@@ -65,6 +75,14 @@
 // 
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
+//
+//
+// RUN: %clang_cc1 -x c++ -std=gnu++1y -E -dM < /dev/null | FileCheck -check-prefix GXX1Y %s
+//
+// GXX1Y:#define __GNUG__
+// GXX1Y:#define __GXX_WEAK__ 1
+// GXX1Y:#define __cplusplus 201305L
+// GXX1Y:#define __private_extern__ extern
 //
 //
 // RUN: %clang_cc1 -x c++ -std=gnu++11 -E -dM < /dev/null | FileCheck -check-prefix GXX11 %s
