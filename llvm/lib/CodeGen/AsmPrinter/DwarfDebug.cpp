@@ -708,6 +708,12 @@ CompileUnit *DwarfDebug::constructCompileUnit(const MDNode *N) {
   Asm->OutStreamer.getContext().setMCLineTableSymbol(LineTableStartSym,
                                                      NewCU->getUniqueID());
 
+  // Use a single line table if we are using .loc and generating assembly.
+  bool UseTheFirstCU =
+    (Asm->TM.hasMCUseLoc() &&
+     Asm->OutStreamer.getKind() == MCStreamer::SK_AsmStreamer) ||
+    (NewCU->getUniqueID() == 0);
+
   // DW_AT_stmt_list is a offset of line number information for this
   // compile unit in debug_line section. For split dwarf this is
   // left in the skeleton CU and so not included.
@@ -716,9 +722,9 @@ CompileUnit *DwarfDebug::constructCompileUnit(const MDNode *N) {
   if (!useSplitDwarf()) {
     if (Asm->MAI->doesDwarfUseRelocationsAcrossSections())
       NewCU->addLabel(Die, dwarf::DW_AT_stmt_list, dwarf::DW_FORM_data4,
-                      NewCU->getUniqueID() == 0 ?
+                      UseTheFirstCU ?
                       Asm->GetTempSymbol("section_line") : LineTableStartSym);
-    else if (NewCU->getUniqueID() == 0)
+    else if (UseTheFirstCU)
       NewCU->addUInt(Die, dwarf::DW_AT_stmt_list, dwarf::DW_FORM_data4, 0);
     else
       NewCU->addDelta(Die, dwarf::DW_AT_stmt_list, dwarf::DW_FORM_data4,
@@ -1441,7 +1447,12 @@ void DwarfDebug::beginFunction(const MachineFunction *MF) {
   LexicalScope *FnScope = LScopes.getCurrentFunctionScope();
   CompileUnit *TheCU = SPMap.lookup(FnScope->getScopeNode());
   assert(TheCU && "Unable to find compile unit!");
-  Asm->OutStreamer.getContext().setDwarfCompileUnitID(TheCU->getUniqueID());
+  if (Asm->TM.hasMCUseLoc() &&
+      Asm->OutStreamer.getKind() == MCStreamer::SK_AsmStreamer)
+    // Use a single line table if we are using .loc and generating assembly.
+    Asm->OutStreamer.getContext().setDwarfCompileUnitID(0);
+  else
+    Asm->OutStreamer.getContext().setDwarfCompileUnitID(TheCU->getUniqueID());
 
   FunctionBeginSym = Asm->GetTempSymbol("func_begin",
                                         Asm->getFunctionNumber());

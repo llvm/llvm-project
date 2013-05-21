@@ -1,5 +1,6 @@
 ; RUN: llc -O0 %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llc < %s -O0 -mtriple=x86_64-apple-macosx10.7 | FileCheck %s -check-prefix=ASM
 
 ; rdar://13067005
 ; CHECK: .debug_info contents:
@@ -20,6 +21,11 @@
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple2.c
 ; CHECK-NOT: file_names
 
+; PR15408
+; ASM: L__DWARF__debug_info_begin0:
+; ASM: .long   0                       ## DW_AT_stmt_list
+; ASM: L__DWARF__debug_info_begin1:
+; ASM: .long   0                       ## DW_AT_stmt_list
 define i32 @test(i32 %a) nounwind uwtable ssp {
 entry:
   %a.addr = alloca i32, align 4
