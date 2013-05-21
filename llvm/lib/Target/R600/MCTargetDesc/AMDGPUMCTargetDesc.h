@@ -32,7 +32,8 @@ class raw_ostream;
 extern Target TheAMDGPUTarget;
 
 MCCodeEmitter *createR600MCCodeEmitter(const MCInstrInfo &MCII,
-                                       const MCRegisterInfo &MRI);
+                                       const MCRegisterInfo &MRI,
+                                       const MCSubtargetInfo &STI);
 
 MCCodeEmitter *createSIMCCodeEmitter(const MCInstrInfo &MCII,
                                      const MCRegisterInfo &MRI,
