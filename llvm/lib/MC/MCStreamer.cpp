@@ -35,6 +35,7 @@ MCStreamer::~MCStreamer() {
 void MCStreamer::reset() {
   for (unsigned i = 0; i < getNumW64UnwindInfos(); ++i)
     delete W64UnwindInfos[i];
+  W64UnwindInfos.clear();
   EmitEHFrame = true;
   EmitDebugFrame = false;
   CurrentW64UnwindInfo = 0;
