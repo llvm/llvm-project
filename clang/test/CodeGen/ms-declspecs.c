@@ -1,10 +1,5 @@
 // RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -fms-compatibility -o - | FileCheck %s
 
-__declspec(selectany) int x1 = 1;
-const __declspec(selectany) int x2 = 2;
-// CHECK: @x1 = weak_odr global i32 1, align 4
-// CHECK: @x2 = weak_odr constant i32 2, align 4
-
 struct __declspec(align(16)) S {
   char x;
 };

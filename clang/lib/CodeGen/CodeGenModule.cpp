@@ -1900,13 +1900,7 @@ CodeGenModule::GetLLVMLinkageVarDefinition(const VarDecl *D,
     return llvm::Function::DLLImportLinkage;
   else if (D->hasAttr<DLLExportAttr>())
     return llvm::Function::DLLExportLinkage;
-  else if (D->hasAttr<SelectAnyAttr>()) {
-    // selectany symbols are externally visible, so use weak instead of
-    // linkonce.  MSVC optimizes away references to const selectany globals, so
-    // all definitions should be the same and ODR linkage should be used.
-    // http://msdn.microsoft.com/en-us/library/5tkz6s71.aspx
-    return llvm::GlobalVariable::WeakODRLinkage;
-  } else if (D->hasAttr<WeakAttr>()) {
+  else if (D->hasAttr<WeakAttr>()) {
     if (GV->isConstant())
       return llvm::GlobalVariable::WeakODRLinkage;
     else

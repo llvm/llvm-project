@@ -948,10 +948,6 @@ def ForceInline : InheritableAttr {
   let Spellings = [Keyword<"__forceinline">];
 }
 
-def SelectAny : InheritableAttr {
-  let Spellings = [Declspec<"selectany">];
-}
-
 def Win64 : InheritableAttr {
   let Spellings = [Keyword<"__w64">];
 }
