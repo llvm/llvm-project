@@ -1948,6 +1948,8 @@ def warn_weak_identifier_undeclared : Warning<
   "weak identifier %0 never declared">;
 def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
+def err_attribute_selectany_non_extern_data : Error<
+  "'selectany' can only be applied to data items with external linkage">;
 def warn_attribute_weak_import_invalid_on_definition : Warning<
   "'weak_import' attribute cannot be specified on a definition">,
   InGroup<IgnoredAttributes>;

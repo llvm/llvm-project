@@ -4638,6 +4638,15 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
       ND.dropAttr<WeakRefAttr>();
     }
   }
+
+  // 'selectany' only applies to externally visible varable declarations.
+  // It does not apply to functions.
+  if (SelectAnyAttr *Attr = ND.getAttr<SelectAnyAttr>()) {
+    if (isa<FunctionDecl>(ND) || !ND.isExternallyVisible()) {
+      S.Diag(Attr->getLocation(), diag::err_attribute_selectany_non_extern_data);
+      ND.dropAttr<SelectAnyAttr>();
+    }
+  }
 }
 
 /// Given that we are within the definition of the given function,
