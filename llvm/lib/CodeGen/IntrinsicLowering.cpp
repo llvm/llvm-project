@@ -453,6 +453,12 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 1));
     break;
 
+  case Intrinsic::annotation:
+  case Intrinsic::ptr_annotation:
+    // Just drop the annotation, but forward the value
+    CI->replaceAllUsesWith(CI->getOperand(0));
+    break;
+
   case Intrinsic::var_annotation:
     break;   // Strip out annotate intrinsic
     
