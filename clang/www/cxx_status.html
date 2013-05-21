@@ -3,7 +3,7 @@
 <html>
 <head>
   <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-  <title>Clang - C++98 and C++11 Status</title>
+  <title>Clang - C++98, C++11, and C++14 Status</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
   <style type="text/css">
@@ -31,7 +31,7 @@
 
 <p>Clang currently implements all of the ISO C++ 1998 standard
   (including the defects addressed in the ISO C++ 2003 standard)
-  except for 'export' (which has been removed in C++11)
+  except for <tt>export</tt> (which has been removed in C++11)
   and is considered a production-quality C++ compiler.  The <a
    href="http://llvm.org/bugs/">LLVM bug tracker</a> contains a Clang
   C++ component that tracks known Clang C++ bugs.</p>
@@ -179,7 +179,7 @@ currently requires g++-4.8's C++ runtime library.</p>
     <tr>
       <td>Generalized attributes</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2761.pdf">N2761</a></td>
-      <td class="svn" align="center">SVN <a href="#n2761">(1)</a></td>
+      <td class="svn" align="center">Clang 3.3 <a href="#n2761">(1)</a></td>
     </tr>
     <tr>
       <td>Generalized constant expressions</td>
@@ -189,7 +189,7 @@ currently requires g++-4.8's C++ runtime library.</p>
     <tr>
       <td>Alignment support</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2341.pdf">N2341</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="svn" align="center">Clang 3.3</td>
     </tr>
     <!-- Skipped N1627: Conditionally-support behavior -->
     <!-- Skipped N1727: Changing Undefined Behavior into Diagnosable Errors -->
@@ -201,7 +201,7 @@ currently requires g++-4.8's C++ runtime library.</p>
     <tr>
       <td>Inheriting constructors</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2540.htm">N2540</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="svn" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Explicit conversion operators</td>
@@ -308,7 +308,7 @@ currently requires g++-4.8's C++ runtime library.</p>
     <tr>
       <td>Sequence points</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2239.html">N2239</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="svn" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Atomic operations</td>
@@ -354,7 +354,7 @@ currently requires g++-4.8's C++ runtime library.</p>
     <tr>
       <td>Thread-local storage</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2659.htm">N2659</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="svn" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Dynamic initialization and destruction with concurrency</td>
@@ -406,8 +406,7 @@ provisionally named C++1y.  The following table describes which C++1y features
 have been implemented in Clang and in which Clang version they became
 available.</p>
 
-<p>Note: many of the links to papers here will not work until the
-ISO/IEC JTC1/SC22/WG21 post-Bristol mailing ships.</p>
+<p>You can use Clang in C++1y mode with the <code>-std=c++1y</code> option.</p>
 
 <table width="689" border="1" cellspacing="0">
  <tr>
@@ -427,8 +426,8 @@ ISO/IEC JTC1/SC22/WG21 post-Bristol mailing ships.</p>
     </tr>
     <tr>
       <td>decltype(auto)</td>
-      <td rowspan=2 style="vertical-align:middle"><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3638.html">N3638</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td rowspan=2 style="vertical-align:middle"><a href="http://isocpp.org/files/papers/N3638.html">N3638</a></td>
+      <td class="svn" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Return type deduction for normal functions</td>
@@ -436,38 +435,38 @@ ISO/IEC JTC1/SC22/WG21 post-Bristol mailing ships.</p>
     </tr>
     <tr>
       <td>Runtime-sized arrays with automatic storage duration</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3639.html">N3639</a></td>
+      <td><a href="http://isocpp.org/files/papers/N3639.html">N3639</a></td>
       <td class="partial" align="center">Partial</td>
     </tr>
     <tr>
       <td>Initialized lambda captures</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3648.html">N3648</a></td>
+      <td><a href="http://isocpp.org/files/papers/N3648.html">N3648</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Generic lambdas</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3649.html">N3649</a></td>
+      <td><a href="http://isocpp.org/files/papers/N3649.html">N3649</a></td>
       <td class="partial" align="center">
         No [<a href="https://github.com/faisalv/clang-glambda">WIP</a>]</td>
     </tr>
     <tr>
       <td>Variable templates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3651.pdf">N3651</a></td>
+      <td><a href="http://isocpp.org/files/papers/N3651.pdf">N3651</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Relaxing requirements on constexpr functions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3652.html">N3652</a></td>
+      <td><a href="http://isocpp.org/files/papers/N3652.html">N3652</a></td>
       <td class="partial" align="center">Partial</td>
     </tr>
     <tr>
       <td>Member initializers and aggregates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3653.html">N3653</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td><a href="http://isocpp.org/files/papers/N3653.html">N3653</a></td>
+      <td class="svn" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Clarifying memory allocation</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3664.html">N3664</a></td>
+      <td><!--<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3664.html">-->N3664<!--</a>--></td>
       <td class="full" align="center">Yes</td>
     </tr>
 </table>
