@@ -1493,7 +1493,13 @@ ClangExpressionDeclMap::GetVariableValue
             return NULL;
         }
     }
-    
+    else if (!var_location_expr.Evaluate(&m_parser_vars->m_exe_ctx, ast, NULL, NULL, NULL, loclist_base_load_addr, NULL, *var_location.get(), &err))
+    {
+        if (log)
+            log->Printf("Error evaluating location: %s", err.AsCString());
+        return NULL;
+    }
+        
     void *type_to_use = NULL;
     
     if (parser_ast_context)

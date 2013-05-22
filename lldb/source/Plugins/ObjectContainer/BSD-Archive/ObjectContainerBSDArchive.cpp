@@ -457,7 +457,7 @@ ObjectContainerBSDArchive::GetObjectFile (const FileSpec *file)
                                                        module_sp->GetObjectModificationTime());
             if (object)
             {
-                lldb::offset_t data_offset = object->ar_file_offset;
+                lldb::offset_t data_offset = m_offset + object->ar_file_offset;
                 return ObjectFile::FindPlugin (module_sp,
                                                file, 
                                                m_offset + object->ar_file_offset,

@@ -416,8 +416,8 @@ Variable::GetValuesForVariableExpressionPath (const char *variable_expr_path,
                                     ValueObjectSP variable_valobj_sp(ValueObjectVariable::Create (scope, var_sp));
                                     if (variable_valobj_sp)
                                     {
-                                        const char *variable_sub_expr_path = variable_expr_path + variable_name.size();
-                                        if (*variable_sub_expr_path)
+                                        variable_expr_path += variable_name.size();
+                                        if (*variable_expr_path)
                                         {
                                             const char* first_unparsed = NULL;
                                             ValueObject::ExpressionPathScanEndReason reason_to_stop;
@@ -425,7 +425,7 @@ Variable::GetValuesForVariableExpressionPath (const char *variable_expr_path,
                                             ValueObject::GetValueForExpressionPathOptions options;
                                             ValueObject::ExpressionPathAftermath final_task_on_target;
 
-                                            valobj_sp = variable_valobj_sp->GetValueForExpressionPath (variable_sub_expr_path,
+                                            valobj_sp = variable_valobj_sp->GetValueForExpressionPath (variable_expr_path,
                                                                                                        &first_unparsed,
                                                                                                        &reason_to_stop,
                                                                                                        &final_value_type,
@@ -434,7 +434,7 @@ Variable::GetValuesForVariableExpressionPath (const char *variable_expr_path,
                                             if (!valobj_sp)
                                             {
                                                 error.SetErrorStringWithFormat ("invalid expression path '%s' for variable '%s'",
-                                                                                variable_sub_expr_path,
+                                                                                variable_expr_path,
                                                                                 var_sp->GetName().GetCString());
                                             }
                                         }

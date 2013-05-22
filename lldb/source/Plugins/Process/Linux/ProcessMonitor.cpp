@@ -1208,13 +1208,7 @@ ProcessMonitor::Launch(LaunchArgs *args)
     ptrace_opts |= PTRACE_O_TRACEEXIT;
 
     // Have the tracer trace threads which spawn in the inferior process.
-    // TODO: if we want to support tracing the inferiors' child, add the
-    // appropriate ptrace flags here (PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK)
-    ptrace_opts |= PTRACE_O_TRACECLONE;
-
-    // Have the tracer notify us before execve returns
-    // (needed to disable legacy SIGTRAP generation)
-    ptrace_opts |= PTRACE_O_TRACEEXEC;
+    ptrace_opts |= PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE;
 
     if (PTRACE(PTRACE_SETOPTIONS, pid, NULL, (void*)ptrace_opts, 0) < 0)
     {
@@ -1396,11 +1390,8 @@ ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
         assert(false && "Unexpected SIGTRAP code!");
         break;
 
-    // TODO: these two cases are required if we want to support tracing
-    // of the inferiors' children
-    // case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
-    // case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
-
+    case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
+    case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
     case (SIGTRAP | (PTRACE_EVENT_CLONE << 8)):
     {
         unsigned long tid = 0;
@@ -1409,11 +1400,6 @@ ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
         message = ProcessMessage::NewThread(pid, tid);
         break;
     }
-
-    case (SIGTRAP | (PTRACE_EVENT_EXEC << 8)):
-        // Don't follow the child by default and resume
-        monitor->Resume(pid, SIGCONT);
-        break;
 
     case (SIGTRAP | (PTRACE_EVENT_EXIT << 8)):
     {

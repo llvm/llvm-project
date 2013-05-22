@@ -75,15 +75,6 @@ public:
     EnablePluginLogging(lldb_private::Stream *strm,
                         lldb_private::Args &command);
 
-    //------------------------------------------------------------------
-    // Plug-in process overrides
-    //------------------------------------------------------------------
-    virtual lldb_private::UnixSignals &
-    GetUnixSignals ()
-    {
-        return m_linux_signals;
-    }
-
 private:
 
     /// Linux-specific signal set.
