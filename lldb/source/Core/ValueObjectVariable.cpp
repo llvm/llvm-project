@@ -187,7 +187,7 @@ ValueObjectVariable::UpdateValue ()
             switch (value_type)
             {
             default:
-                assert(!"Unhandled expression result value kind...");
+                m_error.SetErrorStringWithFormat("Variable %s has an expression result value %d which is currently unhandled",variable->GetName().GetCString(),value_type);
                 break;
 
             case Value::eValueTypeScalar:
