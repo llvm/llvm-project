@@ -1492,17 +1492,6 @@ ProcessMonitor::MonitorSignal(ProcessMonitor *monitor,
         return ProcessMessage::Crash(pid, reason, signo, fault_addr);
     }
 
-    if (signo == SIGCHLD) {
-        assert(monitor);
-        // TODO: Implement tracing of inferiors' children
-        // If we fail to deliver the signal then create a message with the signal
-        if (!monitor->Resume(pid, signo)) {
-            assert(0 && "SIGCHLD delivery failed");
-            message = ProcessMessage::Signal(pid, signo);
-        }
-        return message;
-    }
-
     // Everything else is "normal" and does not require any special action on
     // our part.
     return ProcessMessage::Signal(pid, signo);
