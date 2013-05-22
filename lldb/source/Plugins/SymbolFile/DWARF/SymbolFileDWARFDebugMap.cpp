@@ -54,6 +54,8 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(SymbolFileDWARFDebugMa
         return file_range_map;
     
     ObjectFile *oso_objfile = oso_module->GetObjectFile();
+    if (!oso_objfile)
+        return file_range_map;
     
     Log *log (LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
     if (log)
