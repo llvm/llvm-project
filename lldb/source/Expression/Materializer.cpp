@@ -89,8 +89,7 @@ public:
         
         if (!allocate_error.Success())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't allocate a memory area to store %s: %s", m_persistent_variable_sp->GetName().GetCString(), allocate_error.AsCString());
+            err.SetErrorStringWithFormat("couldn't allocate a memory area to store %s: %s", m_persistent_variable_sp->GetName().GetCString(), allocate_error.AsCString());
             return;
         }
         
@@ -123,8 +122,7 @@ public:
         
         if (!write_error.Success())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat ("Couldn't write %s to the target: %s", m_persistent_variable_sp->GetName().AsCString(),
+            err.SetErrorStringWithFormat ("couldn't write %s to the target: %s", m_persistent_variable_sp->GetName().AsCString(),
                                           write_error.AsCString());
             return;
         }
@@ -140,8 +138,7 @@ public:
             
         if (!deallocate_error.Success())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat ("Couldn't deallocate memory for %s: %s", m_persistent_variable_sp->GetName().GetCString(), deallocate_error.AsCString());
+            err.SetErrorStringWithFormat ("couldn't deallocate memory for %s: %s", m_persistent_variable_sp->GetName().GetCString(), deallocate_error.AsCString());
         }
     }
     
@@ -178,14 +175,12 @@ public:
             
             if (!write_error.Success())
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't write the location of %s to memory: %s", m_persistent_variable_sp->GetName().AsCString(), write_error.AsCString());
+                err.SetErrorStringWithFormat("couldn't write the location of %s to memory: %s", m_persistent_variable_sp->GetName().AsCString(), write_error.AsCString());
             }
         }
         else
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("No materialization happened for persistent variable %s", m_persistent_variable_sp->GetName().AsCString());
+            err.SetErrorStringWithFormat("no materialization happened for persistent variable %s", m_persistent_variable_sp->GetName().AsCString());
             return;
         }
     }
@@ -219,8 +214,7 @@ public:
                                 
                 if (!read_error.Success())
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat("Couldn't read the address of program-allocated variable %s: %s", m_persistent_variable_sp->GetName().GetCString(), read_error.AsCString());
+                    err.SetErrorStringWithFormat("couldn't read the address of program-allocated variable %s: %s", m_persistent_variable_sp->GetName().GetCString(), read_error.AsCString());
                     return;
                 }
                                 
@@ -251,15 +245,13 @@ public:
             
             if (!m_persistent_variable_sp->m_live_sp)
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't find the memory area used to store %s", m_persistent_variable_sp->GetName().GetCString());
+                err.SetErrorStringWithFormat("couldn't find the memory area used to store %s", m_persistent_variable_sp->GetName().GetCString());
                 return;
             }
             
             if (m_persistent_variable_sp->m_live_sp->GetValue().GetValueAddressType() != eAddressTypeLoad)
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("The address of the memory area for %s is in an incorrect format", m_persistent_variable_sp->GetName().GetCString());
+                err.SetErrorStringWithFormat("the address of the memory area for %s is in an incorrect format", m_persistent_variable_sp->GetName().GetCString());
                 return;
             }
             
@@ -282,8 +274,7 @@ public:
                 
                 if (!read_error.Success())
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat ("Couldn't read the contents of %s from memory: %s", m_persistent_variable_sp->GetName().GetCString(), read_error.AsCString());
+                    err.SetErrorStringWithFormat ("couldn't read the contents of %s from memory: %s", m_persistent_variable_sp->GetName().GetCString(), read_error.AsCString());
                     return;
                 }
                     
@@ -292,8 +283,7 @@ public:
         }
         else
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("No dematerialization happened for persistent variable %s", m_persistent_variable_sp->GetName().AsCString());
+            err.SetErrorStringWithFormat("no dematerialization happened for persistent variable %s", m_persistent_variable_sp->GetName().AsCString());
             return;
         }
         
@@ -435,8 +425,7 @@ public:
         
         if (!valobj_sp)
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't get a value object for variable %s", m_variable_sp->GetName().AsCString());
+            err.SetErrorStringWithFormat("couldn't get a value object for variable %s", m_variable_sp->GetName().AsCString());
             return;
         }
         
@@ -452,8 +441,7 @@ public:
             
             if (!write_error.Success())
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't write the contents of reference variable %s to memory: %s", m_variable_sp->GetName().AsCString(), write_error.AsCString());
+                err.SetErrorStringWithFormat("couldn't write the contents of reference variable %s to memory: %s", m_variable_sp->GetName().AsCString(), write_error.AsCString());
                 return;
             }
         }
@@ -473,8 +461,7 @@ public:
                 
                 if (!write_error.Success())
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat("Couldn't write the address of variable %s to memory: %s", m_variable_sp->GetName().AsCString(), write_error.AsCString());
+                    err.SetErrorStringWithFormat("couldn't write the address of variable %s to memory: %s", m_variable_sp->GetName().AsCString(), write_error.AsCString());
                     return;
                 }
             }
@@ -485,15 +472,20 @@ public:
                 
                 if (m_temporary_allocation != LLDB_INVALID_ADDRESS)
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat("Trying to create a temporary region for %s but one exists", m_variable_sp->GetName().AsCString());
+                    err.SetErrorStringWithFormat("trying to create a temporary region for %s but one exists", m_variable_sp->GetName().AsCString());
                     return;
                 }
                 
                 if (data.GetByteSize() != m_variable_sp->GetType()->GetByteSize())
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat("Size of variable %s disagrees with the ValueObject's size", m_variable_sp->GetName().AsCString());
+                    if (data.GetByteSize() == 0 && m_variable_sp->LocationExpression().IsValid() == false)
+                    {
+                        err.SetErrorStringWithFormat("the variable '%s' has no location, it may have been optimized out", m_variable_sp->GetName().AsCString());
+                    }
+                    else
+                    {
+                        err.SetErrorStringWithFormat("size of variable %s disagrees with the ValueObject's size", m_variable_sp->GetName().AsCString());
+                    }
                     return;
                 }
                 
@@ -507,8 +499,7 @@ public:
                 
                 if (!alloc_error.Success())
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat("Couldn't allocate a temporary region for %s: %s", m_variable_sp->GetName().AsCString(), alloc_error.AsCString());
+                    err.SetErrorStringWithFormat("couldn't allocate a temporary region for %s: %s", m_variable_sp->GetName().AsCString(), alloc_error.AsCString());
                     return;
                 }
                 
@@ -518,8 +509,7 @@ public:
                 
                 if (!write_error.Success())
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat("Couldn't write to the temporary region for %s: %s", m_variable_sp->GetName().AsCString(), write_error.AsCString());
+                    err.SetErrorStringWithFormat("couldn't write to the temporary region for %s: %s", m_variable_sp->GetName().AsCString(), write_error.AsCString());
                     return;
                 }
                 
@@ -529,8 +519,7 @@ public:
                 
                 if (!pointer_write_error.Success())
                 {
-                    err.SetErrorToGenericError();
-                    err.SetErrorStringWithFormat("Couldn't write the address of the temporary region for %s: %s", m_variable_sp->GetName().AsCString(), pointer_write_error.AsCString());
+                    err.SetErrorStringWithFormat("couldn't write the address of the temporary region for %s: %s", m_variable_sp->GetName().AsCString(), pointer_write_error.AsCString());
                 }
             }
         }
@@ -559,8 +548,7 @@ public:
             
             if (!valobj_sp)
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't get a value object for variable %s", m_variable_sp->GetName().AsCString());
+                err.SetErrorStringWithFormat("couldn't get a value object for variable %s", m_variable_sp->GetName().AsCString());
                 return;
             }
             
@@ -572,8 +560,7 @@ public:
             
             if (!extract_error.Success())
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't get the data for variable %s", m_variable_sp->GetName().AsCString());
+                err.SetErrorStringWithFormat("couldn't get the data for variable %s", m_variable_sp->GetName().AsCString());
                 return;
             }
             
@@ -583,8 +570,7 @@ public:
             
             if (!set_error.Success())
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't write the new contents of %s back into the variable", m_variable_sp->GetName().AsCString());
+                err.SetErrorStringWithFormat("couldn't write the new contents of %s back into the variable", m_variable_sp->GetName().AsCString());
                 return;
             }
             
@@ -594,8 +580,7 @@ public:
             
             if (!free_error.Success())
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't free the temporary region for %s: %s", m_variable_sp->GetName().AsCString(), free_error.AsCString());
+                err.SetErrorStringWithFormat("couldn't free the temporary region for %s: %s", m_variable_sp->GetName().AsCString(), free_error.AsCString());
                 return;
             }
             
@@ -727,7 +712,6 @@ public:
         {
             if (m_temporary_allocation != LLDB_INVALID_ADDRESS)
             {
-                err.SetErrorToGenericError();
                 err.SetErrorString("Trying to create a temporary region for the result but one exists");
                 return;
             }
@@ -743,8 +727,7 @@ public:
             
             if (!alloc_error.Success())
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't allocate a temporary region for the result: %s", alloc_error.AsCString());
+                err.SetErrorStringWithFormat("couldn't allocate a temporary region for the result: %s", alloc_error.AsCString());
                 return;
             }
                         
@@ -754,8 +737,7 @@ public:
             
             if (!pointer_write_error.Success())
             {
-                err.SetErrorToGenericError();
-                err.SetErrorStringWithFormat("Couldn't write the address of the temporary region for the result: %s", pointer_write_error.AsCString());
+                err.SetErrorStringWithFormat("couldn't write the address of the temporary region for the result: %s", pointer_write_error.AsCString());
             }
         }
     }
@@ -763,7 +745,6 @@ public:
     void Dematerialize (lldb::StackFrameSP &frame_sp, IRMemoryMap &map, lldb::addr_t process_address,
                         lldb::addr_t frame_top, lldb::addr_t frame_bottom, Error &err)
     {
-        err.SetErrorToGenericError();
         err.SetErrorString("Tried to detmaterialize a result variable with the normal Dematerialize method");
     }
     
@@ -777,7 +758,6 @@ public:
         
         if (!exe_scope)
         {
-            err.SetErrorToGenericError();
             err.SetErrorString("Couldn't dematerialize a result variable: invalid execution context scope");
             return;
         }
@@ -789,7 +769,6 @@ public:
         
         if (!read_error.Success())
         {
-            err.SetErrorToGenericError();
             err.SetErrorString("Couldn't dematerialize a result variable: couldn't read its address");
             return;
         }
@@ -798,7 +777,6 @@ public:
         
         if (!target_sp)
         {
-            err.SetErrorToGenericError();
             err.SetErrorString("Couldn't dematerialize a result variable: no target");
             return;
         }
@@ -815,8 +793,7 @@ public:
         
         if (!ret)
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: failed to make persistent variable %s", name.AsCString());
+            err.SetErrorStringWithFormat("couldn't dematerialize a result variable: failed to make persistent variable %s", name.AsCString());
             return;
         }
         
@@ -844,7 +821,6 @@ public:
         
         if (!read_error.Success())
         {
-            err.SetErrorToGenericError();
             err.SetErrorString("Couldn't dematerialize a result variable: couldn't read its memory");
             return;
         }
@@ -1007,8 +983,7 @@ public:
         
         if (!target_sp)
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't resolve symbol %s because there is no target", m_symbol.GetName().AsCString());
+            err.SetErrorStringWithFormat("couldn't resolve symbol %s because there is no target", m_symbol.GetName().AsCString());
             return;
         }
         
@@ -1023,8 +998,7 @@ public:
         
         if (!pointer_write_error.Success())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't write the address of symbol %s: %s", m_symbol.GetName().AsCString(), pointer_write_error.AsCString());
+            err.SetErrorStringWithFormat("couldn't write the address of symbol %s: %s", m_symbol.GetName().AsCString(), pointer_write_error.AsCString());
             return;
         }
     }
@@ -1120,8 +1094,7 @@ public:
         
         if (!frame_sp.get())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't materialize register %s without a stack frame", m_register_info.name);
+            err.SetErrorStringWithFormat("couldn't materialize register %s without a stack frame", m_register_info.name);
             return;
         }
         
@@ -1129,8 +1102,7 @@ public:
         
         if (!reg_context_sp->ReadRegister(&m_register_info, reg_value))
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't read the value of register %s", m_register_info.name);
+            err.SetErrorStringWithFormat("couldn't read the value of register %s", m_register_info.name);
             return;
         }
         
@@ -1138,15 +1110,13 @@ public:
         
         if (!reg_value.GetData(register_data))
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't get the data for register %s", m_register_info.name);
+            err.SetErrorStringWithFormat("couldn't get the data for register %s", m_register_info.name);
             return;
         }
         
         if (register_data.GetByteSize() != m_register_info.byte_size)
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Data for register %s had size %llu but we expected %llu", m_register_info.name, (unsigned long long)register_data.GetByteSize(), (unsigned long long)m_register_info.byte_size);
+            err.SetErrorStringWithFormat("data for register %s had size %llu but we expected %llu", m_register_info.name, (unsigned long long)register_data.GetByteSize(), (unsigned long long)m_register_info.byte_size);
             return;
         }
         
@@ -1156,8 +1126,7 @@ public:
         
         if (!write_error.Success())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't write the contents of register %s: %s", m_register_info.name, write_error.AsCString());
+            err.SetErrorStringWithFormat("couldn't write the contents of register %s: %s", m_register_info.name, write_error.AsCString());
             return;
         }
     }
@@ -1180,8 +1149,7 @@ public:
         
         if (!frame_sp.get())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't dematerialize register %s without a stack frame", m_register_info.name);
+            err.SetErrorStringWithFormat("couldn't dematerialize register %s without a stack frame", m_register_info.name);
             return;
         }
         
@@ -1191,8 +1159,7 @@ public:
         
         if (!extract_error.Success())
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't get the data for register %s: %s", m_register_info.name, extract_error.AsCString());
+            err.SetErrorStringWithFormat("couldn't get the data for register %s: %s", m_register_info.name, extract_error.AsCString());
             return;
         }
         
@@ -1200,8 +1167,7 @@ public:
         
         if (!reg_context_sp->WriteRegister(&m_register_info, register_value))
         {
-            err.SetErrorToGenericError();
-            err.SetErrorStringWithFormat("Couldn't write the value of register %s", m_register_info.name);
+            err.SetErrorStringWithFormat("couldn't write the value of register %s", m_register_info.name);
             return;
         }
     }

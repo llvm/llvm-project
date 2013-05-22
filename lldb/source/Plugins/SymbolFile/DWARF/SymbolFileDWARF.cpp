@@ -7175,174 +7175,171 @@ SymbolFileDWARF::ParseVariableDIE
                 }
             }
 
-            if (location.IsValid())
+            ValueType scope = eValueTypeInvalid;
+
+            const DWARFDebugInfoEntry *sc_parent_die = GetParentSymbolContextDIE(die);
+            dw_tag_t parent_tag = sc_parent_die ? sc_parent_die->Tag() : 0;
+            SymbolContextScope * symbol_context_scope = NULL;
+
+            // DWARF doesn't specify if a DW_TAG_variable is a local, global
+            // or static variable, so we have to do a little digging by
+            // looking at the location of a varaible to see if it contains
+            // a DW_OP_addr opcode _somewhere_ in the definition. I say
+            // somewhere because clang likes to combine small global variables
+            // into the same symbol and have locations like:
+            // DW_OP_addr(0x1000), DW_OP_constu(2), DW_OP_plus
+            // So if we don't have a DW_TAG_formal_parameter, we can look at
+            // the location to see if it contains a DW_OP_addr opcode, and
+            // then we can correctly classify  our variables.
+            if (tag == DW_TAG_formal_parameter)
+                scope = eValueTypeVariableArgument;
+            else
             {
-                ValueType scope = eValueTypeInvalid;
-
-                const DWARFDebugInfoEntry *sc_parent_die = GetParentSymbolContextDIE(die);
-                dw_tag_t parent_tag = sc_parent_die ? sc_parent_die->Tag() : 0;
-                SymbolContextScope * symbol_context_scope = NULL;
-
-                // DWARF doesn't specify if a DW_TAG_variable is a local, global
-                // or static variable, so we have to do a little digging by
-                // looking at the location of a varaible to see if it contains
-                // a DW_OP_addr opcode _somewhere_ in the definition. I say
-                // somewhere because clang likes to combine small global variables
-                // into the same symbol and have locations like:
-                // DW_OP_addr(0x1000), DW_OP_constu(2), DW_OP_plus
-                // So if we don't have a DW_TAG_formal_parameter, we can look at
-                // the location to see if it contains a DW_OP_addr opcode, and
-                // then we can correctly classify  our variables.
-                if (tag == DW_TAG_formal_parameter)
-                    scope = eValueTypeVariableArgument;
-                else
+                bool op_error = false;
+                // Check if the location has a DW_OP_addr with any address value...
+                lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
+                if (!location_is_const_value_data)
                 {
-                    bool op_error = false;
-                    // Check if the location has a DW_OP_addr with any address value...
-                    lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
-                    if (!location_is_const_value_data)
+                    location_DW_OP_addr = location.GetLocation_DW_OP_addr (0, op_error);
+                    if (op_error)
                     {
-                        location_DW_OP_addr = location.GetLocation_DW_OP_addr (0, op_error);
-                        if (op_error)
-                        {
-                            StreamString strm;
-                            location.DumpLocationForAddress (&strm, eDescriptionLevelFull, 0, 0, NULL);
-                            GetObjectFile()->GetModule()->ReportError ("0x%8.8x: %s has an invalid location: %s", die->GetOffset(), DW_TAG_value_to_name(die->Tag()), strm.GetString().c_str());
-                        }
+                        StreamString strm;
+                        location.DumpLocationForAddress (&strm, eDescriptionLevelFull, 0, 0, NULL);
+                        GetObjectFile()->GetModule()->ReportError ("0x%8.8x: %s has an invalid location: %s", die->GetOffset(), DW_TAG_value_to_name(die->Tag()), strm.GetString().c_str());
                     }
+                }
 
-                    if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
+                if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
+                {
+                    if (is_external)
+                        scope = eValueTypeVariableGlobal;
+                    else
+                        scope = eValueTypeVariableStatic;
+                    
+                    
+                    SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile ();
+                    
+                    if (debug_map_symfile)
                     {
-                        if (is_external)
-                            scope = eValueTypeVariableGlobal;
-                        else
-                            scope = eValueTypeVariableStatic;
-                        
-                        
-                        SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile ();
-                        
-                        if (debug_map_symfile)
+                        // When leaving the DWARF in the .o files on darwin,
+                        // when we have a global variable that wasn't initialized,
+                        // the .o file might not have allocated a virtual
+                        // address for the global variable. In this case it will
+                        // have created a symbol for the global variable
+                        // that is undefined/data and external and the value will
+                        // be the byte size of the variable. When we do the
+                        // address map in SymbolFileDWARFDebugMap we rely on
+                        // having an address, we need to do some magic here
+                        // so we can get the correct address for our global
+                        // variable. The address for all of these entries
+                        // will be zero, and there will be an undefined symbol
+                        // in this object file, and the executable will have
+                        // a matching symbol with a good address. So here we
+                        // dig up the correct address and replace it in the
+                        // location for the variable, and set the variable's
+                        // symbol context scope to be that of the main executable
+                        // so the file address will resolve correctly.
+                        bool linked_oso_file_addr = false;
+                        if (is_external && location_DW_OP_addr == 0)
                         {
-                            // When leaving the DWARF in the .o files on darwin,
-                            // when we have a global variable that wasn't initialized,
-                            // the .o file might not have allocated a virtual
-                            // address for the global variable. In this case it will
-                            // have created a symbol for the global variable
-                            // that is undefined/data and external and the value will
-                            // be the byte size of the variable. When we do the
-                            // address map in SymbolFileDWARFDebugMap we rely on
-                            // having an address, we need to do some magic here
-                            // so we can get the correct address for our global
-                            // variable. The address for all of these entries
-                            // will be zero, and there will be an undefined symbol
-                            // in this object file, and the executable will have
-                            // a matching symbol with a good address. So here we
-                            // dig up the correct address and replace it in the
-                            // location for the variable, and set the variable's
-                            // symbol context scope to be that of the main executable
-                            // so the file address will resolve correctly.
-                            bool linked_oso_file_addr = false;
-                            if (is_external && location_DW_OP_addr == 0)
+                            
+                            // we have a possible uninitialized extern global
+                            ConstString const_name(mangled ? mangled : name);
+                            ObjectFile *debug_map_objfile = debug_map_symfile->GetObjectFile();
+                            if (debug_map_objfile)
                             {
-                                
-                                // we have a possible uninitialized extern global
-                                ConstString const_name(mangled ? mangled : name);
-                                ObjectFile *debug_map_objfile = debug_map_symfile->GetObjectFile();
-                                if (debug_map_objfile)
+                                Symtab *debug_map_symtab = debug_map_objfile->GetSymtab();
+                                if (debug_map_symtab)
                                 {
-                                    Symtab *debug_map_symtab = debug_map_objfile->GetSymtab();
-                                    if (debug_map_symtab)
+                                    Symbol *exe_symbol = debug_map_symtab->FindFirstSymbolWithNameAndType (const_name,
+                                                                                                           eSymbolTypeData,
+                                                                                                           Symtab::eDebugYes,
+                                                                                                           Symtab::eVisibilityExtern);
+                                    if (exe_symbol)
                                     {
-                                        Symbol *exe_symbol = debug_map_symtab->FindFirstSymbolWithNameAndType (const_name,
-                                                                                                               eSymbolTypeData,
-                                                                                                               Symtab::eDebugYes,
-                                                                                                               Symtab::eVisibilityExtern);
-                                        if (exe_symbol)
+                                        if (exe_symbol->ValueIsAddress())
                                         {
-                                            if (exe_symbol->ValueIsAddress())
+                                            const addr_t exe_file_addr = exe_symbol->GetAddress().GetFileAddress();
+                                            if (exe_file_addr != LLDB_INVALID_ADDRESS)
                                             {
-                                                const addr_t exe_file_addr = exe_symbol->GetAddress().GetFileAddress();
-                                                if (exe_file_addr != LLDB_INVALID_ADDRESS)
+                                                if (location.Update_DW_OP_addr (exe_file_addr))
                                                 {
-                                                    if (location.Update_DW_OP_addr (exe_file_addr))
-                                                    {
-                                                        linked_oso_file_addr = true;
-                                                        symbol_context_scope = exe_symbol;
-                                                    }
+                                                    linked_oso_file_addr = true;
+                                                    symbol_context_scope = exe_symbol;
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
+                        }
 
-                            if (!linked_oso_file_addr)
+                        if (!linked_oso_file_addr)
+                        {
+                            // The DW_OP_addr is not zero, but it contains a .o file address which
+                            // needs to be linked up correctly.
+                            const lldb::addr_t exe_file_addr = debug_map_symfile->LinkOSOFileAddress(this, location_DW_OP_addr);
+                            if (exe_file_addr != LLDB_INVALID_ADDRESS)
                             {
-                                // The DW_OP_addr is not zero, but it contains a .o file address which
-                                // needs to be linked up correctly.
-                                const lldb::addr_t exe_file_addr = debug_map_symfile->LinkOSOFileAddress(this, location_DW_OP_addr);
-                                if (exe_file_addr != LLDB_INVALID_ADDRESS)
-                                {
-                                    // Update the file address for this variable
-                                    location.Update_DW_OP_addr (exe_file_addr);
-                                }
-                                else
-                                {
-                                    // Variable didn't make it into the final executable
-                                    return var_sp;
-                                }
+                                // Update the file address for this variable
+                                location.Update_DW_OP_addr (exe_file_addr);
+                            }
+                            else
+                            {
+                                // Variable didn't make it into the final executable
+                                return var_sp;
                             }
                         }
                     }
-                    else
-                    {
-                        scope = eValueTypeVariableLocal;
-                    }
-                }
-
-                if (symbol_context_scope == NULL)
-                {
-                    switch (parent_tag)
-                    {
-                    case DW_TAG_subprogram:
-                    case DW_TAG_inlined_subroutine:
-                    case DW_TAG_lexical_block:
-                        if (sc.function)
-                        {
-                            symbol_context_scope = sc.function->GetBlock(true).FindBlockByID(MakeUserID(sc_parent_die->GetOffset()));
-                            if (symbol_context_scope == NULL)
-                                symbol_context_scope = sc.function;
-                        }
-                        break;
-                    
-                    default:
-                        symbol_context_scope = sc.comp_unit;
-                        break;
-                    }
-                }
-
-                if (symbol_context_scope)
-                {
-                    var_sp.reset (new Variable (MakeUserID(die->GetOffset()), 
-                                                name, 
-                                                mangled,
-                                                SymbolFileTypeSP (new SymbolFileType(*this, type_uid)),
-                                                scope, 
-                                                symbol_context_scope, 
-                                                &decl, 
-                                                location, 
-                                                is_external, 
-                                                is_artificial));
-                    
-                    var_sp->SetLocationIsConstantValueData (location_is_const_value_data);
                 }
                 else
                 {
-                    // Not ready to parse this variable yet. It might be a global
-                    // or static variable that is in a function scope and the function
-                    // in the symbol context wasn't filled in yet
-                    return var_sp;
+                    scope = eValueTypeVariableLocal;
                 }
+            }
+
+            if (symbol_context_scope == NULL)
+            {
+                switch (parent_tag)
+                {
+                case DW_TAG_subprogram:
+                case DW_TAG_inlined_subroutine:
+                case DW_TAG_lexical_block:
+                    if (sc.function)
+                    {
+                        symbol_context_scope = sc.function->GetBlock(true).FindBlockByID(MakeUserID(sc_parent_die->GetOffset()));
+                        if (symbol_context_scope == NULL)
+                            symbol_context_scope = sc.function;
+                    }
+                    break;
+                
+                default:
+                    symbol_context_scope = sc.comp_unit;
+                    break;
+                }
+            }
+
+            if (symbol_context_scope)
+            {
+                var_sp.reset (new Variable (MakeUserID(die->GetOffset()), 
+                                            name, 
+                                            mangled,
+                                            SymbolFileTypeSP (new SymbolFileType(*this, type_uid)),
+                                            scope, 
+                                            symbol_context_scope, 
+                                            &decl, 
+                                            location, 
+                                            is_external, 
+                                            is_artificial));
+                
+                var_sp->SetLocationIsConstantValueData (location_is_const_value_data);
+            }
+            else
+            {
+                // Not ready to parse this variable yet. It might be a global
+                // or static variable that is in a function scope and the function
+                // in the symbol context wasn't filled in yet
+                return var_sp;
             }
         }
         // Cache var_sp even if NULL (the variable was just a specification or

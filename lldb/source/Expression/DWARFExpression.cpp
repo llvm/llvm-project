@@ -1303,6 +1303,13 @@ DWARFExpression::Evaluate
     Error *error_ptr
 )
 {
+    
+    if (opcodes_length == 0)
+    {
+        if (error_ptr)
+            error_ptr->SetErrorString ("no location, value may have been optimized out");
+        return false;
+    }
     std::vector<Value> stack;
 
     Process *process = NULL;
@@ -1328,7 +1335,7 @@ DWARFExpression::Evaluate
     if (!opcodes.ValidOffsetForDataOfSize(opcodes_offset, opcodes_length))
     {
         if (error_ptr)
-            error_ptr->SetErrorString ("Invalid offset and/or length for opcodes buffer.");
+            error_ptr->SetErrorString ("invalid offset and/or length for opcodes buffer.");
         return false;
     }
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
