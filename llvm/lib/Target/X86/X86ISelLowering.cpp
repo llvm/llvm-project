@@ -9347,12 +9347,19 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget *Subtarget,
       Op1 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, Op1);
 
       // Since SSE has no unsigned integer comparisons, we need to flip the sign
-      // bits of the inputs before performing those operations.
+      // bits of the inputs before performing those operations. The lower
+      // compare is always unsigned.
+      SDValue SB;
       if (FlipSigns) {
-        SDValue SB = DAG.getConstant(0x80000000U, MVT::v4i32);
-        Op0 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op0, SB);
-        Op1 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op1, SB);
+        SB = DAG.getConstant(0x80000000U, MVT::v4i32);
+      } else {
+        SDValue Sign = DAG.getConstant(0x80000000U, MVT::i32);
+        SDValue Zero = DAG.getConstant(0x00000000U, MVT::i32);
+        SB = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i32,
+                         Sign, Zero, Sign, Zero);
       }
+      Op0 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op0, SB);
+      Op1 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op1, SB);
 
       // Emulate PCMPGTQ with (hi1 > hi2) | ((hi1 == hi2) & (lo1 > lo2))
       SDValue GT = DAG.getNode(X86ISD::PCMPGT, dl, MVT::v4i32, Op0, Op1);
