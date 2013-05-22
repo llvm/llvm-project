@@ -1208,7 +1208,13 @@ ProcessMonitor::Launch(LaunchArgs *args)
     ptrace_opts |= PTRACE_O_TRACEEXIT;
 
     // Have the tracer trace threads which spawn in the inferior process.
-    ptrace_opts |= PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE;
+    // TODO: if we want to support tracing the inferiors' child, add the
+    // appropriate ptrace flags here (PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK)
+    ptrace_opts |= PTRACE_O_TRACECLONE;
+
+    // Have the tracer notify us before execve returns
+    // (needed to disable legacy SIGTRAP generation)
+    ptrace_opts |= PTRACE_O_TRACEEXEC;
 
     if (PTRACE(PTRACE_SETOPTIONS, pid, NULL, (void*)ptrace_opts, 0) < 0)
     {
@@ -1390,8 +1396,11 @@ ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
         assert(false && "Unexpected SIGTRAP code!");
         break;
 
-    case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
-    case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
+    // TODO: these two cases are required if we want to support tracing
+    // of the inferiors' children
+    // case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
+    // case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
+
     case (SIGTRAP | (PTRACE_EVENT_CLONE << 8)):
     {
         unsigned long tid = 0;
@@ -1400,6 +1409,11 @@ ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
         message = ProcessMessage::NewThread(pid, tid);
         break;
     }
+
+    case (SIGTRAP | (PTRACE_EVENT_EXEC << 8)):
+        // Don't follow the child by default and resume
+        monitor->Resume(pid, SIGCONT);
+        break;
 
     case (SIGTRAP | (PTRACE_EVENT_EXIT << 8)):
     {
@@ -1476,6 +1490,17 @@ ProcessMonitor::MonitorSignal(ProcessMonitor *monitor,
         lldb::addr_t fault_addr = reinterpret_cast<lldb::addr_t>(info->si_addr);
         ProcessMessage::CrashReason reason = GetCrashReasonForSIGBUS(info);
         return ProcessMessage::Crash(pid, reason, signo, fault_addr);
+    }
+
+    if (signo == SIGCHLD) {
+        assert(monitor);
+        // TODO: Implement tracing of inferiors' children
+        // If we fail to deliver the signal then create a message with the signal
+        if (!monitor->Resume(pid, signo)) {
+            assert(0 && "SIGCHLD delivery failed");
+            message = ProcessMessage::Signal(pid, signo);
+        }
+        return message;
     }
 
     // Everything else is "normal" and does not require any special action on
