@@ -431,7 +431,7 @@ DisassemblerLLVMC::LLVMCDisassembler::LLVMCDisassembler (const char *triple, uns
     m_subtarget_info_ap.reset(curr_target->createMCSubtargetInfo(triple, "",
                                                                 features_str));
     
-    m_asm_info_ap.reset(curr_target->createMCAsmInfo(*curr_target->createMCRegInfo(triple), triple));
+    m_asm_info_ap.reset(curr_target->createMCAsmInfo(triple));
 
     if (m_instr_info_ap.get() == NULL || m_reg_info_ap.get() == NULL || m_subtarget_info_ap.get() == NULL || m_asm_info_ap.get() == NULL)
     {
