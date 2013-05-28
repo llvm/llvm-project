@@ -27,3 +27,14 @@ for.end.i.i.i:
   unreachable
 }
 
+; PR16139
+define void @test2(i8* %x) {
+entry:
+  indirectbr i8* %x, [ label %L0, label %L1 ]
+
+L0:
+  br label %L0
+
+L1:
+  ret void
+}
