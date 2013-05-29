@@ -702,7 +702,7 @@ void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
   else
     O << ".func ";
   printReturnValStr(F, O);
-  O << *CurrentFnSym << "\n";
+  O << *Mang->getSymbol(F) << "\n";
   emitFunctionParamList(F, O);
   O << ";\n";
 }
@@ -812,7 +812,6 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
         continue;
       if (F->getIntrinsicID())
         continue;
-      CurrentFnSym = Mang->getSymbol(F);
       emitDeclaration(F, O);
       continue;
     }
@@ -824,14 +823,12 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
           // The use is in the initialization of a global variable
           // that is a function pointer, so print a declaration
           // for the original function
-          CurrentFnSym = Mang->getSymbol(F);
           emitDeclaration(F, O);
           break;
         }
         // Emit a declaration of this function if the function that
         // uses this constant expr has already been seen.
         if (useFuncSeen(C, seenMap)) {
-          CurrentFnSym = Mang->getSymbol(F);
           emitDeclaration(F, O);
           break;
         }
@@ -851,7 +848,6 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
       // appearing in the module before the callee. so print out
       // a declaration for the callee.
       if (seenMap.find(caller) != seenMap.end()) {
-        CurrentFnSym = Mang->getSymbol(F);
         emitDeclaration(F, O);
         break;
       }
@@ -1473,7 +1469,7 @@ void NVPTXAsmPrinter::printParamName(Function::const_arg_iterator I,
                                      int paramIndex, raw_ostream &O) {
   if ((nvptxSubtarget.getDrvInterface() == NVPTX::NVCL) ||
       (nvptxSubtarget.getDrvInterface() == NVPTX::CUDA))
-    O << *CurrentFnSym << "_param_" << paramIndex;
+    O << *Mang->getSymbol(I->getParent()) << "_param_" << paramIndex;
   else {
     std::string argName = I->getName();
     const char *p = argName.c_str();
@@ -1532,11 +1528,13 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       if (llvm::isImage(*I)) {
         std::string sname = I->getName();
         if (llvm::isImageWriteOnly(*I))
-          O << "\t.param .surfref " << *CurrentFnSym << "_param_" << paramIndex;
+          O << "\t.param .surfref " << *Mang->getSymbol(F) << "_param_"
+            << paramIndex;
         else // Default image is read_only
-          O << "\t.param .texref " << *CurrentFnSym << "_param_" << paramIndex;
+          O << "\t.param .texref " << *Mang->getSymbol(F) << "_param_"
+            << paramIndex;
       } else // Should be llvm::isSampler(*I)
-        O << "\t.param .samplerref " << *CurrentFnSym << "_param_"
+        O << "\t.param .samplerref " << *Mang->getSymbol(F) << "_param_"
           << paramIndex;
       continue;
     }
