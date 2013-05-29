@@ -512,6 +512,16 @@ def INT_NVVM_SQRT_RM_D : F_MATH_1<"sqrt.rm.f64 \t$dst, $src0;", Float64Regs,
 def INT_NVVM_SQRT_RP_D : F_MATH_1<"sqrt.rp.f64 \t$dst, $src0;", Float64Regs,
   Float64Regs, int_nvvm_sqrt_rp_d>;
 
+// nvvm_sqrt intrinsic
+def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
+          (INT_NVVM_SQRT_RN_FTZ_F Float32Regs:$a)>, Requires<[doF32FTZ, do_SQRTF32_RN]>;
+def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
+          (INT_NVVM_SQRT_RN_F Float32Regs:$a)>, Requires<[do_SQRTF32_RN]>;
+def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
+          (INT_NVVM_SQRT_APPROX_FTZ_F Float32Regs:$a)>, Requires<[doF32FTZ]>;
+def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
+          (INT_NVVM_SQRT_APPROX_F Float32Regs:$a)>;
+
 //
 // Rsqrt
 //

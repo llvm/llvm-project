@@ -41,6 +41,10 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   //    Otherwise, use div.full
   int do_DIVF32_PREC;
 
+  // If true, generate sqrt.rn, else generate sqrt.approx. If FTZ
+  // is true, then generate the corresponding FTZ version.
+  bool do_SQRTF32_PREC;
+
   // If true, add .ftz to f32 instructions.
   // This is only meaningful for sm_20 and later, as the default
   // is not ftz.
