@@ -325,7 +325,7 @@ public:
   virtual bool runOnMachineFunction(MachineFunction &MF) {
     unsigned MaxStack = 0;
     unsigned CurrentStack = 0;
-    bool hasPush;
+    bool HasPush = false;
     for (MachineFunction::iterator MB = MF.begin(), ME = MF.end(); MB != ME;
         ++MB) {
       MachineBasicBlock &MBB = *MB;
@@ -354,7 +354,7 @@ public:
         case AMDGPU::CF_ALU_PUSH_BEFORE:
           CurrentStack++;
           MaxStack = std::max(MaxStack, CurrentStack);
-          hasPush = true;
+          HasPush = true;
         case AMDGPU::CF_ALU:
           I = MI;
           AluClauses.push_back(MakeALUClause(MBB, I));
@@ -475,7 +475,7 @@ public:
           break;
         }
       }
-      MFI->StackSize = getHWStackSize(MaxStack, hasPush);
+      MFI->StackSize = getHWStackSize(MaxStack, HasPush);
     }
 
     return false;
