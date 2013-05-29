@@ -62,6 +62,7 @@ createNVPTXISelDag(NVPTXTargetMachine &TM, llvm::CodeGenOpt::Level OptLevel);
 FunctionPass *createLowerStructArgsPass(NVPTXTargetMachine &);
 FunctionPass *createNVPTXReMatPass(NVPTXTargetMachine &);
 FunctionPass *createNVPTXReMatBlockPass(NVPTXTargetMachine &);
+ModulePass *createGenericToNVVMPass();
 
 bool isImageOrSamplerVal(const Value *, const Module *);
 

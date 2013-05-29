@@ -1510,38 +1510,12 @@ multiclass G_TO_NG<string Str, Intrinsic Intrin> {
 defm cvta_local  : NG_TO_G<"local", int_nvvm_ptr_local_to_gen>;
 defm cvta_shared : NG_TO_G<"shared", int_nvvm_ptr_shared_to_gen>;
 defm cvta_global : NG_TO_G<"global", int_nvvm_ptr_global_to_gen>;
+defm cvta_const  : NG_TO_G<"const", int_nvvm_ptr_constant_to_gen>;
 
 defm cvta_to_local   : G_TO_NG<"local", int_nvvm_ptr_gen_to_local>;
 defm cvta_to_shared : G_TO_NG<"shared", int_nvvm_ptr_gen_to_shared>;
 defm cvta_to_global : G_TO_NG<"global", int_nvvm_ptr_gen_to_global>;
-
-def cvta_const : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-               "mov.u32 \t$result, $src;",
-     [(set Int32Regs:$result, (int_nvvm_ptr_constant_to_gen Int32Regs:$src))]>;
-def cvta_const_64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-               "mov.u64 \t$result, $src;",
-     [(set Int64Regs:$result, (int_nvvm_ptr_constant_to_gen Int64Regs:$src))]>;
-
-
-
-// @TODO: Revisit this.  There is a type
-// contradiction between iPTRAny and iPTR for the def.
-/*def cvta_const_addr : NVPTXInst<(outs Int32Regs:$result), (ins imemAny:$src),
-               "mov.u32 \t$result, $src;",
-     [(set Int32Regs:$result, (int_nvvm_ptr_constant_to_gen
-     (Wrapper tglobaladdr:$src)))]>;
-def cvta_const_addr_64 : NVPTXInst<(outs Int64Regs:$result), (ins imemAny:$src),
-               "mov.u64 \t$result, $src;",
-     [(set Int64Regs:$result, (int_nvvm_ptr_constant_to_gen
-     (Wrapper tglobaladdr:$src)))]>;*/
-
-
-def cvta_to_const : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-            "mov.u32 \t$result, $src;",
-     [(set Int32Regs:$result, (int_nvvm_ptr_gen_to_constant Int32Regs:$src))]>;
-def cvta_to_const_64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-            "mov.u64 \t$result, $src;",
-     [(set Int64Regs:$result, (int_nvvm_ptr_gen_to_constant Int64Regs:$src))]>;
+defm cvta_to_const  : G_TO_NG<"const", int_nvvm_ptr_gen_to_constant>;
 
 
 // nvvm.ptr.gen.to.param

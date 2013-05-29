@@ -68,11 +68,12 @@ InterleaveSrc("nvptx-emit-src", cl::ZeroOrMore,
 namespace {
 /// DiscoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
-void DiscoverDependentGlobals(Value *V, DenseSet<GlobalVariable *> &Globals) {
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+void DiscoverDependentGlobals(const Value *V,
+                              DenseSet<const GlobalVariable *> &Globals) {
+  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
     Globals.insert(GV);
   else {
-    if (User *U = dyn_cast<User>(V)) {
+    if (const User *U = dyn_cast<User>(V)) {
       for (unsigned i = 0, e = U->getNumOperands(); i != e; ++i) {
         DiscoverDependentGlobals(U->getOperand(i), Globals);
       }
@@ -84,8 +85,9 @@ void DiscoverDependentGlobals(Value *V, DenseSet<GlobalVariable *> &Globals) {
 /// instances to be emitted, but only after any dependents have been added
 /// first.
 void VisitGlobalVariableForEmission(
-    GlobalVariable *GV, SmallVectorImpl<GlobalVariable *> &Order,
-    DenseSet<GlobalVariable *> &Visited, DenseSet<GlobalVariable *> &Visiting) {
+    const GlobalVariable *GV, SmallVectorImpl<const GlobalVariable *> &Order,
+    DenseSet<const GlobalVariable *> &Visited,
+    DenseSet<const GlobalVariable *> &Visiting) {
   // Have we already visited this one?
   if (Visited.count(GV))
     return;
@@ -98,12 +100,12 @@ void VisitGlobalVariableForEmission(
   Visiting.insert(GV);
 
   // Make sure we visit all dependents first
-  DenseSet<GlobalVariable *> Others;
+  DenseSet<const GlobalVariable *> Others;
   for (unsigned i = 0, e = GV->getNumOperands(); i != e; ++i)
     DiscoverDependentGlobals(GV->getOperand(i), Others);
 
-  for (DenseSet<GlobalVariable *>::iterator I = Others.begin(),
-                                            E = Others.end();
+  for (DenseSet<const GlobalVariable *>::iterator I = Others.begin(),
+                                                  E = Others.end();
        I != E; ++I)
     VisitGlobalVariableForEmission(*I, Order, Visited, Visiting);
 
@@ -405,6 +407,11 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 
+  if (!GlobalsEmitted) {
+    emitGlobals(*MF->getFunction()->getParent());
+    GlobalsEmitted = true;
+  }
+  
   // Set up
   MRI = &MF->getRegInfo();
   F = MF->getFunction();
@@ -795,7 +802,7 @@ static bool useFuncSeen(const Constant *C,
   return false;
 }
 
-void NVPTXAsmPrinter::emitDeclarations(Module &M, raw_ostream &O) {
+void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
   llvm::DenseMap<const Function *, bool> seenMap;
   for (Module::const_iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI) {
     const Function *F = FI;
@@ -921,6 +928,12 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   if (nvptxSubtarget.getDrvInterface() == NVPTX::CUDA)
     recordAndEmitFilenames(M);
 
+  GlobalsEmitted = false;
+    
+  return false; // success
+}
+
+void NVPTXAsmPrinter::emitGlobals(const Module &M) {
   SmallString<128> Str2;
   raw_svector_ostream OS2(Str2);
 
@@ -931,13 +944,13 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   // global variable in order, and ensure that we emit it *after* its dependent
   // globals. We use a little extra memory maintaining both a set and a list to
   // have fast searches while maintaining a strict ordering.
-  SmallVector<GlobalVariable *, 8> Globals;
-  DenseSet<GlobalVariable *> GVVisited;
-  DenseSet<GlobalVariable *> GVVisiting;
+  SmallVector<const GlobalVariable *, 8> Globals;
+  DenseSet<const GlobalVariable *> GVVisited;
+  DenseSet<const GlobalVariable *> GVVisiting;
 
   // Visit each global variable, in order
-  for (Module::global_iterator I = M.global_begin(), E = M.global_end(); I != E;
-       ++I)
+  for (Module::const_global_iterator I = M.global_begin(), E = M.global_end();
+       I != E; ++I)
     VisitGlobalVariableForEmission(I, Globals, GVVisited, GVVisiting);
 
   assert(GVVisited.size() == M.getGlobalList().size() &&
@@ -951,7 +964,6 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   OS2 << '\n';
 
   OutStreamer.EmitRawText(OS2.str());
-  return false; // success
 }
 
 void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O) {
@@ -989,6 +1001,14 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O) {
 }
 
 bool NVPTXAsmPrinter::doFinalization(Module &M) {
+
+  // If we did not emit any functions, then the global declarations have not
+  // yet been emitted.
+  if (!GlobalsEmitted) {
+    emitGlobals(M);
+    GlobalsEmitted = true;
+  }
+
   // XXX Temproarily remove global variables so that doFinalization() will not
   // emit them again (global variables are emitted at beginning).
 
@@ -1063,7 +1083,8 @@ void NVPTXAsmPrinter::emitLinkageDirective(const GlobalValue *V,
   }
 }
 
-void NVPTXAsmPrinter::printModuleLevelGV(GlobalVariable *GVar, raw_ostream &O,
+void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
+                                         raw_ostream &O,
                                          bool processDemoted) {
 
   // Skip meta data
@@ -1107,10 +1128,10 @@ void NVPTXAsmPrinter::printModuleLevelGV(GlobalVariable *GVar, raw_ostream &O,
   if (llvm::isSampler(*GVar)) {
     O << ".global .samplerref " << llvm::getSamplerName(*GVar);
 
-    Constant *Initializer = NULL;
+    const Constant *Initializer = NULL;
     if (GVar->hasInitializer())
       Initializer = GVar->getInitializer();
-    ConstantInt *CI = NULL;
+    const ConstantInt *CI = NULL;
     if (Initializer)
       CI = dyn_cast<ConstantInt>(Initializer);
     if (CI) {
@@ -1183,7 +1204,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(GlobalVariable *GVar, raw_ostream &O,
     if (localDecls.find(demotedFunc) != localDecls.end())
       localDecls[demotedFunc].push_back(GVar);
     else {
-      std::vector<GlobalVariable *> temp;
+      std::vector<const GlobalVariable *> temp;
       temp.push_back(GVar);
       localDecls[demotedFunc] = temp;
     }
@@ -1213,7 +1234,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(GlobalVariable *GVar, raw_ostream &O,
          (PTy->getAddressSpace() == llvm::ADDRESS_SPACE_CONST_NOT_GEN) ||
          (PTy->getAddressSpace() == llvm::ADDRESS_SPACE_CONST)) &&
         GVar->hasInitializer()) {
-      Constant *Initializer = GVar->getInitializer();
+      const Constant *Initializer = GVar->getInitializer();
       if (!Initializer->isNullValue()) {
         O << " = ";
         printScalarConstant(Initializer, O);
@@ -1237,7 +1258,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(GlobalVariable *GVar, raw_ostream &O,
            (PTy->getAddressSpace() == llvm::ADDRESS_SPACE_CONST_NOT_GEN) ||
            (PTy->getAddressSpace() == llvm::ADDRESS_SPACE_CONST)) &&
           GVar->hasInitializer()) {
-        Constant *Initializer = GVar->getInitializer();
+        const Constant *Initializer = GVar->getInitializer();
         if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue()) {
           AggBuffer aggBuffer(ElementSize, O, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
@@ -1287,7 +1308,7 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
   if (localDecls.find(f) == localDecls.end())
     return;
 
-  std::vector<GlobalVariable *> &gvars = localDecls[f];
+  std::vector<const GlobalVariable *> &gvars = localDecls[f];
 
   for (unsigned i = 0, e = gvars.size(); i != e; ++i) {
     O << "\t// demoted variable\n\t";
@@ -1761,12 +1782,12 @@ void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp, raw_ostream &O) {
   O << utohexstr(API.getZExtValue());
 }
 
-void NVPTXAsmPrinter::printScalarConstant(Constant *CPV, raw_ostream &O) {
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
+void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
     O << CI->getValue();
     return;
   }
-  if (ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
     printFPConstant(CFP, O);
     return;
   }
@@ -1774,13 +1795,13 @@ void NVPTXAsmPrinter::printScalarConstant(Constant *CPV, raw_ostream &O) {
     O << "0";
     return;
   }
-  if (GlobalValue *GVar = dyn_cast<GlobalValue>(CPV)) {
+  if (const GlobalValue *GVar = dyn_cast<GlobalValue>(CPV)) {
     O << *Mang->getSymbol(GVar);
     return;
   }
-  if (ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-    Value *v = Cexpr->stripPointerCasts();
-    if (GlobalValue *GVar = dyn_cast<GlobalValue>(v)) {
+  if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
+    const Value *v = Cexpr->stripPointerCasts();
+    if (const GlobalValue *GVar = dyn_cast<GlobalValue>(v)) {
       O << *Mang->getSymbol(GVar);
       return;
     } else {
@@ -1791,7 +1812,7 @@ void NVPTXAsmPrinter::printScalarConstant(Constant *CPV, raw_ostream &O) {
   llvm_unreachable("Not scalar type found in printScalarConstant()");
 }
 
-void NVPTXAsmPrinter::bufferLEByte(Constant *CPV, int Bytes,
+void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
                                    AggBuffer *aggBuffer) {
 
   const DataLayout *TD = TM.getDataLayout();
@@ -1819,13 +1840,13 @@ void NVPTXAsmPrinter::bufferLEByte(Constant *CPV, int Bytes,
       ptr = (unsigned char *)&int16;
       aggBuffer->addBytes(ptr, 2, Bytes);
     } else if (ETy == Type::getInt32Ty(CPV->getContext())) {
-      if (ConstantInt *constInt = dyn_cast<ConstantInt>(CPV)) {
+      if (const ConstantInt *constInt = dyn_cast<ConstantInt>(CPV)) {
         int int32 = (int)(constInt->getZExtValue());
         ptr = (unsigned char *)&int32;
         aggBuffer->addBytes(ptr, 4, Bytes);
         break;
-      } else if (ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-        if (ConstantInt *constInt = dyn_cast<ConstantInt>(
+      } else if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
+        if (const ConstantInt *constInt = dyn_cast<ConstantInt>(
                 ConstantFoldConstantExpression(Cexpr, TD))) {
           int int32 = (int)(constInt->getZExtValue());
           ptr = (unsigned char *)&int32;
@@ -1841,13 +1862,13 @@ void NVPTXAsmPrinter::bufferLEByte(Constant *CPV, int Bytes,
       }
       llvm_unreachable("unsupported integer const type");
     } else if (ETy == Type::getInt64Ty(CPV->getContext())) {
-      if (ConstantInt *constInt = dyn_cast<ConstantInt>(CPV)) {
+      if (const ConstantInt *constInt = dyn_cast<ConstantInt>(CPV)) {
         long long int64 = (long long)(constInt->getZExtValue());
         ptr = (unsigned char *)&int64;
         aggBuffer->addBytes(ptr, 8, Bytes);
         break;
-      } else if (ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-        if (ConstantInt *constInt = dyn_cast<ConstantInt>(
+      } else if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
+        if (const ConstantInt *constInt = dyn_cast<ConstantInt>(
                 ConstantFoldConstantExpression(Cexpr, TD))) {
           long long int64 = (long long)(constInt->getZExtValue());
           ptr = (unsigned char *)&int64;
@@ -1868,7 +1889,7 @@ void NVPTXAsmPrinter::bufferLEByte(Constant *CPV, int Bytes,
   }
   case Type::FloatTyID:
   case Type::DoubleTyID: {
-    ConstantFP *CFP = dyn_cast<ConstantFP>(CPV);
+    const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV);
     const Type *Ty = CFP->getType();
     if (Ty == Type::getFloatTy(CPV->getContext())) {
       float float32 = (float) CFP->getValueAPF().convertToFloat();
@@ -1884,10 +1905,10 @@ void NVPTXAsmPrinter::bufferLEByte(Constant *CPV, int Bytes,
     break;
   }
   case Type::PointerTyID: {
-    if (GlobalValue *GVar = dyn_cast<GlobalValue>(CPV)) {
+    if (const GlobalValue *GVar = dyn_cast<GlobalValue>(CPV)) {
       aggBuffer->addSymbol(GVar);
-    } else if (ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-      Value *v = Cexpr->stripPointerCasts();
+    } else if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
+      const Value *v = Cexpr->stripPointerCasts();
       aggBuffer->addSymbol(v);
     }
     unsigned int s = TD->getTypeAllocSize(CPV->getType());
@@ -1916,7 +1937,7 @@ void NVPTXAsmPrinter::bufferLEByte(Constant *CPV, int Bytes,
   }
 }
 
-void NVPTXAsmPrinter::bufferAggregateConstant(Constant *CPV,
+void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
                                               AggBuffer *aggBuffer) {
   const DataLayout *TD = TM.getDataLayout();
   int Bytes;
