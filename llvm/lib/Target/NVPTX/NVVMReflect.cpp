@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NVPTX.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -40,7 +41,7 @@ using namespace llvm;
 namespace llvm { void initializeNVVMReflectPass(PassRegistry &); }
 
 namespace {
-class LLVM_LIBRARY_VISIBILITY NVVMReflect : public ModulePass {
+class NVVMReflect : public ModulePass {
 private:
   StringMap<int> VarMap;
   typedef DenseMap<std::string, int>::iterator VarMapIter;
@@ -48,9 +49,18 @@ private:
 
 public:
   static char ID;
-  NVVMReflect() : ModulePass(ID) {
+  NVVMReflect() : ModulePass(ID), ReflectFunction(0) {
+    initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
     VarMap.clear();
-    ReflectFunction = 0;
+  }
+
+  NVVMReflect(const StringMap<int> &Mapping)
+  : ModulePass(ID), ReflectFunction(0) {
+    initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
+    for (StringMap<int>::const_iterator I = Mapping.begin(), E = Mapping.end();
+         I != E; ++I) {
+      VarMap[(*I).getKey()] = (*I).getValue();
+    }
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const { AU.setPreservesAll(); }
@@ -58,6 +68,14 @@ public:
 
   void setVarMap();
 };
+}
+
+ModulePass *llvm::createNVVMReflectPass() {
+  return new NVVMReflect();
+}
+
+ModulePass *llvm::createNVVMReflectPass(const StringMap<int>& Mapping) {
+  return new NVVMReflect(Mapping);
 }
 
 static cl::opt<bool>
