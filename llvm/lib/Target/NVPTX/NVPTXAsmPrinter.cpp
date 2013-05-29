@@ -1199,7 +1199,11 @@ void NVPTXAsmPrinter::printModuleLevelGV(GlobalVariable *GVar, raw_ostream &O,
 
   if (ETy->isPrimitiveType() || ETy->isIntegerTy() || isa<PointerType>(ETy)) {
     O << " .";
-    O << getPTXFundamentalTypeStr(ETy, false);
+    // Special case: ABI requires that we use .u8 for predicates
+    if (ETy->isIntegerTy(1))
+      O << "u8";
+    else
+      O << getPTXFundamentalTypeStr(ETy, false);
     O << " ";
     O << *Mang->getSymbol(GVar);
 
@@ -1564,7 +1568,13 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         }
 
         // non-pointer scalar to kernel func
-        O << "\t.param ." << getPTXFundamentalTypeStr(Ty) << " ";
+        O << "\t.param .";
+        // Special case: predicate operands become .u8 types
+        if (Ty->isIntegerTy(1))
+          O << "u8";
+        else
+          O << getPTXFundamentalTypeStr(Ty);
+        O << " ";
         printParamName(I, paramIndex, O);
         continue;
       }
