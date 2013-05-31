@@ -453,7 +453,8 @@ namespace llvm {
     ExitLimit ComputeExitLimitFromCond(const Loop *L,
                                        Value *ExitCond,
                                        BasicBlock *TBB,
-                                       BasicBlock *FBB);
+                                       BasicBlock *FBB,
+                                       bool IsSubExpr);
 
     /// ComputeExitLimitFromICmp - Compute the number of times the backedge of
     /// the specified loop will execute if its exit condition were a conditional
@@ -461,7 +462,8 @@ namespace llvm {
     ExitLimit ComputeExitLimitFromICmp(const Loop *L,
                                        ICmpInst *ExitCond,
                                        BasicBlock *TBB,
-                                       BasicBlock *FBB);
+                                       BasicBlock *FBB,
+                                       bool IsSubExpr);
 
     /// ComputeLoadConstantCompareExitLimit - Given an exit condition
     /// of 'icmp op load X, cst', try to see if we can compute the
@@ -483,7 +485,7 @@ namespace llvm {
     /// HowFarToZero - Return the number of times an exit condition comparing
     /// the specified value to zero will execute.  If not computable, return
     /// CouldNotCompute.
-    ExitLimit HowFarToZero(const SCEV *V, const Loop *L);
+    ExitLimit HowFarToZero(const SCEV *V, const Loop *L, bool IsSubExpr);
 
     /// HowFarToNonZero - Return the number of times an exit condition checking
     /// the specified value for nonzero will execute.  If not computable, return
@@ -495,7 +497,7 @@ namespace llvm {
     /// computable, return CouldNotCompute. isSigned specifies whether the
     /// less-than is signed.
     ExitLimit HowManyLessThans(const SCEV *LHS, const SCEV *RHS,
-                               const Loop *L, bool isSigned);
+                               const Loop *L, bool isSigned, bool IsSubExpr);
 
     /// getPredecessorWithUniqueSuccessorForBB - Return a predecessor of BB
     /// (which may not be an immediate predecessor) which has exactly one
