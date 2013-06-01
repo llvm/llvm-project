@@ -3937,10 +3937,19 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
 /// before taking the branch. For loops with multiple exits, it may not be the
 /// number times that the loop header executes because the loop may exit
 /// prematurely via another branch.
+///
+/// FIXME: We conservatively call getBackedgeTakenCount(L) instead of
+/// getExitCount(L, ExitingBlock) to compute a safe trip count considering all
+/// loop exits. getExitCount() may return an exact count for this branch
+/// assuming no-signed-wrap. The number of well-defined iterations may actually
+/// be higher than this trip count if this exit test is skipped and the loop
+/// exits via a different branch. Ideally, getExitCount() would know whether it
+/// depends on a NSW assumption, and we would only fall back to a conservative
+/// trip count in that case.
 unsigned ScalarEvolution::
-getSmallConstantTripCount(Loop *L, BasicBlock *ExitingBlock) {
+getSmallConstantTripCount(Loop *L, BasicBlock */*ExitingBlock*/) {
   const SCEVConstant *ExitCount =
-    dyn_cast<SCEVConstant>(getExitCount(L, ExitingBlock));
+    dyn_cast<SCEVConstant>(getBackedgeTakenCount(L));
   if (!ExitCount)
     return 0;
 
@@ -3967,8 +3976,8 @@ getSmallConstantTripCount(Loop *L, BasicBlock *ExitingBlock) {
 /// As explained in the comments for getSmallConstantTripCount, this assumes
 /// that control exits the loop via ExitingBlock.
 unsigned ScalarEvolution::
-getSmallConstantTripMultiple(Loop *L, BasicBlock *ExitingBlock) {
-  const SCEV *ExitCount = getExitCount(L, ExitingBlock);
+getSmallConstantTripMultiple(Loop *L, BasicBlock */*ExitingBlock*/) {
+  const SCEV *ExitCount = getBackedgeTakenCount(L);
   if (ExitCount == getCouldNotCompute())
     return 1;
 
@@ -3997,7 +4006,7 @@ getSmallConstantTripMultiple(Loop *L, BasicBlock *ExitingBlock) {
 }
 
 // getExitCount - Get the expression for the number of loop iterations for which
-// this loop is guaranteed not to exit via ExitintBlock. Otherwise return
+// this loop is guaranteed not to exit via ExitingBlock. Otherwise return
 // SCEVCouldNotCompute.
 const SCEV *ScalarEvolution::getExitCount(Loop *L, BasicBlock *ExitingBlock) {
   return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
