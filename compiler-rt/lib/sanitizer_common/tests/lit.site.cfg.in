@@ -3,6 +3,7 @@
 
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.compiler_rt_src_root = "@COMPILER_RT_SOURCE_DIR@"
 config.llvm_build_mode = "@LLVM_BUILD_MODE@"
 
 try:
