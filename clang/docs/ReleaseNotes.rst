@@ -96,15 +96,6 @@ in the source, the linkage and a semantic storage class. This was a bit
 redundant and the semantic storage class has been removed. The method
 getStorageClass now returns what is written in the source code for that decl.
 
-Wide Character Types
-^^^^^^^^^^^^^^^^^^^^
-
-The ASTContext class now keeps track of two different types for wide character
-types: WCharTy and WideCharTy. WCharTy represents the built-in wchar_t type
-available in C++. WideCharTy is the type used for wide character literals; in
-C++ it is the same as WCharTy, but in C99, where wchar_t is a typedef, it is an
-integer type.
-
 libclang
 --------
 
