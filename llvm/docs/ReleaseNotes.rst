@@ -88,6 +88,32 @@ Removed support for legacy hexagonv2 and hexagonv3 processor architectures which
 are no longer in use. Currently supported architectures arehexagonv4 and
 hexagonv5.
 
+Mips target
+--------------
+
+New features and improvements:
+
+- Clang driver
+ - Support for Sourcery CodeBench Mips toolchain directories tree.
+ - Support for new command line options including:
+  - -mxgot/-mno-xgot
+  - -EL / -EB
+  - -mmicromips / -mno-micromips
+  - -msingle-float / -mdouble-float
+  - -mabi=32 (o32 abi) and -mabi=64 (n64 abi)
+ - Previously, options such as -mips16, -mmicromips, -mdsp and -mdspr2 were
+   not passed to the assembler. This issue has been fixed.
+
+- A number of changes have been made to improve the quality of DSP-ASE code
+  generation.
+ - Multiply and multiply-accumulate instructions can now use all four
+   accumulators.
+ - Instruction selection patterns have been added so that DSP instructions
+   are emitted without having to use builtins.
+
+- Delay slot filler pass can now search successor blocks for instructions to
+  fill delay slots (use option -disable-mips-df-succbb-search=false).
+
 Loop Vectorizer
 ---------------
 
