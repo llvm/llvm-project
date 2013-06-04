@@ -2378,6 +2378,26 @@ bool LoopVectorizationLegality::canVectorize() {
   return true;
 }
 
+/// \brief Check that the instruction has outside loop users and is not an
+/// identified reduction variable.
+static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
+                               SmallPtrSet<Value *, 4> &Reductions) {
+  // Reduction instructions are allowed to have exit users. All other
+  // instructions must not have external users.
+  if (!Reductions.count(Inst))
+    //Check that all of the users of the loop are inside the BB.
+    for (Value::use_iterator I = Inst->use_begin(), E = Inst->use_end();
+         I != E; ++I) {
+      Instruction *U = cast<Instruction>(*I);
+      // This user may be a reduction exit value.
+      if (!TheLoop->contains(U)) {
+        DEBUG(dbgs() << "LV: Found an outside user for : "<< *U << "\n");
+        return true;
+      }
+    }
+  return false;
+}
+
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *PreHeader = TheLoop->getLoopPreheader();
   BasicBlock *Header = TheLoop->getHeader();
@@ -2416,8 +2436,13 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // If this PHINode is not in the header block, then we know that we
         // can convert it to select during if-conversion. No need to check if
         // the PHIs in this block are induction or reduction variables.
-        if (*bb != Header)
-          continue;
+        if (*bb != Header) {
+          // Check that this instruction has no outside users or is an
+          // identified reduction value with an outside user.
+          if(!hasOutsideLoopUser(TheLoop, it, AllowedExit))
+            continue;
+          return false;
+        }
 
         // We only allow if-converted PHIs with more than two incoming values.
         if (Phi->getNumIncomingValues() != 2) {
@@ -2510,17 +2535,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
       // Reduction instructions are allowed to have exit users.
       // All other instructions must not have external users.
-      if (!AllowedExit.count(it))
-        //Check that all of the users of the loop are inside the BB.
-        for (Value::use_iterator I = it->use_begin(), E = it->use_end();
-             I != E; ++I) {
-          Instruction *U = cast<Instruction>(*I);
-          // This user may be a reduction exit value.
-          if (!TheLoop->contains(U)) {
-            DEBUG(dbgs() << "LV: Found an outside user for : "<< *U << "\n");
-            return false;
-          }
-        }
+      if (hasOutsideLoopUser(TheLoop, it, AllowedExit))
+        return false;
+
     } // next instr.
 
   }
