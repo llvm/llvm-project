@@ -517,23 +517,16 @@ private:
                 return false;
             }
             
-            ConstantDataArray *real_name = dyn_cast<ConstantDataArray>(metadata->getOperand(0));
+            MDString *real_name = dyn_cast<MDString>(metadata->getOperand(0));
             
             if (!real_name)
             {
                 if (log)
-                    log->Printf("Function call metadata is not a ConstantArray for [%p] %s", call_inst, PrintValue(call_inst).c_str());
+                    log->Printf("Function call metadata is not an MDString for [%p] %s", call_inst, PrintValue(call_inst).c_str());
                 return false;
             }
-            
-            if (!real_name->isString())
-            {
-                if (log)
-                    log->Printf("Function call metadata is not a string for [%p] %s", call_inst, PrintValue(call_inst).c_str());
-                return false;
-            }
-            
-            std::string name_str = real_name->getAsString();
+
+            std::string name_str = real_name->getString();
             const char* name_cstr = name_str.c_str();
             
             if (log)

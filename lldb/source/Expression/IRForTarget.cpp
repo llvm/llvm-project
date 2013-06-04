@@ -337,12 +337,10 @@ IRForTarget::RegisterFunctionMetadata(LLVMContext &context,
                 
         if (Instruction *user_inst = dyn_cast<Instruction>(user))
         {
-            Constant *name_array = ConstantDataArray::getString(context, StringRef(name));
-            
-            ArrayRef<Value *> md_values(name_array);
-            
-            MDNode *metadata = MDNode::get(context, md_values);
-            
+            MDString* md_name = MDString::get(context, StringRef(name));
+
+            MDNode *metadata = MDNode::get(context, md_name);
+
             user_inst->setMetadata("lldb.call.realName", metadata);
         }
         else
