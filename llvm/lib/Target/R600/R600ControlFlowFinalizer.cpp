@@ -337,6 +337,7 @@ public:
         BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
             getHWInstrDesc(CF_CALL_FS));
         CfCount++;
+        MaxStack = 1;
       }
       std::vector<ClauseFile> FetchClauses, AluClauses;
       for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
