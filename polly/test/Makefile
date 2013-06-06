@@ -32,7 +32,7 @@ ifdef VG
 endif
 
 
-polly-test:: lit.site.cfg polly-lib
+check-polly:: lit.site.cfg polly-lib
 	@ echo '--- Running polly tests for $(TARGET_TRIPLE) ---'
 	@ $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py \
 	  $(LIT_ARGS) $(TESTARGS) $(TESTDIRS)
@@ -58,4 +58,4 @@ lit.site.cfg: FORCE
 clean::
 	@ find . -name Output | xargs rm -fr
 
-.PHONY: polly-test clean
+.PHONY: check-polly clean
