@@ -165,6 +165,26 @@ and share the same distribution license.  This section provides updates on these
 sub-projects.
 
 
+DragonEgg: GCC front-ends, LLVM back-end
+----------------------------------------
+
+`DragonEgg <http://dragonegg.llvm.org/>`_ is a
+`GCC plugin <http://gcc.gnu.org/wiki/plugins>`_ that replaces GCC's optimizers
+and code generators with LLVM's.  It works with gcc-4.5, 4.6, 4.7 and 4.8, can
+target the x86-32/x86-64 and ARM processor families, and has been successfully
+used on the Darwin, FreeBSD, KFreeBSD, Linux and OpenBSD platforms.  It fully
+supports Ada, C, C++ and Fortran.  It has partial support for Go, Java, Obj-C
+and Obj-C++.  Note that gcc-4.6 is the best supported version, and that Ada in
+particular doesn't work well with gcc-4.7 and newer.
+
+The `3.3 release <http://llvm.org/apt/>`_ has the following notable changes.
+
+- supports gcc-4.8 (requires gcc-4.8.1 or newer)
+- object files can be written directly using LLVM's integrated assembler
+- produces saner debug info
+- bitfields can now contain arbitrary scalar types (useful for Ada)
+
+
 LLDB: Low Level Debugger
 ------------------------
 
