@@ -1,4 +1,4 @@
-;RUN: opt %loadPolly %defaultOpts -polly-cloog -analyze < %s | FileCheck %s
+;RUN: opt %loadPolly %defaultOpts -polly-detect-scops-in-functions-without-loops -polly-cloog -analyze < %s | FileCheck %s
 
 ;#include <string.h>
 ;int A[1];
