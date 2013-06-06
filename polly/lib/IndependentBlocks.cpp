@@ -394,9 +394,16 @@ bool IndependentBlocks::translateScalarToArray(Instruction *Inst,
   AllocaInst *Slot = new AllocaInst(
       Inst->getType(), 0, Inst->getName() + ".s2a", AllocaBlock->begin());
   assert(!isa<InvokeInst>(Inst) && "Unexpect Invoke in Scop!");
-  // Store right after Inst.
-  BasicBlock::iterator StorePos = Inst;
-  (void) new StoreInst(Inst, Slot, ++StorePos);
+
+  // Store right after Inst, and make sure the position is after all phi nodes.
+  BasicBlock::iterator StorePos;
+  if (isa<PHINode>(Inst)) {
+    StorePos = Inst->getParent()->getFirstNonPHI();
+  } else {
+    StorePos = Inst;
+    StorePos++;
+  }
+  (void) new StoreInst(Inst, Slot, StorePos);
 
   if (!LoadOutside.empty()) {
     LoadInst *ExitLoad = new LoadInst(Slot, Inst->getName() + ".loadoutside",
