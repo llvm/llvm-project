@@ -2,76 +2,112 @@
 	.section	.rodata.cst8,"aM",@progbits,8
 	.align	8
 .LCPI0_0:
-	.quad	4602678819172646912     # double 5.000000e-01
+	.quad	4602678819172646912     # double 0.5
 	.text
 	.globl	init_array
 	.align	16, 0x90
 	.type	init_array,@function
 init_array:                             # @init_array
-# BB#0:                                 # %pollyBB
-	xorl	%eax, %eax
-	movsd	.LCPI0_0(%rip), %xmm0
-	movq	%rax, %rcx
+	.cfi_startproc
+# BB#0:                                 # %entry
+	pushq	%rbp
+.Ltmp2:
+	.cfi_def_cfa_offset 16
+.Ltmp3:
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+.Ltmp4:
+	.cfi_def_cfa_register %rbp
+	xorl	%r8d, %r8d
+	vmovsd	.LCPI0_0(%rip), %xmm0
 	.align	16, 0x90
-.LBB0_2:                                # %polly.loop_header1.preheader
+.LBB0_1:                                # %polly.loop_preheader3
                                         # =>This Loop Header: Depth=1
-                                        #     Child Loop BB0_3 Depth 2
-	movq	$-1536, %rdx            # imm = 0xFFFFFFFFFFFFFA00
-	xorl	%esi, %esi
+                                        #     Child Loop BB0_2 Depth 2
+	xorl	%ecx, %ecx
 	.align	16, 0x90
-.LBB0_3:                                # %polly.loop_body2
-                                        #   Parent Loop BB0_2 Depth=1
+.LBB0_2:                                # %polly.loop_header2
+                                        #   Parent Loop BB0_1 Depth=1
                                         # =>  This Inner Loop Header: Depth=2
-	movl	%esi, %edi
-	sarl	$31, %edi
-	shrl	$22, %edi
-	addl	%esi, %edi
-	andl	$-1024, %edi            # imm = 0xFFFFFFFFFFFFFC00
-	negl	%edi
-	leal	1(%rsi,%rdi), %edi
-	cvtsi2sd	%edi, %xmm1
-	mulsd	%xmm0, %xmm1
-	cvtsd2ss	%xmm1, %xmm1
-	movss	%xmm1, A+6144(%rax,%rdx,4)
-	movss	%xmm1, B+6144(%rax,%rdx,4)
-	addl	%ecx, %esi
-	incq	%rdx
-	jne	.LBB0_3
-# BB#1:                                 # %polly.loop_header.loopexit
-                                        #   in Loop: Header=BB0_2 Depth=1
-	addq	$6144, %rax             # imm = 0x1800
-	incq	%rcx
-	cmpq	$1536, %rcx             # imm = 0x600
+	movl	%ecx, %edx
+	imull	%r8d, %edx
+	movl	%edx, %esi
+	sarl	$31, %esi
+	shrl	$22, %esi
+	addl	%edx, %esi
+	andl	$-1024, %esi            # imm = 0xFFFFFFFFFFFFFC00
+	negl	%esi
+	movq	%r8, %rax
+	shlq	$11, %rax
+	leal	1(%rdx,%rsi), %edi
+	leaq	(%rax,%rax,2), %rsi
+	leaq	1(%rcx), %rdx
+	cmpq	$1536, %rdx             # imm = 0x600
+	vcvtsi2sdl	%edi, %xmm0, %xmm1
+	vmulsd	%xmm0, %xmm1, %xmm1
+	vcvtsd2ss	%xmm1, %xmm1, %xmm1
+	vmovss	%xmm1, A(%rsi,%rcx,4)
+	vmovss	%xmm1, B(%rsi,%rcx,4)
+	movq	%rdx, %rcx
 	jne	.LBB0_2
-# BB#4:                                 # %polly.after_loop
+# BB#3:                                 # %polly.loop_exit4
+                                        #   in Loop: Header=BB0_1 Depth=1
+	incq	%r8
+	cmpq	$1536, %r8              # imm = 0x600
+	jne	.LBB0_1
+# BB#4:                                 # %polly.loop_exit
+	popq	%rbp
 	ret
-.Ltmp0:
-	.size	init_array, .Ltmp0-init_array
+.Ltmp5:
+	.size	init_array, .Ltmp5-init_array
+	.cfi_endproc
 
 	.globl	print_array
 	.align	16, 0x90
 	.type	print_array,@function
 print_array:                            # @print_array
-# BB#0:
+	.cfi_startproc
+# BB#0:                                 # %entry
+	pushq	%rbp
+.Ltmp9:
+	.cfi_def_cfa_offset 16
+.Ltmp10:
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+.Ltmp11:
+	.cfi_def_cfa_register %rbp
+	pushq	%r15
 	pushq	%r14
+	pushq	%r12
 	pushq	%rbx
-	pushq	%rax
-	movq	$-9437184, %rbx         # imm = 0xFFFFFFFFFF700000
+.Ltmp12:
+	.cfi_offset %rbx, -48
+.Ltmp13:
+	.cfi_offset %r12, -40
+.Ltmp14:
+	.cfi_offset %r14, -32
+.Ltmp15:
+	.cfi_offset %r15, -24
+	xorl	%r14d, %r14d
+	movl	$C, %r15d
 	.align	16, 0x90
-.LBB1_1:                                # %.preheader
+.LBB1_1:                                # %for.cond1.preheader
                                         # =>This Loop Header: Depth=1
                                         #     Child Loop BB1_2 Depth 2
-	xorl	%r14d, %r14d
-	movq	stdout(%rip), %rdi
+	movq	stdout(%rip), %rax
+	movq	%r15, %r12
+	xorl	%ebx, %ebx
 	.align	16, 0x90
-.LBB1_2:                                #   Parent Loop BB1_1 Depth=1
+.LBB1_2:                                # %for.body3
+                                        #   Parent Loop BB1_1 Depth=1
                                         # =>  This Inner Loop Header: Depth=2
-	movss	C+9437184(%rbx,%r14,4), %xmm0
-	cvtss2sd	%xmm0, %xmm0
+	vmovss	(%r12), %xmm0
+	vcvtss2sd	%xmm0, %xmm0, %xmm0
+	movq	%rax, %rdi
 	movl	$.L.str, %esi
 	movb	$1, %al
 	callq	fprintf
-	movslq	%r14d, %rax
+	movslq	%ebx, %rax
 	imulq	$1717986919, %rax, %rcx # imm = 0x66666667
 	movq	%rcx, %rdx
 	shrq	$63, %rdx
@@ -81,125 +117,158 @@ print_array:                            # @print_array
 	subl	%ecx, %eax
 	cmpl	$79, %eax
 	jne	.LBB1_4
-# BB#3:                                 #   in Loop: Header=BB1_2 Depth=2
+# BB#3:                                 # %if.then
+                                        #   in Loop: Header=BB1_2 Depth=2
 	movq	stdout(%rip), %rsi
 	movl	$10, %edi
 	callq	fputc
-.LBB1_4:                                #   in Loop: Header=BB1_2 Depth=2
-	incq	%r14
-	movq	stdout(%rip), %rsi
-	cmpq	$1536, %r14             # imm = 0x600
-	movq	%rsi, %rdi
+.LBB1_4:                                # %for.inc
+                                        #   in Loop: Header=BB1_2 Depth=2
+	addq	$4, %r12
+	incq	%rbx
+	movq	stdout(%rip), %rax
+	cmpq	$1536, %rbx             # imm = 0x600
 	jne	.LBB1_2
-# BB#5:                                 #   in Loop: Header=BB1_1 Depth=1
+# BB#5:                                 # %for.end
+                                        #   in Loop: Header=BB1_1 Depth=1
 	movl	$10, %edi
+	movq	%rax, %rsi
 	callq	fputc
-	addq	$6144, %rbx             # imm = 0x1800
+	addq	$6144, %r15             # imm = 0x1800
+	incq	%r14
+	cmpq	$1536, %r14             # imm = 0x600
 	jne	.LBB1_1
-# BB#6:
-	addq	$8, %rsp
+# BB#6:                                 # %for.end12
 	popq	%rbx
+	popq	%r12
 	popq	%r14
+	popq	%r15
+	popq	%rbp
 	ret
-.Ltmp1:
-	.size	print_array, .Ltmp1-print_array
+.Ltmp16:
+	.size	print_array, .Ltmp16-print_array
+	.cfi_endproc
 
 	.section	.rodata.cst8,"aM",@progbits,8
 	.align	8
 .LCPI2_0:
-	.quad	4602678819172646912     # double 5.000000e-01
+	.quad	4602678819172646912     # double 0.5
 	.text
 	.globl	main
 	.align	16, 0x90
 	.type	main,@function
 main:                                   # @main
-# BB#0:                                 # %pollyBB
-	pushq	%rax
-	xorl	%eax, %eax
-	movsd	.LCPI2_0(%rip), %xmm0
-	movq	%rax, %rcx
+	.cfi_startproc
+# BB#0:                                 # %entry
+	pushq	%rbp
+.Ltmp20:
+	.cfi_def_cfa_offset 16
+.Ltmp21:
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+.Ltmp22:
+	.cfi_def_cfa_register %rbp
+	pushq	%r14
+	pushq	%rbx
+.Ltmp23:
+	.cfi_offset %rbx, -32
+.Ltmp24:
+	.cfi_offset %r14, -24
+	xorl	%ebx, %ebx
+	vmovsd	.LCPI2_0(%rip), %xmm0
 	.align	16, 0x90
-.LBB2_1:                                # %polly.loop_header1.preheader.i
+.LBB2_1:                                # %polly.loop_preheader3.i
                                         # =>This Loop Header: Depth=1
                                         #     Child Loop BB2_2 Depth 2
-	movq	$-1536, %rdx            # imm = 0xFFFFFFFFFFFFFA00
-	xorl	%esi, %esi
+	xorl	%ecx, %ecx
 	.align	16, 0x90
-.LBB2_2:                                # %polly.loop_body2.i
+.LBB2_2:                                # %polly.loop_header2.i
                                         #   Parent Loop BB2_1 Depth=1
                                         # =>  This Inner Loop Header: Depth=2
-	movl	%esi, %edi
-	sarl	$31, %edi
-	shrl	$22, %edi
-	addl	%esi, %edi
-	andl	$-1024, %edi            # imm = 0xFFFFFFFFFFFFFC00
-	negl	%edi
-	leal	1(%rsi,%rdi), %edi
-	cvtsi2sd	%edi, %xmm1
-	mulsd	%xmm0, %xmm1
-	cvtsd2ss	%xmm1, %xmm1
-	movss	%xmm1, A+6144(%rax,%rdx,4)
-	movss	%xmm1, B+6144(%rax,%rdx,4)
-	addl	%ecx, %esi
-	incq	%rdx
+	movl	%ecx, %edx
+	imull	%ebx, %edx
+	movl	%edx, %esi
+	sarl	$31, %esi
+	shrl	$22, %esi
+	addl	%edx, %esi
+	andl	$-1024, %esi            # imm = 0xFFFFFFFFFFFFFC00
+	negl	%esi
+	movq	%rbx, %rax
+	shlq	$11, %rax
+	leal	1(%rdx,%rsi), %edi
+	leaq	(%rax,%rax,2), %rsi
+	leaq	1(%rcx), %rdx
+	cmpq	$1536, %rdx             # imm = 0x600
+	vcvtsi2sdl	%edi, %xmm0, %xmm1
+	vmulsd	%xmm0, %xmm1, %xmm1
+	vcvtsd2ss	%xmm1, %xmm1, %xmm1
+	vmovss	%xmm1, A(%rsi,%rcx,4)
+	vmovss	%xmm1, B(%rsi,%rcx,4)
+	movq	%rdx, %rcx
 	jne	.LBB2_2
-# BB#3:                                 # %polly.loop_header.loopexit.i
+# BB#3:                                 # %polly.loop_exit4.i
                                         #   in Loop: Header=BB2_1 Depth=1
-	addq	$6144, %rax             # imm = 0x1800
-	incq	%rcx
-	cmpq	$1536, %rcx             # imm = 0x600
+	incq	%rbx
+	cmpq	$1536, %rbx             # imm = 0x600
 	jne	.LBB2_1
-# BB#4:                                 # %polly.loop_header.preheader
+# BB#4:                                 # %polly.loop_preheader3.preheader
+	movl	$C, %r14d
 	movl	$C, %edi
 	xorl	%esi, %esi
 	movl	$9437184, %edx          # imm = 0x900000
 	callq	memset
 	xorl	%eax, %eax
-	jmp	.LBB2_6
 	.align	16, 0x90
-.LBB2_5:                                # %polly.loop_header7.loopexit
-                                        #   in Loop: Header=BB2_6 Depth=1
-	addq	$6144, %rax             # imm = 0x1800
-	cmpq	$9437184, %rax          # imm = 0x900000
-	je	.LBB2_7
-.LBB2_6:                                # %polly.loop_header12.preheader
+.LBB2_5:                                # %polly.loop_preheader17
                                         # =>This Loop Header: Depth=1
-                                        #     Child Loop BB2_9 Depth 2
-                                        #       Child Loop BB2_10 Depth 3
-	leaq	A(%rax), %rcx
-	movq	$-9437184, %rdx         # imm = 0xFFFFFFFFFF700000
-	jmp	.LBB2_9
+                                        #     Child Loop BB2_10 Depth 2
+                                        #       Child Loop BB2_8 Depth 3
+	movl	$B, %ebx
+	xorl	%edx, %edx
 	.align	16, 0x90
-.LBB2_8:                                # %polly.loop_header12.loopexit
-                                        #   in Loop: Header=BB2_9 Depth=2
-	addq	$4, %rcx
-	addq	$6144, %rdx             # imm = 0x1800
-	je	.LBB2_5
-.LBB2_9:                                # %polly.loop_header17.preheader
-                                        #   Parent Loop BB2_6 Depth=1
+.LBB2_10:                               # %polly.loop_preheader24
+                                        #   Parent Loop BB2_5 Depth=1
                                         # =>  This Loop Header: Depth=2
-                                        #       Child Loop BB2_10 Depth 3
-	movss	(%rcx), %xmm0
-	xorl	%esi, %esi
+                                        #       Child Loop BB2_8 Depth 3
+	leaq	(%rax,%rax,2), %rcx
+	shlq	$11, %rcx
+	vmovss	A(%rcx,%rdx,4), %xmm0
+	movl	$1536, %esi             # imm = 0x600
+	movq	%r14, %rdi
+	movq	%rbx, %rcx
 	.align	16, 0x90
-.LBB2_10:                               # %polly.loop_body18
-                                        #   Parent Loop BB2_6 Depth=1
-                                        #     Parent Loop BB2_9 Depth=2
+.LBB2_8:                                # %polly.loop_header23
+                                        #   Parent Loop BB2_5 Depth=1
+                                        #     Parent Loop BB2_10 Depth=2
                                         # =>    This Inner Loop Header: Depth=3
-	movss	B+9437184(%rdx,%rsi,4), %xmm1
-	mulss	%xmm0, %xmm1
-	addss	C(%rax,%rsi,4), %xmm1
-	movss	%xmm1, C(%rax,%rsi,4)
-	incq	%rsi
-	cmpq	$1536, %rsi             # imm = 0x600
+	vmulss	(%rcx), %xmm0, %xmm1
+	vaddss	(%rdi), %xmm1, %xmm1
+	vmovss	%xmm1, (%rdi)
+	addq	$4, %rdi
+	addq	$4, %rcx
+	decq	%rsi
+	jne	.LBB2_8
+# BB#9:                                 # %polly.loop_exit25
+                                        #   in Loop: Header=BB2_10 Depth=2
+	addq	$6144, %rbx             # imm = 0x1800
+	incq	%rdx
+	cmpq	$1536, %rdx             # imm = 0x600
 	jne	.LBB2_10
-	jmp	.LBB2_8
-.LBB2_7:                                # %polly.after_loop9
+# BB#6:                                 # %polly.loop_exit18
+                                        #   in Loop: Header=BB2_5 Depth=1
+	addq	$6144, %r14             # imm = 0x1800
+	incq	%rax
+	cmpq	$1536, %rax             # imm = 0x600
+	jne	.LBB2_5
+# BB#7:                                 # %polly.loop_exit11
 	xorl	%eax, %eax
-	popq	%rdx
+	popq	%rbx
+	popq	%r14
+	popq	%rbp
 	ret
-.Ltmp2:
-	.size	main, .Ltmp2-main
+.Ltmp25:
+	.size	main, .Ltmp25-main
+	.cfi_endproc
 
 	.type	A,@object               # @A
 	.comm	A,9437184,16

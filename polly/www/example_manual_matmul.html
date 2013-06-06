@@ -110,7 +110,7 @@ view-scops-only:
 <pre>
 [...]
 Printing analysis 'Polly - Create polyhedral description of Scops' for region:
-'%1 =&gt;&nbsp;%17' in function 'init_array':
+'for.cond =&gt; for.end19' in function 'init_array':
    Context:
    { [] }
    Statements {
@@ -135,7 +135,7 @@ Printing analysis 'Polly - Create polyhedral description of Scops' for region:
    }
 [...]
 Printing analysis 'Polly - Create polyhedral description of Scops' for region:
-'%1 =&gt;&nbsp;%17' in function 'main':
+'for.cond =&gt; for.end30' in function 'main':
    Context:
    { [] }
    Statements {
@@ -178,7 +178,7 @@ Printing analysis 'Polly - Create polyhedral description of Scops' for region:
 <li><h4>Show the dependences for the SCoPs</h4>
 <pre class="code">opt -basicaa -polly-dependences -analyze matmul.preopt.ll</pre>
 <pre>Printing analysis 'Polly - Calculate dependences for SCoP' for region:
-'for.cond =&gt; for.end28' in function 'init_array':
+'for.cond =&gt; for.end19' in function 'init_array':
    Must dependences:
        {  }
    May dependences:
@@ -188,7 +188,7 @@ Printing analysis 'Polly - Create polyhedral description of Scops' for region:
    May no source:
        {  }
 Printing analysis 'Polly - Calculate dependences for SCoP' for region:
-'for.cond =&gt; for.end48' in function 'main':
+'for.cond =&gt; for.end30' in function 'main':
    Must dependences:
        {  Stmt_4[i0, i1] -&gt; Stmt_6[i0, i1, 0]&nbsp;:
               i0 &gt;= 0 and i0 &lt;= 1023 and i1 &gt;= 0 and i1 &lt;= 1023;
@@ -221,8 +221,8 @@ Printing analysis 'Polly - Calculate dependences for SCoP' for region:
 Polly can export the polyhedral representation in so called jscop files. Jscop
 files contain the polyhedral representation stored in a JSON file.
 <pre class="code">opt -basicaa -polly-export-jscop matmul.preopt.ll</pre>
-<pre>Writing SCoP 'for.cond =&gt; for.end28' in function 'init_array' to './init_array___%for.cond---%for.end28.jscop'.
-Writing SCoP 'for.cond =&gt; for.end48' in function 'main' to './main___%for.cond---%for.end48.jscop'.
+<pre>Writing SCoP 'for.cond =&gt; for.end19' in function 'init_array' to './init_array___%for.cond---%for.end19.jscop'.
+Writing SCoP 'for.cond =&gt; for.end30' in function 'main' to './main___%for.cond---%for.end30.jscop'.
 </pre></li>
 
 <li><h4>Import the changed jscop files and print the updated SCoP structure
@@ -268,7 +268,7 @@ opt matmul.preopt.ll -basicaa \
 </pre>
 <pre>
 [...]
-Reading JScop '%1 =&gt; %17' in function 'main' from './main___%1---%17.jscop.interchanged'.
+Reading JScop 'for.cond =&gt; for.end30' in function 'main' from './main___%for.cond---%for.end30.jscop.interchanged+tiled'.
 [...]
 main():
 for (c2=0;c2&lt;=1535;c2++) {
@@ -295,7 +295,7 @@ opt matmul.preopt.ll -basicaa \
 </pre>
 <pre>
 [...]
-Reading JScop '%1 =&gt; %17' in function 'main' from './main___%1---%17.jscop.interchanged+tiled'.
+Reading JScop 'for.cond =&gt; for.end30' in function 'main' from './main___%for.cond---%for.end30.jscop.interchanged+tiled'.
 [...]
 main():
 for (c2=0;c2&lt;=1535;c2++) {
@@ -329,7 +329,7 @@ opt matmul.preopt.ll -basicaa \
 
 <pre>
 [...]
-Reading JScop '%1 =&gt; %17' in function 'main' from './main___%1---%17.jscop.interchanged+tiled+vector'.
+Reading JScop 'for.cond =&gt; for.end30' in function 'main' from './main___%for.cond---%for.end30.jscop.interchanged+tiled+vector'.
 [...]
 main():
 for (c2=0;c2&lt;=1535;c2++) {
@@ -369,11 +369,11 @@ opt -basicaa \
     -polly-codegen matmul.preopt.ll \
    | opt -O3 &gt; matmul.polly.interchanged.ll</pre>
 <pre>
-Reading JScop '%1 =&gt; %19' in function 'init_array' from
-    './init_array___%1---%19.jscop.interchanged'.
+Reading JScop 'for.cond =&gt; for.end19' in function 'init_array' from
+    './init_array___%for.cond---%for.end19.jscop.interchanged'.
 File could not be read: No such file or directory
-Reading JScop '%1 =&gt; %17' in function 'main' from
-    './main___%1---%17.jscop.interchanged'.
+Reading JScop 'for.cond =&gt; for.end30' in function 'main' from
+    './main___%for.cond---%for.end30.jscop.interchanged'.
 </pre>
 <pre class="code">
 opt -basicaa \
@@ -381,11 +381,11 @@ opt -basicaa \
     -polly-codegen matmul.preopt.ll \
    | opt -O3 &gt; matmul.polly.interchanged+tiled.ll</pre>
 <pre>
-Reading JScop '%1 =&gt; %19' in function 'init_array' from
-    './init_array___%1---%19.jscop.interchanged+tiled'.
+Reading JScop 'for.cond =&gt; for.end19' in function 'init_array' from
+    './init_array___%for.cond---%for.end19.jscop.interchanged+tiled'.
 File could not be read: No such file or directory
-Reading JScop '%1 =&gt; %17' in function 'main' from
-    './main___%1---%17.jscop.interchanged+tiled'.
+Reading JScop 'for.cond =&gt; for.end30' in function 'main' from
+    './main___%for.cond---%for.end30.jscop.interchanged+tiled'.
 </pre>
 <pre class="code">
 opt -basicaa \
@@ -393,11 +393,11 @@ opt -basicaa \
     -polly-codegen -polly-vectorizer=polly matmul.preopt.ll \
    | opt -O3 &gt; matmul.polly.interchanged+tiled+vector.ll</pre>
 <pre>
-Reading JScop '%1 =&gt; %19' in function 'init_array' from
-    './init_array___%1---%19.jscop.interchanged+tiled+vector'.
+Reading JScop 'for.cond =&gt; for.end19' in function 'init_array' from
+    './init_array___%for.cond---%for.end19.jscop.interchanged+tiled+vector'.
 File could not be read: No such file or directory
-Reading JScop '%1 =&gt; %17' in function 'main' from
-    './main___%1---%17.jscop.interchanged+tiled+vector'.
+Reading JScop 'for.cond =&gt; for.end30' in function 'main' from
+    './main___%for.cond---%for.end30.jscop.interchanged+tiled+vector'.
 </pre>
 <pre class="code">
 opt -basicaa \
@@ -405,11 +405,11 @@ opt -basicaa \
     -polly-codegen -polly-vectorizer=polly -enable-polly-openmp matmul.preopt.ll \
   | opt -O3 &gt; matmul.polly.interchanged+tiled+openmp.ll</pre>
 <pre>
-Reading JScop '%1 =&gt; %19' in function 'init_array' from
-    './init_array___%1---%19.jscop.interchanged+tiled+vector'.
+Reading JScop 'for.cond =&gt; for.end19' in function 'init_array' from
+    './init_array___%for.cond---%for.end19.jscop.interchanged+tiled+vector'.
 File could not be read: No such file or directory
-Reading JScop '%1 =&gt; %17' in function 'main' from
-    './main___%1---%17.jscop.interchanged+tiled+vector'.
+Reading JScop 'for.cond =&gt; for.end30' in function 'main' from
+    './main___%for.cond---%for.end30.jscop.interchanged+tiled+vector'.
 </pre>
 
 <li><h4>Create the executables</h4>

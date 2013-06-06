@@ -1,5 +1,5 @@
 ; ModuleID = 'matmul.s'
-target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
+target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct._IO_FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct._IO_FILE*, i32, i32, i64, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
@@ -8,173 +8,179 @@ target triple = "x86_64-unknown-linux-gnu"
 @A = common global [1536 x [1536 x float]] zeroinitializer, align 16
 @B = common global [1536 x [1536 x float]] zeroinitializer, align 16
 @stdout = external global %struct._IO_FILE*
-@.str = private unnamed_addr constant [5 x i8] c"%lf \00"
+@.str = private unnamed_addr constant [5 x i8] c"%lf \00", align 1
 @C = common global [1536 x [1536 x float]] zeroinitializer, align 16
-@.str1 = private unnamed_addr constant [2 x i8] c"\0A\00"
+@.str1 = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
-define void @init_array() nounwind {
-; <label>:0
-  br label %1
+; Function Attrs: nounwind uwtable
+define void @init_array() #0 {
+entry:
+  br label %for.cond
 
-; <label>:1                                       ; preds = %18, %0
-  %2 = phi i64 [ %indvar.next2, %18 ], [ 0, %0 ]
-  %exitcond5 = icmp ne i64 %2, 1536
-  br i1 %exitcond5, label %3, label %19
+for.cond:                                         ; preds = %for.inc17, %entry
+  %0 = phi i64 [ %indvar.next2, %for.inc17 ], [ 0, %entry ]
+  %exitcond3 = icmp ne i64 %0, 1536
+  br i1 %exitcond3, label %for.body, label %for.end19
 
-; <label>:3                                       ; preds = %1
-  br label %4
+for.body:                                         ; preds = %for.cond
+  br label %for.cond1
 
-; <label>:4                                       ; preds = %16, %3
-  %indvar = phi i64 [ %indvar.next, %16 ], [ 0, %3 ]
-  %scevgep4 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %2, i64 %indvar
-  %scevgep = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %2, i64 %indvar
-  %tmp = mul i64 %2, %indvar
-  %tmp3 = trunc i64 %tmp to i32
+for.cond1:                                        ; preds = %for.inc, %for.body
+  %indvar = phi i64 [ %indvar.next, %for.inc ], [ 0, %for.body ]
+  %arrayidx6 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %0, i64 %indvar
+  %arrayidx16 = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %0, i64 %indvar
+  %1 = mul i64 %0, %indvar
+  %mul = trunc i64 %1 to i32
   %exitcond = icmp ne i64 %indvar, 1536
-  br i1 %exitcond, label %5, label %17
+  br i1 %exitcond, label %for.body3, label %for.end
 
-; <label>:5                                       ; preds = %4
-  %6 = srem i32 %tmp3, 1024
-  %7 = add nsw i32 1, %6
-  %8 = sitofp i32 %7 to double
-  %9 = fdiv double %8, 2.000000e+00
-  %10 = fptrunc double %9 to float
-  store float %10, float* %scevgep4
-  %11 = srem i32 %tmp3, 1024
-  %12 = add nsw i32 1, %11
-  %13 = sitofp i32 %12 to double
-  %14 = fdiv double %13, 2.000000e+00
-  %15 = fptrunc double %14 to float
-  store float %15, float* %scevgep
-  br label %16
+for.body3:                                        ; preds = %for.cond1
+  %rem = srem i32 %mul, 1024
+  %add = add nsw i32 1, %rem
+  %conv = sitofp i32 %add to double
+  %div = fdiv double %conv, 2.000000e+00
+  %conv4 = fptrunc double %div to float
+  store float %conv4, float* %arrayidx6, align 4
+  %rem8 = srem i32 %mul, 1024
+  %add9 = add nsw i32 1, %rem8
+  %conv10 = sitofp i32 %add9 to double
+  %div11 = fdiv double %conv10, 2.000000e+00
+  %conv12 = fptrunc double %div11 to float
+  store float %conv12, float* %arrayidx16, align 4
+  br label %for.inc
 
-; <label>:16                                      ; preds = %5
+for.inc:                                          ; preds = %for.body3
   %indvar.next = add i64 %indvar, 1
-  br label %4
+  br label %for.cond1
 
-; <label>:17                                      ; preds = %4
-  br label %18
+for.end:                                          ; preds = %for.cond1
+  br label %for.inc17
 
-; <label>:18                                      ; preds = %17
-  %indvar.next2 = add i64 %2, 1
-  br label %1
+for.inc17:                                        ; preds = %for.end
+  %indvar.next2 = add i64 %0, 1
+  br label %for.cond
 
-; <label>:19                                      ; preds = %1
+for.end19:                                        ; preds = %for.cond
   ret void
 }
 
-define void @print_array() nounwind {
-; <label>:0
-  br label %1
+; Function Attrs: nounwind uwtable
+define void @print_array() #0 {
+entry:
+  br label %for.cond
 
-; <label>:1                                       ; preds = %19, %0
-  %indvar1 = phi i64 [ %indvar.next2, %19 ], [ 0, %0 ]
+for.cond:                                         ; preds = %for.inc10, %entry
+  %indvar1 = phi i64 [ %indvar.next2, %for.inc10 ], [ 0, %entry ]
   %exitcond3 = icmp ne i64 %indvar1, 1536
-  br i1 %exitcond3, label %2, label %20
+  br i1 %exitcond3, label %for.body, label %for.end12
 
-; <label>:2                                       ; preds = %1
-  br label %3
+for.body:                                         ; preds = %for.cond
+  br label %for.cond1
 
-; <label>:3                                       ; preds = %15, %2
-  %indvar = phi i64 [ %indvar.next, %15 ], [ 0, %2 ]
-  %scevgep = getelementptr [1536 x [1536 x float]]* @C, i64 0, i64 %indvar1, i64 %indvar
+for.cond1:                                        ; preds = %for.inc, %for.body
+  %indvar = phi i64 [ %indvar.next, %for.inc ], [ 0, %for.body ]
+  %arrayidx5 = getelementptr [1536 x [1536 x float]]* @C, i64 0, i64 %indvar1, i64 %indvar
   %j.0 = trunc i64 %indvar to i32
   %exitcond = icmp ne i64 %indvar, 1536
-  br i1 %exitcond, label %4, label %16
+  br i1 %exitcond, label %for.body3, label %for.end
 
-; <label>:4                                       ; preds = %3
-  %5 = load %struct._IO_FILE** @stdout, align 8
-  %6 = load float* %scevgep
-  %7 = fpext float %6 to double
-  %8 = call i32 (%struct._IO_FILE*, i8*, ...)* @fprintf(%struct._IO_FILE* %5, i8* getelementptr inbounds ([5 x i8]* @.str, i32 0, i32 0), double %7)
-  %9 = srem i32 %j.0, 80
-  %10 = icmp eq i32 %9, 79
-  br i1 %10, label %11, label %14
+for.body3:                                        ; preds = %for.cond1
+  %0 = load %struct._IO_FILE** @stdout, align 8
+  %1 = load float* %arrayidx5, align 4
+  %conv = fpext float %1 to double
+  %call = call i32 (%struct._IO_FILE*, i8*, ...)* @fprintf(%struct._IO_FILE* %0, i8* getelementptr inbounds ([5 x i8]* @.str, i32 0, i32 0), double %conv)
+  %rem = srem i32 %j.0, 80
+  %cmp6 = icmp eq i32 %rem, 79
+  br i1 %cmp6, label %if.then, label %if.end
 
-; <label>:11                                      ; preds = %4
-  %12 = load %struct._IO_FILE** @stdout, align 8
-  %13 = call i32 (%struct._IO_FILE*, i8*, ...)* @fprintf(%struct._IO_FILE* %12, i8* getelementptr inbounds ([2 x i8]* @.str1, i32 0, i32 0))
-  br label %14
+if.then:                                          ; preds = %for.body3
+  %2 = load %struct._IO_FILE** @stdout, align 8
+  %call8 = call i32 (%struct._IO_FILE*, i8*, ...)* @fprintf(%struct._IO_FILE* %2, i8* getelementptr inbounds ([2 x i8]* @.str1, i32 0, i32 0))
+  br label %if.end
 
-; <label>:14                                      ; preds = %11, %4
-  br label %15
+if.end:                                           ; preds = %if.then, %for.body3
+  br label %for.inc
 
-; <label>:15                                      ; preds = %14
+for.inc:                                          ; preds = %if.end
   %indvar.next = add i64 %indvar, 1
-  br label %3
+  br label %for.cond1
 
-; <label>:16                                      ; preds = %3
-  %17 = load %struct._IO_FILE** @stdout, align 8
-  %18 = call i32 (%struct._IO_FILE*, i8*, ...)* @fprintf(%struct._IO_FILE* %17, i8* getelementptr inbounds ([2 x i8]* @.str1, i32 0, i32 0))
-  br label %19
+for.end:                                          ; preds = %for.cond1
+  %3 = load %struct._IO_FILE** @stdout, align 8
+  %call9 = call i32 (%struct._IO_FILE*, i8*, ...)* @fprintf(%struct._IO_FILE* %3, i8* getelementptr inbounds ([2 x i8]* @.str1, i32 0, i32 0))
+  br label %for.inc10
 
-; <label>:19                                      ; preds = %16
+for.inc10:                                        ; preds = %for.end
   %indvar.next2 = add i64 %indvar1, 1
-  br label %1
+  br label %for.cond
 
-; <label>:20                                      ; preds = %1
+for.end12:                                        ; preds = %for.cond
   ret void
 }
 
-declare i32 @fprintf(%struct._IO_FILE*, i8*, ...)
+declare i32 @fprintf(%struct._IO_FILE*, i8*, ...) #1
 
-define i32 @main() nounwind {
-; <label>:0
+; Function Attrs: nounwind uwtable
+define i32 @main() #0 {
+entry:
   call void @init_array()
-  br label %1
+  br label %for.cond
 
-; <label>:1                                       ; preds = %16, %0
-  %indvar3 = phi i64 [ %indvar.next4, %16 ], [ 0, %0 ]
-  %exitcond9 = icmp ne i64 %indvar3, 1536
-  br i1 %exitcond9, label %2, label %17
+for.cond:                                         ; preds = %for.inc28, %entry
+  %indvar3 = phi i64 [ %indvar.next4, %for.inc28 ], [ 0, %entry ]
+  %exitcond6 = icmp ne i64 %indvar3, 1536
+  br i1 %exitcond6, label %for.body, label %for.end30
 
-; <label>:2                                       ; preds = %1
-  br label %3
+for.body:                                         ; preds = %for.cond
+  br label %for.cond1
 
-; <label>:3                                       ; preds = %14, %2
-  %indvar1 = phi i64 [ %indvar.next2, %14 ], [ 0, %2 ]
-  %scevgep8 = getelementptr [1536 x [1536 x float]]* @C, i64 0, i64 %indvar3, i64 %indvar1
-  %exitcond6 = icmp ne i64 %indvar1, 1536
-  br i1 %exitcond6, label %4, label %15
+for.cond1:                                        ; preds = %for.inc25, %for.body
+  %indvar1 = phi i64 [ %indvar.next2, %for.inc25 ], [ 0, %for.body ]
+  %arrayidx5 = getelementptr [1536 x [1536 x float]]* @C, i64 0, i64 %indvar3, i64 %indvar1
+  %exitcond5 = icmp ne i64 %indvar1, 1536
+  br i1 %exitcond5, label %for.body3, label %for.end27
 
-; <label>:4                                       ; preds = %3
-  store float 0.000000e+00, float* %scevgep8
-  br label %5
+for.body3:                                        ; preds = %for.cond1
+  store float 0.000000e+00, float* %arrayidx5, align 4
+  br label %for.cond6
 
-; <label>:5                                       ; preds = %12, %4
-  %indvar = phi i64 [ %indvar.next, %12 ], [ 0, %4 ]
-  %scevgep5 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %indvar3, i64 %indvar
-  %scevgep = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %indvar, i64 %indvar1
+for.cond6:                                        ; preds = %for.inc, %for.body3
+  %indvar = phi i64 [ %indvar.next, %for.inc ], [ 0, %for.body3 ]
+  %arrayidx16 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %indvar3, i64 %indvar
+  %arrayidx20 = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %indvar, i64 %indvar1
   %exitcond = icmp ne i64 %indvar, 1536
-  br i1 %exitcond, label %6, label %13
+  br i1 %exitcond, label %for.body8, label %for.end
 
-; <label>:6                                       ; preds = %5
-  %7 = load float* %scevgep8
-  %8 = load float* %scevgep5
-  %9 = load float* %scevgep
-  %10 = fmul float %8, %9
-  %11 = fadd float %7, %10
-  store float %11, float* %scevgep8
-  br label %12
+for.body8:                                        ; preds = %for.cond6
+  %0 = load float* %arrayidx5, align 4
+  %1 = load float* %arrayidx16, align 4
+  %2 = load float* %arrayidx20, align 4
+  %mul = fmul float %1, %2
+  %add = fadd float %0, %mul
+  store float %add, float* %arrayidx5, align 4
+  br label %for.inc
 
-; <label>:12                                      ; preds = %6
+for.inc:                                          ; preds = %for.body8
   %indvar.next = add i64 %indvar, 1
-  br label %5
+  br label %for.cond6
 
-; <label>:13                                      ; preds = %5
-  br label %14
+for.end:                                          ; preds = %for.cond6
+  br label %for.inc25
 
-; <label>:14                                      ; preds = %13
+for.inc25:                                        ; preds = %for.end
   %indvar.next2 = add i64 %indvar1, 1
-  br label %3
+  br label %for.cond1
 
-; <label>:15                                      ; preds = %3
-  br label %16
+for.end27:                                        ; preds = %for.cond1
+  br label %for.inc28
 
-; <label>:16                                      ; preds = %15
+for.inc28:                                        ; preds = %for.end27
   %indvar.next4 = add i64 %indvar3, 1
-  br label %1
+  br label %for.cond
 
-; <label>:17                                      ; preds = %1
+for.end30:                                        ; preds = %for.cond
   ret i32 0
 }
+
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"="true" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"="true" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
