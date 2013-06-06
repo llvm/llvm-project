@@ -36,10 +36,11 @@ using namespace llvm;
 /// @param Builder    The builder used to create the loop.
 /// @param P          A pointer to the pass that uses this function. It is used
 ///                   to update analysis information.
+/// @param ExitBlock  The block the loop will exit to.
 /// @param Predicate  The predicate used to generate the upper loop bound.
 /// @return Value*    The newly created induction variable for this loop.
 Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
-                  IRBuilder<> &Builder, Pass *P, BasicBlock *&AfterBlock,
+                  IRBuilder<> &Builder, Pass *P, BasicBlock *&ExitBlock,
                   ICmpInst::Predicate Predicate);
 
 class OMPGenerator {

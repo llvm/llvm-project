@@ -780,7 +780,7 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For) {
   isl_id *IteratorID;
   Value *ValueLB, *ValueUB, *ValueInc;
   Type *MaxType;
-  BasicBlock *AfterBlock;
+  BasicBlock *ExitBlock;
   Value *IV;
   CmpInst::Predicate Predicate;
 
@@ -814,21 +814,14 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For) {
   if (MaxType != ValueInc->getType())
     ValueInc = Builder.CreateSExt(ValueInc, MaxType);
 
-  // TODO: In case we can proof a loop is executed at least once, we can
-  //       generate the condition iv != UB + stride (consider possible
-  //       overflow). This condition will allow LLVM to prove the loop is
-  //       executed at least once, which will enable a lot of loop invariant
-  //       code motion.
-
-  IV =
-      createLoop(ValueLB, ValueUB, ValueInc, Builder, P, AfterBlock, Predicate);
+  IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, P, ExitBlock, Predicate);
   IDToValue[IteratorID] = IV;
 
   create(Body);
 
   IDToValue.erase(IteratorID);
 
-  Builder.SetInsertPoint(AfterBlock->begin());
+  Builder.SetInsertPoint(ExitBlock->begin());
 
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);

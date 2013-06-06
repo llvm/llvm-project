@@ -468,14 +468,14 @@ void ClastStmtCodeGen::codegen(const clast_block *b) {
 
 void ClastStmtCodeGen::codegenForSequential(const clast_for *f) {
   Value *LowerBound, *UpperBound, *IV, *Stride;
-  BasicBlock *AfterBB;
+  BasicBlock *ExitBlock;
   Type *IntPtrTy = getIntPtrTy();
 
   LowerBound = ExpGen.codegen(f->LB, IntPtrTy);
   UpperBound = ExpGen.codegen(f->UB, IntPtrTy);
   Stride = Builder.getInt(APInt_from_MPZ(f->stride));
 
-  IV = createLoop(LowerBound, UpperBound, Stride, Builder, P, AfterBB,
+  IV = createLoop(LowerBound, UpperBound, Stride, Builder, P, ExitBlock,
                   CmpInst::ICMP_SLE);
 
   // Add loop iv to symbols.
@@ -486,7 +486,7 @@ void ClastStmtCodeGen::codegenForSequential(const clast_for *f) {
 
   // Loop is finished, so remove its iv from the live symbols.
   ClastVars.erase(f->iterator);
-  Builder.SetInsertPoint(AfterBB->begin());
+  Builder.SetInsertPoint(ExitBlock->begin());
 }
 
 // Helper class to determine all scalar parameters used in the basic blocks of a

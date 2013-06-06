@@ -22,53 +22,84 @@
 using namespace llvm;
 using namespace polly;
 
+// We generate a loop of the following structure
+//
+//              BeforeBB
+//                 |
+//                 v
+//              GuardBB
+//              /      \
+//     __  PreHeaderBB  \
+//    /  \    /         |
+// latch  HeaderBB      |
+//    \  /    \         /
+//     <       \       /
+//              \     /
+//              ExitBB
+//
+// GuardBB checks if the loop is executed at least once. If this is the case
+// we branch to PreHeaderBB and subsequently to the HeaderBB, which contains the
+// loop iv 'polly.indvar', the incremented loop iv 'polly.indvar_next' as well
+// as the condition to check if we execute another iteration of the loop. After
+// the loop has finished, we branch to ExitBB.
+//
+// TODO: We currently always create the GuardBB. If we can prove the loop is
+//       always executed at least once, we can get rid of this branch.
 Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
-                         IRBuilder<> &Builder, Pass *P, BasicBlock *&AfterBlock,
+                         IRBuilder<> &Builder, Pass *P, BasicBlock *&ExitBB,
                          ICmpInst::Predicate Predicate) {
+
   DominatorTree &DT = P->getAnalysis<DominatorTree>();
   Function *F = Builder.GetInsertBlock()->getParent();
   LLVMContext &Context = F->getContext();
 
-  BasicBlock *PreheaderBB = Builder.GetInsertBlock();
-  BasicBlock *HeaderBB = BasicBlock::Create(Context, "polly.loop_header", F);
-  BasicBlock *BodyBB = BasicBlock::Create(Context, "polly.loop_body", F);
-  BasicBlock *AfterBB = SplitBlock(PreheaderBB, Builder.GetInsertPoint()++, P);
-  AfterBB->setName("polly.loop_after");
-
-  PreheaderBB->getTerminator()->setSuccessor(0, HeaderBB);
-  DT.addNewBlock(HeaderBB, PreheaderBB);
-
-  Builder.SetInsertPoint(HeaderBB);
-
-  // Use the type of upper and lower bound.
-  assert(LB->getType() == UB->getType() &&
-         "Different types for upper and lower bound.");
-
+  assert(LB->getType() == UB->getType() && "Types of loop bounds do not match");
   IntegerType *LoopIVType = dyn_cast<IntegerType>(UB->getType());
   assert(LoopIVType && "UB is not integer?");
 
-  // IV
-  PHINode *IV = Builder.CreatePHI(LoopIVType, 2, "polly.loopiv");
-  IV->addIncoming(LB, PreheaderBB);
+  BasicBlock *BeforeBB = Builder.GetInsertBlock();
+  BasicBlock *GuardBB = BasicBlock::Create(Context, "polly.loop_if", F);
+  BasicBlock *HeaderBB = BasicBlock::Create(Context, "polly.loop_header", F);
+  BasicBlock *PreHeaderBB =
+      BasicBlock::Create(Context, "polly.loop_preheader", F);
 
-  Stride = Builder.CreateZExtOrBitCast(Stride, LoopIVType);
-  Value *IncrementedIV = Builder.CreateNSWAdd(IV, Stride, "polly.next_loopiv");
+  // ExitBB
+  ExitBB = SplitBlock(BeforeBB, Builder.GetInsertPoint()++, P);
+  ExitBB->setName("polly.loop_exit");
 
-  // Exit condition.
-  Value *CMP;
-  CMP = Builder.CreateICmp(Predicate, IV, UB);
+  // BeforeBB
+  BeforeBB->getTerminator()->setSuccessor(0, GuardBB);
 
-  Builder.CreateCondBr(CMP, BodyBB, AfterBB);
-  DT.addNewBlock(BodyBB, HeaderBB);
+  // GuardBB
+  DT.addNewBlock(GuardBB, BeforeBB);
+  Builder.SetInsertPoint(GuardBB);
+  Value *LoopGuard;
+  LoopGuard = Builder.CreateICmp(Predicate, LB, UB);
+  LoopGuard->setName("polly.loop_guard");
+  Builder.CreateCondBr(LoopGuard, PreHeaderBB, ExitBB);
 
-  Builder.SetInsertPoint(BodyBB);
+  // PreHeaderBB
+  DT.addNewBlock(PreHeaderBB, GuardBB);
+  Builder.SetInsertPoint(PreHeaderBB);
   Builder.CreateBr(HeaderBB);
-  IV->addIncoming(IncrementedIV, BodyBB);
-  DT.changeImmediateDominator(AfterBB, HeaderBB);
 
-  Builder.SetInsertPoint(BodyBB->begin());
-  AfterBlock = AfterBB;
+  // HeaderBB
+  DT.addNewBlock(HeaderBB, PreHeaderBB);
+  Builder.SetInsertPoint(HeaderBB);
+  PHINode *IV = Builder.CreatePHI(LoopIVType, 2, "polly.indvar");
+  IV->addIncoming(LB, PreHeaderBB);
+  Stride = Builder.CreateZExtOrBitCast(Stride, LoopIVType);
+  Value *IncrementedIV = Builder.CreateNSWAdd(IV, Stride, "polly.indvar_next");
+  Value *LoopCondition;
+  UB = Builder.CreateSub(UB, Stride, "polly.adjust_ub");
+  LoopCondition = Builder.CreateICmp(Predicate, IV, UB);
+  LoopCondition->setName("polly.loop_cond");
+  Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
+  IV->addIncoming(IncrementedIV, HeaderBB);
+  DT.changeImmediateDominator(ExitBB, GuardBB);
 
+  // The loop body should be added here.
+  Builder.SetInsertPoint(HeaderBB->getFirstNonPHI());
   return IV;
 }
 

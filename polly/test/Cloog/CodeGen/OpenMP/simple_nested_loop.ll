@@ -80,7 +80,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
 
 ; CHECK: %omp.userContext = alloca { i32 }
 ; CHECK: getelementptr inbounds { i32 }* %omp.userContext, i32 0, i32 0
-; CHECK: store i32 %polly.loopiv, i32* %1
+; CHECK: store i32 %polly.indvar, i32* %0
 ; CHECK: %omp_data = bitcast { i32 }* %omp.userContext to i8*
 ; CHECK: call void @GOMP_parallel_loop_runtime_start(void (i8*)* @loop_openmp.omp_subfn, i8* %omp_data, i32 0, i32 0, i32 10, i32 1)
 ; CHECK: call void @loop_openmp.omp_subfn(i8* %omp_data)
