@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly %defaultOpts -polly-cloog -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-cloog -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-codegen -loops -analyze < %s | FileCheck %s -check-prefix=LOOPS
 
 ;#include <string.h>
 ;#define N 1024
@@ -214,3 +215,7 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 ; CHECK:     Stmt_9(c2);
 ; CHECK: }
 
+
+; LOOPS: Loop at depth 1 containing: %polly.loop_header<header>,%polly.stmt.,%polly.stmt.3<latch><exiting>
+; LOOPS: Loop at depth 1 containing: %polly.loop_header5<header>,%polly.stmt.11,%polly.stmt.12<latch><exiting>
+; LOOPS: Loop at depth 1 containing: %polly.loop_header15<header>,%polly.stmt.21<latch><exiting>

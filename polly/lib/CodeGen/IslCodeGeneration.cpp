@@ -860,6 +860,13 @@ void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
   DT.addNewBlock(ElseBB, CondBB);
   DT.changeImmediateDominator(MergeBB, CondBB);
 
+  LoopInfo &LI = P->getAnalysis<LoopInfo>();
+  Loop *L = LI.getLoopFor(CondBB);
+  if (L) {
+    L->addBasicBlockToLoop(ThenBB, LI.getBase());
+    L->addBasicBlockToLoop(ElseBB, LI.getBase());
+  }
+
   CondBB->getTerminator()->eraseFromParent();
 
   Builder.SetInsertPoint(CondBB);
@@ -1051,7 +1058,6 @@ public:
 
     AU.addPreserved<Dependences>();
 
-    // FIXME: We do not create LoopInfo for the newly generated loops.
     AU.addPreserved<LoopInfo>();
     AU.addPreserved<DominatorTree>();
     AU.addPreserved<IslAstInfo>();

@@ -924,6 +924,13 @@ void ClastStmtCodeGen::codegen(const clast_guard *g) {
   Builder.CreateBr(MergeBB);
   Builder.SetInsertPoint(ThenBB->begin());
 
+  LoopInfo &LI = P->getAnalysis<LoopInfo>();
+  Loop *L = LI.getLoopFor(CondBB);
+  if (L) {
+    L->addBasicBlockToLoop(ThenBB, LI.getBase());
+    L->addBasicBlockToLoop(MergeBB, LI.getBase());
+  }
+
   codegen(g->then);
 
   Builder.SetInsertPoint(MergeBB->begin());
@@ -1030,8 +1037,6 @@ public:
 
     AU.addPreserved<CloogInfo>();
     AU.addPreserved<Dependences>();
-
-    // FIXME: We do not create LoopInfo for the newly generated loops.
     AU.addPreserved<LoopInfo>();
     AU.addPreserved<DominatorTree>();
     AU.addPreserved<ScopDetection>();

@@ -1,4 +1,6 @@
-; RUN: opt %loadPolly %defaultOpts -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-codegen-isl -loops -analyze < %s | FileCheck %s -check-prefix=LOOPS
+
 
 ;#include <string.h>
 ;#define N 1024
@@ -209,3 +211,8 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 ; CHECK:     Stmt_6(c1);
 ; CHECK:   Stmt_9(c1);
 ; CHECK: }
+
+; LOOPS: Printing analysis 'Natural Loop Information' for function 'loop_with_condition':
+; LOOPS: Loop at depth 1 containing: %1<header><exiting>,%2,%4,%7,%6,%8,%9,%10<latch>
+; LOOPS: Loop at depth 1 containing:
+; LOOPS: %polly.loop_header<header>,%polly.cond,%polly.merge,%polly.then,%polly.else,%polly.stmt.,%polly.cond3,%polly.merge4,%polly.then5,%polly.else6,%polly.stmt.7,%polly.stmt.8<latch><exiting>

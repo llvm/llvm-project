@@ -15,6 +15,7 @@
 #include "polly/ScopDetection.h"
 #include "polly/CodeGen/LoopGenerators.h"
 #include "llvm/Analysis/Dominators.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -50,6 +51,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
                          ICmpInst::Predicate Predicate) {
 
   DominatorTree &DT = P->getAnalysis<DominatorTree>();
+  LoopInfo &LI = P->getAnalysis<LoopInfo>();
   Function *F = Builder.GetInsertBlock()->getParent();
   LLVMContext &Context = F->getContext();
 
@@ -62,6 +64,23 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
   BasicBlock *HeaderBB = BasicBlock::Create(Context, "polly.loop_header", F);
   BasicBlock *PreHeaderBB =
       BasicBlock::Create(Context, "polly.loop_preheader", F);
+
+  // Update LoopInfo
+  Loop *OuterLoop = LI.getLoopFor(BeforeBB);
+  Loop *NewLoop = new Loop();
+
+  if (OuterLoop) {
+    OuterLoop->addChildLoop(NewLoop);
+  } else {
+    LI.addTopLevelLoop(NewLoop);
+  }
+
+  if (OuterLoop) {
+    OuterLoop->addBasicBlockToLoop(GuardBB, LI.getBase());
+    OuterLoop->addBasicBlockToLoop(PreHeaderBB, LI.getBase());
+  }
+
+  NewLoop->addBasicBlockToLoop(HeaderBB, LI.getBase());
 
   // ExitBB
   ExitBB = SplitBlock(BeforeBB, Builder.GetInsertPoint()++, P);
