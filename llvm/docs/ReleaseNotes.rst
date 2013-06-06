@@ -85,7 +85,7 @@ Hexagon Target
 --------------
 
 Removed support for legacy hexagonv2 and hexagonv3 processor architectures which
-are no longer in use. Currently supported architectures arehexagonv4 and
+are no longer in use. Currently supported architectures are hexagonv4 and
 hexagonv5.
 
 Mips target
