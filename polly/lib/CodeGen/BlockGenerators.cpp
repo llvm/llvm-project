@@ -185,6 +185,7 @@ Value *BlockGenerator::getNewValue(const Value *Old, ValueMapT &BBMap,
   }
 
   if (BBMap.count(Old)) {
+    assert(BBMap[Old] && "BBMap[Old] should not be NULL!");
     return BBMap[Old];
   }
 
@@ -354,12 +355,14 @@ void BlockGenerator::copyInstruction(const Instruction *Inst, ValueMapT &BBMap,
     return;
 
   if (const LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-    BBMap[Load] = generateScalarLoad(Load, BBMap, GlobalMap, LTS);
+    Value *NewLoad = generateScalarLoad(Load, BBMap, GlobalMap, LTS);
+    BBMap[Load] = NewLoad;
     return;
   }
 
   if (const StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-    BBMap[Store] = generateScalarStore(Store, BBMap, GlobalMap, LTS);
+    Value *NewStore = generateScalarStore(Store, BBMap, GlobalMap, LTS);
+    BBMap[Store] = NewStore;
     return;
   }
 
