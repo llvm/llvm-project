@@ -356,12 +356,16 @@ void BlockGenerator::copyInstruction(const Instruction *Inst, ValueMapT &BBMap,
 
   if (const LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
     Value *NewLoad = generateScalarLoad(Load, BBMap, GlobalMap, LTS);
+    // Compute NewLoad before its insertion in BBMap to make the insertion
+    // deterministic.
     BBMap[Load] = NewLoad;
     return;
   }
 
   if (const StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
     Value *NewStore = generateScalarStore(Store, BBMap, GlobalMap, LTS);
+    // Compute NewStore before its insertion in BBMap to make the insertion
+    // deterministic.
     BBMap[Store] = NewStore;
     return;
   }
