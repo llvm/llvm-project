@@ -114,6 +114,30 @@ New features and improvements:
 - Delay slot filler pass can now search successor blocks for instructions to
   fill delay slots (use option -disable-mips-df-succbb-search=false).
 
+PowerPC Target
+--------------
+
+New features and improvements:
+
+- PowerPC now supports an assembly parser.
+- Support added for thread-local storage.  64-bit ELF subtarget only.
+- Support added for medium and large code model (-mcmodel=medium,large).
+  Medium code model is now the default.  64-bit ELF subtarget only.
+- Improved register allocation (fewer reserved registers).
+- 64-bit atomic load and store are now supported.
+- Improved code generation for unaligned memory accesses of scalar types.
+- Improved performance of floating-point divide and square root
+  with -ffast-math.
+- Support for predicated returns.
+- Improved code generation for comparisons.
+- Support added for inline setjmp and longjmp.
+- Support added for many instructions introduced in PowerISA 2.04, 2.05,
+  and 2.06.
+- Improved spill code for vector registers.
+- Support added for -mno-altivec.
+- ABI compatibility fixes for complex parameters, 128-bit integer parameters,
+  and varargs functions.  64-bit ELF subtarget only.
+
 Loop Vectorizer
 ---------------
 
