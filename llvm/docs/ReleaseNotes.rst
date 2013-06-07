@@ -221,22 +221,24 @@ to support the latest language features and target support:
 - the LLVM disassembler
 - the LLVM JIT compiler (MCJIT) for expression evaluation
 
-The `3.3 release <http://llvm.org/apt/>`_ has the following notable changes.
+The `3.3 release <http://lldb.llvm.org/download.html>`_ has the following notable changes.
 
-Linux Features:
+Features now supported on Linux:
 
+- Debugging multi-threaded programs
 - Support for watchpoints
-- vim integration for lldb commands and program status using a `vim plug-in
-  <http://llvm.org/svn/llvm-project/lldb/trunk/utils/vim-lldb/README>`_
-- Improved register support including vector registers
-- Builds with cmake/ninja/auto-tools/clang 3.3/gcc 4.6
+- Process list, attach and fork
+- `vim integration <http://llvm.org/svn/llvm-project/lldb/branches/release_33/utils/vim-lldb/README>`_ for LLDB
+
+Portability:
+
+- Builds with cmake, ninja, auto-tools, clang 3.3 and gcc 4.6
 
 Linux Improvements:
 
-- Debugging multi-threaded programs
-- Debugging i386 programs
-- Process list, attach and fork
-- Expression evaluation
+- Improved register support including vector registers
+- Basic debugging of i386 programs
+- Bug fixes for expression evaluation
 
 
 External Open Source Projects Using LLVM 3.3
