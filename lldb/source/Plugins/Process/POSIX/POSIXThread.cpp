@@ -17,6 +17,7 @@
 // Project includes
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -45,6 +46,20 @@ POSIXThread::POSIXThread(Process &process, lldb::tid_t tid)
     Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_THREAD));
     if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
         log->Printf ("POSIXThread::%s (tid = %" PRIi64 ")", __FUNCTION__, tid);
+
+    // Set the current watchpoints for this thread.
+    Target &target = GetProcess()->GetTarget();
+    const WatchpointList &wp_list = target.GetWatchpointList();
+    size_t wp_size = wp_list.GetSize();
+
+    for (uint32_t wp_idx = 0; wp_idx < wp_size; wp_idx++)
+    {
+        lldb::WatchpointSP wp = wp_list.GetByIndex(wp_idx);
+        if (wp.get() && wp->IsEnabled())
+        {
+            assert(EnableHardwareWatchpoint(wp.get()));
+        }
+    }
 }
 
 POSIXThread::~POSIXThread()
@@ -63,15 +78,24 @@ POSIXThread::GetMonitor()
 void
 POSIXThread::RefreshStateAfterStop()
 {
+    // Invalidate all registers in our register context. We don't set "force" to
+    // true because the stop reply packet might have had some register values
+    // that were expedited and these will already be copied into the register
+    // context by the time this function gets called. The KDPRegisterContext
+    // class has been made smart enough to detect when it needs to invalidate
+    // which registers are valid by putting hooks in the register read and 
+    // register supply functions where they check the process stop ID and do
+    // the right thing.
+    //if (StateIsStoppedState(GetState())
+    {
+        const bool force = false;
+        GetRegisterContext()->InvalidateIfNeeded (force);
+    }
+    // FIXME: This should probably happen somewhere else.
+    SetResumeState(eStateRunning);
     Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_THREAD));
-    if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-        log->Printf ("POSIXThread::%s ()", __FUNCTION__);
-
-    // Let all threads recover from stopping and do any clean up based
-    // on the previous thread state (if any).
-    ProcessSP base = GetProcess();
-    ProcessPOSIX &process = static_cast<ProcessPOSIX&>(*base);
-    process.GetThreadList().RefreshStateAfterStop();
+    if (log)
+        log->Printf ("POSIXThread::%s (tid = %" PRIi64 ") setting thread resume state to running", __FUNCTION__, GetID());
 }
 
 const char *
@@ -157,9 +181,18 @@ POSIXThread::GetUnwinder()
 void
 POSIXThread::WillResume(lldb::StateType resume_state)
 {
-	// TODO: the line below shouldn't really be done, but
+    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_THREAD));
+    if (log)
+        log->Printf ("POSIXThread::%s (tid = %" PRIi64 ") setting thread resume state to %s", __FUNCTION__, GetID(), StateAsCString(resume_state));
+    // TODO: the line below shouldn't really be done, but
     // the POSIXThread might rely on this so I will leave this in for now
     SetResumeState(resume_state);
+}
+
+void
+POSIXThread::DidStop()
+{
+    // Don't set the thread state to stopped unless we really stopped.
 }
 
 bool
@@ -170,8 +203,9 @@ POSIXThread::Resume()
     bool status;
 
     Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_THREAD));
-    if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-        log->Printf ("POSIXThread::%s ()", __FUNCTION__);
+    if (log)
+        log->Printf ("POSIXThread::%s (), resume_state = %s", __FUNCTION__,
+                         StateAsCString(resume_state));
 
     switch (resume_state)
     {
@@ -211,10 +245,14 @@ POSIXThread::Notify(const ProcessMessage &message)
         assert(false && "Unexpected message kind!");
         break;
 
+    case ProcessMessage::eExitMessage:
+        // Nothing to be done.
+        break;
+
     case ProcessMessage::eLimboMessage:
         LimboNotify(message);
         break;
-        
+
     case ProcessMessage::eSignalMessage:
         SignalNotify(message);
         break;
@@ -248,27 +286,21 @@ POSIXThread::Notify(const ProcessMessage &message)
 bool
 POSIXThread::EnableHardwareWatchpoint(Watchpoint *wp)
 {
-    bool result = false;
+    bool wp_set = false;
     if (wp)
     {
         addr_t wp_addr = wp->GetLoadAddress();
         size_t wp_size = wp->GetByteSize();
         bool wp_read = wp->WatchpointRead();
         bool wp_write = wp->WatchpointWrite();
-        uint32_t wp_hw_index;
-        lldb::RegisterContextSP reg_ctx_sp = GetRegisterContext();
-        if (reg_ctx_sp.get())
-        {
-            wp_hw_index = reg_ctx_sp->SetHardwareWatchpoint(wp_addr, wp_size,
-                                                            wp_read, wp_write);
-            if (wp_hw_index != LLDB_INVALID_INDEX32)
-            {
-                wp->SetHardwareIndex(wp_hw_index);
-                result = true;
-            }
-        }
+        uint32_t wp_hw_index = wp->GetHardwareIndex();
+        RegisterContextPOSIX* reg_ctx = GetRegisterContextPOSIX();
+        if (reg_ctx)
+            wp_set = reg_ctx->SetHardwareWatchpointWithIndex(wp_addr, wp_size,
+                                                             wp_read, wp_write,
+                                                             wp_hw_index);
     }
-    return result;
+    return wp_set;
 }
 
 bool
@@ -279,11 +311,7 @@ POSIXThread::DisableHardwareWatchpoint(Watchpoint *wp)
     {
         lldb::RegisterContextSP reg_ctx_sp = GetRegisterContext();
         if (reg_ctx_sp.get())
-        {
             result = reg_ctx_sp->ClearHardwareWatchpoint(wp->GetHardwareIndex());
-            if (result == true)
-                wp->SetHardwareIndex(LLDB_INVALID_INDEX32);
-        }
     }
     return result;
 }
@@ -295,6 +323,27 @@ POSIXThread::NumSupportedHardwareWatchpoints()
     if (reg_ctx_sp.get())
         return reg_ctx_sp->NumSupportedHardwareWatchpoints();
     return 0;
+}
+
+uint32_t
+POSIXThread::FindVacantWatchpointIndex()
+{
+    uint32_t hw_index = LLDB_INVALID_INDEX32;
+    uint32_t num_hw_wps = NumSupportedHardwareWatchpoints();
+    uint32_t wp_idx;
+    RegisterContextPOSIX* reg_ctx = GetRegisterContextPOSIX();
+    if (reg_ctx)
+    {
+        for (wp_idx = 0; wp_idx < num_hw_wps; wp_idx++)
+        {
+            if (reg_ctx->IsWatchpointVacant(wp_idx))
+            {
+                hw_index = wp_idx;
+                break;
+            }
+        }
+    }
+    return hw_index;
 }
 
 void
@@ -317,6 +366,9 @@ POSIXThread::BreakNotify(const ProcessMessage &message)
     assert(bp_site);
     lldb::break_id_t bp_id = bp_site->GetID();
     assert(bp_site && bp_site->ValidForThisThread(this));
+
+    // Make this thread the selected thread
+    GetProcess()->GetThreadList().SetSelectedThreadByID(GetID());
 
     m_breakpoint = bp_site;
     SetStopInfo (StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_id));
@@ -408,6 +460,7 @@ POSIXThread::SignalDeliveredNotify(const ProcessMessage &message)
 void
 POSIXThread::CrashNotify(const ProcessMessage &message)
 {
+    // FIXME: Update stop reason as per bugzilla 14598
     int signo = message.GetSignal();
 
     assert(message.GetKind() == ProcessMessage::eCrashMessage);

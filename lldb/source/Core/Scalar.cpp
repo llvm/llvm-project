@@ -715,6 +715,28 @@ Scalar::Cast(Scalar::Type type)
     return success;
 }
 
+bool
+Scalar::MakeSigned ()
+{
+    bool success = false;
+    
+    switch (m_type)
+    {
+    case e_void:                                break;
+    case e_sint:                                success = true; break;
+    case e_uint:        m_type = e_sint;        success = true; break;
+    case e_slong:                               success = true; break;
+    case e_ulong:       m_type = e_slong;       success = true; break;
+    case e_slonglong:                           success = true; break;
+    case e_ulonglong:   m_type = e_slonglong;   success = true; break;
+    case e_float:                               success = true; break;
+    case e_double:                              success = true; break;
+    case e_long_double:                         success = true; break;
+    }
+    
+    return success;
+}
+
 int
 Scalar::SInt(int fail_value) const
 {

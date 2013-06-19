@@ -86,7 +86,7 @@ public:
             return m_full;
         }
         
-        const ConstString &
+        llvm::StringRef
         GetBasename ();
 
         llvm::StringRef
@@ -103,7 +103,7 @@ public:
         Parse();
 
         ConstString     m_full;         // Full name:    "lldb::SBTarget::GetBreakpointAtIndex(unsigned int) const"
-        ConstString     m_basename;     // Basename:     "GetBreakpointAtIndex"
+        llvm::StringRef m_basename;     // Basename:     "GetBreakpointAtIndex"
         llvm::StringRef m_context;      // Decl context: "lldb::SBTarget"
         llvm::StringRef m_arguments;    // Arguments:    "(unsigned int)"
         llvm::StringRef m_qualifiers;   // Qualifiers:   "const"
@@ -133,9 +133,6 @@ public:
     static bool
     IsCPPMangledName(const char *name);
     
-    static bool
-    IsPossibleCPPCall (const char *name, const char *&base_name_start, const char *&base_name_end);
-
     static bool
     StripNamespacesFromVariableName (const char *name, const char *&base_name_start, const char *&base_name_end);
     

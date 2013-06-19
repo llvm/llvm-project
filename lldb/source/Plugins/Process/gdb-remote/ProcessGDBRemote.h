@@ -114,9 +114,6 @@ public:
     virtual void
     DidAttach ();
 
-    virtual void
-    DoDidExec ();
-
     //------------------------------------------------------------------
     // PluginInterface protocol
     //------------------------------------------------------------------
@@ -289,11 +286,7 @@ protected:
     BuildDynamicRegisterInfo (bool force);
 
     void
-    SetLastStopPacket (const StringExtractorGDBRemote &response)
-    {
-        lldb_private::Mutex::Locker locker (m_last_stop_packet_mutex);
-        m_last_stop_packet = response;
-    }
+    SetLastStopPacket (const StringExtractorGDBRemote &response);
 
     //------------------------------------------------------------------
     /// Broadcaster event bits definitions.

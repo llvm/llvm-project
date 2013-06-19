@@ -1,5 +1,5 @@
 """
-Test calling a function that hits a signal set to auto-restart, make sure the call completes.
+Test calling a function that throws an ObjC exception, make sure that it doesn't propagate the exception.
 """
 
 import unittest2
@@ -7,7 +7,7 @@ import lldb
 import lldbutil
 from lldbtest import *
 
-class ExprCommandWithTimeoutsTestCase(TestBase):
+class ExprCommandWithThrowTestCase(TestBase):
 
     mydir = os.path.join("expression_command", "call-throws")
 
@@ -22,14 +22,14 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
     @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
     @dsym_test
     def test_with_dsym(self):
-        """Test calling std::String member function."""
+        """Test calling a function that throws and ObjC exception."""
         self.buildDsym()
         self.call_function()
 
     @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin due to ObjC test case")
     @dwarf_test
     def test_with_dwarf(self):
-        """Test calling std::String member function."""
+        """Test calling a function that throws and ObjC exception."""
         self.buildDwarf()
         self.call_function()
 
@@ -40,7 +40,7 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
 
         
     def call_function(self):
-        """Test calling function with timeout."""
+        """Test calling function that throws."""
         exe_name = "a.out"
         exe = os.path.join(os.getcwd(), exe_name)
 
@@ -78,6 +78,18 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
         # we are ignoring breakpoint hits.
         handler_bkpt = target.BreakpointCreateBySourceRegex("I felt like it", self.main_source_spec)
         self.assertTrue (handler_bkpt.GetNumLocations() > 0)
+        options.SetIgnoreBreakpoints(True)
+        options.SetUnwindOnError(True)
+
+        value = frame.EvaluateExpression ("[my_class callMeIThrow]", options)
+
+        self.assertTrue (value.IsValid() and value.GetError().Success() == False)
+        self.check_after_call()
+
+        # Now set the ObjC language breakpoint and make sure that doesn't interfere with the call:
+        exception_bkpt = target.BreakpointCreateForException (lldb.eLanguageTypeObjC, False, True)
+        self.assertTrue(exception_bkpt.GetNumLocations() > 0)
+
         options.SetIgnoreBreakpoints(True)
         options.SetUnwindOnError(True)
 

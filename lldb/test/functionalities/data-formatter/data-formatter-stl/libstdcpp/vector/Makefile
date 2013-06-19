@@ -2,7 +2,7 @@ LEVEL = ../../../../../make
 
 CXX_SOURCES := main.cpp
 
-include $(LEVEL)/Makefile.rules
+CXXFLAGS := -O0
+USE_LIBSTDCPP := 1
 
-CXXFLAGS += -stdlib=libstdc++ -O0
-LDFLAGS += -stdlib=libstdc++
+include $(LEVEL)/Makefile.rules

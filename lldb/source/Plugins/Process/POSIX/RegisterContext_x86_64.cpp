@@ -1242,6 +1242,8 @@ RegisterContext_x86_64::IsWatchpointVacant(uint32_t hw_index)
     bool is_vacant = false;
     RegisterValue value;
 
+    assert(hw_index < NumSupportedHardwareWatchpoints());
+
     if (ReadRegister(dr7, value))
     {
         uint64_t val = value.GetAsUInt64();
@@ -1282,22 +1284,46 @@ RegisterContext_x86_64::SetHardwareWatchpoint(addr_t addr, size_t size,
                                               bool read, bool write)
 {
     const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
+    uint32_t hw_index;
 
-    if (num_hw_watchpoints == 0)
-        return LLDB_INVALID_INDEX32;
-
-    if (!(size == 1 || size == 2 || size == 4 || size == 8))
-        return LLDB_INVALID_INDEX32;
-
-    if (read == false && write == false)
-        return LLDB_INVALID_INDEX32;
-
-    uint32_t hw_index = 0;
     for (hw_index = 0; hw_index < num_hw_watchpoints; ++hw_index)
     {
         if (IsWatchpointVacant(hw_index))
-            break;
+            return SetHardwareWatchpointWithIndex(addr, size,
+                                                  read, write,
+                                                  hw_index);
     }
+
+    return LLDB_INVALID_INDEX32;
+}
+
+bool
+RegisterContext_x86_64::SetHardwareWatchpointWithIndex(addr_t addr, size_t size,
+                                                       bool read, bool write,
+                                                       uint32_t hw_index)
+{
+    const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
+
+    if (num_hw_watchpoints == 0 || hw_index >= num_hw_watchpoints)
+        return false;
+
+    if (!(size == 1 || size == 2 || size == 4 || size == 8))
+        return false;
+
+    if (read == false && write == false)
+        return false;
+
+    if (m_watchpoints_initialized == false)
+    {
+        // Reset the debug status and debug control registers
+        RegisterValue zero_bits = RegisterValue(uint64_t(0));
+        if (!WriteRegister(dr6, zero_bits) || !WriteRegister(dr7, zero_bits))
+            return false;
+        m_watchpoints_initialized = true;
+    }
+
+    if (!IsWatchpointVacant(hw_index))
+        return false;
 
     // Set both dr7 (debug control register) and dri (debug address register).
 
@@ -1335,11 +1361,11 @@ RegisterContext_x86_64::SetHardwareWatchpoint(addr_t addr, size_t size,
 
             if (WriteRegister(dr0 + hw_index, RegisterValue(addr)) &&
                 WriteRegister(dr7, RegisterValue(new_dr7_bits)))
-                return hw_index;
+                return true;
         }
     }
 
-    return LLDB_INVALID_INDEX32;
+    return false;
 }
 
 bool

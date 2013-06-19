@@ -60,7 +60,7 @@
      					<li>Classes can't inherit from any other classes.</li>
       					<li>Classes can't contain virtual methods.</li>
        					<li>Classes should be compatible with script bridging utilities like <a href="http://www.swig.org/">swig</a>.</li>
-       					<li>Classes should be lightweight and be backed by a single object pointer, shared pointer or global variable in the lldb_private.</li>
+       					<li>Classes should be lightweight and be backed by a single member. Pointers (or shared pointers) are the preferred choice since they allow changing the contents of the backend without affecting the public object layout.</li>
        					<li>The interface should be as minimal as possible in order to give a complete API.</li>
    				    </ul>
    				    <p>By adhering to these rules we should be able to continue to 

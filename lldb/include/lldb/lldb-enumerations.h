@@ -541,10 +541,7 @@ namespace lldb {
                                                     // methods or selectors will be searched.
         eFunctionNameTypeMethod     = (1u << 4),    // Find function by method name (C++) with no namespace or arguments
         eFunctionNameTypeSelector   = (1u << 5),    // Find function by selector name (ObjC) names
-        eFunctionNameTypeAny        = (eFunctionNameTypeFull     |
-                                       eFunctionNameTypeBase     |
-                                       eFunctionNameTypeMethod   |
-                                       eFunctionNameTypeSelector )
+        eFunctionNameTypeAny        = eFunctionNameTypeAuto // DEPRECATED: use eFunctionNameTypeAuto
     } FunctionNameType;
     
     

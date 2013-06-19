@@ -87,7 +87,7 @@ protected:
     // Iterate over the RegisterContextLLDB's in our m_frames vector, look for the first one that
     // has a saved location for this reg.
     bool
-    SearchForSavedLocationForRegister (uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc, uint32_t starting_frame_num, bool pc_or_return_address_reg);
+    SearchForSavedLocationForRegister (uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc, uint32_t starting_frame_num, bool pc_register);
 
 
 private:

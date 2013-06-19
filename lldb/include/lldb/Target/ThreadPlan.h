@@ -544,11 +544,11 @@ protected:
         return m_thread.GetPreviousPlan (this);
     }
     
-    // This forwards the private Thread::GetPrivateStopReason which is generally what
+    // This forwards the private Thread::GetPrivateStopInfo which is generally what
     // ThreadPlan's need to know.
     
     lldb::StopInfoSP 
-    GetPrivateStopReason()
+    GetPrivateStopInfo()
     {
         return m_thread.GetPrivateStopInfo ();
     }

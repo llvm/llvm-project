@@ -278,7 +278,7 @@ UnwindLLDB::GetRegisterContextForFrameNum (uint32_t frame_num)
 }
 
 bool
-UnwindLLDB::SearchForSavedLocationForRegister (uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc, uint32_t starting_frame_num, bool pc_or_return_address_reg)
+UnwindLLDB::SearchForSavedLocationForRegister (uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc, uint32_t starting_frame_num, bool pc_reg)
 {
     int64_t frame_num = starting_frame_num;
     if (frame_num >= m_frames.size())
@@ -286,7 +286,7 @@ UnwindLLDB::SearchForSavedLocationForRegister (uint32_t lldb_regnum, lldb_privat
 
     // Never interrogate more than one level while looking for the saved pc value.  If the value
     // isn't saved by frame_num, none of the frames lower on the stack will have a useful value.
-    if (pc_or_return_address_reg)
+    if (pc_reg)
     {
         UnwindLLDB::RegisterSearchResult result;
         result = m_frames[frame_num]->reg_ctx_lldb_sp->SavedLocationForRegister (lldb_regnum, regloc);

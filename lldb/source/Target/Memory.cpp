@@ -40,10 +40,12 @@ MemoryCache::~MemoryCache()
 }
 
 void
-MemoryCache::Clear()
+MemoryCache::Clear(bool clear_invalid_ranges)
 {
     Mutex::Locker locker (m_mutex);
     m_cache.clear();
+    if (clear_invalid_ranges)
+        m_invalid_ranges.Clear();
 }
 
 void

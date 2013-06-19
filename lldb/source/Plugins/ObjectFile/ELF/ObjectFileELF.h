@@ -16,6 +16,7 @@
 #include "lldb/lldb-private.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Core/UUID.h"
 
 #include "ELFHeader.h"
 
@@ -65,6 +66,12 @@ public:
                              lldb::offset_t file_offset,
                              lldb::offset_t length,
                              lldb_private::ModuleSpecList &specs);
+
+    static bool
+    MagicBytesMatch (lldb::DataBufferSP& data_sp,
+                     lldb::addr_t offset, 
+                     lldb::addr_t length);
+
     //------------------------------------------------------------------
     // PluginInterface protocol
     //------------------------------------------------------------------
@@ -147,6 +154,9 @@ private:
 
     /// ELF file header.
     elf::ELFHeader m_header;
+
+    /// ELF build ID
+    lldb_private::UUID m_uuid;
 
     /// Collection of program headers.
     ProgramHeaderColl m_program_headers;

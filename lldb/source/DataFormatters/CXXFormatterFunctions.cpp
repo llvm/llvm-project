@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/lldb-python.h"
+
 #include "lldb/DataFormatters/CXXFormatterFunctions.h"
 
 #include "llvm/Support/ConvertUTF.h"
@@ -902,7 +904,7 @@ lldb_private::formatters::NSDataSummaryProvider (ValueObject& valobj, Stream& st
     stream.Printf("%s%" PRIu64 " byte%s%s",
                   (needs_at ? "@\"" : ""),
                   value,
-                  (value > 1 ? "s" : ""),
+                  (value != 1 ? "s" : ""),
                   (needs_at ? "\"" : ""));
     
     return true;
@@ -939,8 +941,13 @@ ReadAsciiBufferAndDumpToStream (lldb::addr_t location,
     
     if (my_error.Fail())
         return false;
+    
+    dest.Printf("%c%c",prefix_token,quote);
+    
     if (my_data_read)
-        dest.Printf("%c%c%s%c",prefix_token,quote,(char*)buffer_sp->GetBytes(),quote);
+        dest.Printf("%s",(char*)buffer_sp->GetBytes());
+    
+    dest.Printf("%c",quote);
     
     return true;
 }

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/lldb-python.h"
+
 #include "lldb/DataFormatters/CXXFormatterFunctions.h"
 
 #include "lldb/Core/DataBufferHeap.h"
@@ -378,7 +380,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update()
     m_children.clear();
     m_tree = m_backend.GetChildMemberWithName(ConstString("__tree_"), true).get();
     if (!m_tree)
-        return NULL;
+        return false;
     m_root_node = m_tree->GetChildMemberWithName(ConstString("__begin_node_"), true).get();
     return false;
 }

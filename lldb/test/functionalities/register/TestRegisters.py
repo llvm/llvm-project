@@ -55,7 +55,6 @@ class RegisterCommandsTestCase(TestBase):
 
     def common_setup(self):
         exe = os.path.join(os.getcwd(), "a.out")
-        self.log_file = exe + ".log"
 
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
@@ -77,10 +76,11 @@ class RegisterCommandsTestCase(TestBase):
             self.platform = "linux"
 
         if self.platform != "":
-            self.runCmd("log enable " + self.platform + " " + str(category) + " registers -v -f " + self.log_file, RUN_SUCCEEDED)
+            log_file = os.path.join(os.getcwd(), 'TestRegisters.log')
+            self.runCmd("log enable " + self.platform + " " + str(category) + " registers -v -f " + log_file, RUN_SUCCEEDED)
             if not self.has_teardown:
                 self.has_teardown = True
-                self.addTearDownHook(lambda: os.remove(self.log_file))
+                self.addTearDownHook(lambda: os.remove(log_file))
 
     def register_commands(self):
         """Test commands related to registers, in particular vector registers."""

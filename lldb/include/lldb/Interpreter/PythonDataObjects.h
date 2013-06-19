@@ -82,13 +82,16 @@ namespace lldb_private {
         }
         
         void
-        Dump  () const
+        Dump () const
         {
             if (m_py_obj)
                 _PyObject_Dump (m_py_obj);
             else
                 puts ("NULL");
         }
+        
+        void
+        Dump (Stream &strm) const;
 
         PyObject*
         GetPythonObject () const

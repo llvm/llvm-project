@@ -141,6 +141,29 @@ class LLDBController(object):
     else:
       self.doLaunch('-s' not in args, "")
 
+  def doAttach(self, process_name):
+    """ Handle process attach.  """
+    error = lldb.SBError()
+    
+    self.processListener = lldb.SBListener("process_event_listener")
+    self.target = self.dbg.CreateTarget('')
+    self.process = self.target.AttachToProcessWithName(self.processListener, process_name, False, error)
+    if not error.Success():
+      sys.stderr.write("Error during attach: " + str(error))
+      return
+
+    self.ui.activate()
+    self.pid = self.process.GetProcessID()
+
+    print "Attached to %s (pid=%d)" % (process_name, self.pid)
+
+  def doDetach(self):
+    if self.process is not None and self.process.IsValid():
+      pid = self.process.GetProcessID()
+      state = state_type_to_str(self.process.GetState())
+      self.process.Detach()
+      self.processPendingEvents(self.eventDelayLaunch)
+
   def doLaunch(self, stop_at_entry, args):
     """ Handle process launch.  """
     error = lldb.SBError()
@@ -250,6 +273,10 @@ class LLDBController(object):
 
   def doShow(self, name):
     """ handle :Lshow <name> """
+    if not name:
+      self.ui.activate()
+      return
+
     if self.ui.showWindow(name):
       self.ui.update(self.target, "", self)
 
@@ -320,6 +347,10 @@ class LLDBController(object):
             # An event is on the queue, process it here.
             self.processListener.GetNextEvent(event)
             new_state = lldb.SBProcess.GetStateFromEvent(event)
+
+            # continue if stopped after attaching
+            if old_state == lldb.eStateAttaching and new_state == lldb.eStateStopped:
+              self.process.Continue()
 
             # If needed, perform any event-specific behaviour here
             num_events_handled += 1

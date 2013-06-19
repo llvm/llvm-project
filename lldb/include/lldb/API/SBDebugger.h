@@ -172,6 +172,12 @@ public:
     bool 
     GetUseExternalEditor ();
 
+    bool
+    SetUseColor (bool use_color);
+
+    bool
+    GetUseColor () const;
+
     static bool
     GetDefaultArchitecture (char *arch_name, size_t arch_name_len);
 

@@ -155,7 +155,6 @@ private:
     typedef std::unique_ptr<Entity>  EntityUP;
     typedef std::vector<EntityUP>   EntityVector;
     
-    unsigned                        m_result_index;
     DematerializerWP                m_dematerializer_wp;
     EntityVector                    m_entities;
     Entity                         *m_result_entity;

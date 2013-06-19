@@ -54,7 +54,7 @@ CommandObjectExpression::CommandOptions::g_option_table[] =
 {
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "all-threads",        'a', required_argument, NULL, 0, eArgTypeBoolean,    "Should we run all threads if the execution doesn't complete on one thread."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "ignore-breakpoints", 'i', required_argument, NULL, 0, eArgTypeBoolean,    "Ignore breakpoint hits while running expressions"},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "timeout",            't', required_argument, NULL, 0, eArgTypeUnsignedInteger,  "Timeout value for running the expression."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "timeout",            't', required_argument, NULL, 0, eArgTypeUnsignedInteger,  "Timeout value (in microseconds) for running the expression."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",    'u', required_argument, NULL, 0, eArgTypeBoolean,    "Clean up program state if the expression causes a crash, or raises a signal.  Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
 };
 

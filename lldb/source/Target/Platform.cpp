@@ -118,7 +118,7 @@ Platform::FindPlugin (Process *process, const ConstString &plugin_name)
     {
         for (uint32_t idx = 0; (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx)) != NULL; ++idx)
         {
-            std::unique_ptr<Platform> instance_ap(create_callback(process, false));
+            std::unique_ptr<Platform> instance_ap(create_callback(process, nullptr));
             if (instance_ap.get())
                 return instance_ap.release();
         }

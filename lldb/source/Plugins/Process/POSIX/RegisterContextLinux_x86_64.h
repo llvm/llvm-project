@@ -17,7 +17,6 @@ class RegisterContextLinux_x86_64:
 {
 public:
     RegisterContextLinux_x86_64(lldb_private::Thread &thread, uint32_t concrete_frame_idx);
-    virtual ~RegisterContextLinux_x86_64();
 
     size_t
     GetGPRSize();
@@ -28,9 +27,6 @@ protected:
 
     virtual void
     UpdateRegisterInfo();
-
-private:
-    static lldb_private::RegisterInfo *m_register_infos;
 };
 
 #endif

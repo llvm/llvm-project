@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/lldb-python.h"
+
 #include "lldb/DataFormatters/CXXFormatterFunctions.h"
 
 #include "lldb/Core/DataBufferHeap.h"
@@ -284,7 +286,7 @@ lldb_private::formatters::NSIndexSetSummaryProvider (ValueObject& valobj, Stream
                 return false;
         }
     }  while (false);
-    stream.Printf("%llu index%s",
+    stream.Printf("%" PRIu64 " index%s",
                   count,
                   (count == 1 ? "" : "es"));
     return true;

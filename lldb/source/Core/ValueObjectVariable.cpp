@@ -186,10 +186,8 @@ ValueObjectVariable::UpdateValue ()
 
             switch (value_type)
             {
-            default:
-                assert(!"Unhandled expression result value kind...");
-                break;
-
+            case Value::eValueTypeVector:
+                    // fall through
             case Value::eValueTypeScalar:
                 // The variable value is in the Scalar value inside the m_value.
                 // We can point our m_data right to it.

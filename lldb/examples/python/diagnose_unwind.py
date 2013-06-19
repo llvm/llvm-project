@@ -1,8 +1,10 @@
-# This implements the "diagnose-unwind" command, usually installed in the debug session like
-#   script import lldb.macosx
-# it is used when lldb's backtrace fails -- it collects and prints information about the stack frames,
-# and tries an alternate unwind algorithm, that will help to understand why lldb's unwind algorithm did
-# not succeed.
+# This implements the "diagnose-unwind" command, usually installed
+# in the debug session like
+#   command script import lldb.diagnose
+# it is used when lldb's backtrace fails -- it collects and prints
+# information about the stack frames, and tries an alternate unwind
+# algorithm, that will help to understand why lldb's unwind algorithm
+# did not succeed.
 
 import optparse
 import lldb
@@ -88,8 +90,14 @@ def simple_backtrace(debugger):
   backtrace_print_frame (target, frame_num, cur_pc, cur_fp)
 
 def diagnose_unwind(debugger, command, result, dict):
-  # Use the Shell Lexer to properly parse up command options just like a
-  # shell would
+  """
+Gather diagnostic information to help debug incorrect unwind (backtrace) 
+behavior in lldb.  When there is a backtrace that doesn't look
+correct, run this command with the correct thread selected and a
+large amount of diagnostic information will be printed, it is likely
+to be helpful when reporting the problem.
+  """
+
   command_args = shlex.split(command)
   parser = create_diagnose_unwind_options()
   try:
@@ -110,6 +118,7 @@ def diagnose_unwind(debugger, command, result, dict):
         if len(lldb_versions_match.groups()) >= 5 and lldb_versions_match.groups()[4]:
           lldb_minor = int(lldb_versions_match.groups()[4])
 
+        print 'LLDB version %s' % debugger.GetVersionString()
         print 'Unwind diagnostics for thread %d' % thread.GetIndexID()
         print ""
         print "lldb's unwind algorithm:"

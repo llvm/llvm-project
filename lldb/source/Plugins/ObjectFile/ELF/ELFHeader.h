@@ -107,7 +107,7 @@ struct ELFHeader
     GetRelocationJumpSlotType() const;
 
     //--------------------------------------------------------------------------
-    /// Parse an ELFSectionHeader entry starting at position \p offset and
+    /// Parse an ELFHeader entry starting at position \p offset and
     /// update the data extractor with the address size and byte order
     /// attributes as defined by the header.
     ///
@@ -120,7 +120,7 @@ struct ELFHeader
     ///    advanced by the number of bytes read.
     ///
     /// @return
-    ///    True if the ELFSectionHeader was successfully read and false
+    ///    True if the ELFHeader was successfully read and false
     ///    otherwise.
     bool
     Parse(lldb_private::DataExtractor &data, lldb::offset_t *offset);

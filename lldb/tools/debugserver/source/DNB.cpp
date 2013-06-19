@@ -900,15 +900,6 @@ DNBProcessResetEvents (nub_process_t pid, nub_event_t event_mask)
         procSP->Events().ResetEvents(event_mask);
 }
 
-void
-DNBProcessInterruptEvents (nub_process_t pid)
-{
-    MachProcessSP procSP;
-    if (GetProcessSP (pid, procSP))
-        procSP->Events().SetEvents(eEventProcessAsyncInterrupt);
-}
-
-
 // Breakpoints
 nub_break_t
 DNBBreakpointSet (nub_process_t pid, nub_addr_t addr, nub_size_t size, nub_bool_t hardware)

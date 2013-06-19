@@ -173,7 +173,11 @@ MonitorChildProcessThreadFunction (void *arg)
             if (errno == EINTR)
                 continue;
             else
+            {
+                if (log)
+                    log->Printf ("%s (arg = %p) thread exiting because waitpid failed (%s)...", __FUNCTION__, arg, strerror(errno));
                 break;
+            }
         }
         else if (wait_pid > 0)
         {
@@ -190,8 +194,7 @@ MonitorChildProcessThreadFunction (void *arg)
             {
                 exit_status = WEXITSTATUS(status);
                 status_cstr = "EXITED";
-                if (wait_pid == pid)
-                    exited = true;
+                exited = true;
             }
             else if (WIFSIGNALED(status))
             {
@@ -230,12 +233,20 @@ MonitorChildProcessThreadFunction (void *arg)
                         callback_return = callback (callback_baton, wait_pid, exited, signal, exit_status);
                     
                     // If our process exited, then this thread should exit
-                    if (exited)
+                    if (exited && wait_pid == pid)
+                    {
+                        if (log)
+                            log->Printf ("%s (arg = %p) thread exiting because pid received exit signal...", __FUNCTION__, arg);
                         break;
+                    }
                     // If the callback returns true, it means this process should
                     // exit
                     if (callback_return)
+                    {
+                        if (log)
+                            log->Printf ("%s (arg = %p) thread exiting because callback returned true...", __FUNCTION__, arg);
                         break;
+                    }
                 }
             }
         }
@@ -1223,6 +1234,14 @@ bool
 Host::GetProcessInfo (lldb::pid_t pid, ProcessInstanceInfo &process_info)
 {
     process_info.Clear();
+    return false;
+}
+#endif
+
+#if !defined(__linux__)
+bool
+Host::FindProcessThreads (const lldb::pid_t pid, TidMap &tids_to_attach)
+{
     return false;
 }
 #endif

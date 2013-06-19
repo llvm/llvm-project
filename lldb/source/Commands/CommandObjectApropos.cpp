@@ -68,29 +68,59 @@ CommandObjectApropos::DoExecute (Args& args, CommandReturnObject &result)
             // is private.
             StringList commands_found;
             StringList commands_help;
-            m_interpreter.FindCommandsForApropos (search_word, commands_found, commands_help);
-            if (commands_found.GetSize() == 0)
+            StringList user_commands_found;
+            StringList user_commands_help;
+            
+            m_interpreter.FindCommandsForApropos (search_word, commands_found, commands_help, true, false);
+            m_interpreter.FindCommandsForApropos (search_word, user_commands_found, user_commands_help, false, true);
+            
+            if (commands_found.GetSize() == 0 && user_commands_found.GetSize() == 0)
             {
                 result.AppendMessageWithFormat ("No commands found pertaining to '%s'. Try 'help' to see a complete list of debugger commands.\n", search_word);
             }
             else
             {
-                result.AppendMessageWithFormat ("The following commands may relate to '%s':\n", search_word);
-                size_t max_len = 0;
-
-                for (size_t i = 0; i < commands_found.GetSize(); ++i)
+                if (commands_found.GetSize() > 0)
                 {
-                    size_t len = strlen (commands_found.GetStringAtIndex (i));
-                    if (len > max_len)
-                        max_len = len;
-                }
+                    result.AppendMessageWithFormat ("The following built-in commands may relate to '%s':\n", search_word);
+                    size_t max_len = 0;
 
-                for (size_t i = 0; i < commands_found.GetSize(); ++i)
-                    m_interpreter.OutputFormattedHelpText (result.GetOutputStream(), 
-                                                           commands_found.GetStringAtIndex(i),
-                                                           "--",
-                                                           commands_help.GetStringAtIndex(i),
-                                                           max_len);
+                    for (size_t i = 0; i < commands_found.GetSize(); ++i)
+                    {
+                        size_t len = strlen (commands_found.GetStringAtIndex (i));
+                        if (len > max_len)
+                            max_len = len;
+                    }
+
+                    for (size_t i = 0; i < commands_found.GetSize(); ++i)
+                        m_interpreter.OutputFormattedHelpText (result.GetOutputStream(), 
+                                                               commands_found.GetStringAtIndex(i),
+                                                               "--",
+                                                               commands_help.GetStringAtIndex(i),
+                                                               max_len);
+                    if (user_commands_found.GetSize() > 0)
+                        result.AppendMessage("");
+                }
+                
+                if (user_commands_found.GetSize() > 0)
+                {
+                    result.AppendMessageWithFormat ("The following user commands may relate to '%s':\n", search_word);
+                    size_t max_len = 0;
+
+                    for (size_t i = 0; i < user_commands_found.GetSize(); ++i)
+                    {
+                        size_t len = strlen (user_commands_found.GetStringAtIndex (i));
+                        if (len > max_len)
+                            max_len = len;
+                    }
+
+                    for (size_t i = 0; i < user_commands_found.GetSize(); ++i)
+                        m_interpreter.OutputFormattedHelpText (result.GetOutputStream(), 
+                                                               user_commands_found.GetStringAtIndex(i),
+                                                               "--",
+                                                               user_commands_help.GetStringAtIndex(i),
+                                                               max_len);
+                }
                 
             }
             

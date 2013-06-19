@@ -42,11 +42,13 @@ function! s:InitLldbPlugin()
 
   " Window show/hide commands
   command -complete=custom,s:CompleteWindow -nargs=1 Lhide               python ctrl.doHide('<args>')
-  command -complete=custom,s:CompleteWindow -nargs=1 Lshow               python ctrl.doShow('<args>')
+  command -complete=custom,s:CompleteWindow -nargs=0 Lshow               python ctrl.doShow('<args>')
  
   " Launching convenience commands (no autocompletion)
   command -nargs=* Lstart                                                python ctrl.doLaunch(True,  '<args>')
   command -nargs=* Lrun                                                  python ctrl.doLaunch(False, '<args>')
+  command -nargs=1 Lattach                                               python ctrl.doAttach('<args>')
+  command -nargs=0 Ldetach                                               python ctrl.doDetach()
 
   " Regexp-commands: because vim's command mode does not support '_' or '-'
   " characters in command names, we omit them when creating the :L<cmd>
@@ -80,7 +82,9 @@ function! s:InitLldbPlugin()
   command -complete=custom,s:CompleteCommand -nargs=* Lwatchpoint        python ctrl.doCommand('watchpoint', '<args>')
  
   " Convenience (shortcut) LLDB commands
-  command -complete=custom,s:CompleteCommand -nargs=* Lprint             python ctrl.doCommand('print', '<args>')
+  command -complete=custom,s:CompleteCommand -nargs=* Lprint             python ctrl.doCommand('print', vim.eval("s:CursorWord('<args>')"))
+  command -complete=custom,s:CompleteCommand -nargs=* Lpo                python ctrl.doCommand('po', vim.eval("s:CursorWord('<args>')"))
+  command -complete=custom,s:CompleteCommand -nargs=* LpO                python ctrl.doCommand('po', vim.eval("s:CursorWORD('<args>')"))
   command -complete=custom,s:CompleteCommand -nargs=* Lbt                python ctrl.doCommand('bt', '<args>')
 
   " Frame/Thread-Selection (commands that also do an Uupdate but do not
@@ -131,6 +135,17 @@ l = vim.eval("a:L")
 p = vim.eval("a:P")
 returnCompleteWindow(a, l, p)
 EOF
+endfunction()
+
+" Returns cword if search term is empty
+function! s:CursorWord(term) 
+  return empty(a:term) ? expand('<cword>') : a:term 
+endfunction()
+
+" Returns cleaned cWORD if search term is empty
+function! s:CursorWORD(term) 
+  " Will strip all non-alphabetic characters from both sides
+  return empty(a:term) ?  substitute(expand('<cWORD>'), '^\A*\(.\{-}\)\A*$', '\1', '') : a:term 
 endfunction()
 
 call s:InitLldbPlugin()

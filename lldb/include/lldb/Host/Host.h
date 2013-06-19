@@ -13,6 +13,7 @@
 
 #include <stdarg.h>
 
+#include <map>
 #include <string>
 
 #include "lldb/lldb-private.h"
@@ -414,7 +415,12 @@ public:
     static uint32_t
     FindProcesses (const ProcessInstanceInfoMatch &match_info,
                    ProcessInstanceInfoList &proc_infos);
-    
+
+    typedef std::map<lldb::pid_t, bool> TidMap;
+    typedef std::pair<lldb::pid_t, bool> TidPair;
+    static bool
+    FindProcessThreads (const lldb::pid_t pid, TidMap &tids_to_attach);
+
     static bool
     GetProcessInfo (lldb::pid_t pid, ProcessInstanceInfo &proc_info);
     

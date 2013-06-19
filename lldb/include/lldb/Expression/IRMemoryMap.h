@@ -50,6 +50,7 @@ public:
     };
 
     lldb::addr_t Malloc (size_t size, uint8_t alignment, uint32_t permissions, AllocationPolicy policy, Error &error);
+    void Leak (lldb::addr_t process_address, Error &error);
     void Free (lldb::addr_t process_address, Error &error);
     
     void WriteMemory (lldb::addr_t process_address, const uint8_t *bytes, size_t size, Error &error);
@@ -84,7 +85,10 @@ private:
         uint32_t        m_permissions;      ///< The access permissions on the memory in the process.  In the host, the memory is always read/write.
         uint8_t         m_alignment;        ///< The alignment of the requested allocation
         DataBufferHeap  m_data;
+        
+        ///< Flags
         AllocationPolicy    m_policy;
+        bool                m_leak;
     public:
         Allocation (lldb::addr_t process_alloc,
                     lldb::addr_t process_start,
@@ -100,7 +104,8 @@ private:
             m_permissions (0),
             m_alignment (0),
             m_data (),
-            m_policy (eAllocationPolicyInvalid)
+            m_policy (eAllocationPolicyInvalid),
+            m_leak (false)
         {
         }
     };

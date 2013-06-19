@@ -12,5 +12,7 @@ target_link_libraries(lldb liblldb)
 #target_link_libraries(lldb ${LLDB_USED_LIBS})
 #llvm_config(lldb ${LLVM_LINK_COMPONENTS})
 
+set_target_properties(lldb PROPERTIES VERSION ${LLDB_VERSION})
+
 install(TARGETS lldb
   RUNTIME DESTINATION bin)

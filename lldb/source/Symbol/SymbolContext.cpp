@@ -319,7 +319,6 @@ SymbolContext::GetResolvedMask () const
     return resolved_mask;
 }
 
-
 void
 SymbolContext::Dump(Stream *s, Target *target) const
 {
@@ -593,7 +592,7 @@ SymbolContext::GetFunctionMethodInfo (lldb::LanguageType &language,
 }
 
 ConstString
-SymbolContext::GetFunctionName (Mangled::NamePreference preference)
+SymbolContext::GetFunctionName (Mangled::NamePreference preference) const
 {
     if (function)
     {
@@ -619,6 +618,33 @@ SymbolContext::GetFunctionName (Mangled::NamePreference preference)
         // No function, return an empty string.
         return ConstString();
     }
+}
+
+LineEntry
+SymbolContext::GetFunctionStartLineEntry () const
+{
+    LineEntry line_entry;
+    Address start_addr;
+    if (block)
+    {
+        Block *inlined_block = block->GetContainingInlinedBlock();
+        if (inlined_block)
+        {
+            if (inlined_block->GetStartAddress (start_addr))
+            {
+                if (start_addr.CalculateSymbolContextLineEntry (line_entry))
+                    return line_entry;
+            }
+            return LineEntry();
+        }
+    }
+    
+    if (function)
+    {
+        if (function->GetAddressRange().GetBaseAddress().CalculateSymbolContextLineEntry(line_entry))
+            return line_entry;
+    }
+    return LineEntry();
 }
 
 //----------------------------------------------------------------------

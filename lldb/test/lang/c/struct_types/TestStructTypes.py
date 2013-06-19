@@ -89,7 +89,8 @@ class StructTypesTestCase(TestBase):
             DATA_TYPES_DISPLAYED_CORRECTLY,
             substrs = ['padding[]']) # Once rdar://problem/12566646 is fixed, this should display correctly
 
-
+        self.expect("expression -- &pt == (struct point_tag*)0",
+                    substrs = ['false'])
 
 if __name__ == '__main__':
     import atexit

@@ -17,30 +17,38 @@ class PersistentVariablesTestCase(TestBase):
 
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        self.runCmd("breakpoint set --name main")
+        self.runCmd("breakpoint set --source-pattern-regexp break")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.expect("expression int $i = 5; $i + 1",
-            startstr = "(int) $0 = 6")
-        # (int) $0 = 6
+        self.runCmd("expression int $i = i")
+
+        self.expect("expression $i == i",
+            startstr = "(bool) $0 = true")
+
+        self.expect("expression $i + 1",
+            startstr = "(int) $1 = 6")
 
         self.expect("expression $i + 3",
-            startstr = "(int) $1 = 8")
-        # (int) $1 = 8
+            startstr = "(int) $2 = 8")
 
-        self.expect("expression $1 + $0",
-            startstr = "(int) $2 = 14")
-        # (int) $2 = 14
+        self.expect("expression $2 + $1",
+            startstr = "(int) $3 = 14")
+
+        self.expect("expression $3",
+            startstr = "(int) $3 = 14")
 
         self.expect("expression $2",
-            startstr = "(int) $2 = 14")
-        # (int) $2 =  14
+            startstr = "(int) $2 = 8")
 
-        self.expect("expression $1",
-            startstr = "(int) $1 = 8")
-        # (int) $1 = 8
+        self.expect("expression (int)-2",
+            startstr = "(int) $4 = -2")
 
+        self.expect("expression $4 > (int)31",
+            startstr = "(bool) $5 = false")
+
+        self.expect("expression (long)$4",
+            startstr = "(long) $6 = -2")
 
 if __name__ == '__main__':
     import atexit

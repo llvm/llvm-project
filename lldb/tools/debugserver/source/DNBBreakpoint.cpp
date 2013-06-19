@@ -288,6 +288,15 @@ DNBBreakpointList::GetByIndex (uint32_t i)
     return NULL;
 }
 
+void
+DNBBreakpointList::DisableAll ()
+{
+    iterator pos, end = m_breakpoints.end();
+    for (pos = m_breakpoints.begin(); pos != end; ++pos)
+        (*pos).SetEnabled(false);
+}
+
+
 const DNBBreakpoint *
 DNBBreakpointList::GetByIndex (uint32_t i) const
 {

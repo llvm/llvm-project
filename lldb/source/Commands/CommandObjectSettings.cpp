@@ -255,7 +255,14 @@ protected:
         
         if (error.Success())
         {
-            error = m_interpreter.GetDebugger().SetPropertyValue (&m_exe_ctx,
+            // FIXME this is the same issue as the one in commands script import
+            // we could be setting target.load-script-from-symbol-file which would cause
+            // Python scripts to be loaded, which could run LLDB commands
+            // (e.g. settings set target.process.python-os-plugin-path) and cause a crash
+            // if we did not clear the command's exe_ctx first
+            ExecutionContext exe_ctx(m_exe_ctx);
+            m_exe_ctx.Clear();
+            error = m_interpreter.GetDebugger().SetPropertyValue (&exe_ctx,
                                                                   eVarSetOperationAssign,
                                                                   var_name,
                                                                   var_value_cstr);

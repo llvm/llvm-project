@@ -121,13 +121,11 @@ enum
     eEventSharedLibsStateChange = 1 << 2,       // Shared libraries loaded/unloaded state has changed
     eEventStdioAvailable = 1 << 3,              // Something is available on stdout/stderr
     eEventProfileDataAvailable = 1 << 4,        // Profile data ready for retrieval
-    eEventProcessAsyncInterrupt = 1 << 5,       // Gives the ability for any infinite wait calls to be interrupted
     kAllEventsMask = eEventProcessRunningStateChanged |
                      eEventProcessStoppedStateChanged |
                      eEventSharedLibsStateChange |
                      eEventStdioAvailable |
-                     eEventProfileDataAvailable |
-                     eEventProcessAsyncInterrupt
+                     eEventProfileDataAvailable
 };
 
 #define LOG_VERBOSE             (1u << 0)
@@ -239,7 +237,8 @@ enum DNBThreadStopType
 {
     eStopTypeInvalid = 0,
     eStopTypeSignal,
-    eStopTypeException
+    eStopTypeException,
+    eStopTypeExec
 };
 
 enum DNBMemoryPermissions
@@ -357,6 +356,7 @@ enum DNBProfileDataScanType
     
     eProfileMemory              = (1 << 6), // By default, excludes eProfileMemoryDirtyPage.
     eProfileMemoryDirtyPage     = (1 << 7), // Assume eProfileMemory, get Dirty Page size as well.
+    eProfileMemoryAnonymous     = (1 << 8), // Assume eProfileMemory, get Anonymous memory as well.
     
     eProfileAll                 = 0xffffffff
 };

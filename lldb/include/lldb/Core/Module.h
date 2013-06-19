@@ -595,7 +595,9 @@ public:
     IsLoadedInTarget (Target *target);
 
     bool
-    LoadScriptingResourceInTarget (Target *target, Error& error);
+    LoadScriptingResourceInTarget (Target *target,
+                                   Error& error,
+                                   Stream* feedback_stream = NULL);
     
     //------------------------------------------------------------------
     /// Get the number of compile units for this module.

@@ -152,6 +152,11 @@ public:
     GetFilePath(const lldb_private::ProcessLaunchInfo::FileAction *file_action,
                 const char *default_path);
 
+    /// Stops all threads in the process.
+    /// The \p stop_tid parameter indicates the thread which initiated the stop.
+    virtual void
+    StopAllThreads(lldb::tid_t stop_tid);
+
 protected:
     /// Target byte order.
     lldb::ByteOrder m_byte_order;

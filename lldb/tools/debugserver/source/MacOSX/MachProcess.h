@@ -18,7 +18,6 @@
 #include "DNBBreakpoint.h"
 #include "DNBError.h"
 #include "DNBThreadResumeActions.h"
-//#include "MachDYLD.h"
 #include "MachException.h"
 #include "MachVMMemory.h"
 #include "MachTask.h"
@@ -179,7 +178,7 @@ public:
     nub_thread_t            GetCurrentThreadMachPort ();
     nub_thread_t            SetCurrentThread (nub_thread_t tid);
     MachThreadList &        GetThreadList() { return m_thread_list; }
-    bool                    GetThreadStoppedReason(nub_thread_t tid, struct DNBThreadStopInfo *stop_info) const;
+    bool                    GetThreadStoppedReason(nub_thread_t tid, struct DNBThreadStopInfo *stop_info);
     void                    DumpThreadStoppedReason(nub_thread_t tid) const;
     const char *            GetThreadInfo (nub_thread_t tid) const;
 
@@ -300,6 +299,7 @@ private:
     nub_state_t                 m_state;                    // The state of our process
     PThreadMutex                m_state_mutex;              // Multithreaded protection for m_state
     PThreadEvent                m_events;                   // Process related events in the child processes lifetime can be waited upon
+    PThreadEvent                m_private_events;           // Used to coordinate running and stopping the process without affecting m_events
     DNBBreakpointList           m_breakpoints;              // Breakpoint list for this process
     DNBBreakpointList           m_watchpoints;              // Watchpoint list for this process
     DNBCallbackNameToAddress    m_name_to_addr_callback;
@@ -307,6 +307,7 @@ private:
     DNBCallbackCopyExecutableImageInfos
                                 m_image_infos_callback;
     void *                      m_image_infos_baton;
+    bool                        m_did_exec;
 };
 
 

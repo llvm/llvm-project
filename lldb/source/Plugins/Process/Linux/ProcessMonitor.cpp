@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <sys/ptrace.h>
 #include <sys/socket.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -51,6 +52,10 @@
 #ifndef TRAP_HWBKPT
   #define TRAP_HWBKPT 4
 #endif
+
+// Try to define a macro to encapsulate the tgkill syscall
+// fall back on kill() if tgkill isn't available
+#define tgkill(pid, tid, sig)  syscall(SYS_tgkill, pid, tid, sig)
 
 using namespace lldb_private;
 
@@ -724,7 +729,13 @@ ResumeOperation::Execute(ProcessMonitor *monitor)
         data = m_signo;
 
     if (PTRACE(PTRACE_CONT, m_tid, NULL, (void*)data, 0))
+    {
+        Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
+
+        if (log)
+            log->Printf ("ResumeOperation (%"  PRIu64 ") failed: %s", m_tid, strerror(errno));
         m_result = false;
+    }
     else
         m_result = true;
 }
@@ -846,22 +857,20 @@ KillOperation::Execute(ProcessMonitor *monitor)
 class DetachOperation : public Operation
 {
 public:
-    DetachOperation(Error &result) : m_error(result) { }
+    DetachOperation(lldb::tid_t tid, Error &result) : m_tid(tid), m_error(result) { }
 
     void Execute(ProcessMonitor *monitor);
 
 private:
+    lldb::tid_t m_tid;
     Error &m_error;
 };
 
 void
 DetachOperation::Execute(ProcessMonitor *monitor)
 {
-    lldb::pid_t pid = monitor->GetPID();
-
-    if (ptrace(PT_DETACH, pid, NULL, 0) < 0)
+    if (ptrace(PT_DETACH, m_tid, NULL, 0) < 0)
         m_error.SetErrorToErrno();
-
 }
 
 ProcessMonitor::OperationArgs::OperationArgs(ProcessMonitor *monitor)
@@ -1087,7 +1096,6 @@ ProcessMonitor::Launch(LaunchArgs *args)
     const size_t err_len = 1024;
     char err_str[err_len];
     lldb::pid_t pid;
-    long ptrace_opts = 0;
 
     lldb::ThreadSP inferior;
     Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
@@ -1203,14 +1211,7 @@ ProcessMonitor::Launch(LaunchArgs *args)
     assert(WIFSTOPPED(status) && wpid == pid &&
            "Could not sync with inferior process.");
 
-    // Have the child raise an event on exit.  This is used to keep the child in
-    // limbo until it is destroyed.
-    ptrace_opts |= PTRACE_O_TRACEEXIT;
-
-    // Have the tracer trace threads which spawn in the inferior process.
-    ptrace_opts |= PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE;
-
-    if (PTRACE(PTRACE_SETOPTIONS, pid, NULL, (void*)ptrace_opts, 0) < 0)
+    if (!SetDefaultPtraceOpts(pid))
     {
         args->m_error.SetErrorToErrno();
         goto FINISH;
@@ -1291,6 +1292,9 @@ ProcessMonitor::Attach(AttachArgs *args)
     lldb::ThreadSP inferior;
     Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
 
+    // Use a map to keep track of the threads which we have attached/need to attach.
+    Host::TidMap tids_to_attach;
+
     if (pid <= 1)
     {
         args->m_error.SetErrorToGenericError();
@@ -1298,33 +1302,103 @@ ProcessMonitor::Attach(AttachArgs *args)
         goto FINISH;
     }
 
-    // Attach to the requested process.
-    if (PTRACE(PTRACE_ATTACH, pid, NULL, NULL, 0) < 0)
+    while (Host::FindProcessThreads(pid, tids_to_attach))
     {
-        args->m_error.SetErrorToErrno();
-        goto FINISH;
+        for (Host::TidMap::iterator it = tids_to_attach.begin();
+             it != tids_to_attach.end(); ++it)
+        {
+            if (it->second == false)
+            {
+                lldb::tid_t tid = it->first;
+
+                // Attach to the requested process.
+                // An attach will cause the thread to stop with a SIGSTOP.
+                if (PTRACE(PTRACE_ATTACH, tid, NULL, NULL, 0) < 0)
+                {
+                    // No such thread. The thread may have exited.
+                    // More error handling may be needed.
+                    if (errno == ESRCH)
+                    {
+                        tids_to_attach.erase(it);
+                        continue;
+                    }
+                    else
+                    {
+                        args->m_error.SetErrorToErrno();
+                        goto FINISH;
+                    }
+                }
+
+                int status;
+                // Need to use __WALL otherwise we receive an error with errno=ECHLD
+                // At this point we should have a thread stopped if waitpid succeeds.
+                if ((status = waitpid(tid, NULL, __WALL)) < 0)
+                {
+                    // No such thread. The thread may have exited.
+                    // More error handling may be needed.
+                    if (errno == ESRCH)
+                    {
+                        tids_to_attach.erase(it);
+                        continue;
+                    }
+                    else
+                    {
+                        args->m_error.SetErrorToErrno();
+                        goto FINISH;
+                    }
+                }
+
+                if (!SetDefaultPtraceOpts(tid))
+                {
+                    args->m_error.SetErrorToErrno();
+                    goto FINISH;
+                }
+
+                // Update the process thread list with the attached thread.
+                inferior.reset(new POSIXThread(process, tid));
+                if (log)
+                    log->Printf ("ProcessMonitor::%s() adding tid = %" PRIu64, __FUNCTION__, tid);
+                process.GetThreadList().AddThread(inferior);
+                it->second = true;
+            }
+        }
     }
 
-    int status;
-    if ((status = waitpid(pid, NULL, 0)) < 0)
+    if (tids_to_attach.size() > 0)
     {
-        args->m_error.SetErrorToErrno();
-        goto FINISH;
+        monitor->m_pid = pid;
+        // Let our process instance know the thread has stopped.
+        process.SendMessage(ProcessMessage::Trace(pid));
     }
-
-    monitor->m_pid = pid;
-
-    // Update the process thread list with the attached thread.
-    inferior.reset(new POSIXThread(process, pid));
-    if (log)
-        log->Printf ("ProcessMonitor::%s() adding tid = %" PRIu64, __FUNCTION__, pid);
-    process.GetThreadList().AddThread(inferior);
-
-    // Let our process instance know the thread has stopped.
-    process.SendMessage(ProcessMessage::Trace(pid));
+    else
+    {
+        args->m_error.SetErrorToGenericError();
+        args->m_error.SetErrorString("No such process.");
+    }
 
  FINISH:
     return args->m_error.Success();
+}
+
+bool
+ProcessMonitor::SetDefaultPtraceOpts(lldb::pid_t pid)
+{
+    long ptrace_opts = 0;
+
+    // Have the child raise an event on exit.  This is used to keep the child in
+    // limbo until it is destroyed.
+    ptrace_opts |= PTRACE_O_TRACEEXIT;
+
+    // Have the tracer trace threads which spawn in the inferior process.
+    // TODO: if we want to support tracing the inferiors' child, add the
+    // appropriate ptrace flags here (PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK)
+    ptrace_opts |= PTRACE_O_TRACECLONE;
+
+    // Have the tracer notify us before execve returns
+    // (needed to disable legacy SIGTRAP generation)
+    ptrace_opts |= PTRACE_O_TRACEEXEC;
+
+    return PTRACE(PTRACE_SETOPTIONS, pid, NULL, (void*)ptrace_opts, 0) >= 0;
 }
 
 bool
@@ -1342,8 +1416,21 @@ ProcessMonitor::MonitorCallback(void *callback_baton,
     siginfo_t info;
     int ptrace_err;
 
+    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
+
+    if (exited)
+    {
+        if (log)
+            log->Printf ("ProcessMonitor::%s() got exit signal, tid = %"  PRIu64, __FUNCTION__, pid);
+        message = ProcessMessage::Exit(pid, status);
+        process->SendMessage(message);
+        return pid == process->GetID();
+    }
+
     if (!monitor->GetSignalInfo(pid, &info, ptrace_err)) {
         if (ptrace_err == EINVAL) {
+            if (log)
+                log->Printf ("ProcessMonitor::%s() resuming from group-stop", __FUNCTION__);
             // inferior process is in 'group-stop', so deliver SIGSTOP signal
             if (!monitor->Resume(pid, SIGSTOP)) {
               assert(0 && "SIGSTOP delivery failed while in 'group-stop' state");
@@ -1352,8 +1439,11 @@ ProcessMonitor::MonitorCallback(void *callback_baton,
         } else {
             // ptrace(GETSIGINFO) failed (but not due to group-stop). Most likely,
             // this means the child pid is gone (or not being debugged) therefore
-            // stop the monitor thread.
-            stop_monitoring = true;
+            // stop the monitor thread if this is the main pid.
+            if (log)
+                log->Printf ("ProcessMonitor::%s() GetSignalInfo failed: %s, tid = %" PRIu64 ", signal = %d, status = %d", 
+                              __FUNCTION__, strerror(ptrace_err), pid, signal, status);
+            stop_monitoring = pid == monitor->m_process->GetID();
         }
     }
     else {
@@ -1369,7 +1459,7 @@ ProcessMonitor::MonitorCallback(void *callback_baton,
         }
 
         process->SendMessage(message);
-        stop_monitoring = !process->IsAlive();
+        stop_monitoring = false;
     }
 
     return stop_monitoring;
@@ -1381,6 +1471,8 @@ ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
 {
     ProcessMessage message;
 
+    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
+
     assert(monitor);
     assert(info && info->si_signo == SIGTRAP && "Unexpected child signal!");
 
@@ -1390,10 +1482,16 @@ ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
         assert(false && "Unexpected SIGTRAP code!");
         break;
 
-    case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
-    case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
+    // TODO: these two cases are required if we want to support tracing
+    // of the inferiors' children
+    // case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
+    // case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
+
     case (SIGTRAP | (PTRACE_EVENT_CLONE << 8)):
     {
+        if (log)
+            log->Printf ("ProcessMonitor::%s() received thread creation event, code = %d", __FUNCTION__, info->si_code ^ SIGTRAP);
+
         unsigned long tid = 0;
         if (!monitor->GetEventMessage(pid, &tid))
             tid = -1;
@@ -1401,29 +1499,42 @@ ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
         break;
     }
 
+    case (SIGTRAP | (PTRACE_EVENT_EXEC << 8)):
+        // Don't follow the child by default and resume
+        monitor->Resume(pid, SIGCONT);
+        break;
+
     case (SIGTRAP | (PTRACE_EVENT_EXIT << 8)):
     {
-        // The inferior process is about to exit.  Maintain the process in a
-        // state of "limbo" until we are explicitly commanded to detach,
-        // destroy, resume, etc.
+        // The inferior process or one of its threads is about to exit.
+        // Maintain the process or thread in a state of "limbo" until we are
+        // explicitly commanded to detach, destroy, resume, etc.
         unsigned long data = 0;
         if (!monitor->GetEventMessage(pid, &data))
             data = -1;
+        if (log)
+            log->Printf ("ProcessMonitor::%s() received exit event, data = %lx, pid = %" PRIu64, __FUNCTION__, data, pid);
         message = ProcessMessage::Limbo(pid, (data >> 8));
         break;
     }
 
     case 0:
     case TRAP_TRACE:
+        if (log)
+            log->Printf ("ProcessMonitor::%s() received trace event, pid = %" PRIu64, __FUNCTION__, pid);
         message = ProcessMessage::Trace(pid);
         break;
 
     case SI_KERNEL:
     case TRAP_BRKPT:
+        if (log)
+            log->Printf ("ProcessMonitor::%s() received breakpoint event, pid = %" PRIu64, __FUNCTION__, pid);
         message = ProcessMessage::Break(pid);
         break;
 
     case TRAP_HWBKPT:
+        if (log)
+            log->Printf ("ProcessMonitor::%s() received watchpoint event, pid = %" PRIu64, __FUNCTION__, pid);
         message = ProcessMessage::Watch(pid, (lldb::addr_t)info->si_addr);
         break;
     }
@@ -1438,6 +1549,8 @@ ProcessMonitor::MonitorSignal(ProcessMonitor *monitor,
     ProcessMessage message;
     int signo = info->si_signo;
 
+    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
+
     // POSIX says that process behaviour is undefined after it ignores a SIGFPE,
     // SIGILL, SIGSEGV, or SIGBUS *unless* that signal was generated by a
     // kill(2) or raise(3).  Similarly for tgkill(2) on Linux.
@@ -1448,11 +1561,21 @@ ProcessMonitor::MonitorSignal(ProcessMonitor *monitor,
     // Similarly, ACK signals generated by this monitor.
     if (info->si_code == SI_TKILL || info->si_code == SI_USER)
     {
+        if (log)
+            log->Printf ("ProcessMonitor::%s() received signal %s with code %s, pid = %d",
+                            __FUNCTION__,
+                            monitor->m_process->GetUnixSignals().GetSignalAsCString (signo),
+                            (info->si_code == SI_TKILL ? "SI_TKILL" : "SI_USER"),
+                            info->si_pid);
+
         if (info->si_pid == getpid())
             return ProcessMessage::SignalDelivered(pid, signo);
         else
             return ProcessMessage::Signal(pid, signo);
     }
+
+    if (log)
+        log->Printf ("ProcessMonitor::%s() received signal %s", __FUNCTION__, monitor->m_process->GetUnixSignals().GetSignalAsCString (signo));
 
     if (signo == SIGSEGV) {
         lldb::addr_t fault_addr = reinterpret_cast<lldb::addr_t>(info->si_addr);
@@ -1481,6 +1604,144 @@ ProcessMonitor::MonitorSignal(ProcessMonitor *monitor,
     // Everything else is "normal" and does not require any special action on
     // our part.
     return ProcessMessage::Signal(pid, signo);
+}
+
+bool
+ProcessMonitor::StopThread(lldb::tid_t tid)
+{
+    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
+
+    // FIXME: Try to use tgkill or tkill
+    int ret = tgkill(m_pid, tid, SIGSTOP);
+    if (log)
+        log->Printf ("ProcessMonitor::%s(bp) stopping thread, tid = %" PRIu64 ", ret = %d", __FUNCTION__, tid, ret);
+
+    // This can happen if a thread exited while we were trying to stop it.  That's OK.
+    // We'll get the signal for that later.
+    if (ret < 0)
+        return false;
+
+    // Wait for the thread to stop
+    while (true)
+    {
+        int status = -1;
+        if (log)
+            log->Printf ("ProcessMonitor::%s(bp) waitpid...", __FUNCTION__);
+        lldb::pid_t wait_pid = ::waitpid (-1*m_pid, &status, __WALL);
+        if (log)
+            log->Printf ("ProcessMonitor::%s(bp) waitpid, pid = %" PRIu64 ", status = %d", __FUNCTION__, wait_pid, status);
+
+        if (wait_pid == -1)
+        {
+            // If we got interrupted by a signal (in our process, not the
+            // inferior) try again.
+            if (errno == EINTR)
+                continue;
+            else
+                return false; // This is bad, but there's nothing we can do.
+        }
+
+        // If this is a thread exit, we won't get any more information.
+        if (WIFEXITED(status))
+        {
+            m_process->SendMessage(ProcessMessage::Exit(wait_pid, WEXITSTATUS(status)));
+            if (wait_pid == tid)
+                return true;
+            continue;
+        }
+
+        siginfo_t info;
+        int ptrace_err;
+        if (!GetSignalInfo(wait_pid, &info, ptrace_err))
+        {
+            if (log)
+            {
+                log->Printf ("ProcessMonitor::%s() GetSignalInfo failed.", __FUNCTION__);
+
+                // This would be a particularly interesting case
+                if (ptrace_err == EINVAL)
+                    log->Printf ("ProcessMonitor::%s() in group-stop", __FUNCTION__);
+            }
+            return false;
+        }
+
+        // Handle events from other threads
+        if (log)
+            log->Printf ("ProcessMonitor::%s(bp) handling event, tid == %" PRIu64, __FUNCTION__, wait_pid);
+
+        ProcessMessage message;
+        if (info.si_signo == SIGTRAP)
+            message = MonitorSIGTRAP(this, &info, wait_pid);
+        else
+            message = MonitorSignal(this, &info, wait_pid);
+
+        POSIXThread *thread = static_cast<POSIXThread*>(m_process->GetThreadList().FindThreadByID(wait_pid).get());
+
+        // When a new thread is created, we may get a SIGSTOP for the new thread
+        // just before we get the SIGTRAP that we use to add the thread to our
+        // process thread list.  We don't need to worry about that signal here.
+        assert(thread || message.GetKind() == ProcessMessage::eSignalMessage);
+
+        if (!thread)
+        {
+            m_process->SendMessage(message);
+            continue;
+        }
+
+        switch (message.GetKind())
+        {
+            case ProcessMessage::eInvalidMessage:
+                break;
+
+            // These need special handling because we don't want to send a
+            // resume even if we already sent a SIGSTOP to this thread. In
+            // this case the resume will cause the thread to disappear.  It is
+            // unlikely that we'll ever get eExitMessage here, but the same
+            // reasoning applies.
+            case ProcessMessage::eLimboMessage:
+            case ProcessMessage::eExitMessage:
+                if (log)
+                    log->Printf ("ProcessMonitor::%s(bp) handling message", __FUNCTION__);
+                // SendMessage will set the thread state as needed.
+                m_process->SendMessage(message);
+                // If this is the thread we're waiting for, stop waiting. Even
+                // though this wasn't the signal we expected, it's the last
+                // signal we'll see while this thread is alive.
+                if (wait_pid == tid)
+                    return true;
+                break;
+
+            case ProcessMessage::eSignalDeliveredMessage:
+                // This is the stop we're expecting.
+                if (wait_pid == tid && WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP && info.si_code == SI_TKILL)
+                {
+                    if (log)
+                        log->Printf ("ProcessMonitor::%s(bp) received signal, done waiting", __FUNCTION__);
+                    thread->SetState(lldb::eStateStopped);
+                    return true;
+                }
+                // else fall-through
+            case ProcessMessage::eSignalMessage:
+            case ProcessMessage::eBreakpointMessage:
+            case ProcessMessage::eTraceMessage:
+            case ProcessMessage::eWatchpointMessage:
+            case ProcessMessage::eCrashMessage:
+            case ProcessMessage::eNewThreadMessage:
+                if (log)
+                    log->Printf ("ProcessMonitor::%s(bp) handling message", __FUNCTION__);
+                // SendMessage will set the thread state as needed.
+                m_process->SendMessage(message);
+                // This isn't the stop we were expecting, but the thread is
+                // stopped. SendMessage will handle processing of this event,
+                // but we need to resume here to get the stop we are waiting
+                // for (otherwise the thread will stop again immediately when
+                // we try to resume).
+                if (wait_pid == tid)
+                    Resume(wait_pid, eResumeSignalNone);
+                break;
+        }
+    }
+    return false;
 }
 
 ProcessMessage::CrashReason
@@ -1794,8 +2055,15 @@ bool
 ProcessMonitor::Resume(lldb::tid_t tid, uint32_t signo)
 {
     bool result;
+    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_PROCESS));
+
+    if (log)
+        log->Printf ("ProcessMonitor::%s() resuming thread = %"  PRIu64 " with signal %s", __FUNCTION__, tid,
+                                 m_process->GetUnixSignals().GetSignalAsCString (signo));
     ResumeOperation op(tid, signo, result);
     DoOperation(&op);
+    if (log)
+        log->Printf ("ProcessMonitor::%s() resuming result = %s", __FUNCTION__, result ? "true" : "false");
     return result;
 }
 
@@ -1836,11 +2104,12 @@ ProcessMonitor::GetEventMessage(lldb::tid_t tid, unsigned long *message)
 }
 
 lldb_private::Error
-ProcessMonitor::Detach()
+ProcessMonitor::Detach(lldb::tid_t tid)
 {
     lldb_private::Error error;
-    if (m_pid != LLDB_INVALID_PROCESS_ID) {
-        DetachOperation op(error);
+    if (tid != LLDB_INVALID_THREAD_ID)
+    {
+        DetachOperation op(tid, error);
         DoOperation(&op);
     }
     return error;

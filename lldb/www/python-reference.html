@@ -271,6 +271,10 @@ frame #0: 0x0000000100000bb6 a.out main + 54 at main.c:16
                         </td>
                     </tr>
                     </table>
+             <p>Optionally, a Python breakpoint command can return a value. Returning False tells LLDB that you do not want to stop at the breakpoint.
+                Any other return value (including None or leaving out the return statement altogether) is akin to telling LLDB to actually stop at the breakpoint.
+                This can be useful in situations where a breakpoint only needs to stop the process when certain conditions are met, and you do not want to inspect the
+                program state manually at every stop and then continue.
              <p>An example will show how simple it is to write some python code and attach it to a breakpoint. 
                 The following example will allow you to track the order in which the functions in a given shared library 
                 are first executed during one run of your program.  This is a simple method to gather an order file which
@@ -301,8 +305,8 @@ Enter your Python command(s). Type 'DONE' to end.
 > <strong>print '[%i] %s' % (counter, name)</strong>
 > <font color=green># Disable the current breakpoint location so it doesn't get hit again</font>
 > <strong>bp_loc.SetEnabled(False)</strong>
-> <font color=green># How continue the process</font>
-> <strong>frame.GetThread().GetProcess().Continue()</strong>
+> <font color=green># No need to stop here</font>
+> <strong>return False</strong>
 > <strong>DONE</strong>
 </tt></pre></code>
             <p>The <b>breakpoint command add</b> command above attaches a python script to breakpoint 1.
@@ -387,7 +391,8 @@ Enter your Python command(s). Type 'DONE' to end.
         </tr>
         </table>
         <p>As a convenience, you can treat the result object as a Python file object, and say
-        print >>result, "my command does lots of cool stuff". SBCommandReturnObject and SBStream
+        <code><pre><tt>print >>result, "my command does lots of cool stuff"</tt></pre></code>
+        SBCommandReturnObject and SBStream
         both support this file-like behavior by providing write() and flush() calls at the Python layer.</p>
         <p>One other handy convenience when defining lldb command-line commands is the command
           <b>command script import</b> which will import a module specified by file path - so you

@@ -82,6 +82,7 @@ ValueObject::ValueObject (ValueObject &parent) :
     m_synthetic_value(NULL),
     m_deref_valobj(NULL),
     m_format (eFormatDefault),
+    m_last_format (eFormatDefault),
     m_last_format_mgr_revision(0),
     m_type_summary_sp(),
     m_type_format_sp(),
@@ -127,6 +128,7 @@ ValueObject::ValueObject (ExecutionContextScope *exe_scope,
     m_synthetic_value(NULL),
     m_deref_valobj(NULL),
     m_format (eFormatDefault),
+    m_last_format (eFormatDefault),
     m_last_format_mgr_revision(0),
     m_type_summary_sp(),
     m_type_format_sp(),
@@ -1441,7 +1443,7 @@ ValueObject::GetValueAsCString (lldb::Format format,
 const char *
 ValueObject::GetValueAsCString ()
 {
-    if (UpdateValueIfNeeded(true) && m_value_str.empty())
+    if (UpdateValueIfNeeded(true))
     {
         lldb::Format my_format = GetFormat();
         if (my_format == lldb::eFormatDefault)
@@ -1468,13 +1470,17 @@ ValueObject::GetValueAsCString ()
                 }
             }
         }
-        if (GetValueAsCString(my_format, m_value_str))
+        if (my_format != m_last_format || m_value_str.empty())
         {
-            if (!m_value_did_change && m_old_value_valid)
+            m_last_format = my_format;
+            if (GetValueAsCString(my_format, m_value_str))
             {
-                // The value was gotten successfully, so we consider the
-                // value as changed if the value string differs
-                SetValueDidChange (m_old_value_str != m_value_str);
+                if (!m_value_did_change && m_old_value_valid)
+                {
+                    // The value was gotten successfully, so we consider the
+                    // value as changed if the value string differs
+                    SetValueDidChange (m_old_value_str != m_value_str);
+                }
             }
         }
     }
@@ -4315,6 +4321,7 @@ ValueObject::GetDynamicValueType ()
     }
     return lldb::eNoDynamicValues;
 }
+
 lldb::Format
 ValueObject::GetFormat () const
 {

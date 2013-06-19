@@ -20,17 +20,33 @@ class StdListDataFormatterTestCase(TestBase):
         self.data_formatter_commands()
 
     @dwarf_test
-    @expectedFailureGcc # llvm.org/pr15301 LLDB prints incorrect sizes of STL containers
+    @expectedFailureLinux('llvm.org/pr15301', ['gcc', 'icc']) # LLDB prints incorrect sizes of STL containers
     def test_with_dwarf_and_run_command(self):
         """Test data formatter commands."""
         self.buildDwarf()
         self.data_formatter_commands()
 
+    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
+    @dsym_test
+    def test_with_dsym_and_run_command(self):
+        """Test data formatter commands."""
+        self.buildDsym()
+        self.data_formatter_commands_after_steps()
+
+    @dwarf_test
+    @expectedFailureLinux # llvm.org/pr15301 Multiple LLDB steps do not all complete synchronously. 
+    def test_with_dwarf_and_run_command_after_steps(self):
+        """Test data formatter commands with multiple steps."""
+        self.buildDwarf()
+        self.data_formatter_commands_after_steps()
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        # Find the line number to break at.
+        # Find the line numbers to break at for the different tests.
         self.line = line_number('main.cpp', '// Set break point at this line.')
+        self.optional_line = line_number('main.cpp', '// Optional break point at this line.')
+        self.final_line = line_number('main.cpp', '// Set final break point at this line.')
 
     def data_formatter_commands(self):
         """Test that that file and class static variables display correctly."""
@@ -159,7 +175,14 @@ class StdListDataFormatterTestCase(TestBase):
             substrs = ['list has 0 items',
                        '{}'])
         
-        self.runCmd("n");self.runCmd("n");self.runCmd("n");self.runCmd("n");
+        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.final_line, num_expected_locations=-1)
+
+        self.runCmd("c", RUN_SUCCEEDED)
+
+        # The stop reason of the thread should be breakpoint.
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'stop reason = breakpoint'])
 
         self.expect("frame variable text_list",
                     substrs = ['list has 4 items',
@@ -187,6 +210,46 @@ class StdListDataFormatterTestCase(TestBase):
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(self.frame().FindVariable("text_list").MightHaveChildren(), "text_list.MightHaveChildren() says False for non empty!")
+
+    def data_formatter_commands_after_steps(self):
+        """Test that that file and class static variables display correctly after multiple step instructions."""
+        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.optional_line, num_expected_locations=-1)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # The stop reason of the thread should be breakpoint.
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'stop reason = breakpoint'])
+
+        self.expect("frame variable text_list",
+            substrs = ['{}'])
+       
+        # Verify that steps in rapid succession are processed prior to inspecting text_list.
+        self.runCmd("n");self.runCmd("n");self.runCmd("n");self.runCmd("n");
+
+        self.expect("frame variable text_list",
+                    substrs = ['list has 4 items',
+                               '[0]', 'goofy',
+                               '[1]', 'is',
+                               '[2]', 'smart',
+                               '[3]', '!!!'])
+
+        self.expect("p text_list",
+                    substrs = ['list has 4 items',
+                               '\"goofy\"',
+                               '\"is\"',
+                               '\"smart\"',
+                               '\"!!!\"'])
+        
+        # check access-by-index
+        self.expect("frame variable text_list[0]",
+                    substrs = ['goofy']);
+        self.expect("frame variable text_list[3]",
+                    substrs = ['!!!']);
+        
 
 if __name__ == '__main__':
     import atexit

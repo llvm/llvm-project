@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/PythonDataObjects.h"
@@ -134,7 +135,7 @@ OperatingSystemPython::GetDynamicRegisterInfo ()
     {
         if (!m_interpreter || !m_python_object_sp)
             return NULL;
-        Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
+        Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OS));
         
         if (log)
             log->Printf ("OperatingSystemPython::GetDynamicRegisterInfo() fetching thread register definitions from python for pid %" PRIu64, m_process->GetID());
@@ -173,7 +174,7 @@ OperatingSystemPython::UpdateThreadList (ThreadList &old_thread_list,
     if (!m_interpreter || !m_python_object_sp)
         return false;
     
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OS));
     
     // First thing we have to do is get the API lock, and the run lock.  We're going to change the thread
     // content of the process, and we're going to use python, which requires the API lock to do it.
@@ -191,25 +192,16 @@ OperatingSystemPython::UpdateThreadList (ThreadList &old_thread_list,
     PythonList threads_list(m_interpreter->OSPlugin_ThreadsInfo(m_python_object_sp));
     if (threads_list)
     {
+        if (log)
+        {
+            StreamString strm;
+            threads_list.Dump(strm);
+            log->Printf("threads_list = %s", strm.GetString().c_str());
+        }
         uint32_t i;
         const uint32_t num_threads = threads_list.GetSize();
         if (num_threads > 0)
         {
-            for (i=0; i<num_threads; ++i)
-            {
-                PythonDictionary thread_dict(threads_list.GetItemAtIndex(i));
-                if (thread_dict)
-                {
-                    if (thread_dict.GetItemForKey("core"))
-                    {
-                        // We have some threads that are saying they are on a "core", which means
-                        // they map the threads that are gotten from the lldb_private::Process subclass
-                        // so clear the new threads list so the core threads don't show up
-                        new_thread_list.Clear();
-                        break;
-                    }
-                }
-            }
             for (i=0; i<num_threads; ++i)
             {
                 PythonDictionary thread_dict(threads_list.GetItemAtIndex(i));
@@ -223,8 +215,10 @@ OperatingSystemPython::UpdateThreadList (ThreadList &old_thread_list,
         }
     }
     
+    // No new threads added from the thread info array gotten from python, just
+    // display the core threads.
     if (new_thread_list.GetSize(false) == 0)
-        new_thread_list = old_thread_list;
+        new_thread_list = core_thread_list;
 
     return new_thread_list.GetSize(false) > 0;
 }

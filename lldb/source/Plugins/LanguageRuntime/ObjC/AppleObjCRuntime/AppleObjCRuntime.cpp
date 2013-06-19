@@ -38,6 +38,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+#define PO_FUNCTION_TIMEOUT_USEC 15*1000*1000
+
 bool
 AppleObjCRuntime::GetObjectDescription (Stream &str, ValueObject &valobj)
 {
@@ -143,7 +145,7 @@ AppleObjCRuntime::GetObjectDescription (Stream &strm, Value &value, ExecutionCon
                                                      &wrapper_struct_addr, 
                                                      error_stream, 
                                                      stop_others, 
-                                                     0 /* no timeout */,
+                                                     PO_FUNCTION_TIMEOUT_USEC /* 15 secs timeout */,
                                                      try_all_threads, 
                                                      unwind_on_error,
                                                      ignore_breakpoints,

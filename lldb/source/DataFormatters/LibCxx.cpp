@@ -514,7 +514,7 @@ lldb_private::formatters::LibcxxContainerSummaryProvider (ValueObject& valobj, S
         uint64_t value = valobj.GetValueAsUnsigned(0);
         if (!value)
             return false;
-        stream.Printf("0x%016llx ", value);
+        stream.Printf("0x%016" PRIx64 " ", value);
     }
-    return Debugger::FormatPrompt("size=${svar%#}", NULL, NULL, NULL, stream, NULL, &valobj);
+    return Debugger::FormatPrompt("size=${svar%#}", NULL, NULL, NULL, stream, &valobj);
 }

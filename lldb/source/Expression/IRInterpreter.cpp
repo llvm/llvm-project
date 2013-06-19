@@ -151,10 +151,12 @@ public:
         
         if (constant)
         {
-            if (const ConstantInt *constant_int = dyn_cast<ConstantInt>(constant))
-            {                
-                return AssignToMatchType(scalar, constant_int->getLimitedValue(), value->getType());
-            }
+            APInt value_apint;
+            
+            if (!ResolveConstantValue(value_apint, constant))
+                return false;
+            
+            return AssignToMatchType(scalar, value_apint.getLimitedValue(), value->getType());
         }
         else
         {
@@ -496,6 +498,7 @@ IRInterpreter::CanInterpret (llvm::Module &module,
             case Instruction::Or:
             case Instruction::Ret:
             case Instruction::SDiv:
+            case Instruction::SExt:
             case Instruction::Shl:
             case Instruction::SRem:
             case Instruction::Store:
@@ -662,12 +665,16 @@ IRInterpreter::Interpret (llvm::Module &module,
                         result = L - R;
                         break;
                     case Instruction::SDiv:
+                        L.MakeSigned();
+                        R.MakeSigned();
                         result = L / R;
                         break;
                     case Instruction::UDiv:
                         result = L.GetRawBits64(0) / R.GetRawBits64(1);
                         break;
                     case Instruction::SRem:
+                        L.MakeSigned();
+                        R.MakeSigned();
                         result = L % R;
                         break;
                     case Instruction::URem:
@@ -778,8 +785,8 @@ IRInterpreter::Interpret (llvm::Module &module,
                 if (log)
                 {
                     log->Printf("Interpreted an AllocaInst");
-                    log->Printf("  R : 0x%llx", R);
-                    log->Printf("  P : 0x%llx", P);
+                    log->Printf("  R : 0x%" PRIx64, R);
+                    log->Printf("  P : 0x%" PRIx64, P);
                 }
             }
                 break;
@@ -811,6 +818,39 @@ IRInterpreter::Interpret (llvm::Module &module,
                 }
                 
                 frame.AssignValue(inst, S, module);
+            }
+                break;
+            case Instruction::SExt:
+            {
+                const CastInst *cast_inst = dyn_cast<CastInst>(inst);
+                
+                if (!cast_inst)
+                {
+                    if (log)
+                        log->Printf("getOpcode() returns %s, but instruction is not a BitCastInst", cast_inst->getOpcodeName());
+                    error.SetErrorToGenericError();
+                    error.SetErrorString(interpreter_internal_error);
+                    return false;
+                }
+                
+                Value *source = cast_inst->getOperand(0);
+                
+                lldb_private::Scalar S;
+                
+                if (!frame.EvaluateValue(S, source, module))
+                {
+                    if (log)
+                        log->Printf("Couldn't evaluate %s", PrintValue(source).c_str());
+                    error.SetErrorToGenericError();
+                    error.SetErrorString(bad_value_error);
+                    return false;
+                }
+                
+                S.MakeSigned();
+                
+                lldb_private::Scalar S_signextend(S.SLongLong());
+                
+                frame.AssignValue(inst, S_signextend, module);
             }
                 break;
             case Instruction::Br:
@@ -1004,15 +1044,23 @@ IRInterpreter::Interpret (llvm::Module &module,
                         result = (L.GetRawBits64(0) <= R.GetRawBits64(0));
                         break;
                     case CmpInst::ICMP_SGT:
+                        L.MakeSigned();
+                        R.MakeSigned();
                         result = (L > R);
                         break;
                     case CmpInst::ICMP_SGE:
+                        L.MakeSigned();
+                        R.MakeSigned();
                         result = (L >= R);
                         break;
                     case CmpInst::ICMP_SLT:
+                        L.MakeSigned();
+                        R.MakeSigned();
                         result = (L < R);
                         break;
                     case CmpInst::ICMP_SLE:
+                        L.MakeSigned();
+                        R.MakeSigned();
                         result = (L <= R);
                         break;
                 }
@@ -1195,9 +1243,9 @@ IRInterpreter::Interpret (llvm::Module &module,
                 if (log)
                 {
                     log->Printf("Interpreted a LoadInst");
-                    log->Printf("  P : 0x%llx", P);
-                    log->Printf("  R : 0x%llx", R);
-                    log->Printf("  D : 0x%llx", D);
+                    log->Printf("  P : 0x%" PRIx64, P);
+                    log->Printf("  R : 0x%" PRIx64, R);
+                    log->Printf("  D : 0x%" PRIx64, D);
                 }
             }
                 break;
@@ -1295,9 +1343,9 @@ IRInterpreter::Interpret (llvm::Module &module,
                 if (log)
                 {
                     log->Printf("Interpreted a StoreInst");
-                    log->Printf("  D : 0x%llx", D);
-                    log->Printf("  P : 0x%llx", P);
-                    log->Printf("  R : 0x%llx", R);
+                    log->Printf("  D : 0x%" PRIx64, D);
+                    log->Printf("  P : 0x%" PRIx64, P);
+                    log->Printf("  R : 0x%" PRIx64, R);
                 }
             }
                 break;

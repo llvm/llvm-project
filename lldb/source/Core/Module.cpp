@@ -218,6 +218,9 @@ Module::Module(const FileSpec& file_spec,
 
 Module::~Module()
 {
+    // Lock our module down while we tear everything down to make sure
+    // we don't get any access to the module while it is being destroyed
+    Mutex::Locker locker (m_mutex);
     // Scope for locker below...
     {
         Mutex::Locker locker (GetAllocationModuleCollectionMutex());
@@ -1235,7 +1238,7 @@ Module::IsLoadedInTarget (Target *target)
 }
 
 bool
-Module::LoadScriptingResourceInTarget (Target *target, Error& error)
+Module::LoadScriptingResourceInTarget (Target *target, Error& error, Stream* feedback_stream)
 {
     if (!target)
     {
@@ -1243,7 +1246,7 @@ Module::LoadScriptingResourceInTarget (Target *target, Error& error)
         return false;
     }
     
-    bool shoud_load = target->TargetProperties::GetLoadScriptFromSymbolFile();
+    LoadScriptFromSymFile shoud_load = target->TargetProperties::GetLoadScriptFromSymbolFile();
     
     Debugger &debugger = target->GetDebugger();
     const ScriptLanguage script_language = debugger.GetScriptLanguage();
@@ -1273,14 +1276,18 @@ Module::LoadScriptingResourceInTarget (Target *target, Error& error)
                     FileSpec scripting_fspec (file_specs.GetFileSpecAtIndex(i));
                     if (scripting_fspec && scripting_fspec.Exists())
                     {
-                        if (!shoud_load)
+                        if (shoud_load == eLoadScriptFromSymFileFalse)
+                            return false;
+                        if (shoud_load == eLoadScriptFromSymFileWarn)
                         {
-                            error.SetErrorString("Target doesn't allow loading scripting resource. Please set target.load-script-from-symbol-file and retry.");
+                            if (feedback_stream)
+                                feedback_stream->Printf("warning: '%s' contains a debug script. To run this script in this debug session:\n\n    command script import \"%s\"\n\nTo run all discovered debug scripts in this session:\n\n    settings set target.load-script-from-symbol-file true\n"
+                                                        ,GetFileSpec().GetFileNameStrippingExtension().GetCString(),scripting_fspec.GetPath().c_str());
                             return false;
                         }
                         StreamString scripting_stream;
                         scripting_fspec.Dump(&scripting_stream);
-                        const bool can_reload = false;
+                        const bool can_reload = true;
                         const bool init_lldb_globals = false;
                         bool did_load = script_interpreter->LoadScriptingModule(scripting_stream.GetData(), can_reload, init_lldb_globals, error);
                         if (!did_load)
@@ -1438,8 +1445,19 @@ Module::PrepareForFunctionNameLookup (const ConstString &name,
             if (ObjCLanguageRuntime::IsPossibleObjCSelector(name_cstr))
                 lookup_name_type_mask |= eFunctionNameTypeSelector;
             
-            if (CPPLanguageRuntime::IsPossibleCPPCall(name_cstr, base_name_start, base_name_end))
+            CPPLanguageRuntime::MethodName cpp_method (name);
+            llvm::StringRef basename (cpp_method.GetBasename());
+            if (basename.empty())
+            {
+                if (CPPLanguageRuntime::StripNamespacesFromVariableName (name_cstr, base_name_start, base_name_end))
+                    lookup_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+            }
+            else
+            {
+                base_name_start = basename.data();
+                base_name_end = base_name_start + basename.size();
                 lookup_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+            }
         }
     }
     else
@@ -1449,11 +1467,30 @@ Module::PrepareForFunctionNameLookup (const ConstString &name,
         {
             // If they've asked for a CPP method or function name and it can't be that, we don't
             // even need to search for CPP methods or names.
-            if (!CPPLanguageRuntime::IsPossibleCPPCall(name_cstr, base_name_start, base_name_end))
+            CPPLanguageRuntime::MethodName cpp_method (name);
+            if (cpp_method.IsValid())
             {
-                lookup_name_type_mask &= ~(eFunctionNameTypeMethod | eFunctionNameTypeBase);
-                if (lookup_name_type_mask == eFunctionNameTypeNone)
-                    return;
+                llvm::StringRef basename (cpp_method.GetBasename());
+                base_name_start = basename.data();
+                base_name_end = base_name_start + basename.size();
+
+                if (!cpp_method.GetQualifiers().empty())
+                {
+                    // There is a "const" or other qualifer following the end of the fucntion parens,
+                    // this can't be a eFunctionNameTypeBase
+                    lookup_name_type_mask &= ~(eFunctionNameTypeBase);
+                    if (lookup_name_type_mask == eFunctionNameTypeNone)
+                        return;
+                }
+            }
+            else
+            {
+                if (!CPPLanguageRuntime::StripNamespacesFromVariableName (name_cstr, base_name_start, base_name_end))
+                {
+                    lookup_name_type_mask &= ~(eFunctionNameTypeMethod | eFunctionNameTypeBase);
+                    if (lookup_name_type_mask == eFunctionNameTypeNone)
+                        return;
+                }
             }
         }
         

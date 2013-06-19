@@ -1104,7 +1104,7 @@ public:
     }
     
     //------------------------------------------------------------------
-    /// Find out if a SBValue might have children.
+    /// Find out if a ValueObject might have children.
     ///
     /// This call is much more efficient than CalculateNumChildren() as
     /// it doesn't need to complete the underlying type. This is designed
@@ -1116,7 +1116,7 @@ public:
     /// doing any expensive type completion.
     ///
     /// @return
-    ///     Returns \b true if the SBValue might have children, or \b
+    ///     Returns \b true if the ValueObject might have children, or \b
     ///     false otherwise.
     //------------------------------------------------------------------
     virtual bool
@@ -1230,6 +1230,7 @@ protected:
                                              // as an independent ValueObjectConstResult, which isn't managed by us.
 
     lldb::Format                m_format;
+    lldb::Format                m_last_format;
     uint32_t                    m_last_format_mgr_revision;
     lldb::TypeSummaryImplSP     m_type_summary_sp;
     lldb::TypeFormatImplSP      m_type_format_sp;

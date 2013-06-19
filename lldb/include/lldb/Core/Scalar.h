@@ -102,6 +102,9 @@ public:
 
     bool
     Cast (Scalar::Type type);
+    
+    bool
+    MakeSigned ();
 
     static const char *
     GetValueTypeAsCString (Scalar::Type value_type);

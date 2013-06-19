@@ -147,6 +147,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 "`CMakeFiles'. Please delete them.")
 endif()
 
+# Compute the LLDB version from the LLVM version.
+string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" LLDB_VERSION
+  ${PACKAGE_VERSION})
+message(STATUS "LLDB version: ${LLDB_VERSION}")
+
 macro(add_lldb_library name)
   llvm_process_sources(srcs ${ARGN})
   if (MSVC_IDE OR XCODE)
@@ -170,7 +175,7 @@ macro(add_lldb_library name)
   #endif()
 
   if(LLDB_USED_LIBS)
-    if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    if (CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
       target_link_libraries(${name} -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
     else()
       target_link_libraries(${name} ${LLDB_USED_LIBS})
@@ -241,7 +246,13 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   ${DEBUG_SYMBOLS_LIBRARY})
 endif()
 
+# On FreeBSD, link libexecinfo because libc is missing  backtrace()
+if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  list(APPEND system_libs execinfo)
+endif()
+
 #add_subdirectory(include)
+add_subdirectory(docs)
 add_subdirectory(scripts)
 add_subdirectory(source)
 add_subdirectory(test)

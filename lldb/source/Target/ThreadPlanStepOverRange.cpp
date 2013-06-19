@@ -300,7 +300,7 @@ ThreadPlanStepOverRange::DoPlanExplainsStop (Event *event_ptr)
     // unexplained breakpoint/crash.
     
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_STEP));
-    StopInfoSP stop_info_sp = GetPrivateStopReason();
+    StopInfoSP stop_info_sp = GetPrivateStopInfo ();
     bool return_value;
     
     if (stop_info_sp)

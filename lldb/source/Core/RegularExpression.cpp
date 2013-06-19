@@ -129,7 +129,7 @@ bool
 RegularExpression::Execute(const char* s, Match *match, int execute_flags) const
 {
     int err = 1;
-    if (m_comp_err == 0)
+    if (s != NULL && m_comp_err == 0)
     {
         if (match)
         {

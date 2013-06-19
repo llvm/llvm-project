@@ -984,11 +984,16 @@ static void
 LoadScriptingResourceForModule (const ModuleSP &module_sp, Target *target)
 {
     Error error;
-    if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error))
+    StreamString feedback_stream;
+    if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error, &feedback_stream))
     {
-        target->GetDebugger().GetOutputStream().Printf("unable to load scripting data for module %s - error reported was %s\n",
-                                                       module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
-                                                       error.AsCString());
+        if (error.AsCString())
+            target->GetDebugger().GetErrorStream().Printf("unable to load scripting data for module %s - error reported was %s\n",
+                                                           module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
+                                                           error.AsCString());
+        if (feedback_stream.GetSize())
+            target->GetDebugger().GetOutputStream().Printf("%s\n",
+                                                           feedback_stream.GetData());
     }
 }
 
@@ -1140,18 +1145,21 @@ Target::ModulesDidLoad (ModuleList &module_list)
 void
 Target::SymbolsDidLoad (ModuleList &module_list)
 {
-    if (module_list.GetSize() == 0)
-        return;
-    if (m_process_sp)
+    if (module_list.GetSize())
     {
-        LanguageRuntime* runtime = m_process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC);
-        if (runtime)
+        if (m_process_sp)
         {
-            ObjCLanguageRuntime *objc_runtime = (ObjCLanguageRuntime*)runtime;
-            objc_runtime->SymbolsDidLoad(module_list);
+            LanguageRuntime* runtime = m_process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC);
+            if (runtime)
+            {
+                ObjCLanguageRuntime *objc_runtime = (ObjCLanguageRuntime*)runtime;
+                objc_runtime->SymbolsDidLoad(module_list);
+            }
         }
+        
+        m_breakpoint_list.UpdateBreakpoints (module_list, true);
+        BroadcastEvent(eBroadcastBitSymbolsLoaded, NULL);
     }
-    BroadcastEvent(eBroadcastBitSymbolsLoaded, NULL);
 }
 
 void
@@ -2265,6 +2273,15 @@ g_x86_dis_flavor_value_types[] =
     { 0, NULL, NULL }
 };
 
+static OptionEnumValueElement
+g_load_script_from_sym_file_values[] =
+{
+    { eLoadScriptFromSymFileTrue,    "true",    "Load debug scripts inside symbol files"},
+    { eLoadScriptFromSymFileFalse,   "false",   "Do not load debug scripts inside symbol files."},
+    { eLoadScriptFromSymFileWarn,    "warn",    "Warn about debug scripts inside symbol files but do not load them."},
+    { 0, NULL, NULL }
+};
+
 static PropertyDefinition
 g_properties[] =
 {
@@ -2281,6 +2298,7 @@ g_properties[] =
     { "exec-search-paths"                  , OptionValue::eTypeFileSpecList, false, 0                       , NULL, NULL, "Executable search paths to use when locating executable files whose paths don't match the local file system." },
     { "max-children-count"                 , OptionValue::eTypeSInt64    , false, 256                       , NULL, NULL, "Maximum number of children to expand in any level of depth." },
     { "max-string-summary-length"          , OptionValue::eTypeSInt64    , false, 1024                      , NULL, NULL, "Maximum number of characters to show when using %s in summary strings." },
+    { "max-memory-read-size"               , OptionValue::eTypeSInt64    , false, 1024                      , NULL, NULL, "Maximum number of bytes that 'memory read' will fetch before --force must be specified." },
     { "breakpoints-use-platform-avoid-list", OptionValue::eTypeBoolean   , false, true                      , NULL, NULL, "Consult the platform module avoid list when setting non-module specific breakpoints." },
     { "arg0"                               , OptionValue::eTypeString    , false, 0                         , NULL, NULL, "The first argument passed to the program in the argument array which can be different from the executable itself." },
     { "run-args"                           , OptionValue::eTypeArgs      , false, 0                         , NULL, NULL, "A list containing all the arguments to be passed to the executable when it is run. Note that this does NOT include the argv[0] which is in target.arg0." },
@@ -2301,7 +2319,7 @@ g_properties[] =
     // FIXME: This is the wrong way to do per-architecture settings, but we don't have a general per architecture settings system in place yet.
     { "x86-disassembly-flavor"             , OptionValue::eTypeEnum      , false, eX86DisFlavorDefault,       NULL, g_x86_dis_flavor_value_types, "The default disassembly flavor to use for x86 or x86-64 targets." },
     { "use-fast-stepping"                  , OptionValue::eTypeBoolean   , false, true,                       NULL, NULL, "Use a fast stepping algorithm based on running from branch to branch rather than instruction single-stepping." },
-    { "load-script-from-symbol-file"       , OptionValue::eTypeBoolean   , false, false,                      NULL, NULL, "Allow LLDB to load scripting resources embedded in symbol files when available." },
+    { "load-script-from-symbol-file"       , OptionValue::eTypeEnum   ,    false, eLoadScriptFromSymFileWarn, NULL, g_load_script_from_sym_file_values, "Allow LLDB to load scripting resources embedded in symbol files when available." },
     { NULL                                 , OptionValue::eTypeInvalid   , false, 0                         , NULL, NULL, NULL }
 };
 enum
@@ -2315,6 +2333,7 @@ enum
     ePropertyExecutableSearchPaths,
     ePropertyMaxChildrenCount,
     ePropertyMaxSummaryLength,
+    ePropertyMaxMemReadSize,
     ePropertyBreakpointUseAvoidList,
     ePropertyArg0,
     ePropertyRunArgs,
@@ -2328,7 +2347,7 @@ enum
     ePropertyInlineStrategy,
     ePropertyDisassemblyFlavor,
     ePropertyUseFastStepping,
-    ePropertyLoadScriptFromSymbolFile
+    ePropertyLoadScriptFromSymbolFile,
 };
 
 
@@ -2373,6 +2392,13 @@ public:
         }
         return ProtectedGetPropertyAtIndex (idx);
     }
+    
+    lldb::TargetSP
+    GetTargetSP ()
+    {
+        return m_target->shared_from_this();
+    }
+    
 protected:
     
     void
@@ -2603,6 +2629,13 @@ TargetProperties::GetMaximumSizeOfStringSummary() const
     return m_collection_sp->GetPropertyAtIndexAsSInt64 (NULL, idx, g_properties[idx].default_uint_value);
 }
 
+uint32_t
+TargetProperties::GetMaximumMemReadSize () const
+{
+    const uint32_t idx = ePropertyMaxMemReadSize;
+    return m_collection_sp->GetPropertyAtIndexAsSInt64 (NULL, idx, g_properties[idx].default_uint_value);
+}
+
 FileSpec
 TargetProperties::GetStandardInputPath () const
 {
@@ -2674,18 +2707,11 @@ TargetProperties::GetUseFastStepping () const
     return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
 }
 
-bool
+LoadScriptFromSymFile
 TargetProperties::GetLoadScriptFromSymbolFile () const
 {
     const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
-}
-
-void
-TargetProperties::SetLoadScriptFromSymbolFile (bool b)
-{
-    const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
-    m_collection_sp->SetPropertyAtIndexAsBoolean(NULL, idx, b);
+    return (LoadScriptFromSymFile)m_collection_sp->GetPropertyAtIndexAsEnumeration(NULL, idx, g_properties[idx].default_uint_value);
 }
 
 const TargetPropertiesSP &

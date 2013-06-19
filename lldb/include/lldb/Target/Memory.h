@@ -38,7 +38,7 @@ namespace lldb_private {
         ~MemoryCache ();
         
         void
-        Clear();
+        Clear(bool clear_invalid_ranges = false);
         
         void
         Flush (lldb::addr_t addr, size_t size);

@@ -94,7 +94,7 @@ class TestObjCStepping(TestBase):
         self.assertTrue(mySource, "Found mySource local variable.")
         mySource_isa = mySource.GetChildMemberWithName ("isa")
         self.assertTrue(mySource_isa, "Found mySource->isa local variable.")
-        mySource_isa.GetValue ()
+        className = mySource_isa.GetSummary ()
 
         if self.TraceOn():
              print mySource_isa
@@ -135,14 +135,13 @@ class TestObjCStepping(TestBase):
 
         threads = lldbutil.continue_to_breakpoint (process, break3)
         self.assertTrue (len(threads) == 1, "Continued to third breakpoint in main, our object should now be swizzled.")
-        
-        mySource_isa.GetValue ()
-        did_change = mySource_isa.GetValueDidChange ()
+
+        newClassName = mySource_isa.GetSummary ()
 
         if self.TraceOn():
              print mySource_isa
 
-        self.assertTrue (did_change, "The isa did indeed change, swizzled!")
+        self.assertTrue (newClassName != className, "The isa did indeed change, swizzled!")
 
         # Now step in, that should leave us in the Source randomMethod:
         thread = threads[0]

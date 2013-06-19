@@ -23,11 +23,12 @@ int main()
     numbers_list.push_back(4);
     
     string_list text_list;
-    text_list.push_back(std::string("goofy"));
+    text_list.push_back(std::string("goofy")); // Optional break point at this line.
     text_list.push_back(std::string("is"));
     text_list.push_back(std::string("smart"));
     
     text_list.push_back(std::string("!!!"));
         
-    return 0;
+    return 0; // Set final break point at this line.
 }
+

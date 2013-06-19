@@ -1551,7 +1551,7 @@ ProcessMonitor::GetEventMessage(lldb::tid_t tid, unsigned long *message)
 }
 
 Error
-ProcessMonitor::Detach()
+ProcessMonitor::Detach(lldb::tid_t tid)
 {
     Error result;
     DetachOperation op(result);

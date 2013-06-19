@@ -52,9 +52,6 @@ public:
 
     DynamicLoaderDarwinKernel (lldb_private::Process *process, lldb::addr_t kernel_addr);
 
-    static lldb::addr_t
-    SearchForDarwinKernel (lldb_private::Process *process);
-
     virtual
     ~DynamicLoaderDarwinKernel ();
 
@@ -343,6 +340,9 @@ protected:
                        uint32_t image_infos_count,
                        KextImageInfo::collection &image_infos);
 
+    static lldb::addr_t
+    SearchForDarwinKernel (lldb_private::Process *process);
+    
     static lldb::addr_t
     SearchForKernelAtSameLoadAddr (lldb_private::Process *process);
 

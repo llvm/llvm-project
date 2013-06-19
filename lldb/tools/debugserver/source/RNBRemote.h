@@ -129,7 +129,7 @@ public:
 
     void            Initialize();
 
-    bool            InitializeRegisters ();
+    bool            InitializeRegisters (bool force = false);
 
     rnb_err_t       HandleAsyncPacket(PacketEnum *type = NULL);
     rnb_err_t       HandleReceivedPacket(PacketEnum *type = NULL);

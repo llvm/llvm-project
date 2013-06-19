@@ -71,7 +71,7 @@ USEDLIBS = lldbAPI.a \
 # Because GCC requires RTTI enabled for lldbCore (see source/Core/Makefile) it is
 # necessary to also link the clang rewriter libraries so vtable references can
 # be resolved correctly, if we are building with GCC.
-ifeq (g++,$(shell basename $(CXX)))
+ifeq (g++,$(shell basename $(CXX) | colrm 4))
   USEDLIBS += clangRewriteCore.a \
               clangRewriteFrontend.a
 endif

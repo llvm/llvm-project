@@ -102,10 +102,10 @@ ThreadPlanBase::ShouldStop (Event *event_ptr)
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_STEP));
 
-    StopInfoSP stop_info_sp = GetPrivateStopReason();
+    StopInfoSP stop_info_sp = GetPrivateStopInfo ();
     if (stop_info_sp)
     {
-        StopReason reason = stop_info_sp->GetStopReason();
+        StopReason reason = stop_info_sp->GetStopReason ();
         switch (reason)
         {
         case eStopReasonInvalid:

@@ -8,6 +8,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "RegisterContextLinux_x86_64.h"
+#include <vector>
 
 using namespace lldb_private;
 
@@ -18,13 +19,13 @@ using namespace lldb_private;
 // Update the Linux specific information (offset and size).
 #define UPDATE_GPR_INFO(reg)                                                \
 do {                                                                        \
-    m_register_infos[gpr_##reg].byte_size = sizeof(GPR::reg);               \
-    m_register_infos[gpr_##reg].byte_offset = GPR_OFFSET(reg);              \
+    GetRegisterContext()[gpr_##reg].byte_size = sizeof(GPR::reg);               \
+    GetRegisterContext()[gpr_##reg].byte_offset = GPR_OFFSET(reg);              \
 } while(false);
 
 #define UPDATE_I386_GPR_INFO(i386_reg, reg)                                 \
 do {                                                                        \
-    m_register_infos[gpr_##i386_reg].byte_offset = GPR_OFFSET(reg);         \
+    GetRegisterContext()[gpr_##i386_reg].byte_offset = GPR_OFFSET(reg);         \
 } while(false);
 
 #define DR_OFFSET(reg_index)                                                \
@@ -32,8 +33,8 @@ do {                                                                        \
 
 #define UPDATE_DR_INFO(reg_index)                                                \
 do {                                                                             \
-    m_register_infos[dr##reg_index].byte_size = sizeof(UserArea::u_debugreg[0]); \
-    m_register_infos[dr##reg_index].byte_offset = DR_OFFSET(reg_index);          \
+    GetRegisterContext()[dr##reg_index].byte_size = sizeof(UserArea::u_debugreg[0]); \
+    GetRegisterContext()[dr##reg_index].byte_offset = DR_OFFSET(reg_index);          \
 } while(false);
 
 typedef struct _GPR
@@ -92,18 +93,15 @@ struct UserArea
     uint64_t fault_address; // Control register CR3.
 };
 
-RegisterInfo *RegisterContextLinux_x86_64::m_register_infos = nullptr;
+// Use a singleton function to avoid global constructors in shared libraries.
+static std::vector<RegisterInfo> & GetRegisterContext () {
+    static std::vector<RegisterInfo> g_register_infos;
+    return g_register_infos;
+}
 
 RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(Thread &thread, uint32_t concrete_frame_idx):
     RegisterContext_x86_64(thread, concrete_frame_idx)
 {
-}
-
-RegisterContextLinux_x86_64::~RegisterContextLinux_x86_64()
-{
-    if (m_register_infos)
-        delete m_register_infos;
-    m_register_infos = nullptr;
 }
 
 size_t
@@ -116,19 +114,18 @@ const RegisterInfo *
 RegisterContextLinux_x86_64::GetRegisterInfo()
 {
     // Allocate RegisterInfo only once
-    if (!m_register_infos)
+    if (GetRegisterContext().empty())
     {
-        m_register_infos = new RegisterInfo[k_num_registers];
         // Copy the register information from base class
-        if (m_register_infos)
+        const RegisterInfo *base_info = RegisterContext_x86_64::GetRegisterInfo();
+        if (base_info)
         {
-            memcpy(m_register_infos, RegisterContext_x86_64::GetRegisterInfo(),
-                   sizeof(RegisterInfo) * k_num_registers);
+            GetRegisterContext().insert(GetRegisterContext().end(), &base_info[0], &base_info[k_num_registers]);
             // Update the Linux specific register information (offset and size).
             UpdateRegisterInfo();
         }
     }
-    return m_register_infos;
+    return &GetRegisterContext()[0];
 }
 
 void

@@ -117,9 +117,14 @@ public:
         return message;
     }
 
-    /// Indicates that the thread @p tid was spawned.
+    /// Indicates that the thread @p child_tid was spawned.
     static ProcessMessage NewThread(lldb::tid_t parent_tid, lldb::tid_t child_tid) {
         return ProcessMessage(parent_tid, eNewThreadMessage, child_tid);
+    }
+
+    /// Indicates that the thread @p tid is about to exit with status @p status.
+    static ProcessMessage Exit(lldb::tid_t tid, int status) {
+        return ProcessMessage(tid, eExitMessage, status);
     }
 
     int GetExitStatus() const {

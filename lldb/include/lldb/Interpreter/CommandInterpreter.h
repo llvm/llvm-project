@@ -396,7 +396,9 @@ public:
     void
     FindCommandsForApropos (const char *word, 
                             StringList &commands_found, 
-                            StringList &commands_help);
+                            StringList &commands_help,
+                            bool search_builtin_commands,
+                            bool search_user_commands);
                            
     bool
     GetBatchCommandMode () { return m_batch_command_mode; }

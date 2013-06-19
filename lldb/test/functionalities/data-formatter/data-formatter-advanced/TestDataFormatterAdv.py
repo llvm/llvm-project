@@ -77,7 +77,8 @@ class AdvDataFormatterTestCase(TestBase):
         self.expect("frame variable int_array",
             substrs = ['1,2,3,4,5'])
 
-        self.runCmd("type summary add --summary-string \"${var[].integer}\" -x \"i_am_cool \\[[0-9]\\]")
+        # this will fail if we don't do [] as regex correctly
+        self.runCmd('type summary add --summary-string "${var[].integer}" "i_am_cool[]')
         
         self.expect("frame variable cool_array",
             substrs = ['1,1,1,1,6'])
@@ -122,7 +123,12 @@ class AdvDataFormatterTestCase(TestBase):
 
         self.runCmd("type summary clear")
             
-        self.runCmd("type summary add --summary-string \"${var[0-1]}\" -x \"int \[[0-9]\]\"")
+        self.runCmd('type summary add --summary-string \"${var[0-1]}\" -x \"int \[[0-9]\]\"')
+
+        self.expect("frame variable int_array",
+            substrs = ['1,2'])
+
+        self.runCmd('type summary add --summary-string \"${var[0-1]}\" "int []"')
 
         self.expect("frame variable int_array",
             substrs = ['1,2'])

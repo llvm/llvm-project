@@ -97,8 +97,6 @@
 		26C637E80C71334A0024798E /* dbgnub-mig.defs */ = {isa = PBXFileReference; explicitFileType = sourcecode.mig; fileEncoding = 30; path = "dbgnub-mig.defs"; sourceTree = "<group>"; };
 		26C637EA0C71334A0024798E /* DNBArchImplI386.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = DNBArchImplI386.cpp; sourceTree = "<group>"; };
 		26C637EB0C71334A0024798E /* DNBArchImplI386.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = DNBArchImplI386.h; sourceTree = "<group>"; };
-		26C637EC0C71334A0024798E /* MachDYLD.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = MachDYLD.cpp; sourceTree = "<group>"; };
-		26C637ED0C71334A0024798E /* MachDYLD.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MachDYLD.h; sourceTree = "<group>"; };
 		26C637EE0C71334A0024798E /* MachException.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = MachException.cpp; sourceTree = "<group>"; };
 		26C637EF0C71334A0024798E /* MachException.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MachException.h; sourceTree = "<group>"; };
 		26C637F00C71334A0024798E /* MachProcess.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = MachProcess.cpp; sourceTree = "<group>"; };
@@ -277,8 +275,6 @@
 				4971AE7013D10F4F00649E37 /* HasAVX.h */,
 				4971AE7113D10F4F00649E37 /* HasAVX.s */,
 				26C637E80C71334A0024798E /* dbgnub-mig.defs */,
-				26C637ED0C71334A0024798E /* MachDYLD.h */,
-				26C637EC0C71334A0024798E /* MachDYLD.cpp */,
 				26C637EF0C71334A0024798E /* MachException.h */,
 				26C637EE0C71334A0024798E /* MachException.cpp */,
 				26C637F10C71334A0024798E /* MachProcess.h */,

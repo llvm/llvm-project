@@ -30,7 +30,7 @@ class TargetWatchAddressAPITestCase(TestBase):
         self.buildDsym()
         self.do_set_watchaddress()
 
-    @expectedFailureLinux # llvm.org/pr14416
+    @skipIfLinux # llvm.org/pr14323 - skip due to incomplete multi-threaded debug support
     @python_api_test
     @dwarf_test
     def test_watch_address_with_dwarf(self):

@@ -806,9 +806,12 @@ ExecutionContextRef::GetThreadSP () const
 lldb::StackFrameSP
 ExecutionContextRef::GetFrameSP () const
 {
-    lldb::ThreadSP thread_sp (GetThreadSP());
-    if (thread_sp)
-        return thread_sp->GetFrameWithStackID (m_stack_id);
+    if (m_stack_id.IsValid())
+    {
+        lldb::ThreadSP thread_sp (GetThreadSP());
+        if (thread_sp)
+            return thread_sp->GetFrameWithStackID (m_stack_id);
+    }
     return lldb::StackFrameSP();
 }
 

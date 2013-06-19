@@ -176,7 +176,7 @@ ThreadPlanStepUntil::AnalyzeStop()
     if (m_ran_analyze)
         return;
         
-    StopInfoSP stop_info_sp = GetPrivateStopReason();
+    StopInfoSP stop_info_sp = GetPrivateStopInfo ();
     m_should_stop = true;
     m_explains_stop = false;
     
@@ -320,7 +320,7 @@ ThreadPlanStepUntil::ShouldStop (Event *event_ptr)
     // do so here.  Otherwise, as long as this thread has stopped for a reason,
     // we will stop.
 
-    StopInfoSP stop_info_sp = GetPrivateStopReason();
+    StopInfoSP stop_info_sp = GetPrivateStopInfo ();
     if (!stop_info_sp || stop_info_sp->GetStopReason() == eStopReasonNone)
         return false;
 

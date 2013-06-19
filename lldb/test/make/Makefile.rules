@@ -112,6 +112,17 @@ cxx_compiler = $(if $(findstring clang,$(1)), $(subst clang,clang++,$(1)), $(if 
 cxx_linker = $(if $(findstring clang,$(1)), $(subst clang,clang++,$(1)), $(if $(findstring icc,$(1)), $(subst icc,icpc,$(1)), $(if $(findstring llvm-gcc,$(1)), $(subst llvm-gcc,llvm-g++,$(1)), $(subst gcc,g++,$(1)))))
 
 #----------------------------------------------------------------------
+# C++ standard library options
+#----------------------------------------------------------------------
+ifeq (1,$(USE_LIBSTDCPP))
+	# Clang requires an extra flag: -stdlib=libstdc++
+	ifneq (,$(findstring clang,$(CC)))
+		CFLAGS += -stdlib=libstdc++
+		LDFLAGS += -stdlib=libstdc++
+	endif
+endif
+
+#----------------------------------------------------------------------
 # dylib settings
 #----------------------------------------------------------------------
 ifneq "$(strip $(DYLIB_C_SOURCES))" ""

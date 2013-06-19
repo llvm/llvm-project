@@ -318,8 +318,18 @@ LLDBSwigPythonCallTypeScript
         pvalue = PyObject_CallObject (pfunc, pargs);
         Py_DECREF (pargs);
         
-        if (pvalue != NULL && pvalue != Py_None && PyString_Check(pvalue))
-            retval.assign(PyString_AsString(pvalue));
+        if (pvalue != NULL && pvalue != Py_None)
+        {
+            if (PyString_Check(pvalue))
+                retval.assign(PyString_AsString(pvalue));
+            else
+            {
+                PyObject* value_as_string = PyObject_Str(pvalue);
+                if (value_as_string && value_as_string != Py_None && PyString_Check(value_as_string))
+                    retval.assign(PyString_AsString(value_as_string));
+                Py_XDECREF(value_as_string);
+            }
+        }
         Py_XDECREF (pvalue);
         Py_INCREF (session_dict);
     }

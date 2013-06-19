@@ -194,10 +194,7 @@ Disassembler::Disassemble
         {
             module->FindFunctions (name,
                                    NULL,
-                                   eFunctionNameTypeBase | 
-                                   eFunctionNameTypeFull | 
-                                   eFunctionNameTypeMethod | 
-                                   eFunctionNameTypeSelector, 
+                                   eFunctionNameTypeAuto, 
                                    include_symbols,
                                    include_inlines,
                                    true,
@@ -206,10 +203,7 @@ Disassembler::Disassemble
         else if (exe_ctx.GetTargetPtr())
         {
             exe_ctx.GetTargetPtr()->GetImages().FindFunctions (name, 
-                                                               eFunctionNameTypeBase | 
-                                                               eFunctionNameTypeFull | 
-                                                               eFunctionNameTypeMethod | 
-                                                               eFunctionNameTypeSelector,
+                                                               eFunctionNameTypeAuto,
                                                                include_symbols,
                                                                include_inlines,
                                                                false,

@@ -320,7 +320,7 @@ Symtab::InitNameIndexes()
                          entry.cstring[2] != 'Z'))  // named local entities (if we eventually handle eSymbolTypeData, we will want this back)
                     {
                         CPPLanguageRuntime::MethodName cxx_method (mangled.GetDemangledName());
-                        entry.cstring = cxx_method.GetBasename ().GetCString();
+                        entry.cstring = ConstString(cxx_method.GetBasename()).GetCString();
                         if (entry.cstring && entry.cstring[0])
                         {
                             // ConstString objects permanently store the string in the pool so calling

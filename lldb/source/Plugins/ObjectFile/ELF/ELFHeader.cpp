@@ -305,7 +305,7 @@ ELFSymbol::Dump (lldb_private::Stream *s,
                  const lldb_private::DataExtractor *strtab_data,
                  const lldb_private::SectionList *section_list)
 {
-    s->Printf("[%3u] 0x%16.16llx 0x%16.16llx 0x%8.8x 0x%2.2x (%-10s %-13s) 0x%2.2x 0x%4.4x (%-10s) %s\n",
+    s->Printf("[%3u] 0x%16.16" PRIx64 " 0x%16.16" PRIx64 " 0x%8.8x 0x%2.2x (%-10s %-13s) 0x%2.2x 0x%4.4x (%-10s) %s\n",
               idx,
               st_value,
               st_size,

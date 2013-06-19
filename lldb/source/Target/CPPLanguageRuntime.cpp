@@ -9,6 +9,8 @@
 
 #include "lldb/Target/CPPLanguageRuntime.h"
 
+#include <string.h>
+
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -193,15 +195,7 @@ CPPLanguageRuntime::StripNamespacesFromVariableName (const char *name, const cha
     if (base_name_end == NULL)
         base_name_end = name + strlen (name);
     
-    const char *last_colon = NULL;
-    for (const char *ptr = base_name_end; ptr != name; ptr--)
-    {
-        if (*ptr == ':')
-        {
-            last_colon = ptr;
-            break;
-        }
-    }
+    const char *last_colon = strrchr (name, ':');
     
     if (last_colon == NULL)
     {
@@ -220,36 +214,6 @@ CPPLanguageRuntime::StripNamespacesFromVariableName (const char *name, const cha
         base_name_start = last_colon + 1;
         return true;
     }
-}
-bool
-CPPLanguageRuntime::IsPossibleCPPCall (const char *name, const char *&base_name_start, const char *&base_name_end)
-{
-    if (!name)
-        return false;
-    // For now, I really can't handle taking template names apart, so if you
-    // have < or > I'll say "could be CPP but leave the base_name empty which
-    // means I couldn't figure out what to use for that.
-    // FIXME: Do I need to do more sanity checking here?
-    
-    if (strchr(name, '>') != NULL || strchr (name, '>') != NULL)
-        return true;
-    
-    size_t name_len = strlen (name);
-    
-    if (name[name_len - 1] == ')')
-    {
-        // We've got arguments.
-        base_name_end = strchr (name, '(');
-        if (base_name_end == NULL)
-            return false;
-        
-        // FIXME: should check that this parenthesis isn't a template specialized
-        // on a function type or something gross like that...
-    }
-    else
-        base_name_end = name + strlen (name);
-    
-    return StripNamespacesFromVariableName (name, base_name_start, base_name_end);
 }
 
 uint32_t
@@ -272,7 +236,7 @@ void
 CPPLanguageRuntime::MethodName::Clear()
 {
     m_full.Clear();
-    m_basename.Clear();
+    m_basename = llvm::StringRef();
     m_context = llvm::StringRef();
     m_arguments = llvm::StringRef();
     m_qualifiers = llvm::StringRef();
@@ -356,12 +320,12 @@ CPPLanguageRuntime::MethodName::Parse()
                     context_end = full.rfind(':', basename_end);
 
                 if (context_end == llvm::StringRef::npos)
-                    m_basename.SetString(full.substr(0, basename_end));
+                    m_basename = full.substr(0, basename_end);
                 else
                 {
                     m_context = full.substr(0, context_end - 1);
                     const size_t basename_begin = context_end + 1;
-                    m_basename.SetString(full.substr(basename_begin, basename_end - basename_begin));
+                    m_basename = full.substr(basename_begin, basename_end - basename_begin);
                 }
                 m_type = eTypeUnknownMethod;
             }
@@ -388,7 +352,7 @@ CPPLanguageRuntime::MethodName::Parse()
     }
 }
 
-const ConstString &
+llvm::StringRef
 CPPLanguageRuntime::MethodName::GetBasename ()
 {
     if (!m_parsed)

@@ -37,6 +37,12 @@ Possible window name arguments to the Lhide and Lshow commands include:
     * locals
     * registers
     * threads
+                                                *lldb-:Lattach*
+:Lattach <process-name> Attach to a process by name.
+
+                                                *lldb-:Ldetach*
+:Ldetach                Detach from the current process.
+
                                                 *lldb-:Ltarget*
 :Ltarget [[create] executable]
                         Create a target with the specified executable. If
@@ -83,6 +89,13 @@ Possible window name arguments to the Lhide and Lshow commands include:
 :Lbreakpoint [args]     When arguments are provided, the lldb breakpoint
                         command is invoked. If no arguments are provided,
                         a breakpoint at the location under the cursor.
+
+                                                *lldb-:Lprint*
+                                                *lldb-:Lpo*
+                                                *lldb-:LpO*
+:Lprint <expr>          Aliases to the lldb print and po commands. Cursor
+:Lpo <expr>             word (cursor WORD for LpO) will be used when 
+:LpO <expr>             expression omitted.
 
 MAPPINGS                                        *lldb-mappings*
 

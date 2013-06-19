@@ -25,6 +25,9 @@
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
 
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Symbol/ObjectFile.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -46,6 +49,7 @@ typedef struct ProcessStatInfo
 
 // Get the process info with additional information from /proc/$PID/stat (like process state, and tracer pid).
 static bool GetProcessAndStatInfo (lldb::pid_t pid, ProcessInstanceInfo &process_info, ProcessStatInfo &stat_info, lldb::pid_t &tracerpid);
+
 
 namespace
 {
@@ -291,6 +295,61 @@ Host::FindProcesses (const ProcessInstanceInfoMatch &match_info, ProcessInstance
     return process_infos.GetSize();
 }
 
+bool
+Host::FindProcessThreads (const lldb::pid_t pid, TidMap &tids_to_attach)
+{
+    bool tids_changed = false;
+    static const char procdir[] = "/proc/";
+    static const char taskdir[] = "/task/";
+    std::string process_task_dir = procdir + std::to_string(pid) + taskdir;
+    DIR *dirproc = opendir (process_task_dir.c_str());
+
+    if (dirproc)
+    {
+        struct dirent *direntry = NULL;
+        while ((direntry = readdir (dirproc)) != NULL)
+        {
+            if (direntry->d_type != DT_DIR || !IsDirNumeric (direntry->d_name))
+                continue;
+
+            lldb::tid_t tid = atoi(direntry->d_name);
+            TidMap::iterator it = tids_to_attach.find(tid);
+            if (it == tids_to_attach.end())
+            {
+                tids_to_attach.insert(TidPair(tid, false));
+                tids_changed = true;
+            }
+        }
+        closedir (dirproc);
+    }
+
+    return tids_changed;
+}
+
+static bool
+GetELFProcessCPUType (const char *exe_path, ProcessInstanceInfo &process_info)
+{
+    // Clear the architecture.
+    process_info.GetArchitecture().Clear();
+
+    ModuleSpecList specs;
+    FileSpec filespec (exe_path, false);
+    const size_t num_specs = ObjectFile::GetModuleSpecifications (filespec, 0, specs);
+    // GetModuleSpecifications() could fail if the executable has been deleted or is locked.
+    // But it shouldn't return more than 1 architecture.
+    assert(num_specs <= 1 && "Linux plugin supports only a single architecture");
+    if (num_specs == 1)
+    {
+        ModuleSpec module_spec;
+        if (specs.GetModuleSpecAtIndex (0, module_spec) && module_spec.GetArchitecture().IsValid())
+        {
+            process_info.GetArchitecture () = module_spec.GetArchitecture();
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool
 GetProcessAndStatInfo (lldb::pid_t pid, ProcessInstanceInfo &process_info, ProcessStatInfo &stat_info, lldb::pid_t &tracerpid)
 {
@@ -298,9 +357,6 @@ GetProcessAndStatInfo (lldb::pid_t pid, ProcessInstanceInfo &process_info, Proce
     process_info.Clear();
     ::memset (&stat_info, 0, sizeof(stat_info));
     stat_info.ppid = LLDB_INVALID_PROCESS_ID;
-
-    // Architecture is intentionally omitted because that's better resolved
-    // in other places (see ProcessPOSIX::DoAttachWithID().
 
     // Use special code here because proc/[pid]/exe is a symbolic link.
     char link_path[PATH_MAX];
@@ -322,6 +378,10 @@ GetProcessAndStatInfo (lldb::pid_t pid, ProcessInstanceInfo &process_info, Proce
         !strcmp(exe_path + len - deleted_len, " (deleted)"))
     {
         exe_path[len - deleted_len] = 0;
+    }
+    else
+    {
+        GetELFProcessCPUType (exe_path, process_info);
     }
 
     process_info.SetProcessID(pid);

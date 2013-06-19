@@ -1079,7 +1079,7 @@ RNBRemote::Initialize()
 
 
 bool
-RNBRemote::InitializeRegisters ()
+RNBRemote::InitializeRegisters (bool force)
 {
     pid_t pid = m_ctx.ProcessID();
     if (pid == INVALID_NUB_PROCESS)
@@ -1093,6 +1093,13 @@ RNBRemote::InitializeRegisters ()
         // registers to be discovered using multiple qRegisterInfo calls to get
         // all register information after the architecture for the process is
         // determined.
+        if (force)
+        {
+            g_dynamic_register_map.clear();
+            g_reg_entries = NULL;
+            g_num_reg_entries = 0;
+        }
+
         if (g_dynamic_register_map.empty())
         {
             nub_size_t num_reg_sets = 0;
@@ -2381,6 +2388,10 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
 
     if (DNBThreadGetStopReason (pid, tid, &tid_stop_info))
     {
+        const bool did_exec = tid_stop_info.reason == eStopTypeExec;
+        if (did_exec)
+            RNBRemote::InitializeRegisters(true);
+
         std::ostringstream ostrm;
         // Output the T packet with the thread
         ostrm << 'T';
@@ -2478,8 +2489,12 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
                 }
             }
         }
-
-        if (tid_stop_info.details.exception.type)
+        
+        if (did_exec)
+        {
+            ostrm << "reason:exec;";
+        }
+        else if (tid_stop_info.details.exception.type)
         {
             ostrm << "metype:" << std::hex << tid_stop_info.details.exception.type << ";";
             ostrm << "mecount:" << std::hex << tid_stop_info.details.exception.data_count << ";";

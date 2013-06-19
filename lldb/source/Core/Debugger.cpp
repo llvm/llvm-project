@@ -47,6 +47,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
 
@@ -130,6 +131,7 @@ g_properties[] =
 {   "term-width",               OptionValue::eTypeSInt64 , true, 80   , NULL, NULL, "The maximum number of columns to use for displaying text." },
 {   "thread-format",            OptionValue::eTypeString , true, 0    , DEFAULT_THREAD_FORMAT, NULL, "The default thread format string to use when displaying thread information." },
 {   "use-external-editor",      OptionValue::eTypeBoolean, true, false, NULL, NULL, "Whether to use an external editor or not." },
+{   "use-color",                OptionValue::eTypeBoolean, true, true , NULL, NULL, "Whether to use Ansi color codes or not." },
 
     {   NULL,                       OptionValue::eTypeInvalid, true, 0    , NULL, NULL, NULL }
 };
@@ -147,7 +149,8 @@ enum
     ePropertyStopLineCountBefore,
     ePropertyTerminalWidth,
     ePropertyThreadFormat,
-    ePropertyUseExternalEditor
+    ePropertyUseExternalEditor,
+    ePropertyUseColor,
 };
 
 //
@@ -170,14 +173,48 @@ Debugger::SetPropertyValue (const ExecutionContext *exe_ctx,
                             const char *property_path,
                             const char *value)
 {
+    bool is_load_script = strcmp(property_path,"target.load-script-from-symbol-file") == 0;
+    TargetSP target_sp;
+    LoadScriptFromSymFile load_script_old_value;
+    if (is_load_script && exe_ctx->GetTargetSP())
+    {
+        target_sp = exe_ctx->GetTargetSP();
+        load_script_old_value = target_sp->TargetProperties::GetLoadScriptFromSymbolFile();
+    }
     Error error (Properties::SetPropertyValue (exe_ctx, op, property_path, value));
     if (error.Success())
     {
+        // FIXME it would be nice to have "on-change" callbacks for properties
         if (strcmp(property_path, g_properties[ePropertyPrompt].name) == 0)
         {
             const char *new_prompt = GetPrompt();
+            std::string str = lldb_utility::ansi::FormatAnsiTerminalCodes (new_prompt, GetUseColor());
+            if (str.length())
+                new_prompt = str.c_str();
             EventSP prompt_change_event_sp (new Event(CommandInterpreter::eBroadcastBitResetPrompt, new EventDataBytes (new_prompt)));
             GetCommandInterpreter().BroadcastEvent (prompt_change_event_sp);
+        }
+        else if (strcmp(property_path, g_properties[ePropertyUseColor].name) == 0)
+        {
+			// use-color changed. Ping the prompt so it can reset the ansi terminal codes.
+            SetPrompt (GetPrompt());
+        }
+        else if (is_load_script && target_sp && load_script_old_value == eLoadScriptFromSymFileWarn)
+        {
+            if (target_sp->TargetProperties::GetLoadScriptFromSymbolFile() == eLoadScriptFromSymFileTrue)
+            {
+                std::list<Error> errors;
+                StreamString feedback_stream;
+                if (!target_sp->LoadScriptingResources(errors,&feedback_stream))
+                {
+                    for (auto error : errors)
+                    {
+                        GetErrorStream().Printf("%s\n",error.AsCString());
+                    }
+                    if (feedback_stream.GetSize())
+                        GetErrorStream().Printf("%s",feedback_stream.GetData());
+                }
+            }
         }
     }
     return error;
@@ -217,6 +254,9 @@ Debugger::SetPrompt(const char *p)
     const uint32_t idx = ePropertyPrompt;
     m_collection_sp->SetPropertyAtIndexAsString (NULL, idx, p);
     const char *new_prompt = GetPrompt();
+    std::string str = lldb_utility::ansi::FormatAnsiTerminalCodes (new_prompt, GetUseColor());
+    if (str.length())
+        new_prompt = str.c_str();
     EventSP prompt_change_event_sp (new Event(CommandInterpreter::eBroadcastBitResetPrompt, new EventDataBytes (new_prompt)));;
     GetCommandInterpreter().BroadcastEvent (prompt_change_event_sp);
 }
@@ -268,6 +308,22 @@ Debugger::SetUseExternalEditor (bool b)
 {
     const uint32_t idx = ePropertyUseExternalEditor;
     return m_collection_sp->SetPropertyAtIndexAsBoolean (NULL, idx, b);
+}
+
+bool
+Debugger::GetUseColor () const
+{
+    const uint32_t idx = ePropertyUseColor;
+    return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
+}
+
+bool
+Debugger::SetUseColor (bool b)
+{
+    const uint32_t idx = ePropertyUseColor;
+    bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean (NULL, idx, b);
+    SetPrompt (GetPrompt());
+    return ret;
 }
 
 uint32_t
@@ -602,6 +658,11 @@ Debugger::Debugger (lldb::LogOutputCallback log_callback, void *baton) :
     OptionValueSInt64 *term_width = m_collection_sp->GetPropertyAtIndexAsOptionValueSInt64 (NULL, ePropertyTerminalWidth);
     term_width->SetMinimumValue(10);
     term_width->SetMaximumValue(1024);
+
+    // Turn off use-color if this is a dumb terminal.
+    const char *term = getenv ("TERM");
+    if (term && !strcmp (term, "dumb"))
+        SetUseColor (false);
 }
 
 Debugger::~Debugger ()
@@ -1112,14 +1173,12 @@ TestPromptFormats (StackFrame *frame)
     SymbolContext sc (frame->GetSymbolContext(eSymbolContextEverything));
     ExecutionContext exe_ctx;
     frame->CalculateExecutionContext(exe_ctx);
-    const char *end = NULL;
-    if (Debugger::FormatPrompt (prompt_format, &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), s, &end))
+    if (Debugger::FormatPrompt (prompt_format, &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), s))
     {
         printf("%s\n", s.GetData());
     }
     else
     {
-        printf ("error: at '%s'\n", end);
         printf ("what we got: %s\n", s.GetData());
     }
 }
@@ -1296,8 +1355,8 @@ ExpandIndexedExpression (ValueObject* valobj,
     return item;
 }
 
-bool
-Debugger::FormatPrompt 
+static bool
+FormatPromptRecurse
 (
     const char *format,
     const SymbolContext *sc,
@@ -1312,6 +1371,7 @@ Debugger::FormatPrompt
     bool success = true;
     const char *p;
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
+
     for (p = format; *p != '\0'; ++p)
     {
         if (realvalobj)
@@ -1345,8 +1405,8 @@ Debugger::FormatPrompt
             StreamString sub_strm;
 
             ++p;  // Skip the '{'
-            
-            if (FormatPrompt (p, sc, exe_ctx, addr, sub_strm, &p, valobj))
+
+            if (FormatPromptRecurse (p, sc, exe_ctx, addr, sub_strm, &p, valobj))
             {
                 // The stream had all it needed
                 s.Write(sub_strm.GetData(), sub_strm.GetSize());
@@ -1684,7 +1744,7 @@ Debugger::FormatPrompt
                                         if (!special_directions)
                                             var_success &= item->DumpPrintableRepresentation(s,val_obj_display, custom_format);
                                         else
-                                            var_success &= FormatPrompt(special_directions, sc, exe_ctx, addr, s, NULL, item);
+                                            var_success &= FormatPromptRecurse(special_directions, sc, exe_ctx, addr, s, NULL, item);
                                         
                                         if (--max_num_children == 0)
                                         {
@@ -1706,214 +1766,6 @@ Debugger::FormatPrompt
                                 {
                                     var_success = true;
                                     format_addr = *addr;
-                                }
-                            }
-                            else if (::strncmp (var_name_begin, "ansi.", strlen("ansi.")) == 0)
-                            {
-                                var_success = true;
-                                var_name_begin += strlen("ansi."); // Skip the "ansi."
-                                if (::strncmp (var_name_begin, "fg.", strlen("fg.")) == 0)
-                                {
-                                    var_name_begin += strlen("fg."); // Skip the "fg."
-                                    if (::strncmp (var_name_begin, "black}", strlen("black}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_black,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "red}", strlen("red}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_red,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "green}", strlen("green}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_green,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "yellow}", strlen("yellow}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_yellow,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "blue}", strlen("blue}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_blue,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "purple}", strlen("purple}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_purple,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "cyan}", strlen("cyan}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_cyan,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "white}", strlen("white}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_fg_white,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else
-                                    {
-                                        var_success = false;
-                                    }
-                                }
-                                else if (::strncmp (var_name_begin, "bg.", strlen("bg.")) == 0)
-                                {
-                                    var_name_begin += strlen("bg."); // Skip the "bg."
-                                    if (::strncmp (var_name_begin, "black}", strlen("black}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_black,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "red}", strlen("red}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_red,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "green}", strlen("green}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_green,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "yellow}", strlen("yellow}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_yellow,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "blue}", strlen("blue}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_blue,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "purple}", strlen("purple}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_purple,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "cyan}", strlen("cyan}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_cyan,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else if (::strncmp (var_name_begin, "white}", strlen("white}")) == 0)
-                                    {
-                                        s.Printf ("%s%s%s", 
-                                                  lldb_utility::ansi::k_escape_start, 
-                                                  lldb_utility::ansi::k_bg_white,
-                                                  lldb_utility::ansi::k_escape_end);
-                                    }
-                                    else
-                                    {
-                                        var_success = false;
-                                    }
-                                }
-                                else if (::strncmp (var_name_begin, "normal}", strlen ("normal}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_normal,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "bold}", strlen("bold}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_bold,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "faint}", strlen("faint}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_faint,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "italic}", strlen("italic}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_italic,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "underline}", strlen("underline}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_underline,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "slow-blink}", strlen("slow-blink}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_slow_blink,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "fast-blink}", strlen("fast-blink}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_fast_blink,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "negative}", strlen("negative}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_negative,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else if (::strncmp (var_name_begin, "conceal}", strlen("conceal}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_conceal,
-                                              lldb_utility::ansi::k_escape_end);
-
-                                }
-                                else if (::strncmp (var_name_begin, "crossed-out}", strlen("crossed-out}")) == 0)
-                                {
-                                    s.Printf ("%s%s%s", 
-                                              lldb_utility::ansi::k_escape_start, 
-                                              lldb_utility::ansi::k_ctrl_crossed_out,
-                                              lldb_utility::ansi::k_escape_end);
-                                }
-                                else
-                                {
-                                    var_success = false;
                                 }
                             }
                             break;
@@ -2602,6 +2454,24 @@ Debugger::FormatPrompt
     if (end) 
         *end = p;
     return success;
+}
+
+bool
+Debugger::FormatPrompt
+(
+    const char *format,
+    const SymbolContext *sc,
+    const ExecutionContext *exe_ctx,
+    const Address *addr,
+    Stream &s,
+    ValueObject* valobj
+)
+{
+    bool use_color = exe_ctx ? exe_ctx->GetTargetRef().GetDebugger().GetUseColor() : true;
+    std::string format_str = lldb_utility::ansi::FormatAnsiTerminalCodes (format, use_color);
+    if (format_str.length())
+        format = format_str.c_str();
+    return FormatPromptRecurse (format, sc, exe_ctx, addr, s, NULL, valobj);
 }
 
 void

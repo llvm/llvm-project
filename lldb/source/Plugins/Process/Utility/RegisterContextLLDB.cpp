@@ -1305,21 +1305,20 @@ RegisterContextLLDB::ReadGPRValue (int register_kind, uint32_t regnum, addr_t &v
         return false;
     }
 
-    bool pc_or_return_address = false;
+    bool pc_register = false;
     uint32_t generic_regnum;
-    if (register_kind == eRegisterKindGeneric
-        && (regnum == LLDB_REGNUM_GENERIC_PC || regnum == LLDB_REGNUM_GENERIC_RA))
+    if (register_kind == eRegisterKindGeneric && regnum == LLDB_REGNUM_GENERIC_PC)
     {
-        pc_or_return_address = true;
+        pc_register = true;
     }
     else if (m_thread.GetRegisterContext()->ConvertBetweenRegisterKinds (register_kind, regnum, eRegisterKindGeneric, generic_regnum)
-             && (generic_regnum == LLDB_REGNUM_GENERIC_PC || generic_regnum == LLDB_REGNUM_GENERIC_RA))
+             && generic_regnum == LLDB_REGNUM_GENERIC_PC)
     {
-        pc_or_return_address = true;
+        pc_register = true;
     }
 
     lldb_private::UnwindLLDB::RegisterLocation regloc;
-    if (!m_parent_unwind.SearchForSavedLocationForRegister (lldb_regnum, regloc, m_frame_number - 1, pc_or_return_address))
+    if (!m_parent_unwind.SearchForSavedLocationForRegister (lldb_regnum, regloc, m_frame_number - 1, pc_register))
     {
         return false;
     }

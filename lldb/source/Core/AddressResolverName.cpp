@@ -120,7 +120,7 @@ AddressResolverName::SearchCallback
                                                            sym_list);
             context.module_sp->FindFunctions (m_func_name,
                                               NULL,
-                                              eFunctionNameTypeBase | eFunctionNameTypeFull | eFunctionNameTypeMethod | eFunctionNameTypeSelector,
+                                              eFunctionNameTypeAuto,
                                               include_symbols,
                                               include_inlines,
                                               append, 

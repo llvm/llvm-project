@@ -153,7 +153,7 @@ public:
     /// information in this context. If a module, function, file and
     /// line number are available, they will be dumped. If only a
     /// module and function or symbol name with offset is available,
-    /// that will be ouput. Else just the address at which the target
+    /// that will be output. Else just the address at which the target
     /// was stopped will be displayed.
     ///
     /// @param[in] s
@@ -285,7 +285,31 @@ public:
     ///     The name of the function represented by this symbol context.
     //------------------------------------------------------------------
     ConstString
-    GetFunctionName (Mangled::NamePreference preference = Mangled::ePreferDemangled);
+    GetFunctionName (Mangled::NamePreference preference = Mangled::ePreferDemangled) const;
+
+    
+    //------------------------------------------------------------------
+    /// Get the line entry that corresponds to the function.
+    ///
+    /// If the symbol context contains an inlined block, the line entry
+    /// for the start address of the inlined function will be returned,
+    /// otherwise the line entry for the start address of the function
+    /// will be returned. This can be used after doing a
+    /// Module::FindFunctions(...) or ModuleList::FindFunctions(...)
+    /// call in order to get the correct line table information for
+    /// the symbol context.
+    /// it will return the inlined function name.
+    ///
+    /// @param[in] prefer_mangled
+    ///    if \btrue, then the mangled name will be returned if there
+    ///    is one.  Otherwise the unmangled name will be returned if it
+    ///    is available.
+    ///
+    /// @return
+    ///     The name of the function represented by this symbol context.
+    //------------------------------------------------------------------
+    LineEntry
+    GetFunctionStartLineEntry () const;
 
     //------------------------------------------------------------------
     /// Find the block containing the inlined block that contains this block.

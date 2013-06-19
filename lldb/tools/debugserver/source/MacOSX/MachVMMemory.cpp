@@ -17,6 +17,7 @@
 #include <mach/mach_vm.h>
 #include <mach/shared_region.h>
 #include <sys/sysctl.h>
+#include <dlfcn.h>
 
 MachVMMemory::MachVMMemory() :
     m_page_size    (kInvalidPageSize),
@@ -281,14 +282,7 @@ MachVMMemory::GetRegionSizes(task_t task, mach_vm_size_t &rsize, mach_vm_size_t 
         }
     }
     
-    static vm_size_t pagesize;
-    static bool calculated = false;
-    if (!calculated)
-    {
-        calculated = true;
-        pagesize = PageSize (task);
-    }
-    
+    vm_size_t pagesize = PageSize (task);
     rsize = pages_resident * pagesize;
     dirty_size = pages_dirtied * pagesize;
 }
@@ -333,14 +327,7 @@ MachVMMemory::GetMemorySizes(task_t task, cpu_type_t cputype, nub_process_t pid,
     
     mach_vm_size_t aliased = 0;
     bool global_shared_text_data_mapped = false;
-    
-    static vm_size_t pagesize;
-    static bool calculated = false;
-    if (!calculated)
-    {
-        calculated = true;
-        pagesize = PageSize (task);
-    }
+    vm_size_t pagesize = PageSize (task);
     
     for (mach_vm_address_t addr=0, size=0; ; addr += size)
     {
@@ -430,8 +417,72 @@ MachVMMemory::GetMemorySizes(task_t task, cpu_type_t cputype, nub_process_t pid,
     rprvt += aliased;
 }
 
+#if defined (TASK_VM_INFO) && TASK_VM_INFO >= 22
+
+// cribbed from sysmond
+static uint64_t
+SumVMPurgeableInfo(const vm_purgeable_info_t info)
+{
+    uint64_t sum = 0;
+    int i;
+    
+    for (i = 0; i < 8; i++)
+    {
+        sum += info->fifo_data[i].size;
+    }
+    sum += info->obsolete_data.size;
+    for (i = 0; i < 8; i++)
+    {
+        sum += info->lifo_data[i].size;
+    }
+    
+    return sum;
+}
+
+#endif
+
+static void
+GetPurgeableAndAnonymous(task_t task, uint64_t &purgeable, uint64_t &anonymous)
+{
+#if defined (TASK_VM_INFO) && TASK_VM_INFO >= 22
+
+    kern_return_t kr;
+    task_purgable_info_t purgeable_info;
+    uint64_t purgeable_sum = 0;
+    mach_msg_type_number_t info_count;
+    task_vm_info_data_t vm_info;
+    
+    typedef kern_return_t (*task_purgable_info_type) (task_t, task_purgable_info_t *);
+    task_purgable_info_type task_purgable_info_ptr = NULL;
+    task_purgable_info_ptr = (task_purgable_info_type)dlsym(RTLD_NEXT, "task_purgable_info");
+    if (task_purgable_info_ptr != NULL)
+    {
+        kr = (*task_purgable_info_ptr)(task, &purgeable_info);
+        if (kr == KERN_SUCCESS) {
+            purgeable_sum = SumVMPurgeableInfo(&purgeable_info);
+            purgeable = purgeable_sum;
+        }
+    }
+
+    info_count = TASK_VM_INFO_COUNT;
+    kr = task_info(task, TASK_VM_INFO, (task_info_t)&vm_info, &info_count);
+    if (kr == KERN_SUCCESS)
+    {
+        if (purgeable_sum < vm_info.internal)
+        {
+            anonymous = vm_info.internal - purgeable_sum;
+        }
+        else
+        {
+            anonymous = 0;
+        }
+    }
+    
+#endif
+}
+
 nub_bool_t
-MachVMMemory::GetMemoryProfile(DNBProfileDataScanType scanType, task_t task, struct task_basic_info ti, cpu_type_t cputype, nub_process_t pid, vm_statistics_data_t &vm_stats, uint64_t &physical_memory, mach_vm_size_t &rprvt, mach_vm_size_t &rsize, mach_vm_size_t &vprvt, mach_vm_size_t &vsize, mach_vm_size_t &dirty_size)
+MachVMMemory::GetMemoryProfile(DNBProfileDataScanType scanType, task_t task, struct task_basic_info ti, cpu_type_t cputype, nub_process_t pid, vm_statistics_data_t &vm_stats, uint64_t &physical_memory, mach_vm_size_t &rprvt, mach_vm_size_t &rsize, mach_vm_size_t &vprvt, mach_vm_size_t &vsize, mach_vm_size_t &dirty_size, mach_vm_size_t &purgeable, mach_vm_size_t &anonymous)
 {
     if (scanType & eProfileHostMemory)
         physical_memory = GetPhysicalMemory();
@@ -452,6 +503,11 @@ MachVMMemory::GetMemoryProfile(DNBProfileDataScanType scanType, task_t task, str
         {
             // This uses vmmap strategy. We don't use the returned rsize for now. We prefer to match top's version since that's what we do for the rest of the metrics.
             GetRegionSizes(task, rsize, dirty_size);
+        }
+        
+        if (scanType & eProfileMemoryAnonymous)
+        {
+            GetPurgeableAndAnonymous(task, purgeable, anonymous);
         }
     }
     

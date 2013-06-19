@@ -381,7 +381,9 @@ public:
     virtual lldb::StackFrameSP
     GetFrameWithStackID (const StackID &stack_id)
     {
-        return GetStackFrameList()->GetFrameWithStackID (stack_id);
+        if (stack_id.IsValid())
+            return GetStackFrameList()->GetFrameWithStackID (stack_id);
+        return lldb::StackFrameSP();
     }
 
     uint32_t

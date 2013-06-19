@@ -11,6 +11,7 @@
 #define liblldb_ModuleList_h_
 
 #include <vector>
+#include <list>
 
 #include "lldb/lldb-private.h"
 #include "lldb/Host/Mutex.h"
@@ -484,6 +485,12 @@ public:
     size_t
     GetSize () const;
 
+    bool
+    LoadScriptingResourcesInTarget (Target *target,
+                                    std::list<Error>& errors,
+                                    Stream* feedback_stream = NULL,
+                                    bool continue_on_error = true);
+    
     static bool
     ModuleIsInCache (const Module *module_ptr);
 

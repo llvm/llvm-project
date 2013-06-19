@@ -8,7 +8,7 @@ import lldb
 from lldbtest import *
 import lldbutil
 
-class StopThreadsTestCase(TestBase):
+class ThreadStateTestCase(TestBase):
 
     mydir = os.path.join("functionalities", "thread", "state")
 
@@ -16,54 +16,54 @@ class StopThreadsTestCase(TestBase):
     @dsym_test
     def test_state_after_breakpoint_with_dsym(self):
         """Test thread state after breakpoint."""
-        self.buildDsym()
+        self.buildDsym(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_breakpoint_test()
 
     @dwarf_test
     def test_state_after_breakpoint_with_dwarf(self):
         """Test thread state after breakpoint."""
-        self.buildDwarf()
+        self.buildDwarf(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_breakpoint_test()
 
     @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
     @dsym_test
     def test_state_after_continue_with_dsym(self):
         """Test thread state after continue."""
-        self.buildDsym()
+        self.buildDsym(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_continue_test()
 
     @dwarf_test
     def test_state_after_continue_with_dwarf(self):
         """Test thread state after continue."""
-        self.buildDwarf()
+        self.buildDwarf(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_continue_test()
 
     @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
     @dsym_test
     def test_state_after_expression_with_dsym(self):
         """Test thread state after expression."""
-        self.buildDsym()
+        self.buildDsym(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_continue_test()
 
     @dwarf_test
     def test_state_after_expression_with_dwarf(self):
         """Test thread state after expression."""
-        self.buildDwarf()
+        self.buildDwarf(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_continue_test()
 
     @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
     @dsym_test
-    @unittest2.expectedFailure("llvm.org/pr15824") # thread states not properly maintained
+    @unittest2.expectedFailure("llvm.org/pr16172") # thread states not properly maintained
     def test_process_interrupt_with_dsym(self):
         """Test process interrupt."""
-        self.buildDsym()
+        self.buildDsym(dictionary=self.getBuildFlags(use_cpp11=False))
         self.process_interrupt_test()
 
     @dwarf_test
-    @unittest2.expectedFailure("llvm.org/pr15824") # thread states not properly maintained
+    @unittest2.expectedFailure("llvm.org/pr16712") # thread states not properly maintained
     def test_process_interrupt_with_dwarf(self):
         """Test process interrupt."""
-        self.buildDwarf()
+        self.buildDwarf(dictionary=self.getBuildFlags(use_cpp11=False))
         self.process_interrupt_test()
 
     @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
@@ -71,14 +71,14 @@ class StopThreadsTestCase(TestBase):
     @unittest2.expectedFailure("llvm.org/pr15824") # thread states not properly maintained
     def test_process_state_with_dsym(self):
         """Test thread states (comprehensive)."""
-        self.buildDsym()
+        self.buildDsym(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_states_test()
 
     @dwarf_test
     @unittest2.expectedFailure("llvm.org/pr15824") # thread states not properly maintained
     def test_process_state_with_dwarf(self):
         """Test thread states (comprehensive)."""
-        self.buildDwarf()
+        self.buildDwarf(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_states_test()
 
     def setUp(self):

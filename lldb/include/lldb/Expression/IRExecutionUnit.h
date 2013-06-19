@@ -336,7 +336,13 @@ private:
         /// @return
         ///     True in case of failure, false in case of success.
         //------------------------------------------------------------------
-        bool applyPermissions(std::string *ErrMsg) { return false; }
+        virtual bool applyPermissions(std::string *ErrMsg) {
+            // TODO: Ensure that the instruction cache is flushed because
+            // relocations are updated by dy-load.  See:
+            //   sys::Memory::InvalidateInstructionCache
+            //   llvm::SectionMemoryManager
+            return false;
+        }
         
         //------------------------------------------------------------------
         /// Passthrough interface stub

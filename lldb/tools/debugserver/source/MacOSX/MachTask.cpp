@@ -364,7 +364,9 @@ MachTask::GetProfileData (DNBProfileDataScanType scanType)
     mach_vm_size_t vprvt = 0;
     mach_vm_size_t vsize = 0;
     mach_vm_size_t dirty_size = 0;
-    if (m_vm_memory.GetMemoryProfile(scanType, task, task_info, m_process->GetCPUType(), m_process->ProcessID(), vm_stats, physical_memory, rprvt, rsize, vprvt, vsize, dirty_size))
+    mach_vm_size_t purgeable = 0;
+    mach_vm_size_t anonymous = 0;
+    if (m_vm_memory.GetMemoryProfile(scanType, task, task_info, m_process->GetCPUType(), m_process->ProcessID(), vm_stats, physical_memory, rprvt, rsize, vprvt, vsize, dirty_size, purgeable, anonymous))
     {
         std::ostringstream profile_data_stream;
         
@@ -439,6 +441,12 @@ MachTask::GetProfileData (DNBProfileDataScanType scanType)
             
             if (scanType & eProfileMemoryDirtyPage)
                 profile_data_stream << "dirty:" << dirty_size << ';';
+
+            if (scanType & eProfileMemoryAnonymous)
+            {
+                profile_data_stream << "purgeable:" << purgeable << ';';
+                profile_data_stream << "anonymous:" << anonymous << ';';
+            }
         }
         
         profile_data_stream << "--end--;";

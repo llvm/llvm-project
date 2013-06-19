@@ -222,6 +222,18 @@ ObjectFileELF::CreateMemoryInstance (const lldb::ModuleSP &module_sp,
     return NULL;
 }
 
+bool
+ObjectFileELF::MagicBytesMatch (DataBufferSP& data_sp,
+                                  lldb::addr_t data_offset,
+                                  lldb::addr_t data_length)
+{
+    if (data_sp && data_sp->GetByteSize() > (llvm::ELF::EI_NIDENT + data_offset))
+    {
+        const uint8_t *magic = data_sp->GetBytes() + data_offset;
+        return ELFHeader::MagicBytesMatch(magic);
+    }
+    return false;
+}
 
 size_t
 ObjectFileELF::GetModuleSpecifications (const lldb_private::FileSpec& file,
@@ -231,7 +243,39 @@ ObjectFileELF::GetModuleSpecifications (const lldb_private::FileSpec& file,
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs)
 {
-    return 0;
+    const size_t initial_count = specs.GetSize();
+
+    if (ObjectFileELF::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize()))
+    {
+        DataExtractor data;
+        data.SetData(data_sp);
+        elf::ELFHeader header;
+        if (header.Parse(data, &data_offset))
+        {
+            if (data_sp)
+            {
+                ModuleSpec spec;
+                spec.GetFileSpec() = file;
+                spec.GetArchitecture().SetArchitecture(eArchTypeELF,
+                                                       header.e_machine,
+                                                       LLDB_INVALID_CPUTYPE);
+                if (spec.GetArchitecture().IsValid())
+                {
+                    // We could parse the ABI tag information (in .note, .notes, or .note.ABI-tag) to get the
+                    // machine information. However, we'd have to read a good bit of the rest of the file,
+                    // and this info isn't guaranteed to exist or be correct. More details here:
+                    //  http://refspecs.linuxfoundation.org/LSB_1.2.0/gLSB/noteabitag.html
+                    // Instead of passing potentially incorrect information down the pipeline, grab
+                    // the host information and use it.
+                    spec.GetArchitecture().GetTriple().setOSName (Host::GetOSString().GetCString());
+                    spec.GetArchitecture().GetTriple().setVendorName(Host::GetVendorString().GetCString());
+                    specs.Append(spec);
+                }
+            }
+        }
+    }
+
+    return specs.GetSize() - initial_count;
 }
 
 //------------------------------------------------------------------
@@ -311,14 +355,19 @@ ObjectFileELF::SectionIndex(const SectionHeaderCollConstIter &I) const
 bool
 ObjectFileELF::ParseHeader()
 {
-    lldb::offset_t offset = GetFileOffset();
+    lldb::offset_t offset = 0;
     return m_header.Parse(m_data, &offset);
 }
 
 bool
 ObjectFileELF::GetUUID(lldb_private::UUID* uuid)
 {
-    // FIXME: Return MD5 sum here.  See comment in ObjectFile.h.
+    if (m_uuid.IsValid())
+    {
+        *uuid = m_uuid;
+        return true;
+    }
+    // FIXME: Return MD5 sum here. See comment in ObjectFile.h.
     return false;
 }
 
@@ -619,6 +668,51 @@ ObjectFileELF::GetSectionHeaderByIndex(lldb::user_id_t id)
     return NULL;
 }
 
+static bool
+ParseNoteGNUBuildID(DataExtractor& data, lldb_private::UUID& uuid)
+{
+    // Try to parse the note section (ie .note.gnu.build-id|.notes|.note|...) and get the build id.
+    // BuildID documentation: https://fedoraproject.org/wiki/Releases/FeatureBuildId
+    struct
+    {
+        uint32_t name_len;  // Length of note name
+        uint32_t desc_len;  // Length of note descriptor
+        uint32_t type;      // Type of note (1 is ABI_TAG, 3 is BUILD_ID)
+    } notehdr;
+    lldb::offset_t offset = 0;
+    static const uint32_t g_gnu_build_id = 3; // NT_GNU_BUILD_ID from elf.h
+
+    while (true)
+    {
+        if (data.GetU32 (&offset, &notehdr, 3) == NULL)
+            return false;
+
+        notehdr.name_len = llvm::RoundUpToAlignment (notehdr.name_len, 4);
+        notehdr.desc_len = llvm::RoundUpToAlignment (notehdr.desc_len, 4);
+
+        lldb::offset_t offset_next_note = offset + notehdr.name_len + notehdr.desc_len;
+
+        // 16 bytes is UUID|MD5, 20 bytes is SHA1
+        if ((notehdr.type == g_gnu_build_id) && (notehdr.name_len == 4) &&
+            (notehdr.desc_len == 16 || notehdr.desc_len == 20))
+        {
+            char name[4];
+            if (data.GetU8 (&offset, name, 4) == NULL)
+                return false;
+            if (!strcmp(name, "GNU"))
+            {
+                uint8_t uuidbuf[20]; 
+                if (data.GetU8 (&offset, &uuidbuf, notehdr.desc_len) == NULL)
+                    return false;
+                uuid.SetBytes (uuidbuf, notehdr.desc_len);
+                return true;
+            }
+        }
+        offset = offset_next_note;
+    }
+    return false;
+}
+ 
 SectionList *
 ObjectFileELF::GetSectionList()
 {
@@ -685,7 +779,17 @@ ObjectFileELF::GetSectionList()
             else if (name == g_sect_name_dwarf_debug_ranges)    sect_type = eSectionTypeDWARFDebugRanges;
             else if (name == g_sect_name_dwarf_debug_str)       sect_type = eSectionTypeDWARFDebugStr;
             else if (name == g_sect_name_eh_frame)              sect_type = eSectionTypeEHFrame;
-            
+            else if (header.sh_type == SHT_NOTE)
+            {
+                if (!m_uuid.IsValid())
+                {
+                    DataExtractor data;
+                    if (vm_size && (GetData (header.sh_offset, vm_size, data) == vm_size))
+                    {
+                        ParseNoteGNUBuildID (data, m_uuid);
+                    }
+                }
+            }
             
             SectionSP section_sp(new Section(
                 GetModule(),        // Module to which this section belongs.
@@ -1301,16 +1405,18 @@ ObjectFileELF::DumpELFProgramHeader(Stream *s, const ELFProgramHeader &ph)
 void
 ObjectFileELF::DumpELFProgramHeader_p_type(Stream *s, elf_word p_type)
 {
-    const int kStrWidth = 10;
+    const int kStrWidth = 15;
     switch (p_type)
     {
-    CASE_AND_STREAM(s, PT_NULL      , kStrWidth);
-    CASE_AND_STREAM(s, PT_LOAD      , kStrWidth);
-    CASE_AND_STREAM(s, PT_DYNAMIC   , kStrWidth);
-    CASE_AND_STREAM(s, PT_INTERP    , kStrWidth);
-    CASE_AND_STREAM(s, PT_NOTE      , kStrWidth);
-    CASE_AND_STREAM(s, PT_SHLIB     , kStrWidth);
-    CASE_AND_STREAM(s, PT_PHDR      , kStrWidth);
+    CASE_AND_STREAM(s, PT_NULL        , kStrWidth);
+    CASE_AND_STREAM(s, PT_LOAD        , kStrWidth);
+    CASE_AND_STREAM(s, PT_DYNAMIC     , kStrWidth);
+    CASE_AND_STREAM(s, PT_INTERP      , kStrWidth);
+    CASE_AND_STREAM(s, PT_NOTE        , kStrWidth);
+    CASE_AND_STREAM(s, PT_SHLIB       , kStrWidth);
+    CASE_AND_STREAM(s, PT_PHDR        , kStrWidth);
+    CASE_AND_STREAM(s, PT_TLS         , kStrWidth);
+    CASE_AND_STREAM(s, PT_GNU_EH_FRAME, kStrWidth);
     default:
         s->Printf("0x%8.8x%*s", p_type, kStrWidth - 10, "");
         break;
@@ -1344,9 +1450,9 @@ ObjectFileELF::DumpELFProgramHeaders(Stream *s)
     if (ParseProgramHeaders())
     {
         s->PutCString("Program Headers\n");
-        s->PutCString("IDX  p_type     p_offset p_vaddr  p_paddr  "
+        s->PutCString("IDX  p_type          p_offset p_vaddr  p_paddr  "
                       "p_filesz p_memsz  p_flags                   p_align\n");
-        s->PutCString("==== ---------- -------- -------- -------- "
+        s->PutCString("==== --------------- -------- -------- -------- "
                       "-------- -------- ------------------------- --------\n");
 
         uint32_t idx = 0;

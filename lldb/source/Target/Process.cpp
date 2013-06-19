@@ -996,6 +996,7 @@ Process::Process(Target &target, Listener &listener) :
     ProcessProperties (false),
     UserID (LLDB_INVALID_PROCESS_ID),
     Broadcaster (&(target.GetDebugger()), "lldb.process"),
+    m_reservation_cache (*this),
     m_target (target),
     m_public_state (eStateUnloaded),
     m_private_state (eStateUnloaded),
@@ -1719,7 +1720,7 @@ Process::SetPrivateState (StateType new_state)
         else
             m_private_run_lock.WriteLock();
     }
-    
+
     if (state_changed)
     {
         m_private_state.SetValueNoLock (new_state);
@@ -5582,10 +5583,69 @@ Process::DidExec ()
     m_dynamic_checkers_ap.reset();
     m_abi_sp.reset();
     m_os_ap.reset();
-    m_dyld_ap.reset();    
+    m_dyld_ap.reset();
     m_image_tokens.clear();
     m_allocated_memory_cache.Clear();
     m_language_runtimes.clear();
+    m_thread_list.DiscardThreadPlans();
+    m_memory_cache.Clear(true);
     DoDidExec();
     CompleteAttach ();
+}
+
+Process::ReservationCache::ReservationCache (Process &process) : m_process(process)
+{
+    m_mod_id = process.GetModID();
+}
+
+void
+Process::ReservationCache::Reserve (lldb::addr_t addr, size_t size)
+{
+    CheckModID();
+    m_reserved_cache[addr] = size;
+}
+
+void
+Process::ReservationCache::Unreserve (lldb::addr_t addr)
+{
+    CheckModID();
+    ReservedMap::iterator iter = m_reserved_cache.find(addr);
+    
+    if (iter != m_reserved_cache.end())
+    {
+        size_t size = iter->second;
+        m_reserved_cache.erase(iter);
+        m_free_cache[size].push_back(addr);
+    }
+}
+
+lldb::addr_t
+Process::ReservationCache::Find (size_t size)
+{
+    CheckModID();
+    lldb::addr_t ret = LLDB_INVALID_ADDRESS;
+    FreeMap::iterator map_iter = m_free_cache.find(size);
+    if (map_iter != m_free_cache.end())
+    {
+        if (!map_iter->second.empty())
+        {
+            ret = map_iter->second.back();
+            map_iter->second.pop_back();
+            m_reserved_cache[ret] = size;
+        }
+    }
+    
+    return ret;
+}
+
+void
+Process::ReservationCache::CheckModID()
+{
+    if (m_mod_id != m_process.GetModID())
+    {
+        // wipe all our caches, they're invalid
+        m_reserved_cache.clear();
+        m_free_cache.clear();
+        m_mod_id = m_process.GetModID();
+    }
 }

@@ -1676,7 +1676,7 @@ LookupFunctionInModule (CommandInterpreter &interpreter,
             ConstString function_name (name);
             num_matches = module->FindFunctions (function_name,
                                                  NULL,
-                                                 eFunctionNameTypeBase | eFunctionNameTypeFull | eFunctionNameTypeMethod | eFunctionNameTypeSelector, 
+                                                 eFunctionNameTypeAuto,
                                                  include_symbols,
                                                  include_inlines, 
                                                  append, 
@@ -4376,11 +4376,14 @@ protected:
                             // Make sure we load any scripting resources that may be embedded
                             // in the debug info files in case the platform supports that.
                             Error error;
-                            module_sp->LoadScriptingResourceInTarget (target, error);
-                            if (error.Fail())
+                            StreamString feedback_stream;
+                            module_sp->LoadScriptingResourceInTarget (target, error,&feedback_stream);
+                            if (error.Fail() && error.AsCString())
                                 result.AppendWarningWithFormat("unable to load scripting data for module %s - error reported was %s",
                                                                module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
                                                                error.AsCString());
+                            else if (feedback_stream.GetSize())
+                                result.AppendWarningWithFormat("%s",feedback_stream.GetData());
 
                             flush = true;
                             result.SetStatus (eReturnStatusSuccessFinishResult);

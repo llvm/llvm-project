@@ -31,19 +31,17 @@ IRMemoryMap::~IRMemoryMap ()
     
     if (process_sp)
     {
-        for (AllocationMap::value_type &allocation : m_allocations)
+        AllocationMap::iterator iter;
+        
+        Error err;
+
+        while ((iter = m_allocations.begin()) != m_allocations.end())
         {
-            if (allocation.second.m_policy == eAllocationPolicyMirror ||
-                allocation.second.m_policy == eAllocationPolicyProcessOnly ||
-                (allocation.second.m_policy == eAllocationPolicyHostOnly && process_sp->CanJIT()))
-                process_sp->DeallocateMemory(allocation.second.m_process_alloc);
-            
-            if (lldb_private::Log *log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS))
-            {
-                log->Printf("IRMemoryMap::~IRMemoryMap deallocated [0x%llx..0x%llx)",
-                            (uint64_t)allocation.second.m_process_start,
-                            (uint64_t)allocation.second.m_process_start + (uint64_t)allocation.second.m_size);
-            }
+            err.Clear();
+            if (iter->second.m_leak)
+                m_allocations.erase(iter);
+            else
+                Free(iter->first, err);
         }
     }
 }
@@ -65,6 +63,14 @@ IRMemoryMap::FindSpace (size_t size)
         if (!alloc_error.Success())
             return LLDB_INVALID_ADDRESS;
         else
+            return ret;
+    }
+    
+    if (process_sp)
+    {
+        ret = process_sp->GetReservationCache().Find(size);
+        
+        if (ret != LLDB_INVALID_ADDRESS)
             return ret;
     }
     
@@ -106,6 +112,11 @@ IRMemoryMap::FindSpace (size_t size)
             continue;
         
         ret = candidate;
+        
+        if (process_sp)
+            process_sp->GetReservationCache().Reserve(candidate, size);
+    
+        return ret;
     }
     
     return ret;
@@ -349,7 +360,7 @@ IRMemoryMap::Malloc (size_t size, uint8_t alignment, uint32_t permissions, Alloc
             break;
         }
         
-        log->Printf("IRMemoryMap::Malloc (%llu, 0x%llx, 0x%llx, %s) -> 0x%llx",
+        log->Printf("IRMemoryMap::Malloc (%" PRIu64 ", 0x%" PRIx64 ", 0x%" PRIx64 ", %s) -> 0x%" PRIx64,
                     (uint64_t)allocation_size,
                     (uint64_t)alignment,
                     (uint64_t)permissions,
@@ -358,6 +369,25 @@ IRMemoryMap::Malloc (size_t size, uint8_t alignment, uint32_t permissions, Alloc
     }
     
     return aligned_address;
+}
+
+void
+IRMemoryMap::Leak (lldb::addr_t process_address, Error &error)
+{
+    error.Clear();
+    
+    AllocationMap::iterator iter = m_allocations.find(process_address);
+    
+    if (iter == m_allocations.end())
+    {
+        error.SetErrorToGenericError();
+        error.SetErrorString("Couldn't leak: allocation doesn't exist");
+        return;
+    }
+    
+    Allocation &allocation = iter->second;
+
+    allocation.m_leak = true;
 }
 
 void
@@ -382,9 +412,14 @@ IRMemoryMap::Free (lldb::addr_t process_address, Error &error)
     case eAllocationPolicyHostOnly:
         {
             lldb::ProcessSP process_sp = m_process_wp.lock();
-            if (process_sp && process_sp->CanJIT())
-                process_sp->DeallocateMemory(allocation.m_process_alloc); // FindSpace allocated this for real
-
+            if (process_sp)
+            {
+                if (process_sp->CanJIT())
+                    process_sp->DeallocateMemory(allocation.m_process_alloc); // FindSpace allocated this for real
+                else
+                    process_sp->GetReservationCache().Unreserve(allocation.m_process_alloc); // FindSpace registered this memory
+            }
+    
             break;
         }
     case eAllocationPolicyMirror:
@@ -398,7 +433,7 @@ IRMemoryMap::Free (lldb::addr_t process_address, Error &error)
     
     if (lldb_private::Log *log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS))
     {        
-        log->Printf("IRMemoryMap::Free (0x%llx) freed [0x%llx..0x%llx)",
+        log->Printf("IRMemoryMap::Free (0x%" PRIx64 ") freed [0x%" PRIx64 "..0x%" PRIx64 ")",
                     (uint64_t)process_address,
                     iter->second.m_process_start,
                     iter->second.m_process_start + iter->second.m_size);
@@ -479,7 +514,7 @@ IRMemoryMap::WriteMemory (lldb::addr_t process_address, const uint8_t *bytes, si
     
     if (lldb_private::Log *log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS))
     {        
-        log->Printf("IRMemoryMap::WriteMemory (0x%llx, 0x%llx, 0x%lld) went to [0x%llx..0x%llx)",
+        log->Printf("IRMemoryMap::WriteMemory (0x%" PRIx64 ", 0x%" PRIx64 ", 0x%" PRId64 ") went to [0x%" PRIx64 "..0x%" PRIx64 ")",
                     (uint64_t)process_address,
                     (uint64_t)bytes,
                     (uint64_t)size,
@@ -612,7 +647,7 @@ IRMemoryMap::ReadMemory (uint8_t *bytes, lldb::addr_t process_address, size_t si
     
     if (lldb_private::Log *log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS))
     {
-        log->Printf("IRMemoryMap::ReadMemory (0x%llx, 0x%llx, 0x%lld) came from [0x%llx..0x%llx)",
+        log->Printf("IRMemoryMap::ReadMemory (0x%" PRIx64 ", 0x%" PRIx64 ", 0x%" PRId64 ") came from [0x%" PRIx64 "..0x%" PRIx64 ")",
                     (uint64_t)process_address,
                     (uint64_t)bytes,
                     (uint64_t)size,
@@ -642,7 +677,7 @@ IRMemoryMap::ReadScalarFromMemory (Scalar &scalar, lldb::addr_t process_address,
         {
         default:
             error.SetErrorToGenericError();
-            error.SetErrorStringWithFormat("Couldn't read scalar: unsupported size %lld", (unsigned long long)size);
+            error.SetErrorStringWithFormat("Couldn't read scalar: unsupported size %" PRIu64, (uint64_t)size);
             return;
         case 1: scalar = extractor.GetU8(&offset);  break;
         case 2: scalar = extractor.GetU16(&offset); break;
@@ -686,7 +721,7 @@ IRMemoryMap::GetMemoryData (DataExtractor &extractor, lldb::addr_t process_addre
         if (iter == m_allocations.end())
         {
             error.SetErrorToGenericError();
-            error.SetErrorStringWithFormat("Couldn't find an allocation containing [0x%llx..0x%llx)", (unsigned long long)process_address, (unsigned long long)(process_address + size));
+            error.SetErrorStringWithFormat("Couldn't find an allocation containing [0x%" PRIx64 "..0x%" PRIx64 ")", process_address, process_address + size);
             return;
         }
         

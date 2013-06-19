@@ -339,8 +339,16 @@ Value::GetValueAsData (ExecutionContext *exe_ctx,
     Address file_so_addr;
     switch (m_value_type)
     {
-    default:
-        error.SetErrorStringWithFormat("invalid value type %i", m_value_type);
+    case eValueTypeVector:
+        if (m_context_type == eContextTypeClangType && ast_context)
+        {
+            ClangASTType ptr_type (ast_context, ClangASTContext::GetVoidPtrType(ast_context, false));
+            uint64_t ptr_byte_size = ptr_type.GetClangTypeByteSize();
+            data.SetAddressByteSize (ptr_byte_size);
+        }
+        else
+            data.SetAddressByteSize(sizeof(void *));
+        data.SetData(m_vector.bytes, m_vector.length, m_vector.byte_order);
         break;
 
     case eValueTypeScalar:

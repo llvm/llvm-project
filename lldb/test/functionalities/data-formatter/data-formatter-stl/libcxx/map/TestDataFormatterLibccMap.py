@@ -58,17 +58,15 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.expect('image list',substrs=['libc++.1.dylib','libc++abi.dylib'])
 
         self.runCmd("frame variable ii --show-types")
-        
-        self.runCmd("type summary add -x \"std::__1::map<\" --summary-string \"map has ${svar%#} items\" -e") 
-        
+                
         self.expect('frame variable ii',
-            substrs = ['map has 0 items',
+            substrs = ['size=0',
                        '{}'])
 
         self.runCmd("continue");
 
         self.expect('frame variable ii',
-                    substrs = ['map has 2 items',
+                    substrs = ['size=2',
                                '[0] = {',
                                'first = 0',
                                'second = 0',
@@ -79,7 +77,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue");
 
         self.expect('frame variable ii',
-                    substrs = ['map has 4 items',
+                    substrs = ['size=4',
                                '[2] = {',
                                'first = 2',
                                'second = 0',
@@ -90,7 +88,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue");
 
         self.expect("frame variable ii",
-                    substrs = ['map has 8 items',
+                    substrs = ['size=8',
                                '[5] = {',
                                'first = 5',
                                'second = 0',
@@ -99,7 +97,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                                'second = 1'])
 
         self.expect("p ii",
-                    substrs = ['map has 8 items',
+                    substrs = ['size=8',
                                '[5] = {',
                                'first = 5',
                                'second = 0',
@@ -129,19 +127,19 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue");
         
         self.expect('frame variable ii',
-                    substrs = ['map has 0 items',
+                    substrs = ['size=0',
                                '{}'])
         
         self.runCmd("frame variable si --show-types")
 
         self.expect('frame variable si',
-                    substrs = ['map has 0 items',
+                    substrs = ['size=0',
                                '{}'])
 
         self.runCmd("continue");
 
         self.expect('frame variable si',
-                    substrs = ['map has 1 items',
+                    substrs = ['size=1',
                                '[0] = ',
                                'first = \"zero\"',
                                'second = 0'])
@@ -149,7 +147,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue");
 
         self.expect("frame variable si",
-                    substrs = ['map has 4 items',
+                    substrs = ['size=4',
                                '[0] = ',
                                'first = \"zero\"',
                                'second = 0',
@@ -164,7 +162,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                                 'second = 3'])
 
         self.expect("p si",
-                    substrs = ['map has 4 items',
+                    substrs = ['size=4',
                                '[0] = ',
                                'first = \"zero\"',
                                'second = 0',
@@ -197,20 +195,20 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue");
         
         self.expect('frame variable si',
-                    substrs = ['map has 0 items',
+                    substrs = ['size=0',
                                '{}'])
 
         self.runCmd("continue");
         self.runCmd("frame variable is --show-types")
         
         self.expect('frame variable is',
-                    substrs = ['map has 0 items',
+                    substrs = ['size=0',
                                '{}'])
 
         self.runCmd("continue");
 
         self.expect("frame variable is",
-                    substrs = ['map has 4 items',
+                    substrs = ['size=4',
                                '[0] = ',
                                'second = \"goofy\"',
                                'first = 85',
@@ -225,7 +223,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                                'first = 3'])
         
         self.expect("p is",
-                    substrs = ['map has 4 items',
+                    substrs = ['size=4',
                                '[0] = ',
                                'second = \"goofy\"',
                                'first = 85',
@@ -258,20 +256,20 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue");
         
         self.expect('frame variable is',
-                    substrs = ['map has 0 items',
+                    substrs = ['size=0',
                                '{}'])
 
         self.runCmd("continue");
         self.runCmd("frame variable ss --show-types")
         
         self.expect('frame variable ss',
-                    substrs = ['map has 0 items',
+                    substrs = ['size=0',
                                '{}'])
 
         self.runCmd("continue");
 
         self.expect("frame variable ss",
-                    substrs = ['map has 3 items',
+                    substrs = ['size=3',
                                '[0] = ',
                                'second = \"hello\"',
                                'first = \"ciao\"',
@@ -283,7 +281,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                                'first = \"gatto\"'])
         
         self.expect("p ss",
-                    substrs = ['map has 3 items',
+                    substrs = ['size=3',
                                '[0] = ',
                                'second = \"hello\"',
                                'first = \"ciao\"',
@@ -312,7 +310,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue");
         
         self.expect('frame variable ss',
-                    substrs = ['map has 0 items',
+                    substrs = ['size=0',
                                '{}'])
 
 if __name__ == '__main__':

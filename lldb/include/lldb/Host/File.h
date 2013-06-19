@@ -282,17 +282,19 @@ public:
     /// @see File::Read (void *, size_t, off_t &)
     /// @see File::Write (const void *, size_t, off_t &)
     ///
-    /// @param[in/out] offset
+    /// @param[in] offset
     ///     The offset to seek to within the file relative to the 
-    ///     beginning of the file which gets filled in the the resulting
-    ///     absolute file offset.
+    ///     beginning of the file.
+    ///
+    /// @param[in] error_ptr
+    ///     A pointer to a lldb_private::Error object that will be
+    ///     filled in if non-NULL.
     ///
     /// @return
-    ///     An error object that indicates success or the reason for 
-    ///     failure.
+    ///     The resulting seek offset, or -1 on error.
     //------------------------------------------------------------------
-    Error
-    SeekFromStart (off_t& offset);
+    off_t
+    SeekFromStart (off_t offset, Error *error_ptr = NULL);
     
     //------------------------------------------------------------------
     /// Seek to an offset relative to the current file position.
@@ -303,17 +305,19 @@ public:
     /// @see File::Read (void *, size_t, off_t &)
     /// @see File::Write (const void *, size_t, off_t &)
     ///
-    /// @param[in/out] offset
+    /// @param[in] offset
     ///     The offset to seek to within the file relative to the 
-    ///     current file position. On return this parameter gets filled 
-    ///     in the the resulting absolute file offset.
+    ///     current file position.
+    ///
+    /// @param[in] error_ptr
+    ///     A pointer to a lldb_private::Error object that will be
+    ///     filled in if non-NULL.
     ///
     /// @return
-    ///     An error object that indicates success or the reason for 
-    ///     failure.
+    ///     The resulting seek offset, or -1 on error.
     //------------------------------------------------------------------
-    Error
-    SeekFromCurrent (off_t& offset);
+    off_t
+    SeekFromCurrent (off_t offset, Error *error_ptr = NULL);
     
     //------------------------------------------------------------------
     /// Seek to an offset relative to the end of the file.
@@ -329,12 +333,15 @@ public:
     ///     end of the file which gets filled in the the resulting
     ///     absolute file offset.
     ///
+    /// @param[in] error_ptr
+    ///     A pointer to a lldb_private::Error object that will be
+    ///     filled in if non-NULL.
+    ///
     /// @return
-    ///     An error object that indicates success or the reason for 
-    ///     failure.
+    ///     The resulting seek offset, or -1 on error.
     //------------------------------------------------------------------
-    Error
-    SeekFromEnd (off_t& offset);
+    off_t
+    SeekFromEnd (off_t offset, Error *error_ptr = NULL);
 
     //------------------------------------------------------------------
     /// Read bytes from a file from the specified file offset.

@@ -519,6 +519,7 @@
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
 		94031A9E13CF486700DCFF3C /* InputReaderEZ.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94031A9D13CF486600DCFF3C /* InputReaderEZ.cpp */; };
 		94094C6B163B6F840083A547 /* ValueObjectCast.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94094C69163B6CD90083A547 /* ValueObjectCast.cpp */; };
+		94145431175E63B500284436 /* lldb-versioning.h in Headers */ = {isa = PBXBuildFile; fileRef = 94145430175D7FDE00284436 /* lldb-versioning.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		941BCC7F14E48C4000BB969C /* SBTypeFilter.h in Headers */ = {isa = PBXBuildFile; fileRef = 9461568614E355F2003A195C /* SBTypeFilter.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		941BCC8014E48C4000BB969C /* SBTypeFormat.h in Headers */ = {isa = PBXBuildFile; fileRef = 9461568714E355F2003A195C /* SBTypeFormat.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		941BCC8114E48C4000BB969C /* SBTypeSummary.h in Headers */ = {isa = PBXBuildFile; fileRef = 9461568814E355F2003A195C /* SBTypeSummary.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1560,6 +1561,7 @@
 		940DB8E116EA674000D3C2F1 /* Xcode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Xcode.cpp; sourceTree = "<group>"; };
 		940DB8E216EA674000D3C2F1 /* Xcode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Xcode.h; sourceTree = "<group>"; };
 		940DB8E616EA709400D3C2F1 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		94145430175D7FDE00284436 /* lldb-versioning.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "lldb-versioning.h"; path = "include/lldb/lldb-versioning.h"; sourceTree = "<group>"; };
 		944372DA171F6B4300E57C32 /* RegisterContextDummy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextDummy.cpp; path = Utility/RegisterContextDummy.cpp; sourceTree = "<group>"; };
 		944372DB171F6B4300E57C32 /* RegisterContextDummy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextDummy.h; path = Utility/RegisterContextDummy.h; sourceTree = "<group>"; };
 		9443B120140C18A90013457C /* SBData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBData.h; path = include/lldb/API/SBData.h; sourceTree = "<group>"; };
@@ -2160,6 +2162,7 @@
 				26DE1E6A11616C2E00A093E2 /* lldb-forward.h */,
 				26651A14133BEC76005B64B7 /* lldb-public.h */,
 				26BC7C2910F1B3BC00F91463 /* lldb-types.h */,
+				94145430175D7FDE00284436 /* lldb-versioning.h */,
 				26B42C4C1187ABA50079C8C8 /* LLDB.h */,
 				9A9830FC1125FC5800A56CB0 /* SBDefines.h */,
 				26DE204211618ACA00A093E2 /* SBAddress.h */,
@@ -3505,6 +3508,7 @@
 				2668020F115FD12C008E1FE4 /* lldb-enumerations.h in Headers */,
 				26DE1E6C11616C2E00A093E2 /* lldb-forward.h in Headers */,
 				26680214115FD12C008E1FE4 /* lldb-types.h in Headers */,
+				94145431175E63B500284436 /* lldb-versioning.h in Headers */,
 				26B42C4D1187ABA50079C8C8 /* LLDB.h in Headers */,
 				26DE204311618ACA00A093E2 /* SBAddress.h in Headers */,
 				26DE205711618FC500A093E2 /* SBBlock.h in Headers */,

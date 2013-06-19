@@ -34,9 +34,10 @@
 				<h1 class ="postheader">Linux Status</h1>
 				<div class="postcontent">
 					<p> LLDB is improving on Linux. While the debugserver is not ported
-					(to enable remote debugging) and there are some stability issues, most
-					of the basic functionality, including the Python API and the commandline tool,
-					are working on i386/x86_64 architectures. ARM architectures on Linux are untested.
+					(to enable remote debugging) and debugging of multi-threaded programs is in its infancy, most
+					of the functionality, including the Python API and the command line tool,
+					is working on the x86_64 architecture, and partially working with i386.
+					FreeBSD is untested. ARM architectures on Linux are untested.
 					For more details, see the Features by OS section below.
 				</div>
 				<h1 class ="postheader">Features by OS</h1>
@@ -47,12 +48,12 @@
 							<table border="1">
 								<tr>
 									<th>Feature</th>
-									<th>Linux<br>(i386 and x86_64)</th>
+									<th>Linux<br>(x86_64)</th>
 									<th>Mac OS X (i386/x86_64 and ARM/Thumb)</th>
 								</tr>
 								<tr>
 									<td>Backtracing</td>
-									<td>OK</td>
+									<td>OK (except with targets built with -fomit-frame-pointer)</td>
 									<td>OK</td>
 								</tr>
 								<tr>
@@ -119,14 +120,28 @@
 											<li>launch
 											<li>attach
 											<li>continue
+											<li>fork
 										</ul>
 									</td>
-									<td>OK except attach-by-name </td>
+									<td>OK</td>
 									<td>OK</td>
 								</tr>
 								<tr>
 									<td>Public Python API</td>
 									<td>OK</td>
+									<td>OK</td>
+								</tr>
+								<tr>
+									<td>Registers (x86_64 and i386)
+										<ul>
+											<li>general purpose
+											<li>floating point
+											<li>exception state
+											<li>SSE
+											<li>AVX
+										</ul>
+									</td>
+									<td>OK (except for exception state registers)</td>
 									<td>OK</td>
 								</tr>
 								<tr>

@@ -167,6 +167,12 @@ initialized:\n\
 (lldb)\n\
 \n\
 \n\
+Your Python code, however organized, can optionally return a value.\n\
+If the returned value is False, that tells LLDB not to stop at the breakpoint\n\
+to which the code is associated. Returning anything other than False, or even\n\
+returning None, or even omitting a return statement entirely, will cause\n\
+LLDB to stop.\n\
+\n\
 Final Note:  If you get a warning that no breakpoint command was generated, but\n\
 you did not get any syntax errors, you probably forgot to add a call to your\n\
 functions.\n\

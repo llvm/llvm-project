@@ -13,3 +13,8 @@ set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp PROPE
 ADD_CUSTOM_TARGET(swig_wrapper ALL echo -n
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
     )
+
+# Install the LLDB python module on all operating systems (except Windows)
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+  install(SCRIPT lldb_python_module.cmake -DCMAKE_INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\" -DCMAKE_BUILD_DIR=\"${CMAKE_BUILD_DIR}\")
+endif()

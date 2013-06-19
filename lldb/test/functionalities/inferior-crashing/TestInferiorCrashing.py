@@ -86,6 +86,19 @@ class CrashingInferiorTestCase(TestBase):
     def set_breakpoint(self, line):
         lldbutil.run_break_set_by_file_and_line (self, "main.c", line, num_expected_locations=1, loc_exact=True)
 
+    def check_stop_reason(self):
+        if sys.platform.startswith("darwin"):
+            stop_reason = 'stop reason = EXC_BAD_ACCESS'
+        else:
+            stop_reason = 'stop reason = invalid address'
+
+        # The stop reason of the thread should be a bad access exception.
+        self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
+            substrs = ['stopped',
+                       stop_reason])
+
+        return stop_reason
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -98,16 +111,7 @@ class CrashingInferiorTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        if sys.platform.startswith("darwin"):
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        else:
-            stop_reason = 'stop reason = invalid address'
-
-        # The stop reason of the thread should be a bad access exception.
-        self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
-            substrs = ['stopped',
-                       stop_reason])
+        stop_reason = self.check_stop_reason()
 
         # And it should report the correct line number.
         self.expect("thread backtrace all",
@@ -125,7 +129,6 @@ class CrashingInferiorTestCase(TestBase):
         # Both argv and envp are null.
         process = target.LaunchSimple(None, None, os.getcwd())
 
-        import lldbutil
         if process.GetState() != lldb.eStateStopped:
             self.fail("Process should be in the 'stopped' state, "
                       "instead the actual state is: '%s'" %
@@ -144,11 +147,7 @@ class CrashingInferiorTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        if sys.platform.startswith("darwin"):
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        else:
-            stop_reason = 'stop reason = invalid address'
+        self.check_stop_reason()
 
         # lldb should be able to read from registers from the inferior after crashing.
         self.expect("register read eax",
@@ -160,15 +159,7 @@ class CrashingInferiorTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        if sys.platform.startswith("darwin"):
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        else:
-            stop_reason = 'stop reason = invalid address'
-
-        # The stop reason of the thread should be a bad access exception.
-        self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
-            substrs = ['stopped', stop_reason])
+        self.check_stop_reason()
 
         # The lldb expression interpreter should be able to read from addresses of the inferior after a crash.
         self.expect("p argc",
@@ -190,15 +181,7 @@ class CrashingInferiorTestCase(TestBase):
                        'stop reason = breakpoint'])
 
         self.runCmd("next")
-
-        if sys.platform.startswith("darwin"):
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        else:
-            stop_reason = 'stop reason = invalid address'
-
-        # The stop reason of the thread should be a bad access exception.
-        self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
-            substrs = ['stopped', stop_reason])
+        stop_reason = self.check_stop_reason()
 
         # The lldb expression interpreter should be able to read from addresses of the inferior after a crash.
         self.expect("p argv[0]",
@@ -221,17 +204,10 @@ class CrashingInferiorTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        if sys.platform.startswith("darwin"):
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        else:
-            stop_reason = 'stop reason = invalid address'
+        self.check_stop_reason()
 
         self.runCmd("next")
-
-        # The stop reason of the thread should still be a bad access exception.
-        self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
-            substrs = ['stopped', stop_reason])
+        self.check_stop_reason()
 
     def inferior_crashing_expr_step_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""
@@ -239,22 +215,14 @@ class CrashingInferiorTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        if sys.platform.startswith("darwin"):
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        else:
-            stop_reason = 'stop reason = invalid address'
+        self.check_stop_reason()
 
         # The lldb expression interpreter should be able to read from addresses of the inferior after a crash.
         self.expect("p argv[0]",
             substrs = ['a.out'])
 
         self.runCmd("next")
-
-        if sys.platform.startswith("darwin"):
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        else:
-            stop_reason = 'stop reason = invalid address'
+        self.check_stop_reason()
 
         # The lldb expression interpreter should be able to read from addresses of the inferior after a crash.
         self.expect("p argv[0]",

@@ -179,7 +179,7 @@ public:
     }
     
     static bool
-    AddSummary(const ConstString& type_name,
+    AddSummary(ConstString type_name,
                lldb::TypeSummaryImplSP entry,
                SummaryFormatType type,
                std::string category,
@@ -324,7 +324,7 @@ public:
     }
     
     static bool
-    AddSynth(const ConstString& type_name,
+    AddSynth(ConstString type_name,
              lldb::SyntheticChildrenSP entry,
              SynthFormatType type,
              std::string category_name,
@@ -744,7 +744,9 @@ CommandObjectTypeFormatList_LoopCallback (
 //-------------------------------------------------------------------------
 
 static const char *g_summary_addreader_instructions = "Enter your Python command(s). Type 'DONE' to end.\n"
-                                                       "def function (valobj,internal_dict):";
+                                                       "def function (valobj,internal_dict):\n"
+                                                       "     \"\"\"valobj: an SBValue which you want to provide a summary for\n"
+                                                       "        internal_dict: an LLDB support object not to be used\"\"\"";
 
 class TypeScriptAddInputReader : public InputReaderEZ
 {
@@ -1338,7 +1340,7 @@ CommandObjectTypeSummaryAdd::DoExecute (Args& command, CommandReturnObject &resu
 }
 
 bool
-CommandObjectTypeSummaryAdd::AddSummary(const ConstString& type_name,
+CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
                                         TypeSummaryImplSP entry,
                                         SummaryFormatType type,
                                         std::string category_name,
@@ -1346,6 +1348,21 @@ CommandObjectTypeSummaryAdd::AddSummary(const ConstString& type_name,
 {
     lldb::TypeCategoryImplSP category;
     DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()), category);
+    
+    if (type == eRegularSummary)
+    {
+        std::string type_name_str(type_name.GetCString());
+        if (type_name_str.compare(type_name_str.length() - 2, 2, "[]") == 0)
+        {
+            type_name_str.resize(type_name_str.length()-2);
+            if (type_name_str.back() != ' ')
+                type_name_str.append(" \\[[0-9]+\\]");
+            else
+                type_name_str.append("\\[[0-9]+\\]");
+            type_name.SetCString(type_name_str.c_str());
+            type = eRegexSummary;
+        }
+    }
     
     if (type == eRegexSummary)
     {
@@ -3573,14 +3590,29 @@ CommandObjectTypeSynthAdd::CommandObjectTypeSynthAdd (CommandInterpreter &interp
 }
 
 bool
-CommandObjectTypeSynthAdd::AddSynth(const ConstString& type_name,
-         SyntheticChildrenSP entry,
-         SynthFormatType type,
-         std::string category_name,
-         Error* error)
+CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
+                                    SyntheticChildrenSP entry,
+                                    SynthFormatType type,
+                                    std::string category_name,
+                                    Error* error)
 {
     lldb::TypeCategoryImplSP category;
     DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()), category);
+    
+    if (type == eRegularSynth)
+    {
+        std::string type_name_str(type_name.GetCString());
+        if (type_name_str.compare(type_name_str.length() - 2, 2, "[]") == 0)
+        {
+            type_name_str.resize(type_name_str.length()-2);
+            if (type_name_str.back() != ' ')
+                type_name_str.append(" \\[[0-9]+\\]");
+            else
+                type_name_str.append("\\[[0-9]+\\]");
+            type_name.SetCString(type_name_str.c_str());
+            type = eRegularSynth;
+        }
+    }
     
     if (category->AnyMatches(type_name,
                              eFormatCategoryItemFilter | eFormatCategoryItemRegexFilter,
@@ -3752,7 +3784,7 @@ private:
     };
     
     bool
-    AddFilter(const ConstString& type_name,
+    AddFilter(ConstString type_name,
               SyntheticChildrenSP entry,
               FilterFormatType type,
               std::string category_name,
@@ -3760,6 +3792,21 @@ private:
     {
         lldb::TypeCategoryImplSP category;
         DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()), category);
+        
+        if (type == eRegularFilter)
+        {
+            std::string type_name_str(type_name.GetCString());
+            if (type_name_str.compare(type_name_str.length() - 2, 2, "[]") == 0)
+            {
+                type_name_str.resize(type_name_str.length()-2);
+                if (type_name_str.back() != ' ')
+                    type_name_str.append(" \\[[0-9]+\\]");
+                else
+                    type_name_str.append("\\[[0-9]+\\]");
+                type_name.SetCString(type_name_str.c_str());
+                type = eRegexFilter;
+            }
+        }
         
         if (category->AnyMatches(type_name,
                                  eFormatCategoryItemSynth | eFormatCategoryItemRegexSynth,

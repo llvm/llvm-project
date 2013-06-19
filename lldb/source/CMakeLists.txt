@@ -7,6 +7,13 @@ include_directories(
   )
 endif ()
 
+if ( CMAKE_SYSTEM_NAME MATCHES "FreeBSD" )
+include_directories(
+  Plugins/Process/FreeBSD
+  Plugins/Process/POSIX
+  )
+endif ()
+
 add_subdirectory(API)
 add_subdirectory(Breakpoint)
 add_subdirectory(Commands)
@@ -85,12 +92,27 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Linux" )
     )
 endif ()
 
+# FreeBSD-only libraries
+if ( CMAKE_SYSTEM_NAME MATCHES "FreeBSD" )
+  list(APPEND LLDB_USED_LIBS
+    lldbHostFreeBSD
+    lldbPluginProcessFreeBSD
+    lldbPluginProcessPOSIX
+    )
+endif ()
+
 # Darwin-only libraries
 if ( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
+  set(LLDB_VERS_GENERATED_FILE ${LLDB_BINARY_DIR}/source/LLDB_vers.c)
+  add_custom_command(OUTPUT ${LLDB_VERS_GENERATED_FILE}
+    COMMAND ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
+            ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj
+            > ${LLDB_VERS_GENERATED_FILE})
+
+  set_source_files_properties(${LLDB_VERS_GENERATED_FILE} PROPERTIES GENERATED 1)
   list(APPEND LLDB_USED_LIBS
     lldbHostMacOSX
     lldbPluginDynamicLoaderDarwinKernel
-    lldbPluginOSDarwinKernel
     lldbPluginProcessMacOSXKernel
     lldbPluginSymbolVendorMacOSX
     )
@@ -143,9 +165,17 @@ add_lldb_library(liblldb
   lldb.cpp
   lldb-log.cpp
   ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp
+  ${LLDB_VERS_GENERATED_FILE}
   )
-set_target_properties(liblldb PROPERTIES OUTPUT_NAME lldb)
-add_dependencies(liblldb ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp)
+set_target_properties(liblldb
+  PROPERTIES
+  OUTPUT_NAME lldb
+  VERSION ${LLDB_VERSION}
+  )
+add_dependencies(liblldb
+  ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp
+  ${LLDB_VERS_GENERATED_FILE}
+  )
 target_link_libraries(liblldb ${LLDB_SYSTEM_LIBS})
 
 # Determine LLDB revision and repository. GetSourceVersion and GetRepositoryPath are shell-scripts, and as

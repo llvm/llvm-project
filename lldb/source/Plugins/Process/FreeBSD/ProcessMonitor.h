@@ -188,7 +188,7 @@ public:
     BringProcessIntoLimbo();
 
     lldb_private::Error
-    Detach();
+    Detach(lldb::tid_t tid);
 
 
 private:

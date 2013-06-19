@@ -1071,7 +1071,7 @@ def lldbLoggings():
             raise Exception('log enable failed (check GDB_REMOTE_LOG env variable.')
 
 def getMyCommandLine():
-    ps = subprocess.Popen(['ps', '-o', "command=CMD", str(os.getpid())], stdout=subprocess.PIPE).communicate()[0]
+    ps = subprocess.Popen([which('ps'), '-o', "command=CMD", str(os.getpid())], stdout=subprocess.PIPE).communicate()[0]
     lines = ps.split('\n')
     cmd_line = lines[1]
     return cmd_line

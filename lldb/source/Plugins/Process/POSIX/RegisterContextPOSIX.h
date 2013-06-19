@@ -25,7 +25,8 @@ class RegisterContextPOSIX
 public:
     RegisterContextPOSIX(lldb_private::Thread &thread,
                          uint32_t concrete_frame_idx)
-        : RegisterContext(thread, concrete_frame_idx) { }
+        : RegisterContext(thread, concrete_frame_idx)
+        { m_watchpoints_initialized = false; }
 
     /// Updates the register state of the associated thread after hitting a
     /// breakpoint (if that make sense for the architecture).  Default
@@ -52,7 +53,18 @@ public:
     // Returns the watchpoint address associated with a watchpoint hardware
     // index.
     virtual lldb::addr_t
-    GetWatchpointAddress (uint32_t hw_index) {return LLDB_INVALID_ADDRESS; }
+    GetWatchpointAddress (uint32_t hw_index) { return LLDB_INVALID_ADDRESS; }
+
+    virtual bool
+    IsWatchpointVacant (uint32_t hw_index) { return false; }
+
+    virtual bool
+    SetHardwareWatchpointWithIndex (lldb::addr_t addr, size_t size,
+                                    bool read, bool write,
+                                    uint32_t hw_index) { return false; }
+
+protected:
+    bool m_watchpoints_initialized;
 };
 
 #endif // #ifndef liblldb_RegisterContextPOSIX_H_

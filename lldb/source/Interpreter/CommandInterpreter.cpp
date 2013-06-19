@@ -2804,27 +2804,52 @@ CommandInterpreter::OutputHelpText (Stream &strm,
 
 void
 CommandInterpreter::FindCommandsForApropos (const char *search_word, StringList &commands_found,
-                                            StringList &commands_help)
+                                            StringList &commands_help, bool search_builtin_commands, bool search_user_commands)
 {
     CommandObject::CommandMap::const_iterator pos;
 
-    for (pos = m_command_dict.begin(); pos != m_command_dict.end(); ++pos)
+    if (search_builtin_commands)
     {
-        const char *command_name = pos->first.c_str();
-        CommandObject *cmd_obj = pos->second.get();
-
-        if (cmd_obj->HelpTextContainsWord (search_word))
+        for (pos = m_command_dict.begin(); pos != m_command_dict.end(); ++pos)
         {
-            commands_found.AppendString (command_name);
-            commands_help.AppendString (cmd_obj->GetHelp());
-        }
+            const char *command_name = pos->first.c_str();
+            CommandObject *cmd_obj = pos->second.get();
 
-        if (cmd_obj->IsMultiwordObject())
-            cmd_obj->AproposAllSubCommands (command_name,
-                                            search_word,
-                                            commands_found,
-                                            commands_help);
-      
+            if (cmd_obj->HelpTextContainsWord (search_word))
+            {
+                commands_found.AppendString (command_name);
+                commands_help.AppendString (cmd_obj->GetHelp());
+            }
+
+            if (cmd_obj->IsMultiwordObject())
+                cmd_obj->AproposAllSubCommands (command_name,
+                                                search_word,
+                                                commands_found,
+                                                commands_help);
+          
+        }
+    }
+    
+    if (search_user_commands)
+    {
+        for (pos = m_user_dict.begin(); pos != m_user_dict.end(); ++pos)
+        {
+            const char *command_name = pos->first.c_str();
+            CommandObject *cmd_obj = pos->second.get();
+
+            if (cmd_obj->HelpTextContainsWord (search_word))
+            {
+                commands_found.AppendString (command_name);
+                commands_help.AppendString (cmd_obj->GetHelp());
+            }
+
+            if (cmd_obj->IsMultiwordObject())
+                cmd_obj->AproposAllSubCommands (command_name,
+                                                search_word,
+                                                commands_found,
+                                                commands_help);
+          
+        }
     }
 }
 

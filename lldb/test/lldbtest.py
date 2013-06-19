@@ -34,6 +34,7 @@ $
 import os, sys, traceback
 import os.path
 import re
+import signal
 from subprocess import *
 import StringIO
 import time
@@ -100,6 +101,8 @@ SOURCE_DISPLAYED_CORRECTLY = "Source code displayed correctly"
 STEP_OUT_SUCCEEDED = "Thread step-out succeeded"
 
 STOPPED_DUE_TO_EXC_BAD_ACCESS = "Process should be stopped due to bad access exception"
+
+STOPPED_DUE_TO_ASSERT = "Process should be stopped due to an assertion"
 
 STOPPED_DUE_TO_BREAKPOINT = "Process should be stopped due to breakpoint"
 
@@ -368,7 +371,7 @@ def dwarf_test(func):
     wrapper.__dwarf_test__ = True
     return wrapper
 
-def expectedFailureGcc(bugnumber=None):
+def expectedFailureGcc(bugnumber=None, compiler_version=["=", None]):
      if callable(bugnumber):
         @wraps(bugnumber)
         def expectedFailureGcc_easy_wrapper(*args, **kwargs):
@@ -378,7 +381,7 @@ def expectedFailureGcc(bugnumber=None):
             try:
                 bugnumber(*args, **kwargs)
             except Exception:
-                if "gcc" in test_compiler:
+                if "gcc" in test_compiler and self.expectedCompilerVersion(compiler_version):
                     raise case._ExpectedFailure(sys.exc_info(),None)
                 else:
                     raise
@@ -395,7 +398,7 @@ def expectedFailureGcc(bugnumber=None):
                 try:
                     func(*args, **kwargs)
                 except Exception:
-                    if "gcc" in test_compiler:
+                    if "gcc" in test_compiler and self.expectedCompilerVersion(compiler_version):
                         raise case._ExpectedFailure(sys.exc_info(),bugnumber)
                     else:
                         raise
@@ -513,7 +516,7 @@ def expectedFailurei386(bugnumber=None):
               return wrapper
         return expectedFailurei386_impl
 
-def expectedFailureLinux(bugnumber=None):
+def expectedFailureLinux(bugnumber=None, compilers=None):
      if callable(bugnumber):
         @wraps(bugnumber)
         def expectedFailureLinux_easy_wrapper(*args, **kwargs):
@@ -523,11 +526,11 @@ def expectedFailureLinux(bugnumber=None):
             try:
                 bugnumber(*args, **kwargs)
             except Exception:
-                if "linux" in platform:
+                if "linux" in platform and self.expectedCompiler(compilers):
                     raise case._ExpectedFailure(sys.exc_info(),None)
                 else:
                     raise
-            if "linux" in platform:
+            if "linux" in platform and self.expectedCompiler(compilers):
                 raise case._UnexpectedSuccess(sys.exc_info(),None)
         return expectedFailureLinux_easy_wrapper
      else:
@@ -540,11 +543,11 @@ def expectedFailureLinux(bugnumber=None):
                 try:
                     func(*args, **kwargs)
                 except Exception:
-                    if "linux" in platform:
+                    if "linux" in platform and self.expectedCompiler(compilers):
                         raise case._ExpectedFailure(sys.exc_info(),bugnumber)
                     else:
                         raise
-                if "linux" in platform:
+                if "linux" in platform and self.expectedCompiler(compilers):
                     raise case._UnexpectedSuccess(sys.exc_info(),bugnumber)
               return wrapper
         return expectedFailureLinux_impl
@@ -818,6 +821,9 @@ class Base(unittest2.TestCase):
         # List of spawned subproces.Popen objects
         self.subprocesses = []
 
+        # List of forked process PIDs
+        self.forkedProcessPids = []
+
         # Create a string buffer to record the session info, to be dumped into a
         # test case specific file if test failure is encountered.
         self.session = StringIO.StringIO()
@@ -884,6 +890,10 @@ class Base(unittest2.TestCase):
                 p.terminate()
             del p
         del self.subprocesses[:]
+        # Ensure any forked processes are cleaned up
+        for pid in self.forkedProcessPids:
+            if os.path.exists("/proc/" + str(pid)):
+                os.kill(pid, signal.SIGTERM)
 
     def spawnSubprocess(self, executable, args=[]):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
@@ -901,6 +911,29 @@ class Base(unittest2.TestCase):
                      stdin = PIPE)
         self.subprocesses.append(proc)
         return proc
+
+    def forkSubprocess(self, executable, args=[]):
+        """ Fork a subprocess with its own group ID.
+            NOTE: if using this function, ensure you also call:
+
+              self.addTearDownHook(self.cleanupSubprocesses)
+
+            otherwise the test suite will leak processes.
+        """
+        child_pid = os.fork()
+        if child_pid == 0:
+            # If more I/O support is required, this can be beefed up.
+            fd = os.open(os.devnull, os.O_RDWR)
+            os.dup2(fd, 0)
+            os.dup2(fd, 1)
+            os.dup2(fd, 2)
+            # This call causes the child to have its of group ID
+            os.setpgid(0,0)
+            os.execvp(executable, [executable] + args)
+        # Give the child time to get through the execvp() call
+        time.sleep(0.1)
+        self.forkedProcessPids.append(child_pid)
+        return child_pid
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1149,6 +1182,42 @@ class Base(unittest2.TestCase):
                 version = m.group(1)
         return version
 
+    def expectedCompilerVersion(self, compiler_version):
+        """Returns True iff compiler_version[1] matches the current compiler version.
+           Use compiler_version[0] to specify the operator used to determine if a match has occurred.
+           Any operator other than the following defaults to an equality test:
+             '>', '>=', "=>", '<', '<=', '=<', '!=', "!" or 'not'
+        """
+        if (compiler_version == None):
+            return True
+        operator = str(compiler_version[0])
+        version = compiler_version[1]
+
+        if (version == None):
+            return True
+        if (operator == '>'):
+            return self.getCompilerVersion() > version
+        if (operator == '>=' or operator == '=>'): 
+            return self.getCompilerVersion() >= version
+        if (operator == '<'):
+            return self.getCompilerVersion() < version
+        if (operator == '<=' or operator == '=<'):
+            return self.getCompilerVersion() <= version
+        if (operator == '!=' or operator == '!' or operator == 'not'):
+            return str(version) not in str(self.getCompilerVersion())
+        return str(version) in str(self.getCompilerVersion())
+
+    def expectedCompiler(self, compilers):
+        """Returns True iff any element of compilers is a sub-string of the current compiler."""
+        if (compilers == None):
+            return True
+
+        for compiler in compilers:
+            if compiler in self.getCompiler():
+                return True
+
+        return False
+
     def getRunOptions(self):
         """Command line option for -A and -C to run this test again, called from
         self.dumpSessionInfo()."""
@@ -1222,6 +1291,29 @@ class Base(unittest2.TestCase):
         module = builder_module()
         if not module.buildDwarf(self, architecture, compiler, dictionary, clean):
             raise Exception("Don't know how to build binary with dwarf")
+
+    def getBuildFlags(self, use_cpp11=True, use_pthreads=True):
+        """ Returns a dictionary (which can be provided to build* functions above) which
+            contains OS-specific build flags.
+        """
+        cflags = ""
+        if use_cpp11:
+            cflags += "-std="
+            if "gcc" in self.getCompiler() and "4.6" in self.getCompilerVersion():
+                cflags += "c++0x"
+            else:
+                cflags += "c++11"
+        if sys.platform.startswith("darwin"):
+            cflags += " -stdlib=libc++"
+        elif "clang" in self.getCompiler():
+            cflags += " -stdlib=libstdc++"
+
+        if use_pthreads:
+            ldflags = "-lpthread"
+
+        return {'CFLAGS_EXTRAS' : cflags,
+                'LD_EXTRAS' : ldflags,
+               }
 
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""

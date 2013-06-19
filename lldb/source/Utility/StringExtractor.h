@@ -73,6 +73,12 @@ public:
         return m_packet;
     }
 
+    const std::string &
+    GetStringRef () const
+    {
+        return m_packet;
+    }
+
     bool
     Empty()
     {

@@ -63,6 +63,11 @@ public:
 
     ~ProcessMonitor();
 
+    enum ResumeSignals 
+    {
+        eResumeSignalNone = 0
+    };
+
     /// Provides the process number of debugee.
     lldb::pid_t
     GetPID() const { return m_pid; }
@@ -170,8 +175,11 @@ public:
     BringProcessIntoLimbo();
 
     lldb_private::Error
-    Detach();
+    Detach(lldb::tid_t tid);
 
+    /// Stops the requested thread and waits for the stop signal.
+    bool
+    StopThread(lldb::tid_t tid);
 
 private:
     ProcessLinux *m_process;
@@ -253,6 +261,9 @@ private:
 
     static bool
     Attach(AttachArgs *args);
+
+    static bool
+    SetDefaultPtraceOpts(const lldb::pid_t);
 
     static void
     ServeOperation(OperationArgs *args);

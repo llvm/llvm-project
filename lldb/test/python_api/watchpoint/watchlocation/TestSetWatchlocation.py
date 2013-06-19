@@ -30,7 +30,7 @@ class SetWatchlocationAPITestCase(TestBase):
         self.buildDsym()
         self.do_set_watchlocation()
 
-    @expectedFailureLinux # llvm.org/pr14416
+    @skipIfLinux # Sometimes passes, sometimes not.
     @python_api_test
     @dwarf_test
     def test_watch_location_with_dwarf(self):

@@ -104,7 +104,6 @@ nub_size_t      DNBProcessGetArgumentCount      (nub_process_t pid) DNB_EXPORT;
 //----------------------------------------------------------------------
 nub_event_t     DNBProcessWaitForEvents         (nub_process_t pid, nub_event_t event_mask, bool wait_for_set, struct timespec* timeout) DNB_EXPORT;
 void            DNBProcessResetEvents           (nub_process_t pid, nub_event_t event_mask) DNB_EXPORT;
-void            DNBProcessInterruptEvents       (nub_process_t pid) DNB_EXPORT;
 
 //----------------------------------------------------------------------
 // Thread functions

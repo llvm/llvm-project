@@ -32,6 +32,7 @@
 #include "ThreadMachCore.h"
 #include "StopInfoMachException.h"
 
+// Needed for the plug-in names for the dynamic loaders.
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
 #include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
 
@@ -212,6 +213,13 @@ ProcessMachCore::DoLoadCore ()
         error.SetErrorString ("invalid core object file");   
         return error;
     }
+    
+    if (core_objfile->GetNumThreadContexts() == 0)
+    {
+        error.SetErrorString ("core file doesn't contain any LC_THREAD load commands, or the LC_THREAD architecture is not supported in this lldb");
+        return error;
+    }
+
     SectionList *section_list = core_objfile->GetSectionList();
     if (section_list == NULL)
     {
@@ -296,10 +304,26 @@ ProcessMachCore::DoLoadCore ()
 
     if (m_dyld_addr == LLDB_INVALID_ADDRESS)
     {
-        addr_t kernel_load_address = DynamicLoaderDarwinKernel::SearchForDarwinKernel (this);
-        if (kernel_load_address != LLDB_INVALID_ADDRESS)
+        // We need to locate the main executable in the memory ranges
+        // we have in the core file. We already checked the first address
+        // in each memory zone above, so we just need to check each page
+        // except the first page in each range and stop once we have found
+        // our main executable
+        const size_t num_core_aranges = m_core_aranges.GetSize();
+        for (size_t i=0; i<num_core_aranges && m_dyld_addr == LLDB_INVALID_ADDRESS; ++i)
         {
-            GetDynamicLoaderAddress (kernel_load_address);
+            const VMRangeToFileOffset::Entry *entry = m_core_aranges.GetEntryAtIndex(i);
+            lldb::addr_t section_vm_addr_start = entry->GetRangeBase();
+            lldb::addr_t section_vm_addr_end = entry->GetRangeEnd();
+            for (lldb::addr_t section_vm_addr = section_vm_addr_start + 0x1000;
+                 section_vm_addr < section_vm_addr_end;
+                 section_vm_addr += 0x1000)
+            {
+                if (GetDynamicLoaderAddress (section_vm_addr))
+                {
+                    break;
+                }
+            }
         }
     }
     return error;

@@ -17,7 +17,7 @@ include $(LLDB_LEVEL)/Makefile
 # (cxa_demangle.cpp) uses dynamic_cast<> and GCC (at least 4.6 and 4.7)
 # complain if we try to compile it with -fno-rtti.
 $(info shell basename CXX is $(shell basename $(CXX)))
-ifeq (g++,$(shell basename $(CXX)))
+ifeq (g++,$(shell basename $(CXX) | colrm 4))
 $(ObjDir)/cxa_demangle.o: Compile.CXX := $(filter-out -fno-rtti,$(Compile.CXX)) -frtti
 endif
 

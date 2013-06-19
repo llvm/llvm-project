@@ -14,7 +14,7 @@ class AbbreviationsTestCase(TestBase):
 
     def test_nonrunning_command_abbreviations (self):
         self.expect("ap script",
-                    startstr = "The following commands may relate to 'script':",
+                    startstr = "The following built-in commands may relate to 'script':",
                     substrs = ['breakpoint command add',
                                'breakpoint command list',
                                'breakpoint list',

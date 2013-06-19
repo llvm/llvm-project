@@ -1057,6 +1057,22 @@ SBDebugger::GetUseExternalEditor ()
 }
 
 bool
+SBDebugger::SetUseColor (bool value)
+{
+    if (m_opaque_sp)
+        return m_opaque_sp->SetUseColor (value);
+    return false;
+}
+
+bool
+SBDebugger::GetUseColor () const
+{
+    if (m_opaque_sp)
+        return m_opaque_sp->GetUseColor ();
+    return false;
+}
+
+bool
 SBDebugger::GetDescription (SBStream &description)
 {
     Stream &strm = description.ref();

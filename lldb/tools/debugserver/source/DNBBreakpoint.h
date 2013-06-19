@@ -145,6 +145,7 @@ public:
             size_t              Size() const { return m_breakpoints.size(); }
             DNBBreakpoint *     GetByIndex (uint32_t i);
     const   DNBBreakpoint *     GetByIndex (uint32_t i) const;
+            void                DisableAll ();
 
 protected:
     typedef std::list<DNBBreakpoint>    collection;

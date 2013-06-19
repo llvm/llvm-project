@@ -1355,7 +1355,7 @@ protected:
         void
         OptionParsingStarting ()
         {
-            m_allow_reload = false;
+            m_allow_reload = true;
         }
         
         const OptionDefinition*
@@ -1426,7 +1426,7 @@ protected:
 OptionDefinition
 CommandObjectCommandsScriptImport::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "allow-reload", 'r', no_argument, NULL, 0, eArgTypeNone,        "Allow the script to be loaded even if it was already loaded before (for Python, the __lldb_init_module function will be called again, but the module will not be reloaded from disk)."},
+    { LLDB_OPT_SET_1, false, "allow-reload", 'r', no_argument, NULL, 0, eArgTypeNone,        "Allow the script to be loaded even if it was already loaded before. This argument exists for backwards compatibility, but reloading is always allowed, whether you specify it or not."},
     { 0, false, NULL, 0, 0, NULL, 0, eArgTypeNone, NULL }
 };
 

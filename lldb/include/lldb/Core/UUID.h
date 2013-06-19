@@ -22,7 +22,8 @@ namespace lldb_private {
 class UUID
 {
 public:
-    typedef uint8_t ValueType[16];
+    // Most UUIDs are 16 bytes, but some Linux build-ids (SHA1) are 20.
+    typedef uint8_t ValueType[20];
 
     //------------------------------------------------------------------
     // Constructors and Destructors
@@ -45,20 +46,20 @@ public:
     const void *
     GetBytes() const;
 
-    static size_t
+    size_t
     GetByteSize();
 
     bool
     IsValid () const;
 
     void
-    SetBytes (const void *uuid_bytes);
+    SetBytes (const void *uuid_bytes, uint32_t num_uuid_bytes = 16);
 
     std::string
     GetAsString () const;
 
     size_t
-    SetFromCString (const char *c_str);
+    SetFromCString (const char *c_str, uint32_t num_uuid_bytes = 16);
 
     // Decode as many UUID bytes (up to 16) as possible from the C string "cstr"
     // This is used for auto completion where a partial UUID might have been
@@ -86,12 +87,13 @@ public:
     ///     which should be 16 if a full UUID value was properly decoded.
     //------------------------------------------------------------------
     static size_t
-    DecodeUUIDBytesFromCString (const char *cstr, ValueType &uuid_bytes, const char **end);
+    DecodeUUIDBytesFromCString (const char *cstr, ValueType &uuid_bytes, const char **end, uint32_t num_uuid_bytes = 16);
     
 protected:
     //------------------------------------------------------------------
     // Classes that inherit from UUID can see and modify these
     //------------------------------------------------------------------
+    uint32_t m_num_uuid_bytes; // Should be 16 or 20
     ValueType m_uuid;
 };
 

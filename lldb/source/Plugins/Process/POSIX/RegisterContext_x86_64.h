@@ -193,6 +193,10 @@ public:
     SetHardwareWatchpoint(lldb::addr_t, size_t size, bool read, bool write);
 
     bool
+    SetHardwareWatchpointWithIndex(lldb::addr_t, size_t size, bool read,
+                                   bool write, uint32_t hw_index);
+
+    bool
     ClearHardwareWatchpoint(uint32_t hw_index);
 
     bool

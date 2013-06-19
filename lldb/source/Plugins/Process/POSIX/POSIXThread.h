@@ -39,6 +39,10 @@ public:
     virtual void
     WillResume(lldb::StateType resume_state);
 
+    // This notifies the thread when a private stop occurs.
+    virtual void
+    DidStop ();
+
     const char *
     GetInfo();
 
@@ -78,6 +82,8 @@ public:
 
     uint32_t NumSupportedHardwareWatchpoints();
 
+    uint32_t FindVacantWatchpointIndex();
+
 private:
     RegisterContextPOSIX *
     GetRegisterContextPOSIX ()
@@ -108,6 +114,7 @@ private:
     void SignalDeliveredNotify(const ProcessMessage &message);
     void CrashNotify(const ProcessMessage &message);
     void ThreadNotify(const ProcessMessage &message);
+    void ExitNotify(const ProcessMessage &message);
 
     lldb_private::Unwind *
     GetUnwinder();

@@ -113,7 +113,7 @@ StringSummaryFormat::FormatObject (ValueObject *valobj,
     }
     else
     {
-        if (Debugger::FormatPrompt(m_format.c_str(), &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), s, NULL, valobj))
+        if (Debugger::FormatPrompt(m_format.c_str(), &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), s, valobj))
         {
             retval.assign(s.GetString());
             return true;

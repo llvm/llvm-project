@@ -1282,13 +1282,12 @@ StackFrame::DumpUsingSettingsFormat (Stream *strm)
 
     GetSymbolContext(eSymbolContextEverything);
     ExecutionContext exe_ctx (shared_from_this());
-    const char *end = NULL;
     StreamString s;
     const char *frame_format = NULL;
     Target *target = exe_ctx.GetTargetPtr();
     if (target)
         frame_format = target->GetDebugger().GetFrameFormat();
-    if (frame_format && Debugger::FormatPrompt (frame_format, &m_sc, &exe_ctx, NULL, s, &end))
+    if (frame_format && Debugger::FormatPrompt (frame_format, &m_sc, &exe_ctx, NULL, s))
     {
         strm->Write(s.GetData(), s.GetSize());
     }

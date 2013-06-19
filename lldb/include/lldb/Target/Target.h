@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <list>
 
 // Other libraries and framework includes
 // Project includes
@@ -45,7 +46,14 @@ typedef enum InlineStrategy
     eInlineBreakpointsHeaders,
     eInlineBreakpointsAlways
 } InlineStrategy;
-
+    
+typedef enum LoadScriptFromSymFile
+{
+    eLoadScriptFromSymFileTrue,
+    eLoadScriptFromSymFileFalse,
+    eLoadScriptFromSymFileWarn
+} LoadScriptFromSymFile;
+    
 //----------------------------------------------------------------------
 // TargetProperties
 //----------------------------------------------------------------------
@@ -119,6 +127,9 @@ public:
     
     uint32_t
     GetMaximumSizeOfStringSummary() const;
+
+    uint32_t
+    GetMaximumMemReadSize () const;
     
     FileSpec
     GetStandardInputPath () const;
@@ -147,12 +158,9 @@ public:
     bool
     GetUseFastStepping() const;
     
-    bool
+    LoadScriptFromSymFile
     GetLoadScriptFromSymbolFile() const;
-
-    void
-    SetLoadScriptFromSymbolFile(bool b);
-
+    
 };
 
 typedef std::shared_ptr<TargetProperties> TargetPropertiesSP;
@@ -730,6 +738,14 @@ public:
     void
     SetExecutableModule (lldb::ModuleSP& module_sp, bool get_dependent_files);
 
+    bool
+    LoadScriptingResources (std::list<Error>& errors,
+                            Stream* feedback_stream = NULL,
+                            bool continue_on_error = true)
+    {
+        return m_images.LoadScriptingResourcesInTarget(this,errors,feedback_stream,continue_on_error);
+    }
+    
     //------------------------------------------------------------------
     /// Get accessor for the images for this process.
     ///
