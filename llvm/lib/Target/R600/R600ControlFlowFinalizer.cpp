@@ -116,8 +116,15 @@ private:
       const MachineOperand &MO = *I;
       if (!MO.isReg())
         continue;
-      if (MO.isDef())
-        DstMI = MO.getReg();
+      if (MO.isDef()) {
+        unsigned Reg = MO.getReg();
+        if (AMDGPU::R600_Reg128RegClass.contains(Reg))
+          DstMI = Reg;
+        else
+          DstMI = TRI.getMatchingSuperReg(Reg,
+              TRI.getSubRegFromChannel(TRI.getHWRegChan(Reg)),
+              &AMDGPU::R600_Reg128RegClass);
+      }
       if (MO.isUse()) {
         unsigned Reg = MO.getReg();
         if (AMDGPU::R600_Reg128RegClass.contains(Reg))
