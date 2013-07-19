@@ -1624,9 +1624,37 @@ void DwarfDebug::beginFunction(const MachineFunction *MF) {
 }
 
 void DwarfDebug::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
-//  SmallVector<DbgVariable *, 8> &Vars = ScopeVariables.lookup(LS);
-  ScopeVariables[LS].push_back(Var);
-//  Vars.push_back(Var);
+  SmallVectorImpl<DbgVariable *> &Vars = ScopeVariables[LS];
+  DIVariable DV = Var->getVariable();
+  if (DV.getTag() == dwarf::DW_TAG_arg_variable) {
+    DISubprogram Ctxt(DV.getContext());
+    DIArray Variables = Ctxt.getVariables();
+    // If the variable is a parameter (arg_variable) and this is an optimized
+    // build (the subprogram has a 'variables' list) make sure we keep the
+    // parameters in order. Otherwise we would produce an incorrect function
+    // type with parameters out of order if function parameters were used out of
+    // order or unused (see the call to addScopeVariable in endFunction where
+    // the remaining unused variables (including parameters) are added).
+    if (unsigned NumVariables = Variables.getNumElements()) {
+      // Keep the parameters at the start of the variables list. Search through
+      // current variable list (Vars) and the full function variable list in
+      // lock-step looking for this parameter in the full list to find the
+      // insertion point.
+      SmallVectorImpl<DbgVariable *>::iterator I = Vars.begin();
+      unsigned j = 0;
+      while (I != Vars.end() && j != NumVariables &&
+             Variables.getElement(j) != DV &&
+             (*I)->getVariable().getTag() == dwarf::DW_TAG_arg_variable) {
+        if (Variables.getElement(j) == (*I)->getVariable())
+          ++I;
+        ++j;
+      }
+      Vars.insert(I, Var);
+      return;
+    }
+  }
+
+  Vars.push_back(Var);
 }
 
 // Gather and emit post-function debug information.
