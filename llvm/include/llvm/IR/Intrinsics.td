@@ -347,6 +347,9 @@ def int_eh_typeid_for : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
 def int_eh_return_i32 : Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty]>;
 def int_eh_return_i64 : Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty]>;
 
+// __builtin_unwind_init is an undocumented GCC intrinsic that causes all
+// callee-saved registers to be saved and restored (regardless of whether they
+// are used) in the calling function. It is used by libgcc_eh.
 def int_eh_unwind_init: Intrinsic<[]>,
                         GCCBuiltin<"__builtin_unwind_init">;
 
