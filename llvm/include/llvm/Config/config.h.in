@@ -677,6 +677,9 @@
 /* Minor version of the LLVM API */
 #undef LLVM_VERSION_MINOR
 
+/* Minor version of the LLVM API */
+#undef LLVM_VERSION_PATCH
+
 /* Define if the OS needs help to load dependent libraries for dlopen(). */
 #undef LTDL_DLOPEN_DEPLIBS
 

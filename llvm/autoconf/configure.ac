@@ -31,9 +31,10 @@ dnl===
 dnl===-----------------------------------------------------------------------===
 dnl Initialize autoconf and define the package name, version number and
 dnl address for reporting bugs.
-AC_INIT([LLVM],[3.3],[http://llvm.org/bugs/])
+AC_INIT([LLVM],[3.3.1],[http://llvm.org/bugs/])
 AC_DEFINE([LLVM_VERSION_MAJOR], [3], [Major version of the LLVM API])
 AC_DEFINE([LLVM_VERSION_MINOR], [3], [Minor version of the LLVM API])
+AC_DEFINE([LLVM_VERSION_PATCH], [1], [Minor version of the LLVM API])
 
 dnl Provide a copyright substitution and ensure the copyright notice is included
 dnl in the output of --version option of the generated configure script.
