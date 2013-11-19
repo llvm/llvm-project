@@ -716,6 +716,9 @@ X86AsmPrinter::stackmapOperandParser(MachineInstr::const_mop_iterator MOI,
          "Register mask and implicit operands should not be processed.");
 
   if (MOP.isImm()) {
+    // Verify anyregcc
+    // [<def>], <id>, <numBytes>, <target>, <numArgs>, <cc>, ...
+
     switch (MOP.getImm()) {
     default: llvm_unreachable("Unrecognized operand type.");
     case StackMaps::DirectMemRefOp: {
@@ -756,82 +759,33 @@ X86AsmPrinter::stackmapOperandParser(MachineInstr::const_mop_iterator MOI,
     Location(Location::Register, RC->getSize(), MOP.getReg(), 0), ++MOI);
 }
 
-static MachineInstr::const_mop_iterator
-getStackMapEndMOP(MachineInstr::const_mop_iterator MOI,
-                  MachineInstr::const_mop_iterator MOE) {
-  for (; MOI != MOE; ++MOI)
-    if (MOI->isRegMask() || (MOI->isReg() && MOI->isImplicit()))
-      break;
-
-  return MOI;
-}
-
+// Lower a stackmap of the form:
+// <id>, <shadowBytes>, ...
 static void LowerSTACKMAP(MCStreamer &OutStreamer,
                           StackMaps &SM,
                           const MachineInstr &MI)
 {
-  int64_t ID = MI.getOperand(0).getImm();
   unsigned NumNOPBytes = MI.getOperand(1).getImm();
-
-  assert((int32_t)ID == ID && "Stack maps hold 32-bit IDs");
-  SM.recordStackMap(MI, ID, llvm::next(MI.operands_begin(), 2),
-                    getStackMapEndMOP(MI.operands_begin(), MI.operands_end()));
+  SM.recordStackMap(MI);
   // Emit padding.
+  // FIXME: These nops ensure that the stackmap's shadow is covered by
+  // instructions from the same basic block, but the nops should not be
+  // necessary if instructions from the same block follow the stackmap.
   for (unsigned i = 0; i < NumNOPBytes; ++i)
     OutStreamer.EmitInstruction(MCInstBuilder(X86::NOOP));
 }
 
 // Lower a patchpoint of the form:
-// [<def>], <id>, <numBytes>, <target>, <numArgs>
+// [<def>], <id>, <numBytes>, <target>, <numArgs>, <cc>, ...
 static void LowerPATCHPOINT(MCStreamer &OutStreamer,
                             StackMaps &SM,
                             const MachineInstr &MI) {
-  bool hasDef = MI.getOperand(0).isReg() && MI.getOperand(0).isDef() &&
-                !MI.getOperand(0).isImplicit();
-  unsigned StartIdx = hasDef ? 1 : 0;
-#ifndef NDEBUG
-  {
-  unsigned StartIdx2 = 0, e = MI.getNumOperands();
-  while (StartIdx2 < e && MI.getOperand(StartIdx2).isReg() &&
-         MI.getOperand(StartIdx2).isDef() &&
-         !MI.getOperand(StartIdx2).isImplicit())
-    ++StartIdx2;
+  SM.recordPatchPoint(MI);
 
-  assert(StartIdx == StartIdx2 &&
-         "Unexpected additonal definition in Patchpoint intrinsic.");
-  }
-#endif
-
-  // Find the first scratch register (implicit def and early clobber)
-  unsigned ScratchIdx = StartIdx, e = MI.getNumOperands();
-  while (ScratchIdx < e &&
-         !(MI.getOperand(ScratchIdx).isReg() &&
-           MI.getOperand(ScratchIdx).isDef() &&
-           MI.getOperand(ScratchIdx).isImplicit() &&
-           MI.getOperand(ScratchIdx).isEarlyClobber()))
-    ++ScratchIdx;
-
-  assert(ScratchIdx != e && "No scratch register available");
-
-  int64_t ID = MI.getOperand(StartIdx).getImm();
-  assert((int32_t)ID == ID && "Stack maps hold 32-bit IDs");
-
-  // Get the number of arguments participating in the call. This number was
-  // adjusted during call lowering by subtracting stack args.
-  bool isAnyRegCC = MI.getOperand(StartIdx + 4).getImm() == CallingConv::AnyReg;
-  assert(((hasDef && isAnyRegCC) || !hasDef) &&
-         "Only Patchpoints with AnyReg calling convention may have a result");
-  int64_t StackMapIdx = isAnyRegCC ? StartIdx + 5 :
-    StartIdx + 5 + MI.getOperand(StartIdx + 3).getImm();
-  assert(StackMapIdx <= MI.getNumOperands() &&
-         "Patchpoint intrinsic dropped arguments.");
-
-  SM.recordStackMap(MI, ID, llvm::next(MI.operands_begin(), StackMapIdx),
-                    getStackMapEndMOP(MI.operands_begin(), MI.operands_end()),
-                    isAnyRegCC && hasDef);
-
+  PatchPointOpers opers(&MI);
+  unsigned ScratchIdx = opers.getNextScratchIdx();
   unsigned EncodedBytes = 0;
-  int64_t CallTarget = MI.getOperand(StartIdx + 2).getImm();
+  int64_t CallTarget = opers.getMetaOper(PatchPointOpers::TargetPos).getImm();
   if (CallTarget) {
     // Emit MOV to materialize the target address and the CALL to target.
     // This is encoded with 12-13 bytes, depending on which register is used.
@@ -845,11 +799,11 @@ static void LowerPATCHPOINT(MCStreamer &OutStreamer,
                                 .addReg(MI.getOperand(ScratchIdx).getReg()));
   }
   // Emit padding.
-  unsigned NumNOPBytes = MI.getOperand(StartIdx + 1).getImm();
-  assert(NumNOPBytes >= EncodedBytes &&
+  unsigned NumBytes = opers.getMetaOper(PatchPointOpers::NBytesPos).getImm();
+  assert(NumBytes >= EncodedBytes &&
          "Patchpoint can't request size less than the length of a call.");
 
-  for (unsigned i = EncodedBytes; i < NumNOPBytes; ++i)
+  for (unsigned i = EncodedBytes; i < NumBytes; ++i)
     OutStreamer.EmitInstruction(MCInstBuilder(X86::NOOP));
 }
 

@@ -20,6 +20,60 @@ namespace llvm {
 class AsmPrinter;
 class MCExpr;
 
+/// \brief MI-level patchpoint operands.
+///
+/// MI patchpoint operations take the form:
+/// [<def>], <id>, <numBytes>, <target>, <numArgs>, <cc>, ...
+///
+/// Note that IR/SD patchpoints do not have the <def> or <cc> operands.
+///
+/// Patchpoints following the anyregcc convention are handled specially. For
+/// these, the stack map also records the location of the return value and
+/// arguments.
+class PatchPointOpers {
+public:
+  /// Enumerate the meta operands.
+  enum { IDPos, NBytesPos, TargetPos, NArgPos, CCPos, MetaEnd };
+private:
+  const MachineInstr *MI;
+  bool HasDef;
+  bool IsAnyReg;
+public:
+  explicit PatchPointOpers(const MachineInstr *MI);
+
+  bool isAnyReg() const { return IsAnyReg; }
+  bool hasDef() const { return HasDef; }
+
+  unsigned getMetaIdx(unsigned Pos = 0) const {
+    assert(Pos < MetaEnd && "Meta operand index out of range.");
+    return (HasDef ? 1 : 0) + Pos;
+  }
+
+  const MachineOperand &getMetaOper(unsigned Pos) {
+    return MI->getOperand(getMetaIdx(Pos));
+  }
+
+  unsigned getArgIdx() const { return getMetaIdx() + MetaEnd; }
+
+  /// Get the operand index of the variable list of non-argument operands.
+  /// These hold the "live state".
+  unsigned getVarIdx() const {
+    return getMetaIdx() + MetaEnd
+      + MI->getOperand(getMetaIdx(NArgPos)).getImm();
+  }
+
+  /// Get the index at which stack map locations will be recorded.
+  /// Arguments are not recorded unless the anyregcc convention is used.
+  unsigned getStackMapStartIdx() const {
+    if (IsAnyReg)
+      return getArgIdx();
+    return getVarIdx();
+  }
+
+  /// \brief Get the next scratch register operand index.
+  unsigned getNextScratchIdx(unsigned StartIdx = 0) const;
+};
+
 class StackMaps {
 public:
   struct Location {
@@ -48,15 +102,13 @@ public:
   StackMaps(AsmPrinter &AP, OperandParser OpParser)
     : AP(AP), OpParser(OpParser) {}
 
-  /// This should be called by the MC lowering code _immediately_ before
-  /// lowering the MI to an MCInst. It records where the operands for the
-  /// instruction are stored, and outputs a label to record the offset of
-  /// the call from the start of the text section. In special cases (e.g. AnyReg
-  /// calling convention) the return register is also recorded if requested.
-  void recordStackMap(const MachineInstr &MI, uint32_t ID,
-                      MachineInstr::const_mop_iterator MOI,
-                      MachineInstr::const_mop_iterator MOE,
-                      bool recordResult = false);
+  /// \brief Generate a stackmap record for a stackmap instruction.
+  ///
+  /// MI must be a raw STACKMAP, not a PATCHPOINT.
+  void recordStackMap(const MachineInstr &MI);
+
+  /// \brief Generate a stackmap record for a patchpoint instruction.
+  void recordPatchPoint(const MachineInstr &MI);
 
   /// If there is any stack map data, create a stack map section and serialize
   /// the map info into it. This clears the stack map data structures
@@ -64,7 +116,6 @@ public:
   void serializeToStackMapSection();
 
 private:
-
   typedef SmallVector<Location, 8> LocationVec;
 
   struct CallsiteInfo {
@@ -103,6 +154,16 @@ private:
   OperandParser OpParser;
   CallsiteInfoList CSInfos;
   ConstantPool ConstPool;
+
+  /// This should be called by the MC lowering code _immediately_ before
+  /// lowering the MI to an MCInst. It records where the operands for the
+  /// instruction are stored, and outputs a label to record the offset of
+  /// the call from the start of the text section. In special cases (e.g. AnyReg
+  /// calling convention) the return register is also recorded if requested.
+  void recordStackMapOpers(const MachineInstr &MI, uint32_t ID,
+                           MachineInstr::const_mop_iterator MOI,
+                           MachineInstr::const_mop_iterator MOE,
+                           bool recordResult = false);
 };
 
 }
