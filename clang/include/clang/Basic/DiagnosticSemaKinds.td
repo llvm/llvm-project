@@ -2051,7 +2051,7 @@ def err_attribute_wrong_decl_type : Error<
   "variables, functions and tag types|thread-local variables|"
   "variables and fields|variables, data members and tag types|"
   "types and namespaces|Objective-C interfaces|"
-  "methods and properties}1">;
+  "methods and properties|struct or union|struct, union or class}1">;
 def warn_type_attribute_wrong_type : Warning<
   "'%0' only applies to %select{function|pointer|"
   "Objective-C object or block pointer}1 types; type here is %2">,
@@ -2441,8 +2441,6 @@ def err_ns_bridged_not_interface : Error<
 // objc_bridge attribute diagnostics.
 def err_objc_bridge_not_id : Error<
   "parameter of 'objc_bridge' attribute must be a single name of an Objective-C class">;
-def err_objc_bridge_attribute : Error<
-  "'objc_bridge' attribute must be applied to a struct%select{|, C++ class}0 or union">;
 def err_objc_cf_bridged_not_interface : Error<
   "CF object of type %0 is bridged to '%1', which is not an Objective-C class">;
 def err_objc_ns_bridged_invalid_cfobject : Error<

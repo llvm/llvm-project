@@ -7,28 +7,28 @@ typedef struct __attribute__((objc_bridge(12))) __CFMyColor  *CFMyColorRef; // e
 
 typedef struct __attribute__ ((objc_bridge)) __CFArray *CFArrayRef; // expected-error {{parameter of 'objc_bridge' attribute must be a single name of an Objective-C class}}
 
-typedef void *  __attribute__ ((objc_bridge(NSURL))) CFURLRef;  // expected-error {{'objc_bridge' attribute must be applied to a struct or union}}
+typedef void *  __attribute__ ((objc_bridge(NSURL))) CFURLRef;  // expected-error {{'objc_bridge' attribute only applies to struct or union}}
 
-typedef void * CFStringRef __attribute__ ((objc_bridge(NSString))); // expected-error {{'objc_bridge' attribute must be applied to a struct or union}}
+typedef void * CFStringRef __attribute__ ((objc_bridge(NSString))); // expected-error {{'objc_bridge' attribute only applies to struct or union}}
 
 typedef struct __attribute__((objc_bridge(NSLocale, NSError))) __CFLocale *CFLocaleRef;// expected-error {{use of undeclared identifier 'NSError'}}
 
-typedef struct __CFData __attribute__((objc_bridge(NSData))) CFDataRef; // expected-error {{'objc_bridge' attribute must be applied to a struct or union}}
+typedef struct __CFData __attribute__((objc_bridge(NSData))) CFDataRef; // expected-error {{'objc_bridge' attribute only applies to struct or union}}
 
 typedef struct __attribute__((objc_bridge(NSDictionary))) __CFDictionary * CFDictionaryRef;
 
-typedef struct __CFSetRef * CFSetRef __attribute__((objc_bridge(NSSet))); // expected-error {{'objc_bridge' attribute must be applied to a struct or union}};
+typedef struct __CFSetRef * CFSetRef __attribute__((objc_bridge(NSSet))); // expected-error {{'objc_bridge' attribute only applies to struct or union}};
 
-typedef union __CFUColor __attribute__((objc_bridge(NSUColor))) * CFUColorRef; // expected-error {{'objc_bridge' attribute must be applied to a struct or union}};
+typedef union __CFUColor __attribute__((objc_bridge(NSUColor))) * CFUColorRef; // expected-error {{'objc_bridge' attribute only applies to struct or union}};
 
-typedef union __CFUColor __attribute__((objc_bridge(NSUColor))) *CFUColor1Ref; // expected-error {{'objc_bridge' attribute must be applied to a struct or union}};
+typedef union __CFUColor __attribute__((objc_bridge(NSUColor))) *CFUColor1Ref; // expected-error {{'objc_bridge' attribute only applies to struct or union}};
 
 typedef union __attribute__((objc_bridge(NSUColor))) __CFUPrimeColor XXX;
 typedef XXX *CFUColor2Ref;
 
 @interface I
 {
-   __attribute__((objc_bridge(NSError))) void * color; // expected-error {{'objc_bridge' attribute must be applied to a struct or union}};
+   __attribute__((objc_bridge(NSError))) void * color; // expected-error {{'objc_bridge' attribute only applies to struct or union}};
 }
 @end
 
