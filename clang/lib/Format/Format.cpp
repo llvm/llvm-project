@@ -399,7 +399,7 @@ public:
                 ? 0
                 : Limit - TheLine->Last->TotalLength;
 
-    if (I + 1 == E || (*(I + 1))->Type == LT_Invalid)
+    if (I + 1 == E || I[1]->Type == LT_Invalid)
       return 0;
 
     if (TheLine->Last->is(tok::l_brace)) {
@@ -424,12 +424,11 @@ private:
                             unsigned Limit) {
     if (Limit == 0)
       return 0;
-    if (!(*(I + 1))->InPPDirective || (*(I + 1))->First->HasUnescapedNewline)
+    if (!I[1]->InPPDirective || I[1]->First->HasUnescapedNewline)
       return 0;
-    if (I + 2 != E && (*(I + 2))->InPPDirective &&
-        !(*(I + 2))->First->HasUnescapedNewline)
+    if (I + 2 != E && I[2]->InPPDirective && !I[2]->First->HasUnescapedNewline)
       return 0;
-    if (1 + (*(I + 1))->Last->TotalLength > Limit)
+    if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
     return 1;
   }
@@ -440,23 +439,23 @@ private:
     if (Limit == 0)
       return 0;
     if (Style.BreakBeforeBraces == FormatStyle::BS_Allman &&
-        (*(I + 1))->First->is(tok::l_brace))
+        I[1]->First->is(tok::l_brace))
       return 0;
-    if ((*(I + 1))->InPPDirective != (*I)->InPPDirective ||
-        ((*(I + 1))->InPPDirective && (*(I + 1))->First->HasUnescapedNewline))
+    if (I[1]->InPPDirective != (*I)->InPPDirective ||
+        (I[1]->InPPDirective && I[1]->First->HasUnescapedNewline))
       return 0;
     AnnotatedLine &Line = **I;
     if (Line.Last->isNot(tok::r_paren))
       return 0;
-    if (1 + (*(I + 1))->Last->TotalLength > Limit)
+    if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
-    if ((*(I + 1))->First->isOneOf(tok::semi, tok::kw_if, tok::kw_for,
+    if (I[1]->First->isOneOf(tok::semi, tok::kw_if, tok::kw_for,
                                    tok::kw_while) ||
-        (*(I + 1))->First->Type == TT_LineComment)
+        I[1]->First->Type == TT_LineComment)
       return 0;
     // Only inline simple if's (no nested if or else).
     if (I + 2 != E && Line.First->is(tok::kw_if) &&
-        (*(I + 2))->First->is(tok::kw_else))
+        I[2]->First->is(tok::kw_else))
       return 0;
     return 1;
   }
@@ -480,7 +479,7 @@ private:
                             tok::at, tok::minus, tok::plus))
       return 0;
 
-    FormatToken *Tok = (*(I + 1))->First;
+    FormatToken *Tok = I[1]->First;
     if (Tok->is(tok::r_brace) && !Tok->MustBreakBefore &&
         (Tok->getNextNonComment() == NULL ||
          Tok->getNextNonComment()->is(tok::semi))) {
@@ -490,7 +489,7 @@ private:
       return 1;
     } else if (Limit != 0 && Line.First->isNot(tok::kw_namespace)) {
       // Check that we still have three lines and they fit into the limit.
-      if (I + 2 == E || (*(I + 2))->Type == LT_Invalid)
+      if (I + 2 == E || I[2]->Type == LT_Invalid)
         return 0;
 
       if (!nextTwoLinesFitInto(I, Limit))
@@ -498,7 +497,7 @@ private:
 
       // Second, check that the next line does not contain any braces - if it
       // does, readability declines when putting it into a single line.
-      if ((*(I + 1))->Last->Type == TT_LineComment || Tok->MustBreakBefore)
+      if (I[1]->Last->Type == TT_LineComment || Tok->MustBreakBefore)
         return 0;
       do {
         if (Tok->isOneOf(tok::l_brace, tok::r_brace))
@@ -507,7 +506,7 @@ private:
       } while (Tok != NULL);
 
       // Last, check that the third line contains a single closing brace.
-      Tok = (*(I + 2))->First;
+      Tok = I[2]->First;
       if (Tok->getNextNonComment() != NULL || Tok->isNot(tok::r_brace) ||
           Tok->MustBreakBefore)
         return 0;
@@ -519,9 +518,7 @@ private:
 
   bool nextTwoLinesFitInto(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
                            unsigned Limit) {
-    return 1 + (*(I + 1))->Last->TotalLength + 1 +
-               (*(I + 2))->Last->TotalLength <=
-           Limit;
+    return 1 + I[1]->Last->TotalLength + 1 + I[2]->Last->TotalLength <= Limit;
   }
 
   const FormatStyle &Style;
@@ -571,7 +568,7 @@ public:
       unsigned MergedLines = Joiner.tryFitMultipleLinesInOne(Indent, I, E);
       if (!DryRun) {
         for (unsigned i = 0; i < MergedLines; ++i) {
-          join(**(I + i), **(I + i + 1));
+          join(*I[i], *I[i + 1]);
         }
       }
       I += MergedLines;
@@ -599,7 +596,7 @@ public:
         // If everything fits on a single line, just put it there.
         unsigned ColumnLimit = Style.ColumnLimit;
         if (I + 1 != E) {
-          AnnotatedLine *NextLine = *(I + 1);
+          AnnotatedLine *NextLine = I[1];
           if (NextLine->InPPDirective && !NextLine->First->HasUnescapedNewline)
             ColumnLimit = getColumnLimit(TheLine.InPPDirective);
         }
