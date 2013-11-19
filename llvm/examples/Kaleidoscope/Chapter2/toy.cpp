@@ -75,18 +75,17 @@ static int gettok() {
 //===----------------------------------------------------------------------===//
 // Abstract Syntax Tree (aka Parse Tree)
 //===----------------------------------------------------------------------===//
-
+namespace {
 /// ExprAST - Base class for all expression nodes.
 class ExprAST {
 public:
-  virtual ~ExprAST();
+  virtual ~ExprAST() {}
 };
 
 /// NumberExprAST - Expression class for numeric literals like "1.0".
 class NumberExprAST : public ExprAST {
 public:
   NumberExprAST(double val) {}
-  virtual ~NumberExprAST();
 };
 
 /// VariableExprAST - Expression class for referencing a variable, like "a".
@@ -94,14 +93,12 @@ class VariableExprAST : public ExprAST {
   std::string Name;
 public:
   VariableExprAST(const std::string &name) : Name(name) {}
-  virtual ~VariableExprAST();
 };
 
 /// BinaryExprAST - Expression class for a binary operator.
 class BinaryExprAST : public ExprAST {
 public:
   BinaryExprAST(char op, ExprAST *lhs, ExprAST *rhs) {}
-  virtual ~BinaryExprAST();
 };
 
 /// CallExprAST - Expression class for function calls.
@@ -111,15 +108,7 @@ class CallExprAST : public ExprAST {
 public:
   CallExprAST(const std::string &callee, std::vector<ExprAST*> &args)
     : Callee(callee), Args(args) {}
-  virtual ~CallExprAST();
 };
-
-// Provide out-of-line definitions to prevent weak vtables.
-ExprAST::~ExprAST() {}
-NumberExprAST::~NumberExprAST() {}
-VariableExprAST::~VariableExprAST() {}
-BinaryExprAST::~BinaryExprAST() {}
-CallExprAST::~CallExprAST() {}
 
 /// PrototypeAST - This class represents the "prototype" for a function,
 /// which captures its name, and its argument names (thus implicitly the number
@@ -138,6 +127,7 @@ class FunctionAST {
 public:
   FunctionAST(PrototypeAST *proto, ExprAST *body) {}
 };
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // Parser
@@ -169,7 +159,6 @@ static int GetTokPrecedence() {
 /// Error* - These are little helper functions for error handling.
 ExprAST *Error(const char *Str) { fprintf(stderr, "Error: %s\n", Str);return 0;}
 PrototypeAST *ErrorP(const char *Str) { Error(Str); return 0; }
-FunctionAST *ErrorF(const char *Str) { Error(Str); return 0; }
 
 static ExprAST *ParseExpression();
 

@@ -10,14 +10,13 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
-
-struct VirtualRefCounted : public RefCountedBaseVPTR {
-  virtual void f();
+namespace {
+struct VirtualRefCounted : public llvm::RefCountedBaseVPTR {
+  virtual void f() {}
 };
+}
 
-// Provide out-of-line definition to prevent weak vtable.
-void VirtualRefCounted::f() {}
+namespace llvm {
 
 // Run this test with valgrind to detect memory leaks.
 TEST(IntrusiveRefCntPtr, RefCountedBaseVPTRCopyDoesNotLeak) {

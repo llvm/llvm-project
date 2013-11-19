@@ -36,17 +36,14 @@ static void dumpIdxVec(const SmallVectorImpl<unsigned> &V) {
 }
 #endif
 
+namespace {
 // (instrs a, b, ...) Evaluate and union all arguments. Identical to AddOp.
 struct InstrsOp : public SetTheory::Operator {
   virtual void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
-                     ArrayRef<SMLoc> Loc);
-};
-
-// Provide out-of-line definition to prevent weak vtable.
-void InstrsOp::apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
                      ArrayRef<SMLoc> Loc) {
-  ST.evaluate(Expr->arg_begin(), Expr->arg_end(), Elts, Loc);
-}
+    ST.evaluate(Expr->arg_begin(), Expr->arg_end(), Elts, Loc);
+  }
+};
 
 // (instregex "OpcPat",...) Find all instructions matching an opcode pattern.
 //
@@ -60,38 +57,35 @@ struct InstRegexOp : public SetTheory::Operator {
   const CodeGenTarget &Target;
   InstRegexOp(const CodeGenTarget &t): Target(t) {}
 
-  virtual void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
-                     ArrayRef<SMLoc> Loc);
+  void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
+             ArrayRef<SMLoc> Loc) {
+    SmallVector<Regex*, 4> RegexList;
+    for (DagInit::const_arg_iterator
+           AI = Expr->arg_begin(), AE = Expr->arg_end(); AI != AE; ++AI) {
+      StringInit *SI = dyn_cast<StringInit>(*AI);
+      if (!SI)
+        PrintFatalError(Loc, "instregex requires pattern string: "
+          + Expr->getAsString());
+      std::string pat = SI->getValue();
+      // Implement a python-style prefix match.
+      if (pat[0] != '^') {
+        pat.insert(0, "^(");
+        pat.insert(pat.end(), ')');
+      }
+      RegexList.push_back(new Regex(pat));
+    }
+    for (CodeGenTarget::inst_iterator I = Target.inst_begin(),
+           E = Target.inst_end(); I != E; ++I) {
+      for (SmallVectorImpl<Regex*>::iterator
+             RI = RegexList.begin(), RE = RegexList.end(); RI != RE; ++RI) {
+        if ((*RI)->match((*I)->TheDef->getName()))
+          Elts.insert((*I)->TheDef);
+      }
+    }
+    DeleteContainerPointers(RegexList);
+  }
 };
-
-// Provide out-of-line definition to prevent weak vtable.
-void InstRegexOp::apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
-                       ArrayRef<SMLoc> Loc) {
-  SmallVector<Regex*, 4> RegexList;
-  for (DagInit::const_arg_iterator
-       AI = Expr->arg_begin(), AE = Expr->arg_end(); AI != AE; ++AI) {
-    StringInit *SI = dyn_cast<StringInit>(*AI);
-    if (!SI)
-      PrintFatalError(Loc, "instregex requires pattern string: "
-                      + Expr->getAsString());
-    std::string pat = SI->getValue();
-    // Implement a python-style prefix match.
-    if (pat[0] != '^') {
-      pat.insert(0, "^(");
-      pat.insert(pat.end(), ')');
-    }
-    RegexList.push_back(new Regex(pat));
-  }
-  for (CodeGenTarget::inst_iterator I = Target.inst_begin(),
-       E = Target.inst_end(); I != E; ++I) {
-    for (SmallVectorImpl<Regex*>::iterator
-         RI = RegexList.begin(), RE = RegexList.end(); RI != RE; ++RI) {
-      if ((*RI)->match((*I)->TheDef->getName()))
-        Elts.insert((*I)->TheDef);
-    }
-  }
-  DeleteContainerPointers(RegexList);
-}
+} // end anonymous namespace
 
 /// CodeGenModels ctor interprets machine model records and populates maps.
 CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
