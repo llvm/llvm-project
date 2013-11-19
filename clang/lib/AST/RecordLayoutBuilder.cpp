@@ -2017,6 +2017,8 @@ static bool isMsLayout(const RecordDecl* D) {
 // * If the last field is a non-zero length bitfield and we have any virtual
 //   bases then some extra padding is added before the virtual bases for no
 //   obvious reason.
+// * When laying out empty non-virtual bases, an extra byte of padding is added
+//   if the non-virtual base before the empty non-virtual base has a vbptr.
 
 
 namespace {
@@ -2141,6 +2143,8 @@ public:
   bool LastBaseWasEmpty;
   /// \brief Lets us know if we're in 64-bit mode
   bool Is64BitMode;
+  /// \brief True if the last non-virtual base has a vbptr.
+  bool LastNonVirtualBaseHasVBPtr;
 };
 } // namespace
 
@@ -2304,6 +2308,7 @@ void
 MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   LazyEmptyBase = 0;
   LastBaseWasEmpty = false;
+  LastNonVirtualBaseHasVBPtr = false;
 
   // Lay out the primary base first.
   if (PrimaryBase)
@@ -2331,6 +2336,10 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(const CXXRecordDecl *RD) {
     const ASTRecordLayout &LazyLayout =
         Context.getASTRecordLayout(LazyEmptyBase);
     Size = Size.RoundUpToAlignment(LazyLayout.getAlignment());
+    // If the last non-virtual base has a vbptr we add a byte of padding for no
+    // obvious reason.
+    if (LastNonVirtualBaseHasVBPtr)
+      Size++;
     Bases.insert(std::make_pair(LazyEmptyBase, Size));
     // Empty bases only consume space when followed by another empty base.
     if (RD && Layout->getNonVirtualSize().isZero()) {
@@ -2338,6 +2347,7 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(const CXXRecordDecl *RD) {
       Size++;
     }
     LazyEmptyBase = 0;
+    LastNonVirtualBaseHasVBPtr = false;
   }
 
   // RD is null when flushing the final lazy base.
@@ -2356,6 +2366,7 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(const CXXRecordDecl *RD) {
   // Note: we don't update alignment here because it was accounted
   // for during initalization.
   LastBaseWasEmpty = false;
+  LastNonVirtualBaseHasVBPtr = Layout->hasVBPtr();
 }
 
 void MicrosoftRecordLayoutBuilder::layoutVBPtr(const CXXRecordDecl *RD) {
