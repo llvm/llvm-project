@@ -108,9 +108,9 @@ template<class T>
 class Class1;
 
 class Class2 {
-}  // no ;
+} // expected-error {{expected ';' after class}}
 
-typedef Class1<Class2> Type1; // expected-error {{cannot combine with previous 'class' declaration specifier}}
+typedef Class1<Class2> Type1;
 
 // rdar : // 8307865
 struct CodeCompleteConsumer {

@@ -461,6 +461,12 @@ public:
     ThreadStorageClassSpecLoc  = SourceLocation();
   }
 
+  void ClearTypeSpecType() {
+    TypeSpecType = DeclSpec::TST_unspecified;
+    TypeSpecOwned = false;
+    TSTLoc = SourceLocation();
+  }
+
   // type-specifier
   TSW getTypeSpecWidth() const { return (TSW)TypeSpecWidth; }
   TSC getTypeSpecComplex() const { return (TSC)TypeSpecComplex; }
@@ -506,6 +512,8 @@ public:
   bool containsPlaceholderType() const {
     return TypeSpecType == TST_auto || TypeSpecType == TST_decltype_auto;
   }
+
+  bool hasTagDefinition() const;
 
   /// \brief Turn a type-specifier-type into a string like "_Bool" or "union".
   static const char *getSpecifierName(DeclSpec::TST T);

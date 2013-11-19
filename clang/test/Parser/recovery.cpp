@@ -66,3 +66,56 @@ struct Redefined { // expected-note {{previous}}
 struct Redefined { // expected-error {{redefinition}}
   Redefined() {}
 };
+
+struct MissingSemi5;
+namespace N {
+  typedef int afterMissingSemi4;
+  extern MissingSemi5 afterMissingSemi5;
+}
+
+struct MissingSemi1 {} // expected-error {{expected ';' after struct}}
+static int afterMissingSemi1();
+
+class MissingSemi2 {} // expected-error {{expected ';' after class}}
+MissingSemi1 *afterMissingSemi2;
+
+enum MissingSemi3 {} // expected-error {{expected ';' after enum}}
+::MissingSemi1 afterMissingSemi3;
+
+extern N::afterMissingSemi4 afterMissingSemi4b;
+union MissingSemi4 { MissingSemi4(int); } // expected-error {{expected ';' after union}}
+N::afterMissingSemi4 (afterMissingSemi4b);
+
+int afterMissingSemi5b;
+struct MissingSemi5 { MissingSemi5(int); } // ok, no missing ';' here
+N::afterMissingSemi5 (afterMissingSemi5b);
+
+template<typename T> struct MissingSemiT {
+} // expected-error {{expected ';' after struct}}
+MissingSemiT<int> msi;
+
+struct MissingSemiInStruct {
+  struct Inner1 {} // expected-error {{expected ';' after struct}}
+  static MissingSemi5 ms1;
+
+  struct Inner2 {} // ok, no missing ';' here
+  static MissingSemi1;
+
+  struct Inner3 {} // expected-error {{expected ';' after struct}}
+  static MissingSemi5 *p;
+};
+
+void MissingSemiInFunction() {
+  struct Inner1 {} // expected-error {{expected ';' after struct}}
+  if (true) {}
+
+  // FIXME: It would be nice to at least warn on this.
+  struct Inner2 { Inner2(int); } // ok, no missing ';' here
+  k = l;
+
+  struct Inner3 {} // expected-error {{expected ';' after struct}}
+  Inner1 i1;
+
+  struct Inner4 {} // ok, no missing ';' here
+  Inner5;
+}

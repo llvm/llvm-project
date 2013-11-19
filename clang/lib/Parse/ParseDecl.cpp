@@ -1401,8 +1401,14 @@ Parser::ParseSimpleDeclaration(StmtVector &Stmts, unsigned Context,
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this);
 
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
-                             getDeclSpecContextFromDeclaratorContext(Context));
+  DeclSpecContext DSContext = getDeclSpecContextFromDeclaratorContext(Context);
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none, DSContext);
+
+  // If we had a free-standing type definition with a missing semicolon, we
+  // may get this far before the problem becomes obvious.
+  if (DS.hasTagDefinition() &&
+      DiagnoseMissingSemiAfterTagDefinition(DS, AS_none, DSContext))
+    return DeclGroupPtrTy();
 
   // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
   // declaration-specifiers init-declarator-list[opt] ';'
@@ -2318,6 +2324,101 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
                AttributeList::AS_Keyword, EllipsisLoc);
 }
 
+/// Determine whether we're looking at something that might be a declarator
+/// in a simple-declaration. If it can't possibly be a declarator, maybe
+/// diagnose a missing semicolon after a prior tag definition in the decl
+/// specifier.
+///
+/// \return \c true if an error occurred and this can't be any kind of
+/// declaration.
+bool
+Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
+                                              DeclSpecContext DSContext,
+                                              LateParsedAttrList *LateAttrs) {
+  assert(DS.hasTagDefinition() && "shouldn't call this");
+
+  bool EnteringContext = (DSContext == DSC_class || DSContext == DSC_top_level);
+  bool HasMissingSemi = false;
+
+  if (getLangOpts().CPlusPlus &&
+      (Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
+       Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id)) &&
+      TryAnnotateCXXScopeToken(EnteringContext)) {
+    SkipMalformedDecl();
+    return true;
+  }
+
+  // Determine whether the following tokens could possibly be a
+  // declarator.
+  if (Tok.is(tok::identifier) || Tok.is(tok::annot_template_id)) {
+    const Token &Next = NextToken();
+    // These tokens cannot come after the declarator-id in a
+    // simple-declaration, and are likely to come after a type-specifier.
+    HasMissingSemi = Next.is(tok::star) || Next.is(tok::amp) ||
+                     Next.is(tok::ampamp) || Next.is(tok::identifier) ||
+                     Next.is(tok::annot_cxxscope) ||
+                     Next.is(tok::coloncolon);
+  } else if (Tok.is(tok::annot_cxxscope) &&
+             NextToken().is(tok::identifier) &&
+             DS.getStorageClassSpec() != DeclSpec::SCS_typedef) {
+    // We almost certainly have a missing semicolon. Look up the name and
+    // check; if it names a type, we're missing a semicolon.
+    CXXScopeSpec SS;
+    Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
+                                                 Tok.getAnnotationRange(), SS);
+    const Token &Next = NextToken();
+    IdentifierInfo *Name = Next.getIdentifierInfo();
+    Sema::NameClassification Classification =
+        Actions.ClassifyName(getCurScope(), SS, Name, Next.getLocation(),
+                             NextToken(), /*IsAddressOfOperand*/false);
+    switch (Classification.getKind()) {
+    case Sema::NC_Error:
+      SkipMalformedDecl();
+      return true;
+
+    case Sema::NC_Keyword:
+    case Sema::NC_NestedNameSpecifier:
+      llvm_unreachable("typo correction and nested name specifiers not "
+                       "possible here");
+
+    case Sema::NC_Type:
+    case Sema::NC_TypeTemplate:
+      // Not a previously-declared non-type entity.
+      HasMissingSemi = true;
+      break;
+
+    case Sema::NC_Unknown:
+    case Sema::NC_Expression:
+    case Sema::NC_VarTemplate:
+    case Sema::NC_FunctionTemplate:
+      // Might be a redeclaration of a prior entity.
+      HasMissingSemi = false;
+      break;
+    }
+  } else if (Tok.is(tok::kw_typename) || Tok.is(tok::annot_typename)) {
+    HasMissingSemi = true;
+  }
+
+  if (!HasMissingSemi)
+    return false;
+
+  Diag(PP.getLocForEndOfToken(DS.getRepAsDecl()->getLocEnd()),
+       diag::err_expected_semi_after_tagdecl)
+    << DeclSpec::getSpecifierName(DS.getTypeSpecType());
+
+  // Try to recover from the typo, by dropping the tag definition and parsing
+  // the problematic tokens as a type.
+  //
+  // FIXME: Split the DeclSpec into pieces for the standalone
+  // declaration and pieces for the following declaration, instead
+  // of assuming that all the other pieces attach to new declaration,
+  // and call ParsedFreeStandingDeclSpec as appropriate.
+  DS.ClearTypeSpecType();
+  ParsedTemplateInfo NotATemplate;
+  ParseDeclarationSpecifiers(DS, NotATemplate, AS, DSContext, LateAttrs);
+  return false;
+}
+
 /// ParseDeclarationSpecifiers
 ///       declaration-specifiers: [C99 6.7]
 ///         storage-class-specifier declaration-specifiers[opt]
@@ -2586,6 +2687,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     }
 
     case tok::annot_typename: {
+      // If we've previously seen a tag definition, we were almost surely
+      // missing a semicolon after it.
+      if (DS.hasTypeSpecifier() && DS.hasTagDefinition())
+        goto DoneWithDeclSpec;
+
       if (Tok.getAnnotationValue()) {
         ParsedType T = getTypeAnnotation(Tok);
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
