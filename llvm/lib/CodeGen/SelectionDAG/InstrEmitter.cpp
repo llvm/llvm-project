@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -732,7 +733,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
   // Handle PATCHPOINT specially and then use the generic code.
   if (Opc == TargetOpcode::PATCHPOINT) {
-    unsigned CC = Node->getConstantOperandVal(4);
+    unsigned CC = Node->getConstantOperandVal(PatchPointOpers::CCPos);
     NumDefs = NumResults;
     ScratchRegs = TLI->getScratchRegisters((CallingConv::ID) CC);
   }

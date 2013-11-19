@@ -25,7 +25,11 @@ class MCExpr;
 /// MI patchpoint operations take the form:
 /// [<def>], <id>, <numBytes>, <target>, <numArgs>, <cc>, ...
 ///
-/// Note that IR/SD patchpoints do not have the <def> or <cc> operands.
+/// IR patchpoint intrinsics do not have the <cc> operand because calling
+/// convention is part of the subclass data.
+///
+/// SD patchpoint nodes do not have a def operand because it is part of the
+/// SDValue.
 ///
 /// Patchpoints following the anyregcc convention are handled specially. For
 /// these, the stack map also records the location of the return value and
