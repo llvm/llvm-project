@@ -141,7 +141,7 @@ createMCAsmStreamer(MCContext &Ctx, formatted_raw_ostream &OS,
                     bool isVerboseAsm, bool useLoc, bool useCFI,
                     bool useDwarfDirectory, MCInstPrinter *InstPrint,
                     MCCodeEmitter *CE, MCAsmBackend *TAB, bool ShowInst) {
-  MipsTargetAsmStreamer *S = new MipsTargetAsmStreamer();
+  MipsTargetAsmStreamer *S = new MipsTargetAsmStreamer(OS);
 
   return llvm::createAsmStreamer(Ctx, S, OS, isVerboseAsm, useLoc, useCFI,
                                  useDwarfDirectory, InstPrint, CE, TAB,

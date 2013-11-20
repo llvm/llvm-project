@@ -1,5 +1,3 @@
-; XFAIL: *
-
 ; This tests ELF EFLAGS setting with direct object.
 ; When the assembler is ready a .s file for it will
 ; be created.
@@ -18,19 +16,19 @@
 ; Note that EF_MIPS_CPIC is set by -mabicalls which is the default on Linux
 ; TODO need to support -mno-abicalls
 
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-BE32 %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32 %s -o - | FileCheck -check-prefix=CHECK-BE32_PIC %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-BE32R2 %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 %s -o - | FileCheck -check-prefix=CHECK-BE32R2_PIC %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+micromips -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-BE32R2-MICROMIPS %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+micromips %s -o - | FileCheck -check-prefix=CHECK-BE32R2-MICROMIPS_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32 -relocation-model=static %s -print-hack-directives -o - | FileCheck -check-prefix=CHECK-BE32 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32 -print-hack-directives %s -o - | FileCheck -check-prefix=CHECK-BE32_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -relocation-model=static %s -print-hack-directives -o - | FileCheck -check-prefix=CHECK-BE32R2 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -print-hack-directives %s -o - | FileCheck -check-prefix=CHECK-BE32R2_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+micromips -relocation-model=static -print-hack-directives %s -o - | FileCheck -check-prefix=CHECK-BE32R2-MICROMIPS %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+micromips -print-hack-directives %s -o - | FileCheck -check-prefix=CHECK-BE32R2-MICROMIPS_PIC %s
 
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-BE64 %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 %s -o - | FileCheck -check-prefix=CHECK-BE64_PIC %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-BE64R2 %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 %s -o - | FileCheck -check-prefix=CHECK-BE64R2_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 -relocation-model=static %s -print-hack-directives -o - | FileCheck -check-prefix=CHECK-BE64 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 %s -print-hack-directives -o - | FileCheck -check-prefix=CHECK-BE64_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 -relocation-model=static -print-hack-directives %s -o - | FileCheck -check-prefix=CHECK-BE64R2 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 -print-hack-directives %s -o - | FileCheck -check-prefix=CHECK-BE64R2_PIC %s
 
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+mips16 -relocation-model=pic %s -o - | FileCheck -check-prefix=CHECK-LE32R2-MIPS16 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+mips16 -relocation-model=pic -print-hack-directives %s -o - | FileCheck -check-prefix=CHECK-LE32R2-MIPS16 %s
  
 ; 32(R1) bit with NO_REORDER and static
 ; CHECK-BE32: .mips_hack_elf_flags 0x50001005

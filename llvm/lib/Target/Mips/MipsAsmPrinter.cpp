@@ -276,8 +276,8 @@ void MipsAsmPrinter::EmitFunctionEntryLabel() {
   }
 
   if (Subtarget->inMicroMipsMode())
-    getTargetStreamer().emitSymSTO(CurrentFnSym,
-                                   (unsigned)ELF::STO_MIPS_MICROMIPS);
+    getTargetStreamer().emitMipsHackSTOCG(CurrentFnSym,
+                                          (unsigned)ELF::STO_MIPS_MICROMIPS);
   OutStreamer.EmitLabel(CurrentFnSym);
 }
 

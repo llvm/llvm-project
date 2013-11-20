@@ -1,5 +1,3 @@
-; XFAIL: *
-
 // RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux %s -o -| llvm-readobj -t | FileCheck %s
 
         .text
