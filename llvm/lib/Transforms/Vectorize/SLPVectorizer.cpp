@@ -1869,7 +1869,7 @@ bool SLPVectorizer::vectorizeStoreChain(ArrayRef<Value *> Chain,
     }
   }
 
-    return Changed;
+  return Changed;
 }
 
 bool SLPVectorizer::vectorizeStores(ArrayRef<StoreInst *> Stores,
@@ -1974,7 +1974,7 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R) {
     return false;
 
   unsigned Opcode0 = I0->getOpcode();
-  
+
   Type *Ty0 = I0->getType();
   unsigned Sz = DL->getTypeSizeInBits(Ty0);
   unsigned VF = MinVecRegSize / Sz;
@@ -1989,11 +1989,11 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R) {
   }
 
   bool Changed = false;
-    
+
   for (unsigned i = 0, e = VL.size(); i < e; ++i) {
     unsigned OpsWidth = 0;
-      
-    if (i + VF > e) 
+
+    if (i + VF > e)
       OpsWidth = e - i;
     else
       OpsWidth = VF;
@@ -2001,23 +2001,24 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R) {
     if (!isPowerOf2_32(OpsWidth) || OpsWidth < 2)
       break;
 
-    DEBUG(dbgs() << "SLP: Analyzing " << OpsWidth << " operations " << "\n");
+    DEBUG(dbgs() << "SLP: Analyzing " << OpsWidth << " operations "
+                 << "\n");
     ArrayRef<Value *> Ops = VL.slice(i, OpsWidth);
-      
+
     R.buildTree(Ops);
     int Cost = R.getTreeCost();
-       
+
     if (Cost < -SLPCostThreshold) {
       DEBUG(dbgs() << "SLP: Vectorizing pair at cost:" << Cost << ".\n");
       R.vectorizeTree();
-        
+
       // Move to the next bundle.
       i += VF - 1;
       Changed = true;
     }
   }
-    
-  return Changed; 
+
+  return Changed;
 }
 
 bool SLPVectorizer::tryToVectorize(BinaryOperator *V, BoUpSLP &R) {
