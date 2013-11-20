@@ -138,33 +138,37 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     return;
   }
 
-  // Set the appropriate OS version define.
-  if (Triple.isiOS()) {
-    assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
-    char Str[6];
-    Str[0] = '0' + Maj;
-    Str[1] = '0' + (Min / 10);
-    Str[2] = '0' + (Min % 10);
-    Str[3] = '0' + (Rev / 10);
-    Str[4] = '0' + (Rev % 10);
-    Str[5] = '\0';
-    Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__", Str);
-  } else if (Triple.getArchName() != "thumbv6m" &&
-             Triple.getArchName() != "thumbv7m" &&
-             Triple.getArchName() != "thumbv7em") {
-    // Note that the Driver allows versions which aren't representable in the
-    // define (because we only get a single digit for the minor and micro
-    // revision numbers). So, we limit them to the maximum representable
-    // version.
-    assert(Triple.getEnvironmentName().empty() && "Invalid environment!");
-    assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
-    char Str[5];
-    Str[0] = '0' + (Maj / 10);
-    Str[1] = '0' + (Maj % 10);
-    Str[2] = '0' + std::min(Min, 9U);
-    Str[3] = '0' + std::min(Rev, 9U);
-    Str[4] = '\0';
-    Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
+  // If there's an environment specified in the triple, that means we're dealing
+  // with an embedded variant of some sort and don't want the platform
+  // version-min defines, so only add them if there's not one.
+  if (Triple.getEnvironmentName().empty()) {
+    // Set the appropriate OS version define.
+    if (Triple.isiOS()) {
+      assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
+      char Str[6];
+      Str[0] = '0' + Maj;
+      Str[1] = '0' + (Min / 10);
+      Str[2] = '0' + (Min % 10);
+      Str[3] = '0' + (Rev / 10);
+      Str[4] = '0' + (Rev % 10);
+      Str[5] = '\0';
+      Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__",
+                          Str);
+    } else {
+      // Note that the Driver allows versions which aren't representable in the
+      // define (because we only get a single digit for the minor and micro
+      // revision numbers). So, we limit them to the maximum representable
+      // version.
+      assert(Triple.getEnvironmentName().empty() && "Invalid environment!");
+      assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
+      char Str[5];
+      Str[0] = '0' + (Maj / 10);
+      Str[1] = '0' + (Maj % 10);
+      Str[2] = '0' + std::min(Min, 9U);
+      Str[3] = '0' + std::min(Rev, 9U);
+      Str[4] = '\0';
+      Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
+    }
   }
 
   PlatformMinVersion = VersionTuple(Maj, Min, Rev);
