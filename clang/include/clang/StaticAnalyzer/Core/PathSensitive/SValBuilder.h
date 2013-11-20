@@ -200,7 +200,8 @@ public:
   DefinedSVal getFunctionPointer(const FunctionDecl *func);
   
   DefinedSVal getBlockPointer(const BlockDecl *block, CanQualType locTy,
-                              const LocationContext *locContext);
+                              const LocationContext *locContext,
+                              unsigned blockCount);
 
   /// Returns the value of \p E, if it can be determined in a non-path-sensitive
   /// manner.

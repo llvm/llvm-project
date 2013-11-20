@@ -635,12 +635,14 @@ class BlockDataRegion : public TypedRegion {
   friend class MemRegionManager;
   const BlockTextRegion *BC;
   const LocationContext *LC; // Can be null */
+  unsigned BlockCount;
   void *ReferencedVars;
   void *OriginalVars;
 
   BlockDataRegion(const BlockTextRegion *bc, const LocationContext *lc,
-                  const MemRegion *sreg)
+                  unsigned count, const MemRegion *sreg)
   : TypedRegion(sreg, BlockDataRegionKind), BC(bc), LC(lc),
+     BlockCount(count),
     ReferencedVars(0), OriginalVars(0) {}
 
 public:
@@ -692,7 +694,8 @@ public:
   void Profile(llvm::FoldingSetNodeID& ID) const;
     
   static void ProfileRegion(llvm::FoldingSetNodeID&, const BlockTextRegion *,
-                            const LocationContext *, const MemRegion *);
+                            const LocationContext *, unsigned,
+                            const MemRegion *);
     
   static bool classof(const MemRegion* R) {
     return R->getKind() == BlockDataRegionKind;
@@ -1270,7 +1273,8 @@ public:
   ///  argument is allowed to be NULL for cases where we have no known
   ///  context.
   const BlockDataRegion *getBlockDataRegion(const BlockTextRegion *bc,
-                                            const LocationContext *lc = NULL);
+                                            const LocationContext *lc,
+                                            unsigned blockCount);
 
   /// Create a CXXTempObjectRegion for temporaries which are lifetime-extended
   /// by static references. This differs from getCXXTempObjectRegion in the

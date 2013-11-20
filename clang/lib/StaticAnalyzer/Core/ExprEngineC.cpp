@@ -184,7 +184,8 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
 
   // Get the value of the block itself.
   SVal V = svalBuilder.getBlockPointer(BE->getBlockDecl(), T,
-                                       Pred->getLocationContext());
+                                       Pred->getLocationContext(),
+                                       currBldrCtx->blockCount());
   
   ProgramStateRef State = Pred->getState();
   

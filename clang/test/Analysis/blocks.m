@@ -146,3 +146,19 @@ void testReturnVariousSignatures() {
     return 42;
   }();
 }
+
+// This test used to cause infinite loop in the region invalidation.
+void blockCapturesItselfInTheLoop(int x, int m) {
+  void (^assignData)(int) = ^(int x){
+    x++;
+  };
+  while (m < 0) {
+    void (^loop)(int);
+    loop = ^(int x) {
+      assignData(x);
+    };
+    assignData = loop;
+    m++;
+  }
+  assignData(x);
+}

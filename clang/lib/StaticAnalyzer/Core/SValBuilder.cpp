@@ -202,10 +202,12 @@ DefinedSVal SValBuilder::getFunctionPointer(const FunctionDecl *func) {
 
 DefinedSVal SValBuilder::getBlockPointer(const BlockDecl *block,
                                          CanQualType locTy,
-                                         const LocationContext *locContext) {
+                                         const LocationContext *locContext,
+                                         unsigned blockCount) {
   const BlockTextRegion *BC =
     MemMgr.getBlockTextRegion(block, locTy, locContext->getAnalysisDeclContext());
-  const BlockDataRegion *BD = MemMgr.getBlockDataRegion(BC, locContext);
+  const BlockDataRegion *BD = MemMgr.getBlockDataRegion(BC, locContext,
+                                                        blockCount);
   return loc::MemRegionVal(BD);
 }
 
