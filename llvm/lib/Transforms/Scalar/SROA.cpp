@@ -938,6 +938,7 @@ static Type *findCommonType(AllocaSlices::const_iterator B,
                             AllocaSlices::const_iterator E,
                             uint64_t EndOffset) {
   Type *Ty = 0;
+  bool IgnoreNonIntegralTypes = false;
   for (AllocaSlices::const_iterator I = B; I != E; ++I) {
     Use *U = I->getUse();
     if (isa<IntrinsicInst>(*U->getUser()))
@@ -946,29 +947,37 @@ static Type *findCommonType(AllocaSlices::const_iterator B,
       continue;
 
     Type *UserTy = 0;
-    if (LoadInst *LI = dyn_cast<LoadInst>(U->getUser()))
+    if (LoadInst *LI = dyn_cast<LoadInst>(U->getUser())) {
       UserTy = LI->getType();
-    else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser()))
+    } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
-    else
-      return 0; // Bail if we have weird uses.
+    } else {
+      IgnoreNonIntegralTypes = true; // Give up on anything but an iN type.
+      continue;
+    }
 
     if (IntegerType *ITy = dyn_cast<IntegerType>(UserTy)) {
       // If the type is larger than the partition, skip it. We only encounter
       // this for split integer operations where we want to use the type of the
-      // entity causing the split.
-      if (ITy->getBitWidth() / 8 > (EndOffset - B->beginOffset()))
+      // entity causing the split. Also skip if the type is not a byte width
+      // multiple.
+      if (ITy->getBitWidth() % 8 != 0 ||
+          ITy->getBitWidth() / 8 > (EndOffset - B->beginOffset()))
         continue;
 
       // If we have found an integer type use covering the alloca, use that
-      // regardless of the other types, as integers are often used for a
-      // "bucket
-      // of bits" type.
+      // regardless of the other types, as integers are often used for
+      // a "bucket of bits" type.
+      //
+      // NB: This *must* be the only return from inside the loop so that the
+      // order of slices doesn't impact the computed type.
       return ITy;
+    } else if (IgnoreNonIntegralTypes) {
+      continue;
     }
 
     if (Ty && Ty != UserTy)
-      return 0;
+      IgnoreNonIntegralTypes = true; // Give up on anything but an iN type.
 
     Ty = UserTy;
   }

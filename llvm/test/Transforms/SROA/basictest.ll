@@ -1181,7 +1181,6 @@ entry:
   store i1 %x, i1* %b.i1, align 8
   %b.i8 = bitcast <{ i1 }>* %b to i8*
   %foo = load i8* %b.i8, align 1
-; CHECK-NEXT: {{.*}} = zext i1 %x to i8
 ; CHECK-NEXT: %[[ext:.*]] = zext i1 %x to i8
 ; CHECK-NEXT: store i8 %[[ext]], i8* %[[a]], align 8
 ; CHECK-NEXT: {{.*}} = load i8* %[[a]], align 8
