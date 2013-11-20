@@ -176,3 +176,10 @@ namespace test3 {
   void bah() {}
   void baz() { zed(bah); }
 }
+
+namespace test4 {
+  class foo {
+    template <typename T> static void bar(T v);
+  };
+  extern template void foo::bar(const void *);
+}

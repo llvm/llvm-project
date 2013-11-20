@@ -2506,136 +2506,6 @@ getCCForDeclaratorChunk(Sema &S, Declarator &D,
                                                IsCXXInstanceMethod);
 }
 
-namespace {
-  /// A helper class to unwrap a type down to a function for the
-  /// purposes of applying attributes there.
-  ///
-  /// Use:
-  ///   FunctionTypeUnwrapper unwrapped(SemaRef, T);
-  ///   if (unwrapped.isFunctionType()) {
-  ///     const FunctionType *fn = unwrapped.get();
-  ///     // change fn somehow
-  ///     T = unwrapped.wrap(fn);
-  ///   }
-  struct FunctionTypeUnwrapper {
-    enum WrapKind {
-      Desugar,
-      Parens,
-      Pointer,
-      BlockPointer,
-      Reference,
-      MemberPointer
-    };
-
-    QualType Original;
-    const FunctionType *Fn;
-    SmallVector<unsigned char /*WrapKind*/, 8> Stack;
-
-    FunctionTypeUnwrapper(Sema &S, QualType T) : Original(T) {
-      while (true) {
-        const Type *Ty = T.getTypePtr();
-        if (isa<FunctionType>(Ty)) {
-          Fn = cast<FunctionType>(Ty);
-          return;
-        } else if (isa<ParenType>(Ty)) {
-          T = cast<ParenType>(Ty)->getInnerType();
-          Stack.push_back(Parens);
-        } else if (isa<PointerType>(Ty)) {
-          T = cast<PointerType>(Ty)->getPointeeType();
-          Stack.push_back(Pointer);
-        } else if (isa<BlockPointerType>(Ty)) {
-          T = cast<BlockPointerType>(Ty)->getPointeeType();
-          Stack.push_back(BlockPointer);
-        } else if (isa<MemberPointerType>(Ty)) {
-          T = cast<MemberPointerType>(Ty)->getPointeeType();
-          Stack.push_back(MemberPointer);
-        } else if (isa<ReferenceType>(Ty)) {
-          T = cast<ReferenceType>(Ty)->getPointeeType();
-          Stack.push_back(Reference);
-        } else {
-          const Type *DTy = Ty->getUnqualifiedDesugaredType();
-          if (Ty == DTy) {
-            Fn = 0;
-            return;
-          }
-
-          T = QualType(DTy, 0);
-          Stack.push_back(Desugar);
-        }
-      }
-    }
-
-    bool isFunctionType() const { return (Fn != 0); }
-    const FunctionType *get() const { return Fn; }
-
-    QualType wrap(Sema &S, const FunctionType *New) {
-      // If T wasn't modified from the unwrapped type, do nothing.
-      if (New == get()) return Original;
-
-      Fn = New;
-      return wrap(S.Context, Original, 0);
-    }
-
-  private:
-    QualType wrap(ASTContext &C, QualType Old, unsigned I) {
-      if (I == Stack.size())
-        return C.getQualifiedType(Fn, Old.getQualifiers());
-
-      // Build up the inner type, applying the qualifiers from the old
-      // type to the new type.
-      SplitQualType SplitOld = Old.split();
-
-      // As a special case, tail-recurse if there are no qualifiers.
-      if (SplitOld.Quals.empty())
-        return wrap(C, SplitOld.Ty, I);
-      return C.getQualifiedType(wrap(C, SplitOld.Ty, I), SplitOld.Quals);
-    }
-
-    QualType wrap(ASTContext &C, const Type *Old, unsigned I) {
-      if (I == Stack.size()) return QualType(Fn, 0);
-
-      switch (static_cast<WrapKind>(Stack[I++])) {
-      case Desugar:
-        // This is the point at which we potentially lose source
-        // information.
-        return wrap(C, Old->getUnqualifiedDesugaredType(), I);
-
-      case Parens: {
-        QualType New = wrap(C, cast<ParenType>(Old)->getInnerType(), I);
-        return C.getParenType(New);
-      }
-
-      case Pointer: {
-        QualType New = wrap(C, cast<PointerType>(Old)->getPointeeType(), I);
-        return C.getPointerType(New);
-      }
-
-      case BlockPointer: {
-        QualType New = wrap(C, cast<BlockPointerType>(Old)->getPointeeType(),I);
-        return C.getBlockPointerType(New);
-      }
-
-      case MemberPointer: {
-        const MemberPointerType *OldMPT = cast<MemberPointerType>(Old);
-        QualType New = wrap(C, OldMPT->getPointeeType(), I);
-        return C.getMemberPointerType(New, OldMPT->getClass());
-      }
-
-      case Reference: {
-        const ReferenceType *OldRef = cast<ReferenceType>(Old);
-        QualType New = wrap(C, OldRef->getPointeeType(), I);
-        if (isa<LValueReferenceType>(OldRef))
-          return C.getLValueReferenceType(New, OldRef->isSpelledAsLValue());
-        else
-          return C.getRValueReferenceType(New);
-      }
-      }
-
-      llvm_unreachable("unknown wrapping kind");
-    }
-  };
-}
-
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                                 QualType declSpecType,
                                                 TypeSourceInfo *TInfo) {
@@ -3239,25 +3109,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // top-level template type arguments.
     bool FreeFunction;
     if (!D.getCXXScopeSpec().isSet()) {
-      const DeclSpec &Spec = D.getDeclSpec();
-      FreeFunction = (D.getContext() != Declarator::MemberContext &&
-                      D.getContext() != Declarator::LambdaExprContext) ||
-                     Spec.isFriendSpecified() ||
-                     Spec.getStorageClassSpec() == DeclSpec::SCS_typedef;
+      FreeFunction = ((D.getContext() != Declarator::MemberContext &&
+                       D.getContext() != Declarator::LambdaExprContext) ||
+                      D.getDeclSpec().isFriendSpecified());
     } else {
       DeclContext *DC = S.computeDeclContext(D.getCXXScopeSpec());
       FreeFunction = (DC && !DC->isRecord());
-    }
-
-    if (!S.getCallingConvAttributedType(T)) {
-      CallingConv CC =
-        Context.getDefaultCallingConvention(FnTy->isVariadic(), !FreeFunction);
-      if (CC != FnTy->getCallConv()) {
-        FunctionType::ExtInfo EI = FnTy->getExtInfo().withCallingConv(CC);
-        FnTy = cast<FunctionProtoType>(S.Context.adjustFunctionType(FnTy, EI));
-        FunctionTypeUnwrapper Unwrapped(S, T);
-        T = Unwrapped.wrap(S, FnTy);
-      }
     }
 
     // C++11 [dcl.fct]p6 (w/DR1417):
@@ -4358,6 +4215,136 @@ static bool handleObjCGCTypeAttr(TypeProcessingState &state,
                                        origType, type);
 
   return true;
+}
+
+namespace {
+  /// A helper class to unwrap a type down to a function for the
+  /// purposes of applying attributes there.
+  ///
+  /// Use:
+  ///   FunctionTypeUnwrapper unwrapped(SemaRef, T);
+  ///   if (unwrapped.isFunctionType()) {
+  ///     const FunctionType *fn = unwrapped.get();
+  ///     // change fn somehow
+  ///     T = unwrapped.wrap(fn);
+  ///   }
+  struct FunctionTypeUnwrapper {
+    enum WrapKind {
+      Desugar,
+      Parens,
+      Pointer,
+      BlockPointer,
+      Reference,
+      MemberPointer
+    };
+
+    QualType Original;
+    const FunctionType *Fn;
+    SmallVector<unsigned char /*WrapKind*/, 8> Stack;
+
+    FunctionTypeUnwrapper(Sema &S, QualType T) : Original(T) {
+      while (true) {
+        const Type *Ty = T.getTypePtr();
+        if (isa<FunctionType>(Ty)) {
+          Fn = cast<FunctionType>(Ty);
+          return;
+        } else if (isa<ParenType>(Ty)) {
+          T = cast<ParenType>(Ty)->getInnerType();
+          Stack.push_back(Parens);
+        } else if (isa<PointerType>(Ty)) {
+          T = cast<PointerType>(Ty)->getPointeeType();
+          Stack.push_back(Pointer);
+        } else if (isa<BlockPointerType>(Ty)) {
+          T = cast<BlockPointerType>(Ty)->getPointeeType();
+          Stack.push_back(BlockPointer);
+        } else if (isa<MemberPointerType>(Ty)) {
+          T = cast<MemberPointerType>(Ty)->getPointeeType();
+          Stack.push_back(MemberPointer);
+        } else if (isa<ReferenceType>(Ty)) {
+          T = cast<ReferenceType>(Ty)->getPointeeType();
+          Stack.push_back(Reference);
+        } else {
+          const Type *DTy = Ty->getUnqualifiedDesugaredType();
+          if (Ty == DTy) {
+            Fn = 0;
+            return;
+          }
+
+          T = QualType(DTy, 0);
+          Stack.push_back(Desugar);
+        }
+      }
+    }
+
+    bool isFunctionType() const { return (Fn != 0); }
+    const FunctionType *get() const { return Fn; }
+
+    QualType wrap(Sema &S, const FunctionType *New) {
+      // If T wasn't modified from the unwrapped type, do nothing.
+      if (New == get()) return Original;
+
+      Fn = New;
+      return wrap(S.Context, Original, 0);
+    }
+
+  private:
+    QualType wrap(ASTContext &C, QualType Old, unsigned I) {
+      if (I == Stack.size())
+        return C.getQualifiedType(Fn, Old.getQualifiers());
+
+      // Build up the inner type, applying the qualifiers from the old
+      // type to the new type.
+      SplitQualType SplitOld = Old.split();
+
+      // As a special case, tail-recurse if there are no qualifiers.
+      if (SplitOld.Quals.empty())
+        return wrap(C, SplitOld.Ty, I);
+      return C.getQualifiedType(wrap(C, SplitOld.Ty, I), SplitOld.Quals);
+    }
+
+    QualType wrap(ASTContext &C, const Type *Old, unsigned I) {
+      if (I == Stack.size()) return QualType(Fn, 0);
+
+      switch (static_cast<WrapKind>(Stack[I++])) {
+      case Desugar:
+        // This is the point at which we potentially lose source
+        // information.
+        return wrap(C, Old->getUnqualifiedDesugaredType(), I);
+
+      case Parens: {
+        QualType New = wrap(C, cast<ParenType>(Old)->getInnerType(), I);
+        return C.getParenType(New);
+      }
+
+      case Pointer: {
+        QualType New = wrap(C, cast<PointerType>(Old)->getPointeeType(), I);
+        return C.getPointerType(New);
+      }
+
+      case BlockPointer: {
+        QualType New = wrap(C, cast<BlockPointerType>(Old)->getPointeeType(),I);
+        return C.getBlockPointerType(New);
+      }
+
+      case MemberPointer: {
+        const MemberPointerType *OldMPT = cast<MemberPointerType>(Old);
+        QualType New = wrap(C, OldMPT->getPointeeType(), I);
+        return C.getMemberPointerType(New, OldMPT->getClass());
+      }
+
+      case Reference: {
+        const ReferenceType *OldRef = cast<ReferenceType>(Old);
+        QualType New = wrap(C, OldRef->getPointeeType(), I);
+        if (isa<LValueReferenceType>(OldRef))
+          return C.getLValueReferenceType(New, OldRef->isSpelledAsLValue());
+        else
+          return C.getRValueReferenceType(New);
+      }
+      }
+
+      llvm_unreachable("unknown wrapping kind");
+    }
+  };
 }
 
 static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,

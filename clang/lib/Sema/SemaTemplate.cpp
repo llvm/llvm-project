@@ -6501,29 +6501,16 @@ bool Sema::CheckFunctionTemplateSpecialization(
       // it will be a static member function until we know which template it
       // specializes), so adjust it now assuming it specializes this template.
       QualType FT = FD->getType();
-      const FunctionProtoType *FPT = FT->castAs<FunctionProtoType>();
-      FunctionDecl *TmplFD = FunTmpl->getTemplatedDecl();
       if (FD->isConstexpr()) {
-        CXXMethodDecl *OldMD = dyn_cast<CXXMethodDecl>(TmplFD);
+        CXXMethodDecl *OldMD =
+          dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
         if (OldMD && OldMD->isConst()) {
+          const FunctionProtoType *FPT = FT->castAs<FunctionProtoType>();
           FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
           EPI.TypeQuals |= Qualifiers::Const;
           FT = Context.getFunctionType(FPT->getResultType(), FPT->getArgTypes(),
                                        EPI);
         }
-      }
-
-      // Ignore differences in calling convention and noreturn until decl
-      // merging.
-      const FunctionProtoType *TmplFT =
-          TmplFD->getType()->castAs<FunctionProtoType>();
-      if (FPT->getCallConv() != TmplFT->getCallConv() ||
-          FPT->getNoReturnAttr() != TmplFT->getNoReturnAttr()) {
-        FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-        EPI.ExtInfo = EPI.ExtInfo.withCallingConv(TmplFT->getCallConv());
-        EPI.ExtInfo = EPI.ExtInfo.withNoReturn(TmplFT->getNoReturnAttr());
-        FT = Context.getFunctionType(FPT->getResultType(), FPT->getArgTypes(),
-                                     EPI);
       }
 
       // C++ [temp.expl.spec]p11:
