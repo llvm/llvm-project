@@ -463,10 +463,12 @@ Sema::HandlePropertyInClassExtension(Scope *S,
       QualType PrimaryPropertyQT =
         Context.getCanonicalType(PIDecl->getType()).getUnqualifiedType();
       if (isa<ObjCObjectPointerType>(PrimaryPropertyQT)) {
+        bool PropertyIsWeak = ((PIkind & ObjCPropertyDecl::OBJC_PR_weak) != 0);
         Qualifiers::ObjCLifetime PrimaryPropertyLifeTime =
           PrimaryPropertyQT.getObjCLifetime();
         if (PrimaryPropertyLifeTime == Qualifiers::OCL_None &&
-            (Attributes & ObjCDeclSpec::DQ_PR_weak)) {
+            (Attributes & ObjCDeclSpec::DQ_PR_weak) &&
+            !PropertyIsWeak) {
               Diag(AtLoc, diag::warn_property_implicitly_mismatched);
               Diag(PIDecl->getLocation(), diag::note_property_declare);
             }

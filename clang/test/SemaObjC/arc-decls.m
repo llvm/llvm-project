@@ -113,8 +113,13 @@ struct __attribute__((objc_ownership(none))) S2 {}; // expected-error {{'objc_ow
 
 @interface SomeClassOwnedByController
 @property (readonly) ControllerClass *controller; // expected-note {{property declared here}}
+
+// rdar://15465916
+@property (readonly, weak) ControllerClass *weak_controller;
 @end
 
 @interface SomeClassOwnedByController ()
 @property (readwrite, weak) ControllerClass *controller; // expected-warning {{primary property declaration is implicitly strong while redeclaration in class extension is weak}}
+
+@property (readwrite, weak) ControllerClass *weak_controller;
 @end
