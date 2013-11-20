@@ -142,6 +142,7 @@ declare i32 @llvm.x86.sse2.cvtsd2si(<2 x double>) nounwind readnone
 
 define <4 x float> @test_x86_sse2_cvtsd2ss(<4 x float> %a0, <2 x double> %a1) {
   ; CHECK: cvtsd2ss 
+  ; CHECK-NOT: cvtsd2ss %xmm{{[0-9]+}}, %xmm{{[0-9]+}}, %xmm{{[0-9]+}} 
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }

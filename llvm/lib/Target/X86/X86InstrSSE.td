@@ -1810,14 +1810,14 @@ def Int_VCVTSD2SSrm: I<0x5A, MRMSrcReg,
 let Constraints = "$src1 = $dst" in {
 def Int_CVTSD2SSrr: I<0x5A, MRMSrcReg,
                        (outs VR128:$dst), (ins VR128:$src1, VR128:$src2),
-                       "cvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                       "cvtsd2ss\t{$src2, $dst|$dst, $src2}",
                        [(set VR128:$dst,
                          (int_x86_sse2_cvtsd2ss VR128:$src1, VR128:$src2))],
                        IIC_SSE_CVT_Scalar_RR>, XD, Requires<[UseSSE2]>,
                        Sched<[WriteCvtF2F]>;
 def Int_CVTSD2SSrm: I<0x5A, MRMSrcReg,
                        (outs VR128:$dst), (ins VR128:$src1, sdmem:$src2),
-                       "cvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                       "cvtsd2ss\t{$src2, $dst|$dst, $src2}",
                        [(set VR128:$dst, (int_x86_sse2_cvtsd2ss
                                           VR128:$src1, sse_load_f64:$src2))],
                        IIC_SSE_CVT_Scalar_RM>, XD, Requires<[UseSSE2]>,
