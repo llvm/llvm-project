@@ -298,8 +298,7 @@ void StackMaps::serializeToStackMapSection() {
         }
       }
       else {
-        assert((Loc.LocType != Location::Register
-                && Loc.LocType != Location::Register) &&
+        assert(Loc.LocType != Location::Register &&
                "Missing location register");
       }
       AP.OutStreamer.EmitIntValue(Loc.LocType, 1);
