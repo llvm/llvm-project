@@ -176,7 +176,7 @@ Builtin includes
 
 Clang tools need their builtin headers and search for them the same way Clang
 does.  Thus, the default location to look for builtin headers is in a path
-``$(dirname /path/to/tool)/../lib/clang/3.3/include`` relative to the tool
+``$(dirname /path/to/tool)/../lib/clang/3.4/include`` relative to the tool
 binary.  This works out-of-the-box for tools running from llvm's toplevel
 binary directory after building clang-headers, or if the tool is running from
 the binary directory of a clang install next to the clang binary.
