@@ -148,6 +148,12 @@ public:
   virtual void mangleDynamicAtExitDestructor(const VarDecl *D,
                                              raw_ostream &) = 0;
 
+  /// Generates a unique string for an externally visible type for use with TBAA
+  /// or type uniquing.
+  /// TODO: Extend this to internal types by generating names that are unique
+  /// across translation units so it can be used with LTO.
+  virtual void mangleTypeName(QualType T, raw_ostream &) = 0;
+
   /// @}
 };
 

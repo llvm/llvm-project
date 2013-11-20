@@ -152,11 +152,9 @@ CodeGenTBAA::getTBAAInfo(QualType QTy) {
     if (!Features.CPlusPlus || !ETy->getDecl()->isExternallyVisible())
       return MetadataCache[Ty] = getChar();
 
-    // TODO: This is using the RTTI name. Is there a better way to get
-    // a unique string for a type?
     SmallString<256> OutName;
     llvm::raw_svector_ostream Out(OutName);
-    MContext.mangleCXXRTTIName(QualType(ETy, 0), Out);
+    MContext.mangleTypeName(QualType(ETy, 0), Out);
     Out.flush();
     return MetadataCache[Ty] = createTBAAScalarType(OutName, getChar());
   }
@@ -268,13 +266,11 @@ CodeGenTBAA::getTBAAStructTypeInfo(QualType QTy) {
           FieldNode, Layout.getFieldOffset(idx) / Context.getCharWidth()));
     }
 
-    // TODO: This is using the RTTI name. Is there a better way to get
-    // a unique string for a type?
     SmallString<256> OutName;
     if (Features.CPlusPlus) {
-      // Don't use mangleCXXRTTIName for C code.
+      // Don't use the mangler for C code.
       llvm::raw_svector_ostream Out(OutName);
-      MContext.mangleCXXRTTIName(QualType(Ty, 0), Out);
+      MContext.mangleTypeName(QualType(Ty, 0), Out);
       Out.flush();
     } else {
       OutName = RD->getName();

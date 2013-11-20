@@ -144,6 +144,7 @@ public:
                            raw_ostream &);
   void mangleCXXRTTI(QualType T, raw_ostream &);
   void mangleCXXRTTIName(QualType T, raw_ostream &);
+  void mangleTypeName(QualType T, raw_ostream &);
   void mangleCXXCtor(const CXXConstructorDecl *D, CXXCtorType Type,
                      raw_ostream &);
   void mangleCXXDtor(const CXXDestructorDecl *D, CXXDtorType Type,
@@ -3782,6 +3783,10 @@ void ItaniumMangleContextImpl::mangleCXXRTTIName(QualType Ty,
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTS";
   Mangler.mangleType(Ty);
+}
+
+void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out) {
+  mangleCXXRTTIName(Ty, Out);
 }
 
 ItaniumMangleContext *

@@ -197,6 +197,7 @@ public:
                                 raw_ostream &Out);
   virtual void mangleCXXRTTI(QualType T, raw_ostream &);
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &);
+  virtual void mangleTypeName(QualType T, raw_ostream &);
   virtual void mangleCXXCtor(const CXXConstructorDecl *D, CXXCtorType Type,
                              raw_ostream &);
   virtual void mangleCXXDtor(const CXXDestructorDecl *D, CXXDtorType Type,
@@ -2017,6 +2018,14 @@ void MicrosoftMangleContextImpl::mangleCXXRTTIName(QualType T, raw_ostream &) {
     "cannot mangle the name of type %0 into RTTI descriptors yet");
   getDiags().Report(DiagID)
     << T.getBaseTypeIdentifier();
+}
+
+void MicrosoftMangleContextImpl::mangleTypeName(QualType T, raw_ostream &Out) {
+  // This is just a made up unique string for the purposes of tbaa.  undname
+  // does *not* know how to demangle it.
+  MicrosoftCXXNameMangler Mangler(*this, Out);
+  Mangler.getStream() << '?';
+  Mangler.mangleType(T, SourceRange());
 }
 
 void MicrosoftMangleContextImpl::mangleCXXCtor(const CXXConstructorDecl *D,
