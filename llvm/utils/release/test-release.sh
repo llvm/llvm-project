@@ -26,6 +26,7 @@ Base_url="http://llvm.org/svn/llvm-project"
 Release=""
 Release_no_dot=""
 RC=""
+Triple=""
 do_checkout="yes"
 do_ada="no"
 do_clang="yes"
@@ -44,6 +45,7 @@ function usage() {
     echo " -release X.Y      The release number to test."
     echo " -rc NUM           The pre-release candidate number."
     echo " -final            The final release candidate."
+    echo " -triple TRIPLE    The target triple for this machine."
     echo " -j NUM            Number of compile jobs to run. [default: 3]"
     echo " -build-dir DIR    Directory to perform testing in. [default: pwd]"
     echo " -no-checkout      Don't checkout the sources from SVN."
@@ -71,6 +73,10 @@ while [ $# -gt 0 ]; do
             ;;
         -final | --final )
             RC=final
+            ;;
+        -triple | --triple )
+            shift
+            Triple="$1"
             ;;
         -j* )
             NumJobs="`echo $1 | sed -e 's,-j\([0-9]*\),\1,g'`"
@@ -135,6 +141,10 @@ if [ -z "$RC" ]; then
     echo "error: no release candidate number specified"
     exit 1
 fi
+if [ -z "$Triple" ]; then
+    echo "error: no target triple specified"
+    exit 1
+fi
 
 # Figure out how many make processes to run.
 if [ -z "$NumJobs" ]; then
@@ -158,6 +168,13 @@ cd $BuildDir
 # Location of log files.
 LogDir=$BuildDir/logs
 mkdir -p $LogDir
+
+# Final package name.
+Package=clang+llvm-$Release
+if [ $RC != "final" ]; then
+  Package=$Package-$RC
+fi
+Package=$Package-$Triple
 
 # Find compilers.
 if [ "$do_dragonegg" = "yes" ]; then
@@ -189,9 +206,11 @@ function check_program_exists() {
   fi
 }
 
-check_program_exists 'chrpath'
-check_program_exists 'file'
-check_program_exists 'objdump'
+if [ `uname -s` != "Darwin" ]; then
+  check_program_exists 'chrpath'
+  check_program_exists 'file'
+  check_program_exists 'objdump'
+fi
 
 # Make sure that the URLs are valid.
 function check_valid_urls() {
@@ -343,6 +362,9 @@ function test_llvmCore() {
 # Clean RPATH. Libtool adds the build directory to the search path, which is
 # not necessary --- and even harmful --- for the binary packages we release.
 function clean_RPATH() {
+  if [ `uname -s` = "Darwin" ]; then
+    return
+  fi
   local InstallPath="$1"
   for Candidate in `find $InstallPath/{bin,lib} -type f`; do
     if file $Candidate | grep ELF | egrep 'executable|shared object' > /dev/null 2>&1 ; then
@@ -353,6 +375,16 @@ function clean_RPATH() {
       fi
     fi
   done
+}
+
+# Create a package of the release binaries.
+function package_release() {
+    cwd=`pwd`
+    cd $BuildDir/Phase3/Release
+    mv llvmCore-$Release-$RC.install $Package
+    tar cfz $BuildDir/$Package.tar.gz $Package
+    mv $Package llvmCore-$Release-$RC.install
+    cd $cwd
 }
 
 set -e                          # Exit if any command fails
@@ -550,9 +582,12 @@ for Flavor in $Flavors ; do
 done
 ) 2>&1 | tee $LogDir/testing.$Release-$RC.log
 
+package_release
+
 set +e
 
 # Woo hoo!
 echo "### Testing Finished ###"
+echo "### Package: $Package.tar.gz"
 echo "### Logs: $LogDir"
 exit 0
