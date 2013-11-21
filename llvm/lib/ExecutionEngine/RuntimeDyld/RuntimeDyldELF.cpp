@@ -1031,8 +1031,8 @@ void RuntimeDyldELF::processRelocationRef(unsigned SectionID,
     //  Look up for existing stub.
     StubMap::const_iterator i = Stubs.find(Value);
     if (i != Stubs.end()) {
-      resolveRelocation(Section, Offset,
-                        (uint64_t)Section.Address + i->second, RelType, 0);
+      RelocationEntry RE(SectionID, Offset, RelType, i->second);
+      addRelocationForSection(RE, SectionID);
       DEBUG(dbgs() << " Stub function found\n");
     } else {
       // Create a new stub function.
@@ -1057,9 +1057,8 @@ void RuntimeDyldELF::processRelocationRef(unsigned SectionID,
         addRelocationForSection(RELo, Value.SectionID);
       }
 
-      resolveRelocation(Section, Offset,
-                        (uint64_t)Section.Address + Section.StubOffset,
-                        RelType, 0);
+      RelocationEntry RE(SectionID, Offset, RelType, Section.StubOffset);
+      addRelocationForSection(RE, SectionID);
       Section.StubOffset += getMaxStubSize();
     }
   } else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {

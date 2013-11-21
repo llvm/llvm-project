@@ -1,7 +1,5 @@
 ; RUN: %lli_mcjit -extra-module=%p/Inputs/cross-module-b.ll -disable-lazy-compilation=true -remote-mcjit -mcjit-remote-process=lli-child-target %s > /dev/null
 
-; XFAIL: mips
-
 declare i32 @FB()
 
 define i32 @FA() {

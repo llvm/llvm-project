@@ -1,7 +1,5 @@
 ; RUN: %lli_mcjit -remote-mcjit -mcjit-remote-process=lli-child-target %s > /dev/null
 
-; XFAIL: mips
-
 define double @test(double* %DP, double %Arg) {
 	%D = load double* %DP		; <double> [#uses=1]
 	%V = fadd double %D, 1.000000e+00		; <double> [#uses=2]

@@ -1,7 +1,5 @@
 ; RUN: %lli_mcjit -remote-mcjit -mcjit-remote-process=lli-child-target %s > /dev/null
 
-; XFAIL: mips
-
 @count = global i32 1, align 4
 
 define i32 @main() nounwind uwtable {
