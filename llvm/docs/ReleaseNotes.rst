@@ -132,11 +132,22 @@ Ports to other architectures like ARM and AArch64 are underway.
 DXR
 ---
 
-`DXR https://wiki.mozilla.org/DXR`_ is Mozilla's code search and navigation
+`DXR <https://wiki.mozilla.org/DXR>`_ is Mozilla's code search and navigation
 tool, aimed at making sense of large projects like Firefox. It supports
 full-text and regex searches as well as structural queries like "Find all the
 callers of this function." Behind the scenes, it uses a custom trigram index,
 the re2 library, and structural data collected by a clang compiler plugin.
+
+Likely
+------
+
+`Likely <http://www.liblikely.org/>`_ is an open source domain specific
+language for image recognition.  Algorithms are just-in-time compiled using
+LLVM's MCJIT infrastructure to execute on single or multi-threaded CPUs as well
+as OpenCL SPIR or CUDA enabled GPUs. Likely exploits the observation that while
+image processing and statistical learning kernels must be written generically
+to handle any matrix datatype, at runtime they tend to be executed repeatedly
+on the same type.
 
 Additional Information
 ======================
