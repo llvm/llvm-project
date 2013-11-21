@@ -529,16 +529,16 @@ defm SRADI  : XSForm_1rc<31, 413, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
 defm CNTLZD : XForm_11r<31, 58, (outs g8rc:$rA), (ins g8rc:$rS),
                         "cntlzd", "$rA, $rS", IntGeneral,
                         [(set i64:$rA, (ctlz i64:$rS))]>;
-defm POPCNTD : XForm_11r<31, 506, (outs g8rc:$rA), (ins g8rc:$rS),
-                         "popcntd", "$rA, $rS", IntGeneral,
-                         [(set i64:$rA, (ctpop i64:$rS))]>;
+def POPCNTD : XForm_11<31, 506, (outs g8rc:$rA), (ins g8rc:$rS),
+                       "popcntd $rA, $rS", IntGeneral,
+                       [(set i64:$rA, (ctpop i64:$rS))]>;
 
 // popcntw also does a population count on the high 32 bits (storing the
 // results in the high 32-bits of the output). We'll ignore that here (which is
 // safe because we never separately use the high part of the 64-bit registers).
-defm POPCNTW : XForm_11r<31, 378, (outs gprc:$rA), (ins gprc:$rS),
-                         "popcntw", "$rA, $rS", IntGeneral,
-                         [(set i32:$rA, (ctpop i32:$rS))]>;
+def POPCNTW : XForm_11<31, 378, (outs gprc:$rA), (ins gprc:$rS),
+                       "popcntw $rA, $rS", IntGeneral,
+                       [(set i32:$rA, (ctpop i32:$rS))]>;
 
 defm DIVD  : XOForm_1r<31, 489, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                        "divd", "$rT, $rA, $rB", IntDivD,

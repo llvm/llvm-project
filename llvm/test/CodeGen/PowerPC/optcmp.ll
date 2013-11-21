@@ -134,3 +134,19 @@ entry:
 ; CHECK-NOT: fsubs. 0, 1, 2
 ; CHECK: stfs 0, 0(5)
 }
+
+declare i64 @llvm.ctpop.i64(i64);
+
+define signext i64 @fooct(i64 signext %a, i64 signext %b, i64* nocapture %c) #0 {
+entry:
+  %sub = sub nsw i64 %a, %b
+  %subc = call i64 @llvm.ctpop.i64(i64 %sub)
+  store i64 %subc, i64* %c, align 4
+  %cmp = icmp sgt i64 %subc, 0
+  %cond = select i1 %cmp, i64 %a, i64 %b
+  ret i64 %cond
+
+; CHECK: @fooct
+; CHECK-NOT: popcntd.
+}
+
