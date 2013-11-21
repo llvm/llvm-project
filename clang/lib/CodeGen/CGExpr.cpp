@@ -1553,6 +1553,12 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumDstElts; ++i)
         Mask.push_back(Builder.getInt32(i));
 
+      // When the vector size is odd and .odd or .hi is used, the last element
+      // of the Elts constant array will be one past the size of the vector.
+      // Ignore the last element here, if it is greater than the mask size.
+      if (getAccessedFieldNo(NumSrcElts - 1, Elts) == Mask.size())
+        NumSrcElts--;
+
       // modify when what gets shuffled in
       for (unsigned i = 0; i != NumSrcElts; ++i)
         Mask[getAccessedFieldNo(i, Elts)] = Builder.getInt32(i+NumDstElts);
