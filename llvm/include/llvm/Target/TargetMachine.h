@@ -75,7 +75,8 @@ protected: // Can only create subclasses.
   std::string TargetFS;
 
   /// CodeGenInfo - Low level target information such as relocation model.
-  const MCCodeGenInfo *CodeGenInfo;
+  /// Non-const to allow resetting optimization level per-function.
+  MCCodeGenInfo *CodeGenInfo;
 
   /// AsmInfo - Contains target specific asm information.
   ///
@@ -212,6 +213,9 @@ public:
   /// getOptLevel - Returns the optimization level: None, Less,
   /// Default, or Aggressive.
   CodeGenOpt::Level getOptLevel() const;
+
+  /// \brief Overrides the optimization level.
+  void setOptLevel(CodeGenOpt::Level Level) const;
 
   void setFastISel(bool Enable) { Options.EnableFastISel = Enable; }
 

@@ -164,6 +164,11 @@ CodeGenOpt::Level TargetMachine::getOptLevel() const {
   return CodeGenInfo->getOptLevel();
 }
 
+void TargetMachine::setOptLevel(CodeGenOpt::Level Level) const {
+  if (CodeGenInfo)
+    CodeGenInfo->setOptLevel(Level);
+}
+
 bool TargetMachine::getAsmVerbosityDefault() {
   return AsmVerbosityDefault;
 }
