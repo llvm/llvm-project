@@ -223,39 +223,6 @@ defaultListDAGScheduler("default", "Best scheduler for the target",
 
 namespace llvm {
   //===--------------------------------------------------------------------===//
-  /// \brief This struct is used by SelectionDAGISel to temporarily override
-  /// the optimization level on a per-function basis.
-  class OptLevelChanger {
-    SelectionDAGISel &IS;
-    CodeGenOpt::Level SavedOptLevel;
-
-  public:
-    OptLevelChanger(SelectionDAGISel &ISel,
-                    CodeGenOpt::Level NewOptLevel) : IS(ISel) {
-      SavedOptLevel = IS.OptLevel;
-      if (NewOptLevel == SavedOptLevel)
-        return;
-      IS.OptLevel = NewOptLevel;
-      IS.TM.setOptLevel(NewOptLevel);
-      DEBUG(dbgs() << "\nChanging optimization level for Function "
-            << IS.MF->getFunction()->getName() << "\n");
-      DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel
-            << " ; After: -O" << NewOptLevel << "\n");
-    }
-
-    ~OptLevelChanger() {
-      if (IS.OptLevel == SavedOptLevel)
-        return;
-      DEBUG(dbgs() << "\nRestoring optimization level for Function "
-            << IS.MF->getFunction()->getName() << "\n");
-      DEBUG(dbgs() << "\tBefore: -O" << IS.OptLevel
-            << " ; After: -O" << SavedOptLevel << "\n");
-      IS.OptLevel = SavedOptLevel;
-      IS.TM.setOptLevel(SavedOptLevel);
-    }
-  };
-
-  //===--------------------------------------------------------------------===//
   /// createDefaultScheduler - This creates an instruction scheduler appropriate
   /// for the target.
   ScheduleDAGSDNodes* createDefaultScheduler(SelectionDAGISel *IS,
@@ -401,12 +368,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     const_cast<TargetSubtargetInfo&>(TM.getSubtarget<TargetSubtargetInfo>());
   ST.resetSubtargetFeatures(MF);
   TM.resetTargetOptions(MF);
-
-  // Reset OptLevel to None for optnone functions.
-  CodeGenOpt::Level NewOptLevel = OptLevel;
-  if (Fn.hasFnAttribute(Attribute::OptimizeNone))
-    NewOptLevel = CodeGenOpt::None;
-  OptLevelChanger OLC(*this, NewOptLevel);
 
   DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
@@ -985,7 +946,7 @@ static void collectFailStats(const Instruction *I) {
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = 0;
-  if (TM.Options.EnableFastISel || Fn.hasFnAttribute(Attribute::OptimizeNone))
+  if (TM.Options.EnableFastISel)
     FastIS = getTargetLowering()->createFastISel(*FuncInfo, LibInfo);
 
   // Iterate over all basic blocks in the function.

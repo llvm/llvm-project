@@ -42,9 +42,6 @@ namespace llvm {
     CodeModel::Model getCodeModel() const { return CMModel; }
 
     CodeGenOpt::Level getOptLevel() const { return OptLevel; }
-
-    // Allow overriding OptLevel on a per-function basis.
-    void setOptLevel(CodeGenOpt::Level Level) { OptLevel = Level; }
   };
 } // namespace llvm
 
