@@ -1607,6 +1607,13 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
         CXXThreadLocals.push_back(std::make_pair(D, GV));
       setTLSMode(GV, *D);
     }
+
+    // If required by the ABI, treat declarations of static data members with
+    // inline initializers as definitions.
+    if (getCXXABI().isInlineInitializedStaticDataMemberLinkOnce() &&
+        D->isStaticDataMember() && D->hasInit() &&
+        !D->isThisDeclarationADefinition())
+      EmitGlobalVarDefinition(D);
   }
 
   if (AddrSpace != Ty->getAddressSpace())
@@ -1860,6 +1867,14 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D) {
   llvm::GlobalValue::LinkageTypes Linkage = 
     GetLLVMLinkageVarDefinition(D, GV->isConstant());
   GV->setLinkage(Linkage);
+
+  // If required by the ABI, give definitions of static data members with inline
+  // initializers linkonce_odr linkage.
+  if (getCXXABI().isInlineInitializedStaticDataMemberLinkOnce() &&
+      D->isStaticDataMember() && InitExpr &&
+      !InitDecl->isThisDeclarationADefinition())
+    GV->setLinkage(llvm::GlobalVariable::LinkOnceODRLinkage);
+
   if (Linkage == llvm::GlobalVariable::CommonLinkage)
     // common vars aren't constant even if declared const.
     GV->setConstant(false);

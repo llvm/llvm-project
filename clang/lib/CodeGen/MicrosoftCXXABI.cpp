@@ -50,6 +50,8 @@ public:
   // arbitrary.
   StringRef GetDeletedVirtualCallName() { return "_purecall"; }
 
+  bool isInlineInitializedStaticDataMemberLinkOnce() { return true; }
+
   llvm::Value *adjustToCompleteObject(CodeGenFunction &CGF,
                                       llvm::Value *ptr,
                                       QualType type);
