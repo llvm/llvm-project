@@ -53,4 +53,9 @@ uninstall-backends: stubs
 		$(MAKE) -f Makefile.$$i uninstall; \
 	done
 
-.PHONY: all-backends clean-backends install-backends uninstall-backends
+ocamldoc: stubs
+	$(Verb) for i in $(TARGETS_TO_BUILD); do \
+		$(MAKE) -f Makefile.$$i ocamldoc; \
+	done
+
+.PHONY: all-backends clean-backends install-backends uninstall-backends ocamldoc
