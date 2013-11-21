@@ -129,6 +129,14 @@ combined with LLVM as backend to produce efficient native code. LDC targets
 x86/x86_64 systems like Linux, OS X, FreeBSD and Windows and also Linux/PPC64.
 Ports to other architectures like ARM and AArch64 are underway.
 
+DXR
+---
+
+`DXR https://wiki.mozilla.org/DXR`_ is Mozilla's code search and navigation
+tool, aimed at making sense of large projects like Firefox. It supports
+full-text and regex searches as well as structural queries like "Find all the
+callers of this function." Behind the scenes, it uses a custom trigram index,
+the re2 library, and structural data collected by a clang compiler plugin.
 
 Additional Information
 ======================
