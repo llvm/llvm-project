@@ -9,7 +9,7 @@ define fastcc i32 @tailcaller(i32 %in1, i32 %in2) {
 entry:
 	%tmp11 = tail call fastcc i32 @tailcallee( i32 %in1, i32 %in2, i32 %in1, i32 %in2 )		; <i32> [#uses=1]
 	ret i32 %tmp11
-; CHECK: movl tailcallee@GOT
-; CHECK: jmpl
+; Note that this call via PLT could be further optimized into a direct call (no GOT, no PLT):
+; CHECK: calll tailcallee@PLT
 }
 

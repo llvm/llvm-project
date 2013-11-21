@@ -2665,21 +2665,15 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(unsigned(X86::EBX),
                DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), getPointerTy())));
     } else {
-      // If we are tail calling and generating PIC/GOT style code load the
-      // address of the callee into ECX. The value in ecx is used as target of
-      // the tail jump. This is done to circumvent the ebx/callee-saved problem
-      // for tail calls on PIC/GOT architectures. Normally we would just put the
-      // address of GOT into ebx and then call target@PLT. But for tail calls
-      // ebx would be restored (since ebx is callee saved) before jumping to the
-      // target@PLT.
-
-      // Note: The actual moving to ECX is done further down.
+      // If we are tail calling a global or external symbol in GOT pic mode, we
+      // cannot use a direct jump, since that would make lazy dynamic linking
+      // impossible (see PR15086).  So pretend this is not a tail call, to
+      // prevent the optimization to a jump.
       GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-      if (G && !G->getGlobal()->hasHiddenVisibility() &&
-          !G->getGlobal()->hasProtectedVisibility())
-        Callee = LowerGlobalAddress(Callee, DAG);
-      else if (isa<ExternalSymbolSDNode>(Callee))
-        Callee = LowerExternalSymbol(Callee, DAG);
+      if ((G && !G->getGlobal()->hasHiddenVisibility() &&
+          !G->getGlobal()->hasProtectedVisibility()) ||
+          isa<ExternalSymbolSDNode>(Callee))
+        isTailCall = false;
     }
   }
 
