@@ -1,4 +1,5 @@
 ; RUN: llc -debug < %s -o /dev/null 2>&1 | FileCheck %s
+; REQUIRES: asserts
 
 ; Verify that the backend correctly overrides the optimization level
 ; of optnone functions during instruction selection.
