@@ -149,6 +149,18 @@ image processing and statistical learning kernels must be written generically
 to handle any matrix datatype, at runtime they tend to be executed repeatedly
 on the same type.
 
+WebCL Validator
+---------------
+
+`WebCL Validator <https://github.com/KhronosGroup/webcl-validator>`_ implements
+validation for WebCL C language which is a subset of OpenCL ES 1.1. Validator
+checks the correctness of WebCL C, and implements memory protection for it as a
+source-2-source transformation. The transformation converts WebCL to memory
+protected OpenCL. The protected OpenCL cannot access any memory ranges which
+were not allocated for it, and its memory is always initialized to prevent
+information leakage from other programs.
+
+
 Additional Information
 ======================
 
