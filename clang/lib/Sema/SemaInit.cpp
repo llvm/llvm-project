@@ -6293,6 +6293,28 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
   }
 }
 
+static void diagnoseListInit(Sema &S, const InitializedEntity &Entity,
+                             InitListExpr *InitList) {
+  QualType DestType = Entity.getType();
+
+  QualType E;
+  if (S.getLangOpts().CPlusPlus11 && S.isStdInitializerList(DestType, &E)) {
+    QualType ArrayType = S.Context.getConstantArrayType(
+        E.withConst(),
+        llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
+                    InitList->getNumInits()),
+        clang::ArrayType::Normal, 0);
+    InitializedEntity HiddenArray =
+        InitializedEntity::InitializeTemporary(ArrayType);
+    return diagnoseListInit(S, HiddenArray, InitList);
+  }
+
+  InitListChecker DiagnoseInitList(S, Entity, InitList, DestType,
+                                   /*VerifyOnly=*/false);
+  assert(DiagnoseInitList.HadError() &&
+         "Inconsistent init list check result.");
+}
+
 bool InitializationSequence::Diagnose(Sema &S,
                                       const InitializedEntity &Entity,
                                       const InitializationKind &Kind,
@@ -6340,7 +6362,7 @@ bool InitializationSequence::Diagnose(Sema &S,
     break;
   case FK_ArrayTypeMismatch:
   case FK_NonConstantArrayInit:
-    S.Diag(Kind.getLocation(), 
+    S.Diag(Kind.getLocation(),
            (Failure == FK_ArrayTypeMismatch
               ? diag::err_array_init_different_type
               : diag::err_array_init_non_constant_array))
@@ -6632,12 +6654,8 @@ bool InitializationSequence::Diagnose(Sema &S,
 
   case FK_ListInitializationFailed: {
     // Run the init list checker again to emit diagnostics.
-    InitListExpr* InitList = cast<InitListExpr>(Args[0]);
-    QualType DestType = Entity.getType();
-    InitListChecker DiagnoseInitList(S, Entity, InitList,
-            DestType, /*VerifyOnly=*/false);
-    assert(DiagnoseInitList.HadError() &&
-           "Inconsistent init list check result.");
+    InitListExpr *InitList = cast<InitListExpr>(Args[0]);
+    diagnoseListInit(S, Entity, InitList);
     break;
   }
 

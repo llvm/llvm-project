@@ -225,3 +225,8 @@ namespace RefVersusInitList {
   void f(std::initializer_list<S>);
   void g(S s) { f({S()}); }
 }
+
+namespace PR18013 {
+  int f();
+  std::initializer_list<long (*)()> x = {f}; // expected-error {{cannot initialize an array element of type 'long (*const)()' with an lvalue of type 'int ()': different return type ('long' vs 'int')}}
+}
