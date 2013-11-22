@@ -88,8 +88,11 @@ UniversalArchs.profile_ios := $(call CheckArches,i386 x86_64 armv7,profile_ios)
 Configs += asan_osx_dynamic
 UniversalArchs.asan_osx_dynamic := $(call CheckArches,i386 x86_64,asan_osx_dynamic)
 
+IOSSIM_SDK_PATH := $(call XCRunSdkPath,iphonesimulator)
+ifneq ($(IOSSIM_SDK_PATH),)
 Configs += asan_iossim_dynamic
 UniversalArchs.asan_iossim_dynamic := $(call CheckArches,i386 x86_64,asan_iossim_dynamic)
+endif
 
 Configs += ubsan_osx
 UniversalArchs.ubsan_osx := $(call CheckArches,i386 x86_64,ubsan_osx)
@@ -150,7 +153,6 @@ CFLAGS.asan_osx_dynamic := \
 	-DMAC_INTERPOSE_FUNCTIONS=1 \
   -DASAN_FLEXIBLE_MAPPING_AND_OFFSET=1
 
-IOSSIM_SDK_PATH := $(call XCRunSdkPath,iphonesimulator)
 CFLAGS.asan_iossim_dynamic := \
 	$(CFLAGS) -mios-simulator-version-min=7.0 \
         -isysroot $(IOSSIM_SDK_PATH) \

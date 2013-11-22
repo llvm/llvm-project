@@ -204,7 +204,7 @@ if(APPLE)
   set(DARWIN_iossim_LINKFLAGS
     -Wl,-ios_simulator_version_min,7.0.0
     -mios-simulator-version-min=7.0
-    -Wl,-syslibroot,${IOSSIM_SDK_DIR})
+    -isysroot ${IOSSIM_SDK_DIR})
 endif()
 
 # Architectures supported by Sanitizer runtimes. Specific sanitizers may
