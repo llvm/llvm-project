@@ -731,6 +731,12 @@ private:
       GetExpandedFloat(Op, Lo, Hi);
   }
 
+
+  /// This function will split the integer \p Op into \p NumElements
+  /// operations of type \p EltVT and store them in \p Ops.
+  void IntegerToVector(SDValue Op, unsigned NumElements,
+                       SmallVectorImpl<SDValue> &Ops, EVT EltVT);
+
   // Generic Result Expansion.
   void ExpandRes_MERGE_VALUES      (SDNode *N, unsigned ResNo,
                                     SDValue &Lo, SDValue &Hi);

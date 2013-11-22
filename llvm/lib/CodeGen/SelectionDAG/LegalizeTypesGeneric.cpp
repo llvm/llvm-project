@@ -306,6 +306,25 @@ void DAGTypeLegalizer::ExpandRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi) {
 // Generic Operand Expansion.
 //===--------------------------------------------------------------------===//
 
+void DAGTypeLegalizer::IntegerToVector(SDValue Op, unsigned NumElements,
+                                       SmallVectorImpl<SDValue> &Ops,
+                                       EVT EltVT) {
+  assert(Op.getValueType().isInteger());
+  SDLoc DL(Op);
+  SDValue Parts[2];
+
+  if (NumElements > 1) {
+    NumElements >>= 1;
+    SplitInteger(Op, Parts[0], Parts[1]);
+      if (TLI.isBigEndian())
+        std::swap(Parts[0], Parts[1]);
+    IntegerToVector(Parts[0], NumElements, Ops, EltVT);
+    IntegerToVector(Parts[1], NumElements, Ops, EltVT);
+  } else {
+    Ops.push_back(DAG.getNode(ISD::BITCAST, DL, EltVT, Op));
+  }
+}
+
 SDValue DAGTypeLegalizer::ExpandOp_BITCAST(SDNode *N) {
   SDLoc dl(N);
   if (N->getValueType(0).isVector()) {
@@ -314,21 +333,27 @@ SDValue DAGTypeLegalizer::ExpandOp_BITCAST(SDNode *N) {
     // instead, but only if the new vector type is legal (otherwise there
     // is no point, and it might create expansion loops).  For example, on
     // x86 this turns v1i64 = BITCAST i64 into v1i64 = BITCAST v2i32.
+    //
+    // FIXME: I'm not sure why we are first trying to split the input into
+    // a 2 element vector, so I'm leaving it here to maintain the current
+    // behavior.
+    unsigned NumElts = 2;
     EVT OVT = N->getOperand(0).getValueType();
     EVT NVT = EVT::getVectorVT(*DAG.getContext(),
                                TLI.getTypeToTransformTo(*DAG.getContext(), OVT),
-                               2);
-
-    if (isTypeLegal(NVT)) {
-      SDValue Parts[2];
-      GetExpandedOp(N->getOperand(0), Parts[0], Parts[1]);
-
-      if (TLI.isBigEndian())
-        std::swap(Parts[0], Parts[1]);
-
-      SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, NVT, Parts, 2);
-      return DAG.getNode(ISD::BITCAST, dl, N->getValueType(0), Vec);
+                               NumElts);
+    if (!isTypeLegal(NVT)) {
+      // If we can't find a legal type by splitting the integer in half,
+      // then we can use the node's value type.
+      NumElts = N->getValueType(0).getVectorNumElements();
+      NVT = N->getValueType(0);
     }
+
+    SmallVector<SDValue, 8> Ops;
+    IntegerToVector(N->getOperand(0), NumElts, Ops, NVT.getVectorElementType());
+
+    SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, NVT, &Ops[0], NumElts);
+    return DAG.getNode(ISD::BITCAST, dl, N->getValueType(0), Vec);
   }
 
   // Otherwise, store to a temporary and load out again as the new type.
