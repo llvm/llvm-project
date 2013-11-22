@@ -5,7 +5,8 @@ target triple = "i386-unknown-freebsd9.0"
 
 define double @test1(double %x) nounwind readnone {
 ; CHECK-LABEL: test1:
-; CHECK: calll foo@PLT
+; CHECK: movl foo@GOT
+; CHECK-NEXT: jmpl
   %1 = tail call double @foo(double %x) nounwind readnone
   ret double %1
 }
@@ -14,7 +15,8 @@ declare double @foo(double) readnone
 
 define double @test2(double %x) nounwind readnone {
 ; CHECK-LABEL: test2:
-; CHECK: calll sin@PLT
+; CHECK: movl sin@GOT
+; CHECK-NEXT: jmpl
   %1 = tail call double @sin(double %x) nounwind readnone
   ret double %1
 }
