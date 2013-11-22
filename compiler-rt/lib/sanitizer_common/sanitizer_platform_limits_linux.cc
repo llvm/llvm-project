@@ -52,6 +52,13 @@ COMPILER_CHECK(struct_kernel_stat64_sz == sizeof(struct stat64));
 
 COMPILER_CHECK(struct_io_event_sz == sizeof(struct io_event));
 
+#if !SANITIZER_ANDROID
+COMPILER_CHECK(sizeof(struct __sanitizer_perf_event_attr) <=
+               sizeof(struct perf_event_attr));
+CHECK_SIZE_AND_OFFSET(perf_event_attr, type);
+CHECK_SIZE_AND_OFFSET(perf_event_attr, size);
+#endif
+
 COMPILER_CHECK(iocb_cmd_pread == IOCB_CMD_PREAD);
 COMPILER_CHECK(iocb_cmd_pwrite == IOCB_CMD_PWRITE);
 
