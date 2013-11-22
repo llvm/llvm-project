@@ -61,6 +61,14 @@ namespace __sanitizer {
   const unsigned struct___old_kernel_stat_sz = 32;
   const unsigned struct_kernel_stat_sz = 64;
   const unsigned struct_kernel_stat64_sz = 104;
+#elif defined(__powerpc__) && !defined(__powerpc64__)
+  const unsigned struct___old_kernel_stat_sz = 32;
+  const unsigned struct_kernel_stat_sz = 72;
+  const unsigned struct_kernel_stat64_sz = 104;
+#elif defined(__powerpc64__)
+  const unsigned struct___old_kernel_stat_sz = 0;
+  const unsigned struct_kernel_stat_sz = 144;
+  const unsigned struct_kernel_stat64_sz = 104;
 #endif
   const unsigned struct_io_event_sz = 32;
   struct __sanitizer_perf_event_attr {
@@ -126,17 +134,24 @@ namespace __sanitizer {
     int gid;
     int cuid;
     int cgid;
+#ifdef __powerpc64__
+    unsigned mode;
+    unsigned __seq;
+#else
     unsigned short mode;
     unsigned short __pad1;
     unsigned short __seq;
     unsigned short __pad2;
+#endif
     uptr __unused1;
     uptr __unused2;
   };
 
   struct __sanitizer_shmid_ds {
     __sanitizer_ipc_perm shm_perm;
+  #ifndef __powerpc__
     uptr shm_segsz;
+  #endif
     uptr shm_atime;
   #ifndef _LP64
     uptr __unused1;
@@ -148,6 +163,9 @@ namespace __sanitizer {
     uptr shm_ctime;
   #ifndef _LP64
     uptr __unused3;
+  #endif
+  #ifdef __powerpc__
+    uptr shm_segsz;
   #endif
     int shm_cpid;
     int shm_lpid;
@@ -271,8 +289,15 @@ namespace __sanitizer {
   typedef unsigned short __sanitizer___kernel_gid_t;
   typedef long __sanitizer___kernel_off_t;
 #endif
+
+#if defined(__powerpc64__)
+  typedef unsigned int __sanitizer___kernel_old_uid_t;
+  typedef unsigned int __sanitizer___kernel_old_gid_t;
+#else
   typedef unsigned short __sanitizer___kernel_old_uid_t;
   typedef unsigned short __sanitizer___kernel_old_gid_t;
+#endif
+
   typedef long long __sanitizer___kernel_loff_t;
   typedef struct {
     unsigned long fds_bits[1024 / (8 * sizeof(long))];

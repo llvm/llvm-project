@@ -25,8 +25,25 @@
 // For offsetof -> __builtin_offsetof definition.
 #include <stddef.h>
 
+// With old kernels (and even new kernels on powerpc) asm/stat.h uses types that
+// are not defined anywhere in userspace headers. Fake them. This seems to work
+// fine with newer headers, too.
+#include <asm/posix_types.h>
+#define ino_t __kernel_ino_t
+#define mode_t __kernel_mode_t
+#define nlink_t __kernel_nlink_t
+#define uid_t __kernel_uid_t
+#define gid_t __kernel_gid_t
+#define off_t __kernel_off_t
 // This header seems to contain the definitions of _kernel_ stat* structs.
 #include <asm/stat.h>
+#undef ino_t
+#undef mode_t
+#undef nlink_t
+#undef uid_t
+#undef gid_t
+#undef off_t
+
 #include <linux/aio_abi.h>
 
 #if SANITIZER_ANDROID
@@ -43,7 +60,10 @@ namespace __sanitizer {
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
 }  // namespace __sanitizer
 
+#if !defined(__powerpc64__)
 COMPILER_CHECK(struct___old_kernel_stat_sz == sizeof(struct __old_kernel_stat));
+#endif
+
 COMPILER_CHECK(struct_kernel_stat_sz == sizeof(struct stat));
 
 #if defined(__i386__)
