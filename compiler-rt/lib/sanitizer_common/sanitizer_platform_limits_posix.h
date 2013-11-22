@@ -48,17 +48,25 @@ namespace __sanitizer {
 #endif // !SANITIZER_ANDROID
 
 #if SANITIZER_LINUX
-  extern unsigned struct___old_kernel_stat_sz;
-  extern unsigned struct_kernel_stat_sz;
-  extern unsigned struct_kernel_stat64_sz;
-  extern unsigned struct_io_event_sz;
+
+#if defined(__x86_64__)
+  const unsigned struct___old_kernel_stat_sz = 32;
+  const unsigned struct_kernel_stat_sz = 144;
+  const unsigned struct_kernel_stat64_sz = 0;
+#elif defined(__i386__)
+  const unsigned struct___old_kernel_stat_sz = 32;
+  const unsigned struct_kernel_stat_sz = 64;
+  const unsigned struct_kernel_stat64_sz = 96;
+#endif
+  const unsigned struct_io_event_sz = 32;
+  const unsigned struct_perf_event_attr_sz = 72;
+
   extern unsigned struct_utimbuf_sz;
   extern unsigned struct_new_utsname_sz;
   extern unsigned struct_old_utsname_sz;
   extern unsigned struct_oldold_utsname_sz;
   extern unsigned struct_msqid_ds_sz;
   extern unsigned struct_mq_attr_sz;
-  extern unsigned struct_perf_event_attr_sz;
   extern unsigned struct_timex_sz;
   extern unsigned struct_ustat_sz;
 
@@ -85,8 +93,8 @@ namespace __sanitizer {
     u64   aio_reserved3;
   };
 
-  extern unsigned iocb_cmd_pread;
-  extern unsigned iocb_cmd_pwrite;
+  const unsigned iocb_cmd_pread = 0;
+  const unsigned iocb_cmd_pwrite = 1;
 
   struct __sanitizer___sysctl_args {
     int *name;
@@ -942,4 +950,3 @@ namespace __sanitizer {
                  offsetof(struct CLASS, MEMBER))
 
 #endif
-

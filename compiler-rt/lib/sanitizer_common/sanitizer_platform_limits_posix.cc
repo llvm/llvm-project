@@ -108,7 +108,6 @@
 #include <link.h>
 #include <sys/vfs.h>
 #include <sys/epoll.h>
-// #include <asm/stat.h>
 #include <linux/capability.h>
 #endif // SANITIZER_LINUX
 

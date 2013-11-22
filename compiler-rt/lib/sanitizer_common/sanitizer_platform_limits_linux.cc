@@ -40,24 +40,24 @@
 #endif
 
 namespace __sanitizer {
-  unsigned struct___old_kernel_stat_sz = sizeof(struct __old_kernel_stat);
-  unsigned struct_kernel_stat_sz = sizeof(struct stat);
-  unsigned struct_io_event_sz = sizeof(struct io_event);
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
+}  // namespace __sanitizer
 
-  unsigned iocb_cmd_pread = IOCB_CMD_PREAD;
-  unsigned iocb_cmd_pwrite = IOCB_CMD_PWRITE;
+COMPILER_CHECK(struct___old_kernel_stat_sz == sizeof(struct __old_kernel_stat));
+COMPILER_CHECK(struct_kernel_stat_sz == sizeof(struct stat));
 
-#if !defined(_LP64) && !defined(__x86_64__)
-  unsigned struct_kernel_stat64_sz = sizeof(struct stat64);
-#else
-  unsigned struct_kernel_stat64_sz = 0;
+#if defined(__i386__)
+COMPILER_CHECK(struct_kernel_stat64_sz == sizeof(struct stat64));
 #endif
+
+COMPILER_CHECK(struct_io_event_sz == sizeof(struct io_event));
 
 #if !SANITIZER_ANDROID
-  unsigned struct_perf_event_attr_sz = sizeof(struct perf_event_attr);
+COMPILER_CHECK(struct_perf_event_attr_sz == sizeof(struct perf_event_attr));
 #endif
-}  // namespace __sanitizer
+
+COMPILER_CHECK(iocb_cmd_pread == IOCB_CMD_PREAD);
+COMPILER_CHECK(iocb_cmd_pwrite == IOCB_CMD_PWRITE);
 
 CHECK_TYPE_SIZE(iocb);
 CHECK_SIZE_AND_OFFSET(iocb, aio_data);
