@@ -77,6 +77,18 @@ R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 }
 
+/// \returns true if \p MBBI can be moved into a new basic.
+bool R600InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI) const {
+  for (MachineInstr::const_mop_iterator I = MBBI->operands_begin(),
+                                        E = MBBI->operands_end(); I != E; ++I) {
+    if (I->isReg() && !TargetRegisterInfo::isVirtualRegister(I->getReg()) &&
+        I->isUse() && RI.isPhysRegLiveAcrossClauses(I->getReg()))
+      return false;
+  }
+  return true;
+}
+
 unsigned R600InstrInfo::getIEQOpcode() const {
   return AMDGPU::SETE_INT;
 }
