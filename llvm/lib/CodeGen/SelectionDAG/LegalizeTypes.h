@@ -704,10 +704,6 @@ private:
       GetExpandedFloat(Op, Lo, Hi);
   }
 
-  /// GetSplitDestVTs - Compute the VTs needed for the low/hi parts of a type
-  /// which is split (or expanded) into two not necessarily identical pieces.
-  void GetSplitDestVTs(EVT InVT, EVT &LoVT, EVT &HiVT);
-
   /// GetPairElements - Use ISD::EXTRACT_ELEMENT nodes to extract the low and
   /// high parts of the given value.
   void GetPairElements(SDValue Pair, SDValue &Lo, SDValue &Hi);

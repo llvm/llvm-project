@@ -77,13 +77,9 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
     case TargetLowering::TypeWidenVector: {
       assert(!(InVT.getVectorNumElements() & 1) && "Unsupported BITCAST");
       InOp = GetWidenedVector(InOp);
-      EVT InNVT = EVT::getVectorVT(*DAG.getContext(), InVT.getVectorElementType(),
-                                   InVT.getVectorNumElements()/2);
-      Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, InNVT, InOp,
-                       DAG.getConstant(0, TLI.getVectorIdxTy()));
-      Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, InNVT, InOp,
-                       DAG.getConstant(InNVT.getVectorNumElements(),
-                                       TLI.getVectorIdxTy()));
+      EVT LoVT, HiVT;
+      llvm::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(InVT);
+      llvm::tie(Lo, Hi) = DAG.SplitVector(InOp, dl, LoVT, HiVT);
       if (TLI.isBigEndian())
         std::swap(Lo, Hi);
       Lo = DAG.getNode(ISD::BITCAST, dl, NOutVT, Lo);
@@ -496,15 +492,8 @@ void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo,
       assert(Cond.getValueType() == getSetCCResultType(N->getValueType(0)) &&
              "Condition has not been prepared for split!");
       GetSplitVector(Cond, CL, CH);
-    } else {
-      EVT ETy = Cond.getValueType().getVectorElementType();
-      unsigned NumElements = Cond.getValueType().getVectorNumElements();
-      EVT VCondTy = EVT::getVectorVT(*DAG.getContext(), ETy, NumElements / 2);
-      CL = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VCondTy, Cond,
-                       DAG.getConstant(0, TLI.getVectorIdxTy()));
-      CH = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VCondTy, Cond,
-                       DAG.getConstant(NumElements / 2, TLI.getVectorIdxTy()));
-    }
+    } else
+      llvm::tie(CL, CH) = DAG.SplitVector(Cond, dl);
   }
 
   Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), CL, LL, RL);
@@ -526,7 +515,7 @@ void DAGTypeLegalizer::SplitRes_SELECT_CC(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::SplitRes_UNDEF(SDNode *N, SDValue &Lo, SDValue &Hi) {
   EVT LoVT, HiVT;
-  GetSplitDestVTs(N->getValueType(0), LoVT, HiVT);
+  llvm::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   Lo = DAG.getUNDEF(LoVT);
   Hi = DAG.getUNDEF(HiVT);
 }

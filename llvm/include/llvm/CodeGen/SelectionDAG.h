@@ -170,6 +170,7 @@ class SelectionDAG {
   const TargetMachine &TM;
   const TargetSelectionDAGInfo &TSI;
   const TargetTransformInfo *TTI;
+  const TargetLowering *TLI;
   MachineFunction *MF;
   LLVMContext *Context;
   CodeGenOpt::Level OptLevel;
@@ -268,7 +269,8 @@ public:
   /// init - Prepare this SelectionDAG to process code in the given
   /// MachineFunction.
   ///
-  void init(MachineFunction &mf, const TargetTransformInfo *TTI);
+  void init(MachineFunction &mf, const TargetTransformInfo *TTI,
+            const TargetLowering *TLI);
 
   /// clear - Clear state and free memory necessary to make this
   /// SelectionDAG ready to process a new block.
@@ -277,9 +279,7 @@ public:
 
   MachineFunction &getMachineFunction() const { return *MF; }
   const TargetMachine &getTarget() const { return TM; }
-  const TargetLowering &getTargetLoweringInfo() const {
-    return *TM.getTargetLowering();
-  }
+  const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
   const TargetSelectionDAGInfo &getSelectionDAGInfo() const { return TSI; }
   const TargetTransformInfo *getTargetTransformInfo() const { return TTI; }
   LLVMContext *getContext() const {return Context; }
@@ -1129,6 +1129,29 @@ public:
   /// InferPtrAlignment - Infer alignment of a load / store address. Return 0 if
   /// it cannot be inferred.
   unsigned InferPtrAlignment(SDValue Ptr) const;
+
+  /// GetSplitDestVTs - Compute the VTs needed for the low/hi parts of a type
+  /// which is split (or expanded) into two not necessarily identical pieces.
+  std::pair<EVT, EVT> GetSplitDestVTs(const EVT &VT) const;
+
+  /// SplitVector - Split the vector with EXTRACT_SUBVECTOR using the provides
+  /// VTs and return the low/high part.
+  std::pair<SDValue, SDValue> SplitVector(const SDValue &N, const SDLoc &DL,
+                                          const EVT &LoVT, const EVT &HiVT);
+
+  /// SplitVector - Split the vector with EXTRACT_SUBVECTOR and return the
+  /// low/high part.
+  std::pair<SDValue, SDValue> SplitVector(const SDValue &N, const SDLoc &DL) {
+    EVT LoVT, HiVT;
+    llvm::tie(LoVT, HiVT) = GetSplitDestVTs(N.getValueType());
+    return SplitVector(N, DL, LoVT, HiVT);
+  }
+
+  /// SplitVectorOperand - Split the node's operand with EXTRACT_SUBVECTOR and
+  /// return the low/high part.
+  std::pair<SDValue, SDValue> SplitVectorOperand(SDNode *N, unsigned OpNo) {
+    return SplitVector(N->getOperand(OpNo), SDLoc(N));
+  }
 
 private:
   bool RemoveNodeFromCSEMaps(SDNode *N);
