@@ -2707,11 +2707,7 @@ PRE_SYSCALL(perf_event_open)(void *attr_uptr, long pid, long cpu, long group_fd,
                              long flags) {}
 
 POST_SYSCALL(perf_event_open)(long res, void *attr_uptr, long pid, long cpu,
-                              long group_fd, long flags) {
-  if (res >= 0) {
-    if (attr_uptr) POST_WRITE(attr_uptr, struct_perf_event_attr_sz);
-  }
-}
+                              long group_fd, long flags) {}
 
 PRE_SYSCALL(mmap_pgoff)(long addr, long len, long prot, long flags, long fd,
                         long pgoff) {}

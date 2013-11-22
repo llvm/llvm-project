@@ -59,7 +59,6 @@ namespace __sanitizer {
   const unsigned struct_kernel_stat64_sz = 96;
 #endif
   const unsigned struct_io_event_sz = 32;
-  const unsigned struct_perf_event_attr_sz = 72;
 
   extern unsigned struct_utimbuf_sz;
   extern unsigned struct_new_utsname_sz;
