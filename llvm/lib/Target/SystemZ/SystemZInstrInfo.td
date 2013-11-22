@@ -1176,12 +1176,13 @@ let Defs = [CC] in {
   def TMHL : CompareRI<"tmhl", 0xA73, z_tm_reg, GRH32, imm32ll16>;
   def TMHH : CompareRI<"tmhh", 0xA72, z_tm_reg, GRH32, imm32lh16>;
 
+  def TMLL64 : CompareAliasRI<z_tm_reg, GR64, imm64ll16>;
+  def TMLH64 : CompareAliasRI<z_tm_reg, GR64, imm64lh16>;
+  def TMHL64 : CompareAliasRI<z_tm_reg, GR64, imm64hl16>;
+  def TMHH64 : CompareAliasRI<z_tm_reg, GR64, imm64hh16>;
+
   defm TM : CompareSIPair<"tm", 0x91, 0xEB51, z_tm_mem, anyextloadi8, imm32zx8>;
 }
-def : CompareGR64RI<TMLL, z_tm_reg, imm64ll16, subreg_l32>;
-def : CompareGR64RI<TMLH, z_tm_reg, imm64lh16, subreg_l32>;
-def : CompareGR64RI<TMHL, z_tm_reg, imm64hl16, subreg_h32>;
-def : CompareGR64RI<TMHH, z_tm_reg, imm64hh16, subreg_h32>;
 
 //===----------------------------------------------------------------------===//
 // Prefetch

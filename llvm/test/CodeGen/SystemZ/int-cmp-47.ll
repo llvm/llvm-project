@@ -1,5 +1,6 @@
 ; Test the use of TEST UNDER MASK for 64-bit operations.
 ;
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
 
 @g = global i32 0

@@ -1588,6 +1588,13 @@ class BinaryAliasRIL<SDPatternOperator operator, RegisterOperand cls,
   let Constraints = "$R1 = $R1src";
 }
 
+// An alias of a CompareRI, but with different register sizes.
+class CompareAliasRI<SDPatternOperator operator, RegisterOperand cls,
+                     Immediate imm>
+  : Alias<4, (outs), (ins cls:$R1, imm:$I2), [(operator cls:$R1, imm:$I2)]> {
+  let isCompare = 1;
+}
+
 // An alias of a RotateSelectRIEf, but with different register sizes.
 class RotateSelectAliasRIEf<RegisterOperand cls1, RegisterOperand cls2>
   : Alias<6, (outs cls1:$R1),

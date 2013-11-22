@@ -29,19 +29,29 @@ using namespace llvm;
 // Return an RI instruction like MI with opcode Opcode, but with the
 // GR64 register operands turned into GR32s.
 static MCInst lowerRILow(const MachineInstr *MI, unsigned Opcode) {
-  return MCInstBuilder(Opcode)
-    .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
-    .addReg(SystemZMC::getRegAsGR32(MI->getOperand(1).getReg()))
-    .addImm(MI->getOperand(2).getImm());
+  if (MI->isCompare())
+    return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
+      .addImm(MI->getOperand(1).getImm());
+  else
+    return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
+      .addReg(SystemZMC::getRegAsGR32(MI->getOperand(1).getReg()))
+      .addImm(MI->getOperand(2).getImm());
 }
 
 // Return an RI instruction like MI with opcode Opcode, but with the
 // GR64 register operands turned into GRH32s.
 static MCInst lowerRIHigh(const MachineInstr *MI, unsigned Opcode) {
-  return MCInstBuilder(Opcode)
-    .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
-    .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(1).getReg()))
-    .addImm(MI->getOperand(2).getImm());
+  if (MI->isCompare())
+    return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
+      .addImm(MI->getOperand(1).getImm());
+  else
+    return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
+      .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(1).getReg()))
+      .addImm(MI->getOperand(2).getImm());
 }
 
 // Return an RI instruction like MI with opcode Opcode, but with the
@@ -112,6 +122,8 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   LOWER_LOW(IILL);
   LOWER_LOW(IILH);
+  LOWER_LOW(TMLL);
+  LOWER_LOW(TMLH);
   LOWER_LOW(NILL);
   LOWER_LOW(NILH);
   LOWER_LOW(NILF);
@@ -127,6 +139,8 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   LOWER_HIGH(IIHL);
   LOWER_HIGH(IIHH);
+  LOWER_HIGH(TMHL);
+  LOWER_HIGH(TMHH);
   LOWER_HIGH(NIHL);
   LOWER_HIGH(NIHH);
   LOWER_HIGH(NIHF);
