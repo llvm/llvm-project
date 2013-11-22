@@ -1149,7 +1149,8 @@ public:
 
   /// SplitVectorOperand - Split the node's operand with EXTRACT_SUBVECTOR and
   /// return the low/high part.
-  std::pair<SDValue, SDValue> SplitVectorOperand(SDNode *N, unsigned OpNo) {
+  std::pair<SDValue, SDValue> SplitVectorOperand(const SDNode *N, unsigned OpNo)
+  {
     return SplitVector(N->getOperand(OpNo), SDLoc(N));
   }
 

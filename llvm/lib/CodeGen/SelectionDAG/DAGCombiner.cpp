@@ -4327,6 +4327,23 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   return SDValue();
 }
 
+static
+std::pair<SDValue, SDValue> SplitVSETCC(const SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT LoVT, HiVT;
+  llvm::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+
+  // Split the inputs.
+  SDValue Lo, Hi, LL, LH, RL, RH;
+  llvm::tie(LL, LH) = DAG.SplitVectorOperand(N, 0);
+  llvm::tie(RL, RH) = DAG.SplitVectorOperand(N, 1);
+
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2));
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2));
+
+  return std::make_pair(Lo, Hi);
+}
+
 SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -4364,27 +4381,32 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     }
   }
 
-  // Treat SETCC as a vector mask and promote the result type based on the
-  // targets expected SETCC result type. This will ensure that SETCC and VSELECT
-  // are both split by the type legalizer. This is done to prevent the type
-  // legalizer from unrolling SETCC into scalar comparions.
-  EVT SelectVT = N->getValueType(0);
-  EVT MaskVT = getSetCCResultType(SelectVT);
-  assert(MaskVT.isVector() && "Expected a vector type.");
-  if (N0.getOpcode() == ISD::SETCC && N0.getValueType() != MaskVT) {
-    SDLoc MaskDL(N0);
+  // If the VSELECT result requires splitting and the mask is provided by a
+  // SETCC, then split both nodes and its operands before legalization. This
+  // prevents the type legalizer from unrolling SETCC into scalar comparisons
+  // and enables future optimizations (e.g. min/max pattern matching on X86).
+  if (N0.getOpcode() == ISD::SETCC) {
+    EVT VT = N->getValueType(0);
 
-    // Extend the mask to the desired value type.
-    ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(true));
-    SDValue Mask = DAG.getNode(ExtendCode, MaskDL, MaskVT, N0);
+    // Check if any splitting is required.
+    if (TLI.getTypeAction(*DAG.getContext(), VT) !=
+        TargetLowering::TypeSplitVector)
+      return SDValue();
 
-    AddToWorkList(Mask.getNode());
+    SDValue Lo, Hi, CCLo, CCHi, LL, LH, RL, RH;
+    llvm::tie(CCLo, CCHi) = SplitVSETCC(N0.getNode(), DAG);
+    llvm::tie(LL, LH) = DAG.SplitVectorOperand(N, 1);
+    llvm::tie(RL, RH) = DAG.SplitVectorOperand(N, 2);
 
-    SDValue LHS = N->getOperand(1);
-    SDValue RHS = N->getOperand(2);
+    Lo = DAG.getNode(N->getOpcode(), DL, LL.getValueType(), CCLo, LL, RL);
+    Hi = DAG.getNode(N->getOpcode(), DL, LH.getValueType(), CCHi, LH, RH);
 
-    return DAG.getNode(ISD::VSELECT, DL, SelectVT, Mask, LHS, RHS);
+    // Add the new VSELECT nodes to the work list in case they need to be split
+    // again.
+    AddToWorkList(Lo.getNode());
+    AddToWorkList(Hi.getNode());
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
   }
 
   return SDValue();

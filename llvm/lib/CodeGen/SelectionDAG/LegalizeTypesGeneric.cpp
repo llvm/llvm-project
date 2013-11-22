@@ -488,11 +488,11 @@ void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo,
   SDValue Cond = N->getOperand(0);
   CL = CH = Cond;
   if (Cond.getValueType().isVector()) {
-    if (Cond.getOpcode() == ISD::SETCC) {
-      assert(Cond.getValueType() == getSetCCResultType(N->getValueType(0)) &&
-             "Condition has not been prepared for split!");
+    // Check if there are already splitted versions of the vector available and
+    // use those instead of splitting the mask operand again.
+    if (getTypeAction(Cond.getValueType()) == TargetLowering::TypeSplitVector)
       GetSplitVector(Cond, CL, CH);
-    } else
+    else
       llvm::tie(CL, CH) = DAG.SplitVector(Cond, dl);
   }
 
