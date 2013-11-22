@@ -261,12 +261,12 @@ multiclass VectorList_operands<string PREFIX, string LAYOUT, int Count,
     let Name = PREFIX # LAYOUT # Count;
     let RenderMethod = "addVectorListOperands";
     let PredicateMethod = 
-        "isVectorList<A64Layout::_" # LAYOUT # ", " # Count # ">";
+        "isVectorList<A64Layout::VL_" # LAYOUT # ", " # Count # ">";
     let ParserMethod = "ParseVectorList";
   }
 
   def _operand : RegisterOperand<RegList,
-        "printVectorList<A64Layout::_" # LAYOUT # ", " # Count # ">"> {
+        "printVectorList<A64Layout::VL_" # LAYOUT # ", " # Count # ">"> {
     let ParserMatchClass =
       !cast<AsmOperandClass>(PREFIX # LAYOUT # "_asmoperand");
   }

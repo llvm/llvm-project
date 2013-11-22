@@ -2066,7 +2066,7 @@ AArch64AsmParser::OperandMatchResultTy AArch64AsmParser::ParseVectorList(
 
   A64Layout::VectorLayout Layout = A64StringToVectorLayout(LayoutStr);
   if (Count > 1) { // If count > 1, create vector list using super register.
-    bool IsVec64 = (Layout < A64Layout::_16B);
+    bool IsVec64 = (Layout < A64Layout::VL_16B);
     static unsigned SupRegIDs[3][2] = {
       { AArch64::QPairRegClassID, AArch64::DPairRegClassID },
       { AArch64::QTripleRegClassID, AArch64::DTripleRegClassID },
@@ -2084,10 +2084,10 @@ AArch64AsmParser::OperandMatchResultTy AArch64AsmParser::ParseVectorList(
   if (Parser.getTok().is(AsmToken::LBrac)) {
     uint32_t NumLanes = 0;
     switch(Layout) {
-    case A64Layout::_B : NumLanes = 16; break;
-    case A64Layout::_H : NumLanes = 8; break;
-    case A64Layout::_S : NumLanes = 4; break;
-    case A64Layout::_D : NumLanes = 2; break;
+    case A64Layout::VL_B : NumLanes = 16; break;
+    case A64Layout::VL_H : NumLanes = 8; break;
+    case A64Layout::VL_S : NumLanes = 4; break;
+    case A64Layout::VL_D : NumLanes = 2; break;
     default:
       SMLoc Loc = getLexer().getLoc();
       Error(Loc, "expected comma before next operand");
