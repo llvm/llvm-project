@@ -79,7 +79,7 @@ public:
     case GCC: return false;
     case MacOSX: return true;
     case GNUstep: return true;
-    case ObjFW: return false;
+    case ObjFW: return true;
     case iOS: return true;
     }
     llvm_unreachable("bad kind");
