@@ -27,6 +27,7 @@ Release=""
 Release_no_dot=""
 RC=""
 Triple=""
+use_gzip="no"
 do_checkout="yes"
 do_ada="no"
 do_clang="yes"
@@ -58,6 +59,7 @@ function usage() {
     echo " -test-debug       Test the debug build. [default: no]"
     echo " -test-asserts     Test with asserts on. [default: no]"
     echo " -no-compare-files Don't test that phase 2 and 3 files are identical."
+    echo " -use-gzip         Use gzip instead of xz."
 }
 
 while [ $# -gt 0 ]; do
@@ -118,6 +120,9 @@ while [ $# -gt 0 ]; do
             ;;
         -no-compare-files | --no-compare-files )
             do_compare="no"
+            ;;
+        -use-gzip | --use-gzip )
+            use_gzip="yes"
             ;;
         -help | --help | -h | --h | -\? )
             usage
@@ -382,7 +387,11 @@ function package_release() {
     cwd=`pwd`
     cd $BuildDir/Phase3/Release
     mv llvmCore-$Release-$RC.install $Package
-    tar cfz $BuildDir/$Package.tar.gz $Package
+    if [ "$use_gzip" = "yes" ]; then
+      tar cfz $BuildDir/$Package.tar.gz $Package
+    else
+      tar cfJ $BuildDir/$Package.tar.xz $Package
+    fi
     mv $Package llvmCore-$Release-$RC.install
     cd $cwd
 }
@@ -588,6 +597,10 @@ set +e
 
 # Woo hoo!
 echo "### Testing Finished ###"
-echo "### Package: $Package.tar.gz"
+if [ "$use_gzip" = "yes" ]; then
+  echo "### Package: $Package.tar.gz"
+else
+  echo "### Package: $Package.tar.xz"
+fi
 echo "### Logs: $LogDir"
 exit 0
