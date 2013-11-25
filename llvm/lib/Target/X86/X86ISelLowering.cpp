@@ -17007,6 +17007,15 @@ static SDValue PerformSELECTCombine(SDNode *N, SelectionDAG &DAG,
     if (BitWidth == 1)
       return SDValue();
 
+    // Check all uses of that condition operand to check whether it will be
+    // consumed by non-BLEND instructions, which may depend on all bits are set
+    // properly.
+    for (SDNode::use_iterator I = Cond->use_begin(),
+                              E = Cond->use_end(); I != E; ++I)
+      if (I->getOpcode() != ISD::VSELECT)
+        // TODO: Add other opcodes eventually lowered into BLEND.
+        return SDValue();
+
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
     APInt DemandedMask = APInt::getHighBitsSet(BitWidth, 1);
 
