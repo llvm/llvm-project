@@ -1117,7 +1117,9 @@ static DecodeStatus DecodeVLDSTLanePostInstruction(MCInst &Inst, unsigned Insn,
   bool Is64bitVec = false;
   bool IsLoadDup = false;
   bool IsLoad = false;
-  unsigned TransferBytes = 0; // The total number of bytes transferred.
+  // The total number of bytes transferred.
+  // TransferBytes = NumVecs * OneLaneBytes
+  unsigned TransferBytes = 0;
   unsigned NumVecs = 0;
   unsigned Opc = Inst.getOpcode();
   switch (Opc) {
@@ -1511,17 +1513,20 @@ static DecodeStatus DecodeVLDSTLanePostInstruction(MCInst &Inst, unsigned Insn,
   unsigned Q = fieldFromInstruction(Insn, 30, 1);
   unsigned S = fieldFromInstruction(Insn, 10, 3);
   unsigned lane = 0;
-  switch (NumVecs) {
-  case 1:
-    lane = (Q << 3) & S;
+  // Calculate the number of lanes by number of vectors and transfered bytes.
+  // NumLanes = 16 bytes / bytes of each lane
+  unsigned NumLanes = 16 / (TransferBytes / NumVecs);
+  switch (NumLanes) {
+  case 16: // A vector has 16 lanes, each lane is 1 bytes.
+    lane = (Q << 3) | S;
     break;
-  case 2:
-    lane = (Q << 2) & (S >> 1);
-    break;
-  case 3:
-    lane = (Q << 1) & (S >> 2);
+  case 8:
+    lane = (Q << 2) | (S >> 1);
     break;
   case 4:
+    lane = (Q << 1) | (S >> 2);
+    break;
+  case 2:
     lane = Q;
     break;
   }

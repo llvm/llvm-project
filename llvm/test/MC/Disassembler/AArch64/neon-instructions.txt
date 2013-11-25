@@ -2126,14 +2126,14 @@
 # Post-index of vector load/store single N-element structure to/from
 #  one lane of N consecutive registers (N = 1,2,3,4)
 #----------------------------------------------------------------------
-# CHECK: ld1 {v0.b}[0], [x0], #1
-# CHECK: ld2 {v15.h, v16.h}[0], [x15], #4
-# CHECK: ld3 {v31.s, v0.s, v1.s}[0], [sp], x3
+# CHECK: ld1 {v0.b}[9], [x0], #1
+# CHECK: ld2 {v15.h, v16.h}[7], [x15], #4
+# CHECK: ld3 {v31.s, v0.s, v1.s}[3], [sp], x3
 # CHECK: ld4 {v0.d, v1.d, v2.d, v3.d}[1], [x0], #24
-# CHECK: st1 {v0.d}[0], [x0], #8
-# CHECK: st2 {v31.s, v0.s}[0], [sp], #8
-# CHECK: st3 {v15.h, v16.h, v17.h}[0], [x15], #6
-# CHECK: st4 {v0.b, v1.b, v2.b, v3.b}[1], [x0], x5
+# CHECK: st1 {v0.d}[1], [x0], #8
+# CHECK: st2 {v31.s, v0.s}[3], [sp], #8
+# CHECK: st3 {v15.h, v16.h, v17.h}[7], [x15], #6
+# CHECK: st4 {v0.b, v1.b, v2.b, v3.b}[9], [x0], x5
 0x00,0x04,0xdf,0x4d
 0xef,0x59,0xff,0x4d
 0xff,0xb3,0xc3,0x4d
