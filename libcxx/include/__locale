@@ -23,9 +23,9 @@
 # include <support/win32/locale_win32.h>
 #elif _AIX
 # include <support/ibm/xlocale.h>
-#elif (defined(__GLIBC__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__)) || defined(EMSCRIPTEN) || defined(__IBMCPP__)
+#elif (defined(__GLIBC__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__)) || defined(__EMSCRIPTEN__) || defined(__IBMCPP__)
 # include <xlocale.h>
-#endif  // _WIN32 || __GLIBC__ || __APPLE__ || __FreeBSD__ || __sun__ || EMSCRIPTEN || __IBMCPP__
+#endif  // _WIN32 || __GLIBC__ || __APPLE__ || __FreeBSD__ || __sun__ || __EMSCRIPTEN__ || __IBMCPP__
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -341,12 +341,12 @@ public:
     static const mask punct  = _PUNCT;
     static const mask xdigit = _HEX;
     static const mask blank  = _BLANK;
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(EMSCRIPTEN) || defined(__NetBSD__)
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__)
 #ifdef __APPLE__
     typedef __uint32_t mask;
 #elif defined(__FreeBSD__)
     typedef unsigned long mask;
-#elif defined(EMSCRIPTEN) ||  defined(__NetBSD__)
+#elif defined(__EMSCRIPTEN__) ||  defined(__NetBSD__)
     typedef unsigned short mask;
 #endif
     static const mask space  = _CTYPE_S;
@@ -375,7 +375,7 @@ public:
     static const mask punct  = _ISPUNCT;
     static const mask xdigit = _ISXDIGIT;
     static const mask blank  = _ISBLANK;
-#else  // __GLIBC__ || _WIN32 || __APPLE__ || __FreeBSD__ || EMSCRIPTEN || __sun__
+#else  // __GLIBC__ || _WIN32 || __APPLE__ || __FreeBSD__ || __EMSCRIPTEN__ || __sun__
     typedef unsigned long mask;
     static const mask space  = 1<<0;
     static const mask print  = 1<<1;
@@ -598,7 +598,7 @@ public:
 #endif
     _LIBCPP_ALWAYS_INLINE const mask* table() const  _NOEXCEPT {return __tab_;}
     static const mask* classic_table()  _NOEXCEPT;
-#if defined(__GLIBC__) || defined(EMSCRIPTEN)
+#if defined(__GLIBC__) || defined(__EMSCRIPTEN__)
     static const int* __classic_upper_table() _NOEXCEPT;
     static const int* __classic_lower_table() _NOEXCEPT;
 #endif
