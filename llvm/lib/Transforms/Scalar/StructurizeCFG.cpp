@@ -323,21 +323,32 @@ Value *StructurizeCFG::invert(Value *Condition) {
   if (match(Condition, m_Not(m_Value(Condition))))
     return Condition;
 
-  // Third: Check all the users for an invert
-  BasicBlock *Parent = cast<Instruction>(Condition)->getParent();
-  for (Value::use_iterator I = Condition->use_begin(),
-       E = Condition->use_end(); I != E; ++I) {
+  if (Instruction *Inst = dyn_cast<Instruction>(Condition)) {
+    // Third: Check all the users for an invert
+    BasicBlock *Parent = Inst->getParent();
+    for (Value::use_iterator I = Condition->use_begin(),
+           E = Condition->use_end(); I != E; ++I) {
 
-    Instruction *User = dyn_cast<Instruction>(*I);
-    if (!User || User->getParent() != Parent)
-      continue;
+      Instruction *User = dyn_cast<Instruction>(*I);
+      if (!User || User->getParent() != Parent)
+        continue;
 
-    if (match(*I, m_Not(m_Specific(Condition))))
-      return *I;
+      if (match(*I, m_Not(m_Specific(Condition))))
+        return *I;
+    }
+
+    // Last option: Create a new instruction
+    return BinaryOperator::CreateNot(Condition, "", Parent->getTerminator());
   }
 
-  // Last option: Create a new instruction
-  return BinaryOperator::CreateNot(Condition, "", Parent->getTerminator());
+  if (Argument *Arg = dyn_cast<Argument>(Condition)) {
+    BasicBlock &EntryBlock = Arg->getParent()->getEntryBlock();
+    return BinaryOperator::CreateNot(Condition,
+                                     Arg->getName() + ".inv",
+                                     EntryBlock.getTerminator());
+  }
+
+  llvm_unreachable("Unhandled condition to invert");
 }
 
 /// \brief Build the condition for one edge
