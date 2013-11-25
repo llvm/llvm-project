@@ -140,7 +140,14 @@ bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
 
   // Instead of creating as alias to a linkonce_odr, replace all of the uses
   // of the aliassee.
-  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage)) {
+  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage) &&
+     (TargetLinkage != llvm::GlobalValue::AvailableExternallyLinkage ||
+      !TargetDecl.getDecl()->hasAttr<AlwaysInlineAttr>())) {
+    // FIXME: An extern template instanciation will create functions with
+    // linkage "AvailableExternally". In libc++, some classes also define
+    // members with attribute "AlwaysInline" and expect no reference to
+    // be generated. It is desirable to reenable this optimisation after
+    // corresponding LLVM changes.
     Replacements[MangledName] = Aliasee;
     return false;
   }

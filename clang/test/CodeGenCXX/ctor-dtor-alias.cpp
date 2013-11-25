@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 %s -triple x86_64-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-optzns | FileCheck %s
 // RUN: %clang_cc1 %s -triple x86_64-linux -emit-llvm -o - -mconstructor-aliases | FileCheck --check-prefix=NOOPT %s
 
+// RUN: %clang_cc1 -cc1 -triple x86_64--netbsd -emit-llvm \
+// RUN: -mconstructor-aliases -O2 %s -o - | FileCheck --check-prefix=CHECK-RAUW %s
+
 namespace test1 {
 // test that we don't produce an alias when the destructor is weak_odr. The
 // reason to avoid it that another TU might have no explicit template
@@ -128,4 +131,33 @@ namespace test8 {
   bar::~bar() {}
   struct zed : public bar {};
   zed foo;
+}
+
+// CHECK-RAUW: @_ZTV1C = linkonce_odr unnamed_addr constant [4 x i8*] [{{[^@]*}}@_ZTI1C {{[^@]*}}@_ZN1CD2Ev {{[^@]*}}@_ZN1CD0Ev {{[^@]*}}]
+// r194296 replaced C::~C with B::~B without emitting the later.
+
+class A {
+public:
+  A(int);
+  virtual ~A();
+};
+
+template <class>
+class B : A {
+public:
+  B()
+      : A(0) {
+  }
+  __attribute__((always_inline)) ~B() {
+  }
+};
+
+extern template class B<char>;
+
+class C : B<char> {
+};
+
+void
+fn1() {
+  new C;
 }
