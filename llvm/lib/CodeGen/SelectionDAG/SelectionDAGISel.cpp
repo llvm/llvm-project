@@ -223,6 +223,44 @@ defaultListDAGScheduler("default", "Best scheduler for the target",
 
 namespace llvm {
   //===--------------------------------------------------------------------===//
+  /// \brief This class is used by SelectionDAGISel to temporarily override
+  /// the optimization level on a per-function basis.
+  class OptLevelChanger {
+    SelectionDAGISel &IS;
+    CodeGenOpt::Level SavedOptLevel;
+    bool SavedFastISel;
+
+  public:
+    OptLevelChanger(SelectionDAGISel &ISel,
+                    CodeGenOpt::Level NewOptLevel) : IS(ISel) {
+      SavedOptLevel = IS.OptLevel;
+      if (NewOptLevel == SavedOptLevel)
+        return;
+      IS.OptLevel = NewOptLevel;
+      IS.TM.setOptLevel(NewOptLevel);
+      SavedFastISel = IS.TM.Options.EnableFastISel;
+      if (NewOptLevel == CodeGenOpt::None)
+        IS.TM.setFastISel(true);
+      DEBUG(dbgs() << "\nChanging optimization level for Function "
+            << IS.MF->getFunction()->getName() << "\n");
+      DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel
+            << " ; After: -O" << NewOptLevel << "\n");
+    }
+
+    ~OptLevelChanger() {
+      if (IS.OptLevel == SavedOptLevel)
+        return;
+      DEBUG(dbgs() << "\nRestoring optimization level for Function "
+            << IS.MF->getFunction()->getName() << "\n");
+      DEBUG(dbgs() << "\tBefore: -O" << IS.OptLevel
+            << " ; After: -O" << SavedOptLevel << "\n");
+      IS.OptLevel = SavedOptLevel;
+      IS.TM.setOptLevel(SavedOptLevel);
+      IS.TM.setFastISel(SavedFastISel);
+    }
+  };
+
+  //===--------------------------------------------------------------------===//
   /// createDefaultScheduler - This creates an instruction scheduler appropriate
   /// for the target.
   ScheduleDAGSDNodes* createDefaultScheduler(SelectionDAGISel *IS,
@@ -369,6 +407,12 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     const_cast<TargetSubtargetInfo&>(TM.getSubtarget<TargetSubtargetInfo>());
   ST.resetSubtargetFeatures(MF);
   TM.resetTargetOptions(MF);
+
+  // Reset OptLevel to None for optnone functions.
+  CodeGenOpt::Level NewOptLevel = OptLevel;
+  if (Fn.hasFnAttribute(Attribute::OptimizeNone))
+    NewOptLevel = CodeGenOpt::None;
+  OptLevelChanger OLC(*this, NewOptLevel);
 
   DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
