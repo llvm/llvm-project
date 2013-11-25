@@ -822,12 +822,12 @@ def CNDE_INT : R600_3OP <
 
 def CNDGE_INT : R600_3OP <
   0x1E, "CNDGE_INT",
-  [(set i32:$dst, (selectcc i32:$src0, 0, i32:$src1, i32:$src2, COND_GE))]
+  [(set i32:$dst, (selectcc i32:$src0, 0, i32:$src1, i32:$src2, COND_SGE))]
 >;
 
 def CNDGT_INT : R600_3OP <
   0x1D, "CNDGT_INT",
-  [(set i32:$dst, (selectcc i32:$src0, 0, i32:$src1, i32:$src2, COND_GT))]
+  [(set i32:$dst, (selectcc i32:$src0, 0, i32:$src1, i32:$src2, COND_SGT))]
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2313,7 +2313,7 @@ def : CND_INT_f32 <CNDGE_INT, SETGE>;
 
 //CNDGE_INT extra pattern
 def : Pat <
-  (selectcc i32:$src0, -1, i32:$src1, i32:$src2, COND_GT),
+  (selectcc i32:$src0, -1, i32:$src1, i32:$src2, COND_SGT),
   (CNDGE_INT $src0, $src1, $src2)
 >;
 
