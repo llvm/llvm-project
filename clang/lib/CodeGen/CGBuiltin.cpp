@@ -1772,13 +1772,52 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   // argument that specifies the vector type, need to handle each case.
   switch (BuiltinID) {
   default: break;
+  case AArch64::BI__builtin_neon_vqdmlalh_lane_s16 :
+  case AArch64::BI__builtin_neon_vqdmlalh_laneq_s16 :
+  case AArch64::BI__builtin_neon_vqdmlals_lane_s32 :
+  case AArch64::BI__builtin_neon_vqdmlals_laneq_s32 :
+  case AArch64::BI__builtin_neon_vqdmlslh_lane_s16 :
+  case AArch64::BI__builtin_neon_vqdmlslh_laneq_s16 :
+  case AArch64::BI__builtin_neon_vqdmlsls_lane_s32 :
+  case AArch64::BI__builtin_neon_vqdmlsls_laneq_s32 : {
+    Int = Intrinsic::arm_neon_vqadds;
+    if (BuiltinID == AArch64::BI__builtin_neon_vqdmlslh_lane_s16 ||
+        BuiltinID == AArch64::BI__builtin_neon_vqdmlslh_laneq_s16 ||
+        BuiltinID == AArch64::BI__builtin_neon_vqdmlsls_lane_s32 ||
+        BuiltinID == AArch64::BI__builtin_neon_vqdmlsls_laneq_s32) {
+      Int = Intrinsic::arm_neon_vqsubs;
+    }
+    // create vqdmull call with b * c[i]
+    llvm::Type *Ty = CGF.ConvertType(E->getArg(1)->getType());
+    llvm::VectorType *OpVTy = llvm::VectorType::get(Ty, 1);
+    Ty = CGF.ConvertType(E->getArg(0)->getType());
+    llvm::VectorType *ResVTy = llvm::VectorType::get(Ty, 1);
+    Value *F = CGF.CGM.getIntrinsic(Intrinsic::arm_neon_vqdmull, ResVTy);
+    Value *V = UndefValue::get(OpVTy);
+    llvm::Constant *CI = ConstantInt::get(CGF.Int32Ty, 0);
+    SmallVector<Value *, 2> MulOps;
+    MulOps.push_back(Ops[1]);
+    MulOps.push_back(Ops[2]);
+    MulOps[0] = CGF.Builder.CreateInsertElement(V, MulOps[0], CI);
+    MulOps[1] = CGF.Builder.CreateExtractElement(MulOps[1], Ops[3], "extract");
+    MulOps[1] = CGF.Builder.CreateInsertElement(V, MulOps[1], CI);
+    Value *MulRes = CGF.Builder.CreateCall2(F, MulOps[0], MulOps[1]);
+    // create vqadds call with a +/- vqdmull result
+    F = CGF.CGM.getIntrinsic(Int, ResVTy);
+    SmallVector<Value *, 2> AddOps;
+    AddOps.push_back(Ops[0]);
+    AddOps.push_back(MulRes);
+    V = UndefValue::get(ResVTy);
+    AddOps[0] = CGF.Builder.CreateInsertElement(V, AddOps[0], CI);
+    Value *AddRes = CGF.Builder.CreateCall2(F, AddOps[0], AddOps[1]);
+    return CGF.Builder.CreateBitCast(AddRes, Ty);
+  }
   case AArch64::BI__builtin_neon_vfmas_lane_f32:
   case AArch64::BI__builtin_neon_vfmas_laneq_f32:
   case AArch64::BI__builtin_neon_vfmad_lane_f64:
   case AArch64::BI__builtin_neon_vfmad_laneq_f64: {
     llvm::Type *Ty = CGF.ConvertType(E->getCallReturnType());
     Value *F = CGF.CGM.getIntrinsic(Intrinsic::fma, Ty);
-    // extract lane acc += x * v[i]
     Ops[2] = CGF.Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
     return CGF.Builder.CreateCall3(F, Ops[1], Ops[2], Ops[0]);
   }
@@ -1857,26 +1896,26 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   case AArch64::BI__builtin_neon_vqaddh_s16:
   case AArch64::BI__builtin_neon_vqadds_s32:
   case AArch64::BI__builtin_neon_vqaddd_s64:
-    Int = Intrinsic::aarch64_neon_vqadds;
+    Int = Intrinsic::arm_neon_vqadds;
     s = "vqadds"; OverloadInt = true; break;
   case AArch64::BI__builtin_neon_vqaddb_u8:
   case AArch64::BI__builtin_neon_vqaddh_u16:
   case AArch64::BI__builtin_neon_vqadds_u32:
   case AArch64::BI__builtin_neon_vqaddd_u64:
-    Int = Intrinsic::aarch64_neon_vqaddu;
+    Int = Intrinsic::arm_neon_vqaddu;
     s = "vqaddu"; OverloadInt = true; break;
   // Scalar Saturating Sub
   case AArch64::BI__builtin_neon_vqsubb_s8:
   case AArch64::BI__builtin_neon_vqsubh_s16:
   case AArch64::BI__builtin_neon_vqsubs_s32:
   case AArch64::BI__builtin_neon_vqsubd_s64:
-    Int = Intrinsic::aarch64_neon_vqsubs;
+    Int = Intrinsic::arm_neon_vqsubs;
     s = "vqsubs"; OverloadInt = true; break;
   case AArch64::BI__builtin_neon_vqsubb_u8:
   case AArch64::BI__builtin_neon_vqsubh_u16:
   case AArch64::BI__builtin_neon_vqsubs_u32:
   case AArch64::BI__builtin_neon_vqsubd_u64:
-    Int = Intrinsic::aarch64_neon_vqsubu;
+    Int = Intrinsic::arm_neon_vqsubu;
     s = "vqsubu"; OverloadInt = true; break;
   // Scalar Shift Left
   case AArch64::BI__builtin_neon_vshld_s64:
@@ -2270,7 +2309,7 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   // Signed Saturating Doubling Multiply Long
   case AArch64::BI__builtin_neon_vqdmullh_s16:
   case AArch64::BI__builtin_neon_vqdmulls_s32:
-    Int = Intrinsic::aarch64_neon_vqdmull;
+    Int = Intrinsic::arm_neon_vqdmull;
     s = "vqdmull"; OverloadWideInt = true; break;
   // Scalar Signed Saturating Extract Unsigned Narrow
   case AArch64::BI__builtin_neon_vqmovunh_s16:

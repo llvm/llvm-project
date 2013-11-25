@@ -140,7 +140,13 @@ enum OpKind {
   OpScalarMulXLane,
   OpScalarMulXLaneQ,
   OpScalarVMulXLane,
-  OpScalarVMulXLaneQ
+  OpScalarVMulXLaneQ,
+  OpScalarQDMullLane,
+  OpScalarQDMullLaneQ,
+  OpScalarQDMulHiLane,
+  OpScalarQDMulHiLaneQ,
+  OpScalarQRDMulHiLane,
+  OpScalarQRDMulHiLaneQ
 };
 
 enum ClassKind {
@@ -307,6 +313,13 @@ public:
     OpMap["OP_SCALAR_MULX_LNQ"]= OpScalarMulXLaneQ;
     OpMap["OP_SCALAR_VMULX_LN"]= OpScalarVMulXLane;
     OpMap["OP_SCALAR_VMULX_LNQ"]= OpScalarVMulXLaneQ;
+    OpMap["OP_SCALAR_QDMULL_LN"] = OpScalarQDMullLane;
+    OpMap["OP_SCALAR_QDMULL_LNQ"] = OpScalarQDMullLaneQ;
+    OpMap["OP_SCALAR_QDMULH_LN"] = OpScalarQDMulHiLane;
+    OpMap["OP_SCALAR_QDMULH_LNQ"] = OpScalarQDMulHiLaneQ;
+    OpMap["OP_SCALAR_QRDMULH_LN"] = OpScalarQRDMulHiLane;
+    OpMap["OP_SCALAR_QRDMULH_LNQ"] = OpScalarQRDMulHiLaneQ;
+
 
     Record *SI = R.getClass("SInst");
     Record *II = R.getClass("IInst");
@@ -2033,8 +2046,8 @@ static std::string GenOpString(const std::string &name, OpKind op,
   case OpScalarMulLane: {
     std::string typeCode = "";
     InstructionTypeCode(typestr, ClassS, quad, typeCode);
-	s += TypeString('s', typestr) + " __d1 = vget_lane_" + typeCode +
-	  "(__b, __c);\\\n  __a * __d1;";
+    s += TypeString('s', typestr) + " __d1 = vget_lane_" + typeCode +
+      "(__b, __c);\\\n  __a * __d1;";
     break;
   }
   case OpScalarMulLaneQ: {
@@ -2100,7 +2113,48 @@ static std::string GenOpString(const std::string &name, OpKind op,
       "  vset_lane_" + typeCode + "(__f1, __g1, 0);";
     break;
   }
-
+  case OpScalarQDMullLane: {
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    s += MangleName("vqdmull", typestr, ClassS) + "(__a, " +
+    "vget_lane_" + typeCode + "(b, __c));";
+    break;
+  }
+  case OpScalarQDMullLaneQ: {
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    s += MangleName("vqdmull", typestr, ClassS) + "(__a, " +
+    "vgetq_lane_" + typeCode + "(b, __c));";
+    break;
+  }
+  case OpScalarQDMulHiLane: {
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    s += MangleName("vqdmulh", typestr, ClassS) + "(__a, " +
+    "vget_lane_" + typeCode + "(__b, __c));";
+    break;
+  }
+  case OpScalarQDMulHiLaneQ: {
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    s += MangleName("vqdmulh", typestr, ClassS) + "(__a, " +
+    "vgetq_lane_" + typeCode + "(__b, __c));";
+    break;
+  }
+  case OpScalarQRDMulHiLane: {
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    s += MangleName("vqrdmulh", typestr, ClassS) + "(__a, " +
+    "vget_lane_" + typeCode + "(__b, __c));";
+    break;
+  }
+  case OpScalarQRDMulHiLaneQ: {
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    s += MangleName("vqrdmulh", typestr, ClassS) + "(__a, " +
+    "vgetq_lane_" + typeCode + "(__b, __c));";
+    break;
+  }
   default:
     PrintFatalError("unknown OpKind!");
   }

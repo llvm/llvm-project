@@ -119,6 +119,12 @@ def OP_SCALAR_MULX_LN : Op;
 def OP_SCALAR_MULX_LNQ : Op;
 def OP_SCALAR_VMULX_LN : Op;
 def OP_SCALAR_VMULX_LNQ : Op;
+def OP_SCALAR_QDMULL_LN : Op;
+def OP_SCALAR_QDMULL_LNQ : Op;
+def OP_SCALAR_QDMULH_LN : Op;
+def OP_SCALAR_QDMULH_LNQ : Op;
+def OP_SCALAR_QRDMULH_LN : Op;
+def OP_SCALAR_QRDMULH_LNQ : Op;
 
 class Inst <string n, string p, string t, Op o> {
   string Name = n;
@@ -1244,4 +1250,25 @@ def SCALAR_FMLA_LANEQ : IInst<"vfma_laneq", "sssji", "SfSd">;
 // Scalar Floating Point fused multiply-subtract (scalar, by element)
 def SCALAR_FMLS_LANE : IOpInst<"vfms_lane", "sssdi", "SfSd", OP_FMS_LN>;
 def SCALAR_FMLS_LANEQ : IOpInst<"vfms_laneq", "sssji", "SfSd", OP_FMS_LNQ>;
+
+// Signed Saturating Doubling Multiply Long (scalar by element)
+def SCALAR_SQDMULL_LANE : SOpInst<"vqdmull_lane", "rsdi", "SsSi", OP_SCALAR_QDMULL_LN>;
+def SCALAR_SQDMULL_LANEQ : SOpInst<"vqdmull_laneq", "rsji", "SsSi", OP_SCALAR_QDMULL_LNQ>;
+
+// Signed Saturating Doubling Multiply-Add Long (scalar by element)
+def SCALAR_SQDMLAL_LANE : SInst<"vqdmlal_lane", "rrsdi", "SsSi">;
+def SCALAR_SQDMLAL_LANEQ : SInst<"vqdmlal_laneq", "rrsji", "SsSi">;
+
+// Signed Saturating Doubling Multiply-Subtract Long (scalar by element)
+def SCALAR_SQDMLS_LANE : SInst<"vqdmlsl_lane", "rrsdi", "SsSi">;
+def SCALAR_SQDMLS_LANEQ : SInst<"vqdmlsl_laneq", "rrsji", "SsSi">;
+
+// Scalar Integer Saturating Doubling Multiply Half High (scalar by element)
+def SCALAR_SQDMULH_LANE : SOpInst<"vqdmulh_lane", "ssdi", "SsSi", OP_SCALAR_QDMULH_LN>;
+def SCALAR_SQDMULH_LANEQ : SOpInst<"vqdmulh_laneq", "ssji", "SsSi", OP_SCALAR_QDMULH_LNQ>;
+
+// Scalar Integer Saturating Rounding Doubling Multiply Half High
+def SCALAR_SQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "ssdi", "SsSi", OP_SCALAR_QRDMULH_LN>;
+def SCALAR_SQRDMULH_LANEQ : SOpInst<"vqrdmulh_laneq", "ssji", "SsSi", OP_SCALAR_QRDMULH_LNQ>;
+
 }
