@@ -14,12 +14,12 @@
 /* Usage:
 clang++ ../sanitizer_common/sanitizer_*.cc ../interception/interception_*.cc \
  lsan*.cc tests/lsan_testlib.cc -I. -I.. -g -ldl -lpthread -fPIC -shared -O2 \
- -o lsan.so
+ -DLSAN_USE_PREINIT_ARRAY=0 -o lsan.so
 LD_PRELOAD=./lsan.so /your/app
 */
 #include "lsan.h"
 
 __attribute__((constructor))
 void constructor() {
-  __lsan::Init();
+  __lsan_init();
 }

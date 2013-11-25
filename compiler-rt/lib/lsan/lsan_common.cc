@@ -275,6 +275,8 @@ static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads) {
   // The check here is relatively expensive, so we do this in a separate flood
   // fill. That way we can skip the check for chunks that are reachable
   // otherwise.
+  if (flags()->log_pointers)
+    Report("Processing platform-specific allocations.\n");
   ProcessPlatformSpecificAllocations(&frontier);
   FloodFillTag(&frontier, kReachable);
 

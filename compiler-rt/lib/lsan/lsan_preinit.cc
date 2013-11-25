@@ -14,7 +14,11 @@
 
 #include "lsan.h"
 
-#if !defined(PIC)
+#ifndef LSAN_USE_PREINIT_ARRAY
+#define LSAN_USE_PREINIT_ARRAY 1
+#endif
+
+#if LSAN_USE_PREINIT_ARRAY && !defined(PIC)
   // We force __lsan_init to be called before anyone else by placing it into
   // .preinit_array section.
   __attribute__((section(".preinit_array"), used))
