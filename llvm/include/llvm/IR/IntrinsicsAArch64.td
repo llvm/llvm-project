@@ -196,9 +196,6 @@ def int_aarch64_neon_vaddds :
 def int_aarch64_neon_vadddu :
   Intrinsic<[llvm_v1i64_ty], [llvm_v1i64_ty, llvm_v1i64_ty], [IntrNoMem]>;
 
-// Scalar Saturating Add (Signed, Unsigned)
-def int_aarch64_neon_vqadds : Neon_2Arg_Intrinsic;
-def int_aarch64_neon_vqaddu : Neon_2Arg_Intrinsic;
 
 // Scalar Sub
 def int_aarch64_neon_vsubds :
@@ -206,9 +203,6 @@ def int_aarch64_neon_vsubds :
 def int_aarch64_neon_vsubdu :
   Intrinsic<[llvm_v1i64_ty], [llvm_v1i64_ty, llvm_v1i64_ty], [IntrNoMem]>;
 
-// Scalar Saturating Sub (Signed, Unsigned)
-def int_aarch64_neon_vqsubs : Neon_2Arg_Intrinsic;
-def int_aarch64_neon_vqsubu : Neon_2Arg_Intrinsic;
 
 // Scalar Shift
 // Scalar Shift Left
@@ -323,9 +317,6 @@ def int_aarch64_neon_vqdmlal : Neon_3Arg_Long_Intrinsic;
 
 // Signed Saturating Doubling Multiply-Subtract Long
 def int_aarch64_neon_vqdmlsl : Neon_3Arg_Long_Intrinsic;
-
-// Signed Saturating Doubling Multiply Long
-def int_aarch64_neon_vqdmull : Neon_2Arg_Long_Intrinsic;
 
 class Neon_2Arg_ShiftImm_Intrinsic
   : Intrinsic<[llvm_v1i64_ty], [llvm_v1i64_ty, llvm_i32_ty], [IntrNoMem]>;

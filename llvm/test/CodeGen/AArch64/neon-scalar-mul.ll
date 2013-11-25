@@ -123,7 +123,7 @@ define i32 @test_vqdmullh_s16(i16 %a, i16 %b) {
 entry:
   %vqdmull.i = insertelement <1 x i16> undef, i16 %a, i32 0
   %vqdmull1.i = insertelement <1 x i16> undef, i16 %b, i32 0
-  %vqdmull2.i = call <1 x i32> @llvm.aarch64.neon.vqdmull.v1i32(<1 x i16> %vqdmull.i, <1 x i16> %vqdmull1.i)
+  %vqdmull2.i = call <1 x i32> @llvm.arm.neon.vqdmull.v1i32(<1 x i16> %vqdmull.i, <1 x i16> %vqdmull1.i)
   %0 = extractelement <1 x i32> %vqdmull2.i, i32 0
   ret i32 %0
 }
@@ -134,10 +134,10 @@ define i64 @test_vqdmulls_s32(i32 %a, i32 %b) {
 entry:
   %vqdmull.i = insertelement <1 x i32> undef, i32 %a, i32 0
   %vqdmull1.i = insertelement <1 x i32> undef, i32 %b, i32 0
-  %vqdmull2.i = call <1 x i64> @llvm.aarch64.neon.vqdmull.v1i64(<1 x i32> %vqdmull.i, <1 x i32> %vqdmull1.i)
+  %vqdmull2.i = call <1 x i64> @llvm.arm.neon.vqdmull.v1i64(<1 x i32> %vqdmull.i, <1 x i32> %vqdmull1.i)
   %0 = extractelement <1 x i64> %vqdmull2.i, i32 0
   ret i64 %0
 }
 
-declare <1 x i32> @llvm.aarch64.neon.vqdmull.v1i32(<1 x i16>, <1 x i16>)
-declare <1 x i64> @llvm.aarch64.neon.vqdmull.v1i64(<1 x i32>, <1 x i32>)
+declare <1 x i32> @llvm.arm.neon.vqdmull.v1i32(<1 x i16>, <1 x i16>)
+declare <1 x i64> @llvm.arm.neon.vqdmull.v1i64(<1 x i32>, <1 x i32>)

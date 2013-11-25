@@ -4958,22 +4958,16 @@ defm UQADD : NeonI_Scalar3Same_BHSD_sizes<0b1, 0b00001, "uqadd", 1>;
 defm SQSUB : NeonI_Scalar3Same_BHSD_sizes<0b0, 0b00101, "sqsub", 0>;
 defm UQSUB : NeonI_Scalar3Same_BHSD_sizes<0b1, 0b00101, "uqsub", 0>;
 
-// Patterns to match llvm.arm.* intrinsic for
-// Scalar Integer Saturating Add, Sub  (Signed, Unsigned)
-defm : Neon_Scalar3Same_D_size_patterns<int_arm_neon_vqadds, SQADDddd>;
-defm : Neon_Scalar3Same_D_size_patterns<int_arm_neon_vqaddu, UQADDddd>;
-defm : Neon_Scalar3Same_D_size_patterns<int_arm_neon_vqsubs, SQSUBddd>;
-defm : Neon_Scalar3Same_D_size_patterns<int_arm_neon_vqsubu, UQSUBddd>;
 
 // Patterns to match llvm.aarch64.* intrinsic for
 // Scalar Integer Saturating Add, Sub  (Signed, Unsigned)
-defm : Neon_Scalar3Same_BHSD_size_patterns<int_aarch64_neon_vqadds, SQADDbbb,
+defm : Neon_Scalar3Same_BHSD_size_patterns<int_arm_neon_vqadds, SQADDbbb,
                                            SQADDhhh, SQADDsss, SQADDddd>;
-defm : Neon_Scalar3Same_BHSD_size_patterns<int_aarch64_neon_vqaddu, UQADDbbb,
+defm : Neon_Scalar3Same_BHSD_size_patterns<int_arm_neon_vqaddu, UQADDbbb,
                                            UQADDhhh, UQADDsss, UQADDddd>;
-defm : Neon_Scalar3Same_BHSD_size_patterns<int_aarch64_neon_vqsubs, SQSUBbbb,
+defm : Neon_Scalar3Same_BHSD_size_patterns<int_arm_neon_vqsubs, SQSUBbbb,
                                            SQSUBhhh, SQSUBsss, SQSUBddd>;
-defm : Neon_Scalar3Same_BHSD_size_patterns<int_aarch64_neon_vqsubu, UQSUBbbb,
+defm : Neon_Scalar3Same_BHSD_size_patterns<int_arm_neon_vqsubu, UQSUBbbb,
                                            UQSUBhhh, UQSUBsss, UQSUBddd>;
 
 // Scalar Integer Saturating Doubling Multiply Half High
@@ -5093,7 +5087,7 @@ defm : Neon_Scalar3Diff_ml_HS_size_patterns<int_aarch64_neon_vqdmlsl,
 
 // Signed Saturating Doubling Multiply Long
 defm SQDMULL : NeonI_Scalar3Diff_HS_size<0b0, 0b1101, "sqdmull">;
-defm : Neon_Scalar3Diff_HS_size_patterns<int_aarch64_neon_vqdmull,
+defm : Neon_Scalar3Diff_HS_size_patterns<int_arm_neon_vqdmull,
                                          SQDMULLshh, SQDMULLdss>;
 
 // Scalar Signed Integer Convert To Floating-point
@@ -5564,13 +5558,78 @@ multiclass Neon_ScalarXIndexedElem_FMA_Patterns<
                OpNImm:$Imm))>;
 }
 
-// Scalar Floating Point fused multiply-add and multiply-subtract (scalar, by element)
+// Scalar Floating Point fused multiply-add and
+// multiply-subtract (scalar, by element)
 defm : Neon_ScalarXIndexedElem_FMA_Patterns<FMLAssv_4S, FMLSssv_4S,
   f32, FPR32, v4f32, neon_uimm2_bare, v2f32, v4f32, neon_uimm1_bare>;
 defm : Neon_ScalarXIndexedElem_FMA_Patterns<FMLAddv_2D, FMLSddv_2D,
   f64, FPR64, v2f64, neon_uimm1_bare, v1f64, v2f64, neon_uimm0_bare>;
 defm : Neon_ScalarXIndexedElem_FMA_Patterns<FMLAddv_2D, FMLSddv_2D,
   f64, FPR64, v2f64, neon_uimm1_bare, v1f64, v2f64, neon_uimm0_bare>;
+
+// Scalar Signed saturating doubling multiply long (scalar, by element)
+def SQDMULLshv_4H : NeonI_ScalarXIndexedElemArith<"sqdmull",
+  0b1011, ".h", 0b0, 0b0, 0b1, FPR32, FPR16, VPR64Lo, neon_uimm2_bare> {
+  let Inst{11} = 0b0; // h
+  let Inst{21} = Imm{1}; // l
+  let Inst{20} = Imm{0}; // m
+  let Inst{19-16} = MRm{3-0};
+}
+def SQDMULLshv_8H : NeonI_ScalarXIndexedElemArith<"sqdmull",
+  0b1011, ".h", 0b0, 0b0, 0b1, FPR32, FPR16, VPR128Lo, neon_uimm3_bare> {
+  let Inst{11} = Imm{2}; // h
+  let Inst{21} = Imm{1}; // l
+  let Inst{20} = Imm{0}; // m
+  let Inst{19-16} = MRm{3-0};
+}
+def SQDMULLdsv_2S : NeonI_ScalarXIndexedElemArith<"sqdmull",
+  0b1011, ".s", 0b0, 0b1, 0b0, FPR64, FPR32, VPR64, neon_uimm1_bare> {
+  let Inst{11} = 0b0;    // h
+  let Inst{21} = Imm{0}; // l
+  let Inst{20-16} = MRm;
+}
+def SQDMULLdsv_4S : NeonI_ScalarXIndexedElemArith<"sqdmull",
+  0b1011, ".s", 0b0, 0b1, 0b0, FPR64, FPR32, VPR128, neon_uimm2_bare> {
+  let Inst{11} = Imm{1};    // h
+  let Inst{21} = Imm{0};    // l
+  let Inst{20-16} = MRm;
+}
+
+multiclass Neon_ScalarXIndexedElem_MUL_Patterns<
+  SDPatternOperator opnode,
+  Instruction INST,
+  ValueType ResTy, RegisterClass FPRC,
+  ValueType OpVTy, ValueType OpTy,
+  ValueType VecOpTy, ValueType ExTy, RegisterOperand VPRC, Operand OpImm> {
+
+  def  : Pat<(ResTy (opnode (OpVTy FPRC:$Rn),
+               (OpVTy (scalar_to_vector
+                 (ExTy (vector_extract (VecOpTy VPRC:$MRm), OpImm:$Imm)))))),
+             (ResTy (INST (OpVTy FPRC:$Rn), (VecOpTy VPRC:$MRm), OpImm:$Imm))>;
+
+  //swapped operands
+  def  : Pat<(ResTy (opnode
+               (OpVTy (scalar_to_vector
+                 (ExTy (vector_extract (VecOpTy VPRC:$MRm), OpImm:$Imm)))),
+                 (OpVTy FPRC:$Rn))),
+             (ResTy (INST (OpVTy FPRC:$Rn), (VecOpTy VPRC:$MRm), OpImm:$Imm))>;
+}
+
+
+// Patterns for Scalar Signed saturating doubling
+// multiply long (scalar, by element)
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmull,
+  SQDMULLshv_4H, v1i32, FPR16, v1i16, i16, v4i16,
+  i32, VPR64Lo, neon_uimm2_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmull,
+  SQDMULLshv_8H, v1i32, FPR16, v1i16, i16, v8i16,
+  i32, VPR128Lo, neon_uimm3_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmull,
+  SQDMULLdsv_2S, v1i64, FPR32, v1i32, i32, v2i32,
+  i32, VPR64Lo, neon_uimm1_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmull,
+  SQDMULLdsv_4S, v1i64, FPR32, v1i32, i32, v4i32,
+  i32, VPR128Lo, neon_uimm2_bare>;
 
 // Scalar Signed saturating doubling multiply-add long (scalar, by element)
 def SQDMLALshv_4H : NeonI_ScalarXIndexedElemArith_Constraint_Impl<"sqdmlal",
@@ -5629,33 +5688,63 @@ def SQDMLSLdsv_4S : NeonI_ScalarXIndexedElemArith_Constraint_Impl<"sqdmlsl",
   let Inst{20-16} = MRm;
 }
 
-// Scalar Signed saturating doubling multiply long (scalar, by element)
-def SQDMULLshv_4H : NeonI_ScalarXIndexedElemArith<"sqdmull",
-  0b1011, ".h", 0b0, 0b0, 0b1, FPR32, FPR16, VPR64Lo, neon_uimm2_bare> {
-  let Inst{11} = 0b0; // h
-  let Inst{21} = Imm{1}; // l
-  let Inst{20} = Imm{0}; // m
-  let Inst{19-16} = MRm{3-0};
+multiclass Neon_ScalarXIndexedElem_MLAL_Patterns<
+  SDPatternOperator opnode,
+  SDPatternOperator coreopnode,
+  Instruction INST,
+  ValueType ResTy, RegisterClass ResFPRC, RegisterClass FPRC,
+  ValueType OpTy,
+  ValueType OpVTy, ValueType ExTy, RegisterOperand VPRC, Operand OpImm> {
+
+  def  : Pat<(ResTy (opnode
+               (ResTy ResFPRC:$Ra),
+               (ResTy (coreopnode (OpTy FPRC:$Rn),
+                 (OpTy (scalar_to_vector
+                   (ExTy (vector_extract (OpVTy VPRC:$MRm), OpImm:$Imm)))))))),
+             (ResTy (INST (ResTy ResFPRC:$Ra),
+               (OpTy FPRC:$Rn), (OpVTy VPRC:$MRm), OpImm:$Imm))>;
+
+  // swapped operands
+  def  : Pat<(ResTy (opnode
+               (ResTy ResFPRC:$Ra),
+               (ResTy (coreopnode
+                 (OpTy (scalar_to_vector
+                   (ExTy (vector_extract (OpVTy VPRC:$MRm), OpImm:$Imm)))),
+                 (OpTy FPRC:$Rn))))),
+             (ResTy (INST (ResTy ResFPRC:$Ra),
+               (OpTy FPRC:$Rn), (OpVTy VPRC:$MRm), OpImm:$Imm))>;
 }
-def SQDMULLshv_8H : NeonI_ScalarXIndexedElemArith<"sqdmull",
-  0b1011, ".h", 0b0, 0b0, 0b1, FPR32, FPR16, VPR128Lo, neon_uimm3_bare> {
-  let Inst{11} = Imm{2}; // h
-  let Inst{21} = Imm{1}; // l
-  let Inst{20} = Imm{0}; // m
-  let Inst{19-16} = MRm{3-0};
-}
-def SQDMULLdsv_2S : NeonI_ScalarXIndexedElemArith<"sqdmull",
-  0b1011, ".s", 0b0, 0b1, 0b0, FPR64, FPR32, VPR64, neon_uimm1_bare> {
-  let Inst{11} = 0b0;    // h
-  let Inst{21} = Imm{0}; // l
-  let Inst{20-16} = MRm;
-}
-def SQDMULLdsv_4S : NeonI_ScalarXIndexedElemArith<"sqdmull",
-  0b1011, ".s", 0b0, 0b1, 0b0, FPR64, FPR32, VPR128, neon_uimm2_bare> {
-  let Inst{11} = Imm{1};    // h
-  let Inst{21} = Imm{0};    // l
-  let Inst{20-16} = MRm;
-}
+
+// Patterns for Scalar Signed saturating
+// doubling multiply-add long (scalar, by element)
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqadds,
+  int_arm_neon_vqdmull, SQDMLALshv_4H, v1i32, FPR32, FPR16, v1i16, v4i16,
+  i32, VPR64Lo, neon_uimm2_bare>;
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqadds,
+  int_arm_neon_vqdmull, SQDMLALshv_8H, v1i32, FPR32, FPR16, v1i16, v8i16,
+  i32, VPR128Lo, neon_uimm3_bare>;
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqadds,
+  int_arm_neon_vqdmull, SQDMLALdsv_2S, v1i64, FPR64, FPR32, v1i32, v2i32,
+  i32, VPR64Lo, neon_uimm1_bare>;
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqadds,
+  int_arm_neon_vqdmull, SQDMLALdsv_4S, v1i64, FPR64, FPR32, v1i32, v4i32,
+  i32, VPR128Lo, neon_uimm2_bare>;
+
+// Patterns for Scalar Signed saturating
+// doubling multiply-sub long (scalar, by element)
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqsubs,
+  int_arm_neon_vqdmull, SQDMLSLshv_4H, v1i32, FPR32, FPR16, v1i16, v4i16,
+  i32, VPR64Lo, neon_uimm2_bare>;
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqsubs,
+  int_arm_neon_vqdmull, SQDMLSLshv_8H, v1i32, FPR32, FPR16, v1i16, v8i16,
+  i32, VPR128Lo, neon_uimm3_bare>;
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqsubs,
+  int_arm_neon_vqdmull, SQDMLSLdsv_2S, v1i64, FPR64, FPR32, v1i32, v2i32,
+  i32, VPR64Lo, neon_uimm1_bare>;
+defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqsubs,
+  int_arm_neon_vqdmull, SQDMLSLdsv_4S, v1i64, FPR64, FPR32, v1i32, v4i32,
+  i32, VPR128Lo, neon_uimm2_bare>;
+
 
 // Scalar Signed saturating doubling multiply returning
 // high half (scalar, by element)
@@ -5686,6 +5775,21 @@ def SQDMULHssv_4S : NeonI_ScalarXIndexedElemArith<"sqdmulh",
   let Inst{20-16} = MRm;
 }
 
+// Patterns for Scalar Signed saturating doubling multiply returning
+// high half (scalar, by element)
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmulh,
+  SQDMULHhhv_4H, v1i16, FPR16, v1i16, i16, v4i16,
+  i32, VPR64Lo, neon_uimm2_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmulh,
+  SQDMULHhhv_8H, v1i16, FPR16, v1i16, i16, v8i16,
+  i32, VPR128Lo, neon_uimm3_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmulh,
+  SQDMULHssv_2S, v1i32, FPR32, v1i32, i32, v2i32,
+  i32, VPR64Lo, neon_uimm1_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqdmulh,
+  SQDMULHssv_4S, v1i32, FPR32, v1i32, i32, v4i32,
+  i32, VPR128Lo, neon_uimm2_bare>;
+
 // Scalar Signed saturating rounding doubling multiply
 // returning high half (scalar, by element)
 def SQRDMULHhhv_4H : NeonI_ScalarXIndexedElemArith<"sqrdmulh",
@@ -5715,6 +5819,18 @@ def SQRDMULHssv_4S : NeonI_ScalarXIndexedElemArith<"sqrdmulh",
   let Inst{20-16} = MRm;
 }
 
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqrdmulh,
+  SQRDMULHhhv_4H, v1i16, FPR16, v1i16, i16, v4i16, i32,
+  VPR64Lo, neon_uimm2_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqrdmulh,
+  SQRDMULHhhv_8H, v1i16, FPR16, v1i16, i16, v8i16, i32,
+  VPR128Lo, neon_uimm3_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqrdmulh,
+  SQRDMULHssv_2S, v1i32, FPR32, v1i32, i32, v2i32, i32,
+  VPR64Lo, neon_uimm1_bare>;
+defm : Neon_ScalarXIndexedElem_MUL_Patterns<int_arm_neon_vqrdmulh,
+  SQRDMULHssv_4S, v1i32, FPR32, v1i32, i32, v4i32, i32,
+  VPR128Lo, neon_uimm2_bare>;
 
 // Scalar Copy - DUP element to scalar
 class NeonI_Scalar_DUP<string asmop, string asmlane,
