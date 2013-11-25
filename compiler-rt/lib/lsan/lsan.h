@@ -17,7 +17,11 @@
 
 namespace __lsan {
 
-void Init();
 void InitializeInterceptors();
 
 }  // namespace __lsan
+
+extern bool lsan_inited;
+extern bool lsan_init_is_running;
+
+extern "C" void __lsan_init();

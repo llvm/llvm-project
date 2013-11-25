@@ -9,10 +9,11 @@ set(LSAN_COMMON_SOURCES
   lsan_common_linux.cc)
 
 set(LSAN_SOURCES
-  lsan_interceptors.cc
+  lsan.cc
   lsan_allocator.cc
-  lsan_thread.cc
-  lsan.cc)
+  lsan_interceptors.cc
+  lsan_preinit.cc
+  lsan_thread.cc)
 
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
