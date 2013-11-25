@@ -7,7 +7,7 @@ if (WIN32)
   set(prop_file_v120_xp "toolset-vs2013_xp.props")
 
   # CPack will install a registry key in this format that we wish to reference.
-  set(REG_KEY "${CMAKE_PROJECT_NAME} ${CPACK_PACKAGE_VERSION}")
+  set(REG_KEY "${CPACK_PACKAGE_INSTALL_REGISTRY_KEY}")
 
   set(VS_VERSION "v100")
   set(MSC_VERSION "1600")
