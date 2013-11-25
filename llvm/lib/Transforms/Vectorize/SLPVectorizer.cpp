@@ -163,6 +163,37 @@ static unsigned getSameOpcode(ArrayRef<Value *> VL) {
   return Opcode;
 }
 
+/// \returns \p I after propagating metadata from \p VL.
+static Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL) {
+  Instruction *I0 = cast<Instruction>(VL[0]);
+  SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
+  I0->getAllMetadataOtherThanDebugLoc(Metadata);
+
+  for (unsigned i = 0, n = Metadata.size(); i != n; ++i) {
+    unsigned Kind = Metadata[i].first;
+    MDNode *MD = Metadata[i].second;
+
+    for (int i = 1, e = VL.size(); MD && i != e; i++) {
+      Instruction *I = cast<Instruction>(VL[i]);
+      MDNode *IMD = I->getMetadata(Kind);
+
+      switch (Kind) {
+      default:
+        MD = 0; // Remove unknown metadata
+        break;
+      case LLVMContext::MD_tbaa:
+        MD = MDNode::getMostGenericTBAA(MD, IMD);
+        break;
+      case LLVMContext::MD_fpmath:
+        MD = MDNode::getMostGenericFPMath(MD, IMD);
+        break;
+      }
+    }
+    I->setMetadata(Kind, MD);
+  }
+  return I;
+}
+
 /// \returns The type that all of the values in \p VL have or null if there
 /// are different types.
 static Type* getSameType(ArrayRef<Value *> VL) {
@@ -1478,6 +1509,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       BinaryOperator *BinOp = cast<BinaryOperator>(VL0);
       Value *V = Builder.CreateBinOp(BinOp->getOpcode(), LHS, RHS);
       E->VectorizedValue = V;
+
+      if (Instruction *I = dyn_cast<Instruction>(V))
+        return propagateMetadata(I, E->Scalars);
+
       return V;
     }
     case Instruction::Load: {
@@ -1494,7 +1529,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       LI = Builder.CreateLoad(VecPtr);
       LI->setAlignment(Alignment);
       E->VectorizedValue = LI;
-      return LI;
+      return propagateMetadata(LI, E->Scalars);
     }
     case Instruction::Store: {
       StoreInst *SI = cast<StoreInst>(VL0);
@@ -1513,7 +1548,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       StoreInst *S = Builder.CreateStore(VecValue, VecPtr);
       S->setAlignment(Alignment);
       E->VectorizedValue = S;
-      return S;
+      return propagateMetadata(S, E->Scalars);
     }
     default:
     llvm_unreachable("unknown inst");
