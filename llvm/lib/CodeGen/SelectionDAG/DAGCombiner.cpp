@@ -8703,6 +8703,11 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
         Index = STn;
         break;
       } else if (LoadSDNode *Ldn = dyn_cast<LoadSDNode>(NextInChain)) {
+        if (Ldn->isVolatile()) {
+          Index = NULL;
+          break;
+        }
+
         // Save the load node for later. Continue the scan.
         AliasLoadNodes.push_back(Ldn);
         NextInChain = Ldn->getChain().getNode();
