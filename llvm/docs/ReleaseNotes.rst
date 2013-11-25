@@ -114,6 +114,14 @@ An exciting aspect of LLVM is that it is used as an enabling technology for
 a lot of other language and tools projects. This section lists some of the
 projects that have already been updated to work with LLVM 3.4.
 
+DXR
+---
+
+`DXR <https://wiki.mozilla.org/DXR>`_ is Mozilla's code search and navigation
+tool, aimed at making sense of large projects like Firefox. It supports
+full-text and regex searches as well as structural queries like "Find all the
+callers of this function." Behind the scenes, it uses a custom trigram index,
+the re2 library, and structural data collected by a clang compiler plugin.
 
 LDC - the LLVM-based D compiler
 -------------------------------
@@ -129,15 +137,6 @@ combined with LLVM as backend to produce efficient native code. LDC targets
 x86/x86_64 systems like Linux, OS X, FreeBSD and Windows and also Linux/PPC64.
 Ports to other architectures like ARM and AArch64 are underway.
 
-DXR
----
-
-`DXR <https://wiki.mozilla.org/DXR>`_ is Mozilla's code search and navigation
-tool, aimed at making sense of large projects like Firefox. It supports
-full-text and regex searches as well as structural queries like "Find all the
-callers of this function." Behind the scenes, it uses a custom trigram index,
-the re2 library, and structural data collected by a clang compiler plugin.
-
 Likely
 ------
 
@@ -148,6 +147,34 @@ as OpenCL SPIR or CUDA enabled GPUs. Likely exploits the observation that while
 image processing and statistical learning kernels must be written generically
 to handle any matrix datatype, at runtime they tend to be executed repeatedly
 on the same type.
+
+Portable Computing Language (pocl)
+----------------------------------
+
+In addition to producing an easily portable open source OpenCL
+implementation, another major goal of `pocl <http://portablecl.org/>`_
+is improving performance portability of OpenCL programs with
+compiler optimizations, reducing the need for target-dependent manual
+optimizations. An important part of pocl is a set of LLVM passes used to
+statically parallelize multiple work-items with the kernel compiler, even in
+the presence of work-group barriers. This enables static parallelization of
+the fine-grained static concurrency in the work groups in multiple ways. 
+
+TTA-based Co-design Environment (TCE)
+-------------------------------------
+
+`TCE <http://tce.cs.tut.fi/>`_ is a toolset for designing new
+exposed datapath processors based on the Transport triggered architecture (TTA). 
+The toolset provides a complete co-design flow from C/C++
+programs down to synthesizable VHDL/Verilog and parallel program binaries.
+Processor customization points include the register files, function units,
+supported operations, and the interconnection network.
+
+TCE uses Clang and LLVM for C/C++/OpenCL C language support, target independent 
+optimizations and also for parts of code generation. It generates
+new LLVM-based code generators "on the fly" for the designed processors and
+loads them in to the compiler backend as runtime libraries to avoid
+per-target recompilation of larger parts of the compiler chain. 
 
 WebCL Validator
 ---------------
