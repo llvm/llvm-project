@@ -5883,16 +5883,37 @@ defm : NeonI_SDUP<Neon_low2D, Neon_High2D, v1i64, v2i64>;
 defm : NeonI_SDUP<Neon_low4f, Neon_High4f, v2f32, v4f32>;
 defm : NeonI_SDUP<Neon_low2d, Neon_High2d, v1f64, v2f64>;
 
-// Patterns  for vector extract of FP data using scalar DUP instructions
+// Patterns for vector extract of FP data using scalar DUP instructions
 defm : NeonI_Scalar_DUP_Elt_pattern<DUPsv_S, f32,
   v4f32, neon_uimm2_bare, v2f32, v4f32, neon_uimm1_bare>;
 defm : NeonI_Scalar_DUP_Elt_pattern<DUPdv_D, f64,
   v2f64, neon_uimm1_bare, v1f64, v2f64, neon_uimm0_bare>;
 
+multiclass NeonI_Scalar_DUP_Vec_pattern<Instruction DUPI,
+  ValueType ResTy, ValueType OpTy,Operand OpLImm,
+  ValueType NOpTy, ValueType ExTy, Operand OpNImm> {
+
+  def : Pat<(ResTy (extract_subvector (OpTy VPR128:$Rn), OpLImm:$Imm)),
+            (ResTy (DUPI VPR128:$Rn, OpLImm:$Imm))>;
+
+  def : Pat<(ResTy (extract_subvector (NOpTy VPR64:$Rn), OpNImm:$Imm)),
+            (ResTy (DUPI
+              (ExTy (SUBREG_TO_REG (i64 0), VPR64:$Rn, sub_64)),
+                OpNImm:$Imm))>;
+}
+// Patterns for extract subvectors of v1ix data using scalar DUP instructions
+defm : NeonI_Scalar_DUP_Vec_pattern<DUPbv_B,
+  v1i8, v16i8, neon_uimm4_bare, v8i8, v16i8, neon_uimm3_bare>;
+defm : NeonI_Scalar_DUP_Vec_pattern<DUPhv_H,
+  v1i16, v8i16, neon_uimm3_bare, v4i16, v8i16, neon_uimm2_bare>;
+defm : NeonI_Scalar_DUP_Vec_pattern<DUPsv_S,
+  v1i32, v4i32, neon_uimm2_bare, v2i32, v4i32, neon_uimm1_bare>;
+
+
 multiclass NeonI_Scalar_DUP_alias<string asmop, string asmlane,
                                   Instruction DUPI, Operand OpImm,
                                   RegisterClass ResRC> {
-  def : NeonInstAlias<!strconcat(asmop, "$Rd, $Rn." # asmlane # "[$Imm]"),
+  def : NeonInstAlias<!strconcat(asmop, "$Rd, $Rn" # asmlane # "[$Imm]"),
           (DUPI ResRC:$Rd, VPR128:$Rn, OpImm:$Imm), 0b0>;
 }
 
