@@ -1772,6 +1772,31 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   // argument that specifies the vector type, need to handle each case.
   switch (BuiltinID) {
   default: break;
+  case AArch64::BI__builtin_neon_vdups_lane_f32:
+  case AArch64::BI__builtin_neon_vdupd_lane_f64:
+  case AArch64::BI__builtin_neon_vdups_laneq_f32:
+  case AArch64::BI__builtin_neon_vdupd_laneq_f64: {
+    return CGF.Builder.CreateExtractElement(Ops[0], Ops[1], "vdup_lane");
+  }
+  case AArch64::BI__builtin_neon_vdupb_lane_i8:
+  case AArch64::BI__builtin_neon_vduph_lane_i16:
+  case AArch64::BI__builtin_neon_vdups_lane_i32:
+  case AArch64::BI__builtin_neon_vdupd_lane_i64:
+  case AArch64::BI__builtin_neon_vdupb_laneq_i8:
+  case AArch64::BI__builtin_neon_vduph_laneq_i16:
+  case AArch64::BI__builtin_neon_vdups_laneq_i32:
+  case AArch64::BI__builtin_neon_vdupd_laneq_i64: {
+    // The backend treats Neon scalar types as v1ix types
+    // So we want to dup lane from any vector to v1ix vector
+    // with shufflevector
+    s = "vdup_lane";
+    Value* SV = llvm::ConstantVector::getSplat(1, cast<ConstantInt>(Ops[1]));
+    Value *Result = CGF.Builder.CreateShuffleVector(Ops[0], Ops[0], SV, s);
+    llvm::Type *Ty = CGF.ConvertType(E->getCallReturnType());
+    // AArch64 intrinsic one-element vector type cast to
+    // scalar type expected by the builtin
+    return CGF.Builder.CreateBitCast(Result, Ty, s);
+  }
   case AArch64::BI__builtin_neon_vqdmlalh_lane_s16 :
   case AArch64::BI__builtin_neon_vqdmlalh_laneq_s16 :
   case AArch64::BI__builtin_neon_vqdmlals_lane_s32 :
