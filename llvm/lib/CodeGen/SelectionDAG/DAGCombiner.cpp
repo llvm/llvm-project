@@ -1635,19 +1635,8 @@ static SDValue tryFoldToZero(SDLoc DL, const TargetLowering &TLI, EVT VT,
                              bool LegalOperations, bool LegalTypes) {
   if (!VT.isVector())
     return DAG.getConstant(0, VT);
-  if (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)) {
-    // Produce a vector of zeros.
-    EVT ElemTy = VT.getVectorElementType();
-    if (LegalTypes && TLI.getTypeAction(*DAG.getContext(), ElemTy) ==
-                      TargetLowering::TypePromoteInteger)
-      ElemTy = TLI.getTypeToTransformTo(*DAG.getContext(), ElemTy);
-    assert((!LegalTypes || TLI.isTypeLegal(ElemTy)) &&
-           "Type for zero vector elements is not legal");
-    SDValue El = DAG.getConstant(0, ElemTy);
-    std::vector<SDValue> Ops(VT.getVectorNumElements(), El);
-    return DAG.getNode(ISD::BUILD_VECTOR, DL, VT,
-      &Ops[0], Ops.size());
-  }
+  if (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT))
+    return DAG.getConstant(0, VT);
   return SDValue();
 }
 

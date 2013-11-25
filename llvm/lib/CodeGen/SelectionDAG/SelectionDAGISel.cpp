@@ -670,6 +670,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   DEBUG(dbgs() << "Type-legalized selection DAG: BB#" << BlockNumber
         << " '" << BlockName << "'\n"; CurDAG->dump());
 
+  CurDAG->NewNodesMustHaveLegalTypes = true;
+
   if (Changed) {
     if (ViewDAGCombineLT)
       CurDAG->viewGraph("dag-combine-lt input for " + BlockName);
@@ -710,8 +712,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     DEBUG(dbgs() << "Optimized vector-legalized selection DAG: BB#"
           << BlockNumber << " '" << BlockName << "'\n"; CurDAG->dump());
   }
-
-  CurDAG->NewNodesMustHaveLegalTypes = true;
 
   if (ViewLegalizeDAGs) CurDAG->viewGraph("legalize input for " + BlockName);
 
