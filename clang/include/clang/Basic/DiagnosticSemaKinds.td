@@ -2030,6 +2030,8 @@ def err_alias_not_supported_on_darwin : Error <
   "only weak aliases are supported on darwin">;
 def err_alias_to_undefined : Error<
   "alias must point to a defined variable or function">;
+def err_duplicate_mangled_name : Error<
+  "definition with same mangled name as another definition">;
 def err_cyclic_alias : Error<
   "alias definition is part of a cycle">;
 def warn_attribute_wrong_decl_type : Warning<

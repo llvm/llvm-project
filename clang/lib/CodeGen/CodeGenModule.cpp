@@ -2095,6 +2095,10 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD) {
     Entry = CE->getOperand(0);
   }
 
+  if (!cast<llvm::GlobalValue>(Entry)->isDeclaration()) {
+    getDiags().Report(D->getLocation(), diag::err_duplicate_mangled_name);
+    return;
+  }
 
   if (cast<llvm::GlobalValue>(Entry)->getType()->getElementType() != Ty) {
     llvm::GlobalValue *OldFn = cast<llvm::GlobalValue>(Entry);
