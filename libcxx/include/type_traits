@@ -1409,7 +1409,7 @@ template <class ..._Tp> using common_type_t = typename common_type<_Tp...>::type
 
 // is_assignable
 
-template<typename, typename T> struct __select_2nd { typedef T type; };
+template<typename, typename _Tp> struct __select_2nd { typedef _Tp type; };
 
 template <class _Tp, class _Arg>
 typename __select_2nd<decltype((_VSTD::declval<_Tp>() = _VSTD::declval<_Arg>())), true_type>::type

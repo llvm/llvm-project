@@ -19,7 +19,7 @@
 namespace __gnu_cxx {
 using namespace std;
 
-template <typename T> struct _LIBCPP_TYPE_VIS_ONLY hash : public std::hash<T>
+template <typename _Tp> struct _LIBCPP_TYPE_VIS_ONLY hash : public std::hash<_Tp>
     { };
 
 template <> struct _LIBCPP_TYPE_VIS_ONLY hash<const char*>
