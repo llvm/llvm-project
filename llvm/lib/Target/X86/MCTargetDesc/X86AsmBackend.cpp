@@ -68,9 +68,16 @@ public:
 
 class X86AsmBackend : public MCAsmBackend {
   StringRef CPU;
+  bool HasNopl;
 public:
   X86AsmBackend(const Target &T, StringRef _CPU)
-    : MCAsmBackend(), CPU(_CPU) {}
+    : MCAsmBackend(), CPU(_CPU) {
+    HasNopl = CPU != "generic" && CPU != "i386" && CPU != "i486" &&
+              CPU != "i586" && CPU != "pentium" && CPU != "pentium-mmx" &&
+              CPU != "i686" && CPU != "k6" && CPU != "k6-2" && CPU != "k6-3" &&
+              CPU != "geode" && CPU != "winchip-c6" && CPU != "winchip2" &&
+              CPU != "c3" && CPU != "c3-2";
+  }
 
   unsigned getNumFixupKinds() const {
     return X86::NumTargetFixupKinds;
@@ -310,11 +317,7 @@ bool X86AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   // This CPU doesnt support long nops. If needed add more.
   // FIXME: Can we get this from the subtarget somehow?
   // FIXME: We could generated something better than plain 0x90.
-  if (CPU == "generic" || CPU == "i386" || CPU == "i486" || CPU == "i586" ||
-      CPU == "pentium" || CPU == "pentium-mmx" || CPU == "i686" ||
-      CPU == "k6" || CPU == "k6-2" || CPU == "k6-3" || CPU == "geode" ||
-      CPU == "winchip-c6" || CPU == "winchip2" || CPU == "c3" ||
-      CPU == "c3-2") {
+  if (!HasNopl) {
     for (uint64_t i = 0; i < Count; ++i)
       OW->Write8(0x90);
     return true;
