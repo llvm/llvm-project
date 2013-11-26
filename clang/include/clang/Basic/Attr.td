@@ -1,8 +1,11 @@
-////////////////////////////////////////////////////////////////////////////////
-// Note: This file is a work in progress. Please do not apply non-trivial
-// updates unless you have talked to Sean Hunt <rideau3@gmail.com> prior.
-// Merely adding a new attribute is a trivial update.
-////////////////////////////////////////////////////////////////////////////////
+//==--- Attr.td - attribute definitions -----------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 
 // An attribute's subject is whatever it appertains to. In this file, it is
 // more accurately a list of things that an attribute can appertain to. All

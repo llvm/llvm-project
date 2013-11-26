@@ -796,8 +796,7 @@ class CGObjCGNUstep : public CGObjCGNU {
     }
 };
 
-/// Support for the ObjFW runtime. Support here is due to
-/// Jonathan Schleifer <js@webkeks.org>, the ObjFW maintainer.
+/// Support for the ObjFW runtime.
 class CGObjCObjFW: public CGObjCGNU {
 protected:
   /// The GCC ABI message lookup function.  Returns an IMP pointing to the
