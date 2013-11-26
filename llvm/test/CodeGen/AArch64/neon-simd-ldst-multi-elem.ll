@@ -1,5 +1,77 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon | FileCheck %s
 
+define void @test_ldst1_v16i8(<16 x i8>* %ptr, <16 x i8>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v16i8:
+; CHECK: ld1 {v{{[0-9]+}}.16b}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.16b}, [x{{[0-9]+|sp}}]
+  %tmp = load <16 x i8>* %ptr
+  store <16 x i8> %tmp, <16 x i8>* %ptr2
+  ret void
+}
+
+define void @test_ldst1_v8i16(<8 x i16>* %ptr, <8 x i16>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v8i16:
+; CHECK: ld1 {v{{[0-9]+}}.8h}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.8h}, [x{{[0-9]+|sp}}]
+  %tmp = load <8 x i16>* %ptr
+  store <8 x i16> %tmp, <8 x i16>* %ptr2
+  ret void
+}
+
+define void @test_ldst1_v4i32(<4 x i32>* %ptr, <4 x i32>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v4i32:
+; CHECK: ld1 {v{{[0-9]+}}.4s}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.4s}, [x{{[0-9]+|sp}}]
+  %tmp = load <4 x i32>* %ptr
+  store <4 x i32> %tmp, <4 x i32>* %ptr2
+  ret void
+}
+
+define void @test_ldst1_v2i64(<2 x i64>* %ptr, <2 x i64>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v2i64:
+; CHECK: ld1 {v{{[0-9]+}}.2d}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.2d}, [x{{[0-9]+|sp}}]
+  %tmp = load <2 x i64>* %ptr
+  store <2 x i64> %tmp, <2 x i64>* %ptr2
+  ret void
+}
+
+define void @test_ldst1_v8i8(<8 x i8>* %ptr, <8 x i8>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v8i8:
+; CHECK: ld1 {v{{[0-9]+}}.8b}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.8b}, [x{{[0-9]+|sp}}]
+  %tmp = load <8 x i8>* %ptr
+  store <8 x i8> %tmp, <8 x i8>* %ptr2
+  ret void
+}
+
+define void @test_ldst1_v4i16(<4 x i16>* %ptr, <4 x i16>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v4i16:
+; CHECK: ld1 {v{{[0-9]+}}.4h}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.4h}, [x{{[0-9]+|sp}}]
+  %tmp = load <4 x i16>* %ptr
+  store <4 x i16> %tmp, <4 x i16>* %ptr2
+  ret void
+}
+
+define void @test_ldst1_v2i32(<2 x i32>* %ptr, <2 x i32>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v2i32:
+; CHECK: ld1 {v{{[0-9]+}}.2s}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.2s}, [x{{[0-9]+|sp}}]
+  %tmp = load <2 x i32>* %ptr
+  store <2 x i32> %tmp, <2 x i32>* %ptr2
+  ret void
+}
+
+define void @test_ldst1_v1i64(<1 x i64>* %ptr, <1 x i64>* %ptr2) {
+; CHECK-LABEL: test_ldst1_v1i64:
+; CHECK: ld1 {v{{[0-9]+}}.1d}, [x{{[0-9]+|sp}}]
+; CHECK: st1 {v{{[0-9]+}}.1d}, [x{{[0-9]+|sp}}]
+  %tmp = load <1 x i64>* %ptr
+  store <1 x i64> %tmp, <1 x i64>* %ptr2
+  ret void
+}
+
 %struct.int8x16x2_t = type { [2 x <16 x i8>] }
 %struct.int16x8x2_t = type { [2 x <8 x i16>] }
 %struct.int32x4x2_t = type { [2 x <4 x i32>] }

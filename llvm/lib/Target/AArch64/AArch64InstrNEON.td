@@ -3187,6 +3187,54 @@ def ST1x3_1D : NeonI_STVList<0, 0b0110, 0b11, VTriple1D_operand, "st1">;
 defm ST1x4 : STVList_BHSD<0b0010, "VQuad", "st1">;
 def ST1x4_1D : NeonI_STVList<0, 0b0010, 0b11, VQuad1D_operand, "st1">;
 
+def : Pat<(v2f64 (load GPR64xsp:$addr)), (LD1_2D GPR64xsp:$addr)>;
+def : Pat<(v2i64 (load GPR64xsp:$addr)), (LD1_2D GPR64xsp:$addr)>;
+
+def : Pat<(v4f32 (load GPR64xsp:$addr)), (LD1_4S GPR64xsp:$addr)>;
+def : Pat<(v4i32 (load GPR64xsp:$addr)), (LD1_4S GPR64xsp:$addr)>;
+
+def : Pat<(v8i16 (load GPR64xsp:$addr)), (LD1_8H GPR64xsp:$addr)>;
+def : Pat<(v16i8 (load GPR64xsp:$addr)), (LD1_16B GPR64xsp:$addr)>;
+
+def : Pat<(v1f64 (load GPR64xsp:$addr)), (LD1_1D GPR64xsp:$addr)>;
+def : Pat<(v1i64 (load GPR64xsp:$addr)), (LD1_1D GPR64xsp:$addr)>;
+
+def : Pat<(v2f32 (load GPR64xsp:$addr)), (LD1_2S GPR64xsp:$addr)>;
+def : Pat<(v2i32 (load GPR64xsp:$addr)), (LD1_2S GPR64xsp:$addr)>;
+
+def : Pat<(v4i16 (load GPR64xsp:$addr)), (LD1_4H GPR64xsp:$addr)>;
+def : Pat<(v8i8 (load GPR64xsp:$addr)), (LD1_8B GPR64xsp:$addr)>;
+
+def : Pat<(store (v2i64 VPR128:$value), GPR64xsp:$addr),
+          (ST1_2D GPR64xsp:$addr, VPR128:$value)>;
+def : Pat<(store (v2f64 VPR128:$value), GPR64xsp:$addr),
+          (ST1_2D GPR64xsp:$addr, VPR128:$value)>;
+
+def : Pat<(store (v4i32 VPR128:$value), GPR64xsp:$addr),
+          (ST1_4S GPR64xsp:$addr, VPR128:$value)>;
+def : Pat<(store (v4f32 VPR128:$value), GPR64xsp:$addr),
+          (ST1_4S GPR64xsp:$addr, VPR128:$value)>;
+
+def : Pat<(store (v8i16 VPR128:$value), GPR64xsp:$addr),
+          (ST1_8H GPR64xsp:$addr, VPR128:$value)>;
+def : Pat<(store (v16i8 VPR128:$value), GPR64xsp:$addr),
+          (ST1_16B GPR64xsp:$addr, VPR128:$value)>;
+
+def : Pat<(store (v1i64 VPR64:$value), GPR64xsp:$addr),
+          (ST1_1D GPR64xsp:$addr, VPR64:$value)>;
+def : Pat<(store (v1f64 VPR64:$value), GPR64xsp:$addr),
+          (ST1_1D GPR64xsp:$addr, VPR64:$value)>;
+
+def : Pat<(store (v2i32 VPR64:$value), GPR64xsp:$addr),
+          (ST1_2S GPR64xsp:$addr, VPR64:$value)>;
+def : Pat<(store (v2f32 VPR64:$value), GPR64xsp:$addr),
+          (ST1_2S GPR64xsp:$addr, VPR64:$value)>;
+
+def : Pat<(store (v4i16 VPR64:$value), GPR64xsp:$addr),
+          (ST1_4H GPR64xsp:$addr, VPR64:$value)>;
+def : Pat<(store (v8i8 VPR64:$value), GPR64xsp:$addr),
+          (ST1_8B GPR64xsp:$addr, VPR64:$value)>;
+
 // End of vector load/store multiple N-element structure(class SIMD lselem)
 
 // The followings are post-index vector load/store multiple N-element
@@ -5739,6 +5787,12 @@ def : Pat<(f32 (bitconvert (v1f32  FPR32:$src))), (f32 FPR32:$src)>;
 def : Pat<(f64 (bitconvert (v1f64  FPR64:$src))), (f64 FPR64:$src)>;
 
 def : Pat<(i64 (bitconvert (v1i64  FPR64:$src))), (FMOVxd $src)>;
+def : Pat<(i64 (bitconvert (v1f64  FPR64:$src))), (FMOVxd $src)>;
+def : Pat<(i64 (bitconvert (v2i32  FPR64:$src))), (FMOVxd $src)>;
+def : Pat<(i64 (bitconvert (v2f32  FPR64:$src))), (FMOVxd $src)>;
+def : Pat<(i64 (bitconvert (v4i16  FPR64:$src))), (FMOVxd $src)>;
+def : Pat<(i64 (bitconvert (v8i8  FPR64:$src))), (FMOVxd $src)>;
+
 def : Pat<(i32 (bitconvert (v1i32  FPR32:$src))), (FMOVws $src)>;
 
 def : Pat<(v8i8  (bitconvert (v1i64  VPR64:$src))), (v8i8 VPR64:$src)>;
@@ -5765,6 +5819,12 @@ def : Pat<(v1f32 (bitconvert (f32  FPR32:$src))), (v1f32 FPR32:$src)>;
 def : Pat<(v1f64 (bitconvert (f64  FPR64:$src))), (v1f64 FPR64:$src)>;
 
 def : Pat<(v1i64 (bitconvert (i64  GPR64:$src))), (FMOVdx $src)>;
+def : Pat<(v1f64 (bitconvert (i64  GPR64:$src))), (FMOVdx $src)>;
+def : Pat<(v2i32 (bitconvert (i64  GPR64:$src))), (FMOVdx $src)>;
+def : Pat<(v2f32 (bitconvert (i64  GPR64:$src))), (FMOVdx $src)>;
+def : Pat<(v4i16 (bitconvert (i64  GPR64:$src))), (FMOVdx $src)>;
+def : Pat<(v8i8 (bitconvert (i64  GPR64:$src))), (FMOVdx $src)>;
+
 def : Pat<(v1i32 (bitconvert (i32  GPR32:$src))), (FMOVsw $src)>;
 
 def : Pat<(v8i8   (bitconvert (f64   FPR64:$src))), (v8i8 FPR64:$src)>;

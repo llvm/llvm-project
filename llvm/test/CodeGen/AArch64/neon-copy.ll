@@ -530,3 +530,86 @@ define <2 x i64> @test_vdupq_laneq_s64(<2 x i64> %v1) #0 {
   ret <2 x i64> %shuffle
 }
 
+define i64 @test_bitcastv8i8toi64(<8 x i8> %in) {
+; CHECK-LABEL: test_bitcastv8i8toi64:
+   %res = bitcast <8 x i8> %in to i64
+; CHECK: fmov {{x[0-9]+}}, {{d[0-9]+}}
+   ret i64 %res
+}
+
+define i64 @test_bitcastv4i16toi64(<4 x i16> %in) {
+; CHECK-LABEL: test_bitcastv4i16toi64:
+   %res = bitcast <4 x i16> %in to i64
+; CHECK: fmov {{x[0-9]+}}, {{d[0-9]+}}
+   ret i64 %res
+}
+
+define i64 @test_bitcastv2i32toi64(<2 x i32> %in) {
+; CHECK-LABEL: test_bitcastv2i32toi64:
+   %res = bitcast <2 x i32> %in to i64
+; CHECK: fmov {{x[0-9]+}}, {{d[0-9]+}}
+   ret i64 %res
+}
+
+define i64 @test_bitcastv2f32toi64(<2 x float> %in) {
+; CHECK-LABEL: test_bitcastv2f32toi64:
+   %res = bitcast <2 x float> %in to i64
+; CHECK: fmov {{x[0-9]+}}, {{d[0-9]+}}
+   ret i64 %res
+}
+
+define i64 @test_bitcastv1i64toi64(<1 x i64> %in) {
+; CHECK-LABEL: test_bitcastv1i64toi64:
+   %res = bitcast <1 x i64> %in to i64
+; CHECK: fmov {{x[0-9]+}}, {{d[0-9]+}}
+   ret i64 %res
+}
+
+define i64 @test_bitcastv1f64toi64(<1 x double> %in) {
+; CHECK-LABEL: test_bitcastv1f64toi64:
+   %res = bitcast <1 x double> %in to i64
+; CHECK: fmov {{x[0-9]+}}, {{d[0-9]+}}
+   ret i64 %res
+}
+
+define <8 x i8> @test_bitcasti64tov8i8(i64 %in) {
+; CHECK-LABEL: test_bitcasti64tov8i8:
+   %res = bitcast i64 %in to <8 x i8>
+; CHECK: fmov {{d[0-9]+}}, {{x[0-9]+}}
+   ret <8 x i8> %res
+}
+
+define <4 x i16> @test_bitcasti64tov4i16(i64 %in) {
+; CHECK-LABEL: test_bitcasti64tov4i16:
+   %res = bitcast i64 %in to <4 x i16>
+; CHECK: fmov {{d[0-9]+}}, {{x[0-9]+}}
+   ret <4 x i16> %res
+}
+
+define <2 x i32> @test_bitcasti64tov2i32(i64 %in) {
+; CHECK-LABEL: test_bitcasti64tov2i32:
+   %res = bitcast i64 %in to <2 x i32>
+; CHECK: fmov {{d[0-9]+}}, {{x[0-9]+}}
+   ret <2 x i32> %res
+}
+
+define <2 x float> @test_bitcasti64tov2f32(i64 %in) {
+; CHECK-LABEL: test_bitcasti64tov2f32:
+   %res = bitcast i64 %in to <2 x float>
+; CHECK: fmov {{d[0-9]+}}, {{x[0-9]+}}
+   ret <2 x float> %res
+}
+
+define <1 x i64> @test_bitcasti64tov1i64(i64 %in) {
+; CHECK-LABEL: test_bitcasti64tov1i64:
+   %res = bitcast i64 %in to <1 x i64>
+; CHECK: fmov {{d[0-9]+}}, {{x[0-9]+}}
+   ret <1 x i64> %res
+}
+
+define <1 x double> @test_bitcasti64tov1f64(i64 %in) {
+; CHECK-LABEL: test_bitcasti64tov1f64:
+   %res = bitcast i64 %in to <1 x double>
+; CHECK: fmov {{d[0-9]+}}, {{x[0-9]+}}
+   ret <1 x double> %res
+}
