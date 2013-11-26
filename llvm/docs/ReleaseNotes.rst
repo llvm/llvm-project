@@ -84,6 +84,9 @@ Non-comprehensive list of changes in this release
 * Different sized pointers for different address spaces should now
   generally work. This is primarily useful for GPU targets.
 
+* OCaml bindings have been significantly extended to cover almost all of the
+  LLVM libraries.
+
 * ... next change ...
 
 .. NOTE
