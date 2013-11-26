@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
+struct Trivial {};
 struct NonTrivial {
   NonTrivial(const NonTrivial&);
 };
@@ -68,6 +69,12 @@ struct Deleted {
 };
 Deleted Da;
 Deleted Db(Da); // expected-error{{call to implicitly-deleted copy constructor}}
+
+// It's implied (but not stated) that this also applies in the case where
+// overload resolution would fail.
+struct VolatileMember {
+  volatile Trivial vm; // expected-note {{has no copy}}
+} vm1, vm2(vm1); // expected-error {{deleted}}
 
 // -- a direct or virtual base class B that cannot be copied because overload
 //    resolution results in an ambiguity or a function that is deleted or

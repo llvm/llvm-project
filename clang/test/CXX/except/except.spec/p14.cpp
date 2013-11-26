@@ -44,8 +44,8 @@ namespace PR13381 {
   struct NoThrowMove {
     NoThrowMove(const NoThrowMove &);
     NoThrowMove(NoThrowMove &&) noexcept;
-    NoThrowMove &operator=(const NoThrowMove &);
-    NoThrowMove &operator=(NoThrowMove &&) noexcept;
+    NoThrowMove &operator=(const NoThrowMove &) const;
+    NoThrowMove &operator=(NoThrowMove &&) const noexcept;
   };
   struct NoThrowMoveOnly {
     NoThrowMoveOnly(NoThrowMoveOnly &&) noexcept;

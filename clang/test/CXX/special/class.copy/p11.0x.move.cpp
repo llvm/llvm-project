@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
+struct Trivial {};
 struct NonTrivial {
   NonTrivial(NonTrivial&&);
 };
@@ -60,6 +61,24 @@ struct Deleted {
   Deleted(Deleted&&);
 };
 Deleted::Deleted(Deleted&&) = default; // expected-error{{would delete}}
+
+// It's implied (but not stated) that this should also happen if overload
+// resolution fails.
+struct ConstMember {
+  const Trivial ct;
+  ConstMember(ConstMember&&);
+};
+ConstMember::ConstMember(ConstMember&&) = default; // ok, calls copy ctor
+struct ConstMoveOnlyMember {
+  const NonTrivial cnt;
+  ConstMoveOnlyMember(ConstMoveOnlyMember&&);
+};
+ConstMoveOnlyMember::ConstMoveOnlyMember(ConstMoveOnlyMember&&) = default; // expected-error{{would delete}}
+struct VolatileMember {
+  volatile Trivial vt;
+  VolatileMember(VolatileMember&&);
+};
+VolatileMember::VolatileMember(VolatileMember&&) = default; // expected-error{{would delete}}
 
 // -- a direct or virtual base class B that cannot be moved because overload
 //    resolution results in an ambiguity or a function that is deleted or
