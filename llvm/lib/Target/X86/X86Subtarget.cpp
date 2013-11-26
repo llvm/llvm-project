@@ -276,7 +276,12 @@ void X86Subtarget::AutoDetectSubtargetFeatures() {
          (Family == 6 && Model == 0x2F) || // Westmere: Westmere-EX
          (Family == 6 && Model == 0x2A) || // SandyBridge
          (Family == 6 && Model == 0x2D) || // SandyBridge: SandyBridge-E*
-         (Family == 6 && Model == 0x3A))) {// IvyBridge
+         (Family == 6 && Model == 0x3A) || // IvyBridge
+         (Family == 6 && Model == 0x3E) || // IvyBridge EP
+         (Family == 6 && Model == 0x3C) || // Haswell
+         (Family == 6 && Model == 0x3F) || // ...
+         (Family == 6 && Model == 0x45) || // ...
+         (Family == 6 && Model == 0x46))) { // ...
       IsUAMemFast = true;
       ToggleFeature(X86::FeatureFastUAMem);
     }
