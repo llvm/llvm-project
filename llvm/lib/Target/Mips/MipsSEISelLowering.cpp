@@ -594,9 +594,11 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
       Cond = Op0Op0;
       IfSet = Op0Op1;
 
-      if (isVSplat(Op1Op0, InvMask, IsLittleEndian) && Mask == ~InvMask)
+      if (isVSplat(Op1Op0, InvMask, IsLittleEndian) &&
+          Mask.getBitWidth() == InvMask.getBitWidth() && Mask == ~InvMask)
         IfClr = Op1Op1;
-      else if (isVSplat(Op1Op1, InvMask, IsLittleEndian) && Mask == ~InvMask)
+      else if (isVSplat(Op1Op1, InvMask, IsLittleEndian) &&
+               Mask.getBitWidth() == InvMask.getBitWidth() && Mask == ~InvMask)
         IfClr = Op1Op0;
 
       IsConstantMask = true;
@@ -609,9 +611,11 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
       Cond = Op0Op1;
       IfSet = Op0Op0;
 
-      if (isVSplat(Op1Op0, InvMask, IsLittleEndian) && Mask == ~InvMask)
+      if (isVSplat(Op1Op0, InvMask, IsLittleEndian) &&
+          Mask.getBitWidth() == InvMask.getBitWidth() && Mask == ~InvMask)
         IfClr = Op1Op1;
-      else if (isVSplat(Op1Op1, InvMask, IsLittleEndian) && Mask == ~InvMask)
+      else if (isVSplat(Op1Op1, InvMask, IsLittleEndian) &&
+               Mask.getBitWidth() == InvMask.getBitWidth() && Mask == ~InvMask)
         IfClr = Op1Op0;
 
       IsConstantMask = true;
