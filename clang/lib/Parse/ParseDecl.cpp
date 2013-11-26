@@ -4414,7 +4414,8 @@ bool Parser::isConstructorDeclarator() {
 void Parser::ParseTypeQualifierListOpt(DeclSpec &DS,
                                        bool VendorAttributesAllowed,
                                        bool CXX11AttributesAllowed,
-                                       bool AtomicAllowed) {
+                                       bool AtomicAllowed,
+                                       bool IdentifierRequired) {
   if (getLangOpts().CPlusPlus11 && CXX11AttributesAllowed &&
       isCXX11AttributeSpecifier()) {
     ParsedAttributesWithRange attrs(AttrFactory);
@@ -4468,8 +4469,16 @@ void Parser::ParseTypeQualifierListOpt(DeclSpec &DS,
       ParseOpenCLQualifiers(DS);
       break;
 
-    case tok::kw___sptr:
     case tok::kw___uptr:
+      // GNU libc headers in C mode use '__uptr' as an identifer which conflicts
+      // with the MS modifier keyword.
+      if (VendorAttributesAllowed && !getLangOpts().CPlusPlus &&
+          IdentifierRequired && DS.isEmpty() && NextToken().is(tok::semi) &&
+          PP.getSourceManager().isInSystemHeader(Loc)) {
+        Tok.setKind(tok::identifier);
+        continue;
+      }
+    case tok::kw___sptr:
     case tok::kw___w64:
     case tok::kw___ptr64:
     case tok::kw___ptr32:
@@ -4625,7 +4634,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     DeclSpec DS(AttrFactory);
 
     // FIXME: GNU attributes are not allowed here in a new-type-id.
-    ParseTypeQualifierListOpt(DS);
+    ParseTypeQualifierListOpt(DS, true, true, true, !D.mayOmitIdentifier());
     D.ExtendWithDeclSpec(DS);
 
     // Recursively parse the declarator.
