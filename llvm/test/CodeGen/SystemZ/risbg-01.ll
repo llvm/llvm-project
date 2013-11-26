@@ -456,3 +456,17 @@ define i64 @f40(i64 %foo, i64 *%dest) {
   %and = and i64 %shl, 2147483647
   ret i64 %and
 }
+
+; In this case the sign extension is converted to a pair of 32-bit shifts,
+; which is then extended to 64 bits.  We previously used the wrong bit size
+; when testing whether the shifted-in bits of the shift right were significant.
+define i64 @f41(i1 %x) {
+; CHECK-LABEL: f41:
+; CHECK: sll %r2, 31
+; CHECK: sra %r2, 31
+; CHECK: llgcr %r2, %r2
+; CHECK: br %r14
+  %ext = sext i1 %x to i8
+  %ext2 = zext i8 %ext to i64
+  ret i64 %ext2
+}
