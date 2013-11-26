@@ -125,6 +125,14 @@ namespace AArch64ISD {
     // Vector FP move immediate
     NEON_FMOVIMM,
 
+    // Vector permute
+    NEON_UZP1,
+    NEON_UZP2,
+    NEON_ZIP1,
+    NEON_ZIP2,
+    NEON_TRN1,
+    NEON_TRN2,
+
     // Vector Element reverse
     NEON_REV64,
     NEON_REV32,
@@ -224,6 +232,8 @@ public:
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           SDLoc dl, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
+
+  bool isKnownShuffleVector(SDValue Op, SelectionDAG &DAG, SDValue &Res) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                             const AArch64Subtarget *ST) const;

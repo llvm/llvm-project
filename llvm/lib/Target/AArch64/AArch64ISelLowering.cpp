@@ -921,6 +921,18 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "AArch64ISD::NEON_REV32";
   case AArch64ISD::NEON_REV64:
     return "AArch64ISD::NEON_REV64";
+  case AArch64ISD::NEON_UZP1:
+    return "AArch64ISD::NEON_UZP1";
+  case AArch64ISD::NEON_UZP2:
+    return "AArch64ISD::NEON_UZP2";
+  case AArch64ISD::NEON_ZIP1:
+    return "AArch64ISD::NEON_ZIP1";
+  case AArch64ISD::NEON_ZIP2:
+    return "AArch64ISD::NEON_ZIP2";
+  case AArch64ISD::NEON_TRN1:
+    return "AArch64ISD::NEON_TRN1";
+  case AArch64ISD::NEON_TRN2:
+    return "AArch64ISD::NEON_TRN2";
   case AArch64ISD::NEON_LD1_UPD:
     return "AArch64ISD::NEON_LD1_UPD";
   case AArch64ISD::NEON_LD2_UPD:
@@ -3826,6 +3838,59 @@ AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   return false;
 }
 
+// Check whether a Build Vector could be presented as Shuffle Vector. If yes,
+// try to call LowerVECTOR_SHUFFLE to lower it.
+bool AArch64TargetLowering::isKnownShuffleVector(SDValue Op, SelectionDAG &DAG,
+                                                 SDValue &Res) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned V0NumElts = 0;
+  int Mask[16];
+  SDValue V0, V1;
+
+  // Check if all elements are extracted from less than 3 vectors.
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Elt = Op.getOperand(i);
+    if (Elt.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return false;
+
+    if (V0.getNode() == 0) {
+      V0 = Elt.getOperand(0);
+      V0NumElts = V0.getValueType().getVectorNumElements();
+    }
+    if (Elt.getOperand(0) == V0) {
+      Mask[i] = (cast<ConstantSDNode>(Elt->getOperand(1))->getZExtValue());
+      continue;
+    } else if (V1.getNode() == 0) {
+      V1 = Elt.getOperand(0);
+    }
+    if (Elt.getOperand(0) == V1) {
+      unsigned Lane = cast<ConstantSDNode>(Elt->getOperand(1))->getZExtValue();
+      Mask[i] = (Lane + V0NumElts);
+      continue;
+    } else {
+      return false;
+    }
+  }
+
+  if (!V1.getNode() && V0NumElts == NumElts * 2) {
+    V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V0,
+                     DAG.getConstant(NumElts, MVT::i64));
+    V0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V0,
+                     DAG.getConstant(0, MVT::i64));
+    V0NumElts = V0.getValueType().getVectorNumElements();
+  }
+
+  if (V1.getNode() && NumElts == V0NumElts &&
+      V0NumElts == V1.getValueType().getVectorNumElements()) {
+    SDValue Shuffle = DAG.getVectorShuffle(VT, DL, V0, V1, Mask);
+    Res = LowerVECTOR_SHUFFLE(Shuffle, DAG);
+    return true;
+  } else
+    return false;
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.
 SDValue
@@ -3964,7 +4029,7 @@ AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           SmallVector<SDValue, 3> Ops;
           Ops.push_back(N);
           Ops.push_back(Op.getOperand(I));
-          Ops.push_back(DAG.getConstant(I, MVT::i32));
+          Ops.push_back(DAG.getConstant(I, MVT::i64));
           N = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, &Ops[0], 3);
         }
       }
@@ -3980,6 +4045,11 @@ AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   if (isConstant)
     return SDValue();
 
+  // Try to lower this in lowering ShuffleVector way.
+  SDValue Shuf;
+  if (isKnownShuffleVector(Op, DAG, Shuf))
+    return Shuf;
+
   // If all else fails, just use a sequence of INSERT_VECTOR_ELT when we
   // know the default expansion would otherwise fall back on something even
   // worse. For a vector with one or two non-undef values, that's
@@ -3992,7 +4062,7 @@ AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       SDValue V = Op.getOperand(i);
       if (V.getOpcode() == ISD::UNDEF)
         continue;
-      SDValue LaneIdx = DAG.getConstant(i, MVT::i32);
+      SDValue LaneIdx = DAG.getConstant(i, MVT::i64);
       Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Vec, V, LaneIdx);
     }
     return Vec;
@@ -4030,6 +4100,83 @@ static bool isREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
   return true;
 }
 
+// isPermuteMask - Check whether the vector shuffle matches to UZP, ZIP and
+// TRN instruction.
+static unsigned isPermuteMask(ArrayRef<int> M, EVT VT) {
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts < 4)
+    return 0;
+
+  bool ismatch = true;
+
+  // Check UZP1
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if ((unsigned)M[i] != i * 2) {
+      ismatch = false;
+      break;
+    }
+  }
+  if (ismatch)
+    return AArch64ISD::NEON_UZP1;
+
+  // Check UZP2
+  ismatch = true;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if ((unsigned)M[i] != i * 2 + 1) {
+      ismatch = false;
+      break;
+    }
+  }
+  if (ismatch)
+    return AArch64ISD::NEON_UZP2;
+
+  // Check ZIP1
+  ismatch = true;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if ((unsigned)M[i] != i / 2 + NumElts * (i % 2)) {
+      ismatch = false;
+      break;
+    }
+  }
+  if (ismatch)
+    return AArch64ISD::NEON_ZIP1;
+
+  // Check ZIP2
+  ismatch = true;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if ((unsigned)M[i] != (NumElts + i) / 2 + NumElts * (i % 2)) {
+      ismatch = false;
+      break;
+    }
+  }
+  if (ismatch)
+    return AArch64ISD::NEON_ZIP2;
+
+  // Check TRN1
+  ismatch = true;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if ((unsigned)M[i] != i + (NumElts - 1) * (i % 2)) {
+      ismatch = false;
+      break;
+    }
+  }
+  if (ismatch)
+    return AArch64ISD::NEON_TRN1;
+
+  // Check TRN2
+  ismatch = true;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if ((unsigned)M[i] != 1 + i + (NumElts - 1) * (i % 2)) {
+      ismatch = false;
+      break;
+    }
+  }
+  if (ismatch)
+    return AArch64ISD::NEON_TRN2;
+
+  return 0;
+}
+
 SDValue
 AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                                            SelectionDAG &DAG) const {
@@ -4055,6 +4202,10 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(AArch64ISD::NEON_REV32, dl, VT, V1);
   if (isREVMask(ShuffleMask, VT, 16))
     return DAG.getNode(AArch64ISD::NEON_REV16, dl, VT, V1);
+
+  unsigned ISDNo = isPermuteMask(ShuffleMask, VT);
+  if (ISDNo)
+    return DAG.getNode(ISDNo, dl, VT, V1, V2);
 
   // If the element of shuffle mask are all the same constant, we can
   // transform it into either NEON_VDUP or NEON_VDUPLANE
@@ -4167,10 +4318,12 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     else
       EltVT = (EltSize == 64) ? MVT::i64 : MVT::i32;
 
-    ExtV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, ExtV,
-                        DAG.getConstant(Mask, MVT::i64));
-    InsV = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, InsV, ExtV,
-                       DAG.getConstant(InsIndex[I], MVT::i64));
+    if (Mask >= 0) {
+      ExtV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, ExtV,
+                         DAG.getConstant(Mask, MVT::i64));
+      InsV = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, InsV, ExtV,
+                         DAG.getConstant(InsIndex[I], MVT::i64));
+    }
   }
   return InsV;
 }
