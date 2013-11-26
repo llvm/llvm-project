@@ -35,8 +35,8 @@ def err_drv_output_argument_with_multiple_files : Error<
   "cannot specify -o when generating multiple output files">;
 def err_drv_out_file_argument_with_multiple_sources : Error<
   "cannot specify '%0%1' when compiling multiple source files">;
-def err_no_external_windows_assembler : Error<
-  "there is no external assembler we can use on windows">;
+def err_no_external_assembler : Error<
+  "there is no external assembler that can be used on this platform">;
 def err_drv_unable_to_remove_file : Error<
   "unable to remove file: %0">;
 def err_drv_command_failure : Error<

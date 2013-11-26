@@ -1,5 +1,5 @@
 // RUN: %clang -target x86_64-pc-win32 -### -no-integrated-as %s -c 2>&1 | FileCheck %s
-// CHECK: there is no external assembler we can use on windows
+// CHECK: there is no external assembler that can be used on this platform
 
 // But there is for mingw.  The source file should only be mentioned once for
 // the compile step.
