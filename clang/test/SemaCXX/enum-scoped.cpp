@@ -282,3 +282,17 @@ namespace rdar15124329 {
   static_assert(T2 == B::T, "");
 }
 
+namespace PR18044 {
+  enum class E { a };
+
+  int E::e = 0; // expected-error {{does not refer into a class}}
+  void E::f() {} // expected-error {{does not refer into a class}}
+  struct E::S {}; // expected-error {{no struct named 'S'}}
+  struct T : E::S {}; // expected-error {{expected class name}}
+  enum E::E {}; // expected-error {{no enum named 'E'}}
+  int E::*p; // expected-error {{does not point into a class}}
+  using E::f; // expected-error {{no member named 'f'}}
+
+  using E::a; // ok!
+  E b = a;
+}

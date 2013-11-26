@@ -4223,7 +4223,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
     bool EnteringContext = !D.getDeclSpec().isFriendSpecified();
     DC = computeDeclContext(D.getCXXScopeSpec(), EnteringContext);
-    if (!DC) {
+    if (!DC || isa<EnumDecl>(DC)) {
       // If we could not compute the declaration context, it's because the
       // declaration context is dependent but does not refer to a class,
       // class template, or class template partial specialization. Complain
