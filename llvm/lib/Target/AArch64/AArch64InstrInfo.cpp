@@ -114,23 +114,25 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   } else if (AArch64::FPR128RegClass.contains(DestReg)) {
     assert(AArch64::FPR128RegClass.contains(SrcReg));
 
-    // FIXME: there's no good way to do this, at least without NEON:
-    //   + There's no single move instruction for q-registers
-    //   + We can't create a spill slot and use normal STR/LDR because stack
-    //     allocation has already happened
-    //   + We can't go via X-registers with FMOV because register allocation has
-    //     already happened.
-    // This may not be efficient, but at least it works.
-    BuildMI(MBB, I, DL, get(AArch64::LSFP128_PreInd_STR), AArch64::XSP)
-      .addReg(SrcReg)
-      .addReg(AArch64::XSP)
-      .addImm(0x1ff & -16);
+    // If NEON is enable, we use ORR to implement this copy.
+    // If NEON isn't available, emit STR and LDR to handle this.
+    if(getSubTarget().hasNEON()) {
+      BuildMI(MBB, I, DL, get(AArch64::ORRvvv_16B), DestReg)
+        .addReg(SrcReg)
+        .addReg(SrcReg);
+      return;
+    } else {
+      BuildMI(MBB, I, DL, get(AArch64::LSFP128_PreInd_STR), AArch64::XSP)
+        .addReg(SrcReg)
+        .addReg(AArch64::XSP)
+        .addImm(0x1ff & -16);
 
-    BuildMI(MBB, I, DL, get(AArch64::LSFP128_PostInd_LDR), DestReg)
-      .addReg(AArch64::XSP, RegState::Define)
-      .addReg(AArch64::XSP)
-      .addImm(16);
-    return;
+      BuildMI(MBB, I, DL, get(AArch64::LSFP128_PostInd_LDR), DestReg)
+        .addReg(AArch64::XSP, RegState::Define)
+        .addReg(AArch64::XSP)
+        .addImm(16);
+      return;
+    }
   } else {
     llvm_unreachable("Unknown register class in copyPhysReg");
   }
