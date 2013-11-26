@@ -2211,8 +2211,9 @@ SDValue MipsSETargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
     // If the value fits into a simm10 then we can use ldi.[bhwd]
     // However, if it isn't an integer type we will have to bitcast from an
-    // integer type first.
-    if (ResTy.isInteger() && SplatValue.isSignedIntN(10))
+    // integer type first. Also, if there are any undefs, we must lower them
+    // to defined values first.
+    if (ResTy.isInteger() && !HasAnyUndefs && SplatValue.isSignedIntN(10))
       return Op;
 
     EVT ViaVecTy;
