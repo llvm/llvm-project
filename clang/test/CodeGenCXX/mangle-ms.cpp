@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -cxx-abi microsoft -triple=i386-pc-win32 | FileCheck %s
-// RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -cxx-abi microsoft -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -cxx-abi microsoft -triple=i386-pc-win32 -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -cxx-abi microsoft -triple=x86_64-pc-win32 -std=c++11| FileCheck -check-prefix X64 %s
 
 int a;
 // CHECK-DAG: @"\01?a@@3HA"
@@ -356,3 +356,11 @@ void TypedefNewDelete::operator delete[](void *) { }
 // CHECK-DAG: ??_UTypedefNewDelete@@SAPAXI@Z
 // CHECK-DAG: ??3TypedefNewDelete@@SAXPAX@Z
 // CHECK-DAG: ??_VTypedefNewDelete@@SAXPAX@Z
+
+namespace PR18022 {
+
+struct { } a;
+decltype(a) fun(decltype(a) x, decltype(a)) { return x; }
+// CHECK-DAG: ?fun@PR18022@@YA?AU<unnamed-type-a>@1@U21@0@Z
+
+}
