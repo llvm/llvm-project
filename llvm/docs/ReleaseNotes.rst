@@ -163,6 +163,23 @@ statically parallelize multiple work-items with the kernel compiler, even in
 the presence of work-group barriers. This enables static parallelization of
 the fine-grained static concurrency in the work groups in multiple ways. 
 
+Portable Native Client (PNaCl)
+------------------------------
+
+`Portable Native Client (PNaCl) <http://www.chromium.org/nativeclient/pnacl>`_
+is a Chrome initiative to bring the performance and low-level control of native
+code to modern web browsers, without sacrificing the security benefits and
+portability of web applications. PNaCl works by compiling native C and C++ code
+to an intermediate representation using the LLVM clang compiler. This
+intermediate representation is a subset of LLVM bytecode that is wrapped into a
+portable executable, which can be hosted on a web server like any other website
+asset. When the site is accessed, Chrome fetches and translates the portable
+executable into an architecture-specific machine code optimized directly for
+the underlying device. PNaCl lets developers compile their code once to run on
+any hardware platform and embed their PNaCl application in any website,
+enabling developers to directly leverage the power of the underlying CPU and
+GPU.
+
 TTA-based Co-design Environment (TCE)
 -------------------------------------
 
