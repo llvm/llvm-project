@@ -88,7 +88,7 @@ void SparcAsmPrinter::EmitFunctionBodyStart() {
   const unsigned globalRegs[] = { SP::G2, SP::G3, SP::G6, SP::G7, 0 };
   for (unsigned i = 0; globalRegs[i] != 0; ++i) {
     unsigned reg = globalRegs[i];
-    if (!MRI.isPhysRegUsed(reg))
+    if (MRI.use_empty(reg))
       continue;
     EmitGlobalRegisterDecl(reg);
   }

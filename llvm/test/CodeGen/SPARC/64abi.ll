@@ -380,8 +380,6 @@ define signext i32 @ret_nozext(i32 signext %a0) {
 ; CHECK-LABEL: test_register_directive
 ; CHECK:       .register %g2, #scratch
 ; CHECK:       .register %g3, #scratch
-; CHECK:       .register %g6, #ignore
-; CHECK:       .register %g7, #ignore
 ; CHECK:       add %i0, 2, %g2
 ; CHECK:       add %i0, 3, %g3
 define i32 @test_register_directive(i32 %i0) {
