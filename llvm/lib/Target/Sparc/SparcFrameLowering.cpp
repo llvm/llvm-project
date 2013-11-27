@@ -33,6 +33,51 @@ DisableLeafProc("disable-sparc-leaf-proc",
                 cl::Hidden);
 
 
+void SparcFrameLowering::emitSPAdjustment(MachineFunction &MF,
+                                          MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI,
+                                          int NumBytes,
+                                          unsigned ADDrr,
+                                          unsigned ADDri) const {
+
+  DebugLoc dl = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
+  const SparcInstrInfo &TII =
+    *static_cast<const SparcInstrInfo*>(MF.getTarget().getInstrInfo());
+
+  if (NumBytes >= -4096 && NumBytes < 4096) {
+    BuildMI(MBB, MBBI, dl, TII.get(ADDri), SP::O6)
+      .addReg(SP::O6).addImm(NumBytes);
+    return;
+  }
+
+  // Emit this the hard way.  This clobbers G1 which we always know is
+  // available here.
+  if (NumBytes >= 0) {
+    // Emit nonnegative numbers with sethi + or.
+    // sethi %hi(NumBytes), %g1
+    // or %g1, %lo(NumBytes), %g1
+    // add %sp, %g1, %sp
+    BuildMI(MBB, MBBI, dl, TII.get(SP::SETHIi), SP::G1)
+      .addImm(HI22(NumBytes));
+    BuildMI(MBB, MBBI, dl, TII.get(SP::ORri), SP::G1)
+      .addReg(SP::G1).addImm(LO10(NumBytes));
+    BuildMI(MBB, MBBI, dl, TII.get(ADDrr), SP::O6)
+      .addReg(SP::O6).addReg(SP::G1);
+    return ;
+  }
+
+  // Emit negative numbers with sethi + xor.
+  // sethi %hix(NumBytes), %g1
+  // xor %g1, %lox(NumBytes), %g1
+  // add %sp, %g1, %sp
+  BuildMI(MBB, MBBI, dl, TII.get(SP::SETHIi), SP::G1)
+    .addImm(HIX22(NumBytes));
+  BuildMI(MBB, MBBI, dl, TII.get(SP::XORri), SP::G1)
+    .addReg(SP::G1).addImm(LOX10(NumBytes));
+  BuildMI(MBB, MBBI, dl, TII.get(ADDrr), SP::O6)
+    .addReg(SP::O6).addReg(SP::G1);
+}
+
 void SparcFrameLowering::emitPrologue(MachineFunction &MF) const {
   SparcMachineFunctionInfo *FuncInfo = MF.getInfo<SparcMachineFunctionInfo>();
 
@@ -55,21 +100,8 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF) const {
     SAVErr = SP::ADDrr;
   }
   NumBytes = - SubTarget.getAdjustedFrameSize(NumBytes);
+  emitSPAdjustment(MF, MBB, MBBI, NumBytes, SAVErr, SAVEri);
 
-  if (NumBytes >= -4096) {
-    BuildMI(MBB, MBBI, dl, TII.get(SAVEri), SP::O6)
-      .addReg(SP::O6).addImm(NumBytes);
-  } else {
-    // Emit this the hard way.  This clobbers G1 which we always know is
-    // available here.
-    unsigned OffHi = (unsigned)NumBytes >> 10U;
-    BuildMI(MBB, MBBI, dl, TII.get(SP::SETHIi), SP::G1).addImm(OffHi);
-    // Emit G1 = G1 + I6
-    BuildMI(MBB, MBBI, dl, TII.get(SP::ORri), SP::G1)
-      .addReg(SP::G1).addImm(NumBytes & ((1 << 10)-1));
-    BuildMI(MBB, MBBI, dl, TII.get(SAVErr), SP::O6)
-      .addReg(SP::O6).addReg(SP::G1);
-  }
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
   MCSymbol *FrameLabel = MMI.getContext().CreateTempSymbol();
@@ -100,11 +132,9 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     int Size = MI.getOperand(0).getImm();
     if (MI.getOpcode() == SP::ADJCALLSTACKDOWN)
       Size = -Size;
-    const SparcInstrInfo &TII =
-      *static_cast<const SparcInstrInfo*>(MF.getTarget().getInstrInfo());
+
     if (Size)
-      BuildMI(MBB, I, DL, TII.get(SP::ADDri), SP::O6).addReg(SP::O6)
-        .addImm(Size);
+      emitSPAdjustment(MF, MBB, I, Size, SP::ADDrr, SP::ADDri);
   }
   MBB.erase(I);
 }
@@ -131,21 +161,7 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
     return;
 
   NumBytes = SubTarget.getAdjustedFrameSize(NumBytes);
-
-  if (NumBytes < 4096) {
-    BuildMI(MBB, MBBI, dl, TII.get(SP::ADDri), SP::O6)
-      .addReg(SP::O6).addImm(NumBytes);
-  } else {
-    // Emit this the hard way.  This clobbers G1 which we always know is
-    // available here.
-    unsigned OffHi = (unsigned)NumBytes >> 10U;
-    BuildMI(MBB, MBBI, dl, TII.get(SP::SETHIi), SP::G1).addImm(OffHi);
-    // Emit G1 = G1 + I6
-    BuildMI(MBB, MBBI, dl, TII.get(SP::ORri), SP::G1)
-      .addReg(SP::G1).addImm(NumBytes & ((1 << 10)-1));
-    BuildMI(MBB, MBBI, dl, TII.get(SP::ADDrr), SP::O6)
-      .addReg(SP::O6).addReg(SP::G1);
-  }
+  emitSPAdjustment(MF, MBB, MBBI, NumBytes, SP::ADDrr, SP::ADDri);
 }
 
 bool SparcFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {

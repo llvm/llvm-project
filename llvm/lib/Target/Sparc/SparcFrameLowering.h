@@ -49,6 +49,14 @@ private:
 
   // Returns true if MF is a leaf procedure.
   bool isLeafProc(MachineFunction &MF) const;
+
+
+  // Emits code for adjusting SP in function prologue/epilogue.
+  void emitSPAdjustment(MachineFunction &MF,
+                        MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI,
+                        int NumBytes, unsigned ADDrr, unsigned ADDri) const;
+
 };
 
 } // End llvm namespace

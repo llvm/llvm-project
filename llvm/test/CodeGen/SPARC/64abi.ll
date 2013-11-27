@@ -390,3 +390,24 @@ entry:
   %2 = add nsw i32 %0, %1
   ret i32 %2
 }
+
+; CHECK-LABEL: test_large_stack
+
+; CHECK:       sethi 16, %g1
+; CHECK:       xor %g1, -176, %g1
+; CHECK:       save %sp, %g1, %sp
+
+; CHECK:       sethi 14, %g1
+; CHECK:       xor %g1, -1, %g1
+; CHECK:       add %g1, %fp, %g1
+; CHECK:       call use_buf
+
+define i32 @test_large_stack() {
+entry:
+  %buffer1 = alloca [16384 x i8], align 8
+  %buffer1.sub = getelementptr inbounds [16384 x i8]* %buffer1, i32 0, i32 0
+  %0 = call i32 @use_buf(i32 16384, i8* %buffer1.sub)
+  ret i32 %0
+}
+
+declare i32 @use_buf(i32, i8*)
