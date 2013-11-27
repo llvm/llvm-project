@@ -79,6 +79,15 @@ Compile.CMO  := $(strip $(OCAMLC) -c $(OCAMLCFLAGS) $(OCAMLDEBUGFLAG) -o)
 Compile.CMX  := $(strip $(OCAMLOPT) -c $(OCAMLCFLAGS) $(OCAMLDEBUGFLAG) -o)
 
 ifdef OCAMLSTUBS
+# Avoid the need for LD_LIBRARY_PATH
+ifneq ($(HOST_OS), $(filter $(HOST_OS), Cygwin MingW))
+ifneq ($(HOST_OS),Darwin)
+OCAMLRPATH   := $(RPATH) -Wl,'$(SharedLibDir)'
+endif
+endif
+endif
+
+ifdef OCAMLSTUBS
 Archive.CMA  := $(strip $(OCAMLC) -a -dllib -l$(LIBRARYNAME) $(OCAMLDEBUGFLAG) \
                                   -o)
 else
@@ -88,8 +97,8 @@ endif
 
 ifdef OCAMLSTUBS
 Archive.CMXA := $(strip $(OCAMLOPT) -a $(patsubst %,-cclib %, \
-                                    $(LLVMLibsOptions) -l$(LIBRARYNAME)) \
-                                    -cclib -L$(SharedLibDir) \
+                                    $(LLVMLibsOptions) -l$(LIBRARYNAME) \
+                                    -L$(SharedLibDir) $(OCAMLRPATH))
                                     $(OCAMLDEBUGFLAG) -o)
 else
 Archive.CMXA := $(strip $(OCAMLOPT) -a $(OCAMLAFLAGS) $(OCAMLDEBUGFLAG) -o)
@@ -234,7 +243,7 @@ uninstall-local:: uninstall-shared
 
 $(SharedLib): $(ObjectsO) $(OcamlDir)/.dir
 	$(Echo) "Building $(BuildMode) $(notdir $@)"
-	$(Verb) $(Link) $(SharedLinkOptions) $(LLVMLibsOptions) \
+	$(Verb) $(Link) $(SharedLinkOptions) $(OCAMLRPATH) $(LLVMLibsOptions) \
 			-o $@ $(ObjectsO)
 
 clean-shared::
