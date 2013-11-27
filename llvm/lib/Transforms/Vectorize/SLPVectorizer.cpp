@@ -520,6 +520,8 @@ private:
 
   /// Holds all of the instructions that we gathered.
   SetVector<Instruction *> GatherSeq;
+  /// A list of blocks that we are going to CSE.
+  SmallSet<BasicBlock *, 8> CSEBlocks;
 
   /// Numbers instructions in different blocks.
   DenseMap<BasicBlock *, BlockNumbering> BlocksNumbers;
@@ -1274,6 +1276,7 @@ Value *BoUpSLP::Gather(ArrayRef<Value *> VL, VectorType *Ty) {
     Vec = Builder.CreateInsertElement(Vec, VL[i], Builder.getInt32(i));
     if (Instruction *Insrt = dyn_cast<Instruction>(Vec)) {
       GatherSeq.insert(Insrt);
+      CSEBlocks.insert(Insrt->getParent());
 
       // Add to our 'need-to-extract' list.
       if (ScalarToTreeEntry.count(VL[i])) {
@@ -1588,8 +1591,7 @@ Value *BoUpSLP::vectorizeTree() {
     if (PHINode *PN = dyn_cast<PHINode>(Vec)) {
       Builder.SetInsertPoint(PN->getParent()->getFirstInsertionPt());
       Value *Ex = Builder.CreateExtractElement(Vec, Lane);
-      if (Instruction *Ins = dyn_cast<Instruction>(Ex))
-        GatherSeq.insert(Ins);
+      CSEBlocks.insert(PN->getParent());
       User->replaceUsesOfWith(Scalar, Ex);
     } else if (isa<Instruction>(Vec)){
       if (PHINode *PH = dyn_cast<PHINode>(User)) {
@@ -1597,23 +1599,20 @@ Value *BoUpSLP::vectorizeTree() {
           if (PH->getIncomingValue(i) == Scalar) {
             Builder.SetInsertPoint(PH->getIncomingBlock(i)->getTerminator());
             Value *Ex = Builder.CreateExtractElement(Vec, Lane);
-            if (Instruction *Ins = dyn_cast<Instruction>(Ex))
-              GatherSeq.insert(Ins);
+            CSEBlocks.insert(PH->getIncomingBlock(i));
             PH->setOperand(i, Ex);
           }
         }
       } else {
         Builder.SetInsertPoint(cast<Instruction>(User));
         Value *Ex = Builder.CreateExtractElement(Vec, Lane);
-        if (Instruction *Ins = dyn_cast<Instruction>(Ex))
-          GatherSeq.insert(Ins);
+        CSEBlocks.insert(cast<Instruction>(User)->getParent());
         User->replaceUsesOfWith(Scalar, Ex);
      }
     } else {
       Builder.SetInsertPoint(F->getEntryBlock().begin());
       Value *Ex = Builder.CreateExtractElement(Vec, Lane);
-      if (Instruction *Ins = dyn_cast<Instruction>(Ex))
-        GatherSeq.insert(Ins);
+      CSEBlocks.insert(&F->getEntryBlock());
       User->replaceUsesOfWith(Scalar, Ex);
     }
 
@@ -1676,9 +1675,6 @@ public:
 void BoUpSLP::optimizeGatherSequence() {
   DEBUG(dbgs() << "SLP: Optimizing " << GatherSeq.size()
         << " gather sequences instructions.\n");
-  // Keep a list of visited BBs to run CSE on. It is typically small.
-  SmallPtrSet<BasicBlock *, 4> VisitedBBs;
-  SmallVector<BasicBlock *, 4> CSEWorkList;
   // LICM InsertElementInst sequences.
   for (SetVector<Instruction *>::iterator it = GatherSeq.begin(),
        e = GatherSeq.end(); it != e; ++it) {
@@ -1686,9 +1682,6 @@ void BoUpSLP::optimizeGatherSequence() {
 
     if (!Insert)
       continue;
-
-    if (VisitedBBs.insert(Insert->getParent()))
-      CSEWorkList.push_back(Insert->getParent());
 
     // Check if this block is inside a loop.
     Loop *L = LI->getLoopFor(Insert->getParent());
@@ -1716,6 +1709,7 @@ void BoUpSLP::optimizeGatherSequence() {
 
   // Sort blocks by domination. This ensures we visit a block after all blocks
   // dominating it are visited.
+  SmallVector<BasicBlock *, 8> CSEWorkList(CSEBlocks.begin(), CSEBlocks.end());
   std::stable_sort(CSEWorkList.begin(), CSEWorkList.end(), DTCmp(DT));
 
   // Perform O(N^2) search over the gather sequences and merge identical
@@ -1731,8 +1725,7 @@ void BoUpSLP::optimizeGatherSequence() {
     // For all instructions in blocks containing gather sequences:
     for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e;) {
       Instruction *In = it++;
-      if ((!isa<InsertElementInst>(In) && !isa<ExtractElementInst>(In)) ||
-          !GatherSeq.count(In))
+      if (!isa<InsertElementInst>(In) && !isa<ExtractElementInst>(In))
         continue;
 
       // Check if we can replace this instruction with any of the
@@ -1754,6 +1747,8 @@ void BoUpSLP::optimizeGatherSequence() {
       }
     }
   }
+  CSEBlocks.clear();
+  GatherSeq.clear();
 }
 
 /// The SLPVectorizer Pass.
