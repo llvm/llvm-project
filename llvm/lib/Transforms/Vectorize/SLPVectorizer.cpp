@@ -1588,6 +1588,8 @@ Value *BoUpSLP::vectorizeTree() {
     if (PHINode *PN = dyn_cast<PHINode>(Vec)) {
       Builder.SetInsertPoint(PN->getParent()->getFirstInsertionPt());
       Value *Ex = Builder.CreateExtractElement(Vec, Lane);
+      if (Instruction *Ins = dyn_cast<Instruction>(Ex))
+        GatherSeq.insert(Ins);
       User->replaceUsesOfWith(Scalar, Ex);
     } else if (isa<Instruction>(Vec)){
       if (PHINode *PH = dyn_cast<PHINode>(User)) {
@@ -1595,17 +1597,23 @@ Value *BoUpSLP::vectorizeTree() {
           if (PH->getIncomingValue(i) == Scalar) {
             Builder.SetInsertPoint(PH->getIncomingBlock(i)->getTerminator());
             Value *Ex = Builder.CreateExtractElement(Vec, Lane);
+            if (Instruction *Ins = dyn_cast<Instruction>(Ex))
+              GatherSeq.insert(Ins);
             PH->setOperand(i, Ex);
           }
         }
       } else {
         Builder.SetInsertPoint(cast<Instruction>(User));
         Value *Ex = Builder.CreateExtractElement(Vec, Lane);
+        if (Instruction *Ins = dyn_cast<Instruction>(Ex))
+          GatherSeq.insert(Ins);
         User->replaceUsesOfWith(Scalar, Ex);
      }
     } else {
       Builder.SetInsertPoint(F->getEntryBlock().begin());
       Value *Ex = Builder.CreateExtractElement(Vec, Lane);
+      if (Instruction *Ins = dyn_cast<Instruction>(Ex))
+        GatherSeq.insert(Ins);
       User->replaceUsesOfWith(Scalar, Ex);
     }
 
