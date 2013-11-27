@@ -79,3 +79,17 @@ template<typename T> struct CastDependentIntToPointer {
     return ((void*)(((unsigned long)(x)|0x1ul)));
   }
 };
+
+// Regression test for crasher in r194540.
+namespace PR10837 {
+  typedef void t(int);
+  template<typename> struct A {
+    void f();
+    static t g;
+  };
+  t *p;
+  template<typename T> void A<T>::f() {
+    p = g;
+  }
+  template struct A<int>;
+}

@@ -6564,12 +6564,14 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &RHS,
 
   // C99 6.5.16.1p1: the left operand is a pointer and the right is
   // a null pointer constant.
-  if ((LHSType->isPointerType() ||
-       LHSType->isObjCObjectPointerType() ||
-       LHSType->isBlockPointerType())
-      && RHS.get()->isNullPointerConstant(Context,
-                                          Expr::NPC_ValueDependentIsNull)) {
-    RHS = ImpCastExprToType(RHS.take(), LHSType, CK_NullToPointer);
+  if ((LHSType->isPointerType() || LHSType->isObjCObjectPointerType() ||
+       LHSType->isBlockPointerType()) &&
+      RHS.get()->isNullPointerConstant(Context,
+                                       Expr::NPC_ValueDependentIsNull)) {
+    CastKind Kind;
+    CXXCastPath Path;
+    CheckPointerConversion(RHS.get(), LHSType, Kind, Path, false);
+    RHS = ImpCastExprToType(RHS.take(), LHSType, Kind, VK_RValue, &Path);
     return Compatible;
   }
 
