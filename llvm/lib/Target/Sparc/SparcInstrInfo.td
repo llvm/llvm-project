@@ -502,10 +502,11 @@ defm SRA : F3_12<"sra", 0b100111, sra>;
 defm ADD   : F3_12<"add", 0b000000, add>;
 
 // "LEA" forms of add (patterns to make tblgen happy)
-def LEA_ADDri   : F3_2<2, 0b000000,
-                   (outs IntRegs:$dst), (ins MEMri:$addr),
-                   "add ${addr:arith}, $dst",
-                   [(set iPTR:$dst, ADDRri:$addr)]>;
+let Predicates = [Is32Bit] in
+  def LEA_ADDri   : F3_2<2, 0b000000,
+                     (outs IntRegs:$dst), (ins MEMri:$addr),
+                     "add ${addr:arith}, $dst",
+                     [(set iPTR:$dst, ADDRri:$addr)]>;
 
 let Defs = [ICC] in
   defm ADDCC  : F3_12<"addcc", 0b010000, addc>;
