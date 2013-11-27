@@ -723,33 +723,31 @@ getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
                          Mangler *Mang, const TargetMachine &TM) const {
   int Selection = 0;
   unsigned Characteristics = getCOFFSectionFlags(Kind);
-  SmallString<128> Name(GV->getSection().c_str());
+  StringRef Name = GV->getSection();
+  StringRef COMDATSymName = "";
   if (GV->isWeakForLinker()) {
     Selection = COFF::IMAGE_COMDAT_SELECT_ANY;
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-    Name.append("$");
-    Mang->getNameWithPrefix(Name, GV, false, false);
+    MCSymbol *Sym = getSymbol(*Mang, GV);
+    COMDATSymName = Sym->getName();
   }
   return getContext().getCOFFSection(Name,
                                      Characteristics,
                                      Kind,
-                                     "",
+                                     COMDATSymName,
                                      Selection);
 }
 
-static const char *getCOFFSectionPrefixForUniqueGlobal(SectionKind Kind) {
+static const char *getCOFFSectionNameForUniqueGlobal(SectionKind Kind) {
   if (Kind.isText())
-    return ".text$";
+    return ".text";
   if (Kind.isBSS ())
-    return ".bss$";
-  if (Kind.isThreadLocal()) {
-    // 'LLVM' is just an arbitary string to ensure that the section name gets
-    // sorted in between '.tls$AAA' and '.tls$ZZZ' by the linker.
-    return ".tls$LLVM";
-  }
+    return ".bss";
+  if (Kind.isThreadLocal())
+    return ".tls";
   if (Kind.isWriteable())
-    return ".data$";
-  return ".rdata$";
+    return ".data";
+  return ".rdata";
 }
 
 
@@ -760,16 +758,14 @@ SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
   // If this global is linkonce/weak and the target handles this by emitting it
   // into a 'uniqued' section name, create and return the section now.
   if (GV->isWeakForLinker()) {
-    const char *Prefix = getCOFFSectionPrefixForUniqueGlobal(Kind);
-    SmallString<128> Name(Prefix, Prefix+strlen(Prefix));
-    Mang->getNameWithPrefix(Name, GV, false, false);
-
+    const char *Name = getCOFFSectionNameForUniqueGlobal(Kind);
     unsigned Characteristics = getCOFFSectionFlags(Kind);
 
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-
-    return getContext().getCOFFSection(Name.str(), Characteristics,
-                                       Kind, "", COFF::IMAGE_COMDAT_SELECT_ANY);
+    MCSymbol *Sym = getSymbol(*Mang, GV);
+    return getContext().getCOFFSection(Name, Characteristics,
+                                       Kind, Sym->getName(),
+                                       COFF::IMAGE_COMDAT_SELECT_ANY);
   }
 
   if (Kind.isText())

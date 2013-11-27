@@ -20,6 +20,8 @@ MCSectionCOFF::~MCSectionCOFF() {} // anchor.
 // should be printed before the section name
 bool MCSectionCOFF::ShouldOmitSectionDirective(StringRef Name,
                                                const MCAsmInfo &MAI) const {
+  if (COMDATSymbol)
+    return false;
 
   // FIXME: Does .section .bss/.data/.text work everywhere??
   if (Name == ".text" || Name == ".data" || Name == ".bss")
@@ -58,36 +60,41 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI,
     OS << 'r';
   if (getCharacteristics() & COFF::IMAGE_SCN_MEM_DISCARDABLE)
     OS << 'n';
-  OS << "\"\n";
+
+  OS << '"';
 
   if (getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT) {
+    OS << ",";
     switch (Selection) {
       case COFF::IMAGE_COMDAT_SELECT_NODUPLICATES:
-        OS << "\t.linkonce one_only\n";
+        OS << "one_only,";
         break;
       case COFF::IMAGE_COMDAT_SELECT_ANY:
-        OS << "\t.linkonce discard\n";
+        OS << "discard,";
         break;
       case COFF::IMAGE_COMDAT_SELECT_SAME_SIZE:
-        OS << "\t.linkonce same_size\n";
+        OS << "same_size,";
         break;
       case COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH:
-        OS << "\t.linkonce same_contents\n";
+        OS << "same_contents,";
         break;
       case COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE:
-        OS << "\t.linkonce associative " << Assoc->getSectionName() << "\n";
+        OS << "associative " << Assoc->getSectionName() << ",";
         break;
       case COFF::IMAGE_COMDAT_SELECT_LARGEST:
-        OS << "\t.linkonce largest\n";
+        OS << "largest,";
         break;
       case COFF::IMAGE_COMDAT_SELECT_NEWEST:
-        OS << "\t.linkonce newest\n";
+        OS << "newest,";
         break;
       default:
         assert (0 && "unsupported COFF selection type");
         break;
     }
+    assert(COMDATSymbol);
+    OS << *COMDATSymbol;
   }
+  OS << '\n';
 }
 
 bool MCSectionCOFF::UseCodeAlign() const {
