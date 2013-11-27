@@ -210,19 +210,20 @@ private:
 // Any two pointers in the same address space are equivalent, intptr_t and
 // pointers are equivalent. Otherwise, standard type equivalence rules apply.
 bool FunctionComparator::isEquivalentType(Type *Ty1, Type *Ty2) const {
+
+  PointerType *PTy1 = dyn_cast<PointerType>(Ty1);
+  PointerType *PTy2 = dyn_cast<PointerType>(Ty2);
+
+  if (TD) {
+    if (PTy1 && PTy1->getAddressSpace() == 0) Ty1 = TD->getIntPtrType(Ty1);
+    if (PTy2 && PTy2->getAddressSpace() == 0) Ty2 = TD->getIntPtrType(Ty2);
+  }
+
   if (Ty1 == Ty2)
     return true;
-  if (Ty1->getTypeID() != Ty2->getTypeID()) {
-    if (TD) {
 
-      if (isa<PointerType>(Ty1) && Ty2 == TD->getIntPtrType(Ty1))
-        return true;
-
-      if (isa<PointerType>(Ty2) && Ty1 == TD->getIntPtrType(Ty2))
-        return true;
-    }
+  if (Ty1->getTypeID() != Ty2->getTypeID())
     return false;
-  }
 
   switch (Ty1->getTypeID()) {
   default:
@@ -244,8 +245,7 @@ bool FunctionComparator::isEquivalentType(Type *Ty1, Type *Ty2) const {
     return true;
 
   case Type::PointerTyID: {
-    PointerType *PTy1 = cast<PointerType>(Ty1);
-    PointerType *PTy2 = cast<PointerType>(Ty2);
+    assert(PTy1 && PTy2 && "Both types must be pointers here.");
     return PTy1->getAddressSpace() == PTy2->getAddressSpace();
   }
 
