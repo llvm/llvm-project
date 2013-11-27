@@ -1411,6 +1411,7 @@ SparcTargetLowering::SparcTargetLowering(TargetMachine &TM)
     setOperationAction(ISD::BSWAP, MVT::i64, Expand);
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
+    setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   }
 
   // FIXME: There are instructions available for ATOMIC_FENCE
@@ -2289,20 +2290,23 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
                      std::min(PtrVT.getSizeInBits(), VT.getSizeInBits())/8);
 }
 
-static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
+                                       bool is64Bit) {
   SDValue Chain = Op.getOperand(0);  // Legalize the chain.
   SDValue Size  = Op.getOperand(1);  // Legalize the size.
+  EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
   unsigned SPReg = SP::O6;
-  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, MVT::i32);
-  SDValue NewSP = DAG.getNode(ISD::SUB, dl, MVT::i32, SP, Size); // Value
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
+  SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
   Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);    // Output chain
 
   // The resultant pointer is actually 16 words from the bottom of the stack,
   // to provide a register spill area.
-  SDValue NewVal = DAG.getNode(ISD::ADD, dl, MVT::i32, NewSP,
-                                 DAG.getConstant(96, MVT::i32));
+  unsigned regSpillArea = (is64Bit) ? 128 : 96;
+  SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,
+                               DAG.getConstant(regSpillArea, VT));
   SDValue Ops[2] = { NewVal, Chain };
   return DAG.getMergeValues(Ops, 2, dl);
 }
@@ -2626,7 +2630,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                                                       hasHardQuad);
   case ISD::VASTART:            return LowerVASTART(Op, DAG, *this);
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
-  case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG,
+                                                               is64Bit);
 
   case ISD::LOAD:               return LowerF128Load(Op, DAG);
   case ISD::STORE:              return LowerF128Store(Op, DAG);
