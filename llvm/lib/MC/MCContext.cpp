@@ -34,8 +34,7 @@ typedef std::pair<std::string, std::string> SectionGroupPair;
 
 typedef StringMap<const MCSectionMachO*> MachOUniqueMapTy;
 typedef std::map<SectionGroupPair, const MCSectionELF *> ELFUniqueMapTy;
-typedef StringMap<const MCSectionCOFF*> COFFUniqueMapTy;
-
+typedef std::map<SectionGroupPair, const MCSectionCOFF *> COFFUniqueMapTy;
 
 MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
                      const MCObjectFileInfo *mofi, const SourceMgr *mgr,
@@ -280,24 +279,39 @@ const MCSectionELF *MCContext::CreateELFGroupSection() {
   return Result;
 }
 
-const MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
-                                               unsigned Characteristics,
-                                               SectionKind Kind, int Selection,
-                                               const MCSectionCOFF *Assoc) {
+const MCSectionCOFF *
+MCContext::getCOFFSection(StringRef Section, unsigned Characteristics,
+                          SectionKind Kind, StringRef COMDATSymName,
+                          int Selection, const MCSectionCOFF *Assoc) {
   if (COFFUniquingMap == 0)
     COFFUniquingMap = new COFFUniqueMapTy();
   COFFUniqueMapTy &Map = *(COFFUniqueMapTy*)COFFUniquingMap;
 
   // Do the lookup, if we have a hit, return it.
-  StringMapEntry<const MCSectionCOFF*> &Entry = Map.GetOrCreateValue(Section);
-  if (Entry.getValue()) return Entry.getValue();
 
-  MCSectionCOFF *Result = new (*this) MCSectionCOFF(Entry.getKey(),
-                                                    Characteristics,
-                                                    Selection, Assoc, Kind);
+  SectionGroupPair P(Section, COMDATSymName);
+  std::pair<COFFUniqueMapTy::iterator, bool> Entry =
+      Map.insert(std::make_pair(P, (MCSectionCOFF *)0));
+  COFFUniqueMapTy::iterator Iter = Entry.first;
+  if (!Entry.second)
+    return Iter->second;
 
-  Entry.setValue(Result);
+  const MCSymbol *COMDATSymbol = NULL;
+  if (!COMDATSymName.empty())
+    COMDATSymbol = GetOrCreateSymbol(COMDATSymName);
+
+  MCSectionCOFF *Result =
+      new (*this) MCSectionCOFF(Iter->first.first, Characteristics,
+                                COMDATSymbol, Selection, Assoc, Kind);
+
+  Iter->second = Result;
   return Result;
+}
+
+const MCSectionCOFF *
+MCContext::getCOFFSection(StringRef Section, unsigned Characteristics,
+                          SectionKind Kind) {
+  return getCOFFSection(Section, Characteristics, Kind, "", 0);
 }
 
 const MCSectionCOFF *MCContext::getCOFFSection(StringRef Section) {
@@ -305,7 +319,11 @@ const MCSectionCOFF *MCContext::getCOFFSection(StringRef Section) {
     COFFUniquingMap = new COFFUniqueMapTy();
   COFFUniqueMapTy &Map = *(COFFUniqueMapTy*)COFFUniquingMap;
 
-  return Map.lookup(Section);
+  SectionGroupPair P(Section, "");
+  COFFUniqueMapTy::iterator Iter = Map.find(P);
+  if (Iter == Map.end())
+    return 0;
+  return Iter->second;
 }
 
 //===----------------------------------------------------------------------===//

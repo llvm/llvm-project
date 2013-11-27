@@ -258,8 +258,14 @@ namespace llvm {
 
     const MCSectionCOFF *getCOFFSection(StringRef Section,
                                         unsigned Characteristics,
-                                        SectionKind Kind, int Selection = 0,
+                                        SectionKind Kind,
+                                        StringRef COMDATSymName,
+                                        int Selection,
                                         const MCSectionCOFF *Assoc = 0);
+
+    const MCSectionCOFF *getCOFFSection(StringRef Section,
+                                        unsigned Characteristics,
+                                        SectionKind Kind);
 
     const MCSectionCOFF *getCOFFSection(StringRef Section);
 

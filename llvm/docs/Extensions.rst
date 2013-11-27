@@ -105,3 +105,41 @@ Supported COMDAT types:
   .section .xdata$foo
   .linkonce associative .text$foo
     ...
+
+``.section`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+MC supports passing the information in ``.linkonce`` at the end of
+``.section``. For example,  these two codes are equivalent
+
+.. code-block:: gas
+
+  .section secName, "dr", discard, "Symbol1"
+  .globl Symbol1
+  Symbol1:
+  .long 1
+
+.. code-block:: gas
+
+  .section secName, "dr"
+  .linkonce discard
+  .globl Symbol1
+  Symbol1:
+  .long 1
+
+Note that in the combined form the COMDAT symbol is explict. This
+extension exits to support multiple sections with the same name in
+different comdats:
+
+
+.. code-block:: gas
+
+  .section secName, "dr", discard, "Symbol1"
+  .globl Symbol1
+  Symbol1:
+  .long 1
+
+  .section secName, "dr", discard, "Symbol2"
+  .globl Symbol2
+  Symbol2:
+  .long 1

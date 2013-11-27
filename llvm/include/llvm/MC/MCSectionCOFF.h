@@ -19,6 +19,7 @@
 #include "llvm/Support/COFF.h"
 
 namespace llvm {
+class MCSymbol;
 
 /// MCSectionCOFF - This represents a section on Windows
   class MCSectionCOFF : public MCSection {
@@ -32,6 +33,11 @@ namespace llvm {
     /// drawn from the enums below.
     mutable unsigned Characteristics;
 
+    /// The COMDAT symbol of this section. Only valid if this is a COMDAT
+    /// section. Two COMDAT sections are merged if they have the same
+    /// COMDAT symbol.
+    const MCSymbol *COMDATSymbol;
+
     /// Selection - This is the Selection field for the section symbol, if
     /// it is a COMDAT section (Characteristics & IMAGE_SCN_LNK_COMDAT) != 0
     mutable int Selection;
@@ -44,9 +50,11 @@ namespace llvm {
   private:
     friend class MCContext;
     MCSectionCOFF(StringRef Section, unsigned Characteristics,
-                  int Selection, const MCSectionCOFF *Assoc, SectionKind K)
-      : MCSection(SV_COFF, K), SectionName(Section),
-        Characteristics(Characteristics), Selection(Selection), Assoc(Assoc) {
+                  const MCSymbol *COMDATSymbol, int Selection,
+                  const MCSectionCOFF *Assoc, SectionKind K)
+        : MCSection(SV_COFF, K), SectionName(Section),
+          Characteristics(Characteristics), COMDATSymbol(COMDATSymbol),
+          Selection(Selection), Assoc(Assoc) {
       assert ((Characteristics & 0x00F00000) == 0 &&
         "alignment must not be set upon section creation");
       assert ((Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) ==

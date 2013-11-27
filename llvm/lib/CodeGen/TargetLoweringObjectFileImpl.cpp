@@ -733,6 +733,7 @@ getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
   return getContext().getCOFFSection(Name,
                                      Characteristics,
                                      Kind,
+                                     "",
                                      Selection);
 }
 
@@ -768,7 +769,7 @@ SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
 
     return getContext().getCOFFSection(Name.str(), Characteristics,
-                                       Kind, COFF::IMAGE_COMDAT_SELECT_ANY);
+                                       Kind, "", COFF::IMAGE_COMDAT_SELECT_ANY);
   }
 
   if (Kind.isText())
