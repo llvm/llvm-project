@@ -160,3 +160,23 @@ void call() {
   C::func([]() {});
 }
 }
+
+namespace PR14373 {
+  struct function {
+    template <typename _Functor> function(_Functor __f) { __f(); }
+  };
+  template <typename Func> function exec_func(Func f) {
+    struct functor {
+      functor(Func f) : func(f) {}
+      void operator()() const { func(); }
+      Func func;
+    };
+    return functor(f);
+  }
+  struct Type {
+    void operator()() const {}
+  };
+  int call() {
+    exec_func(Type());
+  }
+}
