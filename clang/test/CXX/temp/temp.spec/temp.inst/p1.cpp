@@ -33,24 +33,23 @@ namespace ScopedEnum {
   ScopedEnum1<double>::E e1; // ok
   ScopedEnum1<double>::E e2 = decltype(e2)::e; // expected-note {{in instantiation of enumeration 'ScopedEnum::ScopedEnum1<double>::E' requested here}}
 
-  // The behavior for enums defined within function templates is not clearly
-  // specified by the standard. We follow the rules for enums defined within
-  // class templates.
+  // DR1484 specifies that enumerations cannot be separately instantiated,
+  // they will be instantiated with the rest of the template declaration.
   template<typename T>
   int f() {
     enum class E {
-      e = T::error
+      e = T::error // expected-error {{has no members}}
     };
     return (int)E();
   }
-  int test1 = f<int>();
+  int test1 = f<int>(); // expected-note {{here}}
 
   template<typename T>
   int g() {
     enum class E {
       e = T::error // expected-error {{has no members}}
     };
-    return E::e; // expected-note {{here}}
+    return E::e;
   }
   int test2 = g<int>(); // expected-note {{here}}
 }

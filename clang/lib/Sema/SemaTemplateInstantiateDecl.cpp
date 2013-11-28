@@ -25,6 +25,17 @@
 
 using namespace clang;
 
+static bool isDeclWithinFunction(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  if (DC->isFunctionOrMethod())
+    return true;
+
+  if (DC->isRecord())
+    return cast<CXXRecordDecl>(DC)->isLocalClass();
+
+  return false;
+}
+
 bool TemplateDeclInstantiator::SubstQualifier(const DeclaratorDecl *OldDecl,
                                               DeclaratorDecl *NewDecl) {
   if (!OldDecl->getQualifierLoc())
@@ -657,19 +668,17 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
     }
   }
 
-  if (D->getDeclContext()->isFunctionOrMethod())
-    SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Enum);
-
   // C++11 [temp.inst]p1: The implicit instantiation of a class template
   // specialization causes the implicit instantiation of the declarations, but
   // not the definitions of scoped member enumerations.
-  // FIXME: There appears to be no wording for what happens for an enum defined
-  // within a block scope, but we treat that much like a member template. Only
-  // instantiate the definition when visiting the definition in that case, since
-  // we will visit all redeclarations.
-  if (!Enum->isScoped() && Def &&
-      (!D->getDeclContext()->isFunctionOrMethod() || D->isCompleteDefinition()))
+  //
+  // DR1484 clarifies that enumeration definitions inside of a template
+  // declaration aren't considered entities that can be separately instantiated
+  // from the rest of the entity they are declared inside of.
+  if (isDeclWithinFunction(D) ? D == Def : Def && !Enum->isScoped()) {
+    SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Enum);
     InstantiateEnumDefinition(Enum, Def);
+  }
 
   return Enum;
 }
@@ -1120,13 +1129,26 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
     Record->setObjectOfFriendDecl();
 
   // Make sure that anonymous structs and unions are recorded.
-  if (D->isAnonymousStructOrUnion()) {
+  if (D->isAnonymousStructOrUnion())
     Record->setAnonymousStructOrUnion(true);
-    if (Record->getDeclContext()->getRedeclContext()->isFunctionOrMethod())
-      SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Record);
-  }
+
+  if (D->isLocalClass())
+    SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Record);
 
   Owner->addDecl(Record);
+
+  // DR1484 clarifies that the members of a local class are instantiated as part
+  // of the instantiation of their enclosing entity.
+  if (D->isCompleteDefinition() && D->isLocalClass()) {
+    if (SemaRef.InstantiateClass(D->getLocation(), Record, D, TemplateArgs,
+                                 TSK_ImplicitInstantiation,
+                                 /*Complain=*/true)) {
+      llvm_unreachable("InstantiateClass shouldn't fail here!");
+    } else {
+      SemaRef.InstantiateClassMembers(D->getLocation(), Record, TemplateArgs,
+                                      TSK_ImplicitInstantiation);
+    }
+  }
   return Record;
 }
 
