@@ -22,7 +22,6 @@ x86\_64 Linux.
 More Information
 ================
 
-Design wiki:
-`https://code.google.com/p/address-sanitizer/wiki/LeakSanitizerDesignDocument
-<https://code.google.com/p/address-sanitizer/wiki/LeakSanitizerDesignDocument>`_
+`https://code.google.com/p/address-sanitizer/wiki/LeakSanitizer
+<https://code.google.com/p/address-sanitizer/wiki/LeakSanitizer>`_
 
