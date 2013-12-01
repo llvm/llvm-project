@@ -533,6 +533,10 @@ static char ModType(const char mod, char type, bool &quad, bool &poly,
       type = 'f';
       usgn = false;
       break;
+    case 'F':
+      type = 'd';
+      usgn = false;
+      break;
     case 'g':
       quad = false;
       break;
@@ -765,7 +769,7 @@ static std::string BuiltinTypeString(const char mod, StringRef typestr,
       return "vv*"; // void result with void* first argument
     if (mod == 'f' || (ck != ClassB && type == 'f'))
       return quad ? "V4f" : "V2f";
-    if (ck != ClassB && type == 'd')
+    if (mod == 'F' || (ck != ClassB && type == 'd'))
       return quad ? "V2d" : "V1d";
     if (ck != ClassB && type == 's')
       return quad ? "V8s" : "V4s";
@@ -787,7 +791,7 @@ static std::string BuiltinTypeString(const char mod, StringRef typestr,
 
   if (mod == 'f' || (ck != ClassB && type == 'f'))
     return quad ? "V4f" : "V2f";
-  if (ck != ClassB && type == 'd')
+  if (mod == 'F' || (ck != ClassB && type == 'd'))
     return quad ? "V2d" : "V1d";
   if (ck != ClassB && type == 's')
     return quad ? "V8s" : "V4s";
@@ -1088,6 +1092,7 @@ static void NormalizeProtoForRegisterPatternCreation(const std::string &Name,
     switch (Proto[i]) {
     case 'u':
     case 'f':
+    case 'F':
     case 'd':
     case 's':
     case 'x':
@@ -2164,7 +2169,7 @@ static std::string GenOpString(const std::string &name, OpKind op,
 static unsigned GetNeonEnum(const std::string &proto, StringRef typestr) {
   unsigned mod = proto[0];
 
-  if (mod == 'v' || mod == 'f')
+  if (mod == 'v' || mod == 'f' || mod == 'F')
     mod = proto[1];
 
   bool quad = false;
