@@ -7818,41 +7818,43 @@ defm : NeonI_2VMisc_Narrow_Patterns<"SQXTN", int_arm_neon_vqmovns>;
 defm : NeonI_2VMisc_Narrow_Patterns<"UQXTN", int_arm_neon_vqmovnu>;
 
 multiclass NeonI_2VMisc_SHIFT<string asmop, bit U, bits<5> opcode> {
-  def 8b8h : NeonI_2VMisc<0b0, U, 0b00, opcode,
-                          (outs VPR128:$Rd),
-                          (ins VPR64:$Rn, uimm_exact8:$Imm),
-                          asmop # "\t$Rd.8h, $Rn.8b, $Imm",
-                          [], NoItinerary>;
-
-  def 4h4s : NeonI_2VMisc<0b0, U, 0b01, opcode,
-                          (outs VPR128:$Rd),
-                          (ins VPR64:$Rn, uimm_exact16:$Imm),
-                          asmop # "\t$Rd.4s, $Rn.4h, $Imm",
-                          [], NoItinerary>;
-
-  def 2s2d : NeonI_2VMisc<0b0, U, 0b10, opcode,
-                          (outs VPR128:$Rd),
-                          (ins VPR64:$Rn, uimm_exact32:$Imm),
-                          asmop # "\t$Rd.2d, $Rn.2s, $Imm",
-                          [], NoItinerary>;
-
-  def 16b8h : NeonI_2VMisc<0b1, U, 0b00, opcode,
-                          (outs VPR128:$Rd),
-                          (ins VPR128:$Rn, uimm_exact8:$Imm),
-                          asmop # "2\t$Rd.8h, $Rn.16b, $Imm",
-                          [], NoItinerary>;
-
-  def 8h4s : NeonI_2VMisc<0b1, U, 0b01, opcode,
-                          (outs VPR128:$Rd),
-                          (ins VPR128:$Rn, uimm_exact16:$Imm),
-                          asmop # "2\t$Rd.4s, $Rn.8h, $Imm",
-                          [], NoItinerary>;
-
-  def 4s2d : NeonI_2VMisc<0b1, U, 0b10, opcode,
-                          (outs VPR128:$Rd),
-                          (ins VPR128:$Rn, uimm_exact32:$Imm),
-                          asmop # "2\t$Rd.2d, $Rn.4s, $Imm",
-                          [], NoItinerary>;
+  let DecoderMethod = "DecodeSHLLInstruction" in {
+    def 8b8h : NeonI_2VMisc<0b0, U, 0b00, opcode,
+                            (outs VPR128:$Rd),
+                            (ins VPR64:$Rn, uimm_exact8:$Imm),
+                            asmop # "\t$Rd.8h, $Rn.8b, $Imm",
+                            [], NoItinerary>;
+    
+    def 4h4s : NeonI_2VMisc<0b0, U, 0b01, opcode,
+                            (outs VPR128:$Rd),
+                            (ins VPR64:$Rn, uimm_exact16:$Imm),
+                            asmop # "\t$Rd.4s, $Rn.4h, $Imm",
+                            [], NoItinerary>;
+    
+    def 2s2d : NeonI_2VMisc<0b0, U, 0b10, opcode,
+                            (outs VPR128:$Rd),
+                            (ins VPR64:$Rn, uimm_exact32:$Imm),
+                            asmop # "\t$Rd.2d, $Rn.2s, $Imm",
+                            [], NoItinerary>;
+    
+    def 16b8h : NeonI_2VMisc<0b1, U, 0b00, opcode,
+                            (outs VPR128:$Rd),
+                            (ins VPR128:$Rn, uimm_exact8:$Imm),
+                            asmop # "2\t$Rd.8h, $Rn.16b, $Imm",
+                            [], NoItinerary>;
+    
+    def 8h4s : NeonI_2VMisc<0b1, U, 0b01, opcode,
+                            (outs VPR128:$Rd),
+                            (ins VPR128:$Rn, uimm_exact16:$Imm),
+                            asmop # "2\t$Rd.4s, $Rn.8h, $Imm",
+                            [], NoItinerary>;
+    
+    def 4s2d : NeonI_2VMisc<0b1, U, 0b10, opcode,
+                            (outs VPR128:$Rd),
+                            (ins VPR128:$Rn, uimm_exact32:$Imm),
+                            asmop # "2\t$Rd.2d, $Rn.4s, $Imm",
+                            [], NoItinerary>;
+  }
 }
 
 defm SHLL : NeonI_2VMisc_SHIFT<"shll", 0b1, 0b10011>;
