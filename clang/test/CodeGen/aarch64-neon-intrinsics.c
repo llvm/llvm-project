@@ -11200,3 +11200,15 @@ poly64x2_t test_vreinterpretq_p64_p8(poly8x16_t a) {
 poly64x2_t test_vreinterpretq_p64_p16(poly16x8_t a) {
   return vreinterpretq_p64_p16(a);
 }
+
+float32_t test_vabds_f32(float32_t a, float32_t b) {
+// CHECK-LABEL: test_vabds_f32
+// CHECK: fabd {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
+  return vabds_f32(a, b);
+}
+
+float64_t test_vabdd_f64(float64_t a, float64_t b) {
+// CHECK-LABEL: test_vabdd_f64
+// CHECK: fabd {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+  return vabdd_f64(a, b);
+}

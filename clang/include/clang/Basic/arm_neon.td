@@ -1202,6 +1202,10 @@ def SCALAR_FACLT : IInst<"vcalt", "bss", "SfSd">;
 def SCALAR_ABS : SInst<"vabs", "ss", "Sl">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Scalar Absolute Difference
+def SCALAR_ABD : IInst<"vabd", "sss", "SfSd">;
+
+////////////////////////////////////////////////////////////////////////////////
 // Scalar Signed Saturating Absolute Value
 def SCALAR_SQABS : SInst<"vqabs", "ss", "ScSsSiSl">;
 
