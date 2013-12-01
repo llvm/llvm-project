@@ -1537,6 +1537,15 @@ InnerLoopVectorizer::createEmptyLoop(LoopVectorizationLegality *Legal) {
   const SCEV *ExitCount = SE->getBackedgeTakenCount(OrigLoop);
   assert(ExitCount != SE->getCouldNotCompute() && "Invalid loop count");
 
+  // The exit count might have the type of i64 while the phi is i32. This can
+  // happen if we have an induction variable that is sign extended before the
+  // compare. The only way that we get a backedge taken count is that the
+  // induction variable was signed and as such will not overflow. In such a case
+  // truncation is legal.
+  if (ExitCount->getType()->getPrimitiveSizeInBits() >
+      IdxTy->getPrimitiveSizeInBits())
+    ExitCount = SE->getTruncateOrNoop(ExitCount, IdxTy);
+
   ExitCount = SE->getNoopOrZeroExtend(ExitCount, IdxTy);
   // Get the total trip count from the count by adding 1.
   ExitCount = SE->getAddExpr(ExitCount,
