@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELF.h"
@@ -96,6 +97,9 @@ void MCELFStreamer::EmitDebugLabel(MCSymbol *Symbol) {
 }
 
 void MCELFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
+  // Let the target do whatever target specific stuff it needs to do.
+  getAssembler().getBackend().handleAssemblerFlag(Flag);
+  // Do any generic stuff we need to do.
   switch (Flag) {
   case MCAF_SyntaxUnified: return; // no-op here.
   case MCAF_Code16: return; // Change parsing mode; no-op here.
