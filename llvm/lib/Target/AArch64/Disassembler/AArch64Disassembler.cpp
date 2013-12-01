@@ -1342,13 +1342,13 @@ static DecodeStatus DecodeVLDSTLanePostInstruction(MCInst &Inst, unsigned Insn,
   case AArch64::LD4LN_WB_D_fixed: case AArch64::LD4LN_WB_D_register: {
     switch (Opc) {
     case AArch64::LD4LN_WB_B_fixed: case AArch64::LD4LN_WB_B_register:
-      TransferBytes = 3; break;
+      TransferBytes = 4; break;
     case AArch64::LD4LN_WB_H_fixed: case AArch64::LD4LN_WB_H_register:
-      TransferBytes = 6; break;
+      TransferBytes = 8; break;
     case AArch64::LD4LN_WB_S_fixed: case AArch64::LD4LN_WB_S_register:
-      TransferBytes = 12; break;
+      TransferBytes = 16; break;
     case AArch64::LD4LN_WB_D_fixed: case AArch64::LD4LN_WB_D_register:
-      TransferBytes = 24; break;
+      TransferBytes = 32; break;
     }
     IsLoad = true;
     NumVecs = 4;

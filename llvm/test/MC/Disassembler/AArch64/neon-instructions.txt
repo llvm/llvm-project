@@ -2129,7 +2129,8 @@
 # CHECK: ld1 {v0.b}[9], [x0], #1
 # CHECK: ld2 {v15.h, v16.h}[7], [x15], #4
 # CHECK: ld3 {v31.s, v0.s, v1.s}[3], [sp], x3
-# CHECK: ld4 {v0.d, v1.d, v2.d, v3.d}[1], [x0], #24
+# CHECK: ld4 {v0.d, v1.d, v2.d, v3.d}[1], [x0], #32
+# CHECK: ld4 {v0.h, v1.h, v2.h, v3.h}[7], [x0], x0
 # CHECK: st1 {v0.d}[1], [x0], #8
 # CHECK: st2 {v31.s, v0.s}[3], [sp], #8
 # CHECK: st3 {v15.h, v16.h, v17.h}[7], [x15], #6
@@ -2138,6 +2139,7 @@
 0xef,0x59,0xff,0x4d
 0xff,0xb3,0xc3,0x4d
 0x00,0xa4,0xff,0x4d
+0x00,0x78,0xe0,0x4d
 0x00,0x84,0x9f,0x4d
 0xff,0x93,0xbf,0x4d
 0xef,0x79,0x9f,0x4d
