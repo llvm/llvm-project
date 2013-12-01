@@ -3708,8 +3708,15 @@ public:
     BigEndian = false;
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
-    // AAPCS 7.1.1, ARM-Linux ABI 2.4: type of wchar_t is unsigned int.
-    WCharType = UnsignedInt;
+    switch (getTriple().getOS()) {
+    case llvm::Triple::NetBSD:
+      WCharType = SignedInt;
+      break;
+    default:
+      // AAPCS 7.1.1, ARM-Linux ABI 2.4: type of wchar_t is unsigned int.
+      WCharType = UnsignedInt;
+      break;
+    }
 
     // {} in inline assembly are neon specifiers, not assembly variant
     // specifiers.
