@@ -316,10 +316,10 @@ entry:
 
 define i8 @test_vqshrnh_n_s16(i16 %a) {
 ; CHECK: test_vqshrnh_n_s16
-; CHECK: sqshrn {{b[0-9]+}}, {{h[0-9]+}}, #15
+; CHECK: sqshrn {{b[0-9]+}}, {{h[0-9]+}}, #8
 entry:
   %vsqshrn = insertelement <1 x i16> undef, i16 %a, i32 0
-  %vsqshrn1 = call <1 x i8> @llvm.aarch64.neon.vsqshrn.v1i8(<1 x i16> %vsqshrn, i32 15)
+  %vsqshrn1 = call <1 x i8> @llvm.aarch64.neon.vsqshrn.v1i8(<1 x i16> %vsqshrn, i32 8)
   %0 = extractelement <1 x i8> %vsqshrn1, i32 0
   ret i8 %0
 }
@@ -328,10 +328,10 @@ declare <1 x i8> @llvm.aarch64.neon.vsqshrn.v1i8(<1 x i16>, i32)
 
 define i16 @test_vqshrns_n_s32(i32 %a) {
 ; CHECK: test_vqshrns_n_s32
-; CHECK: sqshrn {{h[0-9]+}}, {{s[0-9]+}}, #31
+; CHECK: sqshrn {{h[0-9]+}}, {{s[0-9]+}}, #16
 entry:
   %vsqshrn = insertelement <1 x i32> undef, i32 %a, i32 0
-  %vsqshrn1 = call <1 x i16> @llvm.aarch64.neon.vsqshrn.v1i16(<1 x i32> %vsqshrn, i32 31)
+  %vsqshrn1 = call <1 x i16> @llvm.aarch64.neon.vsqshrn.v1i16(<1 x i32> %vsqshrn, i32 16)
   %0 = extractelement <1 x i16> %vsqshrn1, i32 0
   ret i16 %0
 }
@@ -340,10 +340,10 @@ declare <1 x i16> @llvm.aarch64.neon.vsqshrn.v1i16(<1 x i32>, i32)
 
 define i32 @test_vqshrnd_n_s64(i64 %a) {
 ; CHECK: test_vqshrnd_n_s64
-; CHECK: sqshrn {{s[0-9]+}}, {{d[0-9]+}}, #63
+; CHECK: sqshrn {{s[0-9]+}}, {{d[0-9]+}}, #32
 entry:
   %vsqshrn = insertelement <1 x i64> undef, i64 %a, i32 0
-  %vsqshrn1 = call <1 x i32> @llvm.aarch64.neon.vsqshrn.v1i32(<1 x i64> %vsqshrn, i32 63)
+  %vsqshrn1 = call <1 x i32> @llvm.aarch64.neon.vsqshrn.v1i32(<1 x i64> %vsqshrn, i32 32)
   %0 = extractelement <1 x i32> %vsqshrn1, i32 0
   ret i32 %0
 }
@@ -352,10 +352,10 @@ declare <1 x i32> @llvm.aarch64.neon.vsqshrn.v1i32(<1 x i64>, i32)
 
 define i8 @test_vqshrnh_n_u16(i16 %a) {
 ; CHECK: test_vqshrnh_n_u16
-; CHECK: uqshrn {{b[0-9]+}}, {{h[0-9]+}}, #15
+; CHECK: uqshrn {{b[0-9]+}}, {{h[0-9]+}}, #8
 entry:
   %vuqshrn = insertelement <1 x i16> undef, i16 %a, i32 0
-  %vuqshrn1 = call <1 x i8> @llvm.aarch64.neon.vuqshrn.v1i8(<1 x i16> %vuqshrn, i32 15)
+  %vuqshrn1 = call <1 x i8> @llvm.aarch64.neon.vuqshrn.v1i8(<1 x i16> %vuqshrn, i32 8)
   %0 = extractelement <1 x i8> %vuqshrn1, i32 0
   ret i8 %0
 }
@@ -364,10 +364,10 @@ declare <1 x i8> @llvm.aarch64.neon.vuqshrn.v1i8(<1 x i16>, i32)
 
 define i16 @test_vqshrns_n_u32(i32 %a) {
 ; CHECK: test_vqshrns_n_u32
-; CHECK: uqshrn {{h[0-9]+}}, {{s[0-9]+}}, #31
+; CHECK: uqshrn {{h[0-9]+}}, {{s[0-9]+}}, #16
 entry:
   %vuqshrn = insertelement <1 x i32> undef, i32 %a, i32 0
-  %vuqshrn1 = call <1 x i16> @llvm.aarch64.neon.vuqshrn.v1i16(<1 x i32> %vuqshrn, i32 31)
+  %vuqshrn1 = call <1 x i16> @llvm.aarch64.neon.vuqshrn.v1i16(<1 x i32> %vuqshrn, i32 16)
   %0 = extractelement <1 x i16> %vuqshrn1, i32 0
   ret i16 %0
 }
@@ -376,10 +376,10 @@ declare <1 x i16> @llvm.aarch64.neon.vuqshrn.v1i16(<1 x i32>, i32)
 
 define i32 @test_vqshrnd_n_u64(i64 %a) {
 ; CHECK: test_vqshrnd_n_u64
-; CHECK: uqshrn {{s[0-9]+}}, {{d[0-9]+}}, #63
+; CHECK: uqshrn {{s[0-9]+}}, {{d[0-9]+}}, #32
 entry:
   %vuqshrn = insertelement <1 x i64> undef, i64 %a, i32 0
-  %vuqshrn1 = call <1 x i32> @llvm.aarch64.neon.vuqshrn.v1i32(<1 x i64> %vuqshrn, i32 63)
+  %vuqshrn1 = call <1 x i32> @llvm.aarch64.neon.vuqshrn.v1i32(<1 x i64> %vuqshrn, i32 32)
   %0 = extractelement <1 x i32> %vuqshrn1, i32 0
   ret i32 %0
 }
@@ -388,10 +388,10 @@ declare <1 x i32> @llvm.aarch64.neon.vuqshrn.v1i32(<1 x i64>, i32)
 
 define i8 @test_vqrshrnh_n_s16(i16 %a) {
 ; CHECK: test_vqrshrnh_n_s16
-; CHECK: sqrshrn {{b[0-9]+}}, {{h[0-9]+}}, #15
+; CHECK: sqrshrn {{b[0-9]+}}, {{h[0-9]+}}, #8
 entry:
   %vsqrshrn = insertelement <1 x i16> undef, i16 %a, i32 0
-  %vsqrshrn1 = call <1 x i8> @llvm.aarch64.neon.vsqrshrn.v1i8(<1 x i16> %vsqrshrn, i32 15)
+  %vsqrshrn1 = call <1 x i8> @llvm.aarch64.neon.vsqrshrn.v1i8(<1 x i16> %vsqrshrn, i32 8)
   %0 = extractelement <1 x i8> %vsqrshrn1, i32 0
   ret i8 %0
 }
@@ -400,10 +400,10 @@ declare <1 x i8> @llvm.aarch64.neon.vsqrshrn.v1i8(<1 x i16>, i32)
 
 define i16 @test_vqrshrns_n_s32(i32 %a) {
 ; CHECK: test_vqrshrns_n_s32
-; CHECK: sqrshrn {{h[0-9]+}}, {{s[0-9]+}}, #31
+; CHECK: sqrshrn {{h[0-9]+}}, {{s[0-9]+}}, #16
 entry:
   %vsqrshrn = insertelement <1 x i32> undef, i32 %a, i32 0
-  %vsqrshrn1 = call <1 x i16> @llvm.aarch64.neon.vsqrshrn.v1i16(<1 x i32> %vsqrshrn, i32 31)
+  %vsqrshrn1 = call <1 x i16> @llvm.aarch64.neon.vsqrshrn.v1i16(<1 x i32> %vsqrshrn, i32 16)
   %0 = extractelement <1 x i16> %vsqrshrn1, i32 0
   ret i16 %0
 }
@@ -412,10 +412,10 @@ declare <1 x i16> @llvm.aarch64.neon.vsqrshrn.v1i16(<1 x i32>, i32)
 
 define i32 @test_vqrshrnd_n_s64(i64 %a) {
 ; CHECK: test_vqrshrnd_n_s64
-; CHECK: sqrshrn {{s[0-9]+}}, {{d[0-9]+}}, #63
+; CHECK: sqrshrn {{s[0-9]+}}, {{d[0-9]+}}, #32
 entry:
   %vsqrshrn = insertelement <1 x i64> undef, i64 %a, i32 0
-  %vsqrshrn1 = call <1 x i32> @llvm.aarch64.neon.vsqrshrn.v1i32(<1 x i64> %vsqrshrn, i32 63)
+  %vsqrshrn1 = call <1 x i32> @llvm.aarch64.neon.vsqrshrn.v1i32(<1 x i64> %vsqrshrn, i32 32)
   %0 = extractelement <1 x i32> %vsqrshrn1, i32 0
   ret i32 %0
 }
@@ -424,10 +424,10 @@ declare <1 x i32> @llvm.aarch64.neon.vsqrshrn.v1i32(<1 x i64>, i32)
 
 define i8 @test_vqrshrnh_n_u16(i16 %a) {
 ; CHECK: test_vqrshrnh_n_u16
-; CHECK: uqrshrn {{b[0-9]+}}, {{h[0-9]+}}, #15
+; CHECK: uqrshrn {{b[0-9]+}}, {{h[0-9]+}}, #8
 entry:
   %vuqrshrn = insertelement <1 x i16> undef, i16 %a, i32 0
-  %vuqrshrn1 = call <1 x i8> @llvm.aarch64.neon.vuqrshrn.v1i8(<1 x i16> %vuqrshrn, i32 15)
+  %vuqrshrn1 = call <1 x i8> @llvm.aarch64.neon.vuqrshrn.v1i8(<1 x i16> %vuqrshrn, i32 8)
   %0 = extractelement <1 x i8> %vuqrshrn1, i32 0
   ret i8 %0
 }
@@ -436,10 +436,10 @@ declare <1 x i8> @llvm.aarch64.neon.vuqrshrn.v1i8(<1 x i16>, i32)
 
 define i16 @test_vqrshrns_n_u32(i32 %a) {
 ; CHECK: test_vqrshrns_n_u32
-; CHECK: uqrshrn {{h[0-9]+}}, {{s[0-9]+}}, #31
+; CHECK: uqrshrn {{h[0-9]+}}, {{s[0-9]+}}, #16
 entry:
   %vuqrshrn = insertelement <1 x i32> undef, i32 %a, i32 0
-  %vuqrshrn1 = call <1 x i16> @llvm.aarch64.neon.vuqrshrn.v1i16(<1 x i32> %vuqrshrn, i32 31)
+  %vuqrshrn1 = call <1 x i16> @llvm.aarch64.neon.vuqrshrn.v1i16(<1 x i32> %vuqrshrn, i32 16)
   %0 = extractelement <1 x i16> %vuqrshrn1, i32 0
   ret i16 %0
 }
@@ -448,10 +448,10 @@ declare <1 x i16> @llvm.aarch64.neon.vuqrshrn.v1i16(<1 x i32>, i32)
 
 define i32 @test_vqrshrnd_n_u64(i64 %a) {
 ; CHECK: test_vqrshrnd_n_u64
-; CHECK: uqrshrn {{s[0-9]+}}, {{d[0-9]+}}, #63
+; CHECK: uqrshrn {{s[0-9]+}}, {{d[0-9]+}}, #32
 entry:
   %vuqrshrn = insertelement <1 x i64> undef, i64 %a, i32 0
-  %vuqrshrn1 = call <1 x i32> @llvm.aarch64.neon.vuqrshrn.v1i32(<1 x i64> %vuqrshrn, i32 63)
+  %vuqrshrn1 = call <1 x i32> @llvm.aarch64.neon.vuqrshrn.v1i32(<1 x i64> %vuqrshrn, i32 32)
   %0 = extractelement <1 x i32> %vuqrshrn1, i32 0
   ret i32 %0
 }
@@ -460,10 +460,10 @@ declare <1 x i32> @llvm.aarch64.neon.vuqrshrn.v1i32(<1 x i64>, i32)
 
 define i8 @test_vqshrunh_n_s16(i16 %a) {
 ; CHECK: test_vqshrunh_n_s16
-; CHECK: sqshrun {{b[0-9]+}}, {{h[0-9]+}}, #15
+; CHECK: sqshrun {{b[0-9]+}}, {{h[0-9]+}}, #8
 entry:
   %vsqshrun = insertelement <1 x i16> undef, i16 %a, i32 0
-  %vsqshrun1 = call <1 x i8> @llvm.aarch64.neon.vsqshrun.v1i8(<1 x i16> %vsqshrun, i32 15)
+  %vsqshrun1 = call <1 x i8> @llvm.aarch64.neon.vsqshrun.v1i8(<1 x i16> %vsqshrun, i32 8)
   %0 = extractelement <1 x i8> %vsqshrun1, i32 0
   ret i8 %0
 }
@@ -472,10 +472,10 @@ declare <1 x i8> @llvm.aarch64.neon.vsqshrun.v1i8(<1 x i16>, i32)
 
 define i16 @test_vqshruns_n_s32(i32 %a) {
 ; CHECK: test_vqshruns_n_s32
-; CHECK: sqshrun {{h[0-9]+}}, {{s[0-9]+}}, #31
+; CHECK: sqshrun {{h[0-9]+}}, {{s[0-9]+}}, #16
 entry:
   %vsqshrun = insertelement <1 x i32> undef, i32 %a, i32 0
-  %vsqshrun1 = call <1 x i16> @llvm.aarch64.neon.vsqshrun.v1i16(<1 x i32> %vsqshrun, i32 31)
+  %vsqshrun1 = call <1 x i16> @llvm.aarch64.neon.vsqshrun.v1i16(<1 x i32> %vsqshrun, i32 16)
   %0 = extractelement <1 x i16> %vsqshrun1, i32 0
   ret i16 %0
 }
@@ -484,10 +484,10 @@ declare <1 x i16> @llvm.aarch64.neon.vsqshrun.v1i16(<1 x i32>, i32)
 
 define i32 @test_vqshrund_n_s64(i64 %a) {
 ; CHECK: test_vqshrund_n_s64
-; CHECK: sqshrun {{s[0-9]+}}, {{d[0-9]+}}, #63
+; CHECK: sqshrun {{s[0-9]+}}, {{d[0-9]+}}, #32
 entry:
   %vsqshrun = insertelement <1 x i64> undef, i64 %a, i32 0
-  %vsqshrun1 = call <1 x i32> @llvm.aarch64.neon.vsqshrun.v1i32(<1 x i64> %vsqshrun, i32 63)
+  %vsqshrun1 = call <1 x i32> @llvm.aarch64.neon.vsqshrun.v1i32(<1 x i64> %vsqshrun, i32 32)
   %0 = extractelement <1 x i32> %vsqshrun1, i32 0
   ret i32 %0
 }
@@ -496,10 +496,10 @@ declare <1 x i32> @llvm.aarch64.neon.vsqshrun.v1i32(<1 x i64>, i32)
 
 define i8 @test_vqrshrunh_n_s16(i16 %a) {
 ; CHECK: test_vqrshrunh_n_s16
-; CHECK: sqrshrun {{b[0-9]+}}, {{h[0-9]+}}, #15
+; CHECK: sqrshrun {{b[0-9]+}}, {{h[0-9]+}}, #8
 entry:
   %vsqrshrun = insertelement <1 x i16> undef, i16 %a, i32 0
-  %vsqrshrun1 = call <1 x i8> @llvm.aarch64.neon.vsqrshrun.v1i8(<1 x i16> %vsqrshrun, i32 15)
+  %vsqrshrun1 = call <1 x i8> @llvm.aarch64.neon.vsqrshrun.v1i8(<1 x i16> %vsqrshrun, i32 8)
   %0 = extractelement <1 x i8> %vsqrshrun1, i32 0
   ret i8 %0
 }
@@ -508,10 +508,10 @@ declare <1 x i8> @llvm.aarch64.neon.vsqrshrun.v1i8(<1 x i16>, i32)
 
 define i16 @test_vqrshruns_n_s32(i32 %a) {
 ; CHECK: test_vqrshruns_n_s32
-; CHECK: sqrshrun {{h[0-9]+}}, {{s[0-9]+}}, #31
+; CHECK: sqrshrun {{h[0-9]+}}, {{s[0-9]+}}, #16
 entry:
   %vsqrshrun = insertelement <1 x i32> undef, i32 %a, i32 0
-  %vsqrshrun1 = call <1 x i16> @llvm.aarch64.neon.vsqrshrun.v1i16(<1 x i32> %vsqrshrun, i32 31)
+  %vsqrshrun1 = call <1 x i16> @llvm.aarch64.neon.vsqrshrun.v1i16(<1 x i32> %vsqrshrun, i32 16)
   %0 = extractelement <1 x i16> %vsqrshrun1, i32 0
   ret i16 %0
 }
@@ -520,10 +520,10 @@ declare <1 x i16> @llvm.aarch64.neon.vsqrshrun.v1i16(<1 x i32>, i32)
 
 define i32 @test_vqrshrund_n_s64(i64 %a) {
 ; CHECK: test_vqrshrund_n_s64
-; CHECK: sqrshrun {{s[0-9]+}}, {{d[0-9]+}}, #63
+; CHECK: sqrshrun {{s[0-9]+}}, {{d[0-9]+}}, #32
 entry:
   %vsqrshrun = insertelement <1 x i64> undef, i64 %a, i32 0
-  %vsqrshrun1 = call <1 x i32> @llvm.aarch64.neon.vsqrshrun.v1i32(<1 x i64> %vsqrshrun, i32 63)
+  %vsqrshrun1 = call <1 x i32> @llvm.aarch64.neon.vsqrshrun.v1i32(<1 x i64> %vsqrshrun, i32 32)
   %0 = extractelement <1 x i32> %vsqrshrun1, i32 0
   ret i32 %0
 }

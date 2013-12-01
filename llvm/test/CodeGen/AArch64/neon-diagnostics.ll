@@ -11,3 +11,14 @@ entry:
   ret <2 x float> %add
 }
 
+define <4 x i32> @test_vshrn_not_match(<2 x i32> %a, <2 x i64> %b) {
+; CHECK: test_vshrn_not_match
+; CHECK-NOT: shrn2 {{v[0-9]+}}.4s, {{v[0-9]+}}.2d, #35
+  %1 = bitcast <2 x i32> %a to <1 x i64>
+  %2 = ashr <2 x i64> %b, <i64 35, i64 35>
+  %vshrn_n = trunc <2 x i64> %2 to <2 x i32>
+  %3 = bitcast <2 x i32> %vshrn_n to <1 x i64>
+  %shuffle.i = shufflevector <1 x i64> %1, <1 x i64> %3, <2 x i32> <i32 0, i32 1>
+  %4 = bitcast <2 x i64> %shuffle.i to <4 x i32>
+  ret <4 x i32> %4
+}

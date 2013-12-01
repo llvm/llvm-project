@@ -1482,10 +1482,10 @@ def shr_imm16_asmoperand : shr_imm_asmoperands<"16">;
 def shr_imm32_asmoperand : shr_imm_asmoperands<"32">;
 def shr_imm64_asmoperand : shr_imm_asmoperands<"64">;
 
-def shr_imm8 : shr_imm<"8">;
-def shr_imm16 : shr_imm<"16">;
-def shr_imm32 : shr_imm<"32">;
-def shr_imm64 : shr_imm<"64">;
+def shr_imm8 : shr_imm<"8">, ImmLeaf<i32, [{return Imm > 0 && Imm <= 8;}]>;
+def shr_imm16 : shr_imm<"16">, ImmLeaf<i32, [{return Imm > 0 && Imm <= 16;}]>;
+def shr_imm32 : shr_imm<"32">, ImmLeaf<i32, [{return Imm > 0 && Imm <= 32;}]>;
+def shr_imm64 : shr_imm<"64">, ImmLeaf<i32, [{return Imm > 0 && Imm <= 64;}]>;
 
 class shl_imm_asmoperands<string OFFSET> : AsmOperandClass {
   let Name = "ShlImm" # OFFSET;
@@ -1505,10 +1505,10 @@ def shl_imm16_asmoperand : shl_imm_asmoperands<"16">;
 def shl_imm32_asmoperand : shl_imm_asmoperands<"32">;
 def shl_imm64_asmoperand : shl_imm_asmoperands<"64">;
 
-def shl_imm8 : shl_imm<"8">;
-def shl_imm16 : shl_imm<"16">;
-def shl_imm32 : shl_imm<"32">;
-def shl_imm64 : shl_imm<"64">;
+def shl_imm8 : shl_imm<"8">, ImmLeaf<i32, [{return Imm >= 0 && Imm < 8;}]>;
+def shl_imm16 : shl_imm<"16">, ImmLeaf<i32, [{return Imm >= 0 && Imm < 16;}]>;
+def shl_imm32 : shl_imm<"32">, ImmLeaf<i32, [{return Imm >= 0 && Imm < 32;}]>;
+def shl_imm64 : shl_imm<"64">, ImmLeaf<i32, [{return Imm >= 0 && Imm < 64;}]>;
 
 class N2VShift<bit q, bit u, bits<5> opcode, string asmop, string T,
                RegisterOperand VPRC, ValueType Ty, Operand ImmTy, SDNode OpNode>
@@ -1517,37 +1517,37 @@ class N2VShift<bit q, bit u, bits<5> opcode, string asmop, string T,
                      asmop # "\t$Rd." # T # ", $Rn." # T # ", $Imm",
                      [(set (Ty VPRC:$Rd),
                         (Ty (OpNode (Ty VPRC:$Rn),
-                          (Ty (Neon_vdup (i32 imm:$Imm))))))],
+                          (Ty (Neon_vdup (i32 ImmTy:$Imm))))))],
                      NoItinerary>;
 
 multiclass NeonI_N2VShL<bit u, bits<5> opcode, string asmop> {
   // 64-bit vector types.
-  def _8B : N2VShift<0b0, u, opcode, asmop, "8b", VPR64, v8i8, uimm3, shl> {
+  def _8B : N2VShift<0b0, u, opcode, asmop, "8b", VPR64, v8i8, shl_imm8, shl> {
     let Inst{22-19} = 0b0001;  // immh:immb = 0001xxx
   }
 
-  def _4H : N2VShift<0b0, u, opcode, asmop, "4h", VPR64, v4i16, uimm4, shl> {
+  def _4H : N2VShift<0b0, u, opcode, asmop, "4h", VPR64, v4i16, shl_imm16, shl> {
     let Inst{22-20} = 0b001;   // immh:immb = 001xxxx
   }
 
-  def _2S : N2VShift<0b0, u, opcode, asmop, "2s", VPR64, v2i32, uimm5, shl> {
+  def _2S : N2VShift<0b0, u, opcode, asmop, "2s", VPR64, v2i32, shl_imm32, shl> {
     let Inst{22-21} = 0b01;    // immh:immb = 01xxxxx
   }
 
   // 128-bit vector types.
-  def _16B : N2VShift<0b1, u, opcode, asmop, "16b", VPR128, v16i8, uimm3, shl> {
+  def _16B : N2VShift<0b1, u, opcode, asmop, "16b", VPR128, v16i8, shl_imm8, shl> {
     let Inst{22-19} = 0b0001;  // immh:immb = 0001xxx
   }
 
-  def _8H : N2VShift<0b1, u, opcode, asmop, "8h", VPR128, v8i16, uimm4, shl> {
+  def _8H : N2VShift<0b1, u, opcode, asmop, "8h", VPR128, v8i16, shl_imm16, shl> {
     let Inst{22-20} = 0b001;   // immh:immb = 001xxxx
   }
 
-  def _4S : N2VShift<0b1, u, opcode, asmop, "4s", VPR128, v4i32, uimm5, shl> {
+  def _4S : N2VShift<0b1, u, opcode, asmop, "4s", VPR128, v4i32, shl_imm32, shl> {
     let Inst{22-21} = 0b01;    // immh:immb = 01xxxxx
   }
 
-  def _2D : N2VShift<0b1, u, opcode, asmop, "2d", VPR128, v2i64, imm0_63, shl> {
+  def _2D : N2VShift<0b1, u, opcode, asmop, "2d", VPR128, v2i64, shl_imm64, shl> {
     let Inst{22} = 0b1;        // immh:immb = 1xxxxxx
   }
 }
@@ -1628,21 +1628,6 @@ def Neon_Low2double : PatFrag<(ops node:$in),
                               (v1f64 (extract_subvector (v2f64 node:$in),
                                                         (iPTR 0)))>;
 
-def neon_uimm3_shift : Operand<i32>,
-                         ImmLeaf<i32, [{return Imm < 8;}]> {
-  let ParserMatchClass = uimm3_asmoperand;
-}
-
-def neon_uimm4_shift : Operand<i32>,
-                         ImmLeaf<i32, [{return Imm < 16;}]> {
-  let ParserMatchClass = uimm4_asmoperand;
-}
-
-def neon_uimm5_shift : Operand<i32>,
-                         ImmLeaf<i32, [{return Imm < 32;}]> {
-  let ParserMatchClass = uimm5_asmoperand;
-}
-
 class N2VShiftLong<bit q, bit u, bits<5> opcode, string asmop, string DestT,
                    string SrcT, ValueType DestTy, ValueType SrcTy,
                    Operand ImmTy, SDPatternOperator ExtOp>
@@ -1673,33 +1658,33 @@ multiclass NeonI_N2VShLL<string prefix, bit u, bits<5> opcode, string asmop,
                          SDNode ExtOp> {
   // 64-bit vector types.
   def _8B : N2VShiftLong<0b0, u, opcode, asmop, "8h", "8b", v8i16, v8i8,
-                         neon_uimm3_shift, ExtOp> {
+                         shl_imm8, ExtOp> {
     let Inst{22-19} = 0b0001;  // immh:immb = 0001xxx
   }
 
   def _4H : N2VShiftLong<0b0, u, opcode, asmop, "4s", "4h", v4i32, v4i16,
-                         neon_uimm4_shift, ExtOp> {
+                         shl_imm16, ExtOp> {
     let Inst{22-20} = 0b001;   // immh:immb = 001xxxx
   }
 
   def _2S : N2VShiftLong<0b0, u, opcode, asmop, "2d", "2s", v2i64, v2i32,
-                         neon_uimm5_shift, ExtOp> {
+                         shl_imm32, ExtOp> {
     let Inst{22-21} = 0b01;    // immh:immb = 01xxxxx
   }
 
   // 128-bit vector types
   def _16B : N2VShiftLongHigh<0b1, u, opcode, asmop, "8h", "16b", v8i16, v8i8,
-                              8, neon_uimm3_shift, ExtOp, Neon_High16B> {
+                              8, shl_imm8, ExtOp, Neon_High16B> {
     let Inst{22-19} = 0b0001;  // immh:immb = 0001xxx
   }
 
   def _8H : N2VShiftLongHigh<0b1, u, opcode, asmop, "4s", "8h", v4i32, v4i16,
-                             4, neon_uimm4_shift, ExtOp, Neon_High8H> {
+                             4, shl_imm16, ExtOp, Neon_High8H> {
     let Inst{22-20} = 0b001;   // immh:immb = 001xxxx
   }
 
   def _4S : N2VShiftLongHigh<0b1, u, opcode, asmop, "2d", "4s", v2i64, v2i32,
-                             2, neon_uimm5_shift, ExtOp, Neon_High4S> {
+                             2, shl_imm32, ExtOp, Neon_High4S> {
     let Inst{22-21} = 0b01;    // immh:immb = 01xxxxx
   }
 
@@ -1735,7 +1720,7 @@ class N2VShift_RQ<bit q, bit u, bits<5> opcode, string asmop, string T,
                      (outs VPRC:$Rd), (ins VPRC:$Rn, ImmTy:$Imm),
                      asmop # "\t$Rd." # T # ", $Rn." # T # ", $Imm",
                      [(set (Ty VPRC:$Rd), (Ty (OpNode (Ty VPRC:$Rn),
-                        (i32 imm:$Imm))))],
+                        (i32 ImmTy:$Imm))))],
                      NoItinerary>;
 
 // shift right (vector by immediate)
@@ -1780,38 +1765,38 @@ multiclass NeonI_N2VShR_RQ<bit u, bits<5> opcode, string asmop,
 multiclass NeonI_N2VShL_Q<bit u, bits<5> opcode, string asmop,
                           SDPatternOperator OpNode> {
   // 64-bit vector types.
-  def _8B : N2VShift_RQ<0b0, u, opcode, asmop, "8b", VPR64, v8i8, uimm3,
+  def _8B : N2VShift_RQ<0b0, u, opcode, asmop, "8b", VPR64, v8i8, shl_imm8,
                         OpNode> {
     let Inst{22-19} = 0b0001;
   }
 
-  def _4H : N2VShift_RQ<0b0, u, opcode, asmop, "4h", VPR64, v4i16, uimm4,
+  def _4H : N2VShift_RQ<0b0, u, opcode, asmop, "4h", VPR64, v4i16, shl_imm16,
                         OpNode> {
     let Inst{22-20} = 0b001;
   }
 
-  def _2S : N2VShift_RQ<0b0, u, opcode, asmop, "2s", VPR64, v2i32, uimm5,
+  def _2S : N2VShift_RQ<0b0, u, opcode, asmop, "2s", VPR64, v2i32, shl_imm32,
                         OpNode> {
     let Inst{22-21} = 0b01;
   }
 
   // 128-bit vector types.
-  def _16B : N2VShift_RQ<0b1, u, opcode, asmop, "16b", VPR128, v16i8, uimm3,
+  def _16B : N2VShift_RQ<0b1, u, opcode, asmop, "16b", VPR128, v16i8, shl_imm8,
                          OpNode> {
     let Inst{22-19} = 0b0001;
   }
 
-  def _8H : N2VShift_RQ<0b1, u, opcode, asmop, "8h", VPR128, v8i16, uimm4,
+  def _8H : N2VShift_RQ<0b1, u, opcode, asmop, "8h", VPR128, v8i16, shl_imm16,
                         OpNode> {
     let Inst{22-20} = 0b001;
   }
 
-  def _4S : N2VShift_RQ<0b1, u, opcode, asmop, "4s", VPR128, v4i32, uimm5,
+  def _4S : N2VShift_RQ<0b1, u, opcode, asmop, "4s", VPR128, v4i32, shl_imm32,
                         OpNode> {
     let Inst{22-21} = 0b01;
   }
 
-  def _2D : N2VShift_RQ<0b1, u, opcode, asmop, "2d", VPR128, v2i64, imm0_63,
+  def _2D : N2VShift_RQ<0b1, u, opcode, asmop, "2d", VPR128, v2i64, shl_imm64,
                         OpNode> {
     let Inst{22} = 0b1;
   }
@@ -1838,7 +1823,7 @@ class N2VShiftAdd<bit q, bit u, bits<5> opcode, string asmop, string T,
            asmop # "\t$Rd." # T # ", $Rn." # T # ", $Imm",
            [(set (Ty VPRC:$Rd), (Ty (add (Ty VPRC:$src),
               (Ty (OpNode (Ty VPRC:$Rn),
-                (Ty (Neon_vdup (i32 imm:$Imm))))))))],
+                (Ty (Neon_vdup (i32 ImmTy:$Imm))))))))],
            NoItinerary> {
   let Constraints = "$src = $Rd";
 }
@@ -1893,7 +1878,7 @@ class N2VShiftAdd_R<bit q, bit u, bits<5> opcode, string asmop, string T,
                      (outs VPRC:$Rd), (ins VPRC:$src, VPRC:$Rn, ImmTy:$Imm),
                      asmop # "\t$Rd." # T # ", $Rn." # T # ", $Imm",
                      [(set (Ty VPRC:$Rd), (Ty (add (Ty VPRC:$src),
-                        (Ty (OpNode (Ty VPRC:$Rn), (i32 imm:$Imm))))))],
+                        (Ty (OpNode (Ty VPRC:$Rn), (i32 ImmTy:$Imm))))))],
                      NoItinerary> {
   let Constraints = "$src = $Rd";
 }
@@ -1948,45 +1933,45 @@ class N2VShiftIns<bit q, bit u, bits<5> opcode, string asmop, string T,
            (outs VPRC:$Rd), (ins VPRC:$src, VPRC:$Rn, ImmTy:$Imm),
            asmop # "\t$Rd." # T # ", $Rn." # T # ", $Imm",
            [(set (Ty VPRC:$Rd), (Ty (OpNode (Ty VPRC:$src), (Ty VPRC:$Rn),
-             (i32 imm:$Imm))))],
+             (i32 ImmTy:$Imm))))],
            NoItinerary> {
   let Constraints = "$src = $Rd";
 }
 
 // shift left insert (vector by immediate)
 multiclass NeonI_N2VShLIns<bit u, bits<5> opcode, string asmop> {
-  def _8B : N2VShiftIns<0b0, u, opcode, asmop, "8b", VPR64, v8i8, uimm3,
+  def _8B : N2VShiftIns<0b0, u, opcode, asmop, "8b", VPR64, v8i8, shl_imm8,
                         int_aarch64_neon_vsli> {
     let Inst{22-19} = 0b0001;
   }
 
-  def _4H : N2VShiftIns<0b0, u, opcode, asmop, "4h", VPR64, v4i16, uimm4,
+  def _4H : N2VShiftIns<0b0, u, opcode, asmop, "4h", VPR64, v4i16, shl_imm16,
                         int_aarch64_neon_vsli> {
     let Inst{22-20} = 0b001;
   }
 
-  def _2S : N2VShiftIns<0b0, u, opcode, asmop, "2s", VPR64, v2i32, uimm5,
+  def _2S : N2VShiftIns<0b0, u, opcode, asmop, "2s", VPR64, v2i32, shl_imm32,
                         int_aarch64_neon_vsli> {
     let Inst{22-21} = 0b01;
   }
 
     // 128-bit vector types
-  def _16B : N2VShiftIns<0b1, u, opcode, asmop, "16b", VPR128, v16i8, uimm3,
+  def _16B : N2VShiftIns<0b1, u, opcode, asmop, "16b", VPR128, v16i8, shl_imm8,
                          int_aarch64_neon_vsli> {
     let Inst{22-19} = 0b0001;
   }
 
-  def _8H : N2VShiftIns<0b1, u, opcode, asmop, "8h", VPR128, v8i16, uimm4,
+  def _8H : N2VShiftIns<0b1, u, opcode, asmop, "8h", VPR128, v8i16, shl_imm16,
                         int_aarch64_neon_vsli> {
     let Inst{22-20} = 0b001;
   }
 
-  def _4S : N2VShiftIns<0b1, u, opcode, asmop, "4s", VPR128, v4i32, uimm5,
+  def _4S : N2VShiftIns<0b1, u, opcode, asmop, "4s", VPR128, v4i32, shl_imm32,
                         int_aarch64_neon_vsli> {
     let Inst{22-21} = 0b01;
   }
 
-  def _2D : N2VShiftIns<0b1, u, opcode, asmop, "2d", VPR128, v2i64, imm0_63,
+  def _2D : N2VShiftIns<0b1, u, opcode, asmop, "2d", VPR128, v2i64, shl_imm64,
                         int_aarch64_neon_vsli> {
     let Inst{22} = 0b1;
   }
@@ -2135,52 +2120,55 @@ def Neon_ashrImm2D : PatFrag<(ops node:$lhs, node:$rhs),
 // Normal shift right narrow is matched by IR (srl/sra, trunc, concat_vectors)
 multiclass Neon_shiftNarrow_patterns<string shr> {
   def : Pat<(v8i8 (trunc (!cast<PatFrag>("Neon_" # shr # "Imm8H") VPR128:$Rn,
-              (i32 imm:$Imm)))),
+              (i32 shr_imm8:$Imm)))),
             (SHRNvvi_8B VPR128:$Rn, imm:$Imm)>;
   def : Pat<(v4i16 (trunc (!cast<PatFrag>("Neon_" # shr # "Imm4S") VPR128:$Rn,
-              (i32 imm:$Imm)))),
+              (i32 shr_imm16:$Imm)))),
             (SHRNvvi_4H VPR128:$Rn, imm:$Imm)>;
   def : Pat<(v2i32 (trunc (!cast<PatFrag>("Neon_" # shr # "Imm2D") VPR128:$Rn,
-              (i32 imm:$Imm)))),
+              (i32 shr_imm32:$Imm)))),
             (SHRNvvi_2S VPR128:$Rn, imm:$Imm)>;
 
   def : Pat<(Neon_combine_2D (v1i64 VPR64:$src), (v1i64 (bitconvert
               (v8i8 (trunc (!cast<PatFrag>("Neon_" # shr # "Imm8H")
-                VPR128:$Rn, (i32 imm:$Imm))))))),
+                VPR128:$Rn, (i32 shr_imm8:$Imm))))))),
             (SHRNvvi_16B (v2i64 (SUBREG_TO_REG (i64 0), VPR64:$src, sub_64)),
                          VPR128:$Rn, imm:$Imm)>;
   def : Pat<(Neon_combine_2D (v1i64 VPR64:$src), (v1i64 (bitconvert
               (v4i16 (trunc (!cast<PatFrag>("Neon_" # shr # "Imm4S")
-                VPR128:$Rn, (i32 imm:$Imm))))))),
+                VPR128:$Rn, (i32 shr_imm16:$Imm))))))),
             (SHRNvvi_8H (SUBREG_TO_REG (i64 0), VPR64:$src, sub_64),
                         VPR128:$Rn, imm:$Imm)>;
   def : Pat<(Neon_combine_2D (v1i64 VPR64:$src), (v1i64 (bitconvert
               (v2i32 (trunc (!cast<PatFrag>("Neon_" # shr # "Imm2D")
-                VPR128:$Rn, (i32 imm:$Imm))))))),
+                VPR128:$Rn, (i32 shr_imm32:$Imm))))))),
             (SHRNvvi_4S (SUBREG_TO_REG (i64 0), VPR64:$src, sub_64),
                         VPR128:$Rn, imm:$Imm)>;
 }
 
 multiclass Neon_shiftNarrow_QR_patterns<SDPatternOperator op, string prefix> {
-  def : Pat<(v8i8 (op (v8i16 VPR128:$Rn), imm:$Imm)),
+  def : Pat<(v8i8 (op (v8i16 VPR128:$Rn), shr_imm8:$Imm)),
             (!cast<Instruction>(prefix # "_8B") VPR128:$Rn, imm:$Imm)>;
-  def : Pat<(v4i16 (op (v4i32 VPR128:$Rn), imm:$Imm)),
+  def : Pat<(v4i16 (op (v4i32 VPR128:$Rn), shr_imm16:$Imm)),
             (!cast<Instruction>(prefix # "_4H") VPR128:$Rn, imm:$Imm)>;
-  def : Pat<(v2i32 (op (v2i64 VPR128:$Rn), imm:$Imm)),
+  def : Pat<(v2i32 (op (v2i64 VPR128:$Rn), shr_imm32:$Imm)),
             (!cast<Instruction>(prefix # "_2S") VPR128:$Rn, imm:$Imm)>;
 
   def : Pat<(Neon_combine_2D (v1i64 VPR64:$src),
-                (v1i64 (bitconvert (v8i8 (op (v8i16 VPR128:$Rn), imm:$Imm))))),
+                (v1i64 (bitconvert (v8i8
+                    (op (v8i16 VPR128:$Rn), shr_imm8:$Imm))))),
             (!cast<Instruction>(prefix # "_16B")
                 (SUBREG_TO_REG (i64 0), VPR64:$src, sub_64),
                 VPR128:$Rn, imm:$Imm)>;
   def : Pat<(Neon_combine_2D (v1i64 VPR64:$src),
-                (v1i64 (bitconvert (v4i16 (op (v4i32 VPR128:$Rn), imm:$Imm))))),
+                (v1i64 (bitconvert (v4i16
+                    (op (v4i32 VPR128:$Rn), shr_imm16:$Imm))))),
             (!cast<Instruction>(prefix # "_8H")
                 (SUBREG_TO_REG (i64 0), VPR64:$src, sub_64),
                 VPR128:$Rn, imm:$Imm)>;
   def : Pat<(Neon_combine_2D (v1i64 VPR64:$src),
-                (v1i64 (bitconvert (v2i32 (op (v2i64 VPR128:$Rn), imm:$Imm))))),
+                (v1i64 (bitconvert (v2i32
+                    (op (v2i64 VPR128:$Rn), shr_imm32:$Imm))))),
             (!cast<Instruction>(prefix # "_4S")
                   (SUBREG_TO_REG (i64 0), VPR64:$src, sub_64),
                   VPR128:$Rn, imm:$Imm)>;
@@ -2205,7 +2193,7 @@ class N2VCvt_Fx<bit q, bit u, bits<5> opcode, string asmop, string T,
                      (outs VPRC:$Rd), (ins VPRC:$Rn, ImmTy:$Imm),
                      asmop # "\t$Rd." # T # ", $Rn." # T # ", $Imm",
                      [(set (DestTy VPRC:$Rd), (DestTy (IntOp (SrcTy VPRC:$Rn),
-                       (i32 imm:$Imm))))],
+                       (i32 ImmTy:$Imm))))],
                      NoItinerary>;
 
 multiclass NeonI_N2VCvt_Fx2fp<bit u, bits<5> opcode, string asmop,
@@ -4477,7 +4465,8 @@ multiclass NeonI_ScalarShiftLeftImm_BHSD_size<bit u, bits<5> opcode,
 
 class NeonI_ScalarShiftRightImm_accum_D_size<bit u, bits<5> opcode, string asmop>
   : NeonI_ScalarShiftImm<u, opcode,
-                         (outs FPR64:$Rd), (ins FPR64:$Src, FPR64:$Rn, shr_imm64:$Imm),
+                         (outs FPR64:$Rd),
+                         (ins FPR64:$Src, FPR64:$Rn, shr_imm64:$Imm),
                          !strconcat(asmop, "\t$Rd, $Rn, $Imm"),
                          [], NoItinerary> {
     bits<6> Imm;
@@ -4488,7 +4477,8 @@ class NeonI_ScalarShiftRightImm_accum_D_size<bit u, bits<5> opcode, string asmop
 
 class NeonI_ScalarShiftLeftImm_accum_D_size<bit u, bits<5> opcode, string asmop>
   : NeonI_ScalarShiftImm<u, opcode,
-                         (outs FPR64:$Rd), (ins FPR64:$Src, FPR64:$Rn, shl_imm64:$Imm),
+                         (outs FPR64:$Rd),
+                         (ins FPR64:$Src, FPR64:$Rn, shl_imm64:$Imm),
                          !strconcat(asmop, "\t$Rd, $Rn, $Imm"),
                          [], NoItinerary> {
     bits<6> Imm;
@@ -4540,34 +4530,48 @@ multiclass NeonI_ScalarShiftImm_cvt_SD_size<bit u, bits<5> opcode, string asmop>
   }
 }
 
-multiclass Neon_ScalarShiftImm_D_size_patterns<SDPatternOperator opnode,
+multiclass Neon_ScalarShiftRImm_D_size_patterns<SDPatternOperator opnode,
                                                Instruction INSTD> {
-  def ddi : Pat<(v1i64 (opnode (v1i64 FPR64:$Rn), (i32 imm:$Imm))),
+  def ddi : Pat<(v1i64 (opnode (v1i64 FPR64:$Rn), (i32 shr_imm64:$Imm))),
+                (INSTD FPR64:$Rn, imm:$Imm)>;
+}
+
+multiclass Neon_ScalarShiftLImm_D_size_patterns<SDPatternOperator opnode,
+                                               Instruction INSTD> {
+  def ddi : Pat<(v1i64 (opnode (v1i64 FPR64:$Rn), (i32 shl_imm64:$Imm))),
                 (INSTD FPR64:$Rn, imm:$Imm)>;
 }
 
 class Neon_ScalarShiftImm_arm_D_size_patterns<SDPatternOperator opnode,
                                               Instruction INSTD>
-  : Pat<(v1i64 (opnode (v1i64 FPR64:$Rn), (v1i64 (Neon_vdup (i32 imm:$Imm))))),
+  : Pat<(v1i64 (opnode (v1i64 FPR64:$Rn),
+            (v1i64 (Neon_vdup (i32 shr_imm64:$Imm))))),
         (INSTD FPR64:$Rn, imm:$Imm)>;
 
-multiclass Neon_ScalarShiftImm_BHSD_size_patterns<SDPatternOperator opnode,
-                                                  Instruction INSTB,
-                                                  Instruction INSTH,
-                                                  Instruction INSTS,
-                                                  Instruction INSTD>
-  : Neon_ScalarShiftImm_D_size_patterns<opnode, INSTD> {
-  def bbi : Pat<(v1i8 (opnode (v1i8 FPR8:$Rn), (i32 imm:$Imm))),
+multiclass Neon_ScalarShiftLImm_BHSD_size_patterns<SDPatternOperator opnode,
+                                                   Instruction INSTB,
+                                                   Instruction INSTH,
+                                                   Instruction INSTS,
+                                                   Instruction INSTD>
+  : Neon_ScalarShiftLImm_D_size_patterns<opnode, INSTD> {
+  def bbi : Pat<(v1i8 (opnode (v1i8 FPR8:$Rn), (i32 shl_imm8:$Imm))),
                 (INSTB FPR8:$Rn, imm:$Imm)>;
-  def hhi : Pat<(v1i16 (opnode (v1i16 FPR16:$Rn), (i32 imm:$Imm))),
+  def hhi : Pat<(v1i16 (opnode (v1i16 FPR16:$Rn), (i32 shl_imm16:$Imm))),
                 (INSTH FPR16:$Rn, imm:$Imm)>;
-  def ssi : Pat<(v1i32 (opnode (v1i32 FPR32:$Rn), (i32 imm:$Imm))),
+  def ssi : Pat<(v1i32 (opnode (v1i32 FPR32:$Rn), (i32 shl_imm32:$Imm))),
                 (INSTS FPR32:$Rn, imm:$Imm)>;
 }
 
-class Neon_ScalarShiftImm_accum_D_size_patterns<SDPatternOperator opnode,
+class Neon_ScalarShiftLImm_accum_D_size_patterns<SDPatternOperator opnode,
                                                 Instruction INSTD>
-  : Pat<(v1i64 (opnode (v1i64 FPR64:$Src), (v1i64 FPR64:$Rn), (i32 imm:$Imm))),
+  : Pat<(v1i64 (opnode (v1i64 FPR64:$Src), (v1i64 FPR64:$Rn),
+            (i32 shl_imm64:$Imm))),
+        (INSTD FPR64:$Src, FPR64:$Rn, imm:$Imm)>;
+
+class Neon_ScalarShiftRImm_accum_D_size_patterns<SDPatternOperator opnode,
+                                                Instruction INSTD>
+  : Pat<(v1i64 (opnode (v1i64 FPR64:$Src), (v1i64 FPR64:$Rn),
+            (i32 shr_imm64:$Imm))),
         (INSTD FPR64:$Src, FPR64:$Rn, imm:$Imm)>;
 
 multiclass Neon_ScalarShiftImm_narrow_HSD_size_patterns<
@@ -4575,11 +4579,11 @@ multiclass Neon_ScalarShiftImm_narrow_HSD_size_patterns<
                                                        Instruction INSTH,
                                                        Instruction INSTS,
                                                        Instruction INSTD> {
-  def bhi : Pat<(v1i8 (opnode (v1i16 FPR16:$Rn), (i32 imm:$Imm))),
+  def bhi : Pat<(v1i8 (opnode (v1i16 FPR16:$Rn), (i32 shr_imm16:$Imm))),
                 (INSTH FPR16:$Rn, imm:$Imm)>;
-  def hsi : Pat<(v1i16 (opnode (v1i32 FPR32:$Rn), (i32 imm:$Imm))),
+  def hsi : Pat<(v1i16 (opnode (v1i32 FPR32:$Rn), (i32 shr_imm32:$Imm))),
                 (INSTS FPR32:$Rn, imm:$Imm)>;
-  def sdi : Pat<(v1i32 (opnode (v1i64 FPR64:$Rn), (i32 imm:$Imm))),
+  def sdi : Pat<(v1i32 (opnode (v1i64 FPR64:$Rn), (i32 shr_imm64:$Imm))),
                 (INSTD FPR64:$Rn, imm:$Imm)>;
 }
 
@@ -4587,9 +4591,9 @@ multiclass Neon_ScalarShiftImm_scvtf_SD_size_patterns<SDPatternOperator Sopnode,
                                                       SDPatternOperator Dopnode,
                                                       Instruction INSTS,
                                                       Instruction INSTD> {
-  def ssi : Pat<(f32 (Sopnode (v1i32 FPR32:$Rn), (i32 imm:$Imm))),
+  def ssi : Pat<(f32 (Sopnode (v1i32 FPR32:$Rn), (i32 shr_imm32:$Imm))),
                 (INSTS FPR32:$Rn, imm:$Imm)>;
-  def ddi : Pat<(f64 (Dopnode (v1i64 FPR64:$Rn), (i32 imm:$Imm))),
+  def ddi : Pat<(f64 (Dopnode (v1i64 FPR64:$Rn), (i32 shr_imm64:$Imm))),
                 (INSTD FPR64:$Rn, imm:$Imm)>;
 }
 
@@ -4597,83 +4601,89 @@ multiclass Neon_ScalarShiftImm_fcvts_SD_size_patterns<SDPatternOperator Sopnode,
                                                       SDPatternOperator Dopnode,
                                                       Instruction INSTS,
                                                       Instruction INSTD> {
-  def ssi : Pat<(v1i32 (Sopnode (v1f32 FPR32:$Rn), (i32 imm:$Imm))),
+  def ssi : Pat<(v1i32 (Sopnode (v1f32 FPR32:$Rn), (i32 shr_imm32:$Imm))),
                 (INSTS FPR32:$Rn, imm:$Imm)>;
-  def ddi : Pat<(v1i64 (Dopnode (v1f64 FPR64:$Rn), (i32 imm:$Imm))),
+  def ddi : Pat<(v1i64 (Dopnode (v1f64 FPR64:$Rn), (i32 shr_imm64:$Imm))),
                 (INSTD FPR64:$Rn, imm:$Imm)>;
 }
 
 // Scalar Signed Shift Right (Immediate)
 defm SSHR : NeonI_ScalarShiftRightImm_D_size<0b0, 0b00000, "sshr">;
-defm : Neon_ScalarShiftImm_D_size_patterns<int_aarch64_neon_vshrds_n, SSHRddi>;
+defm : Neon_ScalarShiftRImm_D_size_patterns<int_aarch64_neon_vshrds_n, SSHRddi>;
 // Pattern to match llvm.arm.* intrinsic.
 def : Neon_ScalarShiftImm_arm_D_size_patterns<sra, SSHRddi>;
 
 // Scalar Unsigned Shift Right (Immediate)
 defm USHR : NeonI_ScalarShiftRightImm_D_size<0b1, 0b00000, "ushr">;
-defm : Neon_ScalarShiftImm_D_size_patterns<int_aarch64_neon_vshrdu_n, USHRddi>;
+defm : Neon_ScalarShiftRImm_D_size_patterns<int_aarch64_neon_vshrdu_n, USHRddi>;
 // Pattern to match llvm.arm.* intrinsic.
 def : Neon_ScalarShiftImm_arm_D_size_patterns<srl, USHRddi>;
 
 // Scalar Signed Rounding Shift Right (Immediate)
 defm SRSHR : NeonI_ScalarShiftRightImm_D_size<0b0, 0b00100, "srshr">;
-defm : Neon_ScalarShiftImm_D_size_patterns<int_aarch64_neon_vsrshr, SRSHRddi>;
+defm : Neon_ScalarShiftRImm_D_size_patterns<int_aarch64_neon_vsrshr, SRSHRddi>;
 
 // Scalar Unigned Rounding Shift Right (Immediate)
 defm URSHR : NeonI_ScalarShiftRightImm_D_size<0b1, 0b00100, "urshr">;
-defm : Neon_ScalarShiftImm_D_size_patterns<int_aarch64_neon_vurshr, URSHRddi>;
+defm : Neon_ScalarShiftRImm_D_size_patterns<int_aarch64_neon_vurshr, URSHRddi>;
 
 // Scalar Signed Shift Right and Accumulate (Immediate)
 def SSRA : NeonI_ScalarShiftRightImm_accum_D_size<0b0, 0b00010, "ssra">;
-def : Neon_ScalarShiftImm_accum_D_size_patterns<int_aarch64_neon_vsrads_n, SSRA>;
+def : Neon_ScalarShiftRImm_accum_D_size_patterns
+          <int_aarch64_neon_vsrads_n, SSRA>;
 
 // Scalar Unsigned Shift Right and Accumulate (Immediate)
 def USRA : NeonI_ScalarShiftRightImm_accum_D_size<0b1, 0b00010, "usra">;
-def : Neon_ScalarShiftImm_accum_D_size_patterns<int_aarch64_neon_vsradu_n, USRA>;
+def : Neon_ScalarShiftRImm_accum_D_size_patterns
+          <int_aarch64_neon_vsradu_n, USRA>;
 
 // Scalar Signed Rounding Shift Right and Accumulate (Immediate)
 def SRSRA : NeonI_ScalarShiftRightImm_accum_D_size<0b0, 0b00110, "srsra">;
-def : Neon_ScalarShiftImm_accum_D_size_patterns<int_aarch64_neon_vrsrads_n, SRSRA>;
+def : Neon_ScalarShiftRImm_accum_D_size_patterns
+          <int_aarch64_neon_vrsrads_n, SRSRA>;
 
 // Scalar Unsigned Rounding Shift Right and Accumulate (Immediate)
 def URSRA : NeonI_ScalarShiftRightImm_accum_D_size<0b1, 0b00110, "ursra">;
-def : Neon_ScalarShiftImm_accum_D_size_patterns<int_aarch64_neon_vrsradu_n, URSRA>;
+def : Neon_ScalarShiftRImm_accum_D_size_patterns
+          <int_aarch64_neon_vrsradu_n, URSRA>;
 
 // Scalar Shift Left (Immediate)
 defm SHL : NeonI_ScalarShiftLeftImm_D_size<0b0, 0b01010, "shl">;
-defm : Neon_ScalarShiftImm_D_size_patterns<int_aarch64_neon_vshld_n, SHLddi>;
+defm : Neon_ScalarShiftLImm_D_size_patterns<int_aarch64_neon_vshld_n, SHLddi>;
 // Pattern to match llvm.arm.* intrinsic.
 def : Neon_ScalarShiftImm_arm_D_size_patterns<shl, SHLddi>;
 
 // Signed Saturating Shift Left (Immediate)
 defm SQSHL : NeonI_ScalarShiftLeftImm_BHSD_size<0b0, 0b01110, "sqshl">;
-defm : Neon_ScalarShiftImm_BHSD_size_patterns<int_aarch64_neon_vqshls_n,
-                                              SQSHLbbi, SQSHLhhi,
-                                              SQSHLssi, SQSHLddi>;
+defm : Neon_ScalarShiftLImm_BHSD_size_patterns<int_aarch64_neon_vqshls_n,
+                                               SQSHLbbi, SQSHLhhi,
+                                               SQSHLssi, SQSHLddi>;
 // Pattern to match llvm.arm.* intrinsic.
-defm : Neon_ScalarShiftImm_D_size_patterns<Neon_sqrshlImm, SQSHLddi>;
+defm : Neon_ScalarShiftLImm_D_size_patterns<Neon_sqrshlImm, SQSHLddi>;
 
 // Unsigned Saturating Shift Left (Immediate)
 defm UQSHL : NeonI_ScalarShiftLeftImm_BHSD_size<0b1, 0b01110, "uqshl">;
-defm : Neon_ScalarShiftImm_BHSD_size_patterns<int_aarch64_neon_vqshlu_n,
-                                              UQSHLbbi, UQSHLhhi,
-                                              UQSHLssi, UQSHLddi>;
+defm : Neon_ScalarShiftLImm_BHSD_size_patterns<int_aarch64_neon_vqshlu_n,
+                                               UQSHLbbi, UQSHLhhi,
+                                               UQSHLssi, UQSHLddi>;
 // Pattern to match llvm.arm.* intrinsic.
-defm : Neon_ScalarShiftImm_D_size_patterns<Neon_uqrshlImm, UQSHLddi>;
+defm : Neon_ScalarShiftLImm_D_size_patterns<Neon_uqrshlImm, UQSHLddi>;
 
 // Signed Saturating Shift Left Unsigned (Immediate)
 defm SQSHLU : NeonI_ScalarShiftLeftImm_BHSD_size<0b1, 0b01100, "sqshlu">;
-defm : Neon_ScalarShiftImm_BHSD_size_patterns<int_aarch64_neon_vsqshlu,
-                                              SQSHLUbbi, SQSHLUhhi,
-                                              SQSHLUssi, SQSHLUddi>;
+defm : Neon_ScalarShiftLImm_BHSD_size_patterns<int_aarch64_neon_vsqshlu,
+                                               SQSHLUbbi, SQSHLUhhi,
+                                               SQSHLUssi, SQSHLUddi>;
 
 // Shift Right And Insert (Immediate)
 def SRI : NeonI_ScalarShiftRightImm_accum_D_size<0b1, 0b01000, "sri">;
-def : Neon_ScalarShiftImm_accum_D_size_patterns<int_aarch64_neon_vsri, SRI>;
+def : Neon_ScalarShiftRImm_accum_D_size_patterns
+          <int_aarch64_neon_vsri, SRI>;
 
 // Shift Left And Insert (Immediate)
 def SLI : NeonI_ScalarShiftLeftImm_accum_D_size<0b1, 0b01010, "sli">;
-def : Neon_ScalarShiftImm_accum_D_size_patterns<int_aarch64_neon_vsli, SLI>;
+def : Neon_ScalarShiftLImm_accum_D_size_patterns
+          <int_aarch64_neon_vsli, SLI>;
 
 // Signed Saturating Shift Right Narrow (Immediate)
 defm SQSHRN : NeonI_ScalarShiftImm_narrow_HSD_size<0b0, 0b10010, "sqshrn">;
