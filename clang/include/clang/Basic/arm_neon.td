@@ -1123,6 +1123,30 @@ def SCALAR_UCVTFS : SInst<"vcvt_f32", "ys", "SUi">;
 def SCALAR_UCVTFD : SInst<"vcvt_f64", "os", "SUl">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Scalar Floating-point Converts
+def SCALAR_FCVTXN  : IInst<"vcvtx_f32", "ys", "Sd">;
+def SCALAR_FCVTNSS : SInst<"vcvtn_s32", "$s", "Sf">;
+def SCALAR_FCVTNUS : SInst<"vcvtn_u32", "bs", "Sf">;
+def SCALAR_FCVTNSD : SInst<"vcvtn_s64", "$s", "Sd">;
+def SCALAR_FCVTNUD : SInst<"vcvtn_u64", "bs", "Sd">;
+def SCALAR_FCVTMSS : SInst<"vcvtm_s32", "$s", "Sf">;
+def SCALAR_FCVTMUS : SInst<"vcvtm_u32", "bs", "Sf">;
+def SCALAR_FCVTMSD : SInst<"vcvtm_s64", "$s", "Sd">;
+def SCALAR_FCVTMUD : SInst<"vcvtm_u64", "bs", "Sd">;
+def SCALAR_FCVTASS : SInst<"vcvta_s32", "$s", "Sf">;
+def SCALAR_FCVTAUS : SInst<"vcvta_u32", "bs", "Sf">;
+def SCALAR_FCVTASD : SInst<"vcvta_s64", "$s", "Sd">;
+def SCALAR_FCVTAUD : SInst<"vcvta_u64", "bs", "Sd">;
+def SCALAR_FCVTPSS : SInst<"vcvtp_s32", "$s", "Sf">;
+def SCALAR_FCVTPUS : SInst<"vcvtp_u32", "bs", "Sf">;
+def SCALAR_FCVTPSD : SInst<"vcvtp_s64", "$s", "Sd">;
+def SCALAR_FCVTPUD : SInst<"vcvtp_u64", "bs", "Sd">;
+def SCALAR_FCVTZSS : SInst<"vcvt_s32", "$s", "Sf">;
+def SCALAR_FCVTZUS : SInst<"vcvt_u32", "bs", "Sf">;
+def SCALAR_FCVTZSD : SInst<"vcvt_s64", "$s", "Sd">;
+def SCALAR_FCVTZUD : SInst<"vcvt_u64", "bs", "Sd">;
+
+////////////////////////////////////////////////////////////////////////////////
 // Scalar Floating-point Reciprocal Estimate
 def SCALAR_FRECPE : IInst<"vrecpe", "ss", "SfSd">;
 
