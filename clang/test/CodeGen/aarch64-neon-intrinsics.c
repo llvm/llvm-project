@@ -783,6 +783,12 @@ float32x2_t test_vbsl_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
   // CHECK: bsl {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
 }
 
+float64x1_t test_vbsl_f64(uint64x1_t v1, float64x1_t v2, float64x1_t v3) {
+  // CHECK: test_vbsl_f64
+  return vbsl_f64(v1, v2, v3);
+  // CHECK: bsl {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
+}
+
 poly8x8_t test_vbsl_p8(uint8x8_t v1, poly8x8_t v2, poly8x8_t v3) {
   // CHECK: test_vbsl_p8
   return vbsl_p8(v1, v2, v3);

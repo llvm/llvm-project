@@ -626,7 +626,7 @@ def FMLS : SInst<"vfms", "dddd", "fQfQd">;
 // Logical operations
 // With additional Qd, Ql, QPl type.
 def BSL : SInst<"vbsl", "dudd",
-                "csilUcUsUiUlfPcPsQcQsQiQlQUcQUsQUiQUlQfQPcQPsQdPlQPl">;
+                "csilUcUsUiUlfdPcPsQcQsQiQlQUcQUsQUiQUlQfQPcQPsQdPlQPl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Absolute Difference
