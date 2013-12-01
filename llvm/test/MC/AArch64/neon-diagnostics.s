@@ -7301,3 +7301,18 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        fcvtzu d0, s0
 // CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Absolute Difference
+//----------------------------------------------------------------------
+
+
+    fabd s29, d24, s20
+    fabd d29, s24, d20
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fabd s29, d24, s20
+// CHECK-ERROR:                  ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fabd d29, s24, d20
+// CHECK-ERROR:                  ^

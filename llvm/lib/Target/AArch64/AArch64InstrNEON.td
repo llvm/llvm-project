@@ -5074,6 +5074,11 @@ defm FACGT: NeonI_Scalar3Same_SD_sizes<0b1, 0b1, 0b11101, "facgt">;
 defm : Neon_Scalar3Same_cmp_SD_size_patterns<int_aarch64_neon_vcagt,
                                              FACGTsss, FACGTddd>;
 
+// Scakar Floating-point Absolute Difference
+defm FABD: NeonI_Scalar3Same_SD_sizes<0b1, 0b1, 0b11010, "fabd">;
+defm : Neon_Scalar3Same_SD_size_patterns<int_aarch64_neon_vabd,
+                                         FABDsss, FABDddd>;
+
 // Scalar Absolute Value
 defm ABS : NeonI_Scalar2SameMisc_D_size<0b0, 0b01011, "abs">;
 defm : Neon_Scalar2SameMisc_D_size_patterns<int_aarch64_neon_vabs, ABSdd>;

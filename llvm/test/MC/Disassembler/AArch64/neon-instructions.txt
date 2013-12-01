@@ -2609,3 +2609,11 @@
 # CHECK: fcvtzu d21, d14
 0xac,0xb9,0xa1,0x7e
 0xd5,0xb9,0xe1,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Absolute Difference
+#----------------------------------------------------------------------
+# CHECK: fabd s29, s24, s20
+# CHECK: fabd d29, d24, d20
+0x1d,0xd7,0xb4,0x7e
+0x1d,0xd7,0xf4,0x7e

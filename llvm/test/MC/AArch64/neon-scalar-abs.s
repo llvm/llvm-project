@@ -9,6 +9,16 @@
     abs d29, d24
 
 // CHECK: abs d29, d24    // encoding: [0x1d,0xbb,0xe0,0x5e]
+        
+//----------------------------------------------------------------------
+// Scalar Floating-point Absolute Difference
+//----------------------------------------------------------------------
+
+    fabd s29, s24, s20
+    fabd d29, d24, d20
+
+// CHECK: fabd s29, s24, s20  // encoding: [0x1d,0xd7,0xb4,0x7e]
+// CHECK: fabd d29, d24, d20  // encoding: [0x1d,0xd7,0xf4,0x7e]
 
 //----------------------------------------------------------------------
 // Scalar Signed Saturating Absolute Value
