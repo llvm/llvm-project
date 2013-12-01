@@ -178,5 +178,6 @@ namespace PR14373 {
   };
   int call() {
     exec_func(Type());
+    return 0;
   }
 }
