@@ -109,6 +109,10 @@ N: Nadav Rotem
 E: nrotem@apple.com
 D: X86 Backend, Loop Vectorizer
 
+N: Daniel Sanders
+E: daniel.sanders@imgtec.com
+D: MIPS Backend (lib/Target/Mips/*)
+
 N: Richard Sandiford
 E: rsandifo@linux.vnet.ibm.com
 D: SystemZ Backend
