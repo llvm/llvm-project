@@ -266,6 +266,11 @@ private:
     return NodeVec.size()-1;
   }
 
+  inline bool isCalleeArrow(const Expr *E) {
+    const MemberExpr *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts());
+    return ME ? ME->isArrow() : false;
+  }
+
   /// Build an SExpr from the given C++ expression.
   /// Recursive function that terminates on DeclRefExpr.
   /// Note: this function merely creates a SExpr; it does not check to
@@ -327,8 +332,7 @@ private:
       if (LockReturnedAttr* At = MD->getAttr<LockReturnedAttr>()) {
         CallingContext LRCallCtx(CMCE->getMethodDecl());
         LRCallCtx.SelfArg = CMCE->getImplicitObjectArgument();
-        LRCallCtx.SelfArrow =
-          dyn_cast<MemberExpr>(CMCE->getCallee())->isArrow();
+        LRCallCtx.SelfArrow = isCalleeArrow(CMCE->getCallee());
         LRCallCtx.NumArgs = CMCE->getNumArgs();
         LRCallCtx.FunArgs = CMCE->getArgs();
         LRCallCtx.PrevCtx = CallCtx;
@@ -338,7 +342,7 @@ private:
       // ignore any method named get().
       if (CMCE->getMethodDecl()->getNameAsString() == "get" &&
           CMCE->getNumArgs() == 0) {
-        if (NDeref && dyn_cast<MemberExpr>(CMCE->getCallee())->isArrow())
+        if (NDeref && isCalleeArrow(CMCE->getCallee()))
           ++(*NDeref);
         return buildSExpr(CMCE->getImplicitObjectArgument(), CallCtx, NDeref);
       }
@@ -496,11 +500,10 @@ private:
     } else if (const CXXMemberCallExpr *CE =
                dyn_cast<CXXMemberCallExpr>(DeclExp)) {
       CallCtx.SelfArg   = CE->getImplicitObjectArgument();
-      CallCtx.SelfArrow = dyn_cast<MemberExpr>(CE->getCallee())->isArrow();
+      CallCtx.SelfArrow = isCalleeArrow(CE->getCallee());
       CallCtx.NumArgs   = CE->getNumArgs();
       CallCtx.FunArgs   = CE->getArgs();
-    } else if (const CallExpr *CE =
-               dyn_cast<CallExpr>(DeclExp)) {
+    } else if (const CallExpr *CE = dyn_cast<CallExpr>(DeclExp)) {
       CallCtx.NumArgs = CE->getNumArgs();
       CallCtx.FunArgs = CE->getArgs();
     } else if (const CXXConstructExpr *CE =

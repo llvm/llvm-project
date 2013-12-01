@@ -4300,3 +4300,17 @@ class SmartPtr_PtGuardedBy_Test {
 
 }  // end namespace PtGuardedByTest
 
+
+namespace NonMemberCalleeICETest {
+
+class A {
+  void Run() {
+  (RunHelper)();  // expected-warning {{calling function 'RunHelper' requires exclusive lock on 'M'}}
+ }
+
+ void RunHelper() __attribute__((exclusive_locks_required(M)));
+ Mutex M;
+};
+
+}  // end namespace NonMemberCalleeICETest
+
