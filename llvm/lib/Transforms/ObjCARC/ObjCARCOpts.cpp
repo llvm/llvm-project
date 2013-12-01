@@ -432,7 +432,7 @@ namespace {
     bool Partial;
 
     /// The current position in the sequence.
-    Sequence Seq : 8;
+    unsigned char Seq : 8;
 
     /// Unidirectional information about the current sequence.
     RRInfo RRI;
@@ -498,7 +498,7 @@ namespace {
     }
 
     Sequence GetSeq() const {
-      return Seq;
+      return static_cast<Sequence>(Seq);
     }
 
     void ClearSequenceProgress() {
@@ -538,7 +538,8 @@ namespace {
 
 void
 PtrState::Merge(const PtrState &Other, bool TopDown) {
-  Seq = MergeSeqs(Seq, Other.Seq, TopDown);
+  Seq = MergeSeqs(static_cast<Sequence>(Seq), static_cast<Sequence>(Other.Seq),
+                  TopDown);
   KnownPositiveRefCount &= Other.KnownPositiveRefCount;
 
   // If we're not in a sequence (anymore), drop all associated state.
