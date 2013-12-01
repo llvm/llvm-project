@@ -113,21 +113,23 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
 
   // If MI is not a debug value, make sure Offset fits in the 16-bit immediate
   // field.
-  if (!MI.isDebugValue() && !isInt<16>(Offset)) {
-    MachineBasicBlock &MBB = *MI.getParent();
-    DebugLoc DL = II->getDebugLoc();
-    unsigned ADDu = Subtarget.isABI_N64() ? Mips::DADDu : Mips::ADDu;
-    unsigned NewImm;
-    const MipsSEInstrInfo &TII =
-      *static_cast<const MipsSEInstrInfo*>(
-        MBB.getParent()->getTarget().getInstrInfo());
-    unsigned Reg = TII.loadImmediate(Offset, MBB, II, DL, &NewImm);
-    BuildMI(MBB, II, DL, TII.get(ADDu), Reg).addReg(FrameReg)
-      .addReg(Reg, RegState::Kill);
+  if (!MI.isDebugValue()) {
+    if (!isInt<16>(Offset)) {
+      MachineBasicBlock &MBB = *MI.getParent();
+      DebugLoc DL = II->getDebugLoc();
+      unsigned ADDu = Subtarget.isABI_N64() ? Mips::DADDu : Mips::ADDu;
+      unsigned NewImm;
+      const MipsSEInstrInfo &TII =
+          *static_cast<const MipsSEInstrInfo *>(
+               MBB.getParent()->getTarget().getInstrInfo());
+      unsigned Reg = TII.loadImmediate(Offset, MBB, II, DL, &NewImm);
+      BuildMI(MBB, II, DL, TII.get(ADDu), Reg).addReg(FrameReg)
+        .addReg(Reg, RegState::Kill);
 
-    FrameReg = Reg;
-    Offset = SignExtend64<16>(NewImm);
-    IsKill = true;
+      FrameReg = Reg;
+      Offset = SignExtend64<16>(NewImm);
+      IsKill = true;
+    }
   }
 
   MI.getOperand(OpNo).ChangeToRegister(FrameReg, false, false, IsKill);
