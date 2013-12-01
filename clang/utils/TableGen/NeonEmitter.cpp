@@ -2210,10 +2210,17 @@ static unsigned GetNeonEnum(const std::string &proto, StringRef typestr) {
   return Flags.getFlags();
 }
 
+// We don't check 'a' in this function, because for builtin function the
+// argument matching to 'a' uses a vector type splatted from a scalar type.
 static bool ProtoHasScalar(const std::string proto)
 {
   return (proto.find('s') != std::string::npos
-          || proto.find('r') != std::string::npos);
+          || proto.find('z') != std::string::npos
+          || proto.find('r') != std::string::npos
+          || proto.find('b') != std::string::npos
+          || proto.find('$') != std::string::npos
+          || proto.find('y') != std::string::npos
+          || proto.find('o') != std::string::npos);
 }
 
 // Generate the definition for this intrinsic, e.g. __builtin_neon_cls(a)
@@ -2783,6 +2790,8 @@ NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
       PrintFatalError(R->getLoc(), "Builtin has no class kind");
 
     ClassKind ck = ClassMap[R->getSuperClasses()[1]];
+    if (!ProtoHasScalar(Proto))
+      ck = ClassB;
 
     // Do not include AArch64 range checks if not generating code for AArch64.
     bool isA64 = R->getValueAsBit("isA64");
@@ -2821,17 +2830,15 @@ NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
 
         rangestr += "u = " +
           utostr(RangeScalarShiftImm(Proto[immPos - 1], TypeVec[ti]));
-      } else if (!ProtoHasScalar(Proto)) {
+      } else if (R->getValueAsBit("isShift")) {
         // Builtins which are overloaded by type will need to have their upper
         // bound computed at Sema time based on the type constant.
-        ck = ClassB;
-        if (R->getValueAsBit("isShift")) {
-          shiftstr = ", true";
+        shiftstr = ", true";
 
-          // Right shifts have an 'r' in the name, left shifts do not.
-          if (name.find('r') != std::string::npos)
-            rangestr = "l = 1; ";
-        }
+        // Right shifts have an 'r' in the name, left shifts do not.
+        if (name.find('r') != std::string::npos)
+          rangestr = "l = 1; ";
+
         rangestr += "u = RFT(TV" + shiftstr + ")";
       } else {
         // The immediate generally refers to a lane in the preceding argument.
