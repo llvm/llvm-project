@@ -858,7 +858,7 @@ def MOV_N   : WOpInst<"vmov_n", "ds",
 
 ////////////////////////////////////////////////////////////////////////////////
 // Combining vectors, with additional Pl
-def COMBINE : NoTestOpInst<"vcombine", "kdd", "csilhfUcUsUiUlPcPsPl", OP_CONC>;
+def COMBINE : NoTestOpInst<"vcombine", "kdd", "csilhfdUcUsUiUlPcPsPl", OP_CONC>;
 
 ////////////////////////////////////////////////////////////////////////////////
 //Initialize a vector from bit pattern, with additional Pl
