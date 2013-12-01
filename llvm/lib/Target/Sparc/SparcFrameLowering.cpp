@@ -128,7 +128,6 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I) const {
   if (!hasReservedCallFrame(MF)) {
     MachineInstr &MI = *I;
-    DebugLoc DL = MI.getDebugLoc();
     int Size = MI.getOperand(0).getImm();
     if (MI.getOpcode() == SP::ADJCALLSTACKDOWN)
       Size = -Size;
