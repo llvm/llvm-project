@@ -25,11 +25,11 @@ define weak i32 @"\01??_B?$num_put@_WV?$back_insert_iterator@V?$basic_string@_WU
 ; ASM-NOT: .globl "@foo.bar"
 
 ; READOBJ: Symbol
-; READOBJ: Name: .text
-; READOBJ: Section: .text
+; READOBJ: Name: .text$??_B?$num_put@_WV?$back_insert_iterator@V?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@std@@51
+; READOBJ: Section: .text$??_B?$num_put@_WV?$back_insert_iterator@V?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@std@@51
 ; READOBJ: Symbol
 ; READOBJ: Name: ??_B?$num_put@_WV?$back_insert_iterator@V?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@std@@51
-; READOBJ: Section: .text
+; READOBJ: Section: .text$??_B?$num_put@_WV?$back_insert_iterator@V?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@std@@51
 ; READOBJ: Symbol
 ; READOBJ: Name: ??__E_Generic_object@?$_Error_objects@H@std@@YAXXZ
 ; READOBJ: Symbol
