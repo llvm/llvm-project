@@ -2510,3 +2510,102 @@
 # CHECK: tbx v0.16b, {v1.16b, v2.16b, v3.16b}, v2.16b
 # CHECK: tbx v16.16b, {v31.16b, v0.16b, v1.16b, v2.16b}, v2.16b
 
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Lower Precision Narrow, Rounding To
+# Odd
+#----------------------------------------------------------------------
+# CHECK: fcvtxn s22, d13
+0xb6,0x69,0x61,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding To Nearest
+# With Ties To Away
+#----------------------------------------------------------------------
+# CHECK: fcvtas s12, s13
+# CHECK: fcvtas d21, d14
+
+0xac,0xc9,0x21,0x5e
+0xd5,0xc9,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding To
+# Nearest With Ties To Away
+#----------------------------------------------------------------------
+# CHECK: fcvtau s12, s13
+# CHECK: fcvtau d21, d14
+0xac,0xc9,0x21,0x7e
+0xd5,0xc9,0x61,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding Toward
+# Minus Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtms s22, s13
+# CHECK: fcvtms d21, d14
+0xb6,0xb9,0x21,0x5e
+0xd5,0xb9,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
+# Minus Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtmu s12, s13
+# CHECK: fcvtmu d21, d14
+0xac,0xb9,0x21,0x7e
+0xd5,0xb9,0x61,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding To Nearest
+# With Ties To Even
+#----------------------------------------------------------------------
+
+# CHECK: fcvtns s22, s13
+# CHECK: fcvtns d21, d14
+
+0xb6,0xa9,0x21,0x5e
+0xd5,0xa9,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding To
+# Nearest With Ties To Even
+#----------------------------------------------------------------------
+
+# CHECK: fcvtnu s12, s13
+# CHECK: fcvtnu d21, d14
+0xac,0xa9,0x21,0x7e
+0xd5,0xa9,0x61,0x7e
+        
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding Toward
+# Positive Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtps s22, s13
+# CHECK: fcvtps d21, d14
+0xb6,0xa9,0xa1,0x5e
+0xd5,0xa9,0xe1,0x5e
+        
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
+# Positive Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtpu s12, s13
+# CHECK: fcvtpu d21, d14
+0xac,0xa9,0xa1,0x7e
+0xd5,0xa9,0xe1,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding Toward Zero
+#----------------------------------------------------------------------
+# CHECK: fcvtzs s12, s13
+# CHECK: fcvtzs d21, d14
+0xac,0xb9,0xa1,0x5e
+0xd5,0xb9,0xe1,0x5e
+        
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward 
+# Zero
+#----------------------------------------------------------------------
+# CHECK: fcvtzu s12, s13
+# CHECK: fcvtzu d21, d14
+0xac,0xb9,0xa1,0x7e
+0xd5,0xb9,0xe1,0x7e

@@ -7141,3 +7141,163 @@
 // CHECK-ERROR: error: invalid number of vectors
 // CHECK-ERROR:        tbx v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
 // CHECK-ERROR:                                                    ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Lower Precision Narrow, Rounding To
+// Odd
+//----------------------------------------------------------------------
+
+    fcvtxn s0, s1
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtxn s0, s1
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Signed Integer, Rounding To Nearest
+// With Ties To Away
+//----------------------------------------------------------------------
+
+    fcvtas s0, d0
+    fcvtas d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtas s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtas d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Unsigned Integer, Rounding To
+// Nearest With Ties To Away
+//----------------------------------------------------------------------
+
+    fcvtau s0, d0
+    fcvtau d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtau s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtau d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Signed Integer, Rounding Toward
+// Minus Infinity
+//----------------------------------------------------------------------
+
+    fcvtms s0, d0
+    fcvtms d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtms s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtms d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
+// Minus Infinity
+//----------------------------------------------------------------------
+
+    fcvtmu s0, d0
+    fcvtmu d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtmu s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtmu d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Signed Integer, Rounding To Nearest
+// With Ties To Even
+//----------------------------------------------------------------------
+
+    fcvtns s0, d0
+    fcvtns d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtns s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtns d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Unsigned Integer, Rounding To
+// Nearest With Ties To Even
+//----------------------------------------------------------------------
+
+    fcvtnu s0, d0
+    fcvtnu d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtnu s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtnu d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Signed Integer, Rounding Toward
+// Positive Infinity
+//----------------------------------------------------------------------
+
+    fcvtps s0, d0
+    fcvtps d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtps s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtps d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
+// Positive Infinity
+//----------------------------------------------------------------------
+
+    fcvtpu s0, d0
+    fcvtpu d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtpu s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtpu d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Signed Integer, Rounding Toward Zero
+//----------------------------------------------------------------------
+
+    fcvtzs s0, d0
+    fcvtzs d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtzs s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtzs d0, s0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Floating-point Convert To Unsigned Integer, Rounding Toward 
+// Zero
+//----------------------------------------------------------------------
+
+    fcvtzu s0, d0
+    fcvtzu d0, s0
+
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtzu s0, d0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        fcvtzu d0, s0
+// CHECK-ERROR:                   ^

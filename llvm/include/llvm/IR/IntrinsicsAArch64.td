@@ -54,6 +54,10 @@ def int_aarch64_neon_fcvtas :
   Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
 def int_aarch64_neon_fcvtau :
   Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
+def int_aarch64_neon_fcvtzs :
+  Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
+def int_aarch64_neon_fcvtzu :
+  Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
 
 // Vector maxNum (Floating Point)
 def int_aarch64_neon_vmaxnm : Neon_2Arg_Intrinsic;
