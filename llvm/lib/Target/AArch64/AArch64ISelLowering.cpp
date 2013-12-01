@@ -4231,6 +4231,23 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         return DAG.getNode(AArch64ISD::NEON_VDUP, dl, VT,
                            V1.getOperand(Lane));
     }
+
+    // Test if V1 is a EXTRACT_SUBVECTOR.
+    if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+      int ExtLane = cast<ConstantSDNode>(V1.getOperand(1))->getZExtValue();
+      return DAG.getNode(AArch64ISD::NEON_VDUPLANE, dl, VT, V1.getOperand(0),
+                         DAG.getConstant(Lane + ExtLane, MVT::i64));
+    }
+    // Test if V1 is a CONCAT_VECTORS.
+    if (V1.getOpcode() == ISD::CONCAT_VECTORS) {
+      if (V1.getOperand(1).getOpcode() == ISD::UNDEF) {
+        int V1EltNum = V1.getOperand(0).getValueType().getVectorNumElements();
+        assert((Lane < V1EltNum) && "Invalid vector lane access");
+        return DAG.getNode(AArch64ISD::NEON_VDUPLANE, dl, VT, V1.getOperand(0),
+                           DAG.getConstant(Lane, MVT::i64));
+      }
+    }
+
     return DAG.getNode(AArch64ISD::NEON_VDUPLANE, dl, VT, V1,
                        DAG.getConstant(Lane, MVT::i64));
   }
