@@ -39,8 +39,6 @@ def NormalVar : SubsetSubject<Var, "non-register, non-parameter variable",
                                 S->getKind() != Decl::ImplicitParam &&
                                 S->getKind() != Decl::ParmVar &&
                                 S->getKind() != Decl::NonTypeTemplateParm}]>;
-def CXXVirtualMethod : SubsetSubject<CXXRecord, "virtual member function",
-                                     [{S->isVirtual()}]>;
 def NonBitField : SubsetSubject<Field, "non-bit field",
                                 [{!S->isBitField()}]>;
 
