@@ -367,6 +367,11 @@ bool InclusionRewriter::Process(FileID FileId,
   unsigned NextToWrite = 0;
   int Line = 1; // The current input file line number.
 
+  // Ignore UTF-8 BOM, otherwise it'd end up somewhere else than the start
+  // of the resulting file.
+  if (FromFile.getBuffer().startswith("\xEF\xBB\xBF"))
+    NextToWrite = 3;
+
   Token RawToken;
   RawLex.LexFromRawLexer(RawToken);
 
