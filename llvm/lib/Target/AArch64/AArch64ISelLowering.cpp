@@ -4239,13 +4239,13 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                          DAG.getConstant(Lane + ExtLane, MVT::i64));
     }
     // Test if V1 is a CONCAT_VECTORS.
-    if (V1.getOpcode() == ISD::CONCAT_VECTORS) {
-      if (V1.getOperand(1).getOpcode() == ISD::UNDEF) {
-        assert((Lane < V1.getOperand(0).getValueType().getVectorNumElements())
-               && "Invalid vector lane access");
-        return DAG.getNode(AArch64ISD::NEON_VDUPLANE, dl, VT, V1.getOperand(0),
-                           DAG.getConstant(Lane, MVT::i64));
-      }
+    if (V1.getOpcode() == ISD::CONCAT_VECTORS &&
+        V1.getOperand(1).getOpcode() == ISD::UNDEF) {
+      SDValue Op0 = V1.getOperand(0);
+      assert((unsigned)Lane < Op0.getValueType().getVectorNumElements() &&
+             "Invalid vector lane access");
+      return DAG.getNode(AArch64ISD::NEON_VDUPLANE, dl, VT, Op0,
+                         DAG.getConstant(Lane, MVT::i64));
     }
 
     return DAG.getNode(AArch64ISD::NEON_VDUPLANE, dl, VT, V1,
