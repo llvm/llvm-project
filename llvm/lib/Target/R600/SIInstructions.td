@@ -489,14 +489,17 @@ def TBUFFER_STORE_FORMAT_XYZW : MTBUF_Store_Helper <0x00000007, "TBUFFER_STORE_F
 
 let mayLoad = 1 in {
 
-defm S_LOAD_DWORD : SMRD_Helper <0x00, "S_LOAD_DWORD", SReg_64, SReg_32>;
+// We are using the SGPR_32 and not the SReg_32 register class for 32-bit
+// SMRD instructions, because the SGPR_32 register class does not include M0
+// and writing to M0 from an SMRD instruction will hang the GPU.
+defm S_LOAD_DWORD : SMRD_Helper <0x00, "S_LOAD_DWORD", SReg_64, SGPR_32>;
 defm S_LOAD_DWORDX2 : SMRD_Helper <0x01, "S_LOAD_DWORDX2", SReg_64, SReg_64>;
 defm S_LOAD_DWORDX4 : SMRD_Helper <0x02, "S_LOAD_DWORDX4", SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8 : SMRD_Helper <0x03, "S_LOAD_DWORDX8", SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SMRD_Helper <0x04, "S_LOAD_DWORDX16", SReg_64, SReg_512>;
 
 defm S_BUFFER_LOAD_DWORD : SMRD_Helper <
-  0x08, "S_BUFFER_LOAD_DWORD", SReg_128, SReg_32
+  0x08, "S_BUFFER_LOAD_DWORD", SReg_128, SGPR_32
 >;
 
 defm S_BUFFER_LOAD_DWORDX2 : SMRD_Helper <
