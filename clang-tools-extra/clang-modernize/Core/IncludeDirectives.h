@@ -114,7 +114,7 @@ private:
   /// NewLineFlags).
   ///
   /// Source files often contain a file header (copyright, license, explanation
-  /// of the file content). An \#include should preferrably be put after this.
+  /// of the file content). An \#include should preferably be put after this.
   std::pair<unsigned, unsigned>
   findFileHeaderEndOffset(clang::FileID FID) const;
 

@@ -24,7 +24,7 @@
 /// provided by the user through command line options.
 class IncludeExcludeInfo {
 public:
-  /// \brief Read and parse a comma-seperated lists of paths from
+  /// \brief Read and parse a comma-separated lists of paths from
   /// \a IncludeString and \a ExcludeString.
   ///
   /// Returns error_code::success() on successful parse of the strings or

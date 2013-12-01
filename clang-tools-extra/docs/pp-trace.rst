@@ -42,7 +42,7 @@ Command Line Options
 
 .. option:: -ignore <callback-name-list>
 
-  This option specifies a comma-seperated list of names of callbacks
+  This option specifies a comma-separated list of names of callbacks
   that shouldn't be traced.  It can be used to eliminate unwanted
   trace output.  The callback names are the name of the actual
   callback function names in the PPCallbacks class:

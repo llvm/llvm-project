@@ -13,7 +13,7 @@
 // This test uses a compilation database
 // RUN: sed -e 's#$(path)#%/T/CompilationNotInc#g' %S/Inputs/compile_commands.json > %T/CompilationNotInc/compile_commands.json
 
-// Check that no files are tranformed when -p is specified but not -include.
+// Check that no files are transformed when -p is specified but not -include.
 // RUN: cp %S/Inputs/compilations.cpp %T/CompilationNotInc/a1
 // RUN: cp %S/Inputs/compilations.cpp %T/CompilationNotInc/a2
 // RUN: cp %S/Inputs/compilations.cpp %T/CompilationNotInc/a3

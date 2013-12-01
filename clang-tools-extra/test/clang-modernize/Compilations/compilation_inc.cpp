@@ -13,7 +13,7 @@
 // This test uses a compilation database
 // RUN: sed -e 's#$(path)#%/T/CompilationInc#g' %S/Inputs/compile_commands.json > %T/CompilationInc/compile_commands.json
 
-// Check that files are tranformed when -p and -include are specified.
+// Check that files are transformed when -p and -include are specified.
 // RUN: cp %S/Inputs/compilations.cpp %T/CompilationInc/a1
 // RUN: cp %S/Inputs/compilations.cpp %T/CompilationInc/a2
 // RUN: cp %S/Inputs/compilations.cpp %T/CompilationInc/a3

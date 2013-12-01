@@ -187,8 +187,8 @@ public:
 
 private:
   std::string Name;
-  /// GeneratedDecls keeps track of ForStmts which have been tranformed, mapping
-  /// each modified ForStmt to the variable generated in the loop.
+  /// GeneratedDecls keeps track of ForStmts which have been transformed,
+  /// mapping each modified ForStmt to the variable generated in the loop.
   const StmtGeneratedVarNameMap *GeneratedDecls;
   bool Found;
 

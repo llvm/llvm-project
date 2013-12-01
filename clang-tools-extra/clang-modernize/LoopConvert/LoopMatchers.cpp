@@ -54,7 +54,7 @@ static const StatementMatcher IncrementVarMatcher =
 /// \code
 ///   for (int i = 0; j < 3 + 2; ++k) { ... }
 /// \endcode
-/// The following string identifers are bound to the parts of the AST:
+/// The following string identifiers are bound to these parts of the AST:
 ///   ConditionVarName: 'j' (as a VarDecl)
 ///   ConditionBoundName: '3 + 2' (as an Expr)
 ///   InitVarName: 'i' (as a VarDecl)
@@ -262,7 +262,7 @@ StatementMatcher makePseudoArrayLoopMatcher() {
   // Test that the incoming type has a record declaration that has methods
   // called 'begin' and 'end'. If the incoming type is const, then make sure
   // these methods are also marked const.
-  // 
+  //
   // FIXME: To be completely thorough this matcher should also ensure the
   // return type of begin/end is an iterator that dereferences to the same as
   // what operator[] or at() returns. Such a test isn't likely to fail except

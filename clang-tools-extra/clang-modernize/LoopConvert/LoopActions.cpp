@@ -1113,8 +1113,8 @@ void LoopFixer::run(const MatchFinder::MatchResult &Result) {
           DerefByConstRef = InitPointeeType.isConstQualified();
       }
     } else {
-      // If the de-referece operator return by value then test for the canonical
-      // const qualification of the init variable type.
+      // If the dereference operator returns by value then test for the
+      // canonical const qualification of the init variable type.
       DerefByConstRef = CanonicalInitVarType.isConstQualified();
     }
   } else if (FixerKind == LFK_PseudoArray) {

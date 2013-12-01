@@ -83,7 +83,7 @@ private:
 /// FIXME: Note that this inherits from \c AnalysisAction as this is the only
 /// way we can currently get to AnalysisAction::CreateASTConsumer. Ideally
 /// we'd want to build a more generic way to use \c FrontendAction based
-/// checkers in clang-tidy, but that needs some preperation work first.
+/// checkers in clang-tidy, but that needs some preparation work first.
 class ClangTidyAction : public ento::AnalysisAction {
 public:
   ClangTidyAction(StringRef CheckRegexString,

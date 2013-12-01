@@ -116,7 +116,7 @@ cl::opt<std::string> SupportedCompilers(
     "for-compilers", cl::value_desc("string"),
     cl::desc("Select transforms targeting the intersection of\n"
              "language features supported by the given compilers.\n"
-             "Takes a comma-seperated list of <compiler>-<version>.\n"
+             "Takes a comma-separated list of <compiler>-<version>.\n"
              "\t<compiler> can be any of: clang, gcc, icc, msvc\n"
              "\t<version> is <major>[.<minor>]\n"),
     cl::cat(GeneralCategory));
@@ -149,12 +149,12 @@ static cl::opt<std::string> FormatStyleConfig(
 /// Include/Exclude Options
 static cl::opt<std::string>
 IncludePaths("include",
-             cl::desc("Comma seperated list of paths to consider to be "
+             cl::desc("Comma-separated list of paths to consider to be "
                       "transformed"),
              cl::cat(IncludeExcludeCategory));
 
 static cl::opt<std::string>
-ExcludePaths("exclude", cl::desc("Comma seperated list of paths that can not "
+ExcludePaths("exclude", cl::desc("Comma-separated list of paths that can not "
                                  "be transformed"),
              cl::cat(IncludeExcludeCategory));
 
@@ -167,7 +167,7 @@ IncludeFromFile("include-from", cl::value_desc("filename"),
 static cl::opt<std::string>
 ExcludeFromFile("exclude-from", cl::value_desc("filename"),
                 cl::desc("File containing a list of paths that can not be "
-                         "transforms"),
+                         "transformed"),
                 cl::cat(IncludeExcludeCategory));
 
 ////////////////////////////////////////////////////////////////////////////////
