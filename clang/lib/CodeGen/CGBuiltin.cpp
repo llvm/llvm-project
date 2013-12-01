@@ -3669,7 +3669,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return usgn ? Builder.CreateUIToFP(Ops[0], Ty, "vcvt")
                 : Builder.CreateSIToFP(Ops[0], Ty, "vcvt");
   }
-    return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vqmovun_v, E);
   case AArch64::BI__builtin_neon_vrndn_v:
   case AArch64::BI__builtin_neon_vrndnq_v: {
     Int = Intrinsic::aarch64_neon_frintn;

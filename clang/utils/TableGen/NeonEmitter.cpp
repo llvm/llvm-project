@@ -2828,8 +2828,12 @@ NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
             name.find("cvt") != std::string::npos)
           rangestr = "l = 1; ";
 
-        rangestr += "u = " +
-          utostr(RangeScalarShiftImm(Proto[immPos - 1], TypeVec[ti]));
+        unsigned upBound = RangeScalarShiftImm(Proto[immPos - 1], TypeVec[ti]);
+        // Narrow shift has half the upper bound
+        if (R->getValueAsBit("isScalarNarrowShift"))
+          upBound /= 2;
+
+        rangestr += "u = " + utostr(upBound);
       } else if (R->getValueAsBit("isShift")) {
         // Builtins which are overloaded by type will need to have their upper
         // bound computed at Sema time based on the type constant.

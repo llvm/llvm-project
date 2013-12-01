@@ -133,6 +133,7 @@ class Inst <string n, string p, string t, Op o> {
   Op Operand = o;
   bit isShift = 0;
   bit isScalarShift = 0;
+  bit isScalarNarrowShift = 0;
   bit isVCVT_N = 0;
   bit isA64 = 0;
   bit isCrypto = 0;
@@ -1055,14 +1056,16 @@ def SCALAR_SRI_N: SInst<"vsri_n", "sssi", "SlSUl">;
 // Shift Left And Insert (Immediate)
 def SCALAR_SLI_N: SInst<"vsli_n", "sssi", "SlSUl">;
 
-// Signed/Unsigned Saturating Shift Right Narrow (Immediate)
-def SCALAR_SQSHRN_N: SInst<"vqshrn_n", "zsi", "SsSiSlSUsSUiSUl">;
-// Signed/Unsigned Saturating Rounded Shift Right Narrow (Immediate)
-def SCALAR_SQRSHRN_N: SInst<"vqrshrn_n", "zsi", "SsSiSlSUsSUiSUl">;
-// Signed Saturating Shift Right Unsigned Narrow (Immediate)
-def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "zsi", "SsSiSl">;
-// Signed Saturating Rounded Shift Right Unsigned Narrow (Immediate)
-def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "zsi", "SsSiSl">;
+let isScalarNarrowShift = 1 in {
+  // Signed/Unsigned Saturating Shift Right Narrow (Immediate)
+  def SCALAR_SQSHRN_N: SInst<"vqshrn_n", "zsi", "SsSiSlSUsSUiSUl">;
+  // Signed/Unsigned Saturating Rounded Shift Right Narrow (Immediate)
+  def SCALAR_SQRSHRN_N: SInst<"vqrshrn_n", "zsi", "SsSiSlSUsSUiSUl">;
+  // Signed Saturating Shift Right Unsigned Narrow (Immediate)
+  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "zsi", "SsSiSl">;
+  // Signed Saturating Rounded Shift Right Unsigned Narrow (Immediate)
+  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "zsi", "SsSiSl">;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Signed/Unsigned Fixed-point Convert To Floating-Point (Immediate)
