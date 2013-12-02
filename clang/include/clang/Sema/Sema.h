@@ -5776,6 +5776,8 @@ public:
   // C++ Template Argument Deduction (C++ [temp.deduct])
   //===--------------------------------------------------------------------===//
 
+  QualType adjustCCAndNoReturn(QualType ArgFunctionType, QualType FunctionType);
+
   /// \brief Describes the result of template argument deduction.
   ///
   /// The TemplateDeductionResult enumeration describes the result of
