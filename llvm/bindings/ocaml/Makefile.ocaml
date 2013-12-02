@@ -98,7 +98,7 @@ endif
 ifdef OCAMLSTUBS
 Archive.CMXA := $(strip $(OCAMLOPT) -a $(patsubst %,-cclib %, \
                                     $(LLVMLibsOptions) -l$(LIBRARYNAME) \
-                                    -L$(SharedLibDir) $(OCAMLRPATH))
+                                    -L$(SharedLibDir) $(OCAMLRPATH)) \
                                     $(OCAMLDEBUGFLAG) -o)
 else
 Archive.CMXA := $(strip $(OCAMLOPT) -a $(OCAMLAFLAGS) $(OCAMLDEBUGFLAG) -o)
