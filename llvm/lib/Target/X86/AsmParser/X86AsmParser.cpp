@@ -495,17 +495,17 @@ private:
   X86Operand *ParseATTOperand();
   X86Operand *ParseIntelOperand();
   X86Operand *ParseIntelOffsetOfOperator();
-  X86Operand *ParseIntelDotOperator(const MCExpr *Disp, const MCExpr *&NewDisp);
+  bool ParseIntelDotOperator(const MCExpr *Disp, const MCExpr *&NewDisp);
   X86Operand *ParseIntelOperator(unsigned OpKind);
   X86Operand *ParseIntelSegmentOverride(unsigned SegReg, SMLoc Start, unsigned Size);
   X86Operand *ParseIntelMemOperand(int64_t ImmDisp, SMLoc StartLoc,
                                    unsigned Size);
-  X86Operand *ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
+  bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
   X86Operand *ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
                                        int64_t ImmDisp, unsigned Size);
-  X86Operand *ParseIntelIdentifier(const MCExpr *&Val, StringRef &Identifier,
-                                   InlineAsmIdentifierInfo &Info,
-                                   bool IsUnevaluatedOperand, SMLoc &End);
+  bool ParseIntelIdentifier(const MCExpr *&Val, StringRef &Identifier,
+                            InlineAsmIdentifierInfo &Info,
+                            bool IsUnevaluatedOperand, SMLoc &End);
 
   X86Operand *ParseMemOperand(unsigned SegReg, SMLoc StartLoc);
 
@@ -1269,8 +1269,7 @@ RewriteIntelBracExpression(SmallVectorImpl<AsmRewrite> *AsmRewrites,
   }
 }
 
-X86Operand *
-X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
+bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   const AsmToken &Tok = Parser.getTok();
 
   bool Done = false;
@@ -1292,7 +1291,7 @@ X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         Done = true;
         break;
       }
-      return ErrorOperand(Tok.getLoc(), "Unexpected token!");
+      return Error(Tok.getLoc(), "unknown token in expression");
     }
     case AsmToken::EndOfStatement: {
       Done = true;
@@ -1311,18 +1310,18 @@ X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       } else {
         if (!isParsingInlineAsm()) {
           if (getParser().parsePrimaryExpr(Val, End))
-            return ErrorOperand(Tok.getLoc(), "Unexpected identifier!");
+            return Error(Tok.getLoc(), "Unexpected identifier!");
         } else {
           InlineAsmIdentifierInfo &Info = SM.getIdentifierInfo();
-          if (X86Operand *Err = ParseIntelIdentifier(Val, Identifier, Info,
-                                                     /*Unevaluated*/ false, End))
-            return Err;
+          if (ParseIntelIdentifier(Val, Identifier, Info,
+                                   /*Unevaluated=*/false, End))
+            return true;
         }
         SM.onIdentifierExpr(Val, Identifier);
         UpdateLocLex = false;
         break;
       }
-      return ErrorOperand(Tok.getLoc(), "Unexpected identifier!");
+      return Error(Tok.getLoc(), "Unexpected identifier!");
     }
     case AsmToken::Integer:
       if (isParsingInlineAsm() && SM.getAddImmPrefix())
@@ -1340,14 +1339,14 @@ X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
     case AsmToken::RParen:  SM.onRParen(); break;
     }
     if (SM.hadError())
-      return ErrorOperand(Tok.getLoc(), "Unexpected token!");
+      return Error(Tok.getLoc(), "unknown token in expression");
 
     if (!Done && UpdateLocLex) {
       End = Tok.getLoc();
       Parser.Lex(); // Consume the token.
     }
   }
-  return 0;
+  return false;
 }
 
 X86Operand *X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
@@ -1364,8 +1363,8 @@ X86Operand *X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
   // may have already parsed an immediate displacement before the bracketed
   // expression.
   IntelExprStateMachine SM(ImmDisp, /*StopOnLBrac=*/false, /*AddImmPrefix=*/true);
-  if (X86Operand *Err = ParseIntelExpression(SM, End))
-    return Err;
+  if (ParseIntelExpression(SM, End))
+    return 0;
 
   const MCExpr *Disp;
   if (const MCExpr *Sym = SM.getSym()) {
@@ -1383,8 +1382,8 @@ X86Operand *X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
   // Parse the dot operator (e.g., [ebx].foo.bar).
   if (Tok.getString().startswith(".")) {
     const MCExpr *NewDisp;
-    if (X86Operand *Err = ParseIntelDotOperator(Disp, NewDisp))
-      return Err;
+    if (ParseIntelDotOperator(Disp, NewDisp))
+      return 0;
     
     End = Tok.getEndLoc();
     Parser.Lex();  // Eat the field.
@@ -1412,11 +1411,10 @@ X86Operand *X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
 }
 
 // Inline assembly may use variable names with namespace alias qualifiers.
-X86Operand *X86AsmParser::ParseIntelIdentifier(const MCExpr *&Val,
-                                               StringRef &Identifier,
-                                               InlineAsmIdentifierInfo &Info,
-                                               bool IsUnevaluatedOperand,
-                                               SMLoc &End) {
+bool X86AsmParser::ParseIntelIdentifier(const MCExpr *&Val,
+                                        StringRef &Identifier,
+                                        InlineAsmIdentifierInfo &Info,
+                                        bool IsUnevaluatedOperand, SMLoc &End) {
   assert (isParsingInlineAsm() && "Expected to be parsing inline assembly.");
   Val = 0;
 
@@ -1441,7 +1439,7 @@ X86Operand *X86AsmParser::ParseIntelIdentifier(const MCExpr *&Val,
   MCSymbol *Sym = getContext().GetOrCreateSymbol(Identifier);
   MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
   Val = MCSymbolRefExpr::Create(Sym, Variant, getParser().getContext());
-  return 0;
+  return false;
 }
 
 /// \brief Parse intel style segment override.
@@ -1481,16 +1479,16 @@ X86Operand *X86AsmParser::ParseIntelSegmentOverride(unsigned SegReg,
   SMLoc End;
   if (!isParsingInlineAsm()) {
     if (getParser().parsePrimaryExpr(Val, End))
-      return ErrorOperand(Tok.getLoc(), "Unexpected token!");
+      return ErrorOperand(Tok.getLoc(), "unknown token in expression");
 
     return X86Operand::CreateMem(Val, Start, End, Size);
   }
 
   InlineAsmIdentifierInfo Info;
   StringRef Identifier = Tok.getString();
-  if (X86Operand *Err = ParseIntelIdentifier(Val, Identifier, Info,
-                                             /*Unevaluated*/ false, End))
-    return Err;
+  if (ParseIntelIdentifier(Val, Identifier, Info,
+                           /*Unevaluated=*/false, End))
+    return 0;
   return CreateMemForInlineAsm(/*SegReg=*/0, Val, /*BaseReg=*/0,/*IndexReg=*/0,
                                /*Scale=*/1, Start, End, Size, Identifier, Info);
 }
@@ -1508,22 +1506,22 @@ X86Operand *X86AsmParser::ParseIntelMemOperand(int64_t ImmDisp, SMLoc Start,
   const MCExpr *Val;
   if (!isParsingInlineAsm()) {
     if (getParser().parsePrimaryExpr(Val, End))
-      return ErrorOperand(Tok.getLoc(), "Unexpected token!");
+      return ErrorOperand(Tok.getLoc(), "unknown token in expression");
 
     return X86Operand::CreateMem(Val, Start, End, Size);
   }
 
   InlineAsmIdentifierInfo Info;
   StringRef Identifier = Tok.getString();
-  if (X86Operand *Err = ParseIntelIdentifier(Val, Identifier, Info,
-                                             /*Unevaluated*/ false, End))
-    return Err;
+  if (ParseIntelIdentifier(Val, Identifier, Info,
+                           /*Unevaluated=*/false, End))
+    return 0;
   return CreateMemForInlineAsm(/*SegReg=*/0, Val, /*BaseReg=*/0, /*IndexReg=*/0,
                                /*Scale=*/1, Start, End, Size, Identifier, Info);
 }
 
 /// Parse the '.' operator.
-X86Operand *X86AsmParser::ParseIntelDotOperator(const MCExpr *Disp,
+bool X86AsmParser::ParseIntelDotOperator(const MCExpr *Disp,
                                                 const MCExpr *&NewDisp) {
   const AsmToken &Tok = Parser.getTok();
   int64_t OrigDispVal, DotDispVal;
@@ -1532,7 +1530,7 @@ X86Operand *X86AsmParser::ParseIntelDotOperator(const MCExpr *Disp,
   if (const MCConstantExpr *OrigDisp = dyn_cast<MCConstantExpr>(Disp))
     OrigDispVal = OrigDisp->getValue();
   else
-    return ErrorOperand(Tok.getLoc(), "Non-constant offsets are not supported!");
+    return Error(Tok.getLoc(), "Non-constant offsets are not supported!");
 
   // Drop the '.'.
   StringRef DotDispStr = Tok.getString().drop_front(1);
@@ -1547,10 +1545,10 @@ X86Operand *X86AsmParser::ParseIntelDotOperator(const MCExpr *Disp,
     std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     if (SemaCallback->LookupInlineAsmField(BaseMember.first, BaseMember.second,
                                            DotDisp))
-      return ErrorOperand(Tok.getLoc(), "Unable to lookup field reference!");
+      return Error(Tok.getLoc(), "Unable to lookup field reference!");
     DotDispVal = DotDisp;
   } else
-    return ErrorOperand(Tok.getLoc(), "Unexpected token type!");
+    return Error(Tok.getLoc(), "Unexpected token type!");
 
   if (isParsingInlineAsm() && Tok.is(AsmToken::Identifier)) {
     SMLoc Loc = SMLoc::getFromPointer(DotDispStr.data());
@@ -1561,7 +1559,7 @@ X86Operand *X86AsmParser::ParseIntelDotOperator(const MCExpr *Disp,
   }
 
   NewDisp = MCConstantExpr::Create(OrigDispVal + DotDispVal, getContext());
-  return 0;
+  return false;
 }
 
 /// Parse the 'offset' operator.  This operator is used to specify the
@@ -1575,9 +1573,9 @@ X86Operand *X86AsmParser::ParseIntelOffsetOfOperator() {
   InlineAsmIdentifierInfo Info;
   SMLoc Start = Tok.getLoc(), End;
   StringRef Identifier = Tok.getString();
-  if (X86Operand *Err = ParseIntelIdentifier(Val, Identifier, Info,
-                                             /*Unevaluated*/ false, End))
-    return Err;
+  if (ParseIntelIdentifier(Val, Identifier, Info,
+                           /*Unevaluated=*/false, End))
+    return 0;
 
   // Don't emit the offset operator.
   InstInfo->AsmRewrites->push_back(AsmRewrite(AOK_Skip, OffsetOfLoc, 7));
@@ -1611,9 +1609,12 @@ X86Operand *X86AsmParser::ParseIntelOperator(unsigned OpKind) {
   InlineAsmIdentifierInfo Info;
   SMLoc Start = Tok.getLoc(), End;
   StringRef Identifier = Tok.getString();
-  if (X86Operand *Err = ParseIntelIdentifier(Val, Identifier, Info,
-                                             /*Unevaluated*/ true, End))
-    return Err;
+  if (ParseIntelIdentifier(Val, Identifier, Info,
+                           /*Unevaluated=*/true, End))
+    return 0;
+
+  if (!Info.OpDecl)
+    return ErrorOperand(Start, "unable to lookup expression");
 
   unsigned CVal = 0;
   switch(OpKind) {
@@ -1664,8 +1665,8 @@ X86Operand *X86AsmParser::ParseIntelOperand() {
     AsmToken StartTok = Tok;
     IntelExprStateMachine SM(/*Imm=*/0, /*StopOnLBrac=*/true,
                              /*AddImmPrefix=*/false);
-    if (X86Operand *Err = ParseIntelExpression(SM, End))
-      return Err;
+    if (ParseIntelExpression(SM, End))
+      return 0;
 
     int64_t Imm = SM.getImm();
     if (isParsingInlineAsm()) {
