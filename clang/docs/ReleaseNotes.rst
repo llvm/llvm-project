@@ -142,6 +142,15 @@ The static analyzer (which contains additional code checking beyond compiler
 warnings) has improved significantly in both in the core analysis engine and 
 also in the kinds of issues it can find.
 
+Windows Support
+---------------
+
+- `clang-cl <UsersManual.html#clang-cl>` provides a new driver mode that is
+  designed for compatibility with Visual Studio's compiler, cl.exe. This driver
+  mode makes Clang accept the same kind of command-line options as cl.exe.
+  Please note that this mode is still experimental.
+
+
 Core Analysis Improvements
 ==========================
 
