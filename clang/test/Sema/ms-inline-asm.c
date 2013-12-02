@@ -1,4 +1,4 @@
-// REQUIRES: disabled
+// REQUIRES: x86-64-registered-target
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fasm-blocks -Wno-microsoft -verify -fsyntax-only
 
 void t1(void) { 
@@ -13,22 +13,22 @@ void f() {
   }
   f();
   __asm {
-    mov eax, 1+=2 // expected-error 2 {{unknown token in expression}}
+    mov eax, 1+=2 // expected-error {{unknown token in expression}}
   }
   f();
   __asm {
-    mov eax, 1+++ // expected-error 2 {{unknown token in expression}}
+    mov eax, 1+++ // expected-error {{unknown token in expression}}
   }
   f();
   __asm {
-    mov eax, LENGTH bar // expected-error {{Unable to lookup expr!}}
+    mov eax, LENGTH bar // expected-error {{unable to lookup expression}}
   }
   f();
   __asm {
-    mov eax, SIZE bar // expected-error {{Unable to lookup expr!}}
+    mov eax, SIZE bar // expected-error {{unable to lookup expression}}
   }
   f();
   __asm {
-    mov eax, TYPE bar // expected-error {{Unable to lookup expr!}}
+    mov eax, TYPE bar // expected-error {{unable to lookup expression}}
   }
 }
