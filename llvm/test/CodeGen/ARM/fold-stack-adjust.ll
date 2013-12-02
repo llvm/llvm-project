@@ -15,7 +15,7 @@ define void @check_simple() minsize {
 ; CHECK-NOT: sub sp, sp,
 ; ...
 ; CHECK-NOT: add sp, sp,
-; CHECK: pop.w {r7, r8, r9, r10, r11, pc}
+; CHECK: pop.w {r0, r1, r2, r3, r11, pc}
 
 ; CHECK-T1-LABEL: check_simple:
 ; CHECK-T1: push {r3, r4, r5, r6, r7, lr}
@@ -23,7 +23,7 @@ define void @check_simple() minsize {
 ; CHECK-T1-NOT: sub sp, sp,
 ; ...
 ; CHECK-T1-NOT: add sp, sp,
-; CHECK-T1: pop {r3, r4, r5, r6, r7, pc}
+; CHECK-T1: pop {r0, r1, r2, r3, r7, pc}
 
   ; iOS always has a frame pointer and messing with the push affects
   ; how it's set in the prologue. Make sure we get that right.

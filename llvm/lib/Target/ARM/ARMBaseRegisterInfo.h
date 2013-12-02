@@ -72,6 +72,14 @@ static inline bool isARMArea3Register(unsigned Reg, bool isIOS) {
   }
 }
 
+static inline bool isCalleeSavedRegister(unsigned Reg,
+                                         const MCPhysReg *CSRegs) {
+  for (unsigned i = 0; CSRegs[i]; ++i)
+    if (Reg == CSRegs[i])
+      return true;
+  return false;
+}
+
 class ARMBaseRegisterInfo : public ARMGenRegisterInfo {
 protected:
   const ARMSubtarget &STI;

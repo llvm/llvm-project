@@ -215,13 +215,6 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF) const {
     AFI->setShouldRestoreSPFromFP(true);
 }
 
-static bool isCalleeSavedRegister(unsigned Reg, const uint16_t *CSRegs) {
-  for (unsigned i = 0; CSRegs[i]; ++i)
-    if (Reg == CSRegs[i])
-      return true;
-  return false;
-}
-
 static bool isCSRestore(MachineInstr *MI, const uint16_t *CSRegs) {
   if (MI->getOpcode() == ARM::tLDRspi &&
       MI->getOperand(1).isFI() &&
