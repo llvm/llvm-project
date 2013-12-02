@@ -1198,11 +1198,16 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
       Type *AndTy = AndCST->getType();          // Type of the and.
 
       // We can fold this as long as we can't shift unknown bits
-      // into the mask.  This can only happen with signed shift
-      // rights, as they sign-extend.
+      // into the mask. This can happen with signed shift
+      // rights, as they sign-extend. With logical shifts,
+      // we must still make sure the comparison is not signed
+      // because we are effectively changing the
+      // position of the sign bit (PR17827).
+      // TODO: We can relax these constraints a bit more.
       if (ShAmt) {
-        bool CanFold = Shift->isLogicalShift();
-        if (!CanFold) {
+        bool CanFold = false;
+        unsigned ShiftOpcode = Shift->getOpcode();
+        if (ShiftOpcode == Instruction::AShr) {
           // To test for the bad case of the signed shr, see if any
           // of the bits shifted in could be tested after the mask.
           uint32_t TyBits = Ty->getPrimitiveSizeInBits();
@@ -1212,6 +1217,9 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
           if ((APInt::getHighBitsSet(BitWidth, BitWidth-ShAmtVal) &
                AndCST->getValue()) == 0)
             CanFold = true;
+        } else if (ShiftOpcode == Instruction::Shl ||
+                   ShiftOpcode == Instruction::LShr) {
+          CanFold = !ICI.isSigned();
         }
 
         if (CanFold) {
