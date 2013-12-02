@@ -1349,6 +1349,11 @@ static bool isMicroMips(const ArgList &Args) {
   return A && A->getOption().matches(options::OPT_mmicromips);
 }
 
+static bool isMipsFP64(const ArgList &Args) {
+  Arg *A = Args.getLastArg(options::OPT_mfp64, options::OPT_mfp32);
+  return A && A->getOption().matches(options::OPT_mfp64);
+}
+
 static bool isMipsNan2008(const ArgList &Args) {
   Arg *A = Args.getLastArg(options::OPT_mnan_EQ);
   return A && A->getValue() == StringRef("2008");
@@ -1462,8 +1467,13 @@ void Generic_GCC::GCCInstallationDetector::findMIPSABIDirSuffix(
 
     if (isSoftFloatABI(Args))
       Suffix += "/sof";
-    else if (isMipsNan2008(Args))
-      Suffix += "/nan2008";
+    else {
+      if (isMipsFP64(Args))
+        Suffix += "/fp64";
+
+      if (isMipsNan2008(Args))
+        Suffix += "/nan2008";
+    }
   }
 
   if (!hasCrtBeginObj(Path + Suffix))

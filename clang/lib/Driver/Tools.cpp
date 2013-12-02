@@ -6173,6 +6173,13 @@ void gnutools::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString("-mnan=2008"));
     }
 
+    if (Arg *A = Args.getLastArg(options::OPT_mfp32, options::OPT_mfp64)) {
+      if (A->getOption().matches(options::OPT_mfp32))
+        CmdArgs.push_back(Args.MakeArgString("-mfp32"));
+      else
+        CmdArgs.push_back(Args.MakeArgString("-mfp64"));
+    }
+
     Args.AddLastArg(CmdArgs, options::OPT_mips16, options::OPT_mno_mips16);
     Args.AddLastArg(CmdArgs, options::OPT_mmicromips,
                     options::OPT_mno_micromips);
