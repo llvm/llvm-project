@@ -70,6 +70,11 @@ int gorf();
 /// \t bbb IS_DOXYGEN_END
 int Bar();
 
+// expected-warning@+2  {{unknown command tag name 'encode'; did you mean 'endcode'?}}
+// expected-warning@+1  {{'\endcode' command does not terminate a verbatim text block}}
+/// \encode PR18051
+int PR18051();
+
 // CHECK: fix-it:"{{.*}}":{5:12-5:22}:"a"
 // CHECK: fix-it:"{{.*}}":{9:12-9:15}:"aaa"
 // CHECK: fix-it:"{{.*}}":{13:13-13:23}:"T"
@@ -83,3 +88,4 @@ int Bar();
 // CHECK: fix-it:"{{.*}}":{58:30-58:30}:" MY_ATTR_DEPRECATED"
 // CHECK: fix-it:"{{.*}}":{63:6-63:11}:"return"
 // CHECK: fix-it:"{{.*}}":{67:6-67:11}:"foobar"
+// CHECK: fix-it:"{{.*}}":{75:6-75:12}:"endcode"
