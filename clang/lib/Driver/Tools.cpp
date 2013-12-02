@@ -6186,6 +6186,13 @@ void gnutools::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_mdsp, options::OPT_mno_dsp);
     Args.AddLastArg(CmdArgs, options::OPT_mdspr2, options::OPT_mno_dspr2);
 
+    if (Arg *A = Args.getLastArg(options::OPT_mmsa, options::OPT_mno_msa)) {
+      // Do not use AddLastArg because not all versions of MIPS assembler
+      // support -mmsa / -mno-msa options.
+      if (A->getOption().matches(options::OPT_mmsa))
+        CmdArgs.push_back(Args.MakeArgString("-mmsa"));
+    }
+
     Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
                                       options::OPT_fpic, options::OPT_fno_pic,
                                       options::OPT_fPIE, options::OPT_fno_PIE,
