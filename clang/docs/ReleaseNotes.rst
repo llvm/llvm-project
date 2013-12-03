@@ -62,7 +62,19 @@ Clang's diagnostics are constantly being improved to catch more issues,
 explain them more clearly, and provide more accurate source information
 about them. The improvements since the 3.3 release include:
 
--  ...
+- -Wheader-guard warns on mismatches between the #ifndef and #define lines
+  in a header guard.
+- -Wlogical-not-parentheses warns when a logical not ('!') only applies to the
+  left-hand side of a comparison.  This warning is part of -Wparentheses.
+- Boolean increment, a deprecated feature, has own warning flag
+  -Wdeprecated-increment-bool, and is still part of -Wdeprecated.
+- Clang errors on builtin enum increments and decrements.
+- -Wloop-analysis now warns on for-loops which have the same increment or 
+  decrement in the loop header as the last statement in the loop.
+- -Wuninitialized now performs checking across field initializers to detect
+  when one field in used uninitialized in another field initialization.
+- Clang can detect initializer list use inside a macro and suggest parentheses
+  if possible to fix.
 
 New Compiler Flags
 ------------------
