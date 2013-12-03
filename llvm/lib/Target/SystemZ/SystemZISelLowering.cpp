@@ -1933,10 +1933,10 @@ SDValue SystemZTargetLowering::lowerOR(SDValue Op, SelectionDAG &DAG) const {
   // high 32 bits and just masks out low bits.  We can skip it if so.
   if (HighOp.getOpcode() == ISD::AND &&
       HighOp.getOperand(1).getOpcode() == ISD::Constant) {
-    ConstantSDNode *MaskNode = cast<ConstantSDNode>(HighOp.getOperand(1));
-    uint64_t Mask = MaskNode->getZExtValue() | Masks[High];
-    if ((Mask >> 32) == 0xffffffff)
-      HighOp = HighOp.getOperand(0);
+    SDValue HighOp0 = HighOp.getOperand(0);
+    uint64_t Mask = cast<ConstantSDNode>(HighOp.getOperand(1))->getZExtValue();
+    if (DAG.MaskedValueIsZero(HighOp0, APInt(64, ~(Mask | 0xffffffff))))
+      HighOp = HighOp0;
   }
 
   // Take advantage of the fact that all GR32 operations only change the
