@@ -839,9 +839,9 @@ def COPY_LANE : IOpInst<"vcopy_lane", "ddidi",
 def COPYQ_LANE : IOpInst<"vcopy_lane", "ddigi",
                         "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPYQ_LN>;
 def COPY_LANEQ : IOpInst<"vcopy_laneq", "ddiki",
-                     "csilPcPsPlUcUsUiUlf", OP_COPY_LNQ>;
+                     "csilPcPsPlUcUsUiUlfd", OP_COPY_LNQ>;
 def COPYQ_LANEQ : IOpInst<"vcopy_laneq", "ddidi",
-                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfdQdQPl", OP_COPY_LN>;
+                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPY_LN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set all lanes to same value

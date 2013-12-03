@@ -1227,10 +1227,9 @@ uint64x1_t test_vcopy_laneq_u64(uint64x1_t a, uint64x2_t c) {
 }
 
 // CHECK: test_vcopy_laneq_f64
-float64x1_t test_vcopy_laneq_f64(float64x1_t a, float64x1_t c) {
-  return vcopy_laneq_f64(a, 0, c, 0);
-// CHECK: fmov {{d[0-9]+}}, {{d[0-9]+}}
-// CHECK-NOT: dup {{d[0-9]+}}, {{v[0-9]+}}.d[0]
+float64x1_t test_vcopy_laneq_f64(float64x1_t a, float64x2_t c) {
+  return vcopy_laneq_f64(a, 0, c, 1);
+// CHECK: dup {{d[0-9]+}}, {{v[0-9]+}}.d[1]
 }
 
 // CHECK: test_vcopy_laneq_p64
