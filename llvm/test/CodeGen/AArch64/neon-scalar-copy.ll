@@ -78,3 +78,11 @@ define <1 x i64> @test_vector_dup_dv2D(<2 x i64> %v1) {
  ret <1 x i64> %shuffle.i
 }
 
+define <1 x i64> @test_vector_copy_dup_dv2D(<1 x i64> %a, <2 x i64> %c) {
+  ;CHECK: test_vector_copy_dup_dv2D
+  ;CHECK: dup {{d[0-31]+}}, {{v[0-31]+}}.d[1]
+  %vget_lane = extractelement <2 x i64> %c, i32 1
+  %vset_lane = insertelement <1 x i64> undef, i64 %vget_lane, i32 0
+  ret <1 x i64> %vset_lane
+}
+
