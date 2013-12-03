@@ -835,13 +835,13 @@ def GET_LANE : IInst<"vget_lane", "sdi",
 def SET_LANE : IInst<"vset_lane", "dsdi",
                      "csilPcPsUcUsUiUlQcQsQiQlQUcQUsQUiQUlPcPsQPcQPsfdQfQdPlQPl">;
 def COPY_LANE : IOpInst<"vcopy_lane", "ddidi",
-                        "csiPcPsUcUsUiPcPsfPl", OP_COPY_LN>;
+                        "csilPcPsUcUsUiUlPcPsPlfd", OP_COPY_LN>;
 def COPYQ_LANE : IOpInst<"vcopy_lane", "ddigi",
                         "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPYQ_LN>;
 def COPY_LANEQ : IOpInst<"vcopy_laneq", "ddiki",
-                     "csiPcPsUcUsUif", OP_COPY_LNQ>;
+                     "csilPcPsPlUcUsUiUlf", OP_COPY_LNQ>;
 def COPYQ_LANEQ : IOpInst<"vcopy_laneq", "ddidi",
-                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfdQPl", OP_COPY_LN>;
+                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfdQdQPl", OP_COPY_LN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set all lanes to same value
