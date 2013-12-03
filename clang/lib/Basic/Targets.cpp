@@ -3679,6 +3679,7 @@ class ARMTargetInfo : public TargetInfo {
     // it is safe to use atomic instructions on armv6 and newer.
     if (!T.isOSLinux() &&
         T.getOS() != llvm::Triple::FreeBSD &&
+        T.getOS() != llvm::Triple::NetBSD &&
         T.getOS() != llvm::Triple::Bitrig)
       return false;
     StringRef ArchName = T.getArchName();
