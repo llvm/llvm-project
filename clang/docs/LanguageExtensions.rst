@@ -1908,8 +1908,8 @@ ARM Language Extensions
 Interrupt attribute
 ^^^^^^^^^^^^^^^^^^^
 
-Clang supports the GNU style ``__attribite__((interrupt("TYPE")))`` attribute on
-ARM targets. This attribute may be attached to a function definiton and
+Clang supports the GNU style ``__attribute__((interrupt("TYPE")))`` attribute on
+ARM targets. This attribute may be attached to a function definition and
 instructs the backend to generate appropriate function entry/exit code so that
 it can be used directly as an interrupt service routine.
 
