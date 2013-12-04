@@ -75,6 +75,23 @@ about them. The improvements since the 3.3 release include:
   when one field in used uninitialized in another field initialization.
 - Clang can detect initializer list use inside a macro and suggest parentheses
   if possible to fix.
+- Many improvements to Clang's typo correction facilities, such as:
+  + Adding global namespace qualifiers so that corrections can refer to shadowed
+    or otherwise ambiguous or unreachable namespaces.
+  + Including accessible class members in the set of typo correction candidates,
+    so that corrections requiring a class name in the name specifier are now
+    possible.
+  + Allowing typo corrections that involve removing a name specifier.
+  + In some situations, correcting function names when a function was given the
+    wrong number of arguments, including situations where the original function
+    name was correct but was shadowed by a lexically closer function with the
+    same name yet took a different number of arguments.
+  + Offering typo suggestions for 'using' declarations.
+  + Providing better diagnostics and fixit suggestions in more situations when
+    a '->' was used instead of '.' or vice versa.
+  + Providing more relevant suggestions for typos followed by '.' or '='.
+  + Various performance improvements when searching for typo correction
+    candidates.
 
 New Compiler Flags
 ------------------
