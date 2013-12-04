@@ -123,7 +123,7 @@ double test_f64(double f, double g) {
 long double test_f128(long double f, long double g) {
   asm("axbr %0, %2" : "=f" (f) : "0" (f), "f" (g));
   return f;
-// CHECK: define void @test_f128(fp128* noalias nocapture sret [[DEST:%.*]], fp128* byval nocapture readonly, fp128* byval nocapture readonly)
+// CHECK: define void @test_f128(fp128* noalias nocapture sret [[DEST:%.*]], fp128* nocapture readonly, fp128* nocapture readonly)
 // CHECK: %f = load fp128* %0
 // CHECK: %g = load fp128* %1
 // CHECK: [[RESULT:%.*]] = tail call fp128 asm "axbr $0, $2", "=f,0,f"(fp128 %f, fp128 %g)
