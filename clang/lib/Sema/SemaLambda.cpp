@@ -609,12 +609,20 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
   }
 }
 
-VarDecl *Sema::checkInitCapture(SourceLocation Loc, bool ByRef,
-                                IdentifierInfo *Id, Expr *Init) {
-  // C++1y [expr.prim.lambda]p11:
-  //   An init-capture behaves as if it declares and explicitly captures
-  //   a variable of the form
-  //     "auto init-capture;"
+QualType Sema::performLambdaInitCaptureInitialization(SourceLocation Loc,
+                                                      bool ByRef,
+                                                      IdentifierInfo *Id,
+                                                      Expr *&Init) {
+
+  // We do not need to distinguish between direct-list-initialization
+  // and copy-list-initialization here, because we will always deduce
+  // std::initializer_list<T>, and direct- and copy-list-initialization
+  // always behave the same for such a type.
+  // FIXME: We should model whether an '=' was present.
+  const bool IsDirectInit = isa<ParenListExpr>(Init) || isa<InitListExpr>(Init);
+
+  // Create an 'auto' or 'auto&' TypeSourceInfo that we can use to
+  // deduce against.
   QualType DeductType = Context.getAutoDeductType();
   TypeLocBuilder TLB;
   TLB.pushTypeSpec(DeductType).setNameLoc(Loc);
@@ -625,24 +633,100 @@ VarDecl *Sema::checkInitCapture(SourceLocation Loc, bool ByRef,
   }
   TypeSourceInfo *TSI = TLB.getTypeSourceInfo(Context, DeductType);
 
+  // Are we a non-list direct initialization?
+  ParenListExpr *CXXDirectInit = dyn_cast<ParenListExpr>(Init);
+
+  Expr *DeduceInit = Init;
+  // Initializer could be a C++ direct-initializer. Deduction only works if it
+  // contains exactly one expression.
+  if (CXXDirectInit) {
+    if (CXXDirectInit->getNumExprs() == 0) {
+      Diag(CXXDirectInit->getLocStart(), diag::err_init_capture_no_expression)
+          << DeclarationName(Id) << TSI->getType() << Loc;
+      return QualType();
+    } else if (CXXDirectInit->getNumExprs() > 1) {
+      Diag(CXXDirectInit->getExpr(1)->getLocStart(),
+           diag::err_init_capture_multiple_expressions)
+          << DeclarationName(Id) << TSI->getType() << Loc;
+      return QualType();
+    } else {
+      DeduceInit = CXXDirectInit->getExpr(0);
+    }
+  }
+
+  // Now deduce against the initialization expression and store the deduced
+  // type below.
+  QualType DeducedType;
+  if (DeduceAutoType(TSI, DeduceInit, DeducedType) == DAR_Failed) {
+    if (isa<InitListExpr>(Init))
+      Diag(Loc, diag::err_init_capture_deduction_failure_from_init_list)
+          << DeclarationName(Id)
+          << (DeduceInit->getType().isNull() ? TSI->getType()
+                                             : DeduceInit->getType())
+          << DeduceInit->getSourceRange();
+    else
+      Diag(Loc, diag::err_init_capture_deduction_failure)
+          << DeclarationName(Id) << TSI->getType()
+          << (DeduceInit->getType().isNull() ? TSI->getType()
+                                             : DeduceInit->getType())
+          << DeduceInit->getSourceRange();
+  }
+  if (DeducedType.isNull())
+    return QualType();
+
+  // Perform initialization analysis and ensure any implicit conversions
+  // (such as lvalue-to-rvalue) are enforced.
+  InitializedEntity Entity =
+      InitializedEntity::InitializeLambdaCapture(Id, DeducedType, Loc);
+  InitializationKind Kind =
+      IsDirectInit
+          ? (CXXDirectInit ? InitializationKind::CreateDirect(
+                                 Loc, Init->getLocStart(), Init->getLocEnd())
+                           : InitializationKind::CreateDirectList(Loc))
+          : InitializationKind::CreateCopy(Loc, Init->getLocStart());
+
+  MultiExprArg Args = Init;
+  if (CXXDirectInit)
+    Args =
+        MultiExprArg(CXXDirectInit->getExprs(), CXXDirectInit->getNumExprs());
+  QualType DclT;
+  InitializationSequence InitSeq(*this, Entity, Kind, Args);
+  ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
+
+  if (Result.isInvalid())
+    return QualType();
+  Init = Result.takeAs<Expr>();
+
+  // The init-capture initialization is a full-expression that must be
+  // processed as one before we enter the declcontext of the lambda's
+  // call-operator.
+  Result = ActOnFinishFullExpr(Init, Loc, /*DiscardedValue*/ false,
+                               /*IsConstexpr*/ false,
+                               /*IsLambdaInitCaptureInitalizer*/ true);
+  if (Result.isInvalid())
+    return QualType();
+
+  Init = Result.takeAs<Expr>();
+  return DeducedType;
+}
+
+VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc, 
+    QualType InitCaptureType, IdentifierInfo *Id, Expr *Init) {
+
+  TypeSourceInfo *TSI = Context.getTrivialTypeSourceInfo(InitCaptureType,
+      Loc);
   // Create a dummy variable representing the init-capture. This is not actually
   // used as a variable, and only exists as a way to name and refer to the
   // init-capture.
   // FIXME: Pass in separate source locations for '&' and identifier.
   VarDecl *NewVD = VarDecl::Create(Context, CurContext, Loc,
-                                   Loc, Id, TSI->getType(), TSI, SC_Auto);
+                                   Loc, Id, InitCaptureType, TSI, SC_Auto);
   NewVD->setInitCapture(true);
   NewVD->setReferenced(true);
   NewVD->markUsed(Context);
-
-  // We do not need to distinguish between direct-list-initialization
-  // and copy-list-initialization here, because we will always deduce
-  // std::initializer_list<T>, and direct- and copy-list-initialization
-  // always behave the same for such a type.
-  // FIXME: We should model whether an '=' was present.
-  bool DirectInit = isa<ParenListExpr>(Init) || isa<InitListExpr>(Init);
-  AddInitializerToDecl(NewVD, Init, DirectInit, /*ContainsAuto*/true);
+  NewVD->setInit(Init);
   return NewVD;
+
 }
 
 FieldDecl *Sema::buildInitCaptureField(LambdaScopeInfo *LSI, VarDecl *Var) {
@@ -816,7 +900,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     if (C->Init.isInvalid())
       continue;
 
-    VarDecl *Var;
+    VarDecl *Var = 0;
     if (C->Init.isUsable()) {
       Diag(C->Loc, getLangOpts().CPlusPlus1y
                        ? diag::warn_cxx11_compat_init_capture
@@ -824,9 +908,15 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
       if (C->Init.get()->containsUnexpandedParameterPack())
         ContainsUnexpandedParameterPack = true;
-
-      Var = checkInitCapture(C->Loc, C->Kind == LCK_ByRef,
-                             C->Id, C->Init.take());
+      // If the initializer expression is usable, but the InitCaptureType
+      // is not, then an error has occurred - so ignore the capture for now.
+      // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
+      // FIXME: we should create the init capture variable and mark it invalid 
+      // in this case.
+      if (C->InitCaptureType.get().isNull()) 
+        continue;
+      Var = createLambdaInitCaptureVarDecl(C->Loc, C->InitCaptureType.get(), 
+            C->Id, C->Init.take());
       // C++1y [expr.prim.lambda]p11:
       //   An init-capture behaves as if it declares and explicitly
       //   captures a variable [...] whose declarative region is the

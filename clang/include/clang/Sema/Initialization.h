@@ -116,8 +116,8 @@ private:
   };
 
   struct C {
-    /// \brief The variable being captured by an EK_LambdaCapture.
-    VarDecl *Var;
+    /// \brief The name of the variable being captured by an EK_LambdaCapture.
+    IdentifierInfo *VarID;
 
     /// \brief The source location at which the capture occurs.
     unsigned Location;
@@ -183,10 +183,10 @@ private:
                     const InitializedEntity &Parent);
 
   /// \brief Create the initialization entity for a lambda capture.
-  InitializedEntity(VarDecl *Var, FieldDecl *Field, SourceLocation Loc)
-    : Kind(EK_LambdaCapture), Parent(0), Type(Field->getType()) 
+  InitializedEntity(IdentifierInfo *VarID, QualType FieldType, SourceLocation Loc)
+    : Kind(EK_LambdaCapture), Parent(0), Type(FieldType) 
   {
-    Capture.Var = Var;
+    Capture.VarID = VarID;
     Capture.Location = Loc.getRawEncoding();
   }
   
@@ -309,10 +309,10 @@ public:
   }
 
   /// \brief Create the initialization entity for a lambda capture.
-  static InitializedEntity InitializeLambdaCapture(VarDecl *Var,
-                                                   FieldDecl *Field,
+  static InitializedEntity InitializeLambdaCapture(IdentifierInfo *VarID,
+                                                   QualType FieldType,
                                                    SourceLocation Loc) {
-    return InitializedEntity(Var, Field, Loc);
+    return InitializedEntity(VarID, FieldType, Loc);
   }
 
   /// \brief Create the entity for a compound literal initializer.
@@ -402,13 +402,11 @@ public:
            getKind() == EK_ComplexElement);
     this->Index = Index;
   }
-
-  /// \brief Retrieve the variable for a captured variable in a lambda.
-  VarDecl *getCapturedVar() const {
+  /// \brief For a lambda capture, return the capture's name.
+  StringRef getCapturedVarName() const {
     assert(getKind() == EK_LambdaCapture && "Not a lambda capture!");
-    return Capture.Var;
+    return Capture.VarID->getName();
   }
-  
   /// \brief Determine the location of the capture when initializing
   /// field from a captured variable in a lambda.
   SourceLocation getCaptureLoc() const {

@@ -2166,12 +2166,13 @@ struct LambdaCapture {
   IdentifierInfo *Id;
   SourceLocation EllipsisLoc;
   ExprResult Init;
-
+  ParsedType InitCaptureType;
   LambdaCapture(LambdaCaptureKind Kind, SourceLocation Loc,
-                IdentifierInfo* Id = 0,
-                SourceLocation EllipsisLoc = SourceLocation(),
-                ExprResult Init = ExprResult())
-    : Kind(Kind), Loc(Loc), Id(Id), EllipsisLoc(EllipsisLoc), Init(Init)
+                IdentifierInfo* Id,
+                SourceLocation EllipsisLoc,
+                ExprResult Init, ParsedType InitCaptureType)
+    : Kind(Kind), Loc(Loc), Id(Id), EllipsisLoc(EllipsisLoc), Init(Init),
+        InitCaptureType(InitCaptureType)
   {}
 };
 
@@ -2188,10 +2189,12 @@ struct LambdaIntroducer {
   /// \brief Append a capture in a lambda introducer.
   void addCapture(LambdaCaptureKind Kind,
                   SourceLocation Loc,
-                  IdentifierInfo* Id = 0,
-                  SourceLocation EllipsisLoc = SourceLocation(),
-                  ExprResult Init = ExprResult()) {
-    Captures.push_back(LambdaCapture(Kind, Loc, Id, EllipsisLoc, Init));
+                  IdentifierInfo* Id,
+                  SourceLocation EllipsisLoc,
+                  ExprResult Init, 
+                  ParsedType InitCaptureType) {
+    Captures.push_back(LambdaCapture(Kind, Loc, Id, EllipsisLoc, Init, 
+        InitCaptureType));
   }
 };
 

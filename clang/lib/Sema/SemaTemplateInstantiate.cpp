@@ -917,7 +917,8 @@ namespace {
     }
 
     ExprResult TransformLambdaScope(LambdaExpr *E,
-                                    CXXMethodDecl *NewCallOperator) {
+        CXXMethodDecl *NewCallOperator, 
+        ArrayRef<InitCaptureInfoTy> InitCaptureExprsAndTypes) {
       CXXMethodDecl *const OldCallOperator = E->getCallOperator();   
       // In the generic lambda case, we set the NewTemplate to be considered
       // an "instantiation" of the OldTemplate.
@@ -936,7 +937,8 @@ namespace {
         NewCallOperator->setInstantiationOfMemberFunction(OldCallOperator,
                                                     TSK_ImplicitInstantiation);
       
-      return inherited::TransformLambdaScope(E, NewCallOperator);
+      return inherited::TransformLambdaScope(E, NewCallOperator, 
+          InitCaptureExprsAndTypes);
     }
     TemplateParameterList *TransformTemplateParameterList(
                               TemplateParameterList *OrigTPL)  {

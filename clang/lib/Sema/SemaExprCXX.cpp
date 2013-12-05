@@ -5929,13 +5929,30 @@ static void CheckLambdaCaptures(Expr *const FE,
 
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
                                      bool DiscardedValue,
-                                     bool IsConstexpr) {
+                                     bool IsConstexpr, 
+                                     bool IsLambdaInitCaptureInitializer) {
   ExprResult FullExpr = Owned(FE);
 
   if (!FullExpr.get())
     return ExprError();
-
-  if (DiagnoseUnexpandedParameterPack(FullExpr.get()))
+ 
+  // If we are an init-expression in a lambdas init-capture, we should not 
+  // diagnose an unexpanded pack now (will be diagnosed once lambda-expr 
+  // containing full-expression is done).
+  // template<class ... Ts> void test(Ts ... t) {
+  //   test([&a(t)]() { <-- (t) is an init-expr that shouldn't be diagnosed now.
+  //     return a;
+  //   }() ...);
+  // }
+  // FIXME: This is a hack. It would be better if we pushed the lambda scope
+  // when we parse the lambda introducer, and teach capturing (but not
+  // unexpanded pack detection) to walk over LambdaScopeInfos which don't have a
+  // corresponding class yet (that is, have LambdaScopeInfo either represent a
+  // lambda where we've entered the introducer but not the body, or represent a
+  // lambda where we've entered the body, depending on where the
+  // parser/instantiation has got to).
+  if (!IsLambdaInitCaptureInitializer && 
+      DiagnoseUnexpandedParameterPack(FullExpr.get()))
     return ExprError();
 
   // Top-level expressions default to 'id' when we're in a debugger.

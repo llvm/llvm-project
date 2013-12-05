@@ -1650,9 +1650,9 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   }
 
   case InitializedEntity::EK_LambdaCapture: {
-    const VarDecl *Var = Entity.getCapturedVar();
+    StringRef VarName = Entity.getCapturedVarName();
     PD = PDiag(diag::err_access_lambda_capture);
-    PD << Var->getName() << Entity.getType() << getSpecialMember(Constructor);
+    PD << VarName << Entity.getType() << getSpecialMember(Constructor);
     break;
   }
 

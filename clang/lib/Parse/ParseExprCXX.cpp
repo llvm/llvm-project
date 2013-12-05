@@ -633,8 +633,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 ExprResult Parser::ParseLambdaExpression() {
   // Parse lambda-introducer.
   LambdaIntroducer Intro;
-
-  Optional<unsigned> DiagID(ParseLambdaIntroducer(Intro));
+  Optional<unsigned> DiagID = ParseLambdaIntroducer(Intro);
   if (DiagID) {
     Diag(Tok, DiagID.getValue());
     SkipUntil(tok::r_square, StopAtSemi);
@@ -674,7 +673,7 @@ ExprResult Parser::TryParseLambdaExpression() {
   if (Next.is(tok::identifier) && After.is(tok::identifier)) {
     return ExprEmpty();
   }
-
+ 
   // Here, we're stuck: lambda introducers and Objective-C message sends are
   // unambiguous, but it requires arbitrary lookhead.  [a,b,c,d,e,f,g] is a
   // lambda, and [a,b,c,d,e,f,g h] is a Objective-C message send.  Instead of
@@ -684,6 +683,7 @@ ExprResult Parser::TryParseLambdaExpression() {
   LambdaIntroducer Intro;
   if (TryParseLambdaIntroducer(Intro))
     return ExprEmpty();
+
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
 
@@ -809,6 +809,11 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
                                             Exprs);
         }
       } else if (Tok.is(tok::l_brace) || Tok.is(tok::equal)) {
+        // Each lambda init-capture forms its own full expression, which clears
+        // Actions.MaybeODRUseExprs. So create an expression evaluation context
+        // to save the necessary state, and restore it later.
+        EnterExpressionEvaluationContext EC(Actions,
+                                            Sema::PotentiallyEvaluated);
         if (Tok.is(tok::equal))
           ConsumeToken();
 
@@ -862,13 +867,61 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       } else if (Tok.is(tok::ellipsis))
         EllipsisLoc = ConsumeToken();
     }
+    // If this is an init capture, process the initialization expression
+    // right away.  For lambda init-captures such as the following:
+    // const int x = 10;
+    //  auto L = [i = x+1](int a) {
+    //    return [j = x+2,
+    //           &k = x](char b) { };
+    //  };
+    // keep in mind that each lambda init-capture has to have:
+    //  - its initialization expression executed in the context
+    //    of the enclosing/parent decl-context.
+    //  - but the variable itself has to be 'injected' into the
+    //    decl-context of its lambda's call-operator (which has
+    //    not yet been created).
+    // Each init-expression is a full-expression that has to get
+    // Sema-analyzed (for capturing etc.) before its lambda's
+    // call-operator's decl-context, scope & scopeinfo are pushed on their
+    // respective stacks.  Thus if any variable is odr-used in the init-capture
+    // it will correctly get captured in the enclosing lambda, if one exists.
+    // The init-variables above are created later once the lambdascope and
+    // call-operators decl-context is pushed onto its respective stack.
 
-    Intro.addCapture(Kind, Loc, Id, EllipsisLoc, Init);
+    // Since the lambda init-capture's initializer expression occurs in the
+    // context of the enclosing function or lambda, therefore we can not wait
+    // till a lambda scope has been pushed on before deciding whether the
+    // variable needs to be captured.  We also need to process all
+    // lvalue-to-rvalue conversions and discarded-value conversions,
+    // so that we can avoid capturing certain constant variables.
+    // For e.g.,
+    //  void test() {
+    //   const int x = 10;
+    //   auto L = [&z = x](char a) { <-- don't capture by the current lambda
+    //     return [y = x](int i) { <-- don't capture by enclosing lambda
+    //          return y;
+    //     }
+    //   };
+    // If x was not const, the second use would require 'L' to capture, and
+    // that would be an error.
+
+    ParsedType InitCaptureParsedType;
+    if (Init.isUsable()) {
+      // Get the pointer and store it in an lvalue, so we can use it as an
+      // out argument.
+      Expr *InitExpr = Init.get();
+      // This performs any lvalue-to-rvalue conversions if necessary, which
+      // can affect what gets captured in the containing decl-context.
+      QualType InitCaptureType = Actions.performLambdaInitCaptureInitialization(
+        Loc, Kind == LCK_ByRef, Id, InitExpr);
+      Init = InitExpr;
+      InitCaptureParsedType.set(InitCaptureType);
+    }
+    Intro.addCapture(Kind, Loc, Id, EllipsisLoc, Init, InitCaptureParsedType);
   }
 
   T.consumeClose();
   Intro.Range.setEnd(T.getCloseLocation());
-
   return DiagResult();
 }
 
