@@ -669,7 +669,8 @@ TEST(AddressSanitizer, ThreadStackReuseTest) {
   PTHREAD_JOIN(t, 0);
 }
 
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i686__) || defined(__x86_64__)
+#include <emmintrin.h>
 TEST(AddressSanitizer, Store128Test) {
   char *a = Ident((char*)malloc(Ident(12)));
   char *p = a;
