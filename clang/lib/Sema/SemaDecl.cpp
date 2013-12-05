@@ -870,7 +870,16 @@ DeclContext *Sema::getContainingDC(DeclContext *DC) {
   // Functions defined inline within classes aren't parsed until we've
   // finished parsing the top-level class, so the top-level class is
   // the context we'll need to return to.
-  if (isa<FunctionDecl>(DC)) {
+  // A Lambda call operator whose parent is a class must not be treated 
+  // as an inline member function.  A Lambda can be used legally
+  // either as an in-class member initializer or a default argument.  These
+  // are parsed once the class has been marked complete and so the containing
+  // context would be the nested class (when the lambda is defined in one);
+  // If the class is not complete, then the lambda is being used in an 
+  // ill-formed fashion (such as to specify the width of a bit-field, or
+  // in an array-bound) - in which case we still want to return the 
+  // lexically containing DC (which could be a nested class). 
+  if (isa<FunctionDecl>(DC) && !isLambdaCallOperator(DC)) {
     DC = DC->getLexicalParent();
 
     // A function not defined within a class will always return to its
