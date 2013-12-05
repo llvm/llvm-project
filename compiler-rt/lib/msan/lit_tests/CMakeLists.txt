@@ -11,7 +11,7 @@ if(MSAN_CAN_INSTRUMENT_LIBCXX)
     ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
 endif()
 
-if(COMPILER_RT_CAN_EXECUTE_TESTS)
+if(COMPILER_RT_CAN_EXECUTE_TESTS AND CAN_TARGET_x86_64)
   # Run MSan tests only if we're sure we may produce working binaries.
   set(MSAN_TEST_DEPS
     ${SANITIZER_COMMON_LIT_TEST_DEPS}

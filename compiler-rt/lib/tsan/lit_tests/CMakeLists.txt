@@ -8,7 +8,7 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   )
 
-if(COMPILER_RT_CAN_EXECUTE_TESTS)
+if(COMPILER_RT_CAN_EXECUTE_TESTS AND CAN_TARGET_x86_64)
   # Run TSan output tests only if we're sure we can produce working binaries.
   set(TSAN_TEST_DEPS
     ${SANITIZER_COMMON_LIT_TEST_DEPS}
@@ -25,7 +25,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     DEPENDS ${TSAN_TEST_DEPS}
     )
   set_target_properties(check-tsan PROPERTIES FOLDER "TSan unittests")
-elseif(LLVM_INCLUDE_TESTS)
+elseif(LLVM_INCLUDE_TESTS AND CAN_TARGET_x86_64)
   # Otherwise run only TSan unit tests (they are linked using the
   # host compiler).
   add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
