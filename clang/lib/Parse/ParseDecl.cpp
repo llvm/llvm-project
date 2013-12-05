@@ -288,7 +288,8 @@ void Parser::ParseGNUAttributeArgs(IdentifierInfo *AttrName,
 
     // If we don't know how to parse this attribute, but this is the only
     // token in this argument, assume it's meant to be an identifier.
-    if (AttrKind == AttributeList::UnknownAttribute) {
+    if (AttrKind == AttributeList::UnknownAttribute ||
+        AttrKind == AttributeList::IgnoredAttribute) {
       const Token &Next = NextToken();
       IsIdentifierArg = Next.is(tok::r_paren) || Next.is(tok::comma);
     }
