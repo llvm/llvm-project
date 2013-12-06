@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/types.h>
+#include <unistd.h>
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
 #include <winsock2.h>
@@ -1201,6 +1202,29 @@ Host::GetLLDBPath (PathType path_type, FileSpec &file_spec)
             // TODO: where would user LLDB plug-ins be located on other systems?
             return false;
         }
+            
+    case ePathTypeLLDBTempSystemDir:
+        {
+            static ConstString g_lldb_tmp_dir;
+            if (!g_lldb_tmp_dir)
+            {
+                const char *tmpdir_cstr = getenv("TMPDIR");
+                if (tmpdir_cstr == NULL)
+                {
+                    tmpdir_cstr = getenv("TMP");
+                    if (tmpdir_cstr == NULL)
+                        tmpdir_cstr = getenv("TEMP");
+                }
+                if (tmpdir_cstr)
+                {
+                    g_lldb_tmp_dir.SetCString(tmpdir_cstr);
+                    if (log)
+                        log->Printf("Host::GetLLDBPath(ePathTypeLLDBTempSystemDir) => '%s'", g_lldb_tmp_dir.GetCString());
+                }
+            }
+            file_spec.GetDirectory() = g_lldb_tmp_dir;
+            return (bool)file_spec.GetDirectory();
+        }
     }
 
     return false;
@@ -1450,21 +1474,36 @@ Host::RunShellCommand (const char *command,
     
     if (working_dir)
         launch_info.SetWorkingDirectory(working_dir);
-    char output_file_path_buffer[L_tmpnam];
+    char output_file_path_buffer[PATH_MAX];
     const char *output_file_path = NULL;
+    
     if (command_output_ptr)
     {
         // Create a temporary file to get the stdout/stderr and redirect the
         // output of the command into this file. We will later read this file
         // if all goes well and fill the data into "command_output_ptr"
-        output_file_path = ::tmpnam(output_file_path_buffer);
-        launch_info.AppendSuppressFileAction (STDIN_FILENO, true, false);
+        FileSpec tmpdir_file_spec;
+        if (Host::GetLLDBPath (ePathTypeLLDBTempSystemDir, tmpdir_file_spec))
+        {
+            tmpdir_file_spec.GetFilename().SetCString("lldb-shell-output.XXXXXX");
+            strncpy(output_file_path_buffer, tmpdir_file_spec.GetPath().c_str(), sizeof(output_file_path_buffer));
+        }
+        else
+        {
+            strncpy(output_file_path_buffer, "/tmp/lldb-shell-output.XXXXXX", sizeof(output_file_path_buffer));
+        }
+        
+        output_file_path = ::mktemp(output_file_path_buffer);
+    }
+    
+    launch_info.AppendSuppressFileAction (STDIN_FILENO, true, false);
+    if (output_file_path)
+    {
         launch_info.AppendOpenFileAction(STDOUT_FILENO, output_file_path, false, true);
         launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
     }
     else
     {
-        launch_info.AppendSuppressFileAction (STDIN_FILENO, true, false);
         launch_info.AppendSuppressFileAction (STDOUT_FILENO, false, true);
         launch_info.AppendSuppressFileAction (STDERR_FILENO, false, true);
     }

@@ -117,7 +117,9 @@ typedef enum PathType
     ePathTypeHeaderDir,             // Find LLDB header file directory
     ePathTypePythonDir,             // Find Python modules (PYTHONPATH) directory
     ePathTypeLLDBSystemPlugins,     // System plug-ins directory
-    ePathTypeLLDBUserPlugins        // User plug-ins directory
+    ePathTypeLLDBUserPlugins,       // User plug-ins directory
+    ePathTypeLLDBTempSystemDir      // The LLDB temp directory for this system
+
 } PathType;
 
 
