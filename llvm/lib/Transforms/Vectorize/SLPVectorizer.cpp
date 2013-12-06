@@ -564,10 +564,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots, ValueSet *Rdx) {
            UE = Scalar->use_end(); User != UE; ++User) {
         DEBUG(dbgs() << "SLP: Checking user:" << **User << ".\n");
 
-        bool Gathered = MustGather.count(*User);
-
         // Skip in-tree scalars that become vectors.
-        if (ScalarToTreeEntry.count(*User) && !Gathered) {
+        if (ScalarToTreeEntry.count(*User)) {
           DEBUG(dbgs() << "SLP: \tInternal user will be removed:" <<
                 **User << ".\n");
           int Idx = ScalarToTreeEntry[*User]; (void) Idx;
@@ -1638,8 +1636,6 @@ Value *BoUpSLP::vectorizeTree() {
         for (Value::use_iterator User = Scalar->use_begin(),
              UE = Scalar->use_end(); User != UE; ++User) {
           DEBUG(dbgs() << "SLP: \tvalidating user:" << **User << ".\n");
-          assert(!MustGather.count(*User) &&
-                 "Replacing gathered value with undef");
 
           assert((ScalarToTreeEntry.count(*User) ||
                   // It is legal to replace the reduction users by undef.

@@ -59,3 +59,38 @@ for.end:                                          ; preds = %for.body
   ret double %mul3
 }
 
+; A need-to-gather entry cannot be an external use of the scalar element.
+; Instead the insertelement instructions of the need-to-gather entry are the
+; external users.
+; This test would assert because we would keep the scalar fpext and fadd alive.
+; PR18129
+
+; CHECK-LABEL: needtogather
+define i32 @needtogather(double *noalias %a, i32 *noalias %b,  float * noalias %c,
+                i32 * noalias %d) {
+entry:
+  %0 = load i32* %d, align 4
+  %conv = sitofp i32 %0 to float
+  %1 = load float* %c
+  %sub = fsub float 0.000000e+00, %1
+  %mul = fmul float %sub, 0.000000e+00
+  %add = fadd float %conv, %mul
+  %conv1 = fpext float %add to double
+  %sub3 = fsub float 1.000000e+00, %1
+  %mul4 = fmul float %sub3, 0.000000e+00
+  %add5 = fadd float %conv, %mul4
+  %conv6 = fpext float %add5 to double
+  %tobool = fcmp une float %add, 0.000000e+00
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %storemerge = phi double [ %conv6, %if.then ], [ %conv1, %entry ]
+  %e.0 = phi double [ %conv1, %if.then ], [ %conv6, %entry ]
+  store double %storemerge, double* %a, align 8
+  %conv7 = fptosi double %e.0 to i32
+  store i32 %conv7, i32* %b, align 4
+  ret i32 undef
+}
