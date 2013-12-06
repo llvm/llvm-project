@@ -183,6 +183,11 @@ static const char *getARMTargetCPU(const ArgList &Args,
     MArch = Triple.getArchName();
   }
 
+  if (Triple.getOS() == llvm::Triple::NetBSD) {
+    if (MArch == "armv6")
+      return "arm1176jzf-s";
+  }
+
   const char *result = llvm::StringSwitch<const char *>(MArch)
     .Cases("armv2", "armv2a","arm2")
     .Case("armv3", "arm6")

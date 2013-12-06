@@ -499,6 +499,11 @@ static std::string getARMTargetCPU(const ArgList &Args,
     MArch = Triple.getArchName();
   }
 
+  if (Triple.getOS() == llvm::Triple::NetBSD) {
+    if (MArch == "armv6")
+      return "arm1176jzf-s";
+  }
+
   // Handle -march=native.
   std::string NativeMArch;
   if (MArch == "native") {
