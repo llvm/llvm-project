@@ -110,6 +110,19 @@ For more information on MSA (including documentation for the instruction set),
 see the `MIPS SIMD page at Imagination Technologies
 <http://imgtec.com/mips/mips-simd.asp>`_
 
+SPARC Target
+------------
+
+The SPARC backend got many improvements, namely
+
+* experimental SPARC V9 backend
+* JIT support for SPARC
+* fp128 support
+* exception handling
+* TLS support
+* leaf functions optimization
+* bug fixes
+
 External Open Source Projects Using LLVM 3.4
 ============================================
 
