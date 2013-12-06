@@ -699,7 +699,10 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
       Value *TrueVInPred = TrueV->DoPHITranslation(PhiTransBB, ThisBB);
       Value *FalseVInPred = FalseV->DoPHITranslation(PhiTransBB, ThisBB);
       Value *InV = 0;
-      if (Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i)))
+      // Beware of ConstantExpr:  it may eventually evaluate to getNullValue,
+      // even if currently isNullValue gives false.
+      Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i));
+      if (InC && !isa<ConstantExpr>(InC))
         InV = InC->isNullValue() ? FalseVInPred : TrueVInPred;
       else
         InV = Builder->CreateSelect(PN->getIncomingValue(i),
