@@ -263,9 +263,9 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
         for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
           EraseInstFromFunction(*ToDelete[i]);
         Constant *TheSrc = cast<Constant>(Copy->getSource());
-        Instruction *NewI
-          = ReplaceInstUsesWith(AI, ConstantExpr::getBitCast(TheSrc,
-                                                             AI.getType()));
+        Constant *Cast
+          = ConstantExpr::getPointerBitCastOrAddrSpaceCast(TheSrc, AI.getType());
+        Instruction *NewI = ReplaceInstUsesWith(AI, Cast);
         EraseInstFromFunction(*Copy);
         ++NumGlobalCopies;
         return NewI;
