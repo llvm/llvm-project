@@ -30,13 +30,18 @@ def OP_MUL   : Op;
 def OP_MLA   : Op;
 def OP_MLAL  : Op;
 def OP_MULLHi : Op;
+def OP_MULLHi_N : Op;
 def OP_MLALHi : Op;
+def OP_MLALHi_N : Op;
 def OP_MLS   : Op;
 def OP_MLSL  : Op;
 def OP_MLSLHi : Op;
+def OP_MLSLHi_N : Op;
 def OP_MUL_N : Op;
 def OP_MLA_N : Op;
 def OP_MLS_N : Op;
+def OP_FMLA_N : Op;
+def OP_FMLS_N : Op;
 def OP_MLAL_N : Op;
 def OP_MLSL_N : Op;
 def OP_MUL_LN: Op;
@@ -104,8 +109,11 @@ def OP_ABA   : Op;
 def OP_ABAL  : Op;
 def OP_ABALHi : Op;
 def OP_QDMULLHi : Op;
+def OP_QDMULLHi_N : Op;
 def OP_QDMLALHi : Op;
+def OP_QDMLALHi_N : Op;
 def OP_QDMLSLHi : Op;
+def OP_QDMLSLHi_N : Op;
 def OP_DIV  : Op;
 def OP_LONG_HI : Op;
 def OP_NARROW_HI : Op;
@@ -625,6 +633,12 @@ def FMLA : SInst<"vfma", "dddd", "fQfQd">;
 def FMLS : SInst<"vfms", "dddd", "fQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// MUL, FMA, FMS definitions with scalar argument
+def VMUL_N_A64 : IOpInst<"vmul_n", "dds", "Qd", OP_MUL_N>;
+def FMLA_N : SOpInst<"vfma_n", "ddds", "fQf", OP_FMLA_N>;
+def FMLS_N : SOpInst<"vfms_n", "ddds", "fQf", OP_FMLS_N>;
+
+////////////////////////////////////////////////////////////////////////////////
 // Logical operations
 // With additional Qd, Ql, QPl type.
 def BSL : SInst<"vbsl", "dudd",
@@ -816,8 +830,11 @@ def VABDL_HIGH   : SOpInst<"vabdl_high", "wkk",  "csiUcUsUi", OP_ABDLHi>;
 def VABAL_HIGH   : SOpInst<"vabal_high", "wwkk", "csiUcUsUi", OP_ABALHi>;
 
 def VMULL_HIGH   : SOpInst<"vmull_high", "wkk", "csiUcUsUiPc", OP_MULLHi>;
+def VMULL_HIGH_N : SOpInst<"vmull_high_n", "wks", "siUsUi", OP_MULLHi_N>;
 def VMLAL_HIGH   : SOpInst<"vmlal_high", "wwkk", "csiUcUsUi", OP_MLALHi>;
+def VMLAL_HIGH_N : SOpInst<"vmlal_high_n", "wwks", "siUsUi", OP_MLALHi_N>;
 def VMLSL_HIGH   : SOpInst<"vmlsl_high", "wwkk", "csiUcUsUi", OP_MLSLHi>;
+def VMLSL_HIGH_N : SOpInst<"vmlsl_high_n", "wwks", "siUsUi", OP_MLSLHi_N>;
 
 def VADDHN_HIGH  : SOpInst<"vaddhn_high", "qhkk", "silUsUiUl", OP_ADDHNHi>;
 def VRADDHN_HIGH : SOpInst<"vraddhn_high", "qhkk", "silUsUiUl", OP_RADDHNHi>;
@@ -825,8 +842,11 @@ def VSUBHN_HIGH  : SOpInst<"vsubhn_high", "qhkk", "silUsUiUl", OP_SUBHNHi>;
 def VRSUBHN_HIGH : SOpInst<"vrsubhn_high", "qhkk", "silUsUiUl", OP_RSUBHNHi>;
 
 def VQDMULL_HIGH : SOpInst<"vqdmull_high", "wkk", "si", OP_QDMULLHi>;
+def VQDMULL_HIGH_N : SOpInst<"vqdmull_high_n", "wks", "si", OP_QDMULLHi_N>;
 def VQDMLAL_HIGH : SOpInst<"vqdmlal_high", "wwkk", "si", OP_QDMLALHi>;
+def VQDMLAL_HIGH_N : SOpInst<"vqdmlal_high_n", "wwks", "si", OP_QDMLALHi_N>;
 def VQDMLSL_HIGH : SOpInst<"vqdmlsl_high", "wwkk", "si", OP_QDMLSLHi>;
+def VQDMLSL_HIGH_N : SOpInst<"vqdmlsl_high_n", "wwks", "si", OP_QDMLSLHi_N>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Extract or insert element from vector

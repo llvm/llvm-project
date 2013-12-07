@@ -1547,3 +1547,152 @@ float64x2_t test_vmulxq_laneq_f64_0(float64x2_t a, float64x2_t v) {
   // CHECK: fmulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 }
 
+int32x4_t test_vmull_high_n_s16(int16x8_t a, int16_t b) {
+  // CHECK: test_vmull_high_n_s16
+  return vmull_high_n_s16(a, b);
+  // CHECK: smull2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+int64x2_t test_vmull_high_n_s32(int32x4_t a, int32_t b) {
+  // CHECK: test_vmull_high_n_s32
+  return vmull_high_n_s32(a, b);
+  // CHECK: smull2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+uint32x4_t test_vmull_high_n_u16(uint16x8_t a, uint16_t b) {
+  // CHECK: test_vmull_high_n_u16
+  return vmull_high_n_u16(a, b);
+  // CHECK: umull2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+uint64x2_t test_vmull_high_n_u32(uint32x4_t a, uint32_t b) {
+  // CHECK: test_vmull_high_n_u32
+  return vmull_high_n_u32(a, b);
+  // CHECK: umull2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+int32x4_t test_vqdmull_high_n_s16(int16x8_t a, int16_t b) {
+  // CHECK: test_vqdmull_high_n_s16
+  return vqdmull_high_n_s16(a, b);
+  // CHECK: sqdmull2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+int64x2_t test_vqdmull_high_n_s32(int32x4_t a, int32_t b) {
+  // CHECK: test_vqdmull_high_n_s32
+  return vqdmull_high_n_s32(a, b);
+  // CHECK: sqdmull2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+int32x4_t test_vmlal_high_n_s16(int32x4_t a, int16x8_t b, int16_t c) {
+  // CHECK: test_vmlal_high_n_s16
+  return vmlal_high_n_s16(a, b, c);
+  // CHECK: smlal2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+int64x2_t test_vmlal_high_n_s32(int64x2_t a, int32x4_t b, int32_t c) {
+  // CHECK: test_vmlal_high_n_s32
+  return vmlal_high_n_s32(a, b, c);
+  // CHECK: smlal2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+uint32x4_t test_vmlal_high_n_u16(uint32x4_t a, uint16x8_t b, uint16_t c) {
+  // CHECK: test_vmlal_high_n_u16
+  return vmlal_high_n_u16(a, b, c);
+  // CHECK: umlal2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+uint64x2_t test_vmlal_high_n_u32(uint64x2_t a, uint32x4_t b, uint32_t c) {
+  // CHECK: test_vmlal_high_n_u32
+  return vmlal_high_n_u32(a, b, c);
+  // CHECK: umlal2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+int32x4_t test_vqdmlal_high_n_s16(int32x4_t a, int16x8_t b, int16_t c) {
+  // CHECK: test_vqdmlal_high_n_s16
+  return vqdmlal_high_n_s16(a, b, c);
+  // CHECK: sqdmlal2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+int64x2_t test_vqdmlal_high_n_s32(int64x2_t a, int32x4_t b, int32_t c) {
+  // CHECK: test_vqdmlal_high_n_s32
+  return vqdmlal_high_n_s32(a, b, c);
+  // CHECK: sqdmlal2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+int32x4_t test_vmlsl_high_n_s16(int32x4_t a, int16x8_t b, int16_t c) {
+  // CHECK: test_vmlsl_high_n_s16
+  return vmlsl_high_n_s16(a, b, c);
+  // CHECK: smlsl2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+int64x2_t test_vmlsl_high_n_s32(int64x2_t a, int32x4_t b, int32_t c) {
+  // CHECK: test_vmlsl_high_n_s32
+  return vmlsl_high_n_s32(a, b, c);
+  // CHECK: smlsl2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+uint32x4_t test_vmlsl_high_n_u16(uint32x4_t a, uint16x8_t b, uint16_t c) {
+  // CHECK: test_vmlsl_high_n_u16
+  return vmlsl_high_n_u16(a, b, c);
+  // CHECK: umlsl2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+uint64x2_t test_vmlsl_high_n_u32(uint64x2_t a, uint32x4_t b, uint32_t c) {
+  // CHECK: test_vmlsl_high_n_u32
+  return vmlsl_high_n_u32(a, b, c);
+  // CHECK: umlsl2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+int32x4_t test_vqdmlsl_high_n_s16(int32x4_t a, int16x8_t b, int16_t c) {
+  // CHECK: test_vqdmlsl_high_n_s16
+  return vqdmlsl_high_n_s16(a, b, c);
+  // CHECK: sqdmlsl2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, {{v[0-9]+}}.h[0]
+}
+
+int64x2_t test_vqdmlsl_high_n_s32(int64x2_t a, int32x4_t b, int32_t c) {
+  // CHECK: test_vqdmlsl_high_n_s32
+  return vqdmlsl_high_n_s32(a, b, c);
+  // CHECK: sqdmlsl2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+float32x2_t test_vmul_n_f32(float32x2_t a, float32_t b) {
+  // CHECK: test_vmul_n_f32
+  return vmul_n_f32(a, b);
+  // CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
+}
+
+float32x4_t test_vmulq_n_f32(float32x4_t a, float32_t b) {
+  // CHECK: test_vmulq_n_f32
+  return vmulq_n_f32(a, b);
+  // CHECK: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+float64x2_t test_vmulq_n_f64(float64x2_t a, float64_t b) {
+  // CHECK: test_vmulq_n_f64
+  return vmulq_n_f64(a, b);
+  // CHECK: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
+}
+
+float32x2_t test_vfma_n_f32(float32x2_t a, float32x2_t b, float32_t n) {
+  // CHECK: test_vfma_n_f32
+  return vfma_n_f32(a, b, n);
+  // CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
+}
+
+float32x4_t test_vfmaq_n_f32(float32x4_t a, float32x4_t b, float32_t n) {
+  // CHECK: test_vfmaq_n_f32
+  return vfmaq_n_f32(a, b, n);
+  // CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
+
+float32x2_t test_vfms_n_f32(float32x2_t a, float32x2_t b, float32_t n) {
+  // CHECK: test_vfms_n_f32
+  return vfms_n_f32(a, b, n);
+  // CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
+}
+
+float32x4_t test_vfmsq_n_f32(float32x4_t a, float32x4_t b, float32_t n) {
+  // CHECK: test_vfmsq_n_f32
+  return vfmsq_n_f32(a, b, n);
+  // CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
+}
