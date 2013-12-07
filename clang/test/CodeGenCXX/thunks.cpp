@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o - -O1 -disable-llvm-optzns | FileCheck %s
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -fhidden-weak-vtables -emit-llvm -o - | FileCheck -check-prefix=CHECK-HIDDEN %s
 
 namespace Test1 {
@@ -340,6 +341,27 @@ namespace Test14 {
   void C::f() {
   }
   // CHECK: define void @_ZThn8_N6Test141C1fEv({{.*}}) unnamed_addr [[NUW:#[0-9]+]]
+}
+
+// Varargs non-covariant thunk test.
+// PR18098
+namespace Test15 {
+  struct A {
+    virtual ~A();
+  };
+  struct B {
+    virtual void f(int x, ...);
+  };
+  struct C : A, B {
+    virtual void c();
+    virtual void f(int x, ...);
+  };
+  void C::c() {}
+
+  // C::c
+  // CHECK: declare void @_ZN6Test151C1fEiz
+  // non-virtual thunk to C::f
+  // CHECK: declare void @_ZThn8_N6Test151C1fEiz
 }
 
 /**** The following has to go at the end of the file ****/
