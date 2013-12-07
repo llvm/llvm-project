@@ -148,6 +148,25 @@ static bool hasYmmReg(MachineInstr *MI) {
   return false;
 }
 
+/// clobbersAnyYmmReg() - Check if any YMM register will be clobbered by this
+/// instruction.
+static bool clobbersAnyYmmReg(MachineInstr *MI) {
+  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI->getOperand(i);
+    if (!MO.isRegMask())
+      continue;
+    for (unsigned reg = X86::YMM0; reg < X86::YMM31; ++reg) {
+      if (MO.clobbersPhysReg(reg))
+        return true;
+    }
+    for (unsigned reg = X86::ZMM0; reg < X86::ZMM31; ++reg) {
+      if (MO.clobbersPhysReg(reg))
+        return true;
+    }
+  }
+  return false;
+}
+
 /// runOnMachineFunction - Loop over all of the basic blocks, inserting
 /// vzero upper instructions before function calls.
 bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
@@ -234,14 +253,6 @@ bool VZeroUpperInserter::processBasicBlock(MachineFunction &MF,
     DebugLoc dl = I->getDebugLoc();
     MachineInstr *MI = I;
 
-    // Don't need to check instructions added in prolog.
-    // In prolog, special function calls may be added for specific targets
-    // (e.g. on Windows, a prolog helper '_chkstk' is called when the local
-    // variables exceed 4K bytes on stack.) These helpers won't use/def YMM/XMM
-    // registers.
-    if (MI->getFlag(MachineInstr::FrameSetup))
-      continue;
-
     bool isControlFlow = MI->isCall() || MI->isReturn();
 
     // Shortcut: don't need to check regular instructions in dirty state.
@@ -258,6 +269,14 @@ bool VZeroUpperInserter::processBasicBlock(MachineFunction &MF,
     // Check for control-flow out of the current function (which might
     // indirectly execute SSE instructions).
     if (!isControlFlow)
+      continue;
+
+    // If the call won't clobber any YMM register, skip it as well. It usually
+    // happens on helper function calls (such as '_chkstk', '_ftol2') where
+    // standard calling convention is not used (RegMask is not used to mark
+    // register clobbered and register usage (def/imp-def/use) is well-dfined
+    // and explicitly specified.
+    if (MI->isCall() && !clobbersAnyYmmReg(MI))
       continue;
 
     BBHasCall = true;
