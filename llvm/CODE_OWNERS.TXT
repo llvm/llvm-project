@@ -143,7 +143,7 @@ E: atrick@apple.com
 D: IndVar Simplify, Loop Strength Reduction, Instruction Scheduling
 
 N: Bill Wendling
-E: wendling@apple.com
+E: isanbard@gmail.com
 D: libLTO, IR Linker
 
 N: Peter Zotov
