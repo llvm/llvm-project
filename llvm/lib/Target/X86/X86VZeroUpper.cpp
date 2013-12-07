@@ -122,11 +122,11 @@ static bool checkFnHasLiveInYmm(MachineRegisterInfo &MRI) {
 }
 
 static bool clobbersAllYmmRegs(const MachineOperand &MO) {
-  for (unsigned reg = X86::YMM0; reg < X86::YMM31; ++reg) {
+  for (unsigned reg = X86::YMM0; reg <= X86::YMM31; ++reg) {
     if (!MO.clobbersPhysReg(reg))
       return false;
   }
-  for (unsigned reg = X86::ZMM0; reg < X86::ZMM31; ++reg) {
+  for (unsigned reg = X86::ZMM0; reg <= X86::ZMM31; ++reg) {
     if (!MO.clobbersPhysReg(reg))
       return false;
   }
@@ -155,11 +155,11 @@ static bool clobbersAnyYmmReg(MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isRegMask())
       continue;
-    for (unsigned reg = X86::YMM0; reg < X86::YMM31; ++reg) {
+    for (unsigned reg = X86::YMM0; reg <= X86::YMM31; ++reg) {
       if (MO.clobbersPhysReg(reg))
         return true;
     }
-    for (unsigned reg = X86::ZMM0; reg < X86::ZMM31; ++reg) {
+    for (unsigned reg = X86::ZMM0; reg <= X86::ZMM31; ++reg) {
       if (MO.clobbersPhysReg(reg))
         return true;
     }
