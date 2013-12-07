@@ -2206,8 +2206,7 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
     return true;
   }
 
-  // Look for a global declaration.
-  Operator = FindUsualDeallocationFunction(StartLoc, true, Name);
+  Operator = 0;
   return false;
 }
 
@@ -2357,7 +2356,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
         // Otherwise, the usual operator delete[] should be the
         // function we just found.
-        else if (isa<CXXMethodDecl>(OperatorDelete))
+        else if (OperatorDelete && isa<CXXMethodDecl>(OperatorDelete))
           UsualArrayDeleteWantsSize = (OperatorDelete->getNumParams() == 2);
       }
 
