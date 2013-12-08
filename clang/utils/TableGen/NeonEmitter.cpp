@@ -154,7 +154,9 @@ enum OpKind {
   OpScalarQDMulHiLane,
   OpScalarQDMulHiLaneQ,
   OpScalarQRDMulHiLane,
-  OpScalarQRDMulHiLaneQ
+  OpScalarQRDMulHiLaneQ,
+  OpScalarGetLane,
+  OpScalarSetLane
 };
 
 enum ClassKind {
@@ -335,7 +337,8 @@ public:
     OpMap["OP_SCALAR_QDMULH_LNQ"] = OpScalarQDMulHiLaneQ;
     OpMap["OP_SCALAR_QRDMULH_LN"] = OpScalarQRDMulHiLane;
     OpMap["OP_SCALAR_QRDMULH_LNQ"] = OpScalarQRDMulHiLaneQ;
-
+    OpMap["OP_SCALAR_GET_LN"] = OpScalarGetLane;
+    OpMap["OP_SCALAR_SET_LN"] = OpScalarSetLane;
 
     Record *SI = R.getClass("SInst");
     Record *II = R.getClass("IInst");
@@ -2209,6 +2212,34 @@ static std::string GenOpString(const std::string &name, OpKind op,
     "vgetq_lane_" + typeCode + "(__b, __c));";
     break;
   }
+  case OpScalarGetLane:{
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    if (quad) {
+     s += "int16x8_t __a1 = vreinterpretq_s16_f16(__a);\\\n";
+     s += "  vgetq_lane_s16(__a1, __b);";
+    } else {
+     s += "int16x4_t __a1 = vreinterpret_s16_f16(__a);\\\n";
+     s += "  vget_lane_s16(__a1, __b);";
+    }
+    break;
+  }
+  case OpScalarSetLane:{
+    std::string typeCode = "";
+    InstructionTypeCode(typestr, ClassS, quad, typeCode);
+    s += "int16_t __a1 = (int16_t)__a;\\\n";
+    if (quad) {
+     s += "  int16x8_t __b1 = vreinterpretq_s16_f16(b);\\\n";
+     s += "  int16x8_t __b2 = vsetq_lane_s16(__a1, __b1, __c);\\\n";
+     s += "  vreinterpretq_f16_s16(__b2);";
+    } else {
+     s += "  int16x4_t __b1 = vreinterpret_s16_f16(b);\\\n";
+     s += "  int16x4_t __b2 = vset_lane_s16(__a1, __b1, __c);\\\n";
+     s += "  vreinterpret_f16_s16(__b2);";
+    }
+    break;
+  }
+
   default:
     PrintFatalError("unknown OpKind!");
   }

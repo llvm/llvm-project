@@ -1244,3 +1244,76 @@ float64x2_t test_vcopyq_laneq_f64(float64x2_t a, float64x2_t c) {
   return vcopyq_laneq_f64(a, 1, c, 1);
 }
 
+// CHECK: test_vget_lane_f16
+int test_vget_lane_f16(float16x4_t v1) {
+  float16_t a = vget_lane_f16(v1, 3);
+  return (int)a;
+// CHECK: dup {{h[0-9]+}}, {{v[0-9]+}}.h[3]
+}
+
+// CHECK: test_vgetq_lane_f16
+int test_vgetq_lane_f16(float16x8_t v1) {
+  float16_t a = vgetq_lane_f16(v1, 7);
+  return (int)a;
+// CHECK: dup {{h[0-9]+}}, {{v[0-9]+}}.h[7]
+}
+
+// CHECK: test_vget_lane_f16_2
+float test_vget_lane_f16_2(float16x4_t v1) {
+  float16_t a = vget_lane_f16(v1, 3);
+  return (float)a;
+// CHECK: dup {{h[0-9]+}}, {{v[0-9]+}}.h[3]
+}
+
+// CHECK: test_vgetq_lane_f16_2
+float test_vgetq_lane_f16_2(float16x8_t v1) {
+  float16_t a = vgetq_lane_f16(v1, 7);
+  return (float)a;
+// CHECK: dup {{h[0-9]+}}, {{v[0-9]+}}.h[7]
+}
+
+// CHECK: test_vset_lane_f16
+float16x4_t test_vset_lane_f16(float16x4_t v1) {
+  float16_t a;
+  return vset_lane_f16(a, v1, 3);
+// CHECK: fmov  {{s[0-9]+}}, wzr
+// CHECK-NEXT: ins {{v[0-9]+}}.h[3],  {{v[0-9]+}}.h[0]
+}
+
+// CHECK: test_vsetq_lane_f16
+float16x8_t test_vsetq_lane_f16(float16x8_t v1) {
+  float16_t a;
+  return vsetq_lane_f16(a, v1, 7);
+// CHECK: fmov  {{s[0-9]+}}, wzr
+// CHECK-NEXT: ins {{v[0-9]+}}.h[7],  {{v[0-9]+}}.h[0]
+}
+
+// CHECK: test_vset_lane_f16_2
+float16x4_t test_vset_lane_f16_2(float16x4_t v1) {
+  float16_t a = vget_lane_f16(v1, 0);
+  return vset_lane_f16(a, v1, 3);
+// CHECK: ins {{v[0-9]+}}.h[3],  {{v[0-9]+}}.h[0]
+}
+
+// CHECK: test_vsetq_lane_f16_2
+float16x8_t test_vsetq_lane_f16_2(float16x8_t v1) {
+  float16_t a = vgetq_lane_f16(v1, 0);
+  return vsetq_lane_f16(a, v1, 7);
+// CHECK: ins {{v[0-9]+}}.h[7],  {{v[0-9]+}}.h[0]
+}
+
+
+// CHECK: test_vsetq_lane_f16_3
+float16x8_t test_vsetq_lane_f16_3(float16x8_t v1, float b, float c) {
+  float16_t a = (float16_t)b;
+  return vsetq_lane_f16(a, v1, 7);
+// CHECK: ins {{v[0-9]+}}.h[7],  {{w[0-9]+}}
+}
+
+// CHECK: test_vsetq_lane_f16_4
+float16x8_t test_vsetq_lane_f16_4(float16x8_t v1, float b, float c) {
+  float16_t a = (float16_t)b + 1.0;
+  return vsetq_lane_f16(a, v1, 7);
+// CHECK: ins {{v[0-9]+}}.h[7],  {{w[0-9]+}}
+}
+
