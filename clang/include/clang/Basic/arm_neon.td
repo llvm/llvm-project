@@ -652,18 +652,18 @@ def ABD  : SInst<"vabd", "ddd",  "csiUcUsUifQcQsQiQUcQUsQUiQfQd">;
 ////////////////////////////////////////////////////////////////////////////////
 // saturating absolute/negate
 // With additional Qd/Ql type.
-def ABS    : SInst<"vabs", "dd", "csifQcQsQiQfQlQd">;
-def QABS   : SInst<"vqabs", "dd", "csiQcQsQiQl">;
-def NEG    : SOpInst<"vneg", "dd", "csifQcQsQiQfQdQl", OP_NEG>;
-def QNEG   : SInst<"vqneg", "dd", "csiQcQsQiQl">;
+def ABS    : SInst<"vabs", "dd", "csilfQcQsQiQfQlQd">;
+def QABS   : SInst<"vqabs", "dd", "csilQcQsQiQl">;
+def NEG    : SOpInst<"vneg", "dd", "csilfQcQsQiQfQdQl", OP_NEG>;
+def QNEG   : SInst<"vqneg", "dd", "csilQcQsQiQl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Signed Saturating Accumulated of Unsigned Value
-def SUQADD : SInst<"vuqadd", "ddd", "csiQcQsQiQl">;
+def SUQADD : SInst<"vuqadd", "ddd", "csilQcQsQiQl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unsigned Saturating Accumulated of Signed Value
-def USQADD : SInst<"vsqadd", "ddd", "UcUsUiQUcQUsQUiQUl">;
+def USQADD : SInst<"vsqadd", "ddd", "UcUsUiUlQUcQUsQUiQUl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Reciprocal/Sqrt
