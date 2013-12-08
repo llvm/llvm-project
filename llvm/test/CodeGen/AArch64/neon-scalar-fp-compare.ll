@@ -24,6 +24,15 @@ entry:
   ret i64 %0
 }
 
+define <1 x i64> @test_vceqz_f64(<1 x double> %a) #0 {
+; CHECK: test_vceqz_f64
+; CHECK: fcmeq  {{d[0-9]+}}, {{d[0-9]+}}, #0.0
+entry:
+  %0 = fcmp oeq <1 x double> %a, zeroinitializer
+  %vceqz.i = zext <1 x i1> %0 to <1 x i64>
+  ret <1 x i64> %vceqz.i
+}
+
 define i32 @test_vceqzs_f32(float %a) {
 ; CHECK: test_vceqzs_f32
 ; CHECK: fcmeq {{s[0-9]}}, {{s[0-9]}}, #0.0
@@ -39,7 +48,7 @@ define i64 @test_vceqzd_f64(double %a) {
 ; CHECK: fcmeq {{d[0-9]}}, {{d[0-9]}}, #0.0
 entry:
   %vceq.i = insertelement <1 x double> undef, double %a, i32 0
-  %vceq1.i = call <1 x i64> @llvm.aarch64.neon.vceq.v1i64.v1f64.v1f64(<1 x double> %vceq.i, <1 x double> zeroinitializer)
+  %vceq1.i = tail call <1 x i64> @llvm.aarch64.neon.vceq.v1i64.v1f64.v1f32(<1 x double> %vceq.i, <1 x float> zeroinitializer) #5
   %0 = extractelement <1 x i64> %vceq1.i, i32 0
   ret i64 %0
 }
@@ -81,7 +90,7 @@ define i64 @test_vcgezd_f64(double %a) {
 ; CHECK: fcmge {{d[0-9]}}, {{d[0-9]}}, #0.0
 entry:
   %vcge.i = insertelement <1 x double> undef, double %a, i32 0
-  %vcge1.i = call <1 x i64> @llvm.aarch64.neon.vcge.v1i64.v1f64.v1f64(<1 x double> %vcge.i, <1 x double> zeroinitializer)
+  %vcge1.i = tail call <1 x i64> @llvm.aarch64.neon.vcge.v1i64.v1f64.v1f32(<1 x double> %vcge.i, <1 x float> zeroinitializer) #5
   %0 = extractelement <1 x i64> %vcge1.i, i32 0
   ret i64 %0
 }
@@ -123,7 +132,7 @@ define i64 @test_vcgtzd_f64(double %a) {
 ; CHECK: fcmgt {{d[0-9]}}, {{d[0-9]}}, #0.0
 entry:
   %vcgt.i = insertelement <1 x double> undef, double %a, i32 0
-  %vcgt1.i = call <1 x i64> @llvm.aarch64.neon.vcgt.v1i64.v1f64.v1f64(<1 x double> %vcgt.i, <1 x double> zeroinitializer)
+  %vcgt1.i = tail call <1 x i64> @llvm.aarch64.neon.vcgt.v1i64.v1f64.v1f32(<1 x double> %vcgt.i, <1 x float> zeroinitializer) #5
   %0 = extractelement <1 x i64> %vcgt1.i, i32 0
   ret i64 %0
 }
@@ -165,7 +174,7 @@ define i64 @test_vclezd_f64(double %a) {
 ; CHECK: fcmle {{d[0-9]}}, {{d[0-9]}}, #0.0
 entry:
   %vcle.i = insertelement <1 x double> undef, double %a, i32 0
-  %vcle1.i = call <1 x i64> @llvm.aarch64.neon.vclez.v1i64.v1f64.v1f64(<1 x double> %vcle.i, <1 x double> zeroinitializer)
+  %vcle1.i = tail call <1 x i64> @llvm.aarch64.neon.vclez.v1i64.v1f64.v1f32(<1 x double> %vcle.i, <1 x float> zeroinitializer) #5
   %0 = extractelement <1 x i64> %vcle1.i, i32 0
   ret i64 %0
 }
@@ -207,7 +216,7 @@ define i64 @test_vcltzd_f64(double %a) {
 ; CHECK: fcmlt {{d[0-9]}}, {{d[0-9]}}, #0.0
 entry:
   %vclt.i = insertelement <1 x double> undef, double %a, i32 0
-  %vclt1.i = call <1 x i64> @llvm.aarch64.neon.vcltz.v1i64.v1f64.v1f64(<1 x double> %vclt.i, <1 x double> zeroinitializer)
+  %vclt1.i = tail call <1 x i64> @llvm.aarch64.neon.vcltz.v1i64.v1f64.v1f32(<1 x double> %vclt.i, <1 x float> zeroinitializer) #5
   %0 = extractelement <1 x i64> %vclt1.i, i32 0
   ret i64 %0
 }
@@ -301,15 +310,18 @@ entry:
 }
 
 declare <1 x i32> @llvm.aarch64.neon.vceq.v1i32.v1f32.v1f32(<1 x float>, <1 x float>)
+declare <1 x i64> @llvm.aarch64.neon.vceq.v1i64.v1f64.v1f32(<1 x double>, <1 x float>)
 declare <1 x i64> @llvm.aarch64.neon.vceq.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
 declare <1 x i32> @llvm.aarch64.neon.vcge.v1i32.v1f32.v1f32(<1 x float>, <1 x float>)
+declare <1 x i64> @llvm.aarch64.neon.vcge.v1i64.v1f64.v1f32(<1 x double>, <1 x float>)
 declare <1 x i64> @llvm.aarch64.neon.vcge.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
 declare <1 x i32> @llvm.aarch64.neon.vclez.v1i32.v1f32.v1f32(<1 x float>, <1 x float>)
-declare <1 x i64> @llvm.aarch64.neon.vclez.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.vclez.v1i64.v1f64.v1f32(<1 x double>, <1 x float>)
 declare <1 x i32> @llvm.aarch64.neon.vcgt.v1i32.v1f32.v1f32(<1 x float>, <1 x float>)
+declare <1 x i64> @llvm.aarch64.neon.vcgt.v1i64.v1f64.v1f32(<1 x double>, <1 x float>)
 declare <1 x i64> @llvm.aarch64.neon.vcgt.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
 declare <1 x i32> @llvm.aarch64.neon.vcltz.v1i32.v1f32.v1f32(<1 x float>, <1 x float>)
-declare <1 x i64> @llvm.aarch64.neon.vcltz.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.vcltz.v1i64.v1f64.v1f32(<1 x double>, <1 x float>)
 declare <1 x i32> @llvm.aarch64.neon.vcage.v1i32.v1f32.v1f32(<1 x float>, <1 x float>)
 declare <1 x i64> @llvm.aarch64.neon.vcage.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
 declare <1 x i32> @llvm.aarch64.neon.vcagt.v1i32.v1f32.v1f32(<1 x float>, <1 x float>)
