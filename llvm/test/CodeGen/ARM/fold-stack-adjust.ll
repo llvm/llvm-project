@@ -124,3 +124,32 @@ define arm_aapcs_vfpcc double @check_vfp_no_return_clobber() minsize {
 
   ret double 1.0
 }
+
+@dbl = global double 0.0
+
+; PR18136: there was a bug determining where the first eligible pop in a
+; basic-block was when the entire block was epilogue code.
+define void @test_fold_point(i1 %tst) minsize {
+; CHECK-LABEL: test_fold_point:
+
+  ; Important to check for beginning of basic block, because if it gets
+  ; if-converted the test is probably no longer checking what it should.
+; CHECK: {{LBB[0-9]+_2}}:
+; CHECK-NEXT: vpop {d7, d8}
+; CHECK-NEXT: pop {r4, pc}
+  ; We want some memory so there's a stack adjustment to fold...
+  %var = alloca i8, i32 8
+
+  ; We want a long-lived floating register so that a callee-saved dN is used and
+  ; there's both a vpop and a pop.
+  %live_val = load double* @dbl
+  br i1 %tst, label %true, label %end
+true:
+  call void @bar(i8* %var)
+  store double %live_val, double* @dbl
+  br label %end
+end:
+  ; We want the epilogue to be the only thing in a basic block so that we hit
+  ; the correct edge-case (first inst in block is correct one to adjust).
+  ret void
+}

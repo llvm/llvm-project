@@ -380,15 +380,10 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     if (NumBytes != 0)
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes);
   } else {
-    MachineBasicBlock::iterator FirstPop = MBBI;
-
     // Unwind MBBI to point to first LDR / VLDRD.
     const uint16_t *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
     if (MBBI != MBB.begin()) {
       do {
-        if (isPopOpcode(MBBI->getOpcode()))
-          FirstPop = MBBI;
-
         --MBBI;
       } while (MBBI != MBB.begin() && isCSRestore(MBBI, TII, CSRegs));
       if (!isCSRestore(MBBI, TII, CSRegs))
@@ -434,7 +429,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                                  ARM::SP)
             .addReg(FramePtr));
       }
-    } else if (NumBytes && !tryFoldSPUpdateIntoPushPop(MF, FirstPop, NumBytes))
+    } else if (NumBytes && !tryFoldSPUpdateIntoPushPop(MF, MBBI, NumBytes))
         emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes);
 
     // Increment past our save areas.
