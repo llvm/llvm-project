@@ -1499,7 +1499,18 @@ Constant *ConstantExpr::getPointerCast(Constant *S, Type *Ty) {
   return getBitCast(S, Ty);
 }
 
-Constant *ConstantExpr::getIntegerCast(Constant *C, Type *Ty, 
+Constant *ConstantExpr::getPointerBitCastOrAddrSpaceCast(Constant *S,
+                                                         Type *Ty) {
+  assert(S->getType()->isPtrOrPtrVectorTy() && "Invalid cast");
+  assert(Ty->isPtrOrPtrVectorTy() && "Invalid cast");
+
+  if (S->getType()->getPointerAddressSpace() != Ty->getPointerAddressSpace())
+    return getAddrSpaceCast(S, Ty);
+
+  return getBitCast(S, Ty);
+}
+
+Constant *ConstantExpr::getIntegerCast(Constant *C, Type *Ty,
                                        bool isSigned) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          Ty->isIntOrIntVectorTy() && "Invalid cast");
