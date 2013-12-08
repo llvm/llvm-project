@@ -1759,6 +1759,7 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   bool ExtendEle = false;
   bool OverloadInt = false;
   bool OverloadCmpInt = false;
+  bool IsFpCmpZInt = false;
   bool OverloadCvtInt = false;
   bool OverloadWideInt = false;
   bool OverloadNarrowInt = false;
@@ -2269,7 +2270,8 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   case AArch64::BI__builtin_neon_vceqzd_f64:
     Int = Intrinsic::aarch64_neon_vceq; s = "vceq";
     // Add implicit zero operand.
-    Ops.push_back(llvm::Constant::getNullValue(Ops[0]->getType()));
+    Ops.push_back(llvm::Constant::getNullValue(CGF.FloatTy));
+    IsFpCmpZInt = true;
     OverloadCmpInt = true; break;
   // Scalar Floating-point Compare Greater Than Or Equal
   case AArch64::BI__builtin_neon_vcges_f32:
@@ -2281,7 +2283,8 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   case AArch64::BI__builtin_neon_vcgezd_f64:
     Int = Intrinsic::aarch64_neon_vcge; s = "vcge";
     // Add implicit zero operand.
-    Ops.push_back(llvm::Constant::getNullValue(Ops[0]->getType()));
+    Ops.push_back(llvm::Constant::getNullValue(CGF.FloatTy));
+    IsFpCmpZInt = true;
     OverloadCmpInt = true; break;
   // Scalar Floating-point Compare Greather Than
   case AArch64::BI__builtin_neon_vcgts_f32:
@@ -2293,7 +2296,8 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   case AArch64::BI__builtin_neon_vcgtzd_f64:
     Int = Intrinsic::aarch64_neon_vcgt; s = "vcgt";
     // Add implicit zero operand.
-    Ops.push_back(llvm::Constant::getNullValue(Ops[0]->getType()));
+    Ops.push_back(llvm::Constant::getNullValue(CGF.FloatTy));
+    IsFpCmpZInt = true;
     OverloadCmpInt = true; break;
   // Scalar Floating-point Compare Less Than or Equal
   case AArch64::BI__builtin_neon_vcles_f32:
@@ -2305,7 +2309,8 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   case AArch64::BI__builtin_neon_vclezd_f64:
     Int = Intrinsic::aarch64_neon_vclez; s = "vcle";
     // Add implicit zero operand.
-    Ops.push_back(llvm::Constant::getNullValue(Ops[0]->getType()));
+    Ops.push_back(llvm::Constant::getNullValue(CGF.FloatTy));
+    IsFpCmpZInt = true;
     OverloadCmpInt = true; break;
   // Scalar Floating-point Compare Less Than Zero
   case AArch64::BI__builtin_neon_vclts_f32:
@@ -2317,7 +2322,8 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   case AArch64::BI__builtin_neon_vcltzd_f64:
     Int = Intrinsic::aarch64_neon_vcltz; s = "vclt";
     // Add implicit zero operand.
-    Ops.push_back(llvm::Constant::getNullValue(Ops[0]->getType()));
+    Ops.push_back(llvm::Constant::getNullValue(CGF.FloatTy));
+    IsFpCmpZInt = true;
     OverloadCmpInt = true; break;
   // Scalar Floating-point Absolute Compare Greater Than Or Equal
   case AArch64::BI__builtin_neon_vcages_f32:
@@ -2601,6 +2607,8 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
     Ty = CGF.ConvertType(Arg->getType());
     VTy = llvm::VectorType::get(Ty, 1);
     Tys.push_back(VTy);
+    if(IsFpCmpZInt)
+      VTy = llvm::VectorType::get(CGF.FloatTy, 1);
     Tys.push_back(VTy);
 
     F = CGF.CGM.getIntrinsic(Int, Tys);

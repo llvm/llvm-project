@@ -114,6 +114,12 @@ uint32x2_t test_vceqz_f32(float32x2_t a) {
   return vceqz_f32(a);
 }
 
+// CHECK: test_vceqz_f64
+// CHECK: fcmeq  {{d[0-9]+}}, {{d[0-9]+}}, #0
+uint64x1_t test_vceqz_f64(float64x1_t a) {
+  return vceqz_f64(a);
+}
+
 // CHECK: test_vceqzq_f32
 // CHECK: fcmeq  {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, #0
 uint32x4_t test_vceqzq_f32(float32x4_t a) {
