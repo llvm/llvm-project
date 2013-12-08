@@ -343,6 +343,10 @@ public:
   virtual bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                                   unsigned Intrinsic) const LLVM_OVERRIDE;
 
+protected:
+  std::pair<const TargetRegisterClass*, uint8_t>
+  findRepresentativeClass(MVT VT) const;
+
 private:
   const InstrItineraryData *Itins;
 
