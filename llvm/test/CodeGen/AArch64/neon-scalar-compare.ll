@@ -118,6 +118,221 @@ entry:
   ret i64 %0
 }
 
+
+define <1 x i64> @test_vcage_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vcage_f64
+; CHECK: facge {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %vcage2.i = tail call <1 x i64> @llvm.aarch64.neon.vcage.v1i64.v1f64.v1f64(<1 x double> %a, <1 x double> %b) #2
+  ret <1 x i64> %vcage2.i
+}
+
+define <1 x i64> @test_vcagt_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vcagt_f64
+; CHECK: facgt {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %vcagt2.i = tail call <1 x i64> @llvm.aarch64.neon.vcagt.v1i64.v1f64.v1f64(<1 x double> %a, <1 x double> %b) #2
+  ret <1 x i64> %vcagt2.i
+}
+
+define <1 x i64> @test_vcale_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vcale_f64
+; CHECK: facge {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %vcage2.i = tail call <1 x i64> @llvm.aarch64.neon.vcage.v1i64.v1f64.v1f64(<1 x double> %b, <1 x double> %a) #2
+  ret <1 x i64> %vcage2.i
+}
+
+define <1 x i64> @test_vcalt_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vcalt_f64
+; CHECK: facgt {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %vcagt2.i = tail call <1 x i64> @llvm.aarch64.neon.vcagt.v1i64.v1f64.v1f64(<1 x double> %b, <1 x double> %a) #2
+  ret <1 x i64> %vcagt2.i
+}
+
+define <1 x i64> @test_vceq_s64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vceq_s64
+; CHECK: cmeq {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp eq <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vceq_u64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vceq_u64
+; CHECK: cmeq {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp eq <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vceq_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vceq_f64
+; CHECK: fcmeq {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = fcmp oeq <1 x double> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcge_s64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vcge_s64
+; CHECK: cmge {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp sge <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcge_u64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vcge_u64
+; CHECK: cmhs {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp uge <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcge_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vcge_f64
+; CHECK: fcmge {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = fcmp oge <1 x double> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcle_s64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vcle_s64
+; CHECK: cmge {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp sle <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcle_u64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vcle_u64
+; CHECK: cmhs {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp ule <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcle_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vcle_f64
+; CHECK: fcmge {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = fcmp ole <1 x double> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcgt_s64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vcgt_s64
+; CHECK: cmgt {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp sgt <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcgt_u64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vcgt_u64
+; CHECK: cmhi {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp ugt <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vcgt_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vcgt_f64
+; CHECK: fcmgt {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = fcmp ogt <1 x double> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vclt_s64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vclt_s64
+; CHECK: cmgt {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp slt <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vclt_u64(<1 x i64> %a, <1 x i64> %b) #0 {
+; CHECK: test_vclt_u64
+; CHECK: cmhi {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = icmp ult <1 x i64> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vclt_f64(<1 x double> %a, <1 x double> %b) #0 {
+; CHECK: test_vclt_f64
+; CHECK: fcmgt {{d[0-9]}}, {{d[0-9]}}, {{d[0-9]}}
+  %cmp.i = fcmp olt <1 x double> %a, %b
+  %sext.i = sext <1 x i1> %cmp.i to <1 x i64>
+  ret <1 x i64> %sext.i
+}
+
+define <1 x i64> @test_vceqz_s64(<1 x i64> %a) #0 {
+; CHECK: test_vceqz_s64
+; CHECK: cmeq {{d[0-9]}}, {{d[0-9]}}, #0x0
+  %1 = icmp eq <1 x i64> %a, zeroinitializer
+  %vceqz.i = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %vceqz.i
+}
+
+define <1 x i64> @test_vceqz_u64(<1 x i64> %a) #0 {
+; CHECK: test_vceqz_u64
+; CHECK: cmeq {{d[0-9]}}, {{d[0-9]}}, #0x0
+  %1 = icmp eq <1 x i64> %a, zeroinitializer
+  %vceqz.i = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %vceqz.i
+}
+
+define <1 x i64> @test_vceqz_p64(<1 x i64> %a) #0 {
+; CHECK: test_vceqz_p64
+; CHECK: cmeq {{d[0-9]}}, {{d[0-9]}}, #0x0
+  %1 = icmp eq <1 x i64> %a, zeroinitializer
+  %vceqz.i = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %vceqz.i
+}
+
+define <2 x i64> @test_vceqzq_p64(<2 x i64> %a) #0 {
+; CHECK: test_vceqzq_p64
+; CHECK: cmeq  {{v[0-9]}}.2d, {{v[0-9]}}.2d, #0
+  %1 = icmp eq <2 x i64> %a, zeroinitializer
+  %vceqz.i = zext <2 x i1> %1 to <2 x i64>
+  ret <2 x i64> %vceqz.i
+}
+
+define <1 x i64> @test_vcgez_s64(<1 x i64> %a) #0 {
+; CHECK: test_vcgez_s64
+; CHECK: cmge {{d[0-9]}}, {{d[0-9]}}, #0x0
+  %1 = icmp sge <1 x i64> %a, zeroinitializer
+  %vcgez.i = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %vcgez.i
+}
+
+define <1 x i64> @test_vclez_s64(<1 x i64> %a) #0 {
+; CHECK: test_vclez_s64
+; CHECK: cmle {{d[0-9]}}, {{d[0-9]}}, #0x0
+  %1 = icmp sle <1 x i64> %a, zeroinitializer
+  %vclez.i = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %vclez.i
+}
+
+define <1 x i64> @test_vcgtz_s64(<1 x i64> %a) #0 {
+; CHECK: test_vcgtz_s64
+; CHECK: cmgt {{d[0-9]}}, {{d[0-9]}}, #0x0
+  %1 = icmp sgt <1 x i64> %a, zeroinitializer
+  %vcgtz.i = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %vcgtz.i
+}
+
+define <1 x i64> @test_vcltz_s64(<1 x i64> %a) #0 {
+; CHECK: test_vcltz_s64
+; CHECK: cmlt {{d[0-9]}}, {{d[0-9]}}, #0
+  %1 = icmp slt <1 x i64> %a, zeroinitializer
+  %vcltz.i = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %vcltz.i
+}
+
+declare <1 x i64> @llvm.aarch64.neon.vcagt.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.vcage.v1i64.v1f64.v1f64(<1 x double>, <1 x double>)
 declare <1 x i64> @llvm.aarch64.neon.vtstd.v1i64.v1i64.v1i64(<1 x i64>, <1 x i64>)
 declare <1 x i64> @llvm.aarch64.neon.vcltz.v1i64.v1i64.v1i64(<1 x i64>, <1 x i64>)
 declare <1 x i64> @llvm.aarch64.neon.vchs.v1i64.v1i64.v1i64(<1 x i64>, <1 x i64>)
