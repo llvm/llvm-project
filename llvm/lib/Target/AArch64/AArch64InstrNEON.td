@@ -5122,6 +5122,27 @@ defm : Neon_Scalar2SameMisc_accum_BHSD_size_patterns<int_aarch64_neon_vsqadd,
                                                      USQADDbb, USQADDhh,
                                                      USQADDss, USQADDdd>;
 
+def : Pat<(v1i64 (int_aarch64_neon_suqadd (v1i64 FPR64:$Src),
+                                          (v1i64 FPR64:$Rn))),
+          (SUQADDdd FPR64:$Src, FPR64:$Rn)>;
+
+def : Pat<(v1i64 (int_aarch64_neon_usqadd (v1i64 FPR64:$Src),
+                                          (v1i64 FPR64:$Rn))),
+          (USQADDdd FPR64:$Src, FPR64:$Rn)>;
+
+def : Pat<(v1i64 (int_arm_neon_vabs (v1i64 FPR64:$Rn))),
+          (ABSdd FPR64:$Rn)>;
+
+def : Pat<(v1i64 (int_arm_neon_vqabs (v1i64 FPR64:$Rn))),
+          (SQABSdd FPR64:$Rn)>;
+
+def : Pat<(v1i64 (int_arm_neon_vqneg (v1i64 FPR64:$Rn))),
+          (SQNEGdd FPR64:$Rn)>;
+
+def : Pat<(v1i64 (sub (v1i64 (bitconvert (v8i8 Neon_AllZero))),
+                      (v1i64 FPR64:$Rn))),
+          (NEGdd FPR64:$Rn)>;
+
 // Scalar Signed Saturating Extract Unsigned Narrow
 defm SQXTUN : NeonI_Scalar2SameMisc_narrow_HSD_size<0b1, 0b10010, "sqxtun">;
 defm : Neon_Scalar2SameMisc_narrow_HSD_size_patterns<int_arm_neon_vqmovnsu,
