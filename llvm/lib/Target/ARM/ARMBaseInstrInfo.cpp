@@ -2372,8 +2372,32 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
           isSafe = true;
           break;
         }
-        // Condition code is after the operand before CPSR.
-        ARMCC::CondCodes CC = (ARMCC::CondCodes)Instr.getOperand(IO-1).getImm();
+        // Condition code is after the operand before CPSR except for VSELs.
+        ARMCC::CondCodes CC;
+        bool IsInstrVSel = true;
+        switch (Instr.getOpcode()) {
+        default:
+          IsInstrVSel = false;
+          CC = (ARMCC::CondCodes)Instr.getOperand(IO - 1).getImm();
+          break;
+        case ARM::VSELEQD:
+        case ARM::VSELEQS:
+          CC = ARMCC::EQ;
+          break;
+        case ARM::VSELGTD:
+        case ARM::VSELGTS:
+          CC = ARMCC::GT;
+          break;
+        case ARM::VSELGED:
+        case ARM::VSELGES:
+          CC = ARMCC::GE;
+          break;
+        case ARM::VSELVSS:
+        case ARM::VSELVSD:
+          CC = ARMCC::VS;
+          break;
+        }
+
         if (Sub) {
           ARMCC::CondCodes NewCC = getSwappedCondition(CC);
           if (NewCC == ARMCC::AL)
@@ -2384,11 +2408,14 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
           // If it is safe to remove CmpInstr, the condition code of these
           // operands will be modified.
           if (SrcReg2 != 0 && Sub->getOperand(1).getReg() == SrcReg2 &&
-              Sub->getOperand(2).getReg() == SrcReg)
-            OperandsToUpdate.push_back(std::make_pair(&((*I).getOperand(IO-1)),
-                                                      NewCC));
-        }
-        else
+              Sub->getOperand(2).getReg() == SrcReg) {
+            // VSel doesn't support condition code update.
+            if (IsInstrVSel)
+              return false;
+            OperandsToUpdate.push_back(
+                std::make_pair(&((*I).getOperand(IO - 1)), NewCC));
+          }
+        } else
           switch (CC) {
           default:
             // CPSR can be used multiple times, we should continue.
