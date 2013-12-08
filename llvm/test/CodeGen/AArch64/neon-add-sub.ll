@@ -118,3 +118,120 @@ define <2 x double> @sub2xdouble(<2 x double> %A, <2 x double> %B) {
 	ret <2 x double> %tmp3
 }
 
+define <1 x double> @test_vadd_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vadd_f64
+; CHECK: fadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fadd <1 x double> %a, %b
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vmul_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vmul_f64
+; CHECK: fmul d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fmul <1 x double> %a, %b
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vdiv_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vdiv_f64
+; CHECK: fdiv d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fdiv <1 x double> %a, %b
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vmla_f64(<1 x double> %a, <1 x double> %b, <1 x double> %c) {
+; CHECK-LABEL: test_vmla_f64
+; CHECK: fmul d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+; CHECK: fadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fmul <1 x double> %b, %c
+  %2 = fadd <1 x double> %1, %a
+  ret <1 x double> %2
+}
+
+define <1 x double> @test_vmls_f64(<1 x double> %a, <1 x double> %b, <1 x double> %c) {
+; CHECK-LABEL: test_vmls_f64
+; CHECK: fmul d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+; CHECK: fsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fmul <1 x double> %b, %c
+  %2 = fsub <1 x double> %a, %1
+  ret <1 x double> %2
+}
+
+define <1 x double> @test_vfms_f64(<1 x double> %a, <1 x double> %b, <1 x double> %c) {
+; CHECK-LABEL: test_vfms_f64
+; CHECK: fmsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fsub <1 x double> <double -0.000000e+00>, %b
+  %2 = tail call <1 x double> @llvm.fma.v1f64(<1 x double> %1, <1 x double> %c, <1 x double> %a)
+  ret <1 x double> %2
+}
+
+define <1 x double> @test_vfma_f64(<1 x double> %a, <1 x double> %b, <1 x double> %c) {
+; CHECK-LABEL: test_vfma_f64
+; CHECK: fmadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.fma.v1f64(<1 x double> %b, <1 x double> %c, <1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vsub_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vsub_f64
+; CHECK: fsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fsub <1 x double> %a, %b
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vabd_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vabd_f64
+; CHECK: fabd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.arm.neon.vabds.v1f64(<1 x double> %a, <1 x double> %b)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vmax_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vmax_f64
+; CHECK: fmax d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.arm.neon.vmaxs.v1f64(<1 x double> %a, <1 x double> %b)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vmin_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vmin_f64
+; CHECK: fmin d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.arm.neon.vmins.v1f64(<1 x double> %a, <1 x double> %b)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vmaxnm_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vmaxnm_f64
+; CHECK: fmaxnm d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.aarch64.neon.vmaxnm.v1f64(<1 x double> %a, <1 x double> %b)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vminnm_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vminnm_f64
+; CHECK: fminnm d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.aarch64.neon.vminnm.v1f64(<1 x double> %a, <1 x double> %b)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vabs_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vabs_f64
+; CHECK: fabs d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.fabs.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vneg_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vneg_f64
+; CHECK: fneg d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fsub <1 x double> <double -0.000000e+00>, %a
+  ret <1 x double> %1
+}
+
+declare <1 x double> @llvm.fabs.v1f64(<1 x double>)
+declare <1 x double> @llvm.aarch64.neon.vminnm.v1f64(<1 x double>, <1 x double>)
+declare <1 x double> @llvm.aarch64.neon.vmaxnm.v1f64(<1 x double>, <1 x double>)
+declare <1 x double> @llvm.arm.neon.vmins.v1f64(<1 x double>, <1 x double>)
+declare <1 x double> @llvm.arm.neon.vmaxs.v1f64(<1 x double>, <1 x double>)
+declare <1 x double> @llvm.arm.neon.vabds.v1f64(<1 x double>, <1 x double>)
+declare <1 x double> @llvm.fma.v1f64(<1 x double>, <1 x double>, <1 x double>)

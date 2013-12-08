@@ -5651,6 +5651,37 @@ defm : Neon_ScalarXIndexedElem_MLAL_Patterns<int_arm_neon_vqsubs,
   int_arm_neon_vqdmull, SQDMLSLdsv_4S, v1i64, FPR64, FPR32, v1i32, v4i32,
   i32, VPR128Lo, neon_uimm2_bare>;
 
+// Scalar general arithmetic operation
+class Neon_Scalar_GeneralMath2D_pattern<SDPatternOperator opnode,
+                                        Instruction INST> 
+    : Pat<(v1f64 (opnode (v1f64 FPR64:$Rn))), (INST FPR64:$Rn)>;
+
+class Neon_Scalar_GeneralMath3D_pattern<SDPatternOperator opnode,
+                                        Instruction INST> 
+    : Pat<(v1f64 (opnode (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
+          (INST FPR64:$Rn, FPR64:$Rm)>;
+
+class Neon_Scalar_GeneralMath4D_pattern<SDPatternOperator opnode,
+                                        Instruction INST> 
+    : Pat<(v1f64 (opnode (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm),
+              (v1f64 FPR64:$Ra))),
+          (INST FPR64:$Rn, FPR64:$Rm, FPR64:$Ra)>;
+
+def : Neon_Scalar_GeneralMath3D_pattern<fadd, FADDddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<fmul, FMULddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<fsub, FSUBddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<fdiv, FDIVddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<int_arm_neon_vabds, FABDddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<int_arm_neon_vmaxs, FMAXddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<int_arm_neon_vmins, FMINddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<int_aarch64_neon_vmaxnm, FMAXNMddd>;
+def : Neon_Scalar_GeneralMath3D_pattern<int_aarch64_neon_vminnm, FMINNMddd>;
+
+def : Neon_Scalar_GeneralMath2D_pattern<fabs, FABSdd>;
+def : Neon_Scalar_GeneralMath2D_pattern<fneg, FNEGdd>;
+
+def : Neon_Scalar_GeneralMath4D_pattern<fma, FMADDdddd>;
+def : Neon_Scalar_GeneralMath4D_pattern<fmsub, FMSUBdddd>;
 
 // Scalar Signed saturating doubling multiply returning
 // high half (scalar, by element)
