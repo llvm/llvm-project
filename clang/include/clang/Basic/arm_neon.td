@@ -669,9 +669,9 @@ def USQADD : SInst<"vsqadd", "ddd", "UcUsUiUlQUcQUsQUiQUl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Reciprocal/Sqrt
-// With additional Qd type.
-def FRECPS  : IInst<"vrecps", "ddd", "fQfQd">;
-def FRSQRTS : IInst<"vrsqrts", "ddd", "fQfQd">;
+// With additional d, Qd type.
+def FRECPS  : IInst<"vrecps", "ddd", "fdQfQd">;
+def FRSQRTS : IInst<"vrsqrts", "ddd", "fdQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // bitwise reverse
@@ -695,39 +695,39 @@ def VCVT_HIGH_F16 : SOpInst<"vcvt_high_f16", "qhj", "f", OP_VCVT_NA_HI>;
 def VCVT_HIGH_F32_F16 : SOpInst<"vcvt_high_f32", "wk", "h", OP_VCVT_EX_HI>;
 def VCVT_F32_F64 : SInst<"vcvt_f32_f64", "fj", "d">;
 def VCVT_HIGH_F32_F64 : SOpInst<"vcvt_high_f32", "qfj", "d", OP_VCVT_NA_HI>;
-def VCVT_F64_F32 : SInst<"vcvt_f64", "wd", "f">;
-def VCVT_F64 : SInst<"vcvt_f64", "Fd",  "QlQUl">;
+def VCVT_F64_F32 : SInst<"vcvt_f64_f32", "wd", "f">;
+def VCVT_F64 : SInst<"vcvt_f64", "Fd",  "lUlQlQUl">;
 def VCVT_HIGH_F64_F32 : SOpInst<"vcvt_high_f64", "wj", "f", OP_VCVT_EX_HI>;
 def VCVTX_F32_F64 : SInst<"vcvtx_f32", "fj",  "d">;
 def VCVTX_HIGH_F32_F64 : SOpInst<"vcvtx_high_f32", "qfj", "d", OP_VCVTX_HI>;
-def FRINTN : SInst<"vrndn", "dd", "fQfQd">;
-def FRINTA : SInst<"vrnda", "dd", "fQfQd">;
-def FRINTP : SInst<"vrndp", "dd", "fQfQd">;
-def FRINTM : SInst<"vrndm", "dd", "fQfQd">;
-def FRINTX : SInst<"vrndx", "dd", "fQfQd">;
-def FRINTZ : SInst<"vrnd", "dd", "fQfQd">;
-def FRINTI : SInst<"vrndi", "dd", "fQfQd">;
-def VCVT_S64 : SInst<"vcvt_s64", "xd",  "Qd">;
-def VCVT_U64 : SInst<"vcvt_u64", "ud",  "Qd">;
+def FRINTN : SInst<"vrndn", "dd", "fdQfQd">;
+def FRINTA : SInst<"vrnda", "dd", "fdQfQd">;
+def FRINTP : SInst<"vrndp", "dd", "fdQfQd">;
+def FRINTM : SInst<"vrndm", "dd", "fdQfQd">;
+def FRINTX : SInst<"vrndx", "dd", "fdQfQd">;
+def FRINTZ : SInst<"vrnd", "dd", "fdQfQd">;
+def FRINTI : SInst<"vrndi", "dd", "fdQfQd">;
+def VCVT_S64 : SInst<"vcvt_s64", "xd",  "dQd">;
+def VCVT_U64 : SInst<"vcvt_u64", "ud",  "dQd">;
 def FCVTNS_S32 : SInst<"vcvtn_s32", "xd", "fQf">;
-def FCVTNS_S64 : SInst<"vcvtn_s64", "xd", "Qd">;
+def FCVTNS_S64 : SInst<"vcvtn_s64", "xd", "dQd">;
 def FCVTNU_S32 : SInst<"vcvtn_u32", "ud", "fQf">;
-def FCVTNU_S64 : SInst<"vcvtn_u64", "ud", "Qd">;
+def FCVTNU_S64 : SInst<"vcvtn_u64", "ud", "dQd">;
 def FCVTPS_S32 : SInst<"vcvtp_s32", "xd", "fQf">;
-def FCVTPS_S64 : SInst<"vcvtp_s64", "xd", "Qd">;
+def FCVTPS_S64 : SInst<"vcvtp_s64", "xd", "dQd">;
 def FCVTPU_S32 : SInst<"vcvtp_u32", "ud", "fQf">;
-def FCVTPU_S64 : SInst<"vcvtp_u64", "ud", "Qd">;
+def FCVTPU_S64 : SInst<"vcvtp_u64", "ud", "dQd">;
 def FCVTMS_S32 : SInst<"vcvtm_s32", "xd", "fQf">;
-def FCVTMS_S64 : SInst<"vcvtm_s64", "xd", "Qd">;
+def FCVTMS_S64 : SInst<"vcvtm_s64", "xd", "dQd">;
 def FCVTMU_S32 : SInst<"vcvtm_u32", "ud", "fQf">;
-def FCVTMU_S64 : SInst<"vcvtm_u64", "ud", "Qd">;
+def FCVTMU_S64 : SInst<"vcvtm_u64", "ud", "dQd">;
 def FCVTAS_S32 : SInst<"vcvta_s32", "xd", "fQf">;
-def FCVTAS_S64 : SInst<"vcvta_s64", "xd", "Qd">;
+def FCVTAS_S64 : SInst<"vcvta_s64", "xd", "dQd">;
 def FCVTAU_S32 : SInst<"vcvta_u32", "ud", "fQf">;
-def FCVTAU_S64 : SInst<"vcvta_u64", "ud", "Qd">;
-def FRECPE  : SInst<"vrecpe", "dd", "fUiQfQUiQd">;
-def FRSQRTE : SInst<"vrsqrte", "dd", "fUiQfQUiQd">;
-def FSQRT   : SInst<"vsqrt", "dd", "fQfQd">;
+def FCVTAU_S64 : SInst<"vcvta_u64", "ud", "dQd">;
+def FRECPE  : SInst<"vrecpe", "dd", "fdUiQfQUiQd">;
+def FRSQRTE : SInst<"vrsqrte", "dd", "fdUiQfQUiQd">;
+def FSQRT   : SInst<"vsqrt", "dd", "fdQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Comparison
@@ -742,7 +742,7 @@ def FCALT : IInst<"vcalt", "udd", "fQfQd">;
 def CMTST  : WInst<"vtst", "udd",
                    "csiUcUsUiPcPsQcQsQiQUcQUsQUiQPcQPslUlQlQUlPlQPl">;
 def CFMEQ  : SOpInst<"vceq", "udd",
-                  "csifUcUsUiPcQcQsQiQlQfQUcQUsQUiQUlQPcQd", OP_EQ>;
+                     "csifUcUsUiPcQcQsQiQlQfQUcQUsQUiQUlQPcQd", OP_EQ>;
 def CFMGE  : SOpInst<"vcge", "udd", "csifUcUsUiQcQsQiQlQfQUcQUsQUiQUlQd", OP_GE>;
 def CFMLE  : SOpInst<"vcle", "udd", "csifUcUsUiQcQsQiQlQfQUcQUsQUiQUlQd", OP_LE>;
 def CFMGT  : SOpInst<"vcgt", "udd", "csifUcUsUiQcQsQiQlQfQUcQUsQUiQUlQd", OP_GT>;
@@ -816,9 +816,9 @@ def QRSHRN_HIGH_N  : SOpInst<"vqrshrn_high_n", "hmdi",
 def VMOVL_HIGH   : SOpInst<"vmovl_high", "nd", "HcHsHiHUcHUsHUi", OP_MOVL_HI>;
 
 let isVCVT_N = 1 in {
-def CVTF_N_F64   : SInst<"vcvt_n_f64", "Fdi", "QlQUl">;
-def FCVTZS_N_S64 : SInst<"vcvt_n_s64", "xdi", "Qd">;
-def FCVTZS_N_U64 : SInst<"vcvt_n_u64", "udi", "Qd">;
+def CVTF_N_F64   : SInst<"vcvt_n_f64", "Fdi", "lUlQlQUl">;
+def FCVTZS_N_S64 : SInst<"vcvt_n_s64", "xdi", "dQd">;
+def FCVTZS_N_U64 : SInst<"vcvt_n_u64", "udi", "dQd">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
