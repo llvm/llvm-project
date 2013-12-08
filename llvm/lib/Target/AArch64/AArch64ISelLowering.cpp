@@ -4004,8 +4004,8 @@ AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Value);
 
   unsigned EltSize = VT.getVectorElementType().getSizeInBits();
-  // Use VDUP for non-constant splats.
   if (hasDominantValue && EltSize <= 64) {
+    // Use VDUP for non-constant splats.
     if (!isConstant) {
       SDValue N;
 
