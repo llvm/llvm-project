@@ -11369,3 +11369,93 @@ uint64_t test_vaddvq_u64(uint64x2_t a) {
   return vaddvq_u64(a);
   // CHECK: addp {{d[0-9]+}}, {{v[0-9]+}}.2d
 }
+
+float64x1_t test_vadd_f64(float64x1_t a, float64x1_t b) {
+  // CHECK-LABEL: test_vadd_f64
+  return vadd_f64(a, b);
+  // CHECK: fadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vmul_f64(float64x1_t a, float64x1_t b) {
+  // CHECK-LABEL: test_vmul_f64
+  return vmul_f64(a, b);
+  // CHECK: fmul d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vdiv_f64(float64x1_t a, float64x1_t b) {
+  // CHECK-LABEL: test_vdiv_f64
+  return vdiv_f64(a, b);
+  // CHECK: fdiv d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vmla_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
+  // CHECK-LABEL: test_vmla_f64
+  return vmla_f64(a, b, c);
+  // CHECK: fmadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
+  // CHECK-LABEL: test_vmls_f64
+  return vmls_f64(a, b, c);
+  // CHECK: fmsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
+  // CHECK-LABEL: test_vfma_f64
+  return vfma_f64(a, b, c);
+  // CHECK: fmadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vfms_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
+  // CHECK-LABEL: test_vfms_f64
+  return vfms_f64(a, b, c);
+  // CHECK: fmsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vsub_f64(float64x1_t a, float64x1_t b) {
+  // CHECK-LABEL: test_vsub_f64
+  return vsub_f64(a, b);
+  // CHECK: fsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vabd_f64(float64x1_t a, float64x1_t b) {
+  // CHECK-LABEL: test_vabd_f64
+  return vabd_f64(a, b);
+  // CHECK: fabd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vmax_f64(float64x1_t a, float64x1_t b) {
+// CHECK-LABEL: test_vmax_f64
+  return vmax_f64(a, b);
+// CHECK: fmax d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vmin_f64(float64x1_t a, float64x1_t b) {
+// CHECK-LABEL: test_vmin_f64
+  return vmin_f64(a, b);
+// CHECK: fmin d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vmaxnm_f64(float64x1_t a, float64x1_t b) {
+// CHECK-LABEL: test_vmaxnm_f64
+  return vmaxnm_f64(a, b);
+// CHECK: fmaxnm d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vminnm_f64(float64x1_t a, float64x1_t b) {
+// CHECK-LABEL: test_vminnm_f64
+  return vminnm_f64(a, b);
+// CHECK: fminnm d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vabs_f64(float64x1_t a) {
+  // CHECK-LABEL: test_vabs_f64
+  return vabs_f64(a);
+  // CHECK: fabs d{{[0-9]+}}, d{{[0-9]+}}
+}
+
+float64x1_t test_vneg_f64(float64x1_t a) {
+  // CHECK-LABEL: test_vneg_f64
+  return vneg_f64(a);
+  // CHECK: fneg d{{[0-9]+}}, d{{[0-9]+}}
+}

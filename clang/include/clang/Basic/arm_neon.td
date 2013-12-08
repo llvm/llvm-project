@@ -603,20 +603,22 @@ def LD4_DUP  : WInst<"vld4_dup", "4c",
 
 ////////////////////////////////////////////////////////////////////////////////
 // Addition
-// With additional Qd type.
-def ADD : IOpInst<"vadd", "ddd", "csilfUcUsUiUlQcQsQiQlQfQUcQUsQUiQUlQd", OP_ADD>;
+// With additional d, Qd type.
+def ADD : IOpInst<"vadd", "ddd", "csilfdUcUsUiUlQcQsQiQlQfQUcQUsQUiQUlQd",
+                  OP_ADD>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Subtraction
 // With additional Qd type.
-def SUB : IOpInst<"vsub", "ddd", "csilfUcUsUiUlQcQsQiQlQfQUcQUsQUiQUlQd", OP_SUB>;
+def SUB : IOpInst<"vsub", "ddd", "csildfUcUsUiUlQcQsQiQlQfQUcQUsQUiQUlQd",
+                  OP_SUB>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Multiplication
 // With additional Qd type.
-def MUL     : IOpInst<"vmul", "ddd", "csifUcUsUiQcQsQiQfQUcQUsQUiQd", OP_MUL>;
-def MLA     : IOpInst<"vmla", "dddd", "csifUcUsUiQcQsQiQfQUcQUsQUiQd", OP_MLA>;
-def MLS     : IOpInst<"vmls", "dddd", "csifUcUsUiQcQsQiQfQUcQUsQUiQd", OP_MLS>;
+def MUL     : IOpInst<"vmul", "ddd", "csifdUcUsUiQcQsQiQfQUcQUsQUiQd", OP_MUL>;
+def MLA     : IOpInst<"vmla", "dddd", "csifdUcUsUiQcQsQiQfQUcQUsQUiQd", OP_MLA>;
+def MLS     : IOpInst<"vmls", "dddd", "csifdUcUsUiQcQsQiQfQUcQUsQUiQd", OP_MLS>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Multiplication Extended
@@ -624,13 +626,13 @@ def MULX : SInst<"vmulx", "ddd", "fdQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Division
-def FDIV : IOpInst<"vdiv", "ddd",  "fQfQd", OP_DIV>;
+def FDIV : IOpInst<"vdiv", "ddd",  "fdQfQd", OP_DIV>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector fused multiply-add operations
-// With additional Qd type.
-def FMLA : SInst<"vfma", "dddd", "fQfQd">;
-def FMLS : SInst<"vfms", "dddd", "fQfQd">;
+// With additional d, Qd type.
+def FMLA : SInst<"vfma", "dddd", "fdQfQd">;
+def FMLS : SInst<"vfms", "dddd", "fdQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUL, FMA, FMS definitions with scalar argument
@@ -647,14 +649,14 @@ def BSL : SInst<"vbsl", "dudd",
 ////////////////////////////////////////////////////////////////////////////////
 // Absolute Difference
 // With additional Qd type.
-def ABD  : SInst<"vabd", "ddd",  "csiUcUsUifQcQsQiQUcQUsQUiQfQd">;
+def ABD  : SInst<"vabd", "ddd",  "csiUcUsUifdQcQsQiQUcQUsQUiQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // saturating absolute/negate
 // With additional Qd/Ql type.
-def ABS    : SInst<"vabs", "dd", "csilfQcQsQiQfQlQd">;
+def ABS    : SInst<"vabs", "dd", "csilfdQcQsQiQfQlQd">;
 def QABS   : SInst<"vqabs", "dd", "csilQcQsQiQl">;
-def NEG    : SOpInst<"vneg", "dd", "csilfQcQsQiQfQdQl", OP_NEG>;
+def NEG    : SOpInst<"vneg", "dd", "csilfdQcQsQiQfQdQl", OP_NEG>;
 def QNEG   : SInst<"vqneg", "dd", "csilQcQsQiQl">;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -756,13 +758,13 @@ def CMLT  : SInst<"vcltz", "ud", "csifdQcQsQiQlQfQd">;
 ////////////////////////////////////////////////////////////////////////////////
 // Max/Min Integer
 // With additional Qd type.
-def MAX : SInst<"vmax", "ddd", "csiUcUsUifQcQsQiQUcQUsQUiQfQd">;
-def MIN : SInst<"vmin", "ddd", "csiUcUsUifQcQsQiQUcQUsQUiQfQd">;
+def MAX : SInst<"vmax", "ddd", "csiUcUsUifdQcQsQiQUcQUsQUiQfQd">;
+def MIN : SInst<"vmin", "ddd", "csiUcUsUifdQcQsQiQUcQUsQUiQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MaxNum/MinNum Floating Point
-def FMAXNM : SInst<"vmaxnm", "ddd", "fQfQd">;
-def FMINNM : SInst<"vminnm", "ddd", "fQfQd">;
+def FMAXNM : SInst<"vmaxnm", "ddd", "fdQfQd">;
+def FMINNM : SInst<"vminnm", "ddd", "fdQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Pairwise Max/Min
