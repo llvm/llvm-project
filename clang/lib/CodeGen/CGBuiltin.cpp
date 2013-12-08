@@ -1985,6 +1985,7 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
     s = "vqrshlu"; OverloadInt = true; break;
   // Scalar Reduce Pairwise Add
   case AArch64::BI__builtin_neon_vpaddd_s64:
+  case AArch64::BI__builtin_neon_vpaddd_u64:
     Int = Intrinsic::aarch64_neon_vpadd; s = "vpadd";
     break;
   case AArch64::BI__builtin_neon_vpadds_f32:
@@ -2069,23 +2070,36 @@ static Value *EmitAArch64ScalarBuiltinExpr(CodeGenFunction &CGF,
   case AArch64::BI__builtin_neon_vaddvq_s8:
   case AArch64::BI__builtin_neon_vaddvq_s16:
   case AArch64::BI__builtin_neon_vaddvq_s32:
+  case AArch64::BI__builtin_neon_vaddvq_s64:
   case AArch64::BI__builtin_neon_vaddv_u8:
   case AArch64::BI__builtin_neon_vaddv_u16:
   case AArch64::BI__builtin_neon_vaddvq_u8:
   case AArch64::BI__builtin_neon_vaddvq_u16:
   case AArch64::BI__builtin_neon_vaddvq_u32:
+  case AArch64::BI__builtin_neon_vaddvq_u64:
+  case AArch64::BI__builtin_neon_vaddv_f32:
+  case AArch64::BI__builtin_neon_vaddvq_f32:
+  case AArch64::BI__builtin_neon_vaddvq_f64:
     Int = Intrinsic::aarch64_neon_vaddv;
     AcrossVec = true; ExtendEle = false; s = "vaddv"; break;      
+  case AArch64::BI__builtin_neon_vmaxv_f32:
   case AArch64::BI__builtin_neon_vmaxvq_f32:
+  case AArch64::BI__builtin_neon_vmaxvq_f64:
     Int = Intrinsic::aarch64_neon_vmaxv;
     AcrossVec = true; ExtendEle = false; s = "vmaxv"; break;
+  case AArch64::BI__builtin_neon_vminv_f32:
   case AArch64::BI__builtin_neon_vminvq_f32:
+  case AArch64::BI__builtin_neon_vminvq_f64:
     Int = Intrinsic::aarch64_neon_vminv;
     AcrossVec = true; ExtendEle = false; s = "vminv"; break;
+  case AArch64::BI__builtin_neon_vmaxnmv_f32:
   case AArch64::BI__builtin_neon_vmaxnmvq_f32:
+  case AArch64::BI__builtin_neon_vmaxnmvq_f64:
     Int = Intrinsic::aarch64_neon_vmaxnmv;
     AcrossVec = true; ExtendEle = false; s = "vmaxnmv"; break;
+  case AArch64::BI__builtin_neon_vminnmv_f32:
   case AArch64::BI__builtin_neon_vminnmvq_f32:
+  case AArch64::BI__builtin_neon_vminnmvq_f64:
     Int = Intrinsic::aarch64_neon_vminnmv;
     AcrossVec = true; ExtendEle = false; s = "vminnmv"; break;
   // Scalar Integer Saturating Doubling Multiply Half High

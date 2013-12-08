@@ -11272,3 +11272,100 @@ int64x1_t test_vneg_s64(int64x1_t a) {
   return vneg_s64(a);
   // CHECK: neg d{{[0-9]+}}, d{{[0-9]+}}
 }
+
+float32_t test_vaddv_f32(float32x2_t a) {
+  // CHECK-LABEL: test_vaddv_f32
+  return vaddv_f32(a);
+  // CHECK: faddp {{s[0-9]+}}, {{v[0-9]+}}.2s
+}
+
+float32_t test_vaddvq_f32(float32x4_t a) {
+  // CHECK-LABEL: test_vaddvq_f32
+  return vaddvq_f32(a);
+  // CHECK: faddp {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
+  // CHECK: faddp {{s[0-9]+}}, {{v[0-9]+}}.2s
+}
+
+float64_t test_vaddvq_f64(float64x2_t a) {
+  // CHECK-LABEL: test_vaddvq_f64
+  return vaddvq_f64(a);
+  // CHECK: faddp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}
+
+float32_t test_vmaxv_f32(float32x2_t a) {
+  // CHECK-LABEL: test_vmaxv_f32
+  return vmaxv_f32(a);
+  // CHECK: fmaxp {{s[0-9]+}}, {{v[0-9]+}}.2s
+}
+
+float64_t test_vmaxvq_f64(float64x2_t a) {
+  // CHECK-LABEL: test_vmaxvq_f64
+  return vmaxvq_f64(a);
+  // CHECK: fmaxp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}
+
+float32_t test_vminv_f32(float32x2_t a) {
+  // CHECK-LABEL: test_vminv_f32
+  return vminv_f32(a);
+  // CHECK: fminp {{s[0-9]+}}, {{v[0-9]+}}.2s
+}
+
+float64_t test_vminvq_f64(float64x2_t a) {
+  // CHECK-LABEL: test_vminvq_f64
+  return vminvq_f64(a);
+  // CHECK: fminp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}
+
+float64_t test_vmaxnmvq_f64(float64x2_t a) {
+  // CHECK-LABEL: test_vmaxnmvq_f64
+  return vmaxnmvq_f64(a);
+  // CHECK: fmaxnmp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}
+
+float32_t test_vmaxnmv_f32(float32x2_t a) {
+  // CHECK-LABEL: test_vmaxnmv_f32
+  return vmaxnmv_f32(a);
+  // CHECK: fmaxnmp {{s[0-9]+}}, {{v[0-9]+}}.2s
+}
+
+float64_t test_vminnmvq_f64(float64x2_t a) {
+  // CHECK-LABEL: test_vminnmvq_f64
+  return vminnmvq_f64(a);
+  // CHECK: fminnmp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}
+
+float32_t test_vminnmv_f32(float32x2_t a) {
+  // CHECK-LABEL: test_vminnmv_f32
+  return vminnmv_f32(a);
+  // CHECK: fminnmp {{s[0-9]+}}, {{v[0-9]+}}.2s
+}
+
+int64x2_t test_vpaddq_s64(int64x2_t a, int64x2_t b) {
+  // CHECK-LABEL: test_vpaddq_s64
+  return vpaddq_s64(a, b);
+  // CHECK: addp {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
+}
+
+uint64x2_t test_vpaddq_u64(uint64x2_t a, uint64x2_t b) {
+  // CHECK-LABEL: test_vpaddq_u64
+  return vpaddq_u64(a, b);
+  // CHECK: addp {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
+}
+
+uint64_t test_vpaddd_u64(uint64x2_t a) {
+  // CHECK-LABEL: test_vpaddd_u64
+  return vpaddd_u64(a);
+  // CHECK: addp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}
+
+int64_t test_vaddvq_s64(int64x2_t a) {
+  // CHECK-LABEL: test_vaddvq_s64
+  return vaddvq_s64(a);
+  // CHECK: addp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}
+
+uint64_t test_vaddvq_u64(uint64x2_t a) {
+  // CHECK-LABEL: test_vaddvq_u64
+  return vaddvq_u64(a);
+  // CHECK: addp {{d[0-9]+}}, {{v[0-9]+}}.2d
+}

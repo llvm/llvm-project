@@ -778,7 +778,7 @@ def FMINNMP : SInst<"vpminnm", "ddd", "fQfQd">;
 ////////////////////////////////////////////////////////////////////////////////
 // Pairwise Addition
 // With additional Qc Qs Qi QUc QUs QUi Qf Qd types.
-def ADDP  : IInst<"vpadd", "ddd", "csiUcUsUifQcQsQiQUcQUsQUiQfQd">;
+def ADDP  : IInst<"vpadd", "ddd", "csiUcUsUifQcQsQiQlQUcQUsQUiQUlQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Shifts by constant
@@ -950,11 +950,11 @@ def VMULX_LANEQ : IOpInst<"vmulx_laneq", "ddji", "fQfQd", OP_MULX_LN>;
 ////////////////////////////////////////////////////////////////////////////////
 // Across vectors class
 def VADDLV  : SInst<"vaddlv", "rd", "csiUcUsUiQcQsQiQUcQUsQUi">;
-def VMAXV   : SInst<"vmaxv", "sd", "csiUcUsUiQcQsQiQUcQUsQUiQf">;
-def VMINV   : SInst<"vminv", "sd", "csiUcUsUiQcQsQiQUcQUsQUiQf">;
-def VADDV   : SInst<"vaddv", "sd", "csiUcUsUiQcQsQiQUcQUsQUi">;
-def FMAXNMV : SInst<"vmaxnmv", "sd", "Qf">;
-def FMINNMV : SInst<"vminnmv", "sd", "Qf">;
+def VMAXV   : SInst<"vmaxv", "sd", "csifUcUsUiQcQsQiQUcQUsQUiQfQd">;
+def VMINV   : SInst<"vminv", "sd", "csifUcUsUiQcQsQiQUcQUsQUiQfQd">;
+def VADDV   : SInst<"vaddv", "sd", "csifUcUsUiQcQsQiQUcQUsQUiQfQdQlQUl">;
+def FMAXNMV : SInst<"vmaxnmv", "sd", "fQfQd">;
+def FMINNMV : SInst<"vminnmv", "sd", "fQfQd">;
  
 ////////////////////////////////////////////////////////////////////////////////
 // Newly added Vector Extract for f64
@@ -1103,7 +1103,7 @@ def SCALAR_FCVTZU_N_U64 : SInst<"vcvt_n_u64", "bsi", "Sd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Reduce Pairwise Addition (Scalar and Floating Point)
-def SCALAR_ADDP  : SInst<"vpadd", "sd", "SfSHlSHd">;
+def SCALAR_ADDP  : SInst<"vpadd", "sd", "SfSHlSHdSHUl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Reduce Floating Point Pairwise Max/Min
