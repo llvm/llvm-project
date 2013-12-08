@@ -24,6 +24,24 @@ uint32x2_t test_vceqz_s32(int32x2_t a) {
   return vceqz_s32(a);
 }
 
+// CHECK: test_vceqz_s64
+// CHECK: cmeq {{d[0-9]+}}, {{d[0-9]+}}, #0x0
+uint64x1_t test_vceqz_s64(int64x1_t a) {
+  return vceqz_s64(a);
+}
+
+// CHECK: test_vceqz_u64
+// CHECK: cmeq {{d[0-9]+}}, {{d[0-9]+}}, #0x0
+uint64x1_t test_vceqz_u64(uint64x1_t a) {
+  return vceqz_u64(a);
+}
+
+// CHECK: test_vceqz_p64
+// CHECK: cmeq {{d[0-9]+}}, {{d[0-9]+}}, #0x0
+uint64x1_t test_vceqz_p64(poly64x1_t a) {
+  return vceqz_p64(a);
+}
+
 // CHECK: test_vceqzq_s8
 // CHECK: cmeq  {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, #0x0
 uint8x16_t test_vceqzq_s8(int8x16_t a) {
@@ -120,6 +138,12 @@ uint64x2_t test_vceqzq_f64(float64x2_t a) {
   return vceqzq_f64(a);
 }
 
+// CHECK: test_vceqzq_p64
+// CHECK: cmeq  {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, #0
+uint64x2_t test_vceqzq_p64(poly64x2_t a) {
+  return vceqzq_p64(a);
+}
+
 // CHECK: test_vcgez_s8
 // CHECK: cmge  {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, #0x0
 uint8x8_t test_vcgez_s8(int8x8_t a) {
@@ -136,6 +160,12 @@ uint16x4_t test_vcgez_s16(int16x4_t a) {
 // CHECK: cmge  {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, #0x0
 uint32x2_t test_vcgez_s32(int32x2_t a) {
   return vcgez_s32(a);
+}
+
+// CHECK: test_vcgez_s64
+// CHECK: cmge {{d[0-9]+}}, {{d[0-9]+}}, #0x0
+uint64x1_t test_vcgez_s64(int64x1_t a) {
+  return vcgez_s64(a);
 }
 
 // CHECK: test_vcgezq_s8
@@ -198,6 +228,12 @@ uint32x2_t test_vclez_s32(int32x2_t a) {
   return vclez_s32(a);
 }
 
+// CHECK: test_vclez_s64
+// CHECK: cmle {{d[0-9]+}}, {{d[0-9]+}}, #0x0
+uint64x1_t test_vclez_s64(int64x1_t a) {
+  return vclez_s64(a);
+}
+
 // CHECK: test_vclezq_s8
 // CHECK: cmle  {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, #0x0
 uint8x16_t test_vclezq_s8(int8x16_t a) {
@@ -258,6 +294,12 @@ uint32x2_t test_vcgtz_s32(int32x2_t a) {
   return vcgtz_s32(a);
 }
 
+// CHECK: test_vcgtz_s64
+// CHECK: cmgt {{d[0-9]+}}, {{d[0-9]+}}, #0x0
+uint64x1_t test_vcgtz_s64(int64x1_t a) {
+  return vcgtz_s64(a);
+}
+
 // CHECK: test_vcgtzq_s8
 // CHECK: cmgt  {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, #0x0
 uint8x16_t test_vcgtzq_s8(int8x16_t a) {
@@ -316,6 +358,12 @@ uint16x4_t test_vcltz_s16(int16x4_t a) {
 // CHECK: cmlt  {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, #0
 uint32x2_t test_vcltz_s32(int32x2_t a) {
   return vcltz_s32(a);
+}
+
+// CHECK: test_vcltz_s64
+// CHECK: cmlt {{d[0-9]+}}, {{d[0-9]+}}, #0
+uint64x1_t test_vcltz_s64(int64x1_t a) {
+  return vcltz_s64(a);
 }
 
 // CHECK: test_vcltzq_s8

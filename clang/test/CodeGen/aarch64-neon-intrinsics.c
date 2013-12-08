@@ -915,6 +915,12 @@ uint32x2_t test_vcage_f32(float32x2_t v1, float32x2_t v2) {
   // CHECK: facge {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 }
 
+uint64x1_t test_vcage_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vcage_f64
+  return vcage_f64(a, b);
+  // CHECK: facge {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
 uint32x4_t test_vcageq_f32(float32x4_t v1, float32x4_t v2) {
   // CHECK: test_vcageq_f32
   return vcageq_f32(v1, v2);
@@ -933,6 +939,12 @@ uint32x2_t test_vcagt_f32(float32x2_t v1, float32x2_t v2) {
   // CHECK: facgt {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 }
 
+uint64x1_t test_vcagt_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vcagt_f64
+  return vcagt_f64(a, b);
+  // CHECK: facgt {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
 uint32x4_t test_vcagtq_f32(float32x4_t v1, float32x4_t v2) {
   // CHECK: test_vcagtq_f32
   return vcagtq_f32(v1, v2);
@@ -948,8 +960,14 @@ uint64x2_t test_vcagtq_f64(float64x2_t v1, float64x2_t v2) {
 uint32x2_t test_vcale_f32(float32x2_t v1, float32x2_t v2) {
   // CHECK: test_vcale_f32
   return vcale_f32(v1, v2);
- // Using registers other than v0, v1 are possible, but would be odd.
+  // Using registers other than v0, v1 are possible, but would be odd.
   // CHECK: facge {{v[0-9]+}}.2s, v1.2s, v0.2s
+}
+
+uint64x1_t test_vcale_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vcale_f64
+  return vcale_f64(a, b);
+  // CHECK: facge {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 }
 
 uint32x4_t test_vcaleq_f32(float32x4_t v1, float32x4_t v2) {
@@ -971,6 +989,12 @@ uint32x2_t test_vcalt_f32(float32x2_t v1, float32x2_t v2) {
   return vcalt_f32(v1, v2);
   // Using registers other than v0, v1 are possible, but would be odd.
   // CHECK: facgt {{v[0-9]+}}.2s, v1.2s, v0.2s
+}
+
+uint64x1_t test_vcalt_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vcalt_f64
+  return vcalt_f64(a, b);
+  // CHECK: facgt {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 }
 
 uint32x4_t test_vcaltq_f32(float32x4_t v1, float32x4_t v2) {
@@ -1114,10 +1138,28 @@ uint32x2_t test_vceq_s32(int32x2_t v1, int32x2_t v2) {
   // CHECK: cmeq {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 }
 
+uint64x1_t test_vceq_s64(int64x1_t a, int64x1_t b) {
+  // CHECK: test_vceq_s64
+  return vceq_s64(a, b);
+  // CHECK: cmeq {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
+uint64x1_t test_vceq_u64(uint64x1_t a, uint64x1_t b) {
+  // CHECK: test_vceq_u64
+  return vceq_u64(a, b);
+  // CHECK: cmeq {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
 uint32x2_t test_vceq_f32(float32x2_t v1, float32x2_t v2) {
   // CHECK: test_vceq_f32
   return vceq_f32(v1, v2);
   // CHECK: fcmeq {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
+}
+
+uint64x1_t test_vceq_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vceq_f64
+  return vceq_f64(a, b);
+  // CHECK: fcmeq {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 }
 
 uint8x8_t test_vceq_u8(uint8x8_t v1, uint8x8_t v2) {
@@ -1228,10 +1270,28 @@ uint32x2_t test_vcge_s32(int32x2_t v1, int32x2_t v2) {
 // CHECK: cmge {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 }
 
+uint64x1_t test_vcge_s64(int64x1_t a, int64x1_t b) {
+  // CHECK: test_vcge_s64
+  return vcge_s64(a, b);
+  // CHECK: cmge {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
+uint64x1_t test_vcge_u64(uint64x1_t a, uint64x1_t b) {
+  // CHECK: test_vcge_u64
+  return vcge_u64(a, b);
+  // CHECK: cmhs {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
 uint32x2_t test_vcge_f32(float32x2_t v1, float32x2_t v2) {
 // CHECK: test_vcge_f32
   return vcge_f32(v1, v2);
 // CHECK: fcmge {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
+}
+
+uint64x1_t test_vcge_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vcge_f64
+  return vcge_f64(a, b);
+  // CHECK: fcmge {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 }
 
 uint8x8_t test_vcge_u8(uint8x8_t v1, uint8x8_t v2) {
@@ -1333,10 +1393,28 @@ uint32x2_t test_vcle_s32(int32x2_t v1, int32x2_t v2) {
   // CHECK: cmge {{v[0-9]+}}.2s, v1.2s, v0.2s
 }
 
+uint64x1_t test_vcle_s64(int64x1_t a, int64x1_t b) {
+  // CHECK: test_vcle_s64
+  return vcle_s64(a, b);
+  // CHECK: cmge {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
+uint64x1_t test_vcle_u64(uint64x1_t a, uint64x1_t b) {
+  // CHECK: test_vcle_u64
+  return vcle_u64(a, b);
+  // CHECK: cmhs {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
 uint32x2_t test_vcle_f32(float32x2_t v1, float32x2_t v2) {
   // CHECK: test_vcle_f32
   return vcle_f32(v1, v2);
   // CHECK: fcmge {{v[0-9]+}}.2s, v1.2s, v0.2s
+}
+
+uint64x1_t test_vcle_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vcle_f64
+  return vcle_f64(a, b);
+  // CHECK: fcmge {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 }
 
 uint8x8_t test_vcle_u8(uint8x8_t v1, uint8x8_t v2) {
@@ -1436,10 +1514,28 @@ uint32x2_t test_vcgt_s32(int32x2_t v1, int32x2_t v2) {
   // CHECK: cmgt {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 }
 
+uint64x1_t test_vcgt_s64(int64x1_t a, int64x1_t b) {
+  // CHECK: test_vcgt_s64
+  return vcgt_s64(a, b);
+  // CHECK: cmgt {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
+uint64x1_t test_vcgt_u64(uint64x1_t a, uint64x1_t b) {
+  // CHECK: test_vcgt_u64
+  return vcgt_u64(a, b);
+  // CHECK: cmhi {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
 uint32x2_t test_vcgt_f32(float32x2_t v1, float32x2_t v2) {
   // CHECK: test_vcgt_f32
   return vcgt_f32(v1, v2);
   // CHECK: fcmgt {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
+}
+
+uint64x1_t test_vcgt_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vcgt_f64
+  return vcgt_f64(a, b);
+  // CHECK: fcmgt {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 }
 
 uint8x8_t test_vcgt_u8(uint8x8_t v1, uint8x8_t v2) {
@@ -1543,10 +1639,28 @@ uint32x2_t test_vclt_s32(int32x2_t v1, int32x2_t v2) {
   // CHECK: cmgt {{v[0-9]+}}.2s, v1.2s, v0.2s
 }
 
+uint64x1_t test_vclt_s64(int64x1_t a, int64x1_t b) {
+  // CHECK: test_vclt_s64
+  return vclt_s64(a, b);
+  // CHECK: cmgt {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
+uint64x1_t test_vclt_u64(uint64x1_t a, uint64x1_t b) {
+  // CHECK: test_vclt_u64
+  return vclt_u64(a, b);
+  // CHECK: cmhi {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+}
+
 uint32x2_t test_vclt_f32(float32x2_t v1, float32x2_t v2) {
   // CHECK: test_vclt_f32
   return vclt_f32(v1, v2);
   // CHECK: fcmgt {{v[0-9]+}}.2s, v1.2s, v0.2s
+}
+
+uint64x1_t test_vclt_f64(float64x1_t a, float64x1_t b) {
+  // CHECK: test_vclt_f64
+  return vclt_f64(a, b);
+  // CHECK: fcmgt {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 }
 
 uint8x8_t test_vclt_u8(uint8x8_t v1, uint8x8_t v2) {

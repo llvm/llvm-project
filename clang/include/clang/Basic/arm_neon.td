@@ -732,28 +732,31 @@ def FSQRT   : SInst<"vsqrt", "dd", "fdQfQd">;
 ////////////////////////////////////////////////////////////////////////////////
 // Comparison
 // With additional Qd, Ql, QPl type.
-def VVCEQ  : IOpInst<"vceq", "udd", "csifUcUsUiPcQcQsQiQfQUcQUsQUiQPcPlQPl",
-                     OP_EQ>;
-def FCAGE : IInst<"vcage", "udd", "fQfQd">;
-def FCAGT : IInst<"vcagt", "udd", "fQfQd">;
-def FCALE : IInst<"vcale", "udd", "fQfQd">;
-def FCALT : IInst<"vcalt", "udd", "fQfQd">;
+def FCAGE : IInst<"vcage", "udd", "fdQfQd">;
+def FCAGT : IInst<"vcagt", "udd", "fdQfQd">;
+def FCALE : IInst<"vcale", "udd", "fdQfQd">;
+def FCALT : IInst<"vcalt", "udd", "fdQfQd">;
 // With additional Ql, QUl, Qd types.
 def CMTST  : WInst<"vtst", "udd",
                    "csiUcUsUiPcPsQcQsQiQUcQUsQUiQPcQPslUlQlQUlPlQPl">;
+// With additional l, Ul,d, Qd, Ql, QUl, Qd types.
 def CFMEQ  : SOpInst<"vceq", "udd",
-                     "csifUcUsUiPcQcQsQiQlQfQUcQUsQUiQUlQPcQd", OP_EQ>;
-def CFMGE  : SOpInst<"vcge", "udd", "csifUcUsUiQcQsQiQlQfQUcQUsQUiQUlQd", OP_GE>;
-def CFMLE  : SOpInst<"vcle", "udd", "csifUcUsUiQcQsQiQlQfQUcQUsQUiQUlQd", OP_LE>;
-def CFMGT  : SOpInst<"vcgt", "udd", "csifUcUsUiQcQsQiQlQfQUcQUsQUiQUlQd", OP_GT>;
-def CFMLT  : SOpInst<"vclt", "udd", "csifUcUsUiQcQsQiQlQfQUcQUsQUiQUlQd", OP_LT>;
+                     "csilfUcUsUiUlPcQcdQdQsQiQfQUcQUsQUiQUlQlQPcPlQPl", OP_EQ>;
+def CFMGE  : SOpInst<"vcge", "udd",
+                     "csilfUcUsUiUlQcQsQiQlQfQUcQUsQUiQUldQd", OP_GE>;
+def CFMLE  : SOpInst<"vcle", "udd",
+                     "csilfUcUsUiUlQcQsQiQlQfQUcQUsQUiQUldQd", OP_LE>;
+def CFMGT  : SOpInst<"vcgt", "udd",
+                     "csilfUcUsUiUlQcQsQiQlQfQUcQUsQUiQUldQd", OP_GT>;
+def CFMLT  : SOpInst<"vclt", "udd",
+                     "csilfUcUsUiUlQcQsQiQlQfQUcQUsQUiQUldQd", OP_LT>;
 
 def CMEQ  : SInst<"vceqz", "ud",
-                  "csifUcUsUiPcPsQcQsQiQlQfQUcQUsQUiQUlQPcQPsQd">;
-def CMGE  : SInst<"vcgez", "ud", "csifdQcQsQiQlQfQd">;
-def CMLE  : SInst<"vclez", "ud", "csifdQcQsQiQlQfQd">;
-def CMGT  : SInst<"vcgtz", "ud", "csifdQcQsQiQlQfQd">;
-def CMLT  : SInst<"vcltz", "ud", "csifdQcQsQiQlQfQd">;
+                  "csilfUcUsUiUlPcPsPlQcQsQiQlQfQUcQUsQUiQUlQPcQPsdQdQPl">;
+def CMGE  : SInst<"vcgez", "ud", "csilfdQcQsQiQlQfQd">;
+def CMLE  : SInst<"vclez", "ud", "csilfdQcQsQiQlQfQd">;
+def CMGT  : SInst<"vcgtz", "ud", "csilfdQcQsQiQlQfQd">;
+def CMLT  : SInst<"vcltz", "ud", "csilfdQcQsQiQlQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Max/Min Integer

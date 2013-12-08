@@ -3007,10 +3007,24 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vrecps_v, E);
   case AArch64::BI__builtin_neon_vrecpsq_v:
     return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vrecpsq_v, E);
-  case AArch64::BI__builtin_neon_vcage_v:
-    return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vcage_v, E);
   case AArch64::BI__builtin_neon_vcale_v:
-    return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vcale_v, E);
+    if (VTy->getVectorNumElements() == 1) {
+      std::swap(Ops[0], Ops[1]);
+    } else {
+      return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vcale_v, E);
+    }
+  case AArch64::BI__builtin_neon_vcage_v:
+    if (VTy->getVectorNumElements() == 1) {
+      // Determine the types of this overloaded AArch64 intrinsic
+      SmallVector<llvm::Type *, 3> Tys;
+      Tys.push_back(VTy);
+      VTy = llvm::VectorType::get(DoubleTy, 1);
+      Tys.push_back(VTy);
+      Tys.push_back(VTy);
+      Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_vcage, Tys);
+      return EmitNeonCall(F, Ops, "vcage");
+    }
+    return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vcage_v, E);
   case AArch64::BI__builtin_neon_vcaleq_v:
     std::swap(Ops[0], Ops[1]);
   case AArch64::BI__builtin_neon_vcageq_v: {
@@ -3022,8 +3036,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(F, Ops, "vcage");
   }
   case AArch64::BI__builtin_neon_vcalt_v:
-    return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vcalt_v, E);
+    if (VTy->getVectorNumElements() == 1) {
+      std::swap(Ops[0], Ops[1]);
+    } else {
+      return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vcalt_v, E);
+    }
   case AArch64::BI__builtin_neon_vcagt_v:
+    if (VTy->getVectorNumElements() == 1) {
+      // Determine the types of this overloaded AArch64 intrinsic
+      SmallVector<llvm::Type *, 3> Tys;
+      Tys.push_back(VTy);
+      VTy = llvm::VectorType::get(DoubleTy, 1);
+      Tys.push_back(VTy);
+      Tys.push_back(VTy);
+      Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_vcagt, Tys);
+      return EmitNeonCall(F, Ops, "vcagt");
+    }
     return EmitARMBuiltinExpr(ARM::BI__builtin_neon_vcagt_v, E);
   case AArch64::BI__builtin_neon_vcaltq_v:
     std::swap(Ops[0], Ops[1]);
