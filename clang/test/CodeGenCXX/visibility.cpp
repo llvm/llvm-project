@@ -1295,3 +1295,17 @@ namespace test68 {
   }
   // Check lines at top of file.
 }
+
+namespace test69 {
+  // PR18174
+  namespace foo {
+    void f();
+  }
+  namespace foo {
+    void f() {};
+  }
+  namespace foo __attribute__((visibility("hidden"))) {
+  }
+  // CHECK-LABEL: define void @_ZN6test693foo1fEv
+  // CHECK-HIDDEN-LABEL: define hidden void @_ZN6test693foo1fEv
+}

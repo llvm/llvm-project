@@ -976,7 +976,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
                            kind);
 
   // Use the most recent declaration.
-  if (!IsMostRecent) {
+  if (!IsMostRecent && !isa<NamespaceDecl>(ND)) {
     const NamedDecl *MostRecent = ND->getMostRecentDecl();
     if (MostRecent != ND)
       return getExplicitVisibilityAux(MostRecent, kind, true);
