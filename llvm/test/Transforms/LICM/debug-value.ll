@@ -33,6 +33,7 @@ for.end104:                                       ; preds = %for.cond.backedge
 
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
+!llvm.module.flags = !{!26}
 !llvm.dbg.sp = !{!0, !6, !9, !10}
 
 !0 = metadata !{i32 589870, metadata !25, metadata !1, metadata !"idamax", metadata !"idamax", metadata !"", i32 112, metadata !3, i1 false, i1 true, i32 0, i32 0, i32 0, i32 256, i1 false, null, null, null, null, i32 0} ; [ DW_TAG_subprogram ]
@@ -61,3 +62,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !23 = metadata !{i32 296, i32 13, metadata !17, null}
 !24 = metadata !{i32 313, i32 1, metadata !14, null}
 !25 = metadata !{metadata !"/Volumes/Lalgate/work/llvm/projects/llvm-test/SingleSource/Benchmarks/CoyoteBench/lpbench.c", metadata !"/private/tmp"}
+!26 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

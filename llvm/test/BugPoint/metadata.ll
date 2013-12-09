@@ -4,12 +4,12 @@
 
 ; Bugpoint should keep the call's metadata attached to the call.
 
-; CHECK: call void @foo(), !dbg !0, !attach !4
-; CHECK: !0 = metadata !{i32 104, i32 105, metadata !1, metadata !1}
-; CHECK: !1 = metadata !{i32 458769, metadata !2, i32 0, metadata !"me", i1 true, metadata !"", i32 0, metadata !3, metadata !3, null, null, null, metadata !""}
-; CHECK: !2 = metadata !{metadata !"source.c", metadata !"/dir"}
-; CHECK: !3 = metadata !{i32 0}
-; CHECK: !4 = metadata !{metadata !"the call to foo"}
+; CHECK: call void @foo(), !dbg ![[LOC:[0-9]+]], !attach ![[CALL:[0-9]+]]
+; CHECK: ![[LOC]] = metadata !{i32 104, i32 105, metadata ![[SCOPE:[0-9]+]], metadata ![[SCOPE]]}
+; CHECK: ![[SCOPE]] = metadata !{i32 458769, metadata ![[FILE:[0-9]+]], i32 0, metadata !"me", i1 true, metadata !"", i32 0, metadata ![[LIST:[0-9]+]], metadata ![[LIST]], null, null, null, metadata !""}
+; CHECK: ![[FILE]] = metadata !{metadata !"source.c", metadata !"/dir"}
+; CHECK: ![[LIST]] = metadata !{i32 0}
+; CHECK: ![[CALL]] = metadata !{metadata !"the call to foo"}
 
 %rust_task = type {}
 define void @test(i32* %a, i8* %b) {
@@ -22,6 +22,8 @@ define void @test(i32* %a, i8* %b) {
 }
 
 declare void @foo()
+
+!llvm.module.flags = !{!17}
 
 !0 = metadata !{metadata !"boring"}
 !1 = metadata !{metadata !"uninteresting"}
@@ -37,3 +39,4 @@ declare void @foo()
 !14 = metadata !{i32 108, i32 109, metadata !9, metadata !9}
 !15 = metadata !{metadata !"source.c", metadata !"/dir"}
 !16 = metadata !{i32 0}
+!17 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

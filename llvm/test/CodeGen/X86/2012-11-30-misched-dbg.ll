@@ -63,6 +63,7 @@ if.else4114:                                      ; preds = %if.then4073
 declare i32 @__sprintf_chk(i8*, i32, i64, i8*, ...)
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!35}
 
 !0 = metadata !{i32 786449, metadata !19, i32 12, metadata !"clang version 3.3 (trunk 168918) (llvm/trunk 168920)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, null, metadata !""} ; [ DW_TAG_compile_unit ] [MultiSource/Benchmarks/MiBench/consumer-typeset/MultiSource/Benchmarks/MiBench/consumer-typeset/z19.c] [DW_LANG_C99]
 !1 = metadata !{metadata !2}
@@ -134,3 +135,4 @@ declare void @_Znwm()
 !32 = metadata !{i32 786454, metadata !34, null, metadata !"HM", i32 28, i64 0, i64 0, i64 0, i32 0, null} ; [ DW_TAG_typedef ] [HM] [line 28, size 0, align 0, offset 0] [from ]
 !33 = metadata !{i32 786473, metadata !34} ; [ DW_TAG_file_type ]
 !34 = metadata !{metadata !"SingleSource/Benchmarks/Shootout-C++/hash.cpp", metadata !"SingleSource/Benchmarks/Shootout-C++"}
+!35 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

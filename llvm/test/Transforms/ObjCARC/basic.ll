@@ -182,7 +182,7 @@ if.end5:                                          ; preds = %if.then3, %if.end
 ; CHECK:   tail call i8* @objc_retain(i8* %x) [[NUW:#[0-9]+]]
 ; CHECK-NOT: @objc_
 ; CHECK: if.end5:
-; CHECK:   tail call void @objc_release(i8* %x) [[NUW]], !clang.imprecise_release !0
+; CHECK:   tail call void @objc_release(i8* %x) [[NUW]], !clang.imprecise_release ![[RELEASE:[0-9]+]]
 ; CHECK-NOT: @objc_
 ; CHECK: }
 define void @test1b_imprecise(i8* %x, i1 %p, i1 %q) {
@@ -2202,7 +2202,7 @@ define void @test53(void ()** %zz, i8** %pp) {
 
 ; CHECK-LABEL: define void @test54(
 ; CHECK: call i8* @returner()
-; CHECK-NEXT: call void @objc_release(i8* %t) [[NUW]], !clang.imprecise_release !0
+; CHECK-NEXT: call void @objc_release(i8* %t) [[NUW]], !clang.imprecise_release ![[RELEASE]]
 ; CHECK-NEXT: ret void
 ; CHECK: }
 define void @test54() {
@@ -2236,7 +2236,7 @@ entry:
 ; CHECK-NEXT: %0 = tail call i8* @objc_retain(i8* %x) [[NUW]]
 ; CHECK-NEXT: tail call void @use_pointer(i8* %x)
 ; CHECK-NEXT: tail call void @use_pointer(i8* %x)
-; CHECK-NEXT: tail call void @objc_release(i8* %x) [[NUW]], !clang.imprecise_release !0
+; CHECK-NEXT: tail call void @objc_release(i8* %x) [[NUW]], !clang.imprecise_release ![[RELEASE]]
 ; CHECK-NEXT: br label %if.end
 ; CHECK-NOT: @objc
 ; CHECK: }
@@ -3009,7 +3009,11 @@ define void @test67(i8* %x) {
   ret void
 }
 
+!llvm.module.flags = !{!1}
+
 !0 = metadata !{}
+!1 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}
 
 ; CHECK: attributes #0 = { nounwind readnone }
 ; CHECK: attributes [[NUW]] = { nounwind }
+; CHECK: ![[RELEASE]] = metadata !{}

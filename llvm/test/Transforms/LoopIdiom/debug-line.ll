@@ -27,6 +27,7 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
+!llvm.module.flags = !{!19}
 !llvm.dbg.sp = !{!0}
 
 !0 = metadata !{i32 589870, metadata !18, metadata !1, metadata !"foo", metadata !"foo", metadata !"", i32 2, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 false, void (double*)* @foo, null, null, null, i32 0} ; [ DW_TAG_subprogram ] [line 2] [def] [scope 0] [foo]
@@ -48,3 +49,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !16 = metadata !{i32 3, i32 29, metadata !11, null}
 !17 = metadata !{i32 5, i32 1, metadata !12, null}
 !18 = metadata !{metadata !"li.c", metadata !"/private/tmp"}
+!19 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}
