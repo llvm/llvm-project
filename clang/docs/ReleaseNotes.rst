@@ -176,9 +176,11 @@ Windows Support
 
 - `clang-cl <UsersManual.html#clang-cl>` provides a new driver mode that is
   designed for compatibility with Visual Studio's compiler, cl.exe. This driver
-  mode makes Clang accept the same kind of command-line options as cl.exe.
-  Please note that this mode is still experimental.
-
+  mode makes Clang accept the same kind of command-line options as cl.exe. The
+  installer will attempt to expose clang-cl in any Visual Studio installations
+  on the system as a Platform Toolset, e.g. "LLVM-vs2012". clang-cl targets the
+  Microsoft ABI by default. Please note that this driver mode and compatibility
+  with the MS ABI is highly experimental.
 
 Core Analysis Improvements
 ==========================
