@@ -1478,3 +1478,11 @@ bool llvm::StripDebugInfo(Module &M) {
 
   return Changed;
 }
+
+/// Return Debug Info Version by checking module flags.
+unsigned llvm::getDebugInfoVersionFromModule(const Module &M) {
+  Value *Val = M.getModuleFlag("Debug Info Version");
+  if (!Val)
+    return 0;
+  return cast<ConstantInt>(Val)->getZExtValue();
+}

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/AutoUpgrade.h"
+#include "llvm/DebugInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -488,4 +489,13 @@ Value *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
   }
 
   return 0;
+}
+
+/// Check the debug info version number, if it is out-dated, drop the debug
+/// info. Return true if module is modified.
+bool llvm::UpgradeDebugInfo(Module &M) {
+  if (getDebugInfoVersionFromModule(M) == DEBUG_METADATA_VERSION)
+    return false;
+
+  return StripDebugInfo(M);
 }

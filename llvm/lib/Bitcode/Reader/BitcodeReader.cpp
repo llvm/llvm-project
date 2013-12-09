@@ -3152,6 +3152,7 @@ error_code BitcodeReader::MaterializeModule(Module *M) {
   for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
     UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
 
+  UpgradeDebugInfo(*M);
   return error_code::success();
 }
 

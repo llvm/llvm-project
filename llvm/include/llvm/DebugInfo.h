@@ -759,6 +759,9 @@ DITypeIdentifierMap generateDITypeIdentifierMap(const NamedMDNode *CU_Nodes);
 /// Return true if module is modified.
 bool StripDebugInfo(Module &M);
 
+/// Return Debug Info Version by checking module flags.
+unsigned getDebugInfoVersionFromModule(const Module &M);
+
 /// DebugInfoFinder tries to list all debug info MDNodes used in a module. To
 /// list debug info MDNodes used by an instruction, DebugInfoFinder uses
 /// processDeclare, processValue and processLocation to handle DbgDeclareInst,
