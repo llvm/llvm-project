@@ -5,3 +5,8 @@ void f (void) {
   asm volatile ("lw (r1), %0[val]": "=&b"(Val)); // expected-error {{invalid output constraint '=&b' in asm}}
   return;
 }
+
+void test_64bit_r(void) {
+  long long foo = 0, bar = 0;
+  asm volatile("INST %0, %1" : "=r"(foo) : "r"(bar));
+}
