@@ -1274,19 +1274,19 @@ define <4 x i32> @test_vrecpeq_u32(<4 x i32> %a) #0 {
 
 define <2 x float> @test_vsqrt_f32(<2 x float> %a) #0 {
 ; CHECK: fsqrt v{{[0-9]+}}.2s, v{{[0-9]+}}.2s
-  %vsqrt1.i = tail call <2 x float> @llvm.aarch64.neon.fsqrt.v2f32(<2 x float> %a) #4
+  %vsqrt1.i = tail call <2 x float> @llvm.sqrt.v2f32(<2 x float> %a) #4
   ret <2 x float> %vsqrt1.i
 }
 
 define <4 x float> @test_vsqrtq_f32(<4 x float> %a) #0 {
 ; CHECK: fsqrt v{{[0-9]+}}.4s, v{{[0-9]+}}.4s
-  %vsqrt1.i = tail call <4 x float> @llvm.aarch64.neon.fsqrt.v4f32(<4 x float> %a) #4
+  %vsqrt1.i = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a) #4
   ret <4 x float> %vsqrt1.i
 }
 
 define <2 x double> @test_vsqrtq_f64(<2 x double> %a) #0 {
 ; CHECK: fsqrt v{{[0-9]+}}.2d, v{{[0-9]+}}.2d
-  %vsqrt1.i = tail call <2 x double> @llvm.aarch64.neon.fsqrt.v2f64(<2 x double> %a) #4
+  %vsqrt1.i = tail call <2 x double> @llvm.sqrt.v2f64(<2 x double> %a) #4
   ret <2 x double> %vsqrt1.i
 }
 
@@ -1326,11 +1326,11 @@ define <2 x double> @test_vcvtq_f64_u64(<2 x i64> %a) #0 {
   ret <2 x double> %vcvt.i
 }
 
-declare <2 x double> @llvm.aarch64.neon.fsqrt.v2f64(<2 x double>) #2
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>) #2
 
-declare <4 x float> @llvm.aarch64.neon.fsqrt.v4f32(<4 x float>) #2
+declare <4 x float> @llvm.sqrt.v4f32(<4 x float>) #2
 
-declare <2 x float> @llvm.aarch64.neon.fsqrt.v2f32(<2 x float>) #2
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float>) #2
 
 declare <4 x i32> @llvm.arm.neon.vrecpe.v4i32(<4 x i32>) #2
 
@@ -1607,3 +1607,193 @@ declare <4 x float> @llvm.arm.neon.vcvthf2fp(<4 x i16>) #2
 declare <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float>) #2
 
 
+define <1 x i64> @test_vcvt_s64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvt_s64_f64
+; CHECK: fcvtzs d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fptosi <1 x double> %a to <1 x i64>
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvt_u64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvt_u64_f64
+; CHECK: fcvtzu d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = fptoui <1 x double> %a to <1 x i64>
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvtn_s64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvtn_s64_f64
+; CHECK: fcvtns d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtns.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvtn_u64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvtn_u64_f64
+; CHECK: fcvtnu d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtnu.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvtp_s64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvtp_s64_f64
+; CHECK: fcvtps d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtps.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvtp_u64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvtp_u64_f64
+; CHECK: fcvtpu d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtpu.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvtm_s64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvtm_s64_f64
+; CHECK: fcvtms d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtms.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvtm_u64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvtm_u64_f64
+; CHECK: fcvtmu d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtmu.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvta_s64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvta_s64_f64
+; CHECK: fcvtas d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtas.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x i64> @test_vcvta_u64_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vcvta_u64_f64
+; CHECK: fcvtau d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x i64> @llvm.aarch64.neon.fcvtau.v1i64.v1f64(<1 x double> %a)
+  ret <1 x i64> %1
+}
+
+define <1 x double> @test_vcvt_f64_s64(<1 x i64> %a) {
+; CHECK-LABEL: test_vcvt_f64_s64
+; CHECK: scvtf d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = sitofp <1 x i64> %a to <1 x double>
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vcvt_f64_u64(<1 x i64> %a) {
+; CHECK-LABEL: test_vcvt_f64_u64
+; CHECK: ucvtf d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = uitofp <1 x i64> %a to <1 x double>
+  ret <1 x double> %1
+}
+
+declare <1 x i64> @llvm.aarch64.neon.fcvtau.v1i64.v1f64(<1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.fcvtas.v1i64.v1f64(<1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.fcvtmu.v1i64.v1f64(<1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.fcvtms.v1i64.v1f64(<1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.fcvtpu.v1i64.v1f64(<1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.fcvtps.v1i64.v1f64(<1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.fcvtnu.v1i64.v1f64(<1 x double>)
+declare <1 x i64> @llvm.aarch64.neon.fcvtns.v1i64.v1f64(<1 x double>)
+
+define <1 x double> @test_vrndn_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrndn_f64
+; CHECK: frintn d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.aarch64.neon.frintn.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrnda_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrnda_f64
+; CHECK: frinta d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.round.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrndp_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrndp_f64
+; CHECK: frintp d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.ceil.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrndm_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrndm_f64
+; CHECK: frintm d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.floor.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrndx_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrndx_f64
+; CHECK: frintx d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.rint.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrnd_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrnd_f64
+; CHECK: frintz d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.trunc.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrndi_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrndi_f64
+; CHECK: frinti d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.nearbyint.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+declare <1 x double> @llvm.nearbyint.v1f64(<1 x double>)
+declare <1 x double> @llvm.trunc.v1f64(<1 x double>)
+declare <1 x double> @llvm.rint.v1f64(<1 x double>)
+declare <1 x double> @llvm.floor.v1f64(<1 x double>)
+declare <1 x double> @llvm.ceil.v1f64(<1 x double>)
+declare <1 x double> @llvm.round.v1f64(<1 x double>)
+declare <1 x double> @llvm.aarch64.neon.frintn.v1f64(<1 x double>)
+
+define <1 x double> @test_vrsqrte_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrsqrte_f64
+; CHECK: frsqrte d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.arm.neon.vrsqrte.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrecpe_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vrecpe_f64
+; CHECK: frecpe d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.arm.neon.vrecpe.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vsqrt_f64(<1 x double> %a) {
+; CHECK-LABEL: test_vsqrt_f64
+; CHECK: fsqrt d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.sqrt.v1f64(<1 x double> %a)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrecps_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vrecps_f64
+; CHECK: frecps d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.arm.neon.vrecps.v1f64(<1 x double> %a, <1 x double> %b)
+  ret <1 x double> %1
+}
+
+define <1 x double> @test_vrsqrts_f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: test_vrsqrts_f64
+; CHECK: frsqrts d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  %1 = tail call <1 x double> @llvm.arm.neon.vrsqrts.v1f64(<1 x double> %a, <1 x double> %b)
+  ret <1 x double> %1
+}
+
+declare <1 x double> @llvm.arm.neon.vrsqrts.v1f64(<1 x double>, <1 x double>)
+declare <1 x double> @llvm.arm.neon.vrecps.v1f64(<1 x double>, <1 x double>)
+declare <1 x double> @llvm.sqrt.v1f64(<1 x double>)
+declare <1 x double> @llvm.arm.neon.vrecpe.v1f64(<1 x double>)
+declare <1 x double> @llvm.arm.neon.vrsqrte.v1f64(<1 x double>)
