@@ -494,7 +494,7 @@ Value *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
-  if (getDebugInfoVersionFromModule(M) == DEBUG_METADATA_VERSION)
+  if (getDebugMetadataVersionFromModule(M) == DEBUG_METADATA_VERSION)
     return false;
 
   return StripDebugInfo(M);
