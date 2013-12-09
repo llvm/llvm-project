@@ -137,6 +137,15 @@ define void @test_fold_point(i1 %tst) minsize {
 ; CHECK: {{LBB[0-9]+_2}}:
 ; CHECK-NEXT: vpop {d7, d8}
 ; CHECK-NEXT: pop {r4, pc}
+
+  ; With a guaranteed frame-pointer, we want to make sure that its offset in the
+  ; push block is correct, even if a few registers have been tacked onto a later
+  ; vpush (PR18160).
+; CHECK-IOS-LABEL: test_fold_point:
+; CHECK-IOS: push {r4, r7, lr}
+; CHECK-IOS-NEXT: add r7, sp, #4
+; CHECK-IOS-NEXT: vpush {d7, d8}
+
   ; We want some memory so there's a stack adjustment to fold...
   %var = alloca i8, i32 8
 
