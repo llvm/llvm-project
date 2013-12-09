@@ -1386,27 +1386,11 @@ void ExprEngine::processBranch(const Stmt *Condition, const Stmt *Term,
     return;
   }
 
-  SValBuilder &SVB = Pred->getState()->getStateManager().getSValBuilder();
-  SVal TrueVal = SVB.makeTruthVal(true);
-  SVal FalseVal = SVB.makeTruthVal(false);
 
   if (const Expr *Ex = dyn_cast<Expr>(Condition))
     Condition = Ex->IgnoreParens();
 
-  // If the value is already available, we don't need to do anything.
-  if (Pred->getState()->getSVal(Condition, LCtx).isUnknownOrUndef()) {
-    // Resolve the condition in the presence of nested '||' and '&&'.
-    Condition = ResolveCondition(Condition, BldCtx.getBlock());
-  }
-
-  // Cast truth values to the correct type.
-  if (const Expr *Ex = dyn_cast<Expr>(Condition)) {
-    TrueVal = SVB.evalCast(TrueVal, Ex->getType(),
-                           getContext().getLogicalOperationType());
-    FalseVal = SVB.evalCast(FalseVal, Ex->getType(),
-                            getContext().getLogicalOperationType());
-  }
-
+  Condition = ResolveCondition(Condition, BldCtx.getBlock());
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 Condition->getLocStart(),
                                 "Error evaluating branch");
@@ -1449,37 +1433,31 @@ void ExprEngine::processBranch(const Stmt *Condition, const Stmt *Term,
       }
     }
     
-    ProgramStateRef StTrue, StFalse;
-
     // If the condition is still unknown, give up.
     if (X.isUnknownOrUndef()) {
-
-      StTrue = PrevState->BindExpr(Condition, BldCtx.LC, TrueVal);
-      StFalse = PrevState->BindExpr(Condition, BldCtx.LC, FalseVal);
-
-      builder.generateNode(StTrue, true, PredI);
-      builder.generateNode(StFalse, false, PredI);
+      builder.generateNode(PrevState, true, PredI);
+      builder.generateNode(PrevState, false, PredI);
       continue;
     }
 
     DefinedSVal V = X.castAs<DefinedSVal>();
+
+    ProgramStateRef StTrue, StFalse;
     tie(StTrue, StFalse) = PrevState->assume(V);
 
     // Process the true branch.
     if (builder.isFeasible(true)) {
-      if (StTrue) {
-        StTrue = StTrue->BindExpr(Condition, BldCtx.LC, TrueVal);
+      if (StTrue)
         builder.generateNode(StTrue, true, PredI);
-      } else
+      else
         builder.markInfeasible(true);
     }
 
     // Process the false branch.
     if (builder.isFeasible(false)) {
-      if (StFalse) {
-        StFalse = StFalse->BindExpr(Condition, BldCtx.LC, FalseVal);
+      if (StFalse)
         builder.generateNode(StFalse, false, PredI);
-      } else
+      else
         builder.markInfeasible(false);
     }
   }

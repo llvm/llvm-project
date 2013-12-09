@@ -211,8 +211,6 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   LiveVariables::LivenessValues &val;
   LiveVariables::Observer *observer;
   const CFGBlock *currentBlock;
-
-  void markLogicalExprLeaves(const Expr *E);
 public:
   TransferFunctions(LiveVariablesImpl &im,
                     LiveVariables::LivenessValues &Val,
@@ -369,23 +367,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
         if (observer)
           observer->observerKill(DR);
       }
-  } else if (B->isLogicalOp()) {
-    // Leaf expressions in the logical operator tree are live until we reach the
-    // outermost logical operator. Static analyzer relies on this behaviour.
-    markLogicalExprLeaves(B->getLHS()->IgnoreParens());
-    markLogicalExprLeaves(B->getRHS()->IgnoreParens());
   }
-}
-
-void TransferFunctions::markLogicalExprLeaves(const Expr *E) {
-  const BinaryOperator *B = dyn_cast<BinaryOperator>(E);
-  if (!B || !B->isLogicalOp()) {
-    val.liveStmts = LV.SSetFact.add(val.liveStmts, E);
-    return;
-  }
-
-  markLogicalExprLeaves(B->getLHS()->IgnoreParens());
-  markLogicalExprLeaves(B->getRHS()->IgnoreParens());
 }
 
 void TransferFunctions::VisitBlockExpr(BlockExpr *BE) {
