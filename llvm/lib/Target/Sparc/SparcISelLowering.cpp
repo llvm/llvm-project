@@ -1462,6 +1462,13 @@ SparcTargetLowering::SparcTargetLowering(TargetMachine &TM)
   setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
 
+  if (Subtarget->is64Bit()) {
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::MULHU,     MVT::i64, Expand);
+    setOperationAction(ISD::MULHS,     MVT::i64, Expand);
+  }
+
   // VASTART needs to be custom lowered to use the VarArgsFrameIndex.
   setOperationAction(ISD::VASTART           , MVT::Other, Custom);
   // VAARG needs to be lowered to not do unaligned accesses for doubles.
