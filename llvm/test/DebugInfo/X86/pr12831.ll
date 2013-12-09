@@ -76,6 +76,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!162}
 
 !0 = metadata !{i32 786449, metadata !161, i32 4, metadata !"clang version 3.2 ", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !128, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -236,3 +237,4 @@ entry:
 !159 = metadata !{i32 786473, metadata !161} ; [ DW_TAG_file_type ]
 !160 = metadata !{metadata !"BPLFunctionWriter2.ii", metadata !"/home/peter/crashdelta"}
 !161 = metadata !{metadata !"BPLFunctionWriter.cpp", metadata !"/home/peter/crashdelta"}
+!162 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

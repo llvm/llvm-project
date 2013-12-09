@@ -13,6 +13,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!16}
 
 !0 = metadata !{i32 786478, metadata !14, metadata !1, metadata !"main", metadata !"main", metadata !"", i32 3, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 0, i1 false, i32 ()* @main, null, null, null, i32 3} ; [ DW_TAG_subprogram ] [line 3] [def] [main]
 !1 = metadata !{i32 786473, metadata !14} ; [ DW_TAG_file_type ]
@@ -35,3 +36,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !13 = metadata !{metadata !0}
 !14 = metadata !{metadata !"array.c", metadata !"/private/tmp"}
 !15 = metadata !{i32 0}
+!16 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

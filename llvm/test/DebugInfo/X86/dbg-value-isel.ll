@@ -79,6 +79,7 @@ declare <4 x i32> @__amdil_get_global_id_int() nounwind
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!22}
 
 !0 = metadata !{i32 786478, metadata !20, metadata !1, metadata !"__OpenCL_nbt02_kernel", metadata !"__OpenCL_nbt02_kernel", metadata !"__OpenCL_nbt02_kernel", i32 2, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 0, i1 false, null, null, null, null, i32 0} ; [ DW_TAG_subprogram ] [line 2] [def] [scope 0] [__OpenCL_nbt02_kernel]
 !1 = metadata !{i32 786473, metadata !20} ; [ DW_TAG_file_type ]
@@ -102,3 +103,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !19 = metadata !{metadata !0}
 !20 = metadata !{metadata !"OCLlLwTXZ.cl", metadata !"/tmp"}
 !21 = metadata !{i32 0}
+!22 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

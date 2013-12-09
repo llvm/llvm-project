@@ -70,6 +70,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!52}
 
 !0 = metadata !{i32 786478, metadata !51, metadata !1, metadata !"~A", metadata !"~A", metadata !"", i32 2, metadata !11, i1 false, i1 false, i32 0, i32 0, null, i32 256, i1 false, null, null, null, null, i32 0} ; [ DW_TAG_subprogram ]
 !1 = metadata !{i32 589826, metadata !51, metadata !2, metadata !"A", i32 2, i64 128, i64 32, i32 0, i32 0, null, metadata !4, i32 0, null, null, null} ; [ DW_TAG_class_type ] [A] [line 2, size 128, align 32, offset 0] [def] [from ]
@@ -123,3 +124,4 @@ entry:
 !49 = metadata !{i32 786443, metadata !51, metadata !25, i32 2, i32 52, i32 2} ; [ DW_TAG_lexical_block ]
 !50 = metadata !{metadata !0, metadata !10, metadata !14, metadata !19, metadata !22, metadata !25}
 !51 = metadata !{metadata !"a.cc", metadata !"/private/tmp"}
+!52 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

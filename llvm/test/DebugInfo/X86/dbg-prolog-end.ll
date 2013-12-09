@@ -33,6 +33,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!21}
 !18 = metadata !{metadata !1, metadata !6}
 
 !0 = metadata !{i32 786449, metadata !19, i32 12, metadata !"clang version 3.0 (trunk 131100)", i1 false, metadata !"", i32 0, metadata !20, metadata !20, metadata !18, null,  null, metadata !""} ; [ DW_TAG_compile_unit ]
@@ -55,3 +56,4 @@ entry:
 !17 = metadata !{i32 786443, metadata !19, metadata !6, i32 7, i32 12, i32 1} ; [ DW_TAG_lexical_block ]
 !19 = metadata !{metadata !"/tmp/a.c", metadata !"/private/tmp"}
 !20 = metadata !{i32 0}
+!21 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

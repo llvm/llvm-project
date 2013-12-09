@@ -17,6 +17,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!28}
 
 !0 = metadata !{i32 786449, metadata !27, i32 4, metadata !"clang version 3.0 ()", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !18,  metadata !18, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -41,3 +42,4 @@ entry:
 !25 = metadata !{i32 6, i32 1, metadata !26, null}
 !26 = metadata !{i32 786443, metadata !5, i32 4, i32 17, metadata !6, i32 0} ; [ DW_TAG_lexical_block ]
 !27 = metadata !{metadata !"nsNativeAppSupportBase.ii", metadata !"/Users/espindola/mozilla-central/obj-x86_64-apple-darwin11.2.0/toolkit/library"}
+!28 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

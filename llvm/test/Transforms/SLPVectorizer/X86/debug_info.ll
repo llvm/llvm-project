@@ -55,7 +55,7 @@ attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-po
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!18}
+!llvm.module.flags = !{!18, !32}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4 (trunk 187335) (llvm/trunk 187335:187340M)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/Users/nadav/file.c] [DW_LANG_C99]
 !1 = metadata !{metadata !"file.c", metadata !"/Users/nadav"}
@@ -86,3 +86,4 @@ attributes #1 = { nounwind readnone }
 !29 = metadata !{i32 5, i32 0, metadata !25, null}
 !30 = metadata !{i32 7, i32 0, metadata !4, null}
 !31 = metadata !{i32 8, i32 0, metadata !4, null} ; [ DW_TAG_imported_declaration ]
+!32 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -17,6 +17,7 @@ return:                                           ; preds = %entry
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!19}
 !0 = metadata !{i32 524545, metadata !1, metadata !"userUPP", metadata !2, i32 7, metadata !6, i32 0, null} ; [ DW_TAG_arg_variable ]
 !1 = metadata !{i32 524334, metadata !16, null, metadata !"DisposeDMNotificationUPP", metadata !"DisposeDMNotificationUPP", metadata !"DisposeDMNotificationUPP", i32 7, metadata !4, i1 false, i1 true, i32 0, i32 0, null, i1 false, i32 0, null, null, null, null, i32 0} ; [ DW_TAG_subprogram ]
 !2 = metadata !{i32 524329, metadata !16} ; [ DW_TAG_file_type ]
@@ -36,3 +37,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !16 = metadata !{metadata !"t.c", metadata !"/Users/echeng/LLVM/radars/r7937664/"}
 !17 = metadata !{i32 0}
 !18 = metadata !{metadata !1}
+!19 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -31,6 +31,7 @@ return:                                           ; preds = %entry
 }
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!22}
 !0 = metadata !{i32 786689, metadata !1, metadata !"a", metadata !2, i32 8, metadata !6, i32 0, null} ; [ DW_TAG_arg_variable ]
 !1 = metadata !{i32 786478, metadata !20, metadata !2, metadata !"baz", metadata !"baz", metadata !"baz", i32 8, metadata !4, i1 false, i1 true, i32 0, i32 0, null, i32 0, i1 false, void (i32)* @baz, null, null, null, i32 8} ; [ DW_TAG_subprogram ]
 !2 = metadata !{i32 786473, metadata !20} ; [ DW_TAG_file_type ]
@@ -53,3 +54,4 @@ return:                                           ; preds = %entry
 !19 = metadata !{i32 10, i32 0, metadata !1, null}
 !20 = metadata !{metadata !"bar.c", metadata !"/tmp/"}
 !21 = metadata !{i32 0}
+!22 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -22,6 +22,7 @@ declare void @foo(i32) nounwind optsize noinline ssp
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!38}
 
 !0 = metadata !{i32 786484, i32 0, metadata !1, metadata !"ret", metadata !"ret", metadata !"", metadata !1, i32 7, metadata !3, i1 false, i1 true, null, null} ; [ DW_TAG_variable ]
 !1 = metadata !{i32 786473, metadata !36} ; [ DW_TAG_file_type ]
@@ -86,3 +87,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 ; CHECK-NEXT: Ltmp{{.*}}:
 ; CHECK-NEXT: .byte   83
 ; CHECK-NEXT: Ltmp{{.*}}:
+!38 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

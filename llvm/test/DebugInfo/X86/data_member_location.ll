@@ -22,7 +22,7 @@
 @f = global %struct.foo zeroinitializer, align 4
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!13}
+!llvm.module.flags = !{!13, !15}
 !llvm.ident = !{!14}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !3, metadata !2, metadata !10, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/dbginfo/data_member_location.cpp] [DW_LANG_C_plus_plus]
@@ -41,3 +41,4 @@
 !13 = metadata !{i32 2, metadata !"Dwarf Version", i32 4}
 !14 = metadata !{metadata !"clang version 3.4 "}
 
+!15 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -15,6 +15,7 @@ bb11:                                             ; preds = %entry
 }
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!15}
 
 !0 = metadata !{i32 8647, i32 0, metadata !1, null}
 !1 = metadata !{i32 458763, metadata !12, metadata !2, i32 0, i32 0, i32 0}          ; [ DW_TAG_lexical_block ]
@@ -31,3 +32,4 @@ bb11:                                             ; preds = %entry
 !12 = metadata !{metadata !"c-parser.c", metadata !"llvmgcc"}
 !13 = metadata !{i32 0}
 !14 = metadata !{metadata !2}
+!15 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

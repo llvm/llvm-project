@@ -11,6 +11,7 @@ define i32 @bar() nounwind ssp {
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!11}
 !llvm.dbg.sp = !{!1}
 
 !0 = metadata !{i32 589841, metadata !8, i32 12, metadata !"Apple clang version 3.0 (tags/Apple/clang-209.11) (based on LLVM 3.0svn)", i1 true, metadata !"", i32 0, metadata !9, metadata !9, metadata !10, null, null, metadata !""} ; [ DW_TAG_compile_unit ]
@@ -24,3 +25,4 @@ define i32 @bar() nounwind ssp {
 !8 = metadata !{metadata !"b.c", metadata !"/private/tmp"}
 !9 = metadata !{i32 0}
 !10 = metadata !{metadata !1}
+!11 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

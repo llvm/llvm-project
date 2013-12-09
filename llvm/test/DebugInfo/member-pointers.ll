@@ -21,6 +21,7 @@
 @y = global { i64, i64 } zeroinitializer, align 8
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!16}
 
 !0 = metadata !{i32 786449, metadata !15, i32 4, metadata !"clang version 3.3 ", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !1, metadata !3,  metadata !3, metadata !""} ; [ DW_TAG_compile_unit ] [/home/blaikie/Development/scratch/simple.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{i32 0}
@@ -36,3 +37,4 @@
 !13 = metadata !{null, metadata !14, metadata !8}
 !14 = metadata !{i32 786447, i32 0, null, i32 0, i32 0, i64 64, i64 64, i64 0, i32 1088, metadata !9} ; [ DW_TAG_pointer_type ] [line 0, size 64, align 64, offset 0] [artificial] [from S]
 !15 = metadata !{metadata !"simple.cpp", metadata !"/home/blaikie/Development/scratch"}
+!16 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

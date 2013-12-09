@@ -17,6 +17,7 @@ define i32 @f() nounwind {
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!21}
 
 !0 = metadata !{i32 786449, metadata !20, i32 12, metadata !"clang version 3.0 (trunk)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !12,  metadata !12, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -47,3 +48,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 ; CHECK: DW_AT_decl_file [DW_FORM_data1]     (0x01)
 ; CHECK: DW_AT_decl_line [DW_FORM_data1]     (0x04)
 
+!21 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

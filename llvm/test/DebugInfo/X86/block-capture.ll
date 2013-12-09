@@ -60,7 +60,7 @@ declare void @objc_end_catch()
 declare i32 @__objc_personality_v0(...)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!35, !36, !37, !38}
+!llvm.module.flags = !{!35, !36, !37, !38, !64}
 
 !0 = metadata !{i32 786449, metadata !63, i32 16, metadata !"clang version 3.1 (trunk 151227)", i1 false, metadata !"", i32 2, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -124,3 +124,4 @@ declare i32 @__objc_personality_v0(...)
 !61 = metadata !{i32 10, i32 21, metadata !28, null}
 !62 = metadata !{i32 9, i32 20, metadata !56, null}
 !63 = metadata !{metadata !"foo.m", metadata !"/Users/echristo"}
+!64 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

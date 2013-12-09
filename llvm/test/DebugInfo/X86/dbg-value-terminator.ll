@@ -111,6 +111,7 @@ attributes #1 = { nounwind uwtable }
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!22}
 
 !0 = metadata !{i32 786449, metadata !20, i32 12, metadata !"Apple clang version", i1 true, metadata !"", i32 0, metadata !21, metadata !21, metadata !18, null,  null, null} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 786478, metadata !20, metadata !2, metadata !"foo", metadata !"", metadata !"", i32 2, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, %a* ()* @test, null, null, metadata !19, i32 0} ; [ DW_TAG_subprogram ] [line 2] [def] [scope 0] [foo]
@@ -129,3 +130,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !19 = metadata !{metadata !6, metadata !7, metadata !10}
 !20 = metadata !{metadata !"a.c", metadata !"/private/tmp"}
 !21 = metadata !{i32 0}
+!22 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

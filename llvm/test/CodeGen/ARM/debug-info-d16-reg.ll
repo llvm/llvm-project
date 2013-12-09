@@ -57,6 +57,7 @@ entry:
 declare i32 @puts(i8* nocapture) nounwind
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!48}
 
 !0 = metadata !{i32 786478, metadata !46, metadata !1, metadata !"printer", metadata !"printer", metadata !"printer", i32 12, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, i32 (i8*, double, i8)* @printer, null, null, metadata !43, i32 12} ; [ DW_TAG_subprogram ]
 !1 = metadata !{i32 786473, metadata !46} ; [ DW_TAG_file_type ]
@@ -106,3 +107,4 @@ declare i32 @puts(i8* nocapture) nounwind
 !45 = metadata !{metadata !22, metadata !23, metadata !24}
 !46 = metadata !{metadata !"a.c", metadata !"/tmp/"}
 !47 = metadata !{i32 0}
+!48 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -73,6 +73,7 @@ define i32 @get5(i32 %a) nounwind optsize ssp {
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!49}
 
 !0 = metadata !{i32 786449, metadata !47, i32 12, metadata !"clang", i1 true, metadata !"", i32 0, metadata !48, metadata !48, metadata !40, metadata !41,  metadata !41, null} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 786478, metadata !47, metadata !2, metadata !"get1", metadata !"get1", metadata !"", i32 5, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, i32 (i32)* @get1, null, null, metadata !42, i32 5} ; [ DW_TAG_subprogram ] [line 5] [def] [get1]
@@ -123,3 +124,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !46 = metadata !{metadata !27, metadata !28}
 !47 = metadata !{metadata !"ss3.c", metadata !"/private/tmp"}
 !48 = metadata !{i32 0}
+!49 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

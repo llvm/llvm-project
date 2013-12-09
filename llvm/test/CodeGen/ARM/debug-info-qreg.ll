@@ -36,6 +36,7 @@ declare i32 @printf(i8* nocapture, ...) nounwind
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!56}
 
 !0 = metadata !{i32 786478, metadata !54, metadata !1, metadata !"test0001", metadata !"test0001", metadata !"", i32 3, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, <4 x float> (float)* @test0001, null, null, metadata !51, i32 3} ; [ DW_TAG_subprogram ] [line 3] [def] [test0001]
 !1 = metadata !{i32 786473, metadata !54} ; [ DW_TAG_file_type ]
@@ -93,3 +94,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !53 = metadata !{metadata !30}
 !54 = metadata !{metadata !"build2.c", metadata !"/private/tmp"}
 !55 = metadata !{metadata !"/Volumes/Lalgate/work/llvm/projects/llvm-test/SingleSource/UnitTests/Vector/helpers.h", metadata !"/private/tmp"}
+!56 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -48,6 +48,7 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 declare i32 @puts(i8*)
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!27}
 
 !0 = metadata !{i32 786449, metadata !25, i32 4, metadata !"clang version 3.3 (trunk 173515)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{metadata !2}
@@ -75,3 +76,4 @@ declare i32 @puts(i8*)
 !24 = metadata !{i32 10, i32 0, metadata !19, null}
 !25 = metadata !{metadata !"main.cpp", metadata !"/private/tmp"}
 !26 = metadata !{metadata !"test.cpp", metadata !"/private/tmp"}
+!27 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

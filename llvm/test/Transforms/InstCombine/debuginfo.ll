@@ -29,6 +29,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!30}
 
 !0 = metadata !{i32 786689, metadata !1, metadata !"__dest", metadata !2, i32 16777294, metadata !6, i32 0, null} ; [ DW_TAG_arg_variable ]
 !1 = metadata !{i32 786478, metadata !27, metadata !2, metadata !"foobar", metadata !"foobar", metadata !"", i32 79, metadata !4, i1 true, i1 true, i32 0, i32 0, null, i32 256, i1 true, i8* (i8*, i32, i64)* @foobar, null, null, metadata !25, i32 79} ; [ DW_TAG_subprogram ] [line 79] [local] [def] [foobar]
@@ -55,3 +56,4 @@ entry:
 !27 = metadata !{metadata !"string.h", metadata !"Game"}
 !28 = metadata !{metadata !"bits.c", metadata !"Game"}
 !29 = metadata !{i32 0}
+!30 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

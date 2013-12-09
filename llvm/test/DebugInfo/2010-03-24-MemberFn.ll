@@ -37,6 +37,7 @@ return:                                           ; preds = %entry
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!5}
+!llvm.module.flags = !{!28}
 
 !0 = metadata !{i32 786688, metadata !1, metadata !"s1", metadata !4, i32 3, metadata !9, i32 0, null} ; [ DW_TAG_auto_variable ]
 !1 = metadata !{i32 786443, metadata !25, metadata !2, i32 3, i32 0, i32 0} ; [ DW_TAG_lexical_block ]
@@ -66,3 +67,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !25 = metadata !{metadata !"one.cc", metadata !"/tmp/"}
 !26 = metadata !{metadata !"one.h", metadata !"/tmp/"}
 !27 = metadata !{i32 0}
+!28 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

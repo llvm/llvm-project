@@ -70,6 +70,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 declare i32 @puts(i8* nocapture) nounwind
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!33}
 
 !0 = metadata !{i32 786478, metadata !31, metadata !1, metadata !"gcd", metadata !"gcd", metadata !"", i32 5, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, i64 (i64, i64)* @gcd, null, null, metadata !29, i32 0} ; [ DW_TAG_subprogram ] [line 5] [def] [scope 0] [gcd]
 !1 = metadata !{i32 786473, metadata !31} ; [ DW_TAG_file_type ]
@@ -104,3 +105,4 @@ declare i32 @puts(i8* nocapture) nounwind
 !30 = metadata !{metadata !14, metadata !17}
 !31 = metadata !{metadata !"rem_small.c", metadata !"/private/tmp"}
 !32 = metadata !{i32 0}
+!33 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

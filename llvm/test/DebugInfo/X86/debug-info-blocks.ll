@@ -260,7 +260,7 @@ attributes #2 = { nonlazybind }
 attributes #3 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!56, !57, !58, !59}
+!llvm.module.flags = !{!56, !57, !58, !59, !110}
 
 !0 = metadata !{i32 786449, metadata !1, i32 16, metadata !"clang version 3.3 ", i1 false, metadata !"", i32 2, metadata !2, metadata !3, metadata !12, metadata !2,  metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [llvm/tools/clang/test/CodeGenObjC/<unknown>] [DW_LANG_ObjC]
 !1 = metadata !{metadata !"llvm/tools/clang/test/CodeGenObjC/<unknown>", metadata !"llvm/_build.ninja.Debug"}
@@ -372,3 +372,4 @@ attributes #3 = { nounwind }
 !107 = metadata !{i32 786688, metadata !36, metadata !"a", metadata !6, i32 61, metadata !61, i32 0, i32 0} ; [ DW_TAG_auto_variable ] [a] [line 61]
 !108 = metadata !{i32 61, i32 0, metadata !36, null}
 !109 = metadata !{i32 62, i32 0, metadata !36, null}
+!110 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

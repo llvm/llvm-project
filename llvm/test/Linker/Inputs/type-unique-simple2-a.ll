@@ -61,7 +61,7 @@ attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-po
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!16}
+!llvm.module.flags = !{!16, !22}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 (http://llvm.org/git/clang.git 8a3f9e46cb988d2c664395b21910091e3730ae82) (http://llvm.org/git/llvm.git 4699e9549358bc77824a59114548eecc3f7c523c)", i1 false, metadata !"", i32 0, metadata !2, metadata !3, metadata !11, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [foo.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"foo.cpp", metadata !"."}
@@ -85,3 +85,4 @@ attributes #1 = { nounwind readnone }
 !19 = metadata !{i32 786688, metadata !12, metadata !"t", metadata !13, i32 4, metadata !4, i32 0, i32 0} ; [ DW_TAG_auto_variable ] [t] [line 4]
 !20 = metadata !{i32 4, i32 0, metadata !12, null}
 !21 = metadata !{i32 5, i32 0, metadata !12, null}
+!22 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

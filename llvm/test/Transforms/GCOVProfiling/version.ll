@@ -16,6 +16,7 @@ define void @test() {
 
 !llvm.gcov = !{!9}
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!12}
 
 !0 = metadata !{i32 786449, metadata !11, i32 4, metadata !"clang version 3.3 (trunk 176994)", i1 false, metadata !"", i32 0, metadata !3, metadata !3, metadata !4, metadata !3, null, metadata !""} ; [ DW_TAG_compile_unit ] [./version] [DW_LANG_C_plus_plus]
 !2 = metadata !{i32 786473, metadata !11} ; [ DW_TAG_file_type ]
@@ -28,3 +29,4 @@ define void @test() {
 ;; !9 is added through the echo line at the top.
 !10 = metadata !{metadata !"<stdin>", metadata !"."}
 !11 = metadata !{metadata !"version", metadata !"/usr/local/google/home/nlewycky"}
+!12 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

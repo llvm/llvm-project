@@ -35,6 +35,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!21}
 
 !0 = metadata !{i32 786449, metadata !20, i32 4, metadata !"clang version 3.2 (trunk 165305)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ] [/home/samsonov/tmp/clang-di/test.cc] [DW_LANG_C_plus_plus]
 !1 = metadata !{i32 0}
@@ -61,3 +62,4 @@ entry:
 !18 = metadata !{i32 786443, metadata !20, metadata !8, i32 5, i32 23, i32 1} ; [ DW_TAG_lexical_block ] [/home/samsonov/tmp/clang-di/test.cc]
 !19 = metadata !{i32 5, i32 30, metadata !18, null}
 !20 = metadata !{metadata !"test.cc", metadata !"/home/samsonov/tmp/clang-di"}
+!21 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

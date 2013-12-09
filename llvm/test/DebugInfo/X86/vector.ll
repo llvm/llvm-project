@@ -10,6 +10,7 @@
 @a = common global <4 x i32> zeroinitializer, align 16
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!13}
 
 !0 = metadata !{i32 786449, metadata !12, i32 12, metadata !"clang version 3.3 (trunk 171825) (llvm/trunk 171822)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !1, metadata !3,  metadata !3, metadata !""} ; [ DW_TAG_compile_unit ] [/Users/echristo/foo.c] [DW_LANG_C99]
 !1 = metadata !{i32 0}
@@ -26,3 +27,4 @@
 ; Check that we get an array type with a vector attribute.
 ; CHECK: DW_TAG_array_type
 ; CHECK-NEXT: DW_AT_GNU_vector
+!13 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

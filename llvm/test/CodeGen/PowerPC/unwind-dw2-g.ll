@@ -19,7 +19,7 @@ declare void @llvm.eh.unwind.init() #0
 attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!8}
+!llvm.module.flags = !{!8, !11}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/unwind-dw2.c] [DW_LANG_C99]
 !1 = metadata !{metadata !"/tmp/unwind-dw2.c", metadata !"/tmp"}
@@ -32,3 +32,4 @@ attributes #0 = { nounwind }
 !8 = metadata !{i32 2, metadata !"Dwarf Version", i32 3}
 !9 = metadata !{i32 2, i32 0, metadata !4, null}
 !10 = metadata !{i32 3, i32 0, metadata !4, null}
+!11 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

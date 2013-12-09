@@ -62,6 +62,7 @@ declare i32 @puts(i8* nocapture) nounwind optsize
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!53}
 
 !0 = metadata !{i32 786478, metadata !51, metadata !1, metadata !"inlineprinter", metadata !"inlineprinter", metadata !"", i32 5, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, i32 (i8*, float, i8)* @inlineprinter, null, null, metadata !48, i32 5} ; [ DW_TAG_subprogram ] [line 5] [def] [inlineprinter]
 !1 = metadata !{i32 786473, metadata !51} ; [ DW_TAG_file_type ]
@@ -116,3 +117,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !50 = metadata !{metadata !17, metadata !18, metadata !22}
 !51 = metadata !{metadata !"a.c", metadata !"/private/tmp"}
 !52 = metadata !{i32 0}
+!53 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

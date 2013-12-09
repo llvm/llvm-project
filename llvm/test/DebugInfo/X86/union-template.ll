@@ -27,6 +27,7 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!28}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.3 (trunk 178499) (llvm/trunk 178472)", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !9,  metadata !9, metadata !""} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/echristo/tmp/foo.cc] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"foo.cc", metadata !"/usr/local/google/home/echristo/tmp"}
@@ -56,3 +57,4 @@ attributes #1 = { nounwind readnone }
 !25 = metadata !{i32 786688, metadata !4, metadata !"tempValue", metadata !11, i32 4, metadata !12, i32 0, i32 0} ; [ DW_TAG_auto_variable ] [tempValue] [line 4]
 !26 = metadata !{i32 4, i32 0, metadata !4, null}
 !27 = metadata !{i32 5, i32 0, metadata !4, null}
+!28 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

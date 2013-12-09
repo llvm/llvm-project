@@ -6,6 +6,7 @@
 @a = common global [10 x i32] zeroinitializer, align 16
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!12}
 
 !0 = metadata !{i32 720913, metadata !11, i32 12, metadata !"clang version 3.0 (trunk 140253)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !2, metadata !3, null, i32 0} ; [ DW_TAG_compile_unit ]
 !2 = metadata !{i32 0}
@@ -17,3 +18,4 @@
 !9 = metadata !{metadata !10}
 !10 = metadata !{i32 720929, i64 0, i64 10}        ; [ DW_TAG_subrange_type ]
 !11 = metadata !{metadata !"x.c", metadata !"/private/tmp"}
+!12 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

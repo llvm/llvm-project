@@ -86,6 +86,7 @@ attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!38}
 
 !0 = metadata !{i32 786449, metadata !37, i32 4, metadata !"clang version 3.3 (http://llvm.org/git/clang.git a09cd8103a6a719cb2628cdf0c91682250a17bd2) (http://llvm.org/git/llvm.git 47d03cec0afca0c01ae42b82916d1d731716cd20)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !2, metadata !24,  metadata !24, metadata !""} ; [ DW_TAG_compile_unit ] [/usr2/kparzysz/s.hex/t/dwarf-public-names.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{i32 0}
@@ -125,3 +126,4 @@ attributes #1 = { nounwind readnone }
 !35 = metadata !{i32 25, i32 0, metadata !20, null}
 !36 = metadata !{i32 26, i32 0, metadata !20, null}
 !37 = metadata !{metadata !"dwarf-public-names.cpp", metadata !"/usr2/kparzysz/s.hex/t"}
+!38 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

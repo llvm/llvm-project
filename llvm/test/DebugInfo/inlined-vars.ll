@@ -16,6 +16,7 @@ declare void @smth(i32)
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!27}
 
 !0 = metadata !{i32 786449, metadata !26, i32 4, metadata !"clang version 3.2 (trunk 159419)", i1 true, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -52,3 +53,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !24 = metadata !{i32 5, i32 3, metadata !10, metadata !19}
 !25 = metadata !{i32 6, i32 3, metadata !10, metadata !19}
 !26 = metadata !{metadata !"inline-bug.cc", metadata !"/tmp/dbginfo/pr13202"}
+!27 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -44,6 +44,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!24}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/blaikie/dev/scratch/scratch.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"scratch.cpp", metadata !"/usr/local/google/home/blaikie/dev/scratch"}
@@ -69,3 +70,4 @@ attributes #1 = { nounwind readnone }
 !21 = metadata !{i32 786689, metadata !4, metadata !"g", metadata !5, i32 33554438, metadata !8, i32 0, i32 0} ; [ DW_TAG_arg_variable ] [g] [line 6]
 !22 = metadata !{i32 7, i32 0, metadata !4, null}
 !23 = metadata !{i32 8, i32 0, metadata !4, null} ; [ DW_TAG_imported_declaration ]
+!24 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

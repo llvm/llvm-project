@@ -95,7 +95,7 @@ attributes #3 = { nounwind readnone }
 attributes #4 = { nounwind readonly }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!25}
+!llvm.module.flags = !{!25, !42}
 !llvm.ident = !{!26}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 (trunk 192896) (llvm/trunk 192895)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [./branch.cc] [DW_LANG_C_plus_plus]
@@ -140,3 +140,4 @@ attributes #4 = { nounwind readonly }
 !39 = metadata !{i32 20, i32 0, metadata !4, null}
 !40 = metadata !{i32 21, i32 0, metadata !4, null}
 !41 = metadata !{i32 22, i32 0, metadata !4, null}
+!42 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

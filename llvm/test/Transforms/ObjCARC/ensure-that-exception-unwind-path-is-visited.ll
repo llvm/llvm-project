@@ -111,7 +111,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 ; CHECK: attributes [[NUW]] = { nounwind }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!33, !34, !35, !36}
+!llvm.module.flags = !{!33, !34, !35, !36, !61}
 
 !0 = metadata !{i32 786449, metadata !60, i32 16, metadata !"clang version 3.3 ", i1 true, metadata !"", i32 2, metadata !1, metadata !1, metadata !3, metadata !1, null, metadata !""} ; [ DW_TAG_compile_unit ] [/Volumes/Files/gottesmmcab/Radar/12906997/test.m] [DW_LANG_ObjC]
 !1 = metadata !{i32 0}
@@ -171,3 +171,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !57 = metadata !{i32 786443, metadata !60, metadata !27, i32 5, i32 0, i32 7} ; [ DW_TAG_lexical_block ] [/Volumes/Files/gottesmmcab/Radar/12906997/test.m]
 !58 = metadata !{i32 7, i32 0, metadata !57, null}
 !60 = metadata !{metadata !"test.m", metadata !"/Volumes/Files/gottesmmcab/Radar/12906997"}
+!61 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

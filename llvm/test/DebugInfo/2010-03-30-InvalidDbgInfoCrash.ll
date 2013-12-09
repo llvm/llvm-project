@@ -9,6 +9,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!5}
+!llvm.module.flags = !{!22}
 
 !0 = metadata !{{ [0 x i8] }** undef}
 !1 = metadata !{i32 524544, metadata !2, metadata !"x", metadata !4, i32 11, metadata !9} ; [ DW_TAG_auto_variable ]
@@ -32,3 +33,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !19 = metadata !{metadata !"llvm.mdnode.fwdref.23"}
 !20 = metadata !{metadata !"2007-12-VarArrayDebug.c", metadata !"/Users/sabre/llvm/test/FrontendC/"}
 !21 = metadata !{i32 0}
+!22 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

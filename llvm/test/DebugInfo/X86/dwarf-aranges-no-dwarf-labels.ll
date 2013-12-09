@@ -58,7 +58,7 @@ attributes #1 = { nounwind readonly uwtable "less-precise-fpmad"="false" "no-fra
 attributes #2 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!19}
+!llvm.module.flags = !{!19, !26}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 (191881)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !17, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/debug_ranges/a.cc] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"tmp/debug_ranges/a.cc", metadata !"/"}
@@ -86,3 +86,4 @@ attributes #2 = { nounwind readnone }
 !23 = metadata !{metadata !"int", metadata !24}
 !24 = metadata !{metadata !"omnipotent char", metadata !25}
 !25 = metadata !{metadata !"Simple C/C++ TBAA"}
+!26 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

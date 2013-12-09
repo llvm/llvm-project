@@ -42,6 +42,7 @@ attributes #0 = { nounwind ssp uwtable "fp-contract-model"="standard" "no-frame-
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!26}
 
 !0 = metadata !{i32 786449, metadata !25, i32 4, metadata !"clang", i1 true, metadata !"", i32 0, metadata !1, metadata !1, metadata !2, metadata !11, null, metadata !""}
 !1 = metadata !{i32 0}
@@ -66,3 +67,4 @@ attributes #1 = { nounwind readnone }
 !20 = metadata !{i32 786443, metadata !25, metadata !10, i32 6, i32 0, i32 1}
 !24 = metadata !{i32 9, i32 0, metadata !3, null}
 !25 = metadata !{metadata !"test", metadata !"/path/to/somewhere"}
+!26 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

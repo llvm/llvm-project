@@ -44,6 +44,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 ; CHECK: attributes [[NUW]] = { nounwind }
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!30}
 !0 = metadata !{i32 524545, metadata !1, metadata !"name", metadata !2, i32 8, metadata !6} ; [ DW_TAG_arg_variable ]
 !1 = metadata !{i32 524334, metadata !28, metadata !2, metadata !"vfs_addname", metadata !"vfs_addname", metadata !"vfs_addname", i32 12, metadata !4, i1 false, i1 true, i32 0, i32 0, null, i1 false, i32 0, null, null, null, null, i32 0} ; [ DW_TAG_subprogram ]
 !2 = metadata !{i32 524329, metadata !28} ; [ DW_TAG_file_type ]
@@ -74,3 +75,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !27 = metadata !{i32 26, i32 0, metadata !25, null}
 !28 = metadata !{metadata !"tail.c", metadata !"/Users/echeng/LLVM/radars/r7927803/"}
 !29 = metadata !{i32 0}
+!30 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

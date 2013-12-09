@@ -242,7 +242,7 @@ entry:
 declare void @llvm.dbg.value(metadata, i64, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!11}
+!llvm.module.flags = !{!11, !13}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !9, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/home/tmp/test.c] [DW_LANG_C99]
 !1 = metadata !{metadata !"test.c", metadata !"/home/tmp"}
@@ -258,3 +258,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata)
 !11 = metadata !{i32 2, metadata !"Dwarf Version", i32 4}
 !12 = metadata !{i32* undef}
 
+!13 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

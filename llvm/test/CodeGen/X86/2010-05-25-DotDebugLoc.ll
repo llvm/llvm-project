@@ -199,6 +199,7 @@ declare float @copysignf(float, float) nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!48}
 
 !0 = metadata !{i32 786689, metadata !1, metadata !"a", metadata !2, i32 1921, metadata !9, i32 0, null} ; [ DW_TAG_arg_variable ]
 !1 = metadata !{i32 786478, metadata !45, metadata !2, metadata !"__divsc3", metadata !"__divsc3", metadata !"__divsc3", i32 1922, metadata !4, i1 false, i1 true, i32 0, i32 0, null, i1 false, i1 true, %0 (float, float, float, float)* @__divsc3, null, null, metadata !43, i32 1922} ; [ DW_TAG_subprogram ]
@@ -248,3 +249,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !45 = metadata !{metadata !"libgcc2.c", metadata !"/Users/yash/clean/LG.D/gcc/../../llvmgcc/gcc"}
 !46 = metadata !{metadata !"libgcc2.h", metadata !"/Users/yash/clean/LG.D/gcc/../../llvmgcc/gcc"}
 !47 = metadata !{i32 0}
+!48 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

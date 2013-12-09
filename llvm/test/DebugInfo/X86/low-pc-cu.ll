@@ -13,6 +13,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!16}
 
 !0 = metadata !{i32 786449, metadata !15, i32 4, metadata !"clang version 3.1 (trunk 153454) (llvm/trunk 153471)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -28,3 +29,4 @@ entry:
 !13 = metadata !{i32 7, i32 1, metadata !14, null}
 !14 = metadata !{i32 786443, metadata !5, i32 5, i32 1, metadata !6, i32 0} ; [ DW_TAG_lexical_block ]
 !15 = metadata !{metadata !"foo.cpp", metadata !"/Users/echristo/tmp"}
+!16 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

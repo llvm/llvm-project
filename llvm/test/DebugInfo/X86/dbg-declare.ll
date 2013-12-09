@@ -28,6 +28,7 @@ declare i8* @llvm.stacksave() nounwind
 declare void @llvm.stackrestore(i8*) nounwind
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!27}
 
 !0 = metadata !{i32 786449, metadata !26, i32 12, metadata !"clang version 3.1 (trunk 153698)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -54,3 +55,4 @@ declare void @llvm.stackrestore(i8*) nounwind
 !24 = metadata !{i32 9, i32 1, metadata !17, null}
 !25 = metadata !{i32 8, i32 3, metadata !17, null}
 !26 = metadata !{metadata !"20020104-2.c", metadata !"/Volumes/Sandbox/llvm"}
+!27 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -61,7 +61,7 @@ attributes #0 = { nounwind readonly ssp uwtable "less-precise-fpmad"="false" "no
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!18}
+!llvm.module.flags = !{!18, !27}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4 (trunk 185038) (llvm/trunk 185097)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/Volumes/Data/backedup/dev/os/llvm/debug/-] [DW_LANG_C99]
 !1 = metadata !{metadata !"-", metadata !"/Volumes/Data/backedup/dev/os/llvm/debug"}
@@ -87,3 +87,4 @@ attributes #1 = { nounwind readnone }
 !21 = metadata !{i32 5, i32 0, metadata !17, null}
 !22 = metadata !{i32 6, i32 0, metadata !17, null}
 !26 = metadata !{i32 7, i32 0, metadata !4, null}
+!27 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

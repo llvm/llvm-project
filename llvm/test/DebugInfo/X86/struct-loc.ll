@@ -12,6 +12,7 @@
 @f = common global %struct.foo zeroinitializer, align 4
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!12}
 
 !0 = metadata !{i32 786449, metadata !11, i32 12, metadata !"clang version 3.1 (trunk 152837) (llvm/trunk 152845)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !1, metadata !3,  metadata !3, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -23,3 +24,4 @@
 !9 = metadata !{i32 786445, metadata !11, metadata !7, metadata !"a", i32 2, i64 32, i64 32, i64 0, i32 0, metadata !10} ; [ DW_TAG_member ]
 !10 = metadata !{i32 786468, null, null, metadata !"int", i32 0, i64 32, i64 32, i64 0, i32 0, i32 5} ; [ DW_TAG_base_type ]
 !11 = metadata !{metadata !"struct_bug.c", metadata !"/Users/echristo/tmp"}
+!12 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

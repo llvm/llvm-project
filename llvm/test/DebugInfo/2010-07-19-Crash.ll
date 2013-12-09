@@ -8,6 +8,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!15}
 !llvm.dbg.sp = !{!0, !6, !11}
 !llvm.dbg.lv.foo = !{!7}
 
@@ -26,3 +27,4 @@ entry:
 !12 = metadata !{metadata !"one.c", metadata !"/private/tmp"}
 !13 = metadata !{metadata !0, metadata !6, metadata !11}
 !14 = metadata !{i32 0}
+!15 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

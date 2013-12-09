@@ -78,7 +78,7 @@ attributes #1 = { nounwind readnone }
 attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"="true" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!21}
+!llvm.module.flags = !{!21, !33}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/pass.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"pass.cpp", metadata !"/tmp"}
@@ -113,3 +113,4 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !30 = metadata !{i32 786443, metadata !1, metadata !17, i32 13, i32 0, i32 0} ; [ DW_TAG_lexical_block ] [/tmp/pass.cpp]
 !31 = metadata !{i32 14, i32 0, metadata !30, null}
 !32 = metadata !{i32 15, i32 0, metadata !17, null}
+!33 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

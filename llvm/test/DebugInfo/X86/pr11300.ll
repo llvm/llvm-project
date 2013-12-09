@@ -33,6 +33,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!33}
 
 !0 = metadata !{i32 786449, metadata !32, i32 4, metadata !"clang version 3.0 ()", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -65,3 +66,4 @@ entry:
 !30 = metadata !{i32 2, i32 15, metadata !31, null}
 !31 = metadata !{i32 786443, metadata !6, metadata !20, i32 2, i32 14, i32 1} ; [ DW_TAG_lexical_block ]
 !32 = metadata !{metadata !"/home/espindola/llvm/test.cc", metadata !"/home/espindola/tmpfs/build"}
+!33 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

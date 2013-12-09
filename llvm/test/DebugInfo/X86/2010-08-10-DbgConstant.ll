@@ -12,6 +12,7 @@ entry:
 declare void @bar(i32)
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!13}
 
 !0 = metadata !{i32 786478, metadata !12, metadata !1, metadata !"foo", metadata !"foo", metadata !"foo", i32 3, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i1 false, i1 false, void ()* @foo, null, null, null, i32 3} ; [ DW_TAG_subprogram ]
 !1 = metadata !{i32 786473, metadata !12} ; [ DW_TAG_file_type ]
@@ -26,3 +27,4 @@ declare void @bar(i32)
 !10 = metadata !{metadata !0}
 !11 = metadata !{metadata !5}
 !12 = metadata !{metadata !"/tmp/l.c", metadata !"/Volumes/Lalgate/clean/D"}
+!13 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

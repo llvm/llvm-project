@@ -88,6 +88,7 @@ attributes #0 = { nounwind optsize ssp uwtable }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!83}
 
 !0 = metadata !{i32 786449, metadata !82, i32 12, metadata !"clang version 3.3 (trunk 175015)", i1 true, metadata !"", i32 0, metadata !1, metadata !10, metadata !11, metadata !29,  metadata !29, metadata !""} ; [ DW_TAG_compile_unit ] [/Users/manmanren/test-Nov/rdar_13183203/test2/dry.c] [DW_LANG_C99]
 !1 = metadata !{metadata !2}
@@ -169,3 +170,4 @@ attributes #1 = { nounwind readnone }
 !80 = metadata !{i32 197, i32 0, metadata !12, null}
 !81 = metadata !{i32 198, i32 0, metadata !12, null}
 !82 = metadata !{metadata !"dry.c", metadata !"/Users/manmanren/test-Nov/rdar_13183203/test2"}
+!83 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

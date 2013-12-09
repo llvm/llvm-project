@@ -30,6 +30,7 @@ declare void @foobar(i64, i64)
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!33}
 
 !0 = metadata !{i32 786449, metadata !32, i32 12, metadata !"Apple clang version 3.0 (tags/Apple/clang-211.10.1) (based on LLVM 3.0svn)", i1 true, metadata !"", i32 0, metadata !4, metadata !4, metadata !30, null,  null, null} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 786478, metadata !2, metadata !2, metadata !"foo", metadata !"foo", metadata !"", i32 11, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, void (%struct.tag_s*, %struct.tag_s*, i64, i64, %struct.tag_s*, %struct.tag_s*)* @foo, null, null, metadata !31, i32 11} ; [ DW_TAG_subprogram ] [line 11] [def] [foo]
@@ -64,3 +65,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !30 = metadata !{metadata !1}
 !31 = metadata !{metadata !5, metadata !13, metadata !14, metadata !17, metadata !18, metadata!19}
 !32 = metadata !{metadata !"one.c", metadata !"/Volumes/Athwagate/R10048772"}
+!33 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

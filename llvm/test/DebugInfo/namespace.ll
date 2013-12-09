@@ -195,6 +195,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!52}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !19, metadata !21, metadata !""} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/blaikie/dev/llvm/build/clang/debug//usr/local/google/home/blaikie/dev/llvm/src/tools/clang/test/CodeGenCXX/debug-info-namespace.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"/usr/local/google/home/blaikie/dev/llvm/src/tools/clang/test/CodeGenCXX/debug-info-namespace.cpp", metadata !"/usr/local/google/home/blaikie/dev/llvm/build/clang/debug"}
@@ -248,3 +249,4 @@ attributes #1 = { nounwind readnone }
 !49 = metadata !{i32 23, i32 0, metadata !14, null}
 !50 = metadata !{i32 26, i32 0, metadata !14, null}
 !51 = metadata !{i32 27, i32 0, metadata !14, null}
+!52 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

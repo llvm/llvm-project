@@ -10,7 +10,7 @@
 @a = common global %0* null, align 8
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!9, !10, !11, !12}
+!llvm.module.flags = !{!9, !10, !11, !12, !14}
 
 !0 = metadata !{i32 786449, metadata !13, i32 16, metadata !"clang version 3.1 (trunk 152054 trunk 152094)", i1 false, metadata !"", i32 2, metadata !1, metadata !1, metadata !1, metadata !3,  metadata !3, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -24,3 +24,4 @@
 !11 = metadata !{i32 1, metadata !"Objective-C Image Info Section", metadata !"__DATA, __objc_imageinfo, regular, no_dead_strip"}
 !12 = metadata !{i32 4, metadata !"Objective-C Garbage Collection", i32 0}
 !13 = metadata !{metadata !"foo.m", metadata !"/Users/echristo"}
+!14 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

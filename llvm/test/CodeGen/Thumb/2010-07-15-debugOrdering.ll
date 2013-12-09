@@ -47,6 +47,7 @@ declare double @sqrt(double) nounwind readonly
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!5}
+!llvm.module.flags = !{!104}
 !0 = metadata !{i32 46, i32 0, metadata !1, null}
 !1 = metadata !{i32 524299, metadata !101, metadata !2, i32 44, i32 0, i32 0} ; [ DW_TAG_lexical_block ]
 !2 = metadata !{i32 524299, metadata !101, metadata !3, i32 44, i32 0, i32 0} ; [ DW_TAG_lexical_block ]
@@ -151,3 +152,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !101 = metadata !{metadata !"ggEdgeDiscrepancy.cc", metadata !"/Volumes/Home/grosbaj/sources/llvm-externals/speccpu2000/benchspec/CINT2000/252.eon/src"}
 !102 = metadata !{i32 0}
 !103 = metadata !{metadata !3}
+!104 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

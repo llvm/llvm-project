@@ -5,6 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!5}
 
 !0 = metadata !{i32 720913, metadata !4, i32 12, metadata !"clang version 3.1 (trunk 143523)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !2, metadata !2, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !2 = metadata !{i32 0}
@@ -15,3 +16,4 @@ target triple = "x86_64-unknown-linux-gnu"
 ;                        Dir  Mod Time   File Len   File Name
 ;                        ---- ---------- ---------- ---------------------------
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 empty.c
+!5 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

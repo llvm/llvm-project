@@ -84,7 +84,7 @@ entry:
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!31}
+!llvm.module.flags = !{!31, !36}
 !llvm.ident = !{!32}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 (trunk 192849) (llvm/trunk 192850)", i1 false, metadata !"", i32 0, metadata !2, metadata !3, metadata !9, metadata !28, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/echristo/tmp/bar.cpp] [DW_LANG_C_plus_plus]
@@ -123,3 +123,4 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !33 = metadata !{i32 3, i32 0, metadata !10, null}
 !34 = metadata !{i32 1, i32 0, metadata !14, null}
 !35 = metadata !{i32 1, i32 0, metadata !26, null}
+!36 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

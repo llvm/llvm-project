@@ -20,6 +20,7 @@ entry:
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!34}
 !llvm.dbg.lv = !{!0, !14, !15, !16, !17, !24, !25, !28}
 
 !0 = metadata !{i32 786689, metadata !1, metadata !"this", metadata !3, i32 11, metadata !12, i32 0, null} ; [ DW_TAG_arg_variable ]
@@ -56,3 +57,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !31 = metadata !{metadata !"foo.cp", metadata !"/tmp/"}
 !32 = metadata !{i32 0}
 !33 = metadata !{metadata !1, metadata !8, metadata !18}
+!34 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

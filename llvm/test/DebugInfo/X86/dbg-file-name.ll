@@ -10,6 +10,7 @@ define i32 @main() nounwind {
 }
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!12}
 
 !1 = metadata !{i32 786473, metadata !10} ; [ DW_TAG_file_type ]
 !2 = metadata !{i32 786449, metadata !10, i32 1, metadata !"LLVM build 00", i1 true, metadata !"", i32 0, metadata !11, metadata !11, metadata !9, null, null, metadata !""} ; [ DW_TAG_compile_unit ]
@@ -20,3 +21,4 @@ define i32 @main() nounwind {
 !9 = metadata !{metadata !6}
 !10 = metadata !{metadata !"simple.c", metadata !"/Users/manav/one/two"}
 !11 = metadata !{i32 0}
+!12 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

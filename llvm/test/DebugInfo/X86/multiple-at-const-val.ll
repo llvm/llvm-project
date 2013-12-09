@@ -30,6 +30,7 @@ declare %"class.std::basic_ostream"* @test(%"class.std::basic_ostream"*, i8*, i6
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!1803}
 
 !0 = metadata !{i32 786449, metadata !1802, i32 4, metadata !"clang version 3.3 (trunk 174207)", i1 true, metadata !"", i32 0, metadata !1, metadata !955, metadata !956, metadata !1786,  metadata !1786, metadata !""} ; [ DW_TAG_compile_unit ] [/privite/tmp/student2.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !26}
@@ -59,3 +60,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !1800 = metadata !{i32 786484, i32 0, metadata !5, metadata !"badbit", metadata !"badbit", metadata !"badbit", metadata !5, i32 331, metadata !78, i32 1, i32 1, i32 1, metadata !77} ; [ DW_TAG_variable ]
 !1801 = metadata !{metadata !"os_base.h", metadata !"/privite/tmp"}
 !1802 = metadata !{metadata !"student2.cpp", metadata !"/privite/tmp"}
+!1803 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

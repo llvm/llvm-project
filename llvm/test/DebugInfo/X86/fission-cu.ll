@@ -5,6 +5,7 @@
 @a = common global i32 0, align 4
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!9}
 
 !0 = metadata !{i32 786449, metadata !8, i32 12, metadata !"clang version 3.3 (trunk 169021) (llvm/trunk 169020)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !1, metadata !3,  metadata !3, metadata !"baz.dwo"} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/echristo/tmp/baz.c] [DW_LANG_C99]
 !1 = metadata !{i32 0}
@@ -110,3 +111,4 @@
 ; OBJ-NEXT: R_X86_64_32 .debug_line
 ; OBJ-NEXT: R_X86_64_32 .debug_str
 ; OBJ-NEXT: }
+!9 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

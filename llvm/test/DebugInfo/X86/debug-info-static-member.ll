@@ -57,6 +57,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!34}
 
 !0 = metadata !{i32 786449, metadata !33, i32 4, metadata !"clang version 3.3 (trunk 171914)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !10,  metadata !10, metadata !""} ; [ DW_TAG_compile_unit ] [/home/probinson/projects/upstream/static-member/test/debug-info-static-member.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{i32 0}
@@ -252,3 +253,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 ; DARWINA-NOT:  DW_AT_const_value
 ; DARWINA-NOT:  DW_AT_location
 ; DARWINA:      NULL
+!34 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

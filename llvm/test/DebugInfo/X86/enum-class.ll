@@ -6,6 +6,7 @@
 @c = global i32 0, align 4
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!23}
 
 !0 = metadata !{i32 786449, metadata !22, i32 4, metadata !"clang version 3.2 (trunk 157269) (llvm/trunk 157264)", i1 false, metadata !"", i32 0, metadata !1, metadata !15, metadata !15, metadata !17,  metadata !17, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{metadata !3, metadata !8, metadata !12}
@@ -41,3 +42,4 @@
 ; CHECK: DW_TAG_enumeration_type [6]
 ; CHECK-NOT: DW_AT_enum_class
 ; CHECK: DW_AT_name [DW_FORM_strp]      ( .debug_str[{{.*}}] = "C")
+!23 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

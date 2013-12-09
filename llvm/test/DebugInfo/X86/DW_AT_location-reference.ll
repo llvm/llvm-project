@@ -86,6 +86,7 @@ declare i32 @g(i32, i32)
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!24}
 
 !0 = metadata !{i32 786478, metadata !23, metadata !1, metadata !"f", metadata !"f", metadata !"", i32 4, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, void ()* @f, null, null, metadata !22, i32 4} ; [ DW_TAG_subprogram ] [line 4] [def] [f]
 !1 = metadata !{i32 786473, metadata !23} ; [ DW_TAG_file_type ]
@@ -108,3 +109,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !21 = metadata !{metadata !0}
 !22 = metadata !{metadata !5}
 !23 = metadata !{metadata !"simple.c", metadata !"/home/rengol01/temp/tests/dwarf/relocation"}
+!24 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

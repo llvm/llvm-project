@@ -13,6 +13,7 @@ entry:
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!5}
+!llvm.module.flags = !{!16}
 
 !0 = metadata !{i128 42 }
 !1 = metadata !{i32 786688, metadata !2, metadata !"MAX", metadata !4, i32 29, metadata !8, i32 0, null} ; [ DW_TAG_auto_variable ]
@@ -30,3 +31,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !13 = metadata !{metadata !"foo.c", metadata !"/tmp"}
 !14 = metadata !{metadata !"myint.h", metadata !"/tmp"}
 !15 = metadata !{i32 0}
+!16 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

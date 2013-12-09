@@ -6,6 +6,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!9}
 !6 = metadata !{metadata !0}
 
 !0 = metadata !{i32 786478, metadata !7, metadata !1, metadata !"f", metadata !"f", metadata !"", i32 1, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 false, i32 ()* @f, null, null, null, i32 1} ; [ DW_TAG_subprogram ] [line 1] [def] [f]
@@ -23,3 +24,4 @@ entry:
 ; CHECK:      Ltmp9 = (Ltmp3-Ltmp2)-0
 ; CHECK-NEXT:	.long	Ltmp9
 ; CHECK-NEXT:	.quad	Ltmp0
+!9 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -20,6 +20,7 @@ return:                                           ; preds = %entry
 }
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!12}
 !9 = metadata !{metadata !1}
 
 !0 = metadata !{i32 2, i32 0, metadata !1, null}
@@ -33,3 +34,4 @@ return:                                           ; preds = %entry
 !8 = metadata !{i32 786443, metadata !10, metadata !1, i32 2, i32 0, i32 0} ; [ DW_TAG_lexical_block ]
 !10 = metadata !{metadata !"a.c", metadata !"/tmp"}
 !11 = metadata !{i32 0}
+!12 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

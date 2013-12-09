@@ -30,7 +30,7 @@ declare void @_ZN4SValD1Ev(%class.SVal* %this)
 declare void @_ZN4SValD2Ev(%class.SVal* %this)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!47}
+!llvm.module.flags = !{!47, !68}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [aggregate-indirect-arg.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"aggregate-indirect-arg.cpp", metadata !""}
@@ -100,3 +100,4 @@ declare void @_ZN4SValD2Ev(%class.SVal* %this)
 !65 = metadata !{i32 14, i32 0, metadata !33, null}
 !66 = metadata !{i32 786689, metadata !34, metadata !"this", metadata !5, i32 16777230, metadata !64, i32 1088, i32 0} ; [ DW_TAG_arg_variable ] [this] [line 14]
 !67 = metadata !{i32 14, i32 0, metadata !34, null}
+!68 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

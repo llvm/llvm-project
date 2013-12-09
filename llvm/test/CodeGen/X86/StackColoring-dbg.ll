@@ -26,8 +26,10 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
 declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!23}
 !0 = metadata !{i32 524305, metadata !1, i32 1, metadata !"clang", i1 true, metadata !"", i32 0, metadata !2, metadata !2, null, null, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{metadata !"t.c", metadata !""}
 !16 = metadata !{i32 786468, null, null, metadata !"char", i32 0, i64 8, i64 8, i64 0, i32 0, i32 6}
 !2 = metadata !{i32 0}
 !22 = metadata !{i32 786688, null, metadata !"x", metadata !2, i32 16, metadata !16, i32 0, i32 0}
+!23 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

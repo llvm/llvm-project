@@ -19,6 +19,7 @@ entry:
 declare i32 @callme(i32)
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!14}
 
 !0 = metadata !{i32 786449, metadata !13, i32 12, metadata !"clang version 3.2 (trunk 164980) (llvm/trunk 164979)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/echristo/tmp/bar.c] [DW_LANG_C99]
 !1 = metadata !{i32 0}
@@ -32,3 +33,4 @@ declare i32 @callme(i32)
 !11 = metadata !{i32 786443, metadata !13, metadata !5, i32 4, i32 1, i32 0} ; [ DW_TAG_lexical_block ] [/usr/local/google/home/echristo/tmp/bar.c]
 !12 = metadata !{i32 6, i32 3, metadata !11, null}
 !13 = metadata !{metadata !"bar.c", metadata !"/usr/local/google/home/echristo/tmp"}
+!14 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

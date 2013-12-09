@@ -15,6 +15,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!11}
 !llvm.dbg.sp = !{!1}
 !llvm.dbg.gv = !{!5}
 
@@ -29,3 +30,4 @@ entry:
 !8 = metadata !{i32 589835, metadata !9, metadata !1, i32 2, i32 12, i32 0}
 !9 = metadata !{metadata !"/tmp/two.c", metadata !"/Volumes/Lalgate/Slate/D"}
 !10 = metadata !{metadata !1}
+!11 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

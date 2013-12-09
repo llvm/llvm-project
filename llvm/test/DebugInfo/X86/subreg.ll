@@ -17,6 +17,7 @@ entry:
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!11}
 !9 = metadata !{metadata !1}
 
 !0 = metadata !{i32 786689, metadata !1, metadata !"zzz", metadata !2, i32 16777219, metadata !6, i32 0, null} ; [ DW_TAG_arg_variable ]
@@ -29,3 +30,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !7 = metadata !{i32 4, i32 22, metadata !8, null}
 !8 = metadata !{i32 786443, metadata !10, metadata !1, i32 3, i32 19, i32 0} ; [ DW_TAG_lexical_block ]
 !10 = metadata !{metadata !"/home/espindola/llvm/test.c", metadata !"/home/espindola/tmpfs/build"}
+!11 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

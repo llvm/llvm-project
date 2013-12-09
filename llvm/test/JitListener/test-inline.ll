@@ -132,6 +132,7 @@ entry:
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!78}
 
 !0 = metadata !{i32 786449, metadata !77, i32 4, metadata !"clang version 3.3 (ssh://akaylor@git-amr-1.devtools.intel.com:29418/ssg_llvm-clang2 gitosis@miro.kw.intel.com:clang.git 39450d0469e0d5589ad39fd0b20b5742750619a0) (ssh://akaylor@git-amr-1.devtools.intel.com:29418/ssg_llvm-llvm gitosis@miro.kw.intel.com:llvm.git 376642ed620ecae05b68c7bc81f79aeb2065abe0)", i1 true, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !43, null, metadata !""} ; [ DW_TAG_compile_unit ] [/home/akaylor/dev/test-inline.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{i32 0}
@@ -208,3 +209,4 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, 
 !75 = metadata !{i32 48, i32 0, metadata !63, null}
 !76 = metadata !{i32 49, i32 0, metadata !63, null}
 !77 = metadata !{metadata !"test-inline.cpp", metadata !"/home/akaylor/dev"}
+!78 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

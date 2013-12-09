@@ -51,7 +51,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!19}
+!llvm.module.flags = !{!19, !24}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !11, metadata !12, metadata !17, metadata !11, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/enum.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"enum.cpp", metadata !"/tmp"}
@@ -77,3 +77,4 @@ attributes #1 = { nounwind readnone }
 !21 = metadata !{i32 786468, null, null, metadata !"int", i32 0, i64 32, i64 32, i64 0, i32 0, i32 5} ; [ DW_TAG_base_type ] [int] [line 0, size 32, align 32, offset 0, enc DW_ATE_signed]
 !22 = metadata !{i32 4, i32 0, metadata !13, null}
 !23 = metadata !{i32 5, i32 0, metadata !13, null}
+!24 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

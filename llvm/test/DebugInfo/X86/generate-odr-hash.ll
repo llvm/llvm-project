@@ -136,7 +136,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!42}
+!llvm.module.flags = !{!42, !54}
 !llvm.ident = !{!43}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !3, metadata !20, metadata !37, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/dbginfo/bar.cpp] [DW_LANG_C_plus_plus]
@@ -193,3 +193,4 @@ attributes #1 = { nounwind readnone }
 !51 = metadata !{i32 0, i32 0, metadata !26, null}
 !52 = metadata !{i32 25, i32 0, metadata !26, null}
 !53 = metadata !{i32 25, i32 0, metadata !35, null}
+!54 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

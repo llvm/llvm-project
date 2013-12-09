@@ -14,6 +14,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, 
 
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!27}
 !0 = metadata !{i32 589870, metadata !1, null, metadata !"CGRectStandardize", metadata !"CGRectStandardize", metadata !"CGRectStandardize", i32 54, null, i1 false, i1 true, i32 0, i32 0, null, i32 0, i1 false, void (i32*, i32*)* @CGRectStandardize, null, null, null, i32 0} ; [ DW_TAG_subprogram ] [line 54] [def] [scope 0] [CGRectStandardize]
 !1 = metadata !{i32 589865, metadata !25}
 !2 = metadata !{i32 589841, metadata !25, i32 16, metadata !"clang version 2.9 (trunk 115292)", i1 true, metadata !"", i32 1, metadata !26, metadata !26, null, null, null, metadata !""} ; [ DW_TAG_compile_unit ]
@@ -22,3 +23,4 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, 
 !24 = metadata !{i32 53, i32 33, metadata !0, null}
 !25 = metadata !{metadata !"GSFusedSilica.m", metadata !"/Volumes/Data/Users/sabre/Desktop"}
 !26 = metadata !{i32 0}
+!27 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

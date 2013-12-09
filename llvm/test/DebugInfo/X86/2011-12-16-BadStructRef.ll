@@ -87,6 +87,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!83}
 
 !0 = metadata !{i32 720913, metadata !82, i32 4, metadata !"clang version 3.1 (trunk 146596)", i1 false, metadata !"", i32 0, metadata !1, metadata !3, metadata !27, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -168,3 +169,4 @@ entry:
 !80 = metadata !{i32 6, i32 24, metadata !81, null}
 !81 = metadata !{i32 720907, metadata !82, metadata !46, i32 6, i32 23, i32 2} ; [ DW_TAG_lexical_block ]
 !82 = metadata !{metadata !"main.cpp", metadata !"/Users/echristo/tmp/bad-struct-ref"}
+!83 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

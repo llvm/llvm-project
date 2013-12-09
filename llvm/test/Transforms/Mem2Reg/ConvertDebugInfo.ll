@@ -33,6 +33,7 @@ return:                                           ; preds = %entry
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!14}
 
 !0 = metadata !{i32 786689, metadata !1, metadata !"i", metadata !2, i32 2, metadata !7, i32 0, null} ; [ DW_TAG_arg_variable ]
 !1 = metadata !{i32 786478, metadata !12, metadata !2, metadata !"testfunc", metadata !"testfunc", metadata !"testfunc", i32 2, metadata !4, i1 false, i1 true, i32 0, i32 0, null, i32 0, i1 false, double (i32, double)* @testfunc, null, null, null, i32 2} ; [ DW_TAG_subprogram ]
@@ -48,3 +49,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !11 = metadata !{i32 786443, metadata !12, metadata !1, i32 2, i32 0, i32 0} ; [ DW_TAG_lexical_block ]
 !12 = metadata !{metadata !"testfunc.c", metadata !"/tmp"}
 !13 = metadata !{i32 0}
+!14 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

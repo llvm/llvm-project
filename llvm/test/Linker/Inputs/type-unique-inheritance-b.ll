@@ -38,7 +38,7 @@ attributes #2 = { ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-eli
 attributes #3 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!27}
+!llvm.module.flags = !{!27, !38}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 (http://llvm.org/git/clang.git f54e02f969d02d640103db73efc30c45439fceab) (http://llvm.org/git/llvm.git 284353b55896cb1babfaa7add7c0a363245342d2)", i1 false, metadata !"", i32 0, metadata !2, metadata !3, metadata !19, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/Users/mren/c_testing/type_unique_air/inher/bar.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"bar.cpp", metadata !"/Users/mren/c_testing/type_unique_air/inher"}
@@ -78,3 +78,4 @@ attributes #3 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !35 = metadata !{i32 11, i32 0, metadata !24, null}
 !36 = metadata !{i32 12, i32 0, metadata !24, null}
 !37 = metadata !{i32 13, i32 0, metadata !24, null}
+!38 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

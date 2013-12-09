@@ -27,6 +27,7 @@ return:
 }
 
 !llvm.dbg.cu = !{!4, !12}
+!llvm.module.flags = !{!21}
 !16 = metadata !{metadata !2}
 !17 = metadata !{metadata !10}
 
@@ -49,3 +50,4 @@ return:
 !18 = metadata !{metadata !"a.c", metadata !"/tmp/"}
 !19 = metadata !{i32 0}
 !20 = metadata !{metadata !"b.c", metadata !"/tmp/"}
+!21 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -23,7 +23,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata)
 attributes #0 = { sspreq }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!21}
+!llvm.module.flags = !{!21, !72}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 true, metadata !"", i32 0, metadata !2, metadata !5, metadata !8, metadata !20, metadata !5, metadata !""} ; [ DW_TAG_compile_unit ] [/Users/matt/ryan_bug/<unknown>] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"<unknown>", metadata !"/Users/matt/ryan_bug"}
@@ -94,3 +94,4 @@ attributes #0 = { sspreq }
 !69 = metadata !{i32 786689, metadata !65, metadata !"p1", metadata !10, i32 33554433, metadata !50, i32 0, i32 0} ; [ DW_TAG_arg_variable ] [p1] [line 1]
 !70 = metadata !{i32 786689, metadata !65, metadata !"", metadata !10, i32 50331650, metadata !50, i32 0, i32 0} ; [ DW_TAG_arg_variable ] [line 2]
 !71 = metadata !{i32 1, i32 0, metadata !65, metadata !40}
+!72 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

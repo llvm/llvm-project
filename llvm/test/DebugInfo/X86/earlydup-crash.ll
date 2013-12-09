@@ -43,6 +43,7 @@ bb33:                                             ; preds = %bb31, %bb22, %bb18,
 declare void @foobar(i32)
 
 !llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!47}
 !0 = metadata !{i32 590080, metadata !1, metadata !"frname_len", metadata !3, i32 517, metadata !38, i32 0} ; [ DW_TAG_auto_variable ]
 !1 = metadata !{i32 589835, metadata !44, metadata !2, i32 515, i32 0, i32 19} ; [ DW_TAG_lexical_block ]
 !2 = metadata !{i32 589870, metadata !44, null, metadata !"framework_construct_pathname", metadata !"framework_construct_pathname", metadata !"", i32 515, metadata !5, i1 true, i1 true, i32 0, i32 0, null, i32 256, i1 true, i8* (i8*, %struct.cpp_dir*)* @framework_construct_pathname, null, null, null, i32 0} ; [ DW_TAG_subprogram ]
@@ -90,3 +91,4 @@ declare void @foobar(i32)
 !44 = metadata !{metadata !"darwin-c.c", metadata !"/Users/espindola/llvm/build-llvm-gcc/gcc/../../llvm-gcc-4.2/gcc/config"}
 !45 = metadata !{metadata !2}
 !46 = metadata !{i32 0}
+!47 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

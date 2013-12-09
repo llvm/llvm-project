@@ -49,6 +49,7 @@ declare i64 @llvm.bswap.i64(i64) nounwind readnone
 declare void @uuid_LtoB(i8*, i8*)
 
 !llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!41}
 !0 = metadata !{i32 808, i32 0, metadata !1, null}
 !1 = metadata !{i32 524299, metadata !39, metadata !2, i32 807, i32 0, i32 0} ; [ DW_TAG_lexical_block ]
 !2 = metadata !{i32 524334, metadata !39, null, metadata !"gpt2gpm", metadata !"gpt2gpm", metadata !"gpt2gpm", i32 807, metadata !5, i1 true, i1 true, i32 0, i32 0, null, i1 false, i32 0, null, null, null, null, i32 0} ; [ DW_TAG_subprogram ]
@@ -90,3 +91,4 @@ declare void @uuid_LtoB(i8*, i8*)
 !38 = metadata !{metadata !"OSByteOrder.h", metadata !"/usr/include/libkern/ppc"}
 !39 = metadata !{metadata !"G.c", metadata !"/tmp"}
 !40 = metadata !{metadata !2, metadata !9, metadata !16}
+!41 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

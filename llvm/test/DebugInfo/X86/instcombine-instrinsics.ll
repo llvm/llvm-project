@@ -60,6 +60,7 @@ declare i32 @put(i64, i64*, i64, %struct.i24*) nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!73}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.3 ", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !48, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{metadata !"i1", metadata !""}
@@ -98,3 +99,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !52 = metadata !{i64 0}
 !55 = metadata !{%struct.i3* null}
 !72 = metadata !{%struct.i24* null}
+!73 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

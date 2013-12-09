@@ -27,6 +27,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!20}
 
 !0 = metadata !{i32 786449, metadata !19, i32 12, metadata !"clang version 3.1 (trunk 153921) (llvm/trunk 153916)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -46,3 +47,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !17 = metadata !{i32 8, i32 18, metadata !15, null}
 !18 = metadata !{i32 9, i32 5, metadata !15, null}
 !19 = metadata !{metadata !"ending-run.c", metadata !"/Users/echristo/tmp"}
+!20 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

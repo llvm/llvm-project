@@ -9,6 +9,7 @@
 @crass = common global %struct.crass zeroinitializer, align 8
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!14}
 
 !0 = metadata !{i32 786449, metadata !13, i32 12, metadata !"clang version 3.1 (trunk 147882)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !1, metadata !3,  metadata !3, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -22,3 +23,4 @@
 !11 = metadata !{i32 786447, null, null, metadata !"", i32 0, i64 64, i64 64, i64 0, i32 0, metadata !12} ; [ DW_TAG_pointer_type ]
 !12 = metadata !{i32 720932, null, null, metadata !"char", i32 0, i64 8, i64 8, i64 0, i32 0, i32 6} ; [ DW_TAG_base_type ]
 !13 = metadata !{metadata !"foo.c", metadata !"/Users/echristo/tmp"}
+!14 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

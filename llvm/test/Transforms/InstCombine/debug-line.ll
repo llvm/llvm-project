@@ -12,6 +12,7 @@ define void @foo() nounwind ssp {
 declare i32 @printf(i8*, ...)
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!10}
 !llvm.dbg.sp = !{!0}
 
 !0 = metadata !{i32 589870, metadata !8, metadata !1, metadata !"foo", metadata !"foo", metadata !"", i32 4, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 0, i1 false, void ()* @foo, null, null, null, i32 0} ; [ DW_TAG_subprogram ]
@@ -24,3 +25,4 @@ declare i32 @printf(i8*, ...)
 !7 = metadata !{i32 6, i32 1, metadata !6, null}
 !8 = metadata !{metadata !"m.c", metadata !"/private/tmp"}
 !9 = metadata !{metadata !0}
+!10 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -76,6 +76,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!49}
 
 !0 = metadata !{i32 786478, metadata !47, metadata !1, metadata !"get1", metadata !"get1", metadata !"get1", i32 4, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i32 256, i1 true, i8 (i8)* @get1, null, null, metadata !42, i32 4} ; [ DW_TAG_subprogram ]
 !1 = metadata !{i32 786473, metadata !47} ; [ DW_TAG_file_type ]
@@ -126,3 +127,4 @@ entry:
 !46 = metadata !{metadata !27, metadata !28}
 !47 = metadata !{metadata !"foo.c", metadata !"/tmp/"}
 !48 = metadata !{i32 0}
+!49 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

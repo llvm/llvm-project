@@ -41,7 +41,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!15}
+!llvm.module.flags = !{!15, !20}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.4 ", i1 false, metadata !"", i32 0, metadata !2, metadata !3, metadata !13, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/dbginfo/member-order.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"member-order.cpp", metadata !"/tmp/dbginfo"}
@@ -63,3 +63,4 @@ attributes #1 = { nounwind readnone }
 !17 = metadata !{i32 786447, null, null, metadata !"", i32 0, i64 64, i64 64, i64 0, i32 0, metadata !"_ZTS3foo"} ; [ DW_TAG_pointer_type ] [line 0, size 64, align 64, offset 0] [from _ZTS3foo]
 !18 = metadata !{i32 0, i32 0, metadata !14, null}
 !19 = metadata !{i32 7, i32 0, metadata !14, null}
+!20 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

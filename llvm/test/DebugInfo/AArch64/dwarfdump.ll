@@ -21,6 +21,7 @@ define i32 @main() nounwind {
 attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!10}
 
 !0 = metadata !{i32 786449, metadata !9, i32 12, metadata !"clang version 3.3 ", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !2, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ] [/home/timnor01/llvm/build/tmp.c] [DW_LANG_C99]
 !1 = metadata !{i32 0}
@@ -32,3 +33,4 @@ attributes #0 = { nounwind }
 !7 = metadata !{i32 786468, null, null, metadata !"int", i32 0, i64 32, i64 32, i64 0, i32 0, i32 5} ; [ DW_TAG_base_type ] [int] [line 0, size 32, align 32, offset 0, enc DW_ATE_signed]
 !8 = metadata !{i32 2, i32 0, metadata !3, null}
 !9 = metadata !{metadata !"tmp.c", metadata !"/home/tim/llvm/build"}
+!10 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -103,7 +103,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!26}
+!llvm.module.flags = !{!26, !43}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4 (trunk 191700) (llvm/trunk 191710)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !"small.dwo"} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/echristo/tmp/small.c] [DW_LANG_C99]
 !1 = metadata !{metadata !"small.c", metadata !"/usr/local/google/home/echristo/tmp"}
@@ -148,3 +148,4 @@ attributes #1 = { nounwind readnone }
 !40 = metadata !{i32 12, i32 0, metadata !20, null}
 !41 = metadata !{i32* @c}
 !42 = metadata !{i32 15, i32 0, metadata !8, null}
+!43 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

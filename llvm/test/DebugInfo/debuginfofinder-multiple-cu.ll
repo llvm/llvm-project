@@ -20,7 +20,7 @@ define void @g() {
 }
 
 !llvm.dbg.cu = !{!0, !8}
-!llvm.module.flags = !{!13}
+!llvm.module.flags = !{!13, !16}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4 (192092)", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/tmp/test1.c] [DW_LANG_C99]
 !1 = metadata !{metadata !"test1.c", metadata !"/tmp"}
@@ -38,3 +38,4 @@ define void @g() {
 !13 = metadata !{i32 2, metadata !"Dwarf Version", i32 4}
 !14 = metadata !{i32 1, i32 0, metadata !4, null}
 !15 = metadata !{i32 1, i32 0, metadata !11, null}
+!16 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

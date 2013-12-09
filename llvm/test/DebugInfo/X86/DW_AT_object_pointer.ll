@@ -48,6 +48,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!38}
 
 !0 = metadata !{i32 786449, metadata !37, i32 4, metadata !"clang version 3.2 (trunk 163586) (llvm/trunk 163570)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ] [/Users/echristo/debug-tests/bar.cpp] [DW_LANG_C_plus_plus]
 !1 = metadata !{i32 0}
@@ -85,3 +86,4 @@ entry:
 !35 = metadata !{i32 7, i32 0, metadata !5, null}
 !36 = metadata !{i32 786689, metadata !5, metadata !"", metadata !6, i32 16777223, metadata !9, i32 0, i32 0} ; [ DW_TAG_arg_variable ] [line 7]
 !37 = metadata !{metadata !"bar.cpp", metadata !"/Users/echristo/debug-tests"}
+!38 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

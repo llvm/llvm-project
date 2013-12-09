@@ -29,6 +29,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 declare i32 @bar() nounwind readnone
 
 !llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!17}
 
 !0 = metadata !{i32 786478, metadata !15, metadata !1, metadata !"foobar", metadata !"foobar", metadata !"foobar", i32 12, metadata !3, i1 false, i1 true, i32 0, i32 0, null, i1 false, i1 true, i32 ()* @foobar, null, null, metadata !14, i32 0} ; [ DW_TAG_subprogram ]
 !1 = metadata !{i32 786473, metadata !15} ; [ DW_TAG_file_type ]
@@ -47,3 +48,4 @@ declare i32 @bar() nounwind readnone
 !14 = metadata !{metadata !6}
 !15 = metadata !{metadata !"mu.c", metadata !"/private/tmp"}
 !16 = metadata !{i32 0}
+!17 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

@@ -76,6 +76,7 @@ for.end:                                          ; preds = %for.cond
 declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!35}
 
 !0 = metadata !{i32 720913, metadata !34, i32 12, metadata !"clang version 3.1 ()", i1 true, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !12, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -109,3 +110,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !32 = metadata !{i32 12, i32 29, metadata !26, null}
 !33 = metadata !{i32 15, i32 5, metadata !22, null}
 !34 = metadata !{metadata !"test-common-symbols.c", metadata !"/store/store/llvm/build"}
+!35 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

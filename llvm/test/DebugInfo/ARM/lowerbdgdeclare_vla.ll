@@ -64,7 +64,7 @@ attributes #0 = { nounwind optsize readnone "less-precise-fpmad"="false" "no-fra
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!20}
+!llvm.module.flags = !{!20, !33}
 !llvm.ident = !{!21}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4 ", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/Volumes/Data/radar/15464571/<unknown>] [DW_LANG_C99]
@@ -100,3 +100,4 @@ attributes #1 = { nounwind readnone }
 !30 = metadata !{i32 6, i32 0, metadata !19, null}
 !31 = metadata !{i32 7, i32 0, metadata !19, null}
 !32 = metadata !{i32 8, i32 0, metadata !4, null} ; [ DW_TAG_imported_declaration ]
+!33 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

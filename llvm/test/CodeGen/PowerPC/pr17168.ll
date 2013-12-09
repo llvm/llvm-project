@@ -52,7 +52,7 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"=
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!438}
+!llvm.module.flags = !{!438, !464}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4 (trunk 190311)", i1 true, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !298, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [/home/hfinkel/src/NPB2.3-omp-C/BT/bt.c] [DW_LANG_C99]
 !1 = metadata !{metadata !"bt.c", metadata !"/home/hfinkel/src/NPB2.3-omp-C/BT"}
@@ -518,3 +518,4 @@ attributes #1 = { nounwind readnone }
 !461 = metadata !{i32 786443, metadata !1, metadata !462, i32 2019, i32 0, i32 147} ; [ DW_TAG_lexical_block ] [/home/hfinkel/src/NPB2.3-omp-C/BT/bt.c]
 !462 = metadata !{i32 786443, metadata !1, metadata !463, i32 2018, i32 0, i32 146} ; [ DW_TAG_lexical_block ] [/home/hfinkel/src/NPB2.3-omp-C/BT/bt.c]
 !463 = metadata !{i32 786443, metadata !1, metadata !114, i32 2018, i32 0, i32 145} ; [ DW_TAG_lexical_block ] [/home/hfinkel/src/NPB2.3-omp-C/BT/bt.c]
+!464 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

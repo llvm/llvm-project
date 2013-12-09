@@ -16,6 +16,7 @@
 @b = global %class.B zeroinitializer, align 4
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!29}
 
 !0 = metadata !{i32 786449, metadata !28, i32 4, metadata !"clang version 3.1 (trunk 153413) (llvm/trunk 153428)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !1, metadata !3,  metadata !3, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 0}
@@ -44,3 +45,4 @@
 !26 = metadata !{i32 786468}                      ; [ DW_TAG_base_type ]
 !27 = metadata !{i32 786474, metadata !18, null, metadata !6, i32 0, i64 0, i64 0, i64 0, i32 0, metadata !7} ; [ DW_TAG_friend ]
 !28 = metadata !{metadata !"foo.cpp", metadata !"/Users/echristo/tmp"}
+!29 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

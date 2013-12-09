@@ -34,6 +34,7 @@ invoke.cont44:                                    ; preds = %if.end
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!8}
 
 !0 = metadata !{i32 786449, metadata !6, i32 4, metadata !"clang version 3.3 (trunk 168984) (llvm/trunk 168983)", i1 true, metadata !"", i32 0, metadata !2, metadata !7, null, null, null, metadata !""} ; [ DW_TAG_compile_unit ] [MultiSource/Benchmarks/Bullet/MultiSource/Benchmarks/Bullet/btCompoundCollisionAlgorithm.cpp] [DW_LANG_C_plus_plus]
 !2 = metadata !{null}
@@ -42,3 +43,4 @@ invoke.cont44:                                    ; preds = %if.end
 !5 = metadata !{i32 786473, metadata !6} ; [ DW_TAG_file_type ]
 !6 = metadata !{metadata !"MultiSource/Benchmarks/Bullet/btCompoundCollisionAlgorithm.cpp", metadata !"MultiSource/Benchmarks/Bullet"}
 !7 = metadata !{i32 0}
+!8 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

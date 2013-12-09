@@ -16,7 +16,7 @@ entry:
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!9}
+!llvm.module.flags = !{!9, !11}
 
 !0 = metadata !{i32 786449, metadata !1, i32 12, metadata !"clang version 3.4 (trunk 185475)", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{metadata !"CodeGen/dwarf-version.c", metadata !"test"}
@@ -29,3 +29,4 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !8 = metadata !{i32 786468, null, null, metadata !"int", i32 0, i64 32, i64 32, i64 0, i32 0, i32 5} ; [ DW_TAG_base_type ] [int] [line 0, size 32, align 32, offset 0, enc DW_ATE_signed]
 !9 = metadata !{i32 2, metadata !"Dwarf Version", i32 3}
 !10 = metadata !{i32 7, i32 0, metadata !4, null}
+!11 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

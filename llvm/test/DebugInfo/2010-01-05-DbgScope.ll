@@ -9,6 +9,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!3}
+!llvm.module.flags = !{!14}
 
 !0 = metadata !{i32 571, i32 3, metadata !1, null}
 !1 = metadata !{i32 458763, metadata !11, metadata !2, i32 1, i32 1, i32 0}; [DW_TAG_lexical_block ]
@@ -21,3 +22,4 @@ entry:
 !11 = metadata !{metadata !"hashtab.c", metadata !"/usr/src/gnu/usr.bin/cc/cc_tools/../../../../contrib/gcclibs/libiberty"}
 !12 = metadata !{i32 0}
 !13 = metadata !{metadata !2}
+!14 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

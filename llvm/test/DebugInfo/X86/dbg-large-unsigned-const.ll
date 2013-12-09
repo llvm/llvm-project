@@ -26,6 +26,7 @@ entry:
 declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!34}
 !29 = metadata !{metadata !1, metadata !6}
 !30 = metadata !{metadata !7, metadata !11}
 !31 = metadata !{metadata !12}
@@ -58,3 +59,4 @@ declare void @llvm.dbg.value(metadata, i64, metadata) nounwind readnone
 !28 = metadata !{i32 3, i32 3, metadata !16, metadata !22}
 !32 = metadata !{metadata !"lli.cc", metadata !"/private/tmp"}
 !33 = metadata !{i32 0}
+!34 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

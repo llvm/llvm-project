@@ -138,6 +138,7 @@ attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!31}
 
 !0 = metadata !{i32 786449, metadata !1, i32 4, metadata !"clang version 3.3 ", i1 false, metadata !"", i32 0, metadata !2, metadata !2, metadata !3, metadata !2, metadata !2, metadata !""} ; [ DW_TAG_compile_unit ] [<unknown>] [DW_LANG_C_plus_plus]
 !1 = metadata !{metadata !"<unknown>", metadata !""}
@@ -170,3 +171,4 @@ attributes #2 = { nounwind }
 !28 = metadata !{i32 18, i32 0, metadata !27, null}
 !29 = metadata !{i32 19, i32 0, metadata !10, null}
 !30 = metadata !{i32 20, i32 0, metadata !10, null}
+!31 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

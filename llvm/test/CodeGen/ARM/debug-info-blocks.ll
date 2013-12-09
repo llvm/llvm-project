@@ -93,6 +93,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 }
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!162}
 
 !0 = metadata !{i32 786449, metadata !153, i32 16, metadata !"Apple clang version 2.1", i1 false, metadata !"", i32 2, metadata !147, metadata !26, metadata !148, null, null, metadata !""} ; [ DW_TAG_compile_unit ]
 !1 = metadata !{i32 786436, metadata !160, metadata !0, metadata !"", i32 248, i64 32, i64 32, i32 0, i32 0, null, metadata !3, i32 0, null, null, null} ; [ DW_TAG_enumeration_type ] [line 248, size 32, align 32, offset 0] [def] [from ]
@@ -256,3 +257,4 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !159 = metadata !{metadata !"header15.h", metadata !"/Volumes/Sandbox/llvm"}
 !160 = metadata !{metadata !"header.h", metadata !"/Volumes/Sandbox/llvm"}
 !161 = metadata !{metadata !"header2.h", metadata !"/Volumes/Sandbox/llvm"}
+!162 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}

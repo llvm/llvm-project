@@ -64,6 +64,7 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 ; CHECK-NOT:  DW_AT_upper_bound
 
 !llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!33}
 
 !0 = metadata !{i32 786449, metadata !32, i32 12, metadata !"clang version 3.3 (trunk 169136)", i1 false, metadata !"", i32 0, metadata !1, metadata !1, metadata !3, metadata !1,  metadata !1, metadata !""} ; [ DW_TAG_compile_unit ] [/Volumes/Sandbox/llvm/test.c] [DW_LANG_C99]
 !1 = metadata !{i32 0}
@@ -96,3 +97,4 @@ declare void @llvm.dbg.declare(metadata, metadata) nounwind readnone
 !30 = metadata !{i32 16, i32 0, metadata !11, null}
 !31 = metadata !{i32 17, i32 0, metadata !11, null}
 !32 = metadata !{metadata !"test.c", metadata !"/Volumes/Sandbox/llvm"}
+!33 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}
