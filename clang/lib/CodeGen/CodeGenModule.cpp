@@ -265,7 +265,7 @@ void CodeGenModule::Release() {
     // done, the bitcode linker is not going to see modules with different
     // version numbers.
     getModule().addModuleFlag(llvm::Module::Error, "Debug Info Version",
-                              llvm::dwarf::DEBUG_INFO_VERSION);
+                              llvm::DEBUG_METADATA_VERSION);
 
   SimplifyPersonality();
 
