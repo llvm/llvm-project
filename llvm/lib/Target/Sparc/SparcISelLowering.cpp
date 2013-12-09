@@ -2298,7 +2298,7 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
-                                       bool is64Bit) {
+                                       const SparcSubtarget *Subtarget) {
   SDValue Chain = Op.getOperand(0);  // Legalize the chain.
   SDValue Size  = Op.getOperand(1);  // Legalize the size.
   EVT VT = Size->getValueType(0);
@@ -2311,7 +2311,9 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
 
   // The resultant pointer is actually 16 words from the bottom of the stack,
   // to provide a register spill area.
-  unsigned regSpillArea = (is64Bit) ? 128 : 96;
+  unsigned regSpillArea = Subtarget->is64Bit() ? 128 : 96;
+  regSpillArea += Subtarget->getStackPointerBias();
+
   SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,
                                DAG.getConstant(regSpillArea, VT));
   SDValue Ops[2] = { NewVal, Chain };
@@ -2638,7 +2640,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VASTART:            return LowerVASTART(Op, DAG, *this);
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG,
-                                                               is64Bit);
+                                                               Subtarget);
 
   case ISD::LOAD:               return LowerF128Load(Op, DAG);
   case ISD::STORE:              return LowerF128Store(Op, DAG);

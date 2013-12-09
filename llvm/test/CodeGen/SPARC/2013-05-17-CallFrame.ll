@@ -10,7 +10,7 @@
 
 ; SPARC64-LABEL: variable_alloca_with_adj_call_stack
 ; SPARC64:       save %sp, -128, %sp
-; SPARC64:       add {{.+}}, 128, %o0
+; SPARC64:       add {{.+}}, 2175, %o0
 ; SPARC64:       add %sp, -80, %sp
 ; SPARC64:       call foo
 ; SPARC64:       add %sp, 80, %sp
