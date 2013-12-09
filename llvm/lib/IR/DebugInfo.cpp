@@ -1426,3 +1426,55 @@ DIScopeRef DIDescriptor::getFieldAs<DIScopeRef>(unsigned Elt) const {
 template <> DITypeRef DIDescriptor::getFieldAs<DITypeRef>(unsigned Elt) const {
   return DITypeRef(getField(DbgNode, Elt));
 }
+
+/// Strip debug info in the module if it exists.
+/// To do this, we remove all calls to the debugger intrinsics and any named
+/// metadata for debugging. We also remove debug locations for instructions.
+/// Return true if module is modified.
+bool llvm::StripDebugInfo(Module &M) {
+
+  bool Changed = false;
+
+  // Remove all of the calls to the debugger intrinsics, and remove them from
+  // the module.
+  if (Function *Declare = M.getFunction("llvm.dbg.declare")) {
+    while (!Declare->use_empty()) {
+      CallInst *CI = cast<CallInst>(Declare->use_back());
+      CI->eraseFromParent();
+    }
+    Declare->eraseFromParent();
+    Changed = true;
+  }
+
+  if (Function *DbgVal = M.getFunction("llvm.dbg.value")) {
+    while (!DbgVal->use_empty()) {
+      CallInst *CI = cast<CallInst>(DbgVal->use_back());
+      CI->eraseFromParent();
+    }
+    DbgVal->eraseFromParent();
+    Changed = true;
+  }
+
+  for (Module::named_metadata_iterator NMI = M.named_metadata_begin(),
+         NME = M.named_metadata_end(); NMI != NME;) {
+    NamedMDNode *NMD = NMI;
+    ++NMI;
+    if (NMD->getName().startswith("llvm.dbg.")) {
+      NMD->eraseFromParent();
+      Changed = true;
+    }
+  }
+
+  for (Module::iterator MI = M.begin(), ME = M.end(); MI != ME; ++MI)
+    for (Function::iterator FI = MI->begin(), FE = MI->end(); FI != FE;
+         ++FI)
+      for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
+           ++BI) {
+        if (!BI->getDebugLoc().isUnknown()) {
+          Changed = true;
+          BI->setDebugLoc(DebugLoc());
+        }
+      }
+
+  return Changed;
+}

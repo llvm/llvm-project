@@ -753,6 +753,12 @@ DIVariable cleanseInlinedVariable(MDNode *DV, LLVMContext &VMContext);
 /// Construct DITypeIdentifierMap by going through retained types of each CU.
 DITypeIdentifierMap generateDITypeIdentifierMap(const NamedMDNode *CU_Nodes);
 
+/// Strip debug info in the module if it exists.
+/// To do this, we remove all calls to the debugger intrinsics and any named
+/// metadata for debugging. We also remove debug locations for instructions.
+/// Return true if module is modified.
+bool StripDebugInfo(Module &M);
+
 /// DebugInfoFinder tries to list all debug info MDNodes used in a module. To
 /// list debug info MDNodes used by an instruction, DebugInfoFinder uses
 /// processDeclare, processValue and processLocation to handle DbgDeclareInst,
