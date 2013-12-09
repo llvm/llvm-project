@@ -79,6 +79,9 @@ namespace llvm {
     virtual bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const;
     virtual MVT getScalarShiftAmountTy(EVT LHSTy) const { return MVT::i32; }
 
+    /// getSetCCResultType - Return the ISD::SETCC ValueType
+    virtual EVT getSetCCResultType(LLVMContext &Context, EVT VT) const;
+
     virtual SDValue
       LowerFormalArguments(SDValue Chain,
                            CallingConv::ID CallConv,

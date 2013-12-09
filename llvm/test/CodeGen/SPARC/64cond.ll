@@ -109,3 +109,17 @@ entry:
   %rv = select i1 %tobool, i64 123, i64 0
   ret i64 %rv
 }
+
+; CHECK-LABEL: setcc_resultty
+; CHECK:       cmp
+; CHECK:       movne %xcc, 1, [[R:%[gilo][0-7]]]
+; CHECK:       or [[R]], %i1, %i0
+
+define i1 @setcc_resultty(i64 %a, i1 %b) {
+  %a0 = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 32)
+  %a1 = extractvalue { i64, i1 } %a0, 1
+  %a4 = or i1 %a1, %b
+  ret i1 %a4
+}
+
+declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
