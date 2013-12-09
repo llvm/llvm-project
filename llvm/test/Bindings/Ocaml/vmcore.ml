@@ -1031,8 +1031,8 @@ let test_builder () =
   end;
 
   group "metadata"; begin
-    (* CHECK: %metadata = add i32 %P1, %P2, !test !0
-     * !0 is metadata emitted at EOF.
+    (* CHECK: %metadata = add i32 %P1, %P2, !test !1
+     * !1 is metadata emitted at EOF.
      *)
     let i = build_add p1 p2 "metadata" atentry in
     insist ((has_metadata i) = false);
@@ -1056,18 +1056,18 @@ let test_builder () =
   end;
 
   group "named metadata"; begin
-    (* !md is emitted at EOF. *)
+    (* !llvm.module.flags is emitted at EOF. *)
     let n1 = const_int i32_type 1 in
-    let n2 = mdstring context "metadata test" in
-    let md = mdnode context [| n1; n2 |] in
-    add_named_metadata_operand m "md" md;
+    let n2 = mdstring context "Debug Info Version" in
+    let md = mdnode context [| n1; n2; n1 |] in
+    add_named_metadata_operand m "llvm.module.flags" md;
 
-    insist ((get_named_metadata m "md") = [| md |])
+    insist ((get_named_metadata m "llvm.module.flags") = [| md |])
   end;
 
   group "dbg"; begin
-    (* CHECK: %dbg = add i32 %P1, %P2, !dbg !1
-     * !1 is metadata emitted at EOF.
+    (* CHECK: %dbg = add i32 %P1, %P2, !dbg !2
+     * !2 is metadata emitted at EOF.
      *)
     insist ((current_debug_location atentry) = None);
 
@@ -1346,9 +1346,10 @@ let test_builder () =
 
 (* End-of-file checks for things like metdata and attributes.
  * CHECK: attributes #0 = {{.*}}uwtable{{.*}}
- * CHECK: !md = !{!0}
- * CHECK: !0 = metadata !{i32 1, metadata !"metadata test"}
- * CHECK: !1 = metadata !{i32 2, i32 3, metadata !2, metadata !2}
+ * CHECK: !llvm.module.flags = !{!0}
+ * CHECK: !0 = metadata !{i32 1, metadata !"Debug Info Version", i32 1}
+ * CHECK: !1 = metadata !{i32 1, metadata !"metadata test"}
+ * CHECK: !2 = metadata !{i32 2, i32 3, metadata !3, metadata !3}
  *)
 
 (*===-- Pass Managers -----------------------------------------------------===*)
