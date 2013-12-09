@@ -57,6 +57,7 @@ enum LLVMConstants LLVM_ENUM_INT_TYPE(uint32_t) {
   DW_TAG_user_base = 0x1000, // Recommended base for user tags.
 
   DWARF_VERSION = 4,       // Default dwarf version we output.
+  DEBUG_INFO_VERSION = 1,  // Current debug info version number.
   DW_CIE_VERSION = 1,      // Common frame information version.
   DW_PUBTYPES_VERSION = 2, // Section version number for .debug_pubtypes.
   DW_PUBNAMES_VERSION = 2, // Section version number for .debug_pubnames.
