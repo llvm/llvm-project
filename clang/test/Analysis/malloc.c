@@ -1290,6 +1290,12 @@ char *dupstrWarn(const char *s) {
   return p;
 }
 
+int *radar15580979() {
+  int *data = (int *)malloc(32);
+  int *p = data ?: (int*)malloc(32); // no warning
+  return p;
+}
+
 // ----------------------------------------------------------------------------
 // False negatives.
 
