@@ -258,6 +258,11 @@ void CodeGenModule::Release() {
     // We can change from Warning to Latest if such mode is supported.
     getModule().addModuleFlag(llvm::Module::Warning, "Dwarf Version",
                               CodeGenOpts.DwarfVersion);
+  if (DebugInfo)
+    // We support a single version in the linked module: error out when
+    // modules do not have the same version.
+    getModule().addModuleFlag(llvm::Module::Error, "Debug Info Version",
+                              llvm::dwarf::DEBUG_INFO_VERSION);
 
   SimplifyPersonality();
 
