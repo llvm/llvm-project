@@ -200,7 +200,8 @@ public:
                                 raw_ostream &Out) = 0;
 
   virtual void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
-                                        int OffsetInVFTable, raw_ostream &) = 0;
+                                        uint64_t OffsetInVFTable,
+                                        raw_ostream &) = 0;
 
   static bool classof(const MangleContext *C) {
     return C->getKind() == MK_Microsoft;
