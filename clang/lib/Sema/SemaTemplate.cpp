@@ -4588,9 +4588,7 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
   else if ((DRE = dyn_cast<DeclRefExpr>(Arg))) {
     if (ValueDecl *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
       if (VD->getType()->isMemberPointerType()) {
-        if (isa<NonTypeTemplateParmDecl>(VD) ||
-            (isa<VarDecl>(VD) &&
-             S.Context.getCanonicalType(VD->getType()).isConstQualified())) {
+        if (isa<NonTypeTemplateParmDecl>(VD)) {
           if (Arg->isTypeDependent() || Arg->isValueDependent()) {
             Converted = TemplateArgument(Arg);
           } else {

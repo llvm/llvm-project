@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 struct Y {
   int x;
 };
@@ -64,4 +64,11 @@ namespace ValueDepMemberPointer {
     int a[(int)sizeof(T)-42]; // expected-error{{array with a negative size}}
   }
   S<int> s; 
+}
+
+namespace PR18192 {
+  struct A { struct { int n; }; };
+  template<int A::*> struct X {};
+  constexpr int A::*p = &A::n;
+  X<p> x; // expected-error{{not a pointer to member constant}}
 }
