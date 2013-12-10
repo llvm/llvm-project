@@ -185,6 +185,8 @@ namespace llvm {
   public:
     typedef T *iterator;
 
+    typedef std::reverse_iterator<iterator> reverse_iterator;
+
     /// Construct an empty MutableArrayRef.
     /*implicit*/ MutableArrayRef() : ArrayRef<T>() {}
 
@@ -218,6 +220,9 @@ namespace llvm {
 
     iterator begin() const { return data(); }
     iterator end() const { return data() + this->size(); }
+
+    reverse_iterator rbegin() const { return reverse_iterator(end()); }
+    reverse_iterator rend() const { return reverse_iterator(begin()); }
 
     /// front - Get the first element.
     T &front() const {
