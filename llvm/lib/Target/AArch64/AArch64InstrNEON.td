@@ -1423,9 +1423,8 @@ let isReMaterializable = 1 in {
 def MOVIdi : NeonI_1VModImm<0b0, 0b1,
                            (outs FPR64:$Rd), (ins neon_uimm64_mask:$Imm),
                            "movi\t $Rd, $Imm",
-                           [(set (f64 FPR64:$Rd),
-                              (f64 (bitconvert
-                                (v1i64 (Neon_movi (timm:$Imm), (i32 imm))))))],
+                           [(set (v1i64 FPR64:$Rd),
+                             (v1i64 (Neon_movi (timm:$Imm), (i32 imm))))],
                            NoItinerary> {
   let cmode = 0b1110;
 }

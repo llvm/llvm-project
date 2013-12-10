@@ -157,6 +157,16 @@ define <2 x i32> @test_sabd_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
   ret <2 x i32> %abd
 }
 
+define <2 x i32> @test_sabd_v2i32_const() {
+; CHECK: test_sabd_v2i32_const:
+; CHECK: movi     d1, #0xffffffff0000
+; CHECK-NEXT: sabd v0.2s, v0.2s, v1.2s
+  %1 = tail call <2 x i32> @llvm.arm.neon.vabds.v2i32(
+    <2 x i32> <i32 -2147483648, i32 2147450880>,
+    <2 x i32> <i32 -65536, i32 65535>)
+  ret <2 x i32> %1
+}
+
 define <2 x i32> @test_saba_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; CHECK: test_saba_v2i32:
   %abd = call <2 x i32> @llvm.arm.neon.vabds.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)

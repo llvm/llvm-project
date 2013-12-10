@@ -202,4 +202,16 @@ define <2 x double> @fmov2d() {
 	ret <2 x double> < double -1.2e1, double -1.2e1>
 }
 
+define <2 x i32> @movi1d_1() {
+; CHECK: movi    d0, #0xffffffff0000
+  ret <2 x i32> < i32  -65536, i32 65535>
+}
+
+
+declare <2 x i32> @test_movi1d(<2 x i32>, <2 x i32>)
+define <2 x i32> @movi1d() {
+; CHECK: movi     d1, #0xffffffff0000
+  %1 = tail call <2 x i32> @test_movi1d(<2 x i32> <i32 -2147483648, i32 2147450880>, <2 x i32> <i32 -65536, i32 65535>)
+  ret <2 x i32> %1
+}
 
