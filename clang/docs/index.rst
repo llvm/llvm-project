@@ -23,14 +23,10 @@ Using Clang as a Compiler
    ThreadSanitizer
    MemorySanitizer
    DataFlowSanitizer
+   LeakSanitizer
    SanitizerSpecialCaseList
    Modules
    FAQ
-
-.. toctree::
-   :hidden:
-
-   LeakSanitizer
 
 Using Clang as a Library
 ========================
