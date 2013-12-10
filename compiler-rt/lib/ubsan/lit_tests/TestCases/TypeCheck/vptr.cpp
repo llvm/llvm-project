@@ -101,7 +101,7 @@ int main(int, char **argv) {
     // CHECK-OFFSET: vptr.cpp:[[@LINE+5]]:12: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'U'
     // CHECK-OFFSET-NEXT: 0x{{[0-9a-f]*}}: note: object is base class subobject at offset {{8|16}} within object of type [[DYN_TYPE:'U']]
     // CHECK-OFFSET-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  }}
-    // CHECK-OFFSET-NEXT: {{^              \^                        (                         ~~~~~~~~~~~~)~~~~~~~~~~~ *$}}
+    // CHECK-OFFSET-NEXT: {{^              \^                        (                         ~~~~~~~~~~~~)?~~~~~~~~~~~ *$}}
     // CHECK-OFFSET-NEXT: {{^                                       (                         )?vptr for}} 'T' base class of [[DYN_TYPE]]
     return reinterpret_cast<U*>(p)->v() - 2;
 
