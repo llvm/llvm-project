@@ -9814,7 +9814,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   if (N->getNumOperands() == 2 &&
       N->getOperand(1)->getOpcode() == ISD::UNDEF) {
     SDValue In = N->getOperand(0);
-    assert(In->getValueType(0).isVector() && "Must concat vectors");
+    assert(In.getValueType().isVector() && "Must concat vectors");
 
     // Transform: concat_vectors(scalar, undef) -> scalar_to_vector(sclr).
     if (In->getOpcode() == ISD::BITCAST &&
