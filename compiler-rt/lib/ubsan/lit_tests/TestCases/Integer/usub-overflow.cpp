@@ -17,7 +17,7 @@ int main() {
 
 #ifdef SUB_I64
   (void)(uint64_t(8000000000000000000ll) - uint64_t(9000000000000000000ll));
-  // CHECK-SUB_I64: 8000000000000000000 - 9000000000000000000 cannot be represented in type 'unsigned long'
+  // CHECK-SUB_I64: 8000000000000000000 - 9000000000000000000 cannot be represented in type 'unsigned {{long( long)?}}'
 #endif
 
 #ifdef SUB_I128
