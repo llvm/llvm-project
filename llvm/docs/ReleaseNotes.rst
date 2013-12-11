@@ -153,6 +153,15 @@ combined with LLVM as backend to produce efficient native code. LDC targets
 x86/x86_64 systems like Linux, OS X, FreeBSD and Windows and also Linux/PPC64.
 Ports to other architectures like ARM and AArch64 are underway.
 
+LibBeauty
+---------
+
+The `LibBeauty <http://www.libbeauty.comLibBeauty>`_ decompiler and reverse
+engineering tool currently utilises the LLVM disassembler and the LLVM IR
+Builder. The current aim of the project is to take a x86_64 binary ``.o`` file
+as input, and produce an equivalent LLVM IR ``.bc`` or ``.ll`` file as
+output. Support for ARM binary ``.o`` file as input will be added later.
+
 Likely
 ------
 
