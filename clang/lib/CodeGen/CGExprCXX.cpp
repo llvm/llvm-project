@@ -720,7 +720,7 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
 
 static void StoreAnyExprIntoOneUnit(CodeGenFunction &CGF, const Expr *Init,
                                     QualType AllocType, llvm::Value *NewPtr) {
-
+  // FIXME: Refactor with EmitExprAsInit.
   CharUnits Alignment = CGF.getContext().getTypeAlignInChars(AllocType);
   switch (CGF.getEvaluationKind(AllocType)) {
   case TEK_Scalar:
@@ -766,9 +766,21 @@ CodeGenFunction::EmitNewArrayInitializer(const CXXNewExpr *E,
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   EHScopeStack::stable_iterator cleanup;
   llvm::Instruction *cleanupDominator = 0;
+
   // If the initializer is an initializer list, first do the explicit elements.
   if (const InitListExpr *ILE = dyn_cast<InitListExpr>(Init)) {
     initializerElements = ILE->getNumInits();
+
+    // If this is a multi-dimensional array new, we will initialize multiple
+    // elements with each init list element.
+    QualType AllocType = E->getAllocatedType();
+    if (const ConstantArrayType *CAT = dyn_cast_or_null<ConstantArrayType>(
+            AllocType->getAsArrayTypeUnsafe())) {
+      unsigned AS = explicitPtr->getType()->getPointerAddressSpace();
+      llvm::Type *AllocPtrTy = ConvertTypeForMem(AllocType)->getPointerTo(AS);
+      explicitPtr = Builder.CreateBitCast(explicitPtr, AllocPtrTy);
+      initializerElements *= getContext().getConstantArrayElementCount(CAT);
+    }
 
     // Enter a partial-destruction cleanup if necessary.
     if (needsEHCleanup(dtorKind)) {
@@ -788,12 +800,16 @@ CodeGenFunction::EmitNewArrayInitializer(const CXXNewExpr *E,
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
       if (endOfInit) Builder.CreateStore(explicitPtr, endOfInit);
-      StoreAnyExprIntoOneUnit(*this, ILE->getInit(i), elementType, explicitPtr);
-      explicitPtr =Builder.CreateConstGEP1_32(explicitPtr, 1, "array.exp.next");
+      StoreAnyExprIntoOneUnit(*this, ILE->getInit(i),
+                              ILE->getInit(i)->getType(), explicitPtr);
+      explicitPtr = Builder.CreateConstGEP1_32(explicitPtr, 1,
+                                               "array.exp.next");
     }
 
     // The remaining elements are filled with the array filler expression.
     Init = ILE->getArrayFiller();
+
+    explicitPtr = Builder.CreateBitCast(explicitPtr, beginPtr->getType());
   }
 
   // Create the continuation block.
