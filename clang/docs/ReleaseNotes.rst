@@ -171,6 +171,19 @@ The static analyzer (which contains additional code checking beyond compiler
 warnings) has improved significantly in both in the core analysis engine and 
 also in the kinds of issues it can find.
 
+Clang Format
+------------
+
+Clang now includes a new tool ``clang-format`` which can be used to
+automatically format C, C++ and Objective-C source code. ``clang-format``
+automatically chooses linebreaks and indentation and can be easily integrated
+into editors, IDEs and version control systems. It supports several pre-defined
+styles as well as precise style control using a multitude of formatting
+options. ``clang-format`` itself is just a thin wrapper around a library which
+can also be used directly from code refactoring and code translation tools.
+More information can be found on `Clang Format's
+site <http://clang.llvm.org/docs/ClangFormat.html>`_.
+
 Windows Support
 ---------------
 
