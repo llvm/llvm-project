@@ -613,6 +613,20 @@ multiclass XForm_6rc<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   }
 }
 
+multiclass XForm_10r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                    string asmbase, string asmstr, InstrItinClass itin,
+                    list<dag> pattern> {
+  let BaseName = asmbase in {
+    def NAME : XForm_10<opcode, xo, OOL, IOL,
+                       !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
+                       pattern>, RecFormRel;
+    let Defs = [CR0] in
+    def o    : XForm_10<opcode, xo, OOL, IOL,
+                       !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
+                       []>, isDOT, RecFormRel;
+  }
+}
+
 multiclass XForm_10rc<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                       string asmbase, string asmstr, InstrItinClass itin,
                       list<dag> pattern> {
