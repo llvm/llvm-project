@@ -988,6 +988,10 @@ bool PPCInstrInfo::SubsumesPredicate(
   if (Pred2[1].getReg() == PPC::CTR8 || Pred2[1].getReg() == PPC::CTR)
     return false;
 
+  // P1 can only subsume P2 if they test the same condition register.
+  if (Pred1[1].getReg() != Pred2[1].getReg())
+    return false;
+
   PPC::Predicate P1 = (PPC::Predicate) Pred1[0].getImm();
   PPC::Predicate P2 = (PPC::Predicate) Pred2[0].getImm();
 
