@@ -208,7 +208,7 @@ site <http://clang.llvm.org/docs/ClangFormat.html>`_.
 Windows Support
 ---------------
 
-- `clang-cl <UsersManual.html#clang-cl>` provides a new driver mode that is
+- `clang-cl <UsersManual.html#clang-cl>`_ provides a new driver mode that is
   designed for compatibility with Visual Studio's compiler, cl.exe. This driver
   mode makes Clang accept the same kind of command-line options as cl.exe. The
   installer will attempt to expose clang-cl in any Visual Studio installations
