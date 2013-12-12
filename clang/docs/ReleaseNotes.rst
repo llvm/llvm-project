@@ -98,7 +98,7 @@ New Compiler Flags
 
 - Clang no longer special cases -O4 to enable lto. Explicitly pass -flto to
   enable it.
-- Clang no longer fails on >= -O5. Uses -O3 instead.
+- Clang no longer fails on >= -O5. These flags are mapped to -O3 instead.
 - Command line "clang -O3 -flto a.c -c" and "clang -emit-llvm a.c -c"
   are no longer equivalent.
 - Clang now errors on unknown -m flags (``-munknown-to-clang``),
@@ -122,12 +122,32 @@ C++ Language Changes in Clang
   member offsets for classes inheriting from certain classes with tail padding.
   See PR16537.
 
-- ...
+- Clang 3.4 supports the 2013-08-28 draft of the ISO WG21 SG10 feature test
+  macro recommendations. These aim to provide a portable method to determine
+  whether a compiler supports a language feature, much like Clang's
+  |__has_feature macro|_.
 
-C++11 Feature Support
+.. |__has_feature macro| replace:: ``__has_feature`` macro
+.. ___has_feature macro: LanguageExtensions.html#has-feature-and-has-extension
+
+C++1y Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-...
+Clang 3.4 supports all the features in the current working draft of the
+upcoming C++ standard, provisionally named C++1y. Support for the following
+major new features has been added since Clang 3.3:
+
+- Generic lambdas and initialized lambda captures.
+- Deduced function return types (``auto f() { return 0; }``).
+- Generalized ``constexpr`` support (variable mutation and loops).
+- Variable templates and static data member templates.
+- Use of ``'`` as a digit separator in numeric literals.
+- Support for sized ``::operator delete`` functions.
+
+In addition, ``[[deprecated]]`` is now accepted as a synonym for Clang's
+existing ``deprecated`` attribute.
+
+Use ``-std=c++1y`` to enable C++1y mode.
 
 Objective-C Language Changes in Clang
 -------------------------------------
