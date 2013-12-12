@@ -76,6 +76,7 @@ about them. The improvements since the 3.3 release include:
 - Clang can detect initializer list use inside a macro and suggest parentheses
   if possible to fix.
 - Many improvements to Clang's typo correction facilities, such as:
+
   + Adding global namespace qualifiers so that corrections can refer to shadowed
     or otherwise ambiguous or unreachable namespaces.
   + Including accessible class members in the set of typo correction candidates,
@@ -125,10 +126,10 @@ C++ Language Changes in Clang
 - Clang 3.4 supports the 2013-08-28 draft of the ISO WG21 SG10 feature test
   macro recommendations. These aim to provide a portable method to determine
   whether a compiler supports a language feature, much like Clang's
-  |__has_feature macro|_.
+  |has_feature macro|_.
 
-.. |__has_feature macro| replace:: ``__has_feature`` macro
-.. ___has_feature macro: LanguageExtensions.html#has-feature-and-has-extension
+.. |has_feature macro| replace:: ``__has_feature`` macro
+.. _has_feature macro: LanguageExtensions.html#has-feature-and-has-extension
 
 C++1y Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
