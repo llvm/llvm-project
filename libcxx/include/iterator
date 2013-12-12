@@ -1385,8 +1385,6 @@ operator+(typename __wrap_iter<_Iter>::difference_type __n,
     return __x;
 }
 
-#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_TRAILING_RETURN)
-
 template <class _Tp, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY
 _Tp*
@@ -1402,6 +1400,8 @@ end(_Tp (&__array)[_Np])
 {
     return __array + _Np;
 }
+
+#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_TRAILING_RETURN)
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
