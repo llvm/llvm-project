@@ -52,6 +52,7 @@ void test_const_container( const std::initializer_list<T> & c, T val ) {
     assert ( std::end(c)     == c.end());
 #if _LIBCPP_STD_VER > 11
 //  initializer_list doesn't have cbegin/cend/rbegin/rend
+//	but std::cbegin(),etc work (b/c they're general fn templates)
 //     assert ( std::cbegin(c)  == c.cbegin());
 //     assert ( std::cbegin(c)  != c.cend());
 //     assert ( std::cend(c)    == c.cend());

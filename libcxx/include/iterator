@@ -1387,6 +1387,22 @@ operator+(typename __wrap_iter<_Iter>::difference_type __n,
 
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_TRAILING_RETURN)
 
+template <class _Tp, size_t _Np>
+inline _LIBCPP_INLINE_VISIBILITY
+_Tp*
+begin(_Tp (&__array)[_Np])
+{
+    return __array;
+}
+
+template <class _Tp, size_t _Np>
+inline _LIBCPP_INLINE_VISIBILITY
+_Tp*
+end(_Tp (&__array)[_Np])
+{
+    return __array + _Np;
+}
+
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
 auto
@@ -1421,18 +1437,46 @@ end(const _Cp& __c) -> decltype(__c.end())
 
 #if _LIBCPP_STD_VER > 11
 
+template <class _Tp, size_t _Np>
+inline _LIBCPP_INLINE_VISIBILITY
+reverse_iterator<_Tp*> rbegin(_Tp (&__array)[_Np])
+{
+    return reverse_iterator<_Tp*>(__array + _Np);
+}
+
+template <class _Tp, size_t _Np>
+inline _LIBCPP_INLINE_VISIBILITY
+reverse_iterator<_Tp*> rend(_Tp (&__array)[_Np])
+{
+    return reverse_iterator<_Tp*>(__array);
+}
+
+template <class _Ep>
+inline _LIBCPP_INLINE_VISIBILITY
+reverse_iterator<const _Ep*> rbegin(initializer_list<_Ep> __il)
+{
+    return reverse_iterator<const _Ep*>(__il.end());
+}
+
+template <class _Ep>
+inline _LIBCPP_INLINE_VISIBILITY
+reverse_iterator<const _Ep*> rend(initializer_list<_Ep> __il)
+{
+    return reverse_iterator<const _Ep*>(__il.begin());
+}
+
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
 auto cbegin(const _Cp& __c) -> decltype(begin(__c))
 {
-    return __c.begin();
+    return _VSTD::begin(__c);
 }
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
 auto cend(const _Cp& __c) -> decltype(end(__c))
 {
-    return __c.end();
+    return _VSTD::end(__c);
 }
 
 template <class _Cp>
@@ -1515,53 +1559,6 @@ end(const _Cp& __c)
 }
 
 #endif  // !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_TRAILING_RETURN)
-
-template <class _Tp, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
-_Tp*
-begin(_Tp (&__array)[_Np])
-{
-    return __array;
-}
-
-template <class _Tp, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
-_Tp*
-end(_Tp (&__array)[_Np])
-{
-    return __array + _Np;
-}
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
-reverse_iterator<_Tp*> rbegin(_Tp (&__array)[_Np])
-{
-    return reverse_iterator<_Tp*>(__array + _Np);
-}
-
-template <class _Tp, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
-reverse_iterator<_Tp*> rend(_Tp (&__array)[_Np])
-{
-    return reverse_iterator<_Tp*>(__array);
-}
-
-template <class _Ep>
-inline _LIBCPP_INLINE_VISIBILITY
-reverse_iterator<const _Ep*> rbegin(initializer_list<_Ep> __il)
-{
-    return reverse_iterator<const _Ep*>(__il.end());
-}
-
-template <class _Ep>
-inline _LIBCPP_INLINE_VISIBILITY
-reverse_iterator<const _Ep*> rend(initializer_list<_Ep> __il)
-{
-    return reverse_iterator<const _Ep*>(__il.begin());
-}
-
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
