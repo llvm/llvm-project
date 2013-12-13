@@ -156,7 +156,7 @@ Ports to other architectures like ARM and AArch64 are underway.
 LibBeauty
 ---------
 
-The `LibBeauty <http://www.libbeauty.comLibBeauty>`_ decompiler and reverse
+The `LibBeauty <http://www.libbeauty.com>`_ decompiler and reverse
 engineering tool currently utilises the LLVM disassembler and the LLVM IR
 Builder. The current aim of the project is to take a x86_64 binary ``.o`` file
 as input, and produce an equivalent LLVM IR ``.bc`` or ``.ll`` file as
