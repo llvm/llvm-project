@@ -69,7 +69,7 @@ about them. The improvements since the 3.3 release include:
 - Boolean increment, a deprecated feature, has own warning flag
   -Wdeprecated-increment-bool, and is still part of -Wdeprecated.
 - Clang errors on builtin enum increments and decrements.
-- -Wloop-analysis now warns on for-loops which have the same increment or 
+- -Wloop-analysis now warns on for-loops which have the same increment or
   decrement in the loop header as the last statement in the loop.
 - -Wuninitialized now performs checking across field initializers to detect
   when one field in used uninitialized in another field initialization.
@@ -189,8 +189,47 @@ Static Analyzer
 ---------------
 
 The static analyzer (which contains additional code checking beyond compiler
-warnings) has improved significantly in both in the core analysis engine and 
+warnings) has improved significantly in both in the core analysis engine and
 also in the kinds of issues it can find.
+
+For example, the static analyzer now manages the following cases:
+
+- Missing return after function pointer null check.
+
+.. code-block:: c
+
+  void foo(void (*f)(void)) {
+    if (f)
+        return;
+    f();
+  }
+
+- Detect when ``delete`` is used on an uninitialized variable.
+
+.. code-block:: c++
+
+  void foo() {
+    int *x;
+    delete[] x;
+  }
+
+- Handle destructors for the argument to C++ ``delete``.
+
+.. code-block:: c++
+
+  class DerefClass{
+  public:
+    int *x;
+    DerefClass() {}
+    ~DerefClass() {*x = 1;}
+  };
+
+  void testDoubleDeleteClassInstance() {
+    DerefClass *foo = new DerefClass();
+    delete foo;
+    delete foo;
+  }
+
 
 Clang Format
 ------------
