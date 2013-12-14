@@ -37,6 +37,7 @@
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ValueHandle.h"
 #include "llvm/Target/TargetLibraryInfo.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -267,9 +268,17 @@ static bool CleanupPointerRootUsers(GlobalVariable *GV,
 static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
                                        DataLayout *TD, TargetLibraryInfo *TLI) {
   bool Changed = false;
-  SmallVector<User*, 8> WorkList(V->use_begin(), V->use_end());
+  // Note that we need to use a weak value handle for the worklist items. When
+  // we delete a constant array, we may also be holding pointer to one of its
+  // elements (or an element of one of its elements if we're dealing with an
+  // array of arrays) in the worklist.
+  SmallVector<WeakVH, 8> WorkList(V->use_begin(), V->use_end());
   while (!WorkList.empty()) {
-    User *U = WorkList.pop_back_val();
+    Value *UV = WorkList.pop_back_val();
+    if (!UV)
+      continue;
+
+    User *U = cast<User>(UV);
 
     if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
       if (Init) {
