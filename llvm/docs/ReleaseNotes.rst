@@ -110,6 +110,22 @@ For more information on MSA (including documentation for the instruction set),
 see the `MIPS SIMD page at Imagination Technologies
 <http://imgtec.com/mips/mips-simd.asp>`_
 
+PowerPC Target
+--------------
+
+Changes in the PowerPC backend include:
+
+* fast-isel support (for faster -O0 code generation)
+* many improvements to the builtin assembler
+* support for generating unaligned (Altivec) vector loads
+* support for generating the fcpsgn instruction
+* generate frin for round() (not nearbyint() and rint(), which had been done only in fast-math mode)
+* improved instruction scheduling for embedded cores (such as the A2)
+* improved prologue/epilogue generation (especially in 32-bit mode)
+* support for dynamic stack alignment (and dynamic stack allocations with large alignments)
+* improved generation of counter-register-based loops
+* bug fixes
+
 SPARC Target
 ------------
 
