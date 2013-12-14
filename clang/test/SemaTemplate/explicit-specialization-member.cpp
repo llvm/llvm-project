@@ -28,3 +28,22 @@ namespace PR12331 {
   };
   template<> struct S<int>::U { static const int n = sizeof(int); }; // expected-error {{explicit specialization of 'U' after instantiation}}
 }
+
+namespace PR18246 {
+  template<typename T>
+  class Baz {
+  public:
+    template<int N> void bar();
+  };
+
+  template<typename T>
+  template<int N>
+  void Baz<T>::bar() {
+  }
+
+  // FIXME: Don't suggest the 'template<>' correction here, because this cannot
+  // be an explicit specialization.
+  template<typename T>
+  void Baz<T>::bar<0>() { // expected-error {{requires 'template<>'}}
+  }
+}
