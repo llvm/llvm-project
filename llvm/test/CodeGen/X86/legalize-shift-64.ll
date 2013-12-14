@@ -64,3 +64,31 @@ define <2 x i64> @test5(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK: shl
 ; CHECK: shldl
 }
+
+; PR16108
+define i32 @test6() {
+  %x = alloca i32, align 4
+  %t = alloca i64, align 8
+  store i32 1, i32* %x, align 4
+  store i64 1, i64* %t, align 8  ;; DEAD
+  %load = load i32* %x, align 4
+  %shl = shl i32 %load, 8
+  %add = add i32 %shl, -224
+  %sh_prom = zext i32 %add to i64
+  %shl1 = shl i64 1, %sh_prom
+  %cmp = icmp ne i64 %shl1, 4294967296
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  ret i32 1
+
+if.end:                                           ; preds = %entry
+  ret i32 0
+
+; CHECK-LABEL: test6:
+; CHECK-NOT: andb $31
+; CHECK: sete
+; CHECK: movzbl
+; CHECK: xorl $1
+; CHECK: orl
+}
