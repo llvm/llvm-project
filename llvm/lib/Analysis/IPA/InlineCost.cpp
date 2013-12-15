@@ -713,7 +713,7 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallSite CS) {
 }
 
 bool CallAnalyzer::visitCallSite(CallSite CS) {
-  if (CS.isCall() && cast<CallInst>(CS.getInstruction())->canReturnTwice() &&
+  if (CS.hasFnAttr(Attribute::ReturnsTwice) &&
       !F.getAttributes().hasAttribute(AttributeSet::FunctionIndex,
                                       Attribute::ReturnsTwice)) {
     // This aborts the entire analysis.
