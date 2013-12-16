@@ -61,6 +61,7 @@ static const u64 kDefaultShadowScale = 3;
 static const u64 kDefaultShadowOffset32 = 1ULL << 29;
 static const u64 kDefaultShadowOffset64 = 1ULL << 44;
 static const u64 kDefaultShort64bitShadowOffset = 0x7FFF8000;  // < 2G.
+static const u64 kPPC64_ShadowOffset64 = 1ULL << 41;
 static const u64 kMIPS32_ShadowOffset32 = 0x0aaa8000;
 
 #if ASAN_FLEXIBLE_MAPPING_AND_OFFSET == 1
@@ -80,7 +81,9 @@ extern SANITIZER_INTERFACE_ATTRIBUTE uptr __asan_mapping_offset;
 #     define SHADOW_OFFSET kDefaultShadowOffset32
 #   endif
 #  else
-#   if SANITIZER_MAC
+#   if defined(__powerpc64__)
+#    define SHADOW_OFFSET kPPC64_ShadowOffset64
+#   elif SANITIZER_MAC
 #    define SHADOW_OFFSET kDefaultShadowOffset64
 #   else
 #    define SHADOW_OFFSET kDefaultShort64bitShadowOffset

@@ -58,6 +58,13 @@ typedef signed   long long sptr;  // NOLINT
 typedef unsigned long uptr;  // NOLINT
 typedef signed   long sptr;  // NOLINT
 #endif  // defined(_WIN64)
+#if defined(__x86_64__)
+// Since x32 uses ILP32 data model in 64-bit hardware mode,  we must use
+// 64-bit pointer to unwind stack frame.
+typedef unsigned long long uhwptr;  // NOLINT
+#else
+typedef uptr uhwptr;   // NOLINT
+#endif
 typedef unsigned char u8;
 typedef unsigned short u16;  // NOLINT
 typedef unsigned int u32;

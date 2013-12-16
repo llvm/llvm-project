@@ -24,7 +24,10 @@ uptr StackTrace::GetPreviousInstructionPc(uptr pc) {
   // Cancel Thumb bit.
   pc = pc & (~1);
 #endif
-#if defined(__sparc__)
+#if defined(__powerpc__) || defined(__powerpc64__)
+  // PCs are always 4 byte aligned.
+  return pc - 4;
+#elif defined(__sparc__)
   return pc - 8;
 #else
   return pc - 1;
@@ -125,21 +128,29 @@ void StackTrace::FastUnwindStack(uptr pc, uptr bp,
   }
   trace[0] = pc;
   size = 1;
-  uptr *frame = (uptr *)bp;
-  uptr *prev_frame = frame - 1;
+  uhwptr *frame = (uhwptr *)bp;
+  uhwptr *prev_frame = frame - 1;
   if (stack_top < 4096) return;  // Sanity check for stack top.
   // Avoid infinite loop when frame == frame[0] by using frame > prev_frame.
   while (frame > prev_frame &&
-         frame < (uptr *)stack_top - 2 &&
-         frame > (uptr *)stack_bottom &&
+         frame < (uhwptr *)stack_top - 2 &&
+         frame > (uhwptr *)stack_bottom &&
          IsAligned((uptr)frame, sizeof(*frame)) &&
          size < max_depth) {
-    uptr pc1 = frame[1];
+    uhwptr pc1 = frame[1];
     if (pc1 != pc) {
-      trace[size++] = pc1;
+      trace[size++] = (uptr) pc1;
     }
     prev_frame = frame;
-    frame = (uptr*)frame[0];
+    frame = (uhwptr *)frame[0];
+  }
+}
+
+void StackTrace::PopStackFrames(uptr count) {
+  CHECK(size >= count);
+  size -= count;
+  for (uptr i = 0; i < size; i++) {
+    trace[i] = trace[i + count];
   }
 }
 

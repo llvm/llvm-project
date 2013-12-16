@@ -134,23 +134,32 @@ namespace __sanitizer {
     int gid;
     int cuid;
     int cgid;
-#ifdef __powerpc64__
+#ifdef __powerpc__
     unsigned mode;
     unsigned __seq;
+    u64 __unused1;
+    u64 __unused2;
 #else
     unsigned short mode;
     unsigned short __pad1;
     unsigned short __seq;
     unsigned short __pad2;
+#if defined(__x86_64__) && !defined(_LP64)
+    u64 __unused1;
+    u64 __unused2;
+#else
+    unsigned long __unused1;
+    unsigned long __unused2;
 #endif
-    uptr __unused1;
-    uptr __unused2;
+#endif
   };
 
   struct __sanitizer_shmid_ds {
     __sanitizer_ipc_perm shm_perm;
   #ifndef __powerpc__
     uptr shm_segsz;
+  #elif !defined(__powerpc64__)
+    uptr __unused0;
   #endif
     uptr shm_atime;
   #ifndef _LP64
@@ -280,17 +289,20 @@ namespace __sanitizer {
 #endif
 
 #if SANITIZER_LINUX
-#if defined(_LP64) || defined(__x86_64__)
+#if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__)
   typedef unsigned __sanitizer___kernel_uid_t;
   typedef unsigned __sanitizer___kernel_gid_t;
-  typedef long long __sanitizer___kernel_off_t;
 #else
   typedef unsigned short __sanitizer___kernel_uid_t;
   typedef unsigned short __sanitizer___kernel_gid_t;
+#endif
+#if defined(__x86_64__) && !defined(_LP64)
+  typedef long long __sanitizer___kernel_off_t;
+#else
   typedef long __sanitizer___kernel_off_t;
 #endif
 
-#if defined(__powerpc64__)
+#if defined(__powerpc__)
   typedef unsigned int __sanitizer___kernel_old_uid_t;
   typedef unsigned int __sanitizer___kernel_old_gid_t;
 #else
