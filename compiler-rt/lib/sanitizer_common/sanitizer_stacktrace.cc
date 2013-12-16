@@ -158,14 +158,6 @@ static bool MatchPc(uptr cur_pc, uptr trace_pc, uptr threshold) {
   return cur_pc - trace_pc <= threshold || trace_pc - cur_pc <= threshold;
 }
 
-void StackTrace::PopStackFrames(uptr count) {
-  CHECK(count < size);
-  size -= count;
-  for (uptr i = 0; i < size; ++i) {
-    trace[i] = trace[i + count];
-  }
-}
-
 uptr StackTrace::LocatePcInTrace(uptr pc) {
   // Use threshold to find PC in stack trace, as PC we want to unwind from may
   // slightly differ from return address in the actual unwinded stack trace.
