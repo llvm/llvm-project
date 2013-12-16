@@ -188,48 +188,8 @@ libclang
 Static Analyzer
 ---------------
 
-The static analyzer (which contains additional code checking beyond compiler
-warnings) has improved significantly in both in the core analysis engine and
-also in the kinds of issues it can find.
-
-For example, the static analyzer now manages the following cases:
-
-- Missing return after function pointer null check.
-
-.. code-block:: c
-
-  void foo(void (*f)(void)) {
-    if (f)
-        return;
-    f();
-  }
-
-- Detect when ``delete`` is used on an uninitialized variable.
-
-.. code-block:: c++
-
-  void foo() {
-    int *x;
-    delete[] x;
-  }
-
-- Handle destructors for the argument to C++ ``delete``.
-
-.. code-block:: c++
-
-  class DerefClass{
-  public:
-    int *x;
-    DerefClass() {}
-    ~DerefClass() {*x = 1;}
-  };
-
-  void testDoubleDeleteClassInstance() {
-    DerefClass *foo = new DerefClass();
-    delete foo;
-    delete foo;
-  }
-
+The static analyzer has been greatly improved. This impacts the overall analyzer quality and reduces a number of false positives.
+In particular, this release provides enhanced C++ support, reasoning about initializer lists, zeroing constructors, noreturn destructors and modeling of destructor calls on calls to delete.
 
 Clang Format
 ------------
