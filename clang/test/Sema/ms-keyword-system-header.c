@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fms-extensions -D MS -isystem %S/Inputs %s -fsyntax-only -verify
+// RUN: %clang_cc1 -fms-extensions -D MS -Wno-keyword-compat -I %S/Inputs %s -fsyntax-only -verify
+// RUN: %clang_cc1 -fms-extensions -D MS -D NOT_SYSTEM -I %S/Inputs %s -fsyntax-only -verify
 // RUN: %clang_cc1 -isystem %S/Inputs %s -fsyntax-only -verify
 
 // PR17824: GNU libc uses MS keyword __uptr as an identifier in C mode
