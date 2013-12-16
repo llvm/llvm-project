@@ -19,7 +19,7 @@ releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
 For more information about Clang or LLVM, including information about
-the latest release, please check out the main please see the `Clang Web
+the latest release, please check out the main `Clang Web
 Site <http://clang.llvm.org>`_ or the `LLVM Web
 Site <http://llvm.org>`_.
 
@@ -240,7 +240,7 @@ Additional Information
 
 A wide variety of additional information is available on the `Clang web
 page <http://clang.llvm.org/>`_. The web page contains versions of the
-API documentation which are up-to-date with the Subversion version of
+API documentation which are up-to-date with the Subversion revision of
 the source code. You can access versions of these documents specific to
 this release by going into the "``clang/docs/``" directory in the Clang
 tree.
