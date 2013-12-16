@@ -1217,6 +1217,7 @@ Host::GetLLDBPath (PathType path_type, FileSpec &file_spec)
                 }
                 if (tmpdir_cstr)
                 {
+                    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
                     g_lldb_tmp_dir.SetCString(tmpdir_cstr);
                     if (log)
                         log->Printf("Host::GetLLDBPath(ePathTypeLLDBTempSystemDir) => '%s'", g_lldb_tmp_dir.GetCString());
