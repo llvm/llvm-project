@@ -1,6 +1,6 @@
-=====================================
-Clang 3.4 (In-Progress) Release Notes
-=====================================
+=======================
+Clang 3.4 Release Notes
+=======================
 
 .. contents::
    :local:
@@ -93,6 +93,9 @@ about them. The improvements since the 3.3 release include:
   + Providing more relevant suggestions for typos followed by '.' or '='.
   + Various performance improvements when searching for typo correction
     candidates.
+
+- `LeakSanitizer <LeakSanitizer.rst>`_ is an experimental memory leak detector
+  which can be combined with AddressSanitizer.
 
 New Compiler Flags
 ------------------
