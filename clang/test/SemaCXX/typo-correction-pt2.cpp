@@ -181,3 +181,21 @@ void test() {
   MessageHeaders::ParseMessageHeaders(5, 4); // expected-error {{no member named 'ParseMessageHeaders' in 'fix_class_name_qualifier::MessageHeaders'; did you mean 'MessageUtils::ParseMessageHeaders'?}}
 }
 }
+
+namespace PR18213 {  // expected-note {{'PR18213' declared here}}
+struct WrapperInfo {
+  int i;
+};
+
+template <typename T> struct Wrappable {
+  static WrapperInfo kWrapperInfo;
+};
+
+// Note the space before "::PR18213" is intended and needed, as it highlights
+// the actual typo, which is the leading "::".
+// TODO: Suggest removing the "::" from "::PR18213" (the right correction)
+// instead of incorrectly suggesting dropping "PR18213::WrapperInfo::".
+template <>
+PR18213::WrapperInfo ::PR18213::Wrappable<int>::kWrapperInfo = { 0 };  // expected-error {{no member named 'PR18213' in 'PR18213::WrapperInfo'; did you mean simply 'PR18213'?}} \
+                                                                       // expected-error {{C++ requires a type specifier for all declarations}}
+}

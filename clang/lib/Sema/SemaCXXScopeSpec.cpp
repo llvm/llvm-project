@@ -497,6 +497,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
         bool DroppedSpecifier =
             Corrected.WillReplaceSpecifier() &&
             Name.getAsString() == Corrected.getAsString(getLangOpts());
+        if (DroppedSpecifier)
+          SS.clear();
         diagnoseTypo(Corrected, PDiag(diag::err_no_member_suggest)
                                   << Name << LookupCtx << DroppedSpecifier
                                   << SS.getRange());
