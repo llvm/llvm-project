@@ -94,7 +94,7 @@ about them. The improvements since the 3.3 release include:
   + Various performance improvements when searching for typo correction
     candidates.
 
-- `LeakSanitizer <LeakSanitizer.rst>`_ is an experimental memory leak detector
+- `LeakSanitizer <LeakSanitizer.html>`_ is an experimental memory leak detector
   which can be combined with AddressSanitizer.
 
 New Compiler Flags
