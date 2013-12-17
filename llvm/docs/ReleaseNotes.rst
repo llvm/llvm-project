@@ -139,6 +139,13 @@ The SPARC backend got many improvements, namely
 * leaf functions optimization
 * bug fixes
 
+SystemZ/s390x Backend
+---------------------
+
+LLVM and clang can now optimize for zEnterprise z196 and zEnterprise EC12
+targets.  In clang these targets are selected using ``-march=z196`` and
+``-march=zEC12`` respectively.
+
 External Open Source Projects Using LLVM 3.4
 ============================================
 
