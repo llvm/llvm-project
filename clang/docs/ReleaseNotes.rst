@@ -64,15 +64,74 @@ about them. The improvements since the 3.3 release include:
 
 - -Wheader-guard warns on mismatches between the #ifndef and #define lines
   in a header guard.
+
+  .. code-block:: c
+
+    #ifndef multiple
+    #define multi
+    #endif
+
+  returns
+  `warning: 'multiple' is used as a header guard here, followed by #define of a different macro [-Wheader-guard]`
+
 - -Wlogical-not-parentheses warns when a logical not ('!') only applies to the
   left-hand side of a comparison.  This warning is part of -Wparentheses.
+
+  .. code-block:: c++
+
+    int i1 = 0, i2 = 1;
+    bool ret;
+    ret = !i1 == i2;
+
+  returns
+  `warning: logical not is only applied to the left hand side of this comparison [-Wlogical-not-parentheses]`
+
+
 - Boolean increment, a deprecated feature, has own warning flag
   -Wdeprecated-increment-bool, and is still part of -Wdeprecated.
 - Clang errors on builtin enum increments and decrements.
+
+  .. code-block:: c++
+
+    enum A { A1, A2 };
+    void test() {
+    	A a;
+    	a++;
+    }
+
+  returns
+  `error: must use 'enum' tag to refer to type 'A'`
+
+
 - -Wloop-analysis now warns on for-loops which have the same increment or
   decrement in the loop header as the last statement in the loop.
+
+  .. code-block:: c
+
+    void foo(char *a, char *b, unsigned c) {
+	  for (unsigned i = 0; i < c; ++i) {
+		a[i] = b[i];
+		++i;
+	  }
+    }
+
+  returns
+  `warning: variable 'i' is incremented both in the loop header and in the loop body [-Wloop-analysis]`
+
 - -Wuninitialized now performs checking across field initializers to detect
   when one field in used uninitialized in another field initialization.
+
+  .. code-block:: c++
+
+    class A {
+      int x;
+      int y;
+      A() : x(y) {}
+    };
+
+  returns
+  `warning: field 'y' is uninitialized when used here [-Wuninitialized]`
+
 - Clang can detect initializer list use inside a macro and suggest parentheses
   if possible to fix.
 - Many improvements to Clang's typo correction facilities, such as:
