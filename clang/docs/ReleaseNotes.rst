@@ -173,11 +173,6 @@ C Language Changes in Clang
 
 - Added new checked arithmetic builtins for security critical applications.
 
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
-
 C++ Language Changes in Clang
 -----------------------------
 
@@ -212,11 +207,6 @@ existing ``deprecated`` attribute.
 
 Use ``-std=c++1y`` to enable C++1y mode.
 
-Objective-C Language Changes in Clang
--------------------------------------
-
-...
-
 OpenCL C Language Changes in Clang
 ----------------------------------
 
@@ -239,13 +229,6 @@ types: WCharTy and WideCharTy. WCharTy represents the built-in wchar_t type
 available in C++. WideCharTy is the type used for wide character literals; in
 C++ it is the same as WCharTy, but in C99, where wchar_t is a typedef, it is an
 integer type.
-
-...
-
-libclang
---------
-
-...
 
 Static Analyzer
 ---------------
@@ -277,22 +260,10 @@ Windows Support
   Microsoft ABI by default. Please note that this driver mode and compatibility
   with the MS ABI is highly experimental.
 
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
 Python Binding Changes
 ----------------------
 
 The following methods have been added:
-
--  ...
 
 Significant Known Problems
 ==========================
