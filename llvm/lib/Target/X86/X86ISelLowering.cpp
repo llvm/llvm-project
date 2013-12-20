@@ -5395,7 +5395,8 @@ LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, SDLoc dl, SelectionDAG &DAG) {
 /// rather than undef via VZEXT_LOAD, but we do not detect that case today.
 /// There's even a handy isZeroNode for that purpose.
 static SDValue EltsFromConsecutiveLoads(EVT VT, SmallVectorImpl<SDValue> &Elts,
-                                        SDLoc &DL, SelectionDAG &DAG) {
+                                        SDLoc &DL, SelectionDAG &DAG,
+                                        bool isAfterLegalize) {
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElems = Elts.size();
 
@@ -5431,7 +5432,13 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, SmallVectorImpl<SDValue> &Elts,
   // load of the entire vector width starting at the base pointer.  If we found
   // consecutive loads for the low half, generate a vzext_load node.
   if (LastLoadedElt == NumElems - 1) {
+
+    if (isAfterLegalize &&
+        !DAG.getTargetLoweringInfo().isOperationLegal(ISD::LOAD, VT))
+      return SDValue();
+
     SDValue NewLd = SDValue();
+
     if (DAG.InferPtrAlignment(LDBase->getBasePtr()) >= 16)
       NewLd = DAG.getLoad(VT, DL, LDBase->getChain(), LDBase->getBasePtr(),
                           LDBase->getPointerInfo(),
@@ -6075,7 +6082,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       V[i] = Op.getOperand(i);
 
     // Check for elements which are consecutive loads.
-    SDValue LD = EltsFromConsecutiveLoads(VT, V, dl, DAG);
+    SDValue LD = EltsFromConsecutiveLoads(VT, V, dl, DAG, false);
     if (LD.getNode())
       return LD;
 
@@ -16263,7 +16270,7 @@ static SDValue PerformShuffleCombine(SDNode *N, SelectionDAG &DAG,
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
     Elts.push_back(getShuffleScalarElt(N, i, DAG, 0));
 
-  return EltsFromConsecutiveLoads(VT, Elts, dl, DAG);
+  return EltsFromConsecutiveLoads(VT, Elts, dl, DAG, true);
 }
 
 /// PerformTruncateCombine - Converts truncate operation to
