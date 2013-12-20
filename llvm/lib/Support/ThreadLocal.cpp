@@ -23,7 +23,7 @@
 // Define all methods as no-ops if threading is explicitly disabled
 namespace llvm {
 using namespace sys;
-ThreadLocalImpl::ThreadLocalImpl() { }
+ThreadLocalImpl::ThreadLocalImpl() : data() { }
 ThreadLocalImpl::~ThreadLocalImpl() { }
 void ThreadLocalImpl::setInstance(const void* d) {
   typedef int SIZE_TOO_BIG[sizeof(d) <= sizeof(data) ? 1 : -1];

@@ -30,6 +30,7 @@ add_llvm_unittest(SupportTests
   RegexTest.cpp
   SourceMgrTest.cpp
   SwapByteOrderTest.cpp
+  ThreadLocalTest.cpp
   TimeValueTest.cpp
   UnicodeTest.cpp
   ValueHandleTest.cpp

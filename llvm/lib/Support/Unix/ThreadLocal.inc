@@ -18,7 +18,7 @@
 
 namespace llvm {
 using namespace sys;
-ThreadLocalImpl::ThreadLocalImpl() { }
+ThreadLocalImpl::ThreadLocalImpl() : data() { }
 ThreadLocalImpl::~ThreadLocalImpl() { }
 void ThreadLocalImpl::setInstance(const void* d) { data = const_cast<void*>(d);}
 const void* ThreadLocalImpl::getInstance() { return data; }
