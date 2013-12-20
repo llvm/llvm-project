@@ -28,13 +28,6 @@ page <http://llvm.org/releases/>`_.
 Non-comprehensive list of changes in this release
 =================================================
 
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
-
 * This is expected to be the last release of LLVM which compiles using a C++98
   toolchain. We expect to start using some C++11 features in LLVM and other
   sub-projects starting after this release. That said, we are committed to
@@ -86,18 +79,6 @@ Non-comprehensive list of changes in this release
 
 * OCaml bindings have been significantly extended to cover almost all of the
   LLVM libraries.
-
-* ... next change ...
-
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
 
 Mips Target
 -----------
@@ -265,4 +246,3 @@ going into the ``llvm/docs/`` directory in the LLVM tree.
 
 If you have any questions or comments about LLVM, please feel free to contact
 us via the `mailing lists <http://llvm.org/docs/#maillist>`_.
-
