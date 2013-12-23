@@ -119,3 +119,9 @@ void MissingSemiInFunction() {
   struct Inner4 {} // ok, no missing ';' here
   Inner5;
 }
+
+namespace PR17084 {
+enum class EnumID {};
+template <typename> struct TempID;
+template <> struct TempID<BadType> : BadType, EnumID::Garbage; // expected-error{{use of undeclared identifier 'BadType'}}
+}
