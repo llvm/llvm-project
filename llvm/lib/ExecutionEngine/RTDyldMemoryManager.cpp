@@ -34,7 +34,7 @@ RTDyldMemoryManager::~RTDyldMemoryManager() {}
 
 // Determine whether we can register EH tables.
 #if (defined(__GNUC__) && !defined(__ARM_EABI__) && !defined(__ia64__) && \
-     !defined(__USING_SJLJ_EXCEPTIONS__))
+     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__))
 #define HAVE_EHTABLE_SUPPORT 1
 #else
 #define HAVE_EHTABLE_SUPPORT 0
