@@ -47,9 +47,9 @@ Non-comprehensive list of changes in this release
 
 * The R600 backend is not marked experimental anymore and is built by default.
 
-* APFloat::isNormal() was renamed to APFloat::isFiniteNonZero() and
-  APFloat::isIEEENormal() was renamed to APFloat::isNormal(). This ensures that
-  APFloat::isNormal() conforms to IEEE-754R-2008.
+* ``APFloat::isNormal()`` was renamed to ``APFloat::isFiniteNonZero()`` and
+  ``APFloat::isIEEENormal()`` was renamed to ``APFloat::isNormal()``. This
+  ensures that ``APFloat::isNormal()`` conforms to IEEE-754R-2008.
 
 * The library call simplification pass has been removed.  Its functionality
   has been integrated into the instruction combiner and function attribute
@@ -59,20 +59,20 @@ Non-comprehensive list of changes in this release
   or later instead. For more information, see the `Getting Started using Visual
   Studio <GettingStartedVS.html>`_ page.
 
-* The Loop Vectorizer that was previously enabled for -O3 is now enabled for
-  -Os and -O2.
+* The Loop Vectorizer that was previously enabled for ``-O3`` is now enabled
+  for ``-Os`` and ``-O2``.
 
 * The new SLP Vectorizer is now enabled by default.
 
-* llvm-ar now uses the new Object library and produces archives and
+* ``llvm-ar`` now uses the new Object library and produces archives and
   symbol tables in the gnu format.
 
-* FileCheck now allows specifing -check-prefix multiple times. This
+* FileCheck now allows specifing ``-check-prefix`` multiple times. This
   helps reduce duplicate check lines when using multiple RUN lines.
 
 * The bitcast instruction no longer allows casting between pointers
-   with different address spaces. To achieve this, use the new
-   addrspacecast instruction.
+   with different address spaces. To achieve this, use the new addrspacecast
+   instruction.
 
 * Different sized pointers for different address spaces should now
   generally work. This is primarily useful for GPU targets.
@@ -84,8 +84,8 @@ Mips Target
 -----------
 
 Support for the MIPS SIMD Architecture (MSA) has been added. MSA is supported
-through inline assembly, intrinsics with the prefix '__builtin_msa', and normal
-code generation.
+through inline assembly, intrinsics with the prefix '``__builtin_msa``', and
+normal code generation.
 
 For more information on MSA (including documentation for the instruction set),
 see the `MIPS SIMD page at Imagination Technologies
@@ -96,11 +96,12 @@ PowerPC Target
 
 Changes in the PowerPC backend include:
 
-* fast-isel support (for faster -O0 code generation)
+* fast-isel support (for faster ``-O0`` code generation)
 * many improvements to the builtin assembler
 * support for generating unaligned (Altivec) vector loads
 * support for generating the fcpsgn instruction
-* generate frin for round() (not nearbyint() and rint(), which had been done only in fast-math mode)
+* generate ``frin`` for ``round()`` (not ``nearbyint()`` and ``rint()``, which
+  had been done only in fast-math mode)
 * improved instruction scheduling for embedded cores (such as the A2)
 * improved prologue/epilogue generation (especially in 32-bit mode)
 * support for dynamic stack alignment (and dynamic stack allocations with large alignments)
