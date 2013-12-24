@@ -18,23 +18,22 @@ documentation <http://llvm.org/docs/ReleaseNotes.html>`_. All LLVM
 releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
-For more information about Clang or LLVM, including information about
-the latest release, please check out the main `Clang Web
-Site <http://clang.llvm.org>`_ or the `LLVM Web
-Site <http://llvm.org>`_.
+For more information about Clang or LLVM, including information about the
+latest release, please check out the main `Clang Web Site
+<http://clang.llvm.org>`_ or the `LLVM Web Site <http://llvm.org>`_.
 
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <http://llvm.org/releases/>`_.
+Note that if you are reading this file from a Subversion checkout or the main
+Clang web page, this document applies to the *next* release, not the current
+one. To see the release notes for a specific release, please see the `releases
+page <http://llvm.org/releases/>`_.
 
 What's New in Clang 3.4?
 ========================
 
-Some of the major new features and improvements to Clang are listed
-here. Generic improvements to Clang as a whole or to its underlying
-infrastructure are described first, followed by language-specific
-sections with improvements to Clang's support for those languages.
+Some of the major new features and improvements to Clang are listed here.
+Generic improvements to Clang as a whole or to its underlying infrastructure
+are described first, followed by language-specific sections with improvements
+to Clang's support for those languages.
 
 Last release which will build as C++98
 --------------------------------------
@@ -58,9 +57,9 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Clang's diagnostics are constantly being improved to catch more issues,
-explain them more clearly, and provide more accurate source information
-about them. The improvements since the 3.3 release include:
+Clang's diagnostics are constantly being improved to catch more issues, explain
+them more clearly, and provide more accurate source information about them. The
+improvements since the 3.3 release include:
 
 - -Wheader-guard warns on mismatches between the #ifndef and #define lines
   in a header guard.
