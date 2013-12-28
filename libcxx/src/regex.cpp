@@ -69,8 +69,10 @@ regex_error::~regex_error() throw() {}
 
 namespace {
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpadded"
+#endif
 
 struct collationnames
 {
@@ -78,7 +80,9 @@ struct collationnames
     char char_;
 };
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
 const collationnames collatenames[] =
 {
@@ -195,8 +199,10 @@ const collationnames collatenames[] =
     {"zero", 0x30}
 };
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpadded"
+#endif
 
 struct classnames
 {
@@ -204,7 +210,9 @@ struct classnames
     ctype_base::mask mask_;
 };
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
 const classnames ClassNames[] =
 {
