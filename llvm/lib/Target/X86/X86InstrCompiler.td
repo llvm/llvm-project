@@ -72,7 +72,7 @@ def ADJCALLSTACKUP64   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 
 // x86-64 va_start lowering magic.
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, Defs = [EFLAGS] in {
 def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al,
@@ -81,7 +81,8 @@ def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               "#VASTART_SAVE_XMM_REGS $al, $regsavefi, $offset",
                               [(X86vastart_save_xmm_regs GR8:$al,
                                                          imm:$regsavefi,
-                                                         imm:$offset)]>;
+                                                         imm:$offset),
+                               (implicit EFLAGS)]>;
 
 // The VAARG_64 pseudo-instruction takes the address of the va_list,
 // and places the address of the next argument into a register.
