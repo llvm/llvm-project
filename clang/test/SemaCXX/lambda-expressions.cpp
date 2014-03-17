@@ -283,3 +283,18 @@ namespace lambdas_in_NSDMIs {
     L l; 
   }
 }
+
+namespace PR18473 {
+  template<typename T> void f() {
+    T t(0);
+    (void) [=]{ int n = t; }; // expected-error {{deleted}}
+  }
+
+  template void f<int>();
+  struct NoCopy {
+    NoCopy(int);
+    NoCopy(const NoCopy &) = delete; // expected-note {{deleted}}
+    operator int() const;
+  };
+  template void f<NoCopy>(); // expected-note {{instantiation}}
+}

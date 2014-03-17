@@ -5836,17 +5836,16 @@ static inline bool VariableCanNeverBeAConstantExpression(VarDecl *Var,
   assert(DefVD);
   if (DefVD->isWeak()) return false;
   EvaluatedStmt *Eval = DefVD->ensureEvaluatedStmt();
-  
+
   Expr *Init = cast<Expr>(Eval->Value);
 
   if (Var->getType()->isDependentType() || Init->isValueDependent()) {
-    if (!Init->isValueDependent())
-      return !DefVD->checkInitIsICE();
-    // FIXME: We might still be able to do some analysis of Init here
-    // to conclude that even in a dependent setting, Init can never
-    // be a constexpr - but for now admit agnosticity.
+    // FIXME: Teach the constant evaluator to deal with the non-dependent parts
+    // of value-dependent expressions, and use it here to determine whether the
+    // initializer is a potential constant expression.
     return false;
-  } 
+  }
+
   return !IsVariableAConstantExpression(Var, Context); 
 }
 
