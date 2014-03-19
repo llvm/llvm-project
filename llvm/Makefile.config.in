@@ -15,6 +15,10 @@
 # Define LLVM specific info and directories based on the autoconf variables
 LLVMPackageName   := @PACKAGE_TARNAME@
 LLVMVersion       := @PACKAGE_VERSION@
+LLVM_VERSION_MAJOR := @LLVM_VERSION_MAJOR@
+LLVM_VERSION_MINOR := @LLVM_VERSION_MINOR@
+LLVM_VERSION_PATCH := @LLVM_VERSION_PATCH@
+LLVM_VERSION_SUFFIX := @LLVM_VERSION_SUFFIX@
 LLVM_CONFIGTIME   := @LLVM_CONFIGTIME@
 
 ###########################################################################

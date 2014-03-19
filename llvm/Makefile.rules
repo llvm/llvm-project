@@ -757,7 +757,7 @@ else
 Ranlib        = ranlib
 endif
 
-AliasTool     = ln -s
+AliasTool     = ln -sf
 
 #----------------------------------------------------------
 # Get the list of source files and compute object file
@@ -1121,15 +1121,19 @@ ifdef LIBRARYNAME
 
 # Make sure there isn't any extraneous whitespace on the LIBRARYNAME option
 LIBRARYNAME := $(strip $(LIBRARYNAME))
+LIBRARYALIASNAME := $(strip $(LIBRARYALIASNAME))
 ifdef LOADABLE_MODULE
 BaseLibName.A  := $(LIBRARYNAME).a
 BaseLibName.SO := $(LIBRARYNAME)$(SHLIBEXT)
+BaseAliasName.SO := $(LIBRARYALIASNAME)$(SHLIBEXT)
 else
 BaseLibName.A  := lib$(LIBRARYNAME).a
 BaseLibName.SO := $(SharedPrefix)$(LIBRARYNAME)$(SHLIBEXT)
+BaseAliasName.SO := $(SharedPrefix)$(LIBRARYALIASNAME)$(SHLIBEXT)
 endif
 LibName.A  := $(LibDir)/$(BaseLibName.A)
 LibName.SO := $(SharedLibDir)/$(BaseLibName.SO)
+AliasName.SO := $(SharedLibDir)/$(BaseAliasName.SO)
 LibName.O  := $(LibDir)/$(LIBRARYNAME).o
 
 #---------------------------------------------------------
@@ -1183,12 +1187,17 @@ else
 DestSharedLibDir := $(DESTDIR)$(PROJ_libdir)
 endif
 DestSharedLib := $(DestSharedLibDir)/$(BaseLibName.SO)
+DestSharedAlias := $(DestSharedLibDir)/$(BaseAliasName.SO)
 
 install-local:: $(DestSharedLib)
 
 $(DestSharedLib): $(LibName.SO) $(DestSharedLibDir)
 	$(Echo) Installing $(BuildMode) Shared Library $(DestSharedLib)
 	$(Verb) $(INSTALL) $(LibName.SO) $(DestSharedLib)
+ifdef SHARED_ALIAS
+	$(Echo) Creating alias from $(DestSharedLib) to $(DestSharedAlias)
+	$(Verb) $(AliasTool) $(DestSharedLib) $(DestSharedAlias)
+endif
 
 uninstall-local::
 	$(Echo) Uninstalling $(BuildMode) Shared Library $(DestSharedLib)
