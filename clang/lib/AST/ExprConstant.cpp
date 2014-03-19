@@ -5089,16 +5089,15 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
     if (!Result.isUninit())
       return true;
 
-    if (ZeroInit)
-      return ZeroInitialization(E);
-
-    const CXXRecordDecl *RD = FD->getParent();
-    if (RD->isUnion())
-      Result = APValue((FieldDecl*)0);
-    else
-      Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
-                       std::distance(RD->field_begin(), RD->field_end()));
-    return true;
+    // We can get here in two different ways:
+    //  1) We're performing value-initialization, and should zero-initialize
+    //     the object, or
+    //  2) We're performing default-initialization of an object with a trivial
+    //     constexpr default constructor, in which case we should start the
+    //     lifetimes of all the base subobjects (there can be no data member
+    //     subobjects in this case) per [basic.life]p1.
+    // Either way, ZeroInitialization is appropriate.
+    return ZeroInitialization(E);
   }
 
   const FunctionDecl *Definition = 0;
@@ -5578,19 +5577,9 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     if (HadZeroInit)
       return true;
 
-    if (ZeroInit) {
-      ImplicitValueInitExpr VIE(Type);
-      return EvaluateInPlace(*Value, Info, Subobject, &VIE);
-    }
-
-    const CXXRecordDecl *RD = FD->getParent();
-    if (RD->isUnion())
-      *Value = APValue((FieldDecl*)0);
-    else
-      *Value =
-          APValue(APValue::UninitStruct(), RD->getNumBases(),
-                  std::distance(RD->field_begin(), RD->field_end()));
-    return true;
+    // See RecordExprEvaluator::VisitCXXConstructExpr for explanation.
+    ImplicitValueInitExpr VIE(Type);
+    return EvaluateInPlace(*Value, Info, Subobject, &VIE);
   }
 
   const FunctionDecl *Definition = 0;
