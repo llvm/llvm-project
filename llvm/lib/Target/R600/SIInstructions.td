@@ -1413,7 +1413,7 @@ def : Pat <
 /* int_SI_vs_load_input */
 def : Pat<
   (SIload_input i128:$tlst, IMM12bit:$attr_offset, i32:$buf_idx_vgpr),
-  (BUFFER_LOAD_FORMAT_XYZW_IDXEN $tlst, $buf_idx_vgpr, imm:$attr_offset)
+  (BUFFER_LOAD_FORMAT_XYZW_IDXEN $tlst, $buf_idx_vgpr, imm:$attr_offset, 0, 0, 0, 0)
 >;
 
 /* int_SI_export */
@@ -1819,7 +1819,7 @@ def : Pat <
 // 3. Offset in an 32Bit VGPR
 def : Pat <
   (SIload_constant i128:$sbase, i32:$voff),
-  (BUFFER_LOAD_DWORD_OFFEN $sbase, $voff)
+  (BUFFER_LOAD_DWORD_OFFEN $sbase, $voff, 0, 0, 0, 0)
 >;
 
 // The multiplication scales from [0,1] to the unsigned integer range
@@ -1979,6 +1979,50 @@ defm : MUBUFStore_Pattern <BUFFER_STORE_DWORD, i32, global_store>;
 defm : MUBUFStore_Pattern <BUFFER_STORE_DWORDX2, i64, global_store>;
 defm : MUBUFStore_Pattern <BUFFER_STORE_DWORDX2, v2i32, global_store>;
 defm : MUBUFStore_Pattern <BUFFER_STORE_DWORDX4, v4i32, global_store>;
+
+// BUFFER_LOAD_DWORD*, addr64=0
+multiclass MUBUF_Load_Dword <ValueType vt, MUBUF offset, MUBUF offen, MUBUF idxen,
+                             MUBUF bothen> {
+
+  def : Pat <
+    (vt (int_SI_buffer_load_dword i128:$rsrc, i32:$vaddr, i32:$soffset,
+                                  imm:$offset, 0, 0, imm:$glc, imm:$slc,
+                                  imm:$tfe)),
+    (offset $rsrc, $vaddr, (as_i16imm $offset), $soffset, (as_i1imm $glc),
+            (as_i1imm $slc), (as_i1imm $tfe))
+  >;
+
+  def : Pat <
+    (vt (int_SI_buffer_load_dword i128:$rsrc, i32:$vaddr, i32:$soffset,
+                                  imm, 1, 0, imm:$glc, imm:$slc,
+                                  imm:$tfe)),
+    (offen $rsrc, $vaddr, $soffset, (as_i1imm $glc), (as_i1imm $slc),
+           (as_i1imm $tfe))
+  >;
+
+  def : Pat <
+    (vt (int_SI_buffer_load_dword i128:$rsrc, i32:$vaddr, i32:$soffset,
+                                  imm:$offset, 0, 1, imm:$glc, imm:$slc,
+                                  imm:$tfe)),
+    (idxen $rsrc, $vaddr, (as_i16imm $offset), $soffset, (as_i1imm $glc),
+           (as_i1imm $slc), (as_i1imm $tfe))
+  >;
+
+  def : Pat <
+    (vt (int_SI_buffer_load_dword i128:$rsrc, v2i32:$vaddr, i32:$soffset,
+                                  imm, 1, 1, imm:$glc, imm:$slc,
+                                  imm:$tfe)),
+    (bothen $rsrc, $vaddr, $soffset, (as_i1imm $glc), (as_i1imm $slc),
+            (as_i1imm $tfe))
+  >;
+}
+
+defm : MUBUF_Load_Dword <i32, BUFFER_LOAD_DWORD_OFFSET, BUFFER_LOAD_DWORD_OFFEN,
+                         BUFFER_LOAD_DWORD_IDXEN, BUFFER_LOAD_DWORD_BOTHEN>;
+defm : MUBUF_Load_Dword <v2i32, BUFFER_LOAD_DWORDX2_OFFSET, BUFFER_LOAD_DWORDX2_OFFEN,
+                         BUFFER_LOAD_DWORDX2_IDXEN, BUFFER_LOAD_DWORDX2_BOTHEN>;
+defm : MUBUF_Load_Dword <v4i32, BUFFER_LOAD_DWORDX4_OFFSET, BUFFER_LOAD_DWORDX4_OFFEN,
+                         BUFFER_LOAD_DWORDX4_IDXEN, BUFFER_LOAD_DWORDX4_BOTHEN>;
 
 //===----------------------------------------------------------------------===//
 // MTBUF Patterns

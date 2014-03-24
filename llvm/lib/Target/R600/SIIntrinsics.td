@@ -38,6 +38,20 @@ let TargetPrefix = "SI", isTarget = 1 in {
      llvm_i32_ty],   // tfe(imm)
     []>;
 
+  // Fully-flexible BUFFER_LOAD_DWORD_* except for the ADDR64 bit, which is not exposed
+  def int_SI_buffer_load_dword : Intrinsic <
+    [llvm_anyint_ty], // vdata(VGPR), overloaded for types i32, v2i32, v4i32
+    [llvm_anyint_ty,  // rsrc(SGPR)
+     llvm_anyint_ty,  // vaddr(VGPR)
+     llvm_i32_ty,     // soffset(SGPR)
+     llvm_i32_ty,     // inst_offset(imm)
+     llvm_i32_ty,     // offen(imm)
+     llvm_i32_ty,     // idxen(imm)
+     llvm_i32_ty,     // glc(imm)
+     llvm_i32_ty,     // slc(imm)
+     llvm_i32_ty],    // tfe(imm)
+    [IntrReadArgMem]>;
+
   def int_SI_sendmsg : Intrinsic <[], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
   class Sample : Intrinsic <[llvm_v4f32_ty], [llvm_anyvector_ty, llvm_v32i8_ty, llvm_anyint_ty, llvm_i32_ty], [IntrNoMem]>;
