@@ -145,7 +145,9 @@ void SILowerControlFlowPass::SkipIfDead(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
-  if (!shouldSkip(&MBB, &MBB.getParent()->back()))
+  if (MBB.getParent()->getInfo<SIMachineFunctionInfo>()->ShaderType !=
+      ShaderType::PIXEL ||
+      !shouldSkip(&MBB, &MBB.getParent()->back()))
     return;
 
   MachineBasicBlock::iterator Insert = &MI;
@@ -296,9 +298,11 @@ void SILowerControlFlowPass::Kill(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
-  // Kill is only allowed in pixel shaders
+  // Kill is only allowed in pixel / geometry shaders
   assert(MBB.getParent()->getInfo<SIMachineFunctionInfo>()->ShaderType ==
-         ShaderType::PIXEL);
+         ShaderType::PIXEL ||
+         MBB.getParent()->getInfo<SIMachineFunctionInfo>()->ShaderType ==
+         ShaderType::GEOMETRY);
 
   // Clear this pixel from the exec mask if the operand is negative
   BuildMI(MBB, &MI, DL, TII->get(AMDGPU::V_CMPX_LE_F32_e32), AMDGPU::VCC)
