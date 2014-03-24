@@ -314,6 +314,12 @@ Counters SIInsertWaits::handleOperands(MachineInstr &MI) {
 
   Counters Result = ZeroCounts;
 
+  // S_SENDMSG implicitly waits for all outstanding LGKM transfers to finish,
+  // but we also want to wait for any other outstanding transfers before
+  // signalling other hardware blocks
+  if (MI.getOpcode() == AMDGPU::S_SENDMSG)
+    return LastIssued;
+
   // For each register affected by this
   // instruction increase the result sequence
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {

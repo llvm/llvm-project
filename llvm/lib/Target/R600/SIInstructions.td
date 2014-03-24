@@ -22,6 +22,8 @@ def InterpSlot : Operand<i32> {
   let PrintMethod = "printInterpSlot";
 }
 
+def SendMsgImm : Operand<i32>;
+
 def isSI : Predicate<"Subtarget.getGeneration() "
                       ">= AMDGPUSubtarget::SOUTHERN_ISLANDS">;
 
@@ -826,17 +828,25 @@ def S_BARRIER : SOPP <0x0000000a, (ins), "S_BARRIER",
 def S_WAITCNT : SOPP <0x0000000c, (ins WAIT_FLAG:$simm16), "S_WAITCNT $simm16",
   []
 >;
-} // End hasSideEffects
 //def S_SETHALT : SOPP_ <0x0000000d, "S_SETHALT", []>;
 //def S_SLEEP : SOPP_ <0x0000000e, "S_SLEEP", []>;
 //def S_SETPRIO : SOPP_ <0x0000000f, "S_SETPRIO", []>;
-//def S_SENDMSG : SOPP_ <0x00000010, "S_SENDMSG", []>;
+
+let Uses = [EXEC] in {
+  def S_SENDMSG : SOPP <0x00000010, (ins SendMsgImm:$simm16, M0Reg:$m0), "S_SENDMSG $simm16",
+      [(int_SI_sendmsg imm:$simm16, M0Reg:$m0)]
+  > {
+    let DisableEncoding = "$m0";
+  }
+} // End Uses = [EXEC]
+
 //def S_SENDMSGHALT : SOPP_ <0x00000011, "S_SENDMSGHALT", []>;
 //def S_TRAP : SOPP_ <0x00000012, "S_TRAP", []>;
 //def S_ICACHE_INV : SOPP_ <0x00000013, "S_ICACHE_INV", []>;
 //def S_INCPERFLEVEL : SOPP_ <0x00000014, "S_INCPERFLEVEL", []>;
 //def S_DECPERFLEVEL : SOPP_ <0x00000015, "S_DECPERFLEVEL", []>;
 //def S_TTRACEDATA : SOPP_ <0x00000016, "S_TTRACEDATA", []>;
+} // End hasSideEffects
 
 def V_CNDMASK_B32_e32 : VOP2 <0x00000000, (outs VReg_32:$dst),
   (ins VSrc_32:$src0, VReg_32:$src1, VCCReg:$vcc),

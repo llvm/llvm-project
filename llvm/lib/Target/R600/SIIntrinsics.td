@@ -38,6 +38,8 @@ let TargetPrefix = "SI", isTarget = 1 in {
      llvm_i32_ty],   // tfe(imm)
     []>;
 
+  def int_SI_sendmsg : Intrinsic <[], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
   class Sample : Intrinsic <[llvm_v4f32_ty], [llvm_anyvector_ty, llvm_v32i8_ty, llvm_anyint_ty, llvm_i32_ty], [IntrNoMem]>;
 
   def int_SI_sample : Sample;
