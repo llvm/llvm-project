@@ -1,5 +1,7 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
 
+; XFAIL: *
+
 ; CHECK: @bfe_def
 ; CHECK: BFE_UINT
 define void @bfe_def(i32 addrspace(1)* %out, i32 %x) {

@@ -1516,7 +1516,9 @@ let Predicates = [isEGorCayman] in {
                                                i32:$src2))],
     VecALU
   >;
-  def : BFEPattern <BFE_UINT_eg>;
+// XXX: This pattern is broken, disabling for now.  See comment in
+// AMDGPUInstructions.td for more info.
+//  def : BFEPattern <BFE_UINT_eg>;
 
   def BFI_INT_eg : R600_3OP <0x06, "BFI_INT", [], VecALU>;
   defm : BFIPatterns <BFI_INT_eg>;
