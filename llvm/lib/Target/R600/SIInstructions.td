@@ -989,14 +989,16 @@ defm V_MBCNT_HI_U32_B32 : VOP2_32 <0x00000024, "V_MBCNT_HI_U32_B32", []>;
 let isCommutable = 1, Defs = [VCC] in { // Carry-out goes to VCC
 // No patterns so that the scalar instructions are always selected.
 // The scalar versions will be replaced with vector when needed later.
-defm V_ADD_I32 : VOP2b_32 <0x00000025, "V_ADD_I32", []>;
-defm V_SUB_I32 : VOP2b_32 <0x00000026, "V_SUB_I32", []>;
-defm V_SUBREV_I32 : VOP2b_32 <0x00000027, "V_SUBREV_I32", [], "V_SUB_I32">;
+defm V_ADD_I32 : VOP2b_32 <0x00000025, "V_ADD_I32", [], VSrc_32>;
+defm V_SUB_I32 : VOP2b_32 <0x00000026, "V_SUB_I32", [], VSrc_32>;
+defm V_SUBREV_I32 : VOP2b_32 <0x00000027, "V_SUBREV_I32", [], VSrc_32,
+                              "V_SUB_I32">;
 
 let Uses = [VCC] in { // Carry-in comes from VCC
-defm V_ADDC_U32 : VOP2b_32 <0x00000028, "V_ADDC_U32", []>;
-defm V_SUBB_U32 : VOP2b_32 <0x00000029, "V_SUBB_U32", []>;
-defm V_SUBBREV_U32 : VOP2b_32 <0x0000002a, "V_SUBBREV_U32", [], "V_SUBB_U32">;
+defm V_ADDC_U32 : VOP2b_32 <0x00000028, "V_ADDC_U32", [], VReg_32>;
+defm V_SUBB_U32 : VOP2b_32 <0x00000029, "V_SUBB_U32", [], VReg_32>;
+defm V_SUBBREV_U32 : VOP2b_32 <0x0000002a, "V_SUBBREV_U32", [], VReg_32,
+                               "V_SUBB_U32">;
 } // End Uses = [VCC]
 } // End isCommutable = 1, Defs = [VCC]
 

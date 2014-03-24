@@ -290,10 +290,10 @@ multiclass VOP2_64 <bits<6> op, string opName, list<dag> pattern,
   : VOP2_Helper <op, VReg_64, VSrc_64, opName, pattern, revOp>;
 
 multiclass VOP2b_32 <bits<6> op, string opName, list<dag> pattern,
-                     string revOp = opName> {
+                     RegisterClass src0_rc, string revOp = opName> {
 
   def _e32 : VOP2 <
-    op, (outs VReg_32:$dst), (ins VSrc_32:$src0, VReg_32:$src1),
+    op, (outs VReg_32:$dst), (ins src0_rc:$src0, VReg_32:$src1),
     opName#"_e32 $dst, $src0, $src1", pattern
   >, VOP <opName>, VOP2_REV<revOp#"_e32", !eq(revOp, opName)>;
 
