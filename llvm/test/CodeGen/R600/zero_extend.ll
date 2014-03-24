@@ -16,3 +16,13 @@ entry:
   store i64 %2, i64 addrspace(1)* %out
   ret void
 }
+
+; SI-CHECK-LABEL: @testi1toi32
+; SI-CHECK: V_CNDMASK_B32
+define void @testi1toi32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+entry:
+  %0 = icmp eq i32 %a, %b
+  %1 = zext i1 %0 to i32
+  store i32 %1, i32 addrspace(1)* %out
+  ret void
+}

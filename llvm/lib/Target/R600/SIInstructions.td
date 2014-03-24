@@ -1818,6 +1818,11 @@ def : Pat <
   (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src0)
 >;
 
+def : Pat <
+  (i32 (zext i1:$src0)),
+  (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src0)
+>;
+
 // 1. Offset as 8bit DWORD immediate
 def : Pat <
   (SIload_constant i128:$sbase, IMM8bitDWORD:$offset),
