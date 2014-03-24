@@ -521,7 +521,7 @@ bool SILowerControlFlowPass::runOnMachineFunction(MachineFunction &MF) {
             AMDGPU::M0).addImm(0xffffffff);
   }
 
-  if (NeedWQM && MFI->ShaderType != ShaderType::COMPUTE) {
+  if (NeedWQM && MFI->ShaderType == ShaderType::PIXEL) {
     MachineBasicBlock &MBB = MF.front();
     BuildMI(MBB, MBB.getFirstNonPHI(), DebugLoc(), TII->get(AMDGPU::S_WQM_B64),
             AMDGPU::EXEC).addReg(AMDGPU::EXEC);
