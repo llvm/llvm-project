@@ -187,7 +187,7 @@ bool SIFixSGPRCopies::isVGPRToSGPRCopy(const MachineInstr &Copy,
       DstRC == &AMDGPU::M0RegRegClass)
     return false;
 
-  SrcRC = inferRegClassFromDef(TRI, MRI, SrcReg, SrcSubReg);
+  SrcRC = TRI->getSubRegClass(MRI.getRegClass(SrcReg), SrcSubReg);
   return TRI->isSGPRClass(DstRC) && TRI->hasVGPRs(SrcRC);
 }
 
