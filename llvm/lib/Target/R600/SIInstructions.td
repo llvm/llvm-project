@@ -1668,16 +1668,30 @@ def : Pat <
    0 /* ABS */, 1 /* CLAMP */, 0 /* OMOD */, 0 /* NEG */)
 >;
 
+/********** ================================ **********/
+/********** Floating point absolute/negative **********/
+/********** ================================ **********/
+
+// Manipulate the sign bit directly, as e.g. using the source negation modifier
+// in V_ADD_F32_e64 $src, 0, [...] does not result in -0.0 for $src == +0.0,
+// breaking the piglit *s-floatBitsToInt-neg* tests
+
+// TODO: Look into not implementing isFNegFree/isFAbsFree for SI, and possibly
+// removing these patterns
+
+def : Pat <
+  (fneg (fabs f32:$src)),
+  (V_OR_B32_e32 $src, (V_MOV_B32_e32 0x80000000)) /* Set sign bit */
+>;
+
 def : Pat <
   (fabs f32:$src),
-  (V_ADD_F32_e64 $src, (i32 0 /* SRC1 */),
-   1 /* ABS */, 0 /* CLAMP */, 0 /* OMOD */, 0 /* NEG */)
+  (V_AND_B32_e32 $src, (V_MOV_B32_e32 0x7fffffff)) /* Clear sign bit */
 >;
 
 def : Pat <
   (fneg f32:$src),
-  (V_ADD_F32_e64 $src, (i32 0 /* SRC1 */),
-   0 /* ABS */, 0 /* CLAMP */, 0 /* OMOD */, 1 /* NEG */)
+  (V_XOR_B32_e32 $src, (V_MOV_B32_e32 0x80000000)) /* Toggle sign bit */
 >;
 
 /********** ================== **********/

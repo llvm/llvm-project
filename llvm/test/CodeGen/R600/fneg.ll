@@ -4,7 +4,7 @@
 ; R600-CHECK-LABEL: @fneg
 ; R600-CHECK: -PV
 ; SI-CHECK-LABEL: @fneg
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 0, 0, 0, 1
+; SI-CHECK: V_XOR_B32
 define void @fneg(float addrspace(1)* %out, float %in) {
 entry:
   %0 = fsub float -0.000000e+00, %in
@@ -16,8 +16,8 @@ entry:
 ; R600-CHECK: -PV
 ; R600-CHECK: -PV
 ; SI-CHECK-LABEL: @fneg_v2
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 0, 0, 0, 1
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 0, 0, 0, 1
+; SI-CHECK: V_XOR_B32
+; SI-CHECK: V_XOR_B32
 define void @fneg_v2(<2 x float> addrspace(1)* nocapture %out, <2 x float> %in) {
 entry:
   %0 = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %in
@@ -31,10 +31,10 @@ entry:
 ; R600-CHECK: -PV
 ; R600-CHECK: -PV
 ; SI-CHECK-LABEL: @fneg_v4
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 0, 0, 0, 1
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 0, 0, 0, 1
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 0, 0, 0, 1
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 0, 0, 0, 1
+; SI-CHECK: V_XOR_B32
+; SI-CHECK: V_XOR_B32
+; SI-CHECK: V_XOR_B32
+; SI-CHECK: V_XOR_B32
 define void @fneg_v4(<4 x float> addrspace(1)* nocapture %out, <4 x float> %in) {
 entry:
   %0 = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %in

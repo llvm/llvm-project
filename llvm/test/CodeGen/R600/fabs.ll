@@ -9,7 +9,7 @@
 ; R600-CHECK-NOT: AND
 ; R600-CHECK: |PV.{{[XYZW]}}|
 ; SI-CHECK-LABEL: @fabs_free
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 1, 0, 0, 0
+; SI-CHECK: V_AND_B32
 
 define void @fabs_free(float addrspace(1)* %out, i32 %in) {
 entry:
@@ -23,8 +23,8 @@ entry:
 ; R600-CHECK: |{{(PV|T[0-9])\.[XYZW]}}|
 ; R600-CHECK: |{{(PV|T[0-9])\.[XYZW]}}|
 ; SI-CHECK-LABEL: @fabs_v2
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 1, 0, 0, 0
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 1, 0, 0, 0
+; SI-CHECK: V_AND_B32
+; SI-CHECK: V_AND_B32
 define void @fabs_v2(<2 x float> addrspace(1)* %out, <2 x float> %in) {
 entry:
   %0 = call <2 x float> @llvm.fabs.v2f32(<2 x float> %in)
@@ -38,10 +38,10 @@ entry:
 ; R600-CHECK: |{{(PV|T[0-9])\.[XYZW]}}|
 ; R600-CHECK: |{{(PV|T[0-9])\.[XYZW]}}|
 ; SI-CHECK-LABEL: @fabs_v4
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 1, 0, 0, 0
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 1, 0, 0, 0
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 1, 0, 0, 0
-; SI-CHECK: V_ADD_F32_e64 v{{[0-9]}}, s{{[0-9]}}, 0, 1, 0, 0, 0
+; SI-CHECK: V_AND_B32
+; SI-CHECK: V_AND_B32
+; SI-CHECK: V_AND_B32
+; SI-CHECK: V_AND_B32
 define void @fabs_v4(<4 x float> addrspace(1)* %out, <4 x float> %in) {
 entry:
   %0 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %in)
