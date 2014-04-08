@@ -187,15 +187,34 @@ bool IVUsers::AddUsersImpl(Instruction *I,
 
     if (AddUserToIVUsers) {
       // Okay, we found a user that we cannot reduce.
-      IVUses.push_back(new IVStrideUse(this, User, I));
-      IVStrideUse &NewUse = IVUses.back();
+      IVStrideUse &NewUse = AddUser(User, I);
       // Autodetect the post-inc loop set, populating NewUse.PostIncLoops.
       // The regular return value here is discarded; instead of recording
       // it, we just recompute it when we need it.
+      const SCEV *OriginalISE = ISE;
       ISE = TransformForPostIncUse(NormalizeAutodetect,
                                    ISE, User, I,
                                    NewUse.PostIncLoops,
                                    *SE, *DT);
+
+      // PostIncNormalization effectively simplifies the expression under
+      // pre-increment assumptions. Those assumptions (no wrapping) might not
+      // hold for the post-inc value. Catch such cases by making sure the
+      // transformation is invertible.
+      if (OriginalISE != ISE) {
+        const SCEV *DenormalizedISE =
+          TransformForPostIncUse(Denormalize, ISE, User, I,
+              NewUse.PostIncLoops, *SE, *DT);
+
+        // If we normalized the expression, but denormalization doesn't give the
+        // original one, discard this user.
+        if (OriginalISE != DenormalizedISE) {
+          DEBUG(dbgs() << "   DISCARDING (NORMALIZATION ISN'T INVERTIBLE): "
+                       << *ISE << '\n');
+          IVUses.pop_back();
+          return false;
+        }
+      }
       DEBUG(if (SE->getSCEV(I) != ISE)
               dbgs() << "   NORMALIZED TO: " << *ISE << '\n');
     }
