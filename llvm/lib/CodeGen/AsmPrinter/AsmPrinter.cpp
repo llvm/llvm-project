@@ -222,7 +222,7 @@ void AsmPrinter::EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
   case GlobalValue::WeakAnyLinkage:
   case GlobalValue::WeakODRLinkage:
   case GlobalValue::LinkerPrivateWeakLinkage:
-    if (MAI->getWeakDefDirective() != 0) {
+    if (MAI->hasWeakDefDirective()) {
       // .globl _foo
       OutStreamer.EmitSymbolAttribute(GVSym, MCSA_Global);
 
@@ -243,7 +243,7 @@ void AsmPrinter::EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
         OutStreamer.EmitSymbolAttribute(GVSym, MCSA_WeakDefinition);
       else
         OutStreamer.EmitSymbolAttribute(GVSym, MCSA_WeakDefAutoPrivate);
-    } else if (MAI->getLinkOnceDirective() != 0) {
+    } else if (MAI->hasLinkOnceDirective()) {
       // .globl _foo
       OutStreamer.EmitSymbolAttribute(GVSym, MCSA_Global);
       //NOTE: linkonce is handled by the section the symbol was assigned to.

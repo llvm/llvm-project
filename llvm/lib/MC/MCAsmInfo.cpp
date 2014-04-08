@@ -76,8 +76,8 @@ MCAsmInfo::MCAsmInfo() {
   HasIdentDirective = false;
   HasNoDeadStrip = false;
   WeakRefDirective = 0;
-  WeakDefDirective = 0;
-  LinkOnceDirective = 0;
+  HasWeakDefDirective = false;
+  HasLinkOnceDirective = false;
   HiddenVisibilityAttr = MCSA_Hidden;
   HiddenDeclarationVisibilityAttr = MCSA_Hidden;
   ProtectedVisibilityAttr = MCSA_Protected;

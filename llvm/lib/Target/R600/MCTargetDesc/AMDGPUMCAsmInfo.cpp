@@ -13,7 +13,6 @@
 using namespace llvm;
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(StringRef &TT) : MCAsmInfo() {
   HasSingleParameterDotFile = false;
-  WeakDefDirective = 0;
   //===------------------------------------------------------------------===//
   HasSubsectionsViaSymbols = true;
   HasMachoZeroFillDirective = false;
@@ -58,7 +57,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(StringRef &TT) : MCAsmInfo() {
   HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
   WeakRefDirective = ".weakref\t";
-  LinkOnceDirective = 0;
   //===--- Dwarf Emission Directives -----------------------------------===//
   HasLEB128 = true;
   SupportsDebugInformation = true;
