@@ -219,8 +219,11 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
   DenseMap<long long, SDNode*> O2SMap;  // Map from offset to SDNode.
   bool Cluster = false;
   SDNode *Base = Node;
+  // This algorithm requires a reasonably low use count before finding a match
+  // to avoid uselessly blowing up compile time in large blocks.
+  unsigned UseCount = 0;
   for (SDNode::use_iterator I = Chain->use_begin(), E = Chain->use_end();
-       I != E; ++I) {
+       I != E && UseCount < 100; ++I, ++UseCount) {
     SDNode *User = *I;
     if (User == Node || !Visited.insert(User))
       continue;
@@ -237,6 +240,8 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
     if (Offset2 < Offset1)
       Base = User;
     Cluster = true;
+    // Reset UseCount to allow more matches.
+    UseCount = 0;
   }
 
   if (!Cluster)
