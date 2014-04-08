@@ -6218,7 +6218,7 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred,
   // LHS' type is checked for above.
   if (getTypeSizeInBits(LHS->getType()) >
       getTypeSizeInBits(FoundLHS->getType())) {
-    if (CmpInst::isSigned(Pred)) {
+    if (CmpInst::isSigned(FoundPred)) {
       FoundLHS = getSignExtendExpr(FoundLHS, LHS->getType());
       FoundRHS = getSignExtendExpr(FoundRHS, LHS->getType());
     } else {
