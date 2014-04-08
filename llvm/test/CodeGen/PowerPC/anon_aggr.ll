@@ -119,9 +119,9 @@ unequal:
 ; CHECK: ld 3, -[[OFFSET1]](1)
 
 ; DARWIN32: _func3:
-; DARWIN32: addi r[[REG1:[0-9]+]], r[[REGSP:[0-9]+]], 40
+; DARWIN32: addi r[[REG1:[0-9]+]], r[[REGSP:[0-9]+]], 36
 ; DARWIN32: addi r[[REG2:[0-9]+]], r[[REGSP]], 24
-; DARWIN32: lwz r[[REG3:[0-9]+]], 48(r[[REGSP]])
+; DARWIN32: lwz r[[REG3:[0-9]+]], 44(r[[REGSP]])
 ; DARWIN32: lwz r[[REG4:[0-9]+]], 32(r[[REGSP]])
 ; DARWIN32: cmplw cr{{[0-9]+}}, r[[REG4]], r[[REG3]]
 ; DARWIN32: stw r[[REG3]], -[[OFFSET1:[0-9]+]]
