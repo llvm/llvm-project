@@ -798,6 +798,12 @@ namespace std {
   void move();
   template<class T>
   void move(T&&);
+
+  namespace __1 {
+    void move();
+    template<class T>
+    void move(T&&);
+  }
 }
 
 namespace PR18260 {
@@ -810,5 +816,7 @@ namespace PR18260 {
     x.move();
     std::move();
     std::move(x);
+    std::__1::move();
+    std::__1::move(x);
   }
 } // end namespace PR18260
