@@ -8547,7 +8547,10 @@ struct MemOpLink {
 // base ptr.
 struct ConsecutiveMemoryChainSorter {
   bool operator()(MemOpLink LHS, MemOpLink RHS) {
-    return LHS.OffsetFromBase < RHS.OffsetFromBase;
+    return
+        LHS.OffsetFromBase < RHS.OffsetFromBase ||
+        (LHS.OffsetFromBase == RHS.OffsetFromBase &&
+         LHS.SequenceNum > RHS.SequenceNum);
   }
 };
 
