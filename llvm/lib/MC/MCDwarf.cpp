@@ -836,8 +836,9 @@ static unsigned getSizeForEncoding(MCStreamer &streamer,
   }
 }
 
-static void EmitSymbol(MCStreamer &streamer, const MCSymbol &symbol,
-                       unsigned symbolEncoding, const char *comment = 0) {
+static void EmitFDESymbol(MCStreamer &streamer, const MCSymbol &symbol,
+                       unsigned symbolEncoding, bool isEH,
+                       const char *comment = 0) {
   MCContext &context = streamer.getContext();
   const MCAsmInfo *asmInfo = context.getAsmInfo();
   const MCExpr *v = asmInfo->getExprForFDESymbol(&symbol,
@@ -845,7 +846,10 @@ static void EmitSymbol(MCStreamer &streamer, const MCSymbol &symbol,
                                                  streamer);
   unsigned size = getSizeForEncoding(streamer, symbolEncoding);
   if (streamer.isVerboseAsm() && comment) streamer.AddComment(comment);
-  streamer.EmitAbsValue(v, size);
+  if (asmInfo->doDwarfFDESymbolsUseAbsDiff() && isEH)
+    streamer.EmitAbsValue(v, size);
+  else
+    streamer.EmitValue(v, size);
 }
 
 static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
@@ -1344,7 +1348,7 @@ MCSymbol *FrameEmitterImpl::EmitFDE(MCStreamer &streamer,
   unsigned PCEncoding = IsEH ? MOFI->getFDEEncoding(UsingCFI)
                              : (unsigned)dwarf::DW_EH_PE_absptr;
   unsigned PCSize = getSizeForEncoding(streamer, PCEncoding);
-  EmitSymbol(streamer, *frame.Begin, PCEncoding, "FDE initial location");
+  EmitFDESymbol(streamer, *frame.Begin, PCEncoding, IsEH, "FDE initial location");
 
   // PC Range
   const MCExpr *Range = MakeStartMinusEndExpr(streamer, *frame.Begin,
@@ -1364,8 +1368,8 @@ MCSymbol *FrameEmitterImpl::EmitFDE(MCStreamer &streamer,
 
     // Augmentation Data
     if (frame.Lsda)
-      EmitSymbol(streamer, *frame.Lsda, frame.LsdaEncoding,
-                 "Language Specific Data Area");
+      EmitFDESymbol(streamer, *frame.Lsda, frame.LsdaEncoding, true,
+                    "Language Specific Data Area");
   }
 
   // Call Frame Instructions
