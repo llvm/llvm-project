@@ -134,3 +134,12 @@ void TestBlockDecl(int x) {
 // CHECK-NEXT:   ...
 // CHECK-NEXT:   capture ParmVar{{.*}} 'x' 'int'
 // CHECK-NEXT:   CompoundStmt
+
+@interface B
++ (int) foo;
+@end
+
+void f() {
+  __typeof__(B.foo) Test;
+}
+// CHECK: VarDecl{{.*}}Test 'typeof (B.foo)':'int'

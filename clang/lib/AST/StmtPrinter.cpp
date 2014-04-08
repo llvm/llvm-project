@@ -709,9 +709,11 @@ void StmtPrinter::VisitObjCIvarRefExpr(ObjCIvarRefExpr *Node) {
 void StmtPrinter::VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *Node) {
   if (Node->isSuperReceiver())
     OS << "super.";
-  else if (Node->getBase()) {
+  else if (Node->isObjectReceiver() && Node->getBase()) {
     PrintExpr(Node->getBase());
     OS << ".";
+  } else if (Node->isClassReceiver() && Node->getClassReceiver()) {
+    OS << Node->getClassReceiver()->getName() << ".";
   }
 
   if (Node->isImplicitProperty())
