@@ -32,6 +32,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Dominators.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Constants.h"
@@ -70,6 +71,7 @@ namespace {
       AU.addRequired<DominatorTree>();
       AU.addRequired<LoopInfo>();
       AU.addPreservedID(LoopSimplifyID);
+      AU.addPreserved<AliasAnalysis>();
       AU.addPreserved<ScalarEvolution>();
     }
   private:
