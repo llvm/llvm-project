@@ -793,3 +793,22 @@ void testTemporariesAndOperators2() {
 
 } // end namespace InitializerAssertionFailTest
 
+
+namespace std {
+  void move();
+  template<class T>
+  void move(T&&);
+}
+
+namespace PR18260 {
+  class X {
+    public:
+      void move();
+  } x;
+
+  void test() {
+    x.move();
+    std::move();
+    std::move(x);
+  }
+} // end namespace PR18260
