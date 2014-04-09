@@ -33,7 +33,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: %indvar = phi i32 [ %indvar.next, %for.body ], [ 0, %entry ]
 ; CHECK: %call = tail call i32 @foo(i32 %indvar) #1
 ; CHECK: %indvar.next = add i32 %indvar, 1
-; CHECK: %exitcond1 = icmp eq i32 %indvar.next, 498
+; CHECK: %exitcond1 = icmp eq i32 %indvar, 497
 ; CHECK: br i1 %exitcond1, label %for.end, label %for.body
 
 ; CHECK: ret
@@ -83,7 +83,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: %arrayidx = getelementptr inbounds i32* %x, i64 %indvar
 ; CHECK: store i32 %call, i32* %arrayidx, align 4
 ; CHECK: %indvar.next = add i64 %indvar, 1
-; CHECK: %exitcond = icmp eq i64 %indvar.next, 1500
+; CHECK: %exitcond = icmp eq i64 %indvar, 1499
 ; CHECK: br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: ret
@@ -131,7 +131,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: %arrayidx = getelementptr inbounds i32* %x, i64 %indvars.iv
 ; CHECK: store i32 %call, i32* %arrayidx, align 4
 ; CHECK: %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK: %exitcond1 = icmp eq i64 %indvars.iv.next, 1500
+; CHECK: %exitcond1 = icmp eq i64 %indvars.iv, 1499
 ; CHECK: br i1 %exitcond1, label %for.end, label %for.body
 
 ; CHECK: ret
@@ -213,7 +213,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: %add = fadd float %1, %mul
 ; CHECK: store float %add, float* %arrayidx2, align 4
 ; CHECK: %indvar.next = add i64 %indvar, 1
-; CHECK: %exitcond = icmp eq i64 %indvar.next, 3200
+; CHECK: %exitcond = icmp eq i64 %indvar, 3199
 ; CHECK: br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: ret
@@ -313,7 +313,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: %add = fadd float %2, %mul
 ; CHECK: store float %add, float* %arrayidx4, align 4
 ; CHECK: %indvar.next = add i64 %indvar, 1
-; CHECK: %exitcond = icmp eq i64 %indvar.next, 3200
+; CHECK: %exitcond = icmp eq i64 %indvar, 3199
 ; CHECK: br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: ret

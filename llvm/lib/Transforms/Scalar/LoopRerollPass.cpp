@@ -1088,9 +1088,8 @@ bool LoopReroll::reroll(Instruction *IV, Loop *L, BasicBlock *Header,
                            L, SCEV::FlagAnyWrap));
   { // Limit the lifetime of SCEVExpander.
     SCEVExpander Expander(*SE, "reroll");
-    PHINode *NewIV =
-      cast<PHINode>(Expander.expandCodeFor(H, IV->getType(),
-                                           Header->begin()));
+    Value *NewIV = Expander.expandCodeFor(H, IV->getType(), Header->begin());
+
     for (DenseSet<Instruction *>::iterator J = BaseUseSet.begin(),
          JE = BaseUseSet.end(); J != JE; ++J)
       (*J)->replaceUsesOfWith(IV, NewIV);
@@ -1101,20 +1100,23 @@ bool LoopReroll::reroll(Instruction *IV, Loop *L, BasicBlock *Header,
         if (Inc == 1)
           ICSCEV =
             SE->getMulExpr(ICSCEV, SE->getConstant(ICSCEV->getType(), Scale));
-        Value *IC;
-        if (isa<SCEVConstant>(ICSCEV)) {
-          IC = Expander.expandCodeFor(ICSCEV, NewIV->getType(), BI);
+        // Iteration count SCEV minus 1
+        const SCEV *ICMinus1SCEV =
+          SE->getMinusSCEV(ICSCEV, SE->getConstant(ICSCEV->getType(), 1));
+
+        Value *ICMinus1; // Iteration count minus 1
+        if (isa<SCEVConstant>(ICMinus1SCEV)) {
+          ICMinus1 = Expander.expandCodeFor(ICMinus1SCEV, NewIV->getType(), BI);
         } else {
           BasicBlock *Preheader = L->getLoopPreheader();
           if (!Preheader)
             Preheader = InsertPreheaderForLoop(L, this);
 
-          IC = Expander.expandCodeFor(ICSCEV, NewIV->getType(),
-                                      Preheader->getTerminator());
+          ICMinus1 = Expander.expandCodeFor(ICMinus1SCEV, NewIV->getType(),
+                                            Preheader->getTerminator());
         }
  
-        Value *NewIVNext = NewIV->getIncomingValueForBlock(Header); 
-        Value *Cond = new ICmpInst(BI, CmpInst::ICMP_EQ, NewIVNext, IC,
+        Value *Cond = new ICmpInst(BI, CmpInst::ICMP_EQ, NewIV, ICMinus1,
                                    "exitcond");
         BI->setCondition(Cond);
 

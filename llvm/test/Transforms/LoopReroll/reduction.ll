@@ -38,7 +38,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: %0 = load i32* %arrayidx, align 4
 ; CHECK: %add = add nsw i32 %0, %r.029
 ; CHECK: %indvar.next = add i64 %indvar, 1
-; CHECK: %exitcond = icmp eq i64 %indvar.next, 400
+; CHECK: %exitcond = icmp eq i64 %indvar, 399
 ; CHECK: br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: ret
@@ -83,7 +83,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: %0 = load float* %arrayidx, align 4
 ; CHECK: %add = fadd float %0, %r.029
 ; CHECK: %indvar.next = add i64 %indvar, 1
-; CHECK: %exitcond = icmp eq i64 %indvar.next, 400
+; CHECK: %exitcond = icmp eq i64 %indvar, 399
 ; CHECK: br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: ret
