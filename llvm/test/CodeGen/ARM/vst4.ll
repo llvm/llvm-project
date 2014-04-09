@@ -60,6 +60,18 @@ define void @vst4i64(i64* %A, <1 x i64>* %B) nounwind {
 	ret void
 }
 
+define void @vst4i64_update(i64** %ptr, <1 x i64>* %B) nounwind {
+;CHECK-LABEL: vst4i64_update:
+;CHECK: vst1.64	{d16, d17, d18, d19}, [r1]!
+        %A = load i64** %ptr
+        %tmp0 = bitcast i64* %A to i8*
+        %tmp1 = load <1 x i64>* %B
+        call void @llvm.arm.neon.vst4.v1i64(i8* %tmp0, <1 x i64> %tmp1, <1 x i64> %tmp1, <1 x i64> %tmp1, <1 x i64> %tmp1, i32 1)
+        %tmp2 = getelementptr i64* %A, i32 4
+        store i64* %tmp2, i64** %ptr
+        ret void
+}
+
 define void @vst4Qi8(i8* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: vst4Qi8:
 ;Check the alignment value.  Max for this instruction is 256 bits:

@@ -1673,9 +1673,61 @@ SDValue ARMDAGToDAGISel::GetVLDSTAlign(SDValue Align, unsigned NumVecs,
   return CurDAG->getTargetConstant(Alignment, MVT::i32);
 }
 
+static bool isVLDfixed(unsigned Opc)
+{
+  switch (Opc) {
+  default: return false;
+  case ARM::VLD1d8wb_fixed : return true;
+  case ARM::VLD1d16wb_fixed : return true;
+  case ARM::VLD1d64Qwb_fixed : return true;
+  case ARM::VLD1d32wb_fixed : return true;
+  case ARM::VLD1d64wb_fixed : return true;
+  case ARM::VLD1d64TPseudoWB_fixed : return true;
+  case ARM::VLD1d64QPseudoWB_fixed : return true;
+  case ARM::VLD1q8wb_fixed : return true;
+  case ARM::VLD1q16wb_fixed : return true;
+  case ARM::VLD1q32wb_fixed : return true;
+  case ARM::VLD1q64wb_fixed : return true;
+  case ARM::VLD2d8wb_fixed : return true;
+  case ARM::VLD2d16wb_fixed : return true;
+  case ARM::VLD2d32wb_fixed : return true;
+  case ARM::VLD2q8PseudoWB_fixed : return true;
+  case ARM::VLD2q16PseudoWB_fixed : return true;
+  case ARM::VLD2q32PseudoWB_fixed : return true;
+  case ARM::VLD2DUPd8wb_fixed : return true;
+  case ARM::VLD2DUPd16wb_fixed : return true;
+  case ARM::VLD2DUPd32wb_fixed : return true;
+  }
+}
+
+static bool isVSTfixed(unsigned Opc)
+{
+  switch (Opc) {
+  default: return false;
+  case ARM::VST1d8wb_fixed : return true;
+  case ARM::VST1d16wb_fixed : return true;
+  case ARM::VST1d32wb_fixed : return true;
+  case ARM::VST1d64wb_fixed : return true;
+  case ARM::VST1q8wb_fixed : return true; 
+  case ARM::VST1q16wb_fixed : return true; 
+  case ARM::VST1q32wb_fixed : return true; 
+  case ARM::VST1q64wb_fixed : return true; 
+  case ARM::VST1d64TPseudoWB_fixed : return true;
+  case ARM::VST1d64QPseudoWB_fixed : return true;
+  case ARM::VST2d8wb_fixed : return true;
+  case ARM::VST2d16wb_fixed : return true;
+  case ARM::VST2d32wb_fixed : return true;
+  case ARM::VST2q8PseudoWB_fixed : return true;
+  case ARM::VST2q16PseudoWB_fixed : return true;
+  case ARM::VST2q32PseudoWB_fixed : return true;
+  }
+}
+
 // Get the register stride update opcode of a VLD/VST instruction that
 // is otherwise equivalent to the given fixed stride updating instruction.
 static unsigned getVLDSTRegisterUpdateOpcode(unsigned Opc) {
+  assert((isVLDfixed(Opc) || isVSTfixed(Opc))
+    && "Incorrect fixed stride updating instruction.");
   switch (Opc) {
   default: break;
   case ARM::VLD1d8wb_fixed: return ARM::VLD1d8wb_register;
@@ -1686,6 +1738,10 @@ static unsigned getVLDSTRegisterUpdateOpcode(unsigned Opc) {
   case ARM::VLD1q16wb_fixed: return ARM::VLD1q16wb_register;
   case ARM::VLD1q32wb_fixed: return ARM::VLD1q32wb_register;
   case ARM::VLD1q64wb_fixed: return ARM::VLD1q64wb_register;
+  case ARM::VLD1d64Twb_fixed: return ARM::VLD1d64Twb_register;
+  case ARM::VLD1d64Qwb_fixed: return ARM::VLD1d64Qwb_register;
+  case ARM::VLD1d64TPseudoWB_fixed: return ARM::VLD1d64TPseudoWB_register;
+  case ARM::VLD1d64QPseudoWB_fixed: return ARM::VLD1d64QPseudoWB_register;
 
   case ARM::VST1d8wb_fixed: return ARM::VST1d8wb_register;
   case ARM::VST1d16wb_fixed: return ARM::VST1d16wb_register;
@@ -1785,11 +1841,11 @@ SDNode *ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
       SDValue Inc = N->getOperand(AddrOpIdx + 1);
       // FIXME: VLD1/VLD2 fixed increment doesn't need Reg0. Remove the reg0
       // case entirely when the rest are updated to that form, too.
-      if ((NumVecs == 1 || NumVecs == 2) && !isa<ConstantSDNode>(Inc.getNode()))
+      if ((NumVecs <= 2) && !isa<ConstantSDNode>(Inc.getNode()))
         Opc = getVLDSTRegisterUpdateOpcode(Opc);
-      // We use a VLD1 for v1i64 even if the pseudo says vld2/3/4, so
+      // FIXME: We use a VLD1 for v1i64 even if the pseudo says vld2/3/4, so
       // check for that explicitly too. Horribly hacky, but temporary.
-      if ((NumVecs != 1 && NumVecs != 2 && Opc != ARM::VLD1q64wb_fixed) ||
+      if ((NumVecs > 2 && !isVLDfixed(Opc)) ||
           !isa<ConstantSDNode>(Inc.getNode()))
         Ops.push_back(isa<ConstantSDNode>(Inc.getNode()) ? Reg0 : Inc);
     }
@@ -1937,11 +1993,12 @@ SDNode *ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
       // case entirely when the rest are updated to that form, too.
       if (NumVecs <= 2 && !isa<ConstantSDNode>(Inc.getNode()))
         Opc = getVLDSTRegisterUpdateOpcode(Opc);
-      // We use a VST1 for v1i64 even if the pseudo says vld2/3/4, so
+      // FIXME: We use a VST1 for v1i64 even if the pseudo says vld2/3/4, so
       // check for that explicitly too. Horribly hacky, but temporary.
-      if ((NumVecs > 2 && Opc != ARM::VST1q64wb_fixed) ||
-          !isa<ConstantSDNode>(Inc.getNode()))
-        Ops.push_back(isa<ConstantSDNode>(Inc.getNode()) ? Reg0 : Inc);
+      if  (!isa<ConstantSDNode>(Inc.getNode()))
+        Ops.push_back(Inc);
+      else if (NumVecs > 2 && !isVSTfixed(Opc))
+        Ops.push_back(Reg0);
     }
     Ops.push_back(SrcReg);
     Ops.push_back(Pred);
@@ -2834,7 +2891,7 @@ SDNode *ARMDAGToDAGISel::Select(SDNode *N) {
     static const uint16_t DOpcodes[] = { ARM::VLD3d8Pseudo_UPD,
                                          ARM::VLD3d16Pseudo_UPD,
                                          ARM::VLD3d32Pseudo_UPD,
-                                         ARM::VLD1q64wb_fixed};
+                                         ARM::VLD1d64TPseudoWB_fixed};
     static const uint16_t QOpcodes0[] = { ARM::VLD3q8Pseudo_UPD,
                                           ARM::VLD3q16Pseudo_UPD,
                                           ARM::VLD3q32Pseudo_UPD };
@@ -2848,7 +2905,7 @@ SDNode *ARMDAGToDAGISel::Select(SDNode *N) {
     static const uint16_t DOpcodes[] = { ARM::VLD4d8Pseudo_UPD,
                                          ARM::VLD4d16Pseudo_UPD,
                                          ARM::VLD4d32Pseudo_UPD,
-                                         ARM::VLD1q64wb_fixed};
+                                         ARM::VLD1d64QPseudoWB_fixed};
     static const uint16_t QOpcodes0[] = { ARM::VLD4q8Pseudo_UPD,
                                           ARM::VLD4q16Pseudo_UPD,
                                           ARM::VLD4q32Pseudo_UPD };
