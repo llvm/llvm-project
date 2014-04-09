@@ -2587,6 +2587,7 @@ class A64I_SRexs_impl<bits<2> size, bits<3> opcode, string asm, dag outs,
                         pat, itin> {
   let mayStore = 1;
   let PostEncoderMethod = "fixLoadStoreExclusive<1,0>";
+  let Constraints = "@earlyclobber $Rs";
 }
 
 multiclass A64I_SRex<string asmstr, bits<3> opcode, string prefix> {
