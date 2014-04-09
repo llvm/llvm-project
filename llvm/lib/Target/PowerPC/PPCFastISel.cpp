@@ -892,11 +892,13 @@ unsigned PPCFastISel::PPCMoveToFPReg(MVT SrcVT, unsigned SrcReg,
   unsigned LoadOpc = PPC::LFD;
 
   if (SrcVT == MVT::i32) {
-    Addr.Offset = 4;
-    if (!IsSigned)
+    if (!IsSigned) {
       LoadOpc = PPC::LFIWZX;
-    else if (PPCSubTarget.hasLFIWAX())
+      Addr.Offset = 4;
+    } else if (PPCSubTarget.hasLFIWAX()) {
       LoadOpc = PPC::LFIWAX;
+      Addr.Offset = 4;
+    }
   }
 
   const TargetRegisterClass *RC = &PPC::F8RCRegClass;
