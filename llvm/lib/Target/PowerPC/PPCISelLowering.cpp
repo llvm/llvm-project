@@ -2333,7 +2333,7 @@ PPCTargetLowering::LowerFormalArguments_64SVR4(
             EVT ObjType = (ObjSize == 1 ? MVT::i8 :
                            (ObjSize == 2 ? MVT::i16 : MVT::i32));
             Store = DAG.getTruncStore(Val.getValue(1), dl, Val, FIN,
-                                      MachinePointerInfo(FuncArg, CurArgOffset),
+                                      MachinePointerInfo(FuncArg),
                                       ObjType, false, false, 0);
           } else {
             // For sizes that don't fit a truncating store (3, 5, 6, 7),
@@ -2345,7 +2345,7 @@ PPCTargetLowering::LowerFormalArguments_64SVR4(
             int FI = MFI->CreateFixedObject(PtrByteSize, ArgOffset, true);
             SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
             Store = DAG.getStore(Val.getValue(1), dl, Val, FIN,
-                                 MachinePointerInfo(FuncArg, ArgOffset),
+                                 MachinePointerInfo(FuncArg),
                                  false, false, 0);
           }
 
@@ -2369,7 +2369,7 @@ PPCTargetLowering::LowerFormalArguments_64SVR4(
           SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
           SDValue Val = DAG.getCopyFromReg(Chain, dl, VReg, PtrVT);
           SDValue Store = DAG.getStore(Val.getValue(1), dl, Val, FIN,
-                                       MachinePointerInfo(FuncArg, ArgOffset),
+                                       MachinePointerInfo(FuncArg, j),
                                        false, false, 0);
           MemOps.push_back(Store);
           ++GPR_idx;
@@ -2665,8 +2665,7 @@ PPCTargetLowering::LowerFormalArguments_Darwin(
           SDValue Val = DAG.getCopyFromReg(Chain, dl, VReg, PtrVT);
           EVT ObjType = ObjSize == 1 ? MVT::i8 : MVT::i16;
           SDValue Store = DAG.getTruncStore(Val.getValue(1), dl, Val, FIN,
-                                            MachinePointerInfo(FuncArg,
-                                              CurArgOffset),
+                                            MachinePointerInfo(FuncArg),
                                             ObjType, false, false, 0);
           MemOps.push_back(Store);
           ++GPR_idx;
@@ -2690,7 +2689,7 @@ PPCTargetLowering::LowerFormalArguments_Darwin(
           SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
           SDValue Val = DAG.getCopyFromReg(Chain, dl, VReg, PtrVT);
           SDValue Store = DAG.getStore(Val.getValue(1), dl, Val, FIN,
-                                       MachinePointerInfo(FuncArg, ArgOffset),
+                                       MachinePointerInfo(FuncArg, j),
                                        false, false, 0);
           MemOps.push_back(Store);
           ++GPR_idx;
