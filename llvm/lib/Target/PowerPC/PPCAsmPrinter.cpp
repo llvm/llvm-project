@@ -701,13 +701,6 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       return;
     }
     break;
-  case PPC::SYNC:
-    // In Book E sync is called msync, handle this special case here...
-    if (Subtarget.isBookE()) {
-      OutStreamer.EmitRawText(StringRef("\tmsync"));
-      return;
-    }
-    break;
   case PPC::LD:
   case PPC::STD:
   case PPC::LWA_32:

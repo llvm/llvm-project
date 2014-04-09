@@ -580,6 +580,7 @@ def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 def In32BitMode  : Predicate<"!PPCSubTarget.isPPC64()">;
 def In64BitMode  : Predicate<"PPCSubTarget.isPPC64()">;
 def IsBookE  : Predicate<"PPCSubTarget.isBookE()">;
+def IsNotBookE  : Predicate<"!PPCSubTarget.isBookE()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
@@ -1541,8 +1542,17 @@ def STMW : DForm_1<47, (outs), (ins gprc:$rS, memri:$dst),
                    "stmw $rS, $dst", LdStLMW, []>;
 
 def SYNC : XForm_24_sync<31, 598, (outs), (ins i32imm:$L),
-                        "sync $L", LdStSync, []>;
-def : Pat<(int_ppc_sync), (SYNC 0)>;
+                        "sync $L", LdStSync, []>, Requires<[IsNotBookE]>;
+
+let isCodeGenOnly = 1 in {
+  def MSYNC : XForm_24_sync<31, 598, (outs), (ins),
+                           "msync", LdStSync, []>, Requires<[IsBookE]> {
+    let L = 0;
+  }
+}
+
+def : Pat<(int_ppc_sync), (SYNC 0)>, Requires<[IsNotBookE]>;
+def : Pat<(int_ppc_sync), (MSYNC)>, Requires<[IsBookE]>;
 
 //===----------------------------------------------------------------------===//
 // PPC32 Arithmetic Instructions.
@@ -2284,7 +2294,8 @@ def : Pat<(f64 (extloadf32 xaddr:$src)),
 def : Pat<(f64 (fextend f32:$src)),
           (COPY_TO_REGCLASS $src, F8RC)>;
 
-def : Pat<(atomic_fence (imm), (imm)), (SYNC 0)>;
+def : Pat<(atomic_fence (imm), (imm)), (SYNC 0)>, Requires<[IsNotBookE]>;
+def : Pat<(atomic_fence (imm), (imm)), (MSYNC)>, Requires<[IsBookE]>;
 
 // Additional FNMSUB patterns: -a*c + b == -(a*c - b)
 def : Pat<(fma (fneg f64:$A), f64:$C, f64:$B),
@@ -2373,10 +2384,10 @@ class PPCAsmPseudo<string asm, dag iops>
 
 def : InstAlias<"sc", (SC 0)>;
 
-def : InstAlias<"sync", (SYNC 0)>;
-def : InstAlias<"msync", (SYNC 0)>;
-def : InstAlias<"lwsync", (SYNC 1)>;
-def : InstAlias<"ptesync", (SYNC 2)>;
+def : InstAlias<"sync", (SYNC 0)>, Requires<[IsNotBookE]>;
+def : InstAlias<"msync", (SYNC 0)>, Requires<[IsNotBookE]>;
+def : InstAlias<"lwsync", (SYNC 1)>, Requires<[IsNotBookE]>;
+def : InstAlias<"ptesync", (SYNC 2)>, Requires<[IsNotBookE]>;
 
 def : InstAlias<"wait", (WAIT 0)>;
 def : InstAlias<"waitrsv", (WAIT 1)>;
