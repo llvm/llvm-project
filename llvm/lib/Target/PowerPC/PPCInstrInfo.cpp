@@ -570,12 +570,14 @@ PPCInstrInfo::StoreRegToStackSlot(MachineFunction &MF,
   // update isStoreToStackSlot.
 
   DebugLoc DL;
-  if (PPC::GPRCRegClass.hasSubClassEq(RC)) {
+  if (PPC::GPRCRegClass.hasSubClassEq(RC) ||
+      PPC::GPRC_NOR0RegClass.hasSubClassEq(RC)) {
     NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(PPC::STW))
                                        .addReg(SrcReg,
                                                getKillRegState(isKill)),
                                        FrameIdx));
-  } else if (PPC::G8RCRegClass.hasSubClassEq(RC)) {
+  } else if (PPC::G8RCRegClass.hasSubClassEq(RC) ||
+             PPC::G8RC_NOX0RegClass.hasSubClassEq(RC)) {
     NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(PPC::STD))
                                        .addReg(SrcReg,
                                                getKillRegState(isKill)),
@@ -695,10 +697,12 @@ PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, DebugLoc DL,
   // Note: If additional load instructions are added here,
   // update isLoadFromStackSlot.
 
-  if (PPC::GPRCRegClass.hasSubClassEq(RC)) {
+  if (PPC::GPRCRegClass.hasSubClassEq(RC) ||
+      PPC::GPRC_NOR0RegClass.hasSubClassEq(RC)) {
     NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(PPC::LWZ),
                                                DestReg), FrameIdx));
-  } else if (PPC::G8RCRegClass.hasSubClassEq(RC)) {
+  } else if (PPC::G8RCRegClass.hasSubClassEq(RC) ||
+             PPC::G8RC_NOX0RegClass.hasSubClassEq(RC)) {
     NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(PPC::LD), DestReg),
                                        FrameIdx));
   } else if (PPC::F8RCRegClass.hasSubClassEq(RC)) {
