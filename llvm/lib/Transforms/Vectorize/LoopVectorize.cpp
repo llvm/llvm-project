@@ -4191,13 +4191,22 @@ bool LoopVectorizationLegality::AddReductionVar(PHINode *Phi,
         continue;
       }
 
-      // Process instructions only once (termination).
+      // Process instructions only once (termination). Each reduction cycle
+      // value must only be used once, except by phi nodes and min/max
+      // reductions which are represented as a cmp followed by a select.
+      ReductionInstDesc IgnoredVal(false, 0);
       if (VisitedInsts.insert(Usr)) {
         if (isa<PHINode>(Usr))
           PHIs.push_back(Usr);
         else
           NonPHIs.push_back(Usr);
-      }
+      } else if (!isa<PHINode>(Usr) &&
+                 ((!isa<FCmpInst>(Usr) &&
+                   !isa<ICmpInst>(Usr) &&
+                   !isa<SelectInst>(Usr)) ||
+                  !isMinMaxSelectCmpPattern(Usr, IgnoredVal).IsReduction))
+        return false;
+
       // Remember that we completed the cycle.
       if (Usr == Phi)
         FoundStartPHI = true;
