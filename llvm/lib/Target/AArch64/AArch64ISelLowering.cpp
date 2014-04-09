@@ -2782,7 +2782,7 @@ AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 AArch64TargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
   const Value *DestSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
-  const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
+  const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
 
   // We have to make sure we copy the entire structure: 8+8+8+4+4 = 32 bytes
   // rather than just 8.

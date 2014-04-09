@@ -179,24 +179,19 @@ define void @test_va_copy() {
 
 ; Check beginning and end again:
 
-; CHECK: ldr [[BLOCK:x[0-9]+]], [{{x[0-9]+}}, #:lo12:var]
 ; CHECK: add x[[SRC_LIST:[0-9]+]], {{x[0-9]+}}, #:lo12:var
-; CHECK-NOFP: ldr [[BLOCK:x[0-9]+]], [{{x[0-9]+}}, #:lo12:var]
-; CHECK-NOFP: add x[[SRC_LIST:[0-9]+]], {{x[0-9]+}}, #:lo12:var
-
-; CHECK: str [[BLOCK]], [{{x[0-9]+}}, #:lo12:second_list]
-
-; CHECK: ldr [[BLOCK:x[0-9]+]], [x[[SRC_LIST]], #24]
 ; CHECK: add x[[DEST_LIST:[0-9]+]], {{x[0-9]+}}, #:lo12:second_list
+; CHECK: ldr [[BLOCK1:x[0-9]+]], [{{x[0-9]+}}, #:lo12:var]
+; CHECK: ldr [[BLOCK2:x[0-9]+]], [x[[SRC_LIST]], #24]
+; CHECK: str [[BLOCK1]], [{{x[0-9]+}}, #:lo12:second_list]
+; CHECK: str [[BLOCK2]], [x[[DEST_LIST]], #24]
 
-; CHECK: str [[BLOCK]], [x[[DEST_LIST]], #24]
-
-; CHECK-NOFP: str [[BLOCK]], [{{x[0-9]+}}, #:lo12:second_list]
-
-; CHECK-NOFP: ldr [[BLOCK:x[0-9]+]], [x[[SRC_LIST]], #24]
+; CHECK-NOFP: add x[[SRC_LIST:[0-9]+]], {{x[0-9]+}}, #:lo12:var
 ; CHECK-NOFP: add x[[DEST_LIST:[0-9]+]], {{x[0-9]+}}, #:lo12:second_list
-
-; CHECK-NOFP: str [[BLOCK]], [x[[DEST_LIST]], #24]
+; CHECK-NOFP: ldr [[BLOCK1:x[0-9]+]], [{{x[0-9]+}}, #:lo12:var]
+; CHECK-NOFP: ldr [[BLOCK2:x[0-9]+]], [x[[SRC_LIST]], #24]
+; CHECK-NOFP: str [[BLOCK1]], [{{x[0-9]+}}, #:lo12:second_list]
+; CHECK-NOFP: str [[BLOCK2]], [x[[DEST_LIST]], #24]
 
   ret void
 ; CHECK: ret
