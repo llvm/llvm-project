@@ -144,6 +144,13 @@ def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
 def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 }
 
+// The full condition-code register. This is not modeled fully, but defined
+// here primarily, for compatibility with gcc, to allow the inline asm "cc"
+// clobber specification to work.
+def CC : PPCReg<"cc">, DwarfRegAlias<CR0> {
+  let Aliases = [CR0, CR1, CR2, CR3, CR4, CR5, CR6, CR7];
+}
+
 // Link register
 def LR  : SPR<8, "lr">, DwarfRegNum<[-2, 65]>;
 //let Aliases = [LR] in
@@ -234,3 +241,8 @@ def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY)> {
   let CopyCost = -1;
 }
+
+def CCRC : RegisterClass<"PPC", [i32], 32, (add CC)> {
+  let isAllocatable = 0;
+}
+
