@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -use-init-array < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-none-eabi -verify-machineinstrs -use-init-array < %s | FileCheck %s
 
 define internal void @_GLOBAL__I_a() section ".text.startup" {
   ret void

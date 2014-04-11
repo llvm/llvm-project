@@ -22,3 +22,10 @@ AArch64LinuxTargetObjectFile::Initialize(MCContext &Ctx,
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(TM.Options.UseInitArray);
 }
+
+void
+AArch64ElfTargetObjectFile::Initialize(MCContext &Ctx,
+                                       const TargetMachine &TM) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  InitializeELF(TM.Options.UseInitArray);
+}
