@@ -18,8 +18,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
@@ -41,9 +43,9 @@ using namespace llvm;
 
 /// Cutoff after which to stop analysing a set of phi nodes potentially involved
 /// in a cycle. Because we are analysing 'through' phi nodes we need to be
-/// careful with value equivalence. We use dominance to make sure a value cannot
-/// be involved in a cycle.
-const unsigned MaxNumPhiBBsValueDominanceCheck = 20;
+/// careful with value equivalence. We use reachability to make sure a value
+/// cannot be involved in a cycle.
+const unsigned MaxNumPhiBBsValueReachabilityCheck = 20;
 
 //===----------------------------------------------------------------------===//
 // Useful predicates
@@ -453,7 +455,6 @@ namespace {
 
     virtual AliasResult alias(const Location &LocA,
                               const Location &LocB) {
-      DT = 0;
       assert(AliasCache.empty() && "AliasCache must be cleared after use!");
       assert(notDifferentParent(LocA.Ptr, LocB.Ptr) &&
              "BasicAliasAnalysis doesn't support interprocedural queries.");
@@ -522,16 +523,14 @@ namespace {
     // Visited - Track instructions visited by pointsToConstantMemory.
     SmallPtrSet<const Value*, 16> Visited;
 
-    // We use the dominator tree to check values can't be part of a cycle.
-    DominatorTree *DT;
-
     /// \brief Check whether two Values can be considered equivalent.
     ///
     /// In addition to pointer equivalence of \p V1 and \p V2 this checks
     /// whether they can not be part of a cycle in the value graph by looking at
-    /// all visited phi nodes an making sure that the value dominates all of
-    /// them.
-    bool isValueEqual(const Value *V1, const Value *V2);
+    /// all visited phi nodes an making sure that the phis cannot reach the
+    /// value. We have to do this because we are looking through phi nodes (That
+    /// is we say noalias(V, phi(VA, VB)) if noalias(V, VA) and noalias(V, VB).
+    bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
 
     /// \brief Dest and Src are the variable indices from two decomposed
     /// GetElementPtr instructions GEP1 and GEP2 which have common base
@@ -1196,7 +1195,13 @@ BasicAliasAnalysis::aliasCheck(const Value *V1, uint64_t V1Size,
   V2 = V2->stripPointerCasts();
 
   // Are we checking for alias of the same value?
-  if (isValueEqual(V1, V2)) return MustAlias;
+  // Because we look 'through' phi nodes we could look at "Value" pointers from
+  // different iterations. We must therefore make sure that this is not the
+  // case. The function isValueEqualInPotentialCycles ensures that this cannot
+  // happen by looking at the visited phi nodes and making sure they cannot
+  // reach the value.
+  if (isValueEqualInPotentialCycles(V1, V2))
+    return MustAlias;
 
   if (!V1->getType()->isPointerTy() || !V2->getType()->isPointerTy())
     return NoAlias;  // Scalars cannot alias each other
@@ -1317,7 +1322,8 @@ BasicAliasAnalysis::aliasCheck(const Value *V1, uint64_t V1Size,
   return AliasCache[Locs] = Result;
 }
 
-bool BasicAliasAnalysis::isValueEqual(const Value *V, const Value *V2) {
+bool BasicAliasAnalysis::isValueEqualInPotentialCycles(const Value *V,
+                                                       const Value *V2) {
   if (V != V2)
     return false;
 
@@ -1325,23 +1331,23 @@ bool BasicAliasAnalysis::isValueEqual(const Value *V, const Value *V2) {
   if (!Inst)
     return true;
 
-  // Use the dominance if available.
-  DT = getAnalysisIfAvailable<DominatorTree>();
-  if (DT) {
-    if (VisitedPhiBBs.size() > MaxNumPhiBBsValueDominanceCheck)
+  if (VisitedPhiBBs.size() > MaxNumPhiBBsValueReachabilityCheck)
+    return false;
+
+  // Use dominance or loop info if available.
+  DominatorTree *DT = getAnalysisIfAvailable<DominatorTree>();
+  LoopInfo *LI = getAnalysisIfAvailable<LoopInfo>();
+
+  // Make sure that the visited phis cannot reach the Value. This ensures that
+  // the Values cannot come from different iterations of a potential cycle the
+  // phi nodes could be involved in.
+  for (SmallPtrSet<const BasicBlock *, 8>::iterator PI = VisitedPhiBBs.begin(),
+                                                    PE = VisitedPhiBBs.end();
+       PI != PE; ++PI)
+    if (isPotentiallyReachable((*PI)->begin(), Inst, DT, LI))
       return false;
 
-    // Make sure that the visited phis are dominated by the Value.
-    for (SmallPtrSet<const BasicBlock *, 8>::iterator
-             PI = VisitedPhiBBs.begin(),
-             PE = VisitedPhiBBs.end();
-         PI != PE; ++PI)
-      if (!DT->dominates(Inst, *PI))
-        return false;
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 /// GetIndexDifference - Dest and Src are the variable indices from two
@@ -1362,7 +1368,8 @@ void BasicAliasAnalysis::GetIndexDifference(
     // Find V in Dest.  This is N^2, but pointer indices almost never have more
     // than a few variable indexes.
     for (unsigned j = 0, e = Dest.size(); j != e; ++j) {
-      if (!isValueEqual(Dest[j].V, V) || Dest[j].Extension != Extension)
+      if (!isValueEqualInPotentialCycles(Dest[j].V, V) ||
+          Dest[j].Extension != Extension)
         continue;
 
       // If we found it, subtract off Scale V's from the entry in Dest.  If it
