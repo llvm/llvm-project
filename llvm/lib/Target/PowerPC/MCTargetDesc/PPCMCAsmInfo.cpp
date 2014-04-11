@@ -12,10 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCMCAsmInfo.h"
+#include "llvm/ADT/Triple.h"
+
 using namespace llvm;
 
 void PPCMCAsmInfoDarwin::anchor() { }
 
+/// This version of the constructor is here to maintain ABI compatibility with
+/// LLVM 3.4.0
 PPCMCAsmInfoDarwin::PPCMCAsmInfoDarwin(bool is64Bit) {
   if (is64Bit) {
     PointerSize = CalleeSaveStackSlotSize = 8;
@@ -30,6 +34,28 @@ PPCMCAsmInfoDarwin::PPCMCAsmInfoDarwin(bool is64Bit) {
 
   AssemblerDialect = 1;           // New-Style mnemonics.
   SupportsDebugInformation= true; // Debug information.
+}
+
+PPCMCAsmInfoDarwin::PPCMCAsmInfoDarwin(bool is64Bit, const Triple& T) {
+  if (is64Bit) {
+    PointerSize = CalleeSaveStackSlotSize = 8;
+  }
+  IsLittleEndian = false;
+
+  CommentString = ";";
+  ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  if (!is64Bit)
+    Data64bitsDirective = 0;      // We can't emit a 64-bit unit in PPC32 mode.
+
+  AssemblerDialect = 1;           // New-Style mnemonics.
+  SupportsDebugInformation= true; // Debug information.
+
+  // old assembler lacks some directives
+  // FIXME: this should really be a check on the assembler characteristics
+  // rather than OS version
+  if (T.isMacOSX() && T.isMacOSXVersionLT(10, 6))
+    HasWeakDefCanBeHiddenDirective = false;
 }
 
 void PPCLinuxMCAsmInfo::anchor() { }

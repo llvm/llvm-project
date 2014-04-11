@@ -72,7 +72,7 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI, StringRef TT) {
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSDarwin())
-    MAI = new PPCMCAsmInfoDarwin(isPPC64);
+    MAI = new PPCMCAsmInfoDarwin(isPPC64, TheTriple);
   else
     MAI = new PPCLinuxMCAsmInfo(isPPC64);
 

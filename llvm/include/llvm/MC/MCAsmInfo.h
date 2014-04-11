@@ -270,6 +270,10 @@ namespace llvm {
     /// defined symbol.
     bool HasWeakDefDirective;                // Defaults to false.
 
+    /// True if we have a directive to declare a global as being a weak
+    /// defined symbol that can be hidden (unexported).
+    bool HasWeakDefCanBeHiddenDirective;     // Defaults to false.
+
     /// True if we have a .linkonce directive.  This is used on cygwin/mingw.
     bool HasLinkOnceDirective;               // Defaults to false.
 
@@ -501,6 +505,9 @@ namespace llvm {
     bool hasNoDeadStrip() const { return HasNoDeadStrip; }
     const char *getWeakRefDirective() const { return WeakRefDirective; }
     bool hasWeakDefDirective() const { return HasWeakDefDirective; }
+    bool hasWeakDefCanBeHiddenDirective() const {
+      return HasWeakDefCanBeHiddenDirective;
+    }
     bool hasLinkOnceDirective() const { return HasLinkOnceDirective; }
 
     MCSymbolAttr getHiddenVisibilityAttr() const { return HiddenVisibilityAttr;}
