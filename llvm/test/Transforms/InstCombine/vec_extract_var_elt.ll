@@ -16,3 +16,11 @@ define void @test (float %b, <8 x float> * %p)  {
   ret void    
 }
 
+; PR18600
+define i32 @test2(i32 %i) {
+  %e = extractelement <4 x i32> bitcast (<2 x i64> <i64 1, i64 2> to <4 x i32>), i32 %i
+  ret i32 %e
+
+; CHECK-LABEL: @test2
+; CHECK: extractelement
+}

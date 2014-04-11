@@ -25,11 +25,13 @@ static bool CheapToScalarize(Value *V, bool isConstant) {
     if (isConstant) return true;
 
     // If all elts are the same, we can extract it and use any of the values.
-    Constant *Op0 = C->getAggregateElement(0U);
-    for (unsigned i = 1, e = V->getType()->getVectorNumElements(); i != e; ++i)
-      if (C->getAggregateElement(i) != Op0)
-        return false;
-    return true;
+    if (Constant *Op0 = C->getAggregateElement(0U)) {
+      for (unsigned i = 1, e = V->getType()->getVectorNumElements(); i != e;
+           ++i)
+        if (C->getAggregateElement(i) != Op0)
+          return false;
+      return true;
+    }
   }
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return false;
