@@ -1009,7 +1009,15 @@ BasicAliasAnalysis::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
         return NoAlias;
       }
     } else {
-      if (V1Size != UnknownSize) {
+      // We have the situation where:
+      // +                +
+      // | BaseOffset     |
+      // ---------------->|
+      // |-->V1Size       |-------> V2Size
+      // GEP1             V2
+      // We need to know that V2Size is not unknown, otherwise we might have
+      // stripped a gep with negative index ('gep <ptr>, -1, ...).
+      if (V1Size != UnknownSize && V2Size != UnknownSize) {
         if (-(uint64_t)GEP1BaseOffset < V1Size)
           return PartialAlias;
         return NoAlias;
