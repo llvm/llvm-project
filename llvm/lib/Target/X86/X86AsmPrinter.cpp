@@ -393,9 +393,11 @@ bool X86AsmPrinter::printAsmMRegister(const MachineOperand &MO, char Mode,
   case 'k': // Print SImode register
     Reg = getX86SubSuperRegister(Reg, MVT::i32);
     break;
-  case 'q': // Print DImode register
-    // FIXME: gcc will actually print e instead of r for 32-bit.
-    Reg = getX86SubSuperRegister(Reg, MVT::i64);
+  case 'q':
+    // Print 64-bit register names if 64-bit integer registers are available.
+    // Otherwise, print 32-bit register names.
+    MVT::SimpleValueType Ty = Subtarget->is64Bit() ? MVT::i64 : MVT::i32;
+    Reg = getX86SubSuperRegister(Reg, Ty);
     break;
   }
 
