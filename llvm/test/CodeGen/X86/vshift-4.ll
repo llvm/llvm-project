@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 | FileCheck %s
+; RUN: llc < %s -march=x86 -mcpu=core2 | FileCheck %s
 
 ; test vector shifts converted to proper SSE2 vector shifts when the shift
 ; amounts are the same when using a shuffle splat.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse4.1 | FileCheck %s
+; RUN: llc < %s -march=x86 -mcpu=corei7 | FileCheck %s
 
 define <2 x i64> @shl1(<4 x i32> %r, <4 x i32> %a) nounwind readnone ssp {
 entry:
