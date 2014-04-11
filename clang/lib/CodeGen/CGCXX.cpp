@@ -92,7 +92,13 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   if (!ClassLayout.getBaseClassOffset(UniqueBase).isZero())
     return true;
 
+  // Give up if the calling conventions don't match. We could update the call,
+  // but it is probably not worth it.
   const CXXDestructorDecl *BaseD = UniqueBase->getDestructor();
+  if (BaseD->getType()->getAs<FunctionType>()->getCallConv() !=
+      D->getType()->getAs<FunctionType>()->getCallConv())
+    return true;
+
   return TryEmitDefinitionAsAlias(GlobalDecl(D, Dtor_Base),
                                   GlobalDecl(BaseD, Dtor_Base),
                                   false);

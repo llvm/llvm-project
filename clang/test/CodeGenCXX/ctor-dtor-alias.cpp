@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple x86_64-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-optzns | FileCheck %s
-// RUN: %clang_cc1 %s -triple x86_64-linux -emit-llvm -o - -mconstructor-aliases | FileCheck --check-prefix=NOOPT %s
+// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-optzns | FileCheck %s
+// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases | FileCheck --check-prefix=NOOPT %s
 
 // RUN: %clang_cc1 -cc1 -triple x86_64--netbsd -emit-llvm \
 // RUN: -mconstructor-aliases -O2 %s -o - | FileCheck --check-prefix=CHECK-RAUW %s
@@ -131,6 +131,22 @@ namespace test8 {
   bar::~bar() {}
   struct zed : public bar {};
   zed foo;
+}
+
+namespace test9 {
+struct foo {
+  __attribute__((stdcall)) ~foo() {
+  }
+};
+
+struct bar : public foo {};
+
+void zed() {
+  // Test that we produce a call to bar's destructor. We used to call foo's, but
+  // it has a different calling conversion.
+  // CHECK-DAG: call void @_ZN5test93barD2Ev
+  bar ptr;
+}
 }
 
 // CHECK-RAUW: @_ZTV1C = linkonce_odr unnamed_addr constant [4 x i8*] [{{[^@]*}}@_ZTI1C {{[^@]*}}@_ZN1CD2Ev {{[^@]*}}@_ZN1CD0Ev {{[^@]*}}]
