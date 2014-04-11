@@ -1622,6 +1622,21 @@ bool Generic_GCC::isPICDefaultForced() const {
   return false;
 }
 
+void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
+                                        ArgStringList &CC1Args) const {
+  const Generic_GCC::GCCVersion &V = GCCInstallation.getVersion();
+  bool UseInitArrayDefault = 
+      getTriple().getArch() == llvm::Triple::aarch64 ||
+      (getTriple().getOS() == llvm::Triple::Linux && (
+         !V.isOlderThan(4, 7, 0) ||
+         getTriple().getEnvironment() == llvm::Triple::Android));
+
+  if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                         options::OPT_fno_use_init_array,
+                         UseInitArrayDefault))
+    CC1Args.push_back("-fuse-init-array");
+}
+
 /// Hexagon Toolchain
 
 std::string Hexagon_TC::GetGnuDir(const std::string &InstalledDir) {
@@ -2534,19 +2549,6 @@ Tool *Linux::buildLinker() const {
 
 Tool *Linux::buildAssembler() const {
   return new tools::gnutools::Assemble(*this);
-}
-
-void Linux::addClangTargetOptions(const ArgList &DriverArgs,
-                                  ArgStringList &CC1Args) const {
-  const Generic_GCC::GCCVersion &V = GCCInstallation.getVersion();
-  bool UseInitArrayDefault =
-      !V.isOlderThan(4, 7, 0) ||
-      getTriple().getArch() == llvm::Triple::aarch64 ||
-      getTriple().getEnvironment() == llvm::Triple::Android;
-  if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                         options::OPT_fno_use_init_array,
-                         UseInitArrayDefault))
-    CC1Args.push_back("-fuse-init-array");
 }
 
 std::string Linux::computeSysRoot() const {
