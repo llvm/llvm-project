@@ -415,6 +415,10 @@ public:
                                 bool &HadExtra);
 };
 
+/// \return True if the last defined optimization level is -Ofast.
+/// And False otherwise.
+bool isOptimizationLevelFast(const llvm::opt::ArgList &Args);
+
 } // end namespace driver
 } // end namespace clang
 

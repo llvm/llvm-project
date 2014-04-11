@@ -303,7 +303,7 @@ public:
   /// AddFastMathRuntimeIfAvailable - If a runtime library exists that sets
   /// global flags for unsafe floating point math, add it and return true.
   ///
-  /// This checks for presence of the -ffast-math or -funsafe-math flags.
+  /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math flags.
   virtual bool
   AddFastMathRuntimeIfAvailable(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
