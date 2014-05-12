@@ -1,6 +1,6 @@
-======================
-LLVM 3.4 Release Notes
-======================
+========================
+LLVM 3.4.1 Release Notes
+========================
 
 .. contents::
     :local:
@@ -25,8 +25,17 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the `releases
 page <http://llvm.org/releases/>`_.
 
-Non-comprehensive list of changes in this release
-=================================================
+Non-comprehensive list of changes in 3.4.1
+==========================================
+
+* Various bug fixes for AArch64, ARM, PowerPC, R600, and X86 targets.
+
+* R600 geometry shader support
+
+* Fix for vaargs on X86
+
+Non-comprehensive list of changes in 3.4
+========================================
 
 * This is expected to be the last release of LLVM which compiles using a C++98
   toolchain. We expect to start using some C++11 features in LLVM and other
