@@ -22,6 +22,10 @@ _Static_assert(__alignof(c) == 4, "");
 #define __STDC_WANT_LIB_EXT1__ 1
 #include <stddef.h>
 rsize_t x = 0;
+_Static_assert(sizeof(max_align_t) >= sizeof(long long), "");
+_Static_assert(alignof(max_align_t) >= alignof(long long), "");
+_Static_assert(sizeof(max_align_t) >= sizeof(long double), "");
+_Static_assert(alignof(max_align_t) >= alignof(long double), "");
 
 // If we are freestanding, then also check RSIZE_MAX (in a hosted implementation
 // we will use the host stdint.h, which may not yet have C11 support).
