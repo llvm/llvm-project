@@ -27,6 +27,13 @@ Clang web page, this document applies to the *next* release, not the current
 one. To see the release notes for a specific release, please see the `releases
 page <http://llvm.org/releases/>`_.
 
+What's New in Clang 3.4.1?
+==========================
+
+* Various bug fixes for AArch64, ARM, and PowerPC targets
+
+* C++11 fixes
+
 What's New in Clang 3.4?
 ========================
 
