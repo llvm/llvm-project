@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -fmodules %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -triple i686-pc-win32 -fmsc-version=1700 %s
 
 noreturn int f(); // expected-error 1+{{}}
 
@@ -26,6 +27,10 @@ _Static_assert(sizeof(max_align_t) >= sizeof(long long), "");
 _Static_assert(alignof(max_align_t) >= alignof(long long), "");
 _Static_assert(sizeof(max_align_t) >= sizeof(long double), "");
 _Static_assert(alignof(max_align_t) >= alignof(long double), "");
+
+#ifdef _MSC_VER
+_Static_assert(sizeof(max_align_t) == sizeof(double), "");
+#endif
 
 // If we are freestanding, then also check RSIZE_MAX (in a hosted implementation
 // we will use the host stdint.h, which may not yet have C11 support).

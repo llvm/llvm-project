@@ -85,12 +85,16 @@ using ::std::nullptr_t;
 #endif
 
 #if __STDC_VERSION__ >= 201112L || __cplusplus >= 201103L
+#ifndef _MSC_VER
 typedef struct {
   long long __clang_max_align_nonce1
       __attribute__((__aligned__(__alignof__(long long))));
   long double __clang_max_align_nonce2
       __attribute__((__aligned__(__alignof__(long double))));
 } max_align_t;
+#else
+typedef double max_align_t;
+#endif
 #define __CLANG_MAX_ALIGN_T_DEFINED
 #endif
 
