@@ -1202,7 +1202,7 @@ $(DestSharedLib): $(LibName.SO) $(DestSharedLibDir)
 	$(Verb) $(INSTALL) $(LibName.SO) $(DestSharedLib)
 ifdef SHARED_ALIAS
 	$(Echo) Creating alias from $(DestSharedLib) to $(DestSharedAlias)
-	$(Verb) $(AliasTool) $(DestSharedLib) $(DestSharedAlias)
+	$(Verb) $(AliasTool) $(BaseLibName.SO) $(DestSharedAlias)
 endif
 
 uninstall-local::
