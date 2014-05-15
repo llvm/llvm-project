@@ -369,6 +369,14 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
                 J->getOpcode() == Instruction::URem ||
                 J->getOpcode() == Instruction::SRem)) {
       return true;
+    } else if (TT.isArch32Bit() &&
+               isLargeIntegerTy(false, J->getType()->getScalarType()) &&
+               (J->getOpcode() == Instruction::Shl ||
+                J->getOpcode() == Instruction::AShr ||
+                J->getOpcode() == Instruction::LShr)) {
+      // Only on PPC32, for 128-bit integers (specifically not 64-bit
+      // integers), these might be runtime calls.
+      return true;
     } else if (isa<IndirectBrInst>(J) || isa<InvokeInst>(J)) {
       // On PowerPC, indirect jumps use the counter register.
       return true;
