@@ -1027,8 +1027,9 @@ ifeq ($(HOST_OS), $(filter $(HOST_OS), Cygwin MingW))
 LLVMLibsOptions += -Wl,--enable-auto-import,--enable-runtime-pseudo-reloc \
                    -L $(SharedLibDir)
 endif
-LLVMLibsOptions += -lLLVM-$(LLVMVersion)
-LLVMLibsPaths += $(SharedLibDir)/$(SharedPrefix)LLVM-$(LLVMVersion)$(SHLIBEXT)
+LLVM_SO_NAME = LLVM-$(LLVM_VERSION_MAJOR).$(LLVM_VERSION_MINOR)$(LLVM_VERSION_SUFFIX)
+LLVMLibsOptions += -l$(LLVM_SO_NAME)
+LLVMLibsPaths += $(SharedLibDir)/$(SharedPrefix)$(LLVM_SO_NAME)$(SHLIBEXT)
 else
 
 ifndef NO_LLVM_CONFIG
@@ -1144,7 +1145,12 @@ LibName.O  := $(LibDir)/$(LIBRARYNAME).o
 #---------------------------------------------------------
 ifdef SHARED_LIBRARY
 
-all-local:: $(LibName.SO)
+all-local:: $(AliasName.SO)
+
+$(AliasName.SO): $(LibName.SO)
+ifdef SHARED_ALIAS
+	$(Verb) $(AliasTool) $(BaseLibName.SO) $(AliasName.SO)
+endif
 
 ifdef EXPORTED_SYMBOL_FILE
 $(LibName.SO): $(NativeExportsFile)
@@ -1202,6 +1208,9 @@ endif
 uninstall-local::
 	$(Echo) Uninstalling $(BuildMode) Shared Library $(DestSharedLib)
 	-$(Verb) $(RM) -f $(DestSharedLib)
+ifdef SHARED_ALIAS
+	-$(Verb) $(RM) -f $(DestSharedAlias)
+endif
 endif
 endif
 
