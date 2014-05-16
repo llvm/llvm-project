@@ -4876,8 +4876,13 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
   case Type::STK_BlockPointer:
   case Type::STK_ObjCObjectPointer:
     switch (DestTy->getScalarTypeKind()) {
-    case Type::STK_CPointer:
+    case Type::STK_CPointer: {
+      unsigned SrcAS = SrcTy->getPointeeType().getAddressSpace();
+      unsigned DestAS = DestTy->getPointeeType().getAddressSpace();
+      if (SrcAS != DestAS)
+        return CK_AddressSpaceConversion;
       return CK_BitCast;
+    }
     case Type::STK_BlockPointer:
       return (SrcKind == Type::STK_BlockPointer
                 ? CK_BitCast : CK_AnyPointerToBlockPointerCast);
@@ -7830,10 +7835,14 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       diagnoseDistinctPointerComparison(*this, Loc, LHS, RHS, /*isError*/false);
     }
     if (LCanPointeeTy != RCanPointeeTy) {
+      unsigned AddrSpaceL = LCanPointeeTy.getAddressSpace();
+      unsigned AddrSpaceR = RCanPointeeTy.getAddressSpace();
+      CastKind Kind = AddrSpaceL != AddrSpaceR ? CK_AddressSpaceConversion
+                                               : CK_BitCast;
       if (LHSIsNull && !RHSIsNull)
-        LHS = ImpCastExprToType(LHS.take(), RHSType, CK_BitCast);
+        LHS = ImpCastExprToType(LHS.take(), RHSType, Kind);
       else
-        RHS = ImpCastExprToType(RHS.take(), LHSType, CK_BitCast);
+        RHS = ImpCastExprToType(RHS.take(), LHSType, Kind);
     }
     return ResultTy;
   }

@@ -1474,6 +1474,11 @@ void CastExpr::CheckCastConsistency() const {
     assert(getSubExpr()->getType()->isFunctionType());
     goto CheckNoBasePath;
 
+  case CK_AddressSpaceConversion:
+    assert(getType()->isPointerType());
+    assert(getSubExpr()->getType()->isPointerType());
+    assert(getType()->getPointeeType().getAddressSpace() !=
+           getSubExpr()->getType()->getPointeeType().getAddressSpace());
   // These should not have an inheritance path.
   case CK_Dynamic:
   case CK_ToUnion:
@@ -1636,6 +1641,8 @@ const char *CastExpr::getCastKindName() const {
     return "BuiltinFnToFnPtr";
   case CK_ZeroToOCLEvent:
     return "ZeroToOCLEvent";
+  case CK_AddressSpaceConversion:
+    return "AddressSpaceConversion";
   }
 
   llvm_unreachable("Unhandled cast kind!");

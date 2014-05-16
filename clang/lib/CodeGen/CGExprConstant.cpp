@@ -633,6 +633,9 @@ public:
       return llvm::ConstantStruct::get(STy, Elts);
     }
 
+    case CK_AddressSpaceConversion:
+      return llvm::ConstantExpr::getAddrSpaceCast(C, destType);
+
     case CK_LValueToRValue:
     case CK_AtomicToNonAtomic:
     case CK_NonAtomicToAtomic:
@@ -1062,13 +1065,13 @@ llvm::Constant *CodeGenModule::EmitConstantValue(const APValue &Value,
       if (!Offset->isNullValue()) {
         llvm::Constant *Casted = llvm::ConstantExpr::getBitCast(C, Int8PtrTy);
         Casted = llvm::ConstantExpr::getGetElementPtr(Casted, Offset);
-        C = llvm::ConstantExpr::getBitCast(Casted, C->getType());
+        C = llvm::ConstantExpr::getPointerCast(Casted, C->getType());
       }
 
       // Convert to the appropriate type; this could be an lvalue for
       // an integer.
       if (isa<llvm::PointerType>(DestTy))
-        return llvm::ConstantExpr::getBitCast(C, DestTy);
+        return llvm::ConstantExpr::getPointerCast(C, DestTy);
 
       return llvm::ConstantExpr::getPtrToInt(C, DestTy);
     } else {
