@@ -25,6 +25,16 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the `releases
 page <http://llvm.org/releases/>`_.
 
+Changes in 3.4.2
+================
+
+* libLLVM-3.4.so soname fix.
+
+* PowerPC: Fix for 128-bit shifts.
+
+* R600: Shader calling convention fix.
+
+
 Non-comprehensive list of changes in 3.4.1
 ==========================================
 
