@@ -191,9 +191,9 @@ def : MipsPat<(select (i32 (seteq i32:$cond, immZExt16:$imm)), i64:$t, i64:$f),
                                                       immZExt16:$imm))))>,
               ISA_MIPS64R6;
 def : MipsPat<(select (i32 (setne i32:$cond, immZExt16:$imm)), i64:$t, i64:$f),
-              (OR64 (SELNEZ64 i64:$f, (SLL64_32 (XORi i32:$cond,
+              (OR64 (SELNEZ64 i64:$t, (SLL64_32 (XORi i32:$cond,
                                                       immZExt16:$imm))),
-                    (SELEQZ64 i64:$t, (SLL64_32 (XORi i32:$cond,
+                    (SELEQZ64 i64:$f, (SLL64_32 (XORi i32:$cond,
                                                       immZExt16:$imm))))>,
               ISA_MIPS64R6;
 

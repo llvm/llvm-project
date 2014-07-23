@@ -796,8 +796,8 @@ def : MipsPat<(select (i32 (seteq i32:$cond, immZExt16:$imm)), i32:$t, i32:$f),
                   (SELNEZ i32:$f, (XORi i32:$cond, immZExt16:$imm)))>,
               ISA_MIPS32R6;
 def : MipsPat<(select (i32 (setne i32:$cond, immZExt16:$imm)), i32:$t, i32:$f),
-              (OR (SELNEZ i32:$f, (XORi i32:$cond, immZExt16:$imm)),
-                  (SELEQZ i32:$t, (XORi i32:$cond, immZExt16:$imm)))>,
+              (OR (SELNEZ i32:$t, (XORi i32:$cond, immZExt16:$imm)),
+                  (SELEQZ i32:$f, (XORi i32:$cond, immZExt16:$imm)))>,
               ISA_MIPS32R6;
 def : MipsPat<(select (i32 (setgt i32:$cond, immSExt16Plus1:$imm)), i32:$t,
                       i32:$f),
