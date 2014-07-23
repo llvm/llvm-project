@@ -21,6 +21,18 @@ else
 	LLVM_ENABLE_ASSERTIONS := 1
 endif
 
+ifeq ($(REQUIRES_EH),1)
+	LLVM_ENABLE_EH := 1
+else
+	LLVM_ENABLE_EH := 0
+endif
+
+ifeq ($(REQUIRES_RTTI),1)
+	LLVM_ENABLE_RTTI := 1
+else
+	LLVM_ENABLE_RTTI := 0
+endif
+
 OBJMODS := LLVMConfig.cmake LLVMConfigVersion.cmake LLVMExports.cmake
 
 $(PROJ_OBJ_DIR)/LLVMConfig.cmake: LLVMConfig.cmake.in $(LLVMBuildCMakeFrag)
@@ -39,6 +51,8 @@ $(PROJ_OBJ_DIR)/LLVMConfig.cmake: LLVMConfig.cmake.in $(LLVMBuildCMakeFrag)
 	  -e 's/@LLVM_TARGETS_WITH_JIT@/'"$(TARGETS_WITH_JIT)"'/' \
 	  -e 's/@TARGET_TRIPLE@/'"$(TARGET_TRIPLE)"'/' \
 	  -e 's/@LLVM_ENABLE_ASSERTIONS@/'"$(LLVM_ENABLE_ASSERTIONS)"'/' \
+	  -e 's/@LLVM_ENABLE_EH@/'"$(LLVM_ENABLE_EH)"'/' \
+	  -e 's/@LLVM_ENABLE_RTTI@/'"$(LLVM_ENABLE_RTTI)"'/' \
 	  -e 's/@LLVM_ENABLE_TERMINFO@/'"$(ENABLE_TERMINFO)"'/' \
 	  -e 's/@LLVM_ENABLE_THREADS@/'"$(ENABLE_THREADS)"'/' \
 	  -e 's/@LLVM_ENABLE_ZLIB@/'"$(ENABLE_ZLIB)"'/' \
