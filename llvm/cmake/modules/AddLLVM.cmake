@@ -8,8 +8,13 @@ function(llvm_update_compile_flags name)
     set(update_src_props ON)
   endif()
 
-  if(LLVM_REQUIRES_EH)
-    set(LLVM_REQUIRES_RTTI ON)
+  # LLVM_REQUIRES_EH is an internal flag that individual
+  # targets can use to force EH
+  if(LLVM_REQUIRES_EH OR LLVM_ENABLE_EH)
+    if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
+      message(AUTHOR_WARNING "Exception handling requires RTTI. Enabling RTTI for ${name}")
+      set(LLVM_REQUIRES_RTTI ON)
+    endif()
   else()
     if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
       list(APPEND LLVM_COMPILE_FLAGS "-fno-exceptions")
@@ -19,7 +24,9 @@ function(llvm_update_compile_flags name)
     endif()
   endif()
 
-  if(NOT LLVM_REQUIRES_RTTI)
+  # LLVM_REQUIRES_RTTI is an internal flag that individual
+  # targets can use to force RTTI
+  if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
     list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_RTTI=0)
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       list(APPEND LLVM_COMPILE_FLAGS "-fno-rtti")
