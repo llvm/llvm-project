@@ -7047,8 +7047,22 @@ void gnutools::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
 
-    // LLVM doesn't support -mabicalls yet and acts as if it is always given.
-    CmdArgs.push_back("-mno-shared");
+    // -mno-shared should be emitted unless -fpic, -fpie, -fPIC, -fPIE,
+    // or -mshared (not implemented) is in effect.
+    bool IsPicOrPie = false;
+    if (Arg *A = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
+                                 options::OPT_fpic, options::OPT_fno_pic,
+                                 options::OPT_fPIE, options::OPT_fno_PIE,
+                                 options::OPT_fpie, options::OPT_fno_pie)) {
+      if (A->getOption().matches(options::OPT_fPIC) ||
+          A->getOption().matches(options::OPT_fpic) ||
+          A->getOption().matches(options::OPT_fPIE) ||
+          A->getOption().matches(options::OPT_fpie))
+        IsPicOrPie = true;
+    }
+    if (!IsPicOrPie)
+      CmdArgs.push_back("-mno-shared");
+
     // LLVM doesn't support -mplt yet and acts as if it is always given.
     // However, -mplt has no effect with the N64 ABI.
     CmdArgs.push_back(ABIName == "64" ? "-KPIC" : "-call_nonpic");

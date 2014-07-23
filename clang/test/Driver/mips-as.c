@@ -12,7 +12,7 @@
 // RUN: %clang -target mips-linux-gnu -### \
 // RUN:   -no-integrated-as -fPIC -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS32R2-EB-PIC %s
-// MIPS32R2-EB-PIC: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB"
+// MIPS32R2-EB-PIC: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-call_nonpic" "-EB"
 // MIPS32R2-EB-PIC: "-KPIC"
 //
 // RUN: %clang -target mipsel-linux-gnu -### \
