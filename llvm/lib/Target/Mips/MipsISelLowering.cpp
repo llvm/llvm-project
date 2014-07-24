@@ -969,16 +969,16 @@ MipsTargetLowering::emitAtomicBinary(MachineInstr *MI, MachineBasicBlock *BB,
       LL = Mips::LL_MM;
       SC = Mips::SC_MM;
     } else {
-      LL = Subtarget.hasMips32r6() ? Mips::LL : Mips::LL_R6;
-      SC = Subtarget.hasMips32r6() ? Mips::SC : Mips::SC_R6;
+      LL = Subtarget.hasMips32r6() ? Mips::LL_R6 : Mips::LL;
+      SC = Subtarget.hasMips32r6() ? Mips::SC_R6 : Mips::SC;
     }
     AND = Mips::AND;
     NOR = Mips::NOR;
     ZERO = Mips::ZERO;
     BEQ = Mips::BEQ;
   } else {
-    LL = Subtarget.hasMips64r6() ? Mips::LLD : Mips::LLD_R6;
-    SC = Subtarget.hasMips64r6() ? Mips::SCD : Mips::SCD_R6;
+    LL = Subtarget.hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
+    SC = Subtarget.hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
     AND = Mips::AND64;
     NOR = Mips::NOR64;
     ZERO = Mips::ZERO_64;
