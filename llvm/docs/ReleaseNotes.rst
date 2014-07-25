@@ -183,6 +183,50 @@ MIPS64r2, and MIPS64r6 as well as some of the Application Specific Extensions
 such as MSA. It also supports several of the MIPS specific assembler directives
 such as ``.set``, ``.module``, ``.cpload``, etc.
 
+Changes to the AArch64 Target
+-----------------------------
+
+The AArch64 target in LLVM 3.5 is based on substantially different code to the
+one in LLVM 3.4, having been created as the result of merging code released by
+Apple for targetting iOS with the previously existing backend.
+
+We hope the result is a general improvement in the project. Particularly notable
+changes are:
+
+* We should produce faster code, having combined optimisations and ideas from
+  both sources in the final backend.
+* We have a FastISel for AArch64, which should compile time for debug builds (at
+  -O0).
+* We can now target iOS platforms (using the triple ``arm64-apple-ios7.0``).
+
+Background
+^^^^^^^^^^
+
+During the 3.5 release cycle, Apple released the source used to generate 64-bit
+ARM programs on iOS platforms. This took the form of a separate backend that had
+been developed in parallel to, and largely isolation from, the existing
+code.
+
+We decided that maintaining the two backends indefinitely was not an option,
+since their features almost entirely overlapped. However, the implementation
+details in both were different enough that any merge had to firmly start with
+one backend as the core and cherry-pick the best features and optimisations from
+the other.
+
+After discussion, we decided to start with the Apple backend (called ARM64 at
+the time) since it was older, more thoroughly tested in production use, and had
+fewer idiosyncracies in the implementation details.
+
+Many people from across the community worked throughout April and May to ensure
+that this merge destination had all the features we wanted, from both
+sources. In many cases we could simply copy code across; others needed heavy
+modification for the new host; in the most worthwhile, we looked at both
+implementations and combined the best features of each in an entirely new way.
+
+We had also decided that the name of the combined backend should be AArch64,
+following ARM's official documentation. So, at the end of May the old
+AArch64 directory was removed, and ARM64 renamed into its place.
+
 External Open Source Projects Using LLVM 3.5
 ============================================
 
