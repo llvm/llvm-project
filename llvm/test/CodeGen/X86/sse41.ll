@@ -714,3 +714,21 @@ define <4 x float> @pr20087(<4 x float> %a, <4 x float> *%ptr) {
   %ret = shufflevector <4 x float> %load, <4 x float> %a, <4 x i32> <i32 4, i32 undef, i32 6, i32 2>
   ret <4 x float> %ret
 }
+
+; Edge case for insertps where we end up with a shuffle with mask=<0, 7, -1, -1>
+define void @insertps_pr20411(i32* noalias nocapture %RET) #1 {
+; CHECK-LABEL: insertps_pr20411:
+; CHECK: movaps  {{[^,]*}}, %[[REG1:xmm.]]
+; CHECK: pshufd  {{.*}} ## [[REG2:xmm.]] = mem[3,0,0,0]
+; CHECK: insertps  {{.*}} ## xmm1 = [[REG2]][0],[[REG1]][3]{{.*}}
+
+  %gather_load = shufflevector <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, <8 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shuffle109 = shufflevector <4 x i32> <i32 4, i32 5, i32 6, i32 7>, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>  ; 4 5 6 7
+
+  %shuffle116 = shufflevector <8 x i32> %gather_load, <8 x i32> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef> ; 3 x x x
+  %shuffle117 = shufflevector <4 x i32> %shuffle109, <4 x i32> %shuffle116, <4 x i32> <i32 4, i32 3, i32 undef, i32 undef> ; 3 7 x x
+
+  %ptrcast = bitcast i32* %RET to <4 x i32>*
+  store <4 x i32> %shuffle117, <4 x i32>* %ptrcast, align 4
+  ret void
+}

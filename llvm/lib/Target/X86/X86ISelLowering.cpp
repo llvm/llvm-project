@@ -9054,6 +9054,18 @@ static SDValue getINSERTPS(ShuffleVectorSDNode *SVOp, SDLoc &dl,
     To = V2;
     DestIndex = std::find_if(Mask.begin(), Mask.end(), FromV1Predicate) -
                 Mask.begin();
+
+    // If we have 1 element from each vector, we have to check if we're
+    // changing V1's element's place. If so, we're done. Otherwise, we
+    // should assume we're changing V2's element's place and behave
+    // accordingly.
+    int FromV2 = std::count_if(Mask.begin(), Mask.end(), FromV2Predicate);
+    if (FromV1 == FromV2 && DestIndex == Mask[DestIndex] % 4) {
+      From = V2;
+      To = V1;
+      DestIndex =
+          std::find_if(Mask.begin(), Mask.end(), FromV2Predicate) - Mask.begin();
+    }
   } else {
     assert(std::count_if(Mask.begin(), Mask.end(), FromV2Predicate) == 1 &&
            "More than one element from V1 and from V2, or no elements from one "
@@ -9065,6 +9077,8 @@ static SDValue getINSERTPS(ShuffleVectorSDNode *SVOp, SDLoc &dl,
         std::find_if(Mask.begin(), Mask.end(), FromV2Predicate) - Mask.begin();
   }
 
+  // Get an index into the source vector in the range [0,4) (the mask is
+  // in the range [0,8) because it can address V1 and V2)
   unsigned SrcIndex = Mask[DestIndex] % 4;
   if (MayFoldLoad(From)) {
     // Trivial case, when From comes from a load and is only used by the
