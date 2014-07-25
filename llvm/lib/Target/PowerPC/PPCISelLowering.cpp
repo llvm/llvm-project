@@ -919,31 +919,51 @@ static bool isVMerge(ShuffleVectorSDNode *N, unsigned UnitSize,
 
 /// isVMRGLShuffleMask - Return true if this is a shuffle mask suitable for
 /// a VMRGL* instruction with the specified unit size (1,2 or 4 bytes).
+/// The ShuffleKind distinguishes between big-endian merges with two 
+/// different inputs (0), either-endian merges with two identical inputs (1),
+/// and little-endian merges with two different inputs (2).  For the latter,
+/// the input operands are swapped (see PPCInstrAltivec.td).
 bool PPC::isVMRGLShuffleMask(ShuffleVectorSDNode *N, unsigned UnitSize,
-                             bool isUnary, SelectionDAG &DAG) {
+                             unsigned ShuffleKind, SelectionDAG &DAG) {
   if (DAG.getTarget().getDataLayout()->isLittleEndian()) {
-    if (!isUnary)
+    if (ShuffleKind == 1) // unary
+      return isVMerge(N, UnitSize, 0, 0);
+    else if (ShuffleKind == 2) // swapped
       return isVMerge(N, UnitSize, 0, 16);
-    return isVMerge(N, UnitSize, 0, 0);
+    else
+      return false;
   } else {
-    if (!isUnary)
+    if (ShuffleKind == 1) // unary
+      return isVMerge(N, UnitSize, 8, 8);
+    else if (ShuffleKind == 0) // normal
       return isVMerge(N, UnitSize, 8, 24);
-    return isVMerge(N, UnitSize, 8, 8);
+    else
+      return false;
   }
 }
 
 /// isVMRGHShuffleMask - Return true if this is a shuffle mask suitable for
 /// a VMRGH* instruction with the specified unit size (1,2 or 4 bytes).
+/// The ShuffleKind distinguishes between big-endian merges with two 
+/// different inputs (0), either-endian merges with two identical inputs (1),
+/// and little-endian merges with two different inputs (2).  For the latter,
+/// the input operands are swapped (see PPCInstrAltivec.td).
 bool PPC::isVMRGHShuffleMask(ShuffleVectorSDNode *N, unsigned UnitSize,
-                             bool isUnary, SelectionDAG &DAG) {
+                             unsigned ShuffleKind, SelectionDAG &DAG) {
   if (DAG.getTarget().getDataLayout()->isLittleEndian()) {
-    if (!isUnary)
+    if (ShuffleKind == 1) // unary
+      return isVMerge(N, UnitSize, 8, 8);
+    else if (ShuffleKind == 2) // swapped
       return isVMerge(N, UnitSize, 8, 24);
-    return isVMerge(N, UnitSize, 8, 8);
+    else
+      return false;
   } else {
-    if (!isUnary)
+    if (ShuffleKind == 1) // unary
+      return isVMerge(N, UnitSize, 0, 0);
+    else if (ShuffleKind == 0) // normal
       return isVMerge(N, UnitSize, 0, 16);
-    return isVMerge(N, UnitSize, 0, 0);
+    else
+      return false;
   }
 }
 
@@ -6014,12 +6034,12 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         PPC::isVPKUWUMShuffleMask(SVOp, true, DAG) ||
         PPC::isVPKUHUMShuffleMask(SVOp, true, DAG) ||
         PPC::isVSLDOIShuffleMask(SVOp, true, DAG) != -1 ||
-        PPC::isVMRGLShuffleMask(SVOp, 1, true, DAG) ||
-        PPC::isVMRGLShuffleMask(SVOp, 2, true, DAG) ||
-        PPC::isVMRGLShuffleMask(SVOp, 4, true, DAG) ||
-        PPC::isVMRGHShuffleMask(SVOp, 1, true, DAG) ||
-        PPC::isVMRGHShuffleMask(SVOp, 2, true, DAG) ||
-        PPC::isVMRGHShuffleMask(SVOp, 4, true, DAG)) {
+        PPC::isVMRGLShuffleMask(SVOp, 1, 1, DAG) ||
+        PPC::isVMRGLShuffleMask(SVOp, 2, 1, DAG) ||
+        PPC::isVMRGLShuffleMask(SVOp, 4, 1, DAG) ||
+        PPC::isVMRGHShuffleMask(SVOp, 1, 1, DAG) ||
+        PPC::isVMRGHShuffleMask(SVOp, 2, 1, DAG) ||
+        PPC::isVMRGHShuffleMask(SVOp, 4, 1, DAG)) {
       return Op;
     }
   }
@@ -6027,15 +6047,16 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // Altivec has a variety of "shuffle immediates" that take two vector inputs
   // and produce a fixed permutation.  If any of these match, do not lower to
   // VPERM.
+  unsigned int ShuffleKind = isLittleEndian ? 2 : 0;
   if (PPC::isVPKUWUMShuffleMask(SVOp, false, DAG) ||
       PPC::isVPKUHUMShuffleMask(SVOp, false, DAG) ||
       PPC::isVSLDOIShuffleMask(SVOp, false, DAG) != -1 ||
-      PPC::isVMRGLShuffleMask(SVOp, 1, false, DAG) ||
-      PPC::isVMRGLShuffleMask(SVOp, 2, false, DAG) ||
-      PPC::isVMRGLShuffleMask(SVOp, 4, false, DAG) ||
-      PPC::isVMRGHShuffleMask(SVOp, 1, false, DAG) ||
-      PPC::isVMRGHShuffleMask(SVOp, 2, false, DAG) ||
-      PPC::isVMRGHShuffleMask(SVOp, 4, false, DAG))
+      PPC::isVMRGLShuffleMask(SVOp, 1, ShuffleKind, DAG) ||
+      PPC::isVMRGLShuffleMask(SVOp, 2, ShuffleKind, DAG) ||
+      PPC::isVMRGLShuffleMask(SVOp, 4, ShuffleKind, DAG) ||
+      PPC::isVMRGHShuffleMask(SVOp, 1, ShuffleKind, DAG) ||
+      PPC::isVMRGHShuffleMask(SVOp, 2, ShuffleKind, DAG) ||
+      PPC::isVMRGHShuffleMask(SVOp, 4, ShuffleKind, DAG))
     return Op;
 
   // Check to see if this is a shuffle of 4-byte values.  If so, we can use our

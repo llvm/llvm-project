@@ -308,12 +308,12 @@ namespace llvm {
     /// isVMRGLShuffleMask - Return true if this is a shuffle mask suitable for
     /// a VRGL* instruction with the specified unit size (1,2 or 4 bytes).
     bool isVMRGLShuffleMask(ShuffleVectorSDNode *N, unsigned UnitSize,
-                            bool isUnary, SelectionDAG &DAG);
+                            unsigned ShuffleKind, SelectionDAG &DAG);
 
     /// isVMRGHShuffleMask - Return true if this is a shuffle mask suitable for
     /// a VRGH* instruction with the specified unit size (1,2 or 4 bytes).
     bool isVMRGHShuffleMask(ShuffleVectorSDNode *N, unsigned UnitSize,
-                            bool isUnary, SelectionDAG &DAG);
+                            unsigned ShuffleKind, SelectionDAG &DAG);
 
     /// isVSLDOIShuffleMask - If this is a vsldoi shuffle mask, return the shift
     /// amount, otherwise return -1.

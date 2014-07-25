@@ -5,11 +5,6 @@ LLVM 3.5 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 3.5 release.  You may
-   prefer the `LLVM 3.4 Release Notes <http://llvm.org/releases/3.4/docs
-   /ReleaseNotes.html>`_.
-
 
 Introduction
 ============
