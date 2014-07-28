@@ -222,6 +222,19 @@ We had also decided that the name of the combined backend should be AArch64,
 following ARM's official documentation. So, at the end of May the old
 AArch64 directory was removed, and ARM64 renamed into its place.
 
+Changes to CMake build system
+-----------------------------
+
+* Building and installing LLVM, Clang and lld sphinx documentation can now be
+  done in CMake builds. If ``LLVM_ENABLE_SPHINX`` is enabled the
+  "``docs-<project>-html``" and "``docs-<project>-man``" targets (e.g.
+  ``docs-llvm-html``) become available which can be invoked directly (e.g.
+  ``make docs-llvm-html``) to build only the relevant sphinx documentation. If
+  ``LLVM_BUILD_DOCS`` is enabled then the sphinx documentation will also be
+  built as part of the normal build. Enabling this variable also means that if
+  the ``install`` target is invoked then the built documentation will be
+  installed.  See :ref:`LLVM-specific variables`.
+
 External Open Source Projects Using LLVM 3.5
 ============================================
 
