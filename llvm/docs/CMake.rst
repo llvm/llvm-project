@@ -392,66 +392,112 @@ cross-compiling.
 Embedding LLVM in your project
 ==============================
 
-The most difficult part of adding LLVM to the build of a project is to determine
-the set of LLVM libraries corresponding to the set of required LLVM
-features. What follows is an example of how to obtain this information:
+From LLVM 3.5 onwards both the CMake and autoconf/Makefile build systems export
+LLVM libraries as importable CMake targets. This means that clients of LLVM can
+now reliably use CMake to develop their own LLVM based projects against an
+installed version of LLVM regardless of how it was built.
+
+Here is a simple example of CMakeLists.txt file that imports the LLVM libraries
+and uses them to build a simple application ``simple-tool``.
 
 .. code-block:: cmake
 
-  # A convenience variable:
-  set(LLVM_ROOT "" CACHE PATH "Root of LLVM install.")
+  cmake_minimum_required(VERSION 2.8.8)
+  project(SimpleProject)
 
-  # A bit of a sanity check:
-  if( NOT EXISTS ${LLVM_ROOT}/include/llvm )
-  message(FATAL_ERROR "LLVM_ROOT (${LLVM_ROOT}) is not a valid LLVM install")
-  endif()
+  find_package(LLVM REQUIRED CONFIG)
 
-  # We incorporate the CMake features provided by LLVM:
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_ROOT}/share/llvm/cmake")
-  include(LLVMConfig)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-  # Now set the header and library paths:
-  include_directories( ${LLVM_INCLUDE_DIRS} )
-  link_directories( ${LLVM_LIBRARY_DIRS} )
-  add_definitions( ${LLVM_DEFINITIONS} )
+  # Set your project compile flags.
+  # E.g. if using the C++ header files
+  # you will need to enable C++11 support
+  # for your compiler.
 
-  # Let's suppose we want to build a JIT compiler with support for
-  # binary code (no interpreter):
-  llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES jit native)
+  include_directories(${LLVM_INCLUDE_DIRS})
+  add_definitions(${LLVM_DEFINITIONS})
 
-  # Finally, we link the LLVM libraries to our executable:
-  target_link_libraries(mycompiler ${REQ_LLVM_LIBRARIES})
+  # Now build our tools
+  add_excutable(simple-tool tool.cpp)
 
-This assumes that LLVM_ROOT points to an install of LLVM. The procedure works
-too for uninstalled builds although we need to take care to add an
-`include_directories` for the location of the headers on the LLVM source
-directory (if we are building out-of-source.)
+  # Find the libraries that correspond to the LLVM components
+  # that we wish to use
+  llvm_map_components_to_libnames(llvm_libs support core irreader)
 
-Alternativaly, you can utilize CMake's ``find_package`` functionality. Here is
-an equivalent variant of snippet shown above:
+  # Link against LLVM libraries
+  target_link_libraries(simple-tool ${llvm_libs})
 
-.. code-block:: cmake
+The ``find_package(...)`` directive when used in CONFIG mode (as in the above
+example) will look for the ``LLVMConfig.cmake`` file in various locations (see
+cmake manual for details).  It creates a ``LLVM_DIR`` cache entry to save the
+directory where ``LLVMConfig.cmake`` is found or allows the user to specify the
+directory (e.g. by passing ``-DLLVM_DIR=/usr/share/llvm/cmake`` to
+the ``cmake`` command or by setting it directly in ``ccmake`` or ``cmake-gui``).
 
-  find_package(LLVM)
+This file is available in two different locations.
 
-  if( NOT LLVM_FOUND )
-    message(FATAL_ERROR "LLVM package can't be found. Set CMAKE_PREFIX_PATH variable to LLVM's installation prefix.")
-  endif()
+* ``<INSTALL_PREFIX>/share/llvm/cmake/LLVMConfig.cmake`` where
+  ``<INSTALL_PREFIX>`` is the install prefix of an installed version of LLVM.
+  On Linux typically this is ``/usr/share/llvm/cmake/LLVMConfig.cmake``.
 
-  include_directories( ${LLVM_INCLUDE_DIRS} )
-  link_directories( ${LLVM_LIBRARY_DIRS} )
+* ``<LLVM_BUILD_ROOT>/share/llvm/cmake/LLVMConfig.cmake`` where
+  ``<LLVM_BUILD_ROOT>`` is the root of the LLVM build tree. **Note this only
+  available when building LLVM with CMake**
 
-  llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES jit native)
+If LLVM is installed in your operating system's normal installation prefix (e.g.
+on Linux this is usually ``/usr/``) ``find_package(LLVM ...)`` will
+automatically find LLVM if it is installed correctly. If LLVM is not installed
+or you wish to build directly against the LLVM build tree you can use
+``LLVM_DIR`` as previously mentioned.
 
-  target_link_libraries(mycompiler ${REQ_LLVM_LIBRARIES})
+The ``LLVMConfig.cmake`` file sets various useful variables. Notable variables
+include
+
+``LLVM_CMAKE_DIR``
+  The path to the LLVM CMake directory (i.e. the directory containing
+  LLVMConfig.cmake).
+
+``LLVM_DEFINITIONS``
+  A list of preprocessor defines that should be used when building against LLVM.
+
+``LLVM_ENABLE_ASSERTIONS``
+  This is set to ON if LLVM was built with assertions, otherwise OFF.
+
+``LLVM_ENABLE_EH``
+  This is set to ON if LLVM was built with exception handling (EH) enabled,
+  otherwise OFF.
+
+``LLVM_ENABLE_RTTI``
+  This is set to ON if LLVM was built with run time type information (RTTI),
+  otherwise OFF.
+
+``LLVM_INCLUDE_DIRS``
+  A list of include paths to directories containing LLVM header files.
+
+``LLVM_PACKAGE_VERSION``
+  The LLVM version. This string can be used with CMake conditionals. E.g. ``if
+  (${LLVM_PACKAGE_VERSION} VERSION_LESS "3.5")``.
+
+``LLVM_TOOLS_BINARY_DIR``
+  The path to the directory containing the LLVM tools (e.g. ``llvm-as``).
+
+Notice that in the above example we link ``simple-tool`` against several LLVM
+libraries. The list of libraries is determined by using the
+``llvm_map_components_to_libnames()`` CMake function. For a list of available
+components look at the output of running ``llvm-config --components``.
+
+Note that for LLVM < 3.5 ``llvm_map_components_to_libraries()`` was
+used instead of ``llvm_map_components_to_libnames()``. This is now deprecated
+and will be removed in a future version of LLVM.
 
 .. _cmake-out-of-source-pass:
 
-Developing LLVM pass out of source
-----------------------------------
+Developing LLVM passes out of source
+------------------------------------
 
-It is possible to develop LLVM passes against installed LLVM.  An example of
-project layout provided below:
+It is possible to develop LLVM passes out of LLVM's source tree (i.e. against an
+installed or built LLVM). An example of a project layout is provided below.
 
 .. code-block:: none
 
@@ -468,18 +514,33 @@ Contents of ``<project dir>/CMakeLists.txt``:
 
 .. code-block:: cmake
 
-  find_package(LLVM)
-
-  # Define add_llvm_* macro's.
-  include(AddLLVM)
+  find_package(LLVM REQUIRED CONFIG)
 
   add_definitions(${LLVM_DEFINITIONS})
   include_directories(${LLVM_INCLUDE_DIRS})
-  link_directories(${LLVM_LIBRARY_DIRS})
 
   add_subdirectory(<pass name>)
 
 Contents of ``<project dir>/<pass name>/CMakeLists.txt``:
+
+.. code-block:: cmake
+
+  add_library(LLVMPassname MODULE Pass.cpp)
+
+Note if you intend for this pass to be merged into the LLVM source tree at some
+point in the future it might make more sense to use LLVM's internal
+add_llvm_loadable_module function instead by...
+
+
+Adding the following to ``<project dir>/CMakeLists.txt`` (after
+``find_package(LLVM ...)``)
+
+.. code-block:: cmake
+
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+  include(AddLLVM)
+
+And then changing ``<project dir>/<pass name>/CMakeLists.txt`` to
 
 .. code-block:: cmake
 
