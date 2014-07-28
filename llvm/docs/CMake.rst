@@ -389,6 +389,8 @@ for a quick solution.
 Also see the `LLVM-specific variables`_ section for variables used when
 cross-compiling.
 
+.. _Embedding LLVM in your project:
+
 Embedding LLVM in your project
 ==============================
 

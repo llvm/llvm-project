@@ -235,6 +235,16 @@ Changes to CMake build system
   the ``install`` target is invoked then the built documentation will be
   installed.  See :ref:`LLVM-specific variables`.
 
+* Both the Autoconf/Makefile and CMake build systems now generate
+  ``LLVMConfig.cmake`` (and other files) to export installed libraries. This
+  means that projects using CMake to build against LLVM libraries can now build
+  against an installed LLVM built by the Autoconf/Makefile system. See
+  :ref:`Embedding LLVM in your project` for details.
+
+* Use of ``llvm_map_components_to_libraries()`` by external projects is
+  deprecated and the new ``llvm_map_components_to_libnames()`` should be used
+  instead.
+
 External Open Source Projects Using LLVM 3.5
 ============================================
 
