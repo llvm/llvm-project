@@ -213,6 +213,11 @@ WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
     return ConvertAndPushArg(Arg, Args, Allocator);
   }
 
+  if (wcscmp(Arg, L"/?") == 0 || wcscmp(Arg, L"-?") == 0) {
+    // Don't wildcard expand /?. Always treat it as an option.
+    return ConvertAndPushArg(Arg, Args, Allocator);
+  }
+
   // Extract any directory part of the argument.
   SmallVector<char, MAX_PATH> Dir;
   if (std::error_code ec = windows::UTF16ToUTF8(Arg, wcslen(Arg), Dir))
