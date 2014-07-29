@@ -427,6 +427,11 @@ public:
   /// @name ToolChain Implementation
   /// {
 
+  // Darwin tools support multiple architecture (e.g., i386 and x86_64) and
+  // most development is done against SDKs, so compiling for a different
+  // architecture should not get any special treatment.
+  bool isCrossCompiling() const override { return false; }
+
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args,
                 const char *BoundArch) const override;
