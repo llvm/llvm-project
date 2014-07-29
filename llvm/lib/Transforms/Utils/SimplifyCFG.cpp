@@ -3477,7 +3477,7 @@ namespace {
 
     /// BuildLookup - Build instructions with Builder to retrieve the value at
     /// the position given by Index in the lookup table.
-    Value *BuildLookup(Value *Index, IRBuilder<> &Builder);
+    Value *BuildLookup(Value *Index, uint64_t TableSize, IRBuilder<> &Builder);
 
     /// WouldFitInRegister - Return true if a table with TableSize elements of
     /// type ElementType would fit in a target-legal register.
@@ -3598,7 +3598,8 @@ SwitchLookupTable::SwitchLookupTable(Module &M,
   Kind = ArrayKind;
 }
 
-Value *SwitchLookupTable::BuildLookup(Value *Index, IRBuilder<> &Builder) {
+Value *SwitchLookupTable::BuildLookup(Value *Index, uint64_t TableSize,
+                                      IRBuilder<> &Builder) {
   switch (Kind) {
     case SingleValueKind:
       return SingleValue;
@@ -3624,6 +3625,14 @@ Value *SwitchLookupTable::BuildLookup(Value *Index, IRBuilder<> &Builder) {
                                  "switch.masked");
     }
     case ArrayKind: {
+      // Make sure the table index will not overflow when treated as signed.
+      if (IntegerType *IT = dyn_cast<IntegerType>(Index->getType()))
+        if (TableSize > (1 << (IT->getBitWidth() - 1)))
+          Index = Builder.CreateZExt(Index,
+                                     IntegerType::get(IT->getContext(),
+                                                      IT->getBitWidth() + 1),
+                                     "switch.tableidx.zext");
+
       Value *GEPIndices[] = { Builder.getInt32(0), Index };
       Value *GEP = Builder.CreateInBoundsGEP(Array, GEPIndices,
                                              "switch.gep");
@@ -3823,7 +3832,7 @@ static bool SwitchToLookupTable(SwitchInst *SI,
     SI->getDefaultDest()->removePredecessor(SI->getParent());
   } else {
     Value *Cmp = Builder.CreateICmpULT(TableIndex, ConstantInt::get(
-                                         MinCaseVal->getType(), TableSize));
+                                       MinCaseVal->getType(), TableSize));
     Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
   }
 
@@ -3878,7 +3887,7 @@ static bool SwitchToLookupTable(SwitchInst *SI,
     SwitchLookupTable Table(Mod, TableSize, MinCaseVal, ResultLists[PHI],
                             DV, DL);
 
-    Value *Result = Table.BuildLookup(TableIndex, Builder);
+    Value *Result = Table.BuildLookup(TableIndex, TableSize, Builder);
 
     // If the result is used to return immediately from the function, we want to
     // do that right here.
