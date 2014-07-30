@@ -4213,8 +4213,7 @@ static SDValue PerformSHLCombine(SDNode *N,
 
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
-  // FIXME: Get this from the DAG somehow
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Aggressive;
+  CodeGenOpt::Level OptLevel = getTargetMachine().getOptLevel();
   switch (N->getOpcode()) {
     default: break;
     case ISD::ADD:
