@@ -251,10 +251,6 @@ FunctionType *JumpInstrTables::transformType(FunctionType *FunTy) {
 }
 
 bool JumpInstrTables::runOnModule(Module &M) {
-  // Make sure the module is well-formed, especially with respect to jumptable.
-  if (verifyModule(M))
-    return false;
-
   JITI = &getAnalysis<JumpInstrTableInfo>();
 
   // Get the set of jumptable-annotated functions.
