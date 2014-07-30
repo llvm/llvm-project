@@ -203,8 +203,13 @@ def CC_Mips_FastCC : CallingConv<[
       CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, V1]>>>,
 
   // f32 arguments are passed in single-precision floating pointer registers.
-  CCIfType<[f32], CCAssignToReg<[F0, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10,
-                                 F11, F12, F13, F14, F15, F16, F17, F18, F19]>>,
+  CCIfType<[f32], CCIfSubtarget<"useOddSPReg()",
+      CCAssignToReg<[F0, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13,
+                     F14, F15, F16, F17, F18, F19]>>>,
+
+  // Don't use odd numbered single-precision registers for -mno-odd-spreg.
+  CCIfType<[f32], CCIfSubtarget<"noOddSPReg()",
+      CCAssignToReg<[F0, F2, F4, F6, F8, F10, F12, F14, F16, F18]>>>,
 
   // Stack parameter slots for i32 and f32 are 32-bit words and 4-byte aligned.
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,

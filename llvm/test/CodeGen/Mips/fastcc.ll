@@ -1,6 +1,7 @@
 ; RUN: llc  < %s -march=mipsel | FileCheck %s 
 ; RUN: llc  < %s -mtriple=mipsel-none-nacl-gnu \
 ; RUN:  | FileCheck %s -check-prefix=CHECK-NACL
+; RUN: llc  < %s -march=mipsel -mcpu=mips32 -mattr=+nooddspreg | FileCheck %s -check-prefix=NOODDSPREG
 
 
 @gi0 = external global i32
@@ -79,6 +80,8 @@
 @g14 = external global i32
 @g15 = external global i32
 @g16 = external global i32
+
+@fa = common global [11 x float] zeroinitializer, align 4
 
 define void @caller0() nounwind {
 entry:
@@ -261,6 +264,87 @@ entry:
   store float %a18, float* @gf18, align 4
   store float %a19, float* @gf19, align 4
   store float %a20, float* @gf20, align 4
+  ret void
+}
+
+define void @caller2() {
+entry:
+
+; NOODDSPREG-LABEL:  caller2
+
+; Check that first 10 arguments are passed in even float registers
+; f0, f2, ... , f18. Check that 11th argument is passed on stack.
+
+; NOODDSPREG-DAG:    lw      $[[R0:[0-9]+]], %got(fa)(${{[0-9]+|gp}})
+; NOODDSPREG-DAG:    lwc1    $f0, 0($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f2, 4($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f4, 8($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f6, 12($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f8, 16($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f10, 20($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f12, 24($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f14, 28($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f16, 32($[[R0]])
+; NOODDSPREG-DAG:    lwc1    $f18, 36($[[R0]])
+
+; NOODDSPREG-DAG:    lwc1    $[[F0:f[0-9]*[02468]]], 40($[[R0]])
+; NOODDSPREG-DAG:    swc1    $[[F0]], 0($sp)
+
+  %0 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 0), align 4
+  %1 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 1), align 4
+  %2 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 2), align 4
+  %3 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 3), align 4
+  %4 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 4), align 4
+  %5 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 5), align 4
+  %6 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 6), align 4
+  %7 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 7), align 4
+  %8 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 8), align 4
+  %9 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 9), align 4
+  %10 = load float* getelementptr ([11 x float]* @fa, i32 0, i32 10), align 4
+  tail call fastcc void @callee2(float %0, float %1, float %2, float %3,
+                                 float %4, float %5, float %6, float %7,
+                                 float %8, float %9, float %10)
+  ret void
+}
+
+define fastcc void @callee2(float %a0, float %a1, float %a2, float %a3,
+                            float %a4, float %a5, float %a6, float %a7,
+                            float %a8, float %a9, float %a10) {
+entry:
+
+; NOODDSPREG-LABEL:  callee2
+
+; NOODDSPREG:        addiu   $sp, $sp, -[[OFFSET:[0-9]+]]
+
+; Check that first 10 arguments are received in even float registers
+; f0, f2, ... , f18. Check that 11th argument is received on stack.
+
+; NOODDSPREG-DAG:    lw      $[[R0:[0-9]+]], %got(fa)(${{[0-9]+|gp}})
+; NOODDSPREG-DAG:    swc1    $f0, 0($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f2, 4($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f4, 8($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f6, 12($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f8, 16($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f10, 20($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f12, 24($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f14, 28($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f16, 32($[[R0]])
+; NOODDSPREG-DAG:    swc1    $f18, 36($[[R0]])
+
+; NOODDSPREG-DAG:    lwc1    $[[F0:f[0-9]*[02468]]], [[OFFSET]]($sp)
+; NOODDSPREG-DAG:    swc1    $[[F0]], 40($[[R0]])
+
+  store float %a0, float* getelementptr ([11 x float]* @fa, i32 0, i32 0), align 4
+  store float %a1, float* getelementptr ([11 x float]* @fa, i32 0, i32 1), align 4
+  store float %a2, float* getelementptr ([11 x float]* @fa, i32 0, i32 2), align 4
+  store float %a3, float* getelementptr ([11 x float]* @fa, i32 0, i32 3), align 4
+  store float %a4, float* getelementptr ([11 x float]* @fa, i32 0, i32 4), align 4
+  store float %a5, float* getelementptr ([11 x float]* @fa, i32 0, i32 5), align 4
+  store float %a6, float* getelementptr ([11 x float]* @fa, i32 0, i32 6), align 4
+  store float %a7, float* getelementptr ([11 x float]* @fa, i32 0, i32 7), align 4
+  store float %a8, float* getelementptr ([11 x float]* @fa, i32 0, i32 8), align 4
+  store float %a9, float* getelementptr ([11 x float]* @fa, i32 0, i32 9), align 4
+  store float %a10, float* getelementptr ([11 x float]* @fa, i32 0, i32 10), align 4
   ret void
 }
 

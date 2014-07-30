@@ -203,6 +203,7 @@ public:
   bool isFPXX() const { return IsFPXX; }
   bool isFP64bit() const { return IsFP64bit; }
   bool useOddSPReg() const { return UseOddSPReg; }
+  bool noOddSPReg() const { return !UseOddSPReg; }
   bool isNaN2008() const { return IsNaN2008bit; }
   bool isNotFP64bit() const { return !IsFP64bit; }
   bool isGP64bit() const { return IsGP64bit; }
