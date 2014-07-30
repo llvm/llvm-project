@@ -14,7 +14,7 @@
 ## M4sh Initialization.  ##
 ## --------------------- ##
 
-# Be Bourne compatible.
+# Be Bourne compatible
 if test -n "${ZSH_VERSION+set}" && (emulate sh) >/dev/null 2>&1; then
   emulate sh
   NULLCMD=:
@@ -691,7 +691,6 @@ ENABLE_SPLIT_DWARF
 ENABLE_CLANG_ARCMT
 CLANG_PLUGIN_SUPPORT
 ENABLE_CLANG_STATIC_ANALYZER
-ENABLE_CLANG_REWRITER
 ENABLE_OPTIMIZED
 ENABLE_PROFILING
 DISABLE_ASSERTIONS
@@ -742,15 +741,7 @@ RM
 SED
 TAR
 BINPWD
-GRAPHVIZ
 DOT
-FDP
-NEATO
-TWOPI
-CIRCO
-GV
-DOTTY
-XDOT
 INSTALL_PROGRAM
 INSTALL_SCRIPT
 INSTALL_DATA
@@ -776,7 +767,6 @@ NO_UNINITIALIZED
 PYTHON
 HAVE_DLOPEN
 HAVE_TERMINFO
-USE_UDIS86
 USE_OPROFILE
 USE_INTEL_JITEVENTS
 XML2CONFIG
@@ -1412,7 +1402,6 @@ Optional Features:
   --enable-clang-static-analyzer
                           Enable building of clang Static Analyzer (default is
                           YES)
-  --enable-clang-rewriter Enable building of clang rewriter (default is YES)
   --enable-optimized      Compile with optimizations enabled (default is NO)
   --enable-profiling      Compile with profiling enabled (default is NO)
   --enable-assertions     Compile with assertion checks enabled (default is
@@ -1483,7 +1472,6 @@ Optional Packages:
                           submitted (default=http://llvm.org/bugs/)
   --with-internal-prefix  Installation directory for internal files
   --with-python           path to python
-  --with-udis86=<path>    Use udis86 external x86 disassembler library
   --with-oprofile=<prefix>
                           Tell OProfile >= 0.9.4 how to symbolize JIT output
   --with-intel-jitevents  Notify Intel JIT profiling API of generated code
@@ -4921,37 +4909,6 @@ echo "$as_me: error: Invalid setting for --enable-clang-static-analyzer. Use \"y
    { (exit 1); exit 1; }; } ;;
 esac
 
-# Check whether --enable-clang-rewriter was given.
-if test "${enable_clang_rewriter+set}" = set; then
-  enableval=$enable_clang_rewriter;
-else
-  enableval="yes"
-fi
-
-case "$enableval" in
-  yes) ENABLE_CLANG_REWRITER=1
- ;;
-  no)
-    if test ${clang_arcmt} != "no" ; then
-      { { echo "$as_me:$LINENO: error: Cannot enable clang ARC Migration Tool while disabling rewriter." >&5
-echo "$as_me: error: Cannot enable clang ARC Migration Tool while disabling rewriter." >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-    if test ${clang_static_analyzer} != "no" ; then
-      { { echo "$as_me:$LINENO: error: Cannot enable clang static analyzer while disabling rewriter." >&5
-echo "$as_me: error: Cannot enable clang static analyzer while disabling rewriter." >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-    ENABLE_CLANG_REWRITER=0
-
-    ;;
-  default) ENABLE_CLANG_REWRITER=1
-;;
-  *) { { echo "$as_me:$LINENO: error: Invalid setting for --enable-clang-rewriter. Use \"yes\" or \"no\"" >&5
-echo "$as_me: error: Invalid setting for --enable-clang-rewriter. Use \"yes\" or \"no\"" >&2;}
-   { (exit 1); exit 1; }; } ;;
-esac
-
 # Check whether --enable-optimized was given.
 if test "${enable_optimized+set}" = set; then
   enableval=$enable_optimized;
@@ -6500,62 +6457,6 @@ fi
 
 
 
-# Extract the first word of "Graphviz", so it can be a program name with args.
-set dummy Graphviz; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_GRAPHVIZ+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $GRAPHVIZ in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_GRAPHVIZ="$GRAPHVIZ" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_GRAPHVIZ="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_GRAPHVIZ" && ac_cv_path_GRAPHVIZ="echo Graphviz"
-  ;;
-esac
-fi
-GRAPHVIZ=$ac_cv_path_GRAPHVIZ
-if test -n "$GRAPHVIZ"; then
-  { echo "$as_me:$LINENO: result: $GRAPHVIZ" >&5
-echo "${ECHO_T}$GRAPHVIZ" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-if test "$GRAPHVIZ" != "echo Graphviz" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_GRAPHVIZ 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    GRAPHVIZ=`echo $GRAPHVIZ | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_GRAPHVIZ "$GRAPHVIZ${EXEEXT}"
-_ACEOF
-
-fi
 # Extract the first word of "dot", so it can be a program name with args.
 set dummy dot; ac_word=$2
 { echo "$as_me:$LINENO: checking for $ac_word" >&5
@@ -6609,408 +6510,6 @@ _ACEOF
 
 cat >>confdefs.h <<_ACEOF
 #define LLVM_PATH_DOT "$DOT${EXEEXT}"
-_ACEOF
-
-fi
-# Extract the first word of "fdp", so it can be a program name with args.
-set dummy fdp; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_FDP+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $FDP in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_FDP="$FDP" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_FDP="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_FDP" && ac_cv_path_FDP="echo fdp"
-  ;;
-esac
-fi
-FDP=$ac_cv_path_FDP
-if test -n "$FDP"; then
-  { echo "$as_me:$LINENO: result: $FDP" >&5
-echo "${ECHO_T}$FDP" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-if test "$FDP" != "echo fdp" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_FDP 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    FDP=`echo $FDP | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_FDP "$FDP${EXEEXT}"
-_ACEOF
-
-fi
-# Extract the first word of "neato", so it can be a program name with args.
-set dummy neato; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_NEATO+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $NEATO in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_NEATO="$NEATO" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_NEATO="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_NEATO" && ac_cv_path_NEATO="echo neato"
-  ;;
-esac
-fi
-NEATO=$ac_cv_path_NEATO
-if test -n "$NEATO"; then
-  { echo "$as_me:$LINENO: result: $NEATO" >&5
-echo "${ECHO_T}$NEATO" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-if test "$NEATO" != "echo neato" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_NEATO 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    NEATO=`echo $NEATO | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_NEATO "$NEATO${EXEEXT}"
-_ACEOF
-
-fi
-# Extract the first word of "twopi", so it can be a program name with args.
-set dummy twopi; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_TWOPI+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $TWOPI in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_TWOPI="$TWOPI" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_TWOPI="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_TWOPI" && ac_cv_path_TWOPI="echo twopi"
-  ;;
-esac
-fi
-TWOPI=$ac_cv_path_TWOPI
-if test -n "$TWOPI"; then
-  { echo "$as_me:$LINENO: result: $TWOPI" >&5
-echo "${ECHO_T}$TWOPI" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-if test "$TWOPI" != "echo twopi" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_TWOPI 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    TWOPI=`echo $TWOPI | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_TWOPI "$TWOPI${EXEEXT}"
-_ACEOF
-
-fi
-# Extract the first word of "circo", so it can be a program name with args.
-set dummy circo; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_CIRCO+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $CIRCO in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_CIRCO="$CIRCO" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_CIRCO="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_CIRCO" && ac_cv_path_CIRCO="echo circo"
-  ;;
-esac
-fi
-CIRCO=$ac_cv_path_CIRCO
-if test -n "$CIRCO"; then
-  { echo "$as_me:$LINENO: result: $CIRCO" >&5
-echo "${ECHO_T}$CIRCO" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-if test "$CIRCO" != "echo circo" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_CIRCO 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    CIRCO=`echo $CIRCO | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_CIRCO "$CIRCO${EXEEXT}"
-_ACEOF
-
-fi
-for ac_prog in gv gsview32
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_GV+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $GV in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_GV="$GV" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_GV="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-GV=$ac_cv_path_GV
-if test -n "$GV"; then
-  { echo "$as_me:$LINENO: result: $GV" >&5
-echo "${ECHO_T}$GV" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-  test -n "$GV" && break
-done
-test -n "$GV" || GV="echo gv"
-
-if test "$GV" != "echo gv" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_GV 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    GV=`echo $GV | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_GV "$GV${EXEEXT}"
-_ACEOF
-
-fi
-# Extract the first word of "dotty", so it can be a program name with args.
-set dummy dotty; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_DOTTY+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $DOTTY in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_DOTTY="$DOTTY" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_DOTTY="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_DOTTY" && ac_cv_path_DOTTY="echo dotty"
-  ;;
-esac
-fi
-DOTTY=$ac_cv_path_DOTTY
-if test -n "$DOTTY"; then
-  { echo "$as_me:$LINENO: result: $DOTTY" >&5
-echo "${ECHO_T}$DOTTY" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-if test "$DOTTY" != "echo dotty" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_DOTTY 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    DOTTY=`echo $DOTTY | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_DOTTY "$DOTTY${EXEEXT}"
-_ACEOF
-
-fi
-for ac_prog in xdot xdot.py
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_path_XDOT+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $XDOT in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_XDOT="$XDOT" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_XDOT="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-XDOT=$ac_cv_path_XDOT
-if test -n "$XDOT"; then
-  { echo "$as_me:$LINENO: result: $XDOT" >&5
-echo "${ECHO_T}$XDOT" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-  test -n "$XDOT" && break
-done
-test -n "$XDOT" || XDOT="echo xdot"
-
-if test "$XDOT" != "echo xdot" ; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_XDOT 1
-_ACEOF
-
-    if test "$llvm_cv_os_type" = "MingW" ; then
-    XDOT=`echo $XDOT | sed 's/^\/\([A-Za-z]\)\//\1:\//' `
-  fi
-
-cat >>confdefs.h <<_ACEOF
-#define LLVM_PATH_XDOT "$XDOT${EXEEXT}"
 _ACEOF
 
 fi
@@ -10225,120 +9724,6 @@ _ACEOF
 fi
 
 fi
-
-
-# Check whether --with-udis86 was given.
-if test "${with_udis86+set}" = set; then
-  withval=$with_udis86;
-      USE_UDIS86=1
-
-      case "$withval" in
-        /usr/lib|yes) ;;
-        *) LDFLAGS="$LDFLAGS -L${withval}" ;;
-      esac
-
-{ echo "$as_me:$LINENO: checking for ud_init in -ludis86" >&5
-echo $ECHO_N "checking for ud_init in -ludis86... $ECHO_C" >&6; }
-if test "${ac_cv_lib_udis86_ud_init+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-ludis86  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ud_init ();
-int
-main ()
-{
-return ud_init ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag" || test ! -s conftest.err'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_udis86_ud_init=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_udis86_ud_init=no
-fi
-
-rm -f core conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ echo "$as_me:$LINENO: result: $ac_cv_lib_udis86_ud_init" >&5
-echo "${ECHO_T}$ac_cv_lib_udis86_ud_init" >&6; }
-if test $ac_cv_lib_udis86_ud_init = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBUDIS86 1
-_ACEOF
-
-  LIBS="-ludis86 $LIBS"
-
-else
-
-        echo "Error! You need to have libudis86 around."
-        exit -1
-
-fi
-
-
-else
-  USE_UDIS86=0
-
-fi
-
-
-cat >>confdefs.h <<_ACEOF
-#define USE_UDIS86 $USE_UDIS86
-_ACEOF
-
 
 
 # Check whether --with-oprofile was given.
@@ -20203,7 +19588,6 @@ ENABLE_SPLIT_DWARF!$ENABLE_SPLIT_DWARF$ac_delim
 ENABLE_CLANG_ARCMT!$ENABLE_CLANG_ARCMT$ac_delim
 CLANG_PLUGIN_SUPPORT!$CLANG_PLUGIN_SUPPORT$ac_delim
 ENABLE_CLANG_STATIC_ANALYZER!$ENABLE_CLANG_STATIC_ANALYZER$ac_delim
-ENABLE_CLANG_REWRITER!$ENABLE_CLANG_REWRITER$ac_delim
 ENABLE_OPTIMIZED!$ENABLE_OPTIMIZED$ac_delim
 ENABLE_PROFILING!$ENABLE_PROFILING$ac_delim
 DISABLE_ASSERTIONS!$DISABLE_ASSERTIONS$ac_delim
@@ -20211,6 +19595,7 @@ ENABLE_WERROR!$ENABLE_WERROR$ac_delim
 ENABLE_EXPENSIVE_CHECKS!$ENABLE_EXPENSIVE_CHECKS$ac_delim
 EXPENSIVE_CHECKS!$EXPENSIVE_CHECKS$ac_delim
 DEBUG_RUNTIME!$DEBUG_RUNTIME$ac_delim
+DEBUG_SYMBOLS!$DEBUG_SYMBOLS$ac_delim
 _ACEOF
 
   if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
@@ -20252,7 +19637,6 @@ _ACEOF
 ac_delim='%!_!# '
 for ac_last_try in false false false false false :; do
   cat >conf$$subs.sed <<_ACEOF
-DEBUG_SYMBOLS!$DEBUG_SYMBOLS$ac_delim
 KEEP_SYMBOLS!$KEEP_SYMBOLS$ac_delim
 JIT!$JIT$ac_delim
 TARGET_HAS_JIT!$TARGET_HAS_JIT$ac_delim
@@ -20295,15 +19679,7 @@ RM!$RM$ac_delim
 SED!$SED$ac_delim
 TAR!$TAR$ac_delim
 BINPWD!$BINPWD$ac_delim
-GRAPHVIZ!$GRAPHVIZ$ac_delim
 DOT!$DOT$ac_delim
-FDP!$FDP$ac_delim
-NEATO!$NEATO$ac_delim
-TWOPI!$TWOPI$ac_delim
-CIRCO!$CIRCO$ac_delim
-GV!$GV$ac_delim
-DOTTY!$DOTTY$ac_delim
-XDOT!$XDOT$ac_delim
 INSTALL_PROGRAM!$INSTALL_PROGRAM$ac_delim
 INSTALL_SCRIPT!$INSTALL_SCRIPT$ac_delim
 INSTALL_DATA!$INSTALL_DATA$ac_delim
@@ -20329,7 +19705,6 @@ NO_UNINITIALIZED!$NO_UNINITIALIZED$ac_delim
 PYTHON!$PYTHON$ac_delim
 HAVE_DLOPEN!$HAVE_DLOPEN$ac_delim
 HAVE_TERMINFO!$HAVE_TERMINFO$ac_delim
-USE_UDIS86!$USE_UDIS86$ac_delim
 USE_OPROFILE!$USE_OPROFILE$ac_delim
 USE_INTEL_JITEVENTS!$USE_INTEL_JITEVENTS$ac_delim
 XML2CONFIG!$XML2CONFIG$ac_delim
@@ -20349,6 +19724,16 @@ LLVM_ETCDIR!$LLVM_ETCDIR$ac_delim
 LLVM_INCLUDEDIR!$LLVM_INCLUDEDIR$ac_delim
 LLVM_INFODIR!$LLVM_INFODIR$ac_delim
 LLVM_MANDIR!$LLVM_MANDIR$ac_delim
+LLVM_CONFIGTIME!$LLVM_CONFIGTIME$ac_delim
+BINDINGS_TO_BUILD!$BINDINGS_TO_BUILD$ac_delim
+ALL_BINDINGS!$ALL_BINDINGS$ac_delim
+OCAML_LIBDIR!$OCAML_LIBDIR$ac_delim
+ENABLE_VISIBILITY_INLINES_HIDDEN!$ENABLE_VISIBILITY_INLINES_HIDDEN$ac_delim
+RPATH!$RPATH$ac_delim
+RDYNAMIC!$RDYNAMIC$ac_delim
+program_prefix!$program_prefix$ac_delim
+LIBOBJS!$LIBOBJS$ac_delim
+LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
   if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
@@ -20383,59 +19768,6 @@ N; s/^.*\n//; s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g; b n
 ' >>$CONFIG_STATUS <conf$$subs.sed
 rm -f conf$$subs.sed
 cat >>$CONFIG_STATUS <<_ACEOF
-CEOF$ac_eof
-_ACEOF
-
-
-ac_delim='%!_!# '
-for ac_last_try in false false false false false :; do
-  cat >conf$$subs.sed <<_ACEOF
-LLVM_CONFIGTIME!$LLVM_CONFIGTIME$ac_delim
-BINDINGS_TO_BUILD!$BINDINGS_TO_BUILD$ac_delim
-ALL_BINDINGS!$ALL_BINDINGS$ac_delim
-OCAML_LIBDIR!$OCAML_LIBDIR$ac_delim
-ENABLE_VISIBILITY_INLINES_HIDDEN!$ENABLE_VISIBILITY_INLINES_HIDDEN$ac_delim
-RPATH!$RPATH$ac_delim
-RDYNAMIC!$RDYNAMIC$ac_delim
-program_prefix!$program_prefix$ac_delim
-LIBOBJS!$LIBOBJS$ac_delim
-LTLIBOBJS!$LTLIBOBJS$ac_delim
-_ACEOF
-
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 10; then
-    break
-  elif $ac_last_try; then
-    { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
-echo "$as_me: error: could not make $CONFIG_STATUS" >&2;}
-   { (exit 1); exit 1; }; }
-  else
-    ac_delim="$ac_delim!$ac_delim _$ac_delim!! "
-  fi
-done
-
-ac_eof=`sed -n '/^CEOF[0-9]*$/s/CEOF/0/p' conf$$subs.sed`
-if test -n "$ac_eof"; then
-  ac_eof=`echo "$ac_eof" | sort -nru | sed 1q`
-  ac_eof=`expr $ac_eof + 1`
-fi
-
-cat >>$CONFIG_STATUS <<_ACEOF
-cat >"\$tmp/subs-3.sed" <<\CEOF$ac_eof
-/@[a-zA-Z_][a-zA-Z_0-9]*@/!b end
-_ACEOF
-sed '
-s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g
-s/^/s,@/; s/!/@,|#_!!_#|/
-:n
-t n
-s/'"$ac_delim"'$/,g/; t
-s/$/\\/; p
-N; s/^.*\n//; s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g; b n
-' >>$CONFIG_STATUS <conf$$subs.sed
-rm -f conf$$subs.sed
-cat >>$CONFIG_STATUS <<_ACEOF
-:end
-s/|#_!!_#|//g
 CEOF$ac_eof
 _ACEOF
 
@@ -20683,7 +20015,7 @@ s&@abs_builddir@&$ac_abs_builddir&;t t
 s&@abs_top_builddir@&$ac_abs_top_builddir&;t t
 s&@INSTALL@&$ac_INSTALL&;t t
 $ac_datarootdir_hack
-" $ac_file_inputs | sed -f "$tmp/subs-1.sed" | sed -f "$tmp/subs-2.sed" | sed -f "$tmp/subs-3.sed" >$tmp/out
+" $ac_file_inputs | sed -f "$tmp/subs-1.sed" | sed -f "$tmp/subs-2.sed" | sed 's/|#_!!_#|//g' >$tmp/out
 
 test -z "$ac_datarootdir_hack$ac_datarootdir_seen" &&
   { ac_out=`sed -n '/\${datarootdir}/p' "$tmp/out"`; test -n "$ac_out"; } &&
