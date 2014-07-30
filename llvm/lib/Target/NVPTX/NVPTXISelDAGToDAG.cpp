@@ -98,7 +98,7 @@ bool NVPTXDAGToDAGISel::useF32FTZ() const {
 }
 
 bool NVPTXDAGToDAGISel::allowFMA() const {
-  const NVPTXTargetLowering *TL = (NVPTXTargetLowering *)getTargetLowering();
+  const NVPTXTargetLowering *TL = Subtarget.getTargetLowering();
   return TL->allowFMA(*MF, OptLevel);
 }
 
