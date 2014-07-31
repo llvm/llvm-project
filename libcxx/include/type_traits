@@ -1544,16 +1544,21 @@ template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_move_assignable
 //	Otherwise, return "std::declval<_Up&>().~_Up()" is well-formed
 //    where _Up is remove_all_extents<_Tp>::type
 
+template <class>
+struct __is_destructible_apply { typedef int type; };
+
 template <typename _Tp>
 struct __is_destructor_wellformed {
-	template <typename _Tp1, typename _Tp2 = decltype(_VSTD::declval<_Tp1&>().~_Tp1())>
-	static char  __test (int);
+	template <typename _Tp1>
+	static char  __test (
+        typename __is_destructible_apply<decltype(_VSTD::declval<_Tp1&>().~_Tp1())>::type
+    );
 
 	template <typename _Tp1>
 	static __two __test (...);
 	
 	static const bool value = sizeof(__test<_Tp>(12)) == sizeof(char);
-	};
+};
 
 template <class _Tp, bool>
 struct __destructible_imp;
