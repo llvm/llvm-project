@@ -2795,11 +2795,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL,
 
   // Constant fold unary operations with a vector integer operand.
   if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(Operand.getNode())) {
-    APInt Val;
-    APInt DummyUndefs;
-    unsigned SplatBitSize;
-    bool DummyHasUndefs;
-    if (BV->isConstantSplat(Val, DummyUndefs, SplatBitSize, DummyHasUndefs)) {
+    if (BV->isConstant()) {
       switch (Opcode) {
       default:
         // FIXME: Entirely reasonable to perform folding of other unary
@@ -2807,13 +2803,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL,
         break;
       case ISD::UINT_TO_FP:
       case ISD::SINT_TO_FP: {
-        APFloat APF(
-            EVTToAPFloatSemantics(VT.getVectorElementType()),
-            APInt::getNullValue(VT.getVectorElementType().getSizeInBits()));
-        (void)APF.convertFromAPInt(Val, Opcode == ISD::SINT_TO_FP,
-                                   APFloat::rmNearestTiesToEven);
-
-        return getConstantFP(APF, VT);
+        SmallVector<SDValue, 8> Ops;
+        for (int i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+          SDValue OpN = BV->getOperand(i);
+          // Let the above scalar folding handle the conversion of each
+          // element.
+          OpN = getNode(ISD::SINT_TO_FP, DL, VT.getVectorElementType(),
+                        OpN);
+          Ops.push_back(OpN);
+        }
+        return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
       }
       }
     }
