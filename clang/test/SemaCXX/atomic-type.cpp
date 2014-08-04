@@ -48,7 +48,7 @@ typedef _Atomic int(A::*mem_ptr_to_atomic_int);
 
 typedef _Atomic(int)&atomic_int_ref;
 typedef _Atomic int &atomic_int_ref;
-typedef _Atomic atomic_int_ref atomic_int_ref; // ok, qualifiers on references ignored in this case.
+typedef _Atomic atomic_int_ref atomic_int_ref; // expected-warning {{'_Atomic' qualifier on reference type 'atomic_int_ref' (aka '_Atomic(int) &') has no effect}}
 
 typedef int &_Atomic atomic_reference_to_int; // expected-error {{'_Atomic' qualifier may not be applied to a reference}}
 typedef _Atomic(int &) atomic_reference_to_int; // expected-error {{_Atomic cannot be applied to reference type 'int &'}}
