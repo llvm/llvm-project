@@ -1076,6 +1076,7 @@ class TemplateDiff {
         Tree.SetSame(
             FromDecl && ToDecl &&
             FromDecl->getCanonicalDecl() == ToDecl->getCanonicalDecl());
+        Tree.SetDefault(FromIter.isEnd() && FromDecl, ToIter.isEnd() && ToDecl);
         Tree.SetKind(DiffTree::TemplateTemplate);
       }
 
