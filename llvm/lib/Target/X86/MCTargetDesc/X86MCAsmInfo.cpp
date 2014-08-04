@@ -72,11 +72,10 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   if (T.isMacOSX() && T.isMacOSXVersionLT(10, 6))
     HasWeakDefCanBeHiddenDirective = false;
 
-  // FIXME: this should not depend on the target OS version, but on the ld64
-  // version in use.  From at least >= ld64-97.17 (Xcode 3.2.6) the abs-ified
-  // FDE relocs may be used. We also use them for the ios simulator.
-  DwarfFDESymbolsUseAbsDiff = (T.isMacOSX() && !T.isMacOSXVersionLT(10, 6))
-    || T.isiOS();
+  // Assume ld64 is new enough that the abs-ified FDE relocs may be used
+  // (actually, must, since otherwise the non-extern relocations we produce
+  // overwhelm ld64's tiny little mind and it fails).
+  DwarfFDESymbolsUseAbsDiff = true;
 
   UseIntegratedAssembler = true;
 }
