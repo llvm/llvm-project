@@ -1806,55 +1806,92 @@ Execute ``clang-cl /?`` to see a list of supported options:
 
   ::
 
-    /?                     Display available options
-    /c                     Compile only
-    /D <macro[=value]>     Define macro
-    /fallback              Fall back to cl.exe if clang-cl fails to compile
-    /FA                    Output assembly code file during compilation
-    /Fa<file or directory> Output assembly code to this file during compilation
-    /Fe<file or directory> Set output executable file or directory (ends in / or \)
-    /FI<value>             Include file before parsing
-    /Fo<file or directory> Set output object file, or directory (ends in / or \)
-    /GF-                   Disable string pooling
-    /GR-                   Disable RTTI
-    /GR                    Enable RTTI
-    /help                  Display available options
-    /I <dir>               Add directory to include search path
-    /J                     Make char type unsigned
-    /LDd                   Create debug DLL
-    /LD                    Create DLL
-    /link <options>        Forward options to the linker
-    /MDd                   Use DLL debug run-time
-    /MD                    Use DLL run-time
-    /MTd                   Use static debug run-time
-    /MT                    Use static run-time
-    /Ob0                   Disable inlining
-    /Od                    Disable optimization
-    /Oi-                   Disable use of builtin functions
-    /Oi                    Enable use of builtin functions
-    /Os                    Optimize for size
-    /Ot                    Optimize for speed
-    /Ox                    Maximum optimization
-    /Oy-                   Disable frame pointer omission
-    /Oy                    Enable frame pointer omission
-    /O<n>                  Optimization level
-    /P                     Only run the preprocessor
-    /showIncludes          Print info about included files to stderr
-    /TC                    Treat all source files as C
-    /Tc <filename>         Specify a C source file
-    /TP                    Treat all source files as C++
-    /Tp <filename>         Specify a C++ source file
-    /U <macro>             Undefine macro
-    /W0                    Disable all warnings
-    /W1                    Enable -Wall
-    /W2                    Enable -Wall
-    /W3                    Enable -Wall
-    /W4                    Enable -Wall
-    /Wall                  Enable -Wall
-    /WX-                   Do not treat warnings as errors
-    /WX                    Treat warnings as errors
-    /w                     Disable all warnings
-    /Zs                    Syntax-check only
+    CL.EXE COMPATIBILITY OPTIONS:
+      /?                     Display available options
+      /arch:<value>          Set architecture for code generation
+      /C                     Don't discard comments when preprocessing
+      /c                     Compile only
+      /D <macro[=value]>     Define macro
+      /EH<value>             Exception handling model
+      /EP                    Disable linemarker output and preprocess to stdout
+      /E                     Preprocess to stdout
+      /fallback              Fall back to cl.exe if clang-cl fails to compile
+      /FA                    Output assembly code file during compilation
+      /Fa<file or directory> Output assembly code to this file during compilation
+      /Fe<file or directory> Set output executable file or directory (ends in / or \)
+      /FI <value>            Include file before parsing
+      /Fi<file>              Set preprocess output file name
+      /Fo<file or directory> Set output object file, or directory (ends in / or \)
+      /GF-                   Disable string pooling
+      /GR-                   Disable emission of RTTI data
+      /GR                    Enable emission of RTTI data
+      /Gw-                   Don't put each data item in its own section
+      /Gw                    Put each data item in its own section
+      /Gy-                   Don't put each function in its own section
+      /Gy                    Put each function in its own section
+      /help                  Display available options
+      /I <dir>               Add directory to include search path
+      /J                     Make char type unsigned
+      /LDd                   Create debug DLL
+      /LD                    Create DLL
+      /link <options>        Forward options to the linker
+      /MDd                   Use DLL debug run-time
+      /MD                    Use DLL run-time
+      /MTd                   Use static debug run-time
+      /MT                    Use static run-time
+      /Ob0                   Disable inlining
+      /Od                    Disable optimization
+      /Oi-                   Disable use of builtin functions
+      /Oi                    Enable use of builtin functions
+      /Os                    Optimize for size
+      /Ot                    Optimize for speed
+      /Ox                    Maximum optimization
+      /Oy-                   Disable frame pointer omission
+      /Oy                    Enable frame pointer omission
+      /O<n>                  Optimization level
+      /P                     Preprocess to file
+      /showIncludes          Print info about included files to stderr
+      /TC                    Treat all source files as C
+      /Tc <filename>         Specify a C source file
+      /TP                    Treat all source files as C++
+      /Tp <filename>         Specify a C++ source file
+      /U <macro>             Undefine macro
+      /vd<value>             Control vtordisp placement
+      /vmb                   Use a best-case representation method for member pointers
+      /vmg                   Use a most-general representation for member pointers
+      /vmm                   Set the default most-general representation to multiple inheritance
+      /vms                   Set the default most-general representation to single inheritance
+      /vmv                   Set the default most-general representation to virtual inheritance
+      /W0                    Disable all warnings
+      /W1                    Enable -Wall
+      /W2                    Enable -Wall
+      /W3                    Enable -Wall
+      /W4                    Enable -Wall
+      /Wall                  Enable -Wall
+      /WX-                   Do not treat warnings as errors
+      /WX                    Treat warnings as errors
+      /w                     Disable all warnings
+      /Zi                    Enable debug information
+      /Zs                    Syntax-check only
+
+    OPTIONS:
+      -###                  Print (but do not run) the commands to run for this compilation
+      -fms-compatibility-version=<value>
+                            Dot-separated value representing the Microsoft compiler version
+                            number to report in _MSC_VER (0 = don't define it (default))
+      -fmsc-version=<value> Microsoft compiler version number to report in _MSC_VER (0 = don't
+                            define it (default))
+      -fsanitize-blacklist=<value>
+                            Path to blacklist file for sanitizers
+      -fsanitize=<check>    Enable runtime instrumentation for bug detection: address (memory
+                            errors) | thread (race detection) | undefined (miscellaneous
+                            undefined behavior)
+      -mllvm <value>        Additional arguments to forward to LLVM's option processing
+      -Qunused-arguments    Don't emit warning for unused driver arguments
+      --target=<value>      Generate code for the given target
+      -v                    Show commands to run and use verbose output
+      -W<warning>           Enable the specified warning
+      -Xclang <arg>         Pass <arg> to the clang compiler
 
 The /fallback Option
 ^^^^^^^^^^^^^^^^^^^^
