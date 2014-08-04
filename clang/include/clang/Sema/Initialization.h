@@ -663,6 +663,8 @@ public:
     SK_QualificationConversionXValue,
     /// \brief Perform a qualification conversion, producing an lvalue.
     SK_QualificationConversionLValue,
+    /// \brief Perform a conversion adding _Atomic to a type.
+    SK_AtomicConversion,
     /// \brief Perform a load from a glvalue, producing an rvalue.
     SK_LValueToRValue,
     /// \brief Perform an implicit conversion sequence.
@@ -999,7 +1001,11 @@ public:
   /// given type.
   void AddQualificationConversionStep(QualType Ty,
                                      ExprValueKind Category);
-  
+
+  /// \brief Add a new step that performs conversion from non-atomic to atomic
+  /// type.
+  void AddAtomicConversionStep(QualType Ty);
+
   /// \brief Add a new step that performs a load of the given type.
   ///
   /// Although the term "LValueToRValue" is conventional, this applies to both

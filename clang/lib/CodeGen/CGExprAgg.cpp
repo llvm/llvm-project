@@ -1137,6 +1137,16 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
     return;
   }
 
+  if (E->getType()->isAtomicType()) {
+    // An _Atomic(T) object can be list-initialized from an expression
+    // of the same type.
+    assert(E->getNumInits() == 1 &&
+           CGF.getContext().hasSameUnqualifiedType(E->getInit(0)->getType(),
+                                                   E->getType()) &&
+           "unexpected list initialization for atomic object");
+    return Visit(E->getInit(0));
+  }
+
   assert(E->getType()->isRecordType() && "Only support structs/unions here!");
 
   // Do struct initialization; this code just sets each individual member

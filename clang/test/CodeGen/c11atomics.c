@@ -12,6 +12,9 @@
 // they're sufficiently rare that it's not worth making sure that the semantics
 // are correct.
 
+// CHECK: @testStructGlobal = global {{.*}} { i16 1, i16 2, i16 3, i16 4 }
+// CHECK: @testPromotedStructGlobal = global {{.*}} { %{{.*}} { i16 1, i16 2, i16 3 }, [2 x i8] zeroinitializer }
+
 typedef int __attribute__((vector_size(16))) vector;
 
 _Atomic(_Bool) b;
@@ -224,6 +227,7 @@ void testComplexFloat(_Atomic(_Complex float) *fp) {
 }
 
 typedef struct { short x, y, z, w; } S;
+_Atomic S testStructGlobal = (S){1, 2, 3, 4};
 // CHECK: define arm_aapcscc void @testStruct([[S:.*]]*
 void testStruct(_Atomic(S) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[S]]*, align 4
@@ -272,6 +276,7 @@ void testStruct(_Atomic(S) *fp) {
 }
 
 typedef struct { short x, y, z; } PS;
+_Atomic PS testPromotedStructGlobal = (PS){1, 2, 3};
 // CHECK: define arm_aapcscc void @testPromotedStruct([[APS:.*]]*
 void testPromotedStruct(_Atomic(PS) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[APS]]*, align 4

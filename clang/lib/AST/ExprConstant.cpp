@@ -1352,6 +1352,11 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
     return false;
   }
 
+  // We allow _Atomic(T) to be initialized from anything that T can be
+  // initialized from.
+  if (const AtomicType *AT = Type->getAs<AtomicType>())
+    Type = AT->getValueType();
+
   // Core issue 1454: For a literal constant expression of array or class type,
   // each subobject of its value shall have been initialized by a constant
   // expression.

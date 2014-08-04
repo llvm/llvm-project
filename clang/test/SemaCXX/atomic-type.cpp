@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -verify -pedantic %s
+// RUN: %clang_cc1 -verify -pedantic %s -std=c++98
+// RUN: %clang_cc1 -verify -pedantic %s -std=c++11
 
 template<typename T> struct atomic {
   _Atomic(T) value;
@@ -56,3 +57,29 @@ typedef _Atomic(int &) atomic_reference_to_int; // expected-error {{_Atomic cann
 struct S {
   _Atomic union { int n; }; // expected-warning {{anonymous union cannot be '_Atomic'}}
 };
+
+namespace copy_init {
+  struct X {
+    X(int);
+    int n;
+  };
+  _Atomic(X) y = X(0);
+  _Atomic(X) z(X(0));
+  void f() { y = X(0); }
+
+  _Atomic(X) e1(0); // expected-error {{cannot initialize}}
+#if __cplusplus >= 201103L
+  _Atomic(X) e2{0}; // expected-error {{illegal initializer}}
+  _Atomic(X) a{X(0)};
+#endif
+
+  struct Y {
+    _Atomic(X) a;
+    _Atomic(int) b;
+  };
+  Y y1 = { X(0), 4 };
+  Y y2 = { 0, 4 }; // expected-error {{cannot initialize}}
+  // FIXME: It's not really clear if we should allow these. Generally, C++11
+  // allows extraneous braces around initializers.
+  Y y3 = { { X(0) }, { 4 } }; // expected-error 2{{illegal initializer type}}
+}
