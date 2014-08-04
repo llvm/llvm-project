@@ -455,3 +455,13 @@ namespace ArrayOfInitList {
   };
   S x[1] = {};
 }
+
+namespace PR20445 {
+  struct vector { vector(std::initializer_list<int>); };
+  struct MyClass { explicit MyClass(const vector &v); };
+  template<int x> void f() { new MyClass({42, 43}); }
+  template void f<0>();
+  // CHECK-LABEL: define {{.*}} @_ZN7PR204451fILi0EEEvv(
+  // CHECK: call void @_ZN7PR204456vectorC1ESt16initializer_listIiE(
+  // CHECK: call void @_ZN7PR204457MyClassC1ERKNS_6vectorE(
+}

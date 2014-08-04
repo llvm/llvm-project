@@ -1184,14 +1184,6 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     NumInits = List->getNumExprs();
   }
 
-  // Determine whether we've already built the initializer.
-  bool HaveCompleteInit = false;
-  if (Initializer && isa<CXXConstructExpr>(Initializer) &&
-      !isa<CXXTemporaryObjectExpr>(Initializer))
-    HaveCompleteInit = true;
-  else if (Initializer && isa<ImplicitValueInitExpr>(Initializer))
-    HaveCompleteInit = true;
-
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   if (TypeMayContainAuto && AllocType->isUndeducedType()) {
     if (initStyle == CXXNewExpr::NoInit || NumInits == 0)
@@ -1481,8 +1473,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // do it now.
   if (!AllocType->isDependentType() &&
       !Expr::hasAnyTypeDependentArguments(
-        llvm::makeArrayRef(Inits, NumInits)) &&
-      !HaveCompleteInit) {
+          llvm::makeArrayRef(Inits, NumInits))) {
     // C++11 [expr.new]p15:
     //   A new-expression that creates an object of type T initializes that
     //   object as follows:
