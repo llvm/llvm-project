@@ -227,12 +227,10 @@ struct AllocaDerivedValueTracker {
   }
 
   void callUsesLocalStack(CallSite CS, bool IsNocapture) {
-    // Add it to the list of alloca users. If it's already there, skip further
-    // processing.
-    if (!AllocaUsers.insert(CS.getInstruction()))
-      return;
+    // Add it to the list of alloca users.
+    AllocaUsers.insert(CS.getInstruction());
 
-    // If it's nocapture then it can't capture the alloca.
+    // If it's nocapture then it can't capture this alloca.
     if (IsNocapture)
       return;
 

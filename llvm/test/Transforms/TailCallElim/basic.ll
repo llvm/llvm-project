@@ -174,3 +174,17 @@ if.end:
 return:
   ret void
 }
+
+declare void @test11_helper1(i8** nocapture, i8*)
+declare void @test11_helper2(i8*)
+define void @test11() {
+; CHECK-LABEL: @test11
+; CHECK-NOT: tail
+  %a = alloca i8*
+  %b = alloca i8
+  call void @test11_helper1(i8** %a, i8* %b)  ; a = &b
+  %c = load i8** %a
+  call void @test11_helper2(i8* %c)
+; CHECK: call void @test11_helper2
+  ret void
+}
