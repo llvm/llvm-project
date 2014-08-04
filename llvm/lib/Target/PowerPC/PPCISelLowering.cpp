@@ -1005,7 +1005,7 @@ int PPC::isVSLDOIShuffleMask(SDNode *N, bool isUnary, SelectionDAG &DAG) {
   unsigned ShiftAmt = SVOp->getMaskElt(i);
   if (ShiftAmt < i) return -1;
 
-  if (DAG.getTarget().getDataLayout()->isLittleEndian()) {
+  ShiftAmt -= i;
 
   if (!isUnary) {
     // Check the rest of the elements to see if they are consecutive.
