@@ -1129,6 +1129,60 @@ Wrapper<S<(&global2)>> W4 = MakeWrapper<S<(&global)>>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<&global2>>'
 }
 
+namespace NullPtr {
+template <int*, int*>
+struct S {};
+
+template <class T>
+struct Wrapper {};
+
+template <class T>
+Wrapper<T> MakeWrapper();
+int global, global2;
+constexpr int * ptr = nullptr;
+constexpr int * ptr2 = static_cast<int*>(0);
+
+S<&global> s1 = S<&global, ptr>();
+S<&global, nullptr> s2 = S<&global, ptr>();
+
+S<&global, nullptr> s3 = S<&global, &global>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'S<[...], &global>' to 'S<[...], nullptr>'
+S<&global, ptr> s4 = S<&global, &global>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'S<[...], &global>' to 'S<[...], ptr>
+
+Wrapper<S<&global, nullptr>> W1 = MakeWrapper<S<&global, ptr>>();
+Wrapper<S<&global, static_cast<int*>(0)>> W2 = MakeWrapper<S<&global, ptr>>();
+
+Wrapper<S<&global, nullptr>> W3 = MakeWrapper<S<&global, &global>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], nullptr>>'
+Wrapper<S<&global, ptr>> W4 = MakeWrapper<S<&global, &global>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr>>'
+
+Wrapper<S<&global2, ptr>> W5 = MakeWrapper<S<&global, nullptr>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+Wrapper<S<&global2, nullptr>> W6 = MakeWrapper<S<&global, nullptr>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+Wrapper<S<&global2, ptr2>> W7 = MakeWrapper<S<&global, nullptr>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+Wrapper<S<&global2, nullptr>> W8 = MakeWrapper<S<&global, ptr2>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+Wrapper<S<&global2, ptr>> W9 = MakeWrapper<S<&global, ptr2>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+Wrapper<S<&global2, ptr2>> W10 = MakeWrapper<S<&global, ptr>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+Wrapper<S<&global2, static_cast<int *>(0)>> W11 =
+    MakeWrapper<S<&global, nullptr>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+Wrapper<S<&global2, nullptr>> W12 =
+    MakeWrapper<S<&global, static_cast<int *>(0)>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+
+Wrapper<S<&global, &global>> W13 = MakeWrapper<S<&global, ptr>>();
+// C HECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], nullptr>>' to 'Wrapper<S<[...], &global>>'
+Wrapper<S<&global, ptr>> W14 = MakeWrapper<S<&global, &global>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr>>'
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.
