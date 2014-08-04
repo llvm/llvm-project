@@ -361,9 +361,7 @@ class CodeGenModule : public CodeGenTypeCache {
 
   llvm::StringMap<llvm::Constant*> CFConstantStringMap;
 
-  llvm::StringMap<llvm::GlobalVariable *> Constant1ByteStringMap;
-  llvm::StringMap<llvm::GlobalVariable *> Constant2ByteStringMap;
-  llvm::StringMap<llvm::GlobalVariable *> Constant4ByteStringMap;
+  llvm::DenseMap<llvm::Constant *, llvm::GlobalVariable *> ConstantStringMap;
   llvm::DenseMap<const Decl*, llvm::Constant *> StaticLocalDeclMap;
   llvm::DenseMap<const Decl*, llvm::GlobalVariable*> StaticLocalDeclGuardMap;
   llvm::DenseMap<const Expr*, llvm::Constant *> MaterializedGlobalTemporaryMap;
@@ -1043,9 +1041,6 @@ private:
   llvm::Constant *GetOrCreateLLVMGlobal(StringRef MangledName,
                                         llvm::PointerType *PTy,
                                         const VarDecl *D);
-
-  llvm::StringMapEntry<llvm::GlobalVariable *> *
-  getConstantStringMapEntry(StringRef Str, int CharByteWidth);
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).

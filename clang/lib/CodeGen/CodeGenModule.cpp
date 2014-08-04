@@ -2773,10 +2773,11 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S) {
   auto Alignment =
       getContext().getAlignOfGlobalVarInChars(S->getType()).getQuantity();
 
-  llvm::StringMapEntry<llvm::GlobalVariable *> *Entry = nullptr;
+  llvm::Constant *C = GetConstantArrayFromStringLiteral(S);
+  llvm::GlobalVariable **Entry = nullptr;
   if (!LangOpts.WritableStrings) {
-    Entry = getConstantStringMapEntry(S->getBytes(), S->getCharByteWidth());
-    if (auto GV = Entry->getValue()) {
+    Entry = &ConstantStringMap[C];
+    if (auto GV = *Entry) {
       if (Alignment > GV->getAlignment())
         GV->setAlignment(Alignment);
       return GV;
@@ -2803,10 +2804,9 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S) {
     GlobalVariableName = ".str";
   }
 
-  llvm::Constant *C = GetConstantArrayFromStringLiteral(S);
   auto GV = GenerateStringLiteral(C, LT, *this, GlobalVariableName, Alignment);
   if (Entry)
-    Entry->setValue(GV);
+    *Entry = GV;
 
   reportGlobalToASan(GV, S->getStrTokenLoc(0), "<string literal>");
   return GV;
@@ -2822,26 +2822,6 @@ CodeGenModule::GetAddrOfConstantStringFromObjCEncode(const ObjCEncodeExpr *E) {
   return GetAddrOfConstantCString(Str);
 }
 
-
-llvm::StringMapEntry<llvm::GlobalVariable *> *CodeGenModule::getConstantStringMapEntry(
-    StringRef Str, int CharByteWidth) {
-  llvm::StringMap<llvm::GlobalVariable *> *ConstantStringMap = nullptr;
-  switch (CharByteWidth) {
-  case 1:
-    ConstantStringMap = &Constant1ByteStringMap;
-    break;
-  case 2:
-    ConstantStringMap = &Constant2ByteStringMap;
-    break;
-  case 4:
-    ConstantStringMap = &Constant4ByteStringMap;
-    break;
-  default:
-    llvm_unreachable("unhandled byte width!");
-  }
-  return &ConstantStringMap->GetOrCreateValue(Str);
-}
-
 /// GetAddrOfConstantCString - Returns a pointer to a character array containing
 /// the literal and a terminating '\0' character.
 /// The result has pointer to array type.
@@ -2854,19 +2834,20 @@ llvm::GlobalVariable *CodeGenModule::GetAddrOfConstantCString(
                     .getQuantity();
   }
 
+  llvm::Constant *C =
+      llvm::ConstantDataArray::getString(getLLVMContext(), StrWithNull, false);
+
   // Don't share any string literals if strings aren't constant.
-  llvm::StringMapEntry<llvm::GlobalVariable *> *Entry = nullptr;
+  llvm::GlobalVariable **Entry = nullptr;
   if (!LangOpts.WritableStrings) {
-    Entry = getConstantStringMapEntry(StrWithNull, 1);
-    if (auto GV = Entry->getValue()) {
+    Entry = &ConstantStringMap[C];
+    if (auto GV = *Entry) {
       if (Alignment > GV->getAlignment())
         GV->setAlignment(Alignment);
       return GV;
     }
   }
 
-  llvm::Constant *C =
-      llvm::ConstantDataArray::getString(getLLVMContext(), StrWithNull, false);
   // Get the default prefix if a name wasn't specified.
   if (!GlobalName)
     GlobalName = ".str";
@@ -2874,7 +2855,7 @@ llvm::GlobalVariable *CodeGenModule::GetAddrOfConstantCString(
   auto GV = GenerateStringLiteral(C, llvm::GlobalValue::PrivateLinkage, *this,
                                   GlobalName, Alignment);
   if (Entry)
-    Entry->setValue(GV);
+    *Entry = GV;
   return GV;
 }
 
