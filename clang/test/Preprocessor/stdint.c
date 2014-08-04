@@ -1,20 +1,20 @@
 // RUN: %clang_cc1 -E -ffreestanding -triple=arm-none-none %s | FileCheck -check-prefix ARM %s
 //
-// ARM:typedef signed long long int int64_t;
-// ARM:typedef unsigned long long int uint64_t;
+// ARM:typedef long long int int64_t;
+// ARM:typedef long long unsigned int uint64_t;
 // ARM:typedef int64_t int_least64_t;
 // ARM:typedef uint64_t uint_least64_t;
 // ARM:typedef int64_t int_fast64_t;
 // ARM:typedef uint64_t uint_fast64_t;
 //
-// ARM:typedef signed int int32_t;
+// ARM:typedef int int32_t;
 // ARM:typedef unsigned int uint32_t;
 // ARM:typedef int32_t int_least32_t;
 // ARM:typedef uint32_t uint_least32_t;
 // ARM:typedef int32_t int_fast32_t;
 // ARM:typedef uint32_t uint_fast32_t;
 // 
-// ARM:typedef signed short int16_t;
+// ARM:typedef short int16_t;
 // ARM:typedef unsigned short uint16_t;
 // ARM:typedef int16_t int_least16_t;
 // ARM:typedef uint16_t uint_least16_t;
@@ -108,21 +108,21 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=i386-none-none %s | FileCheck -check-prefix I386 %s
 //
-// I386:typedef signed long long int int64_t;
-// I386:typedef unsigned long long int uint64_t;
+// I386:typedef long long int int64_t;
+// I386:typedef long long unsigned int uint64_t;
 // I386:typedef int64_t int_least64_t;
 // I386:typedef uint64_t uint_least64_t;
 // I386:typedef int64_t int_fast64_t;
 // I386:typedef uint64_t uint_fast64_t;
 //
-// I386:typedef signed int int32_t;
+// I386:typedef int int32_t;
 // I386:typedef unsigned int uint32_t;
 // I386:typedef int32_t int_least32_t;
 // I386:typedef uint32_t uint_least32_t;
 // I386:typedef int32_t int_fast32_t;
 // I386:typedef uint32_t uint_fast32_t;
 //
-// I386:typedef signed short int16_t;
+// I386:typedef short int16_t;
 // I386:typedef unsigned short uint16_t;
 // I386:typedef int16_t int_least16_t;
 // I386:typedef uint16_t uint_least16_t;
@@ -215,21 +215,21 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=mips-none-none %s | FileCheck -check-prefix MIPS %s
 //
-// MIPS:typedef signed long long int int64_t;
-// MIPS:typedef unsigned long long int uint64_t;
+// MIPS:typedef long long int int64_t;
+// MIPS:typedef long long unsigned int uint64_t;
 // MIPS:typedef int64_t int_least64_t;
 // MIPS:typedef uint64_t uint_least64_t;
 // MIPS:typedef int64_t int_fast64_t;
 // MIPS:typedef uint64_t uint_fast64_t;
 //
-// MIPS:typedef signed int int32_t;
+// MIPS:typedef int int32_t;
 // MIPS:typedef unsigned int uint32_t;
 // MIPS:typedef int32_t int_least32_t;
 // MIPS:typedef uint32_t uint_least32_t;
 // MIPS:typedef int32_t int_fast32_t;
 // MIPS:typedef uint32_t uint_fast32_t;
 //
-// MIPS:typedef signed short int16_t;
+// MIPS:typedef short int16_t;
 // MIPS:typedef unsigned short uint16_t;
 // MIPS:typedef int16_t int_least16_t;
 // MIPS:typedef uint16_t uint_least16_t;
@@ -322,21 +322,21 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=mips64-none-none %s | FileCheck -check-prefix MIPS64 %s
 //
-// MIPS64:typedef signed long long int int64_t;
-// MIPS64:typedef unsigned long long int uint64_t;
+// MIPS64:typedef long long int int64_t;
+// MIPS64:typedef long long unsigned int uint64_t;
 // MIPS64:typedef int64_t int_least64_t;
 // MIPS64:typedef uint64_t uint_least64_t;
 // MIPS64:typedef int64_t int_fast64_t;
 // MIPS64:typedef uint64_t uint_fast64_t;
 //
-// MIPS64:typedef signed int int32_t;
+// MIPS64:typedef int int32_t;
 // MIPS64:typedef unsigned int uint32_t;
 // MIPS64:typedef int32_t int_least32_t;
 // MIPS64:typedef uint32_t uint_least32_t;
 // MIPS64:typedef int32_t int_fast32_t;
 // MIPS64:typedef uint32_t uint_fast32_t;
 //
-// MIPS64:typedef signed short int16_t;
+// MIPS64:typedef short int16_t;
 // MIPS64:typedef unsigned short uint16_t;
 // MIPS64:typedef int16_t int_least16_t;
 // MIPS64:typedef uint16_t uint_least16_t;
@@ -429,14 +429,14 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=msp430-none-none %s | FileCheck -check-prefix MSP430 %s
 //
-// MSP430:typedef signed long int int32_t;
-// MSP430:typedef unsigned long int uint32_t;
+// MSP430:typedef long int int32_t;
+// MSP430:typedef long unsigned int uint32_t;
 // MSP430:typedef int32_t int_least32_t;
 // MSP430:typedef uint32_t uint_least32_t;
 // MSP430:typedef int32_t int_fast32_t;
 // MSP430:typedef uint32_t uint_fast32_t;
 //
-// MSP430:typedef signed short int16_t;
+// MSP430:typedef short int16_t;
 // MSP430:typedef unsigned short uint16_t;
 // MSP430:typedef int16_t int_least16_t;
 // MSP430:typedef uint16_t uint_least16_t;
@@ -529,21 +529,21 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=powerpc64-none-none %s | FileCheck -check-prefix PPC64 %s
 //
-// PPC64:typedef signed long int int64_t;
-// PPC64:typedef unsigned long int uint64_t;
+// PPC64:typedef long int int64_t;
+// PPC64:typedef long unsigned int uint64_t;
 // PPC64:typedef int64_t int_least64_t;
 // PPC64:typedef uint64_t uint_least64_t;
 // PPC64:typedef int64_t int_fast64_t;
 // PPC64:typedef uint64_t uint_fast64_t;
 //
-// PPC64:typedef signed int int32_t;
+// PPC64:typedef int int32_t;
 // PPC64:typedef unsigned int uint32_t;
 // PPC64:typedef int32_t int_least32_t;
 // PPC64:typedef uint32_t uint_least32_t;
 // PPC64:typedef int32_t int_fast32_t;
 // PPC64:typedef uint32_t uint_fast32_t;
 //
-// PPC64:typedef signed short int16_t;
+// PPC64:typedef short int16_t;
 // PPC64:typedef unsigned short uint16_t;
 // PPC64:typedef int16_t int_least16_t;
 // PPC64:typedef uint16_t uint_least16_t;
@@ -637,21 +637,21 @@
 // RUN: %clang_cc1 -E -ffreestanding -triple=powerpc-none-none %s | FileCheck -check-prefix PPC %s
 //
 //
-// PPC:typedef signed long long int int64_t;
-// PPC:typedef unsigned long long int uint64_t;
+// PPC:typedef long long int int64_t;
+// PPC:typedef long long unsigned int uint64_t;
 // PPC:typedef int64_t int_least64_t;
 // PPC:typedef uint64_t uint_least64_t;
 // PPC:typedef int64_t int_fast64_t;
 // PPC:typedef uint64_t uint_fast64_t;
 //
-// PPC:typedef signed int int32_t;
+// PPC:typedef int int32_t;
 // PPC:typedef unsigned int uint32_t;
 // PPC:typedef int32_t int_least32_t;
 // PPC:typedef uint32_t uint_least32_t;
 // PPC:typedef int32_t int_fast32_t;
 // PPC:typedef uint32_t uint_fast32_t;
 //
-// PPC:typedef signed short int16_t;
+// PPC:typedef short int16_t;
 // PPC:typedef unsigned short uint16_t;
 // PPC:typedef int16_t int_least16_t;
 // PPC:typedef uint16_t uint_least16_t;
@@ -744,21 +744,21 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=s390x-none-none %s | FileCheck -check-prefix S390X %s
 //
-// S390X:typedef signed long long int int64_t;
-// S390X:typedef unsigned long long int uint64_t;
+// S390X:typedef long long int int64_t;
+// S390X:typedef long long unsigned int uint64_t;
 // S390X:typedef int64_t int_least64_t;
 // S390X:typedef uint64_t uint_least64_t;
 // S390X:typedef int64_t int_fast64_t;
 // S390X:typedef uint64_t uint_fast64_t;
 //
-// S390X:typedef signed int int32_t;
+// S390X:typedef int int32_t;
 // S390X:typedef unsigned int uint32_t;
 // S390X:typedef int32_t int_least32_t;
 // S390X:typedef uint32_t uint_least32_t;
 // S390X:typedef int32_t int_fast32_t;
 // S390X:typedef uint32_t uint_fast32_t;
 //
-// S390X:typedef signed short int16_t;
+// S390X:typedef short int16_t;
 // S390X:typedef unsigned short uint16_t;
 // S390X:typedef int16_t int_least16_t;
 // S390X:typedef uint16_t uint_least16_t;
@@ -851,21 +851,21 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=sparc-none-none %s | FileCheck -check-prefix SPARC %s
 //
-// SPARC:typedef signed long long int int64_t;
-// SPARC:typedef unsigned long long int uint64_t;
+// SPARC:typedef long long int int64_t;
+// SPARC:typedef long long unsigned int uint64_t;
 // SPARC:typedef int64_t int_least64_t;
 // SPARC:typedef uint64_t uint_least64_t;
 // SPARC:typedef int64_t int_fast64_t;
 // SPARC:typedef uint64_t uint_fast64_t;
 //
-// SPARC:typedef signed int int32_t;
+// SPARC:typedef int int32_t;
 // SPARC:typedef unsigned int uint32_t;
 // SPARC:typedef int32_t int_least32_t;
 // SPARC:typedef uint32_t uint_least32_t;
 // SPARC:typedef int32_t int_fast32_t;
 // SPARC:typedef uint32_t uint_fast32_t;
 //
-// SPARC:typedef signed short int16_t;
+// SPARC:typedef short int16_t;
 // SPARC:typedef unsigned short uint16_t;
 // SPARC:typedef int16_t int_least16_t;
 // SPARC:typedef uint16_t uint_least16_t;
@@ -958,14 +958,14 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=tce-none-none %s | FileCheck -check-prefix TCE %s
 //
-// TCE:typedef signed int int32_t;
+// TCE:typedef int int32_t;
 // TCE:typedef unsigned int uint32_t;
 // TCE:typedef int32_t int_least32_t;
 // TCE:typedef uint32_t uint_least32_t;
 // TCE:typedef int32_t int_fast32_t;
 // TCE:typedef uint32_t uint_fast32_t;
 //
-// TCE:typedef signed short int16_t;
+// TCE:typedef short int16_t;
 // TCE:typedef unsigned short uint16_t;
 // TCE:typedef int16_t int_least16_t;
 // TCE:typedef uint16_t uint_least16_t;
@@ -1059,21 +1059,21 @@
 // RUN: %clang_cc1 -E -ffreestanding -triple=x86_64-none-none %s | FileCheck -check-prefix X86_64 %s
 //
 //
-// X86_64:typedef signed long int int64_t;
-// X86_64:typedef unsigned long int uint64_t;
+// X86_64:typedef long int int64_t;
+// X86_64:typedef long unsigned int uint64_t;
 // X86_64:typedef int64_t int_least64_t;
 // X86_64:typedef uint64_t uint_least64_t;
 // X86_64:typedef int64_t int_fast64_t;
 // X86_64:typedef uint64_t uint_fast64_t;
 //
-// X86_64:typedef signed int int32_t;
+// X86_64:typedef int int32_t;
 // X86_64:typedef unsigned int uint32_t;
 // X86_64:typedef int32_t int_least32_t;
 // X86_64:typedef uint32_t uint_least32_t;
 // X86_64:typedef int32_t int_fast32_t;
 // X86_64:typedef uint32_t uint_fast32_t;
 //
-// X86_64:typedef signed short int16_t;
+// X86_64:typedef short int16_t;
 // X86_64:typedef unsigned short uint16_t;
 // X86_64:typedef int16_t int_least16_t;
 // X86_64:typedef uint16_t uint_least16_t;
@@ -1179,21 +1179,21 @@
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=xcore-none-none %s | FileCheck -check-prefix XCORE %s
 //
-// XCORE:typedef signed long long int int64_t;
-// XCORE:typedef unsigned long long int uint64_t;
+// XCORE:typedef long long int int64_t;
+// XCORE:typedef long long unsigned int uint64_t;
 // XCORE:typedef int64_t int_least64_t;
 // XCORE:typedef uint64_t uint_least64_t;
 // XCORE:typedef int64_t int_fast64_t;
 // XCORE:typedef uint64_t uint_fast64_t;
 //
-// XCORE:typedef signed int int32_t;
+// XCORE:typedef int int32_t;
 // XCORE:typedef unsigned int uint32_t;
 // XCORE:typedef int32_t int_least32_t;
 // XCORE:typedef uint32_t uint_least32_t;
 // XCORE:typedef int32_t int_fast32_t;
 // XCORE:typedef uint32_t uint_fast32_t;
 //
-// XCORE:typedef signed short int16_t;
+// XCORE:typedef short int16_t;
 // XCORE:typedef unsigned short uint16_t;
 // XCORE:typedef int16_t int_least16_t;
 // XCORE:typedef uint16_t uint_least16_t;

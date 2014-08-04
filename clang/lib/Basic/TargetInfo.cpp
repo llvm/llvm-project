@@ -103,7 +103,7 @@ TargetInfo::~TargetInfo() {}
 const char *TargetInfo::getTypeName(IntType T) {
   switch (T) {
   default: llvm_unreachable("not an integer!");
-  case SignedChar:       return "char";
+  case SignedChar:       return "signed char";
   case UnsignedChar:     return "unsigned char";
   case SignedShort:      return "short";
   case UnsignedShort:    return "unsigned short";
