@@ -1114,11 +1114,15 @@ struct Wrapper {};
 
 template <class T>
 Wrapper<T> MakeWrapper();
-int global;
+int global, global2;
 constexpr int * ptr = nullptr;
 Wrapper<S<ptr>> W = MakeWrapper<S<&global>>();
 // Don't print an extra '&' for 'ptr'
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<ptr>>'
+
+Wrapper<S<(&global2)>> W2 = MakeWrapper<S<&global>>();
+// Handle parens correctly
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<global2>>'
 }
 
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.

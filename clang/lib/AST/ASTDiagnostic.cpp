@@ -1184,7 +1184,8 @@ class TemplateDiff {
       }
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ArgExpr);
     if (!DRE) {
-      DRE = cast<DeclRefExpr>(cast<UnaryOperator>(ArgExpr)->getSubExpr());
+      DRE = cast<DeclRefExpr>(
+          cast<UnaryOperator>(ArgExpr->IgnoreParens())->getSubExpr());
     }
 
     return DRE->getDecl();
