@@ -6,7 +6,9 @@ entry:
         %tmp = load <16 x i8>* %A
         %tmp2 = load <16 x i8>* %B
         %tmp3 = shufflevector <16 x i8> %tmp, <16 x i8> %tmp2, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-; CHECK: vpkuhum
+; CHECK: lvx [[REG1:[0-9]+]]
+; CHECK: lvx [[REG2:[0-9]+]]
+; CHECK: vpkuhum [[REG3:[0-9]+]], [[REG2]], [[REG1]]
         store <16 x i8> %tmp3, <16 x i8>* %A
         ret void
 }
@@ -27,7 +29,9 @@ entry:
         %tmp = load <16 x i8>* %A
         %tmp2 = load <16 x i8>* %B
         %tmp3 = shufflevector <16 x i8> %tmp, <16 x i8> %tmp2, <16 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29>
-; CHECK: vpkuwum
+; CHECK: lvx [[REG1:[0-9]+]]
+; CHECK: lvx [[REG2:[0-9]+]]
+; CHECK: vpkuwum [[REG3:[0-9]+]], [[REG2]], [[REG1]]
         store <16 x i8> %tmp3, <16 x i8>* %A
         ret void
 }

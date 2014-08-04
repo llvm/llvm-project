@@ -297,12 +297,12 @@ namespace llvm {
   namespace PPC {
     /// isVPKUHUMShuffleMask - Return true if this is the shuffle mask for a
     /// VPKUHUM instruction.
-    bool isVPKUHUMShuffleMask(ShuffleVectorSDNode *N, bool isUnary,
+    bool isVPKUHUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
                               SelectionDAG &DAG);
 
     /// isVPKUWUMShuffleMask - Return true if this is the shuffle mask for a
     /// VPKUWUM instruction.
-    bool isVPKUWUMShuffleMask(ShuffleVectorSDNode *N, bool isUnary,
+    bool isVPKUWUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
                               SelectionDAG &DAG);
 
     /// isVMRGLShuffleMask - Return true if this is a shuffle mask suitable for

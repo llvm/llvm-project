@@ -22,25 +22,31 @@ def vnot_ppc : PatFrag<(ops node:$in),
 
 def vpkuhum_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                               (vector_shuffle node:$lhs, node:$rhs), [{
-  return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), false,
-                                   *CurDAG);
+  return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), 0, *CurDAG);
 }]>;
 def vpkuwum_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                               (vector_shuffle node:$lhs, node:$rhs), [{
-  return PPC::isVPKUWUMShuffleMask(cast<ShuffleVectorSDNode>(N), false,
-                                   *CurDAG);
+  return PPC::isVPKUWUMShuffleMask(cast<ShuffleVectorSDNode>(N), 0, *CurDAG);
 }]>;
 def vpkuhum_unary_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                                     (vector_shuffle node:$lhs, node:$rhs), [{
-  return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), true,
-                                   *CurDAG);
+  return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), 1, *CurDAG);
 }]>;
 def vpkuwum_unary_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                                     (vector_shuffle node:$lhs, node:$rhs), [{
-  return PPC::isVPKUWUMShuffleMask(cast<ShuffleVectorSDNode>(N), true,
-                                   *CurDAG);
+  return PPC::isVPKUWUMShuffleMask(cast<ShuffleVectorSDNode>(N), 1, *CurDAG);
 }]>;
 
+// These fragments are provided for little-endian, where the inputs must be
+// swapped for correct semantics.
+def vpkuhum_swapped_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
+                                      (vector_shuffle node:$lhs, node:$rhs), [{
+  return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), 2, *CurDAG);
+}]>;
+def vpkuwum_swapped_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
+                                      (vector_shuffle node:$lhs, node:$rhs), [{
+  return PPC::isVPKUWUMShuffleMask(cast<ShuffleVectorSDNode>(N), 2, *CurDAG);
+}]>;
 
 def vmrglb_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                              (vector_shuffle (v16i8 node:$lhs), node:$rhs), [{
@@ -804,6 +810,14 @@ def:Pat<(vpkuwum_unary_shuffle v16i8:$vA, undef),
         (VPKUWUM $vA, $vA)>;
 def:Pat<(vpkuhum_unary_shuffle v16i8:$vA, undef),
         (VPKUHUM $vA, $vA)>;
+
+// Match vpkuwum(y,x), vpkuhum(y,x), i.e., swapped operands.
+// These fragments are matched for little-endian, where the
+// inputs must be swapped for correct semantics.
+def:Pat<(vpkuwum_swapped_shuffle v16i8:$vA, v16i8:$vB),
+        (VPKUWUM $vB, $vA)>;
+def:Pat<(vpkuhum_swapped_shuffle v16i8:$vA, v16i8:$vB),
+        (VPKUHUM $vB, $vA)>;
 
 // Match vmrg*(x,x)
 def:Pat<(vmrglb_unary_shuffle v16i8:$vA, undef),

@@ -852,14 +852,26 @@ static bool isConstantOrUndef(int Op, int Val) {
 
 /// isVPKUHUMShuffleMask - Return true if this is the shuffle mask for a
 /// VPKUHUM instruction.
-bool PPC::isVPKUHUMShuffleMask(ShuffleVectorSDNode *N, bool isUnary,
+/// The ShuffleKind distinguishes between big-endian operations with
+/// two different inputs (0), either-endian operations with two identical
+/// inputs (1), and little-endian operantion with two different inputs (2).
+/// For the latter, the input operands are swapped (see PPCInstrAltivec.td).
+bool PPC::isVPKUHUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
                                SelectionDAG &DAG) {
-  unsigned j = DAG.getTarget().getDataLayout()->isLittleEndian() ? 0 : 1;
-  if (!isUnary) {
+  if (ShuffleKind == 0) {
+    if (DAG.getTarget().getDataLayout()->isLittleEndian())
+      return false;
     for (unsigned i = 0; i != 16; ++i)
-      if (!isConstantOrUndef(N->getMaskElt(i),  i*2+j))
+      if (!isConstantOrUndef(N->getMaskElt(i), i*2+1))
         return false;
-  } else {
+  } else if (ShuffleKind == 2) {
+    if (!DAG.getTarget().getDataLayout()->isLittleEndian())
+      return false;
+    for (unsigned i = 0; i != 16; ++i)
+      if (!isConstantOrUndef(N->getMaskElt(i), i*2))
+        return false;
+  } else if (ShuffleKind == 1) {
+    unsigned j = DAG.getTarget().getDataLayout()->isLittleEndian() ? 0 : 1;
     for (unsigned i = 0; i != 8; ++i)
       if (!isConstantOrUndef(N->getMaskElt(i),    i*2+j) ||
           !isConstantOrUndef(N->getMaskElt(i+8),  i*2+j))
@@ -870,27 +882,33 @@ bool PPC::isVPKUHUMShuffleMask(ShuffleVectorSDNode *N, bool isUnary,
 
 /// isVPKUWUMShuffleMask - Return true if this is the shuffle mask for a
 /// VPKUWUM instruction.
-bool PPC::isVPKUWUMShuffleMask(ShuffleVectorSDNode *N, bool isUnary,
+/// The ShuffleKind distinguishes between big-endian operations with
+/// two different inputs (0), either-endian operations with two identical
+/// inputs (1), and little-endian operantion with two different inputs (2).
+/// For the latter, the input operands are swapped (see PPCInstrAltivec.td).
+bool PPC::isVPKUWUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
                                SelectionDAG &DAG) {
-  unsigned j, k;
-  if (DAG.getTarget().getDataLayout()->isLittleEndian()) {
-    j = 0;
-    k = 1;
-  } else {
-    j = 2;
-    k = 3;
-  }
-  if (!isUnary) {
+  if (ShuffleKind == 0) {
+    if (DAG.getTarget().getDataLayout()->isLittleEndian())
+      return false;
     for (unsigned i = 0; i != 16; i += 2)
-      if (!isConstantOrUndef(N->getMaskElt(i  ),  i*2+j) ||
-          !isConstantOrUndef(N->getMaskElt(i+1),  i*2+k))
+      if (!isConstantOrUndef(N->getMaskElt(i  ),  i*2+2) ||
+          !isConstantOrUndef(N->getMaskElt(i+1),  i*2+3))
         return false;
-  } else {
+  } else if (ShuffleKind == 2) {
+    if (!DAG.getTarget().getDataLayout()->isLittleEndian())
+      return false;
+    for (unsigned i = 0; i != 16; i += 2)
+      if (!isConstantOrUndef(N->getMaskElt(i  ),  i*2) ||
+          !isConstantOrUndef(N->getMaskElt(i+1),  i*2+1))
+        return false;
+  } else if (ShuffleKind == 1) {
+    unsigned j = DAG.getTarget().getDataLayout()->isLittleEndian() ? 0 : 2;
     for (unsigned i = 0; i != 8; i += 2)
-      if (!isConstantOrUndef(N->getMaskElt(i  ),  i*2+j) ||
-          !isConstantOrUndef(N->getMaskElt(i+1),  i*2+k) ||
-          !isConstantOrUndef(N->getMaskElt(i+8),  i*2+j) ||
-          !isConstantOrUndef(N->getMaskElt(i+9),  i*2+k))
+      if (!isConstantOrUndef(N->getMaskElt(i  ),  i*2+j)   ||
+          !isConstantOrUndef(N->getMaskElt(i+1),  i*2+j+1) ||
+          !isConstantOrUndef(N->getMaskElt(i+8),  i*2+j)   ||
+          !isConstantOrUndef(N->getMaskElt(i+9),  i*2+j+1))
         return false;
   }
   return true;
@@ -6030,8 +6048,8 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     if (PPC::isSplatShuffleMask(SVOp, 1) ||
         PPC::isSplatShuffleMask(SVOp, 2) ||
         PPC::isSplatShuffleMask(SVOp, 4) ||
-        PPC::isVPKUWUMShuffleMask(SVOp, true, DAG) ||
-        PPC::isVPKUHUMShuffleMask(SVOp, true, DAG) ||
+        PPC::isVPKUWUMShuffleMask(SVOp, 1, DAG) ||
+        PPC::isVPKUHUMShuffleMask(SVOp, 1, DAG) ||
         PPC::isVSLDOIShuffleMask(SVOp, true, DAG) != -1 ||
         PPC::isVMRGLShuffleMask(SVOp, 1, 1, DAG) ||
         PPC::isVMRGLShuffleMask(SVOp, 2, 1, DAG) ||
@@ -6047,8 +6065,8 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // and produce a fixed permutation.  If any of these match, do not lower to
   // VPERM.
   unsigned int ShuffleKind = isLittleEndian ? 2 : 0;
-  if (PPC::isVPKUWUMShuffleMask(SVOp, false, DAG) ||
-      PPC::isVPKUHUMShuffleMask(SVOp, false, DAG) ||
+  if (PPC::isVPKUWUMShuffleMask(SVOp, ShuffleKind, DAG) ||
+      PPC::isVPKUHUMShuffleMask(SVOp, ShuffleKind, DAG) ||
       PPC::isVSLDOIShuffleMask(SVOp, false, DAG) != -1 ||
       PPC::isVMRGLShuffleMask(SVOp, 1, ShuffleKind, DAG) ||
       PPC::isVMRGLShuffleMask(SVOp, 2, ShuffleKind, DAG) ||
