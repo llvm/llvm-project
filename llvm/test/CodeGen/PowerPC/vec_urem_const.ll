@@ -1,5 +1,8 @@
 ; RUN: llc -mcpu=pwr6 -mattr=+altivec < %s
 
+target datalayout = "e-m:e-i64:64-n32:64"
+target triple = "powerpc64le-unknown-linux-gnu"
+
 ; Common code used to replace the urem by a mulhu, and compilation would
 ; then crash since mulhu isn't supported on vector types.
 
