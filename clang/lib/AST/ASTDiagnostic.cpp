@@ -994,7 +994,8 @@ class TemplateDiff {
           bool FromAddressOf = false;
           if (FromValueDecl) {
             if (FromExpr) {
-              if (UnaryOperator *UO = dyn_cast<UnaryOperator>(FromExpr)) {
+              if (UnaryOperator *UO =
+                      dyn_cast<UnaryOperator>(FromExpr->IgnoreParens())) {
                 if (UO->getOpcode() == UO_AddrOf)
                   FromAddressOf = true;
               }
@@ -1007,14 +1008,16 @@ class TemplateDiff {
           bool ToAddressOf = false;
           if (ToValueDecl) {
             if (ToExpr) {
-              if (UnaryOperator *UO = dyn_cast<UnaryOperator>(ToExpr)) {
+              if (UnaryOperator *UO =
+                      dyn_cast<UnaryOperator>(ToExpr->IgnoreParens())) {
                 if (UO->getOpcode() == UO_AddrOf) {
                   ToAddressOf = true;
                 }
               }
             } else {
-              if (!ArgumentType->isReferenceType())
+              if (!ArgumentType->isReferenceType()) {
                 ToAddressOf = true;
+              }
             }
           }
           Tree.SetNode(FromValueDecl, ToValueDecl, FromAddressOf, ToAddressOf);

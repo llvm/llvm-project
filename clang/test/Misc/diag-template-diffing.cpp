@@ -1120,9 +1120,13 @@ Wrapper<S<ptr>> W = MakeWrapper<S<&global>>();
 // Don't print an extra '&' for 'ptr'
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<ptr>>'
 
-Wrapper<S<(&global2)>> W2 = MakeWrapper<S<&global>>();
 // Handle parens correctly
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<global2>>'
+Wrapper<S<(&global2)>> W2 = MakeWrapper<S<&global>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<&global2>>'
+Wrapper<S<&global2>> W3 = MakeWrapper<S<(&global)>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<&global2>>'
+Wrapper<S<(&global2)>> W4 = MakeWrapper<S<(&global)>>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<&global2>>'
 }
 
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
