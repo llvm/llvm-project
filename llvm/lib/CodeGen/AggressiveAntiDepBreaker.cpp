@@ -582,7 +582,9 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
     unsigned Reg = Regs[i];
     if (Reg == SuperReg) continue;
     bool IsSub = TRI->isSubRegister(SuperReg, Reg);
-    assert(IsSub && "Expecting group subregister");
+    // FIXME: remove this once PR18663 has been properly fixed. For now,
+    // return a conservative answer:
+    // assert(IsSub && "Expecting group subregister");
     if (!IsSub)
       return false;
   }
