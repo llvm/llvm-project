@@ -1007,36 +1007,18 @@ int PPC::isVSLDOIShuffleMask(SDNode *N, bool isUnary, SelectionDAG &DAG) {
 
   if (DAG.getTarget().getDataLayout()->isLittleEndian()) {
 
-    ShiftAmt += i;
-
-    if (!isUnary) {
-      // Check the rest of the elements to see if they are consecutive.
-      for (++i; i != 16; ++i)
-        if (!isConstantOrUndef(SVOp->getMaskElt(i), ShiftAmt - i))
-          return -1;
-    } else {
-      // Check the rest of the elements to see if they are consecutive.
-      for (++i; i != 16; ++i)
-        if (!isConstantOrUndef(SVOp->getMaskElt(i), (ShiftAmt - i) & 15))
-          return -1;
-    }
-
-  } else {  // Big Endian
-
-    ShiftAmt -= i;
-
-    if (!isUnary) {
-      // Check the rest of the elements to see if they are consecutive.
-      for (++i; i != 16; ++i)
-        if (!isConstantOrUndef(SVOp->getMaskElt(i), ShiftAmt+i))
-          return -1;
-    } else {
-      // Check the rest of the elements to see if they are consecutive.
-      for (++i; i != 16; ++i)
-        if (!isConstantOrUndef(SVOp->getMaskElt(i), (ShiftAmt+i) & 15))
-          return -1;
-    }
+  if (!isUnary) {
+    // Check the rest of the elements to see if they are consecutive.
+    for (++i; i != 16; ++i)
+      if (!isConstantOrUndef(SVOp->getMaskElt(i), ShiftAmt+i))
+        return -1;
+  } else {
+    // Check the rest of the elements to see if they are consecutive.
+    for (++i; i != 16; ++i)
+      if (!isConstantOrUndef(SVOp->getMaskElt(i), (ShiftAmt+i) & 15))
+        return -1;
   }
+
   return ShiftAmt;
 }
 
