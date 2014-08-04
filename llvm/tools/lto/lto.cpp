@@ -222,10 +222,6 @@ void lto_codegen_set_cpu(lto_code_gen_t cg, const char *cpu) {
   return unwrap(cg)->setCpu(cpu);
 }
 
-void lto_codegen_set_attr(lto_code_gen_t cg, const char *attr) {
-  return unwrap(cg)->setAttr(attr);
-}
-
 void lto_codegen_set_assembler_path(lto_code_gen_t cg, const char *path) {
   // In here only for backwards compatibility. We use MC now.
 }

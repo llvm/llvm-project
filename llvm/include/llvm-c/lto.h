@@ -40,7 +40,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 11
+#define LTO_API_VERSION 10
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -374,14 +374,6 @@ lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model);
  */
 extern void
 lto_codegen_set_cpu(lto_code_gen_t cg, const char *cpu);
-
-/**
- * Sets attributes for the cpu to generate code for.
- *
- * \since LTO_API_VERSION=11
- */
-extern void
-lto_codegen_set_attr(lto_code_gen_t cg, const char *attr);
 
 
 /**
