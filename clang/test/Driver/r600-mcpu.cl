@@ -34,6 +34,7 @@
 // RUN: %clang -### -target r600 -x cl -S -emit-llvm -mcpu=kabini %s -o - 2>&1 | FileCheck --check-prefix=KABINI-CHECK %s
 // RUN: %clang -### -target r600 -x cl -S -emit-llvm -mcpu=kaveri %s -o - 2>&1 | FileCheck --check-prefix=KAVERI-CHECK %s
 // RUN: %clang -### -target r600 -x cl -S -emit-llvm -mcpu=hawaii %s -o - 2>&1 | FileCheck --check-prefix=HAWAII-CHECK %s
+// RUN: %clang -### -target r600 -x cl -S -emit-llvm -mcpu=mullins %s -o - 2>&1 | FileCheck --check-prefix=MULLINS-CHECK %s
 
 // R600-CHECK:  "-target-cpu" "r600"
 // RS880-CHECK: "-target-cpu" "rs880"
@@ -58,3 +59,4 @@
 // KABINI-CHECK: "-target-cpu" "kabini"
 // KAVERI-CHECK: "-target-cpu" "kaveri"
 // HAWAII-CHECK: "-target-cpu" "hawaii"
+// MULLINS-CHECK: "-target-cpu" "mullins"
