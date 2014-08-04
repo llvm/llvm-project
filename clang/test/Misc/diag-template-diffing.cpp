@@ -24,17 +24,17 @@ namespace std {
   }
 } // end namespace std
 // CHECK-ELIDE-NOTREE: no matching function for call to 'f'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<class std::basic_string>' to 'vector<class versa_string>' for 1st argument 
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<std::basic_string>' to 'vector<versa_string>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'f'
-// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<class std::basic_string>' to 'vector<class versa_string>' for 1st argument
+// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<std::basic_string>' to 'vector<versa_string>' for 1st argument
 // CHECK-ELIDE-TREE: no matching function for call to 'f'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   vector<
-// CHECK-ELIDE-TREE:     [class std::basic_string != class versa_string]>
+// CHECK-ELIDE-TREE:     [std::basic_string != versa_string]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'f'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   vector<
-// CHECK-NOELIDE-TREE:     [class std::basic_string != class versa_string]>
+// CHECK-NOELIDE-TREE:     [std::basic_string != versa_string]>
 
 template <int... A>
 class I1{};
@@ -1047,7 +1047,7 @@ namespace DependentInt {
     using T2 = M<C<N>>;
     T2 p;
     T1 x = p;
-    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<C<struct DependentInt::N, INT<1>>>' to 'M<C<int, INT<0>>>'
+    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<C<DependentInt::N, INT<1>>>' to 'M<C<int, INT<0>>>'
   }
 }
 
@@ -1064,7 +1064,7 @@ template <typename T, typename A = allocator<const Atom *> > class vector {};
 void foo() {
   vector<Atom *> v;
   AtomVector v2(v);
-  // CHECK-ELIDE-NOTREE: no known conversion from 'vector<class PR17510::Atom *, [...]>' to 'const vector<const class PR17510::Atom *, [...]>'
+  // CHECK-ELIDE-NOTREE: no known conversion from 'vector<PR17510::Atom *, [...]>' to 'const vector<const PR17510::Atom *, [...]>'
 }
 }
 
@@ -1202,6 +1202,14 @@ T<A, A> t5 = T<B>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'T<template B, [...]>' to 'T<template A, [...]>'
 T<B> t6 = T<A, A>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'T<template A, [...]>' to 'T<template B, [...]>'
+}
+
+namespace Bool {
+template <class> class A{};
+A<bool> a1 = A<int>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'A<int>' to 'A<bool>'
+A<int> a2 = A<bool>();
+// CHECK-ELIDE-NOTREE: no viable conversion from 'A<bool>' to 'A<int>'
 }
 
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
