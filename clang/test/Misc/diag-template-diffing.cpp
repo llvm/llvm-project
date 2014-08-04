@@ -1105,6 +1105,22 @@ using F = C<21 + 21>;
 }
 }
 
+namespace AddressOf {
+template <int*>
+struct S {};
+
+template <class T>
+struct Wrapper {};
+
+template <class T>
+Wrapper<T> MakeWrapper();
+int global;
+constexpr int * ptr = nullptr;
+Wrapper<S<ptr>> W = MakeWrapper<S<&global>>();
+// Don't print an extra '&' for 'ptr'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<ptr>>'
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.
