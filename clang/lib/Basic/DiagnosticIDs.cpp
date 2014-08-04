@@ -259,14 +259,14 @@ namespace clang {
       /// getDescription - Return the description of the specified custom
       /// diagnostic.
       StringRef getDescription(unsigned DiagID) const {
-        assert(this && DiagID-DIAG_UPPER_LIMIT < DiagInfo.size() &&
+        assert(DiagID - DIAG_UPPER_LIMIT < DiagInfo.size() &&
                "Invalid diagnostic ID");
         return DiagInfo[DiagID-DIAG_UPPER_LIMIT].second;
       }
 
       /// getLevel - Return the level of the specified custom diagnostic.
       DiagnosticIDs::Level getLevel(unsigned DiagID) const {
-        assert(this && DiagID-DIAG_UPPER_LIMIT < DiagInfo.size() &&
+        assert(DiagID - DIAG_UPPER_LIMIT < DiagInfo.size() &&
                "Invalid diagnostic ID");
         return DiagInfo[DiagID-DIAG_UPPER_LIMIT].first;
       }
@@ -358,6 +358,7 @@ bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) {
 StringRef DiagnosticIDs::getDescription(unsigned DiagID) const {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return Info->getDescription();
+  assert(CustomDiagInfo && "Invalid CustomDiagInfo");
   return CustomDiagInfo->getDescription(DiagID);
 }
 
@@ -384,8 +385,10 @@ DiagnosticIDs::Level
 DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
                                   const DiagnosticsEngine &Diag) const {
   // Handle custom diagnostics, which cannot be mapped.
-  if (DiagID >= diag::DIAG_UPPER_LIMIT)
+  if (DiagID >= diag::DIAG_UPPER_LIMIT) {
+    assert(CustomDiagInfo && "Invalid CustomDiagInfo");
     return CustomDiagInfo->getLevel(DiagID);
+  }
 
   unsigned DiagClass = getBuiltinDiagClass(DiagID);
   if (DiagClass == CLASS_NOTE) return DiagnosticIDs::Note;
@@ -669,6 +672,7 @@ void DiagnosticIDs::EmitDiag(DiagnosticsEngine &Diag, Level DiagLevel) const {
 
 bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
   if (DiagID >= diag::DIAG_UPPER_LIMIT) {
+    assert(CustomDiagInfo && "Invalid CustomDiagInfo");
     // Custom diagnostics.
     return CustomDiagInfo->getLevel(DiagID) >= DiagnosticIDs::Error;
   }
