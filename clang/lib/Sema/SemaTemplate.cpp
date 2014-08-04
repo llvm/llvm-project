@@ -4438,7 +4438,8 @@ CheckTemplateArgumentAddressOfObjectOrFunction(Sema &S,
     switch (NPV) {
     case NPV_NullPointer:
       S.Diag(Arg->getExprLoc(), diag::warn_cxx98_compat_template_arg_null);
-      Converted = TemplateArgument(ParamType, /*isNullPtr=*/true);
+      Converted = TemplateArgument(S.Context.getCanonicalType(ParamType),
+                                   /*isNullPtr=*/true);
       return false;
 
     case NPV_Error:
@@ -4633,7 +4634,8 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
     return true;
   case NPV_NullPointer:
     S.Diag(Arg->getExprLoc(), diag::warn_cxx98_compat_template_arg_null);
-    Converted = TemplateArgument(ParamType, /*isNullPtr*/true);
+    Converted = TemplateArgument(S.Context.getCanonicalType(ParamType),
+                                 /*isNullPtr*/true);
     if (S.Context.getTargetInfo().getCXXABI().isMicrosoft())
       S.RequireCompleteType(Arg->getExprLoc(), ParamType, 0);
     return false;
@@ -5089,7 +5091,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       
     case NPV_NullPointer:
       Diag(Arg->getExprLoc(), diag::warn_cxx98_compat_template_arg_null);
-      Converted = TemplateArgument(ParamType, /*isNullPtr*/true);
+      Converted = TemplateArgument(Context.getCanonicalType(ParamType),
+                                   /*isNullPtr*/true);
       return Arg;
     }
   }
