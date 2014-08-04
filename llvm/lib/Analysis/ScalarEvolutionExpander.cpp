@@ -1443,8 +1443,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     Constant *One = ConstantInt::get(Ty, 1);
     for (pred_iterator HPI = HPB; HPI != HPE; ++HPI) {
       BasicBlock *HP = *HPI;
-      if (!PredSeen.insert(HP))
+      if (!PredSeen.insert(HP)) {
+        // There must be an incoming value for each predecessor, even the
+        // duplicates!
+        CanonicalIV->addIncoming(CanonicalIV->getIncomingValueForBlock(HP), HP);
         continue;
+      }
 
       if (L->contains(HP)) {
         // Insert a unit add instruction right before the terminator
