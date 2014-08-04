@@ -526,11 +526,6 @@ PPCTargetLowering::PPCTargetLowering(PPCTargetMachine &TM)
     // Altivec does not contain unordered floating-point compare instructions
     setCondCodeAction(ISD::SETUO, MVT::v4f32, Expand);
     setCondCodeAction(ISD::SETUEQ, MVT::v4f32, Expand);
-    setCondCodeAction(ISD::SETUGT, MVT::v4f32, Expand);
-    setCondCodeAction(ISD::SETUGE, MVT::v4f32, Expand);
-    setCondCodeAction(ISD::SETULT, MVT::v4f32, Expand);
-    setCondCodeAction(ISD::SETULE, MVT::v4f32, Expand);
-
     setCondCodeAction(ISD::SETO,   MVT::v4f32, Expand);
     setCondCodeAction(ISD::SETONE, MVT::v4f32, Expand);
 
@@ -561,11 +556,6 @@ PPCTargetLowering::PPCTargetLowering(PPCTargetMachine &TM)
       // Share the Altivec comparison restrictions.
       setCondCodeAction(ISD::SETUO, MVT::v2f64, Expand);
       setCondCodeAction(ISD::SETUEQ, MVT::v2f64, Expand);
-      setCondCodeAction(ISD::SETUGT, MVT::v2f64, Expand);
-      setCondCodeAction(ISD::SETUGE, MVT::v2f64, Expand);
-      setCondCodeAction(ISD::SETULT, MVT::v2f64, Expand);
-      setCondCodeAction(ISD::SETULE, MVT::v2f64, Expand);
-
       setCondCodeAction(ISD::SETO,   MVT::v2f64, Expand);
       setCondCodeAction(ISD::SETONE, MVT::v2f64, Expand);
 
