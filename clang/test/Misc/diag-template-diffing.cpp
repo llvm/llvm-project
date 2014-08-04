@@ -1212,6 +1212,41 @@ A<int> a2 = A<bool>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'A<bool>' to 'A<int>'
 }
 
+namespace TypeAlias {
+template <int, int = 0> class A {};
+
+template <class T> using a = A<T::num, 0>;
+template <class T> using a = A<T::num>;
+
+template <class T> using A1 = A<T::num>;
+template <class T> using A1 = A<T::num + 0>;
+// CHECK-ELIDE-NOTREE: type alias template redefinition with different types ('A<T::num + 0>' vs 'A<T::num>')
+
+template <class T> using A2 = A<1 + T::num>;
+template <class T> using A2 = A<T::num + 1>;
+// CHECK-ELIDE-NOTREE: type alias template redefinition with different types ('A<T::num + 1>' vs 'A<1 + T::num>')
+
+template <class T> using A3 = A<(T::num)>;
+template <class T> using A3 = A<T::num>;
+// CHECK-ELIDE-NOTREE: error: type alias template redefinition with different types ('A<T::num>' vs 'A<(T::num)>')
+
+          template <class T> using A4 = A<(T::num)>;
+template <class T> using A4 = A<((T::num))>;
+// CHECK-ELIDE-NOTREE: type alias template redefinition with different types ('A<((T::num))>' vs 'A<(T::num)>')
+
+template <class T> using A5 = A<T::num, 1>;
+template <class T> using A5 = A<T::num>;
+// CHECK-ELIDE-NOTREE: type alias template redefinition with different types ('A<[...], (default) 0>' vs 'A<[...], 1>')
+
+template <class T> using A6 = A<T::num + 5, 1>;
+template <class T> using A6 = A<T::num + 5>;
+// CHECK-ELIDE-NOTREE: type alias template redefinition with different types ('A<[...], (default) 0>' vs 'A<[...], 1>')
+
+template <class T> using A7 = A<T::num, 1>;
+template <class T> using A7 = A<(T::num)>;
+// CHECK-ELIDE-NOTREE: type alias template redefinition with different types ('A<(T::num), (default) 0>' vs 'A<T::num, 1>')
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.

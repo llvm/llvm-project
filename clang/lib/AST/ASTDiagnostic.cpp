@@ -1291,11 +1291,8 @@ class TemplateDiff {
     if (!FromExpr || !ToExpr)
       return false;
 
-    FromExpr = FromExpr->IgnoreParens();
-    ToExpr = ToExpr->IgnoreParens();
-
-    DeclRefExpr *FromDRE = dyn_cast<DeclRefExpr>(FromExpr),
-                *ToDRE = dyn_cast<DeclRefExpr>(ToExpr);
+    DeclRefExpr *FromDRE = dyn_cast<DeclRefExpr>(FromExpr->IgnoreParens()),
+                *ToDRE = dyn_cast<DeclRefExpr>(ToExpr->IgnoreParens());
 
     if (FromDRE || ToDRE) {
       if (!FromDRE || !ToDRE)
@@ -1305,8 +1302,12 @@ class TemplateDiff {
 
     Expr::EvalResult FromResult, ToResult;
     if (!FromExpr->EvaluateAsRValue(FromResult, Context) ||
-        !ToExpr->EvaluateAsRValue(ToResult, Context))
-      return false;
+        !ToExpr->EvaluateAsRValue(ToResult, Context)) {
+      llvm::FoldingSetNodeID FromID, ToID;
+      FromExpr->Profile(FromID, Context, true);
+      ToExpr->Profile(ToID, Context, true);
+      return FromID == ToID;
+    }
 
     APValue &FromVal = FromResult.Val;
     APValue &ToVal = ToResult.Val;
