@@ -3258,98 +3258,66 @@ void test6() {
   /* vec_sld */
   res_vsc = vec_sld(vsc, vsc, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vuc = vec_sld(vuc, vuc, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vs  = vec_sld(vs, vs, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vus = vec_sld(vus, vus, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vp  = vec_sld(vp, vp, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vi  = vec_sld(vi, vi, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vui = vec_sld(vui, vui, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vf  = vec_sld(vf, vf, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vsc = vec_vsldoi(vsc, vsc, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vuc = vec_vsldoi(vuc, vuc, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vs  = vec_vsldoi(vs, vs, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vus = vec_vsldoi(vus, vus, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vp  = vec_vsldoi(vp, vp, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vi  = vec_vsldoi(vi, vi, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vui = vec_vsldoi(vui, vui, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vf  = vec_vsldoi(vf, vf, 0);
 // CHECK: @llvm.ppc.altivec.vperm
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 1
-// CHECK-LE: sub nsw i32 {{[%_.a-z0-9]+}}, 15
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
   /* vec_sll */
@@ -5189,13 +5157,11 @@ void test6() {
 // CHECK: @llvm.ppc.altivec.vsumsws
 // CHECK-LE: @llvm.ppc.altivec.vperm
 // CHECK-LE: @llvm.ppc.altivec.vsumsws
-// CHECK-LE: @llvm.ppc.altivec.vperm
 
   res_vi = vec_vsumsws(vi, vi);
 // CHECK: @llvm.ppc.altivec.vsumsws
 // CHECK-LE: @llvm.ppc.altivec.vperm
 // CHECK-LE: @llvm.ppc.altivec.vsumsws
-// CHECK-LE: @llvm.ppc.altivec.vperm
 
   /* vec_trunc */
   res_vf = vec_trunc(vf);
