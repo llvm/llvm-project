@@ -146,3 +146,25 @@ void PR9412_f() {
     PR9412_t<PR9412_Exact>(); // expected-note {{in instantiation of function template specialization 'PR9412_t<0>' requested here}}
 }
 
+#if __cplusplus >= 201103L
+namespace LambdaVsTemporaryDtor {
+  struct Y { ~Y(); };
+  struct X { template<typename T> X(T, Y = Y()) {} };
+
+  struct Fatal { ~Fatal() __attribute__((noreturn)); };
+  struct FatalCopy { FatalCopy(); FatalCopy(const FatalCopy&, Fatal F = Fatal()); };
+
+  void foo();
+
+  int bar() {
+    X work([](){ Fatal(); });
+    foo();
+  } // expected-warning {{control reaches end of non-void function}}
+
+  int baz() {
+    FatalCopy fc;
+    X work([fc](){});
+    foo();
+  } // ok, initialization of lambda does not return
+}
+#endif

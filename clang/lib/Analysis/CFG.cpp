@@ -3495,9 +3495,34 @@ tryAgain:
     case Stmt::ParenExprClass:
       E = cast<ParenExpr>(E)->getSubExpr();
       goto tryAgain;
-      
+
     case Stmt::MaterializeTemporaryExprClass:
       E = cast<MaterializeTemporaryExpr>(E)->GetTemporaryExpr();
+      goto tryAgain;
+
+    case Stmt::BlockExprClass:
+      // Don't recurse into blocks; their subexpressions don't get evaluated
+      // here.
+      return Block;
+
+    case Stmt::LambdaExprClass: {
+      // For lambda expressions, only recurse into the capture initializers,
+      // and not the body.
+      auto *LE = cast<LambdaExpr>(E);
+      CFGBlock *B = Block;
+      for (Expr *Init : LE->capture_inits()) {
+        if (CFGBlock *R = VisitForTemporaryDtors(Init))
+          B = R;
+      }
+      return B;
+    }
+
+    case Stmt::CXXDefaultArgExprClass:
+      E = cast<CXXDefaultArgExpr>(E)->getExpr();
+      goto tryAgain;
+
+    case Stmt::CXXDefaultInitExprClass:
+      E = cast<CXXDefaultInitExpr>(E)->getExpr();
       goto tryAgain;
   }
 }

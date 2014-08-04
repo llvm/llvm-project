@@ -1479,6 +1479,12 @@ public:
   /// arguments.
   typedef Expr **capture_init_iterator;
 
+  /// \brief Retrieve the initialization expressions for this lambda's captures.
+  llvm::iterator_range<capture_init_iterator> capture_inits() const {
+    return llvm::iterator_range<capture_init_iterator>(capture_init_begin(),
+                                                       capture_init_end());
+  }
+
   /// \brief Retrieve the first initialization argument for this
   /// lambda expression (which initializes the first capture field).
   capture_init_iterator capture_init_begin() const {
