@@ -118,7 +118,8 @@ for.end:
 
 ; SI-PROMOTE: BUFFER_STORE_SHORT v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, s{{[0-9]+}}
 ; SI-PROMOTE: BUFFER_STORE_SHORT v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, s{{[0-9]+}}
-; SI_PROMOTE: BUFFER_LOAD_SSHORT v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}] + v{{[0-9]+}}, s{{[0-9]+}}
+; SI-PROMOTE-NOT: MOVREL
+; SI-PROMOTE: BUFFER_LOAD_SSHORT v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}] + v{{[0-9]+}} + s{{[0-9]+}}
 define void @short_array(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %0 = alloca [2 x i16]
