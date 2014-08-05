@@ -576,6 +576,10 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr *MI, unsigned OpNo,
   return RI.regClassCanUseImmediate(OpInfo.RegClass);
 }
 
+bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
+  return AMDGPU::getVOPe32(Opcode) != -1;
+}
+
 bool SIInstrInfo::verifyInstruction(const MachineInstr *MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI->getOpcode();

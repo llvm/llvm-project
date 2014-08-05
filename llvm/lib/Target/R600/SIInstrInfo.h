@@ -109,6 +109,10 @@ public:
   bool isImmOperandLegal(const MachineInstr *MI, unsigned OpNo,
                          const MachineOperand &MO) const;
 
+  /// \brief Return true if this 64-bit VALU instruction has a 32-bit encoding.
+  /// This function will return false if you pass it a 32-bit instruction.
+  bool hasVALU32BitEncoding(unsigned Opcode) const;
+
   bool verifyInstruction(const MachineInstr *MI,
                          StringRef &ErrInfo) const override;
 
