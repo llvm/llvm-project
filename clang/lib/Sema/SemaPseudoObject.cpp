@@ -845,7 +845,12 @@ bool ObjCPropertyOpBuilder::tryBuildGetOfReference(Expr *op,
   if (!S.getLangOpts().CPlusPlus) return false;
 
   findGetter();
-  assert(Getter && "property has no setter and no getter!");
+  if (!Getter) {
+    // The property has no setter and no getter! This can happen if the type is
+    // invalid. Error have already been reported.
+    result = ExprError();
+    return true;
+  }
 
   // Only do this if the getter returns an l-value reference type.
   QualType resultType = Getter->getReturnType();
