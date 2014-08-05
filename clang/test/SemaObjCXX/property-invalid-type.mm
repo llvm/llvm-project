@@ -7,6 +7,7 @@
 @end
 @interface I ()
 @property A* response;  // expected-error {{unknown type name 'A'}}
+@property  int helper;
 @end
 @implementation I
 @synthesize response;
@@ -16,4 +17,7 @@
 }
 @end
 
-
+void foo(I *i)
+{
+  i.helper;
+}

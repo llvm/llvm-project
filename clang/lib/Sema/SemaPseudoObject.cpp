@@ -284,7 +284,7 @@ namespace {
     bool tryBuildGetOfReference(Expr *op, ExprResult &result);
     bool findSetter(bool warn=true);
     bool findGetter();
-    bool DiagnoseUnsupportedPropertyUse();
+    void DiagnoseUnsupportedPropertyUse();
 
     Expr *rebuildAndCaptureObject(Expr *syntacticBase) override;
     ExprResult buildGet() override;
@@ -642,7 +642,7 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
   return false;
 }
 
-bool ObjCPropertyOpBuilder::DiagnoseUnsupportedPropertyUse() {
+void ObjCPropertyOpBuilder::DiagnoseUnsupportedPropertyUse() {
   if (S.getCurLexicalContext()->isObjCContainer() &&
       S.getCurLexicalContext()->getDeclKind() != Decl::ObjCCategoryImpl &&
       S.getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation) {
@@ -650,10 +650,8 @@ bool ObjCPropertyOpBuilder::DiagnoseUnsupportedPropertyUse() {
         S.Diag(RefExpr->getLocation(),
                diag::err_property_function_in_objc_container);
         S.Diag(prop->getLocation(), diag::note_property_declare);
-        return true;
     }
   }
-  return false;
 }
 
 /// Capture the base object of an Objective-C property expression.
@@ -679,10 +677,10 @@ Expr *ObjCPropertyOpBuilder::rebuildAndCaptureObject(Expr *syntacticBase) {
 /// Load from an Objective-C property reference.
 ExprResult ObjCPropertyOpBuilder::buildGet() {
   findGetter();
-  if (!Getter && DiagnoseUnsupportedPropertyUse())
-      return ExprError();
-
-  assert(Getter);
+  if (!Getter) {
+    DiagnoseUnsupportedPropertyUse();
+    return ExprError();
+  }
 
   if (SyntacticRefExpr)
     SyntacticRefExpr->setIsMessagingGetter();
@@ -720,10 +718,10 @@ ExprResult ObjCPropertyOpBuilder::buildGet() {
 ///   value being set as the value of the property operation.
 ExprResult ObjCPropertyOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
                                            bool captureSetValueAsResult) {
-  bool hasSetter = findSetter(false);
-  if (!hasSetter && DiagnoseUnsupportedPropertyUse())
-      return ExprError();
-  assert(hasSetter); (void) hasSetter;
+  if (!findSetter(false)) {
+    DiagnoseUnsupportedPropertyUse();
+    return ExprError();
+  }
 
   if (SyntacticRefExpr)
     SyntacticRefExpr->setIsMessagingSetter();
