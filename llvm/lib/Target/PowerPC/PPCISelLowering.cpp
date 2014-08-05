@@ -987,7 +987,12 @@ bool PPC::isVMRGHShuffleMask(ShuffleVectorSDNode *N, unsigned UnitSize,
 
 /// isVSLDOIShuffleMask - If this is a vsldoi shuffle mask, return the shift
 /// amount, otherwise return -1.
-int PPC::isVSLDOIShuffleMask(SDNode *N, bool isUnary, SelectionDAG &DAG) {
+/// The ShuffleKind distinguishes between big-endian operations with two 
+/// different inputs (0), either-endian operations with two identical inputs
+/// (1), and little-endian operations with two different inputs (2).  For the
+/// latter, the input operands are swapped (see PPCInstrAltivec.td).
+int PPC::isVSLDOIShuffleMask(SDNode *N, unsigned ShuffleKind,
+                             SelectionDAG &DAG) {
   if (N->getValueType(0) != MVT::v16i8)
     return -1;
 
@@ -1006,18 +1011,24 @@ int PPC::isVSLDOIShuffleMask(SDNode *N, bool isUnary, SelectionDAG &DAG) {
   if (ShiftAmt < i) return -1;
 
   ShiftAmt -= i;
+  bool isLE = DAG.getTarget().getSubtargetImpl()->getDataLayout()->
+    isLittleEndian();
 
-  if (!isUnary) {
+  if ((ShuffleKind == 0 && !isLE) || (ShuffleKind == 2 && isLE)) {
     // Check the rest of the elements to see if they are consecutive.
     for (++i; i != 16; ++i)
       if (!isConstantOrUndef(SVOp->getMaskElt(i), ShiftAmt+i))
         return -1;
-  } else {
+  } else if (ShuffleKind == 1) {
     // Check the rest of the elements to see if they are consecutive.
     for (++i; i != 16; ++i)
       if (!isConstantOrUndef(SVOp->getMaskElt(i), (ShiftAmt+i) & 15))
         return -1;
-  }
+  } else
+    return -1;
+
+  if (ShuffleKind == 2 && isLE)
+    ShiftAmt = 16 - ShiftAmt;
 
   return ShiftAmt;
 }
@@ -6032,7 +6043,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         PPC::isSplatShuffleMask(SVOp, 4) ||
         PPC::isVPKUWUMShuffleMask(SVOp, 1, DAG) ||
         PPC::isVPKUHUMShuffleMask(SVOp, 1, DAG) ||
-        PPC::isVSLDOIShuffleMask(SVOp, true, DAG) != -1 ||
+        PPC::isVSLDOIShuffleMask(SVOp, 1, DAG) != -1 ||
         PPC::isVMRGLShuffleMask(SVOp, 1, 1, DAG) ||
         PPC::isVMRGLShuffleMask(SVOp, 2, 1, DAG) ||
         PPC::isVMRGLShuffleMask(SVOp, 4, 1, DAG) ||
@@ -6049,7 +6060,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   unsigned int ShuffleKind = isLittleEndian ? 2 : 0;
   if (PPC::isVPKUWUMShuffleMask(SVOp, ShuffleKind, DAG) ||
       PPC::isVPKUHUMShuffleMask(SVOp, ShuffleKind, DAG) ||
-      PPC::isVSLDOIShuffleMask(SVOp, false, DAG) != -1 ||
+      PPC::isVSLDOIShuffleMask(SVOp, ShuffleKind, DAG) != -1 ||
       PPC::isVMRGLShuffleMask(SVOp, 1, ShuffleKind, DAG) ||
       PPC::isVMRGLShuffleMask(SVOp, 2, ShuffleKind, DAG) ||
       PPC::isVMRGLShuffleMask(SVOp, 4, ShuffleKind, DAG) ||

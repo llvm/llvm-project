@@ -129,23 +129,34 @@ def vmrghw_swapped_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
 
 
 def VSLDOI_get_imm : SDNodeXForm<vector_shuffle, [{
-  return getI32Imm(PPC::isVSLDOIShuffleMask(N, false, *CurDAG));
+  return getI32Imm(PPC::isVSLDOIShuffleMask(N, 0, *CurDAG));
 }]>;
 def vsldoi_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                              (vector_shuffle node:$lhs, node:$rhs), [{
-  return PPC::isVSLDOIShuffleMask(N, false, *CurDAG) != -1;
+  return PPC::isVSLDOIShuffleMask(N, 0, *CurDAG) != -1;
 }], VSLDOI_get_imm>;
 
 
 /// VSLDOI_unary* - These are used to match vsldoi(X,X), which is turned into
 /// vector_shuffle(X,undef,mask) by the dag combiner.
 def VSLDOI_unary_get_imm : SDNodeXForm<vector_shuffle, [{
-  return getI32Imm(PPC::isVSLDOIShuffleMask(N, true, *CurDAG));
+  return getI32Imm(PPC::isVSLDOIShuffleMask(N, 1, *CurDAG));
 }]>;
 def vsldoi_unary_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                                    (vector_shuffle node:$lhs, node:$rhs), [{
-  return PPC::isVSLDOIShuffleMask(N, true, *CurDAG) != -1;
+  return PPC::isVSLDOIShuffleMask(N, 1, *CurDAG) != -1;
 }], VSLDOI_unary_get_imm>;
+
+
+/// VSLDOI_swapped* - These fragments are provided for little-endian, where
+/// the inputs must be swapped for correct semantics.
+def VSLDOI_swapped_get_imm : SDNodeXForm<vector_shuffle, [{
+  return getI32Imm(PPC::isVSLDOIShuffleMask(N, 2, *CurDAG));
+}]>;
+def vsldoi_swapped_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
+                                     (vector_shuffle node:$lhs, node:$rhs), [{
+  return PPC::isVSLDOIShuffleMask(N, 2, *CurDAG) != -1;
+}], VSLDOI_get_imm>;
 
 
 // VSPLT*_get_imm xform function: convert vector_shuffle mask to VSPLT* imm.
@@ -811,9 +822,11 @@ def:Pat<(vpkuwum_unary_shuffle v16i8:$vA, undef),
 def:Pat<(vpkuhum_unary_shuffle v16i8:$vA, undef),
         (VPKUHUM $vA, $vA)>;
 
-// Match vpkuwum(y,x), vpkuhum(y,x), i.e., swapped operands.
-// These fragments are matched for little-endian, where the
-// inputs must be swapped for correct semantics.
+// Match vsldoi(y,x), vpkuwum(y,x), vpkuhum(y,x), i.e., swapped operands.
+// These fragments are matched for little-endian, where the inputs must
+// be swapped for correct semantics.
+def:Pat<(vsldoi_swapped_shuffle:$in v16i8:$vA, v16i8:$vB),
+        (VSLDOI $vB, $vA, (VSLDOI_swapped_get_imm $in))>;
 def:Pat<(vpkuwum_swapped_shuffle v16i8:$vA, v16i8:$vB),
         (VPKUWUM $vB, $vA)>;
 def:Pat<(vpkuhum_swapped_shuffle v16i8:$vA, v16i8:$vB),

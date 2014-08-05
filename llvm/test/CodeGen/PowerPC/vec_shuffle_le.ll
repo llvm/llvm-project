@@ -190,7 +190,9 @@ entry:
         %tmp = load <16 x i8>* %A
         %tmp2 = load <16 x i8>* %B
         %tmp3 = shufflevector <16 x i8> %tmp, <16 x i8> %tmp2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27>
-; CHECK: vsldoi
+; CHECK: lvx [[REG1:[0-9]+]]
+; CHECK: lvx [[REG2:[0-9]+]]
+; CHECK: vsldoi [[REG3:[0-9]+]], [[REG2]], [[REG1]], 4
         store <16 x i8> %tmp3, <16 x i8>* %A
         ret void
 }

@@ -315,9 +315,10 @@ namespace llvm {
     bool isVMRGHShuffleMask(ShuffleVectorSDNode *N, unsigned UnitSize,
                             unsigned ShuffleKind, SelectionDAG &DAG);
 
-    /// isVSLDOIShuffleMask - If this is a vsldoi shuffle mask, return the shift
-    /// amount, otherwise return -1.
-    int isVSLDOIShuffleMask(SDNode *N, bool isUnary, SelectionDAG &DAG);
+    /// isVSLDOIShuffleMask - If this is a vsldoi shuffle mask, return the
+    /// shift amount, otherwise return -1.
+    int isVSLDOIShuffleMask(SDNode *N, unsigned ShuffleKind,
+                            SelectionDAG &DAG);
 
     /// isSplatShuffleMask - Return true if the specified VECTOR_SHUFFLE operand
     /// specifies a splat of a single element that is suitable for input to
