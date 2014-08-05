@@ -6450,11 +6450,13 @@ static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
   //       AND(VECTOR_CMP(x,y), constant2)
   //    constant2 = UNARYOP(constant)
 
-  // Early exit if this isn't a vector operation or if the operand of the
-  // unary operation isn't a bitwise AND.
+  // Early exit if this isn't a vector operation, the operand of the
+  // unary operation isn't a bitwise AND, or if the sizes of the operations
+  // aren't the same.
   EVT VT = N->getValueType(0);
   if (!VT.isVector() || N->getOperand(0)->getOpcode() != ISD::AND ||
-      N->getOperand(0)->getOperand(0)->getOpcode() != ISD::SETCC)
+      N->getOperand(0)->getOperand(0)->getOpcode() != ISD::SETCC ||
+      VT.getSizeInBits() != N->getOperand(0)->getValueType(0).getSizeInBits())
     return SDValue();
 
   // Now check that the other operand of the AND is a constant splat. We could
