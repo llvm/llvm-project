@@ -36,11 +36,11 @@ def remark_fe_backend_plugin: Remark<"%0">, BackendInfo, InGroup<RemarkBackendPl
 def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
 def remark_fe_backend_optimization_remark : Remark<"%0">, BackendInfo,
-    InGroup<BackendOptimizationRemark>, DefaultRemark;
+    InGroup<BackendOptimizationRemark>;
 def remark_fe_backend_optimization_remark_missed : Remark<"%0">, BackendInfo,
-    InGroup<BackendOptimizationRemarkMissed>, DefaultRemark;
+    InGroup<BackendOptimizationRemarkMissed>;
 def remark_fe_backend_optimization_remark_analysis : Remark<"%0">, BackendInfo,
-    InGroup<BackendOptimizationRemarkAnalysis>, DefaultRemark;
+    InGroup<BackendOptimizationRemarkAnalysis>;
 def warn_fe_backend_optimization_failure : Warning<"%0">, BackendInfo,
     InGroup<BackendOptimizationFailure>, DefaultWarn;
 def note_fe_backend_optimization_remark_invalid_loc : Note<"could "
@@ -126,17 +126,8 @@ def err_relocatable_without_isysroot : Error<
     "must specify system root with -isysroot when building a relocatable "
     "PCH file">;
 
-def warn_unknown_warning_option : Warning<
-    "unknown warning option '%0'">,
-    InGroup<UnknownWarningOption>;
-def warn_unknown_negative_warning_option : Warning<
-    "unknown warning option '%0'">,
-    InGroup<UnknownWarningOption>;
-def warn_unknown_warning_option_suggest : Warning<
-    "unknown warning option '%0'; did you mean '%1'?">,
-    InGroup<UnknownWarningOption>;
-def warn_unknown_negative_warning_option_suggest : Warning<
-    "unknown warning option '%0'; did you mean '%1'?">,
+def warn_unknown_diag_option : Warning<
+    "unknown %select{warning|remark}0 option '%1'%select{|; did you mean '%3'?}2">,
     InGroup<UnknownWarningOption>;
 def warn_unknown_warning_specifier : Warning<
     "unknown %0 warning specifier: '%1'">,
@@ -176,7 +167,7 @@ def warn_module_config_macro_undef : Warning<
 def note_module_def_undef_here : Note<
   "macro was %select{defined|#undef'd}0 here">;
 def remark_module_build : Remark<"building module '%0' as '%1'">,
-  InGroup<DiagGroup<"module-build">>, DefaultIgnore;
+  InGroup<DiagGroup<"module-build">>;
 
 def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;

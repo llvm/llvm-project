@@ -20,6 +20,8 @@
 // Given a warning option 'foo', the following are valid:
 //    -Wfoo, -Wno-foo, -Werror=foo, -Wfatal-errors=foo
 //
+// Remark options are also handled here, analogously, except that they are much
+// simpler because a remark can't be promoted to an error.
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -31,17 +33,12 @@ using namespace clang;
 // EmitUnknownDiagWarning - Emit a warning and typo hint for unknown warning
 // opts
 static void EmitUnknownDiagWarning(DiagnosticsEngine &Diags,
-                                  StringRef Prefix, StringRef Opt,
-                                  bool isPositive) {
-  StringRef Suggestion = DiagnosticIDs::getNearestWarningOption(Opt);
-  if (!Suggestion.empty())
-    Diags.Report(isPositive? diag::warn_unknown_warning_option_suggest :
-                             diag::warn_unknown_negative_warning_option_suggest)
-      << (Prefix.str() += Opt) << (Prefix.str() += Suggestion);
-  else
-    Diags.Report(isPositive? diag::warn_unknown_warning_option :
-                             diag::warn_unknown_negative_warning_option)
-      << (Prefix.str() += Opt);
+                                   diag::Flavor Flavor, StringRef Prefix,
+                                   StringRef Opt) {
+  StringRef Suggestion = DiagnosticIDs::getNearestOption(Flavor, Opt);
+  Diags.Report(diag::warn_unknown_diag_option)
+    << (Flavor == diag::Flavor::WarningOrError ? 0 : 1) << (Prefix.str() += Opt)
+    << !Suggestion.empty() << (Prefix.str() += Suggestion);
 }
 
 void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
@@ -89,6 +86,7 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
       break;
 
     for (unsigned i = 0, e = Opts.Warnings.size(); i != e; ++i) {
+      const auto Flavor = diag::Flavor::WarningOrError;
       StringRef Opt = Opts.Warnings[i];
       StringRef OrigOpt = Opts.Warnings[i];
 
@@ -125,7 +123,7 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
             Diags.setEnableAllWarnings(true);
           } else {
             Diags.setEnableAllWarnings(false);
-            Diags.setSeverityForAll(diag::Severity::Ignored);
+            Diags.setSeverityForAll(Flavor, diag::Severity::Ignored);
           }
         }
         continue;
@@ -154,8 +152,8 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
         if (SetDiagnostic) {
           // Set the warning as error flag for this specifier.
           Diags.setDiagnosticGroupWarningAsError(Specifier, isPositive);
-        } else if (DiagIDs->getDiagnosticsInGroup(Specifier, _Diags)) {
-          EmitUnknownDiagWarning(Diags, "-Werror=", Specifier, isPositive);
+        } else if (DiagIDs->getDiagnosticsInGroup(Flavor, Specifier, _Diags)) {
+          EmitUnknownDiagWarning(Diags, Flavor, "-Werror=", Specifier);
         }
         continue;
       }
@@ -182,19 +180,50 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
         if (SetDiagnostic) {
           // Set the error as fatal flag for this specifier.
           Diags.setDiagnosticGroupErrorAsFatal(Specifier, isPositive);
-        } else if (DiagIDs->getDiagnosticsInGroup(Specifier, _Diags)) {
-          EmitUnknownDiagWarning(Diags, "-Wfatal-errors=", Specifier,
-                                 isPositive);
+        } else if (DiagIDs->getDiagnosticsInGroup(Flavor, Specifier, _Diags)) {
+          EmitUnknownDiagWarning(Diags, Flavor, "-Wfatal-errors=", Specifier);
         }
         continue;
       }
       
       if (Report) {
-        if (DiagIDs->getDiagnosticsInGroup(Opt, _Diags))
-          EmitUnknownDiagWarning(Diags, isPositive ? "-W" : "-Wno-", Opt,
-                                 isPositive);
+        if (DiagIDs->getDiagnosticsInGroup(Flavor, Opt, _Diags))
+          EmitUnknownDiagWarning(Diags, Flavor, isPositive ? "-W" : "-Wno-",
+                                 Opt);
       } else {
-        Diags.setSeverityForGroup(Opt, Mapping);
+        Diags.setSeverityForGroup(Flavor, Opt, Mapping);
+      }
+    }
+
+    for (unsigned i = 0, e = Opts.Remarks.size(); i != e; ++i) {
+      StringRef Opt = Opts.Remarks[i];
+      const auto Flavor = diag::Flavor::Remark;
+
+      // Check to see if this warning starts with "no-", if so, this is a
+      // negative form of the option.
+      bool IsPositive = !Opt.startswith("no-");
+      if (!IsPositive) Opt = Opt.substr(3);
+
+      auto Severity = IsPositive ? diag::Severity::Remark
+                                 : diag::Severity::Ignored;
+
+      // -Reverything sets the state of all remarks. Note that all remarks are
+      // in remark groups, so we don't need a separate 'all remarks enabled'
+      // flag.
+      if (Opt == "everything") {
+        if (SetDiagnostic)
+          Diags.setSeverityForAll(Flavor, Severity);
+        continue;
+      }
+
+      if (Report) {
+        if (DiagIDs->getDiagnosticsInGroup(Flavor, Opt, _Diags))
+          EmitUnknownDiagWarning(Diags, Flavor, IsPositive ? "-R" : "-Rno-",
+                                 Opt);
+      } else {
+        Diags.setSeverityForGroup(Flavor, Opt,
+                                  IsPositive ? diag::Severity::Remark
+                                             : diag::Severity::Ignored);
       }
     }
   }

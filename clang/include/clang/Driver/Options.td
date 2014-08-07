@@ -64,7 +64,9 @@ def M_Group               : OptionGroup<"<M group>">, Group<CompileOnly_Group>;
 def T_Group               : OptionGroup<"<T group>">;
 def O_Group               : OptionGroup<"<O group>">, Group<CompileOnly_Group>;
 def R_Group               : OptionGroup<"<R group>">, Group<CompileOnly_Group>;
+def R_value_Group         : OptionGroup<"<R (with value) group>">, Group<R_Group>;
 def W_Group               : OptionGroup<"<W group>">, Group<CompileOnly_Group>;
+def W_value_Group         : OptionGroup<"<W (with value) group>">, Group<W_Group>;
 def d_Group               : OptionGroup<"<d group>">;
 def f_Group               : OptionGroup<"<f group>">, Group<CompileOnly_Group>;
 def f_clang_Group         : OptionGroup<"<f (clang-only) group>">, Group<CompileOnly_Group>;
@@ -261,17 +263,19 @@ def Qn : Flag<["-"], "Qn">;
 def Qunused_arguments : Flag<["-"], "Qunused-arguments">, Flags<[DriverOption, CoreOption]>,
   HelpText<"Don't emit warning for unused driver arguments">;
 def Q : Flag<["-"], "Q">;
-def Rpass_EQ : Joined<["-"], "Rpass=">, Group<R_Group>, Flags<[CC1Option]>,
+def Rpass_EQ : Joined<["-"], "Rpass=">, Group<R_value_Group>, Flags<[CC1Option]>,
   HelpText<"Report transformations performed by optimization passes whose "
            "name matches the given POSIX regular expression">;
-def Rpass_missed_EQ : Joined<["-"], "Rpass-missed=">, Group<R_Group>,
+def Rpass_missed_EQ : Joined<["-"], "Rpass-missed=">, Group<R_value_Group>,
   Flags<[CC1Option]>,
   HelpText<"Report missed transformations by optimization passes whose "
            "name matches the given POSIX regular expression">;
-def Rpass_analysis_EQ : Joined<["-"], "Rpass-analysis=">, Group<R_Group>,
+def Rpass_analysis_EQ : Joined<["-"], "Rpass-analysis=">, Group<R_value_Group>,
   Flags<[CC1Option]>,
   HelpText<"Report transformation analysis from optimization passes whose "
            "name matches the given POSIX regular expression">;
+def R_Joined : Joined<["-"], "R">, Group<R_Group>, Flags<[CC1Option, CoreOption]>,
+  MetaVarName<"<remark>">, HelpText<"Enable the specified remark">;
 def S : Flag<["-"], "S">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>,
   HelpText<"Only run preprocess and compilation steps">;
 def Tbss : JoinedOrSeparate<["-"], "Tbss">, Group<T_Group>;
@@ -290,6 +294,7 @@ def Wextra : Flag<["-"], "Wextra">, Group<W_Group>, Flags<[CC1Option]>;
 def Wl_COMMA : CommaJoined<["-"], "Wl,">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass the comma separated arguments in <arg> to the linker">,
   MetaVarName<"<arg>">;
+// FIXME: This is broken; these should not be Joined arguments.
 def Wno_nonportable_cfstrings : Joined<["-"], "Wno-nonportable-cfstrings">, Group<W_Group>,
   Flags<[CC1Option]>;
 def Wnonportable_cfstrings : Joined<["-"], "Wnonportable-cfstrings">, Group<W_Group>,

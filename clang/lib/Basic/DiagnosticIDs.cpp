@@ -58,6 +58,11 @@ struct StaticDiagInfoRec {
     return StringRef(DescriptionStr, DescriptionLen);
   }
 
+  diag::Flavor getFlavor() const {
+    return Class == CLASS_REMARK ? diag::Flavor::Remark
+                                 : diag::Flavor::WarningOrError;
+  }
+
   bool operator<(const StaticDiagInfoRec &RHS) const {
     return DiagID < RHS.DiagID;
   }
@@ -522,40 +527,57 @@ StringRef DiagnosticIDs::getWarningOptionForDiag(unsigned DiagID) {
   return StringRef();
 }
 
-static void getDiagnosticsInGroup(const WarningOption *Group,
+/// Return \c true if any diagnostics were found in this group, even if they
+/// were filtered out due to having the wrong flavor.
+static bool getDiagnosticsInGroup(diag::Flavor Flavor,
+                                  const WarningOption *Group,
                                   SmallVectorImpl<diag::kind> &Diags) {
+  // An empty group is considered to be a warning group: we have empty groups
+  // for GCC compatibility, and GCC does not have remarks.
+  if (!Group->Members && !Group->SubGroups)
+    return Flavor == diag::Flavor::Remark ? true : false;
+
+  bool NotFound = true;
+
   // Add the members of the option diagnostic set.
   const int16_t *Member = DiagArrays + Group->Members;
-  for (; *Member != -1; ++Member)
-    Diags.push_back(*Member);
+  for (; *Member != -1; ++Member) {
+    if (GetDiagInfo(*Member)->getFlavor() == Flavor) {
+      NotFound = false;
+      Diags.push_back(*Member);
+    }
+  }
 
   // Add the members of the subgroups.
   const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
   for (; *SubGroups != (int16_t)-1; ++SubGroups)
-    getDiagnosticsInGroup(&OptionTable[(short)*SubGroups], Diags);
+    NotFound &= getDiagnosticsInGroup(Flavor, &OptionTable[(short)*SubGroups],
+                                      Diags);
+
+  return NotFound;
 }
 
-bool DiagnosticIDs::getDiagnosticsInGroup(
-    StringRef Group,
-    SmallVectorImpl<diag::kind> &Diags) const {
-  const WarningOption *Found =
-  std::lower_bound(OptionTable, OptionTable + OptionTableSize, Group,
-                   WarningOptionCompare);
+bool
+DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
+                                     SmallVectorImpl<diag::kind> &Diags) const {
+  const WarningOption *Found = std::lower_bound(
+      OptionTable, OptionTable + OptionTableSize, Group, WarningOptionCompare);
   if (Found == OptionTable + OptionTableSize ||
       Found->getName() != Group)
     return true; // Option not found.
 
-  ::getDiagnosticsInGroup(Found, Diags);
-  return false;
+  return ::getDiagnosticsInGroup(Flavor, Found, Diags);
 }
 
-void DiagnosticIDs::getAllDiagnostics(
-                               SmallVectorImpl<diag::kind> &Diags) const {
+void DiagnosticIDs::getAllDiagnostics(diag::Flavor Flavor,
+                                     SmallVectorImpl<diag::kind> &Diags) const {
   for (unsigned i = 0; i != StaticDiagInfoSize; ++i)
-    Diags.push_back(StaticDiagInfo[i].DiagID);
+    if (StaticDiagInfo[i].getFlavor() == Flavor)
+      Diags.push_back(StaticDiagInfo[i].DiagID);
 }
 
-StringRef DiagnosticIDs::getNearestWarningOption(StringRef Group) {
+StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
+                                          StringRef Group) {
   StringRef Best;
   unsigned BestDistance = Group.size() + 1; // Sanity threshold.
   for (const WarningOption *i = OptionTable, *e = OptionTable + OptionTableSize;
@@ -565,6 +587,14 @@ StringRef DiagnosticIDs::getNearestWarningOption(StringRef Group) {
       continue;
 
     unsigned Distance = i->getName().edit_distance(Group, true, BestDistance);
+    if (Distance > BestDistance)
+      continue;
+
+    // Don't suggest groups that are not of this kind.
+    llvm::SmallVector<diag::kind, 8> Diags;
+    if (::getDiagnosticsInGroup(Flavor, i, Diags) || Diags.empty())
+      continue;
+
     if (Distance == BestDistance) {
       // Two matches with the same distance, don't prefer one over the other.
       Best = "";

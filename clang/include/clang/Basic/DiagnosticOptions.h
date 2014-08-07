@@ -58,6 +58,10 @@ public:
   /// prefixes removed.
   std::vector<std::string> Warnings;
 
+  /// The list of -R... options used to alter the diagnostic mappings, with the
+  /// prefixes removed.
+  std::vector<std::string> Remarks;
+
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.
 #define DIAGOPT(Name, Bits, Default)

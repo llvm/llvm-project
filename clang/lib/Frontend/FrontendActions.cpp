@@ -470,10 +470,11 @@ namespace {
       Out.indent(4) << #Name << ": " << DiagOpts->Name << "\n";
 #include "clang/Basic/DiagnosticOptions.def"
 
-      Out.indent(4) << "Warning options:\n";
-      for (const std::string &Warning : DiagOpts->Warnings) {
+      Out.indent(4) << "Diagnostic flags:\n";
+      for (const std::string &Warning : DiagOpts->Warnings)
         Out.indent(6) << "-W" << Warning << "\n";
-      }
+      for (const std::string &Remark : DiagOpts->Remarks)
+        Out.indent(6) << "-R" << Remark << "\n";
 
       return false;
     }

@@ -4611,9 +4611,10 @@ bool ASTReader::ParseDiagnosticOptions(const RecordData &Record, bool Complain,
   DiagOpts->set##Name(static_cast<Type>(Record[Idx++]));
 #include "clang/Basic/DiagnosticOptions.def"
 
-  for (unsigned N = Record[Idx++]; N; --N) {
+  for (unsigned N = Record[Idx++]; N; --N)
     DiagOpts->Warnings.push_back(ReadString(Record, Idx));
-  }
+  for (unsigned N = Record[Idx++]; N; --N)
+    DiagOpts->Remarks.push_back(ReadString(Record, Idx));
 
   return Listener.ReadDiagnosticOptions(DiagOpts, Complain);
 }

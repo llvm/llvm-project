@@ -13,18 +13,18 @@
 // RUN: echo 'module r { header "r.h" } module t { header "t.h" }' >> %t/module.map
 
 // RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Wmodule-build 2>&1 \
+// RUN:     -I %t -fsyntax-only %s -Rmodule-build 2>&1 \
 // RUN: | FileCheck -check-prefix=REBUILD-ALL %s
 // RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Wmodule-build -verify
+// RUN:     -I %t -fsyntax-only %s -Rmodule-build -verify
 
 // Add an identifier to ensure everything depending on t is out of date
 // RUN: echo 'extern int a;' >> %t/t.h
 // RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Wmodule-build 2>&1 \
+// RUN:     -I %t -fsyntax-only %s -Rmodule-build 2>&1 \
 // RUN: | FileCheck -check-prefix=REBUILD-ALL %s
 // RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -fdisable-module-hash \
-// RUN:     -I %t -fsyntax-only %s -Wmodule-build -verify
+// RUN:     -I %t -fsyntax-only %s -Rmodule-build -verify
 
 // REBUILD-ALL: building module 'b'
 // REBUILD-ALL: building module 'l'

@@ -22,7 +22,7 @@
 
 // CHECK: Diagnostic options:
 // CHECK:   IgnoreWarnings: Yes
-// CHECK:   Warning options:
+// CHECK:   Diagnostic flags:
 // CHECK:     -Wunused
 
 // CHECK: Header search options:

@@ -3323,6 +3323,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // precompiling.
   Args.ClaimAllArgs(options::OPT_flto);
 
+  Args.AddAllArgs(CmdArgs, options::OPT_R_Group);
   Args.AddAllArgs(CmdArgs, options::OPT_W_Group);
   if (Args.hasFlag(options::OPT_pedantic, options::OPT_no_pedantic, false))
     CmdArgs.push_back("-pedantic");
@@ -3708,15 +3709,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       A->render(Args, CmdArgs);
   }
-
-  if (Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
-    A->render(Args, CmdArgs);
-
-  if (Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
-    A->render(Args, CmdArgs);
-
-  if (Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
-    A->render(Args, CmdArgs);
 
   if (Args.hasArg(options::OPT_mkernel)) {
     if (!Args.hasArg(options::OPT_fapple_kext) && types::isCXX(InputType))

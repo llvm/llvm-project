@@ -67,6 +67,15 @@ namespace clang {
       Error = 4,   ///< Present this diagnostic as an error.
       Fatal = 5    ///< Present this diagnostic as a fatal error.
     };
+
+    /// Flavors of diagnostics we can emit. Used to filter for a particular
+    /// kind of diagnostic (for instance, for -W/-R flags).
+    enum class Flavor {
+      WarningOrError, ///< A diagnostic that indicates a problem or potential
+                      ///< problem. Can be made fatal by -Werror.
+      Remark          ///< A diagnostic that indicates normal progress through
+                      ///< compilation.
+    };
   }
 
 class DiagnosticMapping {
@@ -228,15 +237,16 @@ public:
   ///
   /// \param[out] Diags - On return, the diagnostics in the group.
   /// \returns \c true if the given group is unknown, \c false otherwise.
-  bool getDiagnosticsInGroup(StringRef Group,
+  bool getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
                              SmallVectorImpl<diag::kind> &Diags) const;
 
   /// \brief Get the set of all diagnostic IDs.
-  void getAllDiagnostics(SmallVectorImpl<diag::kind> &Diags) const;
+  void getAllDiagnostics(diag::Flavor Flavor,
+                         SmallVectorImpl<diag::kind> &Diags) const;
 
-  /// \brief Get the warning option with the closest edit distance to the given
-  /// group name.
-  static StringRef getNearestWarningOption(StringRef Group);
+  /// \brief Get the diagnostic option with the closest edit distance to the
+  /// given group name.
+  static StringRef getNearestOption(diag::Flavor Flavor, StringRef Group);
 
 private:
   /// \brief Classify the specified diagnostic ID into a Level, consumable by

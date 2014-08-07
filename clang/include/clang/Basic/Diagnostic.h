@@ -542,9 +542,13 @@ public:
   /// \returns true (and ignores the request) if "Group" was unknown, false
   /// otherwise.
   ///
+  /// \param Flavor The flavor of group to affect. -Rfoo does not affect the
+  /// state of the -Wfoo group and vice versa.
+  ///
   /// \param Loc The source location that this change of diagnostic state should
   /// take affect. It can be null if we are setting the state from command-line.
-  bool setSeverityForGroup(StringRef Group, diag::Severity Map,
+  bool setSeverityForGroup(diag::Flavor Flavor, StringRef Group,
+                           diag::Severity Map,
                            SourceLocation Loc = SourceLocation());
 
   /// \brief Set the warning-as-error flag for the given diagnostic group.
@@ -561,11 +565,12 @@ public:
   /// \returns True if the given group is unknown, false otherwise.
   bool setDiagnosticGroupErrorAsFatal(StringRef Group, bool Enabled);
 
-  /// \brief Add the specified mapping to all diagnostics.
+  /// \brief Add the specified mapping to all diagnostics of the specified
+  /// flavor.
   ///
   /// Mainly to be used by -Wno-everything to disable all warnings but allow
   /// subsequent -W options to enable specific warnings.
-  void setSeverityForAll(diag::Severity Map,
+  void setSeverityForAll(diag::Flavor Flavor, diag::Severity Map,
                          SourceLocation Loc = SourceLocation());
 
   bool hasErrorOccurred() const { return ErrorOccurred; }

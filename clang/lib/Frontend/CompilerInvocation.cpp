@@ -111,25 +111,21 @@ static unsigned getOptimizationLevelSize(ArgList &Args) {
   return 0;
 }
 
-static void addWarningArgs(ArgList &Args, std::vector<std::string> &Warnings) {
-  for (arg_iterator I = Args.filtered_begin(OPT_W_Group),
-         E = Args.filtered_end(); I != E; ++I) {
-    Arg *A = *I;
-    // If the argument is a pure flag, add its name (minus the "W" at the beginning)
-    // to the warning list. Else, add its value (for the OPT_W case).
+static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
+                              OptSpecifier GroupWithValue,
+                              std::vector<std::string> &Diagnostics) {
+  for (Arg *A : Args.filtered(Group)) {
     if (A->getOption().getKind() == Option::FlagClass) {
-      Warnings.push_back(A->getOption().getName().substr(1));
+      // The argument is a pure flag (such as OPT_Wall or OPT_Wdeprecated). Add
+      // its name (minus the "W" or "R" at the beginning) to the warning list.
+      Diagnostics.push_back(A->getOption().getName().drop_front(1));
+    } else if (A->getOption().matches(GroupWithValue)) {
+      // This is -Wfoo= or -Rfoo=, where foo is the name of the diagnostic group.
+      Diagnostics.push_back(A->getOption().getName().drop_front(1).rtrim("=-"));
     } else {
-      for (unsigned Idx = 0, End = A->getNumValues();
-           Idx < End; ++Idx) {
-        StringRef V = A->getValue(Idx);
-        // "-Wl," and such are not warning options.
-        // FIXME: Should be handled by putting these in separate flags.
-        if (V.startswith("l,") || V.startswith("a,") || V.startswith("p,"))
-          continue;
-
-        Warnings.push_back(V);
-      }
+      // Otherwise, add its value (for OPT_W_Joined and similar).
+      for (const char *Arg : A->getValues())
+        Diagnostics.push_back(Arg);
     }
   }
 }
@@ -699,7 +695,8 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
       << Opts.TabStop << DiagnosticOptions::DefaultTabStop;
   }
   Opts.MessageLength = getLastArgIntValue(Args, OPT_fmessage_length, 0, Diags);
-  addWarningArgs(Args, Opts.Warnings);
+  addDiagnosticArgs(Args, OPT_W_Group, OPT_W_value_Group, Opts.Warnings);
+  addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);
 
   return Success;
 }
