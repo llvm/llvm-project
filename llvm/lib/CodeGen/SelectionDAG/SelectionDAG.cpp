@@ -6263,7 +6263,10 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
   assert(isVolatile() == MMO->isVolatile() && "Volatile encoding error!");
   assert(isNonTemporal() == MMO->isNonTemporal() &&
          "Non-temporal encoding error!");
-  assert(memvt.getStoreSize() == MMO->getSize() && "Size mismatch!");
+  // We check here that the size of the memory operand fits within the size of
+  // the MMO. This is because the MMO might indicate only a possible address
+  // range instead of specifying the affected memory addresses precisely.
+  assert(memvt.getStoreSize() <= MMO->getSize() && "Size mismatch!");
 }
 
 MemSDNode::MemSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
@@ -6273,7 +6276,7 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
   SubclassData = encodeMemSDNodeFlags(0, ISD::UNINDEXED, MMO->isVolatile(),
                                       MMO->isNonTemporal(), MMO->isInvariant());
   assert(isVolatile() == MMO->isVolatile() && "Volatile encoding error!");
-  assert(memvt.getStoreSize() == MMO->getSize() && "Size mismatch!");
+  assert(memvt.getStoreSize() <= MMO->getSize() && "Size mismatch!");
 }
 
 /// Profile - Gather unique data for the node.
