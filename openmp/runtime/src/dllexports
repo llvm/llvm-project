@@ -471,7 +471,9 @@ kmp_set_warnings_off                        780
 
     # ATOMIC entries
 
+    %ifdef HAVE_QUAD
     __kmpc_atomic_cmplx16_div              2000
+    %endif
 
     __kmpc_atomic_fixed1_add               2001
     __kmpc_atomic_fixed1_andb              2002
@@ -577,6 +579,7 @@ kmp_set_warnings_off                        780
     __kmpc_atomic_cmplx10_sub              2094
     __kmpc_atomic_cmplx10_mul              2095
     __kmpc_atomic_cmplx10_div              2096
+    %ifdef HAVE_QUAD
     __kmpc_atomic_cmplx16_add              2097
     __kmpc_atomic_cmplx16_sub              2098
     __kmpc_atomic_cmplx16_mul              2099
@@ -627,6 +630,7 @@ kmp_set_warnings_off                        780
     __kmpc_atomic_float10_sub_fp           2136
     __kmpc_atomic_float10_mul_fp           2137
     __kmpc_atomic_float10_div_fp           2138
+    %endif
 
     __kmpc_atomic_fixed1_mul_float8        2169
     __kmpc_atomic_fixed1_div_float8        2170
@@ -661,6 +665,7 @@ kmp_set_warnings_off                        780
 
     %ifdef arch_32
 
+        %ifdef HAVE_QUAD
         __kmpc_atomic_float16_add_a16      2255
         __kmpc_atomic_float16_sub_a16      2256
         __kmpc_atomic_float16_mul_a16      2257
@@ -672,6 +677,7 @@ kmp_set_warnings_off                        780
         __kmpc_atomic_cmplx16_sub_a16      2262
         __kmpc_atomic_cmplx16_mul_a16      2263
         __kmpc_atomic_cmplx16_div_a16      2264
+        %endif
 
     %endif
 
@@ -686,14 +692,18 @@ kmp_set_warnings_off                        780
         __kmpc_atomic_float4_rd                2269
         __kmpc_atomic_float8_rd                2270
         __kmpc_atomic_float10_rd               2271
+        %ifdef HAVE_QUAD
         __kmpc_atomic_float16_rd               2272
+        %endif
         __kmpc_atomic_cmplx4_rd                2273
         __kmpc_atomic_cmplx8_rd                2274
         __kmpc_atomic_cmplx10_rd               2275
+        %ifdef HAVE_QUAD
         __kmpc_atomic_cmplx16_rd               2276
-        %ifdef arch_32
-            __kmpc_atomic_float16_a16_rd       2277
-            __kmpc_atomic_cmplx16_a16_rd       2278
+            %ifdef arch_32
+                __kmpc_atomic_float16_a16_rd       2277
+                __kmpc_atomic_cmplx16_a16_rd       2278
+            %endif
         %endif
         __kmpc_atomic_fixed1_wr                2279
         __kmpc_atomic_fixed2_wr                2280
@@ -702,14 +712,18 @@ kmp_set_warnings_off                        780
         __kmpc_atomic_float4_wr                2283
         __kmpc_atomic_float8_wr                2284
         __kmpc_atomic_float10_wr               2285
+        %ifdef HAVE_QUAD
         __kmpc_atomic_float16_wr               2286
+        %endif
         __kmpc_atomic_cmplx4_wr                2287
         __kmpc_atomic_cmplx8_wr                2288
         __kmpc_atomic_cmplx10_wr               2289
+        %ifdef HAVE_QUAD
         __kmpc_atomic_cmplx16_wr               2290
         %ifdef arch_32
             __kmpc_atomic_float16_a16_wr       2291
             __kmpc_atomic_cmplx16_a16_wr       2292
+        %endif
         %endif
         __kmpc_atomic_fixed1_add_cpt           2293
         __kmpc_atomic_fixed1_andb_cpt          2294
@@ -783,8 +797,10 @@ kmp_set_warnings_off                        780
         __kmpc_atomic_float4_min_cpt           2362
         __kmpc_atomic_float8_max_cpt           2363
         __kmpc_atomic_float8_min_cpt           2364
+        %ifdef HAVE_QUAD
         __kmpc_atomic_float16_max_cpt          2365
         __kmpc_atomic_float16_min_cpt          2366
+        %endif
         __kmpc_atomic_fixed1_neqv_cpt          2367
         __kmpc_atomic_fixed2_neqv_cpt          2368
         __kmpc_atomic_fixed4_neqv_cpt          2369
@@ -797,10 +813,12 @@ kmp_set_warnings_off                        780
         __kmpc_atomic_float10_sub_cpt          2376
         __kmpc_atomic_float10_mul_cpt          2377
         __kmpc_atomic_float10_div_cpt          2378
+        %ifdef HAVE_QUAD
         __kmpc_atomic_float16_add_cpt          2379
         __kmpc_atomic_float16_sub_cpt          2380
         __kmpc_atomic_float16_mul_cpt          2381
         __kmpc_atomic_float16_div_cpt          2382
+        %endif
         __kmpc_atomic_cmplx4_add_cpt           2383
         __kmpc_atomic_cmplx4_sub_cpt           2384
         __kmpc_atomic_cmplx4_mul_cpt           2385
@@ -813,13 +831,16 @@ kmp_set_warnings_off                        780
         __kmpc_atomic_cmplx10_sub_cpt          2392
         __kmpc_atomic_cmplx10_mul_cpt          2393
         __kmpc_atomic_cmplx10_div_cpt          2394
+        %ifdef HAVE_QUAD
         __kmpc_atomic_cmplx16_add_cpt          2395
         __kmpc_atomic_cmplx16_sub_cpt          2396
         __kmpc_atomic_cmplx16_mul_cpt          2397
         __kmpc_atomic_cmplx16_div_cpt          2398
+        %endif
        #__kmpc_atomic_cmplx4_add_cpt_tmp            2409
 
         %ifdef arch_32
+        %ifdef HAVE_QUAD
             __kmpc_atomic_float16_add_a16_cpt  2399
             __kmpc_atomic_float16_sub_a16_cpt  2400
             __kmpc_atomic_float16_mul_a16_cpt  2401
@@ -830,6 +851,7 @@ kmp_set_warnings_off                        780
             __kmpc_atomic_cmplx16_sub_a16_cpt  2406
             __kmpc_atomic_cmplx16_mul_a16_cpt  2407
             __kmpc_atomic_cmplx16_div_a16_cpt  2408
+        %endif
         %endif
 
         __kmpc_atomic_start                    2410
@@ -846,15 +868,19 @@ kmp_set_warnings_off                        780
             __kmpc_atomic_float4_swp           2416
             __kmpc_atomic_float8_swp           2417
             __kmpc_atomic_float10_swp          2418
+            %ifdef HAVE_QUAD
               __kmpc_atomic_float16_swp        2419
+            %endif
             __kmpc_atomic_cmplx4_swp           2420
             __kmpc_atomic_cmplx8_swp           2421
             __kmpc_atomic_cmplx10_swp          2422
+            %ifdef HAVE_QUAD
             __kmpc_atomic_cmplx16_swp          2423
 
             %ifdef arch_32
                 __kmpc_atomic_float16_a16_swp  2424
                 __kmpc_atomic_cmplx16_a16_swp  2425
+            %endif
             %endif
 
             __kmpc_atomic_fixed1_sub_cpt_rev   2426
@@ -887,14 +913,17 @@ kmp_set_warnings_off                        780
             __kmpc_atomic_float8_div_cpt_rev   2453
             __kmpc_atomic_float10_sub_cpt_rev  2454
             __kmpc_atomic_float10_div_cpt_rev  2455
+            %ifdef HAVE_QUAD
             __kmpc_atomic_float16_sub_cpt_rev  2456
             __kmpc_atomic_float16_div_cpt_rev  2457
+            %endif
             __kmpc_atomic_cmplx4_sub_cpt_rev   2458
             __kmpc_atomic_cmplx4_div_cpt_rev   2459
             __kmpc_atomic_cmplx8_sub_cpt_rev   2460
             __kmpc_atomic_cmplx8_div_cpt_rev   2461
             __kmpc_atomic_cmplx10_sub_cpt_rev  2462
             __kmpc_atomic_cmplx10_div_cpt_rev  2463
+            %ifdef HAVE_QUAD
             __kmpc_atomic_cmplx16_sub_cpt_rev  2464
             __kmpc_atomic_cmplx16_div_cpt_rev  2465
 
@@ -903,6 +932,7 @@ kmp_set_warnings_off                        780
                 __kmpc_atomic_float16_div_a16_cpt_rev  2467
                 __kmpc_atomic_cmplx16_sub_a16_cpt_rev  2468
                 __kmpc_atomic_cmplx16_div_a16_cpt_rev  2469
+            %endif
             %endif
 
         %endif   # OMP_40

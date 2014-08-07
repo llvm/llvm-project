@@ -1,0 +1,225 @@
+#
+#//===----------------------------------------------------------------------===//
+#//
+#//                     The LLVM Compiler Infrastructure
+#//
+#// This file is dual licensed under the MIT and the University of Illinois Open
+#// Source Licenses. See LICENSE.txt for details.
+#//
+#//===----------------------------------------------------------------------===//
+#
+
+               Building libiomp5 using CMake
+               =============================
+
+   ---- Version of CMake required: v2.8.0 or above ----
+ 
+============================================
+How to call cmake initially, then repeatedly
+============================================
+- When calling cmake for the first time, all needed compiler options
+  must be specified on the command line.  After this initial call to
+  cmake, the compiler definitions must not be included for further calls
+  to cmake.  Other options can be specified on the command line multiple
+  times including all definitions in the Build options section below.
+- Example of configuring, building, reconfiguring, rebuilding:
+  $ mkdir build
+  $ cd build
+  $ cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -Darch=32 ..  # Initial configuration
+  $ make all common
+  ...
+  $ make clean
+  $ cmake -Darch=32e -DCMAKE_BUILD_TYPE=Debug ..                        # Second configuration
+  $ make all common
+  ...
+  $ rm -rf *
+  $ cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -Darch=32e .. # Third configuration
+  $ make all common
+- Notice in the example how the compiler definitions are only specified
+  for an empty build directory, but other Build options are used at any time.
+- The file CMakeCache.txt which is created after the first call to cmake
+  is a configuration file which holds all the values for the Build options.
+  These configuration values can be changed using a text editor to modify 
+  CMakeCache.txt as opposed to using definitions on the command line.
+- To have cmake create a particular type of build generator file simply 
+  inlude the -G <Generator name> option:
+  $ cmake -G "Unix Makefiles" ...
+  You can see a list of generators cmake supports by executing cmake with
+  no arguments and a list will be printed.
+
+=====================
+Instructions to Build
+=====================
+ $ cd libomp_top_level/ [ directory with src/ , exports/ , tools/ , etc. ]
+ $ mkdir build
+ $ cd build
+
+ [ Linux* , Mac* Libraries ]
+ $ cmake -DCMAKE_C_COMPILER=<C Compiler> -DCMAKE_CXX_COMPILER=<C++ Compiler> ..
+
+ [ Intel(R) Many Integrated Core Library (Intel(R) MIC Library) ]
+ $ cmake -DCMAKE_C_COMPILER=<C Compiler> -DCMAKE_CXX_COMPILER=<C++ Compiler> -Dos=mic -Darch=32e ..
+
+ [ Windows Libraries ]
+ $ cmake -G "Unix Makefiles" -DCMAKE_C_COMPILER=<C Compiler> -DCMAKE_CXX_COMPILER=<C++ Compiler> -DCMAKE_ASM_MASM_COMPILER=[ml | ml64] -DCMAKE_BUILD_TYPE=Release ..
+
+ $ make all common
+
+=================
+Mac* Fat Libraries
+=================
+On OS X* machines, it is possible to build universal (or fat) libraries which
+include both IA-32 architecture and Intel(R) 64 architecture objects in a
+single archive; just build the 32 and 32e libraries separately:
+ $ cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -Darch=32 ..
+ $ make
+ $ cmake -Darch=32e ..
+ $ make
+then invoke make again with a special argument as follows:
+ $ make fat
+- The fat target is only available for the arch=32e configuration.
+- The fat libraries will be put in exports/mac_32e/lib while the "thin" libraries
+  will be in exports/mac_32e/lib.thin and exports/mac_32/lib.thin
+
+================
+Compiler options
+================
+-DCMAKE_C_COMPILER=<C compiler name>
+-DCMAKE_CXX_COMPILER=<C++ compiler name>
+
+-DCMAKE_Fortran_COMPILER=<Fortran compiler name>
+Unix* systems (Optional as compiler is default):
+This option is only needed when -Dcreate_fortran_modules is true
+
+-DCMAKE_ASM_COMPILER=<Assembler name>
+This option isn't usually needed for Non-Windows* builds
+
+-DCMAKE_ASM_MASM_COMPILER=[ml | ml64 ]
+This option is Windows* Only
+
+=============
+Build options
+=============
+
+==========================
+==== Operating System ====
+==========================
+-Dos=lin|mac|win|mic
+* Operating system can be lin (Linux*), mac (Mac*), win (Windows*), or
+  mic (Intel(R) Many Integrated Core Architecture (Intel(R) MIC Architecture)).
+  If not specified, cmake will try to determine your current operating system.
+
+======================
+==== Architecture ====
+======================
+-Darch=32|32e|arm|ppc64
+* Architecture can be 32 (IA-32 architecture), 32e (Intel(R) 64 architecture),
+  arm (ARM architecture), or ppc64 (PPC64 architecture).
+  This option, by default is chosen based on the
+  CMake variable CMAKE_SIZEOF_VOID_P.  If it is 8, then Intel(R) 64 architecture
+  is assumed.  If it is 4, then IA-32 architecture is assumed.  If you want to
+  use a different architecture other than x86 based architecture, you must specify
+  it when calling cmake initially using this -Darch=<arch> option or by changing 
+  the arch value via CMakeCache.txt or the CMake GUI after the initial CMake run.
+
+---- First values listed are the default value ----
+-Dlib_type=normal|profile|stubs
+Library type can be normal, profile, or stubs.
+
+-DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo
+Build type can be Release, Debug, or RelWithDebInfo.
+See below for interaction when -DUSE_BUILDPL_RULES is on.
+
+-Dversion=5|4
+libiomp5 version can be 5 or 4.
+
+-Domp_version=40|30
+OpenMP version can be either 40 or 30.
+
+-Dmic_arch=knc|knf
+Intel(R) MIC Architecture.  Can be 
+knf (Knights Ferry) or knc (Knights Corner).
+This value is ignored if os != mic
+  
+-Dmic_os=lin|bsd
+Operating system on Intel(R) MIC Architecture.
+Can be either bsd or lin.  This value is ignored if os != mic
+
+-Dcreate_fortran_modules=off|on
+Should the Fortran modules be created (requires Fortran compiler)
+
+-Dstats=off|on
+Should include stats-gathering code?
+
+=====================
+==== Micro tests ====
+=====================
+After the library has been built, five microtests are performed.
+Some will be skipped based upon the platform.
+These tests can be turned on (default) or off with the following options:
+-Dtest_touch=on|off     -- Should the touch test be done?
+-Dtest_relo=on|off      -- Should the position independent code test be done?
+-Dtest_execstack=on|off -- Should the stack be checked for executability?
+-Dtest_instr=on|off     -- Should the Intel(R) MIC Libraries be checked 
+                            for correct instruction set?
+-Dtest_deps=on|off      -- Should libiomp5's dependencies be checked?
+-Dtests=off|on          -- Should any of the above tests be done?
+
+============================================
+==== How to append flags to compilation ====
+============================================
+- These flags are *appended*.  They do not 
+  overwrite any of the preset flags.
+-DUSER_CPP_FLAGS=<space-separated flags>    -- Additional C Preprocessor flags
+                                               (typically additional -Ddef=val flags)
+-DUSER_C_FLAGS=<space-separated flags>      -- Additional C compiler flags
+-DUSER_CXX_FLAGS=<space-separated flags>    -- Additional C++ compiler flags
+-DUSER_ASM_FLAGS=<space-separated flags>    -- Additional assembly flags
+-DUSER_LD_FLAGS=<space-separated flags>     -- Additional linker flags
+-DUSER_LD_LIB_FLAGS=<space-separated flags> -- Additional libraries to link 
+                                               to during link phase
+-DUSER_F_FLAGS=<space-separated flags>  -- Additional Fortran compiler flags
+
+===================================
+==== Feature Based Compilation ====
+===================================
+-DUSE_BUILDPL_RULES=false|true
+Should the build imitate build.pl's build process.
+When this is true, the Unix* Release builds will build libiomp5
+with -O2 and -g flags activated (same as RelWithDebInfo). Then,
+the debug info is stripped out of the library and put into libiomp5.dbg
+This is done for interaction with Intel(R) Parallel Amplifier.
+
+-DUSE_ADAPTIVE_LOCKS=true|false       
+Should adaptive (TSX-based) locks be included?  
+These are x86 specific.  This feature is turned on by default 
+for IA-32 architecture and Intel(R) 64 architecture. 
+Otherwise, it is turned off.
+
+-DUSE_PREDEFINED_LINKER_FLAGS=true|false
+Should the predefined linker flags in CommonFlags.cmake be included
+in the link command? This is true by default and should work for
+Linux*, Mac*, and Windows*.  The --version-script flag on Unix* based
+operating systems will be included regardless.
+
+========================
+Examples usages of CMake
+========================
+---- Typical usage ----
+cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc ..
+cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
+
+---- With Various Options ----
+cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -Dos=lin -Darch=32 ..
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -Dos=mac -Darch=32 -DCMAKE_BUILD_TYPE=Debug ..
+cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc -DCMAKE_Fortran_COMPILER=ifort -Dtests=on -Dcreate_fortran_modules=on -DUSE_BUILDPL_RULES=on ..
+cmake -DUSER_CFLAGS='Werror' -DUSER_CPP_FLAGS='-DNEW_FEATURE=1 -DOLD_FEATURE=0' -DUSER_CXX_FLAGS='-Werror -Wsign-compare' ..
+
+---- Stubs library ----
+cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -Dlib_type=stubs ..
+
+=========
+Footnotes
+=========
+[*] Other names and brands may be claimed as the property of others.

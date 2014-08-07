@@ -32,7 +32,7 @@
 #include <sys/resource.h>
 #include <sys/syscall.h>
 
-#if KMP_OS_LINUX
+#if KMP_OS_LINUX && !KMP_OS_CNK
 # include <sys/sysinfo.h>
 # if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
 // We should really include <futex.h>, but that causes compatibility problems on different
@@ -61,7 +61,7 @@
 #include <fcntl.h>
 
 // For non-x86 architecture
-#if KMP_COMPILER_GCC && !(KMP_ARCH_X86 || KMP_ARCH_X86_64)
+#if KMP_COMPILER_GCC && !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_PPC64)
 # include <stdbool.h>
 # include <ffi.h>
 #endif
@@ -110,7 +110,7 @@ __kmp_print_cond( char *buffer, kmp_cond_align_t *cond )
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 
-#if KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#if ( KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED)
 
 /*
  * Affinity support
@@ -146,6 +146,19 @@ __kmp_print_cond( char *buffer, kmp_cond_align_t *cond )
 #   elif __NR_sched_getaffinity != 204
 #    error Wrong code for getaffinity system call.
 #   endif /* __NR_sched_getaffinity */
+
+#  elif KMP_ARCH_PPC64
+#   ifndef __NR_sched_setaffinity
+#    define __NR_sched_setaffinity  222
+#   elif __NR_sched_setaffinity != 222
+#    error Wrong code for setaffinity system call.
+#   endif /* __NR_sched_setaffinity */
+#   ifndef __NR_sched_getaffinity
+#    define __NR_sched_getaffinity  223
+#   elif __NR_sched_getaffinity != 223
+#    error Wrong code for getaffinity system call.
+#   endif /* __NR_sched_getaffinity */
+
 
 #  else
 #   error Unknown or unsupported architecture
@@ -445,7 +458,7 @@ __kmp_change_thread_affinity_mask( int gtid, kmp_affin_mask_t *new_mask,
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
+#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM) && !KMP_OS_CNK
 
 int
 __kmp_futex_determine_capable()
@@ -462,7 +475,7 @@ __kmp_futex_determine_capable()
     return retval;
 }
 
-#endif // KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
+#endif // KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM) && !KMP_OS_CNK
 
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
@@ -481,7 +494,7 @@ __kmp_test_then_or32( volatile kmp_int32 *p, kmp_int32 d )
     old_value = TCR_4( *p );
     new_value = old_value | d;
 
-    while ( ! __kmp_compare_and_store32 ( p, old_value, new_value ) )
+    while ( ! KMP_COMPARE_AND_STORE_REL32 ( p, old_value, new_value ) )
     {
         KMP_CPU_PAUSE();
         old_value = TCR_4( *p );
@@ -498,7 +511,7 @@ __kmp_test_then_and32( volatile kmp_int32 *p, kmp_int32 d )
     old_value = TCR_4( *p );
     new_value = old_value & d;
 
-    while ( ! __kmp_compare_and_store32 ( p, old_value, new_value ) )
+    while ( ! KMP_COMPARE_AND_STORE_REL32 ( p, old_value, new_value ) )
     {
         KMP_CPU_PAUSE();
         old_value = TCR_4( *p );
@@ -507,7 +520,7 @@ __kmp_test_then_and32( volatile kmp_int32 *p, kmp_int32 d )
     return old_value;
 }
 
-# if KMP_ARCH_X86
+# if KMP_ARCH_X86 || KMP_ARCH_PPC64
 kmp_int64
 __kmp_test_then_add64( volatile kmp_int64 *p, kmp_int64 d )
 {
@@ -516,7 +529,7 @@ __kmp_test_then_add64( volatile kmp_int64 *p, kmp_int64 d )
     old_value = TCR_8( *p );
     new_value = old_value + d;
 
-    while ( ! __kmp_compare_and_store64 ( p, old_value, new_value ) )
+    while ( ! KMP_COMPARE_AND_STORE_REL64 ( p, old_value, new_value ) )
     {
         KMP_CPU_PAUSE();
         old_value = TCR_8( *p );
@@ -533,7 +546,7 @@ __kmp_test_then_or64( volatile kmp_int64 *p, kmp_int64 d )
 
     old_value = TCR_8( *p );
     new_value = old_value | d;
-    while ( ! __kmp_compare_and_store64 ( p, old_value, new_value ) )
+    while ( ! KMP_COMPARE_AND_STORE_REL64 ( p, old_value, new_value ) )
     {
         KMP_CPU_PAUSE();
         old_value = TCR_8( *p );
@@ -549,7 +562,7 @@ __kmp_test_then_and64( volatile kmp_int64 *p, kmp_int64 d )
 
     old_value = TCR_8( *p );
     new_value = old_value & d;
-    while ( ! __kmp_compare_and_store64 ( p, old_value, new_value ) )
+    while ( ! KMP_COMPARE_AND_STORE_REL64 ( p, old_value, new_value ) )
     {
         KMP_CPU_PAUSE();
         old_value = TCR_8( *p );
@@ -2527,7 +2540,7 @@ __kmp_get_load_balance( int max )
 #endif // USE_LOAD_BALANCE
 
 
-#if KMP_COMPILER_GCC && !(KMP_ARCH_X86 || KMP_ARCH_X86_64)
+#if KMP_COMPILER_GCC && !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_PPC64)
 
 int __kmp_invoke_microtask( microtask_t pkfn, int gtid, int tid, int argc,
         void *p_argv[] )
@@ -2561,7 +2574,89 @@ int __kmp_invoke_microtask( microtask_t pkfn, int gtid, int tid, int argc,
     return 1;
 }
 
-#endif // KMP_COMPILER_GCC && !(KMP_ARCH_X86 || KMP_ARCH_X86_64)
+#endif // KMP_COMPILER_GCC && !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_PPC64)
+
+#if KMP_ARCH_PPC64
+
+// we really only need the case with 1 argument, because CLANG always build
+// a struct of pointers to shared variables referenced in the outlined function
+int
+__kmp_invoke_microtask( microtask_t pkfn,
+                        int gtid, int tid,
+                        int argc, void *p_argv[] ) {
+  switch (argc) {
+  default:
+    fprintf(stderr, "Too many args to microtask: %d!\n", argc);
+    fflush(stderr);
+    exit(-1);
+  case 0:
+    (*pkfn)(&gtid, &tid);
+    break;
+  case 1:
+    (*pkfn)(&gtid, &tid, p_argv[0]);
+    break;
+  case 2:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
+    break;
+  case 3:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
+    break;
+  case 4:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3]);
+    break;
+  case 5:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4]);
+    break;
+  case 6:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5]);
+    break;
+  case 7:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6]);
+    break;
+  case 8:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7]);
+    break;
+  case 9:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8]);
+    break;
+  case 10:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9]);
+    break;
+  case 11:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
+    break;
+  case 12:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11]);
+    break;
+  case 13:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11], p_argv[12]);
+    break;
+  case 14:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11], p_argv[12], p_argv[13]);
+    break;
+  case 15:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
+    break;
+  }
+
+  return 1;
+}
+
+#endif
 
 // end of file //
 

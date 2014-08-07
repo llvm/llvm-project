@@ -73,6 +73,8 @@ OPTIMIZATION := $(call check_variable,OPTIMIZATION,off on)
 TARGET_COMPILER := $(call check_variable,TARGET_COMPILER,12 11)
 # Library version: 4 -- legacy, 5 -- compat.
 VERSION      := $(call check_variable,VERSION,5 4)
+# quad precision floating point
+HAVE_QUAD     = 1
 
 VPATH += $(src_dir)
 VPATH += $(src_dir)i18n/
@@ -171,6 +173,7 @@ ifeq "$(c)" "clang"
         ld-flags += -m32 -msse
         as-flags += -m32 -msse
     endif
+    HAVE_QUAD = 0
 endif
 
 ifeq "$(LINK_TYPE)" "dyna"
@@ -310,6 +313,9 @@ endif
 ifeq "$(CPLUSPLUS)" "on"
     ifeq "$(os)" "win"
         c-flags   += -TP
+    else ifeq "$(arch)" "ppc64"
+    # c++0x on ppc64 linux removes definition of preproc. macros, needed in .hs
+      c-flags   += -x c++ -std=gnu++0x
     else
         ifneq "$(filter gcc clang,$(c))" ""
             c-flags   += -x c++ -std=c++0x
@@ -370,7 +376,7 @@ ifeq "$(os)" "lin"
             ld-flags-extra += -lirc_pic
             endif
         endif
-        ifeq "$(filter 32 32e 64,$(arch))" ""
+        ifeq "$(filter 32 32e 64 ppc64,$(arch))" ""
             ld-flags-extra += $(shell pkg-config --libs libffi)
         endif
     else
@@ -466,7 +472,14 @@ ifneq "$(os)" "win"
 endif
 cpp-flags += -D KMP_LIBRARY_FILE=\"$(lib_file)\"
 cpp-flags += -D KMP_VERSION_MAJOR=$(VERSION)
-cpp-flags += -D CACHE_LINE=64
+
+# customize ppc64 cache line size to 128, 64 otherwise
+ifeq "$(arch)" "ppc64"
+	cpp-flags += -D CACHE_LINE=128
+else 
+	cpp-flags += -D CACHE_LINE=64
+endif
+
 cpp-flags += -D KMP_ADJUST_BLOCKTIME=1
 cpp-flags += -D BUILD_PARALLEL_ORDERED
 cpp-flags += -D KMP_ASM_INTRINS
@@ -581,9 +594,12 @@ ifneq "$(os)" "win"
     ifeq "$(arch)" "arm"
         z_Linux_asm$(obj) : \
 		    cpp-flags += -D KMP_ARCH_ARM
-    else
+    else ifeq "$(arch)" "ppc64" 
         z_Linux_asm$(obj) : \
-            cpp-flags += -D KMP_ARCH_X86$(if $(filter 32e,$(arch)),_64)
+			cpp-flags += -D KMP_ARCH_PPC64		    
+    else
+    	z_Linux_asm$(obj) : \
+       		cpp-flags += -D KMP_ARCH_X86$(if $(filter 32e,$(arch)),_64)	
     endif
 endif
 
@@ -596,6 +612,9 @@ kmp_version$(obj) : cpp-flags += -D _KMP_BUILD_TIME="\"$(date)\""
 
 gd-flags += -D arch_$(arch)
 gd-flags += -D $(LIB_TYPE)
+ifeq "$(HAVE_QUAD)" "1"
+    gd-flags += -D HAVE_QUAD
+endif
 ifeq "$(OMP_VERSION)" "40"
     gd-flags += -D OMP_40 -D OMP_30
 else
@@ -729,7 +748,9 @@ endif
         else # 5
             lib_c_items += kmp_gsupport
         endif
+#        ifneq "$(arch)" "ppc64"
         lib_asm_items += z_Linux_asm
+#	     endif
     endif
 endif
 
@@ -1391,9 +1412,13 @@ ifneq "$(filter %-dyna win-%,$(os)-$(LINK_TYPE))" ""
             td_exp += libc.so.6
             td_exp += ld-linux-armhf.so.3
         endif
+        ifeq "$(arch)" "ppc64"
+            td_exp += libc.so.6
+            td_exp += ld64.so.1
+        endif
         td_exp += libdl.so.2
         td_exp += libgcc_s.so.1
-        ifeq "$(filter 32 32e 64,$(arch))" ""
+        ifeq "$(filter 32 32e 64 ppc64,$(arch))" ""
             td_exp += libffi.so.6
             td_exp += libffi.so.5
         endif

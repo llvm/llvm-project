@@ -138,7 +138,7 @@ __kmp_unnamed_critical_addr:
 #endif /* KMP_GOMP_COMPAT */
 
 
-#if KMP_ARCH_X86
+#if KMP_ARCH_X86 && !KMP_ARCH_PPC64
 
 // -----------------------------------------------------------------------
 // microtasking routines specifically written for IA-32 architecture
@@ -1585,6 +1585,16 @@ __kmp_unnamed_critical_addr:
     .size __kmp_unnamed_critical_addr,4
 #endif /* KMP_ARCH_ARM */
 
+#if KMP_ARCH_PPC64
+    .data
+    .comm .gomp_critical_user_,32,8
+    .data
+    .align 8
+    .global __kmp_unnamed_critical_addr
+__kmp_unnamed_critical_addr:
+    .8byte .gomp_critical_user_
+    .size __kmp_unnamed_critical_addr,8
+#endif /* KMP_ARCH_PPC64 */
 
 #if defined(__linux__)
 .section .note.GNU-stack,"",@progbits

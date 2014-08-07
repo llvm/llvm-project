@@ -321,7 +321,11 @@ int        __kmp_env_consistency_check  = FALSE;  /* KMP_CONSISTENCY_CHECK speci
 kmp_uint32 __kmp_yield_init = KMP_INIT_WAIT;
 kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
 kmp_uint32 __kmp_yielding_on = 1;
+#if KMP_OS_CNK
+kmp_uint32 __kmp_yield_cycle = 0;
+#else
 kmp_uint32 __kmp_yield_cycle = 1;     /* Yield-cycle is on by default */
+#endif
 kmp_int32  __kmp_yield_on_count = 10; /* By default, yielding is on for 10 monitor periods. */
 kmp_int32  __kmp_yield_off_count = 1; /* By default, yielding is off for 1 monitor periods. */
 /* ----------------------------------------------------- */

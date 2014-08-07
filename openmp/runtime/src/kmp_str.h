@@ -28,9 +28,8 @@
 #endif // __cplusplus
 
 #if KMP_OS_WINDOWS
-    #define strdup    _strdup
-    #define snprintf  _snprintf
-    #define vsnprintf _vsnprintf
+# define strdup    _strdup
+# define snprintf  _snprintf
 #endif
 
 /*  some macros to replace ctype.h functions  */

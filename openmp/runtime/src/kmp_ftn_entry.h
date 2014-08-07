@@ -263,7 +263,7 @@ FTN_GET_AFFINITY_MAX_PROC( void )
 
     #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
         if ( __kmp_num_proc_groups <= 1 ) {
-            return KMP_CPU_SETSIZE;
+            return (int)KMP_CPU_SETSIZE;
         }
     #endif /* KMP_OS_WINDOWS && KMP_ARCH_X86_64 */
         return __kmp_xproc;
@@ -412,7 +412,7 @@ xexpand(FTN_GET_THREAD_NUM)( void )
             gtid = __kmp_entry_gtid();
         #elif KMP_OS_WINDOWS
             if (!__kmp_init_parallel ||
-                (gtid = ((kmp_intptr_t)TlsGetValue( __kmp_gtid_threadprivate_key ))) == 0) {
+                (gtid = (int)((kmp_intptr_t)TlsGetValue( __kmp_gtid_threadprivate_key ))) == 0) {
                 // Either library isn't initialized or thread is not registered
                 // 0 is the correct TID in this case
                 return 0;
@@ -463,7 +463,6 @@ xexpand(FTN_GET_NUM_PROCS)( void )
     #ifdef KMP_STUB
         return 1;
     #else
-        int gtid;
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
@@ -1013,7 +1012,7 @@ FTN_SET_DEFAULTS( char const * str
 {
     #ifndef KMP_STUB
         #ifdef PASS_ARGS_BY_VALUE
-            int len = strlen( str );
+            int len = (int)strlen( str );
         #endif
         __kmp_aux_set_defaults( str, len );
     #endif

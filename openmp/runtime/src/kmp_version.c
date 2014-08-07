@@ -53,6 +53,8 @@
     #define KMP_COMPILER "Clang " stringer( __clang_major__ ) "." stringer( __clang_minor__ )
 #elif KMP_COMPILER_GCC
     #define KMP_COMPILER "GCC " stringer( __GNUC__ ) "." stringer( __GNUC_MINOR__ )
+#elif KMP_COMPILER_MSVC
+    #define KMP_COMPILER "MSVC " stringer( __MSC_FULL_VER )
 #endif
 #ifndef KMP_COMPILER
     #warning "Unknown compiler"

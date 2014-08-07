@@ -536,6 +536,7 @@ __kmp_stg_parse_file(
 
 static char * par_range_to_print = NULL;
 
+#ifdef KMP_DEBUG
 static void
 __kmp_stg_parse_par_range(
     char const * name,
@@ -614,7 +615,7 @@ __kmp_stg_parse_par_range(
         break;
     }
 } // __kmp_stg_parse_par_range
-
+#endif
 
 int
 __kmp_initial_threads_capacity( int req_nproc )

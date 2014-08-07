@@ -459,9 +459,9 @@ typedef int PACKED_REDUCTION_METHOD_T;
 /*
  * Only Linux* OS and Windows* OS support thread affinity.
  */
-#if KMP_OS_LINUX || KMP_OS_WINDOWS
+#if (KMP_OS_LINUX || KMP_OS_WINDOWS) && !KMP_OS_CNK && !KMP_ARCH_PPC64
 # define KMP_AFFINITY_SUPPORTED 1
-#elif KMP_OS_DARWIN || KMP_OS_FREEBSD
+#elif KMP_OS_DARWIN || KMP_OS_FREEBSD || KMP_OS_CNK || KMP_ARCH_PPC64
 // affinity not supported
 # define KMP_AFFINITY_SUPPORTED 0
 #else
@@ -476,7 +476,7 @@ extern size_t __kmp_affin_mask_size;
 
 # if KMP_OS_LINUX
 //
-// On Linux* OS, the mask isactually a vector of length __kmp_affin_mask_size
+// On Linux* OS, the mask is actually a vector of length __kmp_affin_mask_size
 // (in bytes).  It should be allocated on a word boundary.
 //
 // WARNING!!!  We have made the base type of the affinity mask unsigned char,
@@ -946,6 +946,9 @@ extern unsigned int __kmp_place_core_offset;
 #if KMP_OS_WINDOWS
 #  define KMP_INIT_WAIT    64U          /* initial number of spin-tests   */
 #  define KMP_NEXT_WAIT    32U          /* susequent number of spin-tests */
+#elif KMP_OS_CNK
+#  define KMP_INIT_WAIT    16U          /* initial number of spin-tests   */
+#  define KMP_NEXT_WAIT     8U          /* susequent number of spin-tests */
 #elif KMP_OS_LINUX
 #  define KMP_INIT_WAIT  1024U          /* initial number of spin-tests   */
 #  define KMP_NEXT_WAIT   512U          /* susequent number of spin-tests */
@@ -971,6 +974,11 @@ extern void __kmp_x86_cpuid( int mode, int mode2, struct kmp_cpuid *p );
   extern void __kmp_x86_pause( void );
 # endif
 # define KMP_CPU_PAUSE()        __kmp_x86_pause()
+#elif KMP_ARCH_PPC64
+# define KMP_PPC64_PRI_LOW() __asm__ volatile ("or 1, 1, 1")
+# define KMP_PPC64_PRI_MED() __asm__ volatile ("or 2, 2, 2")
+# define KMP_PPC64_PRI_LOC_MB() __asm__ volatile ("" : : : "memory")
+# define KMP_CPU_PAUSE() do { KMP_PPC64_PRI_LOW(); KMP_PPC64_PRI_MED(); KMP_PPC64_PRI_LOC_MB(); } while (0)
 #else
 # define KMP_CPU_PAUSE()        /* nothing to do */
 #endif

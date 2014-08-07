@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 
-#if defined(__x86_64)
+#if defined(__x86_64) || defined (__powerpc64__)
 # define KMP_I8
 #endif
 #include "kmp.h"

@@ -828,7 +828,7 @@ __kmpc_flush(ident_t *loc, ...)
                 if ( ! __kmp_cpuinfo.sse2 ) {
                     // CPU cannot execute SSE2 instructions.
                 } else {
-                    #if KMP_COMPILER_ICC
+                    #if KMP_COMPILER_ICC || KMP_COMPILER_MSVC
                     _mm_mfence();
                     #else
                     __sync_synchronize();
@@ -837,6 +837,19 @@ __kmpc_flush(ident_t *loc, ...)
             #endif // KMP_MIC
         #elif KMP_ARCH_ARM
             // Nothing yet
+	     #elif KMP_ARCH_PPC64
+            // Nothing needed here (we have a real MB above).
+            #if KMP_OS_CNK
+	     	 // The flushing thread needs to yield here; this prevents a
+		    // busy-waiting thread from saturating the pipeline. flush is
+		       // often used in loops like this:
+                // while (!flag) {
+                //   #pragma omp flush(flag)
+                // }
+		    // and adding the yield here is good for at least a 10x speedup
+		       // when running >2 threads per core (on the NAS LU benchmark).
+                __kmp_yield(TRUE);
+            #endif
         #else
             #error Unknown or unsupported architecture
         #endif

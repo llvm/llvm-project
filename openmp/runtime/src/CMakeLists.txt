@@ -22,11 +22,17 @@ else()
   message(FATAL_ERROR "Unsupported OS")
 endif()
 
-if("${ARCH}" STREQUAL "")
+if(arch)	
+	set(ARCH ${arch}) #acquire from command line
+else() #assume default
   set(ARCH "32e")
 endif()
 
-set(ARCH_STR "Intel(R) 64")
+if("${arch}" STREQUAL "32e")
+  set(ARCH_STR "Intel(R) 64")
+elseif("${arch}" STREQUAL "ppc64")
+  set(ARCH_STR "PPC64")
+endif()
 
 set(FEATURE_FLAGS "-D USE_ITT_BUILD")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D NDEBUG")
@@ -36,13 +42,22 @@ set(FEATURE_FLAGS "${FEATURE_FLAGS} -D _REENTRANT")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_USE_ASSERT")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D BUILD_I8")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D BUILD_TV")
+
 if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -current_version 5.0")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -compatibility_version 5.0")
 endif()
+
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_LIBRARY_FILE=\\\"libiomp5.${OMP_SHLIBEXT}\\\"")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_VERSION_MAJOR=${VERSION}")
-set(FEATURE_FLAGS "${FEATURE_FLAGS} -D CACHE_LINE=64")
+
+# customize cache line size for ppc64 to 128 bytes: 64 in all other cases
+if("${arch}" STREQUAL "ppc64")
+	set(FEATURE_FLAGS "${FEATURE_FLAGS} -D CACHE_LINE=128")
+else()
+	set(FEATURE_FLAGS "${FEATURE_FLAGS} -D CACHE_LINE=64")	
+endif()
+
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_ADJUST_BLOCKTIME=1")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D BUILD_PARALLEL_ORDERED")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_ASM_INTRINS")
@@ -50,8 +65,13 @@ set(FEATURE_FLAGS "${FEATURE_FLAGS} -D USE_LOAD_BALANCE")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D USE_CBLKDATA")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D GUIDEDLL_EXPORTS")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_GOMP_COMPAT")
-set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_USE_ADAPTIVE_LOCKS=1")
-set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_DEBUG_ADAPTIVE_LOCKS=0")
+
+#adaptive locks use x86 assembly - disable for ppc64
+if("${arch}" STREQUAL "32e" OR "${arch}" STREQUAL "32" OR "${arch}" STREQUAL "arm")
+	set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_USE_ADAPTIVE_LOCKS=1")
+	set(FEATURE_FLAGS "${FEATURE_FLAGS} -D KMP_DEBUG_ADAPTIVE_LOCKS=0")
+endif()
+
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D OMP_50_ENABLED=0")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D OMP_41_ENABLED=0")
 set(FEATURE_FLAGS "${FEATURE_FLAGS} -D OMP_40_ENABLED=1")
@@ -122,16 +142,38 @@ add_custom_command(
   OUTPUT omp.h
     COMMAND perl ${CMAKE_CURRENT_SOURCE_DIR}/../tools/expand-vars.pl --strict -D Revision=\"\\$$Revision\" -D Date=\"\\$$Date\" -D KMP_TYPE=\"Performance\" -D KMP_ARCH=\"\\\"${ARCH_STR}\\\"\" -D KMP_VERSION_MAJOR=${VERSION} -D KMP_VERSION_MINOR=0 -D KMP_VERSION_BUILD=00000000 -D KMP_BUILD_DATE=\"${BUILD_TIME} UTC\" -D KMP_TARGET_COMPILER=12 -D KMP_DIAG=0 -D KMP_DEBUG_INFO=0 -D OMP_VERSION=${OMP_VERSION} ${CMAKE_CURRENT_SOURCE_DIR}/include/${OMP_VERSION_NUM}/omp.h.var omp.h
 )
-add_custom_command(
-  OUTPUT z_Linux_asm.o
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o z_Linux_asm.o -D KMP_ASM_INTRINS -D KMP_GOMP_COMPAT -D KMP_ARCH_X86_64 -x assembler-with-cpp ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_SOURCES}
-)
+
+if("${ARCH}" STREQUAL "ppc64")
+	add_custom_command(
+		OUTPUT z_Linux_asm.o
+    		       COMMAND ${CMAKE_CXX_COMPILER} -c -o z_Linux_asm.o -D KMP_ASM_INTRINS -D KMP_GOMP_COMPAT -D KMP_ARCH_PPC64 -x assembler-with-cpp ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_SOURCES}
+		       )
+else()
+	add_custom_command(
+		OUTPUT z_Linux_asm.o
+    		       COMMAND ${CMAKE_CXX_COMPILER} -c -o z_Linux_asm.o -D KMP_ASM_INTRINS -D KMP_GOMP_COMPAT -D KMP_ARCH_X86_64 -x assembler-with-cpp ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_SOURCES}
+		       )
+endif()
+
 
 add_custom_target(gen_kmp_i18n DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc omp.h z_Linux_asm.o)
 
 if(NOT APPLE)
-  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports_so.txt")
+	if(${ARCH} STREQUAL "ppc64" AND ${OS_GEN} STREQUAL "lin")
+  		set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports_so.txt -ldl")
+ 	else()
+   		set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports_so.txt")
+	endif()
 endif()
 
 add_library(iomp5 SHARED ${SOURCES} z_Linux_asm.o)
+
+# This is a workaround to a known ppc64 issue about libpthread. For more
+# information see
+# http://ryanarn.blogspot.com/2011/07/curious-case-of-pthreadatfork-on.html
+if("${ARCH}" STREQUAL "ppc64")
+	      find_library(PTHREAD NAMES pthread)
+	      target_link_libraries(iomp5 ${PTHREAD})
+endif()
+
 add_dependencies(iomp5 gen_kmp_i18n)

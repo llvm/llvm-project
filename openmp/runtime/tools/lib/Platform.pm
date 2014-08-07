@@ -50,6 +50,8 @@ sub canon_arch($) {
             $arch = "32e";
         } elsif ( $arch =~ m{\Aarm(?:v7\D*)?\z} ) {
             $arch = "arm";
+        } elsif ( $arch =~ m{\Appc64} ) {
+        	$arch = "ppc64";            
         } else {
             $arch = undef;
         }; # if
@@ -159,6 +161,8 @@ sub target_options() {
         $_host_arch = "32e";
     } elsif ( $hardware_platform eq "arm" ) {
         $_host_arch = "arm";
+    } elsif ( $hardware_platform eq "ppc64" ) {
+        $_host_arch = "ppc64";
     } else {
         die "Unsupported host hardware platform: \"$hardware_platform\"; stopped";
     }; # if

@@ -478,7 +478,7 @@
 //#define KMP_API_NAME_GOMP_TARGET_UPDATE                GOMP_target_update
 #define KMP_API_NAME_GOMP_TEAMS                          GOMP_teams
 
-#if KMP_OS_LINUX
+#if KMP_OS_LINUX && !KMP_OS_CNK && !KMP_ARCH_PPC64
     #define xstr(x) str(x) 
     #define str(x) #x
 

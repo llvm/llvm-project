@@ -8450,7 +8450,7 @@ __kmp_determine_reduction_method( ident_t *loc, kmp_int32 global_tid,
         int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
         int tree_available   = FAST_REDUCTION_TREE_METHOD_GENERATED;
 
-        #if KMP_ARCH_X86_64
+        #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64
 
             #if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN
                 #if KMP_MIC
