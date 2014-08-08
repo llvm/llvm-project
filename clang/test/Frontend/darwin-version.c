@@ -23,3 +23,5 @@
 // RUN: grep '__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__' %t | grep '1050' | count 1
 // RUN: %clang -target i686-apple-darwin9 -mmacosx-version-min=10.6 -dM -E -o %t %s
 // RUN: grep '__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__' %t | grep '1060' | count 1
+// RUN: %clang -target x86_64-apple-macosx -mmacosx-version-min=10.10 -dM -E -o %t %s
+// RUN: grep '__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__' %t | grep '101000' | count 1

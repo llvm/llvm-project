@@ -155,12 +155,23 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     // revision numbers). So, we limit them to the maximum representable
     // version.
     assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
-    char Str[5];
-    Str[0] = '0' + (Maj / 10);
-    Str[1] = '0' + (Maj % 10);
-    Str[2] = '0' + std::min(Min, 9U);
-    Str[3] = '0' + std::min(Rev, 9U);
-    Str[4] = '\0';
+    char Str[7];
+    if (Maj < 10 || (Maj == 10 && Min < 10)) {
+      Str[0] = '0' + (Maj / 10);
+      Str[1] = '0' + (Maj % 10);
+      Str[2] = '0' + std::min(Min, 9U);
+      Str[3] = '0' + std::min(Rev, 9U);
+      Str[4] = '\0';
+    } else {
+      // Handle versions > 10.9.
+      Str[0] = '0' + (Maj / 10);
+      Str[1] = '0' + (Maj % 10);
+      Str[2] = '0' + (Min / 10);
+      Str[3] = '0' + (Min % 10);
+      Str[4] = '0' + (Rev / 10);
+      Str[5] = '0' + (Rev % 10);
+      Str[6] = '\0';
+    }
     Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
   }
 
