@@ -166,6 +166,16 @@ libclang
 Static Analyzer
 ---------------
 
+Check for code testing a variable for 0 after using it as a denominator.
+This new checker, alpha.core.TestAfterDivZero, catches issues like this:
+
+.. code:: c
+
+  int sum = ...
+  int avg = sum / count; // potential division by zero...
+  if (count == 0) { ... } // ...caught here
+
+
 The `-analyzer-config` options are now passed from scan-build through to
 ccc-analyzer and then to Clang.
 
