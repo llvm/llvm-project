@@ -100,7 +100,8 @@ passes via three new flags: `-Rpass`, `-Rpass-missed` and `-Rpass-analysis`.
 These flags take a POSIX regular expression which indicates the name
 of the pass (or passes) that should emit optimization remarks.
 
-The option `-u` is forwarded to the linker on gnutools toolchains.
+Options `-u` and `-z` are forwarded to the linker on gnutools toolchains.
+
 
 New Pragmas in Clang
 -----------------------
