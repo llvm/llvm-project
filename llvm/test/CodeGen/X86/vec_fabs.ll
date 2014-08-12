@@ -46,8 +46,8 @@ declare <8 x float> @llvm.fabs.v8f32(<8 x float> %p)
 ; CHECK: .long	2147483647
 ; CHECK: .long	2147483647
 ; CHECK-LABEL: fabs_v2f32_1
-; CHECK: vmovdqa LCPI4_0, %xmm0
-; CHECK: vpand   LCPI4_1, %xmm0, %xmm0
+; CHECK: vmovdqa {{.*}}LCPI4_0, %xmm0
+; CHECK: vpand   {{.*}}LCPI4_1, %xmm0, %xmm0
 ; CHECK: vmovd   %xmm0, %eax
 ; CHECK: vpextrd $1, %xmm0, %edx
 define i64 @fabs_v2f32_1() {
