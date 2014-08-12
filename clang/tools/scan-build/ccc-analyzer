@@ -25,6 +25,17 @@ use Text::ParseWords;
 # Compiler command setup.
 ##===----------------------------------------------------------------------===##
 
+# Search in the PATH if the compiler exists
+sub SearchInPath {
+    my $file = shift;
+    foreach my $dir (split (':', $ENV{PATH})) {
+        if (-x "$dir/$file") {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 my $Compiler;
 my $Clang;
 my $DefaultCCompiler;
@@ -41,7 +52,7 @@ if (`uname -a` =~ m/Darwin/) {
 
 if ($FindBin::Script =~ /c\+\+-analyzer/) {
   $Compiler = $ENV{'CCC_CXX'};
-  if (!defined $Compiler || ! -x $Compiler) { $Compiler = $DefaultCXXCompiler; }
+  if (!defined $Compiler || (! -x $Compiler && ! SearchInPath($Compiler))) { $Compiler = $DefaultCXXCompiler; }
 
   $Clang = $ENV{'CLANG_CXX'};
   if (!defined $Clang || ! -x $Clang) { $Clang = 'clang++'; }
@@ -50,7 +61,7 @@ if ($FindBin::Script =~ /c\+\+-analyzer/) {
 }
 else {
   $Compiler = $ENV{'CCC_CC'};
-  if (!defined $Compiler || ! -x $Compiler) { $Compiler = $DefaultCCompiler; }
+  if (!defined $Compiler || (! -x $Compiler && ! SearchInPath($Compiler))) { $Compiler = $DefaultCCompiler; }
 
   $Clang = $ENV{'CLANG'};
   if (!defined $Clang || ! -x $Clang) { $Clang = 'clang'; }
