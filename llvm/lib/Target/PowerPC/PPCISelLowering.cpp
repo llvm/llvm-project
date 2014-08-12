@@ -8420,25 +8420,17 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                             Intrinsic::ppc_altivec_lvsl);
       SDValue PermCntl = BuildIntrinsicOp(Intr, Ptr, DAG, dl, MVT::v16i8);
 
-      // Create the new MMO for the new base load. It is like the original MMO,
-      // but represents an area in memory almost twice the vector size centered
-      // on the original address. If the address is unaligned, we might start
-      // reading up to (sizeof(vector)-1) bytes below the address of the
-      // original unaligned load.
+      // Refine the alignment of the original load (a "new" load created here
+      // which was identical to the first except for the alignment would be
+      // merged with the existing node regardless).
       MachineFunction &MF = DAG.getMachineFunction();
-      MachineMemOperand *BaseMMO =
-        MF.getMachineMemOperand(LD->getMemOperand(),
-                                -LD->getMemoryVT().getStoreSize()+1,
-                                2*LD->getMemoryVT().getStoreSize()-1);
-
-      // Create the new base load.
-      SDValue LDXIntID = DAG.getTargetConstant(Intrinsic::ppc_altivec_lvx,
-                                               getPointerTy());
-      SDValue BaseLoadOps[] = { Chain, LDXIntID, Ptr };
-      SDValue BaseLoad =
-        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, dl,
-                                DAG.getVTList(MVT::v4i32, MVT::Other),
-                                BaseLoadOps, MVT::v4i32, BaseMMO);
+      MachineMemOperand *MMO =
+        MF.getMachineMemOperand(LD->getPointerInfo(),
+                                LD->getMemOperand()->getFlags(),
+                                LD->getMemoryVT().getStoreSize(),
+                                ABIAlignment);
+      LD->refineAlignment(MMO);
+      SDValue BaseLoad = SDValue(LD, 0);
 
       // Note that the value of IncOffset (which is provided to the next
       // load's pointer info offset value, and thus used to calculate the
@@ -8460,17 +8452,20 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue Increment = DAG.getConstant(IncValue, getPointerTy());
       Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr, Increment);
 
-      MachineMemOperand *ExtraMMO =
-        MF.getMachineMemOperand(LD->getMemOperand(),
-                                1, 2*LD->getMemoryVT().getStoreSize()-1);
-      SDValue ExtraLoadOps[] = { Chain, LDXIntID, Ptr };
       SDValue ExtraLoad =
-        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, dl,
-                                DAG.getVTList(MVT::v4i32, MVT::Other),
-                                ExtraLoadOps, MVT::v4i32, ExtraMMO);
+        DAG.getLoad(VT, dl, Chain, Ptr,
+                    LD->getPointerInfo().getWithOffset(IncOffset),
+                    LD->isVolatile(), LD->isNonTemporal(),
+                    LD->isInvariant(), ABIAlignment);
 
       SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
         BaseLoad.getValue(1), ExtraLoad.getValue(1));
+
+      if (BaseLoad.getValueType() != MVT::v4i32)
+        BaseLoad = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, BaseLoad);
+
+      if (ExtraLoad.getValueType() != MVT::v4i32)
+        ExtraLoad = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, ExtraLoad);
 
       // Because vperm has a big-endian bias, we must reverse the order
       // of the input vectors and complement the permute control vector
@@ -8488,9 +8483,36 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       if (VT != MVT::v4i32)
         Perm = DAG.getNode(ISD::BITCAST, dl, VT, Perm);
 
-      // The output of the permutation is our loaded result, the TokenFactor is
-      // our new chain.
-      DCI.CombineTo(N, Perm, TF);
+      // Now we need to be really careful about how we update the users of the
+      // original load. We cannot just call DCI.CombineTo (or
+      // DAG.ReplaceAllUsesWith for that matter), because the load still has
+      // uses created here (the permutation for example) that need to stay.
+      SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
+      while (UI != UE) {
+        SDUse &Use = UI.getUse();
+        SDNode *User = *UI;
+        // Note: BaseLoad is checked here because it might not be N, but a
+        // bitcast of N.
+        if (User == Perm.getNode() || User == BaseLoad.getNode() ||
+            User == TF.getNode() || Use.getResNo() > 1) {
+          ++UI;
+          continue;
+        }
+
+        SDValue To = Use.getResNo() ? TF : Perm;
+        ++UI;
+
+        SmallVector<SDValue, 8> Ops;
+        for (const SDUse &O : User->ops()) {
+          if (O == Use)
+            Ops.push_back(To);
+          else
+            Ops.push_back(O);
+        }
+
+        DAG.UpdateNodeOperands(User, Ops);
+      }
+
       return SDValue(N, 0);
     }
     }
