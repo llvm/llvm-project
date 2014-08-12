@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+avx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=corei7-avx | FileCheck %s
 
 
 define <2 x double> @fabs_v2f64(<2 x double> %p)
@@ -39,18 +39,16 @@ declare <8 x float> @llvm.fabs.v8f32(<8 x float> %p)
 
 ; PR20354: when generating code for a vector fabs op,
 ; make sure the correct mask is used for all vector elements.
-; CHECK-LABEL: LCPI4_0
-; CHECK: .long	2147483648
-; CHECK: .long	2147483648
-; CHECK-LABEL: LCPI4_1 
-; CHECK: .long	2147483647
-; CHECK: .long	2147483647
-; CHECK-LABEL: fabs_v2f32_1
-; CHECK: vmovdqa {{.*}}LCPI4_0, %xmm0
-; CHECK: vpand   {{.*}}LCPI4_1, %xmm0, %xmm0
-; CHECK: vmovd   %xmm0, %eax
-; CHECK: vpextrd $1, %xmm0, %edx
-define i64 @fabs_v2f32_1() {
+; CHECK-LABEL: .LCPI4_0:
+; CHECK-NEXT:    .long	2147483647
+; CHECK-NEXT:    .long	2147483647
+define i64 @fabs_v2f32(<2 x float> %v) {
+; CHECK-LABEL: fabs_v2f32:
+; CHECK:         movabsq $-9223372034707292160, %[[R:r[^ ]+]]
+; CHECK-NEXT:    vmovq %[[R]], %[[X:xmm[0-9]+]]
+; CHECK-NEXT:    vandps   {{.*}}.LCPI4_0{{.*}}, %[[X]], %[[X]]
+; CHECK-NEXT:    vmovq   %[[X]], %rax
+; CHECK-NEXT:    retq
   %highbits = bitcast i64 9223372039002259456 to <2 x float> ; 0x8000_0000_8000_0000
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %highbits)
   %ret = bitcast <2 x float> %fabs to i64
