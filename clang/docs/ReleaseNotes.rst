@@ -67,6 +67,9 @@ about them. The improvements since the 3.4 release include:
 - GCC compatibility: Clang displays a warning on unsupported gcc
   optimization flags instead of an error.
 
+- New warning `-Wabsolute-value`: Clang warns about incorrect or useless usage
+  of the absolute functions (`abs`, `fabsf`, etc).
+
 -  ...
 
 New Compiler Flags
