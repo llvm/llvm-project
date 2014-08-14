@@ -70,6 +70,30 @@ about them. The improvements since the 3.4 release include:
 - New warning `-Wabsolute-value`: Clang warns about incorrect or useless usage
   of the absolute functions (`abs`, `fabsf`, etc).
 
+  .. code-block:: c
+
+    #include <stdlib.h>
+    void foo() {
+     unsigned int i=0;
+     abs(i);
+    }
+
+  returns
+  `warning: taking the absolute value of unsigned type 'unsigned int' has no effect [-Wabsolute-value]`
+
+  or
+
+  .. code-block:: c
+
+    #include <stdlib.h>
+    void plop() {
+      long long i=0;
+      abs(i);
+    }
+
+  returns
+  `warning: absolute value function 'abs' given an argument of type 'long long' but has parameter of type 'int' which may cause truncation of value [-Wabsolute-value] use function 'llabs' instead`
+
 - New warning `-Wtautological-pointer-compare`:
 
   .. code-block:: c++
