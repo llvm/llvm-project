@@ -230,12 +230,12 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
         m_compiler->getCodeGenOpts().setDebugInfo(CodeGenOptions::NoDebugInfo);
 
     // Disable some warnings.
-    m_compiler->getDiagnostics().setSeverityForGroup(clang::diag::Flavor::WarningOrError,
-        diag::Flavor::Remark, "unused-value", clang::diag::Severity::Ignored,
-        SourceLocation());
-    m_compiler->getDiagnostics().setSeverityForGroup(clang::diag::Flavor::WarningOrError,
-        diag::Flavor::Remark, "odr", clang::diag::Severity::Ignored,
-        SourceLocation());
+    m_compiler->getDiagnostics().setSeverityForGroup(
+        clang::diag::Flavor::WarningOrError, "unused-value",
+        clang::diag::Severity::Ignored, SourceLocation());
+    m_compiler->getDiagnostics().setSeverityForGroup(
+        clang::diag::Flavor::WarningOrError, "odr",
+        clang::diag::Severity::Ignored, SourceLocation());
 
     // Inform the target of the language options
     //
