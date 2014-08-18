@@ -237,9 +237,9 @@ enable_if
    "X","","",""
 
 .. Note:: Some features of this attribute are experimental. The meaning of
-multiple enable_if attributes on a single declaration is subject to change in
-a future version of clang. Also, the ABI is not standardized and the mangled
-name produced may change. To avoid that, use asm labels.
+  multiple enable_if attributes on a single declaration is subject to change in
+  a future version of clang. Also, the ABI is not standardized and the mangled
+  name produced may change. To avoid that, use asm labels.
 
 The ``enable_if`` attribute can be placed on function declarations to control
 which overload is selected based on the values of the function's arguments.
