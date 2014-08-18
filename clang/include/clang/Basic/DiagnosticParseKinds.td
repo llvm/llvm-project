@@ -849,6 +849,11 @@ def warn_pragma_pack_malformed : Warning<
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
   InGroup<IgnoredPragmas>;
+// - #pragma init_seg
+def warn_pragma_init_seg_unsupported_target : Warning<
+  "'#pragma init_seg' is only supported when targeting a "
+  "Microsoft environment">,
+  InGroup<IgnoredPragmas>;
 // - #pragma fp_contract
 def err_pragma_fp_contract_scope : Error<
   "'#pragma fp_contract' can only appear at file scope or at the start of a "

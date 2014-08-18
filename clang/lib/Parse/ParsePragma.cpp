@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RAIIObjectsForParser.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
@@ -655,6 +656,11 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
 // #pragma init_seg({ compiler | lib | user | "section-name" [, func-name]} )
 bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
                                    SourceLocation PragmaLocation) {
+  if (getTargetInfo().getTriple().getEnvironment() != llvm::Triple::MSVC) {
+    PP.Diag(PragmaLocation, diag::warn_pragma_init_seg_unsupported_target);
+    return false;
+  }
+
   if (ExpectAndConsume(tok::l_paren, diag::warn_pragma_expected_lparen,
                        PragmaName))
     return false;
