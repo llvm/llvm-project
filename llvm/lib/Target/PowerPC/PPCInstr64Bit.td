@@ -802,7 +802,7 @@ def LDtocCPT: Pseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
                   [(set i64:$rD,
                      (PPCtoc_entry tconstpool:$disp, i64:$reg))]>, isPPC64;
 
-let hasSideEffects = 1, isCodeGenOnly = 1, RST = 2 in
+let hasSideEffects = 1, isCodeGenOnly = 1, RST = 2, Defs = [X2] in
 def LDinto_toc: DSForm_1<58, 0, (outs), (ins memrix:$src),
                     "ld 2, $src", IIC_LdStLD,
                     [(PPCload_toc ixaddr:$src)]>, isPPC64;
