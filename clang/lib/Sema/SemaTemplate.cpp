@@ -4189,7 +4189,7 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
   if (Arg->isValueDependent() || Arg->isTypeDependent())
     return NPV_NotNullPointer;
   
-  if (!S.getLangOpts().CPlusPlus11 || S.getLangOpts().MSVCCompat)
+  if (!S.getLangOpts().CPlusPlus11)
     return NPV_NotNullPointer;
   
   // Determine whether we have a constant expression.

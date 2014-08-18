@@ -118,7 +118,7 @@ typedef COM_CLASS_TEMPLATE_REF<struct_with_uuid, __uuidof(struct_with_uuid)> COM
 
 COM_CLASS_TEMPLATE_REF<int, __uuidof(struct_with_uuid)> good_template_arg;
 
-COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument of type 'const _GUID' cannot be converted to a value of type 'const GUID *' (aka 'const _GUID *')}}
+COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument of type 'const _GUID' is not a constant expression}}
 
 namespace PR16911 {
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890aB}")) uuid;
@@ -357,3 +357,7 @@ void *_alloca(int);
 void foo(void) {
   __declspec(align(16)) int *buffer = (int *)_alloca(9);
 }
+
+template <int *>
+struct NullptrArg {};
+NullptrArg<nullptr> a;
