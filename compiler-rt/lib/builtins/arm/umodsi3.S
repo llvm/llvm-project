@@ -33,10 +33,8 @@ DEFINE_COMPILERRT_FUNCTION(__umodsi3)
 #if __ARM_ARCH_EXT_IDIV__
 	tst     r1, r1
 	beq     LOCAL_LABEL(divby0)
-	mov 	r3, r0
-	udiv	r0, r3, r1
-	mls 	r1, r0, r1, r3
-	str 	r1, [r2]
+	udiv	r2, r0, r1
+	mls 	r0, r2, r1, r0
 	bx  	lr
 #else
 	cmp	r1, #1
