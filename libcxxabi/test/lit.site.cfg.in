@@ -1,0 +1,11 @@
+@AUTO_GEN_COMMENT@
+config.cxx_under_test        = "@LIBCXXABI_COMPILER@"
+config.libcxxabi_src_root    = "@LIBCXXABI_SOURCE_DIR@"
+config.libcxxabi_obj_root    = "@LIBCXXABI_BINARY_DIR@"
+config.python_executable     = "@PYTHON_EXECUTABLE@"
+config.enable_shared         = @LIBCXXABI_ENABLE_SHARED@
+config.libcxx_includes       = "@LIBCXXABI_LIBCXX_INCLUDES@"
+config.llvm_unwinder         = @LIBCXXABI_USE_LLVM_UNWINDER@
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@LIBCXXABI_SOURCE_DIR@/test/lit.cfg")
