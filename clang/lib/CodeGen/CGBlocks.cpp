@@ -78,7 +78,13 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   ASTContext &C = CGM.getContext();
 
   llvm::Type *ulong = CGM.getTypes().ConvertType(C.UnsignedLongTy);
-  llvm::Type *i8p = CGM.getTypes().ConvertType(C.VoidPtrTy);
+  llvm::Type *i8p = NULL;
+  if (CGM.getLangOpts().OpenCL)
+    i8p = 
+      llvm::Type::getInt8PtrTy(
+           CGM.getLLVMContext(), C.getTargetAddressSpace(LangAS::opencl_constant));
+  else
+    i8p = CGM.getTypes().ConvertType(C.VoidPtrTy);
 
   SmallVector<llvm::Constant*, 6> elements;
 
