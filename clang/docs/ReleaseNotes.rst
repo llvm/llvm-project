@@ -55,7 +55,16 @@ Major New Features
   would return true when the attribute spelling was known, regardless of whether
   the attribute was available to the specific target. Clang now returns true
   only when the attribute pertains to the current compilation target.
-
+  
+- Clang 3.5 now has parsing and semantic-analysis support for all OpenMP 3.1
+  pragmas (except atomics and ordered). LLVM's OpenMP runtime library,
+  originally developed by Intel, has been modified to work on ARM, PowerPC,
+  as well as X86. Code generation support is minimal at this point and will
+  continue to be developed for 3.6, along with the rest of OpenMP 3.1.
+  Support for OpenMP 4.0 features, such as SIMD and target accelerator
+  directives, is also in progress. Contributors to this work include AMD,
+  Argonne National Lab., IBM, Intel, Texas Instruments, University of Houston
+  and many others.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -207,6 +216,13 @@ OpenCL C Language Changes in Clang
 ----------------------------------
 
 ...
+
+OpenMP C/C++ Language Changes in Clang
+--------------------------------------
+
+- `Status of supported OpenMP constructs 
+  <https://github.com/clang-omp/clang/wiki/Status-of-supported-OpenMP-constructs>`_.
+
 
 Internal API Changes
 --------------------
