@@ -46,8 +46,8 @@
 // CHECK-UBUNTU-13-04: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CHECK-UBUNTU-13-04: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-13-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/c++/4.7"
-// CHECK-UBUNTU-13-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/c++/4.7/backward"
 // CHECK-UBUNTU-13-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/x86_64-linux-gnu/c++/4.7"
+// CHECK-UBUNTU-13-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/c++/4.7/backward"
 // CHECK-UBUNTU-13-04: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-UBUNTU-13-04: "-internal-isystem" "{{.*}}{{/|\\\\}}lib{{(64|32)?}}{{/|\\\\}}clang{{/|\\\\}}{{[0-9]\.[0-9]\.[0-9]}}{{/|\\\\}}include"
 // CHECK-UBUNTU-13-04: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/x86_64-linux-gnu"
@@ -61,9 +61,8 @@
 // CHECK-UBUNTU-14-04: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CHECK-UBUNTU-14-04: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-14-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8"
-// CHECK-UBUNTU-14-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/x86_64-linux-gnu/x32"
-// CHECK-UBUNTU-14-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/backward"
 // CHECK-UBUNTU-14-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/x86_64-linux-gnu/c++/4.8/x32"
+// CHECK-UBUNTU-14-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/backward"
 // CHECK-UBUNTU-14-04: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-UBUNTU-14-04: "-internal-isystem" "{{.*}}{{/|\\\\}}lib{{(64|x32)?}}{{/|\\\\}}clang{{/|\\\\}}{{[0-9]\.[0-9]\.[0-9]}}{{/|\\\\}}include"
 // CHECK-UBUNTU-14-04: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/x86_64-linux-gnu"
@@ -77,8 +76,8 @@
 // CHECK-UBUNTU-13-04-CROSS: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CHECK-UBUNTU-13-04-CROSS: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-13-04-CROSS: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.7/../../../../include/c++/4.7"
-// CHECK-UBUNTU-13-04-CROSS: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.7/../../../../include/c++/4.7/backward"
 // CHECK-UBUNTU-13-04-CROSS: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.7/../../../../include/arm-linux-gnueabihf/c++/4.7"
+// CHECK-UBUNTU-13-04-CROSS: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.7/../../../../include/c++/4.7/backward"
 // CHECK-UBUNTU-13-04-CROSS: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-UBUNTU-13-04-CROSS: "-internal-isystem" "{{.*}}{{/|\\\\}}lib{{(64|32)?}}{{/|\\\\}}clang{{/|\\\\}}{{[0-9]\.[0-9]\.[0-9]}}{{/|\\\\}}include"
 // CHECK-UBUNTU-13-04-CROSS: "-internal-externc-isystem" "[[SYSROOT]]/include"
@@ -93,9 +92,8 @@
 // CHECK-UBUNTU-13-04-M32: "-triple" "i386-unknown-linux-gnu"
 // CHECK-UBUNTU-13-04-M32: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-13-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/c++/4.7"
-// CHECK-UBUNTU-13-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/c++/4.7/x86_64-linux-gnu/32"
-// CHECK-UBUNTU-13-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/c++/4.7/backward"
 // CHECK-UBUNTU-13-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/x86_64-linux-gnu/c++/4.7/32"
+// CHECK-UBUNTU-13-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../include/c++/4.7/backward"
 //
 // Test Ubuntu/Debian's Ubuntu 14.04 config variant, with -m32
 // and an empty 4.9 directory.
@@ -107,9 +105,22 @@
 // CHECK-UBUNTU-14-04-M32: "-triple" "i386-unknown-linux-gnu"
 // CHECK-UBUNTU-14-04-M32: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-14-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8"
-// CHECK-UBUNTU-14-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/x86_64-linux-gnu/32"
-// CHECK-UBUNTU-14-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/backward"
 // CHECK-UBUNTU-14-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/x86_64-linux-gnu/c++/4.8/32"
+// CHECK-UBUNTU-14-04-M32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/backward"
+//
+// Test Ubuntu/Debian's Ubuntu 14.04 with -m32 and an i686 cross compiler
+// installed rather than relying on multilib. Also happens to look like an
+// actual i686 Ubuntu system.
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu -m32 \
+// RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
+// RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04-I686 %s
+// CHECK-UBUNTU-14-04-I686: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-UBUNTU-14-04-I686: "-triple" "i386-unknown-linux-gnu"
+// CHECK-UBUNTU-14-04-I686: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-UBUNTU-14-04-I686: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.8/../../../../include/c++/4.8"
+// CHECK-UBUNTU-14-04-I686: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.8/../../../../include/i386-linux-gnu/c++/4.8"
+// CHECK-UBUNTU-14-04-I686: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.8/../../../../include/c++/4.8/backward"
 //
 // Test Ubuntu/Debian's Ubuntu 14.04 for powerpc64le
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
@@ -120,9 +131,8 @@
 // CHECK-UBUNTU-14-04-PPC64LE: "-triple" "powerpc64le-unknown-linux-gnu"
 // CHECK-UBUNTU-14-04-PPC64LE: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-14-04-PPC64LE: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/powerpc64le-linux-gnu/4.8/../../../../include/c++/4.8"
-// CHECK-UBUNTU-14-04-PPC64LE: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/powerpc64le-linux-gnu/4.8/../../../../include/c++/4.8/powerpc64le-linux-gnu"
-// CHECK-UBUNTU-14-04-PPC64LE: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/powerpc64le-linux-gnu/4.8/../../../../include/c++/4.8/backward"
 // CHECK-UBUNTU-14-04-PPC64LE: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/powerpc64le-linux-gnu/4.8/../../../../include/powerpc64le-linux-gnu/c++/4.8"
+// CHECK-UBUNTU-14-04-PPC64LE: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/powerpc64le-linux-gnu/4.8/../../../../include/c++/4.8/backward"
 // CHECK-UBUNTU-14-04-PPC64LE: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/powerpc64le-linux-gnu"
 // CHECK-UBUNTU-14-04-PPC64LE: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-UBUNTU-14-04-PPC64LE: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"

@@ -678,10 +678,10 @@ protected:
 
 private:
   static bool addLibStdCXXIncludePaths(Twine Base, Twine Suffix,
-                                       Twine TargetArchDir, Twine IncludeSuffix,
-                                       const llvm::opt::ArgList &DriverArgs,
-                                       llvm::opt::ArgStringList &CC1Args);
-  static bool addLibStdCXXIncludePaths(Twine Base, Twine TargetArchDir,
+                                       StringRef GCCTriple,
+                                       StringRef GCCMultiarchTriple,
+                                       StringRef TargetMultiarchTriple,
+                                       Twine IncludeSuffix,
                                        const llvm::opt::ArgList &DriverArgs,
                                        llvm::opt::ArgStringList &CC1Args);
 
