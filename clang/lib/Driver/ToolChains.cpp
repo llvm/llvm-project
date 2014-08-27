@@ -3394,7 +3394,7 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                 Twine IncludeSuffix,
                                                 const ArgList &DriverArgs,
                                                 ArgStringList &CC1Args) {
-  if (!llvm::sys::fs::exists(Base))
+  if (!llvm::sys::fs::exists(Base + Suffix))
     return false;
 
   addSystemInclude(DriverArgs, CC1Args, Base + Suffix);
