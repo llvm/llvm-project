@@ -294,6 +294,17 @@ new LLVM-based code generators "on the fly" for the designed processors and
 loads them in to the compiler backend as runtime libraries to avoid
 per-target recompilation of larger parts of the compiler chain. 
 
+ISPC
+----
+
+`ISPC <http://ispc.github.io/>`_ is a C-based language based on the SPMD
+(single program, multiple data) programming model that generates efficient
+SIMD code for modern processors without the need for complex analysis and
+autovectorization. The language exploits the concept of “varying” data types,
+which ensure vector-friendly data layout, explicit vectorization and compact
+representation of the program. The project uses the LLVM infrastructure for
+optimization and code generation.
+
 Additional Information
 ======================
 
