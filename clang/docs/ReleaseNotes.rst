@@ -76,6 +76,15 @@ about them. The improvements since the 3.4 release include:
 - GCC compatibility: Clang displays a warning on unsupported gcc
   optimization flags instead of an error.
 
+- Remarks system: Clang supports `-R` flags for enabling remarks. These are
+  diagnostic messages that provide information about the compilation process,
+  but don't suggest that a problem has been detected. As such, they cannot
+  be upgraded to errors with `-Werror` or `-Rerror`. A `-Reverything` flag
+  is provided (paralleling `-Weverything`) to turn on all remarks.
+
+- New remark `-Rpass`: Clang provides information about decisions made by
+  optimization passes during compilation. See :ref:`opt_rpass`.
+
 - New warning `-Wabsolute-value`: Clang warns about incorrect or useless usage
   of the absolute functions (`abs`, `fabsf`, etc).
 
@@ -177,8 +186,8 @@ New Pragmas in Clang
 Loop optimization hints can be specified using the new `#pragma clang loop`
 directive just prior to the desired loop. The directive allows vectorization,
 interleaving, and unrolling to be enabled or disabled. Vector width as well
-as interleave and unrolling count can be manually specified.  See language
-extensions for details.
+as interleave and unrolling count can be manually specified.  See
+:ref:`langext-pragma-loop` for details.
 
 Clang now supports the `#pragma unroll` directive to specify loop unrolling
 optimization hints.  Placed just prior to the desired loop, `#pragma unroll`
@@ -200,12 +209,31 @@ C11 Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
+- Reference parameters and return values from functions are more aggressively
+  assumed to refer to valid objects when optimizing. Clang will attempt to
+  issue a warning by default if it sees null checks being performed on
+  references, and `-fsanitize=null` can be used to detect null references
+  being formed at runtime.
+
 - ...
 
-C++11 Feature Support
+C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-...
+Clang has experimental support for some proposed C++1z (tentatively, C++17)
+features. This support can be enabled using the `-std=c++1z` flag. The
+supported features are:
+
+- `static_assert(expr)` with no message
+
+- `for (identifier : range)` as a synonym for `for (auto &&identifier : range)`
+
+- `template<template<...> typename>` as a synonym for `template<template<...> class>`
+
+Additionally, trigraphs are not recognized by default in this mode.
+`-ftrigraphs` can be used if you need to parse legacy code that uses trigraphs.
+Note that these features may be changed or removed in future Clang releases
+without notice.
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -231,7 +259,8 @@ These are major API changes that have happened since the 3.4 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
-...
+- Clang uses `std::unique_ptr<T>` in many places where it used to use
+  raw `T *` pointers.
 
 libclang
 --------
@@ -244,7 +273,7 @@ Static Analyzer
 Check for code testing a variable for 0 after using it as a denominator.
 This new checker, alpha.core.TestAfterDivZero, catches issues like this:
 
-.. code:: c
+.. code-block:: c
 
   int sum = ...
   int avg = sum / count; // potential division by zero...

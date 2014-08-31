@@ -531,6 +531,8 @@ control the crash diagnostics.
 The -fno-crash-diagnostics flag can be helpful for speeding the process
 of generating a delta reduced test case.
 
+.. _opt_rpass:
+
 Options to Emit Optimization Reports
 ------------------------------------
 

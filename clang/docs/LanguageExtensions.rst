@@ -1780,6 +1780,8 @@ it causes the instantiation of ``twice`` and ``thrice`` with an ``int`` type; of
 these two instantiations, ``twice`` will be optimized (because its definition
 was outside the region) and ``thrice`` will not be optimized.
 
+.. _langext-pragma-loop:
+
 Extensions for loop hint optimizations
 ======================================
 
