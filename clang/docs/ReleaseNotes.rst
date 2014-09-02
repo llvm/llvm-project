@@ -184,17 +184,9 @@ New Pragmas in Clang
 -----------------------
 
 Loop optimization hints can be specified using the new `#pragma clang loop`
-directive just prior to the desired loop. The directive allows vectorization,
-interleaving, and unrolling to be enabled or disabled. Vector width as well
-as interleave and unrolling count can be manually specified.  See
-:ref:`langext-pragma-loop` for details.
-
-Clang now supports the `#pragma unroll` directive to specify loop unrolling
-optimization hints.  Placed just prior to the desired loop, `#pragma unroll`
-directs the loop unroller to attempt to fully unroll the loop.  The pragma may
-also be specified with a positive integer parameter indicating the desired
-unroll count: `#pragma unroll _value_`.  The unroll count parameter can be
-optionally enclosed in parentheses.
+directive just prior to the desired loop. The directive allows vectorization and
+interleaving to be enabled or disabled. Vector width as well as interleave count
+can be manually specified.  See :ref:`langext-pragma-loop` for details.
 
 C Language Changes in Clang
 ---------------------------

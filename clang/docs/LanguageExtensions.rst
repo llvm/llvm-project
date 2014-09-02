@@ -1787,12 +1787,8 @@ Extensions for loop hint optimizations
 
 The ``#pragma clang loop`` directive is used to specify hints for optimizing the
 subsequent for, while, do-while, or c++11 range-based for loop. The directive
-provides options for vectorization, interleaving, and unrolling. Loop hints can
-be specified before any loop and will be ignored if the optimization is not safe
-to apply.
-
-Vectorization and Interleaving
-------------------------------
+provides options for vectorization and interleaving. Loop hints can be specified
+before any loop and will be ignored if the optimization is not safe to apply.
 
 A vectorized loop performs multiple iterations of the original loop
 in parallel using vector instructions. The instruction set of the target
@@ -1834,46 +1830,6 @@ width/count of the set of target architectures supported by your application.
 
 Specifying a width/count of 1 disables the optimization, and is equivalent to
 ``vectorize(disable)`` or ``interleave(disable)``.
-
-Loop Unrolling
---------------
-
-Unrolling a loop reduces the loop control overhead and exposes more
-opportunities for ILP. Loops can be fully or partially unrolled. Full unrolling
-eliminates the loop and replaces it with an enumerated sequence of loop
-iterations. Full unrolling is only possible if the loop trip count is known at
-compile time. Partial unrolling replicates the loop body within the loop and
-reduces the trip count.
-
-If ``unroll(enable)`` is specified the unroller will attempt to fully unroll the
-loop if the trip count is known at compile time. If the loop count is not known
-or the fully unrolled code size is greater than the limit specified by the
-`-pragma-unroll-threshold` command line option the loop will be partially
-unrolled subject to the same limit.
-
-.. code-block:: c++
-
-  #pragma clang loop unroll(enable)
-  for(...) {
-    ...
-  }
-
-The unroll count can be specified explicitly with ``unroll_count(_value_)`` where
-_value_ is a positive integer. If this value is greater than the trip count the
-loop will be fully unrolled. Otherwise the loop is partially unrolled subject
-to the `-pragma-unroll-threshold` limit.
-
-.. code-block:: c++
-
-  #pragma clang loop unroll_count(8)
-  for(...) {
-    ...
-  }
-
-Unrolling of a loop can be prevented by specifying ``unroll(disable)``.
-
-Additional Information
-----------------------
 
 For convenience multiple loop hints can be specified on a single line.
 
