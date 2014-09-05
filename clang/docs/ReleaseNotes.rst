@@ -1,18 +1,12 @@
-=====================================
-Clang 3.5 (In-Progress) Release Notes
-=====================================
+=======================
+Clang 3.5 Release Notes
+=======================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 3.5 release. You may
-   prefer the `Clang 3.4 Release Notes
-   <http://llvm.org/releases/3.4/tools/clang/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
@@ -188,16 +182,6 @@ directive just prior to the desired loop. The directive allows vectorization and
 interleaving to be enabled or disabled. Vector width as well as interleave count
 can be manually specified.  See :ref:`langext-pragma-loop` for details.
 
-C Language Changes in Clang
----------------------------
-
-...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
-
 C++ Language Changes in Clang
 -----------------------------
 
@@ -206,8 +190,6 @@ C++ Language Changes in Clang
   issue a warning by default if it sees null checks being performed on
   references, and `-fsanitize=null` can be used to detect null references
   being formed at runtime.
-
-- ...
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -227,16 +209,6 @@ Additionally, trigraphs are not recognized by default in this mode.
 Note that these features may be changed or removed in future Clang releases
 without notice.
 
-Objective-C Language Changes in Clang
--------------------------------------
-
-...
-
-OpenCL C Language Changes in Clang
-----------------------------------
-
-...
-
 OpenMP C/C++ Language Changes in Clang
 --------------------------------------
 
@@ -253,11 +225,6 @@ this section should help get you past the largest hurdles of upgrading.
 
 - Clang uses `std::unique_ptr<T>` in many places where it used to use
   raw `T *` pointers.
-
-libclang
---------
-
-...
 
 Static Analyzer
 ---------------
@@ -281,25 +248,6 @@ instead of `report-XXXXXX.html`, scan-build/clang analyzer generate
 (id = i++ for several issues found in the same function/method).
 
 List the function/method name in the index page of scan-build.
-
-...
-
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
 
 Significant Known Problems
 ==========================
