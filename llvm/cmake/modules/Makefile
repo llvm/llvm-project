@@ -33,6 +33,8 @@ else
 	LLVM_ENABLE_RTTI := 0
 endif
 
+# Don't try to run llvm-config during clean because it won't be available
+ifneq ($(MAKECMDGOALS),clean)
 LLVM_LIBS_TO_EXPORT := $(subst -l,,$(shell $(LLVM_CONFIG) --libs $(LINK_COMPONENTS) || echo Error))
 
 ifeq ($(LLVM_LIBS_TO_EXPORT),Error)
@@ -41,6 +43,7 @@ endif
 
 ifndef LLVM_LIBS_TO_EXPORT
 $(error LLVM_LIBS_TO_EXPORT cannot be empty)
+endif
 endif
 
 OBJMODS := LLVMConfig.cmake LLVMConfigVersion.cmake LLVMExports.cmake
