@@ -33,6 +33,16 @@ else
 	LLVM_ENABLE_RTTI := 0
 endif
 
+LLVM_LIBS_TO_EXPORT := $(subst -l,,$(shell $(LLVM_CONFIG) --libs $(LINK_COMPONENTS) || echo Error))
+
+ifeq ($(LLVM_LIBS_TO_EXPORT),Error)
+$(error llvm-config --libs failed)
+endif
+
+ifndef LLVM_LIBS_TO_EXPORT
+$(error LLVM_LIBS_TO_EXPORT cannot be empty)
+endif
+
 OBJMODS := LLVMConfig.cmake LLVMConfigVersion.cmake LLVMExports.cmake
 
 $(PROJ_OBJ_DIR)/LLVMConfig.cmake: LLVMConfig.cmake.in $(LLVMBuildCMakeFrag)
@@ -45,7 +55,7 @@ $(PROJ_OBJ_DIR)/LLVMConfig.cmake: LLVMConfig.cmake.in $(LLVMBuildCMakeFrag)
 	  -e 's/@LLVM_VERSION_PATCH@/'"$(LLVM_VERSION_PATCH)"'/' \
 	  -e 's/@PACKAGE_VERSION@/'"$(LLVMVersion)"'/' \
 	  -e 's/@LLVM_COMMON_DEPENDS@//' \
-	  -e 's/@LLVM_AVAILABLE_LIBS@/'"$(subst -l,,$(LLVMConfigLibs))"'/' \
+	  -e 's/@LLVM_AVAILABLE_LIBS@/'"$(LLVM_LIBS_TO_EXPORT)"'/' \
 	  -e 's/@LLVM_ALL_TARGETS@/'"$(ALL_TARGETS)"'/' \
 	  -e 's/@LLVM_TARGETS_TO_BUILD@/'"$(TARGETS_TO_BUILD)"'/' \
 	  -e 's/@LLVM_TARGETS_WITH_JIT@/'"$(TARGETS_WITH_JIT)"'/' \
@@ -83,7 +93,7 @@ $(PROJ_OBJ_DIR)/LLVMExports.cmake: $(LLVMBuildCMakeExportsFrag)
 	$(Echo) 'Generating LLVM CMake target exports file'
 	$(Verb) ( \
 	  echo '# LLVM CMake target exports.  Do not include directly.' && \
-	  for lib in $(subst -l,,$(LLVMConfigLibs)); do \
+	  for lib in $(LLVM_LIBS_TO_EXPORT); do \
 	    echo 'add_library('"$$lib"' STATIC IMPORTED)' && \
 	    echo 'set_property(TARGET '"$$lib"' PROPERTY IMPORTED_LOCATION "'"$(PROJ_libdir)/lib$$lib.a"'")' ; \
 	  done && \
