@@ -75,7 +75,7 @@ __declspec(dllimport) extern int GlobalRedecl3; // expected-note{{previous decla
                       extern int GlobalRedecl3; // expected-warning{{'GlobalRedecl3' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
 
                       extern int GlobalRedecl4; // expected-note{{previous declaration is here}}
-__declspec(dllimport) extern int GlobalRedecl4; // expected-error{{redeclaration of 'GlobalRedecl4' cannot add 'dllimport' attribute}}
+__declspec(dllimport) extern int GlobalRedecl4; // expected-warning{{redeclaration of 'GlobalRedecl4' should not add 'dllimport' attribute}}
 
 // External linkage is required.
 __declspec(dllimport) static int StaticGlobal; // expected-error{{'StaticGlobal' must have external linkage when declared 'dllimport'}}
@@ -224,10 +224,10 @@ __declspec(dllimport) void redecl3(); // expected-note{{previous declaration is 
                       void redecl3() {} // expected-warning{{'redecl3' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
 
                       void redecl4(); // expected-note{{previous declaration is here}}
-__declspec(dllimport) void redecl4(); // expected-error{{redeclaration of 'redecl4' cannot add 'dllimport' attribute}}
+__declspec(dllimport) void redecl4(); // expected-warning{{redeclaration of 'redecl4' should not add 'dllimport' attribute}}
 
                       void redecl5(); // expected-note{{previous declaration is here}}
-__declspec(dllimport) inline void redecl5() {} // expected-error{{redeclaration of 'redecl5' cannot add 'dllimport' attribute}}
+__declspec(dllimport) inline void redecl5() {} // expected-warning{{redeclaration of 'redecl5' should not add 'dllimport' attribute}}
 
 // Friend functions
 struct FuncFriend {
@@ -240,8 +240,8 @@ struct FuncFriend {
 __declspec(dllimport) void friend1();
                       void friend2(); // expected-warning{{'friend2' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
                       void friend3() {} // expected-warning{{'friend3' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
-__declspec(dllimport) void friend4(); // expected-error{{redeclaration of 'friend4' cannot add 'dllimport' attribute}}
-__declspec(dllimport) inline void friend5() {} // expected-error{{redeclaration of 'friend5' cannot add 'dllimport' attribute}}
+__declspec(dllimport) void friend4(); // expected-warning{{redeclaration of 'friend4' should not add 'dllimport' attribute}}
+__declspec(dllimport) inline void friend5() {} // expected-warning{{redeclaration of 'friend5' should not add 'dllimport' attribute}}
 
 // Implicit declarations can be redeclared with dllimport.
 __declspec(dllimport) void* operator new(__SIZE_TYPE__ n);

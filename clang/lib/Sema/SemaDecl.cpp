@@ -5020,7 +5020,7 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
     NewDecl = NewTD->getTemplatedDecl();
 
   if (!OldDecl || !NewDecl)
-      return;
+    return;
 
   const DLLImportAttr *OldImportAttr = OldDecl->getAttr<DLLImportAttr>();
   const DLLExportAttr *OldExportAttr = OldDecl->getAttr<DLLExportAttr>();
@@ -5037,13 +5037,30 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
   // Implicitly generated declarations are also excluded for now because there
   // is no other way to switch these to use dllimport or dllexport.
   bool AddsAttr = !(OldImportAttr || OldExportAttr) && HasNewAttr;
+
   if (AddsAttr && !IsSpecialization && !OldDecl->isImplicit()) {
-    S.Diag(NewDecl->getLocation(), diag::err_attribute_dll_redeclaration)
-      << NewDecl
-      << (NewImportAttr ? (const Attr *)NewImportAttr : NewExportAttr);
+    // If the declaration hasn't been used yet, allow with a warning for
+    // free functions and global variables.
+    bool JustWarn = false;
+    if (!OldDecl->isUsed() && OldDecl->getDeclContext()->isFileContext()) {
+      auto *VD = dyn_cast<VarDecl>(OldDecl);
+      if (VD && !VD->getDescribedVarTemplate())
+        JustWarn = true;
+      auto *FD = dyn_cast<FunctionDecl>(OldDecl);
+      if (FD && FD->getTemplatedKind() == FunctionDecl::TK_NonTemplate)
+        JustWarn = true;
+    }
+
+    unsigned DiagID = JustWarn ? diag::warn_attribute_dll_redeclaration
+                               : diag::err_attribute_dll_redeclaration;
+    S.Diag(NewDecl->getLocation(), DiagID)
+        << NewDecl
+        << (NewImportAttr ? (const Attr *)NewImportAttr : NewExportAttr);
     S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
-    NewDecl->setInvalidDecl();
-    return;
+    if (!JustWarn) {
+      NewDecl->setInvalidDecl();
+      return;
+    }
   }
 
   // A redeclaration is not allowed to drop a dllimport attribute, the only

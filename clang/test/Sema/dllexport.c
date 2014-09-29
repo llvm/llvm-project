@@ -39,7 +39,12 @@ __declspec(dllexport) extern int GlobalRedecl2;
                              int GlobalRedecl2;
 
                       extern int GlobalRedecl3; // expected-note{{previous declaration is here}}
+int useGlobalRedecl3() { return GlobalRedecl3; }
 __declspec(dllexport) extern int GlobalRedecl3; // expected-error{{redeclaration of 'GlobalRedecl3' cannot add 'dllexport' attribute}}
+
+                      extern int GlobalRedecl4; // expected-note{{previous declaration is here}}
+__declspec(dllexport) extern int GlobalRedecl4; // expected-warning{{redeclaration of 'GlobalRedecl4' should not add 'dllexport' attribute}}
+
 
 // External linkage is required.
 __declspec(dllexport) static int StaticGlobal; // expected-error{{'StaticGlobal' must have external linkage when declared 'dllexport'}}
@@ -86,10 +91,17 @@ __declspec(dllexport) void redecl3();
                       void redecl3() {}
 
                       void redecl4(); // expected-note{{previous declaration is here}}
+void useRedecl4() { redecl4(); }
 __declspec(dllexport) void redecl4(); // expected-error{{redeclaration of 'redecl4' cannot add 'dllexport' attribute}}
 
                       void redecl5(); // expected-note{{previous declaration is here}}
+void useRedecl5() { redecl5(); }
 __declspec(dllexport) inline void redecl5() {} // expected-error{{redeclaration of 'redecl5' cannot add 'dllexport' attribute}}
+
+// Allow with a warning if the decl hasn't been used yet.
+                      void redecl6(); // expected-note{{previous declaration is here}}
+__declspec(dllexport) void redecl6(); // expected-warning{{redeclaration of 'redecl6' should not add 'dllexport' attribute}}
+
 
 // External linkage is required.
 __declspec(dllexport) static int staticFunc(); // expected-error{{'staticFunc' must have external linkage when declared 'dllexport'}}
