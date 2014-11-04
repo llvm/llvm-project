@@ -5042,7 +5042,7 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
     // If the declaration hasn't been used yet, allow with a warning for
     // free functions and global variables.
     bool JustWarn = false;
-    if (!OldDecl->isUsed() && OldDecl->getDeclContext()->isFileContext()) {
+    if (!OldDecl->isUsed() && !OldDecl->isCXXClassMember()) {
       auto *VD = dyn_cast<VarDecl>(OldDecl);
       if (VD && !VD->getDescribedVarTemplate())
         JustWarn = true;

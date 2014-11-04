@@ -77,6 +77,11 @@ __declspec(dllimport) extern int GlobalRedecl3; // expected-note{{previous decla
                       extern int GlobalRedecl4; // expected-note{{previous declaration is here}}
 __declspec(dllimport) extern int GlobalRedecl4; // expected-warning{{redeclaration of 'GlobalRedecl4' should not add 'dllimport' attribute}}
 
+extern "C" {
+                      extern int GlobalRedecl5; // expected-note{{previous declaration is here}}
+__declspec(dllimport) extern int GlobalRedecl5; // expected-warning{{redeclaration of 'GlobalRedecl5' should not add 'dllimport' attribute}}
+}
+
 // External linkage is required.
 __declspec(dllimport) static int StaticGlobal; // expected-error{{'StaticGlobal' must have external linkage when declared 'dllimport'}}
 __declspec(dllimport) Internal InternalTypeGlobal; // expected-error{{'InternalTypeGlobal' must have external linkage when declared 'dllimport'}}
@@ -226,8 +231,13 @@ __declspec(dllimport) void redecl3(); // expected-note{{previous declaration is 
                       void redecl4(); // expected-note{{previous declaration is here}}
 __declspec(dllimport) void redecl4(); // expected-warning{{redeclaration of 'redecl4' should not add 'dllimport' attribute}}
 
+extern "C" {
                       void redecl5(); // expected-note{{previous declaration is here}}
-__declspec(dllimport) inline void redecl5() {} // expected-warning{{redeclaration of 'redecl5' should not add 'dllimport' attribute}}
+__declspec(dllimport) void redecl5(); // expected-warning{{redeclaration of 'redecl5' should not add 'dllimport' attribute}}
+}
+
+                      void redecl6(); // expected-note{{previous declaration is here}}
+__declspec(dllimport) inline void redecl6() {} // expected-warning{{redeclaration of 'redecl6' should not add 'dllimport' attribute}}
 
 // Friend functions
 struct FuncFriend {
