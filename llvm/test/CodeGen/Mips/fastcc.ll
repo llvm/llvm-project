@@ -2,6 +2,7 @@
 ; RUN: llc  < %s -mtriple=mipsel-none-nacl-gnu \
 ; RUN:  | FileCheck %s -check-prefix=CHECK-NACL
 ; RUN: llc  < %s -march=mipsel -mcpu=mips32 -mattr=+nooddspreg | FileCheck %s -check-prefix=NOODDSPREG
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -mattr=+fp64,+nooddspreg | FileCheck %s -check-prefix=FP64-NOODDSPREG
 
 
 @gi0 = external global i32
@@ -82,6 +83,7 @@
 @g16 = external global i32
 
 @fa = common global [11 x float] zeroinitializer, align 4
+@da = common global [11 x double] zeroinitializer, align 8
 
 define void @caller0() nounwind {
 entry:
@@ -348,3 +350,83 @@ entry:
   ret void
 }
 
+define void @caller3() {
+entry:
+
+; FP64-NOODDSPREG-LABEL:  caller3
+
+; Check that first 10 arguments are passed in even float registers
+; f0, f2, ... , f18. Check that 11th argument is passed on stack.
+
+; FP64-NOODDSPREG-DAG:    lw      $[[R0:[0-9]+]], %got(da)(${{[0-9]+|gp}})
+; FP64-NOODDSPREG-DAG:    ldc1    $f0, 0($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f2, 8($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f4, 16($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f6, 24($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f8, 32($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f10, 40($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f12, 48($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f14, 56($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f16, 64($[[R0]])
+; FP64-NOODDSPREG-DAG:    ldc1    $f18, 72($[[R0]])
+
+; FP64-NOODDSPREG-DAG:    ldc1    $[[F0:f[0-9]*[02468]]], 80($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $[[F0]], 0($sp)
+
+  %0 = load double* getelementptr ([11 x double]* @da, i32 0, i32 0), align 8
+  %1 = load double* getelementptr ([11 x double]* @da, i32 0, i32 1), align 8
+  %2 = load double* getelementptr ([11 x double]* @da, i32 0, i32 2), align 8
+  %3 = load double* getelementptr ([11 x double]* @da, i32 0, i32 3), align 8
+  %4 = load double* getelementptr ([11 x double]* @da, i32 0, i32 4), align 8
+  %5 = load double* getelementptr ([11 x double]* @da, i32 0, i32 5), align 8
+  %6 = load double* getelementptr ([11 x double]* @da, i32 0, i32 6), align 8
+  %7 = load double* getelementptr ([11 x double]* @da, i32 0, i32 7), align 8
+  %8 = load double* getelementptr ([11 x double]* @da, i32 0, i32 8), align 8
+  %9 = load double* getelementptr ([11 x double]* @da, i32 0, i32 9), align 8
+  %10 = load double* getelementptr ([11 x double]* @da, i32 0, i32 10), align 8
+  tail call fastcc void @callee3(double %0, double %1, double %2, double %3,
+                                 double %4, double %5, double %6, double %7,
+                                 double %8, double %9, double %10)
+  ret void
+}
+
+define fastcc void @callee3(double %a0, double %a1, double %a2, double %a3,
+                            double %a4, double %a5, double %a6, double %a7,
+                            double %a8, double %a9, double %a10) {
+entry:
+
+; FP64-NOODDSPREG-LABEL:  callee3
+
+; FP64-NOODDSPREG:        addiu   $sp, $sp, -[[OFFSET:[0-9]+]]
+
+; Check that first 10 arguments are received in even float registers
+; f0, f2, ... , f18. Check that 11th argument is received on stack.
+
+; FP64-NOODDSPREG-DAG:    lw      $[[R0:[0-9]+]], %got(da)(${{[0-9]+|gp}})
+; FP64-NOODDSPREG-DAG:    sdc1    $f0, 0($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f2, 8($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f4, 16($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f6, 24($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f8, 32($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f10, 40($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f12, 48($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f14, 56($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f16, 64($[[R0]])
+; FP64-NOODDSPREG-DAG:    sdc1    $f18, 72($[[R0]])
+
+; FP64-NOODDSPREG-DAG:    ldc1    $[[F0:f[0-9]*[02468]]], [[OFFSET]]($sp)
+; FP64-NOODDSPREG-DAG:    sdc1    $[[F0]], 80($[[R0]])
+
+  store double %a0, double* getelementptr ([11 x double]* @da, i32 0, i32 0), align 8
+  store double %a1, double* getelementptr ([11 x double]* @da, i32 0, i32 1), align 8
+  store double %a2, double* getelementptr ([11 x double]* @da, i32 0, i32 2), align 8
+  store double %a3, double* getelementptr ([11 x double]* @da, i32 0, i32 3), align 8
+  store double %a4, double* getelementptr ([11 x double]* @da, i32 0, i32 4), align 8
+  store double %a5, double* getelementptr ([11 x double]* @da, i32 0, i32 5), align 8
+  store double %a6, double* getelementptr ([11 x double]* @da, i32 0, i32 6), align 8
+  store double %a7, double* getelementptr ([11 x double]* @da, i32 0, i32 7), align 8
+  store double %a8, double* getelementptr ([11 x double]* @da, i32 0, i32 8), align 8
+  store double %a9, double* getelementptr ([11 x double]* @da, i32 0, i32 9), align 8
+  store double %a10, double* getelementptr ([11 x double]* @da, i32 0, i32 10), align 8
+  ret void
+}

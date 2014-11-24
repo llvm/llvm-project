@@ -154,13 +154,17 @@ def CC_MipsO32_FastCC : CallingConv<[
   CCIfType<[f64], CCIfSubtarget<"isNotFP64bit()",
                                 CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7,
                                                D8, D9]>>>,
-  CCIfType<[f64], CCIfSubtarget<"isFP64bit()",
+  CCIfType<[f64], CCIfSubtarget<"isFP64bit()", CCIfSubtarget<"useOddSPReg()",
                                 CCAssignToReg<[D0_64, D1_64, D2_64, D3_64,
                                                D4_64, D5_64, D6_64, D7_64,
                                                D8_64, D9_64, D10_64, D11_64,
                                                D12_64, D13_64, D14_64, D15_64,
                                                D16_64, D17_64, D18_64,
-                                               D19_64]>>>,
+                                               D19_64]>>>>,
+  CCIfType<[f64], CCIfSubtarget<"isFP64bit()", CCIfSubtarget<"noOddSPReg()",
+                                CCAssignToReg<[D0_64, D2_64, D4_64, D6_64,
+                                               D8_64, D10_64, D12_64, D14_64,
+                                               D16_64, D18_64]>>>>,
 
   // Stack parameter slots for f64 are 64-bit doublewords and 8-byte aligned.
   CCIfType<[f64], CCAssignToStack<8, 8>>
