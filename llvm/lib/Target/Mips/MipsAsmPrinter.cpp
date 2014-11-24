@@ -471,14 +471,12 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       return false;
     case 'z': {
       // $0 if zero, regular printing otherwise
-      if (MO.getType() != MachineOperand::MO_Immediate)
-        return true;
-      int64_t Val = MO.getImm();
-      if (Val)
-        O << Val;
-      else
+      if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm() == 0) {
         O << "$0";
-      return false;
+        return false;
+      }
+      // If not, call printOperand as normal.
+      break;
     }
     case 'D': // Second part of a double word register operand
     case 'L': // Low order register of a double word register operand
