@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=mipsel-linux-gnu < %s | FileCheck %s
-; RUN: llc -mtriple=mipsel-linux-android < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu < %s | FileCheck  -check-prefix=CHECK32 %s
+; RUN: llc -mtriple=mipsel-linux-android < %s | FileCheck -check-prefix=CHECK32 %s
+; RUN: llc -mtriple=mips64el-linux-gnu < %s | FileCheck  -check-prefix=CHECK64 %s
+; RUN: llc -mtriple=mips64el-linux-android < %s | FileCheck -check-prefix=CHECK64 %s
 
 define i32 @main() {
 ; CHECK: .cfi_startproc
@@ -27,8 +29,11 @@ declare void @foo()
 ; CHECK: .hidden DW.ref.__gxx_personality_v0
 ; CHECK: .weak DW.ref.__gxx_personality_v0
 ; CHECK: .section .data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
-; CHECK: .align 2
+; CHECK32: .align 2
+; CHECK64: .align 3
 ; CHECK: .type DW.ref.__gxx_personality_v0,@object
-; CHECK: .size DW.ref.__gxx_personality_v0, 4
+; CHECK32: .size DW.ref.__gxx_personality_v0, 4
+; CHECK64: .size DW.ref.__gxx_personality_v0, 8
 ; CHECK: DW.ref.__gxx_personality_v0:
-; CHECK: .4byte __gxx_personality_v0
+; CHECK32: .4byte __gxx_personality_v0
+; CHECK64: .8byte __gxx_personality_v0
