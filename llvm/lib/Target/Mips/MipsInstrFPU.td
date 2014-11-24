@@ -178,6 +178,38 @@ class SW_FT<string opstr, RegisterOperand RC, InstrItinClass Itin,
   let mayStore = 1;
 }
 
+class SW_FT2<string opstr, RegisterOperand RC, InstrItinClass Itin,
+            SDPatternOperator OpNode= null_frag> :
+  InstSE<(outs), (ins RC:$rt, mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
+         [(OpNode RC:$rt, addrDefault:$addr)], Itin, FrmFI, opstr> {
+  let DecoderMethod = "DecodeFMem2";
+  let mayStore = 1;
+}
+
+class LW_FT2<string opstr, RegisterOperand RC, InstrItinClass Itin,
+            SDPatternOperator OpNode= null_frag> :
+  InstSE<(outs RC:$rt), (ins mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
+         [(set RC:$rt, (OpNode addrDefault:$addr))], Itin, FrmFI, opstr> {
+  let DecoderMethod = "DecodeFMem2";
+  let mayLoad = 1;
+}
+
+class SW_FT3<string opstr, RegisterOperand RC, InstrItinClass Itin,
+            SDPatternOperator OpNode= null_frag> :
+  InstSE<(outs), (ins RC:$rt, mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
+         [(OpNode RC:$rt, addrDefault:$addr)], Itin, FrmFI, opstr> {
+  let DecoderMethod = "DecodeFMem3";
+  let mayStore = 1;
+}
+
+class LW_FT3<string opstr, RegisterOperand RC, InstrItinClass Itin,
+            SDPatternOperator OpNode= null_frag> :
+  InstSE<(outs RC:$rt), (ins mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
+         [(set RC:$rt, (OpNode addrDefault:$addr))], Itin, FrmFI, opstr> {
+  let DecoderMethod = "DecodeFMem3";
+  let mayLoad = 1;
+}
+
 class MADDS_FT<string opstr, RegisterOperand RC, InstrItinClass Itin,
                SDPatternOperator OpNode = null_frag> :
   InstSE<(outs RC:$fd), (ins RC:$fr, RC:$fs, RC:$ft),
@@ -407,24 +439,24 @@ def SDC1 : MMRel, SW_FT<"sdc1", AFGR64Opnd, II_SDC1, store>, LW_FM<0x3d>,
 // Cop2 Memory Instructions
 // FIXME: These aren't really FPU instructions and as such don't belong in this
 //        file
-def LWC2 : LW_FT<"lwc2", COP2Opnd, NoItinerary, load>, LW_FM<0x32>,
+def LWC2 : LW_FT2<"lwc2", COP2Opnd, NoItinerary, load>, LW_FM<0x32>,
            ISA_MIPS1_NOT_32R6_64R6;
-def SWC2 : SW_FT<"swc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3a>,
+def SWC2 : SW_FT2<"swc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3a>,
            ISA_MIPS1_NOT_32R6_64R6;
-def LDC2 : LW_FT<"ldc2", COP2Opnd, NoItinerary, load>, LW_FM<0x36>,
+def LDC2 : LW_FT2<"ldc2", COP2Opnd, NoItinerary, load>, LW_FM<0x36>,
            ISA_MIPS2_NOT_32R6_64R6;
-def SDC2 : SW_FT<"sdc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3e>,
+def SDC2 : SW_FT2<"sdc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3e>,
            ISA_MIPS2_NOT_32R6_64R6;
 
 // Cop3 Memory Instructions
 // FIXME: These aren't really FPU instructions and as such don't belong in this
 //        file
 let DecoderNamespace = "COP3_" in {
-  def LWC3 : LW_FT<"lwc3", COP3Opnd, NoItinerary, load>, LW_FM<0x33>;
-  def SWC3 : SW_FT<"swc3", COP3Opnd, NoItinerary, store>, LW_FM<0x3b>;
-  def LDC3 : LW_FT<"ldc3", COP3Opnd, NoItinerary, load>, LW_FM<0x37>,
+  def LWC3 : LW_FT3<"lwc3", COP3Opnd, NoItinerary, load>, LW_FM<0x33>;
+  def SWC3 : SW_FT3<"swc3", COP3Opnd, NoItinerary, store>, LW_FM<0x3b>;
+  def LDC3 : LW_FT3<"ldc3", COP3Opnd, NoItinerary, load>, LW_FM<0x37>,
              ISA_MIPS2;
-  def SDC3 : SW_FT<"sdc3", COP3Opnd, NoItinerary, store>, LW_FM<0x3f>,
+  def SDC3 : SW_FT3<"sdc3", COP3Opnd, NoItinerary, store>, LW_FM<0x3f>,
              ISA_MIPS2;
 }
 

@@ -1414,13 +1414,15 @@ def TLBR : TLB<"tlbr">, COP0_TLB_FM<0x01>;
 def TLBWI : TLB<"tlbwi">, COP0_TLB_FM<0x02>;
 def TLBWR : TLB<"tlbwr">, COP0_TLB_FM<0x06>;
 
-class CacheOp<string instr_asm, Operand MemOpnd, RegisterOperand GPROpnd> :
+class CacheOp<string instr_asm, Operand MemOpnd> :
     InstSE<(outs), (ins  MemOpnd:$addr, uimm5:$hint),
-           !strconcat(instr_asm, "\t$hint, $addr"), [], NoItinerary, FrmOther>;
+           !strconcat(instr_asm, "\t$hint, $addr"), [], NoItinerary, FrmOther> {
+  let DecoderMethod = "DecodeCacheOp";
+}
 
-def CACHE : CacheOp<"cache", mem, GPR32Opnd>, CACHEOP_FM<0b101111>,
+def CACHE : CacheOp<"cache", mem>, CACHEOP_FM<0b101111>,
             INSN_MIPS3_32_NOT_32R6_64R6;
-def PREF :  CacheOp<"pref", mem, GPR32Opnd>, CACHEOP_FM<0b110011>,
+def PREF :  CacheOp<"pref", mem>, CACHEOP_FM<0b110011>,
             INSN_MIPS3_32_NOT_32R6_64R6;
 
 //===----------------------------------------------------------------------===//
