@@ -200,14 +200,14 @@ class MipsAsmParser : public MCTargetAsmParser {
   // Example: INSERT.B $w0[n], $1 => 16 > n >= 0
   bool validateMSAIndex(int Val, int RegKind);
 
-  void setFeatureBits(unsigned Feature, StringRef FeatureString) {
+  void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(STI.getFeatureBits() & Feature)) {
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
     }
   }
 
-  void clearFeatureBits(unsigned Feature, StringRef FeatureString) {
+  void clearFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (STI.getFeatureBits() & Feature) {
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
