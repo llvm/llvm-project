@@ -355,9 +355,9 @@ namespace llvm {
         Mips16RetHelperConv, NoSpecialCallingConv
       };
 
-      MipsCC(CallingConv::ID CallConv, bool IsO32, bool IsFP64, CCState &Info,
+      MipsCC(CallingConv::ID CallConv, const MipsSubtarget &Subtarget,
+             CCState &Info,
              SpecialCallingConvType SpecialCallingConv = NoSpecialCallingConv);
-
 
       void analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                bool IsVarArg, bool IsSoftFloat,
@@ -380,7 +380,7 @@ namespace llvm {
       bool hasByValArg() const { return !ByValArgs.empty(); }
 
       /// regSize - Size (in number of bits) of integer registers.
-      unsigned regSize() const { return IsO32 ? 4 : 8; }
+      unsigned regSize() const;
 
       /// numIntArgRegs - Number of integer registers available for calls.
       unsigned numIntArgRegs() const;
@@ -429,7 +429,7 @@ namespace llvm {
 
       CCState &CCInfo;
       CallingConv::ID CallConv;
-      bool IsO32, IsFP64;
+      const MipsSubtarget &Subtarget;
       SpecialCallingConvType SpecialCallingConv;
       SmallVector<ByValArgInfo, 2> ByValArgs;
     };

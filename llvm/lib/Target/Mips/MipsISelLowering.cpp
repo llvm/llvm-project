@@ -2476,8 +2476,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                  getTargetMachine(), ArgLocs, *DAG.getContext());
   MipsCC::SpecialCallingConvType SpecialCallingConv =
     getSpecialCallingConv(Callee);
-  MipsCC MipsCCInfo(CallConv, Subtarget.isABI_O32(), Subtarget.isFP64bit(),
-                    CCInfo, SpecialCallingConv);
+  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo, SpecialCallingConv);
 
   MipsCCInfo.analyzeCallOperands(Outs, IsVarArg,
                                  Subtarget.abiUsesSoftFloat(),
@@ -2678,8 +2677,7 @@ MipsTargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
                  getTargetMachine(), RVLocs, *DAG.getContext());
-  MipsCC MipsCCInfo(CallConv, Subtarget.isABI_O32(), Subtarget.isFP64bit(),
-                    CCInfo);
+  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
   MipsCCInfo.analyzeCallResult(Ins, Subtarget.abiUsesSoftFloat(),
                                CallNode, RetTy);
@@ -2726,8 +2724,7 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
                  getTargetMachine(), ArgLocs, *DAG.getContext());
-  MipsCC MipsCCInfo(CallConv, Subtarget.isABI_O32(), Subtarget.isFP64bit(),
-                    CCInfo);
+  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
   Function::const_arg_iterator FuncArg =
     DAG.getMachineFunction().getFunction()->arg_begin();
   bool UseSoftFloat = Subtarget.abiUsesSoftFloat();
@@ -2879,8 +2876,7 @@ MipsTargetLowering::LowerReturn(SDValue Chain,
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, getTargetMachine(), RVLocs,
                  *DAG.getContext());
-  MipsCC MipsCCInfo(CallConv, Subtarget.isABI_O32(), Subtarget.isFP64bit(),
-                    CCInfo);
+  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
   // Analyze return values.
   MipsCCInfo.analyzeReturn(Outs, Subtarget.abiUsesSoftFloat(),
@@ -3389,10 +3385,10 @@ MipsTargetLowering::MipsCC::SpecialCallingConvType
 }
 
 MipsTargetLowering::MipsCC::MipsCC(
-  CallingConv::ID CC, bool IsO32_, bool IsFP64_, CCState &Info,
-  MipsCC::SpecialCallingConvType SpecialCallingConv_)
-  : CCInfo(Info), CallConv(CC), IsO32(IsO32_), IsFP64(IsFP64_),
-    SpecialCallingConv(SpecialCallingConv_){
+    CallingConv::ID CC, const MipsSubtarget &Subtarget_, CCState &Info,
+    MipsCC::SpecialCallingConvType SpecialCallingConv_)
+    : CCInfo(Info), CallConv(CC), Subtarget(Subtarget_),
+      SpecialCallingConv(SpecialCallingConv_) {
   // Pre-allocate reserved argument area.
   CCInfo.AllocateStack(reservedArgArea(), 1);
 }
@@ -3529,15 +3525,16 @@ void MipsTargetLowering::MipsCC::handleByValArg(unsigned ValNo, MVT ValVT,
 }
 
 unsigned MipsTargetLowering::MipsCC::numIntArgRegs() const {
-  return IsO32 ? array_lengthof(O32IntRegs) : array_lengthof(Mips64IntRegs);
+  return Subtarget.isABI_O32() ? array_lengthof(O32IntRegs)
+                               : array_lengthof(Mips64IntRegs);
 }
 
 unsigned MipsTargetLowering::MipsCC::reservedArgArea() const {
-  return (IsO32 && (CallConv != CallingConv::Fast)) ? 16 : 0;
+  return (Subtarget.isABI_O32() && (CallConv != CallingConv::Fast)) ? 16 : 0;
 }
 
 const MCPhysReg *MipsTargetLowering::MipsCC::intArgRegs() const {
-  return IsO32 ? O32IntRegs : Mips64IntRegs;
+  return Subtarget.isABI_O32() ? O32IntRegs : Mips64IntRegs;
 }
 
 llvm::CCAssignFn *MipsTargetLowering::MipsCC::fixedArgFn() const {
@@ -3546,15 +3543,19 @@ llvm::CCAssignFn *MipsTargetLowering::MipsCC::fixedArgFn() const {
 
   if (SpecialCallingConv == Mips16RetHelperConv)
     return CC_Mips16RetHelper;
-  return IsO32 ? (IsFP64 ? CC_MipsO32_FP64 : CC_MipsO32_FP32) : CC_MipsN;
+  return Subtarget.isABI_O32()
+             ? (Subtarget.isFP64bit() ? CC_MipsO32_FP64 : CC_MipsO32_FP32)
+             : CC_MipsN;
 }
 
 llvm::CCAssignFn *MipsTargetLowering::MipsCC::varArgFn() const {
-  return IsO32 ? (IsFP64 ? CC_MipsO32_FP64 : CC_MipsO32_FP32) : CC_MipsN_VarArg;
+  return Subtarget.isABI_O32()
+             ? (Subtarget.isFP64bit() ? CC_MipsO32_FP64 : CC_MipsO32_FP32)
+             : CC_MipsN_VarArg;
 }
 
 const MCPhysReg *MipsTargetLowering::MipsCC::shadowRegs() const {
-  return IsO32 ? O32IntRegs : Mips64DPRegs;
+  return Subtarget.isABI_O32() ? O32IntRegs : Mips64DPRegs;
 }
 
 void MipsTargetLowering::MipsCC::allocateRegs(ByValArgInfo &ByVal,
@@ -3583,7 +3584,7 @@ void MipsTargetLowering::MipsCC::allocateRegs(ByValArgInfo &ByVal,
 MVT MipsTargetLowering::MipsCC::getRegVT(MVT VT, const Type *OrigTy,
                                          const SDNode *CallNode,
                                          bool IsSoftFloat) const {
-  if (IsSoftFloat || IsO32)
+  if (IsSoftFloat || Subtarget.isABI_O32())
     return VT;
 
   // Check if the original type was fp128.
@@ -3593,6 +3594,10 @@ MVT MipsTargetLowering::MipsCC::getRegVT(MVT VT, const Type *OrigTy,
   }
 
   return VT;
+}
+
+unsigned MipsTargetLowering::MipsCC::regSize() const {
+  return Subtarget.isGP32bit() ? 4 : 8;
 }
 
 void MipsTargetLowering::
