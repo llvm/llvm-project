@@ -17,37 +17,36 @@ int test_v4i32(char *fmt, ...) {
 }
 
 // ALL: define i32 @test_v4i32(i8*{{.*}} %fmt, ...)
-// ALL: entry:
 //
 // O32:   %va = alloca i8*, align [[PTRALIGN:4]]
 // N32:   %va = alloca i8*, align [[PTRALIGN:4]]
 // N64:   %va = alloca i8*, align [[PTRALIGN:8]]
 //
-// ALL:   %va1 = bitcast i8** %va to i8*
-// ALL:   call void @llvm.va_start(i8* %va1)
-// ALL:   %ap.cur = load i8** %va, align [[PTRALIGN]]
+// ALL:   [[VA1:%.+]] = bitcast i8** %va to i8*
+// ALL:   call void @llvm.va_start(i8* [[VA1]])
+// ALL:   [[AP_CUR:%.+]] = load i8** %va, align [[PTRALIGN]]
 //
-// O32:   %0 = ptrtoint i8* %ap.cur to [[PTRTYPE:i32]]
-// N32:   %0 = ptrtoint i8* %ap.cur to [[PTRTYPE:i32]]
-// N64:   %0 = ptrtoint i8* %ap.cur to [[PTRTYPE:i64]]
+// O32:   [[PTR0:%.+]] = ptrtoint i8* [[AP_CUR]] to [[PTRTYPE:i32]]
+// N32:   [[PTR0:%.+]] = ptrtoint i8* [[AP_CUR]] to [[PTRTYPE:i32]]
+// N64:   [[PTR0:%.+]] = ptrtoint i8* [[AP_CUR]] to [[PTRTYPE:i64]]
 //
 // Vectors are 16-byte aligned, however the O32 ABI has a maximum alignment of
 // 8-bytes since the base of the stack is 8-byte aligned.
-// O32:   %1 = add i32 %0, 7
-// O32:   %2 = and i32 %1, -8
+// O32:   [[PTR1:%.+]] = add i32 [[PTR0]], 7
+// O32:   [[PTR2:%.+]] = and i32 [[PTR1]], -8
 //
-// N32:   %1 = add i32 %0, 15
-// N32:   %2 = and i32 %1, -16
+// N32:   [[PTR1:%.+]] = add i32 [[PTR0]], 15
+// N32:   [[PTR2:%.+]] = and i32 [[PTR1]], -16
 //
-// N64:   %1 = add i64 %0, 15
-// N64:   %2 = and i64 %1, -16
+// N64:   [[PTR1:%.+]] = add i64 [[PTR0]], 15
+// N64:   [[PTR2:%.+]] = and i64 [[PTR1]], -16
 //
-// ALL:   %3 = inttoptr [[PTRTYPE]] %2 to <4 x i32>*
-// ALL:   %4 = inttoptr [[PTRTYPE]] %2 to i8*
-// ALL:   %ap.next = getelementptr i8* %4, [[PTRTYPE]] 16
-// ALL:   store i8* %ap.next, i8** %va, align [[PTRALIGN]]
-// ALL:   %5 = load <4 x i32>* %3, align 16
-// ALL:   call void @llvm.va_end(i8* %va1)
-// ALL:   %vecext = extractelement <4 x i32> %5, i32 0
-// ALL:   ret i32 %vecext
+// ALL:   [[PTR3:%.+]] = inttoptr [[PTRTYPE]] [[PTR2]] to <4 x i32>*
+// ALL:   [[PTR4:%.+]] = inttoptr [[PTRTYPE]] [[PTR2]] to i8*
+// ALL:   [[AP_NEXT:%.+]] = getelementptr i8* [[PTR4]], [[PTRTYPE]] 16
+// ALL:   store i8* [[AP_NEXT]], i8** %va, align [[PTRALIGN]]
+// ALL:   [[PTR5:%.+]] = load <4 x i32>* [[PTR3]], align 16
+// ALL:   call void @llvm.va_end(i8* [[VA1]])
+// ALL:   [[VECEXT:%.+]] = extractelement <4 x i32> [[PTR5]], i32 0
+// ALL:   ret i32 [[VECEXT]]
 // ALL: }
