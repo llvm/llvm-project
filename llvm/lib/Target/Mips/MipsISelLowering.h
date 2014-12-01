@@ -355,13 +355,6 @@ namespace llvm {
       const ArrayRef<MCPhysReg> intArgRegs() const;
 
     private:
-      /// Return the type of the register which is used to pass an argument or
-      /// return a value. This function returns f64 if the argument is an i64
-      /// value which has been generated as a result of softening an f128 value.
-      /// Otherwise, it just returns VT.
-      MVT getRegVT(MVT VT, const Type *OrigTy, const SDNode *CallNode,
-                   bool IsSoftFloat) const;
-
       CallingConv::ID CallConv;
       const MipsSubtarget &Subtarget;
     };

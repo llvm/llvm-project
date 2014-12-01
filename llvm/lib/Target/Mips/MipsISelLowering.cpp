@@ -3625,21 +3625,6 @@ const ArrayRef<MCPhysReg> MipsTargetLowering::MipsCC::intArgRegs() const {
   return makeArrayRef(Mips64IntRegs);
 }
 
-MVT MipsTargetLowering::MipsCC::getRegVT(MVT VT, const Type *OrigTy,
-                                         const SDNode *CallNode,
-                                         bool IsSoftFloat) const {
-  if (IsSoftFloat || Subtarget.isABI_O32())
-    return VT;
-
-  // Check if the original type was fp128.
-  if (originalTypeIsF128(OrigTy, CallNode)) {
-    assert(VT == MVT::i64);
-    return MVT::f64;
-  }
-
-  return VT;
-}
-
 void MipsTargetLowering::copyByValRegs(
     SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains, SelectionDAG &DAG,
     const ISD::ArgFlagsTy &Flags, SmallVectorImpl<SDValue> &InVals,
