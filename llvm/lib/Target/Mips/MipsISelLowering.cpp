@@ -251,7 +251,6 @@ MipsTargetLowering::MipsTargetLowering(MipsTargetMachine &TM,
   setOperationAction(ISD::SETCC,              MVT::f32,   Custom);
   setOperationAction(ISD::SETCC,              MVT::f64,   Custom);
   setOperationAction(ISD::BRCOND,             MVT::Other, Custom);
-  setOperationAction(ISD::VASTART,            MVT::Other, Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f32,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
@@ -343,7 +342,8 @@ MipsTargetLowering::MipsTargetLowering(MipsTargetMachine &TM,
 
   setOperationAction(ISD::EH_RETURN, MVT::Other, Custom);
 
-  setOperationAction(ISD::VAARG,             MVT::Other, Expand);
+  setOperationAction(ISD::VASTART,           MVT::Other, Custom);
+  setOperationAction(ISD::VAARG,             MVT::Other, Custom);
   setOperationAction(ISD::VACOPY,            MVT::Other, Expand);
   setOperationAction(ISD::VAEND,             MVT::Other, Expand);
 
@@ -391,6 +391,11 @@ MipsTargetLowering::MipsTargetLowering(MipsTargetMachine &TM,
   setTargetDAGCombine(ISD::ADD);
 
   setMinFunctionAlignment(Subtarget.isGP64bit() ? 3 : 2);
+
+  // The arguments on the stack are defined in terms of 4-byte slots on O32
+  // and 8-byte slots on N32/N64.
+  setMinStackArgumentAlignment(
+      (Subtarget.isABI_N32() || Subtarget.isABI_N64()) ? 8 : 4);
 
   setStackPointerRegisterToSaveRestore(Subtarget.isABI_N64() ? Mips::SP_64
                                                              : Mips::SP);
@@ -792,6 +797,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::SELECT_CC:          return lowerSELECT_CC(Op, DAG);
   case ISD::SETCC:              return lowerSETCC(Op, DAG);
   case ISD::VASTART:            return lowerVASTART(Op, DAG);
+  case ISD::VAARG:              return lowerVAARG(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
   case ISD::FRAMEADDR:          return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:         return lowerRETURNADDR(Op, DAG);
@@ -1753,6 +1759,65 @@ SDValue MipsTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
                       MachinePointerInfo(SV), false, false, 0);
+}
+
+SDValue MipsTargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
+  SDNode *Node = Op.getNode();
+  EVT VT = Node->getValueType(0);
+  SDValue Chain = Node->getOperand(0);
+  SDValue VAListPtr = Node->getOperand(1);
+  unsigned Align = Node->getConstantOperandVal(3);
+  const Value *SV = cast<SrcValueSDNode>(Node->getOperand(2))->getValue();
+  SDLoc DL(Node);
+  unsigned ArgSlotSizeInBytes =
+      (Subtarget.isABI_N32() || Subtarget.isABI_N64()) ? 8 : 4;
+
+  SDValue VAListLoad = DAG.getLoad(getPointerTy(), DL, Chain, VAListPtr,
+                                   MachinePointerInfo(SV), false, false, false,
+                                   0);
+  SDValue VAList = VAListLoad;
+
+  // Re-align the pointer if necessary.
+  // It should only ever be necessary for 64-bit types on O32 since the minimum
+  // argument alignment is the same as the maximum type alignment for N32/N64.
+  //
+  // FIXME: We currently align too often. The code generator doesn't notice
+  //        when the pointer is still aligned from the last va_arg (or pair of
+  //        va_args for the i64 on O32 case).
+  if (Align > getMinStackArgumentAlignment()) {
+    assert(((Align & (Align-1)) == 0) && "Expected Align to be a power of 2");
+
+    VAList = DAG.getNode(ISD::ADD, DL, VAList.getValueType(), VAList,
+                         DAG.getConstant(Align - 1,
+                                         VAList.getValueType()));
+
+    VAList = DAG.getNode(ISD::AND, DL, VAList.getValueType(), VAList,
+                         DAG.getConstant(-(int64_t)Align,
+                                         VAList.getValueType()));
+  }
+
+  // Increment the pointer, VAList, to the next vaarg.
+  unsigned ArgSizeInBytes = getDataLayout()->getTypeAllocSize(VT.getTypeForEVT(*DAG.getContext()));
+  SDValue Tmp3 = DAG.getNode(ISD::ADD, DL, VAList.getValueType(), VAList,
+                             DAG.getConstant(RoundUpToAlignment(ArgSizeInBytes, ArgSlotSizeInBytes),
+                                             VAList.getValueType()));
+  // Store the incremented VAList to the legalized pointer
+  Chain = DAG.getStore(VAListLoad.getValue(1), DL, Tmp3, VAListPtr,
+                      MachinePointerInfo(SV), false, false, 0);
+
+  // In big-endian mode we must adjust the pointer when the load size is smaller
+  // than the argument slot size. We must also reduce the known alignment to
+  // match. For example in the N64 ABI, we must add 4 bytes to the offset to get
+  // the correct half of the slot, and reduce the alignment from 8 (slot
+  // alignment) down to 4 (type alignment).
+  if (!Subtarget.isLittle() && ArgSizeInBytes < ArgSlotSizeInBytes) {
+    unsigned Adjustment = ArgSlotSizeInBytes - ArgSizeInBytes;
+    VAList = DAG.getNode(ISD::ADD, DL, VAListPtr.getValueType(), VAList,
+                         DAG.getIntPtrConstant(Adjustment));
+  }
+  // Load the actual argument out of the pointer VAList
+  return DAG.getLoad(VT, DL, Chain, VAList, MachinePointerInfo(), false, false,
+                     false, 0);
 }
 
 static SDValue lowerFCOPYSIGN32(SDValue Op, SelectionDAG &DAG,

@@ -482,6 +482,7 @@ namespace llvm {
     SDValue lowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFABS(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
