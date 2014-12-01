@@ -361,12 +361,12 @@ namespace llvm {
       void analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                bool IsVarArg, bool IsSoftFloat,
                                const SDNode *CallNode,
-                               std::vector<ArgListEntry> &FuncArgs);
+                               std::vector<ArgListEntry> &FuncArgs,
+                               CCState &State);
       void analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                                   bool IsSoftFloat,
-                                  Function::const_arg_iterator FuncArg);
-
-      const CCState &getCCInfo() const { return CCInfo; }
+                                  Function::const_arg_iterator FuncArg,
+                                  CCState &State);
 
       /// hasByValArg - Returns true if function has byval arguments.
       bool hasByValArg() const { return !ByValArgs.empty(); }
@@ -385,7 +385,7 @@ namespace llvm {
     private:
       void handleByValArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo,
-                          ISD::ArgFlagsTy ArgFlags);
+                          ISD::ArgFlagsTy ArgFlags, CCState &State);
 
       /// useRegsForByval - Returns true if the calling convention allows the
       /// use of registers to pass byval arguments.
@@ -393,8 +393,8 @@ namespace llvm {
 
       const MCPhysReg *shadowRegs() const;
 
-      void allocateRegs(ByValArgInfo &ByVal, unsigned ByValSize,
-                        unsigned Align);
+      void allocateRegs(ByValArgInfo &ByVal, unsigned ByValSize, unsigned Align,
+                        CCState &State);
 
       /// Return the type of the register which is used to pass an argument or
       /// return a value. This function returns f64 if the argument is an i64
@@ -409,7 +409,6 @@ namespace llvm {
 
       SpecialCallingConvType getSpecialCallingConv(const SDNode *Callee) const;
 
-      CCState &CCInfo;
       CallingConv::ID CallConv;
       const MipsSubtarget &Subtarget;
       SmallVector<ByValArgInfo, 2> ByValArgs;
@@ -503,7 +502,8 @@ namespace llvm {
     /// to the stack. Also create a stack frame object for the first variable
     /// argument.
     void writeVarArgRegs(std::vector<SDValue> &OutChains, const MipsCC &CC,
-                         SDValue Chain, SDLoc DL, SelectionDAG &DAG) const;
+                         SDValue Chain, SDLoc DL, SelectionDAG &DAG,
+                         CCState &State) const;
 
     SDValue
       LowerFormalArguments(SDValue Chain,
