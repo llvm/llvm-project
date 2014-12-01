@@ -33,7 +33,7 @@ entry:
 ; O32-DAG:           lbu $2, %lo(byte)([[R1]])
 ; N32-DAG:           lui [[R1:\$[0-9]+]], %hi(byte)
 ; N32-DAG:           lbu $2, %lo(byte)([[R1]])
-; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(byte)($1)
+; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(byte)(
 ; N64-DAG:           lbu $2, 0([[R1]])
 
 define i32 @reti32() nounwind {
@@ -47,7 +47,7 @@ entry:
 ; O32-DAG:           lw $2, %lo(word)([[R1]])
 ; N32-DAG:           lui [[R1:\$[0-9]+]], %hi(word)
 ; N32-DAG:           lw $2, %lo(word)([[R1]])
-; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(word)($1)
+; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(word)(
 ; N64-DAG:           lw $2, 0([[R1]])
 
 define i64 @reti64() nounwind {

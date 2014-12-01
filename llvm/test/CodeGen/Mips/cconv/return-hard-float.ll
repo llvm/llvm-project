@@ -33,7 +33,7 @@ entry:
 ; O32-DAG:           lwc1 $f0, %lo(float)([[R1]])
 ; N32-DAG:           lui [[R1:\$[0-9]+]], %hi(float)
 ; N32-DAG:           lwc1 $f0, %lo(float)([[R1]])
-; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(float)($1)
+; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(float)(
 ; N64-DAG:           lwc1 $f0, 0([[R1]])
 
 define double @retdouble() nounwind {
@@ -45,7 +45,7 @@ entry:
 ; ALL-LABEL: retdouble:
 ; O32-DAG:           ldc1 $f0, %lo(double)([[R1:\$[0-9]+]])
 ; N32-DAG:           ldc1 $f0, %lo(double)([[R1:\$[0-9]+]])
-; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(double)($1)
+; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(double)(
 ; N64-DAG:           ldc1 $f0, 0([[R1]])
 
 define { double, double } @retComplexDouble() #0 {
