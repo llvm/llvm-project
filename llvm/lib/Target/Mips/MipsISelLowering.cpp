@@ -2533,9 +2533,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
                  getTargetMachine(), ArgLocs, *DAG.getContext());
-  MipsCC::SpecialCallingConvType SpecialCallingConv =
-    getSpecialCallingConv(Callee);
-  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo, SpecialCallingConv);
+  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
   MipsCCInfo.analyzeCallOperands(Outs, IsVarArg,
                                  Subtarget.abiUsesSoftFloat(),
@@ -3495,11 +3493,12 @@ static bool originalTypeIsF128(const Type *Ty, const SDNode *CallNode) {
 }
 
 MipsTargetLowering::MipsCC::SpecialCallingConvType
-  MipsTargetLowering::getSpecialCallingConv(SDValue Callee) const {
+MipsTargetLowering::MipsCC::getSpecialCallingConv(const SDNode *Callee) const {
   MipsCC::SpecialCallingConvType SpecialCallingConv =
     MipsCC::NoSpecialCallingConv;
   if (Subtarget.inMips16HardFloat()) {
-    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    if (const GlobalAddressSDNode *G =
+            dyn_cast<const GlobalAddressSDNode>(Callee)) {
       llvm::StringRef Sym = G->getGlobal()->getName();
       Function *F = G->getGlobal()->getParent()->getFunction(Sym);
       if (F && F->hasFnAttribute("__Mips16RetHelper")) {
@@ -3510,11 +3509,10 @@ MipsTargetLowering::MipsCC::SpecialCallingConvType
   return SpecialCallingConv;
 }
 
-MipsTargetLowering::MipsCC::MipsCC(
-    CallingConv::ID CC, const MipsSubtarget &Subtarget_, CCState &Info,
-    MipsCC::SpecialCallingConvType SpecialCallingConv_)
-    : CCInfo(Info), CallConv(CC), Subtarget(Subtarget_),
-      SpecialCallingConv(SpecialCallingConv_) {
+MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
+                                   const MipsSubtarget &Subtarget_,
+                                   CCState &Info)
+    : CCInfo(Info), CallConv(CC), Subtarget(Subtarget_) {
   // Pre-allocate reserved argument area.
   CCInfo.AllocateStack(reservedArgArea(), 1);
 }
@@ -3524,11 +3522,16 @@ void MipsTargetLowering::MipsCC::
 analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Args,
                     bool IsVarArg, bool IsSoftFloat, const SDNode *CallNode,
                     std::vector<ArgListEntry> &FuncArgs) {
+  MipsCC::SpecialCallingConvType SpecialCallingConv =
+      getSpecialCallingConv(CallNode);
   assert((CallConv != CallingConv::Fast || !IsVarArg) &&
          "CallingConv::Fast shouldn't be used for vararg functions.");
 
   unsigned NumOpnds = Args.size();
-  llvm::CCAssignFn *FixedFn = fixedArgFn();
+  llvm::CCAssignFn *FixedFn = CC_Mips_FixedArg;
+  if (CallConv != CallingConv::Fast &&
+      SpecialCallingConv == Mips16RetHelperConv)
+    FixedFn = CC_Mips16RetHelper;
 
   for (unsigned I = 0; I != NumOpnds; ++I) {
     MVT ArgVT = Args[I].VT;
@@ -3562,7 +3565,6 @@ void MipsTargetLowering::MipsCC::
 analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Args,
                        bool IsSoftFloat, Function::const_arg_iterator FuncArg) {
   unsigned NumArgs = Args.size();
-  llvm::CCAssignFn *FixedFn = fixedArgFn();
   unsigned CurArgIdx = 0;
 
   for (unsigned I = 0; I != NumArgs; ++I) {
@@ -3578,7 +3580,7 @@ analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Args,
 
     MVT RegVT = getRegVT(ArgVT, FuncArg->getType(), nullptr, IsSoftFloat);
 
-    if (!FixedFn(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, CCInfo))
+    if (!CC_Mips_FixedArg(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, CCInfo))
       continue;
 
 #ifndef NDEBUG
@@ -3621,14 +3623,6 @@ const ArrayRef<MCPhysReg> MipsTargetLowering::MipsCC::intArgRegs() const {
   if (Subtarget.isABI_O32())
     return makeArrayRef(O32IntRegs);
   return makeArrayRef(Mips64IntRegs);
-}
-
-llvm::CCAssignFn *MipsTargetLowering::MipsCC::fixedArgFn() const {
-  if (CallConv != CallingConv::Fast &&
-      SpecialCallingConv == Mips16RetHelperConv)
-    return CC_Mips16RetHelper;
-
-  return CC_Mips_FixedArg;
 }
 
 const MCPhysReg *MipsTargetLowering::MipsCC::shadowRegs() const {

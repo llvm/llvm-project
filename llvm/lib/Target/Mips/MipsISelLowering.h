@@ -356,8 +356,7 @@ namespace llvm {
       };
 
       MipsCC(CallingConv::ID CallConv, const MipsSubtarget &Subtarget,
-             CCState &Info,
-             SpecialCallingConvType SpecialCallingConv = NoSpecialCallingConv);
+             CCState &Info);
 
       void analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                bool IsVarArg, bool IsSoftFloat,
@@ -392,9 +391,6 @@ namespace llvm {
       /// use of registers to pass byval arguments.
       bool useRegsForByval() const { return CallConv != CallingConv::Fast; }
 
-      /// Return the function that analyzes fixed argument list functions.
-      llvm::CCAssignFn *fixedArgFn() const;
-
       const MCPhysReg *shadowRegs() const;
 
       void allocateRegs(ByValArgInfo &ByVal, unsigned ByValSize,
@@ -411,10 +407,11 @@ namespace llvm {
       void analyzeReturn(const SmallVectorImpl<Ty> &RetVals, bool IsSoftFloat,
                          const SDNode *CallNode, const Type *RetTy) const;
 
+      SpecialCallingConvType getSpecialCallingConv(const SDNode *Callee) const;
+
       CCState &CCInfo;
       CallingConv::ID CallConv;
       const MipsSubtarget &Subtarget;
-      SpecialCallingConvType SpecialCallingConv;
       SmallVector<ByValArgInfo, 2> ByValArgs;
     };
   protected:
@@ -444,8 +441,6 @@ namespace llvm {
     // Create a TargetConstantPool node.
     SDValue getTargetNode(ConstantPoolSDNode *N, EVT Ty, SelectionDAG &DAG,
                           unsigned Flag) const;
-
-    MipsCC::SpecialCallingConvType getSpecialCallingConv(SDValue Callee) const;
 
     // Lower Operand helpers
     SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
