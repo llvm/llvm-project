@@ -2587,8 +2587,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
   CCInfo.PreAnalyzeCallOperandsForF128_(Outs, CLI.getArgs(), Callee.getNode());
-  MipsCCInfo.analyzeCallOperands(Outs, IsVarArg, Subtarget.abiUsesSoftFloat(),
-                                 Callee.getNode(), CLI.getArgs(), CCInfo);
+  MipsCCInfo.analyzeCallOperands(Outs, IsVarArg, Callee.getNode(),
+                                 CLI.getArgs(), CCInfo);
   CCInfo.ClearOriginalArgWasF128();
 
   // Get a count of how many bytes are to be pushed on the stack.
@@ -3589,8 +3589,8 @@ MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
 
 void MipsTargetLowering::MipsCC::analyzeCallOperands(
     const SmallVectorImpl<ISD::OutputArg> &Args, bool IsVarArg,
-    bool IsSoftFloat, const SDNode *CallNode,
-    std::vector<ArgListEntry> &FuncArgs, CCState &State) {
+    const SDNode *CallNode, std::vector<ArgListEntry> &FuncArgs,
+    CCState &State) {
   MipsCC::SpecialCallingConvType SpecialCallingConv =
       getSpecialCallingConv(CallNode);
   assert((CallConv != CallingConv::Fast || !IsVarArg) &&
