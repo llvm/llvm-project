@@ -139,7 +139,8 @@ def RetCC_MipsN : CallingConv<[
   CCIfSubtarget<"isLittle()",
       CCIfType<[i8, i16, i32, i64], CCIfInReg<CCPromoteToType<i64>>>>,
   CCIfSubtargetNot<"isLittle()",
-      CCIfType<[i8, i16, i32, i64], CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
+      CCIfType<[i8, i16, i32, i64],
+          CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
 
   // i64 are returned in registers V0_64, V1_64
   CCIfType<[i64], CCAssignToReg<[V0_64, V1_64]>>,
