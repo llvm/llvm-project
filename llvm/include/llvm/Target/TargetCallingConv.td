@@ -119,6 +119,12 @@ class CCPromoteToType<ValueType destTy> : CCAction {
   ValueType DestTy = destTy;
 }
 
+/// CCPromoteToUpperBitsInType - If applied, this promotes the specified current
+/// value to the specified type and shifts the value into the upper bits.
+class CCPromoteToUpperBitsInType<ValueType destTy> : CCAction {
+  ValueType DestTy = destTy;
+}
+
 /// CCBitConvertToType - If applied, this bitconverts the specified current
 /// value to the specified type.
 class CCBitConvertToType<ValueType destTy> : CCAction {

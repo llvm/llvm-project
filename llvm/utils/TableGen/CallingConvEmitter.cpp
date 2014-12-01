@@ -227,6 +227,21 @@ void CallingConvEmitter::EmitAction(Record *Action,
           << IndentStr << "else\n"
           << IndentStr << IndentStr << "LocInfo = CCValAssign::AExt;\n";
       }
+    } else if (Action->isSubClassOf("CCPromoteToUpperBitsInType")) {
+      Record *DestTy = Action->getValueAsDef("DestTy");
+      MVT::SimpleValueType DestVT = getValueType(DestTy);
+      O << IndentStr << "LocVT = " << getEnumName(DestVT) << ";\n";
+      if (MVT(DestVT).isFloatingPoint()) {
+        PrintFatalError("CCPromoteToUpperBitsInType does not handle floating "
+                        "point");
+      } else {
+        O << IndentStr << "if (ArgFlags.isSExt())\n"
+          << IndentStr << IndentStr << "LocInfo = CCValAssign::SExtUpper;\n"
+          << IndentStr << "else if (ArgFlags.isZExt())\n"
+          << IndentStr << IndentStr << "LocInfo = CCValAssign::ZExtUpper;\n"
+          << IndentStr << "else\n"
+          << IndentStr << IndentStr << "LocInfo = CCValAssign::AExtUpper;\n";
+      }
     } else if (Action->isSubClassOf("CCBitConvertToType")) {
       Record *DestTy = Action->getValueAsDef("DestTy");
       O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy)) <<";\n";
