@@ -117,12 +117,15 @@ private:
 
   /// Identify lowered values that originated from f128 arguments and record
   /// this.
-  void PreAnalyzeCallOperandsForF128(
+  void PreAnalyzeCallOperands(
       const SmallVectorImpl<ISD::OutputArg> &Outs,
-      std::vector<TargetLowering::ArgListEntry> &FuncArgs, SDNode *CallNode) {
-    for (unsigned i = 0; i < Outs.size(); ++i)
+      std::vector<TargetLowering::ArgListEntry> &FuncArgs,
+      const SDNode *CallNode) {
+    for (unsigned i = 0; i < Outs.size(); ++i) {
       OriginalArgWasF128.push_back(
           originalTypeIsF128(FuncArgs[Outs[i].OrigArgIndex].Ty, CallNode));
+      CallOperandIsFixed.push_back(Outs[i].IsFixed);
+    }
   }
 
   /// Identify lowered values that originated from f128 arguments and record
@@ -151,27 +154,41 @@ private:
   /// Records whether the value has been lowered from an f128.
   SmallVector<bool, 4> OriginalArgWasF128;
 
+  /// Records whether the value was a fixed argument.
+  /// See ISD::OutputArg::IsFixed,
+  SmallVector<bool, 4> CallOperandIsFixed;
+
   // Used to handle MIPS16-specific calling convention tweaks.
   // FIXME: This should probably be a fully fledged calling convention.
   SpecialCallingConvType SpecialCallingConv;
 
 public:
-  // FIXME: Remove this from a public inteface ASAP. It's a temporary trap door
-  //        to allow analyzeCallOperands to be removed incrementally.
-  void PreAnalyzeCallOperandsForF128_(
-      const SmallVectorImpl<ISD::OutputArg> &Outs,
-      std::vector<TargetLowering::ArgListEntry> &FuncArgs, SDNode *CallNode) {
-    PreAnalyzeCallOperandsForF128(Outs, FuncArgs, CallNode);
-  }
-  // FIXME: Remove this from a public inteface ASAP. It's a temporary trap door
-  //        to clean up after the above functions.
-  void ClearOriginalArgWasF128() { OriginalArgWasF128.clear(); }
 
   MipsCCState(CallingConv::ID CC, bool isVarArg, MachineFunction &MF,
               const TargetMachine &TM, SmallVectorImpl<CCValAssign> &locs,
               LLVMContext &C,
               SpecialCallingConvType SpecialCC = NoSpecialCallingConv)
       : CCState(CC, isVarArg, MF, TM, locs, C), SpecialCallingConv(SpecialCC) {}
+
+  void
+  AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      CCAssignFn Fn,
+                      std::vector<TargetLowering::ArgListEntry> &FuncArgs,
+                      const SDNode *CallNode) {
+    PreAnalyzeCallOperands(Outs, FuncArgs, CallNode);
+    CCState::AnalyzeCallOperands(Outs, Fn);
+    OriginalArgWasF128.clear();
+    CallOperandIsFixed.clear();
+  }
+
+  // The AnalyzeCallOperands in the base class is not usable since we must
+  // provide a means of accessing ArgListEntry::IsFixed. Delete them from this
+  // class. This doesn't stop them being used via the base class though.
+  void AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                           CCAssignFn Fn) = delete;
+  void AnalyzeCallOperands(const SmallVectorImpl<MVT> &Outs,
+                           SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
+                           CCAssignFn Fn) = delete;
 
   void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                               CCAssignFn Fn) {
@@ -204,6 +221,7 @@ public:
   }
 
   bool WasOriginalArgF128(unsigned ValNo) { return OriginalArgWasF128[ValNo]; }
+  bool IsCallOperandFixed(unsigned ValNo) { return CallOperandIsFixed[ValNo]; }
   SpecialCallingConvType getSpecialCallingConv() { return SpecialCallingConv; }
 };
 }
@@ -2616,9 +2634,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       MipsCCState::getSpecialCallingConvForCallee(Callee.getNode(), Subtarget));
   MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
-  CCInfo.PreAnalyzeCallOperandsForF128_(Outs, CLI.getArgs(), Callee.getNode());
-  MipsCCInfo.analyzeCallOperands(Outs, CLI.getArgs(), CCInfo);
-  CCInfo.ClearOriginalArgWasF128();
+  CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs(), Callee.getNode());
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
@@ -3597,34 +3613,6 @@ MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
     : CallConv(CC), Subtarget(Subtarget_) {
   // Pre-allocate reserved argument area.
   Info.AllocateStack(reservedArgArea(), 1);
-}
-
-void MipsTargetLowering::MipsCC::analyzeCallOperands(
-    const SmallVectorImpl<ISD::OutputArg> &Args,
-    std::vector<ArgListEntry> &FuncArgs, CCState &State) {
-  assert((CallConv != CallingConv::Fast || !State.isVarArg()) &&
-         "CallingConv::Fast shouldn't be used for vararg functions.");
-
-  unsigned NumOpnds = Args.size();
-
-  for (unsigned I = 0; I != NumOpnds; ++I) {
-    MVT ArgVT = Args[I].VT;
-    ISD::ArgFlagsTy ArgFlags = Args[I].Flags;
-    bool R;
-
-    if (State.isVarArg() && !Args[I].IsFixed)
-      R = CC_Mips_VarArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
-    else
-      R = CC_Mips_FixedArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
-
-    if (R) {
-#ifndef NDEBUG
-      dbgs() << "Call operand #" << I << " has unhandled type "
-             << EVT(ArgVT).getEVTString();
-#endif
-      llvm_unreachable(nullptr);
-    }
-  }
 }
 
 unsigned MipsTargetLowering::MipsCC::reservedArgArea() const {

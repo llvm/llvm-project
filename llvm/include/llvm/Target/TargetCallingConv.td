@@ -67,6 +67,9 @@ class CCIfSplit<CCAction A> : CCIf<"ArgFlags.isSplit()", A> {}
 /// the specified action.
 class CCIfSRet<CCAction A> : CCIf<"ArgFlags.isSRet()", A> {}
 
+/// CCIfVarArg - If the current function is vararg - apply the action
+class CCIfVarArg<CCAction A> : CCIf<"State.isVarArg()", A> {}
+
 /// CCIfNotVarArg - If the current function is not vararg - apply the action
 class CCIfNotVarArg<CCAction A> : CCIf<"!State.isVarArg()", A> {}
 

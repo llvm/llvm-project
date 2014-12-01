@@ -347,10 +347,6 @@ namespace llvm {
       MipsCC(CallingConv::ID CallConv, const MipsSubtarget &Subtarget,
              CCState &Info);
 
-      void analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               std::vector<ArgListEntry> &FuncArgs,
-                               CCState &State);
-
       /// reservedArgArea - The size of the area the caller reserves for
       /// register arguments. This is 16-byte if ABI is O32.
       unsigned reservedArgArea() const;

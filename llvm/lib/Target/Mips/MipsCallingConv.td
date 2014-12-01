@@ -343,6 +343,13 @@ def CC_Mips_VarArg : CallingConv<[
   CCDelegateTo<CC_MipsN_VarArg>
 ]>;
 
+def CC_Mips : CallingConv<[
+  CCIfVarArg<
+      CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)",
+          CCDelegateTo<CC_Mips_VarArg>>>,
+  CCDelegateTo<CC_Mips_FixedArg>
+]>;
+
 //===----------------------------------------------------------------------===//
 // Callee-saved register lists.
 //===----------------------------------------------------------------------===//
