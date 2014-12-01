@@ -352,7 +352,7 @@ namespace llvm {
              CCState &Info);
 
       void analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               bool IsVarArg, const SDNode *CallNode,
+                               const SDNode *CallNode,
                                std::vector<ArgListEntry> &FuncArgs,
                                CCState &State);
 

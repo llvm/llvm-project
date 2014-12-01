@@ -2587,8 +2587,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
   CCInfo.PreAnalyzeCallOperandsForF128_(Outs, CLI.getArgs(), Callee.getNode());
-  MipsCCInfo.analyzeCallOperands(Outs, IsVarArg, Callee.getNode(),
-                                 CLI.getArgs(), CCInfo);
+  MipsCCInfo.analyzeCallOperands(Outs, Callee.getNode(), CLI.getArgs(), CCInfo);
   CCInfo.ClearOriginalArgWasF128();
 
   // Get a count of how many bytes are to be pushed on the stack.
@@ -3588,12 +3587,11 @@ MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
 }
 
 void MipsTargetLowering::MipsCC::analyzeCallOperands(
-    const SmallVectorImpl<ISD::OutputArg> &Args, bool IsVarArg,
-    const SDNode *CallNode, std::vector<ArgListEntry> &FuncArgs,
-    CCState &State) {
+    const SmallVectorImpl<ISD::OutputArg> &Args, const SDNode *CallNode,
+    std::vector<ArgListEntry> &FuncArgs, CCState &State) {
   MipsCC::SpecialCallingConvType SpecialCallingConv =
       getSpecialCallingConv(CallNode);
-  assert((CallConv != CallingConv::Fast || !IsVarArg) &&
+  assert((CallConv != CallingConv::Fast || !State.isVarArg()) &&
          "CallingConv::Fast shouldn't be used for vararg functions.");
 
   unsigned NumOpnds = Args.size();
@@ -3607,7 +3605,7 @@ void MipsTargetLowering::MipsCC::analyzeCallOperands(
     ISD::ArgFlagsTy ArgFlags = Args[I].Flags;
     bool R;
 
-    if (IsVarArg && !Args[I].IsFixed)
+    if (State.isVarArg() && !Args[I].IsFixed)
       R = CC_Mips_VarArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
     else
       R = FixedFn(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
