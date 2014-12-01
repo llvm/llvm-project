@@ -212,6 +212,7 @@ public:
   bool isNotFP64bit() const { return !IsFP64bit; }
   bool isGP64bit() const { return IsGP64bit; }
   bool isGP32bit() const { return !IsGP64bit; }
+  unsigned getGPRSizeInBytes() const { return isGP64bit() ? 8 : 4; }
   bool isSingleFloat() const { return IsSingleFloat; }
   bool isNotSingleFloat() const { return !IsSingleFloat; }
   bool hasVFPU() const { return HasVFPU; }

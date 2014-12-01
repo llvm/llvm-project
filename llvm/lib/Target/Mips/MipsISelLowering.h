@@ -379,9 +379,6 @@ namespace llvm {
       /// hasByValArg - Returns true if function has byval arguments.
       bool hasByValArg() const { return !ByValArgs.empty(); }
 
-      /// regSize - Size (in number of bits) of integer registers.
-      unsigned regSize() const;
-
       /// numIntArgRegs - Number of integer registers available for calls.
       unsigned numIntArgRegs() const;
 

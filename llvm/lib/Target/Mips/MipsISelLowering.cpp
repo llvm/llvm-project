@@ -3508,17 +3508,18 @@ void MipsTargetLowering::MipsCC::handleByValArg(unsigned ValNo, MVT ValVT,
   assert(ArgFlags.getByValSize() && "Byval argument's size shouldn't be 0.");
 
   struct ByValArgInfo ByVal;
-  unsigned RegSize = regSize();
-  unsigned ByValSize = RoundUpToAlignment(ArgFlags.getByValSize(), RegSize);
-  unsigned Align = std::min(std::max(ArgFlags.getByValAlign(), RegSize),
-                            RegSize * 2);
+  unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+  unsigned ByValSize =
+      RoundUpToAlignment(ArgFlags.getByValSize(), RegSizeInBytes);
+  unsigned Align = std::min(std::max(ArgFlags.getByValAlign(), RegSizeInBytes),
+                            RegSizeInBytes * 2);
 
   if (useRegsForByval())
     allocateRegs(ByVal, ByValSize, Align);
 
   // Allocate space on caller's stack.
-  ByVal.Address = CCInfo.AllocateStack(ByValSize - RegSize * ByVal.NumRegs,
-                                       Align);
+  ByVal.Address =
+      CCInfo.AllocateStack(ByValSize - RegSizeInBytes * ByVal.NumRegs, Align);
   CCInfo.addLoc(CCValAssign::getMem(ValNo, ValVT, ByVal.Address, LocVT,
                                     LocInfo));
   ByValArgs.push_back(ByVal);
@@ -3561,23 +3562,24 @@ const MCPhysReg *MipsTargetLowering::MipsCC::shadowRegs() const {
 void MipsTargetLowering::MipsCC::allocateRegs(ByValArgInfo &ByVal,
                                               unsigned ByValSize,
                                               unsigned Align) {
-  unsigned RegSize = regSize(), NumIntArgRegs = numIntArgRegs();
+  unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+  unsigned NumIntArgRegs = numIntArgRegs();
   const MCPhysReg *IntArgRegs = intArgRegs(), *ShadowRegs = shadowRegs();
-  assert(!(ByValSize % RegSize) && !(Align % RegSize) &&
+  assert(!(ByValSize % RegSizeInBytes) && !(Align % RegSizeInBytes) &&
          "Byval argument's size and alignment should be a multiple of"
-         "RegSize.");
+         "RegSizeInBytes.");
 
   ByVal.FirstIdx = CCInfo.getFirstUnallocated(IntArgRegs, NumIntArgRegs);
 
-  // If Align > RegSize, the first arg register must be even.
-  if ((Align > RegSize) && (ByVal.FirstIdx % 2)) {
+  // If Align > RegSizeInBytes, the first arg register must be even.
+  if ((Align > RegSizeInBytes) && (ByVal.FirstIdx % 2)) {
     CCInfo.AllocateReg(IntArgRegs[ByVal.FirstIdx], ShadowRegs[ByVal.FirstIdx]);
     ++ByVal.FirstIdx;
   }
 
   // Mark the registers allocated.
   for (unsigned I = ByVal.FirstIdx; ByValSize && (I < NumIntArgRegs);
-       ByValSize -= RegSize, ++I, ++ByVal.NumRegs)
+       ByValSize -= RegSizeInBytes, ++I, ++ByVal.NumRegs)
     CCInfo.AllocateReg(IntArgRegs[I], ShadowRegs[I]);
 }
 
@@ -3596,10 +3598,6 @@ MVT MipsTargetLowering::MipsCC::getRegVT(MVT VT, const Type *OrigTy,
   return VT;
 }
 
-unsigned MipsTargetLowering::MipsCC::regSize() const {
-  return Subtarget.isGP32bit() ? 4 : 8;
-}
-
 void MipsTargetLowering::
 copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
               SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
@@ -3607,13 +3605,15 @@ copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
               const MipsCC &CC, const ByValArgInfo &ByVal) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
-  unsigned RegAreaSize = ByVal.NumRegs * CC.regSize();
+  unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
+  unsigned RegAreaSize = ByVal.NumRegs * GPRSizeInBytes;
   unsigned FrameObjSize = std::max(Flags.getByValSize(), RegAreaSize);
   int FrameObjOffset;
 
   if (RegAreaSize)
-    FrameObjOffset = (int)CC.reservedArgArea() -
-      (int)((CC.numIntArgRegs() - ByVal.FirstIdx) * CC.regSize());
+    FrameObjOffset =
+        (int)CC.reservedArgArea() -
+        (int)((CC.numIntArgRegs() - ByVal.FirstIdx) * GPRSizeInBytes);
   else
     FrameObjOffset = ByVal.Address;
 
@@ -3627,13 +3627,13 @@ copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
     return;
 
   // Copy arg registers.
-  MVT RegTy = MVT::getIntegerVT(CC.regSize() * 8);
+  MVT RegTy = MVT::getIntegerVT(GPRSizeInBytes * 8);
   const TargetRegisterClass *RC = getRegClassFor(RegTy);
 
   for (unsigned I = 0; I < ByVal.NumRegs; ++I) {
     unsigned ArgReg = CC.intArgRegs()[ByVal.FirstIdx + I];
     unsigned VReg = addLiveIn(MF, ArgReg, RC);
-    unsigned Offset = I * CC.regSize();
+    unsigned Offset = I * GPRSizeInBytes;
     SDValue StorePtr = DAG.getNode(ISD::ADD, DL, PtrTy, FIN,
                                    DAG.getConstant(Offset, PtrTy));
     SDValue Store = DAG.getStore(Chain, DL, DAG.getRegister(VReg, RegTy),
@@ -3653,7 +3653,7 @@ passByValArg(SDValue Chain, SDLoc DL,
              const ISD::ArgFlagsTy &Flags, bool isLittle) const {
   unsigned ByValSizeInBytes = Flags.getByValSize();
   unsigned OffsetInBytes = 0; // From beginning of struct
-  unsigned RegSizeInBytes = CC.regSize();
+  unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
   unsigned Alignment = std::min(Flags.getByValAlign(), RegSizeInBytes);
   EVT PtrTy = getPointerTy(), RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);
 
@@ -3747,8 +3747,8 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
   const MCPhysReg *ArgRegs = CC.intArgRegs();
   const CCState &CCInfo = CC.getCCInfo();
   unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs, NumRegs);
-  unsigned RegSize = CC.regSize();
-  MVT RegTy = MVT::getIntegerVT(RegSize * 8);
+  unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+  MVT RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);
   const TargetRegisterClass *RC = getRegClassFor(RegTy);
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
@@ -3758,23 +3758,25 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
   int VaArgOffset;
 
   if (NumRegs == Idx)
-    VaArgOffset = RoundUpToAlignment(CCInfo.getNextStackOffset(), RegSize);
+    VaArgOffset =
+        RoundUpToAlignment(CCInfo.getNextStackOffset(), RegSizeInBytes);
   else
-    VaArgOffset = (int)CC.reservedArgArea() - (int)(RegSize * (NumRegs - Idx));
+    VaArgOffset =
+        (int)CC.reservedArgArea() - (int)(RegSizeInBytes * (NumRegs - Idx));
 
   // Record the frame index of the first variable argument
   // which is a value necessary to VASTART.
-  int FI = MFI->CreateFixedObject(RegSize, VaArgOffset, true);
+  int FI = MFI->CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
   MipsFI->setVarArgsFrameIndex(FI);
 
   // Copy the integer registers that have not been used for argument passing
   // to the argument register save area. For O32, the save area is allocated
   // in the caller's stack frame, while for N32/64, it is allocated in the
   // callee's stack frame.
-  for (unsigned I = Idx; I < NumRegs; ++I, VaArgOffset += RegSize) {
+  for (unsigned I = Idx; I < NumRegs; ++I, VaArgOffset += RegSizeInBytes) {
     unsigned Reg = addLiveIn(MF, ArgRegs[I], RC);
     SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegTy);
-    FI = MFI->CreateFixedObject(RegSize, VaArgOffset, true);
+    FI = MFI->CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
     SDValue PtrOff = DAG.getFrameIndex(FI, getPointerTy());
     SDValue Store = DAG.getStore(Chain, DL, ArgValue, PtrOff,
                                  MachinePointerInfo(), false, false, 0);
