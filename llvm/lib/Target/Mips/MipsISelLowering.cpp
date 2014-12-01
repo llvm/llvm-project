@@ -80,7 +80,6 @@ private:
   void
   PreAnalyzeCallResultForF128(const SmallVectorImpl<ISD::InputArg> &Ins,
                               const TargetLowering::CallLoweringInfo &CLI) {
-    const MachineFunction &MF = getMachineFunction();
     for (unsigned i = 0; i < Ins.size(); ++i)
       OriginalArgWasF128.push_back(
           originalTypeIsF128(CLI.RetTy, CLI.Callee.getNode()));
