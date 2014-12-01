@@ -111,8 +111,17 @@ private:
     const MachineFunction &MF = getMachineFunction();
     for (unsigned i = 0; i < Ins.size(); ++i) {
       Function::const_arg_iterator FuncArg = MF.getFunction()->arg_begin();
-      std::advance(FuncArg, Ins[i].OrigArgIndex);
 
+      // SRet arguments cannot originate from f128 or {f128} returns so we just
+      // push false. We have to handle this specially since SRet arguments
+      // aren't mapped to an original argument.
+      if (Ins[i].Flags.isSRet()) {
+        OriginalArgWasF128.push_back(false);
+        continue;
+      }
+
+      assert(Ins[i].OrigArgIndex < MF.getFunction()->arg_size());
+      std::advance(FuncArg, Ins[i].OrigArgIndex);
       OriginalArgWasF128.push_back(
           originalTypeIsF128(FuncArg->getType(), nullptr));
     }
