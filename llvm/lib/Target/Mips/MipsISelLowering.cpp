@@ -3036,7 +3036,6 @@ MipsTargetLowering::LowerReturn(SDValue Chain,
   // CCState - Info about the registers and stack slot.
   MipsCCState CCInfo(CallConv, IsVarArg, MF, getTargetMachine(), RVLocs,
                      *DAG.getContext());
-  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
   // Analyze return values.
   CCInfo.AnalyzeReturn(Outs, RetCC_Mips);

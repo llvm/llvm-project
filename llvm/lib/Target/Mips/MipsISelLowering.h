@@ -375,10 +375,6 @@ namespace llvm {
       MVT getRegVT(MVT VT, const Type *OrigTy, const SDNode *CallNode,
                    bool IsSoftFloat) const;
 
-      template<typename Ty>
-      void analyzeReturn(const SmallVectorImpl<Ty> &RetVals, bool IsSoftFloat,
-                         const SDNode *CallNode, const Type *RetTy) const;
-
       SpecialCallingConvType getSpecialCallingConv(const SDNode *Callee) const;
 
       CallingConv::ID CallConv;
