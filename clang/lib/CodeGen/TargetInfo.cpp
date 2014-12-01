@@ -5519,12 +5519,15 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
       if (RetTy->isAnyComplexType())
         return ABIArgInfo::getDirect();
 
-      // O32 returns integer vectors in registers.
-      if (IsO32 && RetTy->isVectorType() && !RetTy->hasFloatingRepresentation())
-        return ABIArgInfo::getDirect(returnAggregateInRegs(RetTy, Size));
-
-      if (!IsO32)
-        return ABIArgInfo::getDirect(returnAggregateInRegs(RetTy, Size));
+      // O32 returns integer vectors in registers and N32/N64 returns all small
+      // aggregates in registers..
+      if (!IsO32 ||
+          (RetTy->isVectorType() && !RetTy->hasFloatingRepresentation())) {
+        ABIArgInfo ArgInfo =
+            ABIArgInfo::getDirect(returnAggregateInRegs(RetTy, Size));
+        ArgInfo.setInReg(true);
+        return ArgInfo;
+      }
     }
 
     return ABIArgInfo::getIndirect(0);
