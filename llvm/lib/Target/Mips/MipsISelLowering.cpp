@@ -99,7 +99,6 @@ private:
   void PreAnalyzeCallOperandsForF128(
       const SmallVectorImpl<ISD::OutputArg> &Outs,
       std::vector<TargetLowering::ArgListEntry> &FuncArgs, SDNode *CallNode) {
-    const MachineFunction &MF = getMachineFunction();
     for (unsigned i = 0; i < Outs.size(); ++i)
       OriginalArgWasF128.push_back(
           originalTypeIsF128(FuncArgs[Outs[i].OrigArgIndex].Ty, CallNode));
