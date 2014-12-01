@@ -128,6 +128,7 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
     // aren't mapped to an original argument.
     if (Ins[i].Flags.isSRet()) {
       OriginalArgWasF128.push_back(false);
+      OriginalArgWasFloat.push_back(false);
       continue;
     }
 

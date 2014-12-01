@@ -15,6 +15,8 @@
 @struct_byte = global {i8} zeroinitializer
 @struct_2byte = global {i8,i8} zeroinitializer
 @struct_3xi16 = global {[3 x i16]} zeroinitializer
+@struct_6xi32 = global {[6 x i32]} zeroinitializer
+@struct_128xi16 = global {[128 x i16]} zeroinitializer
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
 
@@ -136,3 +138,95 @@ entry:
 ; N64-BE-DAG:        lhu [[R3:\$[0-9]+]], 4([[PTR]])
 ; N64-BE-DAG:        or [[R4:\$[0-9]+]], [[R3]], [[R2]]
 ; N32-BE-DAG:        dsll $2, [[R4]], 16
+
+; Ensure that large structures (>128-bit) are returned indirectly.
+; We pick an extremely large structure so we don't have to match inlined memcpy's.
+define void @ret_struct_128xi16({[128 x i16]}* sret %returnval) {
+entry:
+        %0 = bitcast {[128 x i16]}* %returnval to i8*
+        call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast ({[128 x i16]}* @struct_128xi16 to i8*), i64 256, i32 2, i1 false)
+        ret void
+}
+
+; ALL-LABEL: ret_struct_128xi16:
+
+; sret pointer is already in $4
+; O32-DAG:        lui [[PTR:\$[0-9]+]], %hi(struct_128xi16)
+; O32-DAG:        addiu $5, [[PTR]], %lo(struct_128xi16)
+; O32:            jal memcpy
+
+; sret pointer is already in $4
+; N32-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_128xi16)
+; N32-DAG:        addiu [[PTR:\$[0-9]+]], [[PTR_HI]], %lo(struct_128xi16)
+; FIXME: This signext isn't necessary. Like integers, pointers are
+;        but unlike integers, pointers cannot have the signext attribute.
+; N32-DAG:        sll $5, [[PTR]], 0
+; N32:            jal memcpy
+
+; sret pointer is already in $4
+; N64-DAG:        ld $5, %got_disp(struct_128xi16)(
+; N64-DAG:        ld $25, %call16(memcpy)(
+; N64:            jalr $25
+
+; Ensure that large structures (>128-bit) are returned indirectly.
+; This will generate inlined memcpy's anyway so pick the smallest large
+; structure
+; This time we let the backend lower the sret argument.
+define {[6 x i32]} @ret_struct_6xi32() {
+entry:
+        %0 = load volatile {[6 x i32]}* @struct_6xi32, align 2
+        ret {[6 x i32]} %0
+}
+
+; ALL-LABEL: ret_struct_6xi32:
+
+; sret pointer is already in $4
+; O32-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_6xi32)
+; O32-DAG:        addiu [[PTR:\$[0-9]+]], [[PTR_HI]], %lo(struct_6xi32)
+; O32-DAG:        lw [[T0:\$[0-9]+]], %lo(struct_6xi32)([[PTR]])
+; O32-DAG:        lw [[T1:\$[0-9]+]], 4([[PTR]])
+; O32-DAG:        lw [[T2:\$[0-9]+]], 8([[PTR]])
+; O32-DAG:        lw [[T3:\$[0-9]+]], 12([[PTR]])
+; O32-DAG:        lw [[T4:\$[0-9]+]], 16([[PTR]])
+; O32-DAG:        lw [[T5:\$[0-9]+]], 20([[PTR]])
+; O32-DAG:        sw [[T0]], 0($4)
+; O32-DAG:        sw [[T1]], 4($4)
+; O32-DAG:        sw [[T2]], 8($4)
+; O32-DAG:        sw [[T3]], 12($4)
+; O32-DAG:        sw [[T4]], 16($4)
+; O32-DAG:        sw [[T5]], 20($4)
+
+; FIXME: This signext isn't necessary. Like integers, pointers are
+;        but unlike integers, pointers cannot have the signext attribute.
+;        In this case we don't have anywhere to put the signext either since
+;        the sret argument is invented by the backend.
+; N32-DAG:        sll [[RET_PTR:\$[0-9]+]], $4, 0
+; N32-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_6xi32)
+; N32-DAG:        addiu [[PTR:\$[0-9]+]], [[PTR_HI]], %lo(struct_6xi32)
+; N32-DAG:        lw [[T0:\$[0-9]+]], %lo(struct_6xi32)([[PTR]])
+; N32-DAG:        lw [[T1:\$[0-9]+]], 4([[PTR]])
+; N32-DAG:        lw [[T2:\$[0-9]+]], 8([[PTR]])
+; N32-DAG:        lw [[T3:\$[0-9]+]], 12([[PTR]])
+; N32-DAG:        lw [[T4:\$[0-9]+]], 16([[PTR]])
+; N32-DAG:        lw [[T5:\$[0-9]+]], 20([[PTR]])
+; N32-DAG:        sw [[T0]], 0([[RET_PTR]])
+; N32-DAG:        sw [[T1]], 4([[RET_PTR]])
+; N32-DAG:        sw [[T2]], 8([[RET_PTR]])
+; N32-DAG:        sw [[T3]], 12([[RET_PTR]])
+; N32-DAG:        sw [[T4]], 16([[RET_PTR]])
+; N32-DAG:        sw [[T5]], 20([[RET_PTR]])
+
+; sret pointer is already in $4
+; N64-DAG:        ld [[PTR:\$[0-9]+]], %got_disp(struct_6xi32)(
+; N64-DAG:        lw [[T0:\$[0-9]+]], 0([[PTR]])
+; N64-DAG:        lw [[T1:\$[0-9]+]], 4([[PTR]])
+; N64-DAG:        lw [[T2:\$[0-9]+]], 8([[PTR]])
+; N64-DAG:        lw [[T3:\$[0-9]+]], 12([[PTR]])
+; N64-DAG:        lw [[T4:\$[0-9]+]], 16([[PTR]])
+; N64-DAG:        lw [[T5:\$[0-9]+]], 20([[PTR]])
+; N64-DAG:        sw [[T0]], 0($4)
+; N64-DAG:        sw [[T1]], 4($4)
+; N64-DAG:        sw [[T2]], 8($4)
+; N64-DAG:        sw [[T3]], 12($4)
+; N64-DAG:        sw [[T4]], 16($4)
+; N64-DAG:        sw [[T5]], 20($4)
