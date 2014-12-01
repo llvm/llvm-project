@@ -2780,7 +2780,7 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
              "ByVal args of size 0 should have been ignored by front-end.");
       assert(ByValIdx < CCInfo.getInRegsParamsCount());
       copyByValRegs(Chain, DL, OutChains, DAG, Flags, InVals, &*FuncArg,
-                    MipsCCInfo, FirstByValReg, LastByValReg, VA);
+                    MipsCCInfo, FirstByValReg, LastByValReg, VA, CCInfo);
       CCInfo.nextInRegsParam();
       continue;
     }
@@ -3404,18 +3404,14 @@ MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
                                    CCState &Info)
     : CallConv(CC), Subtarget(Subtarget_) {
   // Pre-allocate reserved argument area.
-  Info.AllocateStack(reservedArgArea(), 1);
-}
-
-unsigned MipsTargetLowering::MipsCC::reservedArgArea() const {
-  return (Subtarget.isABI_O32() && (CallConv != CallingConv::Fast)) ? 16 : 0;
+  Info.AllocateStack(Subtarget.getABI().GetCalleeAllocdArgSizeInBytes(CC), 1);
 }
 
 void MipsTargetLowering::copyByValRegs(
     SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains, SelectionDAG &DAG,
     const ISD::ArgFlagsTy &Flags, SmallVectorImpl<SDValue> &InVals,
     const Argument *FuncArg, const MipsCC &CC, unsigned FirstReg,
-    unsigned LastReg, const CCValAssign &VA) const {
+    unsigned LastReg, const CCValAssign &VA, MipsCCState &State) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
@@ -3423,11 +3419,13 @@ void MipsTargetLowering::copyByValRegs(
   unsigned RegAreaSize = NumRegs * GPRSizeInBytes;
   unsigned FrameObjSize = std::max(Flags.getByValSize(), RegAreaSize);
   int FrameObjOffset;
-  ArrayRef<MCPhysReg> ByValArgRegs = Subtarget.getABI().GetByValArgRegs();
+  const MipsABIInfo &ABI = Subtarget.getABI();
+  ArrayRef<MCPhysReg> ByValArgRegs = ABI.GetByValArgRegs();
 
   if (RegAreaSize)
-    FrameObjOffset = (int)CC.reservedArgArea() -
-                     (int)((ByValArgRegs.size() - FirstReg) * GPRSizeInBytes);
+    FrameObjOffset =
+        (int)ABI.GetCalleeAllocdArgSizeInBytes(State.getCallingConv()) -
+        (int)((ByValArgRegs.size() - FirstReg) * GPRSizeInBytes);
   else
     FrameObjOffset = VA.getLocMemOffset();
 
@@ -3570,9 +3568,12 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
   if (ArgRegs.size() == Idx)
     VaArgOffset =
         RoundUpToAlignment(State.getNextStackOffset(), RegSizeInBytes);
-  else
-    VaArgOffset = (int)CC.reservedArgArea() -
-                  (int)(RegSizeInBytes * (ArgRegs.size() - Idx));
+  else {
+    const MipsABIInfo &ABI = Subtarget.getABI();
+    VaArgOffset =
+        (int)ABI.GetCalleeAllocdArgSizeInBytes(State.getCallingConv()) -
+        (int)(RegSizeInBytes * (ArgRegs.size() - Idx));
+  }
 
   // Record the frame index of the first variable argument
   // which is a value necessary to VASTART.

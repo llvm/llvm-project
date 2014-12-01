@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/IR/CallingConv.h"
 
 namespace llvm {
 
@@ -43,6 +44,10 @@ public:
 
   /// The registers to use for the variable argument list.
   const ArrayRef<MCPhysReg> GetVarArgRegs() const;
+
+  /// Obtain the size of the area allocated by the callee for arguments.
+  /// CallingConv::FastCall affects the value for O32.
+  unsigned GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const;
 
   /// Ordering of ABI's
   /// MipsGenSubtargetInfo.inc will use this to resolve conflicts when given
