@@ -3476,10 +3476,14 @@ static bool isF128SoftLibCall(const char *CallSym) {
   return std::binary_search(LibCalls, End, CallSym, Comp);
 }
 
-/// This function returns true if Ty is fp128 or i128 which was originally a
-/// fp128.
+/// This function returns true if Ty is fp128, {f128} or i128 which was
+/// originally a fp128.
 static bool originalTypeIsF128(const Type *Ty, const SDNode *CallNode) {
   if (Ty->isFP128Ty())
+    return true;
+
+  if (Ty->isStructTy() && Ty->getStructNumElements() == 1 &&
+      Ty->getStructElementType(0)->isFP128Ty())
     return true;
 
   const ExternalSymbolSDNode *ES =

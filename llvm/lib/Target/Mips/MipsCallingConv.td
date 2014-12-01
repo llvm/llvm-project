@@ -29,6 +29,12 @@ def RetCC_F128SoftFloat : CallingConv<[
 // pair of i64's.
 def RetCC_F128HardFloat : CallingConv<[
   CCBitConvertToType<f64>,
+
+  // Contrary to the ABI documentation, a struct containing a long double is
+  // returned in $f0, and $f1 instead of the usual $f0, and $f2. This is to
+  // match the de facto ABI as implemented by GCC.
+  CCIfInReg<CCAssignToReg<[D0_64, D1_64]>>,
+
   CCAssignToReg<[D0_64, D2_64]>
 ]>;
 
