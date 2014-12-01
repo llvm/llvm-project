@@ -2,7 +2,7 @@
 ; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefix=MIPS64
 ; RUN: llc  < %s -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 | FileCheck %s -check-prefix=MIPS16
 
-define i32 @bswap32(i32 %x) nounwind readnone {
+define i32 @bswap32(i32 signext %x) nounwind readnone {
 entry:
 ; MIPS32-LABEL: bswap32:
 ; MIPS32: wsbh $[[R0:[0-9]+]]
@@ -29,7 +29,7 @@ entry:
   ret i32 %or.3
 }
 
-define i64 @bswap64(i64 %x) nounwind readnone {
+define i64 @bswap64(i64 signext %x) nounwind readnone {
 entry:
 ; MIPS32-LABEL: bswap64:
 ; MIPS32: wsbh $[[R0:[0-9]+]]
@@ -72,24 +72,24 @@ entry:
 define <4 x i32> @bswapv4i32(<4 x i32> %x) nounwind readnone {
 entry:
 ; MIPS32-LABEL: bswapv4i32:
-; MIPS32: wsbh $[[R0:[0-9]+]]
-; MIPS32: rotr ${{[0-9]+}}, $[[R0]], 16
-; MIPS32: wsbh $[[R0:[0-9]+]]
-; MIPS32: rotr ${{[0-9]+}}, $[[R0]], 16
-; MIPS32: wsbh $[[R0:[0-9]+]]
-; MIPS32: rotr ${{[0-9]+}}, $[[R0]], 16
-; MIPS32: wsbh $[[R0:[0-9]+]]
-; MIPS32: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS32-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS32-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS32-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS32-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS32-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS32-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS32-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS32-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
 
 ; MIPS64-LABEL: bswapv4i32:
-; MIPS64: wsbh $[[R0:[0-9]+]]
-; MIPS64: rotr ${{[0-9]+}}, $[[R0]], 16
-; MIPS64: wsbh $[[R0:[0-9]+]]
-; MIPS64: rotr ${{[0-9]+}}, $[[R0]], 16
-; MIPS64: wsbh $[[R0:[0-9]+]]
-; MIPS64: rotr ${{[0-9]+}}, $[[R0]], 16
-; MIPS64: wsbh $[[R0:[0-9]+]]
-; MIPS64: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS64-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS64-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS64-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS64-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS64-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS64-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MIPS64-DAG: wsbh $[[R0:[0-9]+]]
+; MIPS64-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
 
 ; Don't bother with a MIPS16 version. It's just bswap32 repeated four times and
 ; would be very long

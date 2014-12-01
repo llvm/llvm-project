@@ -114,7 +114,7 @@ entry:
 ; ALL-LABEL: conv_LD_UInt:
 ; ALL: ld $25, %call16(__floatunsitf)
 
-define fp128 @conv_LD_UInt(i32 %a) {
+define fp128 @conv_LD_UInt(i32 signext %a) {
 entry:
   %conv = uitofp i32 %a to fp128
   ret fp128 %conv
@@ -635,7 +635,7 @@ entry:
 ; CMP_CC_FMT-DAG: selnez $[[NE2:[0-9]+]], $7, $[[CC]]
 ; CMP_CC_FMT-DAG: or $4, $[[NE2]], $[[EQ2]]
 
-define fp128 @select_LD(i32 %a, i64, fp128 %b, fp128 %c) {
+define fp128 @select_LD(i32 signext %a, i64, fp128 %b, fp128 %c) {
 entry:
   %tobool = icmp ne i32 %a, 0
   %cond = select i1 %tobool, fp128 %b, fp128 %c

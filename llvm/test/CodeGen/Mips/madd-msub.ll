@@ -76,26 +76,14 @@ entry:
 ; 32R6-DAG:      muhu $[[T3:[0-9]+]], ${{[45]}}, ${{[45]}}
 ; 32R6-DAG:      addu $2, $[[T3]], $[[T2]]
 
-; 64-DAG:        dsll $[[T0:[0-9]+]], $4, 32
-; 64-DAG:        dsrl $[[T1:[0-9]+]], $[[T0]], 32
-; 64-DAG:        dsll $[[T2:[0-9]+]], $5, 32
-; 64-DAG:        dsrl $[[T3:[0-9]+]], $[[T2]], 32
-; 64-DAG:        d[[m:m]]ult $[[T3]], $[[T1]]
-; 64-DAG:        [[m]]flo $[[T4:[0-9]+]]
-; 64-DAG:        dsll $[[T5:[0-9]+]], $6, 32
-; 64-DAG:        dsrl $[[T6:[0-9]+]], $[[T5]], 32
-; 64-DAG:        daddu $2, $[[T4]], $[[T6]]
+; 64-DAG:        d[[m:m]]ult $5, $4
+; 64-DAG:        [[m]]flo $[[T0:[0-9]+]]
+; 64-DAG:        daddu $2, $[[T0]], $6
 
-; 64R6-DAG:      dsll $[[T0:[0-9]+]], $4, 32
-; 64R6-DAG:      dsrl $[[T1:[0-9]+]], $[[T0]], 32
-; 64R6-DAG:      dsll $[[T2:[0-9]+]], $5, 32
-; 64R6-DAG:      dsrl $[[T3:[0-9]+]], $[[T2]], 32
-; 64R6-DAG:      dmul $[[T4:[0-9]+]], $[[T3]], $[[T1]]
-; 64R6-DAG:      dsll $[[T5:[0-9]+]], $6, 32
-; 64R6-DAG:      dsrl $[[T6:[0-9]+]], $[[T5]], 32
-; 64R6-DAG:      daddu $2, $[[T4]], $[[T6]]
+; 64R6-DAG:      dmul $[[T0:[0-9]+]], $5, $4
+; 64R6-DAG:      daddu $2, $[[T0]], $6
 
-define i64 @madd2(i32 %a, i32 %b, i32 %c) nounwind readnone {
+define i64 @madd2(i32 zeroext %a, i32 zeroext %b, i32 zeroext %c) nounwind readnone {
 entry:
   %conv = zext i32 %a to i64
   %conv2 = zext i32 %b to i64
@@ -214,26 +202,14 @@ entry:
 ; 32R6-DAG:      negu $2, $[[T3]]
 ; 32R6-DAG:      subu $3, $6, $[[T1]]
 
-; 64-DAG:        dsll $[[T0:[0-9]+]], $4, 32
-; 64-DAG:        dsrl $[[T1:[0-9]+]], $[[T0]], 32
-; 64-DAG:        dsll $[[T2:[0-9]+]], $5, 32
-; 64-DAG:        dsrl $[[T3:[0-9]+]], $[[T2]], 32
-; 64-DAG:        d[[m:m]]ult $[[T3]], $[[T1]]
-; 64-DAG:        [[m]]flo $[[T4:[0-9]+]]
-; 64-DAG:        dsll $[[T5:[0-9]+]], $6, 32
-; 64-DAG:        dsrl $[[T6:[0-9]+]], $[[T5]], 32
-; 64-DAG:        dsubu $2, $[[T6]], $[[T4]]
+; 64-DAG:        d[[m:m]]ult $5, $4
+; 64-DAG:        [[m]]flo $[[T0:[0-9]+]]
+; 64-DAG:        dsubu $2, $6, $[[T0]]
 
-; 64R6-DAG:      dsll $[[T0:[0-9]+]], $4, 32
-; 64R6-DAG:      dsrl $[[T1:[0-9]+]], $[[T0]], 32
-; 64R6-DAG:      dsll $[[T2:[0-9]+]], $5, 32
-; 64R6-DAG:      dsrl $[[T3:[0-9]+]], $[[T2]], 32
-; 64R6-DAG:      dmul $[[T4:[0-9]+]], $[[T3]], $[[T1]]
-; 64R6-DAG:      dsll $[[T5:[0-9]+]], $6, 32
-; 64R6-DAG:      dsrl $[[T6:[0-9]+]], $[[T5]], 32
-; 64R6-DAG:      dsubu $2, $[[T6]], $[[T4]]
+; 64R6-DAG:      dmul $[[T0:[0-9]+]], $5, $4
+; 64R6-DAG:      dsubu $2, $6, $[[T0]]
 
-define i64 @msub2(i32 %a, i32 %b, i32 %c) nounwind readnone {
+define i64 @msub2(i32 zeroext %a, i32 zeroext %b, i32 zeroext %c) nounwind readnone {
 entry:
   %conv = zext i32 %c to i64
   %conv2 = zext i32 %a to i64

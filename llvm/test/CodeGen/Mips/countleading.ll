@@ -11,7 +11,7 @@
 ;   MIPS32-GT-R1 - MIPS64r1 and above (does not include MIPS64's)
 ;   MIPS64-GT-R1 - MIPS64r1 and above
 
-define i32 @ctlz_i32(i32 %X) nounwind readnone {
+define i32 @ctlz_i32(i32 signext %X) nounwind readnone {
 entry:
 ; ALL-LABEL: ctlz_i32:
 
@@ -27,7 +27,7 @@ entry:
 
 declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
 
-define i32 @ctlo_i32(i32 %X) nounwind readnone {
+define i32 @ctlo_i32(i32 signext %X) nounwind readnone {
 entry:
 ; ALL-LABEL: ctlo_i32:
 

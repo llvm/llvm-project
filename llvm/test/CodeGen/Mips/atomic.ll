@@ -12,7 +12,7 @@
 
 @x = common global i32 0, align 4
 
-define i32 @AtomicLoadAdd32(i32 %incr) nounwind {
+define i32 @AtomicLoadAdd32(i32 signext %incr) nounwind {
 entry:
   %0 = atomicrmw add i32* @x, i32 %incr monotonic
   ret i32 %0
@@ -29,7 +29,7 @@ entry:
 ; ALL:           beqz    $[[R2]], $[[BB0]]
 }
 
-define i32 @AtomicLoadNand32(i32 %incr) nounwind {
+define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 entry:
   %0 = atomicrmw nand i32* @x, i32 %incr monotonic
   ret i32 %0
@@ -47,7 +47,7 @@ entry:
 ; ALL:           beqz    $[[R2]], $[[BB0]]
 }
 
-define i32 @AtomicSwap32(i32 %newval) nounwind {
+define i32 @AtomicSwap32(i32 signext %newval) nounwind {
 entry:
   %newval.addr = alloca i32, align 4
   store i32 %newval, i32* %newval.addr, align 4
@@ -66,7 +66,7 @@ entry:
 ; ALL:           beqz    $[[R2]], $[[BB0]]
 }
 
-define i32 @AtomicCmpSwap32(i32 %oldval, i32 %newval) nounwind {
+define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 entry:
   %newval.addr = alloca i32, align 4
   store i32 %newval, i32* %newval.addr, align 4
@@ -293,7 +293,7 @@ entry:
 ; HAS-SEB-SEH:   seb     $2, $[[R17]]
 }
 
-define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 %oldval, i8 signext %newval) nounwind {
+define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) nounwind {
 entry:
   %0 = cmpxchg i8* %ptr, i8 %oldval, i8 %newval monotonic monotonic
   %1 = extractvalue { i8, i1 } %0, 1
@@ -381,7 +381,7 @@ entry:
 
 @countsint = common global i32 0, align 4
 
-define i32 @CheckSync(i32 %v) nounwind noinline {
+define i32 @CheckSync(i32 signext %v) nounwind noinline {
 entry:
   %0 = atomicrmw add i32* @countsint, i32 %v seq_cst
   ret i32 %0 
@@ -415,7 +415,7 @@ entry:
 
 ; Check that MIPS32R6 has the correct offset range.
 ; FIXME: At the moment, we don't seem to do addr+offset for any atomic load/store.
-define i32 @AtomicLoadAdd32_OffGt9Bit(i32 %incr) nounwind {
+define i32 @AtomicLoadAdd32_OffGt9Bit(i32 signext %incr) nounwind {
 entry:
   %0 = atomicrmw add i32* getelementptr(i32* @x, i32 256), i32 %incr monotonic
   ret i32 %0

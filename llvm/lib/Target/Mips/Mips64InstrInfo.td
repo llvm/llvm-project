@@ -419,6 +419,10 @@ defm : SetgePats<GPR64, SLT64, SLTu64>;
 defm : SetgeImmPats<GPR64, SLTi64, SLTiu64>;
 
 // truncate
+def : MipsPat<(trunc (assertsext GPR64:$src)),
+              (EXTRACT_SUBREG GPR64:$src, sub_32)>;
+def : MipsPat<(trunc (assertzext GPR64:$src)),
+              (EXTRACT_SUBREG GPR64:$src, sub_32)>;
 def : MipsPat<(i32 (trunc GPR64:$src)),
               (SLL (EXTRACT_SUBREG GPR64:$src, sub_32), 0)>;
 

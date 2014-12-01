@@ -272,7 +272,7 @@ entry:
 define void @caller2() {
 entry:
 
-; NOODDSPREG-LABEL:  caller2
+; NOODDSPREG-LABEL:  caller2:
 
 ; Check that first 10 arguments are passed in even float registers
 ; f0, f2, ... , f18. Check that 11th argument is passed on stack.
@@ -314,7 +314,7 @@ define fastcc void @callee2(float %a0, float %a1, float %a2, float %a3,
                             float %a8, float %a9, float %a10) {
 entry:
 
-; NOODDSPREG-LABEL:  callee2
+; NOODDSPREG-LABEL:  callee2:
 
 ; NOODDSPREG:        addiu   $sp, $sp, -[[OFFSET:[0-9]+]]
 
@@ -353,7 +353,7 @@ entry:
 define void @caller3() {
 entry:
 
-; FP64-NOODDSPREG-LABEL:  caller3
+; FP64-NOODDSPREG-LABEL:  caller3:
 
 ; Check that first 10 arguments are passed in even float registers
 ; f0, f2, ... , f18. Check that 11th argument is passed on stack.
@@ -395,7 +395,7 @@ define fastcc void @callee3(double %a0, double %a1, double %a2, double %a3,
                             double %a8, double %a9, double %a10) {
 entry:
 
-; FP64-NOODDSPREG-LABEL:  callee3
+; FP64-NOODDSPREG-LABEL:  callee3:
 
 ; FP64-NOODDSPREG:        addiu   $sp, $sp, -[[OFFSET:[0-9]+]]
 

@@ -8,7 +8,7 @@
 
 @g1 = external global i32
 
-define i32 @sel_icmp_nez_i32_z0(i32 %s) nounwind readonly {
+define i32 @sel_icmp_nez_i32_z0(i32 signext %s) nounwind readonly {
 entry:
 ; ALL-LABEL: sel_icmp_nez_i32_z0:
 
@@ -30,7 +30,7 @@ entry:
   ret i32 %cond
 }
 
-define i32 @sel_icmp_nez_i32_z1(i32 %s) nounwind readonly {
+define i32 @sel_icmp_nez_i32_z1(i32 signext %s) nounwind readonly {
 entry:
 ; ALL-LABEL: sel_icmp_nez_i32_z1:
 

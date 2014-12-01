@@ -135,8 +135,8 @@ entry:
 ; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(floats)(
 
 ; The first four arguments are the same in O32/N32/N64.
-; The first argument isn't floating point so floating point registers are not
-; used.
+; The first argument is floating point but soft-float is enabled so floating
+; point registers are not used.
 ; MD00305 and GCC disagree on this one. MD00305 says that floats are treated
 ; as 8-byte aligned and occupy two slots on O32. GCC is treating them as 4-byte
 ; aligned and occupying one slot. We'll use GCC's definition.
@@ -195,7 +195,7 @@ entry:
 ; O32-DAG:           sw $7, 12([[R2]])
 ; NEW-DAG:           sd $5, 8([[R2]])
 
-define void @float_arg2(i8 %a, float %b) nounwind {
+define void @float_arg2(i8 signext %a, float %b) nounwind {
 entry:
         %0 = getelementptr [11 x i8]* @bytes, i32 0, i32 1
         store volatile i8 %a, i8* %0

@@ -8,7 +8,7 @@
 @d2 = external global double
 @d3 = external global double
 
-define i32 @i32_icmp_ne_i32_val(i32 %s, i32 %f0, i32 %f1) nounwind readnone {
+define i32 @i32_icmp_ne_i32_val(i32 signext %s, i32 signext %f0, i32 signext %f1) nounwind readnone {
 entry:
 ; ALL-LABEL: i32_icmp_ne_i32_val:
 
@@ -37,7 +37,7 @@ entry:
   ret i32 %cond
 }
 
-define i64 @i32_icmp_ne_i64_val(i32 %s, i64 %f0, i64 %f1) nounwind readnone {
+define i64 @i32_icmp_ne_i64_val(i32 signext %s, i64 %f0, i64 %f1) nounwind readnone {
 entry:
 ; ALL-LABEL: i32_icmp_ne_i64_val:
 
@@ -128,7 +128,7 @@ entry:
   ret i64 %cond
 }
 
-define float @i32_icmp_ne_f32_val(i32 %s, float %f0, float %f1) nounwind readnone {
+define float @i32_icmp_ne_f32_val(i32 signext %s, float %f0, float %f1) nounwind readnone {
 entry:
 ; ALL-LABEL: i32_icmp_ne_f32_val:
 
@@ -161,7 +161,7 @@ entry:
   ret float %cond
 }
 
-define double @i32_icmp_ne_f64_val(i32 %s, double %f0, double %f1) nounwind readnone {
+define double @i32_icmp_ne_f64_val(i32 signext %s, double %f0, double %f1) nounwind readnone {
 entry:
 ; ALL-LABEL: i32_icmp_ne_f64_val:
 
@@ -496,7 +496,7 @@ entry:
   ret float %cond
 }
 
-define i32 @f32_fcmp_oeq_i32_val(i32 %f0, i32 %f1, float %f2, float %f3) nounwind readnone {
+define i32 @f32_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1, float %f2, float %f3) nounwind readnone {
 entry:
 ; ALL-LABEL: f32_fcmp_oeq_i32_val:
 
@@ -541,7 +541,7 @@ entry:
   ret i32 %cond
 }
 
-define i32 @f32_fcmp_olt_i32_val(i32 %f0, i32 %f1, float %f2, float %f3) nounwind readnone {
+define i32 @f32_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, float %f3) nounwind readnone {
 entry:
 ; ALL-LABEL: f32_fcmp_olt_i32_val:
 
@@ -585,7 +585,7 @@ entry:
   ret i32 %cond
 }
 
-define i32 @f32_fcmp_ogt_i32_val(i32 %f0, i32 %f1, float %f2, float %f3) nounwind readnone {
+define i32 @f32_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, float %f3) nounwind readnone {
 entry:
 ; ALL-LABEL: f32_fcmp_ogt_i32_val:
 
@@ -630,7 +630,7 @@ entry:
   ret i32 %cond
 }
 
-define i32 @f64_fcmp_oeq_i32_val(i32 %f0, i32 %f1) nounwind readonly {
+define i32 @f64_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1) nounwind readonly {
 entry:
 ; ALL-LABEL: f64_fcmp_oeq_i32_val:
 
@@ -707,7 +707,7 @@ entry:
   ret i32 %cond
 }
 
-define i32 @f64_fcmp_olt_i32_val(i32 %f0, i32 %f1) nounwind readonly {
+define i32 @f64_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1) nounwind readonly {
 entry:
 ; ALL-LABEL: f64_fcmp_olt_i32_val:
 
@@ -784,7 +784,7 @@ entry:
   ret i32 %cond
 }
 
-define i32 @f64_fcmp_ogt_i32_val(i32 %f0, i32 %f1) nounwind readonly {
+define i32 @f64_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1) nounwind readonly {
 entry:
 ; ALL-LABEL: f64_fcmp_ogt_i32_val:
 

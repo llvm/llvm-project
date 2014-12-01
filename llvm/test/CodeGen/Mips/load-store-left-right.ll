@@ -47,7 +47,7 @@ entry:
   ret i32 %0
 }
 
-define void @store_SI(i32 %a) nounwind {
+define void @store_SI(i32 signext %a) nounwind {
 entry:
 ; ALL-LABEL: store_SI:
 
@@ -201,7 +201,7 @@ entry:
   ret void
 }
 
-define void @store_SI_trunc_from_i64(i32 %a) nounwind {
+define void @store_SI_trunc_from_i64(i32 signext %a) nounwind {
 entry:
 ; ALL-LABEL: store_SI_trunc_from_i64:
 

@@ -13,7 +13,7 @@
 
 @x = external global i32
 
-define void @test1(i32 %s) {
+define void @test1(i32 signext %s) {
 entry:
   %cmp = icmp eq i32 %s, 0
   br i1 %cmp, label %end, label %then

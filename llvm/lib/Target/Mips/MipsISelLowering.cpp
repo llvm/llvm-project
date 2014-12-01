@@ -2517,6 +2517,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCValAssign &VA = ArgLocs[i];
     MVT ValVT = VA.getValVT(), LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    bool UseUpperBits = false;
 
     // ByVal Arg.
     if (Flags.isByVal()) {
@@ -2538,7 +2539,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // Promote the value if needed.
     switch (VA.getLocInfo()) {
-    default: llvm_unreachable("Unknown loc info!");
+    default:
+      llvm_unreachable("Unknown loc info!");
     case CCValAssign::Full:
       if (VA.isRegLoc()) {
         if ((ValVT == MVT::f32 && LocVT == MVT::i32) ||
@@ -2563,15 +2565,32 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     case CCValAssign::BCvt:
       Arg = DAG.getNode(ISD::BITCAST, DL, LocVT, Arg);
       break;
+    case CCValAssign::SExtUpper:
+      UseUpperBits = true;
+      // Fallthrough
     case CCValAssign::SExt:
       Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, LocVT, Arg);
       break;
+    case CCValAssign::ZExtUpper:
+      UseUpperBits = true;
+      // Fallthrough
     case CCValAssign::ZExt:
       Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, LocVT, Arg);
       break;
+    case CCValAssign::AExtUpper:
+      UseUpperBits = true;
+      // Fallthrough
     case CCValAssign::AExt:
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, LocVT, Arg);
       break;
+    }
+
+    if (UseUpperBits) {
+      unsigned ValSizeInBits = Outs[i].ArgVT.getSizeInBits();
+      unsigned LocSizeInBits = VA.getLocVT().getSizeInBits();
+      Arg = DAG.getNode(
+          ISD::SHL, DL, VA.getLocVT(), Arg,
+          DAG.getConstant(LocSizeInBits - ValSizeInBits, VA.getLocVT()));
     }
 
     // Arguments that can be passed on register must be kept at
@@ -2730,6 +2749,60 @@ SDValue MipsTargetLowering::LowerCallResult(
   return Chain;
 }
 
+static SDValue UnpackFromArgumentSlot(SDValue Val, const CCValAssign &VA,
+                                      EVT ArgVT, SDLoc DL, SelectionDAG &DAG) {
+  MVT LocVT = VA.getLocVT();
+  EVT ValVT = VA.getValVT();
+
+  // Shift into the upper bits if necessary.
+  switch (VA.getLocInfo()) {
+  default:
+    break;
+  case CCValAssign::AExtUpper:
+  case CCValAssign::SExtUpper:
+  case CCValAssign::ZExtUpper: {
+    unsigned ValSizeInBits = ArgVT.getSizeInBits();
+    unsigned LocSizeInBits = VA.getLocVT().getSizeInBits();
+    unsigned Opcode =
+        VA.getLocInfo() == CCValAssign::ZExtUpper ? ISD::SRL : ISD::SRA;
+    Val = DAG.getNode(
+        Opcode, DL, VA.getLocVT(), Val,
+        DAG.getConstant(LocSizeInBits - ValSizeInBits, VA.getLocVT()));
+    break;
+  }
+  }
+
+  // If this is an value smaller than the argument slot size (32-bit for O32,
+  // 64-bit for N32/N64), it has been promoted in some way to the argument slot
+  // size. Extract the value and insert any appropriate assertions regarding
+  // sign/zero extension.
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unknown loc info!");
+  case CCValAssign::Full:
+    break;
+  case CCValAssign::AExtUpper:
+  case CCValAssign::AExt:
+    Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
+    break;
+  case CCValAssign::SExtUpper:
+  case CCValAssign::SExt:
+    Val = DAG.getNode(ISD::AssertSext, DL, LocVT, Val, DAG.getValueType(ValVT));
+    Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
+    break;
+  case CCValAssign::ZExtUpper:
+  case CCValAssign::ZExt:
+    Val = DAG.getNode(ISD::AssertZext, DL, LocVT, Val, DAG.getValueType(ValVT));
+    Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
+    break;
+  case CCValAssign::BCvt:
+    Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
+    break;
+  }
+
+  return Val;
+}
+
 //===----------------------------------------------------------------------===//
 //             Formal Arguments Calling Convention Implementation
 //===----------------------------------------------------------------------===//
@@ -2801,28 +2874,7 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
       unsigned Reg = addLiveIn(DAG.getMachineFunction(), ArgReg, RC);
       SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
-      // If this is an 8 or 16-bit value, it has been passed promoted
-      // to 32 bits.  Insert an assert[sz]ext to capture this, then
-      // truncate to the right size.
-      switch (VA.getLocInfo()) {
-      default:
-        llvm_unreachable("Unknown loc info!");
-      case CCValAssign::Full:
-        break;
-      case CCValAssign::SExt:
-        ArgValue = DAG.getNode(ISD::AssertSext, DL, RegVT, ArgValue,
-                               DAG.getValueType(ValVT));
-        ArgValue = DAG.getNode(ISD::TRUNCATE, DL, ValVT, ArgValue);
-        break;
-      case CCValAssign::ZExt:
-        ArgValue = DAG.getNode(ISD::AssertZext, DL, RegVT, ArgValue,
-                               DAG.getValueType(ValVT));
-        ArgValue = DAG.getNode(ISD::TRUNCATE, DL, ValVT, ArgValue);
-        break;
-      case CCValAssign::BCvt:
-        ArgValue = DAG.getNode(ISD::BITCAST, DL, ValVT, ArgValue);
-        break;
-      }
+      ArgValue = UnpackFromArgumentSlot(ArgValue, VA, Ins[i].ArgVT, DL, DAG);
 
       // Handle floating point arguments passed in integer registers and
       // long double arguments passed in floating point registers.
@@ -2843,21 +2895,34 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
 
       InVals.push_back(ArgValue);
     } else { // VA.isRegLoc()
+      MVT LocVT = VA.getLocVT();
+
+      if (Subtarget.isABI_O32()) {
+        // We ought to be able to use LocVT directly but O32 sets it to i32
+        // when allocating floating point values to integer registers.
+        // This shouldn't influence how we load the value into registers unless
+        // we are targetting softfloat.
+        if (VA.getValVT().isFloatingPoint() && !Subtarget.abiUsesSoftFloat())
+          LocVT = VA.getValVT();
+      }
 
       // sanity check
       assert(VA.isMemLoc());
 
       // The stack pointer offset is relative to the caller stack frame.
-      int FI = MFI->CreateFixedObject(ValVT.getSizeInBits()/8,
+      int FI = MFI->CreateFixedObject(LocVT.getSizeInBits() / 8,
                                       VA.getLocMemOffset(), true);
 
       // Create load nodes to retrieve arguments from the stack
       SDValue FIN = DAG.getFrameIndex(FI, getPointerTy());
-      SDValue Load = DAG.getLoad(ValVT, DL, Chain, FIN,
-                                 MachinePointerInfo::getFixedStack(FI),
-                                 false, false, false, 0);
-      InVals.push_back(Load);
-      OutChains.push_back(Load.getValue(1));
+      SDValue ArgValue = DAG.getLoad(LocVT, DL, Chain, FIN,
+                                     MachinePointerInfo::getFixedStack(FI),
+                                     false, false, false, 0);
+      OutChains.push_back(ArgValue.getValue(1));
+
+      ArgValue = UnpackFromArgumentSlot(ArgValue, VA, Ins[i].ArgVT, DL, DAG);
+
+      InVals.push_back(ArgValue);
     }
   }
 

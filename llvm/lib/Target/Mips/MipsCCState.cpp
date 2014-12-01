@@ -80,9 +80,11 @@ MipsCCState::getSpecialCallingConvForCallee(const SDNode *Callee,
 void MipsCCState::PreAnalyzeCallResultForF128(
     const SmallVectorImpl<ISD::InputArg> &Ins,
     const TargetLowering::CallLoweringInfo &CLI) {
-  for (unsigned i = 0; i < Ins.size(); ++i)
+  for (unsigned i = 0; i < Ins.size(); ++i) {
     OriginalArgWasF128.push_back(
         originalTypeIsF128(CLI.RetTy, CLI.Callee.getNode()));
+    OriginalArgWasFloat.push_back(CLI.RetTy->isFloatingPointTy());
+  }
 }
 
 /// Identify lowered values that originated from f128 arguments and record
@@ -90,9 +92,12 @@ void MipsCCState::PreAnalyzeCallResultForF128(
 void MipsCCState::PreAnalyzeReturnForF128(
     const SmallVectorImpl<ISD::OutputArg> &Outs) {
   const MachineFunction &MF = getMachineFunction();
-  for (unsigned i = 0; i < Outs.size(); ++i)
+  for (unsigned i = 0; i < Outs.size(); ++i) {
     OriginalArgWasF128.push_back(
         originalTypeIsF128(MF.getFunction()->getReturnType(), nullptr));
+    OriginalArgWasFloat.push_back(
+        MF.getFunction()->getReturnType()->isFloatingPointTy());
+  }
 }
 
 /// Identify lowered values that originated from f128 arguments and record
@@ -104,6 +109,8 @@ void MipsCCState::PreAnalyzeCallOperands(
   for (unsigned i = 0; i < Outs.size(); ++i) {
     OriginalArgWasF128.push_back(
         originalTypeIsF128(FuncArgs[Outs[i].OrigArgIndex].Ty, CallNode));
+    OriginalArgWasFloat.push_back(
+        FuncArgs[Outs[i].OrigArgIndex].Ty->isFloatingPointTy());
     CallOperandIsFixed.push_back(Outs[i].IsFixed);
   }
 }
@@ -129,5 +136,6 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
 
     OriginalArgWasF128.push_back(
         originalTypeIsF128(FuncArg->getType(), nullptr));
+    OriginalArgWasFloat.push_back(FuncArg->getType()->isFloatingPointTy());
   }
 }

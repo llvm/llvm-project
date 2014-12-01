@@ -11,7 +11,7 @@ entry:
   ret void
 }
 
-define void @bar(i32 %v, i32* noalias sret %agg.result) nounwind {
+define void @bar(i32 signext %v, i32* noalias sret %agg.result) nounwind {
 entry:
 ; CHECK-LABEL: bar:
 ; CHECK: sw $4, 0($5)

@@ -27,7 +27,7 @@
 @g0 = common global i32 0, align 4
 @g1 = common global i32 0, align 4
 
-define i32 @sdiv1(i32 %a0, i32 %a1) nounwind readnone {
+define i32 @sdiv1(i32 signext %a0, i32 signext %a1) nounwind readnone {
 entry:
 ; ALL-LABEL: sdiv1:
 
@@ -54,7 +54,7 @@ entry:
   ret i32 %div
 }
 
-define i32 @srem1(i32 %a0, i32 %a1) nounwind readnone {
+define i32 @srem1(i32 signext %a0, i32 signext %a1) nounwind readnone {
 entry:
 ; ALL-LABEL: srem1:
 
@@ -81,7 +81,7 @@ entry:
   ret i32 %rem
 }
 
-define i32 @udiv1(i32 %a0, i32 %a1) nounwind readnone {
+define i32 @udiv1(i32 zeroext %a0, i32 zeroext %a1) nounwind readnone {
 entry:
 ; ALL-LABEL: udiv1:
 
@@ -107,7 +107,7 @@ entry:
   ret i32 %div
 }
 
-define i32 @urem1(i32 %a0, i32 %a1) nounwind readnone {
+define i32 @urem1(i32 zeroext %a0, i32 zeroext %a1) nounwind readnone {
 entry:
 ; ALL-LABEL: urem1:
 
@@ -134,7 +134,7 @@ entry:
   ret i32 %rem
 }
 
-define i32 @sdivrem1(i32 %a0, i32 %a1, i32* nocapture %r) nounwind {
+define i32 @sdivrem1(i32 signext %a0, i32 signext %a1, i32* nocapture %r) nounwind {
 entry:
 ; ALL-LABEL: sdivrem1:
 
@@ -175,7 +175,7 @@ entry:
   ret i32 %div
 }
 
-define i32 @udivrem1(i32 %a0, i32 %a1, i32* nocapture %r) nounwind {
+define i32 @udivrem1(i32 zeroext %a0, i32 zeroext %a1, i32* nocapture %r) nounwind {
 entry:
 ; ALL-LABEL: udivrem1:
 
