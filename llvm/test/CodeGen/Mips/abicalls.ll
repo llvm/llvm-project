@@ -1,16 +1,11 @@
-; 
-; When the assembler is ready a .s file for it will
-; be created.
+; RUN: llc -filetype=asm -mtriple mipsel-unknown-linux -mcpu=mips32 -relocation-model=static %s -o - | FileCheck -check-prefix=ABICALLS -check-prefix=STATIC %s
+; RUN: llc -filetype=asm -mtriple mipsel-unknown-linux -mcpu=mips32 %s -o - | FileCheck -check-prefix=ABICALLS -check-prefix=PIC %s
+; RUN: llc -filetype=asm -mtriple mips64el-unknown-linux -mcpu=mips4 -relocation-model=static %s -o - | FileCheck -check-prefix=ABICALLS -check-prefix=PIC %s
+; RUN: llc -filetype=asm -mtriple mips64el-unknown-linux -mcpu=mips64 -relocation-model=static %s -o - | FileCheck -check-prefix=ABICALLS -check-prefix=PIC %s
 
-; Note that EF_MIPS_CPIC is set by -mabicalls which is the default on Linux
-; TODO need to support -mno-abicalls
+; RUN: llc -filetype=asm -mtriple mipsel-unknown-linux -mcpu=mips32 -mattr noabicalls -relocation-model=static %s -o - | FileCheck -implicit-check-not='.abicalls' -implicit-check-not='pic0' %s
 
-; RUN: llc -filetype=asm -mtriple mipsel-unknown-linux -mcpu=mips32 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-STATIC %s
-; RUN: llc -filetype=asm -mtriple mipsel-unknown-linux -mcpu=mips32 %s -o - | FileCheck -check-prefix=CHECK-PIC %s
-; RUN: llc -filetype=asm -mtriple mips64el-unknown-linux -mcpu=mips4 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-PIC %s
-; RUN: llc -filetype=asm -mtriple mips64el-unknown-linux -mcpu=mips64 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-PIC %s
+; ABICALLS: .abicalls
 
-; CHECK-STATIC: .abicalls
-; CHECK-STATIC-NEXT: pic0
-; CHECK-PIC: .abicalls
-; CHECK-PIC-NOT: pic0
+; STATIC: pic0
+; PIC-NOT: pic0

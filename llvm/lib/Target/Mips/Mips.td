@@ -57,8 +57,8 @@ def MipsInstrInfo : InstrInfo;
 // Mips Subtarget features                                                    //
 //===----------------------------------------------------------------------===//
 
-def FeatureABICalls    : SubtargetFeature<"abicalls", "IsABICalls", "true",
-                                "SVR4-style position-independent code.">;
+def FeatureNoABICalls  : SubtargetFeature<"noabicalls", "NoABICalls", "true",
+                                "Disable SVR4-style position-independent code.">;
 def FeatureGP64Bit     : SubtargetFeature<"gp64", "IsGP64bit", "true",
                                 "General Purpose Registers are 64-bit wide.">;
 def FeatureFP64Bit     : SubtargetFeature<"fp64", "IsFP64bit", "true",

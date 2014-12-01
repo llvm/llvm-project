@@ -107,7 +107,7 @@ MipsSubtarget::MipsSubtarget(const std::string &TT, const std::string &CPU,
                              MipsTargetMachine *_TM)
     : MipsGenSubtargetInfo(TT, CPU, FS), MipsArchVersion(Mips32),
       MipsABI(UnknownABI), IsLittle(little), IsSingleFloat(false),
-      IsFPXX(false), IsABICalls(true), IsFP64bit(false), UseOddSPReg(true),
+      IsFPXX(false), NoABICalls(false), IsFP64bit(false), UseOddSPReg(true),
       IsNaN2008bit(false), IsGP64bit(false), HasVFPU(false), HasCnMips(false),
       IsLinux(true), HasMips3_32(false), HasMips3_32r2(false),
       HasMips4_32(false), HasMips4_32r2(false), HasMips5_32r2(false),
