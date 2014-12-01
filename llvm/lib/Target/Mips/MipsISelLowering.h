@@ -344,15 +344,10 @@ namespace llvm {
     /// arguments and inquire about calling convention information.
     class MipsCC {
     public:
-      enum SpecialCallingConvType {
-        Mips16RetHelperConv, NoSpecialCallingConv
-      };
-
       MipsCC(CallingConv::ID CallConv, const MipsSubtarget &Subtarget,
              CCState &Info);
 
       void analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               const SDNode *CallNode,
                                std::vector<ArgListEntry> &FuncArgs,
                                CCState &State);
 
@@ -370,8 +365,6 @@ namespace llvm {
       /// Otherwise, it just returns VT.
       MVT getRegVT(MVT VT, const Type *OrigTy, const SDNode *CallNode,
                    bool IsSoftFloat) const;
-
-      SpecialCallingConvType getSpecialCallingConv(const SDNode *Callee) const;
 
       CallingConv::ID CallConv;
       const MipsSubtarget &Subtarget;

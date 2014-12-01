@@ -295,7 +295,20 @@ def CC_Mips_ByVal : CallingConv<[
   CCIfByVal<CCPassByVal<8, 8>>
 ]>;
 
+def CC_Mips16RetHelper : CallingConv<[
+  CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
+
+  // Integer arguments are passed in integer registers.
+  CCIfType<[i32], CCAssignToReg<[V0, V1, A0, A1]>>
+]>;
+
 def CC_Mips_FixedArg : CallingConv<[
+  // Mips16 needs special handling on some functions.
+  CCIf<"State.getCallingConv() != CallingConv::Fast",
+      CCIf<"static_cast<MipsCCState *>(&State)->getSpecialCallingConv() == "
+               "MipsCCState::Mips16RetHelperConv",
+           CCDelegateTo<CC_Mips16RetHelper>>>,
+
   CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
 
   // f128 needs to be handled similarly to f32 and f64 on hard-float. However,
@@ -328,15 +341,6 @@ def CC_Mips_VarArg : CallingConv<[
   //        that it's the same as CC_MipsN_VarArg
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
   CCDelegateTo<CC_MipsN_VarArg>
-]>;
-
-//==
-
-def CC_Mips16RetHelper : CallingConv<[
-  CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
-
-  // Integer arguments are passed in integer registers.
-  CCIfType<[i32], CCAssignToReg<[V0, V1, A0, A1]>>
 ]>;
 
 //===----------------------------------------------------------------------===//

@@ -74,6 +74,27 @@ static bool originalTypeIsF128(const Type *Ty, const SDNode *CallNode);
 
 namespace {
 class MipsCCState : public CCState {
+public:
+  enum SpecialCallingConvType { Mips16RetHelperConv, NoSpecialCallingConv };
+
+  /// Determine the SpecialCallingConvType for the given callee
+  static SpecialCallingConvType
+  getSpecialCallingConvForCallee(const SDNode *Callee,
+                                 const MipsSubtarget &Subtarget) {
+    SpecialCallingConvType SpecialCallingConv = NoSpecialCallingConv;
+    if (Subtarget.inMips16HardFloat()) {
+      if (const GlobalAddressSDNode *G =
+              dyn_cast<const GlobalAddressSDNode>(Callee)) {
+        llvm::StringRef Sym = G->getGlobal()->getName();
+        Function *F = G->getGlobal()->getParent()->getFunction(Sym);
+        if (F && F->hasFnAttribute("__Mips16RetHelper")) {
+          SpecialCallingConv = Mips16RetHelperConv;
+        }
+      }
+    }
+    return SpecialCallingConv;
+  }
+
 private:
   /// Identify lowered values that originated from f128 arguments and record
   /// this for use by RetCC_MipsN.
@@ -130,6 +151,10 @@ private:
   /// Records whether the value has been lowered from an f128.
   SmallVector<bool, 4> OriginalArgWasF128;
 
+  // Used to handle MIPS16-specific calling convention tweaks.
+  // FIXME: This should probably be a fully fledged calling convention.
+  SpecialCallingConvType SpecialCallingConv;
+
 public:
   // FIXME: Remove this from a public inteface ASAP. It's a temporary trap door
   //        to allow analyzeCallOperands to be removed incrementally.
@@ -143,8 +168,10 @@ public:
   void ClearOriginalArgWasF128() { OriginalArgWasF128.clear(); }
 
   MipsCCState(CallingConv::ID CC, bool isVarArg, MachineFunction &MF,
-              const TargetMachine &TM, SmallVectorImpl<CCValAssign> &locs, LLVMContext &C)
-      : CCState(CC, isVarArg, MF, TM, locs, C) {}
+              const TargetMachine &TM, SmallVectorImpl<CCValAssign> &locs,
+              LLVMContext &C,
+              SpecialCallingConvType SpecialCC = NoSpecialCallingConv)
+      : CCState(CC, isVarArg, MF, TM, locs, C), SpecialCallingConv(SpecialCC) {}
 
   void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                               CCAssignFn Fn) {
@@ -177,6 +204,7 @@ public:
   }
 
   bool WasOriginalArgF128(unsigned ValNo) { return OriginalArgWasF128[ValNo]; }
+  SpecialCallingConvType getSpecialCallingConv() { return SpecialCallingConv; }
 };
 }
 
@@ -2582,12 +2610,14 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  MipsCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
-                     getTargetMachine(), ArgLocs, *DAG.getContext());
+  MipsCCState CCInfo(
+      CallConv, IsVarArg, DAG.getMachineFunction(),
+      getTargetMachine(), ArgLocs, *DAG.getContext(),
+      MipsCCState::getSpecialCallingConvForCallee(Callee.getNode(), Subtarget));
   MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
   CCInfo.PreAnalyzeCallOperandsForF128_(Outs, CLI.getArgs(), Callee.getNode());
-  MipsCCInfo.analyzeCallOperands(Outs, Callee.getNode(), CLI.getArgs(), CCInfo);
+  MipsCCInfo.analyzeCallOperands(Outs, CLI.getArgs(), CCInfo);
   CCInfo.ClearOriginalArgWasF128();
 
   // Get a count of how many bytes are to be pushed on the stack.
@@ -3561,23 +3591,6 @@ static bool originalTypeIsF128(const Type *Ty, const SDNode *CallNode) {
   return (ES && Ty->isIntegerTy(128) && isF128SoftLibCall(ES->getSymbol()));
 }
 
-MipsTargetLowering::MipsCC::SpecialCallingConvType
-MipsTargetLowering::MipsCC::getSpecialCallingConv(const SDNode *Callee) const {
-  MipsCC::SpecialCallingConvType SpecialCallingConv =
-    MipsCC::NoSpecialCallingConv;
-  if (Subtarget.inMips16HardFloat()) {
-    if (const GlobalAddressSDNode *G =
-            dyn_cast<const GlobalAddressSDNode>(Callee)) {
-      llvm::StringRef Sym = G->getGlobal()->getName();
-      Function *F = G->getGlobal()->getParent()->getFunction(Sym);
-      if (F && F->hasFnAttribute("__Mips16RetHelper")) {
-        SpecialCallingConv = MipsCC::Mips16RetHelperConv;
-      }
-    }
-  }
-  return SpecialCallingConv;
-}
-
 MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
                                    const MipsSubtarget &Subtarget_,
                                    CCState &Info)
@@ -3587,18 +3600,12 @@ MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
 }
 
 void MipsTargetLowering::MipsCC::analyzeCallOperands(
-    const SmallVectorImpl<ISD::OutputArg> &Args, const SDNode *CallNode,
+    const SmallVectorImpl<ISD::OutputArg> &Args,
     std::vector<ArgListEntry> &FuncArgs, CCState &State) {
-  MipsCC::SpecialCallingConvType SpecialCallingConv =
-      getSpecialCallingConv(CallNode);
   assert((CallConv != CallingConv::Fast || !State.isVarArg()) &&
          "CallingConv::Fast shouldn't be used for vararg functions.");
 
   unsigned NumOpnds = Args.size();
-  llvm::CCAssignFn *FixedFn = CC_Mips_FixedArg;
-  if (CallConv != CallingConv::Fast &&
-      SpecialCallingConv == Mips16RetHelperConv)
-    FixedFn = CC_Mips16RetHelper;
 
   for (unsigned I = 0; I != NumOpnds; ++I) {
     MVT ArgVT = Args[I].VT;
@@ -3608,7 +3615,7 @@ void MipsTargetLowering::MipsCC::analyzeCallOperands(
     if (State.isVarArg() && !Args[I].IsFixed)
       R = CC_Mips_VarArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
     else
-      R = FixedFn(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
+      R = CC_Mips_FixedArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
 
     if (R) {
 #ifndef NDEBUG
