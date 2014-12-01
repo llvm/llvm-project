@@ -341,17 +341,6 @@ namespace llvm {
                 bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
                 CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const;
 
-    /// MipsCC - This class provides methods used to analyze formal and call
-    /// arguments and inquire about calling convention information.
-    class MipsCC {
-    public:
-      MipsCC(CallingConv::ID CallConv, const MipsSubtarget &Subtarget,
-             CCState &Info);
-
-    private:
-      CallingConv::ID CallConv;
-      const MipsSubtarget &Subtarget;
-    };
   protected:
     SDValue lowerLOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSTORE(SDValue Op, SelectionDAG &DAG) const;
@@ -425,25 +414,24 @@ namespace llvm {
     void copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
                        SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
                        SmallVectorImpl<SDValue> &InVals,
-                       const Argument *FuncArg, const MipsCC &CC,
-                       unsigned FirstReg, unsigned LastReg,
-                       const CCValAssign &VA, MipsCCState &State) const;
+                       const Argument *FuncArg, unsigned FirstReg,
+                       unsigned LastReg, const CCValAssign &VA,
+                       MipsCCState &State) const;
 
     /// passByValArg - Pass a byval argument in registers or on stack.
     void passByValArg(SDValue Chain, SDLoc DL,
                       std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
                       SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
                       MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg,
-                      const MipsCC &CC, unsigned FirstReg, unsigned LastReg,
+                      unsigned FirstReg, unsigned LastReg,
                       const ISD::ArgFlagsTy &Flags, bool isLittle,
                       const CCValAssign &VA) const;
 
     /// writeVarArgRegs - Write variable function arguments passed in registers
     /// to the stack. Also create a stack frame object for the first variable
     /// argument.
-    void writeVarArgRegs(std::vector<SDValue> &OutChains, const MipsCC &CC,
-                         SDValue Chain, SDLoc DL, SelectionDAG &DAG,
-                         CCState &State) const;
+    void writeVarArgRegs(std::vector<SDValue> &OutChains, SDValue Chain,
+                         SDLoc DL, SelectionDAG &DAG, CCState &State) const;
 
     SDValue
       LowerFormalArguments(SDValue Chain,

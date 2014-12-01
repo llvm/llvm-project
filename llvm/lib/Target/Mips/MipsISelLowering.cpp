@@ -2468,7 +2468,11 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       CallConv, IsVarArg, DAG.getMachineFunction(),
       getTargetMachine(), ArgLocs, *DAG.getContext(),
       MipsCCState::getSpecialCallingConvForCallee(Callee.getNode(), Subtarget));
-  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
+
+  // Allocate the reserved argument area. It seems strange to do this from the
+  // caller side but removing it breaks the frame size calculation.
+  const MipsABIInfo &ABI = Subtarget.getABI();
+  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(CallConv), 1);
 
   CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs(), Callee.getNode());
 
@@ -2526,8 +2530,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       assert(!IsTailCall &&
              "Do not tail-call optimize if there is a byval argument.");
       passByValArg(Chain, DL, RegsToPass, MemOpChains, StackPtr, MFI, DAG, Arg,
-                   MipsCCInfo, FirstByValReg, LastByValReg, Flags,
-                   Subtarget.isLittle(), VA);
+                   FirstByValReg, LastByValReg, Flags, Subtarget.isLittle(),
+                   VA);
       CCInfo.nextInRegsParam();
       continue;
     }
@@ -2752,7 +2756,8 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
   SmallVector<CCValAssign, 16> ArgLocs;
   MipsCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
                      getTargetMachine(), ArgLocs, *DAG.getContext());
-  MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
+  const MipsABIInfo &ABI = Subtarget.getABI();
+  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(CallConv), 1);
   Function::const_arg_iterator FuncArg =
     DAG.getMachineFunction().getFunction()->arg_begin();
 
@@ -2780,7 +2785,7 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
              "ByVal args of size 0 should have been ignored by front-end.");
       assert(ByValIdx < CCInfo.getInRegsParamsCount());
       copyByValRegs(Chain, DL, OutChains, DAG, Flags, InVals, &*FuncArg,
-                    MipsCCInfo, FirstByValReg, LastByValReg, VA, CCInfo);
+                    FirstByValReg, LastByValReg, VA, CCInfo);
       CCInfo.nextInRegsParam();
       continue;
     }
@@ -2874,7 +2879,7 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
   }
 
   if (IsVarArg)
-    writeVarArgRegs(OutChains, MipsCCInfo, Chain, DL, DAG, CCInfo);
+    writeVarArgRegs(OutChains, Chain, DL, DAG, CCInfo);
 
   // All stores are grouped in one node to allow the matching between
   // the size of Ins and InVals. This only happens when on varg functions
@@ -3399,19 +3404,11 @@ unsigned MipsTargetLowering::getJumpTableEncoding() const {
   return TargetLowering::getJumpTableEncoding();
 }
 
-MipsTargetLowering::MipsCC::MipsCC(CallingConv::ID CC,
-                                   const MipsSubtarget &Subtarget_,
-                                   CCState &Info)
-    : CallConv(CC), Subtarget(Subtarget_) {
-  // Pre-allocate reserved argument area.
-  Info.AllocateStack(Subtarget.getABI().GetCalleeAllocdArgSizeInBytes(CC), 1);
-}
-
 void MipsTargetLowering::copyByValRegs(
     SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains, SelectionDAG &DAG,
     const ISD::ArgFlagsTy &Flags, SmallVectorImpl<SDValue> &InVals,
-    const Argument *FuncArg, const MipsCC &CC, unsigned FirstReg,
-    unsigned LastReg, const CCValAssign &VA, MipsCCState &State) const {
+    const Argument *FuncArg, unsigned FirstReg, unsigned LastReg,
+    const CCValAssign &VA, MipsCCState &State) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
@@ -3460,9 +3457,9 @@ void MipsTargetLowering::passByValArg(
     SDValue Chain, SDLoc DL,
     std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
     SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
-    MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg, const MipsCC &CC,
-    unsigned FirstReg, unsigned LastReg, const ISD::ArgFlagsTy &Flags,
-    bool isLittle, const CCValAssign &VA) const {
+    MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg, unsigned FirstReg,
+    unsigned LastReg, const ISD::ArgFlagsTy &Flags, bool isLittle,
+    const CCValAssign &VA) const {
   unsigned ByValSizeInBytes = Flags.getByValSize();
   unsigned OffsetInBytes = 0; // From beginning of struct
   unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
@@ -3550,8 +3547,8 @@ void MipsTargetLowering::passByValArg(
 }
 
 void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
-                                         const MipsCC &CC, SDValue Chain,
-                                         SDLoc DL, SelectionDAG &DAG,
+                                         SDValue Chain, SDLoc DL,
+                                         SelectionDAG &DAG,
                                          CCState &State) const {
   const ArrayRef<MCPhysReg> ArgRegs = Subtarget.getABI().GetVarArgRegs();
   unsigned Idx = State.getFirstUnallocated(ArgRegs.data(), ArgRegs.size());
