@@ -56,15 +56,6 @@ EnableMipsFastISel("mips-fast-isel", cl::Hidden,
   cl::desc("Allow mips-fast-isel to be used"),
   cl::init(false));
 
-static const MCPhysReg O32IntRegs[4] = {
-  Mips::A0, Mips::A1, Mips::A2, Mips::A3
-};
-
-static const MCPhysReg Mips64IntRegs[8] = {
-  Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64,
-  Mips::T0_64, Mips::T1_64, Mips::T2_64, Mips::T3_64
-};
-
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
   Mips::D16_64, Mips::D17_64, Mips::D18_64, Mips::D19_64
