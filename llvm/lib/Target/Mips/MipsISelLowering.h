@@ -365,7 +365,6 @@ namespace llvm {
                                CCState &State);
       void analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                                   bool IsSoftFloat,
-                                  Function::const_arg_iterator FuncArg,
                                   CCState &State);
 
       /// hasByValArg - Returns true if function has byval arguments.

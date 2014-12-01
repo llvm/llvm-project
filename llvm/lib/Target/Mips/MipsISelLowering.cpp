@@ -94,10 +94,52 @@ private:
           originalTypeIsF128(MF.getFunction()->getReturnType(), nullptr));
   }
 
+  /// Identify lowered values that originated from f128 arguments and record
+  /// this.
+  void PreAnalyzeCallOperandsForF128(
+      const SmallVectorImpl<ISD::OutputArg> &Outs,
+      std::vector<TargetLowering::ArgListEntry> &FuncArgs, SDNode *CallNode) {
+    const MachineFunction &MF = getMachineFunction();
+    for (unsigned i = 0; i < Outs.size(); ++i)
+      OriginalArgWasF128.push_back(
+          originalTypeIsF128(FuncArgs[Outs[i].OrigArgIndex].Ty, CallNode));
+  }
+
+  /// Identify lowered values that originated from f128 arguments and record
+  /// this.
+  void
+  PreAnalyzeFormalArgumentsForF128(const SmallVectorImpl<ISD::InputArg> &Ins) {
+    const MachineFunction &MF = getMachineFunction();
+    for (unsigned i = 0; i < Ins.size(); ++i) {
+      Function::const_arg_iterator FuncArg = MF.getFunction()->arg_begin();
+      std::advance(FuncArg, Ins[i].OrigArgIndex);
+
+      OriginalArgWasF128.push_back(
+          originalTypeIsF128(FuncArg->getType(), nullptr));
+    }
+  }
+
   /// Records whether the value has been lowered from an f128.
   SmallVector<bool, 4> OriginalArgWasF128;
 
 public:
+  // FIXME: Remove this from a public inteface ASAP. It's a temporary trap door
+  //        to allow analyzeCallOperands to be removed incrementally.
+  void PreAnalyzeCallOperandsForF128_(
+      const SmallVectorImpl<ISD::OutputArg> &Outs,
+      std::vector<TargetLowering::ArgListEntry> &FuncArgs, SDNode *CallNode) {
+    PreAnalyzeCallOperandsForF128(Outs, FuncArgs, CallNode);
+  }
+  // FIXME: Remove this from a public inteface ASAP. It's a temporary trap door
+  //        to allow analyzeFormalArguments to be removed incrementally.
+  void
+  PreAnalyzeFormalArgumentsForF128_(const SmallVectorImpl<ISD::InputArg> &Ins) {
+    PreAnalyzeFormalArgumentsForF128(Ins);
+  }
+  // FIXME: Remove this from a public inteface ASAP. It's a temporary trap door
+  //        to clean up after the above functions.
+  void ClearOriginalArgWasF128() { OriginalArgWasF128.clear(); }
+
   MipsCCState(CallingConv::ID CC, bool isVarArg, MachineFunction &MF,
               const TargetMachine &TM, SmallVectorImpl<CCValAssign> &locs, LLVMContext &C)
       : CCState(CC, isVarArg, MF, TM, locs, C) {}
@@ -2531,12 +2573,14 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
-                 getTargetMachine(), ArgLocs, *DAG.getContext());
+  MipsCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
+                     getTargetMachine(), ArgLocs, *DAG.getContext());
   MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
 
+  CCInfo.PreAnalyzeCallOperandsForF128_(Outs, CLI.getArgs(), Callee.getNode());
   MipsCCInfo.analyzeCallOperands(Outs, IsVarArg, Subtarget.abiUsesSoftFloat(),
                                  Callee.getNode(), CLI.getArgs(), CCInfo);
+  CCInfo.ClearOriginalArgWasF128();
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
@@ -2616,6 +2660,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           continue;
         }
       }
+      break;
+    case CCValAssign::BCvt:
+      Arg = DAG.getNode(ISD::BITCAST, DL, LocVT, Arg);
       break;
     case CCValAssign::SExt:
       Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, LocVT, Arg);
@@ -2808,14 +2855,16 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
-                 getTargetMachine(), ArgLocs, *DAG.getContext());
+  MipsCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
+                     getTargetMachine(), ArgLocs, *DAG.getContext());
   MipsCC MipsCCInfo(CallConv, Subtarget, CCInfo);
   Function::const_arg_iterator FuncArg =
     DAG.getMachineFunction().getFunction()->arg_begin();
   bool UseSoftFloat = Subtarget.abiUsesSoftFloat();
 
-  MipsCCInfo.analyzeFormalArguments(Ins, UseSoftFloat, FuncArg, CCInfo);
+  CCInfo.PreAnalyzeFormalArgumentsForF128_(Ins);
+  MipsCCInfo.analyzeFormalArguments(Ins, UseSoftFloat, CCInfo);
+  CCInfo.ClearOriginalArgWasF128();
   MipsFI->setFormalArgInfo(CCInfo.getNextStackOffset(),
                            MipsCCInfo.hasByValArg());
 
@@ -2854,16 +2903,24 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
       // If this is an 8 or 16-bit value, it has been passed promoted
       // to 32 bits.  Insert an assert[sz]ext to capture this, then
       // truncate to the right size.
-      if (VA.getLocInfo() != CCValAssign::Full) {
-        unsigned Opcode = 0;
-        if (VA.getLocInfo() == CCValAssign::SExt)
-          Opcode = ISD::AssertSext;
-        else if (VA.getLocInfo() == CCValAssign::ZExt)
-          Opcode = ISD::AssertZext;
-        if (Opcode)
-          ArgValue = DAG.getNode(Opcode, DL, RegVT, ArgValue,
-                                 DAG.getValueType(ValVT));
+      switch (VA.getLocInfo()) {
+      default:
+        llvm_unreachable("Unknown loc info!");
+      case CCValAssign::Full:
+        break;
+      case CCValAssign::SExt:
+        ArgValue = DAG.getNode(ISD::AssertSext, DL, RegVT, ArgValue,
+                               DAG.getValueType(ValVT));
         ArgValue = DAG.getNode(ISD::TRUNCATE, DL, ValVT, ArgValue);
+        break;
+      case CCValAssign::ZExt:
+        ArgValue = DAG.getNode(ISD::AssertZext, DL, RegVT, ArgValue,
+                               DAG.getValueType(ValVT));
+        ArgValue = DAG.getNode(ISD::TRUNCATE, DL, ValVT, ArgValue);
+        break;
+      case CCValAssign::BCvt:
+        ArgValue = DAG.getNode(ISD::BITCAST, DL, ValVT, ArgValue);
+        break;
       }
 
       // Handle floating point arguments passed in integer registers and
@@ -3543,11 +3600,8 @@ void MipsTargetLowering::MipsCC::analyzeCallOperands(
 
     if (IsVarArg && !Args[I].IsFixed)
       R = CC_Mips_VarArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
-    else {
-      MVT RegVT = getRegVT(ArgVT, FuncArgs[Args[I].OrigArgIndex].Ty, CallNode,
-                           IsSoftFloat);
-      R = FixedFn(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, State);
-    }
+    else
+      R = FixedFn(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
 
     if (R) {
 #ifndef NDEBUG
@@ -3561,24 +3615,19 @@ void MipsTargetLowering::MipsCC::analyzeCallOperands(
 
 void MipsTargetLowering::MipsCC::analyzeFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Args, bool IsSoftFloat,
-    Function::const_arg_iterator FuncArg, CCState &State) {
+    CCState &State) {
   unsigned NumArgs = Args.size();
-  unsigned CurArgIdx = 0;
 
   for (unsigned I = 0; I != NumArgs; ++I) {
     MVT ArgVT = Args[I].VT;
     ISD::ArgFlagsTy ArgFlags = Args[I].Flags;
-    std::advance(FuncArg, Args[I].OrigArgIndex - CurArgIdx);
-    CurArgIdx = Args[I].OrigArgIndex;
 
     if (ArgFlags.isByVal()) {
       handleByValArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State);
       continue;
     }
 
-    MVT RegVT = getRegVT(ArgVT, FuncArg->getType(), nullptr, IsSoftFloat);
-
-    if (!CC_Mips_FixedArg(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, State))
+    if (!CC_Mips_FixedArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, State))
       continue;
 
 #ifndef NDEBUG
