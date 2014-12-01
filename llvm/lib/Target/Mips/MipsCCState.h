@@ -82,10 +82,10 @@ public:
   // provide a means of accessing ArgListEntry::IsFixed. Delete them from this
   // class. This doesn't stop them being used via the base class though.
   void AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                           CCAssignFn Fn) = delete;
+                           CCAssignFn Fn) LLVM_DELETED_FUNCTION;
   void AnalyzeCallOperands(const SmallVectorImpl<MVT> &Outs,
                            SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
-                           CCAssignFn Fn) = delete;
+                           CCAssignFn Fn) LLVM_DELETED_FUNCTION;
 
   void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                               CCAssignFn Fn) {
