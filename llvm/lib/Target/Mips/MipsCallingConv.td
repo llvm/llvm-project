@@ -10,8 +10,15 @@
 //===----------------------------------------------------------------------===//
 
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
-class CCIfSubtarget<string F, CCAction A>:
-  CCIf<!strconcat("State.getTarget().getSubtarget<MipsSubtarget>().", F), A>;
+class CCIfSubtarget<string F, CCAction A, string Invert = "">
+    : CCIf<!strconcat(Invert,
+                      "State.getMachineFunction().getTarget()."
+                          "getSubtarget<const MipsSubtarget>().",
+                      F),
+           A>;
+
+// The inverse of CCIfSubtarget
+class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
 //===----------------------------------------------------------------------===//
 // Mips O32 Calling Convention
@@ -29,7 +36,7 @@ def RetCC_MipsO32 : CallingConv<[
   // f64 arguments are returned in D0_64 and D2_64 in FP64bit mode or
   // in D0 and D1 in FP32bit mode.
   CCIfType<[f64], CCIfSubtarget<"isFP64bit()", CCAssignToReg<[D0_64, D2_64]>>>,
-  CCIfType<[f64], CCIfSubtarget<"isNotFP64bit()", CCAssignToReg<[D0, D1]>>>
+  CCIfType<[f64], CCIfSubtargetNot<"isFP64bit()", CCAssignToReg<[D0, D1]>>>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -119,11 +126,11 @@ def CC_MipsEABI : CallingConv<[
   CCIfType<[f32], CCIfSubtarget<"isSingleFloat()",
                   CCAssignToReg<[F12, F13, F14, F15, F16, F17, F18, F19]>>>,
 
-  CCIfType<[f32], CCIfSubtarget<"isNotSingleFloat()",
+  CCIfType<[f32], CCIfSubtargetNot<"isSingleFloat()",
                   CCAssignToReg<[F12, F14, F16, F18]>>>,
 
   // The first 4 double fp arguments are passed in single fp registers.
-  CCIfType<[f64], CCIfSubtarget<"isNotSingleFloat()",
+  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()",
                   CCAssignToReg<[D6, D7, D8, D9]>>>,
 
   // Integer values get stored in stack slots that are 4 bytes in
@@ -132,7 +139,7 @@ def CC_MipsEABI : CallingConv<[
 
   // Integer values get stored in stack slots that are 8 bytes in
   // size and 8-byte aligned.
-  CCIfType<[f64], CCIfSubtarget<"isNotSingleFloat()", CCAssignToStack<8, 8>>>
+  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()", CCAssignToStack<8, 8>>>
 ]>;
 
 def RetCC_MipsEABI : CallingConv<[
@@ -143,7 +150,7 @@ def RetCC_MipsEABI : CallingConv<[
   CCIfType<[f32], CCAssignToReg<[F0, F1]>>,
 
   // f64 are returned in register D0
-  CCIfType<[f64], CCIfSubtarget<"isNotSingleFloat()", CCAssignToReg<[D0]>>>
+  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()", CCAssignToReg<[D0]>>>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -151,9 +158,9 @@ def RetCC_MipsEABI : CallingConv<[
 //===----------------------------------------------------------------------===//
 def CC_MipsO32_FastCC : CallingConv<[
   // f64 arguments are passed in double-precision floating pointer registers.
-  CCIfType<[f64], CCIfSubtarget<"isNotFP64bit()",
-                                CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7,
-                                               D8, D9]>>>,
+  CCIfType<[f64], CCIfSubtargetNot<"isFP64bit()",
+                                   CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6,
+                                                  D7, D8, D9]>>>,
   CCIfType<[f64], CCIfSubtarget<"isFP64bit()", CCIfSubtarget<"useOddSPReg()",
                                 CCAssignToReg<[D0_64, D1_64, D2_64, D3_64,
                                                D4_64, D5_64, D6_64, D7_64,
@@ -196,7 +203,7 @@ def CC_Mips_FastCC : CallingConv<[
 
   // Integer arguments are passed in integer registers. All scratch registers,
   // except for AT, V0 and T9, are available to be used as argument registers.
-  CCIfType<[i32], CCIfSubtarget<"isNotTargetNaCl()",
+  CCIfType<[i32], CCIfSubtargetNot<"isTargetNaCl()",
       CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>>,
 
   // In NaCl, T6, T7 and T8 are reserved and not available as argument
