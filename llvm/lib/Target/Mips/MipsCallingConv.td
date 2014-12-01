@@ -105,10 +105,25 @@ def RetCC_MipsN : CallingConv<[
   CCIfType<[f64], CCAssignToReg<[D0_64, D2_64]>>
 ]>;
 
-// In soft-mode, register A0_64, instead of V1_64, is used to return a long
-// double value.
-def RetCC_F128Soft : CallingConv<[
-  CCIfType<[i64], CCAssignToReg<[V0_64, A0_64]>>
+// For soft-float, f128 values are returned in A0_64 rather than V1_64.
+def RetCC_F128SoftFloat : CallingConv<[
+  CCAssignToReg<[V0_64, A0_64]>
+]>;
+
+// For hard-float, f128 values are returned as a pair of f64's rather than a
+// pair of i64's.
+def RetCC_F128HardFloat : CallingConv<[
+  CCBitConvertToType<f64>,
+  CCAssignToReg<[D0_64, D2_64]>
+]>;
+
+// Handle F128 specially since we can't identify the original type during the
+// tablegen-erated code.
+def RetCC_F128 : CallingConv<[
+  CCIfSubtarget<"abiUsesSoftFloat()",
+      CCIfType<[i64], CCDelegateTo<RetCC_F128SoftFloat>>>,
+  CCIfSubtargetNot<"abiUsesSoftFloat()",
+      CCIfType<[i64], CCDelegateTo<RetCC_F128HardFloat>>>
 ]>;
 
 //===----------------------------------------------------------------------===//

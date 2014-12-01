@@ -367,13 +367,6 @@ namespace llvm {
                                   bool IsSoftFloat,
                                   Function::const_arg_iterator FuncArg);
 
-      void analyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
-                             bool IsSoftFloat, const SDNode *CallNode,
-                             const Type *RetTy) const;
-
-      void analyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         bool IsSoftFloat, const Type *RetTy) const;
-
       const CCState &getCCInfo() const { return CCInfo; }
 
       /// hasByValArg - Returns true if function has byval arguments.
