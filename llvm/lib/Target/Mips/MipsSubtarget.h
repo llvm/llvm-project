@@ -65,6 +65,9 @@ protected:
   // IsFPXX - MIPS O32 modeless ABI.
   bool IsFPXX;
 
+  // IsABICalls - SVR4-style position-independent code.
+  bool IsABICalls;
+
   // IsFP64bit - The target processor has 64-bit floating point registers.
   bool IsFP64bit;
 
@@ -200,6 +203,7 @@ public:
   bool hasCnMips() const { return HasCnMips; }
 
   bool isLittle() const { return IsLittle; }
+  bool isABICalls() const { return IsABICalls; }
   bool isFPXX() const { return IsFPXX; }
   bool isFP64bit() const { return IsFP64bit; }
   bool useOddSPReg() const { return UseOddSPReg; }

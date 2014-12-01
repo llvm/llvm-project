@@ -149,6 +149,12 @@ getReservedRegs(const MachineFunction &MF) const {
   for (unsigned I = 0; I < array_lengthof(ReservedGPR64); ++I)
     Reserved.set(ReservedGPR64[I]);
 
+  // For mno-abicalls, GP is a program invariant!
+  if (!Subtarget.isABICalls()) {
+    Reserved.set(Mips::GP);
+    Reserved.set(Mips::GP_64);
+  }
+
   if (Subtarget.isFP64bit()) {
     // Reserve all registers in AFGR64.
     for (RegIter Reg = Mips::AFGR64RegClass.begin(),
