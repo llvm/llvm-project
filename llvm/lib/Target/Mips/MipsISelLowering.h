@@ -449,13 +449,13 @@ namespace llvm {
                           unsigned Flag) const;
 
     MipsCC::SpecialCallingConvType getSpecialCallingConv(SDValue Callee) const;
+
     // Lower Operand helpers
     SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
                             CallingConv::ID CallConv, bool isVarArg,
-                            const SmallVectorImpl<ISD::InputArg> &Ins,
-                            SDLoc dl, SelectionDAG &DAG,
-                            SmallVectorImpl<SDValue> &InVals,
-                            const SDNode *CallNode, const Type *RetTy) const;
+                            const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc dl,
+                            SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+                            TargetLowering::CallLoweringInfo &CLI) const;
 
     // Lower Operand specifics
     SDValue lowerBR_JT(SDValue Op, SelectionDAG &DAG) const;

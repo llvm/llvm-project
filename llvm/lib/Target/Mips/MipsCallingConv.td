@@ -20,6 +20,27 @@ class CCIfSubtarget<string F, CCAction A, string Invert = "">
 // The inverse of CCIfSubtarget
 class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
+// For soft-float, f128 values are returned in A0_64 rather than V1_64.
+def RetCC_F128SoftFloat : CallingConv<[
+  CCAssignToReg<[V0_64, A0_64]>
+]>;
+
+// For hard-float, f128 values are returned as a pair of f64's rather than a
+// pair of i64's.
+def RetCC_F128HardFloat : CallingConv<[
+  CCBitConvertToType<f64>,
+  CCAssignToReg<[D0_64, D2_64]>
+]>;
+
+// Handle F128 specially since we can't identify the original type during the
+// tablegen-erated code.
+def RetCC_F128 : CallingConv<[
+  CCIfSubtarget<"abiUsesSoftFloat()",
+      CCIfType<[i64], CCDelegateTo<RetCC_F128SoftFloat>>>,
+  CCIfSubtargetNot<"abiUsesSoftFloat()",
+      CCIfType<[i64], CCDelegateTo<RetCC_F128HardFloat>>>
+]>;
+
 //===----------------------------------------------------------------------===//
 // Mips O32 Calling Convention
 //===----------------------------------------------------------------------===//
@@ -92,6 +113,20 @@ def CC_MipsN_VarArg : CallingConv<[
 ]>;
 
 def RetCC_MipsN : CallingConv<[
+  // f128 needs to be handled similarly to f32 and f64. However, f128 is not
+  // legal and is lowered to i128 which is further lowered to a pair of i64's.
+  // This presents us with a problem for the calling convention since hard-float
+  // still needs to pass them in FPU registers, and soft-float needs to use $v0,
+  // and $a0 instead of the usual $v0, and $v1. We therefore resort to a
+  // pre-analyze (see PreAnalyzeReturnForF128()) step to pass information on
+  // whether the result was originally an f128 into the tablegen-erated code.
+  //
+  // f128 should only occur for the N64 ABI where long double is 128-bit. On
+  // N32, long double is equivalent to double.
+  CCIfType<[i64],
+      CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgF128(ValNo)",
+           CCDelegateTo<RetCC_F128>>>,
+
   // Aggregate returns are positioned at the lowest address in the slot for
   // both little and big-endian targets. When passing in registers, this
   // requires that big-endian targets shift the value into the upper bits.
@@ -111,27 +146,6 @@ def RetCC_MipsN : CallingConv<[
 
   // f64 are returned in registers D0, D2
   CCIfType<[f64], CCAssignToReg<[D0_64, D2_64]>>
-]>;
-
-// For soft-float, f128 values are returned in A0_64 rather than V1_64.
-def RetCC_F128SoftFloat : CallingConv<[
-  CCAssignToReg<[V0_64, A0_64]>
-]>;
-
-// For hard-float, f128 values are returned as a pair of f64's rather than a
-// pair of i64's.
-def RetCC_F128HardFloat : CallingConv<[
-  CCBitConvertToType<f64>,
-  CCAssignToReg<[D0_64, D2_64]>
-]>;
-
-// Handle F128 specially since we can't identify the original type during the
-// tablegen-erated code.
-def RetCC_F128 : CallingConv<[
-  CCIfSubtarget<"abiUsesSoftFloat()",
-      CCIfType<[i64], CCDelegateTo<RetCC_F128SoftFloat>>>,
-  CCIfSubtargetNot<"abiUsesSoftFloat()",
-      CCIfType<[i64], CCDelegateTo<RetCC_F128HardFloat>>>
 ]>;
 
 //===----------------------------------------------------------------------===//
