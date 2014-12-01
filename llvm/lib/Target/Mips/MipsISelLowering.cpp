@@ -2632,7 +2632,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       assert(!IsTailCall &&
              "Do not tail-call optimize if there is a byval argument.");
       passByValArg(Chain, DL, RegsToPass, MemOpChains, StackPtr, MFI, DAG, Arg,
-                   MipsCCInfo, *ByValArg, Flags, Subtarget.isLittle());
+                   MipsCCInfo, *ByValArg, Flags, Subtarget.isLittle(), VA);
       ++ByValArg;
       continue;
     }
@@ -2884,7 +2884,7 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
              "ByVal args of size 0 should have been ignored by front-end.");
       assert(ByValArg != MipsCCInfo.byval_end());
       copyByValRegs(Chain, DL, OutChains, DAG, Flags, InVals, &*FuncArg,
-                    MipsCCInfo, *ByValArg);
+                    MipsCCInfo, *ByValArg, VA);
       ++ByValArg;
       continue;
     }
@@ -3656,10 +3656,9 @@ void MipsTargetLowering::MipsCC::handleByValArg(unsigned ValNo, MVT ValVT,
     allocateRegs(ByVal, ByValSize, Align, State);
 
   // Allocate space on caller's stack.
-  ByVal.Address =
+  unsigned Offset =
       State.AllocateStack(ByValSize - RegSizeInBytes * ByVal.NumRegs, Align);
-  State.addLoc(
-      CCValAssign::getMem(ValNo, ValVT, ByVal.Address, LocVT, LocInfo));
+  State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
   ByValArgs.push_back(ByVal);
 }
 
@@ -3717,11 +3716,11 @@ MVT MipsTargetLowering::MipsCC::getRegVT(MVT VT, const Type *OrigTy,
   return VT;
 }
 
-void MipsTargetLowering::
-copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
-              SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
-              SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
-              const MipsCC &CC, const ByValArgInfo &ByVal) const {
+void MipsTargetLowering::copyByValRegs(
+    SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains, SelectionDAG &DAG,
+    const ISD::ArgFlagsTy &Flags, SmallVectorImpl<SDValue> &InVals,
+    const Argument *FuncArg, const MipsCC &CC, const ByValArgInfo &ByVal,
+    const CCValAssign &VA) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
@@ -3734,7 +3733,7 @@ copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
         (int)CC.reservedArgArea() -
         (int)((CC.intArgRegs().size() - ByVal.FirstIdx) * GPRSizeInBytes);
   else
-    FrameObjOffset = ByVal.Address;
+    FrameObjOffset = VA.getLocMemOffset();
 
   // Create frame object.
   EVT PtrTy = getPointerTy();
@@ -3763,13 +3762,13 @@ copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
 }
 
 // Copy byVal arg to registers and stack.
-void MipsTargetLowering::
-passByValArg(SDValue Chain, SDLoc DL,
-             std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
-             SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
-             MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg,
-             const MipsCC &CC, const ByValArgInfo &ByVal,
-             const ISD::ArgFlagsTy &Flags, bool isLittle) const {
+void MipsTargetLowering::passByValArg(
+    SDValue Chain, SDLoc DL,
+    std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
+    SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
+    MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg, const MipsCC &CC,
+    const ByValArgInfo &ByVal, const ISD::ArgFlagsTy &Flags, bool isLittle,
+    const CCValAssign &VA) const {
   unsigned ByValSizeInBytes = Flags.getByValSize();
   unsigned OffsetInBytes = 0; // From beginning of struct
   unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
@@ -3852,7 +3851,7 @@ passByValArg(SDValue Chain, SDLoc DL,
   SDValue Src = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
                             DAG.getConstant(OffsetInBytes, PtrTy));
   SDValue Dst = DAG.getNode(ISD::ADD, DL, PtrTy, StackPtr,
-                            DAG.getIntPtrConstant(ByVal.Address));
+                            DAG.getIntPtrConstant(VA.getLocMemOffset()));
   Chain = DAG.getMemcpy(Chain, DL, Dst, Src, DAG.getConstant(MemCpySize, PtrTy),
                         Alignment, /*isVolatile=*/false, /*AlwaysInline=*/false,
                         MachinePointerInfo(), MachinePointerInfo());

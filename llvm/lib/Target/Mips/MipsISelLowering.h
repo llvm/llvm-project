@@ -342,9 +342,8 @@ namespace llvm {
     struct ByValArgInfo {
       unsigned FirstIdx; // Index of the first register used.
       unsigned NumRegs;  // Number of registers used for this argument.
-      unsigned Address;  // Offset of the stack area used to pass this argument.
 
-      ByValArgInfo() : FirstIdx(0), NumRegs(0), Address(0) {}
+      ByValArgInfo() : FirstIdx(0), NumRegs(0) {}
     };
 
     /// MipsCC - This class provides methods used to analyze formal and call
@@ -482,20 +481,20 @@ namespace llvm {
     /// copyByValArg - Copy argument registers which were used to pass a byval
     /// argument to the stack. Create a stack frame object for the byval
     /// argument.
-    void copyByValRegs(SDValue Chain, SDLoc DL,
-                       std::vector<SDValue> &OutChains, SelectionDAG &DAG,
-                       const ISD::ArgFlagsTy &Flags,
+    void copyByValRegs(SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains,
+                       SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
                        SmallVectorImpl<SDValue> &InVals,
-                       const Argument *FuncArg,
-                       const MipsCC &CC, const ByValArgInfo &ByVal) const;
+                       const Argument *FuncArg, const MipsCC &CC,
+                       const ByValArgInfo &ByVal, const CCValAssign &VA) const;
 
     /// passByValArg - Pass a byval argument in registers or on stack.
     void passByValArg(SDValue Chain, SDLoc DL,
-                      std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+                      std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
                       SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
                       MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg,
                       const MipsCC &CC, const ByValArgInfo &ByVal,
-                      const ISD::ArgFlagsTy &Flags, bool isLittle) const;
+                      const ISD::ArgFlagsTy &Flags, bool isLittle,
+                      const CCValAssign &VA) const;
 
     /// writeVarArgRegs - Write variable function arguments passed in registers
     /// to the stack. Also create a stack frame object for the first variable
