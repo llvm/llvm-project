@@ -10,7 +10,11 @@
 #ifndef MIPSABIINFO_H
 #define MIPSABIINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/MC/MCRegisterInfo.h"
+
 namespace llvm {
+
 class MipsABIInfo {
 public:
   enum class ABI { Unknown, O32, N32, N64, EABI };
@@ -33,6 +37,8 @@ public:
   bool IsN64() const { return ThisABI == ABI::N64; }
   bool IsEABI() const { return ThisABI == ABI::EABI; }
   ABI GetEnumValue() const { return ThisABI; }
+
+  const ArrayRef<MCPhysReg> GetByValArgRegs() const;
 
   /// Ordering of ABI's
   /// MipsGenSubtargetInfo.inc will use this to resolve conflicts when given

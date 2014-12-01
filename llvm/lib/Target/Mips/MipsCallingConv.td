@@ -279,13 +279,6 @@ def CC_Mips_FastCC : CallingConv<[
   CCDelegateTo<CC_MipsN_FastCC>
 ]>;
 
-//==
-
-def CC_Mips16RetHelper : CallingConv<[
-  // Integer arguments are passed in integer registers.
-  CCIfType<[i32], CCAssignToReg<[V0, V1, A0, A1]>>
-]>;
-
 //===----------------------------------------------------------------------===//
 // Mips Calling Convention Dispatch
 //===----------------------------------------------------------------------===//
@@ -297,7 +290,14 @@ def RetCC_Mips : CallingConv<[
   CCDelegateTo<RetCC_MipsO32>
 ]>;
 
+def CC_Mips_ByVal : CallingConv<[
+  CCIfSubtarget<"isABI_O32()", CCIfByVal<CCPassByVal<4, 4>>>,
+  CCIfByVal<CCPassByVal<8, 8>>
+]>;
+
 def CC_Mips_FixedArg : CallingConv<[
+  CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
+
   // f128 needs to be handled similarly to f32 and f64 on hard-float. However,
   // f128 is not legal and is lowered to i128 which is further lowered to a pair
   // of i64's.
@@ -322,10 +322,21 @@ def CC_Mips_FixedArg : CallingConv<[
 ]>;
 
 def CC_Mips_VarArg : CallingConv<[
+  CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
+
   // FIXME: There wasn't an EABI case in the original code and it seems unlikely
   //        that it's the same as CC_MipsN_VarArg
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
   CCDelegateTo<CC_MipsN_VarArg>
+]>;
+
+//==
+
+def CC_Mips16RetHelper : CallingConv<[
+  CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
+
+  // Integer arguments are passed in integer registers.
+  CCIfType<[i32], CCAssignToReg<[V0, V1, A0, A1]>>
 ]>;
 
 //===----------------------------------------------------------------------===//
