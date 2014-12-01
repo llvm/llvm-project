@@ -2829,6 +2829,9 @@ bool X86FastISel::FastLowerCall(CallLoweringInfo &CLI) {
       // VExt has not been implemented, so this should be impossible to reach
       // for now.  However, fallback to Selection DAG isel once implemented.
       return false;
+    case CCValAssign::AExtUpper:
+    case CCValAssign::SExtUpper:
+    case CCValAssign::ZExtUpper:
     case CCValAssign::FPExt:
       llvm_unreachable("Unexpected loc info!");
     case CCValAssign::Indirect:
