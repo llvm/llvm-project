@@ -325,6 +325,8 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
     // We re-use the same spill slot each time so that the stack frame doesn't
     // grow too much in functions with a large number of moves.
     int FI = MF.getInfo<MipsFunctionInfo>()->getMoveF64ViaSpillFI(RC2);
+    if (!Subtarget.isLittle())
+      std::swap(LoReg, HiReg);
     TII.storeRegToStack(MBB, I, LoReg, I->getOperand(1).isKill(), FI, RC, &TRI,
                         0);
     TII.storeRegToStack(MBB, I, HiReg, I->getOperand(2).isKill(), FI, RC, &TRI,
@@ -369,6 +371,7 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     unsigned DstReg = I->getOperand(0).getReg();
     unsigned SrcReg = I->getOperand(1).getReg();
     unsigned N = I->getOperand(2).getImm();
+    int64_t Offset = 4 * (Subtarget.isLittle() ? N : (1 - N));
 
     // It should be impossible to have FGR64 on MIPS-II or MIPS32r1 (which are
     // the cases where mfhc1 is not available). 64-bit architectures and
@@ -385,7 +388,7 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     int FI = MF.getInfo<MipsFunctionInfo>()->getMoveF64ViaSpillFI(RC);
     TII.storeRegToStack(MBB, I, SrcReg, I->getOperand(1).isKill(), FI, RC, &TRI,
                         0);
-    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, &TRI, N * 4);
+    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, &TRI, Offset);
     return true;
   }
 
