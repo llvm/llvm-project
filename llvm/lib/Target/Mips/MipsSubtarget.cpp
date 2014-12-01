@@ -106,7 +106,7 @@ MipsSubtarget::MipsSubtarget(const std::string &TT, const std::string &CPU,
                              const std::string &FS, bool little,
                              MipsTargetMachine *_TM)
     : MipsGenSubtargetInfo(TT, CPU, FS), MipsArchVersion(Mips32),
-      MipsABI(UnknownABI), IsLittle(little), IsSingleFloat(false),
+      ABI(MipsABIInfo::Unknown()), IsLittle(little), IsSingleFloat(false),
       IsFPXX(false), NoABICalls(false), IsFP64bit(false), UseOddSPReg(true),
       IsNaN2008bit(false), IsGP64bit(false), HasVFPU(false), HasCnMips(false),
       IsLinux(true), HasMips3_32(false), HasMips3_32r2(false),
@@ -136,7 +136,7 @@ MipsSubtarget::MipsSubtarget(const std::string &TT, const std::string &CPU,
     report_fatal_error("Code generation for MIPS-V is not implemented", false);
 
   // Assert exactly one ABI was chosen.
-  assert(MipsABI != UnknownABI);
+  assert(ABI.IsKnown());
   assert((((getFeatureBits() & Mips::FeatureO32) != 0) +
           ((getFeatureBits() & Mips::FeatureEABI) != 0) +
           ((getFeatureBits() & Mips::FeatureN32) != 0) +

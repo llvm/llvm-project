@@ -343,7 +343,6 @@ namespace {
 
   const TargetMachine &TM;
   bool IsPIC;
-  unsigned ABI;
   const MipsSubtarget *STI;
   const Mips16InstrInfo *TII;
   MipsFunctionInfo *MFI;
@@ -366,8 +365,7 @@ namespace {
     static char ID;
     MipsConstantIslands(TargetMachine &tm)
         : MachineFunctionPass(ID), TM(tm),
-          IsPIC(TM.getRelocationModel() == Reloc::PIC_),
-          ABI(TM.getSubtarget<MipsSubtarget>().getTargetABI()), STI(nullptr),
+          IsPIC(TM.getRelocationModel() == Reloc::PIC_), STI(nullptr),
           MF(nullptr), MCP(nullptr), PrescannedForConstants(false) {}
 
     const char *getPassName() const override {

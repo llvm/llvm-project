@@ -317,11 +317,11 @@ void MipsAsmPrinter::emitFrameDirective() {
 
 /// Emit Set directives.
 const char *MipsAsmPrinter::getCurrentABIString() const {
-  switch (Subtarget->getTargetABI()) {
-  case MipsSubtarget::O32:  return "abi32";
-  case MipsSubtarget::N32:  return "abiN32";
-  case MipsSubtarget::N64:  return "abi64";
-  case MipsSubtarget::EABI: return "eabi32"; // TODO: handle eabi64
+  switch (Subtarget->getABI().GetEnumValue()) {
+  case MipsABIInfo::ABI::O32:  return "abi32";
+  case MipsABIInfo::ABI::N32:  return "abiN32";
+  case MipsABIInfo::ABI::N64:  return "abi64";
+  case MipsABIInfo::ABI::EABI: return "eabi32"; // TODO: handle eabi64
   default: llvm_unreachable("Unknown Mips ABI");
   }
 }
