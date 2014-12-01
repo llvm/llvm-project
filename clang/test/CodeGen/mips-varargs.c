@@ -1,6 +1,6 @@
-// RUN: %clang -target mips-unknown-linux -O3 -S -o - -emit-llvm %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
-// RUN: %clang -target mips64-unknown-linux -O3 -S -o - -emit-llvm -mabi=n32 %s | FileCheck %s -check-prefix=ALL -check-prefix=N32
-// RUN: %clang -target mips64-unknown-linux -O3 -S -o - -emit-llvm %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
+// RUN: %clang_cc1 -triple mips-unknown-linux -O3 -o - -emit-llvm %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
+// RUN: %clang_cc1 -triple mips64-unknown-linux -O3 -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefix=ALL -check-prefix=N32
+// RUN: %clang_cc1 -triple mips64-unknown-linux -O3 -o - -emit-llvm %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
 
 #include <stdarg.h>
 
