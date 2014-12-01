@@ -379,15 +379,12 @@ namespace llvm {
       /// hasByValArg - Returns true if function has byval arguments.
       bool hasByValArg() const { return !ByValArgs.empty(); }
 
-      /// numIntArgRegs - Number of integer registers available for calls.
-      unsigned numIntArgRegs() const;
-
       /// reservedArgArea - The size of the area the caller reserves for
       /// register arguments. This is 16-byte if ABI is O32.
       unsigned reservedArgArea() const;
 
       /// Return pointer to array of integer argument registers.
-      const MCPhysReg *intArgRegs() const;
+      const ArrayRef<MCPhysReg> intArgRegs() const;
 
       typedef SmallVectorImpl<ByValArgInfo>::const_iterator byval_iterator;
       byval_iterator byval_begin() const { return ByValArgs.begin(); }
