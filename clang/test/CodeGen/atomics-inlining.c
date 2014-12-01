@@ -76,8 +76,8 @@ void test1(void) {
 // MIPS32: store atomic i32 {{.*}}, i32* @i1 seq_cst
 // MIPS32: call i64 @__atomic_load_8(i8* bitcast (i64* @ll1 to i8*)
 // MIPS32: call void @__atomic_store_8(i8* bitcast (i64* @ll1 to i8*), i64
-// MIPS32: call void @__atomic_load(i32 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8]* @a2, i32 0, i32 0)
-// MIPS32: call void @__atomic_store(i32 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8]* @a2, i32 0, i32 0)
+// MIPS32: call void @__atomic_load(i32 zeroext 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8]* @a2, i32 0, i32 0)
+// MIPS32: call void @__atomic_store(i32 zeroext 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8]* @a2, i32 0, i32 0)
 
 // MIPS64-LABEL: define void @test1
 // MIPS64: = load atomic i8* @c1 seq_cst
@@ -88,6 +88,6 @@ void test1(void) {
 // MIPS64: store atomic i32 {{.*}}, i32* @i1 seq_cst
 // MIPS64: = load atomic i64* @ll1 seq_cst
 // MIPS64: store atomic i64 {{.*}}, i64* @ll1 seq_cst
-// MIPS64: call void @__atomic_load(i64 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0)
-// MIPS64: call void @__atomic_store(i64 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8]* @a2, i32 0, i32 0)
+// MIPS64: call void @__atomic_load(i64 zeroext 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0)
+// MIPS64: call void @__atomic_store(i64 zeroext 100, i8* getelementptr inbounds ([100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8]* @a2, i32 0, i32 0)
 }
