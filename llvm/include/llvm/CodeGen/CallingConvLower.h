@@ -218,10 +218,10 @@ private:
   // while "%t" goes to the stack: it wouldn't be described in ByValRegs.
   //
   // Supposed use-case for this collection:
-  // 1. Initially ByValRegs is empty, InRegsParamsProceed is 0.
+  // 1. Initially ByValRegs is empty, InRegsParamsProcessed is 0.
   // 2. HandleByVal fillups ByValRegs.
   // 3. Argument analysis (LowerFormatArguments, for example). After
-  // some byval argument was analyzed, InRegsParamsProceed is increased.
+  // some byval argument was analyzed, InRegsParamsProcessed is increased.
   struct ByValInfo {
     ByValInfo(unsigned B, unsigned E, bool IsWaste = false) :
       Begin(B), End(E), Waste(IsWaste) {}
@@ -239,9 +239,9 @@ private:
   };
   SmallVector<ByValInfo, 4 > ByValRegs;
 
-  // InRegsParamsProceed - shows how many instances of ByValRegs was proceed
+  // InRegsParamsProcessed - shows how many instances of ByValRegs was proceed
   // during argument analysis.
-  unsigned InRegsParamsProceed;
+  unsigned InRegsParamsProcessed;
 
 protected:
   ParmContext CallOrPrologue;
@@ -422,7 +422,7 @@ public:
   unsigned getInRegsParamsCount() const { return ByValRegs.size(); }
 
   // Returns count of byval in-regs arguments proceed.
-  unsigned getInRegsParamsProceed() const { return InRegsParamsProceed; }
+  unsigned getInRegsParamsProcessed() const { return InRegsParamsProcessed; }
 
   // Get information about N-th byval parameter that is stored in registers.
   // Here "ByValParamIndex" is N.
@@ -446,20 +446,20 @@ public:
   // Returns false, if end is reached.
   bool nextInRegsParam() {
     unsigned e = ByValRegs.size();
-    if (InRegsParamsProceed < e)
-      ++InRegsParamsProceed;
-    return InRegsParamsProceed < e;
+    if (InRegsParamsProcessed < e)
+      ++InRegsParamsProcessed;
+    return InRegsParamsProcessed < e;
   }
 
   // Clear byval registers tracking info.
   void clearByValRegsInfo() {
-    InRegsParamsProceed = 0;
+    InRegsParamsProcessed = 0;
     ByValRegs.clear();
   }
 
   // Rewind byval registers tracking info.
   void rewindByValRegsInfo() {
-    InRegsParamsProceed = 0;
+    InRegsParamsProcessed = 0;
   }
 
   ParmContext getCallOrPrologue() const { return CallOrPrologue; }

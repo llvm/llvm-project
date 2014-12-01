@@ -1521,7 +1521,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       // True if this byval aggregate will be split between registers
       // and memory.
       unsigned ByValArgsCount = CCInfo.getInRegsParamsCount();
-      unsigned CurByValIdx = CCInfo.getInRegsParamsProceed();
+      unsigned CurByValIdx = CCInfo.getInRegsParamsProcessed();
 
       if (CurByValIdx < ByValArgsCount) {
 
@@ -2962,7 +2962,7 @@ ARMTargetLowering::LowerFormalArguments(SDValue Chain,
         if (Flags.isByVal()) {
           unsigned ExtraArgRegsSize;
           unsigned ExtraArgRegsSaveSize;
-          computeRegArea(CCInfo, MF, CCInfo.getInRegsParamsProceed(),
+          computeRegArea(CCInfo, MF, CCInfo.getInRegsParamsProcessed(),
                          Flags.getByValSize(),
                          ExtraArgRegsSize, ExtraArgRegsSaveSize);
 
@@ -3086,7 +3086,7 @@ ARMTargetLowering::LowerFormalArguments(SDValue Chain,
           // Since they could be overwritten by lowering of arguments in case of
           // a tail call.
           if (Flags.isByVal()) {
-            unsigned CurByValIndex = CCInfo.getInRegsParamsProceed();
+            unsigned CurByValIndex = CCInfo.getInRegsParamsProcessed();
 
             ByValStoreOffset = RoundUpToAlignment(ByValStoreOffset, Flags.getByValAlign());
             int FrameIndex = StoreByValRegs(

@@ -2626,7 +2626,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // ByVal Arg.
     if (Flags.isByVal()) {
       unsigned FirstByValReg, LastByValReg;
-      unsigned ByValIdx = CCInfo.getInRegsParamsProceed();
+      unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
       CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
 
       assert(Flags.getByValSize() &&
@@ -2885,7 +2885,7 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
 
     if (Flags.isByVal()) {
       unsigned FirstByValReg, LastByValReg;
-      unsigned ByValIdx = CCInfo.getInRegsParamsProceed();
+      unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
       CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
 
       assert(Flags.getByValSize() &&
