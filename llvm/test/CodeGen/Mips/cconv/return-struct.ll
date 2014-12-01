@@ -14,6 +14,7 @@
 
 @struct_byte = global {i8} zeroinitializer
 @struct_2byte = global {i8,i8} zeroinitializer
+@struct_3xi16 = global {[3 x i16]} zeroinitializer
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
 
@@ -82,3 +83,56 @@ entry:
 ; N64-BE-DAG:        sh  [[R2]], 8([[SP:\$sp]])
 ; N64-BE-DAG:        lh  [[R3:\$[0-9]+]], 8([[SP:\$sp]])
 ; N64-BE-DAG:        dsll $2, [[R3]], 48
+
+; Ensure that structures bigger than 32-bits but smaller than 64-bits are
+; also returned in the upper bits on big endian targets. Previously, these were
+; missed by the CCPromoteToType and the shift didn't happen.
+define inreg {i48} @ret_struct_3xi16() nounwind {
+entry:
+        %0 = load volatile i48* bitcast ({[3 x i16]}* @struct_3xi16 to i48*), align 2
+        %1 = insertvalue {i48} undef, i48 %0, 0
+        ret {i48} %1
+}
+
+; ALL-LABEL: ret_struct_3xi16:
+
+; O32-BE-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_3xi16)
+; O32-BE-DAG:        addiu [[PTR_LO:\$[0-9]+]], [[PTR_HI]], %lo(struct_3xi16)
+; O32-BE-DAG:        lhu [[R1:\$[0-9]+]], 4([[PTR_LO]])
+; O32-BE-DAG:        lw [[R2:\$[0-9]+]], %lo(struct_3xi16)([[PTR_HI]])
+; O32-BE-DAG:        sll [[R3:\$[0-9]+]], [[R2]], 16
+; O32-BE-DAG:        or  $3, [[R1]], [[R3]]
+; O32-BE-DAG:        srl $2, [[R2]], 16
+
+; O32-LE-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_3xi16)
+; O32-LE-DAG:        addiu [[PTR_LO:\$[0-9]+]], [[PTR_HI]], %lo(struct_3xi16)
+; O32-LE-DAG:        lhu $3, 4([[PTR_LO]])
+; O32-LE-DAG:        lw $2, %lo(struct_3xi16)([[PTR_HI]])
+
+; N32-LE-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_3xi16)
+; N32-LE-DAG:        addiu [[PTR_LO:\$[0-9]+]], [[PTR_HI]], %lo(struct_3xi16)
+; N32-LE-DAG:        lh [[R1:\$[0-9]+]], 4([[PTR_LO]])
+; N32-LE-DAG:        lwu [[R2:\$[0-9]+]], %lo(struct_3xi16)([[PTR_HI]])
+; N32-LE-DAG:        dsll [[R3:\$[0-9]+]], [[R1]], 32
+; N32-LE-DAG:        or $2, [[R2]], [[R3]]
+
+; N32-BE-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_3xi16)
+; N32-BE-DAG:        addiu [[PTR_LO:\$[0-9]+]], [[PTR_HI]], %lo(struct_3xi16)
+; N32-BE-DAG:        lw [[R1:\$[0-9]+]], %lo(struct_3xi16)([[PTR_HI]])
+; N32-BE-DAG:        dsll [[R2:\$[0-9]+]], [[R1]], 16
+; N32-BE-DAG:        lhu [[R3:\$[0-9]+]], 4([[PTR_LO]])
+; N32-BE-DAG:        or [[R4:\$[0-9]+]], [[R3]], [[R2]]
+; N32-BE-DAG:        dsll $2, [[R4]], 16
+
+; N64-LE-DAG:        ld  [[PTR:\$[0-9]+]], %got_disp(struct_3xi16)($1)
+; N64-LE-DAG:        lh [[R1:\$[0-9]+]], 4([[PTR]])
+; N64-LE-DAG:        lwu [[R2:\$[0-9]+]], 0([[PTR]])
+; N64-LE-DAG:        dsll [[R3:\$[0-9]+]], [[R1]], 32
+; N64-LE-DAG:        or $2, [[R2]], [[R3]]
+
+; N64-BE-DAG:        ld  [[PTR:\$[0-9]+]], %got_disp(struct_3xi16)($1)
+; N64-BE-DAG:        lw [[R1:\$[0-9]+]], 0([[PTR]])
+; N64-BE-DAG:        dsll [[R2:\$[0-9]+]], [[R1]], 16
+; N64-BE-DAG:        lhu [[R3:\$[0-9]+]], 4([[PTR]])
+; N64-BE-DAG:        or [[R4:\$[0-9]+]], [[R3]], [[R2]]
+; N32-BE-DAG:        dsll $2, [[R4]], 16
