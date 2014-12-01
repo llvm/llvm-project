@@ -27,3 +27,11 @@ const ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
     return makeArrayRef(Mips64IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
+
+const ArrayRef<MCPhysReg> MipsABIInfo::GetVarArgRegs() const {
+  if (IsO32())
+    return makeArrayRef(O32IntRegs);
+  if (IsN32() || IsN64())
+    return makeArrayRef(Mips64IntRegs);
+  llvm_unreachable("Unhandled ABI");
+}

@@ -351,9 +351,6 @@ namespace llvm {
       /// register arguments. This is 16-byte if ABI is O32.
       unsigned reservedArgArea() const;
 
-      /// Return pointer to array of integer argument registers.
-      const ArrayRef<MCPhysReg> intArgRegs() const;
-
     private:
       CallingConv::ID CallConv;
       const MipsSubtarget &Subtarget;

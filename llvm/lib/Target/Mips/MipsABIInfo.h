@@ -38,7 +38,11 @@ public:
   bool IsEABI() const { return ThisABI == ABI::EABI; }
   ABI GetEnumValue() const { return ThisABI; }
 
+  /// The registers to use for byval arguments.
   const ArrayRef<MCPhysReg> GetByValArgRegs() const;
+
+  /// The registers to use for the variable argument list.
+  const ArrayRef<MCPhysReg> GetVarArgRegs() const;
 
   /// Ordering of ABI's
   /// MipsGenSubtargetInfo.inc will use this to resolve conflicts when given
