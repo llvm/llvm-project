@@ -395,9 +395,6 @@ namespace llvm {
       /// Return the function that analyzes fixed argument list functions.
       llvm::CCAssignFn *fixedArgFn() const;
 
-      /// Return the function that analyzes variable argument list functions.
-      llvm::CCAssignFn *varArgFn() const;
-
       const MCPhysReg *shadowRegs() const;
 
       void allocateRegs(ByValArgInfo &ByVal, unsigned ByValSize,

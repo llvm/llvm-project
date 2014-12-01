@@ -3528,7 +3528,7 @@ analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Args,
          "CallingConv::Fast shouldn't be used for vararg functions.");
 
   unsigned NumOpnds = Args.size();
-  llvm::CCAssignFn *FixedFn = fixedArgFn(), *VarFn = varArgFn();
+  llvm::CCAssignFn *FixedFn = fixedArgFn();
 
   for (unsigned I = 0; I != NumOpnds; ++I) {
     MVT ArgVT = Args[I].VT;
@@ -3541,7 +3541,7 @@ analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Args,
     }
 
     if (IsVarArg && !Args[I].IsFixed)
-      R = VarFn(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo);
+      R = CC_Mips_VarArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo);
     else {
       MVT RegVT = getRegVT(ArgVT, FuncArgs[Args[I].OrigArgIndex].Ty, CallNode,
                            IsSoftFloat);
@@ -3624,20 +3624,11 @@ const ArrayRef<MCPhysReg> MipsTargetLowering::MipsCC::intArgRegs() const {
 }
 
 llvm::CCAssignFn *MipsTargetLowering::MipsCC::fixedArgFn() const {
-  if (CallConv == CallingConv::Fast)
-    return CC_Mips_FastCC;
-
-  if (SpecialCallingConv == Mips16RetHelperConv)
+  if (CallConv != CallingConv::Fast &&
+      SpecialCallingConv == Mips16RetHelperConv)
     return CC_Mips16RetHelper;
-  return Subtarget.isABI_O32()
-             ? (Subtarget.isFP64bit() ? CC_MipsO32_FP64 : CC_MipsO32_FP32)
-             : CC_MipsN;
-}
 
-llvm::CCAssignFn *MipsTargetLowering::MipsCC::varArgFn() const {
-  return Subtarget.isABI_O32()
-             ? (Subtarget.isFP64bit() ? CC_MipsO32_FP64 : CC_MipsO32_FP32)
-             : CC_MipsN_VarArg;
+  return CC_Mips_FixedArg;
 }
 
 const MCPhysReg *MipsTargetLowering::MipsCC::shadowRegs() const {

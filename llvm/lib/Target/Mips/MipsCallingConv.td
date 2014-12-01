@@ -66,6 +66,14 @@ def RetCC_MipsO32 : CallingConv<[
   CCIfType<[f64], CCIfSubtargetNot<"isFP64bit()", CCAssignToReg<[D0, D1]>>>
 ]>;
 
+def CC_MipsO32_FP32 : CustomCallingConv;
+def CC_MipsO32_FP64 : CustomCallingConv;
+
+def CC_MipsO32_FP : CallingConv<[
+  CCIfSubtargetNot<"isFP64bit()", CCDelegateTo<CC_MipsO32_FP32>>,
+  CCIfSubtarget<"isFP64bit()", CCDelegateTo<CC_MipsO32_FP64>>
+]>;
+
 //===----------------------------------------------------------------------===//
 // Mips N32/64 Calling Convention
 //===----------------------------------------------------------------------===//
@@ -287,6 +295,22 @@ def RetCC_Mips : CallingConv<[
   CCIfSubtarget<"isABI_N32()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_N64()", CCDelegateTo<RetCC_MipsN>>,
   CCDelegateTo<RetCC_MipsO32>
+]>;
+
+def CC_Mips_FixedArg : CallingConv<[
+  CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
+
+  // FIXME: There wasn't an EABI case in the original code and it seems unlikely
+  //        that it's the same as CC_MipsN
+  CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCDelegateTo<CC_MipsN>
+]>;
+
+def CC_Mips_VarArg : CallingConv<[
+  // FIXME: There wasn't an EABI case in the original code and it seems unlikely
+  //        that it's the same as CC_MipsN_VarArg
+  CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCDelegateTo<CC_MipsN_VarArg>
 ]>;
 
 //===----------------------------------------------------------------------===//

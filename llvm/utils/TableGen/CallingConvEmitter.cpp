@@ -35,23 +35,26 @@ private:
 } // End anonymous namespace
 
 void CallingConvEmitter::run(raw_ostream &O) {
-
   std::vector<Record*> CCs = Records.getAllDerivedDefinitions("CallingConv");
-  
-  // Emit prototypes for all of the CC's so that they can forward ref each
-  // other.
+
+  // Emit prototypes for all of the non-custom CC's so that they can forward ref
+  // each other.
   for (unsigned i = 0, e = CCs.size(); i != e; ++i) {
-    O << "static bool " << CCs[i]->getName()
-      << "(unsigned ValNo, MVT ValVT,\n"
-      << std::string(CCs[i]->getName().size()+13, ' ')
-      << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-      << std::string(CCs[i]->getName().size()+13, ' ')
-      << "ISD::ArgFlagsTy ArgFlags, CCState &State);\n";
+    if (!CCs[i]->getValueAsBit("Custom")) {
+      O << "static bool " << CCs[i]->getName()
+        << "(unsigned ValNo, MVT ValVT,\n"
+        << std::string(CCs[i]->getName().size() + 13, ' ')
+        << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
+        << std::string(CCs[i]->getName().size() + 13, ' ')
+        << "ISD::ArgFlagsTy ArgFlags, CCState &State);\n";
+    }
   }
-  
-  // Emit each calling convention description in full.
-  for (unsigned i = 0, e = CCs.size(); i != e; ++i)
-    EmitCallingConv(CCs[i], O);
+
+  // Emit each non-custom calling convention description in full.
+  for (unsigned i = 0, e = CCs.size(); i != e; ++i) {
+    if (!CCs[i]->getValueAsBit("Custom"))
+      EmitCallingConv(CCs[i], O);
+  }
 }
 
 

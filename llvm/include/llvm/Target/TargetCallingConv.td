@@ -147,6 +147,13 @@ class CCDelegateTo<CallingConv cc> : CCAction {
 /// that the target supports.
 class CallingConv<list<CCAction> actions> {
   list<CCAction> Actions = actions;
+  bit Custom = 0;
+}
+
+/// CustomCallingConv - An instance of this is used to declare calling
+/// conventions that are implemented using a custom function of the same name.
+class CustomCallingConv : CallingConv<[]> {
+  let Custom = 1;
 }
 
 /// CalleeSavedRegs - A list of callee saved registers for a given calling
