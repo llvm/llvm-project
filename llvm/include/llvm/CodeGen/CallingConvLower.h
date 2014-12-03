@@ -35,18 +35,18 @@ public:
     SExt,      // The value is sign extended in the location.
     ZExt,      // The value is zero extended in the location.
     AExt,      // The value is extended with undefined upper bits.
-    SExtUpper, // The value is in the upper bits of the location and should be
-               // sign extended when retrieved.
-    ZExtUpper, // The value is in the upper bits of the location and should be
-               // zero extended when retrieved.
-    AExtUpper, // The value is in the upper bits of the location and should be
-               // extended with undefined upper bits when retrieved.
     BCvt,      // The value is bit-converted in the location.
     VExt,      // The value is vector-widened in the location.
                // FIXME: Not implemented yet. Code that uses AExt to mean
                // vector-widen should be fixed to use VExt instead.
     FPExt,     // The floating-point value is fp-extended in the location.
-    Indirect   // The location contains pointer to the value.
+    Indirect,  // The location contains pointer to the value.
+    SExtUpper, // The value is in the upper bits of the location and should be
+               // sign extended when retrieved.
+    ZExtUpper, // The value is in the upper bits of the location and should be
+               // zero extended when retrieved.
+    AExtUpper  // The value is in the upper bits of the location and should be
+               // extended with undefined upper bits when retrieved.
     // TODO: a subset of the value is in the location.
   };
 
