@@ -31,6 +31,8 @@ public:
   void emitPrologue(MachineFunction &MF) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  void fixTCReturn(MachineFunction &MF, MachineBasicBlock &MBB) const;
+
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  const std::vector<CalleeSavedInfo> &CSI,

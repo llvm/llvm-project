@@ -566,11 +566,59 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF) const {
     AFI->setShouldRestoreSPFromFP(true);
 }
 
+// Resolve TCReturn pseudo-instruction
+void ARMFrameLowering::fixTCReturn(MachineFunction &MF,
+                                   MachineBasicBlock &MBB) const {
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  assert(MBBI->isReturn() && "Can only insert epilog into returning blocks");
+  unsigned RetOpcode = MBBI->getOpcode();
+  DebugLoc dl = MBBI->getDebugLoc();
+  const ARMBaseInstrInfo &TII =
+      *MF.getTarget().getSubtarget<ARMSubtarget>().getInstrInfo();
+
+  if (!(RetOpcode == ARM::TCRETURNdi || RetOpcode == ARM::TCRETURNri))
+    return;
+
+  // Tail call return: adjust the stack pointer and jump to callee.
+  MBBI = MBB.getLastNonDebugInstr();
+  MachineOperand &JumpTarget = MBBI->getOperand(0);
+
+  // Jump to label or value in register.
+  if (RetOpcode == ARM::TCRETURNdi) {
+    unsigned TCOpcode = STI.isThumb() ?
+             (STI.isTargetMachO() ? ARM::tTAILJMPd : ARM::tTAILJMPdND) :
+             ARM::TAILJMPd;
+    MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(TCOpcode));
+    if (JumpTarget.isGlobal())
+      MIB.addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset(),
+                           JumpTarget.getTargetFlags());
+    else {
+      assert(JumpTarget.isSymbol());
+      MIB.addExternalSymbol(JumpTarget.getSymbolName(),
+                            JumpTarget.getTargetFlags());
+    }
+
+    // Add the default predicate in Thumb mode.
+    if (STI.isThumb()) MIB.addImm(ARMCC::AL).addReg(0);
+  } else if (RetOpcode == ARM::TCRETURNri) {
+    BuildMI(MBB, MBBI, dl,
+            TII.get(STI.isThumb() ? ARM::tTAILJMPr : ARM::TAILJMPr)).
+      addReg(JumpTarget.getReg(), RegState::Kill);
+  }
+
+  MachineInstr *NewMI = std::prev(MBBI);
+  for (unsigned i = 1, e = MBBI->getNumOperands(); i != e; ++i)
+    NewMI->addOperand(MBBI->getOperand(i));
+
+  // Delete the pseudo instruction TCRETURN.
+  MBB.erase(MBBI);
+  MBBI = NewMI;
+}
+
 void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   assert(MBBI->isReturn() && "Can only insert epilog into returning blocks");
-  unsigned RetOpcode = MBBI->getOpcode();
   DebugLoc dl = MBBI->getDebugLoc();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
@@ -588,8 +636,10 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
-  if (MF.getFunction()->getCallingConv() == CallingConv::GHC)
+  if (MF.getFunction()->getCallingConv() == CallingConv::GHC) {
+    fixTCReturn(MF, MBB);
     return;
+  }
 
   if (!AFI->hasStackFrame()) {
     if (NumBytes - ArgRegsSaveSize != 0)
@@ -661,42 +711,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     if (AFI->getGPRCalleeSavedArea1Size()) MBBI++;
   }
 
-  if (RetOpcode == ARM::TCRETURNdi || RetOpcode == ARM::TCRETURNri) {
-    // Tail call return: adjust the stack pointer and jump to callee.
-    MBBI = MBB.getLastNonDebugInstr();
-    MachineOperand &JumpTarget = MBBI->getOperand(0);
-
-    // Jump to label or value in register.
-    if (RetOpcode == ARM::TCRETURNdi) {
-      unsigned TCOpcode = STI.isThumb() ?
-               (STI.isTargetMachO() ? ARM::tTAILJMPd : ARM::tTAILJMPdND) :
-               ARM::TAILJMPd;
-      MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(TCOpcode));
-      if (JumpTarget.isGlobal())
-        MIB.addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset(),
-                             JumpTarget.getTargetFlags());
-      else {
-        assert(JumpTarget.isSymbol());
-        MIB.addExternalSymbol(JumpTarget.getSymbolName(),
-                              JumpTarget.getTargetFlags());
-      }
-
-      // Add the default predicate in Thumb mode.
-      if (STI.isThumb()) MIB.addImm(ARMCC::AL).addReg(0);
-    } else if (RetOpcode == ARM::TCRETURNri) {
-      BuildMI(MBB, MBBI, dl,
-              TII.get(STI.isThumb() ? ARM::tTAILJMPr : ARM::TAILJMPr)).
-        addReg(JumpTarget.getReg(), RegState::Kill);
-    }
-
-    MachineInstr *NewMI = std::prev(MBBI);
-    for (unsigned i = 1, e = MBBI->getNumOperands(); i != e; ++i)
-      NewMI->addOperand(MBBI->getOperand(i));
-
-    // Delete the pseudo instruction TCRETURN.
-    MBB.erase(MBBI);
-    MBBI = NewMI;
-  }
+  fixTCReturn(MF, MBB);
 
   if (ArgRegsSaveSize)
     emitSPUpdate(isARM, MBB, MBBI, dl, TII, ArgRegsSaveSize);
