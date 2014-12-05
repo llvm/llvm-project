@@ -42,6 +42,9 @@ Changes to the MIPS Target
 * Returning a zero-byte struct no longer causes incorrect code generation when
   using the O32 ABI.
 
+* Passing structures of less than 32-bits using the O32 ABI on a big-endian
+  target has been fixed.
+
 * The exception personality has been changed for 64-bit Mips targets to
   eliminate warnings about relocations in a read-only section.
 
