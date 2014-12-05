@@ -3466,6 +3466,15 @@ bool LoopVectorizationLegality::canVectorize() {
     return false;
   }
 
+  // We only handle bottom-tested loops, i.e. loop in which the condition is
+  // checked at the end of each iteration. With that we can assume that all
+  // instructions in the loop are executed the same number of times.
+  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
+    emitAnalysis(
+        Report() << "loop control flow is not understood by vectorizer");
+    return false;
+  }
+
   // We need to have a loop header.
   DEBUG(dbgs() << "LV: Found a loop: " <<
         TheLoop->getHeader()->getName() << '\n');
