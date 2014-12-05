@@ -2268,6 +2268,9 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
 static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
                        CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                        CCState &State, const MCPhysReg *F64Regs) {
+  const MipsSubtarget &Subtarget =
+      State.getMachineFunction().getTarget()
+          .getSubtarget<const MipsSubtarget>();
 
   static const unsigned IntRegsSize = 4, FloatRegsSize = 2;
 
@@ -2277,6 +2280,19 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
   // Do not process byval args here.
   if (ArgFlags.isByVal())
     return true;
+
+  // Promote i8 and i16
+  if (ArgFlags.isInReg() && !Subtarget.isLittle()) {
+    if (LocVT == MVT::i8 || LocVT == MVT::i16 || LocVT == MVT::i32) {
+      LocVT = MVT::i32;
+      if (ArgFlags.isSExt())
+        LocInfo = CCValAssign::SExtUpper;
+      else if (ArgFlags.isZExt())
+        LocInfo = CCValAssign::ZExtUpper;
+      else
+        LocInfo = CCValAssign::AExtUpper;
+    }
+  }
 
   // Promote i8 and i16
   if (LocVT == MVT::i8 || LocVT == MVT::i16) {
