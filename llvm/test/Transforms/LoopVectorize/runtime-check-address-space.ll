@@ -31,25 +31,23 @@ define void @foo(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 %n) #0 {
 ; CHECK: ret
 
 entry:
-  br label %for.cond
+  %cmp1 = icmp slt i32 0, %n
+  br i1 %cmp1, label %for.body, label %for.end
 
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %idxprom = sext i32 %i.0 to i64
+for.body:                                         ; preds = %entry, %for.body
+  %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32 addrspace(1)* %b, i64 %idxprom
   %0 = load i32 addrspace(1)* %arrayidx, align 4
   %mul = mul nsw i32 %0, 3
-  %idxprom1 = sext i32 %i.0 to i64
+  %idxprom1 = sext i32 %i.02 to i64
   %arrayidx2 = getelementptr inbounds i32 addrspace(1)* %a, i64 %idxprom1
   store i32 %mul, i32 addrspace(1)* %arrayidx2, align 4
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
@@ -60,25 +58,23 @@ define void @bar0(i32* %a, i32 addrspace(1)* %b, i32 %n) #0 {
 ; CHECK: ret
 
 entry:
-  br label %for.cond
+  %cmp1 = icmp slt i32 0, %n
+  br i1 %cmp1, label %for.body, label %for.end
 
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %idxprom = sext i32 %i.0 to i64
+for.body:                                         ; preds = %entry, %for.body
+  %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32 addrspace(1)* %b, i64 %idxprom
   %0 = load i32 addrspace(1)* %arrayidx, align 4
   %mul = mul nsw i32 %0, 3
-  %idxprom1 = sext i32 %i.0 to i64
+  %idxprom1 = sext i32 %i.02 to i64
   %arrayidx2 = getelementptr inbounds i32* %a, i64 %idxprom1
   store i32 %mul, i32* %arrayidx2, align 4
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
@@ -89,25 +85,23 @@ define void @bar1(i32 addrspace(1)* %a, i32* %b, i32 %n) #0 {
 ; CHECK: ret
 
 entry:
-  br label %for.cond
+  %cmp1 = icmp slt i32 0, %n
+  br i1 %cmp1, label %for.body, label %for.end
 
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %idxprom = sext i32 %i.0 to i64
+for.body:                                         ; preds = %entry, %for.body
+  %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32* %b, i64 %idxprom
   %0 = load i32* %arrayidx, align 4
   %mul = mul nsw i32 %0, 3
-  %idxprom1 = sext i32 %i.0 to i64
+  %idxprom1 = sext i32 %i.02 to i64
   %arrayidx2 = getelementptr inbounds i32 addrspace(1)* %a, i64 %idxprom1
   store i32 %mul, i32 addrspace(1)* %arrayidx2, align 4
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
@@ -119,25 +113,23 @@ define void @bar2(i32* noalias %a, i32 addrspace(1)* noalias %b, i32 %n) #0 {
 ; CHECK: ret
 
 entry:
-  br label %for.cond
+  %cmp1 = icmp slt i32 0, %n
+  br i1 %cmp1, label %for.body, label %for.end
 
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %idxprom = sext i32 %i.0 to i64
+for.body:                                         ; preds = %entry, %for.body
+  %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32 addrspace(1)* %b, i64 %idxprom
   %0 = load i32 addrspace(1)* %arrayidx, align 4
   %mul = mul nsw i32 %0, 3
-  %idxprom1 = sext i32 %i.0 to i64
+  %idxprom1 = sext i32 %i.02 to i64
   %arrayidx2 = getelementptr inbounds i32* %a, i64 %idxprom1
   store i32 %mul, i32* %arrayidx2, align 4
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
@@ -149,25 +141,23 @@ define void @arst0(i32* %b, i32 %n) #0 {
 ; CHECK: ret
 
 entry:
-  br label %for.cond
+  %cmp1 = icmp slt i32 0, %n
+  br i1 %cmp1, label %for.body, label %for.end
 
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %idxprom = sext i32 %i.0 to i64
+for.body:                                         ; preds = %entry, %for.body
+  %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32* %b, i64 %idxprom
   %0 = load i32* %arrayidx, align 4
   %mul = mul nsw i32 %0, 3
-  %idxprom1 = sext i32 %i.0 to i64
+  %idxprom1 = sext i32 %i.02 to i64
   %arrayidx2 = getelementptr inbounds [1024 x i32] addrspace(1)* @g_as1, i64 0, i64 %idxprom1
   store i32 %mul, i32 addrspace(1)* %arrayidx2, align 4
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
@@ -180,25 +170,23 @@ define void @arst1(i32* %b, i32 %n) #0 {
 ; CHECK: ret
 
 entry:
-  br label %for.cond
+  %cmp1 = icmp slt i32 0, %n
+  br i1 %cmp1, label %for.body, label %for.end
 
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %idxprom = sext i32 %i.0 to i64
+for.body:                                         ; preds = %entry, %for.body
+  %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds [1024 x i32] addrspace(1)* @g_as1, i64 0, i64 %idxprom
   %0 = load i32 addrspace(1)* %arrayidx, align 4
   %mul = mul nsw i32 %0, 3
-  %idxprom1 = sext i32 %i.0 to i64
+  %idxprom1 = sext i32 %i.02 to i64
   %arrayidx2 = getelementptr inbounds i32* %b, i64 %idxprom1
   store i32 %mul, i32* %arrayidx2, align 4
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
@@ -210,25 +198,23 @@ define void @aoeu(i32 %n) #0 {
 ; CHECK: ret
 
 entry:
-  br label %for.cond
+  %cmp1 = icmp slt i32 0, %n
+  br i1 %cmp1, label %for.body, label %for.end
 
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %idxprom = sext i32 %i.0 to i64
+for.body:                                         ; preds = %entry, %for.body
+  %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds [1024 x i32] addrspace(2)* @q_as2, i64 0, i64 %idxprom
   %0 = load i32 addrspace(2)* %arrayidx, align 4
   %mul = mul nsw i32 %0, 3
-  %idxprom1 = sext i32 %i.0 to i64
+  %idxprom1 = sext i32 %i.02 to i64
   %arrayidx2 = getelementptr inbounds [1024 x i32] addrspace(1)* @g_as1, i64 0, i64 %idxprom1
   store i32 %mul, i32 addrspace(1)* %arrayidx2, align 4
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
