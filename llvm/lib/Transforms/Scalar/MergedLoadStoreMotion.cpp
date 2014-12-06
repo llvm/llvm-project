@@ -27,18 +27,18 @@
 //
 //            header:
 //                     br %cond, label %if.then, label %if.else
-//                        /                    \
-//                       /                      \
-//                      /                        \
+//                        +                    +
+//                       +                      +
+//                      +                        +
 //            if.then:                         if.else:
 //               %lt = load %addr_l               %le = load %addr_l
 //               <use %lt>                        <use %le>
 //               <...>                            <...>
 //               store %st, %addr_s               store %se, %addr_s
 //               br label %if.end                 br label %if.end
-//                     \                         /
-//                      \                       /
-//                       \                     /
+//                     +                         +
+//                      +                       +
+//                       +                     +
 //            if.end ("footer"):
 //                     <...>
 //
@@ -47,16 +47,16 @@
 //            header:
 //                     %l = load %addr_l
 //                     br %cond, label %if.then, label %if.else
-//                        /                    \
-//                       /                      \
-//                      /                        \
+//                        +                    +
+//                       +                      +
+//                      +                        +
 //            if.then:                         if.else:
 //               <use %l>                         <use %l>
 //               <...>                            <...>
 //               br label %if.end                 br label %if.end
-//                      \                        /
-//                       \                      /
-//                        \                    /
+//                      +                        +
+//                       +                      +
+//                        +                    +
 //            if.end ("footer"):
 //                     %s.sink = phi [%st, if.then], [%se, if.else]
 //                     <...>
