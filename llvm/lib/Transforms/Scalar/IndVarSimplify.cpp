@@ -1626,16 +1626,19 @@ LinearFunctionTestReplace(Loop *L,
     // The BackedgeTaken expression contains the number of times that the
     // backedge branches to the loop header.  This is one less than the
     // number of times the loop executes, so use the incremented indvar.
-    llvm::Value *IncrementedIndvar = IndVar->getIncomingValueForBlock(L->getExitingBlock());
+    llvm::Value *IncrementedIndvar =
+        IndVar->getIncomingValueForBlock(L->getExitingBlock());
     const auto *IncrementedIndvarSCEV =
         cast<SCEVAddRecExpr>(SE->getSCEV(IncrementedIndvar));
     // It is unsafe to use the incremented indvar if it has a wrapping flag, we
     // don't want to compare against a poison value.  Check the SCEV that
     // corresponds to the incremented indvar, the SCEVExpander will only insert
     // flags in the IR if the SCEV originally had wrapping flags.
-    if (ScalarEvolution::maskFlags(IncrementedIndvarSCEV->getNoWrapFlags(),
-                                   SCEV::FlagNUW | SCEV::FlagNSW) ==
-        SCEV::FlagAnyWrap) {
+    // FIXME: In theory, SCEV could drop flags even though they exist in IR.
+    // A more robust solution would involve getting a new expression for
+    // CmpIndVar by applying non-NSW/NUW AddExprs.
+    if (!ScalarEvolution::maskFlags(IncrementedIndvarSCEV->getNoWrapFlags(),
+                                    SCEV::FlagNUW | SCEV::FlagNSW)) {
       // Add one to the "backedge-taken" count to get the trip count.
       // This addition may overflow, which is valid as long as the comparison is
       // truncated to BackedgeTakenCount->getType().
