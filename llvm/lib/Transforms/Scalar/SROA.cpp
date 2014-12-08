@@ -2697,7 +2697,10 @@ private:
     // the old pointer, which necessarily must be in the right position to
     // dominate the PHI.
     IRBuilderTy PtrBuilder(IRB);
-    PtrBuilder.SetInsertPoint(OldPtr);
+    if (isa<PHINode>(OldPtr))
+      PtrBuilder.SetInsertPoint(OldPtr->getParent()->getFirstInsertionPt());
+    else
+      PtrBuilder.SetInsertPoint(OldPtr);
     PtrBuilder.SetCurrentDebugLocation(OldPtr->getDebugLoc());
 
     Value *NewPtr = getNewAllocaSlicePtr(PtrBuilder, OldPtr->getType());

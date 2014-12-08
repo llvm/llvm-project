@@ -501,3 +501,102 @@ end:
 ; CHECK-NOT: load
 ; CHECK: ret float %[[phi]]
 }
+
+; Verifies we fixed PR20425. We should be able to promote all alloca's to
+; registers in this test.
+;
+; %0 = slice
+; %1 = slice
+; %2 = phi(%0, %1) // == slice
+define float @simplify_phi_nodes_that_equal_slice(i1 %cond, float* %temp) {
+; CHECK-LABEL: @simplify_phi_nodes_that_equal_slice(
+entry:
+  %arr = alloca [4 x float], align 4
+; CHECK-NOT: alloca
+  br i1 %cond, label %then, label %else
+
+then:
+  %0 = getelementptr inbounds [4 x float]* %arr, i64 0, i64 3
+  store float 1.000000e+00, float* %0, align 4
+  br label %merge
+
+else:
+  %1 = getelementptr inbounds [4 x float]* %arr, i64 0, i64 3
+  store float 2.000000e+00, float* %1, align 4
+  br label %merge
+
+merge:
+  %2 = phi float* [ %0, %then ], [ %1, %else ]
+  store float 0.000000e+00, float* %temp, align 4
+  %3 = load float* %2, align 4
+  ret float %3
+}
+
+; A slightly complicated example for PR20425.
+;
+; %0 = slice
+; %1 = phi(%0) // == slice
+; %2 = slice
+; %3 = phi(%1, %2) // == slice
+define float @simplify_phi_nodes_that_equal_slice_2(i1 %cond, float* %temp) {
+; CHECK-LABEL: @simplify_phi_nodes_that_equal_slice_2(
+entry:
+  %arr = alloca [4 x float], align 4
+; CHECK-NOT: alloca
+  br i1 %cond, label %then, label %else
+
+then:
+  %0 = getelementptr inbounds [4 x float]* %arr, i64 0, i64 3
+  store float 1.000000e+00, float* %0, align 4
+  br label %then2
+
+then2:
+  %1 = phi float* [ %0, %then ]
+  store float 2.000000e+00, float* %1, align 4
+  br label %merge
+
+else:
+  %2 = getelementptr inbounds [4 x float]* %arr, i64 0, i64 3
+  store float 3.000000e+00, float* %2, align 4
+  br label %merge
+
+merge:
+  %3 = phi float* [ %1, %then2 ], [ %2, %else ]
+  store float 0.000000e+00, float* %temp, align 4
+  %4 = load float* %3, align 4
+  ret float %4
+}
+
+%struct.S = type { i32 }
+
+; Verifies we fixed PR20822. We have a foldable PHI feeding a speculatable PHI
+; which requires the rewriting of the speculated PHI to handle insertion
+; when the incoming pointer is itself from a PHI node. We would previously
+; insert a bitcast instruction *before* a PHI, producing an invalid module;
+; make sure we insert *after* the first non-PHI instruction.
+define void @PR20822() {
+; CHECK-LABEL: @PR20822(
+entry:
+  %f = alloca %struct.S, align 4
+; CHECK: %[[alloca:.*]] = alloca
+  br i1 undef, label %if.end, label %for.cond
+
+for.cond:                                         ; preds = %for.cond, %entry
+  br label %if.end
+
+if.end:                                           ; preds = %for.cond, %entry
+  %f2 = phi %struct.S* [ %f, %entry ], [ %f, %for.cond ]
+; CHECK: phi i32
+; CHECK: %[[cast:.*]] = bitcast i32* %[[alloca]] to %struct.S*
+  phi i32 [ undef, %entry ], [ undef, %for.cond ]
+  br i1 undef, label %if.then5, label %if.then2
+
+if.then2:                                         ; preds = %if.end
+  br label %if.then5
+
+if.then5:                                         ; preds = %if.then2, %if.end
+  %f1 = phi %struct.S* [ undef, %if.then2 ], [ %f2, %if.end ]
+; CHECK: phi {{.*}} %[[cast]]
+  store %struct.S undef, %struct.S* %f1, align 4
+  ret void
+}
