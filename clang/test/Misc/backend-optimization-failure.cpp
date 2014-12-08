@@ -6,8 +6,8 @@
 
 void test_switch(int *A, int *B, int Length) {
 #pragma clang loop vectorize(enable) unroll(disable)
-  for (int i = 0; i < Length; i++) {
-    /* expected-warning {{loop not vectorized: failed explicitly specified loop vectorization}} */ switch (A[i]) {
+  /* expected-warning {{loop not vectorized: failed explicitly specified loop vectorization}} */ for (int i = 0; i < Length; i++) {
+    switch (A[i]) {
     case 0:
       B[i] = 1;
       break;
