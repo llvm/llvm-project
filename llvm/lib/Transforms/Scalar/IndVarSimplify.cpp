@@ -1623,15 +1623,27 @@ LinearFunctionTestReplace(Loop *L,
   // compare against the post-incremented value, otherwise we must compare
   // against the preincremented value.
   if (L->getExitingBlock() == L->getLoopLatch()) {
-    // Add one to the "backedge-taken" count to get the trip count.
-    // This addition may overflow, which is valid as long as the comparison is
-    // truncated to BackedgeTakenCount->getType().
-    IVCount = SE->getAddExpr(BackedgeTakenCount,
-                             SE->getConstant(BackedgeTakenCount->getType(), 1));
     // The BackedgeTaken expression contains the number of times that the
     // backedge branches to the loop header.  This is one less than the
     // number of times the loop executes, so use the incremented indvar.
-    CmpIndVar = IndVar->getIncomingValueForBlock(L->getExitingBlock());
+    llvm::Value *IncrementedIndvar = IndVar->getIncomingValueForBlock(L->getExitingBlock());
+    const auto *IncrementedIndvarSCEV =
+        cast<SCEVAddRecExpr>(SE->getSCEV(IncrementedIndvar));
+    // It is unsafe to use the incremented indvar if it has a wrapping flag, we
+    // don't want to compare against a poison value.  Check the SCEV that
+    // corresponds to the incremented indvar, the SCEVExpander will only insert
+    // flags in the IR if the SCEV originally had wrapping flags.
+    if (ScalarEvolution::maskFlags(IncrementedIndvarSCEV->getNoWrapFlags(),
+                                   SCEV::FlagNUW | SCEV::FlagNSW) ==
+        SCEV::FlagAnyWrap) {
+      // Add one to the "backedge-taken" count to get the trip count.
+      // This addition may overflow, which is valid as long as the comparison is
+      // truncated to BackedgeTakenCount->getType().
+      IVCount =
+          SE->getAddExpr(BackedgeTakenCount,
+                         SE->getConstant(BackedgeTakenCount->getType(), 1));
+      CmpIndVar = IncrementedIndvar;
+    }
   }
 
   Value *ExitCnt = genLoopLimit(IndVar, IVCount, L, Rewriter, SE);

@@ -82,15 +82,23 @@ exit:
 ; Perform LFTR without generating extra preheader code.
 define void @guardedloop([0 x double]* %matrix, [0 x double]* %vector,
                          i32 %irow, i32 %ilead) nounwind {
-; CHECK: entry:
-; CHECK-NOT: zext
-; CHECK-NOT: add
-; CHECK: loop:
-; CHECK: phi i64
-; CHECK: phi i64
+; CHECK-LABEL: @guardedloop(
+; CHECK-LABEL: entry:
+; CHECK-NEXT: %[[cmp:.*]] = icmp slt i32 1, %irow
+; CHECK-NEXT: br i1 %[[cmp]], label %[[loop_preheader:.*]], label %[[return:.*]]
+
+; CHECK: [[loop_preheader]]:
+; CHECK-NEXT: %[[sext:.*]] = sext i32 %ilead to i64
+; CHECK-NEXT: %[[add:.*]] = add i32 %irow, -1
+; CHECK-NEXT: br label %[[loop:.*]]
+
+; CHECK: [[loop]]:
+; CHECK-NEXT: %[[indvars_iv2:.*]] = phi i64
+; CHECK-NEXT: phi i64
 ; CHECK-NOT: phi
-; CHECK: icmp ne
-; CHECK: br i1
+; CHECK: %[[lftr_wideiv:.*]] = trunc i64 %[[indvars_iv2]] to i32
+; CHECK-NEXT: %[[exitcond:.*]] = icmp ne i32 %[[lftr_wideiv]], %[[add]]
+; CHECK-NEXT: br i1 %[[exitcond]], label %[[loop]], label
 entry:
   %cmp = icmp slt i32 1, %irow
   br i1 %cmp, label %loop, label %return

@@ -11,7 +11,7 @@ entry:
   br i1 %cmp1, label %for.body, label %for.end
 
 ; Make sure the added GEP has the right index type
-; CHECK: %lftr.limit = getelementptr i8 addrspace(2)* %base, i8 %0
+; CHECK: %lftr.limit = getelementptr i8 addrspace(2)* %base, i8
 
 ; CHECK: for.body:
 ; CHECK: phi i8 addrspace(2)*
@@ -43,7 +43,7 @@ entry:
   br i1 %cmp1, label %for.body, label %for.end
 
 ; Make sure the added GEP has the right index type
-; CHECK: %lftr.limit = getelementptr i8 addrspace(3)* %base, i16 %0
+; CHECK: %lftr.limit = getelementptr i8 addrspace(3)* %base, i16
 
 ; CHECK: for.body:
 ; CHECK: phi i8 addrspace(3)*
