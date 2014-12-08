@@ -3746,7 +3746,7 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
         }
 
         // Push the argument pack onto the list of converted arguments.
-        if (InFinalParameterPack) {
+        if (InFinalParameterPack && !ArgumentPack.empty()) {
           Converted.push_back(
             TemplateArgument::CreatePackCopy(Context,
                                              ArgumentPack.data(),

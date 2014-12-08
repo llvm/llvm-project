@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
 
 // Template argument deduction with template template parameters.
 template<typename T, template<T> class A> 
@@ -161,4 +161,20 @@ namespace test14 {
     A<E0> a;
     foo(a);
   }
+}
+
+namespace PR21536 {
+  template<typename ...T> struct X;
+  template<typename A, typename ...B> struct S {
+    static_assert(sizeof...(B) == 1, "");
+    void f() {
+      using T = A;
+      using T = int;
+
+      using U = X<B...>;
+      using U = X<int>;
+    }
+  };
+  template<typename ...T> void f(S<T...>);
+  void g() { f(S<int, int>()); }
 }
