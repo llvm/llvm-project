@@ -53,9 +53,6 @@ public:
   /// getNullValue.
   bool isNullValue() const;
 
-  /// \brief Returns true if the value is one.
-  bool isOneValue() const;
-
   /// isAllOnesValue - Return true if this is the value that would be returned by
   /// getAllOnesValue.
   bool isAllOnesValue() const;

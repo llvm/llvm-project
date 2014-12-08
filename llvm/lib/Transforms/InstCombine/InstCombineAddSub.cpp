@@ -1462,17 +1462,11 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return ReplaceInstUsesWith(I, V);
 
-  // If this is a 'B = x-(-A)', change to B = x+A.
+  // If this is a 'B = x-(-A)', change to B = x+A.  This preserves NSW/NUW.
   if (Value *V = dyn_castNegVal(Op1)) {
     BinaryOperator *Res = BinaryOperator::CreateAdd(Op0, V);
-
-    if (const auto *BO = dyn_cast<BinaryOperator>(Op1)) {
-      assert(BO->getOpcode() == Instruction::Sub &&
-             "Expected a subtraction operator!");
-      if (BO->hasNoSignedWrap() && I.hasNoSignedWrap())
-        Res->setHasNoSignedWrap(true);
-    }
-
+    Res->setHasNoSignedWrap(I.hasNoSignedWrap());
+    Res->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
     return Res;
   }
 
@@ -1561,7 +1555,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     // 0 - (X sdiv C)  -> (X sdiv -C)  provided the negation doesn't overflow.
     if (match(Op1, m_SDiv(m_Value(X), m_Constant(C))) && match(Op0, m_Zero()) &&
-        !C->isMinSignedValue() && !C->isOneValue())
+        !C->isMinSignedValue())
       return BinaryOperator::CreateSDiv(X, ConstantExpr::getNeg(C));
 
     // 0 - (X << Y)  -> (-X << Y)   when X is freely negatable.
