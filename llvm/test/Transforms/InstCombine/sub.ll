@@ -464,3 +464,12 @@ define i32 @test38(i32 %A) {
 ; CHECK-NEXT: [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
 ; CHECK-NEXT: ret i32 [[SEXT]]
 }
+
+define i32 @test39(i32 %A, i32 %x) {
+  %B = sub i32 0, %A
+  %C = sub nsw i32 %x, %B
+  ret i32 %C
+; CHECK-LABEL: @test39(
+; CHECK: %C = add i32 %x, %A
+; CHECK: ret i32 %C
+}
