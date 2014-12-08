@@ -55,16 +55,15 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST) {
       AliasTy = MayAlias;
   }
 
-  bool ASHadUnknownInsts = false;
+  bool ASHadUnknownInsts = !AS.UnknownInsts.empty();
   if (UnknownInsts.empty()) {            // Merge call sites...
-    if (!AS.UnknownInsts.empty()) {
+    if (ASHadUnknownInsts) {
       std::swap(UnknownInsts, AS.UnknownInsts);
       addRef();
     }
-  } else if (!AS.UnknownInsts.empty()) {
+  } else if (ASHadUnknownInsts) {
     UnknownInsts.insert(UnknownInsts.end(), AS.UnknownInsts.begin(), AS.UnknownInsts.end());
     AS.UnknownInsts.clear();
-    ASHadUnknownInsts = true;
   }
 
   AS.Forward = this;  // Forward across AS now...
