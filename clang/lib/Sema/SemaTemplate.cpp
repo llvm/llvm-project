@@ -3692,12 +3692,12 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
                                 ArgumentPack.size(), Converted))
         return true;
 
-      if (TemplateArgs[ArgIdx].getArgument().isPackExpansion() &&
-          isa<TypeAliasTemplateDecl>(Template) &&
-          !(Param + 1 == ParamEnd && (*Param)->isTemplateParameterPack() &&
-            !getExpandedPackSize(*Param))) {
+      bool PackExpansionIntoNonPack =
+          TemplateArgs[ArgIdx].getArgument().isPackExpansion() &&
+          (!(*Param)->isTemplateParameterPack() || getExpandedPackSize(*Param));
+      if (PackExpansionIntoNonPack && isa<TypeAliasTemplateDecl>(Template)) {
         // Core issue 1430: we have a pack expansion as an argument to an
-        // alias template, and it's not part of a final parameter pack. This
+        // alias template, and it's not part of a parameter pack. This
         // can't be canonicalized, so reject it now.
         Diag(TemplateArgs[ArgIdx].getLocation(),
              diag::err_alias_template_expansion_into_fixed_list)
@@ -3720,16 +3720,11 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
         ++Param;
       }
 
-      // If we just saw a pack expansion, then directly convert the remaining
-      // arguments, because we don't know what parameters they'll match up
-      // with.
-      if (TemplateArgs[ArgIdx-1].getArgument().isPackExpansion()) {
-        bool InFinalParameterPack = Param != ParamEnd &&
-                                    Param + 1 == ParamEnd &&
-                                    (*Param)->isTemplateParameterPack() &&
-                                    !getExpandedPackSize(*Param);
-
-        if (!InFinalParameterPack && !ArgumentPack.empty()) {
+      // If we just saw a pack expansion into a non-pack, then directly convert
+      // the remaining arguments, because we don't know what parameters they'll
+      // match up with.
+      if (PackExpansionIntoNonPack) {
+        if (!ArgumentPack.empty()) {
           // If we were part way through filling in an expanded parameter pack,
           // fall back to just producing individual arguments.
           Converted.insert(Converted.end(),
@@ -3738,20 +3733,8 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
         }
 
         while (ArgIdx < NumArgs) {
-          if (InFinalParameterPack)
-            ArgumentPack.push_back(TemplateArgs[ArgIdx].getArgument());
-          else
-            Converted.push_back(TemplateArgs[ArgIdx].getArgument());
+          Converted.push_back(TemplateArgs[ArgIdx].getArgument());
           ++ArgIdx;
-        }
-
-        // Push the argument pack onto the list of converted arguments.
-        if (InFinalParameterPack && !ArgumentPack.empty()) {
-          Converted.push_back(
-            TemplateArgument::CreatePackCopy(Context,
-                                             ArgumentPack.data(),
-                                             ArgumentPack.size()));
-          ArgumentPack.clear();
         }
 
         return false;
