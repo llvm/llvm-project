@@ -253,13 +253,16 @@ private:
                   const MDNode *TBAAInfo,
                   bool KnownMustAlias = false);
   void addUnknownInst(Instruction *I, AliasAnalysis &AA);
-  void removeUnknownInst(Instruction *I) {
+  void removeUnknownInst(AliasSetTracker &AST, Instruction *I) {
+    bool WasEmpty = UnknownInsts.empty();
     for (size_t i = 0, e = UnknownInsts.size(); i != e; ++i)
       if (UnknownInsts[i] == I) {
         UnknownInsts[i] = UnknownInsts.back();
         UnknownInsts.pop_back();
         --i; --e;  // Revisit the moved entry.
       }
+    if (!WasEmpty && UnknownInsts.empty())
+      dropRef(AST);
   }
   void setVolatile() { Volatile = true; }
 
