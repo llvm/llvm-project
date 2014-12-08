@@ -3,12 +3,11 @@
 ; UDiv is safe to speculate if the denominator is known non-zero.
 
 ; CHECK-LABEL: @safe_udiv(
-; CHECK:      %div = udiv i64 %x, %or
+; CHECK:      %div = udiv i64 %x, 2
 ; CHECK-NEXT: br label %for.body
 
 define void @safe_udiv(i64 %x, i64 %m, i64 %n, i32* %p, i64* %q) nounwind {
 entry:
-  %or = or i64 %m, 1
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.inc
@@ -19,7 +18,7 @@ for.body:                                         ; preds = %entry, %for.inc
   br i1 %tobool, label %for.inc, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %div = udiv i64 %x, %or
+  %div = udiv i64 %x, 2
   %arrayidx1 = getelementptr inbounds i64* %q, i64 %i.02
   store i64 %div, i64* %arrayidx1, align 8
   br label %for.inc
@@ -69,13 +68,12 @@ for.end:                                          ; preds = %for.inc, %entry
 ; known to have at least one zero bit.
 
 ; CHECK-LABEL: @safe_sdiv(
-; CHECK:      %div = sdiv i64 %x, %or
+; CHECK:      %div = sdiv i64 %x, 2
 ; CHECK-NEXT: br label %for.body
 
 define void @safe_sdiv(i64 %x, i64 %m, i64 %n, i32* %p, i64* %q) nounwind {
 entry:
   %and = and i64 %m, -3
-  %or = or i64 %and, 1
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.inc
@@ -86,7 +84,7 @@ for.body:                                         ; preds = %entry, %for.inc
   br i1 %tobool, label %for.inc, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %div = sdiv i64 %x, %or
+  %div = sdiv i64 %x, 2
   %arrayidx1 = getelementptr inbounds i64* %q, i64 %i.02
   store i64 %div, i64* %arrayidx1, align 8
   br label %for.inc
