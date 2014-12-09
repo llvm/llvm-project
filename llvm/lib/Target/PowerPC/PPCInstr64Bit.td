@@ -786,7 +786,7 @@ let canFoldAsLoad = 1, PPC970_Unit = 2 in {
 def LD   : DSForm_1<58, 0, (outs g8rc:$rD), (ins memrix:$src),
                     "ld $rD, $src", IIC_LdStLD,
                     [(set i64:$rD, (aligned4load ixaddr:$src))]>, isPPC64;
-// The following three definitions are selected for small code model only.
+// The following four definitions are selected for small code model only.
 // Otherwise, we need to create two instructions to form a 32-bit offset,
 // so we have a custom matcher for TOC_ENTRY in PPCDAGToDAGIsel::Select().
 def LDtoc: Pseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
@@ -801,6 +801,10 @@ def LDtocCPT: Pseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
                   "#LDtocCPT",
                   [(set i64:$rD,
                      (PPCtoc_entry tconstpool:$disp, i64:$reg))]>, isPPC64;
+def LDtocBA: Pseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
+                  "#LDtocCPT",
+                  [(set i64:$rD,
+                     (PPCtoc_entry tblockaddress:$disp, i64:$reg))]>, isPPC64;
 
 let hasSideEffects = 1, isCodeGenOnly = 1, RST = 2, Defs = [X2] in
 def LDinto_toc: DSForm_1<58, 0, (outs), (ins memrix:$src),

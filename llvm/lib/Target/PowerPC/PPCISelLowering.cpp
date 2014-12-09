@@ -1631,8 +1631,16 @@ SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
 SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
                                              SelectionDAG &DAG) const {
   EVT PtrVT = Op.getValueType();
+  BlockAddressSDNode *BASDN = cast<BlockAddressSDNode>(Op);
+  const BlockAddress *BA = BASDN->getBlockAddress();
 
-  const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
+  // 64-bit SVR4 ABI code is always position-independent.
+  // The actual BlockAddress is stored in the TOC.
+  if (Subtarget.isSVR4ABI() && Subtarget.isPPC64()) {
+    SDValue GA = DAG.getTargetBlockAddress(BA, PtrVT, BASDN->getOffset());
+    return DAG.getNode(PPCISD::TOC_ENTRY, SDLoc(BASDN), MVT::i64, GA,
+                       DAG.getRegister(PPC::X2, MVT::i64));
+  }
 
   unsigned MOHiFlag, MOLoFlag;
   bool isPIC = GetLabelAccessInfo(DAG.getTarget(), MOHiFlag, MOLoFlag);

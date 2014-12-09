@@ -1439,7 +1439,7 @@ SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
 
     // For medium and large code model, we generate two instructions as
     // described below.  Otherwise we allow SelectCodeCommon to handle this,
-    // selecting one of LDtoc, LDtocJTI, and LDtocCPT.
+    // selecting one of LDtoc, LDtocJTI, LDtocCPT, and LDtocBA.
     CodeModel::Model CModel = TM.getCodeModel();
     if (CModel != CodeModel::Medium && CModel != CodeModel::Large)
       break;
@@ -1456,7 +1456,8 @@ SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
     SDNode *Tmp = CurDAG->getMachineNode(PPC::ADDIStocHA, dl, MVT::i64,
                                         TOCbase, GA);
 
-    if (isa<JumpTableSDNode>(GA) || CModel == CodeModel::Large)
+    if (isa<JumpTableSDNode>(GA) || isa<BlockAddressSDNode>(GA) ||
+        CModel == CodeModel::Large)
       return CurDAG->getMachineNode(PPC::LDtocL, dl, MVT::i64, GA,
                                     SDValue(Tmp, 0));
 
