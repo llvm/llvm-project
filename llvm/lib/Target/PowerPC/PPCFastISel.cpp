@@ -865,7 +865,7 @@ bool PPCFastISel::SelectFPTrunc(const Instruction *I) {
 }
 
 // Move an i32 or i64 value in a GPR to an f64 value in an FPR.
-// FIXME: When direct register moves are implemented (see PowerISA 2.08),
+// FIXME: When direct register moves are implemented (see PowerISA 2.07),
 // those should be used instead of moving via a stack slot when the
 // subtarget permits.
 // FIXME: The code here is sloppy for the 4-byte case.  Can use a 4-byte
@@ -898,10 +898,10 @@ unsigned PPCFastISel::PPCMoveToFPReg(MVT SrcVT, unsigned SrcReg,
   if (SrcVT == MVT::i32) {
     if (!IsSigned) {
       LoadOpc = PPC::LFIWZX;
-      Addr.Offset = 4;
+      Addr.Offset = (PPCSubTarget->isLittleEndian()) ? 0 : 4;
     } else if (PPCSubTarget->hasLFIWAX()) {
       LoadOpc = PPC::LFIWAX;
-      Addr.Offset = 4;
+      Addr.Offset = (PPCSubTarget->isLittleEndian()) ? 0 : 4;
     }
   }
 
@@ -985,7 +985,7 @@ bool PPCFastISel::SelectIToFP(const Instruction *I, bool IsSigned) {
 
 // Move the floating-point value in SrcReg into an integer destination
 // register, and return the register (or zero if we can't handle it).
-// FIXME: When direct register moves are implemented (see PowerISA 2.08),
+// FIXME: When direct register moves are implemented (see PowerISA 2.07),
 // those should be used instead of moving via a stack slot when the
 // subtarget permits.
 unsigned PPCFastISel::PPCMoveToIntReg(const Instruction *I, MVT VT,
