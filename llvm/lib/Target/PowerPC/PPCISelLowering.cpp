@@ -9002,37 +9002,42 @@ void PPCTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   case 'P': {
     ConstantSDNode *CST = dyn_cast<ConstantSDNode>(Op);
     if (!CST) return; // Must be an immediate to match.
-    unsigned Value = CST->getZExtValue();
+    int64_t Value = CST->getSExtValue();
+    EVT TCVT = MVT::i64; // All constants taken to be 64 bits so that negative
+                         // numbers are printed as such.
     switch (Letter) {
     default: llvm_unreachable("Unknown constraint letter!");
     case 'I':  // "I" is a signed 16-bit constant.
-      if ((short)Value == (int)Value)
-        Result = DAG.getTargetConstant(Value, Op.getValueType());
+      if (isInt<16>(Value))
+        Result = DAG.getTargetConstant(Value, TCVT);
       break;
     case 'J':  // "J" is a constant with only the high-order 16 bits nonzero.
+      if (isShiftedUInt<16, 16>(Value))
+        Result = DAG.getTargetConstant(Value, TCVT);
+      break;
     case 'L':  // "L" is a signed 16-bit constant shifted left 16 bits.
-      if ((short)Value == 0)
-        Result = DAG.getTargetConstant(Value, Op.getValueType());
+      if (isShiftedInt<16, 16>(Value))
+        Result = DAG.getTargetConstant(Value, TCVT);
       break;
     case 'K':  // "K" is a constant with only the low-order 16 bits nonzero.
-      if ((Value >> 16) == 0)
-        Result = DAG.getTargetConstant(Value, Op.getValueType());
+      if (isUInt<16>(Value))
+        Result = DAG.getTargetConstant(Value, TCVT);
       break;
     case 'M':  // "M" is a constant that is greater than 31.
       if (Value > 31)
-        Result = DAG.getTargetConstant(Value, Op.getValueType());
+        Result = DAG.getTargetConstant(Value, TCVT);
       break;
     case 'N':  // "N" is a positive constant that is an exact power of two.
-      if ((int)Value > 0 && isPowerOf2_32(Value))
-        Result = DAG.getTargetConstant(Value, Op.getValueType());
+      if (Value > 0 && isPowerOf2_64(Value))
+        Result = DAG.getTargetConstant(Value, TCVT);
       break;
     case 'O':  // "O" is the constant zero.
       if (Value == 0)
-        Result = DAG.getTargetConstant(Value, Op.getValueType());
+        Result = DAG.getTargetConstant(Value, TCVT);
       break;
     case 'P':  // "P" is a constant whose negation is a signed 16-bit constant.
-      if ((short)-Value == (int)-Value)
-        Result = DAG.getTargetConstant(Value, Op.getValueType());
+      if (isInt<16>(-Value))
+        Result = DAG.getTargetConstant(Value, TCVT);
       break;
     }
     break;
