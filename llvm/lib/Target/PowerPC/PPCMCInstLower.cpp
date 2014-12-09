@@ -137,6 +137,12 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     case PPCII::MO_TLS:
       RefKind = MCSymbolRefExpr::VK_PPC_TLS;
       break;
+    case PPCII::MO_TLSGD:
+      RefKind = MCSymbolRefExpr::VK_PPC_TLSGD;
+      break;
+    case PPCII::MO_TLSLD:
+      RefKind = MCSymbolRefExpr::VK_PPC_TLSLD;
+      break;
   }
 
   if (MO.getTargetFlags() == PPCII::MO_PLT_OR_STUB && !isDarwin)

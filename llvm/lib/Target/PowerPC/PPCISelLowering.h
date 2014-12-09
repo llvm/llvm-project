@@ -99,6 +99,10 @@ namespace llvm {
       /// SVR4 calls.
       CALL, CALL_NOP,
 
+      /// CALL_TLS and CALL_NOP_TLS - Versions of CALL and CALL_NOP used
+      /// to access TLS variables.
+      CALL_TLS, CALL_NOP_TLS,
+
       /// CHAIN,FLAG = MTCTR(VAL, CHAIN[, INFLAG]) - Directly corresponds to a
       /// MTCTR instruction.
       MTCTR,
@@ -214,10 +218,6 @@ namespace llvm {
       /// sym\@got\@tlsgd\@l.
       ADDI_TLSGD_L,
 
-      /// G8RC = GET_TLS_ADDR %X3, Symbol - For the general-dynamic TLS
-      /// model, produces a call to __tls_get_addr(sym\@tlsgd).
-      GET_TLS_ADDR,
-
       /// G8RC = ADDIS_TLSLD_HA %X2, Symbol - For the local-dynamic TLS
       /// model, produces an ADDIS8 instruction that adds the GOT base
       /// register to sym\@got\@tlsld\@ha.
@@ -227,10 +227,6 @@ namespace llvm {
       /// model, produces an ADDI8 instruction that adds G8RReg to
       /// sym\@got\@tlsld\@l.
       ADDI_TLSLD_L,
-
-      /// G8RC = GET_TLSLD_ADDR %X3, Symbol - For the local-dynamic TLS
-      /// model, produces a call to __tls_get_addr(sym\@tlsld).
-      GET_TLSLD_ADDR,
 
       /// G8RC = ADDIS_DTPREL_HA %X3, Symbol, Chain - For the
       /// local-dynamic TLS model, produces an ADDIS8 instruction
@@ -552,6 +548,8 @@ namespace llvm {
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+    std::pair<SDValue,SDValue> lowerTLSCall(SDValue Op, SDLoc dl,
+                                            SelectionDAG &DAG) const;
     SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;

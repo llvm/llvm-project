@@ -188,6 +188,9 @@ def : Pat<(PPCcall (i64 texternalsym:$dst)),
 def : Pat<(PPCcall_nop (i64 texternalsym:$dst)),
           (BL8_NOP texternalsym:$dst)>;
 
+def : Pat<(PPCcall_nop_tls texternalsym:$func, tglobaltlsaddr:$sym),
+          (BL8_NOP_TLS texternalsym:$func, tglobaltlsaddr:$sym)>;
+
 // Atomic operations
 let usesCustomInserter = 1 in {
   let Defs = [CR0] in {
@@ -876,11 +879,6 @@ def ADDItlsgdL : Pseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                        [(set i64:$rD,
                          (PPCaddiTlsgdL i64:$reg, tglobaltlsaddr:$disp))]>,
                  isPPC64;
-def GETtlsADDR : Pseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
-                        "#GETtlsADDR",
-                        [(set i64:$rD,
-                          (PPCgetTlsAddr i64:$reg, tglobaltlsaddr:$sym))]>,
-                 isPPC64;
 def ADDIStlsldHA: Pseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                          "#ADDIStlsldHA",
                          [(set i64:$rD,
@@ -891,11 +889,6 @@ def ADDItlsldL : Pseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                        [(set i64:$rD,
                          (PPCaddiTlsldL i64:$reg, tglobaltlsaddr:$disp))]>,
                  isPPC64;
-def GETtlsldADDR : Pseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
-                          "#GETtlsldADDR",
-                          [(set i64:$rD,
-                            (PPCgetTlsldAddr i64:$reg, tglobaltlsaddr:$sym))]>,
-                   isPPC64;
 def ADDISdtprelHA: Pseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                           "#ADDISdtprelHA",
                           [(set i64:$rD,

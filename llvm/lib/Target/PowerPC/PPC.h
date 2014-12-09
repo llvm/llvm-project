@@ -96,7 +96,12 @@ namespace llvm {
     MO_TOC_LO    = 7 << 4,
 
     // Symbol for VK_PPC_TLS fixup attached to an ADD instruction
-    MO_TLS       = 8 << 4
+    MO_TLS       = 8 << 4,
+
+    // Symbols for VK_PPC_TLSGD and VK_PPC_TLSLD in __tls_get_addr
+    // call sequences.
+    MO_TLSLD     = 9 << 4,
+    MO_TLSGD     = 10 << 4
   };
   } // end namespace PPCII
   

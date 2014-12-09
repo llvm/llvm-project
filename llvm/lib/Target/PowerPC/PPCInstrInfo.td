@@ -110,10 +110,8 @@ def PPCldGotTprelL : SDNode<"PPCISD::LD_GOT_TPREL_L", SDTIntBinOp,
 def PPCaddTls     : SDNode<"PPCISD::ADD_TLS", SDTIntBinOp, []>;
 def PPCaddisTlsgdHA : SDNode<"PPCISD::ADDIS_TLSGD_HA", SDTIntBinOp>;
 def PPCaddiTlsgdL   : SDNode<"PPCISD::ADDI_TLSGD_L", SDTIntBinOp>;
-def PPCgetTlsAddr   : SDNode<"PPCISD::GET_TLS_ADDR", SDTIntBinOp>;
 def PPCaddisTlsldHA : SDNode<"PPCISD::ADDIS_TLSLD_HA", SDTIntBinOp>;
 def PPCaddiTlsldL   : SDNode<"PPCISD::ADDI_TLSLD_L", SDTIntBinOp>;
-def PPCgetTlsldAddr : SDNode<"PPCISD::GET_TLSLD_ADDR", SDTIntBinOp>;
 def PPCaddisDtprelHA : SDNode<"PPCISD::ADDIS_DTPREL_HA", SDTIntBinOp,
                               [SDNPHasChain]>;
 def PPCaddiDtprelL   : SDNode<"PPCISD::ADDI_DTPREL_L", SDTIntBinOp>;
@@ -136,9 +134,15 @@ def SDT_PPCCall   : SDTypeProfile<0, -1, [SDTCisInt<0>]>;
 def PPCcall  : SDNode<"PPCISD::CALL", SDT_PPCCall,
                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                        SDNPVariadic]>;
+def PPCcall_tls : SDNode<"PPCISD::CALL_TLS", SDT_PPCCall,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                          SDNPVariadic]>;
 def PPCcall_nop  : SDNode<"PPCISD::CALL_NOP", SDT_PPCCall,
                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                            SDNPVariadic]>;
+def PPCcall_nop_tls : SDNode<"PPCISD::CALL_NOP_TLS", SDT_PPCCall,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
 def PPCload   : SDNode<"PPCISD::LOAD", SDTypeProfile<1, 1, []>,
                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def PPCload_toc : SDNode<"PPCISD::LOAD_TOC", SDTypeProfile<0, 1, []>,
@@ -2366,6 +2370,8 @@ def : Pat<(PPCcall (i32 tglobaladdr:$dst)),
 def : Pat<(PPCcall (i32 texternalsym:$dst)),
           (BL texternalsym:$dst)>;
 
+def : Pat<(PPCcall_tls texternalsym:$func, tglobaltlsaddr:$sym),
+          (BL_TLS texternalsym:$func, tglobaltlsaddr:$sym)>;
 
 def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
           (TCRETURNdi tglobaladdr:$dst, imm:$imm)>;
@@ -2421,18 +2427,10 @@ def ADDItlsgdL32 : Pseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
                          "#ADDItlsgdL32",
                          [(set i32:$rD,
                            (PPCaddiTlsgdL i32:$reg, tglobaltlsaddr:$disp))]>;
-def GETtlsADDR32 : Pseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$sym),
-                          "#GETtlsADDR32",
-                          [(set i32:$rD,
-                            (PPCgetTlsAddr i32:$reg, tglobaltlsaddr:$sym))]>;
 def ADDItlsldL32 : Pseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
                           "#ADDItlsldL32",
                           [(set i32:$rD,
                             (PPCaddiTlsldL i32:$reg, tglobaltlsaddr:$disp))]>;
-def GETtlsldADDR32 : Pseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$sym),
-                            "#GETtlsldADDR32",
-                            [(set i32:$rD,
-                              (PPCgetTlsldAddr i32:$reg, tglobaltlsaddr:$sym))]>;
 def ADDIdtprelL32 : Pseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
                            "#ADDIdtprelL32",
                            [(set i32:$rD,

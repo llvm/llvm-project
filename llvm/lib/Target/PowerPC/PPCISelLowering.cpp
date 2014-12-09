@@ -781,6 +781,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::SHL:             return "PPCISD::SHL";
   case PPCISD::CALL:            return "PPCISD::CALL";
   case PPCISD::CALL_NOP:        return "PPCISD::CALL_NOP";
+  case PPCISD::CALL_TLS:        return "PPCISD::CALL_TLS";
+  case PPCISD::CALL_NOP_TLS:    return "PPCISD::CALL_NOP_TLS";
   case PPCISD::MTCTR:           return "PPCISD::MTCTR";
   case PPCISD::BCTRL:           return "PPCISD::BCTRL";
   case PPCISD::RET_FLAG:        return "PPCISD::RET_FLAG";
@@ -810,10 +812,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADD_TLS:         return "PPCISD::ADD_TLS";
   case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
-  case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
   case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
   case PPCISD::ADDI_TLSLD_L:    return "PPCISD::ADDI_TLSLD_L";
-  case PPCISD::GET_TLSLD_ADDR:  return "PPCISD::GET_TLSLD_ADDR";
   case PPCISD::ADDIS_DTPREL_HA: return "PPCISD::ADDIS_DTPREL_HA";
   case PPCISD::ADDI_DTPREL_L:   return "PPCISD::ADDI_DTPREL_L";
   case PPCISD::VADD_SPLAT:      return "PPCISD::VADD_SPLAT";
@@ -1649,6 +1649,27 @@ SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
   return LowerLabelRef(TgtBAHi, TgtBALo, isPIC, DAG);
 }
 
+// Generate a call to __tls_get_addr for the given GOT entry Op.
+std::pair<SDValue,SDValue>
+PPCTargetLowering::lowerTLSCall(SDValue Op, SDLoc dl,
+                                SelectionDAG &DAG) const {
+
+  Type *IntPtrTy = getDataLayout()->getIntPtrType(*DAG.getContext());
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Node = Op;
+  Entry.Ty = IntPtrTy;
+  Args.push_back(Entry);
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl).setChain(DAG.getEntryNode())
+    .setCallee(CallingConv::C, IntPtrTy,
+               DAG.getTargetExternalSymbol("__tls_get_addr", getPointerTy()),
+               std::move(Args), 0);
+
+  return LowerCallTo(CLI);
+}
+
 SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                                               SelectionDAG &DAG) const {
 
@@ -1692,7 +1713,8 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   }
 
   if (Model == TLSModel::GeneralDynamic) {
-    SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
+    SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                             PPCII::MO_TLSGD);
     SDValue GOTPtr;
     if (is64bit) {
       SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
@@ -1703,26 +1725,13 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     }
     SDValue GOTEntry = DAG.getNode(PPCISD::ADDI_TLSGD_L, dl, PtrVT,
                                    GOTPtr, TGA);
-
-    // We need a chain node, and don't have one handy.  The underlying
-    // call has no side effects, so using the function entry node
-    // suffices.
-    SDValue Chain = DAG.getEntryNode();
-    Chain = DAG.getCopyToReg(Chain, dl,
-                             is64bit ? PPC::X3 : PPC::R3, GOTEntry);
-    SDValue ParmReg = DAG.getRegister(is64bit ? PPC::X3 : PPC::R3,
-                                      is64bit ? MVT::i64 : MVT::i32);
-    SDValue TLSAddr = DAG.getNode(PPCISD::GET_TLS_ADDR, dl,
-                                  PtrVT, ParmReg, TGA);
-    // The return value from GET_TLS_ADDR really is in X3 already, but
-    // some hacks are needed here to tie everything together.  The extra
-    // copies dissolve during subsequent transforms.
-    Chain = DAG.getCopyToReg(Chain, dl, is64bit ? PPC::X3 : PPC::R3, TLSAddr);
-    return DAG.getCopyFromReg(Chain, dl, is64bit ? PPC::X3 : PPC::R3, PtrVT);
+    std::pair<SDValue, SDValue> CallResult = lowerTLSCall(GOTEntry, dl, DAG);
+    return CallResult.first;
   }
 
   if (Model == TLSModel::LocalDynamic) {
-    SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
+    SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                             PPCII::MO_TLSLD);
     SDValue GOTPtr;
     if (is64bit) {
       SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
@@ -1733,23 +1742,11 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     }
     SDValue GOTEntry = DAG.getNode(PPCISD::ADDI_TLSLD_L, dl, PtrVT,
                                    GOTPtr, TGA);
-
-    // We need a chain node, and don't have one handy.  The underlying
-    // call has no side effects, so using the function entry node
-    // suffices.
-    SDValue Chain = DAG.getEntryNode();
-    Chain = DAG.getCopyToReg(Chain, dl,
-                             is64bit ? PPC::X3 : PPC::R3, GOTEntry);
-    SDValue ParmReg = DAG.getRegister(is64bit ? PPC::X3 : PPC::R3,
-                                      is64bit ? MVT::i64 : MVT::i32);
-    SDValue TLSAddr = DAG.getNode(PPCISD::GET_TLSLD_ADDR, dl,
-                                  PtrVT, ParmReg, TGA);
-    // The return value from GET_TLSLD_ADDR really is in X3 already, but
-    // some hacks are needed here to tie everything together.  The extra
-    // copies dissolve during subsequent transforms.
-    Chain = DAG.getCopyToReg(Chain, dl, is64bit ? PPC::X3 : PPC::R3, TLSAddr);
+    std::pair<SDValue, SDValue> CallResult = lowerTLSCall(GOTEntry, dl, DAG);
+    SDValue TLSAddr = CallResult.first;
+    SDValue Chain = CallResult.second;
     SDValue DtvOffsetHi = DAG.getNode(PPCISD::ADDIS_DTPREL_HA, dl, PtrVT,
-                                      Chain, ParmReg, TGA);
+                                      Chain, TLSAddr, TGA);
     return DAG.getNode(PPCISD::ADDI_DTPREL_L, dl, PtrVT, DtvOffsetHi, TGA);
   }
 
@@ -3712,6 +3709,23 @@ unsigned PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag,
   if (Callee.getNode()) {
     Ops.push_back(Chain);
     Ops.push_back(Callee);
+
+    // If this is a call to __tls_get_addr, find the symbol whose address
+    // is to be taken and add it to the list.  This will be used to 
+    // generate __tls_get_addr(<sym>@tlsgd) or __tls_get_addr(<sym>@tlsld).
+    // We find the symbol by walking the chain to the CopyFromReg, walking
+    // back from the CopyFromReg to the ADDI_TLSGD_L or ADDI_TLSLD_L, and
+    // pulling the symbol from that node.
+    if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee))
+      if (!strcmp(S->getSymbol(), "__tls_get_addr")) {
+        assert(!needIndirectCall && "Indirect call to __tls_get_addr???");
+        SDNode *AddI = Chain.getNode()->getOperand(2).getNode();
+        SDValue TGTAddr = AddI->getOperand(1);
+        assert(TGTAddr.getNode()->getOpcode() == ISD::TargetGlobalTLSAddress &&
+               "Didn't find target global TLS address where we expected one");
+        Ops.push_back(TGTAddr);
+        CallOpc = PPCISD::CALL_TLS;
+      }
   }
   // If this is a tail call add stack pointer delta.
   if (isTailCall)
@@ -3863,7 +3877,9 @@ PPCTargetLowering::FinishCall(CallingConv::ID CallConv, SDLoc dl,
                 DAG.getTarget().getRelocationModel() == Reloc::PIC_)) {
       // Otherwise insert NOP for non-local calls.
       CallOpc = PPCISD::CALL_NOP;
-    }
+    } else if (CallOpc == PPCISD::CALL_TLS)
+      // For 64-bit SVR4, TLS calls are always non-local.
+      CallOpc = PPCISD::CALL_NOP_TLS;
   }
 
   Chain = DAG.getNode(CallOpc, dl, NodeTys, Ops);
