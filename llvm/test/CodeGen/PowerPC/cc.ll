@@ -41,7 +41,7 @@ entry:
   br label %foo
 
 foo:
-  call { i64, i64 } asm sideeffect "sc", "={r0},={r3},{r0},~{cc}" (i64 %a)
+  call { i64, i64 } asm sideeffect "sc", "={r0},={r3},{r0},~{cc},~{cr1},~{cr2},~{cr3},~{cr4},~{cr5},~{cr6},~{cr7}" (i64 %a)
   br i1 %c, label %bar, label %end
 
 bar:

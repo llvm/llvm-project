@@ -188,11 +188,9 @@ def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
 def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 }
 
-// The full condition-code register. This is not modeled fully, but defined
-// here primarily, for compatibility with gcc, to allow the inline asm "cc"
-// clobber specification to work.
+// An alias for "cr0" used by GCC.
 def CC : PPCReg<"cc">, DwarfRegAlias<CR0> {
-  let Aliases = [CR0, CR1, CR2, CR3, CR4, CR5, CR6, CR7];
+  let Aliases = [CR0];
 }
 
 // Link register
