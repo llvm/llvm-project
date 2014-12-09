@@ -37,6 +37,7 @@ entry:
 ; CHECK-DAG: subfic 0, [[REG]], -160
 ; CHECK: stdux 1, 1, 0
 
+; CHECK: .cfi_def_cfa_register r30
 ; CHECK: .cfi_offset r30, -16
 ; CHECK: .cfi_offset lr, 16
 
@@ -59,6 +60,7 @@ entry:
 ; CHECK-FP-DAG: subfic 0, [[REG]], -160
 ; CHECK-FP: stdux 1, 1, 0
 
+; CHECK-FP: .cfi_def_cfa_register r30
 ; CHECK-FP: .cfi_offset r31, -8
 ; CHECK-FP: .cfi_offset r30, -16
 ; CHECK-FP: .cfi_offset lr, 16
@@ -120,6 +122,8 @@ entry:
 ; CHECK-DAG: subfc 0, [[REG3]], [[REG2]]
 ; CHECK: stdux 1, 1, 0
 
+; CHECK: .cfi_def_cfa_register r30
+
 ; CHECK: blr
 
 ; CHECK-32-LABEL: @hoo
@@ -178,6 +182,8 @@ entry:
 ; CHECK-DAG: subfic 0, [[REG]], -192
 ; CHECK: stdux 1, 1, 0
 
+; CHECK: .cfi_def_cfa_register r30
+
 ; CHECK: stfd 30, -16(30)
 
 ; CHECK: blr
@@ -192,6 +198,8 @@ entry:
 ; CHECK-FP-DAG: std 0, 16(1)
 ; CHECK-FP-DAG: subfic 0, [[REG]], -192
 ; CHECK-FP: stdux 1, 1, 0
+
+; CHECK-FP: .cfi_def_cfa_register r30
 
 ; CHECK-FP: stfd 30, -16(30)
 
