@@ -35,6 +35,9 @@ caller_other:
 	nop
 	.size caller_other, .-caller_other
 
+copy1 = callee1
+copy2 = callee2
+
 # Verify that use of .localentry implies ABI version 2
 # CHECK: ElfHeader {
 # CHECK: Flags [ (0x2)
@@ -61,6 +64,22 @@ caller_other:
 # CHECK-NEXT:  Other: 96
 # CHECK-NEXT:  Section: .text
 # CHECK:       Name: callee2
+# CHECK-NEXT:  Value:
+# CHECK-NEXT:  Size: 8
+# CHECK-NEXT:  Binding: Local
+# CHECK-NEXT:  Type: Function
+# CHECK-NEXT:  Other: 0
+# CHECK-NEXT:  Section: .text
+
+# Verify that symbol assignment copies the Other bits.
+# CHECK:       Name: copy1
+# CHECK-NEXT:  Value:
+# CHECK-NEXT:  Size: 16
+# CHECK-NEXT:  Binding: Local
+# CHECK-NEXT:  Type: Function
+# CHECK-NEXT:  Other: 96
+# CHECK-NEXT:  Section: .text
+# CHECK:       Name: copy2
 # CHECK-NEXT:  Value:
 # CHECK-NEXT:  Size: 8
 # CHECK-NEXT:  Binding: Local
