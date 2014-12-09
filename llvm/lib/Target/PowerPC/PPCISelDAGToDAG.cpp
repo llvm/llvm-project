@@ -1473,6 +1473,12 @@ SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
     return CurDAG->getMachineNode(PPC::ADDItocL, dl, MVT::i64,
                                   SDValue(Tmp, 0), GA);
   }
+  case PPCISD::PPC32_PICGOT: {
+    // Generate a PIC-safe GOT reference.
+    assert(!PPCSubTarget->isPPC64() && PPCSubTarget->isSVR4ABI() &&
+      "PPCISD::PPC32_PICGOT is only supported for 32-bit SVR4");
+    return CurDAG->SelectNodeTo(N, PPC::PPC32PICGOT, PPCLowering->getPointerTy(),  MVT::i32);
+  }
   case PPCISD::VADD_SPLAT: {
     // This expands into one of three sequences, depending on whether
     // the first operand is odd or even, positive or negative.

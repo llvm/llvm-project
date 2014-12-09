@@ -588,6 +588,12 @@ def tlsreg32 : Operand<i32> {
   let EncoderMethod = "getTLSRegEncoding";
   let ParserMatchClass = PPCTLSRegOperand;
 }
+def tlsgd32 : Operand<i32> {}
+def tlscall32 : Operand<i32> {
+  let PrintMethod = "printTLSCall";
+  let MIOperandInfo = (ops calltarget:$func, tlsgd32:$sym);
+  let EncoderMethod = "getTLSCallEncoding";
+}
 
 // PowerPC Predicate operand.
 def pred : Operand<OtherVT> {
@@ -1071,6 +1077,8 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR] in {
                     "bla $func", IIC_BrB, [(PPCcall (i32 imm:$func))]>;
 
     let isCodeGenOnly = 1 in {
+      def BL_TLS  : IForm<18, 0, 1, (outs), (ins tlscall32:$func),
+                          "bl $func", IIC_BrB, []>;
       def BCCL : BForm<16, 0, 1, (outs), (ins pred:$cond, condbrtarget:$dst),
                        "b${cond:cc}l${cond:pm} ${cond:reg}, $dst">;
       def BCCLA : BForm<16, 1, 1, (outs), (ins pred:$cond, abscondbrtarget:$dst),
@@ -2396,12 +2404,44 @@ def : Pat<(add i32:$in, (PPChi tblockaddress:$g, 0)),
 def PPC32GOT: Pseudo<(outs gprc:$rD), (ins), "#PPC32GOT", 
                 [(set i32:$rD, (PPCppc32GOT))]>;
 
+// Get the _GLOBAL_OFFSET_TABLE_ in PIC mode.
+// This uses two output registers, the first as the real output, the second as a
+// temporary register, used internally in code generation.
+def PPC32PICGOT: Pseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT", 
+                []>, NoEncode<"$rT">;
+
 def LDgotTprelL32: Pseudo<(outs gprc:$rD), (ins s16imm:$disp, gprc_nor0:$reg),
-                        "#LDgotTprelL32",
-                        [(set i32:$rD,
-                          (PPCldGotTprelL tglobaltlsaddr:$disp, i32:$reg))]>;
+                           "#LDgotTprelL32",
+                           [(set i32:$rD,
+                             (PPCldGotTprelL tglobaltlsaddr:$disp, i32:$reg))]>;
 def : Pat<(PPCaddTls i32:$in, tglobaltlsaddr:$g),
           (ADD4TLS $in, tglobaltlsaddr:$g)>;
+
+def ADDItlsgdL32 : Pseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
+                         "#ADDItlsgdL32",
+                         [(set i32:$rD,
+                           (PPCaddiTlsgdL i32:$reg, tglobaltlsaddr:$disp))]>;
+def GETtlsADDR32 : Pseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$sym),
+                          "#GETtlsADDR32",
+                          [(set i32:$rD,
+                            (PPCgetTlsAddr i32:$reg, tglobaltlsaddr:$sym))]>;
+def ADDItlsldL32 : Pseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
+                          "#ADDItlsldL32",
+                          [(set i32:$rD,
+                            (PPCaddiTlsldL i32:$reg, tglobaltlsaddr:$disp))]>;
+def GETtlsldADDR32 : Pseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$sym),
+                            "#GETtlsldADDR32",
+                            [(set i32:$rD,
+                              (PPCgetTlsldAddr i32:$reg, tglobaltlsaddr:$sym))]>;
+def ADDIdtprelL32 : Pseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
+                           "#ADDIdtprelL32",
+                           [(set i32:$rD,
+                             (PPCaddiDtprelL i32:$reg, tglobaltlsaddr:$disp))]>;
+def ADDISdtprelHA32 : Pseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
+                            "#ADDISdtprelHA32",
+                            [(set i32:$rD,
+                              (PPCaddisDtprelHA i32:$reg,
+                                                tglobaltlsaddr:$disp))]>;
 
 // Support for Position-independent code
 def LWZtoc: Pseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc:$reg),

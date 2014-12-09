@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOpcodes.h"
@@ -308,10 +309,16 @@ void PPCInstPrinter::printMemRegReg(const MCInst *MI, unsigned OpNo,
 
 void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
-  printBranchOperand(MI, OpNo, O);
+  // On PPC64, VariantKind is VK_None, but on PPC32, it's VK_PLT, and it must
+  // come at the _end_ of the expression.
+  const MCOperand &Op = MI->getOperand(OpNo);
+  const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*Op.getExpr());
+  O << refExp.getSymbol().getName();
   O << '(';
   printOperand(MI, OpNo+1, O);
   O << ')';
+  if (refExp.getKind() != MCSymbolRefExpr::VK_None)
+    O << '@' << MCSymbolRefExpr::getVariantKindName(refExp.getKind());
 }
 
 

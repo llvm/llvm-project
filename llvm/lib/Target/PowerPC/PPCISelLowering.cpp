@@ -1685,47 +1685,61 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
   if (Model == TLSModel::GeneralDynamic) {
     SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
-    SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
-    SDValue GOTEntryHi = DAG.getNode(PPCISD::ADDIS_TLSGD_HA, dl, PtrVT,
-                                     GOTReg, TGA);
+    SDValue GOTPtr;
+    if (is64bit) {
+      SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
+      GOTPtr = DAG.getNode(PPCISD::ADDIS_TLSGD_HA, dl, PtrVT,
+                                   GOTReg, TGA);
+    } else {
+      GOTPtr = DAG.getNode(PPCISD::PPC32_PICGOT, dl, PtrVT);
+    }
     SDValue GOTEntry = DAG.getNode(PPCISD::ADDI_TLSGD_L, dl, PtrVT,
-                                   GOTEntryHi, TGA);
+                                   GOTPtr, TGA);
 
     // We need a chain node, and don't have one handy.  The underlying
     // call has no side effects, so using the function entry node
     // suffices.
     SDValue Chain = DAG.getEntryNode();
-    Chain = DAG.getCopyToReg(Chain, dl, PPC::X3, GOTEntry);
-    SDValue ParmReg = DAG.getRegister(PPC::X3, MVT::i64);
+    Chain = DAG.getCopyToReg(Chain, dl,
+                             is64bit ? PPC::X3 : PPC::R3, GOTEntry);
+    SDValue ParmReg = DAG.getRegister(is64bit ? PPC::X3 : PPC::R3,
+                                      is64bit ? MVT::i64 : MVT::i32);
     SDValue TLSAddr = DAG.getNode(PPCISD::GET_TLS_ADDR, dl,
                                   PtrVT, ParmReg, TGA);
     // The return value from GET_TLS_ADDR really is in X3 already, but
     // some hacks are needed here to tie everything together.  The extra
     // copies dissolve during subsequent transforms.
-    Chain = DAG.getCopyToReg(Chain, dl, PPC::X3, TLSAddr);
-    return DAG.getCopyFromReg(Chain, dl, PPC::X3, PtrVT);
+    Chain = DAG.getCopyToReg(Chain, dl, is64bit ? PPC::X3 : PPC::R3, TLSAddr);
+    return DAG.getCopyFromReg(Chain, dl, is64bit ? PPC::X3 : PPC::R3, PtrVT);
   }
 
   if (Model == TLSModel::LocalDynamic) {
     SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
-    SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
-    SDValue GOTEntryHi = DAG.getNode(PPCISD::ADDIS_TLSLD_HA, dl, PtrVT,
-                                     GOTReg, TGA);
+    SDValue GOTPtr;
+    if (is64bit) {
+      SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
+      GOTPtr = DAG.getNode(PPCISD::ADDIS_TLSLD_HA, dl, PtrVT,
+                           GOTReg, TGA);
+    } else {
+      GOTPtr = DAG.getNode(PPCISD::PPC32_PICGOT, dl, PtrVT);
+    }
     SDValue GOTEntry = DAG.getNode(PPCISD::ADDI_TLSLD_L, dl, PtrVT,
-                                   GOTEntryHi, TGA);
+                                   GOTPtr, TGA);
 
     // We need a chain node, and don't have one handy.  The underlying
     // call has no side effects, so using the function entry node
     // suffices.
     SDValue Chain = DAG.getEntryNode();
-    Chain = DAG.getCopyToReg(Chain, dl, PPC::X3, GOTEntry);
-    SDValue ParmReg = DAG.getRegister(PPC::X3, MVT::i64);
+    Chain = DAG.getCopyToReg(Chain, dl,
+                             is64bit ? PPC::X3 : PPC::R3, GOTEntry);
+    SDValue ParmReg = DAG.getRegister(is64bit ? PPC::X3 : PPC::R3,
+                                      is64bit ? MVT::i64 : MVT::i32);
     SDValue TLSAddr = DAG.getNode(PPCISD::GET_TLSLD_ADDR, dl,
                                   PtrVT, ParmReg, TGA);
     // The return value from GET_TLSLD_ADDR really is in X3 already, but
     // some hacks are needed here to tie everything together.  The extra
     // copies dissolve during subsequent transforms.
-    Chain = DAG.getCopyToReg(Chain, dl, PPC::X3, TLSAddr);
+    Chain = DAG.getCopyToReg(Chain, dl, is64bit ? PPC::X3 : PPC::R3, TLSAddr);
     SDValue DtvOffsetHi = DAG.getNode(PPCISD::ADDIS_DTPREL_HA, dl, PtrVT,
                                       Chain, ParmReg, TGA);
     return DAG.getNode(PPCISD::ADDI_DTPREL_L, dl, PtrVT, DtvOffsetHi, TGA);
