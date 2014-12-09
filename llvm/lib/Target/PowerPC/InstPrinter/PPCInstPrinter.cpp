@@ -261,7 +261,7 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
   if (!MI->getOperand(OpNo).isImm())
     return printOperand(MI, OpNo, O);
 
-  O << (int)MI->getOperand(OpNo).getImm()*4;
+  O << SignExtend32<32>((unsigned)MI->getOperand(OpNo).getImm() << 2);
 }
 
 
