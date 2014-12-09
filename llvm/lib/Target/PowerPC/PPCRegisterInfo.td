@@ -188,11 +188,6 @@ def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
 def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 }
 
-// An alias for "cr0" used by GCC.
-def CC : PPCReg<"cc">, DwarfRegAlias<CR0> {
-  let Aliases = [CR0];
-}
-
 // Link register
 def LR  : SPR<8, "lr">, DwarfRegNum<[-2, 65]>;
 //let Aliases = [LR] in
@@ -304,9 +299,5 @@ def CTRRC8 : RegisterClass<"PPC", [i64], 64, (add CTR8)> {
 def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY)> {
   let CopyCost = -1;
-}
-
-def CCRC : RegisterClass<"PPC", [i32], 32, (add CC)> {
-  let isAllocatable = 0;
 }
 
