@@ -387,15 +387,7 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 /// 1. The icmp predicate is inverted
 /// 2. The select operands are reversed
 /// 3. The magnitude of C2 and C1 are flipped
-///
-/// This also tries to turn
-/// --- Single bit tests:
-/// if ((x & C) == 0) x |= C	to  x |= C
-/// if ((x & C) != 0) x ^= C	to  x &= ~C
-/// if ((x & C) == 0) x ^= C	to  x |= C
-/// if ((x & C) != 0) x &= ~C	to  x &= ~C
-/// if ((x & C) == 0) x &= ~C	to  nothing
-static Value *foldSelectICmpAndOr(SelectInst &SI, Value *TrueVal,
+static Value *foldSelectICmpAndOr(const SelectInst &SI, Value *TrueVal,
                                   Value *FalseVal,
                                   InstCombiner::BuilderTy *Builder) {
   const ICmpInst *IC = dyn_cast<ICmpInst>(SI.getCondition());
@@ -414,25 +406,6 @@ static Value *foldSelectICmpAndOr(SelectInst &SI, Value *TrueVal,
     return nullptr;
 
   const APInt *C2;
-  if (match(TrueVal, m_Specific(X))) {
-    // if ((X & C) != 0) X ^= C becomes X &= ~C
-    if (match(FalseVal, m_Xor(m_Specific(X), m_APInt(C2))) && C1 == C2)
-      return Builder->CreateAnd(X, ~(*C1));
-    // if ((X & C) != 0) X &= ~C becomes X &= ~C
-    if (match(FalseVal, m_And(m_Specific(X), m_APInt(C2))) && *C1 == ~(*C2))
-      return FalseVal;
-  } else if (match(FalseVal, m_Specific(X))) {
-    // if ((X & C) == 0) X ^= C becomes X |= C
-    if (match(TrueVal, m_Xor(m_Specific(X), m_APInt(C2))) && C1 == C2)
-      return Builder->CreateOr(X, *C1);
-    // if ((X & C) == 0) X &= ~C becomes nothing
-    if (match(TrueVal, m_And(m_Specific(X), m_APInt(C2))) && *C1 == ~(*C2))
-      return X;
-    // if ((X & C) == 0) X |= C becomes X |= C
-    if (match(TrueVal, m_Or(m_Specific(X), m_APInt(C2))) && C1 == C2)
-      return TrueVal;
-  }
-
   bool OrOnTrueVal = false;
   bool OrOnFalseVal = match(FalseVal, m_Or(m_Specific(TrueVal), m_Power2(C2)));
   if (!OrOnFalseVal)
