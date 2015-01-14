@@ -102,10 +102,10 @@ def availability(issue):
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="none"'
-  elif status == '3.6':
+  elif status == '3.7':
     avail = 'SVN'
     avail_style = ' class="svn"'
-  elif status in ('3.1', '3.2', '3.3', '3.4', '3.5'):
+  elif status in ('3.1', '3.2', '3.3', '3.4', '3.5', '3.6'):
     avail = 'Clang %s' % status
     avail_style = ' class="full"'
   elif status == 'yes':
