@@ -484,6 +484,34 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
+TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
+  // Create a constant.
+  ConstantAsMetadata *CI = ConstantAsMetadata::get(
+      ConstantInt::get(getGlobalContext(), APInt(8, 0)));
+
+  // Create a temporary to prevent nodes from resolving.
+  std::unique_ptr<MDNodeFwdDecl> Temp(MDNode::getTemporary(Context, None));
+
+  // When the first operand of N1 gets reset to nullptr, it'll collide with N2.
+  Metadata *Ops1[] = {CI, CI, Temp.get()};
+  Metadata *Ops2[] = {nullptr, CI, Temp.get()};
+
+  auto *N1 = MDTuple::get(Context, Ops1);
+  auto *N2 = MDTuple::get(Context, Ops2);
+  ASSERT_NE(N1, N2);
+
+  // Tell metadata that the constant is getting deleted.
+  //
+  // After this, N1 will be invalid, so don't touch it.
+  ValueAsMetadata::handleDeletion(CI->getValue());
+  EXPECT_EQ(nullptr, N2->getOperand(0));
+  EXPECT_EQ(nullptr, N2->getOperand(1));
+  EXPECT_EQ(Temp.get(), N2->getOperand(2));
+
+  // Clean up Temp for teardown.
+  Temp->replaceAllUsesWith(nullptr);
+}
+
 typedef MetadataTest TrackingMDRefTest;
 
 TEST_F(TrackingMDRefTest, UpdatesOnRAUW) {

@@ -167,6 +167,11 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
     return L.second.second < R.second.second;
   });
   for (const auto &Pair : Uses) {
+    // Check that this Ref hasn't disappeared after RAUW (when updating a
+    // previous Ref).
+    if (!UseMap.count(Pair.first))
+      continue;
+
     OwnerTy Owner = Pair.second.first;
     if (!Owner) {
       // Update unowned tracking references directly.
