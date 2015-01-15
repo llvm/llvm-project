@@ -141,7 +141,7 @@ The following old IR:
     !1 = metadata !{metadata !2, null, metadata !"other", i32* @global, i32 7}
     !2 = metadata !{}
 
-is should now be written as:
+should now be written as:
 
 .. code-block:: llvm
 
