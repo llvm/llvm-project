@@ -102,6 +102,188 @@ enable handling of case (3).
 .. _discussions: http://lists.cs.uiuc.edu/pipermail/llvmdev/2014-May/073235.html
 
 
+Metadata is not a Value
+-----------------------
+
+Metadata nodes (``!{...}``) and strings (``!"..."``) are no longer values.
+They have no use-lists, no type, cannot RAUW, and cannot be function-local.
+
+Bridges between Value and Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+LLVM intrinsics can reference metadata using the ``metadata`` type, and
+metadata nodes can reference constant values.
+
+Function-local metadata is limited to direct arguments to LLVM intrinsics.
+
+Metadata is typeless
+^^^^^^^^^^^^^^^^^^^^
+
+The following old IR:
+
+.. code-block:: llvm
+
+    @g = global i32 0
+
+    define void @foo(i32 %v) {
+    entry:
+      call void @llvm.md(metadata !{i32 %v})
+      call void @llvm.md(metadata !{i32* @global})
+      call void @llvm.md(metadata !0)
+      call void @llvm.md(metadata !{metadata !"string"})
+      call void @llvm.md(metadata !{metadata !{metadata !1, metadata !"string"}})
+      ret void, !bar !1, !baz !2
+    }
+
+    declare void @llvm.md(metadata)
+
+    !0 = metadata !{metadata !1, metadata !2, metadata !3, metadata !"some string"}
+    !1 = metadata !{metadata !2, null, metadata !"other", i32* @global, i32 7}
+    !2 = metadata !{}
+
+is should now be written as:
+
+.. code-block:: llvm
+
+    @g = global i32 0
+
+    define void @foo(i32 %v) {
+    entry:
+      call void @llvm.md(metadata i32 %v) ; The only legal place for function-local
+                                          ; metadata.
+      call void @llvm.md(metadata i32* @global)
+      call void @llvm.md(metadata !0)
+      call void @llvm.md(metadata !{!"string"})
+      call void @llvm.md(metadata !{!{!1, !"string"}})
+      ret void, !bar !1, !baz !2
+    }
+
+    declare void @llvm.md(metadata)
+
+    !0 = !{!1, !2, !3, !"some string"}
+    !1 = !{!2, null, !"other", i32* @global, i32 7}
+    !2 = !{}
+
+Distinct metadata nodes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Metadata nodes can opt-out of uniquing, using the keyword ``distinct``.
+Distinct nodes are still owned by the context, but are stored in a side table,
+and not uniqued.
+
+In LLVM 3.5, metadata nodes would drop uniquing if an operand changed to
+``null`` during optimizations.  This is no longer true.  However, if an operand
+change causes a uniquing collision, they become ``distinct``.  Unlike LLVM 3.5,
+where serializing to assembly or bitcode would re-unique the nodes, they now
+remain ``distinct``.
+
+The following IR:
+
+.. code-block:: llvm
+
+    !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8}
+
+    !0 = !{}
+    !1 = !{}
+    !2 = distinct !{}
+    !3 = distinct !{}
+    !4 = !{!0}
+    !5 = distinct !{!0}
+    !6 = !{!4, !{}, !5}
+    !7 = !{!{!0}, !0, !5}
+    !8 = distinct !{!{!0}, !0, !5}
+
+is equivalent to the following:
+
+.. code-block:: llvm
+
+    !named = !{!0, !0, !1, !2, !3, !4, !5, !5, !6}
+
+    !0 = !{}
+    !1 = distinct !{}
+    !2 = distinct !{}
+    !3 = !{!0}
+    !4 = distinct !{!0}
+    !5 = !{!3, !0, !4}
+    !6 = distinct !{!3, !0, !4}
+
+Constructing cyclic graphs
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+During graph construction, if a metadata node transitively references a forward
+declaration, the node itself is considered "unresolved" until the forward
+declaration resolves.  An unresolved node can RAUW itself to support uniquing.
+Nodes automatically resolve once all their operands have resolved.
+
+However, cyclic graphs prevent the nodes from resolving.  An API client that
+constructs a cyclic graph must call ``resolveCycles()`` to resolve nodes in the
+cycle.
+
+To save self-references from that burden, self-referencing nodes are implicitly
+``distinct``.  So the following IR:
+
+.. code-block:: llvm
+
+    !named = !{!0, !1, !2, !3, !4}
+
+    !0 = !{!0}
+    !1 = !{!1}
+    !2 = !{!2, !1}
+    !3 = !{!2, !1}
+    !4 = !{!2, !1}
+
+is equivalent to:
+
+.. code-block:: llvm
+
+    !named = !{!0, !1, !2, !3, !3}
+
+    !0 = distinct !{!0}
+    !1 = distinct !{!1}
+    !2 = distinct !{!2, !1}
+    !3 = !{!2, !1}
+
+MDLocation (aka DebugLoc aka DILocation)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There's a new first-class metadata construct called ``MDLocation`` (to be
+followed in subsequent releases by others).  It's used for the locations
+referenced by ``!dbg`` metadata attachments.
+
+For example, if an old ``!dbg`` attachment looked like this:
+
+.. code-block:: llvm
+
+    define i32 @foo(i32 %a, i32 %b) {
+    entry:
+      %add = add i32 %a, %b, !dbg !0
+      ret %add, !dbg !1
+    }
+
+    !0 = metadata !{i32 10, i32 3, metadata !2, metadata !1)
+    !1 = metadata !{i32 20, i32 7, metadata !3)
+    !2 = metadata !{...}
+    !3 = metadata !{...}
+
+the new attachment looks like this:
+
+.. code-block:: llvm
+
+    define i32 @foo(i32 %a, i32 %b) {
+    entry:
+      %add = add i32 %a, %b, !dbg !0
+      ret %add, !dbg !1
+    }
+
+    !0 = !MDLocation(line: 10, column: 3, scope: !2, inlinedAt: !1)
+    !1 = !MDLocation(line: 20, column: 7, scope: !3)
+    !2 = !{...}
+    !3 = !{...}
+
+The fields are named, can be reordered, and have sane defaults if left out
+(although ``scope:`` is required).
+
+
 Changes to the ARM Backend
 --------------------------
 
