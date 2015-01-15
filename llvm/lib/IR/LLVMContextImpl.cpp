@@ -72,7 +72,30 @@ LLVMContextImpl::~LLVMContextImpl() {
   // the container. Avoid iterators during this operation:
   while (!OwnedModules.empty())
     delete *OwnedModules.begin();
-  
+
+  // Drop references for MDNodes.  Do this before Values get deleted to avoid
+  // unnecessary RAUW when nodes are still unresolved.
+  for (auto *I : DistinctMDNodes)
+    I->dropAllReferences();
+  for (auto *I : MDTuples)
+    I->dropAllReferences();
+  for (auto *I : MDLocations)
+    I->dropAllReferences();
+
+  // Also drop references that come from the Value bridges.
+  for (auto &Pair : ValuesAsMetadata)
+    Pair.second->dropUsers();
+  for (auto &Pair : MetadataAsValues)
+    Pair.second->dropUse();
+
+  // Destroy MDNodes.
+  for (UniquableMDNode *I : DistinctMDNodes)
+    I->deleteAsSubclass();
+  for (MDTuple *I : MDTuples)
+    delete I;
+  for (MDLocation *I : MDLocations)
+    delete I;
+
   // Free the constants.  This is important to do here to ensure that they are
   // freed before the LeakDetector is torn down.
   std::for_each(ExprConstants.map_begin(), ExprConstants.map_end(),
@@ -134,21 +157,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   // Destroy ValuesAsMetadata.
   for (auto &Pair : ValuesAsMetadata)
     delete Pair.second;
-
-  // Destroy MDNodes.
-  for (auto *I : DistinctMDNodes)
-    I->dropAllReferences();
-  for (auto *I : MDTuples)
-    I->dropAllReferences();
-  for (auto *I : MDLocations)
-    I->dropAllReferences();
-
-  for (UniquableMDNode *I : DistinctMDNodes)
-    I->deleteAsSubclass();
-  for (MDTuple *I : MDTuples)
-    delete I;
-  for (MDLocation *I : MDLocations)
-    delete I;
 
   // Destroy MDStrings.
   MDStringCache.clear();

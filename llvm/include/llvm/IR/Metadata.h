@@ -115,6 +115,9 @@ class MetadataAsValue : public Value {
   MetadataAsValue(Type *Ty, Metadata *MD);
   ~MetadataAsValue();
 
+  /// \brief Drop use of metadata (during teardown).
+  void dropUse() { MD = nullptr; }
+
 public:
   static MetadataAsValue *get(LLVMContext &Context, Metadata *MD);
   static MetadataAsValue *getIfExists(LLVMContext &Context, Metadata *MD);
@@ -184,6 +187,11 @@ class ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
   friend class LLVMContextImpl;
 
   Value *V;
+
+  /// \brief Drop users without RAUW (during teardown).
+  void dropUsers() {
+    ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
+  }
 
 protected:
   ValueAsMetadata(unsigned ID, Value *V)
