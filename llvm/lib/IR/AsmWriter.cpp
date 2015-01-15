@@ -1291,8 +1291,8 @@ static void writeMDLocation(raw_ostream &Out, const MDLocation *DL,
                             const Module *Context) {
   Out << "!MDLocation(";
   FieldSeparator FS;
-  if (DL->getLine())
-    Out << FS << "line: " << DL->getLine();
+  // Always output the line, since 0 is a relevant and important value for it.
+  Out << FS << "line: " << DL->getLine();
   if (DL->getColumn())
     Out << FS << "column: " << DL->getColumn();
   Out << FS << "scope: ";
