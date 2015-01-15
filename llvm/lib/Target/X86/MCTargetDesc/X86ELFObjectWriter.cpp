@@ -222,6 +222,9 @@ unsigned X86ELFObjectWriter::GetRelocType(const MCValue &Target,
         case MCSymbolRefExpr::VK_GOT:
           Type = ELF::R_386_GOT32;
           break;
+        case MCSymbolRefExpr::VK_PLT:
+          Type = ELF::R_386_PLT32;
+          break;
         case MCSymbolRefExpr::VK_GOTOFF:
           Type = ELF::R_386_GOTOFF;
           break;
