@@ -86,5 +86,5 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !21 = !{!"0x34\00argc\00argc\00\001\000\001", null, !14, !11, i8* @argc, null} ; [ DW_TAG_variable ] [argc] [line 1] [def]
 !22 = !{i32 2, !"Dwarf Version", i32 4}
 !23 = !{i32 2, !"Debug Info Version", i32 2}
-!25 = !{i32 8, i32 3, !13, null}
+!25 = !MDLocation(line: 8, column: 3, scope: !13)
 !29 = !{!"0x102"}               ; [ DW_TAG_expression ]

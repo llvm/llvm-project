@@ -78,7 +78,7 @@ attributes #1 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="
 !16 = !{i32 2, !"Dwarf Version", i32 4}
 !17 = !{i32 1, !"Debug Info Version", i32 2}
 !18 = !{!"clang version 3.5.0 "}
-!19 = !{i32 2, i32 0, !4, null}
-!20 = !{i32 3, i32 0, !11, null}
-!21 = !{i32 4, i32 0, !11, null}
+!19 = !MDLocation(line: 2, scope: !4)
+!20 = !MDLocation(line: 3, scope: !11)
+!21 = !MDLocation(line: 4, scope: !11)
 

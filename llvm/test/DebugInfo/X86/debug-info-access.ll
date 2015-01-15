@@ -147,4 +147,4 @@ attributes #0 = { nounwind ssp uwtable }
 !38 = !{i32 2, !"Dwarf Version", i32 2}
 !39 = !{i32 2, !"Debug Info Version", i32 2}
 !40 = !{!"clang version 3.6.0 "}
-!41 = !{i32 35, i32 14, !30, null}
+!41 = !MDLocation(line: 35, column: 14, scope: !30)

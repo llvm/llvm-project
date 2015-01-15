@@ -34,12 +34,12 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !10 = !{!"0x2e\00print_double\00print_double\00\00203\001\001\000\006\00256\000\000", !20, !2, !4, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !11 = !{!"0x2e\00print_number\00print_number\00\0075\001\001\000\006\00256\000\000", !20, !2, !4, i32 0, null, null, null, null} ; [ DW_TAG_subprogram ]
 !12 = !{!"0x2e\00get_flags\00get_flags\00\00508\001\001\000\006\00256\000\000", !20, !2, !8, null, null, null, null, null} ; [ DW_TAG_subprogram ]
-!13 = !{i32 653, i32 5, !14, null}
+!13 = !MDLocation(line: 653, column: 5, scope: !14)
 !14 = !{!"0xb\00652\0035\002", !20, !15} ; [ DW_TAG_lexical_block ]
 !15 = !{!"0xb\00616\001\000", !20, !1} ; [ DW_TAG_lexical_block ]
 !16 = !{!"0x100\00do_tab_convert\00853\000", !17, !2, !6} ; [ DW_TAG_auto_variable ]
 !17 = !{!"0xb\00850\0012\0033", !20, !14} ; [ DW_TAG_lexical_block ]
-!18 = !{i32 853, i32 11, !17, null}
-!19 = !{i32 853, i32 29, !17, null}
+!18 = !MDLocation(line: 853, column: 11, scope: !17)
+!19 = !MDLocation(line: 853, column: 29, scope: !17)
 !20 = !{!"print.i", !"/Volumes/Ebi/echeng/radars/r9146594"}
 !21 = !{i32 0}

@@ -52,9 +52,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !25 = !{!"0x101\00argv\0022\000", !19, !1, !22} ; [ DW_TAG_arg_variable ]
 !26 = !{!"0x100\00e\0023\000", !27, !1, !14} ; [ DW_TAG_auto_variable ]
 !27 = !{!"0xb\0022\000\000", !36, !19} ; [ DW_TAG_lexical_block ]
-!28 = !{i32 18, i32 0, !29, null}
+!28 = !MDLocation(line: 18, scope: !29)
 !29 = !{!"0xb\0017\000\001", !36, !9} ; [ DW_TAG_lexical_block ]
-!30 = !{i32 19, i32 0, !29, null}
+!30 = !MDLocation(line: 19, scope: !29)
 !31 = !{!0}
 !32 = !{!5, !9, !19}
 !33 = !{!4}

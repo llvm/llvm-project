@@ -21,7 +21,7 @@ entry:
 !7 = !{!"0x15\00\000\000\000\000\000\000", !12, !6, null, !8, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !8 = !{!9}
 !9 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ]
-!10 = !{i32 1, i32 13, !11, null}
+!10 = !MDLocation(line: 1, column: 13, scope: !11)
 !11 = !{!"0xb\001\0011\000", !12, !5} ; [ DW_TAG_lexical_block ]
 !12 = !{!"one.c", !"/private/tmp"}
 !13 = !{i32 1, !"Debug Info Version", i32 2}

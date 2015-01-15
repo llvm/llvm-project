@@ -57,11 +57,11 @@ attributes #3 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !18 = !{!8}
 !19 = !{i32 2, !"Dwarf Version", i32 2}
 !20 = !{!"0x101\00a\0016777220\000", !12, !13, !8} ; [ DW_TAG_arg_variable ] [a] [line 4]
-!21 = !{i32 4, i32 0, !12, null}
+!21 = !MDLocation(line: 4, scope: !12)
 !22 = !{!"0x100\00t\005\000", !12, !13, !4} ; [ DW_TAG_auto_variable ] [t] [line 5]
-!23 = !{i32 5, i32 0, !12, null}
-!24 = !{i32 6, i32 0, !12, null}
-!25 = !{i32 8, i32 0, !16, null}
-!26 = !{i32 9, i32 0, !16, null}
-!27 = !{i32 10, i32 0, !16, null}
+!23 = !MDLocation(line: 5, scope: !12)
+!24 = !MDLocation(line: 6, scope: !12)
+!25 = !MDLocation(line: 8, scope: !16)
+!26 = !MDLocation(line: 9, scope: !16)
+!27 = !MDLocation(line: 10, scope: !16)
 !28 = !{i32 1, !"Debug Info Version", i32 2}

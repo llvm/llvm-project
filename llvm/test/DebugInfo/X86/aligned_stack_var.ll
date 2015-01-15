@@ -37,7 +37,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !9 = !{!"0x100\00x\002\000", !10, !6, !11} ; [ DW_TAG_auto_variable ]
 !10 = !{!"0xb\001\0012\000", !14, !5} ; [ DW_TAG_lexical_block ]
 !11 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ]
-!12 = !{i32 2, i32 7, !10, null}
-!13 = !{i32 3, i32 1, !10, null}
+!12 = !MDLocation(line: 2, column: 7, scope: !10)
+!13 = !MDLocation(line: 3, column: 1, scope: !10)
 !14 = !{!"test.cc", !"/home/samsonov/debuginfo"}
 !15 = !{i32 1, !"Debug Info Version", i32 2}

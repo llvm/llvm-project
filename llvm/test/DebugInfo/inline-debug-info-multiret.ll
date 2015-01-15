@@ -10,8 +10,8 @@
 ; CHECK: br label %invoke.cont, !dbg ![[MD]]
 ; The branch instruction has the source location of line 9 and its inlined location
 ; has the source location of line 14.
-; CHECK: ![[INL:[0-9]+]] = !{i32 14, i32 0, {{.*}}, null}
-; CHECK: ![[MD]] = !{i32 9, i32 0, {{.*}}, ![[INL]]}
+; CHECK: ![[INL:[0-9]+]] = !MDLocation(line: 14, scope: {{.*}})
+; CHECK: ![[MD]] = !MDLocation(line: 9, scope: {{.*}}, inlinedAt: ![[INL]])
 
 ; ModuleID = 'test.cpp'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -136,21 +136,21 @@ attributes #2 = { nounwind }
 !11 = !{!"0x15\00\000\000\000\000\000\000", i32 0, null, null, !12, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !12 = !{!9}
 !13 = !{!"0x101\00k\0016777220\000", !4, !6, !9} ; [ DW_TAG_arg_variable ] [k] [line 4]
-!14 = !{i32 4, i32 0, !4, null}
+!14 = !MDLocation(line: 4, scope: !4)
 !15 = !{!"0x100\00k2\005\000", !4, !6, !9} ; [ DW_TAG_auto_variable ] [k2] [line 5]
-!16 = !{i32 5, i32 0, !4, null}
-!17 = !{i32 6, i32 0, !4, null}
-!18 = !{i32 7, i32 0, !4, null}
-!19 = !{i32 8, i32 0, !4, null}
-!20 = !{i32 9, i32 0, !4, null}
-!21 = !{i32 14, i32 0, !22, null}
+!16 = !MDLocation(line: 5, scope: !4)
+!17 = !MDLocation(line: 6, scope: !4)
+!18 = !MDLocation(line: 7, scope: !4)
+!19 = !MDLocation(line: 8, scope: !4)
+!20 = !MDLocation(line: 9, scope: !4)
+!21 = !MDLocation(line: 14, scope: !22)
 !22 = !{!"0xb\0013\000\000", !5, !10} ; [ DW_TAG_lexical_block ] [test.cpp]
-!23 = !{i32 15, i32 0, !22, null}
+!23 = !MDLocation(line: 15, scope: !22)
 !24 = !{!"0x100\00e\0016\000", !10, !6, !9} ; [ DW_TAG_auto_variable ] [e] [line 16]
-!25 = !{i32 16, i32 0, !10, null}
-!26 = !{i32 17, i32 0, !27, null}
+!25 = !MDLocation(line: 16, scope: !10)
+!26 = !MDLocation(line: 17, scope: !27)
 !27 = !{!"0xb\0016\000\001", !5, !10} ; [ DW_TAG_lexical_block ] [test.cpp]
-!28 = !{i32 18, i32 0, !27, null}
-!29 = !{i32 19, i32 0, !10, null}
-!30 = !{i32 20, i32 0, !10, null}
+!28 = !MDLocation(line: 18, scope: !27)
+!29 = !MDLocation(line: 19, scope: !10)
+!30 = !MDLocation(line: 20, scope: !10)
 !31 = !{i32 1, !"Debug Info Version", i32 2}

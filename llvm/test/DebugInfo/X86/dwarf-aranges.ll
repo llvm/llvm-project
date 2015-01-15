@@ -76,6 +76,6 @@ entry:
 !11 = !{!"0x34\00some_other\00some_other\00\003\000\001", null, !5, !10, i32* @some_other, null} ; [ DW_TAG_variable ] [some_other] [line 3] [def]
 !12 = !{!"0x34\00some_bss\00some_bss\00\002\000\001", null, !5, !10, i32* @some_bss, null} ; [ DW_TAG_variable ] [some_bss] [line 2] [def]
 !13 = !{i32 2, !"Dwarf Version", i32 4}
-!14 = !{i32 7, i32 0, !4, null}
-!15 = !{i32 8, i32 0, !4, null}
+!14 = !MDLocation(line: 7, scope: !4)
+!15 = !MDLocation(line: 8, scope: !4)
 !16 = !{i32 1, !"Debug Info Version", i32 2}

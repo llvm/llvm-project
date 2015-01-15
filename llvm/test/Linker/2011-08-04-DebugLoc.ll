@@ -23,7 +23,7 @@ define i32 @foo() nounwind ssp {
 !3 = !{!"0x15\00\000\000\000\000\000\000", !8, !2, null, !4, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !4 = !{!5}
 !5 = !{!"0x24\00int\000\0032\0032\000\000\005", null, !0} ; [ DW_TAG_base_type ]
-!6 = !{i32 2, i32 13, !7, null}
+!6 = !MDLocation(line: 2, column: 13, scope: !7)
 !7 = !{!"0xb\002\0011\000", !8, !1} ; [ DW_TAG_lexical_block ]
 !8 = !{!"a.c", !"/private/tmp"}
 !9 = !{i32 0}

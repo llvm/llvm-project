@@ -50,10 +50,10 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 1, !"Debug Info Version", i32 2}
 !9 = !{!"clang version 3.5 "}
-!10 = !{i32 3, i32 0, !11, null}
+!10 = !MDLocation(line: 3, scope: !11)
 !11 = !{!"0xb\003\000\000", !1, !4} ; [ DW_TAG_lexical_block ] [basic.c]
-!12 = !{i32 4, i32 0, !4, null}
+!12 = !MDLocation(line: 4, scope: !4)
 
-; CHECK: !12 = !{i32 3, i32 0, !13, null}
+; CHECK: !12 = !MDLocation(line: 3, scope: !13)
 ; CHECK: !13 = !{!"0xb\001", !1, !11} ; [ DW_TAG_lexical_block ] [./basic.c]
-; CHECK: !14 = !{i32 4, i32 0, !4, null}
+; CHECK: !14 = !MDLocation(line: 4, scope: !4)

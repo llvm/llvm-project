@@ -34,11 +34,11 @@ entry:
 !6 = !{!"0x24\00int\000\0032\0032\000\000\005", !18, !2} ; [ DW_TAG_base_type ]
 !7 = !{!"0x101\00x\006\000", !8, !2, !6} ; [ DW_TAG_arg_variable ]
 !8 = !{!"0x2e\00bar\00bar\00bar\006\000\001\000\006\000\001\006", !18, !2, !4, null, i32 (i32)* @bar, null, null, !16} ; [ DW_TAG_subprogram ]
-!9 = !{i32 3, i32 0, !10, null}
+!9 = !MDLocation(line: 3, scope: !10)
 !10 = !{!"0xb\002\000\000", !18, !1} ; [ DW_TAG_lexical_block ]
 !11 = !{i32 1}
-!12 = !{i32 3, i32 0, !10, !13}
-!13 = !{i32 7, i32 0, !14, null}
+!12 = !MDLocation(line: 3, scope: !10, inlinedAt: !13)
+!13 = !MDLocation(line: 7, scope: !14)
 !14 = !{!"0xb\006\000\000", !18, !8} ; [ DW_TAG_lexical_block ]
 !15 = !{!0}
 !16 = !{!7}

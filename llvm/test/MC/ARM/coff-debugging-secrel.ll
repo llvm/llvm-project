@@ -16,7 +16,7 @@ entry:
 !llvm.dbg.cu = !{!7}
 !llvm.module.flags = !{!9, !10}
 
-!0 = !{i32 1, i32 0, !1, null}
+!0 = !MDLocation(line: 1, scope: !1)
 !1 = !{!"0x2e\00function\00function\00\001\000\001\000\006\000\000\001", !2, !3, !4, null, void ()* @function, null, null, !6} ; [ DW_TAG_subprogram ], [line 1], [def], [function]
 !2 = !{!"/Users/compnerd/work/llvm/test/MC/ARM/reduced.c", !"/Users/compnerd/work/llvm"}
 !3 = !{!"0x29", !2} ; [ DW_TAG_file_type] [/Users/compnerd/work/llvm/test/MC/ARM/reduced.c]

@@ -20,14 +20,14 @@
 ; appears to be only one inlined function.
 ; To fix this, we'd need to add some kind of unique metadata per call site, possibly something like:
 ;
-; !42 = !{i32 1, i32 0, !43, !44}
-; !44 = !{i32 2, i32 0, !45, null}
+; !42 = !MDLocation(line: 1, scope: !43, inlinedAt: !44)
+; !44 = !MDLocation(line: 2, scope: !45)
 ;
 ; ->
 ;
-; !42 = !{i32 1, i32 0, !43, !44}
+; !42 = !MDLocation(line: 1, scope: !43, inlinedAt: !44)
 ; !44 = !{!45, !44}
-; !45 = !{i32 2, i32 0, !45, null}
+; !45 = !MDLocation(line: 2, scope: !45)
 ;
 ; since cycles in metadata are not uniqued, the !44 node would not be shared
 ; between calls to the same function from the same location, ensuring separate
@@ -107,11 +107,11 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !14 = !{!"clang version 3.6.0 "}
 !15 = !{!"0x101\00x\0016777224\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [x] [line 8]
 !16 = !{!"0x102"}               ; [ DW_TAG_expression ]
-!17 = !{i32 8, i32 13, !4, null}
+!17 = !MDLocation(line: 8, column: 13, scope: !4)
 !18 = !{!"0x101\00y\0033554440\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [y] [line 8]
-!19 = !{i32 8, i32 20, !4, null}
-!20 = !{i32 8, i32 25, !4, null}
+!19 = !MDLocation(line: 8, column: 20, scope: !4)
+!20 = !MDLocation(line: 8, column: 25, scope: !4)
 !21 = !{!"0x101\00i\0016777218\000", !9, !5, !8} ; [ DW_TAG_arg_variable ] [i] [line 2]
-!22 = !{i32 2, i32 51, !9, !20}
-!23 = !{i32 2, i32 56, !9, !20}
-!24 = !{i32 8, i32 36, !4, null}
+!22 = !MDLocation(line: 2, column: 51, scope: !9, inlinedAt: !20)
+!23 = !MDLocation(line: 2, column: 56, scope: !9, inlinedAt: !20)
+!24 = !MDLocation(line: 8, column: 36, scope: !4)

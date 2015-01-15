@@ -11,7 +11,7 @@ entry:
 !llvm.module.flags = !{!5}
 !2 = !{!"0x11\0032769\00clang version 3.3 \000\00\000\00\001", !4, !3, !3, !3, !3,  !3} ; [ DW_TAG_compile_unit ] [/usr/local/google/home/blaikie/dev/scratch/scratch.cpp] [lang 0x8001]
 !3 = !{}
-!0 = !{i32 662302, i32 26, !1, null}
+!0 = !MDLocation(line: 662302, column: 26, scope: !1)
 !1 = !{i32 4, !"foo"}
 !4 = !{!"scratch.cpp", !"/usr/local/google/home/blaikie/dev/scratch"}
 

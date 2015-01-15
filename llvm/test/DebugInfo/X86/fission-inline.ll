@@ -112,8 +112,8 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !22 = !{i32 2, !"Dwarf Version", i32 4}
 !23 = !{i32 2, !"Debug Info Version", i32 2}
 !24 = !{!"clang version 3.6.0 "}
-!25 = !{i32 17, i32 5, !20, null}
-!26 = !{i32 11, i32 3, !11, !27}
-!27 = !{i32 18, i32 5, !20, null}
-!28 = !{i32 12, i32 3, !11, !27}
-!29 = !{i32 21, i32 1, !10, null}
+!25 = !MDLocation(line: 17, column: 5, scope: !20)
+!26 = !MDLocation(line: 11, column: 3, scope: !11, inlinedAt: !27)
+!27 = !MDLocation(line: 18, column: 5, scope: !20)
+!28 = !MDLocation(line: 12, column: 3, scope: !11, inlinedAt: !27)
+!29 = !MDLocation(line: 21, column: 1, scope: !10)

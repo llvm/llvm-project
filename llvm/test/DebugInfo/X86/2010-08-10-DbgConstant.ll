@@ -22,7 +22,7 @@ declare void @bar(i32)
 !5 = !{!"0x27\00ro\00ro\00ro\001\001\001", !1, !1, !6, i32 201, null} ; [ DW_TAG_constant ]
 !6 = !{!"0x26\00\000\000\000\000\000", !12, !1, !7} ; [ DW_TAG_const_type ]
 !7 = !{!"0x24\00unsigned int\000\0032\0032\000\000\007", !12, !1} ; [ DW_TAG_base_type ]
-!8 = !{i32 3, i32 14, !9, null}
+!8 = !MDLocation(line: 3, column: 14, scope: !9)
 !9 = !{!"0xb\003\0012\000", !12, !0} ; [ DW_TAG_lexical_block ]
 !10 = !{!0}
 !11 = !{!5}

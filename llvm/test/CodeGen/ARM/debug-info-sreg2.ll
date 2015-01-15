@@ -54,11 +54,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !8 = !{!"0x100\00y\008\000", !9, !2, !7} ; [ DW_TAG_auto_variable ]
 !9 = !{!"0xb\007\0025\002", !18, !10} ; [ DW_TAG_lexical_block ]
 !10 = !{!"0xb\007\003\001", !18, !6} ; [ DW_TAG_lexical_block ]
-!11 = !{i32 6, i32 18, !6, null}
-!12 = !{i32 7, i32 3, !6, null}
-!13 = !{i32 8, i32 20, !9, null}
-!14 = !{i32 7, i32 20, !10, null}
-!15 = !{i32 10, i32 1, !6, null}
+!11 = !MDLocation(line: 6, column: 18, scope: !6)
+!12 = !MDLocation(line: 7, column: 3, scope: !6)
+!13 = !MDLocation(line: 8, column: 20, scope: !9)
+!14 = !MDLocation(line: 7, column: 20, scope: !10)
+!15 = !MDLocation(line: 10, column: 1, scope: !6)
 !16 = !{!1}
 !17 = !{!5, !8}
 !18 = !{!"k.cc", !"/private/tmp"}

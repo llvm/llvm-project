@@ -5,8 +5,8 @@
 ; CHECK: invoke void @test()
 ; CHECK-NEXT: to label {{.*}} unwind label {{.*}}, !dbg [[INL_LOC:!.*]]
 ; CHECK: [[EMPTY:.*]] = !{}
-; CHECK: [[INL_LOC]] = !{i32 1, i32 0, [[EMPTY]], [[INL_AT:.*]]}
-; CHECK: [[INL_AT]] = !{i32 2, i32 0, [[EMPTY]], null}
+; CHECK: [[INL_LOC]] = !MDLocation(line: 1, scope: [[EMPTY]], inlinedAt: [[INL_AT:.*]])
+; CHECK: [[INL_AT]] = !MDLocation(line: 2, scope: [[EMPTY]])
 
 declare void @test()
 declare i32 @__gxx_personality_v0(...)
@@ -33,5 +33,5 @@ lpad:
 !llvm.module.flags = !{!1}
 !1 = !{i32 2, !"Debug Info Version", i32 2}
 !2 = !{}
-!3 = !{i32 1, i32 0, !2, null}
-!4 = !{i32 2, i32 0, !2, null}
+!3 = !MDLocation(line: 1, scope: !2)
+!4 = !MDLocation(line: 2, scope: !2)

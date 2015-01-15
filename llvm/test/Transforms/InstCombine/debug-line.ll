@@ -20,9 +20,9 @@ declare i32 @printf(i8*, ...)
 !2 = !{!"0x11\0012\00clang\001\00\000\00\000", !8, !4, !4, !9, null, null} ; [ DW_TAG_compile_unit ]
 !3 = !{!"0x15\00\000\000\000\000\000\000", !8, !1, null, !4, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !4 = !{null}
-!5 = !{i32 5, i32 2, !6, null}
+!5 = !MDLocation(line: 5, column: 2, scope: !6)
 !6 = !{!"0xb\004\0012\000", !8, !0} ; [ DW_TAG_lexical_block ]
-!7 = !{i32 6, i32 1, !6, null}
+!7 = !MDLocation(line: 6, column: 1, scope: !6)
 !8 = !{!"m.c", !"/private/tmp"}
 !9 = !{!0}
 !10 = !{i32 1, !"Debug Info Version", i32 2}

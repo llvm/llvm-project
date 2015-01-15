@@ -86,9 +86,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !27 = !{!"0x34\00b\00b\00_ZN1C1bE\0015\000\001", null, !6, !9, i32* @_ZN1C1bE, !19} ; [ DW_TAG_variable ] [b] [line 15] [def]
 !28 = !{!"0x34\00c\00c\00_ZN1C1cE\0016\000\001", null, !6, !9, i32* @_ZN1C1cE, !23} ; [ DW_TAG_variable ] [c] [line 16] [def]
 !29 = !{!"0x100\00instance_C\0020\000", !5, !6, !13} ; [ DW_TAG_auto_variable ] [instance_C] [line 20]
-!30 = !{i32 20, i32 0, !5, null}
-!31 = !{i32 21, i32 0, !5, null}
-!32 = !{i32 22, i32 0, !5, null}
+!30 = !MDLocation(line: 20, scope: !5)
+!31 = !MDLocation(line: 21, scope: !5)
+!32 = !MDLocation(line: 22, scope: !5)
 !33 = !{!"/usr/local/google/home/blaikie/Development/llvm/src/tools/clang/test/CodeGenCXX/debug-info-static-member.cpp", !"/home/blaikie/local/Development/llvm/build/clang/x86-64/Debug/llvm"}
 ; PRESENT verifies that static member declarations have these attributes:
 ; external, declaration, accessibility, and either DW_AT_MIPS_linkage_name

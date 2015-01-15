@@ -33,9 +33,9 @@ declare i32 @printf(i8*, ...)
 !9 = !{!"0x42\00\000\000\000\000\000", null, null, !10} ; [ DW_TAG_rvalue_reference_type ]
 !10 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ]
 !11 = !{!"0x101\00i\0016777220\000", !5, !6, !9} ; [ DW_TAG_arg_variable ]
-!12 = !{i32 4, i32 17, !5, null}
-!13 = !{i32 6, i32 3, !14, null}
+!12 = !MDLocation(line: 4, column: 17, scope: !5)
+!13 = !MDLocation(line: 6, column: 3, scope: !14)
 !14 = !{!"0xb\005\001\000", !16, !5} ; [ DW_TAG_lexical_block ]
-!15 = !{i32 7, i32 1, !14, null}
+!15 = !MDLocation(line: 7, column: 1, scope: !14)
 !16 = !{!"foo.cpp", !"/Users/echristo/tmp"}
 !17 = !{i32 1, !"Debug Info Version", i32 2}

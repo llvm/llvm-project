@@ -58,7 +58,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !10 = !{!"0x101\00len\009\000", !1, !2, !9} ; [ DW_TAG_arg_variable ]
 !11 = !{!"0x101\00hash\0010\000", !1, !2, !9} ; [ DW_TAG_arg_variable ]
 !12 = !{!"0x101\00flags\0011\000", !1, !2, !9} ; [ DW_TAG_arg_variable ]
-!13 = !{i32 13, i32 0, !14, null}
+!13 = !MDLocation(line: 13, scope: !14)
 !14 = !{!"0xb\0012\000\000", !28, !1} ; [ DW_TAG_lexical_block ]
 !15 = !{!"0x101\00name\0017\000", !16, !2, !6} ; [ DW_TAG_arg_variable ]
 !16 = !{!"0x2e\00add_name_internal\00add_name_internal\00add_name_internal\0022\001\001\000\006\000\000\000", !28, !2, !17, null, null, null, null, null} ; [ DW_TAG_subprogram ]
@@ -69,10 +69,10 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !21 = !{!"0x101\00hash\0019\000", !16, !2, !9} ; [ DW_TAG_arg_variable ]
 !22 = !{!"0x101\00extra\0020\000", !16, !2, !19} ; [ DW_TAG_arg_variable ]
 !23 = !{!"0x101\00flags\0021\000", !16, !2, !9} ; [ DW_TAG_arg_variable ]
-!24 = !{i32 23, i32 0, !25, null}
+!24 = !MDLocation(line: 23, scope: !25)
 !25 = !{!"0xb\0022\000\000", !28, !16} ; [ DW_TAG_lexical_block ]
-!26 = !{i32 24, i32 0, !25, null}
-!27 = !{i32 26, i32 0, !25, null}
+!26 = !MDLocation(line: 24, scope: !25)
+!27 = !MDLocation(line: 26, scope: !25)
 !28 = !{!"tail.c", !"/Users/echeng/LLVM/radars/r7927803/"}
 !29 = !{i32 0}
 !30 = !{i32 1, !"Debug Info Version", i32 2}

@@ -52,5 +52,5 @@ define void @baz() {
 !9 = !{i32 2, !"Dwarf Version", i32 2}
 !10 = !{i32 2, !"Debug Info Version", i32 2}
 !11 = !{!"clang version 3.6.0 "}
-!12 = !{i32 1, i32 13, !4, null}
-!13 = !{i32 3, i32 13, !8, null}
+!12 = !MDLocation(line: 1, column: 13, scope: !4)
+!13 = !MDLocation(line: 3, column: 13, scope: !8)

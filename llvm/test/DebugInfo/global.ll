@@ -38,5 +38,5 @@ attributes #0 = { nounwind readnone uwtable "less-precise-fpmad"="false" "no-fra
 !9 = !{!10}
 !10 = !{!"0x34\00i\00i\00_ZL1i\001\001\001", null, !5, !8, null, null} ; [ DW_TAG_variable ]
 !11 = !{i32 2, !"Dwarf Version", i32 3}
-!12 = !{i32 4, i32 0, !4, null}
+!12 = !MDLocation(line: 4, scope: !4)
 !13 = !{i32 1, !"Debug Info Version", i32 2}

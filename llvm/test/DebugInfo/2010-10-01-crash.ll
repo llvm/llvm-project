@@ -20,7 +20,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, 
 !2 = !{!"0x11\0016\00clang version 2.9 (trunk 115292)\001\00\001\00\000", !25, !26, !26, null, null, null} ; [ DW_TAG_compile_unit ]
 !5 = !{!"0x16\00CGRect\0049\000\000\000\000", !25, null, null} ; [ DW_TAG_typedef ]
 !23 = !{!"0x101\00rect\0053\000", !0, !1, !5} ; [ DW_TAG_arg_variable ]
-!24 = !{i32 53, i32 33, !0, null}
+!24 = !MDLocation(line: 53, column: 33, scope: !0)
 !25 = !{!"GSFusedSilica.m", !"/Volumes/Data/Users/sabre/Desktop"}
 !26 = !{i32 0}
 !27 = !{i32 1, !"Debug Info Version", i32 2}

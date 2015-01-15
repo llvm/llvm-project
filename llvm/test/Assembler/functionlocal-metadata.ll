@@ -35,7 +35,7 @@ entry:
 
 !llvm.module.flags = !{!4}
 
-!0 = !{i32 662302, i32 26, !1, null}
+!0 = !MDLocation(line: 662302, column: 26, scope: !1)
 !1 = !{i32 4, !"foo"}
 !2 = !{!"bar"}
 !3 = !{!"foo"}
@@ -49,7 +49,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 
 ; CHECK: !foo = !{![[FOO]]}
 ; CHECK: !bar = !{![[BAR]]}
-; CHECK: ![[ID0]] = !{i32 662302, i32 26, ![[ID1]], null}
+; CHECK: ![[ID0]] = !MDLocation(line: 662302, column: 26, scope: ![[ID1]])
 ; CHECK: ![[ID1]] = !{i32 4, !"foo"}
 ; CHECK: ![[ID2]] = !{!"bar"}
 ; CHECK: ![[ID3]] = !{!"foo"}

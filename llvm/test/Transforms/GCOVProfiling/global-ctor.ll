@@ -51,6 +51,6 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 !10 = !{i32 2, !"Dwarf Version", i32 4}
 !11 = !{i32 2, !"Debug Info Version", i32 2}
 !12 = !{!"clang version 3.5.0 (trunk 210217)"}
-!13 = !{i32 2, i32 0, !4, null}
-!14 = !{i32 0, i32 0, !15, null}
+!13 = !MDLocation(line: 2, scope: !4)
+!14 = !MDLocation(line: 0, scope: !15)
 !15 = !{!"0xb\000", !5, !8} ; [ DW_TAG_lexical_block ] [/home/nlewycky/global-ctor.ll]

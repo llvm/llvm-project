@@ -31,8 +31,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 ;CHECK-NOT: DW_AT_upper_bound
 ;CHECK-NEXT: End Of Children Mark
 !10 = !{!"0x21\000\00-1"}        ; [ DW_TAG_subrange_type ]
-!11 = !{i32 4, i32 7, !7, null}
-!12 = !{i32 5, i32 3, !7, null}
+!11 = !MDLocation(line: 4, column: 7, scope: !7)
+!12 = !MDLocation(line: 5, column: 3, scope: !7)
 !13 = !{!0}
 !14 = !{!"array.c", !"/private/tmp"}
 !15 = !{i32 0}

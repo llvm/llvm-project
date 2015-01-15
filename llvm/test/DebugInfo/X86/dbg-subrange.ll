@@ -28,8 +28,8 @@ entry:
 !15 = !{!"0x24\00char\000\008\008\000\000\006", null, null} ; [ DW_TAG_base_type ]
 !16 = !{!17}
 !17 = !{!"0x21\000\004294967296"} ; [ DW_TAG_subrange_type ]
-!18 = !{i32 5, i32 3, !19, null}
+!18 = !MDLocation(line: 5, column: 3, scope: !19)
 !19 = !{!"0xb\004\001\000", !21, !5} ; [ DW_TAG_lexical_block ]
-!20 = !{i32 6, i32 1, !19, null}
+!20 = !MDLocation(line: 6, column: 1, scope: !19)
 !21 = !{!"small.c", !"/private/tmp"}
 !22 = !{i32 1, !"Debug Info Version", i32 2}

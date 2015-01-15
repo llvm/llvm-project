@@ -29,7 +29,7 @@ entry:
 !5 = !{!6}
 !6 = !{!"0x24\00int\000\0032\0032\000\000\005", !10, !2} ; [ DW_TAG_base_type ]
 !7 = !{!"0xb\001\0030\000", !2, !1} ; [ DW_TAG_lexical_block ]
-!8 = !{i32 4, i32 3, !7, null}
+!8 = !MDLocation(line: 4, column: 3, scope: !7)
 !9 = !{!1}
 !10 = !{!"test.c", !"/dir"}
 !11 = !{i32 0}

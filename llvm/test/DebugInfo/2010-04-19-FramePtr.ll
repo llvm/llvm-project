@@ -23,14 +23,14 @@ return:                                           ; preds = %entry
 !llvm.module.flags = !{!12}
 !9 = !{!1}
 
-!0 = !{i32 2, i32 0, !1, null}
+!0 = !MDLocation(line: 2, scope: !1)
 !1 = !{!"0x2e\00foo\00foo\00foo\002\000\001\000\006\000\000\002", !10, null, !4, null, i32 ()* @foo, null, null, null} ; [ DW_TAG_subprogram ]
 !2 = !{!"0x29", !10} ; [ DW_TAG_file_type ]
 !3 = !{!"0x11\001\004.2.1 (Based on Apple Inc. build 5658) (LLVM build)\000\00\000\00\000", !10, !11, !11, !9, null,  null} ; [ DW_TAG_compile_unit ]
 !4 = !{!"0x15\00\000\000\000\000\000\000", !10, !2, null, !5, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !5 = !{!6}
 !6 = !{!"0x24\00int\000\0032\0032\000\000\005", !10, !2} ; [ DW_TAG_base_type ]
-!7 = !{i32 2, i32 0, !8, null}
+!7 = !MDLocation(line: 2, scope: !8)
 !8 = !{!"0xb\002\000\000", !10, !1} ; [ DW_TAG_lexical_block ]
 !10 = !{!"a.c", !"/tmp"}
 !11 = !{i32 0}

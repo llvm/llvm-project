@@ -21,7 +21,7 @@ declare void @llvm.dbg.region.end(metadata) nounwind readnone
 !0 = !{!"0x2e\00foo\00foo\00foo\001\000\001\000\006\000\000\000", i32 0, !1, !2, null, null, null, null} ; [ DW_TAG_subprogram ]
 !1 = !{!"0x11\0012\00clang 1.0\001\00\000\00\000", !4, !5, !5, !4, null, null} ; [ DW_TAG_compile_unit ]
 !2 = !{!"0x24\00int\000\0032\0032\000\000\005", null, !1} ; [ DW_TAG_base_type ]
-!3 = !{i32 1, i32 13, !1, !1}
+!3 = !MDLocation(line: 1, column: 13, scope: !1, inlinedAt: !1)
 !4 = !{!"foo.c", !"/tmp"}
 !5 = !{i32 0}
 !6 = !{i32 1, !"Debug Info Version", i32 2}

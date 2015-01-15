@@ -23,9 +23,9 @@ entry:
 !5 = !{!"0x24\00int\000\0032\0032\000\000\005", !14, !1} ; [ DW_TAG_base_type ]
 !6 = !{!"0x2e\00bar\00bar\00bar\004\000\001\000\006\000\000\000", !15, !7, !3, null, i32 ()* @bar, null, null, null} ; [ DW_TAG_subprogram ]
 !7 = !{!"0x29", !15} ; [ DW_TAG_file_type ]
-!8 = !{i32 53, i32 13, !9, null}
+!8 = !MDLocation(line: 53, column: 13, scope: !9)
 !9 = !{!"0xb\0053\0011\000", !14, !0} ; [ DW_TAG_lexical_block ]
-!10 = !{i32 4, i32 13, !11, null}
+!10 = !MDLocation(line: 4, column: 13, scope: !11)
 !11 = !{!"0xb\004\0013\002", !15, !12} ; [ DW_TAG_lexical_block ]
 !12 = !{!"0xb\004\0011\001", !15, !6} ; [ DW_TAG_lexical_block ]
 !13 = !{!0, !6}

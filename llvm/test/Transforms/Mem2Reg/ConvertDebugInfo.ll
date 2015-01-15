@@ -43,9 +43,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !5 = !{!6, !7, !6}
 !6 = !{!"0x24\00double\000\0064\0064\000\000\004", !12, !2} ; [ DW_TAG_base_type ]
 !7 = !{!"0x24\00int\000\0032\0032\000\000\005", !12, !2} ; [ DW_TAG_base_type ]
-!8 = !{i32 2, i32 0, !1, null}
+!8 = !MDLocation(line: 2, scope: !1)
 !9 = !{!"0x101\00j\002\000", !1, !2, !6} ; [ DW_TAG_arg_variable ]
-!10 = !{i32 3, i32 0, !11, null}
+!10 = !MDLocation(line: 3, scope: !11)
 !11 = !{!"0xb\002\000\000", !12, !1} ; [ DW_TAG_lexical_block ]
 !12 = !{!"testfunc.c", !"/tmp"}
 !13 = !{i32 0}

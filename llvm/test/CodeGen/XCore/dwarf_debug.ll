@@ -35,5 +35,5 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 2, !"Debug Info Version", i32 2}
 !11 = !{!"0x101\00a\0016777218\000", !4, !5, !8} ; [ DW_TAG_arg_variable ]
-!12 = !{i32 2, i32 0, !4, null}
+!12 = !MDLocation(line: 2, scope: !4)
 

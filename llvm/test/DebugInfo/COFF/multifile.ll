@@ -319,11 +319,11 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 1, !"Debug Info Version", i32 2}
 !11 = !{!"clang version 3.5 "}
-!12 = !{i32 1, i32 0, !13, null}
+!12 = !MDLocation(line: 1, scope: !13)
 !13 = !{!"0xb\000", !14, !4} ; [ DW_TAG_lexical_block ] [D:\/one.c]
 !14 = !{!"one.c", !"D:\5C"}
-!15 = !{i32 2, i32 0, !16, null}
+!15 = !MDLocation(line: 2, scope: !16)
 !16 = !{!"0xb\000", !17, !4} ; [ DW_TAG_lexical_block ] [D:\/two.c]
 !17 = !{!"two.c", !"D:\5C"}
-!18 = !{i32 7, i32 0, !13, null}
-!19 = !{i32 8, i32 0, !13, null}
+!18 = !MDLocation(line: 7, scope: !13)
+!19 = !MDLocation(line: 8, scope: !13)

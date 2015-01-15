@@ -21,10 +21,10 @@
 
 ; Debug location of the code in caller() and of the inlined code that did not
 ; have any debug location before.
-; CHECK-DAG: [[A]] = !{i32 4, i32 0, !{{[01-9]+}}, null}
+; CHECK-DAG: [[A]] = !MDLocation(line: 4, scope: !{{[01-9]+}})
 
 ; Debug location of the inlined code.
-; CHECK-DAG: [[B]] = !{i32 2, i32 0, !{{[01-9]+}}, [[A]]}
+; CHECK-DAG: [[B]] = !MDLocation(line: 2, scope: !{{[01-9]+}}, inlinedAt: [[A]])
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -65,5 +65,5 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 2, !"Debug Info Version", i32 2}
 !10 = !{!"clang version 3.5.0 (210174)"}
-!11 = !{i32 2, i32 0, !7, null}
-!12 = !{i32 4, i32 0, !4, null}
+!11 = !MDLocation(line: 2, scope: !7)
+!12 = !MDLocation(line: 4, scope: !4)

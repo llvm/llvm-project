@@ -43,10 +43,10 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !20 = !{!"0x34\00a\00a\00\009\000\001", null, !6, !11, %class.A* @a, null} ; [ DW_TAG_variable ]
 !21 = !{!"0x101\00this\0016777221\0064", !5, !6, !22} ; [ DW_TAG_arg_variable ]
 !22 = !{!"0xf\00\000\0064\0064\000\000", null, null, !11} ; [ DW_TAG_pointer_type ]
-!23 = !{i32 5, i32 8, !5, null}
+!23 = !MDLocation(line: 5, column: 8, scope: !5)
 !24 = !{!"0x101\00b\0033554437\000", !5, !6, !9} ; [ DW_TAG_arg_variable ]
-!25 = !{i32 5, i32 14, !5, null}
-!26 = !{i32 6, i32 4, !27, null}
+!25 = !MDLocation(line: 5, column: 14, scope: !5)
+!26 = !MDLocation(line: 6, column: 4, scope: !27)
 !27 = !{!"0xb\005\0017\000", !6, !5} ; [ DW_TAG_lexical_block ]
 !28 = !{!"foo.cpp", !"/Users/echristo"}
 !29 = !{i32 1, !"Debug Info Version", i32 2}

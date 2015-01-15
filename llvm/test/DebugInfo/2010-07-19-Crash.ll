@@ -21,7 +21,7 @@ entry:
 !6 = !{!"0x2e\00foo\00foo\00foo\007\001\001\000\006\000\001\000", !12, !1, !3, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !7 = !{!"0x100\00one\008\000", !8, !1, !5} ; [ DW_TAG_auto_variable ]
 !8 = !{!"0xb\007\0018\000", !12, !6} ; [ DW_TAG_lexical_block ]
-!9 = !{i32 4, i32 3, !10, null}
+!9 = !MDLocation(line: 4, column: 3, scope: !10)
 !10 = !{!"0xb\003\0011\000", !12, !0} ; [ DW_TAG_lexical_block ]
 !11 = !{!"0x2e\00foo\00foo\00foo\007\001\000\000\006\000\001\000", !12, !1, !3, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !12 = !{!"one.c", !"/private/tmp"}

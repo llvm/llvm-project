@@ -92,12 +92,12 @@ entry:
 !13 = !{!"0x2e\00fn\00fn\00\001\000\001\000\006\00256\000\001", !24, !14, !7, null, i32 (i32)* @fn, null, null, !1} ; [ DW_TAG_subprogram ] [line 1] [def] [fn]
 !14 = !{!"0x29", !24} ; [ DW_TAG_file_type ]
 !15 = !{!"0x101\00a\0016777218\000", !5, !6, !9} ; [ DW_TAG_arg_variable ] [a] [line 2]
-!16 = !{i32 2, i32 0, !5, null}
-!17 = !{i32 4, i32 0, !18, null}
+!16 = !MDLocation(line: 2, scope: !5)
+!17 = !MDLocation(line: 4, scope: !18)
 !18 = !{!"0xb\003\000\000", !23, !5} ; [ DW_TAG_lexical_block ]
 !19 = !{!"0x101\00a\0016777217\000", !13, !14, !9} ; [ DW_TAG_arg_variable ] [a] [line 1]
-!20 = !{i32 1, i32 0, !13, null}
-!21 = !{i32 2, i32 0, !22, null}
+!20 = !MDLocation(line: 1, scope: !13)
+!21 = !MDLocation(line: 2, scope: !22)
 !22 = !{!"0xb\001\000\000", !24, !13} ; [ DW_TAG_lexical_block ]
 !23 = !{!"simple.c", !"/private/tmp"}
 !24 = !{!"simple2.c", !"/private/tmp"}

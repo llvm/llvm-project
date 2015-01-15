@@ -18,8 +18,8 @@ target triple = "x86_64-apple-macosx10.7.0"
 ;CHECK: load <2 x double>* {{.*}}, !dbg ![[LOC]]
 ;CHECK: store <2 x double> {{.*}}, !dbg ![[LOC2:[0-9]+]]
 ;CHECK: ret
-;CHECK: ![[LOC]] = !{i32 4, i32 0,
-;CHECK: ![[LOC2]] = !{i32 7, i32 0,
+;CHECK: ![[LOC]] = !MDLocation(line: 4, scope:
+;CHECK: ![[LOC2]] = !MDLocation(line: 7, scope:
 
 define i32 @depth(double* nocapture %A, i32 %m) #0 {
 entry:
@@ -76,14 +76,14 @@ attributes #1 = { nounwind readnone }
 !16 = !{!"0x100\00i\003\000", !17, !5, !8} ; [ DW_TAG_auto_variable ] [i] [line 3]
 !17 = !{!"0xb\003\000\000", !1, !4} ; [ DW_TAG_lexical_block ] [/Users/nadav/file.c]
 !18 = !{i32 2, !"Dwarf Version", i32 2}
-!19 = !{i32 1, i32 0, !4, null}
+!19 = !MDLocation(line: 1, scope: !4)
 !20 = !{double 0.000000e+00}
-!21 = !{i32 2, i32 0, !4, null}
+!21 = !MDLocation(line: 2, scope: !4)
 !22 = !{double 1.000000e+00}
-!23 = !{i32 3, i32 0, !17, null}
-!24 = !{i32 4, i32 0, !25, null}
+!23 = !MDLocation(line: 3, scope: !17)
+!24 = !MDLocation(line: 4, scope: !25)
 !25 = !{!"0xb\003\000\001", !1, !17} ; [ DW_TAG_lexical_block ] [/Users/nadav/file.c]
-!29 = !{i32 5, i32 0, !25, null}
-!30 = !{i32 7, i32 0, !4, null}
-!31 = !{i32 8, i32 0, !4, null}
+!29 = !MDLocation(line: 5, scope: !25)
+!30 = !MDLocation(line: 7, scope: !4)
+!31 = !MDLocation(line: 8, scope: !4)
 !32 = !{i32 1, !"Debug Info Version", i32 2}

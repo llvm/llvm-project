@@ -67,5 +67,5 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 1, !"Debug Info Version", i32 2}
 !11 = !{!"clang version 3.5 (http://llvm.org/git/clang.git 6a0714fee07fb7c4e32d3972b4fe2ce2f5678cf4) (llvm/ 672e88e934757f76d5c5e5258be41e7615094844)"}
-!12 = !{i32 5, i32 0, !4, null}
-!13 = !{i32 6, i32 0, !4, null}
+!12 = !MDLocation(line: 5, scope: !4)
+!13 = !MDLocation(line: 6, scope: !4)

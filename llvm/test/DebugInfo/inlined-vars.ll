@@ -46,11 +46,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 ; VARIABLE-NOT: {{.*Abbrev.*DW_TAG_variable}}
 
 !18 = !{!"0x101\00argument\0016777219\000", !10, !6, !9, !19} ; [ DW_TAG_arg_variable ]
-!19 = !{i32 11, i32 10, !5, null}
-!21 = !{i32 3, i32 25, !10, !19}
+!19 = !MDLocation(line: 11, column: 10, scope: !5)
+!21 = !MDLocation(line: 3, column: 25, scope: !10, inlinedAt: !19)
 !22 = !{!"0x100\00local\004\000", !10, !6, !9, !19} ; [ DW_TAG_auto_variable ]
-!23 = !{i32 4, i32 16, !10, !19}
-!24 = !{i32 5, i32 3, !10, !19}
-!25 = !{i32 6, i32 3, !10, !19}
+!23 = !MDLocation(line: 4, column: 16, scope: !10, inlinedAt: !19)
+!24 = !MDLocation(line: 5, column: 3, scope: !10, inlinedAt: !19)
+!25 = !MDLocation(line: 6, column: 3, scope: !10, inlinedAt: !19)
 !26 = !{!"inline-bug.cc", !"/tmp/dbginfo/pr13202"}
 !27 = !{i32 1, !"Debug Info Version", i32 2}

@@ -28,7 +28,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !4 = !{!"0x15\00\000\000\000\000\000\000", !10, !2, null, !5, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !5 = !{null}
 !6 = !{!"0x24\00short\000\0016\0016\000\000\005", null, !3} ; [ DW_TAG_base_type ]
-!7 = !{i32 4, i32 22, !8, null}
+!7 = !MDLocation(line: 4, column: 22, scope: !8)
 !8 = !{!"0xb\003\0019\000", !10, !1} ; [ DW_TAG_lexical_block ]
 !10 = !{!"/home/espindola/llvm/test.c", !"/home/espindola/tmpfs/build"}
 !11 = !{i32 1, !"Debug Info Version", i32 2}

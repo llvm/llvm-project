@@ -36,7 +36,7 @@ entry:
 !20 = !{!"0x34\00x\00x\00\005\001\001", !5, !6, !21, i32* @_ZZN3foo3barEvE1x, null} ; [ DW_TAG_variable ]
 !21 = !{!"0x26\00\000\000\000\000\000", null, null, !22} ; [ DW_TAG_const_type ]
 !22 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ]
-!25 = !{i32 6, i32 1, !26, null}
+!25 = !MDLocation(line: 6, column: 1, scope: !26)
 !26 = !{!"0xb\004\0017\000", !6, !5} ; [ DW_TAG_lexical_block ]
 !27 = !{!"nsNativeAppSupportBase.ii", !"/Users/espindola/mozilla-central/obj-x86_64-apple-darwin11.2.0/toolkit/library"}
 !28 = !{i32 1, !"Debug Info Version", i32 2}

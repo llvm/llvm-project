@@ -40,4 +40,4 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"=
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 2, !"Debug Info Version", i32 2}
 !10 = !{!"clang version 3.6.0 "}
-!11 = !{i32 3, i32 0, !4, null}
+!11 = !MDLocation(line: 3, scope: !4)

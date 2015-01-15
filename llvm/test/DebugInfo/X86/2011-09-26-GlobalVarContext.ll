@@ -31,9 +31,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !14 = !{!"0x34\00GLB\00GLB\00\001\000\001", null, !6, !9, i32* @GLB, null} ; [ DW_TAG_variable ]
 !15 = !{!"0x100\00LOC\004\000", !16, !6, !9} ; [ DW_TAG_auto_variable ]
 !16 = !{!"0xb\003\009\000", !20, !5} ; [ DW_TAG_lexical_block ]
-!17 = !{i32 4, i32 9, !16, null}
-!18 = !{i32 4, i32 23, !16, null}
-!19 = !{i32 5, i32 5, !16, null}
+!17 = !MDLocation(line: 4, column: 9, scope: !16)
+!18 = !MDLocation(line: 4, column: 23, scope: !16)
+!19 = !MDLocation(line: 5, column: 5, scope: !16)
 !20 = !{!"test.c", !"/work/llvm/vanilla/test/DebugInfo"}
 
 ; CHECK: DW_TAG_variable

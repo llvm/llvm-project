@@ -54,15 +54,15 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !19 = !{!21, !22}
 !21 = !{!"0x101\00argc\0016777227\000", !12, !6, !15} ; [ DW_TAG_arg_variable ]
 !22 = !{!"0x101\00argv\0033554443\000", !12, !6, !16} ; [ DW_TAG_arg_variable ]
-!23 = !{i32 6, i32 3, !24, null}
+!23 = !MDLocation(line: 6, column: 3, scope: !24)
 !24 = !{!"0xb\005\0016\000", !32, !5} ; [ DW_TAG_lexical_block ]
-!25 = !{i32 7, i32 1, !24, null}
-!26 = !{i32 11, i32 14, !12, null}
-!27 = !{i32 11, i32 26, !12, null}
-!28 = !{i32 12, i32 3, !29, null}
+!25 = !MDLocation(line: 7, column: 1, scope: !24)
+!26 = !MDLocation(line: 11, column: 14, scope: !12)
+!27 = !MDLocation(line: 11, column: 26, scope: !12)
+!28 = !MDLocation(line: 12, column: 3, scope: !29)
 !29 = !{!"0xb\0011\0034\000", !32, !12} ; [ DW_TAG_lexical_block ]
-!30 = !{i32 13, i32 3, !29, null}
-!31 = !{i32 14, i32 3, !29, null}
+!30 = !MDLocation(line: 13, column: 3, scope: !29)
+!31 = !MDLocation(line: 14, column: 3, scope: !29)
 !32 = !{!"foo.c", !"/tmp"}
 
 ; This test is simple to be cross platform (many targets don't yet have

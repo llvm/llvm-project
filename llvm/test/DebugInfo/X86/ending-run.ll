@@ -38,11 +38,11 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !8 = !{!9, !9}
 !9 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ]
 !12 = !{!"0x101\00x\0016777221\000", !5, !6, !9} ; [ DW_TAG_arg_variable ]
-!13 = !{i32 5, i32 5, !5, null}
+!13 = !MDLocation(line: 5, column: 5, scope: !5)
 !14 = !{!"0x100\00y\008\000", !15, !6, !9} ; [ DW_TAG_auto_variable ]
 !15 = !{!"0xb\007\001\000", !19, !5} ; [ DW_TAG_lexical_block ]
-!16 = !{i32 8, i32 9, !15, null}
-!17 = !{i32 8, i32 18, !15, null}
-!18 = !{i32 9, i32 5, !15, null}
+!16 = !MDLocation(line: 8, column: 9, scope: !15)
+!17 = !MDLocation(line: 8, column: 18, scope: !15)
+!18 = !MDLocation(line: 9, column: 5, scope: !15)
 !19 = !{!"ending-run.c", !"/Users/echristo/tmp"}
 !20 = !{i32 1, !"Debug Info Version", i32 2}

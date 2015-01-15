@@ -33,4 +33,4 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 2, !"Debug Info Version", i32 2}
 !11 = !{!"clang version 3.6.0 "}
-!12 = !{i32 2, i32 1, !4, null}
+!12 = !MDLocation(line: 2, column: 1, scope: !4)

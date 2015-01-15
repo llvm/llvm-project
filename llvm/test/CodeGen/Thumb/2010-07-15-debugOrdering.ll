@@ -48,7 +48,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 
 !llvm.dbg.cu = !{!5}
 !llvm.module.flags = !{!104}
-!0 = !{i32 46, i32 0, !1, null}
+!0 = !MDLocation(line: 46, scope: !1)
 !1 = !{!"0xb\0044\000\000", !101, !2} ; [ DW_TAG_lexical_block ]
 !2 = !{!"0xb\0044\000\000", !101, !3} ; [ DW_TAG_lexical_block ]
 !3 = !{!"0x2e\00getClosestDiagonal3\00getClosestDiagonal3\00_Z19getClosestDiagonal3ii\0044\000\001\000\006\000\000\000", !101, null, !6, null, null, null, null, null} ; [ DW_TAG_subprogram ]
@@ -142,13 +142,13 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !89 = !{!"0x2e\00indexOfMaxComponent\00indexOfMaxComponent\00_ZNK9ggVector319indexOfMaxComponentEv\00146\000\000\000\006\000\000\000", !9, !8, !86, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !90 = !{!"0x2e\00indexOfMaxAbsComponent\00indexOfMaxAbsComponent\00_ZNK9ggVector322indexOfMaxAbsComponentEv\00150\000\000\000\006\000\000\000", !9, !8, !86, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !91 = !{!"0x100\00vx\0046\000", !1, !4, !13} ; [ DW_TAG_auto_variable ]
-!92 = !{i32 48, i32 0, !1, null}
-!93 = !{i32 218, i32 0, !94, !96}
+!92 = !MDLocation(line: 48, scope: !1)
+!93 = !MDLocation(line: 218, scope: !94, inlinedAt: !96)
 !94 = !{!"0xb\00217\000\000", !101, !95} ; [ DW_TAG_lexical_block ]
 !95 = !{!"0xb\00217\000\000", !101, !77} ; [ DW_TAG_lexical_block ]
-!96 = !{i32 51, i32 0, !1, null}
-!97 = !{i32 227, i32 0, !94, !96}
-!98 = !{i32 52, i32 0, !1, null}
+!96 = !MDLocation(line: 51, scope: !1)
+!97 = !MDLocation(line: 227, scope: !94, inlinedAt: !96)
+!98 = !MDLocation(line: 52, scope: !1)
 !101 = !{!"ggEdgeDiscrepancy.cc", !"/Volumes/Home/grosbaj/sources/llvm-externals/speccpu2000/benchspec/CINT2000/252.eon/src"}
 !102 = !{i32 0}
 !103 = !{!3, !77}

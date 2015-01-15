@@ -27,7 +27,7 @@ entry:
 !4 = !{null}
 !5 = !{!"0x34\00x\00x\00\002\001\001", !0, !2, !6, i32* @x} ; [ DW_TAG_variable ]
 !6 = !{!"0x24\00int\000\0032\0032\000\000\005", null, !0} ; [ DW_TAG_base_type ]
-!7 = !{i32 3, i32 14, !8, null}
+!7 = !MDLocation(line: 3, column: 14, scope: !8)
 !8 = !{!"0xb\003\0012\000", !9, !1} ; [ DW_TAG_lexical_block ]
 !9 = !{!"/tmp/one.c", !"/Volumes/Lalgate/Slate/D"}
 !10 = !{!1}

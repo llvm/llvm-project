@@ -131,10 +131,10 @@ attributes #3 = { nounwind }
 !16 = !{i32 2, !"Dwarf Version", i32 4}
 !17 = !{i32 2, !"Debug Info Version", i32 2}
 !18 = !{!"clang version 3.5.0 "}
-!19 = !{i32 4, i32 0, !4, null}
+!19 = !MDLocation(line: 4, scope: !4)
 !20 = !{!"0x101\00x\0016777217\000", !12, !13, !8} ; [ DW_TAG_arg_variable ] [x] [line 1]
-!21 = !{i32 1, i32 0, !12, !19}
-!22 = !{i32 2, i32 0, !12, !19}
-!23 = !{i32 1, i32 0, !12, null}
-!24 = !{i32 2, i32 0, !12, null}
+!21 = !MDLocation(line: 1, scope: !12, inlinedAt: !19)
+!22 = !MDLocation(line: 2, scope: !12, inlinedAt: !19)
+!23 = !MDLocation(line: 1, scope: !12)
+!24 = !MDLocation(line: 2, scope: !12)
 

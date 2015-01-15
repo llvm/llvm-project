@@ -235,5 +235,5 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 1, !"Debug Info Version", i32 2}
 !11 = !{!"clang version 3.5 "}
-!12 = !{i32 4, i32 0, !4, null}
-!13 = !{i32 5, i32 0, !4, null}
+!12 = !MDLocation(line: 4, scope: !4)
+!13 = !MDLocation(line: 5, scope: !4)

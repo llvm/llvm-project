@@ -20,7 +20,7 @@ entry:
 !9 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ]
 !12 = !{!14}
 !14 = !{!"0x34\00bar\00bar\00\002\001\001", !5, !6, !9, null, null} ; [ DW_TAG_variable ]
-!15 = !{i32 3, i32 3, !16, null}
+!15 = !MDLocation(line: 3, column: 3, scope: !16)
 !16 = !{!"0xb\001\0011\000", !17, !5} ; [ DW_TAG_lexical_block ]
 !17 = !{!"fb.c", !"/private/tmp"}
 !18 = !{i32 1, !"Debug Info Version", i32 2}

@@ -91,5 +91,5 @@ attributes #1 = { nounwind readnone }
 !20 = !{i32 1, !"Debug Info Version", i32 2}
 !21 = !{!"clang version 3.5.0 "}
 !22 = !{!"0x101\00i\0016777217\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [i] [line 1]
-!23 = !{i32 1, i32 0, !4, null}
-!24 = !{i32 2, i32 0, !4, null}
+!23 = !MDLocation(line: 1, scope: !4)
+!24 = !MDLocation(line: 2, scope: !4)

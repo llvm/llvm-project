@@ -22,13 +22,13 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 declare i32 @foo(i32) ssp
 
-!0 = !{i32 5, i32 2, !1, null}
+!0 = !MDLocation(line: 5, column: 2, scope: !1)
 !1 = !{!"0xb\001\001\000", null, !2}; [DW_TAG_lexical_block ]
 !2 = !{!"0x2e\00bar\00bar\00bar\004\000\001\000\006\000\000\000", i32 0, !3, null, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !3 = !{!"0x11\0012\00clang 1.1\001\00\000\00\000", !8, null, !9, null, null, null}; [DW_TAG_compile_unit ]
 !4 = !{!"0x100\00count_\005\000", !5, !3, !6}; [ DW_TAG_auto_variable ]
 !5 = !{!"0xb\001\001\000", null, !1}; [DW_TAG_lexical_block ]
 !6 = !{!"0x24\00int\000\0032\0032\000\000\005", null, !3}; [DW_TAG_base_type ]
-!7 = !{i32 6, i32 1, !2, null}
+!7 = !MDLocation(line: 6, column: 1, scope: !2)
 !8 = !{!"genmodes.i", !"/Users/yash/Downloads"}
 !9 = !{i32 0}

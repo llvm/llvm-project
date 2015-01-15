@@ -15,7 +15,7 @@ entry:
 !5 = !{!"0x24\00int\000\0032\0032\000\000\005", !10, !1} ; [ DW_TAG_base_type ]
 !6 = !{!"0x34\00i\00i\00i\002\001\001", !1, !1, !7, i32 0, null} ; [ DW_TAG_variable ]
 !7 = !{!"0x26\00\000\000\000\000\000", !10, !1, !5} ; [ DW_TAG_const_type ]
-!8 = !{i32 3, i32 13, !9, null}
+!8 = !MDLocation(line: 3, column: 13, scope: !9)
 !9 = !{!"0xb\003\0011\000", !10, !0} ; [ DW_TAG_lexical_block ]
 !10 = !{!"/tmp/a.c", !"/Volumes/Lalgate/clean/D.CW"}
 !11 = !{i32 0}

@@ -29,8 +29,8 @@ declare i32 @callme(i32)
 !7 = !{!"0x15\00\000\000\000\000\000\000", i32 0, null, null, !8, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !8 = !{!9}
 !9 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ] [int] [line 0, size 32, align 32, offset 0, enc DW_ATE_signed]
-!10 = !{i32 5, i32 3, !11, null}
+!10 = !MDLocation(line: 5, column: 3, scope: !11)
 !11 = !{!"0xb\004\001\000", !13, !5} ; [ DW_TAG_lexical_block ] [/usr/local/google/home/echristo/tmp/bar.c]
-!12 = !{i32 6, i32 3, !11, null}
+!12 = !MDLocation(line: 6, column: 3, scope: !11)
 !13 = !{!"bar.c", !"/usr/local/google/home/echristo/tmp"}
 !14 = !{i32 1, !"Debug Info Version", i32 2}

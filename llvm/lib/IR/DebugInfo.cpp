@@ -592,10 +592,7 @@ bool DIExpression::Verify() const {
 }
 
 bool DILocation::Verify() const {
-  if (!DbgNode)
-    return false;
-
-  return DbgNode->getNumOperands() == 4;
+  return DbgNode && isa<MDLocation>(DbgNode);
 }
 
 bool DINameSpace::Verify() const {
@@ -830,16 +827,12 @@ void DICompileUnit::replaceGlobalVariables(DIArray GlobalVariables) {
 
 DILocation DILocation::copyWithNewScope(LLVMContext &Ctx,
                                         DILexicalBlockFile NewScope) {
-  SmallVector<Metadata *, 10> Elts;
   assert(Verify());
-  for (unsigned I = 0; I < DbgNode->getNumOperands(); ++I) {
-    if (I != 2)
-      Elts.push_back(DbgNode->getOperand(I));
-    else
-      Elts.push_back(NewScope);
-  }
-  MDNode *NewDIL = MDNode::get(Ctx, Elts);
-  return DILocation(NewDIL);
+  assert(NewScope && "Expected valid scope");
+
+  const auto *Old = cast<MDLocation>(DbgNode);
+  return DILocation(MDLocation::get(Ctx, Old->getLine(), Old->getColumn(),
+                                    NewScope, Old->getInlinedAt()));
 }
 
 unsigned DILocation::computeNewDiscriminator(LLVMContext &Ctx) {

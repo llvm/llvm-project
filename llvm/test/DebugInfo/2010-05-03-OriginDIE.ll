@@ -50,21 +50,21 @@ declare void @uuid_LtoB(i8*, i8*)
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!41}
-!0 = !{i32 808, i32 0, !1, null}
+!0 = !MDLocation(line: 808, scope: !1)
 !1 = !{!"0xb\00807\000\000", !39, !2} ; [ DW_TAG_lexical_block ]
 !2 = !{!"0x2e\00gpt2gpm\00gpt2gpm\00gpt2gpm\00807\001\001\000\006\000\000\000", !39, null, !5, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !3 = !{!"0x29", !39} ; [ DW_TAG_file_type ]
 !4 = !{!"0x11\001\00llvm-gcc\001\00\000\00\000", !39, !18, !18, !40, null, null} ; [ DW_TAG_compile_unit ]
 !5 = !{!"0x15\00\000\000\000\000\000\000", !39, !3, null, !6, null, null, null} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !6 = !{null}
-!7 = !{i32 810, i32 0, !1, null}
+!7 = !MDLocation(line: 810, scope: !1)
 !8 = !{!"0x101\00data\00201\000", !9, !10, !11} ; [ DW_TAG_arg_variable ]
 !9 = !{!"0x2e\00_OSSwapInt64\00_OSSwapInt64\00_OSSwapInt64\00202\001\001\000\006\000\000\000", !10, null, !5, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !10 = !{!"0x29", !"OSByteOrder.h", !"/usr/include/libkern/ppc", !4} ; [ DW_TAG_file_type ]
 !11 = !{!"0x16\00uint64_t\0059\000\000\000\000", !36, !3, !13} ; [ DW_TAG_typedef ]
 !12 = !{!"0x29", !"stdint.h", !"/usr/4.2.1/include", !4} ; [ DW_TAG_file_type ]
 !13 = !{!"0x24\00long long unsigned int\000\0064\0064\000\000\007", !39, !3} ; [ DW_TAG_base_type ]
-!14 = !{i32 202, i32 0, !9, !7}
+!14 = !MDLocation(line: 202, scope: !9, inlinedAt: !7)
 !15 = !{!"0x101\00base\0092\000", !16, !10, !17} ; [ DW_TAG_arg_variable ]
 !16 = !{!"0x2e\00OSReadSwapInt64\00OSReadSwapInt64\00OSReadSwapInt64\0095\001\001\000\006\000\000\000", !38, null, !5, null, null, null, null, null} ; [ DW_TAG_subprogram ]
 !17 = !{!"0xf\00\000\0032\0032\000\000", !39, !3, null} ; [ DW_TAG_pointer_type ]

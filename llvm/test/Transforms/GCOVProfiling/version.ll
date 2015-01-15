@@ -23,7 +23,7 @@ define void @test() {
 !5 = !{!"0x2e\00test\00test\00\001\000\001\000\006\00256\000\001", !10, !6, !7, null, void ()* @test, null, null, !3} ; [ DW_TAG_subprogram ] [line 1] [def] [test]
 !6 = !{!"0x29", !10} ; [ DW_TAG_file_type ]
 !7 = !{!"0x15\00\000\000\000\000\000\000", i32 0, null, null, !3, i32 0} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
-!8 = !{i32 1, i32 0, !5, null}
+!8 = !MDLocation(line: 1, scope: !5)
 ;; !9 is added through the echo line at the top.
 !10 = !{!"<stdin>", !"."}
 !11 = !{!"version", !"/usr/local/google/home/nlewycky"}

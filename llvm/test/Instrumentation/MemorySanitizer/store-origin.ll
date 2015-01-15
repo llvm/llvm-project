@@ -43,13 +43,13 @@ attributes #1 = { nounwind readnone }
 !13 = !{i32 2, !"Dwarf Version", i32 4}
 !14 = !{i32 1, !"Debug Info Version", i32 2}
 !15 = !{!"clang version 3.5.0 (204220)"}
-!16 = !{i32 1, i32 0, !4, null}
-!17 = !{i32 2, i32 0, !4, null}
+!16 = !MDLocation(line: 1, scope: !4)
+!17 = !MDLocation(line: 2, scope: !4)
 !18 = !{!19, !19, i64 0}
 !19 = !{!"int", !20, i64 0}
 !20 = !{!"omnipotent char", !21, i64 0}
 !21 = !{!"Simple C/C++ TBAA"}
-!22 = !{i32 3, i32 0, !4, null}
+!22 = !MDLocation(line: 3, scope: !4)
 
 
 ; CHECK: @Store

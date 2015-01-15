@@ -44,10 +44,10 @@ entry:
 !10 = !{!"0x16\00size_t\0080\000\000\000\000", !27, !3, !11} ; [ DW_TAG_typedef ]
 !11 = !{!"0x16\00__darwin_size_t\0090\000\000\000\000", !27, !3, !12} ; [ DW_TAG_typedef ]
 !12 = !{!"0x24\00long unsigned int\000\0064\0064\000\000\007", null, !3} ; [ DW_TAG_base_type ]
-!16 = !{i32 78, i32 28, !1, null}
-!18 = !{i32 78, i32 40, !1, null}
-!20 = !{i32 78, i32 54, !1, null}
-!21 = !{i32 80, i32 3, !22, null}
+!16 = !MDLocation(line: 78, column: 28, scope: !1)
+!18 = !MDLocation(line: 78, column: 40, scope: !1)
+!20 = !MDLocation(line: 78, column: 54, scope: !1)
+!21 = !MDLocation(line: 80, column: 3, scope: !22)
 !22 = !{!"0xb\0080\003\007", !27, !23} ; [ DW_TAG_lexical_block ]
 !23 = !{!"0xb\0079\001\006", !27, !1} ; [ DW_TAG_lexical_block ]
 !24 = !{!1}

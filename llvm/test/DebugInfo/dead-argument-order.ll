@@ -77,5 +77,5 @@ attributes #1 = { nounwind readnone }
 !17 = !{i32 2, !"Debug Info Version", i32 2}
 !18 = !{!"clang version 3.5.0 "}
 !19 = !{%struct.S* undef}
-!20 = !{i32 2, i32 0, !9, null}
+!20 = !MDLocation(line: 2, scope: !9)
 

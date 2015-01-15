@@ -40,10 +40,10 @@ declare i32 @bar() nounwind readnone
 !6 = !{!"0x100\00j\0015\000", !7, !1, !5} ; [ DW_TAG_auto_variable ]
 !7 = !{!"0xb\0012\0052\000", !15, !0} ; [ DW_TAG_lexical_block ]
 !8 = !{i32 42}
-!9 = !{i32 15, i32 12, !7, null}
-!10 = !{i32 23, i32 3, !7, null}
-!11 = !{i32 17, i32 3, !7, null}
-!12 = !{i32 18, i32 3, !7, null}
+!9 = !MDLocation(line: 15, column: 12, scope: !7)
+!10 = !MDLocation(line: 23, column: 3, scope: !7)
+!11 = !MDLocation(line: 17, column: 3, scope: !7)
+!12 = !MDLocation(line: 18, column: 3, scope: !7)
 !13 = !{!0}
 !14 = !{!6}
 !15 = !{!"mu.c", !"/private/tmp"}

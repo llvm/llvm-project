@@ -31,9 +31,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !13 = !{!15, !16}
 !15 = !{!"0x101\00argc\0016777217\000", !5, !6, !9} ; [ DW_TAG_arg_variable ]
 !16 = !{!"0x101\00argv\0033554433\000", !5, !6, !10} ; [ DW_TAG_arg_variable ]
-!17 = !{i32 1, i32 14, !5, null}
-!18 = !{i32 1, i32 26, !5, null}
-!19 = !{i32 2, i32 3, !20, null}
+!17 = !MDLocation(line: 1, column: 14, scope: !5)
+!18 = !MDLocation(line: 1, column: 26, scope: !5)
+!19 = !MDLocation(line: 2, column: 3, scope: !20)
 !20 = !{!"0xb\001\0034\000", !21, !5} ; [ DW_TAG_lexical_block ]
 !21 = !{!"dbg.c", !"/src"}
 !22 = !{i32 1, !"Debug Info Version", i32 2}

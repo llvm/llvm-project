@@ -877,10 +877,26 @@ class DILocation : public DIDescriptor {
 public:
   explicit DILocation(const MDNode *N) : DIDescriptor(N) {}
 
-  unsigned getLineNumber() const { return getUnsignedField(0); }
-  unsigned getColumnNumber() const { return getUnsignedField(1); }
-  DIScope getScope() const { return getFieldAs<DIScope>(2); }
-  DILocation getOrigLocation() const { return getFieldAs<DILocation>(3); }
+  unsigned getLineNumber() const {
+    if (auto *L = dyn_cast_or_null<MDLocation>(DbgNode))
+      return L->getLine();
+    return 0;
+  }
+  unsigned getColumnNumber() const {
+    if (auto *L = dyn_cast_or_null<MDLocation>(DbgNode))
+      return L->getColumn();
+    return 0;
+  }
+  DIScope getScope() const {
+    if (auto *L = dyn_cast_or_null<MDLocation>(DbgNode))
+      return DIScope(dyn_cast_or_null<MDNode>(L->getScope()));
+    return DIScope(nullptr);
+  }
+  DILocation getOrigLocation() const {
+    if (auto *L = dyn_cast_or_null<MDLocation>(DbgNode))
+      return DILocation(dyn_cast_or_null<MDNode>(L->getInlinedAt()));
+    return DILocation(nullptr);
+  }
   StringRef getFilename() const { return getScope().getFilename(); }
   StringRef getDirectory() const { return getScope().getDirectory(); }
   bool Verify() const;
@@ -901,7 +917,9 @@ public:
     // sure this location is a lexical block before retrieving its
     // value.
     return getScope().isLexicalBlockFile()
-               ? getFieldAs<DILexicalBlockFile>(2).getDiscriminator()
+               ? DILexicalBlockFile(
+                     cast<MDNode>(cast<MDLocation>(DbgNode)->getScope()))
+                     .getDiscriminator()
                : 0;
   }
 

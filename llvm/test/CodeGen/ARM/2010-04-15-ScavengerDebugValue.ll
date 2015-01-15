@@ -24,9 +24,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !6 = !{!"0x16\00SItype\00152\000\000\000\000", !12, null, !8} ; [ DW_TAG_typedef ]
 !7 = !{!"0x29", !"libgcc2.h", !"/Users/bwilson/local/nightly/test-2010-04-14/build/llvmgcc.roots/llvmgcc~obj/src/gcc", !3} ; [ DW_TAG_file_type ]
 !8 = !{!"0x24\00int\000\0032\0032\000\000\005", !12, !2} ; [ DW_TAG_base_type ]
-!9 = !{i32 95, i32 0, !10, null}
+!9 = !MDLocation(line: 95, scope: !10)
 !10 = !{!"0xb\0094\000\000", !12, !1} ; [ DW_TAG_lexical_block ]
-!11 = !{i32 100, i32 0, !10, null}
+!11 = !MDLocation(line: 100, scope: !10)
 !13 = !{i32 0}
 !14 = !{!1}
 !15 = !{i32 1, !"Debug Info Version", i32 2}

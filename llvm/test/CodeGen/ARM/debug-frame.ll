@@ -142,27 +142,27 @@ declare void @_ZSt9terminatev()
 !11 = !{i32 1, !"Debug Info Version", i32 2}
 !12 = !{!"clang version 3.5 "}
 !13 = !{!"0x101\00a\0016777220\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [a] [line 4]
-!14 = !{i32 4, i32 0, !4, null}
+!14 = !MDLocation(line: 4, scope: !4)
 !15 = !{!"0x101\00b\0033554436\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [b] [line 4]
 !16 = !{!"0x101\00c\0050331652\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [c] [line 4]
 !17 = !{!"0x101\00d\0067108868\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [d] [line 4]
 !18 = !{!"0x101\00e\0083886084\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [e] [line 4]
 !19 = !{!"0x101\00m\00100663301\000", !4, !5, !9} ; [ DW_TAG_arg_variable ] [m] [line 5]
-!20 = !{i32 5, i32 0, !4, null}
+!20 = !MDLocation(line: 5, scope: !4)
 !21 = !{!"0x101\00n\00117440517\000", !4, !5, !9} ; [ DW_TAG_arg_variable ] [n] [line 5]
 !22 = !{!"0x101\00p\00134217733\000", !4, !5, !9} ; [ DW_TAG_arg_variable ] [p] [line 5]
 !23 = !{!"0x101\00q\00150994949\000", !4, !5, !9} ; [ DW_TAG_arg_variable ] [q] [line 5]
 !24 = !{!"0x101\00r\00167772165\000", !4, !5, !9} ; [ DW_TAG_arg_variable ] [r] [line 5]
-!25 = !{i32 7, i32 0, !26, null}
+!25 = !MDLocation(line: 7, scope: !26)
 !26 = !{!"0xb\006\000\000", !1, !4} ; [ DW_TAG_lexical_block ] [/tmp/exp.cpp]
-!27 = !{i32 8, i32 0, !26, null}
-!28 = !{i32 11, i32 0, !26, null}
-!29 = !{i32 9, i32 0, !30, null}
+!27 = !MDLocation(line: 8, scope: !26)
+!28 = !MDLocation(line: 11, scope: !26)
+!29 = !MDLocation(line: 9, scope: !30)
 !30 = !{!"0xb\008\000\001", !1, !4} ; [ DW_TAG_lexical_block ] [/tmp/exp.cpp]
-!31 = !{i32 10, i32 0, !30, null}
-!32 = !{i32 10, i32 0, !4, null}
-!33 = !{i32 11, i32 0, !4, null}
-!34 = !{i32 11, i32 0, !30, null}
+!31 = !MDLocation(line: 10, scope: !30)
+!32 = !MDLocation(line: 10, scope: !4)
+!33 = !MDLocation(line: 11, scope: !4)
+!34 = !MDLocation(line: 11, scope: !30)
 
 ; CHECK-FP-LABEL: _Z4testiiiiiddddd:
 ; CHECK-FP:   .cfi_startproc

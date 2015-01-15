@@ -32,8 +32,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !10 = !{!"0x2\00A\003\008\008\000\000\000", !17, !11, null, !2, null, null, null} ; [ DW_TAG_class_type ] [A] [line 3, size 8, align 8, offset 0] [def] [from ]
 !11 = !{!"0x39\00N1\002", !17, null} ; [ DW_TAG_namespace ]
 !12 = !{!"0x29", !17} ; [ DW_TAG_file_type ]
-!13 = !{i32 4, i32 12, !5, null}
-!14 = !{i32 4, i32 18, !15, null}
+!13 = !MDLocation(line: 4, column: 12, scope: !5)
+!14 = !MDLocation(line: 4, column: 18, scope: !15)
 !15 = !{!"0xb\004\0017\000", !16, !5} ; [ DW_TAG_lexical_block ]
 !16 = !{!"n1.c", !"/private/tmp"}
 !17 = !{!"./n.h", !"/private/tmp"}

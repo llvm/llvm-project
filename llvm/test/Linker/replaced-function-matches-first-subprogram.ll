@@ -68,8 +68,8 @@ entry:
 !11 = !{i32 2, !"Debug Info Version", i32 2}
 !12 = !{i32 1, !"PIC Level", i32 2}
 !13 = !{!"clang version 3.6.0 (trunk 224193) (llvm/trunk 224197)"}
-!14 = !{i32 2, i32 20, !4, null}
+!14 = !MDLocation(line: 2, column: 20, scope: !4)
 
 ; The same subprogram should be pointed to by inside the !dbg reference.
-; CHECK: ![[LOC]] = !{i32 2, i32 15, ![[SP2]], null}
-!15 = !{i32 2, i32 15, !7, null}
+; CHECK: ![[LOC]] = !MDLocation(line: 2, column: 15, scope: ![[SP2]])
+!15 = !MDLocation(line: 2, column: 15, scope: !7)

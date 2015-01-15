@@ -34,7 +34,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !12 = !{!"0x1\00\000\0064\0032\000\000", null, null, !9, !13, i32 0, null, null, null} ; [ DW_TAG_array_type ] [line 0, size 64, align 32, offset 0] [from int]
 !13 = !{!14}
 !14 = !{!"0x21\000\002"}        ; [ DW_TAG_subrange_type ] [0, 1]
-!15 = !{i32 4, i32 0, !11, null}
-!16 = !{i32 6, i32 0, !11, null}
+!15 = !MDLocation(line: 4, scope: !11)
+!16 = !MDLocation(line: 6, scope: !11)
 !17 = !{!"foo.c", !"/usr/local/google/home/echristo/tmp"}
 !18 = !{i32 1, !"Debug Info Version", i32 2}

@@ -21,7 +21,7 @@ entry:
 !5 = !{!"0x2e\00foo\00foo\00_Z3foov\001\000\001\000\006\00256\000\001", !1, !1, !6, null, void ()* @_Z3foov, null, null, !3} ; [ DW_TAG_subprogram ] [line 1] [def] [foo]
 !6 = !{!"0x15\00\000\000\000\000\000\000", i32 0, null, null, !7, i32 0} ; [ DW_TAG_subroutine_type ] [line 0, size 0, align 0, offset 0] [from ]
 !7 = !{null}
-!8 = !{i32 1, i32 0, !5, null}
+!8 = !MDLocation(line: 1, scope: !5)
 
 
 !10 = !{i32 1, !"Debug Info Version", i32 2}

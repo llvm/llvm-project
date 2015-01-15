@@ -34,7 +34,7 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 1, !"Debug Info Version", i32 2}
 !11 = !{!"clang version 3.5.0 "}
-!12 = !{i32 2, i32 0, !4, null}
+!12 = !MDLocation(line: 2, scope: !4)
 
 ; DWARF2:      .debug_frame contents:
 ; DWARF2:        Version:               1

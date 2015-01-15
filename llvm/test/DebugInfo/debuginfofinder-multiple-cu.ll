@@ -36,6 +36,6 @@ define void @g() {
 !11 = !{!"0x2e\00g\00g\00\001\000\001\000\006\000\000\001", !9, !12, !6, null, void ()* @g, null, null, !2} ; [ DW_TAG_subprogram ] [line 1] [def] [g]
 !12 = !{!"0x29", !9}         ; [ DW_TAG_file_type ] [/tmp/test2.c]
 !13 = !{i32 2, !"Dwarf Version", i32 4}
-!14 = !{i32 1, i32 0, !4, null}
-!15 = !{i32 1, i32 0, !11, null}
+!14 = !MDLocation(line: 1, scope: !4)
+!15 = !MDLocation(line: 1, scope: !11)
 !16 = !{i32 1, !"Debug Info Version", i32 2}

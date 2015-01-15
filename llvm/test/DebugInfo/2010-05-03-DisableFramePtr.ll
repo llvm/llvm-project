@@ -31,8 +31,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !10 = !{!"0xf\00\000\0064\0064\000\000", !16, !2, !11} ; [ DW_TAG_pointer_type ]
 !11 = !{!"0x16\00AppleEvent\004\000\000\000\000", !16, !2, !12} ; [ DW_TAG_typedef ]
 !12 = !{!"0x13\00AEDesc\001\000\000\000\004\000", !16, !2, null, null, null, null, null} ; [ DW_TAG_structure_type ] [AEDesc] [line 1, size 0, align 0, offset 0] [decl] [from ]
-!13 = !{i32 7, i32 0, !1, null}
-!14 = !{i32 8, i32 0, !15, null}
+!13 = !MDLocation(line: 7, scope: !1)
+!14 = !MDLocation(line: 8, scope: !15)
 !15 = !{!"0xb\007\000\000", !16, !1} ; [ DW_TAG_lexical_block ]
 !16 = !{!"t.c", !"/Users/echeng/LLVM/radars/r7937664/"}
 !17 = !{i32 0}

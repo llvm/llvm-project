@@ -22,7 +22,7 @@ entry:
 !7 = !{!8}
 !8 = !{!"0x24\00int\000\0032\0032\000\000\005", null, null} ; [ DW_TAG_base_type ] [int] [line 0, size 32, align 32, offset 0, enc DW_ATE_signed]
 !9 = !{i32 2, !"Dwarf Version", i32 2}
-!12 = !{i32 4, i32 0, !4, null}
+!12 = !MDLocation(line: 4, scope: !4)
 
 ; WARN: warning: ignoring debug info with an invalid version (0)
 ; CHECK-NOT: !dbg

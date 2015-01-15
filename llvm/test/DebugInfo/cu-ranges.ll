@@ -63,9 +63,9 @@ attributes #1 = { nounwind readnone }
 !11 = !{i32 1, !"Debug Info Version", i32 2}
 !12 = !{!"clang version 3.5.0 (trunk 204164) (llvm/trunk 204183)"}
 !13 = !{!"0x101\00a\0016777217\000", !4, !5, !8} ; [ DW_TAG_arg_variable ] [a] [line 1]
-!14 = !{i32 1, i32 0, !4, null}
-!15 = !{i32 2, i32 0, !4, null}
+!14 = !MDLocation(line: 1, scope: !4)
+!15 = !MDLocation(line: 2, scope: !4)
 !16 = !{!"0x101\00a\0016777221\000", !9, !5, !8} ; [ DW_TAG_arg_variable ] [a] [line 5]
-!17 = !{i32 5, i32 0, !9, null}
-!18 = !{i32 6, i32 0, !9, null}
+!17 = !MDLocation(line: 5, scope: !9)
+!18 = !MDLocation(line: 6, scope: !9)
 

@@ -17,7 +17,7 @@
 !104 = !{!"0x1\00\000\0085312\0064\000\000", !109, null, !46, !105, i32 0, null, null, null} ; [ DW_TAG_array_type ] [line 0, size 85312, align 64, offset 0] [from ]
 !105 = !{!106}
 !106 = !{!"0x21\000\001333"}    ; [ DW_TAG_subrange_type ]
-!107 = !{i32 73, i32 0, !103, null}
+!107 = !MDLocation(line: 73, scope: !103)
 !108 = !{i32 0}
 !109 = !{!"pbmsrch.c", !"/Users/grawp/LLVM/test-suite/MultiSource/Benchmarks/MiBench/office-stringsearch"}
 

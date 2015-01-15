@@ -91,4 +91,4 @@ attributes #0 = { nounwind sanitize_address "less-precise-fpmad"="false" "no-fra
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 1, !"Debug Info Version", i32 2}
 !9 = !{!"clang version 3.5.0 "}
-!10 = !{i32 2, i32 0, !4, null}
+!10 = !MDLocation(line: 2, scope: !4)

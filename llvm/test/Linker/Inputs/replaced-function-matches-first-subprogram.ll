@@ -24,4 +24,4 @@ entry:
 !9 = !{i32 2, !"Debug Info Version", i32 2}
 !10 = !{i32 1, !"PIC Level", i32 2}
 !11 = !{!"clang version 3.6.0 (trunk 224193) (llvm/trunk 224197)"}
-!12 = !{i32 2, i32 15, !4, null}
+!12 = !MDLocation(line: 2, column: 15, scope: !4)

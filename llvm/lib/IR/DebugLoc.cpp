@@ -58,12 +58,8 @@ DebugLoc DebugLoc::get(unsigned Line, unsigned Col,
   if (Col > 255) Col = 0;
   if (Line >= (1 << 24)) Line = 0;
 
-  LLVMContext &Context = Scope->getContext();
-  Type *Int32 = Type::getInt32Ty(Context);
-  Metadata *Elts[] = {ConstantAsMetadata::get(ConstantInt::get(Int32, Line)),
-                      ConstantAsMetadata::get(ConstantInt::get(Int32, Col)),
-                      Scope, InlinedAt};
-  return getFromDILocation(MDNode::get(Context, Elts));
+  return getFromDILocation(
+      MDLocation::get(Scope->getContext(), Line, Col, Scope, InlinedAt));
 }
 
 /// getAsMDNode - This method converts the compressed DebugLoc node into a

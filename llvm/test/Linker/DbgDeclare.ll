@@ -51,10 +51,10 @@ declare void @test(i32, i8**)
 !12 = !{!"0x26\00\000\000\000\000\000", null, null, !13} ; [ DW_TAG_const_type ]
 !13 = !{!"0x24\00char\000\008\008\000\000\006", null, null} ; [ DW_TAG_base_type ]
 !14 = !{!"0x101\00argc\0016777219\000", !5, !6, !9} ; [ DW_TAG_arg_variable ]
-!15 = !{i32 3, i32 0, !5, null}
+!15 = !MDLocation(line: 3, scope: !5)
 !16 = !{!"0x101\00argv\0033554435\000", !5, !6, !10} ; [ DW_TAG_arg_variable ]
-!17 = !{i32 5, i32 0, !18, null}
+!17 = !MDLocation(line: 5, scope: !18)
 !18 = !{!"0xb\004\000\000", !20, !5} ; [ DW_TAG_lexical_block ]
-!19 = !{i32 6, i32 0, !18, null}
+!19 = !MDLocation(line: 6, scope: !18)
 !20 = !{!"main.cpp", !"/private/tmp"}
 !21 = !{i32 1, !"Debug Info Version", i32 2}

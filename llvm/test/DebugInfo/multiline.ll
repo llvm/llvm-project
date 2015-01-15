@@ -73,10 +73,10 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 2, !"Debug Info Version", i32 2}
 !10 = !{!"clang version 3.6.0 (trunk 225000) (llvm/trunk 224999)"}
-!11 = !{i32 3, i32 3, !4, null}
-!12 = !{i32 3, i32 9, !4, null}
-!13 = !{i32 3, i32 15, !4, null}
-!14 = !{i32 4, i32 3, !4, null}
-!15 = !{i32 4, i32 9, !4, null}
-!16 = !{i32 4, i32 15, !4, null}
-!17 = !{i32 5, i32 1, !4, null}
+!11 = !MDLocation(line: 3, column: 3, scope: !4)
+!12 = !MDLocation(line: 3, column: 9, scope: !4)
+!13 = !MDLocation(line: 3, column: 15, scope: !4)
+!14 = !MDLocation(line: 4, column: 3, scope: !4)
+!15 = !MDLocation(line: 4, column: 9, scope: !4)
+!16 = !MDLocation(line: 4, column: 15, scope: !4)
+!17 = !MDLocation(line: 5, column: 1, scope: !4)

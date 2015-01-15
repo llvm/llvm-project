@@ -11,7 +11,7 @@ define void @test() {
   ret void, !foo !0, !bar !1
 }
 
-!0 = !{i32 662302, i32 26, !1, null}
+!0 = !MDLocation(line: 662302, column: 26, scope: !1)
 !1 = !{i32 4, !"foo"}
 
 declare void @llvm.dbg.func.start(metadata) nounwind readnone

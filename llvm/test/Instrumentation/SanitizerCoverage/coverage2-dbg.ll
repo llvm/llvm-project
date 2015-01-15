@@ -21,9 +21,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: call void @__sanitizer_cov(i32*{{.*}}), !dbg [[B:!.*]]
 ; CHECK: call void @__sanitizer_cov(i32*{{.*}}), !dbg [[C:!.*]]
 ; CHECK: ret void
-; CHECK: [[A]] = !{i32 1, i32 0, !{{.*}}, null}
-; CHECK: [[B]] = !{i32 3, i32 5, !{{.*}}, null}
-; CHECK: [[C]] = !{i32 4, i32 1, !{{.*}}, null}
+; CHECK: [[A]] = !MDLocation(line: 1, scope: !{{.*}})
+; CHECK: [[B]] = !MDLocation(line: 3, column: 5, scope: !{{.*}})
+; CHECK: [[C]] = !MDLocation(line: 4, column: 1, scope: !{{.*}})
 
 define void @_Z3fooPi(i32* %a) #0 {
 entry:
@@ -64,12 +64,12 @@ attributes #1 = { nounwind readnone }
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 2, !"Debug Info Version", i32 2}
 !14 = !{!"clang version 3.6.0 (217079)"}
-!15 = !{i32 1, i32 15, !4, null}
-!16 = !{i32 2, i32 7, !17, null}
+!15 = !MDLocation(line: 1, column: 15, scope: !4)
+!16 = !MDLocation(line: 2, column: 7, scope: !17)
 !17 = !{!"0xb\002\007\000", !1, !4} ; [ DW_TAG_lexical_block ] [FOO/if.cc]
-!18 = !{i32 3, i32 5, !17, null}
+!18 = !MDLocation(line: 3, column: 5, scope: !17)
 !19 = !{!20, !20, i64 0}
 !20 = !{!"int", !21, i64 0}
 !21 = !{!"omnipotent char", !22, i64 0}
 !22 = !{!"Simple C/C++ TBAA"}
-!23 = !{i32 4, i32 1, !4, null}
+!23 = !MDLocation(line: 4, column: 1, scope: !4)

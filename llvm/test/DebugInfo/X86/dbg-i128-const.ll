@@ -26,7 +26,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !8 = !{!"0x16\00ti_int\0078\000\000\000\000", !14, !4, !10} ; [ DW_TAG_typedef ]
 !9 = !{!"0x29", !14} ; [ DW_TAG_file_type ]
 !10 = !{!"0x24\00\000\00128\00128\000\000\005", !13, !4} ; [ DW_TAG_base_type ]
-!11 = !{i32 29, i32 0, !2, null}
+!11 = !MDLocation(line: 29, scope: !2)
 !12 = !{!3}
 !13 = !{!"foo.c", !"/tmp"}
 !14 = !{!"myint.h", !"/tmp"}
