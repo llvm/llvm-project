@@ -20,8 +20,8 @@
 //
 // CHECK: [ DW_TAG_subprogram ] [line [[@LINE+4]]] [local] [def] [-[I p1]]
 // CHECK: [ DW_TAG_subprogram ] [line [[@LINE+3]]] [local] [def] [-[I setP1:]]
-// CHECK: ![[DBG1]] = !{i32 [[@LINE+2]],
-// CHECK: ![[DBG2]] = !{i32 [[@LINE+1]],
+// CHECK: ![[DBG1]] = !MDLocation(line: [[@LINE+2]],
+// CHECK: ![[DBG2]] = !MDLocation(line: [[@LINE+1]],
 @property int p1;
 @end
 

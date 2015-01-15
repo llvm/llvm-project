@@ -7,7 +7,7 @@
 // CHECK: [[HPP:.*]] = !{!"./template.hpp",
 // CHECK: [[SP:.*]] = !{!"0x2e\00{{.*}}", [[HPP]],{{.*}}[ DW_TAG_subprogram ] [line 22] [def] [bar]
 // We shouldn't need a lexical block for this function.
-// CHECK: [[DBG]] = !{i32 23, i32 0, [[SP]], null}
+// CHECK: [[DBG]] = !MDLocation(line: 23, scope: [[SP]])
 
 
 # 1 "./template.h" 1

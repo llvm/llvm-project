@@ -22,10 +22,10 @@
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DESTROY_LINE:[0-9]+]]
 
-// CHECK-DAG: [[DBG_LINE]] = !{i32 0, i32 0, ![[COPY_SP:[0-9]+]], null}
-// CHECK-DAG: [[COPY_LINE]] = !{i32 0, i32 0, ![[COPY_SP:[0-9]+]], null}
+// CHECK-DAG: [[DBG_LINE]] = !MDLocation(line: 0, scope: ![[COPY_SP:[0-9]+]])
+// CHECK-DAG: [[COPY_LINE]] = !MDLocation(line: 0, scope: ![[COPY_SP:[0-9]+]])
 // CHECK-DAG: [[COPY_SP]] = {{.*}}[ DW_TAG_subprogram ]{{.*}}[__copy_helper_block_]
-// CHECK-DAG: [[DESTROY_LINE]] = !{i32 0, i32 0, ![[DESTROY_SP:[0-9]+]], null}
+// CHECK-DAG: [[DESTROY_LINE]] = !MDLocation(line: 0, scope: ![[DESTROY_SP:[0-9]+]])
 // CHECK-DAG: [[DESTROY_SP]] = {{.*}}[ DW_TAG_subprogram ]{{.*}}[__destroy_helper_block_]
 typedef unsigned int NSUInteger;
 

@@ -48,8 +48,8 @@ int main() {
   // CHECK: br label
   // CHECK: br label {{.*}}, !dbg [[DBG4:!.*]]
 
-  // CHECK: [[DBG1]] = !{i32 100, i32 0, !{{.*}}, null}
-  // CHECK: [[DBG2]] = !{i32 200, i32 0, !{{.*}}, null}
-  // CHECK: [[DBG3]] = !{i32 300, i32 0, !{{.*}}, null}
-  // CHECK: [[DBG4]] = !{i32 401, i32 0, !{{.*}}, null}
+  // CHECK: [[DBG1]] = !MDLocation(line: 100, scope: !{{.*}})
+  // CHECK: [[DBG2]] = !MDLocation(line: 200, scope: !{{.*}})
+  // CHECK: [[DBG3]] = !MDLocation(line: 300, scope: !{{.*}})
+  // CHECK: [[DBG4]] = !MDLocation(line: 401, scope: !{{.*}})
 }

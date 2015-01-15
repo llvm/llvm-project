@@ -118,5 +118,5 @@ int main(int argc, char **argv) {
 // CHECK: !"_ZTS1D", {{.*}}, [[D_FUNC_DECL:![0-9]*]], {{![0-9]*}}} ; [ DW_TAG_subprogram ] {{.*}} [def] [func]
 // CHECK: [[D_FUNC_DECL]] = !{!"0x2e\00func\00{{.*}}\000\00{{[0-9]+}}"{{.*}}, !"_ZTS1D", {{.*}}, null} ; [ DW_TAG_subprogram ] {{.*}} [func]
 
-// CHECK: ![[EXCEPTLOC]] = !{i32 84,
-// CHECK: ![[RETLOC]] = !{i32 83,
+// CHECK: ![[EXCEPTLOC]] = !MDLocation(line: 84,
+// CHECK: ![[RETLOC]] = !MDLocation(line: 83,

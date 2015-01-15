@@ -19,4 +19,4 @@ template struct AB<int>;
 // CHECK-LABEL: define
 
 // CHECK: [[THUNK_VEC_DEL_DTOR:![0-9]*]] = {{.*}} @"\01??_E?$AB@H@@W3AEPAXI@Z", {{.*}}; [ DW_TAG_subprogram ]
-// CHECK: [[THUNK_LOC]] = !{i32 15, i32 0, [[THUNK_VEC_DEL_DTOR]], null}
+// CHECK: [[THUNK_LOC]] = !MDLocation(line: 15, scope: [[THUNK_VEC_DEL_DTOR]])

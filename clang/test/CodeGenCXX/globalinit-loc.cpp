@@ -7,7 +7,7 @@
 // CHECK: define internal void @_GLOBAL__sub_I_globalinit_loc.cpp
 // CHECK: !dbg ![[DBG:.*]]
 // CHECK:  !"0x2e\00\00\00_GLOBAL__sub_I_globalinit_loc.cpp\000\00{{.*}}\000", {{.*}} ; [ DW_TAG_subprogram ] [line 0] [local] [def]
-// CHECK: ![[DBG]] = !{i32 0, i32 0,
+// CHECK: ![[DBG]] = !MDLocation(line: 0,
 # 99 "someheader.h"
 class A {
 public:

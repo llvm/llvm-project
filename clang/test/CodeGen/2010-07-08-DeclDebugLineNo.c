@@ -6,5 +6,5 @@ void foo() {
   int p = 0;    // line #5: CHECK: {{call.*llvm.dbg.declare.*%p.*\!dbg }}[[variable_p:![0-9]+]]
 }
 // Now match the line number records:
-// CHECK: {{^}}[[variable_l]]{{ = !{i32 5,}}
-// CHECK: {{^}}[[variable_p]]{{ = !{i32 6,}}
+// CHECK: {{^}}[[variable_l]] = !MDLocation(line: 5,
+// CHECK: {{^}}[[variable_p]] = !MDLocation(line: 6,

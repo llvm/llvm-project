@@ -7,8 +7,8 @@
 // CHECK: ret void, !dbg [[F2_LINE:![0-9]*]]
 // CHECK: [[F1:![0-9]*]] = {{.*}} ; [ DW_TAG_subprogram ] {{.*}} [def] [f1]
 // CHECK: [[F2:![0-9]*]] = {{.*}} ; [ DW_TAG_subprogram ] {{.*}} [def] [f2]
-// CHECK: [[F1_LINE]] = {{.*}}, [[F1]], null}
-// CHECK: [[F2_LINE]] = {{.*}}, [[F2]], null}
+// CHECK: [[F1_LINE]] = !MDLocation({{.*}}, scope: [[F1]])
+// CHECK: [[F2_LINE]] = !MDLocation({{.*}}, scope: [[F2]])
 
 void f1() {
 }

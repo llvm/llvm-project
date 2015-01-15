@@ -26,5 +26,5 @@ void f1() {
 }
 @end
 
-// CHECK: [[DBG_F1]] = !{i32 100,
-// CHECK: [[DBG_TNSO]] = !{i32 200,
+// CHECK: [[DBG_F1]] = !MDLocation(line: 100,
+// CHECK: [[DBG_TNSO]] = !MDLocation(line: 200,

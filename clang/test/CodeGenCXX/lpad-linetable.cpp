@@ -4,7 +4,7 @@
 // CHECK: ret i32
 // CHECK: landingpad {{.*}}
 // CHECK-NEXT: !dbg ![[LPAD:[0-9]+]]
-// CHECK: ![[LPAD]] = !{i32 24, i32 0, !{{.*}}, null}
+// CHECK: ![[LPAD]] = !MDLocation(line: 24, scope: !{{.*}})
 
 # 1 "/usr/include/c++/4.2.1/vector" 1 3
 typedef long unsigned int __darwin_size_t;

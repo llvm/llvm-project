@@ -9,8 +9,8 @@
 
 int main()
 {
-// CHECK: [[ASSIGNMENT]] = !{i32 [[@LINE+2]],
-// CHECK: [[BLOCK_ENTRY]] = !{i32 [[@LINE+1]],
+// CHECK: [[ASSIGNMENT]] = !MDLocation(line: [[@LINE+2]],
+// CHECK: [[BLOCK_ENTRY]] = !MDLocation(line: [[@LINE+1]],
     int (^blockptr)(void) = ^(void) {
       return 0;
     };
