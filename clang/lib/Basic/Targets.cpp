@@ -5922,6 +5922,8 @@ public:
       Builder.defineMacro("__mips_isa_rev", "1");
     else if (CPUStr == "mips32r2")
       Builder.defineMacro("__mips_isa_rev", "2");
+    else if (CPUStr == "mips32r6")
+      Builder.defineMacro("__mips_isa_rev", "6");
 
     if (ABI == "o32") {
       Builder.defineMacro("__mips_o32");
@@ -6065,6 +6067,8 @@ public:
       Builder.defineMacro("__mips_isa_rev", "1");
     else if (CPUStr == "mips64r2")
       Builder.defineMacro("__mips_isa_rev", "2");
+    else if (CPUStr == "mips64r6")
+      Builder.defineMacro("__mips_isa_rev", "6");
 
     if (ABI == "n32") {
       Builder.defineMacro("__mips_n32");

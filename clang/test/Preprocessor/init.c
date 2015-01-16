@@ -3442,6 +3442,15 @@
 // MIPS-ARCH-32R2:#define _MIPS_ISA _MIPS_ISA_MIPS32
 // MIPS-ARCH-32R2:#define __mips_isa_rev 2
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips-none-none \
+// RUN:            -target-cpu mips32r6 < /dev/null \
+// RUN:   | FileCheck -check-prefix MIPS-ARCH-32R6 %s
+//
+// MIPS-ARCH-32R6:#define _MIPS_ARCH "mips32r6"
+// MIPS-ARCH-32R6:#define _MIPS_ARCH_MIPS32R6 1
+// MIPS-ARCH-32R6:#define _MIPS_ISA _MIPS_ISA_MIPS32
+// MIPS-ARCH-32R6:#define __mips_isa_rev 6
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
 // RUN:            < /dev/null \
 // RUN:   | FileCheck -check-prefix MIPS-ARCH-DEF64 %s
@@ -3468,6 +3477,15 @@
 // MIPS-ARCH-64R2:#define _MIPS_ARCH_MIPS64R2 1
 // MIPS-ARCH-64R2:#define _MIPS_ISA _MIPS_ISA_MIPS64
 // MIPS-ARCH-64R2:#define __mips_isa_rev 2
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-cpu mips64r6 < /dev/null \
+// RUN:   | FileCheck -check-prefix MIPS-ARCH-64R6 %s
+//
+// MIPS-ARCH-64R6:#define _MIPS_ARCH "mips64r6"
+// MIPS-ARCH-64R6:#define _MIPS_ARCH_MIPS64R6 1
+// MIPS-ARCH-64R6:#define _MIPS_ISA _MIPS_ISA_MIPS64
+// MIPS-ARCH-64R6:#define __mips_isa_rev 6
 //
 // Check MIPS float ABI macros
 //
