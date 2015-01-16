@@ -78,7 +78,9 @@ ArgumentsAdjuster getInsertArgumentAdjuster(const char *Extra,
 
 ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
                                    ArgumentsAdjuster Second) {
-  return std::bind(Second, std::bind(First, std::placeholders::_1));
+  return [First, Second](const CommandLineArguments &Args) {
+    return Second(First(Args));
+  };
 }
 
 } // end namespace tooling
