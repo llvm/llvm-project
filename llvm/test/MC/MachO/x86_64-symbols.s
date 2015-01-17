@@ -121,12 +121,6 @@ D38:
 //L39:
 //D39:
 
-        .section foo, bar
-        .long L4 + 1
-        .long L35 + 1
-        .long L36 + 1
-        .long L37 + 1
-        .long L38 + 1
 
 // CHECK: Symbols [
 // CHECK-NEXT:   Symbol {

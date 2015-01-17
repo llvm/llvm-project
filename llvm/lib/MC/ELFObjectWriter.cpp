@@ -219,7 +219,7 @@ class ELFObjectWriter : public MCObjectWriter {
                                   const MCSymbolData *SD, uint64_t C,
                                   unsigned Type) const;
 
-    void RecordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
+    void RecordRelocation(const MCAssembler &Asm, const MCAsmLayout &Layout,
                           const MCFragment *Fragment, const MCFixup &Fixup,
                           MCValue Target, bool &IsPCRel,
                           uint64_t &FixedValue) override;
@@ -789,11 +789,13 @@ static const MCSymbol *getWeakRef(const MCSymbolRefExpr &Ref) {
   return nullptr;
 }
 
-void ELFObjectWriter::RecordRelocation(MCAssembler &Asm,
+void ELFObjectWriter::RecordRelocation(const MCAssembler &Asm,
                                        const MCAsmLayout &Layout,
                                        const MCFragment *Fragment,
-                                       const MCFixup &Fixup, MCValue Target,
-                                       bool &IsPCRel, uint64_t &FixedValue) {
+                                       const MCFixup &Fixup,
+                                       MCValue Target,
+                                       bool &IsPCRel,
+                                       uint64_t &FixedValue) {
   const MCSectionData *FixupSection = Fragment->getParent();
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();

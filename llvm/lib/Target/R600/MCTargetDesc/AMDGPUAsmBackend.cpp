@@ -29,7 +29,7 @@ public:
                                 const MCAsmLayout &Layout) override {
     //XXX: Implement if necessary.
   }
-  void RecordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
+  void RecordRelocation(const MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, bool &IsPCRel,
                         uint64_t &FixedValue) override {

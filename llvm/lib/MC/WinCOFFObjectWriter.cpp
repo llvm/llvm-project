@@ -175,7 +175,7 @@ public:
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
-  void RecordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
+  void RecordRelocation(const MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, bool &IsPCRel,
                         uint64_t &FixedValue) override;
@@ -661,9 +661,13 @@ bool WinCOFFObjectWriter::IsSymbolRefDifferenceFullyResolvedImpl(
                                                                 InSet, IsPCRel);
 }
 
-void WinCOFFObjectWriter::RecordRelocation(
-    MCAssembler &Asm, const MCAsmLayout &Layout, const MCFragment *Fragment,
-    const MCFixup &Fixup, MCValue Target, bool &IsPCRel, uint64_t &FixedValue) {
+void WinCOFFObjectWriter::RecordRelocation(const MCAssembler &Asm,
+                                           const MCAsmLayout &Layout,
+                                           const MCFragment *Fragment,
+                                           const MCFixup &Fixup,
+                                           MCValue Target,
+                                           bool &IsPCRel,
+                                           uint64_t &FixedValue) {
   assert(Target.getSymA() && "Relocation must reference a symbol!");
 
   const MCSymbol &Symbol = Target.getSymA()->getSymbol();

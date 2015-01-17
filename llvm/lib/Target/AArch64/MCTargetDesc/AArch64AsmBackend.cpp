@@ -317,6 +317,42 @@ public:
                                          MachO::CPU_SUBTYPE_ARM64_ALL);
   }
 
+  bool doesSectionRequireSymbols(const MCSection &Section) const override {
+    // Any section for which the linker breaks things into atoms needs to
+    // preserve symbols, including assembler local symbols, to identify
+    // those atoms. These sections are:
+    // Sections of type:
+    //
+    //    S_CSTRING_LITERALS  (e.g. __cstring)
+    //    S_LITERAL_POINTERS  (e.g.  objc selector pointers)
+    //    S_16BYTE_LITERALS, S_8BYTE_LITERALS, S_4BYTE_LITERALS
+    //
+    // Sections named:
+    //
+    //    __TEXT,__eh_frame
+    //    __TEXT,__ustring
+    //    __DATA,__cfstring
+    //    __DATA,__objc_classrefs
+    //    __DATA,__objc_catlist
+    //
+    // FIXME: It would be better if the compiler used actual linker local
+    // symbols for each of these sections rather than preserving what
+    // are ostensibly assembler local symbols.
+    const MCSectionMachO &SMO = static_cast<const MCSectionMachO &>(Section);
+    return (SMO.getType() == MachO::S_CSTRING_LITERALS ||
+            SMO.getType() == MachO::S_4BYTE_LITERALS ||
+            SMO.getType() == MachO::S_8BYTE_LITERALS ||
+            SMO.getType() == MachO::S_16BYTE_LITERALS ||
+            SMO.getType() == MachO::S_LITERAL_POINTERS ||
+            (SMO.getSegmentName() == "__TEXT" &&
+             (SMO.getSectionName() == "__eh_frame" ||
+              SMO.getSectionName() == "__ustring")) ||
+            (SMO.getSegmentName() == "__DATA" &&
+             (SMO.getSectionName() == "__cfstring" ||
+              SMO.getSectionName() == "__objc_classrefs" ||
+              SMO.getSectionName() == "__objc_catlist")));
+  }
+
   /// \brief Generate the compact unwind encoding from the CFI directives.
   uint32_t generateCompactUnwindEncoding(
                              ArrayRef<MCCFIInstruction> Instrs) const override {

@@ -11,7 +11,6 @@
 #define LLVM_MC_MCASSEMBLER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -882,8 +881,6 @@ private:
 
   iplist<MCSymbolData> Symbols;
 
-  DenseSet<const MCSymbol *> LocalsUsedInReloc;
-
   /// The map of sections to their associated assembler backend data.
   //
   // FIXME: Avoid this indirection?
@@ -983,9 +980,6 @@ private:
                                         MCFragment &F, const MCFixup &Fixup);
 
 public:
-  void addLocalUsedInReloc(const MCSymbol &Sym);
-  bool isLocalUsedInReloc(const MCSymbol &Sym) const;
-
   /// Compute the effective fragment size assuming it is laid out at the given
   /// \p SectionAddress and \p FragmentOffset.
   uint64_t computeFragmentSize(const MCAsmLayout &Layout,

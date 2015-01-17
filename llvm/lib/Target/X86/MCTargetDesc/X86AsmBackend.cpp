@@ -777,6 +777,19 @@ public:
                                      MachO::CPU_TYPE_X86_64, Subtype);
   }
 
+  bool doesSectionRequireSymbols(const MCSection &Section) const override {
+    // Temporary labels in the string literals sections require symbols. The
+    // issue is that the x86_64 relocation format does not allow symbol +
+    // offset, and so the linker does not have enough information to resolve the
+    // access to the appropriate atom unless an external relocation is used. For
+    // non-cstring sections, we expect the compiler to use a non-temporary label
+    // for anything that could have an addend pointing outside the symbol.
+    //
+    // See <rdar://problem/4765733>.
+    const MCSectionMachO &SMO = static_cast<const MCSectionMachO&>(Section);
+    return SMO.getType() == MachO::S_CSTRING_LITERALS;
+  }
+
   /// \brief Generate the compact unwind encoding for the CFI instructions.
   uint32_t generateCompactUnwindEncoding(
                              ArrayRef<MCCFIInstruction> Instrs) const override {

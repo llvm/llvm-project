@@ -61,6 +61,12 @@ public:
   /// markers. If not, data region directives will be ignored.
   bool hasDataInCodeSupport() const { return HasDataInCodeSupport; }
 
+  /// doesSectionRequireSymbols - Check whether the given section requires that
+  /// all symbols (even temporaries) have symbol table entries.
+  virtual bool doesSectionRequireSymbols(const MCSection &Section) const {
+    return false;
+  }
+
   /// @name Target Fixup Interfaces
   /// @{
 

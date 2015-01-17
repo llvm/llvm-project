@@ -76,10 +76,12 @@ public:
   /// post layout binding. The implementation is responsible for storing
   /// information about the relocation so that it can be emitted during
   /// WriteObject().
-  virtual void RecordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
+  virtual void RecordRelocation(const MCAssembler &Asm,
+                                const MCAsmLayout &Layout,
                                 const MCFragment *Fragment,
                                 const MCFixup &Fixup, MCValue Target,
-                                bool &IsPCRel, uint64_t &FixedValue) = 0;
+                                bool &IsPCRel,
+                                uint64_t &FixedValue) = 0;
 
   /// \brief Check whether the difference (A - B) between two symbol
   /// references is fully resolved.

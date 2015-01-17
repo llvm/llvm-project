@@ -41,7 +41,7 @@ public:
       : MCMachObjectTargetWriter(Is64Bit, CPUType, CPUSubtype,
                                  /*UseAggressiveSymbolFolding=*/Is64Bit) {}
 
-  void RecordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
+  void RecordRelocation(MachObjectWriter *Writer, const MCAssembler &Asm,
                         const MCAsmLayout &Layout, const MCFragment *Fragment,
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override {
@@ -282,7 +282,7 @@ bool PPCMachObjectWriter::RecordScatteredRelocation(
     MachO::any_relocation_info MRE;
     makeScatteredRelocationInfo(MRE, other_half, MachO::GENERIC_RELOC_PAIR,
                                 Log2Size, IsPCRel, Value2);
-    Writer->addRelocation(nullptr, Fragment->getParent(), MRE);
+    Writer->addRelocation(Fragment->getParent(), MRE);
   } else {
     // If the offset is more than 24-bits, it won't fit in a scattered
     // relocation offset field, so we fall back to using a non-scattered
@@ -296,7 +296,7 @@ bool PPCMachObjectWriter::RecordScatteredRelocation(
   }
   MachO::any_relocation_info MRE;
   makeScatteredRelocationInfo(MRE, FixupOffset, Type, Log2Size, IsPCRel, Value);
-  Writer->addRelocation(nullptr, Fragment->getParent(), MRE);
+  Writer->addRelocation(Fragment->getParent(), MRE);
   return true;
 }
 
@@ -331,9 +331,9 @@ void PPCMachObjectWriter::RecordPPCRelocation(
   // See <reloc.h>.
   const uint32_t FixupOffset = getFixupOffset(Layout, Fragment, Fixup);
   unsigned Index = 0;
+  unsigned IsExtern = 0;
   unsigned Type = RelocType;
 
-  const MCSymbolData *RelSymbol = nullptr;
   if (Target.isAbsolute()) { // constant
                              // SymbolNum of 0 indicates the absolute section.
                              //
@@ -355,7 +355,8 @@ void PPCMachObjectWriter::RecordPPCRelocation(
 
     // Check whether we need an external or internal relocation.
     if (Writer->doesSymbolRequireExternRelocation(SD)) {
-      RelSymbol = SD;
+      IsExtern = 1;
+      Index = SD->getIndex();
       // For external relocations, make sure to offset the fixup value to
       // compensate for the addend of the symbol address, if it was
       // undefined. This occurs with weak definitions, for example.
@@ -374,8 +375,9 @@ void PPCMachObjectWriter::RecordPPCRelocation(
 
   // struct relocation_info (8 bytes)
   MachO::any_relocation_info MRE;
-  makeRelocationInfo(MRE, FixupOffset, Index, IsPCRel, Log2Size, false, Type);
-  Writer->addRelocation(RelSymbol, Fragment->getParent(), MRE);
+  makeRelocationInfo(MRE, FixupOffset, Index, IsPCRel, Log2Size, IsExtern,
+                     Type);
+  Writer->addRelocation(Fragment->getParent(), MRE);
 }
 
 MCObjectWriter *llvm::createPPCMachObjectWriter(raw_ostream &OS, bool Is64Bit,

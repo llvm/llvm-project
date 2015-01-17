@@ -68,10 +68,12 @@ public:
   /// @name API
   /// @{
 
-  virtual void RecordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
+  virtual void RecordRelocation(MachObjectWriter *Writer,
+                                const MCAssembler &Asm,
                                 const MCAsmLayout &Layout,
                                 const MCFragment *Fragment,
-                                const MCFixup &Fixup, MCValue Target,
+                                const MCFixup &Fixup,
+                                MCValue Target,
                                 uint64_t &FixedValue) = 0;
 
   /// @}
@@ -95,14 +97,8 @@ class MachObjectWriter : public MCObjectWriter {
   /// @name Relocation Data
   /// @{
 
-  struct RelAndSymbol {
-    const MCSymbolData *Sym;
-    MachO::any_relocation_info MRE;
-    RelAndSymbol(const MCSymbolData *Sym, const MachO::any_relocation_info &MRE)
-        : Sym(Sym), MRE(MRE) {}
-  };
-
-  llvm::DenseMap<const MCSectionData *, std::vector<RelAndSymbol>> Relocations;
+  llvm::DenseMap<const MCSectionData*,
+                 std::vector<MachO::any_relocation_info> > Relocations;
   llvm::DenseMap<const MCSectionData*, unsigned> IndirectSymBase;
 
   /// @}
@@ -217,15 +213,9 @@ public:
   //  - Input errors, where something cannot be correctly encoded. 'as' allows
   //    these through in many cases.
 
-  // Add a relocation to be output in the object file. At the time this is
-  // called, the symbol indexes are not know, so if the relocation refers
-  // to a symbol it should be passed as \p RelSymbol so that it can be updated
-  // afterwards. If the relocation doesn't refer to a symbol, nullptr should be
-  // used.
-  void addRelocation(const MCSymbolData *RelSymbol, const MCSectionData *SD,
+  void addRelocation(const MCSectionData *SD,
                      MachO::any_relocation_info &MRE) {
-    RelAndSymbol P(RelSymbol, MRE);
-    Relocations[SD].push_back(P);
+    Relocations[SD].push_back(MRE);
   }
 
   void RecordScatteredRelocation(const MCAssembler &Asm,
@@ -241,7 +231,7 @@ public:
                             const MCFixup &Fixup, MCValue Target,
                             uint64_t &FixedValue);
 
-  void RecordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
+  void RecordRelocation(const MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, bool &IsPCRel,
                         uint64_t &FixedValue) override;
