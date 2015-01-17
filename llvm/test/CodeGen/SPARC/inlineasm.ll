@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -no-integrated-as <%s | FileCheck %s
+; RUN: llc -march=sparc <%s | FileCheck %s
 
 ; CHECK-LABEL: test_constraint_r
 ; CHECK:       add %o1, %o0, %o0
