@@ -359,13 +359,10 @@ TEST_F(MCJITCAPITest, gva) {
   buildMCJITEngine();
   buildAndRunPasses();
 
-  union {
-    uint64_t raw;
-    int32_t *usable;
-  } valuePointer;
-  valuePointer.raw = LLVMGetGlobalValueAddress(Engine, "simple_value");
+  uint64_t raw = LLVMGetGlobalValueAddress(Engine, "simple_value");
+  int32_t *usable  = (int32_t *) raw;
 
-  EXPECT_EQ(42, *valuePointer.usable);
+  EXPECT_EQ(42, *usable);
 }
 
 TEST_F(MCJITCAPITest, gfa) {
@@ -376,13 +373,10 @@ TEST_F(MCJITCAPITest, gfa) {
   buildMCJITEngine();
   buildAndRunPasses();
 
-  union {
-    uint64_t raw;
-    int (*usable)();
-  } functionPointer;
-  functionPointer.raw = LLVMGetFunctionAddress(Engine, "simple_function");
+  uint64_t raw = LLVMGetFunctionAddress(Engine, "simple_function");
+  int (*usable)() = (int (*)()) raw;
 
-  EXPECT_EQ(42, functionPointer.usable());
+  EXPECT_EQ(42, usable());
 }
 
 TEST_F(MCJITCAPITest, custom_memory_manager) {
