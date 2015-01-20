@@ -4395,9 +4395,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_OptimizeNone:
     handleOptimizeNoneAttr(S, D, Attr);
     break;
-  case AttributeList::AT_FlagEnum:
-    handleSimpleAttribute<FlagEnumAttr>(S, D, Attr);
-    break;
   case AttributeList::AT_Flatten:
     handleSimpleAttribute<FlattenAttr>(S, D, Attr);
     break;

@@ -1196,16 +1196,6 @@ behavior of the program is undefined.
   }];
 }
 
-def FlagEnumDocs : Documentation {
-  let Category = DocCatType;
-  let Content = [{
-This attribute can be added to an enumerator to signal to the compiler that it
-is intended to be used as a flag type. This will cause the compiler to assume
-that the range of the type includes all of the values that you can get by
-manipulating bits of the enumerator when issuing warnings.
-  }];
-}
-
 def MSInheritanceDocs : Documentation {
   let Category = DocCatType;
   let Heading = "__single_inhertiance, __multiple_inheritance, __virtual_inheritance";
