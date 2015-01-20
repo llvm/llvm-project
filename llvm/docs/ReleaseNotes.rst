@@ -284,6 +284,100 @@ The fields are named, can be reordered, and have sane defaults if left out
 (although ``scope:`` is required).
 
 
+Alias syntax change
+-----------------------
+
+The syntax for aliases is now closer to what is used for global variables
+
+.. code-block:: llvm
+
+    @a = weak global ...
+    @b = weak alias ...
+
+The order of the ``alias`` keyword and the linkage was swapped before.
+
+The old JIT has been removed
+----------------------------
+
+All users should transition to MCJIT.
+
+
+object::Binary doesn't owns the file buffer
+-------------------------------------------
+
+It is now just a wrapper, which simplifies using object::Binary with other
+users of the underlying file.
+
+IR in object files is now supported
+-----------------------------------
+
+Regular object files can contain IR in a section named ``.llvmbc``.
+
+
+The gold plugin has been rewritten
+----------------------------------
+
+It is now implemented directly on top of lib/Linker instead of ``lib/LTO``.
+The API of ``lib/LTO`` is sufficiently different from gold's view of the
+linking process that some cases could not be conveniently implemented.
+
+The new implementation is also lazier and has a ``save-temps`` option.
+
+
+Change in the representation of lazy loaded funcs
+-------------------------------------------------
+
+Lazy loaded functions are now represented is a way that ``isDeclaration``
+returns the correct answer even before reading the body.
+
+
+The opt option -std-compile-opts was removed
+--------------------------------------------
+
+It was effectively an alias of -O3.
+
+
+Python 2.7 is now required
+--------------------------
+
+This was done to simplify compatibility with python 3.
+
+The leak detector has been removed
+----------------------------------
+
+In practice tools like asan and valgrind were finding way more bugs than
+the old leak detector, so it was removed.
+
+
+New comdat syntax
+-----------------
+
+The syntax of comdats was changed to
+
+.. code-block:: llvm
+
+    $c = comdat any
+    @g = global i32 0, comdat($c)
+    @c = global i32 0, comdat
+
+The version without the parentheses is a syntatic sugar for a comdat with
+the same name as the global.
+
+
+Diagnotic infrastructure used by lib/Linker and lib/Bitcode
+-----------------------------------------------------------
+
+These libraries now use the diagnostic handler to print errors and warnings.
+This provides better error messages and simpler error handling.
+
+
+The PreserveSource linker mode was removed
+------------------------------------------
+
+It was fairly broken and was removed.
+
+
+
 Changes to the ARM Backend
 --------------------------
 
