@@ -302,6 +302,8 @@ static unsigned getImplicitScaleFactor(MVT VT) {
 CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
   if (CC == CallingConv::WebKit_JS)
     return CC_AArch64_WebKit_JS;
+  if (CC == CallingConv::GHC)
+    return CC_AArch64_GHC;
   return Subtarget->isTargetDarwin() ? CC_AArch64_DarwinPCS : CC_AArch64_AAPCS;
 }
 

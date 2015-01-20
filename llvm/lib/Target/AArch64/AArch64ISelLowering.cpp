@@ -1990,6 +1990,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     llvm_unreachable("Unsupported calling convention.");
   case CallingConv::WebKit_JS:
     return CC_AArch64_WebKit_JS;
+  case CallingConv::GHC:
+    return CC_AArch64_GHC;
   case CallingConv::C:
   case CallingConv::Fast:
     if (!Subtarget->isTargetDarwin())

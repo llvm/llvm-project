@@ -215,6 +215,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF) const {
   bool HasFP = hasFP(MF);
   DebugLoc DL = MBB.findDebugLoc(MBBI);
 
+  // All calls are tail calls in GHC calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction()->getCallingConv() == CallingConv::GHC)
+    return;
+
   int NumBytes = (int)MFI->getStackSize();
   if (!AFI->hasStackFrame()) {
     assert(!HasFP && "unexpected function without stack frame but with FP");
@@ -450,6 +455,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   int NumBytes = MFI->getStackSize();
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+
+  // All calls are tail calls in GHC calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction()->getCallingConv() == CallingConv::GHC)
+    return;
 
   // Initial and residual are named for consitency with the prologue. Note that
   // in the epilogue, the residual adjustment is executed first.
