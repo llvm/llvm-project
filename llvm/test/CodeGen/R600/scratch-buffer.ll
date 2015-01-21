@@ -3,9 +3,14 @@
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.
 
+; Also, make sure we use the same register for storing the scratch buffer addresss
+; for both stores. This register is allocated by the register scavenger, so we
+; should be able to reuse the same regiser for each scratch buffer access.
+
 ; CHECK-LABEL: {{^}}legal_offset_fi:
-; CHECK: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
-; CHECK: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x8000
+; CHECK: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0{{$}}
+; CHECK: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
+; CHECK: v_mov_b32_e32 [[OFFSET]], 0x8000
 ; CHECK: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
 define void @legal_offset_fi(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) {

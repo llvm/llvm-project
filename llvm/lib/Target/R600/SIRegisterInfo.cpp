@@ -289,7 +289,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         BuildMI(*MBB, MI, MI->getDebugLoc(),
                 TII->get(AMDGPU::V_MOV_B32_e32), TmpReg)
                 .addImm(Offset);
-        FIOp.ChangeToRegister(TmpReg, false);
+        FIOp.ChangeToRegister(TmpReg, false, false, true);
       }
     }
   }
