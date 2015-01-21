@@ -1949,14 +1949,14 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
   let UseNamedOperandTable = 1 in {
     def _SAVE : InstSI <
       (outs),
-      (ins sgpr_class:$src, i32imm:$frame_idx, SReg_64:$scratch_ptr,
+      (ins sgpr_class:$src, i32imm:$frame_idx, SReg_128:$scratch_rsrc,
            SReg_32:$scratch_offset),
       "", []
     >;
 
     def _RESTORE : InstSI <
       (outs sgpr_class:$dst),
-      (ins i32imm:$frame_idx, SReg_64:$scratch_ptr, SReg_32:$scratch_offset),
+      (ins i32imm:$frame_idx, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset),
       "", []
     >;
   } // End UseNamedOperandTable = 1
@@ -1972,14 +1972,14 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
   let UseNamedOperandTable = 1 in {
     def _SAVE : InstSI <
       (outs),
-      (ins vgpr_class:$src, i32imm:$frame_idx, SReg_64:$scratch_ptr,
+      (ins vgpr_class:$src, i32imm:$frame_idx, SReg_128:$scratch_rsrc,
            SReg_32:$scratch_offset),
       "", []
     >;
 
     def _RESTORE : InstSI <
       (outs vgpr_class:$dst),
-      (ins i32imm:$frame_idx, SReg_64:$scratch_ptr, SReg_32:$scratch_offset),
+      (ins i32imm:$frame_idx, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset),
       "", []
     >;
   } // End UseNamedOperandTable = 1

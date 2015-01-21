@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 
+#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 namespace {
@@ -84,28 +85,10 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
   if (!Entry->isLiveIn(ScratchOffsetPreloadReg))
     Entry->addLiveIn(ScratchOffsetPreloadReg);
 
-  // Load the scratch pointer
-  unsigned ScratchPtrReg =
-      TRI->findUnusedRegister(MRI, &AMDGPU::SGPR_64RegClass);
-  int ScratchPtrFI = -1;
-
-  if (ScratchPtrReg != AMDGPU::NoRegister) {
-    // Found an SGPR to use.
-    MRI.setPhysRegUsed(ScratchPtrReg);
-    BuildMI(*Entry, I, DL, TII->get(AMDGPU::S_MOV_B64), ScratchPtrReg)
-            .addReg(ScratchPtrPreloadReg);
-  } else {
-    // No SGPR is available, we must spill.
-    ScratchPtrFI = FrameInfo->CreateSpillStackObject(8, 4);
-    BuildMI(*Entry, I, DL, TII->get(AMDGPU::SI_SPILL_S64_SAVE))
-            .addReg(ScratchPtrPreloadReg)
-            .addFrameIndex(ScratchPtrFI);
-  }
-
   // Load the scratch offset.
   unsigned ScratchOffsetReg =
       TRI->findUnusedRegister(MRI, &AMDGPU::SGPR_32RegClass);
-  int ScratchOffsetFI = ~0;
+  int ScratchOffsetFI = -1;
 
   if (ScratchOffsetReg != AMDGPU::NoRegister) {
     // Found an SGPR to use
@@ -125,22 +108,26 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
   // add them to all the SI_SPILL_V* instructions.
 
   RegScavenger RS;
-  bool UseRegScavenger =
-      (ScratchPtrReg == AMDGPU::NoRegister ||
-      ScratchOffsetReg == AMDGPU::NoRegister);
+  unsigned ScratchRsrcFI = FrameInfo->CreateSpillStackObject(16, 4);
+  RS.addScavengingFrameIndex(ScratchRsrcFI);
+
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
        BI != BE; ++BI) {
 
     MachineBasicBlock &MBB = *BI;
-    if (UseRegScavenger)
-      RS.enterBasicBlock(&MBB);
+    // Add the scratch offset reg as a live-in so that the register scavenger
+    // doesn't re-use it.
+    if (!MBB.isLiveIn(ScratchOffsetReg))
+      MBB.addLiveIn(ScratchOffsetReg);
+    RS.enterBasicBlock(&MBB);
 
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
          I != E; ++I) {
       MachineInstr &MI = *I;
+      RS.forward(I);
       DebugLoc DL = MI.getDebugLoc();
       switch(MI.getOpcode()) {
-        default: break;;
+        default: break;
         case AMDGPU::SI_SPILL_V512_SAVE:
         case AMDGPU::SI_SPILL_V256_SAVE:
         case AMDGPU::SI_SPILL_V128_SAVE:
@@ -153,18 +140,35 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
         case AMDGPU::SI_SPILL_V256_RESTORE:
         case AMDGPU::SI_SPILL_V512_RESTORE:
 
-          // Scratch Pointer
-          if (ScratchPtrReg == AMDGPU::NoRegister) {
-            ScratchPtrReg = RS.scavengeRegister(&AMDGPU::SGPR_64RegClass, 0);
-            BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_SPILL_S64_RESTORE),
-                    ScratchPtrReg)
-                    .addFrameIndex(ScratchPtrFI)
-                    .addReg(AMDGPU::NoRegister)
-                    .addReg(AMDGPU::NoRegister);
-          } else if (!MBB.isLiveIn(ScratchPtrReg)) {
-            MBB.addLiveIn(ScratchPtrReg);
-          }
+          // Scratch resource
+          unsigned ScratchRsrcReg =
+              RS.scavengeRegister(&AMDGPU::SReg_128RegClass, 0);
 
+          uint64_t Rsrc = AMDGPU::RSRC_DATA_FORMAT | AMDGPU::RSRC_TID_ENABLE |
+                          0xffffffff; // Size
+
+          unsigned Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
+          unsigned Rsrc1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
+          unsigned Rsrc2 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);
+          unsigned Rsrc3 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
+
+          BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), Rsrc0)
+                  .addExternalSymbol("SCRATCH_RSRC_DWORD0")
+                  .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+          BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), Rsrc1)
+                  .addExternalSymbol("SCRATCH_RSRC_DWORD1")
+                  .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+          BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), Rsrc2)
+                  .addImm(Rsrc & 0xffffffff)
+                  .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+          BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), Rsrc3)
+                  .addImm(Rsrc >> 32)
+                  .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+          // Scratch Offset
           if (ScratchOffsetReg == AMDGPU::NoRegister) {
             ScratchOffsetReg = RS.scavengeRegister(&AMDGPU::SGPR_32RegClass, 0);
             BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_SPILL_S32_RESTORE),
@@ -176,20 +180,26 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
             MBB.addLiveIn(ScratchOffsetReg);
           }
 
-          if (ScratchPtrReg == AMDGPU::NoRegister ||
+          if (ScratchRsrcReg == AMDGPU::NoRegister ||
               ScratchOffsetReg == AMDGPU::NoRegister) {
             LLVMContext &Ctx = MF.getFunction()->getContext();
             Ctx.emitError("ran out of SGPRs for spilling VGPRs");
-            ScratchPtrReg = AMDGPU::SGPR0;
+            ScratchRsrcReg = AMDGPU::SGPR0;
             ScratchOffsetReg = AMDGPU::SGPR0;
           }
-          MI.getOperand(2).setReg(ScratchPtrReg);
+          MI.getOperand(2).setReg(ScratchRsrcReg);
+          MI.getOperand(2).setIsKill(true);
+          MI.getOperand(2).setIsUndef(false);
           MI.getOperand(3).setReg(ScratchOffsetReg);
+          MI.getOperand(3).setIsUndef(false);
+          MI.addOperand(MachineOperand::CreateReg(Rsrc0, false, true, true));
+          MI.addOperand(MachineOperand::CreateReg(Rsrc1, false, true, true));
+          MI.addOperand(MachineOperand::CreateReg(Rsrc2, false, true, true));
+          MI.addOperand(MachineOperand::CreateReg(Rsrc3, false, true, true));
 
+          MI.dump();
           break;
       }
-      if (UseRegScavenger)
-        RS.forward();
     }
   }
   return true;

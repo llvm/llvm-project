@@ -962,16 +962,27 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
   const SITargetLowering& Lowering =
     *static_cast<const SITargetLowering*>(getTargetLowering());
 
-  unsigned ScratchPtrReg =
-      TRI->getPreloadedValue(MF, SIRegisterInfo::SCRATCH_PTR);
   unsigned ScratchOffsetReg =
       TRI->getPreloadedValue(MF, SIRegisterInfo::SCRATCH_WAVE_OFFSET);
   Lowering.CreateLiveInRegister(*CurDAG, &AMDGPU::SReg_32RegClass,
                                 ScratchOffsetReg, MVT::i32);
+  SDValue Sym0 = CurDAG->getExternalSymbol("SCRATCH_RSRC_DWORD0", MVT::i32);
+  SDValue ScratchRsrcDword0 =
+      SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, Sym0), 0);
 
-  SDValue ScratchPtr =
-    CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
-                           MRI.getLiveInVirtReg(ScratchPtrReg), MVT::i64);
+  SDValue Sym1 = CurDAG->getExternalSymbol("SCRATCH_RSRC_DWORD1", MVT::i32);
+  SDValue ScratchRsrcDword1 =
+      SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, Sym1), 0);
+
+  const SDValue RsrcOps[] = {
+      CurDAG->getTargetConstant(AMDGPU::SReg_64RegClassID, MVT::i32),
+      ScratchRsrcDword0,
+      CurDAG->getTargetConstant(AMDGPU::sub0, MVT::i32),
+      ScratchRsrcDword1,
+      CurDAG->getTargetConstant(AMDGPU::sub1, MVT::i32),
+  };
+  SDValue ScratchPtr = SDValue(CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
+                                              MVT::v2i32, RsrcOps), 0);
   Rsrc = SDValue(Lowering.buildScratchRSRC(*CurDAG, DL, ScratchPtr), 0);
   SOffset = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
       MRI.getLiveInVirtReg(ScratchOffsetReg), MVT::i32);

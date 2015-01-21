@@ -80,6 +80,12 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       MCOp = MCOperand::CreateExpr(Expr);
       break;
     }
+    case MachineOperand::MO_ExternalSymbol: {
+      MCSymbol *Sym = Ctx.GetOrCreateSymbol(StringRef(MO.getSymbolName()));
+      const MCSymbolRefExpr *Expr = MCSymbolRefExpr::Create(Sym, Ctx);
+      MCOp = MCOperand::CreateExpr(Expr);
+      break;
+    }
     }
     OutMI.addOperand(MCOp);
   }

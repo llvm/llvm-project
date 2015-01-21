@@ -482,7 +482,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
             .addFrameIndex(FrameIndex)
             // Place-holder registers, these will be filled in by
             // SIPrepareScratchRegs.
-            .addReg(AMDGPU::SGPR0_SGPR1, RegState::Undef)
+            .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
             .addReg(AMDGPU::SGPR0, RegState::Undef);
   } else {
     LLVMContext &Ctx = MF->getFunction()->getContext();
@@ -528,7 +528,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
             .addFrameIndex(FrameIndex)
             // Place-holder registers, these will be filled in by
             // SIPrepareScratchRegs.
-            .addReg(AMDGPU::SGPR0_SGPR1, RegState::Undef)
+            .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
             .addReg(AMDGPU::SGPR0, RegState::Undef);
 
   } else {

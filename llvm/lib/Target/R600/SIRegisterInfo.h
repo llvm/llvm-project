@@ -111,7 +111,7 @@ struct SIRegisterInfo : public AMDGPURegisterInfo {
 private:
   void buildScratchLoadStore(MachineBasicBlock::iterator MI,
                              unsigned LoadStoreOp, unsigned Value,
-                             unsigned ScratchPtr, unsigned ScratchOffset,
+                             unsigned ScratchRsrcReg, unsigned ScratchOffset,
                              int64_t Offset, RegScavenger *RS) const;
 };
 

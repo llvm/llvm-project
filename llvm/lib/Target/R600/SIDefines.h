@@ -163,4 +163,5 @@ namespace SIOutMods {
 #define R_00B860_COMPUTE_TMPRING_SIZE                                   0x00B860
 #define   S_00B860_WAVESIZE(x)                                        (((x) & 0x1FFF) << 12)
 
+
 #endif
