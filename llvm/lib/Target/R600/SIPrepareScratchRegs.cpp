@@ -29,7 +29,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 
-#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 namespace {
@@ -197,7 +196,6 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
           MI.addOperand(MachineOperand::CreateReg(Rsrc2, false, true, true));
           MI.addOperand(MachineOperand::CreateReg(Rsrc3, false, true, true));
 
-          MI.dump();
           break;
       }
     }
