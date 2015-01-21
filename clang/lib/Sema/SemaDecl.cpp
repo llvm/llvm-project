@@ -8828,11 +8828,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
           });
       if (Res.isInvalid()) {
         VDecl->setInvalidDecl();
-        return;
-      }
-      if (Res.get() != Args[Idx])
+      } else if (Res.get() != Args[Idx]) {
         Args[Idx] = Res.get();
+      }
     }
+    if (VDecl->isInvalidDecl())
+      return;
 
     InitializationSequence InitSeq(*this, Entity, Kind, Args);
     ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
