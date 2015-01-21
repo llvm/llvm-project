@@ -24,8 +24,7 @@ define void @s_ctpop_i32(i32 addrspace(1)* noalias %out, i32 %val) nounwind {
 ; XXX - Why 0 in register?
 ; FUNC-LABEL: {{^}}v_ctpop_i32:
 ; SI: buffer_load_dword [[VAL:v[0-9]+]],
-; SI: v_mov_b32_e32 [[VZERO:v[0-9]+]], 0
-; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL]], [[VZERO]]
+; SI: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], 0
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
 
@@ -40,8 +39,7 @@ define void @v_ctpop_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noali
 ; FUNC-LABEL: {{^}}v_ctpop_add_chain_i32:
 ; SI: buffer_load_dword [[VAL0:v[0-9]+]],
 ; SI: buffer_load_dword [[VAL1:v[0-9]+]],
-; SI: v_mov_b32_e32 [[VZERO:v[0-9]+]], 0
-; SI: v_bcnt_u32_b32_e32 [[MIDRESULT:v[0-9]+]], [[VAL1]], [[VZERO]]
+; SI: v_bcnt_u32_b32_e64 [[MIDRESULT:v[0-9]+]], [[VAL1]], 0
 ; SI-NEXT: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
@@ -73,8 +71,8 @@ define void @v_ctpop_add_sgpr_i32(i32 addrspace(1)* noalias %out, i32 addrspace(
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v2i32:
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
 ; SI: s_endpgm
 
 ; EG: BCNT_INT
@@ -87,10 +85,10 @@ define void @v_ctpop_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrs
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v4i32:
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
 ; SI: s_endpgm
 
 ; EG: BCNT_INT
@@ -105,14 +103,14 @@ define void @v_ctpop_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrs
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v8i32:
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
 ; SI: s_endpgm
 
 ; EG: BCNT_INT
@@ -131,22 +129,22 @@ define void @v_ctpop_v8i32(<8 x i32> addrspace(1)* noalias %out, <8 x i32> addrs
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v16i32:
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
-; SI: v_bcnt_u32_b32_e32
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
+; SI: v_bcnt_u32_b32_e64
 ; SI: s_endpgm
 
 ; EG: BCNT_INT

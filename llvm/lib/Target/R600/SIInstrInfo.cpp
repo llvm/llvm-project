@@ -615,7 +615,7 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(MachineBasicBlock &MBB,
               .addImm(-1)
               .addImm(0);
 
-      BuildMI(Entry, Insert, DL, get(AMDGPU::V_MBCNT_HI_U32_B32_e32),
+      BuildMI(Entry, Insert, DL, get(AMDGPU::V_MBCNT_HI_U32_B32_e64),
               TIDReg)
               .addImm(-1)
               .addReg(TIDReg);
@@ -1291,7 +1291,7 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) {
   case AMDGPU::S_LOAD_DWORDX2_SGPR: return AMDGPU::BUFFER_LOAD_DWORDX2_ADDR64;
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX4_SGPR: return AMDGPU::BUFFER_LOAD_DWORDX4_ADDR64;
-  case AMDGPU::S_BCNT1_I32_B32: return AMDGPU::V_BCNT_U32_B32_e32;
+  case AMDGPU::S_BCNT1_I32_B32: return AMDGPU::V_BCNT_U32_B32_e64;
   case AMDGPU::S_FF1_I32_B32: return AMDGPU::V_FFBL_B32_e32;
   case AMDGPU::S_FLBIT_I32_B32: return AMDGPU::V_FFBH_U32_e32;
   }
@@ -2282,7 +2282,7 @@ void SIInstrInfo::splitScalar64BitBCNT(SmallVectorImpl<MachineInstr *> &Worklist
   MachineOperand &Dest = Inst->getOperand(0);
   MachineOperand &Src = Inst->getOperand(1);
 
-  const MCInstrDesc &InstDesc = get(AMDGPU::V_BCNT_U32_B32_e32);
+  const MCInstrDesc &InstDesc = get(AMDGPU::V_BCNT_U32_B32_e64);
   const TargetRegisterClass *SrcRC = Src.isReg() ?
     MRI.getRegClass(Src.getReg()) :
     &AMDGPU::SGPR_32RegClass;

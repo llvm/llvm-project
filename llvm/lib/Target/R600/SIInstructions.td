@@ -2735,7 +2735,7 @@ let Predicates = [isSICI] in {
 
 def : Pat <
   (int_SI_tid),
-  (V_MBCNT_HI_U32_B32_e32 0xffffffff,
+  (V_MBCNT_HI_U32_B32_e64 0xffffffff,
                           (V_MBCNT_LO_U32_B32_e64 0xffffffff, 0))
 >;
 
