@@ -1656,9 +1656,6 @@ defm V_ALIGNBYTE_B32 : VOP3Inst <vop3<0x14f, 0x1cf>, "v_alignbyte_b32",
   VOP_I32_I32_I32_I32
 >;
 
-// Only on SI
-defm V_MULLIT_F32 : VOP3Inst <vop3<0x150>, "v_mullit_f32",
-  VOP_F32_F32_F32_F32>;
 defm V_MIN3_F32 : VOP3Inst <vop3<0x151>, "v_min3_f32",
   VOP_F32_F32_F32_F32, AMDGPUfmin3>;
 
@@ -1698,20 +1695,6 @@ defm V_DIV_FIXUP_F64 : VOP3Inst <
 >;
 
 } // let SchedRW = [WriteDouble]
-
-defm V_LSHL_B64 : VOP3Inst <vop3<0x161>, "v_lshl_b64",
-  VOP_I64_I64_I32, shl
->;
-
-// Only on SI
-defm V_LSHR_B64 : VOP3Inst <vop3<0x162>, "v_lshr_b64",
-  VOP_I64_I64_I32, srl
->;
-
-// Only on SI
-defm V_ASHR_I64 : VOP3Inst <vop3<0x163>, "v_ashr_i64",
-  VOP_I64_I64_I32, sra
->;
 
 let SchedRW = [WriteDouble] in {
 let isCommutable = 1 in {
@@ -1784,6 +1767,26 @@ defm V_TRIG_PREOP_F64 : VOP3Inst <
 >;
 
 } // let SchedRW = [WriteDouble]
+
+// These instructions only exist on SI and CI
+let SubtargetPredicate = isSICI in {
+
+defm V_LSHL_B64 : VOP3Inst <vop3<0x161>, "v_lshl_b64",
+  VOP_I64_I64_I32, shl
+>;
+
+defm V_LSHR_B64 : VOP3Inst <vop3<0x162>, "v_lshr_b64",
+  VOP_I64_I64_I32, srl
+>;
+
+defm V_ASHR_I64 : VOP3Inst <vop3<0x163>, "v_ashr_i64",
+  VOP_I64_I64_I32, sra
+>;
+
+defm V_MULLIT_F32 : VOP3Inst <vop3<0x150>, "v_mullit_f32",
+  VOP_F32_F32_F32_F32>;
+
+} // End SubtargetPredicate = isSICI
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
