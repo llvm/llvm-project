@@ -1130,12 +1130,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr *MI,
     }
 
     switch (Desc.OpInfo[i].OperandType) {
-    case MCOI::OPERAND_REGISTER: {
-      if (MI->getOperand(i).isImm() &&
-          !isImmOperandLegal(MI, i, MI->getOperand(i))) {
-          ErrInfo = "Illegal immediate value for operand.";
-          return false;
-        }
+    case MCOI::OPERAND_REGISTER:
+      if (MI->getOperand(i).isImm() || MI->getOperand(i).isFPImm()) {
+        ErrInfo = "Illegal immediate value for operand.";
+        return false;
+      }
+      break;
+    case AMDGPU::OPERAND_REG_IMM32:
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_C:
+      if (MI->getOperand(i).isImm() && !isInlineConstant(MI->getOperand(i))) {
+        ErrInfo = "Illegal immediate value for operand.";
+        return false;
       }
       break;
     case MCOI::OPERAND_IMMEDIATE:
