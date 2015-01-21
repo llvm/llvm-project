@@ -998,6 +998,23 @@ multiclass VOP3_C_m <vop op, dag outs, dag ins, string asm,
   }
 }
 
+// An instruction that is VOP2 on SI and VOP3 on VI, no modifiers.
+multiclass VOP2SI_3VI_m <vop3 op, string opName, dag outs, dag ins,
+                         string asm, list<dag> pattern = []> {
+  let isPseudo = 1 in {
+    def "" : VOPAnyCommon <outs, ins, "", pattern>,
+             SIMCInstr<opName, SISubtarget.NONE>;
+  }
+
+  def _si : VOP2 <op.SI3{5-0}, outs, ins, asm, []>,
+            SIMCInstr <opName, SISubtarget.SI>;
+
+  def _vi : VOP3Common <outs, ins, asm, []>,
+            VOP3e_vi <op.VI3>,
+            VOP3DisableFields <1, 0, 0>,
+            SIMCInstr <opName, SISubtarget.VI>;
+}
+
 multiclass VOP1_Helper <vop1 op, string opName, dag outs,
                         dag ins32, string asm32, list<dag> pat32,
                         dag ins64, string asm64, list<dag> pat64,

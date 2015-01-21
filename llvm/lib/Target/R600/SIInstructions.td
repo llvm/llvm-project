@@ -1525,24 +1525,24 @@ defm V_SUBBREV_U32 : VOP2bInst <vop2<0x2a, 0x1e>, "v_subbrev_u32",
 } // End Uses = [VCC]
 } // End isCommutable = 1, Defs = [VCC]
 
-// These instructions only exist on SI and CI
-let SubtargetPredicate = isSICI in {
-
-def V_READLANE_B32 : VOP2 <
-  0x00000001,
+defm V_READLANE_B32 : VOP2SI_3VI_m <
+  vop3 <0x001, 0x289>,
+  "v_readlane_b32",
   (outs SReg_32:$vdst),
   (ins VGPR_32:$src0, SSrc_32:$vsrc1),
-  "v_readlane_b32 $vdst, $src0, $vsrc1",
-  []
+  "v_readlane_b32 $vdst, $src0, $vsrc1"
 >;
 
-def V_WRITELANE_B32 : VOP2 <
-  0x00000002,
+defm V_WRITELANE_B32 : VOP2SI_3VI_m <
+  vop3 <0x002, 0x28a>,
+  "v_writelane_b32",
   (outs VGPR_32:$vdst),
   (ins SReg_32:$src0, SSrc_32:$vsrc1),
-  "v_writelane_b32 $vdst, $src0, $vsrc1",
-  []
+  "v_writelane_b32 $vdst, $src0, $vsrc1"
 >;
+
+// These instructions only exist on SI and CI
+let SubtargetPredicate = isSICI in {
 
 let isCommutable = 1 in {
 defm V_MAC_LEGACY_F32 : VOP2Inst <vop2<0x6>, "v_mac_legacy_f32",
