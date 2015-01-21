@@ -341,8 +341,39 @@ int AMDGPUInstrInfo::getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const {
 // instead.
 namespace llvm {
 namespace AMDGPU {
-int getMCOpcode(uint16_t Opcode, unsigned Gen) {
+static int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, (enum Subtarget)Gen);
 }
 }
+}
+
+// This must be kept in sync with the SISubtarget class in SIInstrInfo.td
+enum SISubtarget {
+  SI = 0,
+  VI = 1
+};
+
+enum SISubtarget AMDGPUSubtargetToSISubtarget(unsigned Gen) {
+  switch (Gen) {
+  default:
+    return SI;
+  case AMDGPUSubtarget::VOLCANIC_ISLANDS:
+    return VI;
+  }
+}
+
+int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
+  int MCOp = AMDGPU::getMCOpcode(Opcode,
+                        AMDGPUSubtargetToSISubtarget(RI.ST.getGeneration()));
+
+  // -1 means that Opcode is already a native instruction.
+  if (MCOp == -1)
+    return Opcode;
+
+  // (uint16_t)-1 means that Opcode is a pseudo instruction that has
+  // no encoding in the given subtarget generation.
+  if (MCOp == (uint16_t)-1)
+    return -1;
+
+  return MCOp;
 }

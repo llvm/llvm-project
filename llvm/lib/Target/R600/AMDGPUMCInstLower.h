@@ -19,22 +19,8 @@ class MCContext;
 class MCInst;
 
 class AMDGPUMCInstLower {
-
-  // This must be kept in sync with the SISubtarget class in SIInstrInfo.td
-  enum SISubtarget {
-    SI = 0,
-    VI = 1
-  };
-
   MCContext &Ctx;
   const AMDGPUSubtarget &ST;
-
-  /// Convert a member of the AMDGPUSubtarget::Generation enum to the
-  /// SISubtarget enum.
-  enum SISubtarget AMDGPUSubtargetToSISubtarget(unsigned Gen) const;
-
-  /// Get the MC opcode for this MachineInstr.
-  unsigned getMCOpcode(unsigned MIOpcode) const;
 
 public:
   AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &ST);

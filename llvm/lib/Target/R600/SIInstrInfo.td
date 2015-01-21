@@ -57,7 +57,7 @@ class sopk <bits<5> si, bits<5> vi = si> {
 }
 
 // Execpt for the NONE field, this must be kept in sync with the SISubtarget enum
-// in AMDGPUMCInstLower.h
+// in AMDGPUInstrInfo.cpp
 def SISubtarget {
   int NONE = -1;
   int SI = 0;

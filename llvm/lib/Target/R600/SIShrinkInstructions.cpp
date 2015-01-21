@@ -10,6 +10,7 @@
 //
 
 #include "AMDGPU.h"
+#include "AMDGPUMCInstLower.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -206,12 +207,12 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           continue;
       }
 
-      int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
-
-      // Op32 could be -1 here if we started with an instruction that had a
+      // getVOPe32 could be -1 here if we started with an instruction that had
       // a 32-bit encoding and then commuted it to an instruction that did not.
-      if (Op32 == -1)
+      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
         continue;
+
+      int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
       if (TII->isVOPC(Op32)) {
         unsigned DstReg = MI.getOperand(0).getReg();

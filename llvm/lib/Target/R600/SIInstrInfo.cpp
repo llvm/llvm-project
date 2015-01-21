@@ -1053,7 +1053,11 @@ bool SIInstrInfo::canFoldOffset(unsigned OffsetSize, unsigned AS) const {
 }
 
 bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
-  return AMDGPU::getVOPe32(Opcode) != -1;
+  int Op32 = AMDGPU::getVOPe32(Opcode);
+  if (Op32 == -1)
+    return false;
+
+  return pseudoToMCOpcode(Op32) != -1;
 }
 
 bool SIInstrInfo::hasModifiers(unsigned Opcode) const {
