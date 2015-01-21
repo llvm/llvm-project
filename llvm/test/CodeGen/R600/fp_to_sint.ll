@@ -1,12 +1,23 @@
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC
 
+declare float @llvm.fabs.f32(float) #0
+
 ; FUNC-LABEL: {{^}}fp_to_sint_i32:
 ; EG: FLT_TO_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
 ; SI: v_cvt_i32_f32_e32
 ; SI: s_endpgm
-define void @fp_to_sint_i32 (i32 addrspace(1)* %out, float %in) {
+define void @fp_to_sint_i32(i32 addrspace(1)* %out, float %in) {
   %conv = fptosi float %in to i32
+  store i32 %conv, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fp_to_sint_i32_fabs:
+; SI: v_cvt_i32_f32_e64 v{{[0-9]+}}, |s{{[0-9]+}}|{{$}}
+define void @fp_to_sint_i32_fabs(i32 addrspace(1)* %out, float %in) {
+  %in.fabs = call float @llvm.fabs.f32(float %in) #0
+  %conv = fptosi float %in.fabs to i32
   store i32 %conv, i32 addrspace(1)* %out
   ret void
 }
@@ -214,3 +225,5 @@ define void @fp_to_sint_v4i64(<4 x i64> addrspace(1)* %out, <4 x float> %x) {
   store <4 x i64> %conv, <4 x i64> addrspace(1)* %out
   ret void
 }
+
+attributes #0 = { nounwind readnone }

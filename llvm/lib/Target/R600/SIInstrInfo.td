@@ -737,7 +737,7 @@ class getAsm32 <int NumSrcArgs> {
 // Returns the assembly string for the inputs and outputs of a VOP3
 // instruction.
 class getAsm64 <int NumSrcArgs, bit HasModifiers> {
-  string src0 = "$src0_modifiers,";
+  string src0 = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
   string src1 = !if(!eq(NumSrcArgs, 1), "",
                    !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
                                            " $src1_modifiers,"));
