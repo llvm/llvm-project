@@ -99,7 +99,9 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
     ScratchOffsetFI = FrameInfo->CreateSpillStackObject(4,4);
     BuildMI(*Entry, I, DL, TII->get(AMDGPU::SI_SPILL_S32_SAVE))
             .addReg(ScratchOffsetPreloadReg)
-            .addFrameIndex(ScratchOffsetFI);
+            .addFrameIndex(ScratchOffsetFI)
+            .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
+            .addReg(AMDGPU::SGPR0, RegState::Undef);
   }
 
 
@@ -116,7 +118,8 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock &MBB = *BI;
     // Add the scratch offset reg as a live-in so that the register scavenger
     // doesn't re-use it.
-    if (!MBB.isLiveIn(ScratchOffsetReg))
+    if (!MBB.isLiveIn(ScratchOffsetReg) &&
+        ScratchOffsetReg != AMDGPU::NoRegister)
       MBB.addLiveIn(ScratchOffsetReg);
     RS.enterBasicBlock(&MBB);
 
@@ -173,8 +176,8 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
             BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_SPILL_S32_RESTORE),
                     ScratchOffsetReg)
                     .addFrameIndex(ScratchOffsetFI)
-                    .addReg(AMDGPU::NoRegister)
-                    .addReg(AMDGPU::NoRegister);
+                    .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
+                    .addReg(AMDGPU::SGPR0, RegState::Undef);
           } else if (!MBB.isLiveIn(ScratchOffsetReg)) {
             MBB.addLiveIn(ScratchOffsetReg);
           }
@@ -191,6 +194,7 @@ bool SIPrepareScratchRegs::runOnMachineFunction(MachineFunction &MF) {
           MI.getOperand(2).setIsUndef(false);
           MI.getOperand(3).setReg(ScratchOffsetReg);
           MI.getOperand(3).setIsUndef(false);
+          MI.getOperand(3).setIsKill(false);
           MI.addOperand(MachineOperand::CreateReg(Rsrc0, false, true, true));
           MI.addOperand(MachineOperand::CreateReg(Rsrc1, false, true, true));
           MI.addOperand(MachineOperand::CreateReg(Rsrc2, false, true, true));

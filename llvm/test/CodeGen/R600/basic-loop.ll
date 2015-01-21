@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: llc -O0 -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_loop:
