@@ -988,22 +988,6 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
     }
   }
 
-  // (add FI, n0)
-  if ((Addr.getOpcode() == ISD::ADD || Addr.getOpcode() == ISD::OR) &&
-       isa<FrameIndexSDNode>(Addr.getOperand(0))) {
-    VAddr = Addr.getOperand(1);
-    ImmOffset = Addr.getOperand(0);
-    return true;
-  }
-
-  // (FI)
-  if (isa<FrameIndexSDNode>(Addr)) {
-    VAddr = SDValue(CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, DL, MVT::i32,
-                                          CurDAG->getConstant(0, MVT::i32)), 0);
-    ImmOffset = Addr;
-    return true;
-  }
-
   // (node)
   VAddr = Addr;
   ImmOffset = CurDAG->getTargetConstant(0, MVT::i16);
