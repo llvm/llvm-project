@@ -93,7 +93,11 @@ C11 Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
-- ...
+- Clang now supports putting identical constructors and destructors in
+  the C5/D5 comdat, reducing code duplication.
+
+- Clang will put individual ``.init_array/.ctors`` sections in
+  comdats, reducing code duplication and speeding up startup.
 
 C++11 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
