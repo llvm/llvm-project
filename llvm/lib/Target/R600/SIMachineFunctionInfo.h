@@ -50,6 +50,7 @@ public:
   unsigned NumUserSGPRs;
   std::map<unsigned, unsigned> LaneVGPRs;
   unsigned LDSWaveSpillSize;
+  unsigned ScratchOffsetReg;
   bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; };
   unsigned getTIDReg() const { return TIDReg; };
   void setTIDReg(unsigned Reg) { TIDReg = Reg; }

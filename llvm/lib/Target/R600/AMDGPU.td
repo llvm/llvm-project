@@ -92,6 +92,11 @@ def FeatureFlatAddressSpace : SubtargetFeature<"flat-address-space",
         "true",
         "Support flat address space">;
 
+def FeatureVGPRSpilling : SubtargetFeature<"vgpr-spilling",
+        "EnableVGPRSpilling",
+        "true",
+        "Enable spilling of VGPRs to scratch memory">;
+
 class SubtargetFeatureFetchLimit <string Value> :
                           SubtargetFeature <"fetch"#Value,
         "TexVTXClauseSize",

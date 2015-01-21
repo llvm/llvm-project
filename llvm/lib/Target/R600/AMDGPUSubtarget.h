@@ -30,6 +30,8 @@
 
 namespace llvm {
 
+class SIMachineFunctionInfo;
+
 class AMDGPUSubtarget : public AMDGPUGenSubtargetInfo {
 
 public:
@@ -63,6 +65,7 @@ private:
   unsigned WavefrontSize;
   bool CFALUBug;
   int LocalMemorySize;
+  bool EnableVGPRSpilling;
 
   const DataLayout DL;
   AMDGPUFrameLowering FrameLowering;
@@ -224,6 +227,7 @@ public:
   bool isAmdHsaOS() const {
     return TargetTriple.getOS() == Triple::AMDHSA;
   }
+  bool isVGPRSpillingEnabled(const SIMachineFunctionInfo *MFI) const;
 };
 
 } // End namespace llvm

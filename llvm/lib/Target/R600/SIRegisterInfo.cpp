@@ -424,6 +424,8 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
   case SIRegisterInfo::TGID_Z:
     return AMDGPU::SReg_32RegClass.getRegister(MFI->NumUserSGPRs + 2);
   case SIRegisterInfo::SCRATCH_WAVE_OFFSET:
+    if (MFI->getShaderType() != ShaderType::COMPUTE)
+      return MFI->ScratchOffsetReg;
     return AMDGPU::SReg_32RegClass.getRegister(MFI->NumUserSGPRs + 4);
   case SIRegisterInfo::SCRATCH_PTR:
     return AMDGPU::SGPR2_SGPR3;
