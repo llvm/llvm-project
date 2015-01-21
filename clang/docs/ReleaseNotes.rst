@@ -53,9 +53,11 @@ Major New Features
   __has_declspec_attribute, this allows for more precise coverage of attribute
   syntax querying.
 
+- clang-format now supports formatting Java code.
+
 
 Improvements to Clang's diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------------
 
 Clang's diagnostics are constantly being improved to catch more issues,
 explain them more clearly, and provide more accurate source information
@@ -68,6 +70,21 @@ New Compiler Flags
 
 The option ....
 
+The __EXCEPTIONS macro
+----------------------
+``__EXCEPTIONS`` is now defined when landing pads are emitted, not when c++ exceptions are enabled. The two can be different in Objective-C files: If C++ exceptions are disabled but Objective-C exceptions are enabled, landing pads will be emitted. Clang 3.6 is switching the behavior of ``__EXCEPTIONS``. Clang 3.5 confusingly changed the behavior of ``has_feature(cxx_exceptions)``, which used to be set if landing pads were emitted, but is now set if C++ exceptions are enabled. So there are 3 cases:
+
+Clang before 3.5:
+   ``__EXCEPTIONS`` is set if C++ exceptions are enabled, ``cxx_exceptions`` enabled if C++ or ObjC exceptions are enabled
+
+Clang 3.5:
+   ``__EXCEPTIONS`` is set if C++ exceptions are enabled, ``cxx_exceptions`` enabled if C++ exceptions are enabled
+
+Clang 3.6:
+   ``__EXCEPTIONS`` is set if C++ or ObjC exceptions are enabled, ``cxx_exceptions`` enabled if C++ exceptions are enabled
+
+To reliably test if C++ exceptions are enabled, use ``__EXCEPTIONS && __has_feature(cxx_exceptions)``, else things won't work in all versions of clang in Objective-C++ files.
+
 
 New Pragmas in Clang
 -----------------------
@@ -77,7 +94,9 @@ Clang now supports the ...
 Windows Support
 ---------------
 
-Clang's support for building native Windows programs ...
+- Many, many bug fixes
+
+- Basic support for DWARF debug information in COFF files
 
 
 C Language Changes in Clang
