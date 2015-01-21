@@ -85,49 +85,41 @@ class Enc64 {
 
 let Uses = [EXEC] in {
 
-class VOPCCommon <dag ins, string asm, list<dag> pattern> :
-    InstSI <(outs VCCReg:$dst), ins, asm, pattern> {
+class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
+    InstSI <outs, ins, asm, pattern> {
 
-  let DisableEncoding = "$dst";
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
   let UseNamedOperandTable = 1;
-  let VOPC = 1;
   let VALU = 1;
+}
+
+class VOPCCommon <dag ins, string asm, list<dag> pattern> :
+    VOPAnyCommon <(outs VCCReg:$dst), ins, asm, pattern> {
+
+  let DisableEncoding = "$dst";
+  let VOPC = 1;
   let Size = 4;
 }
 
 class VOP1Common <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI <outs, ins, asm, pattern> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
+    VOPAnyCommon <outs, ins, asm, pattern> {
+
   let VOP1 = 1;
-  let VALU = 1;
   let Size = 4;
 }
 
 class VOP2Common <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI <outs, ins, asm, pattern> {
+    VOPAnyCommon <outs, ins, asm, pattern> {
 
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
   let VOP2 = 1;
-  let VALU = 1;
   let Size = 4;
 }
 
 class VOP3Common <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI <outs, ins, asm, pattern> {
+    VOPAnyCommon <outs, ins, asm, pattern> {
 
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
   // Using complex patterns gives VOP3 patterns a very high complexity rating,
   // but standalone patterns are almost always prefered, so we need to adjust the
   // priority lower.  The goal is to use a high number to reduce complexity to
@@ -135,8 +127,6 @@ class VOP3Common <dag outs, dag ins, string asm, list<dag> pattern> :
   let AddedComplexity = -1000;
 
   let VOP3 = 1;
-  let VALU = 1;
-
   int Size = 8;
 }
 
