@@ -206,9 +206,6 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   GV->setAlignment(getContext().getDeclAlign(&D).getQuantity());
   setGlobalVisibility(GV, &D);
 
-  if (supportsCOMDAT() && GV->isWeakForLinker())
-    GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
-
   if (D.getTLSKind())
     setTLSMode(GV, D);
 

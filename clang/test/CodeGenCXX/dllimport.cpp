@@ -243,7 +243,7 @@ __declspec(dllimport) __attribute__((noinline)) inline void noinline() {}
 USE(noinline)
 
 // MSC2-NOT: @"\01?alwaysInline@@YAXXZ"()
-// GNU-DAG: define linkonce_odr void @_Z12alwaysInlinev() {{.*}} comdat {
+// GNU2-NOT: @_Z12alwaysInlinev()
 __declspec(dllimport) __attribute__((always_inline)) inline void alwaysInline() {}
 USE(alwaysInline)
 

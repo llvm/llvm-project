@@ -17,6 +17,6 @@ struct __declspec(dllexport) S {
   };
 };
 
-// CHECK: @"\01?x@S@@2FB" = weak_odr dllexport constant i16 42, comdat, align 2
-// CHECK: @"\01?y@S@@2W4Enum@@B" = weak_odr dllexport constant i32 2, comdat, align 4
+// CHECK: @"\01?x@S@@2FB" = weak_odr dllexport constant i16 42, align 2
+// CHECK: @"\01?y@S@@2W4Enum@@B" = weak_odr dllexport constant i32 2, align 4
 // CHECK-NOT: NonExported

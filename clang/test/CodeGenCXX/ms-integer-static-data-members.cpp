@@ -26,7 +26,7 @@ const int S::x = 5;
 
 
 // Inline initialization.
-// CHECK-INLINE: @"\01?x@S@@2HB" = linkonce_odr constant i32 5, comdat, align 4
+// CHECK-INLINE: @"\01?x@S@@2HB" = linkonce_odr constant i32 5, align 4
 
 // Out-of-line initialization.
 // CHECK-OUTOFLINE: @"\01?x@S@@2HB" = constant i32 5, align 4

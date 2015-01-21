@@ -110,9 +110,9 @@ public:
 
   // MSC-DAG: @"\01?StaticField@ExportMembers@@2HA"               = dllexport global i32 1, align 4
   // MSC-DAG: @"\01?StaticConstField@ExportMembers@@2HB"          = dllexport constant i32 1, align 4
-  // MSC-DAG: @"\01?StaticConstFieldEqualInit@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-  // MSC-DAG: @"\01?StaticConstFieldBraceInit@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-  // MSC-DAG: @"\01?ConstexprField@ExportMembers@@2HB"            = weak_odr dllexport constant i32 1, comdat, align 4
+  // MSC-DAG: @"\01?StaticConstFieldEqualInit@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, align 4
+  // MSC-DAG: @"\01?StaticConstFieldBraceInit@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, align 4
+  // MSC-DAG: @"\01?ConstexprField@ExportMembers@@2HB"            = weak_odr dllexport constant i32 1, align 4
   // GNU-DAG: @_ZN13ExportMembers11StaticFieldE                   = dllexport global i32 1, align 4
   // GNU-DAG: @_ZN13ExportMembers16StaticConstFieldE              = dllexport constant i32 1, align 4
   // GNU-DAG: @_ZN13ExportMembers25StaticConstFieldEqualInitE     = dllexport constant i32 1, align 4
@@ -233,9 +233,9 @@ public:
 
   // MSC-DAG: @"\01?StaticField@Nested@ExportMembers@@2HA"               = dllexport global i32 1, align 4
   // MSC-DAG: @"\01?StaticConstField@Nested@ExportMembers@@2HB"          = dllexport constant i32 1, align 4
-  // MSC-DAG: @"\01?StaticConstFieldEqualInit@Nested@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-  // MSC-DAG: @"\01?StaticConstFieldBraceInit@Nested@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-  // MSC-DAG: @"\01?ConstexprField@Nested@ExportMembers@@2HB"            = weak_odr dllexport constant i32 1, comdat, align 4
+  // MSC-DAG: @"\01?StaticConstFieldEqualInit@Nested@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, align 4
+  // MSC-DAG: @"\01?StaticConstFieldBraceInit@Nested@ExportMembers@@2HB" = weak_odr dllexport constant i32 1, align 4
+  // MSC-DAG: @"\01?ConstexprField@Nested@ExportMembers@@2HB"            = weak_odr dllexport constant i32 1, align 4
   // GNU-DAG: @_ZN13ExportMembers6Nested11StaticFieldE                   = dllexport global i32 1, align 4
   // GNU-DAG: @_ZN13ExportMembers6Nested16StaticConstFieldE              = dllexport constant i32 1, align 4
   // GNU-DAG: @_ZN13ExportMembers6Nested25StaticConstFieldEqualInitE     = dllexport constant i32 1, align 4
@@ -599,21 +599,21 @@ template<typename T> const int MemVarTmpl::StaticVar;
 template<typename T> const int MemVarTmpl::ExportedStaticVar;
 
 // Export implicit instantiation of an exported member variable template.
-// MSC-DAG: @"\01??$ExportedStaticVar@UImplicitInst_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-// GNU-DAG: @_ZN10MemVarTmpl17ExportedStaticVarI21ImplicitInst_ExportedEE       = weak_odr dllexport constant i32 1, comdat, align 4
+// MSC-DAG: @"\01??$ExportedStaticVar@UImplicitInst_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, align 4
+// GNU-DAG: @_ZN10MemVarTmpl17ExportedStaticVarI21ImplicitInst_ExportedEE       = weak_odr dllexport constant i32 1, align 4
 int useMemVarTmpl() { return MemVarTmpl::ExportedStaticVar<ImplicitInst_Exported>; }
 
 // Export explicit instantiation declaration of an exported member variable
 // template.
-// MSC-DAG: @"\01??$ExportedStaticVar@UExplicitDecl_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-// GNU-DAG: @_ZN10MemVarTmpl17ExportedStaticVarI21ExplicitDecl_ExportedEE       = weak_odr dllexport constant i32 1, comdat, align 4
+// MSC-DAG: @"\01??$ExportedStaticVar@UExplicitDecl_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, align 4
+// GNU-DAG: @_ZN10MemVarTmpl17ExportedStaticVarI21ExplicitDecl_ExportedEE       = weak_odr dllexport constant i32 1, align 4
 extern template const int MemVarTmpl::ExportedStaticVar<ExplicitDecl_Exported>;
        template const int MemVarTmpl::ExportedStaticVar<ExplicitDecl_Exported>;
 
 // Export explicit instantiation definition of an exported member variable
 // template.
-// MSC-DAG: @"\01??$ExportedStaticVar@UExplicitInst_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-// GNU-DAG: @_ZN10MemVarTmpl17ExportedStaticVarI21ExplicitInst_ExportedEE       = weak_odr dllexport constant i32 1, comdat, align 4
+// MSC-DAG: @"\01??$ExportedStaticVar@UExplicitInst_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, align 4
+// GNU-DAG: @_ZN10MemVarTmpl17ExportedStaticVarI21ExplicitInst_ExportedEE       = weak_odr dllexport constant i32 1, align 4
 template const int MemVarTmpl::ExportedStaticVar<ExplicitInst_Exported>;
 
 // Export specialization of an exported member variable template.
@@ -630,15 +630,15 @@ template<> const int MemVarTmpl::ExportedStaticVar<ExplicitSpec_NotExported> = 1
 
 // Export explicit instantiation declaration of a non-exported member variable
 // template.
-// MSC-DAG: @"\01??$StaticVar@UExplicitDecl_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-// GNU-DAG: @_ZN10MemVarTmpl9StaticVarI21ExplicitDecl_ExportedEE        = weak_odr dllexport constant i32 1, comdat, align 4
+// MSC-DAG: @"\01??$StaticVar@UExplicitDecl_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, align 4
+// GNU-DAG: @_ZN10MemVarTmpl9StaticVarI21ExplicitDecl_ExportedEE        = weak_odr dllexport constant i32 1, align 4
 extern template __declspec(dllexport) const int MemVarTmpl::StaticVar<ExplicitDecl_Exported>;
        template __declspec(dllexport) const int MemVarTmpl::StaticVar<ExplicitDecl_Exported>;
 
 // Export explicit instantiation definition of a non-exported member variable
 // template.
-// MSC-DAG: @"\01??$StaticVar@UExplicitInst_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, comdat, align 4
-// GNU-DAG: @_ZN10MemVarTmpl9StaticVarI21ExplicitInst_ExportedEE        = weak_odr dllexport constant i32 1, comdat, align 4
+// MSC-DAG: @"\01??$StaticVar@UExplicitInst_Exported@@@MemVarTmpl@@2HB" = weak_odr dllexport constant i32 1, align 4
+// GNU-DAG: @_ZN10MemVarTmpl9StaticVarI21ExplicitInst_ExportedEE        = weak_odr dllexport constant i32 1, align 4
 template __declspec(dllexport) const int MemVarTmpl::StaticVar<ExplicitInst_Exported>;
 
 // Export specialization of a non-exported member variable template.

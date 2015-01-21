@@ -22,9 +22,9 @@ template<> void S<short>::f() { h(); }
 // CHECK: define {{.*}} @_ZN1SIA2_sE1fEv() [[NUW]]
 template<> void S<short[2]>::f() noexcept { h(); }
 
-// CHECK: define {{.*}} @_Z1fIDsEvv() [[NONE]] comdat {
+// CHECK: define {{.*}} @_Z1fIDsEvv() [[NONE]] {
 template void f<char16_t>();
-// CHECK: define {{.*}} @_Z1fIA2_DsEvv() [[NUW]] comdat {
+// CHECK: define {{.*}} @_Z1fIA2_DsEvv() [[NUW]]  {
 template void f<char16_t[2]>();
 
 // CHECK: define {{.*}} @_ZN1SIDsE1fEv()
@@ -34,9 +34,9 @@ template void S<char16_t>::f();
 template void S<char16_t[2]>::f();
 
 void h() {
-  // CHECK: define {{.*}} @_Z1fIiEvv() [[NUW]] comdat {
+  // CHECK: define {{.*}} @_Z1fIiEvv() [[NUW]] {
   f<int>();
-  // CHECK: define {{.*}} @_Z1fIA2_iEvv() [[NONE]] comdat {
+  // CHECK: define {{.*}} @_Z1fIA2_iEvv() [[NONE]] {
   f<int[2]>();
 
   // CHECK: define {{.*}} @_ZN1SIiE1fEv() [[NUW]]
@@ -45,9 +45,9 @@ void h() {
   // CHECK-NOT: [[NUW]]
   S<int[2]>::f();
 
-  // CHECK: define {{.*}} @_Z1fIfEvv() [[NUW]] comdat {
+  // CHECK: define {{.*}} @_Z1fIfEvv() [[NUW]] {
   void (*f1)() = &f<float>;
-  // CHECK: define {{.*}} @_Z1fIdEvv() [[NONE]] comdat {
+  // CHECK: define {{.*}} @_Z1fIdEvv() [[NONE]] {
   void (*f2)() = &f<double>;
 
   // CHECK: define {{.*}} @_ZN1SIfE1fEv() [[NUW]]
@@ -56,9 +56,9 @@ void h() {
   // CHECK-NOT: [[NUW]]
   void (*f4)() = &S<double>::f;
 
-  // CHECK: define {{.*}} @_Z1fIA4_cEvv() [[NUW]] comdat {
+  // CHECK: define {{.*}} @_Z1fIA4_cEvv() [[NUW]] {
   (void)&f<char[4]>;
-  // CHECK: define {{.*}} @_Z1fIcEvv() [[NONE]] comdat {
+  // CHECK: define {{.*}} @_Z1fIcEvv() [[NONE]] {
   (void)&f<char>;
 
   // CHECK: define {{.*}} @_ZN1SIA4_cE1fEv() [[NUW]]

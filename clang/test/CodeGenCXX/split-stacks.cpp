@@ -18,7 +18,7 @@ int nosplit() {
 
 // CHECK-SEGSTK: define i32 @_Z3foov() [[SS:#[0-9]+]] {
 // CHECK-SEGSTK: define i32 @_Z7nosplitv() [[NSS1:#[0-9]+]] {
-// CHECK-SEGSTK: define linkonce_odr i32 @_Z8tnosplitIiEiv() [[NSS2:#[0-9]+]] comdat {
+// CHECK-SEGSTK: define linkonce_odr i32 @_Z8tnosplitIiEiv() [[NSS2:#[0-9]+]] {
 // CHECK-SEGSTK-NOT: [[NSS1]] = { {{.*}} "split-stack" {{.*}} }
 // CHECK-SEGSTK-NOT: [[NSS2]] = { {{.*}} "split-stack" {{.*}} }
 // CHECK-SEGSTK: [[SS]] = { {{.*}} "split-stack" {{.*}} }
@@ -27,7 +27,7 @@ int nosplit() {
 
 // CHECK-NOSEGSTK: define i32 @_Z3foov() [[NSS0:#[0-9]+]] {
 // CHECK-NOSEGSTK: define i32 @_Z7nosplitv() [[NSS1:#[0-9]+]] {
-// CHECK-NOSEGSTK: define linkonce_odr i32 @_Z8tnosplitIiEiv() [[NSS2:#[0-9]+]] comdat {
+// CHECK-NOSEGSTK: define linkonce_odr i32 @_Z8tnosplitIiEiv() [[NSS2:#[0-9]+]] {
 // CHECK-NOSEGSTK-NOT: [[NSS1]] = { {{.*}} "split-stack" {{.*}} }
 // CHECK-NOSEGSTK-NOT: [[NSS2]] = { {{.*}} "split-stack" {{.*}} }
 // CHECK-NOSEGSTK-NOT: [[NSS3]] = { {{.*}} "split-stack" {{.*}} }
