@@ -3154,8 +3154,9 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
   if (LHS == RHS)
     return getConstant(LHS->getType(), 0);
 
-  // X - Y --> X + -Y
-  return getAddExpr(LHS, getNegativeSCEV(RHS), Flags);
+  // X - Y --> X + -Y.
+  // X -(nsw || nuw) Y --> X + -Y.
+  return getAddExpr(LHS, getNegativeSCEV(RHS));
 }
 
 /// getTruncateOrZeroExtend - Return a SCEV corresponding to a conversion of the
@@ -3461,12 +3462,10 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
                   if (isKnownPositive(getMinusSCEV(getSCEV(GEP), Ptr)))
                     Flags = setFlags(Flags, SCEV::FlagNUW);
                 }
-              } else if (const SubOperator *OBO =
-                           dyn_cast<SubOperator>(BEValueV)) {
-                if (OBO->hasNoUnsignedWrap())
-                  Flags = setFlags(Flags, SCEV::FlagNUW);
-                if (OBO->hasNoSignedWrap())
-                  Flags = setFlags(Flags, SCEV::FlagNSW);
+
+                // We cannot transfer nuw and nsw flags from subtraction
+                // operations -- sub nuw X, Y is not the same as add nuw X, -Y
+                // for instance.
               }
 
               const SCEV *StartVal = getSCEV(StartValueV);
