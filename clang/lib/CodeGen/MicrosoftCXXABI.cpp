@@ -1534,6 +1534,12 @@ llvm::Function *MicrosoftCXXABI::EmitVirtualMemPtrThunk(
   CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn);
   CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
 
+  // Add the "thunk" attribute so that LLVM knows that the return type is
+  // meaningless. These thunks can be used to call functions with differing
+  // return types, and the caller is required to cast the prototype
+  // appropriately to extract the correct value.
+  ThunkFn->addFnAttr("thunk");
+
   // These thunks can be compared, so they are not unnamed.
   ThunkFn->setUnnamedAddr(false);
 

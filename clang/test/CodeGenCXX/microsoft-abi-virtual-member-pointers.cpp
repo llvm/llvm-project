@@ -62,6 +62,7 @@ void f() {
 
 // Thunk for calling the 1st virtual function in C with no parameters.
 // CHECK32-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_9C@@$BA@AE"(%struct.C* %this, ...)
+// CHECK32: #[[ATTR:[0-9]+]]
 // CHECK32-NOT:             unnamed_addr
 // CHECK32: [[VPTR:%.*]] = getelementptr inbounds void (%struct.C*, ...)** %{{.*}}, i64 0
 // CHECK32: [[CALLEE:%.*]] = load void (%struct.C*, ...)** [[VPTR]]
@@ -70,6 +71,7 @@ void f() {
 // CHECK32: }
 //
 // CHECK64-LABEL: define linkonce_odr void @"\01??_9C@@$BA@AA"(%struct.C* %this, ...)
+// CHECK64: #[[ATTR:[0-9]+]]
 // CHECK64-NOT:             unnamed_addr
 // CHECK64: [[VPTR:%.*]] = getelementptr inbounds void (%struct.C*, ...)** %{{.*}}, i64 0
 // CHECK64: [[CALLEE:%.*]] = load void (%struct.C*, ...)** [[VPTR]]
@@ -79,6 +81,7 @@ void f() {
 
 // Thunk for calling the 2nd virtual function in C, taking int and double as parameters, returning int.
 // CHECK32-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_9C@@$B3AE"(%struct.C* %this, ...)
+// CHECK32: #[[ATTR]]
 // CHECK32: [[VPTR:%.*]] = getelementptr inbounds void (%struct.C*, ...)** %{{.*}}, i64 1
 // CHECK32: [[CALLEE:%.*]] = load void (%struct.C*, ...)** [[VPTR]]
 // CHECK32: musttail call x86_thiscallcc void (%struct.C*, ...)* [[CALLEE]](%struct.C* %{{.*}}, ...)
@@ -86,6 +89,7 @@ void f() {
 // CHECK32: }
 //
 // CHECK64-LABEL: define linkonce_odr void @"\01??_9C@@$B7AA"(%struct.C* %this, ...)
+// CHECK64: #[[ATTR]]
 // CHECK64: [[VPTR:%.*]] = getelementptr inbounds void (%struct.C*, ...)** %{{.*}}, i64 1
 // CHECK64: [[CALLEE:%.*]] = load void (%struct.C*, ...)** [[VPTR]]
 // CHECK64: musttail call void (%struct.C*, ...)* [[CALLEE]](%struct.C* %{{.*}}, ...)
@@ -94,6 +98,7 @@ void f() {
 
 // Thunk for calling the 3rd virtual function in C, taking an int parameter, returning a struct.
 // CHECK32-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_9C@@$B7AE"(%struct.C* %this, ...)
+// CHECK32: #[[ATTR]]
 // CHECK32: [[VPTR:%.*]] = getelementptr inbounds void (%struct.C*, ...)** %{{.*}}, i64 2
 // CHECK32: [[CALLEE:%.*]] = load void (%struct.C*, ...)** [[VPTR]]
 // CHECK32: musttail call x86_thiscallcc void (%struct.C*, ...)* [[CALLEE]](%struct.C* %{{.*}}, ...)
@@ -101,6 +106,7 @@ void f() {
 // CHECK32: }
 //
 // CHECK64-LABEL: define linkonce_odr void @"\01??_9C@@$BBA@AA"(%struct.C* %this, ...)
+// CHECK64: #[[ATTR]]
 // CHECK64: [[VPTR:%.*]] = getelementptr inbounds void (%struct.C*, ...)** %{{.*}}, i64 2
 // CHECK64: [[CALLEE:%.*]] = load void (%struct.C*, ...)** [[VPTR]]
 // CHECK64: musttail call void (%struct.C*, ...)* [[CALLEE]](%struct.C* %{{.*}}, ...)
@@ -109,6 +115,7 @@ void f() {
 
 // Thunk for calling the virtual function in internal class D.
 // CHECK32-LABEL: define internal x86_thiscallcc void @"\01??_9D@?A@@$BA@AE"(%"struct.(anonymous namespace)::D"* %this, ...)
+// CHECK32: #[[ATTR]]
 // CHECK32: [[VPTR:%.*]] = getelementptr inbounds void (%"struct.(anonymous namespace)::D"*, ...)** %{{.*}}, i64 0
 // CHECK32: [[CALLEE:%.*]] = load void (%"struct.(anonymous namespace)::D"*, ...)** [[VPTR]]
 // CHECK32: musttail call x86_thiscallcc void (%"struct.(anonymous namespace)::D"*, ...)* [[CALLEE]](%"struct.(anonymous namespace)::D"* %{{.*}}, ...)
@@ -116,6 +123,7 @@ void f() {
 // CHECK32: }
 //
 // CHECK64-LABEL: define internal void @"\01??_9D@?A@@$BA@AA"(%"struct.(anonymous namespace)::D"* %this, ...)
+// CHECK64: #[[ATTR]]
 // CHECK64: [[VPTR:%.*]] = getelementptr inbounds void (%"struct.(anonymous namespace)::D"*, ...)** %{{.*}}, i64 0
 // CHECK64: [[CALLEE:%.*]] = load void (%"struct.(anonymous namespace)::D"*, ...)** [[VPTR]]
 // CHECK64: musttail call void (%"struct.(anonymous namespace)::D"*, ...)* [[CALLEE]](%"struct.(anonymous namespace)::D"* %{{.*}}, ...)
@@ -137,3 +145,5 @@ void f() {
 // CHECK64: musttail call void (%struct.C*, ...)* [[CALLEE]](%struct.C* %{{.*}}, ...)
 // CHECK64: ret void
 // CHECK64: }
+
+// CHECK32: #[[ATTR]] = {{{.*}}"thunk"{{.*}}}
