@@ -61,3 +61,14 @@ entry:
   %call = tail call i32 bitcast (i32 (i64)* @fn3 to i32 (i32*)*)(i32* %a)
   ret i32 %call
 }
+
+declare i32 @fn4(i32) "thunk"
+
+define i32 @test4(i32* %a) {
+; CHECK-LABEL: @test4
+; CHECK:      %[[call:.*]] = tail call i32 bitcast (i32 (i32)* @fn4 to i32 (i32*)*)(i32* %a)
+; CHECK-NEXT: ret i32 %[[call]]
+entry:
+  %call = tail call i32 bitcast (i32 (i32)* @fn4 to i32 (i32*)*)(i32* %a)
+  ret i32 %call
+}
