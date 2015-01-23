@@ -230,9 +230,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       llvm::APSInt Result;
       if (!InputExpr->EvaluateAsInt(Result, Context))
         return StmtError(
-            Diag(InputExpr->getLocStart(), diag::err_asm_invalid_type_in_input)
-            << InputExpr->getType() << Info.getConstraintStr()
-            << InputExpr->getSourceRange());
+            Diag(InputExpr->getLocStart(), diag::err_asm_immediate_expected)
+            << Info.getConstraintStr() << InputExpr->getSourceRange());
       if (Result.slt(Info.getImmConstantMin()) ||
           Result.sgt(Info.getImmConstantMax()))
         return StmtError(Diag(InputExpr->getLocStart(),

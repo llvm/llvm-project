@@ -6,7 +6,7 @@ void I(int i, int j) {
   static const int AboveMax = 32;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "I"(j)); // expected-error{{invalid type 'int' in asm input for constraint 'I'}}
+          : "0"(i), "I"(j)); // expected-error{{constraint 'I' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "I"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'I'}}
@@ -23,7 +23,7 @@ void J(int i, int j) {
   static const int AboveMax = 64;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "J"(j)); // expected-error{{invalid type 'int' in asm input for constraint 'J'}}
+          : "0"(i), "J"(j)); // expected-error{{constraint 'J' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "J"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'J'}}
@@ -40,7 +40,7 @@ void K(int i, int j) {
   static const int AboveMax = 128;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "K"(j)); // expected-error{{invalid type 'int' in asm input for constraint 'K'}}
+          : "0"(i), "K"(j)); // expected-error{{constraint 'K' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "K"(BelowMin)); // expected-error{{value '-129' out of range for constraint 'K'}}
@@ -57,7 +57,7 @@ void M(int i, int j) {
   static const int AboveMax = 4;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "M"(j)); // expected-error{{invalid type 'int' in asm input for constraint 'M'}}
+          : "0"(i), "M"(j)); // expected-error{{constraint 'M' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "M"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'M'}}
@@ -74,7 +74,7 @@ void N(int i, int j) {
   static const int AboveMax = 256;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "N"(j)); // expected-error{{invalid type 'int' in asm input for constraint 'N'}}
+          : "0"(i), "N"(j)); // expected-error{{constraint 'N' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "N"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'N'}}
@@ -91,7 +91,7 @@ void O(int i, int j) {
   static const int AboveMax = 128;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "O"(j)); // expected-error{{invalid type 'int' in asm input for constraint 'O'}}
+          : "0"(i), "O"(j)); // expected-error{{constraint 'O' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "O"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'O'}}
