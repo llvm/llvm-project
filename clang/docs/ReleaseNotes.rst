@@ -12,7 +12,7 @@ Written by the `LLVM Team <http://llvm.org/>`_
 
    These are in-progress notes for the upcoming Clang 3.6 release. You may
    prefer the `Clang 3.5 Release Notes
-   <http://llvm.org/releases/3.5/tools/clang/docs/ReleaseNotes.html>`_.
+   <http://llvm.org/releases/3.5.0/tools/clang/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
