@@ -206,28 +206,6 @@ uint32_t RegisterRange(uint8_t start, uint8_t count_minus_one) {
 
 } // end anonymous namespace
 
-uintptr_t _Unwind_GetGR(struct _Unwind_Context* context, int index) {
-  uintptr_t value = 0;
-  _Unwind_VRS_Get(context, _UVRSC_CORE, (uint32_t)index, _UVRSD_UINT32, &value);
-  return value;
-}
-
-void _Unwind_SetGR(struct _Unwind_Context* context, int index, uintptr_t
-    new_value) {
-  _Unwind_VRS_Set(context, _UVRSC_CORE, (uint32_t)index,
-                  _UVRSD_UINT32, &new_value);
-}
-
-uintptr_t _Unwind_GetIP(struct _Unwind_Context* context) {
-  // remove the thumb-bit before returning
-  return (_Unwind_GetGR(context, 15) & (~(uintptr_t)0x1));
-}
-
-void _Unwind_SetIP(struct _Unwind_Context* context, uintptr_t new_value) {
-  uintptr_t thumb_bit = _Unwind_GetGR(context, 15) & ((uintptr_t)0x1);
-  _Unwind_SetGR(context, 15, new_value | thumb_bit);
-}
-
 /**
  * Decodes an EHT entry.
  *

@@ -208,11 +208,37 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                 _Unwind_VRS_DataRepresentation representation);
 #endif
 
+#if LIBCXXABI_ARM_EHABI
+static inline uintptr_t _Unwind_GetGR(struct _Unwind_Context* context,
+                                      int index) {
+  uintptr_t value = 0;
+  _Unwind_VRS_Get(context, _UVRSC_CORE, (uint32_t)index, _UVRSD_UINT32, &value);
+  return value;
+}
+
+static inline void _Unwind_SetGR(struct _Unwind_Context* context, int index,
+                                 uintptr_t new_value) {
+  _Unwind_VRS_Set(context, _UVRSC_CORE, (uint32_t)index,
+                  _UVRSD_UINT32, &new_value);
+}
+
+static inline uintptr_t _Unwind_GetIP(struct _Unwind_Context* context) {
+  // remove the thumb-bit before returning
+  return (_Unwind_GetGR(context, 15) & (~(uintptr_t)0x1));
+}
+
+static inline void _Unwind_SetIP(struct _Unwind_Context* context,
+                                 uintptr_t new_value) {
+  uintptr_t thumb_bit = _Unwind_GetGR(context, 15) & ((uintptr_t)0x1);
+  _Unwind_SetGR(context, 15, new_value | thumb_bit);
+}
+#else
 extern uintptr_t _Unwind_GetGR(struct _Unwind_Context *context, int index);
 extern void _Unwind_SetGR(struct _Unwind_Context *context, int index,
                           uintptr_t new_value);
 extern uintptr_t _Unwind_GetIP(struct _Unwind_Context *context);
 extern void _Unwind_SetIP(struct _Unwind_Context *, uintptr_t new_value);
+#endif
 
 extern uintptr_t _Unwind_GetRegionStart(struct _Unwind_Context *context);
 extern uintptr_t
