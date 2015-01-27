@@ -1101,9 +1101,16 @@ __gxx_personality_v0(_Unwind_State state,
     _Unwind_SetGR(context, REG_UCB, reinterpret_cast<uint32_t>(unwind_exception));
 #endif
 
+    // Check the undocumented force unwinding behavior
+    bool is_force_unwinding = state & _US_FORCE_UNWIND;
+    state &= ~_US_FORCE_UNWIND;
+
     scan_results results;
     switch (state) {
     case _US_VIRTUAL_UNWIND_FRAME:
+        if (is_force_unwinding)
+            return continue_unwind(unwind_exception, context);
+
         // Phase 1 search:  All we're looking for in phase 1 is a handler that halts unwinding
         scan_eh_tab(results, _UA_SEARCH_PHASE, native_exception, unwind_exception, context);
         if (results.reason == _URC_HANDLER_FOUND)
@@ -1119,6 +1126,11 @@ __gxx_personality_v0(_Unwind_State state,
         return results.reason;
 
     case _US_UNWIND_FRAME_STARTING:
+        // TODO: Support force unwinding in the phase 2 search.
+        // NOTE: In order to call the cleanup functions, _Unwind_ForcedUnwind()
+        // will call this personality function with (_US_FORCE_UNWIND |
+        // _US_UNWIND_FRAME_STARTING).
+
         // Phase 2 search
         if (unwind_exception->barrier_cache.sp == _Unwind_GetGR(context, REG_SP))
         {
