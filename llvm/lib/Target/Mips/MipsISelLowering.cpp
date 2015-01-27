@@ -1613,22 +1613,22 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
 
     if (TLOF.IsGlobalInSmallSection(GV, getTargetMachine()))
       // %gp_rel relocation
-      return getAddrGPRel(N, Ty, DAG);
+      return getAddrGPRel(N, SDLoc(N), Ty, DAG);
 
     // %hi/%lo relocation
-    return getAddrNonPIC(N, Ty, DAG);
+    return getAddrNonPIC(N, SDLoc(N), Ty, DAG);
   }
 
   if (GV->hasInternalLinkage() || (GV->hasLocalLinkage() && !isa<Function>(GV)))
-    return getAddrLocal(N, Ty, DAG,
+    return getAddrLocal(N, SDLoc(N), Ty, DAG,
                         Subtarget.isABI_N32() || Subtarget.isABI_N64());
 
   if (LargeGOT)
-    return getAddrGlobalLargeGOT(N, Ty, DAG, MipsII::MO_GOT_HI16,
+    return getAddrGlobalLargeGOT(N, SDLoc(N), Ty, DAG, MipsII::MO_GOT_HI16,
                                  MipsII::MO_GOT_LO16, DAG.getEntryNode(),
                                  MachinePointerInfo::getGOT());
 
-  return getAddrGlobal(N, Ty, DAG,
+  return getAddrGlobal(N, SDLoc(N), Ty, DAG,
                        (Subtarget.isABI_N32() || Subtarget.isABI_N64())
                            ? MipsII::MO_GOT_DISP
                            : MipsII::MO_GOT16,
@@ -1642,9 +1642,9 @@ SDValue MipsTargetLowering::lowerBlockAddress(SDValue Op,
 
   if (getTargetMachine().getRelocationModel() != Reloc::PIC_ &&
       !Subtarget.isABI_N64())
-    return getAddrNonPIC(N, Ty, DAG);
+    return getAddrNonPIC(N, SDLoc(N), Ty, DAG);
 
-  return getAddrLocal(N, Ty, DAG,
+  return getAddrLocal(N, SDLoc(N), Ty, DAG,
                       Subtarget.isABI_N32() || Subtarget.isABI_N64());
 }
 
@@ -1735,9 +1735,9 @@ lowerJumpTable(SDValue Op, SelectionDAG &DAG) const
 
   if (getTargetMachine().getRelocationModel() != Reloc::PIC_ &&
       !Subtarget.isABI_N64())
-    return getAddrNonPIC(N, Ty, DAG);
+    return getAddrNonPIC(N, SDLoc(N), Ty, DAG);
 
-  return getAddrLocal(N, Ty, DAG,
+  return getAddrLocal(N, SDLoc(N), Ty, DAG,
                       Subtarget.isABI_N32() || Subtarget.isABI_N64());
 }
 
@@ -1754,12 +1754,12 @@ lowerConstantPool(SDValue Op, SelectionDAG &DAG) const
 
     if (TLOF.IsConstantInSmallSection(N->getConstVal(), getTargetMachine()))
       // %gp_rel relocation
-      return getAddrGPRel(N, Ty, DAG);
+      return getAddrGPRel(N, SDLoc(N), Ty, DAG);
 
-    return getAddrNonPIC(N, Ty, DAG);
+    return getAddrNonPIC(N, SDLoc(N), Ty, DAG);
   }
 
-  return getAddrLocal(N, Ty, DAG,
+  return getAddrLocal(N, SDLoc(N), Ty, DAG,
                       Subtarget.isABI_N32() || Subtarget.isABI_N64());
 }
 
@@ -2681,15 +2681,15 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       InternalLinkage = Val->hasInternalLinkage();
 
       if (InternalLinkage)
-        Callee = getAddrLocal(G, Ty, DAG,
+        Callee = getAddrLocal(G, DL, Ty, DAG,
                               Subtarget.isABI_N32() || Subtarget.isABI_N64());
       else if (LargeGOT) {
-        Callee = getAddrGlobalLargeGOT(G, Ty, DAG, MipsII::MO_CALL_HI16,
+        Callee = getAddrGlobalLargeGOT(G, DL, Ty, DAG, MipsII::MO_CALL_HI16,
                                        MipsII::MO_CALL_LO16, Chain,
                                        FuncInfo->callPtrInfo(Val));
         IsCallReloc = true;
       } else {
-        Callee = getAddrGlobal(G, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
+        Callee = getAddrGlobal(G, DL, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
                                FuncInfo->callPtrInfo(Val));
         IsCallReloc = true;
       }
@@ -2702,15 +2702,15 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const char *Sym = S->getSymbol();
 
     if (!Subtarget.isABI_N64() && !IsPIC) // !N64 && static
-      Callee = DAG.getTargetExternalSymbol(Sym, getPointerTy(),
-                                            MipsII::MO_NO_FLAG);
+      Callee =
+          DAG.getTargetExternalSymbol(Sym, getPointerTy(), MipsII::MO_NO_FLAG);
     else if (LargeGOT) {
-      Callee = getAddrGlobalLargeGOT(S, Ty, DAG, MipsII::MO_CALL_HI16,
+      Callee = getAddrGlobalLargeGOT(S, DL, Ty, DAG, MipsII::MO_CALL_HI16,
                                      MipsII::MO_CALL_LO16, Chain,
                                      FuncInfo->callPtrInfo(Sym));
       IsCallReloc = true;
     } else { // N64 || PIC
-      Callee = getAddrGlobal(S, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
+      Callee = getAddrGlobal(S, DL, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
                              FuncInfo->callPtrInfo(Sym));
       IsCallReloc = true;
     }

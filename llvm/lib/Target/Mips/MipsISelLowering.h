@@ -272,9 +272,8 @@ namespace llvm {
     //
     // (add (load (wrapper $gp, %got(sym)), %lo(sym))
     template <class NodeTy>
-    SDValue getAddrLocal(NodeTy *N, EVT Ty, SelectionDAG &DAG,
+    SDValue getAddrLocal(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG,
                          bool IsN32OrN64) const {
-      SDLoc DL(N);
       unsigned GOTFlag = IsN32OrN64 ? MipsII::MO_GOT_PAGE : MipsII::MO_GOT;
       SDValue GOT = DAG.getNode(MipsISD::Wrapper, DL, Ty, getGlobalReg(DAG, Ty),
                                 getTargetNode(N, Ty, DAG, GOTFlag));
@@ -291,11 +290,10 @@ namespace llvm {
     // computing a global symbol's address:
     //
     // (load (wrapper $gp, %got(sym)))
-    template<class NodeTy>
-    SDValue getAddrGlobal(NodeTy *N, EVT Ty, SelectionDAG &DAG,
+    template <class NodeTy>
+    SDValue getAddrGlobal(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG,
                           unsigned Flag, SDValue Chain,
                           const MachinePointerInfo &PtrInfo) const {
-      SDLoc DL(N);
       SDValue Tgt = DAG.getNode(MipsISD::Wrapper, DL, Ty, getGlobalReg(DAG, Ty),
                                 getTargetNode(N, Ty, DAG, Flag));
       return DAG.getLoad(Ty, DL, Chain, Tgt, PtrInfo, false, false, false, 0);
@@ -305,14 +303,13 @@ namespace llvm {
     // computing a global symbol's address in large-GOT mode:
     //
     // (load (wrapper (add %hi(sym), $gp), %lo(sym)))
-    template<class NodeTy>
-    SDValue getAddrGlobalLargeGOT(NodeTy *N, EVT Ty, SelectionDAG &DAG,
-                                  unsigned HiFlag, unsigned LoFlag,
-                                  SDValue Chain,
+    template <class NodeTy>
+    SDValue getAddrGlobalLargeGOT(NodeTy *N, SDLoc DL, EVT Ty,
+                                  SelectionDAG &DAG, unsigned HiFlag,
+                                  unsigned LoFlag, SDValue Chain,
                                   const MachinePointerInfo &PtrInfo) const {
-      SDLoc DL(N);
-      SDValue Hi = DAG.getNode(MipsISD::Hi, DL, Ty,
-                               getTargetNode(N, Ty, DAG, HiFlag));
+      SDValue Hi =
+          DAG.getNode(MipsISD::Hi, DL, Ty, getTargetNode(N, Ty, DAG, HiFlag));
       Hi = DAG.getNode(ISD::ADD, DL, Ty, Hi, getGlobalReg(DAG, Ty));
       SDValue Wrapper = DAG.getNode(MipsISD::Wrapper, DL, Ty, Hi,
                                     getTargetNode(N, Ty, DAG, LoFlag));
@@ -324,9 +321,9 @@ namespace llvm {
     // computing a symbol's address in non-PIC mode:
     //
     // (add %hi(sym), %lo(sym))
-    template<class NodeTy>
-    SDValue getAddrNonPIC(NodeTy *N, EVT Ty, SelectionDAG &DAG) const {
-      SDLoc DL(N);
+    template <class NodeTy>
+    SDValue getAddrNonPIC(NodeTy *N, SDLoc DL, EVT Ty,
+                          SelectionDAG &DAG) const {
       SDValue Hi = getTargetNode(N, Ty, DAG, MipsII::MO_ABS_HI);
       SDValue Lo = getTargetNode(N, Ty, DAG, MipsII::MO_ABS_LO);
       return DAG.getNode(ISD::ADD, DL, Ty,
@@ -338,9 +335,8 @@ namespace llvm {
     // computing a symbol's address using gp-relative addressing:
     //
     // (add $gp, %gp_rel(sym))
-    template<class NodeTy>
-    SDValue getAddrGPRel(NodeTy *N, EVT Ty, SelectionDAG &DAG) const {
-      SDLoc DL(N);
+    template <class NodeTy>
+    SDValue getAddrGPRel(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG) const {
       assert(Ty == MVT::i32);
       SDValue GPRel = getTargetNode(N, Ty, DAG, MipsII::MO_GPREL);
       return DAG.getNode(ISD::ADD, DL, Ty,
