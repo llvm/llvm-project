@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Unwind-EHABI.h"
+
 #include <unwind.h>
 
 #include <stdbool.h>
@@ -42,10 +44,6 @@ const char* getNextWord(const char* data, uint32_t* out) {
 const char* getNextNibble(const char* data, uint32_t* out) {
   *out = *reinterpret_cast<const uint16_t*>(data);
   return data + 2;
-}
-
-static inline uint32_t signExtendPrel31(uint32_t data) {
-  return data | ((data & 0x40000000u) << 1);
 }
 
 struct Descriptor {
@@ -162,10 +160,9 @@ _Unwind_Reason_Code ProcessDescriptors(
   return _URC_CONTINUE_UNWIND;
 }
 
-_Unwind_Reason_Code unwindOneFrame(
-    _Unwind_State state,
-    _Unwind_Control_Block* ucbp,
-    struct _Unwind_Context* context) {
+static _Unwind_Reason_Code unwindOneFrame(_Unwind_State state,
+                                          _Unwind_Control_Block* ucbp,
+                                          struct _Unwind_Context* context) {
   // Read the compact model EHT entry's header # 6.3
   const uint32_t* unwindingData = ucbp->pr_cache.ehtp;
   assert((*unwindingData & 0xf0000000) == 0x80000000 && "Must be a compact entry");
@@ -216,44 +213,27 @@ uint32_t RegisterRange(uint8_t start, uint8_t count_minus_one) {
  */
 extern "C" const uint32_t*
 decode_eht_entry(const uint32_t* data, size_t* off, size_t* len) {
-  if ((*data & 0x80000000) == 0) {
-    // 6.2: Generic Model
-    // EHT entry is a prel31 pointing to the PR, followed by data understood only
-    // by the personality routine. Since EHABI doesn't guarantee the location or
-    // availability of the unwind opcodes in the generic model, we have to check
-    // for them on a case-by-case basis:
-    _Unwind_Reason_Code __gxx_personality_v0(int version, _Unwind_Action actions,
-                                             uint64_t exceptionClass,
-                                             _Unwind_Exception* unwind_exception,
-                                             _Unwind_Context* context);
-    void *PR = (void*)signExtendPrel31(*data);
-    if (PR == (void*)&__gxx_personality_v0) {
-      *off = 1; // First byte is size data.
-      *len = (((data[1] >> 24) & 0xff) + 1) * 4;
-    } else
-      return nullptr;
-    data++; // Skip the first word, which is the prel31 offset.
-  } else {
-    // 6.3: ARM Compact Model
-    // EHT entries here correspond to the __aeabi_unwind_cpp_pr[012] PRs indeded
-    // by format:
-    Descriptor::Format format =
-        static_cast<Descriptor::Format>((*data & 0x0f000000) >> 24);
-    switch (format) {
-      case Descriptor::SU16:
-        *len = 4;
-        *off = 1;
-        break;
-      case Descriptor::LU16:
-      case Descriptor::LU32:
-        *len = 4 + 4 * ((*data & 0x00ff0000) >> 16);
-        *off = 2;
-        break;
-      default:
-        return nullptr;
-    }
-  }
+  assert((*data & 0x80000000) != 0 &&
+         "decode_eht_entry() does not support user-defined personality");
 
+  // 6.3: ARM Compact Model
+  // EHT entries here correspond to the __aeabi_unwind_cpp_pr[012] PRs indeded
+  // by format:
+  Descriptor::Format format =
+      static_cast<Descriptor::Format>((*data & 0x0f000000) >> 24);
+  switch (format) {
+    case Descriptor::SU16:
+      *len = 4;
+      *off = 1;
+      break;
+    case Descriptor::LU16:
+    case Descriptor::LU32:
+      *len = 4 + 4 * ((*data & 0x00ff0000) >> 16);
+      *off = 2;
+      break;
+    default:
+      return nullptr;
+  }
   return data;
 }
 

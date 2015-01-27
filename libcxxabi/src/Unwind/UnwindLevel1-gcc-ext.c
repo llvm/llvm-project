@@ -21,6 +21,10 @@
 #include "libunwind_ext.h"
 #include "config.h"
 
+#if LIBCXXABI_ARM_EHABI
+#include "Unwind-EHABI.h"
+#endif
+
 #if _LIBUNWIND_BUILD_ZERO_COST_APIS
 
 ///  Called by __cxa_rethrow().
@@ -99,7 +103,6 @@ _LIBUNWIND_EXPORT void *_Unwind_FindEnclosingFunction(void *pc) {
     return NULL;
 }
 
-
 /// Walk every frame and call trace function at each one.  If trace function
 /// returns anything other than _URC_NO_REASON, then walk is terminated.
 _LIBUNWIND_EXPORT _Unwind_Reason_Code
@@ -132,17 +135,39 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
     }
 
     struct _Unwind_Context *context = (struct _Unwind_Context *)&cursor;
-    size_t off;
-    size_t len;
     const uint32_t* unwindInfo = (uint32_t *) frameInfo.unwind_info;
-    unwindInfo = decode_eht_entry(unwindInfo, &off, &len);
-    if (unwindInfo == NULL) {
-      return _URC_FAILURE;
-    }
+    if ((*unwindInfo & 0x80000000) == 0) {
+      // 6.2: Generic Model
+      // EHT entry is a prel31 pointing to the PR, followed by data understood
+      // only by the personality routine. Since EHABI doesn't guarantee the
+      // location or availability of the unwind opcodes in the generic model,
+      // we have to call personality functions with (_US_VIRTUAL_UNWIND_FRAME |
+      // _US_FORCE_UNWIND) state.
 
-    result = _Unwind_VRS_Interpret(context, unwindInfo, off, len);
-    if (result != _URC_CONTINUE_UNWIND) {
-      return _URC_END_OF_STACK;
+      // Create a mock exception object for force unwinding.
+      _Unwind_Exception ex;
+      ex.exception_class = 0x434C4E47554E5700; // CLNGUNW\0
+      ex.pr_cache.fnstart = frameInfo.start_ip;
+      ex.pr_cache.ehtp = (_Unwind_EHT_Header *) unwindInfo;
+      ex.pr_cache.additional= frameInfo.flags;
+
+      // Get and call the personality function to unwind the frame.
+      __personality_routine pr = (__personality_routine) readPrel31(unwindInfo);
+      if (pr(_US_VIRTUAL_UNWIND_FRAME | _US_FORCE_UNWIND, &ex, context) !=
+              _URC_CONTINUE_UNWIND) {
+        return _URC_END_OF_STACK;
+      }
+    } else {
+      size_t off, len;
+      unwindInfo = decode_eht_entry(unwindInfo, &off, &len);
+      if (unwindInfo == NULL) {
+        return _URC_FAILURE;
+      }
+
+      result = _Unwind_VRS_Interpret(context, unwindInfo, off, len);
+      if (result != _URC_CONTINUE_UNWIND) {
+        return _URC_END_OF_STACK;
+      }
     }
 #endif // LIBCXXABI_ARM_EHABI
 

@@ -31,6 +31,10 @@
 #include "CompactUnwinder.hpp"
 #include "config.h"
 
+#if LIBCXXABI_ARM_EHABI
+#include "Unwind-EHABI.h"
+#endif
+
 namespace libunwind {
 
 #if _LIBUNWIND_SUPPORT_DWARF_UNWIND
@@ -604,20 +608,6 @@ struct EHABIIndexEntry {
   uint32_t functionOffset;
   uint32_t data;
 };
-
-// Unable to unwind in the ARM index table (section 5 EHABI).
-#define UNW_EXIDX_CANTUNWIND 0x1
-
-static inline uint32_t signExtendPrel31(uint32_t data) {
-  return data | ((data & 0x40000000u) << 1);
-}
-
-extern "C" _Unwind_Reason_Code __aeabi_unwind_cpp_pr0(
-    _Unwind_State state, _Unwind_Control_Block *ucbp, _Unwind_Context *context);
-extern "C" _Unwind_Reason_Code __aeabi_unwind_cpp_pr1(
-    _Unwind_State state, _Unwind_Control_Block *ucbp, _Unwind_Context *context);
-extern "C" _Unwind_Reason_Code __aeabi_unwind_cpp_pr2(
-    _Unwind_State state, _Unwind_Control_Block *ucbp, _Unwind_Context *context);
 
 template<typename A>
 struct EHABISectionIterator {
