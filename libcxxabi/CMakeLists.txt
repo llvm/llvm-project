@@ -162,6 +162,7 @@ macro(append_if list condition var)
   endif()
 endmacro()
 
+set(LIBCXXABI_C_FLAGS "")
 set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
@@ -214,6 +215,8 @@ endif()
 append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_FSTRICT_ALIASING_FLAG -fstrict-aliasing)
 append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_EHSC_FLAG -EHsc)
 
+append_if(LIBCXXABI_C_FLAGS LIBCXXABI_HAS_FUNWIND_TABLES -funwind-tables)
+
 # Assert
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 if (LIBCXXABI_ENABLE_ASSERTIONS)
@@ -252,6 +255,7 @@ endif()
 
 string(REPLACE ";" " " LIBCXXABI_CXX_FLAGS "${LIBCXXABI_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBCXXABI_CXX_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")
 
 #===============================================================================
 # Setup Source Code

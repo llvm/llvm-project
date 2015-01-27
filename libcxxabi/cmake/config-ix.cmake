@@ -1,7 +1,9 @@
 include(CheckLibraryExists)
+include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
 # Check compiler flags
+check_c_compiler_flag(-funwind-tables         LIBCXXABI_HAS_FUNWIND_TABLES)
 check_cxx_compiler_flag(-fPIC                 LIBCXXABI_HAS_FPIC_FLAG)
 check_cxx_compiler_flag(-fstrict-aliasing     LIBCXXABI_HAS_FSTRICT_ALIASING_FLAG)
 check_cxx_compiler_flag(-nodefaultlibs        LIBCXXABI_HAS_NODEFAULTLIBS_FLAG)
