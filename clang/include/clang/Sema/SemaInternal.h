@@ -101,7 +101,7 @@ public:
                          DeclContext *MemberContext,
                          bool EnteringContext)
       : Typo(TypoName.getName().getAsIdentifierInfo()), CurrentTCIndex(0),
-        SemaRef(SemaRef), S(S),
+        SavedTCIndex(0), SemaRef(SemaRef), S(S),
         SS(SS ? llvm::make_unique<CXXScopeSpec>(*SS) : nullptr),
         CorrectionValidator(std::move(CCC)), MemberContext(MemberContext),
         Result(SemaRef, TypoName, LookupKind),
@@ -187,6 +187,17 @@ public:
            CurrentTCIndex >= ValidatedCorrections.size();
   }
 
+  /// \brief Save the current position in the correction stream (overwriting any
+  /// previously saved position).
+  void saveCurrentPosition() {
+    SavedTCIndex = CurrentTCIndex;
+  }
+
+  /// \brief Restore the saved position in the correction stream.
+  void restoreSavedPosition() {
+    CurrentTCIndex = SavedTCIndex;
+  }
+
   ASTContext &getContext() const { return SemaRef.Context; }
   const LookupResult &getLookupResult() const { return Result; }
 
@@ -267,6 +278,7 @@ private:
 
   SmallVector<TypoCorrection, 4> ValidatedCorrections;
   size_t CurrentTCIndex;
+  size_t SavedTCIndex;
 
   Sema &SemaRef;
   Scope *S;

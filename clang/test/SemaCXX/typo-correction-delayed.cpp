@@ -165,3 +165,13 @@ namespace PR22250 {
 // expected-error@+1 {{expected ';' after top level declarator}}
 int getenv_s(size_t *y, char(&z)) {}
 }
+
+namespace PR22297 {
+double pow(double x, double y);
+struct TimeTicks {
+  static void Now();  // expected-note {{'Now' declared here}}
+};
+void f() {
+  TimeTicks::now();  // expected-error {{no member named 'now' in 'PR22297::TimeTicks'; did you mean 'Now'?}}
+}
+}
