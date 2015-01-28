@@ -19,6 +19,9 @@
 // RUN: %clang -no-canonical-prefixes -target armeb--netbsd-eabi \
 // RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=ARMEB %s
+// RUN: %clang -r -no-canonical-prefixes -target armeb--netbsd-eabi \
+// RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=ARMEB-R %s
 // RUN: %clang -no-canonical-prefixes -target arm--netbsd \
 // RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=ARM-APCS %s
@@ -132,11 +135,14 @@
 // ARMEB: clang{{.*}}" "-cc1" "-triple" "armebv5e--netbsd-eabi"
 // ARMEB: as{{.*}}" "-mcpu=arm926ej-s" "-o"
 // ARMEB: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
-// ARMEB: "-m" "armelfb_nbsd_eabi"
+// ARMEB: "--be8" "-m" "armelfb_nbsd_eabi"
 // ARMEB: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // ARMEB: "{{.*}}/usr/lib{{/|\\\\}}eabi{{/|\\\\}}crti.o"
 // ARMEB: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // ARMEB: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// ARMEB-R: ld{{.*}}"
+// ARMEB-R-NOT: "--be8"
 
 // ARM-APCS: clang{{.*}}" "-cc1" "-triple" "armv4--netbsd"
 // ARM-APCS: as{{.*}}" "-mcpu=strongarm" "-o"
