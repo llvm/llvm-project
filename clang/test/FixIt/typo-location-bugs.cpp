@@ -34,3 +34,16 @@ void test(B b) {
   b.f(1);  // expected-error{{too many arguments to function call, expected 0, have 1; did you mean 'A::f'?}}
 }
 }
+
+namespace PR20626 {
+class A {
+public:
+  void Foo(){};  // expected-note{{'Foo' declared here}}
+};
+class B {};
+class C : public A, public B {
+  void Run() {
+    B::Foo();  // expected-error{{no member named 'Foo' in 'PR20626::B'; did you mean simply 'Foo'?}}
+  }
+};
+}

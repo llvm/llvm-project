@@ -3587,7 +3587,7 @@ retry_lookup:
         QualifiedResults.push_back(Candidate);
       break;
     }
-    Candidate.setCorrectionRange(TempSS, Result.getLookupNameInfo());
+    Candidate.setCorrectionRange(SS.get(), Result.getLookupNameInfo());
     return true;
   }
   return false;
