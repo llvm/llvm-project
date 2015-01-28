@@ -166,6 +166,14 @@ namespace PR22250 {
 int getenv_s(size_t *y, char(&z)) {}
 }
 
+namespace PR22291 {
+template <unsigned I> void f() {
+  unsigned *prio_bits_array;  // expected-note {{'prio_bits_array' declared here}}
+  // expected-error@+1 {{use of undeclared identifier 'prio_op_array'; did you mean 'prio_bits_array'?}}
+  __atomic_store_n(prio_op_array + I, false, __ATOMIC_RELAXED);
+}
+}
+
 namespace PR22297 {
 double pow(double x, double y);
 struct TimeTicks {
