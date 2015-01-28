@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXALLOCAHOISTING_H
 
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Pass.h"
 
@@ -32,8 +33,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DataLayoutPass>();
-    AU.addPreserved("stack-protector");
     AU.addPreserved<MachineFunctionAnalysis>();
+    AU.addPreserved<StackProtector>();
   }
 
   const char *getPassName() const override {

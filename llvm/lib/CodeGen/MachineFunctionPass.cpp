@@ -11,11 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Function.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/DominanceFrontier.h"
+#include "llvm/Analysis/IVUsers.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/StackProtector.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 using namespace llvm;
 
 Pass *MachineFunctionPass::createPrinterPass(raw_ostream &O,
@@ -43,15 +51,13 @@ void MachineFunctionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   // because CodeGen overloads that to mean preserving the MachineBasicBlock
   // CFG in addition to the LLVM IR CFG.
   AU.addPreserved<AliasAnalysis>();
-  AU.addPreserved("scalar-evolution");
-  AU.addPreserved("iv-users");
-  AU.addPreserved("memdep");
-  AU.addPreserved("live-values");
-  AU.addPreserved("domtree");
-  AU.addPreserved("domfrontier");
-  AU.addPreserved("loops");
-  AU.addPreserved("lda");
-  AU.addPreserved("stack-protector");
+  AU.addPreserved<DominanceFrontier>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
+  AU.addPreserved<IVUsers>();
+  AU.addPreserved<LoopInfo>();
+  AU.addPreserved<MemoryDependenceAnalysis>();
+  AU.addPreserved<ScalarEvolution>();
+  AU.addPreserved<StackProtector>();
 
   FunctionPass::getAnalysisUsage(AU);
 }
