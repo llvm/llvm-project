@@ -11,51 +11,56 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Check cases where dstlen >= len.
 
-define void @test_simplify1() {
+define i8* @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
   %dst = bitcast %struct.T* @t to i8*
 
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64
-  call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 1824)
-  ret void
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i32 4, i1 false)
+; CHECK-NEXT: ret i8* bitcast (%struct.T* @t to i8*)
+  %ret = call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 1824)
+  ret i8* %ret
 }
 
-define void @test_simplify2() {
+define i8* @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
   %dst = bitcast %struct.T* @t to i8*
 
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64
-  call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 3648)
-  ret void
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i32 4, i1 false)
+; CHECK-NEXT: ret i8* bitcast (%struct.T* @t to i8*)
+  %ret = call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 3648)
+  ret i8* %ret
 }
 
-define void @test_simplify3() {
+define i8* @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
   %dst = bitcast %struct.T* @t to i8*
 
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64
-  call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 -1)
-  ret void
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i32 4, i1 false)
+; CHECK-NEXT: ret i8* bitcast (%struct.T* @t to i8*)
+  %ret = call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 -1)
+  ret i8* %ret
 }
 
 ; Check cases where dstlen < len.
 
-define void @test_no_simplify1() {
+define i8* @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
   %dst = bitcast %struct.T* @t to i8*
 
-; CHECK-NEXT: call i8* @__memset_chk
-  call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 400)
-  ret void
+; CHECK-NEXT: %ret = call i8* @__memset_chk(i8* bitcast (%struct.T* @t to i8*), i32 0, i64 1824, i64 400)
+; CHECK-NEXT: ret i8* %ret
+  %ret = call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 400)
+  ret i8* %ret
 }
 
-define void @test_no_simplify2() {
+define i8* @test_no_simplify2() {
 ; CHECK-LABEL: @test_no_simplify2(
   %dst = bitcast %struct.T* @t to i8*
 
-; CHECK-NEXT: call i8* @__memset_chk
-  call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 0)
-  ret void
+; CHECK-NEXT: %ret = call i8* @__memset_chk(i8* bitcast (%struct.T* @t to i8*), i32 0, i64 1824, i64 0)
+; CHECK-NEXT: ret i8* %ret
+  %ret = call i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 0)
+  ret i8* %ret
 }
 
 declare i8* @__memset_chk(i8*, i32, i64, i64)
