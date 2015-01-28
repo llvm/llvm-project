@@ -1397,3 +1397,21 @@
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>& 1 \
 // RUN:   | FileCheck --check-prefix=CHECK-u %s
 // CHECK-u: "-u" "asdf"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=armeb-unknown-linux \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ARMEB %s
+// CHECK-ARMEB: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-ARMEB-NOT: "--be8"
+// CHECK-ARMEB: "-m" "armebelf_linux_eabi"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=armebv7-unknown-linux \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ARMV7EB %s
+// CHECK-ARMV7EB: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-ARMV7EB: "--be8"
+// CHECK-ARMV7EB: "-m" "armebelf_linux_eabi"

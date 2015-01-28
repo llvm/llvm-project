@@ -228,6 +228,8 @@ namespace arm {
   const char* getARMCPUForMArch(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Triple);
   const char* getLLVMArchSuffixForARM(StringRef CPU);
+
+  void appendEBLinkFlags(const llvm::opt::ArgList &Args, ArgStringList &CmdArgs, const llvm::Triple &Triple);
 }
 
 namespace mips {
