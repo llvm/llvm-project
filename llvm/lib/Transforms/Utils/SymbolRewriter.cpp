@@ -145,6 +145,9 @@ performOnModule(Module &M) {
       report_fatal_error("unable to transforn " + C.getName() + " in " +
                          M.getModuleIdentifier() + ": " + Error);
 
+    if (C.getName() == Name)
+      continue;
+
     if (Value *V = (M.*Get)(Name))
       C.setValueName(V->getValueName());
     else
