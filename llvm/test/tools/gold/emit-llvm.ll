@@ -21,6 +21,11 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
+@g7 = extern_weak global i32
+; CHECK-DAG: @g7 = extern_weak global i32
+
+@g8 = external global i32
+
 ; CHECK: define internal void @f1()
 ; OPT-NOT: @f1
 define hidden void @f1() {
@@ -62,6 +67,13 @@ define linkonce_odr void @f6() unnamed_addr {
 }
 @g6 = global void()* @f6
 
+define i32* @f7() {
+  ret i32* @g7
+}
+
+define i32* @f8() {
+  ret i32* @g8
+}
 
 ; API: f1 PREVAILING_DEF_IRONLY
 ; API: f2 PREVAILING_DEF_IRONLY
@@ -69,5 +81,9 @@ define linkonce_odr void @f6() unnamed_addr {
 ; API: f4 PREVAILING_DEF_IRONLY_EXP
 ; API: f5 PREVAILING_DEF_IRONLY_EXP
 ; API: f6 PREVAILING_DEF_IRONLY_EXP
+; API: f7 PREVAILING_DEF_IRONLY_EXP
+; API: f8 PREVAILING_DEF_IRONLY_EXP
+; API: g7 UNDEF
+; API: g8 UNDEF
 ; API: g5 PREVAILING_DEF_IRONLY_EXP
 ; API: g6 PREVAILING_DEF_IRONLY_EXP
