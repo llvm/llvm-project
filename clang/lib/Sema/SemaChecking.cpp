@@ -1340,6 +1340,11 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
         << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
+    if (IsC11 && ValType->isPointerType() &&
+        RequireCompleteType(Ptr->getLocStart(), ValType->getPointeeType(),
+                            diag::err_incomplete_type)) {
+      return ExprError();
+    }
   } else if (IsN && !ValType->isIntegerType() && !ValType->isPointerType()) {
     // For __atomic_*_n operations, the value type must be a scalar integral or
     // pointer type which is 1, 2, 4, 8 or 16 bytes in length.

@@ -49,7 +49,7 @@ char i8;
 short i16;
 int i32;
 int __attribute__((vector_size(8))) i64;
-struct Incomplete *incomplete;
+struct Incomplete *incomplete; // expected-note {{forward declaration of 'struct Incomplete'}}
 
 _Static_assert(__atomic_is_lock_free(1, &i8), "");
 _Static_assert(__atomic_is_lock_free(1, &i64), "");
@@ -267,6 +267,10 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__c11_atomic_fetch_add(Ap, 1, memory_order_release);
   (void)__c11_atomic_fetch_add(Ap, 1, memory_order_acq_rel);
   (void)__c11_atomic_fetch_add(Ap, 1, memory_order_seq_cst);
+
+  (void)__c11_atomic_fetch_add(
+      (struct Incomplete * _Atomic *)0, // expected-error {{incomplete type 'struct Incomplete'}}
+      1, memory_order_seq_cst);
 
   (void)__c11_atomic_init(Ap, val);
   (void)__c11_atomic_init(Ap, val);
