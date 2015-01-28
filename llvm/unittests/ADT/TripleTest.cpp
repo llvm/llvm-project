@@ -665,3 +665,20 @@ TEST(TripleTest, getARMCPUForArch) {
   }
 }
 }
+
+TEST(TripleTest, NormalizeARM) {
+  EXPECT_EQ("armv6--netbsd-eabi", Triple::normalize("armv6-netbsd-eabi"));
+  EXPECT_EQ("armv7--netbsd-eabi", Triple::normalize("armv7-netbsd-eabi"));
+  EXPECT_EQ("armv6eb--netbsd-eabi", Triple::normalize("armv6eb-netbsd-eabi"));
+  EXPECT_EQ("armv7eb--netbsd-eabi", Triple::normalize("armv7eb-netbsd-eabi"));
+  EXPECT_EQ("armv6--netbsd-eabihf", Triple::normalize("armv6-netbsd-eabihf"));
+  EXPECT_EQ("armv7--netbsd-eabihf", Triple::normalize("armv7-netbsd-eabihf"));
+  EXPECT_EQ("armv6eb--netbsd-eabihf", Triple::normalize("armv6eb-netbsd-eabihf"));
+  EXPECT_EQ("armv7eb--netbsd-eabihf", Triple::normalize("armv7eb-netbsd-eabihf"));
+
+  Triple T;
+  T = Triple("armv6--netbsd-eabi");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  T = Triple("armv6eb--netbsd-eabi");
+  EXPECT_EQ(Triple::armeb, T.getArch());
+}

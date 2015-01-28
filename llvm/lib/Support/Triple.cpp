@@ -246,13 +246,21 @@ static Triple::ArchType parseARMArch(StringRef ArchName) {
 
   if (ArchName.startswith("armv")) {
     offset = 3;
-    arch = Triple::arm;
+    if (ArchName.endswith("eb")) {
+      arch = Triple::armeb;
+      ArchName = ArchName.substr(0, ArchName.size() - 2);
+    } else
+      arch = Triple::arm;
   } else if (ArchName.startswith("armebv")) {
     offset = 5;
     arch = Triple::armeb;
   } else if (ArchName.startswith("thumbv")) {
     offset = 5;
-    arch = Triple::thumb;
+    if (ArchName.endswith("eb")) {
+      arch = Triple::thumbeb;
+      ArchName = ArchName.substr(0, ArchName.size() - 2);
+    } else
+      arch = Triple::thumb;
   } else if (ArchName.startswith("thumbebv")) {
     offset = 7;
     arch = Triple::thumbeb;
@@ -271,6 +279,8 @@ static Triple::ArchType parseARMArch(StringRef ArchName) {
 }
 
 static Triple::ArchType parseArch(StringRef ArchName) {
+  Triple::ArchType ARMArch(parseARMArch(ArchName));
+
   return StringSwitch<Triple::ArchType>(ArchName)
     .Cases("i386", "i486", "i586", "i686", Triple::x86)
     // FIXME: Do we need to support these?
@@ -280,9 +290,10 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Cases("powerpc64", "ppu", Triple::ppc64)
     .Case("powerpc64le", Triple::ppc64le)
     .Case("xscale", Triple::arm)
-    .StartsWith("arm", parseARMArch(ArchName))
-    .StartsWith("thumb", parseARMArch(ArchName))
-    .StartsWith("aarch64", parseARMArch(ArchName))
+    .Case("xscaleeb", Triple::armeb)
+    .StartsWith("arm", ARMArch)
+    .StartsWith("thumb", ARMArch)
+    .StartsWith("aarch64", ARMArch)
     .Case("msp430", Triple::msp430)
     .Cases("mips", "mipseb", "mipsallegrex", Triple::mips)
     .Cases("mipsel", "mipsallegrexel", Triple::mipsel)
@@ -379,6 +390,9 @@ static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {
 }
 
 static Triple::SubArchType parseSubArch(StringRef SubArchName) {
+  if (SubArchName.endswith("eb"))
+    SubArchName = SubArchName.substr(0, SubArchName.size() - 2);
+
   return StringSwitch<Triple::SubArchType>(SubArchName)
     .EndsWith("v8", Triple::ARMSubArch_v8)
     .EndsWith("v8a", Triple::ARMSubArch_v8)
@@ -1022,6 +1036,8 @@ const char *Triple::getARMCPUForArch(StringRef MArch) const {
     offset = 5;
   if (offset != StringRef::npos && MArch.substr(offset, 2) == "eb")
     offset += 2;
+  if (MArch.endswith("eb"))
+    MArch = MArch.substr(0, MArch.size() - 2);
   if (offset != StringRef::npos)
     result = llvm::StringSwitch<const char *>(MArch.substr(offset))
       .Cases("v2", "v2a", "arm2")
