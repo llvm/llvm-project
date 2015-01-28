@@ -417,6 +417,28 @@ SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
                                   N->getValueType(0), Ops);
   }
 
+  case ISD::LOAD: {
+    // To simplify the TableGen patters, we replace all i64 loads with
+    // v2i32 loads.  Alternatively, we could promote i64 loads to v2i32
+    // during DAG legalization, however, so places (ExpandUnalignedLoad)
+    // in the DAG legalizer assume that if i64 is legal, so doing this
+    // promotion early can cause problems.
+    EVT VT = N->getValueType(0);
+    LoadSDNode *LD = cast<LoadSDNode>(N);
+    if (VT != MVT::i64 || LD->getExtensionType() != ISD::NON_EXTLOAD)
+      break;
+
+    SDValue NewLoad = CurDAG->getLoad(MVT::v2i32, SDLoc(N), LD->getChain(),
+                                     LD->getBasePtr(), LD->getMemOperand());
+    SDValue BitCast = CurDAG->getNode(ISD::BITCAST, SDLoc(N),
+                                      MVT::i64, NewLoad);
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 1), NewLoad.getValue(1));
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), BitCast);
+    SelectCode(NewLoad.getNode());
+    N = BitCast.getNode();
+    break;
+  }
+
   case AMDGPUISD::REGISTER_LOAD: {
     if (ST.getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS)
       break;
