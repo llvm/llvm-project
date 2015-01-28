@@ -116,7 +116,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   const AMDGPUSubtarget &STM = TM.getSubtarget<AMDGPUSubtarget>();
   SIProgramInfo KernelInfo;
   if (STM.isAmdHsaOS()) {
-    OutStreamer.SwitchSection(getObjFileLowering().getTextSection());
     getSIProgramInfo(KernelInfo, MF);
     EmitAmdKernelCodeT(MF, KernelInfo);
     OutStreamer.EmitCodeAlignment(2 << (MF.getAlignment() - 1));
@@ -508,6 +507,19 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
   header.code_type = 1; // HSA_EXT_CODE_KERNEL
 
   header.wavefront_size = STM.getWavefrontSize();
+
+  const MCSectionELF *VersionSection = OutContext.getELFSection(".hsa.version",
+      ELF::SHT_PROGBITS, 0, SectionKind::getReadOnly());
+  OutStreamer.SwitchSection(VersionSection);
+  OutStreamer.EmitBytes(Twine("HSA Code Unit:" +
+                        Twine(header.hsail_version_major) + "." +
+                        Twine(header.hsail_version_minor) + ":" +
+                        "AMD:" +
+                        Twine(header.amd_code_version_major) + "." +
+                        Twine(header.amd_code_version_minor) +  ":" +
+                        "GFX8.1:0").str());
+
+  OutStreamer.SwitchSection(getObjFileLowering().getTextSection());
 
   if (isVerbose()) {
     OutStreamer.emitRawComment("amd_code_version_major = " +
