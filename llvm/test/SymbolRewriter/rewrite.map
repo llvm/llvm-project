@@ -44,3 +44,23 @@ global alias: {
   target: _ZN1SD1Ev,
 }
 
+function: {
+  source: source_comdat_function,
+  target: target_comdat_function,
+}
+
+function: {
+  source: source_comdat_function_(.*),
+  transform: target_comdat_function_\1,
+}
+
+global variable: {
+  source: source_comdat_variable,
+  target: target_comdat_variable,
+}
+
+global variable: {
+  source: source_comdat_variable_(.*),
+  transform: target_comdat_variable_\1,
+}
+

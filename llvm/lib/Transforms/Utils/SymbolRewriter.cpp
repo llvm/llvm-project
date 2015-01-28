@@ -79,6 +79,19 @@ static cl::list<std::string> RewriteMapFiles("rewrite-map-file",
 
 namespace llvm {
 namespace SymbolRewriter {
+void rewriteComdat(Module &M, GlobalObject *GO, const std::string &Source,
+                   const std::string &Target) {
+  if (Comdat *CD = GO->getComdat()) {
+    auto &Comdats = M.getComdatSymbolTable();
+
+    Comdat *C = M.getOrInsertComdat(Target);
+    C->setSelectionKind(CD->getSelectionKind());
+    GO->setComdat(C);
+
+    Comdats.erase(Comdats.find(Source));
+  }
+}
+
 template <RewriteDescriptor::Type DT, typename ValueType,
           ValueType *(llvm::Module::*Get)(StringRef) const>
 class ExplicitRewriteDescriptor : public RewriteDescriptor {
@@ -102,10 +115,14 @@ template <RewriteDescriptor::Type DT, typename ValueType,
 bool ExplicitRewriteDescriptor<DT, ValueType, Get>::performOnModule(Module &M) {
   bool Changed = false;
   if (ValueType *S = (M.*Get)(Source)) {
+    if (GlobalObject *GO = dyn_cast<GlobalObject>(S))
+      rewriteComdat(M, GO, Source, Target);
+
     if (Value *T = (M.*Get)(Target))
       S->setValueName(T->getValueName());
     else
       S->setName(Target);
+
     Changed = true;
   }
   return Changed;
@@ -147,6 +164,9 @@ performOnModule(Module &M) {
 
     if (C.getName() == Name)
       continue;
+
+    if (GlobalObject *GO = dyn_cast<GlobalObject>(&C))
+      rewriteComdat(M, GO, C.getName(), Name);
 
     if (Value *V = (M.*Get)(Name))
       C.setValueName(V->getValueName());

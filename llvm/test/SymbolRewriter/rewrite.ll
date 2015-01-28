@@ -28,12 +28,40 @@ entry:
   ret void
 }
 
+$source_comdat_function = comdat any
+define dllexport void @source_comdat_function() comdat($source_comdat_function) {
+entry:
+  ret void
+}
+
+$source_comdat_function_1 = comdat exactmatch
+define dllexport void @source_comdat_function_1() comdat($source_comdat_function_1) {
+entry:
+  ret void
+}
+
+$source_comdat_variable = comdat largest
+@source_comdat_variable = global i32 32, comdat($source_comdat_variable)
+
+$source_comdat_variable_1 = comdat noduplicates
+@source_comdat_variable_1 = global i32 64, comdat($source_comdat_variable_1)
+
+; CHECK: $target_comdat_function = comdat any
+; CHECK: $target_comdat_function_1 = comdat exactmatch
+; CHECK: $target_comdat_variable = comdat largest
+; CHECK: $target_comdat_variable_1 = comdat noduplicates
+
 ; CHECK: @target_variable = external global i32
 ; CHECK-NOT: @source_variable = external global i32
 ; CHECK: @target_pattern_variable = external global i32
 ; CHECK-NOT: @source_pattern_variable = external global i32
 ; CHECK: @target_pattern_multiple_variable_matches = external global i32
 ; CHECK-NOT: @source_pattern_multiple_variable_matches = external global i32
+; CHECK: @target_comdat_variable = global i32 32, comdat
+; CHECK-NOT: @source_comdat_variable = global i32 32, comdat
+; CHECK: @target_comdat_variable_1 = global i32 64, comdat
+; CHECK-NOT: @source_comdat_variable_1 = global i32 64, comdat
+
 ; CHECK: declare void @target_function()
 ; CHECK-NOT: declare void @source_function()
 ; CHECK: declare void @target_pattern_function()
@@ -56,4 +84,9 @@ entry:
 ; CHECK:   %res = add i32 %rhs, %lhs
 ; CHECK:   ret i32 %res
 ; CHECK: }
+
+; CHECK: define dllexport void @target_comdat_function() comdat
+; CHECK-NOT: define dllexport void @source_comdat_function() comdat
+; CHECK: define dllexport void @target_comdat_function_1() comdat
+; CHECK-NOT: define dllexport void @source_comdat_function_1() comdat
 
