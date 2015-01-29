@@ -626,10 +626,7 @@ static uint64_t getBaseTypeSize(DwarfDebug *DD, DIDerivedType Ty) {
 
   DIType BaseType = DD->resolve(Ty.getTypeDerivedFrom());
 
-  // If this type is not derived from any type or the type is a declaration then
-  // take conservative approach.
-  if (!BaseType.isValid() || BaseType.isForwardDecl())
-    return Ty.getSizeInBits();
+  assert(BaseType.isValid());
 
   // If this is a derived type, go ahead and get the base type, unless it's a
   // reference then it's just the size of the field. Pointer types have no need
@@ -1473,7 +1470,7 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, DIDerivedType DT) {
     uint64_t FieldSize = getBaseTypeSize(DD, DT);
     uint64_t OffsetInBytes;
 
-    if (Size != FieldSize) {
+    if (FieldSize && Size != FieldSize) {
       // Handle bitfield, assume bytes are 8 bits.
       addUInt(MemberDie, dwarf::DW_AT_byte_size, None, FieldSize/8);
       addUInt(MemberDie, dwarf::DW_AT_bit_size, None, Size);
