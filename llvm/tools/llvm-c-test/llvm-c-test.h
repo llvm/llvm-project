@@ -27,6 +27,10 @@ int calc(void);
 // disassemble.c
 int disassemble(void);
 
+// metadata.c
+int add_named_metadata_operand(void);
+int set_metadata(void);
+
 // object.c
 int object_list_sections(void);
 int object_list_symbols(void);

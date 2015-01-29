@@ -41,6 +41,7 @@ add_llvm_tool(llvm-c-test
   include-all.c
   main.c
   module.c
+  metadata.c
   object.c
   targets.c
   )

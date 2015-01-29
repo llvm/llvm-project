@@ -65,6 +65,10 @@ int main(int argc, char **argv) {
     return disassemble();
   } else if (argc == 2 && !strcmp(argv[1], "--calc")) {
     return calc();
+  } else if (argc == 2 && !strcmp(argv[1], "--add-named-metadata-operand")) {
+    return add_named_metadata_operand();
+  } else if (argc == 2 && !strcmp(argv[1], "--set-metadata")) {
+    return set_metadata();
   } else {
     print_usage();
   }
