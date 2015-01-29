@@ -22,6 +22,8 @@ int add_named_metadata_operand(void) {
   // This used to trigger an assertion
   LLVMAddNamedMetadataOperand(m, "name", LLVMMDNode(values, 1));
 
+  LLVMDisposeModule(m);
+
   return 0;
 }
 
@@ -34,6 +36,8 @@ int set_metadata(void) {
       LLVMBuildRetVoid(b),
       LLVMGetMDKindID("kind", 4),
       LLVMMDNode(values, 1));
+
+  LLVMDisposeBuilder(b);
 
   return 0;
 }
