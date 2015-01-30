@@ -16,7 +16,9 @@
 #include "llvm-c/Core.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"     // Get autoconf configuration settings
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadLocal.h"
 #include "llvm/Support/Watchdog.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -26,18 +28,7 @@
 
 using namespace llvm;
 
-// We need a thread local pointer to manage the stack of our stack trace
-// objects, but we *really* cannot tolerate destructors running and do not want
-// to pay any overhead of synchronizing. As a consequence, we use a raw
-// thread-local variable. Some day, we should be able to use a limited subset
-// of C++11's thread_local, but compilers aren't up for it today.
-// FIXME: This should be moved to a Compiler.h abstraction.
-#ifdef _MSC_VER // MSVC supports this with a __declspec.
-static __declspec(thread) const PrettyStackTraceEntry
-    *PrettyStackTraceHead = nullptr;
-#else // Clang, GCC, and all compatible compilers tend to use __thread.
-static __thread const PrettyStackTraceEntry *PrettyStackTraceHead = nullptr;
-#endif
+static ManagedStatic<sys::ThreadLocal<const PrettyStackTraceEntry> > PrettyStackTraceHead;
 
 static unsigned PrintStack(const PrettyStackTraceEntry *Entry, raw_ostream &OS){
   unsigned NextID = 0;
@@ -55,12 +46,12 @@ static unsigned PrintStack(const PrettyStackTraceEntry *Entry, raw_ostream &OS){
 /// PrintCurStackTrace - Print the current stack trace to the specified stream.
 static void PrintCurStackTrace(raw_ostream &OS) {
   // Don't print an empty trace.
-  if (!PrettyStackTraceHead) return;
+  if (!PrettyStackTraceHead->get()) return;
   
   // If there are pretty stack frames registered, walk and emit them.
   OS << "Stack dump:\n";
   
-  PrintStack(PrettyStackTraceHead, OS);
+  PrintStack(PrettyStackTraceHead->get(), OS);
   OS.flush();
 }
 
@@ -110,14 +101,26 @@ static void CrashHandler(void *) {
 
 PrettyStackTraceEntry::PrettyStackTraceEntry() {
   // Link ourselves.
-  NextEntry = PrettyStackTraceHead;
-  PrettyStackTraceHead = this;
+  NextEntry = PrettyStackTraceHead->get();
+  PrettyStackTraceHead->set(this);
 }
 
 PrettyStackTraceEntry::~PrettyStackTraceEntry() {
-  assert(PrettyStackTraceHead == this &&
+  // Do nothing if PrettyStackTraceHead is uninitialized. This can only happen
+  // if a shutdown occurred after we created the PrettyStackTraceEntry. That
+  // does occur in the following idiom:
+  //
+  // PrettyStackTraceProgram X(...);
+  // llvm_shutdown_obj Y;
+  //
+  // Without this check, we may end up removing ourselves from the stack trace
+  // after PrettyStackTraceHead has already been destroyed.
+  if (!PrettyStackTraceHead.isConstructed())
+    return;
+  
+  assert(PrettyStackTraceHead->get() == this &&
          "Pretty stack trace entry destruction is out of order");
-  PrettyStackTraceHead = getNextEntry();
+  PrettyStackTraceHead->set(getNextEntry());
 }
 
 void PrettyStackTraceString::print(raw_ostream &OS) const {
