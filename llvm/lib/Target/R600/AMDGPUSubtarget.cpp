@@ -20,6 +20,7 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 
 using namespace llvm;
 
@@ -119,4 +120,22 @@ unsigned AMDGPUSubtarget::getAmdKernelCodeChipID() const {
 bool AMDGPUSubtarget::isVGPRSpillingEnabled(
                                        const SIMachineFunctionInfo *MFI) const {
   return MFI->getShaderType() == ShaderType::COMPUTE || EnableVGPRSpilling;
+}
+
+void AMDGPUSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
+                                          MachineInstr *begin,
+                                          MachineInstr *end,
+                                          unsigned NumRegionInstrs) const {
+  if (getGeneration() >= SOUTHERN_ISLANDS) {
+
+    // Track register pressure so the scheduler can try to decrease
+    // pressure once register usage is above the threshold defined by
+    // SIRegisterInfo::getRegPressureSetLimit()
+    Policy.ShouldTrackPressure = true;
+
+    // Enabling both top down and bottom up scheduling seems to give us less
+    // register spills than just using one of these approaches on its own.
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = false;
+  }
 }

@@ -51,9 +51,32 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
-                                             MachineFunction &MF) const {
-  return RC->getNumRegs();
+unsigned SIRegisterInfo::getRegPressureSetLimit(unsigned Idx) const {
+
+  // FIXME: We should adjust the max number of waves based on LDS size.
+  unsigned SGPRLimit = getNumSGPRsAllowed(ST.getMaxWavesPerCU());
+  unsigned VGPRLimit = getNumVGPRsAllowed(ST.getMaxWavesPerCU());
+
+  for (regclass_iterator I = regclass_begin(), E = regclass_end();
+       I != E; ++I) {
+
+    unsigned NumSubRegs = std::max((int)(*I)->getSize() / 4, 1);
+    unsigned Limit;
+
+    if (isSGPRClass(*I)) {
+      Limit = SGPRLimit / NumSubRegs;
+    } else {
+      Limit = VGPRLimit / NumSubRegs;
+    }
+
+    const int *Sets = getRegClassPressureSets(*I);
+    assert(Sets);
+    for (unsigned i = 0; Sets[i] != -1; ++i) {
+	    if (Sets[i] == (int)Idx)
+        return Limit;
+    }
+  }
+  return 256;
 }
 
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {
@@ -455,3 +478,29 @@ unsigned SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
   return AMDGPU::NoRegister;
 }
 
+unsigned SIRegisterInfo::getNumVGPRsAllowed(unsigned WaveCount) const {
+  switch(WaveCount) {
+    case 10: return 24;
+    case 9:  return 28;
+    case 8:  return 32;
+    case 7:  return 36;
+    case 6:  return 40;
+    case 5:  return 48;
+    case 4:  return 64;
+    case 3:  return 84;
+    case 2:  return 128;
+    default: return 256;
+  }
+}
+
+unsigned SIRegisterInfo::getNumSGPRsAllowed(unsigned WaveCount) const {
+  switch(WaveCount) {
+    case 10: return 48;
+    case 9:  return 56;
+    case 8:  return 64;
+    case 7:  return 72;
+    case 6:  return 80;
+    case 5:  return 96;
+    default: return 103;
+  }
+}
