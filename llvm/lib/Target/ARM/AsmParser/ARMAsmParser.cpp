@@ -9191,27 +9191,39 @@ bool ARMAsmParser::parseDirectiveCPU(SMLoc L) {
 // FIXME: This is duplicated in getARMFPUFeatures() in
 // tools/clang/lib/Driver/Tools.cpp
 static const struct {
-  const unsigned Fpu;
+  const unsigned ID;
   const uint64_t Enabled;
   const uint64_t Disabled;
-} Fpus[] = {
-      {ARM::VFP, ARM::FeatureVFP2, ARM::FeatureNEON},
-      {ARM::VFPV2, ARM::FeatureVFP2, ARM::FeatureNEON},
-      {ARM::VFPV3, ARM::FeatureVFP3, ARM::FeatureNEON},
-      {ARM::VFPV3_D16, ARM::FeatureVFP3 | ARM::FeatureD16, ARM::FeatureNEON},
-      {ARM::VFPV4, ARM::FeatureVFP4, ARM::FeatureNEON},
-      {ARM::VFPV4_D16, ARM::FeatureVFP4 | ARM::FeatureD16, ARM::FeatureNEON},
-      {ARM::FPV5_D16, ARM::FeatureFPARMv8 | ARM::FeatureD16,
-       ARM::FeatureNEON | ARM::FeatureCrypto},
-      {ARM::FP_ARMV8, ARM::FeatureFPARMv8,
-       ARM::FeatureNEON | ARM::FeatureCrypto},
-      {ARM::NEON, ARM::FeatureNEON, 0},
-      {ARM::NEON_VFPV4, ARM::FeatureVFP4 | ARM::FeatureNEON, 0},
-      {ARM::NEON_FP_ARMV8, ARM::FeatureFPARMv8 | ARM::FeatureNEON,
-       ARM::FeatureCrypto},
-      {ARM::CRYPTO_NEON_FP_ARMV8,
-       ARM::FeatureFPARMv8 | ARM::FeatureNEON | ARM::FeatureCrypto, 0},
-      {ARM::SOFTVFP, 0, 0},
+} FPUs[] = {
+    {ARM::VFP, ARM::FeatureVFP2, ARM::FeatureNEON},
+    {ARM::VFPV2, ARM::FeatureVFP2, ARM::FeatureNEON},
+    {ARM::VFPV3, ARM::FeatureVFP2 | ARM::FeatureVFP3, ARM::FeatureNEON},
+    {ARM::VFPV3_D16, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureD16,
+     ARM::FeatureNEON},
+    {ARM::VFPV4, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4,
+     ARM::FeatureNEON},
+    {ARM::VFPV4_D16,
+     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 | ARM::FeatureD16,
+     ARM::FeatureNEON},
+    {ARM::FPV5_D16, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+                        ARM::FeatureFPARMv8 | ARM::FeatureD16,
+     ARM::FeatureNEON | ARM::FeatureCrypto},
+    {ARM::FP_ARMV8, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+                        ARM::FeatureFPARMv8,
+     ARM::FeatureNEON | ARM::FeatureCrypto},
+    {ARM::NEON, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureNEON, 0},
+    {ARM::NEON_VFPV4,
+     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 | ARM::FeatureNEON,
+     0},
+    {ARM::NEON_FP_ARMV8,
+     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+         ARM::FeatureFPARMv8 | ARM::FeatureNEON,
+     ARM::FeatureCrypto},
+    {ARM::CRYPTO_NEON_FP_ARMV8,
+     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+         ARM::FeatureFPARMv8 | ARM::FeatureNEON | ARM::FeatureCrypto,
+     0},
+    {ARM::SOFTVFP, 0, 0},
 };
 
 /// parseDirectiveFPU
@@ -9229,14 +9241,14 @@ bool ARMAsmParser::parseDirectiveFPU(SMLoc L) {
     return false;
   }
 
-  for (const auto &Fpu : Fpus) {
-    if (Fpu.Fpu != ID)
+  for (const auto &Entry : FPUs) {
+    if (Entry.ID != ID)
       continue;
 
     // Need to toggle features that should be on but are off and that
     // should off but are on.
-    uint64_t Toggle = (Fpu.Enabled & ~STI.getFeatureBits()) |
-                      (Fpu.Disabled & STI.getFeatureBits());
+    uint64_t Toggle = (Entry.Enabled & ~STI.getFeatureBits()) |
+                      (Entry.Disabled & STI.getFeatureBits());
     setAvailableFeatures(ComputeAvailableFeatures(STI.ToggleFeature(Toggle)));
     break;
   }
