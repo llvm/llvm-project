@@ -9195,36 +9195,48 @@ static const struct {
   const uint64_t Enabled;
   const uint64_t Disabled;
 } FPUs[] = {
-    {ARM::VFP, ARM::FeatureVFP2, ARM::FeatureNEON},
-    {ARM::VFPV2, ARM::FeatureVFP2, ARM::FeatureNEON},
-    {ARM::VFPV3, ARM::FeatureVFP2 | ARM::FeatureVFP3,
-     ARM::FeatureNEON | ARM::FeatureD16},
-    {ARM::VFPV3_D16, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureD16,
-     ARM::FeatureNEON},
-    {ARM::VFPV4, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4,
-     ARM::FeatureNEON | ARM::FeatureD16},
-    {ARM::VFPV4_D16,
-     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 | ARM::FeatureD16,
-     ARM::FeatureNEON},
-    {ARM::FPV5_D16, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
-                        ARM::FeatureFPARMv8 | ARM::FeatureD16,
-     ARM::FeatureNEON | ARM::FeatureCrypto},
-    {ARM::FP_ARMV8, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
-                        ARM::FeatureFPARMv8,
-     ARM::FeatureNEON | ARM::FeatureCrypto | ARM::FeatureD16},
-    {ARM::NEON, ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureNEON,
-     ARM::FeatureD16},
-    {ARM::NEON_VFPV4,
-     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 | ARM::FeatureNEON,
-     ARM::FeatureD16},
-    {ARM::NEON_FP_ARMV8,
-     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+    {/* ID */ ARM::VFP,
+     /* Enabled */ ARM::FeatureVFP2,
+     /* Disabled */ ARM::FeatureNEON},
+    {/* ID */ ARM::VFPV2,
+     /* Enabled */ ARM::FeatureVFP2,
+     /* Disabled */ ARM::FeatureNEON},
+    {/* ID */ ARM::VFPV3,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3,
+     /* Disabled */ ARM::FeatureNEON | ARM::FeatureD16},
+    {/* ID */ ARM::VFPV3_D16,
+     /* Enable */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureD16,
+     /* Disabled */ ARM::FeatureNEON},
+    {/* ID */ ARM::VFPV4,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4,
+     /* Disabled */ ARM::FeatureNEON | ARM::FeatureD16},
+    {/* ID */ ARM::VFPV4_D16,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+         ARM::FeatureD16,
+     /* Disabled */ ARM::FeatureNEON},
+    {/* ID */ ARM::FPV5_D16,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+         ARM::FeatureFPARMv8 | ARM::FeatureD16,
+     /* Disabled */ ARM::FeatureNEON | ARM::FeatureCrypto},
+    {/* ID */ ARM::FP_ARMV8,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+         ARM::FeatureFPARMv8,
+     /* Disabled */ ARM::FeatureNEON | ARM::FeatureCrypto | ARM::FeatureD16},
+    {/* ID */ ARM::NEON,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureNEON,
+     /* Disabled */ ARM::FeatureD16},
+    {/* ID */ ARM::NEON_VFPV4,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+         ARM::FeatureNEON,
+     /* Disabled */ ARM::FeatureD16},
+    {/* ID */ ARM::NEON_FP_ARMV8,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
          ARM::FeatureFPARMv8 | ARM::FeatureNEON,
-     ARM::FeatureCrypto | ARM::FeatureD16},
-    {ARM::CRYPTO_NEON_FP_ARMV8,
-     ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
+     /* Disabled */ ARM::FeatureCrypto | ARM::FeatureD16},
+    {/* ID */ ARM::CRYPTO_NEON_FP_ARMV8,
+     /* Enabled */ ARM::FeatureVFP2 | ARM::FeatureVFP3 | ARM::FeatureVFP4 |
          ARM::FeatureFPARMv8 | ARM::FeatureNEON | ARM::FeatureCrypto,
-     ARM::FeatureD16},
+     /* Disabled */ ARM::FeatureD16},
     {ARM::SOFTVFP, 0, 0},
 };
 
