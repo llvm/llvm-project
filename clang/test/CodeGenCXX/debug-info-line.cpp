@@ -166,6 +166,23 @@ void f13() {
   F13_IMPL;
 }
 
+struct f14 {
+  f14(int);
+};
+
+// CHECK-LABEL: define
+// CHECK-LABEL: define
+// CHECK-LABEL: define
+struct {
+// CHECK: call {{.*}}, !dbg [[DBG_F14_CTOR_CALL:![0-9]*]]
+#line 1600
+  f14 v
+      =
+      1;
+} f14_inst;
+
+// CHECK-LABEL: define
+
 // CHECK: [[DBG_F1]] = !MDLocation(line: 100,
 // CHECK: [[DBG_FOO_VALUE]] = !MDLocation(line: 200,
 // CHECK: [[DBG_FOO_REF]] = !MDLocation(line: 202,

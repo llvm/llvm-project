@@ -544,7 +544,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
                                   CXXCtorInitializer *MemberInit,
                                   const CXXConstructorDecl *Constructor,
                                   FunctionArgList &Args) {
-  ApplyDebugLocation Loc(CGF, MemberInit->getMemberLocation());
+  ApplyDebugLocation Loc(CGF, MemberInit->getSourceLocation());
   assert(MemberInit->isAnyMemberInitializer() &&
          "Must have member initializer!");
   assert(MemberInit->getInit() && "Must have initializer!");
@@ -598,7 +598,6 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
   ArrayRef<VarDecl *> ArrayIndexes;
   if (MemberInit->getNumArrayIndices())
     ArrayIndexes = MemberInit->getArrayIndexes();
-  ApplyDebugLocation DL(CGF, MemberInit->getMemberLocation());
   CGF.EmitInitializerForField(Field, LHS, MemberInit->getInit(), ArrayIndexes);
 }
 

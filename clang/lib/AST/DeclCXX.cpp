@@ -1693,12 +1693,12 @@ const Type *CXXCtorInitializer::getBaseClass() const {
 }
 
 SourceLocation CXXCtorInitializer::getSourceLocation() const {
-  if (isAnyMemberInitializer())
-    return getMemberLocation();
-
   if (isInClassMemberInitializer())
     return getAnyMember()->getLocation();
   
+  if (isAnyMemberInitializer())
+    return getMemberLocation();
+
   if (TypeSourceInfo *TSInfo = Initializee.get<TypeSourceInfo*>())
     return TSInfo->getTypeLoc().getLocalSourceRange().getBegin();
   
