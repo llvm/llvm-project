@@ -171,15 +171,16 @@ struct f14 {
 };
 
 // CHECK-LABEL: define
-// CHECK-LABEL: define
-// CHECK-LABEL: define
-struct {
+struct f14_use {
 // CHECK: call {{.*}}, !dbg [[DBG_F14_CTOR_CALL:![0-9]*]]
 #line 1600
   f14 v
       =
       1;
-} f14_inst;
+  f14_use();
+};
+
+f14_use::f14_use() = default;
 
 // CHECK-LABEL: define
 
