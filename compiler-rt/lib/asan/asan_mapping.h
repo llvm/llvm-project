@@ -81,11 +81,13 @@
 // || `[0x00000000, 0x3fffffff]` || LowMem     ||
 //
 // Default Windows/i386 mapping:
-// || `[0x60000000, 0xffffffff]` || HighMem    ||
-// || `[0x4c000000, 0x5fffffff]` || HighShadow ||
-// || `[0x48000000, 0x4bffffff]` || ShadowGap  ||
-// || `[0x40000000, 0x47ffffff]` || LowShadow  ||
-// || `[0x00000000, 0x3fffffff]` || LowMem     ||
+// (the exact location of HighShadow/HighMem may vary depending
+//  on WoW64, /LARGEADDRESSAWARE, etc).
+// || `[0x50000000, 0xffffffff]` || HighMem    ||
+// || `[0x3a000000, 0x4fffffff]` || HighShadow ||
+// || `[0x36000000, 0x39ffffff]` || ShadowGap  ||
+// || `[0x30000000, 0x35ffffff]` || LowShadow  ||
+// || `[0x00000000, 0x2fffffff]` || LowMem     ||
 
 static const u64 kDefaultShadowScale = 3;
 static const u64 kDefaultShadowOffset32 = 1ULL << 29;  // 0x20000000
@@ -98,7 +100,7 @@ static const u64 kMIPS64_ShadowOffset64 = 1ULL << 36;
 static const u64 kPPC64_ShadowOffset64 = 1ULL << 41;
 static const u64 kFreeBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
 static const u64 kFreeBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
-static const u64 kWindowsShadowOffset32 = 1ULL << 30;  // 0x40000000
+static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 
 #define SHADOW_SCALE kDefaultShadowScale
 #if SANITIZER_ANDROID
