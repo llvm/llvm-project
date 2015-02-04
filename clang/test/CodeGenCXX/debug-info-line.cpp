@@ -184,6 +184,15 @@ f14_use::f14_use() = default;
 
 // CHECK-LABEL: define
 
+// CHECK-LABEL: define
+int f21_a(int = 0);
+void f21_b(int = f21_a());
+void f21() {
+// CHECK: call {{.*}}f21_b{{.*}}, !dbg [[DBG_F21:![0-9]*]]
+#line 2300
+  f21_b();
+}
+
 // CHECK: [[DBG_F1]] = !MDLocation(line: 100,
 // CHECK: [[DBG_FOO_VALUE]] = !MDLocation(line: 200,
 // CHECK: [[DBG_FOO_REF]] = !MDLocation(line: 202,
