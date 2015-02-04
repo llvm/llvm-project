@@ -334,11 +334,6 @@ function(llvm_add_library name)
         PREFIX ""
         )
     endif()
-    if (MSVC)
-      set_target_properties(${name}
-        PROPERTIES
-        IMPORT_SUFFIX ".imp")
-    endif ()
   endif()
 
   if(ARG_MODULE OR ARG_SHARED)
