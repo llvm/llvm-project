@@ -247,6 +247,9 @@ protected:
     bool
     UpdateSOEntriesForDeletion();
 
+    bool
+    SOEntryIsMainExecutable(const SOEntry &entry);
+
     /// Reads the current list of shared objects according to the link map
     /// supplied by the runtime linker.
     bool

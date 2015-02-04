@@ -19,6 +19,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 
+#include "llvm/Support/Path.h"
+
 #include "DYLDRendezvous.h"
 
 using namespace lldb;
@@ -238,9 +240,7 @@ DYLDRendezvous::UpdateSOEntriesForAddition()
             return false;
 
         // Only add shared libraries and not the executable.
-        // On Linux this is indicated by an empty path in the entry.
-        // On FreeBSD it is the name of the executable.
-        if (entry.path.empty() || ::strcmp(entry.path.c_str(), m_exe_path) == 0)
+        if (SOEntryIsMainExecutable(entry))
             continue;
 
         pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
@@ -277,6 +277,28 @@ DYLDRendezvous::UpdateSOEntriesForDeletion()
 }
 
 bool
+DYLDRendezvous::SOEntryIsMainExecutable(const SOEntry &entry)
+{
+    // On Linux the executable is indicated by an empty path in the entry. On
+    // FreeBSD it is the full path to the executable. On Android, it is the
+    // basename of the executable.
+
+    auto triple = m_process->GetTarget().GetArchitecture().GetTriple();
+    auto os_type = triple.getOS();
+    auto env_type = triple.getEnvironment();
+
+    switch (os_type) {
+        case llvm::Triple::FreeBSD:
+            return ::strcmp(entry.path.c_str(), m_exe_path) == 0;
+        case llvm::Triple::Linux:
+            return entry.path.empty() || (env_type == llvm::Triple::Android &&
+                   llvm::sys::path::filename(m_exe_path) == entry.path);
+        default:
+            return false;
+    }
+}
+
+bool
 DYLDRendezvous::TakeSnapshot(SOEntryList &entry_list)
 {
     SOEntry entry;
@@ -290,9 +312,7 @@ DYLDRendezvous::TakeSnapshot(SOEntryList &entry_list)
             return false;
 
         // Only add shared libraries and not the executable.
-        // On Linux this is indicated by an empty path in the entry.
-        // On FreeBSD it is the name of the executable.
-        if (entry.path.empty() || ::strcmp(entry.path.c_str(), m_exe_path) == 0)
+        if (SOEntryIsMainExecutable(entry))
             continue;
 
         entry_list.push_back(entry);
