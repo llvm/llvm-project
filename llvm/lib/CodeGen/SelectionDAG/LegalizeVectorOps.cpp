@@ -554,9 +554,9 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
       BitOffset += SrcEltBits;
       if (BitOffset >= WideBits) {
         WideIdx++;
-        Offset -= WideBits;
-        if (Offset > 0) {
-          ShAmt = DAG.getConstant(SrcEltBits - Offset,
+        BitOffset -= WideBits;
+        if (BitOffset > 0) {
+          ShAmt = DAG.getConstant(SrcEltBits - BitOffset,
                                   TLI.getShiftAmountTy(WideVT));
           Hi = DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
           Hi = DAG.getNode(ISD::AND, dl, WideVT, Hi, SrcEltBitMask);
