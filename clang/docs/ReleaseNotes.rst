@@ -120,10 +120,35 @@ C++ Language Changes in Clang
 - Clang will put individual ``.init_array/.ctors`` sections in
   comdats, reducing code duplication and speeding up startup.
 
-C++11 Feature Support
+C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-...
+Clang has experimental support for some proposed C++1z (tentatively, C++17)
+features. This support can be enabled using the `-std=c++1z` flag.
+
+New in Clang 3.6 is support for:
+
+- Fold expressions
+
+- `u8` character literals
+
+- Nested namespace definitions: `namespace A::B { ... }` as a shorthand for
+  `namespace A { namespace B { ... } }`
+
+- Attributes for namespaces and enumerators
+
+- Constant evaluation for all non-type template arguments
+
+Note that these features may be changed or removed in future Clang releases
+without notice.
+
+Support for `for (identifier : range)` as a synonym for
+`for (auto &&identifier : range)` has been removed as it is no longer currently
+considered for C++17.
+
+For more details on C++ feature support, see
+`the C++ status page <http://clang.llvm.org/cxx_status.html>`_.
+
 
 Objective-C Language Changes in Clang
 -------------------------------------
