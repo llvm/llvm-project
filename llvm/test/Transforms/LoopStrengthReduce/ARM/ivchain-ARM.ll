@@ -201,7 +201,7 @@ for.end:                                          ; preds = %for.body
 ;
 ; Currently we have three extra add.w's that keep the store address
 ; live past the next increment because ISEL is unfortunately undoing
-; the store chain. ISEL also fails to convert all but one of the stores to
+; the store chain. ISEL also fails to convert the stores to
 ; post-increment addressing. However, the loads should use
 ; post-increment addressing, no add's or add.w's beyond the three
 ; mentioned. Most importantly, there should be no spills or reloads!
@@ -210,7 +210,7 @@ for.end:                                          ; preds = %for.body
 ; A9: %.lr.ph
 ; A9-NOT: lsl.w
 ; A9-NOT: {{ldr|str|adds|add r}}
-; A9: vst1.8 {{.*}} [r{{[0-9]+}}]!
+; A9: add.w r
 ; A9-NOT: {{ldr|str|adds|add r}}
 ; A9: add.w r
 ; A9-NOT: {{ldr|str|adds|add r}}
