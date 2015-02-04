@@ -98,6 +98,8 @@ Windows Support
 
 - Basic support for DWARF debug information in COFF files
 
+- Support for Visual C++ '__super' keyword
+
 
 C Language Changes in Clang
 ---------------------------
