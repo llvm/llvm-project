@@ -100,7 +100,7 @@ bool AMDGPUTTI::hasBranchDivergence() const { return true; }
 void AMDGPUTTI::getUnrollingPreferences(const Function *, Loop *L,
                                         UnrollingPreferences &UP) const {
   UP.Threshold = 300; // Twice the default.
-  UP.Count = UINT_MAX;
+  UP.MaxCount = UINT_MAX;
   UP.Partial = true;
 
   // TODO: Do we want runtime unrolling?
