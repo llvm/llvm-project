@@ -71,12 +71,12 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 1, !"Debug Info Version", i32 2}
 !10 = !{!"clang version 3.5 "}
-!11 = !{i32 2, i32 0, !12, null}
+!11 = !MDLocation(line: 2, scope: !12)
 !12 = !{!"0xb\002\000\000", !1, !4} ; [ DW_TAG_lexical_block ] [/home/grosser/Projects/polly/git/tools/polly/test.c]
-!13 = !{i32 3, i32 0, !12, null}
-!14 = !{i32 4, i32 0, !4, null}
-!15 = !{i32 9, i32 0, !16, null}
+!13 = !MDLocation(line: 3, scope: !12)
+!14 = !MDLocation(line: 4, scope: !4)
+!15 = !MDLocation(line: 9, scope: !16)
 !16 = !{!"0xb\009\000\001", !1, !7} ; [ DW_TAG_lexical_block ] [/home/grosser/Projects/polly/git/tools/polly/test.c]
-!17 = !{i32 13, i32 0, !16, null}
-!18 = !{i32 14, i32 0, !7, null}
+!17 = !MDLocation(line: 13, scope: !16)
+!18 = !MDLocation(line: 14, scope: !7)
 

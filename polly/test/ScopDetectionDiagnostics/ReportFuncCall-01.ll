@@ -56,12 +56,12 @@ declare double @invalidCall(double*) #1
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 2}
 !9 = !{!"clang version 3.5.0 "}
-!10 = !{i32 4, i32 8, !11, null}
+!10 = !MDLocation(line: 4, column: 8, scope: !11)
 !11 = !{!"0xb\004\003\000", !1, !4} ; [ DW_TAG_lexical_block ] [/home/simbuerg/Projekte/llvm/tools/polly/test/ScopDetectionDiagnostics/ReportFuncCall.c]
-!12 = !{i32 5, i32 12, !13, null}
+!12 = !MDLocation(line: 5, column: 12, scope: !13)
 !13 = !{!"0xb\004\0027\000", !1, !11} ; [ DW_TAG_lexical_block ] [/home/simbuerg/Projekte/llvm/tools/polly/test/ScopDetectionDiagnostics/ReportFuncCall.c]
 !14 = !{!15, !15, i64 0}
 !15 = !{!"double", !16, i64 0}
 !16 = !{!"omnipotent char", !17, i64 0}
 !17 = !{!"Simple C/C++ TBAA"}
-!18 = !{i32 7, i32 1, !4, null}
+!18 = !MDLocation(line: 7, column: 1, scope: !4)
