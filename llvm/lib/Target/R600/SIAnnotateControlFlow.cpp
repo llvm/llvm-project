@@ -14,6 +14,7 @@
 
 #include "AMDGPU.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -66,6 +67,8 @@ class SIAnnotateControlFlow : public FunctionPass {
   DominatorTree *DT;
   StackVector Stack;
 
+  LoopInfo *LI;
+
   bool isTopOfStack(BasicBlock *BB);
 
   Value *popSaved();
@@ -99,6 +102,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LoopInfo>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
@@ -277,10 +281,25 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 
   Term->setCondition(CallInst::Create(Loop, Arg, "", Term));
   push(Term->getSuccessor(0), Arg);
-}
-
-/// \brief Close the last opened control flow
+}/// \brief Close the last opened control flow
 void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
+  llvm::Loop *L = LI->getLoopFor(BB);
+
+  if (L && L->getHeader() == BB) {
+    // We can't insert an EndCF call into a loop header, because it will
+    // get executed on every iteration of the loop, when it should be
+    // executed only once before the loop.
+    SmallVector <BasicBlock*, 8> Latches;
+    L->getLoopLatches(Latches);
+
+    std::vector<BasicBlock*> Preds;
+    for (pred_iterator PI = pred_begin(BB), PE = pred_end(BB); PI != PE; ++PI) {
+      if (std::find(Latches.begin(), Latches.end(), *PI) == Latches.end())
+        Preds.push_back(*PI);
+    }
+    BB = llvm::SplitBlockPredecessors(BB, Preds, "endcf.split", this);
+  }
+
   CallInst::Create(EndCf, popSaved(), "", BB->getFirstInsertionPt());
 }
 
@@ -288,6 +307,7 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 /// recognize if/then/else and loops.
 bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LI = &getAnalysis<LoopInfo>();
 
   for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
        E = df_end(&F.getEntryBlock()); I != E; ++I) {
