@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ISL_HASH="b3e0fa7a05d32f1e0e36e0a42b0b83fa2ba1f609"
+ISL_HASH="0698f8436c523ecc742b13a9b3aa337cc2421fa2"
 
 PWD=`pwd`
 

@@ -191,7 +191,6 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
   case isl_ast_op_pdiv_r:
   case isl_ast_op_div:
   case isl_ast_op_fdiv_q:
-  case isl_ast_op_zdiv_r:
     // Do nothing
     break;
   case isl_ast_op_add:
@@ -240,7 +239,6 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
     break;
   }
   case isl_ast_op_pdiv_r: // Dividend is non-negative
-  case isl_ast_op_zdiv_r: // Result only compared against zero
     Res = Builder.CreateSRem(LHS, RHS);
     break;
   }
@@ -406,7 +404,6 @@ Value *IslExprBuilder::createOp(__isl_take isl_ast_expr *Expr) {
   case isl_ast_op_fdiv_q: // Round towards -infty
   case isl_ast_op_pdiv_q: // Dividend is non-negative
   case isl_ast_op_pdiv_r: // Dividend is non-negative
-  case isl_ast_op_zdiv_r: // Result only compared against zero
     return createOpBin(Expr);
   case isl_ast_op_minus:
     return createOpUnary(Expr);
