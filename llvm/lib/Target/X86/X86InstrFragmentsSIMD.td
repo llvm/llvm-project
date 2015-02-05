@@ -424,7 +424,7 @@ def alignedloadv8i64  : PatFrag<(ops node:$ptr),
 // setting a feature bit in the processor (on startup, for example).
 // Opteron 10h and later implement such a feature.
 def memop : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return    Subtarget->hasVectorUAMem()
+  return    Subtarget->hasSSEUnalignedMem()
          || cast<LoadSDNode>(N)->getAlignment() >= 16;
 }]>;
 
