@@ -391,7 +391,8 @@ During this release the MIPS target has reached a few major milestones. The
 compiler has gained support for MIPS-II and MIPS-III; become ABI-compatible
 with GCC for big and little endian O32, N32, and N64; and is now able to
 compile the Linux kernel for 32-bit targets. Additionally, LLD now supports
-microMIPS for the O32 ABI on little endian targets.
+microMIPS for the O32 ABI on little endian targets, and code generation for
+microMIPS is almost completely passing the test-suite.
 
 ABI
 ^^^
