@@ -49,6 +49,14 @@
 #include "regcclass.h"
 #include "regcname.h"
 
+#include "llvm/Config/config.h"
+#if HAVE_STDINT_H
+#include <stdint.h>
+#else
+/* Pessimistically bound memory use */
+#define SIZE_MAX UINT_MAX
+#endif
+
 /*
  * parse structure, passed up and down to avoid global variables and
  * other clumsinesses
@@ -1069,6 +1077,8 @@ allocset(struct parse *p)
 
 		p->ncsalloc += CHAR_BIT;
 		nc = p->ncsalloc;
+		if (nc > SIZE_MAX / sizeof(cset))
+			goto nomem;
 		assert(nc % CHAR_BIT == 0);
 		nbytes = nc / CHAR_BIT * css;
 
@@ -1412,6 +1422,11 @@ enlarge(struct parse *p, sopno size)
 	if (p->ssize >= size)
 		return;
 
+	if ((unsigned long)size > SIZE_MAX / sizeof(sop)) {
+		SETERROR(REG_ESPACE);
+		return;
+	}
+
 	sp = (sop *)realloc(p->strip, size*sizeof(sop));
 	if (sp == NULL) {
 		SETERROR(REG_ESPACE);
@@ -1428,6 +1443,12 @@ static void
 stripsnug(struct parse *p, struct re_guts *g)
 {
 	g->nstates = p->slen;
+	if ((unsigned long)p->slen > SIZE_MAX / sizeof(sop)) {
+		g->strip = p->strip;
+		SETERROR(REG_ESPACE);
+		return;
+	}
+
 	g->strip = (sop *)realloc((char *)p->strip, p->slen * sizeof(sop));
 	if (g->strip == NULL) {
 		SETERROR(REG_ESPACE);
