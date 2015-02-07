@@ -688,11 +688,11 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     std::vector<const MCSymbol*> DLLExportedFns, DLLExportedGlobals;
 
     for (const auto &Function : M)
-      if (Function.hasDLLExportStorageClass())
+      if (Function.hasDLLExportStorageClass() && !Function.isDeclaration())
         DLLExportedFns.push_back(getSymbol(&Function));
 
     for (const auto &Global : M.globals())
-      if (Global.hasDLLExportStorageClass())
+      if (Global.hasDLLExportStorageClass() && !Global.isDeclaration())
         DLLExportedGlobals.push_back(getSymbol(&Global));
 
     for (const auto &Alias : M.aliases()) {
