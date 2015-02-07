@@ -248,7 +248,7 @@ public:
   void setReductionState(ReductionState RS) { this->RS = RS; }
 
   void handleAddEdge(const MatrixMetadata& MD, bool Transpose) {
-    DeniedOpts += Transpose ? MD.getWorstCol() : MD.getWorstRow();
+    DeniedOpts += Transpose ? MD.getWorstRow() : MD.getWorstCol();
     const bool* UnsafeOpts =
       Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
     for (unsigned i = 0; i < NumOpts; ++i)
@@ -256,7 +256,7 @@ public:
   }
 
   void handleRemoveEdge(const MatrixMetadata& MD, bool Transpose) {
-    DeniedOpts -= Transpose ? MD.getWorstCol() : MD.getWorstRow();
+    DeniedOpts -= Transpose ? MD.getWorstRow() : MD.getWorstCol();
     const bool* UnsafeOpts =
       Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
     for (unsigned i = 0; i < NumOpts; ++i)
