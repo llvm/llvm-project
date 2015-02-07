@@ -3,5 +3,5 @@
 
 @data = dllexport constant [5 x i8] c"data\00", align 1
 
-; CHECK: .section	.rdata,"rd"
+; CHECK: .section	.rdata,"dr"
 

@@ -48,7 +48,7 @@ define void @F1() {
 ; LINUX-SECTIONS: .section        .rodata.G3,"a",@progbits
 ; LINUX-SECTIONS: .globl  G3
 
-; WIN32-SECTIONS: .section        .rdata,"rd",one_only,_G3
+; WIN32-SECTIONS: .section        .rdata,"dr",one_only,_G3
 ; WIN32-SECTIONS: .globl  _G3
 
 
@@ -126,7 +126,7 @@ define void @F1() {
 ; LINUX-SECTIONS: .section        .rodata.G7,"aMS",@progbits,1
 ; LINUX-SECTIONS:       .globl G7
 
-; WIN32-SECTIONS: .section        .rdata,"rd",one_only,_G7
+; WIN32-SECTIONS: .section        .rdata,"dr",one_only,_G7
 ; WIN32-SECTIONS:       .globl _G7
 
 
@@ -189,7 +189,7 @@ define void @F1() {
 ; LINUX-SECTIONS:        .asciz  "foo"
 ; LINUX-SECTIONS:        .size   .LG14, 4
 
-; WIN32-SECTIONS:        .section        .rdata,"rd"
+; WIN32-SECTIONS:        .section        .rdata,"dr"
 ; WIN32-SECTIONS: L_G14:
 ; WIN32-SECTIONS:        .asciz  "foo"
 
@@ -211,5 +211,5 @@ define void @F1() {
 ; LINUX-SECTIONS: .section      .rodata.G15,"aM",@progbits,8
 ; LINUX-SECTIONS: G15:
 
-; WIN32-SECTIONS: .section      .rdata,"rd",one_only,_G15
+; WIN32-SECTIONS: .section      .rdata,"dr",one_only,_G15
 ; WIN32-SECTIONS: _G15:

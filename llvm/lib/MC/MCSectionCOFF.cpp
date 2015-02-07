@@ -47,6 +47,10 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI,
   }
 
   OS << "\t.section\t" << getSectionName() << ",\"";
+  if (getCharacteristics() & COFF::IMAGE_SCN_CNT_INITIALIZED_DATA)
+    OS << 'd';
+  if (getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
+    OS << 'b';
   if (getCharacteristics() & COFF::IMAGE_SCN_MEM_EXECUTE)
     OS << 'x';
   if (getCharacteristics() & COFF::IMAGE_SCN_MEM_WRITE)
@@ -55,10 +59,6 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI,
     OS << 'r';
   else
     OS << 'y';
-  if (getCharacteristics() & COFF::IMAGE_SCN_CNT_INITIALIZED_DATA)
-    OS << 'd';
-  if (getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
-    OS << 'b';
   if (getCharacteristics() & COFF::IMAGE_SCN_LNK_REMOVE)
     OS << 'n';
   if (getCharacteristics() & COFF::IMAGE_SCN_MEM_SHARED)

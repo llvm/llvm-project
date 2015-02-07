@@ -3,5 +3,5 @@
 // CHECK: .section .klaatu,"wn"
 .section .barada,"y"
 // CHECK: .section .barada,"y"
-.section .nikto,"wds"
-// CHECK: .section .nikto,"wds"
+.section .nikto,"dws"
+// CHECK: .section .nikto,"dws"

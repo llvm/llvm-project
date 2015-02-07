@@ -53,7 +53,7 @@
 ; X86-NEXT: L{{.*}}:
 ; X86-NEXT: [[END_OF_F:.*]]:
 ;
-; X86-LABEL: .section        .debug$S,"rd"
+; X86-LABEL: .section        .debug$S,"dr"
 ; X86-NEXT: .long   4
 ; Symbol subsection for x
 ; X86-NEXT: .long   241
@@ -317,7 +317,7 @@
 ; X64-NEXT: .L{{.*}}:
 ; X64-NEXT: [[END_OF_F:.*]]:
 ;
-; X64-LABEL: .section        .debug$S,"rd"
+; X64-LABEL: .section        .debug$S,"dr"
 ; X64-NEXT: .long   4
 ; Symbol subsection for x
 ; X64-NEXT: .long   241

@@ -28,20 +28,20 @@ define weak void @f() section ".sect" {
 }
 
 ; Weak global
-; X86: .section .data,"rd",discard,_a
+; X86: .section .data,"dr",discard,_a
 ; X86: .globl _a
 ; X86: .zero 12
 ;
-; X64: .section .data,"rd",discard,a
+; X64: .section .data,"dr",discard,a
 ; X64: .globl a
 ; X64: .zero 12
 @a = weak unnamed_addr constant { i32, i32, i32 } { i32 0, i32 0, i32 0}, section ".data"
 
-; X86:  .section        .tls$,"wd",discard,_b
+; X86:  .section        .tls$,"dw",discard,_b
 ; X86:  .globl  _b
 ; X86:  .long   0
 ;
-; X64:  .section        .tls$,"wd",discard,b
+; X64:  .section        .tls$,"dw",discard,b
 ; X64:  .globl  b
 ; X64:  .long   0
 

@@ -10,6 +10,6 @@ entry:
   ret void
 }
 
-; CHECK: .section .rdata,"rd"
+; CHECK: .section .rdata,"dr"
 ; CHECK-NOT: .section ".rodata.str1.1"
 

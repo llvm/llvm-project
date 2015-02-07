@@ -22,7 +22,7 @@
 ; X86-NEXT: [[END_OF_BAR:^L.*]]:{{$}}
 ; X86-NOT:  ret
 
-; X86-LABEL: .section        .debug$S,"rd"
+; X86-LABEL: .section        .debug$S,"dr"
 ; X86:       .secrel32 "?bar@@YAXHZZ"
 ; X86-NEXT:  .secidx   "?bar@@YAXHZZ"
 ; X86:       .long   0

@@ -6,7 +6,7 @@ define double @double() {
   ret double 0x0000000000800000
 }
 ; CHECK:              .globl  __real@0000000000800000
-; CHECK-NEXT:         .section        .rdata,"rd",discard,__real@0000000000800000
+; CHECK-NEXT:         .section        .rdata,"dr",discard,__real@0000000000800000
 ; CHECK-NEXT:         .align  8
 ; CHECK-NEXT: __real@0000000000800000:
 ; CHECK-NEXT:         .quad   8388608
@@ -18,7 +18,7 @@ define <4 x i32> @vec1() {
   ret <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 }
 ; CHECK:              .globl  __xmm@00000000000000010000000200000003
-; CHECK-NEXT:         .section        .rdata,"rd",discard,__xmm@00000000000000010000000200000003
+; CHECK-NEXT:         .section        .rdata,"dr",discard,__xmm@00000000000000010000000200000003
 ; CHECK-NEXT:         .align  16
 ; CHECK-NEXT: __xmm@00000000000000010000000200000003:
 ; CHECK-NEXT:         .long   3
@@ -33,7 +33,7 @@ define <8 x i16> @vec2() {
   ret <8 x i16> <i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
 }
 ; CHECK:             .globl  __xmm@00000001000200030004000500060007
-; CHECK-NEXT:        .section        .rdata,"rd",discard,__xmm@00000001000200030004000500060007
+; CHECK-NEXT:        .section        .rdata,"dr",discard,__xmm@00000001000200030004000500060007
 ; CHECK-NEXT:        .align  16
 ; CHECK-NEXT: __xmm@00000001000200030004000500060007:
 ; CHECK-NEXT:        .short  7
@@ -53,7 +53,7 @@ define <4 x float> @undef1() {
   ret <4 x float> <float 1.0, float 1.0, float undef, float undef>
 
 ; CHECK:             .globl  __xmm@00000000000000003f8000003f800000
-; CHECK-NEXT:        .section        .rdata,"rd",discard,__xmm@00000000000000003f8000003f800000
+; CHECK-NEXT:        .section        .rdata,"dr",discard,__xmm@00000000000000003f8000003f800000
 ; CHECK-NEXT:        .align  16
 ; CHECK-NEXT: __xmm@00000000000000003f8000003f800000:
 ; CHECK-NEXT:        .long   1065353216              # float 1

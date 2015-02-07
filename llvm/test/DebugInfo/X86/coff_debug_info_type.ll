@@ -6,7 +6,7 @@
 ; CHECK:    .section  .apple_types
 
 ; RUN: llc -mtriple=i686-pc-win32 -filetype=asm -O0 < %s | FileCheck -check-prefix=WIN32 %s
-; WIN32:    .section .debug$S,"rd"
+; WIN32:    .section .debug$S,"dr"
 
 ; RUN: llc -mtriple=i686-pc-win32 -filetype=null -O0 < %s
 
