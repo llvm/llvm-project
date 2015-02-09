@@ -6287,6 +6287,8 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
                                     AArch64CC::CondCode CC, bool NoNans, EVT VT,
                                     SDLoc dl, SelectionDAG &DAG) {
   EVT SrcVT = LHS.getValueType();
+  assert(VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+         "function only supposed to emit natural comparisons");
 
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(RHS.getNode());
   APInt CnstBits(VT.getSizeInBits(), 0);
@@ -6381,13 +6383,15 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+  EVT CmpVT = LHS.getValueType().changeVectorElementTypeToInteger();
   SDLoc dl(Op);
 
   if (LHS.getValueType().getVectorElementType().isInteger()) {
     assert(LHS.getValueType() == RHS.getValueType());
     AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
-    return EmitVectorComparison(LHS, RHS, AArch64CC, false, Op.getValueType(),
-                                dl, DAG);
+    SDValue Cmp =
+        EmitVectorComparison(LHS, RHS, AArch64CC, false, CmpVT, dl, DAG);
+    return DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
   }
 
   assert(LHS.getValueType().getVectorElementType() == MVT::f32 ||
@@ -6401,18 +6405,20 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
 
   bool NoNaNs = getTargetMachine().Options.NoNaNsFPMath;
   SDValue Cmp =
-      EmitVectorComparison(LHS, RHS, CC1, NoNaNs, Op.getValueType(), dl, DAG);
+      EmitVectorComparison(LHS, RHS, CC1, NoNaNs, CmpVT, dl, DAG);
   if (!Cmp.getNode())
     return SDValue();
 
   if (CC2 != AArch64CC::AL) {
     SDValue Cmp2 =
-        EmitVectorComparison(LHS, RHS, CC2, NoNaNs, Op.getValueType(), dl, DAG);
+        EmitVectorComparison(LHS, RHS, CC2, NoNaNs, CmpVT, dl, DAG);
     if (!Cmp2.getNode())
       return SDValue();
 
-    Cmp = DAG.getNode(ISD::OR, dl, Cmp.getValueType(), Cmp, Cmp2);
+    Cmp = DAG.getNode(ISD::OR, dl, CmpVT, Cmp, Cmp2);
   }
+
+  Cmp = DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
 
   if (ShouldInvert)
     return Cmp = DAG.getNOT(dl, Cmp, Cmp.getValueType());

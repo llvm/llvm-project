@@ -4487,6 +4487,7 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
   SDValue Op0 = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1);
   SDValue CC = Op.getOperand(2);
+  EVT CmpVT = Op0.getValueType().changeVectorElementTypeToInteger();
   EVT VT = Op.getValueType();
   ISD::CondCode SetCCOpcode = cast<CondCodeSDNode>(CC)->get();
   SDLoc dl(Op);
@@ -4516,8 +4517,8 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
       TmpOp0 = Op0;
       TmpOp1 = Op1;
       Opc = ISD::OR;
-      Op0 = DAG.getNode(ARMISD::VCGT, dl, VT, TmpOp1, TmpOp0);
-      Op1 = DAG.getNode(ARMISD::VCGT, dl, VT, TmpOp0, TmpOp1);
+      Op0 = DAG.getNode(ARMISD::VCGT, dl, CmpVT, TmpOp1, TmpOp0);
+      Op1 = DAG.getNode(ARMISD::VCGT, dl, CmpVT, TmpOp0, TmpOp1);
       break;
     case ISD::SETUO: Invert = true; // Fallthrough
     case ISD::SETO:
@@ -4525,8 +4526,8 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
       TmpOp0 = Op0;
       TmpOp1 = Op1;
       Opc = ISD::OR;
-      Op0 = DAG.getNode(ARMISD::VCGT, dl, VT, TmpOp1, TmpOp0);
-      Op1 = DAG.getNode(ARMISD::VCGE, dl, VT, TmpOp0, TmpOp1);
+      Op0 = DAG.getNode(ARMISD::VCGT, dl, CmpVT, TmpOp1, TmpOp0);
+      Op1 = DAG.getNode(ARMISD::VCGE, dl, CmpVT, TmpOp0, TmpOp1);
       break;
     }
   } else {
@@ -4560,8 +4561,8 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
 
       if (AndOp.getNode() && AndOp.getOpcode() == ISD::AND) {
         Opc = ARMISD::VTST;
-        Op0 = DAG.getNode(ISD::BITCAST, dl, VT, AndOp.getOperand(0));
-        Op1 = DAG.getNode(ISD::BITCAST, dl, VT, AndOp.getOperand(1));
+        Op0 = DAG.getNode(ISD::BITCAST, dl, CmpVT, AndOp.getOperand(0));
+        Op1 = DAG.getNode(ISD::BITCAST, dl, CmpVT, AndOp.getOperand(1));
         Invert = !Invert;
       }
     }
@@ -4587,21 +4588,23 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
   if (SingleOp.getNode()) {
     switch (Opc) {
     case ARMISD::VCEQ:
-      Result = DAG.getNode(ARMISD::VCEQZ, dl, VT, SingleOp); break;
+      Result = DAG.getNode(ARMISD::VCEQZ, dl, CmpVT, SingleOp); break;
     case ARMISD::VCGE:
-      Result = DAG.getNode(ARMISD::VCGEZ, dl, VT, SingleOp); break;
+      Result = DAG.getNode(ARMISD::VCGEZ, dl, CmpVT, SingleOp); break;
     case ARMISD::VCLEZ:
-      Result = DAG.getNode(ARMISD::VCLEZ, dl, VT, SingleOp); break;
+      Result = DAG.getNode(ARMISD::VCLEZ, dl, CmpVT, SingleOp); break;
     case ARMISD::VCGT:
-      Result = DAG.getNode(ARMISD::VCGTZ, dl, VT, SingleOp); break;
+      Result = DAG.getNode(ARMISD::VCGTZ, dl, CmpVT, SingleOp); break;
     case ARMISD::VCLTZ:
-      Result = DAG.getNode(ARMISD::VCLTZ, dl, VT, SingleOp); break;
+      Result = DAG.getNode(ARMISD::VCLTZ, dl, CmpVT, SingleOp); break;
     default:
-      Result = DAG.getNode(Opc, dl, VT, Op0, Op1);
+      Result = DAG.getNode(Opc, dl, CmpVT, Op0, Op1);
     }
   } else {
-     Result = DAG.getNode(Opc, dl, VT, Op0, Op1);
+     Result = DAG.getNode(Opc, dl, CmpVT, Op0, Op1);
   }
+
+  Result = DAG.getSExtOrTrunc(Result, dl, VT);
 
   if (Invert)
     Result = DAG.getNOT(dl, Result, VT);
