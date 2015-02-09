@@ -160,6 +160,19 @@ OpenCL C Language Changes in Clang
 
 ...
 
+OpenMP Language Changes in Clang
+--------------------------------
+
+Clang 3.6 contains codegen for many individual pragmas for OpenMP but combinations are not completed as yet. 
+We plan to continue codegen code drop aiming for completion for 3.7. Please see this link for up-to-date 
+`status <https://github.com/clang-omp/clang/wiki/Status-of-supported-OpenMP-constructs>_`
+LLVM’s OpenMP runtime library, originally developed by Intel, has been modified to work on ARM, PowerPC, 
+as well as X86. The Runtime Library's compatibility with GCC 4.9 is improved 
+- missed entry points added, Barrier and fork/join code improved, one more type of barrier enabled.
+Support for ppc64le architecture is now available and automatically detected when using cmake system. 
+Using makefile the new "ppc64le" arch type is available. 
+Contributors to this work include AMD, Argonne National Lab., IBM, Intel, Texas Instruments, University of Houston and many others. 
+
 Internal API Changes
 --------------------
 
