@@ -623,8 +623,8 @@ void Instruction::getAAMetadata(AAMDNodes &N, bool Merge) const {
     N.TBAA = getMetadata(LLVMContext::MD_tbaa);
 
   if (Merge)
-    N.Scope =
-        MDNode::intersect(N.Scope, getMetadata(LLVMContext::MD_alias_scope));
+    N.Scope = MDNode::getMostGenericAliasScope(
+        N.Scope, getMetadata(LLVMContext::MD_alias_scope));
   else
     N.Scope = getMetadata(LLVMContext::MD_alias_scope);
 

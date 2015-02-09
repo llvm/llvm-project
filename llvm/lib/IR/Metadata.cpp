@@ -826,6 +826,28 @@ MDNode *MDNode::intersect(MDNode *A, MDNode *B) {
   return getOrSelfReference(A->getContext(), MDs);
 }
 
+MDNode *MDNode::getMostGenericAliasScope(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  SmallVector<Metadata *, 4> MDs(B->op_begin(), B->op_end());
+  for (unsigned i = 0, ie = A->getNumOperands(); i != ie; ++i) {
+    Metadata *MD = A->getOperand(i);
+    bool insert = true;
+    for (unsigned j = 0, je = B->getNumOperands(); j != je; ++j)
+      if (MD == B->getOperand(j)) {
+        insert = false;
+        break;
+      }
+    if (insert)
+        MDs.push_back(MD);
+  }
+
+  // FIXME: This preserves long-standing behaviour, but is it really the right
+  // behaviour?  Or was that an unintended side-effect of node uniquing?
+  return getOrSelfReference(A->getContext(), MDs);
+}
+
 MDNode *MDNode::getMostGenericFPMath(MDNode *A, MDNode *B) {
   if (!A || !B)
     return nullptr;

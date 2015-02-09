@@ -1328,6 +1328,8 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J, ArrayRef<unsign
         K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
         break;
       case LLVMContext::MD_alias_scope:
+        K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
+        break;
       case LLVMContext::MD_noalias:
         K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
         break;
