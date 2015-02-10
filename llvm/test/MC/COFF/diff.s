@@ -1,5 +1,23 @@
 // RUN: llvm-mc -filetype=obj -triple i686-pc-mingw32 %s | llvm-readobj -s -sr -sd | FileCheck %s
 
+.section baz, "xr"
+	.def	X
+	.scl	2;
+	.type	32;
+	.endef
+	.globl	X
+X:
+	mov	Y-X+42,	%eax
+	retl
+
+	.def	Y
+	.scl	2;
+	.type	32;
+	.endef
+	.globl	Y
+Y:
+	retl
+
 	.def	 _foobar;
 	.scl	2;
 	.type	32;
@@ -29,4 +47,11 @@ _rust_crate:
 // CHECK-NEXT:   ]
 // CHECK:        SectionData (
 // CHECK-NEXT:     0000: 00000000 00000000 1C000000 20000000
+// CHECK-NEXT:   )
+
+// CHECK:        Name: baz
+// CHECK:        Relocations [
+// CHECK-NEXT:   ]
+// CHECK:        SectionData (
+// CHECK-NEXT:     0000: A1300000 00C3C3
 // CHECK-NEXT:   )
