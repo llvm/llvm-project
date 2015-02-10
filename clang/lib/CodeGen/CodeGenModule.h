@@ -324,7 +324,7 @@ private:
   /// referenced. These get code generated when the module is done.
   struct DeferredGlobal {
     DeferredGlobal(llvm::GlobalValue *GV, GlobalDecl GD) : GV(GV), GD(GD) {}
-    llvm::AssertingVH<llvm::GlobalValue> GV;
+    llvm::TrackingVH<llvm::GlobalValue> GV;
     GlobalDecl GD;
   };
   std::vector<DeferredGlobal> DeferredDeclsToEmit;

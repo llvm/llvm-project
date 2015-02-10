@@ -232,3 +232,14 @@ foo::~foo() {}
 // CHECK6: @_ZN6test113fooD2Ev = alias {{.*}} @_ZN6test113barD2Ev
 // CHECK6: @_ZN6test113fooD1Ev = alias {{.*}} @_ZN6test113fooD2Ev
 }
+
+namespace test12 {
+template <int>
+struct foo {
+  ~foo() { delete this; }
+};
+
+template class foo<1>;
+// CHECK6: @_ZN6test123fooILi1EED1Ev = weak_odr alias {{.*}} @_ZN6test123fooILi1EED2Ev
+// CHECK6: define weak_odr void @_ZN6test123fooILi1EED2Ev({{.*}}) {{.*}} comdat($_ZN6test123fooILi1EED5Ev)
+}
