@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <unwind.h>
 
+#if LIBCXXABI_ARM_EHABI
+
 // Unable to unwind in the ARM index table (section 5 EHABI).
 #define UNW_EXIDX_CANTUNWIND 0x1
 
@@ -40,6 +42,8 @@ extern _Unwind_Reason_Code __aeabi_unwind_cpp_pr2(
 
 #if defined(__cplusplus)
 } // extern "C"
+#endif
+
 #endif
 
 #endif  // __UNWIND_EHABI_H__
