@@ -783,10 +783,10 @@ __assoc_state_alloc<_Rp, _Alloc>::__on_zero_shared() _NOEXCEPT
 {
     if (this->__state_ & base::__constructed)
         reinterpret_cast<_Rp*>(_VSTD::addressof(this->__value_))->~_Rp();
-    typedef typename __allocator_traits_rebind<_Alloc, __assoc_state_alloc>::type _A;
-    typedef allocator_traits<_A> _ATraits;
+    typedef typename __allocator_traits_rebind<_Alloc, __assoc_state_alloc>::type _Al;
+    typedef allocator_traits<_Al> _ATraits;
     typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-    _A __a(__alloc_);
+    _Al __a(__alloc_);
     this->~__assoc_state_alloc();
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
@@ -809,10 +809,10 @@ template <class _Rp, class _Alloc>
 void
 __assoc_state_alloc<_Rp&, _Alloc>::__on_zero_shared() _NOEXCEPT
 {
-    typedef typename __allocator_traits_rebind<_Alloc, __assoc_state_alloc>::type _A;
-    typedef allocator_traits<_A> _ATraits;
+    typedef typename __allocator_traits_rebind<_Alloc, __assoc_state_alloc>::type _Al;
+    typedef allocator_traits<_Al> _ATraits;
     typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-    _A __a(__alloc_);
+    _Al __a(__alloc_);
     this->~__assoc_state_alloc();
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
@@ -835,10 +835,10 @@ template <class _Alloc>
 void
 __assoc_sub_state_alloc<_Alloc>::__on_zero_shared() _NOEXCEPT
 {
-    typedef typename __allocator_traits_rebind<_Alloc, __assoc_sub_state_alloc>::type _A;
-    typedef allocator_traits<_A> _ATraits;
+    typedef typename __allocator_traits_rebind<_Alloc, __assoc_sub_state_alloc>::type _Al;
+    typedef allocator_traits<_Al> _ATraits;
     typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-    _A __a(__alloc_);
+    _Al __a(__alloc_);
     this->~__assoc_sub_state_alloc();
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }

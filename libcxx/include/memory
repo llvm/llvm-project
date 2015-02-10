@@ -2890,8 +2890,8 @@ operator< (const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y)
 {
     typedef typename unique_ptr<_T1, _D1>::pointer _P1;
     typedef typename unique_ptr<_T2, _D2>::pointer _P2;
-    typedef typename common_type<_P1, _P2>::type _V;
-    return less<_V>()(__x.get(), __y.get());
+    typedef typename common_type<_P1, _P2>::type _Vp;
+    return less<_Vp>()(__x.get(), __y.get());
 }
 
 template <class _T1, class _D1, class _T2, class _D2>
@@ -3677,11 +3677,11 @@ template <class _Tp, class _Dp, class _Alloc>
 void
 __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
 {
-    typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_pointer>::type _A;
-    typedef allocator_traits<_A> _ATraits;
+    typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_pointer>::type _Al;
+    typedef allocator_traits<_Al> _ATraits;
     typedef pointer_traits<typename _ATraits::pointer> _PTraits;
 
-    _A __a(__data_.second());
+    _Al __a(__data_.second());
     __data_.second().~_Alloc();
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
@@ -3746,10 +3746,10 @@ template <class _Tp, class _Alloc>
 void
 __shared_ptr_emplace<_Tp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
 {
-    typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type _A;
-    typedef allocator_traits<_A> _ATraits;
+    typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type _Al;
+    typedef allocator_traits<_Al> _ATraits;
     typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-    _A __a(__data_.first());
+    _Al __a(__data_.first());
     __data_.first().~_Alloc();
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
@@ -4745,8 +4745,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator<(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT
 {
-    typedef typename common_type<_Tp*, _Up*>::type _V;
-    return less<_V>()(__x.get(), __y.get());
+    typedef typename common_type<_Tp*, _Up*>::type _Vp;
+    return less<_Vp>()(__x.get(), __y.get());
 }
 
 template<class _Tp, class _Up>

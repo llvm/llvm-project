@@ -268,7 +268,9 @@ class Configuration(object):
         self.config.available_features.add(std)
         # Configure include paths
         self.compile_flags += ['-nostdinc++']
-        self.compile_flags += ['-I' + self.src_root + '/test/support']
+        support_path = os.path.join(self.src_root, 'test/support')
+        self.cxx.compile_flags += ['-I' + support_path]
+        self.cxx.compile_flags += ['-include', os.path.join(support_path, 'nasty_macros.hpp')]
         libcxx_headers = self.get_lit_conf('libcxx_headers',
                                            self.src_root + '/include')
         if not os.path.isdir(libcxx_headers):
