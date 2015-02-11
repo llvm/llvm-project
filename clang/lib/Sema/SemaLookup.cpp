@@ -2500,8 +2500,18 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
   // will always be a (possibly implicit) declaration to shadow any others.
   OverloadCandidateSet OCS(RD->getLocation(), OverloadCandidateSet::CSK_Normal);
   DeclContext::lookup_result R = RD->lookup(Name);
-  assert(!R.empty() &&
-         "lookup for a constructor or assignment operator was empty");
+
+  if (R.empty()) {
+    // We might have no default constructor because we have a lambda's closure
+    // type, rather than because there's some other declared constructor.
+    // Every class has a copy/move constructor, copy/move assignment, and
+    // destructor.
+    assert(SM == CXXDefaultConstructor &&
+           "lookup for a constructor or assignment operator was empty");
+    Result->setMethod(nullptr);
+    Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+    return Result;
+  }
 
   // Copy the candidates as our processing of them may load new declarations
   // from an external source and invalidate lookup_result.

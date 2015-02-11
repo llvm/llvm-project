@@ -437,3 +437,12 @@ namespace error_in_transform_prototype {
     f(S()); // expected-note {{requested here}}
   }
 }
+
+namespace PR21857 {
+  template<typename Fn> struct fun : Fn {
+    fun() = default;
+    using Fn::operator();
+  };
+  template<typename Fn> fun<Fn> wrap(Fn fn);
+  auto x = wrap([](){});
+}
