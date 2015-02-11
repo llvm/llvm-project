@@ -1061,7 +1061,7 @@ Host::LaunchApplication (const FileSpec &app_file_spec)
 
 #endif
 
-#if !defined (__linux__) && !defined (__FreeBSD__) && !defined (__NetBSD__)
+#if !defined (__linux__) && !defined (__FreeBSD__) && !defined(__FreeBSD_kernel__) && !defined (__NetBSD__)
 
 const lldb_private::UnixSignalsSP&
 Host::GetUnixSignals ()

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#if defined(__FreeBSD__) || defined(__linux__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__linux__)
 
 // In-house headers:
 #include "MIUtilString.h"

@@ -14,7 +14,9 @@
 // C includes
 #include <errno.h>
 #include <pthread.h>
+#if defined (__FreeBSD__)
 #include <pthread_np.h>
+#endif
 #include <stdlib.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
