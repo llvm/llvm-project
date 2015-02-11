@@ -192,4 +192,13 @@ define void @test11(i32 *%P) {
   ; CHECK-NEXT: ret void
 }
 
-
+; CHECK-LABEL: @test12(
+define i32 @test12(i1 %B, i32* %P1, i32* %P2) {
+  %load0 = load i32* %P1
+  %1 = load atomic i32* %P2 seq_cst, align 4
+  %load1 = load i32* %P1
+  %sel = select i1 %B, i32 %load0, i32 %load1
+  ret i32 %sel
+  ; CHECK: load i32* %P1
+  ; CHECK: load i32* %P1
+}
