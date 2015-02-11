@@ -802,6 +802,10 @@ def warn_cxx98_compat_lambda : Warning<
 def err_lambda_missing_parens : Error<
   "lambda requires '()' before %select{'mutable'|return type|"
   "attribute specifier}0">;
+def warn_init_capture_direct_list_init : Warning<
+  "direct list initialization of a lambda init-capture will change meaning in "
+  "a future version of Clang; insert an '=' to avoid a change in behavior">,
+  InGroup<FutureCompat>;
 
 // Availability attribute
 def err_expected_version : Error<

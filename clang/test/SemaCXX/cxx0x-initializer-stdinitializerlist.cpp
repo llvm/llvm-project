@@ -117,6 +117,7 @@ void argument_deduction() {
 
 void auto_deduction() {
   auto l = {1, 2, 3, 4};
+  auto l2 {1, 2, 3, 4}; // expected-warning {{will change meaning in a future version of Clang}}
   static_assert(same_type<decltype(l), std::initializer_list<int>>::value, "");
   auto bl = {1, 2.0}; // expected-error {{cannot deduce}}
 

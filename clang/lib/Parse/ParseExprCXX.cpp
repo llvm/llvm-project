@@ -894,11 +894,16 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         // to save the necessary state, and restore it later.
         EnterExpressionEvaluationContext EC(Actions,
                                             Sema::PotentiallyEvaluated);
-        TryConsumeToken(tok::equal);
+        bool HadEquals = TryConsumeToken(tok::equal);
 
-        if (!SkippedInits)
+        if (!SkippedInits) {
+          // Warn on constructs that will change meaning when we implement N3922
+          if (!HadEquals && Tok.is(tok::l_brace)) {
+            Diag(Tok, diag::warn_init_capture_direct_list_init)
+              << FixItHint::CreateInsertion(Tok.getLocation(), "=");
+          }
           Init = ParseInitializer();
-        else if (Tok.is(tok::l_brace)) {
+        } else if (Tok.is(tok::l_brace)) {
           BalancedDelimiterTracker Braces(*this, tok::l_brace);
           Braces.consumeOpen();
           Braces.skipToEnd();

@@ -749,3 +749,6 @@ def SerializedDiagnostics : DiagGroup<"serialized-diagnostics">;
 // A warning group for warnings about code that clang accepts when
 // compiling CUDA C/C++ but which is not compatible with the CUDA spec.
 def CudaCompat : DiagGroup<"cuda-compat">;
+
+// A warning group for things that will change semantics in the future.
+def FutureCompat : DiagGroup<"future-compat">;

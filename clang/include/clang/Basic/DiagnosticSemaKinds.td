@@ -1635,6 +1635,10 @@ def err_auto_var_init_multiple_expressions : Error<
 def err_auto_var_init_paren_braces : Error<
   "cannot deduce type for variable %0 with type %1 from "
   "parenthesized initializer list">;
+def warn_auto_var_direct_list_init : Warning<
+  "direct list initialization of a variable with a deduced type will change "
+  "meaning in a future version of Clang; insert an '=' to avoid a change in "
+  "behavior">, InGroup<FutureCompat>;
 def err_auto_new_ctor_multiple_expressions : Error<
   "new expression for type %0 contains multiple constructor arguments">;
 def err_auto_missing_trailing_return : Error<
