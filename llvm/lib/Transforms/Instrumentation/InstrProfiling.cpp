@@ -71,8 +71,16 @@ private:
     return isMachO() ? "__DATA,__llvm_prf_data" : "__llvm_prf_data";
   }
 
+  /// Get the section name for the coverage mapping data.
+  StringRef getCoverageSection() const {
+    return isMachO() ? "__DATA,__llvm_covmap" : "__llvm_covmap";
+  }
+
   /// Replace instrprof_increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
+
+  /// Set up the section and uses for coverage data and its references.
+  void lowerCoverageData(GlobalVariable *CoverageData);
 
   /// Get the region counters for an increment, creating them if necessary.
   ///
@@ -118,6 +126,10 @@ bool InstrProfiling::runOnModule(Module &M) {
           lowerIncrement(Inc);
           MadeChange = true;
         }
+  if (GlobalVariable *Coverage = M.getNamedGlobal("__llvm_coverage_mapping")) {
+    lowerCoverageData(Coverage);
+    MadeChange = true;
+  }
   if (!MadeChange)
     return false;
 
@@ -138,6 +150,35 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   Count = Builder.CreateAdd(Count, Builder.getInt64(1));
   Inc->replaceAllUsesWith(Builder.CreateStore(Count, Addr));
   Inc->eraseFromParent();
+}
+
+void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageData) {
+  CoverageData->setSection(getCoverageSection());
+  CoverageData->setAlignment(8);
+
+  Constant *Init = CoverageData->getInitializer();
+  // We're expecting { i32, i32, i32, i32, [n x { i8*, i32, i32 }], [m x i8] }
+  // for some C. If not, the frontend's given us something broken.
+  assert(Init->getNumOperands() == 6 && "bad number of fields in coverage map");
+  assert(isa<ConstantArray>(Init->getAggregateElement(4)) &&
+         "invalid function list in coverage map");
+  ConstantArray *Records = cast<ConstantArray>(Init->getAggregateElement(4));
+  for (unsigned I = 0, E = Records->getNumOperands(); I < E; ++I) {
+    Constant *Record = Records->getOperand(I);
+    Value *V = const_cast<Value *>(Record->getOperand(0))->stripPointerCasts();
+
+    assert(isa<GlobalVariable>(V) && "Missing reference to function name");
+    GlobalVariable *Name = cast<GlobalVariable>(V);
+
+    // If we have region counters for this name, we've already handled it.
+    auto It = RegionCounters.find(Name);
+    if (It != RegionCounters.end())
+      continue;
+
+    // Move the name variable to the right section.
+    Name->setSection(getNameSection());
+    Name->setAlignment(1);
+  }
 }
 
 /// Get the name of a profiling variable for a particular function.
