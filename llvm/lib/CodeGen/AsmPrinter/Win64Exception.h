@@ -29,10 +29,6 @@ class Win64Exception : public EHStreamer {
   /// Per-function flag to indicate if frame moves info should be emitted.
   bool shouldEmitMoves;
 
-  void emitCSpecificHandlerTable();
-
-  const MCSymbolRefExpr *createImageRel32(const MCSymbol *Value);
-
 public:
   //===--------------------------------------------------------------------===//
   // Main entry points.

@@ -452,14 +452,6 @@ void MachineModuleInfo::addCleanup(MachineBasicBlock *LandingPad) {
   LP.TypeIds.push_back(0);
 }
 
-MCSymbol *
-MachineModuleInfo::addClauseForLandingPad(MachineBasicBlock *LandingPad) {
-  MCSymbol *ClauseLabel = Context.CreateTempSymbol();
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  LP.ClauseLabels.push_back(ClauseLabel);
-  return ClauseLabel;
-}
-
 /// TidyLandingPads - Remap landing pad labels and remove any deleted landing
 /// pads.
 void MachineModuleInfo::TidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap) {

@@ -19,7 +19,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -41,7 +40,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -909,8 +907,6 @@ void SelectionDAGISel::DoInstructionSelection() {
 void SelectionDAGISel::PrepareEHLandingPad() {
   MachineBasicBlock *MBB = FuncInfo->MBB;
 
-  const TargetRegisterClass *PtrRC = TLI->getRegClassFor(TLI->getPointerTy());
-
   // Add a label to mark the beginning of the landing pad.  Deletion of the
   // landing pad can thus be detected via the MachineModuleInfo.
   MCSymbol *Label = MF->getMMI().addLandingPad(MBB);
@@ -922,66 +918,8 @@ void SelectionDAGISel::PrepareEHLandingPad() {
   BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(), II)
     .addSym(Label);
 
-  if (TM.getMCAsmInfo()->getExceptionHandlingType() ==
-      ExceptionHandling::MSVC) {
-    // Make virtual registers and a series of labels that fill in values for the
-    // clauses.
-    auto &RI = MF->getRegInfo();
-    FuncInfo->ExceptionSelectorVirtReg = RI.createVirtualRegister(PtrRC);
-
-    // Get all invoke BBs that will unwind into the clause BBs.
-    SmallVector<MachineBasicBlock *, 4> InvokeBBs(MBB->pred_begin(),
-                                                  MBB->pred_end());
-
-    // Emit separate machine basic blocks with separate labels for each clause
-    // before the main landing pad block.
-    const BasicBlock *LLVMBB = MBB->getBasicBlock();
-    const LandingPadInst *LPadInst = LLVMBB->getLandingPadInst();
-    MachineInstrBuilder SelectorPHI = BuildMI(
-        *MBB, MBB->begin(), SDB->getCurDebugLoc(), TII->get(TargetOpcode::PHI),
-        FuncInfo->ExceptionSelectorVirtReg);
-    for (unsigned I = 0, E = LPadInst->getNumClauses(); I != E; ++I) {
-      MachineBasicBlock *ClauseBB = MF->CreateMachineBasicBlock(LLVMBB);
-      MF->insert(MBB, ClauseBB);
-
-      // Add the edge from the invoke to the clause.
-      for (MachineBasicBlock *InvokeBB : InvokeBBs)
-        InvokeBB->addSuccessor(ClauseBB);
-
-      // Mark the clause as a landing pad or MI passes will delete it.
-      ClauseBB->setIsLandingPad();
-
-      GlobalValue *ClauseGV = ExtractTypeInfo(LPadInst->getClause(I));
-
-      // Start the BB with a label.
-      MCSymbol *ClauseLabel = MF->getMMI().addClauseForLandingPad(MBB);
-      BuildMI(*ClauseBB, ClauseBB->begin(), SDB->getCurDebugLoc(), II)
-          .addSym(ClauseLabel);
-
-      // Construct a simple BB that defines a register with the typeid constant.
-      FuncInfo->MBB = ClauseBB;
-      FuncInfo->InsertPt = ClauseBB->end();
-      unsigned VReg = SDB->visitLandingPadClauseBB(ClauseGV, MBB);
-      CurDAG->setRoot(SDB->getRoot());
-      SDB->clear();
-      CodeGenAndEmitDAG();
-
-      // Add the typeid virtual register to the phi in the main landing pad.
-      SelectorPHI.addReg(VReg).addMBB(ClauseBB);
-    }
-
-    // Remove the edge from the invoke to the lpad.
-    for (MachineBasicBlock *InvokeBB : InvokeBBs)
-      InvokeBB->removeSuccessor(MBB);
-
-    // Restore FuncInfo back to its previous state and select the main landing
-    // pad block.
-    FuncInfo->MBB = MBB;
-    FuncInfo->InsertPt = MBB->end();
-    return;
-  }
-
   // Mark exception register as live in.
+  const TargetRegisterClass *PtrRC = TLI->getRegClassFor(TLI->getPointerTy());
   if (unsigned Reg = TLI->getExceptionPointerRegister())
     FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
 

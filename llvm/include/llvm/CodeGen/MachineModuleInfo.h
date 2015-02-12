@@ -66,7 +66,6 @@ struct LandingPadInfo {
   MachineBasicBlock *LandingPadBlock;    // Landing pad block.
   SmallVector<MCSymbol*, 1> BeginLabels; // Labels prior to invoke.
   SmallVector<MCSymbol*, 1> EndLabels;   // Labels after invoke.
-  SmallVector<MCSymbol*, 1> ClauseLabels; // Labels for each clause.
   MCSymbol *LandingPadLabel;             // Label at beginning of landing pad.
   const Function *Personality;           // Personality function.
   std::vector<int> TypeIds;              // List of type ids (filters negative)
@@ -330,11 +329,6 @@ public:
   /// addCleanup - Add a cleanup action for a landing pad.
   ///
   void addCleanup(MachineBasicBlock *LandingPad);
-
-  /// Add a clause for a landing pad. Returns a new label for the clause. This
-  /// is used by EH schemes that have more than one landing pad. In this case,
-  /// each clause gets its own basic block.
-  MCSymbol *addClauseForLandingPad(MachineBasicBlock *LandingPad);
 
   /// getTypeIDFor - Return the type id for the specified typeinfo.  This is
   /// function wide.
