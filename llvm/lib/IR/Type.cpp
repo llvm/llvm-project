@@ -708,9 +708,10 @@ VectorType::VectorType(Type *ElType, unsigned NumEl)
 VectorType *VectorType::get(Type *elementType, unsigned NumElements) {
   Type *ElementType = const_cast<Type*>(elementType);
   assert(NumElements > 0 && "#Elements of a VectorType must be greater than 0");
-  assert(isValidElementType(ElementType) &&
-         "Elements of a VectorType must be a primitive type");
-  
+  assert(isValidElementType(ElementType) && "Element type of a VectorType must "
+                                            "be an integer, floating point, or "
+                                            "pointer type.");
+
   LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
   VectorType *&Entry = ElementType->getContext().pImpl
     ->VectorTypes[std::make_pair(ElementType, NumElements)];
