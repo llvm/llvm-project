@@ -525,15 +525,15 @@ bool DISubprogram::Verify() const {
         while ((IA = DL.getInlinedAt()))
           DL = DebugLoc::getFromDILocation(IA);
         DL.getScopeAndInlinedAt(Scope, IA);
-        assert(Scope && "debug location has no scope");
+        if (!Scope)
+          return false;
         assert(!IA);
         while (!DIDescriptor(Scope).isSubprogram()) {
           DILexicalBlockFile D(Scope);
           Scope = D.isLexicalBlockFile()
                       ? D.getScope()
                       : DebugLoc::getFromDILexicalBlock(Scope).getScope();
-          if (!Scope)
-            llvm_unreachable("lexical block file has no scope");
+          assert(Scope && "lexical block file has no scope");
         }
         if (!DISubprogram(Scope).describes(F))
           return false;
