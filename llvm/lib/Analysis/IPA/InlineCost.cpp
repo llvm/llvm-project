@@ -52,7 +52,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   const TargetTransformInfo &TTI;
 
   /// The cache of @llvm.assume intrinsics.
-  AssumptionCache &AC;
+  AssumptionCacheTracker *ACT;
 
   // The called function.
   Function &F;
@@ -146,8 +146,8 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
 public:
   CallAnalyzer(const DataLayout *DL, const TargetTransformInfo &TTI,
-               AssumptionCache &AC, Function &Callee, int Threshold)
-      : DL(DL), TTI(TTI), AC(AC), F(Callee), Threshold(Threshold), Cost(0),
+               AssumptionCacheTracker *ACT, Function &Callee, int Threshold)
+      : DL(DL), TTI(TTI), ACT(ACT), F(Callee), Threshold(Threshold), Cost(0),
         IsCallerRecursive(false), IsRecursiveCall(false),
         ExposesReturnsTwice(false), HasDynamicAlloca(false),
         ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
@@ -783,7 +783,7 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
   // during devirtualization and so we want to give it a hefty bonus for
   // inlining, but cap that bonus in the event that inlining wouldn't pan
   // out. Pretend to inline the function, with a custom threshold.
-  CallAnalyzer CA(DL, TTI, AC, *F, InlineConstants::IndirectCallThreshold);
+  CallAnalyzer CA(DL, TTI, ACT, *F, InlineConstants::IndirectCallThreshold);
   if (CA.analyzeCall(CS)) {
     // We were able to inline the indirect call! Subtract the cost from the
     // bonus we want to apply, but don't go below zero.
@@ -1110,7 +1110,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   // the ephemeral values multiple times (and they're completely determined by
   // the callee, so this is purely duplicate work).
   SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(&F, &AC, EphValues);
+  CodeMetrics::collectEphemeralValues(&F, &ACT->getAssumptionCache(F), EphValues);
 
   // The worklist of live basic blocks in the callee *after* inlining. We avoid
   // adding basic blocks of the callee which can be proven to be dead for this
@@ -1310,7 +1310,7 @@ InlineCost InlineCostAnalysis::getInlineCost(CallSite CS, Function *Callee,
         << "...\n");
 
   CallAnalyzer CA(Callee->getDataLayout(), *TTI,
-                  ACT->getAssumptionCache(*Callee), *Callee, Threshold);
+                  ACT, *Callee, Threshold);
   bool ShouldInline = CA.analyzeCall(CS);
 
   DEBUG(CA.dump());
