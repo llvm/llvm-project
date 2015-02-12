@@ -5473,6 +5473,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
 
     if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
       DecodePSHUFBMask(C, Mask);
+      if (Mask.empty())
+        return false;
       break;
     }
 
