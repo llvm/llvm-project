@@ -287,16 +287,13 @@ Value *IslExprBuilder::createOpICmp(__isl_take isl_ast_expr *Expr) {
   LHS = create(isl_ast_expr_get_op_arg(Expr, 0));
   RHS = create(isl_ast_expr_get_op_arg(Expr, 1));
 
-  bool IsPtrType =
-      LHS->getType()->isPointerTy() || RHS->getType()->isPointerTy();
+  bool IsPtrType = LHS->getType()->isPointerTy();
+  assert((!IsPtrType || RHS->getType()->isPointerTy()) &&
+         "Both ICmp operators should be pointer types or none of them");
 
   if (LHS->getType() != RHS->getType()) {
     if (IsPtrType) {
       Type *I8PtrTy = Builder.getInt8PtrTy();
-      if (!LHS->getType()->isPointerTy())
-        LHS = Builder.CreateIntToPtr(LHS, I8PtrTy);
-      if (!RHS->getType()->isPointerTy())
-        RHS = Builder.CreateIntToPtr(RHS, I8PtrTy);
       if (LHS->getType() != I8PtrTy)
         LHS = Builder.CreateBitCast(LHS, I8PtrTy);
       if (RHS->getType() != I8PtrTy)

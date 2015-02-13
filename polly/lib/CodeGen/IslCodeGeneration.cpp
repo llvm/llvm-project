@@ -872,7 +872,8 @@ void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
 
 Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
   Instruction *InsertLocation = --(Builder.GetInsertBlock()->end());
-  return Rewriter->expandCodeFor(Expr, Expr->getType(), InsertLocation);
+  return Rewriter->expandCodeFor(Expr, cast<IntegerType>(Expr->getType()),
+                                 InsertLocation);
 }
 
 namespace {

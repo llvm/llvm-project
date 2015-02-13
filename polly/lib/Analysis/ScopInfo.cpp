@@ -1171,18 +1171,14 @@ void Scop::addParameterBounds() {
     isl_id *Id;
     const SCEV *Scev;
     const IntegerType *T;
-    int Width;
 
     Id = isl_set_get_dim_id(Context, isl_dim_param, i);
     Scev = (const SCEV *)isl_id_get_user(Id);
+    T = dyn_cast<IntegerType>(Scev->getType());
     isl_id_free(Id);
 
-    T = dyn_cast<IntegerType>(Scev->getType());
-
-    if (!T)
-      continue;
-
-    Width = T->getBitWidth();
+    assert(T && "Not an integer type");
+    int Width = T->getBitWidth();
 
     V = isl_val_int_from_si(IslCtx, Width - 1);
     V = isl_val_2exp(V);
