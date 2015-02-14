@@ -544,6 +544,18 @@ new LLVM-based code generators "on the fly" for the designed processors and
 loads them in to the compiler backend as runtime libraries to avoid
 per-target recompilation of larger parts of the compiler chain. 
 
+Likely
+------
+
+`Likely <http://www.liblikely.org>`_ is an embeddable just-in-time Lisp for
+image recognition and heterogenous computing. Algorithms are just-in-time
+compiled using LLVM's MCJIT infrastructure to execute on single or
+multi-threaded CPUs and potentially OpenCL SPIR or CUDA enabled GPUs.
+Likely seeks to explore new optimizations for statistical learning 
+algorithms by moving them from an offline model generation step to the 
+compile-time evaluation of a function (the learning algorithm) with constant
+arguments (the training data).
+
 Additional Information
 ======================
 
