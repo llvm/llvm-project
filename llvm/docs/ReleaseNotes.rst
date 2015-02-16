@@ -556,6 +556,21 @@ algorithms by moving them from an offline model generation step to the
 compile-time evaluation of a function (the learning algorithm) with constant
 arguments (the training data).
 
+LDC - the LLVM-based D compiler
+-------------------------------
+
+`D <http://dlang.org>`_ is a language with C-like syntax and static typing. It
+pragmatically combines efficiency, control, and modeling power, with safety and
+programmer productivity. D supports powerful concepts like Compile-Time Function
+Execution (CTFE) and Template Meta-Programming, provides an innovative approach
+to concurrency and offers many classical paradigms.
+
+`LDC <http://wiki.dlang.org/LDC>`_ uses the frontend from the reference compiler
+combined with LLVM as backend to produce efficient native code. LDC targets
+x86/x86_64 systems like Linux, OS X, FreeBSD and Windows and also Linux on
+PowerPC (32/64 bit). Ports to other architectures like ARM, AArch64 and MIPS64
+are underway.
+
 Additional Information
 ======================
 
