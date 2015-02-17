@@ -4842,7 +4842,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 
   MaskedStoreSDNode *MST = dyn_cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
-  SDValue Data  = MST->getData();
+  SDValue Data  = MST->getValue();
   SDLoc DL(N);
 
   // If the MSTORE data type requires splitting and the mask is provided by a
@@ -4885,7 +4885,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
                            MachineMemOperand::MOStore,  LoMemVT.getStoreSize(),
                            Alignment, MST->getAAInfo(), MST->getRanges());
 
-    Lo = DAG.getMaskedStore(Chain, DL, DataLo, Ptr, MaskLo, MMO);
+    Lo = DAG.getMaskedStore(Chain, DL, DataLo, Ptr, MaskLo, LoMemVT, MMO,
+                            MST->isTruncatingStore());
 
     unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
     Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
@@ -4897,7 +4898,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
                            SecondHalfAlignment, MST->getAAInfo(),
                            MST->getRanges());
 
-    Hi = DAG.getMaskedStore(Chain, DL, DataHi, Ptr, MaskHi, MMO);
+    Hi = DAG.getMaskedStore(Chain, DL, DataHi, Ptr, MaskHi, HiMemVT, MMO,
+                            MST->isTruncatingStore());
 
     AddToWorklist(Lo.getNode());
     AddToWorklist(Hi.getNode());
@@ -4958,7 +4960,8 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
                          MachineMemOperand::MOLoad,  LoMemVT.getStoreSize(),
                          Alignment, MLD->getAAInfo(), MLD->getRanges());
 
-    Lo = DAG.getMaskedLoad(LoVT, DL, Chain, Ptr, MaskLo, Src0Lo, MMO);
+    Lo = DAG.getMaskedLoad(LoVT, DL, Chain, Ptr, MaskLo, Src0Lo, LoMemVT, MMO,
+                           ISD::NON_EXTLOAD);
 
     unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
     Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
@@ -4969,7 +4972,8 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
                          MachineMemOperand::MOLoad,  HiMemVT.getStoreSize(),
                          SecondHalfAlignment, MLD->getAAInfo(), MLD->getRanges());
 
-    Hi = DAG.getMaskedLoad(HiVT, DL, Chain, Ptr, MaskHi, Src0Hi, MMO);
+    Hi = DAG.getMaskedLoad(HiVT, DL, Chain, Ptr, MaskHi, Src0Hi, HiMemVT, MMO,
+                           ISD::NON_EXTLOAD);
 
     AddToWorklist(Lo.getNode());
     AddToWorklist(Hi.getNode());
@@ -9482,6 +9486,8 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     unsigned MSB = BitWidth - Imm.countLeadingZeros() - 1;
     unsigned NewBW = NextPowerOf2(MSB - ShAmt);
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
+    // The narrowing should be profitable, the load/store operation should be
+    // legal (or custom) and the store size should be equal to the NewVT width.
     while (NewBW < BitWidth &&
            !(TLI.isOperationLegalOrCustom(Opc, NewVT) &&
              TLI.isNarrowingProfitable(VT, NewVT))) {

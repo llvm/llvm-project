@@ -4924,15 +4924,15 @@ SelectionDAG::getIndexedStore(SDValue OrigStore, SDLoc dl, SDValue Base,
 
 SDValue
 SelectionDAG::getMaskedLoad(EVT VT, SDLoc dl, SDValue Chain,
-                            SDValue Ptr, SDValue Mask, SDValue Src0,
-                            MachineMemOperand *MMO) {
+                            SDValue Ptr, SDValue Mask, SDValue Src0, EVT MemVT,
+                            MachineMemOperand *MMO, ISD::LoadExtType ExtTy) {
 
   SDVTList VTs = getVTList(VT, MVT::Other);
   SDValue Ops[] = { Chain, Ptr, Mask, Src0 };
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MLOAD, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(ISD::NON_EXTLOAD, ISD::UNINDEXED,
+  ID.AddInteger(encodeMemSDNodeFlags(ExtTy, ISD::UNINDEXED,
                                      MMO->isVolatile(),
                                      MMO->isNonTemporal(),
                                      MMO->isInvariant()));
@@ -4944,14 +4944,15 @@ SelectionDAG::getMaskedLoad(EVT VT, SDLoc dl, SDValue Chain,
   }
   SDNode *N = new (NodeAllocator) MaskedLoadSDNode(dl.getIROrder(),
                                              dl.getDebugLoc(), Ops, 4, VTs,
-                                             VT, MMO);
+                                             ExtTy, MemVT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
 }
 
 SDValue SelectionDAG::getMaskedStore(SDValue Chain, SDLoc dl, SDValue Val,
-                               SDValue Ptr, SDValue Mask, MachineMemOperand *MMO) {
+                                     SDValue Ptr, SDValue Mask, EVT MemVT,
+                                     MachineMemOperand *MMO, bool isTrunc) {
   assert(Chain.getValueType() == MVT::Other &&
         "Invalid chain type");
   EVT VT = Val.getValueType();
@@ -4970,7 +4971,7 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, SDLoc dl, SDValue Val,
   }
   SDNode *N = new (NodeAllocator) MaskedStoreSDNode(dl.getIROrder(),
                                                     dl.getDebugLoc(), Ops, 4,
-                                                    VTs, VT, MMO);
+                                                    VTs, isTrunc, MemVT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);

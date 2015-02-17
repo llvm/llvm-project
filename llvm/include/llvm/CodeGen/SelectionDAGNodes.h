@@ -1970,13 +1970,17 @@ public:
 class MaskedLoadSDNode : public MaskedLoadStoreSDNode {
 public:
   friend class SelectionDAG;
-  MaskedLoadSDNode(unsigned Order, DebugLoc dl,
-                   SDValue *Operands, unsigned numOperands, 
-                   SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
+  MaskedLoadSDNode(unsigned Order, DebugLoc dl, SDValue *Operands,
+                   unsigned numOperands, SDVTList VTs, ISD::LoadExtType ETy,
+                   EVT MemVT, MachineMemOperand *MMO)
     : MaskedLoadStoreSDNode(ISD::MLOAD, Order, dl, Operands, numOperands,
-                            VTs, MemVT, MMO) 
-  {}
+                            VTs, MemVT, MMO) {
+    SubclassData |= (unsigned short)ETy;
+  }
 
+  ISD::LoadExtType getExtensionType() const {
+    return ISD::LoadExtType(SubclassData & 3);
+  } 
   const SDValue &getSrc0() const { return getOperand(3); }
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MLOAD;
@@ -1989,14 +1993,19 @@ class MaskedStoreSDNode : public MaskedLoadStoreSDNode {
 
 public:
   friend class SelectionDAG;
-  MaskedStoreSDNode(unsigned Order, DebugLoc dl,
-                   SDValue *Operands, unsigned numOperands, 
-                   SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
+  MaskedStoreSDNode(unsigned Order, DebugLoc dl, SDValue *Operands,
+                    unsigned numOperands, SDVTList VTs, bool isTrunc, EVT MemVT,
+                    MachineMemOperand *MMO)
     : MaskedLoadStoreSDNode(ISD::MSTORE, Order, dl, Operands, numOperands,
-                            VTs, MemVT, MMO) 
-  {}
+                            VTs, MemVT, MMO) {
+      SubclassData |= (unsigned short)isTrunc;
+  }
+  /// isTruncatingStore - Return true if the op does a truncation before store.
+  /// For integers this is the same as doing a TRUNCATE and storing the result.
+  /// For floats, it is the same as doing an FP_ROUND and storing the result.
+  bool isTruncatingStore() const { return SubclassData & 1; }
 
-  const SDValue &getData() const { return getOperand(3); }
+  const SDValue &getValue() const { return getOperand(3); }
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MSTORE;

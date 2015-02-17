@@ -3667,7 +3667,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I) {
     getMachineMemOperand(MachinePointerInfo(PtrOperand),
                           MachineMemOperand::MOStore,  VT.getStoreSize(),
                           Alignment, AAInfo);
-  SDValue StoreNode = DAG.getMaskedStore(getRoot(), sdl, Src0, Ptr, Mask, MMO);
+  SDValue StoreNode = DAG.getMaskedStore(getRoot(), sdl, Src0, Ptr, Mask, VT,
+                                         MMO, false);
   DAG.setRoot(StoreNode);
   setValue(&I, StoreNode);
 }
@@ -3706,7 +3707,8 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I) {
                           MachineMemOperand::MOLoad,  VT.getStoreSize(),
                           Alignment, AAInfo, Ranges);
 
-  SDValue Load = DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Mask, Src0, MMO);
+  SDValue Load = DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Mask, Src0, VT, MMO,
+                                   ISD::NON_EXTLOAD);
   SDValue OutChain = Load.getValue(1);
   DAG.setRoot(OutChain);
   setValue(&I, Load);

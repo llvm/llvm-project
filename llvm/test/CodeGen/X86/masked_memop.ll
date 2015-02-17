@@ -159,7 +159,7 @@ define void @test14(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 }
 
 ; AVX2-LABEL: test15
-; AVX2: vpmaskmovq
+; AVX2: vpmaskmovd
 define void @test15(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v2i32(<2 x i32>%val, <2 x i32>* %addr, i32 4, <2 x i1>%mask)
@@ -176,8 +176,9 @@ define <2 x float> @test16(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %
 }
 
 ; AVX2-LABEL: test17
-; AVX2: vpmaskmovq
-; AVX2: vblendvpd
+; AVX2: vpmaskmovd
+; AVX2: vblendvps
+; AVX2: vpmovsxdq
 define <2 x i32> @test17(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %dst) {
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   %res = call <2 x i32> @llvm.masked.load.v2i32(<2 x i32>* %addr, i32 4, <2 x i1>%mask, <2 x i32>%dst)

@@ -1679,7 +1679,9 @@ void X86TargetLowering::resetOperationActions() {
   setTargetDAGCombine(ISD::FMA);
   setTargetDAGCombine(ISD::SUB);
   setTargetDAGCombine(ISD::LOAD);
+  setTargetDAGCombine(ISD::MLOAD);
   setTargetDAGCombine(ISD::STORE);
+  setTargetDAGCombine(ISD::MSTORE);
   setTargetDAGCombine(ISD::ZERO_EXTEND);
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND);
@@ -24738,6 +24740,166 @@ static SDValue PerformLOADCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// PerformMLOADCombine - Resolve extending loads
+static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const X86Subtarget *Subtarget) {
+  MaskedLoadSDNode *Mld = cast<MaskedLoadSDNode>(N);
+  if (Mld->getExtensionType() != ISD::SEXTLOAD)
+    return SDValue();
+
+  EVT VT = Mld->getValueType(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned NumElems = VT.getVectorNumElements();
+  EVT LdVT = Mld->getMemoryVT();
+  SDLoc dl(Mld);
+
+  assert(LdVT != VT && "Cannot extend to the same type");
+  unsigned ToSz = VT.getVectorElementType().getSizeInBits();
+  unsigned FromSz = LdVT.getVectorElementType().getSizeInBits();
+  // From, To sizes and ElemCount must be pow of two
+  assert (isPowerOf2_32(NumElems * FromSz * ToSz) &&
+    "Unexpected size for extending masked load");
+
+  unsigned SizeRatio  = ToSz / FromSz;
+  assert(SizeRatio * NumElems * FromSz == VT.getSizeInBits());
+
+  // Create a type on which we perform the shuffle
+  EVT WideVecVT = EVT::getVectorVT(*DAG.getContext(),
+          LdVT.getScalarType(), NumElems*SizeRatio);
+  assert(WideVecVT.getSizeInBits() == VT.getSizeInBits());
+
+  // Convert Src0 value
+  SDValue WideSrc0 = DAG.getNode(ISD::BITCAST, dl, WideVecVT, Mld->getSrc0());
+  if (Mld->getSrc0().getOpcode() != ISD::UNDEF) {
+    SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
+    for (unsigned i = 0; i != NumElems; ++i)
+      ShuffleVec[i] = i * SizeRatio;
+
+    // Can't shuffle using an illegal type.
+    assert (TLI.isTypeLegal(WideVecVT) && "WideVecVT should be legal");
+    WideSrc0 = DAG.getVectorShuffle(WideVecVT, dl, WideSrc0,
+                                    DAG.getUNDEF(WideVecVT), &ShuffleVec[0]);
+  }
+  // Prepare the new mask
+  SDValue NewMask;
+  SDValue Mask = Mld->getMask();
+  if (Mask.getValueType() == VT) {
+    // Mask and original value have the same type
+    NewMask = DAG.getNode(ISD::BITCAST, dl, WideVecVT, Mask);
+    SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
+    for (unsigned i = 0; i != NumElems; ++i)
+      ShuffleVec[i] = i * SizeRatio;
+    for (unsigned i = NumElems; i != NumElems*SizeRatio; ++i)
+      ShuffleVec[i] = NumElems*SizeRatio;
+    NewMask = DAG.getVectorShuffle(WideVecVT, dl, NewMask,
+                                   DAG.getConstant(0, WideVecVT),
+                                   &ShuffleVec[0]);
+  }
+  else {
+    assert(Mask.getValueType().getVectorElementType() == MVT::i1);
+    unsigned WidenNumElts = NumElems*SizeRatio;
+    unsigned MaskNumElts = VT.getVectorNumElements();
+    EVT NewMaskVT = EVT::getVectorVT(*DAG.getContext(),  MVT::i1,
+                                     WidenNumElts);
+
+    unsigned NumConcat = WidenNumElts / MaskNumElts;
+    SmallVector<SDValue, 16> Ops(NumConcat);
+    SDValue ZeroVal = DAG.getConstant(0, Mask.getValueType());
+    Ops[0] = Mask;
+    for (unsigned i = 1; i != NumConcat; ++i)
+      Ops[i] = ZeroVal;
+
+    NewMask = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewMaskVT, Ops);
+  }
+  
+  SDValue WideLd = DAG.getMaskedLoad(WideVecVT, dl, Mld->getChain(),
+                                     Mld->getBasePtr(), NewMask, WideSrc0,
+                                     Mld->getMemoryVT(), Mld->getMemOperand(),
+                                     ISD::NON_EXTLOAD);
+  SDValue NewVec = DAG.getNode(X86ISD::VSEXT, dl, VT, WideLd);
+  return DCI.CombineTo(N, NewVec, WideLd.getValue(1), true);
+
+}
+/// PerformMSTORECombine - Resolve truncating stores
+static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
+                                    const X86Subtarget *Subtarget) {
+  MaskedStoreSDNode *Mst = cast<MaskedStoreSDNode>(N);
+  if (!Mst->isTruncatingStore())
+    return SDValue();
+
+  EVT VT = Mst->getValue().getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned NumElems = VT.getVectorNumElements();
+  EVT StVT = Mst->getMemoryVT();
+  SDLoc dl(Mst);
+
+  assert(StVT != VT && "Cannot truncate to the same type");
+  unsigned FromSz = VT.getVectorElementType().getSizeInBits();
+  unsigned ToSz = StVT.getVectorElementType().getSizeInBits();
+
+  // From, To sizes and ElemCount must be pow of two
+  assert (isPowerOf2_32(NumElems * FromSz * ToSz) &&
+    "Unexpected size for truncating masked store");
+  // We are going to use the original vector elt for storing.
+  // Accumulated smaller vector elements must be a multiple of the store size.
+  assert (((NumElems * FromSz) % ToSz) == 0 && 
+          "Unexpected ratio for truncating masked store");
+
+  unsigned SizeRatio  = FromSz / ToSz;
+  assert(SizeRatio * NumElems * ToSz == VT.getSizeInBits());
+
+  // Create a type on which we perform the shuffle
+  EVT WideVecVT = EVT::getVectorVT(*DAG.getContext(),
+          StVT.getScalarType(), NumElems*SizeRatio);
+
+  assert(WideVecVT.getSizeInBits() == VT.getSizeInBits());
+
+  SDValue WideVec = DAG.getNode(ISD::BITCAST, dl, WideVecVT, Mst->getValue());
+  SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
+  for (unsigned i = 0; i != NumElems; ++i)
+    ShuffleVec[i] = i * SizeRatio;
+
+  // Can't shuffle using an illegal type.
+  assert (TLI.isTypeLegal(WideVecVT) && "WideVecVT should be legal");
+
+  SDValue TruncatedVal = DAG.getVectorShuffle(WideVecVT, dl, WideVec,
+                                        DAG.getUNDEF(WideVecVT),
+                                        &ShuffleVec[0]);
+
+  SDValue NewMask;
+  SDValue Mask = Mst->getMask();
+  if (Mask.getValueType() == VT) {
+    // Mask and original value have the same type
+    NewMask = DAG.getNode(ISD::BITCAST, dl, WideVecVT, Mask);
+    for (unsigned i = 0; i != NumElems; ++i)
+      ShuffleVec[i] = i * SizeRatio;
+    for (unsigned i = NumElems; i != NumElems*SizeRatio; ++i)
+      ShuffleVec[i] = NumElems*SizeRatio;
+    NewMask = DAG.getVectorShuffle(WideVecVT, dl, NewMask,
+                                   DAG.getConstant(0, WideVecVT),
+                                   &ShuffleVec[0]);
+  }
+  else {
+    assert(Mask.getValueType().getVectorElementType() == MVT::i1);
+    unsigned WidenNumElts = NumElems*SizeRatio;
+    unsigned MaskNumElts = VT.getVectorNumElements();
+    EVT NewMaskVT = EVT::getVectorVT(*DAG.getContext(),  MVT::i1,
+                                     WidenNumElts);
+
+    unsigned NumConcat = WidenNumElts / MaskNumElts;
+    SmallVector<SDValue, 16> Ops(NumConcat);
+    SDValue ZeroVal = DAG.getConstant(0, Mask.getValueType());
+    Ops[0] = Mask;
+    for (unsigned i = 1; i != NumConcat; ++i)
+      Ops[i] = ZeroVal;
+
+    NewMask = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewMaskVT, Ops);
+  }
+
+  return DAG.getMaskedStore(Mst->getChain(), dl, TruncatedVal, Mst->getBasePtr(),
+                            NewMask, StVT, Mst->getMemOperand(), false);
+}
 /// PerformSTORECombine - Do target-specific dag combines on STORE nodes.
 static SDValue PerformSTORECombine(SDNode *N, SelectionDAG &DAG,
                                    const X86Subtarget *Subtarget) {
@@ -25836,7 +25998,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::OR:             return PerformOrCombine(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return PerformXorCombine(N, DAG, DCI, Subtarget);
   case ISD::LOAD:           return PerformLOADCombine(N, DAG, DCI, Subtarget);
+  case ISD::MLOAD:          return PerformMLOADCombine(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return PerformSTORECombine(N, DAG, Subtarget);
+  case ISD::MSTORE:         return PerformMSTORECombine(N, DAG, Subtarget);
   case ISD::SINT_TO_FP:     return PerformSINT_TO_FPCombine(N, DAG, this);
   case ISD::FADD:           return PerformFADDCombine(N, DAG, Subtarget);
   case ISD::FSUB:           return PerformFSUBCombine(N, DAG, Subtarget);
