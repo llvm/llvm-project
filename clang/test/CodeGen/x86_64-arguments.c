@@ -184,6 +184,28 @@ struct v4f32wrapper f27(struct v4f32wrapper X) {
   return X;
 }
 
+// PR22563 - We should unwrap simple structs and arrays to pass
+// and return them in the appropriate vector registers if possible.
+
+typedef float v8f32 __attribute__((__vector_size__(32)));
+struct v8f32wrapper {
+  v8f32 v;
+};
+
+struct v8f32wrapper f27a(struct v8f32wrapper X) {
+  // AVX-LABEL: define <8 x float> @f27a(<8 x float> %X.coerce)
+  return X;
+}
+
+struct v8f32wrapper_wrapper {
+  v8f32 v[1];
+};
+
+struct v8f32wrapper_wrapper f27b(struct v8f32wrapper_wrapper X) {
+  // AVX-LABEL: define <8 x float> @f27b(<8 x float> %X.coerce)
+  return X;
+}
+
 // rdar://5711709
 struct f28c {
   double x;
