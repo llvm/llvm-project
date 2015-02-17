@@ -22,4 +22,4 @@ subdirectories = Interpreter MCJIT RuntimeDyld IntelJITEvents OProfileJIT
 type = Library
 name = ExecutionEngine
 parent = Libraries
-required_libraries = Core MC Object Support
+required_libraries = Core MC Object Support RuntimeDyld

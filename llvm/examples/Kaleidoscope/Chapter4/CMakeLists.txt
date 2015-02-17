@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   ExecutionEngine
   InstCombine
   MC
+  RuntimeDyld
   ScalarOpts
   Support
   native
