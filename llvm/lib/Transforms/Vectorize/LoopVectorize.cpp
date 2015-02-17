@@ -1874,6 +1874,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
         // wide store needs to start at the last vector element.
         PartPtr = Builder.CreateGEP(Ptr, Builder.getInt32(-Part * VF));
         PartPtr = Builder.CreateGEP(PartPtr, Builder.getInt32(1 - VF));
+        Mask[Part] = reverseVector(Mask[Part]);
       }
 
       Value *VecPtr = Builder.CreateBitCast(PartPtr,
@@ -1902,6 +1903,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
       // wide load needs to start at the last vector element.
       PartPtr = Builder.CreateGEP(Ptr, Builder.getInt32(-Part * VF));
       PartPtr = Builder.CreateGEP(PartPtr, Builder.getInt32(1 - VF));
+      Mask[Part] = reverseVector(Mask[Part]);
     }
 
     Instruction* NewLI;

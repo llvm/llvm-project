@@ -418,3 +418,85 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
+; Reverse loop
+;void foo6(double *in, double *out, unsigned size, int *trigger) {
+;
+;  for (int i=SIZE-1; i>=0; i--) {
+;    if (trigger[i] > 0) {
+;      out[i] = in[i] + (double) 0.5;
+;    }
+;  }
+;}
+;AVX2-LABEL: @foo6
+;AVX2: icmp sgt <4 x i32> %reverse, zeroinitializer
+;AVX2: shufflevector <4 x i1>{{.*}}<4 x i32> <i32 3, i32 2, i32 1, i32 0>
+;AVX2: call <4 x double> @llvm.masked.load.v4f64
+;AVX2: fadd <4 x double>
+;AVX2: call void @llvm.masked.store.v4f64
+;AVX2: ret void
+
+;AVX512-LABEL: @foo6
+;AVX512: icmp sgt <8 x i32> %reverse, zeroinitializer
+;AVX512: shufflevector <8 x i1>{{.*}}<8 x i32> <i32 7, i32 6, i32 5, i32 4
+;AVX512: call <8 x double> @llvm.masked.load.v8f64
+;AVX512: fadd <8 x double>
+;AVX512: call void @llvm.masked.store.v8f64
+;AVX512: ret void
+
+
+define void @foo6(double* %in, double* %out, i32 %size, i32* %trigger) {
+entry:
+  %in.addr = alloca double*, align 8
+  %out.addr = alloca double*, align 8
+  %size.addr = alloca i32, align 4
+  %trigger.addr = alloca i32*, align 8
+  %i = alloca i32, align 4
+  store double* %in, double** %in.addr, align 8
+  store double* %out, double** %out.addr, align 8
+  store i32 %size, i32* %size.addr, align 4
+  store i32* %trigger, i32** %trigger.addr, align 8
+  store i32 4095, i32* %i, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32* %i, align 4
+  %cmp = icmp sge i32 %0, 0
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %1 = load i32* %i, align 4
+  %idxprom = sext i32 %1 to i64
+  %2 = load i32** %trigger.addr, align 8
+  %arrayidx = getelementptr inbounds i32* %2, i64 %idxprom
+  %3 = load i32* %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %3, 0
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  %4 = load i32* %i, align 4
+  %idxprom2 = sext i32 %4 to i64
+  %5 = load double** %in.addr, align 8
+  %arrayidx3 = getelementptr inbounds double* %5, i64 %idxprom2
+  %6 = load double* %arrayidx3, align 8
+  %add = fadd double %6, 5.000000e-01
+  %7 = load i32* %i, align 4
+  %idxprom4 = sext i32 %7 to i64
+  %8 = load double** %out.addr, align 8
+  %arrayidx5 = getelementptr inbounds double* %8, i64 %idxprom4
+  store double %add, double* %arrayidx5, align 8
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.end
+  %9 = load i32* %i, align 4
+  %dec = add nsw i32 %9, -1
+  store i32 %dec, i32* %i, align 4
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  ret void
+}
+
+
