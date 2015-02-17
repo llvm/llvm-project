@@ -92,6 +92,9 @@
 /* Minor version of the LLVM API */
 #undef LLVM_VERSION_MINOR
 
+/* Patch version of the LLVM API */
+#undef LLVM_VERSION_PATCH
+
 /* LLVM version string */
 #undef LLVM_VERSION_STRING
 

@@ -6,9 +6,6 @@
 /* Exported configuration */
 #include "llvm/Config/llvm-config.h"
 
-/* Patch version of the LLVM API */
-#cmakedefine LLVM_VERSION_PATCH ${LLVM_VERSION_PATCH}
-
 /* Bug report URL. */
 #define BUG_REPORT_URL "${BUG_REPORT_URL}"
 

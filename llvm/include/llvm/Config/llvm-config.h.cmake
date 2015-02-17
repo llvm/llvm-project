@@ -87,10 +87,13 @@
 #cmakedefine LLVM_USE_OPROFILE 1
 
 /* Major version of the LLVM API */
-#cmakedefine LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
+#define LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
 
 /* Minor version of the LLVM API */
-#cmakedefine LLVM_VERSION_MINOR ${LLVM_VERSION_MINOR}
+#define LLVM_VERSION_MINOR ${LLVM_VERSION_MINOR}
+
+/* Patch version of the LLVM API */
+#define LLVM_VERSION_PATCH ${LLVM_VERSION_PATCH}
 
 /* LLVM version string */
 #define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
