@@ -99,6 +99,8 @@ public:
 class BitcodeReaderMDValueList {
   unsigned NumFwdRefs;
   bool AnyFwdRefs;
+  unsigned MinFwdRef;
+  unsigned MaxFwdRef;
   std::vector<TrackingMDRef> MDValuePtrs;
 
   LLVMContext &Context;
