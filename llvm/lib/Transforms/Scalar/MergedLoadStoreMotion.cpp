@@ -403,7 +403,7 @@ bool MergedLoadStoreMotion::isStoreSinkBarrierInRange(const Instruction& Start,
                                                       const Instruction& End,
                                                       AliasAnalysis::Location
                                                       Loc) {
-  return AA->canInstructionRangeModRef(Start, End, Loc, AliasAnalysis::Ref);
+  return AA->canInstructionRangeModRef(Start, End, Loc, AliasAnalysis::ModRef);
 }
 
 ///
@@ -414,6 +414,7 @@ bool MergedLoadStoreMotion::isStoreSinkBarrierInRange(const Instruction& Start,
 StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
                                                    StoreInst *Store0) {
   DEBUG(dbgs() << "can Sink? : "; Store0->dump(); dbgs() << "\n");
+  BasicBlock *BB0 = Store0->getParent();
   for (BasicBlock::reverse_iterator RBI = BB1->rbegin(), RBE = BB1->rend();
        RBI != RBE; ++RBI) {
     Instruction *Inst = &*RBI;
@@ -422,13 +423,14 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
        continue;
 
     StoreInst *Store1 = cast<StoreInst>(Inst);
-    BasicBlock *BB0 = Store0->getParent();
 
     AliasAnalysis::Location Loc0 = AA->getLocation(Store0);
     AliasAnalysis::Location Loc1 = AA->getLocation(Store1);
     if (AA->isMustAlias(Loc0, Loc1) && Store0->isSameOperationAs(Store1) &&
-      !isStoreSinkBarrierInRange(*Store1, BB1->back(), Loc1) &&
-      !isStoreSinkBarrierInRange(*Store0, BB0->back(), Loc0)) {
+      !isStoreSinkBarrierInRange(*(std::next(BasicBlock::iterator(Store1))),
+                                 BB1->back(), Loc1) &&
+      !isStoreSinkBarrierInRange(*(std::next(BasicBlock::iterator(Store0))),
+                                 BB0->back(), Loc0)) {
       return Store1;
     }
   }
