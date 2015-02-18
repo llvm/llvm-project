@@ -1,18 +1,12 @@
-=====================================
-Clang 3.6 (In-Progress) Release Notes
-=====================================
+=======================
+Clang 3.6 Release Notes
+=======================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 3.6 release. You may
-   prefer the `Clang 3.5 Release Notes
-   <http://llvm.org/releases/3.5.0/tools/clang/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
@@ -22,19 +16,14 @@ frontend, part of the LLVM Compiler Infrastructure, release 3.6. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see `the LLVM
-documentation <http://llvm.org/docs/ReleaseNotes.html>`_. All LLVM
-releases may be downloaded from the `LLVM releases web
+documentation <http://llvm.org/releases/3.6.0/docs/ReleaseNotes.html>`_.
+All LLVM releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
 For more information about Clang or LLVM, including information about
 the latest release, please check out the main please see the `Clang Web
 Site <http://clang.llvm.org>`_ or the `LLVM Web
 Site <http://llvm.org>`_.
-
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <http://llvm.org/releases/>`_.
 
 What's New in Clang 3.6?
 ========================
