@@ -3,7 +3,7 @@
 ; This tests that setting the unroll count works
 
 ; CHECK: for.body.prol:
-; CHECK: br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.preheader.split
+; CHECK: br label %for.body.preheader.split
 ; CHECK: for.body:
 ; CHECK: br i1 %exitcond.1, label %for.end.loopexit.unr-lcssa, label %for.body
 ; CHECK-NOT: br i1 %exitcond.4, label %for.end.loopexit{{.*}}, label %for.body

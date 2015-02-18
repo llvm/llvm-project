@@ -55,7 +55,7 @@ STATISTIC(NumRuntimeUnrolled,
 /// - Branch around the original loop if the trip count is less
 ///   than the unroll factor.
 ///
-static void ConnectProlog(Loop *L, Value *TripCount, unsigned Count,
+static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           BasicBlock *LastPrologBB, BasicBlock *PrologEnd,
                           BasicBlock *OrigPH, BasicBlock *NewPH,
                           ValueToValueMapTy &VMap, Pass *P) {
@@ -105,12 +105,19 @@ static void ConnectProlog(Loop *L, Value *TripCount, unsigned Count,
     }
   }
 
-  // Create a branch around the orignal loop, which is taken if the
-  // trip count is less than the unroll factor.
+  // Create a branch around the orignal loop, which is taken if there are no
+  // iterations remaining to be executed after running the prologue.
   Instruction *InsertPt = PrologEnd->getTerminator();
+
+  assert(Count != 0 && "nonsensical Count!");
+
+  // If BECount <u (Count - 1) then (BECount + 1) & (Count - 1) == (BECount + 1)
+  // (since Count is a power of 2).  This means %xtraiter is (BECount + 1) and
+  // and all of the iterations of this loop were executed by the prologue.  Note
+  // that if BECount <u (Count - 1) then (BECount + 1) cannot unsigned-overflow.
   Instruction *BrLoopExit =
-    new ICmpInst(InsertPt, ICmpInst::ICMP_ULT, TripCount,
-                 ConstantInt::get(TripCount->getType(), Count));
+    new ICmpInst(InsertPt, ICmpInst::ICMP_ULT, BECount,
+                 ConstantInt::get(BECount->getType(), Count - 1));
   BasicBlock *Exit = L->getUniqueExitBlock();
   assert(Exit && "Loop must have a single exit block only");
   // Split the exit to maintain loop canonicalization guarantees
@@ -292,23 +299,28 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count, LoopInfo *LI,
 
   // Only unroll loops with a computable trip count and the trip count needs
   // to be an int value (allowing a pointer type is a TODO item)
-  const SCEV *BECount = SE->getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(BECount) || !BECount->getType()->isIntegerTy())
+  const SCEV *BECountSC = SE->getBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BECountSC) ||
+      !BECountSC->getType()->isIntegerTy())
     return false;
 
-  // If BECount is INT_MAX, we can't compute trip-count without overflow.
-  if (BECount->isAllOnesValue())
-    return false;
+  unsigned BEWidth = cast<IntegerType>(BECountSC->getType())->getBitWidth();
 
   // Add 1 since the backedge count doesn't include the first loop iteration
   const SCEV *TripCountSC =
-    SE->getAddExpr(BECount, SE->getConstant(BECount->getType(), 1));
+    SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC))
     return false;
 
   // We only handle cases when the unroll factor is a power of 2.
   // Count is the loop unroll factor, the number of extra copies added + 1.
-  if ((Count & (Count-1)) != 0)
+  if (!isPowerOf2_32(Count))
+    return false;
+
+  // This constraint lets us deal with an overflowing trip count easily; see the
+  // comment on ModVal below.  This check is equivalent to `Log2(Count) <
+  // BEWidth`.
+  if (static_cast<uint64_t>(Count) > (1ULL << BEWidth))
     return false;
 
   // If this loop is nested, then the loop unroller changes the code in
@@ -330,16 +342,23 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count, LoopInfo *LI,
   SCEVExpander Expander(*SE, "loop-unroll");
   Value *TripCount = Expander.expandCodeFor(TripCountSC, TripCountSC->getType(),
                                             PreHeaderBR);
+  Value *BECount = Expander.expandCodeFor(BECountSC, BECountSC->getType(),
+                                          PreHeaderBR);
 
   IRBuilder<> B(PreHeaderBR);
   Value *ModVal = B.CreateAnd(TripCount, Count - 1, "xtraiter");
 
-  // Check if for no extra iterations, then jump to cloned/unrolled loop.
-  // We have to check that the trip count computation didn't overflow when
-  // adding one to the backedge taken count.
-  Value *LCmp = B.CreateIsNotNull(ModVal, "lcmp.mod");
-  Value *OverflowCheck = B.CreateIsNull(TripCount, "lcmp.overflow");
-  Value *BranchVal = B.CreateOr(OverflowCheck, LCmp, "lcmp.or");
+  // If ModVal is zero, we know that either
+  //  1. there are no iteration to be run in the prologue loop
+  // OR
+  //  2. the addition computing TripCount overflowed
+  //
+  // If (2) is true, we know that TripCount really is (1 << BEWidth) and so the
+  // number of iterations that remain to be run in the original loop is a
+  // multiple Count == (1 << Log2(Count)) because Log2(Count) <= BEWidth (we
+  // explicitly check this above).
+
+  Value *BranchVal = B.CreateIsNotNull(ModVal, "lcmp.mod");
 
   // Branch to either the extra iterations or the cloned/unrolled loop
   // We will fix up the true branch label when adding loop body copies
@@ -362,10 +381,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count, LoopInfo *LI,
   std::vector<BasicBlock *> NewBlocks;
   ValueToValueMapTy VMap;
 
-  // If unroll count is 2 and we can't overflow in tripcount computation (which
-  // is BECount + 1), then we don't need a loop for prologue, and we can unroll
-  // it. We can be sure that we don't overflow only if tripcount is a constant.
-  bool UnrollPrologue = (Count == 2 && isa<ConstantInt>(TripCount));
+  bool UnrollPrologue = Count == 2;
 
   // Clone all the basic blocks in the loop. If Count is 2, we don't clone
   // the loop, otherwise we create a cloned loop to execute the extra
@@ -391,7 +407,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count, LoopInfo *LI,
   // Connect the prolog code to the original loop and update the
   // PHI functions.
   BasicBlock *LastLoopBB = cast<BasicBlock>(VMap[Latch]);
-  ConnectProlog(L, TripCount, Count, LastLoopBB, PEnd, PH, NewPH, VMap,
+  ConnectProlog(L, BECount, Count, LastLoopBB, PEnd, PH, NewPH, VMap,
                 LPM->getAsPass());
   NumRuntimeUnrolled++;
   return true;

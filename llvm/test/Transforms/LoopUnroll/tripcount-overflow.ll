@@ -1,19 +1,28 @@
 ; RUN: opt < %s -S -unroll-runtime -unroll-count=2 -loop-unroll | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; When prologue is fully unrolled, the branch on its end is unconditional.
-; Unrolling it is illegal if we can't prove that trip-count+1 doesn't overflow,
-; like in this example, where it comes from an argument.
-;
-; This test is based on an example from here:
-; http://stackoverflow.com/questions/23838661/why-is-clang-optimizing-this-code-out
-;
+; This test case documents how runtime loop unrolling handles the case
+; when the backedge-count is -1.
+
+; If %N, the backedge-taken count, is -1 then %0 unsigned-overflows
+; and is 0.  %xtraiter too is 0, signifying that the total trip-count
+; is divisible by 2.  The prologue then branches to the unrolled loop
+; and executes the 2^32 iterations there, in groups of 2.
+
+
+; CHECK: entry:
+; CHECK-NEXT: %0 = add i32 %N, 1
+; CHECK-NEXT: %xtraiter = and i32 %0, 1
+; CHECK-NEXT: %lcmp.mod = icmp ne i32 %xtraiter, 0
+; CHECK-NEXT: br i1 %lcmp.mod, label %while.body.prol, label %entry.split
+
 ; CHECK: while.body.prol:
-; CHECK: br i1
+; CHECK: br label %entry.split
+
 ; CHECK: entry.split:
 
 ; Function Attrs: nounwind readnone ssp uwtable
-define i32 @foo(i32 %N) #0 {
+define i32 @foo(i32 %N) {
 entry:
   br label %while.body
 
@@ -26,5 +35,3 @@ while.body:                                       ; preds = %while.body, %entry
 while.end:                                        ; preds = %while.body
   ret i32 %i
 }
-
-attributes #0 = { nounwind readnone ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
