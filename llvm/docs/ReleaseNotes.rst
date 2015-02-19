@@ -498,6 +498,12 @@ Changes to the OCaml bindings
 
 * As usual, many more functions have been exposed to OCaml.
 
+Go bindings
+-----------
+
+* A set of Go bindings based on `gollvm <https://github.com/go-llvm/llvm>`_
+  was introduced in this release.
+
 External Open Source Projects Using LLVM 3.6
 ============================================
 
