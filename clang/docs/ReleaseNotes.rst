@@ -83,11 +83,23 @@ Clang now supports the ...
 Windows Support
 ---------------
 
-- Many, many bug fixes
+- Many, many bug fixes.
 
-- Basic support for DWARF debug information in COFF files
+- Clang can now self-host using the ``msvc`` environment on x86 and x64
+  Windows. This means that Microsoft C++ ABI is more or less feature-complete,
+  minus exception support.
 
-- Support for Visual C++ '__super' keyword
+- Added more MSVC compatibility hacks, such as allowing more lookup into
+  dependent bases of class templates when there is a known template pattern.
+  As a result, applications using Active Template Library (ATL) or Windows
+  Runtime Library (WRL) headers should compile correctly.
+
+- Added support for the Visual C++ ``__super`` keyword.
+
+- Added support for MSVC's ``__vectorcall`` calling convention, which is used
+  in the upcoming Visual Studio 2015 STL.
+
+- Added basic support for DWARF debug information in COFF files.
 
 
 C Language Changes in Clang
