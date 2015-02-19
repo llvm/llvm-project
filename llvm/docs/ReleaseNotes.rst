@@ -37,6 +37,9 @@ Non-comprehensive list of changes in this release
 * Added support for a `native object file-based bitcode wrapper format
   <BitCodeFormat.html#native-object-file>`_.
 
+* Added support for MSVC's ``__vectorcall`` calling convention as
+  ``x86_vectorcallcc``.
+
 * ... next change ...
 
 .. NOTE
@@ -354,9 +357,20 @@ The syntax of comdats was changed to
 The version without the parentheses is a syntatic sugar for a comdat with
 the same name as the global.
 
+Added support for Win64 unwind information
+------------------------------------------
 
-Diagnotic infrastructure used by lib/Linker and lib/Bitcode
------------------------------------------------------------
+LLVM now obeys the `Win64 prologue and epilogue conventions
+<https://msdn.microsoft.com/en-us/library/tawsa7cb.aspx>`_ documented by
+Microsoft. Unwind information is also emitted into the .xdata section.
+
+As a result of the ABI-required prologue changes, it is now no longer possible
+to unwind the stack using a standard frame pointer walk on Win64. Instead,
+users should call ``CaptureStackBackTrace``, or implement equivalent
+functionality by consulting the unwind tables present in the binary.
+
+Diagnostic infrastructure used by lib/Linker and lib/Bitcode
+------------------------------------------------------------
 
 These libraries now use the diagnostic handler to print errors and warnings.
 This provides better error messages and simpler error handling.
