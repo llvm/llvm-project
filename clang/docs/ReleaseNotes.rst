@@ -52,6 +52,10 @@ Clang's diagnostics are constantly being improved to catch more issues,
 explain them more clearly, and provide more accurate source information
 about them. The improvements since the 3.5 release include:
 
+- Smarter typo correction. Clang now tries a bit harder to give a usable
+  suggestion in more cases, and can now successfully recover in more
+  situations where the suggestion changes how an expression is parsed.
+
 -  ...
 
 New Compiler Flags
