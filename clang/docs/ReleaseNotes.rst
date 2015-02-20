@@ -61,6 +61,8 @@ about them. The improvements since the 3.5 release include:
 New Compiler Flags
 ------------------
 
+The ``-fpic`` option now uses small pic on PowerPC.
+
 The option ....
 
 The __EXCEPTIONS macro
