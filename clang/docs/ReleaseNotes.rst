@@ -105,15 +105,26 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
-...
+- The default language mode for C compilations with Clang has been changed from
+  C99 with GNU extensions to C11 with GNU extensions. C11 is largely
+  backwards-compatible with C99, but if you want to restore the former behavior
+  you can do so with the `-std=gnu99` flag.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
-...
+- Clang now provides an implementation of the standard C11 header `<stdatomic.h>`.
 
 C++ Language Changes in Clang
 -----------------------------
+
+- An `upcoming change to C++ <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3922.html>_`
+  changes the semantics of certain deductions of `auto` from a braced initializer
+  list. Following the intent of the C++ committee, this change will be applied to
+  our C++11 and C++14 modes as well as our experimental C++17 mode. Clang 3.6
+  does not yet implement this change, but to provide a transition period, it
+  warns on constructs whose meaning will change. The fix in all cases is to
+  add an `=` prior to the left brace.
 
 - Clang now supports putting identical constructors and destructors in
   the C5/D5 comdat, reducing code duplication.
