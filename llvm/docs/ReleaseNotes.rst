@@ -502,6 +502,8 @@ There are numerous improvements to the PowerPC target in this release:
 
 * PPC32 SVR4 now supports small-model PIC.
 
+* Experimental support for the stackmap/patchpoint intrinsics has been added.
+
 * There have been many smaller bug fixes and performance improvements.
 
 Changes to the OCaml bindings
