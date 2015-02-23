@@ -296,7 +296,7 @@ The old JIT has been removed
 All users should transition to MCJIT.
 
 
-object::Binary doesn't owns the file buffer
+object::Binary doesn't own the file buffer
 -------------------------------------------
 
 It is now just a wrapper, which simplifies using object::Binary with other
