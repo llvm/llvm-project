@@ -382,6 +382,24 @@ The PreserveSource linker mode was removed
 It was fairly broken and was removed.
 
 
+Garbage Collection
+------------------
+A new experimental mechanism for describing a garbage collection safepoint was
+added to LLVM.  The new mechanism was not complete at the point this release
+was branched so it is recommended that anyone interested in using this
+mechanism track the ongoing development work on tip of tree.  The hope is that
+these intrinsics will be ready for general use by 3.7.  Documentation can be
+found `here <http://llvm.org/docs/Statepoints.html>`_.
+
+The existing gc.root implementation is still supported and as fully featured
+as it ever was.  However, two features from GCStrategy will likely be removed
+in the 3.7 release (performCustomLowering and findCustomSafePoints).  If you
+have a use case for either, please mention it on llvm-dev so that it can be
+considered for future development.
+
+We are expecting to migrate away from gc.root in the 3.8 time frame,
+but both mechanism will be supported in 3.7.
+
 
 Changes to the ARM Backend
 --------------------------
