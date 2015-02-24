@@ -56,29 +56,38 @@ about them. The improvements since the 3.5 release include:
   suggestion in more cases, and can now successfully recover in more
   situations where the suggestion changes how an expression is parsed.
 
--  ...
 
 New Compiler Flags
 ------------------
 
 The ``-fpic`` option now uses small pic on PowerPC.
 
-The option ....
 
 The __EXCEPTIONS macro
 ----------------------
-``__EXCEPTIONS`` is now defined when landing pads are emitted, not when c++ exceptions are enabled. The two can be different in Objective-C files: If C++ exceptions are disabled but Objective-C exceptions are enabled, landing pads will be emitted. Clang 3.6 is switching the behavior of ``__EXCEPTIONS``. Clang 3.5 confusingly changed the behavior of ``has_feature(cxx_exceptions)``, which used to be set if landing pads were emitted, but is now set if C++ exceptions are enabled. So there are 3 cases:
+``__EXCEPTIONS`` is now defined when landing pads are emitted, not when
+C++ exceptions are enabled. The two can be different in Objective-C files:
+If C++ exceptions are disabled but Objective-C exceptions are enabled,
+landing pads will be emitted. Clang 3.6 is switching the behavior of
+``__EXCEPTIONS``. Clang 3.5 confusingly changed the behavior of
+``has_feature(cxx_exceptions)``, which used to be set if landing pads were
+emitted, but is now set if C++ exceptions are enabled. So there are 3 cases:
 
 Clang before 3.5:
-   ``__EXCEPTIONS`` is set if C++ exceptions are enabled, ``cxx_exceptions`` enabled if C++ or ObjC exceptions are enabled
+   ``__EXCEPTIONS`` is set if C++ exceptions are enabled, ``cxx_exceptions``
+   enabled if C++ or ObjC exceptions are enabled
 
 Clang 3.5:
-   ``__EXCEPTIONS`` is set if C++ exceptions are enabled, ``cxx_exceptions`` enabled if C++ exceptions are enabled
+   ``__EXCEPTIONS`` is set if C++ exceptions are enabled, ``cxx_exceptions``
+   enabled if C++ exceptions are enabled
 
 Clang 3.6:
-   ``__EXCEPTIONS`` is set if C++ or ObjC exceptions are enabled, ``cxx_exceptions`` enabled if C++ exceptions are enabled
+   ``__EXCEPTIONS`` is set if C++ or ObjC exceptions are enabled,
+   ``cxx_exceptions`` enabled if C++ exceptions are enabled
 
-To reliably test if C++ exceptions are enabled, use ``__EXCEPTIONS && __has_feature(cxx_exceptions)``, else things won't work in all versions of clang in Objective-C++ files.
+To reliably test if C++ exceptions are enabled, use
+``__EXCEPTIONS && __has_feature(cxx_exceptions)``, else things won't work in
+all versions of Clang in Objective-C++ files.
 
 
 New Pragmas in Clang
@@ -148,6 +157,7 @@ C++ Language Changes in Clang
 - Clang will put individual ``.init_array/.ctors`` sections in
   comdats, reducing code duplication and speeding up startup.
 
+
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -178,20 +188,10 @@ For more details on C++ feature support, see
 `the C++ status page <http://clang.llvm.org/cxx_status.html>`_.
 
 
-Objective-C Language Changes in Clang
--------------------------------------
-
-...
-
-OpenCL C Language Changes in Clang
-----------------------------------
-
-...
-
 OpenMP Language Changes in Clang
 --------------------------------
 
-Clang 3.6 contains codegen for many individual OpenMP pragmas, but combinations are not completed as yet.
+Clang 3.6 contains codegen for many individual OpenMP pragmas, but combinations are not completed yet.
 We plan to continue codegen code drop aiming for completion in 3.7. Please see this link for up-to-date
 `status <https://github.com/clang-omp/clang/wiki/Status-of-supported-OpenMP-constructs>_`.
 LLVM's OpenMP runtime library, originally developed by Intel, has been modified to work on ARM, PowerPC,
@@ -201,44 +201,6 @@ Support for ppc64le architecture is now available and automatically detected whe
 Using makefile the new "ppc64le" arch type is available.
 Contributors to this work include AMD, Argonne National Lab., IBM, Intel, Texas Instruments, University of Houston and many others.
 
-Internal API Changes
---------------------
-
-These are major API changes that have happened since the 3.5 release of
-Clang. If upgrading an external codebase that uses Clang as a library,
-this section should help get you past the largest hurdles of upgrading.
-
-...
-
-libclang
---------
-
-...
-
-Static Analyzer
----------------
-
-...
-
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
