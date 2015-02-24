@@ -398,7 +398,7 @@ have a use case for either, please mention it on llvm-dev so that it can be
 considered for future development.
 
 We are expecting to migrate away from gc.root in the 3.8 time frame,
-but both mechanism will be supported in 3.7.
+but both mechanisms will be supported in 3.7.
 
 
 Changes to the ARM Backend
