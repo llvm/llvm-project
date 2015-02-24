@@ -602,6 +602,24 @@ x86/x86_64 systems like Linux, OS X, FreeBSD and Windows and also Linux on
 PowerPC (32/64 bit). Ports to other architectures like ARM, AArch64 and MIPS64
 are underway.
 
+LLVMSharp & ClangSharp
+----------------------
+
+`LLVMSharp <http://www.llvmsharp.org>`_ and
+`ClangSharp <http://www.clangsharp.org>`_ are type-safe C# bindings for
+Microsoft.NET and Mono that Platform Invoke into the native libraries.
+ClangSharp is self-hosted and is used to generated LLVMSharp using the
+LLVM-C API.
+
+`LLVMSharp Kaleidoscope Tutorials <http://www.llvmsharp.org/Kaleidoscope/>`_
+are instructive examples of writing a compiler in C#, with certain improvements
+like using the visitor pattern to generate LLVM IR.
+
+`ClangSharp PInvoke Generator <http://www.clangsharp.org/PInvoke/>`_ is the
+self-hosting mechanism for LLVM/ClangSharp and is demonstrative of using
+LibClang to generate Platform Invoke (PInvoke) signatures for C APIs.
+
+
 Additional Information
 ======================
 
