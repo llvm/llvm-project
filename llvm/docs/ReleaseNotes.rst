@@ -383,6 +383,9 @@ The PreserveSource linker mode was removed
 
 It was fairly broken and was removed.
 
+The mode is currently still available in the C API for source
+compatibility, but it doesn't have any effect.
+
 
 Garbage Collection
 ------------------
