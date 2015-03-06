@@ -32,10 +32,10 @@ entry:
 
 ; Now l with 1024: make sure register lo is picked. We do this by checking the instruction
 ; after the inline expression for a mflo to pull the value out of lo.
-; CHECK: #APP
-; CHECK-NEXT:  mtlo ${{[0-9]+}} 
+; CHECK:       #APP
+; CHECK:       mtlo ${{[0-9]+}}
 ; CHECK-NEXT:  madd ${{[0-9]+}},${{[0-9]+}}
-; CHECK-NEXT: #NO_APP	
+; CHECK:       #NO_APP
 ; CHECK-NEXT:  mflo	${{[0-9]+}}
   %bosco = alloca i32, align 4
   call i32 asm sideeffect "\09mtlo $3 \0A\09\09madd $1,$2 ", "=l,r,r,r"(i32 7, i32 6, i32 44) nounwind
