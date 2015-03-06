@@ -53,7 +53,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-asm-printer"
 
-MipsTargetStreamer &MipsAsmPrinter::getTargetStreamer() const {
+MipsTargetStreamer &MipsAsmPrinter::getTargetStreamer() {
   return static_cast<MipsTargetStreamer &>(*OutStreamer.getTargetStreamer());
 }
 
@@ -719,29 +719,6 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
                                  Subtarget->isABI_FPXX()))
     getTargetStreamer().emitDirectiveModuleOddSPReg(Subtarget->useOddSPReg(),
                                                     Subtarget->isABI_O32());
-}
-
-void MipsAsmPrinter::emitInlineAsmStart(
-    const MCSubtargetInfo &StartInfo) const {
-  MipsTargetStreamer &TS = getTargetStreamer();
-
-  // GCC's choice of assembler options for inline assembly code ('at', 'macro'
-  // and 'reorder') is different from LLVM's choice for generated code ('noat',
-  // 'nomacro' and 'noreorder').
-  // In order to maintain compatibility with inline assembly code which depends
-  // on GCC's assembler options being used, we have to switch to those options
-  // for the duration of the inline assembly block and then switch back.
-  TS.emitDirectiveSetPush();
-  TS.emitDirectiveSetAt();
-  TS.emitDirectiveSetMacro();
-  TS.emitDirectiveSetReorder();
-  OutStreamer.AddBlankLine();
-}
-
-void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                      const MCSubtargetInfo *EndInfo) const {
-  OutStreamer.AddBlankLine();
-  getTargetStreamer().emitDirectiveSetPop();
 }
 
 void MipsAsmPrinter::EmitJal(MCSymbol *Symbol) {

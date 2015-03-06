@@ -31,7 +31,7 @@ class Module;
 class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY MipsAsmPrinter : public AsmPrinter {
-  MipsTargetStreamer &getTargetStreamer() const;
+  MipsTargetStreamer &getTargetStreamer();
 
   void EmitInstrWithMacroNoAT(const MachineInstr *MI);
 
@@ -59,11 +59,6 @@ private:
 
   std::map<const char *, const llvm::Mips16HardFloatInfo::FuncSignature *>
   StubsNeeded;
-
-  void emitInlineAsmStart(const MCSubtargetInfo &StartInfo) const override;
-
-  void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo) const override;
 
   void EmitJal(MCSymbol *Symbol);
 
