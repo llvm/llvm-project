@@ -119,3 +119,16 @@ entry:
   %r = sdiv i64 %a, %b
   ret i64 %r
 }
+
+define signext i128 @sdiv_i128(i128 signext %a, i128 signext %b) {
+entry:
+  ; ALL-LABEL: sdiv_i128:
+
+    ; GP32:         lw      $25, %call16(__divti3)($gp)
+
+    ; GP64-NOT-R6:  ld      $25, %call16(__divti3)($gp)
+    ; 64R6:         ld      $25, %call16(__divti3)($gp)
+
+    %r = sdiv i128 %a, %b
+    ret i128 %r
+}

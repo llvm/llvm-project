@@ -125,6 +125,8 @@ MipsSETargetLowering::MipsSETargetLowering(MipsTargetMachine &TM,
     setOperationAction(ISD::MUL,              MVT::i64, Custom);
 
   if (Subtarget.isGP64bit()) {
+    setOperationAction(ISD::SMUL_LOHI,        MVT::i64, Custom);
+    setOperationAction(ISD::UMUL_LOHI,        MVT::i64, Custom);
     setOperationAction(ISD::MULHS,            MVT::i64, Custom);
     setOperationAction(ISD::MULHU,            MVT::i64, Custom);
   }
@@ -203,6 +205,8 @@ MipsSETargetLowering::MipsSETargetLowering(MipsTargetMachine &TM,
   if (Subtarget.hasMips64r6()) {
     // MIPS64r6 replaces the accumulator-based multiplies with a three register
     // instruction
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
     setOperationAction(ISD::MUL, MVT::i64, Legal);
     setOperationAction(ISD::MULHS, MVT::i64, Legal);
     setOperationAction(ISD::MULHU, MVT::i64, Legal);

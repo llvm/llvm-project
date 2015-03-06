@@ -70,3 +70,23 @@ entry:
   %r = and i64 %a, %b
   ret i64 %r
 }
+
+define signext i128 @and_i128(i128 signext %a, i128 signext %b) {
+entry:
+; ALL-LABEL: and_i128:
+
+  ; GP32:         lw      $[[T0:[0-9]+]], 24($sp)
+  ; GP32:         lw      $[[T1:[0-9]+]], 20($sp)
+  ; GP32:         lw      $[[T2:[0-9]+]], 16($sp)
+  ; GP32:         and     $2, $4, $[[T2]]
+  ; GP32:         and     $3, $5, $[[T1]]
+  ; GP32:         and     $4, $6, $[[T0]]
+  ; GP32:         lw      $[[T3:[0-9]+]], 28($sp)
+  ; GP32:         and     $5, $7, $[[T3]]
+
+  ; GP64:         and     $2, $4, $6
+  ; GP64:         and     $3, $5, $7
+
+  %r = and i128 %a, %b
+  ret i128 %r
+}
