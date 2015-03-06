@@ -3721,3 +3721,25 @@ void MipsTargetLowering::HandleByVal(CCState *State, unsigned &Size,
 
   State->addInRegsParamInfo(FirstReg, FirstReg + NumRegs);
 }
+
+// FIXME? Maybe this could be a TableGen attribute on some registers and
+// this table could be generated automatically from RegInfo.
+unsigned MipsTargetLowering::getRegisterByName(const char* RegName,
+                                               EVT VT) const {
+  // Named registers is expected to be fairly rare. For now, just support $28
+  // since the linux kernel uses it.
+  if (Subtarget.isGP64bit()) {
+    unsigned Reg = StringSwitch<unsigned>(RegName)
+                         .Case("$28", Mips::GP_64)
+                         .Default(0);
+    if (Reg)
+      return Reg;
+  } else {
+    unsigned Reg = StringSwitch<unsigned>(RegName)
+                         .Case("$28", Mips::GP)
+                         .Default(0);
+    if (Reg)
+      return Reg;
+  }
+  report_fatal_error("Invalid register name global variable");
+}
