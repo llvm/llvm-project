@@ -781,3 +781,93 @@ define i32 @true_f64(double %a, double %b) nounwind {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
+
+; The optimizers sometimes produce setlt instead of setolt/setult.
+define float @bug1_f32(float %angle, float %at) #0 {
+entry:
+; ALL-LABEL: bug1_f32:
+
+; 32-C-DAG:      add.s    $[[T0:f[0-9]+]], $f14, $f12
+; 32-C-DAG:      lwc1     $[[T1:f[0-9]+]], %lo($CPI32_0)(
+; 32-C-DAG:      c.ole.s  $[[T0]], $[[T1]]
+; 32-C-DAG:      bc1t
+
+; 32-CMP-DAG:    add.s    $[[T0:f[0-9]+]], $f14, $f12
+; 32-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %lo($CPI32_0)(
+; 32-CMP-DAG:    cmp.le.s $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
+; 32-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
+; FIXME: This instruction is redundant.
+; 32-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
+; 32-CMP-DAG:    bnez     $[[T4]],
+
+; 64-C-DAG:      add.s    $[[T0:f[0-9]+]], $f13, $f12
+; 64-C-DAG:      lwc1     $[[T1:f[0-9]+]], %got_ofst($CPI32_0)(
+; 64-C-DAG:      c.ole.s  $[[T0]], $[[T1]]
+; 64-C-DAG:      bc1t
+
+; 64-CMP-DAG:    add.s    $[[T0:f[0-9]+]], $f13, $f12
+; 64-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %got_ofst($CPI32_0)(
+; 64-CMP-DAG:    cmp.le.s $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
+; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
+; FIXME: This instruction is redundant.
+; 64-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
+; 64-CMP-DAG:    bnez     $[[T4]],
+
+  %add = fadd fast float %at, %angle
+  %cmp = fcmp ogt float %add, 1.000000e+00
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %sub = fadd fast float %add, -1.000000e+00
+  br label %if.end
+
+if.end:
+  %theta.0 = phi float [ %sub, %if.then ], [ %add, %entry ]
+  ret float %theta.0
+}
+
+; The optimizers sometimes produce setlt instead of setolt/setult.
+define double @bug1_f64(double %angle, double %at) #0 {
+entry:
+; ALL-LABEL: bug1_f64:
+
+; 32-C-DAG:      add.d    $[[T0:f[0-9]+]], $f14, $f12
+; 32-C-DAG:      ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
+; 32-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
+; 32-C-DAG:      bc1t
+
+; 32-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f14, $f12
+; 32-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
+; 32-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
+; 32-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
+; FIXME: This instruction is redundant.
+; 32-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
+; 32-CMP-DAG:    bnez     $[[T4]],
+
+; 64-C-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
+; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %got_ofst($CPI33_0)(
+; 64-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
+; 64-C-DAG:      bc1t
+
+; 64-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f13, $f12
+; 64-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %got_ofst($CPI33_0)(
+; 64-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
+; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
+; FIXME: This instruction is redundant.
+; 64-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
+; 64-CMP-DAG:    bnez     $[[T4]],
+
+  %add = fadd fast double %at, %angle
+  %cmp = fcmp ogt double %add, 1.000000e+00
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %sub = fadd fast double %add, -1.000000e+00
+  br label %if.end
+
+if.end:
+  %theta.0 = phi double [ %sub, %if.then ], [ %add, %entry ]
+  ret double %theta.0
+}
+
+attributes #0 = { nounwind readnone "no-nans-fp-math"="true" }
