@@ -11,16 +11,17 @@ foo:
 	.uleb128	128
 	.uleb128	16383
 	.uleb128	16384
+        .uleb128	23, 42
 
 // ELF_32:   Name: .text
 // ELF_32:   SectionData (
-// ELF_32:     0000: 00017F80 01FF7F80 8001
+// ELF_32:     0000: 00017F80 01FF7F80 8001172A
 // ELF_32:   )
 // ELF_64:   Name: .text
 // ELF_64:   SectionData (
-// ELF_64:     0000: 00017F80 01FF7F80 8001
+// ELF_64:     0000: 00017F80 01FF7F80 8001172A
 // ELF_64:   )
 // MACHO_32: ('section_name', '__text\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-// MACHO_32: ('_section_data', '00017f80 01ff7f80 8001')
+// MACHO_32: ('_section_data', '00017f80 01ff7f80 8001172a')
 // MACHO_64: ('section_name', '__text\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-// MACHO_64: ('_section_data', '00017f80 01ff7f80 8001')
+// MACHO_64: ('_section_data', '00017f80 01ff7f80 8001172a')
