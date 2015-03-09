@@ -153,3 +153,21 @@ entry:
 "5":                                              ; preds = %"3", %entry
   ret void
 }
+
+; PR21968
+define void @test8(i1 %C, i8* %P) #0 {
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  br i1 %C, label %l_bad, label %for.body
+
+for.body:                                         ; preds = %for.cond
+  indirectbr i8* %P, [label %for.inc, label %l_bad]
+
+for.inc:                                          ; preds = %for.body
+  br label %for.cond
+
+l_bad:                                            ; preds = %for.body, %for.cond
+  ret void
+}

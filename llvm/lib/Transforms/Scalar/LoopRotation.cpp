@@ -535,6 +535,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       Loop *PredLoop = LI->getLoopFor(*PI);
       if (!PredLoop || PredLoop->contains(Exit))
         continue;
+      if (isa<IndirectBrInst>((*PI)->getTerminator()))
+        continue;
       SplitLatchEdge |= L->getLoopLatch() == *PI;
       BasicBlock *ExitSplit = SplitCriticalEdge(*PI, Exit, this);
       ExitSplit->moveBefore(Exit);
