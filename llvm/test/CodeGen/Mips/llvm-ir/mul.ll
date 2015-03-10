@@ -1,19 +1,19 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=M2
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=32R1-R2 -check-prefix=32R1
-; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=32R1-R2 -check-prefix=32R2
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=32R6
-; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=M4
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=64R1-R2
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=64R1-R2
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
-; RUN:     -check-prefix=ALL -check-prefix=64R6
+; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=M2 -check-prefix=GP32
+; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=32R1-R2 -check-prefix=GP32
+; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=32R1-R2 -check-prefix=32R2 -check-prefix=GP32
+; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=32R6 -check-prefix=GP32
+; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=M4 -check-prefix=GP64-NOT-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=64R1-R2 -check-prefix=GP64-NOT-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=64R1-R2 -check-prefix=GP64 -check-prefix=GP64-NOT-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s -check-prefix=ALL \
+; RUN:    -check-prefix=64R6
 
 define signext i1 @mul_i1(i1 signext %a, i1 signext %b) {
 entry:
@@ -178,4 +178,31 @@ entry:
 
   %r = mul i64 %a, %b
   ret i64 %r
+}
+
+define signext i128 @mul_i128(i128 signext %a, i128 signext %b) {
+entry:
+; ALL-LABEL: mul_i128:
+
+  ; GP32:           lw      $25, %call16(__multi3)($gp)
+
+  ; GP64-NOT-R6:    dmult   $4, $7
+  ; GP64-NOT-R6:    mflo    $[[T0:[0-9]+]]
+  ; GP64-NOT-R6:    dmult   $5, $6
+  ; GP64-NOT-R6:    mflo    $[[T1:[0-9]+]]
+  ; GP64-NOT-R6:    dmultu  $5, $7
+  ; GP64-NOT-R6:    mflo    $3
+  ; GP64-NOT-R6:    mfhi    $[[T2:[0-9]+]]
+  ; GP64-NOT-R6:    daddu   $[[T3:[0-9]+]], $[[T2]], $[[T1]]
+  ; GP64-NOT-R6:    daddu   $2, $[[T3:[0-9]+]], $[[T0]]
+
+  ; 64R6:           dmul    $[[T0:[0-9]+]], $5, $6
+  ; 64R6:           dmuhu   $[[T1:[0-9]+]], $5, $7
+  ; 64R6:           daddu   $[[T2:[0-9]+]], $[[T1]], $[[T0]]
+  ; 64R6:           dmul    $[[T3:[0-9]+]], $4, $7
+  ; 64R6:           daddu   $2, $[[T2]], $[[T3]]
+  ; 64R6:           dmul    $3, $5, $7
+
+  %r = mul i128 %a, %b
+  ret i128 %r
 }

@@ -440,6 +440,16 @@ def : MipsPat<(i64 (sext_inreg GPR64:$src, i32)),
 // bswap MipsPattern
 def : MipsPat<(bswap GPR64:$rt), (DSHD (DSBH GPR64:$rt))>;
 
+// Carry pattern
+def : MipsPat<(subc GPR64:$lhs, GPR64:$rhs),
+              (DSUBu GPR64:$lhs, GPR64:$rhs)>;
+let AdditionalPredicates = [NotDSP] in {
+  def : MipsPat<(addc GPR64:$lhs, GPR64:$rhs),
+                (DADDu GPR64:$lhs, GPR64:$rhs)>;
+  def : MipsPat<(addc GPR64:$lhs, immSExt16:$imm),
+                (DADDiu GPR64:$lhs, imm:$imm)>;
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction aliases
 //===----------------------------------------------------------------------===//

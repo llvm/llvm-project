@@ -236,13 +236,31 @@ SDNode *MipsSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,
           (Opc == ISD::SUBC || Opc == ISD::SUBE)) &&
          "(ADD|SUB)E flag operand must come from (ADD|SUB)C/E insn");
 
+  unsigned SLTuOp = Mips::SLTu, ADDuOp = Mips::ADDu;
+  if (Subtarget->isGP64bit()) {
+    SLTuOp = Mips::SLTu64;
+    ADDuOp = Mips::DADDu;
+  }
+
   SDValue Ops[] = { CmpLHS, InFlag.getOperand(1) };
   SDValue LHS = Node->getOperand(0), RHS = Node->getOperand(1);
   EVT VT = LHS.getValueType();
 
-  SDNode *Carry = CurDAG->getMachineNode(Mips::SLTu, DL, VT, Ops);
-  SDNode *AddCarry = CurDAG->getMachineNode(Mips::ADDu, DL, VT,
+  SDNode *Carry = CurDAG->getMachineNode(SLTuOp, DL, VT, Ops);
+
+  if (Subtarget->isGP64bit()) {
+    // On 64-bit targets, sltu produces an i64 but our backend currently says
+    // that SLTu64 produces an i32. We need to fix this in the long run but for
+    // now, just make the DAG type-correct by asserting the upper bits are zero.
+    Carry = CurDAG->getMachineNode(Mips::SUBREG_TO_REG, DL, VT,
+                                   CurDAG->getTargetConstant(0, VT),
+                                   SDValue(Carry, 0),
+                                   CurDAG->getTargetConstant(Mips::sub_32, VT));
+  }
+
+  SDNode *AddCarry = CurDAG->getMachineNode(ADDuOp, DL, VT,
                                             SDValue(Carry, 0), RHS);
+
   return CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS,
                               SDValue(AddCarry, 0));
 }
@@ -641,7 +659,8 @@ std::pair<bool, SDNode*> MipsSEDAGToDAGISel::selectNode(SDNode *Node) {
 
   case ISD::SUBE: {
     SDValue InFlag = Node->getOperand(2);
-    Result = selectAddESubE(Mips::SUBu, InFlag, InFlag.getOperand(0), DL, Node);
+    unsigned Opc = Subtarget->isGP64bit() ? Mips::DSUBu : Mips::SUBu;
+    Result = selectAddESubE(Opc, InFlag, InFlag.getOperand(0), DL, Node);
     return std::make_pair(true, Result);
   }
 
@@ -649,7 +668,8 @@ std::pair<bool, SDNode*> MipsSEDAGToDAGISel::selectNode(SDNode *Node) {
     if (Subtarget->hasDSP()) // Select DSP instructions, ADDSC and ADDWC.
       break;
     SDValue InFlag = Node->getOperand(2);
-    Result = selectAddESubE(Mips::ADDu, InFlag, InFlag.getValue(0), DL, Node);
+    unsigned Opc = Subtarget->isGP64bit() ? Mips::DADDu : Mips::ADDu;
+    Result = selectAddESubE(Opc, InFlag, InFlag.getValue(0), DL, Node);
     return std::make_pair(true, Result);
   }
 

@@ -130,3 +130,16 @@ entry:
   %r = urem i64 %a, %b
   ret i64 %r
 }
+
+define signext i128 @urem_i128(i128 signext %a, i128 signext %b) {
+entry:
+  ; ALL-LABEL: urem_i128:
+
+    ; GP32:         lw      $25, %call16(__umodti3)($gp)
+
+    ; GP64-NOT-R6:  ld      $25, %call16(__umodti3)($gp)
+    ; 64-R6:        ld      $25, %call16(__umodti3)($gp)
+
+    %r = urem i128 %a, %b
+    ret i128 %r
+}
