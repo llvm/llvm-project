@@ -49,6 +49,8 @@ public:
   virtual void emitDirectiveSetMips64();
   virtual void emitDirectiveSetMips64R2();
   virtual void emitDirectiveSetDsp();
+  virtual void emitDirectiveSetPop();
+  virtual void emitDirectiveSetPush();
 
   // PIC support
   virtual void emitDirectiveCpload(unsigned RegNo);
@@ -125,6 +127,8 @@ public:
   void emitDirectiveSetMips64() override;
   void emitDirectiveSetMips64R2() override;
   void emitDirectiveSetDsp() override;
+  void emitDirectiveSetPop() override;
+  void emitDirectiveSetPush() override;
 
   // PIC support
   virtual void emitDirectiveCpload(unsigned RegNo);
