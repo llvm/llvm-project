@@ -175,8 +175,6 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(avx2_packsswb,     INTR_TYPE_2OP, X86ISD::PACKSS, 0),
   X86_INTRINSIC_DATA(avx2_packusdw,     INTR_TYPE_2OP, X86ISD::PACKUS, 0),
   X86_INTRINSIC_DATA(avx2_packuswb,     INTR_TYPE_2OP, X86ISD::PACKUS, 0),
-  X86_INTRINSIC_DATA(avx2_permd,        INTR_TYPE_2OP, X86ISD::VPERMV, 0),
-  X86_INTRINSIC_DATA(avx2_permps,       INTR_TYPE_2OP, X86ISD::VPERMV, 0),
   X86_INTRINSIC_DATA(avx2_phadd_d,      INTR_TYPE_2OP, X86ISD::HADD, 0),
   X86_INTRINSIC_DATA(avx2_phadd_w,      INTR_TYPE_2OP, X86ISD::HADD, 0),
   X86_INTRINSIC_DATA(avx2_phsub_d,      INTR_TYPE_2OP, X86ISD::HSUB, 0),
