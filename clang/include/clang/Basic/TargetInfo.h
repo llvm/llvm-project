@@ -852,6 +852,12 @@ public:
     }
   }
 
+  /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
+  /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
+  virtual bool hasSjLjLowering() const {
+    return false;
+  }
+
 protected:
   virtual uint64_t getPointerWidthV(unsigned AddrSpace) const {
     return PointerWidth;
