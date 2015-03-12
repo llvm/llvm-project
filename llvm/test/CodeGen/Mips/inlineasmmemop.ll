@@ -5,6 +5,7 @@
 
 define i32 @f1(i32 %x) nounwind {
 entry:
+; CHECK-LABEL: f1:
 ; CHECK: addiu $[[T0:[0-9]+]], $sp
 ; CHECK: #APP
 ; CHECK: sw $4, 0($[[T0]])
@@ -22,17 +23,18 @@ entry:
   ret i32 %0
 }
 
+; CHECK-LABEL: main:
 ; "D": Second word of double word. This works for any memory element
 ; double or single.
 ; CHECK: #APP
-; CHECK-NEXT: lw ${{[0-9]+}},4(${{[0-9]+}});
-; CHECK-NEXT: #NO_APP
+; CHECK: lw ${{[0-9]+}},4(${{[0-9]+}});
+; CHECK: #NO_APP
 
 ; No "D": First word of double word. This works for any memory element 
 ; double or single.
 ; CHECK: #APP
-; CHECK-NEXT: lw ${{[0-9]+}},0(${{[0-9]+}});
-; CHECK-NEXT: #NO_APP
+; CHECK: lw ${{[0-9]+}},0(${{[0-9]+}});
+; CHECK: #NO_APP
 
 ;int b[8] = {0,1,2,3,4,5,6,7};
 ;int main()

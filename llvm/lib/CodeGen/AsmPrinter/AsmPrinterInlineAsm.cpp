@@ -89,6 +89,7 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MDNode *LocMDNode,
   assert(MCAI && "No MCAsmInfo");
   if (!MCAI->useIntegratedAssembler() &&
       !OutStreamer.isIntegratedAssemblerRequired()) {
+    emitInlineAsmStart(TM.getSubtarget<MCSubtargetInfo>());
     OutStreamer.EmitRawText(Str);
     emitInlineAsmEnd(TM.getSubtarget<MCSubtargetInfo>(), nullptr);
     return;
@@ -147,6 +148,7 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MDNode *LocMDNode,
   Parser->setAssemblerDialect(Dialect);
   Parser->setTargetParser(*TAP.get());
 
+  emitInlineAsmStart(STIOrig);
   // Don't implicitly switch to the text section before the asm.
   int Res = Parser->Run(/*NoInitialTextSection*/ true,
                         /*NoFinalize*/ true);
@@ -560,6 +562,8 @@ bool AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   // Target doesn't support this yet!
   return true;
 }
+
+void AsmPrinter::emitInlineAsmStart(const MCSubtargetInfo &StartInfo) const {}
 
 void AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                                   const MCSubtargetInfo *EndInfo) const {}

@@ -458,7 +458,6 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
   FStub->setSection(SectionName);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", FStub);
   InlineAsmHelper IAH(Context, BB);
-  IAH.Out(" .set  macro");
   if (PicMode) {
     IAH.Out(".set noreorder");
     IAH.Out(".cpload  $$25");
@@ -467,7 +466,6 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
     IAH.Out("la $$25," + LocalName);
   }
   else {
-    IAH.Out(".set reorder");
     IAH.Out("la $$25," + Name);
   }
   swapFPIntParams(PV, M, IAH, LE, false);

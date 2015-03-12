@@ -53,7 +53,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-asm-printer"
 
-MipsTargetStreamer &MipsAsmPrinter::getTargetStreamer() {
+MipsTargetStreamer &MipsAsmPrinter::getTargetStreamer() const {
   return static_cast<MipsTargetStreamer &>(*OutStreamer.getTargetStreamer());
 }
 
@@ -719,6 +719,23 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
                                  Subtarget->isABI_FPXX()))
     getTargetStreamer().emitDirectiveModuleOddSPReg(Subtarget->useOddSPReg(),
                                                     Subtarget->isABI_O32());
+}
+
+void MipsAsmPrinter::emitInlineAsmStart(
+    const MCSubtargetInfo &StartInfo) const {
+  MipsTargetStreamer &TS = getTargetStreamer();
+
+  TS.emitDirectiveSetPush();
+  TS.emitDirectiveSetAt();
+  TS.emitDirectiveSetMacro();
+  TS.emitDirectiveSetReorder();
+  OutStreamer.AddBlankLine();
+}
+
+void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                                      const MCSubtargetInfo *EndInfo) const {
+  OutStreamer.AddBlankLine();
+  getTargetStreamer().emitDirectiveSetPop();
 }
 
 void MipsAsmPrinter::EmitJal(MCSymbol *Symbol) {

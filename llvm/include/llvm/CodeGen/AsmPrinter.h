@@ -461,6 +461,10 @@ public:
                                      unsigned AsmVariant, const char *ExtraCode,
                                      raw_ostream &OS);
 
+  /// Let the target do anything it needs to do before emitting inlineasm.
+  /// \p StartInfo - the subtarget info before parsing inline asm
+  virtual void emitInlineAsmStart(const MCSubtargetInfo &StartInfo) const;
+
   /// Let the target do anything it needs to do after emitting inlineasm.
   /// This callback can be used restore the original mode in case the
   /// inlineasm contains directives to switch modes.
