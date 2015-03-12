@@ -38,23 +38,23 @@ class MCInstrInfo;
 namespace {
 class MipsAssemblerOptions {
 public:
-  MipsAssemblerOptions() : aTReg(1), reorder(true), macro(true) {}
+  MipsAssemblerOptions() : ATReg(1), Reorder(true), Macro(true) {}
 
-  unsigned getATRegNum() { return aTReg; }
+  unsigned getATRegNum() { return ATReg; }
   bool setATReg(unsigned Reg);
 
-  bool isReorder() { return reorder; }
-  void setReorder() { reorder = true; }
-  void setNoreorder() { reorder = false; }
+  bool isReorder() { return Reorder; }
+  void setReorder() { Reorder = true; }
+  void setNoReorder() { Reorder = false; }
 
-  bool isMacro() { return macro; }
-  void setMacro() { macro = true; }
-  void setNomacro() { macro = false; }
+  bool isMacro() { return Macro; }
+  void setMacro() { Macro = true; }
+  void setNoMacro() { Macro = false; }
 
 private:
-  unsigned aTReg;
-  bool reorder;
-  bool macro;
+  unsigned ATReg;
+  bool Reorder;
+  bool Macro;
 };
 }
 
@@ -1568,7 +1568,7 @@ bool MipsAssemblerOptions::setATReg(unsigned Reg) {
   if (Reg > 31)
     return false;
 
-  aTReg = Reg;
+  ATReg = Reg;
   return true;
 }
 
@@ -2409,7 +2409,7 @@ bool MipsAsmParser::parseSetNoReorderDirective() {
     reportParseError("unexpected token in statement");
     return false;
   }
-  Options.setNoreorder();
+  Options.setNoReorder();
   getTargetStreamer().emitDirectiveSetNoReorder();
   Parser.Lex(); // Consume the EndOfStatement.
   return false;
@@ -2438,7 +2438,7 @@ bool MipsAsmParser::parseSetNoMacroDirective() {
     reportParseError("`noreorder' must be set before `nomacro'");
     return false;
   }
-  Options.setNomacro();
+  Options.setNoMacro();
   Parser.Lex(); // Consume the EndOfStatement.
   return false;
 }
