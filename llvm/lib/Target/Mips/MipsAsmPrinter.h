@@ -60,10 +60,10 @@ private:
   std::map<const char *, const llvm::Mips16HardFloatInfo::FuncSignature *>
   StubsNeeded;
 
-  void emitInlineAsmStart(const MCSubtargetInfo &StartInfo) const override;
-
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                         const MCSubtargetInfo *EndInfo) const override;
+
+  void emitInlineAsmStart(const MCSubtargetInfo &StartInfo) const override;
 
   void EmitJal(MCSymbol *Symbol);
 
