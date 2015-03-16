@@ -1776,9 +1776,12 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
                         << *IsomorphicInc << '\n');
         Value *NewInc = OrigInc;
         if (OrigInc->getType() != IsomorphicInc->getType()) {
-          Instruction *IP = isa<PHINode>(OrigInc)
-            ? (Instruction*)L->getHeader()->getFirstInsertionPt()
-            : OrigInc->getNextNode();
+          Instruction *IP = nullptr;
+          if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
+            IP = PN->getParent()->getFirstInsertionPt();
+          else
+            IP = OrigInc->getNextNode();
+
           IRBuilder<> Builder(IP);
           Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
           NewInc = Builder.
