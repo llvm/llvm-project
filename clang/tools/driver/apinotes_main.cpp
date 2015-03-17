@@ -104,6 +104,12 @@ int cc1apinotes_main(ArrayRef<const char *> Argv, const char *Argv0,
         case llvm::Triple::IOS:
           targetOS = api_notes::OSType::IOS;
           break;
+        case llvm::Triple::WatchOS:
+          targetOS = api_notes::OSType::WatchOS;
+          break;
+        case llvm::Triple::TvOS:
+          targetOS = api_notes::OSType::TvOS;
+          break;
         default:
           errs() << "target is not supported\n";
           return 1;
