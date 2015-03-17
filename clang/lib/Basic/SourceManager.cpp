@@ -2076,22 +2076,33 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
     return IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second);
   }
 
-  // This can happen if a location is in a built-ins buffer.
-  // But see PR5662.
+  // If we arrived here, the location is either in a built-ins buffer or
+  // associated with global inline asm. PR5662 and PR22576 are examples.
+
   // Clear the lookup cache, it depends on a common location.
   IsBeforeInTUCache.clear();
-  bool LIsBuiltins = strcmp("<built-in>",
-                            getBuffer(LOffs.first)->getBufferIdentifier()) == 0;
-  bool RIsBuiltins = strcmp("<built-in>",
-                            getBuffer(ROffs.first)->getBufferIdentifier()) == 0;
-  // built-in is before non-built-in
-  if (LIsBuiltins != RIsBuiltins)
-    return LIsBuiltins;
-  assert(LIsBuiltins && RIsBuiltins &&
-         "Non-built-in locations must be rooted in the main file");
-  // Both are in built-in buffers, but from different files. We just claim that
-  // lower IDs come first.
-  return LOffs.first < ROffs.first;
+  llvm::MemoryBuffer *LBuf = getBuffer(LOffs.first);
+  llvm::MemoryBuffer *RBuf = getBuffer(ROffs.first);
+  bool LIsBuiltins = strcmp("<built-in>", LBuf->getBufferIdentifier()) == 0;
+  bool RIsBuiltins = strcmp("<built-in>", RBuf->getBufferIdentifier()) == 0;
+  // Sort built-in before non-built-in.
+  if (LIsBuiltins || RIsBuiltins) {
+    if (LIsBuiltins != RIsBuiltins)
+      return LIsBuiltins;
+    // Both are in built-in buffers, but from different files. We just claim that
+    // lower IDs come first.
+    return LOffs.first < ROffs.first;
+  }
+  bool LIsAsm = strcmp("<inline asm>", LBuf->getBufferIdentifier()) == 0;
+  bool RIsAsm = strcmp("<inline asm>", RBuf->getBufferIdentifier()) == 0;
+  // Sort assembler after built-ins, but before the rest.
+  if (LIsAsm || RIsAsm) {
+    if (LIsAsm != RIsAsm)
+      return RIsAsm;
+    assert(LOffs.first == ROffs.first);
+    return false;
+  }
+  llvm_unreachable("Unsortable locations found");
 }
 
 void SourceManager::PrintStats() const {
