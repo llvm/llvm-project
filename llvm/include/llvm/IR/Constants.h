@@ -326,6 +326,9 @@ public:
   /// index.
   Constant *getElementValue(unsigned Idx) const;
 
+  /// \brief Return the number of elements in the array, vector, or struct.
+  unsigned getNumElements() const;
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   ///
   static bool classof(const Value *V) {
@@ -1163,6 +1166,9 @@ public:
   /// getElementValue - Return an undef of the right value for the specified GEP
   /// index.
   UndefValue *getElementValue(unsigned Idx) const;
+
+  /// \brief Return the number of elements in the array, vector, or struct.
+  unsigned getNumElements() const;
 
   void destroyConstant() override;
 
