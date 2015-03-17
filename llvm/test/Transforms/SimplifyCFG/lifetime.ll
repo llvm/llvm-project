@@ -1,11 +1,11 @@
 ; RUN: opt < %s -simplifycfg -S | FileCheck %s
 
-; Test that a lifetime intrinsic doesn't prevent us from simplifying this.
+; Test that a lifetime intrinsic isn't removed because that would change semantics
 
 ; CHECK: foo
 ; CHECK: entry:
-; CHECK-NOT: bb0:
-; CHECK-NOT: bb1:
+; CHECK: bb0:
+; CHECK: bb1:
 ; CHECK: ret
 define void @foo(i1 %x) {
 entry:
