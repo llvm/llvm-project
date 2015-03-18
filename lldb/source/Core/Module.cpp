@@ -1590,7 +1590,7 @@ Module::SetArchitecture (const ArchSpec &new_arch)
         m_arch = new_arch;
         return true;
     }    
-    return m_arch.IsExactMatch(new_arch);
+    return m_arch.IsCompatibleMatch(new_arch);
 }
 
 bool 
