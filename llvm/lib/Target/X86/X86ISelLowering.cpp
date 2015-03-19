@@ -10094,12 +10094,12 @@ static SDValue lowerV2X128VectorShuffle(SDLoc DL, MVT VT, SDValue V1,
                                VT.getVectorNumElements() / 2);
   // Check for patterns which can be matched with a single insert of a 128-bit
   // subvector.
-  if (isShuffleEquivalent(Mask, 0, 1, 0, 1) ||
-      isShuffleEquivalent(Mask, 0, 1, 4, 5)) {
+  bool OnlyUsesV1 = isShuffleEquivalent(Mask, 0, 1, 0, 1);
+  if (OnlyUsesV1 || isShuffleEquivalent(Mask, 0, 1, 4, 5)) {
     SDValue LoV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, V1,
                               DAG.getIntPtrConstant(0));
     SDValue HiV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT,
-                              Mask[2] < 4 ? V1 : V2, DAG.getIntPtrConstant(0));
+                              OnlyUsesV1 ? V1 : V2, DAG.getIntPtrConstant(0));
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoV, HiV);
   }
   if (isShuffleEquivalent(Mask, 0, 1, 6, 7)) {
