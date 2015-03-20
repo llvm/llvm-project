@@ -11047,7 +11047,9 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
       } else if (VecInT.getSizeInBits() == VT.getSizeInBits() * 2) {
         // If the input vector is too large, try to split it.
         // We don't support having two input vectors that are too large.
-        if (VecIn2.getNode())
+        // If the zero vector was used, we can not split the vector,
+        // since we'd need 3 inputs.
+        if (UsesZeroVector || VecIn2.getNode())
           return SDValue();
 
         if (!TLI.isExtractSubvectorCheap(VT, VT.getVectorNumElements()))
@@ -11059,7 +11061,6 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
           DAG.getConstant(VT.getVectorNumElements(), TLI.getVectorIdxTy()));
         VecIn1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, VecIn1,
           DAG.getConstant(0, TLI.getVectorIdxTy()));
-        UsesZeroVector = false;
       } else
         return SDValue();
     }
