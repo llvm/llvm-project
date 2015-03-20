@@ -172,10 +172,80 @@ entry:
 define <8 x float> @F(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
 ; ALL-LABEL: F:
 ; ALL:       ## BB#0: ## %entry
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[0,1,0,1]
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; ALL-NEXT:    retq
 entry:
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 undef, i32 9, i32 undef, i32 11>
+  ret <8 x float> %shuffle
+}
+
+define <8 x float> @F2(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
+; ALL-LABEL: F2:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; ALL-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 undef, i32 undef, i32 6, i32 7>
+  ret <8 x float> %shuffle
+}
+
+define <8 x float> @F3(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
+; ALL-LABEL: F3:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; ALL-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 undef, i32 undef, i32 10, i32 11>
+  ret <8 x float> %shuffle
+}
+
+define <8 x float> @F4(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
+; ALL-LABEL: F4:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; ALL-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 undef, i32 undef, i32 14, i32 15>
+  ret <8 x float> %shuffle
+}
+
+define <8 x float> @F5(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
+; ALL-LABEL: F5:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; ALL-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x float> %shuffle
+}
+
+define <8 x float> @F6(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
+; ALL-LABEL: F6:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; ALL-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+  ret <8 x float> %shuffle
+}
+
+define <8 x float> @F7(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
+; ALL-LABEL: F7:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; ALL-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 6, i32 7>
+  ret <8 x float> %shuffle
+}
+
+define <8 x float> @F8(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
+; ALL-LABEL: F8:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; ALL-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 14, i32 15>
   ret <8 x float> %shuffle
 }
 

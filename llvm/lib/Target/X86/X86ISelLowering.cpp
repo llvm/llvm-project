@@ -10112,7 +10112,15 @@ static SDValue lowerV2X128VectorShuffle(SDLoc DL, MVT VT, SDValue V1,
 
   // Otherwise form a 128-bit permutation.
   // FIXME: Detect zero-vector inputs and use the VPERM2X128 to zero that half.
-  unsigned PermMask = Mask[0] / 2 | (Mask[2] / 2) << 4;
+  int MaskLO = Mask[0];
+  if (MaskLO == SM_SentinelUndef)
+    MaskLO = Mask[1] == SM_SentinelUndef ? 0 : Mask[1];
+
+  int MaskHI = Mask[2];
+  if (MaskHI == SM_SentinelUndef)
+    MaskHI = Mask[3] == SM_SentinelUndef ? 0 : Mask[3];
+
+  unsigned PermMask = MaskLO / 2 | (MaskHI / 2) << 4;
   return DAG.getNode(X86ISD::VPERM2X128, DL, VT, V1, V2,
                      DAG.getConstant(PermMask, MVT::i8));
 }
