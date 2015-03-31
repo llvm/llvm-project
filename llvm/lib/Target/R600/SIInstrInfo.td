@@ -383,15 +383,13 @@ class SOP1_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
   let isPseudo = 1;
 }
 
-class SOP1_Real_si <sop1 op, string opName, dag outs, dag ins, string asm,
-                    list<dag> pattern> :
-  SOP1 <outs, ins, asm, pattern>,
+class SOP1_Real_si <sop1 op, string opName, dag outs, dag ins, string asm> :
+  SOP1 <outs, ins, asm, []>,
   SOP1e <op.SI>,
   SIMCInstr<opName, SISubtarget.SI>;
 
-class SOP1_Real_vi <sop1 op, string opName, dag outs, dag ins, string asm,
-                    list<dag> pattern> :
-  SOP1 <outs, ins, asm, pattern>,
+class SOP1_Real_vi <sop1 op, string opName, dag outs, dag ins, string asm> :
+  SOP1 <outs, ins, asm, []>,
   SOP1e <op.VI>,
   SIMCInstr<opName, SISubtarget.VI>;
 
@@ -400,10 +398,10 @@ multiclass SOP1_32 <sop1 op, string opName, list<dag> pattern> {
     pattern>;
 
   def _si : SOP1_Real_si <op, opName, (outs SReg_32:$dst), (ins SSrc_32:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 
   def _vi : SOP1_Real_vi <op, opName, (outs SReg_32:$dst), (ins SSrc_32:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 }
 
 multiclass SOP1_64 <sop1 op, string opName, list<dag> pattern> {
@@ -411,10 +409,10 @@ multiclass SOP1_64 <sop1 op, string opName, list<dag> pattern> {
     pattern>;
 
   def _si : SOP1_Real_si <op, opName, (outs SReg_64:$dst), (ins SSrc_64:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 
   def _vi : SOP1_Real_vi <op, opName, (outs SReg_64:$dst), (ins SSrc_64:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 }
 
 // no input, 64-bit output.
@@ -422,12 +420,12 @@ multiclass SOP1_64_0 <sop1 op, string opName, list<dag> pattern> {
   def "" : SOP1_Pseudo <opName, (outs SReg_64:$dst), (ins), pattern>;
 
   def _si : SOP1_Real_si <op, opName, (outs SReg_64:$dst), (ins),
-    opName#" $dst", pattern> {
+    opName#" $dst"> {
     let SSRC0 = 0;
   }
 
   def _vi : SOP1_Real_vi <op, opName, (outs SReg_64:$dst), (ins),
-    opName#" $dst", pattern> {
+    opName#" $dst"> {
     let SSRC0 = 0;
   }
 }
@@ -438,10 +436,10 @@ multiclass SOP1_32_64 <sop1 op, string opName, list<dag> pattern> {
     pattern>;
 
   def _si : SOP1_Real_si <op, opName, (outs SReg_32:$dst), (ins SSrc_64:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 
   def _vi : SOP1_Real_vi <op, opName, (outs SReg_32:$dst), (ins SSrc_64:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 }
 
 class SOP2_Pseudo<string opName, dag outs, dag ins, list<dag> pattern> :
@@ -451,15 +449,13 @@ class SOP2_Pseudo<string opName, dag outs, dag ins, list<dag> pattern> :
   let Size = 4;
 }
 
-class SOP2_Real_si<sop2 op, string opName, dag outs, dag ins, string asm,
-                   list<dag> pattern> :
-  SOP2<outs, ins, asm, pattern>,
+class SOP2_Real_si<sop2 op, string opName, dag outs, dag ins, string asm> :
+  SOP2<outs, ins, asm, []>,
   SOP2e<op.SI>,
   SIMCInstr<opName, SISubtarget.SI>;
 
-class SOP2_Real_vi<sop2 op, string opName, dag outs, dag ins, string asm,
-                   list<dag> pattern> :
-  SOP2<outs, ins, asm, pattern>,
+class SOP2_Real_vi<sop2 op, string opName, dag outs, dag ins, string asm> :
+  SOP2<outs, ins, asm, []>,
   SOP2e<op.VI>,
   SIMCInstr<opName, SISubtarget.VI>;
 
@@ -469,11 +465,11 @@ multiclass SOP2_SELECT_32 <sop2 op, string opName, list<dag> pattern> {
 
   def _si : SOP2_Real_si <op, opName, (outs SReg_32:$dst),
     (ins SSrc_32:$src0, SSrc_32:$src1, SCCReg:$scc),
-    opName#" $dst, $src0, $src1 [$scc]", pattern>;
+    opName#" $dst, $src0, $src1 [$scc]">;
 
   def _vi : SOP2_Real_vi <op, opName, (outs SReg_32:$dst),
     (ins SSrc_32:$src0, SSrc_32:$src1, SCCReg:$scc),
-    opName#" $dst, $src0, $src1 [$scc]", pattern>;
+    opName#" $dst, $src0, $src1 [$scc]">;
 }
 
 multiclass SOP2_32 <sop2 op, string opName, list<dag> pattern> {
@@ -481,10 +477,10 @@ multiclass SOP2_32 <sop2 op, string opName, list<dag> pattern> {
     (ins SSrc_32:$src0, SSrc_32:$src1), pattern>;
 
   def _si : SOP2_Real_si <op, opName, (outs SReg_32:$dst),
-    (ins SSrc_32:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1", pattern>;
+    (ins SSrc_32:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1">;
 
   def _vi : SOP2_Real_vi <op, opName, (outs SReg_32:$dst),
-    (ins SSrc_32:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1", pattern>;
+    (ins SSrc_32:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1">;
 }
 
 multiclass SOP2_64 <sop2 op, string opName, list<dag> pattern> {
@@ -492,10 +488,10 @@ multiclass SOP2_64 <sop2 op, string opName, list<dag> pattern> {
     (ins SSrc_64:$src0, SSrc_64:$src1), pattern>;
 
   def _si : SOP2_Real_si <op, opName, (outs SReg_64:$dst),
-    (ins SSrc_64:$src0, SSrc_64:$src1), opName#" $dst, $src0, $src1", pattern>;
+    (ins SSrc_64:$src0, SSrc_64:$src1), opName#" $dst, $src0, $src1">;
 
   def _vi : SOP2_Real_vi <op, opName, (outs SReg_64:$dst),
-    (ins SSrc_64:$src0, SSrc_64:$src1), opName#" $dst, $src0, $src1", pattern>;
+    (ins SSrc_64:$src0, SSrc_64:$src1), opName#" $dst, $src0, $src1">;
 }
 
 multiclass SOP2_64_32 <sop2 op, string opName, list<dag> pattern> {
@@ -503,10 +499,10 @@ multiclass SOP2_64_32 <sop2 op, string opName, list<dag> pattern> {
     (ins SSrc_64:$src0, SSrc_32:$src1), pattern>;
 
   def _si : SOP2_Real_si <op, opName, (outs SReg_64:$dst),
-    (ins SSrc_64:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1", pattern>;
+    (ins SSrc_64:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1">;
 
   def _vi : SOP2_Real_vi <op, opName, (outs SReg_64:$dst),
-    (ins SSrc_64:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1", pattern>;
+    (ins SSrc_64:$src0, SSrc_32:$src1), opName#" $dst, $src0, $src1">;
 }
 
 
@@ -527,15 +523,13 @@ class SOPK_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
   let isPseudo = 1;
 }
 
-class SOPK_Real_si <sopk op, string opName, dag outs, dag ins, string asm,
-                    list<dag> pattern> :
-  SOPK <outs, ins, asm, pattern>,
+class SOPK_Real_si <sopk op, string opName, dag outs, dag ins, string asm> :
+  SOPK <outs, ins, asm, []>,
   SOPKe <op.SI>,
   SIMCInstr<opName, SISubtarget.SI>;
 
-class SOPK_Real_vi <sopk op, string opName, dag outs, dag ins, string asm,
-                    list<dag> pattern> :
-  SOPK <outs, ins, asm, pattern>,
+class SOPK_Real_vi <sopk op, string opName, dag outs, dag ins, string asm> :
+  SOPK <outs, ins, asm, []>,
   SOPKe <op.VI>,
   SIMCInstr<opName, SISubtarget.VI>;
 
@@ -544,10 +538,10 @@ multiclass SOPK_32 <sopk op, string opName, list<dag> pattern> {
     pattern>;
 
   def _si : SOPK_Real_si <op, opName, (outs SReg_32:$dst), (ins u16imm:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 
   def _vi : SOPK_Real_vi <op, opName, (outs SReg_32:$dst), (ins u16imm:$src0),
-    opName#" $dst, $src0", pattern>;
+    opName#" $dst, $src0">;
 }
 
 multiclass SOPK_SCC <sopk op, string opName, list<dag> pattern> {
@@ -555,10 +549,10 @@ multiclass SOPK_SCC <sopk op, string opName, list<dag> pattern> {
     (ins SReg_32:$src0, u16imm:$src1), pattern>;
 
   def _si : SOPK_Real_si <op, opName, (outs SCCReg:$dst),
-    (ins SReg_32:$src0, u16imm:$src1), opName#" $dst, $src0", pattern>;
+    (ins SReg_32:$src0, u16imm:$src1), opName#" $dst, $src0">;
 
   def _vi : SOPK_Real_vi <op, opName, (outs SCCReg:$dst),
-    (ins SReg_32:$src0, u16imm:$src1), opName#" $dst, $src0", pattern>;
+    (ins SReg_32:$src0, u16imm:$src1), opName#" $dst, $src0">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -974,13 +968,13 @@ multiclass VOP3b_2_m <vop op, dag outs, dag ins, string asm,
   // can write it into any SGPR. We currently don't use the carry out,
   // so for now hardcode it to VCC as well.
   let sdst = SIOperand.VCC, Defs = [VCC] in {
-    def _si : VOP3b <op.SI3, outs, ins, asm, pattern>,
+    def _si : VOP3b <op.SI3, outs, ins, asm, []>,
               VOP3DisableFields<1, 0, HasMods>,
               SIMCInstr<opName#"_e64", SISubtarget.SI>,
               VOP2_REV<revOp#"_e64_si", !eq(revOp, opName)>;
 
     // TODO: Do we need this VI variant here?
-    /*def _vi : VOP3b_vi <op.VI3, outs, ins, asm, pattern>,
+    /*def _vi : VOP3b_vi <op.VI3, outs, ins, asm, []>,
               VOP3DisableFields<1, 0, HasMods>,
               SIMCInstr<opName#"_e64", SISubtarget.VI>,
               VOP2_REV<revOp#"_e64_vi", !eq(revOp, opName)>;*/
@@ -1307,22 +1301,21 @@ class Vop3ModPat<Instruction Inst, VOPProfile P, SDPatternOperator node> : Pat<
 // Interpolation opcodes
 //===----------------------------------------------------------------------===//
 
-class VINTRP_Pseudo <string opName, dag outs, dag ins, string asm,
-                     list<dag> pattern> :
-  VINTRPCommon <outs, ins, asm, pattern>,
+class VINTRP_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
+  VINTRPCommon <outs, ins, "", pattern>,
   SIMCInstr<opName, SISubtarget.NONE> {
   let isPseudo = 1;
 }
 
 class VINTRP_Real_si <bits <2> op, string opName, dag outs, dag ins,
-                      string asm, list<dag> pattern> :
-  VINTRPCommon <outs, ins, asm, pattern>,
+                      string asm> :
+  VINTRPCommon <outs, ins, asm, []>,
   VINTRPe <op>,
   SIMCInstr<opName, SISubtarget.SI>;
 
 class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
-                      string asm, list<dag> pattern> :
-  VINTRPCommon <outs, ins, asm, pattern>,
+                      string asm> :
+  VINTRPCommon <outs, ins, asm, []>,
   VINTRPe_vi <op>,
   SIMCInstr<opName, SISubtarget.VI>;
 
@@ -1331,11 +1324,11 @@ multiclass VINTRP_m <bits <2> op, string opName, dag outs, dag ins, string asm,
                      list<dag> pattern = []> {
   let DisableEncoding = disableEncoding,
       Constraints = constraints in {
-    def "" : VINTRP_Pseudo <opName, outs, ins, asm, pattern>;
+    def "" : VINTRP_Pseudo <opName, outs, ins, pattern>;
 
-    def _si : VINTRP_Real_si <op, opName, outs, ins, asm, pattern>;
+    def _si : VINTRP_Real_si <op, opName, outs, ins, asm>;
 
-    def _vi : VINTRP_Real_vi <op, opName, outs, ins, asm, pattern>;
+    def _vi : VINTRP_Real_vi <op, opName, outs, ins, asm>;
   }
 }
 
