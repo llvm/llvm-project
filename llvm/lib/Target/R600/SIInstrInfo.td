@@ -1596,20 +1596,75 @@ multiclass MTBUF_Load_Helper <bits<3> op, string opName,
 // MUBUF classes
 //===----------------------------------------------------------------------===//
 
+class MUBUFAddr64Table <bit is_addr64, string suffix = ""> {
+  bit IsAddr64 = is_addr64;
+  string OpName = NAME # suffix;
+}
+
+class MUBUF_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
+  MUBUF <outs, ins, "", pattern>,
+  SIMCInstr<opName, SISubtarget.NONE> {
+  let isPseudo = 1;
+
+  // dummy fields, so that we can use let statements around multiclasses
+  bits<1> offen;
+  bits<1> idxen;
+  bits<8> vaddr;
+  bits<1> glc;
+  bits<1> slc;
+  bits<1> tfe;
+  bits<8> soffset;
+}
+
+class MUBUF_Real_si <bits<7> op, string opName, dag outs, dag ins,
+                     string asm> :
+  MUBUF <outs, ins, asm, []>,
+  MUBUFe <op>,
+  SIMCInstr<opName, SISubtarget.SI> {
+  let lds = 0;
+}
+
+class MUBUF_Real_vi <bits<7> op, string opName, dag outs, dag ins,
+                     string asm> :
+  MUBUF <outs, ins, asm, []>,
+  MUBUFe_vi <op>,
+  SIMCInstr<opName, SISubtarget.VI> {
+  let lds = 0;
+}
+
+multiclass MUBUF_m <bits<7> op, string opName, dag outs, dag ins, string asm,
+                    list<dag> pattern> {
+
+  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
+           MUBUFAddr64Table <0>;
+
+  let addr64 = 0 in {
+    def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
+  }
+}
+
+multiclass MUBUFAddr64_m <bits<7> op, string opName, dag outs,
+                          dag ins, string asm, list<dag> pattern> {
+
+  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
+           MUBUFAddr64Table <1>;
+
+  let addr64 = 1 in {
+    def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
+  }
+
+  // There is no VI version. If the pseudo is selected, it should be lowered
+  // for VI appropriately.
+}
+
 class MUBUF_si <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
   MUBUF <outs, ins, asm, pattern>, MUBUFe <op> {
-  let lds  = 0;
+  let lds = 0;
 }
 
 class MUBUF_vi <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
   MUBUF <outs, ins, asm, pattern>, MUBUFe_vi <op> {
   let lds = 0;
-}
-
-class MUBUFAddr64Table <bit is_addr64, string suffix = ""> {
-
-  bit IsAddr64 = is_addr64;
-  string OpName = NAME # suffix;
 }
 
 class MUBUFAtomicAddr64 <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern>
@@ -1619,7 +1674,6 @@ class MUBUFAtomicAddr64 <bits<7> op, dag outs, dag ins, string asm, list<dag> pa
   let idxen = 0;
   let addr64 = 1;
   let tfe = 0;
-  let lds = 0;
   let soffset = 128;
 }
 
@@ -1630,7 +1684,6 @@ class MUBUFAtomicOffset <bits<7> op, dag outs, dag ins, string asm, list<dag> pa
   let idxen = 0;
   let addr64 = 0;
   let tfe = 0;
-  let lds = 0;
   let vaddr = 0;
 }
 
@@ -1686,56 +1739,51 @@ multiclass MUBUF_Atomic <bits<7> op, string name, RegisterClass rc,
   } // mayStore = 1, mayLoad = 1, hasPostISelHook = 1
 }
 
-multiclass MUBUF_Load_Helper <bits<7> op, string asm, RegisterClass regClass,
+multiclass MUBUF_Load_Helper <bits<7> op, string name, RegisterClass regClass,
                               ValueType load_vt = i32,
                               SDPatternOperator ld = null_frag> {
 
   let mayLoad = 1, mayStore = 0 in {
-
-    let addr64 = 0 in {
-
-      let offen = 0, idxen = 0, vaddr = 0 in {
-        def _OFFSET : MUBUF_si <op, (outs regClass:$vdata),
-                             (ins SReg_128:$srsrc,
-                             mbuf_offset:$offset, SCSrc_32:$soffset, glc:$glc,
-                             slc:$slc, tfe:$tfe),
-                             asm#" $vdata, $srsrc, $soffset"#"$offset"#"$glc"#"$slc"#"$tfe",
-                             [(set load_vt:$vdata, (ld (MUBUFOffset v4i32:$srsrc,
-                                                       i32:$soffset, i16:$offset,
-                                                       i1:$glc, i1:$slc, i1:$tfe)))]>,
-                     MUBUFAddr64Table<0>;
-      }
-
-      let offen = 1, idxen = 0  in {
-        def _OFFEN  : MUBUF_si <op, (outs regClass:$vdata),
-                             (ins SReg_128:$srsrc, VGPR_32:$vaddr,
-                             SCSrc_32:$soffset, mbuf_offset:$offset, glc:$glc, slc:$slc,
-                             tfe:$tfe),
-                             asm#" $vdata, $vaddr, $srsrc, $soffset offen"#"$offset"#"$glc"#"$slc"#"$tfe", []>;
-      }
-
-      let offen = 0, idxen = 1 in {
-        def _IDXEN  : MUBUF_si <op, (outs regClass:$vdata),
-                             (ins SReg_128:$srsrc, VGPR_32:$vaddr,
-                             mbuf_offset:$offset, SCSrc_32:$soffset, glc:$glc,
-                             slc:$slc, tfe:$tfe),
-                             asm#" $vdata, $vaddr, $srsrc, $soffset idxen"#"$offset"#"$glc"#"$slc"#"$tfe", []>;
-      }
-
-      let offen = 1, idxen = 1 in {
-        def _BOTHEN : MUBUF_si <op, (outs regClass:$vdata),
-                             (ins SReg_128:$srsrc, VReg_64:$vaddr,
-                             SCSrc_32:$soffset, glc:$glc, slc:$slc, tfe:$tfe),
-                             asm#" $vdata, $vaddr, $srsrc, $soffset, idxen offen"#"$glc"#"$slc"#"$tfe", []>;
-      }
+    let offen = 0, idxen = 0, vaddr = 0 in {
+      defm _OFFSET : MUBUF_m <op, name#"_offset", (outs regClass:$vdata),
+                           (ins SReg_128:$srsrc,
+                           mbuf_offset:$offset, SCSrc_32:$soffset, glc:$glc,
+                           slc:$slc, tfe:$tfe),
+                           name#" $vdata, $srsrc, $soffset"#"$offset"#"$glc"#"$slc"#"$tfe",
+                           [(set load_vt:$vdata, (ld (MUBUFOffset v4i32:$srsrc,
+                                                     i32:$soffset, i16:$offset,
+                                                     i1:$glc, i1:$slc, i1:$tfe)))]>;
     }
 
-    let offen = 0, idxen = 0, addr64 = 1, glc = 0, slc = 0, tfe = 0, soffset = 128 /* ZERO */ in {
-      def _ADDR64 : MUBUF_si <op, (outs regClass:$vdata),
+    let offen = 1, idxen = 0  in {
+      defm _OFFEN  : MUBUF_m <op, name#"_offen", (outs regClass:$vdata),
+                           (ins SReg_128:$srsrc, VGPR_32:$vaddr,
+                           SCSrc_32:$soffset, mbuf_offset:$offset, glc:$glc, slc:$slc,
+                           tfe:$tfe),
+                           name#" $vdata, $vaddr, $srsrc, $soffset offen"#"$offset"#"$glc"#"$slc"#"$tfe", []>;
+    }
+
+    let offen = 0, idxen = 1 in {
+      defm _IDXEN  : MUBUF_m <op, name#"_idxen", (outs regClass:$vdata),
+                           (ins SReg_128:$srsrc, VGPR_32:$vaddr,
+                           mbuf_offset:$offset, SCSrc_32:$soffset, glc:$glc,
+                           slc:$slc, tfe:$tfe),
+                           name#" $vdata, $vaddr, $srsrc, $soffset idxen"#"$offset"#"$glc"#"$slc"#"$tfe", []>;
+    }
+
+    let offen = 1, idxen = 1 in {
+      defm _BOTHEN : MUBUF_m <op, name#"_bothen", (outs regClass:$vdata),
+                           (ins SReg_128:$srsrc, VReg_64:$vaddr,
+                           SCSrc_32:$soffset, glc:$glc, slc:$slc, tfe:$tfe),
+                           name#" $vdata, $vaddr, $srsrc, $soffset, idxen offen"#"$glc"#"$slc"#"$tfe", []>;
+    }
+
+    let offen = 0, idxen = 0, glc = 0, slc = 0, tfe = 0, soffset = 128 /* ZERO */ in {
+      defm _ADDR64 : MUBUFAddr64_m <op, name#"_addr64", (outs regClass:$vdata),
                            (ins SReg_128:$srsrc, VReg_64:$vaddr, mbuf_offset:$offset),
-                           asm#" $vdata, $vaddr, $srsrc, 0 addr64"#"$offset",
+                           name#" $vdata, $vaddr, $srsrc, 0 addr64"#"$offset",
                            [(set load_vt:$vdata, (ld (MUBUFAddr64 v4i32:$srsrc,
-                                                  i64:$vaddr, i16:$offset)))]>, MUBUFAddr64Table<1>;
+                                                  i64:$vaddr, i16:$offset)))]>;
     }
   }
 }
@@ -1744,7 +1792,7 @@ multiclass MUBUF_Load_Helper_vi <bits<7> op, string asm, RegisterClass regClass,
                               ValueType load_vt = i32,
                               SDPatternOperator ld = null_frag> {
 
-  let lds = 0, mayLoad = 1 in {
+  let mayLoad = 1, mayStore = 0 in {
     let offen = 0, idxen = 0, vaddr = 0 in {
       def _OFFSET : MUBUF_vi <op, (outs regClass:$vdata),
                            (ins SReg_128:$srsrc,
@@ -1784,66 +1832,40 @@ multiclass MUBUF_Load_Helper_vi <bits<7> op, string asm, RegisterClass regClass,
 
 multiclass MUBUF_Store_Helper <bits<7> op, string name, RegisterClass vdataClass,
                           ValueType store_vt, SDPatternOperator st> {
-
   let mayLoad = 0, mayStore = 1 in {
-  let addr64 = 0 in {
-
-    def "" : MUBUF_si <
-      op, (outs),
-      (ins vdataClass:$vdata, SReg_128:$srsrc, VGPR_32:$vaddr, SCSrc_32:$soffset,
-           mbuf_offset:$offset, offen:$offen, idxen:$idxen, glc:$glc, slc:$slc,
-           tfe:$tfe),
-      name#" $vdata, $vaddr, $srsrc, $soffset"#"$offen"#"$idxen"#"$offset"#
-           "$glc"#"$slc"#"$tfe",
-      []
-    >;
+    defm : MUBUF_m <op, name, (outs),
+                    (ins vdataClass:$vdata, SReg_128:$srsrc, VGPR_32:$vaddr, SCSrc_32:$soffset,
+                    mbuf_offset:$offset, offen:$offen, idxen:$idxen, glc:$glc, slc:$slc,
+                    tfe:$tfe),
+                    name#" $vdata, $vaddr, $srsrc, $soffset"#"$offen"#"$idxen"#"$offset"#
+                    "$glc"#"$slc"#"$tfe", []>;
 
     let offen = 0, idxen = 0, vaddr = 0 in {
-      def _OFFSET : MUBUF_si <
-        op, (outs),
-        (ins vdataClass:$vdata, SReg_128:$srsrc, mbuf_offset:$offset,
-              SCSrc_32:$soffset, glc:$glc, slc:$slc, tfe:$tfe),
-        name#" $vdata, $srsrc, $soffset"#"$offset"#"$glc"#"$slc"#"$tfe",
-        [(st store_vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset,
-                                           i16:$offset, i1:$glc, i1:$slc,
-                                           i1:$tfe))]
-      >, MUBUFAddr64Table<0>;
+      defm _OFFSET : MUBUF_m <op, name#"_offset",(outs),
+                              (ins vdataClass:$vdata, SReg_128:$srsrc, mbuf_offset:$offset,
+                              SCSrc_32:$soffset, glc:$glc, slc:$slc, tfe:$tfe),
+                              name#" $vdata, $srsrc, $soffset"#"$offset"#"$glc"#"$slc"#"$tfe",
+                              [(st store_vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset,
+                                   i16:$offset, i1:$glc, i1:$slc, i1:$tfe))]>;
     } // offen = 0, idxen = 0, vaddr = 0
 
     let offen = 1, idxen = 0  in {
-      def _OFFEN  : MUBUF_si <
-        op, (outs),
-        (ins vdataClass:$vdata, SReg_128:$srsrc, VGPR_32:$vaddr, SCSrc_32:$soffset,
-             mbuf_offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
-        name#" $vdata, $vaddr, $srsrc, $soffset offen"#"$offset"#
-            "$glc"#"$slc"#"$tfe",
-        []
-      >;
+      defm _OFFEN : MUBUF_m <op, name#"_offen", (outs),
+                             (ins vdataClass:$vdata, SReg_128:$srsrc, VGPR_32:$vaddr, SCSrc_32:$soffset,
+                             mbuf_offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
+                             name#" $vdata, $vaddr, $srsrc, $soffset offen"#"$offset"#
+                             "$glc"#"$slc"#"$tfe", []>;
     } // end offen = 1, idxen = 0
 
-  } // End addr64 = 0
-
-  def _ADDR64 : MUBUF_si <
-    op, (outs),
-    (ins vdataClass:$vdata, SReg_128:$srsrc, VReg_64:$vaddr, mbuf_offset:$offset),
-    name#" $vdata, $vaddr, $srsrc, 0 addr64"#"$offset",
-    [(st store_vt:$vdata,
-     (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i16:$offset))]>, MUBUFAddr64Table<1>
-     {
-
-      let mayLoad = 0;
-      let mayStore = 1;
-
-      // Encoding
-      let offen = 0;
-      let idxen = 0;
-      let glc = 0;
-      let addr64 = 1;
-      let slc = 0;
-      let tfe = 0;
-      let soffset = 128; // ZERO
-   }
-   } // End mayLoad = 0, mayStore = 1
+    let offen = 0, idxen = 0, glc = 0, slc = 0, tfe = 0,
+        soffset = 128 /* ZERO */ in {
+      defm _ADDR64 : MUBUFAddr64_m <op, name#"_addr64", (outs),
+                                    (ins vdataClass:$vdata, SReg_128:$srsrc, VReg_64:$vaddr, mbuf_offset:$offset),
+                                    name#" $vdata, $vaddr, $srsrc, 0 addr64"#"$offset",
+                                    [(st store_vt:$vdata,
+                                      (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i16:$offset))]>;
+    }
+  } // End mayLoad = 0, mayStore = 1
 }
 
 class FLAT_Load_Helper <bits<7> op, string asm, RegisterClass regClass> :
