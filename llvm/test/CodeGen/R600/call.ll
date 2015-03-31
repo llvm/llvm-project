@@ -1,4 +1,5 @@
 ; RUN: not llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s 2>&1 | FileCheck %s
 ; RUN: not llc -march=r600 -mcpu=cypress < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: unsupported call to function external_function in test_call_external

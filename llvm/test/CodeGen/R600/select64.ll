@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ; CHECK-LABEL: {{^}}select0:
 ; i64 select should be split into two i32 selects, and we shouldn't need

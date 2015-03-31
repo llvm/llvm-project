@@ -1,5 +1,6 @@
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 %s
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; These tests check that fdiv is expanded correctly and also test that the
 ; scheduler is scheduling the RECIP_IEEE and MUL_IEEE instructions in separate

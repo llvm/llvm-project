@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -o /dev/null %s
+; RUN: llc -march=amdgcn -mcpu=tonga -o /dev/null %s
 ; RUN: llc -march=r600 -mcpu=cypress -o /dev/null %s
 
 @extern_const_addrspace = external unnamed_addr addrspace(2) constant [5 x i32], align 4

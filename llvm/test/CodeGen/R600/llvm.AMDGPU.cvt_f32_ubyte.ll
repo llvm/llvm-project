@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
 
 declare float @llvm.AMDGPU.cvt.f32.ubyte0(i32) nounwind readnone
 declare float @llvm.AMDGPU.cvt.f32.ubyte1(i32) nounwind readnone

@@ -1,4 +1,5 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-DAG: image_sample_d {{v\[[0-9]+:[0-9]+\]}}, 15
 ;CHECK-DAG: image_sample_d {{v\[[0-9]+:[0-9]+\]}}, 3

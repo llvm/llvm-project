@@ -1,6 +1,9 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=SI -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
 ; XUN: llc -march=amdgcn -mcpu=SI -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE-SPDENORM -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; XUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE-SPDENORM -check-prefix=SI -check-prefix=FUNC %s
 
 ; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG-SAFE -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=cayman -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s

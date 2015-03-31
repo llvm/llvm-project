@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 declare double @llvm.AMDGPU.rcp.f64(double) nounwind readnone
 declare double @llvm.sqrt.f64(double) nounwind readnone

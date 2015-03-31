@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s
 
 ; This tests for a bug that caused a crash in
 ; AMDGPUDAGToDAGISel::SelectMUBUFScratch() which is used for selecting

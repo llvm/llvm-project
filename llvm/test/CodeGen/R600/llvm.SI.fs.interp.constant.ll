@@ -1,4 +1,5 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK: s_mov_b32
 ;CHECK-NEXT: v_interp_mov_f32

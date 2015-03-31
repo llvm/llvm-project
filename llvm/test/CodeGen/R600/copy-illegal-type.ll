@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}test_copy_v4i8:
 ; SI: buffer_load_dword [[REG:v[0-9]+]]

@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; Test that codegenprepare understands address space sizes
 

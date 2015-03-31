@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 declare double @llvm.maxnum.f64(double, double) #0
 declare <2 x double> @llvm.maxnum.v2f64(<2 x double>, <2 x double>) #0

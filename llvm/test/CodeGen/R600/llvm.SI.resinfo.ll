@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-DAG: image_get_resinfo {{v\[[0-9]+:[0-9]+\]}}, 15, 0, 0, -1
 ; CHECK-DAG: image_get_resinfo {{v\[[0-9]+:[0-9]+\]}}, 3, 0, 0, 0

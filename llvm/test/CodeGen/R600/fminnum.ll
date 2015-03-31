@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 declare float @llvm.minnum.f32(float, float) #0
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #0

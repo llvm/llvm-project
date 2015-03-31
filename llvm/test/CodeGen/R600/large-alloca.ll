@@ -1,6 +1,7 @@
 ; XFAIL: *
 ; REQUIRES: asserts
 ; RUN: llc -march=amdgcn -mcpu=SI < %s
+; RUN: llc -march=amdgcn -mcpu=tonga < %s
 
 define void @large_alloca(i32 addrspace(1)* %out, i32 %x, i32 %y) nounwind {
   %large = alloca [8192 x i32], align 4

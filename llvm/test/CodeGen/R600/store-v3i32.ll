@@ -1,5 +1,6 @@
 ; XFAIL: *
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
 
 ; 3 vectors have the same size and alignment as 4 vectors, so this
 ; should be done in a single store.

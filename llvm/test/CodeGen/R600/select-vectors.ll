@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; Test expansion of scalar selects on vectors.
 ; Evergreen not enabled since it seems to be having problems with doubles.

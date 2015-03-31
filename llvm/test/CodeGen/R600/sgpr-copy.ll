@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ; This test checks that no VGPR to SGPR copies are created by the register
 ; allocator.

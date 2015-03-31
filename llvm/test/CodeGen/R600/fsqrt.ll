@@ -1,5 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck %s
 
 ; Run with unsafe-fp-math to make sure nothing tries to turn this into 1 / rsqrt(x)
 

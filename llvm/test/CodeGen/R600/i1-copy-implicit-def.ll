@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SILowerI1Copies was not handling IMPLICIT_DEF
 ; SI-LABEL: {{^}}br_implicit_def:

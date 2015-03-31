@@ -1,5 +1,6 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=R600-CHECK
 ; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s --check-prefix=SI-CHECK
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefix=SI-CHECK
 
 ; R600-CHECK: {{^}}v4i32_kernel_arg:
 ; R600-CHECK-DAG: MOV {{[* ]*}}T[[GPR:[0-9]]].X, KC0[3].Y

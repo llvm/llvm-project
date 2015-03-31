@@ -1,4 +1,5 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-DAG: image_load {{v\[[0-9]+:[0-9]+\]}}, 15, 0, 0, -1
 ;CHECK-DAG: image_load_mip {{v\[[0-9]+:[0-9]+\]}}, 3, 0, 0, 0

@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}infinite_loop:
 ; SI: v_mov_b32_e32 [[REG:v[0-9]+]], 0x3e7

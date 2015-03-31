@@ -1,6 +1,7 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=R600-CHECK --check-prefix=FUNC %s
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck --check-prefix=R600-CHECK --check-prefix=FUNC %s
 ; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK --check-prefix=FUNC %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK --check-prefix=FUNC %s
 
 ;===------------------------------------------------------------------------===;
 ; GLOBAL ADDRESS SPACE

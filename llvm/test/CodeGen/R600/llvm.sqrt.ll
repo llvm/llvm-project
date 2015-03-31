@@ -1,5 +1,6 @@
 ; RUN: llc < %s -march=r600 --mcpu=redwood | FileCheck %s --check-prefix=R600-CHECK
 ; RUN: llc < %s -march=r600 --mcpu=SI -verify-machineinstrs| FileCheck %s --check-prefix=SI-CHECK
+; RUN: llc < %s -march=r600 --mcpu=tonga -verify-machineinstrs| FileCheck %s --check-prefix=SI-CHECK
 
 ; R600-CHECK-LABEL: {{^}}sqrt_f32:
 ; R600-CHECK: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[2].Z

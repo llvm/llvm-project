@@ -1,4 +1,5 @@
 ; RUN: llc -march=r600 -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; FUNC-LABEL {{^}}sextload_i1_to_i32_trunc_cmp_eq_0:
 ; SI: buffer_load_ubyte [[LOAD:v[0-9]+]]

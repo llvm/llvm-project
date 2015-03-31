@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=tahiti -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ; load a f64 value from the global address space.
 ; CHECK-LABEL: {{^}}load_f64:

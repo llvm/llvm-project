@@ -1,4 +1,5 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: s_sendmsg Gs(emit stream 0)

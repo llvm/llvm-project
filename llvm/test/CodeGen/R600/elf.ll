@@ -1,5 +1,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs -filetype=obj | llvm-readobj -s -symbols - | FileCheck --check-prefix=ELF-CHECK %s
 ; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG-CHECK %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs -filetype=obj | llvm-readobj -s -symbols - | FileCheck --check-prefix=ELF-CHECK %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG-CHECK %s
 
 ; ELF-CHECK: Format: ELF32
 ; ELF-CHECK: Name: .AMDGPU.config

@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}kill_gs_const:
 ; SI-NOT: v_cmpx_le_f32

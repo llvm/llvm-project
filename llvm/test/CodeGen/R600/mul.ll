@@ -1,5 +1,6 @@
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG %s -check-prefix=FUNC
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; mul24 and mad24 are affected
 

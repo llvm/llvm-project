@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 declare float @llvm.convert.from.fp16.f32(i16) nounwind readnone
 declare double @llvm.convert.from.fp16.f64(i16) nounwind readnone

@@ -1,4 +1,5 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs| FileCheck --check-prefix=SI --check-prefix=FUNC %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs| FileCheck --check-prefix=SI --check-prefix=FUNC %s
 
 ; XXX: Merge this into setcc, once R600 supports 64-bit operations
 

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=SI %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}vector_imax:
 ; SI: v_max_i32_e32

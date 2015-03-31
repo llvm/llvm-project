@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
 
 ; FIXME: Broken on evergreen
 ; FIXME: For some reason the 8 and 16 vectors are being stored as

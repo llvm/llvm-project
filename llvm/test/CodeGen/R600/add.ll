@@ -1,5 +1,6 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG-CHECK --check-prefix=FUNC %s
 ; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK --check-prefix=FUNC %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK --check-prefix=FUNC %s
 
 ;FUNC-LABEL: {{^}}test1:
 ;EG-CHECK: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}

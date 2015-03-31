@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; On Southern Islands GPUs the local address space(3) uses 32-bit pointers and
 ; the global address space(1) uses 64-bit pointers.  These tests check to make sure

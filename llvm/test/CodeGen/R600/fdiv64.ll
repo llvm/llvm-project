@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=tahiti -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ; CHECK: {{^}}fdiv_f64:
 ; CHECK: v_rcp_f64_e32 {{v\[[0-9]+:[0-9]+\]}}

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ; CHECK-LABEL: {{^}}anyext_i1_i32:
 ; CHECK: v_cndmask_b32_e64
