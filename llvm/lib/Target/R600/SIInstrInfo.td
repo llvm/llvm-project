@@ -1669,27 +1669,38 @@ class MUBUF_si <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
   let lds = 0;
 }
 
-class MUBUFAtomicAddr64 <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern>
-    : MUBUF_si <op, outs, ins, asm, pattern> {
+multiclass MUBUFAtomicOffset_m <mubuf op, string opName, dag outs, dag ins,
+                                string asm, list<dag> pattern, bit is_return> {
 
-  let offen = 0;
-  let idxen = 0;
-  let addr64 = 1;
-  let tfe = 0;
-  let soffset = 128;
+  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
+           MUBUFAddr64Table <0, !if(is_return, "_RTN", "")>,
+           AtomicNoRet<NAME#"_OFFSET", is_return>;
+
+  let offen = 0, idxen = 0, tfe = 0, vaddr = 0 in {
+    let addr64 = 0 in {
+      def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
+    }
+
+    def _vi : MUBUF_Real_vi <op, opName, outs, ins, asm>;
+  }
 }
 
-class MUBUFAtomicOffset <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern>
-    : MUBUF_si <op, outs, ins, asm, pattern> {
+multiclass MUBUFAtomicAddr64_m <mubuf op, string opName, dag outs, dag ins,
+                                string asm, list<dag> pattern, bit is_return> {
 
-  let offen = 0;
-  let idxen = 0;
-  let addr64 = 0;
-  let tfe = 0;
-  let vaddr = 0;
+  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
+           MUBUFAddr64Table <1, !if(is_return, "_RTN", "")>,
+           AtomicNoRet<NAME#"_ADDR64", is_return>;
+
+  let offen = 0, idxen = 0, addr64 = 1, tfe = 0, soffset = 128 in {
+    def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
+  }
+
+  // There is no VI version. If the pseudo is selected, it should be lowered
+  // for VI appropriately.
 }
 
-multiclass MUBUF_Atomic <bits<7> op, string name, RegisterClass rc,
+multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
                          ValueType vt, SDPatternOperator atomic> {
 
   let mayStore = 1, mayLoad = 1, hasPostISelHook = 1 in {
@@ -1697,44 +1708,44 @@ multiclass MUBUF_Atomic <bits<7> op, string name, RegisterClass rc,
     // No return variants
     let glc = 0 in {
 
-      def _ADDR64 : MUBUFAtomicAddr64 <
-        op, (outs),
+      defm _ADDR64 : MUBUFAtomicAddr64_m <
+        op, name#"_addr64", (outs),
         (ins rc:$vdata, SReg_128:$srsrc, VReg_64:$vaddr,
              mbuf_offset:$offset, slc:$slc),
-        name#" $vdata, $vaddr, $srsrc, 0 addr64"#"$offset"#"$slc", []
-      >, MUBUFAddr64Table<1>, AtomicNoRet<NAME#"_ADDR64", 0>;
+        name#" $vdata, $vaddr, $srsrc, 0 addr64"#"$offset"#"$slc", [], 0
+      >;
 
-      def _OFFSET : MUBUFAtomicOffset <
-        op, (outs),
+      defm _OFFSET : MUBUFAtomicOffset_m <
+        op, name#"_offset", (outs),
         (ins rc:$vdata, SReg_128:$srsrc, mbuf_offset:$offset,
              SCSrc_32:$soffset, slc:$slc),
-        name#" $vdata, $srsrc, $soffset"#"$offset"#"$slc", []
-      >, MUBUFAddr64Table<0>, AtomicNoRet<NAME#"_OFFSET", 0>;
+        name#" $vdata, $srsrc, $soffset"#"$offset"#"$slc", [], 0
+      >;
     } // glc = 0
 
     // Variant that return values
     let glc = 1, Constraints = "$vdata = $vdata_in",
         DisableEncoding = "$vdata_in"  in {
 
-      def _RTN_ADDR64 : MUBUFAtomicAddr64 <
-        op, (outs rc:$vdata),
+      defm _RTN_ADDR64 : MUBUFAtomicAddr64_m <
+        op, name#"_rtn_addr64", (outs rc:$vdata),
         (ins rc:$vdata_in, SReg_128:$srsrc, VReg_64:$vaddr,
              mbuf_offset:$offset, slc:$slc),
         name#" $vdata, $vaddr, $srsrc, 0 addr64"#"$offset"#" glc"#"$slc",
         [(set vt:$vdata,
          (atomic (MUBUFAddr64Atomic v4i32:$srsrc, i64:$vaddr, i16:$offset,
-                                    i1:$slc), vt:$vdata_in))]
-      >, MUBUFAddr64Table<1, "_RTN">, AtomicNoRet<NAME#"_ADDR64", 1>;
+                                    i1:$slc), vt:$vdata_in))], 1
+      >;
 
-      def _RTN_OFFSET : MUBUFAtomicOffset <
-        op, (outs rc:$vdata),
+      defm _RTN_OFFSET : MUBUFAtomicOffset_m <
+        op, name#"_rtn_offset", (outs rc:$vdata),
         (ins rc:$vdata_in, SReg_128:$srsrc, mbuf_offset:$offset,
              SCSrc_32:$soffset, slc:$slc),
         name#" $vdata, $srsrc, $soffset"#"$offset"#" glc $slc",
         [(set vt:$vdata,
          (atomic (MUBUFOffsetAtomic v4i32:$srsrc, i32:$soffset, i16:$offset,
-                                    i1:$slc), vt:$vdata_in))]
-      >, MUBUFAddr64Table<0, "_RTN">, AtomicNoRet<NAME#"_OFFSET", 1>;
+                                    i1:$slc), vt:$vdata_in))], 1
+      >;
 
     } // glc = 1
 

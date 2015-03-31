@@ -931,67 +931,63 @@ defm BUFFER_STORE_DWORDX4 : MUBUF_Store_Helper <
   mubuf<0x1e, 0x1f>, "buffer_store_dwordx4", VReg_128, v4i32, global_store
 >;
 
-let SubtargetPredicate = isSICI in {
-
-//def BUFFER_ATOMIC_SWAP : MUBUF_ <0x00000030, "buffer_atomic_swap", []>;
 defm BUFFER_ATOMIC_SWAP : MUBUF_Atomic <
-  0x00000030, "buffer_atomic_swap", VGPR_32, i32, atomic_swap_global
+  mubuf<0x30, 0x40>, "buffer_atomic_swap", VGPR_32, i32, atomic_swap_global
 >;
-//def BUFFER_ATOMIC_CMPSWAP : MUBUF_ <0x00000031, "buffer_atomic_cmpswap", []>;
+//def BUFFER_ATOMIC_CMPSWAP : MUBUF_ <mubuf<0x31, 0x41>, "buffer_atomic_cmpswap", []>;
 defm BUFFER_ATOMIC_ADD : MUBUF_Atomic <
-  0x00000032, "buffer_atomic_add", VGPR_32, i32, atomic_add_global
+  mubuf<0x32, 0x42>, "buffer_atomic_add", VGPR_32, i32, atomic_add_global
 >;
 defm BUFFER_ATOMIC_SUB : MUBUF_Atomic <
-  0x00000033, "buffer_atomic_sub", VGPR_32, i32, atomic_sub_global
+  mubuf<0x33, 0x43>, "buffer_atomic_sub", VGPR_32, i32, atomic_sub_global
 >;
-//def BUFFER_ATOMIC_RSUB : MUBUF_ <0x00000034, "buffer_atomic_rsub", []>;
+//def BUFFER_ATOMIC_RSUB : MUBUF_ <mubuf<0x34>, "buffer_atomic_rsub", []>; // isn't on CI & VI
 defm BUFFER_ATOMIC_SMIN : MUBUF_Atomic <
-  0x00000035, "buffer_atomic_smin", VGPR_32, i32, atomic_min_global
+  mubuf<0x35, 0x44>, "buffer_atomic_smin", VGPR_32, i32, atomic_min_global
 >;
 defm BUFFER_ATOMIC_UMIN : MUBUF_Atomic <
-  0x00000036, "buffer_atomic_umin", VGPR_32, i32, atomic_umin_global
+  mubuf<0x36, 0x45>, "buffer_atomic_umin", VGPR_32, i32, atomic_umin_global
 >;
 defm BUFFER_ATOMIC_SMAX : MUBUF_Atomic <
-  0x00000037, "buffer_atomic_smax", VGPR_32, i32, atomic_max_global
+  mubuf<0x37, 0x46>, "buffer_atomic_smax", VGPR_32, i32, atomic_max_global
 >;
 defm BUFFER_ATOMIC_UMAX : MUBUF_Atomic <
-  0x00000038, "buffer_atomic_umax", VGPR_32, i32, atomic_umax_global
+  mubuf<0x38, 0x47>, "buffer_atomic_umax", VGPR_32, i32, atomic_umax_global
 >;
 defm BUFFER_ATOMIC_AND : MUBUF_Atomic <
-  0x00000039, "buffer_atomic_and", VGPR_32, i32, atomic_and_global
+  mubuf<0x39, 0x48>, "buffer_atomic_and", VGPR_32, i32, atomic_and_global
 >;
 defm BUFFER_ATOMIC_OR : MUBUF_Atomic <
-  0x0000003a, "buffer_atomic_or", VGPR_32, i32, atomic_or_global
+  mubuf<0x3a, 0x49>, "buffer_atomic_or", VGPR_32, i32, atomic_or_global
 >;
 defm BUFFER_ATOMIC_XOR : MUBUF_Atomic <
-  0x0000003b, "buffer_atomic_xor", VGPR_32, i32, atomic_xor_global
+  mubuf<0x3b, 0x4a>, "buffer_atomic_xor", VGPR_32, i32, atomic_xor_global
 >;
-//def BUFFER_ATOMIC_INC : MUBUF_ <0x0000003c, "buffer_atomic_inc", []>;
-//def BUFFER_ATOMIC_DEC : MUBUF_ <0x0000003d, "buffer_atomic_dec", []>;
-//def BUFFER_ATOMIC_FCMPSWAP : MUBUF_ <0x0000003e, "buffer_atomic_fcmpswap", []>;
-//def BUFFER_ATOMIC_FMIN : MUBUF_ <0x0000003f, "buffer_atomic_fmin", []>;
-//def BUFFER_ATOMIC_FMAX : MUBUF_ <0x00000040, "buffer_atomic_fmax", []>;
-//def BUFFER_ATOMIC_SWAP_X2 : MUBUF_X2 <0x00000050, "buffer_atomic_swap_x2", []>;
-//def BUFFER_ATOMIC_CMPSWAP_X2 : MUBUF_X2 <0x00000051, "buffer_atomic_cmpswap_x2", []>;
-//def BUFFER_ATOMIC_ADD_X2 : MUBUF_X2 <0x00000052, "buffer_atomic_add_x2", []>;
-//def BUFFER_ATOMIC_SUB_X2 : MUBUF_X2 <0x00000053, "buffer_atomic_sub_x2", []>;
-//def BUFFER_ATOMIC_RSUB_X2 : MUBUF_X2 <0x00000054, "buffer_atomic_rsub_x2", []>;
-//def BUFFER_ATOMIC_SMIN_X2 : MUBUF_X2 <0x00000055, "buffer_atomic_smin_x2", []>;
-//def BUFFER_ATOMIC_UMIN_X2 : MUBUF_X2 <0x00000056, "buffer_atomic_umin_x2", []>;
-//def BUFFER_ATOMIC_SMAX_X2 : MUBUF_X2 <0x00000057, "buffer_atomic_smax_x2", []>;
-//def BUFFER_ATOMIC_UMAX_X2 : MUBUF_X2 <0x00000058, "buffer_atomic_umax_x2", []>;
-//def BUFFER_ATOMIC_AND_X2 : MUBUF_X2 <0x00000059, "buffer_atomic_and_x2", []>;
-//def BUFFER_ATOMIC_OR_X2 : MUBUF_X2 <0x0000005a, "buffer_atomic_or_x2", []>;
-//def BUFFER_ATOMIC_XOR_X2 : MUBUF_X2 <0x0000005b, "buffer_atomic_xor_x2", []>;
-//def BUFFER_ATOMIC_INC_X2 : MUBUF_X2 <0x0000005c, "buffer_atomic_inc_x2", []>;
-//def BUFFER_ATOMIC_DEC_X2 : MUBUF_X2 <0x0000005d, "buffer_atomic_dec_x2", []>;
-//def BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_X2 <0x0000005e, "buffer_atomic_fcmpswap_x2", []>;
-//def BUFFER_ATOMIC_FMIN_X2 : MUBUF_X2 <0x0000005f, "buffer_atomic_fmin_x2", []>;
-//def BUFFER_ATOMIC_FMAX_X2 : MUBUF_X2 <0x00000060, "buffer_atomic_fmax_x2", []>;
-//def BUFFER_WBINVL1_SC : MUBUF_WBINVL1 <0x00000070, "buffer_wbinvl1_sc", []>;
-//def BUFFER_WBINVL1 : MUBUF_WBINVL1 <0x00000071, "buffer_wbinvl1", []>;
-
-} // End SubtargetPredicate = isSICI
+//def BUFFER_ATOMIC_INC : MUBUF_ <mubuf<0x3c, 0x4b>, "buffer_atomic_inc", []>;
+//def BUFFER_ATOMIC_DEC : MUBUF_ <mubuf<0x3d, 0x4c>, "buffer_atomic_dec", []>;
+//def BUFFER_ATOMIC_FCMPSWAP : MUBUF_ <mubuf<0x3e>, "buffer_atomic_fcmpswap", []>; // isn't on VI
+//def BUFFER_ATOMIC_FMIN : MUBUF_ <mubuf<0x3f>, "buffer_atomic_fmin", []>; // isn't on VI
+//def BUFFER_ATOMIC_FMAX : MUBUF_ <mubuf<0x40>, "buffer_atomic_fmax", []>; // isn't on VI
+//def BUFFER_ATOMIC_SWAP_X2 : MUBUF_X2 <mubuf<0x50, 0x60>, "buffer_atomic_swap_x2", []>;
+//def BUFFER_ATOMIC_CMPSWAP_X2 : MUBUF_X2 <mubuf<0x51, 0x61>, "buffer_atomic_cmpswap_x2", []>;
+//def BUFFER_ATOMIC_ADD_X2 : MUBUF_X2 <mubuf<0x52, 0x62>, "buffer_atomic_add_x2", []>;
+//def BUFFER_ATOMIC_SUB_X2 : MUBUF_X2 <mubuf<0x53, 0x63>, "buffer_atomic_sub_x2", []>;
+//def BUFFER_ATOMIC_RSUB_X2 : MUBUF_X2 <mubuf<0x54>, "buffer_atomic_rsub_x2", []>; // isn't on CI & VI
+//def BUFFER_ATOMIC_SMIN_X2 : MUBUF_X2 <mubuf<0x55, 0x64>, "buffer_atomic_smin_x2", []>;
+//def BUFFER_ATOMIC_UMIN_X2 : MUBUF_X2 <mubuf<0x56, 0x65>, "buffer_atomic_umin_x2", []>;
+//def BUFFER_ATOMIC_SMAX_X2 : MUBUF_X2 <mubuf<0x57, 0x66>, "buffer_atomic_smax_x2", []>;
+//def BUFFER_ATOMIC_UMAX_X2 : MUBUF_X2 <mubuf<0x58, 0x67>, "buffer_atomic_umax_x2", []>;
+//def BUFFER_ATOMIC_AND_X2 : MUBUF_X2 <mubuf<0x59, 0x68>, "buffer_atomic_and_x2", []>;
+//def BUFFER_ATOMIC_OR_X2 : MUBUF_X2 <mubuf<0x5a, 0x69>, "buffer_atomic_or_x2", []>;
+//def BUFFER_ATOMIC_XOR_X2 : MUBUF_X2 <mubuf<0x5b, 0x6a>, "buffer_atomic_xor_x2", []>;
+//def BUFFER_ATOMIC_INC_X2 : MUBUF_X2 <mubuf<0x5c, 0x6b>, "buffer_atomic_inc_x2", []>;
+//def BUFFER_ATOMIC_DEC_X2 : MUBUF_X2 <mubuf<0x5d, 0x6c>, "buffer_atomic_dec_x2", []>;
+//def BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_X2 <mubuf<0x5e>, "buffer_atomic_fcmpswap_x2", []>; // isn't on VI
+//def BUFFER_ATOMIC_FMIN_X2 : MUBUF_X2 <mubuf<0x5f>, "buffer_atomic_fmin_x2", []>; // isn't on VI
+//def BUFFER_ATOMIC_FMAX_X2 : MUBUF_X2 <mubuf<0x60>, "buffer_atomic_fmax_x2", []>; // isn't on VI
+//def BUFFER_WBINVL1_SC : MUBUF_WBINVL1 <mubuf<0x70>, "buffer_wbinvl1_sc", []>; // isn't on CI & VI
+//def BUFFER_WBINVL1_VOL : MUBUF_WBINVL1 <mubuf<0x70, 0x3f>, "buffer_wbinvl1_vol", []>; // isn't on SI
+//def BUFFER_WBINVL1 : MUBUF_WBINVL1 <mubuf<0x71, 0x3e>, "buffer_wbinvl1", []>;
 
 //===----------------------------------------------------------------------===//
 // MTBUF Instructions
