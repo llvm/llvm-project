@@ -881,57 +881,58 @@ defm DS_READ2ST64_B64 : DS_Load2_Helper <0x00000076, "ds_read2st64_b64", VReg_12
 // MUBUF Instructions
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isSICI in {
-
-//def BUFFER_LOAD_FORMAT_X : MUBUF_ <0x00000000, "buffer_load_format_x", []>;
-//def BUFFER_LOAD_FORMAT_XY : MUBUF_ <0x00000001, "buffer_load_format_xy", []>;
-//def BUFFER_LOAD_FORMAT_XYZ : MUBUF_ <0x00000002, "buffer_load_format_xyz", []>;
-defm BUFFER_LOAD_FORMAT_XYZW : MUBUF_Load_Helper <0x00000003, "buffer_load_format_xyzw", VReg_128>;
-//def BUFFER_STORE_FORMAT_X : MUBUF_ <0x00000004, "buffer_store_format_x", []>;
-//def BUFFER_STORE_FORMAT_XY : MUBUF_ <0x00000005, "buffer_store_format_xy", []>;
-//def BUFFER_STORE_FORMAT_XYZ : MUBUF_ <0x00000006, "buffer_store_format_xyz", []>;
-//def BUFFER_STORE_FORMAT_XYZW : MUBUF_ <0x00000007, "buffer_store_format_xyzw", []>;
+//def BUFFER_LOAD_FORMAT_X : MUBUF_ <mubuf<0x00>, "buffer_load_format_x", []>;
+//def BUFFER_LOAD_FORMAT_XY : MUBUF_ <mubuf<0x01>, "buffer_load_format_xy", []>;
+//def BUFFER_LOAD_FORMAT_XYZ : MUBUF_ <mubuf<0x02>, "buffer_load_format_xyz", []>;
+defm BUFFER_LOAD_FORMAT_XYZW : MUBUF_Load_Helper <mubuf<0x03>, "buffer_load_format_xyzw", VReg_128>;
+//def BUFFER_STORE_FORMAT_X : MUBUF_ <mubuf<0x04>, "buffer_store_format_x", []>;
+//def BUFFER_STORE_FORMAT_XY : MUBUF_ <mubuf<0x05>, "buffer_store_format_xy", []>;
+//def BUFFER_STORE_FORMAT_XYZ : MUBUF_ <mubuf<0x06>, "buffer_store_format_xyz", []>;
+//def BUFFER_STORE_FORMAT_XYZW : MUBUF_ <mubuf<0x07>, "buffer_store_format_xyzw", []>;
 defm BUFFER_LOAD_UBYTE : MUBUF_Load_Helper <
-  0x00000008, "buffer_load_ubyte", VGPR_32, i32, az_extloadi8_global
+  mubuf<0x08, 0x10>, "buffer_load_ubyte", VGPR_32, i32, az_extloadi8_global
 >;
 defm BUFFER_LOAD_SBYTE : MUBUF_Load_Helper <
-  0x00000009, "buffer_load_sbyte", VGPR_32, i32, sextloadi8_global
+  mubuf<0x09, 0x11>, "buffer_load_sbyte", VGPR_32, i32, sextloadi8_global
 >;
 defm BUFFER_LOAD_USHORT : MUBUF_Load_Helper <
-  0x0000000a, "buffer_load_ushort", VGPR_32, i32, az_extloadi16_global
+  mubuf<0x0a, 0x12>, "buffer_load_ushort", VGPR_32, i32, az_extloadi16_global
 >;
 defm BUFFER_LOAD_SSHORT : MUBUF_Load_Helper <
-  0x0000000b, "buffer_load_sshort", VGPR_32, i32, sextloadi16_global
+  mubuf<0x0b, 0x13>, "buffer_load_sshort", VGPR_32, i32, sextloadi16_global
 >;
 defm BUFFER_LOAD_DWORD : MUBUF_Load_Helper <
-  0x0000000c, "buffer_load_dword", VGPR_32, i32, global_load
+  mubuf<0x0c, 0x14>, "buffer_load_dword", VGPR_32, i32, global_load
 >;
 defm BUFFER_LOAD_DWORDX2 : MUBUF_Load_Helper <
-  0x0000000d, "buffer_load_dwordx2", VReg_64, v2i32, global_load
+  mubuf<0x0d, 0x15>, "buffer_load_dwordx2", VReg_64, v2i32, global_load
 >;
 defm BUFFER_LOAD_DWORDX4 : MUBUF_Load_Helper <
-  0x0000000e, "buffer_load_dwordx4", VReg_128, v4i32, global_load
+  mubuf<0x0e, 0x17>, "buffer_load_dwordx4", VReg_128, v4i32, global_load
 >;
 
 defm BUFFER_STORE_BYTE : MUBUF_Store_Helper <
-  0x00000018, "buffer_store_byte", VGPR_32, i32, truncstorei8_global
+  mubuf<0x18>, "buffer_store_byte", VGPR_32, i32, truncstorei8_global
 >;
 
 defm BUFFER_STORE_SHORT : MUBUF_Store_Helper <
-  0x0000001a, "buffer_store_short", VGPR_32, i32, truncstorei16_global
+  mubuf<0x1a>, "buffer_store_short", VGPR_32, i32, truncstorei16_global
 >;
 
 defm BUFFER_STORE_DWORD : MUBUF_Store_Helper <
-  0x0000001c, "buffer_store_dword", VGPR_32, i32, global_store
+  mubuf<0x1c>, "buffer_store_dword", VGPR_32, i32, global_store
 >;
 
 defm BUFFER_STORE_DWORDX2 : MUBUF_Store_Helper <
-  0x0000001d, "buffer_store_dwordx2", VReg_64, v2i32, global_store
+  mubuf<0x1d>, "buffer_store_dwordx2", VReg_64, v2i32, global_store
 >;
 
 defm BUFFER_STORE_DWORDX4 : MUBUF_Store_Helper <
-  0x0000001e, "buffer_store_dwordx4", VReg_128, v4i32, global_store
+  mubuf<0x1e, 0x1f>, "buffer_store_dwordx4", VReg_128, v4i32, global_store
 >;
+
+let SubtargetPredicate = isSICI in {
+
 //def BUFFER_ATOMIC_SWAP : MUBUF_ <0x00000030, "buffer_atomic_swap", []>;
 defm BUFFER_ATOMIC_SWAP : MUBUF_Atomic <
   0x00000030, "buffer_atomic_swap", VGPR_32, i32, atomic_swap_global
@@ -2020,15 +2021,11 @@ def : Pat <
   (SI_KILL 0xbf800000)
 >;
 
-let Predicates = [isSICI] in {
-
 /* int_SI_vs_load_input */
 def : Pat<
   (SIload_input v4i32:$tlst, imm:$attr_offset, i32:$buf_idx_vgpr),
   (BUFFER_LOAD_FORMAT_XYZW_IDXEN $tlst, $buf_idx_vgpr, imm:$attr_offset, 0, 0, 0, 0)
 >;
-
-} // End Predicates = [isSICI]
 
 /* int_SI_export */
 def : Pat <
@@ -2716,15 +2713,11 @@ class Ext32Pat <SDNode ext> : Pat <
 def : Ext32Pat <zext>;
 def : Ext32Pat <anyext>;
 
-let Predicates = [isSICI] in {
-
 // Offset in an 32Bit VGPR
 def : Pat <
   (SIload_constant v4i32:$sbase, i32:$voff),
   (BUFFER_LOAD_DWORD_OFFEN $sbase, $voff, 0, 0, 0, 0, 0)
 >;
-
-} // End Predicates = [isSICI]
 
 // The multiplication scales from [0,1] to the unsigned integer range
 def : Pat <
@@ -2907,7 +2900,6 @@ class MUBUFScratchLoadPat <MUBUF Instr, ValueType vt, PatFrag ld> : Pat <
   (Instr $srsrc, $vaddr, $soffset, $offset, 0, 0, 0)
 >;
 
-let Predicates = [isSICI] in {
 def : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, i32, sextloadi8_private>;
 def : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, i32, extloadi8_private>;
 def : MUBUFScratchLoadPat <BUFFER_LOAD_SSHORT_OFFEN, i32, sextloadi16_private>;
@@ -2915,7 +2907,6 @@ def : MUBUFScratchLoadPat <BUFFER_LOAD_USHORT_OFFEN, i32, extloadi16_private>;
 def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORD_OFFEN, i32, load_private>;
 def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX2_OFFEN, v2i32, load_private>;
 def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX4_OFFEN, v4i32, load_private>;
-} // End Predicates = [isSICI]
 
 // BUFFER_LOAD_DWORD*, addr64=0
 multiclass MUBUF_Load_Dword <ValueType vt, MUBUF offset, MUBUF offen, MUBUF idxen,
@@ -2954,14 +2945,12 @@ multiclass MUBUF_Load_Dword <ValueType vt, MUBUF offset, MUBUF offen, MUBUF idxe
   >;
 }
 
-let Predicates = [isSICI] in {
 defm : MUBUF_Load_Dword <i32, BUFFER_LOAD_DWORD_OFFSET, BUFFER_LOAD_DWORD_OFFEN,
                          BUFFER_LOAD_DWORD_IDXEN, BUFFER_LOAD_DWORD_BOTHEN>;
 defm : MUBUF_Load_Dword <v2i32, BUFFER_LOAD_DWORDX2_OFFSET, BUFFER_LOAD_DWORDX2_OFFEN,
                          BUFFER_LOAD_DWORDX2_IDXEN, BUFFER_LOAD_DWORDX2_BOTHEN>;
 defm : MUBUF_Load_Dword <v4i32, BUFFER_LOAD_DWORDX4_OFFSET, BUFFER_LOAD_DWORDX4_OFFEN,
                          BUFFER_LOAD_DWORDX4_IDXEN, BUFFER_LOAD_DWORDX4_BOTHEN>;
-} // End Predicates = [isSICI]
 
 class MUBUFScratchStorePat <MUBUF Instr, ValueType vt, PatFrag st> : Pat <
   (st vt:$value, (MUBUFScratch v4i32:$srsrc, i32:$vaddr, i32:$soffset,
@@ -2969,13 +2958,11 @@ class MUBUFScratchStorePat <MUBUF Instr, ValueType vt, PatFrag st> : Pat <
   (Instr $value, $srsrc, $vaddr, $soffset, $offset, 0, 0, 0)
 >;
 
-let Predicates = [isSICI] in {
 def : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, i32, truncstorei8_private>;
 def : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, i32, truncstorei16_private>;
 def : MUBUFScratchStorePat <BUFFER_STORE_DWORD_OFFEN, i32, store_private>;
 def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX2_OFFEN, v2i32, store_private>;
 def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, v4i32, store_private>;
-} // End Predicates = [isSICI]
 
 /*
 class MUBUFStore_Pattern <MUBUF Instr, ValueType vt, PatFrag st> : Pat <
