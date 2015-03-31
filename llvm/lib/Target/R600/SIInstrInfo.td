@@ -1467,70 +1467,92 @@ multiclass DS_Store2_Helper <bits<8> op, string asm, RegisterClass regClass>
   asm#" $addr, $data0, $data1"#"$offset0"#"$offset1 [M0]",
   []>;
 
-class DS_1A_si <bits<8> op, dag outs, dag ins, string asm, list<dag> pat> :
-    DS_si <op, outs, ins, asm, pat> {
-  bits<16> offset;
+// 1 address, 1 data.
+multiclass DS_1A1D_RET_m <bits<8> op, string opName, dag outs, dag ins,
+                          string asm, list<dag> pat, string noRetOp> {
+  let mayLoad = 1, mayStore = 1,
+      hasPostISelHook = 1 // Adjusted to no return version.
+      in {
+    def "" : DS_Pseudo <opName, outs, ins, pat>,
+             AtomicNoRet<noRetOp, 1>;
 
-  // Single load interpret the 2 i8imm operands as a single i16 offset.
-  let offset0 = offset{7-0};
-  let offset1 = offset{15-8};
-
-  let hasSideEffects = 0;
+    let data1 = 0 in {
+      def _si : DS_1A_Real_si <op, opName, outs, ins, asm>;
+      def _vi : DS_1A_Real_vi <op, opName, outs, ins, asm>;
+    }
+  }
 }
 
-// 1 address, 1 data.
-class DS_1A1D_RET <bits<8> op, string asm, RegisterClass rc, string noRetOp = ""> : DS_1A_si <
-  op,
+multiclass DS_1A1D_RET <bits<8> op, string asm, RegisterClass rc,
+                        string noRetOp = ""> : DS_1A1D_RET_m <
+  op, asm,
   (outs rc:$vdst),
   (ins i1imm:$gds, VGPR_32:$addr, rc:$data0, ds_offset:$offset, M0Reg:$m0),
-  asm#" $vdst, $addr, $data0"#"$offset"#" [M0]", []>,
-  AtomicNoRet<noRetOp, 1> {
-
-  let data1 = 0;
-  let mayStore = 1;
-  let mayLoad = 1;
-
-  let hasPostISelHook = 1; // Adjusted to no return version.
-}
+  asm#" $vdst, $addr, $data0"#"$offset"#" [M0]", [], noRetOp>;
 
 // 1 address, 2 data.
-class DS_1A2D_RET <bits<8> op, string asm, RegisterClass rc, string noRetOp = ""> : DS_1A_si <
-  op,
+multiclass DS_1A2D_RET_m <bits<8> op, string opName, dag outs, dag ins,
+                          string asm, list<dag> pat, string noRetOp> {
+  let mayLoad = 1, mayStore = 1,
+      hasPostISelHook = 1 // Adjusted to no return version.
+      in {
+    def "" : DS_Pseudo <opName, outs, ins, pat>,
+             AtomicNoRet<noRetOp, 1>;
+
+    def _si : DS_1A_Real_si <op, opName, outs, ins, asm>;
+    def _vi : DS_1A_Real_vi <op, opName, outs, ins, asm>;
+  }
+}
+
+multiclass DS_1A2D_RET <bits<8> op, string asm, RegisterClass rc,
+                   string noRetOp = ""> : DS_1A2D_RET_m <
+  op, asm,
   (outs rc:$vdst),
   (ins i1imm:$gds, VGPR_32:$addr, rc:$data0, rc:$data1, ds_offset:$offset, M0Reg:$m0),
   asm#" $vdst, $addr, $data0, $data1"#"$offset"#" [M0]",
-  []>,
-  AtomicNoRet<noRetOp, 1> {
-  let mayStore = 1;
-  let mayLoad = 1;
-  let hasPostISelHook = 1; // Adjusted to no return version.
-}
+  [], noRetOp>;
 
 // 1 address, 2 data.
-class DS_1A2D_NORET <bits<8> op, string asm, RegisterClass rc, string noRetOp = asm> : DS_1A_si <
-  op,
+multiclass DS_1A2D_NORET_m <bits<8> op, string opName, dag outs, dag ins,
+                            string asm, list<dag> pat, string noRetOp> {
+  let mayLoad = 1, mayStore = 1 in {
+    def "" : DS_Pseudo <opName, outs, ins, pat>,
+             AtomicNoRet<noRetOp, 0>;
+
+    def _si : DS_1A_Real_si <op, opName, outs, ins, asm>;
+    def _vi : DS_1A_Real_vi <op, opName, outs, ins, asm>;
+  }
+}
+
+multiclass DS_1A2D_NORET <bits<8> op, string asm, RegisterClass rc,
+                     string noRetOp = asm> : DS_1A2D_NORET_m <
+  op, asm,
   (outs),
   (ins i1imm:$gds, VGPR_32:$addr, rc:$data0, rc:$data1, ds_offset:$offset, M0Reg:$m0),
   asm#" $addr, $data0, $data1"#"$offset"#" [M0]",
-  []>,
-  AtomicNoRet<noRetOp, 0> {
-  let mayStore = 1;
-  let mayLoad = 1;
-}
+  [], noRetOp>;
 
 // 1 address, 1 data.
-class DS_1A1D_NORET <bits<8> op, string asm, RegisterClass rc, string noRetOp = asm> : DS_1A_si <
-  op,
+multiclass DS_1A1D_NORET_m <bits<8> op, string opName, dag outs, dag ins,
+                            string asm, list<dag> pat, string noRetOp> {
+  let mayLoad = 1, mayStore = 1 in {
+    def "" : DS_Pseudo <opName, outs, ins, pat>,
+             AtomicNoRet<noRetOp, 0>;
+
+    let data1 = 0 in {
+      def _si : DS_1A_Real_si <op, opName, outs, ins, asm>;
+      def _vi : DS_1A_Real_vi <op, opName, outs, ins, asm>;
+    }
+  }
+}
+
+multiclass DS_1A1D_NORET <bits<8> op, string asm, RegisterClass rc,
+                          string noRetOp = asm> : DS_1A1D_NORET_m <
+  op, asm,
   (outs),
   (ins i1imm:$gds, VGPR_32:$addr, rc:$data0, ds_offset:$offset, M0Reg:$m0),
   asm#" $addr, $data0"#"$offset"#" [M0]",
-  []>,
-  AtomicNoRet<noRetOp, 0> {
-
-  let data1 = 0;
-  let mayStore = 1;
-  let mayLoad = 1;
-}
+  [], noRetOp>;
 
 //===----------------------------------------------------------------------===//
 // MTBUF classes

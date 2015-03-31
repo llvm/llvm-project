@@ -585,9 +585,6 @@ class DS <dag outs, dag ins, string asm, list<dag> pattern> :
   let SchedRW = [WriteLDS];
 }
 
-class DS_si <bits<8> op, dag outs, dag ins, string asm, list<dag> pattern> :
-    DS <outs, ins, asm, pattern>, DSe<op>;
-
 class MUBUF <dag outs, dag ins, string asm, list<dag> pattern> :
     InstSI<outs, ins, asm, pattern> {
 
