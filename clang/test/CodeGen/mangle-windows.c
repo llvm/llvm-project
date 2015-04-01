@@ -1,15 +1,26 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-mingw32 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-windows-msvc-elf | FileCheck %s --check-prefix=ELF32
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-win32 | FileCheck %s --check-prefix=X64
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-mingw32 | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc-elf | FileCheck %s --check-prefix=ELF64
+
+// CHECK: target datalayout = "e-m:w-{{.*}}"
+// X64: target datalayout = "e-m:e-{{.*}}"
+// ELF32: target datalayout = "e-m:e-{{.*}}"
+// ELF64: target datalayout = "e-m:e-{{.*}}"
 
 void __stdcall f1(void) {}
 // CHECK: define x86_stdcallcc void @"\01_f1@0"
 // X64: define void @f1(
+// ELF32: define x86_stdcallcc void @"\01_f1@0"
+// ELF64: define void @f1(
 
 void __fastcall f2(void) {}
 // CHECK: define x86_fastcallcc void @"\01@f2@0"
 // X64: define void @f2(
+// ELF32: define x86_fastcallcc void @"\01@f2@0"
+// ELF64: define void @f2(
 
 void __stdcall f3() {}
 // CHECK: define x86_stdcallcc void @"\01_f3@0"
@@ -46,10 +57,14 @@ void f12(void) {}
 void __vectorcall v1(void) {}
 // CHECK: define x86_vectorcallcc void @"\01v1@@0"(
 // X64: define x86_vectorcallcc void @"\01v1@@0"(
+// ELF32: define x86_vectorcallcc void @"\01v1@@0"(
+// ELF64: define x86_vectorcallcc void @"\01v1@@0"(
 
 void __vectorcall v2(char a) {}
 // CHECK: define x86_vectorcallcc void @"\01v2@@4"(
 // X64: define x86_vectorcallcc void @"\01v2@@8"(
+// ELF32: define x86_vectorcallcc void @"\01v2@@4"(
+// ELF64: define x86_vectorcallcc void @"\01v2@@8"(
 
 void __vectorcall v3(short a) {}
 // CHECK: define x86_vectorcallcc void @"\01v3@@4"(
