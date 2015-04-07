@@ -67,11 +67,11 @@ if (-e "$llvm_srcroot/lib")
 else
 {
     print "Checking out llvm sources from revision $llvm_revision...\n";
-    do_command ("cd '$SRCROOT' && svn co --quiet --revision $llvm_revision http://llvm.org/svn/llvm-project/llvm/trunk llvm", "checking out llvm from repository", 1);
+    do_command ("cd '$SRCROOT' && svn co --quiet --revision $llvm_revision http://llvm.org/svn/llvm-project/llvm/branches/release_36 llvm", "checking out llvm from repository", 1);
     print "Checking out clang sources from revision $clang_revision...\n";
-    do_command ("cd '$llvm_srcroot/tools' && svn co --quiet --revision $clang_revision http://llvm.org/svn/llvm-project/cfe/trunk clang", "checking out clang from repository", 1);
+    do_command ("cd '$llvm_srcroot/tools' && svn co --quiet --revision $clang_revision http://llvm.org/svn/llvm-project/cfe/branches/release_36 clang", "checking out clang from repository", 1);
     print "Checking out compiler-rt sources from revision $compiler_rt_revision...\n";
-    do_command ("cd '$llvm_srcroot/projects' && svn co --quiet --revision $compiler_rt_revision http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt", "checking out compiler-rt from repository", 1);
+    do_command ("cd '$llvm_srcroot/projects' && svn co --quiet --revision $compiler_rt_revision http://llvm.org/svn/llvm-project/compiler-rt/branches/release_36 compiler-rt", "checking out compiler-rt from repository", 1);
     print "Applying any local patches to LLVM/Clang...";
 
     my @llvm_patches = bsd_glob("$ENV{SRCROOT}/scripts/llvm.*.diff");
