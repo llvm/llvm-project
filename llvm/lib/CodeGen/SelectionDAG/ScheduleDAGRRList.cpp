@@ -1423,9 +1423,10 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
 
       // If one or more successors has been unscheduled, then the current
       // node is no longer available.
-      if (!TrySU->isAvailable)
+      if (!TrySU->isAvailable || !TrySU->NodeQueueId)
         CurSU = AvailableQueue->pop();
       else {
+        // Available and in AvailableQueue
         AvailableQueue->remove(TrySU);
         CurSU = TrySU;
       }
