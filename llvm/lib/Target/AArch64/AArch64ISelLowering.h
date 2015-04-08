@@ -29,9 +29,9 @@ enum {
   WrapperLarge, // 4-instruction MOVZ/MOVK sequence for 64-bit addresses.
   CALL,         // Function call.
 
-  // Almost the same as a normal call node, except that a TLSDesc relocation is
-  // needed so the linker can relax it correctly if possible.
-  TLSDESC_CALL,
+  // Produces the full sequence of instructions for getting the thread pointer
+  // offset of a variable into X0, using the TLSDesc model.
+  TLSDESC_CALLSEQ,
   ADRP,     // Page address of a TargetGlobalAddress operand.
   ADDlow,   // Add the low 12 bits of a TargetGlobalAddress operand.
   LOADgot,  // Load from automatically generated descriptor (e.g. Global
@@ -399,8 +399,8 @@ private:
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDarwinGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerELFGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerELFTLSDescCall(SDValue SymAddr, SDValue DescAddr, SDLoc DL,
-                              SelectionDAG &DAG) const;
+  SDValue LowerELFTLSDescCallSeq(SDValue SymAddr, SDLoc DL,
+                                 SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;

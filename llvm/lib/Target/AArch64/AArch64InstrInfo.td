@@ -96,6 +96,19 @@ def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
 
 def SDT_AArch64TLSDescCall : SDTypeProfile<0, -2, [SDTCisPtrTy<0>,
                                                  SDTCisPtrTy<1>]>;
+
+// Generates the general dynamic sequences, i.e.
+//  adrp  x0, :tlsdesc:var
+//  ldr   x1, [x0, #:tlsdesc_lo12:var]
+//  add   x0, x0, #:tlsdesc_lo12:var
+//  .tlsdesccall var
+//  blr   x1
+
+// (the TPIDR_EL0 offset is put directly in X0, hence no "result" here)
+// number of operands (the variable)
+def SDT_AArch64TLSDescCallSeq : SDTypeProfile<0,1,
+                                          [SDTCisPtrTy<0>]>;
+
 def SDT_AArch64WrapperLarge : SDTypeProfile<1, 4,
                                         [SDTCisVT<0, i64>, SDTCisVT<1, i32>,
                                          SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>,
@@ -229,10 +242,11 @@ def AArch64Prefetch        : SDNode<"AArch64ISD::PREFETCH", SDT_AArch64PREFETCH,
 def AArch64sitof: SDNode<"AArch64ISD::SITOF", SDT_AArch64ITOF>;
 def AArch64uitof: SDNode<"AArch64ISD::UITOF", SDT_AArch64ITOF>;
 
-def AArch64tlsdesc_call : SDNode<"AArch64ISD::TLSDESC_CALL",
-                                 SDT_AArch64TLSDescCall,
-                                 [SDNPInGlue, SDNPOutGlue, SDNPHasChain,
-                                  SDNPVariadic]>;
+def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
+                                    SDT_AArch64TLSDescCallSeq,
+                                    [SDNPInGlue, SDNPOutGlue, SDNPHasChain,
+                                     SDNPVariadic]>;
+
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;
@@ -1049,15 +1063,16 @@ def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []> {
   let AsmString = ".tlsdesccall $sym";
 }
 
-// Pseudo-instruction representing a BLR with attached TLSDESC relocation. It
-// gets expanded to two MCInsts during lowering.
-let isCall = 1, Defs = [LR] in
-def TLSDESC_BLR
-    : Pseudo<(outs), (ins GPR64:$dest, i64imm:$sym),
-             [(AArch64tlsdesc_call GPR64:$dest, tglobaltlsaddr:$sym)]>;
+// FIXME: maybe the scratch register used shouldn't be fixed to X1?
+// FIXME: can "hasSideEffects be dropped?
+let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1,
+    isCodeGenOnly = 1 in
+def TLSDESC_CALLSEQ
+    : Pseudo<(outs), (ins i64imm:$sym),
+             [(AArch64tlsdesc_callseq tglobaltlsaddr:$sym)]>;
+def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
+          (TLSDESC_CALLSEQ texternalsym:$sym)>;
 
-def : Pat<(AArch64tlsdesc_call GPR64:$dest, texternalsym:$sym),
-          (TLSDESC_BLR GPR64:$dest, texternalsym:$sym)>;
 //===----------------------------------------------------------------------===//
 // Conditional branch (immediate) instruction.
 //===----------------------------------------------------------------------===//

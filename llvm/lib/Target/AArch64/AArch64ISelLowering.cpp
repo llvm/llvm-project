@@ -64,8 +64,16 @@ EnableAArch64ExtrGeneration("aarch64-extr-generation", cl::Hidden,
 
 static cl::opt<bool>
 EnableAArch64SlrGeneration("aarch64-shift-insert-generation", cl::Hidden,
-                         cl::desc("Allow AArch64 SLI/SRI formation"),
-                         cl::init(false));
+                           cl::desc("Allow AArch64 SLI/SRI formation"),
+                           cl::init(false));
+
+// FIXME: The necessary dtprel relocations don't seem to be supported
+// well in the GNU bfd and gold linkers at the moment. Therefore, by
+// default, for now, fall back to GeneralDynamic code generation.
+cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration(
+    "aarch64-elf-ldtls-generation", cl::Hidden,
+    cl::desc("Allow AArch64 Local Dynamic TLS code generation"),
+    cl::init(false));
 
 
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM)
@@ -760,7 +768,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::CSNEG:             return "AArch64ISD::CSNEG";
   case AArch64ISD::CSINC:             return "AArch64ISD::CSINC";
   case AArch64ISD::THREAD_POINTER:    return "AArch64ISD::THREAD_POINTER";
-  case AArch64ISD::TLSDESC_CALL:      return "AArch64ISD::TLSDESC_CALL";
+  case AArch64ISD::TLSDESC_CALLSEQ:   return "AArch64ISD::TLSDESC_CALLSEQ";
   case AArch64ISD::ADC:               return "AArch64ISD::ADC";
   case AArch64ISD::SBC:               return "AArch64ISD::SBC";
   case AArch64ISD::ADDS:              return "AArch64ISD::ADDS";
@@ -3049,61 +3057,34 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
 /// When accessing thread-local variables under either the general-dynamic or
 /// local-dynamic system, we make a "TLS-descriptor" call. The variable will
 /// have a descriptor, accessible via a PC-relative ADRP, and whose first entry
-/// is a function pointer to carry out the resolution. This function takes the
-/// address of the descriptor in X0 and returns the TPIDR_EL0 offset in X0. All
-/// other registers (except LR, NZCV) are preserved.
+/// is a function pointer to carry out the resolution.
 ///
-/// Thus, the ideal call sequence on AArch64 is:
+/// The sequence is:
+///    adrp  x0, :tlsdesc:var
+///    ldr   x1, [x0, #:tlsdesc_lo12:var]
+///    add   x0, x0, #:tlsdesc_lo12:var
+///    .tlsdesccall var
+///    blr   x1
+///    (TPIDR_EL0 offset now in x0)
 ///
-///     adrp x0, :tlsdesc:thread_var
-///     ldr x8, [x0, :tlsdesc_lo12:thread_var]
-///     add x0, x0, :tlsdesc_lo12:thread_var
-///     .tlsdesccall thread_var
-///     blr x8
-///     (TPIDR_EL0 offset now in x0).
-///
-/// The ".tlsdesccall" directive instructs the assembler to insert a particular
-/// relocation to help the linker relax this sequence if it turns out to be too
-/// conservative.
-///
-/// FIXME: we currently produce an extra, duplicated, ADRP instruction, but this
-/// is harmless.
-SDValue AArch64TargetLowering::LowerELFTLSDescCall(SDValue SymAddr,
-                                                   SDValue DescAddr, SDLoc DL,
-                                                   SelectionDAG &DAG) const {
+///  The above sequence must be produced unscheduled, to enable the linker to
+///  optimize/relax this sequence.
+///  Therefore, a pseudo-instruction (TLSDESC_CALLSEQ) is used to represent the
+///  above sequence, and expanded really late in the compilation flow, to ensure
+///  the sequence is produced as per above.
+SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr, SDLoc DL,
+                                                      SelectionDAG &DAG) const {
   EVT PtrVT = getPointerTy();
 
-  // The function we need to call is simply the first entry in the GOT for this
-  // descriptor, load it in preparation.
-  SDValue Func = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, SymAddr);
-
-  // TLS calls preserve all registers except those that absolutely must be
-  // trashed: X0 (it takes an argument), LR (it's a call) and NZCV (let's not be
-  // silly).
-  const TargetRegisterInfo *TRI =
-      getTargetMachine().getSubtargetImpl()->getRegisterInfo();
-  const AArch64RegisterInfo *ARI =
-      static_cast<const AArch64RegisterInfo *>(TRI);
-  const uint32_t *Mask = ARI->getTLSCallPreservedMask();
-
-  // The function takes only one argument: the address of the descriptor itself
-  // in X0.
-  SDValue Glue, Chain;
-  Chain = DAG.getCopyToReg(DAG.getEntryNode(), DL, AArch64::X0, DescAddr, Glue);
-  Glue = Chain.getValue(1);
-
-  // We're now ready to populate the argument list, as with a normal call:
-  SmallVector<SDValue, 6> Ops;
-  Ops.push_back(Chain);
-  Ops.push_back(Func);
-  Ops.push_back(SymAddr);
-  Ops.push_back(DAG.getRegister(AArch64::X0, PtrVT));
-  Ops.push_back(DAG.getRegisterMask(Mask));
-  Ops.push_back(Glue);
-
+  SDValue Chain = DAG.getEntryNode();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  Chain = DAG.getNode(AArch64ISD::TLSDESC_CALL, DL, NodeTys, Ops);
-  Glue = Chain.getValue(1);
+
+  SmallVector<SDValue, 2> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(SymAddr);
+
+  Chain = DAG.getNode(AArch64ISD::TLSDESC_CALLSEQ, DL, NodeTys, Ops);
+  SDValue Glue = Chain.getValue(1);
 
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
 }
@@ -3114,9 +3095,18 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   assert(Subtarget->isTargetELF() && "This function expects an ELF target");
   assert(getTargetMachine().getCodeModel() == CodeModel::Small &&
          "ELF TLS only supported in small memory model");
+  // Different choices can be made for the maximum size of the TLS area for a
+  // module. For the small address model, the default TLS size is 16MiB and the
+  // maximum TLS size is 4GiB.
+  // FIXME: add -mtls-size command line option and make it control the 16MiB
+  // vs. 4GiB code sequence generation.
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
 
   TLSModel::Model Model = getTargetMachine().getTLSModel(GA->getGlobal());
+  if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
+    if (Model == TLSModel::LocalDynamic)
+      Model = TLSModel::GeneralDynamic;
+  }
 
   SDValue TPOff;
   EVT PtrVT = getPointerTy();
@@ -3127,17 +3117,20 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
 
   if (Model == TLSModel::LocalExec) {
     SDValue HiVar = DAG.getTargetGlobalAddress(
-        GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_G1);
+        GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_HI12);
     SDValue LoVar = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, 0,
-        AArch64II::MO_TLS | AArch64II::MO_G0 | AArch64II::MO_NC);
+        AArch64II::MO_TLS | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
 
-    TPOff = SDValue(DAG.getMachineNode(AArch64::MOVZXi, DL, PtrVT, HiVar,
-                                       DAG.getTargetConstant(16, MVT::i32)),
-                    0);
-    TPOff = SDValue(DAG.getMachineNode(AArch64::MOVKXi, DL, PtrVT, TPOff, LoVar,
-                                       DAG.getTargetConstant(0, MVT::i32)),
-                    0);
+    SDValue TPWithOff_lo =
+        SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, ThreadBase,
+                                   HiVar, DAG.getTargetConstant(0, MVT::i32)),
+                0);
+    SDValue TPWithOff =
+        SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, TPWithOff_lo,
+                                   LoVar, DAG.getTargetConstant(0, MVT::i32)),
+                0);
+    return TPWithOff;
   } else if (Model == TLSModel::InitialExec) {
     TPOff = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_TLS);
     TPOff = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, TPOff);
@@ -3152,19 +3145,6 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
         DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
     MFI->incNumLocalDynamicTLSAccesses();
 
-    // Accesses used in this sequence go via the TLS descriptor which lives in
-    // the GOT. Prepare an address we can use to handle this.
-    SDValue HiDesc = DAG.getTargetExternalSymbol(
-        "_TLS_MODULE_BASE_", PtrVT, AArch64II::MO_TLS | AArch64II::MO_PAGE);
-    SDValue LoDesc = DAG.getTargetExternalSymbol(
-        "_TLS_MODULE_BASE_", PtrVT,
-        AArch64II::MO_TLS | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
-
-    // First argument to the descriptor call is the address of the descriptor
-    // itself.
-    SDValue DescAddr = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, HiDesc);
-    DescAddr = DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, DescAddr, LoDesc);
-
     // The call needs a relocation too for linker relaxation. It doesn't make
     // sense to call it MO_PAGE or MO_PAGEOFF though so we need another copy of
     // the address.
@@ -3173,40 +3153,23 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
 
     // Now we can calculate the offset from TPIDR_EL0 to this module's
     // thread-local area.
-    TPOff = LowerELFTLSDescCall(SymAddr, DescAddr, DL, DAG);
+    TPOff = LowerELFTLSDescCallSeq(SymAddr, DL, DAG);
 
     // Now use :dtprel_whatever: operations to calculate this variable's offset
     // in its thread-storage area.
     SDValue HiVar = DAG.getTargetGlobalAddress(
-        GV, DL, MVT::i64, 0, AArch64II::MO_TLS | AArch64II::MO_G1);
+        GV, DL, MVT::i64, 0, AArch64II::MO_TLS | AArch64II::MO_HI12);
     SDValue LoVar = DAG.getTargetGlobalAddress(
         GV, DL, MVT::i64, 0,
-        AArch64II::MO_TLS | AArch64II::MO_G0 | AArch64II::MO_NC);
-
-    SDValue DTPOff =
-        SDValue(DAG.getMachineNode(AArch64::MOVZXi, DL, PtrVT, HiVar,
-                                   DAG.getTargetConstant(16, MVT::i32)),
-                0);
-    DTPOff =
-        SDValue(DAG.getMachineNode(AArch64::MOVKXi, DL, PtrVT, DTPOff, LoVar,
-                                   DAG.getTargetConstant(0, MVT::i32)),
-                0);
-
-    TPOff = DAG.getNode(ISD::ADD, DL, PtrVT, TPOff, DTPOff);
-  } else if (Model == TLSModel::GeneralDynamic) {
-    // Accesses used in this sequence go via the TLS descriptor which lives in
-    // the GOT. Prepare an address we can use to handle this.
-    SDValue HiDesc = DAG.getTargetGlobalAddress(
-        GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_PAGE);
-    SDValue LoDesc = DAG.getTargetGlobalAddress(
-        GV, DL, PtrVT, 0,
         AArch64II::MO_TLS | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
 
-    // First argument to the descriptor call is the address of the descriptor
-    // itself.
-    SDValue DescAddr = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, HiDesc);
-    DescAddr = DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, DescAddr, LoDesc);
-
+    TPOff = SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, TPOff, HiVar,
+                                       DAG.getTargetConstant(0, MVT::i32)),
+                    0);
+    TPOff = SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, TPOff, LoVar,
+                                       DAG.getTargetConstant(0, MVT::i32)),
+                    0);
+  } else if (Model == TLSModel::GeneralDynamic) {
     // The call needs a relocation too for linker relaxation. It doesn't make
     // sense to call it MO_PAGE or MO_PAGEOFF though so we need another copy of
     // the address.
@@ -3214,7 +3177,7 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
         DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_TLS);
 
     // Finally we can make a call to calculate the offset from tpidr_el0.
-    TPOff = LowerELFTLSDescCall(SymAddr, DescAddr, DL, DAG);
+    TPOff = LowerELFTLSDescCallSeq(SymAddr, DL, DAG);
   } else
     llvm_unreachable("Unsupported ELF TLS access model");
 

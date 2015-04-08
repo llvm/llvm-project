@@ -22,8 +22,11 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
+
+extern cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration;
 
 AArch64MCInstLower::AArch64MCInstLower(MCContext &ctx, AsmPrinter &printer)
     : Ctx(ctx), Printer(printer), TargetTriple(printer.getTargetTriple()) {}
@@ -84,10 +87,16 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
       Model = Printer.TM.getTLSModel(GV);
+      if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
+          Model == TLSModel::LocalDynamic)
+        Model = TLSModel::GeneralDynamic;
+
     } else {
       assert(MO.isSymbol() &&
              StringRef(MO.getSymbolName()) == "_TLS_MODULE_BASE_" &&
              "unexpected external TLS symbol");
+      // The general dynamic access sequence is used to get the
+      // address of _TLS_MODULE_BASE_.
       Model = TLSModel::GeneralDynamic;
     }
     switch (Model) {
@@ -123,6 +132,8 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     RefFlags |= AArch64MCExpr::VK_G1;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G0)
     RefFlags |= AArch64MCExpr::VK_G0;
+  else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_HI12)
+    RefFlags |= AArch64MCExpr::VK_HI12;
 
   if (MO.getTargetFlags() & AArch64II::MO_NC)
     RefFlags |= AArch64MCExpr::VK_NC;
