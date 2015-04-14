@@ -419,6 +419,7 @@ protected:
 public:
   NetBSDTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {
     this->UserLabelPrefix = "";
+    this->MCountName = "_mcount";
   }
 };
 
