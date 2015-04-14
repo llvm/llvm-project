@@ -6673,6 +6673,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
     switch (os) {
     case llvm::Triple::Linux:
       return new LinuxTargetInfo<PPC64TargetInfo>(Triple);
+    case llvm::Triple::NetBSD:
+      return new NetBSDTargetInfo<PPC64TargetInfo>(Triple);
     default:
       return new PPC64TargetInfo(Triple);
     }
