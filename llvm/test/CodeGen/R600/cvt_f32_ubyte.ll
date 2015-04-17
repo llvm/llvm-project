@@ -146,7 +146,7 @@ define void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias %out, <7 x i8>
 ; SI: buffer_store_dword
 ; SI: buffer_store_dword
 define void @load_v8i8_to_v8f32(<8 x float> addrspace(1)* noalias %out, <8 x i8> addrspace(1)* noalias %in) nounwind {
-  %load = load <8 x i8> addrspace(1)* %in, align 1
+  %load = load <8 x i8> addrspace(1)* %in, align 8
   %cvt = uitofp <8 x i8> %load to <8 x float>
   store <8 x float> %cvt, <8 x float> addrspace(1)* %out, align 16
   ret void

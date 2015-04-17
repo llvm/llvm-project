@@ -314,9 +314,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   if (!VT.isSimple() || VT == MVT::Other)
     return false;
 
-  // XXX - CI changes say "Support for unaligned memory accesses" but I don't
-  // see what for specifically. The wording everywhere else seems to be the
-  // same.
+  // TODO - CI+ supports unaligned memory accesses, but this requires driver
+  // support.
 
   // XXX - The only mention I see of this in the ISA manual is for LDS direct
   // reads the "byte address and must be dword aligned". Is it also true for the
@@ -333,7 +332,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   // This applies to private, global, and constant memory.
   if (IsFast)
     *IsFast = true;
-  return VT.bitsGT(MVT::i32);
+
+  return VT.bitsGT(MVT::i32) && Align % 4 == 0;
 }
 
 EVT SITargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
