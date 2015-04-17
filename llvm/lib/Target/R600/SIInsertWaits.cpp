@@ -82,6 +82,8 @@ private:
   /// \brief Type of the last opcode.
   InstType LastOpcodeType;
 
+  bool LastInstWritesM0;
+
   /// \brief Get increment/decrement amount for this instruction.
   Counters getHwCounts(MachineInstr &MI);
 
@@ -105,6 +107,9 @@ private:
 
   /// \brief Resolve all operand dependencies to counter requirements
   Counters handleOperands(MachineInstr &MI);
+
+  /// \brief Insert S_NOP between an instruction writing M0 and S_SENDMSG.
+  void handleSendMsg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I);
 
 public:
   SIInsertWaits(TargetMachine &tm) :
@@ -269,6 +274,7 @@ void SIInsertWaits::pushInstruction(MachineBasicBlock &MBB,
       // Insert a NOP to break the clause.
       BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_NOP))
           .addImm(0);
+      LastInstWritesM0 = false;
     }
 
     if (TII->isSMRD(I->getOpcode()))
@@ -362,6 +368,7 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
                   ((Counts.Named.LGKM & 0x7) << 8));
 
   LastOpcodeType = OTHER;
+  LastInstWritesM0 = false;
   return true;
 }
 
@@ -403,6 +410,30 @@ Counters SIInsertWaits::handleOperands(MachineInstr &MI) {
   return Result;
 }
 
+void SIInsertWaits::handleSendMsg(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator I) {
+  if (TRI->ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return;
+
+  // There must be "S_NOP 0" between an instruction writing M0 and S_SENDMSG.
+  if (LastInstWritesM0 && I->getOpcode() == AMDGPU::S_SENDMSG) {
+    BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_NOP)).addImm(0);
+    LastInstWritesM0 = false;
+    return;
+  }
+
+  // Set whether this instruction sets M0
+  LastInstWritesM0 = false;
+
+  unsigned NumOperands = I->getNumOperands();
+  for (unsigned i = 0; i < NumOperands; i++) {
+    const MachineOperand &Op = I->getOperand(i);
+
+    if (Op.isReg() && Op.isDef() && Op.getReg() == AMDGPU::M0)
+      LastInstWritesM0 = true;
+  }
+}
+
 // FIXME: Insert waits listed in Table 4.2 "Required User-Inserted Wait States"
 // around other non-memory instructions.
 bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
@@ -417,6 +448,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   WaitedOn = ZeroCounts;
   LastIssued = ZeroCounts;
   LastOpcodeType = OTHER;
+  LastInstWritesM0 = false;
 
   memset(&UsedRegs, 0, sizeof(UsedRegs));
   memset(&DefinedRegs, 0, sizeof(DefinedRegs));
@@ -433,7 +465,9 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
         Changes |= insertWait(MBB, I, LastIssued);
       else
         Changes |= insertWait(MBB, I, handleOperands(*I));
+
       pushInstruction(MBB, I);
+      handleSendMsg(MBB, I);
     }
 
     // Wait for everything at the end of the MBB
