@@ -204,7 +204,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
            Ctx.emitError("Ran out of VGPRs for spilling SGPR");
         }
 
-        BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill.VGPR)
+        BuildMI(*MBB, MI, DL,
+                TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+                Spill.VGPR)
                 .addReg(SubReg)
                 .addImm(Spill.Lane);
 
@@ -236,7 +238,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (isM0)
           SubReg = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0);
 
-        BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), SubReg)
+        BuildMI(*MBB, MI, DL,
+                TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
+                SubReg)
                 .addReg(Spill.VGPR)
                 .addImm(Spill.Lane)
                 .addReg(MI->getOperand(0).getReg(), RegState::ImplicitDefine);
