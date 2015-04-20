@@ -1455,22 +1455,19 @@ defm V_MAX_U32 : VOP2Inst <vop2<0x14, 0xf>, "v_max_u32", VOP_I32_I32_I32,
   AMDGPUumax
 >;
 
-// No non-Rev Op on VI
 defm V_LSHRREV_B32 : VOP2Inst <
   vop2<0x16, 0x10>, "v_lshrrev_b32", VOP_I32_I32_I32, null_frag,
-    "v_lshr_b32", "v_lshrrev_b32"
+    "v_lshr_b32"
 >;
 
-// No non-Rev OP on VI
 defm V_ASHRREV_I32 : VOP2Inst <
   vop2<0x18, 0x11>, "v_ashrrev_i32", VOP_I32_I32_I32, null_frag,
-    "v_ashr_i32", "v_ashrrev_i32"
+    "v_ashr_i32"
 >;
 
-// No non-Rev OP on VI
 defm V_LSHLREV_B32 : VOP2Inst <
   vop2<0x1a, 0x12>, "v_lshlrev_b32", VOP_I32_I32_I32, null_frag,
-    "v_lshl_b32", "v_lshlrev_b32"
+    "v_lshl_b32"
 >;
 
 defm V_AND_B32 : VOP2Inst <vop2<0x1b, 0x13>, "v_and_b32",
