@@ -1,18 +1,18 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG-CHECK %s
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=VI-CHECK %s
+;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG %s
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=VI %s
 
-;EG-CHECK: {{^}}shl_v2i32:
-;EG-CHECK: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-;EG-CHECK: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+;EG: {{^}}shl_v2i32:
+;EG: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+;EG: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-;SI-CHECK: {{^}}shl_v2i32:
-;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;SI: {{^}}shl_v2i32:
+;SI: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;SI: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
-;VI-CHECK: {{^}}shl_v2i32:
-;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI: {{^}}shl_v2i32:
+;VI: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
 define void @shl_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i32> addrspace(1)* %in, i32 1
@@ -23,23 +23,23 @@ define void @shl_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in
   ret void
 }
 
-;EG-CHECK: {{^}}shl_v4i32:
-;EG-CHECK: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-;EG-CHECK: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-;EG-CHECK: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-;EG-CHECK: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+;EG: {{^}}shl_v4i32:
+;EG: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+;EG: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+;EG: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+;EG: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-;SI-CHECK: {{^}}shl_v4i32:
-;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;SI: {{^}}shl_v4i32:
+;SI: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;SI: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;SI: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;SI: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
-;VI-CHECK: {{^}}shl_v4i32:
-;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI: {{^}}shl_v4i32:
+;VI: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
 define void @shl_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i32> addrspace(1)* %in, i32 1
@@ -50,23 +50,23 @@ define void @shl_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in
   ret void
 }
 
-;EG-CHECK: {{^}}shl_i64:
-;EG-CHECK: SUB_INT {{\*? *}}[[COMPSH:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHIFT:T[0-9]+\.[XYZW]]]
-;EG-CHECK: LSHR {{\* *}}[[TEMP:T[0-9]+\.[XYZW]]], [[OPLO:T[0-9]+\.[XYZW]]], {{[[COMPSH]]|PV.[XYZW]}}
-;EG-CHECK: LSHR {{\*? *}}[[OVERF:T[0-9]+\.[XYZW]]], {{[[TEMP]]|PV.[XYZW]}}, 1
+;EG: {{^}}shl_i64:
+;EG: SUB_INT {{\*? *}}[[COMPSH:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHIFT:T[0-9]+\.[XYZW]]]
+;EG: LSHR {{\* *}}[[TEMP:T[0-9]+\.[XYZW]]], [[OPLO:T[0-9]+\.[XYZW]]], {{[[COMPSH]]|PV.[XYZW]}}
+;EG: LSHR {{\*? *}}[[OVERF:T[0-9]+\.[XYZW]]], {{[[TEMP]]|PV.[XYZW]}}, 1
 ;EG_CHECK-DAG: ADD_INT {{\*? *}}[[BIGSH:T[0-9]+\.[XYZW]]], [[SHIFT]], literal
-;EG-CHECK-DAG: LSHL {{\*? *}}[[HISMTMP:T[0-9]+\.[XYZW]]], [[OPHI:T[0-9]+\.[XYZW]]], [[SHIFT]]
-;EG-CHECK-DAG: OR_INT {{\*? *}}[[HISM:T[0-9]+\.[XYZW]]], {{[[HISMTMP]]|PV.[XYZW]}}, {{[[OVERF]]|PV.[XYZW]}}
-;EG-CHECK-DAG: LSHL {{\*? *}}[[LOSM:T[0-9]+\.[XYZW]]], [[OPLO]], {{PS|[[SHIFT]]}}
-;EG-CHECK-DAG: SETGT_UINT {{\*? *}}[[RESC:T[0-9]+\.[XYZW]]], [[SHIFT]], literal
-;EG-CHECK-DAG: CNDE_INT {{\*? *}}[[RESLO:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW]}}
-;EG-CHECK-DAG: CNDE_INT {{\*? *}}[[RESHI:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW], .*}}, 0.0
+;EG-DAG: LSHL {{\*? *}}[[HISMTMP:T[0-9]+\.[XYZW]]], [[OPHI:T[0-9]+\.[XYZW]]], [[SHIFT]]
+;EG-DAG: OR_INT {{\*? *}}[[HISM:T[0-9]+\.[XYZW]]], {{[[HISMTMP]]|PV.[XYZW]}}, {{[[OVERF]]|PV.[XYZW]}}
+;EG-DAG: LSHL {{\*? *}}[[LOSM:T[0-9]+\.[XYZW]]], [[OPLO]], {{PS|[[SHIFT]]}}
+;EG-DAG: SETGT_UINT {{\*? *}}[[RESC:T[0-9]+\.[XYZW]]], [[SHIFT]], literal
+;EG-DAG: CNDE_INT {{\*? *}}[[RESLO:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW]}}
+;EG-DAG: CNDE_INT {{\*? *}}[[RESHI:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW], .*}}, 0.0
 
-;SI-CHECK: {{^}}shl_i64:
-;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;SI: {{^}}shl_i64:
+;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 
-;VI-CHECK: {{^}}shl_i64:
-;VI-CHECK: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
+;VI: {{^}}shl_i64:
+;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
 
 define void @shl_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %b_ptr = getelementptr i64 addrspace(1)* %in, i64 1
@@ -77,35 +77,35 @@ define void @shl_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   ret void
 }
 
-;EG-CHECK: {{^}}shl_v2i64:
-;EG-CHECK-DAG: SUB_INT {{\*? *}}[[COMPSHA:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHA:T[0-9]+\.[XYZW]]]
-;EG-CHECK-DAG: SUB_INT {{\*? *}}[[COMPSHB:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHB:T[0-9]+\.[XYZW]]]
-;EG-CHECK-DAG: LSHR {{\*? *}}[[COMPSHA]]
-;EG-CHECK-DAG: LSHR {{\*? *}}[[COMPSHB]]
-;EG-CHECK-DAG: LSHR {{.*}}, 1
-;EG-CHECK-DAG: LSHR {{.*}}, 1
-;EG-CHECK-DAG: ADD_INT  {{\*? *}}[[BIGSHA:T[0-9]+\.[XYZW]]]{{.*}}, literal
-;EG-CHECK-DAG: ADD_INT  {{\*? *}}[[BIGSHB:T[0-9]+\.[XYZW]]]{{.*}}, literal
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHA]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHB]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHA]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHB]]
-;EG-CHECK-DAG: LSHL
-;EG-CHECK-DAG: LSHL
-;EG-CHECK-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHA]], literal
-;EG-CHECK-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHB]], literal
-;EG-CHECK-DAG: CNDE_INT {{.*}}, 0.0
-;EG-CHECK-DAG: CNDE_INT {{.*}}, 0.0
-;EG-CHECK-DAG: CNDE_INT
-;EG-CHECK-DAG: CNDE_INT
+;EG: {{^}}shl_v2i64:
+;EG-DAG: SUB_INT {{\*? *}}[[COMPSHA:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHA:T[0-9]+\.[XYZW]]]
+;EG-DAG: SUB_INT {{\*? *}}[[COMPSHB:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHB:T[0-9]+\.[XYZW]]]
+;EG-DAG: LSHR {{\*? *}}[[COMPSHA]]
+;EG-DAG: LSHR {{\*? *}}[[COMPSHB]]
+;EG-DAG: LSHR {{.*}}, 1
+;EG-DAG: LSHR {{.*}}, 1
+;EG-DAG: ADD_INT  {{\*? *}}[[BIGSHA:T[0-9]+\.[XYZW]]]{{.*}}, literal
+;EG-DAG: ADD_INT  {{\*? *}}[[BIGSHB:T[0-9]+\.[XYZW]]]{{.*}}, literal
+;EG-DAG: LSHL {{.*}}, [[SHA]]
+;EG-DAG: LSHL {{.*}}, [[SHB]]
+;EG-DAG: LSHL {{.*}}, [[SHA]]
+;EG-DAG: LSHL {{.*}}, [[SHB]]
+;EG-DAG: LSHL
+;EG-DAG: LSHL
+;EG-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHA]], literal
+;EG-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHB]], literal
+;EG-DAG: CNDE_INT {{.*}}, 0.0
+;EG-DAG: CNDE_INT {{.*}}, 0.0
+;EG-DAG: CNDE_INT
+;EG-DAG: CNDE_INT
 
-;SI-CHECK: {{^}}shl_v2i64:
-;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
-;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;SI: {{^}}shl_v2i64:
+;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 
-;VI-CHECK: {{^}}shl_v2i64:
-;VI-CHECK: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
-;VI-CHECK: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
+;VI: {{^}}shl_v2i64:
+;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
+;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
 
 define void @shl_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i64> addrspace(1)* %in, i64 1
@@ -116,59 +116,59 @@ define void @shl_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in
   ret void
 }
 
-;EG-CHECK: {{^}}shl_v4i64:
-;EG-CHECK-DAG: SUB_INT {{\*? *}}[[COMPSHA:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHA:T[0-9]+\.[XYZW]]]
-;EG-CHECK-DAG: SUB_INT {{\*? *}}[[COMPSHB:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHB:T[0-9]+\.[XYZW]]]
-;EG-CHECK-DAG: SUB_INT {{\*? *}}[[COMPSHC:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHC:T[0-9]+\.[XYZW]]]
-;EG-CHECK-DAG: SUB_INT {{\*? *}}[[COMPSHD:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHD:T[0-9]+\.[XYZW]]]
-;EG-CHECK-DAG: LSHR {{\*? *}}[[COMPSHA]]
-;EG-CHECK-DAG: LSHR {{\*? *}}[[COMPSHB]]
-;EG-CHECK-DAG: LSHR {{\*? *}}[[COMPSHC]]
-;EG-CHECK-DAG: LSHR {{\*? *}}[[COMPSHD]]
-;EG-CHECK-DAG: LSHR {{.*}}, 1
-;EG-CHECK-DAG: LSHR {{.*}}, 1
-;EG-CHECK-DAG: LSHR {{.*}}, 1
-;EG-CHECK-DAG: LSHR {{.*}}, 1
-;EG-CHECK-DAG: ADD_INT  {{\*? *}}[[BIGSHA:T[0-9]+\.[XYZW]]]{{.*}}, literal
-;EG-CHECK-DAG: ADD_INT  {{\*? *}}[[BIGSHB:T[0-9]+\.[XYZW]]]{{.*}}, literal
-;EG-CHECK-DAG: ADD_INT  {{\*? *}}[[BIGSHC:T[0-9]+\.[XYZW]]]{{.*}}, literal
-;EG-CHECK-DAG: ADD_INT  {{\*? *}}[[BIGSHD:T[0-9]+\.[XYZW]]]{{.*}}, literal
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHA]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHB]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHC]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHD]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHA]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHB]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHC]]
-;EG-CHECK-DAG: LSHL {{.*}}, [[SHD]]
-;EG-CHECK-DAG: LSHL
-;EG-CHECK-DAG: LSHL
-;EG-CHECK-DAG: LSHL
-;EG-CHECK-DAG: LSHL
-;EG-CHECK-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHA]], literal
-;EG-CHECK-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHB]], literal
-;EG-CHECK-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHC]], literal
-;EG-CHECK-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHD]], literal
-;EG-CHECK-DAG: CNDE_INT {{.*}}, 0.0
-;EG-CHECK-DAG: CNDE_INT {{.*}}, 0.0
-;EG-CHECK-DAG: CNDE_INT {{.*}}, 0.0
-;EG-CHECK-DAG: CNDE_INT {{.*}}, 0.0
-;EG-CHECK-DAG: CNDE_INT
-;EG-CHECK-DAG: CNDE_INT
-;EG-CHECK-DAG: CNDE_INT
-;EG-CHECK-DAG: CNDE_INT
+;EG: {{^}}shl_v4i64:
+;EG-DAG: SUB_INT {{\*? *}}[[COMPSHA:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHA:T[0-9]+\.[XYZW]]]
+;EG-DAG: SUB_INT {{\*? *}}[[COMPSHB:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHB:T[0-9]+\.[XYZW]]]
+;EG-DAG: SUB_INT {{\*? *}}[[COMPSHC:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHC:T[0-9]+\.[XYZW]]]
+;EG-DAG: SUB_INT {{\*? *}}[[COMPSHD:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHD:T[0-9]+\.[XYZW]]]
+;EG-DAG: LSHR {{\*? *}}[[COMPSHA]]
+;EG-DAG: LSHR {{\*? *}}[[COMPSHB]]
+;EG-DAG: LSHR {{\*? *}}[[COMPSHC]]
+;EG-DAG: LSHR {{\*? *}}[[COMPSHD]]
+;EG-DAG: LSHR {{.*}}, 1
+;EG-DAG: LSHR {{.*}}, 1
+;EG-DAG: LSHR {{.*}}, 1
+;EG-DAG: LSHR {{.*}}, 1
+;EG-DAG: ADD_INT  {{\*? *}}[[BIGSHA:T[0-9]+\.[XYZW]]]{{.*}}, literal
+;EG-DAG: ADD_INT  {{\*? *}}[[BIGSHB:T[0-9]+\.[XYZW]]]{{.*}}, literal
+;EG-DAG: ADD_INT  {{\*? *}}[[BIGSHC:T[0-9]+\.[XYZW]]]{{.*}}, literal
+;EG-DAG: ADD_INT  {{\*? *}}[[BIGSHD:T[0-9]+\.[XYZW]]]{{.*}}, literal
+;EG-DAG: LSHL {{.*}}, [[SHA]]
+;EG-DAG: LSHL {{.*}}, [[SHB]]
+;EG-DAG: LSHL {{.*}}, [[SHC]]
+;EG-DAG: LSHL {{.*}}, [[SHD]]
+;EG-DAG: LSHL {{.*}}, [[SHA]]
+;EG-DAG: LSHL {{.*}}, [[SHB]]
+;EG-DAG: LSHL {{.*}}, [[SHC]]
+;EG-DAG: LSHL {{.*}}, [[SHD]]
+;EG-DAG: LSHL
+;EG-DAG: LSHL
+;EG-DAG: LSHL
+;EG-DAG: LSHL
+;EG-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHA]], literal
+;EG-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHB]], literal
+;EG-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHC]], literal
+;EG-DAG: SETGT_UINT {{\*? *T[0-9]\.[XYZW]}}, [[SHD]], literal
+;EG-DAG: CNDE_INT {{.*}}, 0.0
+;EG-DAG: CNDE_INT {{.*}}, 0.0
+;EG-DAG: CNDE_INT {{.*}}, 0.0
+;EG-DAG: CNDE_INT {{.*}}, 0.0
+;EG-DAG: CNDE_INT
+;EG-DAG: CNDE_INT
+;EG-DAG: CNDE_INT
+;EG-DAG: CNDE_INT
 
-;SI-CHECK: {{^}}shl_v4i64:
-;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
-;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
-;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
-;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;SI: {{^}}shl_v4i64:
+;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 
-;VI-CHECK: {{^}}shl_v4i64:
-;VI-CHECK: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
-;VI-CHECK: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
-;VI-CHECK: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
-;VI-CHECK: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
+;VI: {{^}}shl_v4i64:
+;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
+;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
+;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
+;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
 
 define void @shl_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i64> addrspace(1)* %in, i64 1

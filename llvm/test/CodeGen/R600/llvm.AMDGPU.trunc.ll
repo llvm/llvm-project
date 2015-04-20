@@ -1,11 +1,11 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=R600-CHECK %s
-; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK %s
+; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=R600 %s
+; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI %s
 
-; R600-CHECK: {{^}}amdgpu_trunc:
-; R600-CHECK: TRUNC T{{[0-9]+\.[XYZW]}}, KC0[2].Z
-; SI-CHECK: {{^}}amdgpu_trunc:
-; SI-CHECK: v_trunc_f32
+; R600: {{^}}amdgpu_trunc:
+; R600: TRUNC T{{[0-9]+\.[XYZW]}}, KC0[2].Z
+; SI: {{^}}amdgpu_trunc:
+; SI: v_trunc_f32
 
 define void @amdgpu_trunc(float addrspace(1)* %out, float %x) {
 entry:

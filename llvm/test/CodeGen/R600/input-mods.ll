@@ -1,13 +1,13 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG-CHECK
-;RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=CM-CHECK
+;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG
+;RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=CM
 
-;EG-CHECK-LABEL: {{^}}test:
-;EG-CHECK: EXP_IEEE *
-;CM-CHECK-LABEL: {{^}}test:
-;CM-CHECK: EXP_IEEE T{{[0-9]+}}.X, -|T{{[0-9]+}}.X|
-;CM-CHECK: EXP_IEEE T{{[0-9]+}}.Y (MASKED), -|T{{[0-9]+}}.X|
-;CM-CHECK: EXP_IEEE T{{[0-9]+}}.Z (MASKED), -|T{{[0-9]+}}.X|
-;CM-CHECK: EXP_IEEE * T{{[0-9]+}}.W (MASKED), -|T{{[0-9]+}}.X|
+;EG-LABEL: {{^}}test:
+;EG: EXP_IEEE *
+;CM-LABEL: {{^}}test:
+;CM: EXP_IEEE T{{[0-9]+}}.X, -|T{{[0-9]+}}.X|
+;CM: EXP_IEEE T{{[0-9]+}}.Y (MASKED), -|T{{[0-9]+}}.X|
+;CM: EXP_IEEE T{{[0-9]+}}.Z (MASKED), -|T{{[0-9]+}}.X|
+;CM: EXP_IEEE * T{{[0-9]+}}.W (MASKED), -|T{{[0-9]+}}.X|
 
 define void @test(<4 x float> inreg %reg0) #0 {
    %r0 = extractelement <4 x float> %reg0, i32 0
