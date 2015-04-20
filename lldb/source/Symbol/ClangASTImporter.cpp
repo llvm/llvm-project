@@ -286,7 +286,12 @@ ClangASTImporter::RequireCompleteType (clang::QualType type)
     
     if (const TagType *tag_type = type->getAs<TagType>())
     {
-        return CompleteTagDecl(tag_type->getDecl());
+        TagDecl *tag_decl = tag_type->getDecl();
+
+        if (tag_decl->getDefinition() || tag_decl->isBeingDefined())
+            return true;
+
+        return CompleteTagDecl(tag_decl);
     }
     if (const ObjCObjectType *objc_object_type = type->getAs<ObjCObjectType>())
     {

@@ -50,6 +50,7 @@ public:
         m_lookups_enabled (false),
         m_target (target),
         m_ast_context (NULL),
+        m_active_lexical_decls (),
         m_active_lookups ()
     {
         m_ast_importer = m_target->GetClangASTImporter();
@@ -415,6 +416,7 @@ protected:
     const lldb::TargetSP                m_target;           ///< The target to use in finding variables and types.
 	clang::ASTContext                  *m_ast_context;      ///< The AST context requests are coming in for.
     ClangASTImporter                   *m_ast_importer;     ///< The target's AST importer.
+    std::set<const clang::Decl *>       m_active_lexical_decls;
     std::set<const char *>              m_active_lookups;
 };
 
