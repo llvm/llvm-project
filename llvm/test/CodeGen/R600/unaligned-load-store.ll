@@ -35,7 +35,8 @@ define void @unaligned_load_store_i32_global(i32 addrspace(1)* %p, i32 addrspace
 ; SI: ds_read_u8
 ; SI: ds_read_u8
 ; SI: ds_read_u8
-; SI: ds_write2_b32
+; SI: ds_write_b32
+; SI: ds_write_b32
 ; SI: s_endpgm
 define void @unaligned_load_store_i64_local(i64 addrspace(3)* %p, i64 addrspace(3)* %r) {
   %v = load i64 addrspace(3)* %p, align 1
@@ -52,7 +53,8 @@ define void @unaligned_load_store_i64_local(i64 addrspace(3)* %p, i64 addrspace(
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
-; SI: buffer_store_dwordx2
+; SI: buffer_store_dword
+; SI: buffer_store_dword
 define void @unaligned_load_store_i64_global(i64 addrspace(1)* %p, i64 addrspace(1)* %r) {
   %v = load i64 addrspace(1)* %p, align 1
   store i64 %v, i64 addrspace(1)* %r, align 1

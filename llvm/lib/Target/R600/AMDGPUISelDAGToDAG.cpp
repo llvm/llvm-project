@@ -439,6 +439,31 @@ SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
     break;
   }
 
+  case ISD::STORE: {
+    // Handle i64 stores here for the same reason mentioned above for loads.
+    StoreSDNode *ST = cast<StoreSDNode>(N);
+    SDValue Value = ST->getValue();
+    if (Value.getValueType() != MVT::i64 || ST->isTruncatingStore())
+      break;
+
+    SDValue NewValue = CurDAG->getNode(ISD::BITCAST, SDLoc(N),
+                                      MVT::v2i32, Value);
+    SDValue NewStore = CurDAG->getStore(ST->getChain(), SDLoc(N), NewValue,
+                                        ST->getBasePtr(), ST->getMemOperand());
+
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), NewStore);
+
+    if (NewValue.getOpcode() == ISD::BITCAST) {
+      Select(NewStore.getNode());
+      return SelectCode(NewValue.getNode());
+    }
+
+    // getNode() may fold the bitcast if its input was another bitcast.  If that
+    // happens we should only select the new store.
+    N = NewStore.getNode();
+    break;
+  }
+
   case AMDGPUISD::REGISTER_LOAD: {
     if (ST.getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS)
       break;
