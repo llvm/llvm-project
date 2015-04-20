@@ -89,8 +89,6 @@ SITargetLowering::SITargetLowering(TargetMachine &TM) :
   setOperationAction(ISD::STORE, MVT::v16i32, Custom);
 
   setOperationAction(ISD::STORE, MVT::i1, Custom);
-  setOperationAction(ISD::STORE, MVT::i32, Custom);
-  setOperationAction(ISD::STORE, MVT::v2i32, Custom);
   setOperationAction(ISD::STORE, MVT::v4i32, Custom);
 
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
@@ -158,8 +156,6 @@ SITargetLowering::SITargetLowering(TargetMachine &TM) :
   for (MVT VT : MVT::fp_valuetypes())
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
 
-  setTruncStoreAction(MVT::i32, MVT::i8, Custom);
-  setTruncStoreAction(MVT::i32, MVT::i16, Custom);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::i64, MVT::i32, Expand);
   setTruncStoreAction(MVT::v8i32, MVT::v8i16, Expand);
@@ -1125,11 +1121,6 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Store->getMemoryVT();
 
   // These stores are legal.
-  if (Store->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
-      VT.isVector() && VT.getVectorNumElements() == 2 &&
-      VT.getVectorElementType() == MVT::i32)
-    return SDValue();
-
   if (Store->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
     if (VT.isVector() && VT.getVectorNumElements() > 4)
       return ScalarizeVectorStore(Op, DAG);

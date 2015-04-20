@@ -6,7 +6,10 @@
 ; SI: ds_read_u8
 ; SI: ds_read_u8
 ; SI: ds_read_u8
-; SI: ds_write_b32
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
 ; SI: s_endpgm
 define void @unaligned_load_store_i32_local(i32 addrspace(3)* %p, i32 addrspace(3)* %r) nounwind {
   %v = load i32 addrspace(3)* %p, align 1
@@ -19,7 +22,10 @@ define void @unaligned_load_store_i32_local(i32 addrspace(3)* %p, i32 addrspace(
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
-; SI: buffer_store_dword
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
 define void @unaligned_load_store_i32_global(i32 addrspace(1)* %p, i32 addrspace(1)* %r) nounwind {
   %v = load i32 addrspace(1)* %p, align 1
   store i32 %v, i32 addrspace(1)* %r, align 1
@@ -35,8 +41,14 @@ define void @unaligned_load_store_i32_global(i32 addrspace(1)* %p, i32 addrspace
 ; SI: ds_read_u8
 ; SI: ds_read_u8
 ; SI: ds_read_u8
-; SI: ds_write_b32
-; SI: ds_write_b32
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
 ; SI: s_endpgm
 define void @unaligned_load_store_i64_local(i64 addrspace(3)* %p, i64 addrspace(3)* %r) {
   %v = load i64 addrspace(3)* %p, align 1
@@ -53,8 +65,14 @@ define void @unaligned_load_store_i64_local(i64 addrspace(3)* %p, i64 addrspace(
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
-; SI: buffer_store_dword
-; SI: buffer_store_dword
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
+; SI: buffer_store_byte
 define void @unaligned_load_store_i64_global(i64 addrspace(1)* %p, i64 addrspace(1)* %r) {
   %v = load i64 addrspace(1)* %p, align 1
   store i64 %v, i64 addrspace(1)* %r, align 1
@@ -82,10 +100,25 @@ define void @unaligned_load_store_i64_global(i64 addrspace(1)* %p, i64 addrspace
 ; SI: ds_read_u8
 ; SI: ds_read_u8
 
-; SI: ds_write_b32
-; SI: ds_write_b32
-; SI: ds_write_b32
-; SI: ds_write_b32
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
 ; SI: s_endpgm
 define void @unaligned_load_store_v4i32_local(<4 x i32> addrspace(3)* %p, <4 x i32> addrspace(3)* %r) nounwind {
   %v = load <4 x i32> addrspace(3)* %p, align 1
@@ -149,12 +182,23 @@ define void @load_lds_i64_align_4_with_split_offset(i64 addrspace(1)* nocapture 
   ret void
 }
 
-; FIXME: Need to fix this case.
-; define void @load_lds_i64_align_1(i64 addrspace(1)* nocapture %out, i64 addrspace(3)* %in) #0 {
-;   %val = load i64 addrspace(3)* %in, align 1
-;   store i64 %val, i64 addrspace(1)* %out, align 8
-;   ret void
-; }
+; SI-LABEL: {{^}}load_lds_i64_align_1:
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: buffer_store_dwordx2
+; SI: s_endpgm
+
+define void @load_lds_i64_align_1(i64 addrspace(1)* nocapture %out, i64 addrspace(3)* %in) #0 {
+  %val = load i64 addrspace(3)* %in, align 1
+  store i64 %val, i64 addrspace(1)* %out, align 8
+  ret void
+}
 
 ; SI-LABEL: {{^}}store_lds_i64_align_4:
 ; SI: ds_write2_b32

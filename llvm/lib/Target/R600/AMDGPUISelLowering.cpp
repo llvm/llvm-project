@@ -159,9 +159,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM) :
   // Custom lowering of vector stores is required for local address space
   // stores.
   setOperationAction(ISD::STORE, MVT::v4i32, Custom);
-  // XXX: Native v2i32 local address space stores are possible, but not
-  // currently implemented.
-  setOperationAction(ISD::STORE, MVT::v2i32, Custom);
 
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
   setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
