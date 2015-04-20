@@ -945,13 +945,24 @@ multiclass VOP3_2_m <vop op, dag outs, dag ins, string asm,
   def "" : VOP3_Pseudo <outs, ins, pattern, opName>,
            VOP2_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-  def _si : VOP3_Real_si <op.SI3,
-              outs, ins, asm, opName>,
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
             VOP3DisableFields<1, 0, HasMods>;
 
-  def _vi : VOP3_Real_vi <op.VI3,
-              outs, ins, asm, opName>,
+  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName>,
             VOP3DisableFields<1, 0, HasMods>;
+}
+
+multiclass VOP3SI_2_m <vop op, dag outs, dag ins, string asm,
+                     list<dag> pattern, string opName, string revOp,
+                     bit HasMods = 1, bit UseFullOp = 0> {
+
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName>,
+           VOP2_REV<revOp#"_e64", !eq(revOp, opName)>;
+
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+            VOP3DisableFields<1, 0, HasMods>;
+
+  // No VI instruction. This class is for SI only.
 }
 
 multiclass VOP3b_2_m <vop op, dag outs, dag ins, string asm,
@@ -1072,6 +1083,21 @@ multiclass VOP2Inst <vop2 op, string opName, VOPProfile P,
       [(set P.DstVT:$dst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
   revOp, P.HasModifiers
 >;
+
+multiclass VOP2InstSI <vop2 op, string opName, VOPProfile P,
+                       SDPatternOperator node = null_frag,
+                       string revOp = opName> {
+  defm _e32 : VOP2SI_m <op, P.Outs, P.Ins32, P.Asm32, [], opName, revOp>;
+
+  defm _e64 : VOP3SI_2_m <op, P.Outs, P.Ins64, opName#"_e64"#P.Asm64,
+    !if(P.HasModifiers,
+        [(set P.DstVT:$dst,
+             (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
+                                        i1:$clamp, i32:$omod)),
+                   (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
+        [(set P.DstVT:$dst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
+    opName, revOp, P.HasModifiers>;
+}
 
 multiclass VOP2b_Helper <vop2 op, string opName, dag outs,
                          dag ins32, string asm32, list<dag> pat32,

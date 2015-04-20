@@ -1,6 +1,6 @@
 ;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG-CHECK %s
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI-CHECK %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=VI-CHECK %s
 
 ;EG-CHECK: {{^}}shl_v2i32:
 ;EG-CHECK: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
@@ -9,6 +9,10 @@
 ;SI-CHECK: {{^}}shl_v2i32:
 ;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+
+;VI-CHECK: {{^}}shl_v2i32:
+;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
 define void @shl_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i32> addrspace(1)* %in, i32 1
@@ -30,6 +34,12 @@ define void @shl_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in
 ;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ;SI-CHECK: v_lshl_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+
+;VI-CHECK: {{^}}shl_v4i32:
+;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+;VI-CHECK: v_lshlrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
 define void @shl_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i32> addrspace(1)* %in, i32 1
@@ -54,6 +64,9 @@ define void @shl_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in
 
 ;SI-CHECK: {{^}}shl_i64:
 ;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+
+;VI-CHECK: {{^}}shl_i64:
+;VI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 
 define void @shl_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %b_ptr = getelementptr i64 addrspace(1)* %in, i64 1
@@ -89,6 +102,10 @@ define void @shl_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 ;SI-CHECK: {{^}}shl_v2i64:
 ;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 ;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+
+;VI-CHECK: {{^}}shl_v2i64:
+;VI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;VI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 
 define void @shl_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i64> addrspace(1)* %in, i64 1
@@ -146,6 +163,12 @@ define void @shl_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in
 ;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 ;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 ;SI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+
+;VI-CHECK: {{^}}shl_v4i64:
+;VI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;VI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;VI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+;VI-CHECK: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
 
 define void @shl_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i64> addrspace(1)* %in, i64 1

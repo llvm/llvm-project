@@ -408,11 +408,15 @@ unsigned SIInstrInfo::commuteOpcode(unsigned Opcode) const {
   int NewOpc;
 
   // Try to map original to commuted opcode
-  if ((NewOpc = AMDGPU::getCommuteRev(Opcode)) != -1)
+  NewOpc = AMDGPU::getCommuteRev(Opcode);
+  // Check if the commuted (REV) opcode exists on the target.
+  if (NewOpc != -1 && pseudoToMCOpcode(NewOpc) != -1)
     return NewOpc;
 
   // Try to map commuted to original opcode
-  if ((NewOpc = AMDGPU::getCommuteOrig(Opcode)) != -1)
+  NewOpc = AMDGPU::getCommuteOrig(Opcode);
+  // Check if the original (non-REV) opcode exists on the target.
+  if (NewOpc != -1 && pseudoToMCOpcode(NewOpc) != -1)
     return NewOpc;
 
   return Opcode;
