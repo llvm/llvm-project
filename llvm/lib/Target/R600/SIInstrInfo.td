@@ -843,6 +843,15 @@ multiclass VOP1_m <vop1 op, dag outs, dag ins, string asm, list<dag> pattern,
             SIMCInstr <opName#"_e32", SISubtarget.VI>;
 }
 
+multiclass VOP1SI_m <vop1 op, dag outs, dag ins, string asm, list<dag> pattern,
+                   string opName> {
+  def "" : VOP1_Pseudo <outs, ins, pattern, opName>;
+
+  def _si : VOP1<op.SI, outs, ins, asm, []>,
+            SIMCInstr <opName#"_e32", SISubtarget.SI>;
+  // No VI instruction. This class is for SI only.
+}
+
 class VOP2_Pseudo <dag outs, dag ins, list<dag> pattern, string opName> :
   VOP2Common <outs, ins, "", pattern>,
   VOP <opName>,
@@ -937,6 +946,16 @@ multiclass VOP3_1_m <vop op, dag outs, dag ins, string asm,
 
   def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName>,
             VOP3DisableFields<0, 0, HasMods>;
+}
+
+multiclass VOP3SI_1_m <vop op, dag outs, dag ins, string asm,
+                     list<dag> pattern, string opName, bit HasMods = 1> {
+
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName>;
+
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+            VOP3DisableFields<0, 0, HasMods>;
+  // No VI instruction. This class is for SI only.
 }
 
 multiclass VOP3_2_m <vop op, dag outs, dag ins, string asm,
@@ -1046,17 +1065,14 @@ multiclass VOP1Inst <vop1 op, string opName, VOPProfile P,
 multiclass VOP1InstSI <vop1 op, string opName, VOPProfile P,
                        SDPatternOperator node = null_frag> {
 
-  def _e32 : VOP1 <op.SI, P.Outs, P.Ins32, opName#P.Asm32, []>,
-             VOP <opName>;
+  defm _e32 : VOP1SI_m <op, P.Outs, P.Ins32, opName#P.Asm32, [], opName>;
 
-  def _e64 : VOP3Common <P.Outs, P.Ins64, opName#P.Asm64,
+  defm _e64 : VOP3SI_1_m <op, P.Outs, P.Ins64, opName#P.Asm64,
     !if(P.HasModifiers,
       [(set P.DstVT:$dst, (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0,
                                 i32:$src0_modifiers, i1:$clamp, i32:$omod))))],
-      [(set P.DstVT:$dst, (node P.Src0VT:$src0))])>,
-            VOP <opName>,
-            VOP3e <op.SI3>,
-            VOP3DisableFields<0, 0, P.HasModifiers>;
+      [(set P.DstVT:$dst, (node P.Src0VT:$src0))]),
+    opName, P.HasModifiers>;
 }
 
 multiclass VOP2_Helper <vop2 op, string opName, dag outs,
