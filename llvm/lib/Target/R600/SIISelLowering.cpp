@@ -323,6 +323,11 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
     return Align % 4 == 0;
   }
 
+  // Smaller than dword value must be aligned.
+  // FIXME: This should be allowed on CI+
+  if (VT.bitsLT(MVT::i32))
+    return false;
+
   // 8.1.6 - For Dword or larger reads or writes, the two LSBs of the
   // byte-address are ignored, thus forcing Dword alignment.
   // This applies to private, global, and constant memory.
