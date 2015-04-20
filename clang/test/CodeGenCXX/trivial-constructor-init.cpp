@@ -32,3 +32,17 @@ static C c[4];
 
 int main() {
 }
+
+namespace PR22793 {
+template <typename>
+struct foo {
+protected:
+// CHECK-NOT: _ZN7PR227933fooIiED2Ev
+  ~foo() = default;
+  friend void func();
+};
+
+void func() { foo<int> f; }
+
+template struct foo<int>;
+}
