@@ -1890,7 +1890,7 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
 
         // symbol_value_offset may contain 0 for ARM symbols or -1 for
         // THUMB symbols. See above for more details.
-        uint64_t symbol_value = symbol.st_value | symbol_value_offset;
+        uint64_t symbol_value = symbol.st_value + symbol_value_offset;
         if (symbol_section_sp && CalculateType() != ObjectFile::Type::eTypeObjectFile)
             symbol_value -= symbol_section_sp->GetFileAddress();
         bool is_global = symbol.getBinding() == STB_GLOBAL;
