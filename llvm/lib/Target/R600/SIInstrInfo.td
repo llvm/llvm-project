@@ -786,6 +786,7 @@ def VOP_F32_F32_I32 : VOPProfile <[f32, f32, i32, untyped]>;
 def VOP_F64_F64_F64 : VOPProfile <[f64, f64, f64, untyped]>;
 def VOP_F64_F64_I32 : VOPProfile <[f64, f64, i32, untyped]>;
 def VOP_I32_F32_F32 : VOPProfile <[i32, f32, f32, untyped]>;
+def VOP_I32_F32_I32 : VOPProfile <[i32, f32, i32, untyped]>;
 def VOP_I32_I32_I32 : VOPProfile <[i32, i32, i32, untyped]>;
 def VOP_I32_I32_I32_VCC : VOPProfile <[i32, i32, i32, untyped]> {
   let Src0RC32 = VCSrc_32;

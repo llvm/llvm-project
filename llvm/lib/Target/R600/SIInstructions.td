@@ -1541,12 +1541,6 @@ defm V_WRITELANE_B32 : VOP2SI_3VI_m <
 // These instructions only exist on SI and CI
 let SubtargetPredicate = isSICI in {
 
-let isCommutable = 1 in {
-defm V_MAC_LEGACY_F32 : VOP2Inst <vop2<0x6>, "v_mac_legacy_f32",
-  VOP_F32_F32_F32
->;
-} // End isCommutable = 1
-
 defm V_MIN_LEGACY_F32 : VOP2Inst <vop2<0xd>, "v_min_legacy_f32",
   VOP_F32_F32_F32, AMDGPUfmin_legacy
 >;
@@ -1567,6 +1561,12 @@ defm V_LSHL_B32 : VOP2Inst <vop2<0x19>, "v_lshl_b32", VOP_I32_I32_I32, shl>;
 } // End isCommutable = 1
 } // End let SubtargetPredicate = SICI
 
+let isCommutable = 1 in {
+defm V_MAC_LEGACY_F32 : VOP2_VI3_Inst <vop23<0x6, 0x28e>, "v_mac_legacy_f32",
+  VOP_F32_F32_F32
+>;
+} // End isCommutable = 1
+
 defm V_BFM_B32 : VOP2_VI3_Inst <vop23<0x1e, 0x293>, "v_bfm_b32", VOP_I32_I32_I32,
   AMDGPUbfm
 >;
@@ -1583,14 +1583,25 @@ defm V_LDEXP_F32 : VOP2_VI3_Inst <vop23<0x2b, 0x288>, "v_ldexp_f32",
   VOP_F32_F32_I32, AMDGPUldexp
 >;
 
-////def V_CVT_PKACCUM_U8_F32 : VOP2_U8 <0x0000002c, "v_cvt_pkaccum_u8_f32", []>;
-////def V_CVT_PKNORM_I16_F32 : VOP2_I16 <0x0000002d, "v_cvt_pknorm_i16_f32", []>;
-////def V_CVT_PKNORM_U16_F32 : VOP2_U16 <0x0000002e, "v_cvt_pknorm_u16_f32", []>;
-defm V_CVT_PKRTZ_F16_F32 : VOP2_VI3_Inst <vop23<0x2f, 0x296>, "v_cvt_pkrtz_f16_f32",
- VOP_I32_F32_F32, int_SI_packf16
+
+defm V_CVT_PKACCUM_U8_F32 : VOP2_VI3_Inst <vop23<0x2c, 0x1f0>, "v_cvt_pkaccum_u8_f32",
+  VOP_I32_F32_I32>; // TODO: set "Uses = dst"
+
+defm V_CVT_PKNORM_I16_F32 : VOP2_VI3_Inst <vop23<0x2d, 0x294>, "v_cvt_pknorm_i16_f32",
+  VOP_I32_F32_F32
 >;
-////def V_CVT_PK_U16_U32 : VOP2_U16 <0x00000030, "v_cvt_pk_u16_u32", []>;
-////def V_CVT_PK_I16_I32 : VOP2_I16 <0x00000031, "v_cvt_pk_i16_i32", []>;
+defm V_CVT_PKNORM_U16_F32 : VOP2_VI3_Inst <vop23<0x2e, 0x295>, "v_cvt_pknorm_u16_f32",
+  VOP_I32_F32_F32
+>;
+defm V_CVT_PKRTZ_F16_F32 : VOP2_VI3_Inst <vop23<0x2f, 0x296>, "v_cvt_pkrtz_f16_f32",
+  VOP_I32_F32_F32, int_SI_packf16
+>;
+defm V_CVT_PK_U16_U32 : VOP2_VI3_Inst <vop23<0x30, 0x297>, "v_cvt_pk_u16_u32",
+  VOP_I32_I32_I32
+>;
+defm V_CVT_PK_I16_I32 : VOP2_VI3_Inst <vop23<0x31, 0x298>, "v_cvt_pk_i16_i32",
+  VOP_I32_I32_I32
+>;
 
 //===----------------------------------------------------------------------===//
 // VOP3 Instructions
