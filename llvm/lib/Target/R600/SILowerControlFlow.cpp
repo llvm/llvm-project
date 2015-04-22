@@ -513,12 +513,6 @@ bool SILowerControlFlowPass::runOnMachineFunction(MachineFunction &MF) {
         case AMDGPU::SI_INDIRECT_DST_V16:
           IndirectDst(MI);
           break;
-
-        case AMDGPU::V_INTERP_P1_F32:
-        case AMDGPU::V_INTERP_P2_F32:
-        case AMDGPU::V_INTERP_MOV_F32:
-          NeedWQM = true;
-          break;
       }
     }
   }
