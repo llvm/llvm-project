@@ -3229,6 +3229,12 @@ def : Pat <
 >;
 
 def : Pat <
+  (i1 (trunc i64:$a)),
+  (V_CMP_EQ_I32_e64 (V_AND_B32_e64 (i32 1),
+                    (EXTRACT_SUBREG $a, sub0)), 1)
+>;
+
+def : Pat <
   (i32 (bswap i32:$a)),
   (V_BFI_B32 (S_MOV_B32 0x00ff00ff),
              (V_ALIGNBIT_B32 $a, $a, 24),
