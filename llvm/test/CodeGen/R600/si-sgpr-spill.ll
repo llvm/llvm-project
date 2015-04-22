@@ -5,6 +5,7 @@
 ; SGPRs.
 
 ; CHECK-LABEL: {{^}}main:
+; CHECK: s_wqm
 ; Writing to M0 from an SMRD instruction will hang the GPU.
 ; CHECK-NOT: s_buffer_load_dword m0
 ; CHECK: s_endpgm
