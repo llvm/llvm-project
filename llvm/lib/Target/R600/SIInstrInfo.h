@@ -204,6 +204,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  bool isWQM(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::WQM;
+  }
+
   bool isInlineConstant(const APInt &Imm) const;
   bool isInlineConstant(const MachineOperand &MO) const;
   bool isLiteralConstant(const MachineOperand &MO) const;

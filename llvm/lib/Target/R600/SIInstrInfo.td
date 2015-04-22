@@ -1957,7 +1957,7 @@ multiclass MIMG_NoSampler <bits<7> op, string asm> {
 
 class MIMG_Sampler_Helper <bits<7> op, string asm,
                            RegisterClass dst_rc,
-                           RegisterClass src_rc> : MIMG <
+                           RegisterClass src_rc, int wqm> : MIMG <
   op,
   (outs dst_rc:$vdata),
   (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
@@ -1969,33 +1969,41 @@ class MIMG_Sampler_Helper <bits<7> op, string asm,
   let mayLoad = 1;
   let mayStore = 0;
   let hasPostISelHook = 1;
+  let WQM = wqm;
 }
 
 multiclass MIMG_Sampler_Src_Helper <bits<7> op, string asm,
                                     RegisterClass dst_rc,
-                                    int channels> {
-  def _V1 : MIMG_Sampler_Helper <op, asm, dst_rc, VGPR_32>,
+                                    int channels, int wqm> {
+  def _V1 : MIMG_Sampler_Helper <op, asm, dst_rc, VGPR_32, wqm>,
             MIMG_Mask<asm#"_V1", channels>;
-  def _V2 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_64>,
+  def _V2 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_64, wqm>,
             MIMG_Mask<asm#"_V2", channels>;
-  def _V4 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_128>,
+  def _V4 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_128, wqm>,
             MIMG_Mask<asm#"_V4", channels>;
-  def _V8 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_256>,
+  def _V8 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_256, wqm>,
             MIMG_Mask<asm#"_V8", channels>;
-  def _V16 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_512>,
+  def _V16 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_512, wqm>,
             MIMG_Mask<asm#"_V16", channels>;
 }
 
 multiclass MIMG_Sampler <bits<7> op, string asm> {
-  defm _V1 : MIMG_Sampler_Src_Helper<op, asm, VGPR_32, 1>;
-  defm _V2 : MIMG_Sampler_Src_Helper<op, asm, VReg_64, 2>;
-  defm _V3 : MIMG_Sampler_Src_Helper<op, asm, VReg_96, 3>;
-  defm _V4 : MIMG_Sampler_Src_Helper<op, asm, VReg_128, 4>;
+  defm _V1 : MIMG_Sampler_Src_Helper<op, asm, VGPR_32, 1, 0>;
+  defm _V2 : MIMG_Sampler_Src_Helper<op, asm, VReg_64, 2, 0>;
+  defm _V3 : MIMG_Sampler_Src_Helper<op, asm, VReg_96, 3, 0>;
+  defm _V4 : MIMG_Sampler_Src_Helper<op, asm, VReg_128, 4, 0>;
+}
+
+multiclass MIMG_Sampler_WQM <bits<7> op, string asm> {
+  defm _V1 : MIMG_Sampler_Src_Helper<op, asm, VGPR_32, 1, 1>;
+  defm _V2 : MIMG_Sampler_Src_Helper<op, asm, VReg_64, 2, 1>;
+  defm _V3 : MIMG_Sampler_Src_Helper<op, asm, VReg_96, 3, 1>;
+  defm _V4 : MIMG_Sampler_Src_Helper<op, asm, VReg_128, 4, 1>;
 }
 
 class MIMG_Gather_Helper <bits<7> op, string asm,
                           RegisterClass dst_rc,
-                          RegisterClass src_rc> : MIMG <
+                          RegisterClass src_rc, int wqm> : MIMG <
   op,
   (outs dst_rc:$vdata),
   (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
@@ -2016,28 +2024,36 @@ class MIMG_Gather_Helper <bits<7> op, string asm,
   // Therefore, disable all code which updates DMASK by setting these two:
   let MIMG = 0;
   let hasPostISelHook = 0;
+  let WQM = wqm;
 }
 
 multiclass MIMG_Gather_Src_Helper <bits<7> op, string asm,
                                     RegisterClass dst_rc,
-                                    int channels> {
-  def _V1 : MIMG_Gather_Helper <op, asm, dst_rc, VGPR_32>,
+                                    int channels, int wqm> {
+  def _V1 : MIMG_Gather_Helper <op, asm, dst_rc, VGPR_32, wqm>,
             MIMG_Mask<asm#"_V1", channels>;
-  def _V2 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_64>,
+  def _V2 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_64, wqm>,
             MIMG_Mask<asm#"_V2", channels>;
-  def _V4 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_128>,
+  def _V4 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_128, wqm>,
             MIMG_Mask<asm#"_V4", channels>;
-  def _V8 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_256>,
+  def _V8 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_256, wqm>,
             MIMG_Mask<asm#"_V8", channels>;
-  def _V16 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_512>,
+  def _V16 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_512, wqm>,
             MIMG_Mask<asm#"_V16", channels>;
 }
 
 multiclass MIMG_Gather <bits<7> op, string asm> {
-  defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1>;
-  defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2>;
-  defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3>;
-  defm _V4 : MIMG_Gather_Src_Helper<op, asm, VReg_128, 4>;
+  defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1, 0>;
+  defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2, 0>;
+  defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3, 0>;
+  defm _V4 : MIMG_Gather_Src_Helper<op, asm, VReg_128, 4, 0>;
+}
+
+multiclass MIMG_Gather_WQM <bits<7> op, string asm> {
+  defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1, 1>;
+  defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2, 1>;
+  defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3, 1>;
+  defm _V4 : MIMG_Gather_Src_Helper<op, asm, VReg_128, 4, 1>;
 }
 
 //===----------------------------------------------------------------------===//
