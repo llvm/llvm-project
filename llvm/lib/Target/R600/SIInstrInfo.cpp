@@ -334,12 +334,17 @@ SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   } else if (AMDGPU::SReg_64RegClass.contains(DestReg)) {
     if (DestReg == AMDGPU::VCC) {
-      // FIXME: Hack until VReg_1 removed.
+      if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
+        BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), AMDGPU::VCC)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+      } else {
+        // FIXME: Hack until VReg_1 removed.
+        assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
+        BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_I32_e32), AMDGPU::VCC)
+          .addImm(0)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+      }
 
-      assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
-      BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_I32_e32), AMDGPU::VCC)
-        .addImm(0)
-        .addReg(SrcReg, getKillRegState(KillSrc));
       return;
     }
 
