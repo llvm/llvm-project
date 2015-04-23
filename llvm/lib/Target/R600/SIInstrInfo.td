@@ -907,6 +907,16 @@ class VOP3_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName> :
   VOP3e_vi <op>,
   SIMCInstr <opName#"_e64", SISubtarget.VI>;
 
+class VOP3b_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName> :
+  VOP3Common <outs, ins, asm, []>,
+  VOP3be <op>,
+  SIMCInstr<opName#"_e64", SISubtarget.SI>;
+
+class VOP3b_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName> :
+  VOP3Common <outs, ins, asm, []>,
+  VOP3be_vi <op>,
+  SIMCInstr <opName#"_e64", SISubtarget.VI>;
+
 multiclass VOP3_m <vop op, dag outs, dag ins, string asm, list<dag> pattern,
                    string opName, int NumSrcArgs, bit HasMods = 1> {
 
@@ -985,6 +995,8 @@ multiclass VOP3SI_2_m <vop op, dag outs, dag ins, string asm,
   // No VI instruction. This class is for SI only.
 }
 
+// XXX - Is v_div_scale_{f32|f64} only available in vop3b without
+// option of implicit vcc use?
 multiclass VOP3b_2_m <vop op, dag outs, dag ins, string asm,
                       list<dag> pattern, string opName, string revOp,
                       bit HasMods = 1, bit UseFullOp = 0> {
@@ -995,14 +1007,11 @@ multiclass VOP3b_2_m <vop op, dag outs, dag ins, string asm,
   // can write it into any SGPR. We currently don't use the carry out,
   // so for now hardcode it to VCC as well.
   let sdst = SIOperand.VCC, Defs = [VCC] in {
-    def _si : VOP3b <op.SI3, outs, ins, asm, []>,
-              VOP3DisableFields<1, 0, HasMods>,
-              SIMCInstr<opName#"_e64", SISubtarget.SI>;
+    def _si : VOP3b_Real_si <op.SI3, outs, ins, asm, opName>,
+              VOP3DisableFields<1, 0, HasMods>;
 
-    // TODO: Do we need this VI variant here?
-    /*def _vi : VOP3b_vi <op.VI3, outs, ins, asm, []>,
-              VOP3DisableFields<1, 0, HasMods>,
-              SIMCInstr<opName#"_e64", SISubtarget.VI>;*/
+    def _vi : VOP3b_Real_vi <op.VI3, outs, ins, asm, opName>,
+              VOP3DisableFields<1, 0, HasMods>;
   } // End sdst = SIOperand.VCC, Defs = [VCC]
 }
 

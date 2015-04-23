@@ -556,9 +556,6 @@ class VOP1 <bits<8> op, dag outs, dag ins, string asm, list<dag> pattern> :
 class VOP2 <bits<6> op, dag outs, dag ins, string asm, list<dag> pattern> :
     VOP2Common <outs, ins, asm, pattern>, VOP2e<op>;
 
-class VOP3b <bits<9> op, dag outs, dag ins, string asm, list<dag> pattern> :
-    VOP3Common <outs, ins, asm, pattern>, VOP3be<op>;
-
 class VOPC <bits<8> op, dag ins, string asm, list<dag> pattern> :
     VOPCCommon <ins, asm, pattern>, VOPCe <op>;
 
