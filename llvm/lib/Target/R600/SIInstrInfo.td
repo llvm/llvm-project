@@ -1327,6 +1327,28 @@ multiclass VOP3Inst <vop3 op, string opName, VOPProfile P,
   P.NumSrcArgs, P.HasModifiers
 >;
 
+// Special case for v_div_fmas_{f32|f64}, since it seems to be the
+// only VOP instruction that implicitly reads VCC.
+multiclass VOP3_VCC_Inst <vop3 op, string opName,
+                          VOPProfile P,
+                          SDPatternOperator node = null_frag> : VOP3_Helper <
+  op, opName,
+  P.Outs,
+  (ins InputModsNoDefault:$src0_modifiers, P.Src0RC64:$src0,
+       InputModsNoDefault:$src1_modifiers, P.Src1RC64:$src1,
+       InputModsNoDefault:$src2_modifiers, P.Src2RC64:$src2,
+       ClampMod:$clamp,
+       omod:$omod),
+  " $dst, $src0_modifiers, $src1_modifiers, $src2_modifiers"#"$clamp"#"$omod",
+  [(set P.DstVT:$dst,
+            (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
+                                       i1:$clamp, i32:$omod)),
+                  (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
+                  (P.Src2VT (VOP3Mods P.Src2VT:$src2, i32:$src2_modifiers)),
+                  (i1 VCC)))],
+  3, 1
+>;
+
 multiclass VOP3b_Helper <vop op, RegisterClass vrc, RegisterOperand arc,
                     string opName, list<dag> pattern> :
   VOP3b_3_m <
