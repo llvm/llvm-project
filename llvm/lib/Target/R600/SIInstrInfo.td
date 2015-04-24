@@ -1015,6 +1015,19 @@ multiclass VOP3b_2_m <vop op, dag outs, dag ins, string asm,
   } // End sdst = SIOperand.VCC, Defs = [VCC]
 }
 
+multiclass VOP3b_3_m <vop op, dag outs, dag ins, string asm,
+                      list<dag> pattern, string opName, string revOp,
+                      bit HasMods = 1, bit UseFullOp = 0> {
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName>;
+
+
+  def _si : VOP3b_Real_si <op.SI3, outs, ins, asm, opName>,
+            VOP3DisableFields<1, 1, HasMods>;
+
+  def _vi : VOP3b_Real_vi <op.VI3, outs, ins, asm, opName>,
+            VOP3DisableFields<1, 1, HasMods>;
+}
+
 multiclass VOP3_C_m <vop op, dag outs, dag ins, string asm,
                      list<dag> pattern, string opName,
                      bit HasMods, bit defExec> {
@@ -1316,7 +1329,7 @@ multiclass VOP3Inst <vop3 op, string opName, VOPProfile P,
 
 multiclass VOP3b_Helper <vop op, RegisterClass vrc, RegisterOperand arc,
                     string opName, list<dag> pattern> :
-  VOP3b_2_m <
+  VOP3b_3_m <
   op, (outs vrc:$vdst, SReg_64:$sdst),
       (ins InputModsNoDefault:$src0_modifiers, arc:$src0,
            InputModsNoDefault:$src1_modifiers, arc:$src1,
