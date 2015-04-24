@@ -209,7 +209,9 @@ def VReg_256 : RegisterClass<"AMDGPU", [v32i8, v8i32, v8f32], 256, (add VGPR_256
 
 def VReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 512, (add VGPR_512)>;
 
-def VReg_1 : RegisterClass<"AMDGPU", [i1, i32], 32, (add VGPR_32)>;
+def VReg_1 : RegisterClass<"AMDGPU", [i1], 32, (add VGPR_32)> {
+  let Size = 32;
+}
 
 class RegImmOperand <RegisterClass rc> : RegisterOperand<rc> {
   let OperandNamespace = "AMDGPU";
