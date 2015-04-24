@@ -786,6 +786,8 @@ SDNode *AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   return CurDAG->SelectNodeTo(N, AMDGPU::REG_SEQUENCE, MVT::i64, Args);
 }
 
+// We need to handle this here because tablegen doesn't support matching
+// instructions with multiple outputs.
 SDNode *AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
@@ -795,19 +797,12 @@ SDNode *AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
   unsigned Opc
     = (VT == MVT::f64) ? AMDGPU::V_DIV_SCALE_F64 : AMDGPU::V_DIV_SCALE_F32;
 
-  const SDValue Zero = CurDAG->getTargetConstant(0, MVT::i32);
-  const SDValue False = CurDAG->getTargetConstant(0, MVT::i1);
-  SDValue Ops[] = {
-    Zero,             // src0_modifiers
-    N->getOperand(0), // src0
-    Zero,             // src1_modifiers
-    N->getOperand(1), // src1
-    Zero,             // src2_modifiers
-    N->getOperand(2), // src2
-    False,            // clamp
-    Zero              // omod
-  };
+  // src0_modifiers, src0, src1_modifiers, src1, src2_modifiers, src2, clamp, omod
+  SDValue Ops[8];
 
+  SelectVOP3Mods0(N->getOperand(0), Ops[1], Ops[0], Ops[6], Ops[7]);
+  SelectVOP3Mods(N->getOperand(1), Ops[3], Ops[2]);
+  SelectVOP3Mods(N->getOperand(2), Ops[5], Ops[4]);
   return CurDAG->SelectNodeTo(N, Opc, VT, MVT::i1, Ops);
 }
 

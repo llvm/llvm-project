@@ -3,6 +3,7 @@
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 declare { float, i1 } @llvm.AMDGPU.div.scale.f32(float, float, i1) nounwind readnone
 declare { double, i1 } @llvm.AMDGPU.div.scale.f64(double, double, i1) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; SI-LABEL @test_div_scale_f32_1:
 ; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
@@ -283,5 +284,81 @@ define void @test_div_scale_f64_all_scalar_2(double addrspace(1)* %out, double %
   %result = call { double, i1 } @llvm.AMDGPU.div.scale.f64(double %a, double %b, i1 true) nounwind readnone
   %result0 = extractvalue { double, i1 } %result, 0
   store double %result0, double addrspace(1)* %out, align 8
+  ret void
+}
+
+; SI-LABEL @test_div_scale_f32_inline_imm_num:
+; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[A]], [[A]], 1.0
+; SI: buffer_store_dword [[RESULT0]]
+; SI: s_endpgm
+define void @test_div_scale_f32_inline_imm_num(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %gep.0 = getelementptr float addrspace(1)* %in, i32 %tid
+  %a = load float addrspace(1)* %gep.0, align 4
+
+  %result = call { float, i1 } @llvm.AMDGPU.div.scale.f32(float 1.0, float %a, i1 false) nounwind readnone
+  %result0 = extractvalue { float, i1 } %result, 0
+  store float %result0, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; SI-LABEL @test_div_scale_f32_inline_imm_den:
+; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], 2.0, 2.0, [[A]]
+; SI: buffer_store_dword [[RESULT0]]
+; SI: s_endpgm
+define void @test_div_scale_f32_inline_imm_den(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %gep.0 = getelementptr float addrspace(1)* %in, i32 %tid
+  %a = load float addrspace(1)* %gep.0, align 4
+
+  %result = call { float, i1 } @llvm.AMDGPU.div.scale.f32(float %a, float 2.0, i1 false) nounwind readnone
+  %result0 = extractvalue { float, i1 } %result, 0
+  store float %result0, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; SI-LABEL @test_div_scale_f32_fabs_num:
+; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
+; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[B]], [[B]], |[[A]]|
+; SI: buffer_store_dword [[RESULT0]]
+; SI: s_endpgm
+define void @test_div_scale_f32_fabs_num(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %gep.0 = getelementptr float addrspace(1)* %in, i32 %tid
+  %gep.1 = getelementptr float addrspace(1)* %gep.0, i32 1
+
+  %a = load float addrspace(1)* %gep.0, align 4
+  %b = load float addrspace(1)* %gep.1, align 4
+
+  %a.fabs = call float @llvm.fabs.f32(float %a) nounwind readnone
+
+  %result = call { float, i1 } @llvm.AMDGPU.div.scale.f32(float %a.fabs, float %b, i1 false) nounwind readnone
+  %result0 = extractvalue { float, i1 } %result, 0
+  store float %result0, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; SI-LABEL @test_div_scale_f32_fabs_den:
+; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
+; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], |[[B]]|, |[[B]]|, [[A]]
+; SI: buffer_store_dword [[RESULT0]]
+; SI: s_endpgm
+define void @test_div_scale_f32_fabs_den(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %gep.0 = getelementptr float addrspace(1)* %in, i32 %tid
+  %gep.1 = getelementptr float addrspace(1)* %gep.0, i32 1
+
+  %a = load float addrspace(1)* %gep.0, align 4
+  %b = load float addrspace(1)* %gep.1, align 4
+
+  %b.fabs = call float @llvm.fabs.f32(float %b) nounwind readnone
+
+  %result = call { float, i1 } @llvm.AMDGPU.div.scale.f32(float %a, float %b.fabs, i1 false) nounwind readnone
+  %result0 = extractvalue { float, i1 } %result, 0
+  store float %result0, float addrspace(1)* %out, align 4
   ret void
 }
