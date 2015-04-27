@@ -258,8 +258,12 @@ SDNode *MipsSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,
                                    CurDAG->getTargetConstant(Mips::sub_32, VT));
   }
 
-  SDNode *AddCarry = CurDAG->getMachineNode(ADDuOp, DL, VT,
-                                            SDValue(Carry, 0), RHS);
+  // Generate a second addition only if we know that RHS is not a
+  // constant-zero node.
+  SDNode *AddCarry = Carry;
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS);
+  if (!C || C->getZExtValue())
+    AddCarry = CurDAG->getMachineNode(ADDuOp, DL, VT, SDValue(Carry, 0), RHS);
 
   return CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS,
                               SDValue(AddCarry, 0));
