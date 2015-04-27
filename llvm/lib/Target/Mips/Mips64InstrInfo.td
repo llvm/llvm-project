@@ -428,6 +428,14 @@ def : MipsPat<(trunc (assertzext GPR64:$src)),
 def : MipsPat<(i32 (trunc GPR64:$src)),
               (SLL (EXTRACT_SUBREG GPR64:$src, sub_32), 0)>;
 
+// Bypass trunc nodes for bitwise ops.
+def : MipsPat<(i32 (trunc (and GPR64:$lhs, GPR64:$rhs))),
+              (EXTRACT_SUBREG (AND64 GPR64:$lhs, GPR64:$rhs), sub_32)>;
+def : MipsPat<(i32 (trunc (or GPR64:$lhs, GPR64:$rhs))),
+              (EXTRACT_SUBREG (OR64 GPR64:$lhs, GPR64:$rhs), sub_32)>;
+def : MipsPat<(i32 (trunc (xor GPR64:$lhs, GPR64:$rhs))),
+              (EXTRACT_SUBREG (XOR64 GPR64:$lhs, GPR64:$rhs), sub_32)>;
+
 // 32-to-64-bit extension
 def : MipsPat<(i64 (anyext GPR32:$src)), (SLL64_32 GPR32:$src)>;
 def : MipsPat<(i64 (zext GPR32:$src)), (DSRL (DSLL64_32 GPR32:$src), 32)>;
