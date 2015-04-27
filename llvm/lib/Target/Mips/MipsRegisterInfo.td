@@ -388,6 +388,8 @@ def MSA128W: RegisterClass<"Mips", [v4i32, v4f32], 128,
                            (sequence "W%u", 0, 31)>;
 def MSA128D: RegisterClass<"Mips", [v2i64, v2f64], 128,
                            (sequence "W%u", 0, 31)>;
+def MSA128WEvens: RegisterClass<"Mips", [v4i32, v4f32], 128,
+                                (decimate (sequence "W%u", 0, 31), 2)>;
 
 def MSACtrl: RegisterClass<"Mips", [i32], 32, (add
   MSAIR, MSACSR, MSAAccess, MSASave, MSAModify, MSARequest, MSAMap, MSAUnmap)>;
