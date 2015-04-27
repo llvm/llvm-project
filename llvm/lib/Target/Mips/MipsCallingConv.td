@@ -123,7 +123,7 @@ def CC_MipsN_SoftFloat : CallingConv<[
 ]>;
 
 def CC_MipsN : CallingConv<[
-  CCIfType<[i8, i16, i32],
+  CCIfType<[i8, i16, i32, i64],
       CCIfSubtargetNot<"isLittle()",
           CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
 
