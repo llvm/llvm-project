@@ -39,10 +39,9 @@ entry:
 ; 32R6-DAG:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R6-DAG:      add.s $f0, $[[T1]], $[[T2]]
 
-; 64-DAG:        mul.s $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        add.s $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        mtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        add.s $f0, $[[T1]], $[[T2]]
+; 64-DAG:        madd.s $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-DAG:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-DAG:        add.s $f0, $[[T0]], $[[T1]]
 
 ; 64R2:          madd.s $[[T0:f[0-9]+]], $f14, $f12, $f13
 ; 64R2:          mtc1 $zero, $[[T1:f[0-9]+]]
@@ -80,10 +79,9 @@ entry:
 ; 32R6-DAG:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R6-DAG:      add.s $f0, $[[T1]], $[[T2]]
 
-; 64-DAG:        mul.s $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        sub.s $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        mtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        add.s $f0, $[[T1]], $[[T2]]
+; 64-DAG:        msub.s $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-DAG:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-DAG:        add.s $f0, $[[T0]], $[[T1]]
 
 ; 64R2:          msub.s $[[T0:f[0-9]+]], $f14, $f12, $f13
 ; 64R2:          mtc1 $zero, $[[T1:f[0-9]+]]
@@ -124,10 +122,11 @@ entry:
 ; 32R6-DAG:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R6-DAG:      sub.s $f0, $[[T2]], $[[T1]]
 
-; 64-DAG:        mul.s $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        add.s $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        mtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        sub.s $f0, $[[T2]], $[[T1]]
+; 64-NONAN:      nmadd.s $f0, $f14, $f12, $f13
+
+; 64-NAN:        madd.s $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-NAN:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-NAN:        sub.s  $f0, $[[T1]], $[[T0]]
 
 ; 64R2-NONAN:    nmadd.s $f0, $f14, $f12, $f13
 
@@ -164,10 +163,11 @@ entry:
 ; 32R2-NAN:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R2-NAN:      sub.s  $f0, $[[T2]], $[[T1]]
 
-; 64-DAG:        mul.s $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        sub.s $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        mtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        sub.s $f0, $[[T2]], $[[T1]]
+; 64-NAN:        msub.s $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-NAN:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-NAN:        sub.s  $f0, $[[T1]], $[[T0]]
+
+; 64-NONAN:      nmsub.s $f0, $f14, $f12, $f13
 
 ; 64R2-NAN:      msub.s $[[T0:f[0-9]+]], $f14, $f12, $f13
 ; 64R2-NAN:      mtc1 $zero, $[[T1:f[0-9]+]]
@@ -206,10 +206,9 @@ entry:
 ; 32R6-DAG:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R6-DAG:      add.d $f0, $[[T1]], $[[T2]]
 
-; 64-DAG:        mul.d $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        add.d $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        dmtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        add.d $f0, $[[T1]], $[[T2]]
+; 64-DAG:        madd.d $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-DAG:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-DAG:        add.d $f0, $[[T0]], $[[T1]]
 
 ; 64R2:          madd.d $[[T0:f[0-9]+]], $f14, $f12, $f13
 ; 64R2:          mtc1 $zero, $[[T1:f[0-9]+]]
@@ -248,10 +247,9 @@ entry:
 ; 32R6-DAG:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R6-DAG:      add.d $f0, $[[T1]], $[[T2]]
 
-; 64-DAG:        mul.d $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        sub.d $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        dmtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        add.d $f0, $[[T1]], $[[T2]]
+; 64-DAG:        msub.d $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-DAG:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-DAG:        add.d $f0, $[[T0]], $[[T1]]
 
 ; 64R2:          msub.d $[[T0:f[0-9]+]], $f14, $f12, $f13
 ; 64R2:          mtc1 $zero, $[[T1:f[0-9]+]]
@@ -293,10 +291,11 @@ entry:
 ; 32R6-DAG:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R6-DAG:      sub.d $f0, $[[T2]], $[[T1]]
 
-; 64-DAG:        mul.d $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        add.d $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        dmtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        sub.d $f0, $[[T2]], $[[T1]]
+; 64-NONAN:      nmadd.d $f0, $f14, $f12, $f13
+
+; 64-NAN:        madd.d $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-NAN:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-NAN:        sub.d $f0, $[[T1]], $[[T0]]
 
 ; 64R2-NONAN:    nmadd.d $f0, $f14, $f12, $f13
 
@@ -340,10 +339,11 @@ entry:
 ; 32R6-DAG:      mtc1 $zero, $[[T2:f[0-9]+]]
 ; 32R6-DAG:      sub.d $f0, $[[T2]], $[[T1]]
 
-; 64-DAG:        mul.d $[[T1:f[0-9]+]], $f12, $f13
-; 64-DAG:        sub.d $[[T2:f[0-9]+]], $[[T1]], $f14
-; 64-DAG:        dmtc1 $zero, $[[T2:f[0-9]+]]
-; 64-DAG:        sub.d $f0, $[[T2]], $[[T1]]
+; 64-NONAN:      nmsub.d $f0, $f14, $f12, $f13
+
+; 64-NAN:        msub.d $[[T0:f[0-9]+]], $f14, $f12, $f13
+; 64-NAN:        mtc1 $zero, $[[T1:f[0-9]+]]
+; 64-NAN:        sub.d $f0, $[[T1]], $[[T0]]
 
 ; 64R2-NONAN:    nmsub.d $f0, $f14, $f12, $f13
 

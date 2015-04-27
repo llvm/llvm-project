@@ -35,14 +35,6 @@
         c.ult.s         $fcc7,$f24,$f10
         c.un.d          $fcc6,$f23,$f24
         c.un.s          $fcc1,$f30,$f4
-        madd.d          $f18,$f19,$f26,$f20
-        madd.s          $f1,$f31,$f19,$f25
-        msub.d          $f10,$f1,$f31,$f18
-        msub.s          $f12,$f19,$f10,$f16
-        nmadd.d         $f18,$f9,$f14,$f19
-        nmadd.s         $f0,$f5,$f25,$f12
-        nmsub.d         $f30,$f8,$f16,$f30
-        nmsub.s         $f1,$f24,$f19,$f4
         recip.d         $f19,$f6
         recip.s         $f3,$f30
         rsqrt.d         $f3,$f28

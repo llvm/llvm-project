@@ -176,7 +176,6 @@
         lwle            $11,-42($11)
         lwre            $sp,-152($24)
         lwx $12,$12($s4)
-        madd.d          $f18,$f19,$f26,$f20
         madd.ps         $f22,$f3,$f14,$f3
         maq_s.w.phl     $ac2,$25,$11
         maq_s.w.phr     $ac0,$10,$25
@@ -193,7 +192,6 @@
         msgn.qh         $v0,$v24,$v20
         msgn.qh         $v12,$v21,$v0[1]
         msub            $ac2,$sp,$14
-        msub.d          $f10,$f1,$f31,$f18
         msub.ps         $f12,$f14,$f29,$f17
         msubu           $ac2,$a1,$24
         mtc0            $9,c0_datahi1
@@ -222,9 +220,7 @@
         nlzc.d          $w14,$w14
         nlzc.h          $w24,$w24
         nlzc.w          $w10,$w4
-        nmadd.d         $f18,$f9,$f14,$f19
         nmadd.ps        $f27,$f4,$f9,$f25
-        nmsub.d         $f30,$f8,$f16,$f30
         nmsub.ps        $f6,$f12,$f14,$f17
         nor.v           $w20,$w20,$w15
         or.v            $w13,$w23,$w12

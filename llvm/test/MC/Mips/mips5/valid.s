@@ -135,6 +135,8 @@
         lwr       $zero,-19147($gp)
         lwu       $s3,-24086($v1)
         lwxc1     $f12,$s1($s8)
+        madd.d    $f18, $f22, $f26, $f20  # encoding: [0x4e,0xd4,0xd4,0xa1]
+        madd.s    $f2, $f30, $f18, $f24   # encoding: [0x4f,0xd8,0x90,0xa0]
         mfc1      $a3,$f27
         mfhi      $s3
         mfhi      $sp
@@ -157,6 +159,8 @@
         movz      $a1,$s6,$9
         movz.d    $f12,$f29,$9
         movz.s    $f25,$f7,$v1
+        msub.d    $f10, $f2, $f30, $f18   # encoding: [0x4c,0x52,0xf2,0xa9]
+        msub.s    $f12, $f18, $f10, $f16  # encoding: [0x4e,0x50,0x53,0x28]
         mtc1      $s8,$f9
         mthi      $s1
         mtlo      $sp
@@ -171,6 +175,10 @@
         negu      $2,$3                # CHECK: negu $2, $3            # encoding: [0x00,0x03,0x10,0x23]
         neg.d     $f27,$f18
         neg.s     $f1,$f15
+        nmadd.d   $f18, $f8, $f14, $f20   # encoding: [0x4d,0x14,0x74,0xb1]
+        nmadd.s   $f0, $f4, $f24, $f12    # encoding: [0x4c,0x8c,0xc0,0x30]
+        nmsub.d   $f30, $f8, $f16, $f30   # encoding: [0x4d,0x1e,0x87,0xb9]
+        nmsub.s   $f0, $f24, $f20, $f4    # encoding: [0x4f,0x04,0xa0,0x38]
         nop
         nor       $a3,$zero,$a3
         or        $12,$s0,$sp
