@@ -79,6 +79,12 @@ public:
     ///   - guard variables  are smaller.
     GenericAArch64,
 
+    /// The generic Mips ABI is a modified version of the Itanium ABI.
+    ///
+    /// At the moment, only change from the generic ABI in this case is:
+    ///   - representation of member function pointers adjusted as in ARM.
+    GenericMIPS,
+
     /// The Microsoft ABI is the ABI used by Microsoft Visual Studio (and
     /// compatible compilers).
     ///
@@ -114,6 +120,7 @@ public:
     case GenericARM:
     case iOS:
     case iOS64:
+    case GenericMIPS:
       return true;
 
     case Microsoft:
@@ -130,6 +137,7 @@ public:
     case GenericARM:
     case iOS:
     case iOS64:
+    case GenericMIPS:
       return false;
 
     case Microsoft:
@@ -212,6 +220,7 @@ public:
     case GenericItanium:
     case iOS:   // old iOS compilers did not follow this rule
     case Microsoft:
+    case GenericMIPS:
       return true;
     }
     llvm_unreachable("bad ABI kind");
@@ -257,6 +266,7 @@ public:
     case GenericAArch64:
     case GenericARM:
     case iOS:
+    case GenericMIPS:
       return UseTailPaddingUnlessPOD03;
 
     // iOS on ARM64 uses the C++11 POD rules.  It does not honor the

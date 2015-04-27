@@ -655,6 +655,7 @@ bool TargetCXXABI::tryParse(llvm::StringRef name) {
     .Case("ios", iOS)
     .Case("itanium", GenericItanium)
     .Case("microsoft", Microsoft)
+    .Case("arm", GenericMIPS)
     .Default(unknown);
   if (kind == unknown) return false;
 

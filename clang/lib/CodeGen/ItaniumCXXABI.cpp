@@ -339,6 +339,9 @@ CodeGen::CGCXXABI *CodeGen::CreateItaniumCXXABI(CodeGenModule &CGM) {
     return new ItaniumCXXABI(CGM, /* UseARMMethodPtrABI = */ true,
                              /* UseARMGuardVarABI = */ true);
 
+  case TargetCXXABI::GenericMIPS:
+    return new ItaniumCXXABI(CGM, /* UseARMMethodPtrABI = */ true);
+
   case TargetCXXABI::GenericItanium:
     if (CGM.getContext().getTargetInfo().getTriple().getArch()
         == llvm::Triple::le32) {
