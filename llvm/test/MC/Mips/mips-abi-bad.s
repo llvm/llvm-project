@@ -1,20 +1,30 @@
-# Error checking for malformed abi related directives
 # RUN: not llvm-mc -triple mips-unknown-unknown %s 2>&1 | FileCheck %s
-# CHECK: .text
+
+# Error checking for malformed .module directives (and .set fp=...).
+
     .module fp=3
-# CHECK      : mips-abi-bad.s:4:16: error: unsupported option
-# CHECK-NEXT : .module fp=3
-# CHECK-NEXT :           ^
+# CHECK: :[[@LINE-1]]:17: error: unsupported value, expected 'xx', '32' or '64'
+# CHECK-NEXT: .module fp=3
+# CHECK-NEXT:             ^
 
+# FIXME: Add separate test for .set fp=xx/32/64.
     .set fp=xx,6
-# CHECK      :mips-abi-bad.s:5:15: error: unexpected token in statement
-# CHECK-NEXT :    .set fp=xx,6
-# CHECK-NEXT :              ^
+# CHECK: :[[@LINE-1]]:15: error: unexpected token, expected end of statement
+# CHECK-NEXT: .set fp=xx,6
+# CHECK-NEXT:           ^
 
-# CHECK       :.set mips16
+    .module
+# CHECK: :[[@LINE-1]]:12: error: expected .module option identifier
+# CHECK-NEXT: .module
+# CHECK-NEXT:        ^
+
+    .module 34
+# CHECK: :[[@LINE-1]]:13: error: expected .module option identifier
+# CHECK-NEXT: .module 34
+# CHECK-NEXT:         ^
+
     .set mips16
     .module fp=32
-
-# CHECK      :mips-abi-bad.s:14:13: error: .module directive must come before any code
-# CHECK-NEXT :    .module fp=32
-# CHECK-NEXT :            ^
+# CHECK: :[[@LINE-1]]:13: error: .module directive must appear before any code
+# CHECK-NEXT: .module fp=32
+# CHECK-NEXT:         ^

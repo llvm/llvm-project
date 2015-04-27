@@ -3667,43 +3667,44 @@ bool MipsAsmParser::parseDirectiveModule() {
     return false;
   }
 
-  if (Lexer.is(AsmToken::Identifier)) {
-    StringRef Option = Parser.getTok().getString();
-    Parser.Lex();
-
-    if (Option == "oddspreg") {
-      getTargetStreamer().emitDirectiveModuleOddSPReg(true, isABI_O32());
-      clearFeatureBits(Mips::FeatureNoOddSPReg, "nooddspreg");
-
-      if (getLexer().isNot(AsmToken::EndOfStatement)) {
-        reportParseError("unexpected token, expected end of statement");
-        return false;
-      }
-
-      return false;
-    } else if (Option == "nooddspreg") {
-      if (!isABI_O32()) {
-        Error(L, "'.module nooddspreg' requires the O32 ABI");
-        return false;
-      }
-
-      getTargetStreamer().emitDirectiveModuleOddSPReg(false, isABI_O32());
-      setFeatureBits(Mips::FeatureNoOddSPReg, "nooddspreg");
-
-      if (getLexer().isNot(AsmToken::EndOfStatement)) {
-        reportParseError("unexpected token, expected end of statement");
-        return false;
-      }
-
-      return false;
-    } else if (Option == "fp") {
-      return parseDirectiveModuleFP();
-    }
-
-    return Error(L, "'" + Twine(Option) + "' is not a valid .module option.");
+  StringRef Option;
+  if (Parser.parseIdentifier(Option)) {
+    reportParseError("expected .module option identifier");
+    return false;
   }
 
-  return false;
+  if (Option == "oddspreg") {
+    getTargetStreamer().emitDirectiveModuleOddSPReg(true, isABI_O32());
+    clearFeatureBits(Mips::FeatureNoOddSPReg, "nooddspreg");
+
+    // If this is not the end of the statement, report an error.
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      reportParseError("unexpected token, expected end of statement");
+      return false;
+    }
+
+    return false; // parseDirectiveModule has finished successfully.
+  } else if (Option == "nooddspreg") {
+    if (!isABI_O32()) {
+      Error(L, "'.module nooddspreg' requires the O32 ABI");
+      return false;
+    }
+
+    getTargetStreamer().emitDirectiveModuleOddSPReg(false, isABI_O32());
+    setFeatureBits(Mips::FeatureNoOddSPReg, "nooddspreg");
+
+    // If this is not the end of the statement, report an error.
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      reportParseError("unexpected token, expected end of statement");
+      return false;
+    }
+
+    return false; // parseDirectiveModule has finished successfully.
+  } else if (Option == "fp") {
+    return parseDirectiveModuleFP();
+  } else {
+    return Error(L, "'" + Twine(Option) + "' is not a valid .module option.");
+  }
 }
 
 /// parseDirectiveModuleFP
