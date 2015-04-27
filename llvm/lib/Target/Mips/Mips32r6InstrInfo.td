@@ -379,7 +379,6 @@ class JMP_IDX_COMPACT_DESC_BASE<string opstr, DAGOperand opnd,
   list<dag> Pattern = [];
   bit isTerminator = 1;
   bit hasDelaySlot = 0;
-  string DecoderMethod = "DecodeSimm16";
 }
 
 class JIALC_DESC : JMP_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
