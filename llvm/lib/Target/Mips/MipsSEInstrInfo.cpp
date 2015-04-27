@@ -364,6 +364,9 @@ void MipsSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
   unsigned ADDu = STI.isABI_N64() ? Mips::DADDu : Mips::ADDu;
   unsigned ADDiu = STI.isABI_N64() ? Mips::DADDiu : Mips::ADDiu;
 
+  if (Amount == 0)
+    return;
+
   if (isInt<16>(Amount))// addi sp, sp, amount
     BuildMI(MBB, I, DL, get(ADDiu), SP).addReg(SP).addImm(Amount);
   else { // Expand immediate that doesn't fit in 16-bit.
