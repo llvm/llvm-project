@@ -1,4 +1,4 @@
 # RUN: llvm-mc %s -triple=mips-unknown-linux -disassemble -mcpu=mips1 | FileCheck %s
 # XFAIL: *
-0xc2 0x44 0xe3 0x67   # CHECK:     lwc0    $4,-7321($18)
-0xe2 0x64 0x49 0xd8   # CHECK:     swc0    $4,18904($19)
+0xc2 0x44 0xe3 0x67 # CHECK: lwc0 $4, -7321($18)
+0xe2 0x64 0x49 0xd8 # CHECK: swc0 $4, 18904($19)
