@@ -1,5 +1,4 @@
 # RUN: llvm-mc %s -disassemble -triple=mips-unknown-linux -mcpu=mips64r6 | FileCheck %s
-
 0x30 0x42 0x00 0x04    #CHECK: andi $2, $2, 4
 0xec 0x80 0x00 0x19    #CHECK: addiupc $4, 100
 0x25 0x29 0x00 0x0a    #CHECK: addiu $9, $9, 10

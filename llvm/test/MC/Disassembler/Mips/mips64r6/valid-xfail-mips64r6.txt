@@ -3,8 +3,6 @@
 #
 # RUN: not llvm-mc %s -disassemble -triple=mips-unknown-linux -mcpu=mips64r6 | not FileCheck %s
 # XFAIL: *
-
-
 0x20 0x40 0x00 0x01    # CHECK: bovc $0, $2, 4
 0x20 0x82 0x00 0x01    # CHECK: bovc $2, $4, 4
 0x60 0x40 0x00 0x01    # CHECK: bnvc $0, $2, 4
