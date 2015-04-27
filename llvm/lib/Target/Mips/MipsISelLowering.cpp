@@ -642,10 +642,8 @@ static SDValue performCMovFPCombine(SDNode *N, SelectionDAG &DAG,
                                                          MipsISD::CMovFP_T;
 
   SDValue FCC = N->getOperand(1), Glue = N->getOperand(3);
-  SDVTList VTs = DAG.getVTList(FCC.getValueType(), ValueIfTrue.getValueType(),
-                               ValueIfFalse.getValueType(),
-                               Glue.getValueType());
-  return DAG.getNode(Opc, SDLoc(N), VTs, ValueIfFalse, FCC, ValueIfTrue, Glue);
+  return DAG.getNode(Opc, SDLoc(N), ValueIfFalse.getValueType(),
+                     ValueIfFalse, FCC, ValueIfTrue, Glue);
 }
 
 static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
