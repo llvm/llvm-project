@@ -304,6 +304,10 @@ static DecodeStatus DecodeFMem3(MCInst &Inst, unsigned Insn,
                                uint64_t Address,
                                const void *Decoder);
 
+static DecodeStatus DecodeFMemCop2R6(MCInst &Inst, unsigned Insn,
+                               uint64_t Address,
+                               const void *Decoder);
+
 static DecodeStatus DecodeSpecial3LlSc(MCInst &Inst,
                                        unsigned Insn,
                                        uint64_t Address,
@@ -1354,6 +1358,23 @@ static DecodeStatus DecodeFMem3(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeFMemCop2R6(MCInst &Inst,
+                                    unsigned Insn,
+                                    uint64_t Address,
+                                    const void *Decoder) {
+  int Offset = SignExtend32<11>(Insn & 0x07ff);
+  unsigned Reg = fieldFromInstruction(Insn, 16, 5);
+  unsigned Base = fieldFromInstruction(Insn, 11, 5);
+
+  Reg = getReg(Decoder, Mips::COP2RegClassID, Reg);
+  Base = getReg(Decoder, Mips::GPR32RegClassID, Base);
+
+  Inst.addOperand(MCOperand::CreateReg(Reg));
+  Inst.addOperand(MCOperand::CreateReg(Base));
+  Inst.addOperand(MCOperand::CreateImm(Offset));
+
+  return MCDisassembler::Success;
+}
 static DecodeStatus DecodeSpecial3LlSc(MCInst &Inst,
                                        unsigned Insn,
                                        uint64_t Address,
