@@ -4,7 +4,7 @@
 ; Tests for indirect addressing on SI, which is implemented using dynamic
 ; indexing of vectors.
 
-; CHECK: extract_w_offset
+; CHECK-LABEL: {{^}}extract_w_offset:
 ; CHECK: s_mov_b32 m0
 ; CHECK-NEXT: v_movrels_b32_e32
 define void @extract_w_offset(float addrspace(1)* %out, i32 %in) {
@@ -15,7 +15,7 @@ entry:
   ret void
 }
 
-; CHECK: extract_wo_offset
+; CHECK-LABEL: {{^}}extract_wo_offset:
 ; CHECK: s_mov_b32 m0
 ; CHECK-NEXT: v_movrels_b32_e32
 define void @extract_wo_offset(float addrspace(1)* %out, i32 %in) {
@@ -25,7 +25,7 @@ entry:
   ret void
 }
 
-; CHECK: insert_w_offset
+; CHECK-LABEL: {{^}}insert_w_offset:
 ; CHECK: s_mov_b32 m0
 ; CHECK-NEXT: v_movreld_b32_e32
 define void @insert_w_offset(float addrspace(1)* %out, i32 %in) {
@@ -37,7 +37,7 @@ entry:
   ret void
 }
 
-; CHECK: insert_wo_offset
+; CHECK-LABEL: {{^}}insert_wo_offset:
 ; CHECK: s_mov_b32 m0
 ; CHECK-NEXT: v_movreld_b32_e32
 define void @insert_wo_offset(float addrspace(1)* %out, i32 %in) {
