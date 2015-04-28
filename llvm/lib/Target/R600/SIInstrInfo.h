@@ -247,7 +247,27 @@ public:
   /// the register class of its machine operand.
   /// to infer the correct register class base on the other operands.
   const TargetRegisterClass *getOpRegClass(const MachineInstr &MI,
-                                           unsigned OpNo) const;\
+                                           unsigned OpNo) const;
+
+  /// \brief Return the size in bytes of the operand OpNo on the given
+  // instruction opcode.
+  unsigned getOpSize(uint16_t Opcode, unsigned OpNo) const {
+    const MCOperandInfo &OpInfo = get(Opcode).OpInfo[OpNo];
+
+    if (OpInfo.RegClass == -1) {
+      // If this is an immediate operand, this must be a 32-bit literal.
+      assert(OpInfo.OperandType == MCOI::OPERAND_IMMEDIATE);
+      return 4;
+    }
+
+    return RI.getRegClass(OpInfo.RegClass)->getSize();
+  }
+
+  /// \brief This form should usually be preferred since it handles operands
+  /// with unknown register classes.
+  unsigned getOpSize(const MachineInstr &MI, unsigned OpNo) const {
+    return getOpRegClass(MI, OpNo)->getSize();
+  }
 
   /// \returns true if it is legal for the operand at index \p OpNo
   /// to read a VGPR.
