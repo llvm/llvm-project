@@ -2164,9 +2164,13 @@ def : Pat <
 //===----------------------------------------------------------------------===//
 
 let Predicates = [UnsafeFPMath] in {
-def : RcpPat<V_RCP_F64_e32, f64>;
-defm : RsqPat<V_RSQ_F64_e32, f64>;
-defm : RsqPat<V_RSQ_F32_e32, f32>;
+
+//def : RcpPat<V_RCP_F64_e32, f64>;
+//defm : RsqPat<V_RSQ_F64_e32, f64>;
+//defm : RsqPat<V_RSQ_F32_e32, f32>;
+
+def : RsqPat<V_RSQ_F32_e32, f32>;
+def : RsqPat<V_RSQ_F64_e32, f64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2681,13 +2685,6 @@ def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 def : Pat <
   (int_AMDGPU_div f32:$src0, f32:$src1),
   (V_MUL_LEGACY_F32_e32 $src0, (V_RCP_LEGACY_F32_e32 $src1))
->;
-
-def : Pat<
-  (fdiv f64:$src0, f64:$src1),
-  (V_MUL_F64 0 /* src0_modifiers */, $src0,
-             0 /* src1_modifiers */, (V_RCP_F64_e32 $src1),
-             0 /* clamp */, 0 /* omod */)
 >;
 
 def : Pat <

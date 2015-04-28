@@ -40,10 +40,14 @@ define void @unsafe_frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
    ret void
 }
 
-; TODO: This should check something when f64 fdiv is implemented
-; correctly
-
 ; FUNC-LABEL: {{^}}frem_f64:
+; SI: buffer_load_dwordx2 [[Y:v\[[0-9]+:[0-9]+\]]], {{.*}}, 0
+; SI: buffer_load_dwordx2 [[X:v\[[0-9]+:[0-9]+\]]], {{.*}}, 0
+; SI-DAG: v_div_fmas_f64
+; SI-DAG: v_div_scale_f64
+; SI-DAG: v_mul_f64
+; SI: v_add_f64
+; SI: buffer_store_dwordx2
 ; SI: s_endpgm
 define void @frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                       double addrspace(1)* %in2) #0 {

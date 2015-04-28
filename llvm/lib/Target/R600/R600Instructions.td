@@ -1193,7 +1193,7 @@ let Predicates = [isR600] in {
   def TGSI_LIT_Z_r600 : TGSI_LIT_Z_Common<MUL_LIT_r600, LOG_CLAMPED_r600, EXP_IEEE_r600>;
 
   def : Pat<(fsqrt f32:$src), (MUL $src, (RECIPSQRT_CLAMPED_r600 $src))>;
-  defm : RsqPat<RECIPSQRT_IEEE_r600, f32>;
+  def : RsqPat<RECIPSQRT_IEEE_r600, f32>;
 
   def : FROUNDPat <CNDGE_r600, CNDGT_r600>;
 

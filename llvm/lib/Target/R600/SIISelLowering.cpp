@@ -210,6 +210,7 @@ SITargetLowering::SITargetLowering(TargetMachine &TM) :
   }
 
   setOperationAction(ISD::FDIV, MVT::f32, Custom);
+  setOperationAction(ISD::FDIV, MVT::f64, Custom);
 
   setTargetDAGCombine(ISD::FADD);
   setTargetDAGCombine(ISD::FSUB);
@@ -1105,7 +1106,70 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SITargetLowering::LowerFDIV64(SDValue Op, SelectionDAG &DAG) const {
-  return SDValue();
+  if (DAG.getTarget().Options.UnsafeFPMath)
+    return LowerFastFDIV(Op, DAG);
+
+  SDLoc SL(Op);
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
+
+  const SDValue One = DAG.getConstantFP(1.0, MVT::f64);
+
+  SDVTList ScaleVT = DAG.getVTList(MVT::f64, MVT::i1);
+
+  SDValue DivScale0 = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT, Y, Y, X);
+
+  SDValue NegDivScale0 = DAG.getNode(ISD::FNEG, SL, MVT::f64, DivScale0);
+
+  SDValue Rcp = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f64, DivScale0);
+
+  SDValue Fma0 = DAG.getNode(ISD::FMA, SL, MVT::f64, NegDivScale0, Rcp, One);
+
+  SDValue Fma1 = DAG.getNode(ISD::FMA, SL, MVT::f64, Rcp, Fma0, Rcp);
+
+  SDValue Fma2 = DAG.getNode(ISD::FMA, SL, MVT::f64, NegDivScale0, Fma1, One);
+
+  SDValue DivScale1 = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT, X, Y, X);
+
+  SDValue Fma3 = DAG.getNode(ISD::FMA, SL, MVT::f64, Fma1, Fma2, Fma1);
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f64, DivScale1, Fma3);
+
+  SDValue Fma4 = DAG.getNode(ISD::FMA, SL, MVT::f64,
+                             NegDivScale0, Mul, DivScale1);
+
+  SDValue Scale;
+
+  if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS) {
+    // Workaround a hardware bug on SI where the condition output from div_scale
+    // is not usable.
+
+    const SDValue Hi = DAG.getConstant(1, MVT::i32);
+
+    // Figure out if the scale to use for div_fmas.
+    SDValue NumBC = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, X);
+    SDValue DenBC = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Y);
+    SDValue Scale0BC = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, DivScale0);
+    SDValue Scale1BC = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, DivScale1);
+
+    SDValue NumHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, NumBC, Hi);
+    SDValue DenHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, DenBC, Hi);
+
+    SDValue Scale0Hi
+      = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Scale0BC, Hi);
+    SDValue Scale1Hi
+      = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Scale1BC, Hi);
+
+    SDValue CmpDen = DAG.getSetCC(SL, MVT::i1, DenHi, Scale0Hi, ISD::SETEQ);
+    SDValue CmpNum = DAG.getSetCC(SL, MVT::i1, NumHi, Scale1Hi, ISD::SETEQ);
+    Scale = DAG.getNode(ISD::XOR, SL, MVT::i1, CmpNum, CmpDen);
+  } else {
+    Scale = DivScale1.getValue(1);
+  }
+
+  SDValue Fmas = DAG.getNode(AMDGPUISD::DIV_FMAS, SL, MVT::f64,
+                             Fma4, Fma3, Mul, Scale);
+
+  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f64, Fmas, Y, X);
 }
 
 SDValue SITargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {

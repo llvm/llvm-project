@@ -649,17 +649,10 @@ class RcpPat<Instruction RcpInst, ValueType vt> : Pat <
   (RcpInst $src)
 >;
 
-multiclass RsqPat<Instruction RsqInst, ValueType vt> {
-  def : Pat <
-    (fdiv FP_ONE, (fsqrt vt:$src)),
-    (RsqInst $src)
-  >;
-
-  def : Pat <
-    (AMDGPUrcp (fsqrt vt:$src)),
-    (RsqInst $src)
-  >;
-}
+class RsqPat<Instruction RsqInst, ValueType vt> : Pat <
+  (AMDGPUrcp (fsqrt vt:$src)),
+  (RsqInst $src)
+>;
 
 include "R600Instructions.td"
 include "R700Instructions.td"

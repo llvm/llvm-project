@@ -69,7 +69,7 @@ def EXP_IEEE_eg : EXP_IEEE_Common<0x81>;
 def LOG_IEEE_eg : LOG_IEEE_Common<0x83>;
 def RECIP_CLAMPED_eg : RECIP_CLAMPED_Common<0x84>;
 def RECIPSQRT_IEEE_eg : RECIPSQRT_IEEE_Common<0x89>;
-defm : RsqPat<RECIPSQRT_IEEE_eg, f32>;
+def : RsqPat<RECIPSQRT_IEEE_eg, f32>;
 def SIN_eg : SIN_Common<0x8D>;
 def COS_eg : COS_Common<0x8E>;
 
