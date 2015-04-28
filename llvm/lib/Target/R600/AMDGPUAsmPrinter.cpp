@@ -343,6 +343,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.NumVGPR = MaxVGPR + 1;
   ProgInfo.NumSGPR = MaxSGPR + 1;
 
+  if (STM.hasSGPRInitBug()) {
+    if (ProgInfo.NumSGPR > AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG)
+      llvm_unreachable("Too many SGPRs used with the SGPR init bug");
+
+    ProgInfo.NumSGPR = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+  }
+
   ProgInfo.VGPRBlocks = (ProgInfo.NumVGPR - 1) / 4;
   ProgInfo.SGPRBlocks = (ProgInfo.NumSGPR - 1) / 8;
   // Set the value to initialize FP_ROUND and FP_DENORM parts of the mode

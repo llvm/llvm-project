@@ -46,6 +46,23 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(AMDGPU::VGPR255);
   Reserved.set(AMDGPU::VGPR254);
 
+  // Tonga and Iceland can only allocate a fixed number of SGPRs due
+  // to a hw bug.
+  if (ST.hasSGPRInitBug()) {
+    unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
+    // Reserve some SGPRs for FLAT_SCRATCH and VCC (4 SGPRs).
+    // Assume XNACK_MASK is unused.
+    unsigned Limit = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4;
+
+    for (unsigned i = Limit; i < NumSGPRs; ++i) {
+      unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
+      MCRegAliasIterator R = MCRegAliasIterator(Reg, this, true);
+
+      for (; R.isValid(); ++R)
+        Reserved.set(*R);
+    }
+  }
+
   return Reserved;
 }
 
