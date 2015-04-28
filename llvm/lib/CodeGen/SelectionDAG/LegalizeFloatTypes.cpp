@@ -658,7 +658,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
                            NVT, N->getOperand(0));
   return TLI.makeLibCall(DAG, LC,
                          TLI.getTypeToTransformTo(*DAG.getContext(), RVT),
-                         &Op, 1, false, dl).first;
+                         &Op, 1, Signed, dl).first;
 }
 
 
