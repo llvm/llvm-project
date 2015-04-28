@@ -874,8 +874,8 @@ defm DS_WRITE2ST64_B64 : DS_Store2_Helper <0x0000004F, "ds_write2st64_b64", VReg
 
 defm DS_READ2_B32 : DS_Load2_Helper <0x00000037, "ds_read2_b32", VReg_64>;
 defm DS_READ2ST64_B32 : DS_Load2_Helper <0x00000038, "ds_read2st64_b32", VReg_64>;
-defm DS_READ2_B64 : DS_Load2_Helper <0x00000075, "ds_read2_b64", VReg_128>;
-defm DS_READ2ST64_B64 : DS_Load2_Helper <0x00000076, "ds_read2st64_b64", VReg_128>;
+defm DS_READ2_B64 : DS_Load2_Helper <0x00000077, "ds_read2_b64", VReg_128>;
+defm DS_READ2ST64_B64 : DS_Load2_Helper <0x00000078, "ds_read2st64_b64", VReg_128>;
 
 //===----------------------------------------------------------------------===//
 // MUBUF Instructions
