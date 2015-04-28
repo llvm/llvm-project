@@ -164,10 +164,6 @@ class PrivateStore <SDPatternOperator op> : PrivateMemOp <
   (ops node:$value, node:$ptr), (op node:$value, node:$ptr)
 >;
 
-def extloadi8_private : PrivateLoad <extloadi8>;
-def sextloadi8_private : PrivateLoad <sextloadi8>;
-def extloadi16_private : PrivateLoad <extloadi16>;
-def sextloadi16_private : PrivateLoad <sextloadi16>;
 def load_private : PrivateLoad <load>;
 
 def truncstorei8_private : PrivateStore <truncstorei8>;
@@ -231,6 +227,9 @@ def sextloadi8_local : PatFrag<(ops node:$ptr), (sextloadi8 node:$ptr), [{
     return isLocalLoad(dyn_cast<LoadSDNode>(N));
 }]>;
 
+def extloadi8_private : PrivateLoad <az_extloadi8>;
+def sextloadi8_private : PrivateLoad <sextloadi8>;
+
 def az_extloadi16 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
 }]>;
@@ -266,6 +265,9 @@ def az_extloadi16_local : PatFrag<(ops node:$ptr), (az_extloadi16 node:$ptr), [{
 def sextloadi16_local : PatFrag<(ops node:$ptr), (sextloadi16 node:$ptr), [{
     return isLocalLoad(dyn_cast<LoadSDNode>(N));
 }]>;
+
+def extloadi16_private : PrivateLoad <az_extloadi16>;
+def sextloadi16_private : PrivateLoad <sextloadi16>;
 
 def az_extloadi32 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
