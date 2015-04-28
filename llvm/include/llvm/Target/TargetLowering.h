@@ -1060,6 +1060,11 @@ public:
     return false;
   }
 
+  /// Returns true if arguments should be sign-extended in lib calls.
+  virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
+    return IsSigned;
+ }
+
   /// Returns true if the given (atomic) load should be expanded by the
   /// IR-level AtomicExpand pass into a load-linked instruction
   /// (through emitLoadLinked()).

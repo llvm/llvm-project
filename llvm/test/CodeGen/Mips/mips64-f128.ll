@@ -545,7 +545,7 @@ entry:
 
 ; ALL-LABEL: load_LD_float:
 ; ALL: ld   $[[R0:[0-9]+]], %got_disp(gf1)
-; ALL: lwu  $4, 0($[[R0]])
+; ALL: lw   $4, 0($[[R0]])
 ; ALL: ld   $25, %call16(__extendsftf2)
 ; ALL: jalr $25
 
