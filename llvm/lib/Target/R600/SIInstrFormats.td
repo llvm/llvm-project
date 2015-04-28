@@ -297,14 +297,13 @@ class VOP1e <bits<8> op> : Enc32 {
 }
 
 class VOP2e <bits<6> op> : Enc32 {
+  bits<8> vdst;
+  bits<9> src0;
+  bits<8> src1;
 
-  bits<8> VDST;
-  bits<9> SRC0;
-  bits<8> VSRC1;
-
-  let Inst{8-0} = SRC0;
-  let Inst{16-9} = VSRC1;
-  let Inst{24-17} = VDST;
+  let Inst{8-0} = src0;
+  let Inst{16-9} = src1;
+  let Inst{24-17} = vdst;
   let Inst{30-25} = op;
   let Inst{31} = 0x0; //encoding
 }

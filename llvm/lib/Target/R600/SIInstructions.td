@@ -1508,16 +1508,16 @@ defm V_READLANE_B32 : VOP2SI_3VI_m <
   vop3 <0x001, 0x289>,
   "v_readlane_b32",
   (outs SReg_32:$vdst),
-  (ins VGPR_32:$src0, SSrc_32:$vsrc1),
-  "v_readlane_b32 $vdst, $src0, $vsrc1"
+  (ins VGPR_32:$src0, SCSrc_32:$src1),
+  "v_readlane_b32 $vdst, $src0, $src1"
 >;
 
 defm V_WRITELANE_B32 : VOP2SI_3VI_m <
   vop3 <0x002, 0x28a>,
   "v_writelane_b32",
   (outs VGPR_32:$vdst),
-  (ins SReg_32:$src0, SSrc_32:$vsrc1),
-  "v_writelane_b32 $vdst, $src0, $vsrc1"
+  (ins SReg_32:$src0, SCSrc_32:$src1),
+  "v_writelane_b32 $vdst, $src0, $src1"
 >;
 
 // These instructions only exist on SI and CI
