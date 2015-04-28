@@ -291,6 +291,8 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
         printImmediate64(Op.getImm(), O);
       else
         llvm_unreachable("Invalid register class size");
+    } else if (Desc.OpInfo[OpNo].OperandType == MCOI::OPERAND_IMMEDIATE) {
+      printImmediate32(Op.getImm(), O);
     } else {
       // We hit this for the immediate instruction bits that don't yet have a
       // custom printer.

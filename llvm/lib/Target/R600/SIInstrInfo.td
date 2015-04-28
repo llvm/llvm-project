@@ -807,6 +807,10 @@ def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
 def VOP_I64_I64_I64 : VOPProfile <[i64, i64, i64, untyped]>;
 
 def VOP_F32_F32_F32_F32 : VOPProfile <[f32, f32, f32, f32]>;
+def VOP_MADK : VOPProfile <[f32, f32, f32, f32]> {
+  field dag Ins = (ins VCSrc_32:$src0, VGPR_32:$vsrc1, u32imm:$src2);
+  field string Asm = " $dst, $src0, $vsrc1, $src2";
+}
 def VOP_F64_F64_F64_F64 : VOPProfile <[f64, f64, f64, f64]>;
 def VOP_I32_I32_I32_I32 : VOPProfile <[i32, i32, i32, i32]>;
 def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
@@ -1191,6 +1195,23 @@ multiclass VOP2_VI3_Inst <vop23 op, string opName, VOPProfile P,
       [(set P.DstVT:$dst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
   revOp, P.HasModifiers
 >;
+
+multiclass VOP2MADK <vop2 op, string opName, list<dag> pattern = []> {
+
+  def "" : VOP2_Pseudo <VOP_MADK.Outs, VOP_MADK.Ins, pattern, opName>;
+
+let isCodeGenOnly = 0 in {
+  def _si : VOP2Common <VOP_MADK.Outs, VOP_MADK.Ins,
+                        !strconcat(opName, VOP_MADK.Asm), []>,
+            SIMCInstr <opName#"_e32", SISubtarget.SI>,
+            VOP2_MADKe <op.SI>;
+
+  def _vi : VOP2Common <VOP_MADK.Outs, VOP_MADK.Ins,
+                        !strconcat(opName, VOP_MADK.Asm), []>,
+            SIMCInstr <opName#"_e32", SISubtarget.VI>,
+            VOP2_MADKe <op.VI>;
+} // End isCodeGenOnly = 0
+}
 
 class VOPC_Pseudo <dag outs, dag ins, list<dag> pattern, string opName> :
   VOPCCommon <ins, "", pattern>,
