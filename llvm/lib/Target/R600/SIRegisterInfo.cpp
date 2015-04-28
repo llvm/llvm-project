@@ -14,7 +14,6 @@
 
 
 #include "SIRegisterInfo.h"
-#include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -53,7 +52,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 unsigned SIRegisterInfo::getRegPressureSetLimit(unsigned Idx) const {
 
   // FIXME: We should adjust the max number of waves based on LDS size.
-  unsigned SGPRLimit = getNumSGPRsAllowed(ST.getMaxWavesPerCU());
+  unsigned SGPRLimit = getNumSGPRsAllowed(ST.getGeneration(),
+                                          ST.getMaxWavesPerCU());
   unsigned VGPRLimit = getNumVGPRsAllowed(ST.getMaxWavesPerCU());
 
   for (regclass_iterator I = regclass_begin(), E = regclass_end();
@@ -494,14 +494,24 @@ unsigned SIRegisterInfo::getNumVGPRsAllowed(unsigned WaveCount) const {
   }
 }
 
-unsigned SIRegisterInfo::getNumSGPRsAllowed(unsigned WaveCount) const {
-  switch(WaveCount) {
-    case 10: return 48;
-    case 9:  return 56;
-    case 8:  return 64;
-    case 7:  return 72;
-    case 6:  return 80;
-    case 5:  return 96;
-    default: return 103;
+unsigned SIRegisterInfo::getNumSGPRsAllowed(AMDGPUSubtarget::Generation gen,
+                                            unsigned WaveCount) const {
+  if (gen >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    switch (WaveCount) {
+      case 10: return 80;
+      case 9:  return 80;
+      case 8:  return 96;
+      default: return 102;
+    }
+  } else {
+    switch(WaveCount) {
+      case 10: return 48;
+      case 9:  return 56;
+      case 8:  return 64;
+      case 7:  return 72;
+      case 6:  return 80;
+      case 5:  return 96;
+      default: return 103;
+    }
   }
 }
