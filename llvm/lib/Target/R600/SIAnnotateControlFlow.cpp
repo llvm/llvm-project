@@ -83,7 +83,7 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   void insertElse(BranchInst *Term);
 
-  Value *handleLoopCondition(Value *Cond, PHINode *Broken);
+  Value *handleLoopCondition(Value *Cond, PHINode *Broken, llvm::Loop *L);
 
   void handleLoop(BranchInst *Term);
 
@@ -207,7 +207,8 @@ void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
 }
 
 /// \brief Recursively handle the condition leading to a loop
-Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken) {
+Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
+                                                  llvm::Loop *L) {
   if (PHINode *Phi = dyn_cast<PHINode>(Cond)) {
     BasicBlock *Parent = Phi->getParent();
     PHINode *NewPhi = PHINode::Create(Int64, 0, "", &Parent->front());
@@ -223,7 +224,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken) 
       }
 
       Phi->setIncomingValue(i, BoolFalse);
-      Value *PhiArg = handleLoopCondition(Incoming, Broken);
+      Value *PhiArg = handleLoopCondition(Incoming, Broken, L);
       NewPhi->addIncoming(PhiArg, From);
     }
 
@@ -253,7 +254,12 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken) 
 
   } else if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
     BasicBlock *Parent = Inst->getParent();
-    TerminatorInst *Insert = Parent->getTerminator();
+    Instruction *Insert;
+    if (L->contains(Inst)) {
+      Insert = Parent->getTerminator();
+    } else {
+      Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+    }
     Value *Args[] = { Cond, Broken };
     return CallInst::Create(IfBreak, Args, "", Insert);
 
@@ -265,14 +271,15 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken) 
 
 /// \brief Handle a back edge (loop)
 void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
+  BasicBlock *BB = Term->getParent();
+  llvm::Loop *L = LI->getLoopFor(BB);
   BasicBlock *Target = Term->getSuccessor(1);
   PHINode *Broken = PHINode::Create(Int64, 0, "", &Target->front());
 
   Value *Cond = Term->getCondition();
   Term->setCondition(BoolTrue);
-  Value *Arg = handleLoopCondition(Cond, Broken);
+  Value *Arg = handleLoopCondition(Cond, Broken, L);
 
-  BasicBlock *BB = Term->getParent();
   for (pred_iterator PI = pred_begin(Target), PE = pred_end(Target);
        PI != PE; ++PI) {
 
