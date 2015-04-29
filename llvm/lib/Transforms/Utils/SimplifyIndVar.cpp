@@ -288,14 +288,11 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
 
   IntegerType *IT = cast<IntegerType>(IVOperand->getType());
   Value *OtherOperand = nullptr;
-  int OtherOperandIdx = -1;
   if (BO->getOperand(0) == IVOperand) {
     OtherOperand = BO->getOperand(1);
-    OtherOperandIdx = 1;
   } else {
     assert(BO->getOperand(1) == IVOperand && "only other use!");
     OtherOperand = BO->getOperand(0);
-    OtherOperandIdx = 0;
   }
 
   bool Changed = false;
