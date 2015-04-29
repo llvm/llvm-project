@@ -31,6 +31,13 @@ insn3:
         movl	$0, %eax
 	retq
 
+# Test processing of the __eh_frame section.
+# rtdyld-check: *{8}(section_addr(test_x86-64.o, __eh_frame) + 0x20) = eh_frame_test - (section_addr(test_x86-64.o, __eh_frame) + 0x20)
+eh_frame_test:
+        .cfi_startproc
+        retq
+        .cfi_endproc
+
         .comm   y,4,2
 
         .section	__DATA,__data

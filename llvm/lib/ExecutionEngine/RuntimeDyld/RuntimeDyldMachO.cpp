@@ -177,25 +177,30 @@ bool RuntimeDyldMachO::isCompatibleFile(const object::ObjectFile &Obj) const {
 }
 
 template <typename Impl>
-void RuntimeDyldMachOCRTPBase<Impl>::finalizeLoad(const ObjectFile &ObjImg,
+void RuntimeDyldMachOCRTPBase<Impl>::finalizeLoad(const ObjectFile &Obj,
                                                   ObjSectionToIDMap &SectionMap) {
   unsigned EHFrameSID = RTDYLD_INVALID_SECTION_ID;
   unsigned TextSID = RTDYLD_INVALID_SECTION_ID;
   unsigned ExceptTabSID = RTDYLD_INVALID_SECTION_ID;
-  ObjSectionToIDMap::iterator i, e;
 
-  for (i = SectionMap.begin(), e = SectionMap.end(); i != e; ++i) {
-    const SectionRef &Section = i->first;
+  for (const auto &Section : Obj.sections()) {
     StringRef Name;
     Section.getName(Name);
-    if (Name == "__eh_frame")
-      EHFrameSID = i->second;
-    else if (Name == "__text")
-      TextSID = i->second;
+
+    // Force emission of the __text, __eh_frame, and __gcc_except_tab sections
+    // if they're present. Otherwise call down to the impl to handle other
+    // sections that have already been emitted.
+    if (Name == "__text")
+      TextSID = findOrEmitSection(Obj, Section, true, SectionMap);
+    else if (Name == "__eh_frame")
+      EHFrameSID = findOrEmitSection(Obj, Section, false, SectionMap);
     else if (Name == "__gcc_except_tab")
-      ExceptTabSID = i->second;
-    else
-      impl().finalizeSection(ObjImg, i->second, Section);
+      ExceptTabSID = findOrEmitSection(Obj, Section, true, SectionMap);
+    else {
+      auto I = SectionMap.find(Section);
+      if (I != SectionMap.end())
+        impl().finalizeSection(Obj, I->second, Section);
+    }
   }
   UnregisteredEHFrameSections.push_back(
     EHFrameRelatedSections(EHFrameSID, TextSID, ExceptTabSID));
