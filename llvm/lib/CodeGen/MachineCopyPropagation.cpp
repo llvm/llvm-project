@@ -75,10 +75,9 @@ MachineCopyPropagation::SourceNoLongerAvailable(unsigned Reg,
            I != E; ++I) {
         unsigned MappedDef = *I;
         // Source of copy is no longer available for propagation.
-        if (AvailCopyMap.erase(MappedDef)) {
-          for (MCSubRegIterator SR(MappedDef, TRI); SR.isValid(); ++SR)
-            AvailCopyMap.erase(*SR);
-        }
+        AvailCopyMap.erase(MappedDef);
+        for (MCSubRegIterator SR(MappedDef, TRI); SR.isValid(); ++SR)
+          AvailCopyMap.erase(*SR);
       }
     }
   }
