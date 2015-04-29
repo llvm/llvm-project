@@ -875,9 +875,6 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return LowerIntrinsicIABS(Op, DAG);
     case AMDGPUIntrinsic::AMDGPU_lrp:
       return LowerIntrinsicLRP(Op, DAG);
-    case AMDGPUIntrinsic::AMDGPU_fract:
-    case AMDGPUIntrinsic::AMDIL_fraction: // Legacy name.
-      return DAG.getNode(AMDGPUISD::FRACT, DL, VT, Op.getOperand(1));
 
     case AMDGPUIntrinsic::AMDGPU_clamp:
     case AMDGPUIntrinsic::AMDIL_clamp: // Legacy name.
