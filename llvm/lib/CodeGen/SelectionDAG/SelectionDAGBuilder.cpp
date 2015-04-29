@@ -5727,6 +5727,11 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
     // Skip the first return-type Attribute to get to params.
     Entry.setAttributes(&CS, i - CS.arg_begin() + 1);
     Args.push_back(Entry);
+
+    // If we have an explicit sret argument that is an Instruction, (i.e., it
+    // might point to function-local memory), we can't meaningfully tail-call.
+    if (Entry.isSRet && isa<Instruction>(V))
+      isTailCall = false;
   }
 
   // Check if target-independent constraints permit a tail call here.
