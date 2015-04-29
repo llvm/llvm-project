@@ -1120,27 +1120,18 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
         return ConstantInt::get(CI1->getContext(), C1V | C2V);
       case Instruction::Xor:
         return ConstantInt::get(CI1->getContext(), C1V ^ C2V);
-      case Instruction::Shl: {
-        uint32_t shiftAmt = C2V.getZExtValue();
-        if (shiftAmt < C1V.getBitWidth())
-          return ConstantInt::get(CI1->getContext(), C1V.shl(shiftAmt));
-        else
-          return UndefValue::get(C1->getType()); // too big shift is undef
-      }
-      case Instruction::LShr: {
-        uint32_t shiftAmt = C2V.getZExtValue();
-        if (shiftAmt < C1V.getBitWidth())
-          return ConstantInt::get(CI1->getContext(), C1V.lshr(shiftAmt));
-        else
-          return UndefValue::get(C1->getType()); // too big shift is undef
-      }
-      case Instruction::AShr: {
-        uint32_t shiftAmt = C2V.getZExtValue();
-        if (shiftAmt < C1V.getBitWidth())
-          return ConstantInt::get(CI1->getContext(), C1V.ashr(shiftAmt));
-        else
-          return UndefValue::get(C1->getType()); // too big shift is undef
-      }
+      case Instruction::Shl:
+        if (C2V.ult(C1V.getBitWidth()))
+          return ConstantInt::get(CI1->getContext(), C1V.shl(C2V));
+        return UndefValue::get(C1->getType()); // too big shift is undef
+      case Instruction::LShr:
+        if (C2V.ult(C1V.getBitWidth()))
+          return ConstantInt::get(CI1->getContext(), C1V.lshr(C2V));
+        return UndefValue::get(C1->getType()); // too big shift is undef
+      case Instruction::AShr:
+        if (C2V.ult(C1V.getBitWidth()))
+          return ConstantInt::get(CI1->getContext(), C1V.ashr(C2V));
+        return UndefValue::get(C1->getType()); // too big shift is undef
       }
     }
 
