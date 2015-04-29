@@ -266,7 +266,22 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   .addReg(SubReg);
         }
       }
-      TII->insertNOPs(MI, 3);
+
+      // TODO: only do this when it is needed
+      switch (ST.getGeneration()) {
+      case AMDGPUSubtarget::SOUTHERN_ISLANDS:
+        // "VALU writes SGPR" -> "SMRD reads that SGPR" needs "S_NOP 3" on SI
+        TII->insertNOPs(MI, 3);
+        break;
+      case AMDGPUSubtarget::SEA_ISLANDS:
+        break;
+      default: // VOLCANIC_ISLANDS and later
+        // "VALU writes SGPR -> VMEM reads that SGPR" needs "S_NOP 4" on VI
+        // and later. This also applies to VALUs which write VCC, but we're
+        // unlikely to see VMEM use VCC.
+        TII->insertNOPs(MI, 4);
+      }
+
       MI->eraseFromParent();
       break;
     }
