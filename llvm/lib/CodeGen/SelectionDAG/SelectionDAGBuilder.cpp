@@ -7353,6 +7353,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     Entry.Alignment = Align;
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.RetTy = Type::getVoidTy(CLI.RetTy->getContext());
+
+    // sret demotion isn't compatible with tail-calls, since the sret argument
+    // points into the callers stack frame.
+    CLI.IsTailCall = false;
   } else {
     for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
       EVT VT = RetTys[I];
