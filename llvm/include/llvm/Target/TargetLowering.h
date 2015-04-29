@@ -2011,12 +2011,6 @@ protected:
   /// Replace/modify any TargetFrameIndex operands with a targte-dependent
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
   MachineBasicBlock *emitPatchPoint(MachineInstr *MI, MachineBasicBlock *MBB) const;
-
-public:
-  /// Returns true if arguments should be sign-extended in lib calls.
-  virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
-    return IsSigned;
-  }
 };
 
 /// This class defines information used to lower LLVM code to legal SelectionDAG
@@ -2811,6 +2805,11 @@ public:
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
   virtual bool useLoadStackGuardNode() const {
     return false;
+  }
+
+  /// Returns true if arguments should be sign-extended in lib calls.
+  virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
+    return IsSigned;
   }
 };
 
