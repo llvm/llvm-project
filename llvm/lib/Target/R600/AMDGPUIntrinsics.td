@@ -68,6 +68,7 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
   def int_AMDGPU_bfe_u32 : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
   def int_AMDGPU_bfm : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
   def int_AMDGPU_brev : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+  def int_AMDGPU_flbit_i32 : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_AMDGPU_barrier_local  : Intrinsic<[], [], []>;
   def int_AMDGPU_barrier_global  : Intrinsic<[], [], []>;
 }

@@ -152,9 +152,11 @@ defm S_FLBIT_I32_B32 : SOP1_32 <sop1<0x15, 0x12>, "s_flbit_i32_b32",
   [(set i32:$dst, (ctlz_zero_undef i32:$src0))]
 >;
 
-//defm S_FLBIT_I32_B64 : SOP1_32 <sop1<0x16, 0x13>, "s_flbit_i32_b64", []>;
-defm S_FLBIT_I32 : SOP1_32 <sop1<0x17, 0x14>, "s_flbit_i32", []>;
-//defm S_FLBIT_I32_I64 : SOP1_32 <sop1<0x18, 0x15>, "s_flbit_i32_i64", []>;
+defm S_FLBIT_I32_B64 : SOP1_32_64 <sop1<0x16, 0x13>, "s_flbit_i32_b64", []>;
+defm S_FLBIT_I32 : SOP1_32 <sop1<0x17, 0x14>, "s_flbit_i32",
+  [(set i32:$dst, (int_AMDGPU_flbit_i32 i32:$src0))]
+>;
+defm S_FLBIT_I32_I64 : SOP1_32_64 <sop1<0x18, 0x15>, "s_flbit_i32_i64", []>;
 defm S_SEXT_I32_I8 : SOP1_32 <sop1<0x19, 0x16>, "s_sext_i32_i8",
   [(set i32:$dst, (sext_inreg i32:$src0, i8))]
 >;
