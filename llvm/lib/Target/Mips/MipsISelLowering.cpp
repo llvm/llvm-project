@@ -2069,7 +2069,7 @@ SDValue MipsTargetLowering::lowerShiftLeftParts(SDValue Op,
   SDValue Or = DAG.getNode(ISD::OR, DL, VT, ShiftLeftHi, ShiftRightLo);
   SDValue ShiftLeftLo = DAG.getNode(ISD::SHL, DL, VT, Lo, Shamt);
   SDValue Cond = DAG.getNode(ISD::AND, DL, MVT::i32, Shamt,
-                             DAG.getConstant(0x20, MVT::i32));
+                             DAG.getConstant(VT.getSizeInBits(), MVT::i32));
   Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond,
                    DAG.getConstant(0, VT), ShiftLeftLo);
   Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond, ShiftLeftLo, Or);
@@ -2108,11 +2108,12 @@ SDValue MipsTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
   SDValue ShiftRightHi = DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL,
                                      DL, VT, Hi, Shamt);
   SDValue Cond = DAG.getNode(ISD::AND, DL, MVT::i32, Shamt,
-                             DAG.getConstant(0x20, MVT::i32));
-  SDValue Shift31 = DAG.getNode(ISD::SRA, DL, VT, Hi, DAG.getConstant(31, VT));
+                             DAG.getConstant(VT.getSizeInBits(), MVT::i32));
+  SDValue Ext = DAG.getNode(ISD::SRA, DL, VT, Hi,
+                            DAG.getConstant(VT.getSizeInBits() - 1, VT));
   Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond, ShiftRightHi, Or);
   Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond,
-                   IsSRA ? Shift31 : DAG.getConstant(0, VT), ShiftRightHi);
+                   IsSRA ? Ext : DAG.getConstant(0, VT), ShiftRightHi);
 
   SDValue Ops[2] = {Lo, Hi};
   return DAG.getMergeValues(Ops, DL);
