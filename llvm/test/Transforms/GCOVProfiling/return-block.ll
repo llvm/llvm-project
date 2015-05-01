@@ -1,8 +1,14 @@
 ; Inject metadata to set the .gcno file location
 ; RUN: echo '!19 = !{!"%/T/return-block.ll", !0}' > %t1
 ; RUN: cat %s %t1 > %t2
+
+; By default, the return block is last.
 ; RUN: opt -insert-gcov-profiling -disable-output %t2
-; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck %s
+; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
+
+; But we can optionally emit it second, to match newer gcc versions.
+; RUN: opt -insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t2
+; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -58,9 +64,12 @@ attributes #2 = { nounwind }
 !17 = !{!"0xb\007\007\000", !1, !4} ; [ DW_TAG_lexical_block ] [return-block.c]
 !18 = !MDLocation(line: 9, column: 1, scope: !4)
 
-; There should be no destination edges for block 1.
-; CHECK: Block : 0 Counter : 0
-; CHECK-NEXT:         Destination Edges : 2 (0), 
-; CHECK-NEXT: Block : 1 Counter : 0
-; CHECK-NEXT:         Source Edges : 4 (0), 
-; CHECK-NEXT: Block : 2 Counter : 0
+; There should be no destination edges for the exit block.
+; CHECK: Block : 1 Counter : 0
+; RETURN-LAST:       Destination Edges
+; RETURN-SECOND-NOT: Destination Edges
+; CHECK: Block : 2 Counter : 0
+; CHECK: Block : 4 Counter : 0
+; RETURN-LAST-NOT: Destination Edges
+; RETURN-SECOND:   Destination Edges
+; CHECK-NOT: Block :
