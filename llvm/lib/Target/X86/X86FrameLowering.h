@@ -27,8 +27,8 @@ public:
   explicit X86FrameLowering(StackDirection D, unsigned StackAl, int LAO)
     : TargetFrameLowering(StackGrowsDown, StackAl, LAO) {}
 
-  static void getStackProbeFunction(const X86Subtarget &STI,
-                                    unsigned &CallOp,
+  static void getStackProbeFunction(const MachineFunction &MF,
+                                    const X86Subtarget &STI, unsigned &CallOp,
                                     const char *&Symbol);
 
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,

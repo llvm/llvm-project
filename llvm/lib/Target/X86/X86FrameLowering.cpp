@@ -375,10 +375,16 @@ static bool usesTheStack(const MachineFunction &MF) {
   return false;
 }
 
-void X86FrameLowering::getStackProbeFunction(const X86Subtarget &STI,
+void X86FrameLowering::getStackProbeFunction(const MachineFunction &MF,
+                                             const X86Subtarget &STI,
                                              unsigned &CallOp,
                                              const char *&Symbol) {
-  CallOp = STI.is64Bit() ? X86::W64ALLOCA : X86::CALLpcrel32;
+  if (STI.is64Bit())
+    CallOp = MF.getTarget().getCodeModel() == CodeModel::Large
+                 ? X86::CALL64r
+                 : X86::W64ALLOCA;
+  else
+    CallOp = X86::CALLpcrel32;
 
   if (STI.is64Bit()) {
     if (STI.isTargetCygMing()) {
@@ -725,7 +731,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF) const {
     const char *StackProbeSymbol;
     unsigned CallOp;
 
-    getStackProbeFunction(STI, CallOp, StackProbeSymbol);
+    getStackProbeFunction(MF, STI, CallOp, StackProbeSymbol);
 
     // Check whether EAX is livein for this function.
     bool isEAXAlive = isEAXLiveIn(MF);
@@ -755,12 +761,23 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF) const {
         .setMIFlag(MachineInstr::FrameSetup);
     }
 
-    BuildMI(MBB, MBBI, DL,
-            TII.get(CallOp))
-      .addExternalSymbol(StackProbeSymbol)
-      .addReg(StackPtr,    RegState::Define | RegState::Implicit)
-      .addReg(X86::EFLAGS, RegState::Define | RegState::Implicit)
-      .setMIFlag(MachineInstr::FrameSetup);
+    if (Is64Bit && MF.getTarget().getCodeModel() == CodeModel::Large) {
+      // For the large code model, we have to call through a register. Use R11,
+      // as it is unused and clobbered by all probe functions.
+      BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri), X86::R11)
+          .addExternalSymbol(StackProbeSymbol);
+      BuildMI(MBB, MBBI, DL, TII.get(CallOp))
+          .addReg(X86::R11)
+          .addReg(StackPtr, RegState::Define | RegState::Implicit)
+          .addReg(X86::EFLAGS, RegState::Define | RegState::Implicit)
+          .setMIFlag(MachineInstr::FrameSetup);
+    } else {
+      BuildMI(MBB, MBBI, DL, TII.get(CallOp))
+          .addExternalSymbol(StackProbeSymbol)
+          .addReg(StackPtr, RegState::Define | RegState::Implicit)
+          .addReg(X86::EFLAGS, RegState::Define | RegState::Implicit)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
 
     if (Is64Bit) {
       // MSVC x64's __chkstk and cygwin/mingw's ___chkstk_ms do not adjust %rsp

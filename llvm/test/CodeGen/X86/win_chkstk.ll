@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck %s -check-prefix=WIN_X32
 ; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck %s -check-prefix=WIN_X64
+; RUN: llc < %s -mtriple=x86_64-pc-win32 -code-model=large | FileCheck %s -check-prefix=WIN64_LARGE
 ; RUN: llc < %s -mtriple=i686-pc-mingw32 | FileCheck %s -check-prefix=MINGW_X32
 ; RUN: llc < %s -mtriple=x86_64-pc-mingw32 | FileCheck %s -check-prefix=MINGW_X64
 ; RUN: llc < %s -mtriple=i386-pc-linux | FileCheck %s -check-prefix=LINUX
@@ -16,6 +17,8 @@ define i32 @main4k() nounwind {
 entry:
 ; WIN_X32:    calll __chkstk
 ; WIN_X64:    callq __chkstk
+; WIN64_LARGE: movabsq $__chkstk, %r11
+; WIN64_LARGE: callq *%r11
 ; MINGW_X32:  calll __alloca
 ; MINGW_X64:  callq ___chkstk_ms
 ; LINUX-NOT:  call __chkstk
@@ -52,6 +55,8 @@ define x86_64_win64cc i32 @main4k_win64() nounwind {
 entry:
 ; WIN_X32:    calll __chkstk
 ; WIN_X64:    callq __chkstk
+; WIN64_LARGE: movabsq $__chkstk, %r11
+; WIN64_LARGE: callq *%r11
 ; MINGW_X32:  calll __alloca
 ; MINGW_X64:  callq ___chkstk_ms
 ; LINUX-NOT:  call __chkstk

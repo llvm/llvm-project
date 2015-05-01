@@ -279,7 +279,8 @@ let isCall = 1, Uses = [RSP], SchedRW = [WriteJump] in {
 }
 
 let isCall = 1, isCodeGenOnly = 1 in
-  // __chkstk(MSVC):     clobber R10, R11 and EFLAGS.
+  // __chkstk(MSVC):     clobber R10, R11 and EFLAGS
+  // ___chkstk_ms(Mingw64): clobber R10, R11 and EFLAGS
   // ___chkstk(Mingw64): clobber R10, R11, RAX and EFLAGS, and update RSP.
   let Defs = [RAX, R10, R11, RSP, EFLAGS],
       Uses = [RSP] in {
