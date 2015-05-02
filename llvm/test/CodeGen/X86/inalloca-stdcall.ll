@@ -6,6 +6,7 @@ declare x86_stdcallcc void @f(%Foo* inalloca %a)
 declare x86_stdcallcc void @i(i32 %a)
 
 define void @g() {
+; CHECK-LABEL: _g:
   %b = alloca inalloca %Foo
 ; CHECK: movl    $8, %eax
 ; CHECK: calll   __chkstk
