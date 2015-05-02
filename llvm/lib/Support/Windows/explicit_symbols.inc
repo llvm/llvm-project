@@ -10,8 +10,14 @@
 #ifdef HAVE___CHKSTK
   EXPLICIT_SYMBOL(__chkstk)
 #endif
+#ifdef HAVE___CHKSTK_MS
+  EXPLICIT_SYMBOL(__chkstk_ms)
+#endif
 #ifdef HAVE____CHKSTK
   EXPLICIT_SYMBOL(___chkstk)
+#endif
+#ifdef HAVE____CHKSTK_MS
+  EXPLICIT_SYMBOL(___chkstk_ms)
 #endif
 #ifdef HAVE___MAIN
   EXPLICIT_SYMBOL(__main) // FIXME: Don't call it.
