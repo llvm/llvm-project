@@ -209,7 +209,15 @@ void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
 /// \brief Recursively handle the condition leading to a loop
 Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
                                                   llvm::Loop *L) {
-  if (PHINode *Phi = dyn_cast<PHINode>(Cond)) {
+
+  // Only search through PHI nodes which are inside the loop.  If we try this
+  // with PHI nodes that are outside of the loop, we end up inserting new PHI
+  // nodes outside of the loop which depend on values defined inside the loop.
+  // This will break the module with
+  // 'Instruction does not dominate all users!' errors.
+  PHINode *Phi = nullptr;
+  if ((Phi = dyn_cast<PHINode>(Cond)) && L->contains(Phi)) {
+
     BasicBlock *Parent = Phi->getParent();
     PHINode *NewPhi = PHINode::Create(Int64, 0, "", &Parent->front());
     Value *Ret = NewPhi;
