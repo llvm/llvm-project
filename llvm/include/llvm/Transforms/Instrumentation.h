@@ -59,10 +59,6 @@ struct GCOVOptions {
   // Emit the name of the function in the .gcda files. This is redundant, as
   // the function identifier can be used to find the name from the .gcno file.
   bool FunctionNamesInData;
-
-  // Emit the exit block immediately after the start block, rather than after
-  // all of the function body's blocks.
-  bool ExitBlockBeforeBody;
 };
 ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
                                    GCOVOptions::getDefault());
