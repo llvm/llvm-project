@@ -102,3 +102,20 @@ public:
 };
 
 }  // end namespace SimpleTest
+
+namespace DoubleAttribute {
+
+struct Foo {
+  Mutex &mutex();
+};
+
+template <typename A>
+class TemplateClass {
+  template <typename B>
+  static void Function(Foo *F)
+      EXCLUSIVE_LOCKS_REQUIRED(F->mutex()) UNLOCK_FUNCTION(F->mutex()) {}
+};
+
+void test() { TemplateClass<int> TC; }
+
+}  // end namespace DoubleAttribute
