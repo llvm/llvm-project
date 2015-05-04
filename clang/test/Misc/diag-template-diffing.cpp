@@ -1261,6 +1261,19 @@ void foo(const T &t) {
 // CHECK-ELIDE-NOTREE: binding of reference to type 'condition<[...]>' to a value of type 'const condition<[...]>' drops qualifiers
 }
 
+namespace BoolArgumentBitExtended {
+template <bool B> struct BoolT {};
+
+template <typename T> void foo(T) {}
+
+void test() {
+  BoolT<false> X;
+  foo<BoolT<true>>(X);
+}
+// CHECK-ELIDE-NOTREE: no matching function for call to 'foo'
+// CHECK-ELIDE-NOTREE: candidate function [with T = BoolArgumentBitExtended::BoolT<true>] not viable: no known conversion from 'BoolT<0>' to 'BoolT<1>' for 1st argument
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.
