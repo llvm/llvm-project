@@ -88,7 +88,8 @@ private:
   void Kill(MachineInstr &MI);
   void Branch(MachineInstr &MI);
 
-  void LoadM0(MachineInstr &MI, MachineInstr *MovRel);
+  void LoadM0(MachineInstr &MI, MachineInstr *MovRel, int Offset = 0);
+  void computeIndirectRegAndOffset(unsigned VecReg, unsigned &Reg, int &Offset);
   void IndirectSrc(MachineInstr &MI);
   void IndirectDst(MachineInstr &MI);
 
@@ -323,7 +324,7 @@ void SILowerControlFlowPass::Kill(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::LoadM0(MachineInstr &MI, MachineInstr *MovRel) {
+void SILowerControlFlowPass::LoadM0(MachineInstr &MI, MachineInstr *MovRel, int Offset) {
 
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
@@ -333,8 +334,14 @@ void SILowerControlFlowPass::LoadM0(MachineInstr &MI, MachineInstr *MovRel) {
   unsigned Idx = MI.getOperand(3).getReg();
 
   if (AMDGPU::SReg_32RegClass.contains(Idx)) {
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
-            .addReg(Idx);
+    if (Offset) {
+      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
+              .addReg(Idx)
+              .addImm(Offset);
+    } else {
+      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+              .addReg(Idx);
+    }
     MBB.insert(I, MovRel);
   } else {
 
@@ -363,6 +370,11 @@ void SILowerControlFlowPass::LoadM0(MachineInstr &MI, MachineInstr *MovRel) {
     BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_AND_SAVEEXEC_B64), AMDGPU::VCC)
             .addReg(AMDGPU::VCC);
 
+    if (Offset) {
+      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
+              .addReg(AMDGPU::M0)
+              .addImm(Offset);
+    }
     // Do the actual move
     MBB.insert(I, MovRel);
 
@@ -384,6 +396,33 @@ void SILowerControlFlowPass::LoadM0(MachineInstr &MI, MachineInstr *MovRel) {
   MI.eraseFromParent();
 }
 
+/// \param @VecReg The register which holds element zero of the vector
+///                 being addressed into.
+/// \param[out] @Reg The base register to use in the indirect addressing instruction.
+/// \param[in,out] @Offset As an input, this is the constant offset part of the
+//                         indirect Index. e.g. v0 = v[VecReg + Offset]
+//                         As an output, this is a constant value that needs
+//                         to be added to the value stored in M0.
+void SILowerControlFlowPass::computeIndirectRegAndOffset(unsigned VecReg,
+                                                         unsigned &Reg,
+                                                         int &Offset) {
+  unsigned SubReg = TRI->getSubReg(VecReg, AMDGPU::sub0);
+  if (!SubReg)
+    SubReg = VecReg;
+
+  const TargetRegisterClass *RC = TRI->getPhysRegClass(SubReg);
+  int RegIdx = TRI->getHWRegIndex(SubReg) + Offset;
+
+  if (RegIdx < 0) {
+    Offset = RegIdx;
+    RegIdx = 0;
+  } else {
+    Offset = 0;
+  }
+
+  Reg = RC->getRegister(RegIdx);
+}
+
 void SILowerControlFlowPass::IndirectSrc(MachineInstr &MI) {
 
   MachineBasicBlock &MBB = *MI.getParent();
@@ -391,18 +430,18 @@ void SILowerControlFlowPass::IndirectSrc(MachineInstr &MI) {
 
   unsigned Dst = MI.getOperand(0).getReg();
   unsigned Vec = MI.getOperand(2).getReg();
-  unsigned Off = MI.getOperand(4).getImm();
-  unsigned SubReg = TRI->getSubReg(Vec, AMDGPU::sub0);
-  if (!SubReg)
-    SubReg = Vec;
+  int Off = MI.getOperand(4).getImm();
+  unsigned Reg;
+
+  computeIndirectRegAndOffset(Vec, Reg, Off);
 
   MachineInstr *MovRel =
     BuildMI(*MBB.getParent(), DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-            .addReg(SubReg + Off)
+            .addReg(Reg)
             .addReg(AMDGPU::M0, RegState::Implicit)
             .addReg(Vec, RegState::Implicit);
 
-  LoadM0(MI, MovRel);
+  LoadM0(MI, MovRel, Off);
 }
 
 void SILowerControlFlowPass::IndirectDst(MachineInstr &MI) {
@@ -411,20 +450,20 @@ void SILowerControlFlowPass::IndirectDst(MachineInstr &MI) {
   DebugLoc DL = MI.getDebugLoc();
 
   unsigned Dst = MI.getOperand(0).getReg();
-  unsigned Off = MI.getOperand(4).getImm();
+  int Off = MI.getOperand(4).getImm();
   unsigned Val = MI.getOperand(5).getReg();
-  unsigned SubReg = TRI->getSubReg(Dst, AMDGPU::sub0);
-  if (!SubReg)
-    SubReg = Dst;
+  unsigned Reg;
+
+  computeIndirectRegAndOffset(Dst, Reg, Off);
 
   MachineInstr *MovRel = 
     BuildMI(*MBB.getParent(), DL, TII->get(AMDGPU::V_MOVRELD_B32_e32))
-            .addReg(SubReg + Off, RegState::Define)
+            .addReg(Reg, RegState::Define)
             .addReg(Val)
             .addReg(AMDGPU::M0, RegState::Implicit)
             .addReg(Dst, RegState::Implicit);
 
-  LoadM0(MI, MovRel);
+  LoadM0(MI, MovRel, Off);
 }
 
 bool SILowerControlFlowPass::runOnMachineFunction(MachineFunction &MF) {
