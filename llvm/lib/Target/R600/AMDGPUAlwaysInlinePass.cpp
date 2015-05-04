@@ -40,7 +40,8 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
   std::vector<Function*> FuncsToClone;
   for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
     Function &F = *I;
-    if (!F.hasLocalLinkage() && !F.isDeclaration() && !F.use_empty())
+    if (!F.hasLocalLinkage() && !F.isDeclaration() && !F.use_empty() &&
+        !F.hasFnAttribute(Attribute::NoInline))
       FuncsToClone.push_back(&F);
   }
 
@@ -54,7 +55,7 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
 
   for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
     Function &F = *I;
-    if (F.hasLocalLinkage()) {
+    if (F.hasLocalLinkage() && !F.hasFnAttribute(Attribute::NoInline)) {
       F.addFnAttr(Attribute::AlwaysInline);
     }
   }
