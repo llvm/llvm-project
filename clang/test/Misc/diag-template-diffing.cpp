@@ -1247,6 +1247,20 @@ template <class T> using A7 = A<(T::num)>;
 // CHECK-ELIDE-NOTREE: type alias template redefinition with different types ('A<(T::num), (default) 0>' vs 'A<T::num, 1>')
 }
 
+namespace TemplateArgumentImplicitConversion {
+template <int X> struct condition {};
+
+struct is_const {
+    constexpr operator int() const { return 10; }
+};
+
+using T = condition<(is_const())>;
+void foo(const T &t) {
+  T &t2 = t;
+}
+// CHECK-ELIDE-NOTREE: binding of reference to type 'condition<[...]>' to a value of type 'const condition<[...]>' drops qualifiers
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.
