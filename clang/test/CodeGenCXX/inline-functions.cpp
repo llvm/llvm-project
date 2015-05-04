@@ -121,3 +121,18 @@ struct TypeWithInlineMethods {
   // CHECK-NOT: _ZN21TypeWithInlineMethods12NonStaticFunEv
   void NonStaticFun() { StaticFun(); }
 };
+
+namespace PR22959 {
+template <typename>
+struct S;
+
+S<int> Foo();
+
+template <typename>
+struct S {
+  friend S<int> Foo();
+};
+
+__attribute__((used)) inline S<int> Foo() { return S<int>(); }
+// CHECK-LABEL: define linkonce_odr void @_ZN7PR229593FooEv(
+}

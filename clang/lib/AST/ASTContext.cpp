@@ -7874,7 +7874,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   // Functions specified with extern and inline in -fms-compatibility mode
   // forcibly get emitted.  While the body of the function cannot be later
   // replaced, the function definition cannot be discarded.
-  if (FD->getMostRecentDecl()->isMSExternInline())
+  if (FD->isMSExternInline())
     return GVA_StrongODR;
 
   return GVA_DiscardableODR;
