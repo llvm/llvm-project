@@ -826,11 +826,9 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
 SDValue AMDGPUTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SmallVector<SDValue, 8> Args;
-  SDValue A = Op.getOperand(0);
-  SDValue B = Op.getOperand(1);
 
-  DAG.ExtractVectorElements(A, Args);
-  DAG.ExtractVectorElements(B, Args);
+  for (const SDUse &U : Op->ops())
+    DAG.ExtractVectorElements(U.get(), Args);
 
   return DAG.getNode(ISD::BUILD_VECTOR, SDLoc(Op), Op.getValueType(), Args);
 }
