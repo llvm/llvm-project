@@ -2108,8 +2108,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
           // Create a dummy expression,
           VarDecl *VD = const_cast<VarDecl*>(AD.getVarDecl());
-          DeclRefExpr DRE(VD, false, VD->getType(), VK_LValue,
-                          AD.getTriggerStmt()->getLocEnd());
+          DeclRefExpr DRE(VD, false, VD->getType().getNonReferenceType(),
+                          VK_LValue, AD.getTriggerStmt()->getLocEnd());
           LocksetBuilder.handleCall(&DRE, DD);
           break;
         }
