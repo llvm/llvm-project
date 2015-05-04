@@ -1823,8 +1823,8 @@ def SGPR_USE : InstSI <(outs),(ins), "", []>;
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
-let mayLoad = 1, mayStore = 1, hasSideEffects = 1,
-    Uses = [EXEC], Defs = [EXEC] in {
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+let Uses = [EXEC], Defs = [EXEC] in {
 
 let isBranch = 1, isTerminator = 1 in {
 
@@ -1881,15 +1881,18 @@ def SI_END_CF : InstSI <
   [(int_SI_end_cf i64:$saved)]
 >;
 
+} // End Uses = [EXEC], Defs = [EXEC]
+
+let Uses = [EXEC], Defs = [EXEC,VCC] in {
 def SI_KILL : InstSI <
   (outs),
   (ins VSrc_32:$src),
   "si_kill $src",
   [(int_AMDGPU_kill f32:$src)]
 >;
+} // End Uses = [EXEC], Defs = [EXEC,VCC]
 
 } // end mayLoad = 1, mayStore = 1, hasSideEffects = 1
-  // Uses = [EXEC], Defs = [EXEC]
 
 let Uses = [EXEC], Defs = [EXEC,VCC,M0] in {
 

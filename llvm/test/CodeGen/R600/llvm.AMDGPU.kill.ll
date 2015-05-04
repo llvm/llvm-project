@@ -16,8 +16,24 @@ main_body:
   ret void
 }
 
+; SI-LABEL: {{^}}kill_vcc_implicit_def:
+; SI-NOT: v_cmp_gt_f32_e32 vcc,
+; SI: v_cmpx_le_f32_e32 vcc, 0, v{{[0-9]+}}
+; SI: v_cmp_lt_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, 0
+; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1.0, [[CMP]]
+define void @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <4 x i32>] addrspace(2)* byval, [34 x <8 x i32>] addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) #1 {
+entry:
+  %tmp0 = fcmp olt float %13, 0.0
+  call void @llvm.AMDGPU.kill(float %14)
+  %tmp1 = select i1 %tmp0, float 1.0, float 0.0
+  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 1, i32 1, float %tmp1, float %tmp1, float %tmp1, float %tmp1)
+  ret void
+}
+
 declare void @llvm.AMDGPU.kill(float)
+declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
 attributes #0 = { "ShaderType"="2" }
+attributes #1 = { "ShaderType"="0" }
 
 !0 = !{!"const", null, i32 1}
