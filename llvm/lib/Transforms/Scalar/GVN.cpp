@@ -2183,12 +2183,16 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS,
       // Handle the floating point versions of equality comparisons too.
       if ((isKnownTrue && Cmp->getPredicate() == CmpInst::FCMP_OEQ) ||
           (isKnownFalse && Cmp->getPredicate() == CmpInst::FCMP_UNE)) {
-        // Floating point -0.0 and 0.0 compare equal, so we can't
-        // propagate a constant based on that comparison.
+
+        // Floating point -0.0 and 0.0 compare equal, so we can only
+        // propagate values if we know that we have a constant and that
+        // its value is non-zero.
+        
         // FIXME: We should do this optimization if 'no signed zeros' is
         // applicable via an instruction-level fast-math-flag or some other
         // indicator that relaxed FP semantics are being used.
-        if (!isa<ConstantFP>(Op1) || !cast<ConstantFP>(Op1)->isZero())
+
+        if (isa<ConstantFP>(Op1) && !cast<ConstantFP>(Op1)->isZero())
           Worklist.push_back(std::make_pair(Op0, Op1));
       }
  

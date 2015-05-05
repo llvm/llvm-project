@@ -59,7 +59,7 @@ bb2:
   ret void
 }
 
-define double @fcmp_oeq(double %x, double %y) {
+define double @fcmp_oeq_not_zero(double %x, double %y) {
 entry:
   %cmp = fcmp oeq double %y, 2.0
   br i1 %cmp, label %if, label %return
@@ -72,11 +72,11 @@ return:
   %retval = phi double [ %div, %if ], [ %x, %entry ]
   ret double %retval
 
-; CHECK-LABEL: define double @fcmp_oeq(
+; CHECK-LABEL: define double @fcmp_oeq_not_zero(
 ; CHECK: %div = fdiv double %x, 2.0
 }
 
-define double @fcmp_une(double %x, double %y) {
+define double @fcmp_une_not_zero(double %x, double %y) {
 entry:
   %cmp = fcmp une double %y, 2.0
   br i1 %cmp, label %return, label %else
@@ -89,7 +89,7 @@ return:
   %retval = phi double [ %div, %else ], [ %x, %entry ]
   ret double %retval
 
-; CHECK-LABEL: define double @fcmp_une(
+; CHECK-LABEL: define double @fcmp_une_not_zero(
 ; CHECK: %div = fdiv double %x, 2.0
 }
 
@@ -128,4 +128,43 @@ return:
 
 ; CHECK-LABEL: define double @fcmp_une_zero(
 ; CHECK: %div = fdiv double %x, %y
+}
+
+; We also cannot propagate a value if it's not a constant.
+; This is because the value could be 0.0 or -0.0.
+
+define double @fcmp_oeq_maybe_zero(double %x, double %y, double %z1, double %z2) {
+entry:
+ %z = fadd double %z1, %z2
+ %cmp = fcmp oeq double %y, %z
+ br i1 %cmp, label %if, label %return
+
+if:
+ %div = fdiv double %x, %z
+ br label %return
+
+return:
+ %retval = phi double [ %div, %if ], [ %x, %entry ]
+ ret double %retval
+
+; CHECK-LABEL: define double @fcmp_oeq_maybe_zero(
+; CHECK: %div = fdiv double %x, %z
+}
+
+define double @fcmp_une_maybe_zero(double %x, double %y, double %z1, double %z2) {
+entry:
+ %z = fadd double %z1, %z2
+ %cmp = fcmp une double %y, %z
+ br i1 %cmp, label %return, label %else
+
+else:
+ %div = fdiv double %x, %z
+ br label %return
+
+return:
+ %retval = phi double [ %div, %else ], [ %x, %entry ]
+ ret double %retval
+
+; CHECK-LABEL: define double @fcmp_une_maybe_zero(
+; CHECK: %div = fdiv double %x, %z
 }
