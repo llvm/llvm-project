@@ -243,7 +243,8 @@ unsigned char *RuntimeDyldMachOCRTPBase<Impl>::processFDE(unsigned char *P,
 }
 
 static int64_t computeDelta(SectionEntry *A, SectionEntry *B) {
-  int64_t ObjDistance = A->ObjAddress - B->ObjAddress;
+  int64_t ObjDistance =
+    static_cast<int64_t>(A->ObjAddress) - static_cast<int64_t>(B->ObjAddress);
   int64_t MemDistance = A->LoadAddress - B->LoadAddress;
   return ObjDistance - MemDistance;
 }
