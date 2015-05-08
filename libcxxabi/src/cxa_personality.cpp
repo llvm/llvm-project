@@ -148,7 +148,7 @@ namespace
 template <class AsType>
 uintptr_t readPointerHelper(const uint8_t*& p) {
     AsType value;
-    memcpy(&value, const_cast<uint8_t*>(p), sizeof(AsType));
+    memcpy(&value, p, sizeof(AsType));
     p += sizeof(AsType);
     return static_cast<uintptr_t>(value);
 }
