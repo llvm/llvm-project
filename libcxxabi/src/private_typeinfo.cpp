@@ -383,6 +383,24 @@ __pointer_type_info::can_catch(const __shim_type_info* thrown_type,
     // bullet 3A
     if (is_equal(__pointee, &typeid(void), false))
         return true;
+
+    // Handle pointer to pointer
+    const __pointer_type_info* nested_pointer_type =
+        dynamic_cast<const __pointer_type_info*>(__pointee);
+    if (nested_pointer_type) {
+        if (~__flags & __const_mask) return false;
+        return nested_pointer_type->can_catch_nested(thrown_pointer_type->__pointee);
+    }
+
+    // Handle pointer to pointer to member
+    const __pointer_to_member_type_info* member_ptr_type =
+        dynamic_cast<const __pointer_to_member_type_info*>(__pointee);
+    if (member_ptr_type) {
+        if (~__flags & __const_mask) return false;
+        return member_ptr_type->can_catch_nested(thrown_pointer_type->__pointee);
+    }
+
+    // Handle pointer to class type
     const __class_type_info* catch_class_type =
         dynamic_cast<const __class_type_info*>(__pointee);
     if (catch_class_type == 0)
@@ -403,6 +421,84 @@ __pointer_type_info::can_catch(const __shim_type_info* thrown_type,
     return false;
 }
 
+bool __pointer_type_info::can_catch_nested(
+    const __shim_type_info* thrown_type) const
+{
+  const __pointer_type_info* thrown_pointer_type =
+        dynamic_cast<const __pointer_type_info*>(thrown_type);
+    if (thrown_pointer_type == 0)
+        return false;
+    // bullet 3B
+    if (thrown_pointer_type->__flags & ~__flags)
+        return false;
+    if (is_equal(__pointee, thrown_pointer_type->__pointee, false))
+        return true;
+    // If the pointed to types differ then the catch type must be const
+    // qualified.
+    if (~__flags & __const_mask)
+        return false;
+
+    // Handle pointer to pointer
+    const __pointer_type_info* nested_pointer_type =
+        dynamic_cast<const __pointer_type_info*>(__pointee);
+    if (nested_pointer_type) {
+        return nested_pointer_type->can_catch_nested(
+            thrown_pointer_type->__pointee);
+    }
+
+    // Handle pointer to pointer to member
+    const __pointer_to_member_type_info* member_ptr_type =
+        dynamic_cast<const __pointer_to_member_type_info*>(__pointee);
+    if (member_ptr_type) {
+        return member_ptr_type->can_catch_nested(thrown_pointer_type->__pointee);
+    }
+
+    return false;
+}
+
+bool __pointer_to_member_type_info::can_catch(
+    const __shim_type_info* thrown_type, void*& adjustedPtr) const {
+    // bullets 1 and 4
+    if (__pbase_type_info::can_catch(thrown_type, adjustedPtr))
+        return true;
+
+    const __pointer_to_member_type_info* thrown_pointer_type =
+        dynamic_cast<const __pointer_to_member_type_info*>(thrown_type);
+    if (thrown_pointer_type == 0)
+        return false;
+    if (thrown_pointer_type->__flags & ~__flags)
+        return false;
+    if (!is_equal(__pointee, thrown_pointer_type->__pointee, false))
+        return false;
+    if (is_equal(__context, thrown_pointer_type->__context, false))
+        return true;
+
+    __dynamic_cast_info info = {__context, 0, thrown_pointer_type->__context, -1, 0};
+    info.number_of_dst_type = 1;
+    __context->has_unambiguous_public_base(&info, adjustedPtr, public_path);
+    if (info.path_dst_ptr_to_static_ptr == public_path)
+        return true;
+
+    return false;
+}
+
+bool __pointer_to_member_type_info::can_catch_nested(
+    const __shim_type_info* thrown_type) const
+{
+    const __pointer_to_member_type_info* thrown_member_ptr_type =
+        dynamic_cast<const __pointer_to_member_type_info*>(thrown_type);
+    if (thrown_member_ptr_type == 0)
+        return false;
+    if (~__flags & thrown_member_ptr_type->__flags)
+        return false;
+    if (!is_equal(__pointee, thrown_member_ptr_type->__pointee, false))
+        return false;
+    if (!is_equal(__context, thrown_member_ptr_type->__context, false))
+        return false;
+    return true;
+}
+
+#ifdef __clang__
 #pragma clang diagnostic pop
 
 #pragma GCC visibility pop

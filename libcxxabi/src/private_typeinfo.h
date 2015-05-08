@@ -230,6 +230,7 @@ class __attribute__ ((__visibility__("default"))) __pointer_type_info
 public:
     __attribute__ ((__visibility__("hidden"))) virtual ~__pointer_type_info();
     __attribute__ ((__visibility__("hidden"))) virtual bool can_catch(const __shim_type_info*, void*&) const;
+    __attribute__ ((__visibility__("hidden"))) bool can_catch_nested(const __shim_type_info*) const;
 };
 
 class __attribute__ ((__visibility__("default"))) __pointer_to_member_type_info
@@ -239,6 +240,8 @@ public:
     const __class_type_info* __context;
 
     __attribute__ ((__visibility__("hidden"))) virtual ~__pointer_to_member_type_info();
+    __attribute__ ((__visibility__("hidden"))) virtual bool can_catch(const __shim_type_info*, void*&) const;
+    __attribute__ ((__visibility__("hidden"))) bool can_catch_nested(const __shim_type_info*) const;
 };
 
 #pragma GCC visibility pop
