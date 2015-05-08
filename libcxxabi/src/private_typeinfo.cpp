@@ -500,7 +500,6 @@ bool __pointer_to_member_type_info::can_catch_nested(
     return true;
 }
 
-#ifdef __clang__
 #pragma clang diagnostic pop
 
 #pragma GCC visibility pop
