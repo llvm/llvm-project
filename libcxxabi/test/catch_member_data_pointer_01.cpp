@@ -72,7 +72,7 @@ void test2()
     }
 }
 
-// Check that Base -> Derived conversions are allowed.
+// Check that Base -> Derived conversions are NOT allowed.
 void test3()
 {
     try
@@ -90,14 +90,14 @@ void test3()
     }
     catch (der1)
     {
+        assert(false);
     }
     catch (md1)
     {
-        assert(false);
     }
 }
 
-// Check that Base -> Derived conversions are allowed with different cv
+// Check that Base -> Derived conversions NOT are allowed with different cv
 // qualifiers.
 void test4()
 {
@@ -108,18 +108,13 @@ void test4()
     }
     catch (der2)
     {
-    }
-    catch (...)
-    {
-        assert(false);
-    }
-
-    try
-    {
-        throw &A::j;
         assert(false);
     }
     catch (der1)
+    {
+        assert(false);
+    }
+    catch (md2)
     {
     }
     catch (...)

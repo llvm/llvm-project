@@ -140,6 +140,4 @@ int main()
   generate_tests<int A::*, int A::*, 3>()();
   generate_tests<int A::*, void, 2>()();
   generate_tests<void, int A::*, 2>()();
-  generate_tests<int Base::*, int Derived::*, 2>()();
-  generate_tests<int Derived::*, int Base::*, 2>()();
 }

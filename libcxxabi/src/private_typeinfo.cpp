@@ -473,11 +473,9 @@ bool __pointer_to_member_type_info::can_catch(
     if (is_equal(__context, thrown_pointer_type->__context, false))
         return true;
 
-    __dynamic_cast_info info = {__context, 0, thrown_pointer_type->__context, -1, 0};
-    info.number_of_dst_type = 1;
-    __context->has_unambiguous_public_base(&info, adjustedPtr, public_path);
-    if (info.path_dst_ptr_to_static_ptr == public_path)
-        return true;
+    // [except.handle] does not allow the pointer-to-member conversions mentioned
+    // in [mem.conv] to take place. For this reason we don't check Derived->Base
+    // for Derived->Base conversions.
 
     return false;
 }
