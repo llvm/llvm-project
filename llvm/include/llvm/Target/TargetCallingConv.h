@@ -134,6 +134,8 @@ namespace ISD {
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
+    /// Sentinel value for implicit machine-level input arguments.
+    static const unsigned NoArgIndex = UINT_MAX;
 
     /// Offset in bytes of current input value relative to the beginning of
     /// original argument. E.g. if argument was splitted into four 32 bit
@@ -146,6 +148,15 @@ namespace ISD {
       : Flags(flags), Used(used), OrigArgIndex(origIdx), PartOffset(partOffs) {
       VT = vt.getSimpleVT();
       ArgVT = argvt;
+    }
+
+    bool isOrigArg() const {
+      return OrigArgIndex != NoArgIndex;
+    }
+
+    unsigned getOrigArgIndex() const {
+      assert(OrigArgIndex != NoArgIndex && "Implicit machine-level argument");
+      return OrigArgIndex;
     }
   };
 

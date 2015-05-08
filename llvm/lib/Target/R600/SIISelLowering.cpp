@@ -450,7 +450,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       // We REALLY want the ORIGINAL number of vertex elements here, e.g. a
       // three or five element vertex only needs three or five registers,
       // NOT four or eigth.
-      Type *ParamType = FType->getParamType(Arg.OrigArgIndex);
+      Type *ParamType = FType->getParamType(Arg.getOrigArgIndex());
       unsigned NumElements = ParamType->getVectorNumElements();
 
       for (unsigned j = 0; j != NumElements; ++j) {
@@ -533,7 +533,7 @@ SDValue SITargetLowering::LowerFormalArguments(
                                    Offset, Ins[i].Flags.isSExt());
 
       const PointerType *ParamTy =
-          dyn_cast<PointerType>(FType->getParamType(Ins[i].OrigArgIndex));
+        dyn_cast<PointerType>(FType->getParamType(Ins[i].getOrigArgIndex()));
       if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS &&
           ParamTy && ParamTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
         // On SI local pointers are just offsets into LDS, so they are always
@@ -568,7 +568,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     if (Arg.VT.isVector()) {
 
       // Build a vector from the registers
-      Type *ParamType = FType->getParamType(Arg.OrigArgIndex);
+      Type *ParamType = FType->getParamType(Arg.getOrigArgIndex());
       unsigned NumElements = ParamType->getVectorNumElements();
 
       SmallVector<SDValue, 4> Regs;

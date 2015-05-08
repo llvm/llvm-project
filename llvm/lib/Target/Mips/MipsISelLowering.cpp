@@ -2933,13 +2933,16 @@ MipsTargetLowering::LowerFormalArguments(SDValue Chain,
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
-    std::advance(FuncArg, Ins[i].OrigArgIndex - CurArgIdx);
-    CurArgIdx = Ins[i].OrigArgIndex;
+    if (Ins[i].isOrigArg()) {
+      std::advance(FuncArg, Ins[i].getOrigArgIndex() - CurArgIdx);
+      CurArgIdx = Ins[i].getOrigArgIndex();
+    }
     EVT ValVT = VA.getValVT();
     ISD::ArgFlagsTy Flags = Ins[i].Flags;
     bool IsRegLoc = VA.isRegLoc();
 
     if (Flags.isByVal()) {
+      assert(Ins[i].isOrigArg() && "Byval arguments cannot be implicit");
       unsigned FirstByValReg, LastByValReg;
       unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
       CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);

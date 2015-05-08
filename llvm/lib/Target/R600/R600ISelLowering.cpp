@@ -1698,7 +1698,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // XXX - I think PartOffset should give you this, but it seems to give the
     // size of the register which isn't useful.
 
-    unsigned ValBase = ArgLocs[In.OrigArgIndex].getLocMemOffset();
+    unsigned ValBase = ArgLocs[In.getOrigArgIndex()].getLocMemOffset();
     unsigned PartOffset = VA.getLocMemOffset();
     unsigned Offset = 36 + VA.getLocMemOffset();
 

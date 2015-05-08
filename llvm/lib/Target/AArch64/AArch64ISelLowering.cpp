@@ -2031,18 +2031,19 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   unsigned CurArgIdx = 0;
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ValVT = Ins[i].VT;
-    std::advance(CurOrigArg, Ins[i].OrigArgIndex - CurArgIdx);
-    CurArgIdx = Ins[i].OrigArgIndex;
+    if (Ins[i].isOrigArg()) {
+      std::advance(CurOrigArg, Ins[i].getOrigArgIndex() - CurArgIdx);
+      CurArgIdx = Ins[i].getOrigArgIndex();
 
-    // Get type of the original argument.
-    EVT ActualVT = getValueType(CurOrigArg->getType(), /*AllowUnknown*/ true);
-    MVT ActualMVT = ActualVT.isSimple() ? ActualVT.getSimpleVT() : MVT::Other;
-    // If ActualMVT is i1/i8/i16, we should set LocVT to i8/i8/i16.
-    if (ActualMVT == MVT::i1 || ActualMVT == MVT::i8)
-      ValVT = MVT::i8;
-    else if (ActualMVT == MVT::i16)
-      ValVT = MVT::i16;
-
+      // Get type of the original argument.
+      EVT ActualVT = getValueType(CurOrigArg->getType(), /*AllowUnknown*/ true);
+      MVT ActualMVT = ActualVT.isSimple() ? ActualVT.getSimpleVT() : MVT::Other;
+      // If ActualMVT is i1/i8/i16, we should set LocVT to i8/i8/i16.
+      if (ActualMVT == MVT::i1 || ActualMVT == MVT::i8)
+        ValVT = MVT::i8;
+      else if (ActualMVT == MVT::i16)
+        ValVT = MVT::i16;
+    }
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, /*IsVarArg=*/false);
     bool Res =
         AssignFn(i, ValVT, ValVT, CCValAssign::Full, Ins[i].Flags, CCInfo);

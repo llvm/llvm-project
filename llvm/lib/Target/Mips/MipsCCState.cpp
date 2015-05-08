@@ -132,8 +132,8 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
       continue;
     }
 
-    assert(Ins[i].OrigArgIndex < MF.getFunction()->arg_size());
-    std::advance(FuncArg, Ins[i].OrigArgIndex);
+    assert(Ins[i].getOrigArgIndex() < MF.getFunction()->arg_size());
+    std::advance(FuncArg, Ins[i].getOrigArgIndex());
 
     OriginalArgWasF128.push_back(
         originalTypeIsF128(FuncArg->getType(), nullptr));

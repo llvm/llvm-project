@@ -2688,9 +2688,10 @@ PPCTargetLowering::LowerFormalArguments_64SVR4(
     unsigned ObjSize = ObjectVT.getStoreSize();
     unsigned ArgSize = ObjSize;
     ISD::ArgFlagsTy Flags = Ins[ArgNo].Flags;
-    std::advance(FuncArg, Ins[ArgNo].OrigArgIndex - CurArgIdx);
-    CurArgIdx = Ins[ArgNo].OrigArgIndex;
-
+    if (Ins[ArgNo].isOrigArg()) {
+      std::advance(FuncArg, Ins[ArgNo].getOrigArgIndex() - CurArgIdx);
+      CurArgIdx = Ins[ArgNo].getOrigArgIndex();
+    }
     /* Respect alignment of argument on the stack.  */
     unsigned Align =
       CalculateStackSlotAlignment(ObjectVT, OrigVT, Flags, PtrByteSize);
@@ -2704,6 +2705,8 @@ PPCTargetLowering::LowerFormalArguments_64SVR4(
     // FIXME the codegen can be much improved in some cases.
     // We do not have to keep everything in memory.
     if (Flags.isByVal()) {
+      assert(Ins[ArgNo].isOrigArg() && "Byval arguments cannot be implicit");
+
       // ObjSize is the true size, ArgSize rounded up to multiple of registers.
       ObjSize = Flags.getByValSize();
       ArgSize = ((ObjSize + PtrByteSize - 1)/PtrByteSize) * PtrByteSize;
@@ -3064,9 +3067,10 @@ PPCTargetLowering::LowerFormalArguments_Darwin(
     unsigned ObjSize = ObjectVT.getSizeInBits()/8;
     unsigned ArgSize = ObjSize;
     ISD::ArgFlagsTy Flags = Ins[ArgNo].Flags;
-    std::advance(FuncArg, Ins[ArgNo].OrigArgIndex - CurArgIdx);
-    CurArgIdx = Ins[ArgNo].OrigArgIndex;
-
+    if (Ins[ArgNo].isOrigArg()) {
+      std::advance(FuncArg, Ins[ArgNo].getOrigArgIndex() - CurArgIdx);
+      CurArgIdx = Ins[ArgNo].getOrigArgIndex();
+    }
     unsigned CurArgOffset = ArgOffset;
 
     // Varargs or 64 bit Altivec parameters are padded to a 16 byte boundary.
@@ -3087,6 +3091,8 @@ PPCTargetLowering::LowerFormalArguments_Darwin(
     // FIXME the codegen can be much improved in some cases.
     // We do not have to keep everything in memory.
     if (Flags.isByVal()) {
+      assert(Ins[ArgNo].isOrigArg() && "Byval arguments cannot be implicit");
+
       // ObjSize is the true size, ArgSize rounded up to multiple of registers.
       ObjSize = Flags.getByValSize();
       ArgSize = ((ObjSize + PtrByteSize - 1)/PtrByteSize) * PtrByteSize;
