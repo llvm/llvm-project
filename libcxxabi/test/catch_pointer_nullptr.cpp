@@ -8,6 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+#include <cstdlib>
+
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
+struct A {};
 
 #if __has_feature(cxx_nullptr)
 
@@ -27,8 +34,6 @@ void test1()
     }
 }
 
-struct A {};
-
 void test2()
 {
     try
@@ -45,6 +50,18 @@ void test2()
     }
 }
 
+template <class Catch>
+void catch_nullptr_test() {
+  try {
+    throw nullptr;
+    assert(false);
+  } catch (Catch) {
+    // nothing todo
+  } catch (...) {
+    assert(false);
+  }
+}
+
 #else
 
 void test1()
@@ -55,10 +72,22 @@ void test2()
 {
 }
 
+template <class Catch>
+void catch_nullptr_test()
+{
+}
+
 #endif
 
 int main()
 {
-    test1();
-    test2();
+  // catch naked nullptrs
+  test1();
+  test2();
+
+  catch_nullptr_test<int*>();
+  catch_nullptr_test<int**>();
+  catch_nullptr_test<int A::*>();
+  catch_nullptr_test<const int A::*>();
+  catch_nullptr_test<int A::**>();
 }
