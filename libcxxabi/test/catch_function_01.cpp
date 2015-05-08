@@ -11,11 +11,19 @@
 
 #include <cassert>
 
+template <class Tp>
+bool can_convert(Tp) { return true; }
+
+template <class>
+bool can_convert(...) { return false; }
+
 void f() {}
 
 int main()
 {
     typedef void Function();
+    assert(!can_convert<Function&>(&f));
+    assert(!can_convert<void*>(&f));
     try
     {
         throw f;     // converts to void (*)()
@@ -25,7 +33,15 @@ int main()
     {
         assert(false);
     }
+    catch (void*) // can't catch as void*
+    {
+        assert(false);
+    }
+    catch(Function*)
+    {
+    }
     catch (...)
     {
+        assert(false);
     }
 }
