@@ -117,7 +117,7 @@ tag_release=`echo $release | sed -e 's,\.,,g'`
 if [ "x$rc" = "x" ]; then
     tag_version
 else
-    if [ "x$revision" != "x" ]; then
+    if [ "$revision" != "HEAD" ]; then
         echo "error: cannot use -revision with -rc"
         echo
         usage
