@@ -45,8 +45,7 @@ Changes to the MIPS Target
 * Fixed multiple segfaults and assertions in the disassembler when
   disassembling instructions that have memory operands.
 
-* Fixed multiple cases of suboptimal code generation involving ``$zero`` and
-  redundant sign/zero extension.
+* Fixed multiple cases of suboptimal code generation involving ``$zero``.
 
 Non-comprehensive list of changes in 3.6.0
 ==========================================
