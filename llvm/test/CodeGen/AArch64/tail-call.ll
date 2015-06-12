@@ -103,3 +103,41 @@ define fastcc void @caller_weak() {
   tail call void @callee_weak()
   ret void
 }
+
+declare { [2 x float] } @get_vec2()
+
+define { [3 x float] } @test_add_elem() {
+; CHECK-LABEL: test_add_elem:
+; CHECK: bl get_vec2
+; CHECK: fmov s2, #1.0
+; CHECK: ret
+
+  %call = tail call { [2 x float] } @get_vec2()
+  %arr = extractvalue { [2 x float] } %call, 0
+  %arr.0 = extractvalue [2 x float] %arr, 0
+  %arr.1 = extractvalue [2 x float] %arr, 1
+
+  %res.0 = insertvalue { [3 x float] } undef, float %arr.0, 0, 0
+  %res.01 = insertvalue { [3 x float] } %res.0, float %arr.1, 0, 1
+  %res.012 = insertvalue { [3 x float] } %res.01, float 1.000000e+00, 0, 2
+  ret { [3 x float] } %res.012
+}
+
+declare double @get_double()
+define { double, [2 x double] } @test_mismatched_insert() {
+; CHECK-LABEL: test_mismatched_insert:
+; CHECK: bl get_double
+; CHECK: bl get_double
+; CHECK: bl get_double
+; CHECK: ret
+
+  %val0 = call double @get_double()
+  %val1 = call double @get_double()
+  %val2 = tail call double @get_double()
+
+  %res.0 = insertvalue { double, [2 x double] } undef, double %val0, 0
+  %res.01 = insertvalue { double, [2 x double] } %res.0, double %val1, 1, 0
+  %res.012 = insertvalue { double, [2 x double] } %res.01, double %val2, 1, 1
+
+  ret { double, [2 x double] } %res.012
+}
