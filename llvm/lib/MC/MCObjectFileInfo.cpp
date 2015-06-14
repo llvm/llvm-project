@@ -350,6 +350,8 @@ void MCObjectFileInfo::InitELFMCObjectFileInfo(Triple T) {
     // eh_frame section can be read-only.  DW.ref.personality will be generated
     // for relocation.
     PersonalityEncoding = dwarf::DW_EH_PE_indirect;
+    LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     break;
   case Triple::ppc64:
   case Triple::ppc64le:
