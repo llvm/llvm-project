@@ -29,8 +29,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
@@ -1035,27 +1033,6 @@ void MipsAsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
   // return to the text section
   OutStreamer.SwitchSection(OutContext.getObjectFileInfo()->getTextSection());
-
-  /* if (Subtarget->isTargetELF()) */ {
-    const TargetLoweringObjectFileELF &TLOFELF =
-      static_cast<const TargetLoweringObjectFileELF &>(getObjFileLowering());
-
-    MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
-
-    // Output stubs for external and common global variables.
-    MachineModuleInfoELF::SymbolListTy Stubs = MMIELF.GetGVStubList();
-    if (!Stubs.empty()) {
-      OutStreamer.SwitchSection(TLOFELF.getDataRelSection());
-      const DataLayout *TD = TM.getSubtargetImpl()->getDataLayout();
-
-      for (const auto &Stub : Stubs) {
-        OutStreamer.EmitLabel(Stub.first);
-        OutStreamer.EmitSymbolValue(Stub.second.getPointer(),
-                                    TD->getPointerSize());
-      }
-      Stubs.clear();
-    }
-  }
 }
 
 void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,

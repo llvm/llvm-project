@@ -656,7 +656,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   (void)BlockNumber;
   bool MatchFilterBB = false; (void)MatchFilterBB;
 #ifndef NDEBUG
-  MatchFilterBB = (FilterDAGBasicBlockName.empty() ||
+  MatchFilterBB = (!FilterDAGBasicBlockName.empty() &&
                    FilterDAGBasicBlockName ==
                        FuncInfo->MBB->getBasicBlock()->getName().str());
 #endif
