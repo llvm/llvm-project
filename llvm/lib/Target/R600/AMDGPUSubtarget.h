@@ -71,6 +71,7 @@ private:
   int LocalMemorySize;
   bool EnableVGPRSpilling;
   bool SGPRInitBug;
+  int LDSBankCount;
 
   const DataLayout DL;
   AMDGPUFrameLowering FrameLowering;
@@ -210,6 +211,10 @@ public:
 
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
+  }
+
+  int getLDSBankCount() const {
+    return LDSBankCount;
   }
 
   unsigned getAmdKernelCodeChipID() const;

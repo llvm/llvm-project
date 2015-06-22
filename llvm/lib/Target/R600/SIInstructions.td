@@ -40,6 +40,9 @@ def isVI : Predicate <
 
 def HasFlatAddressSpace : Predicate<"Subtarget.hasFlatAddressSpace()">;
 
+def has16BankLDS : Predicate<"Subtarget.getLDSBankCount() == 16">;
+def has32BankLDS : Predicate<"Subtarget.getLDSBankCount() == 32">;
+
 def SWaitMatchClass : AsmOperandClass {
   let Name = "SWaitCnt";
   let RenderMethod = "addImmOperands";
@@ -1376,12 +1379,26 @@ defm V_RSQ_CLAMP_F64 : VOP1InstSI <vop1<0x32>, "v_rsq_clamp_f64",
 //===----------------------------------------------------------------------===//
 
 // FIXME: Specify SchedRW for VINTRP insturctions.
-defm V_INTERP_P1_F32 : VINTRP_m <
-  0x00000000, 
+
+multiclass V_INTERP_P1_F32_m : VINTRP_m <
+  0x00000000,
   (outs VGPR_32:$dst),
   (ins VGPR_32:$i, i32imm:$attr_chan, i32imm:$attr, M0Reg:$m0),
   "v_interp_p1_f32 $dst, $i, $attr_chan, $attr, [$m0]",
-  "$m0">;
+  "$m0"
+>;
+
+let OtherPredicates = [has32BankLDS] in {
+
+defm V_INTERP_P1_F32 : V_INTERP_P1_F32_m;
+
+} // End OtherPredicates = [has32BankLDS]
+
+let OtherPredicates = [has16BankLDS], Constraints = "@earlyclobber $dst" in {
+
+defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
+
+} // End OtherPredicates = [has32BankLDS], Constraints = "@earlyclobber $dst"
 
 defm V_INTERP_P2_F32 : VINTRP_m <
   0x00000001,
@@ -2672,13 +2689,25 @@ def : Pat <
   (V_INTERP_MOV_F32 INTERP.P0, imm:$attr_chan, imm:$attr, (S_MOV_B32 $params))
 >;
 
-def : Pat <
+class FSInterpPat <Instruction P1> : Pat <
   (int_SI_fs_interp imm:$attr_chan, imm:$attr, i32:$params, v2i32:$ij),
-  (V_INTERP_P2_F32 (V_INTERP_P1_F32 (EXTRACT_SUBREG v2i32:$ij, sub0),
+  (V_INTERP_P2_F32 (P1 (EXTRACT_SUBREG v2i32:$ij, sub0),
                                     imm:$attr_chan, imm:$attr, (S_MOV_B32 $params)),
                    (EXTRACT_SUBREG $ij, sub1),
                    imm:$attr_chan, imm:$attr, (S_MOV_B32 $params))
 >;
+
+let Predicates = [has32BankLDS] in {
+
+def : FSInterpPat<V_INTERP_P1_F32>;
+
+} // EndPredicates = [has32BankLDS]
+
+let Predicates = [has16BankLDS] in {
+
+def : FSInterpPat<V_INTERP_P1_F32_16bank>;
+
+} // End Predicates = [has32BankLDS]
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/

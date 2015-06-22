@@ -121,6 +121,15 @@ def FeatureWavefrontSize16 : SubtargetFeatureWavefrontSize<16>;
 def FeatureWavefrontSize32 : SubtargetFeatureWavefrontSize<32>;
 def FeatureWavefrontSize64 : SubtargetFeatureWavefrontSize<64>;
 
+class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
+      "ldsbankcount"#Value,
+      "LDSBankCount",
+      !cast<string>(Value),
+      "The number of LDS banks per compute unit.">;
+
+def FeatureLDSBankCount16 : SubtargetFeatureLDSBankCount<16>;
+def FeatureLDSBankCount32 : SubtargetFeatureLDSBankCount<32>;
+
 class SubtargetFeatureLocalMemorySize <int Value> : SubtargetFeature<
         "localmemorysize"#Value,
         "LocalMemorySize",
@@ -152,7 +161,7 @@ def FeatureNorthernIslands : SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
 
 def FeatureSouthernIslands : SubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
         [Feature64BitPtr, FeatureFP64, FeatureLocalMemorySize32768,
-         FeatureWavefrontSize64]>;
+         FeatureWavefrontSize64, FeatureLDSBankCount32]>;
 
 def FeatureSeaIslands : SubtargetFeatureGeneration<"SEA_ISLANDS",
         [Feature64BitPtr, FeatureFP64, FeatureLocalMemorySize65536,
@@ -160,7 +169,8 @@ def FeatureSeaIslands : SubtargetFeatureGeneration<"SEA_ISLANDS",
 
 def FeatureVolcanicIslands : SubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
         [Feature64BitPtr, FeatureFP64, FeatureLocalMemorySize65536,
-         FeatureWavefrontSize64, FeatureFlatAddressSpace]>;
+         FeatureWavefrontSize64, FeatureFlatAddressSpace,
+         FeatureLDSBankCount32]>;
 
 //===----------------------------------------------------------------------===//
 
