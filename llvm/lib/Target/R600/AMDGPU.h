@@ -43,6 +43,7 @@ FunctionPass *createSILowerI1CopiesPass();
 FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass(TargetMachine &tm);
 FunctionPass *createSILowerControlFlowPass(TargetMachine &tm);
+FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIFixSGPRCopiesPass(TargetMachine &tm);
 FunctionPass *createSIFixSGPRLiveRangesPass();
 FunctionPass *createSICodeEmitterPass(formatted_raw_ostream &OS);
@@ -67,6 +68,9 @@ ModulePass *createAMDGPUAlwaysInlinePass();
 /// \brief Creates an AMDGPU-specific Target Transformation Info pass.
 ImmutablePass *
 createAMDGPUTargetTransformInfoPass(const AMDGPUTargetMachine *TM);
+
+void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
+extern char &SIFixControlFlowLiveIntervalsID;
 
 void initializeSIFixSGPRLiveRangesPass(PassRegistry&);
 extern char &SIFixSGPRLiveRangesID;
