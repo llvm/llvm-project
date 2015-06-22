@@ -140,7 +140,7 @@ const TargetRegisterClass *SIFixSGPRCopies::inferRegClassFromUses(
   const TargetRegisterClass *RC
     = TargetRegisterInfo::isVirtualRegister(Reg) ?
     MRI.getRegClass(Reg) :
-    TRI->getRegClass(Reg);
+    TRI->getPhysRegClass(Reg);
 
   RC = TRI->getSubRegClass(RC, SubReg);
   for (MachineRegisterInfo::use_instr_iterator
@@ -183,10 +183,13 @@ bool SIFixSGPRCopies::isVGPRToSGPRCopy(const MachineInstr &Copy,
   unsigned SrcReg = Copy.getOperand(1).getReg();
   unsigned SrcSubReg = Copy.getOperand(1).getSubReg();
 
-  const TargetRegisterClass *DstRC
-    = TargetRegisterInfo::isVirtualRegister(DstReg) ?
-    MRI.getRegClass(DstReg) :
-    TRI->getRegClass(DstReg);
+  if (!TargetRegisterInfo::isVirtualRegister(DstReg)) {
+    // If the destination register is a physical register there isn't really
+    // much we can do to fix this.
+    return false;
+  }
+
+  const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
 
   const TargetRegisterClass *SrcRC;
 

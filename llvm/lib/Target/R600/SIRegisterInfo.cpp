@@ -345,6 +345,7 @@ const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
   assert(!TargetRegisterInfo::isVirtualRegister(Reg));
 
   static const TargetRegisterClass *BaseClasses[] = {
+    &AMDGPU::M0RegRegClass,
     &AMDGPU::VGPR_32RegClass,
     &AMDGPU::SReg_32RegClass,
     &AMDGPU::VReg_64RegClass,
