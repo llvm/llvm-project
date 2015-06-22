@@ -1986,7 +1986,7 @@ defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 
 multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
-  let UseNamedOperandTable = 1 in {
+  let UseNamedOperandTable = 1, VGPRSpill = 1 in {
     def _SAVE : InstSI <
       (outs),
       (ins vgpr_class:$src, i32imm:$frame_idx, SReg_128:$scratch_rsrc,
@@ -1999,7 +1999,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
       (ins i32imm:$frame_idx, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset),
       "", []
     >;
-  } // End UseNamedOperandTable = 1
+  } // End UseNamedOperandTable = 1, VGPRSpill = 1
 }
 
 defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
