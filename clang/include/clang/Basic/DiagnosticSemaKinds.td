@@ -5467,6 +5467,12 @@ def err_conditional_ambiguous : Error<
 def err_conditional_ambiguous_ovl : Error<
   "conditional expression is ambiguous; %diff{$ and $|types}0,1 "
   "can be converted to several common types">;
+def err_conditional_vector_size : Error<
+  "vector condition type %0 and result type %1 do not have the same number "
+  "of elements">;
+def err_conditional_vector_element_size : Error<
+  "vector condition type %0 and result type %1 do not have elements of the "
+  "same size">;
 
 def err_throw_incomplete : Error<
   "cannot throw object of incomplete type %0">;
@@ -6049,8 +6055,12 @@ def err_typecheck_call_invalid_ordered_compare : Error<
 def err_typecheck_call_invalid_unary_fp : Error<
   "floating point classification requires argument of floating point type "
   "(passed in %0)">;
+def err_typecheck_cond_expect_int_float : Error<
+  "used type %0 where integer or floating point type is required">;
 def err_typecheck_cond_expect_scalar : Error<
   "used type %0 where arithmetic or pointer type is required">;
+def err_typecheck_cond_expect_nonfloat : Error<
+  "used type %0 where floating point type is not allowed">;
 def ext_typecheck_cond_one_void : Extension<
   "C99 forbids conditional expressions with only one void side">;
 def err_typecheck_cond_expect_scalar_or_vector : Error<
