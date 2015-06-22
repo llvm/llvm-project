@@ -132,7 +132,12 @@ set( CLANG_USED_LIBS
 
 set(LLDB_SYSTEM_LIBS)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT __ANDROID_NDK__)
-  list(APPEND LLDB_SYSTEM_LIBS edit panel ncurses)
+  if (NOT LLDB_DISABLE_LIBEDIT)
+    list(APPEND LLDB_SYSTEM_LIBS edit)
+  endif()
+  if (NOT LLDB_DISABLE_CURSES)
+    list(APPEND LLDB_SYSTEM_LIBS panel ncurses)
+  endif()
 endif()
 # On FreeBSD backtrace() is provided by libexecinfo, not libc.
 if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
