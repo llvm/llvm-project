@@ -34,10 +34,12 @@ endif()
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
   target_link_libraries(lldb-platform
                         -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
+  target_link_libraries(lldb-platform
+                        -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
 else()
   target_link_libraries(lldb-platform ${LLDB_USED_LIBS})
+  target_link_libraries(lldb-platform ${CLANG_USED_LIBS})
 endif()
-target_link_libraries(lldb-platform ${CLANG_USED_LIBS})
 llvm_config(lldb-platform ${LLVM_LINK_COMPONENTS})
 
 target_link_libraries(lldb-platform ${LLDB_SYSTEM_LIBS})

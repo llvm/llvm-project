@@ -28,10 +28,12 @@ add_lldb_executable(lldb-gdbserver
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
   target_link_libraries(lldb-gdbserver
                         -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
+  target_link_libraries(lldb-gdbserver
+                        -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
 else()
   target_link_libraries(lldb-gdbserver ${LLDB_USED_LIBS})
+  target_link_libraries(lldb-gdbserver ${CLANG_USED_LIBS})
 endif()
-target_link_libraries(lldb-gdbserver ${CLANG_USED_LIBS})
 llvm_config(lldb-gdbserver ${LLVM_LINK_COMPONENTS})
 
 target_link_libraries(lldb-gdbserver ${LLDB_SYSTEM_LIBS})
