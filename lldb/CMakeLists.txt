@@ -22,13 +22,15 @@ else ()
 endif ()
 
 set(LLDB_ENABLE_PYTHON_SCRIPTS_SWIG_API_GENERATION ${LLDB_DEFAULT_ENABLE_PYTHON_SCRIPTS_SWIG_API_GENERATION} CACHE BOOL
-  "Enables using new Python scripts for SWIG API generation .")  
+  "Enables using new Python scripts for SWIG API generation .")
 
 # If we are not building as a part of LLVM, build LLDB as an
 # standalone project, using LLVM as an external library:
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lldb)
   cmake_minimum_required(VERSION 2.8)
+
+  option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
   set(LLDB_PATH_TO_LLVM_SOURCE "" CACHE PATH
     "Path to LLVM source code. Not necessary if using an installed LLVM.")
@@ -199,7 +201,7 @@ if( MSVC )
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
   )
-endif() 
+endif()
 
 # If building on a 32-bit system, make sure off_t can store offsets > 2GB
 if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
@@ -291,9 +293,11 @@ macro(add_lldb_library name)
     )
   add_dependencies(${name} ${LLDB_DEPENDENCIES})
 
-  install(TARGETS ${name}
-    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "liblldb")
+    install(TARGETS ${name}
+      LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+      ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+  endif()
   set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
 endmacro(add_lldb_library)
 
@@ -307,12 +311,14 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 
-install(DIRECTORY include/
-  DESTINATION include
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY include/
+    DESTINATION include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".svn" EXCLUDE
   )
+endif()
 
 
 # Find libraries or frameworks that may be needed
