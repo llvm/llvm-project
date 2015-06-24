@@ -17,6 +17,7 @@
 #define LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 class MCAsmBackend;
