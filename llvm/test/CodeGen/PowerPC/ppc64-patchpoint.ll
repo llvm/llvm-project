@@ -103,6 +103,21 @@ entry:
   ret void
 }
 
+; Trivial symbolic patchpoint codegen.
+
+declare i64 @foo(i64 %p1, i64 %p2)
+define i64 @trivial_symbolic_patchpoint_codegen(i64 %p1, i64 %p2) {
+entry:
+; CHECK-LABEL: trivial_symbolic_patchpoint_codegen:
+; CHECK:       bl foo
+; CHECK-NEXT:  nop
+; CHECK-NEXT:  nop
+; CHECK-NOT:   nop
+; CHECK:       blr
+  %result = tail call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 9, i32 12, i8* bitcast (i64 (i64, i64)* @foo to i8*), i32 2, i64 %p1, i64 %p2)
+  ret i64 %result
+}
+
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)
