@@ -56,6 +56,21 @@ static void setThunkVisibility(CodeGenModule &CGM, const CXXMethodDecl *MD,
   CGM.setGlobalVisibility(Fn, MD);
 }
 
+static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
+                               llvm::Function *ThunkFn, bool ForVTable,
+                               GlobalDecl GD) {
+  CGM.setFunctionLinkage(GD, ThunkFn);
+  CGM.getCXXABI().setThunkLinkage(ThunkFn, ForVTable, GD,
+                                  !Thunk.Return.isEmpty());
+
+  // Set the right visibility.
+  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+  setThunkVisibility(CGM, MD, Thunk, ThunkFn);
+
+  if (CGM.supportsCOMDAT() && ThunkFn->isWeakForLinker())
+    ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
+}
+
 #ifndef NDEBUG
 static bool similar(const ABIArgInfo &infoL, CanQualType typeL,
                     const ABIArgInfo &infoR, CanQualType typeR) {
@@ -429,8 +444,7 @@ void CodeGenVTables::emitThunk(GlobalDecl GD, const ThunkInfo &Thunk,
       return;
     }
 
-    // Change the linkage.
-    CGM.setFunctionLinkage(GD, ThunkFn);
+    setThunkProperties(CGM, Thunk, ThunkFn, ForVTable, GD);
     return;
   }
 
@@ -451,16 +465,7 @@ void CodeGenVTables::emitThunk(GlobalDecl GD, const ThunkInfo &Thunk,
     CodeGenFunction(CGM).generateThunk(ThunkFn, FnInfo, GD, Thunk);
   }
 
-  CGM.setFunctionLinkage(GD, ThunkFn);
-  CGM.getCXXABI().setThunkLinkage(ThunkFn, ForVTable, GD,
-                                  !Thunk.Return.isEmpty());
-
-  // Set the right visibility.
-  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
-  setThunkVisibility(CGM, MD, Thunk, ThunkFn);
-
-  if (CGM.supportsCOMDAT() && ThunkFn->isWeakForLinker())
-    ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
+  setThunkProperties(CGM, Thunk, ThunkFn, ForVTable, GD);
 }
 
 void CodeGenVTables::maybeEmitThunkForVTable(GlobalDecl GD,

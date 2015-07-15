@@ -361,6 +361,23 @@ namespace Test15 {
   // CHECK: declare void @_ZThn8_N6Test151C1fEiz
 }
 
+namespace Test16 {
+struct A {
+  virtual ~A();
+};
+struct B {
+  virtual void foo();
+};
+struct C : public A, public B {
+  void foo() {}
+};
+struct D : public C {
+  ~D();
+};
+D::~D() {}
+// CHECK: define linkonce_odr void @_ZThn8_N6Test161C3fooEv({{.*}}) {{.*}} comdat
+}
+
 /**** The following has to go at the end of the file ****/
 
 // This is from Test5:
