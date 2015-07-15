@@ -1789,7 +1789,7 @@ CMICmdCmdDataInfoLine::Acknowledge(void)
             //                                                                     ^ -- line
             const size_t nLineStartPos = nFileEndPos + 1;
             const size_t nLineEndPos = rLine.find(':', nLineStartPos);
-            const size_t nLineLen = nLineEndPos != std::string::npos ? nLineEndPos - nLineStartPos - 1
+            const size_t nLineLen = nLineEndPos != std::string::npos ? nLineEndPos - nLineStartPos
                                                                      : std::string::npos;
             const CMIUtilString strLine(rLine.substr(nLineStartPos, nLineLen).c_str());
             const CMICmnMIValueConst miValueConst4(strLine);
