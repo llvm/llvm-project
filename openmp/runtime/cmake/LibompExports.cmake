@@ -22,27 +22,27 @@ libomp_append(libomp_suffix .deb DEBUG_BUILD)
 libomp_append(libomp_suffix .dia RELWITHDEBINFO_BUILD)
 libomp_append(libomp_suffix .min MINSIZEREL_BUILD)
 if(NOT "${LIBOMP_OMP_VERSION}" STREQUAL "41")
-    libomp_append(libomp_suffix .${LIBOMP_OMP_VERSION})
+  libomp_append(libomp_suffix .${LIBOMP_OMP_VERSION})
 endif()
 libomp_append(libomp_suffix .s1 LIBOMP_STATS)
 libomp_append(libomp_suffix .ompt LIBOMP_OMPT_SUPPORT)
 if(${LIBOMP_OMPT_SUPPORT})
-    libomp_append(libomp_suffix .no-ompt-blame IF_FALSE LIBOMP_OMPT_BLAME)
-    libomp_append(libomp_suffix .no-ompt-trace IF_FALSE LIBOMP_OMPT_TRACE)
+  libomp_append(libomp_suffix .no-ompt-blame IF_FALSE LIBOMP_OMPT_BLAME)
+  libomp_append(libomp_suffix .no-ompt-trace IF_FALSE LIBOMP_OMPT_TRACE)
 endif()
 string(REPLACE ";" "" libomp_suffix "${libomp_suffix}")
 
 # Set exports locations
 if(${MIC})
-    set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_${LIBOMP_MIC_ARCH}") # e.g., lin_knf, lin_knc
+  set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_${LIBOMP_MIC_ARCH}") # e.g., lin_knf, lin_knc
 else()
-    if(${IA32})
-        set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_32")
-    elseif(${INTEL64})
-        set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_32e")
-    else()
-        set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_${LIBOMP_ARCH}") # e.g., lin_arm, lin_ppc64
-    endif()
+  if(${IA32})
+    set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_32")
+  elseif(${INTEL64})
+    set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_32e")
+  else()
+    set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_${LIBOMP_ARCH}") # e.g., lin_arm, lin_ppc64
+  endif()
 endif()
 set(LIBOMP_EXPORTS_DIR "${LIBOMP_BASE_DIR}/exports")
 set(LIBOMP_EXPORTS_PLATFORM_DIR "${LIBOMP_EXPORTS_DIR}/${libomp_platform}${libomp_suffix}")
@@ -53,46 +53,46 @@ set(LIBOMP_EXPORTS_LIB_DIR "${LIBOMP_EXPORTS_DIR}/${libomp_platform}${libomp_suf
 
 # Put headers in exports/ directory post build
 add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_CMN_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy omp.h ${LIBOMP_EXPORTS_CMN_DIR}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_CMN_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy omp.h ${LIBOMP_EXPORTS_CMN_DIR}
 )
 if(${LIBOMP_OMPT_SUPPORT})
-    add_custom_command(TARGET omp POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ompt.h ${LIBOMP_EXPORTS_CMN_DIR}
-    )
+  add_custom_command(TARGET omp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ompt.h ${LIBOMP_EXPORTS_CMN_DIR}
+  )
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
-    add_custom_command(TARGET libomp-mod POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_MOD_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy omp_lib_kinds.mod ${LIBOMP_EXPORTS_MOD_DIR}
-    )
+  add_custom_command(TARGET libomp-mod POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_MOD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib_kinds.mod ${LIBOMP_EXPORTS_MOD_DIR}
+  )
 endif()
 
 # Copy OpenMP library into exports/ directory post build
 if(WIN32)
-    get_target_property(LIBOMP_OUTPUT_DIRECTORY omp RUNTIME_OUTPUT_DIRECTORY)
+  get_target_property(LIBOMP_OUTPUT_DIRECTORY omp RUNTIME_OUTPUT_DIRECTORY)
 else()
-    get_target_property(LIBOMP_OUTPUT_DIRECTORY omp LIBRARY_OUTPUT_DIRECTORY)
+  get_target_property(LIBOMP_OUTPUT_DIRECTORY omp LIBRARY_OUTPUT_DIRECTORY)
 endif()
 if(NOT LIBOMP_OUTPUT_DIRECTORY)
-    set(LIBOMP_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set(LIBOMP_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_LIB_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE} ${LIBOMP_EXPORTS_LIB_DIR}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_LIB_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE} ${LIBOMP_EXPORTS_LIB_DIR}
 )
 
 # Copy Windows import library into exports/ directory post build
 if(WIN32)
-    get_target_property(LIBOMPIMP_OUTPUT_DIRECTORY ompimp ARCHIVE_OUTPUT_DIRECTORY)
-    if(NOT LIBOMPIMP_OUTPUT_DIRECTORY)
-        set(LIBOMPIMP_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    endif()
-    add_custom_command(TARGET ompimp POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_LIB_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMPIMP_OUTPUT_DIRECTORY}/${LIBOMP_IMP_LIB_FILE} ${LIBOMP_EXPORTS_LIB_DIR}
-    )
+  get_target_property(LIBOMPIMP_OUTPUT_DIRECTORY ompimp ARCHIVE_OUTPUT_DIRECTORY)
+  if(NOT LIBOMPIMP_OUTPUT_DIRECTORY)
+    set(LIBOMPIMP_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  endif()
+  add_custom_command(TARGET ompimp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_LIB_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMPIMP_OUTPUT_DIRECTORY}/${LIBOMP_IMP_LIB_FILE} ${LIBOMP_EXPORTS_LIB_DIR}
+  )
 endif()
 
