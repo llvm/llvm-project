@@ -415,7 +415,7 @@ protected:
 
 
 
-DisassemblerLLVMC::LLVMCDisassembler::LLVMCDisassembler (const char *triple, const char *cpu, unsigned flavor, DisassemblerLLVMC &owner):
+DisassemblerLLVMC::LLVMCDisassembler::LLVMCDisassembler (const char *triple, const char *cpu, const char *features_str, unsigned flavor, DisassemblerLLVMC &owner):
     m_is_valid(true)
 {
     std::string Error;
@@ -428,8 +428,6 @@ DisassemblerLLVMC::LLVMCDisassembler::LLVMCDisassembler (const char *triple, con
 
     m_instr_info_ap.reset(curr_target->createMCInstrInfo());
     m_reg_info_ap.reset (curr_target->createMCRegInfo(triple));
-
-    std::string features_str;
 
     m_subtarget_info_ap.reset(curr_target->createMCSubtargetInfo(triple, cpu,
                                                                 features_str));
@@ -674,8 +672,25 @@ DisassemblerLLVMC::DisassemblerLLVMC (const ArchSpec &arch, const char *flavor_s
         default:
             cpu = ""; break;
     }
+
+    std::string features_str = "";
+    if (arch.GetTriple().getArch() == llvm::Triple::mips || arch.GetTriple().getArch() == llvm::Triple::mipsel
+        || arch.GetTriple().getArch() == llvm::Triple::mips64 || arch.GetTriple().getArch() == llvm::Triple::mips64el)
+    {
+        uint32_t arch_flags = arch.GetFlags ();
+        if (arch_flags & ArchSpec::eMIPSAse_msa)
+            features_str += "+msa,";
+        if (arch_flags & ArchSpec::eMIPSAse_dsp)
+            features_str += "+dsp,";
+        if (arch_flags & ArchSpec::eMIPSAse_dspr2)
+            features_str += "+dspr2,";
+        if (arch_flags & ArchSpec::eMIPSAse_mips16)
+            features_str += "+mips16,";
+        if (arch_flags & ArchSpec::eMIPSAse_micromips)
+            features_str += "+micromips,";
+    }
     
-    m_disasm_ap.reset (new LLVMCDisassembler(triple, cpu, flavor, *this));
+    m_disasm_ap.reset (new LLVMCDisassembler(triple, cpu, features_str.c_str(), flavor, *this));
     if (!m_disasm_ap->IsValid())
     {
         // We use m_disasm_ap.get() to tell whether we are valid or not, so if this isn't good for some reason,
@@ -687,7 +702,7 @@ DisassemblerLLVMC::DisassemblerLLVMC (const ArchSpec &arch, const char *flavor_s
     if (arch.GetTriple().getArch() == llvm::Triple::arm)
     {
         std::string thumb_triple(thumb_arch.GetTriple().getTriple());
-        m_alternate_disasm_ap.reset(new LLVMCDisassembler(thumb_triple.c_str(), "", flavor, *this));
+        m_alternate_disasm_ap.reset(new LLVMCDisassembler(thumb_triple.c_str(), "", "", flavor, *this));
         if (!m_alternate_disasm_ap->IsValid())
         {
             m_disasm_ap.reset();

@@ -1437,6 +1437,25 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         assert(spec_ostype == ostype);
     }
 
+    if (arch_spec.GetMachine() == llvm::Triple::mips || arch_spec.GetMachine() == llvm::Triple::mipsel
+        || arch_spec.GetMachine() == llvm::Triple::mips64 || arch_spec.GetMachine() == llvm::Triple::mips64el)
+    {
+        switch (header.e_flags & llvm::ELF::EF_MIPS_ARCH_ASE)
+        {
+            case llvm::ELF::EF_MIPS_MICROMIPS:  
+                arch_spec.SetFlags (ArchSpec::eMIPSAse_micromips); 
+                break;
+            case llvm::ELF::EF_MIPS_ARCH_ASE_M16: 
+                arch_spec.SetFlags (ArchSpec::eMIPSAse_mips16); 
+                break;
+            case llvm::ELF::EF_MIPS_ARCH_ASE_MDMX: 
+                arch_spec.SetFlags (ArchSpec::eMIPSAse_mdmx); 
+                break;
+            default: 
+                break;
+        }
+    }
+
     // If there are no section headers we are done.
     if (header.e_shnum == 0)
         return 0;
@@ -1482,6 +1501,22 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                 ConstString name(shstr_data.PeekCStr(I->sh_name));
 
                 I->section_name = name;
+
+                if (arch_spec.GetMachine() == llvm::Triple::mips || arch_spec.GetMachine() == llvm::Triple::mipsel
+                    || arch_spec.GetMachine() == llvm::Triple::mips64 || arch_spec.GetMachine() == llvm::Triple::mips64el)
+                {
+                    if (header.sh_type == SHT_MIPS_ABIFLAGS)
+                    {
+                        DataExtractor data;
+                        if (section_size && (data.SetData (object_data, header.sh_offset, section_size) == section_size))
+                        {
+                            lldb::offset_t ase_offset = 12; // MIPS ABI Flags Version: 0
+                            uint32_t arch_flags = arch_spec.GetFlags ();
+                            arch_flags |= data.GetU32 (&ase_offset);
+                            arch_spec.SetFlags (arch_flags);
+                        }
+                    }
+                }
 
                 if (name == g_sect_name_gnu_debuglink)
                 {

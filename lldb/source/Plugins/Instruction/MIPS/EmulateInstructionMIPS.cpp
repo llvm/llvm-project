@@ -124,6 +124,19 @@ EmulateInstructionMIPS::EmulateInstructionMIPS (const lldb_private::ArchSpec &ar
             cpu = "generic"; break;
     }
 
+    std::string features = "";
+    uint32_t arch_flags = arch.GetFlags ();
+    if (arch_flags & ArchSpec::eMIPSAse_msa)
+        features += "+msa,";
+    if (arch_flags & ArchSpec::eMIPSAse_dsp)
+        features += "+dsp,";
+    if (arch_flags & ArchSpec::eMIPSAse_dspr2)
+        features += "+dspr2,";
+    if (arch_flags & ArchSpec::eMIPSAse_mips16)
+        features += "+mips16,";
+    if (arch_flags & ArchSpec::eMIPSAse_micromips)
+        features += "+micromips,";
+
     m_reg_info.reset (target->createMCRegInfo (triple.getTriple()));
     assert (m_reg_info.get());
 
@@ -131,7 +144,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS (const lldb_private::ArchSpec &ar
     assert (m_insn_info.get());
 
     m_asm_info.reset (target->createMCAsmInfo (*m_reg_info, triple.getTriple()));
-    m_subtype_info.reset (target->createMCSubtargetInfo (triple.getTriple(), cpu, ""));
+    m_subtype_info.reset (target->createMCSubtargetInfo (triple.getTriple(), cpu, features));
     assert (m_asm_info.get() && m_subtype_info.get());
 
     m_context.reset (new llvm::MCContext (m_asm_info.get(), m_reg_info.get(), nullptr));
