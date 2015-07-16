@@ -8,9 +8,9 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 
 ; CHECK-LABEL: testi0
 ; CHECK: lxvd2x 0, 0, 3
-; CHECK: lxsdx 34, 0, 4
+; CHECK: lxsdx 1, 0, 4
 ; CHECK: xxswapd 0, 0
-; CHECK: xxspltd 1, 34, 0
+; CHECK: xxspltd 1, 1, 0
 ; CHECK: xxpermdi 34, 0, 1, 1
 }
 
@@ -22,9 +22,9 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 
 ; CHECK-LABEL: testi1
 ; CHECK: lxvd2x 0, 0, 3
-; CHECK: lxsdx 34, 0, 4
+; CHECK: lxsdx 1, 0, 4
 ; CHECK: xxswapd 0, 0
-; CHECK: xxspltd 1, 34, 0
+; CHECK: xxspltd 1, 1, 0
 ; CHECK: xxmrgld 34, 1, 0
 }
 

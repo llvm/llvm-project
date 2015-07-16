@@ -580,6 +580,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
       addRegisterClass(MVT::f64, &PPC::VSFRCRegClass);
 
+      addRegisterClass(MVT::v4i32, &PPC::VSRCRegClass);
       addRegisterClass(MVT::v4f32, &PPC::VSRCRegClass);
       addRegisterClass(MVT::v2f64, &PPC::VSRCRegClass);
 
