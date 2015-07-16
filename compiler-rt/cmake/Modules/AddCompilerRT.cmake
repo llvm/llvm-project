@@ -245,7 +245,6 @@ macro(add_custom_libcxx name prefix)
     list(APPEND LIBCXX_DEPS clang)
   endif()
 
-  set(EXCLUDE_FROM_ALL TRUE)
   ExternalProject_Add(${name}
     PREFIX ${prefix}
     SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
@@ -259,6 +258,7 @@ macro(add_custom_libcxx name prefix)
     LOG_CONFIGURE 1
     LOG_INSTALL 1
     )
+  set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
   ExternalProject_Add_Step(${name} force-reconfigure
     DEPENDERS configure
@@ -272,5 +272,4 @@ macro(add_custom_libcxx name prefix)
     DEPENDERS configure
     DEPENDS ${LIBCXX_DEPS}
     )
-  set(EXCLUDE_FROM_ALL FALSE)
 endmacro()
