@@ -80,7 +80,37 @@ Changes to the MIPS Target
 Changes to the PowerPC Target
 -----------------------------
 
- During this release ...
+There are numerous improvements to the PowerPC target in this release:
+
+* LLVM now supports the ISA 2.07B (POWER8) instruction set, including
+  direct moves between general registers and vector registers, and
+  built-in support for hardware transactional memory (HTM).  Some missing
+  instructions from ISA 2.06 (POWER7) were also added.
+
+* Code generation for the local-dynamic and global-dynamic thread-local
+  storage models has been improved.
+
+* Loops may be restructured to leverage pre-increment loads and stores.
+
+* QPX - Hal, please say a few words.
+
+* Loads from the TOC area are now correctly treated as invariant.
+
+* PowerPC now has support for i128 and v1i128 types.  The types differ
+  in how they are passed in registers for the ELFv2 ABI.
+
+* Disassembly will now print shorter mnemonic aliases when available.
+
+* Optional register name prefixes for VSX and QPX registers are now
+  supported in the assembly parser.
+
+* The back end now contains a pass to remove unnecessary vector swaps
+  from POWER8 little-endian code generation.  Additional improvements
+  are planned for release 3.8.
+
+* The undefined-behavior sanitizer (UBSan) is now supported for PowerPC.
+
+* Many bugs have been identified and fixed.
 
 
 Changes to the OCaml bindings
