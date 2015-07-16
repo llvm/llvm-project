@@ -1719,7 +1719,6 @@ MachineBasicBlock *
 AMDGPUCFGStructurizer::normalizeInfiniteLoopExit(MachineLoop* LoopRep) {
   MachineBasicBlock *LoopHeader = LoopRep->getHeader();
   MachineBasicBlock *LoopLatch = LoopRep->getLoopLatch();
-  const TargetRegisterClass * I32RC = TRI->getCFGStructurizerRegClass(MVT::i32);
 
   if (!LoopHeader || !LoopLatch)
     return nullptr;
