@@ -90,6 +90,7 @@ static void truncateCurrentFile(void) {
     char *Copy = malloc(strlen(Filename) + 1);
     strcpy(Copy, Filename);
     __llvm_profile_recursive_mkdir(Copy);
+    free(Copy);
   }
 
   /* Truncate the file.  Later we'll reopen and append. */
