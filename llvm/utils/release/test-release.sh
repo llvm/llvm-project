@@ -29,12 +29,12 @@ RC=""
 Triple=""
 use_gzip="no"
 do_checkout="yes"
-do_64bit="yes"
 do_debug="no"
 do_asserts="no"
 do_compare="yes"
 BuildDir="`pwd`"
-BuildTriple=""
+use_autoconf="no"
+ExtraConfigureFlags=""
 
 function usage() {
     echo "usage: `basename $0` -release X.Y.Z -rc NUM [OPTIONS]"
@@ -46,14 +46,18 @@ function usage() {
     echo " -j NUM               Number of compile jobs to run. [default: 3]"
     echo " -build-dir DIR       Directory to perform testing in. [default: pwd]"
     echo " -no-checkout         Don't checkout the sources from SVN."
-    echo " -no-64bit            Don't test the 64-bit version. [default: yes]"
     echo " -test-debug          Test the debug build. [default: no]"
     echo " -test-asserts        Test with asserts on. [default: no]"
     echo " -no-compare-files    Don't test that phase 2 and 3 files are identical."
     echo " -use-gzip            Use gzip instead of xz."
-    echo " -build-triple TRIPLE The build triple for this machine"
-    echo "                      [default: use config.guess]"
+    echo " -configure-flags FLAGS  Extra flags to pass to the configure step."
+    echo " -use-autoconf        Use autoconf instead of cmake"
 }
+
+if [ `uname -s` = "Darwin" ]; then
+  # compiler-rt doesn't yet build with CMake on Darwin.
+  use_autoconf="yes"
+fi
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -73,9 +77,9 @@ while [ $# -gt 0 ]; do
             shift
             Triple="$1"
             ;;
-        -build-triple | --build-triple )
+        -configure-flags | --configure-flags )
             shift
-            BuildTriple="$1"
+            ExtraConfigureFlags="$1"
             ;;
         -j* )
             NumJobs="`echo $1 | sed -e 's,-j\([0-9]*\),\1,g'`"
@@ -91,9 +95,6 @@ while [ $# -gt 0 ]; do
         -no-checkout | --no-checkout )
             do_checkout="no"
             ;;
-        -no-64bit | --no-64bit )
-            do_64bit="no"
-            ;;
         -test-debug | --test-debug )
             do_debug="yes"
             ;;
@@ -105,6 +106,9 @@ while [ $# -gt 0 ]; do
             ;;
         -use-gzip | --use-gzip )
             use_gzip="yes"
+            ;;
+        -use-autoconf | --use-autoconf )
+            use_autoconf="yes"
             ;;
         -help | --help | -h | --h | -\? )
             usage
@@ -233,17 +237,20 @@ function configure_llvmCore() {
     ObjDir="$3"
 
     case $Flavor in
-        Release | Release-64 )
-            Optimized="yes"
-            Assertions="no"
+        Release )
+            BuildType="Release"
+            Assertions="OFF"
+            ConfigureFlags="--enable-optimized --disable-assertions"
             ;;
         Release+Asserts )
-            Optimized="yes"
-            Assertions="yes"
+            BuildType="Release"
+            Assertions="ON"
+            ConfigureFlags="--enable-optimized --enable-assertions"
             ;;
         Debug )
-            Optimized="no"
-            Assertions="yes"
+            BuildType="Debug"
+            Assertions="ON"
+            ConfigureFlags="--disable-optimized --enable-assertions"
             ;;
         * )
             echo "# Invalid flavor '$Flavor'"
@@ -255,22 +262,33 @@ function configure_llvmCore() {
     echo "# Using C compiler: $c_compiler"
     echo "# Using C++ compiler: $cxx_compiler"
 
-    build_triple_option="${BuildTriple:+--build=$BuildTriple}"
-
     cd $ObjDir
     echo "# Configuring llvm $Release-$RC $Flavor"
-    echo "# $BuildDir/llvm.src/configure \
-        --enable-optimized=$Optimized \
-        --enable-assertions=$Assertions \
-        --disable-timestamps \
-        $build_triple_option"
-    env CC="$c_compiler" CXX="$cxx_compiler" \
-        $BuildDir/llvm.src/configure \
-        --enable-optimized=$Optimized \
-        --enable-assertions=$Assertions \
-        --disable-timestamps \
-        $build_triple_option \
-        2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
+
+    if [ "$use_autoconf" = "yes" ]; then
+        echo "#" env CC="$c_compiler" CXX="$cxx_compiler" \
+            $BuildDir/llvm.src/configure \
+            $ConfigureFlags --disable-timestamps $ExtraConfigureFlags \
+            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
+        env CC="$c_compiler" CXX="$cxx_compiler" \
+            $BuildDir/llvm.src/configure \
+            $ConfigureFlags --disable-timestamps $ExtraConfigureFlags \
+            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
+    else
+        echo "#" env CC="$c_compiler" CXX="$cxx_compiler" \
+            cmake -G "Unix Makefiles" \
+            -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
+            -DLLVM_ENABLE_TIMESTAMPS=OFF -DLLVM_CONFIGTIME="(timestamp not enabled)" \
+            $ExtraConfigureFlags $BuildDir/llvm.src \
+            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
+        env CC="$c_compiler" CXX="$cxx_compiler" \
+            cmake -G "Unix Makefiles" \
+            -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
+            -DLLVM_ENABLE_TIMESTAMPS=OFF -DLLVM_CONFIGTIME="(timestamp not enabled)" \
+            $ExtraConfigureFlags $BuildDir/llvm.src \
+            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
+    fi
+
     cd $BuildDir
 }
 
@@ -279,16 +297,11 @@ function build_llvmCore() {
     Flavor="$2"
     ObjDir="$3"
     DestDir="$4"
-    ExtraOpts=""
-
-    if [ "$Flavor" = "Release-64" ]; then
-        ExtraOpts="EXTRA_OPTIONS=-m64"
-    fi
 
     cd $ObjDir
     echo "# Compiling llvm $Release-$RC $Flavor"
-    echo "# ${MAKE} -j $NumJobs VERBOSE=1 $ExtraOpts"
-    ${MAKE} -j $NumJobs VERBOSE=1 $ExtraOpts \
+    echo "# ${MAKE} -j $NumJobs VERBOSE=1"
+    ${MAKE} -j $NumJobs VERBOSE=1 \
         2>&1 | tee $LogDir/llvm.make-Phase$Phase-$Flavor.log
 
     echo "# Installing llvm $Release-$RC $Flavor"
@@ -305,10 +318,15 @@ function test_llvmCore() {
     ObjDir="$3"
 
     cd $ObjDir
-    ${MAKE} -k check-all \
+    ${MAKE} -j $NumJobs -k check-all \
         2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log
-    ${MAKE} -k unittests \
-        2>&1 | tee $LogDir/llvm.unittests-Phase$Phase-$Flavor.log
+
+    if [ "$use_autoconf" = "yes" ]; then
+        # In the cmake build, unit tests are run as part of check-all.
+        ${MAKE} -k unittests \
+            2>&1 | tee $LogDir/llvm.unittests-Phase$Phase-$Flavor.log
+    fi
+
     cd $BuildDir
 }
 
@@ -361,9 +379,6 @@ if [ "$do_debug" = "yes" ]; then
 fi
 if [ "$do_asserts" = "yes" ]; then
     Flavors="$Flavors Release+Asserts"
-fi
-if [ "$do_64bit" = "yes" ]; then
-    Flavors="$Flavors Release-64"
 fi
 
 for Flavor in $Flavors ; do
@@ -446,10 +461,13 @@ for Flavor in $Flavors ; do
     if [ "$do_compare" = "yes" ]; then
         echo
         echo "# Comparing Phase 2 and Phase 3 files"
-        for o in `find $llvmCore_phase2_objdir -name '*.o'` ; do
-            p3=`echo $o | sed -e 's,Phase2,Phase3,'`
-            if ! cmp --ignore-initial=16 $o $p3 > /dev/null 2>&1 ; then
-                echo "file `basename $o` differs between phase 2 and phase 3"
+        for p2 in `find $llvmCore_phase2_objdir -name '*.o'` ; do
+            p3=`echo $p2 | sed -e 's,Phase2,Phase3,'`
+            # Substitute 'Phase2' for 'Phase3' in the Phase 2 object file in
+            # case there are build paths in the debug info.
+            if ! cmp --ignore-initial=16 <(sed -e 's,Phase2,Phase3,g' $p2) $p3 \
+                    > /dev/null 2>&1 ; then
+                echo "file `basename $p2` differs between phase 2 and phase 3"
             fi
         done
     fi
