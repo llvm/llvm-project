@@ -110,6 +110,14 @@ There are numerous improvements to the PowerPC target in this release:
 
 * The undefined-behavior sanitizer (UBSan) is now supported for PowerPC.
 
+* Many new vector programming APIs have been added to altivec.h.
+  Additional ones are planned for release 3.8.
+
+* PowerPC now supports __builtin_call_with_static_chain.
+
+* PowerPC now supports the revised -mrecip option that permits finer
+  control over reciprocal estimates.
+
 * Many bugs have been identified and fixed.
 
 
