@@ -1732,18 +1732,9 @@ AMDGPUCFGStructurizer::normalizeInfiniteLoopExit(MachineLoop* LoopRep) {
   FuncRep->push_back(DummyExitBlk);  //insert to function
   SHOWNEWBLK(DummyExitBlk, "DummyExitBlock to normalize infiniteLoop: ");
   DEBUG(dbgs() << "Old branch instr: " << *BranchMI << "\n";);
-  MachineBasicBlock::iterator I = BranchMI;
-  unsigned ImmReg = FuncRep->getRegInfo().createVirtualRegister(I32RC);
-  llvm_unreachable("Extra register needed to handle CFG");
-  MachineInstr *NewMI = insertInstrBefore(I, AMDGPU::BRANCH_COND_i32);
-  MachineInstrBuilder MIB(*FuncRep, NewMI);
-  MIB.addMBB(LoopHeader);
-  MIB.addReg(ImmReg, false);
-  SHOWNEWINSTR(NewMI);
-  BranchMI->eraseFromParent();
-  LoopLatch->addSuccessor(DummyExitBlk);
-
-  return DummyExitBlk;
+  LLVMContext &Ctx = LoopHeader->getParent()->getFunction()->getContext();
+  Ctx.emitError("Extra register needed to handle CFG");
+  return nullptr;
 }
 
 void AMDGPUCFGStructurizer::removeUnconditionalBranch(MachineBasicBlock *MBB) {
