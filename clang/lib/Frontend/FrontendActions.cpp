@@ -93,7 +93,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
       CI.getPreprocessor(), OutputFile, nullptr, Sysroot, Buffer));
   Consumers.push_back(
-      CI.getPCHContainerOperations()->CreatePCHContainerGenerator(
+      CI.getPCHContainerWriter().CreatePCHContainerGenerator(
           CI.getDiagnostics(), CI.getHeaderSearchOpts(),
           CI.getPreprocessorOpts(), CI.getTargetOpts(), CI.getLangOpts(),
           InFile, OutputFile, OS, Buffer));
@@ -139,7 +139,7 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
       CI.getPreprocessor(), OutputFile, Module, Sysroot, Buffer));
   Consumers.push_back(
-      CI.getPCHContainerOperations()->CreatePCHContainerGenerator(
+      CI.getPCHContainerWriter().CreatePCHContainerGenerator(
           CI.getDiagnostics(), CI.getHeaderSearchOpts(),
           CI.getPreprocessorOpts(), CI.getTargetOpts(), CI.getLangOpts(),
           InFile, OutputFile, OS, Buffer));
@@ -415,7 +415,7 @@ void VerifyPCHAction::ExecuteAction() {
   bool Preamble = CI.getPreprocessorOpts().PrecompiledPreambleBytes.first != 0;
   const std::string &Sysroot = CI.getHeaderSearchOpts().Sysroot;
   std::unique_ptr<ASTReader> Reader(new ASTReader(
-      CI.getPreprocessor(), CI.getASTContext(), *CI.getPCHContainerOperations(),
+      CI.getPreprocessor(), CI.getASTContext(), CI.getPCHContainerReader(),
       Sysroot.empty() ? "" : Sysroot.c_str(),
       /*DisableValidation*/ false,
       /*AllowPCHWithCompilerErrors*/ false,
@@ -578,7 +578,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   DumpModuleInfoListener Listener(Out);
   ASTReader::readASTFileControlBlock(
       getCurrentFile(), getCompilerInstance().getFileManager(),
-      *getCompilerInstance().getPCHContainerOperations(), Listener);
+      getCompilerInstance().getPCHContainerReader(), Listener);
 }
 
 //===----------------------------------------------------------------------===//

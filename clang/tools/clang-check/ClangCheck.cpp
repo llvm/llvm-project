@@ -160,8 +160,7 @@ int main(int argc, const char **argv) {
 
   CommonOptionsParser OptionsParser(argc, argv, ClangCheckCategory);
   ClangTool Tool(OptionsParser.getCompilations(),
-                 OptionsParser.getSourcePathList(),
-                 std::make_shared<clang::ObjectFilePCHContainerOperations>());
+                 OptionsParser.getSourcePathList());
 
   // Clear adjusters because -fsyntax-only is inserted by the default chain.
   Tool.clearArgumentsAdjusters();

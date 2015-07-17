@@ -150,7 +150,7 @@ inline std::unique_ptr<FrontendActionFactory> newFrontendActionFactory(
 bool runToolOnCode(clang::FrontendAction *ToolAction, const Twine &Code,
                    const Twine &FileName = "input.cc",
                    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                       std::make_shared<RawPCHContainerOperations>());
+                       std::make_shared<PCHContainerOperations>());
 
 /// The first part of the pair is the filename, the second part the
 /// file-content.
@@ -171,7 +171,7 @@ bool runToolOnCodeWithArgs(
     clang::FrontendAction *ToolAction, const Twine &Code,
     const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-        std::make_shared<RawPCHContainerOperations>(),
+        std::make_shared<PCHContainerOperations>(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings());
 
 /// \brief Builds an AST for 'Code'.
@@ -185,7 +185,7 @@ bool runToolOnCodeWithArgs(
 std::unique_ptr<ASTUnit>
 buildASTFromCode(const Twine &Code, const Twine &FileName = "input.cc",
                  std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                     std::make_shared<RawPCHContainerOperations>());
+                     std::make_shared<PCHContainerOperations>());
 
 /// \brief Builds an AST for 'Code' with additional flags.
 ///
@@ -200,7 +200,7 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     const Twine &Code, const std::vector<std::string> &Args,
     const Twine &FileName = "input.cc",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-        std::make_shared<RawPCHContainerOperations>());
+        std::make_shared<PCHContainerOperations>());
 
 /// \brief Utility to run a FrontendAction in a single clang invocation.
 class ToolInvocation {
@@ -219,7 +219,7 @@ public:
   ToolInvocation(std::vector<std::string> CommandLine, FrontendAction *FAction,
                  FileManager *Files,
                  std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                     std::make_shared<RawPCHContainerOperations>());
+                     std::make_shared<PCHContainerOperations>());
 
   /// \brief Create a tool invocation.
   ///
@@ -288,7 +288,7 @@ class ClangTool {
   ClangTool(const CompilationDatabase &Compilations,
             ArrayRef<std::string> SourcePaths,
             std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                std::make_shared<RawPCHContainerOperations>());
+                std::make_shared<PCHContainerOperations>());
 
   ~ClangTool();
 

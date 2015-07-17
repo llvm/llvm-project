@@ -650,7 +650,7 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     const std::string &Filename,
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    const PCHContainerReader &PCHContainerRdr,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, bool OnlyLocalDecls,
     ArrayRef<RemappedFile> RemappedFiles, bool CaptureDiagnostics,
@@ -676,7 +676,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                                      AST->getFileManager(),
                                      UserFilesAreVolatile);
   AST->HSOpts = new HeaderSearchOptions();
-
+  AST->HSOpts->ModuleFormat = PCHContainerRdr.getFormat();
   AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
                                          AST->getSourceManager(),
                                          AST->getDiagnostics(),
@@ -708,7 +708,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   bool disableValid = false;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = true;
-  AST->Reader = new ASTReader(PP, Context, *PCHContainerOps,
+  AST->Reader = new ASTReader(PP, Context, PCHContainerRdr,
                               /*isysroot=*/"",
                               /*DisableValidation=*/disableValid,
                               AllowPCHWithCompilerErrors);

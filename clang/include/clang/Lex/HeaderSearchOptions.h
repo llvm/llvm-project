@@ -92,6 +92,9 @@ public:
   /// \brief The directory used for a user build.
   std::string ModuleUserBuildPath;
 
+  /// The module/pch container format.
+  std::string ModuleFormat;
+
   /// \brief Whether we should disable the use of the hash string within the
   /// module cache.
   ///
@@ -167,16 +170,14 @@ public:
 
 public:
   HeaderSearchOptions(StringRef _Sysroot = "/")
-    : Sysroot(_Sysroot), DisableModuleHash(0), ImplicitModuleMaps(0),
-      ModuleMapFileHomeIsCwd(0),
-      ModuleCachePruneInterval(7*24*60*60),
-      ModuleCachePruneAfter(31*24*60*60),
-      BuildSessionTimestamp(0),
-      UseBuiltinIncludes(true),
-      UseStandardSystemIncludes(true), UseStandardCXXIncludes(true),
-      UseLibcxx(false), Verbose(false),
-      ModulesValidateOncePerBuildSession(false),
-      ModulesValidateSystemHeaders(false) {}
+      : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(0),
+        ImplicitModuleMaps(0), ModuleMapFileHomeIsCwd(0),
+        ModuleCachePruneInterval(7 * 24 * 60 * 60),
+        ModuleCachePruneAfter(31 * 24 * 60 * 60), BuildSessionTimestamp(0),
+        UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
+        UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
+        ModulesValidateOncePerBuildSession(false),
+        ModulesValidateSystemHeaders(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,

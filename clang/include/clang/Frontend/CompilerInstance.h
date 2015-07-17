@@ -183,7 +183,7 @@ class CompilerInstance : public ModuleLoader {
 public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-          std::make_shared<RawPCHContainerOperations>(),
+          std::make_shared<PCHContainerOperations>(),
       bool BuildingModule = false);
   ~CompilerInstance() override;
 
@@ -508,6 +508,34 @@ public:
     return ThePCHContainerOperations;
   }
 
+  /// Return the appropriate PCHContainerWriter depending on the
+  /// current CodeGenOptions.
+  const PCHContainerWriter &getPCHContainerWriter() const {
+    assert(Invocation && "cannot determine module format without invocation");
+    StringRef Format = getHeaderSearchOpts().ModuleFormat;
+    auto *Writer = ThePCHContainerOperations->getWriterOrNull(Format);
+    if (!Writer) {
+      if (Diagnostics)
+        Diagnostics->Report(diag::err_module_format_unhandled) << Format;
+      llvm::report_fatal_error("unknown module format");
+    }
+    return *Writer;
+  }
+
+  /// Return the appropriate PCHContainerReader depending on the
+  /// current CodeGenOptions.
+  const PCHContainerReader &getPCHContainerReader() const {
+    assert(Invocation && "cannot determine module format without invocation");
+    StringRef Format = getHeaderSearchOpts().ModuleFormat;
+    auto *Reader = ThePCHContainerOperations->getReaderOrNull(Format);
+    if (!Reader) {
+      if (Diagnostics)
+        Diagnostics->Report(diag::err_module_format_unhandled) << Format;
+      llvm::report_fatal_error("unknown module format");
+    }
+    return *Reader;
+  }
+
   /// }
   /// @name Code Completion
   /// {
@@ -621,7 +649,7 @@ public:
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
       bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
-      const PCHContainerOperations &PCHContainerOps,
+      const PCHContainerReader &PCHContainerRdr,
       void *DeserializationListener, bool OwnDeserializationListener,
       bool Preamble, bool UseGlobalModuleIndex);
 

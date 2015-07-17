@@ -139,7 +139,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     }
 
     // Initialize the stream.
-    PCHContainerOps.ExtractPCH(New->Buffer->getMemBufferRef(), New->StreamFile);
+    PCHContainerRdr.ExtractPCH(New->Buffer->getMemBufferRef(), New->StreamFile);
   }
 
   if (ExpectedSignature) {
@@ -290,8 +290,8 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
 }
 
 ModuleManager::ModuleManager(FileManager &FileMgr,
-                             const PCHContainerOperations &PCHContainerOps)
-    : FileMgr(FileMgr), PCHContainerOps(PCHContainerOps), GlobalIndex(),
+                             const PCHContainerReader &PCHContainerRdr)
+    : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr), GlobalIndex(),
       FirstVisitState(nullptr) {}
 
 ModuleManager::~ModuleManager() {

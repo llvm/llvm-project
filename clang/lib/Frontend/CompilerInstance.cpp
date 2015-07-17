@@ -322,7 +322,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                           PP->getFileManager(), PPOpts);
 
   // Predefine macros and configure the preprocessor.
-  InitializePreprocessor(*PP, PPOpts, *getPCHContainerOperations(),
+  InitializePreprocessor(*PP, PPOpts, getPCHContainerReader(),
                          getFrontendOpts());
 
   // Initialize the header search object.
@@ -399,7 +399,7 @@ void CompilerInstance::createPCHExternalASTSource(
   ModuleManager = createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisablePCHValidation,
       AllowPCHWithCompilerErrors, getPreprocessor(), getASTContext(),
-      *getPCHContainerOperations(), DeserializationListener,
+      getPCHContainerReader(), DeserializationListener,
       OwnDeserializationListener, Preamble,
       getFrontendOpts().UseGlobalModuleIndex);
 }
@@ -407,13 +407,13 @@ void CompilerInstance::createPCHExternalASTSource(
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
     bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
-    const PCHContainerOperations &PCHContainerOps,
+    const PCHContainerReader &PCHContainerRdr,
     void *DeserializationListener, bool OwnDeserializationListener,
     bool Preamble, bool UseGlobalModuleIndex) {
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
-      PP, Context, PCHContainerOps, Sysroot.empty() ? "" : Sysroot.data(),
+      PP, Context, PCHContainerRdr, Sysroot.empty() ? "" : Sysroot.data(),
       DisablePCHValidation, AllowPCHWithCompilerErrors,
       /*AllowConfigurationMismatch*/ false, HSOpts.ModulesValidateSystemHeaders,
       UseGlobalModuleIndex));
@@ -1244,7 +1244,7 @@ void CompilerInstance::createModuleManager() {
       ReadTimer = llvm::make_unique<llvm::Timer>("Reading modules",
                                                  *FrontendTimerGroup);
     ModuleManager = new ASTReader(
-        getPreprocessor(), *Context, *getPCHContainerOperations(),
+        getPreprocessor(), *Context, getPCHContainerReader(),
         Sysroot.empty() ? "" : Sysroot.c_str(), PPOpts.DisablePCHValidation,
         /*AllowASTWithCompilerErrors=*/false,
         /*AllowConfigurationMismatch=*/false,
@@ -1296,7 +1296,7 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
       ModuleFileStack.push_back(FileName);
       ModuleNameStack.push_back(StringRef());
       if (ASTReader::readASTFileControlBlock(FileName, CI.getFileManager(),
-                                             *CI.getPCHContainerOperations(),
+                                             CI.getPCHContainerReader(),
                                              *this)) {
         CI.getDiagnostics().Report(
             SourceLocation(), CI.getFileManager().getBufferForFile(FileName)
@@ -1667,7 +1667,7 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     llvm::sys::fs::create_directories(
       getPreprocessor().getHeaderSearchInfo().getModuleCachePath());
     GlobalModuleIndex::writeIndex(
-        getFileManager(), *getPCHContainerOperations(),
+        getFileManager(), getPCHContainerReader(),
         getPreprocessor().getHeaderSearchInfo().getModuleCachePath());
     ModuleManager->resetForReload();
     ModuleManager->loadGlobalIndex();
@@ -1695,7 +1695,7 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     }
     if (RecreateIndex) {
       GlobalModuleIndex::writeIndex(
-          getFileManager(), *getPCHContainerOperations(),
+          getFileManager(), getPCHContainerReader(),
           getPreprocessor().getHeaderSearchInfo().getModuleCachePath());
       ModuleManager->resetForReload();
       ModuleManager->loadGlobalIndex();

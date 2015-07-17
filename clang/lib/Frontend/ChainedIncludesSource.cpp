@@ -81,7 +81,7 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
   Preprocessor &PP = CI.getPreprocessor();
   std::unique_ptr<ASTReader> Reader;
   Reader.reset(new ASTReader(PP, CI.getASTContext(),
-                             *CI.getPCHContainerOperations(),
+                             CI.getPCHContainerReader(),
                              /*isysroot=*/"", /*DisableValidation=*/true));
   for (unsigned ti = 0; ti < bufNames.size(); ++ti) {
     StringRef sr(bufNames[ti]);

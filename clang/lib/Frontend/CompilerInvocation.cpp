@@ -1112,6 +1112,8 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
       getLastArgUInt64Value(Args, OPT_fbuild_session_timestamp, 0);
   Opts.ModulesValidateSystemHeaders =
       Args.hasArg(OPT_fmodules_validate_system_headers);
+  if (const Arg *A = Args.getLastArg(OPT_fmodule_format_EQ))
+    Opts.ModuleFormat = A->getValue();
 
   for (const Arg *A : Args.filtered(OPT_fmodules_ignore_macro)) {
     StringRef MacroDef = A->getValue();

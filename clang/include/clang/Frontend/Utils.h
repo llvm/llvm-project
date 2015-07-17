@@ -45,7 +45,7 @@ class HeaderSearch;
 class HeaderSearchOptions;
 class IdentifierTable;
 class LangOptions;
-class PCHContainerOperations;
+class PCHContainerReader;
 class Preprocessor;
 class PreprocessorOptions;
 class PreprocessorOutputOptions;
@@ -63,7 +63,7 @@ void ApplyHeaderSearchOptions(HeaderSearch &HS,
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
 void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
-                            const PCHContainerOperations &PCHContainerOps,
+                            const PCHContainerReader &PCHContainerRdr,
                             const FrontendOptions &FEOpts);
 
 /// DoPrintPreprocessedInput - Implement -E mode.

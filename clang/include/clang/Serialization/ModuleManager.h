@@ -24,7 +24,7 @@ namespace clang {
 
 class GlobalModuleIndex;
 class ModuleMap;
-class PCHContainerOperations;
+class PCHContainerReader;
 
 namespace serialization {
 
@@ -52,7 +52,7 @@ class ModuleManager {
   FileManager &FileMgr;
 
   /// \brief Knows how to unwrap module containers.
-  const PCHContainerOperations &PCHContainerOps;
+  const PCHContainerReader &PCHContainerRdr;
 
   /// \brief A lookup of in-memory (virtual file) buffers
   llvm::DenseMap<const FileEntry *, std::unique_ptr<llvm::MemoryBuffer>>
@@ -118,9 +118,9 @@ public:
   typedef std::pair<uint32_t, StringRef> ModuleOffset;
 
   explicit ModuleManager(FileManager &FileMgr,
-                         const PCHContainerOperations &PCHContainerOps);
+                         const PCHContainerReader &PCHContainerRdr);
   ~ModuleManager();
-  
+
   /// \brief Forward iterator to traverse all loaded modules.  This is reverse
   /// source-order.
   ModuleIterator begin() { return Chain.begin(); }

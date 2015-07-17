@@ -198,10 +198,9 @@ public:
   /// \param Path The path to the directory containing module files, into
   /// which the global index will be written.
   static ErrorCode writeIndex(FileManager &FileMgr,
-                              const PCHContainerOperations &PCHContainerOps,
+                              const PCHContainerReader &PCHContainerRdr,
                               StringRef Path);
 };
-
 }
 
 #endif

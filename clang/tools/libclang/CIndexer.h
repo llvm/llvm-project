@@ -44,7 +44,7 @@ class CIndexer {
 
 public:
   CIndexer(std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-               std::make_shared<RawPCHContainerOperations>())
+               std::make_shared<PCHContainerOperations>())
       : OnlyLocalDecls(false), DisplayDiagnostics(false),
         Options(CXGlobalOpt_None), PCHContainerOps(PCHContainerOps) {}
 

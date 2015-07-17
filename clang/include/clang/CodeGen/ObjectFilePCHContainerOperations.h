@@ -14,30 +14,32 @@
 
 namespace clang {
 
-/// \brief A PCHContainerOperations implementation that uses LLVM to
+/// A PCHContainerWriter implementation that uses LLVM to
 /// wraps Clang modules inside a COFF, ELF, or Mach-O container.
-class ObjectFilePCHContainerOperations
-  : public PCHContainerOperations {
-  /// \brief Return an ASTConsumer that can be chained with a
+class ObjectFilePCHContainerWriter : public PCHContainerWriter {
+  StringRef getFormat() const override { return "obj"; }
+
+  /// Return an ASTConsumer that can be chained with a
   /// PCHGenerator that produces a wrapper file format
   /// that also contains full debug info for the module.
-  std::unique_ptr<ASTConsumer>
-    CreatePCHContainerGenerator(
+  std::unique_ptr<ASTConsumer> CreatePCHContainerGenerator(
       DiagnosticsEngine &Diags, const HeaderSearchOptions &HSO,
       const PreprocessorOptions &PPO, const TargetOptions &TO,
       const LangOptions &LO, const std::string &MainFileName,
       const std::string &OutputFileName, llvm::raw_pwrite_stream *OS,
       std::shared_ptr<PCHBuffer> Buffer) const override;
+};
 
-  /// \brief Initialize an llvm::BitstreamReader with the serialized
+/// A PCHContainerReader implementation that uses LLVM to
+/// wraps Clang modules inside a COFF, ELF, or Mach-O container.
+class ObjectFilePCHContainerReader : public PCHContainerReader {
+  StringRef getFormat() const override { return "obj"; }
+
+  /// Initialize an llvm::BitstreamReader with the serialized
   /// AST inside the PCH container Buffer.
   void ExtractPCH(llvm::MemoryBufferRef Buffer,
                   llvm::BitstreamReader &StreamFile) const override;
-
-
 };
-
 }
-
 
 #endif

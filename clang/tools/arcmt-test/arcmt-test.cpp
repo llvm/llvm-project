@@ -132,7 +132,7 @@ static bool checkForMigration(StringRef resourcesPath,
     return false;
 
   arcmt::checkForManualIssues(CI, CI.getFrontendOpts().Inputs[0],
-                              std::make_shared<RawPCHContainerOperations>(),
+                              std::make_shared<PCHContainerOperations>(),
                               Diags->getClient());
   return Diags->getClient()->getNumErrors() > 0;
 }
@@ -171,8 +171,8 @@ static bool performTransformations(StringRef resourcesPath,
   if (!origCI.getLangOpts()->ObjC1)
     return false;
 
-  MigrationProcess migration(
-      origCI, std::make_shared<RawPCHContainerOperations>(), DiagClient);
+  MigrationProcess migration(origCI, std::make_shared<PCHContainerOperations>(),
+                             DiagClient);
 
   std::vector<TransformFn>
     transforms = arcmt::getAllTransformations(origCI.getLangOpts()->getGC(),

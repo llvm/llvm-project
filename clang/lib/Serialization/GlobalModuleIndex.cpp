@@ -385,7 +385,7 @@ namespace {
   /// \brief Builder that generates the global module index file.
   class GlobalModuleIndexBuilder {
     FileManager &FileMgr;
-    const PCHContainerOperations &PCHContainerOps;
+    const PCHContainerReader &PCHContainerRdr;
 
     /// \brief Mapping from files to module file information.
     typedef llvm::MapVector<const FileEntry *, ModuleFileInfo> ModuleFilesMap;
@@ -419,8 +419,8 @@ namespace {
 
   public:
     explicit GlobalModuleIndexBuilder(
-        FileManager &FileMgr, const PCHContainerOperations &PCHContainerOps)
-        : FileMgr(FileMgr), PCHContainerOps(PCHContainerOps) {}
+        FileManager &FileMgr, const PCHContainerReader &PCHContainerRdr)
+        : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr) {}
 
     /// \brief Load the contents of the given module file into the builder.
     ///
@@ -505,7 +505,7 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
 
   // Initialize the input stream
   llvm::BitstreamReader InStreamFile;
-  PCHContainerOps.ExtractPCH((*Buffer)->getMemBufferRef(), InStreamFile);
+  PCHContainerRdr.ExtractPCH((*Buffer)->getMemBufferRef(), InStreamFile);
   llvm::BitstreamCursor InStream(InStreamFile);
 
   // Sniff for the signature.
@@ -768,7 +768,7 @@ void GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
 
 GlobalModuleIndex::ErrorCode
 GlobalModuleIndex::writeIndex(FileManager &FileMgr,
-                              const PCHContainerOperations &PCHContainerOps,
+                              const PCHContainerReader &PCHContainerRdr,
                               StringRef Path) {
   llvm::SmallString<128> IndexPath;
   IndexPath += Path;
@@ -792,7 +792,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
   }
 
   // The module index builder.
-  GlobalModuleIndexBuilder Builder(FileMgr, PCHContainerOps);
+  GlobalModuleIndexBuilder Builder(FileMgr, PCHContainerRdr);
 
   // Load each of the module files.
   std::error_code EC;

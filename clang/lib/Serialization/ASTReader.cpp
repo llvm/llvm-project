@@ -3601,7 +3601,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   ModuleFile &F = *M;
   BitstreamCursor &Stream = F.Stream;
-  PCHContainerOps.ExtractPCH(F.Buffer->getMemBufferRef(), F.StreamFile);
+  PCHContainerRdr.ExtractPCH(F.Buffer->getMemBufferRef(), F.StreamFile);
   Stream.init(&F.StreamFile);
   F.SizeInBits = F.Buffer->getBufferSize() * 8;
   
@@ -3872,7 +3872,7 @@ static ASTFileSignature readASTFileSignature(llvm::BitstreamReader &StreamFile){
 /// file.
 std::string ASTReader::getOriginalSourceFile(
     const std::string &ASTFileName, FileManager &FileMgr,
-    const PCHContainerOperations &PCHContainerOps, DiagnosticsEngine &Diags) {
+    const PCHContainerReader &PCHContainerRdr, DiagnosticsEngine &Diags) {
   // Open the AST file.
   auto Buffer = FileMgr.getBufferForFile(ASTFileName);
   if (!Buffer) {
@@ -3883,7 +3883,7 @@ std::string ASTReader::getOriginalSourceFile(
 
   // Initialize the stream
   llvm::BitstreamReader StreamFile;
-  PCHContainerOps.ExtractPCH((*Buffer)->getMemBufferRef(), StreamFile);
+  PCHContainerRdr.ExtractPCH((*Buffer)->getMemBufferRef(), StreamFile);
   BitstreamCursor Stream(StreamFile);
 
   // Sniff for the signature.
@@ -3967,7 +3967,7 @@ namespace {
 
 bool ASTReader::readASTFileControlBlock(
     StringRef Filename, FileManager &FileMgr,
-    const PCHContainerOperations &PCHContainerOps,
+    const PCHContainerReader &PCHContainerRdr,
     ASTReaderListener &Listener) {
   // Open the AST file.
   // FIXME: This allows use of the VFS; we do not allow use of the
@@ -3979,7 +3979,7 @@ bool ASTReader::readASTFileControlBlock(
 
   // Initialize the stream
   llvm::BitstreamReader StreamFile;
-  PCHContainerOps.ExtractPCH((*Buffer)->getMemBufferRef(), StreamFile);
+  PCHContainerRdr.ExtractPCH((*Buffer)->getMemBufferRef(), StreamFile);
   BitstreamCursor Stream(StreamFile);
 
   // Sniff for the signature.
@@ -4160,12 +4160,12 @@ bool ASTReader::readASTFileControlBlock(
 
 bool ASTReader::isAcceptableASTFile(
     StringRef Filename, FileManager &FileMgr,
-    const PCHContainerOperations &PCHContainerOps, const LangOptions &LangOpts,
+    const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
     const TargetOptions &TargetOpts, const PreprocessorOptions &PPOpts,
     std::string ExistingModuleCachePath) {
   SimplePCHValidator validator(LangOpts, TargetOpts, PPOpts,
                                ExistingModuleCachePath, FileMgr);
-  return !readASTFileControlBlock(Filename, FileMgr, PCHContainerOps,
+  return !readASTFileControlBlock(Filename, FileMgr, PCHContainerRdr,
                                   validator);
 }
 
@@ -8472,7 +8472,7 @@ void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
 }
 
 ASTReader::ASTReader(Preprocessor &PP, ASTContext &Context,
-                     const PCHContainerOperations &PCHContainerOps,
+                     const PCHContainerReader &PCHContainerRdr,
                      StringRef isysroot, bool DisableValidation,
                      bool AllowASTWithCompilerErrors,
                      bool AllowConfigurationMismatch, bool ValidateSystemInputs,
@@ -8480,9 +8480,9 @@ ASTReader::ASTReader(Preprocessor &PP, ASTContext &Context,
                      std::unique_ptr<llvm::Timer> ReadTimer)
     : Listener(new PCHValidator(PP, *this)), DeserializationListener(nullptr),
       OwnsDeserializationListener(false), SourceMgr(PP.getSourceManager()),
-      FileMgr(PP.getFileManager()), PCHContainerOps(PCHContainerOps),
+      FileMgr(PP.getFileManager()), PCHContainerRdr(PCHContainerRdr),
       Diags(PP.getDiagnostics()), SemaObj(nullptr), PP(PP), Context(Context),
-      Consumer(nullptr), ModuleMgr(PP.getFileManager(), PCHContainerOps),
+      Consumer(nullptr), ModuleMgr(PP.getFileManager(), PCHContainerRdr),
       ReadTimer(std::move(ReadTimer)),
       isysroot(isysroot), DisableValidation(DisableValidation),
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),

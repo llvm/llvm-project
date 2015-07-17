@@ -587,4 +587,6 @@ void FileManager::PrintStats() const {
   //llvm::errs() << PagesMapped << BytesOfPagesMapped << FSLookups;
 }
 
-PCHContainerOperations::~PCHContainerOperations() {}
+// Virtual destructors for abstract base classes that need live in Basic.
+PCHContainerWriter::~PCHContainerWriter() {}
+PCHContainerReader::~PCHContainerReader() {}
