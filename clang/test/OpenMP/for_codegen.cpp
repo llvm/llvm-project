@@ -389,6 +389,7 @@ void for_with_global_lcv() {
 // CHECK: store i8 [[I_VAL]], i8* [[K]]
 // CHECK-NOT: [[I]]
 // CHECK: call void @__kmpc_for_static_fini(
+// CHECK: call void @__kmpc_barrier(
 #pragma omp for
   for (i = 0; i < 2; ++i) {
     k = i;
@@ -410,5 +411,59 @@ void for_with_global_lcv() {
   }
 }
 
-#endif // HEADER
+struct Bool {
+  Bool(bool b) : b(b) {}
+  operator bool() const { return b; }
+  const bool b;
+};
 
+template <typename T>
+struct It {
+  It() : p(0) {}
+  It(const It &) ;
+  It(It &) ;
+  It &operator=(const It &);
+  It &operator=(It &);
+  ~It() {}
+
+  It(T *p) : p(p) {}
+
+  operator T *&() { return p; }
+  operator T *() const { return p; }
+  T *operator->() const { return p; }
+
+  It &operator++() { ++p; return *this; }
+  It &operator--() { --p; return *this; }
+  It &operator+=(unsigned n) { p += n; return *this; }
+  It &operator-=(unsigned n) { p -= n; return *this; }
+
+  T *p;
+};
+
+template <typename T>
+It<T> operator+(It<T> a, typename It<T>::difference_type n) { return a.p + n; }
+
+template <typename T>
+It<T> operator+(typename It<T>::difference_type n, It<T> a) { return a.p + n; }
+
+template <typename T>
+It<T> operator-(It<T> a, typename It<T>::difference_type n) { return a.p - n; }
+
+typedef Bool BoolType;
+
+template <typename T>
+BoolType operator<(It<T> a, It<T> b) { return a.p < b.p; }
+
+void loop_with_It(It<char> begin, It<char> end) {
+#pragma omp for
+  for (It<char> it = begin; it < end; ++it) {
+    *it = 0;
+  }
+}
+
+// CHECK-LABEL: loop_with_It
+// CHECK: call i32 @__kmpc_global_thread_num(
+// CHECK: call void @__kmpc_for_static_init_8(
+// CHECK: call void @__kmpc_for_static_fini(
+
+#endif // HEADER

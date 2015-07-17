@@ -2262,6 +2262,22 @@ bool OpenMPIterationSpaceChecker::Dependent() const {
          (UB && UB->isValueDependent()) || (Step && Step->isValueDependent());
 }
 
+template <typename T>
+static T *getExprAsWritten(T *E) {
+  if (auto *ExprTemp = dyn_cast<ExprWithCleanups>(E))
+    E = ExprTemp->getSubExpr();
+
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    E = MTE->GetTemporaryExpr();
+
+  while (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
+    E = Binder->getSubExpr();
+
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    E = ICE->getSubExprAsWritten();
+  return E->IgnoreParens();
+}
+
 bool OpenMPIterationSpaceChecker::SetVarAndLB(VarDecl *NewVar,
                                               DeclRefExpr *NewVarRefExpr,
                                               Expr *NewLB) {
@@ -2272,6 +2288,11 @@ bool OpenMPIterationSpaceChecker::SetVarAndLB(VarDecl *NewVar,
     return true;
   Var = NewVar;
   VarRef = NewVarRefExpr;
+  if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(NewLB))
+    if (const CXXConstructorDecl *Ctor = CE->getConstructor())
+      if (Ctor->isCopyConstructor() && CE->getNumArgs() == 1 &&
+          CE->getArg(0) != nullptr)
+        NewLB = CE->getArg(0)->IgnoreParenImpCasts();
   LB = NewLB;
   return false;
 }
@@ -2402,7 +2423,7 @@ bool OpenMPIterationSpaceChecker::CheckInit(Stmt *S, bool EmitDiags) {
 static const VarDecl *GetInitVarDecl(const Expr *E) {
   if (!E)
     return nullptr;
-  E = E->IgnoreParenImpCasts();
+  E = getExprAsWritten(E);
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(E))
     if (const CXXConstructorDecl *Ctor = CE->getConstructor())
       if (Ctor->isCopyConstructor() && CE->getNumArgs() == 1 &&
@@ -2425,7 +2446,7 @@ bool OpenMPIterationSpaceChecker::CheckCond(Expr *S) {
     SemaRef.Diag(DefaultLoc, diag::err_omp_loop_not_canonical_cond) << Var;
     return true;
   }
-  S = S->IgnoreParenImpCasts();
+  S = getExprAsWritten(S);
   SourceLocation CondLoc = S->getLocStart();
   if (auto BO = dyn_cast<BinaryOperator>(S)) {
     if (BO->isRelationalOp()) {
@@ -2646,6 +2667,11 @@ Expr *OpenMPIterationSpaceChecker::BuildPreCond(Scope *S, Expr *Cond) const {
       S, DefaultLoc, TestIsLessOp ? (TestIsStrictOp ? BO_LT : BO_LE)
                                   : (TestIsStrictOp ? BO_GT : BO_GE),
       LB, UB);
+  if (CondExpr.isUsable()) {
+    CondExpr = SemaRef.PerformImplicitConversion(
+        CondExpr.get(), SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
+        /*AllowExplicit=*/true);
+  }
   SemaRef.getDiagnostics().setSuppressAllDiagnostics(Suppress);
   // Otherwise use original loop conditon and evaluate it in runtime.
   return CondExpr.isUsable() ? CondExpr.get() : Cond;
@@ -3231,7 +3257,8 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *NestedLoopCountExpr,
   Built.IterationVarRef = IV.get();
   Built.LastIteration = LastIteration.get();
   Built.NumIterations = NumIterations.get();
-  Built.CalcLastIteration = CalcLastIteration.get();
+  Built.CalcLastIteration =
+      SemaRef.ActOnFinishFullExpr(CalcLastIteration.get()).get();
   Built.PreCond = PreCond.get();
   Built.Cond = Cond.get();
   Built.Init = Init.get();
