@@ -420,8 +420,9 @@ struct Bool {
 template <typename T>
 struct It {
   It() : p(0) {}
-  It(const It &) ;
-  It(It &) ;
+  It(const It &, int = 0) ;
+  template <typename U>
+  It(U &, int = 0) ;
   It &operator=(const It &);
   It &operator=(It &);
   ~It() {}

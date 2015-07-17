@@ -456,7 +456,7 @@ int test_with_random_access_iterator() {
     ++I;
 
   // Initializer is constructor with all default params.
-  // expected-error@+4 {{invalid operands to binary expression ('Iter1' and 'Iter1')}}
+  // expected-error@+4 {{invalid operands to binary expression ('Iter1' and 'float')}}
   // expected-error@+3 {{could not calculate number of iterations calling 'operator-' with upper and lower loop bounds}}
   // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp simd

@@ -2290,8 +2290,9 @@ bool OpenMPIterationSpaceChecker::SetVarAndLB(VarDecl *NewVar,
   VarRef = NewVarRefExpr;
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(NewLB))
     if (const CXXConstructorDecl *Ctor = CE->getConstructor())
-      if (Ctor->isCopyConstructor() && CE->getNumArgs() == 1 &&
-          CE->getArg(0) != nullptr)
+      if ((Ctor->isCopyOrMoveConstructor() ||
+           Ctor->isConvertingConstructor(/*AllowExplicit=*/false)) &&
+          CE->getNumArgs() > 0 && CE->getArg(0) != nullptr)
         NewLB = CE->getArg(0)->IgnoreParenImpCasts();
   LB = NewLB;
   return false;
@@ -2426,8 +2427,9 @@ static const VarDecl *GetInitVarDecl(const Expr *E) {
   E = getExprAsWritten(E);
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(E))
     if (const CXXConstructorDecl *Ctor = CE->getConstructor())
-      if (Ctor->isCopyConstructor() && CE->getNumArgs() == 1 &&
-          CE->getArg(0) != nullptr)
+      if ((Ctor->isCopyOrMoveConstructor() ||
+           Ctor->isConvertingConstructor(/*AllowExplicit=*/false)) &&
+          CE->getNumArgs() > 0 && CE->getArg(0) != nullptr)
         E = CE->getArg(0)->IgnoreParenImpCasts();
   auto DRE = dyn_cast_or_null<DeclRefExpr>(E);
   if (!DRE)
