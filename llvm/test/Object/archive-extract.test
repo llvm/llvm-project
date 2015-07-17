@@ -53,4 +53,4 @@ RUN: llvm-ar p %p/Inputs/thin.a evenlen | FileCheck %s --check-prefix=EVENLEN
 EVENLEN: evenlen
 
 RUN: not llvm-ar p %p/Inputs/thin-path.a t/test2.o | FileCheck %s --check-prefix=MISSING
-MISSING: No such file or directory.
+MISSING: {{N|n}}o such file or directory.
