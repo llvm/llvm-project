@@ -440,30 +440,39 @@ void GlobalsModRef::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     }
 
     // Scan the function bodies for explicit loads or stores.
-    for (unsigned i = 0, e = SCC.size(); i != e && FunctionEffect != ModRef;
-         ++i)
-      for (inst_iterator II = inst_begin(SCC[i]->getFunction()),
-                         E = inst_end(SCC[i]->getFunction());
-           II != E && FunctionEffect != ModRef; ++II)
-        if (LoadInst *LI = dyn_cast<LoadInst>(&*II)) {
-          FunctionEffect |= Ref;
-          if (LI->isVolatile())
-            // Volatile loads may have side-effects, so mark them as writing
-            // memory (for example, a flag inside the processor).
-            FunctionEffect |= Mod;
-        } else if (StoreInst *SI = dyn_cast<StoreInst>(&*II)) {
-          FunctionEffect |= Mod;
-          if (SI->isVolatile())
-            // Treat volatile stores as reading memory somewhere.
-            FunctionEffect |= Ref;
-        } else if (isAllocationFn(&*II, TLI) || isFreeCall(&*II, TLI)) {
-          FunctionEffect |= ModRef;
-        } else if (IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(&*II)) {
-          // The callgraph doesn't include intrinsic calls.
-          Function *Callee = Intrinsic->getCalledFunction();
-          ModRefBehavior Behaviour = AliasAnalysis::getModRefBehavior(Callee);
-          FunctionEffect |= (Behaviour & ModRef);
+    for (auto *Node : SCC) {
+      if (FunctionEffect == ModRef)
+        break; // The mod/ref lattice saturates here.
+      for (Instruction &I : inst_range(Node->getFunction())) {
+        if (FunctionEffect == ModRef)
+          break; // The mod/ref lattice saturates here.
+
+        // We handle calls specially because the graph-relevant aspects are
+        // handled above.
+        if (auto CS = CallSite(&I)) {
+          if (isAllocationFn(&I, TLI) || isFreeCall(&I, TLI)) {
+            // FIXME: It is completely unclear why this is necessary and not
+            // handled by the above graph code.
+            FunctionEffect |= ModRef;
+          } else if (Function *Callee = CS.getCalledFunction()) {
+            // The callgraph doesn't include intrinsic calls.
+            if (Callee->isIntrinsic()) {
+              ModRefBehavior Behaviour =
+                  AliasAnalysis::getModRefBehavior(Callee);
+              FunctionEffect |= (Behaviour & ModRef);
+            }
+          }
+          continue;
         }
+
+        // All non-call instructions we use the primary predicates for whether
+        // thay read or write memory.
+        if (I.mayReadFromMemory())
+          FunctionEffect |= Ref;
+        if (I.mayWriteToMemory())
+          FunctionEffect |= Mod;
+      }
+    }
 
     if ((FunctionEffect & Mod) == 0)
       ++NumReadMemFunctions;
