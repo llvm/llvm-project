@@ -18,7 +18,7 @@ else
     MAKE=make
 fi
 
-projects="llvm cfe compiler-rt libcxx libcxxabi test-suite clang-tools-extra"
+projects="llvm cfe compiler-rt libcxx libcxxabi test-suite clang-tools-extra libunwind"
 
 # Base SVN URL for the sources.
 Base_url="http://llvm.org/svn/llvm-project"
@@ -228,6 +228,10 @@ function export_sources() {
     if [ ! -h libcxxabi ]; then
         ln -s ../../libcxxabi.src libcxxabi
     fi
+    if [ ! -h libunwind ]; then
+        ln -s ../../libunwind.src libunwind
+    fi
+
     cd $BuildDir
 }
 
