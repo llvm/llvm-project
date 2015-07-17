@@ -1417,7 +1417,7 @@ int PPC::isVSLDOIShuffleMask(SDNode *N, unsigned ShuffleKind,
   } else
     return -1;
 
-  if (ShuffleKind == 2 && isLE)
+  if (isLE)
     ShiftAmt = 16 - ShiftAmt;
 
   return ShiftAmt;
@@ -7012,17 +7012,20 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // t = vsplti c, result = vsldoi t, t, 1
     if (SextVal == (int)(((unsigned)i << 8) | (i < 0 ? 0xFF : 0))) {
       SDValue T = BuildSplatI(i, SplatSize, MVT::v16i8, DAG, dl);
-      return BuildVSLDOI(T, T, 1, Op.getValueType(), DAG, dl);
+      unsigned Amt = Subtarget.isLittleEndian() ? 15 : 1;
+      return BuildVSLDOI(T, T, Amt, Op.getValueType(), DAG, dl);
     }
     // t = vsplti c, result = vsldoi t, t, 2
     if (SextVal == (int)(((unsigned)i << 16) | (i < 0 ? 0xFFFF : 0))) {
       SDValue T = BuildSplatI(i, SplatSize, MVT::v16i8, DAG, dl);
-      return BuildVSLDOI(T, T, 2, Op.getValueType(), DAG, dl);
+      unsigned Amt = Subtarget.isLittleEndian() ? 14 : 2;
+      return BuildVSLDOI(T, T, Amt, Op.getValueType(), DAG, dl);
     }
     // t = vsplti c, result = vsldoi t, t, 3
     if (SextVal == (int)(((unsigned)i << 24) | (i < 0 ? 0xFFFFFF : 0))) {
       SDValue T = BuildSplatI(i, SplatSize, MVT::v16i8, DAG, dl);
-      return BuildVSLDOI(T, T, 3, Op.getValueType(), DAG, dl);
+      unsigned Amt = Subtarget.isLittleEndian() ? 13 : 3;
+      return BuildVSLDOI(T, T, Amt, Op.getValueType(), DAG, dl);
     }
   }
 
