@@ -16,7 +16,7 @@
 // CHECK-kernel-64-bits: || `[0x28{{0+}}, 0x3{{f+}}]` || HighShadow ||
 // CHECK-kernel-64-bits: || `[0x24{{0+}}, 0x27{{f+}}]` || ShadowGap  ||
 //
-// REQUIRES: asan-32-bits
+// REQUIRES: asan-32-bits,i386-supported-target
 
 int main() {
   return 0;
