@@ -7037,11 +7037,10 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
       return new NaClTargetInfo<ARMleTargetInfo>(Triple);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
-      default:
-        return new ARMleTargetInfo(Triple);
       case llvm::Triple::Itanium:
         return new ItaniumWindowsARMleTargetInfo(Triple);
       case llvm::Triple::MSVC:
+      default: // Assume MSVC for unknown environments
         return new MicrosoftARMleTargetInfo(Triple);
       }
     default:
@@ -7296,14 +7295,13 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
       return new SolarisTargetInfo<X86_32TargetInfo>(Triple);
     case llvm::Triple::Win32: {
       switch (Triple.getEnvironment()) {
-      default:
-        return new X86_32TargetInfo(Triple);
       case llvm::Triple::Cygnus:
         return new CygwinX86_32TargetInfo(Triple);
       case llvm::Triple::GNU:
         return new MinGWX86_32TargetInfo(Triple);
       case llvm::Triple::Itanium:
       case llvm::Triple::MSVC:
+      default: // Assume MSVC for unknown environments
         return new MicrosoftX86_32TargetInfo(Triple);
       }
     }
@@ -7348,11 +7346,10 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
       return new SolarisTargetInfo<X86_64TargetInfo>(Triple);
     case llvm::Triple::Win32: {
       switch (Triple.getEnvironment()) {
-      default:
-        return new X86_64TargetInfo(Triple);
       case llvm::Triple::GNU:
         return new MinGWX86_64TargetInfo(Triple);
       case llvm::Triple::MSVC:
+      default: // Assume MSVC for unknown environments
         return new MicrosoftX86_64TargetInfo(Triple);
       }
     }
