@@ -1029,6 +1029,10 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
                                            SDValue &SLC, SDValue &TFE) const {
   SDValue Ptr, Offen, Idxen, Addr64;
 
+  // addr64 bit was removed for volcanic islands.
+  if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return false;
+
   SelectMUBUF(Addr, Ptr, VAddr, SOffset, Offset, Offen, Idxen, Addr64,
               GLC, SLC, TFE);
 

@@ -254,6 +254,12 @@ bool SITargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &,
   return false;
 }
 
+bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
+  // Flat instructions do not have offsets, and only have the register
+  // address.
+  return AM.BaseOffs == 0 && (AM.Scale == 0 || AM.Scale == 1);
+}
+
 bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                              const AddrMode &AM, Type *Ty,
                                              unsigned AS) const {
@@ -263,8 +269,21 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   switch (AS) {
   case AMDGPUAS::GLOBAL_ADDRESS:
-  case AMDGPUAS::CONSTANT_ADDRESS: // XXX - Should we assume SMRD instructions?
+    if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+      // Assume the we will use FLAT for all global memory accesses
+      // on VI.
+      // FIXME: This assumption is currently wrong.  On VI we still use
+      // MUBUF instructions for the r + i addressing mode.  As currently
+      // implemented, the MUBUF instructions only work on buffer < 4GB.
+      // It may be possible to support > 4GB buffers with MUBUF instructions,
+      // by setting the stride value in the resource descriptor which would
+      // increase the size limit to (stride * 4GB).  However, this is risky,
+      // because it has never been validated.
+      return isLegalFlatAddressingMode(AM);
+    }
+    // fall-through
   case AMDGPUAS::PRIVATE_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS: // XXX - Should we assume SMRD instructions?
   case AMDGPUAS::UNKNOWN_ADDRESS_SPACE: {
     // MUBUF / MTBUF instructions have a 12-bit unsigned byte offset, and
     // additionally can do r + r + i with addr64. 32-bit has more addressing
@@ -324,11 +343,9 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
     return false;
   }
-  case AMDGPUAS::FLAT_ADDRESS: {
-    // Flat instructions do not have offsets, and only have the register
-    // address.
-    return AM.BaseOffs == 0 && (AM.Scale == 0 || AM.Scale == 1);
-  }
+  case AMDGPUAS::FLAT_ADDRESS:
+    return isLegalFlatAddressingMode(AM);
+
   default:
     llvm_unreachable("unhandled address space");
   }

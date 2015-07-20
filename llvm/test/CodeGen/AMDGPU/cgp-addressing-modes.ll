@@ -1,12 +1,15 @@
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN %s
+; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI %s
+; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tonga < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
 
 ; OPT-LABEL: @test_sink_global_small_offset_i32(
-; OPT-NOT: getelementptr i32, i32 addrspace(1)* %in
+; OPT-CI-NOT: getelementptr i32, i32 addrspace(1)* %in
+; OPT-VI: getelementptr i32, i32 addrspace(1)* %in
 ; OPT: br i1
-; OPT: ptrtoint
+; OPT-CI: ptrtoint
 
 ; GCN-LABEL: {{^}}test_sink_global_small_offset_i32:
 ; GCN: {{^}}BB0_2:
@@ -214,8 +217,11 @@ done:
 }
 
 ; GCN-LABEL: {{^}}test_sink_global_vreg_sreg_i32:
+; VI-DAG: s_movk_i32 flat_scratch_lo, 0x0
+; VI-DAG: s_movk_i32 flat_scratch_hi, 0x0
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; CI: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; VI: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
 ; GCN: {{^}}BB7_2:
 define void @test_sink_global_vreg_sreg_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %offset, i32 %cond) {
 entry:

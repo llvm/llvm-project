@@ -56,6 +56,7 @@ class SITargetLowering : public AMDGPUTargetLowering {
   SDValue performMin3Max3Combine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSetCCCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  bool isLegalFlatAddressingMode(const AddrMode &AM) const;
 public:
   SITargetLowering(TargetMachine &tm, const AMDGPUSubtarget &STI);
 
