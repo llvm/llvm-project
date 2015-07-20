@@ -1,5 +1,7 @@
-include(cmake/modules/LLDBConfig.cmake)
+cmake_minimum_required(VERSION 2.8)
+
 include(cmake/modules/LLDBStandalone.cmake)
+include(cmake/modules/LLDBConfig.cmake)
 include(cmake/modules/AddLLDB.cmake)
 
 #add_subdirectory(include)
@@ -12,7 +14,6 @@ add_subdirectory(test)
 add_subdirectory(tools)
 add_subdirectory(unittests)
 add_subdirectory(lit)
-
 
 if ( LLDB_ENABLE_PYTHON_SCRIPTS_SWIG_API_GENERATION AND NOT LLDB_DISABLE_PYTHON )
 	# Add a Post-Build Event to copy over Python files and create the symlink to liblldb.so for the Python API(hardlink on Windows)
