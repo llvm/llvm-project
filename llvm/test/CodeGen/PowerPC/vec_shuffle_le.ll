@@ -202,7 +202,7 @@ entry:
 ; CHECK: VSLDOI_xx:
         %tmp = load <16 x i8>, <16 x i8>* %A
         %tmp2 = shufflevector <16 x i8> %tmp, <16 x i8> %tmp, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-; CHECK: vsldoi
+; CHECK: vsldoi {{[0-9]+}}, [[REG1:[0-9]+]], [[REG1]], 4
         store <16 x i8> %tmp2, <16 x i8>* %A
         ret void
 }
