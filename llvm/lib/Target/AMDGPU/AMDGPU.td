@@ -123,6 +123,11 @@ def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
         "true",
         "VI SGPR initilization bug requiring a fixed SGPR allocation size">;
 
+def FeatureEnableHugeScratchBuffer : SubtargetFeature<"huge-scratch-buffer",
+        "EnableHugeScratchBuffer",
+        "true",
+        "Enable scratch buffer sizes greater than 128 GB">;
+
 class SubtargetFeatureFetchLimit <string Value> :
                           SubtargetFeature <"fetch"#Value,
         "TexVTXClauseSize",

@@ -73,7 +73,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
       WavefrontSize(0), CFALUBug(false), LocalMemorySize(0),
       EnableVGPRSpilling(false), SGPRInitBug(false), IsGCN(false),
       GCN1Encoding(false), GCN3Encoding(false), CIInsts(false), LDSBankCount(0),
-      IsaVersion(ISAVersion0_0_0),
+      IsaVersion(ISAVersion0_0_0), EnableHugeScratchBuffer(false),
       FrameLowering(TargetFrameLowering::StackGrowsUp,
                     64 * 16, // Maximum stack alignment (long16)
                     0),

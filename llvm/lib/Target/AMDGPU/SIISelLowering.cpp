@@ -812,10 +812,29 @@ static SDNode *findUser(SDValue Value, unsigned Opcode) {
 
 SDValue SITargetLowering::LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
 
+  SDLoc SL(Op);
   FrameIndexSDNode *FINode = cast<FrameIndexSDNode>(Op);
   unsigned FrameIndex = FINode->getIndex();
 
-  return DAG.getTargetFrameIndex(FrameIndex, MVT::i32);
+  // A FrameIndex node represents a 32-bit offset into scratch memory.  If
+  // the high bit of a frame index offset were to be set, this would mean
+  // that it represented an offset of ~2GB * 64 = ~128GB from the start of the
+  // scratch buffer, with 64 being the number of threads per wave.
+  //
+  // If we know the machine uses less than 128GB of scratch, then we can
+  // amrk the high bit of the FrameIndex node as known zero,
+  // which is important, because it means in most situations we can
+  // prove that values derived from FrameIndex nodes are non-negative.
+  // This enables us to take advantage of more addressing modes when
+  // accessing scratch buffers, since for scratch reads/writes, the register
+  // offset must always be positive.
+
+  SDValue TFI = DAG.getTargetFrameIndex(FrameIndex, MVT::i32);
+  if (Subtarget->enableHugeScratchBuffer())
+    return TFI;
+
+  return DAG.getNode(ISD::AssertZext, SL, MVT::i32, TFI,
+                    DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), 31)));
 }
 
 /// This transforms the control flow intrinsics to get the branch destination as
@@ -2034,6 +2053,13 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   }
 }
 
+static bool isFrameIndexOp(SDValue Op) {
+  if (Op.getOpcode() == ISD::AssertZext)
+    Op = Op.getOperand(0);
+
+  return isa<FrameIndexSDNode>(Op);
+}
+
 /// \brief Legalize target independent instructions (e.g. INSERT_SUBREG)
 /// with frame index operands.
 /// LLVM assumes that inputs are to these instructions are registers.
@@ -2042,7 +2068,7 @@ void SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
 
   SmallVector<SDValue, 8> Ops;
   for (unsigned i = 0; i < Node->getNumOperands(); ++i) {
-    if (!isa<FrameIndexSDNode>(Node->getOperand(i))) {
+    if (!isFrameIndexOp(Node->getOperand(i))) {
       Ops.push_back(Node->getOperand(i));
       continue;
     }

@@ -89,6 +89,7 @@ private:
   bool FeatureDisable;
   int LDSBankCount;
   unsigned IsaVersion; 
+  bool EnableHugeScratchBuffer;
 
   AMDGPUFrameLowering FrameLowering;
   std::unique_ptr<AMDGPUTargetLowering> TLInfo;
@@ -269,6 +270,10 @@ public:
 
   StringRef getDeviceName() const {
     return DevName;
+  }
+
+  bool enableHugeScratchBuffer() const {
+    return EnableHugeScratchBuffer;
   }
 
   bool dumpCode() const {
