@@ -1095,13 +1095,16 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
 
   // (add n0, c1)
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
-    ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
-
-    if (isLegalMUBUFImmOffset(C1)) {
-      VAddr = Addr.getOperand(0);
-      ImmOffset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
-      return true;
+    // Offsets in vaddr must be positive.
+    if (CurDAG->SignBitIsZero(N0)) {
+      ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
+      if (isLegalMUBUFImmOffset(C1)) {
+        VAddr = N0;
+        ImmOffset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
+        return true;
+      }
     }
   }
 

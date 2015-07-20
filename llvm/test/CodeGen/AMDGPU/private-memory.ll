@@ -298,7 +298,7 @@ entry:
 ; FUNC-LABEL: ptrtoint:
 ; SI-NOT: ds_write
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen
-; SI: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:5
+; SI: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ;
 define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) {
   %alloca = alloca [16 x i32]
   %tmp0 = getelementptr [16 x i32], [16 x i32]* %alloca, i32 0, i32 %a

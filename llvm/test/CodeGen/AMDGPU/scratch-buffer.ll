@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck --check-prefix=GCN --check-prefix=DEFAULT-SCRATCH %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=GCN --check-prefix=DEFAULT-SCRATCH %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+huge-scratch-buffer -mcpu=SI < %s | FileCheck --check-prefix=GCN --check-prefix=HUGE-SCRATCH %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+huge-scratch-buffer -mcpu=tonga < %s | FileCheck --check-prefix=GCN --check-prefix=HUGE-SCRATCH %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.
@@ -8,11 +10,11 @@
 ; for both stores. This register is allocated by the register scavenger, so we
 ; should be able to reuse the same regiser for each scratch buffer access.
 
-; CHECK-LABEL: {{^}}legal_offset_fi:
-; CHECK: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0{{$}}
-; CHECK: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
-; CHECK: v_mov_b32_e32 [[OFFSET]], 0x8000
-; CHECK: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN-LABEL: {{^}}legal_offset_fi:
+; GCN: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
+; GCN: v_mov_b32_e32 [[OFFSET]], 0x8000
+; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
 define void @legal_offset_fi(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) {
 entry:
@@ -47,10 +49,10 @@ done:
 
 }
 
-; CHECK-LABEL: {{^}}legal_offset_fi_offset
-; CHECK: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
-; CHECK: v_add_i32_e32 [[OFFSET:v[0-9]+]], 0x8000
-; CHECK: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN-LABEL: {{^}}legal_offset_fi_offset
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
+; GCN: v_add_i32_e32 [[OFFSET:v[0-9]+]], 0x8000
+; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
 define void @legal_offset_fi_offset(i32 addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %offsets, i32 %if_offset, i32 %else_offset) {
 entry:
@@ -85,3 +87,30 @@ done:
   ret void
 }
 
+; GCN-LABEL: @neg_vaddr_offset
+; We can't prove %offset is positive, so we must do the computation with the
+; immediate in an add instruction instead of folding offset and the immediate into
+; the store instruction.
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen{{$}}
+define void @neg_vaddr_offset(i32 %offset) {
+entry:
+  %array = alloca [8192 x i32]
+  %ptr_offset = add i32 %offset, 4
+  %ptr = getelementptr [8192 x i32], [8192 x i32]* %array, i32 0, i32 %ptr_offset
+  store i32 0, i32* %ptr
+  ret void
+}
+
+; GCN-LABEL: @pos_vaddr_offse
+; DEFAULT-SCRATCH: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:16
+; HUGE-SCRATCH: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen{{$}}
+define void @pos_vaddr_offset(i32 addrspace(1)* %out, i32 %offset) {
+entry:
+  %array = alloca [8192 x i32]
+  %ptr = getelementptr [8192 x i32], [8192 x i32]* %array, i32 0, i32 4
+  store i32 0, i32* %ptr
+  %load_ptr = getelementptr [8192 x i32], [8192 x i32]* %array, i32 0, i32 %offset
+  %val = load i32, i32* %load_ptr
+  store i32 %val, i32 addrspace(1)* %out
+  ret void
+}
