@@ -42,7 +42,7 @@ else()
     )
 
   # The Darwin linker doesn't understand --start-group/--end-group.
-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+  if (LLDB_LINKER_SUPPORTS_GROUPS)
     target_link_libraries(lldb-server
                           -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
     target_link_libraries(lldb-server

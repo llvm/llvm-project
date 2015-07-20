@@ -3,18 +3,12 @@ function(lldb_link_common_libs name targetkind)
     return()
   endif()
 
-  set(COMPILER_SUPPORTS_GROUPS OFF)
-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    # The Darwin linker doesn't understand --start-group/--end-group.
-    set(COMPILER_SUPPORTS_GROUPS ON)
-  endif()
-
   if(${targetkind} MATCHES "SHARED")
     set(LINK_KEYWORD ${cmake_2_8_12_PUBLIC})
   endif()
-  
+
   if(${targetkind} MATCHES "SHARED" OR ${targetkind} MATCHES "EXE")
-    if (COMPILER_SUPPORTS_GROUPS)
+    if (LLDB_LINKER_SUPPORTS_GROUPS)
       target_link_libraries(${name} ${LINK_KEYWORD}
                             -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
     else()
@@ -24,7 +18,7 @@ function(lldb_link_common_libs name targetkind)
 endfunction(lldb_link_common_libs)
 
 macro(add_lldb_library name)
-  # only supported parameters to this macro are the optional 
+  # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT"
@@ -66,13 +60,13 @@ macro(add_lldb_library name)
 
     lldb_link_common_libs(${name} "${libkind}")
 
-    
-    target_link_libraries(${name})
-    if (COMPILER_SUPPORTS_GROUPS)
+    if (PARAM_SHARED)
+      if (LLDB_LINKER_SUPPORTS_GROUPS)
         target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
                     -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
-    else()
+      else()
         target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${CLANG_USED_LIBS})
+      endif()
     endif()
     llvm_config(${name} ${LLVM_LINK_COMPONENTS})
 
