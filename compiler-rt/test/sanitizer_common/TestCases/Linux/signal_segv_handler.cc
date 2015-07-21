@@ -18,23 +18,27 @@
 #include <signal.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <unistd.h>
 
+unsigned long page_size;
 void *guard;
 
 void handler(int signo, siginfo_t *info, void *uctx) {
-  mprotect(guard, 4096, PROT_READ | PROT_WRITE);
+  mprotect(guard, page_size, PROT_READ | PROT_WRITE);
 }
 
 int main() {
+  page_size = sysconf(_SC_PAGESIZE);
   struct sigaction a, old;
   memset(&a, 0, sizeof(a));
   memset(&old, 0, sizeof(old));
   a.sa_sigaction = handler;
   a.sa_flags = SA_SIGINFO;
   sigaction(SIGSEGV, &a, &old);
-  guard = mmap(0, 4096, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+  guard = mmap(0, 3 * page_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+  guard = (char*)guard + page_size;  // work around a kernel bug 
   for (int i = 0; i < 1000000; i++) {
-    mprotect(guard, 4096, PROT_NONE);
+    mprotect(guard, page_size, PROT_NONE);
     *(int*)guard = 1;
   }
   sigaction(SIGSEGV, &old, 0);
