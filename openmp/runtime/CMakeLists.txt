@@ -41,6 +41,8 @@ if(${LIBOMP_STANDALONE_BUILD})
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
+  set(LIBOMP_ENABLE_WERROR FALSE CACHE BOOL
+    "Enable -Werror flags to turn warnings into errors for supporting compilers.")
   # CMAKE_BUILD_TYPE was not defined, set default to Release
   if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -73,6 +75,7 @@ else() # Part of LLVM build
   endif ()
   set(LIBOMP_LIBDIR_SUFFIX ${LLVM_LIBDIR_SUFFIX})
   set(LIBOMP_ENABLE_ASSERTIONS ${LLVM_ENABLE_ASSERTIONS})
+  set(LIBOMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 endif()
 libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 mic)
 
