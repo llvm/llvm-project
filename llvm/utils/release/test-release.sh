@@ -343,10 +343,12 @@ function clean_RPATH() {
   local InstallPath="$1"
   for Candidate in `find $InstallPath/{bin,lib} -type f`; do
     if file $Candidate | grep ELF | egrep 'executable|shared object' > /dev/null 2>&1 ; then
-      rpath=`objdump -x $Candidate | grep 'RPATH' | sed -e's/^ *RPATH *//'`
-      if [ -n "$rpath" ]; then
-        newrpath=`echo $rpath | sed -e's/.*\(\$ORIGIN[^:]*\).*/\1/'`
-        chrpath -r $newrpath $Candidate 2>&1 > /dev/null 2>&1
+      if rpath=`objdump -x $Candidate | grep 'RPATH'` ; then
+        rpath=`echo $rpath | sed -e's/^ *RPATH *//'`
+        if [ -n "$rpath" ]; then
+          newrpath=`echo $rpath | sed -e's/.*\(\$ORIGIN[^:]*\).*/\1/'`
+          chrpath -r $newrpath $Candidate 2>&1 > /dev/null 2>&1
+        fi
       fi
     fi
   done
