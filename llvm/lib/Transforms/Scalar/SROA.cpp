@@ -1847,10 +1847,17 @@ static unsigned getAdjustedAlignment(Instruction *I, uint64_t Offset,
 static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy) {
   if (OldTy == NewTy)
     return true;
-  if (IntegerType *OldITy = dyn_cast<IntegerType>(OldTy))
-    if (IntegerType *NewITy = dyn_cast<IntegerType>(NewTy))
-      if (NewITy->getBitWidth() >= OldITy->getBitWidth())
-        return true;
+
+  // For integer types, we can't handle any bit-width differences. This would
+  // break both vector conversions with extension and introduce endianness
+  // issues when in conjunction with loads and stores.
+  if (isa<IntegerType>(OldTy) && isa<IntegerType>(NewTy)) {
+    assert(cast<IntegerType>(OldTy)->getBitWidth() !=
+               cast<IntegerType>(NewTy)->getBitWidth() &&
+           "We can't have the same bitwidth for different int types");
+    return false;
+  }
+
   if (DL.getTypeSizeInBits(NewTy) != DL.getTypeSizeInBits(OldTy))
     return false;
   if (!NewTy->isSingleValueType() || !OldTy->isSingleValueType())
@@ -1885,10 +1892,8 @@ static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
   if (OldTy == NewTy)
     return V;
 
-  if (IntegerType *OldITy = dyn_cast<IntegerType>(OldTy))
-    if (IntegerType *NewITy = dyn_cast<IntegerType>(NewTy))
-      if (NewITy->getBitWidth() > OldITy->getBitWidth())
-        return IRB.CreateZExt(V, NewITy);
+  assert(!(isa<IntegerType>(OldTy) && isa<IntegerType>(NewTy)) &&
+         "Integer types must be the exact same to convert.");
 
   // See if we need inttoptr for this type pair. A cast involving both scalars
   // and vectors requires and additional bitcast.
@@ -2134,6 +2139,9 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
   if (LoadInst *LI = dyn_cast<LoadInst>(U->getUser())) {
     if (LI->isVolatile())
       return false;
+    // We can't handle loads that extend past the allocated memory.
+    if (DL.getTypeStoreSize(LI->getType()) > Size)
+      return false;
     // Note that we don't count vector loads or stores as whole-alloca
     // operations which enable integer widening because we would prefer to use
     // vector widening instead.
@@ -2151,6 +2159,9 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
   } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
     Type *ValueTy = SI->getValueOperand()->getType();
     if (SI->isVolatile())
+      return false;
+    // We can't handle stores that extend past the allocated memory.
+    if (DL.getTypeStoreSize(ValueTy) > Size)
       return false;
     // Note that we don't count vector loads or stores as whole-alloca
     // operations which enable integer widening because we would prefer to use
@@ -2585,6 +2596,7 @@ private:
 
     Type *TargetTy = IsSplit ? Type::getIntNTy(LI.getContext(), SliceSize * 8)
                              : LI.getType();
+    const bool IsLoadPastEnd = DL.getTypeStoreSize(TargetTy) > SliceSize;
     bool IsPtrAdjusted = false;
     Value *V;
     if (VecTy) {
@@ -2592,13 +2604,27 @@ private:
     } else if (IntTy && LI.getType()->isIntegerTy()) {
       V = rewriteIntegerLoad(LI);
     } else if (NewBeginOffset == NewAllocaBeginOffset &&
-               canConvertValue(DL, NewAllocaTy, LI.getType())) {
+               NewEndOffset == NewAllocaEndOffset &&
+               (canConvertValue(DL, NewAllocaTy, TargetTy) ||
+                (IsLoadPastEnd && NewAllocaTy->isIntegerTy() &&
+                 TargetTy->isIntegerTy()))) {
       LoadInst *NewLI = IRB.CreateAlignedLoad(&NewAI, NewAI.getAlignment(),
                                               LI.isVolatile(), LI.getName());
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSynchScope());
-
       V = NewLI;
+
+      // If this is an integer load past the end of the slice (which means the
+      // bytes outside the slice are undef or this load is dead) just forcibly
+      // fix the integer size with correct handling of endianness.
+      if (auto *AITy = dyn_cast<IntegerType>(NewAllocaTy))
+        if (auto *TITy = dyn_cast<IntegerType>(TargetTy))
+          if (AITy->getBitWidth() < TITy->getBitWidth()) {
+            V = IRB.CreateZExt(V, TITy, "load.ext");
+            if (DL.isBigEndian())
+              V = IRB.CreateShl(V, TITy->getBitWidth() - AITy->getBitWidth(),
+                                "endian_shift");
+          }
     } else {
       Type *LTy = TargetTy->getPointerTo();
       LoadInst *NewLI = IRB.CreateAlignedLoad(getNewAllocaSlicePtr(IRB, LTy),
@@ -2718,10 +2744,25 @@ private:
     if (IntTy && V->getType()->isIntegerTy())
       return rewriteIntegerStore(V, SI);
 
+    const bool IsStorePastEnd = DL.getTypeStoreSize(V->getType()) > SliceSize;
     StoreInst *NewSI;
     if (NewBeginOffset == NewAllocaBeginOffset &&
         NewEndOffset == NewAllocaEndOffset &&
-        canConvertValue(DL, V->getType(), NewAllocaTy)) {
+        (canConvertValue(DL, V->getType(), NewAllocaTy) ||
+         (IsStorePastEnd && NewAllocaTy->isIntegerTy() &&
+          V->getType()->isIntegerTy()))) {
+      // If this is an integer store past the end of slice (and thus the bytes
+      // past that point are irrelevant or this is unreachable), truncate the
+      // value prior to storing.
+      if (auto *VITy = dyn_cast<IntegerType>(V->getType()))
+        if (auto *AITy = dyn_cast<IntegerType>(NewAllocaTy))
+          if (VITy->getBitWidth() > AITy->getBitWidth()) {
+            if (DL.isBigEndian())
+              V = IRB.CreateLShr(V, VITy->getBitWidth() - AITy->getBitWidth(),
+                                 "endian_shift");
+            V = IRB.CreateTrunc(V, AITy, "load.trunc");
+          }
+
       V = convertValue(DL, IRB, V, NewAllocaTy);
       NewSI = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlignment(),
                                      SI.isVolatile());

@@ -1195,20 +1195,24 @@ entry:
   %a = alloca <{ i1 }>, align 8
   %b = alloca <{ i1 }>, align 8
 ; CHECK:      %[[a:.*]] = alloca i8, align 8
+; CHECK-NEXT: %[[b:.*]] = alloca i8, align 8
 
   %b.i1 = bitcast <{ i1 }>* %b to i1*
   store i1 %x, i1* %b.i1, align 8
   %b.i8 = bitcast <{ i1 }>* %b to i8*
   %foo = load i8, i8* %b.i8, align 1
-; CHECK-NEXT: %[[ext:.*]] = zext i1 %x to i8
-; CHECK-NEXT: store i8 %[[ext]], i8* %[[a]], align 8
-; CHECK-NEXT: {{.*}} = load i8, i8* %[[a]], align 8
+; CHECK-NEXT: %[[b_cast:.*]] = bitcast i8* %[[b]] to i1*
+; CHECK-NEXT: store i1 %x, i1* %[[b_cast]], align 8
+; CHECK-NEXT: {{.*}} = load i8, i8* %[[b]], align 8
 
   %a.i8 = bitcast <{ i1 }>* %a to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.i8, i8* %b.i8, i32 1, i32 1, i1 false) nounwind
   %bar = load i8, i8* %a.i8, align 1
   %a.i1 = getelementptr inbounds <{ i1 }>, <{ i1 }>* %a, i32 0, i32 0
   %baz = load i1, i1* %a.i1, align 1
+; CHECK-NEXT: %[[copy:.*]] = load i8, i8* %[[b]], align 8
+; CHECK-NEXT: store i8 %[[copy]], i8* %[[a]], align 8
+; CHECK-NEXT: {{.*}} = load i8, i8* %[[a]], align 8
 ; CHECK-NEXT: %[[a_cast:.*]] = bitcast i8* %[[a]] to i1*
 ; CHECK-NEXT: {{.*}} = load i1, i1* %[[a_cast]], align 8
 

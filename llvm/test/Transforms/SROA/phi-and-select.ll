@@ -438,26 +438,26 @@ define i64 @PR14132(i1 %flag) {
 ; steps to only use the not-undef bits, and so we need to at least loosely
 ; support this..
 entry:
-  %a = alloca i64
-  %b = alloca i8
-  %ptr = alloca i64*
+  %a = alloca i64, align 8
+  %b = alloca i8, align 8
+  %ptr = alloca i64*, align 8
 ; CHECK-NOT: alloca
 
   %ptr.cast = bitcast i64** %ptr to i8**
-  store i64 0, i64* %a
-  store i8 1, i8* %b
-  store i64* %a, i64** %ptr
+  store i64 0, i64* %a, align 8
+  store i8 1, i8* %b, align 8
+  store i64* %a, i64** %ptr, align 8
   br i1 %flag, label %if.then, label %if.end
 
 if.then:
-  store i8* %b, i8** %ptr.cast
+  store i8* %b, i8** %ptr.cast, align 8
   br label %if.end
 ; CHECK-NOT: store
 ; CHECK: %[[ext:.*]] = zext i8 1 to i64
 
 if.end:
-  %tmp = load i64*, i64** %ptr
-  %result = load i64, i64* %tmp
+  %tmp = load i64*, i64** %ptr, align 8
+  %result = load i64, i64* %tmp, align 8
 ; CHECK-NOT: load
 ; CHECK: %[[result:.*]] = phi i64 [ %[[ext]], %if.then ], [ 0, %entry ]
 

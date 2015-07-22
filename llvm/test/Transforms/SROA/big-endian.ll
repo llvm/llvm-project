@@ -112,3 +112,126 @@ entry:
 ; CHECK-NEXT: %[[ret:.*]] = zext i56 %[[insert4]] to i64
 ; CHECK-NEXT: ret i64 %[[ret]]
 }
+
+define i64 @PR14132(i1 %flag) {
+; CHECK-LABEL: @PR14132(
+; Here we form a PHI-node by promoting the pointer alloca first, and then in
+; order to promote the other two allocas, we speculate the load of the
+; now-phi-node-pointer. In doing so we end up loading a 64-bit value from an i8
+; alloca. While this is a bit dubious, we were asserting on trying to
+; rewrite it. The trick is that the code using the value may carefully take
+; steps to only use the not-undef bits, and so we need to at least loosely
+; support this. This test is particularly interesting because how we handle
+; a load of an i64 from an i8 alloca is dependent on endianness.
+entry:
+  %a = alloca i64, align 8
+  %b = alloca i8, align 8
+  %ptr = alloca i64*, align 8
+; CHECK-NOT: alloca
+
+  %ptr.cast = bitcast i64** %ptr to i8**
+  store i64 0, i64* %a
+  store i8 1, i8* %b
+  store i64* %a, i64** %ptr
+  br i1 %flag, label %if.then, label %if.end
+
+if.then:
+  store i8* %b, i8** %ptr.cast
+  br label %if.end
+; CHECK-NOT: store
+; CHECK: %[[ext:.*]] = zext i8 1 to i64
+; CHECK: %[[shift:.*]] = shl i64 %[[ext]], 56
+
+if.end:
+  %tmp = load i64*, i64** %ptr
+  %result = load i64, i64* %tmp
+; CHECK-NOT: load
+; CHECK: %[[result:.*]] = phi i64 [ %[[shift]], %if.then ], [ 0, %entry ]
+
+  ret i64 %result
+; CHECK-NEXT: ret i64 %[[result]]
+}
+
+declare void @f(i64 %x, i32 %y)
+
+define void @test3() {
+; CHECK-LABEL: @test3(
+;
+; This is a test that specifically exercises the big-endian lowering because it
+; ends up splitting a 64-bit integer into two smaller integers and has a number
+; of tricky aspects (the i24 type) that make that hard. Historically, SROA
+; would miscompile this by either dropping a most significant byte or least
+; significant byte due to shrinking the [4,8) slice to an i24, or by failing to
+; move the bytes around correctly.
+;
+; The magical number 34494054408 is used because it has bits set in various
+; bytes so that it is clear if those bytes fail to be propagated.
+;
+; If you're debugging this, rather than using the direct magical numbers, run
+; the IR through '-sroa -instcombine'. With '-instcombine' these will be
+; constant folded, and if the i64 doesn't round-trip correctly, you've found
+; a bug!
+;
+entry:
+  %a = alloca { i32, i24 }, align 4
+; CHECK-NOT: alloca
+
+  %tmp0 = bitcast { i32, i24 }* %a to i64*
+  store i64 34494054408, i64* %tmp0
+  %tmp1 = load i64, i64* %tmp0, align 4
+  %tmp2 = bitcast { i32, i24 }* %a to i32*
+  %tmp3 = load i32, i32* %tmp2, align 4
+; CHECK: %[[HI_EXT:.*]] = zext i32 134316040 to i64
+; CHECK: %[[HI_INPUT:.*]] = and i64 undef, -4294967296
+; CHECK: %[[HI_MERGE:.*]] = or i64 %[[HI_INPUT]], %[[HI_EXT]]
+; CHECK: %[[LO_EXT:.*]] = zext i32 8 to i64
+; CHECK: %[[LO_SHL:.*]] = shl i64 %[[LO_EXT]], 32
+; CHECK: %[[LO_INPUT:.*]] = and i64 %[[HI_MERGE]], 4294967295
+; CHECK: %[[LO_MERGE:.*]] = or i64 %[[LO_INPUT]], %[[LO_SHL]]
+
+  call void @f(i64 %tmp1, i32 %tmp3)
+; CHECK: call void @f(i64 %[[LO_MERGE]], i32 8)
+  ret void
+; CHECK: ret void
+}
+
+define void @test4() {
+; CHECK-LABEL: @test4
+;
+; Much like @test3, this is specifically testing big-endian management of data.
+; Also similarly, it uses constants with particular bits set to help track
+; whether values are corrupted, and can be easily evaluated by running through
+; -instcombine to see that the i64 round-trips.
+;
+entry:
+  %a = alloca { i32, i24 }, align 4
+  %a2 = alloca i64, align 4
+; CHECK-NOT: alloca
+
+  store i64 34494054408, i64* %a2
+  %tmp0 = bitcast { i32, i24 }* %a to i8*
+  %tmp1 = bitcast i64* %a2 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp0, i8* %tmp1, i64 8, i32 4, i1 false)
+; CHECK: %[[LO_SHR:.*]] = lshr i64 34494054408, 32
+; CHECK: %[[LO_START:.*]] = trunc i64 %[[LO_SHR]] to i32
+; CHECK: %[[HI_START:.*]] = trunc i64 34494054408 to i32
+
+  %tmp2 = bitcast { i32, i24 }* %a to i64*
+  %tmp3 = load i64, i64* %tmp2, align 4
+  %tmp4 = bitcast { i32, i24 }* %a to i32*
+  %tmp5 = load i32, i32* %tmp4, align 4
+; CHECK: %[[HI_EXT:.*]] = zext i32 %[[HI_START]] to i64
+; CHECK: %[[HI_INPUT:.*]] = and i64 undef, -4294967296
+; CHECK: %[[HI_MERGE:.*]] = or i64 %[[HI_INPUT]], %[[HI_EXT]]
+; CHECK: %[[LO_EXT:.*]] = zext i32 %[[LO_START]] to i64
+; CHECK: %[[LO_SHL:.*]] = shl i64 %[[LO_EXT]], 32
+; CHECK: %[[LO_INPUT:.*]] = and i64 %[[HI_MERGE]], 4294967295
+; CHECK: %[[LO_MERGE:.*]] = or i64 %[[LO_INPUT]], %[[LO_SHL]]
+
+  call void @f(i64 %tmp3, i32 %tmp5)
+; CHECK: call void @f(i64 %[[LO_MERGE]], i32 %[[LO_START]])
+  ret void
+; CHECK: ret void
+}
+
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i32, i1)
