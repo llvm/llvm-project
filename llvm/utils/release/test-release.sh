@@ -18,8 +18,6 @@ else
     MAKE=make
 fi
 
-projects="llvm cfe compiler-rt libcxx libcxxabi test-suite clang-tools-extra libunwind"
-
 # Base SVN URL for the sources.
 Base_url="http://llvm.org/svn/llvm-project"
 
@@ -32,6 +30,9 @@ do_checkout="yes"
 do_debug="no"
 do_asserts="no"
 do_compare="yes"
+do_rt="yes"
+do_libs="yes"
+do_test_suite="yes"
 BuildDir="`pwd`"
 use_autoconf="no"
 ExtraConfigureFlags=""
@@ -52,6 +53,9 @@ function usage() {
     echo " -use-gzip            Use gzip instead of xz."
     echo " -configure-flags FLAGS  Extra flags to pass to the configure step."
     echo " -use-autoconf        Use autoconf instead of cmake"
+    echo " -no-rt               Disable check-out & build Compiler-RT"
+    echo " -no-libs             Disable check-out & build libcxx/libcxxabi/libunwind"
+    echo " -no-test-suite       Disable check-out & build test-suite"
 }
 
 if [ `uname -s` = "Darwin" ]; then
@@ -110,6 +114,15 @@ while [ $# -gt 0 ]; do
         -use-autoconf | --use-autoconf )
             use_autoconf="yes"
             ;;
+        -no-rt )
+            do_rt="no"
+            ;;
+        -no-libs )
+            do_libs="no"
+            ;;
+        -no-test-suite )
+            do_test_suite="no"
+            ;;
         -help | --help | -h | --h | -\? )
             usage
             exit 0
@@ -149,6 +162,18 @@ if [ -z "$NumJobs" ]; then
 fi
 if [ -z "$NumJobs" ]; then
     NumJobs=3
+fi
+
+# Projects list
+projects="llvm cfe clang-tools-extra"
+if [ $do_rt = "yes" ]; then
+  projects="$projects compiler-rt"
+fi
+if [ $do_libs = "yes" ]; then
+  projects="$projects libcxx libcxxabi libunwind"
+fi
+if [ $do_test_suite = "yes" ]; then
+  projects="$projects test-suite"
 fi
 
 # Go to the build directory (may be different from CWD)
@@ -199,6 +224,10 @@ function export_sources() {
     check_valid_urls
 
     for proj in $projects ; do
+        if [ -d $proj.src ]; then
+          echo "# Reusing $proj $Release-$RC sources"
+          continue
+        fi
         echo "# Exporting $proj $Release-$RC sources"
         if ! svn export -q $Base_url/$proj/tags/RELEASE_$Release_no_dot/$RC $proj.src ; then
             echo "error: failed to export $proj project"
@@ -216,19 +245,19 @@ function export_sources() {
         ln -s ../../../../clang-tools-extra.src extra
     fi
     cd $BuildDir/llvm.src/projects
-    if [ ! -h test-suite ]; then
+    if [ -d $BuildDir/test-suite.src ] && [ ! -h test-suite ]; then
         ln -s ../../test-suite.src test-suite
     fi
-    if [ ! -h compiler-rt ]; then
+    if [ -d $BuildDir/compiler-rt.src ] && [ ! -h compiler-rt ]; then
         ln -s ../../compiler-rt.src compiler-rt
     fi
-    if [ ! -h libcxx ]; then
+    if [ -d $BuildDir/libcxx.src ] && [ ! -h libcxx ]; then
         ln -s ../../libcxx.src libcxx
     fi
-    if [ ! -h libcxxabi ]; then
+    if [ -d $BuildDir/libcxxabi.src ] && [ ! -h libcxxabi ]; then
         ln -s ../../libcxxabi.src libcxxabi
     fi
-    if [ ! -h libunwind ]; then
+    if [ -d $BuildDir/libunwind.src ] && [ ! -h libunwind ]; then
         ln -s ../../libunwind.src libunwind
     fi
 
