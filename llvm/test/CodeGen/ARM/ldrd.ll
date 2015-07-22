@@ -112,10 +112,10 @@ entry:
 }
 
 ; CHECK-LABEL: strd_spill_ldrd_reload:
-; A8: strd r1, r0, [sp, #-8]!
-; M3: strd r1, r0, [sp, #-8]!
-; BASIC: strd r1, r0, [sp, #-8]!
-; GREEDY: strd r0, r1, [sp, #-8]!
+; A8: strd r1, r0, [sp]
+; M3: strd r1, r0, [sp]
+; BASIC: strd r1, r0, [sp]
+; GREEDY: strd r0, r1, [sp]
 ; CHECK: @ InlineAsm Start
 ; CHECK: @ InlineAsm End
 ; A8: ldrd r2, r1, [sp]
@@ -129,54 +129,6 @@ define void @strd_spill_ldrd_reload(i32 %v0, i32 %v1) {
   ; force the reloaded %v0, %v1 into different registers
   call void @extfunc(i32 0, i32 %v0, i32 %v1, i32 7)
   ret void
-}
-
-declare void @extfunc2(i32*, i32, i32)
-
-; CHECK-LABEL: ldrd_postupdate_dec:
-; CHECK: ldrd r1, r2, [r0], #-8
-; CHECK-NEXT: bl{{x?}} _extfunc
-define void @ldrd_postupdate_dec(i32* %p0) {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  %v0 = load i32, i32* %p0
-  %v1 = load i32, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 -2
-  call void @extfunc2(i32* %p1, i32 %v0, i32 %v1)
-  ret void
-}
-
-; CHECK-LABEL: ldrd_postupdate_inc:
-; CHECK: ldrd r1, r2, [r0], #8
-; CHECK-NEXT: bl{{x?}} _extfunc
-define void @ldrd_postupdate_inc(i32* %p0) {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  %v0 = load i32, i32* %p0
-  %v1 = load i32, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 2
-  call void @extfunc2(i32* %p1, i32 %v0, i32 %v1)
-  ret void
-}
-
-; CHECK-LABEL: strd_postupdate_dec:
-; CHECK: strd r1, r2, [r0], #-8
-; CHECK-NEXT: bx lr
-define i32* @strd_postupdate_dec(i32* %p0, i32 %v0, i32 %v1) {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  store i32 %v0, i32* %p0
-  store i32 %v1, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 -2
-  ret i32* %p1
-}
-
-; CHECK-LABEL: strd_postupdate_inc:
-; CHECK: strd r1, r2, [r0], #8
-; CHECK-NEXT: bx lr
-define i32* @strd_postupdate_inc(i32* %p0, i32 %v0, i32 %v1) {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  store i32 %v0, i32* %p0
-  store i32 %v1, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 2
-  ret i32* %p1
 }
 
 declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
