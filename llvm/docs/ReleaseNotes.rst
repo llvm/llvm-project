@@ -53,6 +53,19 @@ Non-comprehensive list of changes in this release
   a pointer to make it explicit. The Module owns the datalayout and it has to
   match the one attached to the TargetMachine for generating code.
 
+* Comdats are now ortogonal to the linkage. LLVM will not create
+  comdats for weak linkage globals and the frontends are responsible
+  for explicitly adding them.
+
+* On ELF we now support multiple sections with the same name and
+  comdat. This allows for smaller object files since multiple
+  sections can have a simple name (`.text`, `.rodata`, etc).
+
+* LLVM now lazily loads metadata in some cases. Creating archives
+  with IR files with debug info is now 25X faster.
+
+* llvm-ar can create archives in the BSD format used by OS X.
+
 * ... next change ...
 
 .. NOTE
