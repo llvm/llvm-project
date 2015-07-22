@@ -356,13 +356,13 @@ function clean_RPATH() {
 function package_release() {
     cwd=`pwd`
     cd $BuildDir/Phase3/Release
-    mv llvmCore-$Release-$RC.install $Package
+    mv llvmCore-$Release-$RC.install/usr/local $Package
     if [ "$use_gzip" = "yes" ]; then
       tar cfz $BuildDir/$Package.tar.gz $Package
     else
       tar cfJ $BuildDir/$Package.tar.xz $Package
     fi
-    mv $Package llvmCore-$Release-$RC.install
+    mv $Package llvmCore-$Release-$RC.install/usr/local
     cd $cwd
 }
 
