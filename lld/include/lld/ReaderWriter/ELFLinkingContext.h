@@ -408,6 +408,7 @@ protected:
   std::map<std::string, uint64_t> _absoluteSymbols;
   llvm::StringSet<> _dynamicallyExportedSymbols;
   std::unique_ptr<File> _resolver;
+  std::mutex _cidentMutex;
   llvm::StringSet<> _cidentSections;
 
   // The linker script semantic object, which owns all script ASTs, is stored

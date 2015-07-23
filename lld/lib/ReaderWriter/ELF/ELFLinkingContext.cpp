@@ -254,8 +254,10 @@ void ELFLinkingContext::notifyInputSectionName(StringRef name) {
   if (name.find_first_not_of("0123456789"
                              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                              "abcdefghijklmnopqrstuvwxyz"
-                             "_") == StringRef::npos)
+                             "_") == StringRef::npos) {
+    std::lock_guard<std::mutex> lock(_cidentMutex);
     _cidentSections.insert(name);
+  }
 }
 
 } // end namespace lld
