@@ -556,6 +556,7 @@ private:
   std::string Arch;
   mutable std::unique_ptr<tools::gcc::Preprocessor> Preprocessor;
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
+  void findGccLibDir();
 };
 
 class LLVM_LIBRARY_VISIBILITY OpenBSD : public Generic_ELF {
