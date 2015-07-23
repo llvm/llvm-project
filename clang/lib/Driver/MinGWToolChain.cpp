@@ -192,16 +192,18 @@ void MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  llvm::SmallString<1024> IncludeDir(GccLibDir);
-  llvm::sys::path::append(IncludeDir, "include");
-  addSystemInclude(DriverArgs, CC1Args, IncludeDir.c_str());
-  IncludeDir += "-fixed";
+  if (GetRuntimeLibType(DriverArgs) == ToolChain::RLT_Libgcc) {
+    llvm::SmallString<1024> IncludeDir(GccLibDir);
+    llvm::sys::path::append(IncludeDir, "include");
+    addSystemInclude(DriverArgs, CC1Args, IncludeDir.c_str());
+    IncludeDir += "-fixed";
 #ifdef LLVM_ON_UNIX
-  // openSUSE
-  addSystemInclude(DriverArgs, CC1Args,
-                   "/usr/x86_64-w64-mingw32/sys-root/mingw/include");
+    // openSUSE
+    addSystemInclude(DriverArgs, CC1Args,
+                     "/usr/x86_64-w64-mingw32/sys-root/mingw/include");
 #endif
-  addSystemInclude(DriverArgs, CC1Args, IncludeDir.c_str());
+    addSystemInclude(DriverArgs, CC1Args, IncludeDir.c_str());
+  }
   addSystemInclude(DriverArgs, CC1Args, Base + Arch + "include");
   addSystemInclude(DriverArgs, CC1Args, Base + "include");
 }
@@ -212,19 +214,29 @@ void MinGW::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
-  llvm::SmallVector<llvm::SmallString<1024>, 4> CppIncludeBases;
-  CppIncludeBases.emplace_back(Base);
-  llvm::sys::path::append(CppIncludeBases[0], Arch, "include", "c++");
-  CppIncludeBases.emplace_back(Base);
-  llvm::sys::path::append(CppIncludeBases[1], Arch, "include", "c++", Ver);
-  CppIncludeBases.emplace_back(Base);
-  llvm::sys::path::append(CppIncludeBases[2], "include", "c++", Ver);
-  CppIncludeBases.emplace_back(GccLibDir);
-  llvm::sys::path::append(CppIncludeBases[3], "include", "c++");
-  for (auto &CppIncludeBase : CppIncludeBases) {
-    CppIncludeBase += llvm::sys::path::get_separator();
-    addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
-    addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + Arch);
-    addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx:
+    addSystemInclude(DriverArgs, CC1Args, Base        + "include" +
+                     llvm::sys::path::get_separator() + "c++"     +
+                     llvm::sys::path::get_separator() + "v1");
+    break;
+
+  case ToolChain::CST_Libstdcxx:
+    llvm::SmallVector<llvm::SmallString<1024>, 4> CppIncludeBases;
+    CppIncludeBases.emplace_back(Base);
+    llvm::sys::path::append(CppIncludeBases[0], Arch, "include", "c++");
+    CppIncludeBases.emplace_back(Base);
+    llvm::sys::path::append(CppIncludeBases[1], Arch, "include", "c++", Ver);
+    CppIncludeBases.emplace_back(Base);
+    llvm::sys::path::append(CppIncludeBases[2], "include", "c++", Ver);
+    CppIncludeBases.emplace_back(GccLibDir);
+    llvm::sys::path::append(CppIncludeBases[3], "include", "c++");
+    for (auto &CppIncludeBase : CppIncludeBases) {
+      CppIncludeBase += llvm::sys::path::get_separator();
+      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
+      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + Arch);
+      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
+    }
+    break;
   }
 }

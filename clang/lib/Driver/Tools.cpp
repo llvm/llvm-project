@@ -2243,8 +2243,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 
 // Until ARM libraries are build separately, we have them all in one library
 static StringRef getArchNameForCompilerRTLib(const ToolChain &TC) {
-  if (TC.getTriple().isOSWindows() &&
-      !TC.getTriple().isWindowsItaniumEnvironment() &&
+  if (TC.getTriple().isWindowsMSVCEnvironment() &&
       TC.getArch() == llvm::Triple::x86)
     return "i386";
   if (TC.getArch() == llvm::Triple::arm || TC.getArch() == llvm::Triple::armeb)
@@ -2270,10 +2269,12 @@ SmallString<128> tools::getCompilerRT(const ToolChain &TC, StringRef Component,
                         : "";
 
   bool IsOSWindows = TC.getTriple().isOSWindows();
+  bool IsITANMSVCWindows = TC.getTriple().isWindowsMSVCEnvironment() ||
+                           TC.getTriple().isWindowsItaniumEnvironment();
   StringRef Arch = getArchNameForCompilerRTLib(TC);
-  const char *Prefix = IsOSWindows ? "" : "lib";
+  const char *Prefix = IsITANMSVCWindows ? "" : "lib";
   const char *Suffix =
-      Shared ? (IsOSWindows ? ".dll" : ".so") : (IsOSWindows ? ".lib" : ".a");
+      Shared ? (IsOSWindows ? ".dll" : ".so") : (IsITANMSVCWindows ? ".lib" : ".a");
 
   SmallString<128> Path = getCompilerRTLibDir(TC);
   llvm::sys::path::append(Path, Prefix + Twine("clang_rt.") + Component + "-" +
@@ -7816,6 +7817,7 @@ void gnutools::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
                       ArgStringList &CmdArgs, const ArgList &Args) {
   bool isAndroid = Triple.getEnvironment() == llvm::Triple::Android;
+  bool isCygMing = Triple.isOSCygMing();
   bool StaticLibgcc = Args.hasArg(options::OPT_static_libgcc) ||
                       Args.hasArg(options::OPT_static);
   if (!D.CCCIsCXX())
@@ -7825,10 +7827,10 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
     if (D.CCCIsCXX())
       CmdArgs.push_back("-lgcc");
   } else {
-    if (!D.CCCIsCXX())
+    if (!D.CCCIsCXX() && !isCygMing)
       CmdArgs.push_back("--as-needed");
     CmdArgs.push_back("-lgcc_s");
-    if (!D.CCCIsCXX())
+    if (!D.CCCIsCXX() && !isCygMing)
       CmdArgs.push_back("--no-as-needed");
   }
 
@@ -8910,15 +8912,10 @@ void MinGW::Linker::AddLibGCC(const ArgList &Args,
   if (Args.hasArg(options::OPT_mthreads))
     CmdArgs.push_back("-lmingwthrd");
   CmdArgs.push_back("-lmingw32");
-  if (Args.hasArg(options::OPT_shared) ||
-      Args.hasArg(options::OPT_shared_libgcc) ||
-      !Args.hasArg(options::OPT_static_libgcc)) {
-    CmdArgs.push_back("-lgcc_s");
-    CmdArgs.push_back("-lgcc");
-  } else {
-    CmdArgs.push_back("-lgcc");
-    CmdArgs.push_back("-lgcc_eh");
-  }
+
+  // Add libgcc or compiler-rt.
+  AddRunTimeLibs(getToolChain(), getToolChain().getDriver(), CmdArgs, Args);
+
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   CmdArgs.push_back("-lmsvcrt");
