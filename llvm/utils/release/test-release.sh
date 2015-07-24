@@ -192,6 +192,16 @@ if [ $RC != "final" ]; then
 fi
 Package=$Package-$Triple
 
+# Errors to be highlighted at the end are written to this file.
+echo -n > $LogDir/deferred_errors.log
+
+function deferred_error() {
+  Phase="$1"
+  Flavor="$2"
+  Msg="$3"
+  echo "[${Flavor} Phase${Phase}] ${Msg}" | tee -a $LogDir/deferred_errors.log
+}
+
 # Make sure that a required program is available
 function check_program_exists() {
   local program="$1"
@@ -351,13 +361,17 @@ function test_llvmCore() {
     ObjDir="$3"
 
     cd $ObjDir
-    ${MAKE} -j $NumJobs -k check-all \
-        2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log
+    if ! ( ${MAKE} -j $NumJobs -k check-all \
+        2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
+      deferred_error $Phase $Flavor "check-all failed"
+    fi
 
     if [ "$use_autoconf" = "yes" ]; then
         # In the cmake build, unit tests are run as part of check-all.
-        ${MAKE} -k unittests \
-            2>&1 | tee $LogDir/llvm.unittests-Phase$Phase-$Flavor.log
+        if ! ( ${MAKE} -k unittests 2>&1 | \
+            tee $LogDir/llvm.unittests-Phase$Phase-$Flavor.log ) ; then
+          deferred_error $Phase $Flavor "unittests failed"
+        fi
     fi
 
     cd $BuildDir
@@ -522,4 +536,13 @@ else
   echo "### Package: $Package.tar.xz"
 fi
 echo "### Logs: $LogDir"
+
+echo "### Errors:"
+if [ -s "$LogDir/deferred_errors.log" ]; then
+  cat "$LogDir/deferred_errors.log"
+  exit 1
+else
+  echo "None."
+fi
+
 exit 0
