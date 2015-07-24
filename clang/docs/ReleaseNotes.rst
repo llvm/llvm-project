@@ -52,6 +52,11 @@ Major New Features
   extension is also enabled when compiling CUDA code, but its use should be
   viewed as an implementation detail that is subject to change.
 
+- Clang 3.7 fully supports OpenMP 3.1 and reported to work on many platforms,
+  including x86, x86-64 and Power. Also, pragma ``omp simd`` from OpenMP 4.0 is
+  supported as well. See below for details.
+
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -111,6 +116,24 @@ Objective-C Language Changes in Clang
 OpenCL C Language Changes in Clang
 ----------------------------------
 
+...
+
+OpenMP Support
+--------------
+OpenMP 3.1 is fully supported, but disabled by default. To enable it, please use
+``-fopenmp=libomp`` command line option. Your feedback (positive or negative) on
+using OpenMP-enabled clang would be much appreciated; please share it either on
+`cfe-dev <http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev>`_ or `openmp-dev
+<http://lists.cs.uiuc.edu/mailman/listinfo/openmp-dev>`_ mailing lists.
+
+In addition to OpenMP 3.1, several important elements of 4.0 version of the
+standard are supported as well:
+- ``omp simd``, ``omp for simd`` and ``omp parallel for simd`` pragmas
+- atomic constructs
+- ``proc_bind`` clause of ``omp parallel`` pragma
+- ``depend`` clause of ``omp task`` pragma (except for array sections)
+- ``omp cancel`` and ``omp cancellation point`` pragmas
+- ``omp taskgroup`` pragma
 ...
 
 Internal API Changes
