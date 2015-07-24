@@ -1133,7 +1133,7 @@ def ObjCRuntimeName : Attr {
 def ObjCBoxable : Attr {
   let Spellings = [GNU<"objc_boxable">];
   let Subjects = SubjectList<[Record], ErrorDiag, "ExpectedStructOrUnion">;
-  let Documentation = [Undocumented];
+  let Documentation = [ObjCBoxableDocs];
 }
 
 def OptimizeNone : InheritableAttr {

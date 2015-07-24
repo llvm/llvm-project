@@ -492,6 +492,34 @@ can only be placed before an @protocol or @interface declaration:
     }];
 }
 
+def ObjCBoxableDocs : Documentation {
+    let Category = DocCatFunction;
+    let Content = [{
+Structs and unions marked with the ``objc_boxable`` attribute can be used 
+with the Objective-C boxed expression syntax, ``@(...)``.
+
+**Usage**: ``__attribute__((objc_boxable))``. This attribute 
+can only be placed on a declaration of a trivially-copyable struct or union:
+
+.. code-block:: objc
+
+  struct __attribute__((objc_boxable)) some_struct {
+    int i;
+  };
+  union __attribute__((objc_boxable)) some_union {
+    int i;
+    float f;
+  };
+  typedef struct __attribute__((objc_boxable)) _some_struct some_struct;
+
+  // ...
+
+  some_struct ss;
+  NSValue *boxed = @(ss);
+
+    }];
+}
+
 def AvailabilityDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
