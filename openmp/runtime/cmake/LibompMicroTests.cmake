@@ -137,7 +137,7 @@ add_custom_command(
   OUTPUT  test-relo/.success test-relo/readelf.log
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-relo
   COMMAND readelf -d ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE} > test-relo/readelf.log
-  COMMAND grep -e TEXTREL test-relo/readelf.log \; [ $$? -eq 1 ]
+  COMMAND grep -e TEXTREL test-relo/readelf.log \; test $$? -eq 1
   COMMAND ${CMAKE_COMMAND} -E touch test-relo/.success
   DEPENDS omp
 )
