@@ -3273,13 +3273,13 @@ def : Pat <
   (f64 (fadd (f64 (VOP3Mods f64:$x, i32:$mods)),
              (f64 (fneg (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))))))),
   (V_CNDMASK_B64_PSEUDO
-      $x,
       (V_MIN_F64
           SRCMODS.NONE,
           (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE),
           SRCMODS.NONE,
           (V_MOV_B64_PSEUDO 0x3fefffffffffffff),
           DSTCLAMP.NONE, DSTOMOD.NONE),
+      $x,
       (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, 3/*NaN*/))
 >;
 
@@ -3291,13 +3291,13 @@ def : Pat <
       $x,
       SRCMODS.NEG,
       (V_CNDMASK_B64_PSEUDO
-         $x,
          (V_MIN_F64
              SRCMODS.NONE,
              (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE),
              SRCMODS.NONE,
              (V_MOV_B64_PSEUDO 0x3fefffffffffffff),
              DSTCLAMP.NONE, DSTOMOD.NONE),
+         $x,
          (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, 3/*NaN*/)),
       DSTCLAMP.NONE, DSTOMOD.NONE)
 >;

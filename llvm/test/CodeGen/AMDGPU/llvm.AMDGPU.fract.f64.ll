@@ -11,8 +11,8 @@ declare double @llvm.AMDGPU.fract.f64(double) nounwind readnone
 ; SI: v_mov_b32_e32 v[[UPHI:[0-9]+]], 0x3fefffff
 ; SI: v_min_f64 v{{\[}}[[MINLO:[0-9]+]]:[[MINHI:[0-9]+]]], v{{\[}}[[UPLO]]:[[UPHI]]], [[FRC]]
 ; SI: v_cmp_class_f64_e64 [[COND:s\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO]]:[[HI]]], 3
-; SI: v_cndmask_b32_e64 v[[RESLO:[0-9]+]], v[[LO]], v[[MINLO]], [[COND]]
-; SI: v_cndmask_b32_e64 v[[RESHI:[0-9]+]], v[[HI]], v[[MINHI]], [[COND]]
+; SI: v_cndmask_b32_e64 v[[RESLO:[0-9]+]], v[[MINLO]], v[[LO]], [[COND]]
+; SI: v_cndmask_b32_e64 v[[RESHI:[0-9]+]], v[[MINHI]], v[[HI]], [[COND]]
 ; SI: buffer_store_dwordx2 v{{\[}}[[RESLO]]:[[RESHI]]]
 ; CI: buffer_store_dwordx2 [[FRC]]
 define void @fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) nounwind {
@@ -28,8 +28,8 @@ define void @fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) nou
 ; SI: v_mov_b32_e32 v[[UPHI:[0-9]+]], 0x3fefffff
 ; SI: v_min_f64 v{{\[}}[[MINLO:[0-9]+]]:[[MINHI:[0-9]+]]], v{{\[}}[[UPLO]]:[[UPHI]]], [[FRC]]
 ; SI: v_cmp_class_f64_e64 [[COND:s\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO]]:[[HI]]], 3
-; SI: v_cndmask_b32_e64 v[[RESLO:[0-9]+]], v[[LO]], v[[MINLO]], [[COND]]
-; SI: v_cndmask_b32_e64 v[[RESHI:[0-9]+]], v[[HI]], v[[MINHI]], [[COND]]
+; SI: v_cndmask_b32_e64 v[[RESLO:[0-9]+]], v[[MINLO]], v[[LO]], [[COND]]
+; SI: v_cndmask_b32_e64 v[[RESHI:[0-9]+]], v[[MINHI]], v[[HI]], [[COND]]
 ; SI: buffer_store_dwordx2 v{{\[}}[[RESLO]]:[[RESHI]]]
 ; CI: buffer_store_dwordx2 [[FRC]]
 define void @fract_f64_neg(double addrspace(1)* %out, double addrspace(1)* %src) nounwind {
@@ -46,8 +46,8 @@ define void @fract_f64_neg(double addrspace(1)* %out, double addrspace(1)* %src)
 ; SI: v_mov_b32_e32 v[[UPHI:[0-9]+]], 0x3fefffff
 ; SI: v_min_f64 v{{\[}}[[MINLO:[0-9]+]]:[[MINHI:[0-9]+]]], v{{\[}}[[UPLO]]:[[UPHI]]], [[FRC]]
 ; SI: v_cmp_class_f64_e64 [[COND:s\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO]]:[[HI]]], 3
-; SI: v_cndmask_b32_e64 v[[RESLO:[0-9]+]], v[[LO]], v[[MINLO]], [[COND]]
-; SI: v_cndmask_b32_e64 v[[RESHI:[0-9]+]], v[[HI]], v[[MINHI]], [[COND]]
+; SI: v_cndmask_b32_e64 v[[RESLO:[0-9]+]], v[[MINLO]], v[[LO]], [[COND]]
+; SI: v_cndmask_b32_e64 v[[RESHI:[0-9]+]], v[[MINHI]], v[[HI]], [[COND]]
 ; SI: buffer_store_dwordx2 v{{\[}}[[RESLO]]:[[RESHI]]]
 ; CI: buffer_store_dwordx2 [[FRC]]
 define void @fract_f64_neg_abs(double addrspace(1)* %out, double addrspace(1)* %src) nounwind {
