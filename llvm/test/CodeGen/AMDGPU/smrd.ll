@@ -43,13 +43,7 @@ entry:
 ; GCN-LABEL: {{^}}smrd3:
 ; FIXME: There are too many copies here because we don't fold immediates
 ;        through REG_SEQUENCE
-; SI: s_mov_b32 s[[SLO:[0-9]+]], 0 ;
-; SI: s_mov_b32 s[[SHI:[0-9]+]], 4
-; SI: s_mov_b32 s[[SSLO:[0-9]+]], s[[SLO]]
-; SI-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[SSLO]]
-; SI-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[SHI]]
-; FIXME: We should be able to use s_load_dword here
-; SI: buffer_load_dword v{{[0-9]+}}, v{{\[}}[[VLO]]:[[VHI]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64
+; SI: s_load_dwordx2 s[{{[0-9]:[0-9]}}], s[{{[0-9]:[0-9]}}], 0xb ; encoding: [0x0b
 ; TODO: Add VI checks
 ; GCN: s_endpgm
 define void @smrd3(i32 addrspace(1)* %out, i32 addrspace(2)* %ptr) {

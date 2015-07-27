@@ -8,9 +8,7 @@
 @float_gv = internal unnamed_addr addrspace(2) constant [5 x float] [float 0.0, float 1.0, float 2.0, float 3.0, float 4.0], align 4
 
 ; FUNC-LABEL: {{^}}float:
-; FIXME: We should be using s_load_dword here.
-; SI: buffer_load_dword
-; VI: s_load_dword
+; GCN: s_load_dword
 
 ; EG-DAG: MOV {{\** *}}T2.X
 ; EG-DAG: MOV {{\** *}}T3.X
@@ -31,9 +29,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}i32:
 
-; FIXME: We should be using s_load_dword here.
-; SI: buffer_load_dword
-; VI: s_load_dword
+; GCN: s_load_dword
 
 ; EG-DAG: MOV {{\** *}}T2.X
 ; EG-DAG: MOV {{\** *}}T3.X
@@ -71,9 +67,7 @@ define void @struct_foo_gv_load(i32 addrspace(1)* %out, i32 %index) {
                                                                 <1 x i32> <i32 4> ]
 
 ; FUNC-LABEL: {{^}}array_v1_gv_load:
-; FIXME: We should be using s_load_dword here.
-; SI: buffer_load_dword
-; VI: s_load_dword
+; GCN: s_load_dword
 define void @array_v1_gv_load(<1 x i32> addrspace(1)* %out, i32 %index) {
   %gep = getelementptr inbounds [4 x <1 x i32>], [4 x <1 x i32>] addrspace(2)* @array_v1_gv, i32 0, i32 %index
   %load = load <1 x i32>, <1 x i32> addrspace(2)* %gep, align 4
