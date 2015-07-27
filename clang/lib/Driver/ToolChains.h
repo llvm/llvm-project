@@ -29,7 +29,7 @@ namespace toolchains {
 /// all subcommands; this relies on gcc translating the majority of
 /// command line options.
 class LLVM_LIBRARY_VISIBILITY Generic_GCC : public ToolChain {
-protected:
+public:
   /// \brief Struct to store and manipulate GCC versions.
   ///
   /// We rely on assumptions about the form and structure of GCC version
@@ -147,6 +147,7 @@ protected:
                                 bool NeedsBiarchSuffix = false);
   };
 
+protected:
   GCCInstallationDetector GCCInstallation;
 
 public:
