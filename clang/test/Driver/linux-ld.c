@@ -618,6 +618,13 @@
 // CHECK-ARM: "-dynamic-linker" "{{.*}}/lib/ld-linux.so.3"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=arm-linux-gnueabi -mfloat-abi=hard \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM-ABIHF %s
+// CHECK-ARM-ABIHF: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ARM-ABIHF: "-m" "armelf_linux_eabi"
+// CHECK-ARM-ABIHF: "-dynamic-linker" "{{.*}}/lib/ld-linux-armhf.so.3"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-gnueabihf \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-HF %s
 // CHECK-ARM-HF: "{{.*}}ld{{(.exe)?}}"

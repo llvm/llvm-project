@@ -7865,13 +7865,15 @@ static std::string getLinuxDynamicLinker(const ArgList &Args,
   else if (Arch == llvm::Triple::aarch64_be)
     return "/lib/ld-linux-aarch64_be.so.1";
   else if (Arch == llvm::Triple::arm || Arch == llvm::Triple::thumb) {
-    if (ToolChain.getTriple().getEnvironment() == llvm::Triple::GNUEABIHF)
+    if (ToolChain.getTriple().getEnvironment() == llvm::Triple::GNUEABIHF ||
+        tools::arm::getARMFloatABI(ToolChain.getDriver(), Args, ToolChain.getTriple()) == "hard")
       return "/lib/ld-linux-armhf.so.3";
     else
       return "/lib/ld-linux.so.3";
   } else if (Arch == llvm::Triple::armeb || Arch == llvm::Triple::thumbeb) {
     // TODO: check which dynamic linker name.
-    if (ToolChain.getTriple().getEnvironment() == llvm::Triple::GNUEABIHF)
+    if (ToolChain.getTriple().getEnvironment() == llvm::Triple::GNUEABIHF ||
+        tools::arm::getARMFloatABI(ToolChain.getDriver(), Args, ToolChain.getTriple()) == "hard")
       return "/lib/ld-linux-armhf.so.3";
     else
       return "/lib/ld-linux.so.3";
