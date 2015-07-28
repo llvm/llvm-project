@@ -204,11 +204,54 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                 _Unwind_VRS_DataRepresentation representation);
 #endif
 
+#if !_LIBUNWIND_ARM_EHABI
+
 extern uintptr_t _Unwind_GetGR(struct _Unwind_Context *context, int index);
 extern void _Unwind_SetGR(struct _Unwind_Context *context, int index,
                           uintptr_t new_value);
 extern uintptr_t _Unwind_GetIP(struct _Unwind_Context *context);
 extern void _Unwind_SetIP(struct _Unwind_Context *, uintptr_t new_value);
+
+#else  // _LIBUNWIND_ARM_EHABI
+
+#if defined(_LIBUNWIND_UNWIND_LEVEL1_EXTERNAL_LINKAGE)
+#define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 extern
+#else
+#define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 static __inline__
+#endif
+
+// These are de facto helper functions for ARM, which delegate the function
+// calls to _Unwind_VRS_Get/Set().  These are not a part of ARM EHABI
+// specification, thus these function MUST be inlined.  Please don't replace
+// these with the "extern" function declaration; otherwise, the program
+// including this <unwind.h> header won't be ABI compatible and will result in
+// link error when we are linking the program with libgcc.
+
+_LIBUNWIND_EXPORT_UNWIND_LEVEL1
+uintptr_t _Unwind_GetGR(struct _Unwind_Context *context, int index) {
+  uintptr_t value = 0;
+  _Unwind_VRS_Get(context, _UVRSC_CORE, (uint32_t)index, _UVRSD_UINT32, &value);
+  return value;
+}
+
+_LIBUNWIND_EXPORT_UNWIND_LEVEL1
+void _Unwind_SetGR(struct _Unwind_Context *context, int index,
+                   uintptr_t value) {
+  _Unwind_VRS_Set(context, _UVRSC_CORE, (uint32_t)index, _UVRSD_UINT32, &value);
+}
+
+_LIBUNWIND_EXPORT_UNWIND_LEVEL1
+uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
+  // remove the thumb-bit before returning
+  return _Unwind_GetGR(context, 15) & (~(uintptr_t)0x1);
+}
+
+_LIBUNWIND_EXPORT_UNWIND_LEVEL1
+void _Unwind_SetIP(struct _Unwind_Context *context, uintptr_t value) {
+  uintptr_t thumb_bit = _Unwind_GetGR(context, 15) & ((uintptr_t)0x1);
+  _Unwind_SetGR(context, 15, value | thumb_bit);
+}
+#endif  // _LIBUNWIND_ARM_EHABI
 
 extern uintptr_t _Unwind_GetRegionStart(struct _Unwind_Context *context);
 extern uintptr_t
