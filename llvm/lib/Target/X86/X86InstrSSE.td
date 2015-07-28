@@ -2919,6 +2919,14 @@ multiclass sse12_fp_packed_vector_logical_alias<
   defm V#NAME#PD : sse12_fp_packed<opc, !strconcat(OpcodeStr, "pd"), OpNode,
         VR128, v2f64, f128mem, loadv2f64, SSEPackedDouble, itins, 0>,
         PD, VEX_4V;
+
+  defm V#NAME#PSY : sse12_fp_packed<opc, !strconcat(OpcodeStr, "ps"), OpNode,
+        VR256, v8f32, f256mem, loadv8f32, SSEPackedSingle, itins, 0>,
+        PS, VEX_4V, VEX_L;
+        
+  defm V#NAME#PDY : sse12_fp_packed<opc, !strconcat(OpcodeStr, "pd"), OpNode,
+        VR256, v4f64, f256mem, loadv4f64, SSEPackedDouble, itins, 0>,
+        PD, VEX_4V, VEX_L;
   }
 
   let Constraints = "$src1 = $dst" in {

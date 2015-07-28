@@ -12640,24 +12640,29 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
       if (User->getOpcode() == ISD::FNEG)
         return Op;
 
-  SDValue Op0 = Op.getOperand(0);
-  bool IsFNABS = !IsFABS && (Op0.getOpcode() == ISD::FABS);
-
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
-  // Assume scalar op for initialization; update for vector if needed.
-  // Note that there are no scalar bitwise logical SSE/AVX instructions, so we
-  // generate a 16-byte vector constant and logic op even for the scalar case.
-  // Using a 16-byte mask allows folding the load of the mask with
-  // the logic op, so it can save (~4 bytes) on code size.
-  MVT EltVT = VT;
-  unsigned NumElts = VT == MVT::f64 ? 2 : 4;
+
   // FIXME: Use function attribute "OptimizeForSize" and/or CodeGenOpt::Level to
   // decide if we should generate a 16-byte constant mask when we only need 4 or
   // 8 bytes for the scalar case.
+
+  MVT LogicVT;
+  MVT EltVT;
+  unsigned NumElts;
+  
   if (VT.isVector()) {
+    LogicVT = VT;
     EltVT = VT.getVectorElementType();
     NumElts = VT.getVectorNumElements();
+  } else {
+    // There are no scalar bitwise logical SSE/AVX instructions, so we
+    // generate a 16-byte vector constant and logic op even for the scalar case.
+    // Using a 16-byte mask allows folding the load of the mask with
+    // the logic op, so it can save (~4 bytes) on code size.
+    LogicVT = (VT == MVT::f64) ? MVT::v2f64 : MVT::v4f32;
+    EltVT = VT;
+    NumElts = (VT == MVT::f64) ? 2 : 4;
   }
 
   unsigned EltBits = EltVT.getSizeInBits();
@@ -12670,26 +12675,25 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue CPIdx = DAG.getConstantPool(C, TLI.getPointerTy(DAG.getDataLayout()));
   unsigned Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlignment();
-  SDValue Mask = DAG.getLoad(VT, dl, DAG.getEntryNode(), CPIdx,
+  SDValue Mask = DAG.getLoad(LogicVT, dl, DAG.getEntryNode(), CPIdx,
                              MachinePointerInfo::getConstantPool(),
                              false, false, false, Alignment);
 
-  if (VT.isVector()) {
-    // For a vector, cast operands to a vector type, perform the logic op,
-    // and cast the result back to the original value type.
-    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    SDValue MaskCasted = DAG.getBitcast(VecVT, Mask);
-    SDValue Operand = IsFNABS ? DAG.getBitcast(VecVT, Op0.getOperand(0))
-                              : DAG.getBitcast(VecVT, Op0);
-    unsigned BitOp = IsFABS ? ISD::AND : IsFNABS ? ISD::OR : ISD::XOR;
-    return DAG.getBitcast(VT,
-                          DAG.getNode(BitOp, dl, VecVT, Operand, MaskCasted));
-  }
-
-  // If not vector, then scalar.
-  unsigned BitOp = IsFABS ? X86ISD::FAND : IsFNABS ? X86ISD::FOR : X86ISD::FXOR;
+  SDValue Op0 = Op.getOperand(0);
+  bool IsFNABS = !IsFABS && (Op0.getOpcode() == ISD::FABS);
+  unsigned LogicOp =
+    IsFABS ? X86ISD::FAND : IsFNABS ? X86ISD::FOR : X86ISD::FXOR;
   SDValue Operand = IsFNABS ? Op0.getOperand(0) : Op0;
-  return DAG.getNode(BitOp, dl, VT, Operand, Mask);
+
+  if (VT.isVector())
+    return DAG.getNode(LogicOp, dl, LogicVT, Operand, Mask);
+
+  // For the scalar case extend to a 128-bit vector, perform the logic op,
+  // and extract the scalar result back out.
+  Operand = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Operand);
+  SDValue LogicNode = DAG.getNode(LogicOp, dl, LogicVT, Operand, Mask);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, LogicNode,
+                     DAG.getIntPtrConstant(0, dl));
 }
 
 static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
@@ -12729,10 +12733,16 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
   Constant *C = ConstantVector::get(CV);
   auto PtrVT = TLI.getPointerTy(DAG.getDataLayout());
   SDValue CPIdx = DAG.getConstantPool(C, PtrVT, 16);
-  SDValue Mask1 = DAG.getLoad(SrcVT, dl, DAG.getEntryNode(), CPIdx,
+
+  // Perform all logic operations as 16-byte vectors because there are no
+  // scalar FP logic instructions in SSE. This allows load folding of the
+  // constants into the logic instructions.
+  MVT LogicVT = (VT == MVT::f64) ? MVT::v2f64 : MVT::v4f32;
+  SDValue Mask1 = DAG.getLoad(LogicVT, dl, DAG.getEntryNode(), CPIdx,
                               MachinePointerInfo::getConstantPool(),
                               false, false, false, 16);
-  SDValue SignBit = DAG.getNode(X86ISD::FAND, dl, SrcVT, Op1, Mask1);
+  Op1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Op1);
+  SDValue SignBit = DAG.getNode(X86ISD::FAND, dl, LogicVT, Op1, Mask1);
 
   // Next, clear the sign bit from the first operand (magnitude).
   // If it's a constant, we can clear it here.
@@ -12740,7 +12750,8 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
     APFloat APF = Op0CN->getValueAPF();
     // If the magnitude is a positive zero, the sign bit alone is enough.
     if (APF.isPosZero())
-      return SignBit;
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SrcVT, SignBit,
+                         DAG.getIntPtrConstant(0, dl));
     APF.clearSign();
     CV[0] = ConstantFP::get(*Context, APF);
   } else {
@@ -12750,15 +12761,18 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
   }
   C = ConstantVector::get(CV);
   CPIdx = DAG.getConstantPool(C, PtrVT, 16);
-  SDValue Val = DAG.getLoad(VT, dl, DAG.getEntryNode(), CPIdx,
+  SDValue Val = DAG.getLoad(LogicVT, dl, DAG.getEntryNode(), CPIdx,
                             MachinePointerInfo::getConstantPool(),
                             false, false, false, 16);
   // If the magnitude operand wasn't a constant, we need to AND out the sign.
-  if (!isa<ConstantFPSDNode>(Op0))
-    Val = DAG.getNode(X86ISD::FAND, dl, VT, Op0, Val);
-
+  if (!isa<ConstantFPSDNode>(Op0)) {
+    Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Op0);
+    Val = DAG.getNode(X86ISD::FAND, dl, LogicVT, Op0, Val);
+  }
   // OR the magnitude value with the sign bit.
-  return DAG.getNode(X86ISD::FOR, dl, VT, Val, SignBit);
+  Val = DAG.getNode(X86ISD::FOR, dl, LogicVT, Val, SignBit);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SrcVT, Val,
+                     DAG.getIntPtrConstant(0, dl));
 }
 
 static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {

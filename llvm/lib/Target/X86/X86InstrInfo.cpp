@@ -956,18 +956,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::DPPDrri,         X86::DPPDrmi,       TB_ALIGN_16 },
     { X86::DPPSrri,         X86::DPPSrmi,       TB_ALIGN_16 },
 
-    // FIXME: We should not be folding Fs* scalar loads into vector
-    // instructions because the vector instructions require vector-sized
-    // loads. Lowering should create vector-sized instructions (the Fv*
-    // variants below) to allow load folding.
-    { X86::FsANDNPDrr,      X86::FsANDNPDrm,    TB_ALIGN_16 },
-    { X86::FsANDNPSrr,      X86::FsANDNPSrm,    TB_ALIGN_16 },
-    { X86::FsANDPDrr,       X86::FsANDPDrm,     TB_ALIGN_16 },
-    { X86::FsANDPSrr,       X86::FsANDPSrm,     TB_ALIGN_16 },
-    { X86::FsORPDrr,        X86::FsORPDrm,      TB_ALIGN_16 },
-    { X86::FsORPSrr,        X86::FsORPSrm,      TB_ALIGN_16 },
-    { X86::FsXORPDrr,       X86::FsXORPDrm,     TB_ALIGN_16 },
-    { X86::FsXORPSrr,       X86::FsXORPSrm,     TB_ALIGN_16 },
+    // Do not fold Fs* scalar logical op loads because there are no scalar
+    // load variants for these instructions. When folded, the load is required
+    // to be 128-bits, so the load size would not match.
 
     { X86::FvANDNPDrr,      X86::FvANDNPDrm,    TB_ALIGN_16 },
     { X86::FvANDNPSrr,      X86::FvANDNPSrm,    TB_ALIGN_16 },

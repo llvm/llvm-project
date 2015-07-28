@@ -55,12 +55,12 @@ declare double @copysign(double, double)
 
 define float @int1(float %a, float %b) {
 ; X32-LABEL: @int1
-; X32:       movss 12(%esp), %xmm0 {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:  movss  8(%esp), %xmm1 {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:  andps .LCPI2_0, %xmm1
-; X32-NEXT:  andps .LCPI2_1, %xmm0
-; X32-NEXT:  orps  %xmm1, %xmm0
-; X32-NEXT:  movss %xmm0, (%esp)
+; X32:       movss  8(%esp), %xmm0 {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:  andps .LCPI2_0, %xmm0
+; X32-NEXT:  movss 12(%esp), %xmm1 {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:  andps .LCPI2_1, %xmm1
+; X32-NEXT:  orps  %xmm0, %xmm1
+; X32-NEXT:  movss %xmm1, (%esp)
 ; X32-NEXT:  flds  (%esp)
 ; X32-NEXT:  popl %eax
 ; X32-NEXT:  retl
@@ -76,14 +76,14 @@ define float @int1(float %a, float %b) {
 
 define double @int2(double %a, float %b, float %c) {
 ; X32-LABEL: @int2
-; X32:       movsd  8(%ebp), %xmm0 {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:  movss 16(%ebp), %xmm1 {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:  addss 20(%ebp), %xmm1
-; X32-NEXT:  andpd .LCPI3_0, %xmm0
-; X32-NEXT:  cvtss2sd %xmm1, %xmm1
-; X32-NEXT:  andpd .LCPI3_1, %xmm1
-; X32-NEXT:  orpd  %xmm0, %xmm1
-; X32-NEXT:  movsd %xmm1, (%esp)
+; X32:       movss 16(%ebp), %xmm0 {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:  addss 20(%ebp), %xmm0
+; X32-NEXT:  movsd  8(%ebp), %xmm1 {{.*#+}} xmm1 = mem[0],zero
+; X32-NEXT:  andpd .LCPI3_0, %xmm1
+; X32-NEXT:  cvtss2sd %xmm0, %xmm0
+; X32-NEXT:  andpd .LCPI3_1, %xmm0
+; X32-NEXT:  orpd  %xmm1, %xmm0
+; X32-NEXT:  movlpd %xmm0, (%esp)
 ; X32-NEXT:  fldl  (%esp)
 ; X32-NEXT:  movl %ebp, %esp
 ; X32-NEXT:  popl %ebp
@@ -91,9 +91,9 @@ define double @int2(double %a, float %b, float %c) {
 ;
 ; X64-LABEL: @int2
 ; X64:       addss %xmm2, %xmm1
-; X64-NEXT:  andpd .LCPI3_0(%rip), %xmm0
 ; X64-NEXT:  cvtss2sd %xmm1, %xmm1
-; X64-NEXT:  andpd .LCPI3_1(%rip), %xmm1
+; X64-NEXT:  andpd .LCPI3_0(%rip), %xmm1
+; X64-NEXT:  andpd .LCPI3_1(%rip), %xmm0
 ; X64-NEXT:  orpd %xmm1, %xmm0
 ; X64-NEXT:  retq
   %tmp1 = fadd float %b, %c
