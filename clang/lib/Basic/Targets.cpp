@@ -4978,7 +4978,6 @@ public:
 
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     MaxVectorAlign = 128;
-    RegParmMax = 8;
     MaxAtomicInlineWidth = 128;
     MaxAtomicPromoteWidth = 128;
 
