@@ -4,6 +4,14 @@
 // RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -DLAMBDA -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -fblocks -DBLOCKS -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=BLOCKS %s
 // RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=ARRAY %s
+
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s -check-prefix=TLS-CHECK
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TLS-CHECK
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DLAMBDA -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=TLS-LAMBDA %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -fblocks -DBLOCKS -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=TLS-BLOCKS %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DARRAY -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefix=TLS-ARRAY %s
+// REQUIRES: tls
 // expected-no-diagnostics
 #ifndef ARRAY
 #ifndef HEADER
@@ -25,7 +33,9 @@ struct S {
 // CHECK-DAG: [[S_FLOAT_TY:%.+]] = type { float }
 // CHECK-DAG: [[S_INT_TY:%.+]] = type { i{{[0-9]+}} }
 // CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
-
+// TLS-CHECK-DAG: [[S_FLOAT_TY:%.+]] = type { float }
+// TLS-CHECK-DAG: [[S_INT_TY:%.+]] = type { i{{[0-9]+}} }
+// TLS-CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
 
 // CHECK-DAG: [[T_VAR:@.+]] = internal global i{{[0-9]+}} 1122,
 // CHECK-DAG: [[VEC:@.+]] = internal global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 1, i{{[0-9]+}} 2],
@@ -35,6 +45,15 @@ struct S {
 // CHECK-DAG: [[TMAIN_VEC:@.+]] = linkonce_odr global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 3, i{{[0-9]+}} 3],
 // CHECK-DAG: [[TMAIN_S_ARR:@.+]] = linkonce_odr global [2 x [[S_INT_TY]]] zeroinitializer,
 // CHECK-DAG: [[TMAIN_VAR:@.+]] = linkonce_odr global [[S_INT_TY]] zeroinitializer,
+// TLS-CHECK-DAG: [[T_VAR:@.+]] = internal thread_local global i{{[0-9]+}} 1122,
+// TLS-CHECK-DAG: [[VEC:@.+]] = internal thread_local global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 1, i{{[0-9]+}} 2],
+// TLS-CHECK-DAG: [[S_ARR:@.+]] = internal thread_local global [2 x [[S_FLOAT_TY]]] zeroinitializer,
+// TLS-CHECK-DAG: [[VAR:@.+]] = internal thread_local global [[S_FLOAT_TY]] zeroinitializer,
+// TLS-CHECK-DAG: [[TMAIN_T_VAR:@.+]] = linkonce_odr thread_local global i{{[0-9]+}} 333,
+// TLS-CHECK-DAG: [[TMAIN_VEC:@.+]] = linkonce_odr thread_local global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 3, i{{[0-9]+}} 3],
+// TLS-CHECK-DAG: [[TMAIN_S_ARR:@.+]] = linkonce_odr thread_local global [2 x [[S_INT_TY]]] zeroinitializer,
+// TLS-CHECK-DAG: [[TMAIN_VAR:@.+]] = linkonce_odr thread_local global [[S_INT_TY]] zeroinitializer,
+
 template <typename T>
 T tmain() {
   S<T> test;
@@ -59,12 +78,28 @@ int main() {
   // LAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
   // LAMBDA-LABEL: @main
   // LAMBDA: call{{.*}} void [[OUTER_LAMBDA:@.+]](
+  // TLS-LAMBDA: [[G_CAPTURE_TY:%.+]] = type { i{{[0-9]+}}* }
+  // TLS-LAMBDA: [[G:@.+]] = {{.*}}thread_local {{.*}}global i{{[0-9]+}} 1212,
+  // TLS-LAMBDA-LABEL: @main
+  // TLS-LAMBDA: call{{.*}} void [[OUTER_LAMBDA:@.+]](
   [&]() {
   // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
   // LAMBDA: call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i8*
+
+  // TLS-LAMBDA-DAG: [[G_CPY_ADDR:%.+]] = getelementptr inbounds [[G_CAPTURE_TY]], [[G_CAPTURE_TY]]* [[G_CAPTURE:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // TLS-LAMBDA-DAG: [[G_CPY_VAL:%.+]] = call i{{[0-9]+}}* [[G_CTOR:@.+]]()
+  // TLS-LAMBDA:     store i{{[0-9]+}}* [[G_CPY_VAL]], i{{[0-9]+}}** [[G_CPY_ADDR]]
+  // TLS-LAMBDA:     [[G_CAPTURE_CAST:%.+]] = bitcast [[G_CAPTURE_TY]]* [[G_CAPTURE]] to i8*
+  // TLS-LAMBDA:     call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i8* [[G_CAPTURE_CAST]]
+
+  // TLS-LAMBDA:     define {{.*}}i{{[0-9]+}}* [[G_CTOR]]() {
+  // TLS-LAMBDA:     ret i{{[0-9]+}}* [[G]]
+  // TLS-LAMBDA:     }
+
 #pragma omp parallel copyin(g)
   {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* %{{.+}}, i32* %{{.+}}, %{{.+}}* [[ARG:%.+]])
+    // TLS-LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* %{{.+}}, i32* %{{.+}}, [[G_CAPTURE_TY]]* [[ARG:%.+]])
 
     // threadprivate_g = g;
     // LAMBDA: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[G]]
@@ -76,14 +111,31 @@ int main() {
     // LAMBDA: store volatile i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* %{{.+}},
     // LAMBDA: [[DONE]]
 
+    // TLS-LAMBDA-DAG: [[G_CAPTURE_FIELD:%.+]] = getelementptr inbounds [[G_CAPTURE_TY]], [[G_CAPTURE_TY]]* {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
+    // TLS-LAMBDA-DAG: [[G_CAPTURE_SRC:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_CAPTURE_FIELD]]
+    // TLS-LAMBDA-DAG: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-LAMBDA-DAG: [[G_CAPTURE_SRCC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_SRC]] to i{{[0-9]+}}
+    // TLS-LAMBDA-DAG: [[G_CAPTURE_DSTC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_DST]] to i{{[0-9]+}}
+    // TLS-LAMBDA: icmp ne i{{[0-9]+}} {{%.+}}, {{%.+}}
+    // TLS-LAMBDA: br i1 %{{.+}}, label %[[NOT_MASTER:.+]], label %[[DONE:.+]]
+    // TLS-LAMBDA: [[NOT_MASTER]]
+    // TLS-LAMBDA: load i{{[0-9]+}}, i{{[0-9]+}}* [[G_CAPTURE_SRC]],
+    // TLS-LAMBDA: store volatile i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* [[G_CAPTURE_DST]],
+    // TLS-LAMBDA: [[DONE]]
+
     // LAMBDA: call {{.*}}i32 @__kmpc_cancel_barrier(
+    // TLS-LAMBDA: call {{.*}}i32 @__kmpc_cancel_barrier(
     g = 1;
     // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}*
+    // TLS-LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}*
     [&]() {
       // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
       g = 2;
       // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
+
+      // TLS-LAMBDA: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+      // TLS-LAMBDA: store volatile i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_CAPTURE_DST]]
     }();
   }
   }();
@@ -92,12 +144,28 @@ int main() {
   // BLOCKS: [[G:@.+]] = global i{{[0-9]+}} 1212,
   // BLOCKS-LABEL: @main
   // BLOCKS: call {{.*}}void {{%.+}}(i8
+
+  // TLS-BLOCKS: [[G_CAPTURE_TY:%.+]] = type { i{{[0-9]+}}* }
+  // TLS-BLOCKS: [[G:@.+]] = {{.*}}thread_local {{.*}}global i{{[0-9]+}} 1212,
+  // TLS-BLOCKS-LABEL: @main
+  // TLS-BLOCKS: call {{.*}}void {{%.+}}(i8
   ^{
   // BLOCKS: define{{.*}} internal{{.*}} void {{.+}}(i8*
   // BLOCKS: call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i8*
+
+  // TLS-BLOCKS-DAG: [[G_CPY_ADDR:%.+]] = getelementptr inbounds [[G_CAPTURE_TY]], [[G_CAPTURE_TY]]* [[G_CAPTURE:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // TLS-BLOCKS-DAG: [[G_CPY_VAL:%.+]] = call i{{[0-9]+}}* [[G_CTOR:@.+]]()
+  // TLS-BLOCKS:     store i{{[0-9]+}}* [[G_CPY_VAL]], i{{[0-9]+}}** [[G_CPY_ADDR]]
+  // TLS-BLOCKS:     [[G_CAPTURE_CAST:%.+]] = bitcast [[G_CAPTURE_TY]]* [[G_CAPTURE]] to i8*
+  // TLS-BLOCKS:     call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i8* [[G_CAPTURE_CAST]]
+
+  // TLS-BLOCKS:     define {{.*}}i{{[0-9]+}}* [[G_CTOR]]() {
+  // TLS-BLOCKS:     ret i{{[0-9]+}}* [[G]]
+  // TLS-BLOCKS:     }
 #pragma omp parallel copyin(g)
   {
     // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* %{{.+}}, i32* %{{.+}}, %{{.+}}* [[ARG:%.+]])
+    // TLS-BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* %{{.+}}, i32* %{{.+}}, [[G_CAPTURE_TY]]* [[ARG:%.+]])
 
     // threadprivate_g = g;
     // BLOCKS: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[G]]
@@ -109,19 +177,44 @@ int main() {
     // BLOCKS: store volatile i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* %{{.+}},
     // BLOCKS: [[DONE]]
 
+    // TLS-BLOCKS-DAG: [[G_CAPTURE_FIELD:%.+]] = getelementptr inbounds [[G_CAPTURE_TY]], [[G_CAPTURE_TY]]* {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
+    // TLS-BLOCKS-DAG: [[G_CAPTURE_SRC:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_CAPTURE_FIELD]]
+    // TLS-BLOCKS-DAG: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-BLOCKS-DAG: [[G_CAPTURE_SRCC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_SRC]] to i{{[0-9]+}}
+    // TLS-BLOCKS-DAG: [[G_CAPTURE_DSTC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_DST]] to i{{[0-9]+}}
+    // TLS-BLOCKS: icmp ne i{{[0-9]+}} {{%.+}}, {{%.+}}
+    // TLS-BLOCKS: br i1 %{{.+}}, label %[[NOT_MASTER:.+]], label %[[DONE:.+]]
+    // TLS-BLOCKS: [[NOT_MASTER]]
+    // TLS-BLOCKS: load i{{[0-9]+}}, i{{[0-9]+}}* [[G_CAPTURE_SRC]],
+    // TLS-BLOCKS: store volatile i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* [[G_CAPTURE_DST]],
+    // TLS-BLOCKS: [[DONE]]
+
     // BLOCKS: call {{.*}}i32 @__kmpc_cancel_barrier(
+    // TLS-BLOCKS: call {{.*}}i32 @__kmpc_cancel_barrier(
     g = 1;
     // BLOCKS: store volatile i{{[0-9]+}} 1, i{{[0-9]+}}*
     // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
     // BLOCKS: call {{.*}}void {{%.+}}(i8
+
+    // TLS-BLOCKS: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-BLOCKS: store volatile i{{[0-9]+}} 1, i{{[0-9]+}}* [[G_CAPTURE_DST]]
+    // TLS-BLOCKS-NOT: [[G]]{{[[^:word:]]}}
+    // TLS-BLOCKS: call {{.*}}void {{%.+}}(i8
     ^{
       // BLOCKS: define {{.+}} void {{@.+}}(i8*
+      // TLS-BLOCKS: define {{.+}} void {{@.+}}(i8*
       g = 2;
       // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
       // BLOCKS: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[G]]
       // BLOCKS: store volatile i{{[0-9]+}} 2, i{{[0-9]+}}*
       // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
       // BLOCKS: ret
+
+      // TLS-BLOCKS-NOT: [[G]]{{[[^:word:]]}}
+      // TLS-BLOCKS: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+      // TLS-BLOCKS: store volatile i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_CAPTURE_DST]]
+      // TLS-BLOCKS-NOT: [[G]]{{[[^:word:]]}}
+      // TLS-BLOCKS: ret
     }();
   }
   }();
@@ -153,11 +246,33 @@ int main() {
 // CHECK: = call {{.*}}i{{.+}} [[TMAIN_INT:@.+]]()
 // CHECK: call {{.*}} [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
 // CHECK: ret
-//
+
+// TLS-CHECK-LABEL: @main
+// TLS-CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
+// TLS-CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN:@.+]]([[S_FLOAT_TY]]* [[TEST]], [[S_FLOAT_TY]]*
+// TLS-CHECK-DAG: store i{{[0-9]+}}* [[T_VAR]], i{{[0-9]+}}** [[T_VAR_FIELD:%.+]],
+// TLS-CHECK-DAG: store [2 x i{{[0-9]+}}]* [[VEC]], [2 x i{{[0-9]+}}]** [[VEC_FIELD:%.+]],
+// TLS-CHECK-DAG: store [2 x [[S_FLOAT_TY]]]* [[S_ARR]], [2 x [[S_FLOAT_TY]]]** [[S_ARR_FIELD:%.+]],
+// TLS-CHECK-DAG: store [[S_FLOAT_TY]]* [[VAR]], [[S_FLOAT_TY]]** [[VAR_FIELD:%.+]],
+// TLS-CHECK-DAG: [[T_VAR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK-DAG: [[VEC_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK-DAG: [[S_ARR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK-DAG: [[VAR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, {{%.+}}*)* [[MAIN_MICROTASK:@.+]] to void (i32*, i32*, ...)*), i8* %{{.+}})
+// TLS-CHECK-DAG: store i{{[0-9]+}}* [[T_VAR]], i{{[0-9]+}}** [[T_VAR_FIELD:%.+]],
+// TLS-CHECK-DAG: [[T_VAR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, {{%.+}}*)* [[MAIN_MICROTASK1:@.+]] to void (i32*, i32*, ...)*), i8* %{{.+}})
+// TLS-CHECK: = call {{.*}}i{{.+}} [[TMAIN_INT:@.+]]()
+// TLS-CHECK: call {{.*}} [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
+// TLS-CHECK: ret
+
 // CHECK: define internal {{.*}}void [[MAIN_MICROTASK]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 // CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
 // CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+
+// TLS-CHECK: define internal {{.*}}void [[MAIN_MICROTASK]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
+// TLS-CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
 // threadprivate_t_var = t_var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[T_VAR]]
@@ -168,9 +283,23 @@ int main() {
 // CHECK: load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR]],
 // CHECK: store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* %{{.+}},
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load i32*, i32** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_LONG:%.+]] = ptrtoint i32* [[MASTER_REF]] to i{{[0-9]+}}
+// TLS-CHECK: icmp ne i{{[0-9]+}} [[MASTER_LONG]], ptrtoint (i{{[0-9]+}}* [[T_VAR]] to i{{[0-9]+}})
+// TLS-CHECK: br i1 %{{.+}}, label %[[NOT_MASTER:.+]], label %[[DONE:.+]]
+// TLS-CHECK: [[NOT_MASTER]]
+// TLS-CHECK: [[MASTER_VAL:%.+]] = load i32, i32* [[MASTER_REF]]
+// TLS-CHECK: store i32 [[MASTER_VAL]], i32* [[T_VAR]]
+
 // threadprivate_vec = vec;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[VEC]]
 // CHECK: call void @llvm.memcpy{{.*}}(i8* %{{.+}}, i8* bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*),
+
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load [2 x i32]*, [2 x i32]** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_CAST:%.+]] = bitcast [2 x i32]* [[MASTER_REF]] to i8*
+// TLS-CHECK: call void @llvm.memcpy{{.*}}(i8* bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*), i8* [[MASTER_CAST]]
 
 // threadprivate_s_arr = s_arr;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[S_ARR]]
@@ -182,18 +311,42 @@ int main() {
 // CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN]]([[S_FLOAT_TY]]* {{.+}}, [[S_FLOAT_TY]]* {{.+}})
 // CHECK: br i1 {{.+}}, label %{{.+}}, label %[[S_ARR_BODY]]
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_CAST:%.+]] = bitcast [2 x [[S_FLOAT_TY]]]* [[MASTER_REF]] to [[S_FLOAT_TY]]*
+// TLS-CHECK-DAG: [[S_ARR_SRC_BEGIN:%.+]] = phi [[S_FLOAT_TY]]* {{.*}}[[MASTER_CAST]]
+// TLS-CHECK-DAG: [[S_ARR_DST_BEGIN:%.+]] = phi [[S_FLOAT_TY]]* {{.*}}getelementptr inbounds ([2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// TLS-CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN]]([[S_FLOAT_TY]]* {{.+}}, [[S_FLOAT_TY]]* {{.+}})
+// TLS-CHECK-DAG: [[S_ARR_SRC_END:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[S_ARR_SRC_BEGIN]], i{{[0-9]+}} 1
+// TLS-CHECK-DAG: [[S_ARR_DST_END:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[S_ARR_DST_BEGIN]], i{{[0-9]+}} 1
+// TLS-CHECK: icmp eq [[S_FLOAT_TY]]* [[S_ARR_DST_END]], getelementptr ([[S_FLOAT_TY]], [[S_FLOAT_TY]]* getelementptr inbounds ([2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0), i{{[0-9]+}} 2)
+// TLS-CHECK: br i1 %{{.*}}, label %[[ARR_DONE:.+]], label {{.*}}
+// TLS-CHECK: [[ARR_DONE]]
+
 // threadprivate_var = var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[VAR]]
 // CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN]]([[S_FLOAT_TY]]* {{%.+}}, [[S_FLOAT_TY]]* {{.*}}[[VAR]])
 // CHECK: [[DONE]]
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[MASTER_FIELD]]
+// TLS-CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN]]([[S_FLOAT_TY]]* {{.*}}[[VAR]], [[S_FLOAT_TY]]* {{.*}}[[MASTER_REF]])
+
 // CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
 // CHECK: ret void
+
+// TLS-CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
+// TLS-CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+// TLS-CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
+// TLS-CHECK: ret void
 
 // CHECK: define internal {{.*}}void [[MAIN_MICROTASK1]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 // CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
 // CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+
+// TLS-CHECK: define internal {{.*}}void [[MAIN_MICROTASK1]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
+// TLS-CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
 // threadprivate_t_var = t_var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[T_VAR]]
@@ -205,8 +358,23 @@ int main() {
 // CHECK: store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* %{{.+}},
 // CHECK: [[DONE]]
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load i32*, i32** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_LONG:%.+]] = ptrtoint i32* [[MASTER_REF]] to i{{[0-9]+}}
+// TLS-CHECK: icmp ne i{{[0-9]+}} [[MASTER_LONG]], ptrtoint (i{{[0-9]+}}* [[T_VAR]] to i{{[0-9]+}})
+// TLS-CHECK: br i1 %{{.+}}, label %[[NOT_MASTER:.+]], label %[[DONE:.+]]
+// TLS-CHECK: [[NOT_MASTER]]
+// TLS-CHECK: [[MASTER_VAL:%.+]] = load i32, i32* [[MASTER_REF]]
+// TLS-CHECK: store i32 [[MASTER_VAL]], i32* [[T_VAR]]
+// TLS-CHECK: [[DONE]]
+
 // CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
 // CHECK: ret void
+
+// TLS-CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
+// TLS-CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+// TLS-CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
+// TLS-CHECK: ret void
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
@@ -215,11 +383,30 @@ int main() {
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, {{%.+}}*)* [[TMAIN_MICROTASK1:@.+]] to void (i32*, i32*, ...)*), i8* %{{.+}})
 // CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret
+
+// TLS-CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
+// TLS-CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
+// TLS-CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN:@.+]]([[S_INT_TY]]* [[TEST]], [[S_INT_TY]]*
+// TLS-CHECK-DAG: store i{{[0-9]+}}* [[TMAIN_T_VAR]], i{{[0-9]+}}** [[T_VAR_FIELD:%.+]],
+// TLS-CHECK-DAG: store [2 x i{{[0-9]+}}]* [[TMAIN_VEC]], [2 x i{{[0-9]+}}]** [[VEC_FIELD:%.+]],
+// TLS-CHECK-DAG: store [2 x [[S_INT_TY]]]* [[TMAIN_S_ARR]], [2 x [[S_INT_TY]]]** [[S_ARR_FIELD:%.+]],
+// TLS-CHECK-DAG: store [[S_INT_TY]]* [[TMAIN_VAR]], [[S_INT_TY]]** [[VAR_FIELD:%.+]],
+// TLS-CHECK-DAG: [[T_VAR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK-DAG: [[VEC_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK-DAG: [[S_ARR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK-DAG: [[VAR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, {{%.+}}*)* [[TMAIN_MICROTASK:@.+]] to void (i32*, i32*, ...)*), i8* %{{.+}})
+// TLS-CHECK-DAG: store i{{[0-9]+}}* [[TMAIN_T_VAR]], i{{[0-9]+}}** [[T_VAR_FIELD:%.+]],
+// TLS-CHECK-DAG: [[T_VAR_FIELD]] = getelementptr inbounds {{.*}}
+// TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, {{%.+}}*)* [[TMAIN_MICROTASK1:@.+]] to void (i32*, i32*, ...)*), i8* %{{.+}})
 //
 // CHECK: define internal {{.*}}void [[TMAIN_MICROTASK]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 // CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
 // CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+//
+// TLS-CHECK: define internal {{.*}}void [[TMAIN_MICROTASK]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
+// TLS-CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
 // threadprivate_t_var = t_var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_T_VAR]]
@@ -230,9 +417,23 @@ int main() {
 // CHECK: load i{{[0-9]+}}, i{{[0-9]+}}* [[TMAIN_T_VAR]],
 // CHECK: store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* %{{.+}},
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load i32*, i32** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_LONG:%.+]] = ptrtoint i32* [[MASTER_REF]] to i{{[0-9]+}}
+// TLS-CHECK: icmp ne i{{[0-9]+}} [[MASTER_LONG]], ptrtoint (i{{[0-9]+}}* [[TMAIN_T_VAR]] to i{{[0-9]+}})
+// TLS-CHECK: br i1 %{{.+}}, label %[[NOT_MASTER:.+]], label %[[DONE:.+]]
+// TLS-CHECK: [[NOT_MASTER]]
+// TLS-CHECK: [[MASTER_VAL:%.+]] = load i32, i32* [[MASTER_REF]]
+// TLS-CHECK: store i32 [[MASTER_VAL]], i32* [[TMAIN_T_VAR]]
+
 // threadprivate_vec = vec;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_VEC]]
 // CHECK: call {{.*}}void @llvm.memcpy{{.*}}(i8* %{{.+}}, i8* bitcast ([2 x i{{[0-9]+}}]* [[TMAIN_VEC]] to i8*),
+
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load [2 x i32]*, [2 x i32]** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_CAST:%.+]] = bitcast [2 x i32]* [[MASTER_REF]] to i8*
+// TLS-CHECK: call void @llvm.memcpy{{.*}}(i8* bitcast ([2 x i{{[0-9]+}}]* [[TMAIN_VEC]] to i8*), i8* [[MASTER_CAST]]
 
 // threadprivate_s_arr = s_arr;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_S_ARR]]
@@ -244,18 +445,42 @@ int main() {
 // CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN]]([[S_INT_TY]]* {{.+}}, [[S_INT_TY]]* {{.+}})
 // CHECK: br i1 {{.+}}, label %{{.+}}, label %[[S_ARR_BODY]]
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_CAST:%.+]] = bitcast [2 x [[S_INT_TY]]]* [[MASTER_REF]] to [[S_INT_TY]]*
+// TLS-CHECK-DAG: [[S_ARR_SRC_BEGIN:%.+]] = phi [[S_INT_TY]]* {{.*}}[[MASTER_CAST]]
+// TLS-CHECK-DAG: [[S_ARR_DST_BEGIN:%.+]] = phi [[S_INT_TY]]* {{.*}}getelementptr inbounds ([2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[TMAIN_S_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// TLS-CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN]]([[S_INT_TY]]* {{.+}}, [[S_INT_TY]]* {{.+}})
+// TLS-CHECK-DAG: [[S_ARR_SRC_END:%.+]] = getelementptr [[S_INT_TY]], [[S_INT_TY]]* [[S_ARR_SRC_BEGIN]], i{{[0-9]+}} 1
+// TLS-CHECK-DAG: [[S_ARR_DST_END:%.+]] = getelementptr [[S_INT_TY]], [[S_INT_TY]]* [[S_ARR_DST_BEGIN]], i{{[0-9]+}} 1
+// TLS-CHECK: icmp eq [[S_INT_TY]]* [[S_ARR_DST_END]], getelementptr ([[S_INT_TY]], [[S_INT_TY]]* getelementptr inbounds ([2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[TMAIN_S_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0), i{{[0-9]+}} 2)
+// TLS-CHECK: br i1 %{{.*}}, label %[[ARR_DONE:.+]], label {{.*}}
+// TLS-CHECK: [[ARR_DONE]]
+
 // threadprivate_var = var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_VAR]]
 // CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN]]([[S_INT_TY]]* {{%.+}}, [[S_INT_TY]]* {{.*}}[[TMAIN_VAR]])
 // CHECK: [[DONE]]
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[MASTER_FIELD]]
+// TLS-CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN]]([[S_INT_TY]]* {{.*}}[[TMAIN_VAR]], [[S_INT_TY]]* {{.*}}[[MASTER_REF]])
+
 // CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
 // CHECK: ret void
+
+// TLS-CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
+// TLS-CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+// TLS-CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
+// TLS-CHECK: ret void
 
 // CHECK: define internal {{.*}}void [[TMAIN_MICROTASK1]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 // CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
 // CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+
+// TLS-CHECK: define internal {{.*}}void [[TMAIN_MICROTASK1]](i{{[0-9]+}}* [[GTID_ADDR:%.+]], i{{[0-9]+}}* %{{.+}}, {{%.+}}* %{{.+}})
+// TLS-CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
 // threadprivate_t_var = t_var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_T_VAR]]
@@ -267,12 +492,30 @@ int main() {
 // CHECK: store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}* %{{.+}},
 // CHECK: [[DONE]]
 
+// TLS-CHECK: [[MASTER_FIELD:%.+]] = getelementptr inbounds {{.+}}
+// TLS-CHECK: [[MASTER_REF:%.+]] = load i32*, i32** [[MASTER_FIELD]]
+// TLS-CHECK: [[MASTER_LONG:%.+]] = ptrtoint i32* [[MASTER_REF]] to i{{[0-9]+}}
+// TLS-CHECK: icmp ne i{{[0-9]+}} [[MASTER_LONG]], ptrtoint (i{{[0-9]+}}* [[TMAIN_T_VAR]] to i{{[0-9]+}})
+// TLS-CHECK: br i1 %{{.+}}, label %[[NOT_MASTER:.+]], label %[[DONE:.+]]
+// TLS-CHECK: [[NOT_MASTER]]
+// TLS-CHECK: [[MASTER_VAL:%.+]] = load i32, i32* [[MASTER_REF]]
+// TLS-CHECK: store i32 [[MASTER_VAL]], i32* [[TMAIN_T_VAR]]
+// TLS-CHECK: [[DONE]]
+
 // CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
 // CHECK: ret void
+
+// TLS-CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],
+// TLS-CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
+// TLS-CHECK: call {{.*}}i32 @__kmpc_cancel_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
+// TLS-CHECK: ret void
 
 #endif
 #else
 // ARRAY-LABEL: array_func
+// TLS-ARRAY: [[ARR_CAPTURETY:%.+]] = type { [2 x {{.*}}]*, [2 x {{.*}}]* }
+// TLS-ARRAY-LABEL: array_func
+
 struct St {
   int a, b;
   St() : a(0), b(0) {}
@@ -287,6 +530,18 @@ void array_func() {
 // ARRAY: call i8* @__kmpc_threadprivate_cached(
 // ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.+}}, i8* bitcast ([2 x i32]* @{{.+}} to i8*), i64 8, i32 4, i1 false)
 // ARRAY: call dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* dereferenceable(8) %{{.+}})
+
+// TLS-ARRAY-DAG: [[ARR_CAP1:%.+]] = getelementptr inbounds [[ARR_CAPTURETY]], [[ARR_CAPTURETY]]* {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// TLS-ARRAY-DAG: [[ARR_CAP2:%.+]] = getelementptr inbounds [[ARR_CAPTURETY]], [[ARR_CAPTURETY]]* {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 1
+// TLS-ARRAY-DAG: store [2 x {{.*}}]* @{{.*}}, [2 x {{.*}}]** [[ARR_CAP1]]
+// TLS-ARRAY-DAG: store [2 x {{.*}}]* @{{.*}}, [2 x {{.*}}]** [[ARR_CAP2]]
+// TLS-ARRAY: @__kmpc_fork_call(
+// TLS-ARRAY-DAG: call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast ([2 x i32]* @{{.+}} to i8*), i8* [[REF:%.+]], i64 8, i32 4, i1 false)
+// TLS-ARRAY-DAG: [[REF]] = bitcast [2 x i32]* [[REFT:%.+]] to i8*
+// TLS-ARRAY-DAG: [[REFT]] = load [2 x i32]*, [2 x i32]** [[FIELDADDR:%.+]],
+// TLS-ARRAY-DAG: [[FIELDADDR]] = getelementptr inbounds [[ARR_CAPTURETY]], [[ARR_CAPTURETY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}}
+// TLS-ARRAY: call dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* dereferenceable(8) %{{.+}})
+
 #pragma omp threadprivate(a, s)
 #pragma omp parallel copyin(a, s)
   ;

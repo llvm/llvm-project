@@ -120,6 +120,7 @@ private:
   /// from current directive.
   OpenMPClauseKind ClauseKindMode;
   Sema &SemaRef;
+  bool ForceCapturing;
 
   typedef SmallVector<SharingMapTy, 8>::reverse_iterator reverse_iterator;
 
@@ -130,10 +131,14 @@ private:
 
 public:
   explicit DSAStackTy(Sema &S)
-      : Stack(1), ClauseKindMode(OMPC_unknown), SemaRef(S) {}
+      : Stack(1), ClauseKindMode(OMPC_unknown), SemaRef(S),
+        ForceCapturing(false) {}
 
   bool isClauseParsingMode() const { return ClauseKindMode != OMPC_unknown; }
   void setClauseParsingMode(OpenMPClauseKind K) { ClauseKindMode = K; }
+
+  bool isForceVarCapturing() const { return ForceCapturing; }
+  void setForceVarCapturing(bool V) { ForceCapturing = V; }
 
   void push(OpenMPDirectiveKind DKind, const DeclarationNameInfo &DirName,
             Scope *CurScope, SourceLocation Loc) {
@@ -655,7 +660,8 @@ bool Sema::IsOpenMPCapturedVar(VarDecl *VD) {
   if (DSAStack->getCurrentDirective() != OMPD_unknown) {
     if (DSAStack->isLoopControlVariable(VD) ||
         (VD->hasLocalStorage() &&
-         isParallelOrTaskRegion(DSAStack->getCurrentDirective())))
+         isParallelOrTaskRegion(DSAStack->getCurrentDirective())) ||
+        DSAStack->isForceVarCapturing())
       return true;
     auto DVarPrivate = DSAStack->getTopDSA(VD, DSAStack->isClauseParsingMode());
     if (DVarPrivate.CKind != OMPC_unknown && isOpenMPPrivate(DVarPrivate.CKind))
@@ -1350,13 +1356,18 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
   // This is required for proper codegen.
   for (auto *Clause : Clauses) {
     if (isOpenMPPrivate(Clause->getClauseKind()) ||
-        Clause->getClauseKind() == OMPC_copyprivate) {
+        Clause->getClauseKind() == OMPC_copyprivate ||
+        (getLangOpts().OpenMPUseTLS &&
+         getASTContext().getTargetInfo().isTLSSupported() &&
+         Clause->getClauseKind() == OMPC_copyin)) {
+      DSAStack->setForceVarCapturing(Clause->getClauseKind() == OMPC_copyin);
       // Mark all variables in private list clauses as used in inner region.
       for (auto *VarRef : Clause->children()) {
         if (auto *E = cast_or_null<Expr>(VarRef)) {
           MarkDeclarationsReferencedInExpr(E);
         }
       }
+      DSAStack->setForceVarCapturing(/*V=*/false);
     } else if (isParallelOrTaskRegion(DSAStack->getCurrentDirective()) &&
                Clause->getClauseKind() == OMPC_schedule) {
       // Mark all variables in private list clauses as used in inner region.
