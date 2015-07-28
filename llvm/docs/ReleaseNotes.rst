@@ -87,8 +87,75 @@ Changes to the ARM Backend
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
+During this release the MIPS target has:
 
+* Added support for MIPS32R3, MIPS32R5, MIPS32R3, MIPS32R5, and microMIPS32.
+
+* Added support for dynamic stack realignment. This of particular importance to
+  MSA on 32-bit subtargets since vectors always exceed the stack alignment on
+  the O32 ABI.
+
+* Added support for compiler-rt including:
+
+  * Support for the Address, and Undefined Behaviour Sanitizers for all MIPS
+    subtargets.
+
+  * Support for the Data Flow, and Memory Sanitizer for 64-bit subtargets.
+
+  * Support for the Profiler for all MIPS subtargets.
+
+* Added support for libcxx, libcxxabi, libunwind
+
+* Improved inline assembly support such that memory constraints may now make use
+  of the appropriate address offsets available to the instructions. Also, added
+  support for the ``ZC`` constraint.
+
+* Added support for 128-bit integers on 64-bit subtargets and 16-bit floating
+  point conversions on all subtargets.
+
+* Added support for read-only ``.eh_frame`` sections by storing type information
+  indirectly.
+
+* Added support for MCJIT on all 64-bit subtargets as well as MIPS32R6.
+
+* Various bug fixes. Including the following notable fixes:
+
+  * Fixed 'jumpy' debug line info around calls where calculation of the address
+    of the function would inappropriately change the line number.
+
+  * Fixed missing ``__mips_isa_rev`` macro on the MIPS32R6 and MIPS32R6
+    subtargets.
+
+  * Fixed representation of NaN when targeting systems using traditional
+    encodings. Traditionally, MIPS has used NaN encodings that were compatible
+    with IEEE754-1985 but would later be found incompatible with IEEE754-2008.
+
+  * Fixed multiple segfaults and assertions in the disassembler when
+    disassembling instructions that have memory operands.
+
+  * Fixed multiple cases of suboptimal code generation involving $zero.
+
+  * Fixed code generation of 128-bit shifts on 64-bit subtargets.
+
+  * Prevented the delay slot filler from filling call delay slots with
+    instructions that modify or use $ra.
+
+  * Fixed some remaining N32/N64 calling convention bugs when using small
+    structures on big-endian subtargets.
+
+  * Fixed missing sign-extensions that are required by the N32/N64 calling
+    convention when generating calls to library functions with 32-bit
+    parameters.
+
+  * Corrected the ``int64_t`` typedef to be ``long`` for N64.
+
+  * ``-mno-odd-spreg`` is now honoured for vector insertion/extraction
+    operations when using -mmsa.
+
+  * Fixed vector insertion and extraction for MSA on 64-bit subtargets.
+
+  * Corrected the representation of member function pointers. This makes them
+    usable on microMIPS subtargets.
 
 Changes to the PowerPC Target
 -----------------------------
