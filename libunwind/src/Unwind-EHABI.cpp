@@ -12,7 +12,7 @@
 
 #include "Unwind-EHABI.h"
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -451,7 +451,7 @@ unwind_phase1(unw_context_t *uc, _Unwind_Exception *exception_object) {
   // Walk each frame looking for a place to stop.
   for (bool handlerNotFound = true; handlerNotFound;) {
 
-#if !LIBCXXABI_ARM_EHABI
+#if !_LIBUNWIND_ARM_EHABI
     // Ask libuwind to get next frame (skip over first which is
     // _Unwind_RaiseException).
     int stepResult = unw_step(&cursor1);
@@ -585,7 +585,7 @@ static _Unwind_Reason_Code unwind_phase2(unw_context_t *uc,
       resume = false;
     }
 
-#if !LIBCXXABI_ARM_EHABI
+#if !_LIBUNWIND_ARM_EHABI
     int stepResult = unw_step(&cursor2);
     if (stepResult == 0) {
       _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): unw_step() reached "
@@ -1006,4 +1006,4 @@ __gnu_unwind_frame(_Unwind_Exception *exception_object,
   return _URC_OK;
 }
 
-#endif  // LIBCXXABI_ARM_EHABI
+#endif  // _LIBUNWIND_ARM_EHABI

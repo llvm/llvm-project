@@ -28,7 +28,7 @@
 ///  Called by __cxa_rethrow().
 _LIBUNWIND_EXPORT _Unwind_Reason_Code
 _Unwind_Resume_or_Rethrow(_Unwind_Exception *exception_object) {
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
   _LIBUNWIND_TRACE_API("_Unwind_Resume_or_Rethrow(ex_obj=%p), private_1=%ld\n",
                        (void *)exception_object,
                        (long)exception_object->unwinder_cache.reserved1);
@@ -38,7 +38,7 @@ _Unwind_Resume_or_Rethrow(_Unwind_Exception *exception_object) {
                        (long)exception_object->private_1);
 #endif
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
   // _Unwind_RaiseException on EHABI will always set the reserved1 field to 0,
   // which is in the same position as private_1 below.
   return _Unwind_RaiseException(exception_object);
@@ -111,7 +111,7 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
   _LIBUNWIND_TRACE_API("_Unwind_Backtrace(callback=%p)\n",
                        (void *)(uintptr_t)callback);
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
   // Create a mock exception object for force unwinding.
   _Unwind_Exception ex;
   memset(&ex, '\0', sizeof(ex));
@@ -122,7 +122,7 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
   while (true) {
     _Unwind_Reason_Code result;
 
-#if !LIBCXXABI_ARM_EHABI
+#if !_LIBUNWIND_ARM_EHABI
     // ask libuwind to get next frame (skip over first frame which is
     // _Unwind_Backtrace())
     if (unw_step(&cursor) <= 0) {
@@ -154,7 +154,7 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
             _URC_CONTINUE_UNWIND) {
       return _URC_END_OF_STACK;
     }
-#endif // LIBCXXABI_ARM_EHABI
+#endif // _LIBUNWIND_ARM_EHABI
 
     // debugging
     if (_LIBUNWIND_TRACING_UNWINDING) {

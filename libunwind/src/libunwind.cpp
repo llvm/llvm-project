@@ -61,7 +61,7 @@ _LIBUNWIND_EXPORT int unw_init_local(unw_cursor_t *cursor,
 #elif defined(__arm64__)
   new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_arm64>(
                                  context, LocalAddressSpace::sThisAddressSpace);
-#elif LIBCXXABI_ARM_EHABI
+#elif _LIBUNWIND_ARM_EHABI
   new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_arm>(
                                  context, LocalAddressSpace::sThisAddressSpace);
 #endif
@@ -205,7 +205,7 @@ _LIBUNWIND_EXPORT int unw_get_fpreg(unw_cursor_t *cursor, unw_regnum_t regNum,
 /// Set value of specified float register at cursor position in stack frame.
 _LIBUNWIND_EXPORT int unw_set_fpreg(unw_cursor_t *cursor, unw_regnum_t regNum,
                                     unw_fpreg_t value) {
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
   _LIBUNWIND_TRACE_API("unw_set_fpreg(cursor=%p, regNum=%d, value=%llX)\n",
                        static_cast<void *>(cursor), regNum, value);
 #else

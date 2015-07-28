@@ -14,6 +14,8 @@
 #ifndef __UNWIND_H__
 #define __UNWIND_H__
 
+#include <__libunwind_config.h>
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -22,8 +24,6 @@
 #else
 #define LIBUNWIND_UNAVAIL
 #endif
-
-#include <__cxxabi_config.h>
 
 typedef enum {
   _URC_NO_REASON = 0,
@@ -36,7 +36,7 @@ typedef enum {
   _URC_HANDLER_FOUND = 6,
   _URC_INSTALL_CONTEXT = 7,
   _URC_CONTINUE_UNWIND = 8,
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
   _URC_FAILURE = 9
 #endif
 } _Unwind_Reason_Code;
@@ -51,7 +51,7 @@ typedef enum {
 
 typedef struct _Unwind_Context _Unwind_Context;   // opaque
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
 typedef uint32_t _Unwind_State;
 
 static const _Unwind_State _US_VIRTUAL_UNWIND_FRAME   = 0;
@@ -164,7 +164,7 @@ extern void _Unwind_Resume(_Unwind_Exception *exception_object);
 #endif
 extern void _Unwind_DeleteException(_Unwind_Exception *exception_object);
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
 typedef enum {
   _UVRSC_CORE = 0, /* integer register */
   _UVRSC_VFP = 1, /* vfp */

@@ -438,7 +438,7 @@ public:
 
 private:
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
   bool getInfoFromEHABISection(pint_t pc, const UnwindInfoSections &sects);
 
   int stepWithEHABI() {
@@ -634,7 +634,7 @@ template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {
   return _isSignalFrame;
 }
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
 struct EHABIIndexEntry {
   uint32_t functionOffset;
   uint32_t data;
@@ -1163,7 +1163,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   pint_t pc = (pint_t)this->getReg(UNW_REG_IP);
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
   // Remove the thumb bit so the IP represents the actual instruction address.
   // This matches the behaviour of _Unwind_GetIP on arm.
   pc &= (pint_t)~0x1;
@@ -1213,7 +1213,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     }
 #endif
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
     // If there is ARM EHABI unwind info, look there next.
     if (sects.arm_section != 0 && this->getInfoFromEHABISection(pc, sects))
       return;
@@ -1297,12 +1297,12 @@ int UnwindCursor<A, R>::step() {
   result = this->stepWithCompactEncoding();
 #elif _LIBUNWIND_SUPPORT_DWARF_UNWIND
   result = this->stepWithDwarfFDE();
-#elif LIBCXXABI_ARM_EHABI
+#elif _LIBUNWIND_ARM_EHABI
   result = this->stepWithEHABI();
 #else
   #error Need _LIBUNWIND_SUPPORT_COMPACT_UNWIND or \
               _LIBUNWIND_SUPPORT_DWARF_UNWIND or \
-              LIBCXXABI_ARM_EHABI
+              _LIBUNWIND_ARM_EHABI
 #endif
 
   // update info based on new PC

@@ -14,10 +14,10 @@
 #ifndef __LIBUNWIND__
 #define __LIBUNWIND__
 
+#include <__libunwind_config.h>
+
 #include <stdint.h>
 #include <stddef.h>
-
-#include <__cxxabi_config.h>
 
 #ifdef __APPLE__
   #include <Availability.h>
@@ -58,7 +58,7 @@ typedef struct unw_cursor_t unw_cursor_t;
 typedef struct unw_addr_space *unw_addr_space_t;
 
 typedef int unw_regnum_t;
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
 typedef uint32_t unw_word_t;
 typedef uint64_t unw_fpreg_t;
 #else

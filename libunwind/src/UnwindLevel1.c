@@ -23,7 +23,7 @@
 #include "unwind.h"
 #include "config.h"
 
-#if !LIBCXXABI_ARM_EHABI
+#if !_LIBUNWIND_ARM_EHABI
 
 static _Unwind_Reason_Code
 unwind_phase1(unw_context_t *uc, _Unwind_Exception *exception_object) {
@@ -530,5 +530,5 @@ _LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *context,
   _Unwind_SetGR(context, 15, value | thumb_bit);
 }
 
-#endif // !LIBCXXABI_ARM_EHABI
+#endif // !_LIBUNWIND_ARM_EHABI
 

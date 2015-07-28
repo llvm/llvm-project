@@ -11,9 +11,9 @@
 #ifndef __UNWIND_EHABI_H__
 #define __UNWIND_EHABI_H__
 
-#include <__cxxabi_config.h>
+#include <__libunwind_config.h>
 
-#if LIBCXXABI_ARM_EHABI
+#if _LIBUNWIND_ARM_EHABI
 
 #include <stdint.h>
 #include <unwind.h>
@@ -46,6 +46,6 @@ extern _Unwind_Reason_Code __aeabi_unwind_cpp_pr2(
 } // extern "C"
 #endif
 
-#endif // LIBCXXABI_ARM_EHABI
+#endif // _LIBUNWIND_ARM_EHABI
 
 #endif  // __UNWIND_EHABI_H__
