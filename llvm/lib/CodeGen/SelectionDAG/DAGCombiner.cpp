@@ -8365,12 +8365,12 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     if (N0CFP && N0CFP->isExactlyValue(1.0))
       return SDValue();
 
-    SmallVector<SDNode *, 4> Users;
     // Find all FDIV users of the same divisor.
-    for (auto *U : N1->uses()) {
+    // Use a set because duplicates may be present in the user list.
+    SetVector<SDNode *> Users;
+    for (auto *U : N1->uses())
       if (U->getOpcode() == ISD::FDIV && U->getOperand(1) == N1)
-        Users.push_back(U);
-    }
+        Users.insert(U);
 
     if (TLI.combineRepeatedFPDivisors(Users.size())) {
       SDValue FPOne = DAG.getConstantFP(1.0, DL, VT);

@@ -44,5 +44,24 @@ define double @div3_arcp(double %x, double %y, double %z) #0 {
   ret double %ret
 }
 
+define void @PR24141() #0 {
+; CHECK-LABEL: PR24141:
+; CHECK:	callq
+; CHECK-NEXT:	divsd
+; CHECK-NEXT:	jmp
+entry:
+  br label %while.body
+
+while.body:
+  %x.0 = phi double [ undef, %entry ], [ %div, %while.body ]
+  %call = call { double, double } @g(double %x.0)
+  %xv0 = extractvalue { double, double } %call, 0
+  %xv1 = extractvalue { double, double } %call, 1
+  %div = fdiv double %xv0, %xv1
+  br label %while.body
+}
+
+declare { double, double } @g(double)
+
 ; FIXME: If the backend understands 'arcp', then this attribute is unnecessary.
 attributes #0 = { "unsafe-fp-math"="true" }
