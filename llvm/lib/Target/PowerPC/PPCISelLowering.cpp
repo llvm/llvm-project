@@ -1430,6 +1430,11 @@ bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
   assert(N->getValueType(0) == MVT::v16i8 &&
          (EltSize == 1 || EltSize == 2 || EltSize == 4));
 
+  // The consecutive indices need to specify an element, not part of two
+  // different elements.  So abandon ship early if this isn't the case.
+  if (N->getMaskElt(0) % EltSize != 0)
+    return false;
+
   // This is a splat operation if each element of the permute is the same, and
   // if the value doesn't reference the second vector.
   unsigned ElementBase = N->getMaskElt(0);
