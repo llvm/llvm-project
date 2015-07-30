@@ -27,6 +27,7 @@ class Configuration(LibcxxConfiguration):
 
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']
+        self.cxx.compile_flags += ['-funwind-tables']
         super(Configuration, self).configure_compile_flags()
 
     def configure_compile_flags_header_includes(self):
