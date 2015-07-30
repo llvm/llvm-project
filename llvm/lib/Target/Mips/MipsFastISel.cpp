@@ -981,6 +981,13 @@ bool MipsFastISel::selectSelect(const Instruction *I) {
   if (!Src1Reg || !Src2Reg || !CondReg)
     return false;
 
+  unsigned ZExtCondReg = createResultReg(&Mips::GPR32RegClass);
+  if (!ZExtCondReg)
+    return false;
+
+  if (!emitIntExt(MVT::i1, CondReg, MVT::i32, ZExtCondReg, true))
+    return false;
+
   unsigned ResultReg = createResultReg(RC);
   unsigned TempReg = createResultReg(RC);
 
@@ -989,7 +996,7 @@ bool MipsFastISel::selectSelect(const Instruction *I) {
 
   emitInst(TargetOpcode::COPY, TempReg).addReg(Src2Reg);
   emitInst(CondMovOpc, ResultReg)
-    .addReg(Src1Reg).addReg(CondReg).addReg(TempReg);
+    .addReg(Src1Reg).addReg(ZExtCondReg).addReg(TempReg);
   updateValueMap(I, ResultReg);
   return true;
 }

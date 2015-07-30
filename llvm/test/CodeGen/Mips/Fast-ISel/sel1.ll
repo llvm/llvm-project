@@ -8,7 +8,8 @@ entry:
   ; FIXME: The following instruction is redundant.
   ; CHECK:            xor     $[[T0:[0-9]+]], $4, $zero
   ; CHECK-NEXT:       sltu    $[[T1:[0-9]+]], $zero, $[[T0]]
-  ; CHECK-NEXT:       movn    $6, $5, $[[T1]]
+  ; CHECK-NEXT:       andi    $[[T2:[0-9]+]], $[[T1]], 1
+  ; CHECK-NEXT:       movn    $6, $5, $[[T2]]
   ; CHECK:            move    $2, $6
   %cond = icmp ne i1 %j, 0
   %res = select i1 %cond, i1 %k, i1 %l
@@ -24,7 +25,8 @@ entry:
   ; CHECK-DAG:        seb     $[[T1:[0-9]+]], $zero
   ; CHECK:            xor     $[[T2:[0-9]+]], $[[T0]], $[[T1]]
   ; CHECK-NEXT:       sltu    $[[T3:[0-9]+]], $zero, $[[T2]]
-  ; CHECK-NEXT:       movn    $6, $5, $[[T3]]
+  ; CHECK-NEXT:       andi    $[[T4:[0-9]+]], $[[T3]], 1
+  ; CHECK-NEXT:       movn    $6, $5, $[[T4]]
   ; CHECK:            move    $2, $6
   %cond = icmp ne i8 %j, 0
   %res = select i1 %cond, i8 %k, i8 %l
@@ -40,7 +42,8 @@ entry:
   ; CHECK-DAG:        seh     $[[T1:[0-9]+]], $zero
   ; CHECK:            xor     $[[T2:[0-9]+]], $[[T0]], $[[T1]]
   ; CHECK-NEXT:       sltu    $[[T3:[0-9]+]], $zero, $[[T2]]
-  ; CHECK-NEXT:       movn    $6, $5, $[[T3]]
+  ; CHECK-NEXT:       andi    $[[T4:[0-9]+]], $[[T3]], 1
+  ; CHECK-NEXT:       movn    $6, $5, $[[T4]]
   ; CHECK:            move    $2, $6
   %cond = icmp ne i16 %j, 0
   %res = select i1 %cond, i16 %k, i16 %l
@@ -54,7 +57,8 @@ entry:
   ; FIXME: The following instruction is redundant.
   ; CHECK:            xor     $[[T0:[0-9]+]], $4, $zero
   ; CHECK-NEXT:       sltu    $[[T1:[0-9]+]], $zero, $[[T0]]
-  ; CHECK-NEXT:       movn    $6, $5, $[[T1]]
+  ; CHECK-NEXT:       andi    $[[T2:[0-9]+]], $[[T1]], 1
+  ; CHECK-NEXT:       movn    $6, $5, $[[T2]]
   ; CHECK:            move    $2, $6
   %cond = icmp ne i32 %j, 0
   %res = select i1 %cond, i32 %k, i32 %l
@@ -69,7 +73,8 @@ entry:
   ; CHECK-DAG:        mtc1    $5, $f1
   ; CHECK-DAG:        xor     $[[T0:[0-9]+]], $4, $zero
   ; CHECK:            sltu    $[[T1:[0-9]+]], $zero, $[[T0]]
-  ; CHECK:            movn.s  $f0, $f1, $[[T1]]
+  ; CHECK-NEXT:       andi    $[[T2:[0-9]+]], $[[T1]], 1
+  ; CHECK:            movn.s  $f0, $f1, $[[T2]]
   %cond = icmp ne i32 %j, 0
   %res = select i1 %cond, float %k, float %l
   ret float %res
@@ -84,7 +89,8 @@ entry:
   ; CHECK-DAG:        ldc1    $f0, 16($sp)
   ; CHECK-DAG:        xor     $[[T0:[0-9]+]], $4, $zero
   ; CHECK:            sltu    $[[T1:[0-9]+]], $zero, $[[T0]]
-  ; CHECK:            movn.d  $f0, $f2, $[[T1]]
+  ; CHECK-NEXT:       andi    $[[T2:[0-9]+]], $[[T1]], 1
+  ; CHECK:            movn.d  $f0, $f2, $[[T2]]
   %cond = icmp ne i32 %j, 0
   %res = select i1 %cond, double %k, double %l
   ret double %res
