@@ -822,7 +822,13 @@ ProcessGDBRemote::DoConnectRemote (Stream *strm, const char *remote_url)
         log->Printf ("ProcessGDBRemote::%s pid %" PRIu64 ": normalized target architecture triple: %s", __FUNCTION__, GetID (), GetTarget ().GetArchitecture ().GetTriple ().getTriple ().c_str ());
 
     if (error.Success())
-        SetUnixSignals(std::make_shared<GDBRemoteSignals>(GetTarget().GetPlatform()->GetUnixSignals()));
+    {
+        PlatformSP platform_sp = GetTarget().GetPlatform();
+        if (platform_sp && platform_sp->IsConnected())
+            SetUnixSignals(platform_sp->GetUnixSignals());
+        else
+            SetUnixSignals(UnixSignals::Create(GetTarget().GetArchitecture()));
+    }
 
     return error;
 }
