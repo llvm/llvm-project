@@ -72,4 +72,11 @@ void test1() {
   // TRAPV: add i8 {{.*}}, 1
   // CATCH_UB: add i8 {{.*}}, 1
   ++PR9350;
+
+  // PR24256: don't instrument __builtin_frame_address.
+  __builtin_frame_address(0 + 0);
+  // DEFAULT:  call i8* @llvm.frameaddress(i32 0)
+  // WRAPV:    call i8* @llvm.frameaddress(i32 0)
+  // TRAPV:    call i8* @llvm.frameaddress(i32 0)
+  // CATCH_UB: call i8* @llvm.frameaddress(i32 0)
 }
