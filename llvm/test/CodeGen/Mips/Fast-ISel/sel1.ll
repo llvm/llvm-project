@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -O2 -relocation-model=pic \
-; RUN:          -fast-isel -mips-fast-isel -fast-isel-abort=1 | FileCheck %s
+; RUN:          -fast-isel -fast-isel-abort=1 | FileCheck %s
 
 define i1 @sel_i1(i1 %j, i1 %k, i1 %l) {
 entry:

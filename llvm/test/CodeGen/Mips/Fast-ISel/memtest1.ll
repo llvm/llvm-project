@@ -1,8 +1,8 @@
 ; RUN: llc < %s -march=mipsel -mcpu=mips32 -O0 -relocation-model=pic \
-; RUN:     -fast-isel=true -mips-fast-isel -fast-isel-abort=1 | FileCheck %s \
+; RUN:     -fast-isel-abort=1 | FileCheck %s \
 ; RUN:     -check-prefix=ALL -check-prefix=32R1
 ; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -O0 -relocation-model=pic \
-; RUN:     -fast-isel=true -mips-fast-isel -fast-isel-abort=1 | FileCheck %s \
+; RUN:     -fast-isel-abort=1 | FileCheck %s \
 ; RUN:     -check-prefix=ALL -check-prefix=32R2
 
 @str = private unnamed_addr constant [12 x i8] c"hello there\00", align 1

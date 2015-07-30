@@ -1,5 +1,5 @@
-; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel -mips-fast-isel -fast-isel-abort=1 -mcpu=mips32r2 < %s | FileCheck %s
-; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel -mips-fast-isel -fast-isel-abort=1 -mcpu=mips32 < %s | FileCheck %s
+; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=1 -mcpu=mips32r2 < %s | FileCheck %s
+; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=1 -mcpu=mips32 < %s | FileCheck %s
 
 @ub1 = common global i8 0, align 1
 @ub2 = common global i8 0, align 1

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mcpu=mips32r2 -O1 -fast-isel=true -mips-fast-isel -filetype=obj %s -o - \
+; RUN: llc -march=mipsel -mcpu=mips32r2 -O0 -fast-isel=true -filetype=obj %s -o - \
 ; RUN:   | llvm-objdump -arch mipsel -mcpu=mips32r2 -d - | FileCheck %s
 
 ; This test checks that encoding for srl is correct when fast-isel for mips32r2 is used.

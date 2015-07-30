@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=mipsel -mcpu=mips32 -O0 -relocation-model=pic \
-; RUN:      -fast-isel=true -mips-fast-isel -fast-isel-abort=1 | FileCheck %s
+; RUN:      -fast-isel-abort=1 | FileCheck %s
 ; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -O0 -relocation-model=pic \
-; RUN:      -fast-isel=true -mips-fast-isel -fast-isel-abort=1 | FileCheck %s
+; RUN:      -fast-isel-abort=1 | FileCheck %s
 
 @sj = global i32 200, align 4
 @sk = global i32 -47, align 4

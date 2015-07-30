@@ -1,10 +1,10 @@
 ; Check that register scavenging spill slot is close to $fp.
-; RUN: llc -march=mipsel -O0 < %s | FileCheck %s
+; RUN: llc -march=mipsel -O0 -fast-isel=false < %s | FileCheck %s
 
-; CHECK: sw ${{.*}}, 4($sp)
-; CHECK: lw ${{.*}}, 4($sp)
+; CHECK: sw ${{.*}}, 8($sp)
+; CHECK: lw ${{.*}}, 8($sp)
 
-define i32 @main(i32 signext %argc, i8** %argv) "no-frame-pointer-elim"="true" {
+define i32 @main(i32 signext %argc, i8** %argv) #0 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
@@ -30,3 +30,5 @@ entry:
   store <16 x i8> %mul, <16 x i8>* %result, align 16
   ret i32 0
 }
+
+attributes #0 = { noinline optnone "no-frame-pointer-elim"="true" }

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -relocation-model=pic -O0 -mips-fast-isel -fast-isel-abort=1 -mcpu=mips32r2 \
+; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=1 -mcpu=mips32r2 \
 ; RUN:     < %s | FileCheck %s
 
 %struct.x = type { i32 }
