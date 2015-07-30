@@ -179,8 +179,7 @@ else()
       # FIXME: We build runtimes for both i686 and i386, as "clang -m32" may
       # target different variant than "$CMAKE_C_COMPILER -m32". This part should
       # be gone after we resolve PR14109.
-      # Use -march to make sure Clang defines __i686__; see PR24222.
-      test_target_arch(i686 __i686__ "-m32" "-march=i686")
+      test_target_arch(i686 __i686__ "-m32")
       test_target_arch(i386 __i386__ "-m32")
     else()
       if (CMAKE_SIZEOF_VOID_P EQUAL 4)
