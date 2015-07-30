@@ -283,8 +283,8 @@ entry:
 ; CHECK-DAG:    lw      $[[UC_ADDR:[0-9]+]], %got(uc)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UC1_ADDR:[0-9]+]], %got(uc1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UC1:[0-9]+]], 0($[[UC1_ADDR]])
-; CHECK-DAG:    addiu   $[[CONST_Neg89:[0-9]+]], $zero, -89
-; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[UC1]], $[[CONST_Neg89]]
+; CHECK-DAG:    addiu   $[[CONST_167:[0-9]+]], $zero, 167
+; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[UC1]], $[[CONST_167]]
 ; CHECK:        sb      $[[RES]], 0($[[UC_ADDR]])
 ; CHECK:        .end    andUc1
   ret void
@@ -345,8 +345,8 @@ entry:
 ; CHECK-DAG:    lw      $[[UC_ADDR:[0-9]+]], %got(uc)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UC1_ADDR:[0-9]+]], %got(uc1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UC1:[0-9]+]], 0($[[UC1_ADDR]])
-; CHECK-DAG:    addiu   $[[CONST_neg18:[0-9]+]], $zero, -18
-; CHECK-DAG:    or      $[[RES:[0-9]+]], $[[UC1]], $[[CONST_neg18]]
+; CHECK-DAG:    addiu   $[[CONST_238:[0-9]+]], $zero, 238
+; CHECK-DAG:    or      $[[RES:[0-9]+]], $[[UC1]], $[[CONST_238]]
 ; CHECK:        sb      $[[RES]], 0($[[UC_ADDR]])
 ; CHECK:        .end    orUc1
   ret void
@@ -469,8 +469,8 @@ entry:
 ; CHECK-DAG:    lw      $[[US_ADDR:[0-9]+]], %got(us)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[US1_ADDR:[0-9]+]], %got(us1)($[[REG_GP]])
 ; CHECK-DAG:    lhu     $[[US1:[0-9]+]], 0($[[US1_ADDR]])
-; CHECK-DAG:    addiu   $[[CONST_Neg4185:[0-9]+]], $zero, -4185
-; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[US1]], $[[CONST_Neg4185]]
+; CHECK-DAG:    ori     $[[CONST_61351:[0-9]+]], $zero, 61351
+; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[US1]], $[[CONST_61351]]
 ; CHECK:        sh      $[[RES]], 0($[[US_ADDR]])
 ; CHECK:        .end    andUs1
   ret void
@@ -520,8 +520,8 @@ entry:
 ; CHECK-DAG:    lw      $[[US_ADDR:[0-9]+]], %got(us)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[US1_ADDR:[0-9]+]], %got(us1)($[[REG_GP]])
 ; CHECK-DAG:    lhu     $[[US1:[0-9]+]], 0($[[US1_ADDR]])
-; CHECK-DAG:    addiu   $[[CONST_neg4591:[0-9]+]], $zero, -4591
-; CHECK-DAG:    or      $[[RES:[0-9]+]], $[[US1]], $[[CONST_neg4591]]
+; CHECK-DAG:    ori     $[[CONST_60945:[0-9]+]], $zero, 60945
+; CHECK-DAG:    or      $[[RES:[0-9]+]], $[[US1]], $[[CONST_60945]]
 ; CHECK:        sh      $[[RES]], 0($[[US_ADDR]])
 ; CHECK:        .end    orUs1
   ret void
@@ -583,8 +583,8 @@ entry:
 ; CHECK-DAG:    lw      $[[US_ADDR:[0-9]+]], %got(us)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[US1_ADDR:[0-9]+]], %got(us1)($[[REG_GP]])
 ; CHECK-DAG:    lhu     $[[US1:[0-9]+]], 0($[[US1_ADDR]])
-; CHECK-DAG:    addiu   $[[CONST_Neg5512:[0-9]+]], $zero, -5512
-; CHECK-DAG:    xor     $[[RES:[0-9]+]], $[[US1]], $[[CONST_Neg5512]]
+; CHECK-DAG:    ori     $[[CONST_60024:[0-9]+]], $zero, 60024
+; CHECK-DAG:    xor     $[[RES:[0-9]+]], $[[US1]], $[[CONST_60024]]
 ; CHECK:        sh      $[[RES]], 0($[[US_ADDR]])
 ; CHECK:        .end    xorUs1
   ret void

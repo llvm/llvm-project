@@ -22,9 +22,10 @@ define void @si2_2() #0 {
 entry:
   store i32 -32768, i32* @ijk, align 4
 ; CHECK:        .ent    si2_2
-; CHECK:        addiu   $[[REG1:[0-9]+]], $zero, -32768
-; CHECK:        lw      $[[REG2:[0-9]+]], %got(ijk)(${{[0-9]+}})
-; CHECK:        sw      $[[REG1]], 0($[[REG2]])
+; CHECK:        lui     $[[REG1:[0-9]+]], 65535
+; CHECK:        ori     $[[REG2:[0-9]+]], $[[REG1]], 32768
+; CHECK:        lw      $[[REG3:[0-9]+]], %got(ijk)(${{[0-9]+}})
+; CHECK:        sw      $[[REG2]], 0($[[REG3]])
   ret void
 }
 

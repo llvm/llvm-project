@@ -290,12 +290,7 @@ unsigned MipsFastISel::materializeInt(const Constant *C, MVT VT) {
     return 0;
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
   const ConstantInt *CI = cast<ConstantInt>(C);
-  int64_t Imm;
-  if ((VT != MVT::i1) && CI->isNegative())
-    Imm = CI->getSExtValue();
-  else
-    Imm = CI->getZExtValue();
-  return materialize32BitInt(Imm, RC);
+  return materialize32BitInt(CI->getZExtValue(), RC);
 }
 
 unsigned MipsFastISel::materialize32BitInt(int64_t Imm,
