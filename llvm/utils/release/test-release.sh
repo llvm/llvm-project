@@ -32,6 +32,7 @@ do_asserts="no"
 do_compare="yes"
 do_rt="yes"
 do_libs="yes"
+do_libunwind="yes"
 do_test_suite="yes"
 do_openmp="no"
 BuildDir="`pwd`"
@@ -56,6 +57,7 @@ function usage() {
     echo " -use-autoconf        Use autoconf instead of cmake"
     echo " -no-rt               Disable check-out & build Compiler-RT"
     echo " -no-libs             Disable check-out & build libcxx/libcxxabi/libunwind"
+    echo " -no-libunwind        Disable check-out & build libunwind"
     echo " -no-test-suite       Disable check-out & build test-suite"
     echo " -openmp              Check out and build the OpenMP run-time (experimental)"
 }
@@ -122,6 +124,9 @@ while [ $# -gt 0 ]; do
         -no-libs )
             do_libs="no"
             ;;
+        -no-libunwind )
+            do_libunwind="no"
+            ;;
         -no-test-suite )
             do_test_suite="no"
             ;;
@@ -175,7 +180,10 @@ if [ $do_rt = "yes" ]; then
   projects="$projects compiler-rt"
 fi
 if [ $do_libs = "yes" ]; then
-  projects="$projects libcxx libcxxabi libunwind"
+  projects="$projects libcxx libcxxabi"
+  if [ $do_libunwind = "yes" ]; then
+    projects="$projects libunwind"
+  fi
 fi
 if [ $do_test_suite = "yes" ]; then
   projects="$projects test-suite"
