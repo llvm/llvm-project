@@ -231,11 +231,11 @@ public:
 } // end namespace hexagon.
 
 namespace arm {
-  std::string getARMTargetCPU(const llvm::opt::ArgList &Args,
+  std::string getARMTargetCPU(StringRef CPU, StringRef Arch,
                               const llvm::Triple &Triple);
-  const std::string getARMArch(const llvm::opt::ArgList &Args,
+  const std::string getARMArch(StringRef Arch,
                                const llvm::Triple &Triple);
-  const char* getARMCPUForMArch(const llvm::opt::ArgList &Args,
+  const char* getARMCPUForMArch(StringRef Arch,
                                 const llvm::Triple &Triple);
   const char* getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch);
 
