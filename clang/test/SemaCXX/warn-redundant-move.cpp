@@ -90,3 +90,10 @@ C test4(A& a1, B& b1) {
   return std::move(b1);
   return std::move(b2);
 }
+
+//PR23819
+struct X {};
+X g();
+void h(X&&);
+X f(X x) { return std::move(x); } //expected-warning{{redundant move in return statement}} \
+                                  //expected-note{{remove std::move call here}}

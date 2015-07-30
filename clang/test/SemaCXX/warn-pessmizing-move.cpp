@@ -23,10 +23,6 @@ A test1(A a1) {
   return a1;
   return a2;
   return std::move(a1);
-  // expected-warning@-1{{prevents copy elision}}
-  // expected-note@-2{{remove std::move call}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:20}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:22-[[@LINE-4]]:23}:""
   return std::move(a2);
   // expected-warning@-1{{prevents copy elision}}
   // expected-note@-2{{remove std::move call}}
@@ -46,10 +42,6 @@ B test2(A a1, B b1) {
   return b1;
   return b2;
   return std::move(b1);
-  // expected-warning@-1{{prevents copy elision}}
-  // expected-note@-2{{remove std::move call}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:20}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:22-[[@LINE-4]]:23}:""
   return std::move(b2);
   // expected-warning@-1{{prevents copy elision}}
   // expected-note@-2{{remove std::move call}}
@@ -163,9 +155,10 @@ A test7() {
 #define wrap1(x) x
 #define wrap2(x) x
 
-// Macro test.  Since the std::move call is outside the macro, it is
+// Macro test. Since the std::move call is outside the macro, it is
 // safe to suggest a fix-it.
-A test8(A a) {
+A test8() {
+  A a;
   return std::move(a);
   // expected-warning@-1{{prevents copy elision}}
   // expected-note@-2{{remove std::move call}}
@@ -184,7 +177,8 @@ A test8(A a) {
 }
 
 #define test9            \
-  A test9(A a) {         \
+  A test9() {            \
+    A a;                 \
     return std::move(a); \
   }
 
@@ -196,7 +190,8 @@ test9
 #define return_a return std::move(a)
 
 // Macro test.  The std::call is inside the macro, so no fix-it is suggested.
-A test10(A a) {
+A test10() {
+  A a;
   return_a;
   // expected-warning@-1{{prevents copy elision}}
   // CHECK-NOT: fix-it

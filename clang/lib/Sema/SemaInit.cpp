@@ -5986,6 +5986,11 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
     if (!VD->getType()->isRecordType())
       return;
 
+    // If we're returning a function parameter, copy elision
+    // is not possible.
+    if (isa<ParmVarDecl>(VD))
+      DiagID = diag::warn_redundant_move_on_return;
+
     if (DiagID == 0) {
       DiagID = S.Context.hasSameUnqualifiedType(DestType, VD->getType())
                    ? diag::warn_pessimizing_move_on_return
