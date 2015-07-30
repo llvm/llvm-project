@@ -104,7 +104,7 @@ During this release the MIPS target has:
 
   * Support for the Profiler for all MIPS subtargets.
 
-* Added support for libcxx, libcxxabi, libunwind
+* Added support for libcxx, and libcxxabi.
 
 * Improved inline assembly support such that memory constraints may now make use
   of the appropriate address offsets available to the instructions. Also, added
