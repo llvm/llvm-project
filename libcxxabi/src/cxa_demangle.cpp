@@ -156,7 +156,9 @@ constexpr const char* float_data<double>::spec;
 template <>
 struct float_data<long double>
 {
-#if defined(__arm__)
+#if defined(__mips__) && defined(__mips_n64)
+    static const size_t mangled_size = 32;
+#elif defined(__arm__) || defined(__mips__)
     static const size_t mangled_size = 16;
 #else
     static const size_t mangled_size = 20;  // May need to be adjusted to 16 or 24 on other platforms
