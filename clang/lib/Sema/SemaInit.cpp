@@ -5926,6 +5926,9 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
   if (!InitExpr)
     return;
 
+  if (!S.ActiveTemplateInstantiations.empty())
+    return;
+
   QualType DestType = InitExpr->getType();
   if (!DestType->isRecordType())
     return;
@@ -5941,24 +5944,6 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
       return;
 
     InitExpr = CCE->getArg(0)->IgnoreImpCasts();
-
-    // Remove implicit temporary and constructor nodes.
-    if (const MaterializeTemporaryExpr *MTE =
-            dyn_cast<MaterializeTemporaryExpr>(InitExpr)) {
-      InitExpr = MTE->GetTemporaryExpr()->IgnoreImpCasts();
-      while (const CXXConstructExpr *CCE =
-                 dyn_cast<CXXConstructExpr>(InitExpr)) {
-        if (isa<CXXTemporaryObjectExpr>(CCE))
-          return;
-        if (CCE->getNumArgs() == 0)
-          return;
-        if (CCE->getNumArgs() > 1 && !isa<CXXDefaultArgExpr>(CCE->getArg(1)))
-          return;
-        InitExpr = CCE->getArg(0);
-      }
-      InitExpr = InitExpr->IgnoreImpCasts();
-      DiagID = diag::warn_redundant_move_on_return;
-    }
   }
 
   // Find the std::move call and get the argument.
@@ -5983,19 +5968,20 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
     if (!VD || !VD->hasLocalStorage())
       return;
 
-    if (!VD->getType()->isRecordType())
+    QualType SourceType = VD->getType();
+    if (!SourceType->isRecordType())
       return;
+
+    if (!S.Context.hasSameUnqualifiedType(DestType, SourceType)) {
+      return;
+    }
 
     // If we're returning a function parameter, copy elision
     // is not possible.
     if (isa<ParmVarDecl>(VD))
       DiagID = diag::warn_redundant_move_on_return;
-
-    if (DiagID == 0) {
-      DiagID = S.Context.hasSameUnqualifiedType(DestType, VD->getType())
-                   ? diag::warn_pessimizing_move_on_return
-                   : diag::warn_redundant_move_on_return;
-    }
+    else
+      DiagID = diag::warn_pessimizing_move_on_return;
   } else {
     DiagID = diag::warn_pessimizing_move_on_initialization;
     const Expr *ArgStripped = Arg->IgnoreImplicit()->IgnoreParens();
