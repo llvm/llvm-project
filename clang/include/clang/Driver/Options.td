@@ -1351,6 +1351,13 @@ def mno_altivec : Flag<["-"], "mno-altivec">, Alias<fno_altivec>;
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;
 
+def fzvector : Flag<["-"], "fzvector">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Enable System z vector language extension">;
+def fno_zvector : Flag<["-"], "fno-zvector">, Group<f_Group>,
+  Flags<[CC1Option]>;
+def mzvector : Flag<["-"], "mzvector">, Alias<fzvector>;
+def mno_zvector : Flag<["-"], "mno-zvector">, Alias<fno_zvector>;
+
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,

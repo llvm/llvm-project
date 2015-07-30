@@ -110,7 +110,8 @@ namespace {
     HALFSUPPORT = 0x08000,
     KEYCONCEPTS = 0x10000,
     KEYOBJC2    = 0x20000,
-    KEYALL = (0x3ffff & ~KEYNOMS18 &
+    KEYZVECTOR  = 0x40000,
+    KEYALL = (0x7ffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 

@@ -1748,3 +1748,12 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK_SYSTEMZ_HTM
 //
 // CHECK_SYSTEMZ_HTM: #define __HTM__ 1
+//
+// RUN: %clang -fzvector -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck %s -check-prefix=CHECK_SYSTEMZ_ZVECTOR
+// RUN: %clang -mzvector -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck %s -check-prefix=CHECK_SYSTEMZ_ZVECTOR
+//
+// CHECK_SYSTEMZ_ZVECTOR: #define __VEC__ 10301

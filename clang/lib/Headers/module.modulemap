@@ -158,6 +158,11 @@ module _Builtin_intrinsics [system] [extern_c] {
       header "htmintrin.h"
       header "htmxlintrin.h"
     }
+
+    explicit module zvector {
+      requires zvector, vx
+      header "vecintrin.h"
+    }
   }
 }
 

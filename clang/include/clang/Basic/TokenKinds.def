@@ -239,6 +239,8 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   KEYOPENCL  - This is a keyword in OpenCL
 //   KEYNOOPENCL  - This is a keyword that is not supported in OpenCL
 //   KEYALTIVEC - This is a keyword in AltiVec
+//   KEYZVECTOR - This is a keyword for the System z vector extensions,
+//                which are heavily based on AltiVec
 //   KEYBORLAND - This is a keyword if Borland extensions are enabled
 //   BOOLSUPPORT - This is a keyword if 'bool' is a built-in type
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
@@ -501,7 +503,7 @@ ALIAS("write_only", __write_only    , KEYOPENCL)
 ALIAS("read_write", __read_write    , KEYOPENCL)
 // OpenCL builtins
 KEYWORD(__builtin_astype            , KEYOPENCL)
-KEYWORD(vec_step                    , KEYOPENCL|KEYALTIVEC)
+KEYWORD(vec_step                    , KEYOPENCL|KEYALTIVEC|KEYZVECTOR)
 
 // OpenMP Type Traits
 KEYWORD(__builtin_omp_required_simd_align, KEYALL)
@@ -510,9 +512,9 @@ KEYWORD(__builtin_omp_required_simd_align, KEYALL)
 KEYWORD(__pascal                    , KEYALL)
 
 // Altivec Extension.
-KEYWORD(__vector                    , KEYALTIVEC)
+KEYWORD(__vector                    , KEYALTIVEC|KEYZVECTOR)
 KEYWORD(__pixel                     , KEYALTIVEC)
-KEYWORD(__bool                      , KEYALTIVEC)
+KEYWORD(__bool                      , KEYALTIVEC|KEYZVECTOR)
 
 // ARM NEON extensions.
 ALIAS("__fp16", half                , KEYALL)

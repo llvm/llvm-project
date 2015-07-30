@@ -59,6 +59,7 @@ set(files
   unwind.h
   vadefs.h
   varargs.h
+  vecintrin.h
   __wmmintrin_aes.h
   wmmintrin.h
   __wmmintrin_pclmul.h

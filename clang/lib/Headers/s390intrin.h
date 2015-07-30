@@ -32,4 +32,8 @@
 #include <htmintrin.h>
 #endif
 
+#ifdef __VEC__
+#include <vecintrin.h>
+#endif
+
 #endif /* __S390INTRIN_H*/
