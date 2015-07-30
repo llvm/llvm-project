@@ -180,10 +180,17 @@ uint64_t ExecutionEngineState::RemoveMapping(StringRef Name) {
 }
 
 std::string ExecutionEngine::getMangledName(const GlobalValue *GV) {
+  assert(GV->hasName() && "Global must have name.");
+
   MutexGuard locked(lock);
-  Mangler Mang;
   SmallString<128> FullName;
-  Mang.getNameWithPrefix(FullName, GV, false);
+
+  const DataLayout &DL =
+    GV->getParent()->getDataLayout().isDefault()
+      ? *getDataLayout()
+      : GV->getParent()->getDataLayout();
+
+  Mangler::getNameWithPrefix(FullName, GV->getName(), DL);
   return FullName.str();
 }
 

@@ -266,6 +266,12 @@ void MCJIT::finalizeModule(Module *M) {
 RuntimeDyld::SymbolInfo MCJIT::findExistingSymbol(const std::string &Name) {
   SmallString<128> FullName;
   Mangler::getNameWithPrefix(FullName, Name, *TM->getDataLayout());
+
+  if (void *Addr = getPointerToGlobalIfAvailable(FullName))
+    return RuntimeDyld::SymbolInfo(static_cast<uint64_t>(
+                                     reinterpret_cast<uintptr_t>(Addr)),
+                                   JITSymbolFlags::Exported);
+
   return Dyld.getSymbol(FullName);
 }
 
