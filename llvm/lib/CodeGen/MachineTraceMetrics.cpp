@@ -624,6 +624,10 @@ struct DataDep {
 static bool getDataDeps(const MachineInstr *UseMI,
                         SmallVectorImpl<DataDep> &Deps,
                         const MachineRegisterInfo *MRI) {
+  // Debug values should not be included in any calculations.
+  if (UseMI->isDebugValue())
+    return false;
+  
   bool HasPhysRegs = false;
   for (MachineInstr::const_mop_iterator I = UseMI->operands_begin(),
        E = UseMI->operands_end(); I != E; ++I) {
