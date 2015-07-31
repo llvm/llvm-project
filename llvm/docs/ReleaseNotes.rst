@@ -118,6 +118,8 @@ During this release the MIPS target has:
 
 * Added support for MCJIT on all 64-bit subtargets as well as MIPS32R6.
 
+* Added support for fast instruction selection on MIPS32 and MIPS32R2 with PIC.
+
 * Various bug fixes. Including the following notable fixes:
 
   * Fixed 'jumpy' debug line info around calls where calculation of the address
