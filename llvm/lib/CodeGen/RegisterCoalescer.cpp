@@ -1531,6 +1531,14 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
         DEBUG(dbgs() << "\t\tInterference (read): " << *MI);
         return false;
       }
+
+      // We must also check for clobbers caused by regmasks.
+      for (const auto &MO : MI->operands()) {
+        if (MO.isRegMask() && MO.clobbersPhysReg(DstReg)) {
+          DEBUG(dbgs() << "\t\tInterference (regmask clobber): " << *MI);
+          return false;
+        }
+      }
     }
 
     // We're going to remove the copy which defines a physical reserved
