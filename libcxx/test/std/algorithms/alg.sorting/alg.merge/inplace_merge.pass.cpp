@@ -20,12 +20,35 @@
 
 #include "test_iterators.h"
 
+#if TEST_STD_VER >= 11
+struct S {
+	S() : i_(0) {}
+	S(int i) : i_(i) {}
+	
+	S(const S&  rhs) : i_(rhs.i_) {}
+	S(      S&& rhs) : i_(rhs.i_) { rhs.i_ = -1; }
+	
+	S& operator =(const S&  rhs) { i_ = rhs.i_;              return *this; }
+	S& operator =(      S&& rhs) { i_ = rhs.i_; rhs.i_ = -2; assert(this != &rhs); return *this; }
+	S& operator =(int i)         { i_ = i;                   return *this; }
+	
+	bool operator  <(const S&  rhs) const { return i_ < rhs.i_; }
+	bool operator ==(const S&  rhs) const { return i_ == rhs.i_; }
+	bool operator ==(int i)         const { return i_ == i; }
+
+	void set(int i) { i_ = i; }
+	
+	int i_;
+	};
+#endif
+
 template <class Iter>
 void
 test_one(unsigned N, unsigned M)
 {
+    typedef typename std::iterator_traits<Iter>::value_type value_type;
     assert(M <= N);
-    int* ia = new int[N];
+    value_type* ia = new value_type[N];
     for (unsigned i = 0; i < N; ++i)
         ia[i] = i;
     std::random_shuffle(ia, ia+N);
@@ -76,4 +99,10 @@ int main()
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+
+#if TEST_STD_VER >= 11
+    test<bidirectional_iterator<S*> >();
+    test<random_access_iterator<S*> >();
+    test<S*>();
+#endif  // TEST_STD_VER >= 11
 }

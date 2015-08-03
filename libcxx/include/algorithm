@@ -4361,6 +4361,34 @@ merge(_InputIterator1 __first1, _InputIterator1 __last1,
 
 // inplace_merge
 
+template <class _Compare, class _InputIterator1, class _InputIterator2,
+          class _OutputIterator>
+void __half_inplace_merge(_InputIterator1 __first1, _InputIterator1 __last1,
+                          _InputIterator2 __first2, _InputIterator2 __last2,
+                          _OutputIterator __result, _Compare __comp)
+{
+    for (; __first1 != __last1; ++__result)
+    {
+        if (__first2 == __last2)
+        {
+            _VSTD::move(__first1, __last1, __result);
+            return;
+        }
+
+        if (__comp(*__first2, *__first1))
+        {
+            *__result = _VSTD::move(*__first2);
+            ++__first2;
+        }
+        else
+        {
+            *__result = _VSTD::move(*__first1);
+            ++__first1;
+        }
+    }
+    // __first2 through __last2 are already in the right spot.
+}
+
 template <class _Compare, class _BidirectionalIterator>
 void
 __buffered_inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last,
@@ -4376,11 +4404,7 @@ __buffered_inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator 
         value_type* __p = __buff;
         for (_BidirectionalIterator __i = __first; __i != __middle; __d.__incr((value_type*)0), (void) ++__i, ++__p)
             ::new(__p) value_type(_VSTD::move(*__i));
-        __merge<_Compare>(move_iterator<value_type*>(__buff),
-                          move_iterator<value_type*>(__p),
-                          move_iterator<_BidirectionalIterator>(__middle),
-                          move_iterator<_BidirectionalIterator>(__last),
-                          __first, __comp);
+        __half_inplace_merge(__buff, __p, __middle, __last, __first, __comp);
     }
     else
     {
@@ -4389,9 +4413,9 @@ __buffered_inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator 
             ::new(__p) value_type(_VSTD::move(*__i));
         typedef reverse_iterator<_BidirectionalIterator> _RBi;
         typedef reverse_iterator<value_type*> _Rv;
-        __merge(move_iterator<_RBi>(_RBi(__middle)), move_iterator<_RBi>(_RBi(__first)),
-                move_iterator<_Rv>(_Rv(__p)), move_iterator<_Rv>(_Rv(__buff)),
-                _RBi(__last), __negate<_Compare>(__comp));
+        __half_inplace_merge(_Rv(__p), _Rv(__buff), 
+                             _RBi(__middle), _RBi(__first),
+                             _RBi(__last), __negate<_Compare>(__comp));
     }
 }
 

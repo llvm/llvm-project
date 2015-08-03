@@ -18,7 +18,10 @@
 #include <algorithm>
 #include <functional>
 #include <cassert>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 11
 #include <memory>
 
 struct indirect_less
@@ -28,7 +31,29 @@ struct indirect_less
         {return *x < *y;}
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+struct S {
+	S() : i_(0) {}
+	S(int i) : i_(i) {}
+	
+	S(const S&  rhs) : i_(rhs.i_) {}
+	S(      S&& rhs) : i_(rhs.i_) { rhs.i_ = -1; }
+	
+	S& operator =(const S&  rhs) { i_ = rhs.i_;              return *this; }
+	S& operator =(      S&& rhs) { i_ = rhs.i_; rhs.i_ = -2; assert(this != &rhs); return *this; }
+	S& operator =(int i)         { i_ = i;                   return *this; }
+	
+	bool operator  <(const S&  rhs) const { return i_ < rhs.i_; }
+	bool operator  >(const S&  rhs) const { return i_ > rhs.i_; }
+	bool operator ==(const S&  rhs) const { return i_ == rhs.i_; }
+	bool operator ==(int i)         const { return i_ == i; }
+
+	void set(int i) { i_ = i; }
+	
+	int i_;
+	};
+
+
+#endif  // TEST_STD_VER >= 11
 
 #include "test_iterators.h"
 #include "counting_predicates.hpp"
@@ -38,19 +63,20 @@ void
 test_one(unsigned N, unsigned M)
 {
     assert(M <= N);
-    int* ia = new int[N];
+    typedef typename std::iterator_traits<Iter>::value_type value_type;
+    value_type* ia = new value_type[N];
     for (unsigned i = 0; i < N; ++i)
         ia[i] = i;
     std::random_shuffle(ia, ia+N);
-    std::sort(ia, ia+M, std::greater<int>());
-    std::sort(ia+M, ia+N, std::greater<int>());
-    binary_counting_predicate<std::greater<int>, int, int> pred((std::greater<int>()));
+    std::sort(ia, ia+M, std::greater<value_type>());
+    std::sort(ia+M, ia+N, std::greater<value_type>());
+    binary_counting_predicate<std::greater<value_type>, value_type, value_type> pred((std::greater<value_type>()));
     std::inplace_merge(Iter(ia), Iter(ia+M), Iter(ia+N), std::ref(pred));
     if(N > 0)
     {
         assert(ia[0] == N-1);
         assert(ia[N-1] == 0);
-        assert(std::is_sorted(ia, ia+N, std::greater<int>()));
+        assert(std::is_sorted(ia, ia+N, std::greater<value_type>()));
         assert(pred.count() <= (N-1));
     }
     delete [] ia;
@@ -93,7 +119,11 @@ int main()
     test<random_access_iterator<int*> >();
     test<int*>();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
+    test<bidirectional_iterator<S*> >();
+    test<random_access_iterator<S*> >();
+    test<S*>();
+
     {
     unsigned N = 100;
     unsigned M = 50;
@@ -112,5 +142,5 @@ int main()
     }
     delete [] ia;
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // TEST_STD_VER >= 11
 }
