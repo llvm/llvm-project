@@ -29,7 +29,7 @@
 #define __AVX512VLINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512vl")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 /* Integer compare */
 

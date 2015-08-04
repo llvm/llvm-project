@@ -28,8 +28,12 @@
 #ifndef __FMAINTRIN_H
 #define __FMAINTRIN_H
 
+#ifndef __FMA__
+# error "FMA instruction set is not enabled"
+#else
+
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("fma")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_fmadd_ps(__m128 __A, __m128 __B, __m128 __C)
@@ -224,5 +228,7 @@ _mm256_fmsubadd_pd(__m256d __A, __m256d __B, __m256d __C)
 }
 
 #undef __DEFAULT_FN_ATTRS
+
+#endif /* __FMA__ */
 
 #endif /* __FMAINTRIN_H */

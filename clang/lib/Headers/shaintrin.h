@@ -28,8 +28,12 @@
 #ifndef __SHAINTRIN_H
 #define __SHAINTRIN_H
 
+#if !defined (__SHA__)
+#  error "SHA instructions not enabled"
+#endif
+
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sha")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 #define _mm_sha1rnds4_epu32(V1, V2, M) __extension__ ({ \
   __builtin_ia32_sha1rnds4((V1), (V2), (M)); })

@@ -47,7 +47,7 @@ typedef unsigned short __mmask16;
 #define _MM_FROUND_CUR_DIRECTION    0x04
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512f")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 /* Create vectors with repeated elements */
 

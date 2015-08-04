@@ -24,6 +24,10 @@
 #ifndef __MMINTRIN_H
 #define __MMINTRIN_H
 
+#ifndef __MMX__
+#error "MMX instruction set not enabled"
+#else
+
 typedef long long __m64 __attribute__((__vector_size__(8)));
 
 typedef int __v2si __attribute__((__vector_size__(8)));
@@ -31,7 +35,7 @@ typedef short __v4hi __attribute__((__vector_size__(8)));
 typedef char __v8qi __attribute__((__vector_size__(8)));
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("mmx")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_empty(void)
@@ -496,6 +500,8 @@ _mm_setr_pi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
 #define _m_pcmpgtb _mm_cmpgt_pi8
 #define _m_pcmpgtw _mm_cmpgt_pi16
 #define _m_pcmpgtd _mm_cmpgt_pi32
+
+#endif /* __MMX__ */
 
 #endif /* __MMINTRIN_H */
 

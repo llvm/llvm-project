@@ -25,6 +25,10 @@
 #error "Never use <f16cintrin.h> directly; include <x86intrin.h> instead."
 #endif
 
+#ifndef __F16C__
+# error "F16C instruction is not enabled"
+#endif /* __F16C__ */
+
 #ifndef __F16CINTRIN_H
 #define __F16CINTRIN_H
 
@@ -32,7 +36,7 @@ typedef float __v8sf __attribute__ ((__vector_size__ (32)));
 typedef float __m256 __attribute__ ((__vector_size__ (32)));
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("f16c")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 #define _mm_cvtps_ph(a, imm) __extension__ ({ \
   __m128 __a = (a); \

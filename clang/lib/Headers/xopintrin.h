@@ -28,10 +28,14 @@
 #ifndef __XOPINTRIN_H
 #define __XOPINTRIN_H
 
+#ifndef __XOP__
+# error "XOP instruction set is not enabled"
+#else
+
 #include <fma4intrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("xop")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_maccs_epi16(__m128i __A, __m128i __B, __m128i __C)
@@ -799,5 +803,7 @@ _mm256_frcz_pd(__m256d __A)
 }
 
 #undef __DEFAULT_FN_ATTRS
+
+#endif /* __XOP__ */
 
 #endif /* __XOPINTRIN_H */

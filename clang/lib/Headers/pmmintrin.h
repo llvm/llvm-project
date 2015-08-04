@@ -24,10 +24,14 @@
 #ifndef __PMMINTRIN_H
 #define __PMMINTRIN_H
 
+#ifndef __SSE3__
+#error "SSE3 instruction set not enabled"
+#else
+
 #include <emmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse3")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_lddqu_si128(__m128i const *__p)
@@ -112,5 +116,7 @@ _mm_mwait(unsigned __extensions, unsigned __hints)
 }
 
 #undef __DEFAULT_FN_ATTRS
+
+#endif /* __SSE3__ */
 
 #endif /* __PMMINTRIN_H */

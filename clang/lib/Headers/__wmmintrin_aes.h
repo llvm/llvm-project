@@ -25,8 +25,12 @@
 
 #include <emmintrin.h>
 
+#if !defined (__AES__)
+#  error "AES instructions not enabled"
+#else
+
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("aes")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_aesenc_si128(__m128i __V, __m128i __R)
@@ -62,5 +66,7 @@ _mm_aesimc_si128(__m128i __V)
   __builtin_ia32_aeskeygenassist128((C), (R))
 
 #undef __DEFAULT_FN_ATTRS
+
+#endif
 
 #endif  /* _WMMINTRIN_AES_H */

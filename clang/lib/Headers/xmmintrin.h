@@ -24,6 +24,10 @@
 #ifndef __XMMINTRIN_H
 #define __XMMINTRIN_H
  
+#ifndef __SSE__
+#error "SSE instruction set not enabled"
+#else
+
 #include <mmintrin.h>
 
 typedef int __v4si __attribute__((__vector_size__(16)));
@@ -37,7 +41,7 @@ typedef float __m128 __attribute__((__vector_size__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_add_ss(__m128 __a, __m128 __b)
@@ -998,5 +1002,7 @@ do { \
 #if defined(__SSE2__) && !__has_feature(modules)
 #include <emmintrin.h>
 #endif
+
+#endif /* __SSE__ */
 
 #endif /* __XMMINTRIN_H */

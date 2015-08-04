@@ -40,7 +40,7 @@ typedef double __m256d __attribute__((__vector_size__(32)));
 typedef long long __m256i __attribute__((__vector_size__(32)));
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 /* Arithmetic */
 static __inline __m256d __DEFAULT_FN_ATTRS

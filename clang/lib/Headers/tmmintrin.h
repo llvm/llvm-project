@@ -24,10 +24,14 @@
 #ifndef __TMMINTRIN_H
 #define __TMMINTRIN_H
 
+#ifndef __SSSE3__
+#error "SSSE3 instruction set not enabled"
+#else
+
 #include <pmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("ssse3")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_abs_pi8(__m64 __a)
@@ -220,5 +224,7 @@ _mm_sign_pi32(__m64 __a, __m64 __b)
 }
 
 #undef __DEFAULT_FN_ATTRS
+
+#endif /* __SSSE3__ */
 
 #endif /* __TMMINTRIN_H */
