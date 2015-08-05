@@ -454,7 +454,12 @@ function build_OpenMP() {
     echo "# ${MAKE} install DESTDIR=$BuildDir/Phase3/openmp.install"
     ${MAKE} install DESTDIR=$BuildDir/Phase3/openmp.install
 
-    OpenMPPackage=OpenMP-$Triple
+    OpenMPPackage=OpenMP-$Release
+    if [ $RC != "final" ]; then
+        OpenMPPackage=$OpenMPPackage-$RC
+    fi
+    OpenMPPackage=$OpenMPPackage-$Triple
+
     mv $BuildDir/Phase3/openmp.install/usr/local $BuildDir/$OpenMPPackage
     cd $BuildDir
     tar cvfJ $BuildDir/$OpenMPPackage.tar.xz $OpenMPPackage
