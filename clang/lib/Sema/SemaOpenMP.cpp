@@ -657,7 +657,9 @@ void Sema::InitDataSharingAttributesStack() {
 bool Sema::IsOpenMPCapturedVar(VarDecl *VD) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   VD = VD->getCanonicalDecl();
-  if (DSAStack->getCurrentDirective() != OMPD_unknown) {
+  if (DSAStack->getCurrentDirective() != OMPD_unknown &&
+      (!DSAStack->isClauseParsingMode() ||
+       DSAStack->getParentDirective() != OMPD_unknown)) {
     if (DSAStack->isLoopControlVariable(VD) ||
         (VD->hasLocalStorage() &&
          isParallelOrTaskRegion(DSAStack->getCurrentDirective())) ||

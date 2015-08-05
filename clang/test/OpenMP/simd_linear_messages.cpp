@@ -156,6 +156,7 @@ namespace C {
 using A::x;
 }
 
+int f;
 int main(int argc, char **argv) {
   double darr[100];
   // expected-note@+1 {{in instantiation of function template specialization 'test_template<-4, double, int>' requested here}}
@@ -167,6 +168,8 @@ int main(int argc, char **argv) {
   S5 g(5); // expected-note {{'g' defined here}}
   int i;
   int &j = i; // expected-note {{'j' defined here}}
+  #pragma omp simd linear(f) linear(f) // expected-error {{linear variable cannot be linear}} expected-note {{defined as linear}}
+  for (int k = 0; k < argc; ++k) ++k;
   #pragma omp simd linear // expected-error {{expected '(' after 'linear'}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp simd linear ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
