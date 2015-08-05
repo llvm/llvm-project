@@ -35,7 +35,7 @@ uptr internal_write(fd_t fd, const void *buf, uptr count);
 
 // Memory
 uptr internal_mmap(void *addr, uptr length, int prot, int flags,
-                   int fd, u64 offset);
+                   int fd, OFF_T offset);
 uptr internal_munmap(void *addr, uptr length);
 int internal_mprotect(void *addr, uptr length, int prot);
 

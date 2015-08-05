@@ -236,7 +236,7 @@ uptr ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
 // (or NULL if mapping fails). Stores the size of mmaped region
 // in '*buff_size'.
 void *MapFileToMemory(const char *file_name, uptr *buff_size);
-void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, uptr offset);
+void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, OFF_T offset);
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
 
