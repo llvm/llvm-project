@@ -267,7 +267,7 @@ function export_sources() {
         ln -s ../../cfe.src clang
     fi
     cd $BuildDir/llvm.src/tools/clang/tools
-    if [ ! -h clang-tools-extra ]; then
+    if [ ! -h extra ]; then
         ln -s ../../../../clang-tools-extra.src extra
     fi
     cd $BuildDir/llvm.src/projects
