@@ -406,6 +406,9 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     Failed = Parser->Run(Opts.NoInitialTextSection);
   }
 
+  // Close Streamer first.
+  // It might have a reference to the output stream.
+  Str.reset();
   // Close the output stream early.
   BOS.reset();
   FDOS.reset();
