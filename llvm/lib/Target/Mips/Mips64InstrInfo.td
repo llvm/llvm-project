@@ -500,14 +500,6 @@ def : MipsPat<(trunc (assertzext GPR64:$src)),
 def : MipsPat<(i32 (trunc GPR64:$src)),
               (SLL (EXTRACT_SUBREG GPR64:$src, sub_32), 0)>;
 
-// Bypass trunc nodes for bitwise ops.
-def : MipsPat<(i32 (trunc (and GPR64:$lhs, GPR64:$rhs))),
-              (EXTRACT_SUBREG (AND64 GPR64:$lhs, GPR64:$rhs), sub_32)>;
-def : MipsPat<(i32 (trunc (or GPR64:$lhs, GPR64:$rhs))),
-              (EXTRACT_SUBREG (OR64 GPR64:$lhs, GPR64:$rhs), sub_32)>;
-def : MipsPat<(i32 (trunc (xor GPR64:$lhs, GPR64:$rhs))),
-              (EXTRACT_SUBREG (XOR64 GPR64:$lhs, GPR64:$rhs), sub_32)>;
-
 // variable shift instructions patterns
 def : MipsPat<(shl GPR64:$rt, (i32 (trunc GPR64:$rs))),
               (DSLLV GPR64:$rt, (EXTRACT_SUBREG GPR64:$rs, sub_32))>;

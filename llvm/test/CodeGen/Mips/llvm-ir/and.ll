@@ -59,7 +59,10 @@ define signext i32 @and_i32(i32 signext %a, i32 signext %b) {
 entry:
 ; ALL-LABEL: and_i32:
 
-  ; ALL:          and     $2, $4, $5
+  ; GP32:         and     $2, $4, $5
+
+  ; GP64:         and     $[[T0:[0-9]+]], $4, $5
+  ; GP64:         sll     $2, $[[T0]], 0
 
   %r = and i32 %a, %b
   ret i32 %r

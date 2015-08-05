@@ -59,7 +59,11 @@ define signext i32 @or_i32(i32 signext %a, i32 signext %b) {
 entry:
 ; ALL-LABEL: or_i32:
 
-  ; ALL:          or     $2, $4, $5
+  ; GP32:         or     $2, $4, $5
+
+  ; GP64:         or     $[[T0:[0-9]+]], $4, $5
+  ; FIXME: The sll instruction below is redundant.
+  ; GP64:         sll     $2, $[[T0]], 0
 
   %r = or i32 %a, %b
   ret i32 %r

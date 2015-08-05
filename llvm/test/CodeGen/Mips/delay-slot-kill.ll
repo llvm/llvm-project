@@ -1,4 +1,6 @@
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s
+; We have to XFAIL this temporarily because of the reversion of r229675.
+; XFAIL: *
 
 ; Currently, the following IR assembly generates a KILL instruction between
 ; the bitwise-and instruction and the return instruction. We verify that the
