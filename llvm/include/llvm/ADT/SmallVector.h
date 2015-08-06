@@ -315,8 +315,10 @@ protected:
                                            T2>::value>::type * = nullptr) {
     // Use memcpy for PODs iterated by pointers (which includes SmallVector
     // iterators): std::uninitialized_copy optimizes to memmove, but we can
-    // use memcpy here.
-    memcpy(Dest, I, (E-I)*sizeof(T));
+    // use memcpy here. Note that I and E are iterators and thus might be
+    // invalid for memcpy if they are equal.
+    if (I != E)
+      memcpy(Dest, I, (E - I) * sizeof(T));
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
