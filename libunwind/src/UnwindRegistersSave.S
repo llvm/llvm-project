@@ -301,7 +301,7 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
 #if !defined(__ARM_ARCH_ISA_ARM)
-  stm r0!, {r0-r7}
+  stm r0, {r0-r7}
   mov r2, sp
   mov r3, lr
   str r2, [r0, #52]
