@@ -326,7 +326,8 @@ namespace {
       OS << "    " << getLowerName() << "Length = S.size();\n";
       OS << "    this->" << getLowerName() << " = new (C, 1) char ["
          << getLowerName() << "Length];\n";
-      OS << "    std::memcpy(this->" << getLowerName() << ", S.data(), "
+      OS << "    if (!S.empty())\n";
+      OS << "      std::memcpy(this->" << getLowerName() << ", S.data(), "
          << getLowerName() << "Length);\n";
       OS << "  }";
     }
@@ -337,7 +338,8 @@ namespace {
       OS << "A->get" << getUpperName() << "()";
     }
     void writeCtorBody(raw_ostream &OS) const override {
-      OS << "      std::memcpy(" << getLowerName() << ", " << getUpperName()
+      OS << "      if (!" << getUpperName() << ".empty())\n";
+      OS << "        std::memcpy(" << getLowerName() << ", " << getUpperName()
          << ".data(), " << getLowerName() << "Length);";
     }
     void writeCtorInitializers(raw_ostream &OS) const override {

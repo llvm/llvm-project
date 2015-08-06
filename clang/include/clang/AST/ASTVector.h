@@ -384,14 +384,15 @@ void ASTVector<T>::grow(const ASTContext &C, size_t MinSize) {
   T *NewElts = new (C, llvm::alignOf<T>()) T[NewCapacity];
 
   // Copy the elements over.
-  if (std::is_class<T>::value) {
-    std::uninitialized_copy(Begin, End, NewElts);
-    // Destroy the original elements.
-    destroy_range(Begin, End);
-  }
-  else {
-    // Use memcpy for PODs (std::uninitialized_copy optimizes to memmove).
-    memcpy(NewElts, Begin, CurSize * sizeof(T));
+  if (Begin != End) {
+    if (std::is_class<T>::value) {
+      std::uninitialized_copy(Begin, End, NewElts);
+      // Destroy the original elements.
+      destroy_range(Begin, End);
+    } else {
+      // Use memcpy for PODs (std::uninitialized_copy optimizes to memmove).
+      memcpy(NewElts, Begin, CurSize * sizeof(T));
+    }
   }
 
   // ASTContext never frees any memory.

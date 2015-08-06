@@ -435,17 +435,19 @@ TypeLoc NestedNameSpecifierLoc::getTypeLoc() const {
 namespace {
   void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
               unsigned &BufferCapacity) {
+    if (Start == End)
+      return;
+
     if (BufferSize + (End - Start) > BufferCapacity) {
       // Reallocate the buffer.
-      unsigned NewCapacity 
-      = std::max((unsigned)(BufferCapacity? BufferCapacity * 2 
-                            : sizeof(void*) * 2),
-                 (unsigned)(BufferSize + (End - Start)));
+      unsigned NewCapacity = std::max(
+          (unsigned)(BufferCapacity ? BufferCapacity * 2 : sizeof(void *) * 2),
+          (unsigned)(BufferSize + (End - Start)));
       char *NewBuffer = static_cast<char *>(malloc(NewCapacity));
-      memcpy(NewBuffer, Buffer, BufferSize);
-      
-      if (BufferCapacity)
+      if (BufferCapacity) {
+        memcpy(NewBuffer, Buffer, BufferSize);
         free(Buffer);
+      }
       Buffer = NewBuffer;
       BufferCapacity = NewCapacity;
     }

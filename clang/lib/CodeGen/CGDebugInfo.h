@@ -484,8 +484,10 @@ private:
   /// are concatenated.
   StringRef internString(StringRef A, StringRef B = StringRef()) {
     char *Data = DebugInfoNames.Allocate<char>(A.size() + B.size());
-    std::memcpy(Data, A.data(), A.size());
-    std::memcpy(Data + A.size(), B.data(), B.size());
+    if (!A.empty())
+      std::memcpy(Data, A.data(), A.size());
+    if (!B.empty())
+      std::memcpy(Data + A.size(), B.data(), B.size());
     return StringRef(Data, A.size() + B.size());
   }
 };

@@ -255,6 +255,17 @@ static int parse_remapped_files_with_try(int try_idx,
   if (ret)
     return ret;
 
+  if (num_unsaved_files_no_try_idx == 0) {
+    *unsaved_files = unsaved_files_try_idx;
+    *num_unsaved_files = num_unsaved_files_try_idx;
+    return 0;
+  }
+  if (num_unsaved_files_try_idx == 0) {
+    *unsaved_files = unsaved_files_no_try_idx;
+    *num_unsaved_files = num_unsaved_files_no_try_idx;
+    return 0;
+  }
+
   *num_unsaved_files = num_unsaved_files_no_try_idx + num_unsaved_files_try_idx;
   *unsaved_files
     = (struct CXUnsavedFile *)realloc(unsaved_files_no_try_idx,
