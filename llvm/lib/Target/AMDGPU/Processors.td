@@ -138,3 +138,7 @@ def : ProcessorModel<"iceland", SIQuarterSpeedModel,
 def : ProcessorModel<"carrizo", SIQuarterSpeedModel,
   [FeatureVolcanicIslands, FeatureISAVersion8_0_1]
 >;
+
+def : ProcessorModel<"fiji", SIQuarterSpeedModel,
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_1]
+>;
