@@ -374,9 +374,10 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
   if (!Tmp.PHITranslateValue(CurBB, PredBB, &DT, /*MustDominate=*/true))
     return Tmp.getAddr();
 
-  // If we don't have an available version of this value, it must be an
-  // instruction.
-  Instruction *Inst = cast<Instruction>(InVal);
+  // We don't need to PHI translate values which aren't instructions.
+  auto *Inst = dyn_cast<Instruction>(InVal);
+  if (!Inst)
+    return nullptr;
 
   // Handle cast of PHI translatable value.
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
