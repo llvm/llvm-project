@@ -219,8 +219,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class>
 struct __void_t { typedef void type; };
 
-template <class T>
-struct __identity { typedef T type; };
+template <class _Tp>
+struct __identity { typedef _Tp type; };
 
 template <class _Tp, bool>
 struct _LIBCPP_TYPE_VIS_ONLY __dependent_type : public _Tp {};
