@@ -371,7 +371,7 @@ ProcessGDBRemote::ProcessGDBRemote(Target& target, Listener &listener) :
     m_flags (0),
     m_gdb_comm (),
     m_debugserver_pid (LLDB_INVALID_PROCESS_ID),
-    m_last_stop_packet_mutex (Mutex::eMutexTypeNormal),
+    m_last_stop_packet_mutex (Mutex::eMutexTypeRecursive),
     m_register_info (),
     m_async_broadcaster (NULL, "lldb.process.gdb-remote.async-broadcaster"),
     m_async_thread_state_mutex(Mutex::eMutexTypeRecursive),
@@ -2447,6 +2447,18 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                 }
             }
 
+            if (tid == LLDB_INVALID_THREAD_ID)
+            {
+                // A thread id may be invalid if the response is old style 'S' packet which does not provide the 
+                // thread information. So update the thread list and choose the first one.
+                UpdateThreadIDList ();
+                
+                if (!m_thread_ids.empty ())
+                {
+                    tid = m_thread_ids.front ();
+                }
+            }
+
             ThreadSP thread_sp = SetThreadStopInfo (tid,
                                                     expedited_register_map,
                                                     signo,
@@ -2460,19 +2472,6 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                                                     queue_name,
                                                     queue_kind,
                                                     queue_serial);
-
-            // If the response is old style 'S' packet which does not provide us with thread information
-            // then update the thread list and choose the first one.
-            if (!thread_sp)
-            {
-                UpdateThreadIDList ();
-
-                if (!m_thread_ids.empty ())
-                {
-                    Mutex::Locker locker (m_thread_list_real.GetMutex ());
-                    thread_sp = m_thread_list_real.FindThreadByProtocolID (m_thread_ids.front (), false);
-                }
-            }
 
             return eStateStopped;
         }
