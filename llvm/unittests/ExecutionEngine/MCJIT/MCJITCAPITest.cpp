@@ -339,14 +339,11 @@ TEST_F(MCJITCAPITest, simple_function) {
   buildMCJITOptions();
   buildMCJITEngine();
   buildAndRunPasses();
-  
-  union {
-    void *raw;
-    int (*usable)();
-  } functionPointer;
-  functionPointer.raw = LLVMGetPointerToGlobal(Engine, Function);
-  
-  EXPECT_EQ(42, functionPointer.usable());
+
+  auto *functionPointer = reinterpret_cast<int (*)()>(
+      reinterpret_cast<uintptr_t>(LLVMGetPointerToGlobal(Engine, Function)));
+
+  EXPECT_EQ(42, functionPointer());
 }
 
 TEST_F(MCJITCAPITest, gva) {
@@ -389,14 +386,11 @@ TEST_F(MCJITCAPITest, custom_memory_manager) {
   useRoundTripSectionMemoryManager();
   buildMCJITEngine();
   buildAndRunPasses();
-  
-  union {
-    void *raw;
-    int (*usable)();
-  } functionPointer;
-  functionPointer.raw = LLVMGetPointerToGlobal(Engine, Function);
-  
-  EXPECT_EQ(42, functionPointer.usable());
+
+  auto *functionPointer = reinterpret_cast<int (*)()>(
+      reinterpret_cast<uintptr_t>(LLVMGetPointerToGlobal(Engine, Function)));
+
+  EXPECT_EQ(42, functionPointer());
   EXPECT_TRUE(didCallAllocateCodeSection);
 }
 
@@ -412,14 +406,11 @@ TEST_F(MCJITCAPITest, stackmap_creates_compact_unwind_on_darwin) {
   useRoundTripSectionMemoryManager();
   buildMCJITEngine();
   buildAndRunOptPasses();
-  
-  union {
-    void *raw;
-    int (*usable)();
-  } functionPointer;
-  functionPointer.raw = LLVMGetPointerToGlobal(Engine, Function);
-  
-  EXPECT_EQ(42, functionPointer.usable());
+
+  auto *functionPointer = reinterpret_cast<int (*)()>(
+      reinterpret_cast<uintptr_t>(LLVMGetPointerToGlobal(Engine, Function)));
+
+  EXPECT_EQ(42, functionPointer());
   EXPECT_TRUE(didCallAllocateCodeSection);
   
   // Up to this point, the test is specific only to X86-64. But this next
@@ -446,21 +437,15 @@ TEST_F(MCJITCAPITest, reserve_allocation_space) {
   Options.MCJMM = wrap(MM);
   buildMCJITEngine();
   buildAndRunPasses();
-  
-  union {
-    void *raw;
-    int (*usable)();
-  } GetGlobalFct;
-  GetGlobalFct.raw = LLVMGetPointerToGlobal(Engine, Function);
-  
-  union {
-    void *raw;
-    void (*usable)(int);
-  } SetGlobalFct;
-  SetGlobalFct.raw = LLVMGetPointerToGlobal(Engine, Function2);
-  
-  SetGlobalFct.usable(789);
-  EXPECT_EQ(789, GetGlobalFct.usable());
+
+  auto GetGlobalFct = reinterpret_cast<int (*)()>(
+      reinterpret_cast<uintptr_t>(LLVMGetPointerToGlobal(Engine, Function)));
+
+  auto SetGlobalFct = reinterpret_cast<void (*)(int)>(
+      reinterpret_cast<uintptr_t>(LLVMGetPointerToGlobal(Engine, Function2)));
+
+  SetGlobalFct(789);
+  EXPECT_EQ(789, GetGlobalFct());
   EXPECT_LE(MM->UsedCodeSize, MM->ReservedCodeSize);
   EXPECT_LE(MM->UsedDataSizeRO, MM->ReservedDataSizeRO);
   EXPECT_LE(MM->UsedDataSizeRW, MM->ReservedDataSizeRW);
@@ -478,13 +463,10 @@ TEST_F(MCJITCAPITest, yield) {
   LLVMContextSetYieldCallback(C, yield, nullptr);
   buildAndRunPasses();
 
-  union {
-    void *raw;
-    int (*usable)();
-  } functionPointer;
-  functionPointer.raw = LLVMGetPointerToGlobal(Engine, Function);
+  auto *functionPointer = reinterpret_cast<int (*)()>(
+      reinterpret_cast<uintptr_t>(LLVMGetPointerToGlobal(Engine, Function)));
 
-  EXPECT_EQ(42, functionPointer.usable());
+  EXPECT_EQ(42, functionPointer());
   EXPECT_TRUE(didCallYield);
 }
 
@@ -514,7 +496,9 @@ TEST_F(MCJITCAPITest, addGlobalMapping) {
   buildMCJITOptions();
   buildMCJITEngine();
 
-  LLVMAddGlobalMapping(Engine, MappedFn, reinterpret_cast<void*>(&localTestFunc));
+  LLVMAddGlobalMapping(
+      Engine, MappedFn,
+      reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(&localTestFunc)));
 
   buildAndRunPasses();
 
