@@ -12,11 +12,11 @@ tree, and in the 'tools/extra' subdirectory of the Clang checkout.
 
 All discussion regarding Clang, Clang-based tools, and code in this repository
 should be held using the standard Clang mailing lists:
-  http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev
+  http://lists.llvm.org/mailman/listinfo/cfe-dev
 
 Code review for this tree should take place on the standard Clang patch and
 commit lists:
-  http://lists.cs.uiuc.edu/mailman/listinfo/cfe-commits
+  http://lists.llvm.org/mailman/listinfo/cfe-commits
 
 If you find a bug in these tools, please file it in the LLVM bug tracker:
   http://llvm.org/bugs/
