@@ -32,8 +32,8 @@
     <div class="urbangreymenu">
       <h1 class="headerbar">Mailing&nbsp;Lists</h1>
       <ul>
-        <li><a href="http://lists.cs.uiuc.edu/mailman/listinfo/lldb-dev">lldb-dev</a></li>
-        <li><a href="http://lists.cs.uiuc.edu/mailman/listinfo/lldb-commits">lldb-commits</a></li>
+        <li><a href="http://lists.llvm.org/mailman/listinfo/lldb-dev">lldb-dev</a></li>
+        <li><a href="http://lists.llvm.org/mailman/listinfo/lldb-commits">lldb-commits</a></li>
       </ul>
     </div>
   </div>
