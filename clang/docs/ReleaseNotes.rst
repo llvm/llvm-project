@@ -64,7 +64,25 @@ Clang's diagnostics are constantly being improved to catch more issues,
 explain them more clearly, and provide more accurate source information
 about them. The improvements since the 3.6 release include:
 
--  ...
+- -Wrange-loop-analysis analyzes the loop variable type and the container type
+  to determine whether copies are made of the container elements.  If possible,
+  suggest a const reference type to prevent copies, or a non-reference type
+  to indicate a copy is made.
+
+- -Wredundant-move warns when a parameter variable is moved on return and the
+  return type is the same as the variable.  Returning the variable directly
+  will already make a move, so the call is not needed.
+
+- -Wpessimizing-move warns when a local variable is ir moved on return and the
+  return type is the same as the variable.  Copy elision cannot take place with
+  a move, but can take place if the variable is returned directly.
+
+- -Wmove is a new warning group which has the previous two warnings,
+  -Wredundant-move and -Wpessimizing-move, as well as previous warning
+  -Wself-move.  In addition, this group is part of -Wmost and -Wall now.
+
+- -Winfinite-recursion, a warning for functions that only call themselves,
+  is now part of -Wmost and -Wall.
 
 New Compiler Flags
 ------------------
