@@ -2112,9 +2112,8 @@ static Instruction *ProcessUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
 bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
                                          Value *RHS, Instruction &OrigI,
                                          Value *&Result, Constant *&Overflow) {
-  assert((!OrigI.isCommutative() ||
-          !(isa<Constant>(LHS) && !isa<Constant>(RHS))) &&
-         "call with a constant RHS if possible!");
+  if (OrigI.isCommutative() && isa<Constant>(LHS) && !isa<Constant>(RHS))
+    std::swap(LHS, RHS);
 
   auto SetResult = [&](Value *OpResult, Constant *OverflowVal, bool ReuseName) {
     Result = OpResult;
