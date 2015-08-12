@@ -20,7 +20,7 @@ where Clang is used are:
 
 If you know of (or wrote!) a tool or project using Clang, please send an
 email to Clang's `development discussion mailing list
-<http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev>`_ to have it added.
+<http://lists.llvm.org/mailman/listinfo/cfe-dev>`_ to have it added.
 (or if you are already a Clang contributor, feel free to directly commit
 additions). Since the primary purpose of this page is to provide examples
 that can help developers, generally they must have code available.

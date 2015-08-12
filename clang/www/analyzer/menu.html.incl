@@ -34,8 +34,8 @@
 <li>
   Mailing Lists
   <ul>
-    <li><a href="http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev">cfe-dev</a></li>
-    <li><a href="http://lists.cs.uiuc.edu/mailman/listinfo/cfe-commits">cfe-commits</a></li>
+    <li><a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a></li>
+    <li><a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits</a></li>
   </ul>
 </li>
 </ul>

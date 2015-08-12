@@ -193,4 +193,4 @@ tree.
 
 If you have any questions or comments about Clang, please feel free to
 contact us via the `mailing
-list <http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev>`_.
+list <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
