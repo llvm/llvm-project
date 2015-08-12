@@ -11,6 +11,7 @@
 # serve to show the default.
 
 import sys, os
+from datetime import date
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -40,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'LLVM'
-copyright = u'2003-2014, LLVM Project'
+copyright = u'2003-%d, LLVM Project' % date.today().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
