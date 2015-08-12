@@ -25,7 +25,7 @@ Optimizations</span></h2>
 
   <div class="submenu">
     <label>Development </label>
-    <a href="http://lists.cs.uiuc.edu/mailman/listinfo/llvm-commits">
+    <a href="http://lists.llvm.org/mailman/listinfo/llvm-commits">
       Mailing List (patches)
     </a>
     <a href="http://groups.google.com/group/polly-dev">Mailing List (discussion)</a>
