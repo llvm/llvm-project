@@ -658,7 +658,7 @@ bool EarlyCSE::run() {
   // gains over vector when the container becomes very large due to the
   // specific access patterns. For more information see the mailing list
   // discussion on this:
-  // http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120116/135228.html
+  // http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20120116/135228.html
   std::deque<StackNode *> nodesToProcess;
 
   bool Changed = false;

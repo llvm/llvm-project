@@ -10,5 +10,5 @@ These are syntax highlighting files for the jEdit editor. Included are:
   <MODE NAME="tablegen" FILE="tablegen.xml" FILE_NAME_GLOB="*.td" />
 
 Note: If you notice missing or incorrect syntax highlighting, please contact
-<llvmbugs [at] cs.uiuc.edu>; if you wish to provide a patch to improve the
+<llvm-bugs [at] lists.llvm.org>; if you wish to provide a patch to improve the
 functionality, it will be most appreciated. Thank you.

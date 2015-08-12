@@ -565,7 +565,7 @@ The existing IR Verifier pass has been extended to check most of the
 local restrictions on the intrinsics mentioned in their respective
 documentation.  The current implementation in LLVM does not check the
 key relocation invariant, but this is ongoing work on developing such
-a verifier.  Please ask on llvmdev if you're interested in
+a verifier.  Please ask on llvm-dev if you're interested in
 experimenting with the current version.
 
 .. _statepoint-utilities:
@@ -696,7 +696,7 @@ If you are scheduling the RewriteStatepointsForGC pass late in the pass order,
 you should probably schedule this pass immediately before it.  The exception 
 would be if you need to preserve abstract frame information (e.g. for
 deoptimization or introspection) at safepoints.  In that case, ask on the 
-llvmdev mailing list for suggestions.
+llvm-dev mailing list for suggestions.
 
 
 Bugs and Enhancements
@@ -707,8 +707,8 @@ tracked by performing a `bugzilla search
 <http://llvm.org/bugs/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
 for [Statepoint] in the summary field. When filing new bugs, please
 use this tag so that interested parties see the newly filed bug.  As
-with most LLVM features, design discussions take place on `llvmdev
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev>`_, and patches
+with most LLVM features, design discussions take place on `llvm-dev
+<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_, and patches
 should be sent to `llvm-commits
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvm-commits>`_ for review.
+<http://lists.llvm.org/mailman/listinfo/llvm-commits>`_ for review.
 

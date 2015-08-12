@@ -566,7 +566,7 @@ Robert Muth started working on an alternate jump table implementation that
 does not put the tables in-line in the text.  This is more like the llvm
 default jump table implementation.  This might be useful sometime.  Several
 revisions of patches are on the mailing list, beginning at:
-http://lists.cs.uiuc.edu/pipermail/llvmdev/2009-June/022763.html
+http://lists.llvm.org/pipermail/llvm-dev/2009-June/022763.html
 
 //===---------------------------------------------------------------------===//
 

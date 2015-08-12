@@ -9,7 +9,7 @@ To install copy all subdirectories to your $HOME/.vim or if you prefer create
 symlinks to the files here. Do not copy the vimrc file here it is only meant as an inspiration and starting point for those working on llvm c++ code.
 
 Note: If you notice missing or incorrect syntax highlighting, please contact
-<llvmbugs [at] cs.uiuc.edu>; if you wish to provide a patch to improve the
+<llvm-bugs [at] lists.llvm.org>; if you wish to provide a patch to improve the
 functionality, it will be most appreciated. Thank you.
 
 If you find yourself working with LLVM Makefiles often, but you don't get syntax

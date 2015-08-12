@@ -30,7 +30,7 @@ This policy is also designed to accomplish the following objectives:
 This policy is aimed at frequent contributors to LLVM. People interested in
 contributing one-off patches can do so in an informal way by sending them to the
 `llvm-commits mailing list
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvm-commits>`_ and engaging another
+<http://lists.llvm.org/mailman/listinfo/llvm-commits>`_ and engaging another
 developer to see it through the process.
 
 Developer Policies
@@ -47,23 +47,23 @@ Stay Informed
 -------------
 
 Developers should stay informed by reading at least the "dev" mailing list for
-the projects you are interested in, such as `llvmdev
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev>`_ for LLVM, `cfe-dev
-<http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev>`_ for Clang, or `lldb-dev
-<http://lists.cs.uiuc.edu/mailman/listinfo/lldb-dev>`_ for LLDB.  If you are
+the projects you are interested in, such as `llvm-dev
+<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ for LLVM, `cfe-dev
+<http://lists.llvm.org/mailman/listinfo/cfe-dev>`_ for Clang, or `lldb-dev
+<http://lists.llvm.org/mailman/listinfo/lldb-dev>`_ for LLDB.  If you are
 doing anything more than just casual work on LLVM, it is suggested that you also
 subscribe to the "commits" mailing list for the subproject you're interested in,
 such as `llvm-commits
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvm-commits>`_, `cfe-commits
-<http://lists.cs.uiuc.edu/mailman/listinfo/cfe-commits>`_, or `lldb-commits
-<http://lists.cs.uiuc.edu/mailman/listinfo/lldb-commits>`_.  Reading the
+<http://lists.llvm.org/mailman/listinfo/llvm-commits>`_, `cfe-commits
+<http://lists.llvm.org/mailman/listinfo/cfe-commits>`_, or `lldb-commits
+<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.  Reading the
 "commits" list and paying attention to changes being made by others is a good
 way to see what other people are interested in and watching the flow of the
 project as a whole.
 
 We recommend that active developers register an email account with `LLVM
 Bugzilla <http://llvm.org/bugs/>`_ and preferably subscribe to the `llvm-bugs
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvmbugs>`_ email list to keep track
+<http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to keep track
 of bugs and enhancements occurring in LLVM.  We really appreciate people who are
 proactive at catching incoming bugs in their components and dealing with them
 promptly.
@@ -365,7 +365,7 @@ If you have recently been granted commit access, these policies apply:
 
 #. You are granted *commit-after-approval* to all parts of LLVM.  To get
    approval, submit a `patch`_ to `llvm-commits
-   <http://lists.cs.uiuc.edu/mailman/listinfo/llvm-commits>`_. When approved,
+   <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_. When approved,
    you may commit it yourself.
 
 #. You are allowed to commit patches without approval which you think are
@@ -394,8 +394,8 @@ Making a Major Change
 ---------------------
 
 When a developer begins a major new project with the aim of contributing it back
-to LLVM, they should inform the community with an email to the `llvmdev
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev>`_ email list, to the extent
+to LLVM, they should inform the community with an email to the `llvm-dev
+<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ email list, to the extent
 possible. The reason for this is to:
 
 #. keep the community informed about future changes to LLVM,
@@ -608,7 +608,7 @@ LICENSE.txt files specifically indicate that they contain GPL code.
 
 We have no plans to change the license of LLVM.  If you have questions or
 comments about the license, please contact the `LLVM Developer's Mailing
-List <mailto:llvmdev@cs.uiuc.edu>`_.
+List <mailto:llvm-dev@lists.llvm.org>`_.
 
 Patents
 -------

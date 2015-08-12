@@ -23,7 +23,7 @@ from the `LLVM releases web site <http://llvm.org/releases/>`_.
 For more information about LLVM, including information about the latest
 release, please check out the `main LLVM web site <http://llvm.org/>`_.  If you
 have questions or comments, the `LLVM Developer's Mailing List
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev>`_ is a good place to send
+<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
 Note that if you are reading this file from a Subversion checkout or the main

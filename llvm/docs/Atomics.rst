@@ -173,7 +173,7 @@ Notes for code generation
   also expected to generate an i8 store as an i8 store, and not an instruction
   which writes to surrounding bytes.  (If you are writing a backend for an
   architecture which cannot satisfy these restrictions and cares about
-  concurrency, please send an email to llvmdev.)
+  concurrency, please send an email to llvm-dev.)
 
 Unordered
 ---------

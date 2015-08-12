@@ -57,7 +57,7 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // Some things to try that should be better:
     //   * 'mov hi, $src; mov $dst, hi', with hi as either r10 or r11
     //   * 'movs $dst, $src' if cpsr isn't live
-    // See: http://lists.cs.uiuc.edu/pipermail/llvmdev/2014-August/075998.html
+    // See: http://lists.llvm.org/pipermail/llvm-dev/2014-August/075998.html
 
     // 'MOV lo, lo' is unpredictable on < v6, so use the stack to do it
     AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::tPUSH)))

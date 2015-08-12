@@ -7,7 +7,7 @@ TableGen Language Introduction
 
 .. warning::
    This document is extremely rough. If you find something lacking, please
-   fix it, file a documentation bug, or ask about it on llvmdev.
+   fix it, file a documentation bug, or ask about it on llvm-dev.
 
 Introduction
 ============

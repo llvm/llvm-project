@@ -95,8 +95,8 @@ For example, try adding:
 Have fun - try doing something crazy and unusual. Building a language
 like everyone else always has, is much less fun than trying something a
 little crazy or off the wall and seeing how it turns out. If you get
-stuck or want to talk about it, feel free to email the `llvmdev mailing
-list <http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev>`_: it has lots
+stuck or want to talk about it, feel free to email the `llvm-dev mailing
+list <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_: it has lots
 of people who are interested in languages and are often willing to help
 out.
 
@@ -174,8 +174,8 @@ It is certainly possible to implement a safe language in LLVM, but LLVM
 IR does not itself guarantee safety. The LLVM IR allows unsafe pointer
 casts, use after free bugs, buffer over-runs, and a variety of other
 problems. Safety needs to be implemented as a layer on top of LLVM and,
-conveniently, several groups have investigated this. Ask on the `llvmdev
-mailing list <http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev>`_ if
+conveniently, several groups have investigated this. Ask on the `llvm-dev
+mailing list <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ if
 you are interested in more details.
 
 Language-Specific Optimizations
@@ -225,7 +225,7 @@ safe to optimize that into "return 0;" because C specifies what the
 In addition to simple library knowledge, it is possible to embed a
 variety of other language-specific information into the LLVM IR. If you
 have a specific need and run into a wall, please bring the topic up on
-the llvmdev list. At the very worst, you can always treat LLVM as if it
+the llvm-dev list. At the very worst, you can always treat LLVM as if it
 were a "dumb code generator" and implement the high-level optimizations
 you desire in your front-end, on the language-specific AST.
 

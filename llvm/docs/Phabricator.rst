@@ -150,7 +150,7 @@ Status
 
 Please let us know whether you like it and what could be improved! We're still
 working on setting up a bug tracker, but you can email klimek-at-google-dot-com
-and chandlerc-at-gmail-dot-com and CC the llvmdev mailing list with questions
+and chandlerc-at-gmail-dot-com and CC the llvm-dev mailing list with questions
 until then. We also could use help implementing improvements. This sadly is
 really painful and hard because the Phabricator codebase is in PHP and not as
 testable as you might like. However, we've put exactly what we're deploying up

@@ -15,7 +15,7 @@ When you come to this realization, stop and think. Do you really need to extend
 LLVM? Is it a new fundamental capability that LLVM does not support at its
 current incarnation or can it be synthesized from already pre-existing LLVM
 elements? If you are not sure, ask on the `LLVM-dev
-<http://mail.cs.uiuc.edu/mailman/listinfo/llvmdev>`_ list. The reason is that
+<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ list. The reason is that
 extending LLVM will get involved as you need to update all the different passes
 that you intend to use with your extension, and there are ``many`` LLVM analyses
 and transformations, so it may be quite a bit of work.

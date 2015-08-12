@@ -20,4 +20,4 @@ Modified as follows:
 * To GTestStreamToHelper in include/gtest/internal/gtest-internal.h,
   added the ability to stream with raw_os_ostream.
 * To refresh Haiku support in include/gtest/internal/gtest-port.h,
-  see http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20100621/102898.html
+  see http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20100621/102898.html

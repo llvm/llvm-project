@@ -28,7 +28,7 @@ Note that some code bases (e.g. ``libc++``) have really good reasons to deviate
 from the coding standards.  In the case of ``libc++``, this is because the
 naming and other conventions are dictated by the C++ standard.  If you think
 there is a specific good reason to deviate from the standards here, please bring
-it up on the LLVMdev mailing list.
+it up on the LLVM-dev mailing list.
 
 There are some conventions that are not uniformly followed in the code base
 (e.g. the naming convention).  This is because they are relatively new, and a

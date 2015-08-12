@@ -174,10 +174,10 @@ Adding to this document
 
 If you run across a case that you feel deserves to be covered here, please send
 a patch to `llvm-commits
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvm-commits>`_ for review.
+<http://lists.llvm.org/mailman/listinfo/llvm-commits>`_ for review.
 
-If you have questions on these items, please direct them to `llvmdev 
-<http://lists.cs.uiuc.edu/mailman/listinfo/llvmdev>`_.  The more relevant 
+If you have questions on these items, please direct them to `llvm-dev 
+<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_.  The more relevant 
 context you are able to give to your question, the more likely it is to be 
 answered.
 

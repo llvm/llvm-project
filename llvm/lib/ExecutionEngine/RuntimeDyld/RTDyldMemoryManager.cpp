@@ -98,7 +98,7 @@ void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr,
                                            uint64_t LoadAddr,
                                            size_t Size) {
   // On OS X OS X __register_frame takes a single FDE as an argument.
-  // See http://lists.cs.uiuc.edu/pipermail/llvmdev/2013-April/061768.html
+  // See http://lists.llvm.org/pipermail/llvm-dev/2013-April/061768.html
   const char *P = (const char *)Addr;
   const char *End = P + Size;
   do  {

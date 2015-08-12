@@ -58,7 +58,7 @@ LLVM_OBJ_ROOT   := $(call realpath, @abs_top_builddir@)
 PROJ_SRC_ROOT   := $(LLVM_SRC_ROOT)
 PROJ_SRC_DIR    := $(LLVM_SRC_ROOT)$(patsubst $(PROJ_OBJ_ROOT)%,%,$(PROJ_OBJ_DIR))
 
-# See: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20150323/268067.html
+# See: http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20150323/268067.html
 ifeq ($(LLVM_SRC_ROOT), $(LLVM_OBJ_ROOT))
   $(error In-source builds are not allowed. Please configure from a separate build directory!)
 endif
