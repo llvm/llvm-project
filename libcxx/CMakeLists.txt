@@ -14,7 +14,7 @@ endif()
 set(PACKAGE_NAME libcxx)
 set(PACKAGE_VERSION trunk-svn)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "llvmbugs@cs.uiuc.edu")
+set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
