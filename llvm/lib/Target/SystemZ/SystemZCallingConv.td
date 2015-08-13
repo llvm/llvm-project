@@ -53,10 +53,6 @@ def RetCC_SystemZ : CallingConv<[
   CCIfSubtarget<"hasVector()",
     CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
              CCAssignToReg<[V24, V26, V28, V30, V25, V27, V29, V31]>>>
-
-  // ABI-compliant code returns long double by reference, but that conversion
-  // is left to higher-level code.  Perhaps we could add an f128 definition
-  // here for code that doesn't care about the ABI?
 ]>;
 
 //===----------------------------------------------------------------------===//

@@ -1175,6 +1175,20 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   return Chain;
 }
 
+bool SystemZTargetLowering::
+CanLowerReturn(CallingConv::ID CallConv,
+               MachineFunction &MF, bool isVarArg,
+               const SmallVectorImpl<ISD::OutputArg> &Outs,
+               LLVMContext &Context) const {
+  // Detect unsupported vector return types.
+  if (Subtarget.hasVector())
+    VerifyVectorTypes(Outs);
+
+  SmallVector<CCValAssign, 16> RetLocs;
+  CCState RetCCInfo(CallConv, isVarArg, MF, RetLocs, Context);
+  return RetCCInfo.CheckReturn(Outs, RetCC_SystemZ);
+}
+
 SDValue
 SystemZTargetLowering::LowerReturn(SDValue Chain,
                                    CallingConv::ID CallConv, bool IsVarArg,
