@@ -2472,26 +2472,45 @@ GDBRemoteCommunicationClient::GetWatchpointSupportInfo (uint32_t &num)
 }
 
 lldb_private::Error
-GDBRemoteCommunicationClient::GetWatchpointSupportInfo (uint32_t &num, bool& after)
+GDBRemoteCommunicationClient::GetWatchpointSupportInfo (uint32_t &num, bool& after, const ArchSpec &arch)
 {
     Error error(GetWatchpointSupportInfo(num));
     if (error.Success())
-        error = GetWatchpointsTriggerAfterInstruction(after);
+        error = GetWatchpointsTriggerAfterInstruction(after, arch);
     return error;
 }
 
 lldb_private::Error
-GDBRemoteCommunicationClient::GetWatchpointsTriggerAfterInstruction (bool &after)
+GDBRemoteCommunicationClient::GetWatchpointsTriggerAfterInstruction (bool &after, const ArchSpec &arch)
 {
     Error error;
+    llvm::Triple::ArchType atype = arch.GetMachine();
     
     // we assume watchpoints will happen after running the relevant opcode
     // and we only want to override this behavior if we have explicitly
     // received a qHostInfo telling us otherwise
     if (m_qHostInfo_is_valid != eLazyBoolYes)
-        after = true;
+    {
+        // On targets like MIPS, watchpoint exceptions are always generated 
+        // before the instruction is executed. The connected target may not 
+        // support qHostInfo or qWatchpointSupportInfo packets.
+        if (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel
+            || atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el)
+            after = false;
+        else
+            after = true;
+    }
     else
+    {
+        // For MIPS, set m_watchpoints_trigger_after_instruction to eLazyBoolNo 
+        // if it is not calculated before.
+        if (m_watchpoints_trigger_after_instruction == eLazyBoolCalculate &&
+            (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel
+            || atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el))
+            m_watchpoints_trigger_after_instruction = eLazyBoolNo;
+
         after = (m_watchpoints_trigger_after_instruction != eLazyBoolNo);
+    }
     return error;
 }
 

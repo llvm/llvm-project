@@ -2440,6 +2440,21 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                         }
                     }
                 }
+                else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 || key.compare("awatch") == 0)
+                {
+                    // Support standard GDB remote stop reply packet 'TAAwatch:addr'
+                    lldb::addr_t wp_addr = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
+                    WatchpointSP wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
+                    uint32_t wp_index = LLDB_INVALID_INDEX32;
+
+                    if (wp_sp)
+                        wp_index = wp_sp->GetHardwareIndex();
+
+                    reason = "watchpoint";
+                    StreamString ostr;
+                    ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
+                    description = ostr.GetString().c_str();
+                }
                 else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1]))
                 {
                     uint32_t reg = StringConvert::ToUInt32 (key.c_str(), UINT32_MAX, 16);
@@ -3012,7 +3027,7 @@ ProcessGDBRemote::GetWatchpointSupportInfo (uint32_t &num)
 Error
 ProcessGDBRemote::GetWatchpointSupportInfo (uint32_t &num, bool& after)
 {
-    Error error (m_gdb_comm.GetWatchpointSupportInfo (num, after));
+    Error error (m_gdb_comm.GetWatchpointSupportInfo (num, after, GetTarget().GetArchitecture()));
     return error;
 }
 

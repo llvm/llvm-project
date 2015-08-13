@@ -287,10 +287,10 @@ public:
     GetWatchpointSupportInfo (uint32_t &num); 
 
     Error
-    GetWatchpointSupportInfo (uint32_t &num, bool& after);
+    GetWatchpointSupportInfo (uint32_t &num, bool& after, const ArchSpec &arch);
     
     Error
-    GetWatchpointsTriggerAfterInstruction (bool &after);
+    GetWatchpointsTriggerAfterInstruction (bool &after, const ArchSpec &arch);
 
     const ArchSpec &
     GetHostArchitecture ();
