@@ -334,6 +334,12 @@ NativeRegisterContext::GetWatchpointAddress (uint32_t wp_index)
     return LLDB_INVALID_ADDRESS;
 }
 
+lldb::addr_t
+NativeRegisterContext::GetWatchpointHitAddress (uint32_t wp_index)
+{
+    return LLDB_INVALID_ADDRESS;
+}
+
 bool
 NativeRegisterContext::HardwareSingleStep (bool enable)
 {

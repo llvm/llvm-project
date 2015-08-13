@@ -128,6 +128,12 @@ protected:
     Emulate_SD (llvm::MCInst& insn);
 
     bool
+    Emulate_SW (llvm::MCInst& insn);
+
+    bool
+    Emulate_LW (llvm::MCInst& insn);
+
+    bool
     Emulate_LD (llvm::MCInst& insn);
 
     bool

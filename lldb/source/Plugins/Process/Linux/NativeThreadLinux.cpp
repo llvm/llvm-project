@@ -330,6 +330,16 @@ NativeThreadLinux::SetStoppedByWatchpoint (uint32_t wp_index)
     std::ostringstream ostr;
     ostr << GetRegisterContext()->GetWatchpointAddress(wp_index) << " ";
     ostr << wp_index;
+
+    /*
+     * MIPS: Last 3bits of the watchpoint address are masked by the kernel. For example:
+     * 'n' is at 0x120010d00 and 'm' is 0x120010d04. When a watchpoint is set at 'm', then
+     * watch exception is generated even when 'n' is read/written. To handle this case,
+     * find the base address of the load/store instruction and append it in the stop-info 
+     * packet.
+    */
+    ostr << " " << GetRegisterContext()->GetWatchpointHitAddress(wp_index);
+
     m_stop_description = ostr.str();
 
     m_stop_info.reason = StopReason::eStopReasonWatchpoint;

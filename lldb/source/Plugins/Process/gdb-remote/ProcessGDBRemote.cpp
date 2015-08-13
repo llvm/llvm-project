@@ -1990,6 +1990,7 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                         StringExtractor desc_extractor(description.c_str());
                         addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
                         uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
+                        addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
                         watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
                         if (wp_addr != LLDB_INVALID_ADDRESS)
                         {
@@ -2005,7 +2006,7 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                             Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_WATCHPOINTS));
                             if (log) log->Printf ("failed to find watchpoint");
                         }
-                        thread_sp->SetStopInfo (StopInfo::CreateStopReasonWithWatchpointID (*thread_sp, watch_id));
+                        thread_sp->SetStopInfo (StopInfo::CreateStopReasonWithWatchpointID (*thread_sp, watch_id, wp_hit_addr));
                         handled = true;
                     }
                     else if (reason.compare("exception") == 0)

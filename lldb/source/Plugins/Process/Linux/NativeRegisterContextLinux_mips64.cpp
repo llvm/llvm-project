@@ -20,7 +20,9 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Host/HostInfo.h"
-
+#include "lldb/Core/EmulateInstruction.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_mips64.h"
@@ -1017,6 +1019,106 @@ NativeRegisterContextLinux_mips64::GetWatchpointAddress (uint32_t wp_index)
         return LLDB_INVALID_ADDRESS;
 
     return hw_addr_map[wp_index];
+}
+
+struct EmulatorBaton
+{
+    lldb::addr_t m_watch_hit_addr;
+    NativeProcessLinux* m_process;
+    NativeRegisterContext* m_reg_context;
+
+    EmulatorBaton(NativeProcessLinux* process, NativeRegisterContext* reg_context) :
+            m_watch_hit_addr(LLDB_INVALID_ADDRESS), 
+            m_process(process),
+            m_reg_context(reg_context) 
+            {}
+};
+
+static size_t
+ReadMemoryCallback (EmulateInstruction *instruction, void *baton,
+                    const EmulateInstruction::Context &context, lldb::addr_t addr, 
+                    void *dst, size_t length)
+{
+    size_t bytes_read;
+    EmulatorBaton* emulator_baton = static_cast<EmulatorBaton*>(baton);
+    emulator_baton->m_process->ReadMemory(addr, dst, length, bytes_read);
+    return bytes_read;
+}
+
+static size_t
+WriteMemoryCallback (EmulateInstruction *instruction, void *baton,
+                     const EmulateInstruction::Context &context, 
+                     lldb::addr_t addr, const void *dst, size_t length)
+{
+    return length;
+}
+
+static bool
+ReadRegisterCallback (EmulateInstruction *instruction, void *baton,
+                      const RegisterInfo *reg_info, RegisterValue &reg_value)
+{
+    EmulatorBaton* emulator_baton = static_cast<EmulatorBaton*>(baton);
+
+    const RegisterInfo* full_reg_info = emulator_baton->m_reg_context->GetRegisterInfo(
+            lldb::eRegisterKindDWARF, reg_info->kinds[lldb::eRegisterKindDWARF]);
+
+    Error error = emulator_baton->m_reg_context->ReadRegister(full_reg_info, reg_value);
+    if (error.Success())
+        return true;
+
+    return false;
+}
+
+static bool
+WriteRegisterCallback (EmulateInstruction *instruction, void *baton,
+                       const EmulateInstruction::Context &context,
+                       const RegisterInfo *reg_info, const RegisterValue &reg_value)
+{
+    if (reg_info->kinds[lldb::eRegisterKindDWARF] == gcc_dwarf_bad_mips64)
+    {
+        EmulatorBaton* emulator_baton = static_cast<EmulatorBaton*>(baton);
+        emulator_baton->m_watch_hit_addr = reg_value.GetAsUInt64 ();
+    }
+
+    return true;
+}
+
+/*
+ * MIPS Linux kernel returns a masked address (last 3bits are masked)
+ * when a HW watchpoint is hit. However user may not have set a watchpoint
+ * on this address. Emulate instruction at PC and find the base address of
+ * the load/store instruction. This will give the exact address used to
+ * read/write the variable. Send this exact address to client so that
+ * it can decide to stop or continue the thread.
+*/
+lldb::addr_t
+NativeRegisterContextLinux_mips64::GetWatchpointHitAddress (uint32_t wp_index)
+{
+    if (wp_index >= NumSupportedHardwareWatchpoints())
+        return LLDB_INVALID_ADDRESS;
+
+    lldb_private::ArchSpec arch;
+    arch = GetRegisterInfoInterface().GetTargetArchitecture();
+    std::unique_ptr<EmulateInstruction> emulator_ap(
+        EmulateInstruction::FindPlugin(arch, lldb_private::eInstructionTypeAny, nullptr));
+
+    if (emulator_ap == nullptr)
+        return LLDB_INVALID_ADDRESS;
+    
+    EmulatorBaton baton(static_cast<NativeProcessLinux*>(m_thread.GetProcess().get()), this);
+    emulator_ap->SetBaton (&baton);
+    emulator_ap->SetReadMemCallback (&ReadMemoryCallback);
+    emulator_ap->SetReadRegCallback (&ReadRegisterCallback);
+    emulator_ap->SetWriteMemCallback (&WriteMemoryCallback);
+    emulator_ap->SetWriteRegCallback (&WriteRegisterCallback);
+
+    if (!emulator_ap->ReadInstruction())
+        return LLDB_INVALID_ADDRESS;
+
+    if (emulator_ap->EvaluateInstruction(lldb::eEmulateInstructionOptionNone))
+        return baton.m_watch_hit_addr;
+
+    return LLDB_INVALID_ADDRESS;
 }
 
 uint32_t

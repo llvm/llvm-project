@@ -410,6 +410,9 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction (const char *op_name)
         { "SD",         &EmulateInstructionMIPS64::Emulate_SD,          "SD rt,offset(rs)"          },
         { "LD",         &EmulateInstructionMIPS64::Emulate_LD,          "LD rt,offset(base)"        },
 
+        { "SW",         &EmulateInstructionMIPS64::Emulate_SW,          "SW rt,offset(rs)"          },
+        { "LW",         &EmulateInstructionMIPS64::Emulate_LW,          "LW rt,offset(rs)"          },
+
         //----------------------------------------------------------------------
         // Branch instructions
         //----------------------------------------------------------------------
@@ -657,35 +660,95 @@ EmulateInstructionMIPS64::Emulate_DADDiu (llvm::MCInst& insn)
 }
 
 bool
+EmulateInstructionMIPS64::Emulate_SW (llvm::MCInst& insn)
+{
+    bool success = false;
+    uint32_t base;
+    int64_t imm, address;
+    Context bad_vaddr_context;
+
+    base = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
+    imm = insn.getOperand(2).getImm();
+
+    RegisterInfo reg_info_base;
+    if (!GetRegisterInfo (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, reg_info_base))
+        return false;
+
+    /* read base register */
+    address = ReadRegisterUnsigned (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, 0, &success);
+    if (!success)
+        return false;
+
+    /* destination address */
+    address = address + imm;
+
+    /* Set the bad_vaddr register with base address used in the instruction */
+    bad_vaddr_context.type = eContextInvalid;
+    WriteRegisterUnsigned (bad_vaddr_context, eRegisterKindDWARF, gcc_dwarf_bad_mips64, address);
+
+    return true;
+}
+
+bool
+EmulateInstructionMIPS64::Emulate_LW (llvm::MCInst& insn)
+{
+    bool success = false;
+    uint32_t base;
+    int64_t imm, address;
+    Context bad_vaddr_context;
+
+    base = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
+    imm = insn.getOperand(2).getImm();
+
+    RegisterInfo reg_info_base;
+    if (!GetRegisterInfo (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, reg_info_base))
+        return false;
+
+    /* read base register */
+    address = ReadRegisterUnsigned (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, 0, &success);
+    if (!success)
+        return false;
+
+    /* destination address */
+    address = address + imm;
+
+    /* Set the bad_vaddr register with base address used in the instruction */
+    bad_vaddr_context.type = eContextInvalid;
+    WriteRegisterUnsigned (bad_vaddr_context, eRegisterKindDWARF, gcc_dwarf_bad_mips64, address);
+
+    return true;
+}
+
+bool
 EmulateInstructionMIPS64::Emulate_SD (llvm::MCInst& insn)
 {
+    uint64_t address;
+    RegisterInfo reg_info_base;
+    RegisterInfo reg_info_src;
     bool success = false;
     uint32_t imm16 = insn.getOperand(2).getImm();
     uint64_t imm = SignedBits(imm16, 15, 0);
     uint32_t src, base;
+    Context bad_vaddr_context;
 
     src = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     base = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
 
+    if (!GetRegisterInfo (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, reg_info_base)
+        || !GetRegisterInfo (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + src, reg_info_src))
+        return false;
+
+    /* read SP */
+    address = ReadRegisterUnsigned (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, 0, &success);
+    if (!success)
+        return false;
+
+    /* destination address */
+    address = address + imm;
+
     /* We look for sp based non-volatile register stores */
     if (base == gcc_dwarf_sp_mips64 && nonvolatile_reg_p (src))
     {
-        uint64_t address;
-        RegisterInfo reg_info_base;
-        RegisterInfo reg_info_src;
-
-        if (!GetRegisterInfo (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, reg_info_base)
-            || !GetRegisterInfo (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + src, reg_info_src))
-            return false;
-
-        /* read SP */
-        address = ReadRegisterUnsigned (eRegisterKindDWARF, gcc_dwarf_zero_mips64 + base, 0, &success);
-        if (!success)
-            return false;
-
-        /* destination address */
-        address = address + imm;
-
         Context context;
         RegisterValue data_src;
         context.type = eContextPushRegisterOnStack;
@@ -702,11 +765,13 @@ EmulateInstructionMIPS64::Emulate_SD (llvm::MCInst& insn)
 
         if (!WriteMemory (context, address, buffer, reg_info_src.byte_size))
             return false;
-
-        return true;
     }
 
-    return false;
+    /* Set the bad_vaddr register with base address used in the instruction */
+    bad_vaddr_context.type = eContextInvalid;
+    WriteRegisterUnsigned (bad_vaddr_context, eRegisterKindDWARF, gcc_dwarf_bad_mips64, address);
+
+    return true;
 }
 
 bool

@@ -615,10 +615,11 @@ public:
         Watchpoint *watchpoint;
     };
 
-    StopInfoWatchpoint (Thread &thread, break_id_t watch_id) :
+    StopInfoWatchpoint (Thread &thread, break_id_t watch_id, lldb::addr_t watch_hit_addr) :
         StopInfo(thread, watch_id),
         m_should_stop(false),
-        m_should_stop_is_valid(false)
+        m_should_stop_is_valid(false),
+        m_watch_hit_addr(watch_hit_addr)
     {
     }
     
@@ -745,6 +746,21 @@ protected:
                     }
                 }
 
+                /*
+                 * MIPS: Last 3bits of the watchpoint address are masked by the kernel. For example:
+                 * 'n' is at 0x120010d00 and 'm' is 0x120010d04. When a watchpoint is set at 'm', then
+                 * watch exception is generated even when 'n' is read/written. To handle this case,
+                 * server emulates the instruction at PC and finds the base address of the load/store
+                 * instruction and appends it in the description of the stop-info packet. If watchpoint
+                 * is not set on this address by user then this do not stop.
+                */
+                if (m_watch_hit_addr != LLDB_INVALID_ADDRESS)
+                {
+                    WatchpointSP wp_hit_sp = thread_sp->CalculateTarget()->GetWatchpointList().FindByAddress(m_watch_hit_addr);
+                    if (!wp_hit_sp)
+                        m_should_stop = false;
+                }
+                
                 if (m_should_stop && wp_sp->GetConditionText() != NULL)
                 {
                     // We need to make sure the user sees any parse errors in their condition, so we'll hook the
@@ -857,6 +873,7 @@ protected:
 private:
     bool m_should_stop;
     bool m_should_stop_is_valid;
+    lldb::addr_t m_watch_hit_addr;
 };
 
 
@@ -1154,9 +1171,9 @@ StopInfo::CreateStopReasonWithBreakpointSiteID (Thread &thread, break_id_t break
 }
 
 StopInfoSP
-StopInfo::CreateStopReasonWithWatchpointID (Thread &thread, break_id_t watch_id)
+StopInfo::CreateStopReasonWithWatchpointID (Thread &thread, break_id_t watch_id, lldb::addr_t watch_hit_addr)
 {
-    return StopInfoSP (new StopInfoWatchpoint (thread, watch_id));
+    return StopInfoSP (new StopInfoWatchpoint (thread, watch_id, watch_hit_addr));
 }
 
 StopInfoSP

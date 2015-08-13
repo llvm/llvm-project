@@ -36,6 +36,9 @@ namespace process_linux {
         lldb::addr_t
         GetPCfromBreakpointLocation (lldb::addr_t fail_value = LLDB_INVALID_ADDRESS) override;
 
+        lldb::addr_t
+        GetWatchpointHitAddress (uint32_t wp_index) override;
+
         const RegisterSet *
         GetRegisterSet (uint32_t set_index) const override;
 
