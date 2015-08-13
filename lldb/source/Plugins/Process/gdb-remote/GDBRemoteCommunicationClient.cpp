@@ -1459,6 +1459,21 @@ GDBRemoteCommunicationClient::GetCurrentProcessID (bool allow_lazy)
                 }
             }
         }
+
+        // If we don't get a response for $qC, check if $qfThreadID gives us a result.
+        if (m_curr_pid == LLDB_INVALID_PROCESS_ID)
+        {
+            std::vector<lldb::tid_t> thread_ids;
+            bool sequence_mutex_unavailable;
+            size_t size;
+            size = GetCurrentThreadIDs (thread_ids, sequence_mutex_unavailable);
+            if (size && sequence_mutex_unavailable == false)
+            {
+                m_curr_pid = thread_ids.front();
+                m_curr_pid_is_valid = eLazyBoolYes;
+                return m_curr_pid;
+            }
+        }
     }
     
     return LLDB_INVALID_PROCESS_ID;
