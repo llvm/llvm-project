@@ -593,6 +593,7 @@ bool AArch64A57FPLoadBalancing::colorChain(Chain *G, Color C,
       if (Change) {
         Substs[MO.getReg()] = Reg;
         MO.setReg(Reg);
+        MRI->setPhysRegUsed(Reg);
 
         Changed = true;
       }

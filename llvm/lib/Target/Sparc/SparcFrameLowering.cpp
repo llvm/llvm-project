@@ -190,11 +190,11 @@ static bool LLVM_ATTRIBUTE_UNUSED verifyLeafProcRegUse(MachineRegisterInfo *MRI)
 {
 
   for (unsigned reg = SP::I0; reg <= SP::I7; ++reg)
-    if (!MRI->reg_nodbg_empty(reg))
+    if (MRI->isPhysRegUsed(reg))
       return false;
 
   for (unsigned reg = SP::L0; reg <= SP::L7; ++reg)
-    if (!MRI->reg_nodbg_empty(reg))
+    if (MRI->isPhysRegUsed(reg))
       return false;
 
   return true;
@@ -206,10 +206,10 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineFrameInfo    *MFI = MF.getFrameInfo();
 
-  return !(MFI->hasCalls()                 // has calls
-           || !MRI.reg_nodbg_empty(SP::L0) // Too many registers needed
-           || !MRI.reg_nodbg_empty(SP::O6) // %SP is used
-           || hasFP(MF));                  // need %FP
+  return !(MFI->hasCalls()              // has calls
+           || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
+           || MRI.isPhysRegUsed(SP::O6) // %SP is used
+           || hasFP(MF));               // need %FP
 }
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
@@ -218,13 +218,16 @@ void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
 
   // Remap %i[0-7] to %o[0-7].
   for (unsigned reg = SP::I0; reg <= SP::I7; ++reg) {
-    if (MRI.reg_nodbg_empty(reg))
+    if (!MRI.isPhysRegUsed(reg))
       continue;
     unsigned mapped_reg = (reg - SP::I0 + SP::O0);
-    assert(MRI.reg_nodbg_empty(mapped_reg));
+    assert(!MRI.isPhysRegUsed(mapped_reg));
 
     // Replace I register with O register.
     MRI.replaceRegWith(reg, mapped_reg);
+
+    // Mark the reg unused.
+    MRI.setPhysRegUnused(reg);
   }
 
   // Rewrite MBB's Live-ins.

@@ -986,6 +986,10 @@ void RAFast::AllocateBasicBlock() {
       }
     }
 
+    for (UsedInInstrSet::iterator
+         I = UsedInInstr.begin(), E = UsedInInstr.end(); I != E; ++I)
+      MRI->setRegUnitUsed(*I);
+
     // Track registers defined by instruction - early clobbers and tied uses at
     // this point.
     UsedInInstr.clear();
@@ -1046,6 +1050,10 @@ void RAFast::AllocateBasicBlock() {
       killVirtReg(VirtDead[i]);
     VirtDead.clear();
 
+    for (UsedInInstrSet::iterator
+         I = UsedInInstr.begin(), E = UsedInInstr.end(); I != E; ++I)
+      MRI->setRegUnitUsed(*I);
+
     if (CopyDst && CopyDst == CopySrc && CopyDstSub == CopySrcSub) {
       DEBUG(dbgs() << "-- coalescing: " << *MI);
       Coalesced.push_back(MI);
@@ -1094,6 +1102,12 @@ bool RAFast::runOnMachineFunction(MachineFunction &Fn) {
     MBB = &*MBBi;
     AllocateBasicBlock();
   }
+
+  // Add the clobber lists for all the instructions we skipped earlier.
+  for (const MCInstrDesc *Desc : SkippedInstrs)
+    if (const uint16_t *Defs = Desc->getImplicitDefs())
+      while (*Defs)
+        MRI->setPhysRegUsed(*Defs++);
 
   // All machine operands and other references to virtual registers have been
   // replaced. Remove the virtual registers.

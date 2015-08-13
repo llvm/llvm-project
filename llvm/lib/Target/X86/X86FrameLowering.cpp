@@ -1682,6 +1682,8 @@ void X86FrameLowering::adjustForSegmentedStacks(
       .addImm(StackSize);
     BuildMI(allocMBB, DL, TII.get(MOVri), Reg11)
       .addImm(X86FI->getArgumentStackSize());
+    MF.getRegInfo().setPhysRegUsed(Reg10);
+    MF.getRegInfo().setPhysRegUsed(Reg11);
   } else {
     BuildMI(allocMBB, DL, TII.get(X86::PUSHi32))
       .addImm(X86FI->getArgumentStackSize());

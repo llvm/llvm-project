@@ -864,13 +864,13 @@ static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
   // Check for an unused caller-saved register.
   for ( ; *CallerSavedRegs; ++CallerSavedRegs) {
     MCPhysReg FreeReg = *CallerSavedRegs;
-    if (!MRI.reg_nodbg_empty(FreeReg))
+    if (MRI.isPhysRegUsed(FreeReg))
       continue;
 
     // Check aliased register usage.
     bool IsCurrentRegUsed = false;
     for (MCRegAliasIterator AI(FreeReg, &HRI, false); AI.isValid(); ++AI)
-      if (!MRI.reg_nodbg_empty(*AI)) {
+      if (MRI.isPhysRegUsed(*AI)) {
         IsCurrentRegUsed = true;
         break;
       }

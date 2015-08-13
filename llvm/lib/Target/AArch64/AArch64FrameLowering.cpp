@@ -354,6 +354,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (NumBytes && NeedsRealignment) {
     // Use the first callee-saved register as a scratch register.
     scratchSPReg = AArch64::X9;
+    MF.getRegInfo().setPhysRegUsed(scratchSPReg);
   }
 
   // If we're a leaf function, try using the red zone.

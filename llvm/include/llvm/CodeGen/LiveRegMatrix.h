@@ -32,11 +32,13 @@ namespace llvm {
 
 class LiveInterval;
 class LiveIntervalAnalysis;
+class MachineRegisterInfo;
 class TargetRegisterInfo;
 class VirtRegMap;
 
 class LiveRegMatrix : public MachineFunctionPass {
   const TargetRegisterInfo *TRI;
+  MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
   VirtRegMap *VRM;
 

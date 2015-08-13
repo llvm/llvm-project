@@ -733,14 +733,12 @@ bool ExeDepsFix::runOnMachineFunction(MachineFunction &mf) {
   // If no relevant registers are used in the function, we can skip it
   // completely.
   bool anyregs = false;
-  const MachineRegisterInfo &MRI = mf.getRegInfo();
   for (TargetRegisterClass::const_iterator I = RC->begin(), E = RC->end();
-       I != E && !anyregs; ++I)
-    for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
-      if (!MRI.reg_nodbg_empty(*AI)) {
-        anyregs = true;
-        break;
-      }
+       I != E; ++I)
+    if (MF->getRegInfo().isPhysRegUsed(*I)) {
+      anyregs = true;
+      break;
+    }
   if (!anyregs) return false;
 
   // Initialize the AliasMap on the first use.

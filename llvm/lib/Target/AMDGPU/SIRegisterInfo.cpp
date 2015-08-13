@@ -499,7 +499,7 @@ unsigned SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
 
   for (TargetRegisterClass::iterator I = RC->begin(), E = RC->end();
        I != E; ++I) {
-    if (MRI.reg_nodbg_empty(*I))
+    if (!MRI.isPhysRegUsed(*I))
       return *I;
   }
   return AMDGPU::NoRegister;

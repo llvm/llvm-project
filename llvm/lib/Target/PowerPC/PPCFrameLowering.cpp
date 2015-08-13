@@ -306,10 +306,9 @@ static void HandleVRSaveUpdate(MachineInstr *MI, const TargetInstrInfo &TII) {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   DebugLoc dl = MI->getDebugLoc();
 
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
   unsigned UsedRegMask = 0;
   for (unsigned i = 0; i != 32; ++i)
-    if (MRI.isPhysRegModified(VRRegNo[i]))
+    if (MF->getRegInfo().isPhysRegUsed(VRRegNo[i]))
       UsedRegMask |= 1 << (31-i);
 
   // Live in and live out values already must be in the mask, so don't bother
