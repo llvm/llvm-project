@@ -729,26 +729,11 @@ public:
   /// \brief The declaration of the Objective-C NSArray class.
   ObjCInterfaceDecl *NSArrayDecl;
 
-  /// \brief Pointer to NSMutableArray type (NSMutableArray *).
-  QualType NSMutableArrayPointer;
-
   /// \brief The declaration of the arrayWithObjects:count: method.
   ObjCMethodDecl *ArrayWithObjectsMethod;
 
   /// \brief The declaration of the Objective-C NSDictionary class.
   ObjCInterfaceDecl *NSDictionaryDecl;
-
-  /// \brief Pointer to NSMutableDictionary type (NSMutableDictionary *).
-  QualType NSMutableDictionaryPointer;
-
-  /// \brief Pointer to NSMutableSet type (NSMutableSet *).
-  QualType NSMutableSetPointer;
-
-  /// \brief Pointer to NSCountedSet type (NSCountedSet *).
-  QualType NSCountedSetPointer;
-
-  /// \brief Pointer to NSMutableOrderedSet type (NSMutableOrderedSet *).
-  QualType NSMutableOrderedSetPointer;
 
   /// \brief The declaration of the dictionaryWithObjects:forKeys:count: method.
   ObjCMethodDecl *DictionaryWithObjectsMethod;

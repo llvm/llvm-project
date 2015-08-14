@@ -9,6 +9,7 @@
 
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/StringSwitch.h"
 
@@ -29,7 +30,6 @@ IdentifierInfo *NSAPI::getNSClassId(NSClassIdKindKind K) const {
     "NSMutableDictionary",
     "NSNumber",
     "NSMutableSet",
-    "NSCountedSet",
     "NSMutableOrderedSet",
     "NSValue"
   };
@@ -509,6 +509,26 @@ StringRef NSAPI::GetNSIntegralKind(QualType T) const {
 bool NSAPI::isMacroDefined(StringRef Id) const {
   // FIXME: Check whether the relevant module macros are visible.
   return Ctx.Idents.get(Id).hasMacroDefinition();
+}
+
+bool NSAPI::isSubclassOfNSClass(ObjCInterfaceDecl *InterfaceDecl,
+                                NSClassIdKindKind NSClassKind) const {
+  if (!InterfaceDecl) {
+    return false;
+  }
+
+  IdentifierInfo *NSClassID = getNSClassId(NSClassKind);
+
+  bool IsSubclass = false;
+  do {
+    IsSubclass = NSClassID == InterfaceDecl->getIdentifier();
+
+    if (IsSubclass) {
+      break;
+    }
+  } while ((InterfaceDecl = InterfaceDecl->getSuperClass()));
+
+  return IsSubclass;
 }
 
 bool NSAPI::isObjCTypedef(QualType T,

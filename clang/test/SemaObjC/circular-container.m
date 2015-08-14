@@ -144,3 +144,64 @@ void checkNSMutableOrderedSet() {
   [s replaceObjectAtIndex:0 withObject:s]; // expected-warning {{adding 's' to 's' might cause circular dependency in container}}
 }
 
+// Test subclassing
+
+@interface FootableSet : NSMutableSet
+@end
+
+@implementation FootableSet
+- (void)meth {
+  [super addObject:self]; // expected-warning {{adding 'self' to 'super' might cause circular dependency in container}}
+  [super addObject:nil]; // no-warning
+  [self addObject:self]; // expected-warning {{adding 'self' to 'self' might cause circular dependency in container}}
+}
+@end
+
+@interface FootableArray : NSMutableArray
+@end
+
+@implementation FootableArray
+- (void)meth {
+  [super addObject:self]; // expected-warning {{adding 'self' to 'super' might cause circular dependency in container}}
+  [super addObject:nil]; // no-warning
+  [self addObject:self]; // expected-warning {{adding 'self' to 'self' might cause circular dependency in container}}
+}
+@end
+
+@interface FootableDictionary : NSMutableDictionary
+@end
+
+@implementation FootableDictionary
+- (void)meth {
+  [super setObject:self forKey:@"key"]; // expected-warning {{adding 'self' to 'super' might cause circular dependency in container}}
+  [super setObject:nil forKey:@"key"]; // no-warning
+  [self setObject:self forKey:@"key"]; // expected-warning {{adding 'self' to 'self' might cause circular dependency in container}}
+}
+@end
+
+
+void subclassingNSMutableArray() {
+  FootableArray *a = nil; // expected-note 5 {{'a' declared here}} 5
+
+  [a addObject:a]; // expected-warning {{adding 'a' to 'a' might cause circular dependency in container}}
+  [a insertObject:a atIndex:0]; // expected-warning {{adding 'a' to 'a' might cause circular dependency in container}}
+  [a replaceObjectAtIndex:0 withObject:a]; // expected-warning {{adding 'a' to 'a' might cause circular dependency in container}}
+  [a setObject:a atIndexedSubscript:0]; // expected-warning {{adding 'a' to 'a' might cause circular dependency in container}}
+  a[0] = a; // expected-warning {{adding 'a' to 'a' might cause circular dependency in container}}
+}
+
+void subclassingNSMutableDictionary() {
+  FootableDictionary *d = nil; // expected-note 4 {{'d' declared here}}
+
+  [d setObject:d forKey:@"key"]; // expected-warning {{adding 'd' to 'd' might cause circular dependency in container}}
+  [d setObject:d forKeyedSubscript:@"key"]; // expected-warning {{adding 'd' to 'd' might cause circular dependency in container}}
+  [d setValue:d forKey:@"key"]; // expected-warning {{adding 'd' to 'd' might cause circular dependency in container}}
+  d[@"key"] = d; // expected-warning {{adding 'd' to 'd' might cause circular dependency in container}}
+}
+
+void subclassingNSMutableSet() {
+  FootableSet *s = nil; // expected-note {{'s' declared here}}
+
+  [s addObject:s]; // expected-warning {{adding 's' to 's' might cause circular dependency in container}}
+}
+
