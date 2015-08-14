@@ -205,6 +205,23 @@ There are numerous improvements to the PowerPC target in this release:
 
 * Many bugs have been identified and fixed.
 
+Changes to the System/Z Target
+------------------------------
+
+* LLVM no longer attempts to automatically detect the current host CPU when
+  invoked natively.
+
+* Support for all thread-local storage models. (Previous releases would support
+  only the local-exec TLS model.)
+
+* The POPCNT instruction is now used on z196 and above.
+
+* The RISBGN instruction is now used on zEC12 and above.
+
+* Support for the transactional-execution facility on zEC12 and above.
+
+* Support for the z13 processor and its vector facility.
+
 
 Changes to the OCaml bindings
 -----------------------------
