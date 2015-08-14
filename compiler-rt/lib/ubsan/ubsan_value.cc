@@ -83,10 +83,11 @@ FloatMax Value::getFloatValue() const {
 #endif
       case 32: {
         float Value;
-#if defined(__BIG_ENDIAN__)
-       // For big endian the float value is in the second 4 bytes
-       //  instead of the first 4 bytes.
-       internal_memcpy(&Value, ((const char*)&Val)+4, 4);
+#if defined(__BIG_ENDIAN__) && !defined(__mips__)
+       // For big endian the float value is in the highest addressed 4 bytes
+       // (the least significant bits) but we must also consider that we might
+       // have a 32-bit type.
+       internal_memcpy(&Value, ((const char*)&Val + 1) - 4, 4);
 #else 
        internal_memcpy(&Value, &Val, 4);
 #endif
