@@ -66,6 +66,10 @@ Non-comprehensive list of changes in this release
 
 * llvm-ar can create archives in the BSD format used by OS X.
 
+* LLVM received a backend for the extended Berkely Packet Filter
+  instruction set that can be dynamically loaded into the Linux kernel via the
+  `bpf(2) <http://man7.org/linux/man-pages/man2/bpf.2.html>`_ syscall.
+
 * ... next change ...
 
 .. NOTE
