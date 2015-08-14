@@ -185,8 +185,8 @@ namespace {
 
 struct VtablePrefix {
   /// The offset from the vptr to the start of the most-derived object.
-  /// This should never be greater than zero, and will usually be exactly
-  /// zero.
+  /// This will only be greater than zero in some virtual base class vtables
+  /// used during object con-/destruction, and will usually be exactly zero.
   sptr Offset;
   /// The type_info object describing the most-derived class type.
   std::type_info *TypeInfo;
@@ -196,7 +196,7 @@ VtablePrefix *getVtablePrefix(void *Vtable) {
   if (!Vptr)
     return 0;
   VtablePrefix *Prefix = Vptr - 1;
-  if (Prefix->Offset > 0 || !Prefix->TypeInfo)
+  if (!Prefix->TypeInfo)
     // This can't possibly be a valid vtable.
     return 0;
   return Prefix;
