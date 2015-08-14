@@ -518,7 +518,7 @@ if (APPLE)
 else(UNIX)
   if(NOT DEFINED CMAKE_INSTALL_RPATH)
     set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
-    if (${CMAKE_SYSTEM_NAME} MATCHES FreeBSD)
+    if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,origin")
       set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,origin")
     endif()
@@ -544,12 +544,12 @@ if(LLVM_USE_HOST_TOOLS)
   include(CrossCompile)
 endif(LLVM_USE_HOST_TOOLS)
 
-if( ${CMAKE_SYSTEM_NAME} MATCHES FreeBSD )
+if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
   # On FreeBSD, /usr/local/* is not used by default. In order to build LLVM
   # with libxml2, iconv.h, etc., we must add /usr/local paths.
   include_directories("/usr/local/include")
   link_directories("/usr/local/lib")
-endif( ${CMAKE_SYSTEM_NAME} MATCHES FreeBSD )
+endif(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
 
 if( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include llvm/Support/Solaris.h")
