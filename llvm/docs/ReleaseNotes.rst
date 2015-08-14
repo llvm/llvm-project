@@ -106,7 +106,8 @@ During this release the MIPS target has:
 
 * Added support for compiler-rt including:
 
-  * Support for the Address Sanitizer for all MIPS subtargets.
+  * Support for the Address, and Undefined Behaviour Sanitizers for all MIPS
+    subtargets.
 
   * Support for the Data Flow, and Memory Sanitizer for 64-bit subtargets.
 
