@@ -136,6 +136,20 @@ OpenCL C Language Changes in Clang
 
 ...
 
+Profile Guided Optimization
+---------------------------
+
+Clang now accepts GCC-compatible flags for profile guided optimization (PGO).
+You can now use ``-fprofile-generate=<dir>``, ``-fprofile-use=<dir>``,
+``-fno-profile-generate`` and ``-fno-profile-use``. These flags have the
+same semantics as their GCC counterparts. However, the generated profile
+is still LLVM-specific. PGO profiles generated with Clang cannot be used
+by GCC and vice-versa.
+
+Clang now emits function entry counts in profile-instrumented binaries.
+This has improved the computation of weights and frequencies in
+profile analysis.
+
 OpenMP Support
 --------------
 OpenMP 3.1 is fully supported, but disabled by default. To enable it, please use
