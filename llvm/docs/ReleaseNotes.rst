@@ -70,6 +70,11 @@ Non-comprehensive list of changes in this release
   instruction set that can be dynamically loaded into the Linux kernel via the
   `bpf(2) <http://man7.org/linux/man-pages/man2/bpf.2.html>`_ syscall.
 
+* Switch-case lowering was rewritten to avoid generating unbalanced search trees
+  (`PR22262 <http://llvm.org/pr22262>`_) and to exploit profile information
+  when available. Some lowering strategies are now disabled when optimizations
+  are turned off, to save compile time.
+
 * ... next change ...
 
 .. NOTE
