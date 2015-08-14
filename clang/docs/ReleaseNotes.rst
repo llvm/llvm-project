@@ -56,6 +56,9 @@ Major New Features
   including x86, x86-64 and Power. Also, pragma ``omp simd`` from OpenMP 4.0 is
   supported as well. See below for details.
 
+- Clang 3.7 includes an implementation of :doc:`control flow integrity
+  <ControlFlowIntegrity>`, a security hardening mechanism.
+
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
