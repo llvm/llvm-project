@@ -1858,13 +1858,20 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
       Hi = Integer;
     } else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
       Current = Integer;
-    } else if ((k == BuiltinType::Float || k == BuiltinType::Double) ||
-               (k == BuiltinType::LongDouble &&
-                getTarget().getTriple().isOSNaCl())) {
+    } else if (k == BuiltinType::Float || k == BuiltinType::Double) {
       Current = SSE;
     } else if (k == BuiltinType::LongDouble) {
-      Lo = X87;
-      Hi = X87Up;
+      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
+      if (LDF == &llvm::APFloat::IEEEquad) {
+        Lo = SSE;
+        Hi = SSEUp;
+      } else if (LDF == &llvm::APFloat::x87DoubleExtended) {
+        Lo = X87;
+        Hi = X87Up;
+      } else if (LDF == &llvm::APFloat::IEEEdouble) {
+        Current = SSE;
+      } else
+        llvm_unreachable("unexpected long double representation!");
     }
     // FIXME: _Decimal32 and _Decimal64 are SSE.
     // FIXME: _float128 and _Decimal128 are (SSE, SSEUp).
@@ -1967,14 +1974,21 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
         Current = Integer;
       else if (Size <= 128)
         Lo = Hi = Integer;
-    } else if (ET == getContext().FloatTy)
+    } else if (ET == getContext().FloatTy) {
       Current = SSE;
-    else if (ET == getContext().DoubleTy ||
-             (ET == getContext().LongDoubleTy &&
-              getTarget().getTriple().isOSNaCl()))
+    } else if (ET == getContext().DoubleTy) {
       Lo = Hi = SSE;
-    else if (ET == getContext().LongDoubleTy)
-      Current = ComplexX87;
+    } else if (ET == getContext().LongDoubleTy) {
+      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
+      if (LDF == &llvm::APFloat::IEEEquad)
+        Current = Memory;
+      else if (LDF == &llvm::APFloat::x87DoubleExtended)
+        Current = ComplexX87;
+      else if (LDF == &llvm::APFloat::IEEEdouble)
+        Lo = Hi = SSE;
+      else
+        llvm_unreachable("unexpected long double representation!");
+    }
 
     // If this complex type crosses an eightbyte boundary then it
     // should be split.
@@ -2243,7 +2257,8 @@ llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
     Ty = QualType(InnerTy, 0);
 
   llvm::Type *IRType = CGT.ConvertType(Ty);
-  if(isa<llvm::VectorType>(IRType))
+  if (isa<llvm::VectorType>(IRType) ||
+      IRType->getTypeID() == llvm::Type::FP128TyID)
     return IRType;
 
   // We couldn't find the preferred IR vector type for 'Ty'.
