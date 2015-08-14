@@ -1814,6 +1814,7 @@ Here is the table:
 :raw-html:`<th>SystemZ</th>`
 :raw-html:`<th>X86</th>`
 :raw-html:`<th>XCore</th>`
+:raw-html:`<th>eBPF</th>`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1828,6 +1829,7 @@ Here is the table:
 :raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="yes"></td> <!-- XCore -->`
+:raw-html:`<td class="yes"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1842,6 +1844,7 @@ Here is the table:
 :raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
+:raw-html:`<td class="no"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1856,6 +1859,7 @@ Here is the table:
 :raw-html:`<td class="no"></td> <!-- Sparc -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="yes"></td> <!-- XCore -->`
+:raw-html:`<td class="yes"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1870,6 +1874,7 @@ Here is the table:
 :raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="yes"></td> <!-- XCore -->`
+:raw-html:`<td class="no"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1884,6 +1889,7 @@ Here is the table:
 :raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
+:raw-html:`<td class="yes"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1898,6 +1904,7 @@ Here is the table:
 :raw-html:`<td class="yes"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
+:raw-html:`<td class="yes"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1912,6 +1919,7 @@ Here is the table:
 :raw-html:`<td class="no"></td> <!-- SystemZ -->`
 :raw-html:`<td class="yes"></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
+:raw-html:`<td class="no"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`<tr>`
@@ -1926,6 +1934,7 @@ Here is the table:
 :raw-html:`<td class="no"></td> <!-- SystemZ -->`
 :raw-html:`<td class="partial"><a href="#feat_segstacks_x86">*</a></td> <!-- X86 -->`
 :raw-html:`<td class="no"></td> <!-- XCore -->`
+:raw-html:`<td class="no"></td> <!-- eBPF -->`
 :raw-html:`</tr>`
 
 :raw-html:`</table>`
@@ -2448,3 +2457,191 @@ Code Generator Options:
 :raw-html:`</tr>`
 :raw-html:`</table>`
 
+The extended Berkeley Packet Filter (eBPF) backend
+--------------------------------------------------
+
+Extended BPF (or eBPF) is similar to the original ("classic") BPF (cBPF) used
+to filter network packets.  The
+`bpf() system call <http://man7.org/linux/man-pages/man2/bpf.2.html>`_
+performs a range of operations related to eBPF.  For both cBPF and eBPF
+programs, the Linux kernel statically analyzes the programs before loading
+them, in order to ensure that they cannot harm the running system.  eBPF is
+a 64-bit RISC instruction set designed for one to one mapping to 64-bit CPUs.
+Opcodes are 8-bit encoded, and 87 instructions are defined.  There are 10
+registers, grouped by function as outlined below.
+
+::
+
+  R0        return value from in-kernel functions; exit value for eBPF program
+  R1 - R5   function call arguments to in-kernel functions
+  R6 - R9   callee-saved registers preserved by in-kernel functions
+  R10       stack frame pointer (read only)
+
+Instruction encoding (arithmetic and jump)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+eBPF is reusing most of the opcode encoding from classic to simplify conversion
+of classic BPF to eBPF.  For arithmetic and jump instructions the 8-bit 'code'
+field is divided into three parts:
+
+::
+
+  +----------------+--------+--------------------+
+  |   4 bits       |  1 bit |   3 bits           |
+  | operation code | source | instruction class  |
+  +----------------+--------+--------------------+
+  (MSB)                                      (LSB)
+
+Three LSB bits store instruction class which is one of:
+
+::
+
+  BPF_LD     0x0
+  BPF_LDX    0x1
+  BPF_ST     0x2
+  BPF_STX    0x3
+  BPF_ALU    0x4
+  BPF_JMP    0x5
+  (unused)   0x6
+  BPF_ALU64  0x7
+
+When BPF_CLASS(code) == BPF_ALU or BPF_ALU64 or BPF_JMP,
+4th bit encodes source operand
+
+::
+
+  BPF_X     0x0  use src_reg register as source operand
+  BPF_K     0x1  use 32 bit immediate as source operand
+
+and four MSB bits store operation code
+
+::
+
+  BPF_ADD   0x0  add
+  BPF_SUB   0x1  subtract
+  BPF_MUL   0x2  multiply
+  BPF_DIV   0x3  divide
+  BPF_OR    0x4  bitwise logical OR
+  BPF_AND   0x5  bitwise logical AND
+  BPF_LSH   0x6  left shift
+  BPF_RSH   0x7  right shift (zero extended)
+  BPF_NEG   0x8  arithmetic negation
+  BPF_MOD   0x9  modulo
+  BPF_XOR   0xa  bitwise logical XOR
+  BPF_MOV   0xb  move register to register
+  BPF_ARSH  0xc  right shift (sign extended)
+  BPF_END   0xd  endianness conversion
+
+If BPF_CLASS(code) == BPF_JMP, BPF_OP(code) is one of
+
+::
+
+  BPF_JA    0x0  unconditional jump
+  BPF_JEQ   0x1  jump ==
+  BPF_JGT   0x2  jump >
+  BPF_JGE   0x3  jump >=
+  BPF_JSET  0x4  jump if (DST & SRC)
+  BPF_JNE   0x5  jump !=
+  BPF_JSGT  0x6  jump signed >
+  BPF_JSGE  0x7  jump signed >=
+  BPF_CALL  0x8  function call
+  BPF_EXIT  0x9  function return
+
+Instruction encoding (load, store)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For load and store instructions the 8-bit 'code' field is divided as:
+
+::
+
+  +--------+--------+-------------------+
+  | 3 bits | 2 bits |   3 bits          |
+  |  mode  |  size  | instruction class |
+  +--------+--------+-------------------+
+  (MSB)                             (LSB)
+
+Size modifier is one of
+
+::
+
+  BPF_W       0x0  word
+  BPF_H       0x1  half word
+  BPF_B       0x2  byte
+  BPF_DW      0x3  double word
+
+Mode modifier is one of
+
+::
+
+  BPF_IMM     0x0  immediate
+  BPF_ABS     0x1  used to access packet data
+  BPF_IND     0x2  used to access packet data
+  BPF_MEM     0x3  memory
+  (reserved)  0x4
+  (reserved)  0x5
+  BPF_XADD    0x6  exclusive add
+
+
+Packet data access (BPF_ABS, BPF_IND)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Two non-generic instructions: (BPF_ABS | <size> | BPF_LD) and
+(BPF_IND | <size> | BPF_LD) which are used to access packet data.
+Register R6 is an implicit input that must contain pointer to sk_buff.
+Register R0 is an implicit output which contains the data fetched
+from the packet.  Registers R1-R5 are scratch registers and must not
+be used to store the data across BPF_ABS | BPF_LD or BPF_IND | BPF_LD
+instructions.  These instructions have implicit program exit condition
+as well.  When eBPF program is trying to access the data beyond
+the packet boundary, the interpreter will abort the execution of the program.
+
+BPF_IND | BPF_W | BPF_LD is equivalent to:
+  R0 = ntohl(\*(u32 \*) (((struct sk_buff \*) R6)->data + src_reg + imm32))
+
+eBPF maps
+^^^^^^^^^
+
+eBPF maps are provided for sharing data between kernel and user-space.
+Currently implemented types are hash and array, with potential extension to
+support bloom filters, radix trees, etc.  A map is defined by its type,
+maximum number of elements, key size and value size in bytes.  eBPF syscall
+supports create, update, find and delete functions on maps.
+
+Function calls
+^^^^^^^^^^^^^^
+
+Function call arguments are passed using up to five registers (R1 - R5).
+The return value is passed in a dedicated register (R0).  Four additional
+registers (R6 - R9) are callee-saved, and the values in these registers
+are preserved within kernel functions.  R0 - R5 are scratch registers within
+kernel functions, and eBPF programs must therefor store/restore values in
+these registers if needed across function calls.  The stack can be accessed
+using the read-only frame pointer R10.  eBPF registers map 1:1 to hardware
+registers on x86_64 and other 64-bit architectures.  For example, x86_64
+in-kernel JIT maps them as
+
+::
+
+  R0 - rax
+  R1 - rdi
+  R2 - rsi
+  R3 - rdx
+  R4 - rcx
+  R5 - r8
+  R6 - rbx
+  R7 - r13
+  R8 - r14
+  R9 - r15
+  R10 - rbp
+
+since x86_64 ABI mandates rdi, rsi, rdx, rcx, r8, r9 for argument passing
+and rbx, r12 - r15 are callee saved.
+
+Program start
+^^^^^^^^^^^^^
+
+An eBPF program receives a single argument and contains
+a single eBPF main routine; the program does not contain eBPF functions.
+Function calls are limited to a predefined set of kernel functions.  The size
+of a program is limited to 4K instructions:  this ensures fast termination and
+a limited number of kernel function calls.  Prior to running an eBPF program,
+a verifier performs static analysis to prevent loops in the code and
+to ensure valid register usage and operand types.
