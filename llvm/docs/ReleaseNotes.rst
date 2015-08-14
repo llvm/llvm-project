@@ -265,6 +265,11 @@ new LLVM-based code generators "on the fly" for the designed processors and
 loads them in to the compiler backend as runtime libraries to avoid
 per-target recompilation of larger parts of the compiler chain.
 
+BPF Compiler Collection (BCC)
+-----------------------------
+`BCC <https://github.com/iovisor/bcc>`_ is a Python + C framework for tracing and
+networking that is using Clang rewriter + 2nd pass of Clang + BPF backend to
+generate eBPF and push it into the kernel.
 
 Additional Information
 ======================
