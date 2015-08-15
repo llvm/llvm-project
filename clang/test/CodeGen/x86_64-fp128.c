@@ -31,20 +31,20 @@ typedef __builtin_va_list va_list;
 
 int TestGetVarInt(va_list ap) {
   return __builtin_va_arg(ap, int);
-// Since int can be passed in memory or in register there is a branch and a phi.
+// Since int can be passed in memory or register there are two branches.
 // CHECK:   define i32 @TestGetVarInt(
-// CHECK:   br
-// CHECK:   load {{.*}} %overflow_arg_area_p
+// CHECK:   br label
+// CHECK:   br label
 // CHECK:   = phi
 // CHECK:   ret i32
 }
 
 double TestGetVarDouble(va_list ap) {
   return __builtin_va_arg(ap, double);
-// Since double can be passed in memory or in register there is a branch and a phi.
+// Since double can be passed in memory or register there are two branches.
 // CHECK:   define double @TestGetVarDouble(
-// CHECK:   br
-// CHECK:   load {{.*}} %overflow_arg_area_p
+// CHECK:   br label
+// CHECK:   br label
 // CHECK:   = phi
 // CHECK:   ret double
 }
@@ -54,10 +54,10 @@ long double TestGetVarLD(va_list ap) {
 // fp128 can be passed in memory or in register, but x86_fp80 is in memory.
 // ANDROID: define fp128 @TestGetVarLD(
 // GNU:     define x86_fp80 @TestGetVarLD(
-// ANDROID: br
-// GNU-NOT: br
-// CHECK:   load {{.*}} %overflow_arg_area_p
+// ANDROID: br label
+// ANDROID: br label
 // ANDROID: = phi
+// GNU-NOT: br
 // GNU-NOT: = phi
 // ANDROID: ret fp128
 // GNU:     ret x86_fp80
@@ -69,7 +69,6 @@ long double _Complex TestGetVarLDC(va_list ap) {
 // ANDROID:   define void @TestGetVarLDC({ fp128, fp128 }* {{.*}}, %struct.__va_list_tag*
 // GNU:       define { x86_fp80, x86_fp80 } @TestGetVarLDC(
 // CHECK-NOT: br
-// CHECK:     load {{.*}} %overflow_arg_area_p
 // CHECK-NOT: phi
 // ANDROID:   ret void
 // GNU:       ret { x86_fp80, x86_fp80 }
@@ -106,11 +105,11 @@ void TestPassVarLD(long double x) {
 void TestPassVarLDC(long double _Complex x) {
   TestVarArg("A", x);
 // ANDROID:      define void @TestPassVarLDC({ fp128, fp128 }* {{.*}} %x)
-// ANDROID:      store fp128 %x.{{.*}}, fp128* %
-// ANDROID-NEXT: store fp128 %x.{{.*}}, fp128* %
+// ANDROID:      store fp128 %{{.*}}, fp128* %
+// ANDROID-NEXT: store fp128 %{{.*}}, fp128* %
 // ANDROID-NEXT: call {{.*}} @TestVarArg(i8* {{.*}}, { fp128, fp128 }* {{.*}} %
 // GNU:          define void @TestPassVarLDC({ x86_fp80, x86_fp80 }* {{.*}} %x)
-// GNU:          store x86_fp80 %x.{{.*}}, x86_fp80* %
-// GNU-NEXT:     store x86_fp80 %x.{{.*}}, x86_fp80* %
+// GNU:          store x86_fp80 %{{.*}}, x86_fp80* %
+// GNU-NEXT:     store x86_fp80 %{{.*}}, x86_fp80* %
 // GNGNU-NEXT:   call {{.*}} @TestVarArg(i8* {{.*}}, { x86_fp80, x86_fp80 }* {{.*}} %
 }
