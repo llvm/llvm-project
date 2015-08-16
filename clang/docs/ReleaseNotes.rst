@@ -136,6 +136,9 @@ C++11 Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
+- ``objc_boxable`` attribute was added. Structs and unions marked with this attribute can be
+  used with boxed expressions (``@(...)``) to create ``NSValue``.
+
 ...
 
 OpenCL C Language Changes in Clang
