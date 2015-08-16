@@ -87,6 +87,10 @@ about them. The improvements since the 3.6 release include:
 - -Winfinite-recursion, a warning for functions that only call themselves,
   is now part of -Wmost and -Wall.
 
+- -Wobjc-circular-container prevents creation of circular containers, 
+  it covers ``NSMutableArray``, ``NSMutableSet``, ``NSMutableDictionary``,
+  ``NSMutableOrderedSet`` and all their subclasses.
+
 New Compiler Flags
 ------------------
 
@@ -158,8 +162,8 @@ OpenMP Support
 OpenMP 3.1 is fully supported, but disabled by default. To enable it, please use
 ``-fopenmp=libomp`` command line option. Your feedback (positive or negative) on
 using OpenMP-enabled clang would be much appreciated; please share it either on
-`cfe-dev <http://lists.cs.uiuc.edu/mailman/listinfo/cfe-dev>`_ or `openmp-dev
-<http://lists.cs.uiuc.edu/mailman/listinfo/openmp-dev>`_ mailing lists.
+`cfe-dev <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or `openmp-dev
+<http://lists.llvm.org/mailman/listinfo/openmp-dev>`_ mailing lists.
 
 In addition to OpenMP 3.1, several important elements of 4.0 version of the
 standard are supported as well:
