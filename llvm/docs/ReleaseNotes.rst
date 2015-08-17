@@ -212,8 +212,8 @@ There are numerous improvements to the PowerPC target in this release:
 
 * Many bugs have been identified and fixed.
 
-Changes to the System/Z Target
-------------------------------
+Changes to the SystemZ Target
+-----------------------------
 
 * LLVM no longer attempts to automatically detect the current host CPU when
   invoked natively.
