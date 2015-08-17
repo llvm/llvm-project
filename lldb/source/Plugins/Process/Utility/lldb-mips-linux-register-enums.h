@@ -1,4 +1,4 @@
-//===-- lldb-mips64-register-enums.h -------------------------------*- C++ -*-===//
+//===-- lldb-mips-linux-register-enums.h -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_mips64_register_enums_h
-#define lldb_mips64_register_enums_h
+#ifndef lldb_mips_linux_register_enums_h
+#define lldb_mips_linux_register_enums_h
 
 namespace lldb_private
 {
@@ -52,14 +52,15 @@ namespace lldb_private
         gpr_sp_mips,
         gpr_r30_mips,
         gpr_ra_mips,
+        gpr_sr_mips,
         gpr_mullo_mips,
         gpr_mulhi_mips,
-        gpr_pc_mips,
         gpr_badvaddr_mips,
-        gpr_sr_mips,
         gpr_cause_mips,
+        gpr_pc_mips,
+        gpr_config5_mips,
 
-        k_last_gpr_mips = gpr_cause_mips,
+        k_last_gpr_mips = gpr_config5_mips,
 
         k_first_fpr_mips,
         fpr_f0_mips = k_first_fpr_mips,
@@ -96,12 +97,55 @@ namespace lldb_private
         fpr_f31_mips,
         fpr_fcsr_mips,
         fpr_fir_mips,
-        k_last_fpr_mips = fpr_fir_mips,
+        fpr_config5_mips,
+        k_last_fpr_mips = fpr_config5_mips,
+
+        k_first_msa_mips,
+        msa_w0_mips = k_first_msa_mips,
+        msa_w1_mips,
+        msa_w2_mips,
+        msa_w3_mips,
+        msa_w4_mips,
+        msa_w5_mips,
+        msa_w6_mips,
+        msa_w7_mips,
+        msa_w8_mips,
+        msa_w9_mips,
+        msa_w10_mips,
+        msa_w11_mips,
+        msa_w12_mips,
+        msa_w13_mips,
+        msa_w14_mips,
+        msa_w15_mips,
+        msa_w16_mips,
+        msa_w17_mips,
+        msa_w18_mips,
+        msa_w19_mips,
+        msa_w20_mips,
+        msa_w21_mips,
+        msa_w22_mips,
+        msa_w23_mips,
+        msa_w24_mips,
+        msa_w25_mips,
+        msa_w26_mips,
+        msa_w27_mips,
+        msa_w28_mips,
+        msa_w29_mips,
+        msa_w30_mips,
+        msa_w31_mips,
+        msa_fcsr_mips,
+        msa_fir_mips,
+        msa_mcsr_mips,
+        msa_mir_mips,
+        msa_config5_mips,
+        k_last_msa_mips = msa_config5_mips,
 
         k_num_registers_mips,
+
         k_num_gpr_registers_mips = k_last_gpr_mips - k_first_gpr_mips + 1,
         k_num_fpr_registers_mips = k_last_fpr_mips - k_first_fpr_mips + 1,
-        k_num_user_registers_mips = k_num_gpr_registers_mips + k_num_fpr_registers_mips,
+        k_num_msa_registers_mips = k_last_msa_mips - k_first_msa_mips + 1,
+        k_num_user_registers_mips = k_num_gpr_registers_mips + k_num_fpr_registers_mips + k_num_msa_registers_mips
     };
 
     //---------------------------------------------------------------------------
@@ -142,16 +186,14 @@ namespace lldb_private
         gpr_sp_mips64,
         gpr_r30_mips64,
         gpr_ra_mips64,
+        gpr_sr_mips64,
         gpr_mullo_mips64,
         gpr_mulhi_mips64,
-        gpr_pc_mips64,
         gpr_badvaddr_mips64,
-        gpr_sr_mips64,
         gpr_cause_mips64,
-        gpr_ic_mips64,
-        gpr_dummy_mips64,
-
-        k_last_gpr_mips64 = gpr_dummy_mips64,
+        gpr_pc_mips64,
+        gpr_config5_mips64,
+        k_last_gpr_mips64 = gpr_config5_mips64,
 
         k_first_fpr_mips64,
         fpr_f0_mips64 = k_first_fpr_mips64,
@@ -188,12 +230,56 @@ namespace lldb_private
         fpr_f31_mips64,
         fpr_fcsr_mips64,
         fpr_fir_mips64,
-        k_last_fpr_mips64 = fpr_fir_mips64,
+        fpr_config5_mips64,
+        k_last_fpr_mips64 = fpr_config5_mips64,
+
+        k_first_msa_mips64,
+        msa_w0_mips64 = k_first_msa_mips64,
+        msa_w1_mips64,
+        msa_w2_mips64,
+        msa_w3_mips64,
+        msa_w4_mips64,
+        msa_w5_mips64,
+        msa_w6_mips64,
+        msa_w7_mips64,
+        msa_w8_mips64,
+        msa_w9_mips64,
+        msa_w10_mips64,
+        msa_w11_mips64,
+        msa_w12_mips64,
+        msa_w13_mips64,
+        msa_w14_mips64,
+        msa_w15_mips64,
+        msa_w16_mips64,
+        msa_w17_mips64,
+        msa_w18_mips64,
+        msa_w19_mips64,
+        msa_w20_mips64,
+        msa_w21_mips64,
+        msa_w22_mips64,
+        msa_w23_mips64,
+        msa_w24_mips64,
+        msa_w25_mips64,
+        msa_w26_mips64,
+        msa_w27_mips64,
+        msa_w28_mips64,
+        msa_w29_mips64,
+        msa_w30_mips64,
+        msa_w31_mips64,
+        msa_fcsr_mips64,
+        msa_fir_mips64,
+        msa_mcsr_mips64,
+        msa_mir_mips64,
+        msa_config5_mips64,
+        k_last_msa_mips64 = msa_config5_mips64,
 
         k_num_registers_mips64,
+
         k_num_gpr_registers_mips64 = k_last_gpr_mips64 - k_first_gpr_mips64 + 1,
         k_num_fpr_registers_mips64 = k_last_fpr_mips64 - k_first_fpr_mips64 + 1,
+        k_num_msa_registers_mips64 = k_last_msa_mips64 - k_first_msa_mips64 + 1,
+        k_num_user_registers_mips64 = k_num_gpr_registers_mips64 + k_num_fpr_registers_mips64 + k_num_msa_registers_mips64
     };
 }
 
-#endif // #ifndef fpr_mips64_register_enums_h
+#endif // #ifndef lldb_mips_linux_register_enums_h

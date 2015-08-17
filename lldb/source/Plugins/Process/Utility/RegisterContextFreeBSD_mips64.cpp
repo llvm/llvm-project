@@ -57,7 +57,7 @@ typedef struct _GPR
     uint64_t pc;
     uint64_t ic;
     uint64_t dummy;
-} GPR;
+} GPR_freebsd_mips;
 
 //---------------------------------------------------------------------------
 // Include RegisterInfos_mips64 to declare our g_register_infos_mips64 structure.
@@ -74,7 +74,7 @@ RegisterContextFreeBSD_mips64::RegisterContextFreeBSD_mips64(const ArchSpec &tar
 size_t
 RegisterContextFreeBSD_mips64::GetGPRSize() const
 {
-    return sizeof(GPR);
+    return sizeof(GPR_freebsd_mips);
 }
 
 const RegisterInfo *

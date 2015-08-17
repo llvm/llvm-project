@@ -33,7 +33,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Plugins/Process/Utility/RegisterContext_mips64.h"  //mips32 has same registers nos as mips64
+#include "Plugins/Process/Utility/RegisterContext_mips.h"  //mips32 has same registers nos as mips64
 
 using namespace lldb;
 using namespace lldb_private;
@@ -302,38 +302,38 @@ EmulateInstructionMIPS::GetRegisterName (unsigned reg_num, bool alternate_name)
         case gcc_dwarf_bad_mips:      return "bad";
         case gcc_dwarf_cause_mips:    return "cause";
         case gcc_dwarf_pc_mips:       return "pc";
-        case gcc_dwarf_f0_mips:       return "fp_reg[0]";
-        case gcc_dwarf_f1_mips:       return "fp_reg[1]";
-        case gcc_dwarf_f2_mips:       return "fp_reg[2]";
-        case gcc_dwarf_f3_mips:       return "fp_reg[3]";
-        case gcc_dwarf_f4_mips:       return "fp_reg[4]";
-        case gcc_dwarf_f5_mips:       return "fp_reg[5]";
-        case gcc_dwarf_f6_mips:       return "fp_reg[6]";
-        case gcc_dwarf_f7_mips:       return "fp_reg[7]";
-        case gcc_dwarf_f8_mips:       return "fp_reg[8]";
-        case gcc_dwarf_f9_mips:       return "fp_reg[9]";
-        case gcc_dwarf_f10_mips:      return "fp_reg[10]";
-        case gcc_dwarf_f11_mips:      return "fp_reg[11]";
-        case gcc_dwarf_f12_mips:      return "fp_reg[12]";
-        case gcc_dwarf_f13_mips:      return "fp_reg[13]";
-        case gcc_dwarf_f14_mips:      return "fp_reg[14]";
-        case gcc_dwarf_f15_mips:      return "fp_reg[15]";
-        case gcc_dwarf_f16_mips:      return "fp_reg[16]";
-        case gcc_dwarf_f17_mips:      return "fp_reg[17]";
-        case gcc_dwarf_f18_mips:      return "fp_reg[18]";
-        case gcc_dwarf_f19_mips:      return "fp_reg[19]";
-        case gcc_dwarf_f20_mips:      return "fp_reg[20]";
-        case gcc_dwarf_f21_mips:      return "fp_reg[21]";
-        case gcc_dwarf_f22_mips:      return "fp_reg[22]";
-        case gcc_dwarf_f23_mips:      return "fp_reg[23]";
-        case gcc_dwarf_f24_mips:      return "fp_reg[24]";
-        case gcc_dwarf_f25_mips:      return "fp_reg[25]";
-        case gcc_dwarf_f26_mips:      return "fp_reg[26]";
-        case gcc_dwarf_f27_mips:      return "fp_reg[27]";
-        case gcc_dwarf_f28_mips:      return "fp_reg[28]";
-        case gcc_dwarf_f29_mips:      return "fp_reg[29]";
-        case gcc_dwarf_f30_mips:      return "fp_reg[30]";
-        case gcc_dwarf_f31_mips:      return "fp_reg[31]";
+        case gcc_dwarf_f0_mips:       return "f0";
+        case gcc_dwarf_f1_mips:       return "f1";
+        case gcc_dwarf_f2_mips:       return "f2";
+        case gcc_dwarf_f3_mips:       return "f3";
+        case gcc_dwarf_f4_mips:       return "f4";
+        case gcc_dwarf_f5_mips:       return "f5";
+        case gcc_dwarf_f6_mips:       return "f6";
+        case gcc_dwarf_f7_mips:       return "f7";
+        case gcc_dwarf_f8_mips:       return "f8";
+        case gcc_dwarf_f9_mips:       return "f9";
+        case gcc_dwarf_f10_mips:      return "f10";
+        case gcc_dwarf_f11_mips:      return "f11";
+        case gcc_dwarf_f12_mips:      return "f12";
+        case gcc_dwarf_f13_mips:      return "f13";
+        case gcc_dwarf_f14_mips:      return "f14";
+        case gcc_dwarf_f15_mips:      return "f15";
+        case gcc_dwarf_f16_mips:      return "f16";
+        case gcc_dwarf_f17_mips:      return "f17";
+        case gcc_dwarf_f18_mips:      return "f18";
+        case gcc_dwarf_f19_mips:      return "f19";
+        case gcc_dwarf_f20_mips:      return "f20";
+        case gcc_dwarf_f21_mips:      return "f21";
+        case gcc_dwarf_f22_mips:      return "f22";
+        case gcc_dwarf_f23_mips:      return "f23";
+        case gcc_dwarf_f24_mips:      return "f24";
+        case gcc_dwarf_f25_mips:      return "f25";
+        case gcc_dwarf_f26_mips:      return "f26";
+        case gcc_dwarf_f27_mips:      return "f27";
+        case gcc_dwarf_f28_mips:      return "f28";
+        case gcc_dwarf_f29_mips:      return "f29";
+        case gcc_dwarf_f30_mips:      return "f30";
+        case gcc_dwarf_f31_mips:      return "f31";
         case gcc_dwarf_fcsr_mips:     return "fcsr";
         case gcc_dwarf_fir_mips:      return "fir";
     }

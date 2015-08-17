@@ -13,8 +13,8 @@
 #define lldb_NativeRegisterContextLinux_mips64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/RegisterContext_mips64.h"
-#include "Plugins/Process/Utility/lldb-mips64-register-enums.h"
+#include "Plugins/Process/Utility/RegisterContext_mips.h"
+#include "Plugins/Process/Utility/lldb-mips-linux-register-enums.h"
 
 #define MAX_NUM_WP 8
 
@@ -55,10 +55,10 @@ namespace process_linux {
         WriteAllRegisterValues (const lldb::DataBufferSP &data_sp) override;
 
         Error
-        ReadFPR() override;
+        ReadCP1();
 
         Error
-        WriteFPR() override;
+        WriteCP1();
 
         Error
         IsWatchpointHit (uint32_t wp_index, bool &is_hit) override;
@@ -111,16 +111,25 @@ namespace process_linux {
         IsFR0();
 
         bool
+        IsFRE();
+
+        bool
         IsFPR(uint32_t reg_index) const;
 
+        bool
+        IsMSA(uint32_t reg_index) const;
+
+        bool
+        IsMSAAvailable();
+
         void*
-        GetGPRBuffer() override { return &m_gpr_mips64; }
+        GetGPRBuffer() override { return &m_gpr; }
 
         void*
         GetFPRBuffer() override { return &m_fpr; }
 
         size_t
-        GetFPRSize() override { return sizeof(FPR_mips); }
+        GetFPRSize() override { return sizeof(FPR_linux_mips); }
 
     private:
         // Info about register ranges.
@@ -133,15 +142,21 @@ namespace process_linux {
             uint32_t last_gpr;
             uint32_t first_fpr;
             uint32_t last_fpr;
+            uint32_t first_msa;
+            uint32_t last_msa;
         };
 
         RegInfo m_reg_info;
 
-        uint64_t m_gpr_mips64[k_num_gpr_registers_mips64];
+        GPR_linux_mips m_gpr;
 
-        FPR_mips m_fpr;
+        FPR_linux_mips m_fpr;
+
+        MSA_linux_mips m_msa;
 
         lldb::addr_t hw_addr_map[MAX_NUM_WP];
+
+        IOVEC_mips m_iovec;
     };
 
 } // namespace process_linux

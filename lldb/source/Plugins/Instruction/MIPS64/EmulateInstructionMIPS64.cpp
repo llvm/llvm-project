@@ -33,7 +33,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Plugins/Process/Utility/RegisterContext_mips64.h"
+#include "Plugins/Process/Utility/RegisterContext_mips.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -302,38 +302,38 @@ EmulateInstructionMIPS64::GetRegisterName (unsigned reg_num, bool alternate_name
         case gcc_dwarf_bad_mips64:      return "bad";
         case gcc_dwarf_cause_mips64:    return "cause";
         case gcc_dwarf_pc_mips64:       return "pc";
-        case gcc_dwarf_f0_mips64:       return "fp_reg[0]";
-        case gcc_dwarf_f1_mips64:       return "fp_reg[1]";
-        case gcc_dwarf_f2_mips64:       return "fp_reg[2]";
-        case gcc_dwarf_f3_mips64:       return "fp_reg[3]";
-        case gcc_dwarf_f4_mips64:       return "fp_reg[4]";
-        case gcc_dwarf_f5_mips64:       return "fp_reg[5]";
-        case gcc_dwarf_f6_mips64:       return "fp_reg[6]";
-        case gcc_dwarf_f7_mips64:       return "fp_reg[7]";
-        case gcc_dwarf_f8_mips64:       return "fp_reg[8]";
-        case gcc_dwarf_f9_mips64:       return "fp_reg[9]";
-        case gcc_dwarf_f10_mips64:      return "fp_reg[10]";
-        case gcc_dwarf_f11_mips64:      return "fp_reg[11]";
-        case gcc_dwarf_f12_mips64:      return "fp_reg[12]";
-        case gcc_dwarf_f13_mips64:      return "fp_reg[13]";
-        case gcc_dwarf_f14_mips64:      return "fp_reg[14]";
-        case gcc_dwarf_f15_mips64:      return "fp_reg[15]";
-        case gcc_dwarf_f16_mips64:      return "fp_reg[16]";
-        case gcc_dwarf_f17_mips64:      return "fp_reg[17]";
-        case gcc_dwarf_f18_mips64:      return "fp_reg[18]";
-        case gcc_dwarf_f19_mips64:      return "fp_reg[19]";
-        case gcc_dwarf_f20_mips64:      return "fp_reg[20]";
-        case gcc_dwarf_f21_mips64:      return "fp_reg[21]";
-        case gcc_dwarf_f22_mips64:      return "fp_reg[22]";
-        case gcc_dwarf_f23_mips64:      return "fp_reg[23]";
-        case gcc_dwarf_f24_mips64:      return "fp_reg[24]";
-        case gcc_dwarf_f25_mips64:      return "fp_reg[25]";
-        case gcc_dwarf_f26_mips64:      return "fp_reg[26]";
-        case gcc_dwarf_f27_mips64:      return "fp_reg[27]";
-        case gcc_dwarf_f28_mips64:      return "fp_reg[28]";
-        case gcc_dwarf_f29_mips64:      return "fp_reg[29]";
-        case gcc_dwarf_f30_mips64:      return "fp_reg[30]";
-        case gcc_dwarf_f31_mips64:      return "fp_reg[31]";
+        case gcc_dwarf_f0_mips64:       return "f0";
+        case gcc_dwarf_f1_mips64:       return "f1";
+        case gcc_dwarf_f2_mips64:       return "f2";
+        case gcc_dwarf_f3_mips64:       return "f3";
+        case gcc_dwarf_f4_mips64:       return "f4";
+        case gcc_dwarf_f5_mips64:       return "f5";
+        case gcc_dwarf_f6_mips64:       return "f6";
+        case gcc_dwarf_f7_mips64:       return "f7";
+        case gcc_dwarf_f8_mips64:       return "f8";
+        case gcc_dwarf_f9_mips64:       return "f9";
+        case gcc_dwarf_f10_mips64:      return "f10";
+        case gcc_dwarf_f11_mips64:      return "f11";
+        case gcc_dwarf_f12_mips64:      return "f12";
+        case gcc_dwarf_f13_mips64:      return "f13";
+        case gcc_dwarf_f14_mips64:      return "f14";
+        case gcc_dwarf_f15_mips64:      return "f15";
+        case gcc_dwarf_f16_mips64:      return "f16";
+        case gcc_dwarf_f17_mips64:      return "f17";
+        case gcc_dwarf_f18_mips64:      return "f18";
+        case gcc_dwarf_f19_mips64:      return "f19";
+        case gcc_dwarf_f20_mips64:      return "f20";
+        case gcc_dwarf_f21_mips64:      return "f21";
+        case gcc_dwarf_f22_mips64:      return "f22";
+        case gcc_dwarf_f23_mips64:      return "f23";
+        case gcc_dwarf_f24_mips64:      return "f24";
+        case gcc_dwarf_f25_mips64:      return "f25";
+        case gcc_dwarf_f26_mips64:      return "f26";
+        case gcc_dwarf_f27_mips64:      return "f27";
+        case gcc_dwarf_f28_mips64:      return "f28";
+        case gcc_dwarf_f29_mips64:      return "f29";
+        case gcc_dwarf_f30_mips64:      return "f30";
+        case gcc_dwarf_f31_mips64:      return "f31";
         case gcc_dwarf_fcsr_mips64:     return "fcsr";
         case gcc_dwarf_fir_mips64:      return "fir";
     }

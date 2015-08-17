@@ -164,7 +164,7 @@ NativeRegisterContextLinux::ReadFPR()
 
     void* buf = GetFPRBuffer();
     if (!buf)
-        return Error("GPR buffer is NULL");
+        return Error("FPR buffer is NULL");
     size_t buf_size = GetFPRSize();
 
     NativeProcessLinux* process_p = static_cast<NativeProcessLinux*>(process_sp.get());
@@ -180,7 +180,7 @@ NativeRegisterContextLinux::WriteFPR()
 
     void* buf = GetFPRBuffer();
     if (!buf)
-        return Error("GPR buffer is NULL");
+        return Error("FPR buffer is NULL");
     size_t buf_size = GetFPRSize();
 
     NativeProcessLinux* process_p = static_cast<NativeProcessLinux*>(process_sp.get());
