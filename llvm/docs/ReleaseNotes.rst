@@ -75,6 +75,10 @@ Non-comprehensive list of changes in this release
   when available. Some lowering strategies are now disabled when optimizations
   are turned off, to save compile time.
 
+* The debug info IR class hierarchy now inherits from ``Metadata`` and has its
+  own bitcode records and assembly syntax (documented in LangRef).  The debug
+  info verifier has been merged with the main verifier.
+
 * ... next change ...
 
 .. NOTE
