@@ -613,6 +613,9 @@ bool StructType::isLayoutIdentical(StructType *Other) const {
   if (isPacked() != Other->isPacked() ||
       getNumElements() != Other->getNumElements())
     return false;
+
+  if (!getNumElements())
+    return true;
   
   return std::equal(element_begin(), element_end(), Other->element_begin());
 }
