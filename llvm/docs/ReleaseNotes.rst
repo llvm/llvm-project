@@ -295,6 +295,24 @@ BPF Compiler Collection (BCC)
 networking that is using Clang rewriter + 2nd pass of Clang + BPF backend to
 generate eBPF and push it into the kernel.
 
+LLVMSharp & ClangSharp
+----------------------
+
+`LLVMSharp <http://www.llvmsharp.org>`_ and
+`ClangSharp <http://www.clangsharp.org>`_ are type-safe C# bindings for
+Microsoft.NET and Mono that Platform Invoke into the native libraries.
+ClangSharp is self-hosted and is used to generated LLVMSharp using the
+LLVM-C API.
+
+`LLVMSharp Kaleidoscope Tutorials <http://www.llvmsharp.org/Kaleidoscope/>`_
+are instructive examples of writing a compiler in C#, with certain improvements
+like using the visitor pattern to generate LLVM IR.
+
+`ClangSharp PInvoke Generator <http://www.clangsharp.org/PInvoke/>`_ is the
+self-hosting mechanism for LLVM/ClangSharp and is demonstrative of using
+LibClang to generate Platform Invoke (PInvoke) signatures for C APIs.
+
+
 Additional Information
 ======================
 
