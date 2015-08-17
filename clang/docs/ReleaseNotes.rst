@@ -203,8 +203,8 @@ Static Analyzer
 
 ...
 
-System/Z
---------
+SystemZ
+-------
 
 * Clang will now always default to the z10 processor when compiling
   without any ``-march=`` option. Previous releases used to automatically
