@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "TreeTransform.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
@@ -2601,20 +2602,85 @@ bool OpenMPIterationSpaceChecker::CheckInc(Expr *S) {
   return true;
 }
 
+namespace {
+// Transform variables declared in GNU statement expressions to new ones to
+// avoid crash on codegen.
+class TransformToNewDefs : public TreeTransform<TransformToNewDefs> {
+  typedef TreeTransform<TransformToNewDefs> BaseTransform;
+
+public:
+  TransformToNewDefs(Sema &SemaRef) : BaseTransform(SemaRef) {}
+
+  Decl *TransformDefinition(SourceLocation Loc, Decl *D) {
+    if (auto *VD = cast<VarDecl>(D))
+      if (!isa<ParmVarDecl>(D) && !isa<VarTemplateSpecializationDecl>(D) &&
+          !isa<ImplicitParamDecl>(D)) {
+        auto *NewVD = VarDecl::Create(
+            SemaRef.Context, VD->getDeclContext(), VD->getLocStart(),
+            VD->getLocation(), VD->getIdentifier(), VD->getType(),
+            VD->getTypeSourceInfo(), VD->getStorageClass());
+        NewVD->setTSCSpec(VD->getTSCSpec());
+        NewVD->setInit(VD->getInit());
+        NewVD->setInitStyle(VD->getInitStyle());
+        NewVD->setExceptionVariable(VD->isExceptionVariable());
+        NewVD->setNRVOVariable(VD->isNRVOVariable());
+        NewVD->setCXXForRangeDecl(VD->isInExternCXXContext());
+        NewVD->setConstexpr(VD->isConstexpr());
+        NewVD->setInitCapture(VD->isInitCapture());
+        NewVD->setPreviousDeclInSameBlockScope(
+            VD->isPreviousDeclInSameBlockScope());
+        VD->getDeclContext()->addHiddenDecl(NewVD);
+        transformedLocalDecl(VD, NewVD);
+        return NewVD;
+      }
+    return BaseTransform::TransformDefinition(Loc, D);
+  }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    if (auto *NewD = TransformDecl(E->getExprLoc(), E->getDecl()))
+      if (E->getDecl() != NewD) {
+        NewD->setReferenced();
+        NewD->markUsed(SemaRef.Context);
+        return DeclRefExpr::Create(
+            SemaRef.Context, E->getQualifierLoc(), E->getTemplateKeywordLoc(),
+            cast<ValueDecl>(NewD), E->refersToEnclosingVariableOrCapture(),
+            E->getNameInfo(), E->getType(), E->getValueKind());
+      }
+    return BaseTransform::TransformDeclRefExpr(E);
+  }
+};
+}
+
 /// \brief Build the expression to calculate the number of iterations.
 Expr *
 OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
                                                 const bool LimitedType) const {
+  TransformToNewDefs Transform(SemaRef);
   ExprResult Diff;
-  if (Var->getType()->isIntegerType() || Var->getType()->isPointerType() ||
+  auto VarType = Var->getType().getNonReferenceType();
+  if (VarType->isIntegerType() || VarType->isPointerType() ||
       SemaRef.getLangOpts().CPlusPlus) {
     // Upper - Lower
-    Expr *Upper = TestIsLessOp ? UB : LB;
-    Expr *Lower = TestIsLessOp ? LB : UB;
+    auto *UBExpr = TestIsLessOp ? UB : LB;
+    auto *LBExpr = TestIsLessOp ? LB : UB;
+    Expr *Upper = Transform.TransformExpr(UBExpr).get();
+    Expr *Lower = Transform.TransformExpr(LBExpr).get();
+    if (!Upper || !Lower)
+      return nullptr;
+    Upper = SemaRef.PerformImplicitConversion(Upper, UBExpr->getType(),
+                                                    Sema::AA_Converting,
+                                                    /*AllowExplicit=*/true)
+                      .get();
+    Lower = SemaRef.PerformImplicitConversion(Lower, LBExpr->getType(),
+                                              Sema::AA_Converting,
+                                              /*AllowExplicit=*/true)
+                .get();
+    if (!Upper || !Lower)
+      return nullptr;
 
     Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Lower);
 
-    if (!Diff.isUsable() && Var->getType()->getAsCXXRecordDecl()) {
+    if (!Diff.isUsable() && VarType->getAsCXXRecordDecl()) {
       // BuildBinOp already emitted error, this one is to point user to upper
       // and lower bound, and to tell what is passed to 'operator-'.
       SemaRef.Diag(Upper->getLocStart(), diag::err_omp_loop_diff_cxx)
@@ -2635,8 +2701,15 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
     return nullptr;
 
   // Upper - Lower [- 1] + Step
-  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Diff.get(),
-                            Step->IgnoreImplicit());
+  auto NewStep = Transform.TransformExpr(Step->IgnoreImplicit());
+  if (NewStep.isInvalid())
+    return nullptr;
+  NewStep = SemaRef.PerformImplicitConversion(
+      NewStep.get(), Step->IgnoreImplicit()->getType(), Sema::AA_Converting,
+      /*AllowExplicit=*/true);
+  if (NewStep.isInvalid())
+    return nullptr;
+  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Diff.get(), NewStep.get());
   if (!Diff.isUsable())
     return nullptr;
 
@@ -2646,15 +2719,35 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
     return nullptr;
 
   // (Upper - Lower [- 1] + Step) / Step
-  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Div, Diff.get(),
-                            Step->IgnoreImplicit());
+  NewStep = Transform.TransformExpr(Step->IgnoreImplicit());
+  if (NewStep.isInvalid())
+    return nullptr;
+  NewStep = SemaRef.PerformImplicitConversion(
+      NewStep.get(), Step->IgnoreImplicit()->getType(), Sema::AA_Converting,
+      /*AllowExplicit=*/true);
+  if (NewStep.isInvalid())
+    return nullptr;
+  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Div, Diff.get(), NewStep.get());
   if (!Diff.isUsable())
     return nullptr;
 
   // OpenMP runtime requires 32-bit or 64-bit loop variables.
+  QualType Type = Diff.get()->getType();
+  auto &C = SemaRef.Context;
+  bool UseVarType = VarType->hasIntegerRepresentation() &&
+                    C.getTypeSize(Type) > C.getTypeSize(VarType);
+  if (!Type->isIntegerType() || UseVarType) {
+    unsigned NewSize =
+        UseVarType ? C.getTypeSize(VarType) : C.getTypeSize(Type);
+    bool IsSigned = UseVarType ? VarType->hasSignedIntegerRepresentation()
+                               : Type->hasSignedIntegerRepresentation();
+    Type = C.getIntTypeForBitwidth(NewSize, IsSigned);
+    Diff = SemaRef.PerformImplicitConversion(
+        Diff.get(), Type, Sema::AA_Converting, /*AllowExplicit=*/true);
+    if (!Diff.isUsable())
+      return nullptr;
+  }
   if (LimitedType) {
-    auto &C = SemaRef.Context;
-    QualType Type = Diff.get()->getType();
     unsigned NewSize = (C.getTypeSize(Type) > 32) ? 64 : 32;
     if (NewSize != C.getTypeSize(Type)) {
       if (NewSize < C.getTypeSize(Type)) {
@@ -2663,7 +2756,8 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
             << InitSrcRange << ConditionSrcRange;
       }
       QualType NewType = C.getIntTypeForBitwidth(
-          NewSize, Type->hasSignedIntegerRepresentation());
+          NewSize, Type->hasSignedIntegerRepresentation() ||
+                       C.getTypeSize(Type) < NewSize);
       Diff = SemaRef.PerformImplicitConversion(Diff.get(), NewType,
                                                Sema::AA_Converting, true);
       if (!Diff.isUsable())
@@ -2678,10 +2772,24 @@ Expr *OpenMPIterationSpaceChecker::BuildPreCond(Scope *S, Expr *Cond) const {
   // Try to build LB <op> UB, where <op> is <, >, <=, or >=.
   bool Suppress = SemaRef.getDiagnostics().getSuppressAllDiagnostics();
   SemaRef.getDiagnostics().setSuppressAllDiagnostics(/*Val=*/true);
+  TransformToNewDefs Transform(SemaRef);
+
+  auto NewLB = Transform.TransformExpr(LB);
+  auto NewUB = Transform.TransformExpr(UB);
+  if (NewLB.isInvalid() || NewUB.isInvalid())
+    return Cond;
+  NewLB = SemaRef.PerformImplicitConversion(NewLB.get(), LB->getType(),
+                                            Sema::AA_Converting,
+                                            /*AllowExplicit=*/true);
+  NewUB = SemaRef.PerformImplicitConversion(NewUB.get(), UB->getType(),
+                                            Sema::AA_Converting,
+                                            /*AllowExplicit=*/true);
+  if (NewLB.isInvalid() || NewUB.isInvalid())
+    return Cond;
   auto CondExpr = SemaRef.BuildBinOp(
       S, DefaultLoc, TestIsLessOp ? (TestIsStrictOp ? BO_LT : BO_LE)
                                   : (TestIsStrictOp ? BO_GT : BO_GE),
-      LB, UB);
+      NewLB.get(), NewUB.get());
   if (CondExpr.isUsable()) {
     CondExpr = SemaRef.PerformImplicitConversion(
         CondExpr.get(), SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
@@ -2876,6 +2984,31 @@ static bool CheckOpenMPIterationSpace(
   return HasErrors;
 }
 
+/// \brief Build 'VarRef = Start.
+static ExprResult BuildCounterInit(Sema &SemaRef, Scope *S, SourceLocation Loc,
+                                   ExprResult VarRef, ExprResult Start) {
+  TransformToNewDefs Transform(SemaRef);
+  // Build 'VarRef = Start.
+  auto NewStart = Transform.TransformExpr(Start.get()->IgnoreImplicit());
+  if (NewStart.isInvalid())
+    return ExprError();
+  NewStart = SemaRef.PerformImplicitConversion(
+      NewStart.get(), Start.get()->IgnoreImplicit()->getType(),
+      Sema::AA_Converting,
+      /*AllowExplicit=*/true);
+  if (NewStart.isInvalid())
+    return ExprError();
+  NewStart = SemaRef.PerformImplicitConversion(
+      NewStart.get(), VarRef.get()->getType(), Sema::AA_Converting,
+      /*AllowExplicit=*/true);
+  if (!NewStart.isUsable())
+    return ExprError();
+
+  auto Init =
+      SemaRef.BuildBinOp(S, Loc, BO_Assign, VarRef.get(), NewStart.get());
+  return Init;
+}
+
 /// \brief Build 'VarRef = Start + Iter * Step'.
 static ExprResult BuildCounterUpdate(Sema &SemaRef, Scope *S,
                                      SourceLocation Loc, ExprResult VarRef,
@@ -2887,14 +3020,33 @@ static ExprResult BuildCounterUpdate(Sema &SemaRef, Scope *S,
       !Step.isUsable())
     return ExprError();
 
-  ExprResult Update = SemaRef.BuildBinOp(S, Loc, BO_Mul, Iter.get(),
-                                         Step.get()->IgnoreImplicit());
+  TransformToNewDefs Transform(SemaRef);
+  auto NewStep = Transform.TransformExpr(Step.get()->IgnoreImplicit());
+  if (NewStep.isInvalid())
+    return ExprError();
+  NewStep = SemaRef.PerformImplicitConversion(
+      NewStep.get(), Step.get()->IgnoreImplicit()->getType(),
+      Sema::AA_Converting,
+      /*AllowExplicit=*/true);
+  if (NewStep.isInvalid())
+    return ExprError();
+  ExprResult Update =
+      SemaRef.BuildBinOp(S, Loc, BO_Mul, Iter.get(), NewStep.get());
   if (!Update.isUsable())
     return ExprError();
 
   // Build 'VarRef = Start + Iter * Step'.
+  auto NewStart = Transform.TransformExpr(Start.get()->IgnoreImplicit());
+  if (NewStart.isInvalid())
+    return ExprError();
+  NewStart = SemaRef.PerformImplicitConversion(
+      NewStart.get(), Start.get()->IgnoreImplicit()->getType(),
+      Sema::AA_Converting,
+      /*AllowExplicit=*/true);
+  if (NewStart.isInvalid())
+    return ExprError();
   Update = SemaRef.BuildBinOp(S, Loc, (Subtract ? BO_Sub : BO_Add),
-                              Start.get()->IgnoreImplicit(), Update.get());
+                              NewStart.get(), Update.get());
   if (!Update.isUsable())
     return ExprError();
 
@@ -3005,8 +3157,18 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *NestedLoopCountExpr,
   // true).
   auto PreCond = ExprResult(IterSpaces[0].PreCond);
   auto N0 = IterSpaces[0].NumIterations;
-  ExprResult LastIteration32 = WidenIterationCount(32 /* Bits */, N0, SemaRef);
-  ExprResult LastIteration64 = WidenIterationCount(64 /* Bits */, N0, SemaRef);
+  ExprResult LastIteration32 = WidenIterationCount(
+      32 /* Bits */, SemaRef.PerformImplicitConversion(
+                                N0->IgnoreImpCasts(), N0->getType(),
+                                Sema::AA_Converting, /*AllowExplicit=*/true)
+                         .get(),
+      SemaRef);
+  ExprResult LastIteration64 = WidenIterationCount(
+      64 /* Bits */, SemaRef.PerformImplicitConversion(
+                                N0->IgnoreImpCasts(), N0->getType(),
+                                Sema::AA_Converting, /*AllowExplicit=*/true)
+                         .get(),
+      SemaRef);
 
   if (!LastIteration32.isUsable() || !LastIteration64.isUsable())
     return NestedLoopCount;
@@ -3023,11 +3185,19 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *NestedLoopCountExpr,
     auto N = IterSpaces[Cnt].NumIterations;
     AllCountsNeedLessThan32Bits &= C.getTypeSize(N->getType()) < 32;
     if (LastIteration32.isUsable())
-      LastIteration32 = SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_Mul,
-                                           LastIteration32.get(), N);
+      LastIteration32 = SemaRef.BuildBinOp(
+          CurScope, SourceLocation(), BO_Mul, LastIteration32.get(),
+          SemaRef.PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
+                                            Sema::AA_Converting,
+                                            /*AllowExplicit=*/true)
+              .get());
     if (LastIteration64.isUsable())
-      LastIteration64 = SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_Mul,
-                                           LastIteration64.get(), N);
+      LastIteration64 = SemaRef.BuildBinOp(
+          CurScope, SourceLocation(), BO_Mul, LastIteration64.get(),
+          SemaRef.PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
+                                            Sema::AA_Converting,
+                                            /*AllowExplicit=*/true)
+              .get());
   }
 
   // Choose either the 32-bit or 64-bit version.
@@ -3188,6 +3358,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *NestedLoopCountExpr,
   // Build updates and final values of the loop counters.
   bool HasErrors = false;
   Built.Counters.resize(NestedLoopCount);
+  Built.Inits.resize(NestedLoopCount);
   Built.Updates.resize(NestedLoopCount);
   Built.Finals.resize(NestedLoopCount);
   {
@@ -3221,6 +3392,12 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *NestedLoopCountExpr,
           SemaRef, cast<VarDecl>(cast<DeclRefExpr>(IS.CounterVar)->getDecl()),
           IS.CounterVar->getType(), IS.CounterVar->getExprLoc(),
           /*RefersToCapture=*/true);
+      ExprResult Init = BuildCounterInit(SemaRef, CurScope, UpdLoc, CounterVar,
+                                         IS.CounterInit);
+      if (!Init.isUsable()) {
+        HasErrors = true;
+        break;
+      }
       ExprResult Update =
           BuildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
                              IS.CounterInit, Iter, IS.CounterStep, IS.Subtract);
@@ -3260,6 +3437,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *NestedLoopCountExpr,
       }
       // Save results
       Built.Counters[Cnt] = IS.CounterVar;
+      Built.Inits[Cnt] = Init.get();
       Built.Updates[Cnt] = Update.get();
       Built.Finals[Cnt] = Final.get();
     }

@@ -698,27 +698,9 @@ static void emitPreCond(CodeGenFunction &CGF, const OMPLoopDirective &S,
   {
     CodeGenFunction::OMPPrivateScope PreCondScope(CGF);
     emitPrivateLoopCounters(CGF, PreCondScope, S.counters());
-    const VarDecl *IVDecl =
-        cast<VarDecl>(cast<DeclRefExpr>(S.getIterationVariable())->getDecl());
-    bool IsRegistered = PreCondScope.addPrivate(IVDecl, [&]() -> llvm::Value *{
-      // Emit var without initialization.
-      auto VarEmission = CGF.EmitAutoVarAlloca(*IVDecl);
-      CGF.EmitAutoVarCleanups(VarEmission);
-      return VarEmission.getAllocatedAddress();
-    });
-    assert(IsRegistered && "counter already registered as private");
-    // Silence the warning about unused variable.
-    (void)IsRegistered;
     (void)PreCondScope.Privatize();
-    // Initialize internal counter to 0 to calculate initial values of real
-    // counters.
-    LValue IV = CGF.EmitLValue(S.getIterationVariable());
-    CGF.EmitStoreOfScalar(
-        llvm::ConstantInt::getNullValue(
-            IV.getAddress()->getType()->getPointerElementType()),
-        CGF.EmitLValue(S.getIterationVariable()), /*isInit=*/true);
     // Get initial values of real counters.
-    for (auto I : S.updates()) {
+    for (auto I : S.inits()) {
       CGF.EmitIgnoredExpr(I);
     }
   }
