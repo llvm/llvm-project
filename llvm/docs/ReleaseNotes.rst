@@ -183,7 +183,8 @@ There are numerous improvements to the PowerPC target in this release:
 
 * Loops may be restructured to leverage pre-increment loads and stores.
 
-* QPX - Hal, please say a few words.
+* QPX - The vector instruction set used by the IBM Blue Gene/Q supercomputers
+  is now supported.
 
 * Loads from the TOC area are now correctly treated as invariant.
 
