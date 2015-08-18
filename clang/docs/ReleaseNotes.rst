@@ -249,6 +249,55 @@ SystemZ
  
 * Several cases of ABI incompatibility with GCC have been fixed.
 
+clang-tidy
+----------
+Added new checks:
+
+  * google-global-names-in-headers: flag global namespace pollution in header
+    files.
+
+  * misc-assert-side-effect: detects `assert()` conditions with side effects
+    which can cause different behavior in debug / release builds.
+
+  * misc-assign-operator-signature: finds declarations of assign operators with
+    the wrong return and/or argument types.
+
+  * misc-inaccurate-erase: warns when some elements of a container are not
+    removed due to using the `erase()` algorithm incorrectly.
+
+  * misc-inefficient-algorithm: warns on inefficient use of STL algorithms on
+    associative containers.
+
+  * misc-macro-parentheses: finds macros that can have unexpected behavior due
+    to missing parentheses.
+
+  * misc-macro-repeated-side-effects: checks for repeated argument with side
+    effects in macros.
+
+  * misc-noexcept-move-constructor: flags user-defined move constructors and
+    assignment operators not marked with `noexcept` or marked with
+    `noexcept(expr)` where `expr` evaluates to `false` (but is not a `false`
+    literal itself).
+
+  * misc-static-assert: replaces `assert()` with `static_assert()` if the
+    condition is evaluatable at compile time.
+
+  * readability-container-size-empty: checks whether a call to the `size()`
+    method can be replaced with a call to `empty()`.
+
+  * readability-else-after-return: flags conditional statements having the
+    `else` branch, when the `true` branch has a `return` as the last statement.
+
+  * readability-redundant-string-cstr: finds unnecessary calls to
+    `std::string::c_str()`.
+
+  * readability-shrink-to-fit: replaces copy and swap tricks on shrinkable
+    containers with the `shrink_to_fit()` method call.
+
+  * readability-simplify-boolean-expr: looks for boolean expressions involving
+    boolean constants and simplifies them to use the appropriate boolean
+    expression directly (`if (x == true) ... -> if (x)`, etc.)
+
 
 Core Analysis Improvements
 ==========================
