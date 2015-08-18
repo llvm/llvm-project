@@ -150,3 +150,14 @@ entry:
   ret <4 x float> undef
 }
 
+define <8 x i32> @pr24458(<8 x float> %n) {
+; CHECK-LABEL: @pr24458
+  %notequal_b_load_.i = fcmp une <8 x float> %n, zeroinitializer
+  %equal_a_load72_.i = fcmp ueq <8 x float> %n, zeroinitializer
+  %notequal_b_load__to_boolvec.i = sext <8 x i1> %notequal_b_load_.i to <8 x i32>
+  %equal_a_load72__to_boolvec.i = sext <8 x i1> %equal_a_load72_.i to <8 x i32>
+  %wrong = or <8 x i32> %notequal_b_load__to_boolvec.i, %equal_a_load72__to_boolvec.i
+  ret <8 x i32> %wrong
+; CHECK-NEXT: ret <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+}
+

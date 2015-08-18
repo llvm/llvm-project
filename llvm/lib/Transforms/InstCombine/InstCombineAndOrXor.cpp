@@ -93,7 +93,8 @@ static Value *getFCmpValue(bool isordered, unsigned code,
   case 5: Pred = isordered ? FCmpInst::FCMP_ONE : FCmpInst::FCMP_UNE; break;
   case 6: Pred = isordered ? FCmpInst::FCMP_OLE : FCmpInst::FCMP_ULE; break;
   case 7:
-    if (!isordered) return ConstantInt::getTrue(LHS->getContext());
+    if (!isordered)
+      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
     Pred = FCmpInst::FCMP_ORD; break;
   }
   return Builder->CreateFCmp(Pred, LHS, RHS);
