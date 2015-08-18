@@ -31,6 +31,7 @@ $(PROJ_OBJ_DIR)/doxygen.cfg: doxygen.cfg.in
 	  -e 's/@llvm_doxygen_qhp_cust_filter_name@//g' \
 	  -e 's/@llvm_doxygen_qhp_namespace@//g' \
 	  -e 's/@searchengine_url@//g' \
+	  -e 's/@DOT_IMAGE_FORMAT@/png/g' \
 	  > $@
 endif
 

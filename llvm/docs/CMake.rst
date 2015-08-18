@@ -387,6 +387,10 @@ LLVM-specific variables
   ``-DLLVM_ENABLE_DOXYGEN_QT_HELP=ON``; otherwise this has no
   effect.
 
+**LLVM_DOXYGEN_SVG**:BOOL
+  Uses .svg files instead of .png files for graphs in the Doxygen output.
+  Defaults to OFF.
+
 **LLVM_ENABLE_SPHINX**:BOOL
   If enabled CMake will search for the ``sphinx-build`` executable and will make
   the ``SPHINX_OUTPUT_HTML`` and ``SPHINX_OUTPUT_MAN`` CMake options available.
