@@ -201,7 +201,20 @@ libclang
 Static Analyzer
 ---------------
 
-...
+* The generated plists now contain the name of the check that generated it.
+
+* Configuration options can now be passed to the checkers (not just the static
+  analyzer core).
+
+* New check for dereferencing object that the result of a zero-length
+  allocation.
+
+* Also check functions in precompiled headers.
+
+* Properly handle alloca() in some checkers.
+
+* Various improvements to the retain count checker.
+
 
 SystemZ
 -------
