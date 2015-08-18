@@ -240,6 +240,20 @@ Changes to the OCaml bindings
  During this release ...
 
 
+Changes to the JIT APIs
+-----------------------
+
+* Added a new C++ JIT API called On Request Compilation, or ORC.
+
+  ORC is a new JIT API inspired by MCJIT but designed to be more testable, and
+  easier to extend with new features. A key new feature already in tree is lazy,
+  function-at-a-time compilation for X86. Also included is a reimplementation of
+  MCJIT’s API and behavior (OrcMCJITReplacement). MCJIT itself remains in tree,
+  and continues to be the default JIT ExecutionEngine, though new users are
+  encouraged to try ORC out for their projects. (A good place to start is the
+  new ORC tutorials under llvm/examples/kaleidoscope/orc).
+
+
 External Open Source Projects Using LLVM 3.7
 ============================================
 
