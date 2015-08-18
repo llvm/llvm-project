@@ -30,6 +30,7 @@ $(PROJ_OBJ_DIR)/doxygen.cfg: doxygen.cfg.in
 	  -e 's/@enable_server_based_search@/NO/g' \
 	  -e 's/@extra_search_mappings@//g' \
 	  -e 's/@searchengine_url@//g' \
+	  -e 's/@DOT_IMAGE_FORMAT@/png/g' \
 	  > $@
 endif
 
