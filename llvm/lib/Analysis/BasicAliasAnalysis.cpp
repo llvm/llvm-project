@@ -206,14 +206,6 @@ static Value *GetLinearExpression(Value *V, APInt &Scale, APInt &Offset,
     return V;
   }
 
-  if (ConstantInt *Const = dyn_cast<ConstantInt>(V)) {
-    // if it's a constant, just convert it to an offset
-    // and remove the variable.
-    Offset += Const->getValue();
-    assert(Scale == 0 && "Constant values don't have a scale");
-    return V;
-  }
-
   if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(V)) {
     if (ConstantInt *RHSC = dyn_cast<ConstantInt>(BOp->getOperand(1))) {
       switch (BOp->getOpcode()) {
@@ -261,10 +253,7 @@ static Value *GetLinearExpression(Value *V, APInt &Scale, APInt &Offset,
     Value *Result = GetLinearExpression(CastOp, Scale, Offset, Extension, DL,
                                         Depth + 1, AC, DT);
     Scale = Scale.zext(OldWidth);
-
-    // We have to sign-extend even if Extension == EK_ZeroExt as we can't
-    // decompose a sign extension (i.e. zext(x - 1) != zext(x) - zext(-1)).
-    Offset = Offset.sext(OldWidth);
+    Offset = Offset.zext(OldWidth);
 
     return Result;
   }
@@ -1135,43 +1124,12 @@ AliasResult BasicAliasAnalysis::aliasGEP(
     }
   }
 
+  // Try to distinguish something like &A[i][1] against &A[42][0].
+  // Grab the least significant bit set in any of the scales.
   if (!GEP1VariableIndices.empty()) {
     uint64_t Modulo = 0;
-    bool AllPositive = true;
-    for (unsigned i = 0, e = GEP1VariableIndices.size(); i != e; ++i) {
-
-      // Try to distinguish something like &A[i][1] against &A[42][0].
-      // Grab the least significant bit set in any of the scales. We
-      // don't need std::abs here (even if the scale's negative) as we'll
-      // be ^'ing Modulo with itself later.
+    for (unsigned i = 0, e = GEP1VariableIndices.size(); i != e; ++i)
       Modulo |= (uint64_t) GEP1VariableIndices[i].Scale;
-
-      if (AllPositive) {
-        // If the Value could change between cycles, then any reasoning about
-        // the Value this cycle may not hold in the next cycle. We'll just
-        // give up if we can't determine conditions that hold for every cycle:
-        const Value *V = GEP1VariableIndices[i].V;
-
-        bool SignKnownZero, SignKnownOne;
-        ComputeSignBit(const_cast<Value *>(V), SignKnownZero, SignKnownOne, *DL,
-                       0, AC1, nullptr, DT);
-
-        // Zero-extension widens the variable, and so forces the sign
-        // bit to zero.
-        bool IsZExt = GEP1VariableIndices[i].Extension == EK_ZeroExt;
-        SignKnownZero |= IsZExt;
-        SignKnownOne &= !IsZExt;
-
-        // If the variable begins with a zero then we know it's
-        // positive, regardless of whether the value is signed or
-        // unsigned.
-        int64_t Scale = GEP1VariableIndices[i].Scale;
-        AllPositive =
-          (SignKnownZero && Scale >= 0) ||
-          (SignKnownOne && Scale < 0);
-      }
-    }
-
     Modulo = Modulo ^ (Modulo & (Modulo - 1));
 
     // We can compute the difference between the two addresses
@@ -1181,12 +1139,6 @@ AliasResult BasicAliasAnalysis::aliasGEP(
     if (V1Size != MemoryLocation::UnknownSize &&
         V2Size != MemoryLocation::UnknownSize && ModOffset >= V2Size &&
         V1Size <= Modulo - ModOffset)
-      return NoAlias;
-
-    // If we know all the variables are positive, then GEP1 >= GEP1BasePtr.
-    // If GEP1BasePtr > V2 (GEP1BaseOffset > 0) then we know the pointers
-    // don't alias if V2Size can fit in the gap between V2 and GEP1BasePtr.
-    if (AllPositive && GEP1BaseOffset > 0 && V2Size <= (uint64_t) GEP1BaseOffset)
       return NoAlias;
   }
 

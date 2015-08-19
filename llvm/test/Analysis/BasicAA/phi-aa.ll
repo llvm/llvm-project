@@ -39,7 +39,6 @@ return:
 
 ; CHECK-LABEL: pr18068
 ; CHECK: MayAlias: i32* %0, i32* %arrayidx5
-; CHECK: NoAlias: i32* %arrayidx13, i32* %arrayidx5
 
 define i32 @pr18068(i32* %jj7, i32* %j) {
 entry:
