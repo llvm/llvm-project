@@ -228,3 +228,51 @@ define i32 @test12(i32 %x, i32 %y, i8* %p) nounwind {
 ; CHECK-LABEL: @test12(
 ; CHECK: ret i32 %r
 }
+
+@P = internal global i32 715827882, align 4
+@Q = internal global i32 715827883, align 4
+@.str = private unnamed_addr constant [7 x i8] c"%u %u\0A\00", align 1
+
+; Make sure we recognize that u[0] and u[Global + Cst] may alias
+; when the addition has wrapping semantic.
+; PR24468.
+; CHECK-LABEL: @test13(
+; Make sure the stores appear before the related loads.
+; CHECK: store i8 42,
+; CHECK: store i8 99,
+; Find the loads and make sure they are used in the arguments to the printf.
+; CHECK: [[T0ADDR:%[a-zA-Z0-9_]+]] = getelementptr inbounds [3 x i8], [3 x i8]* %t, i32 0, i32 0
+; CHECK: [[T0:%[a-zA-Z0-9_]+]] = load i8, i8* [[T0ADDR]], align 1
+; CHECK: [[T0ARG:%[a-zA-Z0-9_]+]] = zext i8 [[T0]] to i32
+; CHECK: [[U0ADDR:%[a-zA-Z0-9_]+]] = getelementptr inbounds [3 x i8], [3 x i8]* %u, i32 0, i32 0
+; CHECK: [[U0:%[a-zA-Z0-9_]+]] = load i8, i8* [[U0ADDR]], align 1
+; CHECK: [[U0ARG:%[a-zA-Z0-9_]+]] = zext i8 [[U0]] to i32
+; CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0), i32 [[T0ARG]], i32 [[U0ARG]])
+; CHECK: ret
+define void @test13() {
+entry:
+  %t = alloca [3 x i8], align 1
+  %u = alloca [3 x i8], align 1
+  %tmp = load i32, i32* @P, align 4
+  %tmp1 = mul i32 %tmp, 3
+  %mul = add i32 %tmp1, -2147483646
+  %idxprom = zext i32 %mul to i64
+  %arrayidx = getelementptr inbounds [3 x i8], [3 x i8]* %t, i64 0, i64 %idxprom
+  store i8 42, i8* %arrayidx, align 1
+  %tmp2 = load i32, i32* @Q, align 4
+  %tmp3 = mul i32 %tmp2, 3
+  %mul2 = add i32 %tmp3, 2147483647
+  %idxprom3 = zext i32 %mul2 to i64
+  %arrayidx4 = getelementptr inbounds [3 x i8], [3 x i8]* %u, i64 0, i64 %idxprom3
+  store i8 99, i8* %arrayidx4, align 1
+  %arrayidx5 = getelementptr inbounds [3 x i8], [3 x i8]* %t, i64 0, i64 0
+  %tmp4 = load i8, i8* %arrayidx5, align 1
+  %conv = zext i8 %tmp4 to i32
+  %arrayidx6 = getelementptr inbounds [3 x i8], [3 x i8]* %u, i64 0, i64 0
+  %tmp5 = load i8, i8* %arrayidx6, align 1
+  %conv7 = zext i8 %tmp5 to i32
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i64 0, i64 0), i32 %conv, i32 %conv7)
+  ret void
+}
+
+declare i32 @printf(i8*, ...)
