@@ -47,7 +47,7 @@ void MinGW::findGccLibDir() {
   Archs.emplace_back(getTriple().getArchName());
   Archs[0] += "-w64-mingw32";
   Archs.emplace_back("mingw32");
-  Arch = "unknown";
+  Arch = Archs[0].str();
   // lib: Arch Linux, Ubuntu, Windows
   // lib64: openSUSE Linux
   for (StringRef CandidateLib : {"lib", "lib64"}) {
