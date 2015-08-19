@@ -227,10 +227,16 @@ Value *Scatterer::operator[](unsigned I) {
       if (!Idx)
         break;
       unsigned J = Idx->getZExtValue();
-      CV[J] = Insert->getOperand(1);
       V = Insert->getOperand(0);
-      if (I == J)
+      if (I == J) {
+        CV[J] = Insert->getOperand(1);
         return CV[J];
+      } else if (!CV[J]) {
+        // Only cache the first entry we find for each index we're not actively
+        // searching for. This prevents us from going too far up the chain and
+        // caching incorrect entries.
+        CV[J] = Insert->getOperand(1);
+      }
     }
     CV[I] = Builder.CreateExtractElement(V, Builder.getInt32(I),
                                          V->getName() + ".i" + Twine(I));
