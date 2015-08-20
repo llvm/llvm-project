@@ -3574,18 +3574,9 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const Query &,
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
-  if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
-    unsigned IndexVal = IdxC->getZExtValue();
-    unsigned VectorWidth = Vec->getType()->getVectorNumElements();
-
-    // If this is extracting an invalid index, turn this into undef, to avoid
-    // crashing the code below.
-    if (IndexVal >= VectorWidth)
-      return UndefValue::get(Vec->getType()->getVectorElementType());
-
-    if (Value *Elt = findScalarElement(Vec, IndexVal))
+  if (auto *IdxC = dyn_cast<ConstantInt>(Idx))
+    if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
-  }
 
   return nullptr;
 }

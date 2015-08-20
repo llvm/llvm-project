@@ -36,3 +36,13 @@ define i32 @test3(i32 %a, float %b) {
 ; CHECK-LABEL: @test3(
 ; CHECK: ret i32 %a
 }
+
+define i8 @test4(<8 x i8> %V) {
+  %add     = add <8 x i8> %V, bitcast (double 0x319BEB8FD172E36 to <8 x i8>)
+  %extract = extractelement <8 x i8> %add, i32 6
+  ret i8 %extract
+; CHECK-LABEL: @test4(
+; CHECK: %[[add:.*]] = add <8 x i8> %V, bitcast (<1 x double> <double 0x319BEB8FD172E36> to <8 x i8>)
+; CHECK-NEXT: %[[extract:.*]] = extractelement <8 x i8> %[[add]], i32 6
+; CHECK-NEXT: ret i8 %[[extract]]
+}

@@ -402,8 +402,9 @@ llvm::Value *llvm::findScalarElement(llvm::Value *V, unsigned EltNo) {
   if (match(V,
             llvm::PatternMatch::m_Add(llvm::PatternMatch::m_Value(Val),
                                       llvm::PatternMatch::m_Constant(Con)))) {
-    if (Con->getAggregateElement(EltNo)->isNullValue())
-      return findScalarElement(Val, EltNo);
+    if (Constant *Elt = Con->getAggregateElement(EltNo))
+      if (Elt->isNullValue())
+        return findScalarElement(Val, EltNo);
   }
 
   // Otherwise, we don't know.
