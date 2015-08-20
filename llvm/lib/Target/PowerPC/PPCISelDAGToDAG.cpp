@@ -2305,14 +2305,15 @@ SDNode *PPCDAGToDAGISel::SelectSETCC(SDNode *N) {
     if (Swap)
       std::swap(LHS, RHS);
 
+    EVT ResVT = VecVT.changeVectorElementTypeToInteger();
     if (Negate) {
-      SDValue VCmp(CurDAG->getMachineNode(VCmpInst, dl, VecVT, LHS, RHS), 0);
+      SDValue VCmp(CurDAG->getMachineNode(VCmpInst, dl, ResVT, LHS, RHS), 0);
       return CurDAG->SelectNodeTo(N, PPCSubTarget->hasVSX() ? PPC::XXLNOR :
                                                               PPC::VNOR,
-                                  VecVT, VCmp, VCmp);
+                                  ResVT, VCmp, VCmp);
     }
 
-    return CurDAG->SelectNodeTo(N, VCmpInst, VecVT, LHS, RHS);
+    return CurDAG->SelectNodeTo(N, VCmpInst, ResVT, LHS, RHS);
   }
 
   if (PPCSubTarget->useCRBits())
