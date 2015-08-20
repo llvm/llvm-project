@@ -4583,6 +4583,12 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
   ISD::CondCode SetCCOpcode = cast<CondCodeSDNode>(CC)->get();
   SDLoc dl(Op);
 
+  if (CmpVT.getVectorElementType() == MVT::i64)
+    // 64-bit comparisons are not legal. We've marked SETCC as non-Custom,
+    // but it's possible that our operands are 64-bit but our result is 32-bit.
+    // Bail in this case.
+    return SDValue();
+
   if (Op1.getValueType().isFloatingPoint()) {
     switch (SetCCOpcode) {
     default: llvm_unreachable("Illegal FP comparison");
