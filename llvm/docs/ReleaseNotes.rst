@@ -79,6 +79,14 @@ Non-comprehensive list of changes in this release
   own bitcode records and assembly syntax (documented in LangRef).  The debug
   info verifier has been merged with the main verifier.
 
+* LLVM IR and APIs are in a period of transition to aid in the removal of
+  pointer types (the end goal being that pointers are typeless/opaque - void*,
+  if you will). Some APIs and IR constructs have been modified to take
+  explicit types that are currently checked to match the target type of their
+  pre-existing pointer type operands. Further changes are still needed, but the
+  more you can avoid using PointerType::getPointeeType, the easier the
+  migration will be.
+
 * ... next change ...
 
 .. NOTE
