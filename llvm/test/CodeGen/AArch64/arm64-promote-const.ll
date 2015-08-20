@@ -135,39 +135,13 @@ define <16 x i8> @test5(<16 x i8> %arg, i32 %path) {
 ; In stress mode, constant vector are promoted
 ; Since, the constant is the same as the previous function,
 ; the same address must be used
-; PROMOTED: adrp [[PAGEADDR:x[0-9]+]], [[CSTV1]]@PAGE
-; PROMOTED-NEXT: ldr q[[REGNUM:[0-9]+]], {{\[}}[[PAGEADDR]], [[CSTV1]]@PAGEOFF]
-; PROMOTED-NEXT: cbz w0, [[LABEL:LBB.*]]
-; Next BB
-; PROMOTED: add.16b [[DESTV:v[0-9]+]], v0, v[[REGNUM]]
-; PROMOTED-NEXT: mul.16b v[[REGNUM]], [[DESTV]], v[[REGNUM]]
-; Next BB
-; PROMOTED-NEXT: [[LABEL]]:
-; PROMOTED-NEXT: mul.16b [[TMP1:v[0-9]+]], v[[REGNUM]], v[[REGNUM]]
-; PROMOTED-NEXT: mul.16b [[TMP2:v[0-9]+]], [[TMP1]], [[TMP1]]
-; PROMOTED-NEXT: mul.16b [[TMP3:v[0-9]+]], [[TMP2]], [[TMP2]]
-; PROMOTED-NEXT: mul.16b v0, [[TMP3]], [[TMP3]]
-; PROMOTED-NEXT: ret
+; PROMOTED: ldr
+; PROMOTED-NOT: ldr
+; PROMOTED: ret
 
 ; REGULAR-LABEL: test5:
-; REGULAR: cbz w0, [[LABELelse:LBB.*]]
-; Next BB
-; REGULAR: adrp [[PAGEADDR:x[0-9]+]], [[CSTLABEL:lCP.*]]@PAGE
-; REGULAR-NEXT: ldr q[[REGNUM:[0-9]+]], {{\[}}[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
-; REGULAR-NEXT: add.16b [[DESTV:v[0-9]+]], v0, v[[REGNUM]]
-; REGULAR-NEXT: mul.16b v[[DESTREGNUM:[0-9]+]], [[DESTV]], v[[REGNUM]]
-; REGULAR-NEXT: b [[LABELend:LBB.*]]
-; Next BB
-; REGULAR-NEXT: [[LABELelse]]
-; REGULAR-NEXT: adrp [[PAGEADDR:x[0-9]+]], [[CSTLABEL:lCP.*]]@PAGE
-; REGULAR-NEXT: ldr q[[DESTREGNUM]], {{\[}}[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
-; Next BB
-; REGULAR-NEXT: [[LABELend]]:
-; REGULAR-NEXT: mul.16b [[TMP1:v[0-9]+]], v[[DESTREGNUM]], v[[DESTREGNUM]]
-; REGULAR-NEXT: mul.16b [[TMP2:v[0-9]+]], [[TMP1]], [[TMP1]]
-; REGULAR-NEXT: mul.16b [[TMP3:v[0-9]+]], [[TMP2]], [[TMP2]]
-; REGULAR-NEXT: mul.16b v0, [[TMP3]], [[TMP3]]
-; REGULAR-NEXT: ret
+; REGULAR: ldr
+; REGULAR: ret
 entry:
   %tobool = icmp eq i32 %path, 0
   br i1 %tobool, label %if.end, label %if.then

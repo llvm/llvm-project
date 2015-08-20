@@ -1,9 +1,9 @@
 ; RUN: llc -O3 -mcpu=cortex-a57 < %s | FileCheck %s 
 
-; CHECK-LABLE: @test
-; CHECK: tst [[CMP:x[0-9]+]], #0x8000000000000000
-; CHECK: csel [[R0:x[0-9]+]], [[S0:x[0-9]+]], [[S1:x[0-9]+]], eq
-; CHECK: csel [[R1:x[0-9]+]], [[S2:x[0-9]+]], [[S3:x[0-9]+]], eq
+; CHECK-LABEL: @test
+; CHECK: and 
+; CHECK: csel
+; CHECK: csel
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "arm64--linux-gnueabi"
 
