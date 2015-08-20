@@ -9966,6 +9966,9 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
     if (Src.getValueType() == MVT::f32) {
       Src = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Src);
       DCI.AddToWorklist(Src.getNode());
+    } else if (Src.getValueType() != MVT::f64) {
+      // Make sure that we don't pick up a ppc_fp128 source value.
+      return SDValue();
     }
 
     unsigned FCTOp =
