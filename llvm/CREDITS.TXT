@@ -465,3 +465,47 @@ N: Bob Wilson
 E: bob.wilson@acm.org
 D: Advanced SIMD (NEON) support in the ARM backend.
 
+N: Alexey Bataev
+E: a.bataev@hotmail.com
+D: Clang OpenMP implementation
+
+N: Andrey Bokhanko
+E: andreybokhanko@gmail.com 
+D: Clang OpenMP implementation
+
+N: Carlo Bertolli
+E: cbertol@us.ibm.com 
+D: Clang OpenMP implementation
+
+N: Eric Stotzer
+E: estotzer@ti.com 
+D: Clang OpenMP implementation
+
+N: Kelvin Li
+E: kkwli0@gmail.com 
+D: Clang OpenMP implementation
+
+N: Samuel Antao
+E: sfantao@us.ibm.com 
+D: Clang OpenMP implementation
+
+N: Sergey Ostanevich
+E: sergos.gnu@gmail.com 
+D: Clang OpenMP implementation
+
+N: Alexandre Eichenberger
+E: alexe@us.ibm.com 
+D: Clang OpenMP implementation
+
+N: Guansong Zhang
+E: guansong.zhang@amd.com 
+D: Clang OpenMP implementation
+
+N: Sunita Chandrasekaran
+E: sunisg123@gmail.com  
+D: Clang OpenMP implementation
+
+N: Michael Wong
+E: fraggamuffin@gmail.com 
+D: Clang OpenMP implementation
+
