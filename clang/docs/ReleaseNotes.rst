@@ -76,7 +76,7 @@ about them. The improvements since the 3.6 release include:
   return type is the same as the variable.  Returning the variable directly
   will already make a move, so the call is not needed.
 
-- -Wpessimizing-move warns when a local variable is ir moved on return and the
+- -Wpessimizing-move warns when a local variable is moved on return and the
   return type is the same as the variable.  Copy elision cannot take place with
   a move, but can take place if the variable is returned directly.
 
