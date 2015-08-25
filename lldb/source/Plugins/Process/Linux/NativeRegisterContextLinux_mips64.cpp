@@ -584,7 +584,6 @@ NativeRegisterContextLinux_mips64::ReadRegister (const RegisterInfo *reg_info, R
     if (IsMSA(reg) || IsFPR(reg))
     {
         uint8_t *src;
-        type128 int128;
 
         error = ReadCP1();
 
@@ -604,9 +603,6 @@ NativeRegisterContextLinux_mips64::ReadRegister (const RegisterInfo *reg_info, R
             assert (reg_info->byte_offset < sizeof(UserArea));
             src = (uint8_t *)&m_msa + reg_info->byte_offset - (sizeof(m_gpr) + sizeof(m_fpr));
         }
-        int128.x[0] = *(uint64_t *)src;
-        int128.x[1] = *(uint64_t *)(src + 8);
-        llvm::APInt rhs = llvm::APInt(128, 2, int128.x);
         switch (reg_info->byte_size)
         {
             case 4:
@@ -616,7 +612,7 @@ NativeRegisterContextLinux_mips64::ReadRegister (const RegisterInfo *reg_info, R
                 reg_value.SetUInt64(*(uint64_t *)src);
                 break;
             case 16:
-                reg_value.SetUInt128(rhs);
+                reg_value.SetBytes((const void *)src, 16, GetByteOrder());
                 break;
             default:
                 assert(false && "Unhandled data size.");
@@ -660,7 +656,7 @@ NativeRegisterContextLinux_mips64::WriteRegister (const RegisterInfo *reg_info, 
     if (IsFPR(reg_index) || IsMSA(reg_index))
     {
         uint8_t *dst;
-        const uint64_t *src;
+        uint64_t *src;
 
         // Initialise the FP and MSA buffers by reading all co-processor 1 registers
         ReadCP1();
@@ -675,8 +671,6 @@ NativeRegisterContextLinux_mips64::WriteRegister (const RegisterInfo *reg_info, 
             assert (reg_info->byte_offset < sizeof(UserArea));
             dst = (uint8_t *)&m_msa + reg_info->byte_offset - (sizeof(m_gpr) + sizeof(m_fpr));
         }
-        llvm::APInt lhs;
-        llvm::APInt fail_value = llvm::APInt::getMaxValue(128);
         switch (reg_info->byte_size)
         {
             case 4:
@@ -686,8 +680,7 @@ NativeRegisterContextLinux_mips64::WriteRegister (const RegisterInfo *reg_info, 
                 *(uint64_t *)dst = reg_value.GetAsUInt64();
                 break;
             case 16:
-                lhs = reg_value.GetAsUInt128(fail_value);
-                src = lhs.getRawData();
+                src = (uint64_t *)reg_value.GetBytes();
                 *(uint64_t *)dst = *src;
                 *(uint64_t *)(dst + 8) = *(src + 1);
                 break;
