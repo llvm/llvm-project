@@ -42,18 +42,18 @@ Non-comprehensive list of changes in this release
   collection of tips for frontend authors on how to generate IR which LLVM is
   able to effectively optimize.
 
-* The DataLayout is no longer optional. All the IR level optimizations expects
+* The ``DataLayout`` is no longer optional. All the IR level optimizations expects
   it to be present and the API has been changed to use a reference instead of
   a pointer to make it explicit. The Module owns the datalayout and it has to
   match the one attached to the TargetMachine for generating code.
 
-  In 3.6, a pass was inserted in the pipeline to make the DataLayout accessible:
-    MyPassManager->add(new DataLayoutPass(MyTargetMachine->getDataLayout()));
-  In 3.7, you don't need a pass, you set the DataLayout on the Module:
-    MyModule->setDataLayout(MyTargetMachine->createDataLayout());
+  In 3.6, a pass was inserted in the pipeline to make the ``DataLayout`` accessible:
+    ``MyPassManager->add(new DataLayoutPass(MyTargetMachine->getDataLayout()));``
+  In 3.7, you don't need a pass, you set the ``DataLayout`` on the ``Module``:
+    ``MyModule->setDataLayout(MyTargetMachine->createDataLayout());``
 
-  The LLVM C API `LLVMGetTargetMachineData` is deprecated to reflect the fact
-  that it won't be available anymore from TargetMachine in 3.8.
+  The LLVM C API ``LLVMGetTargetMachineData`` is deprecated to reflect the fact
+  that it won't be available anymore from ``TargetMachine`` in 3.8.
 
 * Comdats are now ortogonal to the linkage. LLVM will not create
   comdats for weak linkage globals and the frontends are responsible
@@ -78,7 +78,8 @@ Non-comprehensive list of changes in this release
   are turned off, to save compile time.
 
 * The debug info IR class hierarchy now inherits from ``Metadata`` and has its
-  own bitcode records and assembly syntax (documented in LangRef).  The debug
+  own bitcode records and assembly syntax
+  (`documented in LangRef <LangRef.html#specialized-metadata-nodes>`_).  The debug
   info verifier has been merged with the main verifier.
 
 * LLVM IR and APIs are in a period of transition to aid in the removal of
@@ -86,25 +87,8 @@ Non-comprehensive list of changes in this release
   if you will). Some APIs and IR constructs have been modified to take
   explicit types that are currently checked to match the target type of their
   pre-existing pointer type operands. Further changes are still needed, but the
-  more you can avoid using PointerType::getPointeeType, the easier the
+  more you can avoid using ``PointerType::getPointeeType``, the easier the
   migration will be.
-
-* ... next change ...
-
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
-
-Changes to the ARM Backend
---------------------------
-
- During this release ...
 
 
 Changes to the MIPS Target
@@ -114,8 +98,8 @@ During this release the MIPS target has:
 
 * Added support for MIPS32R3, MIPS32R5, MIPS32R3, MIPS32R5, and microMIPS32.
 
-* Added support for dynamic stack realignment. This of particular importance to
-  MSA on 32-bit subtargets since vectors always exceed the stack alignment on
+* Added support for dynamic stack realignment. This is of particular importance
+  to MSA on 32-bit subtargets since vectors always exceed the stack alignment on
   the O32 ABI.
 
 * Added support for compiler-rt including:
@@ -244,12 +228,6 @@ Changes to the SystemZ Target
 * Support for the z13 processor and its vector facility.
 
 
-Changes to the OCaml bindings
------------------------------
-
- During this release ...
-
-
 Changes to the JIT APIs
 -----------------------
 
@@ -258,7 +236,7 @@ Changes to the JIT APIs
   ORC is a new JIT API inspired by MCJIT but designed to be more testable, and
   easier to extend with new features. A key new feature already in tree is lazy,
   function-at-a-time compilation for X86. Also included is a reimplementation of
-  MCJIT’s API and behavior (OrcMCJITReplacement). MCJIT itself remains in tree,
+  MCJIT's API and behavior (OrcMCJITReplacement). MCJIT itself remains in tree,
   and continues to be the default JIT ExecutionEngine, though new users are
   encouraged to try ORC out for their projects. (A good place to start is the
   new ORC tutorials under llvm/examples/kaleidoscope/orc).
@@ -353,4 +331,3 @@ going into the ``llvm/docs/`` directory in the LLVM tree.
 
 If you have any questions or comments about LLVM, please feel free to contact
 us via the `mailing lists <http://llvm.org/docs/#maillist>`_.
-
