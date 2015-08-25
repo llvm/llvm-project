@@ -8,11 +8,6 @@ Clang 3.7 (In-Progress) Release Notes
 
 Written by the `LLVM Team <http://llvm.org/>`_
 
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 3.7 release. You may
-   prefer the `Clang 3.6 Release Notes
-   <http://llvm.org/releases/3.6.0/tools/clang/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
