@@ -1,6 +1,6 @@
-=====================================
-Clang 3.7 (In-Progress) Release Notes
-=====================================
+=======================
+Clang 3.7 Release Notes
+=======================
 
 .. contents::
    :local:
@@ -25,11 +25,6 @@ For more information about Clang or LLVM, including information about
 the latest release, please check out the main please see the `Clang Web
 Site <http://clang.llvm.org>`_ or the `LLVM Web
 Site <http://llvm.org>`_.
-
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <http://llvm.org/releases/>`_.
 
 What's New in Clang 3.7?
 ========================
@@ -56,7 +51,7 @@ Major New Features
 
 
 Improvements to Clang's diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------------
 
 Clang's diagnostics are constantly being improved to catch more issues,
 explain them more clearly, and provide more accurate source information
@@ -94,52 +89,12 @@ The sized deallocation feature of C++14 is now controlled by the
 isn't yet widely deployed, so the user must supply an extra flag to get the
 extra functionality.
 
-The option ....
-
-
-New Pragmas in Clang
------------------------
-
-Clang now supports the ...
-
-Windows Support
----------------
-
-Clang's support for building native Windows programs ...
-
-
-C Language Changes in Clang
----------------------------
-
-...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
-
-C++ Language Changes in Clang
------------------------------
-
-- ...
-
-C++11 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
 
 Objective-C Language Changes in Clang
 -------------------------------------
 
 - ``objc_boxable`` attribute was added. Structs and unions marked with this attribute can be
   used with boxed expressions (``@(...)``) to create ``NSValue``.
-
-...
-
-OpenCL C Language Changes in Clang
-----------------------------------
-
-...
 
 Profile Guided Optimization
 ---------------------------
@@ -158,20 +113,20 @@ profile analysis.
 OpenMP Support
 --------------
 OpenMP 3.1 is fully supported, but disabled by default. To enable it, please use
-``-fopenmp=libomp`` command line option. Your feedback (positive or negative) on
+the ``-fopenmp=libomp`` command line option. Your feedback (positive or negative) on
 using OpenMP-enabled clang would be much appreciated; please share it either on
 `cfe-dev <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or `openmp-dev
 <http://lists.llvm.org/mailman/listinfo/openmp-dev>`_ mailing lists.
 
-In addition to OpenMP 3.1, several important elements of 4.0 version of the
+In addition to OpenMP 3.1, several important elements of the 4.0 version of the
 standard are supported as well:
+
 - ``omp simd``, ``omp for simd`` and ``omp parallel for simd`` pragmas
 - atomic constructs
 - ``proc_bind`` clause of ``omp parallel`` pragma
 - ``depend`` clause of ``omp task`` pragma (except for array sections)
 - ``omp cancel`` and ``omp cancellation point`` pragmas
 - ``omp taskgroup`` pragma
-...
 
 Internal API Changes
 --------------------
@@ -180,18 +135,13 @@ These are major API changes that have happened since the 3.6 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
--  Some of the `PPCallbacks` interface now deals in `MacroDefinition`
-   objects instead of `MacroDirective` objects. This allows preserving
+-  Some of the ``PPCallbacks`` interface now deals in ``MacroDefinition``
+   objects instead of ``MacroDirective`` objects. This allows preserving
    full information on macros imported from modules.
 
--  `clang-c/Index.h` no longer `#include`\s `clang-c/Documentation.h`.
-   You now need to explicitly `#include "clang-c/Documentation.h"` if
+-  ``clang-c/Index.h`` no longer ``#include``\s ``clang-c/Documentation.h``.
+   You now need to explicitly ``#include "clang-c/Documentation.h"`` if
    you use the libclang documentation API.
-
-libclang
---------
-
-...
 
 Static Analyzer
 ---------------
@@ -248,71 +198,51 @@ clang-tidy
 ----------
 Added new checks:
 
-  * google-global-names-in-headers: flag global namespace pollution in header
-    files.
+* google-global-names-in-headers: flag global namespace pollution in header
+  files.
 
-  * misc-assert-side-effect: detects `assert()` conditions with side effects
-    which can cause different behavior in debug / release builds.
+* misc-assert-side-effect: detects ``assert()`` conditions with side effects
+  which can cause different behavior in debug / release builds.
 
-  * misc-assign-operator-signature: finds declarations of assign operators with
-    the wrong return and/or argument types.
+* misc-assign-operator-signature: finds declarations of assign operators with
+  the wrong return and/or argument types.
 
-  * misc-inaccurate-erase: warns when some elements of a container are not
-    removed due to using the `erase()` algorithm incorrectly.
+* misc-inaccurate-erase: warns when some elements of a container are not
+  removed due to using the ``erase()`` algorithm incorrectly.
 
-  * misc-inefficient-algorithm: warns on inefficient use of STL algorithms on
-    associative containers.
+* misc-inefficient-algorithm: warns on inefficient use of STL algorithms on
+  associative containers.
 
-  * misc-macro-parentheses: finds macros that can have unexpected behavior due
-    to missing parentheses.
+* misc-macro-parentheses: finds macros that can have unexpected behavior due
+  to missing parentheses.
 
-  * misc-macro-repeated-side-effects: checks for repeated argument with side
-    effects in macros.
+* misc-macro-repeated-side-effects: checks for repeated argument with side
+  effects in macros.
 
-  * misc-noexcept-move-constructor: flags user-defined move constructors and
-    assignment operators not marked with `noexcept` or marked with
-    `noexcept(expr)` where `expr` evaluates to `false` (but is not a `false`
-    literal itself).
+* misc-noexcept-move-constructor: flags user-defined move constructors and
+  assignment operators not marked with ``noexcept`` or marked with
+  ``noexcept(expr)`` where ``expr`` evaluates to ``false`` (but is not a
+  ``false`` literal itself).
 
-  * misc-static-assert: replaces `assert()` with `static_assert()` if the
-    condition is evaluatable at compile time.
+* misc-static-assert: replaces ``assert()`` with ``static_assert()`` if the
+  condition is evaluable at compile time.
 
-  * readability-container-size-empty: checks whether a call to the `size()`
-    method can be replaced with a call to `empty()`.
+* readability-container-size-empty: checks whether a call to the ``size()``
+  method can be replaced with a call to ``empty()``.
 
-  * readability-else-after-return: flags conditional statements having the
-    `else` branch, when the `true` branch has a `return` as the last statement.
+* readability-else-after-return: flags conditional statements having the
+  ``else`` branch, when the ``true`` branch has a ``return`` as the last statement.
 
-  * readability-redundant-string-cstr: finds unnecessary calls to
-    `std::string::c_str()`.
+* readability-redundant-string-cstr: finds unnecessary calls to
+  ``std::string::c_str()``.
 
-  * readability-shrink-to-fit: replaces copy and swap tricks on shrinkable
-    containers with the `shrink_to_fit()` method call.
+* readability-shrink-to-fit: replaces copy and swap tricks on shrinkable
+  containers with the ``shrink_to_fit()`` method call.
 
-  * readability-simplify-boolean-expr: looks for boolean expressions involving
-    boolean constants and simplifies them to use the appropriate boolean
-    expression directly (`if (x == true) ... -> if (x)`, etc.)
+* readability-simplify-boolean-expr: looks for boolean expressions involving
+  boolean constants and simplifies them to use the appropriate boolean
+  expression directly (``if (x == true) ... -> if (x)``, etc.)
 
-
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
