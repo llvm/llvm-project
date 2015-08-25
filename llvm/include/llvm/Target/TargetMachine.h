@@ -125,9 +125,14 @@ public:
     return *static_cast<const STC*>(getSubtargetImpl(F));
   }
 
+  /// Deprecated in 3.7, will be removed in 3.8. Use createDataLayout() instead.
+  ///
   /// This method returns a pointer to the DataLayout for the target. It should
   /// be unchanging for every subtarget.
   const DataLayout *getDataLayout() const { return &DL; }
+
+  /// Create a DataLayout.
+  const DataLayout createDataLayout() const { return DL; }
 
   /// \brief Reset the target options based on the function's attributes.
   // FIXME: Remove TargetOptions that affect per-function code generation

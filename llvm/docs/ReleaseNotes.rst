@@ -53,6 +53,14 @@ Non-comprehensive list of changes in this release
   a pointer to make it explicit. The Module owns the datalayout and it has to
   match the one attached to the TargetMachine for generating code.
 
+  In 3.6, a pass was inserted in the pipeline to make the DataLayout accessible:
+    MyPassManager->add(new DataLayoutPass(MyTargetMachine->getDataLayout()));
+  In 3.7, you don't need a pass, you set the DataLayout on the Module:
+    MyModule->setDataLayout(MyTargetMachine->createDataLayout());
+
+  The LLVM C API `LLVMGetTargetMachineData` is deprecated to reflect the fact
+  that it won't be available anymore from TargetMachine in 3.8.
+
 * Comdats are now ortogonal to the linkage. LLVM will not create
   comdats for weak linkage globals and the frontends are responsible
   for explicitly adding them.

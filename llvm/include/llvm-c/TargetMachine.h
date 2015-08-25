@@ -115,7 +115,7 @@ char *LLVMGetTargetMachineCPU(LLVMTargetMachineRef T);
   LLVMDisposeMessage. */
 char *LLVMGetTargetMachineFeatureString(LLVMTargetMachineRef T);
 
-/** Returns the llvm::DataLayout used for this llvm:TargetMachine. */
+/** Deprecated: use LLVMGetDataLayout(LLVMModuleRef M) instead. */
 LLVMTargetDataRef LLVMGetTargetMachineData(LLVMTargetMachineRef T);
 
 /** Set the target machine's ASM verbosity. */
