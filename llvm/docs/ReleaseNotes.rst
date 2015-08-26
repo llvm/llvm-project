@@ -286,89 +286,89 @@ Changes since the last release:
 
 * isl imported into Polly distribution
 
-`isl <http://repo.or.cz/w/isl.git>`_, the math library Polly uses, has been
-imported into the source code repository of Polly and is now distributed as part
-of Polly. As this was the last external library dependency of Polly, Polly can
-now be compiled right after checking out the Polly source code without the need
-for any additional libraries to be pre-installed.
+  `isl <http://repo.or.cz/w/isl.git>`_, the math library Polly uses, has been
+  imported into the source code repository of Polly and is now distributed as part
+  of Polly. As this was the last external library dependency of Polly, Polly can
+  now be compiled right after checking out the Polly source code without the need
+  for any additional libraries to be pre-installed.
 
 * Small integer optimization of isl
 
-The MIT licensed imath backend using in `isl <http://repo.or.cz/w/isl.git>`_ for
-arbitrary width integer computations has been optimized to use native integer
-operations for the common case where the operands of a computation fit into 32
-bit and to only fall back to large arbitrary precision integers for the
-remaining cases. This optimization has greatly improved the compile-time
-performance of Polly, both due to faster native operations also due to a
-reduction in malloc traffic and pointer indirections. As a result, computations
-that use arbitrary precision integers heavily have been speed up by almost 6x.
-As a result, the compile-time of Polly on the Polybench test kernels in the LNT
-suite has been reduced by 20% on average with compile time reductions between
-9-43%.
+  The MIT licensed imath backend using in `isl <http://repo.or.cz/w/isl.git>`_ for
+  arbitrary width integer computations has been optimized to use native integer
+  operations for the common case where the operands of a computation fit into 32
+  bit and to only fall back to large arbitrary precision integers for the
+  remaining cases. This optimization has greatly improved the compile-time
+  performance of Polly, both due to faster native operations also due to a
+  reduction in malloc traffic and pointer indirections. As a result, computations
+  that use arbitrary precision integers heavily have been speed up by almost 6x.
+  As a result, the compile-time of Polly on the Polybench test kernels in the LNT
+  suite has been reduced by 20% on average with compile time reductions between
+  9-43%.
 
 * Schedule Trees
 
-Polly now uses internally so-called > Schedule Trees < to model the loop
-structure it optimizes. Schedule trees are an easy to understand tree structure
-that describes a loop nest using integer constraint sets to keep track of
-execution constraints. It allows the developer to use per-tree-node operations
-to modify the loop tree. Programatic analysis that work on the schedule tree
-(e.g., as dependence analysis) also show a visible speedup as they can exploit
-the tree structure of the schedule and need to fall back to ILP based
-optimization problems less often. Section 6 of `Polyhedral AST generation is
-more than scanning polyhedra
-<http://www.grosser.es/#pub-polyhedral-AST-generation>`_ gives a detailed
-explanation of this schedule trees.
+  Polly now uses internally so-called > Schedule Trees < to model the loop
+  structure it optimizes. Schedule trees are an easy to understand tree structure
+  that describes a loop nest using integer constraint sets to keep track of
+  execution constraints. It allows the developer to use per-tree-node operations
+  to modify the loop tree. Programatic analysis that work on the schedule tree
+  (e.g., as dependence analysis) also show a visible speedup as they can exploit
+  the tree structure of the schedule and need to fall back to ILP based
+  optimization problems less often. Section 6 of `Polyhedral AST generation is
+  more than scanning polyhedra
+  <http://www.grosser.es/#pub-polyhedral-AST-generation>`_ gives a detailed
+  explanation of this schedule trees.
 
 * Scalar and PHI node modeling - Polly as an analysis
 
-Polly now requires almost no preprocessing to analyse LLVM-IR, which makes it
-easier to use Polly as a pure analysis pass e.g. to provide more precise
-dependence information to non-polyhedral transformation passes. Originally,
-Polly required the input LLVM-IR to be preprocessed such that all scalar and
-PHI-node dependences are translated to in-memory operations. Since this release,
-Polly has full support for scalar and PHI node dependences and requires no
-scalar-to-memory translation for such kind of dependences.
+  Polly now requires almost no preprocessing to analyse LLVM-IR, which makes it
+  easier to use Polly as a pure analysis pass e.g. to provide more precise
+  dependence information to non-polyhedral transformation passes. Originally,
+  Polly required the input LLVM-IR to be preprocessed such that all scalar and
+  PHI-node dependences are translated to in-memory operations. Since this release,
+  Polly has full support for scalar and PHI node dependences and requires no
+  scalar-to-memory translation for such kind of dependences.
 
 * Modeling of modulo and non-affine conditions
 
-Polly can now supports modulo operations such as A[t%2][i][j] as they appear
-often in stencil computations and also allows data-dependent conditional
-branches as they result e.g. from ternary conditions ala A[i] > 255 ? 255 :
-A[i].
+  Polly can now supports modulo operations such as A[t%2][i][j] as they appear
+  often in stencil computations and also allows data-dependent conditional
+  branches as they result e.g. from ternary conditions ala A[i] > 255 ? 255 :
+  A[i].
 
 * Delinearization
 
-Polly now support the analysis of manually linearized multi-dimensional arrays
-as they result form macros such as
-"#define 2DARRAY(A,i,j) (A.data[(i) * A.size + (j)]". Similar constructs appear
-in old C code written before C99, C++ code such as boost::ublas, LLVM exported
-from Julia, Matlab generated code and many others. Our work titled
-`Optimistic Delinearization of Parametrically Sized Arrays
-<http://www.grosser.es/#pub-optimistic-delinerization>`_ gives details.
+  Polly now support the analysis of manually linearized multi-dimensional arrays
+  as they result form macros such as
+  "#define 2DARRAY(A,i,j) (A.data[(i) * A.size + (j)]". Similar constructs appear
+  in old C code written before C99, C++ code such as boost::ublas, LLVM exported
+  from Julia, Matlab generated code and many others. Our work titled
+  `Optimistic Delinearization of Parametrically Sized Arrays
+  <http://www.grosser.es/#pub-optimistic-delinerization>`_ gives details.
 
 * Compile time improvements
 
-Pratik Bahtu worked on compile-time performance tuning of Polly. His work
-together with the support for schedule trees and the small integer optimization
-in isl notably reduced the compile time.
+  Pratik Bahtu worked on compile-time performance tuning of Polly. His work
+  together with the support for schedule trees and the small integer optimization
+  in isl notably reduced the compile time.
 
 * Increased compute timeouts
 
-As Polly's compile time has been notabily improved, we were able to increase
-the compile time saveguards in Polly. As a result, the default configuration
-of Polly can now analyze larger loop nests without running into compile time
-restrictions.
+  As Polly's compile time has been notabily improved, we were able to increase
+  the compile time saveguards in Polly. As a result, the default configuration
+  of Polly can now analyze larger loop nests without running into compile time
+  restrictions.
 
 * Export Debug Locations via JSCoP file
 
-Polly's JSCoP import/export format gained support for debug locations that show
-to the user the source code location of detected scops.
+  Polly's JSCoP import/export format gained support for debug locations that show
+  to the user the source code location of detected scops.
 
 * Improved windows support
 
-The compilation of Polly on windows using cmake has been improved and several
-visual studio build issues have been addressed.
+  The compilation of Polly on windows using cmake has been improved and several
+  visual studio build issues have been addressed.
 
 * Many bug fixes
 
