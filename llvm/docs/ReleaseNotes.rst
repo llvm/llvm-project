@@ -90,6 +90,11 @@ Non-comprehensive list of changes in this release
   more you can avoid using ``PointerType::getPointeeType``, the easier the
   migration will be.
 
+* Argument-less ``TargetMachine::getSubtarget`` and
+  ``TargetMachine::getSubtargetImpl`` have been removed from the tree. Updating
+  out of tree ports is as simple as implementing a non-virtual version in the
+  target, but implementing full ``Function`` based ``TargetSubtargetInfo``
+  support is recommended.
 
 Changes to the MIPS Target
 --------------------------
