@@ -72,6 +72,19 @@ Non-comprehensive list of changes in this release
   instruction set that can be dynamically loaded into the Linux kernel via the
   `bpf(2) <http://man7.org/linux/man-pages/man2/bpf.2.html>`_ syscall.
 
+  Support for BPF has been present in the kernel for some time, but starting
+  from 3.18 has been extended with such features as: 64-bit registers, 8
+  additional registers registers, conditional backwards jumps, call
+  instruction, shift instructions, map (hash table, array, etc.), 1-8 byte
+  load/store from stack, and more.
+
+  Up until now, users of BPF had to write bytecode by hand, or use
+  custom generators. This release adds a proper LLVM backend target for the BPF
+  bytecode architecture.
+
+  The BPF target is now available by default, and options exist in both Clang
+  (-target bpf) or llc (-march=bpf) to pick eBPF as a backend.
+
 * Switch-case lowering was rewritten to avoid generating unbalanced search trees
   (`PR22262 <http://llvm.org/pr22262>`_) and to exploit profile information
   when available. Some lowering strategies are now disabled when optimizations
