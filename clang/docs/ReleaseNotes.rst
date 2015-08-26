@@ -247,6 +247,12 @@ Added new checks:
   boolean constants and simplifies them to use the appropriate boolean
   expression directly (``if (x == true) ... -> if (x)``, etc.)
 
+Last release which will run on Windows XP and Windows Vista
+-----------------------------------------------------------
+
+This is expected to the be the last major release of Clang that will support
+running on Windows XP and Windows Vista.  For the next major release the
+minimum Windows version requirement will be Windows 7.
 
 Additional Information
 ======================
