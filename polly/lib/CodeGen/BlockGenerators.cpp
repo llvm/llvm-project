@@ -123,6 +123,8 @@ Value *BlockGenerator::getNewValue(ScopStmt &Stmt, const Value *Old,
                                       ->getParent()
                                       ->getDataLayout(),
                               "polly");
+        assert(Builder.GetInsertPoint() != Builder.GetInsertBlock()->end() &&
+               "Only instructions can be insert points for SCEVExpander");
         Value *Expanded = Expander.expandCodeFor(NewScev, Old->getType(),
                                                  Builder.GetInsertPoint());
 
@@ -1116,7 +1118,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, ValueMapT &GlobalMap,
     ValueMapT &RegionMap = RegionMaps[BBCopy];
     RegionMap.insert(BlockMap.begin(), BlockMap.end());
 
-    Builder.SetInsertPoint(BBCopy);
+    Builder.SetInsertPoint(BICopy);
     copyInstScalar(Stmt, BI, RegionMap, GlobalMap, LTS);
     BICopy->eraseFromParent();
   }
