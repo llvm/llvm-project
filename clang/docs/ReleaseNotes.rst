@@ -42,6 +42,10 @@ Major New Features
   extension is also enabled when compiling CUDA code, but its use should be
   viewed as an implementation detail that is subject to change.
 
+- On Windows targets, some uses of the ``__try``, ``__except``, and
+  ``__finally`` language constructs are supported in Clang 3.7. MSVC-compatible
+  C++ exceptions are not yet supported, however.
+
 - Clang 3.7 fully supports OpenMP 3.1 and reported to work on many platforms,
   including x86, x86-64 and Power. Also, pragma ``omp simd`` from OpenMP 4.0 is
   supported as well. See below for details.
