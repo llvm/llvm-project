@@ -96,6 +96,10 @@ Non-comprehensive list of changes in this release
   target, but implementing full ``Function`` based ``TargetSubtargetInfo``
   support is recommended.
 
+* This is expected to be the last major release of LLVM that supports being
+  run on Windows XP and Windows Vista.  For the next major release the minimum
+  Windows version requirement will be Windows 7.
+
 Changes to the MIPS Target
 --------------------------
 
