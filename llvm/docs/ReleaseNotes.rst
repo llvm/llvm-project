@@ -55,7 +55,7 @@ Non-comprehensive list of changes in this release
   The LLVM C API ``LLVMGetTargetMachineData`` is deprecated to reflect the fact
   that it won't be available anymore from ``TargetMachine`` in 3.8.
 
-* Comdats are now ortogonal to the linkage. LLVM will not create
+* Comdats are now orthogonal to the linkage. LLVM will not create
   comdats for weak linkage globals and the frontends are responsible
   for explicitly adding them.
 
