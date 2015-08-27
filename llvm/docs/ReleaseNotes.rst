@@ -372,6 +372,17 @@ Changes since the last release:
 
 * Many bug fixes
 
+libunwind
+---------
+
+The unwind implementation which use to reside in `libc++abi` has been moved into
+a separate repository.  This implementation can still be used for `libc++abi` by
+specifying `-DLIBCXXABI_USE_LLVM_UNWINDER=YES` and
+`-DLIBCXXABI_LIBUNWIND_PATH=<path to libunwind source>` when configuring
+`libc++abi`, which defaults to `true` when building on ARM.
+
+The new repository can also be built standalone if just `libunwind` is desired.
+
 External Open Source Projects Using LLVM 3.7
 ============================================
 
