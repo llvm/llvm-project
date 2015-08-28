@@ -509,3 +509,10 @@ N: Michael Wong
 E: fraggamuffin@gmail.com 
 D: Clang OpenMP implementation
 
+N: Alexander Mussman
+E: alexander.musman@intel.com 
+D: Clang OpenMP implementation
+
+N: Kevin O'Brien
+E: caomhin@us.ibm.com 
+D: Clang OpenMP implementation
