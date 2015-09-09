@@ -1728,7 +1728,7 @@ func (b Builder) CreatePtrDiff(lhs, rhs Value, name string) (v Value) {
 func (b Builder) CreateLandingPad(t Type, personality Value, nclauses int, name string) (l Value) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
-	l.C = C.LLVMBuildLandingPad(b.C, t.C, C.unsigned(nclauses), cname)
+	l.C = C.LLVMBuildLandingPad(b.C, t.C, nil, C.unsigned(nclauses), cname)
 	return l
 }
 

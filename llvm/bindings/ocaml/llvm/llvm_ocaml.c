@@ -1745,7 +1745,7 @@ CAMLprim LLVMValueRef llvm_build_invoke_bc(value Args[], int NumArgs) {
 CAMLprim LLVMValueRef llvm_build_landingpad(LLVMTypeRef Ty, LLVMValueRef PersFn,
                                             value NumClauses,  value Name,
                                             value B) {
-    return LLVMBuildLandingPad(Builder_val(B), Ty, Int_val(NumClauses),
+    return LLVMBuildLandingPad(Builder_val(B), Ty, PersFn, Int_val(NumClauses),
                                String_val(Name));
 }
 
