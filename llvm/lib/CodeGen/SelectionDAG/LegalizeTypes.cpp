@@ -1010,6 +1010,8 @@ SDValue DAGTypeLegalizer::GetVectorElementPointer(SDValue VecPtr, EVT EltVT,
 
   // Calculate the element offset and add it to the pointer.
   unsigned EltSize = EltVT.getSizeInBits() / 8; // FIXME: should be ABI size.
+  assert(EltSize * 8 == EltVT.getSizeInBits() &&
+         "Converting bits to bytes lost precision");
 
   Index = DAG.getNode(ISD::MUL, dl, Index.getValueType(), Index,
                       DAG.getConstant(EltSize, dl, Index.getValueType()));
