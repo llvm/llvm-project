@@ -129,9 +129,6 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SUBC, MVT::i64, Expand);
   setOperationAction(ISD::SUBE, MVT::i64, Expand);
 
-  // no UNDEF allowed
-  setOperationAction(ISD::UNDEF, MVT::i64, Expand);
-
   setOperationAction(ISD::ROTR, MVT::i64, Expand);
   setOperationAction(ISD::ROTL, MVT::i64, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);

@@ -130,13 +130,6 @@ SDNode *BPFDAGToDAGISel::Select(SDNode *Node) {
   // tablegen selection should be handled here.
   switch (Opcode) {
   default: break;
-
-  case ISD::UNDEF: {
-    errs() << "BUG: "; Node->dump(CurDAG); errs() << '\n';
-    report_fatal_error("shouldn't see UNDEF during Select");
-    break;
-  }
-
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
     switch (IntNo) {
