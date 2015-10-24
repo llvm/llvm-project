@@ -102,6 +102,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::BRIND, MVT::Other, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
   setOperationAction(ISD::SETCC, MVT::i64, Expand);
   setOperationAction(ISD::SELECT, MVT::i64, Expand);
