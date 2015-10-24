@@ -50,6 +50,7 @@ private:
 
   // Complex Pattern for address selection.
   bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset);
+  bool SelectFIAddr(SDValue Addr, SDValue &Base, SDValue &Offset);
 };
 }
 
@@ -67,7 +68,7 @@ bool BPFDAGToDAGISel::SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
       Addr.getOpcode() == ISD::TargetGlobalAddress)
     return false;
 
-  // Addresses of the form FI+const or FI|const
+  // Addresses of the form Addr+const or Addr|const
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
     if (isInt<32>(CN->getSExtValue())) {
@@ -87,6 +88,31 @@ bool BPFDAGToDAGISel::SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
   Base   = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, MVT::i64);
   return true;
+}
+
+// ComplexPattern used on BPF FI instruction
+bool BPFDAGToDAGISel::SelectFIAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
+  SDLoc DL(Addr);
+
+  if (!CurDAG->isBaseWithConstantOffset(Addr))
+    return false;
+
+  // Addresses of the form Addr+const or Addr|const
+  ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
+  if (isInt<32>(CN->getSExtValue())) {
+
+    // If the first operand is a FI, get the TargetFI Node
+    if (FrameIndexSDNode *FIN =
+            dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i64);
+    else
+      return false;
+
+    Offset = CurDAG->getTargetConstant(CN->getSExtValue(), DL, MVT::i64);
+    return true;
+  }
+
+  return false;
 }
 
 SDNode *BPFDAGToDAGISel::Select(SDNode *Node) {

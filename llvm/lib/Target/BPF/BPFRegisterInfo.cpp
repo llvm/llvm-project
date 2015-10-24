@@ -58,14 +58,13 @@ void BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned FrameReg = getFrameRegister(MF);
   int FrameIndex = MI.getOperand(i).getIndex();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  MachineBasicBlock &MBB = *MI.getParent();
 
   if (MI.getOpcode() == BPF::MOV_rr) {
-    const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
     int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex);
 
     MI.getOperand(i).ChangeToRegister(FrameReg, false);
-
-    MachineBasicBlock &MBB = *MI.getParent();
     unsigned reg = MI.getOperand(i - 1).getReg();
     BuildMI(MBB, ++II, DL, TII.get(BPF::ADD_ri), reg)
         .addReg(reg)
@@ -79,8 +78,24 @@ void BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!isInt<32>(Offset))
     llvm_unreachable("bug in frame offset");
 
-  MI.getOperand(i).ChangeToRegister(FrameReg, false);
-  MI.getOperand(i + 1).ChangeToImmediate(Offset);
+  if (MI.getOpcode() == BPF::FI_ri) {
+    // architecture does not really support FI_ri, replace it with
+    //    MOV_rr <target_reg>, frame_reg
+    //    ADD_ri <target_reg>, imm
+    unsigned reg = MI.getOperand(i - 1).getReg();
+
+    BuildMI(MBB, ++II, DL, TII.get(BPF::MOV_rr), reg)
+        .addReg(FrameReg);
+    BuildMI(MBB, II, DL, TII.get(BPF::ADD_ri), reg)
+        .addReg(reg)
+        .addImm(Offset);
+
+    // Remove FI_ri instruction
+    MI.eraseFromParent();
+  } else {
+    MI.getOperand(i).ChangeToRegister(FrameReg, false);
+    MI.getOperand(i + 1).ChangeToImmediate(Offset);
+  }
 }
 
 unsigned BPFRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

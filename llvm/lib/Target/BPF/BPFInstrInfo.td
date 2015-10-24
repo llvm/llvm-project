@@ -54,7 +54,8 @@ def i64immSExt32 : PatLeaf<(imm),
                 [{return isInt<32>(N->getSExtValue()); }]>;
 
 // Addressing modes.
-def ADDRri : ComplexPattern<i64, 2, "SelectAddr", [frameindex], []>;
+def ADDRri : ComplexPattern<i64, 2, "SelectAddr", [], []>;
+def FIri : ComplexPattern<i64, 2, "SelectFIAddr", [add, or], []>;
 
 // Address operands
 def MEMri : Operand<i64> {
@@ -259,6 +260,15 @@ def LD_imm64 : LD_IMM64<0, "ld_64">;
 def MOV_rr : MOV_RR<"mov">;
 def MOV_ri : MOV_RI<"mov">;
 }
+
+def FI_ri
+    : InstBPF<(outs GPR:$dst), (ins MEMri:$addr),
+               "lea\t$dst, $addr",
+               [(set i64:$dst, FIri:$addr)]> {
+  // This is a tentative instruction, and will be replaced
+  // with MOV_rr and ADD_ri in PEI phase
+}
+
 
 def LD_pseudo
     : InstBPF<(outs GPR:$dst), (ins i64imm:$pseudo, u64imm:$imm),
