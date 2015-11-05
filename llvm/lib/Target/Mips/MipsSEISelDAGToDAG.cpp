@@ -115,6 +115,11 @@ bool MipsSEDAGToDAGISel::replaceUsesWithZeroReg(MachineRegisterInfo *MRI,
     if (MI->isPHI() || MI->isRegTiedToDefOperand(OpNo) || MI->isPseudo())
       continue;
 
+    // Also, we have to check that the register class of the operand
+    // contains the zero register.
+    if (!MRI->getRegClass(MO.getReg())->contains(ZeroReg))
+      continue;
+
     MO.setReg(ZeroReg);
   }
 
