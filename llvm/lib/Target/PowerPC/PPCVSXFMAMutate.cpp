@@ -103,6 +103,11 @@ protected:
 
         VNInfo *AddendValNo =
           LIS->getInterval(MI->getOperand(1).getReg()).Query(FMAIdx).valueIn();
+        if (!AddendValNo) {
+          // This can be null if the register is undef.
+          continue;
+        }
+
         MachineInstr *AddendMI = LIS->getInstructionFromIndex(AddendValNo->def);
 
         // The addend and this instruction must be in the same block.
