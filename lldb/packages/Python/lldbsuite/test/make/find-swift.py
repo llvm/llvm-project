@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # find-swift.py
 #
 # This source file is part of the Swift.org open source project
@@ -9,7 +11,6 @@
 # See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-#!/usr/bin/env python
 
 import argparse, os, sys
 import commands
