@@ -86,6 +86,8 @@ def RetCC_AArch64_AAPCS : CallingConv<[
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
 
+  CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X19], [W19]>>>,
+
   // Big endian vectors must be passed as if they were 1-element vectors so that
   // their lanes are in a consistent order.
   CCIfBigEndian<CCIfType<[v2i32, v2f32, v4i16, v4f16, v8i8],
@@ -125,6 +127,12 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   // Put ByVal arguments directly on the stack. Minimum size and alignment of a
   // slot is 64-bit.
   CCIfByVal<CCPassByVal<8, 8>>,
+
+  // An SwiftSelf is passed in X9.
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToRegWithShadow<[X9], [W9]>>>,
+
+  // A SwiftError is passed in X19.
+  CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X19], [W19]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
@@ -269,6 +277,11 @@ def CSR_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
 // destructors with 'this' returns, so this RegMask will not be used in that
 // case)
 def CSR_AArch64_AAPCS_ThisReturn : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X0)>;
+
+def CSR_AArch64_AAPCS_SwiftError : CalleeSavedRegs<(add LR, FP, X20, X21, X22,
+                                           X23, X24, X25, X26, X27, X28,
+                                           D8,  D9,  D10, D11,
+                                           D12, D13, D14, D15)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // guarantees more than a normal AAPCS function. x16 and x17 are used on the

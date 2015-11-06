@@ -567,6 +567,10 @@ namespace llvm {
                             SmallVectorImpl<SDValue> &InVals,
                             bool isThisReturn, SDValue ThisVal) const;
 
+    bool supportSwiftError() const override {
+      return true;
+    }
+
     SDValue
       LowerFormalArguments(SDValue Chain,
                            CallingConv::ID CallConv, bool isVarArg,

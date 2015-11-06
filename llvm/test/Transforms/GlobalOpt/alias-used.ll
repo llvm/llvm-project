@@ -45,3 +45,22 @@ define i8* @g2() {
 define i8* @h() {
   ret i8* @ca
 }
+
+; Check that GlobalOpt doesn't try to resolve aliases with GEP operands.
+
+%struct.S = type { i32, i32, i32 }
+@s = global %struct.S { i32 1, i32 2, i32 3 }, align 4
+
+@alias1 = alias i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i64 0, i32 1)
+@alias2 = alias i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i64 0, i32 2)
+
+; CHECK: load i32, i32* @alias1, align 4
+; CHECK: load i32, i32* @alias2, align 4
+
+define i32 @foo1() {
+entry:
+  %0 = load i32, i32* @alias1, align 4
+  %1 = load i32, i32* @alias2, align 4
+  %add = add nsw i32 %1, %0
+  ret i32 %add
+}

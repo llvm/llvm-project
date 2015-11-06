@@ -1351,6 +1351,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeThread;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
     return Attribute::SanitizeMemory;
+  case bitc::ATTR_KIND_SWIFT_ERROR:
+    return Attribute::SwiftError;
+  case bitc::ATTR_KIND_SWIFT_SELF:
+    return Attribute::SwiftSelf;
   case bitc::ATTR_KIND_UW_TABLE:
     return Attribute::UWTable;
   case bitc::ATTR_KIND_Z_EXT:
@@ -2062,6 +2066,23 @@ std::error_code BitcodeReader::parseMetadata() {
 
       if (Tag >= 1u << 16 || Version != 0)
         return error("Invalid record");
+
+      // Deprecated internal hack to support serializing MDModule.
+      // This node has since been deleted.
+      // Upgrading this node is not officially supported.  This code
+      // may be removed in the future.
+      if (Tag == dwarf::DW_TAG_module) {
+        if (Record.size() != 6)
+          return error("Invalid record");
+
+        MDValueList.assignValue(
+            GET_OR_DISTINCT(DIModule, Record[0],
+                            (Context, getMDOrNull(Record[4]),
+                             getMDString(Record[5]), nullptr,
+                             nullptr, nullptr)),
+            NextMDValueNo++);
+        break;
+      }
 
       auto *Header = getMDString(Record[3]);
       SmallVector<Metadata *, 8> DwarfOps;
@@ -4715,10 +4736,11 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       uint64_t AlignRecord = Record[3];
       const uint64_t InAllocaMask = uint64_t(1) << 5;
       const uint64_t ExplicitTypeMask = uint64_t(1) << 6;
-      // Reserve bit 7 for SwiftError flag.
-      // const uint64_t SwiftErrorMask = uint64_t(1) << 7;
-      const uint64_t FlagMask = InAllocaMask | ExplicitTypeMask;
+      const uint64_t SwiftErrorMask = uint64_t(1) << 7;
+      const uint64_t FlagMask = InAllocaMask | ExplicitTypeMask |
+                                SwiftErrorMask;
       bool InAlloca = AlignRecord & InAllocaMask;
+      bool SwiftError = AlignRecord & SwiftErrorMask;
       Type *Ty = getTypeByID(Record[0]);
       if ((AlignRecord & ExplicitTypeMask) == 0) {
         auto *PTy = dyn_cast_or_null<PointerType>(Ty);
@@ -4737,6 +4759,7 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid record");
       AllocaInst *AI = new AllocaInst(Ty, Size, Align);
       AI->setUsedWithInAlloca(InAlloca);
+      AI->setSwiftError(SwiftError);
       I = AI;
       InstructionList.push_back(I);
       break;

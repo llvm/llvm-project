@@ -542,6 +542,8 @@ public:
   ///
   LoopT *getLoopFor(const BlockT *BB) const { return BBMap.lookup(BB); }
 
+  const DenseMap<const BlockT *, LoopT *> &getBlockMap() const { return BBMap; }
+
   /// operator[] - same as getLoopFor...
   ///
   const LoopT *operator[](const BlockT *BB) const {

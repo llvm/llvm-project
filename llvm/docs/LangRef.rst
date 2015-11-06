@@ -1037,6 +1037,17 @@ Currently, only the following parameter attributes are defined:
     ``dereferenceable(<n>)``). This attribute may only be applied to
     pointer typed parameters.
 
+``swiftself``
+    This indicates that the parameter is the self/context parameter. This is not
+    a valid attribute for return values and can only be applied to one
+    parameter.
+
+``swifterror``
+    This indicates that the parameter is a pointer type. That pointer holds a
+    pointer to the error object. We can only load and store from the parameter
+    to get the pointer to the error object. This is not a valid attribute for
+    return values and can only be applied to one parameter.
+
 .. _gc:
 
 Garbage Collector Strategy Names

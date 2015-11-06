@@ -73,6 +73,12 @@ public:
   /// containing function.
   bool hasByValAttr() const;
 
+  /// \brief Return true if this argument has the swiftself attribute.
+  bool hasSwiftSelfAttr() const;
+
+  /// \brief Return true if this argument has the swifterror attribute.
+  bool hasSwiftErrorAttr() const;
+
   /// \brief Return true if this argument has the byval attribute or inalloca
   /// attribute on it in its containing function.  These attributes both
   /// represent arguments being passed by value.

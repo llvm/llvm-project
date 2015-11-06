@@ -888,10 +888,46 @@ SDValue SelectionDAGBuilder::getControlRoot() {
   return Root;
 }
 
+/// Copy swift error to the final virtual register at end of a basic block, as
+/// specified by SwiftErrorWorklist, if necessary.
+static void copySwiftErrorsToFinalVRegs(SelectionDAGBuilder &SDB) {
+  const TargetLowering &TLI = SDB.DAG.getTargetLoweringInfo();
+  if (!TLI.supportSwiftError())
+    return;
+
+  if (!SDB.FuncInfo.SwiftErrorWorklist.count(SDB.FuncInfo.MBB))
+    return;
+
+  // Go through entries in SwiftErrorWorklist, and create copy as necessary.
+  auto &WorklistEntry = SDB.FuncInfo.SwiftErrorWorklist[SDB.FuncInfo.MBB];
+  auto &MapEntry = SDB.FuncInfo.SwiftErrorMap[SDB.FuncInfo.MBB];
+  for (unsigned I = 0, E = WorklistEntry.size(); I < E; I++) {
+    unsigned WorkReg = WorklistEntry[I];
+
+    // Find the swifterror virtual register for the value in SwiftErrorMap.
+    unsigned MapReg = MapEntry[I];
+    assert(TargetRegisterInfo::isVirtualRegister(MapReg) &&
+           "Entries in SwiftErrorMap should be virtual registers");
+
+    if (WorkReg == MapReg)
+      continue;
+
+    // Create copy from SwiftErrorMap to SwiftWorklist.
+    auto &DL = SDB.DAG.getDataLayout();
+    SDValue CopyNode = SDB.DAG.getCopyToReg(
+        SDB.getRoot(), SDB.getCurSDLoc(), WorkReg,
+        SDB.DAG.getRegister(MapReg, EVT(TLI.getPointerTy(DL))));
+    MapEntry[I] = WorkReg;
+    SDB.DAG.setRoot(CopyNode);
+  }
+}
+
 void SelectionDAGBuilder::visit(const Instruction &I) {
   // Set up outgoing PHI node register values before emitting the terminator.
-  if (isa<TerminatorInst>(&I))
+  if (isa<TerminatorInst>(&I)) {
+    copySwiftErrorsToFinalVRegs(*this);
     HandlePHINodesInSuccessorBlocks(I.getParent());
+  }
 
   ++SDNodeOrder;
 
@@ -1414,6 +1450,23 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
         }
       }
     }
+  }
+
+  // Push in swifterror virtual register as the last element of Outs. This makes
+  // sure swifterror virtual register will be returned in the swifterror
+  // physical register.
+  const Function *F = I.getParent()->getParent();
+  if (F->getAttributes().hasAttrSomewhere(Attribute::SwiftError) &&
+      TLI.supportSwiftError()) {
+    ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
+    Flags.setSwiftError();
+    Outs.push_back(ISD::OutputArg(Flags, EVT(TLI.getPointerTy(DL)) /*vt*/,
+                                  EVT(TLI.getPointerTy(DL)) /*argvt*/,
+                                  true /*isfixed*/, 1 /*origidx*/,
+                                  0 /*partOffs*/));
+    // Create SDNode for the swifterror virtual register.
+    OutVals.push_back(DAG.getRegister(FuncInfo.SwiftErrorMap[FuncInfo.MBB][0],
+                                      EVT(TLI.getPointerTy(DL))));
   }
 
   bool isVarArg = DAG.getMachineFunction().getFunction()->isVarArg();
@@ -3098,6 +3151,18 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     return visitAtomicLoad(I);
 
   const Value *SV = I.getOperand(0);
+  if (const Argument *Arg = dyn_cast<Argument>(SV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Arg->hasSwiftErrorAttr() && TLI.supportSwiftError())
+      return visitLoadFromSwiftError(I);
+  }
+
+  if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(SV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Alloca->isSwiftError() && TLI.supportSwiftError())
+      return visitLoadFromSwiftError(I);
+  }
+
   SDValue Ptr = getValue(SV);
 
   Type *Ty = I.getType();
@@ -3192,12 +3257,80 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
                            DAG.getVTList(ValueVTs), Values));
 }
 
+void SelectionDAGBuilder::visitStoreToSwiftError(const StoreInst &I) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  assert(TLI.supportSwiftError() &&
+         "call visitStoreToSwiftError when backend supports swifterror");
+
+  SmallVector<EVT, 4> ValueVTs;
+  SmallVector<uint64_t, 4> Offsets;
+  const Value *SrcV = I.getOperand(0);
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                  SrcV->getType(), ValueVTs, &Offsets);
+  assert(ValueVTs.size() == 1 && "expect a single EVT for swifterror");
+
+  SDValue Src = getValue(SrcV);
+  // Create a virtual register, then update the virtual register.
+  auto &DL = DAG.getDataLayout();
+  const TargetRegisterClass *RC = TLI.getRegClassFor(TLI.getPointerTy(DL));
+  unsigned VReg = FuncInfo.MF->getRegInfo().createVirtualRegister(RC);
+  // Chain, DL, Reg, N or Chain, DL, Reg, N, Glue
+  // Chain can be getRoot or getControlRoot.
+  SDValue CopyNode = DAG.getCopyToReg(getRoot(), getCurSDLoc(), VReg,
+                                      SDValue(Src.getNode(), Src.getResNo()));
+  DAG.setRoot(CopyNode);
+  FuncInfo.setSwiftErrorVReg(FuncInfo.MBB, I.getOperand(1), VReg);
+}
+
+void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
+  assert(DAG.getTargetLoweringInfo().supportSwiftError() &&
+         "call visitLoadFromSwiftError when backend supports swifterror");
+
+  assert(!I.isVolatile() &&
+         I.getMetadata(LLVMContext::MD_nontemporal) == nullptr &&
+         I.getMetadata(LLVMContext::MD_invariant_load) == nullptr &&
+         "Support volatile, non temporal, invariant for load_from_swift_error");
+
+  const Value *SV = I.getOperand(0);
+  Type *Ty = I.getType();
+  AAMDNodes AAInfo;
+  I.getAAMetadata(AAInfo);
+  assert(!AA->pointsToConstantMemory(MemoryLocation(
+             SV, DAG.getDataLayout().getTypeStoreSize(Ty), AAInfo)) &&
+         "load_from_swift_error should not be constant memory");
+
+  SmallVector<EVT, 4> ValueVTs;
+  SmallVector<uint64_t, 4> Offsets;
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(), Ty,
+                  ValueVTs, &Offsets);
+  assert(ValueVTs.size() == 1 && "expect a single EVT for swifterror");
+
+  // Chain, DL, Reg, VT, Glue or Chain, DL, Reg, VT
+  SDValue L = DAG.getCopyFromReg(getRoot(), getCurSDLoc(),
+                                 FuncInfo.findSwiftErrorVReg(FuncInfo.MBB, SV),
+                                 ValueVTs[0]);
+
+  setValue(&I, L);
+}
+
 void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   if (I.isAtomic())
     return visitAtomicStore(I);
 
   const Value *SrcV = I.getOperand(0);
   const Value *PtrV = I.getOperand(1);
+
+  if (const Argument *Arg = dyn_cast<Argument>(PtrV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Arg->hasSwiftErrorAttr() && TLI.supportSwiftError())
+      return visitStoreToSwiftError(I);
+  }
+
+  if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Alloca->isSwiftError() && TLI.supportSwiftError())
+      return visitStoreToSwiftError(I);
+  }
 
   SmallVector<EVT, 4> ValueVTs;
   SmallVector<uint64_t, 4> Offsets;
@@ -5345,11 +5478,14 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   PointerType *PT = cast<PointerType>(CS.getCalledValue()->getType());
   FunctionType *FTy = cast<FunctionType>(PT->getElementType());
   Type *RetTy = FTy->getReturnType();
+  auto &DL = DAG.getDataLayout();
 
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
   Args.reserve(CS.arg_size());
 
+  bool HasSwiftError = false;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   for (ImmutableCallSite::arg_iterator i = CS.arg_begin(), e = CS.arg_end();
        i != e; ++i) {
     const Value *V = *i;
@@ -5363,6 +5499,14 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
     // Skip the first return-type Attribute to get to params.
     Entry.setAttributes(&CS, i - CS.arg_begin() + 1);
+
+    // Use swifterror virtual register as input to the call.
+    if (Entry.isSwiftError && TLI.supportSwiftError()) {
+      HasSwiftError = true;
+      Entry.Node = DAG.getRegister(FuncInfo.SwiftErrorMap[FuncInfo.MBB][0],
+                                   EVT(TLI.getPointerTy(DL)));
+    }
+
     Args.push_back(Entry);
 
     // If we have an explicit sret argument that is an Instruction, (i.e., it
@@ -5384,6 +5528,19 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
   if (Result.first.getNode())
     setValue(CS.getInstruction(), Result.first);
+
+  // The last element of CLI.InVals has the SDValue for swifterror return.
+  // Here we copy it to a virtual register and update SwiftErrorMap for
+  // book-keeping.
+  if (HasSwiftError && TLI.supportSwiftError()) {
+    // Get the last element of InVals.
+    SDValue Src = CLI.InVals.back();
+    const TargetRegisterClass *RC = TLI.getRegClassFor(TLI.getPointerTy(DL));
+    unsigned VReg = FuncInfo.MF->getRegInfo().createVirtualRegister(RC);
+    SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
+    FuncInfo.SwiftErrorMap[FuncInfo.MBB][0] = VReg;
+    DAG.setRoot(CopyNode);
+  }
 }
 
 /// IsOnlyUsedInZeroEqualityComparison - Return true if it only matters that the
@@ -7021,6 +7178,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     Entry.isNest = false;
     Entry.isByVal = false;
     Entry.isReturned = false;
+    Entry.isSwiftSelf = false;
+    Entry.isSwiftError = false;
     Entry.Alignment = Align;
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.RetTy = Type::getVoidTy(CLI.RetTy->getContext());
@@ -7049,10 +7208,23 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     }
   }
 
+  // We push in swifterror return as the last element of CLI.Ins.
+  ArgListTy &Args = CLI.getArgs();
+  if (supportSwiftError()) {
+    for (unsigned i = 0, e = Args.size(); i != e; ++i) {
+      if (Args[i].isSwiftError) {
+        ISD::InputArg MyFlags;
+        MyFlags.VT = getPointerTy(DL);
+        MyFlags.ArgVT = EVT(getPointerTy(DL));
+        MyFlags.Flags.setSwiftError();
+        CLI.Ins.push_back(MyFlags);
+      }
+    }
+  }
+
   // Handle all of the outgoing arguments.
   CLI.Outs.clear();
   CLI.OutVals.clear();
-  ArgListTy &Args = CLI.getArgs();
   for (unsigned i = 0, e = Args.size(); i != e; ++i) {
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*this, DL, Args[i].Ty, ValueVTs);
@@ -7078,6 +7250,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         Flags.setInReg();
       if (Args[i].isSRet)
         Flags.setSRet();
+      if (Args[i].isSwiftSelf)
+        Flags.setSwiftSelf();
+      if (Args[i].isSwiftError)
+        Flags.setSwiftError();
       if (Args[i].isByVal)
         Flags.setByVal();
       if (Args[i].isInAlloca) {
@@ -7162,6 +7338,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   SmallVector<SDValue, 4> InVals;
   CLI.Chain = LowerCall(CLI, InVals);
+
+  // Update CLI.InVals to use outside of this function.
+  CLI.InVals = InVals;
 
   // Verify that the target's LowerCall behaved as expected.
   assert(CLI.Chain.getNode() && CLI.Chain.getValueType() == MVT::Other &&
@@ -7350,6 +7529,10 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         Flags.setInReg();
       if (F.getAttributes().hasAttribute(Idx, Attribute::StructRet))
         Flags.setSRet();
+      if (F.getAttributes().hasAttribute(Idx, Attribute::SwiftSelf))
+        Flags.setSwiftSelf();
+      if (F.getAttributes().hasAttribute(Idx, Attribute::SwiftError))
+        Flags.setSwiftError();
       if (F.getAttributes().hasAttribute(Idx, Attribute::ByVal))
         Flags.setByVal();
       if (F.getAttributes().hasAttribute(Idx, Attribute::InAlloca)) {
@@ -7505,6 +7688,14 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         if (FrameIndexSDNode *FI =
             dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
         FuncInfo->setArgumentFrameIndex(&*I, FI->getIndex());
+    }
+
+    // Update SwiftErrorMap.
+    if (Res.getOpcode() == ISD::CopyFromReg && TLI->supportSwiftError() &&
+        F.getAttributes().hasAttribute(Idx, Attribute::SwiftError)) {
+      unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
+      if (TargetRegisterInfo::isVirtualRegister(Reg))
+        FuncInfo->SwiftErrorMap[FuncInfo->MBB][0] = Reg;
     }
 
     // If this argument is live outside of the entry block, insert a copy from
