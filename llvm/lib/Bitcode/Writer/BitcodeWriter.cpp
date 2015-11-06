@@ -248,6 +248,10 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_THREAD;
   case Attribute::SanitizeMemory:
     return bitc::ATTR_KIND_SANITIZE_MEMORY;
+  case Attribute::SwiftError:
+    return bitc::ATTR_KIND_SWIFT_ERROR;
+  case Attribute::SwiftSelf:
+    return bitc::ATTR_KIND_SWIFT_SELF;
   case Attribute::UWTable:
     return bitc::ATTR_KIND_UW_TABLE;
   case Attribute::ZExt:
@@ -2051,8 +2055,7 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
     assert(AlignRecord < 1 << 5 && "alignment greater than 1 << 64");
     AlignRecord |= AI.isUsedWithInAlloca() << 5;
     AlignRecord |= 1 << 6;
-    // Reserve bit 7 for SwiftError flag.
-    // AlignRecord |= AI.isSwiftError() << 7;
+    AlignRecord |= AI.isSwiftError() << 7;
     Vals.push_back(AlignRecord);
     break;
   }

@@ -1441,7 +1441,8 @@ int X86FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
 
 bool X86FrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
-    std::vector<CalleeSavedInfo> &CSI) const {
+    std::vector<CalleeSavedInfo> &CSI,
+    unsigned &MinCSFrameIndex, unsigned &MaxCSFrameIndex) const {
   MachineFrameInfo *MFI = MF.getFrameInfo();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
 

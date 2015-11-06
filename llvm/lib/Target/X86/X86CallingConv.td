@@ -161,6 +161,9 @@ def RetCC_X86_64_C : CallingConv<[
 
   // MMX vector types are always returned in XMM0.
   CCIfType<[x86mmx], CCAssignToReg<[XMM0, XMM1]>>,
+
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
+
   CCDelegateTo<RetCC_X86Common>
 ]>;
 
@@ -189,6 +192,20 @@ def RetCC_X86_64_WebKit_JS : CallingConv<[
 
   // Return: RAX
   CCIfType<[i64], CCAssignToReg<[RAX]>>
+]>;
+
+def RetCC_X86_64_Swift : CallingConv<[
+  CCIfType<[i8] , CCAssignToReg<[AL, DL, CL, R8B]>>,
+  CCIfType<[i16], CCAssignToReg<[AX, DX, CX, R8W]>>,
+  CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX, R8D]>>,
+  CCIfType<[i64], CCAssignToReg<[RAX, RDX, RCX, R8]>>,
+
+  CCIfType<[f32], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+  CCIfType<[f64], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+
+  // MMX vector types are always returned in XMM0.
+  CCIfType<[x86mmx], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+  CCDelegateTo<RetCC_X86Common>
 ]>;
 
 // X86-64 AnyReg return-value convention. No explicit register is specified for
@@ -233,6 +250,9 @@ def RetCC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::WebKit_JS", CCDelegateTo<RetCC_X86_64_WebKit_JS>>,
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_X86_64_AnyReg>>,
 
+  // Handle Swift calls.
+  CCIfCC<"CallingConv::Swift", CCDelegateTo<RetCC_X86_64_Swift>>,
+
   // Handle explicit CC selection
   CCIfCC<"CallingConv::X86_64_Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
   CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<RetCC_X86_64_C>>,
@@ -271,6 +291,12 @@ def CC_X86_64_C : CallingConv<[
   // The 'nest' parameter, if any, is passed in R10.
   CCIfNest<CCIfSubtarget<"isTarget64BitILP32()", CCAssignToReg<[R10D]>>>,
   CCIfNest<CCAssignToReg<[R10]>>,
+
+  // An SwiftSelf is passed in R10.
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R10]>>>,
+
+  // An SwiftError is passed in R12.
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
 
   // The first 6 integer arguments are passed in integer registers.
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D]>>,
@@ -789,6 +815,8 @@ def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
 def CSR_32 : CalleeSavedRegs<(add ESI, EDI, EBX, EBP)>;
 def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;
+
+def CSR_64_SwiftError : CalleeSavedRegs<(add RBX, R13, R14, R15, RBP)>;
 
 def CSR_32EHRet : CalleeSavedRegs<(add EAX, EDX, CSR_32)>;
 def CSR_64EHRet : CalleeSavedRegs<(add RAX, RDX, CSR_64)>;

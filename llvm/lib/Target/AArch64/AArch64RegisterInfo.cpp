@@ -46,6 +46,23 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_NoRegs_SaveList;
   if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
+  if (MF->getFunction()->getAttributes().hasAttrSomewhere(
+      Attribute::SwiftError))
+    return CSR_AArch64_AAPCS_SwiftError_SaveList;
+  else
+    return CSR_AArch64_AAPCS_SaveList;
+}
+
+const MCPhysReg *
+AArch64RegisterInfo::getCalleeSavedRegsForLayout(
+                       const MachineFunction *MF) const {
+  assert(MF && "Invalid MachineFunction pointer.");
+  if (MF->getFunction()->getCallingConv() == CallingConv::GHC)
+    // GHC set of callee saved regs is empty as all those regs are
+    // used for passing STG regs around
+    return CSR_AArch64_NoRegs_SaveList;
+  if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg)
+    return CSR_AArch64_AllRegs_SaveList;
   else
     return CSR_AArch64_AAPCS_SaveList;
 }
@@ -58,6 +75,8 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_AArch64_NoRegs_RegMask;
   if (CC == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_RegMask;
+  if (MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+    return CSR_AArch64_AAPCS_SwiftError_RegMask;
   else
     return CSR_AArch64_AAPCS_RegMask;
 }

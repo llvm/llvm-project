@@ -1187,8 +1187,13 @@ bool AsmPrinter::doFinalization(Module &M) {
 
     EmitVisibility(Name, Alias.getVisibility());
 
+    const MCExpr *Expr = lowerConstant(Alias.getAliasee());
+
+    if (MAI->hasAltEntry() && isa<MCBinaryExpr>(Expr))
+      OutStreamer->EmitSymbolAttribute(Name, MCSA_AltEntry);
+
     // Emit the directives as assignments aka .set:
-    OutStreamer->EmitAssignment(Name, lowerConstant(Alias.getAliasee()));
+    OutStreamer->EmitAssignment(Name, Expr);
 
     // If the aliasee does not correspond to a symbol in the output, i.e. the
     // alias is not of an object or the aliased object is private, then set the

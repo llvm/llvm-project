@@ -377,6 +377,10 @@ private:
   void addDRTypeForNEON(MVT VT);
   void addQRTypeForNEON(MVT VT);
 
+  bool supportSwiftError() const override {
+    return true;
+  }
+
   SDValue
   LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                        const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL,

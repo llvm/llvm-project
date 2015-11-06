@@ -115,6 +115,8 @@ public:
     SanitizeAddress,       ///< AddressSanitizer is on.
     SanitizeThread,        ///< ThreadSanitizer is on.
     SanitizeMemory,        ///< MemorySanitizer is on.
+    SwiftError,            ///< Argument is swift error.
+    SwiftSelf,             ///< Argument is swift self/context.
     UWTable,               ///< Function must be in a unwind table
     ZExt,                  ///< Zero extended before/after call
 

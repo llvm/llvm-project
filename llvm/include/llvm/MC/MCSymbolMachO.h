@@ -33,6 +33,7 @@ class MCSymbolMachO : public MCSymbol {
     SF_WeakReference                        = 0x0040,
     SF_WeakDefinition                       = 0x0080,
     SF_SymbolResolver                       = 0x0100,
+    SF_AltEntry                             = 0x0200,
 
     // Common alignment
     SF_CommonAlignmentMask                  = 0xF0FF,
@@ -86,6 +87,10 @@ public:
   }
   void setSymbolResolver() const {
     modifyFlags(SF_SymbolResolver, SF_SymbolResolver);
+  }
+
+  void setAltEntry() const {
+    modifyFlags(SF_AltEntry, SF_AltEntry);
   }
 
   void setDesc(unsigned Value) const {
