@@ -1015,7 +1015,8 @@ public:
                           unsigned personalityEncoding, const MCSymbol *lsda,
                           bool IsSignalFrame, unsigned lsdaEncoding,
                           bool IsSimple);
-  MCSymbol *EmitFDE(const MCSymbol &cieStart, const MCDwarfFrameInfo &frame);
+  void EmitFDE(const MCSymbol &cieStart, const MCDwarfFrameInfo &frame,
+               bool LastInSection);
   void EmitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
                            MCSymbol *BaseLabel);
   void EmitCFIInstruction(const MCCFIInstruction &Instr);
@@ -1368,8 +1369,9 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCSymbol *personality,
   return *sectionStart;
 }
 
-MCSymbol *FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
-                                    const MCDwarfFrameInfo &frame) {
+void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
+                               const MCDwarfFrameInfo &frame,
+                               bool LastInSection) {
   MCContext &context = Streamer.getContext();
   MCSymbol *fdeStart = context.createTempSymbol();
   MCSymbol *fdeEnd = context.createTempSymbol();
@@ -1426,9 +1428,13 @@ MCSymbol *FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   EmitCFIInstructions(frame.Instructions, frame.Begin);
 
   // Padding
-  Streamer.EmitValueToAlignment(PCSize);
+  // The size of a .eh_frame section has to be a multiple of the alignment
+  // since a null CIE is interpreted as the end. Old systems overaligned
+  // .eh_frame, so we do too and account for it in the last FDE.
+  unsigned Align = LastInSection ? asmInfo->getPointerSize() : PCSize;
+  Streamer.EmitValueToAlignment(Align);
 
-  return fdeEnd;
+  Streamer.EmitLabel(fdeEnd);
 }
 
 namespace {
@@ -1519,22 +1525,18 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   Streamer.EmitLabel(SectionStart);
   Emitter.setSectionStart(SectionStart);
 
-  MCSymbol *FDEEnd = nullptr;
   DenseMap<CIEKey, const MCSymbol *> CIEStarts;
 
   const MCSymbol *DummyDebugKey = nullptr;
-  NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
   bool CanOmitDwarf = MOFI->getOmitDwarfIfHaveCompactUnwind();
-  for (const MCDwarfFrameInfo &Frame : FrameArray) {
+  for (auto I = FrameArray.begin(), E = FrameArray.end(); I != E;) {
+    const MCDwarfFrameInfo &Frame = *I;
+    ++I;
     if (CanOmitDwarf && Frame.CompactUnwindEncoding !=
           MOFI->getCompactUnwindDwarfEHFrameOnly())
       // Don't generate an EH frame if we don't need one. I.e., it's taken care
       // of by the compact unwind encoding.
       continue;
-
-    // Close the previous FDE.
-    if (FDEEnd)
-      Streamer.EmitLabel(FDEEnd);
 
     CIEKey Key(Frame.Personality, Frame.PersonalityEncoding,
                Frame.LsdaEncoding, Frame.IsSignalFrame, Frame.IsSimple);
@@ -1544,12 +1546,8 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                                   Frame.Lsda, Frame.IsSignalFrame,
                                   Frame.LsdaEncoding, Frame.IsSimple);
 
-    FDEEnd = Emitter.EmitFDE(*CIEStart, Frame);
+    Emitter.EmitFDE(*CIEStart, Frame, I == E);
   }
-
-  Streamer.EmitValueToAlignment(Context.getAsmInfo()->getPointerSize());
-  if (FDEEnd)
-    Streamer.EmitLabel(FDEEnd);
 }
 
 void MCDwarfFrameEmitter::EmitAdvanceLoc(MCObjectStreamer &Streamer,

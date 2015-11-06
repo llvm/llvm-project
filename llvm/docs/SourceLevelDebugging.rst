@@ -231,7 +231,7 @@ Compiled to LLVM, this function would be represented like this:
 .. code-block:: llvm
 
   ; Function Attrs: nounwind ssp uwtable
-  define void @foo() #0 {
+  define void @foo() #0 !dbg !4 {
   entry:
     %X = alloca i32, align 4
     %Y = alloca i32, align 4
@@ -263,7 +263,7 @@ Compiled to LLVM, this function would be represented like this:
   !1 = !DIFile(filename: "/dev/stdin", directory: "/Users/dexonsmith/data/llvm/debug-info")
   !2 = !{}
   !3 = !{!4}
-  !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, function: void ()* @foo, variables: !2)
+  !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, variables: !2)
   !5 = !DISubroutineType(types: !6)
   !6 = !{null}
   !7 = !{i32 2, !"Dwarf Version", i32 2}
@@ -304,10 +304,9 @@ scope information for the variable ``X``.
 .. code-block:: llvm
 
   !14 = !DILocation(line: 2, column: 9, scope: !4)
-  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5,
-                     isLocal: false, isDefinition: true, scopeLine: 1,
-                     isOptimized: false, function: void ()* @foo,
-                     variables: !2)
+  !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5,
+                              isLocal: false, isDefinition: true, scopeLine: 1,
+                              isOptimized: false, variables: !2)
 
 Here ``!14`` is metadata providing `location information
 <LangRef.html#dilocation>`_.  In this example, scope is encoded by ``!4``, a
@@ -463,12 +462,12 @@ a C/C++ front-end would generate the following descriptors:
   !4 = !DISubprogram(name: "main", scope: !1, file: !1, line: 1, type: !5,
                      isLocal: false, isDefinition: true, scopeLine: 1,
                      flags: DIFlagPrototyped, isOptimized: false,
-                     function: i32 (i32, i8**)* @main, variables: !2)
+                     variables: !2)
 
   ;;
   ;; Define the subprogram itself.
   ;;
-  define i32 @main(i32 %argc, i8** %argv) {
+  define i32 @main(i32 %argc, i8** %argv) !dbg !4 {
   ...
   }
 

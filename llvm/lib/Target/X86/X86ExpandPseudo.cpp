@@ -141,6 +141,13 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // The EH_RETURN pseudo is really removed during the MC Lowering.
     return true;
   }
+
+  case X86::EH_RESTORE: {
+    // Restore ESP and EBP, and optionally ESI if required.
+    X86FL->restoreWin32EHStackPointers(MBB, MBBI, DL, /*RestoreSP=*/true);
+    MBBI->eraseFromParent();
+    return true;
+  }
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }

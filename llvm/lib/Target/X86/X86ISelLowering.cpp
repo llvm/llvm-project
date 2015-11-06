@@ -21338,6 +21338,46 @@ X86TargetLowering::EmitLoweredWinAlloca(MachineInstr *MI,
 }
 
 MachineBasicBlock *
+X86TargetLowering::EmitLoweredCatchRet(MachineInstr *MI,
+                                       MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  const Constant *PerFn = MF->getFunction()->getPersonalityFn();
+  bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(PerFn));
+  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
+  MachineBasicBlock *TargetMBB = MI->getOperand(0).getMBB();
+  DebugLoc DL = MI->getDebugLoc();
+
+  // SEH does not outline catch bodies into funclets. Turn CATCHRETs into
+  // JMP_4s, possibly with some extra restoration code for 32-bit EH.
+  if (IsSEH) {
+    if (Subtarget->is32Bit())
+      BuildMI(*BB, MI, DL, TII.get(X86::EH_RESTORE));
+    BuildMI(*BB, MI, DL, TII.get(X86::JMP_4)).addMBB(TargetMBB);
+    MI->eraseFromParent();
+    return BB;
+  }
+
+  // Only 32-bit EH needs to worry about manually restoring stack pointers.
+  if (!Subtarget->is32Bit())
+    return BB;
+
+  // C++ EH creates a new target block to hold the restore code, and wires up
+  // the new block to the return destination with a normal JMP_4.
+  MachineBasicBlock *RestoreMBB =
+      MF->CreateMachineBasicBlock(BB->getBasicBlock());
+  MF->insert(TargetMBB->getIterator(), RestoreMBB);
+  BB->removeSuccessor(TargetMBB);
+  BB->addSuccessor(RestoreMBB);
+  RestoreMBB->addSuccessor(TargetMBB);
+  MI->getOperand(0).setMBB(RestoreMBB);
+
+  auto RestoreMBBI = RestoreMBB->begin();
+  BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::EH_RESTORE));
+  BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::JMP_4)).addMBB(TargetMBB);
+  return BB;
+}
+
+MachineBasicBlock *
 X86TargetLowering::EmitLoweredTLSCall(MachineInstr *MI,
                                       MachineBasicBlock *BB) const {
   // This is pretty easy.  We're taking the value that we received from
@@ -21717,6 +21757,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     return BB;
   case X86::WIN_ALLOCA:
     return EmitLoweredWinAlloca(MI, BB);
+  case X86::CATCHRET:
+    return EmitLoweredCatchRet(MI, BB);
   case X86::SEG_ALLOCA_32:
   case X86::SEG_ALLOCA_64:
     return EmitLoweredSegAlloca(MI, BB);

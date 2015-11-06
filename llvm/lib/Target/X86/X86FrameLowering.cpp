@@ -1091,7 +1091,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool NeedsWinCFI =
       IsWin64Prologue && MF.getFunction()->needsUnwindTableEntry();
   bool IsFunclet = isFuncletReturnInstr(MBBI);
-  MachineBasicBlock *RestoreMBB = nullptr;
+  MachineBasicBlock *TargetMBB = nullptr;
 
   // Get the number of bytes to allocate from the FrameInfo.
   uint64_t StackSize = MFI->getStackSize();
@@ -1100,45 +1100,19 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t NumBytes = 0;
 
   if (MBBI->getOpcode() == X86::CATCHRET) {
+    // SEH shouldn't use catchret.
+    assert(!isAsynchronousEHPersonality(
+               classifyEHPersonality(MF.getFunction()->getPersonalityFn())) &&
+           "SEH should not use CATCHRET");
+
     NumBytes = getWinEHFuncletFrameSize(MF);
     assert(hasFP(MF) && "EH funclets without FP not yet implemented");
-    MachineBasicBlock *TargetMBB = MBBI->getOperand(0).getMBB();
-
-    // If this is SEH, this isn't really a funclet return.
-    bool IsSEH = isAsynchronousEHPersonality(
-        classifyEHPersonality(MF.getFunction()->getPersonalityFn()));
-    if (IsSEH) {
-      if (STI.is32Bit())
-        restoreWin32EHStackPointers(MBB, MBBI, DL, /*RestoreSP=*/true);
-      BuildMI(MBB, MBBI, DL, TII.get(X86::JMP_4)).addMBB(TargetMBB);
-      MBBI->eraseFromParent();
-      return;
-    }
-
-    // For 32-bit, create a new block for the restore code.
-    RestoreMBB = TargetMBB;
-    if (STI.is32Bit()) {
-      RestoreMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
-      MF.insert(TargetMBB->getIterator(), RestoreMBB);
-      MBB.removeSuccessor(TargetMBB);
-      MBB.addSuccessor(RestoreMBB);
-      RestoreMBB->addSuccessor(TargetMBB);
-      MBBI->getOperand(0).setMBB(RestoreMBB);
-    }
+    TargetMBB = MBBI->getOperand(0).getMBB();
 
     // Pop EBP.
     BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::POP64r : X86::POP32r),
             MachineFramePtr)
         .setMIFlag(MachineInstr::FrameDestroy);
-
-    // Insert frame restoration code in a new block.
-    if (STI.is32Bit()) {
-      auto RestoreMBBI = RestoreMBB->begin();
-      restoreWin32EHStackPointers(*RestoreMBB, RestoreMBBI, DL,
-                                  /*RestoreSP=*/true);
-      BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::JMP_4))
-          .addMBB(TargetMBB);
-    }
   } else if (MBBI->getOpcode() == X86::CLEANUPRET) {
     NumBytes = getWinEHFuncletFrameSize(MF);
     assert(hasFP(MF) && "EH funclets without FP not yet implemented");
@@ -1178,26 +1152,26 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
   MachineBasicBlock::iterator FirstCSPop = MBBI;
 
-  if (RestoreMBB) {
+  if (TargetMBB) {
     // Fill EAX/RAX with the address of the target block.
     unsigned ReturnReg = STI.is64Bit() ? X86::RAX : X86::EAX;
     if (STI.is64Bit()) {
-      // LEA64r RestoreMBB(%rip), %rax
+      // LEA64r TargetMBB(%rip), %rax
       BuildMI(MBB, FirstCSPop, DL, TII.get(X86::LEA64r), ReturnReg)
           .addReg(X86::RIP)
           .addImm(0)
           .addReg(0)
-          .addMBB(RestoreMBB)
+          .addMBB(TargetMBB)
           .addReg(0);
     } else {
-      // MOV32ri $RestoreMBB, %eax
+      // MOV32ri $TargetMBB, %eax
       BuildMI(MBB, FirstCSPop, DL, TII.get(X86::MOV32ri))
           .addReg(ReturnReg)
-          .addMBB(RestoreMBB);
+          .addMBB(TargetMBB);
     }
-    // Record that we've taken the address of RestoreMBB and no longer just
+    // Record that we've taken the address of TargetMBB and no longer just
     // reference it in a terminator.
-    RestoreMBB->setHasAddressTaken();
+    TargetMBB->setHasAddressTaken();
   }
 
   if (MBBI != MBB.end())
