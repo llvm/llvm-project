@@ -23,6 +23,6 @@ USEDLIBS = clangFrontend.a clangCodeGen.a clangIndex.a \
            clangStaticAnalyzerFrontend.a clangStaticAnalyzerCheckers.a \
            clangStaticAnalyzerCore.a clangAnalysis.a clangRewriteFrontend.a \
            clangRewrite.a clangEdit.a clangAST.a clangLex.a \
-           clangBasic.a
+           clangAPINotes.a clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile

@@ -17,6 +17,7 @@
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -586,11 +587,15 @@ public:
   /// the given declaration (e.g., preferring 'unavailable' to
   /// 'deprecated').
   ///
-  /// \param Message If non-NULL and the result is not \c
+  /// \param[out] Message If non-NULL and the result is not \c
   /// AR_Available, will be set to a (possibly empty) message
   /// describing why the declaration has not been introduced, is
   /// deprecated, or is unavailable.
-  AvailabilityResult getAvailability(std::string *Message = nullptr) const;
+  /// \param Version The version of the target OS to determine availability for.
+  /// If \c None, uses the version specified in the ASTContext's target info.
+  AvailabilityResult
+  getAvailability(std::string *Message = nullptr,
+                  Optional<VersionTuple> Version = None) const;
 
   /// \brief Determine whether this declaration is marked 'deprecated'.
   ///

@@ -72,7 +72,8 @@ static int skipArgs(const char *Flag, bool HaveCrashVFS) {
   // These flags are treated as a single argument (e.g., -F<Dir>).
   StringRef FlagRef(Flag);
   if (FlagRef.startswith("-F") || FlagRef.startswith("-I") ||
-      FlagRef.startswith("-fmodules-cache-path="))
+      FlagRef.startswith("-fmodules-cache-path=") ||
+      FlagRef.startswith("-fapinotes-cache-path="))
     return 1;
 
   return 0;

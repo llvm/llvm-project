@@ -832,6 +832,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
 static void ParseFileSystemArgs(FileSystemOptions &Opts, ArgList &Args) {
   Opts.WorkingDir = Args.getLastArgValue(OPT_working_directory);
+  Opts.APINotesCachePath = Args.getLastArgValue(OPT_fapinotes_cache_path);
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -1682,6 +1683,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   std::sort(Opts.ModuleFeatures.begin(), Opts.ModuleFeatures.end());
   Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
   Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns);
+  Opts.APINotes = Args.hasArg(OPT_fapinotes);
   Opts.GNUAsm = !Args.hasArg(OPT_fno_gnu_inline_asm);
 
   // __declspec is enabled by default for the PS4 by the driver, and also
@@ -1999,6 +2001,13 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     ParseLangArgs(*Res.getLangOpts(), Args, DashX, Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       Res.getLangOpts()->ObjCExceptions = 1;
+
+    // -fapinotes requires -fapinotes-cache-path=<directory>.
+    if (Res.getLangOpts()->APINotes &&
+        Res.getFileSystemOpts().APINotesCachePath.empty()) {
+      Diags.Report(diag::err_no_apinotes_cache_path);
+      Success = false;
+    }
   }
   // FIXME: ParsePreprocessorArgs uses the FileManager to read the contents of
   // PCH file and find the original header name. Remove the need to do that in

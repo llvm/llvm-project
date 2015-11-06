@@ -30,7 +30,7 @@ USEDLIBS = clangIndex.a clangARCMigrate.a \
 	   clangRewrite.a \
 	   clangAnalysis.a clangEdit.a \
 	   clangASTMatchers.a \
-	   clangAST.a clangLex.a clangBasic.a
+	   clangAST.a clangLex.a clangAPINotes.a clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile
 

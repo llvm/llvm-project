@@ -15,6 +15,6 @@ USEDLIBS = clangTooling.a clangToolingCore.a clangFrontend.a \
 	   clangSerialization.a clangDriver.a \
            clangParse.a clangRewrite.a clangRewriteFrontend.a \
 	   clangSema.a clangAnalysis.a clangEdit.a \
-           clangAST.a clangASTMatchers.a clangLex.a clangBasic.a
+           clangAST.a clangASTMatchers.a clangLex.a clangAPINotes.a clangBasic.a
 
 include $(CLANG_LEVEL)/unittests/Makefile
