@@ -4,7 +4,7 @@
 // CHECK:      Section {
 // CHECK:        Index: 
 // CHECK:        Name: .eh_frame
-// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Type: SHT_X86_64_UNWIND
 // CHECK-NEXT:   Flags [
 // CHECK-NEXT:     SHF_ALLOC
 // CHECK-NEXT:   ]

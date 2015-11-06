@@ -501,6 +501,8 @@ declare void @f.uwtable() uwtable
 ; CHECK: declare void @f.uwtable() #30
 declare void @f.kvpair() "cpu"="cortex-a8"
 ; CHECK:declare void @f.kvpair() #31
+declare void @f.norecurse() norecurse
+; CHECK: declare void @f.norecurse() #32
 
 ; Functions -- section
 declare void @f.section() section "80"
@@ -559,7 +561,7 @@ declare void @f.prologuearray() prologue [4 x i32] [i32 0, i32 1, i32 2, i32 3]
 
 ; Functions -- Personality constant
 declare void @llvm.donothing() nounwind readnone
-; CHECK: declare void @llvm.donothing() #32
+; CHECK: declare void @llvm.donothing() #33
 define void @f.no_personality() personality i8 3 {
 ; CHECK: define void @f.no_personality() personality i8 3
   invoke void @llvm.donothing() to label %normal unwind label %exception
@@ -1125,7 +1127,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #36
+  ; CHECK: call void @f.nobuiltin() #37
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1497,11 +1499,12 @@ normal:
 ; CHECK: attributes #29 = { "thunk" }
 ; CHECK: attributes #30 = { uwtable }
 ; CHECK: attributes #31 = { "cpu"="cortex-a8" }
-; CHECK: attributes #32 = { nounwind readnone }
-; CHECK: attributes #33 = { nounwind readonly argmemonly }
-; CHECK: attributes #34 = { nounwind argmemonly }
-; CHECK: attributes #35 = { nounwind readonly }
-; CHECK: attributes #36 = { builtin }
+; CHECK: attributes #32 = { norecurse }
+; CHECK: attributes #33 = { nounwind readnone }
+; CHECK: attributes #34 = { nounwind readonly argmemonly }
+; CHECK: attributes #35 = { nounwind argmemonly }
+; CHECK: attributes #36 = { nounwind readonly }
+; CHECK: attributes #37 = { builtin }
 
 ;; Metadata
 

@@ -49,6 +49,12 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
   // MachO
   SupportsWeakOmittedEHFrame = false;
 
+  EHFrameSection = Ctx->getMachOSection(
+      "__TEXT", "__eh_frame",
+      MachO::S_COALESCED | MachO::S_ATTR_NO_TOC |
+          MachO::S_ATTR_STRIP_STATIC_SYMS | MachO::S_ATTR_LIVE_SUPPORT,
+      SectionKind::getReadOnly());
+
   if (T.isOSDarwin() && T.getArch() == Triple::aarch64)
     SupportsCompactUnwindWithoutEHFrame = true;
 
@@ -416,16 +422,15 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
     break;
   }
 
+  unsigned EHSectionType = T.getArch() == Triple::x86_64
+                               ? ELF::SHT_X86_64_UNWIND
+                               : ELF::SHT_PROGBITS;
+
   // Solaris requires different flags for .eh_frame to seemingly every other
   // platform.
-  EHSectionType = ELF::SHT_PROGBITS;
-  EHSectionFlags = ELF::SHF_ALLOC;
-  if (T.isOSSolaris()) {
-    if (T.getArch() == Triple::x86_64)
-      EHSectionType = ELF::SHT_X86_64_UNWIND;
-    else
-      EHSectionFlags |= ELF::SHF_WRITE;
-  }
+  unsigned EHSectionFlags = ELF::SHF_ALLOC;
+  if (T.isOSSolaris() && T.getArch() != Triple::x86_64)
+    EHSectionFlags |= ELF::SHF_WRITE;
 
   // ELF
   BSSSection = Ctx->getELFSection(".bss", ELF::SHT_NOBITS,
@@ -548,9 +553,17 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
 
   FaultMapSection =
       Ctx->getELFSection(".llvm_faultmaps", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+
+  EHFrameSection =
+      Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
+  EHFrameSection = Ctx->getCOFFSection(
+      ".eh_frame", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                       COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
+      SectionKind::getDataRel());
+
   bool IsWoA = T.getArch() == Triple::arm || T.getArch() == Triple::thumb;
 
   CommDirectiveSupportsAlignment = true;
@@ -823,25 +836,4 @@ void MCObjectFileInfo::InitMCObjectFileInfo(StringRef TT, Reloc::Model RM,
 MCSection *MCObjectFileInfo::getDwarfTypesSection(uint64_t Hash) const {
   return Ctx->getELFSection(".debug_types", ELF::SHT_PROGBITS, ELF::SHF_GROUP,
                             0, utostr(Hash));
-}
-
-void MCObjectFileInfo::InitEHFrameSection() {
-  if (Env == IsMachO)
-    EHFrameSection =
-      Ctx->getMachOSection("__TEXT", "__eh_frame",
-                           MachO::S_COALESCED |
-                           MachO::S_ATTR_NO_TOC |
-                           MachO::S_ATTR_STRIP_STATIC_SYMS |
-                           MachO::S_ATTR_LIVE_SUPPORT,
-                           SectionKind::getReadOnly());
-  else if (Env == IsELF)
-    EHFrameSection =
-        Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
-  else
-    EHFrameSection =
-      Ctx->getCOFFSection(".eh_frame",
-                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                          COFF::IMAGE_SCN_MEM_READ |
-                          COFF::IMAGE_SCN_MEM_WRITE,
-                          SectionKind::getDataRel());
 }

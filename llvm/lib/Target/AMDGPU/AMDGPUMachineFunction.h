@@ -37,6 +37,11 @@ public:
     return ShaderType;
   }
 
+  bool isKernel() const {
+    // FIXME: Assume everything is a kernel until function calls are supported.
+    return true;
+  }
+
   unsigned ScratchSize;
   bool IsKernel;
 };

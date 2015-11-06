@@ -383,11 +383,10 @@ class MipsAsmParser : public MCTargetAsmParser {
 
 public:
   enum MipsMatchResultTy {
-    Match_RequiresDifferentSrcAndDst = FIRST_TARGET_MATCH_RESULT_TY
+    Match_RequiresDifferentSrcAndDst = FIRST_TARGET_MATCH_RESULT_TY,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "MipsGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
-
   };
 
   MipsAsmParser(MCSubtargetInfo &sti, MCAsmParser &parser,
@@ -894,6 +893,15 @@ public:
     Inst.addOperand(MCOperand::createReg(getHWRegsReg()));
   }
 
+  template <unsigned Bits, int Offset = 0>
+  void addConstantUImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    uint64_t Imm = getConstantImm() - Offset;
+    Imm &= (1 << Bits) - 1;
+    Imm += Offset;
+    Inst.addOperand(MCOperand::createImm(Imm));
+  }
+
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCExpr *Expr = getImm();
@@ -952,6 +960,12 @@ public:
   bool isImm() const override { return Kind == k_Immediate; }
   bool isConstantImm() const {
     return isImm() && dyn_cast<MCConstantExpr>(getImm());
+  }
+  bool isConstantImmz() const {
+    return isConstantImm() && getConstantImm() == 0;
+  }
+  template <unsigned Bits, int Offset = 0> bool isConstantUImm() const {
+    return isConstantImm() && isUInt<Bits>(getConstantImm() - Offset);
   }
   template <unsigned Bits> bool isUImm() const {
     return isImm() && isConstantImm() && isUInt<Bits>(getConstantImm());
@@ -3234,6 +3248,17 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   return Match_Success;
 }
 
+static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
+                            uint64_t ErrorInfo) {
+  if (ErrorInfo != ~0ULL && ErrorInfo < Operands.size()) {
+    SMLoc ErrorLoc = Operands[ErrorInfo]->getStartLoc();
+    if (ErrorLoc == SMLoc())
+      return Loc;
+    return ErrorLoc;
+  }
+  return Loc;
+}
+
 bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
@@ -3262,7 +3287,7 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       if (ErrorInfo >= Operands.size())
         return Error(IDLoc, "too few operands for instruction");
 
-      ErrorLoc = ((MipsOperand &)*Operands[ErrorInfo]).getStartLoc();
+      ErrorLoc = Operands[ErrorInfo]->getStartLoc();
       if (ErrorLoc == SMLoc())
         ErrorLoc = IDLoc;
     }
@@ -3273,6 +3298,23 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, "invalid instruction");
   case Match_RequiresDifferentSrcAndDst:
     return Error(IDLoc, "source and destination must be different");
+  case Match_Immz:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo), "expected '0'");
+  case Match_UImm1_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 1-bit unsigned immediate");
+  case Match_UImm2_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 2-bit unsigned immediate");
+  case Match_UImm2_1:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range 1 .. 4");
+  case Match_UImm3_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 3-bit unsigned immediate");
+  case Match_UImm4_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 4-bit unsigned immediate");
   }
 
   llvm_unreachable("Implement any new match types added!");

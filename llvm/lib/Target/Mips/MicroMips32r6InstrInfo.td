@@ -426,7 +426,7 @@ class LSA_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   list<dag> Pattern = [];
 }
 
-class LSA_MMR6_DESC : LSA_MMR6_DESC_BASE<"lsa", GPR32Opnd, uimm2>;
+class LSA_MMR6_DESC : LSA_MMR6_DESC_BASE<"lsa", GPR32Opnd, uimm2_plus1>;
 
 class PCREL_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                            Operand ImmOpnd> : MMR6Arch<instr_asm> {
