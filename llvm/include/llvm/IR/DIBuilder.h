@@ -514,7 +514,6 @@ namespace llvm {
     /// \param Flags         e.g. is this function prototyped or not.
     ///                      These flags are used to emit dwarf attributes.
     /// \param isOptimized   True if optimization is ON.
-    /// \param Fn            llvm::Function pointer.
     /// \param TParams       Function template parameters.
     DISubprogram *createFunction(DIScope *Scope, StringRef Name,
                                  StringRef LinkageName, DIFile *File,
@@ -562,7 +561,6 @@ namespace llvm {
     /// \param Flags         e.g. is this function prototyped or not.
     ///                      This flags are used to emit dwarf attributes.
     /// \param isOptimized   True if optimization is ON.
-    /// \param Fn            llvm::Function pointer.
     /// \param TParams       Function template parameters.
     DISubprogram *
     createMethod(DIScope *Scope, StringRef Name, StringRef LinkageName,

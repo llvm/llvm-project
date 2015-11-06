@@ -54,14 +54,15 @@ public:
       M += sizeof(uint64_t); // Number of value kinds with value sites.
       for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
         uint32_t NumValueSites = ProfRecord.getNumValueSites(Kind);
-        if (NumValueSites == 0) continue;
+        if (NumValueSites == 0)
+          continue;
         M += sizeof(uint64_t); // Value kind
         M += sizeof(uint64_t); // The number of value sites for given value kind
         for (uint32_t I = 0; I < NumValueSites; I++) {
           M += sizeof(uint64_t); // Number of value data pairs at a value site
           uint64_t NumValueDataForSite =
               ProfRecord.getNumValueDataForSite(Kind, I);
-          M += 2 * sizeof(uint64_t) * NumValueDataForSite;  // Value data pairs
+          M += 2 * sizeof(uint64_t) * NumValueDataForSite; // Value data pairs
         }
       }
     }
@@ -83,7 +84,8 @@ public:
 
       LE.write<uint64_t>(ProfileData.first); // Function hash
       LE.write<uint64_t>(ProfRecord.Counts.size());
-      for (uint64_t I : ProfRecord.Counts) LE.write<uint64_t>(I);
+      for (uint64_t I : ProfRecord.Counts)
+        LE.write<uint64_t>(I);
 
       // Compute the number of value kinds with value sites.
       uint64_t NumValueKinds = ProfRecord.getNumValueKinds();
@@ -92,7 +94,8 @@ public:
       // Write value data
       for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
         uint32_t NumValueSites = ProfRecord.getNumValueSites(Kind);
-        if (NumValueSites == 0) continue;
+        if (NumValueSites == 0)
+          continue;
         LE.write<uint64_t>(Kind); // Write value kind
         // Write number of value sites for current value kind
         LE.write<uint64_t>(NumValueSites);
@@ -134,7 +137,8 @@ static std::error_code combineInstrProfRecords(InstrProfRecord &Dest,
   }
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
-    if (std::error_code EC = Dest.mergeValueProfData(Kind, Source)) return EC;
+    if (std::error_code EC = Dest.mergeValueProfData(Kind, Source))
+      return EC;
   }
 
   // We keep track of the max function count as we go for simplicity.
