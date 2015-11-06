@@ -546,15 +546,15 @@ std::error_code status_known(const Twine &path, bool &result);
 ///
 /// Generates a unique path suitable for a temporary file and then opens it as a
 /// file. The name is based on \a model with '%' replaced by a random char in
-/// [0-9a-f]. If \a model is not an absolute path, a suitable temporary
-/// directory will be prepended.
+/// [0-9a-f]. If \a model is not an absolute path, the temporary file will be
+/// created in the current directory.
 ///
 /// Example: clang-%%-%%-%%-%%-%%.s => clang-a0-b1-c2-d3-e4.s
 ///
 /// This is an atomic operation. Either the file is created and opened, or the
 /// file system is left untouched.
 ///
-/// The intendend use is for files that are to be kept, possibly after
+/// The intended use is for files that are to be kept, possibly after
 /// renaming them. For example, when running 'clang -c foo.o', the file can
 /// be first created as foo-abc123.o and then renamed.
 ///

@@ -640,6 +640,7 @@ an optional :ref:`comdat <langref_comdats>`,
 an optional :ref:`garbage collector name <gc>`, an optional :ref:`prefix <prefixdata>`,
 an optional :ref:`prologue <prologuedata>`,
 an optional :ref:`personality <personalityfn>`,
+an optional list of attached :ref:`metadata <metadata>`,
 an opening curly brace, a list of basic blocks, and a closing curly brace.
 
 LLVM function declarations consist of the "``declare``" keyword, an
@@ -688,7 +689,7 @@ Syntax::
            <ResultType> @<FunctionName> ([argument list])
            [unnamed_addr] [fn Attrs] [section "name"] [comdat [($name)]]
            [align N] [gc] [prefix Constant] [prologue Constant]
-           [personality Constant] { ... }
+           [personality Constant] (!name !N)* { ... }
 
 The argument list is a comma separated sequence of arguments where each
 argument is of the following form:
@@ -3635,12 +3636,21 @@ function is using two metadata arguments:
 
     call void @llvm.dbg.value(metadata !24, i64 0, metadata !25)
 
-Metadata can be attached with an instruction. Here metadata ``!21`` is
-attached to the ``add`` instruction using the ``!dbg`` identifier:
+Metadata can be attached to an instruction. Here metadata ``!21`` is attached
+to the ``add`` instruction using the ``!dbg`` identifier:
 
 .. code-block:: llvm
 
     %indvar.next = add i64 %indvar, 1, !dbg !21
+
+Metadata can also be attached to a function definition. Here metadata ``!22``
+is attached to the ``foo`` function using the ``!dbg`` identifier:
+
+.. code-block:: llvm
+
+    define void @foo() !dbg !22 {
+      ret void
+    }
 
 More information about specific metadata nodes recognized by the
 optimizers and code generator is found below.
@@ -3912,20 +3922,26 @@ All global variables should be referenced by the `globals:` field of a
 DISubprogram
 """"""""""""
 
-``DISubprogram`` nodes represent functions from the source language. The
-``variables:`` field points at :ref:`variables <DILocalVariable>` that must be
-retained, even if their IR counterparts are optimized out of the IR. The
-``type:`` field must point at an :ref:`DISubroutineType`.
+``DISubprogram`` nodes represent functions from the source language. A
+``DISubprogram`` may be attached to a function definition using ``!dbg``
+metadata. The ``variables:`` field points at :ref:`variables <DILocalVariable>`
+that must be retained, even if their IR counterparts are optimized out of
+the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
 
 .. code-block:: llvm
 
-    !0 = !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
-                       file: !2, line: 7, type: !3, isLocal: true,
-                       isDefinition: false, scopeLine: 8, containingType: !4,
-                       virtuality: DW_VIRTUALITY_pure_virtual, virtualIndex: 10,
-                       flags: DIFlagPrototyped, isOptimized: true,
-                       function: void ()* @_Z3foov,
-                       templateParams: !5, declaration: !6, variables: !7)
+    define void @_Z3foov() !dbg !0 {
+      ...
+    }
+
+    !0 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
+                                file: !2, line: 7, type: !3, isLocal: true,
+                                isDefinition: false, scopeLine: 8,
+                                containingType: !4,
+                                virtuality: DW_VIRTUALITY_pure_virtual,
+                                virtualIndex: 10, flags: DIFlagPrototyped,
+                                isOptimized: true, templateParams: !5,
+                                declaration: !6, variables: !7)
 
 .. _DILexicalBlock:
 
