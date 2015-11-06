@@ -2485,8 +2485,10 @@ bool MismatchingNewDeleteDetector::hasMatchingNewInCtor(
 MismatchingNewDeleteDetector::MismatchResult
 MismatchingNewDeleteDetector::analyzeInClassInitializer() {
   assert(Field != nullptr && "This should be called only for members");
-  if (const CXXNewExpr *NE =
-          getNewExprFromInitListOrExpr(Field->getInClassInitializer())) {
+  const Expr *InitExpr = Field->getInClassInitializer();
+  if (!InitExpr)
+    return EndOfTU ? NoMismatch : AnalyzeLater;
+  if (const CXXNewExpr *NE = getNewExprFromInitListOrExpr(InitExpr)) {
     if (NE->isArray() != IsArrayForm) {
       NewExprs.push_back(NE);
       return MemberInitMismatches;
