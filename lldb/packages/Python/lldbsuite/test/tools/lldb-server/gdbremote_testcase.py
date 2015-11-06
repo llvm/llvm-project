@@ -13,7 +13,6 @@ import platform
 import random
 import re
 import select
-import sets
 import signal
 import socket
 import subprocess
@@ -786,7 +785,7 @@ class GdbRemoteTestCaseBase(TestBase):
 
     def select_modifiable_register(self, reg_infos):
         """Find a register that can be read/written freely."""
-        PREFERRED_REGISTER_NAMES = sets.Set(["rax",])
+        PREFERRED_REGISTER_NAMES = set(["rax",])
 
         # First check for the first register from the preferred register name set.
         alternative_register_index = None

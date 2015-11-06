@@ -80,7 +80,7 @@ Args:   -h      (optional) Print help information on this program.\n\
             automatically. Python install directory.\n\
     --argsFile= The args are read from a file instead of the\n\
             command line. Other command line args are ignored.\n\
-    --swigExecutable=   (optional) Full path of swig executable.\n\
+    --swigExecutable=   Full path of swig executable.\n\
 \n\
 Usage:\n\
     buildSwigWrapperClasses.py --srcRoot=ADirPath --targetDir=ADirPath\n\
@@ -310,137 +310,6 @@ def run_swig_for_each_script_supported(vDictArgs):
     return (nResult, strStatusMsg)
 
 #++---------------------------------------------------------------------------
-# Details:  Dummy function - system unknown. Function should not be called.
-# Args:     vDictArgs   - (R) Program input parameters.
-# Returns:  Bool    - False = Program logic error.
-#           Str     - Error message.
-# Throws:   None.
-#--
-def check_lldb_swig_executable_file_exists_Unknown(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("check_lldb_swig_executable_file_exists_Unknown()")
-    # Do nothing
-    return (False, strMsgErrorOsTypeUnknown)
-
-#++---------------------------------------------------------------------------
-# Details:  Locate the SWIG executable file in a Windows system. Several hard
-#           coded predetermined possible file path locations are searched.
-#           (This is good candidate for a derived class object)
-# Args:     vDictArgs   - (W) Program input parameters.
-# Returns:  Bool    - True = Success.
-#                   - False = Failure file not found.
-#           Str     - Error message.
-# Throws:   None.
-#--
-def check_lldb_swig_executable_file_exists_Windows(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("check_lldb_swig_executable_file_exists_Windows()")
-
-    # Will always be true as it assumed the path to SWIG executable will be
-    # in the OS system environmental variable %PATH%. Easier this way as the
-    # user may have renamed the directory and or custom path installation.
-    bExeFileFound = True
-    vDictArgs["--swigExePath"] = ""
-    vDictArgs["--swigExeName"] = "swig.exe"
-    return (bExeFileFound, None)
-
-#++---------------------------------------------------------------------------
-# Details:  Locate the SWIG executable file in a Linux system. Several hard
-#           coded predetermined possible file path locations are searched.
-#           (This is good candidate for a derived class object)
-# Args:     vDictArgs   - (W) Program input parameters.
-# Returns:  Bool    - True = Success.
-#                   - False = Failure file not found.
-#           Str     - Error message.
-# Throws:   None.
-#--
-def check_lldb_swig_executable_file_exists_Linux(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("check_lldb_swig_executable_file_exists_Linux()")
-    bExeFileFound = False
-
-    strSwigExe = "swig"
-    strSwigExePath = "/usr/bin"
-    strExe = os.path.normcase("%s/%s" % (strSwigExePath, strSwigExe))
-    if os.path.isfile(strExe) and os.access(strExe, os.X_OK):
-        bExeFileFound = True
-        vDictArgs["--swigExePath"] = os.path.normcase(strSwigExePath)
-        vDictArgs["--swigExeName"] = strSwigExe
-        return (bExeFileFound, None)
-
-    strSwigExePath = "/usr/local/bin"
-    strExe = os.path.normcase("%s/%s" % (strSwigExePath, strSwigExe))
-    if os.path.isfile(strExe) and os.access(strExe, os.X_OK):
-        bExeFileFound = True
-        vDictArgs["--swigExePath"] = os.path.normcase(strSwigExePath)
-        vDictArgs["--swigExeName"] = strSwigExe
-        return (bExeFileFound, None)
-
-    return (bExeFileFound, strSwigExeFileNotFound)
-
-#++---------------------------------------------------------------------------
-# Details:  Locate the SWIG executable file in a OSX system. Several hard
-#           coded predetermined possible file path locations are searched.
-#           (This is good candidate for a derived class object)
-# Args:     vDictArgs   - (W) Program input parameters.
-# Returns:  Bool    - True = Success.
-#                   - False = Failure file not found.
-#           Str     - Error message.
-# Throws:   None.
-#--
-def check_lldb_swig_executable_file_exists_Darwin(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("check_lldb_swig_executable_file_exists_Darwin()")
-    bExeFileFound = False
-    # ToDo: Find the SWIG executable and add the path to the args dictionary
-    #vDictArgs.["--swigExePath"] = "/usr/bin/swig"
-    strStatusMsg = "Sorry function 'check_lldb_swig_executable_file_exists_Darwin()' is not implemented"
-
-    return (bExeFileFound, strStatusMsg)
-
-#++---------------------------------------------------------------------------
-# Details:  Locate the SWIG executable file in a OSX system. Several hard
-#           coded predetermined possible file path locations are searched.
-#           (This is good candidate for a derived class object)
-# Args:     vDictArgs   - (W) Program input parameters.
-# Returns:  Bool    - True = Success.
-#                   - False = Failure file not found.
-#           Str     - Error message.
-# Throws:   None.
-#--
-def check_lldb_swig_executable_file_exists_FreeBSD(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("check_lldb_swig_executable_file_exists_FreeBSD()")
-    bExeFileFound = False
-    # ToDo: Find the SWIG executable and add the path to the args dictionary
-    #vDictArgs.["--swigExePath"] = "/usr/bin/swig"
-    strStatusMsg = "Sorry function 'check_lldb_swig_executable_file_exists_FreeBSD()' is not implemented"
-
-    return (bExeFileFound, strStatusMsg)
-
-#++---------------------------------------------------------------------------
-# Details:  Locate the SWIG executable file. Several hard coded predetermined
-#           possible file path locations are searched.
-# Args:     vDictArgs   - (RW) Program input parameters.
-#           veOSType    - (R) Current OS type enumeration.
-# Returns:  Bool    - True = Success.
-#                   - False = Failure file not found.
-#           Str     - Error message.
-# Throws:   None.
-#--
-def check_lldb_swig_executable_file_exists(vDictArgs, veOSType):
-    dbg = utilsDebug.CDebugFnVerbose("check_lldb_swig_executable_file_exists()")
-    bExeFileFound = False
-    strStatusMsg = ""
-    if "--swigExecutable" in vDictArgs:
-        vDictArgs["--swigExeName"] = os.path.basename(vDictArgs["--swigExecutable"])
-        vDictArgs["--swigExePath"] = os.path.dirname(vDictArgs["--swigExecutable"])
-        bExeFileFound = True
-    else:
-        from utilsOsType import EnumOsType
-        switch = {EnumOsType.Unknown : check_lldb_swig_executable_file_exists_Unknown,
-                  EnumOsType.Darwin : check_lldb_swig_executable_file_exists_Darwin,
-                  EnumOsType.FreeBSD : check_lldb_swig_executable_file_exists_FreeBSD,
-                  EnumOsType.Linux : check_lldb_swig_executable_file_exists_Linux,
-                  EnumOsType.Windows : check_lldb_swig_executable_file_exists_Windows}
-        bExeFileFound, strStatusMsg = switch[veOSType](vDictArgs)
-    return (bExeFileFound, strStatusMsg)
-#++---------------------------------------------------------------------------
 # Details:  Validate the arguments passed to the program. This function exits
 #           the program should error with the arguments be found.
 # Args:     vArgv   - (R) List of arguments and values.
@@ -521,10 +390,6 @@ def main(vArgv):
     bOk, strMsg = check_lldb_swig_file_exists(dictArgs["--srcRoot"], eOSType)
     if bOk == False:
         program_exit(-3, strMsg)
-
-    bOk, strMsg = check_lldb_swig_executable_file_exists(dictArgs, eOSType)
-    if bOk == False:
-        program_exit(-6, strMsg)
 
     nResult, strMsg = run_swig_for_each_script_supported(dictArgs)
 

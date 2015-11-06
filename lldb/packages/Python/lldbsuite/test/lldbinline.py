@@ -145,7 +145,7 @@ class InlineTest(TestBase):
         self.do_test()
 
     def execute_user_command(self, __command):
-        exec __command in globals(), locals()
+        exec(__command, globals(), locals())
 
     def do_test(self):
         exe_name = "a.out"

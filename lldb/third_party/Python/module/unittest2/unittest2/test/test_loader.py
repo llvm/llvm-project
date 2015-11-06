@@ -1104,15 +1104,12 @@ class Test_TestLoader(unittest2.TestCase):
     # "Function to be used to compare method names when sorting them in
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromTestCase(self):
-        def reversed_cmp(x, y):
-            return -cmp(x, y)
-
         class Foo(unittest2.TestCase):
             def test_1(self): pass
             def test_2(self): pass
 
         loader = unittest2.TestLoader()
-        loader.sortTestMethodsUsing = reversed_cmp
+        loader.sortTestMethodsUsing = unittest2.reversed_cmp_
 
         tests = loader.suiteClass([Foo('test_2'), Foo('test_1')])
         self.assertEqual(loader.loadTestsFromTestCase(Foo), tests)
@@ -1120,9 +1117,6 @@ class Test_TestLoader(unittest2.TestCase):
     # "Function to be used to compare method names when sorting them in
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromModule(self):
-        def reversed_cmp(x, y):
-            return -cmp(x, y)
-
         m = types.ModuleType('m')
         class Foo(unittest2.TestCase):
             def test_1(self): pass
@@ -1130,7 +1124,7 @@ class Test_TestLoader(unittest2.TestCase):
         m.Foo = Foo
 
         loader = unittest2.TestLoader()
-        loader.sortTestMethodsUsing = reversed_cmp
+        loader.sortTestMethodsUsing = unittest2.reversed_cmp_
 
         tests = [loader.suiteClass([Foo('test_2'), Foo('test_1')])]
         self.assertEqual(list(loader.loadTestsFromModule(m)), tests)
@@ -1138,9 +1132,6 @@ class Test_TestLoader(unittest2.TestCase):
     # "Function to be used to compare method names when sorting them in
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromName(self):
-        def reversed_cmp(x, y):
-            return -cmp(x, y)
-
         m = types.ModuleType('m')
         class Foo(unittest2.TestCase):
             def test_1(self): pass
@@ -1148,7 +1139,7 @@ class Test_TestLoader(unittest2.TestCase):
         m.Foo = Foo
 
         loader = unittest2.TestLoader()
-        loader.sortTestMethodsUsing = reversed_cmp
+        loader.sortTestMethodsUsing = unittest2.reversed_cmp_
 
         tests = loader.suiteClass([Foo('test_2'), Foo('test_1')])
         self.assertEqual(loader.loadTestsFromName('Foo', m), tests)
@@ -1156,9 +1147,6 @@ class Test_TestLoader(unittest2.TestCase):
     # "Function to be used to compare method names when sorting them in
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromNames(self):
-        def reversed_cmp(x, y):
-            return -cmp(x, y)
-
         m = types.ModuleType('m')
         class Foo(unittest2.TestCase):
             def test_1(self): pass
@@ -1166,7 +1154,7 @@ class Test_TestLoader(unittest2.TestCase):
         m.Foo = Foo
 
         loader = unittest2.TestLoader()
-        loader.sortTestMethodsUsing = reversed_cmp
+        loader.sortTestMethodsUsing = unittest2.reversed_cmp_
 
         tests = [loader.suiteClass([Foo('test_2'), Foo('test_1')])]
         self.assertEqual(list(loader.loadTestsFromNames(['Foo'], m)), tests)
@@ -1176,15 +1164,12 @@ class Test_TestLoader(unittest2.TestCase):
     #
     # Does it actually affect getTestCaseNames()?
     def test_sortTestMethodsUsing__getTestCaseNames(self):
-        def reversed_cmp(x, y):
-            return -cmp(x, y)
-
         class Foo(unittest2.TestCase):
             def test_1(self): pass
             def test_2(self): pass
 
         loader = unittest2.TestLoader()
-        loader.sortTestMethodsUsing = reversed_cmp
+        loader.sortTestMethodsUsing = unittest2.reversed_cmp_
 
         test_names = ['test_2', 'test_1']
         self.assertEqual(loader.getTestCaseNames(Foo), test_names)
@@ -1192,7 +1177,7 @@ class Test_TestLoader(unittest2.TestCase):
     # "The default value is the built-in cmp() function"
     def test_sortTestMethodsUsing__default_value(self):
         loader = unittest2.TestLoader()
-        self.assertTrue(loader.sortTestMethodsUsing is cmp)
+        self.assertTrue(loader.sortTestMethodsUsing is unittest2.cmp_)
 
     # "it can be set to None to disable the sort."
     #

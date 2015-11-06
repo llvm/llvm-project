@@ -603,15 +603,11 @@ def expectedFailure(expected_fn, bugnumber=None):
         def wrapper(*args, **kwargs):
             from unittest2 import case
             self = args[0]
-            try:
-                func(*args, **kwargs)
-            except Exception:
-                if expected_fn(self):
-                    raise case._ExpectedFailure(sys.exc_info(), bugnumber)
-                else:
-                    raise
             if expected_fn(self):
-                raise case._UnexpectedSuccess(sys.exc_info(), bugnumber)
+                xfail_func = unittest2.expectedFailure(func)
+                xfail_func(*args, **kwargs)
+            else:
+                func(*args, **kwargs)
         return wrapper
     # if bugnumber is not-callable(incluing None), that means decorator function is called with optional arguments
     # return decorator in this case, so it will be used to decorating original method

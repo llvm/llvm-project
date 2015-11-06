@@ -44,8 +44,7 @@ strMsgFileNotExist = "\'%s\' could not be found\nSWIG file will need to be re-bu
 strErrMsgOsTypeUnknown = "Unable to determine current OS type"
 strMsgNotNeedUpdate = "Everything is up-to-date"
 strMsgSwigNeedRebuild = "SWIG needs to be re-run"
-strErrMsgSwigParamsMissing = "This script was not passed either '--swigExePath \
-or the '--swigExeName' argument. Both are required."
+strErrMsgSwigParamsMissing = "This script was not passed '--swigExecutable' as required."
 strMsgSwigExecute = "SWIG executing the following:\n\'%s'"
 strErrMsgSwigExecute = "SWIG failed: %s"
 strErrMsgPythonExecute = "Python script '%s' failed: %s"
@@ -463,16 +462,8 @@ def do_swig_rebuild(vDictArgs, vstrSwigDepFile, vstrCfgBldDir,
     strMsg = ""
     bDbg = "-d" in vDictArgs
     bGenDependencies = "-M" in vDictArgs
-    strSwigExePath = vDictArgs["--swigExePath"]
-    strSwigExeName = vDictArgs["--swigExeName"]
+    strSwig = vDictArgs["--swigExecutable"]
     strSrcRoot = vDictArgs["--srcRoot"]
-
-    # Build SWIG path to executable
-    if strSwigExePath != "":
-        strSwig = "%s/%s" % (strSwigExePath, strSwigExeName)
-        strSwig = os.path.normcase(strSwig)
-    else:
-        strSwig = strSwigExeName
 
     strCfg = vstrCfgBldDir
     strOp = vstrSwigOpFile
@@ -615,27 +606,24 @@ def do_modify_python_lldb(vDictArgs, vstrCfgBldDir):
     Args:     vDictArgs - (R) Map of parameter names to values. Used to for the
                               the SWIG required parameters to create code. Note
                               this container does get amended with more data.
-            -d (optional)   Determines whether or not this script
-                            outputs additional information when running.
-            -m (optional)   Specify called from Makefile system. If given locate
-                            the LLDBWrapPython.cpp in --srcRoot/source folder
-                            else in the --targetDir folder.
-            -M (optional)   Specify want SWIG to generate a dependency file.
-            --srcRoot       The root of the lldb source tree.
-            --targetDir     Where the lldb framework/shared library gets put.
-            --cfgBldDir     Where the buildSwigPythonLLDB.py program will
-            (optional)      put the lldb.py file it generated from running
-                            SWIG.
-            --prefix        Is the root directory used to determine where
-            (optional)      third-party modules for scripting languages should
-                            be installed. Where non-Darwin systems want to put
-                            the .py and .so files so that Python can find them
-                            automatically. Python install directory.
-            --swigExePath   File path the SWIG executable. (Determined and
-                            passed by buildSwigWrapperClasses.py to here)
-            --swigExeName   The file name of the SWIG executable. (Determined
-                            and passed by buildSwigWrapperClasses.py to
-                            here)
+            -d (optional)    Determines whether or not this script
+                             outputs additional information when running.
+            -m (optional)    Specify called from Makefile system. If given locate
+                             the LLDBWrapPython.cpp in --srcRoot/source folder
+                             else in the --targetDir folder.
+            -M (optional)    Specify want SWIG to generate a dependency file.
+            --srcRoot        The root of the lldb source tree.
+            --targetDir      Where the lldb framework/shared library gets put.
+            --cfgBldDir      Where the buildSwigPythonLLDB.py program will
+            (optional)       put the lldb.py file it generated from running
+                             SWIG.
+            --prefix         Is the root directory used to determine where
+            (optional)       third-party modules for scripting languages should
+                             be installed. Where non-Darwin systems want to put
+                             the .py and .so files so that Python can find them
+                             automatically. Python install directory.
+            --swigExecutable Full path to the SWIG executable. (Determined and
+                             passed by buildSwigWrapperClasses.py to here)
     Results:    0 Success
                 1 Success, generated dependencies removed
                   LLDBWrapPython.cpp.d.
@@ -651,7 +639,7 @@ def main(vDictArgs):
     bOk = True
     strMsg = ""
 
-    if not("--swigExePath" in vDictArgs) and ("--swigExeName" in vDictArgs):
+    if not "--swigExecutable" in vDictArgs:
         strErrMsgProgFail += strErrMsgSwigParamsMissing
         return (-100, strErrMsgProgFail)
 
