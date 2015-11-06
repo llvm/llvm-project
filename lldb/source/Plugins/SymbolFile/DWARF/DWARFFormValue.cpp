@@ -678,3 +678,9 @@ DWARFFormValue::Compare (const DWARFFormValue& a_value,
     return -1;
 }
 
+void
+DWARFFormValue::Clear ()
+{
+    m_cu = NULL;
+    m_form = 0;
+}

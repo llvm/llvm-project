@@ -34,7 +34,7 @@ class GoPersistentExpressionState : public PersistentExpressionState
   public:
     GoPersistentExpressionState();
 
-    ConstString GetNextPersistentVariableName() override;
+    ConstString GetNextPersistentVariableName(bool is_error = false) override;
 
     void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
@@ -69,7 +69,7 @@ class GoUserExpression : public UserExpression
                      lldb::LanguageType language, ResultType desired_type, const EvaluateExpressionOptions &options);
 
     virtual bool Parse(Stream &error_stream, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
-                       bool keep_result_in_memory, bool generate_debug_info) override;
+                       bool keep_result_in_memory, bool generate_debug_info, uint32_t line_offset) override;
 
     virtual lldb::ExpressionResults Execute(Stream &error_stream, ExecutionContext &exe_ctx,
                                             const EvaluateExpressionOptions &options,

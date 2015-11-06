@@ -70,7 +70,7 @@ typedef struct
 {
     uint32_t usage_mask;                     // Used to mark options that can be used together.  If (1 << n & usage_mask) != 0
                                              // then this option belongs to option set n.
-    bool required;                           // This option is required (in the current usage level)
+    bool required;
     const char * long_option;                // Full name for this option.
     int short_option;                        // Single character for this option.
     int option_has_arg;                      // no_argument, required_argument or optional_argument
@@ -82,6 +82,7 @@ typedef struct
 
 #define LLDB_3_TO_5 LLDB_OPT_SET_3|LLDB_OPT_SET_4|LLDB_OPT_SET_5
 #define LLDB_4_TO_5 LLDB_OPT_SET_4|LLDB_OPT_SET_5
+#define LLDB_3_AND_7 LLDB_OPT_SET_3|LLDB_OPT_SET_7
 
 static OptionDefinition g_options[] =
 {
@@ -412,7 +413,7 @@ Driver::OptionData::OptionData () :
     m_print_version (false),
     m_print_python_path (false),
     m_print_help (false),
-    m_wait_for(false),
+    m_wait_for (false),
     m_repl (false),
     m_repl_lang (eLanguageTypeUnknown),
     m_repl_options (),
@@ -452,6 +453,8 @@ Driver::OptionData::Clear ()
     m_print_python_path = false;
     m_use_external_editor = false;
     m_wait_for = false;
+    m_repl = false;
+    m_repl_options.erase();
     m_process_name.erase();
     m_batch = false;
     m_after_crash_commands.clear();
@@ -1196,7 +1199,6 @@ Driver::MainLoop ()
     
     SBDebugger::Destroy (m_debugger);
 }
-
 
 void
 Driver::ResizeWindow (unsigned short col)

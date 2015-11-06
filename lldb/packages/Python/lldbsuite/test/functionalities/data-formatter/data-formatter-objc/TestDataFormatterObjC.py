@@ -258,7 +258,7 @@ class ObjCDataFormatterTestCase(TestBase):
         self.expect('frame variable nserror',
                     substrs = ['domain: @"Foobar" - code: 12'])
 
-        self.expect('frame variable nserror->_userInfo',
+        self.expect('frame variable  -d run-target nserror->_userInfo',
                     substrs = ['2 key/value pairs'])
 
         self.expect('frame variable nserror->_userInfo --ptr-depth 1 -d run-target',
@@ -272,10 +272,10 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def nsexception_data_formatter_commands(self):
         self.expect('frame variable except0 except1 except2 except3',
-                    substrs = ['(NSException *) except0 = ','name:@"TheGuyWhoHasNoName" reason:@"cuz it\'s funny"',
-                    '(NSException *) except1 = ','name:@"TheGuyWhoHasNoName~1" reason:@"cuz it\'s funny"',
-                    '(NSException *) except2 = ','name:@"TheGuyWhoHasNoName`2" reason:@"cuz it\'s funny"',
-                    '(NSException *) except3 = ','name:@"TheGuyWhoHasNoName/3" reason:@"cuz it\'s funny"'])
+                    substrs = ['(NSException *) except0 = ','name: @"TheGuyWhoHasNoName" - reason: @"cuz it\'s funny"',
+                    '(NSException *) except1 = ','name: @"TheGuyWhoHasNoName~1" - reason: @"cuz it\'s funny"',
+                    '(NSException *) except2 = ','name: @"TheGuyWhoHasNoName`2" - reason: @"cuz it\'s funny"',
+                    '(NSException *) except3 = ','name: @"TheGuyWhoHasNoName/3" - reason: @"cuz it\'s funny"'])
 
     def nsmisc_data_formatter_commands(self):
         self.expect('frame variable localhost',
@@ -406,7 +406,6 @@ class ObjCDataFormatterTestCase(TestBase):
          '(Rect *) rect_ptr = (t=4, l=8, b=4, r=7)',
          '(Point) point = (v=7, h=12)',
          '(Point *) point_ptr = (v=7, h=12)',
-         'name:@"TheGuyWhoHasNoName" reason:@"cuz it\'s funny"',
          '1985',
          'foo_selector_impl'];
          

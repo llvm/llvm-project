@@ -94,10 +94,10 @@ ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
 
     m_target = exe_ctx.GetTargetPtr();
 
-    if (!(m_allow_cxx || m_allow_objc))
+    if (!m_target)
     {
         if (log)
-            log->Printf("  [CUE::SC] Settings inhibit C++ and Objective-C");
+            log->Printf("  [CUE::SC] Null target");
         return;
     }
 
@@ -115,6 +115,13 @@ ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
     {
         if (log)
             log->Printf("  [CUE::SC] Null function");
+        return;
+    }
+
+    if (!(m_allow_cxx || m_allow_objc))
+    {
+        if (log)
+            log->Printf("  [CUE::SC] Settings inhibit C++ and Objective-C");
         return;
     }
 
@@ -330,7 +337,8 @@ ClangUserExpression::Parse (Stream &error_stream,
                             ExecutionContext &exe_ctx,
                             lldb_private::ExecutionPolicy execution_policy,
                             bool keep_result_in_memory,
-                            bool generate_debug_info)
+                            bool generate_debug_info,
+                            uint32_t line_offset)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
@@ -415,8 +423,20 @@ ClangUserExpression::Parse (Stream &error_stream,
         lang_type = lldb::eLanguageTypeObjC;
     else
         lang_type = lldb::eLanguageTypeC;
+    
+    m_options.SetLanguage(lang_type);
+    uint32_t first_body_line = 0;
 
-    if (!source_code->GetText(m_transformed_text, lang_type, m_const_object, m_in_static_method, exe_ctx))
+    if (!source_code->GetText(m_transformed_text,
+                              lang_type,
+                              m_const_object,
+                              m_needs_object_ptr,
+                              m_in_static_method,
+                              m_is_swift_class,
+                              m_options,
+                              m_swift_generic_info,
+                              exe_ctx,
+                              first_body_line))
     {
         error_stream.PutCString ("error: couldn't construct expression body");
         return false;
@@ -486,8 +506,6 @@ ClangUserExpression::Parse (Stream &error_stream,
 
     if (num_errors)
     {
-        error_stream.Printf ("error: %d errors parsing expression\n", num_errors);
-
         ResetDeclMap(); // We are being careful here in the case of breakpoint conditions.
 
         return false;
@@ -496,43 +514,63 @@ ClangUserExpression::Parse (Stream &error_stream,
     //////////////////////////////////////////////////////////////////////////////////////////
     // Prepare the output of the parser for execution, evaluating it statically if possible
     //
-
+    
     Error jit_error = parser.PrepareForExecution (m_jit_start_addr,
                                                   m_jit_end_addr,
                                                   m_execution_unit_sp,
                                                   exe_ctx,
                                                   m_can_interpret,
                                                   execution_policy);
-
-    if (generate_debug_info)
+    
+    if (m_execution_unit_sp)
     {
-        lldb::ModuleSP jit_module_sp ( m_execution_unit_sp->GetJITModule());
-
-        if (jit_module_sp)
+        bool register_execution_unit = false;
+        
+        if (m_options.GetREPLEnabled())
         {
-            ConstString const_func_name(FunctionName());
-            FileSpec jit_file;
-            jit_file.GetFilename() = const_func_name;
-            jit_module_sp->SetFileSpecAndObjectName (jit_file, ConstString());
-            m_jit_module_wp = jit_module_sp;
-            target->GetImages().Append(jit_module_sp);
+            if (!m_execution_unit_sp->GetJittedFunctions().empty() ||
+                !m_execution_unit_sp->GetJittedGlobalVariables().empty())
+            {
+                register_execution_unit = true;
+            }
         }
-//        lldb_private::ObjectFile *jit_obj_file = jit_module_sp->GetObjectFile();
-//        StreamFile strm (stdout, false);
-//        if (jit_obj_file)
-//        {
-//            jit_obj_file->GetSectionList();
-//            jit_obj_file->GetSymtab();
-//            jit_obj_file->Dump(&strm);
-//        }
-//        lldb_private::SymbolVendor *jit_sym_vendor = jit_module_sp->GetSymbolVendor();
-//        if (jit_sym_vendor)
-//        {
-//            lldb_private::SymbolContextList sc_list;
-//            jit_sym_vendor->FindFunctions(const_func_name, NULL, lldb::eFunctionNameTypeFull, true, false, sc_list);
-//            sc_list.Dump(&strm, target);
-//            jit_sym_vendor->Dump(&strm);
-//        }
+        else
+        {
+            if (m_execution_unit_sp->GetJittedFunctions().size() > 1 ||
+                m_execution_unit_sp->GetJittedGlobalVariables().size() > 1)
+            {
+                register_execution_unit = true;
+            }
+        }
+        
+        if (register_execution_unit)
+        {
+            // We currently key off there being more than one external function in the execution
+            // unit to determine whether it needs to live in the process.
+            
+            llvm::cast<ClangPersistentVariables>(exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift))->RegisterExecutionUnit(m_execution_unit_sp);
+        }
+    }
+    
+
+    if (m_options.GetGenerateDebugInfo())
+    {
+        StreamString jit_module_name;
+        jit_module_name.Printf("%s%u", FunctionName(), m_options.GetExpressionNumber());
+        const char *limit_file = m_options.GetPoundLineFilePath();
+        FileSpec limit_file_spec;
+        uint32_t limit_start_line = 0;
+        uint32_t limit_end_line = 0;
+        if (limit_file)
+        {
+            limit_file_spec.SetFile(limit_file, false);
+            limit_start_line = m_options.GetPoundLineLine();
+            limit_end_line = limit_start_line + std::count(m_expr_text.begin(), m_expr_text.end(), '\n');
+        }
+        m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().c_str(),
+                                             limit_file ? &limit_file_spec : NULL,
+                                             limit_start_line,
+                                             limit_end_line);
     }
 
     ResetDeclMap(); // Make this go away since we don't need any of its state after parsing.  This also gets rid of any ClangASTImporter::Minions.

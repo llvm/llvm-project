@@ -22,6 +22,9 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
+#include "lldb/Symbol/CompilerType.h"
+
+#include "llvm/ADT/SmallVector.h"
 
 namespace lldb_private {
 
@@ -80,9 +83,21 @@ public:
     {
         return lldb::eLanguageTypeUnknown;
     }
-    
+        
     //------------------------------------------------------------------
-    /// Return the desired result type of the function, or 
+    /// Return the object that the parser should use when registering external
+    /// values (assuming it doesn't use a ClangExpressionDeclMap).  May be
+    /// NULL if there is a ClangExpressionDeclMap or everything should be
+    /// self-contained.
+    //------------------------------------------------------------------
+    virtual Materializer *
+    GetMaterializer()
+    {
+        return NULL;
+    }
+        
+    //------------------------------------------------------------------
+    /// Return the desired result type of the function, or
     /// eResultTypeAny if indifferent.
     //------------------------------------------------------------------
     virtual ResultType
@@ -108,7 +123,7 @@ public:
     //------------------------------------------------------------------
     virtual bool
     NeedsVariableResolution () = 0;
-
+    
     virtual EvaluateExpressionOptions *GetOptions() { return nullptr; };
 
     //------------------------------------------------------------------
@@ -121,6 +136,22 @@ public:
         return m_jit_start_addr;
     }
     
+    struct SwiftGenericInfo
+    {
+        struct Binding {
+            const char     *name;
+            CompilerType    type;
+        };
+        llvm::SmallVector<Binding, 3> function_bindings;
+        llvm::SmallVector<Binding, 3> class_bindings;
+    };
+    
+    const SwiftGenericInfo &
+    GetSwiftGenericInfo()
+    {
+        return m_swift_generic_info;
+    }
+
     virtual ExpressionTypeSystemHelper *
     GetTypeSystemHelper ()
     {
@@ -133,7 +164,7 @@ protected:
     lldb::ProcessWP m_jit_process_wp;       /// An expression might have a process, but it doesn't need to (e.g. calculator mode.)
     lldb::addr_t    m_jit_start_addr;       ///< The address of the JITted function within the JIT allocation.  LLDB_INVALID_ADDRESS if invalid.
     lldb::addr_t    m_jit_end_addr;         ///< The address of the JITted function within the JIT allocation.  LLDB_INVALID_ADDRESS if invalid.
-
+    SwiftGenericInfo m_swift_generic_info;
 };
 
 } // namespace lldb_private

@@ -64,7 +64,15 @@ public:
                              TypeAndOrName &class_type_or_name,
                              Address &address,
                              Value::ValueType &value_type) override;
-    
+
+    bool
+    GetDynamicTypeAndAddress(ValueObject &in_value,
+                             lldb::DynamicValueType use_dynamic,
+                             TypeAndOrName &class_type_or_name,
+                             Address &address,
+                             Value::ValueType &value_type,
+                             bool allow_swift) override;
+
     UtilityFunction *
     CreateObjectChecker(const char *) override;
 
@@ -106,7 +114,10 @@ public:
     
     EncodingToTypeSP
     GetEncodingToType() override;
-    
+
+    bool
+    IsTaggedPointer(lldb::addr_t ptr);
+
     TaggedPointerVendor*
     GetTaggedPointerVendor() override
     {
@@ -278,24 +289,21 @@ private:
             return {true, true};
         }
     };
-    
+
     AppleObjCRuntimeV2 (Process *process,
                         const lldb::ModuleSP &objc_module_sp);
-    
+
     ObjCISA
     GetPointerISA (ObjCISA isa);
-    
-    bool
-    IsTaggedPointer(lldb::addr_t ptr);
-    
+
     lldb::addr_t
     GetISAHashTablePointer ();
 
     bool
-    UpdateISAToDescriptorMapFromMemory (RemoteNXMapTable &hash_table);
+    UpdateISAToDescriptorMapFromMemory (RemoteNXMapTable &hash_table, uint32_t &discovered_classes_count);
     
     bool
-    UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table);
+    UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table, uint32_t &discovered_classes_count);
     
     uint32_t
     ParseClassInfoArray (const lldb_private::DataExtractor &data,
@@ -305,7 +313,7 @@ private:
     UpdateISAToDescriptorMapSharedCache ();
     
     void
-    WarnIfNoClassesCached ();
+    WarnIfNoClassesFound (bool globally);
 
     lldb::addr_t
     GetSharedCacheReadOnlyAddress();
@@ -328,6 +336,10 @@ private:
     std::unique_ptr<NonPointerISACache>     m_non_pointer_isa_cache_ap;
     std::unique_ptr<TaggedPointerVendor>    m_tagged_pointer_vendor_ap;
     EncodingToTypeSP                        m_encoding_to_type_sp;
+    struct {
+        bool in_shared_cache : 1;
+        bool globally : 1;
+    }                                       m_warn_if_no_classes_cached;
     bool                                    m_noclasses_warning_emitted;
 };
     

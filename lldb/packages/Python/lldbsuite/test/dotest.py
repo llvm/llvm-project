@@ -134,6 +134,8 @@ lldbtest_remote_shell_template = None
 # and "-C gcc -C clang" => compilers=['gcc', 'clang'].
 archs = None        # Must be initialized after option parsing
 compilers = None    # Must be initialized after option parsing
+swiftCompiler = None
+swiftLibrary = None
 
 # The arch might dictate some specific CFLAGS to be passed to the toolchain to build
 # the inferior programs.  The global variable cflags_extras provides a hook to do
@@ -444,6 +446,8 @@ def parseOptionsAndInitTestdirs():
     global configFile
     global archs
     global compilers
+    global swiftCompiler
+    global swiftLibrary
     global count
     global dumpSysPath
     global bmExecutable
@@ -553,6 +557,12 @@ def parseOptionsAndInitTestdirs():
 
     if args.skipCategories:
         skipCategories = test_categories.validate(args.skipCategories, False)
+
+    if args.swiftcompiler:
+        swiftCompiler = args.swiftcompiler
+
+    if args.swiftlibrary:
+        swiftLibrary = args.swiftlibrary
 
     if args.D:
         dumpSysPath = True
@@ -882,7 +892,7 @@ def getXcodeOutputPaths(lldbRootDirectory):
     xcode3_build_dir = ['build']
     xcode4_build_dir = ['build', 'lldb', 'Build', 'Products']
 
-    configurations = [['Debug'], ['DebugClang'], ['Release'], ['BuildAndIntegration']]
+    configurations = [['DebugPresubmission'], ['Debug'], ['DebugClang'], ['Release'], ['BuildAndIntegration'], ['CustomSwift-Debug'], ['CustomSwift-Release']]
     xcode_build_dirs = [xcode3_build_dir, xcode4_build_dir]
     for configuration in configurations:
         for xcode_build_dir in xcode_build_dirs:
@@ -1012,6 +1022,16 @@ def getOutputPaths(lldbRootDirectory):
     result.append(os.path.join(lldbParentDir, 'build', 'bin'))
     result.append(os.path.join(lldbParentDir, 'build', 'host', 'bin'))
 
+    # linux swiftie build
+    configurations = ['Ninja-DebugAssert','Ninja-RelWithDebInfoAssert'] # TODO: add more configurations
+    for configuration in configurations:
+        result.append(os.path.join(lldbParentDir, 'build', configuration, 'lldb-linux-x86_64', 'bin'))
+
+    # osx swiftie build
+    configurations = [['Ninja-DebugAssert','Ninja-RelWithDebInfoAssert','CustomSwift-Debug']] # TODO: add more configurations
+    for configuration in configurations:
+        result.append(os.path.join(lldbParentDir, 'build', configuration[0], 'lldb-macosx-x86_64', configuration[1]))
+
     return result
 
 def setupSysPath():
@@ -1067,7 +1087,11 @@ def setupSysPath():
     # This is the root of the lldb git/svn checkout
     # When this changes over to a package instead of a standalone script, this
     # will be `lldbsuite.lldb_root`
-    lldbRootDirectory = lldbsuite.lldb_root
+    lldbRootDirectory = os.path.abspath(os.path.join(scriptPath, os.pardir))
+    # if we are in packages/Python/lldbsuite, we are too deep and not really at our root
+    # so go up a few more times
+    if os.path.basename(lldbRootDirectory) == 'lldbsuite':
+        lldbRootDirectory = os.path.abspath(os.path.join(lldbRootDirectory, os.pardir, os.pardir, os.pardir))
 
     # Some of the tests can invoke the 'lldb' command directly.
     # We'll try to locate the appropriate executable right here.
@@ -1689,6 +1713,51 @@ def run_suite():
                     else:
                         compilers[i] = cmd_output.split('\n')[0]
                         print("'xcrun -find %s' returning %s" % (c, compilers[i]))
+
+    if not parsable:
+        print("compilers=%s" % str(compilers))
+
+    if not compilers or len(compilers) == 0:
+        print("No eligible compiler found, exiting.")
+        exitTestSuite(1)
+
+    if isinstance(compilers, list) and len(compilers) >= 1:
+        iterCompilers = True
+
+    # Make a shallow copy of sys.path, we need to manipulate the search paths later.
+    # This is only necessary if we are relocated and with different configurations.
+    if rdir:
+        old_sys_path = sys.path[:]
+    # If we iterate on archs or compilers, there is a chance we want to split stderr/stdout.
+    if iterArchs or iterCompilers:
+        old_stderr = sys.stderr
+        old_stdout = sys.stdout
+        new_stderr = None
+        new_stdout = None
+
+    # Iterating over all possible architecture and compiler combinations.
+    for ia in range(len(archs) if iterArchs else 1):
+        archConfig = ""
+        if iterArchs:
+            os.environ["ARCH"] = archs[ia]
+            archConfig = "arch=%s" % archs[ia]
+        for ic in range(len(compilers) if iterCompilers else 1):
+            if iterCompilers:
+                os.environ["CC"] = compilers[ic]
+                if swiftCompiler: os.environ["SWIFTCC"] = swiftCompiler
+                if swiftLibrary: os.environ["USERSWIFTLIBRARY"] = swiftLibrary
+                configString = "%s compiler=%s" % (archConfig, compilers[ic])
+            else:
+                if sys.platform.startswith("darwin"):
+                    pipe = subprocess.Popen(['xcrun', '-find', c], stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+                    cmd_output = pipe.stdout.read()
+                    if cmd_output:
+                        if "not found" in cmd_output:
+                            print("dropping %s from the compilers used" % c)
+                            compilers.remove(i)
+                        else:
+                            compilers[i] = cmd_output.split('\n')[0]
+                            print("'xcrun -find %s' returning %s" % (c, compilers[i]))
 
     if not parsable:
         print("compilers=%s" % str(compilers))

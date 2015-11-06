@@ -321,7 +321,7 @@ GoASTContext::GetPluginVersion()
 }
 
 lldb::TypeSystemSP
-GoASTContext::CreateInstance (lldb::LanguageType language, Module *module, Target *target)
+GoASTContext::CreateInstance (lldb::LanguageType language, Module *module, Target *target, const char *compiler_options)
 {
     if (language == eLanguageTypeGo)
     {
@@ -562,7 +562,9 @@ GoASTContext::IsPolymorphicClass(lldb::opaque_compiler_type_t type)
 bool
 GoASTContext::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                     CompilerType *target_type, // Can pass NULL
-                                    bool check_cplusplus, bool check_objc)
+                                    bool check_cplusplus,
+                                    bool check_objc,
+                                    bool check_swift)
 {
     if (target_type)
         target_type->Clear();
@@ -1130,11 +1132,21 @@ GoASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type, size_t idx, std
 }
 
 CompilerType
-GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
-                                          bool omit_empty_base_classes, bool ignore_array_bounds, std::string &child_name,
-                                          uint32_t &child_byte_size, int32_t &child_byte_offset,
-                                          uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-                                          bool &child_is_base_class, bool &child_is_deref_of_parent, ValueObject *valobj)
+GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type,
+                                          ExecutionContext *exe_ctx,
+                                          size_t idx,
+                                          bool transparent_pointers,
+                                          bool omit_empty_base_classes,
+                                          bool ignore_array_bounds,
+                                          std::string &child_name,
+                                          uint32_t &child_byte_size,
+                                          int32_t &child_byte_offset,
+                                          uint32_t &child_bitfield_bit_size,
+                                          uint32_t &child_bitfield_bit_offset,
+                                          bool &child_is_base_class,
+                                          bool &child_is_deref_of_parent,
+                                          bool &child_is_indirect_enum_case,
+                                          ValueObject *valobj)
 {
     child_name.clear();
     child_byte_size = 0;
@@ -1164,10 +1176,20 @@ GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type, Exe
         if (transparent_pointers && pointee.IsAggregateType())
         {
             bool tmp_child_is_deref_of_parent = false;
-            return pointee.GetChildCompilerTypeAtIndex(exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-                                                    ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-                                                    child_bitfield_bit_size, child_bitfield_bit_offset,
-                                                    child_is_base_class, tmp_child_is_deref_of_parent, valobj);
+            return pointee.GetChildCompilerTypeAtIndex(exe_ctx,
+                                                       idx,
+                                                       transparent_pointers,
+                                                       omit_empty_base_classes,
+                                                       ignore_array_bounds,
+                                                       child_name,
+                                                       child_byte_size,
+                                                       child_byte_offset,
+                                                       child_bitfield_bit_size,
+                                                       child_bitfield_bit_offset,
+                                                       child_is_base_class,
+                                                       tmp_child_is_deref_of_parent,
+                                                       child_is_indirect_enum_case,
+                                                       valobj);
         }
         else
         {
@@ -1206,10 +1228,20 @@ GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type, Exe
     }
     else if (t->IsTypedef())
     {
-        return t->GetElementType().GetChildCompilerTypeAtIndex(
-            exe_ctx, idx, transparent_pointers, omit_empty_base_classes, ignore_array_bounds, child_name,
-            child_byte_size, child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
-            child_is_deref_of_parent, valobj);
+        return t->GetElementType().GetChildCompilerTypeAtIndex(exe_ctx,
+                                                               idx,
+                                                               transparent_pointers,
+                                                               omit_empty_base_classes,
+                                                               ignore_array_bounds,
+                                                               child_name,
+                                                               child_byte_size,
+                                                               child_byte_offset,
+                                                               child_bitfield_bit_size,
+                                                               child_bitfield_bit_offset,
+                                                               child_is_base_class,
+                                                               child_is_deref_of_parent,
+                                                               child_is_indirect_enum_case,
+                                                               valobj);
     }
     return CompilerType();
 }
@@ -1277,9 +1309,16 @@ GoASTContext::DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe
 }
 
 bool
-GoASTContext::DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s, lldb::Format format, const DataExtractor &data,
-                            lldb::offset_t byte_offset, size_t byte_size, uint32_t bitfield_bit_size,
-                            uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope)
+GoASTContext::DumpTypeValue(lldb::opaque_compiler_type_t type,
+                            Stream *s,
+                            lldb::Format format,
+                            const DataExtractor &data,
+                            lldb::offset_t byte_offset,
+                            size_t byte_size,
+                            uint32_t bitfield_bit_size,
+                            uint32_t bitfield_bit_offset,
+                            ExecutionContextScope *exe_scope,
+                            bool is_base_class)
 {
     if (!type)
         return false;
@@ -1305,7 +1344,8 @@ GoASTContext::DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s, lldb::
                 typedef_byte_size,   // Size of this type in bytes
                 bitfield_bit_size,   // Size in bits of a bitfield value, if zero don't treat as a bitfield
                 bitfield_bit_offset, // Offset in bits of a bitfield value if bitfield_bit_size != 0
-                exe_scope);
+                exe_scope,
+                is_base_class);
         }
 
         uint32_t item_count = 1;

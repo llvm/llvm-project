@@ -78,6 +78,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd (ll
     m_options.SetCoerceToId(false);
     m_options.SetUnwindOnError(true);
     m_options.SetKeepInMemory(true);
+    m_options.SetResultIsInternal(true);
     m_options.SetUseDynamic(lldb::eDynamicCanRunTarget);
 }
 

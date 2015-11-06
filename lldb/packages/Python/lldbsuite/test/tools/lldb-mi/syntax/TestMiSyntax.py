@@ -43,6 +43,10 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Create an alias for myexe
         complicated_myexe = "C--mpl-x file's`s @#$%^&*()_+-={}[]| name"
+        # Make sure to remove a file in case the test suite was cancelled or crashed
+        # when this link was created and before it was removed.
+        if os.path.exists(complicated_myexe):
+            os.unlink(complicated_myexe)
         os.symlink(self.myexe, complicated_myexe)
         self.addTearDownHook(lambda: os.unlink(complicated_myexe))
 
@@ -61,7 +65,6 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureLinux  # Failing in ~6/600 dosep runs (build 3120-3122)
     def test_lldbmi_process_output(self):
         """Test that 'lldb-mi --interpreter' wraps process output correctly."""
 

@@ -1,6 +1,9 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import lldb
+from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
 # System modules
 import os
 import sys
@@ -20,7 +23,8 @@ def source_type(filename):
         '.cxx' : 'CXX_SOURCES',
         '.cc' : 'CXX_SOURCES',
         '.m' : 'OBJC_SOURCES',
-        '.mm' : 'OBJCXX_SOURCES'
+        '.mm' : 'OBJCXX_SOURCES',
+        '.swift' : 'SWIFT_SOURCES'
     }.get(extension, None)
 
 class CommandParser:
@@ -185,7 +189,7 @@ def ApplyDecoratorsToFunction(func, decorators):
     elif hasattr(decorators, '__call__'):
         tmp = decorators(tmp)
     return tmp
-    
+
 
 def MakeInlineTest(__file, __globals, decorators=None):
     # Derive the test name from the current file name
@@ -203,6 +207,6 @@ def MakeInlineTest(__file, __globals, decorators=None):
 
     # Add the test case to the globals, and hide InlineTest
     __globals.update({test_name : test})
-    
+
     return test
 

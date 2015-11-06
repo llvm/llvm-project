@@ -7,10 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/Log.h"
+#include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
-#include "lldb/Core/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -94,6 +96,31 @@ ThreadPlanShouldStopHere::DefaultShouldStopHereCallback (ThreadPlan *current_pla
         }
     }
     
+    // Check whether the frame we are in is a language runtime thunk, only for step out:
+    if (operation == eFrameCompareOlder)
+    {
+        Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
+        if (symbol)
+        {
+            LanguageRuntime *language_runtime;
+            bool is_thunk = false;
+            ProcessSP process_sp(current_plan->GetThread().GetProcess());
+            enum LanguageType languages_to_try[] = {eLanguageTypeSwift, eLanguageTypeObjC, eLanguageTypeC_plus_plus};
+            
+            for (enum LanguageType language : languages_to_try)
+            {
+                language_runtime = process_sp->GetLanguageRuntime(language);
+                if (language_runtime)
+                    is_thunk = language_runtime->IsSymbolARuntimeThunk(*symbol);
+                if (is_thunk)
+                {
+                    should_stop_here = false;
+                    break;
+                }
+            }
+        }
+    }
+    
     // Always avoid code with line number 0.
     // FIXME: At present the ShouldStop and the StepFromHere calculate this independently.  If this ever
     // becomes expensive (this one isn't) we can try to have this set a state that the StepFromHere can use.
@@ -119,22 +146,30 @@ ThreadPlanShouldStopHere::DefaultStepFromHereCallback (ThreadPlan *current_plan,
     ThreadPlanSP return_plan_sp;
     // If we are stepping through code at line number 0, then we need to step over this range.  Otherwise
     // we will step out.
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_STEP));
     StackFrame *frame = current_plan->GetThread().GetStackFrameAtIndex(0).get();
     if (!frame)
         return return_plan_sp;
+
     SymbolContext sc;
     sc = frame->GetSymbolContext (eSymbolContextLineEntry);
     if (sc.line_entry.line == 0)
     {
         AddressRange range = sc.line_entry.range;
-        return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepOverRange(false,
+        if (log)
+            log->Printf ("ThreadPlanShouldStopHere::DefaultStepFromHereCallback Queueing StepInRange plan to step through line 0 code.");
+        
+        return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepInRange(false,
                                                                                    range,
                                                                                    sc,
+                                                                                   NULL,
                                                                                    eOnlyDuringStepping,
+                                                                                   eLazyBoolCalculate,
                                                                                    eLazyBoolNo);
     }
     
     if (!return_plan_sp)
+    {
         return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepOutNoShouldStop (false,
                                                                                           NULL,
                                                                                           true,
@@ -142,6 +177,7 @@ ThreadPlanShouldStopHere::DefaultStepFromHereCallback (ThreadPlan *current_plan,
                                                                                           eVoteNo,
                                                                                           eVoteNoOpinion,
                                                                                           frame_index);
+    }
     return return_plan_sp;
 }
 

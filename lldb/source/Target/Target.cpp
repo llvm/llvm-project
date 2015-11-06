@@ -10,6 +10,7 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "swift/Frontend/Frontend.h"
 // Project includes
 #include "lldb/Target/Target.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
@@ -35,6 +36,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTSource.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
+#include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -44,6 +46,8 @@
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Language.h"
@@ -73,7 +77,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch, const lldb::Plat
     ExecutionContextScope (),
     m_debugger (debugger),
     m_platform_sp (platform_sp),
-    m_mutex (Mutex::eMutexTypeRecursive), 
+    m_mutex (Mutex::eMutexTypeRecursive),
     m_arch (target_arch),
     m_images (this),
     m_section_load_history (),
@@ -358,7 +362,15 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
                 
             case eInlineBreakpointsHeaders:
                 if (file.IsSourceImplementationFile())
-                    check_inlines = eLazyBoolNo;
+                {
+                    // Swift can inline a lot of code from other swift files so always
+                    // check inlines for swift source files
+                    static ConstString g_swift_extension("swift");
+                    if (file.GetFileNameExtension() == g_swift_extension)
+                        check_inlines = eLazyBoolYes;
+                    else
+                        check_inlines = eLazyBoolNo;
+                }
                 else
                     check_inlines = eLazyBoolYes;
                 break;
@@ -582,6 +594,7 @@ BreakpointSP
 Target::CreateFuncRegexBreakpoint (const FileSpecList *containingModules, 
                                    const FileSpecList *containingSourceFiles,
                                    RegularExpression &func_regex, 
+                                   lldb::LanguageType requested_language,
                                    LazyBool skip_prologue,
                                    bool internal,
                                    bool hardware)
@@ -591,7 +604,8 @@ Target::CreateFuncRegexBreakpoint (const FileSpecList *containingModules,
       (skip_prologue == eLazyBoolCalculate) ? GetSkipPrologue()
                                             : static_cast<bool>(skip_prologue);
     BreakpointResolverSP resolver_sp(new BreakpointResolverName (NULL, 
-                                                                 func_regex, 
+                                                                 func_regex,
+                                                                 requested_language,
                                                                  skip));
 
     return CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, true);
@@ -1241,44 +1255,70 @@ bool
 Target::SetArchitecture (const ArchSpec &arch_spec)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TARGET));
-    if (m_arch.IsCompatibleMatch(arch_spec) || !m_arch.IsValid())
+    bool missing_local_arch = (false == m_arch.IsValid());
+    bool replace_local_arch = true;
+    bool compatible_local_arch = false;
+    ArchSpec other(arch_spec);
+
+    if (!missing_local_arch)
     {
-        // If we haven't got a valid arch spec, or the architectures are
-        // compatible, so just update the architecture. Architectures can be
-        // equal, yet the triple OS and vendor might change, so we need to do
-        // the assignment here just in case.
-        m_arch = arch_spec;
+        if (m_arch.IsCompatibleMatch(arch_spec))
+        {
+            other.MergeFrom(m_arch);
+            
+            if (m_arch.IsCompatibleMatch(other))
+            {
+                compatible_local_arch = true;
+                bool arch_changed, vendor_changed, os_changed, os_ver_changed, env_changed;
+                
+                m_arch.PiecewiseTripleCompare(other,
+                                              arch_changed,
+                                              vendor_changed,
+                                              os_changed,
+                                              os_ver_changed,
+                                              env_changed);
+                
+                if (!arch_changed && !vendor_changed && !os_changed)
+                    replace_local_arch = false;
+            }
+        }
+    }
+
+    if (compatible_local_arch || missing_local_arch)
+    {
+        // If we haven't got a valid arch spec, or the architectures are compatible
+        // update the architecture, unless the one we already have is more specified
+        if (replace_local_arch)
+            m_arch = other;
         if (log)
-            log->Printf ("Target::SetArchitecture setting architecture to %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
+            log->Printf ("Target::SetArchitecture set architecture to %s (%s)", m_arch.GetArchitectureName(), m_arch.GetTriple().getTriple().c_str());
         return true;
     }
-    else
-    {
-        // If we have an executable file, try to reset the executable to the desired architecture
-        if (log)
-          log->Printf ("Target::SetArchitecture changing architecture to %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
-        m_arch = arch_spec;
-        ModuleSP executable_sp = GetExecutableModule ();
+    
+    // If we have an executable file, try to reset the executable to the desired architecture
+    if (log)
+      log->Printf ("Target::SetArchitecture changing architecture to %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
+    m_arch = other;
+    ModuleSP executable_sp = GetExecutableModule ();
 
-        ClearModules(true);
-        // Need to do something about unsetting breakpoints.
-        
-        if (executable_sp)
+    ClearModules(true);
+    // Need to do something about unsetting breakpoints.
+    
+    if (executable_sp)
+    {
+        if (log)
+          log->Printf("Target::SetArchitecture Trying to select executable file architecture %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
+        ModuleSpec module_spec (executable_sp->GetFileSpec(), other);
+        Error error = ModuleList::GetSharedModule (module_spec, 
+                                                   executable_sp, 
+                                                   &GetExecutableSearchPaths(),
+                                                   NULL, 
+                                                   NULL);
+                                      
+        if (!error.Fail() && executable_sp)
         {
-            if (log)
-              log->Printf("Target::SetArchitecture Trying to select executable file architecture %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
-            ModuleSpec module_spec (executable_sp->GetFileSpec(), arch_spec);
-            Error error = ModuleList::GetSharedModule (module_spec, 
-                                                       executable_sp, 
-                                                       &GetExecutableSearchPaths(),
-                                                       NULL, 
-                                                       NULL);
-                                          
-            if (!error.Fail() && executable_sp)
-            {
-                SetExecutableModule (executable_sp, true);
-                return true;
-            }
+            SetExecutableModule (executable_sp, true);
+            return true;
         }
     }
     return false;
@@ -1343,7 +1383,10 @@ Target::ModuleUpdated (const ModuleList& module_list, const ModuleSP &old_module
 {
     // A module is replacing an already added module
     if (m_valid)
+    {
         m_breakpoint_list.UpdateBreakpointsWhenModuleIsReplaced(old_module_sp, new_module_sp);
+        m_internal_breakpoint_list.UpdateBreakpointsWhenModuleIsReplaced(old_module_sp, new_module_sp);
+    }
 }
 
 void
@@ -1352,10 +1395,18 @@ Target::ModulesDidLoad (ModuleList &module_list)
     if (m_valid && module_list.GetSize())
     {
         m_breakpoint_list.UpdateBreakpoints (module_list, true, false);
+        m_internal_breakpoint_list.UpdateBreakpoints (module_list, true, false);
         if (m_process_sp)
         {
             m_process_sp->ModulesDidLoad (module_list);
         }
+        // if there's no SwiftASTContext, clearing it doesn't really matter
+        const bool create_on_demand = false;
+        Error error;
+        auto swift_ast_ctx = GetScratchSwiftASTContext(error, create_on_demand);
+        if (swift_ast_ctx)
+            swift_ast_ctx->ModulesDidLoad(module_list);
+        module_list.ClearModuleDependentCaches();
         BroadcastEvent (eBroadcastBitModulesLoaded, new TargetEventData (this->shared_from_this(), module_list));
     }
 }
@@ -1376,6 +1427,7 @@ Target::SymbolsDidLoad (ModuleList &module_list)
         }
         
         m_breakpoint_list.UpdateBreakpoints (module_list, true, false);
+        m_internal_breakpoint_list.UpdateBreakpoints (module_list, true, false);
         BroadcastEvent (eBroadcastBitSymbolsLoaded, new TargetEventData (this->shared_from_this(), module_list));
     }
 }
@@ -1387,6 +1439,7 @@ Target::ModulesDidUnload (ModuleList &module_list, bool delete_locations)
     {
         UnloadModuleSections (module_list);
         m_breakpoint_list.UpdateBreakpoints (module_list, false, delete_locations);
+        m_internal_breakpoint_list.UpdateBreakpoints (module_list, false, delete_locations);
         BroadcastEvent (eBroadcastBitModulesUnloaded, new TargetEventData (this->shared_from_this(), module_list));
     }
 }
@@ -1935,7 +1988,7 @@ Target::ImageSearchPathsChanged(const PathMappingList &path_list,
 }
 
 TypeSystem *
-Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType language, bool create_on_demand)
+Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType language, bool create_on_demand, const char *compiler_options)
 {
     if (!m_valid)
         return nullptr;
@@ -1970,7 +2023,26 @@ Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType langua
         }
     }
 
-    return m_scratch_type_system_map.GetTypeSystemForLanguage(language, this, create_on_demand);
+
+    TypeSystem *type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(language, this, create_on_demand, compiler_options);
+    if (language == eLanguageTypeSwift)
+    {
+        if (SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(type_system))
+        {
+            if (swift_ast_ctx->CheckProcessChanged())
+            {
+                m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+                type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(language, this, create_on_demand, compiler_options);
+            }
+        }
+    }
+    return type_system;
+}
+
+const TypeSystemMap &
+Target::GetTypeSystemMap ()
+{
+    return m_scratch_type_system_map;
 }
 
 PersistentExpressionState *
@@ -2088,6 +2160,12 @@ Target::GetClangASTImporter()
         return ast_importer;
     }
     return nullptr;
+}
+
+SwiftASTContext *
+Target::GetScratchSwiftASTContext(Error &error, bool create_on_demand, const char *extra_options)
+{
+    return llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
 }
 
 void
@@ -2910,6 +2988,58 @@ Target::ClearAllLoadedSections ()
     m_section_load_history.Clear();
 }
 
+lldb::addr_t
+Target::FindLoadAddrForNameInSymbolsAndPersistentVariables(ConstString name_const_str, SymbolType symbol_type)
+{
+    lldb::addr_t symbol_addr = LLDB_INVALID_ADDRESS;
+    SymbolContextList sc_list;
+    
+    if (GetImages().FindSymbolsWithNameAndType(name_const_str, symbol_type, sc_list))
+    {
+        SymbolContext desired_symbol;
+        
+        if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, desired_symbol))
+        {
+            if (desired_symbol.symbol)
+            {
+                symbol_addr = desired_symbol.symbol->GetAddress().GetLoadAddress(this);
+            }
+        }
+        else if (sc_list.GetSize() > 1)
+        {
+            for (size_t i = 0; i < sc_list.GetSize(); i++)
+            {
+                if (sc_list.GetContextAtIndex(i, desired_symbol))
+                {
+                    if (desired_symbol.symbol)
+                    {
+                        symbol_addr = desired_symbol.symbol->GetAddress().GetLoadAddress(this);
+                        if (symbol_addr != LLDB_INVALID_ADDRESS)
+                            break;
+                    }
+                }
+            }
+        }
+    }
+    
+    if (symbol_addr == LLDB_INVALID_ADDRESS)
+    {
+        // If we didn't find it in the symbols, check the ClangPersistentVariables, 'cause we may have
+        // made it by hand.
+        ConstString mangled_const_str;
+        if (name_const_str.GetMangledCounterpart(mangled_const_str))
+            symbol_addr = GetPersistentSymbol (mangled_const_str);
+    }
+    
+    if (symbol_addr == LLDB_INVALID_ADDRESS)
+    {
+        // Let's try looking for the name passed-in itself, as it might be a mangled name
+        symbol_addr = GetPersistentSymbol (name_const_str);
+    }
+    
+    return symbol_addr;
+}
+
 Error
 Target::Launch (ProcessLaunchInfo &launch_info, Stream *stream)
 {
@@ -3361,7 +3491,10 @@ g_properties[] =
     { "exec-search-paths"                  , OptionValue::eTypeFileSpecList, false, 0                       , NULL, NULL, "Executable search paths to use when locating executable files whose paths don't match the local file system." },
     { "debug-file-search-paths"            , OptionValue::eTypeFileSpecList, false, 0                       , NULL, NULL, "List of directories to be searched when locating debug symbol files." },
     { "clang-module-search-paths"          , OptionValue::eTypeFileSpecList, false, 0                       , NULL, NULL, "List of directories to be searched when locating modules for Clang." },
-    { "auto-import-clang-modules"          , OptionValue::eTypeBoolean   , false, false                     , NULL, NULL, "Automatically load Clang modules referred to by the program." },
+    { "swift-framework-search-paths"       , OptionValue::eTypeFileSpecList, false, 0                       , NULL, NULL, "List of directories to be searched when locating fraomeworks for Swift." },
+    { "swift-module-search-paths"          , OptionValue::eTypeFileSpecList, false, 0                       , NULL, NULL, "List of directories to be searched when locating modules for Swift." },
+    { "auto-import-clang-modules"          , OptionValue::eTypeBoolean   , false, false                     , NULL, NULL, "Automatically load Swift modules referred to by the program." },
+    { "use-all-compiler-flags"             , OptionValue::eTypeBoolean   , false, false                     , NULL, NULL, "Try to use compiler flags for all modules when setting up the Swift expression parser, not just the main executable." },
     { "max-children-count"                 , OptionValue::eTypeSInt64    , false, 256                       , NULL, NULL, "Maximum number of children to expand in any level of depth." },
     { "max-string-summary-length"          , OptionValue::eTypeSInt64    , false, 1024                      , NULL, NULL, "Maximum number of characters to show when using %s in summary strings." },
     { "max-memory-read-size"               , OptionValue::eTypeSInt64    , false, 1024                      , NULL, NULL, "Maximum number of bytes that 'memory read' will fetch before --force must be specified." },
@@ -3398,6 +3531,8 @@ g_properties[] =
         "'minimal' is the fastest setting and will load section data with no symbols, but should rarely be used as stack frames in these memory regions will be inaccurate and not provide any context (fastest). " },
     { "display-expression-in-crashlogs"    , OptionValue::eTypeBoolean   , false, false,                      NULL, NULL, "Expressions that crash will show up in crash logs if the host system supports executable specific crash log strings and this setting is set to true." },
     { "trap-handler-names"                 , OptionValue::eTypeArray     , true,  OptionValue::eTypeString,   NULL, NULL, "A list of trap handler function names, e.g. a common Unix user process one is _sigtramp." },
+    { "sdk-path"                           , OptionValue::eTypeFileSpec  , false, 0,                          NULL, NULL, "The path to the SDK used to build the current target." },
+    { "module-cache-path"                  , OptionValue::eTypeFileSpec  , false, 0,                          NULL, NULL, "The path to the module-cache directory." },
     { "display-runtime-support-values"     , OptionValue::eTypeBoolean   , false, false,                      NULL, NULL, "If true, LLDB will show variables that are meant to support the operation of a language's runtime support." },
     { "non-stop-mode"                      , OptionValue::eTypeBoolean   , false, 0,                          NULL, NULL, "Disable lock-step debugging, instead control threads independently." },
     { NULL                                 , OptionValue::eTypeInvalid   , false, 0                         , NULL, NULL, NULL }
@@ -3416,7 +3551,10 @@ enum
     ePropertyExecutableSearchPaths,
     ePropertyDebugFileSearchPaths,
     ePropertyClangModuleSearchPaths,
+    ePropertySwiftFrameworkSearchPaths,
+    ePropertySwiftModuleSearchPaths,
     ePropertyAutoImportClangModules,
+    ePropertyUseAllCompilerFlags,
     ePropertyMaxChildrenCount,
     ePropertyMaxSummaryLength,
     ePropertyMaxMemReadSize,
@@ -3440,6 +3578,8 @@ enum
     ePropertyMemoryModuleLoadLevel,
     ePropertyDisplayExpressionsInCrashlogs,
     ePropertyTrapHandlerNames,
+    ePropertySDKPath,
+    ePropertyModuleCachePath,
     ePropertyDisplayRuntimeSupportValues,
     ePropertyNonStopModeEnabled
 };
@@ -3772,6 +3912,42 @@ TargetProperties::GetDebugFileSearchPaths ()
     return option_value->GetCurrentValue();
 }
 
+FileSpec &
+TargetProperties::GetModuleCachePath ()
+{
+    const uint32_t idx = ePropertyModuleCachePath;
+    OptionValueFileSpec *option_value = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec (NULL, false, idx);
+    assert (option_value);
+    return option_value->GetCurrentValue();
+}
+
+FileSpec &
+TargetProperties::GetSDKPath ()
+{
+    const uint32_t idx = ePropertySDKPath;
+    OptionValueFileSpec *option_value = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec (NULL, false, idx);
+    assert (option_value);
+    return option_value->GetCurrentValue();
+}
+
+FileSpecList &
+TargetProperties::GetSwiftFrameworkSearchPaths ()
+{
+    const uint32_t idx = ePropertySwiftFrameworkSearchPaths;
+    OptionValueFileSpecList *option_value = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList (NULL, false, idx);
+    assert (option_value);
+    return option_value->GetCurrentValue();
+}
+
+FileSpecList &
+TargetProperties::GetSwiftModuleSearchPaths ()
+{
+    const uint32_t idx = ePropertySwiftModuleSearchPaths;
+    OptionValueFileSpecList *option_value = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList (NULL, false, idx);
+    assert (option_value);
+    return option_value->GetCurrentValue();
+}
+
 FileSpecList &
 TargetProperties::GetClangModuleSearchPaths ()
 {
@@ -3785,6 +3961,13 @@ bool
 TargetProperties::GetEnableAutoImportClangModules() const
 {
     const uint32_t idx = ePropertyAutoImportClangModules;
+    return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
+}
+
+bool
+TargetProperties::GetUseAllCompilerFlags() const
+{
+    const uint32_t idx = ePropertyUseAllCompilerFlags;
     return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
 }
 
@@ -4087,6 +4270,17 @@ TargetProperties::DisableSTDIOValueChangedCallback(void *target_property_ptr, Op
         this_->m_launch_info.GetFlags().Set(lldb::eLaunchFlagDisableSTDIO);
     else
         this_->m_launch_info.GetFlags().Clear(lldb::eLaunchFlagDisableSTDIO);
+}
+
+uint32_t
+EvaluateExpressionOptions::GetExpressionNumber () const
+{
+    if (m_expr_number == 0)
+    {
+        static uint32_t g_expr_idx = 0;
+        m_expr_number = ++g_expr_idx;
+    }
+    return m_expr_number;
 }
 
 //----------------------------------------------------------------------

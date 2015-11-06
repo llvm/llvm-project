@@ -14,6 +14,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Flags.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/ValueObjectList.h"
@@ -138,11 +139,20 @@ ValueObjectVariable::UpdateValue ()
         // expr doesn't contain DWARF bytes, it contains the constant variable
         // value bytes themselves...
         if (expr.GetExpressionData(m_data))
+        {
+            if (m_data.GetDataStart() && m_data.GetByteSize())
+                m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
             m_value.SetContext(Value::eContextTypeVariable, variable);
+        }
         else
-            m_error.SetErrorString ("empty constant data");
+        {
+            CompilerType var_type(GetCompilerTypeImpl());
+            if (var_type.IsValid() && !SwiftASTContext::IsPossibleZeroSizeType(var_type))
+                m_error.SetErrorString ("empty constant data");
+        }
         // constant bytes can't be edited - sorry
         m_resolved_value.SetContext(Value::eContextTypeInvalid, NULL);
+        SetAddressTypeOfChildren(eAddressTypeInvalid);
     }
     else
     {
@@ -177,7 +187,7 @@ ValueObjectVariable::UpdateValue ()
 
             Process *process = exe_ctx.GetProcessPtr();
             const bool process_is_alive = process && process->IsAlive();
-            const uint32_t type_info = compiler_type.GetTypeInfo();
+            const uint32_t type_info = compiler_type.IsValid() ? compiler_type.GetTypeInfo() : 0;
             const bool is_pointer_or_ref = (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
 
             switch (value_type)

@@ -165,7 +165,7 @@ InlineFunctionInfo::GetDisplayName (LanguageType language) const
 {
     if (m_mangled)
         return m_mangled.GetDisplayDemangledName(language);
-    return m_name;
+    return GetName(language);
 }
 
 Declaration &
@@ -497,7 +497,7 @@ ConstString
 Function::GetDisplayName () const
 {
     if (!m_mangled)
-        return ConstString();
+        return GetName();
     return m_mangled.GetDisplayDemangledName(GetLanguage());
 }
 
@@ -667,6 +667,3 @@ Function::GetNameNoArguments() const
         language = m_comp_unit->GetLanguage();
     return m_mangled.GetName(language, Mangled::ePreferDemangledWithoutArguments);
 }
-
-
-

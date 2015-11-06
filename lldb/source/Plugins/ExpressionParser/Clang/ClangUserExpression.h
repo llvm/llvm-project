@@ -30,6 +30,7 @@
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 
 namespace lldb_private
 {
@@ -113,6 +114,9 @@ public:
     /// @param[in] desired_type
     ///     If not eResultTypeAny, the type to use for the expression
     ///     result.
+    ///
+    /// @param[in] options
+    ///     Additional options for the expression.
     //------------------------------------------------------------------
     ClangUserExpression (ExecutionContextScope &exe_scope,
                          const char *expr,
@@ -149,7 +153,8 @@ public:
            ExecutionContext &exe_ctx,
            lldb_private::ExecutionPolicy execution_policy,
            bool keep_result_in_memory,
-           bool generate_debug_info) override;
+           bool generate_debug_info,
+           uint32_t line_offset = 0) override;
 
     ExpressionTypeSystemHelper *
     GetTypeSystemHelper () override
@@ -177,7 +182,7 @@ public:
 
     lldb::ExpressionVariableSP
     GetResultAfterDematerialization(ExecutionContextScope *exe_scope) override;
-    
+
 private:
     //------------------------------------------------------------------
     /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the environment.

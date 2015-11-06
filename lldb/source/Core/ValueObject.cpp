@@ -44,6 +44,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Type.h"
 
 #include "lldb/Target/ExecutionContext.h"
@@ -107,8 +108,11 @@ ValueObject::ValueObject (ValueObject &parent) :
     m_is_child_at_offset(false),
     m_is_getting_summary(false),
     m_did_calculate_complete_objc_class_type(false),
+    m_ignore_instance_pointerness(false),
     m_is_synthetic_children_generated(parent.m_is_synthetic_children_generated)
 {
+    m_data.SetByteOrder(parent.GetDataExtractor().GetByteOrder());
+    m_data.SetAddressByteSize(parent.GetDataExtractor().GetAddressByteSize());
     m_manager->ManageObject(this);
 }
 
@@ -158,8 +162,19 @@ ValueObject::ValueObject (ExecutionContextScope *exe_scope,
     m_is_child_at_offset(false),
     m_is_getting_summary(false),
     m_did_calculate_complete_objc_class_type(false),
+    m_ignore_instance_pointerness(false),
     m_is_synthetic_children_generated(false)
 {
+    if (exe_scope)
+    {
+        TargetSP target_sp (exe_scope->CalculateTarget());
+        if (target_sp)
+        {
+            const ArchSpec &arch = target_sp->GetArchitecture();
+            m_data.SetByteOrder(arch.GetByteOrder());
+            m_data.SetAddressByteSize(arch.GetAddressByteSize());
+        }
+    }
     m_manager = new ValueObjectManager();
     m_manager->ManageObject (this);
 }
@@ -284,8 +299,8 @@ ValueObject::UpdateFormatsIfNeeded()
                     DataVisualization::GetCurrentRevision());
 
     bool any_change = false;
-
-    if ( (m_last_format_mgr_revision != DataVisualization::GetCurrentRevision()))
+    
+    if (GetCompilerType().IsValid() && (m_last_format_mgr_revision != DataVisualization::GetCurrentRevision()))
     {
         m_last_format_mgr_revision = DataVisualization::GetCurrentRevision();
         any_change = true;
@@ -335,6 +350,9 @@ ValueObject::MaybeCalculateCompleteType ()
             return compiler_type;
     }
     
+    if (!compiler_type.IsValid())
+        return compiler_type;
+    
     CompilerType class_type;
     bool is_pointer_type = false;
     
@@ -350,6 +368,12 @@ ValueObject::MaybeCalculateCompleteType ()
     {
         return compiler_type;
     }
+    
+    auto make_pointer_if_needed = [] (CompilerType compiler_type, bool is_pointer_type) -> CompilerType {
+        if (is_pointer_type)
+            return compiler_type.GetPointerType();
+        return compiler_type;
+    };
     
     m_did_calculate_complete_objc_class_type = true;
     
@@ -375,18 +399,43 @@ ValueObject::MaybeCalculateCompleteType ()
                         
                         if (complete_class.GetCompleteType())
                         {
-                            if (is_pointer_type)
+                            m_override_type = make_pointer_if_needed(complete_class, is_pointer_type);
+                            if (m_override_type.IsValid())
+                                return m_override_type;
+                        }
+                    }
+                    
+                    std::vector<clang::NamedDecl*> decls;
+                    
+                    // try the modules
+                    if (TargetSP target_sp = GetTargetSP())
+                    {
+                        if (auto clang_modules_decl_vendor = target_sp->GetClangModulesDeclVendor())
+                        {
+                            if (clang_modules_decl_vendor->FindDecls(class_name, false, UINT32_MAX, decls) > 0 &&
+                                decls.size() > 0)
                             {
-                                m_override_type = complete_class.GetPointerType();
-                            }
-                            else
-                            {
-                                m_override_type = complete_class;
+                                CompilerType module_type = ClangASTContext::GetTypeForDecl(decls.front());
+                                m_override_type = make_pointer_if_needed(module_type, is_pointer_type);
                             }
                             
                             if (m_override_type.IsValid())
                                 return m_override_type;
                         }
+                    }
+
+                    // then try the runtime
+                    if (auto runtime_vendor = objc_language_runtime->GetDeclVendor())
+                    {
+                        if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX, decls) > 0 &&
+                            decls.size() > 0)
+                        {
+                            CompilerType runtime_type = ClangASTContext::GetTypeForDecl(decls.front());
+                            m_override_type = make_pointer_if_needed(runtime_type, is_pointer_type);
+                        }
+                        
+                        if (m_override_type.IsValid())
+                            return m_override_type;
                     }
                 }
             }
@@ -460,11 +509,29 @@ ValueObject::GetLocationAsCStringImpl (const Value& value,
                         else if (reg_info->alt_name)
                             m_location_str = reg_info->alt_name;
                         if (m_location_str.empty())
-                            m_location_str = (reg_info->encoding == lldb::eEncodingVector) ? "vector" : "scalar";
+                        {
+                            if (reg_info->encoding == lldb::eEncodingVector)
+                                m_location_str = "vector_reg";
+                            else
+                            {
+                                uint32_t addr_nibble_size = data.GetAddressByteSize() * 2;
+                                sstr.Printf("scalar_reg(0x%*.*llx)", addr_nibble_size, addr_nibble_size, value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS));
+                                m_location_str.swap(sstr.GetString());
+                            }
+                        }
                     }
                 }
                 if (m_location_str.empty())
-                    m_location_str = (value_type == Value::eValueTypeVector) ? "vector" : "scalar";
+                {
+                    if (value_type == Value::eValueTypeVector)
+                        m_location_str = "vector";
+                    else
+                    {
+                        uint32_t addr_nibble_size = data.GetAddressByteSize() * 2;
+                        sstr.Printf("scalar(0x%*.*llx)", addr_nibble_size, addr_nibble_size, value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS));
+                        m_location_str.swap(sstr.GetString());
+                    }
+                }
                 break;
 
             case Value::eValueTypeLoadAddress:
@@ -480,6 +547,19 @@ ValueObject::GetLocationAsCStringImpl (const Value& value,
         }
     }
     return m_location_str.c_str();
+}
+
+lldb_private::Error
+ValueObject::GetValueAsData (ExecutionContext *exe_ctx,
+                             DataExtractor &data,
+                             uint32_t data_offset,
+                             Module *module,
+                             bool mask_error_on_zerosize_type)
+{
+    Error err = m_value.GetValueAsData(exe_ctx, data, data_offset, module);
+    if (err.Fail() && mask_error_on_zerosize_type && SwiftASTContext::IsPossibleZeroSizeType(GetCompilerType()))
+        return Error();
+    return err;
 }
 
 Value &
@@ -776,9 +856,13 @@ ValueObject::GetChildMemberWithName (const ConstString &name, bool can_create)
 
     std::vector<uint32_t> child_indexes;
     bool omit_empty_base_classes = true;
+    
+    if (!GetCompilerType().IsValid())
+        return ValueObjectSP();
+    
     const size_t num_child_indexes =  GetCompilerType().GetIndexOfChildMemberWithName (name.GetCString(),
-                                                                                    omit_empty_base_classes,
-                                                                                    child_indexes);
+                                                                                       omit_empty_base_classes,
+                                                                                       child_indexes);
     if (num_child_indexes > 0)
     {
         std::vector<uint32_t>::const_iterator pos = child_indexes.begin ();
@@ -873,6 +957,7 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
     uint32_t child_bitfield_bit_offset = 0;
     bool child_is_base_class = false;
     bool child_is_deref_of_parent = false;
+    bool is_indirect_enum_case = false;
 
     const bool transparent_pointers = synthetic_array_member == false;
     CompilerType child_compiler_type;
@@ -891,6 +976,7 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
                                                                       child_bitfield_bit_offset,
                                                                       child_is_base_class,
                                                                       child_is_deref_of_parent,
+                                                                      is_indirect_enum_case,
                                                                       this);
     if (child_compiler_type)
     {
@@ -910,8 +996,16 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
                                        child_bitfield_bit_offset,
                                        child_is_base_class,
                                        child_is_deref_of_parent,
+                                       is_indirect_enum_case,
                                        eAddressTypeInvalid);
-        //if (valobj)
+        
+        if (valobj && child_is_base_class)
+        {
+            Flags flags(child_compiler_type.GetTypeInfo());
+            if (flags.AnySet(eTypeInstanceIsPointer))
+                valobj->SetIgnoreInstancePointerness(true);
+        }
+            //if (valobj)
         //    valobj->SetAddressTypeOfChildren(eAddressTypeInvalid);
    }
     
@@ -2058,7 +2152,27 @@ ValueObject::GetQualifiedTypeName()
 LanguageType
 ValueObject::GetObjectRuntimeLanguage ()
 {
-    return GetCompilerType().GetMinimumLanguage ();
+    if (GetCompilerType().IsValid())
+        return GetCompilerType().GetMinimumLanguage ();
+    return lldb::eLanguageTypeUnknown;
+}
+
+SwiftASTContext *
+ValueObject::GetSwiftASTContext ()
+{
+    if (GetObjectRuntimeLanguage() != lldb::eLanguageTypeSwift)
+        return nullptr;
+    lldb::ModuleSP module_sp(GetModule());
+    if (module_sp)
+        return llvm::dyn_cast<SwiftASTContext>(module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+
+    lldb::TargetSP target_sp(GetTargetSP());
+    if (target_sp)
+    {
+        Error error;
+        return target_sp->GetScratchSwiftASTContext(error);
+    }
+    return nullptr;
 }
 
 void
@@ -2121,7 +2235,7 @@ ValueObject::IsPossibleDynamicType ()
     if (process)
         return process->IsPossibleDynamicValue(*this);
     else
-        return GetCompilerType().IsPossibleDynamicType (NULL, true, true);
+        return GetCompilerType().IsPossibleDynamicType (NULL, true, true, true);
 }
 
 bool
@@ -2142,13 +2256,18 @@ ValueObject::IsRuntimeSupportValue ()
 bool
 ValueObject::IsObjCNil ()
 {
-    const uint32_t mask = eTypeIsObjC | eTypeIsPointer;
-    bool isObjCpointer = (((GetCompilerType().GetTypeInfo(NULL)) & mask) == mask);
-    if (!isObjCpointer)
-        return false;
-    bool canReadValue = true;
-    bool isZero = GetValueAsUnsigned(0,&canReadValue) == 0;
-    return canReadValue && isZero;
+    CompilerType clang_type(GetCompilerType());
+    if (clang_type.IsValid())
+    {
+        const uint32_t mask = eTypeIsObjC | eTypeIsPointer;
+        bool isObjCpointer = (((clang_type.GetTypeInfo(NULL)) & mask) == mask);
+        if (!isObjCpointer)
+            return false;
+        bool canReadValue = true;
+        bool isZero = GetValueAsUnsigned(0,&canReadValue) == 0;
+        return canReadValue && isZero;
+    }
+    return false;
 }
 
 // This allows you to create an array member using and index
@@ -2219,6 +2338,7 @@ ValueObject::GetSyntheticBitFieldChild (uint32_t from, uint32_t to, bool can_cre
                                                                       from,
                                                                       false,
                                                                       false,
+                                                                      false,
                                                                       eAddressTypeInvalid);
             
             // Cache the value if we got one back...
@@ -2265,6 +2385,7 @@ ValueObject::GetSyntheticChildAtOffset(uint32_t offset, const CompilerType& type
                                                              0,
                                                              false,
                                                              false,
+                                                             false,
                                                              eAddressTypeInvalid);
     if (synthetic_child)
     {
@@ -2307,6 +2428,7 @@ ValueObject::GetSyntheticBase (uint32_t offset, const CompilerType& type, bool c
                                                              0,
                                                              0,
                                                              is_base_class,
+                                                             false,
                                                              false,
                                                              eAddressTypeInvalid);
     if (synthetic_child)
@@ -3780,6 +3902,7 @@ ValueObject::Dereference (Error &error)
         uint32_t child_bitfield_bit_offset = 0;
         bool child_is_base_class = false;
         bool child_is_deref_of_parent = false;
+        bool is_indirect_enum_case = false;
         const bool transparent_pointers = false;
         CompilerType compiler_type = GetCompilerType();
         CompilerType child_compiler_type;
@@ -3798,6 +3921,7 @@ ValueObject::Dereference (Error &error)
                                                                          child_bitfield_bit_offset,
                                                                          child_is_base_class,
                                                                          child_is_deref_of_parent,
+                                                                         is_indirect_enum_case,
                                                                          this);
         if (child_compiler_type && child_byte_size)
         {
@@ -3814,6 +3938,7 @@ ValueObject::Dereference (Error &error)
                                                    child_bitfield_bit_offset,
                                                    child_is_base_class,
                                                    child_is_deref_of_parent,
+                                                   is_indirect_enum_case,
                                                    eAddressTypeInvalid);
         }
     }
@@ -4366,4 +4491,16 @@ void
 ValueObject::SetSyntheticChildrenGenerated (bool b)
 {
     m_is_synthetic_children_generated = b;
+}
+
+bool
+ValueObject::GetIgnoreInstancePointerness ()
+{
+    return m_ignore_instance_pointerness;
+}
+
+void
+ValueObject::SetIgnoreInstancePointerness (bool b)
+{
+    m_ignore_instance_pointerness = b;
 }

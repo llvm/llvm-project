@@ -21,14 +21,17 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
@@ -40,6 +43,9 @@
 
 #include "Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
+#include "swift/Basic/LangOptions.h"
+#include "swift/Serialization/Validation.h"
+#include "swift/Frontend/Frontend.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/Signals.h"
 
@@ -418,8 +424,14 @@ Module::GetUUID()
 
 TypeSystem *
 Module::GetTypeSystemForLanguage (LanguageType language)
-{
+{                      
     return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
+}
+
+SwiftASTContext *
+Module::GetSwiftASTContextNoCreate ()
+{
+    return llvm::dyn_cast_or_null<SwiftASTContext>(m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false));
 }
 
 void
@@ -1631,6 +1643,8 @@ Module::SetArchitecture (const ArchSpec &new_arch)
     if (!m_arch.IsValid())
     {
         m_arch = new_arch;
+        if (SwiftASTContext *swift_ast = GetSwiftASTContextNoCreate())
+            swift_ast->SetTriple(new_arch.GetTriple().str().c_str());
         return true;
     }    
     return m_arch.IsCompatibleMatch(new_arch);
@@ -1750,6 +1764,8 @@ Module::PrepareForFunctionNameLookup (const ConstString &name,
                   Language::LanguageIsObjC(language)) &&
                  ObjCLanguage::IsPossibleObjCMethodName (name_cstr))
             lookup_name_type_mask = eFunctionNameTypeFull;
+        else if (SwiftLanguageRuntime::IsSwiftMangledName(name_cstr))
+            lookup_name_type_mask = eFunctionNameTypeFull;
         else if (Language::LanguageIsC(language))
         {
             lookup_name_type_mask = eFunctionNameTypeFull;
@@ -1762,7 +1778,13 @@ Module::PrepareForFunctionNameLookup (const ConstString &name,
                 lookup_name_type_mask |= eFunctionNameTypeSelector;
             
             CPlusPlusLanguage::MethodName cpp_method (name);
-            basename = cpp_method.GetBasename();
+            SwiftLanguageRuntime::MethodName swift_method (name, true);
+            
+            if (swift_method.IsValid())
+                basename = swift_method.GetBasename();
+            else if (cpp_method.IsValid())
+                basename = cpp_method.GetBasename();
+
             if (basename.empty())
             {
                 if (CPlusPlusLanguage::ExtractContextAndIdentifier (name_cstr, context, basename))
@@ -1784,10 +1806,13 @@ Module::PrepareForFunctionNameLookup (const ConstString &name,
             // If they've asked for a CPP method or function name and it can't be that, we don't
             // even need to search for CPP methods or names.
             CPlusPlusLanguage::MethodName cpp_method (name);
+            SwiftLanguageRuntime::MethodName swift_method (name, true);
+            if (swift_method.IsValid())
+                basename = swift_method.GetBasename();
             if (cpp_method.IsValid())
-            {
                 basename = cpp_method.GetBasename();
-
+            if (!basename.empty())
+            {
                 if (!cpp_method.GetQualifiers().empty())
                 {
                     // There is a "const" or other qualifier following the end of the function parens,
@@ -1855,6 +1880,13 @@ Module::CreateJITModule (const lldb::ObjectFileJITDelegateSP &delegate_sp)
         return module_sp;
     }
     return ModuleSP();
+}
+
+void
+Module::ClearModuleDependentCaches ()
+{
+    if (SwiftASTContext *swift_ast = GetSwiftASTContextNoCreate())
+        swift_ast->ClearModuleDependentCaches();
 }
 
 bool

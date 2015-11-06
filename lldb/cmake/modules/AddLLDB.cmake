@@ -63,14 +63,20 @@ macro(add_lldb_library name)
     if (PARAM_SHARED)
       if (LLDB_LINKER_SUPPORTS_GROUPS)
         target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
-                    -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
+                    -Wl,--start-group ${SWIFT_ALL_LIBS} -Wl,--end-group)
+        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
+                    -Wl,--start-group ${CLANG_ALL_LIBS} -Wl,--end-group)
+        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
+                    -Wl,--start-group ${LLVM_ALL_LIBS} -Wl,--end-group)
       else()
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${CLANG_USED_LIBS})
+        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${SWIFT_ALL_LIBS})
+        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${CLANG_ALL_LIBS})
+        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${LLVM_ALL_LIBS})
       endif()
     endif()
     llvm_config(${name} ${LLVM_LINK_COMPONENTS})
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "liblldb")
+    if (${name} STREQUAL "liblldb")
       if (PARAM_SHARED)
         install(TARGETS ${name}
           RUNTIME DESTINATION bin
@@ -95,6 +101,7 @@ endmacro(add_lldb_library)
 macro(add_lldb_executable name)
   add_llvm_executable(${name} ${ARGN})
   set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
+  set_target_properties(${name} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 endmacro(add_lldb_executable)
 
 # Support appending linker flags to an existing target.

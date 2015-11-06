@@ -56,6 +56,14 @@ public:
     }
     
     bool
+    IsBaseClass () override
+    {
+        if (m_parent)
+            return m_parent->IsBaseClass();
+        return false;
+    }
+    
+    bool
     GetIsConstant() const override
     {
         return false;
@@ -98,11 +106,25 @@ public:
     TypeImpl
     GetTypeImpl() override;
     
+     lldb::VariableSP
+    GetVariable () override
+    {
+        return m_parent ? m_parent->GetVariable() : nullptr;
+    }
+    
     lldb::LanguageType
     GetPreferredDisplayLanguage() override;
     
     void
     SetPreferredDisplayLanguage (lldb::LanguageType);
+    
+    bool
+    GetIgnoreInstancePointerness () override
+    {
+        if (m_parent)
+            return m_parent->GetIgnoreInstancePointerness();
+        return false;
+    }
     
     bool
     GetDeclaration(Declaration &decl) override;

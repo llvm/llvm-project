@@ -575,7 +575,10 @@ namespace lldb {
         eSymbolTypeObjCClass,
         eSymbolTypeObjCMetaClass,
         eSymbolTypeObjCIVar,
-        eSymbolTypeReExported
+        eSymbolTypeIVarOffset,  // A symbol that contains an offset for an instance variable
+        eSymbolTypeReExported,
+        eSymbolTypeMetadata,    // A symbol that contains the location of a direct metadata for a type
+        eSymbolTypeASTFile      // A symbol whose name is the path to a compiler AST file
     };
     
     enum SectionType
@@ -610,6 +613,7 @@ namespace lldb {
         eSectionTypeDWARFDebugStrOffsets,
         eSectionTypeDWARFAppleNames,
         eSectionTypeDWARFAppleTypes,
+        eSectionTypeDWARFAppleExternalTypes,
         eSectionTypeDWARFAppleNamespaces,
         eSectionTypeDWARFAppleObjC,
         eSectionTypeELFSymbolTable,       // Elf SHT_SYMTAB section
@@ -617,6 +621,7 @@ namespace lldb {
         eSectionTypeELFRelocationEntries, // Elf SHT_REL or SHT_REL section
         eSectionTypeELFDynamicLinkInfo,   // Elf SHT_DYNAMIC section
         eSectionTypeEHFrame,
+        eSectionTypeSwiftModules,
         eSectionTypeARMexidx,
         eSectionTypeARMextab,
         eSectionTypeCompactUnwind,        // compact unwind section in Mach-O, __TEXT,__unwind_info
@@ -901,13 +906,15 @@ namespace lldb {
     {
         ePathTypeLLDBShlibDir,            // The directory where the lldb.so (unix) or LLDB mach-o file in LLDB.framework (MacOSX) exists
         ePathTypeSupportExecutableDir,    // Find LLDB support executable directory (debugserver, etc)
+        ePathTypeSupportFileDir,          // Find LLDB support file directory (non-executable files)
         ePathTypeHeaderDir,               // Find LLDB header file directory
         ePathTypePythonDir,               // Find Python modules (PYTHONPATH) directory
         ePathTypeLLDBSystemPlugins,       // System plug-ins directory
         ePathTypeLLDBUserPlugins,         // User plug-ins directory
         ePathTypeLLDBTempSystemDir,       // The LLDB temp directory for this system that will be cleaned up on exit
         ePathTypeGlobalLLDBTempSystemDir, // The LLDB temp directory for this system, NOT cleaned up on a process exit.
-        ePathTypeClangDir                 // Find path to Clang builtin headers
+        ePathTypeClangDir,                // Find path to Clang builtin headers
+        ePathTypeSwiftDir                 // Find path to Swift libraries
     };
     
     //----------------------------------------------------------------------
@@ -960,7 +967,15 @@ namespace lldb {
         eTypeIsInteger          = (1u << 18),
         eTypeIsFloat            = (1u << 19),
         eTypeIsComplex          = (1u << 20),
-        eTypeIsSigned           = (1u << 21)
+        eTypeIsSigned           = (1u << 21),
+        eTypeInstanceIsPointer  = (1u << 22),
+        eTypeIsSwift            = (1u << 23),
+        eTypeIsArchetype        = (1u << 24),
+        eTypeIsProtocol         = (1u << 25),
+        eTypeIsTuple            = (1u << 26),
+        eTypeIsMetatype         = (1u << 27),
+        eTypeIsGeneric          = (1u << 28),
+        eTypeIsBound            = (1u << 29)
     };
     
     FLAGS_ENUM(CommandFlags)

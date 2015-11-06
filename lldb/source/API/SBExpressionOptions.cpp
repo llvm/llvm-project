@@ -162,6 +162,18 @@ SBExpressionOptions::SetCancelCallback (lldb::ExpressionCancelCallback callback,
 }
 
 bool
+SBExpressionOptions::GetPlaygroundTransformEnabled () const
+{
+    return m_opaque_ap->GetPlaygroundTransformEnabled();
+}
+
+void
+SBExpressionOptions::SetPlaygroundTransformEnabled (bool enable_playground_transform)
+{
+    m_opaque_ap->SetPlaygroundTransformEnabled (enable_playground_transform);
+}
+
+bool
 SBExpressionOptions::GetGenerateDebugInfo ()
 {
     return m_opaque_ap->GetGenerateDebugInfo();

@@ -19,6 +19,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Symtab.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 
@@ -88,7 +89,7 @@ Symtab::SectionFileAddressesChanged ()
 }
 
 void
-Symtab::Dump (Stream *s, Target *target, SortOrder sort_order)
+Symtab::Dump (Stream *s, Target *target, SortOrder sort_order, Mangled::NamePreference name_preference)
 {
     Mutex::Locker locker (m_mutex);
 
@@ -122,7 +123,7 @@ Symtab::Dump (Stream *s, Target *target, SortOrder sort_order)
                 for (const_iterator pos = m_symbols.begin(); pos != end; ++pos)
                 {
                     s->Indent();
-                    pos->Dump(s, target, std::distance(begin, pos));
+                    pos->Dump(s, target, std::distance(begin, pos), name_preference);
                 }
             }
             break;
@@ -146,7 +147,7 @@ Symtab::Dump (Stream *s, Target *target, SortOrder sort_order)
                 for (CStringToSymbol::const_iterator pos = name_map.begin(), end = name_map.end(); pos != end; ++pos)
                 {
                     s->Indent();
-                    pos->second->Dump (s, target, pos->second - &m_symbols[0]);
+                    pos->second->Dump (s, target, pos->second - &m_symbols[0], name_preference);
                 }
             }
             break;
@@ -161,7 +162,7 @@ Symtab::Dump (Stream *s, Target *target, SortOrder sort_order)
             {
                 s->Indent();
                 const uint32_t symbol_idx = m_file_addr_to_index.GetEntryRef(i).data;
-                m_symbols[symbol_idx].Dump(s, target, symbol_idx);
+                m_symbols[symbol_idx].Dump(s, target, symbol_idx, name_preference);
             }
             break;
         }
@@ -169,7 +170,7 @@ Symtab::Dump (Stream *s, Target *target, SortOrder sort_order)
 }
 
 void
-Symtab::Dump(Stream *s, Target *target, std::vector<uint32_t>& indexes) const
+Symtab::Dump(Stream *s, Target *target, std::vector<uint32_t>& indexes, Mangled::NamePreference name_preference) const
 {
     Mutex::Locker locker (m_mutex);
 
@@ -190,7 +191,7 @@ Symtab::Dump(Stream *s, Target *target, std::vector<uint32_t>& indexes) const
             if (idx < num_symbols)
             {
                 s->Indent();
-                m_symbols[idx].Dump(s, target, idx);
+                m_symbols[idx].Dump(s, target, idx, name_preference);
             }
         }
     }
@@ -311,11 +312,18 @@ Symtab::InitNameIndexes()
                 continue;
 
             const Mangled &mangled = symbol->GetMangled();
-            entry.cstring = mangled.GetMangledName().GetCString();
+
+            ConstString mangled_name = mangled.GetMangledName();
+            entry.cstring = mangled_name.GetCString();
             if (entry.cstring && entry.cstring[0])
             {
+                // Put the mangled name into the names list
                 m_name_to_index.Append (entry);
 
+                // Now try and figure out the basename and figure out if the
+                // basename is a method, function, etc and put that in the
+                // appropriate table.
+                const char *name = entry.cstring;
                 if (symbol->ContainsLinkerAnnotations()) {
                     // If the symbol has linker annotations, also add the version without the
                     // annotations.
@@ -326,10 +334,10 @@ Symtab::InitNameIndexes()
                 const SymbolType symbol_type = symbol->GetType();
                 if (symbol_type == eSymbolTypeCode || symbol_type == eSymbolTypeResolver)
                 {
-                    if (entry.cstring[0] == '_' && entry.cstring[1] == 'Z' &&
-                        (entry.cstring[2] != 'T' && // avoid virtual table, VTT structure, typeinfo structure, and typeinfo name
-                         entry.cstring[2] != 'G' && // avoid guard variables
-                         entry.cstring[2] != 'Z'))  // named local entities (if we eventually handle eSymbolTypeData, we will want this back)
+                    if (name[0] == '_' && name[1] == 'Z' &&
+                        (name[2] != 'T' && // avoid virtual table, VTT structure, typeinfo structure, and typeinfo name
+                         name[2] != 'G' && // avoid guard variables
+                         name[2] != 'Z'))  // named local entities (if we eventually handle eSymbolTypeData, we will want this back)
                     {
                         CPlusPlusLanguage::MethodName cxx_method (mangled.GetDemangledName(lldb::eLanguageTypeC_plus_plus));
                         entry.cstring = ConstString(cxx_method.GetBasename()).GetCString();
@@ -377,9 +385,25 @@ Symtab::InitNameIndexes()
                             }
                         }
                     }
+                    else if (name[0] == '_' && name[1] == 'T')
+                    {
+                        lldb_private::ConstString basename;
+                        bool is_method = false;
+                        if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled (mangled_name, basename, is_method))
+                        {
+                            if (basename && basename != mangled_name)
+                            {
+                                entry.cstring = basename.GetCString();
+                                if (is_method)
+                                    m_method_to_index.Append (entry);
+                                else
+                                    m_basename_to_index.Append(entry);
+                            }
+                        }
+                    }
                 }
             }
-            
+
             entry.cstring = mangled.GetDemangledName(symbol->GetLanguage()).GetCString();
             if (entry.cstring && entry.cstring[0]) {
                 m_name_to_index.Append (entry);

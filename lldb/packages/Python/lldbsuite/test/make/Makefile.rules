@@ -28,7 +28,7 @@
 # SHELL = /bin/sh -x
 
 THIS_FILE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
-LLDB_BASE_DIR := $(THIS_FILE_DIR)../../
+LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
 
 #----------------------------------------------------------------------
@@ -58,7 +58,8 @@ ifneq "$(TRIPLE)" ""
 					ifeq "$(TRIPLE_VERSION)" ""
 						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
 					endif
-					TRIPLE_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					TRIPLE_CFLAGS :=-mios-simulator-version-min=9.0 -isysroot "$(SDKROOT)"
+					TRIPLE_SWIFTFLAGS :=-target $(TRIPLE) -sdk "$(SDKROOT)"
 				endif
 			endif
 		endif
@@ -113,6 +114,22 @@ ifeq "$(CC)" "cc"
 		CC = gcc
 	endif
 endif
+
+#----------------------------------------------------------------------
+# SWIFTCC defaults to swift.
+# TODO:
+# If you change the defaults of SWIFTCC, be sure to also change it in the file
+# test/plugins/builder_base.py, which provides a Python way to return the
+# value of the make variable SWIFTCC -- getSwiftCompiler().
+#
+# See also these functions:
+#   o cxx_compiler
+#   o cxx_linker
+#----------------------------------------------------------------------
+SWIFTCC ?= $(shell $(LEVEL)/find-swift.py)
+SWIFTLIBS ?= $(shell $(LEVEL)/find-swift.py -l)
+SWIFTSDKROOT ?= $(shell $(LEVEL)/find-swift.py -s)
+
 
 #----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
@@ -176,6 +193,12 @@ ifneq (,$(findstring clang,$(CC)))
 endif
 
 CFLAGS ?= -g -O0 -fno-builtin
+SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
+
+# Setup a default per-user Swift module cache directory.
+SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
+SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
+
 ifeq "$(OS)" "Darwin"
 	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 else
@@ -183,6 +206,7 @@ else
 endif
 
 CFLAGS += -include $(THIS_FILE_DIR)test_common.h $(TRIPLE_CFLAGS)
+SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
@@ -350,6 +374,23 @@ ifneq "$(strip $(OBJC_SOURCES))" ""
 endif
 
 #----------------------------------------------------------------------
+# Check if we have any Swift source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(SWIFT_SOURCES))" ""
+	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.o))
+	LDFLAGS +=-L$(SWIFTLIBS)
+	SWIFTFLAGS +=-sdk $(SWIFTSDKROOT)
+	USESWIFTDRIVER = 1
+endif
+
+#----------------------------------------------------------------------
+# Check if we need the Swift/ObjC interop features
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_OBJC_INTEROP)" "1"
+	LDFLAGS +=-lswiftObjectiveC -lswiftFoundation -framework Cocoa -framework QuartzCore
+endif
+
+#----------------------------------------------------------------------
 # Check if we have any ObjC++ source files
 #----------------------------------------------------------------------
 ifneq "$(strip $(OBJCXX_SOURCES))" ""
@@ -437,6 +478,10 @@ endif
 #----------------------------------------------------------------------
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
+ifeq "$(USESWIFTDRIVER)" "1"
+$(EXE) : $(SWIFT_SOURCES)
+	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) -o "$(EXE)"
+else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
@@ -448,7 +493,7 @@ else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
 	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
 endif
-
+endif
 #----------------------------------------------------------------------
 # Make the archive
 #----------------------------------------------------------------------

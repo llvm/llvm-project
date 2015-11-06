@@ -94,6 +94,12 @@ public:
     SetCancelCallback (lldb::ExpressionCancelCallback callback, void *baton);
 
     bool
+    GetPlaygroundTransformEnabled () const;
+    
+    void
+    SetPlaygroundTransformEnabled (bool enable_playground_transform = true);
+
+    bool
     GetGenerateDebugInfo ();
     
     void

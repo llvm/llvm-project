@@ -1857,8 +1857,10 @@ DataExtractor::Dump (Stream *s,
                             }
                             else if (item_bit_size == ast->getTypeSize(ast->LongDoubleTy))
                             {
+                                auto byte_size = item_byte_size;
                                 const auto &semantics = ast->getFloatTypeSemantics(ast->LongDoubleTy);
-                                const auto byte_size = (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
+                                if (&semantics == &llvm::APFloat::x87DoubleExtended)
+                                    byte_size = 10;
 
                                 llvm::APInt apint;
                                 if (GetAPInt(*this, &offset, byte_size, apint))

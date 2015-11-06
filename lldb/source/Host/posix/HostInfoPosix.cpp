@@ -197,6 +197,21 @@ HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec)
 }
 
 bool
+HostInfoPosix::ComputeSupportFileDirectory(FileSpec &file_spec)
+{
+    FileSpec temp_file_spec;
+    
+    if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, temp_file_spec))
+        return false;
+    
+    temp_file_spec.AppendPathComponent("lldb");
+    
+    file_spec = temp_file_spec;
+    
+    return true;
+}
+
+bool
 HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec)
 {
     FileSpec temp_file("/opt/local/include/lldb", false);
@@ -242,3 +257,31 @@ HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec)
     return false;
 #endif
 }
+
+bool
+HostInfoPosix::ComputeClangDirectory(FileSpec &file_spec)
+{
+    FileSpec lldb_file_spec;
+    if (!GetLLDBPath (lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+        return false;
+    
+    lldb_file_spec.AppendPathComponent("lldb");
+    lldb_file_spec.AppendPathComponent("clang");
+    
+    file_spec = lldb_file_spec;
+    return true;
+}
+
+bool
+HostInfoPosix::ComputeSwiftDirectory(FileSpec &file_spec)
+{
+    FileSpec lldb_file_spec;
+    if (!GetLLDBPath (lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+        return false;
+    
+    lldb_file_spec.AppendPathComponent("swift");
+    
+    file_spec = lldb_file_spec;
+    return true;
+}
+

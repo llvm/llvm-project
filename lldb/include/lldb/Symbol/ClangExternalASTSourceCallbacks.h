@@ -97,6 +97,11 @@ public:
     {
     }
 
+    void
+    FindExternalLexicalDecls(const clang::DeclContext *decl_ctx,
+                             llvm::function_ref<bool(clang::Decl::Kind)> isKindWeWant,
+                             llvm::SmallVectorImpl<clang::Decl *> &decls) override;
+
     bool FindExternalVisibleDeclsByName(const clang::DeclContext *decl_ctx, clang::DeclarationName decl_name) override;
 
     void CompleteType(clang::TagDecl *tag_decl) override;

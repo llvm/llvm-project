@@ -22,6 +22,7 @@
 class SymbolFileDWARF;
 class DWARFDebugAranges;
 class DWARFDeclContext;
+class DebugMapModule;
 
 class SymbolFileDWARFDebugMap : public lldb_private::SymbolFile
 {
@@ -90,6 +91,9 @@ public:
                               uint32_t type_mask,
                               lldb_private::TypeList &type_list) override;
 
+    lldb::DataBufferSP
+                    GetASTData (lldb::LanguageType language) override;
+    
     //------------------------------------------------------------------
     // PluginInterface protocol
     //------------------------------------------------------------------
@@ -110,6 +114,7 @@ protected:
     friend class SymbolFileDWARF;
     friend class DebugMapModule;
     friend class DWARFASTParserClang;
+    friend class DWARFASTParserSwift;
     struct OSOInfo
     {
         lldb::ModuleSP module_sp;
@@ -335,6 +340,7 @@ protected:
     std::map<lldb_private::ConstString, OSOInfoSP> m_oso_map;
     UniqueDWARFASTTypeMap m_unique_ast_type_map;
     lldb_private::LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
+    bool m_initialized_swift_modules;
     DebugMap m_debug_map;
     
     //------------------------------------------------------------------

@@ -69,6 +69,7 @@ ValueObjectConstResultImpl::CreateChildAtIndex (size_t idx, bool synthetic_array
     uint32_t child_bitfield_bit_offset = 0;
     bool child_is_base_class = false;
     bool child_is_deref_of_parent = false;
+    bool child_is_indirect_enum_case = false;
     
     const bool transparent_pointers = synthetic_array_member == false;
     CompilerType compiler_type = m_impl_backend->GetCompilerType();
@@ -88,6 +89,7 @@ ValueObjectConstResultImpl::CreateChildAtIndex (size_t idx, bool synthetic_array
                                                                      child_bitfield_bit_offset,
                                                                      child_is_base_class,
                                                                      child_is_deref_of_parent,
+                                                                     child_is_indirect_enum_case,
                                                                      m_impl_backend);
     if (child_compiler_type && child_byte_size)
     {
@@ -107,6 +109,7 @@ ValueObjectConstResultImpl::CreateChildAtIndex (size_t idx, bool synthetic_array
                                                   child_bitfield_bit_offset,
                                                   child_is_base_class,
                                                   child_is_deref_of_parent,
+                                                  child_is_indirect_enum_case,
                                                   m_live_address == LLDB_INVALID_ADDRESS ? m_live_address : m_live_address+child_byte_offset);
     }
     

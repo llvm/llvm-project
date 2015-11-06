@@ -17,6 +17,7 @@ class TestQueues(TestBase):
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])      
     @unittest2.expectedFailure("rdar://22531180")
+    @skipIfSmooshbase
     def test_with_python_api(self):
         """Test queues inspection SB APIs."""
         self.build()

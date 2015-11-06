@@ -28,9 +28,7 @@
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectRegister.h"
-#ifndef LLDB_DISABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
-#endif
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/Block.h"
@@ -378,7 +376,6 @@ IOHandlerEditline::IOHandlerEditline (Debugger &debugger,
     IOHandler (debugger, type, input_sp, output_sp, error_sp, flags),
 #ifndef LLDB_DISABLE_LIBEDIT
     m_editline_ap (),
-#endif
     m_delegate (delegate),
     m_prompt (),
     m_continuation_prompt(),
@@ -391,8 +388,6 @@ IOHandlerEditline::IOHandlerEditline (Debugger &debugger,
     m_editing (false)
 {
     SetPrompt(prompt);
-
-#ifndef LLDB_DISABLE_LIBEDIT
     bool use_editline = false;
     
     use_editline = m_input_sp->GetFile().GetIsRealTerminal();
@@ -404,6 +399,7 @@ IOHandlerEditline::IOHandlerEditline (Debugger &debugger,
                                           GetOutputFILE (),
                                           GetErrorFILE (),
                                           m_color_prompts));
+        SetBaseLineNumber (m_base_line_number);
         m_editline_ap->SetIsInputCompleteCallback (IsInputCompleteCallback, this);
         m_editline_ap->SetAutoCompleteCallback (AutoCompleteCallback, this);
         // See if the delegate supports fixing indentation
@@ -423,9 +419,7 @@ IOHandlerEditline::IOHandlerEditline (Debugger &debugger,
 
 IOHandlerEditline::~IOHandlerEditline ()
 {
-#ifndef LLDB_DISABLE_LIBEDIT
     m_editline_ap.reset();
-#endif
 }
 
 void
@@ -445,14 +439,12 @@ IOHandlerEditline::Deactivate ()
 bool
 IOHandlerEditline::GetLine (std::string &line, bool &interrupted)
 {
-#ifndef LLDB_DISABLE_LIBEDIT
     if (m_editline_ap)
     {
         return m_editline_ap->GetLine (line, interrupted);
     }
     else
     {
-#endif
         line.clear();
 
         FILE *in = GetInputFILE();
@@ -527,9 +519,7 @@ IOHandlerEditline::GetLine (std::string &line, bool &interrupted)
             SetIsDone(true);
         }
         return false;
-#ifndef LLDB_DISABLE_LIBEDIT
     }
-#endif
 }
 
 
@@ -573,24 +563,14 @@ IOHandlerEditline::AutoCompleteCallback (const char *current_line,
                                                               matches);
     return 0;
 }
-#endif
 
 const char *
 IOHandlerEditline::GetPrompt ()
 {
-#ifndef LLDB_DISABLE_LIBEDIT
     if (m_editline_ap)
-    {
         return m_editline_ap->GetPrompt ();
-    }
-    else
-    {
-#endif
-        if (m_prompt.empty())
-            return NULL;
-#ifndef LLDB_DISABLE_LIBEDIT
-    }
-#endif
+    else if (m_prompt.empty())
+        return NULL;
     return m_prompt.c_str();
 }
 
@@ -601,10 +581,8 @@ IOHandlerEditline::SetPrompt (const char *p)
         m_prompt = p;
     else
         m_prompt.clear();
-#ifndef LLDB_DISABLE_LIBEDIT
     if (m_editline_ap)
         m_editline_ap->SetPrompt (m_prompt.empty() ? NULL : m_prompt.c_str());
-#endif
     return true;
 }
 
@@ -652,7 +630,6 @@ IOHandlerEditline::GetLines (StringList &lines, bool &interrupted)
     m_current_lines_ptr = &lines;
     
     bool success = false;
-#ifndef LLDB_DISABLE_LIBEDIT
     if (m_editline_ap)
     {
         return m_editline_ap->GetLines (m_base_line_number, lines, interrupted);
@@ -688,9 +665,8 @@ IOHandlerEditline::GetLines (StringList &lines, bool &interrupted)
             }
         }
         success = lines.GetSize() > 0;
-#ifndef LLDB_DISABLE_LIBEDIT
     }
-#endif
+    m_current_lines_ptr = NULL;
     return success;
 }
 
@@ -759,20 +735,16 @@ IOHandlerEditline::Interrupt ()
     if (m_delegate.IOHandlerInterrupt(*this))
         return true;
 
-#ifndef LLDB_DISABLE_LIBEDIT
     if (m_editline_ap)
         return m_editline_ap->Interrupt();
-#endif
     return false;
 }
 
 void
 IOHandlerEditline::GotEOF()
 {
-#ifndef LLDB_DISABLE_LIBEDIT
     if (m_editline_ap)
         m_editline_ap->Interrupt();
-#endif
 }
 
 void

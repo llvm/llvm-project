@@ -61,6 +61,12 @@ class LLVMUserExpression : public UserExpression
         return m_can_interpret;
     }
 
+    virtual Materializer *
+    GetMaterializer() override
+    {
+        return m_materializer_ap.get();
+    }
+
     //------------------------------------------------------------------
     /// Return the string that the parser should parse.  Must be a full
     /// translation unit.
@@ -105,6 +111,7 @@ class LLVMUserExpression : public UserExpression
                              ///was parsed when exe_ctx was in an Objective-C class method).
     bool m_needs_object_ptr; ///< True if "this" or "self" must be looked up and passed in.  False if the expression
                              ///doesn't really use them and they can be NULL.
+    bool m_is_swift_class;   /// FIXME: This really should not be in LLVMUserExpression.
     bool m_const_object;     ///< True if "this" is const.
     Target *m_target;        ///< The target for storing persistent data like types and variables.
 

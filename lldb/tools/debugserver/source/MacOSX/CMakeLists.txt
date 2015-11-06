@@ -66,23 +66,13 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
   OUTPUT_VARIABLE CODESIGN_ALLOCATE
   )
-# Older cmake versions don't support "-E env".
-if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} LESS 3.2)
-  add_custom_command(TARGET debugserver
-    POST_BUILD
-    # Note: --entitlements option removed, as it causes errors when debugging.
-    # was: COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/../debugserver-entitlements.plist --force --sign ${CODESIGN_IDENTITY} debugserver
-    COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${CODESIGN_IDENTITY} debugserver
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+add_custom_command(TARGET debugserver
+  POST_BUILD
+  # --entitlements option removed, as it causes errors when debugging.
+  #was: COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/../debugserver-entitlements.plist --force --sign ${CODESIGN_IDENTITY} debugserver
+  COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${CODESIGN_IDENTITY} debugserver
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
-else()
-  add_custom_command(TARGET debugserver
-    POST_BUILD
-    # Note: --entitlements option removed (see comment above).
-    COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${CODESIGN_IDENTITY} debugserver
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-  )
-endif()
 
 install(TARGETS debugserver
   RUNTIME DESTINATION bin

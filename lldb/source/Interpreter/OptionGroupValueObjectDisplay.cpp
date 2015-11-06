@@ -38,7 +38,7 @@ g_option_table[] =
     { LLDB_OPT_SET_1, false, "depth",              'D', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,     "Set the max recurse depth when dumping aggregate types (default is infinity)."},
     { LLDB_OPT_SET_1, false, "flat",               'F', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,      "Display results in a flat format that uses expression paths for each variable or member."},
     { LLDB_OPT_SET_1, false, "location",           'L', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,      "Show variable location information."},
-    { LLDB_OPT_SET_1, false, "object-description", 'O', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,      "Print as an Objective-C object."},
+    { LLDB_OPT_SET_1, false, "object-description", 'O', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,      "Display using a language-specific description API, if possible."},
     { LLDB_OPT_SET_1, false, "ptr-depth",          'P', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,     "The number of pointers to be traversed when dumping values (default is zero)."},
     { LLDB_OPT_SET_1, false, "show-types",         'T', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,      "Show variable types when dumping values."},
     { LLDB_OPT_SET_1, false, "no-summary-depth",   'Y', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeCount,     "Set the depth at which omitting summary information stops (default is 1)."},

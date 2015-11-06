@@ -46,6 +46,7 @@ import signal
 from subprocess import *
 import time
 import types
+import lldb
 
 # Third-party modules
 import unittest2
@@ -58,6 +59,7 @@ import six
 import lldb
 from . import lldbtest_config
 from . import lldbutil
+from . import lock
 from . import test_categories
 
 # dosep.py starts lots and lots of dotest instances
@@ -618,6 +620,20 @@ def expectedFailure(expected_fn, bugnumber=None):
     else:
         return expectedFailure_impl
 
+def expectedFailureCompiler(compiler, compiler_version=None, bugnumber=None):
+    if compiler_version is None:
+        compiler_version=['=', None]
+    def fn(self):
+        return compiler in self.getCompiler() and self.expectedCompilerVersion(compiler_version)
+    return expectedFailure(fn, bugnumber)
+
+def expectedFailurePlatform(platform, bugnumber=None):
+    def fn(self):
+        if lldb.remote_platform:
+            return lldb.remote_platform_name == platform
+        return False
+    return expectedFailure(fn, bugnumber)
+
 # provide a function to xfail on defined oslist, compiler version, and archs
 # if none is specified for any argument, that argument won't be checked and thus means for all
 # for example,
@@ -799,6 +815,9 @@ def expectedFlakeyClang(bugnumber=None, compiler_version=None):
 def expectedFlakeyGcc(bugnumber=None, compiler_version=None):
     return expectedFlakeyCompiler('gcc', compiler_version, bugnumber)
 
+def expectedFailureiOSSimulator(bugnumber=None):
+    return expectedFailurePlatform('ios-simulator', bugnumber)
+
 def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
     return expectedFlakey(matchAndroid(api_levels, archs), bugnumber)
 
@@ -870,6 +889,10 @@ def skipIfNoSBHeaders(func):
         else:
             func(*args, **kwargs)
     return wrapper
+
+def skipIfSmooshbase(func):
+    """Decorate the item to skip tests that should be skipped on the smooshbase buildbot."""
+    return unittest2.skipIf(os.environ.get('IS_SMOOSHBASE', 'FAIL') != 'FAIL', 'skip on the smooshbase buildbot')(func)
 
 def skipIfiOSSimulator(func):
     """Decorate the item to skip tests that should be skipped on the iOS Simulator."""
@@ -1172,6 +1195,22 @@ def skipUnlessCompilerRt(func):
             func(*args, **kwargs)
     return wrapper
 
+def swiftTest(func):
+    """Decorate the item as a Swift test (Darwin x86_64 only no dSYM)."""
+    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+        raise Exception("@swiftTest can only be used to decorate a test method")
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        from unittest2 import case
+        self = args[0]
+        if "i386" == self.getArchitecture():
+            self.skipTest("skipping because i386 is not a supported architecture")
+        elif not(any(x in sys.platform for x in ['darwin', 'linux'])):
+            self.skipTest("skipping because only Darwin and Linux are supported OSs")
+        else:
+            func(*args, **kwargs)
+    return wrapper
+
 class _PlatformContext(object):
     """Value object class which contains platform-specific options."""
 
@@ -1229,7 +1268,6 @@ class Base(unittest2.TestCase):
             os.chdir(os.path.join(os.environ["LLDB_TEST"], cls.mydir))
 
         if debug_confirm_directory_exclusivity:
-            import lock
             cls.dir_lock = lock.Lock(os.path.join(full_dir, ".dirlock"))
             try:
                 cls.dir_lock.try_acquire()
@@ -1986,6 +2024,8 @@ class Base(unittest2.TestCase):
             option_str = ""
         if comp:
             option_str += " -C " + comp
+        if lldb.remote_platform:
+            option_str += ' --platform-name=%s' % (lldb.remote_platform_name)
         return option_str
 
     # ==================================================
@@ -2130,6 +2170,10 @@ class Base(unittest2.TestCase):
           "llvm-build/Debug+Asserts/x86_64/Debug+Asserts/bin/clang",
           "llvm-build/Release/x86_64/Release/bin/clang",
           "llvm-build/Debug/x86_64/Debug/bin/clang",
+          "llvm-build/ReleaseAsserts/llvm-macosx-x86_64/bin/clang",
+          "llvm-build/DebugAsserts/llvm-macosx-x86_64/bin/clang",
+          "llvm-build/Release/llvm-macosx-x86_64/bin/clang",
+          "llvm-build/Debug/llvm-macosx-x86_64/bin/clang",
         ]
         lldb_root_path = os.path.join(os.path.dirname(__file__), "..")
         for p in paths_to_try:

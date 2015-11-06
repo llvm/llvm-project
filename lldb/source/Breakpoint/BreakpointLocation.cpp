@@ -309,7 +309,8 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
                                          exe_ctx,
                                          eExecutionPolicyOnlyWhenNeeded,
                                          true,
-                                         false))
+                                         false,
+                                         0))
         {
             error.SetErrorStringWithFormat("Couldn't parse conditional expression:\n%s",
                                            errors.GetData());

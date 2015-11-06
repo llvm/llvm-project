@@ -483,33 +483,35 @@ ThreadPlanStepRange::GetPlanRunState ()
 bool
 ThreadPlanStepRange::MischiefManaged ()
 {
-    // If we have pushed some plans between ShouldStop & MischiefManaged, then we're not done...
-    // I do this check first because we might have stepped somewhere that will fool InRange into
-    // thinking it needs to step past the end of that line.  This happens, for instance, when stepping
-    // over inlined code that is in the middle of the current line.
-    
-    if (!m_no_more_plans)
-        return false;
-    
     bool done = true;
     if (!IsPlanComplete())
     {
-        if (InRange())
-        {
+        // If we have pushed some plans between ShouldStop & MischiefManaged, then we're not done...
+        // I do this check first because we might have stepped somewhere that will fool InRange into
+        // thinking it needs to step past the end of that line.  This happens, for instance, when stepping
+        // over inlined code that is in the middle of the current line.
+    
+        if (!m_no_more_plans)
             done = false;
-        }
-        else 
+        else
         {
-            FrameComparison frame_order = CompareCurrentFrameToStartFrame();
-            if (frame_order != eFrameCompareOlder)
+            if (InRange())
             {
-                if (m_no_more_plans)
-                    done = true;
-                else
-                    done = false;
+                done = false;
             }
-            else
-                done = true;
+            else 
+            {
+                FrameComparison frame_order = CompareCurrentFrameToStartFrame();
+                if (frame_order != eFrameCompareOlder)
+                {
+                    if (m_no_more_plans)
+                        done = true;
+                    else
+                        done = false;
+                }
+                else
+                    done = true;
+            }
         }
     }
 

@@ -150,6 +150,10 @@ public:
     DumpValueObjectOptions&
     SetAllowOnelinerMode (bool oneliner = false);    
 
+    DumpValueObjectOptions&
+    SetRevealEmptyAggregates (bool reveal = true);
+
+public:
     uint32_t m_max_depth = UINT32_MAX;
     lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
     uint32_t m_omit_summary_depth = 0;
@@ -173,6 +177,7 @@ public:
     bool m_use_type_display_name : 1;
     bool m_allow_oneliner_mode : 1;
     bool m_hide_pointer_value : 1;
+    bool m_reveal_empty_aggregates : 1;
 };
 
 } // namespace lldb_private

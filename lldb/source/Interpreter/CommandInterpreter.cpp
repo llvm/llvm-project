@@ -145,10 +145,10 @@ CommandInterpreter::GetPromptOnQuit () const
 }
 
 void
-CommandInterpreter::SetPromptOnQuit (bool b)
+CommandInterpreter::SetPromptOnQuit (bool enable)
 {
     const uint32_t idx = ePropertyPromptOnQuit;
-    m_collection_sp->SetPropertyAtIndexAsBoolean (nullptr, idx, b);
+    m_collection_sp->SetPropertyAtIndexAsBoolean (nullptr, idx, enable);
 }
 
 void
@@ -346,6 +346,11 @@ CommandInterpreter::Initialize ()
         ProcessAliasOptionsArgs (cmd_obj_sp, "-O -- ", alias_arguments_vector_sp);
         AddAlias ("po", cmd_obj_sp);
         AddOrReplaceAliasOptions ("po", alias_arguments_vector_sp);
+        
+        alias_arguments_vector_sp.reset (new OptionArgVector);
+        ProcessAliasOptionsArgs (cmd_obj_sp, "--repl -- ", alias_arguments_vector_sp);
+        AddAlias ("repl", cmd_obj_sp);
+        AddOrReplaceAliasOptions ("repl", alias_arguments_vector_sp);
     }
     
     cmd_obj_sp = GetCommandSPExact ("process kill", false);
@@ -369,8 +374,8 @@ CommandInterpreter::Initialize ()
         ProcessAliasOptionsArgs (cmd_obj_sp, shell_option.c_str(), alias_arguments_vector_sp);
     #else
         std::string shell_option;
-        shell_option.append("--shell=");
-        shell_option.append(HostInfo::GetDefaultShell().GetPath());
+        shell_option.append("--shell-expand-args");
+        shell_option.append(" true");
         shell_option.append(" --");
         ProcessAliasOptionsArgs (cmd_obj_sp, shell_option.c_str(), alias_arguments_vector_sp);
     #endif
@@ -698,6 +703,7 @@ CommandInterpreter::LoadCommandDictionary ()
             list_regex_cmd_ap->AddRegexCommand("^\\*?(0x[[:xdigit:]]+)[[:space:]]*$", "source list --address %1") &&
             list_regex_cmd_ap->AddRegexCommand("^-[[:space:]]*$", "source list --reverse") &&
             list_regex_cmd_ap->AddRegexCommand("^-([[:digit:]]+)[[:space:]]*$", "source list --reverse --count %1") &&
+            list_regex_cmd_ap->AddRegexCommand("^([^.]+)\\.([^.]+)$", "source list --file \"%1.%2\"") &&
             list_regex_cmd_ap->AddRegexCommand("^(.+)$", "source list --name \"%1\"") &&
             list_regex_cmd_ap->AddRegexCommand("^$", "source list"))
         {

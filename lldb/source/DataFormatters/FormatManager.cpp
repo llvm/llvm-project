@@ -20,6 +20,7 @@
 #include "lldb/Core/Log.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
+#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 
@@ -284,7 +285,7 @@ FormatManager::GetPossibleMatches (ValueObject& valobj,
             }
         }
     }
-        
+
     // try to strip typedef chains
     if (compiler_type.IsTypedefType())
     {
@@ -555,6 +556,10 @@ FormatManager::ShouldPrintAsOneLiner (ValueObject& valobj)
     if (valobj.GetTargetSP().get() && valobj.GetTargetSP()->GetDebugger().GetAutoOneLineSummaries() == false)
         return false; // then don't oneline
     
+    // FIXME: we should actually be able to make it work
+    if (valobj.IsIndirectEnumCase())
+        return false;
+    
     // if this object has a summary, then ask the summary
     if (valobj.GetSummaryFormat().get() != nullptr)
         return valobj.GetSummaryFormat()->IsOneLiner();
@@ -590,6 +595,15 @@ FormatManager::ShouldPrintAsOneLiner (ValueObject& valobj)
         // something is wrong here - bail out
         if (!child_sp)
             return false;
+        
+        // base classes are also endgame here
+        if (child_sp->IsBaseClass())
+            return false;
+        
+        // FIXME: we should actually be able to make it work
+        if (child_sp->IsIndirectEnumCase())
+            return false;
+        
         // if we decided to define synthetic children for a type, we probably care enough
         // to show them, but avoid nesting children in children
         if (child_sp->GetSyntheticChildren().get() != nullptr)
@@ -665,6 +679,10 @@ FormatManager::GetCandidateLanguages (lldb::LanguageType lang_type)
 {
     switch (lang_type)
     {
+        case lldb::eLanguageTypeSwift:
+            return {lldb::eLanguageTypeSwift, lldb::eLanguageTypeObjC};
+        case lldb::eLanguageTypeObjC:
+            return {lldb::eLanguageTypeObjC, lldb::eLanguageTypeSwift};
         case lldb::eLanguageTypeC:
         case lldb::eLanguageTypeC89:
         case lldb::eLanguageTypeC99:
@@ -1034,12 +1052,16 @@ FormatManager::FormatManager() :
     m_language_categories_mutex(Mutex::eMutexTypeRecursive),
     m_default_category_name(ConstString("default")),
     m_system_category_name(ConstString("system")), 
-    m_vectortypes_category_name(ConstString("VectorTypes"))
+    m_vectortypes_category_name(ConstString("VectorTypes")),
+    m_runtime_synths_category_name(ConstString("runtime-synthetics"))
 {
     LoadSystemFormatters();
     LoadVectorFormatters();
     
+    GetCategory(m_runtime_synths_category_name); // EnableCategory() won't enable a non-existant category, so create this one first even if empty
+    
     EnableCategory(m_vectortypes_category_name,TypeCategoryMap::Last, lldb::eLanguageTypeObjC_plus_plus);
+    EnableCategory(m_runtime_synths_category_name,TypeCategoryMap::Last, {lldb::eLanguageTypeObjC_plus_plus,lldb::eLanguageTypeSwift});
     EnableCategory(m_system_category_name,TypeCategoryMap::Last, lldb::eLanguageTypeObjC_plus_plus);
 }
 

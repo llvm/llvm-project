@@ -488,10 +488,13 @@ ClangASTSource::FindExternalLexicalDecls (const DeclContext *decl_context,
 
     if (TagDecl *original_tag_decl = dyn_cast<TagDecl>(original_decl))
     {
-        ExternalASTSource *external_source = original_ctx->getExternalSource();
+        if (original_tag_decl->hasExternalLexicalStorage() || original_tag_decl->hasExternalVisibleStorage())
+        {
+            ExternalASTSource *external_source = original_ctx->getExternalSource();
 
-        if (external_source)
-            external_source->CompleteType (original_tag_decl);
+            if (external_source)
+                external_source->CompleteType (original_tag_decl);
+        }
     }
 
     const DeclContext *original_decl_context = dyn_cast<DeclContext>(original_decl);
@@ -738,13 +741,13 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
         TypeList types;
         SymbolContext null_sc;
         const bool exact_match = false;
+      
+        bool found_a_type = false;
 
         if (module_sp && namespace_decl)
-            module_sp->FindTypesInNamespace(null_sc, name, &namespace_decl, 1, types);
-        else
-            m_target->GetImages().FindTypes(null_sc, name, exact_match, 1, types);
-
-        bool found_a_type = false;
+            module_sp->FindTypesInNamespace(null_sc, name, &namespace_decl, UINT32_MAX, types);
+        else 
+            m_target->GetImages().FindTypes(null_sc, name, exact_match, UINT32_MAX, types);
         
         if (size_t num_types = types.GetSize())
         {
@@ -1901,7 +1904,7 @@ ClangASTSource::GuardedCopyType (const CompilerType &src_type)
     QualType copied_qual_type = m_ast_importer->CopyType (m_ast_context, src_ast->getASTContext(), ClangASTContext::GetQualType(src_type));
 
     SetImportInProgress(false);
-
+    
     if (copied_qual_type.getAsOpaquePtr() && copied_qual_type->getCanonicalTypeInternal().isNull())
         // this shouldn't happen, but we're hardening because the AST importer seems to be generating bad types
         // on occasion.
@@ -1914,7 +1917,7 @@ clang::NamedDecl *
 NameSearchContext::AddVarDecl(const CompilerType &type)
 {
     assert (type && "Type for variable must be valid!");
-
+    
     if (!type.IsValid())
         return NULL;
 
@@ -1935,7 +1938,7 @@ NameSearchContext::AddVarDecl(const CompilerType &type)
                                              0,
                                              SC_Static);
     m_decls.push_back(Decl);
-
+    
     return Decl;
 }
 

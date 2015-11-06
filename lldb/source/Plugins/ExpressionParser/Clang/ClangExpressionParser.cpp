@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -25,6 +26,7 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
@@ -65,6 +67,7 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StreamString.h"
+#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -163,11 +166,18 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
                                               bool generate_debug_info) :
     ExpressionParser (exe_scope, expr, generate_debug_info),
     m_compiler (),
+    m_builtin_context (),
+    m_selector_table (),
     m_code_generator (),
     m_pp_callbacks(nullptr)
 {
     // 1. Create a new compiler instance.
     m_compiler.reset(new CompilerInstance());
+    
+    // Register the support for object-file-wrapped Clang modules.
+    std::shared_ptr<clang::PCHContainerOperations> pch_operations = m_compiler->getPCHContainerOperations();
+    pch_operations->registerWriter(llvm::make_unique<ObjectFilePCHContainerWriter>());
+    pch_operations->registerReader(llvm::make_unique<ObjectFilePCHContainerReader>());
 
     // 2. Install the target.
 
@@ -189,6 +199,8 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     {
         m_compiler->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
     }
+    
+    m_compiler->getTargetOpts().CPU = "";
 
     if (target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86 ||
         target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
@@ -374,6 +386,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     std::string module_name("$__lldb_module");
 
     m_llvm_context.reset(new LLVMContext());
+
     m_code_generator.reset(CreateLLVMCodeGen(m_compiler->getDiagnostics(),
                                              module_name,
                                              m_compiler->getHeaderSearchOpts(),
@@ -387,7 +400,10 @@ ClangExpressionParser::~ClangExpressionParser()
 }
 
 unsigned
-ClangExpressionParser::Parse (Stream &stream)
+ClangExpressionParser::Parse (Stream &stream,
+                              uint32_t first_line,
+                              uint32_t last_line,
+                              uint32_t line_offset)
 {
     TextDiagnosticBuffer *diag_buf = static_cast<TextDiagnosticBuffer*>(m_compiler->getDiagnostics().getClient());
 
@@ -397,39 +413,18 @@ ClangExpressionParser::Parse (Stream &stream)
 
     clang::SourceManager &SourceMgr = m_compiler->getSourceManager();
     bool created_main_file = false;
-    if (m_compiler->getCodeGenOpts().getDebugInfo() == CodeGenOptions::FullDebugInfo)
+    if (m_expr.GetOptions() && m_expr.GetOptions()->GetPoundLineFilePath() == NULL && m_compiler->getCodeGenOpts().getDebugInfo() == CodeGenOptions::FullDebugInfo)
     {
         std::string temp_source_path;
-
-        int temp_fd = -1;
-        llvm::SmallString<PATH_MAX> result_path;
-        FileSpec tmpdir_file_spec;
-        if (HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir, tmpdir_file_spec))
+        if (ExpressionSourceCode::SaveExpressionTextToTempFile(expr_text, *m_expr.GetOptions(), temp_source_path))
         {
-            tmpdir_file_spec.AppendPathComponent("lldb-%%%%%%.expr");
-            temp_source_path = tmpdir_file_spec.GetPath();
-            llvm::sys::fs::createUniqueFile(temp_source_path, temp_fd, result_path);
-        }
-        else
-        {
-            llvm::sys::fs::createTemporaryFile("lldb", "expr", temp_fd, result_path);
-        }
-        
-        if (temp_fd != -1)
-        {
-            lldb_private::File file (temp_fd, true);
-            const size_t expr_text_len = strlen(expr_text);
-            size_t bytes_written = expr_text_len;
-            if (file.Write(expr_text, bytes_written).Success())
+            auto file = m_file_manager->getFile(temp_source_path);
+            if (file)
             {
-                if (bytes_written == expr_text_len)
-                {
-                    file.Close();
-                    SourceMgr.setMainFileID(SourceMgr.createFileID(
-                        m_file_manager->getFile(result_path),
-                        SourceLocation(), SrcMgr::C_User));
-                    created_main_file = true;
-                }
+                SourceMgr.setMainFileID(SourceMgr.createFileID (file,
+                                                                SourceLocation(),
+                                                                SrcMgr::C_User));
+                created_main_file = true;
             }
         }
     }
@@ -499,7 +494,8 @@ ClangExpressionParser::Parse (Stream &stream)
             num_errors++;
         }
     }
-
+    
+    stream.Printf ("error: %d errors parsing expression\n", num_errors);
     return num_errors;
 }
 
@@ -542,6 +538,15 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         err.SetErrorToGenericError();
         err.SetErrorString("IR doesn't contain a module");
         return err;
+    }
+    
+    for (llvm::Function &function : *llvm_module_ap.get()) {
+        llvm::AttributeSet attributes = function.getAttributes();
+        llvm::AttrBuilder attributes_to_remove;
+        
+        attributes_to_remove.addAttribute("target-cpu");
+        
+        function.setAttributes(attributes.removeAttributes(function.getContext(), llvm::AttributeSet::FunctionIndex, llvm::AttributeSet::get(function.getContext(), llvm::AttributeSet::FunctionIndex, attributes_to_remove)));
     }
 
     // Find the actual name of the function (it's often mangled somehow)

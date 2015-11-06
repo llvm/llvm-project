@@ -57,6 +57,7 @@ public:
     // Creates a function breakpoint by regular expression.  Takes over control of the lifespan of func_regex.
     BreakpointResolverName (Breakpoint *bkpt,
                             RegularExpression &func_regex,
+                            lldb::LanguageType language,
                             bool skip_prologue);
 
     BreakpointResolverName (Breakpoint *bkpt,

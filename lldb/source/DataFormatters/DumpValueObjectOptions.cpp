@@ -36,7 +36,8 @@ DumpValueObjectOptions::DumpValueObjectOptions() :
     m_run_validator(false),
     m_use_type_display_name(true),
     m_allow_oneliner_mode(true),
-    m_hide_pointer_value(false)
+    m_hide_pointer_value(false),
+    m_reveal_empty_aggregates(true)
 {}
 
 
@@ -234,3 +235,11 @@ DumpValueObjectOptions::SetAllowOnelinerMode (bool oneliner)
     m_allow_oneliner_mode = oneliner;
     return *this;
 }
+
+DumpValueObjectOptions&
+DumpValueObjectOptions::SetRevealEmptyAggregates (bool reveal)
+{
+    m_reveal_empty_aggregates = reveal;
+    return *this;
+}
+                                

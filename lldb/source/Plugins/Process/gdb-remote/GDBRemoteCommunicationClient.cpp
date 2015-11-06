@@ -4466,8 +4466,11 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
                                             case eSymbolTypeCompiler:
                                             case eSymbolTypeInstrumentation:
                                             case eSymbolTypeTrampoline:
+                                            case eSymbolTypeASTFile:
+                                            case eSymbolTypeMetadata:
                                                 break;
 
+                                            case eSymbolTypeIVarOffset:
                                             case eSymbolTypeCode:
                                             case eSymbolTypeResolver:
                                             case eSymbolTypeData:

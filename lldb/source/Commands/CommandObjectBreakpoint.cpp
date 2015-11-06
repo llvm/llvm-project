@@ -185,6 +185,9 @@ public:
                         case eLanguageTypeObjC_plus_plus:
                             error.SetErrorStringWithFormat ("Set exception breakpoints separately for c++ and objective-c");
                             break;
+                         case eLanguageTypeSwift:
+                             m_exception_language = eLanguageTypeSwift;
+                             break;
                         case eLanguageTypeUnknown:
                             error.SetErrorStringWithFormat ("Unknown language type: '%s' for exception breakpoint", option_arg);
                             break;
@@ -193,7 +196,7 @@ public:
                     }
                 }
                 break;
-
+                    
                 case 'f':
                     m_filenames.AppendIfUnique (FileSpec(option_arg, false));
                     break;
@@ -252,6 +255,20 @@ public:
                     m_language = Language::GetLanguageTypeFromString (option_arg);
                     if (m_language == eLanguageTypeUnknown)
                         error.SetErrorStringWithFormat ("Unknown language type: '%s' for breakpoint", option_arg);
+                    else
+                    {
+                        switch (m_language)
+                        {
+                                // For the purposes of breakpoints all C dialects are the same.
+                            case eLanguageTypeC89:
+                            case eLanguageTypeC:
+                            case eLanguageTypeC99:
+                                m_language = eLanguageTypeC;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
                     break;
 
                 case 'm':
@@ -289,7 +306,7 @@ public:
                     break;
 
                 case 'O':
-                    m_exception_extra_args.AppendArgument ("-O");
+                    m_exception_extra_args.AppendArgument ("exception-typename");
                     m_exception_extra_args.AppendArgument (option_arg);
                     break;
 
@@ -374,6 +391,7 @@ public:
             m_catch_bp = false;
             m_throw_bp = true;
             m_hardware = false;
+            m_language = eLanguageTypeUnknown;
             m_exception_language = eLanguageTypeUnknown;
             m_language = lldb::eLanguageTypeUnknown;
             m_skip_prologue = eLazyBoolCalculate;
@@ -546,6 +564,7 @@ protected:
                     bp = target->CreateFuncRegexBreakpoint (&(m_options.m_modules),
                                                             &(m_options.m_filenames),
                                                             regexp,
+                                                            m_options.m_language,
                                                             m_options.m_skip_prologue,
                                                             internal,
                                                             m_options.m_hardware).get();
@@ -805,9 +824,8 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
     { LLDB_OPT_SET_10, false, "on-catch", 'h', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeBoolean,
         "Set the breakpoint on exception catcH." },
 
-//  Don't add this option till it actually does something useful...
-//    { LLDB_OPT_SET_10, false, "exception-typename", 'O', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeTypeName,
-//        "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop for multiple object types" },
+    { LLDB_OPT_SET_10, false, "exception-typename", 'O', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeTypeName,
+        "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop for multiple object types.  Only supported for Swift at present." },
 
     { LLDB_OPT_EXPR_LANGUAGE, false, "language", 'L', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLanguage,
         "Specifies the Language to use when interpreting the breakpoint's expression (note: currently only implemented for setting breakpoints on identifiers).  If not set the target.language setting is used." },

@@ -92,6 +92,12 @@ public:
     void
     SetTrapExceptions (bool trap_exceptions = true);
     
+    bool
+    GetPlaygroundTransformEnabled () const;
+    
+    void
+    SetPlaygroundTransformEnabled (bool enable_playground_transform = true);
+
     %feature ("docstring", "Sets the language that LLDB should assume the expression is written in") SetLanguage;
     void
     SetLanguage (lldb::LanguageType language);

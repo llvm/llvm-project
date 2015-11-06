@@ -56,7 +56,6 @@ public:
     
     //------------------------------------------------------------------
     /// Destructor
-    //------------------------------------------------------------------
     ~ClangExpressionParser () override;
     
     //------------------------------------------------------------------
@@ -71,7 +70,10 @@ public:
     ///     success.
     //------------------------------------------------------------------
     unsigned
-    Parse (Stream &stream) override;
+    Parse (Stream &stream,
+           uint32_t first_line = 0,
+           uint32_t last_line = UINT32_MAX,
+           uint32_t line_offset = 0) override;
     
     //------------------------------------------------------------------
     /// Ready an already-parsed expression for execution, possibly
@@ -110,7 +112,7 @@ public:
     ///     An error code indicating the success or failure of the operation.
     ///     Test with Success().
     //------------------------------------------------------------------
-    Error
+    virtual Error
     PrepareForExecution (lldb::addr_t &func_addr,
                          lldb::addr_t &func_end,
                          lldb::IRExecutionUnitSP &execution_unit_sp,

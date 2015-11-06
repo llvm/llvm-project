@@ -35,6 +35,7 @@ ValueObjectChild::ValueObjectChild
     uint32_t bitfield_bit_offset,
     bool is_base_class,
     bool is_deref_of_parent,
+    bool is_indirect_enum_case,
     AddressType child_ptr_or_ref_addr_type
 ) :
     ValueObject (parent),
@@ -45,6 +46,7 @@ ValueObjectChild::ValueObjectChild
     m_bitfield_bit_offset (bitfield_bit_offset),
     m_is_base_class (is_base_class),
     m_is_deref_of_parent (is_deref_of_parent),
+    m_is_indirect_enum_case(is_indirect_enum_case),
     m_can_update_with_invalid_exe_ctx()
 {
     m_name = name;
@@ -139,12 +141,21 @@ ValueObjectChild::UpdateValue ()
         {
             m_value.SetCompilerType(GetCompilerType());
 
+            CompilerType parent_type(parent->GetCompilerType());
             // Copy the parent scalar value and the scalar value type
             m_value.GetScalar() = parent->GetValue().GetScalar();
             Value::ValueType value_type = parent->GetValue().GetValueType();
             m_value.SetValueType (value_type);
+            
+            Flags parent_type_flags(parent_type.GetTypeInfo());
+            
+            bool treat_scalar_as_address = parent_type_flags.AnySet(lldb::eTypeIsPointer | lldb::eTypeIsReference);
+            treat_scalar_as_address |= ((m_is_base_class == false) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
+            treat_scalar_as_address |= (GetIgnoreInstancePointerness() == true);
+            
+            AddressType addr_type = parent->GetAddressTypeOfChildren();
 
-            if (parent->GetCompilerType().IsPointerOrReferenceType ())
+            if (treat_scalar_as_address)
             {
                 lldb::addr_t addr = parent->GetPointerValue ();
                 m_value.GetScalar() = addr;
@@ -160,7 +171,6 @@ ValueObjectChild::UpdateValue ()
                 else
                 {
                     m_value.GetScalar() += m_byte_offset;
-                    AddressType addr_type = parent->GetAddressTypeOfChildren();
                     
                     switch (addr_type)
                     {
@@ -174,7 +184,7 @@ ValueObjectChild::UpdateValue ()
                             }
                             break;
                         case eAddressTypeLoad:
-                            m_value.SetValueType (Value::eValueTypeLoadAddress);
+                            m_value.SetValueType (GetIgnoreInstancePointerness() ? Value::eValueTypeScalar: Value::eValueTypeLoadAddress);
                             break;
                         case eAddressTypeHost:
                             m_value.SetValueType(Value::eValueTypeHostAddress);
@@ -213,9 +223,16 @@ ValueObjectChild::UpdateValue ()
                     break;
 
                 case Value::eValueTypeScalar:
-                    // TODO: What if this is a register value? Do we try and
-                    // extract the child value from within the parent data?
-                    // Probably...
+                    // try to extract the child value from the parent's scalar value
+                    {
+                    Scalar scalar(m_value.GetScalar());
+                    if (m_bitfield_bit_size)
+                        scalar.ExtractBitfield(m_bitfield_bit_size, m_bitfield_bit_offset);
+                    else
+                        scalar.ExtractBitfield(8*m_byte_size, 8*m_byte_offset);
+                    m_value.GetScalar() = scalar;
+                    }
+                    break;
                 default:
                     m_error.SetErrorString ("parent has invalid value.");
                     break;
@@ -227,10 +244,18 @@ ValueObjectChild::UpdateValue ()
                 const bool thread_and_frame_only_if_stopped = true;
                 ExecutionContext exe_ctx (GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped));
                 if (GetCompilerType().GetTypeInfo() & lldb::eTypeHasValue)
-                    m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+                {
+                    if (!GetIgnoreInstancePointerness())
+                        m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+                    else
+                        m_error = m_parent->GetValue().GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+                }
                 else
+                {
                     m_error.Clear(); // No value so nothing to read...
+                }
             }
+            
         }
         else
         {

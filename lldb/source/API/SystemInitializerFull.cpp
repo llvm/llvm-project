@@ -26,6 +26,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/GoASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 
 #include "Plugins/ABI/MacOSX-i386/ABIMacOSX_i386.h"
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
@@ -83,6 +84,11 @@
 #include "lldb/Host/windows/windows.h"
 #include "Plugins/Process/Windows/Live/ProcessWindowsLive.h"
 #include "Plugins/Process/Windows/MiniDump/ProcessWinMiniDump.h"
+#endif
+
+#if defined(__APPLE__) || defined(__linux__)
+#include "Plugins/Language/Swift/SwiftLanguage.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #endif
 
 #include "llvm/Support/TargetSelect.h"
@@ -248,6 +254,24 @@ SystemInitializerFull::~SystemInitializerFull()
 {
 }
 
+static void
+SwiftInitialize ()
+{
+#if defined(__APPLE__) || defined(__linux__)  
+    SwiftLanguage::Initialize();
+    SwiftLanguageRuntime::Initialize();
+#endif
+}
+
+static void
+SwiftTerminate()
+{
+#if defined(__APPLE__) || defined(__linux__)
+    SwiftLanguage::Terminate();
+    SwiftLanguageRuntime::Terminate();
+#endif
+}
+
 void
 SystemInitializerFull::Initialize()
 {
@@ -271,6 +295,7 @@ SystemInitializerFull::Initialize()
 
     ClangASTContext::Initialize();
     GoASTContext::Initialize();
+    SwiftASTContext::Initialize();
 
     ABIMacOSX_i386::Initialize();
     ABIMacOSX_arm::Initialize();
@@ -311,6 +336,8 @@ SystemInitializerFull::Initialize()
     GoLanguage::Initialize();
     ObjCLanguage::Initialize();
     ObjCPlusPlusLanguage::Initialize();
+
+    ::SwiftInitialize();
 
 #if defined(_MSC_VER)
     ProcessWindowsLive::Initialize();
@@ -389,6 +416,7 @@ SystemInitializerFull::Terminate()
 
     ClangASTContext::Terminate();
     GoASTContext::Terminate();
+    SwiftASTContext::Terminate();
 
     ABIMacOSX_i386::Terminate();
     ABIMacOSX_arm::Terminate();
@@ -422,6 +450,8 @@ SystemInitializerFull::Terminate()
     AppleObjCRuntimeV1::Terminate();
     SystemRuntimeMacOSX::Terminate();
     RenderScriptRuntime::Terminate();
+
+    ::SwiftTerminate();
 
     CPlusPlusLanguage::Terminate();
     GoLanguage::Terminate();

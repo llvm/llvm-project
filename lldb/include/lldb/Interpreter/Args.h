@@ -329,6 +329,12 @@ public:
     void
     ParseArgsForCompletion (Options &options, OptionElementVector &option_element_vector, uint32_t cursor_index);
 
+    bool
+    GetOptionValueAsString(const char *option, std::string &value);
+    
+    int
+    GetOptionValuesAsStrings(const char *option, std::vector<std::string> &values);
+    
     //------------------------------------------------------------------
     // Clear the arguments.
     //

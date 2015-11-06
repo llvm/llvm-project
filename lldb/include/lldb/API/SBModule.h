@@ -335,6 +335,8 @@ public:
     lldb::SBAddress
     GetObjectFileHeaderAddress() const;
 
+    lldb::SBError
+    IsTypeSystemCompatible (lldb::LanguageType language);
 private:
     friend class SBAddress;
     friend class SBFrame;

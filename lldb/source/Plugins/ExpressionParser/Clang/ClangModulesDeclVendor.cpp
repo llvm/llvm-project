@@ -13,6 +13,7 @@
 
 // Other libraries and framework includes
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
@@ -431,7 +432,7 @@ ClangModulesDeclVendorImpl::ForEachMacro(const ClangModulesDeclVendor::ModuleVec
     }
     
     for (clang::Preprocessor::macro_iterator mi = m_compiler_instance->getPreprocessor().macro_begin(),
-                                             me = m_compiler_instance->getPreprocessor().macro_end();
+         me = m_compiler_instance->getPreprocessor().macro_end();
          mi != me;
          ++mi)
     {
@@ -454,7 +455,7 @@ ClangModulesDeclVendorImpl::ForEachMacro(const ClangModulesDeclVendor::ModuleVec
         for (clang::ModuleMacro *module_macro : m_compiler_instance->getPreprocessor().getLeafModuleMacros(ii))
         {
             clang::Module *module = module_macro->getOwningModule();
-            
+
             {
                 ModulePriorityMap::iterator pi = module_priorities.find(reinterpret_cast<ModuleID>(module));
                 
@@ -492,7 +493,7 @@ ClangModulesDeclVendorImpl::ForEachMacro(const ClangModulesDeclVendor::ModuleVec
                     bool first_arg = true;
                     
                     for (clang::MacroInfo::arg_iterator ai = macro_info->arg_begin(),
-                                                        ae = macro_info->arg_end();
+                         ae = macro_info->arg_end();
                          ai != ae;
                          ++ai)
                     {
@@ -528,7 +529,7 @@ ClangModulesDeclVendorImpl::ForEachMacro(const ClangModulesDeclVendor::ModuleVec
                 }
                 
                 macro_expansion.append(" ");
-
+                
                 bool first_token = true;
                 
                 for (clang::MacroInfo::tokens_iterator ti = macro_info->tokens_begin(),
@@ -694,7 +695,11 @@ ClangModulesDeclVendor::Create(Target &target)
     
     invocation->getPreprocessorOpts().addRemappedFile(ModuleImportBufferName, source_buffer.release());
     
-    std::unique_ptr<clang::CompilerInstance> instance(new clang::CompilerInstance);
+    std::unique_ptr<clang::CompilerInstance> instance(new clang::CompilerInstance());
+    
+    std::shared_ptr<clang::PCHContainerOperations> pch_operations = instance->getPCHContainerOperations();
+    pch_operations->registerWriter(llvm::make_unique<clang::ObjectFilePCHContainerWriter>());
+    pch_operations->registerReader(llvm::make_unique<clang::ObjectFilePCHContainerReader>());
     
     instance->setDiagnostics(diagnostics_engine.get());
     instance->setInvocation(invocation.get());

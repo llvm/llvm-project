@@ -966,10 +966,30 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
                                         synthetic.get() == NULL /* no synthetic */
                                         || synthetic == valobj_sp) /* synthetic is the same as the original object */
                                     {
-                                        valobj_sp->GetExpressionPath (var_expr_path_strm, false);
-                                        error.SetErrorStringWithFormat ("\"(%s) %s\" is not an array type", 
-                                                                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                                                                        var_expr_path_strm.GetString().c_str());
+                                        if (valobj_sp->GetCompilerType().IsArrayType (NULL, NULL, &is_incomplete_array))
+                                        {
+                                            // Pass false to dynamic_value here so we can tell the difference between
+                                            // no dynamic value and no member of this type...
+                                            child_valobj_sp = valobj_sp->GetChildAtIndex (child_index, true);
+                                            if (!child_valobj_sp && (is_incomplete_array || no_synth_child == false))
+                                                child_valobj_sp = valobj_sp->GetSyntheticArrayMember (child_index, true);
+                                            
+                                            if (!child_valobj_sp)
+                                            {
+                                                valobj_sp->GetExpressionPath (var_expr_path_strm, false);
+                                                error.SetErrorStringWithFormat ("array index %ld is not valid for \"(%s) %s\"",
+                                                                                child_index,
+                                                                                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                                                                                var_expr_path_strm.GetString().c_str());
+                                            }
+                                        }
+                                        else
+                                        {
+                                            valobj_sp->GetExpressionPath (var_expr_path_strm, false);
+                                            error.SetErrorStringWithFormat ("\"(%s) %s\" is not an array type", 
+                                                                            valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                                                                            var_expr_path_strm.GetString().c_str());
+                                        }
                                     }
                                     else if (static_cast<uint32_t>(child_index) >= synthetic->GetNumChildren() /* synthetic does not have that many values */)
                                     {
@@ -1146,6 +1166,14 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
                 }
                 if (valobj_sp)
                 {
+                    const CompilerType &clang_type(valobj_sp->GetCompilerType());
+                    Flags clang_type_flags(clang_type.GetTypeInfo());
+                    if ( (deref || address_of) && clang_type_flags.AllSet(eTypeIsSwift) )
+                    {
+                        error.SetErrorStringWithFormat("cannot evaluate %s on a Swift variable",
+                                                       deref ? "*" : "&");
+                        return ValueObjectSP();
+                    }
                     if (deref)
                     {
                         ValueObjectSP deref_valobj_sp (valobj_sp->Dereference(error));

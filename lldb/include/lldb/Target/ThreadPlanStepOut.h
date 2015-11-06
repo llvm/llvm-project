@@ -50,6 +50,12 @@ public:
         return m_return_valobj_sp;
     }
 
+    bool
+    IsReturnValueSwiftErrorValue() override
+    {
+        return m_is_swift_error_value;
+    }
+
 protected:
     void
     SetFlagsToDefault() override
@@ -69,6 +75,7 @@ private:
     StackID  m_immediate_step_from_id;
     lldb::break_id_t m_return_bp_id;
     lldb::addr_t m_return_addr;
+    lldb::addr_t m_swift_error_return_addr;
     bool m_stop_others;
     lldb::ThreadPlanSP m_step_out_to_inline_plan_sp;    // This plan implements step out to the real function containing
                                                         // an inlined frame so we can then step out of that.
@@ -76,6 +83,7 @@ private:
     lldb::ThreadPlanSP m_step_out_further_plan_sp;      // This plan keeps stepping out if ShouldStopHere told us to.
     Function *m_immediate_step_from_function;
     lldb::ValueObjectSP m_return_valobj_sp;
+    bool                m_is_swift_error_value;
 
     friend lldb::ThreadPlanSP
     Thread::QueueThreadPlanForStepOut (bool abort_other_plans,

@@ -188,7 +188,7 @@ ConstString
 Symbol::GetDisplayName () const
 {
     if (!m_mangled)
-        return ConstString();
+        return GetName();
     return m_mangled.GetDisplayDemangledName(GetLanguage());
 }
 
@@ -305,7 +305,7 @@ Symbol::GetDescription (Stream *s, lldb::DescriptionLevel level, Target *target)
 }
 
 void
-Symbol::Dump(Stream *s, Target *target, uint32_t index) const
+Symbol::Dump(Stream *s, Target *target, uint32_t index, Mangled::NamePreference name_preference) const
 {
     s->Printf("[%5u] %6u %c%c%c %-15s ",
               index,
@@ -318,7 +318,7 @@ Symbol::Dump(Stream *s, Target *target, uint32_t index) const
     // Make sure the size of the symbol is up to date before dumping
     GetByteSize();
 
-    ConstString name = m_mangled.GetName(GetLanguage());
+    ConstString name = m_mangled.GetName(GetLanguage(), name_preference);
     if (ValueIsAddress())
     {
         if (!m_addr_range.GetBaseAddress().Dump(s, nullptr, Address::DumpStyleFileAddress))
@@ -342,7 +342,7 @@ Symbol::Dump(Stream *s, Target *target, uint32_t index) const
         s->Printf ("                                                         0x%8.8x %s",
                    m_flags,
                    name.AsCString(""));
-        
+
         ConstString reexport_name = GetReExportedSymbolName();
         intptr_t shlib = m_addr_range.GetByteSize();
         if (shlib)
@@ -488,6 +488,8 @@ Symbol::GetTypeAsString() const
     ENUM_TO_CSTRING(ObjCClass);
     ENUM_TO_CSTRING(ObjCMetaClass);
     ENUM_TO_CSTRING(ObjCIVar);
+    ENUM_TO_CSTRING(IVarOffset);
+    ENUM_TO_CSTRING(Metadata)
     ENUM_TO_CSTRING(ReExported);
     default:
         break;

@@ -201,6 +201,20 @@
 			remoteGlobalIDString = 4C1E373816F4035D00FF10BB;
 			remoteInfo = lldbperf;
 		};
+		94BA9B491B1A7C5700035A23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4C86C5C316F7A35000844407 /* lldb.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2690CD171A6DC0D000E717C8;
+			remoteInfo = "lldb-mi";
+		};
+		94BA9B4B1B1A7C5700035A23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4C86C5C316F7A35000844407 /* lldb.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 94A928611A92B81600771D51;
+			remoteInfo = argdumper;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -466,9 +480,11 @@
 				264B3DE816F7E47600D1E7AB /* LLDB.framework */,
 				264B3DEA16F7E47600D1E7AB /* darwin-debug */,
 				264B3DEC16F7E47600D1E7AB /* liblldb-core.a */,
-				264B3DEE16F7E47600D1E7AB /* lldb-platform */,
+				264B3DEE16F7E47600D1E7AB /* lldb-server */,
 				264B3DF016F7E47600D1E7AB /* com.apple.lldb.launcherXPCService.xpc */,
 				264B3DF216F7E47600D1E7AB /* com.apple.lldb.launcherRootXPCService.xpc */,
+				94BA9B4A1B1A7C5700035A23 /* lldb-mi */,
+				94BA9B4C1B1A7C5700035A23 /* argdumper */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -638,6 +654,7 @@
 		4C1E373116F4035D00FF10BB /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 0700;
 				LastUpgradeCheck = 0500;
 				ORGANIZATIONNAME = lldb.llvm.org;
 			};
@@ -700,10 +717,10 @@
 			remoteRef = 264B3DEB16F7E47600D1E7AB /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		264B3DEE16F7E47600D1E7AB /* lldb-platform */ = {
+		264B3DEE16F7E47600D1E7AB /* lldb-server */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.executable";
-			path = "lldb-platform";
+			path = "lldb-server";
 			remoteRef = 264B3DED16F7E47600D1E7AB /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
@@ -719,6 +736,20 @@
 			fileType = wrapper.cfbundle;
 			path = com.apple.lldb.launcherRootXPCService.xpc;
 			remoteRef = 264B3DF116F7E47600D1E7AB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		94BA9B4A1B1A7C5700035A23 /* lldb-mi */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = "lldb-mi";
+			remoteRef = 94BA9B491B1A7C5700035A23 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		94BA9B4C1B1A7C5700035A23 /* argdumper */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = argdumper;
+			remoteRef = 94BA9B4B1B1A7C5700035A23 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -869,7 +900,6 @@
 				);
 				OTHER_LDFLAGS = "-Wl,-rpath,@loader_path/../../../../build/Debug";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../ $(SRCROOT)/../../include/";
 			};
 			name = Debug;
@@ -886,7 +916,6 @@
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				OTHER_LDFLAGS = "-Wl,-rpath,@loader_path/../../../../build/Release";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../ $(SRCROOT)/../../include/";
 			};
 			name = Release;
@@ -921,6 +950,10 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx.internal;
+				"SDKROOT[arch=i386]" = macosx;
+				"SDKROOT[arch=x86_64]" = macosx;
+				"SDKROOT[arch=x86_64h]" = macosx;
 			};
 			name = Debug;
 		};
@@ -948,6 +981,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx.internal;
+				"SDKROOT[arch=i386]" = macosx;
+				"SDKROOT[arch=x86_64]" = macosx;
+				"SDKROOT[arch=x86_64h]" = macosx;
 			};
 			name = Release;
 		};

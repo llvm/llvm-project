@@ -83,7 +83,13 @@ fi
 # Next look for swig
 #
 
-SWIG=`which swig`
+if [ -f "$LLDB_PATH_TO_SWIG" ]
+then
+    SWIG="$LLDB_PATH_TO_SWIG"
+else
+    SWIG=`which swig`
+fi
+
 if [ ! -x "$SWIG" -a -f /usr/bin/swig ]
 then
     SWIG=/usr/bin/swig

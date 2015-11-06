@@ -13,8 +13,10 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -210,7 +212,6 @@ SymbolVendor::ParseImportedModules (const SymbolContext &sc,
             return m_sym_file_ap->ParseImportedModules(sc, imported_modules);
     }
     return false;
-    
 }
 
 size_t
@@ -499,6 +500,40 @@ SymbolVendor::ClearSymtab()
     }
 }
 
+bool
+SymbolVendor::GetCompileOption(const char *option, std::string &value, lldb_private::CompileUnit *cu)
+{
+    SymbolFile *sym_file = GetSymbolFile();
+    
+    if (sym_file)
+        return sym_file->GetCompileOption(option, value, cu);
+        
+    value.clear();
+    return false;
+}
+
+
+int
+SymbolVendor::GetCompileOptions(const char *option, std::vector<std::string> &values, lldb_private::CompileUnit *cu)
+{
+    SymbolFile *sym_file = GetSymbolFile();
+    
+    if (sym_file)
+        return sym_file->GetCompileOptions(option, values, cu);
+    
+    values.clear();
+    return false;
+}
+
+void
+SymbolVendor::GetLoadedModules(lldb::LanguageType language, FileSpecList &modules)
+{
+    SymbolFile *sym_file = GetSymbolFile();
+    
+    if (sym_file)
+        sym_file->GetLoadedModules(language, modules);
+}
+
 void
 SymbolVendor::SectionFileAddressesChanged ()
 {
@@ -536,3 +571,68 @@ SymbolVendor::GetPluginVersion()
     return 1;
 }
 
+bool
+SymbolVendor::SetLimitSourceFileRange (const FileSpec &file,
+                                       uint32_t first_line,
+                                       uint32_t last_line)
+{
+    SymbolFile *sym_file = GetSymbolFile();
+    
+    if (sym_file)
+        return sym_file->SetLimitSourceFileRange (file, first_line, last_line);
+
+    return false;
+}
+
+bool
+SymbolVendor::SymbolContextShouldBeExcluded (const SymbolContext &sc, uint32_t actual_line)
+{
+    SymbolFile *sym_file = GetSymbolFile();
+    
+    if (sym_file)
+        return sym_file->SymbolContextShouldBeExcluded (sc, actual_line);
+    
+    return false;
+}
+
+DataBufferSP
+SymbolVendor::GetASTData (lldb::LanguageType language)
+{
+    // Sometimes the AST Section data is found from the module, so look there first:
+    SectionList *section_list = GetModule()->GetSectionList();
+    if (language != eLanguageTypeSwift)
+        return DataBufferSP();
+
+    if (section_list)
+    {
+        SectionSP section_sp (section_list->FindSectionByType (eSectionTypeSwiftModules, true));
+        if (section_sp)
+        {
+            DataExtractor section_data;
+            
+            if (section_sp->GetSectionData(section_data))
+            {
+                return DataBufferSP (new DataBufferHeap((const char *)section_data.GetDataStart(), section_data.GetByteSize()));
+            }
+        }
+    }
+
+    // If we couldn't find it in the Module, then look for it in the SymbolFile:
+    SymbolFile *sym_file = GetSymbolFile();
+
+    if (sym_file)
+        return sym_file->GetASTData (language);
+
+    return DataBufferSP();
+}
+
+
+bool
+SymbolVendor::ForceInlineSourceFileCheck ()
+{
+    SymbolFile *sym_file = GetSymbolFile();
+    if (sym_file)
+        return sym_file->ForceInlineSourceFileCheck();
+    
+    return false;
+}

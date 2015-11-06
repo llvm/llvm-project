@@ -595,6 +595,13 @@ public:
                             const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
+    BreakpointCreateByName (const char *symbol_name,
+                            uint32_t func_name_type,           // Logical OR one or more FunctionNameType enum bits
+                            lldb::LanguageType symbol_language,
+                            const SBFileSpecList &module_list, 
+                            const SBFileSpecList &comp_unit_list);
+
+    lldb::SBBreakpoint
     BreakpointCreateByNames (const char *symbol_name[],
                              uint32_t num_names,
                              uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
@@ -602,8 +609,22 @@ public:
                              const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
+    BreakpointCreateByNames (const char *symbol_name[],
+                             uint32_t num_names,
+                             uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
+                             lldb::LanguageType symbol_language,
+                             const SBFileSpecList &module_list,
+                             const SBFileSpecList &comp_unit_list);
+
+    lldb::SBBreakpoint
     BreakpointCreateByRegex (const char *symbol_name_regex, const char *module_name = NULL);
 
+    lldb::SBBreakpoint
+    BreakpointCreateByRegex (const char *symbol_name_regex,
+                             lldb::LanguageType symbol_language,
+                             const SBFileSpecList &module_list, 
+                             const SBFileSpecList &comp_unit_list);
+    
     lldb::SBBreakpoint
     BreakpointCreateBySourceRegex (const char *source_regex, const lldb::SBFileSpec &source_file, const char *module_name = NULL);
 
@@ -614,6 +635,12 @@ public:
     BreakpointCreateForException  (lldb::LanguageType language,
                                    bool catch_bp,
                                    bool throw_bp);
+
+    lldb::SBBreakpoint
+    BreakpointCreateForException  (lldb::LanguageType language,
+                                   bool catch_bp,
+                                   bool throw_bp,
+                                   SBStringList &extra_args);
 
     lldb::SBBreakpoint
     BreakpointCreateByAddress (addr_t address);

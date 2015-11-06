@@ -19,12 +19,15 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 
 #include <iterator>
 #include <mutex>
+
+#include "swift/AST/Type.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -45,6 +48,13 @@ CompilerType::CompilerType (clang::ASTContext *ast,
     if (m_type)
         assert(m_type_system != nullptr);
 #endif
+}
+
+CompilerType::CompilerType (swift::ASTContext *ast_context,
+                            swift::Type qual_type) :
+    m_type(qual_type.getPointer()),
+    m_type_system(SwiftASTContext::GetSwiftASTContext(ast_context))
+{
 }
 
 CompilerType::~CompilerType()
@@ -252,10 +262,11 @@ CompilerType::IsPolymorphicClass () const
 bool
 CompilerType::IsPossibleDynamicType (CompilerType *dynamic_pointee_type,
                                      bool check_cplusplus,
-                                     bool check_objc) const
+                                     bool check_objc,
+                                     bool check_swift) const
 {
     if (IsValid())
-        return m_type_system->IsPossibleDynamicType(m_type, dynamic_pointee_type, check_cplusplus, check_objc);
+        return m_type_system->IsPossibleDynamicType(m_type, dynamic_pointee_type, check_cplusplus, check_objc, check_swift);
     return false;
 }
 
@@ -365,7 +376,31 @@ CompilerType::GetTypeName () const
 ConstString
 CompilerType::GetDisplayTypeName () const
 {
-    return GetTypeName();
+    if (IsValid())
+    {
+        return m_type_system->GetDisplayTypeName(m_type);
+    }
+    return ConstString();
+}
+
+ConstString
+CompilerType::GetTypeSymbolName() const
+{
+    if (IsValid())
+    {
+        return m_type_system->GetTypeSymbolName(m_type);
+    }
+    return ConstString();
+}
+
+ConstString
+CompilerType::GetMangledTypeName () const
+{
+    if (IsValid())
+    {
+        return m_type_system->GetMangledTypeName(m_type);
+    }
+    return ConstString();
 }
 
 uint32_t
@@ -440,6 +475,14 @@ CompilerType::GetCanonicalType () const
 {
     if (IsValid())
         return m_type_system->GetCanonicalType(m_type);
+    return CompilerType();
+}
+
+CompilerType
+CompilerType::GetInstanceType () const
+{
+    if (IsValid())
+        return m_type_system->GetInstanceType(m_type);
     return CompilerType();
 }
 
@@ -593,6 +636,23 @@ CompilerType::GetTypedefedType () const
         return CompilerType();
 }
 
+CompilerType
+CompilerType::GetUnboundType () const
+{
+    if (IsValid())
+        return m_type_system->GetUnboundType(m_type);
+    return CompilerType();
+}
+
+//CompilerType
+//CompilerType::RemoveFastQualifiers () const
+//{
+//    if (IsValid())
+//        return m_type_system->RemoveFastQualifiers(m_type);
+//    return CompilerType();
+//}
+
+
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 //----------------------------------------------------------------------
@@ -624,6 +684,19 @@ CompilerType::GetByteSize (ExecutionContextScope *exe_scope) const
     return (GetBitSize (exe_scope) + 7) / 8;
 }
 
+uint64_t
+CompilerType::GetByteStride () const
+{
+    if (IsValid())
+        return m_type_system->GetByteStride(m_type);
+    return 0;
+}
+
+uint64_t
+CompilerType::GetAlignedBitSize () const
+{
+    return 0;
+}
 
 size_t
 CompilerType::GetTypeBitAlign () const
@@ -764,6 +837,7 @@ CompilerType::GetChildCompilerTypeAtIndex (ExecutionContext *exe_ctx,
                                            uint32_t &child_bitfield_bit_offset,
                                            bool &child_is_base_class,
                                            bool &child_is_deref_of_parent,
+                                           bool &child_is_indirect_enum_case,
                                            ValueObject *valobj) const
 {
     if (!IsValid())
@@ -781,6 +855,7 @@ CompilerType::GetChildCompilerTypeAtIndex (ExecutionContext *exe_ctx,
                                                       child_bitfield_bit_offset,
                                                       child_is_base_class,
                                                       child_is_deref_of_parent,
+                                                      child_is_indirect_enum_case,
                                                       valobj);
 }
 
@@ -934,11 +1009,12 @@ CompilerType::DumpTypeValue (Stream *s,
                              size_t byte_size,
                              uint32_t bitfield_bit_size,
                              uint32_t bitfield_bit_offset,
-                             ExecutionContextScope *exe_scope)
+                             ExecutionContextScope *exe_scope,
+                             bool is_base_class)
 {
     if (!IsValid())
         return false;
-    return m_type_system->DumpTypeValue(m_type, s, format, data, byte_offset, byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope);
+    return m_type_system->DumpTypeValue(m_type, s, format, data, byte_offset, byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
 }
 
 
@@ -979,7 +1055,7 @@ CompilerType::GetValueAsScalar (const lldb_private::DataExtractor &data,
     if (!IsValid())
         return false;
     
-    if (IsAggregateType ())
+    if (0 == (GetTypeInfo() & eTypeHasValue))
     {
         return false;   // Aggregate types don't have scalar values
     }

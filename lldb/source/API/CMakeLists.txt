@@ -1,3 +1,8 @@
+set(LLVM_NO_RTTI 1)
+
+include(AddLLVM)
+include(SwiftAddCustomCommandTarget)
+
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   add_definitions( -DEXPORT_LIBLLDB )
 endif()
@@ -117,3 +122,20 @@ if (LLDB_WRAP_PYTHON)
 endif()
 target_link_libraries(liblldb ${cmake_2_8_12_PRIVATE} ${LLDB_SYSTEM_LIBS})
 
+set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
+file(GLOB CLANG_RESOURCE_PATHS "${LLDB_PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang/*.*.*")
+list(GET CLANG_RESOURCE_PATHS 0 CLANG_RESOURCE_PATH)
+add_custom_command_target(
+    unused_var
+    COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${CLANG_RESOURCE_PATH}" "${lib_dir}/lldb/clang"
+    OUTPUT "${lib_dir}/lldb/clang"
+    VERBATIM
+    ALL
+    DEPENDS ${CLANG_RESOURCE_PATH}/include)
+
+install(
+  CODE "file(MAKE_DIRECTORY ${lib_dir}/lldb)")
+
+install(
+  DIRECTORY "${lib_dir}/lldb/clang"
+  DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)

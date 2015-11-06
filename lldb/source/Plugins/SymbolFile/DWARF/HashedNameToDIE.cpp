@@ -136,6 +136,7 @@ DWARFMappedHash::GetAtomTypeName (uint16_t atom)
         case eAtomTypeNameFlags:    return "name-flags";
         case eAtomTypeTypeFlags:    return "type-flags";
         case eAtomTypeQualNameHash: return "qualified-name-hash";
+        case eAtomTypeString:       return "strp";
     }
     return "<invalid>";
 }
@@ -145,7 +146,8 @@ DWARFMappedHash::DIEInfo::DIEInfo () :
     offset (DW_INVALID_OFFSET),
     tag (0),
     type_flags (0),
-    qualified_name_hash (0)
+    qualified_name_hash (0),
+    strp (UINT64_MAX)
 {
 }
 
@@ -153,12 +155,14 @@ DWARFMappedHash::DIEInfo::DIEInfo (dw_offset_t c,
                                    dw_offset_t o,
                                    dw_tag_t t,
                                    uint32_t f,
-                                   uint32_t h) :
+                                   uint32_t h,
+                                   uint64_t s) :
     cu_offset (c),
     offset (o),
     tag (t),
     type_flags (f),
-    qualified_name_hash (h)
+    qualified_name_hash (h),
+    strp (s)
 {
 }
 

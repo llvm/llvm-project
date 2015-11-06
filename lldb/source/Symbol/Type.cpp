@@ -63,6 +63,13 @@ TypeListImpl::Append (const lldb_private::TypeList &type_list)
 }
 
 
+SymbolFileType::SymbolFileType (SymbolFile &symbol_file, lldb::TypeSP type_sp) :
+    UserID (type_sp ? type_sp->GetID() : LLDB_INVALID_UID),
+    m_symbol_file (symbol_file),
+    m_type_sp (type_sp)
+{
+}
+
 Type *
 SymbolFileType::GetType ()
 {
@@ -698,6 +705,36 @@ Type::GetQualifiedName ()
     return GetForwardCompilerType ().GetConstTypeName();
 }
 
+static bool
+StripScopingSeparator (const char* name_cstr,
+                       const char* basename_cstr,
+                       const char* scoping_separator,
+                       char generic_args_separator,
+                       std::string &scope,
+                       std::string &basename)
+{
+    const size_t len_of_scoping_separator = strlen(scoping_separator);
+    const char* scope_separator = ::strstr (basename_cstr, scoping_separator);
+    if (scope_separator)
+    {
+        const char* template_arg_char = ::strchr (basename_cstr, generic_args_separator);
+        while (scope_separator != nullptr)
+        {
+            if (template_arg_char && scope_separator > template_arg_char) // but namespace'd template arguments are still good to go
+                break;
+            basename_cstr = scope_separator + len_of_scoping_separator;
+            scope_separator = strstr(basename_cstr, scoping_separator);
+        }
+        if (basename_cstr > name_cstr)
+        {
+            scope.assign (name_cstr, basename_cstr - name_cstr);
+            basename.assign (basename_cstr);
+            return true;
+        }
+    }
+    return false;
+}
+
 bool
 Type::GetTypeScopeAndBasename (const char* &name_cstr,
                                std::string &scope,
@@ -736,25 +773,16 @@ Type::GetTypeScopeAndBasename (const char* &name_cstr,
             name_cstr += 8;
             type_class = eTypeClassTypedef;
         }
-        const char *basename_cstr = name_cstr;
-        const char* namespace_separator = ::strstr (basename_cstr, "::");
-        if (namespace_separator)
+        else if (name_strref.startswith("typealias "))
         {
-            const char* template_arg_char = ::strchr (basename_cstr, '<');
-            while (namespace_separator != nullptr)
-            {
-                if (template_arg_char && namespace_separator > template_arg_char) // but namespace'd template arguments are still good to go
-                    break;
-                basename_cstr = namespace_separator + 2;
-                namespace_separator = strstr(basename_cstr, "::");
-            }
-            if (basename_cstr > name_cstr)
-            {
-                scope.assign (name_cstr, basename_cstr - name_cstr);
-                basename.assign (basename_cstr);
-                return true;
-            }
+            name_cstr += 8;
+            type_class = eTypeClassTypedef;
         }
+        const char *basename_cstr = name_cstr;
+        if (::StripScopingSeparator(name_cstr, basename_cstr, "::", '<', scope, basename)) // try with C++-style
+            return true;
+        if (::StripScopingSeparator(name_cstr, basename_cstr, ".", '<', scope, basename)) // try with Swift-style
+            return true;
     }
     return false;
 }
@@ -768,10 +796,9 @@ Type::GetModule()
     return ModuleSP();
 }
 
-
 TypeAndOrName::TypeAndOrName () : m_type_pair(), m_type_name()
 {
-
+    
 }
 
 TypeAndOrName::TypeAndOrName (TypeSP &in_type_sp) : m_type_pair(in_type_sp)
@@ -786,7 +813,7 @@ TypeAndOrName::TypeAndOrName (const char *in_type_str) : m_type_name(in_type_str
 
 TypeAndOrName::TypeAndOrName (const TypeAndOrName &rhs) : m_type_pair (rhs.m_type_pair), m_type_name (rhs.m_type_name)
 {
-
+    
 }
 
 TypeAndOrName::TypeAndOrName (ConstString &in_type_const_string) : m_type_name (in_type_const_string)

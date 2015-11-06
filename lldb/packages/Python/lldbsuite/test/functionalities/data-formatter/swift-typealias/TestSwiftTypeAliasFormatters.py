@@ -1,0 +1,102 @@
+# TestSwiftTypeAliasFormatters.py
+#
+# This source file is part of the Swift.org open source project
+#
+# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Licensed under Apache License v2.0 with Runtime Library Exception
+#
+# See http://swift.org/LICENSE.txt for license information
+# See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+#
+# ------------------------------------------------------------------------------
+"""
+Test that Swift typealiases get formatted properly
+"""
+import lldb
+from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
+import os
+
+class TestSwiftTypeAliasFormatters(TestBase):
+    
+    mydir = TestBase.compute_mydir(__file__)
+    
+    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
+    @dsym_test
+    @swiftTest
+    def test_with_dsym(self):
+        """Test that Swift typealiases get formatted properly"""
+        self.buildDsym()
+        self.do_test()
+
+    @dwarf_test
+    @swiftTest
+    def test_with_dwarf(self):
+        """Test that Swift typealiases get formatted properly"""
+        self.buildDwarf()
+        self.do_test()
+
+    def setUp(self):
+        TestBase.setUp(self)
+        self.main_source = "main.swift"
+        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+
+    def do_test(self):
+        """Test that Swift typealiases get formatted properly"""
+        exe_name = "a.out"
+        exe = os.path.join(os.getcwd(), exe_name)
+
+        # Create the target
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        
+        # Set the breakpoints
+        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
+        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
+
+        # Launch the process, and do not stop at the entry point.
+        process = target.LaunchSimple(None, None, os.getcwd())
+
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # Frame #0 should be at our breakpoint.
+        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        
+        self.assertTrue(len(threads) == 1)
+        self.thread = threads[0]
+        self.frame = self.thread.frames[0]
+        self.assertTrue(self.frame, "Frame 0 is valid.")
+        
+        def cleanup():
+            self.runCmd('type format clear', check=False)
+            self.runCmd('type summary clear', check=False)
+            self.runCmd("settings set target.max-children-count 256", check=False)
+        
+        self.addTearDownHook(cleanup)
+        
+        self.expect("frame variable f", substrs=['.Foo) f = 12'])
+        self.expect("frame variable b", substrs=['.Bar) b = 24'])
+        
+        self.runCmd('type summary add a.Foo -v -s "hello"')
+        self.expect("frame variable f", substrs=['.Foo) f = hello'])
+        self.expect("frame variable b", substrs=['.Bar) b = hello'])
+        
+        self.runCmd('type summary add a.Bar -v -s "hi"')
+        self.expect("frame variable f", substrs=['.Foo) f = hello'])
+        self.expect("frame variable b", substrs=['.Bar) b = hi'])
+        
+        self.runCmd("type summary delete a.Foo")
+        self.expect("frame variable f", substrs=['.Foo) f = 12'])
+        self.expect("frame variable b", substrs=['.Bar) b = hi'])
+        
+        self.runCmd("type summary delete a.Bar")
+        self.runCmd("type summary add -C no -v a.Foo -s hello")
+        self.expect("frame variable f", substrs=['.Foo) f = hello'])
+        self.expect("frame variable b", substrs=['.Bar) b = 24'])
+        
+        
+if __name__ == '__main__':
+    import atexit
+    lldb.SBDebugger.Initialize()
+    atexit.register(lambda: lldb.SBDebugger.Terminate())
+    unittest2.main()

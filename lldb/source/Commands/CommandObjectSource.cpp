@@ -771,32 +771,39 @@ protected:
             SymbolContextList sc_list;
             size_t num_matches = 0;
             
-            if (m_options.modules.size() > 0)
+            for (size_t i=0; i<2; ++i)
             {
-                ModuleList matching_modules;
-                for (size_t i = 0, e = m_options.modules.size(); i < e; ++i)
+                if (m_options.modules.size() > 0)
                 {
-                    FileSpec module_file_spec(m_options.modules[i].c_str(), false);
-                    if (module_file_spec)
+                    ModuleList matching_modules;
+                    for (size_t i = 0, e = m_options.modules.size(); i < e; ++i)
                     {
-                        ModuleSpec module_spec (module_file_spec);
-                        matching_modules.Clear();
-                        target->GetImages().FindModules (module_spec, matching_modules);
-                        num_matches += matching_modules.ResolveSymbolContextForFilePath (filename,
-                                                                                         0,
-                                                                                         check_inlines,
-                                                                                         eSymbolContextModule | eSymbolContextCompUnit,
-                                                                                         sc_list);
+                        FileSpec module_file_spec(m_options.modules[i].c_str(), false);
+                        if (module_file_spec)
+                        {
+                            ModuleSpec module_spec (module_file_spec);
+                            matching_modules.Clear();
+                            target->GetImages().FindModules (module_spec, matching_modules);
+                            num_matches += matching_modules.ResolveSymbolContextForFilePath (filename,
+                                                                                             check_inlines ? 1 : 0, // For inlines set line to 1 to make sure we get a match
+                                                                                             check_inlines,
+                                                                                             eSymbolContextModule | eSymbolContextCompUnit,
+                                                                                             sc_list);
+                        }
                     }
                 }
-            }
-            else
-            {
-                num_matches = target->GetImages().ResolveSymbolContextForFilePath (filename,
-                                                                                   0,
-                                                                                   check_inlines,
-                                                                                   eSymbolContextModule | eSymbolContextCompUnit,
-                                                                                   sc_list);
+                else
+                {
+                    num_matches = target->GetImages().ResolveSymbolContextForFilePath (filename,
+                                                                                       check_inlines ? 1 : 0, // For inlines set line to 1 to make sure we get a match
+                                                                                       check_inlines,
+                                                                                       eSymbolContextModule | eSymbolContextCompUnit,
+                                                                                       sc_list);
+                }
+                if (num_matches > 0)
+                    break;
+                else
+                    check_inlines = true;
             }
             
             if (num_matches == 0)
@@ -806,26 +813,69 @@ protected:
                 result.SetStatus (eReturnStatusFailed);
                 return false;
             }
-
-            if (num_matches > 1)
+            SymbolContext best_sc;
+            SymbolContext sc;
+            FileSpec source_spec;
+            if (num_matches == 1)
+            {
+                sc_list.GetContextAtIndex(0, best_sc);
+            }
+            else
             {
                 bool got_multiple = false;
-                FileSpec *test_cu_spec = NULL;
 
                 for (unsigned i = 0; i < num_matches; i++)
                 {
-                    SymbolContext sc;
                     sc_list.GetContextAtIndex(i, sc);
-                    if (sc.comp_unit)
+                    if (best_sc.comp_unit == NULL)
                     {
-                        if (test_cu_spec)
+                        // First entry, just set the best_sc
+                        best_sc = sc;
+                    }
+                    else
+                    {
+                        // Second or higher entry
+                        if (sc.line_entry.file)
                         {
-                            if (test_cu_spec != static_cast<FileSpec *> (sc.comp_unit))
+                            // We picked up an inline entry, see if it matches the inline
+                            // entry in "best_sc" or the compile unit in "best_sc"
+                            if (best_sc.line_entry.file)
+                            {
+                                if (best_sc.line_entry.file != sc.line_entry.file)
+                                    got_multiple = true;
+                            }
+                            else if (*best_sc.comp_unit != sc.line_entry.file)
+                            {
                                 got_multiple = true;
-                            break;
+                            }
                         }
                         else
-                            test_cu_spec = sc.comp_unit;
+                        {
+                            if (best_sc.line_entry.file)
+                            {
+                                // The best match so far was an inline entry...
+                                if (best_sc.line_entry.file == *sc.comp_unit)
+                                {
+                                    // best_sc was an inline entry, but we found a compile unit
+                                    // that actually matches, use the current sc as the best match
+                                    best_sc = sc;
+                                }
+                                else if (best_sc.line_entry.file != *sc.comp_unit)
+                                {
+                                    got_multiple = true;
+                                }
+                            }
+                            else
+                            {
+                                // The best match so far has a valid compile unit. Complain if
+                                // the compile units are the same file, or if the compile unit
+                                // in the best match doesn't match the inline entry in "sc"
+                                if (*(static_cast<FileSpec *>(best_sc.comp_unit)) != *(static_cast<FileSpec *>(sc.comp_unit)))
+                                {
+                                    got_multiple = true;
+                                }
+                            }
+                        }
                     }
                 }
                 if (got_multiple)
@@ -837,41 +887,38 @@ protected:
                 }
             }
             
-            SymbolContext sc;
-            if (sc_list.GetContextAtIndex(0, sc))
+            sc = best_sc;
+            if (sc.comp_unit)
             {
-                if (sc.comp_unit)
+                if (m_options.show_bp_locs)
                 {
-                    if (m_options.show_bp_locs)
-                    {
-                        const bool show_inlines = true;
-                        m_breakpoint_locations.Reset (*sc.comp_unit, 0, show_inlines);
-                        SearchFilterForUnconstrainedSearches target_search_filter (target->shared_from_this());
-                        target_search_filter.Search (m_breakpoint_locations);
-                    }
-                    else
-                        m_breakpoint_locations.Clear();
-
-                    if (m_options.num_lines == 0)
-                        m_options.num_lines = 10;
-                    
-                    target->GetSourceManager().DisplaySourceLinesWithLineNumbers (sc.comp_unit,
-                                                                                  m_options.start_line,
-                                                                                  0,
-                                                                                  m_options.num_lines,
-                                                                                  "",
-                                                                                  &result.GetOutputStream(),
-                                                                                  GetBreakpointLocations ());
-
-                    result.SetStatus (eReturnStatusSuccessFinishResult);
+                    const bool show_inlines = true;
+                    m_breakpoint_locations.Reset (*sc.comp_unit, 0, show_inlines);
+                    SearchFilterForUnconstrainedSearches target_search_filter (target->shared_from_this());
+                    target_search_filter.Search (m_breakpoint_locations);
                 }
                 else
-                {
-                    result.AppendErrorWithFormat("No comp unit found for: \"%s.\"\n", 
-                                                 m_options.file_name.c_str());
-                    result.SetStatus (eReturnStatusFailed);
-                    return false;
-                }
+                    m_breakpoint_locations.Clear();
+
+                if (m_options.num_lines == 0)
+                    m_options.num_lines = 10;
+                
+                target->GetSourceManager().DisplaySourceLinesWithLineNumbers (sc.line_entry.file ? sc.line_entry.file : sc.comp_unit,
+                                                                              m_options.start_line,
+                                                                              0,
+                                                                              m_options.num_lines,
+                                                                              "",
+                                                                              &result.GetOutputStream(),
+                                                                              GetBreakpointLocations ());
+
+                result.SetStatus (eReturnStatusSuccessFinishResult);
+            }
+            else
+            {
+                result.AppendErrorWithFormat("No comp unit found for: \"%s.\"\n", 
+                                             m_options.file_name.c_str());
+                result.SetStatus (eReturnStatusFailed);
+                return false;
             }
         }
         return result.Succeeded();

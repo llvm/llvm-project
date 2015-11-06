@@ -20,6 +20,8 @@ import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
+
+@skipIfLinux  # <rdar://problem/23157557> TestConcurrentEvents.py timeout on Ubuntu 14.04 x86_64
 @skipIfWindows
 class ConcurrentEventsTestCase(TestBase):
 
@@ -405,7 +407,7 @@ class ConcurrentEventsTestCase(TestBase):
 
         # Initialize the (single) watchpoint on the global variable (g_watchme)
         if num_watchpoint_threads + num_delay_watchpoint_threads > 0:
-            self.runCmd("watchpoint set variable g_watchme")
+            self.expect("watchpoint set variable g_watchme", "Watchpoint created:")
             for w in self.inferior_target.watchpoint_iter():
                 self.thread_watchpoint = w
                 self.assertTrue("g_watchme" in str(self.thread_watchpoint), "Watchpoint location not shown correctly")

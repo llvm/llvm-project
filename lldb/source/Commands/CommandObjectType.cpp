@@ -4769,6 +4769,7 @@ public:
             // FIXME: hardcoding languages is not good
             languages.push_back(Language::FindPlugin(eLanguageTypeObjC));
             languages.push_back(Language::FindPlugin(eLanguageTypeC_plus_plus));
+            languages.push_back(Language::FindPlugin(eLanguageTypeSwift));
         }
         else
         {

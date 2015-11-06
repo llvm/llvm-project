@@ -129,6 +129,11 @@ public:
                     uint64_t fail_value,
                     bool check_specification_or_abstract_origin = false) const;
 
+    lldb::LanguageType
+                GetLanguageAttributeValue(
+                    SymbolFileDWARF* dwarf2Data,
+                    const DWARFCompileUnit* cu) const;
+
     uint64_t    GetAttributeValueAsReference(
                     SymbolFileDWARF* dwarf2Data,
                     const DWARFCompileUnit* cu,

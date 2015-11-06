@@ -18,6 +18,8 @@ add_lldb_library(lldbSymbol
   LineEntry.cpp
   LineTable.cpp
   ObjectFile.cpp
+  SwiftASTContext.cpp
+  SwiftMangledNameVisitor.cpp
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp

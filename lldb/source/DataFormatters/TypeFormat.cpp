@@ -115,7 +115,7 @@ TypeFormatImpl_Format::FormatObject (ValueObject *valobj,
                 {
                     Error error;
                     valobj->GetData(data, error);
-                    if (error.Fail())
+                    if (error.Fail() && !SwiftASTContext::IsPossibleZeroSizeType(compiler_type))
                         return false;
                 }
                 
@@ -124,10 +124,11 @@ TypeFormatImpl_Format::FormatObject (ValueObject *valobj,
                                           GetFormat(),                  // Format to display this type with
                                           data,                         // Data to extract from
                                           0,                             // Byte offset into "m_data"
-                                          valobj->GetByteSize(),                 // Byte size of item in "m_data"
+                                          compiler_type.GetByteSize(nullptr),                 // Byte size of item in "m_data"
                                           valobj->GetBitfieldBitSize(),          // Bitfield bit size
                                           valobj->GetBitfieldBitOffset(),        // Bitfield bit offset
-                                          exe_ctx.GetBestExecutionContextScope());
+                                          exe_ctx.GetBestExecutionContextScope(),
+                                          valobj->IsBaseClass());
                 // Given that we do not want to set the ValueObject's m_error
                 // for a formatting error (or else we wouldn't be able to reformat
                 // until a next update), an empty string is treated as a "false"
@@ -232,7 +233,8 @@ TypeFormatImpl_EnumType::FormatObject (ValueObject *valobj,
                                    data.GetByteSize(),
                                    0,
                                    0,
-                                   exe_ctx.GetBestExecutionContextScope());
+                                   exe_ctx.GetBestExecutionContextScope(),
+                                   valobj->IsBaseClass());
     if (!sstr.GetString().empty())
         dest.swap(sstr.GetString());
     return !dest.empty();

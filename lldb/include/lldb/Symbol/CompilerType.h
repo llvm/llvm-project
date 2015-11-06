@@ -41,6 +41,7 @@ public:
     //----------------------------------------------------------------------
     CompilerType (TypeSystem *type_system, lldb::opaque_compiler_type_t type);
     CompilerType (clang::ASTContext *ast_context, clang::QualType qual_type);
+    CompilerType (swift::ASTContext *ast_context, swift::Type qual_type);
 
     CompilerType (const CompilerType &rhs) :
         m_type (rhs.m_type),
@@ -154,13 +155,14 @@ public:
     bool
     IsPossibleCPlusPlusDynamicType(CompilerType *target_type = nullptr) const
     {
-        return IsPossibleDynamicType (target_type, true, false);
+        return IsPossibleDynamicType (target_type, true, false, false);
     }
     
     bool
-    IsPossibleDynamicType(CompilerType *target_type, // Can pass nullptr
-                          bool check_cplusplus,
-                          bool check_objc) const;
+    IsPossibleDynamicType (CompilerType *target_type, // Can pass nullptr
+                           bool check_cplusplus,
+                           bool check_objc,
+                           bool check_swift) const;
 
     bool
     IsPointerToScalarType () const;
@@ -221,6 +223,12 @@ public:
 
     ConstString
     GetDisplayTypeName () const;
+    
+    ConstString
+    GetTypeSymbolName () const;
+    
+    ConstString
+    GetMangledTypeName () const;
 
     uint32_t
     GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr) const;
@@ -257,6 +265,9 @@ public:
     GetCanonicalType () const;
     
     CompilerType
+    GetInstanceType () const;
+    
+    CompilerType
     GetFullyUnqualifiedType () const;
     
     // Returns -1 if this isn't a function of if the function doesn't have a prototype
@@ -283,7 +294,7 @@ public:
     //----------------------------------------------------------------------
     CompilerType
     GetNonReferenceType () const;
-
+    
     //----------------------------------------------------------------------
     // If this type is a pointer type, return the type that the pointer
     // points to, else return an invalid type.
@@ -348,7 +359,10 @@ public:
     // If the current object represents a typedef type, get the underlying type
     CompilerType
     GetTypedefedType () const;
-    
+
+    CompilerType
+    GetUnboundType () const;
+        
     //----------------------------------------------------------------------
     // Create related types using the current type's AST
     //----------------------------------------------------------------------
@@ -365,6 +379,12 @@ public:
     uint64_t
     GetBitSize (ExecutionContextScope *exe_scope) const;
 
+    uint64_t
+    GetByteStride () const;
+    
+    uint64_t
+    GetAlignedBitSize () const;
+    
     lldb::Encoding
     GetEncoding (uint64_t &count) const;
     
@@ -437,6 +457,7 @@ public:
                                  uint32_t &child_bitfield_bit_offset,
                                  bool &child_is_base_class,
                                  bool &child_is_deref_of_parent,
+                                 bool &child_is_indirect_enum_case,
                                  ValueObject *valobj) const;
     
     // Lookup a child given a name. This function will match base class names
@@ -507,7 +528,8 @@ public:
                    size_t data_byte_size,
                    uint32_t bitfield_bit_size,
                    uint32_t bitfield_bit_offset,
-                   ExecutionContextScope *exe_scope);
+                   ExecutionContextScope *exe_scope,
+                   bool is_base_class);
     
     void
     DumpSummary (ExecutionContext *exe_ctx,

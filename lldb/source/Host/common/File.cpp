@@ -86,7 +86,8 @@ File::File(const char *path, uint32_t options, uint32_t permissions) :
     m_options (),
     m_own_stream (false),
     m_is_interactive (eLazyBoolCalculate),
-    m_is_real_terminal (eLazyBoolCalculate)
+    m_is_real_terminal (eLazyBoolCalculate),
+    m_supports_colors (eLazyBoolCalculate)
 {
     Open (path, options, permissions);
 }
@@ -100,8 +101,8 @@ File::File (const FileSpec& filespec,
     m_options (0),
     m_own_stream (false),
     m_is_interactive (eLazyBoolCalculate),
-    m_is_real_terminal (eLazyBoolCalculate)
-
+    m_is_real_terminal (eLazyBoolCalculate),
+    m_supports_colors (eLazyBoolCalculate)
 {
     if (filespec)
     {
@@ -115,8 +116,10 @@ File::File (const File &rhs) :
     m_stream (kInvalidStream),
     m_options (0),
     m_own_stream (false),
+    m_own_descriptor (false),
     m_is_interactive (eLazyBoolCalculate),
-    m_is_real_terminal (eLazyBoolCalculate)
+    m_is_real_terminal (eLazyBoolCalculate),
+    m_supports_colors (eLazyBoolCalculate)
 {
     Duplicate (rhs);
 }
@@ -1039,6 +1042,7 @@ File::CalculateInteractiveAndTerminal ()
     {
         m_is_interactive = eLazyBoolNo;
         m_is_real_terminal = eLazyBoolNo;
+        m_supports_colors = eLazyBoolNo;
 #if (defined(_WIN32) || defined(__ANDROID_NDK__))
         if (_isatty(fd))
         {

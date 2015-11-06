@@ -19,7 +19,7 @@ function(add_lldb_unittest test_name)
     )
 
   lldb_link_common_libs(${test_name} EXE)
-  target_link_libraries(${test_name} ${CLANG_USED_LIBS} ${LLDB_SYSTEM_LIBS})
+  target_link_libraries(${test_name} ${SWIFT_ALL_LIBS} ${CLANG_ALL_LIBS} ${LLDB_SYSTEM_LIBS})
   llvm_config(${test_name} ${LLVM_LINK_COMPONENTS})
 endfunction()
 

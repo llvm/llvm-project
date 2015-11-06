@@ -707,7 +707,7 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCre
     CompilerType valobj_type(valobj_sp->GetCompilerType());
     Flags flags(valobj_type.GetTypeInfo());
     
-    if (flags.IsClear(eTypeIsPointer))
+    if (flags.IsClear(eTypeIsPointer) && flags.IsClear(eTypeIsSwift))
     {
         Error error;
         valobj_sp = valobj_sp->AddressOf(error);

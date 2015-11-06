@@ -35,6 +35,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
+    @expectedFailureAll("<rdar://problem/23139731> Linux/OS X: TestMiExec.MiExecTestCase.test_lldbmi_exec_abort failing")
     def test_lldbmi_exec_abort(self):
         """Test that 'lldb-mi --interpreter' works for -exec-abort."""
 

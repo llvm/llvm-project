@@ -30,6 +30,7 @@ add_lldb_library(lldbTarget
   StackFrameList.cpp
   StackID.cpp
   StopInfo.cpp
+  SwiftLanguageRuntime.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetList.cpp

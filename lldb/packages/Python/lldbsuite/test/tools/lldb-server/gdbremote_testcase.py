@@ -24,6 +24,7 @@ from lldbsuite.test.lldbtest import *
 from lldbgdbserverutils import *
 import logging
 
+@skipIfDarwin  # ("<rdar://problem/23299430> enable code signing on buildbot")
 class GdbRemoteTestCaseBase(TestBase):
 
     _TIMEOUT_SECONDS = 5

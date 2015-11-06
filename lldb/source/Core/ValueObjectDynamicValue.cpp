@@ -34,6 +34,7 @@
 #include "lldb/Target/Thread.h"
 
 using namespace lldb_private;
+using namespace lldb;
 
 ValueObjectDynamicValue::ValueObjectDynamicValue (ValueObject &parent, lldb::DynamicValueType use_dynamic) :
     ValueObject(parent),
@@ -69,6 +70,8 @@ ValueObjectDynamicValue::GetTypeName()
     const bool success = UpdateValueIfNeeded(false);
     if (success)
     {
+        if (m_dynamic_type_info.HasType())
+            return GetCompilerType().GetConstTypeName();
         if (m_dynamic_type_info.HasName())
             return m_dynamic_type_info.GetName();
     }
@@ -92,6 +95,8 @@ ValueObjectDynamicValue::GetQualifiedTypeName()
     const bool success = UpdateValueIfNeeded(false);
     if (success)
     {
+        if (m_dynamic_type_info.HasType())
+            return GetCompilerType().GetConstQualifiedTypeName ();
         if (m_dynamic_type_info.HasName())
             return m_dynamic_type_info.GetName();
     }
@@ -147,6 +152,10 @@ ValueObjectDynamicValue::GetValueType() const
 bool
 ValueObjectDynamicValue::UpdateValue ()
 {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
+    
+    Log *verbose_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_VERBOSE));
+    
     SetValueIsValid (false);
     m_error.Clear();
 
@@ -214,10 +223,24 @@ ValueObjectDynamicValue::UpdateValue ()
 
     if (runtime && found_dynamic_type)
     {
+        if (verbose_log)
+            verbose_log->Printf("[%s %p] might have a dynamic type", GetName().GetCString(), (void*)this);
         if (class_type_or_name.HasType())
         {
-            m_type_impl = TypeImpl(m_parent->GetCompilerType(),
-                                   runtime->FixUpDynamicType(class_type_or_name, *m_parent).GetCompilerType());
+            // TypeSP are always generated from debug info
+            const bool prefer_parent_type = false;
+
+            if (prefer_parent_type)
+            {
+                m_type_impl = TypeImpl(m_parent->GetCompilerType(),
+                                       runtime->FixUpDynamicType(class_type_or_name, *m_parent).GetCompilerType());
+                class_type_or_name.SetCompilerType(CompilerType());
+            }
+            else
+            {
+                m_type_impl = TypeImpl(m_parent->GetCompilerType(),
+                                       runtime->FixUpDynamicType(class_type_or_name, *m_parent).GetCompilerType());
+            }
         }
         else
         {
@@ -238,14 +261,12 @@ ValueObjectDynamicValue::UpdateValue ()
         ClearDynamicTypeInformation();
         m_dynamic_type_info.Clear();
         m_value = m_parent->GetValue();
-        m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+        m_error = GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
         return m_error.Success();
     }
 
     Value old_value(m_value);
-
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
-
+    
     bool has_changed_type = false;
 
     if (!m_dynamic_type_info)
@@ -292,7 +313,7 @@ ValueObjectDynamicValue::UpdateValue ()
     {
         // The variable value is in the Scalar value inside the m_value.
         // We can point our m_data right to it.
-        m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+        m_error = GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
         if (m_error.Success())
         {
             if (!CanProvideValue())

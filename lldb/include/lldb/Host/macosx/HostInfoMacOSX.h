@@ -35,10 +35,12 @@ class HostInfoMacOSX : public HostInfoPosix
 
   protected:
     static bool ComputeSupportExeDirectory(FileSpec &file_spec);
+    static bool ComputeSupportFileDirectory(FileSpec &file_spec);
     static void ComputeHostArchitectureSupport(ArchSpec &arch_32, ArchSpec &arch_64);
     static bool ComputeHeaderDirectory(FileSpec &file_spec);
     static bool ComputePythonDirectory(FileSpec &file_spec);
     static bool ComputeClangDirectory(FileSpec &file_spec);
+    static bool ComputeSwiftDirectory(FileSpec &file_spec);
     static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
     static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 };

@@ -637,7 +637,7 @@ ClangExpressionDeclMap::GetFunctionAddress
             sc_list_size = sc_list.GetSize();
         }
     }
-
+    
     lldb::addr_t intern_callable_load_addr = LLDB_INVALID_ADDRESS;
 
     for (uint32_t i=0; i<sc_list_size; ++i)
@@ -769,6 +769,9 @@ ClangExpressionDeclMap::GetSymbolAddress (Target &target,
             case eSymbolTypeObjCClass:
             case eSymbolTypeObjCMetaClass:
             case eSymbolTypeObjCIVar:
+            case eSymbolTypeIVarOffset:
+            case eSymbolTypeMetadata:
+            case eSymbolTypeASTFile:
                 symbol_load_addr = sym_address.GetLoadAddress (&target);
                 break;
         }
@@ -830,6 +833,8 @@ ClangExpressionDeclMap::FindGlobalDataSymbol (Target &target,
                     case eSymbolTypeObjCClass:
                     case eSymbolTypeObjCMetaClass:
                     case eSymbolTypeObjCIVar:
+                    case eSymbolTypeIVarOffset:
+                    case eSymbolTypeMetadata:
                         if (symbol->GetDemangledNameIsSynthesized())
                         {
                             // If the demangled name was synthesized, then don't use it
@@ -889,6 +894,7 @@ ClangExpressionDeclMap::FindGlobalDataSymbol (Target &target,
                     case eSymbolTypeInstrumentation:
                     case eSymbolTypeUndefined:
                     case eSymbolTypeResolver:
+                    case eSymbolTypeASTFile:
                         break;
                 }
             }
@@ -1285,9 +1291,9 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
 
             if (!scratch_ast_context)
                 break;
-
-            TypeDecl *ptype_type_decl = m_parser_vars->m_persistent_vars->GetPersistentType(name);
-
+            
+            TypeDecl *ptype_type_decl = m_parser_vars->m_persistent_vars->GetClangPersistentType(name);
+            
             if (!ptype_type_decl)
                 break;
 
@@ -1660,7 +1666,23 @@ ClangExpressionDeclMap::GetVariableValue (VariableSP &var,
             log->PutCString("Skipped a definition because it has no Clang type");
         return false;
     }
-
+    
+    if (llvm::isa<SwiftASTContext>(var_clang_type.GetTypeSystem()))
+    {
+#ifdef CAN_IMPORT_SWIFT_CLANG_TYPES // <rdar://problem/16102770> ASTImporter can't import Swift-generated types
+        // Try to get a Clang type for the Swift type.
+        
+        if (!var_clang_type.IsImportedType(&var_clang_type))
+        {
+            if (log)
+                log->PutCString("Skipped a definition because it has a Swift type and we can't get a Clang type for it");
+            return false;
+        }
+#else
+        return false;
+#endif
+    }
+    
     ClangASTContext *clang_ast = llvm::dyn_cast_or_null<ClangASTContext>(var_type->GetForwardCompilerType().GetTypeSystem());
 
     if (!clang_ast)

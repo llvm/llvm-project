@@ -9,7 +9,12 @@ set(SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/lldb-versioning.h
 )
 
-find_package(SWIG REQUIRED)
+if (IS_DIRECTORY ${LLDB_PATH_TO_SWIG_BIN})
+  set(SWIG_EXECUTABLE ${LLDB_PATH_TO_SWIG_BIN}/swig)
+else()
+  find_package(SWIG REQUIRED)
+endif()
+
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
   DEPENDS ${SWIG_SOURCES}
@@ -26,7 +31,7 @@ add_custom_target(swig_wrapper ALL
 
 # Install the LLDB python module on all operating systems (except Windows)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  install(DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}
+  install(DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/python2.7
   DESTINATION lib${LLVM_LIBDIR_SUFFIX})
 endif()
 

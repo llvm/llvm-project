@@ -302,7 +302,7 @@ public:
                               uint32_t addr_byte_size) = 0;
 
     virtual ConstString
-    GetNextPersistentVariableName () = 0;
+    GetNextPersistentVariableName (bool is_error = false) = 0;
     
     virtual void
     RemovePersistentVariable (lldb::ExpressionVariableSP variable) = 0;

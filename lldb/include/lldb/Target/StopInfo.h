@@ -172,7 +172,8 @@ public:
     static lldb::StopInfoSP
     CreateStopReasonWithPlan (lldb::ThreadPlanSP &plan,
                               lldb::ValueObjectSP return_valobj_sp,
-                              lldb::ExpressionVariableSP expression_variable_sp);
+                              lldb::ExpressionVariableSP expression_variable_sp,
+                              bool return_is_swift_error_value = false);
 
     static lldb::StopInfoSP
     CreateStopReasonWithException (Thread &thread, const char *description);
@@ -181,7 +182,7 @@ public:
     CreateStopReasonWithExec (Thread &thread);
 
     static lldb::ValueObjectSP
-    GetReturnValueObject (lldb::StopInfoSP &stop_info_sp);
+    GetReturnValueObject (lldb::StopInfoSP &stop_info_sp, bool &is_swift_error_result);
 
     static lldb::ExpressionVariableSP
     GetExpressionVariable (lldb::StopInfoSP &stop_info_sp);

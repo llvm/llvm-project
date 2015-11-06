@@ -17,13 +17,13 @@ import curses
 import datetime
 import math
 import sys
-import test_results
 import time
 
 # Third-party modules
 
 # LLDB modules
 from . import lldbcurses
+from . import test_results
 
 class Curses(test_results.ResultsFormatter):
     """Receives live results from tests that are running and reports them to the terminal in a curses GUI"""

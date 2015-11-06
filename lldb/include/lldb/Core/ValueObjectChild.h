@@ -81,6 +81,12 @@ public:
     {
         return m_is_deref_of_parent;
     }
+    
+    virtual bool
+    IsIndirectEnumCase () override
+    {
+        return m_is_indirect_enum_case;
+    }
 
 protected:
     bool
@@ -103,6 +109,7 @@ protected:
     uint8_t m_bitfield_bit_offset;
     bool m_is_base_class;
     bool m_is_deref_of_parent;
+    bool m_is_indirect_enum_case;
     llvm::Optional<LazyBool> m_can_update_with_invalid_exe_ctx;
 
 //
@@ -123,6 +130,7 @@ protected:
                       uint32_t bitfield_bit_offset,
                       bool is_base_class,
                       bool is_deref_of_parent,
+                      bool is_indirect_enum_case,
                       AddressType child_ptr_or_ref_addr_type);
 
     DISALLOW_COPY_AND_ASSIGN (ValueObjectChild);

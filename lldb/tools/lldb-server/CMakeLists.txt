@@ -42,10 +42,16 @@ else()
     target_link_libraries(lldb-server
                           -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
     target_link_libraries(lldb-server
-                          -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
+                          -Wl,--start-group ${SWIFT_ALL_LIBS} -Wl,--end-group)
+    target_link_libraries(lldb-server
+                          -Wl,--start-group ${CLANG_ALL_LIBS} -Wl,--end-group)
+    target_link_libraries(lldb-server
+                          -Wl,--start-group ${LLVM_ALL_LIBS} -Wl,--end-group)
   else()
     target_link_libraries(lldb-server ${LLDB_USED_LIBS})
-    target_link_libraries(lldb-server ${CLANG_USED_LIBS})
+    target_link_libraries(lldb-server ${SWIFT_ALL_LIBS})
+    target_link_libraries(lldb-server ${CLANG_ALL_LIBS})
+    target_link_libraries(lldb-server ${LLVM_ALL_LIBS})
   endif()
   llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
 

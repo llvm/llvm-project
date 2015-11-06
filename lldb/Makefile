@@ -34,6 +34,7 @@ CPP.Flags += -I$(PROJ_SRC_DIR)/$(LLDB_LEVEL)/include
 CPP.Flags += -I$(PROJ_OBJ_DIR)/$(LLDB_LEVEL)/include
 CPP.Flags += -I$(LLVM_SRC_ROOT)/tools/clang/include
 CPP.Flags += -I$(LLVM_OBJ_ROOT)/tools/clang/include
+CPP.Flags += -I$(LLVM_OBJ_ROOT)/lib/Target/ARM
 CPP.Flags += -I$(PROJ_SRC_DIR)/$(LLDB_LEVEL)/source
 CPP.Flags += -I$(PROJ_SRC_DIR)/$(LLDB_LEVEL)/source/Utility
 CPP.Flags += -I$(PROJ_SRC_DIR)/$(LLDB_LEVEL)/source/Plugins/Process/Utility

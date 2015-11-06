@@ -30,6 +30,12 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
+#include "clang/AST/DeclCXX.h"
+
+// FIXME: we should not need this
+#include "Plugins/Language/Swift/SwiftDictionary.h"
+#include <mutex>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -317,7 +323,7 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSDictionarySyntheticFrontE
     CompilerType valobj_type(valobj_sp->GetCompilerType());
     Flags flags(valobj_type.GetTypeInfo());
     
-    if (flags.IsClear(eTypeIsPointer))
+    if (flags.IsClear(eTypeIsPointer) && flags.IsClear(eTypeIsSwift))
     {
         Error error;
         valobj_sp = valobj_sp->AddressOf(error);

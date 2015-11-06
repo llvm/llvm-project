@@ -48,7 +48,7 @@ namespace lldb_private
     typedef lldb::MemoryHistorySP (*MemoryHistoryCreateInstance) (const lldb::ProcessSP &process_sp);
     typedef lldb::InstrumentationRuntimeType (*InstrumentationRuntimeGetType) ();
     typedef lldb::InstrumentationRuntimeSP (*InstrumentationRuntimeCreateInstance) (const lldb::ProcessSP &process_sp);
-    typedef lldb::TypeSystemSP (*TypeSystemCreateInstance) (lldb::LanguageType language, Module *module, Target *target);
+    typedef lldb::TypeSystemSP (*TypeSystemCreateInstance) (lldb::LanguageType language, Module *module, Target *target, const char *compiler_options);
     typedef lldb::REPLSP (*REPLCreateInstance) (Error &error, lldb::LanguageType language, Debugger *debugger, Target *target, const char *repl_options);
     typedef void (*TypeSystemEnumerateSupportedLanguages) (std::set<lldb::LanguageType> &languages_for_types, std::set<lldb::LanguageType> &languages_for_expressions);
     typedef void (*REPLEnumerateSupportedLanguages) (std::set<lldb::LanguageType> &languages);

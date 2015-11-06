@@ -280,7 +280,8 @@ SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap (ObjectFile* ofile) :
     m_compile_unit_infos(),
     m_func_indexes(),
     m_glob_indexes(),
-    m_supports_DW_AT_APPLE_objc_complete_type (eLazyBoolCalculate)
+    m_supports_DW_AT_APPLE_objc_complete_type (eLazyBoolCalculate),
+    m_initialized_swift_modules(false)
 {
 }
 
@@ -1559,4 +1560,28 @@ SymbolFileDWARFDebugMap::AddOSOARanges (SymbolFileDWARF* dwarf2Data, DWARFDebugA
         }
     }
     return num_line_entries_added;
+}
+
+DataBufferSP
+SymbolFileDWARFDebugMap::GetASTData (lldb::LanguageType language)
+{
+    if (language == eLanguageTypeSwift)
+    {
+        Symtab* symtab = m_obj_file->GetSymtab();
+        if (symtab)
+        {
+            uint32_t start_idx = 0;
+            Symbol *symbol = symtab->FindSymbolWithType (eSymbolTypeASTFile,
+                                                         Symtab::eDebugAny,
+                                                         Symtab::eVisibilityAny,
+                                                         start_idx);
+            if (symbol)
+            {
+                FileSpec file_spec(symbol->GetName().GetCString(), false);
+                if (file_spec.Exists())
+                    return file_spec.ReadFileContents();
+            }
+        }
+    }
+    return DataBufferSP();
 }

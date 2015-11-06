@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>33757C0D-84EA-4A16-9D53-E61E9BD7DDEA</string>
+	<key>IDESourceControlProjectName</key>
+	<string>aTestFramework</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>42DDEF266BFD7CFD920E2C3201FC4A107CEFDBC1</key>
+		<string>ssh://git@github.com/apple/swift-lldb.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>test/lang/swift/objc_runtime_ivars/framework/aTestFramework/aTestFramework.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>42DDEF266BFD7CFD920E2C3201FC4A107CEFDBC1</key>
+		<string>../../../../../../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>ssh://git@github.com/apple/swift-lldb.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>42DDEF266BFD7CFD920E2C3201FC4A107CEFDBC1</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>42DDEF266BFD7CFD920E2C3201FC4A107CEFDBC1</string>
+			<key>IDESourceControlWCCName</key>
+			<string>lldb</string>
+		</dict>
+	</array>
+</dict>
+</plist>

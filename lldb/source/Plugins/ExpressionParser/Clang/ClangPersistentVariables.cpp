@@ -7,12 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Expression/IRExecutionUnit.h"
 #include "ClangPersistentVariables.h"
 
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
+
+#include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
+
+#include "clang/AST/Decl.h"
+#include "swift/AST/Decl.h"
+#include "swift/AST/Pattern.h"
 
 #include "llvm/ADT/StringMap.h"
 
@@ -21,7 +29,8 @@ using namespace lldb_private;
 
 ClangPersistentVariables::ClangPersistentVariables () :
     lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
-    m_next_persistent_variable_id (0)
+    m_next_persistent_variable_id (0),
+    m_next_persistent_error_id (0)
 {
 }
 
@@ -44,6 +53,9 @@ ClangPersistentVariables::CreatePersistentVariable (ExecutionContextScope *exe_s
 void
 ClangPersistentVariables::RemovePersistentVariable (lldb::ExpressionVariableSP variable)
 {
+    if (!variable)
+        return;
+
     RemoveVariable(variable);
     
     const char *name = variable->GetName().AsCString();
@@ -51,34 +63,140 @@ ClangPersistentVariables::RemovePersistentVariable (lldb::ExpressionVariableSP v
     if (*name != '$')
         return;
     name++;
-    
-    if (strtoul(name, NULL, 0) == m_next_persistent_variable_id - 1)
-        m_next_persistent_variable_id--;
+
+    bool is_error = false;
+
+    if (llvm::isa<SwiftASTContext>(variable->GetCompilerType().GetTypeSystem()))
+    {
+        switch (*name)
+        {
+        case 'R':
+            break;
+        case 'E':
+            is_error = true;
+            break;
+        default:
+            return;
+        }
+        name++;
+    }
+
+    uint32_t value = strtoul(name, NULL, 0);
+    if (is_error)
+    {
+        if (value == m_next_persistent_error_id - 1)
+            m_next_persistent_error_id--;
+    }
+    else
+    {
+        if (value == m_next_persistent_variable_id - 1)
+            m_next_persistent_variable_id--;
+    }
 }
 
 ConstString
-ClangPersistentVariables::GetNextPersistentVariableName ()
+ClangPersistentVariables::GetNextPersistentVariableName (bool is_error)
 {
     char name_cstr[256];
-    ::snprintf (name_cstr, sizeof(name_cstr), "$%u", m_next_persistent_variable_id++);
+    
+    const char *prefix = "$";
+    
+/* THIS NEEDS TO BE HANDLED BY SWIFT-SPECIFIC CODE
+    switch (language_type)
+    {
+    default:
+        break;
+    case lldb::eLanguageTypePLI:
+    case lldb::eLanguageTypeSwift:
+        if (is_error)
+            prefix = "$E";
+        else
+            prefix = "$R";
+        break;
+    }
+ */
+
+    ::snprintf (name_cstr,
+                sizeof(name_cstr),
+                "%s%u",
+                prefix,
+                is_error? m_next_persistent_error_id++ : m_next_persistent_variable_id++);
+
     ConstString name(name_cstr);
     return name;
 }
 
 void
-ClangPersistentVariables::RegisterPersistentType (const ConstString &name,
-                                                  clang::TypeDecl *type_decl)
+ClangPersistentVariables::RegisterClangPersistentType (clang::TypeDecl *type_decl)
 {
-    m_persistent_types.insert(std::pair<const char*, clang::TypeDecl*>(name.GetCString(), type_decl));
+    ConstString name(type_decl->getName().str().c_str());
+    m_clang_persistent_types.insert(std::make_pair(name.GetCString(), type_decl));
 }
 
 clang::TypeDecl *
-ClangPersistentVariables::GetPersistentType (const ConstString &name)
+ClangPersistentVariables::GetClangPersistentType (const ConstString &name)
 {
-    PersistentTypeMap::const_iterator i = m_persistent_types.find(name.GetCString());
+    ClangPersistentTypeMap::const_iterator i = m_clang_persistent_types.find(name.GetCString());
     
-    if (i == m_persistent_types.end())
+    if (i == m_clang_persistent_types.end())
         return NULL;
     else
         return i->second;
+}
+
+
+void
+ClangPersistentVariables::RegisterExecutionUnit (lldb::IRExecutionUnitSP &execution_unit_sp)
+{
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+
+    m_execution_units.insert(execution_unit_sp);
+    
+    if (log)
+        log->Printf ("Registering JITted Functions:\n");
+    
+    for (const IRExecutionUnit::JittedFunction &jitted_function : execution_unit_sp->GetJittedFunctions())
+    {
+        if (jitted_function.m_name != execution_unit_sp->GetFunctionName() &&
+            jitted_function.m_remote_addr != LLDB_INVALID_ADDRESS)
+        {
+            m_symbol_map[jitted_function.m_name.GetCString()] = jitted_function.m_remote_addr;
+            if (log)
+                log->Printf ("  Function: %s at 0x%" PRIx64 ".", jitted_function.m_name.GetCString(), jitted_function.m_remote_addr);
+        }
+    }
+    
+    if (log)
+        log->Printf ("Registering JIIted Symbols:\n");
+    
+    for (const IRExecutionUnit::JittedGlobalVariable &global_var : execution_unit_sp->GetJittedGlobalVariables())
+    {
+        if (global_var.m_remote_addr != LLDB_INVALID_ADDRESS)
+        {
+            // Demangle the name before inserting it, so that lookups by the ConstStr of the demangled name
+            // will find the mangled one (needed for looking up metadata pointers.)
+            Mangled mangler(global_var.m_name);
+            mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
+            m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;
+            if (log)
+                log->Printf ("  Symbol: %s at 0x%" PRIx64 ".", global_var.m_name.GetCString(), global_var.m_remote_addr);
+        }
+    }
+}
+
+void
+ClangPersistentVariables::RegisterSymbol (const ConstString &name, lldb::addr_t addr)
+{
+    m_symbol_map[name.GetCString()] = addr;
+}
+
+lldb::addr_t
+ClangPersistentVariables::LookupSymbol (const ConstString &name)
+{
+    SymbolMap::iterator si = m_symbol_map.find(name.GetCString());
+    
+    if (si != m_symbol_map.end())
+        return si->second;
+    else
+        return LLDB_INVALID_ADDRESS;    
 }

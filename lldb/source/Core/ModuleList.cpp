@@ -28,6 +28,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+static bool KeepLookingInDylinker (SymbolContextList &sc_list, size_t start_idx);
+
 //----------------------------------------------------------------------
 // ModuleList constructor
 //----------------------------------------------------------------------
@@ -493,16 +495,27 @@ ModuleList::FindFunctions(const RegularExpression &name,
                           bool append,
                           SymbolContextList& sc_list)
 {
-    const size_t old_size = sc_list.GetSize();
+    const size_t initial_size = sc_list.GetSize();
 
     Mutex::Locker locker(m_modules_mutex);
     collection::const_iterator pos, end = m_modules.end();
+    collection dylinker_modules;
     for (pos = m_modules.begin(); pos != end; ++pos)
     {
-        (*pos)->FindFunctions (name, include_symbols, include_inlines, append, sc_list);
+        if (!(*pos)->GetIsDynamicLinkEditor())
+            (*pos)->FindFunctions (name, include_symbols, include_inlines, append, sc_list);
+        else
+            dylinker_modules.push_back(*pos);
     }
+    bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
 
-    return sc_list.GetSize() - old_size;
+    if (keep_looking)
+    {
+        end = dylinker_modules.end();
+        for (pos = dylinker_modules.begin() ; pos != end; pos++)
+            (*pos)->FindFunctions (name, include_symbols, include_inlines, append, sc_list);
+    }
+    return sc_list.GetSize() - initial_size;
 }
 
 size_t
@@ -556,6 +569,40 @@ ModuleList::FindGlobalVariables (const RegularExpression& regex,
     return variable_list.GetSize() - initial_size;
 }
 
+// We don't want to find symbols in the dylinker file if we've found
+// a viable candidate anywhere else.  This function looks at the symbols
+// added to the sc_list since start_idx, and if there's one in there that
+// looks real, returns false, in which case we should terminate the search.
+// If it returns true, we should go on to look in the dylinker.
+
+static bool
+KeepLookingInDylinker (SymbolContextList &sc_list, size_t start_idx)
+{
+    bool keep_looking = true;
+    if (sc_list.GetSize() == start_idx)
+    {
+        return true;
+    }
+
+    SymbolContext sc;
+    size_t num_symbols = sc_list.GetSize();
+    for (size_t idx = start_idx; idx < num_symbols; idx++)
+    {
+        sc_list.GetContextAtIndex(idx, sc);
+        if (sc.symbol && sc.symbol->GetType() != lldb::eSymbolTypeUndefined)
+        {
+            keep_looking = false;
+            break;
+        }
+        // If we have a function it's not going to be an undefined symbol...
+        if (sc.function)
+        {
+            keep_looking = false;
+            break;
+        }
+    }
+    return keep_looking;
+}
 
 size_t
 ModuleList::FindSymbolsWithNameAndType (const ConstString &name, 
@@ -569,8 +616,25 @@ ModuleList::FindSymbolsWithNameAndType (const ConstString &name,
     size_t initial_size = sc_list.GetSize();
     
     collection::const_iterator pos, end = m_modules.end();
+    collection dylinker_modules;
     for (pos = m_modules.begin(); pos != end; ++pos)
-        (*pos)->FindSymbolsWithNameAndType (name, symbol_type, sc_list);
+    {
+        if (!(*pos)->GetIsDynamicLinkEditor())
+            (*pos)->FindSymbolsWithNameAndType (name, symbol_type, sc_list);
+        else
+            dylinker_modules.push_back (*pos);
+    }
+
+    // Lets see if we found anything but undefined symbols.  If so, then we'll also look in the dylinker.
+    bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+    if (keep_looking)
+    {
+        end = dylinker_modules.end();
+        for (pos = dylinker_modules.begin(); pos != end; ++pos)
+            (*pos)->FindSymbolsWithNameAndType (name, symbol_type, sc_list);
+    }
+
     return sc_list.GetSize() - initial_size;
 }
 
@@ -586,8 +650,23 @@ ModuleList::FindSymbolsMatchingRegExAndType (const RegularExpression &regex,
     size_t initial_size = sc_list.GetSize();
     
     collection::const_iterator pos, end = m_modules.end();
+    collection dylinker_modules;
     for (pos = m_modules.begin(); pos != end; ++pos)
+    {
+        if (!(*pos)->GetIsDynamicLinkEditor())
         (*pos)->FindSymbolsMatchingRegExAndType (regex, symbol_type, sc_list);
+        else
+            dylinker_modules.push_back (*pos);
+    }
+
+    bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+    if (keep_looking)
+    {
+        end = dylinker_modules.end();
+        for (pos = dylinker_modules.begin(); pos != end; ++pos)
+            (*pos)->FindSymbolsMatchingRegExAndType (regex, symbol_type, sc_list);
+    }
     return sc_list.GetSize() - initial_size;
 }
 
@@ -1239,3 +1318,13 @@ ModuleList::ForEach (std::function <bool (const ModuleSP &module_sp)> const &cal
             break;
     }
 }
+
+void
+ModuleList::ClearModuleDependentCaches ()
+{
+    Mutex::Locker locker(m_modules_mutex);
+    for (const auto &module : m_modules)
+        module->ClearModuleDependentCaches();
+}
+
+

@@ -376,14 +376,14 @@ IRForTarget::ResolveFunctionPointers(llvm::Module &llvm_module)
 
                 if (value_ptr)
                     *value_ptr = value;
-
+                
                 // If we are replacing a function with the nobuiltin attribute, it may
                 // be called with the builtin attribute on call sites. Remove any such
                 // attributes since it's illegal to have a builtin call to something
                 // other than a nobuiltin function.
                 if (fun->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
                     llvm::Attribute builtin = llvm::Attribute::get(fun->getContext(), llvm::Attribute::Builtin);
-
+                    
                     for (auto u : fun->users()) {
                         if (auto call = dyn_cast<CallInst>(u)) {
                             call->removeAttribute(AttributeSet::FunctionIndex, builtin);
@@ -2461,7 +2461,7 @@ IRForTarget::BuildRelocation(llvm::Type *type, uint64_t offset)
     llvm::Type *char_pointer_type = char_type->getPointerTo();
 
     llvm::Constant *reloc_placeholder_bitcast = ConstantExpr::getBitCast(m_reloc_placeholder, char_pointer_type);
-    llvm::Constant *reloc_getelementptr = ConstantExpr::getGetElementPtr(char_type, reloc_placeholder_bitcast, offsets);
+    llvm::Constant *reloc_getelementptr = ConstantExpr::getGetElementPtr(nullptr, reloc_placeholder_bitcast, offsets);
     llvm::Constant *reloc_bitcast = ConstantExpr::getBitCast(reloc_getelementptr, type);
 
     return reloc_bitcast;

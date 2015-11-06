@@ -442,6 +442,12 @@ public:
         return false;
     }
     
+    virtual bool
+    IsIndirectEnumCase ()
+    {
+        return false;
+    }
+    
     bool
     IsIntegerType (bool &is_signed);
     
@@ -719,6 +725,9 @@ public:
     virtual bool
     HasSyntheticValue();
     
+    SwiftASTContext *
+    GetSwiftASTContext ();
+        
     virtual bool
     IsSynthetic() { return false; }
     
@@ -783,6 +792,12 @@ public:
     {
         return false;
     }
+    
+    virtual bool
+    GetIgnoreInstancePointerness ();
+    
+    void
+    SetIgnoreInstancePointerness (bool);
     
     bool
     IsSyntheticChildrenGenerated ();
@@ -1004,6 +1019,12 @@ public:
     virtual bool
     MightHaveChildren();
     
+    virtual lldb::VariableSP
+    GetVariable ()
+    {
+        return nullptr;
+    }
+
     virtual bool
     IsRuntimeSupportValue ();
 
@@ -1134,6 +1155,7 @@ protected:
                         m_is_child_at_offset:1,
                         m_is_getting_summary:1,
                         m_did_calculate_complete_objc_class_type:1,
+                        m_ignore_instance_pointerness:1,
                         m_is_synthetic_children_generated:1;
     
     friend class ValueObjectChild;
@@ -1237,6 +1259,13 @@ protected:
     GetLocationAsCStringImpl (const Value& value,
                               const DataExtractor& data);
     
+    virtual lldb_private::Error
+    GetValueAsData (ExecutionContext *exe_ctx,
+                    DataExtractor &data,
+                    uint32_t data_offset,
+                    Module *module,
+                    bool mask_error_on_zerosize_type = true);
+
     bool
     IsChecksumEmpty ();
     

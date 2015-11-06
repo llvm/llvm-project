@@ -67,6 +67,7 @@ public:
     friend class DebugMapModule;
     friend class DWARFCompileUnit;
     friend class DWARFASTParserClang;
+    friend class DWARFASTParserSwift;
     friend class DWARFASTParserGo;
 
     //------------------------------------------------------------------
@@ -226,6 +227,15 @@ public:
     FindNamespace (const lldb_private::SymbolContext& sc,
                    const lldb_private::ConstString &name,
                    const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
+        
+    bool
+    GetCompileOption(const char *option, std::string &value, lldb_private::CompileUnit *cu = nullptr) override;
+    
+    int
+    GetCompileOptions(const char *option, std::vector<std::string> &value, lldb_private::CompileUnit *cu = nullptr) override;
+    
+    void
+    GetLoadedModules(lldb::LanguageType language, lldb_private::FileSpecList &modules) override;
 
 
     //------------------------------------------------------------------
@@ -249,6 +259,7 @@ public:
     const lldb_private::DWARFDataExtractor&     get_debug_str_offsets_data ();
     const lldb_private::DWARFDataExtractor&     get_apple_names_data ();
     const lldb_private::DWARFDataExtractor&     get_apple_types_data ();
+    const lldb_private::DWARFDataExtractor&     get_apple_exttypes_data ();
     const lldb_private::DWARFDataExtractor&     get_apple_namespaces_data ();
     const lldb_private::DWARFDataExtractor&     get_apple_objc_data ();
 
@@ -505,6 +516,21 @@ protected:
     void
     UpdateExternalModuleListIfNeeded();
 
+    lldb_private::ClangASTImporter &
+    GetClangASTImporter();
+
+    lldb::ModuleSP
+    GetExternalModule (uint64_t strp);
+    
+    lldb_private::SwiftASTContext *
+    GetSwiftASTContextForCU (lldb_private::Error *error, DWARFCompileUnit &cu);
+    
+    lldb::user_id_t
+    GetTypeUIDFromTypeAttribute (const DWARFFormValue &type_attr);
+    
+    lldb::TypeSP
+    ResolveTypeFromAttribute (const DWARFFormValue &type_attr);
+
     virtual DIEToTypePtr&
     GetDIEToType() { return m_die_to_type; }
 
@@ -533,6 +559,7 @@ protected:
     DWARFDataSegment                      m_data_debug_str_offsets;
     DWARFDataSegment                      m_data_apple_names;
     DWARFDataSegment                      m_data_apple_types;
+    DWARFDataSegment                      m_data_apple_exttypes;
     DWARFDataSegment                      m_data_apple_namespaces;
     DWARFDataSegment                      m_data_apple_objc;
 
@@ -543,9 +570,11 @@ protected:
     std::unique_ptr<DWARFDebugLine>       m_line;
     std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_names_ap;
     std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_types_ap;
+    std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_exttypes_ap;
     std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_namespaces_ap;
     std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_objc_ap;
     std::unique_ptr<GlobalVariableMap>  m_global_aranges_ap;
+    std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_ap;
     ExternalTypeModuleMap               m_external_type_modules;
     NameToDIE                           m_function_basename_index;  // All concrete functions
     NameToDIE                           m_function_fullname_index;  // All concrete functions
@@ -557,6 +586,8 @@ protected:
     NameToDIE                           m_namespace_index;          // All type DIE offsets
     bool                                m_indexed:1,
                                         m_using_apple_tables:1,
+                                        m_initialized_swift_modules:1,
+                                        m_reported_missing_sdk:1,
                                         m_fetched_external_modules:1;
     lldb_private::LazyBool              m_supports_DW_AT_APPLE_objc_complete_type;
 

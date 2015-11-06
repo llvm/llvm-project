@@ -436,7 +436,9 @@ Thread::GetStopInfo ()
     const uint32_t stop_id = process_sp ? process_sp->GetStopID() : UINT32_MAX;
     if (plan_sp && plan_sp->PlanSucceeded())
     {
-        return StopInfo::CreateStopReasonWithPlan (plan_sp, GetReturnValueObject(), GetExpressionVariable());
+        bool is_swift_error_value;
+        ValueObjectSP return_value_object = GetReturnValueObject(&is_swift_error_value);
+        return StopInfo::CreateStopReasonWithPlan (plan_sp, return_value_object, GetExpressionVariable(), is_swift_error_value);
     }
     else
     {
@@ -726,15 +728,12 @@ Thread::ShouldResume (StateType resume_state)
     m_discarded_plan_stack.clear();
     m_override_should_notify = eLazyBoolCalculate;
 
-    m_temporary_resume_state = resume_state;
+    SetTemporaryResumeState(resume_state);
     
     lldb::ThreadSP backing_thread_sp (GetBackingThread ());
     if (backing_thread_sp)
-        backing_thread_sp->m_temporary_resume_state = resume_state;
+        backing_thread_sp->SetTemporaryResumeState(resume_state);
 
-    // Make sure m_stop_info_sp is valid
-    GetPrivateStopInfo();
-    
     // This is a little dubious, but we are trying to limit how often we actually fetch stop info from
     // the target, 'cause that slows down single stepping.  So assume that if we got to the point where
     // we're about to resume, and we haven't yet had to fetch the stop reason, then it doesn't need to know
@@ -1213,8 +1212,11 @@ Thread::GetCompletedPlan ()
 }
 
 ValueObjectSP
-Thread::GetReturnValueObject ()
+Thread::GetReturnValueObject (bool *is_swift_error_value)
 {
+    if (is_swift_error_value)
+        *is_swift_error_value = false;
+
     if (!m_completed_plan_stack.empty())
     {
         for (int i = m_completed_plan_stack.size() - 1; i >= 0; i--)
@@ -1222,7 +1224,11 @@ Thread::GetReturnValueObject ()
             ValueObjectSP return_valobj_sp;
             return_valobj_sp = m_completed_plan_stack[i]->GetReturnValueObject();
             if (return_valobj_sp)
+            {
+                if (is_swift_error_value)
+                    *is_swift_error_value = m_completed_plan_stack[i]->IsReturnValueSwiftErrorValue();
                 return return_valobj_sp;
+            }
         }
     }
     return ValueObjectSP();

@@ -841,6 +841,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Darwin debugserver translates some signals like SIGSEGV into some gdb expectations about fixed signal numbers.
         self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
 
+    @unittest2.expectedFailure()  # this is failing 1 in 4 times on some Ubuntu 14.04 and 15.10 setups
     @llgs_test
     def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
         self.init_llgs_test()

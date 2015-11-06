@@ -605,7 +605,7 @@ namespace lldb_private {
                                          StringList &matches,
                                          void *baton);
 #endif
-
+        
     protected:
 #ifndef LLDB_DISABLE_LIBEDIT
         std::unique_ptr<Editline> m_editline_ap;
@@ -712,7 +712,9 @@ namespace lldb_private {
         IOHandlerStack () :
             m_stack(),
             m_mutex(Mutex::eMutexTypeRecursive),
-            m_top (nullptr)
+            m_top (nullptr),
+            m_repl_active (false),
+            m_repl_enabled (false)
         {
         }
         
@@ -735,6 +737,8 @@ namespace lldb_private {
                 m_stack.push_back (sp);
                 // Set m_top the non-locking IsTop() call
                 m_top = sp.get();
+
+                UpdateREPLIsActive();
             }
         }
         
@@ -768,8 +772,9 @@ namespace lldb_private {
                 sp->SetPopped (true);
             }
             // Set m_top the non-locking IsTop() call
-
             m_top = (m_stack.empty() ? nullptr : m_stack.back().get());
+
+            UpdateREPLIsActive();
         }
 
         Mutex &
@@ -812,14 +817,81 @@ namespace lldb_private {
             return ((m_top != nullptr) ? m_top->GetHelpPrologue() : nullptr);
         }
 
+        // Returns true if the REPL is the active IOHandler or if it is just
+        // below the Process IOHandler.
+        bool
+        REPLIsActive()
+        {
+            // This is calculated and cached by UpdateREPLIsActive() as IOHandlers
+            // are pushed and popped since it gets called for all process events.
+            return m_repl_active;
+        }
+
+        // Returns true if any REPL IOHandlers are anywhere on the stack
+        bool
+        REPLIsEnabled()
+        {
+            // This is calculated and cached by UpdateREPLIsActive() as IOHandlers
+            // are pushed and popped since it gets called for all process events.
+            return m_repl_enabled;
+            
+        }
+
         void
         PrintAsync (Stream *stream, const char *s, size_t len);
 
     protected:
+        void
+        UpdateREPLIsActive()
+        {
+            m_repl_active = false;
+            m_repl_enabled = false;
+            // This function should only be called when the mutex is locked...
+            if (m_top)
+            {
+                switch (m_top->GetType())
+                {
+                case IOHandler::Type::ProcessIO:
+                    // Check the REPL is underneath the process IO handler...
+                    if (m_stack.size() > 1)
+                    {
+                        if (m_stack[m_stack.size()-2]->GetType() == IOHandler::Type::REPL)
+                        {
+                            m_repl_active = true;
+                            m_repl_enabled = true;
+                        }
+                    }
+                    break;
+
+                case IOHandler::Type::REPL:
+                    m_repl_active = true;
+                    m_repl_enabled = true;
+                    break;
+                    
+                default:
+                    break;
+                }
+            }
+            
+            if (!m_repl_enabled)
+            {
+                for (const auto &io_handler_sp: m_stack)
+                {
+                    if (io_handler_sp->GetType() == IOHandler::Type::REPL)
+                    {
+                        m_repl_enabled = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         typedef std::vector<lldb::IOHandlerSP> collection;
         collection m_stack;
         mutable Mutex m_mutex;
         IOHandler *m_top;
+        bool m_repl_active;  // REPL is the active IOHandler or right underneath the process IO handler
+        bool m_repl_enabled; // REPL is on IOHandler stack somewhere
         
     private:
         DISALLOW_COPY_AND_ASSIGN (IOHandlerStack);

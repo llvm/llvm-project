@@ -17,6 +17,7 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -28,7 +29,6 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // ThreadPlanStepThrough: If the current instruction is a trampoline, step through it
 // If it is the beginning of the prologue of a function, step through that as well.
-// FIXME: At present only handles DYLD trampolines.
 //----------------------------------------------------------------------
 
 ThreadPlanStepThrough::ThreadPlanStepThrough (Thread &thread, StackID &m_stack_id, bool stop_others) :
@@ -96,6 +96,12 @@ ThreadPlanStepThrough::LookForPlanToStepThroughFromCurrentPC()
         ObjCLanguageRuntime *objc_runtime = m_thread.GetProcess()->GetObjCLanguageRuntime();
         if (objc_runtime)
             m_sub_plan_sp = objc_runtime->GetStepThroughTrampolinePlan (m_thread, m_stop_others);
+    }
+    if (!m_sub_plan_sp.get())
+    {
+        SwiftLanguageRuntime *swift_runtime = m_thread.GetProcess()->GetSwiftLanguageRuntime();
+        if (swift_runtime)
+            m_sub_plan_sp = swift_runtime->GetStepThroughTrampolinePlan(m_thread, m_stop_others);
     }
     
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_STEP));

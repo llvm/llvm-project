@@ -25,7 +25,7 @@ class TypeLookupTestCase(TestBase):
     @skipUnlessDarwin
     def test_type_lookup(self):
         """Test type lookup command."""
-        self.build()
+        self.buildDwarf()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line (self, "main.m", self.line, num_expected_locations=1, loc_exact=True)

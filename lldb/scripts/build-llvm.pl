@@ -9,6 +9,7 @@
 # files might contain object files with the same name.
 
 use strict;
+use Config;
 use Cwd 'abs_path';
 use File::Basename;
 use File::Glob ':glob';
@@ -16,60 +17,234 @@ use File::Slurp;
 use List::Util qw[min max];
 use Digest::MD5 qw(md5_hex);
 
-our $llvm_srcroot = $ENV{SCRIPT_INPUT_FILE_0};
-our $llvm_dstroot = $ENV{SCRIPT_INPUT_FILE_1};
-our $archive_filelist_file = $ENV{SCRIPT_INPUT_FILE_2};
+our $llvm_srcroot = $ENV{LLVM_SOURCE_DIR};
+our $llvm_dstroot = $ENV{LLVM_BUILD_DIR};
+our $llvm_configuration = $ENV{LLVM_CONFIGURATION};
+our $archive_filelist_file = "$ENV{LLVM_BUILD_DIR}/archives.txt";
 
 our $llvm_configuration = $ENV{LLVM_CONFIGURATION};
+our $lldb_configuration = $ENV{CONFIGURATION};
 
-our $llvm_revision = "HEAD";
-our $clang_revision = "HEAD";
-our $compiler_rt_revision = "HEAD";
+# these values only matter in submission branches
+# they are provided by whoever hands out swiftlang tags
+our $swift_version = "600.04.10";
+our $clang_version = "600.19.85";
+
+our $llvm_revision = "swift-master";
+our $clang_revision = "swift-master";
+our $compiler_rt_revision = "master";
+our $swift_revision = "master";
+
+our $lldb_version = $ENV{CURRENT_PROJECT_VERSION};
 
 our $SRCROOT = "$ENV{SRCROOT}";
 our @archs = split (/\s+/, $ENV{ARCHS});
 my $os_release = 11;
 
+our $is_ios_build = 0;
+foreach my $tmparch (@archs)
+{
+    if ($tmparch =~ /^arm/)
+    {
+        $is_ios_build = 1;
+    }
+}
+
 my $original_env_path = $ENV{PATH};
 
-my $common_configure_options = "--disable-terminfo";
+# xcrun --sdk macosx.internal --show-sdk-path
+our $SDKROOT = "$ENV{SDKROOT}";
 
-our %llvm_config_info = (
-    'Debug'         => { configure_options => '--disable-optimized --disable-assertions --enable-cxx11 --enable-libcpp', make_options => 'DEBUG_SYMBOLS=1'},
-    'Debug+Asserts' => { configure_options => '--disable-optimized --enable-assertions --enable-cxx11 --enable-libcpp' , make_options => 'DEBUG_SYMBOLS=1'},
-    'Release'       => { configure_options => '--enable-optimized --disable-assertions --enable-cxx11 --enable-libcpp' , make_options => ''},
-    'Release+Debug' => { configure_options => '--enable-optimized --disable-assertions --enable-cxx11 --enable-libcpp' , make_options => 'DEBUG_SYMBOLS=1'},
-    'Release+Asserts' => { configure_options => '--enable-optimized --enable-assertions --enable-cxx11 --enable-libcpp' , make_options => ''},
+our $CMAKE_C_COMPILER = "$ENV{CMAKE_C_COMPILER}";
+
+if ($CMAKE_C_COMPILER eq "")
+{
+    $CMAKE_C_COMPILER = `xcrun --toolchain default -f cc`;
+    chomp($CMAKE_C_COMPILER);
+}
+
+our $CMAKE_CXX_COMPILER = "$ENV{CMAKE_CXX_COMPILER}";
+
+if ($CMAKE_CXX_COMPILER eq "")
+{
+    $CMAKE_CXX_COMPILER = `xcrun --toolchain default -f c++`;
+    chomp($CMAKE_CXX_COMPILER);
+}
+
+
+
+my $common_configure_options = "";
+my $common_impl_options = "";
+
+our %llvm_config_info;
+
+#if (($ENV{DT_VARIANT} eq "PONDEROSA") || ($ENV{RC_APPLETV} eq "YES") || ($ENV{PLATFORM_NAME} =~ /tvos/i) || ($ENV{RC_PLATFORM_NAME} =~ /tvos/i)) {
+    %llvm_config_info = (
+        'Debug'           => { configure_options => '--preset=LLDB_Swift_Debug swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64'},
+        'DebugAssert'   => { configure_options => '--preset=LLDB_Swift_DebugAssert swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64' },
+        'DebugPresubmission'   => { configure_options => '--preset=LLDB_Swift_DebugPresubmission swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64' },
+        'Release'         => { configure_options => '--preset=LLDB_Swift_Release swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64'},
+        'ReleaseDebug'   => { configure_options => '--preset=LLDB_Swift_ReleaseDebug swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64'},
+        'ReleaseAssert' => { configure_options => '--preset=LLDB_Swift_ReleaseAssert swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64' },
+    
+        ### Don't change the --preset=LLDB_BNI bit below without also updating the is_ios_build 
+        ### block below that modifies it for iOS builds.
+        'BuildAndIntegration' => { configure_options => "--preset=LLDB_BNI swift_compiler_version=${swift_version} clang_tag=${clang_version} swift_tag=${swift_version} swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64" },
+    );
+#} else {
+#    %llvm_config_info = (
+#        'Debug'           => { configure_options => '--preset=LLDB_Swift_Debug_bleached'},
+#        'DebugAssert'   => { configure_options => '--preset=LLDB_Swift_DebugAssert_bleached' },
+#        'DebugPresubmission'   => { configure_options => '--preset=LLDB_Swift_DebugPresubmission' },
+#        'Release'         => { configure_options => '--preset=LLDB_Swift_Release_bleached'},
+#        'ReleaseDebug'   => { configure_options => '--preset=LLDB_Swift_ReleaseDebug_bleached'},
+#        'ReleaseAssert' => { configure_options => '--preset=LLDB_Swift_ReleaseAssert_bleached' },
+#    
+#        ### Don't change the --preset=LLDB_BNI bit below without also updating the is_ios_build 
+#        ### block below that modifies it for iOS builds.
+#        'BuildAndIntegration' => { configure_options => "--preset=LLDB_BNI_bleached swift_compiler_version=${swift_version} clang_tag=${clang_version} swift_tag=${swift_version} swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64" },
+#    );
+#}
+
+our %llvm_build_dirs = (
+    'Debug' => 'Debug',
+    'DebugAssert' => 'DebugAssert',
+    'DebugPresubmission' => 'DebugAssert',
+    'Release' => 'RelWithDebInfo',
+    'ReleaseDebug' => 'RelWithDebInfo',
+    'ReleaseAssert' => 'RelWithDebInfoAssert',
+    'BuildAndIntegration' => 'RelWithDebInfo'
 );
+
+our $llvm_build_dir = "";
+our $is_swift_prebuilt = 0;
+
+if(defined $ENV{LLDB_PATH_TO_LLVM_BUILD})
+{
+    $llvm_build_dir = $ENV{LLDB_PATH_TO_LLVM_BUILD};
+    print "swiftlang root in $llvm_build_dir\n";
+    $is_swift_prebuilt = 1;
+}
+else
+{
+    $llvm_build_dir = $llvm_build_dirs{"$llvm_configuration"};
+}
+
+my $llvm_hash_includes_diffs = 0;
 
 our $llvm_config_href = undef;
 if (exists $llvm_config_info{"$llvm_configuration"})
 {
     $llvm_config_href = $llvm_config_info{$llvm_configuration};
+    if ($is_ios_build)
+    {
+        my $target_configs = "";
+        my $arm_archs = join ("_", sort (@archs));
+        if ($ENV{RC_PLATFORM_NAME} =~ /tvos/i || $ENV{PLATFORM_NAME} =~ /tvos/i)
+        {
+            $llvm_config_href->{configure_options} =~ s/LLDB_BNI /LLDB_BNI_tvos /;
+            $llvm_config_href->{configure_options} =~ s/LLDB_Swift_Release$/LLDB_Swift_Release_tvos /;
+            $llvm_config_href->{configure_options} =~ s/LLDB_Swift_ReleaseAssert$/LLDB_Swift_ReleaseAssert_tvos /;
+            foreach my $tmparch (@archs)
+            {
+                $target_configs = $target_configs . "appletvos-$tmparch ";
+            }
+        }
+        elsif ($ENV{RC_PLATFORM_NAME} =~ /watchos/i || $ENV{PLATFORM_NAME} =~ /watchos/i)
+        {
+            $llvm_config_href->{configure_options} =~ s/_bleached//;
+            $llvm_config_href->{configure_options} =~ s/LLDB_BNI /LLDB_BNI_watchos /;
+            $llvm_config_href->{configure_options} =~ s/LLDB_Swift_Release$/LLDB_Swift_Release_watchos /;
+            $llvm_config_href->{configure_options} =~ s/LLDB_Swift_ReleaseAssert$/LLDB_Swift_ReleaseAssert_watchos /;
+            foreach my $tmparch (@archs)
+            {
+                $target_configs = $target_configs . "watchos-$tmparch ";
+            }
+        }
+        else
+        {
+            $llvm_config_href->{configure_options} =~ s/_bleached//;
+            $llvm_config_href->{configure_options} =~ s/LLDB_BNI /LLDB_BNI_ios /;
+            $llvm_config_href->{configure_options} =~ s/LLDB_Swift_Release$/LLDB_Swift_Release_ios /;
+            $llvm_config_href->{configure_options} =~ s/LLDB_Swift_ReleaseAssert$/LLDB_Swift_ReleaseAssert_ios /;
+            foreach my $tmparch (@archs)
+            {
+                $target_configs = $target_configs . "iphoneos-$tmparch ";
+            }
+        }
+        $target_configs =~ s/ $//;
+        $llvm_config_href->{configure_options} = $llvm_config_href->{configure_options} . " cross_compile_tools_deployment_targets='$target_configs'";
+    }
 }
 else
 {
     die "Unsupported LLVM configuration: '$llvm_configuration'\n";
 }
+
+if ($is_ios_build)
+{
+    # in llvm/tools/swift/utils/build-presets.ini the LLDB_BNI_ios preset doesn't build with
+    # debug info enabled - the build root is enormous to build all the architectures with
+    # debug info.  Make sure we're looking for the correct llvm build dir here.
+    if ($llvm_config_href->{configure_options} =~ /_BNI_ios/ || $llvm_config_href->{configure_options} =~ /_BNI_watchos/ || $llvm_config_href->{configure_options} =~ /_BNI_tvos/)
+    {
+        $llvm_build_dir =~ s/RelWithDebInfo/Release/;
+    }
+}
+
 our @llvm_repositories = (
     abs_path("$llvm_srcroot"),
     abs_path("$llvm_srcroot/tools/clang"),
-#    abs_path("$llvm_srcroot/projects/compiler-rt")
+    abs_path("$llvm_srcroot/projects/compiler-rt"),
+    abs_path("$llvm_srcroot/tools/swift")
 );
 
-if (-e "$llvm_srcroot/lib")
+# Get rid of the "/BuildAndIntegration" part, use Ninja-* name
+if ($is_swift_prebuilt)
+{
+    $llvm_dstroot = $llvm_build_dir;
+}
+else
+{
+    my $ninja_dirname = dirname ($llvm_dstroot);
+    $llvm_dstroot = $ninja_dirname . "/Ninja-${llvm_build_dir}";
+}
+
+if ((-e "$llvm_srcroot/lib" ) and (-e "$llvm_srcroot/tools/clang") and (-e "$llvm_srcroot/tools/swift"))
 {
     print "Using existing llvm sources in: '$llvm_srcroot'\n";
     print "Using standard LLVM build directory:\n  SRC = '$llvm_srcroot'\n  DST = '$llvm_dstroot'\n";
 }
+elsif ($is_swift_prebuilt)
+{
+    print "Using prebuilt llvm in: ${llvm_build_dir}"
+}
 else
 {
-    print "Checking out llvm sources from revision $llvm_revision...\n";
-    do_command ("cd '$SRCROOT' && svn co --quiet --revision $llvm_revision http://llvm.org/svn/llvm-project/llvm/trunk llvm", "checking out llvm from repository", 1);
-    print "Checking out clang sources from revision $clang_revision...\n";
-    do_command ("cd '$llvm_srcroot/tools' && svn co --quiet --revision $clang_revision http://llvm.org/svn/llvm-project/cfe/trunk clang", "checking out clang from repository", 1);
-#    print "Checking out compiler-rt sources from revision $compiler_rt_revision...\n";
-#    do_command ("cd '$llvm_srcroot/projects' && svn co --quiet --revision $compiler_rt_revision http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt", "checking out compiler-rt from repository", 1);
+    print "Checking out llvm sources...\n";
+    do_command ("cd '$SRCROOT' && git clone ssh://git\@github.com/apple/swift-llvm.git llvm", "checking out llvm from repository", 1);
+    do_command("pushd $SRCROOT/llvm; git fetch --all --tags; git checkout $llvm_revision; popd",1);
+    print "Checking out clang sources...\n";
+    do_command ("cd '$SRCROOT/llvm/tools' && git clone ssh://git\@github.com/apple/swift-clang.git clang", "checking out clang from repository", 1);
+    do_command("pushd $SRCROOT/llvm/tools/clang; git fetch --all --tags; git checkout $clang_revision; popd",1);
+
+# compiler_rt will not build (currently, Feb 2015) for arm; don't check it out
+# for native builds which might be re-used for arm.  It's only needed for running
+# the testsuite while using the self-built clang as a compiler for the ASAN tests.
+#    if (!$is_ios_build)
+#    {
+#        print "Checking out compiler-rt sources from revision $compiler_rt_revision...\n";
+#        do_command ("cd '$SRCROOT/llvm/projects' && git clone ssh://git\@github.com/apple/swift-compiler-rt.git compiler-rt", "checking out compiler-rt from repository", 1);
+#        do_command("pushd $SRCROOT/llvm/projects/compiler-rt; git fetch --all --tags; git checkout $compiler_rt_revision; popd",1);
+#    }
+
+    print "Checking out swift sources...\n";
+    do_command ("cd '$SRCROOT/llvm/tools' && git clone ssh://git\@github.com/apple/swift.git", "checking out swift from repository", 1);
+    do_command("pushd $SRCROOT/llvm/tools/swift; git fetch --all; git checkout $swift_revision; popd",1);
+
+    print "Checking out ninja sources... \n";
+    do_command("cd '$SRCROOT' && git clone git://github.com/martine/ninja.git", "checking out ninja from repository", 0);
+
     print "Applying any local patches to LLVM/Clang...";
 
     my @llvm_patches = bsd_glob("$ENV{SRCROOT}/scripts/llvm.*.diff");
@@ -84,11 +259,34 @@ else
         do_command ("cd '$llvm_srcroot/tools/clang' && patch -p0 < $patch");
     }
 
-#    my @compiler_rt_patches = bsd_glob("$ENV{SRCROOT}/scripts/compiler-rt.*.diff");
-#    foreach my $patch (@compiler_rt_patches)
-#    {
-#        do_command ("cd '$llvm_srcroot/projects/compiler-rt' && patch -p0 < $patch");
-#    }
+    my @compiler_rt_patches = bsd_glob("$ENV{SRCROOT}/scripts/compiler-rt.*.diff");
+    foreach my $patch (@compiler_rt_patches)
+    {
+        do_command ("cd '$llvm_srcroot/projects/compiler-rt' && patch -p0 < $patch");
+    }
+
+    my @swift_patches = bsd_glob("$ENV{SRCROOT}/scripts/swift.*.diff");
+    foreach my $patch (@swift_patches)
+    {
+        do_command ("cd '$llvm_srcroot/tools/swift' && patch -p0 < $patch");
+    }
+}
+
+if (not $is_swift_prebuilt)
+{
+    # if an existing clang or swift symlink is lurking around remove it before adding it anew
+    # this helps prevent B&I issues if one forgets to remove their local symlinks before submitting
+    if ((-e "$SRCROOT/clang"))
+    {
+        do_command("rm $SRCROOT/clang", "remove existing clang symlink or whatnot", 0);
+    }
+    do_command("cd $SRCROOT; ln -s llvm/tools/clang clang", "symlinking clang", 0);
+    
+    if ((-e "$SRCROOT/swift"))
+    {
+        do_command("rm $SRCROOT/swift", "remove existing swift symlink or whatnot", 0);
+    }
+    do_command("cd $SRCROOT; ln -s llvm/tools/swift swift", "symlinking swift", 0);
 }
 
 # Get our options
@@ -118,13 +316,19 @@ sub build_llvm
     {
         if (-d "$repo/.svn")
         {
-            push(@llvm_md5_strings, `cd '$repo'; svn info`);
-            push(@llvm_md5_strings, `cd '$repo'; svn diff`);
+            push(@llvm_md5_strings, `cd $repo; svn info`);
+            if ($llvm_hash_includes_diffs == 1)
+            {
+                push(@llvm_md5_strings, `cd $repo; svn diff`);
+            }
         }
         elsif (-d "$repo/.git")
         {
             push(@llvm_md5_strings, `cd '$repo'; git branch -v`);
-            push(@llvm_md5_strings, `cd '$repo'; git diff`);
+            if ($llvm_hash_includes_diffs == 1)
+            {
+                push(@llvm_md5_strings, `cd '$repo'; git diff`);
+            }
         }
     }
     
@@ -146,23 +350,68 @@ sub build_llvm
 
     foreach my $arch (@archs)
     {
-        my $llvm_dstroot_arch = "${llvm_dstroot}/${arch}";
 
         # if the arch destination root exists we have already built it
         my $do_configure = 0;
         my $do_make = 0;
-        my $is_arm = $arch =~ /^arm/;
         my $save_arch_digest = 1;
-        my $arch_digest_file = "$llvm_dstroot_arch/md5";
-        my $llvm_dstroot_arch_archive_dir = "$llvm_dstroot_arch/$llvm_configuration/lib";
-        
-        push @archive_dirs, $llvm_dstroot_arch_archive_dir;
+
+        my $llvm_dstroot_arch = "${llvm_dstroot}/llvm-macosx-x86_64";
+        my $swift_dstroot_arch = "${llvm_dstroot}/swift-macosx-x86_64";
+        my $cmark_dstroot_arch = "${llvm_dstroot}/cmark-macosx-x86_64";
+
+        if ($is_ios_build)
+        {
+            if ($ENV{RC_PLATFORM_NAME} =~ /tvos/i || $ENV{PLATFORM_NAME} =~ /tvos/i)
+            {
+                $llvm_dstroot_arch = "${llvm_dstroot}/llvm-appletvos-$arch";
+                $swift_dstroot_arch = "${llvm_dstroot}/swift-appletvos-$arch";
+                $cmark_dstroot_arch = "${llvm_dstroot}/cmark-appletvos-$arch";
+            }
+            elsif ($ENV{RC_PLATFORM_NAME} =~ /watchos/i || $ENV{PLATFORM_NAME} =~ /watchos/i)
+            {
+                $llvm_dstroot_arch = "${llvm_dstroot}/llvm-watchos-$arch";
+                $swift_dstroot_arch = "${llvm_dstroot}/swift-watchos-$arch";
+                $cmark_dstroot_arch = "${llvm_dstroot}/cmark-watchos-$arch";
+            }
+            else
+            {
+                $llvm_dstroot_arch = "${llvm_dstroot}/llvm-iphoneos-$arch";
+                $swift_dstroot_arch = "${llvm_dstroot}/swift-iphoneos-$arch";
+                $cmark_dstroot_arch = "${llvm_dstroot}/cmark-iphoneos-$arch";
+            }
+        }
+
+        if ($is_swift_prebuilt)
+        {
+            # a prebuilt swiftlang has been already updated by swift's build logic
+            $llvm_dstroot_arch = "$ENV{LLDB_PATH_TO_LLVM_BUILD}";
+            $swift_dstroot_arch = "$ENV{LLDB_PATH_TO_SWIFT_BUILD}";
+            $cmark_dstroot_arch = "$ENV{LLDB_PATH_TO_CMARK_BUILD}";
+
+            push @archive_dirs, "$llvm_dstroot_arch/lib";
+            push @archive_dirs, "$swift_dstroot_arch/lib";
+            push @archive_dirs, "$cmark_dstroot_arch/src";
+
+            print "Prebuilt swiftlang exists at $llvm_dstroot_arch + $swift_dstroot_arch + $cmark_dstroot_arch\n";
+
+            next;
+        }
+        else
+        {
+            push @archive_dirs, "$llvm_dstroot_arch/lib";
+            push @archive_dirs, "$swift_dstroot_arch/lib";
+            push @archive_dirs, "$cmark_dstroot_arch/src";
+        }        
+
+        my $arch_digest_file = "${llvm_dstroot}/${arch}.md5";
 
         print "LLVM architecture root for ${arch} exists at '$llvm_dstroot_arch'...";
-        if (-e $llvm_dstroot_arch)
+        if ((-e $llvm_dstroot_arch) and (-e $swift_dstroot_arch))
         {
-            print "YES\n";
-            $do_configure = !-e "$llvm_dstroot_arch/config.log";
+            print " YES\n";
+            
+            $do_configure = !-e "$llvm_dstroot_arch/CMakeCache.txt";
 
             my @archive_modtimes;
             if ($do_make == 0)
@@ -197,7 +446,9 @@ sub build_llvm
                         # make the final archive to make sure we don't need to rebuild
                         my $archive_filelist_file_modtime = (stat($archive_filelist_file))[9];
                         
-                        our @archive_files = glob "$llvm_dstroot_arch_archive_dir/*.a";
+                        our @archive_files = glob "$llvm_dstroot_arch/lib/*.a";
+                        push @archive_files, glob "$swift_dstroot_arch/lib/*.a";
+                        push @archive_files, glob "$cmark_dstroot_arch/src/*.a";
                         
                         for my $llvm_lib (@archive_files)
                         {
@@ -222,22 +473,24 @@ sub build_llvm
         else
         {
             print "NO\n";
-            do_command ("mkdir -p '$llvm_dstroot_arch'", "making llvm build directory '$llvm_dstroot_arch'", 1);
+
+            do_command ("mkdir -p '$llvm_dstroot_arch'", "making llvm build directory '$llvm_dstroot_arch'", 0);
+            do_command ("mkdir -p '$swift_dstroot_arch'", "making swift build directory '$swift_dstroot_arch'", 0);
             $do_configure = 1;
             $do_make = 1;
 
-            if ($is_arm)
+            if ($is_ios_build)
             {
                 my $llvm_dstroot_arch_bin = "${llvm_dstroot_arch}/bin";
                 if (!-d $llvm_dstroot_arch_bin)
                 {
-                    do_command ("mkdir -p '$llvm_dstroot_arch_bin'", "making llvm build arch bin directory '$llvm_dstroot_arch_bin'", 1);
+                    do_command ("mkdir -p '$llvm_dstroot_arch_bin'", "making llvm build arch bin directory '$llvm_dstroot_arch_bin'", 0);
                     my @tools = ("ar", "nm", "strip", "lipo", "ld", "as");
                     my $script_mode = 0755;
                     my $prog;
                     for $prog (@tools)
                     {
-                        chomp(my $actual_prog_path = `xcrun -sdk '$ENV{SDKROOT}' -find ${prog}`);
+                        chomp(my $actual_prog_path = `xcrun -sdk '$SDKROOT' -find ${prog}`);
                         symlink($actual_prog_path, "$llvm_dstroot_arch_bin/${prog}");
                         my $script_prog_path = "$llvm_dstroot_arch_bin/arm-apple-darwin${os_release}-${prog}";
                         open (SCRIPT, ">$script_prog_path") or die "Can't open $! for writing...\n";
@@ -249,11 +502,11 @@ sub build_llvm
                     my @arch_sysroot_tools = ("clang", "clang++", "gcc", "g++");
                     for $prog (@arch_sysroot_tools)
                     {
-                        chomp(my $actual_prog_path = `xcrun -sdk '$ENV{SDKROOT}' -find ${prog}`);
+                        chomp(my $actual_prog_path = `xcrun -sdk '$SDKROOT' -find ${prog}`);
                         symlink($actual_prog_path, "$llvm_dstroot_arch_bin/${prog}");
                         my $script_prog_path = "$llvm_dstroot_arch_bin/arm-apple-darwin${os_release}-${prog}";
                         open (SCRIPT, ">$script_prog_path") or die "Can't open $! for writing...\n";
-                        print SCRIPT "#!/bin/sh\nexec '$actual_prog_path' -arch ${arch} -isysroot '$ENV{SDKROOT}' \"\$\@\"\n";
+                        print SCRIPT "#!/bin/sh\nexec '$actual_prog_path' -arch ${arch} -isysroot '$SDKROOT' \"\$\@\"\n";
                         close (SCRIPT);
                         chmod($script_mode, $script_prog_path);
                     }
@@ -269,53 +522,38 @@ sub build_llvm
             write_file($arch_digest_file, \$llvm_hex_digest);
         }
 
+        if ($do_make)
+        {
+            $do_configure = 1;
+        }
+
         if ($do_configure)
         {
             # Build llvm and clang
             print "Configuring clang ($arch) in '$llvm_dstroot_arch'...\n";
-            my $lldb_configuration_options = "--enable-targets=x86_64,arm,arm64 $common_configure_options $llvm_config_href->{configure_options}";
+            #per Dmitri, DLLVM_TARGETS_TO_BUILD=\"X86;ARM;AArch64\" is the default
+            my $lldb_configuration_options = "$common_configure_options $llvm_config_href->{configure_options} $common_impl_options";
 
             # We're configuring llvm/clang with --enable-cxx11 and --enable-libcpp but llvm/configure doesn't
             # pick up the right C++ standard library.  If we have a MACOSX_DEPLOYMENT_TARGET of 10.7 or 10.8
             # (or are using actually building on those releases), we need to specify "-stdlib=libc++" at link
             # time or llvm/configure will not see <atomic> as available and error out (v. llvm r199313).
-            $ENV{LDFLAGS} = $ENV{LDFLAGS} . " -stdlib=libc++";
+            # $ENV{LDFLAGS} = $ENV{LDFLAGS} . " -stdlib=libc++";
 
-            if ($is_arm)
-            {
-                $lldb_configuration_options .= " --host=arm-apple-darwin${os_release} --target=arm-apple-darwin${os_release} --build=i686-apple-darwin${os_release} --program-prefix=\"\"";
-            }
-            else
-            {
-                $lldb_configuration_options .= " --build=$arch-apple-darwin${os_release}";
-            }
-			if ($is_arm)
-			{
-				# Unset "SDKROOT" for ARM builds
-	            do_command ("cd '$llvm_dstroot_arch' && unset SDKROOT && '$llvm_srcroot/configure' $lldb_configuration_options",
-	                        "configuring llvm build", 1);				
-			}
-			else
-			{
-	            do_command ("cd '$llvm_dstroot_arch' && '$llvm_srcroot/configure' $lldb_configuration_options",
-	                        "configuring llvm build", 1);								
-			}
+            # Unset "SDKROOT" for ARM builds
+            do_command ("SWIFT_SOURCE_ROOT=$ENV{SRCROOT} SWIFT_BUILD_ROOT=$ENV{LLVM_BUILD_DIRTREE} ./swift/utils/build-script $lldb_configuration_options",
+	                        "configuring llvm build (Unix Makefiles)", 1);
+
         }
 
         if ($do_make)
         {
             $did_make = 1;
             # Build llvm and clang
-            my $num_cpus = parallel_guess();
-            print "Building clang using $num_cpus cpus ($arch)...\n";
-            my $extra_make_flags = '';
-            if ($is_arm)
-            {
-                $extra_make_flags = "UNIVERSAL=1 UNIVERSAL_ARCH=${arch} UNIVERSAL_SDK_PATH='$ENV{SDKROOT}' SDKROOT=";
-            }
-            do_command ("cd '$llvm_dstroot_arch' && make -j$num_cpus clang-only VERBOSE=1 $llvm_config_href->{make_options} PROJECT_NAME='llvm' $extra_make_flags", "making llvm and clang", 1);
-            do_command ("cd '$llvm_dstroot_arch' && make -j$num_cpus tools-only VERBOSE=1 $llvm_config_href->{make_options} PROJECT_NAME='llvm' $extra_make_flags EDIS_VERSION=1", "making libedis", 1);
-            
+            # These all seem redundant
+            # Combine all .o files from a bunch of static libraries from llvm
+            # and clang into a single .a file.
+            do_command("rm -rf $ENV{LLVM_BUILD_DIR}; ln -s $ENV{LLVM_BUILD_DIRTREE}/Ninja-$llvm_build_dir $ENV{LLVM_BUILD_DIR}", "symlinking config", 0);
         }
 
         ++$arch_idx;
@@ -323,7 +561,7 @@ sub build_llvm
 
     # If we did any makes update the archive filenames file with any .a files from
     # each architectures "lib" folder...
-    if ($did_make)
+    if ($did_make || $is_swift_prebuilt)
     {
         open my $fh, '>', $archive_filelist_file or die "Can't open $! for writing...\n";
         foreach my $archive_dir (@archive_dirs)

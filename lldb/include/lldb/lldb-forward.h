@@ -196,6 +196,9 @@ class   SectionList;
 class   SectionLoadHistory;
 class   SectionLoadList;
 class   Settings;
+class   SwiftASTContext;
+class   SwiftLanguageRuntime;
+class   SwiftREPL;
 class   SourceManager;
 class   SourceManagerImpl;
 class   StackFrame;
@@ -395,6 +398,7 @@ namespace lldb {
     typedef std::shared_ptr<lldb_private::SectionLoadList> SectionLoadListSP;
     typedef std::shared_ptr<lldb_private::SearchFilter> SearchFilterSP;
     typedef std::shared_ptr<lldb_private::Settings> SettingsSP;
+    typedef std::shared_ptr<lldb_private::SwiftASTContext> SwiftASTContextSP;
     typedef std::unique_ptr<lldb_private::SourceManager> SourceManagerUP;
     typedef std::shared_ptr<lldb_private::StackFrame> StackFrameSP;
     typedef std::unique_ptr<lldb_private::StackFrame> StackFrameUP;

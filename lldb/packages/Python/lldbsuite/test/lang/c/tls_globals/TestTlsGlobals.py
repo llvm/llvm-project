@@ -27,6 +27,7 @@ class TlsGlobalTestCase(TestBase):
 
     @unittest2.expectedFailure("rdar://7796742")
     @skipIfWindows # TLS works differently on Windows, this would need to be implemented separately.
+    @skipIfSmooshbase
     def test(self):
         """Test thread-local storage."""
         self.build()

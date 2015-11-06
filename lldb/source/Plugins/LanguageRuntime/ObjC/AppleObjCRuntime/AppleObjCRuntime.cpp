@@ -177,6 +177,7 @@ AppleObjCRuntime::GetObjectDescription (Stream &strm, Value &value, ExecutionCon
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
     options.SetTimeoutUsec(PO_FUNCTION_TIMEOUT_USEC);
+    options.SetLanguage(lldb::eLanguageTypeObjC_plus_plus);
     
     ExpressionResults results = m_print_object_caller_up->ExecuteFunction (exe_ctx,
                                                                            &wrapper_struct_addr,
@@ -254,13 +255,22 @@ AppleObjCRuntime::GetPrintForDebuggerAddr()
 bool
 AppleObjCRuntime::CouldHaveDynamicValue (ValueObject &in_value)
 {
-    return in_value.GetCompilerType().IsPossibleDynamicType (NULL,
-                                                          false, // do not check C++
-                                                          true); // check ObjC
+    return CouldHaveDynamicValue(in_value,
+                                 /* allow_swift = */ false);
 }
 
 bool
-AppleObjCRuntime::GetDynamicTypeAndAddress (ValueObject &in_value, 
+AppleObjCRuntime::CouldHaveDynamicValue (ValueObject &in_value,
+                                         bool allow_swift)
+{
+    return in_value.GetCompilerType().IsPossibleDynamicType (NULL,
+                                                             false, // do not check C++
+                                                             true,  // check ObjC
+                                                             allow_swift);
+}
+
+bool
+AppleObjCRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
                                             lldb::DynamicValueType use_dynamic, 
                                             TypeAndOrName &class_type_or_name, 
                                             Address &address,
@@ -299,6 +309,20 @@ AppleObjCRuntime::FixUpDynamicType (const TypeAndOrName& type_and_or_name,
         ret.SetName(corrected_name.c_str());
     }
     return ret;
+}
+
+bool
+AppleObjCRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
+                                            lldb::DynamicValueType use_dynamic,
+                                            TypeAndOrName &class_type_or_name,
+                                            Address &address,
+                                            Value::ValueType &value_type,
+                                            bool allow_swift)
+{
+    if (!allow_swift)
+        return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name, address, value_type);
+    else
+        return false;
 }
 
 bool

@@ -21,6 +21,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
 using namespace lldb;
@@ -90,12 +91,13 @@ BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
 
 BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
                                                 RegularExpression &func_regex,
+                                                lldb::LanguageType language,
                                                 bool skip_prologue) :
     BreakpointResolver (bkpt, BreakpointResolver::NameResolver),
     m_class_name (nullptr),
     m_regex (func_regex),
     m_match_type (Breakpoint::Regexp),
-    m_language (eLanguageTypeUnknown),
+    m_language (language),
     m_skip_prologue (skip_prologue)
 {
 }
@@ -157,6 +159,24 @@ BreakpointResolverName::AddNameLookup (const ConstString &name, uint32_t name_ty
         lookup.name = name;
         Module::PrepareForFunctionNameLookup(lookup.name, name_type_mask, m_language, lookup.lookup_name, lookup.name_type_mask, lookup.match_name_after_lookup);
         m_lookups.push_back (lookup);
+
+        // we need to do this because we don't have a proper parser for Swift function name syntax
+        // so we try to ensure that if we autocomplete to something, we'll look for its mangled
+        // equivalent and use the mangled version as a lookup as well - to avoid overhead
+        // only do it for mangled names that start with _T - i.e. Swift mangled names!
+        ConstString counterpart;
+        if (name.GetMangledCounterpart(counterpart))
+        {
+            if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetCString()))
+            {
+                LookupInfo lookup;
+                lookup.name = counterpart;
+                lookup.lookup_name = counterpart;
+                lookup.name_type_mask = eFunctionNameTypeAuto;
+                lookup.match_name_after_lookup = false;
+                m_lookups.push_back(lookup);
+            }
+        }
     }
 }
 
@@ -211,6 +231,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
         return Searcher::eCallbackReturnStop;
     }
     bool filter_by_cu = (filter.GetFilterRequiredItems() & eSymbolContextCompUnit) != 0;
+    bool filter_by_language = (m_language != eLanguageTypeUnknown);
     const bool include_symbols = !filter_by_cu;
     const bool include_inlines = true;
     const bool append = true;
@@ -254,15 +275,48 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     }
 
     // If the filter specifies a Compilation Unit, remove the ones that don't pass at this point.
-    if (filter_by_cu)
+    if (filter_by_cu || filter_by_language)
     {
+        Target &target = m_breakpoint->GetTarget();
+        
         uint32_t num_functions = func_list.GetSize();
         
         for (size_t idx = 0; idx < num_functions; idx++)
         {
+            bool remove_it = false;
             SymbolContext sc;
             func_list.GetContextAtIndex(idx, sc);
-            if (!sc.comp_unit || !filter.CompUnitPasses(*sc.comp_unit))
+            if (filter_by_cu)
+            {
+                if (!sc.comp_unit || !filter.CompUnitPasses(*sc.comp_unit))
+                    remove_it = true;
+            }
+            
+            if (filter_by_language)
+            {
+                const char *name = sc.GetFunctionName(Mangled::ePreferMangled).AsCString();
+                if (name)
+                {
+                    LanguageType sym_language = LanguageRuntime::GetLanguageForSymbolByName(target, name);
+                    if (m_language == eLanguageTypeC)
+                    {
+                        // We don't currently have a way to say "This symbol name is C" so for now, C means
+                        // not ObjC and not C++, etc...
+                        if (sym_language == eLanguageTypeC_plus_plus
+                            || sym_language == eLanguageTypeObjC
+                            || sym_language == eLanguageTypeSwift)
+                        {
+                            remove_it = true;
+                        }
+                    }
+                    else if (sym_language != m_language)
+                    {
+                        remove_it = true;
+                    }
+                }
+            }
+            
+            if  (remove_it)
             {
                 func_list.RemoveContextAtIndex(idx);
                 num_functions--;
@@ -369,6 +423,10 @@ BreakpointResolverName::GetDescription (Stream *s)
             }
             s->Printf ("'%s'}", m_lookups[num_names - 1].name.GetCString());
         }
+    }
+    if (m_language != eLanguageTypeUnknown)
+    {
+        s->Printf (", language = %s", Language::GetNameForLanguageType(m_language));
     }
 }
 

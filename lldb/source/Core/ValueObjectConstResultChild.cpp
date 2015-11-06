@@ -27,6 +27,7 @@ ValueObjectConstResultChild::ValueObjectConstResultChild
     uint32_t bitfield_bit_offset,
     bool is_base_class,
     bool is_deref_of_parent,
+    bool child_is_indirect_enum_case,
     lldb::addr_t live_address
 ) :
     ValueObjectChild (parent,
@@ -38,6 +39,7 @@ ValueObjectConstResultChild::ValueObjectConstResultChild
                       bitfield_bit_offset,
                       is_base_class,
                       is_deref_of_parent,
+                      child_is_indirect_enum_case,
                       eAddressTypeLoad),
     m_impl(this, live_address)
 {

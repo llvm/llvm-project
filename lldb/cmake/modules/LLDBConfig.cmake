@@ -314,6 +314,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   ${CORE_FOUNDATION_LIBRARY} ${CORE_SERVICES_LIBRARY} ${SECURITY_LIBRARY}
   ${DEBUG_SYMBOLS_LIBRARY})
 
+  include_directories(AFTER /usr/include/libxml2)
 else()
   if (LIBXML2_FOUND)
     add_definitions( -DLIBXML2_DEFINED )

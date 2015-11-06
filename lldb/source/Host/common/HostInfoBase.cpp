@@ -64,9 +64,11 @@ namespace
 
         FileSpec m_lldb_so_dir;
         FileSpec m_lldb_support_exe_dir;
+        FileSpec m_lldb_support_file_dir;
         FileSpec m_lldb_headers_dir;
         FileSpec m_lldb_python_dir;
         FileSpec m_lldb_clang_resource_dir;
+        FileSpec m_lldb_swift_resource_dir;
         FileSpec m_lldb_system_plugin_dir;
         FileSpec m_lldb_user_plugin_dir;
         FileSpec m_lldb_process_tmp_dir;
@@ -188,6 +190,21 @@ HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec)
                     result = &g_fields->m_lldb_support_exe_dir;
             }
             break;
+        case lldb::ePathTypeSupportFileDir:
+            {
+                static std::once_flag g_once_flag;
+                static bool success = false;
+                std::call_once(g_once_flag,  []() {
+                    success = HostInfo::ComputeSupportFileDirectory (g_fields->m_lldb_support_file_dir);
+                    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+                    if (log)
+                        log->Printf("HostInfoBase::GetLLDBPath(ePathTypeSupportFileDir) => '%s'",
+                                    g_fields->m_lldb_support_file_dir.GetPath().c_str());
+                });
+                if (success)
+                    result = &g_fields->m_lldb_support_file_dir;
+            }
+            break;
         case lldb::ePathTypeHeaderDir:
             {
                 static std::once_flag g_once_flag;
@@ -228,6 +245,20 @@ HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec)
                 });
                 if (success)
                     result = &g_fields->m_lldb_clang_resource_dir;
+            }
+            break;
+        case lldb::ePathTypeSwiftDir:
+            {
+                static std::once_flag g_once_flag;
+                static bool success = false;
+                std::call_once(g_once_flag,  []() {
+                    success = HostInfo::ComputeSwiftDirectory (g_fields->m_lldb_swift_resource_dir);
+                    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+                    if (log)
+                        log->Printf("HostInfoBase::GetLLDBPath(ePathTypeSwiftResourceDir) => '%s'", g_fields->m_lldb_swift_resource_dir.GetPath().c_str());
+                });
+                if (success)
+                    result = &g_fields->m_lldb_swift_resource_dir;
             }
             break;
         case lldb::ePathTypeLLDBSystemPlugins:
@@ -324,6 +355,21 @@ HostInfoBase::ComputeSupportExeDirectory(FileSpec &file_spec)
 }
 
 bool
+HostInfoBase::ComputeSupportFileDirectory(FileSpec &file_spec)
+{
+    FileSpec temp_file_spec;
+    
+    if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, temp_file_spec))
+        return false;
+    
+    temp_file_spec.AppendPathComponent("lldb");
+    
+    file_spec = temp_file_spec;
+    
+    return true;
+}
+
+bool
 HostInfoBase::ComputeProcessTempFileDirectory(FileSpec &file_spec)
 {
     FileSpec temp_file_spec;
@@ -385,6 +431,14 @@ HostInfoBase::ComputeSystemPluginsDirectory(FileSpec &file_spec)
 bool
 HostInfoBase::ComputeClangDirectory(FileSpec &file_spec)
 {
+    // TODO(zturner): Figure out how to compute the clang directory for all platforms.
+    return false;
+}
+
+bool
+HostInfoBase::ComputeSwiftDirectory(FileSpec &file_spec)
+{
+    // TODO(zturner): Figure out how to compute the swift directory for all platforms.
     return false;
 }
 

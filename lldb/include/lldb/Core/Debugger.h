@@ -224,6 +224,10 @@ public:
     bool
     PopIOHandler (const lldb::IOHandlerSP& reader_sp);
     
+    uint32_t
+    PopIOHandlers (const lldb::IOHandlerSP& reader1_sp,
+                   const lldb::IOHandlerSP& reader2_sp);
+
     // Synchronously run an input reader until it is done
     void
     RunIOHandler (const lldb::IOHandlerSP& reader_sp);
@@ -234,7 +238,7 @@ public:
     bool
     CheckTopIOHandlerTypes (IOHandler::Type top_type,
                             IOHandler::Type second_top_type);
-
+    
     void
     PrintAsync (const char *s, size_t len, bool is_stdout);
 
@@ -385,7 +389,19 @@ public:
     
     Error
     RunREPL (lldb::LanguageType language, const char *repl_options);
-
+    
+    bool
+    REPLIsActive ()
+    {
+        return m_input_reader_stack.REPLIsActive();
+    }
+    
+    bool
+    REPLIsEnabled ()
+    {
+        return m_input_reader_stack.REPLIsEnabled();
+    }
+    
     // This is for use in the command interpreter, when you either want the selected target, or if no target
     // is present you want to prime the dummy target with entities that will be copied over to new targets.
     Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
@@ -393,6 +409,7 @@ public:
 
 protected:
     friend class CommandInterpreter;
+    friend class SwiftREPL;
     friend class REPL;
 
     bool
@@ -403,10 +420,10 @@ protected:
 
     static lldb::thread_result_t
     EventHandlerThread (lldb::thread_arg_t arg);
-
+    
     bool
     HasIOHandlerThread();
-
+    
     bool
     StartIOHandlerThread();
     
@@ -427,7 +444,7 @@ protected:
     
     void
     HandleProcessEvent (const lldb::EventSP &event_sp);
-
+    
     void
     HandleThreadEvent (const lldb::EventSP &event_sp);
 

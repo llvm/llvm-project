@@ -65,7 +65,10 @@ public:
     ///     success.
     //------------------------------------------------------------------
     virtual unsigned
-    Parse (Stream &stream) = 0;
+    Parse (Stream &stream,
+           uint32_t first_line = 0,
+           uint32_t last_line = UINT32_MAX,
+           uint32_t line_offset = 0) = 0;
     
     //------------------------------------------------------------------
     /// Ready an already-parsed expression for execution, possibly

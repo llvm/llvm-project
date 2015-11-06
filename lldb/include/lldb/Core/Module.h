@@ -24,6 +24,8 @@
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Mutex.h"
 #include "lldb/Host/TimeValue.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
@@ -948,6 +950,11 @@ public:
     bool
     GetIsDynamicLinkEditor ();
 
+    // This function must be called immediately after construction of the Module
+    // in the cases where the AST is to be shared.
+    void
+    SetTypeSystemForLanguage (lldb::LanguageType language, const lldb::TypeSystemSP &type_system_sp);
+
     TypeSystem *
     GetTypeSystemForLanguage (lldb::LanguageType language);
 
@@ -1099,8 +1106,20 @@ public:
                                   ConstString &lookup_name,
                                   uint32_t &lookup_name_type_mask,
                                   bool &match_name_after_lookup);
+    
+    void
+    ClearModuleDependentCaches ();
+
+    void
+    SetTypeSystemMap (const TypeSystemMap &type_system_map)
+    {
+        m_type_system_map = type_system_map;
+    }
 
 protected:
+    SwiftASTContext *
+    GetSwiftASTContextNoCreate ();
+
     //------------------------------------------------------------------
     // Member Variables
     //------------------------------------------------------------------

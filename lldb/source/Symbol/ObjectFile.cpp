@@ -369,8 +369,10 @@ ObjectFile::GetAddressClass (addr_t file_addr)
                     case eSectionTypeDWARFDebugStrOffsets:
                     case eSectionTypeDWARFAppleNames:
                     case eSectionTypeDWARFAppleTypes:
+                    case eSectionTypeDWARFAppleExternalTypes:
                     case eSectionTypeDWARFAppleNamespaces:
                     case eSectionTypeDWARFAppleObjC:
+                    case eSectionTypeSwiftModules:
                         return eAddressClassDebug;
                     case eSectionTypeEHFrame:
                     case eSectionTypeARMexidx:
@@ -418,7 +420,10 @@ ObjectFile::GetAddressClass (addr_t file_addr)
             case eSymbolTypeObjCClass:      return eAddressClassRuntime;
             case eSymbolTypeObjCMetaClass:  return eAddressClassRuntime;
             case eSymbolTypeObjCIVar:       return eAddressClassRuntime;
+            case eSymbolTypeIVarOffset:     return eAddressClassRuntime;
+            case eSymbolTypeMetadata:       return eAddressClassRuntime;
             case eSymbolTypeReExported:     return eAddressClassRuntime;
+            case eSymbolTypeASTFile:        return eAddressClassDebug;
             }
         }
     }
@@ -625,4 +630,37 @@ ObjectFile::GetSectionList(bool update_module_section_list)
         }
     }
     return m_sections_ap.get();
+}
+
+lldb::SymbolType
+ObjectFile::GetSymbolTypeFromName (llvm::StringRef name,
+                                   lldb::SymbolType symbol_type_hint)
+{
+    if (!name.empty())
+    {
+        if (name.startswith("_T"))
+        {
+            // Swift
+            if (name.startswith("_TM"))
+                return lldb::eSymbolTypeMetadata;
+            if (name.startswith("_TWvd"))
+                return lldb::eSymbolTypeIVarOffset;
+        }
+        else if(name.startswith("_OBJC_"))
+        {
+            // ObjC
+            if (name.startswith("_OBJC_CLASS_$_"))
+                return lldb::eSymbolTypeObjCClass;
+            if (name.startswith("_OBJC_METACLASS_$_"))
+                return lldb::eSymbolTypeObjCMetaClass;
+            if (name.startswith("_OBJC_IVAR_$_"))
+                return lldb::eSymbolTypeObjCIVar;
+        }
+        else if (name.startswith(".objc_class_name_"))
+        {
+            // ObjC v1
+            return lldb::eSymbolTypeObjCClass;
+        }
+    }
+    return symbol_type_hint;
 }

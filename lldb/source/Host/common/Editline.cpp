@@ -1404,7 +1404,8 @@ Editline::GetLines (int first_line_number, StringList &lines, bool &interrupted)
     if (!interrupted)
     {
         // Save the completed entry in history before returning
-        m_history_sp->Enter (CombineLines (m_input_lines).c_str());
+        if (m_input_lines.size() > 1 || !m_input_lines[0].empty())
+            m_history_sp->Enter (CombineLines (m_input_lines).c_str());
 
         lines = GetInputAsStringList();
     }

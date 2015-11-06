@@ -54,6 +54,7 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfWindows # clang-cl does not support throw or catch (llvm.org/pr24538)
     @expectedFlakeyFreeBSD
     @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.8"], archs=["x86_64"])
+    @expectedFailureLinux("<rdar://problem/23345681>") # sometimes failing on clang 3.6 as well.
     def test_sb_api_listener_resume(self):
         """ Test that a process can be resumed from a non-main thread. """
         self.build_and_test('driver.cpp listener_test.cpp test_listener_resume.cpp',
