@@ -3290,11 +3290,11 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
   // post-dominated by a sink, simply add all the nodes in the equivalence class
   // to 'Nodes'.  Any of the reports will serve as a "representative" report.
   if (!BT.isSuppressOnSink()) {
-    BugReport *R = I;
+    BugReport *R = &*I;
     for (BugReportEquivClass::iterator I=EQ.begin(), E=EQ.end(); I!=E; ++I) {
       const ExplodedNode *N = I->getErrorNode();
       if (N) {
-        R = I;
+        R = &*I;
         bugReports.push_back(R);
       }
     }
@@ -3320,9 +3320,9 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
     }
     // No successors?  By definition this nodes isn't post-dominated by a sink.
     if (errorNode->succ_empty()) {
-      bugReports.push_back(I);
+      bugReports.push_back(&*I);
       if (!exampleReport)
-        exampleReport = I;
+        exampleReport = &*I;
       continue;
     }
 
@@ -3346,9 +3346,9 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
         if (Succ->succ_empty()) {
           // If we found an end-of-path node that is not a sink.
           if (!Succ->isSink()) {
-            bugReports.push_back(I);
+            bugReports.push_back(&*I);
             if (!exampleReport)
-              exampleReport = I;
+              exampleReport = &*I;
             WL.clear();
             break;
           }

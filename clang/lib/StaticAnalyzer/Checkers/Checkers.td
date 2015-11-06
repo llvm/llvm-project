@@ -362,6 +362,10 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   HelpText<"Check for mismatched deallocators.">,
   DescFile<"MallocChecker.cpp">;
 
+def VforkChecker : Checker<"Vfork">,
+  HelpText<"Check for proper usage of vfork">,
+  DescFile<"VforkChecker.cpp">;
+
 } // end "unix"
 
 let ParentPackage = UnixAlpha in {
