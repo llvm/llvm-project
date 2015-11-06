@@ -1,5 +1,5 @@
 #import <Foundation/Foundation.h>
-#import "MyClass.h"
+#import "myclass.h"
 
 @implementation MyClass
 {
