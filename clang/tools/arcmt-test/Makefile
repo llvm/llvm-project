@@ -21,6 +21,6 @@ LINK_COMPONENTS := $(TARGETS_TO_BUILD) asmparser bitreader support mc option
 USEDLIBS = clangARCMigrate.a clangRewrite.a \
 		 clangFrontend.a clangDriver.a clangSerialization.a clangParse.a \
 		 clangSema.a clangEdit.a clangAnalysis.a clangAST.a clangLex.a \
-		 clangBasic.a
+		 clangAPINotes.a clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile

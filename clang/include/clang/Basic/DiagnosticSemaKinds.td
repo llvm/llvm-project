@@ -649,6 +649,8 @@ def note_suppressed_class_declare : Note<
   "class with specified objc_requires_property_definitions attribute is declared here">;
 def err_objc_root_class_subclass : Error<
   "objc_root_class attribute may only be specified on a root class declaration">;
+def err_restricted_superclass_mismatch : Error<
+  "cannot subclass a class with objc_subclassing_restricted attribute">;
 def warn_objc_root_class_missing : Warning<
   "class %0 defined without specifying a base class">,
   InGroup<ObjCRootClass>;
@@ -2431,6 +2433,9 @@ def warn_mismatched_availability_override_unavail : Warning<
   InGroup<Availability>;
 def note_overridden_method : Note<
   "overridden method is here">;
+def warn_availability_swift_unavailable_only : Warning<
+  "only 'unavailable' is supported for Swift availability">,
+  InGroup<Availability>;
 def note_protocol_method : Note<
   "protocol method is here">;
 
@@ -2765,6 +2770,9 @@ def warn_attribute_nonnull_no_pointers : Warning<
 def warn_attribute_nonnull_parm_no_args : Warning<
   "'nonnull' attribute when used on parameters takes no arguments">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_noescape_non_pointer : Warning<
+  "'noescape' attribute ignored on parameter of non-pointer type %0">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_sentinel_named_arguments : Warning<
   "'sentinel' attribute requires named arguments">,
   InGroup<IgnoredAttributes>;
@@ -2881,6 +2889,23 @@ def err_objc_bridged_related_known_method : Error<
 
 def err_objc_attr_protocol_requires_definition : Error<
   "attribute %0 can only be applied to @protocol definitions, not forward declarations">;
+
+// Swift attributes
+def err_attr_swift_name_decl_kind : Error<
+  "%0 attribute cannot be applied to this declaration">;
+def err_attr_swift_name_identifier : Error<
+  "parameter of %0 attribute must be an ASCII identifier string">;
+def err_attr_swift_name_function : Error<
+  "parameter of %0 attribute must be a Swift function name string">;
+def warn_attr_swift_name_num_params : Warning<
+  "too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
+  InGroup<DiagGroup<"swift-name-attribute">>;
+def err_attr_swift_error_no_error_parameter : Error<
+  "%0 attribute can only be applied to a %select{function|method}1 "
+  "with an error parameter">;
+def err_attr_swift_error_return_type : Error<
+  "%0 attribute with '%1' convention can only be applied to a "
+  "%select{function|method}2 returning %select{an integral type|a pointer}3">;
 
 // Function Parameter Semantic Analysis.
 def err_param_with_void_type : Error<"argument may not have 'void' type">;

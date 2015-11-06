@@ -85,6 +85,9 @@ def NormalVar : SubsetSubject<Var,
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}]>;
 
+def ObjCClassMethod : SubsetSubject<ObjCMethod,
+                                    [{!S->isInstanceMethod()}]>;
+
 def ObjCInstanceMethod : SubsetSubject<ObjCMethod,
                                        [{S->isInstanceMethod()}]>;
 
@@ -462,6 +465,7 @@ def Availability : InheritableAttr {
              .Case("macosx_app_extension", "OS X (App Extension)")
              .Case("tvos_app_extension", "tvOS (App Extension)")
              .Case("watchos_app_extension", "watchOS (App Extension)")
+             .Case("swift", "Swift")
              .Default(llvm::StringRef());
 } }];
   let HasCustomParsing = 1;
@@ -1010,6 +1014,12 @@ def ObjCKindOf : TypeAttr {
   let Documentation = [Undocumented];
 }
 
+def NoEscape : InheritableAttr {
+  let Spellings = [GCC<"noescape">];
+  let Subjects = SubjectList<[ParmVar], WarnDiag, "ExpectedParameter">;
+  let Documentation = [Undocumented];
+}
+
 def AssumeAligned : InheritableAttr {
   let Spellings = [GCC<"assume_aligned">];
   let Subjects = SubjectList<[ObjCMethod, Function]>;
@@ -1144,6 +1154,18 @@ def ObjCRootClass : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def ObjCSubclassingRestricted : InheritableAttr {
+  let Spellings = [GNU<"objc_subclassing_restricted">];
+  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def ObjCCompleteDefinition : InheritableAttr {
+  let Spellings = [GNU<"objc_complete_definition">];
+  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
 def ObjCExplicitProtocolImpl : InheritableAttr {
   let Spellings = [GNU<"objc_protocol_requires_explicit_implementation">];
   let Subjects = SubjectList<[ObjCProtocol], ErrorDiag>;
@@ -1238,6 +1260,30 @@ def Regparm : TypeAttr {
   let Spellings = [GCC<"regparm">];
   let Args = [UnsignedArgument<"NumParams">];
   let Documentation = [RegparmDocs];
+}
+
+def SwiftError : InheritableAttr {
+  let Spellings = [GCC<"swift_error">];
+  let Args = [EnumArgument<"Convention", "ConventionKind",
+               ["none", "nonnull_error", "null_result", "zero_result", "nonzero_result"],
+               ["None", "NonNullError", "NullResult", "ZeroResult", "NonZeroResult"]>];
+  let Subjects = SubjectList<[ObjCMethod, Function], ErrorDiag>;
+  let Documentation = [SwiftErrorDocs];
+}
+
+def SwiftName : InheritableAttr {
+  let Spellings = [GCC<"swift_name">];
+  let Args = [StringArgument<"Name">];
+  // Proper subject list disabled because of the custom error needed.
+  // Let's avoid merge conflicts for now.
+//  let Subjects = SubjectList<[EnumConstant, ObjCProtocol, ObjCClassMethod],
+//                             ErrorDiag, "ExpectedSwiftNameSubjects">;
+  let Documentation = [Undocumented];
+}
+
+def SwiftPrivate : InheritableAttr {
+  let Spellings = [GCC<"swift_private">];
+  let Documentation = [Undocumented];
 }
 
 def ReqdWorkGroupSize : InheritableAttr {

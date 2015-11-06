@@ -464,6 +464,14 @@ def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
 
+def fapinotes : Flag<["-"], "fapinotes">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable external API notes support">;
+def fno_apinotes : Flag<["-"], "fno-apinotes">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable external API notes support">;
+def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
+  Group<i_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
+  HelpText<"Specify the API notes cache path">;
+
 def fblocks : Flag<["-"], "fblocks">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable the 'blocks' language feature">;
 def fbootclasspath_EQ : Joined<["-"], "fbootclasspath=">, Group<f_Group>;

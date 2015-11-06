@@ -216,4 +216,8 @@ def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
   "invalid virtual filesystem overlay file '%0'">, DefaultFatal;
+
+def err_no_apinotes_cache_path : Error<
+  "-fapinotes was provided without -fapinotes-cache-path=<directory>">,
+  DefaultFatal;
 }
