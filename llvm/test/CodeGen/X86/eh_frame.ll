@@ -7,8 +7,8 @@
 @bar1 = constant i8* bitcast (i32* @foo to i8*), section "my_bar1", align 8
 
 
-; STATIC: .section	.eh_frame,"a",@progbits
+; STATIC: .section	.eh_frame,"a",@unwind
 ; STATIC: .section	my_bar1,"a",@progbits
 
-; PIC:	.section	.eh_frame,"a",@progbits
+; PIC:	.section	.eh_frame,"a",@unwind
 ; PIC:	.section	my_bar1,"aw",@progbits

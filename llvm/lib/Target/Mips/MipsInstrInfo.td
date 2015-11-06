@@ -381,6 +381,33 @@ include "MipsInstrFormats.td"
 // Mips Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
+                                  int Offset = 0> : AsmOperandClass {
+  let Name = "ConstantUImm" # Bits # "_" # Offset;
+  let RenderMethod = "addConstantUImmOperands<" # Bits # ", " # Offset # ">";
+  let PredicateMethod = "isConstantUImm<" # Bits # ", " # Offset # ">";
+  let SuperClasses = Supers;
+  let DiagnosticType = "UImm" # Bits # "_" # Offset;
+}
+
+def ConstantUImm4AsmOperandClass
+    : ConstantUImmAsmOperandClass<4, []>;
+def ConstantUImm3AsmOperandClass
+    : ConstantUImmAsmOperandClass<3, [ConstantUImm4AsmOperandClass]>;
+def ConstantUImm2Plus1AsmOperandClass
+    : ConstantUImmAsmOperandClass<2, [ConstantUImm3AsmOperandClass], 1>;
+def ConstantUImm2AsmOperandClass
+    : ConstantUImmAsmOperandClass<2, [ConstantUImm3AsmOperandClass]>;
+def ConstantUImm1AsmOperandClass
+    : ConstantUImmAsmOperandClass<1, [ConstantUImm2AsmOperandClass]>;
+def ConstantImmzAsmOperandClass : AsmOperandClass {
+  let Name = "ConstantImmz";
+  let RenderMethod = "addConstantUImmOperands<1>";
+  let PredicateMethod = "isConstantImmz";
+  let SuperClasses = [ConstantUImm1AsmOperandClass];
+  let DiagnosticType = "Immz";
+}
+
 def MipsJumpTargetAsmOperand : AsmOperandClass {
   let Name = "JumpTarget";
   let ParserMethod = "parseJumpTarget";
@@ -450,15 +477,22 @@ def simm16_64   : Operand<i64> {
 // Zero
 def uimmz       : Operand<i32> {
   let PrintMethod = "printUnsignedImm";
+  let ParserMatchClass = ConstantImmzAsmOperandClass;
 }
 
-// Unsigned Operand
-def uimm2 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
-}
+// Unsigned Operands
+foreach I = {1, 2, 3, 4} in
+  def uimm # I : Operand<i32> {
+    let PrintMethod = "printUnsignedImm";
+    let ParserMatchClass =
+        !cast<AsmOperandClass>("ConstantUImm" # I # "AsmOperandClass");
+  }
 
-def uimm3 : Operand<i32> {
+def uimm2_plus1 : Operand<i32> {
   let PrintMethod = "printUnsignedImm";
+  let EncoderMethod = "getUImmWithOffsetEncoding<2, 1>";
+  let DecoderMethod = "DecodeUImmWithOffset<2, 1>";
+  let ParserMatchClass = ConstantUImm2Plus1AsmOperandClass;
 }
 
 def uimm5       : Operand<i32> {
@@ -2082,6 +2116,16 @@ let AddedComplexity = 40 in {
   def : LoadRegImmPat<LW, i32, load>;
   }
 }
+
+// Atomic load patterns.
+def : MipsPat<(atomic_load_8 addr:$a), (LB addr:$a)>;
+def : MipsPat<(atomic_load_16 addr:$a), (LH addr:$a)>;
+def : MipsPat<(atomic_load_32 addr:$a), (LW addr:$a)>;
+
+// Atomic store patterns.
+def : MipsPat<(atomic_store_8 addr:$a, GPR32:$v), (SB GPR32:$v, addr:$a)>;
+def : MipsPat<(atomic_store_16 addr:$a, GPR32:$v), (SH GPR32:$v, addr:$a)>;
+def : MipsPat<(atomic_store_32 addr:$a, GPR32:$v), (SW GPR32:$v, addr:$a)>;
 
 //===----------------------------------------------------------------------===//
 // Floating Point Support

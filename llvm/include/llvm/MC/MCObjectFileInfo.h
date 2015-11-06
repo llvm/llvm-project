@@ -47,10 +47,6 @@ protected:
   unsigned FDECFIEncoding;
   unsigned TTypeEncoding;
 
-  /// Section flags for eh_frame
-  unsigned EHSectionType;
-  unsigned EHSectionFlags;
-
   /// Compact unwind encoding indicating that we should emit only an EH frame.
   unsigned CompactUnwindDwarfEHFrameOnly;
 
@@ -336,8 +332,6 @@ public:
   MCSection *getSXDataSection() const { return SXDataSection; }
 
   MCSection *getEHFrameSection() {
-    if (!EHFrameSection)
-      InitEHFrameSection();
     return EHFrameSection;
   }
 
@@ -356,9 +350,6 @@ private:
   void initMachOMCObjectFileInfo(Triple T);
   void initELFMCObjectFileInfo(Triple T);
   void initCOFFMCObjectFileInfo(Triple T);
-
-  /// Initialize EHFrameSection on demand.
-  void InitEHFrameSection();
 
 public:
   const Triple &getTargetTriple() const { return TT; }

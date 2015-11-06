@@ -597,7 +597,7 @@ class LSA_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   list<dag> Pattern = [];
 }
 
-class LSA_R6_DESC : LSA_R6_DESC_BASE<"lsa", GPR32Opnd, uimm2>;
+class LSA_R6_DESC : LSA_R6_DESC_BASE<"lsa", GPR32Opnd, uimm2_plus1>;
 
 class LL_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs GPROpnd:$rt);

@@ -70,25 +70,6 @@ def immZExt6Ptr : ImmLeaf<iPTR, [{return isUInt<6>(Imm);}]>;
 
 // Operands
 
-// The immediate of an LSA instruction needs special handling
-// as the encoded value should be subtracted by one.
-def uimm2LSAAsmOperand : AsmOperandClass {
-  let Name = "LSAImm";
-  let ParserMethod = "parseLSAImm";
-  let RenderMethod = "addImmOperands";
-}
-
-def LSAImm : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
-  let EncoderMethod = "getLSAImmEncoding";
-  let DecoderMethod = "DecodeLSAImm";
-  let ParserMatchClass = uimm2LSAAsmOperand;
-}
-
-def uimm4 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm8";
-}
-
 def uimm4_ptr : Operand<iPTR> {
   let PrintMethod = "printUnsignedImm8";
 }
@@ -1292,13 +1273,14 @@ class MSA_COPY_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
 }
 
 class MSA_ELM_SLD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                            RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
+                            RegisterOperand ROWD, RegisterOperand ROWS,
+                            Operand ImmOp, ImmLeaf Imm,
                             InstrItinClass itin = NoItinerary> {
   dag OutOperandList = (outs ROWD:$wd);
-  dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, uimm4:$n);
+  dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, ImmOp:$n);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws[$n]");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWD:$wd_in, ROWS:$ws,
-                                              immZExt4:$n))];
+                                              Imm:$n))];
   string Constraints = "$wd = $wd_in";
   InstrItinClass Itinerary = itin;
 }
@@ -2380,7 +2362,7 @@ class LSA_DESC_BASE<string instr_asm, RegisterOperand RORD,
                     RegisterOperand RORS = RORD, RegisterOperand RORT = RORD,
                     InstrItinClass itin = NoItinerary > {
   dag OutOperandList = (outs RORD:$rd);
-  dag InOperandList = (ins RORS:$rs, RORT:$rt, LSAImm:$sa);
+  dag InOperandList = (ins RORS:$rs, RORT:$rt, uimm2_plus1:$sa);
   string AsmString = !strconcat(instr_asm, "\t$rd, $rs, $rt, $sa");
   list<dag> Pattern = [(set RORD:$rd, (add RORT:$rt,
                                                 (shl RORS:$rs,
@@ -2588,13 +2570,17 @@ class SLD_W_DESC : MSA_3R_SLD_DESC_BASE<"sld.w", int_mips_sld_w, MSA128WOpnd>;
 class SLD_D_DESC : MSA_3R_SLD_DESC_BASE<"sld.d", int_mips_sld_d, MSA128DOpnd>;
 
 class SLDI_B_DESC : MSA_ELM_SLD_DESC_BASE<"sldi.b", int_mips_sldi_b,
-                                          MSA128BOpnd>;
+                                          MSA128BOpnd, MSA128BOpnd, uimm4,
+                                          immZExt4>;
 class SLDI_H_DESC : MSA_ELM_SLD_DESC_BASE<"sldi.h", int_mips_sldi_h,
-                                          MSA128HOpnd>;
+                                          MSA128HOpnd, MSA128HOpnd, uimm3,
+                                          immZExt3>;
 class SLDI_W_DESC : MSA_ELM_SLD_DESC_BASE<"sldi.w", int_mips_sldi_w,
-                                          MSA128WOpnd>;
+                                          MSA128WOpnd, MSA128WOpnd, uimm2,
+                                          immZExt2>;
 class SLDI_D_DESC : MSA_ELM_SLD_DESC_BASE<"sldi.d", int_mips_sldi_d,
-                                          MSA128DOpnd>;
+                                          MSA128DOpnd, MSA128DOpnd, uimm1,
+                                          immZExt1>;
 
 class SLL_B_DESC : MSA_3R_DESC_BASE<"sll.b", shl, MSA128BOpnd>;
 class SLL_H_DESC : MSA_3R_DESC_BASE<"sll.h", shl, MSA128HOpnd>;

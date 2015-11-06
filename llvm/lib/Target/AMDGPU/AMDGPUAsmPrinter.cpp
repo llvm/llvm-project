@@ -110,6 +110,19 @@ void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
   OutStreamer->EmitLabel(EndOfTextLabel);
 }
 
+void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
+  const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
+  if (MFI->isKernel() && STM.isAmdHsaOS()) {
+    AMDGPUTargetStreamer *TS =
+        static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
+    TS->EmitAMDGPUSymbolType(CurrentFnSym->getName(),
+                             ELF::STT_AMDGPU_HSA_KERNEL);
+  }
+
+  AsmPrinter::EmitFunctionEntryLabel();
+}
+
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   // The starting address of all shader programs must be 256 bytes aligned.

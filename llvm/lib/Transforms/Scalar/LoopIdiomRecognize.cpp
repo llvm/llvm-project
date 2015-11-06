@@ -73,6 +73,7 @@ class LoopIdiomRecognize : public LoopPass {
   ScalarEvolution *SE;
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
+  const DataLayout *DL;
 
 public:
   static char ID;
@@ -200,6 +201,7 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L, LPPassManager &LPM) {
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
       *CurLoop->getHeader()->getParent());
+  DL = &CurLoop->getHeader()->getModule()->getDataLayout();
 
   if (SE->hasLoopInvariantBackedgeTakenCount(L))
     return runOnCountableLoop();
@@ -295,8 +297,7 @@ bool LoopIdiomRecognize::processLoopStore(StoreInst *SI, const SCEV *BECount) {
   Value *StorePtr = SI->getPointerOperand();
 
   // Reject stores that are so large that they overflow an unsigned.
-  auto &DL = CurLoop->getHeader()->getModule()->getDataLayout();
-  uint64_t SizeInBits = DL.getTypeSizeInBits(StoredVal->getType());
+  uint64_t SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
   if ((SizeInBits & 7) || (SizeInBits >> 32) != 0)
     return false;
 
@@ -425,7 +426,7 @@ static bool mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
 ///
 /// Note that we don't ever attempt to use memset_pattern8 or 4, because these
 /// just replicate their input array and then pass on to memset_pattern16.
-static Constant *getMemSetPatternValue(Value *V, const DataLayout &DL) {
+static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   // If the value isn't a constant, we can't promote it to being in a constant
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
@@ -434,12 +435,12 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout &DL) {
     return nullptr;
 
   // Only handle simple values that are a power of two bytes in size.
-  uint64_t Size = DL.getTypeSizeInBits(V->getType());
+  uint64_t Size = DL->getTypeSizeInBits(V->getType());
   if (Size == 0 || (Size & 7) || (Size & (Size - 1)))
     return nullptr;
 
   // Don't care enough about darwin/ppc to implement this.
-  if (DL.isBigEndian())
+  if (DL->isBigEndian())
     return nullptr;
 
   // Convert to size in bytes.
@@ -473,7 +474,6 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // but it can be turned into memset_pattern if the target supports it.
   Value *SplatValue = isBytewiseValue(StoredVal);
   Constant *PatternValue = nullptr;
-  auto &DL = CurLoop->getHeader()->getModule()->getDataLayout();
   unsigned DestAS = DestPtr->getType()->getPointerAddressSpace();
 
   // If we're allowed to form a memset, and the stored value would be acceptable
@@ -500,10 +500,10 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // header.  This allows us to insert code for it in the preheader.
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
-  SCEVExpander Expander(*SE, DL, "loop-idiom");
+  SCEVExpander Expander(*SE, *DL, "loop-idiom");
 
   Type *DestInt8PtrTy = Builder.getInt8PtrTy(DestAS);
-  Type *IntPtr = Builder.getIntPtrTy(DL, DestAS);
+  Type *IntPtr = Builder.getIntPtrTy(*DL, DestAS);
 
   const SCEV *Start = Ev->getStart();
   // If we have a negative stride, Start refers to the end of the memory
@@ -599,8 +599,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // header.  This allows us to insert code for it in the preheader.
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
-  const DataLayout &DL = Preheader->getModule()->getDataLayout();
-  SCEVExpander Expander(*SE, DL, "loop-idiom");
+  SCEVExpander Expander(*SE, *DL, "loop-idiom");
 
   // Okay, we have a strided store "p[i]" of a loaded value.  We can turn
   // this into a memcpy in the loop preheader now if we want.  However, this
@@ -639,7 +638,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   // The # stored bytes is (BECount+1)*Size.  Expand the trip count out to
   // pointer size if it isn't already.
-  Type *IntPtrTy = Builder.getIntPtrTy(DL, SI->getPointerAddressSpace());
+  Type *IntPtrTy = Builder.getIntPtrTy(*DL, SI->getPointerAddressSpace());
   BECount = SE->getTruncateOrZeroExtend(BECount, IntPtrTy);
 
   const SCEV *NumBytesS =

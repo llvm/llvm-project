@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA-CI --check-prefix=HSA %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo | FileCheck --check-prefix=HSA-VI --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj  | llvm-readobj -s -sd | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri | llvm-readobj -s -sd | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj  | llvm-readobj -symbols -s -sd | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri | llvm-readobj -symbols -s -sd | FileCheck %s --check-prefix=ELF
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.
@@ -24,12 +24,18 @@
 ; ELF: 0030: 00000000 00000000 414D4400 414D4447
 ; ELF: 0040: 50550000
 
+; ELF: Symbol {
+; ELF: Name: simple
+; ELF: Type: AMDGPU_HSA_KERNEL (0xA)
+; ELF: }
+
 ; HSA: .hsa_code_object_version 1,0
 ; HSA-CI: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 ; HSA-VI: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
 
 ; HSA: .hsatext
 
+; HSA: .amdgpu_hsa_kernel simple
 ; HSA: {{^}}simple:
 ; HSA: .amd_kernel_code_t
 ; HSA: .end_amd_kernel_code_t

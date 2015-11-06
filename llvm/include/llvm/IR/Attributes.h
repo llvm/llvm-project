@@ -86,6 +86,7 @@ public:
     NoDuplicate,           ///< Call cannot be duplicated
     NoImplicitFloat,       ///< Disable implicit floating point insts
     NoInline,              ///< inline=never
+    NoRecurse,             ///< The function does not recurse
     NonLazyBind,           ///< Function is called early and/or
                            ///< often, so lazy binding isn't worthwhile
     NonNull,               ///< Pointer is known to be not null

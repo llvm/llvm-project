@@ -101,6 +101,8 @@ public:
 
   void EmitEndOfAsmFile(Module &M) override;
 
+  void EmitFunctionEntryLabel() override;
+
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        unsigned AsmVariant, const char *ExtraCode,
                        raw_ostream &O) override;

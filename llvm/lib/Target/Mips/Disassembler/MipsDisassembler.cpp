@@ -380,12 +380,9 @@ static DecodeStatus DecodeSimm16(MCInst &Inst,
                                  uint64_t Address,
                                  const void *Decoder);
 
-// Decode the immediate field of an LSA instruction which
-// is off by one.
-static DecodeStatus DecodeLSAImm(MCInst &Inst,
-                                 unsigned Insn,
-                                 uint64_t Address,
-                                 const void *Decoder);
+template <unsigned Bits, int Offset>
+static DecodeStatus DecodeUImmWithOffset(MCInst &Inst, unsigned Value,
+                                         uint64_t Address, const void *Decoder);
 
 static DecodeStatus DecodeInsSize(MCInst &Inst,
                                   unsigned Insn,
@@ -1908,12 +1905,12 @@ static DecodeStatus DecodeSimm16(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeLSAImm(MCInst &Inst,
-                                 unsigned Insn,
-                                 uint64_t Address,
-                                 const void *Decoder) {
-  // We add one to the immediate field as it was encoded as 'imm - 1'.
-  Inst.addOperand(MCOperand::createImm(Insn + 1));
+template <unsigned Bits, int Offset>
+static DecodeStatus DecodeUImmWithOffset(MCInst &Inst, unsigned Value,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  Value &= ((1 << Bits) - 1);
+  Inst.addOperand(MCOperand::createImm(Value + Offset));
   return MCDisassembler::Success;
 }
 

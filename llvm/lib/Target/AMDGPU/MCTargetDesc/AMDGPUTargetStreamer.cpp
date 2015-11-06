@@ -221,6 +221,16 @@ AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
 
 }
 
+void AMDGPUTargetAsmStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
+                                                   unsigned Type) {
+  switch (Type) {
+    default: llvm_unreachable("Invalid AMDGPU symbol type");
+    case ELF::STT_AMDGPU_HSA_KERNEL:
+      OS << "\t.amdgpu_hsa_kernel " << SymbolName << '\n' ;
+      break;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
@@ -298,4 +308,11 @@ AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
   OS.SwitchSection(AMDGPU::getHSATextSection(OS.getContext()));
   OS.EmitBytes(StringRef((const char*)&Header, sizeof(Header)));
   OS.PopSection();
+}
+
+void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
+                                                   unsigned Type) {
+  MCSymbolELF *Symbol = cast<MCSymbolELF>(
+      getStreamer().getContext().getOrCreateSymbol(SymbolName));
+  Symbol->setType(ELF::STT_AMDGPU_HSA_KERNEL);
 }
