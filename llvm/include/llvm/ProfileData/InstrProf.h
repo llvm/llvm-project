@@ -191,7 +191,8 @@ struct InstrProfValueSiteRecord {
     auto IE = ValueData.end();
     for (auto J = Input.ValueData.begin(), JE = Input.ValueData.end(); J != JE;
          ++J) {
-      while (I != IE && I->Value < J->Value) ++I;
+      while (I != IE && I->Value < J->Value)
+        ++I;
       if (I != IE && I->Value == J->Value) {
         I->Count += J->Count;
         ++I;
@@ -224,8 +225,8 @@ struct InstrProfRecord {
   /// site: Site.
   inline uint32_t getNumValueDataForSite(uint32_t ValueKind,
                                          uint32_t Site) const;
-  inline std::unique_ptr<InstrProfValueData[]> getValueForSite(
-      uint32_t ValueKind, uint32_t Site) const;
+  inline std::unique_ptr<InstrProfValueData[]>
+  getValueForSite(uint32_t ValueKind, uint32_t Site) const;
   /// Reserve space for NumValueSites sites.
   inline void reserveSites(uint32_t ValueKind, uint32_t NumValueSites);
   /// Add ValueData for ValueKind at value Site.
@@ -240,7 +241,7 @@ struct InstrProfRecord {
   /// the writer instance.
   inline void updateStrings(InstrProfStringTable *StrTab);
 
- private:
+private:
   std::vector<InstrProfValueSiteRecord> IndirectCallSites;
   const std::vector<InstrProfValueSiteRecord> &
   getValueSitesForKind(uint32_t ValueKind) const {
@@ -262,18 +263,19 @@ struct InstrProfRecord {
   // Map indirect call target name hash to name string.
   uint64_t remapValue(uint64_t Value, uint32_t ValueKind,
                       ValueMapType *HashKeys) {
-    if (!HashKeys) return Value;
+    if (!HashKeys)
+      return Value;
     switch (ValueKind) {
-      case IPVK_IndirectCallTarget: {
-        auto Result =
-            std::lower_bound(HashKeys->begin(), HashKeys->end(), Value,
-                             [](const std::pair<uint64_t, const char *> &LHS,
-                                uint64_t RHS) { return LHS.first < RHS; });
-        assert(Result != HashKeys->end() &&
-               "Hash does not match any known keys\n");
-        Value = (uint64_t)Result->second;
-        break;
-      }
+    case IPVK_IndirectCallTarget: {
+      auto Result =
+          std::lower_bound(HashKeys->begin(), HashKeys->end(), Value,
+                           [](const std::pair<uint64_t, const char *> &LHS,
+                              uint64_t RHS) { return LHS.first < RHS; });
+      assert(Result != HashKeys->end() &&
+             "Hash does not match any known keys\n");
+      Value = (uint64_t)Result->second;
+      break;
+    }
     }
     return Value;
   }
@@ -295,10 +297,11 @@ uint32_t InstrProfRecord::getNumValueDataForSite(uint32_t ValueKind,
   return getValueSitesForKind(ValueKind)[Site].ValueData.size();
 }
 
-std::unique_ptr<InstrProfValueData[]> InstrProfRecord::getValueForSite(
-    uint32_t ValueKind, uint32_t Site) const {
+std::unique_ptr<InstrProfValueData[]>
+InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site) const {
   uint32_t N = getNumValueDataForSite(ValueKind, Site);
-  if (N == 0) return std::unique_ptr<InstrProfValueData[]>(nullptr);
+  if (N == 0)
+    return std::unique_ptr<InstrProfValueData[]>(nullptr);
 
   std::unique_ptr<InstrProfValueData[]> VD(new InstrProfValueData[N]);
   uint32_t I = 0;
@@ -347,7 +350,8 @@ instrprof_error InstrProfRecord::mergeValueProfData(uint32_t ValueKind,
 }
 
 void InstrProfRecord::updateStrings(InstrProfStringTable *StrTab) {
-  if (!StrTab) return;
+  if (!StrTab)
+    return;
 
   Name = StrTab->insertString(Name);
   for (auto &VSite : IndirectCallSites)
@@ -429,8 +433,7 @@ inline uint64_t getMagic<uint32_t>() {
 // It should also match the synthesized type in
 // Transforms/Instrumentation/InstrProfiling.cpp:getOrCreateRegionCounters.
 
-template <class IntPtrT>
-struct ProfileData {
+template <class IntPtrT> struct ProfileData {
   #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Type Name;
   #include "llvm/ProfileData/InstrProfData.inc"
 };
@@ -454,8 +457,7 @@ struct Header {
 namespace coverage {
 
 LLVM_PACKED_START
-template <class IntPtrT>
-struct CovMapFunctionRecord {
+template <class IntPtrT> struct CovMapFunctionRecord {
   #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
   #include "llvm/ProfileData/InstrProfData.inc"
 };

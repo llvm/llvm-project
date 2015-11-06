@@ -483,8 +483,9 @@ std::error_code IndexedInstrProfReader::readHeader() {
   return success();
 }
 
-ErrorOr<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
-    StringRef FuncName, uint64_t FuncHash) {
+ErrorOr<InstrProfRecord>
+IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
+                                           uint64_t FuncHash) {
   ArrayRef<InstrProfRecord> Data;
   std::error_code EC = Index.getRecords(FuncName, Data);
   if (EC != instrprof_error::success) return EC;
@@ -498,10 +499,12 @@ ErrorOr<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   return error(instrprof_error::hash_mismatch);
 }
 
-std::error_code IndexedInstrProfReader::getFunctionCounts(
-    StringRef FuncName, uint64_t FuncHash, std::vector<uint64_t> &Counts) {
+std::error_code
+IndexedInstrProfReader::getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
+                                          std::vector<uint64_t> &Counts) {
   ErrorOr<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
-  if (std::error_code EC = Record.getError()) return EC;
+  if (std::error_code EC = Record.getError())
+    return EC;
 
   Counts = Record.get().Counts;
   return success();
