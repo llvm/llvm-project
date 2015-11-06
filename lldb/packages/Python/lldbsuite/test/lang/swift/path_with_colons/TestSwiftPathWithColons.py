@@ -74,9 +74,9 @@ class TestSwiftPathWithColon(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        self.expect('breakpoint set -l 2', substrs=['foo'])
+        self.expect('breakpoint set -l 13', substrs=['foo'])
 
-        self.expect('source list -l 2', substrs=['return x + y - z'])
+        self.expect('source list -l 13', substrs=['return x + y - z'])
 
         self.expect('run', substrs=['return x + y - z'])
 

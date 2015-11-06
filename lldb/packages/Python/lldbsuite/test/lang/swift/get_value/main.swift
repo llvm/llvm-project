@@ -17,7 +17,7 @@ func main() -> ()
 	var aString = "Hello world"
 	var aNumber = 123456
 	var aClassObject = AClassType()
-	print("Hello world")
+	print("Hello world") // break here
 }
 
 main()
