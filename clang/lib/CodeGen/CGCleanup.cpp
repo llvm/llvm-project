@@ -945,8 +945,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     if (CleanupEndBB) {
       EHStack.popPadEnd();
       if (CleanupEndBB->hasNUsesOrMore(1)) {
-        CurFn->getBasicBlockList().insertAfter(Builder.GetInsertBlock(),
-                                               CleanupEndBB);
+        CurFn->getBasicBlockList().insertAfter(
+            Builder.GetInsertBlock()->getIterator(), CleanupEndBB);
       } else {
         delete CleanupEndBB;
       }

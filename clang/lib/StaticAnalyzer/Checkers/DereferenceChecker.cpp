@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -111,15 +112,11 @@ void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
     S = expr->IgnoreParenLValueCasts();
 
   if (IsBind) {
-    if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(S)) {
-      if (BO->isAssignmentOp())
-        S = BO->getRHS();
-    } else if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
-      assert(DS->isSingleDecl() && "We process decls one by one");
-      if (const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl()))
-        if (const Expr *Init = VD->getAnyInitializer())
-          S = Init;
-    }
+    const VarDecl *VD;
+    const Expr *Init;
+    std::tie(VD, Init) = parseAssignment(S);
+    if (VD && Init)
+      S = Init;
   }
 
   switch (S->getStmtClass()) {

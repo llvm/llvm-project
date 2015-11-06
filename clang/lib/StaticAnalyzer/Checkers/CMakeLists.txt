@@ -76,6 +76,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UndefinedAssignmentChecker.cpp
   UnixAPIChecker.cpp
   UnreachableCodeChecker.cpp
+  VforkChecker.cpp
   VLASizeChecker.cpp
   VirtualCallChecker.cpp
 

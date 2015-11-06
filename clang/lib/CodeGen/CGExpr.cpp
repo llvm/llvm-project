@@ -86,7 +86,7 @@ void CodeGenFunction::InitTempAlloca(Address Var, llvm::Value *Init) {
   auto *Store = new llvm::StoreInst(Init, Var.getPointer());
   Store->setAlignment(Var.getAlignment().getQuantity());
   llvm::BasicBlock *Block = AllocaInsertPt->getParent();
-  Block->getInstList().insertAfter(&*AllocaInsertPt, Store);
+  Block->getInstList().insertAfter(AllocaInsertPt->getIterator(), Store);
 }
 
 Address CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {

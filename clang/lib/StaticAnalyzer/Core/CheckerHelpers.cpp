@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 
 // Recursively find any substatements containing macros
@@ -69,4 +70,27 @@ bool clang::ento::containsBuiltinOffsetOf(const Stmt *S) {
       return true;
 
   return false;
+}
+
+// Extract lhs and rhs from assignment statement
+std::pair<const clang::VarDecl *, const clang::Expr *>
+clang::ento::parseAssignment(const Stmt *S) {
+  const VarDecl *VD = 0;
+  const Expr *RHS = 0;
+
+  if (auto Assign = dyn_cast_or_null<BinaryOperator>(S)) {
+    if (Assign->isAssignmentOp()) {
+      // Ordinary assignment
+      RHS = Assign->getRHS();
+      if (auto DE = dyn_cast_or_null<DeclRefExpr>(Assign->getLHS()))
+        VD = dyn_cast_or_null<VarDecl>(DE->getDecl());
+    }
+  } else if (auto PD = dyn_cast_or_null<DeclStmt>(S)) {
+    // Initialization
+    assert(PD->isSingleDecl() && "We process decls one by one");
+    VD = dyn_cast_or_null<VarDecl>(PD->getSingleDecl());
+    RHS = VD->getAnyInitializer();
+  }
+
+  return std::make_pair(VD, RHS);
 }

@@ -779,7 +779,7 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
 void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
   if (!CGM.getCodeGenOpts().ProfileInstrGenerate || !RegionCounterMap)
     return;
-  if (!Builder.GetInsertPoint())
+  if (!Builder.GetInsertBlock())
     return;
 
   unsigned Counter = (*RegionCounterMap)[S];
