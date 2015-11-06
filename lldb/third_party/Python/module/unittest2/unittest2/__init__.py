@@ -34,6 +34,8 @@ if sys.version_info[0] >= 3:
 else:
     cmp_ = cmp
 
+reversed_cmp_ = lambda x, y: -cmp_(x,y)
+
 __all__ = ['TestResult', 'TestCase', 'TestSuite',
            'TextTestRunner', 'TestLoader', 'FunctionTestCase', 'main',
            'defaultTestLoader', 'SkipTest', 'skip', 'skipIf', 'skipUnless',

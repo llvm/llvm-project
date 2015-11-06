@@ -1,5 +1,6 @@
 """Loading unittests."""
 
+import functools
 import os
 import re
 import sys
@@ -17,17 +18,6 @@ except ImportError:
     from unittest2.compatibility import relpath
 
 __unittest = True
-
-
-def _CmpToKey(mycmp):
-    'Convert a cmp= function into a key= function'
-    class K(object):
-        def __init__(self, obj):
-            self.obj = obj
-        def __lt__(self, other):
-            return mycmp(self.obj, other.obj) == -1
-    return K
-
 
 # what about .pyc or .pyo (etc)
 # we would need to avoid loading the same tests multiple times
@@ -60,10 +50,12 @@ class TestLoader(unittest.TestLoader):
     This class is responsible for loading tests according to various criteria
     and returning them wrapped in a TestSuite
     """
-    testMethodPrefix = 'test'
-    sortTestMethodsUsing = cmp_
-    suiteClass = suite.TestSuite
-    _top_level_dir = None
+
+    def __init__(self):
+        self.testMethodPrefix = 'test'
+        self.sortTestMethodsUsing = cmp_
+        self.suiteClass = suite.TestSuite
+        self._top_level_dir = None
 
     def loadTestsFromTestCase(self, testCaseClass):
         """Return a suite of all tests cases contained in testCaseClass"""
@@ -157,7 +149,7 @@ class TestLoader(unittest.TestLoader):
                 hasattr(getattr(testCaseClass, attrname), '__call__')
         testFnNames = list(filter(isTestMethod, dir(testCaseClass)))
         if self.sortTestMethodsUsing:
-            testFnNames.sort(key=_CmpToKey(self.sortTestMethodsUsing))
+            testFnNames.sort(key=functools.cmp_to_key(self.sortTestMethodsUsing))
         return testFnNames
 
     def discover(self, start_dir, pattern='test*.py', top_level_dir=None):

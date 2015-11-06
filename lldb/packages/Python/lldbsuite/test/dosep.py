@@ -1264,11 +1264,10 @@ def default_test_runner_name(num_threads):
     elif os.name == "nt":
         # On Windows, Python uses CRT with a low limit on the number of open
         # files.  If you have a lot of cores, the threading-pool runner will
-        # often fail because it exceeds that limit.
-        if num_threads > 32:
-            test_runner_name = "multiprocessing-pool"
-        else:
-            test_runner_name = "threading-pool"
+        # often fail because it exceeds that limit.  It's not clear what the
+        # right balance is, so until we can investigate it more deeply,
+        # just use the one that works
+        test_runner_name = "multiprocessing-pool"
     elif is_darwin_version_lower_than(
             distutils.version.StrictVersion("10.10.0")):
         # OS X versions before 10.10 appear to have an issue using
