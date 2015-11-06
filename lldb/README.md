@@ -1,4 +1,4 @@
-# Swift Programming Language
+# Swift Debugger and REPL
 
 **Welcome to the Swift Debugger and REPL!**
 
