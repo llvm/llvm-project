@@ -33,7 +33,6 @@ class VirtRegMap;
 
 class LLVM_LIBRARY_VISIBILITY LiveDebugVariables : public MachineFunctionPass {
   void *pImpl;
-  DenseMap<const Function *, DISubprogram *> FunctionDIs;
 
 public:
   static char ID; // Pass identification, replacement for typeid
