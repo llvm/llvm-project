@@ -378,5 +378,3 @@ LanguageRuntime::GetLanguageForSymbolByName (Target &target, const char *symbol_
     else
         return eLanguageTypeUnknown;
 }
-
-

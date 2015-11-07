@@ -1,4 +1,4 @@
-//===-- NSException.cpp ----------------------------------------------*- C++ -*-===//
+//===-- NSException.cpp -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+#include "clang/AST/DeclCXX.h"
+
+// Project includes
 #include "Cocoa.h"
 
 #include "lldb/Core/DataBufferHeap.h"
@@ -21,8 +27,6 @@
 #include "lldb/Target/Target.h"
 
 #include "lldb/Utility/ProcessStructReader.h"
-
-#include "clang/AST/DeclCXX.h"
 
 #include "Plugins/Language/ObjC/NSString.h"
 
@@ -79,8 +83,8 @@ lldb_private::formatters::NSException_SummaryProvider (ValueObject& valobj, Stre
     StreamString reason_str_summary;
     if (NSStringSummaryProvider(*name_sp, name_str_summary, options) &&
         NSStringSummaryProvider(*reason_sp, reason_str_summary, options) &&
-        name_str_summary.Empty() == false &&
-        reason_str_summary.Empty() == false)
+        !name_str_summary.Empty() &&
+        !reason_str_summary.Empty())
     {
         stream.Printf("name: %s - reason: %s", name_str_summary.GetData(), reason_str_summary.GetData());
         return true;
@@ -95,9 +99,12 @@ public:
     NSExceptionSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
     SyntheticChildrenFrontEnd(*valobj_sp)
     {}
-    
-    virtual size_t
-    CalculateNumChildren ()
+
+    ~NSExceptionSyntheticFrontEnd() override = default;
+    // no need to delete m_child_ptr - it's kept alive by the cluster manager on our behalf
+
+    size_t
+    CalculateNumChildren() override
     {
         if (m_child_ptr)
             return 1;
@@ -106,8 +113,8 @@ public:
         return 0;
     }
     
-    virtual lldb::ValueObjectSP
-    GetChildAtIndex (size_t idx)
+    lldb::ValueObjectSP
+    GetChildAtIndex(size_t idx) override
     {
         if (idx != 0)
             return lldb::ValueObjectSP();
@@ -117,8 +124,8 @@ public:
         return m_child_sp;
     }
     
-    virtual bool
-    Update()
+    bool
+    Update() override
     {
         m_child_ptr = nullptr;
         m_child_sp.reset();
@@ -157,27 +164,21 @@ public:
         return false;
     }
     
-    virtual bool
-    MightHaveChildren ()
+    bool
+    MightHaveChildren() override
     {
         return true;
     }
     
-    virtual size_t
-    GetIndexOfChildWithName (const ConstString &name)
+    size_t
+    GetIndexOfChildWithName(const ConstString &name) override
     {
         static ConstString g___userInfo("userInfo");
         if (name == g___userInfo)
             return 0;
         return UINT32_MAX;
     }
-    
-    virtual
-    ~NSExceptionSyntheticFrontEnd ()
-    {
-        // no need to delete m_child_ptr - it's kept alive by the cluster manager on our behalf
-    }
-    
+
 private:
     // the child here can be "real" (i.e. an actual child of the root) or synthetized from raw memory
     // if the former, I need to store a plain pointer to it - or else a loop of references will cause this entire hierarchy of values to leak
@@ -216,4 +217,3 @@ lldb_private::formatters::NSExceptionSyntheticFrontEndCreator (CXXSyntheticChild
     
     return nullptr;
 }
-

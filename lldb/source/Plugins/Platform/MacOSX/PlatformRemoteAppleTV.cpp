@@ -7,12 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PlatformRemoteAppleTV.h"
-
 // C Includes
 // C++ Includes
+#include <string>
+#include <vector>
+
 // Other libraries and framework includes
 // Project includes
+#include "PlatformRemoteAppleTV.h"
+
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Error.h"
@@ -28,6 +31,20 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+//------------------------------------------------------------------
+/// Default Constructor
+//------------------------------------------------------------------
+PlatformRemoteAppleTV::PlatformRemoteAppleTV () :
+    PlatformDarwin (false),    // This is a remote platform
+    m_sdk_directory_infos(),
+    m_device_support_directory(),
+    m_device_support_directory_for_os_version (),
+    m_build_update(),
+    m_last_module_sdk_idx (UINT32_MAX),
+    m_connected_module_sdk_idx (UINT32_MAX)
+{
+}
 
 PlatformRemoteAppleTV::SDKDirectoryInfo::SDKDirectoryInfo (const lldb_private::FileSpec &sdk_dir) :
     directory(sdk_dir),
@@ -91,7 +108,7 @@ PlatformSP
 PlatformRemoteAppleTV::CreateInstance (bool force, const ArchSpec *arch)
 {
     bool create = force;
-    if (create == false && arch && arch->IsValid())
+    if (!create && arch && arch->IsValid())
     {
         switch (arch->GetMachine())
         {
@@ -151,7 +168,6 @@ PlatformRemoteAppleTV::CreateInstance (bool force, const ArchSpec *arch)
     return lldb::PlatformSP();
 }
 
-
 lldb_private::ConstString
 PlatformRemoteAppleTV::GetPluginNameStatic ()
 {
@@ -164,32 +180,6 @@ PlatformRemoteAppleTV::GetDescriptionStatic()
 {
     return "Remote Apple TV platform plug-in.";
 }
-
-
-//------------------------------------------------------------------
-/// Default Constructor
-//------------------------------------------------------------------
-PlatformRemoteAppleTV::PlatformRemoteAppleTV () :
-    PlatformDarwin (false),    // This is a remote platform
-    m_sdk_directory_infos(),
-    m_device_support_directory(),
-    m_device_support_directory_for_os_version (),
-    m_build_update(),
-    m_last_module_sdk_idx (UINT32_MAX),
-    m_connected_module_sdk_idx (UINT32_MAX)
-{
-}
-
-//------------------------------------------------------------------
-/// Destructor.
-///
-/// The destructor is virtual since this class is designed to be
-/// inherited from by the plug-in instance.
-//------------------------------------------------------------------
-PlatformRemoteAppleTV::~PlatformRemoteAppleTV()
-{
-}
-
 
 void
 PlatformRemoteAppleTV::GetStatus (Stream &strm)
@@ -211,7 +201,6 @@ PlatformRemoteAppleTV::GetStatus (Stream &strm)
     }
 }
 
-
 Error
 PlatformRemoteAppleTV::ResolveExecutable (const ModuleSpec &ms,
                                           lldb::ModuleSP &exe_module_sp,
@@ -230,11 +219,11 @@ PlatformRemoteAppleTV::ResolveExecutable (const ModuleSpec &ms,
     {
         if (resolved_module_spec.GetArchitecture().IsValid() || resolved_module_spec.GetUUID().IsValid())
         {
-            error = ModuleList::GetSharedModule (resolved_module_spec,
-                                                 exe_module_sp, 
-                                                 NULL,
-                                                 NULL, 
-                                                 NULL);
+            error = ModuleList::GetSharedModule(resolved_module_spec,
+                                                exe_module_sp,
+                                                nullptr,
+                                                nullptr,
+                                                nullptr);
         
             if (exe_module_sp && exe_module_sp->GetObjectFile())
                 return error;
@@ -246,11 +235,11 @@ PlatformRemoteAppleTV::ResolveExecutable (const ModuleSpec &ms,
         StreamString arch_names;
         for (uint32_t idx = 0; GetSupportedArchitectureAtIndex (idx, resolved_module_spec.GetArchitecture()); ++idx)
         {
-            error = ModuleList::GetSharedModule (resolved_module_spec,
-                                                 exe_module_sp, 
-                                                 NULL,
-                                                 NULL, 
-                                                 NULL);
+            error = ModuleList::GetSharedModule(resolved_module_spec,
+                                                exe_module_sp,
+                                                nullptr,
+                                                nullptr,
+                                                nullptr);
             // Did we find an executable using one of the 
             if (error.Success())
             {
@@ -454,13 +443,13 @@ PlatformRemoteAppleTV::GetSDKDirectoryForCurrentOSVersion ()
                     return &m_sdk_directory_infos[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 const PlatformRemoteAppleTV::SDKDirectoryInfo *
 PlatformRemoteAppleTV::GetSDKDirectoryForLatestOSVersion ()
 {
-    const PlatformRemoteAppleTV::SDKDirectoryInfo *result = NULL;
+    const PlatformRemoteAppleTV::SDKDirectoryInfo *result = nullptr;
     if (UpdateSDKDirectoryInfosIfNeeded())
     {
         const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
@@ -470,7 +459,7 @@ PlatformRemoteAppleTV::GetSDKDirectoryForLatestOSVersion ()
             const SDKDirectoryInfo &sdk_dir_info = m_sdk_directory_infos[i];
             if (sdk_dir_info.version_major != UINT32_MAX)
             {
-                if (result == NULL || sdk_dir_info.version_major > result->version_major)
+                if (result == nullptr || sdk_dir_info.version_major > result->version_major)
                 {
                     result = &sdk_dir_info;
                 }
@@ -493,8 +482,6 @@ PlatformRemoteAppleTV::GetSDKDirectoryForLatestOSVersion ()
     }
     return result;
 }
-
-
 
 const char *
 PlatformRemoteAppleTV::GetDeviceSupportDirectory()
@@ -519,10 +506,9 @@ PlatformRemoteAppleTV::GetDeviceSupportDirectory()
     assert (m_device_support_directory.empty() == false);
     if (m_device_support_directory[0])
         return m_device_support_directory.c_str();
-    return NULL;
+    return nullptr;
 }
             
-
 const char *
 PlatformRemoteAppleTV::GetDeviceSupportDirectoryForOSVersion()
 {
@@ -532,7 +518,7 @@ PlatformRemoteAppleTV::GetDeviceSupportDirectoryForOSVersion()
     if (m_device_support_directory_for_os_version.empty())
     {
         const PlatformRemoteAppleTV::SDKDirectoryInfo *sdk_dir_info = GetSDKDirectoryForCurrentOSVersion ();
-        if (sdk_dir_info == NULL)
+        if (sdk_dir_info == nullptr)
             sdk_dir_info = GetSDKDirectoryForLatestOSVersion ();
         if (sdk_dir_info)
         {
@@ -555,7 +541,7 @@ PlatformRemoteAppleTV::GetDeviceSupportDirectoryForOSVersion()
     assert (m_device_support_directory_for_os_version.empty() == false);
     if (m_device_support_directory_for_os_version[0])
         return m_device_support_directory_for_os_version.c_str();
-    return NULL;
+    return nullptr;
 }
 
 uint32_t
@@ -602,7 +588,6 @@ PlatformRemoteAppleTV::GetFileInSDK (const char *platform_file_path,
     return false;
 }
 
-
 bool
 PlatformRemoteAppleTV::GetFileInSDKRoot (const char *platform_file_path,
                                      const char *sdkroot_path,
@@ -647,7 +632,6 @@ PlatformRemoteAppleTV::GetFileInSDKRoot (const char *platform_file_path,
     }
     return false;
 }
-
 
 Error
 PlatformRemoteAppleTV::GetSymbolFile (const FileSpec &platform_file,
@@ -741,9 +725,9 @@ PlatformRemoteAppleTV::GetSharedModule (const ModuleSpec &module_spec,
             if (GetFileInSDK (platform_file_path, connected_sdk_idx, platform_module_spec.GetFileSpec()))
             {
                 module_sp.reset();
-                error = ResolveExecutable (platform_module_spec,
-                                           module_sp,
-                                           NULL);
+                error = ResolveExecutable(platform_module_spec,
+                                          module_sp,
+                                          nullptr);
                 if (module_sp)
                 {
                     m_last_module_sdk_idx = connected_sdk_idx;
@@ -760,9 +744,9 @@ PlatformRemoteAppleTV::GetSharedModule (const ModuleSpec &module_spec,
             if (GetFileInSDK (platform_file_path, m_last_module_sdk_idx, platform_module_spec.GetFileSpec()))
             {
                 module_sp.reset();
-                error = ResolveExecutable (platform_module_spec,
-                                           module_sp,
-                                           NULL);
+                error = ResolveExecutable(platform_module_spec,
+                                          module_sp,
+                                          nullptr);
                 if (module_sp)
                 {
                     error.Clear();
@@ -784,7 +768,7 @@ PlatformRemoteAppleTV::GetSharedModule (const ModuleSpec &module_spec,
             {
                 //printf ("sdk[%u]: '%s'\n", sdk_idx, local_file.GetPath().c_str());
                 
-                error = ResolveExecutable (platform_module_spec, module_sp, NULL);
+                error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
                 if (module_sp)
                 {
                     // Remember the index of the last SDK that we found a file
@@ -869,7 +853,6 @@ PlatformRemoteAppleTV::GetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &
             default: break;
         }
         break;
-
     }
     arch.Clear();
     return false;

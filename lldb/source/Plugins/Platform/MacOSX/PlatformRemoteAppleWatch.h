@@ -12,15 +12,21 @@
 
 // C Includes
 // C++ Includes
+#include <string>
+#include <vector>
+
 // Other libraries and framework includes
+// Project includes
 #include "lldb/Host/FileSpec.h"
 
-// Project includes
 #include "PlatformDarwin.h"
 
 class PlatformRemoteAppleWatch : public PlatformDarwin
 {
 public:
+    PlatformRemoteAppleWatch();
+
+    ~PlatformRemoteAppleWatch() override = default;
 
     //------------------------------------------------------------
     // Class Functions
@@ -43,10 +49,6 @@ public:
     //------------------------------------------------------------
     // Class Methods
     //------------------------------------------------------------
-    PlatformRemoteAppleWatch ();
-
-    virtual
-    ~PlatformRemoteAppleWatch();
 
     //------------------------------------------------------------
     // lldb_private::PluginInterface functions
@@ -166,7 +168,6 @@ protected:
 
 private:
     DISALLOW_COPY_AND_ASSIGN (PlatformRemoteAppleWatch);
-
 };
 
-#endif  // liblldb_PlatformRemoteAppleWatch_h_
+#endif // liblldb_PlatformRemoteAppleWatch_h_

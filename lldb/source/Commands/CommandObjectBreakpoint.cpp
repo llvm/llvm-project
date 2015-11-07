@@ -736,7 +736,7 @@ private:
 #define LLDB_OPT_NOT_10 ( LLDB_OPT_SET_FROM_TO(1, 10) & ~LLDB_OPT_SET_10 )
 #define LLDB_OPT_SKIP_PROLOGUE ( LLDB_OPT_SET_1 | LLDB_OPT_SET_FROM_TO(3,8) )
 #define LLDB_OPT_MOVE_TO_NEAREST_CODE ( LLDB_OPT_SET_1 | LLDB_OPT_SET_9 )
-#define LLDB_OPT_EXPR_LANGUAGE ( LLDB_OPT_SET_FROM_TO(3, 8) & ~LLDB_OPT_SET_7 )
+#define LLDB_OPT_EXPR_LANGUAGE ( LLDB_OPT_SET_FROM_TO(3, 8) )
 
 OptionDefinition
 CommandObjectBreakpointSet::CommandOptions::g_option_table[] =

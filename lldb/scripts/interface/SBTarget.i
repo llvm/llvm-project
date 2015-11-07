@@ -624,7 +624,7 @@ public:
                              lldb::LanguageType symbol_language,
                              const SBFileSpecList &module_list, 
                              const SBFileSpecList &comp_unit_list);
-    
+
     lldb::SBBreakpoint
     BreakpointCreateBySourceRegex (const char *source_regex, const lldb::SBFileSpec &source_file, const char *module_name = NULL);
 

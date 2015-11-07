@@ -728,12 +728,18 @@ Thread::ShouldResume (StateType resume_state)
     m_discarded_plan_stack.clear();
     m_override_should_notify = eLazyBoolCalculate;
 
+    StateType prev_resume_state = GetTemporaryResumeState();
+
     SetTemporaryResumeState(resume_state);
     
     lldb::ThreadSP backing_thread_sp (GetBackingThread ());
     if (backing_thread_sp)
         backing_thread_sp->SetTemporaryResumeState(resume_state);
 
+    // Make sure m_stop_info_sp is valid.  Don't do this for threads we suspended in the previous run.
+    if (prev_resume_state != eStateSuspended)
+        GetPrivateStopInfo();
+    
     // This is a little dubious, but we are trying to limit how often we actually fetch stop info from
     // the target, 'cause that slows down single stepping.  So assume that if we got to the point where
     // we're about to resume, and we haven't yet had to fetch the stop reason, then it doesn't need to know

@@ -1,4 +1,4 @@
-//===-- GoUserExpression.h -----------------------------------*- C++ -*-===//
+//===-- GoUserExpression.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,13 +12,10 @@
 
 // C Includes
 // C++ Includes
-#include <string>
-#include <map>
-#include <vector>
+#include <memory>
 
 // Other libraries and framework includes
 // Project includes
-
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "lldb/Expression/UserExpression.h"
@@ -68,13 +65,15 @@ class GoUserExpression : public UserExpression
     GoUserExpression(ExecutionContextScope &exe_scope, const char *expr, const char *expr_prefix,
                      lldb::LanguageType language, ResultType desired_type, const EvaluateExpressionOptions &options);
 
-    virtual bool Parse(Stream &error_stream, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
-                       bool keep_result_in_memory, bool generate_debug_info, uint32_t line_offset) override;
+    bool
+    Parse(Stream &error_stream, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
+          bool keep_result_in_memory, bool generate_debug_info, uint32_t line_offset) override;
 
-    virtual lldb::ExpressionResults Execute(Stream &error_stream, ExecutionContext &exe_ctx,
-                                            const EvaluateExpressionOptions &options,
-                                            lldb::UserExpressionSP &shared_ptr_to_me,
-                                            lldb::ExpressionVariableSP &result) override;
+    lldb::ExpressionResults
+    Execute(Stream &error_stream, ExecutionContext &exe_ctx,
+            const EvaluateExpressionOptions &options,
+            lldb::UserExpressionSP &shared_ptr_to_me,
+            lldb::ExpressionVariableSP &result) override;
 
     bool
     CanInterpret() override

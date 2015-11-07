@@ -22,6 +22,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
 using namespace lldb;

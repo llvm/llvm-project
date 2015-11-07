@@ -10,7 +10,6 @@
 // C Includes
 // C++ Includes
 #include <map>
-#include <vector>
 
 // Other libraries and framework includes
 // Project includes
@@ -169,6 +168,6 @@ lldb_private::formatters::GoSliceSyntheticFrontEndCreator(CXXSyntheticChildren *
 
     lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
     if (!process_sp)
-        return NULL;
+        return nullptr;
     return new GoSliceSyntheticFrontEnd(*valobj_sp);
 }

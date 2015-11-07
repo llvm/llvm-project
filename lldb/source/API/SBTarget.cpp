@@ -948,14 +948,14 @@ SBTarget::BreakpointCreateByNames (const char *symbol_names[],
         const bool hardware = false;
         const LazyBool skip_prologue = eLazyBoolCalculate;
         *sb_bp = target_sp->CreateBreakpoint (module_list.get(), 
-                                                comp_unit_list.get(), 
-                                                symbol_names,
-                                                num_names,
-                                                name_type_mask, 
-                                                symbol_language,
-                                                skip_prologue,
-                                                internal,
-                                                hardware);
+                                              comp_unit_list.get(), 
+                                              symbol_names,
+                                              num_names,
+                                              name_type_mask, 
+                                              symbol_language,
+                                              skip_prologue,
+                                              internal,
+                                              hardware);
     }
 
     if (log)
