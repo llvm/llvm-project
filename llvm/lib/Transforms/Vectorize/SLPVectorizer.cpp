@@ -1941,7 +1941,6 @@ void BoUpSLP::reorderAltShuffleOperands(ArrayRef<Value *> VL,
   }
 }
 
-
 // Return true if I should be commuted before adding it's left and right
 // operands to the arrays Left and Right.
 //
@@ -1950,60 +1949,76 @@ void BoUpSLP::reorderAltShuffleOperands(ArrayRef<Value *> VL,
 // a splat to lower the vectorizing cost.
 static bool shouldReorderOperands(int i, Instruction &I,
                                   SmallVectorImpl<Value *> &Left,
-                                  SmallVectorImpl<Value *> &Right) {
+                                  SmallVectorImpl<Value *> &Right,
+                                  bool AllSameOpcodeLeft,
+                                  bool AllSameOpcodeRight, bool SplatLeft,
+                                  bool SplatRight) {
   Value *VLeft = I.getOperand(0);
   Value *VRight = I.getOperand(1);
+  // If we have "SplatRight", try to see if commuting is needed to preserve it.
+  if (SplatRight) {
+    if (VRight == Right[i - 1])
+      // Preserve SplatRight
+      return false;
+    if (VLeft == Right[i - 1]) {
+      // Commuting would preserve SplatRight, but we don't want to break
+      // SplatLeft either, i.e. preserve the original order if possible.
+      // (FIXME: why do we care?)
+      if (SplatLeft && VLeft == Left[i - 1])
+        return false;
+      return true;
+    }
+  }
+  // Symmetrically handle Right side.
+  if (SplatLeft) {
+    if (VLeft == Left[i - 1])
+      // Preserve SplatLeft
+      return false;
+    if (VRight == Left[i - 1])
+      return true;
+  }
+
   Instruction *ILeft = dyn_cast<Instruction>(VLeft);
   Instruction *IRight = dyn_cast<Instruction>(VRight);
 
-  // Sort two opcodes. In the code below we try to preserve the ability to use
-  // broadcast of values instead of individual inserts.
-  // vl1 = load
-  // vl2 = phi
-  // vr1 = load
-  // vr2 = vr2
-  //    = vl1 x vr1
-  //    = vl2 x vr2
-  // If we just sorted according to opcode we would leave the first line in
-  // tact but we would swap vl2 with vr2 because opcode(phi) > opcode(load).
-  //    = vl1 x vr1
-  //    = vr2 x vl2
-  // Because vr2 and vr1 are from the same load we loose the opportunity of a
-  // broadcast for the packed right side in the backend: we have [vr1, vl2]
-  // instead of [vr1, vr2=vr1].
-  if (ILeft && IRight) {
-    if (ILeft->getOpcode() > IRight->getOpcode() &&
-               Right[i - 1] != IRight) {
-      // Try not to destroy a broad cast for no apparent benefit.
-      return true;
-    } else if (ILeft->getOpcode() == IRight->getOpcode() &&
-               Right[i - 1] == ILeft) {
-      // Try preserve broadcasts.
-      return true;
-    } else if (ILeft->getOpcode() == IRight->getOpcode() &&
-               Left[i - 1] == IRight) {
-      // Try preserve broadcasts.
+  // If we have "AllSameOpcodeRight", try to see if the left operands preserves
+  // it and not the right, in this case we want to commute.
+  if (AllSameOpcodeRight) {
+    unsigned RightPrevOpcode = cast<Instruction>(Right[i - 1])->getOpcode();
+    if (IRight && RightPrevOpcode == IRight->getOpcode())
+      // Do not commute, a match on the right preserves AllSameOpcodeRight
+      return false;
+    if (ILeft && RightPrevOpcode == ILeft->getOpcode()) {
+      // We have a match and may want to commute, but first check if there is
+      // not also a match on the existing operands on the Left to preserve
+      // AllSameOpcodeLeft, i.e. preserve the original order if possible.
+      // (FIXME: why do we care?)
+      if (AllSameOpcodeLeft && ILeft &&
+          cast<Instruction>(Left[i - 1])->getOpcode() == ILeft->getOpcode())
+        return false;
       return true;
     }
-    return false;
   }
-  // One opcode, put the instruction on the right.
-  return ILeft != nullptr;
+  // Symmetrically handle Left side.
+  if (AllSameOpcodeLeft) {
+    unsigned LeftPrevOpcode = cast<Instruction>(Left[i - 1])->getOpcode();
+    if (ILeft && LeftPrevOpcode == ILeft->getOpcode())
+      return false;
+    if (IRight && LeftPrevOpcode == IRight->getOpcode())
+      return true;
+  }
+  return false;
 }
 
 void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
                                              SmallVectorImpl<Value *> &Left,
                                              SmallVectorImpl<Value *> &Right) {
 
-  SmallVector<Value *, 16> OrigLeft, OrigRight;
-
   if (VL.size()) {
     // Peel the first iteration out of the loop since there's nothing
-    // interesting to do anyway and it simplifies the checks
+    // interesting to do anyway and it simplifies the checks in the loop.
     auto VLeft = cast<Instruction>(VL[0])->getOperand(0);
     auto VRight = cast<Instruction>(VL[0])->getOperand(1);
-    OrigLeft.push_back(VLeft);
-    OrigRight.push_back(VRight);
     if (!isa<Instruction>(VRight) && isa<Instruction>(VLeft))
       // Favor having instruction to the right. FIXME: why?
       std::swap(VLeft, VRight);
@@ -2014,59 +2029,37 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
   // Keep track if we have instructions with all the same opcode on one side.
   bool AllSameOpcodeLeft = isa<Instruction>(Left[0]);
   bool AllSameOpcodeRight = isa<Instruction>(Right[0]);
+  // Keep track if we have one side with all the same value (broadcast).
+  bool SplatLeft = true;
+  bool SplatRight = true;
 
   for (unsigned i = 1, e = VL.size(); i != e; ++i) {
     Instruction *I = cast<Instruction>(VL[i]);
-
-    Value *VLeft = I->getOperand(0);
-    Value *VRight = I->getOperand(1);
-    OrigLeft.push_back(VLeft);
-    OrigRight.push_back(VRight);
-    Instruction *ILeft = dyn_cast<Instruction>(VLeft);
-    Instruction *IRight = dyn_cast<Instruction>(VRight);
-
-    // Check whether all operands on one side have the same opcode. In this case
-    // we want to preserve the original order and not make things worse by
-    // reordering.
-    if (AllSameOpcodeLeft && ILeft) {
-      if (Instruction *PLeft = dyn_cast<Instruction>(OrigLeft[i - 1])) {
-        if (PLeft->getOpcode() != ILeft->getOpcode())
-          AllSameOpcodeLeft = false;
-      } else
-        AllSameOpcodeLeft = false;
-    }
-    if (AllSameOpcodeRight && IRight) {
-      if (Instruction *PRight = dyn_cast<Instruction>(OrigRight[i - 1])) {
-        if (PRight->getOpcode() != IRight->getOpcode())
-          AllSameOpcodeRight = false;
-      } else
-        AllSameOpcodeRight = false;
-    }
-
-
+    assert(I->isCommutative() && "Can only process commutative instruction");
     // Commute to favor either a splat or maximizing having the same opcodes on
     // one side.
-    if (shouldReorderOperands(i, *I, Left, Right)) {
+    if (shouldReorderOperands(i, *I, Left, Right, AllSameOpcodeLeft,
+                              AllSameOpcodeRight, SplatLeft, SplatRight)) {
       Left.push_back(I->getOperand(1));
       Right.push_back(I->getOperand(0));
     } else {
       Left.push_back(I->getOperand(0));
       Right.push_back(I->getOperand(1));
     }
+    // Update Splat* and AllSameOpcode* after the insertion.
+    SplatRight = SplatRight && (Right[i - 1] == Right[i]);
+    SplatLeft = SplatLeft && (Left[i - 1] == Left[i]);
+    AllSameOpcodeLeft = AllSameOpcodeLeft && isa<Instruction>(Left[i]) &&
+                        (cast<Instruction>(Left[i - 1])->getOpcode() ==
+                         cast<Instruction>(Left[i])->getOpcode());
+    AllSameOpcodeRight = AllSameOpcodeRight && isa<Instruction>(Right[i]) &&
+                         (cast<Instruction>(Right[i - 1])->getOpcode() ==
+                          cast<Instruction>(Right[i])->getOpcode());
   }
 
-  bool LeftBroadcast = isSplat(Left);
-  bool RightBroadcast = isSplat(Right);
-
-  // If operands end up being broadcast return this operand order.
-  if (LeftBroadcast || RightBroadcast)
+  // If one operand end up being broadcast, return this operand order.
+  if (SplatRight || SplatLeft)
     return;
-
-  // Don't reorder if the operands where good to begin.
-  if (AllSameOpcodeRight || AllSameOpcodeLeft) {
-    Left = OrigLeft;
-    Right = OrigRight;
-  }
 
   const DataLayout &DL = F->getParent()->getDataLayout();
 

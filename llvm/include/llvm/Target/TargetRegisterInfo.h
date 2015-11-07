@@ -475,6 +475,11 @@ public:
     return nullptr;
   }
 
+  /// Return a register mask that clobbers everything.
+  virtual const uint32_t *getNoPreservedMask() const {
+    llvm_unreachable("target does not provide no presered mask");
+  }
+
   /// Return all the call-preserved register masks defined for this target.
   virtual ArrayRef<const uint32_t *> getRegMasks() const = 0;
   virtual ArrayRef<const char *> getRegMaskNames() const = 0;

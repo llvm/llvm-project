@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}large_alloca:
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
 ; GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
-; GCN: ScratchSize: 32768
+; GCN: ScratchSize: 32776
 define void @large_alloca(i32 addrspace(1)* %out, i32 %x, i32 %y) #0 {
   %large = alloca [8192 x i32], align 4
   %gep = getelementptr [8192 x i32], [8192 x i32]* %large, i32 0, i32 8191

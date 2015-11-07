@@ -220,8 +220,8 @@ private:
   template<class T> void operator-(T) const;
 public:
 
-  ilist_iterator(pointer NP) : NodePtr(NP) {}
-  ilist_iterator(reference NR) : NodePtr(&NR) {}
+  explicit ilist_iterator(pointer NP) : NodePtr(NP) {}
+  explicit ilist_iterator(reference NR) : NodePtr(&NR) {}
   ilist_iterator() : NodePtr(nullptr) {}
 
   // This is templated so that we can allow constructing a const iterator from
@@ -241,7 +241,7 @@ public:
   void reset(pointer NP) { NodePtr = NP; }
 
   // Accessors...
-  operator pointer() const {
+  explicit operator pointer() const {
     return NodePtr;
   }
 

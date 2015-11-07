@@ -94,7 +94,7 @@ public:
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
-  const uint32_t *getNoPreservedMask() const;
+  const uint32_t *getNoPreservedMask() const override;
 
   /// getThisReturnPreservedMask - Returns a call preserved mask specific to the
   /// case that 'returned' is on an i32 first argument if the calling convention

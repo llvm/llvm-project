@@ -375,8 +375,8 @@ public:
     CALLSITE_DELEGATE_GETTER(getNumTotalBundleOperands());
   }
 
-  OperandBundleUse getOperandBundle(unsigned Index) const {
-    CALLSITE_DELEGATE_GETTER(getOperandBundle(Index));
+  OperandBundleUse getOperandBundleAt(unsigned Index) const {
+    CALLSITE_DELEGATE_GETTER(getOperandBundleAt(Index));
   }
 
   Optional<OperandBundleUse> getOperandBundle(StringRef Name) const {

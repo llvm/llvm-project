@@ -1106,7 +1106,7 @@ void BT::run() {
     if (It == End) {
       MachineFunction::const_iterator BIt = B.getIterator();
       MachineFunction::const_iterator Next = std::next(BIt);
-      if (Next != MF.end() && B.isSuccessor(Next)) {
+      if (Next != MF.end() && B.isSuccessor(&*Next)) {
         int ThisN = B.getNumber();
         int NextN = Next->getNumber();
         FlowQ.push(CFGEdge(ThisN, NextN));

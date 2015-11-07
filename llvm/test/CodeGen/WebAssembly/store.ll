@@ -9,9 +9,9 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .local i32, i32{{$}}
-; CHECK-NEXT: get_local 1{{$}}
+; CHECK-NEXT: get_local push, 1{{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 3, pop{{$}}
 ; CHECK-NEXT: i32.store (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: return{{$}}
@@ -24,9 +24,9 @@ define void @sti32(i32 *%p, i32 %v) {
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .param i64{{$}}
 ; CHECK-NEXT: .local i64, i32{{$}}
-; CHECK-NEXT: get_local 1{{$}}
+; CHECK-NEXT: get_local push, 1{{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 3, pop{{$}}
 ; CHECK-NEXT: i64.store (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: return{{$}}
@@ -39,9 +39,9 @@ define void @sti64(i64 *%p, i64 %v) {
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .local f32, i32{{$}}
-; CHECK-NEXT: get_local 1{{$}}
+; CHECK-NEXT: get_local push, 1{{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 3, pop{{$}}
 ; CHECK-NEXT: f32.store (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: return{{$}}
@@ -54,9 +54,9 @@ define void @stf32(float *%p, float %v) {
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .param f64{{$}}
 ; CHECK-NEXT: .local f64, i32{{$}}
-; CHECK-NEXT: get_local 1{{$}}
+; CHECK-NEXT: get_local push, 1{{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 3, pop{{$}}
 ; CHECK-NEXT: f64.store (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: return{{$}}

@@ -16,7 +16,7 @@ declare void @void_nullary()
 ; CHECK-LABEL: call_i32_nullary:
 ; CHECK-NEXT: .result i32
 ; CHECK-NEXT: .local i32
-; CHECK-NEXT: call $i32_nullary
+; CHECK-NEXT: call $i32_nullary, push{{$}}
 ; CHECK-NEXT: set_local 0, pop
 ; CHECK-NEXT: return (get_local 0)
 define i32 @call_i32_nullary() {
@@ -27,7 +27,7 @@ define i32 @call_i32_nullary() {
 ; CHECK-LABEL: call_i64_nullary:
 ; CHECK-NEXT: .result i64
 ; CHECK-NEXT: .local i64
-; CHECK-NEXT: call $i64_nullary
+; CHECK-NEXT: call $i64_nullary, push{{$}}
 ; CHECK-NEXT: set_local 0, pop
 ; CHECK-NEXT: return (get_local 0)
 define i64 @call_i64_nullary() {
@@ -38,7 +38,7 @@ define i64 @call_i64_nullary() {
 ; CHECK-LABEL: call_float_nullary:
 ; CHECK-NEXT: .result f32
 ; CHECK-NEXT: .local f32
-; CHECK-NEXT: call $float_nullary
+; CHECK-NEXT: call $float_nullary, push{{$}}
 ; CHECK-NEXT: set_local 0, pop
 ; CHECK-NEXT: return (get_local 0)
 define float @call_float_nullary() {
@@ -49,7 +49,7 @@ define float @call_float_nullary() {
 ; CHECK-LABEL: call_double_nullary:
 ; CHECK-NEXT: .result f64
 ; CHECK-NEXT: .local f64
-; CHECK-NEXT: call $double_nullary
+; CHECK-NEXT: call $double_nullary, push{{$}}
 ; CHECK-NEXT: set_local 0, pop
 ; CHECK-NEXT: return (get_local 0)
 define double @call_double_nullary() {
@@ -58,7 +58,7 @@ define double @call_double_nullary() {
 }
 
 ; CHECK-LABEL: call_void_nullary:
-; CHECK-NEXT: call $void_nullary
+; CHECK-NEXT: call $void_nullary{{$}}
 ; CHECK-NEXT: return
 define void @call_void_nullary() {
   call void @void_nullary()
@@ -69,9 +69,9 @@ define void @call_void_nullary() {
 ; CHECK-NEXT: .param i32
 ; CHECK-NEXT: .result i32
 ; CHECK-NEXT: .local i32, i32
-; CHECK-NEXT: get_local 0
+; CHECK-NEXT: get_local push, 0
 ; CHECK-NEXT: set_local 1, pop
-; CHECK-NEXT: call $i32_unary, (get_local 1)
+; CHECK-NEXT: call $i32_unary, push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop
 ; CHECK-NEXT: return (get_local 2)
 define i32 @call_i32_unary(i32 %a) {
@@ -84,11 +84,11 @@ define i32 @call_i32_unary(i32 %a) {
 ; CHECK-NEXT: .param i32
 ; CHECK-NEXT: .result i32
 ; CHECK-NEXT: .local i32, i32, i32
-; CHECK-NEXT: get_local 1
+; CHECK-NEXT: get_local push, 1
 ; CHECK-NEXT: set_local 2, pop
-; CHECK-NEXT: get_local 0
+; CHECK-NEXT: get_local push, 0
 ; CHECK-NEXT: set_local 3, pop
-; CHECK-NEXT: call $i32_binary, (get_local 3), (get_local 2)
+; CHECK-NEXT: call $i32_binary, push, (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: set_local 4, pop
 ; CHECK-NEXT: return (get_local 4)
 define i32 @call_i32_binary(i32 %a, i32 %b) {
@@ -99,9 +99,9 @@ define i32 @call_i32_binary(i32 %a, i32 %b) {
 ; CHECK-LABEL: call_indirect_void:
 ; CHECK-NEXT: .param i32
 ; CHECK-NEXT: .local i32
-; CHECK-NEXT: get_local 0
+; CHECK-NEXT: get_local push, 0
 ; CHECK-NEXT: set_local 1, pop
-; CHECK-NEXT: call_indirect (get_local 1)
+; CHECK-NEXT: call_indirect (get_local 1){{$}}
 ; CHECK-NEXT: return
 define void @call_indirect_void(void ()* %callee) {
   call void %callee()
@@ -112,9 +112,9 @@ define void @call_indirect_void(void ()* %callee) {
 ; CHECK-NEXT: .param i32
 ; CHECK-NEXT: .result i32
 ; CHECK-NEXT: .local i32, i32
-; CHECK-NEXT: get_local 0
+; CHECK-NEXT: get_local push, 0
 ; CHECK-NEXT: set_local 1, pop
-; CHECK-NEXT: call_indirect (get_local 1)
+; CHECK-NEXT: call_indirect (get_local 1), push{{$}}
 ; CHECK-NEXT: set_local 2, pop
 ; CHECK-NEXT: return (get_local 2)
 define i32 @call_indirect_i32(i32 ()* %callee) {
@@ -123,7 +123,7 @@ define i32 @call_indirect_i32(i32 ()* %callee) {
 }
 
 ; CHECK-LABEL: tail_call_void_nullary:
-; CHECK-NEXT: call $void_nullary
+; CHECK-NEXT: call $void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @tail_call_void_nullary() {
   tail call void @void_nullary()
@@ -131,7 +131,7 @@ define void @tail_call_void_nullary() {
 }
 
 ; CHECK-LABEL: fastcc_tail_call_void_nullary:
-; CHECK-NEXT: call $void_nullary
+; CHECK-NEXT: call $void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @fastcc_tail_call_void_nullary() {
   tail call fastcc void @void_nullary()

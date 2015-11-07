@@ -78,8 +78,8 @@ exit:
 
 ; SI: BB2_3:
 ; SI: buffer_load_dword
-; SI: buffer_store_dword
-; SI: v_cmp_eq_i32_e32 vcc,
+; SI-DAG: buffer_store_dword
+; SI-DAG: v_cmp_eq_i32_e32 vcc,
 ; SI: s_or_b64 [[OR_SREG:s\[[0-9]+:[0-9]+\]]]
 ; SI: s_andn2_b64 exec, exec, [[OR_SREG]]
 ; SI: s_cbranch_execnz BB2_3

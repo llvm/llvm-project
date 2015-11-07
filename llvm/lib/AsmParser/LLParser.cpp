@@ -4838,6 +4838,7 @@ int LLParser::ParseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_call:     return ParseCall(Inst, PFS, CallInst::TCK_None);
   case lltok::kw_tail:     return ParseCall(Inst, PFS, CallInst::TCK_Tail);
   case lltok::kw_musttail: return ParseCall(Inst, PFS, CallInst::TCK_MustTail);
+  case lltok::kw_notail:   return ParseCall(Inst, PFS, CallInst::TCK_NoTail);
   // Memory.
   case lltok::kw_alloca:         return ParseAlloc(Inst, PFS);
   case lltok::kw_load:           return ParseLoad(Inst, PFS);

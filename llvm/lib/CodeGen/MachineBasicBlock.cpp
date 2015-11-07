@@ -1301,3 +1301,17 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   // At this point we have no idea of the liveness of the register.
   return LQR_Unknown;
 }
+
+const uint32_t *
+MachineBasicBlock::getBeginClobberMask(const TargetRegisterInfo *TRI) const {
+  // EH funclet entry does not preserve any registers.
+  return isEHFuncletEntry() ? TRI->getNoPreservedMask() : nullptr;
+}
+
+const uint32_t *
+MachineBasicBlock::getEndClobberMask(const TargetRegisterInfo *TRI) const {
+  // If we see a return block with successors, this must be a funclet return,
+  // which does not preserve any registers. If there are no successors, we don't
+  // care what kind of return it is, putting a mask after it is a no-op.
+  return isReturnBlock() && !succ_empty() ? TRI->getNoPreservedMask() : nullptr;
+}

@@ -225,6 +225,13 @@ void LiveIntervals::computeRegMasks() {
   for (MachineBasicBlock &MBB : *MF) {
     std::pair<unsigned, unsigned> &RMB = RegMaskBlocks[MBB.getNumber()];
     RMB.first = RegMaskSlots.size();
+
+    // Some block starts, such as EH funclets, create masks.
+    if (const uint32_t *Mask = MBB.getBeginClobberMask(TRI)) {
+      RegMaskSlots.push_back(Indexes->getMBBStartIdx(&MBB));
+      RegMaskBits.push_back(Mask);
+    }
+
     for (MachineInstr &MI : MBB) {
       for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isRegMask())
@@ -233,6 +240,13 @@ void LiveIntervals::computeRegMasks() {
         RegMaskBits.push_back(MO.getRegMask());
       }
     }
+
+    // Some block ends, such as funclet returns, create masks.
+    if (const uint32_t *Mask = MBB.getEndClobberMask(TRI)) {
+      RegMaskSlots.push_back(Indexes->getMBBEndIdx(&MBB));
+      RegMaskBits.push_back(Mask);
+    }
+
     // Compute the number of register mask instructions in this block.
     RMB.second = RegMaskSlots.size() - RMB.first;
   }

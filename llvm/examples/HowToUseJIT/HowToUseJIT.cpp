@@ -80,7 +80,7 @@ int main() {
 
   // Get pointers to the integer argument of the add1 function...
   assert(Add1F->arg_begin() != Add1F->arg_end()); // Make sure there's an arg
-  Argument *ArgX = Add1F->arg_begin();  // Get the arg
+  Argument *ArgX = &*Add1F->arg_begin();          // Get the arg
   ArgX->setName("AnArg");            // Give it a nice symbolic name for fun.
 
   // Create the add instruction, inserting it into the end of BB.

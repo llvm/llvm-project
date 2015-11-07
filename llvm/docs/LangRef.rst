@@ -8397,7 +8397,7 @@ Syntax:
 
 ::
 
-      <result> = [tail | musttail] call [cconv] [ret attrs] <ty> [<fnty>*] <fnptrval>(<function args>) [fn attrs]
+      <result> = [tail | musttail | notail ] call [cconv] [ret attrs] <ty> [<fnty>*] <fnptrval>(<function args>) [fn attrs]
                    [ operand bundles ]
 
 Overview:
@@ -8449,6 +8449,10 @@ This instruction requires several arguments:
       ``llvm::GuaranteedTailCallOpt`` is ``true``.
    -  `Platform-specific constraints are
       met. <CodeGenerator.html#tailcallopt>`_
+
+#. The optional ``notail`` marker indicates that the optimizers should not add
+   ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
+   call optimization from being performed on the call.
 
 #. The optional "cconv" marker indicates which :ref:`calling
    convention <callingconv>` the call should use. If none is

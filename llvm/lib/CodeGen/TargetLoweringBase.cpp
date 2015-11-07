@@ -765,8 +765,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   EnableExtLdPromotion = false;
   HasFloatingPointExceptions = true;
   StackPointerRegisterToSaveRestore = 0;
-  ExceptionPointerRegister = 0;
-  ExceptionSelectorRegister = 0;
   BooleanContents = UndefinedBooleanContent;
   BooleanFloatContents = UndefinedBooleanContent;
   BooleanVectorContents = UndefinedBooleanContent;

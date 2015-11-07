@@ -18,33 +18,44 @@ Here are some notes on building/testing LLVM/Clang on ARM. Note that
 ARM encompasses a wide variety of CPUs; this advice is primarily based
 on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
 
-#. If you are building LLVM/Clang on an ARM board with 1G of memory or less,
-   please use ``gold`` rather then GNU ``ld``.
-   Building LLVM/Clang with ``--enable-optimized``
-   is preferred since it consumes less memory. Otherwise, the building
-   process will very likely fail due to insufficient memory. In any
-   case it is probably a good idea to set up a swap partition.
-
-#. If you want to run ``make check-all`` after building LLVM/Clang, to avoid
-   false alarms (e.g., ARCMT failure) please use at least the following
-   configuration:
-
-   .. code-block:: bash
-
-     $ ../$LLVM_SRC_DIR/configure --with-abi=aapcs-vfp
-
 #. The most popular Linaro/Ubuntu OS's for ARM boards, e.g., the
-   Pandaboard, have become hard-float platforms. The following set
-   of configuration options appears to be a good choice for this
-   platform:
+   Pandaboard, have become hard-float platforms. There are a number of
+   choices when using CMake. Autoconf usage is deprecated as of 3.8.
+
+   Building LLVM/Clang in ``Relese`` mode is preferred since it consumes
+   a lot less memory. Otherwise, the building process will very likely
+   fail due to insufficient memory. It's also a lot quicker to only build
+   the relevant back-ends (ARM and AArch64), since it's very unlikely that
+   you'll use an ARM board to cross-compile to other arches. If you're
+   running Compiler-RT tests, also include the x86 back-end, or some tests
+   will fail.
 
    .. code-block:: bash
 
-     ../$LLVM_SRC_DIR/configure --build=armv7l-unknown-linux-gnueabihf \
-     --host=armv7l-unknown-linux-gnueabihf \
-     --target=armv7l-unknown-linux-gnueabihf --with-cpu=cortex-a9 \
-     --with-float=hard --with-abi=aapcs-vfp --with-fpu=neon \
-     --enable-targets=arm --enable-optimized --enable-assertions
+     cmake $LLVM_SRC_DIR -DCMAKE_BUILD_TYPE=Release \
+                         -DLLVM_TARGETS_TO_BUILD="ARM;X86;AArch64"
+
+   Other options you can use are:
+
+   .. code-block:: bash
+
+     Use Ninja instead of Make: "-G Ninja"
+     Build with assertions on: "-DLLVM_ENABLE_ASSERTIONS=True"
+     Force Python2: "-DPYTHON_EXECUTABLE=/usr/bin/python2"
+     Local (non-sudo) install path: "-DCMAKE_INSTALL_PREFIX=$HOME/llvm/instal"
+     CPU flags: "DCMAKE_C_FLAGS=-mcpu=cortex-a15" (same for CXX_FLAGS)
+
+   After that, just typing ``make -jN`` or ``ninja`` will build everything.
+   ``make -jN check-all`` or ``ninja check-all`` will run all compiler tests. For
+   running the test suite, please refer to :doc:`TestingGuide`.
+
+#. If you are building LLVM/Clang on an ARM board with 1G of memory or less,
+   please use ``gold`` rather then GNU ``ld``. In any case it is probably a good
+   idea to set up a swap partition, too.
+
+   .. code-block:: bash
+
+     $ sudo ln -sf /usr/bin/ld /usr/bin/ld.gold
 
 #. ARM development boards can be unstable and you may experience that cores
    are disappearing, caches being flushed on every big.LITTLE switch, and
@@ -58,6 +69,10 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
           sudo cpufreq-set -c $cpu -g performance
       done
 
+   Remember to turn that off after the build, or you may risk burning your
+   CPU. Most modern kernels don't need that, so only use it if you have
+   problems.
+
 #. Running the build on SD cards is ok, but they are more prone to failures
    than good quality USB sticks, and those are more prone to failures than
    external hard-drives (those are also a lot faster). So, at least, you
@@ -66,4 +81,5 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
 
 #. Make sure you have a decent power supply (dozens of dollars worth) that can
    provide *at least* 4 amperes, this is especially important if you use USB
-   devices with your board.
+   devices with your board. Externally powered USB/SATA harddrives are even
+   better than having a good power supply.

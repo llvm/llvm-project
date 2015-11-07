@@ -9,9 +9,9 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: .local i32, i32{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 1, pop{{$}}
-; CHECK-NEXT: i32.load (get_local 1){{$}}
+; CHECK-NEXT: i32.load push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 ; CHECK-NEXT: return (get_local 2){{$}}
 define i32 @ldi32(i32 *%p) {
@@ -23,9 +23,9 @@ define i32 @ldi32(i32 *%p) {
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i64{{$}}
 ; CHECK-NEXT: .local i32, i64{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 1, pop{{$}}
-; CHECK-NEXT: i64.load (get_local 1){{$}}
+; CHECK-NEXT: i64.load push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 ; CHECK-NEXT: return (get_local 2){{$}}
 define i64 @ldi64(i64 *%p) {
@@ -37,9 +37,9 @@ define i64 @ldi64(i64 *%p) {
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result f32{{$}}
 ; CHECK-NEXT: .local i32, f32{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 1, pop{{$}}
-; CHECK-NEXT: f32.load (get_local 1){{$}}
+; CHECK-NEXT: f32.load push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 ; CHECK-NEXT: return (get_local 2){{$}}
 define float @ldf32(float *%p) {
@@ -51,9 +51,9 @@ define float @ldf32(float *%p) {
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result f64{{$}}
 ; CHECK-NEXT: .local i32, f64{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 1, pop{{$}}
-; CHECK-NEXT: f64.load (get_local 1){{$}}
+; CHECK-NEXT: f64.load push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 ; CHECK-NEXT: return (get_local 2){{$}}
 define double @ldf64(double *%p) {

@@ -827,15 +827,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLibcallName(RTLIB::SRA_I128, nullptr);
   }
 
-  if (isPPC64) {
-    setStackPointerRegisterToSaveRestore(PPC::X1);
-    setExceptionPointerRegister(PPC::X3);
-    setExceptionSelectorRegister(PPC::X4);
-  } else {
-    setStackPointerRegisterToSaveRestore(PPC::R1);
-    setExceptionPointerRegister(PPC::R3);
-    setExceptionSelectorRegister(PPC::R4);
-  }
+  setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine(ISD::SINT_TO_FP);
@@ -11530,6 +11522,16 @@ PPCTargetLowering::getScratchRegisters(CallingConv::ID) const {
   };
 
   return ScratchRegs;
+}
+
+unsigned PPCTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return Subtarget.isPPC64() ? PPC::X3 : PPC::R3;
+}
+
+unsigned PPCTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return Subtarget.isPPC64() ? PPC::X4 : PPC::R4;
 }
 
 bool

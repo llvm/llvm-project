@@ -666,7 +666,7 @@ static void IntroduceControlFlow(Function *F, Random &R) {
 
   for (auto *Instr : BoolInst) {
     BasicBlock *Curr = Instr->getParent();
-    BasicBlock::iterator Loc = Instr;
+    BasicBlock::iterator Loc = Instr->getIterator();
     BasicBlock *Next = Curr->splitBasicBlock(Loc, "CF");
     Instr->moveBefore(Curr->getTerminator());
     if (Curr != &F->getEntryBlock()) {

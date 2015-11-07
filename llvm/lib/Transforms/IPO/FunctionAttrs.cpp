@@ -328,14 +328,28 @@ struct ArgumentUsesTracker : public CaptureTracker {
     unsigned UseIndex =
         std::distance(const_cast<const Use *>(CS.arg_begin()), U);
 
-    assert(UseIndex < CS.arg_size() && "Non-argument use?");
+    assert(UseIndex < CS.data_operands_size() &&
+           "Indirect function calls should have been filtered above!");
+
+    if (UseIndex >= CS.getNumArgOperands()) {
+      // Data operand, but not a argument operand -- must be a bundle operand
+      assert(CS.hasOperandBundles() && "Must be!");
+
+      // CaptureTracking told us that we're being captured by an operand bundle
+      // use.  In this case it does not matter if the callee is within our SCC
+      // or not -- we've been captured in some unknown way, and we have to be
+      // conservative.
+      Captured = true;
+      return true;
+    }
+
     if (UseIndex >= F->arg_size()) {
       assert(F->isVarArg() && "More params than args in non-varargs call");
       Captured = true;
       return true;
     }
 
-    Uses.push_back(std::next(F->arg_begin(), UseIndex));
+    Uses.push_back(&*std::next(F->arg_begin(), UseIndex));
     return false;
   }
 
@@ -394,7 +408,6 @@ determinePointerReadAttrs(Argument *A,
   while (!Worklist.empty()) {
     Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
-    Value *V = U->get();
 
     switch (I->getOpcode()) {
     case Instruction::BitCast:
@@ -438,24 +451,44 @@ determinePointerReadAttrs(Argument *A,
         return Attribute::None;
       }
 
-      Function::arg_iterator AI = F->arg_begin(), AE = F->arg_end();
-      CallSite::arg_iterator B = CS.arg_begin(), E = CS.arg_end();
-      for (CallSite::arg_iterator A = B; A != E; ++A, ++AI) {
-        if (A->get() == V) {
-          if (AI == AE) {
-            assert(F->isVarArg() &&
-                   "More params than args in non-varargs call.");
-            return Attribute::None;
-          }
-          Captures &= !CS.doesNotCapture(A - B);
-          if (SCCNodes.count(&*AI))
-            continue;
-          if (!CS.onlyReadsMemory() && !CS.onlyReadsMemory(A - B))
-            return Attribute::None;
-          if (!CS.doesNotAccessMemory(A - B))
-            IsRead = true;
-        }
+      // Note: the callee and the two successor blocks *follow* the argument
+      // operands.  This means there is no need to adjust UseIndex to account
+      // for these.
+
+      unsigned UseIndex = std::distance(CS.arg_begin(), U);
+
+      // U cannot be the callee operand use: since we're exploring the
+      // transitive uses of an Argument, having such a use be a callee would
+      // imply the CallSite is an indirect call or invoke; and we'd take the
+      // early exit above.
+      assert(UseIndex < CS.data_operands_size() &&
+             "Data operand use expected!");
+
+      bool IsOperandBundleUse = UseIndex >= CS.getNumArgOperands();
+
+      if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
+        assert(F->isVarArg() && "More params than args in non-varargs call");
+        return Attribute::None;
       }
+
+      Captures &= !CS.doesNotCapture(UseIndex);
+
+      // Since the optimizer (by design) cannot see the data flow corresponding
+      // to a operand bundle use, these cannot participate in the optimistic SCC
+      // analysis.  Instead, we model the operand bundle uses as arguments in
+      // call to a function external to the SCC.
+      if (!SCCNodes.count(&*std::next(F->arg_begin(), UseIndex)) ||
+          IsOperandBundleUse) {
+
+        // The accessors used on CallSite here do the right thing for calls and
+        // invokes with operand bundles.
+
+        if (!CS.onlyReadsMemory() && !CS.onlyReadsMemory(UseIndex))
+          return Attribute::None;
+        if (!CS.doesNotAccessMemory(UseIndex))
+          IsRead = true;
+      }
+
       AddUsersToWorklistIfCapturing();
       break;
     }

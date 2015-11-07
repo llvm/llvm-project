@@ -8365,6 +8365,12 @@ let Predicates = [HasAVX2] in {
             (VPBROADCASTWrm addr:$src)>;
   def : Pat<(v16i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),
             (VPBROADCASTWYrm addr:$src)>;
+  def : Pat<(v8i16 (X86VBroadcast
+              (i16 (trunc (i32 (zextloadi16 addr:$src)))))),
+            (VPBROADCASTWrm addr:$src)>;
+  def : Pat<(v16i16 (X86VBroadcast
+              (i16 (trunc (i32 (zextloadi16 addr:$src)))))),
+            (VPBROADCASTWYrm addr:$src)>;
 
   // Provide aliases for broadcast from the same register class that
   // automatically does the extract.

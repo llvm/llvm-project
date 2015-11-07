@@ -43,9 +43,11 @@
 // points must be in the same loop.
 // Property #3 is ensured via the MachineBlockFrequencyInfo.
 //
-// If this pass found points matching all this properties, then
+// If this pass found points matching all these properties, then
 // MachineFrameInfo is updated this that information.
 //===----------------------------------------------------------------------===//
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 // To check for profitability.
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -117,11 +119,31 @@ class ShrinkWrap : public MachineFunctionPass {
   unsigned FrameDestroyOpcode;
   /// Entry block.
   const MachineBasicBlock *Entry;
+  typedef SmallSetVector<unsigned, 16> SetOfRegs;
+  /// Registers that need to be saved for the current function.
+  mutable SetOfRegs CurrentCSRs;
+  /// Current MachineFunction.
+  MachineFunction *MachineFunc;
 
   /// \brief Check if \p MI uses or defines a callee-saved register or
   /// a frame index. If this is the case, this means \p MI must happen
   /// after Save and before Restore.
   bool useOrDefCSROrFI(const MachineInstr &MI) const;
+
+  const SetOfRegs &getCurrentCSRs() const {
+    if (CurrentCSRs.empty()) {
+      BitVector SavedRegs;
+      const TargetFrameLowering *TFI =
+          MachineFunc->getSubtarget().getFrameLowering();
+
+      TFI->determineCalleeSaves(*MachineFunc, SavedRegs, nullptr);
+
+      for (int Reg = SavedRegs.find_first(); Reg != -1;
+           Reg = SavedRegs.find_next(Reg))
+        CurrentCSRs.insert((unsigned)Reg);
+    }
+    return CurrentCSRs;
+  }
 
   /// \brief Update the Save and Restore points such that \p MBB is in
   /// the region that is dominated by Save and post-dominated by Restore
@@ -144,6 +166,8 @@ class ShrinkWrap : public MachineFunctionPass {
     FrameSetupOpcode = TII.getCallFrameSetupOpcode();
     FrameDestroyOpcode = TII.getCallFrameDestroyOpcode();
     Entry = &MF.front();
+    CurrentCSRs.clear();
+    MachineFunc = &MF;
 
     ++NumFunc;
   }
@@ -199,20 +223,26 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI) const {
     return true;
   }
   for (const MachineOperand &MO : MI.operands()) {
-    bool UseCSR = false;
+    bool UseOrDefCSR = false;
     if (MO.isReg()) {
       unsigned PhysReg = MO.getReg();
       if (!PhysReg)
         continue;
       assert(TargetRegisterInfo::isPhysicalRegister(PhysReg) &&
              "Unallocated register?!");
-      UseCSR = RCI.getLastCalleeSavedAlias(PhysReg);
+      UseOrDefCSR = RCI.getLastCalleeSavedAlias(PhysReg);
+    } else if (MO.isRegMask()) {
+      // Check if this regmask clobbers any of the CSRs.
+      for (unsigned Reg : getCurrentCSRs()) {
+        if (MO.clobbersPhysReg(Reg)) {
+          UseOrDefCSR = true;
+          break;
+        }
+      }
     }
-    // TODO: Handle regmask more accurately.
-    // For now, be conservative about them.
-    if (UseCSR || MO.isFI() || MO.isRegMask()) {
-      DEBUG(dbgs() << "Use or define CSR(" << UseCSR << ") or FI(" << MO.isFI()
-                   << "): " << MI << '\n');
+    if (UseOrDefCSR || MO.isFI()) {
+      DEBUG(dbgs() << "Use or define CSR(" << UseOrDefCSR << ") or FI("
+                   << MO.isFI() << "): " << MI << '\n');
       return true;
     }
   }

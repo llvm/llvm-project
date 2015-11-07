@@ -1232,7 +1232,7 @@ public:
   }
 
   /// \brief Return the operand bundle at a specific index.
-  OperandBundleUse getOperandBundle(unsigned Index) const {
+  OperandBundleUse getOperandBundleAt(unsigned Index) const {
     assert(Index < getNumOperandBundles() && "Index out of bounds!");
     return operandBundleFromBundleOpInfo(*(bundle_op_info_begin() + Index));
   }
@@ -1242,7 +1242,7 @@ public:
   unsigned countOperandBundlesOfType(StringRef Name) const {
     unsigned Count = 0;
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
-      if (getOperandBundle(i).Tag == Name)
+      if (getOperandBundleAt(i).Tag == Name)
         Count++;
 
     return Count;
@@ -1256,7 +1256,7 @@ public:
     assert(countOperandBundlesOfType(Name) < 2 && "Precondition violated!");
 
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
-      OperandBundleUse U = getOperandBundle(i);
+      OperandBundleUse U = getOperandBundleAt(i);
       if (U.Tag == Name)
         return U;
     }

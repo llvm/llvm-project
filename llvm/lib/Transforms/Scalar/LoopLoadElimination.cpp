@@ -373,7 +373,7 @@ public:
     Value *Initial =
         new LoadInst(InitialPtr, "load_initial", PH->getTerminator());
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
-                                   L->getHeader()->begin());
+                                   &L->getHeader()->front());
     PHI->addIncoming(Initial, PH);
     PHI->addIncoming(Cand.Store->getOperand(0), L->getLoopLatch());
 

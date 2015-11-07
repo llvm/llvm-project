@@ -1501,15 +1501,20 @@ public:
   }
 
   // Note that 'musttail' implies 'tail'.
-  enum TailCallKind { TCK_None = 0, TCK_Tail = 1, TCK_MustTail = 2 };
+  enum TailCallKind { TCK_None = 0, TCK_Tail = 1, TCK_MustTail = 2,
+                      TCK_NoTail = 3 };
   TailCallKind getTailCallKind() const {
     return TailCallKind(getSubclassDataFromInstruction() & 3);
   }
   bool isTailCall() const {
-    return (getSubclassDataFromInstruction() & 3) != TCK_None;
+    unsigned Kind = getSubclassDataFromInstruction() & 3;
+    return Kind == TCK_Tail || Kind == TCK_MustTail;
   }
   bool isMustTailCall() const {
     return (getSubclassDataFromInstruction() & 3) == TCK_MustTail;
+  }
+  bool isNoTailCall() const {
+    return (getSubclassDataFromInstruction() & 3) == TCK_NoTail;
   }
   void setTailCall(bool isTC = true) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~3) |

@@ -2400,7 +2400,7 @@ static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
   if (PHI)
     return PHI;
 
-  PHI = PHINode::Create(V->getType(), 2, "simplifycfg.merge", Succ->begin());
+  PHI = PHINode::Create(V->getType(), 2, "simplifycfg.merge", &Succ->front());
   PHI->addIncoming(V, BB);
   for (BasicBlock *PredBB : predecessors(Succ))
     if (PredBB != BB)
@@ -2500,8 +2500,8 @@ static bool mergeConditionalStoreToAddress(BasicBlock *PTB, BasicBlock *PFB,
   Value *QPHI = ensureValueAvailableInSuccessor(QStore->getValueOperand(),
                                                 QStore->getParent(), PPHI);
 
-  IRBuilder<> QB(PostBB->getFirstInsertionPt());
-  
+  IRBuilder<> QB(&*PostBB->getFirstInsertionPt());
+
   Value *PPred = PStore->getParent() == PTB ? PCond : QB.CreateNot(PCond);
   Value *QPred = QStore->getParent() == QTB ? QCond : QB.CreateNot(QCond);
 
@@ -2511,7 +2511,8 @@ static bool mergeConditionalStoreToAddress(BasicBlock *PTB, BasicBlock *PFB,
     QPred = QB.CreateNot(QPred);
   Value *CombinedPred = QB.CreateOr(PPred, QPred);
 
-  auto *T = SplitBlockAndInsertIfThen(CombinedPred, QB.GetInsertPoint(), false);
+  auto *T =
+      SplitBlockAndInsertIfThen(CombinedPred, &*QB.GetInsertPoint(), false);
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
   AAMDNodes AAMD;
@@ -2686,7 +2687,7 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   // If BI is reached from the true path of PBI and PBI's condition implies
   // BI's condition, we know the direction of the BI branch.
   if (PBI->getSuccessor(0) == BI->getParent() &&
-      isImpliedCondition(PBI->getCondition(), BI->getCondition()) &&
+      isImpliedCondition(PBI->getCondition(), BI->getCondition(), DL) &&
       PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
       BB->getSinglePredecessor()) {
     // Turn this into a branch on constant.

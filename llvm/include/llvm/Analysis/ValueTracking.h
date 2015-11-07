@@ -444,7 +444,10 @@ namespace llvm {
   ///  T | T | F
   ///  F | T | T
   /// (A)
-  bool isImpliedCondition(Value *LHS, Value *RHS);
+  bool isImpliedCondition(Value *LHS, Value *RHS, const DataLayout &DL,
+                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                          const Instruction *CxtI = nullptr,
+                          const DominatorTree *DT = nullptr);
 } // end namespace llvm
 
 #endif

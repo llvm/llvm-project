@@ -939,15 +939,19 @@ public:
   }
 
   /// If a physical register, this returns the register that receives the
-  /// exception address on entry to a landing pad.
-  unsigned getExceptionPointerRegister() const {
-    return ExceptionPointerRegister;
+  /// exception address on entry to an EH pad.
+  virtual unsigned
+  getExceptionPointerRegister(const Constant *PersonalityFn) const {
+    // 0 is guaranteed to be the NoRegister value on all targets
+    return 0;
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
-  unsigned getExceptionSelectorRegister() const {
-    return ExceptionSelectorRegister;
+  virtual unsigned
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const {
+    // 0 is guaranteed to be the NoRegister value on all targets
+    return 0;
   }
 
   /// Returns the target's jmp_buf size in bytes (if never set, the default is
@@ -1226,18 +1230,6 @@ protected:
   /// llvm.savestack/llvm.restorestack should save and restore.
   void setStackPointerRegisterToSaveRestore(unsigned R) {
     StackPointerRegisterToSaveRestore = R;
-  }
-
-  /// If set to a physical register, this sets the register that receives the
-  /// exception address on entry to a landing pad.
-  void setExceptionPointerRegister(unsigned R) {
-    ExceptionPointerRegister = R;
-  }
-
-  /// If set to a physical register, this sets the register that receives the
-  /// exception typeid on entry to a landing pad.
-  void setExceptionSelectorRegister(unsigned R) {
-    ExceptionSelectorRegister = R;
   }
 
   /// Tells the code generator not to expand operations into sequences that use
@@ -1855,14 +1847,6 @@ private:
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   unsigned StackPointerRegisterToSaveRestore;
-
-  /// If set to a physical register, this specifies the register that receives
-  /// the exception address on entry to a landing pad.
-  unsigned ExceptionPointerRegister;
-
-  /// If set to a physical register, this specifies the register that receives
-  /// the exception typeid on entry to a landing pad.
-  unsigned ExceptionSelectorRegister;
 
   /// This indicates the default register class to use for each ValueType the
   /// target supports natively.

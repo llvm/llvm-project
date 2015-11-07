@@ -2018,3 +2018,65 @@ define <32 x i8> @insert_dup_mem_v32i8_sext_i8(i8* %ptr) {
   %tmp4 = shufflevector <16 x i8> %tmp3, <16 x i8> undef, <32 x i32> zeroinitializer
   ret <32 x i8> %tmp4
 }
+
+define <32 x i8> @insert_dup_elt1_mem_v32i8_i32(i32* %ptr) {
+; AVX1-LABEL: insert_dup_elt1_mem_v32i8_i32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: insert_dup_elt1_mem_v32i8_i32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpbroadcastb 1(%rdi), %ymm0
+; AVX2-NEXT:    retq
+  %tmp = load i32, i32* %ptr, align 4
+  %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
+  %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
+  %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  ret <32 x i8> %tmp3
+}
+
+define <32 x i8> @insert_dup_elt3_mem_v32i8_i32(i32* %ptr) {
+; AVX1-LABEL: insert_dup_elt3_mem_v32i8_i32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: insert_dup_elt3_mem_v32i8_i32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpbroadcastb 3(%rdi), %ymm0
+; AVX2-NEXT:    retq
+  %tmp = load i32, i32* %ptr, align 4
+  %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
+  %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
+  %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <32 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <32 x i8> %tmp3
+}
+
+define <32 x i8> @insert_dup_elt1_mem_v32i8_sext_i8(i8* %ptr) {
+; AVX1-LABEL: insert_dup_elt1_mem_v32i8_sext_i8:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    movsbl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: insert_dup_elt1_mem_v32i8_sext_i8:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    movsbl (%rdi), %eax
+; AVX2-NEXT:    shrl $8, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpbroadcastb %xmm0, %ymm0
+; AVX2-NEXT:    retq
+  %tmp = load i8, i8* %ptr, align 1
+  %tmp1 = sext i8 %tmp to i32
+  %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
+  %tmp3 = bitcast <4 x i32> %tmp2 to <16 x i8>
+  %tmp4 = shufflevector <16 x i8> %tmp3, <16 x i8> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  ret <32 x i8> %tmp4
+}

@@ -15,6 +15,7 @@ add_public_tablegen_target(AMDGPUCommonTableGen)
 add_llvm_target(AMDGPUCodeGen
   AMDILCFGStructurizer.cpp
   AMDGPUAlwaysInlinePass.cpp
+  AMDGPUAnnotateKernelFeatures.cpp
   AMDGPUAsmPrinter.cpp
   AMDGPUDiagnosticInfoUnsupported.cpp
   AMDGPUFrameLowering.cpp
@@ -48,6 +49,7 @@ add_llvm_target(AMDGPUCodeGen
   SIFixSGPRCopies.cpp
   SIFixSGPRLiveRanges.cpp
   SIFoldOperands.cpp
+  SIFrameLowering.cpp
   SIInsertWaits.cpp
   SIInstrInfo.cpp
   SIISelLowering.cpp
