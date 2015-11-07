@@ -47,3 +47,5 @@ source/LLDBWrapPython.cpp
 PrebuiltSwiftlang
 intermediates
 test/crashinfo.so
+crashinfo.lock
+crashinfo.so
