@@ -1721,6 +1721,15 @@ static void handleDependencyAttr(Sema &S, Scope *Scope, Decl *D,
                                    Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleNotTailCalledAttr(Sema &S, Decl *D,
+                                    const AttributeList &Attr) {
+  if (checkAttrMutualExclusion<AlwaysInlineAttr>(S, D, Attr))
+    return;
+
+  D->addAttr(::new (S.Context) NotTailCalledAttr(
+      Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+}
+
 static void handleUsedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
     if (VD->hasLocalStorage()) {
@@ -3464,6 +3473,9 @@ SwiftNameAttr *Sema::mergeSwiftNameAttr(Decl *D, SourceRange Range,
 
 static void handleAlwaysInlineAttr(Sema &S, Decl *D,
                                    const AttributeList &Attr) {
+  if (checkAttrMutualExclusion<NotTailCalledAttr>(S, D, Attr))
+    return;
+
   if (AlwaysInlineAttr *Inline = S.mergeAlwaysInlineAttr(
           D, Attr.getRange(), Attr.getName(),
           Attr.getAttributeSpellingListIndex()))
@@ -5257,6 +5269,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_ReturnsTwice:
     handleSimpleAttribute<ReturnsTwiceAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_NotTailCalled:
+    handleNotTailCalledAttr(S, D, Attr);
     break;
   case AttributeList::AT_Used:
     handleUsedAttr(S, D, Attr);

@@ -5379,6 +5379,16 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
       ND.setInvalidDecl();
     }
   }
+
+  // Virtual functions cannot be marked as 'notail'.
+  if (auto *Attr = ND.getAttr<NotTailCalledAttr>())
+    if (auto *MD = dyn_cast<CXXMethodDecl>(&ND))
+      if (MD->isVirtual()) {
+        S.Diag(ND.getLocation(),
+               diag::err_invalid_attribute_on_virtual_function)
+            << Attr;
+        ND.dropAttr<NotTailCalledAttr>();
+      }
 }
 
 static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,

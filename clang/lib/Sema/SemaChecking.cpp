@@ -493,9 +493,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_mul_overflow:
-      if (SemaBuiltinOverflow(*this, TheCall))
-          return ExprError();
-      break;
+    if (SemaBuiltinOverflow(*this, TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_operator_new:
   case Builtin::BI__builtin_operator_delete:
     if (!getLangOpts().CPlusPlus) {

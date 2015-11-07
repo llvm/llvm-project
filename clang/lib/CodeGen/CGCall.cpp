@@ -3493,6 +3493,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // lexical order, so deactivate it and run it manually here.
   CallArgs.freeArgumentMemory(*this);
 
+  if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI))
+    if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
+      Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
+
   RValue Ret = [&] {
     switch (RetAI.getKind()) {
     case ABIArgInfo::InAlloca:

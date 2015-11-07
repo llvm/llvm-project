@@ -1039,6 +1039,12 @@ def NoInstrumentFunction : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def NotTailCalled : InheritableAttr {
+  let Spellings = [GNU<"not_tail_called">, CXX11<"clang", "not_tail_called">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [NotTailCalledDocs];
+}
+
 def NoThrow : InheritableAttr {
   let Spellings = [GCC<"nothrow">, Declspec<"nothrow">];
   let Documentation = [Undocumented];
