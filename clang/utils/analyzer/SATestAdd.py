@@ -10,11 +10,35 @@ the Repository Directory.
    have the same name as the project ID
 
  The project should use the following files for set up:
-      - pre_run_static_analyzer.sh - prepare the build environment.
+      - cleanup_run_static_analyzer.sh - prepare the build environment.
                                      Ex: make clean can be a part of it.
       - run_static_analyzer.cmd - a list of commands to run through scan-build.
                                      Each command should be on a separate line.
                                      Choose from: configure, make, xcodebuild
+      - download_project.sh - download the project into the CachedSource/
+                                     directory. For example, download a zip of
+                                     the project source from GitHub, unzip it,
+                                     and rename the unzipped directory to
+                                     'CachedSource'. This script is not called
+                                     when 'CachedSource' is already present,
+                                     so an alternative is to check the
+                                     'CachedSource' directory into the
+                                     repository directly.
+      - CachedSource/ - An optional directory containing the source of the
+                                     project being analyzed. If present,
+                                     download_project.sh will not be called.
+      - changes_for_analyzer.patch - An optional patch file for any local changes
+                                     (e.g., to adapt to newer version of clang)
+                                     that should be applied to CachedSource
+                                     before analysis. To construct this patch,
+                                     run the the download script to download
+                                     the project to CachedSource, copy the
+                                     CachedSource to another directory (for
+                                     example, PatchedSource) and make any needed
+                                     modifications to the the copied source.
+                                     Then run:
+                                          diff -ur CachedSource PatchedSource \
+                                              > changes_for_analyzer.patch
 """
 import SATestBuild
 
