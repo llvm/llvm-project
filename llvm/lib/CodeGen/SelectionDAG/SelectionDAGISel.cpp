@@ -1122,7 +1122,7 @@ static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
   for (Function::const_arg_iterator AI = Fn.arg_begin(), AE = Fn.arg_end();
        AI != AE; ++AI)
     if (AI->hasSwiftErrorAttr())
-      FuncInfo->SwiftErrorVals.push_back(AI);
+      FuncInfo->SwiftErrorVals.push_back(&*AI);
 
   for (const auto &LLVMBB : Fn)
     for (const auto &Inst : LLVMBB) {
