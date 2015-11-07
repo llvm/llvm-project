@@ -16,6 +16,7 @@ class ThreadSpecificBreakTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfLinux # rdar://23453412 - timing out on Ubuntu 14.04/15.10 x86_64
     @skipIfFreeBSD # test frequently times out or hangs
     @expectedFailureFreeBSD('llvm.org/pr18522') # hits break in another thread in testrun
     @expectedFailureWindows("llvm.org/pr24777")
