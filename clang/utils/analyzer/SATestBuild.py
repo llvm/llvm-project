@@ -154,6 +154,8 @@ Jobs = int(math.ceil(detectCPUs() * 0.75))
 ProjectMapFile = "projectMap.csv"
 
 # Names of the project specific scripts.
+# The script that downloads the project.
+DownloadScript = "download_project.sh"
 # The script that needs to be executed before the build can start.
 CleanupScript = "cleanup_run_static_analyzer.sh"
 # This is a file containing commands for scan-build.
@@ -173,6 +175,21 @@ DiffsSummaryFileName = "diffs.txt"
 SBOutputDirName = "ScanBuildResults"
 SBOutputDirReferencePrefix = "Ref"
 
+# The name of the directory storing the cached project source. If this directory
+# does not exist, the download script will be executed. That script should
+# create the "CachedSource" directory and download the project source into it.
+CachedSourceDirName = "CachedSource"
+
+# The name of the directory containing the source code that will be analyzed.
+# Each time a project is analyzed, a fresh copy of its CachedSource directory
+# will be copied to the PatchedSource directory and then the local patches
+# in PatchfileName will be applied (if PatchfileName exists).
+PatchedSourceDirName = "PatchedSource"
+
+# The name of the patchfile specifying any changes that should be applied
+# to the CachedSource before analyzing.
+PatchfileName = "changes_for_analyzer.patch"
+
 # The list of checkers used during analyzes.
 # Currently, consists of all the non-experimental checkers, plus a few alpha
 # checkers we don't want to regress on.
@@ -186,22 +203,72 @@ Verbose = 1
 
 # Run pre-processing script if any.
 def runCleanupScript(Dir, PBuildLogFile):
+    Cwd = os.path.join(Dir, PatchedSourceDirName)
     ScriptPath = os.path.join(Dir, CleanupScript)
+    runScript(ScriptPath, PBuildLogFile, Cwd)
+
+# Run the script to download the project, if it exists.
+def runDownloadScript(Dir, PBuildLogFile):
+    ScriptPath = os.path.join(Dir, DownloadScript)
+    runScript(ScriptPath, PBuildLogFile, Dir)
+
+# Run the provided script if it exists.
+def runScript(ScriptPath, PBuildLogFile, Cwd):
     if os.path.exists(ScriptPath):
         try:
             if Verbose == 1:
                 print "  Executing: %s" % (ScriptPath,)
-            check_call("chmod +x %s" % ScriptPath, cwd = Dir,
+            check_call("chmod +x %s" % ScriptPath, cwd = Cwd,
                                               stderr=PBuildLogFile,
                                               stdout=PBuildLogFile,
                                               shell=True)
-            check_call(ScriptPath, cwd = Dir, stderr=PBuildLogFile,
+            check_call(ScriptPath, cwd = Cwd, stderr=PBuildLogFile,
                                               stdout=PBuildLogFile,
                                               shell=True)
         except:
-            print "Error: The pre-processing step failed. See ", \
-                  PBuildLogFile.name, " for details."
+            print "Error: Running %s failed. See %s for details." % (ScriptPath,
+                PBuildLogFile.name)
             sys.exit(-1)
+
+# Download the project and apply the local patchfile if it exists.
+def downloadAndPatch(Dir, PBuildLogFile):
+    CachedSourceDirPath = os.path.join(Dir, CachedSourceDirName)
+
+    # If the we don't already have the cached source, run the project's
+    # download script to download it.
+    if not os.path.exists(CachedSourceDirPath):
+      runDownloadScript(Dir, PBuildLogFile)
+      if not os.path.exists(CachedSourceDirPath):
+        print "Error: '%s' not found after download." % (CachedSourceDirPath)
+        exit(-1)
+
+    PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
+
+    # Remove potentially stale patched source.
+    if os.path.exists(PatchedSourceDirPath):
+        shutil.rmtree(PatchedSourceDirPath)
+
+    # Copy the cached source and apply any patches to the copy.
+    shutil.copytree(CachedSourceDirPath, PatchedSourceDirPath, symlinks=True)
+    applyPatch(Dir, PBuildLogFile)
+
+def applyPatch(Dir, PBuildLogFile):
+    PatchfilePath = os.path.join(Dir, PatchfileName)
+    PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
+    if not os.path.exists(PatchfilePath):
+        print "  No local patches."
+        return
+
+    print "  Applying patch."
+    try:
+        check_call("patch -p1 < %s" % (PatchfilePath),
+                    cwd = PatchedSourceDirPath,
+                    stderr=PBuildLogFile,
+                    stdout=PBuildLogFile,
+                    shell=True)
+    except:
+        print "Error: Patch failed. See %s for details." % (PBuildLogFile.name)
+        sys.exit(-1)
 
 # Build the project with scan-build by reading in the commands and
 # prefixing them with the scan-build options.
@@ -214,6 +281,9 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     AllCheckers = Checkers
     if os.environ.has_key('SA_ADDITIONAL_CHECKERS'):
         AllCheckers = AllCheckers + ',' + os.environ['SA_ADDITIONAL_CHECKERS']
+
+    # Run scan-build from within the patched source directory.
+    SBCwd = os.path.join(Dir, PatchedSourceDirName)
 
     SBOptions = "--use-analyzer " + Clang + " "
     SBOptions += "-plist-html -o " + SBOutputDir + " "
@@ -238,9 +308,9 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
             SBCommand = SBPrefix + Command
             if Verbose == 1:
                 print "  Executing: %s" % (SBCommand,)
-            check_call(SBCommand, cwd = Dir, stderr=PBuildLogFile,
-                                             stdout=PBuildLogFile,
-                                             shell=True)
+            check_call(SBCommand, cwd = SBCwd, stderr=PBuildLogFile,
+                                               stdout=PBuildLogFile,
+                                               shell=True)
     except:
         print "Error: scan-build failed. See ",PBuildLogFile.name,\
               " for details."
@@ -355,9 +425,9 @@ def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
 
     # Build and analyze the project.
     try:
-        runCleanupScript(Dir, PBuildLogFile)
-
         if (ProjectBuildMode == 1):
+            downloadAndPatch(Dir, PBuildLogFile)
+            runCleanupScript(Dir, PBuildLogFile)
             runScanBuild(Dir, SBOutputDir, PBuildLogFile)
         else:
             runAnalyzePreprocessed(Dir, SBOutputDir, ProjectBuildMode)
@@ -372,8 +442,12 @@ def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
                         continue
                     Plist = os.path.join(DirPath, F)
                     Data = plistlib.readPlist(Plist)
-                    Paths = [SourceFile[len(Dir)+1:] if SourceFile.startswith(Dir)\
-                            else SourceFile for SourceFile in Data['files']]
+                    PathPrefix = Dir
+                    if (ProjectBuildMode == 1):
+                        PathPrefix = os.path.join(Dir, PatchedSourceDirName)
+                    Paths = [SourceFile[len(PathPrefix)+1:]\
+                              if SourceFile.startswith(PathPrefix)\
+                              else SourceFile for SourceFile in Data['files']]
                     Data['files'] = Paths
                     plistlib.writePlist(Data, Plist)
 
@@ -489,7 +563,8 @@ def runCmpResults(Dir, Strictness = 0):
             print "  Comparing Results: %s %s" % (RefDir, NewDir)
 
         DiffsPath = os.path.join(NewDir, DiffsSummaryFileName)
-        Opts = CmpRuns.CmpOptions(DiffsPath, "", Dir)
+        PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
+        Opts = CmpRuns.CmpOptions(DiffsPath, "", PatchedSourceDirPath)
         # Discard everything coming out of stdout (CmpRun produces a lot of them).
         OLD_STDOUT = sys.stdout
         sys.stdout = Discarder()
