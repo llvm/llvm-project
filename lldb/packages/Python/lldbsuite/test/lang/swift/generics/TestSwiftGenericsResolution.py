@@ -22,7 +22,6 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureDarwin("rdar://22580750")
     def test_break_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
         self.build()
