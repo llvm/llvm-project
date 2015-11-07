@@ -121,7 +121,7 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurSubmodule = nullptr;
   if (CurLexerKind != CLK_LexAfterModuleImport)
     CurLexerKind = CLK_Lexer;
-  
+
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks && !CurLexer->Is_PragmaLexer) {
     SrcMgr::CharacteristicKind FileType =
