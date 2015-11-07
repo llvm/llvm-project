@@ -1646,4 +1646,52 @@ All of these conventions except ``none`` require the function to have an error p
 * ``swift_error(nonnull_error)`` means that calls to the function should be considered to have thrown if they leave a non-null error in the error parameter.  The return type is left unmodified.
 
 }];
+
+def NotTailCalledDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``not_tail_called`` attribute prevents tail-call optimization on statically bound calls. It has no effect on indirect calls. Virtual functions, objective-c methods, and functions marked as ``always_inline`` cannot be marked as ``not_tail_called``.
+
+For example, it prevents tail-call optimization in the following case:
+  .. code-block: c
+  int __attribute__((not_tail_called)) foo1(int);
+
+  int foo2(int a) {
+    return foo1(a); // No tail-call optimization on direct calls.
+  }
+
+However, it doesn't prevent tail-call optimization in this case:
+  .. code-block: c
+  int __attribute__((not_tail_called)) foo1(int);
+
+  int foo2(int a) {
+    int (*fn)(int) = &foo1;
+
+    // not_tail_called has no effect on an indirect call even if the call can be
+    // resolved at compile time.
+    return (*fn)(a);
+  }
+
+Marking virtual functions as ``not_tail_called`` is an error:
+  .. code-block: c++
+  class Base {
+  public:
+    // not_tail_called on a virtual function is an error.
+    [[clang::not_tail_called]] virtual int foo1();
+
+    virtual int foo2();
+
+    // Non-virtual functions can be marked ``not_tail_called``.
+    [[clang::not_tail_called]] int foo3();
+  };
+
+  class Derived1 : public Base {
+  public:
+    int foo1() override;
+
+    // not_tail_called on a virtual function is an error.
+    [[clang::not_tail_called]] int foo2() override;
+  };
+
+  }];
 }
