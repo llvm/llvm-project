@@ -344,8 +344,6 @@ class DwarfDebug : public AsmPrinterHandler {
   DwarfAccelTable AccelNamespace;
   DwarfAccelTable AccelTypes;
 
-  DenseMap<const Function *, DISubprogram *> FunctionDIs;
-
   // Identify a debugger for "tuning" the debug info.
   DebuggerKind DebuggerTuning;
 
