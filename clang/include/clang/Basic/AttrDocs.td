@@ -1646,6 +1646,7 @@ All of these conventions except ``none`` require the function to have an error p
 * ``swift_error(nonnull_error)`` means that calls to the function should be considered to have thrown if they leave a non-null error in the error parameter.  The return type is left unmodified.
 
 }];
+}
 
 def NotTailCalledDocs : Documentation {
   let Category = DocCatFunction;
