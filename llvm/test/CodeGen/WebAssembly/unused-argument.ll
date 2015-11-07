@@ -10,7 +10,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: .local i32{{$}}
-; CHECK-NEXT: get_local 1{{$}}
+; CHECK-NEXT: get_local push, 1{{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 ; CHECK-NEXT: return (get_local 2){{$}}
 define i32 @unused_first(i32 %x, i32 %y) {
@@ -22,7 +22,7 @@ define i32 @unused_first(i32 %x, i32 %y) {
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: .local i32{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 ; CHECK-NEXT: return (get_local 2){{$}}
 define i32 @unused_second(i32 %x, i32 %y) {

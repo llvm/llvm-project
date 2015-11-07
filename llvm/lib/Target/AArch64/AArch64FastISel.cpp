@@ -2473,6 +2473,10 @@ bool AArch64FastISel::selectIndirectBr(const Instruction *I) {
 bool AArch64FastISel::selectCmp(const Instruction *I) {
   const CmpInst *CI = cast<CmpInst>(I);
 
+  // Vectors of i1 are weird: bail out.
+  if (CI->getType()->isVectorTy())
+    return false;
+
   // Try to optimize or fold the cmp.
   CmpInst::Predicate Predicate = optimizeCmpPredicate(CI);
   unsigned ResultReg = 0;

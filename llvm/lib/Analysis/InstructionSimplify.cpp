@@ -2176,7 +2176,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       // X >=u 1 -> X
       if (match(RHS, m_One()))
         return LHS;
-      if (isImpliedCondition(RHS, LHS))
+      if (isImpliedCondition(RHS, LHS, Q.DL))
         return getTrue(ITy);
       break;
     case ICmpInst::ICMP_SGE:
@@ -2187,7 +2187,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       ///  0  |  1  |  1 (0 >= -1)  |  1
       ///  1  |  0  |  0 (-1 >= 0)  |  0
       ///  1  |  1  |  1 (-1 >= -1) |  1
-      if (isImpliedCondition(LHS, RHS))
+      if (isImpliedCondition(LHS, RHS, Q.DL))
         return getTrue(ITy);
       break;
     case ICmpInst::ICMP_SLT:
@@ -2201,7 +2201,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         return LHS;
       break;
     case ICmpInst::ICMP_ULE:
-      if (isImpliedCondition(LHS, RHS))
+      if (isImpliedCondition(LHS, RHS, Q.DL))
         return getTrue(ITy);
       break;
     }

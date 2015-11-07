@@ -527,6 +527,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(caller);
   KEYWORD(tail);
   KEYWORD(musttail);
+  KEYWORD(notail);
   KEYWORD(target);
   KEYWORD(triple);
   KEYWORD(unwind);

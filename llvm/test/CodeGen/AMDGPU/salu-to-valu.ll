@@ -185,18 +185,18 @@ entry:
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x16:
 
 ; GCN: s_mov_b32 s[[OFFSET0:[0-9]+]], 0x13480{{$}}
-; SI: s_add_i32 s[[OFFSET1:[0-9]+]], s[[OFFSET0]], 16
-; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET0]]:{{[0-9]+}}], 0 addr64{{$}}
+; SI-DAG: s_add_i32 s[[OFFSET1:[0-9]+]], s[[OFFSET0]], 16
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET0]]:{{[0-9]+}}], 0 addr64{{$}}
 
-; CI: s_mov_b32 s[[OFFSET1:[0-9]+]], 0x13490{{$}}
-; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
+; CI-DAG: s_mov_b32 s[[OFFSET1:[0-9]+]], 0x13490{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
 
-; SI: s_add_i32 s[[OFFSET2:[0-9]+]], s[[OFFSET0]], 32
-; CI: s_mov_b32 s[[OFFSET2:[0-9]+]], 0x134a0
+; SI-DAG: s_add_i32 s[[OFFSET2:[0-9]+]], s[[OFFSET0]], 32
+; CI-DAG: s_mov_b32 s[[OFFSET2:[0-9]+]], 0x134a0
 
-; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET2]]:{{[0-9]+}}], 0 addr64{{$}}
-; GCN: s_add_i32 s[[OFFSET3:[0-9]+]], s[[OFFSET2]], 16
-; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET3]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET2]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN-DAG: s_add_i32 s[[OFFSET3:[0-9]+]], s[[OFFSET2]], 16
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET3]]:{{[0-9]+}}], 0 addr64{{$}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}

@@ -335,6 +335,15 @@ enum { BITCODE_CURRENT_EPOCH = 0 };
     SYNCHSCOPE_CROSSTHREAD = 1
   };
 
+  /// Markers and flags for call instruction.
+  enum CallMarkersFlags {
+    CALL_TAIL = 0,
+    CALL_CCONV = 1,
+    CALL_MUSTTAIL = 14,
+    CALL_EXPLICIT_TYPE = 15,
+    CALL_NOTAIL = 16
+  };
+
   // The function body block (FUNCTION_BLOCK_ID) describes function bodies.  It
   // can contain a constant block (CONSTANTS_BLOCK_ID).
   enum FunctionCodes {

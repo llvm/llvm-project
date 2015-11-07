@@ -1431,9 +1431,7 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
 //===----------------------------------------------------------------------===//
 
 multiclass V_CNDMASK <vop2 op, string name> {
-  defm _e32 : VOP2_m <
-      op, VOP_CNDMASK.Outs, VOP_CNDMASK.Ins32, VOP_CNDMASK.Asm32, [],
-      name, name>;
+  defm _e32 : VOP2_m <op, name, VOP_CNDMASK, [], name>;
 
   defm _e64  : VOP3_m <
       op, VOP_CNDMASK.Outs, VOP_CNDMASK.Ins64,
@@ -2010,8 +2008,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
   let UseNamedOperandTable = 1, Uses = [EXEC] in {
     def _SAVE : InstSI <
       (outs),
-      (ins sgpr_class:$src, i32imm:$frame_idx, SReg_128:$scratch_rsrc,
-           SReg_32:$scratch_offset),
+      (ins sgpr_class:$src, i32imm:$frame_idx),
       "", []
     > {
       let mayStore = 1;
@@ -2020,7 +2017,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 
     def _RESTORE : InstSI <
       (outs sgpr_class:$dst),
-      (ins i32imm:$frame_idx, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset),
+      (ins i32imm:$frame_idx),
       "", []
     > {
       let mayStore = 0;

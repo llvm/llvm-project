@@ -11,7 +11,7 @@ declare void @something()
 
 ; CHECK-LABEL: test0:
 ; CHECK: loop
-; CHECK: add
+; CHECK: i32.add
 ; CHECK: br_if
 ; CHECK: call
 ; CHECK: br $BB0_1{{$}}
@@ -39,7 +39,7 @@ back:
 
 ; CHECK-LABEL: test1:
 ; CHECK: loop
-; CHECK: add
+; CHECK: i32.add
 ; CHECK: br_if
 ; CHECK: call
 ; CHECK: br $BB1_1{{$}}

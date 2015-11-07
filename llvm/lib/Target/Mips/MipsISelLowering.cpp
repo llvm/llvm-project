@@ -438,9 +438,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
 
   setStackPointerRegisterToSaveRestore(ABI.IsN64() ? Mips::SP_64 : Mips::SP);
 
-  setExceptionPointerRegister(ABI.IsN64() ? Mips::A0_64 : Mips::A0);
-  setExceptionSelectorRegister(ABI.IsN64() ? Mips::A1_64 : Mips::A1);
-
   MaxStoresPerMemcpy = 16;
 
   isMicroMips = Subtarget.inMicroMipsMode();

@@ -938,6 +938,7 @@ static bool hasExceptionPointerOrCodeUser(const CatchPadInst *CPI) {
 /// do other setup for EH landing-pad blocks.
 bool SelectionDAGISel::PrepareEHLandingPad() {
   MachineBasicBlock *MBB = FuncInfo->MBB;
+  const Constant *PersonalityFn = FuncInfo->Fn->getPersonalityFn();
   const BasicBlock *LLVMBB = MBB->getBasicBlock();
   const TargetRegisterClass *PtrRC =
       TLI->getRegClassFor(TLI->getPointerTy(CurDAG->getDataLayout()));
@@ -948,7 +949,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     if (hasExceptionPointerOrCodeUser(CPI)) {
       // Get or create the virtual register to hold the pointer or code.  Mark
       // the live in physreg and copy into the vreg.
-      MCPhysReg EHPhysReg = TLI->getExceptionPointerRegister();
+      MCPhysReg EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
       assert(EHPhysReg && "target lacks exception pointer register");
       MBB->addLiveIn(EHPhysReg);
       unsigned VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
@@ -974,11 +975,11 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     .addSym(Label);
 
   // Mark exception register as live in.
-  if (unsigned Reg = TLI->getExceptionPointerRegister())
+  if (unsigned Reg = TLI->getExceptionPointerRegister(PersonalityFn))
     FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
 
   // Mark exception selector register as live in.
-  if (unsigned Reg = TLI->getExceptionSelectorRegister())
+  if (unsigned Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
     FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
 
   return true;

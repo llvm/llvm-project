@@ -471,6 +471,40 @@ unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
   return AMDGPU::COPY;
 }
 
+static unsigned getSGPRSpillSaveOpcode(unsigned Size) {
+  switch (Size) {
+  case 4:
+    return AMDGPU::SI_SPILL_S32_SAVE;
+  case 8:
+    return AMDGPU::SI_SPILL_S64_SAVE;
+  case 16:
+    return AMDGPU::SI_SPILL_S128_SAVE;
+  case 32:
+    return AMDGPU::SI_SPILL_S256_SAVE;
+  case 64:
+    return AMDGPU::SI_SPILL_S512_SAVE;
+  default:
+    llvm_unreachable("unknown register size");
+  }
+}
+
+static unsigned getVGPRSpillSaveOpcode(unsigned Size) {
+  switch (Size) {
+  case 4:
+    return AMDGPU::SI_SPILL_V32_SAVE;
+  case 8:
+    return AMDGPU::SI_SPILL_V64_SAVE;
+  case 16:
+    return AMDGPU::SI_SPILL_V128_SAVE;
+  case 32:
+    return AMDGPU::SI_SPILL_V256_SAVE;
+  case 64:
+    return AMDGPU::SI_SPILL_V512_SAVE;
+  default:
+    llvm_unreachable("unknown register size");
+  }
+}
+
 void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MI,
                                       unsigned SrcReg, bool isKill,
@@ -481,7 +515,14 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo *FrameInfo = MF->getFrameInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
-  int Opcode = -1;
+
+  unsigned Size = FrameInfo->getObjectSize(FrameIndex);
+  unsigned Align = FrameInfo->getObjectAlignment(FrameIndex);
+  MachinePointerInfo PtrInfo
+    = MachinePointerInfo::getFixedStack(*MF, FrameIndex);
+  MachineMemOperand *MMO
+    = MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                               Size, Align);
 
   if (RI.isSGPRClass(RC)) {
     MFI->setHasSpilledSGPRs();
@@ -489,50 +530,70 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     // We are only allowed to create one new instruction when spilling
     // registers, so we need to use pseudo instruction for spilling
     // SGPRs.
-    switch (RC->getSize() * 8) {
-      case 32:  Opcode = AMDGPU::SI_SPILL_S32_SAVE;  break;
-      case 64:  Opcode = AMDGPU::SI_SPILL_S64_SAVE;  break;
-      case 128: Opcode = AMDGPU::SI_SPILL_S128_SAVE; break;
-      case 256: Opcode = AMDGPU::SI_SPILL_S256_SAVE; break;
-      case 512: Opcode = AMDGPU::SI_SPILL_S512_SAVE; break;
-    }
-  } else if(RI.hasVGPRs(RC) && ST.isVGPRSpillingEnabled(MFI)) {
-    MFI->setHasSpilledVGPRs();
+    unsigned Opcode = getSGPRSpillSaveOpcode(RC->getSize());
+    BuildMI(MBB, MI, DL, get(Opcode))
+      .addReg(SrcReg)            // src
+      .addFrameIndex(FrameIndex) // frame_idx
+      .addMemOperand(MMO);
 
-    switch(RC->getSize() * 8) {
-      case 32: Opcode = AMDGPU::SI_SPILL_V32_SAVE; break;
-      case 64: Opcode = AMDGPU::SI_SPILL_V64_SAVE; break;
-      case 96: Opcode = AMDGPU::SI_SPILL_V96_SAVE; break;
-      case 128: Opcode = AMDGPU::SI_SPILL_V128_SAVE; break;
-      case 256: Opcode = AMDGPU::SI_SPILL_V256_SAVE; break;
-      case 512: Opcode = AMDGPU::SI_SPILL_V512_SAVE; break;
-    }
+    return;
   }
 
-  if (Opcode != -1) {
-    MachinePointerInfo PtrInfo
-      = MachinePointerInfo::getFixedStack(*MF, FrameIndex);
-    unsigned Size = FrameInfo->getObjectSize(FrameIndex);
-    unsigned Align = FrameInfo->getObjectAlignment(FrameIndex);
-    MachineMemOperand *MMO
-      = MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
-                                 Size, Align);
-
-    FrameInfo->setObjectAlignment(FrameIndex, 4);
-    BuildMI(MBB, MI, DL, get(Opcode))
-      .addReg(SrcReg)
-      .addFrameIndex(FrameIndex)
-      // Place-holder registers, these will be filled in by
-      // SIPrepareScratchRegs.
-      .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
-      .addReg(AMDGPU::SGPR0, RegState::Undef)
-      .addMemOperand(MMO);
-  } else {
+  if (!ST.isVGPRSpillingEnabled(MFI)) {
     LLVMContext &Ctx = MF->getFunction()->getContext();
     Ctx.emitError("SIInstrInfo::storeRegToStackSlot - Do not know how to"
                   " spill register");
     BuildMI(MBB, MI, DL, get(AMDGPU::KILL))
-            .addReg(SrcReg);
+      .addReg(SrcReg);
+
+    return;
+  }
+
+  assert(RI.hasVGPRs(RC) && "Only VGPR spilling expected");
+
+  unsigned Opcode = getVGPRSpillSaveOpcode(RC->getSize());
+  MFI->setHasSpilledVGPRs();
+  BuildMI(MBB, MI, DL, get(Opcode))
+    .addReg(SrcReg)                   // src
+    .addFrameIndex(FrameIndex)        // frame_idx
+    // Place-holder registers, these will be filled in by
+    // SIPrepareScratchRegs.
+    .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
+    .addReg(AMDGPU::SGPR0, RegState::Undef)
+    .addMemOperand(MMO);
+}
+
+static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
+  switch (Size) {
+  case 4:
+    return AMDGPU::SI_SPILL_S32_RESTORE;
+  case 8:
+    return AMDGPU::SI_SPILL_S64_RESTORE;
+  case 16:
+    return AMDGPU::SI_SPILL_S128_RESTORE;
+  case 32:
+    return AMDGPU::SI_SPILL_S256_RESTORE;
+  case 64:
+    return AMDGPU::SI_SPILL_S512_RESTORE;
+  default:
+    llvm_unreachable("unknown register size");
+  }
+}
+
+static unsigned getVGPRSpillRestoreOpcode(unsigned Size) {
+  switch (Size) {
+  case 4:
+    return AMDGPU::SI_SPILL_V32_RESTORE;
+  case 8:
+    return AMDGPU::SI_SPILL_V64_RESTORE;
+  case 16:
+    return AMDGPU::SI_SPILL_V128_RESTORE;
+  case 32:
+    return AMDGPU::SI_SPILL_V256_RESTORE;
+  case 64:
+    return AMDGPU::SI_SPILL_V512_RESTORE;
+  default:
+    llvm_unreachable("unknown register size");
   }
 }
 
@@ -545,50 +606,45 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo *FrameInfo = MF->getFrameInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
-  int Opcode = -1;
+  unsigned Align = FrameInfo->getObjectAlignment(FrameIndex);
+  unsigned Size = FrameInfo->getObjectSize(FrameIndex);
 
-  if (RI.isSGPRClass(RC)){
-    switch(RC->getSize() * 8) {
-      case 32:  Opcode = AMDGPU::SI_SPILL_S32_RESTORE; break;
-      case 64:  Opcode = AMDGPU::SI_SPILL_S64_RESTORE;  break;
-      case 128: Opcode = AMDGPU::SI_SPILL_S128_RESTORE; break;
-      case 256: Opcode = AMDGPU::SI_SPILL_S256_RESTORE; break;
-      case 512: Opcode = AMDGPU::SI_SPILL_S512_RESTORE; break;
-    }
-  } else if(RI.hasVGPRs(RC) && ST.isVGPRSpillingEnabled(MFI)) {
-    switch(RC->getSize() * 8) {
-      case 32: Opcode = AMDGPU::SI_SPILL_V32_RESTORE; break;
-      case 64: Opcode = AMDGPU::SI_SPILL_V64_RESTORE; break;
-      case 96: Opcode = AMDGPU::SI_SPILL_V96_RESTORE; break;
-      case 128: Opcode = AMDGPU::SI_SPILL_V128_RESTORE; break;
-      case 256: Opcode = AMDGPU::SI_SPILL_V256_RESTORE; break;
-      case 512: Opcode = AMDGPU::SI_SPILL_V512_RESTORE; break;
-    }
+  MachinePointerInfo PtrInfo
+    = MachinePointerInfo::getFixedStack(*MF, FrameIndex);
+
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+    PtrInfo, MachineMemOperand::MOLoad, Size, Align);
+
+  if (RI.isSGPRClass(RC)) {
+    // FIXME: Maybe this should not include a memoperand because it will be
+    // lowered to non-memory instructions.
+    unsigned Opcode = getSGPRSpillRestoreOpcode(RC->getSize());
+    BuildMI(MBB, MI, DL, get(Opcode), DestReg)
+      .addFrameIndex(FrameIndex) // frame_idx
+      .addMemOperand(MMO);
+
+    return;
   }
 
-  if (Opcode != -1) {
-    unsigned Align = 4;
-    FrameInfo->setObjectAlignment(FrameIndex, Align);
-    unsigned Size = FrameInfo->getObjectSize(FrameIndex);
-
-    MachinePointerInfo PtrInfo
-      = MachinePointerInfo::getFixedStack(*MF, FrameIndex);
-    MachineMemOperand *MMO = MF->getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOLoad, Size, Align);
-
-    BuildMI(MBB, MI, DL, get(Opcode), DestReg)
-      .addFrameIndex(FrameIndex)
-      // Place-holder registers, these will be filled in by
-      // SIPrepareScratchRegs.
-      .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
-      .addReg(AMDGPU::SGPR0, RegState::Undef)
-      .addMemOperand(MMO);
-  } else {
+  if (!ST.isVGPRSpillingEnabled(MFI)) {
     LLVMContext &Ctx = MF->getFunction()->getContext();
     Ctx.emitError("SIInstrInfo::loadRegFromStackSlot - Do not know how to"
                   " restore register");
     BuildMI(MBB, MI, DL, get(AMDGPU::IMPLICIT_DEF), DestReg);
+
+    return;
   }
+
+  assert(RI.hasVGPRs(RC) && "Only VGPR spilling expected");
+
+  unsigned Opcode = getVGPRSpillRestoreOpcode(RC->getSize());
+  BuildMI(MBB, MI, DL, get(Opcode), DestReg)
+    .addFrameIndex(FrameIndex)        // frame_idx
+    // Place-holder registers, these will be filled in by
+    // SIPrepareScratchRegs.
+    .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
+    .addReg(AMDGPU::SGPR0, RegState::Undef)
+    .addMemOperand(MMO);
 }
 
 /// \param @Offset Offset in bytes of the FrameIndex being spilled
@@ -631,6 +687,7 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(MachineBasicBlock &MBB,
       }
 
       RS->enterBasicBlock(&Entry);
+      // FIXME: Can we scavenge an SReg_64 and access the subregs?
       unsigned STmp0 = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, 0);
       unsigned STmp1 = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, 0);
       BuildMI(Entry, Insert, DL, get(AMDGPU::S_LOAD_DWORD_IMM), STmp0)

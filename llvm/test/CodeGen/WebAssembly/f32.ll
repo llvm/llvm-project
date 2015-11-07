@@ -19,11 +19,11 @@ declare float @llvm.rint.f32(float)
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result f32{{$}}
 ; CHECK-NEXT: .local f32, f32, f32{{$}}
-; CHECK-NEXT: get_local 1{{$}}
+; CHECK-NEXT: get_local push, 1{{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
-; CHECK-NEXT: get_local 0{{$}}
+; CHECK-NEXT: get_local push, 0{{$}}
 ; CHECK-NEXT: set_local 3, pop{{$}}
-; CHECK-NEXT: add (get_local 3), (get_local 2){{$}}
+; CHECK-NEXT: f32.add push, (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: set_local 4, pop{{$}}
 ; CHECK-NEXT: return (get_local 4){{$}}
 define float @fadd32(float %x, float %y) {
@@ -32,7 +32,7 @@ define float @fadd32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fsub32:
-; CHECK: sub (get_local 3), (get_local 2){{$}}
+; CHECK: f32.sub push, (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: set_local 4, pop{{$}}
 define float @fsub32(float %x, float %y) {
   %a = fsub float %x, %y
@@ -40,7 +40,7 @@ define float @fsub32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fmul32:
-; CHECK: mul (get_local 3), (get_local 2){{$}}
+; CHECK: f32.mul push, (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: set_local 4, pop{{$}}
 define float @fmul32(float %x, float %y) {
   %a = fmul float %x, %y
@@ -48,7 +48,7 @@ define float @fmul32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fdiv32:
-; CHECK: div (get_local 3), (get_local 2){{$}}
+; CHECK: f32.div push, (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: set_local 4, pop{{$}}
 define float @fdiv32(float %x, float %y) {
   %a = fdiv float %x, %y
@@ -56,7 +56,7 @@ define float @fdiv32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fabs32:
-; CHECK: abs (get_local 1){{$}}
+; CHECK: f32.abs push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @fabs32(float %x) {
   %a = call float @llvm.fabs.f32(float %x)
@@ -64,7 +64,7 @@ define float @fabs32(float %x) {
 }
 
 ; CHECK-LABEL: fneg32:
-; CHECK: neg (get_local 1){{$}}
+; CHECK: f32.neg push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @fneg32(float %x) {
   %a = fsub float -0., %x
@@ -72,7 +72,7 @@ define float @fneg32(float %x) {
 }
 
 ; CHECK-LABEL: copysign32:
-; CHECK: copysign (get_local 3), (get_local 2){{$}}
+; CHECK: f32.copysign push, (get_local 3), (get_local 2){{$}}
 ; CHECK-NEXT: set_local 4, pop{{$}}
 define float @copysign32(float %x, float %y) {
   %a = call float @llvm.copysign.f32(float %x, float %y)
@@ -80,7 +80,7 @@ define float @copysign32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: sqrt32:
-; CHECK: sqrt (get_local 1){{$}}
+; CHECK: f32.sqrt push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @sqrt32(float %x) {
   %a = call float @llvm.sqrt.f32(float %x)
@@ -88,7 +88,7 @@ define float @sqrt32(float %x) {
 }
 
 ; CHECK-LABEL: ceil32:
-; CHECK: ceil (get_local 1){{$}}
+; CHECK: f32.ceil push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @ceil32(float %x) {
   %a = call float @llvm.ceil.f32(float %x)
@@ -96,7 +96,7 @@ define float @ceil32(float %x) {
 }
 
 ; CHECK-LABEL: floor32:
-; CHECK: floor (get_local 1){{$}}
+; CHECK: f32.floor push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @floor32(float %x) {
   %a = call float @llvm.floor.f32(float %x)
@@ -104,7 +104,7 @@ define float @floor32(float %x) {
 }
 
 ; CHECK-LABEL: trunc32:
-; CHECK: trunc (get_local 1){{$}}
+; CHECK: f32.trunc push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @trunc32(float %x) {
   %a = call float @llvm.trunc.f32(float %x)
@@ -112,7 +112,7 @@ define float @trunc32(float %x) {
 }
 
 ; CHECK-LABEL: nearest32:
-; CHECK: nearest (get_local 1){{$}}
+; CHECK: f32.nearest push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @nearest32(float %x) {
   %a = call float @llvm.nearbyint.f32(float %x)
@@ -120,7 +120,7 @@ define float @nearest32(float %x) {
 }
 
 ; CHECK-LABEL: nearest32_via_rint:
-; CHECK: nearest (get_local 1){{$}}
+; CHECK: f32.nearest push, (get_local 1){{$}}
 ; CHECK-NEXT: set_local 2, pop{{$}}
 define float @nearest32_via_rint(float %x) {
   %a = call float @llvm.rint.f32(float %x)

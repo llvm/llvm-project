@@ -376,6 +376,14 @@ public:
     return make_range(livein_begin(), livein_end());
   }
 
+  /// Get the clobber mask for the start of this basic block. Funclets use this
+  /// to prevent register allocation across funclet transitions.
+  const uint32_t *getBeginClobberMask(const TargetRegisterInfo *TRI) const;
+
+  /// Get the clobber mask for the end of the basic block.
+  /// \see getBeginClobberMask()
+  const uint32_t *getEndClobberMask(const TargetRegisterInfo *TRI) const;
+
   /// Return alignment of the basic block. The alignment is specified as
   /// log2(bytes).
   unsigned getAlignment() const { return Alignment; }
@@ -548,8 +556,8 @@ public:
     return const_cast<MachineBasicBlock *>(this)->getLastNonDebugInstr();
   }
 
-  /// Convenience function that returns true if the block has no successors and
-  /// contains a return instruction.
+  /// Convenience function that returns true if the block ends in a return
+  /// instruction.
   bool isReturnBlock() const {
     return !empty() && back().isReturn();
   }

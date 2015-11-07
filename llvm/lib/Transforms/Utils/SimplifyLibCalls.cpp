@@ -1093,7 +1093,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     if (Op1C->isExactlyValue(2.0) &&
         hasUnaryFloatFn(TLI, Op1->getType(), LibFunc::exp2, LibFunc::exp2f,
                         LibFunc::exp2l))
-      return EmitUnaryFloatFnCall(Op2, "exp2", B, Callee->getAttributes());
+      return EmitUnaryFloatFnCall(Op2, TLI->getName(LibFunc::exp2), B,
+                                  Callee->getAttributes());
     // pow(10.0, x) -> exp10(x)
     if (Op1C->isExactlyValue(10.0) &&
         hasUnaryFloatFn(TLI, Op1->getType(), LibFunc::exp10, LibFunc::exp10f,

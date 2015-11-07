@@ -399,8 +399,12 @@ void SchedulePostRATDList::schedule() {
   }
 
   DEBUG(dbgs() << "********** List Scheduling **********\n");
-  DEBUG(for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
-          SUnits[su].dumpAll(this));
+  DEBUG(
+    for (const SUnit &SU : SUnits) {
+      SU.dumpAll(this);
+      dbgs() << '\n';
+    }
+  );
 
   AvailableQueue.initNodes(SUnits);
   ListScheduleTopDown();

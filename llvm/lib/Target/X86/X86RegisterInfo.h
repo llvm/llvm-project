@@ -96,7 +96,7 @@ public:
   getCalleeSavedRegs(const MachineFunction* MF) const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
-  const uint32_t *getNoPreservedMask() const;
+  const uint32_t *getNoPreservedMask() const override;
 
   /// getReservedRegs - Returns a bitset indexed by physical register number
   /// indicating if a register is a special register that has particular uses and

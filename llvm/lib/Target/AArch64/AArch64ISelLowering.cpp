@@ -196,11 +196,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Expand);
 
-  // Exception handling.
-  // FIXME: These are guesses. Has this been defined yet?
-  setExceptionPointerRegister(AArch64::X0);
-  setExceptionSelectorRegister(AArch64::X1);
-
   // Constant pool entries
   setOperationAction(ISD::ConstantPool, MVT::i64, Custom);
 

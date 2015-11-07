@@ -304,7 +304,9 @@ bool TailCallElim::markTails(Function &F, bool &AllCallsAreTailCalls) {
       if (!CI || CI->isTailCall())
         continue;
 
-      if (CI->doesNotAccessMemory()) {
+      bool IsNoTail = CI->isNoTailCall();
+
+      if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed
         // outside this function can be marked tail. Even if you stored the
         // alloca address into a global, a readnone function can't load the
@@ -332,7 +334,7 @@ bool TailCallElim::markTails(Function &F, bool &AllCallsAreTailCalls) {
         }
       }
 
-      if (Escaped == UNESCAPED && !Tracker.AllocaUsers.count(CI)) {
+      if (!IsNoTail && Escaped == UNESCAPED && !Tracker.AllocaUsers.count(CI)) {
         DeferredTails.push_back(CI);
       } else {
         AllCallsAreTailCalls = false;

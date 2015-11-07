@@ -4,8 +4,10 @@
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 
 ; FUNC-LABEL: {{^}}i8_arg:
-; EG: MOV {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
-; GCN: buffer_load_ubyte
+; EG: AND_INT {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
+; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
+; VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
+; GCN: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xff
 
 define void @i8_arg(i32 addrspace(1)* nocapture %out, i8 %in) nounwind {
 entry:
@@ -39,8 +41,10 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i16_arg:
-; EG: MOV {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
-; GCN: buffer_load_ushort
+; EG: AND_INT {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
+; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
+; VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
+; GCN: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xff
 
 define void @i16_arg(i32 addrspace(1)* nocapture %out, i16 %in) nounwind {
 entry:

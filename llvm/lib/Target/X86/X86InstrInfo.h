@@ -264,6 +264,46 @@ public:
   bool findCommutedOpIndices(MachineInstr *MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
 
+  /// Returns true if the routine could find two commutable operands
+  /// in the given FMA instruction. Otherwise, returns false.
+  ///
+  /// \p SrcOpIdx1 and \p SrcOpIdx2 are INPUT and OUTPUT arguments.
+  /// The output indices of the commuted operands are returned in these
+  /// arguments. Also, the input values of these arguments may be preset either
+  /// to indices of operands that must be commuted or be equal to a special
+  /// value 'CommuteAnyOperandIndex' which means that the corresponding
+  /// operand index is not set and this method is free to pick any of
+  /// available commutable operands.
+  ///
+  /// For example, calling this method this way:
+  ///     unsigned Idx1 = 1, Idx2 = CommuteAnyOperandIndex;
+  ///     findFMA3CommutedOpIndices(MI, Idx1, Idx2);
+  /// can be interpreted as a query asking if the operand #1 can be swapped
+  /// with any other available operand (e.g. operand #2, operand #3, etc.).
+  ///
+  /// The returned FMA opcode may differ from the opcode in the given MI.
+  /// For example, commuting the operands #1 and #3 in the following FMA
+  ///     FMA213 #1, #2, #3
+  /// results into instruction with adjusted opcode:
+  ///     FMA231 #3, #2, #1
+  bool findFMA3CommutedOpIndices(MachineInstr *MI,
+                                 unsigned &SrcOpIdx1,
+                                 unsigned &SrcOpIdx2) const;
+
+  /// Returns an adjusted FMA opcode that must be used in FMA instruction that
+  /// performs the same computations as the given MI but which has the operands
+  /// \p SrcOpIdx1 and \p SrcOpIdx2 commuted.
+  /// It may return 0 if it is unsafe to commute the operands.
+  ///
+  /// The returned FMA opcode may differ from the opcode in the given \p MI.
+  /// For example, commuting the operands #1 and #3 in the following FMA
+  ///     FMA213 #1, #2, #3
+  /// results into instruction with adjusted opcode:
+  ///     FMA231 #3, #2, #1
+  unsigned getFMA3OpcodeToCommuteOperands(MachineInstr *MI,
+                                          unsigned SrcOpIdx1,
+                                          unsigned SrcOpIdx2) const;
+
   // Branch analysis.
   bool isUnpredicatedTerminator(const MachineInstr* MI) const override;
   bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,

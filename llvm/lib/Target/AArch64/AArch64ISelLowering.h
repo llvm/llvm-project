@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 
+#include "AArch64.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/CallingConv.h"
@@ -365,6 +366,22 @@ public:
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const override;
+
+  /// If a physical register, this returns the register that receives the
+  /// exception address on entry to an EH pad.
+  unsigned
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+    // FIXME: This is a guess. Has this been defined yet?
+    return AArch64::X0;
+  }
+
+  /// If a physical register, this returns the register that receives the
+  /// exception typeid on entry to a landing pad.
+  unsigned
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+    // FIXME: This is a guess. Has this been defined yet?
+    return AArch64::X1;
+  }
 
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;

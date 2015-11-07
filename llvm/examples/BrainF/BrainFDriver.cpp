@@ -64,9 +64,9 @@ void addMainFunction(Module *mod) {
                           IntegerType::getInt8Ty(mod->getContext()))), NULL));
   {
     Function::arg_iterator args = main_func->arg_begin();
-    Value *arg_0 = args++;
+    Value *arg_0 = &*args++;
     arg_0->setName("argc");
-    Value *arg_1 = args++;
+    Value *arg_1 = &*args++;
     arg_1->setName("argv");
   }
 

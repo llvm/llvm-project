@@ -2237,8 +2237,9 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.getExceptionPointerRegister() == 0 &&
-      TLI.getExceptionSelectorRegister() == 0)
+  const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
+  if (TLI.getExceptionPointerRegister(PersonalityFn) == 0 &&
+      TLI.getExceptionSelectorRegister(PersonalityFn) == 0)
     return;
 
   SmallVector<EVT, 2> ValueVTs;

@@ -889,6 +889,16 @@ namespace llvm {
     unsigned getRegisterByName(const char* RegName, EVT VT,
                                SelectionDAG &DAG) const override;
 
+    /// If a physical register, this returns the register that receives the
+    /// exception address on entry to an EH pad.
+    unsigned
+    getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+    /// If a physical register, this returns the register that receives the
+    /// exception typeid on entry to a landing pad.
+    unsigned
+    getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
     /// This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.
     FastISel *createFastISel(FunctionLoweringInfo &funcInfo,

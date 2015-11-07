@@ -101,11 +101,11 @@ static BasicBlock::iterator findInsertPointAfter(Instruction *I,
     if (isa<LandingPadInst>(IP) || isa<CleanupPadInst>(IP)) {
       ++IP;
     } else if (auto *TPI = dyn_cast<TerminatePadInst>(IP)) {
-      IP = TPI->getUnwindDest()->getFirstNonPHI();
+      IP = TPI->getUnwindDest()->getFirstNonPHI()->getIterator();
     } else if (auto *CEPI = dyn_cast<CatchEndPadInst>(IP)) {
-      IP = CEPI->getUnwindDest()->getFirstNonPHI();
+      IP = CEPI->getUnwindDest()->getFirstNonPHI()->getIterator();
     } else if (auto *CEPI = dyn_cast<CleanupEndPadInst>(IP)) {
-      IP = CEPI->getUnwindDest()->getFirstNonPHI();
+      IP = CEPI->getUnwindDest()->getFirstNonPHI()->getIterator();
     } else if (isa<CatchPadInst>(IP)) {
       IP = MustDominate->getFirstInsertionPt();
     } else {

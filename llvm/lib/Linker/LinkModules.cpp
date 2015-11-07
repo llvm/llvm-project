@@ -440,6 +440,11 @@ class ModuleLinker {
   /// as part of a different backend compilation process.
   bool HasExportedFunctions;
 
+  /// Set to true when all global value body linking is complete (including
+  /// lazy linking). Used to prevent metadata linking from creating new
+  /// references.
+  bool DoneLinkingBodies;
+
 public:
   ModuleLinker(Module *dstM, Linker::IdentifiedStructTypeSet &Set, Module *srcM,
                DiagnosticHandlerFunction DiagnosticHandler, unsigned Flags,
@@ -448,7 +453,8 @@ public:
       : DstM(dstM), SrcM(srcM), TypeMap(Set),
         ValMaterializer(TypeMap, DstM, LazilyLinkGlobalValues, this),
         DiagnosticHandler(DiagnosticHandler), Flags(Flags), ImportIndex(Index),
-        ImportFunction(FuncToImport), HasExportedFunctions(false) {
+        ImportFunction(FuncToImport), HasExportedFunctions(false),
+        DoneLinkingBodies(false) {
     assert((ImportIndex || !ImportFunction) &&
            "Expect a FunctionInfoIndex when importing");
     // If we have a FunctionInfoIndex but no function to import,
@@ -474,6 +480,9 @@ public:
 
   /// Check if we should promote the given local value to global scope.
   bool doPromoteLocalToGlobal(const GlobalValue *SGV);
+
+  /// Check if all global value body linking is complete.
+  bool doneLinkingBodies() { return DoneLinkingBodies; }
 
 private:
   bool shouldLinkFromSource(bool &LinkFromSrc, const GlobalValue &Dest,
@@ -886,6 +895,12 @@ GlobalValue *ModuleLinker::copyGlobalValueProto(TypeMapTy &TypeMap,
 Value *ValueMaterializerTy::materializeValueFor(Value *V) {
   auto *SGV = dyn_cast<GlobalValue>(V);
   if (!SGV)
+    return nullptr;
+
+  // If we are done linking global value bodies (i.e. we are performing
+  // metadata linking), don't link in the global value due to this
+  // reference, simply map it to null.
+  if (ModLinker->doneLinkingBodies())
     return nullptr;
 
   GlobalValue *DGV = ModLinker->copyGlobalValueProto(TypeMap, SGV);
@@ -1892,15 +1907,6 @@ bool ModuleLinker::run() {
     linkGlobalValueBody(Src);
   }
 
-  // Remap all of the named MDNodes in Src into the DstM module. We do this
-  // after linking GlobalValues so that MDNodes that reference GlobalValues
-  // are properly remapped.
-  linkNamedMDNodes();
-
-  // Merge the module flags into the DstM module.
-  if (linkModuleFlagsMetadata())
-    return true;
-
   // Update the initializers in the DstM module now that all globals that may
   // be referenced are in DstM.
   for (GlobalVariable &Src : SrcM->globals()) {
@@ -1926,6 +1932,19 @@ bool ModuleLinker::run() {
     if (linkGlobalValueBody(*SGV))
       return true;
   }
+
+  // Note that we are done linking global value bodies. This prevents
+  // metadata linking from creating new references.
+  DoneLinkingBodies = true;
+
+  // Remap all of the named MDNodes in Src into the DstM module. We do this
+  // after linking GlobalValues so that MDNodes that reference GlobalValues
+  // are properly remapped.
+  linkNamedMDNodes();
+
+  // Merge the module flags into the DstM module.
+  if (linkModuleFlagsMetadata())
+    return true;
 
   return false;
 }

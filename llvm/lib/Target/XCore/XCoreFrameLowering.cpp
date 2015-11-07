@@ -160,18 +160,18 @@ static void GetSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
 /// As offsets are negative, the largest offsets will be first.
 static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
                            MachineFrameInfo *MFI, XCoreFunctionInfo *XFI,
+                           const Constant *PersonalityFn,
                            const TargetLowering *TL) {
   assert(XFI->hasEHSpillSlot() && "There are no EH register spill slots");
-  const int* EHSlot = XFI->getEHSpillSlot();
-  SpillList.push_back(StackSlotInfo(EHSlot[0],
-                                    MFI->getObjectOffset(EHSlot[0]),
-                                    TL->getExceptionPointerRegister()));
-  SpillList.push_back(StackSlotInfo(EHSlot[0],
-                                    MFI->getObjectOffset(EHSlot[1]),
-                                    TL->getExceptionSelectorRegister()));
+  const int *EHSlot = XFI->getEHSpillSlot();
+  SpillList.push_back(
+      StackSlotInfo(EHSlot[0], MFI->getObjectOffset(EHSlot[0]),
+                    TL->getExceptionPointerRegister(PersonalityFn)));
+  SpillList.push_back(
+      StackSlotInfo(EHSlot[0], MFI->getObjectOffset(EHSlot[1]),
+                    TL->getExceptionSelectorRegister(PersonalityFn)));
   std::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
 }
-
 
 static MachineMemOperand *
 getFrameIndexMMO(MachineBasicBlock &MBB, int FrameIndex, unsigned flags) {
@@ -322,8 +322,11 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
     if (XFI->hasEHSpillSlot()) {
       // The unwinder requires stack slot & CFI offsets for the exception info.
       // We do not save/spill these registers.
-      SmallVector<StackSlotInfo,2> SpillList;
-      GetEHSpillList(SpillList, MFI, XFI,
+      const Function *Fn = MF.getFunction();
+      const Constant *PersonalityFn =
+          Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
+      SmallVector<StackSlotInfo, 2> SpillList;
+      GetEHSpillList(SpillList, MFI, XFI, PersonalityFn,
                      MF.getSubtarget().getTargetLowering());
       assert(SpillList.size()==2 && "Unexpected SpillList size");
       EmitCfiOffset(MBB, MBBI, dl, TII, MMI,
@@ -354,8 +357,12 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
   if (RetOpcode == XCore::EH_RETURN) {
     // 'Restore' the exception info the unwinder has placed into the stack
     // slots.
-    SmallVector<StackSlotInfo,2> SpillList;
-    GetEHSpillList(SpillList, MFI, XFI, MF.getSubtarget().getTargetLowering());
+    const Function *Fn = MF.getFunction();
+    const Constant *PersonalityFn =
+        Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
+    SmallVector<StackSlotInfo, 2> SpillList;
+    GetEHSpillList(SpillList, MFI, XFI, PersonalityFn,
+                   MF.getSubtarget().getTargetLowering());
     RestoreSpillList(MBB, MBBI, dl, TII, RemainingAdj, SpillList);
 
     // Return to the landing pad.

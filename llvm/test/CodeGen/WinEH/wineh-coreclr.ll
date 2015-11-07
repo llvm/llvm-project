@@ -2,6 +2,8 @@
 
 declare void @ProcessCLRException()
 declare void @f(i32)
+declare void @g(i8 addrspace(1)*)
+declare i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token)
 
 ; Simplified IR for pseudo-C# like the following:
 ; void test1() {
@@ -51,8 +53,13 @@ catch1.pad:
     to label %catch1.body unwind label %catch2.pad
 catch1.body:
 ; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                     ^ establisher frame pointer passed in rcx
+;                        ^ establisher frame pointer passed in rcx
 ; CHECK: .seh_endprologue
+; CHECK: movq %rdx, %rcx
+;             ^ exception pointer passed in rdx
+; CHECK-NEXT: callq g
+  %exn1 = call i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token %catch1)
+  call void @g(i8 addrspace(1)* %exn1)
 ; CHECK: [[L_before_f3:.+]]:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
@@ -67,8 +74,13 @@ catch2.pad:
     to label %catch2.body unwind label %catch.end
 catch2.body:
 ; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                     ^ establisher frame pointer passed in rcx
+;                        ^ establisher frame pointer passed in rcx
 ; CHECK: .seh_endprologue
+; CHECK: movq %rdx, %rcx
+;             ^ exception pointer passed in rdx
+; CHECK-NEXT: callq g
+  %exn2 = call i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token %catch2)
+  call void @g(i8 addrspace(1)* %exn2)
 ; CHECK: [[L_before_f4:.+]]:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
@@ -87,7 +99,7 @@ fault.pad:
 ; CHECK: .seh_proc [[L_fault:[^ ]+]]
   %fault = cleanuppad [i32 undef]
 ; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                     ^ establisher frame pointer passed in rcx
+;                        ^ establisher frame pointer passed in rcx
 ; CHECK: .seh_endprologue
 ; CHECK: [[L_before_f6:.+]]:
 ; CHECK-NEXT: movl $6, %ecx
@@ -110,7 +122,7 @@ finally.pad:
 ; CHECK: .seh_proc [[L_finally:[^ ]+]]
   %finally = cleanuppad []
 ; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                     ^ establisher frame pointer passed in rcx
+;                        ^ establisher frame pointer passed in rcx
 ; CHECK: .seh_endprologue
 ; CHECK: [[L_before_f7:.+]]:
 ; CHECK-NEXT: movl $7, %ecx

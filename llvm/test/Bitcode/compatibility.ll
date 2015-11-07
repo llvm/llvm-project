@@ -1144,6 +1144,13 @@ define void @instructions.call_musttail(i8* inalloca %val) {
   ret void
 }
 
+define void @instructions.call_notail() {
+  notail call void @f1()
+  ; CHECK: notail call void @f1()
+
+  ret void
+}
+
 define void @instructions.landingpad() personality i32 -2 {
   invoke void @llvm.donothing() to label %proceed unwind label %catch1
   invoke void @llvm.donothing() to label %proceed unwind label %catch2

@@ -151,8 +151,6 @@ XCoreTargetLowering::XCoreTargetLowering(const TargetMachine &TM,
 
   // Exception handling
   setOperationAction(ISD::EH_RETURN, MVT::Other, Custom);
-  setExceptionPointerRegister(XCore::R0);
-  setExceptionSelectorRegister(XCore::R1);
   setOperationAction(ISD::FRAME_TO_ARGS_OFFSET, MVT::i32, Custom);
 
   // Atomic operations

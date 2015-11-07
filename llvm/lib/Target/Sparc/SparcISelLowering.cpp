@@ -1674,9 +1674,6 @@ SparcTargetLowering::SparcTargetLowering(TargetMachine &TM,
   setOperationAction(ISD::STACKRESTORE      , MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32  , Custom);
 
-  setExceptionPointerRegister(SP::I0);
-  setExceptionSelectorRegister(SP::I1);
-
   setStackPointerRegisterToSaveRestore(SP::O6);
 
   setOperationAction(ISD::CTPOP, MVT::i32,

@@ -729,3 +729,62 @@ loop2b:                                           ; preds = %loop1
 end:
   ret void
 }
+
+; Check that we just don't bail out on RegMask.
+; In this case, the RegMask does not touch a CSR so we are good to go!
+; CHECK-LABEL: regmask:
+;
+; Compare the arguments and jump to exit.
+; No prologue needed.
+; ENABLE: cmpl %esi, %edi
+; ENABLE-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
+;
+; Prologue code.
+; (What we push does not matter. It should be some random sratch register.)
+; CHECK: pushq
+;
+; Compare the arguments and jump to exit.
+; After the prologue is set.
+; DISABLE: cmpl %esi, %edi
+; DISABLE-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
+;
+; CHECK: nop
+; Set the first argument to zero.
+; CHECK: xorl %edi, %edi
+; Set the second argument to addr.
+; CHECK-NEXT: movq %rdx, %rsi
+; CHECK-NEXT: callq _doSomething
+; CHECK-NEXT: popq
+; CHECK-NEXT: retq
+;
+; CHECK: [[EXIT_LABEL]]:
+; Set the first argument to 6.
+; CHECK-NEXT: movl $6, %edi
+; Set the second argument to addr.
+; CHECK-NEXT: movq %rdx, %rsi
+;
+; Without shrink-wrapping, we need to restore the stack before
+; making the tail call.
+; Epilogue code.
+; DISABLE-NEXT: popq
+;
+; CHECK-NEXT: jmp _doSomething
+define i32 @regmask(i32 %a, i32 %b, i32* %addr) {
+  %tmp2 = icmp slt i32 %a, %b
+  br i1 %tmp2, label %true, label %false
+
+true:
+  ; Clobber a CSR so that we check something on the regmask
+  ; of the tail call.
+  tail call void asm sideeffect "nop", "~{ebx}"()
+  %tmp4 = call i32 @doSomething(i32 0, i32* %addr)
+  br label %end
+
+false:
+  %tmp5 = tail call i32 @doSomething(i32 6, i32* %addr)
+  br label %end
+
+end:
+  %tmp.0 = phi i32 [ %tmp4, %true ], [ %tmp5, %false ]
+  ret i32 %tmp.0
+}

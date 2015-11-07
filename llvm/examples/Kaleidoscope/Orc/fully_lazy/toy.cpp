@@ -1085,7 +1085,7 @@ void PrototypeAST::CreateArgumentAllocas(Function *F, IRGenContext &C) {
     AllocaInst *Alloca = CreateEntryBlockAlloca(F, Args[Idx]);
 
     // Store the initial value into the alloca.
-    C.getBuilder().CreateStore(AI, Alloca);
+    C.getBuilder().CreateStore(&*AI, Alloca);
 
     // Add arguments to variable symbol table.
     C.NamedValues[Args[Idx]] = Alloca;

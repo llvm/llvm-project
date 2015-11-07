@@ -4969,7 +4969,7 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       unsigned CCInfo = Record[OpNum++];
 
       FunctionType *FTy = nullptr;
-      if (CCInfo >> 15 & 1 &&
+      if (CCInfo >> bitc::CALL_EXPLICIT_TYPE & 1 &&
           !(FTy = dyn_cast<FunctionType>(getTypeByID(Record[OpNum++]))))
         return error("Explicit call type is not a function type");
 
@@ -5019,12 +5019,14 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       OperandBundles.clear();
       InstructionList.push_back(I);
       cast<CallInst>(I)->setCallingConv(
-          static_cast<CallingConv::ID>((0x7ff & CCInfo) >> 1));
+          static_cast<CallingConv::ID>((0x7ff & CCInfo) >> bitc::CALL_CCONV));
       CallInst::TailCallKind TCK = CallInst::TCK_None;
-      if (CCInfo & 1)
+      if (CCInfo & 1 << bitc::CALL_TAIL)
         TCK = CallInst::TCK_Tail;
-      if (CCInfo & (1 << 14))
+      if (CCInfo & (1 << bitc::CALL_MUSTTAIL))
         TCK = CallInst::TCK_MustTail;
+      if (CCInfo & (1 << bitc::CALL_NOTAIL))
+        TCK = CallInst::TCK_NoTail;
       cast<CallInst>(I)->setTailCallKind(TCK);
       cast<CallInst>(I)->setAttributes(PAL);
       break;

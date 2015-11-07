@@ -17,7 +17,7 @@ catch.pad:
 catch.body:
   %exn = call i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token %catch)
   %cast_exn = bitcast i8 addrspace(1)* %exn to i32 addrspace(1)*
-  ; CHECK: movq %rax, %rcx
+  ; CHECK: movq %rdx, %rcx
   ; CHECK-NEXT: callq g
   call void @g(i32 addrspace(1)* %cast_exn)
   catchret %catch to label %exit

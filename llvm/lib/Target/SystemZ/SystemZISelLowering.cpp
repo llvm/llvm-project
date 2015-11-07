@@ -114,8 +114,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
   // Set up special registers.
-  setExceptionPointerRegister(SystemZ::R6D);
-  setExceptionSelectorRegister(SystemZ::R7D);
   setStackPointerRegisterToSaveRestore(SystemZ::R15D);
 
   // TODO: It may be better to default to latency-oriented scheduling, however

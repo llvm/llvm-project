@@ -3012,7 +3012,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     while (EndInst != BB->begin()) {
       // Delete the next to last instruction.
       Instruction *Inst = &*--EndInst->getIterator();
-      if (!Inst->use_empty())
+      if (!Inst->use_empty() && !Inst->getType()->isTokenTy())
         Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
       if (Inst->isEHPad()) {
         EndInst = Inst;
@@ -3022,7 +3022,8 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
         ++NumDeadInst;
         MadeIRChange = true;
       }
-      Inst->eraseFromParent();
+      if (!Inst->getType()->isTokenTy())
+        Inst->eraseFromParent();
     }
   }
 

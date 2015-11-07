@@ -267,6 +267,20 @@ namespace llvm {
     unsigned getRegisterByName(const char* RegName, EVT VT,
                                SelectionDAG &DAG) const override;
 
+    /// If a physical register, this returns the register that receives the
+    /// exception address on entry to an EH pad.
+    unsigned
+    getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+      return ABI.IsN64() ? Mips::A0_64 : Mips::A0;
+    }
+
+    /// If a physical register, this returns the register that receives the
+    /// exception typeid on entry to a landing pad.
+    unsigned
+    getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+      return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
+    }
+
     /// Returns true if a cast between SrcAS and DestAS is a noop.
     bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
       // Mips doesn't have any special address spaces so we just reserve

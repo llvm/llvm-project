@@ -154,7 +154,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI) {
   SmallPtrSet<MachineBasicBlock *, 16> Visited;
   SmallVector<POStackEntry, 16> Stack;
 
-  MachineBasicBlock *Entry = MF.begin();
+  MachineBasicBlock *Entry = &*MF.begin();
   Visited.insert(Entry);
   Stack.push_back(POStackEntry(Entry, MF, MLI));
 
@@ -170,7 +170,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI) {
 
     // Put the block in its position in the MachineFunction.
     MachineBasicBlock &MBB = *Entry.MBB;
-    MBB.moveBefore(MF.begin());
+    MBB.moveBefore(&*MF.begin());
 
     // Branch instructions may utilize a fallthrough, so update them if a
     // fallthrough has been added or removed.
@@ -196,7 +196,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI) {
       assert(Loop->getHeader() == Loop->getTopBlock());
       assert((Loop->getHeader() == &MBB ||
               Loop->contains(
-                  MLI.getLoopFor(prev(MachineFunction::iterator(&MBB))))) &&
+                  MLI.getLoopFor(&*prev(MachineFunction::iterator(&MBB))))) &&
              "Loop isn't contiguous");
     } else {
       // Assert that non-loops have no backedge predecessors.
@@ -257,7 +257,7 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
           Iter = next(MachineFunction::iterator(Bottom));
         }
         BuildMI(MBB, MBB.begin(), DebugLoc(), TII.get(WebAssembly::LOOP))
-            .addMBB(Iter);
+            .addMBB(&*Iter);
       }
 
     // Check for forward branches and switches that need BLOCKS placed.

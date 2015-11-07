@@ -1286,8 +1286,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(4);
   setMinFunctionAlignment(2);
   setInsertFencesForAtomic(false);
-  setExceptionPointerRegister(Hexagon::R0);
-  setExceptionSelectorRegister(Hexagon::R1);
   setStackPointerRegisterToSaveRestore(HRI.getStackRegister());
 
   if (EnableHexSDNodeSched)
