@@ -1028,7 +1028,7 @@ def getOutputPaths(lldbRootDirectory):
         result.append(os.path.join(lldbParentDir, 'build', configuration, 'lldb-linux-x86_64', 'bin'))
 
     # osx swiftie build
-    configurations = [['Ninja-DebugAssert','Ninja-RelWithDebInfoAssert','CustomSwift-Debug']] # TODO: add more configurations
+    configurations = [['Ninja-DebugAssert','CustomSwift-Debug'], ['Ninja-RelWithDebInfoAssert','CustomSwift-Release']] # TODO: add more configurations
     for configuration in configurations:
         result.append(os.path.join(lldbParentDir, 'build', configuration[0], 'lldb-macosx-x86_64', configuration[1]))
 
