@@ -373,8 +373,9 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock*> &BBs) {
           (*SI)->removePredecessor(&*BB);
 
         TerminatorInst *BBTerm = BB->getTerminator();
-
-        if (!BB->getTerminator()->getType()->isVoidTy())
+        if (BBTerm->isEHPad())
+          continue;
+        if (!BBTerm->getType()->isVoidTy() && !BBTerm->getType()->isTokenTy())
           BBTerm->replaceAllUsesWith(Constant::getNullValue(BBTerm->getType()));
 
         // Replace the old terminator instruction.
@@ -476,7 +477,7 @@ bool ReduceCrashingInstructions::TestInsts(std::vector<const Instruction*>
         Instruction *Inst = &*I++;
         if (!Instructions.count(Inst) && !isa<TerminatorInst>(Inst) &&
             !Inst->isEHPad()) {
-          if (!Inst->getType()->isVoidTy())
+          if (!Inst->getType()->isVoidTy() && !Inst->getType()->isTokenTy())
             Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
           Inst->eraseFromParent();
         }
@@ -785,7 +786,7 @@ static bool DebugACrash(BugDriver &BD,
             } else {
               if (BugpointIsInterrupted) goto ExitLoops;
 
-              if (isa<LandingPadInst>(I))
+              if (I->isEHPad() || I->getType()->isTokenTy())
                 continue;
 
               outs() << "Checking instruction: " << *I;

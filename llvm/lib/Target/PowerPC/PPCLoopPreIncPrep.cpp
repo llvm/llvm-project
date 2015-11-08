@@ -101,17 +101,20 @@ FunctionPass *llvm::createPPCLoopPreIncPrepPass(PPCTargetMachine &TM) {
 }
 
 namespace {
-  struct SCEVLess : std::binary_function<const SCEV *, const SCEV *, bool>
-  {
-    SCEVLess(ScalarEvolution *SE) : SE(SE) {}
+  struct BucketElement {
+    BucketElement(const SCEVConstant *O, Instruction *I) : Offset(O), Instr(I) {}
+    BucketElement(Instruction *I) : Offset(nullptr), Instr(I) {}
 
-    bool operator() (const SCEV *X, const SCEV *Y) const {
-      const SCEV *Diff = SE->getMinusSCEV(X, Y);
-      return cast<SCEVConstant>(Diff)->getValue()->getSExtValue() < 0;
-    }
+    const SCEVConstant *Offset;
+    Instruction *Instr;
+  };
 
-  protected:
-    ScalarEvolution *SE;
+  struct Bucket {
+    Bucket(const SCEV *B, Instruction *I) : BaseSCEV(B),
+                                            Elements(1, BucketElement(I)) {}
+
+    const SCEV *BaseSCEV;
+    SmallVector<BucketElement, 16> Elements;
   };
 }
 
@@ -169,7 +172,6 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     std::distance(pred_begin(Header), pred_end(Header));
 
   // Collect buckets of comparable addresses used by loads and stores.
-  typedef std::multimap<const SCEV *, Instruction *, SCEVLess> Bucket;
   SmallVector<Bucket, 16> Buckets;
   for (Loop::block_iterator I = L->block_begin(), IE = L->block_end();
        I != IE; ++I) {
@@ -212,25 +214,24 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
       }
 
       bool FoundBucket = false;
-      for (unsigned i = 0, e = Buckets.size(); i != e; ++i)
-        for (Bucket::iterator K = Buckets[i].begin(), KE = Buckets[i].end();
-             K != KE; ++K) {
-          const SCEV *Diff = SE->getMinusSCEV(K->first, LSCEV);
-          if (isa<SCEVConstant>(Diff)) {
-            Buckets[i].insert(std::make_pair(LSCEV, MemI));
-            FoundBucket = true;
-            break;
-          }
+      for (auto &B : Buckets) {
+        const SCEV *Diff = SE->getMinusSCEV(LSCEV, B.BaseSCEV);
+        if (const auto *CDiff = dyn_cast<SCEVConstant>(Diff)) {
+          B.Elements.push_back(BucketElement(CDiff, MemI));
+          FoundBucket = true;
+          break;
         }
+      }
 
       if (!FoundBucket) {
-        Buckets.push_back(Bucket(SCEVLess(SE)));
-        Buckets[Buckets.size()-1].insert(std::make_pair(LSCEV, MemI));
+        if (Buckets.size() == MaxVars)
+          return MadeChange;
+        Buckets.push_back(Bucket(LSCEV, MemI));
       }
     }
   }
 
-  if (Buckets.empty() || Buckets.size() > MaxVars)
+  if (Buckets.empty())
     return MadeChange;
 
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
@@ -253,8 +254,45 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     // The base address of each bucket is transformed into a phi and the others
     // are rewritten as offsets of that variable.
 
+    // We have a choice now of which instruction's memory operand we use as the
+    // base for the generated PHI. Always picking the first instruction in each
+    // bucket does not work well, specifically because that instruction might
+    // be a prefetch (and there are no pre-increment dcbt variants). Otherwise,
+    // the choice is somewhat arbitrary, because the backend will happily
+    // generate direct offsets from both the pre-incremented and
+    // post-incremented pointer values. Thus, we'll pick the first non-prefetch
+    // instruction in each bucket, and adjust the recurrence and other offsets
+    // accordingly. 
+    for (int j = 0, je = Buckets[i].Elements.size(); j != je; ++j) {
+      if (auto *II = dyn_cast<IntrinsicInst>(Buckets[i].Elements[j].Instr))
+        if (II->getIntrinsicID() == Intrinsic::prefetch)
+          continue;
+
+      // If we'd otherwise pick the first element anyway, there's nothing to do.
+      if (j == 0)
+        break;
+
+      // If our chosen element has no offset from the base pointer, there's
+      // nothing to do.
+      if (!Buckets[i].Elements[j].Offset ||
+          Buckets[i].Elements[j].Offset->isZero())
+        break;
+
+      const SCEV *Offset = Buckets[i].Elements[j].Offset;
+      Buckets[i].BaseSCEV = SE->getAddExpr(Buckets[i].BaseSCEV, Offset);
+      for (auto &E : Buckets[i].Elements) {
+        if (E.Offset)
+          E.Offset = cast<SCEVConstant>(SE->getMinusSCEV(E.Offset, Offset));
+        else
+          E.Offset = cast<SCEVConstant>(SE->getNegativeSCEV(Offset));
+      }
+
+      std::swap(Buckets[i].Elements[j], Buckets[i].Elements[0]);
+      break;
+    }
+
     const SCEVAddRecExpr *BasePtrSCEV =
-      cast<SCEVAddRecExpr>(Buckets[i].begin()->first);
+      cast<SCEVAddRecExpr>(Buckets[i].BaseSCEV);
     if (!BasePtrSCEV->isAffine())
       continue;
 
@@ -262,7 +300,9 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     assert(BasePtrSCEV->getLoop() == L &&
            "AddRec for the wrong loop?");
 
-    Instruction *MemI = Buckets[i].begin()->second;
+    // The instruction corresponding to the Bucket's BaseSCEV must be the first
+    // in the vector of elements.
+    Instruction *MemI = Buckets[i].Elements.begin()->Instr;
     Value *BasePtr = GetPointerOperand(MemI);
     assert(BasePtr && "No pointer operand");
 
@@ -327,18 +367,20 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     BasePtr->replaceAllUsesWith(NewBasePtr);
     RecursivelyDeleteTriviallyDeadInstructions(BasePtr);
 
-    Value *LastNewPtr = NewBasePtr;
-    for (Bucket::iterator I = std::next(Buckets[i].begin()),
-         IE = Buckets[i].end(); I != IE; ++I) {
-      Value *Ptr = GetPointerOperand(I->second);
+    // Keep track of the replacement pointer values we've inserted so that we
+    // don't generate more pointer values than necessary.
+    SmallPtrSet<Value *, 16> NewPtrs;
+    NewPtrs.insert( NewBasePtr);
+
+    for (auto I = std::next(Buckets[i].Elements.begin()),
+         IE = Buckets[i].Elements.end(); I != IE; ++I) {
+      Value *Ptr = GetPointerOperand(I->Instr);
       assert(Ptr && "No pointer operand");
-      if (Ptr == LastNewPtr)
+      if (NewPtrs.count(Ptr))
         continue;
 
       Instruction *RealNewPtr;
-      const SCEVConstant *Diff =
-        cast<SCEVConstant>(SE->getMinusSCEV(I->first, BasePtrSCEV));
-      if (Diff->isZero()) {
+      if (!I->Offset || I->Offset->getValue()->isZero()) {
         RealNewPtr = NewBasePtr;
       } else {
         Instruction *PtrIP = dyn_cast<Instruction>(Ptr);
@@ -348,11 +390,11 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
         else if (isa<PHINode>(PtrIP))
           PtrIP = &*PtrIP->getParent()->getFirstInsertionPt();
         else if (!PtrIP)
-          PtrIP = I->second;
+          PtrIP = I->Instr;
 
         GetElementPtrInst *NewPtr = GetElementPtrInst::Create(
-            I8Ty, PtrInc, Diff->getValue(),
-            I->second->hasName() ? I->second->getName() + ".off" : "", PtrIP);
+            I8Ty, PtrInc, I->Offset->getValue(),
+            I->Instr->hasName() ? I->Instr->getName() + ".off" : "", PtrIP);
         if (!PtrIP)
           NewPtr->insertAfter(cast<Instruction>(PtrInc));
         NewPtr->setIsInBounds(IsPtrInBounds(Ptr));
@@ -373,7 +415,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
       Ptr->replaceAllUsesWith(ReplNewPtr);
       RecursivelyDeleteTriviallyDeadInstructions(Ptr);
 
-      LastNewPtr = RealNewPtr;
+      NewPtrs.insert(RealNewPtr);
     }
 
     MadeChange = true;

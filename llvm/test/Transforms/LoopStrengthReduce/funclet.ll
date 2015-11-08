@@ -4,7 +4,9 @@ target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc"
 
 declare i32 @_except_handler3(...)
+declare i32 @__CxxFrameHandler3(...)
 
+declare void @external(i32*)
 declare void @reserve()
 
 define void @f() personality i32 (...)* @_except_handler3 {
@@ -188,3 +190,54 @@ unwind_out:                                       ; preds = %iter, %loop_body
 
 ; CHECK-LABEL: define void @i(
 ; CHECK: ptrtoint i8* %phi2 to i32
+
+define void @test1(i32* %b, i32* %c) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %d.0 = phi i32* [ %b, %entry ], [ %incdec.ptr, %for.inc ]
+  invoke void @external(i32* %d.0)
+          to label %for.inc unwind label %catch.dispatch
+
+for.inc:                                          ; preds = %for.cond
+  %incdec.ptr = getelementptr inbounds i32, i32* %d.0, i32 1
+  br label %for.cond
+
+catch.dispatch:                                   ; preds = %for.cond
+  %0 = catchpad [i8* null, i32 64, i8* null]
+          to label %catch unwind label %catchendblock
+
+catchendblock:                                    ; preds = %catch.dispatch
+  catchendpad unwind label %catch.dispatch.2
+
+catch:                                            ; preds = %catch.dispatch
+  catchret %0 to label %try.cont
+
+try.cont:                                         ; preds = %catch
+  invoke void @external(i32* %c)
+          to label %try.cont.7 unwind label %catch.dispatch.2
+
+catch.dispatch.2:                                 ; preds = %try.cont, %catchendblock
+  %e.0 = phi i32* [ %c, %try.cont ], [ %b, %catchendblock ]
+  %1 = catchpad [i8* null, i32 64, i8* null]
+          to label %catch.4 unwind label %catchendblock.3
+
+catch.4:                                          ; preds = %catch.dispatch.2
+  unreachable
+
+try.cont.7:                                       ; preds = %try.cont
+  ret void
+
+catchendblock.3:                                  ; preds = %catch.dispatch.2
+  catchendpad unwind to caller
+}
+
+; CHECK-LABEL: define void @test1(
+; CHECK: for.cond:
+; CHECK:   %d.0 = phi i32* [ %b, %entry ], [ %incdec.ptr, %for.inc ]
+
+; CHECK: catchendpad unwind label %catch.dispatch.2
+
+; CHECK: catch.dispatch.2:
+; CHECK: %e.0 = phi i32* [ %c, %try.cont ], [ %b, %catchendblock ]
