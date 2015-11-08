@@ -306,6 +306,13 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   return false;
 }
 #endif
+#else
+static bool findModulesAndOffsets(void **StackTrace, int Depth,
+                                  const char **Modules, intptr_t *Offsets,
+                                  const char *MainExecutableName,
+                                  StringSaver &StrPool) {
+  return false;
+}
 #endif // defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES)
 
 // PrintStackTrace - In the case of a program crash or fault, print out a stack

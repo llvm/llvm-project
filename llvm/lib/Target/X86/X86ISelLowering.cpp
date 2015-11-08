@@ -21419,10 +21419,10 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr *MI,
   // the new block to the return destination with a normal JMP_4.
   MachineBasicBlock *RestoreMBB =
       MF->CreateMachineBasicBlock(BB->getBasicBlock());
+  assert(BB->succ_size() == 1);
   MF->insert(TargetMBB->getIterator(), RestoreMBB);
-  BB->removeSuccessor(TargetMBB);
+  RestoreMBB->transferSuccessorsAndUpdatePHIs(BB);
   BB->addSuccessor(RestoreMBB);
-  RestoreMBB->addSuccessor(TargetMBB);
   MI->getOperand(0).setMBB(RestoreMBB);
 
   auto RestoreMBBI = RestoreMBB->begin();

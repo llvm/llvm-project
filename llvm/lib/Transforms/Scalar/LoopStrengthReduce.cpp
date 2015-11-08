@@ -3132,6 +3132,9 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
             PHINode::getIncomingValueNumForOperand(U.getOperandNo()));
         if (!DT.dominates(L->getHeader(), UseBB))
           continue;
+        // Don't bother if the instruction is in a BB which ends in an EHPad.
+        if (UseBB->getTerminator()->isEHPad())
+          continue;
         // Ignore uses which are part of other SCEV expressions, to avoid
         // analyzing them multiple times.
         if (SE.isSCEVable(UserInst->getType())) {

@@ -62,6 +62,10 @@ static FormattedNumber format_ptr(void *PC) {
   return format_hex((uint64_t)PC, PtrWidth);
 }
 
+static bool printSymbolizedStackTrace(void **StackTrace, int Depth,
+                                      llvm::raw_ostream &OS)
+  LLVM_ATTRIBUTE_USED;
+
 /// Helper that launches llvm-symbolizer and symbolizes a backtrace.
 static bool printSymbolizedStackTrace(void **StackTrace, int Depth,
                                       llvm::raw_ostream &OS) {
