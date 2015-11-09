@@ -511,8 +511,15 @@ def ARMAsmWriter : AsmWriter {
   bit isMCAsmWriter = 1;
 }
 
+def ARMAsmParserVariant : AsmParserVariant {
+  int Variant = 0;
+  string Name = "ARM";
+  string BreakCharacters = ".";
+}
+
 def ARM : Target {
   // Pull in Instruction Info:
   let InstructionSet = ARMInstrInfo;
   let AssemblyWriters = [ARMAsmWriter];
+  let AssemblyParserVariants = [ARMAsmParserVariant];
 }

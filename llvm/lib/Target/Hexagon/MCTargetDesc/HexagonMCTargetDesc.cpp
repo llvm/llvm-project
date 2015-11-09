@@ -40,6 +40,14 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "HexagonGenRegisterInfo.inc"
 
+cl::opt<bool> llvm::HexagonDisableCompound
+  ("mno-compound",
+   cl::desc("Disable looking for compound instructions for Hexagon"));
+
+cl::opt<bool> llvm::HexagonDisableDuplex
+  ("mno-pairing",
+   cl::desc("Disable looking for duplex instructions for Hexagon"));
+
 MCInstrInfo *llvm::createHexagonMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
   InitHexagonMCInstrInfo(X);
@@ -54,7 +62,10 @@ static MCRegisterInfo *createHexagonMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *
 createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  return createHexagonMCSubtargetInfoImpl(TT, CPU, FS);
+  StringRef CPUName = CPU;
+  if (CPU.empty())
+    CPUName = "hexagonv5";
+  return createHexagonMCSubtargetInfoImpl(TT, CPUName, FS);
 }
 
 namespace {

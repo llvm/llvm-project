@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -62,4 +66,66 @@ static ManagedStatic<InstrProfErrorCategoryType> ErrorCategory;
 
 const std::error_category &llvm::instrprof_category() {
   return *ErrorCategory;
+}
+
+namespace llvm {
+
+std::string getPGOFuncName(StringRef RawFuncName,
+                           GlobalValue::LinkageTypes Linkage,
+                           StringRef FileName) {
+
+  // Function names may be prefixed with a binary '1' to indicate
+  // that the backend should not modify the symbols due to any platform
+  // naming convention. Do not include that '1' in the PGO profile name.
+  if (RawFuncName[0] == '\1')
+    RawFuncName = RawFuncName.substr(1);
+
+  std::string FuncName = RawFuncName;
+  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
+    // For local symbols, prepend the main file name to distinguish them.
+    // Do not include the full path in the file name since there's no guarantee
+    // that it will stay the same, e.g., if the files are checked out from
+    // version control in different locations.
+    if (FileName.empty())
+      FuncName = FuncName.insert(0, "<unknown>:");
+    else
+      FuncName = FuncName.insert(0, FileName.str() + ":");
+  }
+  return FuncName;
+}
+
+std::string getPGOFuncName(const Function &F) {
+  return getPGOFuncName(F.getName(), F.getLinkage(), F.getParent()->getName());
+}
+
+GlobalVariable *createPGOFuncNameVar(Module &M,
+                                     GlobalValue::LinkageTypes Linkage,
+                                     StringRef FuncName) {
+
+  // We generally want to match the function's linkage, but available_externally
+  // and extern_weak both have the wrong semantics, and anything that doesn't
+  // need to link across compilation units doesn't need to be visible at all.
+  if (Linkage == GlobalValue::ExternalWeakLinkage)
+    Linkage = GlobalValue::LinkOnceAnyLinkage;
+  else if (Linkage == GlobalValue::AvailableExternallyLinkage)
+    Linkage = GlobalValue::LinkOnceODRLinkage;
+  else if (Linkage == GlobalValue::InternalLinkage ||
+           Linkage == GlobalValue::ExternalLinkage)
+    Linkage = GlobalValue::PrivateLinkage;
+
+  auto *Value = ConstantDataArray::getString(M.getContext(), FuncName, false);
+  auto FuncNameVar =
+      new GlobalVariable(M, Value->getType(), true, Linkage, Value,
+                         Twine(getInstrProfNameVarPrefix()) + FuncName);
+
+  // Hide the symbol so that we correctly get a copy for each executable.
+  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
+
+  return FuncNameVar;
+}
+
+GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName) {
+  return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), FuncName);
+}
 }

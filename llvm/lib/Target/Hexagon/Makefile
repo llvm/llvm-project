@@ -13,6 +13,7 @@ TARGET = Hexagon
 # Make sure that tblgen is run, first thing.
 BUILT_SOURCES = HexagonGenRegisterInfo.inc \
                 HexagonGenInstrInfo.inc  \
+                HexagonGenAsmMatcher.inc \
                 HexagonGenAsmWriter.inc \
                 HexagonGenDAGISel.inc HexagonGenSubtargetInfo.inc \
                 HexagonGenCallingConv.inc \
@@ -20,6 +21,6 @@ BUILT_SOURCES = HexagonGenRegisterInfo.inc \
                 HexagonGenMCCodeEmitter.inc \
                 HexagonGenDisassemblerTables.inc
 
-DIRS = TargetInfo MCTargetDesc Disassembler
+DIRS = TargetInfo MCTargetDesc Disassembler AsmParser
 
 include $(LEVEL)/Makefile.common

@@ -19,5 +19,5 @@
 type = Library
 name = HexagonDisassembler
 parent = Hexagon
-required_libraries = HexagonDesc HexagonInfo MCDisassembler Support
+required_libraries = HexagonDesc HexagonInfo MC MCDisassembler Support
 add_to_library_groups = Hexagon

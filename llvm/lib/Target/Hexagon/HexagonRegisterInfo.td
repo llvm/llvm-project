@@ -137,20 +137,21 @@ let Namespace = "Hexagon" in {
   def LC1  : Rc<3,  "lc1",       ["c3"]>,   DwarfRegNum<[70]>;
   def P3_0 : Rc<4,  "p3:0",      ["c4"], [P0, P1, P2, P3]>,
                                             DwarfRegNum<[71]>;
-  def C6   : Rc<6,  "c6",        [], [M0]>, DwarfRegNum<[72]>;
-  def C7   : Rc<7,  "c7",        [], [M1]>, DwarfRegNum<[73]>;
+  def C5   : Rc<5,  "c5",        ["c5"]>,   DwarfRegNum<[72]>; // future use
+  def C6   : Rc<6,  "c6",        [], [M0]>, DwarfRegNum<[73]>;
+  def C7   : Rc<7,  "c7",        [], [M1]>, DwarfRegNum<[74]>;
 
-  def USR  : Rc<8,  "usr",       ["c8"]>,   DwarfRegNum<[74]> {
+  def USR  : Rc<8,  "usr",       ["c8"]>,   DwarfRegNum<[75]> {
     let SubRegIndices = [subreg_overflow];
     let SubRegs = [USR_OVF];
   }
-  def PC   : Rc<9,  "pc">,                  DwarfRegNum<[75]>;
-  def UGP  : Rc<10, "ugp",       ["c10"]>,  DwarfRegNum<[76]>;
-  def GP   : Rc<11, "gp">,                  DwarfRegNum<[77]>;
-  def CS0  : Rc<12, "cs0",       ["c12"]>,  DwarfRegNum<[78]>;
-  def CS1  : Rc<13, "cs1",       ["c13"]>,  DwarfRegNum<[79]>;
-  def UPCL : Rc<14, "upcyclelo", ["c14"]>,  DwarfRegNum<[80]>;
-  def UPCH : Rc<15, "upcyclehi", ["c15"]>,  DwarfRegNum<[81]>;
+  def PC   : Rc<9,  "pc">,                  DwarfRegNum<[76]>;
+  def UGP  : Rc<10, "ugp",       ["c10"]>,  DwarfRegNum<[77]>;
+  def GP   : Rc<11, "gp">,                  DwarfRegNum<[78]>;
+  def CS0  : Rc<12, "cs0",       ["c12"]>,  DwarfRegNum<[79]>;
+  def CS1  : Rc<13, "cs1",       ["c13"]>,  DwarfRegNum<[80]>;
+  def UPCL : Rc<14, "upcyclelo", ["c14"]>,  DwarfRegNum<[81]>;
+  def UPCH : Rc<15, "upcyclehi", ["c15"]>,  DwarfRegNum<[82]>;
 }
 
   // Control registers pairs.

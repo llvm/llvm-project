@@ -403,6 +403,7 @@ def PPCAsmParserVariant : AsmParserVariant {
   // InstAlias definitions use immediate literals.  Set RegisterPrefix
   // so that those are not misinterpreted as registers.
   string RegisterPrefix = "%";
+  string BreakCharacters = ".";
 }
 
 def PPC : Target {

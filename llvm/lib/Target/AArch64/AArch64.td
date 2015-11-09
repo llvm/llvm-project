@@ -125,11 +125,13 @@ def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def GenericAsmParserVariant : AsmParserVariant {
   int Variant = 0;
   string Name = "generic";
+  string BreakCharacters = ".";
 }
 
 def AppleAsmParserVariant : AsmParserVariant {
   int Variant = 1;
   string Name = "apple-neon";
+  string BreakCharacters = ".";
 }
 
 //===----------------------------------------------------------------------===//

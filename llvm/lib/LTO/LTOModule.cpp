@@ -91,6 +91,15 @@ bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,
   return StringRef(Triple).startswith(TriplePrefix);
 }
 
+std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
+  ErrorOr<MemoryBufferRef> BCOrErr =
+      IRObjectFile::findBitcodeInMemBuffer(Buffer->getMemBufferRef());
+  if (!BCOrErr)
+    return "";
+  LLVMContext Context;
+  return getBitcodeProducerString(*BCOrErr, Context);
+}
+
 LTOModule *LTOModule::createFromFile(const char *path, TargetOptions options,
                                      std::string &errMsg) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =

@@ -108,6 +108,8 @@ public:
     SHUFFLE_ERROR_BRANCHES, ///< No free slots for branch insns.
     SHUFFLE_ERROR_NOSLOTS,  ///< No free slots for other insns.
     SHUFFLE_ERROR_SLOTS,    ///< Over-subscribed slots.
+    SHUFFLE_ERROR_ERRATA2, ///< Errata violation (v60).
+    SHUFFLE_ERROR_STORE_LOAD_CONFLICT, ///< store/load conflict
     SHUFFLE_ERROR_UNKNOWN   ///< Unknown error.
   };
 

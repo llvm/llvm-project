@@ -249,6 +249,14 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
                  << format("%p\n", Section.Address + Offset));
     break;
   }
+  case ELF::R_X86_64_PC8: {
+    uint64_t FinalAddress = Section.LoadAddress + Offset;
+    int64_t RealOffset = Value + Addend - FinalAddress;
+    assert(isInt<8>(RealOffset));
+    int8_t TruncOffset = (RealOffset & 0xFF);
+    Section.Address[Offset] = TruncOffset;
+    break;
+  }
   case ELF::R_X86_64_PC32: {
     uint64_t FinalAddress = Section.LoadAddress + Offset;
     int64_t RealOffset = Value + Addend - FinalAddress;

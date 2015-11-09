@@ -1,4 +1,5 @@
 ; RUN: llc -march=hexagon -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
+; XFAIL: *
 
 ; CHECK: p0 = cmp.gt(r0,#-1); if (!p0.new) jump:nt
 

@@ -16,6 +16,8 @@
 
 #include <cstdint>
 
+#include "llvm/Support/CommandLine.h"
+
 namespace llvm {
 struct InstrItinerary;
 struct InstrStage;
@@ -33,7 +35,8 @@ class raw_ostream;
 class raw_pwrite_stream;
 
 extern Target TheHexagonTarget;
-
+extern cl::opt<bool> HexagonDisableCompound;
+extern cl::opt<bool> HexagonDisableDuplex;
 extern const InstrStage HexagonStages[];
 
 MCInstrInfo *createHexagonMCInstrInfo();

@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonAsmPrinter.h"
-#include "Hexagon.h"
 #include "HexagonInstPrinter.h"
+#include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -28,63 +28,33 @@ using namespace llvm;
 #define GET_INSTRUCTION_NAME
 #include "HexagonGenAsmWriter.inc"
 
-// Return the minimum value that a constant extendable operand can have
-// without being extended.
-static int getMinValue(uint64_t TSFlags) {
-  unsigned isSigned =
-      (TSFlags >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask;
-  unsigned bits =
-      (TSFlags >> HexagonII::ExtentBitsPos) & HexagonII::ExtentBitsMask;
-
-  if (isSigned)
-    return -1U << (bits - 1);
-
-  return 0;
-}
-
-// Return the maximum value that a constant extendable operand can have
-// without being extended.
-static int getMaxValue(uint64_t TSFlags) {
-  unsigned isSigned =
-      (TSFlags >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask;
-  unsigned bits =
-      (TSFlags >> HexagonII::ExtentBitsPos) & HexagonII::ExtentBitsMask;
-
-  if (isSigned)
-    return ~(-1U << (bits - 1));
-
-  return ~(-1U << bits);
-}
-
-// Return true if the instruction must be extended.
-static bool isExtended(uint64_t TSFlags) {
-  return (TSFlags >> HexagonII::ExtendedPos) & HexagonII::ExtendedMask;
-}
-
-// Currently just used in an assert statement
-static bool isExtendable(uint64_t TSFlags) LLVM_ATTRIBUTE_UNUSED;
-// Return true if the instruction may be extended based on the operand value.
-static bool isExtendable(uint64_t TSFlags) {
-  return (TSFlags >> HexagonII::ExtendablePos) & HexagonII::ExtendableMask;
+HexagonInstPrinter::HexagonInstPrinter(MCAsmInfo const &MAI,
+                                       MCInstrInfo const &MII,
+                                       MCRegisterInfo const &MRI)
+    : MCInstPrinter(MAI, MII, MRI), MII(MII), HasExtender(false) {
 }
 
 StringRef HexagonInstPrinter::getOpcodeName(unsigned Opcode) const {
   return MII.getName(Opcode);
 }
 
-void HexagonInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << getRegisterName(RegNo);
+void HexagonInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
+  O << getRegName(RegNo);
+}
+
+StringRef HexagonInstPrinter::getRegName(unsigned RegNo) const {
+  return getRegisterName(RegNo);
 }
 
 void HexagonInstPrinter::setExtender(MCInst const &MCI) {
   HasExtender = HexagonMCInstrInfo::isImmext(MCI);
 }
 
-void HexagonInstPrinter::printInst(MCInst const *MI, raw_ostream &OS,
-                                   StringRef Annot,
-                                   MCSubtargetInfo const &STI) {
+void HexagonInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
+                                   StringRef Annot, const MCSubtargetInfo &STI) {
   assert(HexagonMCInstrInfo::isBundle(*MI));
   assert(HexagonMCInstrInfo::bundleSize(*MI) <= HEXAGON_PACKET_SIZE);
+  assert(HexagonMCInstrInfo::bundleSize(*MI) > 0);
   HasExtender = false;
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(*MI)) {
     MCInst const &MCI = *I.getInst();
@@ -116,173 +86,148 @@ void HexagonInstPrinter::printInst(MCInst const *MI, raw_ostream &OS,
   }
 }
 
-void HexagonInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printOperand(MCInst const *MI, unsigned OpNo,
                                       raw_ostream &O) const {
-  const MCOperand& MO = MI->getOperand(OpNo);
-
-  if (MO.isReg()) {
-    printRegName(O, MO.getReg());
-  } else if(MO.isExpr()) {
-    MO.getExpr()->print(O, &MAI);
-  } else if(MO.isImm()) {
-    printImmOperand(MI, OpNo, O);
-  } else {
-    llvm_unreachable("Unknown operand");
-  }
-}
-
-void HexagonInstPrinter::printImmOperand(const MCInst *MI, unsigned OpNo,
-                                         raw_ostream &O) const {
-  const MCOperand& MO = MI->getOperand(OpNo);
-
-  if(MO.isExpr()) {
-    MO.getExpr()->print(O, &MAI);
-  } else if(MO.isImm()) {
-    O << MI->getOperand(OpNo).getImm();
-  } else {
-    llvm_unreachable("Unknown operand");
-  }
-}
-
-void HexagonInstPrinter::printExtOperand(const MCInst *MI, unsigned OpNo,
-                                         raw_ostream &O) const {
-  const MCOperand &MO = MI->getOperand(OpNo);
-  const MCInstrDesc &MII = getMII().get(MI->getOpcode());
-
-  assert((isExtendable(MII.TSFlags) || isExtended(MII.TSFlags)) &&
-         "Expecting an extendable operand");
-
-  if (MO.isExpr() || isExtended(MII.TSFlags)) {
+  if (HexagonMCInstrInfo::getExtendableOp(MII, *MI) == OpNo &&
+      (HasExtender || HexagonMCInstrInfo::isConstExtended(MII, *MI)))
     O << "#";
-  } else if (MO.isImm()) {
-    int ImmValue = MO.getImm();
-    if (ImmValue < getMinValue(MII.TSFlags) ||
-        ImmValue > getMaxValue(MII.TSFlags))
-      O << "#";
+  MCOperand const &MO = MI->getOperand(OpNo);
+  if (MO.isReg()) {
+    O << getRegisterName(MO.getReg());
+  } else if (MO.isExpr()) {
+    int64_t Value;
+    if (MO.getExpr()->evaluateAsAbsolute(Value))
+      O << formatImm(Value);
+    else
+      O << *MO.getExpr();
+  } else {
+    llvm_unreachable("Unknown operand");
   }
+}
+
+void HexagonInstPrinter::printExtOperand(MCInst const *MI, unsigned OpNo,
+                                         raw_ostream &O) const {
   printOperand(MI, OpNo, O);
 }
 
-void HexagonInstPrinter::printUnsignedImmOperand(const MCInst *MI,
-                                    unsigned OpNo, raw_ostream &O) const {
+void HexagonInstPrinter::printUnsignedImmOperand(MCInst const *MI,
+                                                 unsigned OpNo,
+                                                 raw_ostream &O) const {
   O << MI->getOperand(OpNo).getImm();
 }
 
-void HexagonInstPrinter::printNegImmOperand(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printNegImmOperand(MCInst const *MI, unsigned OpNo,
                                             raw_ostream &O) const {
   O << -MI->getOperand(OpNo).getImm();
 }
 
-void HexagonInstPrinter::printNOneImmOperand(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printNOneImmOperand(MCInst const *MI, unsigned OpNo,
                                              raw_ostream &O) const {
   O << -1;
 }
 
 void HexagonInstPrinter::prints3_6ImmOperand(MCInst const *MI, unsigned OpNo,
                                              raw_ostream &O) const {
-  int64_t Imm = MI->getOperand(OpNo).getImm();
+  int64_t Imm;
+  bool Success = MI->getOperand(OpNo).getExpr()->evaluateAsAbsolute(Imm);
+  Imm = SignExtend64<9>(Imm);
+  assert(Success); (void)Success;
   assert(((Imm & 0x3f) == 0) && "Lower 6 bits must be ZERO.");
   O << formatImm(Imm/64);
 }
 
 void HexagonInstPrinter::prints3_7ImmOperand(MCInst const *MI, unsigned OpNo,
                                              raw_ostream &O) const {
-  int64_t Imm = MI->getOperand(OpNo).getImm();
+  int64_t Imm;
+  bool Success = MI->getOperand(OpNo).getExpr()->evaluateAsAbsolute(Imm);
+  Imm = SignExtend64<10>(Imm);
+  assert(Success); (void)Success;
   assert(((Imm & 0x7f) == 0) && "Lower 7 bits must be ZERO.");
   O << formatImm(Imm/128);
 }
 
 void HexagonInstPrinter::prints4_6ImmOperand(MCInst const *MI, unsigned OpNo,
                                              raw_ostream &O) const {
-  int64_t Imm = MI->getOperand(OpNo).getImm();
+  int64_t Imm;
+  bool Success = MI->getOperand(OpNo).getExpr()->evaluateAsAbsolute(Imm);
+  Imm = SignExtend64<10>(Imm);
+  assert(Success); (void)Success;
   assert(((Imm & 0x3f) == 0) && "Lower 6 bits must be ZERO.");
   O << formatImm(Imm/64);
 }
 
 void HexagonInstPrinter::prints4_7ImmOperand(MCInst const *MI, unsigned OpNo,
                                              raw_ostream &O) const {
-  int64_t Imm = MI->getOperand(OpNo).getImm();
+  int64_t Imm;
+  bool Success = MI->getOperand(OpNo).getExpr()->evaluateAsAbsolute(Imm);
+  Imm = SignExtend64<11>(Imm);
+  assert(Success); (void)Success;
   assert(((Imm & 0x7f) == 0) && "Lower 7 bits must be ZERO.");
   O << formatImm(Imm/128);
 }
 
-void HexagonInstPrinter::printMEMriOperand(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O) const {
-  const MCOperand& MO0 = MI->getOperand(OpNo);
-  const MCOperand& MO1 = MI->getOperand(OpNo + 1);
-
-  printRegName(O, MO0.getReg());
-  O << " + #" << MO1.getImm();
-}
-
-void HexagonInstPrinter::printFrameIndexOperand(const MCInst *MI, unsigned OpNo,
-                                                raw_ostream &O) const {
-  const MCOperand& MO0 = MI->getOperand(OpNo);
-  const MCOperand& MO1 = MI->getOperand(OpNo + 1);
-
-  printRegName(O, MO0.getReg());
-  O << ", #" << MO1.getImm();
-}
-
-void HexagonInstPrinter::printGlobalOperand(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printGlobalOperand(MCInst const *MI, unsigned OpNo,
                                             raw_ostream &O) const {
-  assert(MI->getOperand(OpNo).isExpr() && "Expecting expression");
-
   printOperand(MI, OpNo, O);
 }
 
-void HexagonInstPrinter::printJumpTable(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printJumpTable(MCInst const *MI, unsigned OpNo,
                                         raw_ostream &O) const {
   assert(MI->getOperand(OpNo).isExpr() && "Expecting expression");
 
   printOperand(MI, OpNo, O);
 }
 
-void HexagonInstPrinter::printConstantPool(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printConstantPool(MCInst const *MI, unsigned OpNo,
                                            raw_ostream &O) const {
   assert(MI->getOperand(OpNo).isExpr() && "Expecting expression");
 
   printOperand(MI, OpNo, O);
 }
 
-void HexagonInstPrinter::printBranchOperand(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printBranchOperand(MCInst const *MI, unsigned OpNo,
                                             raw_ostream &O) const {
   // Branches can take an immediate operand.  This is used by the branch
   // selection pass to print $+8, an eight byte displacement from the PC.
   llvm_unreachable("Unknown branch operand.");
 }
 
-void HexagonInstPrinter::printCallOperand(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) const {
-}
+void HexagonInstPrinter::printCallOperand(MCInst const *MI, unsigned OpNo,
+                                          raw_ostream &O) const {}
 
-void HexagonInstPrinter::printAbsAddrOperand(const MCInst *MI, unsigned OpNo,
-                                             raw_ostream &O) const {
-}
+void HexagonInstPrinter::printAbsAddrOperand(MCInst const *MI, unsigned OpNo,
+                                             raw_ostream &O) const {}
 
-void HexagonInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
-                                               raw_ostream &O) const {
-}
+void HexagonInstPrinter::printPredicateOperand(MCInst const *MI, unsigned OpNo,
+                                               raw_ostream &O) const {}
 
-void HexagonInstPrinter::printSymbol(const MCInst *MI, unsigned OpNo,
+void HexagonInstPrinter::printSymbol(MCInst const *MI, unsigned OpNo,
                                      raw_ostream &O, bool hi) const {
-  assert(MI->getOperand(OpNo).isImm() && "Unknown symbol operand");
+  MCOperand const &MO = MI->getOperand(OpNo);
 
-  O << '#' << (hi ? "HI" : "LO") << "(#";
-  printOperand(MI, OpNo, O);
+  O << '#' << (hi ? "HI" : "LO") << '(';
+  if (MO.isImm()) {
+    O << '#';
+    printOperand(MI, OpNo, O);
+  } else {
+    printOperand(MI, OpNo, O);
+    assert("Unknown symbol operand");
+  }
   O << ')';
 }
 
-void HexagonInstPrinter::printExtBrtarget(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) const {
-  const MCOperand &MO = MI->getOperand(OpNo);
-  const MCInstrDesc &MII = getMII().get(MI->getOpcode());
-
-  assert((isExtendable(MII.TSFlags) || isExtended(MII.TSFlags)) &&
-         "Expecting an extendable operand");
-
-  if (MO.isExpr() || isExtended(MII.TSFlags)) {
-    O << "##";
+void HexagonInstPrinter::printBrtarget(MCInst const *MI, unsigned OpNo,
+                                       raw_ostream &O) const {
+  MCOperand const &MO = MI->getOperand(OpNo);
+  assert (MO.isExpr());
+  MCExpr const &Expr = *MO.getExpr();
+  int64_t Value;
+  if (Expr.evaluateAsAbsolute(Value))
+    O << format("0x%" PRIx64, Value);
+  else {
+    if (HasExtender || HexagonMCInstrInfo::isConstExtended(MII, *MI))
+      if (HexagonMCInstrInfo::getExtendableOp(MII, *MI) == OpNo)
+        O << "##";
+    O << Expr;
   }
-  printOperand(MI, OpNo, O);
 }

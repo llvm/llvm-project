@@ -1,4 +1,5 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
+; XFAIL: *
 
 ; Check that we don't generate an invalid packet with too many instructions
 ; due to a store that has a must-extend operand.

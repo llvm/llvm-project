@@ -1334,6 +1334,15 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // Treat '.' as a valid identifier in this context.
     Lex();
     IDVal = ".";
+  } else if (Lexer.is(AsmToken::LCurly)) {
+    // Treat '{' as a valid identifier in this context.
+    Lex();
+    IDVal = "{";
+
+  } else if (Lexer.is(AsmToken::RCurly)) {
+    // Treat '}' as a valid identifier in this context.
+    Lex();
+    IDVal = "}";
   } else if (parseIdentifier(IDVal)) {
     if (!TheCondState.Ignore)
       return TokError("unexpected token at start of statement");
@@ -1396,6 +1405,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   // See what kind of statement we have.
   switch (Lexer.getKind()) {
   case AsmToken::Colon: {
+    if (!getTargetParser().isLabel(ID))
+      break;
     checkForValidSection();
 
     // identifier ':'   -> Label.
@@ -1454,6 +1465,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   }
 
   case AsmToken::Equal:
+    if (!getTargetParser().equalIsAsmAssignment())
+      break;
     // identifier '=' ... -> assignment statement
     Lex();
 
@@ -1703,7 +1716,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   // Canonicalize the opcode to lower case.
   std::string OpcodeStr = IDVal.lower();
   ParseInstructionInfo IInfo(Info.AsmRewrites);
-  bool HadError = getTargetParser().ParseInstruction(IInfo, OpcodeStr, IDLoc,
+  bool HadError = getTargetParser().ParseInstruction(IInfo, OpcodeStr, ID,
                                                      Info.ParsedOperands);
   Info.ParseError = HadError;
 

@@ -294,6 +294,13 @@ public:
   }
 };
 
+class AsmVariantInfo {
+public:
+  std::string TokenizingCharacters;
+  std::string SeparatorCharacters;
+  std::string BreakCharacters;
+};
+
 /// MatchableInfo - Helper class for storing the necessary information for an
 /// instruction or alias which is capable of being matched.
 struct MatchableInfo {
@@ -484,7 +491,8 @@ struct MatchableInfo {
 
   void initialize(const AsmMatcherInfo &Info,
                   SmallPtrSetImpl<Record*> &SingletonRegisters,
-                  int AsmVariantNo, StringRef RegisterPrefix);
+                  int AsmVariantNo, StringRef RegisterPrefix,
+                  AsmVariantInfo const &Variant);
 
   /// validate - Return true if this matchable is a valid thing to match against
   /// and perform a bunch of validity checking.
@@ -584,8 +592,10 @@ struct MatchableInfo {
   void dump() const;
 
 private:
-  void tokenizeAsmString(const AsmMatcherInfo &Info);
-  void addAsmOperand(size_t Start, size_t End);
+  void tokenizeAsmString(AsmMatcherInfo const &Info,
+                         AsmVariantInfo const &Variant);
+  void addAsmOperand(size_t Start, size_t End,
+                     std::string const &SeparatorCharacters);
 };
 
 /// SubtargetFeatureInfo - Helper class for storing information on a subtarget
@@ -828,12 +838,13 @@ extractSingletonRegisterForAsmOperand(MatchableInfo::AsmOperand &Op,
 
 void MatchableInfo::initialize(const AsmMatcherInfo &Info,
                                SmallPtrSetImpl<Record*> &SingletonRegisters,
-                               int AsmVariantNo, StringRef RegisterPrefix) {
+                               int AsmVariantNo, StringRef RegisterPrefix,
+                               AsmVariantInfo const &Variant) {
   AsmVariantID = AsmVariantNo;
   AsmString =
     CodeGenInstruction::FlattenAsmStringVariants(AsmString, AsmVariantNo);
 
-  tokenizeAsmString(Info);
+  tokenizeAsmString(Info, Variant);
 
   // Compute the require features.
   for (Record *Predicate : TheDef->getValueAsListOfDefs("Predicates"))
@@ -857,9 +868,9 @@ void MatchableInfo::initialize(const AsmMatcherInfo &Info,
 }
 
 /// Append an AsmOperand for the given substring of AsmString.
-void MatchableInfo::addAsmOperand(size_t Start, size_t End) {
+void MatchableInfo::addAsmOperand(size_t Start, size_t End,
+                                  std::string const &Separators) {
   StringRef String = AsmString;
-  StringRef Separators = "[]*! \t,";
   // Look for separators before and after to figure out is this token is
   // isolated.  Accept '$$' as that's how we escape '$'.
   bool IsIsolatedToken =
@@ -870,42 +881,54 @@ void MatchableInfo::addAsmOperand(size_t Start, size_t End) {
 }
 
 /// tokenizeAsmString - Tokenize a simplified assembly string.
-void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info) {
+void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
+                                      AsmVariantInfo const &Variant) {
   StringRef String = AsmString;
-  size_t Prev = 0;
-  bool InTok = true;
-  for (size_t i = 0, e = String.size(); i != e; ++i) {
-    switch (String[i]) {
-    case '[':
-    case ']':
-    case '*':
-    case '!':
-    case ' ':
-    case '\t':
-    case ',':
-      if (InTok) {
-        addAsmOperand(Prev, i);
+  unsigned Prev = 0;
+  bool InTok = false;
+  std::string Separators = Variant.TokenizingCharacters +
+                           Variant.SeparatorCharacters;
+  for (unsigned i = 0, e = String.size(); i != e; ++i) {
+    if(Variant.BreakCharacters.find(String[i]) != std::string::npos) {
+      if(InTok) {
+        addAsmOperand(Prev, i, Separators);
+        Prev = i;
+      }
+      InTok = true;
+      continue;
+    }
+    if(Variant.TokenizingCharacters.find(String[i]) != std::string::npos) {
+      if(InTok) {
+        addAsmOperand(Prev, i, Separators);
         InTok = false;
       }
-      if (!isspace(String[i]) && String[i] != ',')
-        addAsmOperand(i, i + 1);
+      addAsmOperand(i, i + 1, Separators);
       Prev = i + 1;
-      break;
-
+      continue;
+    }
+    if(Variant.SeparatorCharacters.find(String[i]) != std::string::npos) {
+      if(InTok) {
+        addAsmOperand(Prev, i, Separators);
+        InTok = false;
+      }
+      Prev = i + 1;
+      continue;
+    }
+    switch (String[i]) {
     case '\\':
       if (InTok) {
-        addAsmOperand(Prev, i);
+        addAsmOperand(Prev, i, Separators);
         InTok = false;
       }
       ++i;
       assert(i != String.size() && "Invalid quoted character");
-      addAsmOperand(i, i + 1);
+      addAsmOperand(i, i + 1, Separators);
       Prev = i + 1;
       break;
 
     case '$': {
-      if (InTok) {
-        addAsmOperand(Prev, i);
+      if (InTok && Prev != i) {
+        addAsmOperand(Prev, i, Separators);
         InTok = false;
       }
 
@@ -915,48 +938,29 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info) {
         break;
       }
 
-      // If this is "${" find the next "}" and make an identifier like "${xxx}"
-      size_t EndPos = String.find('}', i);
-      assert(EndPos != StringRef::npos &&
-             "Missing brace in operand reference!");
-      addAsmOperand(i, EndPos+1);
+      StringRef::iterator End = std::find(String.begin() + i, String.end(),'}');
+      assert(End != String.end() && "Missing brace in operand reference!");
+      size_t EndPos = End - String.begin();
+      addAsmOperand(i, EndPos+1, Separators);
       Prev = EndPos + 1;
       i = EndPos;
       break;
     }
-
-    case '.':
-      if (!Info.AsmParser->getValueAsBit("MnemonicContainsDot")) {
-        if (InTok)
-          addAsmOperand(Prev, i);
-        Prev = i;
-      }
-      InTok = true;
-      break;
-
     default:
       InTok = true;
     }
   }
   if (InTok && Prev != String.size())
-    addAsmOperand(Prev, StringRef::npos);
+    addAsmOperand(Prev, StringRef::npos, Separators);
 
   // The first token of the instruction is the mnemonic, which must be a
   // simple string, not a $foo variable or a singleton register.
   if (AsmOperands.empty())
     PrintFatalError(TheDef->getLoc(),
                   "Instruction '" + TheDef->getName() + "' has no tokens");
-  Mnemonic = AsmOperands[0].Token;
-  if (Mnemonic.empty())
-    PrintFatalError(TheDef->getLoc(),
-                  "Missing instruction mnemonic");
-  // FIXME : Check and raise an error if it is a register.
-  if (Mnemonic[0] == '$')
-    PrintFatalError(TheDef->getLoc(),
-                    "Invalid instruction mnemonic '" + Mnemonic + "'!");
-
-  // Remove the first operand, it is tracked in the mnemonic field.
-  AsmOperands.erase(AsmOperands.begin());
+  assert(!AsmOperands[0].Token.empty());
+  if (AsmOperands[0].Token[0] != '$')
+    Mnemonic = AsmOperands[0].Token;
 }
 
 bool MatchableInfo::validate(StringRef CommentDelimiter, bool Hack) const {
@@ -1373,6 +1377,13 @@ void AsmMatcherInfo::buildInfo() {
     std::string CommentDelimiter =
       AsmVariant->getValueAsString("CommentDelimiter");
     std::string RegisterPrefix = AsmVariant->getValueAsString("RegisterPrefix");
+    AsmVariantInfo Variant;
+    Variant.TokenizingCharacters =
+        AsmVariant->getValueAsString("TokenizingCharacters");
+    Variant.SeparatorCharacters =
+        AsmVariant->getValueAsString("SeparatorCharacters");
+    Variant.BreakCharacters =
+        AsmVariant->getValueAsString("BreakCharacters");
     int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
     for (const CodeGenInstruction *CGI : Target.instructions()) {
@@ -1388,7 +1399,8 @@ void AsmMatcherInfo::buildInfo() {
 
       auto II = llvm::make_unique<MatchableInfo>(*CGI);
 
-      II->initialize(*this, SingletonRegisters, AsmVariantNo, RegisterPrefix);
+      II->initialize(*this, SingletonRegisters, AsmVariantNo, RegisterPrefix,
+                     Variant);
 
       // Ignore instructions which shouldn't be matched and diagnose invalid
       // instruction definitions with an error.
@@ -1415,7 +1427,8 @@ void AsmMatcherInfo::buildInfo() {
 
       auto II = llvm::make_unique<MatchableInfo>(std::move(Alias));
 
-      II->initialize(*this, SingletonRegisters, AsmVariantNo, RegisterPrefix);
+      II->initialize(*this, SingletonRegisters, AsmVariantNo, RegisterPrefix,
+                     Variant);
 
       // Validate the alias definitions.
       II->validate(CommentDelimiter, false);
@@ -1858,7 +1871,7 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
         // Add the operand entry to the instruction kind conversion row.
         ConversionRow.push_back(ID);
-        ConversionRow.push_back(OpInfo.AsmOperandNum + 1);
+        ConversionRow.push_back(OpInfo.AsmOperandNum);
 
         if (!IsNewConverter)
           break;
@@ -2581,13 +2594,17 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   OS << "  uint64_t AvailableFeatures = getAvailableFeatures();\n\n";
 
   OS << "  // Get the next operand index.\n";
-  OS << "  unsigned NextOpNum = Operands.size()-1;\n";
+  OS << "  unsigned NextOpNum = Operands.size();\n";
 
   // Emit code to search the table.
   OS << "  // Search the table.\n";
   OS << "  std::pair<const OperandMatchEntry*, const OperandMatchEntry*>";
-  OS << " MnemonicRange =\n";
-  OS << "    std::equal_range(OperandMatchTable, OperandMatchTable+"
+  OS << " MnemonicRange\n";
+  OS << "       (OperandMatchTable, OperandMatchTable+";
+  OS << Info.OperandMatchInfo.size() << ");\n";
+  OS << "  if(!Mnemonic.empty())\n";
+  OS << "    MnemonicRange = std::equal_range(OperandMatchTable,";
+  OS << " OperandMatchTable+"
      << Info.OperandMatchInfo.size() << ", Mnemonic,\n"
      << "                     LessOpcodeOperand());\n\n";
 
@@ -2897,8 +2914,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
      << "                     bool matchingInlineAsm, unsigned VariantID) {\n";
 
   OS << "  // Eliminate obvious mismatches.\n";
-  OS << "  if (Operands.size() > " << (MaxNumOperands+1) << ") {\n";
-  OS << "    ErrorInfo = " << (MaxNumOperands+1) << ";\n";
+  OS << "  if (Operands.size() > " << MaxNumOperands << ") {\n";
+  OS << "    ErrorInfo = " << MaxNumOperands << ";\n";
   OS << "    return Match_InvalidOperand;\n";
   OS << "  }\n\n";
 
@@ -2907,7 +2924,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  uint64_t AvailableFeatures = getAvailableFeatures();\n\n";
 
   OS << "  // Get the instruction mnemonic, which is the first token.\n";
-  OS << "  StringRef Mnemonic = ((" << Target.getName()
+  OS << "  StringRef Mnemonic;\n";
+  OS << "  if (Operands[0]->isToken())\n";
+  OS << "    Mnemonic = ((" << Target.getName()
      << "Operand&)*Operands[0]).getToken();\n\n";
 
   if (HasMnemonicAliases) {
@@ -2938,8 +2957,11 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
   OS << "  }\n";
   OS << "  // Search the table.\n";
-  OS << "  std::pair<const MatchEntry*, const MatchEntry*> MnemonicRange =\n";
-  OS << "    std::equal_range(Start, End, Mnemonic, LessOpcode());\n\n";
+  OS << "  std::pair<const MatchEntry*, const MatchEntry*>"
+        "MnemonicRange(Start, End);\n";
+  OS << "  unsigned SIndex = Mnemonic.empty() ? 0 : 1;\n";
+  OS << "  if (!Mnemonic.empty())\n";
+  OS << "    MnemonicRange = std::equal_range(Start, End, Mnemonic.lower(), LessOpcode());\n\n";
 
   OS << "  // Return a more specific error code if no mnemonics match.\n";
   OS << "  if (MnemonicRange.first == MnemonicRange.second)\n";
@@ -2949,28 +2971,23 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
      << "*ie = MnemonicRange.second;\n";
   OS << "       it != ie; ++it) {\n";
 
-  OS << "    // equal_range guarantees that instruction mnemonic matches.\n";
-  OS << "    assert(Mnemonic == it->getMnemonic());\n";
-
   // Emit check that the subclasses match.
   OS << "    bool OperandsValid = true;\n";
-  OS << "    for (unsigned i = 0; i != " << MaxNumOperands << "; ++i) {\n";
-  OS << "      if (i + 1 >= Operands.size()) {\n";
-  OS << "        OperandsValid = (it->Classes[i] == " <<"InvalidMatchClass);\n";
-  OS << "        if (!OperandsValid) ErrorInfo = i + 1;\n";
+  OS << "    for (unsigned i = SIndex; i != " << MaxNumOperands << "; ++i) {\n";
+  OS << "      auto Formal = static_cast<MatchClassKind>(it->Classes[i]);\n";
+  OS << "      if (i >= Operands.size()) {\n";
+  OS << "        OperandsValid = (Formal == " <<"InvalidMatchClass);\n";
+  OS << "        if (!OperandsValid) ErrorInfo = i;\n";
   OS << "        break;\n";
   OS << "      }\n";
-  OS << "      unsigned Diag = validateOperandClass(*Operands[i+1],\n";
-  OS.indent(43);
-  OS << "(MatchClassKind)it->Classes[i]);\n";
+  OS << "      MCParsedAsmOperand &Actual = *Operands[i];\n";
+  OS << "      unsigned Diag = validateOperandClass(Actual, Formal);\n";
   OS << "      if (Diag == Match_Success)\n";
   OS << "        continue;\n";
   OS << "      // If the generic handler indicates an invalid operand\n";
   OS << "      // failure, check for a special case.\n";
   OS << "      if (Diag == Match_InvalidOperand) {\n";
-  OS << "        Diag = validateTargetOperandClass(*Operands[i+1],\n";
-  OS.indent(43);
-  OS << "(MatchClassKind)it->Classes[i]);\n";
+  OS << "        Diag = validateTargetOperandClass(Actual, Formal);\n";
   OS << "        if (Diag == Match_Success)\n";
   OS << "          continue;\n";
   OS << "      }\n";
@@ -2979,8 +2996,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      // If we already had a match that only failed due to a\n";
   OS << "      // target predicate, that diagnostic is preferred.\n";
   OS << "      if (!HadMatchOtherThanPredicate &&\n";
-  OS << "          (it == MnemonicRange.first || ErrorInfo <= i+1)) {\n";
-  OS << "        ErrorInfo = i+1;\n";
+  OS << "          (it == MnemonicRange.first || ErrorInfo <= i)) {\n";
+  OS << "        ErrorInfo = i;\n";
   OS << "        // InvalidOperand is the default. Prefer specificity.\n";
   OS << "        if (Diag != Match_InvalidOperand)\n";
   OS << "          RetCode = Diag;\n";
