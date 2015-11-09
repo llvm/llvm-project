@@ -82,6 +82,19 @@ private:
 
 public:
     typedef std::set<TypeOrDecl, EitherComparator> TypesOrDecls;
+    
+    class LanguageFlags
+    {
+    public:
+        enum : uint64_t
+        {
+            eIsIndirectEnumCase        = 0x1ULL,
+            eIgnoreInstancePointerness = 0x2ULL
+        };
+        
+    private:
+        LanguageFlags () = delete;
+    };
 
     //------------------------------------------------------------------
     // llvm casting support
@@ -755,8 +768,8 @@ public:
                                  uint32_t &child_bitfield_bit_offset,
                                  bool &child_is_base_class,
                                  bool &child_is_deref_of_parent,
-                                 bool &child_is_indirect_enum_case,
-                                 ValueObject *valobj) override;
+                                 ValueObject *valobj,
+                                 uint64_t &language_flags) override;
     
     // Lookup a child given a name. This function will match base class names
     // and member member names in "clang_type" only, not descendants.
@@ -788,7 +801,7 @@ public:
     GetTypeForFormatters (void* type) override;
     
     LazyBool
-    ShouldPrintAsOneLiner (void* type) override;
+    ShouldPrintAsOneLiner (void* type, ValueObject* valobj) override;
     
     bool
     IsMeaninglessWithoutDynamicResolution (void* type) override;

@@ -267,6 +267,8 @@ ValueObjectPrinter::IsInstancePointer ()
     // you need to do this check on the value's clang type
     if (m_is_instance_ptr == eLazyBoolCalculate)
         m_is_instance_ptr = (m_valobj->GetValue().GetCompilerType().GetTypeInfo() & eTypeInstanceIsPointer) != 0 ? eLazyBoolYes : eLazyBoolNo;
+    if ((eLazyBoolYes == m_is_instance_ptr) && m_valobj->IsBaseClass())
+        m_is_instance_ptr = eLazyBoolNo;
     return m_is_instance_ptr == eLazyBoolYes;
 }
 
@@ -880,8 +882,6 @@ ValueObjectPrinter::PrintChildrenIfNeeded (bool value_printed,
                           m_options.m_flat_output ||
                           m_options.m_show_location) ? false : DataVisualization::ShouldPrintAsOneLiner(*m_valobj);
     bool is_instance_ptr = IsInstancePointer();
-    if (is_instance_ptr)
-        is_instance_ptr = !m_valobj->GetIgnoreInstancePointerness();
     uint64_t instance_ptr_value = LLDB_INVALID_ADDRESS;
     
     if (print_children && is_instance_ptr)

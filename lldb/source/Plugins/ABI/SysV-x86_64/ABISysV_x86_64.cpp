@@ -1,4 +1,4 @@
-//===-- ABISysV_x86_64.cpp --------------------------------------*- C++ -*-===//
+    //===-- ABISysV_x86_64.cpp --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -791,7 +791,7 @@ ExtractBytesFromRegisters (ExecutionContext& exe_ctx,
         uint32_t child_bitfield_bit_offset = 0;
         bool child_is_base_class = false;
         bool child_is_deref_of_parent = false;
-        bool child_is_indirect_enum_case = false;
+        uint64_t language_flags;
         CompilerType field_clang_type = clang_type.GetChildCompilerTypeAtIndex(&exe_ctx,
                                                                                idx,
                                                                                transparent_pointers,
@@ -804,8 +804,8 @@ ExtractBytesFromRegisters (ExecutionContext& exe_ctx,
                                                                                child_bitfield_bit_offset,
                                                                                child_is_base_class,
                                                                                child_is_deref_of_parent,
-                                                                               child_is_indirect_enum_case,
-                                                                               NULL);
+                                                                               nullptr,
+                                                                               language_flags);
 
         const uint64_t field_bit_offset = child_byte_offset * 8;
         const size_t field_bit_width = child_byte_size * 8 + child_bitfield_bit_size;
@@ -1128,7 +1128,7 @@ ABISysV_x86_64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
                     uint32_t child_bitfield_bit_size = 0;
                     uint32_t child_bitfield_bit_offset = 0;
                     bool child_is_deref_of_parent = false;
-                    bool child_is_indirect_enum_case = false;
+                    uint64_t language_flags;
                     CompilerType field_compiler_type = return_compiler_type.GetChildCompilerTypeAtIndex(&exe_ctx,
                                                                                                         idx,
                                                                                                         transparent_pointers,
@@ -1141,8 +1141,8 @@ ABISysV_x86_64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
                                                                                                         child_bitfield_bit_offset,
                                                                                                         child_is_base_class,
                                                                                                         child_is_deref_of_parent,
-                                                                                                        child_is_indirect_enum_case,
-                                                                                                        NULL);
+                                                                                                        nullptr,
+                                                                                                        language_flags);
                 }
 
                 // if we don't know the size of the field (e.g. invalid type), just bail out

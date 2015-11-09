@@ -35,8 +35,8 @@ ValueObjectChild::ValueObjectChild
     uint32_t bitfield_bit_offset,
     bool is_base_class,
     bool is_deref_of_parent,
-    bool is_indirect_enum_case,
-    AddressType child_ptr_or_ref_addr_type
+    AddressType child_ptr_or_ref_addr_type,
+    uint64_t language_flags
 ) :
     ValueObject (parent),
     m_compiler_type (compiler_type),
@@ -46,11 +46,11 @@ ValueObjectChild::ValueObjectChild
     m_bitfield_bit_offset (bitfield_bit_offset),
     m_is_base_class (is_base_class),
     m_is_deref_of_parent (is_deref_of_parent),
-    m_is_indirect_enum_case(is_indirect_enum_case),
     m_can_update_with_invalid_exe_ctx()
 {
     m_name = name;
     SetAddressTypeOfChildren(child_ptr_or_ref_addr_type);
+    SetLanguageFlags(language_flags);
 }
 
 ValueObjectChild::~ValueObjectChild()
@@ -149,9 +149,10 @@ ValueObjectChild::UpdateValue ()
             
             Flags parent_type_flags(parent_type.GetTypeInfo());
             
+            bool is_instance_ptr_base = ((m_is_base_class == true) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
             bool treat_scalar_as_address = parent_type_flags.AnySet(lldb::eTypeIsPointer | lldb::eTypeIsReference);
             treat_scalar_as_address |= ((m_is_base_class == false) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
-            treat_scalar_as_address |= (GetIgnoreInstancePointerness() == true);
+            treat_scalar_as_address |= is_instance_ptr_base;
             
             AddressType addr_type = parent->GetAddressTypeOfChildren();
 
@@ -184,7 +185,7 @@ ValueObjectChild::UpdateValue ()
                             }
                             break;
                         case eAddressTypeLoad:
-                            m_value.SetValueType (GetIgnoreInstancePointerness() ? Value::eValueTypeScalar: Value::eValueTypeLoadAddress);
+                            m_value.SetValueType (is_instance_ptr_base ? Value::eValueTypeScalar: Value::eValueTypeLoadAddress);
                             break;
                         case eAddressTypeHost:
                             m_value.SetValueType(Value::eValueTypeHostAddress);
@@ -245,7 +246,7 @@ ValueObjectChild::UpdateValue ()
                 ExecutionContext exe_ctx (GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped));
                 if (GetCompilerType().GetTypeInfo() & lldb::eTypeHasValue)
                 {
-                    if (!GetIgnoreInstancePointerness())
+                    if (!is_instance_ptr_base)
                         m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
                     else
                         m_error = m_parent->GetValue().GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());

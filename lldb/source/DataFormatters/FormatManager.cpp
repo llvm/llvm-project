@@ -556,10 +556,6 @@ FormatManager::ShouldPrintAsOneLiner (ValueObject& valobj)
     if (valobj.GetTargetSP().get() && valobj.GetTargetSP()->GetDebugger().GetAutoOneLineSummaries() == false)
         return false; // then don't oneline
     
-    // FIXME: we should actually be able to make it work
-    if (valobj.IsIndirectEnumCase())
-        return false;
-    
     // if this object has a summary, then ask the summary
     if (valobj.GetSummaryFormat().get() != nullptr)
         return valobj.GetSummaryFormat()->IsOneLiner();

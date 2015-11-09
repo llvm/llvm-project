@@ -153,14 +153,6 @@ public:
     bool
     SetValueFromCString(const char *value_str, Error& error) override;
     
-    bool
-    GetIgnoreInstancePointerness () override
-    {
-        if (m_parent)
-            return m_parent->GetIgnoreInstancePointerness();
-        return false;
-    }
-
     void
     SetFormat(lldb::Format format) override;
     
@@ -173,6 +165,12 @@ public:
     bool
     GetDeclaration(Declaration &decl) override;
 
+    uint64_t
+    GetLanguageFlags () override;
+    
+    void
+    SetLanguageFlags (uint64_t flags) override;
+    
 protected:
     bool
     UpdateValue() override;

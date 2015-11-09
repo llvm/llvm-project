@@ -5794,8 +5794,8 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                               uint32_t &child_bitfield_bit_offset,
                                               bool &child_is_base_class,
                                               bool &child_is_deref_of_parent,
-                                              bool &child_is_indirect_enum_case,
-                                              ValueObject *valobj)
+                                              ValueObject *valobj,
+                                              uint64_t &language_flags)
 {
     if (!type)
         return CompilerType();
@@ -5805,7 +5805,7 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
     child_is_base_class = false;
-    child_is_indirect_enum_case = false;
+    language_flags = 0;
     
     const bool idx_is_valid = idx < GetNumChildren (type, omit_empty_base_classes);
     uint32_t bit_offset;
@@ -6116,8 +6116,8 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                                            child_bitfield_bit_offset,
                                                                            child_is_base_class,
                                                                            tmp_child_is_deref_of_parent,
-                                                                           child_is_indirect_enum_case,
-                                                                           valobj);
+                                                                           valobj,
+                                                                           language_flags);
                 }
                 else
                 {
@@ -6208,8 +6208,8 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                                            child_bitfield_bit_offset,
                                                                            child_is_base_class,
                                                                            tmp_child_is_deref_of_parent,
-                                                                           child_is_indirect_enum_case,
-                                                                           valobj);
+                                                                           valobj,
+                                                                           language_flags);
                 }
                 else
                 {
@@ -6255,8 +6255,8 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                                            child_bitfield_bit_offset,
                                                                            child_is_base_class,
                                                                            tmp_child_is_deref_of_parent,
-                                                                           child_is_indirect_enum_case,
-                                                                           valobj);
+                                                                           valobj,
+                                                                           language_flags);
                 }
                 else
                 {
@@ -6293,8 +6293,8 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                                      child_bitfield_bit_offset,
                                                                      child_is_base_class,
                                                                      child_is_deref_of_parent,
-                                                                     child_is_indirect_enum_case,
-                                                                     valobj);
+                                                                     valobj,
+                                                                     language_flags);
         }
             break;
             
@@ -6313,8 +6313,8 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                                       child_bitfield_bit_offset,
                                                                       child_is_base_class,
                                                                       child_is_deref_of_parent,
-                                                                      child_is_indirect_enum_case,
-                                                                      valobj);
+                                                                      valobj,
+                                                                      language_flags);
         }
             
         case clang::Type::Paren:
@@ -6332,8 +6332,8 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                                  child_bitfield_bit_offset,
                                                                  child_is_base_class,
                                                                  child_is_deref_of_parent,
-                                                                 child_is_indirect_enum_case,
-                                                                 valobj);
+                                                                 valobj,
+                                                                 language_flags);
         }
             
             

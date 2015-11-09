@@ -3114,6 +3114,12 @@ SwiftLanguageRuntime::GetValueType (Value::ValueType static_value_type,
         return Value::eValueTypeScalar;
 }
 
+static bool
+IsIndirectEnumCase (ValueObject& valobj)
+{
+    return (valobj.GetLanguageFlags() & SwiftASTContext::LanguageFlags::eIsIndirectEnumCase) == SwiftASTContext::LanguageFlags::eIsIndirectEnumCase;
+}
+
 bool
 SwiftLanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
                                                 lldb::DynamicValueType use_dynamic,
@@ -3128,7 +3134,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
     
     bool success = false;
     
-    if (in_value.IsIndirectEnumCase())
+    if (IsIndirectEnumCase(in_value))
         success = GetDynamicTypeAndAddress_IndirectEnumCase(in_value,use_dynamic,class_type_or_name,address);
     else
     {
@@ -3175,7 +3181,7 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName& type_and_or_name,
     // could either be a Swift type (no need to change anything), or an ObjC type
     // in which case it needs to be made into a pointer
     if (type_flags.AnySet(eTypeIsPointer))
-        should_be_made_into_ptr = (type_flags.AllClear(eTypeIsArchetype) && !static_value.IsIndirectEnumCase());
+        should_be_made_into_ptr = (type_flags.AllClear(eTypeIsArchetype) && !IsIndirectEnumCase(static_value));
     else if (type_flags.AnySet(eTypeInstanceIsPointer))
         should_be_made_into_ptr = !type_andor_name_flags.AllSet(eTypeIsSwift);
     else if (type_flags.AnySet(eTypeIsReference))
@@ -3242,7 +3248,7 @@ SwiftLanguageRuntime::CouldHaveDynamicValue (ValueObject &in_value)
 {
     //if (in_value.IsDynamic())
     //    return false;
-    if (in_value.IsIndirectEnumCase())
+    if (IsIndirectEnumCase(in_value))
         return true;
     CompilerType var_type(in_value.GetCompilerType());
     Flags var_type_flags(var_type.GetTypeInfo());

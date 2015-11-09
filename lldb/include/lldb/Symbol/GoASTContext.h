@@ -297,21 +297,13 @@ class GoASTContext : public TypeSystem
         return CompilerType();
     }
 
-    virtual CompilerType GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type,
-                                                     ExecutionContext *exe_ctx,
-                                                     size_t idx,
-                                                     bool transparent_pointers,
-                                                     bool omit_empty_base_classes,
-                                                     bool ignore_array_bounds,
-                                                     std::string &child_name,
-                                                     uint32_t &child_byte_size,
-                                                     int32_t &child_byte_offset,
-                                                     uint32_t &child_bitfield_bit_size,
-                                                     uint32_t &child_bitfield_bit_offset,
-                                                     bool &child_is_base_class,
-                                                     bool &child_is_deref_of_parent,
-                                                     bool &child_is_indirect_enum_case,
-                                                     ValueObject *valobj) override;
+    CompilerType GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
+                                             bool transparent_pointers, bool omit_empty_base_classes,
+                                             bool ignore_array_bounds, std::string &child_name,
+                                             uint32_t &child_byte_size, int32_t &child_byte_offset,
+                                             uint32_t &child_bitfield_bit_size,
+                                             uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
+                                             bool &child_is_deref_of_parent, ValueObject *valobj, uint64_t &language_flags) override;
 
     // Lookup a child given a name. This function will match base class names
     // and member member names in "clang_type" only, not descendants.

@@ -35,8 +35,8 @@ public:
                                  uint32_t bitfield_bit_offset,
                                  bool is_base_class,
                                  bool is_deref_of_parent,
-                                 bool child_is_indirect_enum_case,
-                                 lldb::addr_t live_address); // REMOVE AFTER THINGS COMPILE? = LLDB_INVALID_ADDRESS);
+                                 lldb::addr_t live_address,
+                                 uint64_t language_flags);
     
     ~ValueObjectConstResultChild() override;
     

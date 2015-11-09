@@ -10314,13 +10314,13 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                                               uint32_t &child_bitfield_bit_offset,
                                               bool &child_is_base_class,
                                               bool &child_is_deref_of_parent,
-                                              bool &child_is_indirect_enum_case,
-                                              ValueObject *valobj)
+                                              ValueObject *valobj,
+                                              uint64_t &language_flags)
 {
     if (!type)
         return CompilerType();
     
-    child_is_indirect_enum_case = false;
+    language_flags = 0;
     
     swift::CanType swift_can_type (GetCanonicalSwiftType (type));
     
@@ -10351,8 +10351,8 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                                                                                                                                                                           child_bitfield_bit_offset,
                                                                                                                                                                           child_is_base_class,
                                                                                                                                                                           child_is_deref_of_parent,
-                                                                                                                                                                          child_is_indirect_enum_case,
-                                                                                                                                                                          valobj);
+                                                                                                                                                                          valobj,
+                                                                                                                                                                          language_flags);
             //            case swift::TypeKind::Tuple:
             //                {
             //                    swift::TupleType *tuple_type = swift_can_type->getAs<swift::TupleType>();
@@ -10412,8 +10412,8 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                                                                                                                                                                     child_bitfield_bit_offset,
                                                                                                                                                                     child_is_base_class,
                                                                                                                                                                     child_is_deref_of_parent,
-                                                                                                                                                                    child_is_indirect_enum_case,
-                                                                                                                                                                    valobj);
+                                                                                                                                                                    valobj,
+                                                                                                                                                                    language_flags);
         case swift::TypeKind::GenericTypeParam:
         case swift::TypeKind::AssociatedType:
         case swift::TypeKind::DependentMember:
@@ -10437,7 +10437,7 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                 child_is_deref_of_parent = false;
                 if (element_info->is_indirect)
                 {
-                    child_is_indirect_enum_case = true;
+                    language_flags |= LanguageFlags::eIsIndirectEnumCase;
                     return CompilerType(GetASTContext(), GetASTContext()->TheRawPointerType.getPointer());
                 }
                 else
@@ -10463,8 +10463,8 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                                                                                                              child_bitfield_bit_offset,
                                                                                                              child_is_base_class,
                                                                                                              child_is_deref_of_parent,
-                                                                                                             child_is_indirect_enum_case,
-                                                                                                             valobj);
+                                                                                                             valobj,
+                                                                                                             language_flags);
             break;
         }
             
@@ -10497,7 +10497,10 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                     child_byte_offset = cached_member_info->member_infos[idx].byte_offset;
                     child_bitfield_bit_size = 0;
                     child_bitfield_bit_offset = 0;
-                    child_is_base_class = cached_member_info->member_infos[idx].member_type == MemberType::BaseClass;
+                    if (child_is_base_class = cached_member_info->member_infos[idx].member_type == MemberType::BaseClass)
+                    {
+                        language_flags |= LanguageFlags::eIgnoreInstancePointerness;
+                    }
                     child_is_deref_of_parent = false;
                     return cached_member_info->member_infos[idx].clang_type;
                 }
@@ -10538,8 +10541,8 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                                                                            child_bitfield_bit_offset,
                                                                            child_is_base_class,
                                                                            tmp_child_is_deref_of_parent,
-                                                                           child_is_indirect_enum_case,
-                                                                           valobj);
+                                                                           valobj,
+                                                                           language_flags);
                 }
                 else
                 {
@@ -11169,12 +11172,19 @@ SwiftASTContext::GetTypeForFormatters (void* type)
 }
 
 LazyBool
-SwiftASTContext::ShouldPrintAsOneLiner (void* type)
+SwiftASTContext::ShouldPrintAsOneLiner (void* type, ValueObject* valobj)
 {
     if (type)
     {
         CompilerType can_compiler_type(GetCanonicalType(type));
         if (IsImportedType(can_compiler_type, nullptr))
+            return eLazyBoolNo;
+    }
+    if (valobj)
+    {
+        if (valobj->IsBaseClass())
+            return eLazyBoolNo;
+        if ((valobj->GetLanguageFlags() & LanguageFlags::eIsIndirectEnumCase) == LanguageFlags::eIsIndirectEnumCase)
             return eLazyBoolNo;
     }
     

@@ -1132,21 +1132,11 @@ GoASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type, size_t idx, std
 }
 
 CompilerType
-GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type,
-                                          ExecutionContext *exe_ctx,
-                                          size_t idx,
-                                          bool transparent_pointers,
-                                          bool omit_empty_base_classes,
-                                          bool ignore_array_bounds,
-                                          std::string &child_name,
-                                          uint32_t &child_byte_size,
-                                          int32_t &child_byte_offset,
-                                          uint32_t &child_bitfield_bit_size,
-                                          uint32_t &child_bitfield_bit_offset,
-                                          bool &child_is_base_class,
-                                          bool &child_is_deref_of_parent,
-                                          bool &child_is_indirect_enum_case,
-                                          ValueObject *valobj)
+GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
+                                          bool omit_empty_base_classes, bool ignore_array_bounds, std::string &child_name,
+                                          uint32_t &child_byte_size, int32_t &child_byte_offset,
+                                          uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
+                                          bool &child_is_base_class, bool &child_is_deref_of_parent, ValueObject *valobj, uint64_t &language_flags)
 {
     child_name.clear();
     child_byte_size = 0;
@@ -1155,6 +1145,7 @@ GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type,
     child_bitfield_bit_offset = 0;
     child_is_base_class = false;
     child_is_deref_of_parent = false;
+    language_flags = 0;
 
     if (!type || !GetCompleteType(type))
         return CompilerType();
@@ -1176,20 +1167,10 @@ GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type,
         if (transparent_pointers && pointee.IsAggregateType())
         {
             bool tmp_child_is_deref_of_parent = false;
-            return pointee.GetChildCompilerTypeAtIndex(exe_ctx,
-                                                       idx,
-                                                       transparent_pointers,
-                                                       omit_empty_base_classes,
-                                                       ignore_array_bounds,
-                                                       child_name,
-                                                       child_byte_size,
-                                                       child_byte_offset,
-                                                       child_bitfield_bit_size,
-                                                       child_bitfield_bit_offset,
-                                                       child_is_base_class,
-                                                       tmp_child_is_deref_of_parent,
-                                                       child_is_indirect_enum_case,
-                                                       valobj);
+            return pointee.GetChildCompilerTypeAtIndex(exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+                                                    ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+                                                    child_bitfield_bit_size, child_bitfield_bit_offset,
+                                                       child_is_base_class, tmp_child_is_deref_of_parent, valobj, language_flags);
         }
         else
         {
@@ -1228,20 +1209,10 @@ GoASTContext::GetChildCompilerTypeAtIndex(lldb::opaque_compiler_type_t type,
     }
     else if (t->IsTypedef())
     {
-        return t->GetElementType().GetChildCompilerTypeAtIndex(exe_ctx,
-                                                               idx,
-                                                               transparent_pointers,
-                                                               omit_empty_base_classes,
-                                                               ignore_array_bounds,
-                                                               child_name,
-                                                               child_byte_size,
-                                                               child_byte_offset,
-                                                               child_bitfield_bit_size,
-                                                               child_bitfield_bit_offset,
-                                                               child_is_base_class,
-                                                               child_is_deref_of_parent,
-                                                               child_is_indirect_enum_case,
-                                                               valobj);
+        return t->GetElementType().GetChildCompilerTypeAtIndex(
+            exe_ctx, idx, transparent_pointers, omit_empty_base_classes, ignore_array_bounds, child_name,
+            child_byte_size, child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
+            child_is_deref_of_parent, valobj, language_flags);
     }
     return CompilerType();
 }

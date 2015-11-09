@@ -106,7 +106,7 @@ public:
     TypeImpl
     GetTypeImpl() override;
     
-     lldb::VariableSP
+    lldb::VariableSP
     GetVariable () override
     {
         return m_parent ? m_parent->GetVariable() : nullptr;
@@ -119,15 +119,13 @@ public:
     SetPreferredDisplayLanguage (lldb::LanguageType);
     
     bool
-    GetIgnoreInstancePointerness () override
-    {
-        if (m_parent)
-            return m_parent->GetIgnoreInstancePointerness();
-        return false;
-    }
-    
-    bool
     GetDeclaration(Declaration &decl) override;
+    
+    uint64_t
+    GetLanguageFlags () override;
+    
+    void
+    SetLanguageFlags (uint64_t flags) override;
 
 protected:
     bool
