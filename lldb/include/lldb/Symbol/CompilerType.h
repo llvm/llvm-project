@@ -490,7 +490,7 @@ public:
     GetTypeForFormatters () const;
     
     LazyBool
-    ShouldPrintAsOneLiner () const;
+    ShouldPrintAsOneLiner (ValueObject* valobj) const;
     
     bool
     IsMeaninglessWithoutDynamicResolution () const;

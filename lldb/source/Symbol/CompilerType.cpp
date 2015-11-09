@@ -943,10 +943,10 @@ CompilerType::GetTypeForFormatters () const
 }
 
 LazyBool
-CompilerType::ShouldPrintAsOneLiner () const
+CompilerType::ShouldPrintAsOneLiner (ValueObject* valobj) const
 {
     if (IsValid())
-        return m_type_system->ShouldPrintAsOneLiner(m_type);
+        return m_type_system->ShouldPrintAsOneLiner(m_type, valobj);
     return eLazyBoolCalculate;
 }
 
