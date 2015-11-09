@@ -531,7 +531,7 @@ public:
     GetTypeForFormatters (void* type);
     
     virtual LazyBool
-    ShouldPrintAsOneLiner (void* type);
+    ShouldPrintAsOneLiner (void* type, ValueObject* valobj);
     
     // Type systems can have types that are placeholder types, which are meant to indicate
     // the presence of a type, but offer no actual information about said types, and leave

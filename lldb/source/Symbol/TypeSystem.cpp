@@ -110,7 +110,7 @@ TypeSystem::GetTypeForFormatters (void* type)
 }
 
 LazyBool
-TypeSystem::ShouldPrintAsOneLiner (void* type)
+TypeSystem::ShouldPrintAsOneLiner (void* type, ValueObject* valobj)
 {
     return eLazyBoolCalculate;
 }
