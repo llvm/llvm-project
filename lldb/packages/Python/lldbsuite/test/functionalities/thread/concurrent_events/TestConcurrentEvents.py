@@ -21,7 +21,6 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
-@skipIfLinux  # <rdar://problem/23157557> TestConcurrentEvents.py timeout on Ubuntu 14.04 x86_64
 @skipIfWindows
 class ConcurrentEventsTestCase(TestBase):
 

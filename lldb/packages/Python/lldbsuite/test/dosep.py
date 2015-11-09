@@ -1049,7 +1049,7 @@ def getDefaultTimeout(platform_name):
     if platform_name.startswith("remote-"):
         return "10m"
     else:
-        return "4m"
+        return "5m"
 
 
 def touch(fname, times=None):
