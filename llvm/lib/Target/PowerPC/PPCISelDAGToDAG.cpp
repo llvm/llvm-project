@@ -2799,6 +2799,8 @@ SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
         SDValue Base, Offset;
 
         if (LD->isUnindexed() &&
+            (LD->getMemoryVT() == MVT::f64 ||
+             LD->getMemoryVT() == MVT::i64) &&
             SelectAddrIdxOnly(LD->getBasePtr(), Base, Offset)) {
           SDValue Chain = LD->getChain();
           SDValue Ops[] = { Base, Offset, Chain };
