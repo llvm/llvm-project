@@ -2835,24 +2835,84 @@ def : Pat<(i64 (anyext i1:$in)),
           (SELECT_I8 $in, (LI8 1), (LI8 0))>;
 
 // match setcc on i1 variables.
+// CRANDC is:
+//   1 1 : F
+//   1 0 : T
+//   0 1 : F
+//   0 0 : F
+//
+// LT is:
+//  -1 -1  : F
+//  -1  0  : T
+//   0 -1  : F
+//   0  0  : F
+//
+// ULT is:
+//   1 1 : F
+//   1 0 : F
+//   0 1 : T
+//   0 0 : F
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETLT)),
-          (CRANDC $s2, $s1)>;
+          (CRANDC $s1, $s2)>;
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETULT)),
           (CRANDC $s2, $s1)>;
+// CRORC is:
+//   1 1 : T
+//   1 0 : T
+//   0 1 : F
+//   0 0 : T
+//
+// LE is:
+//  -1 -1 : T
+//  -1  0 : T
+//   0 -1 : F
+//   0  0 : T
+//
+// ULE is:
+//   1 1 : T
+//   1 0 : F
+//   0 1 : T
+//   0 0 : T
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETLE)),
-          (CRORC $s2, $s1)>;
+          (CRORC $s1, $s2)>;
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETULE)),
           (CRORC $s2, $s1)>;
+
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETEQ)),
           (CREQV $s1, $s2)>;
+
+// GE is:
+//  -1 -1 : T
+//  -1  0 : F
+//   0 -1 : T
+//   0  0 : T
+//
+// UGE is:
+//   1 1 : T
+//   1 0 : T
+//   0 1 : F
+//   0 0 : T
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETGE)),
-          (CRORC $s1, $s2)>;
+          (CRORC $s2, $s1)>;
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETUGE)),
           (CRORC $s1, $s2)>;
+
+// GT is:
+//  -1 -1 : F
+//  -1  0 : F
+//   0 -1 : T
+//   0  0 : F
+//
+// UGT is:
+//  1 1 : F
+//  1 0 : T
+//  0 1 : F
+//  0 0 : F
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETGT)),
-          (CRANDC $s1, $s2)>;
+          (CRANDC $s2, $s1)>;
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETUGT)),
           (CRANDC $s1, $s2)>;
+
 def : Pat<(i1 (setcc i1:$s1, i1:$s2, SETNE)),
           (CRXOR $s1, $s2)>;
 
@@ -3203,18 +3263,30 @@ def : Pat<(i1 (select i1:$cond, i1:$tval, i1:$fval)),
 //   select (lhs == rhs), tval, fval is:
 //   ((lhs == rhs) & tval) | (!(lhs == rhs) & fval)
 def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETLT)),
+           (CROR (CRAND (CRANDC $lhs, $rhs), $tval),
+                 (CRAND (CRORC  $rhs, $lhs), $fval))>;
+def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETULT)),
            (CROR (CRAND (CRANDC $rhs, $lhs), $tval),
                  (CRAND (CRORC  $lhs, $rhs), $fval))>;
 def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETLE)),
+           (CROR (CRAND (CRORC  $lhs, $rhs), $tval),
+                 (CRAND (CRANDC $rhs, $lhs), $fval))>;
+def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETULE)),
            (CROR (CRAND (CRORC  $rhs, $lhs), $tval),
                  (CRAND (CRANDC $lhs, $rhs), $fval))>;
 def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETEQ)),
            (CROR (CRAND (CREQV $lhs, $rhs), $tval),
                  (CRAND (CRXOR $lhs, $rhs), $fval))>;
 def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETGE)),
+           (CROR (CRAND (CRORC  $rhs, $lhs), $tval),
+                 (CRAND (CRANDC $lhs, $rhs), $fval))>;
+def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETUGE)),
            (CROR (CRAND (CRORC  $lhs, $rhs), $tval),
                  (CRAND (CRANDC $rhs, $lhs), $fval))>;
 def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETGT)),
+           (CROR (CRAND (CRANDC $rhs, $lhs), $tval),
+                 (CRAND (CRORC  $lhs, $rhs), $fval))>;
+def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETUGT)),
            (CROR (CRAND (CRANDC $lhs, $rhs), $tval),
                  (CRAND (CRORC  $rhs, $lhs), $fval))>;
 def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETNE)),
@@ -3223,66 +3295,106 @@ def : Pat <(i1 (selectcc i1:$lhs, i1:$rhs, i1:$tval, i1:$fval, SETNE)),
 
 // match selectcc on i1 variables with non-i1 output.
 def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETLT)),
+          (SELECT_I4 (CRANDC $lhs, $rhs), $tval, $fval)>;
+def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETULT)),
           (SELECT_I4 (CRANDC $rhs, $lhs), $tval, $fval)>;
 def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETLE)),
+          (SELECT_I4 (CRORC  $lhs, $rhs), $tval, $fval)>;
+def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETULE)),
           (SELECT_I4 (CRORC  $rhs, $lhs), $tval, $fval)>;
 def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETEQ)),
           (SELECT_I4 (CREQV $lhs, $rhs), $tval, $fval)>;
 def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETGE)),
+          (SELECT_I4 (CRORC  $rhs, $lhs), $tval, $fval)>;
+def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETUGE)),
           (SELECT_I4 (CRORC  $lhs, $rhs), $tval, $fval)>;
 def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETGT)),
+          (SELECT_I4 (CRANDC $rhs, $lhs), $tval, $fval)>;
+def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETUGT)),
           (SELECT_I4 (CRANDC $lhs, $rhs), $tval, $fval)>;
 def : Pat<(i32 (selectcc i1:$lhs, i1:$rhs, i32:$tval, i32:$fval, SETNE)),
           (SELECT_I4 (CRXOR $lhs, $rhs), $tval, $fval)>;
 
 def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETLT)),
+          (SELECT_I8 (CRANDC $lhs, $rhs), $tval, $fval)>;
+def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETULT)),
           (SELECT_I8 (CRANDC $rhs, $lhs), $tval, $fval)>;
 def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETLE)),
+          (SELECT_I8 (CRORC  $lhs, $rhs), $tval, $fval)>;
+def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETULE)),
           (SELECT_I8 (CRORC  $rhs, $lhs), $tval, $fval)>;
 def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETEQ)),
           (SELECT_I8 (CREQV $lhs, $rhs), $tval, $fval)>;
 def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETGE)),
+          (SELECT_I8 (CRORC  $rhs, $lhs), $tval, $fval)>;
+def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETUGE)),
           (SELECT_I8 (CRORC  $lhs, $rhs), $tval, $fval)>;
 def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETGT)),
+          (SELECT_I8 (CRANDC $rhs, $lhs), $tval, $fval)>;
+def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETUGT)),
           (SELECT_I8 (CRANDC $lhs, $rhs), $tval, $fval)>;
 def : Pat<(i64 (selectcc i1:$lhs, i1:$rhs, i64:$tval, i64:$fval, SETNE)),
           (SELECT_I8 (CRXOR $lhs, $rhs), $tval, $fval)>;
 
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETLT)),
+          (SELECT_F4 (CRANDC $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETULT)),
           (SELECT_F4 (CRANDC $rhs, $lhs), $tval, $fval)>;
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETLE)),
+          (SELECT_F4 (CRORC  $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETULE)),
           (SELECT_F4 (CRORC  $rhs, $lhs), $tval, $fval)>;
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETEQ)),
           (SELECT_F4 (CREQV $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETGE)),
+          (SELECT_F4 (CRORC  $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETUGE)),
           (SELECT_F4 (CRORC  $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETGT)),
+          (SELECT_F4 (CRANDC $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETUGT)),
           (SELECT_F4 (CRANDC $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETNE)),
           (SELECT_F4 (CRXOR $lhs, $rhs), $tval, $fval)>;
 
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETLT)),
+          (SELECT_F8 (CRANDC $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETULT)),
           (SELECT_F8 (CRANDC $rhs, $lhs), $tval, $fval)>;
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETLE)),
+          (SELECT_F8 (CRORC  $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETULE)),
           (SELECT_F8 (CRORC  $rhs, $lhs), $tval, $fval)>;
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETEQ)),
           (SELECT_F8 (CREQV $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETGE)),
+          (SELECT_F8 (CRORC  $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETUGE)),
           (SELECT_F8 (CRORC  $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETGT)),
+          (SELECT_F8 (CRANDC $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETUGT)),
           (SELECT_F8 (CRANDC $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETNE)),
           (SELECT_F8 (CRXOR $lhs, $rhs), $tval, $fval)>;
 
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETLT)),
+          (SELECT_VRRC (CRANDC $lhs, $rhs), $tval, $fval)>;
+def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETULT)),
           (SELECT_VRRC (CRANDC $rhs, $lhs), $tval, $fval)>;
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETLE)),
+          (SELECT_VRRC (CRORC  $lhs, $rhs), $tval, $fval)>;
+def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETULE)),
           (SELECT_VRRC (CRORC  $rhs, $lhs), $tval, $fval)>;
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETEQ)),
           (SELECT_VRRC (CREQV $lhs, $rhs), $tval, $fval)>;
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETGE)),
+          (SELECT_VRRC (CRORC  $rhs, $lhs), $tval, $fval)>;
+def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETUGE)),
           (SELECT_VRRC (CRORC  $lhs, $rhs), $tval, $fval)>;
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETGT)),
+          (SELECT_VRRC (CRANDC $rhs, $lhs), $tval, $fval)>;
+def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETUGT)),
           (SELECT_VRRC (CRANDC $lhs, $rhs), $tval, $fval)>;
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETNE)),
           (SELECT_VRRC (CRXOR $lhs, $rhs), $tval, $fval)>;

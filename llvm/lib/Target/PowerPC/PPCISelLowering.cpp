@@ -431,6 +431,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       AddPromotedToType (ISD::LOAD  , VT, MVT::v4i32);
       setOperationAction(ISD::SELECT, VT, Promote);
       AddPromotedToType (ISD::SELECT, VT, MVT::v4i32);
+      setOperationAction(ISD::SELECT_CC, VT, Promote);
+      AddPromotedToType (ISD::SELECT_CC, VT, MVT::v4i32);
       setOperationAction(ISD::STORE, VT, Promote);
       AddPromotedToType (ISD::STORE, VT, MVT::v4i32);
 
