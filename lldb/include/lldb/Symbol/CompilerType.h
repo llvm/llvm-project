@@ -108,6 +108,9 @@ public:
     IsAggregateType () const;
     
     bool
+    IsAnonymousType () const;
+    
+    bool
     IsBeingDefined () const;
 
     bool

@@ -76,7 +76,7 @@ GetFreeBSDProcessArgs (const ProcessInstanceInfoMatch *match_info_ptr,
         size_t arg_data_size = sizeof(arg_data);
         if (::sysctl (mib, 4, arg_data, &arg_data_size , NULL, 0) == 0)
         {
-            DataExtractor data (arg_data, arg_data_size, lldb::endian::InlHostByteOrder(), sizeof(void *));
+            DataExtractor data (arg_data, arg_data_size, endian::InlHostByteOrder(), sizeof(void *));
             lldb::offset_t offset = 0;
             const char *cstr;
 

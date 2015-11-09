@@ -619,6 +619,9 @@ public:
     IsAggregateType (lldb::opaque_compiler_type_t type) override;
     
     bool
+    IsAnonymousType (lldb::opaque_compiler_type_t type) override;
+    
+    bool
     IsBeingDefined (lldb::opaque_compiler_type_t type) override;
     
     bool

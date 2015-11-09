@@ -61,7 +61,7 @@ WriteSwappedInt64(unsigned char* ptr, unsigned offset, uint64_t value)
 DataEncoder::DataEncoder () :
     m_start     (NULL),
     m_end       (NULL),
-    m_byte_order(lldb::endian::InlHostByteOrder()),
+    m_byte_order(endian::InlHostByteOrder()),
     m_addr_size (sizeof(void*)),
     m_data_sp   ()
 {
@@ -114,7 +114,7 @@ DataEncoder::Clear ()
 {
     m_start = NULL;
     m_end = NULL;
-    m_byte_order = lldb::endian::InlHostByteOrder();
+    m_byte_order = endian::InlHostByteOrder();
     m_addr_size = sizeof(void*);
     m_data_sp.reset();
 }
@@ -240,7 +240,7 @@ DataEncoder::PutU16 (uint32_t offset, uint16_t value)
 {
     if (ValidOffsetForDataOfSize(offset, sizeof(value)))
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
             WriteSwappedInt16 (m_start, offset, value);
         else
             WriteInt16 (m_start, offset, value);
@@ -255,7 +255,7 @@ DataEncoder::PutU32 (uint32_t offset, uint32_t value)
 {
     if (ValidOffsetForDataOfSize(offset, sizeof(value)))
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
             WriteSwappedInt32 (m_start, offset, value);
         else
             WriteInt32 (m_start, offset, value);
@@ -270,7 +270,7 @@ DataEncoder::PutU64 (uint32_t offset, uint64_t value)
 {
     if (ValidOffsetForDataOfSize(offset, sizeof(value)))
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
             WriteSwappedInt64 (m_start, offset, value);
         else
             WriteInt64 (m_start, offset, value);

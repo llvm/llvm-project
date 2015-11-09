@@ -1320,7 +1320,7 @@ DynamicLoaderMacOSXDYLD::ReadMachHeader (lldb::addr_t addr, llvm::MachO::mach_he
         ::memset (header, 0, sizeof(llvm::MachO::mach_header));
 
         // Get the magic byte unswapped so we can figure out what we are dealing with
-        DataExtractor data(header_bytes.GetBytes(), header_bytes.GetByteSize(), lldb::endian::InlHostByteOrder(), 4);
+        DataExtractor data(header_bytes.GetBytes(), header_bytes.GetByteSize(), endian::InlHostByteOrder(), 4);
         header->magic = data.GetU32(&offset);
         lldb::addr_t load_cmd_addr = addr;
         data.SetByteOrder(DynamicLoaderMacOSXDYLD::GetByteOrderFromMagic(header->magic));
@@ -2047,11 +2047,11 @@ DynamicLoaderMacOSXDYLD::GetByteOrderFromMagic (uint32_t magic)
     {
         case llvm::MachO::MH_MAGIC:
         case llvm::MachO::MH_MAGIC_64:
-            return lldb::endian::InlHostByteOrder();
+            return endian::InlHostByteOrder();
             
         case llvm::MachO::MH_CIGAM:
         case llvm::MachO::MH_CIGAM_64:
-            if (lldb::endian::InlHostByteOrder() == lldb::eByteOrderBig)
+            if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
                 return lldb::eByteOrderLittle;
             else
                 return lldb::eByteOrderBig;

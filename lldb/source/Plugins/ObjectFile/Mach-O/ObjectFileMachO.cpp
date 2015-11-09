@@ -1155,7 +1155,7 @@ ObjectFileMachO::ParseHeader (DataExtractor &data,
                               lldb::offset_t *data_offset_ptr,
                               llvm::MachO::mach_header &header)
 {
-    data.SetByteOrder (lldb::endian::InlHostByteOrder());
+    data.SetByteOrder (endian::InlHostByteOrder());
     // Leave magic in the original byte order
     header.magic = data.GetU32(data_offset_ptr);
     bool can_parse = false;
@@ -1163,26 +1163,26 @@ ObjectFileMachO::ParseHeader (DataExtractor &data,
     switch (header.magic)
     {
         case MH_MAGIC:
-            data.SetByteOrder (lldb::endian::InlHostByteOrder());
+            data.SetByteOrder (endian::InlHostByteOrder());
             data.SetAddressByteSize(4);
             can_parse = true;
             break;
             
         case MH_MAGIC_64:
-            data.SetByteOrder (lldb::endian::InlHostByteOrder());
+            data.SetByteOrder (endian::InlHostByteOrder());
             data.SetAddressByteSize(8);
             can_parse = true;
             is_64_bit = true;
             break;
             
         case MH_CIGAM:
-            data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             data.SetAddressByteSize(4);
             can_parse = true;
             break;
             
         case MH_CIGAM_64:
-            data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             data.SetAddressByteSize(8);
             is_64_bit = true;
             can_parse = true;
@@ -1215,31 +1215,31 @@ ObjectFileMachO::ParseHeader ()
         lldb_private::Mutex::Locker locker(module_sp->GetMutex());
         bool can_parse = false;
         lldb::offset_t offset = 0;
-        m_data.SetByteOrder (lldb::endian::InlHostByteOrder());
+        m_data.SetByteOrder (endian::InlHostByteOrder());
         // Leave magic in the original byte order
         m_header.magic = m_data.GetU32(&offset);
         switch (m_header.magic)
         {
         case MH_MAGIC:
-            m_data.SetByteOrder (lldb::endian::InlHostByteOrder());
+            m_data.SetByteOrder (endian::InlHostByteOrder());
             m_data.SetAddressByteSize(4);
             can_parse = true;
             break;
 
         case MH_MAGIC_64:
-            m_data.SetByteOrder (lldb::endian::InlHostByteOrder());
+            m_data.SetByteOrder (endian::InlHostByteOrder());
             m_data.SetAddressByteSize(8);
             can_parse = true;
             break;
 
         case MH_CIGAM:
-            m_data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             m_data.SetAddressByteSize(4);
             can_parse = true;
             break;
 
         case MH_CIGAM_64:
-            m_data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             m_data.SetAddressByteSize(8);
             can_parse = true;
             break;

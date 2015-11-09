@@ -262,7 +262,7 @@ ExecutionContext::GetByteOrder() const
         m_target_sp->GetArchitecture().GetByteOrder();
     if (m_process_sp)
         m_process_sp->GetByteOrder();
-    return lldb::endian::InlHostByteOrder();
+    return endian::InlHostByteOrder();
 }
 
 RegisterContext *

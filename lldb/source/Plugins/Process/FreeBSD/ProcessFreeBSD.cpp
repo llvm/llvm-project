@@ -271,7 +271,7 @@ ProcessFreeBSD::SendMessage(const ProcessMessage &message)
 
 ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp, Listener &listener, UnixSignalsSP &unix_signals_sp)
     : Process(target_sp, listener, unix_signals_sp),
-      m_byte_order(lldb::endian::InlHostByteOrder()),
+      m_byte_order(endian::InlHostByteOrder()),
       m_monitor(NULL),
       m_module(NULL),
       m_message_mutex (Mutex::eMutexTypeRecursive),

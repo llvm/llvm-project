@@ -13,7 +13,7 @@ include $(LLDB_LEVEL)/../../Makefile.config
 DIRS :=
 
 # enable lldb-gdbserver for supported platforms
-ifneq (,$(strip $(filter $(HOST_OS), FreeBSD Linux GNU/kFreeBSD)))
+ifneq (,$(strip $(filter $(HOST_OS), FreeBSD Linux NetBSD GNU/kFreeBSD)))
 DIRS += lldb-server
 endif
 

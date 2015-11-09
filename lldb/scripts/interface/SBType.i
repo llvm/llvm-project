@@ -215,6 +215,9 @@ public:
     bool
     IsTypedefType ();
     
+    bool
+    IsAnonymousType ();
+    
     lldb::SBType
     GetPointerType();
 

@@ -261,8 +261,8 @@ namespace lldb_private {
         bool
         GetEndianSwap() const
         {
-            return (m_byte_order == lldb::eByteOrderBig && lldb::endian::InlHostByteOrder() == lldb::eByteOrderLittle) ||
-                   (m_byte_order == lldb::eByteOrderLittle && lldb::endian::InlHostByteOrder() == lldb::eByteOrderBig);
+            return (m_byte_order == lldb::eByteOrderBig && endian::InlHostByteOrder() == lldb::eByteOrderLittle) ||
+                   (m_byte_order == lldb::eByteOrderLittle && endian::InlHostByteOrder() == lldb::eByteOrderBig);
         }
 
         lldb::ByteOrder m_byte_order;

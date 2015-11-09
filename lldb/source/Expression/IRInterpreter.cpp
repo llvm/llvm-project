@@ -365,7 +365,7 @@ public:
 
         const uint64_t *raw_data = resolved_value.getRawData();
 
-        buffer.PutRawBytes(raw_data, constant_size, lldb::endian::InlHostByteOrder());
+        buffer.PutRawBytes(raw_data, constant_size, lldb_private::endian::InlHostByteOrder());
 
         lldb_private::Error write_error;
 
@@ -498,7 +498,7 @@ IRInterpreter::CanInterpret (llvm::Module &module,
             default:
                 {
                     if (log)
-                        log->Printf("Unsupported instruction: %s", PrintValue(ii).c_str());
+                        log->Printf("Unsupported instruction: %s", PrintValue(&*ii).c_str());
                     error.SetErrorToGenericError();
                     error.SetErrorString(unsupported_opcode_error);
                     return false;
@@ -522,7 +522,7 @@ IRInterpreter::CanInterpret (llvm::Module &module,
                     if (!CanIgnoreCall(call_inst) && !support_function_calls)
                     {
                         if (log)
-                            log->Printf("Unsupported instruction: %s", PrintValue(ii).c_str());
+                            log->Printf("Unsupported instruction: %s", PrintValue(&*ii).c_str());
                         error.SetErrorToGenericError();
                         error.SetErrorString(unsupported_opcode_error);
                         return false;
@@ -547,7 +547,7 @@ IRInterpreter::CanInterpret (llvm::Module &module,
                     default:
                     {
                         if (log)
-                            log->Printf("Unsupported ICmp predicate: %s", PrintValue(ii).c_str());
+                            log->Printf("Unsupported ICmp predicate: %s", PrintValue(&*ii).c_str());
 
                         error.SetErrorToGenericError();
                         error.SetErrorString(unsupported_opcode_error);
@@ -663,16 +663,16 @@ IRInterpreter::Interpret (llvm::Module &module,
 
         lldb::addr_t ptr = args[arg_index];
 
-        frame.MakeArgument(ai, ptr);
+        frame.MakeArgument(&*ai, ptr);
     }
 
     uint32_t num_insts = 0;
 
-    frame.Jump(function.begin());
+    frame.Jump(&function.front());
 
     while (frame.m_ii != frame.m_ie && (++num_insts < 4096))
     {
-        const Instruction *inst = frame.m_ii;
+        const Instruction *inst = &*frame.m_ii;
 
         if (log)
             log->Printf("Interpreting %s", PrintValue(inst).c_str());

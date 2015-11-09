@@ -130,7 +130,7 @@ ReadSwapInt64(const void* ptr)
 DataExtractor::DataExtractor () :
     m_start     (NULL),
     m_end       (NULL),
-    m_byte_order(lldb::endian::InlHostByteOrder()),
+    m_byte_order(endian::InlHostByteOrder()),
     m_addr_size (sizeof(void *)),
     m_data_sp   (),
     m_target_byte_size(1)
@@ -249,7 +249,7 @@ DataExtractor::Clear ()
 {
     m_start = NULL;
     m_end = NULL;
-    m_byte_order = lldb::endian::InlHostByteOrder();
+    m_byte_order = endian::InlHostByteOrder();
     m_addr_size = sizeof(void *);
     m_data_sp.reset();
 }
@@ -442,7 +442,7 @@ DataExtractor::GetU16 (offset_t *offset_ptr) const
     const uint8_t *data = (const uint8_t *)GetData (offset_ptr, sizeof(val));
     if (data)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
             val = ReadSwapInt16(data);
         else
             val = ReadInt16 (data);
@@ -454,7 +454,7 @@ uint16_t
 DataExtractor::GetU16_unchecked (offset_t *offset_ptr) const
 {
     uint16_t val;
-    if (m_byte_order == lldb::endian::InlHostByteOrder())
+    if (m_byte_order == endian::InlHostByteOrder())
         val = ReadInt16 (m_start, *offset_ptr);
     else
         val = ReadSwapInt16(m_start, *offset_ptr);
@@ -466,7 +466,7 @@ uint32_t
 DataExtractor::GetU32_unchecked (offset_t *offset_ptr) const
 {
     uint32_t val;
-    if (m_byte_order == lldb::endian::InlHostByteOrder())
+    if (m_byte_order == endian::InlHostByteOrder())
         val = ReadInt32 (m_start, *offset_ptr);
     else
         val =  ReadSwapInt32 (m_start, *offset_ptr);
@@ -478,7 +478,7 @@ uint64_t
 DataExtractor::GetU64_unchecked (offset_t *offset_ptr) const
 {
     uint64_t val;
-    if (m_byte_order == lldb::endian::InlHostByteOrder())
+    if (m_byte_order == endian::InlHostByteOrder())
         val = ReadInt64 (m_start, *offset_ptr);
     else
         val = ReadSwapInt64 (m_start, *offset_ptr);
@@ -503,7 +503,7 @@ DataExtractor::GetU16 (offset_t *offset_ptr, void *void_dst, uint32_t count) con
     const uint16_t *src = (const uint16_t *)GetData (offset_ptr, src_size);
     if (src)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
         {
             uint16_t *dst_pos = (uint16_t *)void_dst;
             uint16_t *dst_end = dst_pos + count;
@@ -538,7 +538,7 @@ DataExtractor::GetU32 (offset_t *offset_ptr) const
     const uint8_t *data = (const uint8_t *)GetData (offset_ptr, sizeof(val));
     if (data)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
         {
             val = ReadSwapInt32 (data);
         }
@@ -566,7 +566,7 @@ DataExtractor::GetU32 (offset_t *offset_ptr, void *void_dst, uint32_t count) con
     const uint32_t *src = (const uint32_t *)GetData (offset_ptr, src_size);
     if (src)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
         {
             uint32_t *dst_pos = (uint32_t *)void_dst;
             uint32_t *dst_end = dst_pos + count;
@@ -601,7 +601,7 @@ DataExtractor::GetU64 (offset_t *offset_ptr) const
     const uint8_t *data = (const uint8_t *)GetData (offset_ptr, sizeof(val));
     if (data)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
         {
             val = ReadSwapInt64 (data);
         }
@@ -627,7 +627,7 @@ DataExtractor::GetU64 (offset_t *offset_ptr, void *void_dst, uint32_t count) con
     const uint64_t *src = (const uint64_t *)GetData (offset_ptr, src_size);
     if (src)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
         {
             uint64_t *dst_pos = (uint64_t *)void_dst;
             uint64_t *dst_end = dst_pos + count;
@@ -775,7 +775,7 @@ DataExtractor::GetFloat (offset_t *offset_ptr) const
     const float_type *src = (const float_type *)GetData (offset_ptr, src_size);
     if (src)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
         {
             const uint8_t *src_data = (const uint8_t *)src;
             uint8_t *dst_data = (uint8_t *)&val;
@@ -799,7 +799,7 @@ DataExtractor::GetDouble (offset_t *offset_ptr) const
     const float_type *src = (const float_type *)GetData (offset_ptr, src_size);
     if (src)
     {
-        if (m_byte_order != lldb::endian::InlHostByteOrder())
+        if (m_byte_order != endian::InlHostByteOrder())
         {
             const uint8_t *src_data = (const uint8_t *)src;
             uint8_t *dst_data = (uint8_t *)&val;
@@ -820,9 +820,9 @@ DataExtractor::GetLongDouble (offset_t *offset_ptr) const
 {
     long double val = 0.0;
 #if defined (__i386__) || defined (__amd64__) || defined (__x86_64__) || defined(_M_IX86) || defined(_M_IA64) || defined(_M_X64)
-    *offset_ptr += CopyByteOrderedData (*offset_ptr, 10, &val, sizeof(val), lldb::endian::InlHostByteOrder());
+    *offset_ptr += CopyByteOrderedData (*offset_ptr, 10, &val, sizeof(val), endian::InlHostByteOrder());
 #else
-    *offset_ptr += CopyByteOrderedData (*offset_ptr, sizeof(val), &val, sizeof(val), lldb::endian::InlHostByteOrder());
+    *offset_ptr += CopyByteOrderedData (*offset_ptr, sizeof(val), &val, sizeof(val), endian::InlHostByteOrder());
 #endif
     return val;
 }

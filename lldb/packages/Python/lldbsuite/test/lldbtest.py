@@ -1451,8 +1451,8 @@ class Base(unittest2.TestCase):
         self.log_basename = self.getLogBasenameForCurrentTest()
 
         session_file = "{}.log".format(self.log_basename)
-        unbuffered = 0 # 0 is the constant for unbuffered
-        self.session = open(session_file, "w", unbuffered)
+        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
+        self.session = open(session_file, "w")
 
         # Optimistically set __errored__, __failed__, __expected__ to False
         # initially.  If the test errored/failed, the session info

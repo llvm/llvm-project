@@ -51,6 +51,7 @@ USEDLIBS = lldbAPI.a \
 	lldbPluginDynamicLoaderMacOSXDYLD.a \
 	lldbPluginDynamicLoaderWindowsDYLD.a \
 	lldbPluginExpressionParserClang.a \
+	lldbPluginExpressionParserGo.a \
 	lldbPluginInstructionARM.a \
 	lldbPluginInstructionARM64.a \
 	lldbPluginInstructionMIPS.a \
@@ -64,6 +65,7 @@ USEDLIBS = lldbAPI.a \
 	lldbPluginLanguageRuntimeGo.a \
 	lldbPluginObjCLanguage.a \
 	lldbPluginObjCPlusPlusLanguage.a \
+	lldbPluginGoLanguage.a \
 	lldbPluginObjectContainerBSDArchive.a \
 	lldbPluginObjectContainerMachOArchive.a \
 	lldbPluginObjectFileELF.a \

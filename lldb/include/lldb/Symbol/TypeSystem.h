@@ -153,6 +153,9 @@ public:
     
     virtual bool
     IsAggregateType (lldb::opaque_compiler_type_t type) = 0;
+
+    virtual bool
+    IsAnonymousType (lldb::opaque_compiler_type_t type);
     
     virtual bool
     IsCharType (lldb::opaque_compiler_type_t type) = 0;

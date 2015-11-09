@@ -2639,6 +2639,38 @@ ClangASTContext::IsAggregateType (lldb::opaque_compiler_type_t type)
 }
 
 bool
+ClangASTContext::IsAnonymousType (lldb::opaque_compiler_type_t type)
+{
+    clang::QualType qual_type (GetCanonicalQualType(type));
+    
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    switch (type_class)
+    {
+        case clang::Type::Record:
+        {
+            if (const clang::RecordType *record_type = llvm::dyn_cast_or_null<clang::RecordType>(qual_type.getTypePtrOrNull()))
+            {
+                if (const clang::RecordDecl *record_decl = record_type->getDecl())
+                {
+                    return record_decl->isAnonymousStructOrUnion();
+                }
+            }
+            break;
+        }
+        case clang::Type::Elaborated:
+            return IsAnonymousType(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr());
+        case clang::Type::Typedef:
+            return IsAnonymousType(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr());
+        case clang::Type::Paren:
+            return IsAnonymousType(llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr());
+        default:
+            break;
+    }
+    // The clang type does have a value
+    return false;
+}
+
+bool
 ClangASTContext::IsArrayType (lldb::opaque_compiler_type_t type,
                               CompilerType *element_type_ptr,
                               uint64_t *size,

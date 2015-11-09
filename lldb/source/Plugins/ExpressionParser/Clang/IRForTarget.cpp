@@ -338,7 +338,7 @@ IRForTarget::ResolveFunctionPointers(llvm::Module &llvm_module)
          fi != llvm_module.end();
          ++fi)
     {
-        Function *fun = fi;
+        Function *fun = &*fi;
 
         bool is_decl = fun->isDeclaration();
 
@@ -1955,7 +1955,7 @@ IRForTarget::ReplaceStaticLiterals (llvm::BasicBlock &basic_block)
             if (operand_constant_fp/* && operand_constant_fp->getType()->isX86_FP80Ty()*/)
             {
                 static_constants.push_back(operand_val);
-                static_users.push_back(ii);
+                static_users.push_back(&*ii);
             }
         }
     }
@@ -2000,7 +2000,7 @@ IRForTarget::ReplaceStaticLiterals (llvm::BasicBlock &basic_block)
 
             lldb_private::DataBufferHeap data(operand_data_size, 0);
 
-            if (lldb::endian::InlHostByteOrder() != m_data_allocator.GetStream().GetByteOrder())
+            if (lldb_private::endian::InlHostByteOrder() != m_data_allocator.GetStream().GetByteOrder())
             {
                 uint8_t *data_bytes = data.GetBytes();
 
@@ -2280,7 +2280,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
         return false;
     }
 
-    Argument *argument = iter;
+    Argument *argument = &*iter;
 
     if (argument->getName().equals("this"))
     {
@@ -2294,7 +2294,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
             return false;
         }
 
-        argument = iter;
+        argument = &*iter;
     }
     else if (argument->getName().equals("self"))
     {
@@ -2326,7 +2326,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
             return false;
         }
 
-        argument = iter;
+        argument = &*iter;
     }
 
     if (!argument->getName().equals("$__lldb_arg"))
@@ -2624,7 +2624,7 @@ IRForTarget::runOnModule (Module &llvm_module)
          fi != fe;
          ++fi)
     {
-        llvm::Function *function = fi;
+        llvm::Function *function = &*fi;
 
         if (function->begin() == function->end())
             continue;
@@ -2699,7 +2699,7 @@ IRForTarget::runOnModule (Module &llvm_module)
          fi != fe;
          ++fi)
     {
-        llvm::Function *function = fi;
+        llvm::Function *function = &*fi;
 
         for (llvm::Function::iterator bbi = function->begin(), bbe = function->end();
              bbi != bbe;
@@ -2721,7 +2721,7 @@ IRForTarget::runOnModule (Module &llvm_module)
          fi != fe;
          ++fi)
     {
-        llvm::Function *function = fi;
+        llvm::Function *function = &*fi;
 
         for (llvm::Function::iterator bbi = function->begin(), bbe = function->end();
              bbi != bbe;

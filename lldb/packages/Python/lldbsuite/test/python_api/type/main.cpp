@@ -16,6 +16,12 @@ public:
         TASK_TYPE_1,
         TASK_TYPE_2
     } type;
+    struct {
+      int x;
+    } my_type_is_nameless;
+    struct name {
+      int x;
+    } my_type_is_named;
     Task(int i, Task *n):
         id(i),
         next(n),

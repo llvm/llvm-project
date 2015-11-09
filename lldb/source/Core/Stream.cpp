@@ -30,7 +30,7 @@ Stream::Stream (uint32_t flags, uint32_t addr_size, ByteOrder byte_order) :
 Stream::Stream () :
     m_flags (0),
     m_addr_size (4),
-    m_byte_order (lldb::endian::InlHostByteOrder()),
+    m_byte_order (endian::InlHostByteOrder()),
     m_indent_level(0)
 {
 }
@@ -632,7 +632,7 @@ Stream::PutMaxHex64
 size_t
 Stream::PutPointer (void *ptr)
 {
-    return PutRawBytes (&ptr, sizeof(ptr), lldb::endian::InlHostByteOrder(), lldb::endian::InlHostByteOrder());
+    return PutRawBytes (&ptr, sizeof(ptr), endian::InlHostByteOrder(), endian::InlHostByteOrder());
 }
 
 size_t
@@ -641,7 +641,7 @@ Stream::PutFloat(float f, ByteOrder byte_order)
     if (byte_order == eByteOrderInvalid)
         byte_order = m_byte_order;
 
-    return PutRawBytes (&f, sizeof(f), lldb::endian::InlHostByteOrder(), byte_order);
+    return PutRawBytes (&f, sizeof(f), endian::InlHostByteOrder(), byte_order);
 }
 
 size_t
@@ -650,7 +650,7 @@ Stream::PutDouble(double d, ByteOrder byte_order)
     if (byte_order == eByteOrderInvalid)
         byte_order = m_byte_order;
 
-    return PutRawBytes (&d, sizeof(d), lldb::endian::InlHostByteOrder(), byte_order);
+    return PutRawBytes (&d, sizeof(d), endian::InlHostByteOrder(), byte_order);
 }
 
 size_t
@@ -659,7 +659,7 @@ Stream::PutLongDouble(long double ld, ByteOrder byte_order)
     if (byte_order == eByteOrderInvalid)
         byte_order = m_byte_order;
 
-    return PutRawBytes (&ld, sizeof(ld), lldb::endian::InlHostByteOrder(), byte_order);
+    return PutRawBytes (&ld, sizeof(ld), endian::InlHostByteOrder(), byte_order);
 }
 
 size_t
@@ -743,21 +743,21 @@ Stream::UnitTest(Stream *s)
     s->PutHex8(0x12);
 
     s->PutChar(' ');
-    s->PutHex16(0x3456, lldb::endian::InlHostByteOrder());
+    s->PutHex16(0x3456, endian::InlHostByteOrder());
     s->PutChar(' ');
     s->PutHex16(0x3456, eByteOrderBig);
     s->PutChar(' ');
     s->PutHex16(0x3456, eByteOrderLittle);
 
     s->PutChar(' ');
-    s->PutHex32(0x789abcde, lldb::endian::InlHostByteOrder());
+    s->PutHex32(0x789abcde, endian::InlHostByteOrder());
     s->PutChar(' ');
     s->PutHex32(0x789abcde, eByteOrderBig);
     s->PutChar(' ');
     s->PutHex32(0x789abcde, eByteOrderLittle);
 
     s->PutChar(' ');
-    s->PutHex64(0x1122334455667788ull, lldb::endian::InlHostByteOrder());
+    s->PutHex64(0x1122334455667788ull, endian::InlHostByteOrder());
     s->PutChar(' ');
     s->PutHex64(0x1122334455667788ull, eByteOrderBig);
     s->PutChar(' ');

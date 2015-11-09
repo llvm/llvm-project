@@ -571,7 +571,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
 //        case 1:
 //            {
 //                int8_t v;
-//                if (data.ExtractBytes (0, sizeof (int8_t), lldb::endian::InlHostByteOrder(), &v) != sizeof (int8_t))
+//                if (data.ExtractBytes (0, sizeof (int8_t), endian::InlHostByteOrder(), &v) != sizeof (int8_t))
 //                    return false;
 //                value = v;
 //                return true;
@@ -579,7 +579,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
 //        case 2:
 //            {
 //                int16_t v;
-//                if (data.ExtractBytes (0, sizeof (int16_t), lldb::endian::InlHostByteOrder(), &v) != sizeof (int16_t))
+//                if (data.ExtractBytes (0, sizeof (int16_t), endian::InlHostByteOrder(), &v) != sizeof (int16_t))
 //                    return false;
 //                value = v;
 //                return true;
@@ -587,7 +587,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
 //        case 4:
 //            {
 //                int32_t v;
-//                if (data.ExtractBytes (0, sizeof (int32_t), lldb::endian::InlHostByteOrder(), &v) != sizeof (int32_t))
+//                if (data.ExtractBytes (0, sizeof (int32_t), endian::InlHostByteOrder(), &v) != sizeof (int32_t))
 //                    return false;
 //                value = v;
 //                return true;
@@ -595,7 +595,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
 //        case 8:
 //            {
 //                int64_t v;
-//                if (data.ExtractBytes (0, sizeof (int64_t), lldb::endian::InlHostByteOrder(), &v) != sizeof (int64_t))
+//                if (data.ExtractBytes (0, sizeof (int64_t), endian::InlHostByteOrder(), &v) != sizeof (int64_t))
 //                    return false;
 //                value = v;
 //                return true;
@@ -608,7 +608,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
 //        case sizeof (float):
 //            {
 //                float v;
-//                if (data.ExtractBytes (0, sizeof (float), lldb::endian::InlHostByteOrder(), &v) != sizeof (float))
+//                if (data.ExtractBytes (0, sizeof (float), endian::InlHostByteOrder(), &v) != sizeof (float))
 //                    return false;
 //                value = v;
 //                return true;
@@ -616,7 +616,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
 //        case sizeof (double):
 //            {
 //                double v;
-//                if (data.ExtractBytes (0, sizeof (double), lldb::endian::InlHostByteOrder(), &v) != sizeof (double))
+//                if (data.ExtractBytes (0, sizeof (double), endian::InlHostByteOrder(), &v) != sizeof (double))
 //                    return false;
 //                value = v;
 //                return true;
@@ -624,7 +624,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
 //        case sizeof (long double):
 //            {
 //                double v;
-//                if (data.ExtractBytes (0, sizeof (long double), lldb::endian::InlHostByteOrder(), &v) != sizeof (long double))
+//                if (data.ExtractBytes (0, sizeof (long double), endian::InlHostByteOrder(), &v) != sizeof (long double))
 //                    return false;
 //                value = v;
 //                return true;

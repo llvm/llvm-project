@@ -35,6 +35,7 @@ PARALLEL_DIRS := ABI/MacOSX-arm ABI/MacOSX-arm64 ABI/MacOSX-i386 ABI/SysV-i386 A
 	DynamicLoader/Windows-DYLD \
 	JITLoader/GDB \
 	ExpressionParser/Clang \
+	ExpressionParser/Go \
 	OperatingSystem/Go \
 	OperatingSystem/Python \
 	SystemRuntime/MacOSX \

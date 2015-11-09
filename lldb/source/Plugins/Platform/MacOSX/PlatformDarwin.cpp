@@ -1621,7 +1621,7 @@ PlatformDarwin::GetOSVersion (uint32_t &major,
                     }
                     else if (env_str.startswith(k_dyld_root_path))
                     {
-                        dyld_root_path = std::move(env_str.substr(k_dyld_root_path.size()).str());
+                        dyld_root_path = env_str.substr(k_dyld_root_path.size()).str();
                     }
                 }
             }

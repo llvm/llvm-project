@@ -76,7 +76,7 @@ set(LLDB_MI_SOURCES
   Platform.cpp
   )
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
+if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
   add_definitions( -DIMPORT_LIBLLDB )
   list(APPEND LLDB_MI_SOURCES
     ${LLDB_SOURCE_ROOT}/Host/common/GetOptInc.cpp

@@ -20,7 +20,8 @@ add_custom_command(
   DEPENDS ${SWIG_SOURCES}
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/buildSwigWrapperClasses.py
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Python/buildSwigPython.py
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Python/modify-python-lldb.py
   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/buildSwigWrapperClasses.py "--srcRoot=${LLDB_SOURCE_DIR}" "--targetDir=${CMAKE_CURRENT_BINARY_DIR}" "--cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}" "--prefix=${CMAKE_BINARY_DIR}" "--swigExecutable=${SWIG_EXECUTABLE}" -m
   COMMENT "Python script building LLDB Python wrapper")
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp PROPERTIES GENERATED 1)

@@ -82,7 +82,7 @@ Opcode::GetDataByteOrder () const
         case Opcode::eType16:
         case Opcode::eType16_2:
         case Opcode::eType32:
-        case Opcode::eType64:    return lldb::endian::InlHostByteOrder();
+        case Opcode::eType64:    return endian::InlHostByteOrder();
         case Opcode::eTypeBytes:
             break;
     }

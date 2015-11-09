@@ -52,3 +52,8 @@ D: CMake build, Host (common+windows), Plugins/Process/Windows, Anything Windows
 N: Oleksiy Vyalov
 E: ovyalov@google.com
 D: Linux, Android
+
+N: Todd Fiala
+E: todd.fiala@gmail.com
+D: Test Suite subsystems (concurrent test runners, test events, TestResults system), gdb-remote protocol tests
+

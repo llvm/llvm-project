@@ -74,6 +74,14 @@ CompilerType::IsAggregateType () const
 }
 
 bool
+CompilerType::IsAnonymousType () const
+{
+    if (IsValid())
+        return m_type_system->IsAnonymousType(m_type);
+    return false;
+}
+
+bool
 CompilerType::IsArrayType (CompilerType *element_type_ptr,
                            uint64_t *size,
                            bool *is_incomplete) const

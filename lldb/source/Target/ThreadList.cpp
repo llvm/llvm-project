@@ -262,7 +262,11 @@ ThreadList::ShouldStop (Event *event_ptr)
             // This is an optimization...  If we didn't let a thread run in between the previous stop and this
             // one, we shouldn't have to consult it for ShouldStop.  So just leave it off the list we are going to
             // inspect.
-            if (thread_sp->GetTemporaryResumeState () != eStateSuspended)
+            // On Linux, if a thread-specific conditional breakpoint was hit, it won't necessarily be the thread
+            // that hit the breakpoint itself that evaluates the conditional expression, so the thread that hit
+            // the breakpoint could still be asked to stop, even though it hasn't been allowed to run since the
+            // previous stop.
+            if (thread_sp->GetTemporaryResumeState () != eStateSuspended || thread_sp->IsStillAtLastBreakpointHit())
                 threads_copy.push_back(thread_sp);
         }
 

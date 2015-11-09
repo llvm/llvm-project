@@ -816,7 +816,7 @@ GetMacOSXProcessArgs (const ProcessInstanceInfoMatch *match_info_ptr,
         arg_data_size = arg_data.GetByteSize();
         if (::sysctl (proc_args_mib, 3, arg_data.GetBytes(), &arg_data_size , NULL, 0) == 0)
         {
-            DataExtractor data (arg_data.GetBytes(), arg_data_size, lldb::endian::InlHostByteOrder(), sizeof(void *));
+            DataExtractor data (arg_data.GetBytes(), arg_data_size, endian::InlHostByteOrder(), sizeof(void *));
             lldb::offset_t offset = 0;
             uint32_t argc = data.GetU32 (&offset);
             llvm::Triple &triple = process_info.GetArchitecture().GetTriple();

@@ -1120,8 +1120,8 @@ public:
                                 StreamString packet;
                                 packet.PutBytesAsRawHex8(reply.GetDataStart(),
                                                          reply.GetByteSize(),
-                                                         lldb::endian::InlHostByteOrder(),
-                                                         lldb::endian::InlHostByteOrder());
+                                                         endian::InlHostByteOrder(),
+                                                         endian::InlHostByteOrder());
                                 result.AppendMessage(packet.GetString().c_str());
                                 result.SetStatus (eReturnStatusSuccessFinishResult);
                                 return true;

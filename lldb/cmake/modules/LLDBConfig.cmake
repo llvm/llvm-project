@@ -382,7 +382,8 @@ endif()
 # ensure we build lldb-server when an lldb target is being built.
 if ((CMAKE_SYSTEM_NAME MATCHES "Darwin") OR
     (CMAKE_SYSTEM_NAME MATCHES "FreeBSD") OR
-    (CMAKE_SYSTEM_NAME MATCHES "Linux"))
+    (CMAKE_SYSTEM_NAME MATCHES "Linux") OR
+    (CMAKE_SYSTEM_NAME MATCHES "NetBSD"))
     set(LLDB_CAN_USE_LLDB_SERVER 1)
 else()
     set(LLDB_CAN_USE_LLDB_SERVER 0)

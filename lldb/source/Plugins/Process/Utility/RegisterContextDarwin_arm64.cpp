@@ -488,7 +488,7 @@ RegisterContextDarwin_arm64::ReadRegister (const RegisterInfo *reg_info, Registe
     case fpu_v29:
     case fpu_v30:
     case fpu_v31:
-        value.SetBytes(fpu.v[reg].bytes, reg_info->byte_size, lldb::endian::InlHostByteOrder());
+        value.SetBytes(fpu.v[reg].bytes, reg_info->byte_size, endian::InlHostByteOrder());
         break;
 
     case fpu_fpsr:

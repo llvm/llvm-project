@@ -264,6 +264,14 @@ SBType::IsTypedefType ()
     return m_opaque_sp->GetCompilerType(true).IsTypedefType();
 }
 
+bool
+SBType::IsAnonymousType ()
+{
+    if (!IsValid())
+        return false;
+    return m_opaque_sp->GetCompilerType(true).IsAnonymousType();
+}
+
 lldb::SBType
 SBType::GetFunctionReturnType ()
 {

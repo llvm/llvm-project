@@ -146,7 +146,7 @@ ValueObjectConstResultImpl::AddressOf (Error &error)
                                                                compiler_type.GetPointerType(),
                                                                ConstString(new_name.c_str()),
                                                                buffer,
-                                                               lldb::endian::InlHostByteOrder(), 
+                                                               endian::InlHostByteOrder(),
                                                                exe_ctx.GetAddressByteSize());
         
         m_address_of_backend->GetValue().SetValueType(Value::eValueTypeScalar);

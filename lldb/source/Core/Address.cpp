@@ -179,7 +179,7 @@ ReadCStringFromMemory (ExecutionContextScope *exe_scope, const Address &address,
     buf[k_buf_len] = '\0'; // NULL terminate
 
     // Byte order and address size don't matter for C string dumping..
-    DataExtractor data (buf, sizeof(buf), lldb::endian::InlHostByteOrder(), 4);
+    DataExtractor data (buf, sizeof(buf), endian::InlHostByteOrder(), 4);
     size_t total_len = 0;
     size_t bytes_read;
     Address curr_address(address);

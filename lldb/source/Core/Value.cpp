@@ -189,7 +189,7 @@ Value::AppendDataToHostBuffer (const Value &rhs)
                 {
                     rhs.m_value.GetAsMemoryData (m_data_buffer.GetBytes() + curr_size,
                                                  scalar_size,
-                                                 lldb::endian::InlHostByteOrder(),
+                                                 endian::InlHostByteOrder(),
                                                  error);
                     return scalar_size;
                 }
@@ -420,7 +420,7 @@ Value::GetValueAsData (ExecutionContext *exe_ctx,
 
     case eValueTypeScalar:
         {
-            data.SetByteOrder (lldb::endian::InlHostByteOrder());
+            data.SetByteOrder (endian::InlHostByteOrder());
             if (ast_type.IsValid())
                 data.SetAddressByteSize (ast_type.GetPointerByteSize());
             else
@@ -623,7 +623,7 @@ Value::GetValueAsData (ExecutionContext *exe_ctx,
             }
         }
         // fallback to host settings
-        data.SetByteOrder(lldb::endian::InlHostByteOrder());
+        data.SetByteOrder(endian::InlHostByteOrder());
         data.SetAddressByteSize(sizeof(void *));
         break;
     }

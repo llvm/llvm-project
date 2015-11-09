@@ -203,7 +203,7 @@ namespace lldb_private
                     {
                         snprintf (history_path, sizeof (history_path), "~/%s-widehistory", m_prefix.c_str());
                     }
-                    m_path = std::move (FileSpec (history_path, true).GetPath());
+                    m_path = FileSpec (history_path, true).GetPath();
                 }
                 if (m_path.empty())
                     return NULL;

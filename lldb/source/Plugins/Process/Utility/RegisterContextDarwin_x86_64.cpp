@@ -626,7 +626,7 @@ RegisterContextDarwin_x86_64::ReadRegister (const RegisterInfo *reg_info,
     case fpu_stmm5:
     case fpu_stmm6:
     case fpu_stmm7:
-        value.SetBytes(fpu.stmm[reg - fpu_stmm0].bytes, reg_info->byte_size, lldb::endian::InlHostByteOrder());
+        value.SetBytes(fpu.stmm[reg - fpu_stmm0].bytes, reg_info->byte_size, endian::InlHostByteOrder());
         break;
 
     case fpu_xmm0:
@@ -645,7 +645,7 @@ RegisterContextDarwin_x86_64::ReadRegister (const RegisterInfo *reg_info,
     case fpu_xmm13:
     case fpu_xmm14:
     case fpu_xmm15:
-        value.SetBytes(fpu.xmm[reg - fpu_xmm0].bytes, reg_info->byte_size, lldb::endian::InlHostByteOrder());
+        value.SetBytes(fpu.xmm[reg - fpu_xmm0].bytes, reg_info->byte_size, endian::InlHostByteOrder());
         break;
 
     case exc_trapno:

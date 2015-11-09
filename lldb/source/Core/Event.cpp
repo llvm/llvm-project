@@ -147,7 +147,7 @@ EventDataBytes::Dump (Stream *s) const
     else if (m_bytes.size() > 0)
     {
         DataExtractor data;
-        data.SetData(&m_bytes[0], m_bytes.size(), lldb::endian::InlHostByteOrder());
+        data.SetData(&m_bytes[0], m_bytes.size(), endian::InlHostByteOrder());
         data.Dump(s, 0, eFormatBytes, 1, m_bytes.size(), 32, LLDB_INVALID_ADDRESS, 0, 0);
     }
 }
