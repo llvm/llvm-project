@@ -1517,7 +1517,7 @@ void CodeGenModule::ConstructAttributeList(const CGFunctionInfo &FI,
           getTarget().getTargetOpts().FeaturesAsWritten.end());
 
       if (ParsedAttr.second != "")
-	TargetCPU = ParsedAttr.second;
+        TargetCPU = ParsedAttr.second;
 
       // Now populate the feature map, first with the TargetCPU which is either
       // the default or a new one from the target attribute string. Then we'll
