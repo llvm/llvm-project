@@ -195,15 +195,13 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     // Special case this one from Group L2.
     // Rd = memw(r29+#u5:2)
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg)) {
-      if (HexagonMCInstrInfo::isIntReg(SrcReg) && Hexagon::R29 == SrcReg &&
-          MCI.getOperand(2).isImm() &&
-          isShiftedUInt<5, 2>(MCI.getOperand(2).getImm())) {
+      if (HexagonMCInstrInfo::isIntReg(SrcReg) &&
+          Hexagon::R29 == SrcReg && inRange<5, 2>(MCI, 2)) {
         return HexagonII::HSIG_L2;
       }
       // Rd = memw(Rs+#u4:2)
       if (HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-          (MCI.getOperand(2).isImm() &&
-           isShiftedUInt<4, 2>(MCI.getOperand(2).getImm()))) {
+          inRange<4, 2>(MCI, 2)) {
         return HexagonII::HSIG_L1;
       }
     }
@@ -214,7 +212,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(1).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        MCI.getOperand(2).isImm() && isUInt<4>(MCI.getOperand(2).getImm())) {
+        inRange<4>(MCI, 2)) {
       return HexagonII::HSIG_L1;
     }
     break;
@@ -235,8 +233,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(1).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        MCI.getOperand(2).isImm() &&
-        isShiftedUInt<3, 1>(MCI.getOperand(2).getImm())) {
+        inRange<3, 1>(MCI, 2)) {
       return HexagonII::HSIG_L2;
     }
     break;
@@ -246,7 +243,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(1).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        MCI.getOperand(2).isImm() && isUInt<3>(MCI.getOperand(2).getImm())) {
+        inRange<3>(MCI, 2)) {
       return HexagonII::HSIG_L2;
     }
     break;
@@ -256,8 +253,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(1).getReg();
     if (HexagonMCInstrInfo::isDblRegForSubInst(DstReg) &&
         HexagonMCInstrInfo::isIntReg(SrcReg) && Hexagon::R29 == SrcReg &&
-        MCI.getOperand(2).isImm() &&
-        isShiftedUInt<5, 3>(MCI.getOperand(2).getImm())) {
+        inRange<5, 3>(MCI, 2)) {
       return HexagonII::HSIG_L2;
     }
     break;
@@ -326,15 +322,13 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     Src2Reg = MCI.getOperand(2).getReg();
     if (HexagonMCInstrInfo::isIntReg(Src1Reg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(Src2Reg) &&
-        Hexagon::R29 == Src1Reg && MCI.getOperand(1).isImm() &&
-        isShiftedUInt<5, 2>(MCI.getOperand(1).getImm())) {
+        Hexagon::R29 == Src1Reg && inRange<5, 2>(MCI, 1)) {
       return HexagonII::HSIG_S2;
     }
     // memw(Rs+#u4:2) = Rt
     if (HexagonMCInstrInfo::isIntRegForSubInst(Src1Reg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(Src2Reg) &&
-        MCI.getOperand(1).isImm() &&
-        isShiftedUInt<4, 2>(MCI.getOperand(1).getImm())) {
+        inRange<4, 2>(MCI, 1)) {
       return HexagonII::HSIG_S1;
     }
     break;
@@ -344,7 +338,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     Src2Reg = MCI.getOperand(2).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(Src1Reg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(Src2Reg) &&
-        MCI.getOperand(1).isImm() && isUInt<4>(MCI.getOperand(1).getImm())) {
+        inRange<4>(MCI, 1)) {
       return HexagonII::HSIG_S1;
     }
     break;
@@ -363,8 +357,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     Src2Reg = MCI.getOperand(2).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(Src1Reg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(Src2Reg) &&
-        MCI.getOperand(1).isImm() &&
-        isShiftedUInt<3, 1>(MCI.getOperand(1).getImm())) {
+        inRange<3, 1>(MCI, 1)) {
       return HexagonII::HSIG_S2;
     }
     break;
@@ -374,8 +367,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     Src2Reg = MCI.getOperand(2).getReg();
     if (HexagonMCInstrInfo::isDblRegForSubInst(Src2Reg) &&
         HexagonMCInstrInfo::isIntReg(Src1Reg) && Hexagon::R29 == Src1Reg &&
-        MCI.getOperand(1).isImm() &&
-        isShiftedInt<6, 3>(MCI.getOperand(1).getImm())) {
+        inSRange<6, 3>(MCI, 1)) {
       return HexagonII::HSIG_S2;
     }
     break;
@@ -383,9 +375,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     // memw(Rs+#u4:2) = #U1
     Src1Reg = MCI.getOperand(0).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(Src1Reg) &&
-        MCI.getOperand(1).isImm() &&
-        isShiftedUInt<4, 2>(MCI.getOperand(1).getImm()) &&
-        MCI.getOperand(2).isImm() && isUInt<1>(MCI.getOperand(2).getImm())) {
+        inRange<4, 2>(MCI, 1) && inRange<1>(MCI, 2)) {
       return HexagonII::HSIG_S2;
     }
     break;
@@ -393,16 +383,13 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     // memb(Rs+#u4) = #U1
     Src1Reg = MCI.getOperand(0).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(Src1Reg) &&
-        MCI.getOperand(1).isImm() && isUInt<4>(MCI.getOperand(1).getImm()) &&
-        MCI.getOperand(2).isImm() && isUInt<1>(MCI.getOperand(2).getImm())) {
+        inRange<4>(MCI, 1) && inRange<1>(MCI, 2)) {
       return HexagonII::HSIG_S2;
     }
     break;
   case Hexagon::S2_allocframe:
-    if (MCI.getOperand(0).isImm() &&
-        isShiftedUInt<5, 3>(MCI.getOperand(0).getImm())) {
+    if (inRange<5, 3>(MCI, 0))
       return HexagonII::HSIG_S2;
-    }
     break;
   //
   // Group A:
@@ -428,8 +415,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg)) {
       // Rd = add(r29,#u6:2)
       if (HexagonMCInstrInfo::isIntReg(SrcReg) && Hexagon::R29 == SrcReg &&
-          MCI.getOperand(2).isImm() &&
-          isShiftedUInt<6, 2>(MCI.getOperand(2).getImm())) {
+          inRange<6, 2>(MCI, 2)) {
         return HexagonII::HSIG_A;
       }
       // Rx = add(Rx,#s7)
@@ -439,8 +425,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
       // Rd = add(Rs,#1)
       // Rd = add(Rs,#-1)
       if (HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-          MCI.getOperand(2).isImm() && ((MCI.getOperand(2).getImm() == 1) ||
-                                        (MCI.getOperand(2).getImm() == -1))) {
+          (minConstant(MCI, 2) == 1 || minConstant(MCI, 2) == -1)) {
         return HexagonII::HSIG_A;
       }
     }
@@ -460,8 +445,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(1).getReg();
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        MCI.getOperand(2).isImm() && ((MCI.getOperand(2).getImm() == 1) ||
-                                      (MCI.getOperand(2).getImm() == 255))) {
+        (minConstant(MCI, 2) == 1 || minConstant(MCI, 2) == 255)) {
       return HexagonII::HSIG_A;
     }
     break;
@@ -491,8 +475,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     DstReg = MCI.getOperand(0).getReg();  // Rd
     PredReg = MCI.getOperand(1).getReg(); // P0
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg) &&
-        Hexagon::P0 == PredReg && MCI.getOperand(2).isImm() &&
-        MCI.getOperand(2).getImm() == 0) {
+        Hexagon::P0 == PredReg && minConstant(MCI, 2) == 0) {
       return HexagonII::HSIG_A;
     }
     break;
@@ -502,7 +485,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(1).getReg();
     if (Hexagon::P0 == DstReg &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        MCI.getOperand(2).isImm() && isUInt<2>(MCI.getOperand(2).getImm())) {
+        inRange<2>(MCI, 2)) {
       return HexagonII::HSIG_A;
     }
     break;
@@ -511,10 +494,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     // Rdd = combine(#u2,#U2)
     DstReg = MCI.getOperand(0).getReg();
     if (HexagonMCInstrInfo::isDblRegForSubInst(DstReg) &&
-        // TODO: Handle Globals/Symbols
-        (MCI.getOperand(1).isImm() && isUInt<2>(MCI.getOperand(1).getImm())) &&
-        ((MCI.getOperand(2).isImm() &&
-          isUInt<2>(MCI.getOperand(2).getImm())))) {
+        inRange<2>(MCI, 1) && inRange<2>(MCI, 2)) {
       return HexagonII::HSIG_A;
     }
     break;
@@ -524,7 +504,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(1).getReg();
     if (HexagonMCInstrInfo::isDblRegForSubInst(DstReg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        (MCI.getOperand(2).isImm() && MCI.getOperand(2).getImm() == 0)) {
+        minConstant(MCI, 2) == 0) {
       return HexagonII::HSIG_A;
     }
     break;
@@ -534,7 +514,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     SrcReg = MCI.getOperand(2).getReg();
     if (HexagonMCInstrInfo::isDblRegForSubInst(DstReg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        (MCI.getOperand(1).isImm() && MCI.getOperand(1).getImm() == 0)) {
+        minConstant(MCI, 1) == 0) {
       return HexagonII::HSIG_A;
     }
     break;
@@ -556,19 +536,17 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
 }
 
 bool HexagonMCInstrInfo::subInstWouldBeExtended(MCInst const &potentialDuplex) {
-
   unsigned DstReg, SrcReg;
-
   switch (potentialDuplex.getOpcode()) {
   case Hexagon::A2_addi:
     // testing for case of: Rx = add(Rx,#s7)
     DstReg = potentialDuplex.getOperand(0).getReg();
     SrcReg = potentialDuplex.getOperand(1).getReg();
     if (DstReg == SrcReg && HexagonMCInstrInfo::isIntRegForSubInst(DstReg)) {
-      if (potentialDuplex.getOperand(2).isExpr())
+      int64_t Value;
+      if (!potentialDuplex.getOperand(2).getExpr()->evaluateAsAbsolute(Value))
         return true;
-      if (potentialDuplex.getOperand(2).isImm() &&
-          !(isShiftedInt<7, 0>(potentialDuplex.getOperand(2).getImm())))
+      if (!isShiftedInt<7, 0>(Value))
         return true;
     }
     break;
@@ -576,15 +554,14 @@ bool HexagonMCInstrInfo::subInstWouldBeExtended(MCInst const &potentialDuplex) {
     DstReg = potentialDuplex.getOperand(0).getReg();
 
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg)) {
-      if (potentialDuplex.getOperand(1).isExpr())
+      int64_t Value;
+      if (!potentialDuplex.getOperand(1).getExpr()->evaluateAsAbsolute(Value))
         return true;
       // Check for case of Rd = #-1.
-      if (potentialDuplex.getOperand(1).isImm() &&
-          (potentialDuplex.getOperand(1).getImm() == -1))
+      if (Value == -1)
         return false;
       // Check for case of Rd = #u6.
-      if (potentialDuplex.getOperand(1).isImm() &&
-          !isShiftedUInt<6, 0>(potentialDuplex.getOperand(1).getImm()))
+      if (!isShiftedUInt<6, 0>(Value))
         return true;
     }
     break;
@@ -712,19 +689,23 @@ inline static void addOps(MCInst &subInstPtr, MCInst const &Inst,
 
 MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
   MCInst Result;
+  bool Absolute;
+  int64_t Value;
   switch (Inst.getOpcode()) {
   default:
     // dbgs() << "opcode: "<< Inst->getOpcode() << "\n";
     llvm_unreachable("Unimplemented subinstruction \n");
     break;
   case Hexagon::A2_addi:
-    if (Inst.getOperand(2).isImm() && Inst.getOperand(2).getImm() == 1) {
+    Absolute = Inst.getOperand(2).getExpr()->evaluateAsAbsolute(Value);
+    assert(Absolute);(void)Absolute;
+    if (Value == 1) {
       Result.setOpcode(Hexagon::V4_SA1_inc);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 1);
       break;
     } //  1,2 SUBInst $Rd = add($Rs, #1)
-    else if (Inst.getOperand(2).isImm() && Inst.getOperand(2).getImm() == -1) {
+    else if (Value == -1) {
       Result.setOpcode(Hexagon::V4_SA1_dec);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 1);
@@ -754,7 +735,7 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     addOps(Result, Inst, 0);
     break; //    1 SUBInst allocframe(#$u5_3)
   case Hexagon::A2_andir:
-    if (Inst.getOperand(2).getImm() == 255) {
+    if (minConstant(Inst, 2) == 255) {
       Result.setOpcode(Hexagon::V4_SA1_zxtb);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 1);
@@ -772,26 +753,27 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     break; //    2,3 SUBInst p0 = cmp.eq($Rs, #$u2)
   case Hexagon::A4_combineii:
   case Hexagon::A2_combineii:
-    if (Inst.getOperand(1).getImm() == 1) {
+    Absolute = Inst.getOperand(1).getExpr()->evaluateAsAbsolute(Value);
+    assert(Absolute);(void)Absolute;
+    if (Value == 1) {
       Result.setOpcode(Hexagon::V4_SA1_combine1i);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 2);
       break; //  1,3 SUBInst $Rdd = combine(#1, #$u2)
     }
-
-    if (Inst.getOperand(1).getImm() == 3) {
+    if (Value == 3) {
       Result.setOpcode(Hexagon::V4_SA1_combine3i);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 2);
       break; //  1,3 SUBInst $Rdd = combine(#3, #$u2)
     }
-    if (Inst.getOperand(1).getImm() == 0) {
+    if (Value == 0) {
       Result.setOpcode(Hexagon::V4_SA1_combine0i);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 2);
       break; //  1,3 SUBInst $Rdd = combine(#0, #$u2)
     }
-    if (Inst.getOperand(1).getImm() == 2) {
+    if (Value == 2) {
       Result.setOpcode(Hexagon::V4_SA1_combine2i);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 2);
@@ -894,12 +876,14 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
       break; //    1,2,3 SUBInst $Rd = memw($Rs + #$u4_2)
     }
   case Hexagon::S4_storeirb_io:
-    if (Inst.getOperand(2).getImm() == 0) {
+    Absolute = Inst.getOperand(2).getExpr()->evaluateAsAbsolute(Value);
+    assert(Absolute);(void)Absolute;
+    if (Value == 0) {
       Result.setOpcode(Hexagon::V4_SS2_storebi0);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 1);
       break; //    1,2 SUBInst memb($Rs + #$u4_0)=#0
-    } else if (Inst.getOperand(2).getImm() == 1) {
+    } else if (Value == 1) {
       Result.setOpcode(Hexagon::V4_SS2_storebi1);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 1);
@@ -923,12 +907,14 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     addOps(Result, Inst, 2);
     break; //    1,2,3 SUBInst memb($Rs + #$u4_0) = $Rt
   case Hexagon::S4_storeiri_io:
-    if (Inst.getOperand(2).getImm() == 0) {
+    Absolute = Inst.getOperand(2).getExpr()->evaluateAsAbsolute(Value);
+    assert(Absolute);(void)Absolute;
+    if (Value == 0) {
       Result.setOpcode(Hexagon::V4_SS2_storewi0);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 1);
       break; //  3 1,2 SUBInst memw($Rs + #$u4_2)=#0
-    } else if (Inst.getOperand(2).getImm() == 1) {
+    } else if (Value == 1) {
       Result.setOpcode(Hexagon::V4_SS2_storewi1);
       addOps(Result, Inst, 0);
       addOps(Result, Inst, 1);
@@ -983,7 +969,8 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     addOps(Result, Inst, 0);
     break; //  2 SUBInst if (p0) $Rd = #0
   case Hexagon::A2_tfrsi:
-    if (Inst.getOperand(1).isImm() && Inst.getOperand(1).getImm() == -1) {
+    Absolute = Inst.getOperand(1).getExpr()->evaluateAsAbsolute(Value);
+    if (Absolute && Value == -1) {
       Result.setOpcode(Hexagon::V4_SA1_setin1);
       addOps(Result, Inst, 0);
       break; //  2 1 SUBInst $Rd = #-1
@@ -1044,6 +1031,8 @@ HexagonMCInstrInfo::getDuplexPossibilties(MCInstrInfo const &MCII,
                      << "\n");
         bisReversable = false;
       }
+      if (HexagonMCInstrInfo::isMemReorderDisabled(MCB)) // }:mem_noshuf
+        bisReversable = false;
 
       // Try in order.
       if (isOrderedDuplexPair(

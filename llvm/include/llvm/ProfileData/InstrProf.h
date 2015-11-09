@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -27,6 +28,10 @@
 #include <vector>
 
 namespace llvm {
+
+class Function;
+class GlobalVariable;
+class Module;
 
 /// Return the name of data section containing profile counter variables.
 inline StringRef getInstrProfCountersSectionName(bool AddSegment) {
@@ -112,6 +117,31 @@ inline StringRef getInstrProfRuntimeHookVarUseFuncName() {
 inline StringRef getInstrProfFileOverriderFuncName() {
   return "__llvm_profile_override_default_filename";
 }
+
+/// Return the modified name for function \c F suitable to be
+/// used the key for profile lookup.
+std::string getPGOFuncName(const Function &F);
+
+/// Return the modified name for a function suitable to be
+/// used the key for profile lookup. The function's original
+/// name is \c RawFuncName and has linkage of type \c Linkage.
+/// The function is defined in module \c FileName.
+std::string getPGOFuncName(StringRef RawFuncName,
+                           GlobalValue::LinkageTypes Linkage,
+                           StringRef FileName);
+
+/// Create and return the global variable for function name used in PGO
+/// instrumentation. \c FuncName is the name of the function returned
+/// by \c getPGOFuncName call.
+GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName);
+
+/// Create and return the global variable for function name used in PGO
+/// instrumentation.  /// \c FuncName is the name of the function
+/// returned by \c getPGOFuncName call, \c M is the owning module,
+/// and \c Linkage is the linkage of the instrumented function.
+GlobalVariable *createPGOFuncNameVar(Module &M,
+                                     GlobalValue::LinkageTypes Linkage,
+                                     StringRef FuncName);
 
 const std::error_category &instrprof_category();
 

@@ -30,6 +30,9 @@ def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "V60", "Hexagon V60">
 // Hexagon ISA Extensions
 def ExtensionHVX: SubtargetFeature<"hvx", "UseHVXOps",
                                    "true", "Hexagon HVX instructions">;
+def ExtensionHVXDbl: SubtargetFeature<"hvxDbl", "UseHVXDblOps",
+                                   "true", "Hexagon HVX Double instructions">;
+
 //===----------------------------------------------------------------------===//
 // Hexagon Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
@@ -212,7 +215,13 @@ def : Proc<"hexagonv5",  HexagonModelV4,
 // Declare the target which we are implementing
 //===----------------------------------------------------------------------===//
 
+def HexagonAsmParserVariant : AsmParserVariant {
+  int Variant = 0;
+  string TokenizingCharacters = "#()=:.<>!+*";
+}
+
 def Hexagon : Target {
   // Pull in Instruction Info:
   let InstructionSet = HexagonInstrInfo;
+  let AssemblyParserVariants = [HexagonAsmParserVariant];
 }

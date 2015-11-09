@@ -73,11 +73,14 @@ void llvm::HexagonLowerToMC(MachineInstr const* MI, MCInst& MCB,
       APFloat Val = MO.getFPImm()->getValueAPF();
       // FP immediates are used only when setting GPRs, so they may be dealt
       // with like regular immediates from this point on.
-      MCO = MCOperand::createImm(*Val.bitcastToAPInt().getRawData());
+      MCO = MCOperand::createExpr(
+        MCConstantExpr::create(*Val.bitcastToAPInt().getRawData(),
+                               AP.OutContext));
       break;
     }
     case MachineOperand::MO_Immediate:
-      MCO = MCOperand::createImm(MO.getImm());
+      MCO = MCOperand::createExpr(
+        MCConstantExpr::create(MO.getImm(), AP.OutContext));
       break;
     case MachineOperand::MO_MachineBasicBlock:
       MCO = MCOperand::createExpr

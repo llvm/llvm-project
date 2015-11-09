@@ -118,7 +118,7 @@ public:
 /// lexers.
 class MCAsmLexer {
   /// The current token, stored in the base class for faster access.
-  AsmToken CurTok;
+  SmallVector<AsmToken, 1> CurTok;
 
   /// The location and description of the current error
   SMLoc ErrLoc;
@@ -148,7 +148,15 @@ public:
   /// The lexer will continuosly return the end-of-file token once the end of
   /// the main input file has been reached.
   const AsmToken &Lex() {
-    return CurTok = LexToken();
+    assert(!CurTok.empty());
+    CurTok.erase(CurTok.begin());
+    if (CurTok.empty())
+      CurTok.emplace_back(LexToken());
+    return CurTok.front();
+  }
+
+  void UnLex(AsmToken const &Token) {
+    CurTok.insert(CurTok.begin(), Token);
   }
 
   virtual StringRef LexUntilEndOfStatement() = 0;
@@ -158,7 +166,7 @@ public:
 
   /// Get the current (last) lexed token.
   const AsmToken &getTok() const {
-    return CurTok;
+    return CurTok[0];
   }
 
   /// Look ahead at the next token to be lexed.

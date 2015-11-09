@@ -1,4 +1,4 @@
-//===- HexagonOperands.td - Hexagon immediate processing -*- tablegen -*-===//
+//===- HexagonImmediates.td - Hexagon immediate processing -*- tablegen -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,57 +7,100 @@
 //
 //===----------------------------------------------------------------------===//
 
+def s32ImmOperand : AsmOperandClass { let Name = "s32Imm"; }
+def s8ImmOperand : AsmOperandClass { let Name = "s8Imm"; }
+def s8Imm64Operand : AsmOperandClass { let Name = "s8Imm64"; }
+def s6ImmOperand : AsmOperandClass { let Name = "s6Imm"; }
+def s4ImmOperand : AsmOperandClass { let Name = "s4Imm"; }
 def s4_0ImmOperand : AsmOperandClass { let Name = "s4_0Imm"; }
 def s4_1ImmOperand : AsmOperandClass { let Name = "s4_1Imm"; }
 def s4_2ImmOperand : AsmOperandClass { let Name = "s4_2Imm"; }
 def s4_3ImmOperand : AsmOperandClass { let Name = "s4_3Imm"; }
 def s4_6ImmOperand : AsmOperandClass { let Name = "s4_6Imm"; }
 def s3_6ImmOperand : AsmOperandClass { let Name = "s3_6Imm"; }
-
+def u64ImmOperand : AsmOperandClass { let Name = "u64Imm"; }
+def u32ImmOperand : AsmOperandClass { let Name = "u32Imm"; }
+def u26_6ImmOperand : AsmOperandClass { let Name = "u26_6Imm"; }
+def u16ImmOperand : AsmOperandClass { let Name = "u16Imm"; }
+def u16_0ImmOperand : AsmOperandClass { let Name = "u16_0Imm"; }
+def u16_1ImmOperand : AsmOperandClass { let Name = "u16_1Imm"; }
+def u16_2ImmOperand : AsmOperandClass { let Name = "u16_2Imm"; }
+def u16_3ImmOperand : AsmOperandClass { let Name = "u16_3Imm"; }
+def u11_3ImmOperand : AsmOperandClass { let Name = "u11_3Imm"; }
+def u10ImmOperand : AsmOperandClass { let Name = "u10Imm"; }
+def u9ImmOperand : AsmOperandClass { let Name = "u9Imm"; }
+def u8ImmOperand : AsmOperandClass { let Name = "u8Imm"; }
+def u7ImmOperand : AsmOperandClass { let Name = "u7Imm"; }
+def u6ImmOperand : AsmOperandClass { let Name = "u6Imm"; }
+def u6_0ImmOperand : AsmOperandClass { let Name = "u6_0Imm"; }
+def u6_1ImmOperand : AsmOperandClass { let Name = "u6_1Imm"; }
+def u6_2ImmOperand : AsmOperandClass { let Name = "u6_2Imm"; }
+def u6_3ImmOperand : AsmOperandClass { let Name = "u6_3Imm"; }
+def u5ImmOperand : AsmOperandClass { let Name = "u5Imm"; }
+def u4ImmOperand : AsmOperandClass { let Name = "u4Imm"; }
+def u3ImmOperand : AsmOperandClass { let Name = "u3Imm"; }
+def u2ImmOperand : AsmOperandClass { let Name = "u2Imm"; }
+def u1ImmOperand : AsmOperandClass { let Name = "u1Imm"; }
+def n8ImmOperand : AsmOperandClass { let Name = "n8Imm"; }
 // Immediate operands.
 
-let PrintMethod = "printImmOperand" in {
-  def s32Imm : Operand<i32>;
-  def s8Imm : Operand<i32>;
-  def s8Imm64 : Operand<i64>;
-  def s6Imm : Operand<i32>;
+let OperandType = "OPERAND_IMMEDIATE",
+    DecoderMethod = "unsignedImmDecoder" in {
+  def s32Imm : Operand<i32> { let ParserMatchClass = s32ImmOperand;
+                              let DecoderMethod = "s32ImmDecoder"; }
+  def s8Imm : Operand<i32> { let ParserMatchClass = s8ImmOperand;
+                             let DecoderMethod = "s8ImmDecoder"; }
+  def s8Imm64 : Operand<i64>  { let ParserMatchClass = s8Imm64Operand;
+                                let DecoderMethod = "s8ImmDecoder"; }
+  def s6Imm : Operand<i32> { let ParserMatchClass = s6ImmOperand;
+                             let DecoderMethod = "s6_0ImmDecoder"; }
   def s6_3Imm : Operand<i32>;
-  def s4Imm : Operand<i32>;
-  def s4_0Imm : Operand<i32> { let DecoderMethod = "s4_0ImmDecoder"; }
-  def s4_1Imm : Operand<i32> { let DecoderMethod = "s4_1ImmDecoder"; }
-  def s4_2Imm : Operand<i32> { let DecoderMethod = "s4_2ImmDecoder"; }
-  def s4_3Imm : Operand<i32> { let DecoderMethod = "s4_3ImmDecoder"; }
-  def u64Imm : Operand<i64>;
-  def u32Imm : Operand<i32>;
-  def u26_6Imm : Operand<i32>;
-  def u16Imm : Operand<i32>;
-  def u16_0Imm : Operand<i32>;
-  def u16_1Imm : Operand<i32>;
-  def u16_2Imm : Operand<i32>;
-  def u16_3Imm : Operand<i32>;
-  def u11_3Imm : Operand<i32>;
-  def u10Imm : Operand<i32>;
-  def u9Imm : Operand<i32>;
-  def u8Imm : Operand<i32>;
-  def u7Imm : Operand<i32>;
-  def u6Imm : Operand<i32>;
-  def u6_0Imm : Operand<i32>;
-  def u6_1Imm : Operand<i32>;
-  def u6_2Imm : Operand<i32>;
-  def u6_3Imm : Operand<i32>;
-  def u5Imm : Operand<i32>;
+  def s4Imm : Operand<i32> { let ParserMatchClass = s4ImmOperand;
+                             let DecoderMethod = "s4_0ImmDecoder"; }
+  def s4_0Imm : Operand<i32> { let ParserMatchClass = s4_0ImmOperand;
+                               let DecoderMethod = "s4_0ImmDecoder"; }
+  def s4_1Imm : Operand<i32> { let ParserMatchClass = s4_1ImmOperand;
+                               let DecoderMethod = "s4_1ImmDecoder"; }
+  def s4_2Imm : Operand<i32> { let ParserMatchClass = s4_2ImmOperand;
+                               let DecoderMethod = "s4_2ImmDecoder"; }
+  def s4_3Imm : Operand<i32> { let ParserMatchClass = s4_3ImmOperand;
+                               let DecoderMethod = "s4_3ImmDecoder"; }
+  def u64Imm : Operand<i64> { let ParserMatchClass = u64ImmOperand; }
+  def u32Imm : Operand<i32> { let ParserMatchClass = u32ImmOperand; }
+  def u26_6Imm : Operand<i32> { let ParserMatchClass = u26_6ImmOperand; }
+  def u16Imm : Operand<i32> { let ParserMatchClass = u16ImmOperand; }
+  def u16_0Imm : Operand<i32> { let ParserMatchClass = u16_0ImmOperand; }
+  def u16_1Imm : Operand<i32> { let ParserMatchClass = u16_1ImmOperand; }
+  def u16_2Imm : Operand<i32> { let ParserMatchClass = u16_2ImmOperand; }
+  def u16_3Imm : Operand<i32> { let ParserMatchClass = u16_3ImmOperand; }
+  def u11_3Imm : Operand<i32> { let ParserMatchClass = u11_3ImmOperand; }
+  def u10Imm : Operand<i32> { let ParserMatchClass = u10ImmOperand; }
+  def u9Imm : Operand<i32> { let ParserMatchClass = u9ImmOperand; }
+  def u8Imm : Operand<i32> { let ParserMatchClass = u8ImmOperand; }
+  def u7Imm : Operand<i32> { let ParserMatchClass = u7ImmOperand; }
+  def u6Imm : Operand<i32> { let ParserMatchClass = u6ImmOperand; }
+  def u6_0Imm : Operand<i32> { let ParserMatchClass = u6_0ImmOperand; }
+  def u6_1Imm : Operand<i32> { let ParserMatchClass = u6_1ImmOperand; }
+  def u6_2Imm : Operand<i32> { let ParserMatchClass = u6_2ImmOperand; }
+  def u6_3Imm : Operand<i32> { let ParserMatchClass = u6_3ImmOperand; }
+  def u5Imm : Operand<i32> { let ParserMatchClass = u5ImmOperand; }
+  def u5_0Imm : Operand<i32>;
+  def u5_1Imm : Operand<i32>;
   def u5_2Imm : Operand<i32>;
   def u5_3Imm : Operand<i32>;
-  def u4Imm : Operand<i32>;
+  def u4Imm : Operand<i32> { let ParserMatchClass = u4ImmOperand; }
   def u4_0Imm : Operand<i32>;
+  def u4_1Imm : Operand<i32>;
   def u4_2Imm : Operand<i32>;
-  def u3Imm : Operand<i32>;
+  def u4_3Imm : Operand<i32>;
+  def u3Imm : Operand<i32> { let ParserMatchClass = u3ImmOperand; }
   def u3_0Imm : Operand<i32>;
   def u3_1Imm : Operand<i32>;
-  def u2Imm : Operand<i32>;
-  def u1Imm : Operand<i32>;
-  def n8Imm : Operand<i32>;
-  def m6Imm : Operand<i32>;
+  def u3_2Imm : Operand<i32>;
+  def u3_3Imm : Operand<i32>;
+  def u2Imm : Operand<i32> { let ParserMatchClass = u2ImmOperand; }
+  def u1Imm : Operand<i32> { let ParserMatchClass = u1ImmOperand; }
+  def n8Imm : Operand<i32> { let ParserMatchClass = n8ImmOperand; }
 }
 
 let OperandType = "OPERAND_IMMEDIATE" in {
@@ -72,9 +115,6 @@ let OperandType = "OPERAND_IMMEDIATE" in {
   def s3_7Imm : Operand<i32> { let PrintMethod = "prints3_7ImmOperand";
                                let DecoderMethod = "s3_6ImmDecoder";}
 }
-
-let PrintMethod = "printNOneImmOperand" in
-def nOneImm : Operand<i32>;
 
 //
 // Immediate predicates
@@ -169,7 +209,6 @@ def s4_3ImmPred  : PatLeaf<(i32 imm), [{
   return isShiftedInt<4,3>(v);
 }]>;
 
-
 def u64ImmPred  : PatLeaf<(i64 imm), [{
   // Adding "N ||" to suppress gcc unused warning.
   return (N || true);
@@ -223,6 +262,11 @@ def u16_2ImmPred  : PatLeaf<(i32 imm), [{
 def u11_3ImmPred : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isShiftedUInt<11,3>(v);
+}]>;
+
+def u10ImmPred  : PatLeaf<(i32 imm), [{
+  int64_t v = (int64_t)N->getSExtValue();
+  return isUInt<10>(v);
 }]>;
 
 def u9ImmPred  : PatLeaf<(i32 imm), [{
@@ -292,6 +336,11 @@ def u2ImmPred  : PatLeaf<(i32 imm), [{
 }]>;
 
 def u1ImmPred  : PatLeaf<(i1 imm), [{
+  int64_t v = (int64_t)N->getSExtValue();
+  return isUInt<1>(v);
+}]>;
+
+def u1ImmPred32  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isUInt<1>(v);
 }]>;
@@ -408,29 +457,65 @@ def SetClr3ImmPred : PatLeaf<(i32 imm), [{
 
 
 // Extendable immediate operands.
+def f32ExtOperand : AsmOperandClass { let Name = "f32Ext"; }
+def s16ExtOperand : AsmOperandClass { let Name = "s16Ext"; }
+def s12ExtOperand : AsmOperandClass { let Name = "s12Ext"; }
+def s10ExtOperand : AsmOperandClass { let Name = "s10Ext"; }
+def s9ExtOperand : AsmOperandClass { let Name = "s9Ext"; }
+def s8ExtOperand : AsmOperandClass { let Name = "s8Ext"; }
+def s7ExtOperand : AsmOperandClass { let Name = "s7Ext"; }
+def s6ExtOperand : AsmOperandClass { let Name = "s6Ext"; }
+def s11_0ExtOperand : AsmOperandClass { let Name = "s11_0Ext"; }
+def s11_1ExtOperand : AsmOperandClass { let Name = "s11_1Ext"; }
+def s11_2ExtOperand : AsmOperandClass { let Name = "s11_2Ext"; }
+def s11_3ExtOperand : AsmOperandClass { let Name = "s11_3Ext"; }
+def u6ExtOperand : AsmOperandClass { let Name = "u6Ext"; }
+def u7ExtOperand : AsmOperandClass { let Name = "u7Ext"; }
+def u8ExtOperand : AsmOperandClass { let Name = "u8Ext"; }
+def u9ExtOperand : AsmOperandClass { let Name = "u9Ext"; }
+def u10ExtOperand : AsmOperandClass { let Name = "u10Ext"; }
+def u6_0ExtOperand : AsmOperandClass { let Name = "u6_0Ext"; }
+def u6_1ExtOperand : AsmOperandClass { let Name = "u6_1Ext"; }
+def u6_2ExtOperand : AsmOperandClass { let Name = "u6_2Ext"; }
+def u6_3ExtOperand : AsmOperandClass { let Name = "u6_3Ext"; }
+def u32MustExtOperand : AsmOperandClass { let Name = "u32MustExt"; }
 
-let PrintMethod = "printExtOperand" in {
-  def f32Ext : Operand<f32>;
-  def s16Ext : Operand<i32> { let DecoderMethod = "s16ImmDecoder"; }
-  def s12Ext : Operand<i32> { let DecoderMethod = "s12ImmDecoder"; }
-  def s11_0Ext : Operand<i32> { let DecoderMethod = "s11_0ImmDecoder"; }
-  def s11_1Ext : Operand<i32> { let DecoderMethod = "s11_1ImmDecoder"; }
-  def s11_2Ext : Operand<i32> { let DecoderMethod = "s11_2ImmDecoder"; }
-  def s11_3Ext : Operand<i32> { let DecoderMethod = "s11_3ImmDecoder"; }
-  def s10Ext : Operand<i32> { let DecoderMethod = "s10ImmDecoder"; }
-  def s9Ext : Operand<i32> { let DecoderMethod = "s90ImmDecoder"; }
-  def s8Ext : Operand<i32> { let DecoderMethod = "s8ImmDecoder"; }
-  def s7Ext : Operand<i32>;
-  def s6Ext : Operand<i32> { let DecoderMethod = "s6_0ImmDecoder"; }
-  def u6Ext : Operand<i32>;
-  def u7Ext : Operand<i32>;
-  def u8Ext : Operand<i32>;
-  def u9Ext : Operand<i32>;
-  def u10Ext : Operand<i32>;
-  def u6_0Ext : Operand<i32>;
-  def u6_1Ext : Operand<i32>;
-  def u6_2Ext : Operand<i32>;
-  def u6_3Ext : Operand<i32>;
+
+
+let OperandType = "OPERAND_IMMEDIATE", PrintMethod = "printExtOperand",
+    DecoderMethod = "unsignedImmDecoder" in {
+  def f32Ext : Operand<f32> { let ParserMatchClass = f32ExtOperand; }
+  def s16Ext : Operand<i32> { let ParserMatchClass = s16ExtOperand;
+                              let DecoderMethod = "s16ImmDecoder"; }
+  def s12Ext : Operand<i32> { let ParserMatchClass = s12ExtOperand;
+                              let DecoderMethod = "s12ImmDecoder"; }
+  def s11_0Ext : Operand<i32> { let ParserMatchClass = s11_0ExtOperand;
+                              let DecoderMethod = "s11_0ImmDecoder"; }
+  def s11_1Ext : Operand<i32> { let ParserMatchClass = s11_1ExtOperand;
+                              let DecoderMethod = "s11_1ImmDecoder"; }
+  def s11_2Ext : Operand<i32> { let ParserMatchClass = s11_2ExtOperand;
+                              let DecoderMethod = "s11_2ImmDecoder"; }
+  def s11_3Ext : Operand<i32> { let ParserMatchClass = s11_3ExtOperand;
+                              let DecoderMethod = "s11_3ImmDecoder"; }
+  def s10Ext : Operand<i32> { let ParserMatchClass = s10ExtOperand;
+                              let DecoderMethod = "s10ImmDecoder"; }
+  def s9Ext : Operand<i32> { let ParserMatchClass = s9ExtOperand;
+                              let DecoderMethod = "s90ImmDecoder"; }
+  def s8Ext : Operand<i32> { let ParserMatchClass = s8ExtOperand;
+                              let DecoderMethod = "s8ImmDecoder"; }
+  def s7Ext : Operand<i32> { let ParserMatchClass = s7ExtOperand; }
+  def s6Ext : Operand<i32> { let ParserMatchClass = s6ExtOperand;
+                              let DecoderMethod = "s6_0ImmDecoder"; }
+  def u6Ext : Operand<i32> { let ParserMatchClass = u6ExtOperand; }
+  def u7Ext : Operand<i32> { let ParserMatchClass = u7ExtOperand; }
+  def u8Ext : Operand<i32> { let ParserMatchClass = u8ExtOperand; }
+  def u9Ext : Operand<i32> { let ParserMatchClass = u9ExtOperand; }
+  def u10Ext : Operand<i32> { let ParserMatchClass = u10ExtOperand; }
+  def u6_0Ext : Operand<i32> { let ParserMatchClass = u6_0ExtOperand; }
+  def u6_1Ext : Operand<i32> { let ParserMatchClass = u6_1ExtOperand; }
+  def u6_2Ext : Operand<i32> { let ParserMatchClass = u6_2ExtOperand; }
+  def u6_3Ext : Operand<i32> { let ParserMatchClass = u6_3ExtOperand; }
+  def u32MustExt : Operand<i32> { let ParserMatchClass = u32MustExtOperand; }
 }
 
 
@@ -492,21 +577,21 @@ let PrintMethod = "printGlobalOperand" in {
 let PrintMethod = "printJumpTable" in
 def jumptablebase : Operand<i32>;
 
-def brtarget : Operand<OtherVT>;
-def brtargetExt : Operand<OtherVT> {
-  let PrintMethod = "printExtBrtarget";
+def brtarget : Operand<OtherVT> {
+  let DecoderMethod = "brtargetDecoder";
+  let PrintMethod = "printBrtarget";
 }
-def calltarget : Operand<i32>;
+def brtargetExt : Operand<OtherVT> {
+  let DecoderMethod = "brtargetDecoder";
+  let PrintMethod = "printBrtarget";
+}
+def calltarget : Operand<i32> {
+  let DecoderMethod = "brtargetDecoder";
+  let PrintMethod = "printBrtarget";
+}
 
 def bblabel : Operand<i32>;
-def bbl   : SDNode<"ISD::BasicBlock", SDTPtrLeaf   , [], "BasicBlockSDNode">;
-
-def symbolHi32 : Operand<i32> {
-  let PrintMethod = "printSymbolHi";
-}
-def symbolLo32 : Operand<i32> {
-  let PrintMethod = "printSymbolLo";
-}
+def bbl     : SDNode<"ISD::BasicBlock", SDTPtrLeaf, [], "BasicBlockSDNode">;
 
 // Return true if for a 32 to 64-bit sign-extended load.
 def is_sext_i32 : PatLeaf<(i64 DoubleRegs:$src1), [{

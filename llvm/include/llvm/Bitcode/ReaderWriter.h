@@ -54,6 +54,13 @@ namespace llvm {
   getBitcodeTargetTriple(MemoryBufferRef Buffer, LLVMContext &Context,
                          DiagnosticHandlerFunction DiagnosticHandler = nullptr);
 
+  /// Read the header of the specified bitcode buffer and extract just the
+  /// producer string information. If successful, this returns a string. On
+  /// error, this returns "".
+  std::string getBitcodeProducerString(
+      MemoryBufferRef Buffer, LLVMContext &Context,
+      DiagnosticHandlerFunction DiagnosticHandler = nullptr);
+
   /// Read the specified bitcode file, returning the module.
   ErrorOr<std::unique_ptr<Module>>
   parseBitcodeFile(MemoryBufferRef Buffer, LLVMContext &Context,
