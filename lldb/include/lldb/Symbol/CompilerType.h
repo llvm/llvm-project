@@ -179,6 +179,9 @@ public:
     
     bool
     IsReferenceType(CompilerType *pointee_type = nullptr, bool* is_rvalue = nullptr) const;
+
+    bool
+    ShouldTreatScalarValueAsAddress () const;
     
     bool
     IsScalarType () const;

@@ -227,6 +227,14 @@ CompilerType::IsReferenceType (CompilerType *pointee_type, bool* is_rvalue) cons
 }
 
 bool
+CompilerType::ShouldTreatScalarValueAsAddress () const
+{
+    if (IsValid())
+        return m_type_system->ShouldTreatScalarValueAsAddress(m_type);
+    return false;
+}
+
+bool
 CompilerType::IsFloatingPointType (uint32_t &count, bool &is_complex) const
 {
     if (IsValid())

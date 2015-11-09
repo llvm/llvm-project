@@ -960,7 +960,8 @@ namespace lldb {
         eTypeIsInteger          = (1u << 18),
         eTypeIsFloat            = (1u << 19),
         eTypeIsComplex          = (1u << 20),
-        eTypeIsSigned           = (1u << 21)
+        eTypeIsSigned           = (1u << 21),
+        eTypeInstanceIsPointer  = (1u << 22)
     };
     
     FLAGS_ENUM(CommandFlags)

@@ -146,7 +146,7 @@ ValueObjectChild::UpdateValue ()
             Value::ValueType value_type = parent->GetValue().GetValueType();
             m_value.SetValueType (value_type);
 
-            if (parent->GetCompilerType().IsPointerOrReferenceType ())
+            if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress())
             {
                 lldb::addr_t addr = parent->GetPointerValue ();
                 m_value.GetScalar() = addr;
