@@ -1227,6 +1227,10 @@ def adjust_inferior_options(dotest_argv):
         _remove_option(dotest_argv, "--results-formatter-option", "-O",
                        True)
 
+    # Remove the --curses shortcut if specified.
+    if dotest_options.curses:
+        _remove_option(dotest_argv, "--curses", None, False)
+
     # Remove test runner name if present.
     if dotest_options.test_runner_name is not None:
         _remove_option(dotest_argv, "--test-runner-name", None, True)

@@ -151,6 +151,10 @@ def create_parser():
     # Test results support.
     group = parser.add_argument_group('Test results options')
     group.add_argument(
+        '--curses',
+        action='store_true',
+        help='Shortcut for specifying test results using the curses formatter')
+    group.add_argument(
         '--results-file',
         action='store',
         help=('Specifies the file where test results will be written '

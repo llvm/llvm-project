@@ -22,7 +22,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 # System modules
-import sys
 import atexit
 import importlib
 import os
@@ -751,6 +750,11 @@ def parseOptionsAndInitTestdirs():
         test_runner_name = args.test_runner_name
 
     # Capture test results-related args.
+    if args.curses and not args.inferior:
+        # Act as if the following args were set.
+        args.results_formatter = "lldbsuite.test.curses_results.Curses"
+        args.results_file = "stdout"
+
     if args.results_file:
         results_filename = args.results_file
 
