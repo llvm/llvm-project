@@ -186,11 +186,14 @@ protected:
         if (!KilledProdOp)
           continue;
 
-        // For virtual registers, verify that the addend source register
-        // is live here (as should have been assured above).
-        assert((!TargetRegisterInfo::isVirtualRegister(AddendSrcReg) ||
-                LIS->getInterval(AddendSrcReg).liveAt(FMAIdx)) &&
-               "Addend source register is not live!");
+	// If the addend copy is used only by this MI, then the addend source
+	// register is likely not live here. This could be fixed (based on the
+	// legality checks above, the live range for the addend source register
+	// could be extended), but it seems likely that such a trivial copy can
+	// be coalesced away later, and thus is not worth the effort.
+	if (TargetRegisterInfo::isVirtualRegister(AddendSrcReg) &&
+            !LIS->getInterval(AddendSrcReg).liveAt(FMAIdx))
+          continue;
 
         // Transform: (O2 * O3) + O1 -> (O2 * O1) + O3.
 
