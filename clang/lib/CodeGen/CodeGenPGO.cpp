@@ -28,56 +28,15 @@ using namespace CodeGen;
 
 void CodeGenPGO::setFuncName(StringRef Name,
                              llvm::GlobalValue::LinkageTypes Linkage) {
-  StringRef RawFuncName = Name;
-
-  // Function names may be prefixed with a binary '1' to indicate
-  // that the backend should not modify the symbols due to any platform
-  // naming convention. Do not include that '1' in the PGO profile name.
-  if (RawFuncName[0] == '\1')
-    RawFuncName = RawFuncName.substr(1);
-
-  FuncName = RawFuncName;
-  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
-    // For local symbols, prepend the main file name to distinguish them.
-    // Do not include the full path in the file name since there's no guarantee
-    // that it will stay the same, e.g., if the files are checked out from
-    // version control in different locations.
-    if (CGM.getCodeGenOpts().MainFileName.empty())
-      FuncName = FuncName.insert(0, "<unknown>:");
-    else
-      FuncName = FuncName.insert(0, CGM.getCodeGenOpts().MainFileName + ":");
-  }
+  FuncName = llvm::getPGOFuncName(Name, Linkage, CGM.getCodeGenOpts().MainFileName);
 
   // If we're generating a profile, create a variable for the name.
   if (CGM.getCodeGenOpts().ProfileInstrGenerate)
-    createFuncNameVar(Linkage);
+    FuncNameVar = llvm::createPGOFuncNameVar(CGM.getModule(), Linkage, FuncName);
 }
 
 void CodeGenPGO::setFuncName(llvm::Function *Fn) {
   setFuncName(Fn->getName(), Fn->getLinkage());
-}
-
-void CodeGenPGO::createFuncNameVar(llvm::GlobalValue::LinkageTypes Linkage) {
-  // We generally want to match the function's linkage, but available_externally
-  // and extern_weak both have the wrong semantics, and anything that doesn't
-  // need to link across compilation units doesn't need to be visible at all.
-  if (Linkage == llvm::GlobalValue::ExternalWeakLinkage)
-    Linkage = llvm::GlobalValue::LinkOnceAnyLinkage;
-  else if (Linkage == llvm::GlobalValue::AvailableExternallyLinkage)
-    Linkage = llvm::GlobalValue::LinkOnceODRLinkage;
-  else if (Linkage == llvm::GlobalValue::InternalLinkage ||
-           Linkage == llvm::GlobalValue::ExternalLinkage)
-    Linkage = llvm::GlobalValue::PrivateLinkage;
-
-  auto *Value =
-      llvm::ConstantDataArray::getString(CGM.getLLVMContext(), FuncName, false);
-  FuncNameVar =
-      new llvm::GlobalVariable(CGM.getModule(), Value->getType(), true, Linkage,
-                               Value, llvm::getInstrProfNameVarPrefix() + FuncName);
-
-  // Hide the symbol so that we correctly get a copy for each executable.
-  if (!llvm::GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
-    FuncNameVar->setVisibility(llvm::GlobalValue::HiddenVisibility);
 }
 
 namespace {
