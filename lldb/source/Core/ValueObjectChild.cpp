@@ -146,13 +146,10 @@ ValueObjectChild::UpdateValue ()
             m_value.GetScalar() = parent->GetValue().GetScalar();
             Value::ValueType value_type = parent->GetValue().GetValueType();
             m_value.SetValueType (value_type);
-            
+
             Flags parent_type_flags(parent_type.GetTypeInfo());
-            
             const bool is_instance_ptr_base = ((m_is_base_class == true) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
-            const bool treat_scalar_as_address = parent_type_flags.AnySet(lldb::eTypeIsPointer | lldb::eTypeIsReference | lldb::eTypeInstanceIsPointer);
-            
-            if (treat_scalar_as_address)
+            if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress())
             {
                 lldb::addr_t addr = parent->GetPointerValue ();
                 m_value.GetScalar() = addr;

@@ -965,6 +965,9 @@ public:
     bool
     IsReferenceType (void * type, CompilerType *pointee_type, bool* is_rvalue) override;
 
+    bool
+    ShouldTreatScalarValueAsAddress (lldb::opaque_compiler_type_t type) override;
+    
     CompilerType
     StripRedundantParentheses (void* type);
     

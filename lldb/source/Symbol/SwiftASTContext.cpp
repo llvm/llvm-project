@@ -8197,6 +8197,11 @@ SwiftASTContext::IsPointerOrReferenceType (void* type, CompilerType *pointee_typ
     return IsPointerType (type, pointee_type) || IsReferenceType(type, pointee_type, nullptr);
 }
 
+bool
+SwiftASTContext::ShouldTreatScalarValueAsAddress (lldb::opaque_compiler_type_t type)
+{
+    return Flags(GetTypeInfo(type, nullptr)).AnySet(eTypeInstanceIsPointer);
+}
 
 bool
 SwiftASTContext::IsReferenceType (void* type, CompilerType *pointee_type, bool* is_rvalue)
