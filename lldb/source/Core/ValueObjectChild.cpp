@@ -149,13 +149,9 @@ ValueObjectChild::UpdateValue ()
             
             Flags parent_type_flags(parent_type.GetTypeInfo());
             
-            bool is_instance_ptr_base = ((m_is_base_class == true) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
-            bool treat_scalar_as_address = parent_type_flags.AnySet(lldb::eTypeIsPointer | lldb::eTypeIsReference);
-            treat_scalar_as_address |= ((m_is_base_class == false) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
-            treat_scalar_as_address |= is_instance_ptr_base;
+            const bool is_instance_ptr_base = ((m_is_base_class == true) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
+            const bool treat_scalar_as_address = parent_type_flags.AnySet(lldb::eTypeIsPointer | lldb::eTypeIsReference | lldb::eTypeInstanceIsPointer);
             
-            AddressType addr_type = parent->GetAddressTypeOfChildren();
-
             if (treat_scalar_as_address)
             {
                 lldb::addr_t addr = parent->GetPointerValue ();
@@ -172,6 +168,7 @@ ValueObjectChild::UpdateValue ()
                 else
                 {
                     m_value.GetScalar() += m_byte_offset;
+                    AddressType addr_type = parent->GetAddressTypeOfChildren();
                     
                     switch (addr_type)
                     {
