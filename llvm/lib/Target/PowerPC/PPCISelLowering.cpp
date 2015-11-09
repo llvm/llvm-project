@@ -7177,7 +7177,6 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         PPC::isSplatShuffleMask(SVOp, 4) ||
         PPC::isVPKUWUMShuffleMask(SVOp, 1, DAG) ||
         PPC::isVPKUHUMShuffleMask(SVOp, 1, DAG) ||
-        PPC::isVPKUDUMShuffleMask(SVOp, 1, DAG) ||
         PPC::isVSLDOIShuffleMask(SVOp, 1, DAG) != -1 ||
         PPC::isVMRGLShuffleMask(SVOp, 1, 1, DAG) ||
         PPC::isVMRGLShuffleMask(SVOp, 2, 1, DAG) ||
@@ -7185,8 +7184,10 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         PPC::isVMRGHShuffleMask(SVOp, 1, 1, DAG) ||
         PPC::isVMRGHShuffleMask(SVOp, 2, 1, DAG) ||
         PPC::isVMRGHShuffleMask(SVOp, 4, 1, DAG) ||
-        PPC::isVMRGEOShuffleMask(SVOp, true, 1, DAG)   ||
-        PPC::isVMRGEOShuffleMask(SVOp, false, 1, DAG)) {
+        (Subtarget.hasP8Altivec() && (
+         PPC::isVPKUDUMShuffleMask(SVOp, 1, DAG) ||
+         PPC::isVMRGEOShuffleMask(SVOp, true, 1, DAG) ||
+         PPC::isVMRGEOShuffleMask(SVOp, false, 1, DAG)))) {
       return Op;
     }
   }
@@ -7197,7 +7198,6 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   unsigned int ShuffleKind = isLittleEndian ? 2 : 0;
   if (PPC::isVPKUWUMShuffleMask(SVOp, ShuffleKind, DAG) ||
       PPC::isVPKUHUMShuffleMask(SVOp, ShuffleKind, DAG) ||
-      PPC::isVPKUDUMShuffleMask(SVOp, ShuffleKind, DAG) ||
       PPC::isVSLDOIShuffleMask(SVOp, ShuffleKind, DAG) != -1 ||
       PPC::isVMRGLShuffleMask(SVOp, 1, ShuffleKind, DAG) ||
       PPC::isVMRGLShuffleMask(SVOp, 2, ShuffleKind, DAG) ||
@@ -7205,8 +7205,10 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       PPC::isVMRGHShuffleMask(SVOp, 1, ShuffleKind, DAG) ||
       PPC::isVMRGHShuffleMask(SVOp, 2, ShuffleKind, DAG) ||
       PPC::isVMRGHShuffleMask(SVOp, 4, ShuffleKind, DAG) ||
-      PPC::isVMRGEOShuffleMask(SVOp, true, ShuffleKind, DAG)             ||
-      PPC::isVMRGEOShuffleMask(SVOp, false, ShuffleKind, DAG))
+      (Subtarget.hasP8Altivec() && (
+       PPC::isVPKUDUMShuffleMask(SVOp, ShuffleKind, DAG) ||
+       PPC::isVMRGEOShuffleMask(SVOp, true, ShuffleKind, DAG) ||
+       PPC::isVMRGEOShuffleMask(SVOp, false, ShuffleKind, DAG))))
     return Op;
 
   // Check to see if this is a shuffle of 4-byte values.  If so, we can use our
