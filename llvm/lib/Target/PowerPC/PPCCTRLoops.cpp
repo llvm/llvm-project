@@ -239,6 +239,11 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
         if (F->getIntrinsicID() != Intrinsic::not_intrinsic) {
           switch (F->getIntrinsicID()) {
           default: continue;
+          // If we have a call to ppc_is_decremented_ctr_nonzero, or ppc_mtctr
+          // we're definitely using CTR.
+          case Intrinsic::ppc_is_decremented_ctr_nonzero:
+	  case Intrinsic::ppc_mtctr:
+	    return true;
 
 // VisualStudio defines setjmp as _setjmp
 #if defined(_MSC_VER) && defined(setjmp) && \
@@ -426,6 +431,7 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   // Process nested loops first.
   for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
     MadeChange |= convertToCTRLoop(*I);
+    DEBUG(dbgs() << "Nested loop converted\n");
   }
 
   // If a nested loop has been converted, then we can't convert this loop.
