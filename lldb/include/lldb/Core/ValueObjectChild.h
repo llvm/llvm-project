@@ -123,7 +123,8 @@ protected:
                       uint32_t bitfield_bit_offset,
                       bool is_base_class,
                       bool is_deref_of_parent,
-                      AddressType child_ptr_or_ref_addr_type);
+                      AddressType child_ptr_or_ref_addr_type,
+                      uint64_t language_flags);
 
     DISALLOW_COPY_AND_ASSIGN (ValueObjectChild);
 };

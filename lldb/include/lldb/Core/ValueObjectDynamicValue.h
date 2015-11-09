@@ -106,6 +106,12 @@ public:
     
     bool
     GetDeclaration(Declaration &decl) override;
+    
+    uint64_t
+    GetLanguageFlags () override;
+    
+    void
+    SetLanguageFlags (uint64_t flags) override;
 
 protected:
     bool

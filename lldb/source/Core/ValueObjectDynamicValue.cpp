@@ -426,3 +426,20 @@ ValueObjectDynamicValue::GetDeclaration (Declaration &decl)
 
     return ValueObject::GetDeclaration(decl);
 }
+
+uint64_t
+ValueObjectDynamicValue::GetLanguageFlags ()
+{
+    if (m_parent)
+        return m_parent->GetLanguageFlags();
+    return this->ValueObject::GetLanguageFlags();
+}
+
+void
+ValueObjectDynamicValue::SetLanguageFlags (uint64_t flags)
+{
+    if (m_parent)
+        m_parent->SetLanguageFlags(flags);
+    else
+        this->ValueObject::SetLanguageFlags(flags);
+}

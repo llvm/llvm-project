@@ -97,6 +97,7 @@ ValueObject::ValueObject (ValueObject &parent) :
     m_address_type_of_ptr_or_ref_children(eAddressTypeInvalid),
     m_value_checksum(),
     m_preferred_display_language(lldb::eLanguageTypeUnknown),
+    m_language_flags(0),
     m_value_is_valid (false),
     m_value_did_change (false),
     m_children_count_valid (false),
@@ -148,6 +149,7 @@ ValueObject::ValueObject (ExecutionContextScope *exe_scope,
     m_address_type_of_ptr_or_ref_children(child_ptr_or_ref_addr_type),
     m_value_checksum(),
     m_preferred_display_language(lldb::eLanguageTypeUnknown),
+    m_language_flags(0),
     m_value_is_valid (false),
     m_value_did_change (false),
     m_children_count_valid (false),
@@ -873,6 +875,7 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
     uint32_t child_bitfield_bit_offset = 0;
     bool child_is_base_class = false;
     bool child_is_deref_of_parent = false;
+    uint64_t language_flags = 0;
 
     const bool transparent_pointers = synthetic_array_member == false;
     CompilerType child_compiler_type;
@@ -891,7 +894,8 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
                                                                       child_bitfield_bit_offset,
                                                                       child_is_base_class,
                                                                       child_is_deref_of_parent,
-                                                                      this);
+                                                                      this,
+                                                                      language_flags);
     if (child_compiler_type)
     {
         if (synthetic_index)
@@ -910,7 +914,8 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
                                        child_bitfield_bit_offset,
                                        child_is_base_class,
                                        child_is_deref_of_parent,
-                                       eAddressTypeInvalid);
+                                       eAddressTypeInvalid,
+                                       language_flags);
         //if (valobj)
         //    valobj->SetAddressTypeOfChildren(eAddressTypeInvalid);
    }
@@ -2219,7 +2224,8 @@ ValueObject::GetSyntheticBitFieldChild (uint32_t from, uint32_t to, bool can_cre
                                                                       from,
                                                                       false,
                                                                       false,
-                                                                      eAddressTypeInvalid);
+                                                                      eAddressTypeInvalid,
+                                                                      0);
             
             // Cache the value if we got one back...
             if (synthetic_child)
@@ -2265,7 +2271,8 @@ ValueObject::GetSyntheticChildAtOffset(uint32_t offset, const CompilerType& type
                                                              0,
                                                              false,
                                                              false,
-                                                             eAddressTypeInvalid);
+                                                             eAddressTypeInvalid,
+                                                             0);
     if (synthetic_child)
     {
         AddSyntheticChild(name_const_str, synthetic_child);
@@ -2308,7 +2315,8 @@ ValueObject::GetSyntheticBase (uint32_t offset, const CompilerType& type, bool c
                                                              0,
                                                              is_base_class,
                                                              false,
-                                                             eAddressTypeInvalid);
+                                                             eAddressTypeInvalid,
+                                                             0);
     if (synthetic_child)
     {
         AddSyntheticChild(name_const_str, synthetic_child);
@@ -3783,6 +3791,7 @@ ValueObject::Dereference (Error &error)
         const bool transparent_pointers = false;
         CompilerType compiler_type = GetCompilerType();
         CompilerType child_compiler_type;
+        uint64_t language_flags;
 
         ExecutionContext exe_ctx (GetExecutionContextRef());
 
@@ -3798,7 +3807,8 @@ ValueObject::Dereference (Error &error)
                                                                          child_bitfield_bit_offset,
                                                                          child_is_base_class,
                                                                          child_is_deref_of_parent,
-                                                                         this);
+                                                                         this,
+                                                                         language_flags);
         if (child_compiler_type && child_byte_size)
         {
             ConstString child_name;
@@ -3814,7 +3824,8 @@ ValueObject::Dereference (Error &error)
                                                    child_bitfield_bit_offset,
                                                    child_is_base_class,
                                                    child_is_deref_of_parent,
-                                                   eAddressTypeInvalid);
+                                                   eAddressTypeInvalid,
+                                                   language_flags);
         }
     }
 
@@ -4366,4 +4377,16 @@ void
 ValueObject::SetSyntheticChildrenGenerated (bool b)
 {
     m_is_synthetic_children_generated = b;
+}
+
+uint64_t
+ValueObject::GetLanguageFlags ()
+{
+    return m_language_flags;
+}
+
+void
+ValueObject::SetLanguageFlags (uint64_t flags)
+{
+    m_language_flags = flags;
 }

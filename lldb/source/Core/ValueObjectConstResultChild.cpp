@@ -27,7 +27,8 @@ ValueObjectConstResultChild::ValueObjectConstResultChild
     uint32_t bitfield_bit_offset,
     bool is_base_class,
     bool is_deref_of_parent,
-    lldb::addr_t live_address
+    lldb::addr_t live_address,
+    uint64_t language_flags
 ) :
     ValueObjectChild (parent,
                       compiler_type,
@@ -38,7 +39,8 @@ ValueObjectConstResultChild::ValueObjectConstResultChild
                       bitfield_bit_offset,
                       is_base_class,
                       is_deref_of_parent,
-                      eAddressTypeLoad),
+                      eAddressTypeLoad,
+                      language_flags),
     m_impl(this, live_address)
 {
     m_name = name;

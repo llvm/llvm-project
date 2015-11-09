@@ -35,7 +35,8 @@ ValueObjectChild::ValueObjectChild
     uint32_t bitfield_bit_offset,
     bool is_base_class,
     bool is_deref_of_parent,
-    AddressType child_ptr_or_ref_addr_type
+    AddressType child_ptr_or_ref_addr_type,
+    uint64_t language_flags
 ) :
     ValueObject (parent),
     m_compiler_type (compiler_type),
@@ -49,6 +50,7 @@ ValueObjectChild::ValueObjectChild
 {
     m_name = name;
     SetAddressTypeOfChildren(child_ptr_or_ref_addr_type);
+    SetLanguageFlags(language_flags);
 }
 
 ValueObjectChild::~ValueObjectChild()
