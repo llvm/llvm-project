@@ -88,6 +88,8 @@ def err_module_unavailable : Error<
   "module '%0' %select{is incompatible with|requires}1 feature '%2'">;
 def err_module_header_missing : Error<
   "%select{|umbrella }0header '%1' not found">;
+def err_module_shadowed : Error<
+  "import of shadowed module '%0'">;
 def err_module_lock_failure : Error<
   "could not acquire lock file for module '%0'">, DefaultFatal;
 def err_module_lock_timeout : Error<

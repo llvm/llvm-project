@@ -1605,8 +1605,13 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     // Check whether this module is available.
     clang::Module::Requirement Requirement;
     clang::Module::UnresolvedHeaderDirective MissingHeader;
+    clang::Module *ShadowingModule = nullptr;
     if (!Module->isAvailable(getLangOpts(), getTarget(), Requirement,
-                             MissingHeader)) {
+                             MissingHeader, ShadowingModule)) {
+
+      assert(!ShadowingModule &&
+             "lookup of module by name should never find shadowed module");
+
       if (MissingHeader.FileNameLoc.isValid()) {
         getDiagnostics().Report(MissingHeader.FileNameLoc,
                                 diag::err_module_header_missing)

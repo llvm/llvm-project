@@ -562,12 +562,27 @@ ModuleMap::findOrCreateModule(StringRef Name, Module *Parent, bool IsFramework,
   }
   if (!Parent) {
     Modules[Name] = Result;
+    ModuleScopeIDs[Result] = CurrentModuleScopeID;
     if (!LangOpts.CurrentModule.empty() && !CompilingModule &&
         Name == LangOpts.CurrentModule) {
       CompilingModule = Result;
     }
   }
   return std::make_pair(Result, true);
+}
+
+Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
+                                        Module *ShadowingModule) {
+
+  // Create a new module with this name.
+  Module *Result =
+      new Module(Name, SourceLocation(), /*Parent=*/nullptr, IsFramework,
+                 /*IsExplicit=*/false, NumCreatedModules++);
+  Result->ShadowingModule = ShadowingModule;
+  Result->IsAvailable = false;
+  ModuleScopeIDs[Result] = CurrentModuleScopeID;
+
+  return Result;
 }
 
 /// \brief For a framework module, infer the framework against which we
@@ -682,6 +697,8 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   Module *Result = new Module(ModuleName, SourceLocation(), Parent,
                               /*IsFramework=*/true, /*IsExplicit=*/false,
                               NumCreatedModules++);
+  if (!Parent)
+    ModuleScopeIDs[Result] = CurrentModuleScopeID;
   InferredModuleAllowedBy[Result] = ModuleMapFile;
   Result->IsInferred = true;
   if (LangOpts.CurrentModule == ModuleName) {
@@ -1412,6 +1429,7 @@ void ModuleMapParser::parseModuleDecl() {
   SourceLocation LBraceLoc = consumeToken();
   
   // Determine whether this (sub)module has already been defined.
+  Module *ShadowingModule = nullptr;
   if (Module *Existing = Map.lookupModuleQualified(ModuleName, ActiveModule)) {
     if (Existing->DefinitionLoc.isInvalid() && !ActiveModule) {
       // Skip the module definition.
@@ -1425,23 +1443,35 @@ void ModuleMapParser::parseModuleDecl() {
       }
       return;
     }
-    
-    Diags.Report(ModuleNameLoc, diag::err_mmap_module_redefinition)
-      << ModuleName;
-    Diags.Report(Existing->DefinitionLoc, diag::note_mmap_prev_definition);
-    
-    // Skip the module definition.
-    skipUntil(MMToken::RBrace);
-    if (Tok.is(MMToken::RBrace))
-      consumeToken();
-    
-    HadError = true;
-    return;
+
+    if (!Existing->Parent && Map.mayShadowNewModule(Existing)) {
+      ShadowingModule = Existing;
+    } else {
+      // This is not a shawdowed module decl, it is an illegal redefinition.
+      Diags.Report(ModuleNameLoc, diag::err_mmap_module_redefinition)
+          << ModuleName;
+      Diags.Report(Existing->DefinitionLoc, diag::note_mmap_prev_definition);
+
+      // Skip the module definition.
+      skipUntil(MMToken::RBrace);
+      if (Tok.is(MMToken::RBrace))
+        consumeToken();
+
+      HadError = true;
+      return;
+    }
   }
 
   // Start defining this module.
-  ActiveModule = Map.findOrCreateModule(ModuleName, ActiveModule, Framework,
-                                        Explicit).first;
+  if (ShadowingModule) {
+    ActiveModule =
+        Map.createShadowedModule(ModuleName, Framework, ShadowingModule);
+  } else {
+    ActiveModule =
+        Map.findOrCreateModule(ModuleName, ActiveModule, Framework, Explicit)
+            .first;
+  }
+
   ActiveModule->DefinitionLoc = ModuleNameLoc;
   if (Attrs.IsSystem || IsSystem)
     ActiveModule->IsSystem = true;
