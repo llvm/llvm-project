@@ -1584,6 +1584,7 @@ GDBRemoteCommunicationClient::SendEnvironmentPacket (char const *name_equal_valu
                     case '$':
                     case '#':
                     case '*':
+                    case '}':
                         send_hex_encoding = true;
                         break;
                     default:

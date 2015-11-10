@@ -26,72 +26,70 @@ private:
     bool m_print;
 };
 
+// TODO(zturner): This should be part of a `PythonModule` class in
+// PythonDataObjects.hm and it should return a `PythonObject`
 static PyObject*
 ResolvePythonName(const char* name,
                   PyObject* pmodule)
 {
+    using namespace lldb_private;
     if (!name)
         return pmodule;
 
     PyErr_Cleaner pyerr_cleanup(true);  // show Python errors
 
-    PyObject* main_dict;
+    PythonDictionary main_dict(PyInitialValue::Invalid);
 
     if (!pmodule)
     {
         pmodule = PyImport_AddModule ("__main__");
         if (!pmodule)
-            return NULL;
+            return nullptr;
     }
 
     if (PyType_Check(pmodule))
-    {
-        main_dict = ((PyTypeObject*)pmodule)->tp_dict;
-        if (!main_dict)
-            return NULL;
-    }
-    else if (!PyDict_Check(pmodule))
-    {
-        main_dict = PyModule_GetDict (pmodule);
-        if (!main_dict)
-            return NULL;
-    }
+        main_dict.Reset(PyRefType::Borrowed, ((PyTypeObject*)pmodule)->tp_dict);
+    else if (PythonDictionary::Check(pmodule))
+        main_dict.Reset(PyRefType::Borrowed, pmodule);
     else
-        main_dict = pmodule;
+        main_dict.Reset(PyRefType::Borrowed, PyModule_GetDict (pmodule));
+    if (!main_dict.IsValid())
+        return nullptr;
 
     const char* dot_pos = ::strchr(name, '.');
 
-    PyObject *dest_object;
-    PyObject *key, *value;
+    PythonObject dest_object;
     Py_ssize_t pos = 0;
 
     if (!dot_pos)
     {
-        dest_object = NULL;
-        while (PyDict_Next (main_dict, &pos, &key, &value))
+        PyObject *py_key;
+        PyObject *py_value;
+        // TODO(zturner): This should be conveniently wrapped by `PythonDictionary`.
+        while (PyDict_Next(main_dict.get(), &pos, &py_key, &py_value))
         {
-            // We have stolen references to the key and value objects in the dictionary; we need to increment
-            // them now so that Python's garbage collector doesn't collect them out from under us.
-            Py_INCREF (key);
-            Py_INCREF (value);
-            if (strcmp (PyString_AsString (key), name) == 0)
+            PythonObject key(PyRefType::Borrowed, py_key);
+            auto key_string = key.AsType<PythonString>();
+            if (!key_string.IsAllocated())
+                continue;
+
+            std::string str(key_string.GetString().str());
+            if (strcmp(str.c_str(), name) == 0)
             {
-                dest_object = value;
+                dest_object.Reset(PyRefType::Borrowed, py_value);
                 break;
             }
         }
-        if (!dest_object || dest_object == Py_None)
-            return NULL;
-        return dest_object;
+        return dest_object.release();
     }
     else
     {
         size_t len = dot_pos - name;
         std::string piece(name,len);
-        pmodule = ResolvePythonName(piece.c_str(), main_dict);
-        if (!pmodule)
-            return NULL;
-        return ResolvePythonName(dot_pos+1,pmodule); // tail recursion.. should be optimized by the compiler
+        PyObject *resolved_object = ResolvePythonName(piece.c_str(), main_dict.get());
+        if (!resolved_object || resolved_object == Py_None)
+            return nullptr;
+        return ResolvePythonName(dot_pos+1,resolved_object); // tail recursion.. should be optimized by the compiler
     }
 }
 
@@ -101,6 +99,8 @@ FindSessionDictionary(const char *session_dictionary_name)
     return ResolvePythonName(session_dictionary_name, NULL);
 }
 
+// TODO(zturner): This entire class should be moved to PythonDataObjects.h
+// and properly abstracted and unit-tested.
 class PyCallable
 {
 public:

@@ -178,3 +178,24 @@ class ProcessLaunchTestCase(TestBase):
 
         if not success:
             self.fail(err_msg)
+
+    def test_environment_with_special_char (self):
+        """Test that environment variables containing '*' and '}' are communicated correctly to the lldb-server."""
+        d = {'CXX_SOURCES' : 'print_env.cpp'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(d)
+        exe = os.path.join (os.getcwd(), "a.out")
+
+        evil_var = 'INIT*MIDDLE}TAIL'
+
+        target = self.dbg.CreateTarget(exe)
+        process = target.LaunchSimple(None, ['EVIL=' + evil_var], self.get_process_working_directory())
+        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
+
+        out = process.GetSTDOUT(len(evil_var))[:len(evil_var)]
+        if out != evil_var:
+            self.fail('The environment variable was mis-coded: %s\n' % repr(out))
+
+        newline = process.GetSTDOUT(1)[0]
+        if newline != '\r' and newline != '\n':
+            self.fail('Garbage at end of environment variable')

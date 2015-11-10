@@ -176,7 +176,7 @@ ABIMacOSX_i386::CreateInstance (const ArchSpec &arch)
 {
     static ABISP g_abi_sp;
      if ((arch.GetTriple().getArch() == llvm::Triple::x86) &&
-          (arch.GetTriple().isMacOSX() || arch.GetTriple().isiOS()))
+          (arch.GetTriple().isMacOSX() || arch.GetTriple().isiOS() || arch.GetTriple().isWatchOS()))
      {
         if (!g_abi_sp)
             g_abi_sp.reset (new ABIMacOSX_i386);
