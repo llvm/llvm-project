@@ -10,6 +10,7 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -669,6 +670,10 @@ DynamicLoaderMacOSXDYLD::NotifyBreakpointHit (void *baton,
                 }
             }
         }
+    }
+    else
+    {
+        process->GetTarget().GetDebugger().GetAsyncErrorStream()->Printf("No ABI plugin located for triple %s -- shared libraries will not be registered!\n", process->GetTarget().GetArchitecture().GetTriple().getTriple().c_str());
     }
     
     // Return true to stop the target, false to just let the target run
