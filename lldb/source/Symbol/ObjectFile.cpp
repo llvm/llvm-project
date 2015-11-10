@@ -646,7 +646,7 @@ ObjectFile::GetSymbolTypeFromName (llvm::StringRef name,
             if (name.startswith("_TWvd"))
                 return lldb::eSymbolTypeIVarOffset;
         }
-        else if(name.startswith("_OBJC_"))
+        else if (name.startswith("_OBJC_"))
         {
             // ObjC
             if (name.startswith("_OBJC_CLASS_$_"))
