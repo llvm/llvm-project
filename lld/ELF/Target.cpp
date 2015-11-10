@@ -145,6 +145,8 @@ TargetInfo *createTarget() {
 
 TargetInfo::~TargetInfo() {}
 
+uint64_t TargetInfo::getVAStart() const { return Config->Shared ? 0 : VAStart; }
+
 bool TargetInfo::relocNeedsCopy(uint32_t Type, const SymbolBody &S) const {
   return false;
 }

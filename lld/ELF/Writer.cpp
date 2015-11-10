@@ -55,7 +55,6 @@ private:
   bool isOutputDynamic() const {
     return !Symtab.getSharedFiles().empty() || Config->Shared;
   }
-  uintX_t getVAStart() const { return Config->Shared ? 0 : Target->getVAStart(); }
   uintX_t getEntryAddr() const;
   int getPhdrsNum() const;
 
@@ -677,7 +676,7 @@ static uint32_t toPhdrFlags(uint64_t Flags) {
 // Visits all sections to create PHDRs and to assign incremental,
 // non-overlapping addresses to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = getVAStart() + sizeof(Elf_Ehdr);
+  uintX_t VA = Target->getVAStart() + sizeof(Elf_Ehdr);
   uintX_t FileOff = sizeof(Elf_Ehdr);
 
   // Calculate and reserve the space for the program header first so that
@@ -697,7 +696,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     Interp = &Phdrs[++PhdrIdx];
 
   // Add the first PT_LOAD segment for regular output sections.
-  setPhdr(&Phdrs[++PhdrIdx], PT_LOAD, PF_R, 0, getVAStart(), FileOff,
+  setPhdr(&Phdrs[++PhdrIdx], PT_LOAD, PF_R, 0, Target->getVAStart(), FileOff,
           Target->getPageSize());
 
   Elf_Phdr TlsPhdr{};
