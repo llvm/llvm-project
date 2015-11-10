@@ -4158,7 +4158,7 @@ ObjectFileMachO::ParseSymtab ()
                         type = eSymbolTypeAdditional;
                         break;
 
-                    case 0x32u: // N_AST TODO: remove 0x32u constant once we verify that clang 600 has the define in its MachO.h
+                    case N_AST:
                         // A path to a compiler AST file
                         type = eSymbolTypeASTFile;
                         break;
