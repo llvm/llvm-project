@@ -79,7 +79,7 @@ public:
   std::string SourceModuleName;
 
 private:
-  /// \brief The top-level modules that are known.
+  /// \brief The unshadowed top-level modules that are known.
   llvm::StringMap<Module *> Modules;
 
   /// \brief The number of modules we have created in total.
@@ -154,6 +154,15 @@ private:
   /// in the module map over to the module that includes them via its umbrella
   /// header.
   llvm::DenseMap<const DirectoryEntry *, Module *> UmbrellaDirs;
+
+  /// \brief A generation counter that is used to test whether modules of the
+  /// same name may shadow or are illegal redefintions.
+  ///
+  /// Modules from earlier scopes may shadow modules from later ones.
+  /// Modules from the same scope may not have the same name.
+  unsigned CurrentModuleScopeID = 0;
+
+  llvm::DenseMap<Module *, unsigned> ModuleScopeIDs;
 
   /// \brief The set of attributes that can be attached to a module.
   struct Attributes {
@@ -387,6 +396,24 @@ public:
   /// framework directory.
   Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
                                bool IsSystem, Module *Parent);
+
+  /// \brief Create a new top-level module that is shadowed by
+  /// \p ShadowingModule.
+  Module *createShadowedModule(StringRef Name, bool IsFramework,
+                               Module *ShadowingModule);
+
+  /// \brief Creates a new declaration scope for module names, allowing
+  /// previously defined modules to shadow definitions from the new scope.
+  ///
+  /// \note Module names from earlier scopes will shadow names from the new
+  /// scope, which is the opposite of how shadowing works for variables.
+  void finishModuleDeclarationScope() { CurrentModuleScopeID += 1; }
+
+  bool mayShadowNewModule(Module *ExistingModule) {
+    assert(!ExistingModule->Parent && "expected top-level module");
+    assert(ModuleScopeIDs.count(ExistingModule) && "unknown module");
+    return ModuleScopeIDs[ExistingModule] < CurrentModuleScopeID;
+  }
 
   /// \brief Retrieve the module map file containing the definition of the given
   /// module.
