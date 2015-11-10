@@ -175,7 +175,7 @@ func main () -> Void
     var do_something_result = call_overridden (b_object, 30) // Stop here to step into call_overridden.
 
     var point = (1, -1)  // At point initializer.
-    func return_same (var input : Int) -> Int
+    func return_same (input : Int) -> Int
     {
         return input; // return_same gets called in both where statements
     }
@@ -213,14 +213,13 @@ func main () -> Void
     func doSomethingWithFunction<Result : P> ( f: (arg : Int)->Result, _ other_value : Int) -> Result // Stopped in doSomethingWithFunctionResult decl. 
     {
         print("Calling doSomethingWithFunction with value \(other_value)")
-        var result = f(arg: other_value)
+        let result = f(arg: other_value)
         result.protocol_func(other_value)
         print ("Done calling doSomethingWithFunction.")
         return result
     }
 
-    var a_p = doSomethingWithFunction(cd_maker, 10)
-    
+    doSomethingWithFunction(cd_maker, 10)
 
 }
 

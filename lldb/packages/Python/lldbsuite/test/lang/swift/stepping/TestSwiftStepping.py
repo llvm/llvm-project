@@ -292,7 +292,7 @@ class TestSwiftStepping(lldbtest.TestBase):
         # And one step over is necessary because step out doesn't
         # finish off the line.
         thread.StepOver()
-        self.hit_correct_line(thread, "var a_p = doSomethingWithFunction")
+        self.hit_correct_line(thread, "doSomethingWithFunction(cd_maker, 10)")
 
         thread.StepInto()
         stop_in_prologue = self.hit_correct_line(
@@ -302,7 +302,7 @@ class TestSwiftStepping(lldbtest.TestBase):
         self.hit_correct_line(
             thread, "Calling doSomethingWithFunction with value")
         thread.StepOver()
-        self.hit_correct_line(thread, "var result = f(arg: other_value)")
+        self.hit_correct_line(thread, "let result = f(arg: other_value)")
 
         # Now try stepping into calling a closure, there's several
         # layers of goo to get through:
@@ -319,7 +319,7 @@ class TestSwiftStepping(lldbtest.TestBase):
         # Again, step out may not have completed the source line we
         # stepped in FROM...
         stop_in_caller_line = self.hit_correct_line(
-            thread, "var result = f(arg: other_value)", False)
+            thread, "let result = f(arg: other_value)", False)
         if stop_in_caller_line:
             thread.StepOver()
 
