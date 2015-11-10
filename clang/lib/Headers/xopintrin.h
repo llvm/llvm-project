@@ -238,20 +238,16 @@ _mm_rot_epi64(__m128i __A, __m128i __B)
 }
 
 #define _mm_roti_epi8(A, N) __extension__ ({ \
-  __m128i __A = (A); \
-  (__m128i)__builtin_ia32_vprotbi((__v16qi)__A, (N)); })
+  (__m128i)__builtin_ia32_vprotbi((__v16qi)(__m128i)(A), (N)); })
 
 #define _mm_roti_epi16(A, N) __extension__ ({ \
-  __m128i __A = (A); \
-  (__m128i)__builtin_ia32_vprotwi((__v8hi)__A, (N)); })
+  (__m128i)__builtin_ia32_vprotwi((__v8hi)(__m128i)(A), (N)); })
 
 #define _mm_roti_epi32(A, N) __extension__ ({ \
-  __m128i __A = (A); \
-  (__m128i)__builtin_ia32_vprotdi((__v4si)__A, (N)); })
+  (__m128i)__builtin_ia32_vprotdi((__v4si)(__m128i)(A), (N)); })
 
 #define _mm_roti_epi64(A, N) __extension__ ({ \
-  __m128i __A = (A); \
-  (__m128i)__builtin_ia32_vprotqi((__v2di)__A, (N)); })
+  (__m128i)__builtin_ia32_vprotqi((__v2di)(__m128i)(A), (N)); })
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_shl_epi8(__m128i __A, __m128i __B)
@@ -302,44 +298,36 @@ _mm_sha_epi64(__m128i __A, __m128i __B)
 }
 
 #define _mm_com_epu8(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomub((__v16qi)__A, (__v16qi)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomub((__v16qi)(__m128i)(A), \
+                                  (__v16qi)(__m128i)(B), (N)); })
 
 #define _mm_com_epu16(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomuw((__v8hi)__A, (__v8hi)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomuw((__v8hi)(__m128i)(A), \
+                                  (__v8hi)(__m128i)(B), (N)); })
 
 #define _mm_com_epu32(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomud((__v4si)__A, (__v4si)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomud((__v4si)(__m128i)(A), \
+                                  (__v4si)(__m128i)(B), (N)); })
 
 #define _mm_com_epu64(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomuq((__v2di)__A, (__v2di)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomuq((__v2di)(__m128i)(A), \
+                                  (__v2di)(__m128i)(B), (N)); })
 
 #define _mm_com_epi8(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomb((__v16qi)__A, (__v16qi)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomb((__v16qi)(__m128i)(A), \
+                                 (__v16qi)(__m128i)(B), (N)); })
 
 #define _mm_com_epi16(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomw((__v8hi)__A, (__v8hi)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomw((__v8hi)(__m128i)(A), \
+                                 (__v8hi)(__m128i)(B), (N)); })
 
 #define _mm_com_epi32(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomd((__v4si)__A, (__v4si)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomd((__v4si)(__m128i)(A), \
+                                 (__v4si)(__m128i)(B), (N)); })
 
 #define _mm_com_epi64(A, B, N) __extension__ ({ \
-  __m128i __A = (A); \
-  __m128i __B = (B); \
-  (__m128i)__builtin_ia32_vpcomq((__v2di)__A, (__v2di)__B, (N)); })
+  (__m128i)__builtin_ia32_vpcomq((__v2di)(__m128i)(A), \
+                                 (__v2di)(__m128i)(B), (N)); })
 
 #define _MM_PCOMCTRL_LT    0
 #define _MM_PCOMCTRL_LE    1
@@ -735,32 +723,23 @@ _mm_comtrue_epi64(__m128i __A, __m128i __B)
 }
 
 #define _mm_permute2_pd(X, Y, C, I) __extension__ ({ \
-  __m128d __X = (X); \
-  __m128d __Y = (Y); \
-  __m128i __C = (C); \
-  (__m128d)__builtin_ia32_vpermil2pd((__v2df)__X, (__v2df)__Y, \
-                                     (__v2di)__C, (I)); })
+  (__m128d)__builtin_ia32_vpermil2pd((__v2df)(__m128d)(X), \
+                                     (__v2df)(__m128d)(Y), \
+                                     (__v2di)(__m128i)(C), (I)); })
 
 #define _mm256_permute2_pd(X, Y, C, I) __extension__ ({ \
-  __m256d __X = (X); \
-  __m256d __Y = (Y); \
-  __m256i __C = (C); \
-  (__m256d)__builtin_ia32_vpermil2pd256((__v4df)__X, (__v4df)__Y, \
-                                        (__v4di)__C, (I)); })
+  (__m256d)__builtin_ia32_vpermil2pd256((__v4df)(__m256d)(X), \
+                                        (__v4df)(__m256d)(Y), \
+                                        (__v4di)(__m256i)(C), (I)); })
 
 #define _mm_permute2_ps(X, Y, C, I) __extension__ ({ \
-  __m128 __X = (X); \
-  __m128 __Y = (Y); \
-  __m128i __C = (C); \
-  (__m128)__builtin_ia32_vpermil2ps((__v4sf)__X, (__v4sf)__Y, \
-                                    (__v4si)__C, (I)); })
+  (__m128)__builtin_ia32_vpermil2ps((__v4sf)(__m128)(X), (__v4sf)(__m128)(Y), \
+                                    (__v4si)(__m128i)(C), (I)); })
 
 #define _mm256_permute2_ps(X, Y, C, I) __extension__ ({ \
-  __m256 __X = (X); \
-  __m256 __Y = (Y); \
-  __m256i __C = (C); \
-  (__m256)__builtin_ia32_vpermil2ps256((__v8sf)__X, (__v8sf)__Y, \
-                                       (__v8si)__C, (I)); })
+  (__m256)__builtin_ia32_vpermil2ps256((__v8sf)(__m256)(X), \
+                                       (__v8sf)(__m256)(Y), \
+                                       (__v8si)(__m256i)(C), (I)); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_frcz_ss(__m128 __A)

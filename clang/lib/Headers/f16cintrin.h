@@ -35,12 +35,10 @@ typedef float __m256 __attribute__ ((__vector_size__ (32)));
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("f16c")))
 
 #define _mm_cvtps_ph(a, imm) __extension__ ({ \
-  __m128 __a = (a); \
- (__m128i)__builtin_ia32_vcvtps2ph((__v4sf)__a, (imm)); })
+ (__m128i)__builtin_ia32_vcvtps2ph((__v4sf)(__m128)(a), (imm)); })
 
 #define _mm256_cvtps_ph(a, imm) __extension__ ({ \
-  __m256 __a = (a); \
- (__m128i)__builtin_ia32_vcvtps2ph256((__v8sf)__a, (imm)); })
+ (__m128i)__builtin_ia32_vcvtps2ph256((__v8sf)(__m256)(a), (imm)); })
 
 static __inline __m128 __DEFAULT_FN_ATTRS
 _mm_cvtph_ps(__m128i __a)
