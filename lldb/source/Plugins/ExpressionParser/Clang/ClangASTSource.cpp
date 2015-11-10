@@ -57,7 +57,7 @@ namespace {
 
 ClangASTSource::~ClangASTSource()
 {
-    m_ast_importer->ForgetDestination(m_ast_context);
+    m_ast_importer_sp->ForgetDestination(m_ast_context);
 
     // We are in the process of destruction, don't create clang ast context on demand
     // by passing false to Target::GetScratchClangASTContext(create_on_demand).
@@ -72,7 +72,7 @@ ClangASTSource::~ClangASTSource()
         return;
 
     if (m_ast_context != scratch_ast_context)
-        m_ast_importer->ForgetSource(scratch_ast_context, m_ast_context);
+        m_ast_importer_sp->ForgetSource(scratch_ast_context, m_ast_context);
 }
 
 void
@@ -221,7 +221,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
     m_active_lexical_decls.insert(tag_decl);
     ScopedLexicalDeclEraser eraser(m_active_lexical_decls, tag_decl);
 
-    if (!m_ast_importer->CompleteTagDecl (tag_decl))
+    if (!m_ast_importer_sp->CompleteTagDecl (tag_decl))
     {
         // We couldn't complete the type.  Maybe there's a definition
         // somewhere else that can be completed.
@@ -235,7 +235,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
 
         if (const NamespaceDecl *namespace_context = dyn_cast<NamespaceDecl>(decl_ctx))
         {
-            ClangASTImporter::NamespaceMapSP namespace_map = m_ast_importer->GetNamespaceMap(namespace_context);
+            ClangASTImporter::NamespaceMapSP namespace_map = m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
             if (log && log->GetVerbose())
                 log->Printf("      CTD[%u] Inspecting namespace map %p (%d entries)",
@@ -283,7 +283,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
 
                     TagDecl *candidate_tag_decl = const_cast<TagDecl*>(tag_type->getDecl());
 
-                    if (m_ast_importer->CompleteTagDeclWithOrigin (tag_decl, candidate_tag_decl))
+                    if (m_ast_importer_sp->CompleteTagDeclWithOrigin (tag_decl, candidate_tag_decl))
                         found = true;
                 }
             }
@@ -322,7 +322,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
 
                 TagDecl *candidate_tag_decl = const_cast<TagDecl*>(tag_type->getDecl());
 
-                if (m_ast_importer->CompleteTagDeclWithOrigin (tag_decl, candidate_tag_decl))
+                if (m_ast_importer_sp->CompleteTagDeclWithOrigin (tag_decl, candidate_tag_decl))
                     found = true;
             }
         }
@@ -354,7 +354,7 @@ ClangASTSource::CompleteType (clang::ObjCInterfaceDecl *interface_decl)
     Decl *original_decl = NULL;
     ASTContext *original_ctx = NULL;
 
-    if (m_ast_importer->ResolveDeclOrigin(interface_decl, &original_decl, &original_ctx))
+    if (m_ast_importer_sp->ResolveDeclOrigin(interface_decl, &original_decl, &original_ctx))
     {
         if (ObjCInterfaceDecl *original_iface_decl = dyn_cast<ObjCInterfaceDecl>(original_decl))
         {
@@ -362,12 +362,12 @@ ClangASTSource::CompleteType (clang::ObjCInterfaceDecl *interface_decl)
 
             if (complete_iface_decl && (complete_iface_decl != original_iface_decl))
             {
-                m_ast_importer->SetDeclOrigin(interface_decl, original_iface_decl);
+                m_ast_importer_sp->SetDeclOrigin(interface_decl, original_iface_decl);
             }
         }
     }
 
-    m_ast_importer->CompleteObjCInterfaceDecl (interface_decl);
+    m_ast_importer_sp->CompleteObjCInterfaceDecl (interface_decl);
 
     if (interface_decl->getSuperClass() &&
         interface_decl->getSuperClass() != interface_decl)
@@ -462,7 +462,7 @@ ClangASTSource::FindExternalLexicalDecls (const DeclContext *decl_context,
     Decl *original_decl = NULL;
     ASTContext *original_ctx = NULL;
 
-    if (!m_ast_importer->ResolveDeclOrigin(context_decl, &original_decl, &original_ctx))
+    if (!m_ast_importer_sp->ResolveDeclOrigin(context_decl, &original_decl, &original_ctx))
         return;
 
     if (log)
@@ -482,7 +482,7 @@ ClangASTSource::FindExternalLexicalDecls (const DeclContext *decl_context,
             original_decl = complete_iface_decl;
             original_ctx = &complete_iface_decl->getASTContext();
 
-            m_ast_importer->SetDeclOrigin(context_decl, original_iface_decl);
+            m_ast_importer_sp->SetDeclOrigin(context_decl, original_iface_decl);
         }
     }
 
@@ -519,7 +519,7 @@ ClangASTSource::FindExternalLexicalDecls (const DeclContext *decl_context,
                     log->Printf("  FELD[%d] Adding lexical %sDecl %s", current_id, decl->getDeclKindName(), ast_dumper.GetCString());
             }
             
-            Decl *copied_decl = m_ast_importer->CopyDecl(m_ast_context, original_ctx, decl);
+            Decl *copied_decl = m_ast_importer_sp->CopyDecl(m_ast_context, original_ctx, decl);
 
             if (!copied_decl)
                 continue;
@@ -528,7 +528,7 @@ ClangASTSource::FindExternalLexicalDecls (const DeclContext *decl_context,
             {
                 QualType copied_field_type = copied_field->getType();
 
-                m_ast_importer->RequireCompleteType(copied_field_type);
+                m_ast_importer_sp->RequireCompleteType(copied_field_type);
             }
 
             DeclContext *decl_context_non_const = const_cast<DeclContext *>(decl_context);
@@ -584,7 +584,7 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context)
 
     if (const NamespaceDecl *namespace_context = dyn_cast<NamespaceDecl>(context.m_decl_context))
     {
-        ClangASTImporter::NamespaceMapSP namespace_map = m_ast_importer->GetNamespaceMap(namespace_context);
+        ClangASTImporter::NamespaceMapSP namespace_map = m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
         if (log && log->GetVerbose())
             log->Printf("  CAS::FEVD[%u] Inspecting namespace map %p (%d entries)",
@@ -816,7 +816,7 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
                         llvm::isa<clang::ObjCContainerDecl>(decl_from_modules) ||
                         llvm::isa<clang::EnumConstantDecl>(decl_from_modules))
                     {
-                        clang::Decl *copied_decl = m_ast_importer->CopyDecl(m_ast_context, &decl_from_modules->getASTContext(), decl_from_modules);
+                        clang::Decl *copied_decl = m_ast_importer_sp->CopyDecl(m_ast_context, &decl_from_modules->getASTContext(), decl_from_modules);
                         clang::NamedDecl *copied_named_decl = copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
                         
                         if (!copied_named_decl)
@@ -874,7 +874,7 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
                                 name.GetCString());
                 }
                 
-                clang::Decl *copied_decl = m_ast_importer->CopyDecl(m_ast_context, &decls[0]->getASTContext(), decls[0]);
+                clang::Decl *copied_decl = m_ast_importer_sp->CopyDecl(m_ast_context, &decls[0]->getASTContext(), decls[0]);
                 clang::NamedDecl *copied_named_decl = copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
                 
                 if (!copied_named_decl)
@@ -1069,7 +1069,7 @@ ClangASTSource::FindObjCMethodDecls (NameSearchContext &context)
         Decl *original_decl = NULL;
         ASTContext *original_ctx = NULL;
 
-        m_ast_importer->ResolveDeclOrigin(interface_decl, &original_decl, &original_ctx);
+        m_ast_importer_sp->ResolveDeclOrigin(interface_decl, &original_decl, &original_ctx);
 
         if (!original_decl)
             break;
@@ -1080,7 +1080,7 @@ ClangASTSource::FindObjCMethodDecls (NameSearchContext &context)
                                           context,
                                           original_interface_decl,
                                           m_ast_context,
-                                          m_ast_importer,
+                                          m_ast_importer_sp.get(),
                                           "at origin"))
             return; // found it, no need to look any further
     } while (0);
@@ -1227,7 +1227,7 @@ ClangASTSource::FindObjCMethodDecls (NameSearchContext &context)
 
             if (found_interface_decl->getName() == interface_decl->getName())
             {
-                Decl *copied_decl = m_ast_importer->CopyDecl(m_ast_context, &method_decl->getASTContext(), method_decl);
+                Decl *copied_decl = m_ast_importer_sp->CopyDecl(m_ast_context, &method_decl->getASTContext(), method_decl);
 
                 if (!copied_decl)
                     continue;
@@ -1275,7 +1275,7 @@ ClangASTSource::FindObjCMethodDecls (NameSearchContext &context)
                                       context,
                                       complete_interface_decl,
                                       m_ast_context,
-                                      m_ast_importer,
+                                      m_ast_importer_sp.get(),
                                       "in debug info");
 
         return;
@@ -1308,7 +1308,7 @@ ClangASTSource::FindObjCMethodDecls (NameSearchContext &context)
                                               context,
                                               interface_decl_from_modules,
                                               m_ast_context,
-                                              m_ast_importer,
+                                              m_ast_importer_sp.get(),
                                               "in modules"))
                 return;
         }
@@ -1354,7 +1354,7 @@ ClangASTSource::FindObjCMethodDecls (NameSearchContext &context)
                                       context,
                                       runtime_interface_decl,
                                       m_ast_context,
-                                      m_ast_importer,
+                                      m_ast_importer_sp.get(),
                                       "in runtime");
     }
     while(0);
@@ -1426,7 +1426,7 @@ ClangASTSource::FindObjCPropertyAndIvarDecls (NameSearchContext &context)
     unsigned int current_id = invocation_id++;
 
     DeclFromParser<const ObjCInterfaceDecl> parser_iface_decl(cast<ObjCInterfaceDecl>(context.m_decl_context));
-    DeclFromUser<const ObjCInterfaceDecl> origin_iface_decl(parser_iface_decl.GetOrigin(m_ast_importer));
+    DeclFromUser<const ObjCInterfaceDecl> origin_iface_decl(parser_iface_decl.GetOrigin(m_ast_importer_sp.get()));
 
     ConstString class_name(parser_iface_decl->getNameAsString().c_str());
 
@@ -1439,7 +1439,7 @@ ClangASTSource::FindObjCPropertyAndIvarDecls (NameSearchContext &context)
     if (FindObjCPropertyAndIvarDeclsWithOrigin(current_id,
                                                context,
                                                *m_ast_context,
-                                               m_ast_importer,
+                                               m_ast_importer_sp.get(),
                                                origin_iface_decl))
         return;
 
@@ -1474,7 +1474,7 @@ ClangASTSource::FindObjCPropertyAndIvarDecls (NameSearchContext &context)
         FindObjCPropertyAndIvarDeclsWithOrigin(current_id,
                                                context,
                                                *m_ast_context,
-                                               m_ast_importer,
+                                               m_ast_importer_sp.get(),
                                                complete_iface_decl);
 
         return;
@@ -1514,7 +1514,7 @@ ClangASTSource::FindObjCPropertyAndIvarDecls (NameSearchContext &context)
         if (FindObjCPropertyAndIvarDeclsWithOrigin(current_id,
                                                    context,
                                                    *m_ast_context,
-                                                   m_ast_importer,
+                                                   m_ast_importer_sp.get(),
                                                    interface_decl_from_modules))
             return;
     }
@@ -1564,7 +1564,7 @@ ClangASTSource::FindObjCPropertyAndIvarDecls (NameSearchContext &context)
         if (FindObjCPropertyAndIvarDeclsWithOrigin(current_id,
                                                    context,
                                                    *m_ast_context,
-                                                   m_ast_importer,
+                                                   m_ast_importer_sp.get(),
                                                    interface_decl_from_runtime))
             return;
     }
@@ -1667,7 +1667,7 @@ ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size, uint6
                     record->getNameAsString().c_str());
 
     DeclFromParser <const RecordDecl> parser_record(record);
-    DeclFromUser <const RecordDecl> origin_record(parser_record.GetOrigin(m_ast_importer));
+    DeclFromUser <const RecordDecl> origin_record(parser_record.GetOrigin(m_ast_importer_sp.get()));
 
     if (origin_record.IsInvalid())
         return false;
@@ -1709,9 +1709,9 @@ ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size, uint6
             return false;
     }
 
-    if (!ImportOffsetMap(field_offsets, origin_field_offsets, m_ast_importer, parser_ast_context) ||
-        !ImportOffsetMap(base_offsets, origin_base_offsets, m_ast_importer, parser_ast_context) ||
-        !ImportOffsetMap(virtual_base_offsets, origin_virtual_base_offsets, m_ast_importer, parser_ast_context))
+    if (!ImportOffsetMap(field_offsets, origin_field_offsets, m_ast_importer_sp.get(), parser_ast_context) ||
+        !ImportOffsetMap(base_offsets, origin_base_offsets, m_ast_importer_sp.get(), parser_ast_context) ||
+        !ImportOffsetMap(virtual_base_offsets, origin_virtual_base_offsets, m_ast_importer_sp.get(), parser_ast_context))
         return false;
 
     size = record_layout.getSize().getQuantity() * m_ast_context->getCharWidth();
@@ -1873,7 +1873,7 @@ ClangASTSource::AddNamespace (NameSearchContext &context, ClangASTImporter::Name
     if (!src_namespace_decl)
         return nullptr;
 
-    Decl *copied_decl = m_ast_importer->CopyDecl(m_ast_context, src_ast, src_namespace_decl);
+    Decl *copied_decl = m_ast_importer_sp->CopyDecl(m_ast_context, src_ast, src_namespace_decl);
 
     if (!copied_decl)
         return nullptr;
@@ -1885,7 +1885,7 @@ ClangASTSource::AddNamespace (NameSearchContext &context, ClangASTImporter::Name
 
     context.m_decls.push_back(copied_namespace_decl);
 
-    m_ast_importer->RegisterNamespaceMap(copied_namespace_decl, namespace_decls);
+    m_ast_importer_sp->RegisterNamespaceMap(copied_namespace_decl, namespace_decls);
 
     return dyn_cast<NamespaceDecl>(copied_decl);
 }
@@ -1901,7 +1901,7 @@ ClangASTSource::GuardedCopyType (const CompilerType &src_type)
 
     SetImportInProgress(true);
 
-    QualType copied_qual_type = m_ast_importer->CopyType (m_ast_context, src_ast->getASTContext(), ClangASTContext::GetQualType(src_type));
+    QualType copied_qual_type = m_ast_importer_sp->CopyType (m_ast_context, src_ast->getASTContext(), ClangASTContext::GetQualType(src_type));
 
     SetImportInProgress(false);
     
