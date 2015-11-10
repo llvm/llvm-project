@@ -36,6 +36,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -376,6 +377,19 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
              std::vector<ClangTidyError> *Errors, ProfileData *Profile) {
   ClangTool Tool(Compilations, InputFiles);
   clang::tidy::ClangTidyContext Context(std::move(OptionsProvider));
+  ArgumentsAdjuster PerFileExtraArgumentsInserter = [&Context](
+      const CommandLineArguments &Args, StringRef Filename) {
+    ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
+    CommandLineArguments AdjustedArgs;
+    if (Opts.ExtraArgsBefore)
+      AdjustedArgs = *Opts.ExtraArgsBefore;
+    AdjustedArgs.insert(AdjustedArgs.begin(), Args.begin(), Args.end());
+    if (Opts.ExtraArgs)
+      AdjustedArgs.insert(AdjustedArgs.end(), Opts.ExtraArgs->begin(),
+                          Opts.ExtraArgs->end());
+    return AdjustedArgs;
+  };
+  Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
   if (Profile)
     Context.setCheckProfileData(Profile);
 

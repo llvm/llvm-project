@@ -380,7 +380,9 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     uint64_t length;
     uint8_t opcode = addressSpace.get8(p);
     uint8_t operand;
+#if !defined(_LIBUNWIND_NO_HEAP)
     PrologInfoStackEntry *entry;
+#endif
     ++p;
     switch (opcode) {
     case DW_CFA_nop:
@@ -492,6 +494,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
         fprintf(stderr, "DW_CFA_register(reg=%" PRIu64 ", reg2=%" PRIu64 ")\n",
                 reg, reg2);
       break;
+#if !defined(_LIBUNWIND_NO_HEAP)
     case DW_CFA_remember_state:
       // avoid operator new, because that would be an upward dependency
       entry = (PrologInfoStackEntry *)malloc(sizeof(PrologInfoStackEntry));
@@ -517,6 +520,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       if (logDwarf)
         fprintf(stderr, "DW_CFA_restore_state\n");
       break;
+#endif
     case DW_CFA_def_cfa:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       offset = (int64_t)addressSpace.getULEB128(p, instructionsEnd);

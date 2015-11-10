@@ -152,9 +152,8 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       Hint = FixItHint::CreateReplacement(MemberCall->getSourceRange(),
                                           "!" + ReplacementText);
   }
-  diag(MemberCall->getLocStart(),
-       "The 'empty' method should be used to check for emptiness instead "
-       "of 'size'.")
+  diag(MemberCall->getLocStart(), "the 'empty' method should be used to check "
+                                  "for emptiness instead of 'size'")
       << Hint;
 }
 

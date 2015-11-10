@@ -71,7 +71,7 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
   default:
     StringRef S = Sec->getSectionName();
     return S.startswith(".init") || S.startswith(".fini") ||
-           S.startswith(".jcr") || S == ".eh_frame";
+           S.startswith(".jcr");
   }
 }
 
@@ -109,11 +109,18 @@ template <class ELFT> void lld::elf2::markLive(SymbolTable<ELFT> *Symtab) {
   }
 
   // Preserve special sections.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles())
-    for (InputSectionBase<ELFT> *Sec : F->getSections())
-      if (Sec && Sec != &InputSection<ELFT>::Discarded)
+  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles()) {
+    for (InputSectionBase<ELFT> *Sec : F->getSections()) {
+      if (Sec && Sec != &InputSection<ELFT>::Discarded) {
         if (isReserved(Sec))
           Enqueue(Sec);
+        else if (Sec->getSectionName() == ".eh_frame")
+          // .eh_frame is special. It should be marked live so that we don't
+          // drop it, but it should not keep any section alive.
+          Sec->Live = true;
+      }
+    }
+  }
 
   // Mark all reachable sections.
   while (!Q.empty())

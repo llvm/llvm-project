@@ -69,6 +69,12 @@ public:
     bool
     SetData(DataExtractor &data, Error &error) override;
     
+    virtual lldb::VariableSP
+    GetVariable () override
+    {
+        return m_variable_sp;
+    }
+    
 protected:
     bool
     UpdateValue() override;
@@ -78,7 +84,7 @@ protected:
 
     lldb::VariableSP  m_variable_sp;  ///< The variable that this value object is based upon
     Value m_resolved_value;           ///< The value that DWARFExpression resolves this variable to before we patch it up
-
+    
 private:
     ValueObjectVariable (ExecutionContextScope *exe_scope, const lldb::VariableSP &var_sp);
     //------------------------------------------------------------------

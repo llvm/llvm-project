@@ -13,7 +13,7 @@
 ; CHECK:        a.phiops.reload = load i32, i32* %a.phiops
 ;
 ; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:
-; CHECK:         store i32 %a.phiops.reload, i32* %a.s2a
+; CHECK:         store i32 %polly.a, i32* %a.s2a
 
 define void @func() {
 entry:

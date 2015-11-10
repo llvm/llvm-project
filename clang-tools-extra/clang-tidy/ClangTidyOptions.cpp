@@ -27,6 +27,7 @@ using clang::tidy::FileFilter;
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter::LineRange)
 LLVM_YAML_IS_SEQUENCE_VECTOR(ClangTidyOptions::StringPair)
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::string)
 
 namespace llvm {
 namespace yaml {
@@ -88,6 +89,8 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("AnalyzeTemporaryDtors", Options.AnalyzeTemporaryDtors);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", NOpts->Options);
+    IO.mapOptional("ExtraArgs", Options.ExtraArgs);
+    IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
   }
 };
 
@@ -129,6 +132,10 @@ ClangTidyOptions::mergeWith(const ClangTidyOptions &Other) const {
     Result.AnalyzeTemporaryDtors = Other.AnalyzeTemporaryDtors;
   if (Other.User)
     Result.User = Other.User;
+  if (Other.ExtraArgs)
+    Result.ExtraArgs = Other.ExtraArgs;
+  if (Other.ExtraArgsBefore)
+    Result.ExtraArgsBefore = Other.ExtraArgsBefore;
 
   for (const auto &KeyValue : Other.CheckOptions)
     Result.CheckOptions[KeyValue.first] = KeyValue.second;

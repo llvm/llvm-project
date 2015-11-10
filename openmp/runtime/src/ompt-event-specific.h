@@ -113,8 +113,8 @@
 #define ompt_event_barrier_begin_implemented            ompt_event_MAY_ALWAYS_TRACE
 #define ompt_event_barrier_end_implemented              ompt_event_MAY_ALWAYS_TRACE
 
-#define ompt_event_taskwait_begin_implemented           ompt_event_UNIMPLEMENTED
-#define ompt_event_taskwait_end_implemented             ompt_event_UNIMPLEMENTED
+#define ompt_event_taskwait_begin_implemented           ompt_event_MAY_ALWAYS_TRACE
+#define ompt_event_taskwait_end_implemented             ompt_event_MAY_ALWAYS_TRACE
 
 #define ompt_event_taskgroup_begin_implemented          ompt_event_UNIMPLEMENTED
 #define ompt_event_taskgroup_end_implemented            ompt_event_UNIMPLEMENTED

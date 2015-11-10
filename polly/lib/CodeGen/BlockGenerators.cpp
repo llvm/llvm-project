@@ -1012,6 +1012,8 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   assert(Stmt.isRegionStmt() &&
          "Only region statements can be copied by the region generator");
 
+  Scop *S = Stmt.getParent();
+
   // Forget all old mappings.
   BlockMap.clear();
   RegionMaps.clear();
@@ -1031,11 +1033,23 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   EntryBBCopy->setName("polly.stmt." + EntryBB->getName() + ".entry");
   Builder.SetInsertPoint(&EntryBBCopy->front());
 
-  generateScalarLoads(Stmt, RegionMaps[EntryBBCopy]);
+  ValueMapT &EntryBBMap = RegionMaps[EntryBBCopy];
+  generateScalarLoads(Stmt, EntryBBMap);
 
   for (auto PI = pred_begin(EntryBB), PE = pred_end(EntryBB); PI != PE; ++PI)
     if (!R->contains(*PI))
       BlockMap[*PI] = EntryBBCopy;
+
+  // Determine the original exit block of this subregion. If it the exit block
+  // is also the scop's exit, it it has been changed to polly.merge_new_and_old.
+  // We move one block back to find the original block. This only happens if the
+  // scop required simplification.
+  // If the whole scop consists of only this non-affine region, then they share
+  // the same Region object, such that we cannot change the exit of one and not
+  // the other.
+  BasicBlock *ExitBB = R->getExit();
+  if (!S->hasSingleExitEdge() && ExitBB == S->getRegion().getExit())
+    ExitBB = *(++pred_begin(ExitBB));
 
   // Iterate over all blocks in the region in a breadth-first search.
   std::deque<BasicBlock *> Blocks;
@@ -1054,11 +1068,18 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     // In order to remap PHI nodes we store also basic block mappings.
     BlockMap[BB] = BBCopy;
 
-    // Get the mapping for this block and initialize it with the mapping
-    // available at its immediate dominator (in the new region).
-    ValueMapT &RegionMap = RegionMaps[BBCopy];
-    if (BBCopy != EntryBBCopy)
-      RegionMap = RegionMaps[BBCopyIDom];
+    // Get the mapping for this block and initialize it with either the scalar
+    // loads from the generated entering block (which dominates all blocks of
+    // this subregion) or the maps of the immediate dominator, if part of the
+    // subregion. The latter necessarily includes the former.
+    ValueMapT *InitBBMap;
+    if (BBCopyIDom) {
+      assert(RegionMaps.count(BBCopyIDom));
+      InitBBMap = &RegionMaps[BBCopyIDom];
+    } else
+      InitBBMap = &EntryBBMap;
+    auto Inserted = RegionMaps.insert(std::make_pair(BBCopy, *InitBBMap));
+    ValueMapT &RegionMap = Inserted.first->second;
 
     // Copy the block with the BlockGenerator.
     Builder.SetInsertPoint(&BBCopy->front());
@@ -1076,6 +1097,10 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     for (auto SI = succ_begin(BB), SE = succ_end(BB); SI != SE; SI++)
       if (R->contains(*SI) && SeenBlocks.insert(*SI).second)
         Blocks.push_back(*SI);
+
+    // Remember value in case it is visible after this subregion.
+    if (DT.dominates(BB, ExitBB))
+      ValueMap.insert(RegionMap.begin(), RegionMap.end());
   }
 
   // Now create a new dedicated region exit block and add it to the region map.
@@ -1084,13 +1109,10 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   ExitBBCopy->setName("polly.stmt." + R->getExit()->getName() + ".exit");
   BlockMap[R->getExit()] = ExitBBCopy;
 
-  repairDominance(R->getExit(), ExitBBCopy);
-
-  // Remember value in case it is visible after this subregion. Only values that
-  // dominate the exit node can be visible.
-  for (auto &Pair : RegionMaps)
-    if (DT.properlyDominates(Pair.first, ExitBBCopy))
-      ValueMap.insert(Pair.second.begin(), Pair.second.end());
+  if (ExitBB == R->getExit())
+    repairDominance(ExitBB, ExitBBCopy);
+  else
+    DT.changeImmediateDominator(ExitBBCopy, BlockMap.lookup(ExitBB));
 
   // As the block generator doesn't handle control flow we need to add the
   // region control flow by hand after all blocks have been copied.

@@ -23,4 +23,8 @@
 # RUN: not ld.lld2 %p/Inputs/invalid-shstrndx.so -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 
+# RUN: not ld.lld2 %p/Inputs/invalid-shentsize-zero.elf -o %t2 2>&1 | \
+# RUN:   FileCheck --check-prefix=INVALID-SHENTSIZE-ZERO %s
+# INVALID-SHENTSIZE-ZERO: SHF_MERGE section size must be a multiple of sh_entsize
+
 .long foo

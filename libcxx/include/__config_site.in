@@ -18,5 +18,6 @@
 #cmakedefine _LIBCPP_HAS_NO_THREADS
 #cmakedefine _LIBCPP_HAS_NO_MONOTONIC_CLOCK
 #cmakedefine _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
+#cmakedefine _LIBCPP_HAS_MUSL_LIBC
 
-#endif
+#endif // _LIBCPP_CONFIG_SITE

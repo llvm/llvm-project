@@ -149,7 +149,7 @@ public:
   /// \brief Sets ASTContext for the current translation unit.
   void setASTContext(ASTContext *Context);
 
-  /// \brief Gets the language options from the AST context
+  /// \brief Gets the language options from the AST context.
   LangOptions getLangOpts() const { return LangOpts; }
 
   /// \brief Returns the name of the clang-tidy check which produced this
@@ -157,13 +157,21 @@ public:
   StringRef getCheckName(unsigned DiagnosticID) const;
 
   /// \brief Returns check filter for the \c CurrentFile.
+  ///
+  /// The \c CurrentFile can be changed using \c setCurrentFile.
   GlobList &getChecksFilter();
 
   /// \brief Returns global options.
   const ClangTidyGlobalOptions &getGlobalOptions() const;
 
   /// \brief Returns options for \c CurrentFile.
+  ///
+  /// The \c CurrentFile can be changed using \c setCurrentFile.
   const ClangTidyOptions &getOptions() const;
+
+  /// \brief Returns options for \c File. Does not change or depend on
+  /// \c CurrentFile.
+  ClangTidyOptions getOptionsForFile(StringRef File) const;
 
   /// \brief Returns \c ClangTidyStats containing issued and ignored diagnostic
   /// counters.

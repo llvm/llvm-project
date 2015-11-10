@@ -991,24 +991,34 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
     isl_id_free(ParamId);
   }
 
-  for (auto *DerivedSAI : SAI->getDerivedSAIs()) {
-    Value *BasePtr = DerivedSAI->getBasePtr();
-
-    // As the derived SAI information is quite coarse, any load from the current
-    // SAI could be the base pointer of the derived SAI, however we should only
-    // change the base pointer of the derived SAI if we actually preloaded it.
-    for (const MemoryAccess *MA : MAs) {
-      if (BasePtr != MA->getBaseAddr())
-        continue;
-      BasePtr = Builder.CreateBitOrPointerCast(PreloadVal, BasePtr->getType());
-      DerivedSAI->setBasePtr(BasePtr);
-    }
-  }
-
   BasicBlock *EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
   auto *Alloca = new AllocaInst(AccInstTy, AccInst->getName() + ".preload.s2a");
   Alloca->insertBefore(&*EntryBB->getFirstInsertionPt());
   Builder.CreateStore(PreloadVal, Alloca);
+
+  for (auto *DerivedSAI : SAI->getDerivedSAIs()) {
+    Value *BasePtr = DerivedSAI->getBasePtr();
+
+    for (const MemoryAccess *MA : MAs) {
+      // As the derived SAI information is quite coarse, any load from the
+      // current SAI could be the base pointer of the derived SAI, however we
+      // should only change the base pointer of the derived SAI if we actually
+      // preloaded it.
+      if (BasePtr == MA->getBaseAddr()) {
+        BasePtr =
+            Builder.CreateBitOrPointerCast(PreloadVal, BasePtr->getType());
+        DerivedSAI->setBasePtr(BasePtr);
+      }
+
+      // For scalar derived SAIs we remap the alloca used for the derived value.
+      if (BasePtr == MA->getAccessInstruction()) {
+        if (DerivedSAI->isPHI())
+          PHIOpMap[BasePtr] = Alloca;
+        else
+          ScalarMap[BasePtr] = Alloca;
+      }
+    }
+  }
 
   const Region &R = S.getRegion();
   for (const MemoryAccess *MA : MAs) {

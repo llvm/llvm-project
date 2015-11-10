@@ -35,21 +35,12 @@ namespace elf2 {
 
 std::unique_ptr<TargetInfo> Target;
 
-template <bool IsLE> static uint32_t read32(const uint8_t *L);
-template <> uint32_t read32<true>(const uint8_t *L) { return read32le(L); }
-template <> uint32_t read32<false>(const uint8_t *L) { return read32be(L); }
+template <endianness E> static void add32(void *P, int32_t V) {
+  write32<E>(P, read32<E>(P) + V);
+}
 
-template <bool IsLE> static void write32(uint8_t *L, uint32_t V);
-template <> void write32<true>(uint8_t *L, uint32_t V) { write32le(L, V); }
-template <> void write32<false>(uint8_t *L, uint32_t V) { write32be(L, V); }
-
-static void add32le(uint8_t *L, int32_t V) { write32le(L, read32le(L) + V); }
-static void add32be(uint8_t *L, int32_t V) { write32be(L, read32be(L) + V); }
-static void or32le(uint8_t *L, int32_t V) { write32le(L, read32le(L) | V); }
-
-template <bool IsLE> static void add32(uint8_t *L, int32_t V);
-template <> void add32<true>(uint8_t *L, int32_t V) { add32le(L, V); }
-template <> void add32<false>(uint8_t *L, int32_t V) { add32be(L, V); }
+static void add32le(uint8_t *P, int32_t V) { add32<support::little>(P, V); }
+static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 
 namespace {
 class X86TargetInfo final : public TargetInfo {
@@ -722,16 +713,16 @@ template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
                                        uint32_t Type, uint64_t P,
                                        uint64_t SA) const {
-  const bool IsLE = ELFT::TargetEndianness == support::little;
+  const endianness E = ELFT::TargetEndianness;
   switch (Type) {
   case R_MIPS_32:
-    add32<IsLE>(Loc, SA);
+    add32<E>(Loc, SA);
     break;
   case R_MIPS_GOT16: {
     int64_t V = SA - getMipsGpAddr<ELFT>();
     if (!isInt<16>(V))
       error("Relocation R_MIPS_GOT16 out of range");
-    write32<IsLE>(Loc, (read32<IsLE>(Loc) & 0xffff0000) | (V & 0xffff));
+    write32<E>(Loc, (read32<E>(Loc) & 0xffff0000) | (V & 0xffff));
     break;
   }
   default:

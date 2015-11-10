@@ -11,14 +11,14 @@ def trace_function(function, log_calls, log_results, label=''):
         # Perform the call itself, logging before, after, and anything thrown.
         try:
             if log_calls:
-                print '{}: Calling {}'.format(label, call_str)
+                print('{}: Calling {}'.format(label, call_str))
             res = function(*args, **kwargs)
             if log_results:
-                print '{}: {} -> {}'.format(label, call_str, res)
+                print('{}: {} -> {}'.format(label, call_str, res))
             return res
         except Exception as ex:
             if log_results:
-                print '{}: {} raised {}'.format(label, call_str, type(ex))
+                print('{}: {} raised {}'.format(label, call_str, type(ex)))
             raise ex
 
     return wrapper

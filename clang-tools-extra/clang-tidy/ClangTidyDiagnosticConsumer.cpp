@@ -202,9 +202,7 @@ void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
 
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = File;
-  // Safeguard against options with unset values.
-  CurrentOptions = ClangTidyOptions::getDefaults().mergeWith(
-      OptionsProvider->getOptions(CurrentFile));
+  CurrentOptions = getOptionsForFile(CurrentFile);
   CheckFilter.reset(new GlobList(*getOptions().Checks));
 }
 
@@ -219,6 +217,13 @@ const ClangTidyGlobalOptions &ClangTidyContext::getGlobalOptions() const {
 
 const ClangTidyOptions &ClangTidyContext::getOptions() const {
   return CurrentOptions;
+}
+
+ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
+  // Merge options on top of getDefaults() as a safeguard against options with
+  // unset values.
+  return ClangTidyOptions::getDefaults().mergeWith(
+      OptionsProvider->getOptions(CurrentFile));
 }
 
 void ClangTidyContext::setCheckProfileData(ProfileData *P) { Profile = P; }

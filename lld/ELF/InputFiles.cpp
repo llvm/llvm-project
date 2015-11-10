@@ -143,7 +143,7 @@ static bool shouldMerge(const typename ELFFile<ELFT>::Elf_Shdr &Sec) {
   if (Flags & SHF_WRITE)
     error("Writable SHF_MERGE sections are not supported");
   uintX_t EntSize = Sec.sh_entsize;
-  if (Sec.sh_size % EntSize)
+  if (!EntSize || Sec.sh_size % EntSize)
     error("SHF_MERGE section size must be a multiple of sh_entsize");
 
   // Don't try to merge if the aligment is larger than the sh_entsize.

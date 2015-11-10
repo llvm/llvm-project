@@ -39,6 +39,7 @@ static void __kmp_bottom_half_finish_proxy( kmp_int32 gtid, kmp_task_t * ptask )
 
 static inline void __kmp_null_resume_wrapper(int gtid, volatile void *flag) {
     if (!flag) return;
+    // Attempt to wake up a thread: examine its type and call appropriate template
     switch (((kmp_flag_64 *)flag)->get_type()) {
     case flag32: __kmp_resume_32(gtid, NULL); break;
     case flag64: __kmp_resume_64(gtid, NULL); break;
@@ -1304,6 +1305,23 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
 
         thread = __kmp_threads[ gtid ];
         taskdata = thread -> th.th_current_task;
+
+#if OMPT_SUPPORT && OMPT_TRACE
+        ompt_task_id_t my_task_id;
+        ompt_parallel_id_t my_parallel_id;
+        
+        if (ompt_enabled) {
+            kmp_team_t *team = thread->th.th_team;
+            my_task_id = taskdata->ompt_task_info.task_id;
+            my_parallel_id = team->t.ompt_team_info.parallel_id;
+            
+            if (ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)) {
+                ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)(
+                                my_parallel_id, my_task_id);
+            }
+        }
+#endif
+
 #if USE_ITT_BUILD
         // Note: These values are used by ITT events as well.
 #endif /* USE_ITT_BUILD */
@@ -1337,6 +1355,14 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
 
         // GEH TODO: shouldn't we have some sort of OMPRAP API calls here to mark end of wait?
         taskdata->td_taskwait_thread = - taskdata->td_taskwait_thread;
+
+#if OMPT_SUPPORT && OMPT_TRACE
+        if (ompt_enabled &&
+            ompt_callbacks.ompt_callback(ompt_event_taskwait_end)) {
+            ompt_callbacks.ompt_callback(ompt_event_taskwait_end)(
+                                my_parallel_id, my_task_id);
+        }
+#endif
     }
 
     KA_TRACE(10, ("__kmpc_omp_taskwait(exit): T#%d task %p finished waiting, "
@@ -2378,7 +2404,6 @@ __kmp_free_task_team( kmp_info_t *thread, kmp_task_team_t *task_team )
 
     KMP_DEBUG_ASSERT( task_team -> tt.tt_next == NULL );
     task_team -> tt.tt_next = __kmp_free_task_teams;
-    TCW_4(task_team -> tt.tt_found_tasks, FALSE);
     TCW_PTR(__kmp_free_task_teams, task_team);
 
     __kmp_release_bootstrap_lock( & __kmp_task_team_lock );

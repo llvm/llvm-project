@@ -140,17 +140,21 @@ ValueObjectChild::UpdateValue ()
         if (parent->UpdateValueIfNeeded(false))
         {
             m_value.SetCompilerType(GetCompilerType());
-
+            
+            CompilerType parent_type(parent->GetCompilerType());
             // Copy the parent scalar value and the scalar value type
             m_value.GetScalar() = parent->GetValue().GetScalar();
             Value::ValueType value_type = parent->GetValue().GetValueType();
             m_value.SetValueType (value_type);
+            
+            Flags parent_type_flags(parent_type.GetTypeInfo());
+            const bool is_instance_ptr_base = ((m_is_base_class == true) && (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
 
             if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress())
             {
                 lldb::addr_t addr = parent->GetPointerValue ();
                 m_value.GetScalar() = addr;
-
+                
                 if (addr == LLDB_INVALID_ADDRESS)
                 {
                     m_error.SetErrorString ("parent address is invalid.");
@@ -167,16 +171,16 @@ ValueObjectChild::UpdateValue ()
                     switch (addr_type)
                     {
                         case eAddressTypeFile:
-                            {
-                                lldb::ProcessSP process_sp (GetProcessSP());
-                                if (process_sp && process_sp->IsAlive() == true)
-                                    m_value.SetValueType (Value::eValueTypeLoadAddress);
-                                else
-                                    m_value.SetValueType(Value::eValueTypeFileAddress);
-                            }
+                        {
+                            lldb::ProcessSP process_sp (GetProcessSP());
+                            if (process_sp && process_sp->IsAlive() == true)
+                                m_value.SetValueType (Value::eValueTypeLoadAddress);
+                            else
+                                m_value.SetValueType(Value::eValueTypeFileAddress);
+                        }
                             break;
                         case eAddressTypeLoad:
-                            m_value.SetValueType (Value::eValueTypeLoadAddress);
+                            m_value.SetValueType (is_instance_ptr_base ? Value::eValueTypeScalar: Value::eValueTypeLoadAddress);
                             break;
                         case eAddressTypeHost:
                             m_value.SetValueType(Value::eValueTypeHostAddress);
@@ -192,9 +196,9 @@ ValueObjectChild::UpdateValue ()
             {
                 switch (value_type)
                 {
-                case Value::eValueTypeLoadAddress:
-                case Value::eValueTypeFileAddress:
-                case Value::eValueTypeHostAddress:
+                    case Value::eValueTypeLoadAddress:
+                    case Value::eValueTypeFileAddress:
+                    case Value::eValueTypeHostAddress:
                     {
                         lldb::addr_t addr = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
                         if (addr == LLDB_INVALID_ADDRESS)
@@ -212,27 +216,42 @@ ValueObjectChild::UpdateValue ()
                             m_value.GetScalar() += GetByteOffset();
                         }
                     }
-                    break;
-
-                case Value::eValueTypeScalar:
-                    // TODO: What if this is a register value? Do we try and
-                    // extract the child value from within the parent data?
-                    // Probably...
-                default:
-                    m_error.SetErrorString ("parent has invalid value.");
-                    break;
+                        break;
+                        
+                    case Value::eValueTypeScalar:
+                        // try to extract the child value from the parent's scalar value
+                    {
+                        Scalar scalar(m_value.GetScalar());
+                        if (m_bitfield_bit_size)
+                            scalar.ExtractBitfield(m_bitfield_bit_size, m_bitfield_bit_offset);
+                        else
+                            scalar.ExtractBitfield(8*m_byte_size, 8*m_byte_offset);
+                        m_value.GetScalar() = scalar;
+                    }
+                        break;
+                    default:
+                        m_error.SetErrorString ("parent has invalid value.");
+                        break;
                 }
             }
-
+            
             if (m_error.Success())
             {
                 const bool thread_and_frame_only_if_stopped = true;
                 ExecutionContext exe_ctx (GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped));
                 if (GetCompilerType().GetTypeInfo() & lldb::eTypeHasValue)
-                    m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+                {
+                    if (!is_instance_ptr_base)
+                        m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+                    else
+                        m_error = m_parent->GetValue().GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
+                }
                 else
+                {
                     m_error.Clear(); // No value so nothing to read...
+                }
             }
+            
         }
         else
         {

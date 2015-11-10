@@ -1004,6 +1004,12 @@ public:
     virtual bool
     MightHaveChildren();
     
+    virtual lldb::VariableSP
+    GetVariable ()
+    {
+        return nullptr;
+    }
+
     virtual bool
     IsRuntimeSupportValue ();
     

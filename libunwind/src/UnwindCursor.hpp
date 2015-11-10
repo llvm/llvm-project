@@ -114,6 +114,7 @@ typename A::pint_t DwarfFDECache<A>::findFDE(pint_t mh, pint_t pc) {
 template <typename A>
 void DwarfFDECache<A>::add(pint_t mh, pint_t ip_start, pint_t ip_end,
                            pint_t fde) {
+#if !defined(_LIBUNWIND_NO_HEAP)
   _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_wrlock(&_lock));
   if (_bufferUsed >= _bufferEnd) {
     size_t oldSize = (size_t)(_bufferEnd - _buffer);
@@ -139,6 +140,7 @@ void DwarfFDECache<A>::add(pint_t mh, pint_t ip_start, pint_t ip_end,
   }
 #endif
   _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_unlock(&_lock));
+#endif
 }
 
 template <typename A>

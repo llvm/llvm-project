@@ -707,7 +707,7 @@ lld::elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
   // and must be treated specially. For now we just replace the symbol with
   // 0.
   InputSectionBase<ELFT> *Section = File.getSection(*Sym);
-  if (Section == &InputSection<ELFT>::Discarded)
+  if (Section == &InputSection<ELFT>::Discarded || !Section->isLive())
     return Addend;
 
   uintX_t VA = Section->OutSec->getVA();

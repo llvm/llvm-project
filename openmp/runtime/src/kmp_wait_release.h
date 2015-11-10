@@ -438,6 +438,7 @@ class kmp_flag_32 : public kmp_basic_flag<kmp_uint32> {
                             USE_ITT_BUILD_ARG(itt_sync_obj));
     }
     void release() { __kmp_release_template(this); }
+    flag_type get_ptr_type() { return flag32; }
 };
 
 class kmp_flag_64 : public kmp_basic_flag<kmp_uint64> {
@@ -458,6 +459,7 @@ class kmp_flag_64 : public kmp_basic_flag<kmp_uint64> {
                             USE_ITT_BUILD_ARG(itt_sync_obj));
     }
     void release() { __kmp_release_template(this); }
+    flag_type get_ptr_type() { return flag64; }
 };
 
 // Hierarchical 64-bit on-core barrier instantiation
@@ -551,6 +553,7 @@ public:
     }
     kmp_uint8 *get_stolen() { return NULL; }
     enum barrier_type get_bt() { return bt; }
+    flag_type get_ptr_type() { return flag_oncore; }
 };
 
 
