@@ -109,7 +109,6 @@ ValueObject::ValueObject (ValueObject &parent) :
     m_is_child_at_offset(false),
     m_is_getting_summary(false),
     m_did_calculate_complete_objc_class_type(false),
-    m_ignore_instance_pointerness(false),
     m_is_synthetic_children_generated(parent.m_is_synthetic_children_generated)
 {
     m_data.SetByteOrder(parent.GetDataExtractor().GetByteOrder());
@@ -164,7 +163,6 @@ ValueObject::ValueObject (ExecutionContextScope *exe_scope,
     m_is_child_at_offset(false),
     m_is_getting_summary(false),
     m_did_calculate_complete_objc_class_type(false),
-    m_ignore_instance_pointerness(false),
     m_is_synthetic_children_generated(false)
 {
     if (exe_scope)
@@ -3897,7 +3895,6 @@ ValueObject::Dereference (Error &error)
         uint32_t child_bitfield_bit_offset = 0;
         bool child_is_base_class = false;
         bool child_is_deref_of_parent = false;
-        bool is_indirect_enum_case = false;
         const bool transparent_pointers = false;
         CompilerType compiler_type = GetCompilerType();
         CompilerType child_compiler_type;

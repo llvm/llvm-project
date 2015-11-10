@@ -1151,7 +1151,6 @@ protected:
                         m_is_child_at_offset:1,
                         m_is_getting_summary:1,
                         m_did_calculate_complete_objc_class_type:1,
-                        m_ignore_instance_pointerness:1,
                         m_is_synthetic_children_generated:1;
     
     friend class ValueObjectChild;
