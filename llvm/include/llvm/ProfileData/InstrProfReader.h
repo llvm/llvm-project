@@ -186,11 +186,16 @@ class InstrProfLookupTrait {
   std::vector<InstrProfRecord> DataBuffer;
   IndexedInstrProf::HashT HashType;
   unsigned FormatVersion;
+  // Endianness of the input value profile data.
+  // It should be LE by default, but can be changed
+  // for testing purpose.
+  support::endianness ValueProfDataEndianness;
   std::vector<std::pair<uint64_t, const char *>> HashKeys;
 
 public:
   InstrProfLookupTrait(IndexedInstrProf::HashT HashType, unsigned FormatVersion)
-      : HashType(HashType), FormatVersion(FormatVersion) {}
+      : HashType(HashType), FormatVersion(FormatVersion),
+        ValueProfDataEndianness(support::little) {}
 
   typedef ArrayRef<InstrProfRecord> data_type;
 
@@ -223,6 +228,11 @@ public:
   bool ReadValueProfilingData(const unsigned char *&D,
                               const unsigned char *const End);
   data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
+
+  // Used for testing purpose only.
+  void setValueProfDataEndianness(support::endianness Endianness) {
+    ValueProfDataEndianness = Endianness;
+  }
 };
 
 class InstrProfReaderIndex {
@@ -251,6 +261,10 @@ class InstrProfReaderIndex {
 
   void advanceToNextKey() { RecordIterator++; }
   bool atEnd() const { return RecordIterator == Index->data_end(); }
+  // Used for testing purpose only.
+  void setValueProfDataEndianness(support::endianness Endianness) {
+    Index->getInfoObj().setValueProfDataEndianness(Endianness);
+  }
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -295,6 +309,11 @@ private:
 
   static ErrorOr<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);
+
+  // Used for testing purpose only.
+  void setValueProfDataEndianness(support::endianness Endianness) {
+    Index.setValueProfDataEndianness(Endianness);
+  }
 };
 
 } // end namespace llvm

@@ -671,6 +671,41 @@ StringRef remove_leading_dotslash(StringRef Path) {
   return Path;
 }
 
+static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot) {
+  SmallVector<StringRef, 16> components;
+
+  // Skip the root path, then look for traversal in the components.
+  StringRef rel = path::relative_path(path);
+  for (StringRef C : llvm::make_range(path::begin(rel), path::end(rel))) {
+    if (C == ".")
+      continue;
+    if (remove_dot_dot) {
+      if (C == "..") {
+        if (!components.empty())
+          components.pop_back();
+        continue;
+      }
+    }
+    components.push_back(C);
+  }
+
+  SmallString<256> buffer = path::root_path(path);
+  for (StringRef C : components)
+    path::append(buffer, C);
+  return buffer;
+}
+
+bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot) {
+  StringRef p(path.data(), path.size());
+
+  SmallString<256> result = remove_dots(p, remove_dot_dot);
+  if (result == path)
+    return false;
+
+  path.swap(result);
+  return true;
+}
+
 } // end namespace path
 
 namespace fs {

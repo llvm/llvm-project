@@ -1,5 +1,4 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
-; XFAIL: *
 
 ; CHECK: r{{[0-9]+}} = ##i129_l+16
 ; CHECK: r{{[0-9]+}} = ##i129_s+16

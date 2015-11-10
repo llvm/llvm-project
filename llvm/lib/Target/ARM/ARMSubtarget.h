@@ -380,6 +380,11 @@ public:
             TargetTriple.getEnvironment() == Triple::EABIHF) &&
            !isTargetDarwin() && !isTargetWindows();
   }
+  bool isTargetGNUAEABI() const {
+    return (TargetTriple.getEnvironment() == Triple::GNUEABI ||
+            TargetTriple.getEnvironment() == Triple::GNUEABIHF) &&
+           !isTargetDarwin() && !isTargetWindows();
+  }
 
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.

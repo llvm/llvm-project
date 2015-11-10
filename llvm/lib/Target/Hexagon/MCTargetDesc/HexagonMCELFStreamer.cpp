@@ -60,9 +60,9 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
     if (Extended) {
       if (HexagonMCInstrInfo::isDuplex(*MCII, *MCI)) {
         MCInst *SubInst = const_cast<MCInst *>(MCI->getOperand(1).getInst());
-        HexagonMCInstrInfo::clampExtended(*MCII, *SubInst);
+        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *SubInst);
       } else {
-        HexagonMCInstrInfo::clampExtended(*MCII, *MCI);
+        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *MCI);
       }
       Extended = false;
     } else {

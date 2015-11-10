@@ -54,10 +54,14 @@ multiclass RETURN<WebAssemblyRegClass vt> {
   def RETURN_#vt : I<(outs), (ins vt:$val), [(WebAssemblyreturn vt:$val)],
                      "return $val">;
 }
-let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
+
+let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
+let isReturn = 1 in {
   defm : RETURN<I32>;
   defm : RETURN<I64>;
   defm : RETURN<F32>;
   defm : RETURN<F64>;
   def RETURN_VOID : I<(outs), (ins), [(WebAssemblyreturn)], "return">;
-} // isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
+} // isReturn = 1
+  def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable">;
+} // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1

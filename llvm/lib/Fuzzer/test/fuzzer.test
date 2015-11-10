@@ -60,3 +60,6 @@ RUN:     LLVMFuzzer-SimpleDictionaryTest                    -seed=1 -runs=100000
 
 RUN: not LLVMFuzzer-SimpleHashTest -use_traces=1 -seed=1 -runs=100000  2>&1 | FileCheck %s
 RUN:     LLVMFuzzer-SimpleHashTest               -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=Done1000000
+
+RUN: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
+UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.

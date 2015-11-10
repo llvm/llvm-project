@@ -2833,6 +2833,16 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
   return false;
 }
 
+bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
+  assert(A.getValueType() == B.getValueType() &&
+         "Values must have the same type");
+  APInt AZero, AOne;
+  APInt BZero, BOne;
+  computeKnownBits(A, AZero, AOne);
+  computeKnownBits(B, BZero, BOne);
+  return (AZero | BZero).isAllOnesValue();
+}
+
 /// getNode - Gets or creates the specified node.
 ///
 SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT) {

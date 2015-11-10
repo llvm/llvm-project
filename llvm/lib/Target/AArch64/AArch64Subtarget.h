@@ -115,6 +115,10 @@ public:
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }
   bool hasCRC() const { return HasCRC; }
+  /// CPU has TBI (top byte of addresses is ignored during HW address
+  /// translation) and OS enables it.
+  bool supportsAddressTopByteIgnored() const;
+
   bool hasPerfMon() const { return HasPerfMon; }
 
   bool isLittleEndian() const { return IsLittle; }

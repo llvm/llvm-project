@@ -156,19 +156,23 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1 in {
   def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET", [(cleanupret)]>;
 
-  // CATCHRET needs a custom inserter for SEH nonsense.
+  // CATCHRET needs a custom inserter for SEH.
   let usesCustomInserter = 1 in
     def CATCHRET : I<0, Pseudo, (outs), (ins brtarget32:$dst, brtarget32:$from),
                      "# CATCHRET",
                      [(catchret bb:$dst, bb:$from)]>;
 }
 
+let hasSideEffects = 1, hasCtrlDep = 1, isCodeGenOnly = 1,
+    usesCustomInserter = 1 in
+def CATCHPAD : I<0, Pseudo, (outs), (ins), "# CATCHPAD", [(catchpad)]>;
+
 // This instruction is responsible for re-establishing stack pointers after an
 // exception has been caught and we are rejoining normal control flow in the
 // parent function or funclet. It generally sets ESP and EBP, and optionally
 // ESI. It is only needed for 32-bit WinEH, as the runtime restores CSRs for us
 // elsewhere.
-let hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1, isCodeGenOnly = 1 in
+let hasSideEffects = 1, hasCtrlDep = 1, isCodeGenOnly = 1 in
 def EH_RESTORE : I<0, Pseudo, (outs), (ins), "# EH_RESTORE", []>;
 
 let hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,

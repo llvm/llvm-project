@@ -2622,6 +2622,40 @@ defm FMOV : FPMoveImmediate<"fmov">;
 // Advanced SIMD two vector instructions.
 //===----------------------------------------------------------------------===//
 
+defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl",
+                                          uabsdiff>;
+// Match UABDL in log2-shuffle patterns.
+def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
+               (v8i16 (add (sub (zext (v8i8 V64:$opA)),
+                                (zext (v8i8 V64:$opB))),
+                           (AArch64vashr v8i16:$src, (i32 15))))),
+          (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
+def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
+               (v8i16 (add (sub (zext (extract_high_v16i8 V128:$opA)),
+                                (zext (extract_high_v16i8 V128:$opB))),
+                           (AArch64vashr v8i16:$src, (i32 15))))),
+          (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
+def : Pat<(xor (v4i32 (AArch64vashr v4i32:$src, (i32 31))),
+               (v4i32 (add (sub (zext (v4i16 V64:$opA)),
+                                (zext (v4i16 V64:$opB))),
+                           (AArch64vashr v4i32:$src, (i32 31))))),
+          (UABDLv4i16_v4i32 V64:$opA, V64:$opB)>;
+def : Pat<(xor (v4i32 (AArch64vashr v4i32:$src, (i32 31))),
+               (v4i32 (add (sub (zext (extract_high_v8i16 V128:$opA)),
+                                (zext (extract_high_v8i16 V128:$opB))),
+                          (AArch64vashr v4i32:$src, (i32 31))))),
+          (UABDLv8i16_v4i32 V128:$opA, V128:$opB)>;
+def : Pat<(xor (v2i64 (AArch64vashr v2i64:$src, (i32 63))),
+               (v2i64 (add (sub (zext (v2i32 V64:$opA)),
+                                (zext (v2i32 V64:$opB))),
+                           (AArch64vashr v2i64:$src, (i32 63))))),
+          (UABDLv2i32_v2i64 V64:$opA, V64:$opB)>;
+def : Pat<(xor (v2i64 (AArch64vashr v2i64:$src, (i32 63))),
+               (v2i64 (add (sub (zext (extract_high_v4i32 V128:$opA)),
+                                (zext (extract_high_v4i32 V128:$opB))),
+                          (AArch64vashr v2i64:$src, (i32 63))))),
+          (UABDLv4i32_v2i64 V128:$opA, V128:$opB)>;
+
 defm ABS    : SIMDTwoVectorBHSD<0, 0b01011, "abs", int_aarch64_neon_abs>;
 def : Pat<(xor (v8i8 (AArch64vashr V64:$src, (i32 7))),
                (v8i8 (add V64:$src, (AArch64vashr V64:$src, (i32 7))))),
@@ -3375,8 +3409,6 @@ defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
                  BinOpFrag<(sub node:$LHS, (sext node:$RHS))>>;
 defm UABAL   : SIMDLongThreeVectorTiedBHSabal<1, 0b0101, "uabal",
                                               uabsdiff>;
-defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl",
-                                          uabsdiff>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
                  BinOpFrag<(add (zext node:$LHS), (zext node:$RHS))>>;
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
@@ -5787,6 +5819,21 @@ def : Pat<(v16i8 (bitconvert (v4f32 FPR128:$src))),
 def : Pat<(v16i8 (bitconvert (v8f16 FPR128:$src))),
                              (v16i8 (REV16v16i8 FPR128:$src))>;
 }
+
+def : Pat<(v4i16 (extract_subvector V128:$Rn, (i64 0))),
+           (EXTRACT_SUBREG V128:$Rn, dsub)>;
+def : Pat<(v8i8 (extract_subvector V128:$Rn, (i64 0))),
+           (EXTRACT_SUBREG V128:$Rn, dsub)>;
+def : Pat<(v2f32 (extract_subvector V128:$Rn, (i64 0))),
+           (EXTRACT_SUBREG V128:$Rn, dsub)>;
+def : Pat<(v4f16 (extract_subvector V128:$Rn, (i64 0))),
+           (EXTRACT_SUBREG V128:$Rn, dsub)>;
+def : Pat<(v2i32 (extract_subvector V128:$Rn, (i64 0))),
+           (EXTRACT_SUBREG V128:$Rn, dsub)>;
+def : Pat<(v1i64 (extract_subvector V128:$Rn, (i64 0))),
+           (EXTRACT_SUBREG V128:$Rn, dsub)>;
+def : Pat<(v1f64 (extract_subvector V128:$Rn, (i64 0))),
+           (EXTRACT_SUBREG V128:$Rn, dsub)>;
 
 def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 1))),
           (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;

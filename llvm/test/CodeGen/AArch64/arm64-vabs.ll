@@ -134,6 +134,72 @@ define <2 x i64> @uabdl2_2d(<4 x i32>* %A, <4 x i32>* %B) nounwind {
   ret <2 x i64> %tmp4
 }
 
+define i16 @uabdl8h_log2_shuffle(<16 x i8>* %a, <16 x i8>* %b) {
+; CHECK-LABEL: uabdl8h_log2_shuffle
+; CHECK: uabdl2.8h
+; CHECK: uabdl.8h
+  %aload = load <16 x i8>, <16 x i8>* %a, align 1
+  %bload = load <16 x i8>, <16 x i8>* %b, align 1
+  %aext = zext <16 x i8> %aload to <16 x i16>
+  %bext = zext <16 x i8> %bload to <16 x i16>
+  %abdiff = sub nsw <16 x i16> %aext, %bext
+  %abcmp = icmp slt <16 x i16> %abdiff, zeroinitializer
+  %ababs = sub nsw <16 x i16> zeroinitializer, %abdiff
+  %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
+  %rdx.shuf = shufflevector <16 x i16> %absel, <16 x i16> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin1.rdx = add <16 x i16> %absel, %rdx.shuf
+  %rdx.shufx = shufflevector <16 x i16> %bin1.rdx, <16 x i16> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <16 x i16> %bin1.rdx, %rdx.shufx
+  %rdx.shuf136 = shufflevector <16 x i16> %bin.rdx, <16 x i16> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx137 = add <16 x i16> %bin.rdx, %rdx.shuf136
+  %rdx.shuf138 = shufflevector <16 x i16> %bin.rdx137, <16 x i16> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx139 = add <16 x i16> %bin.rdx137, %rdx.shuf138
+  %reduced_v = extractelement <16 x i16> %bin.rdx139, i16 0
+  ret i16 %reduced_v
+}
+
+define i32 @uabdl4s_log2_shuffle(<8 x i16>* %a, <8 x i16>* %b) {
+; CHECK-LABEL: uabdl4s_log2_shuffle
+; CHECK: uabdl2.4s
+; CHECK: uabdl.4s
+  %aload = load <8 x i16>, <8 x i16>* %a, align 1
+  %bload = load <8 x i16>, <8 x i16>* %b, align 1
+  %aext = zext <8 x i16> %aload to <8 x i32>
+  %bext = zext <8 x i16> %bload to <8 x i32>
+  %abdiff = sub nsw <8 x i32> %aext, %bext
+  %abcmp = icmp slt <8 x i32> %abdiff, zeroinitializer
+  %ababs = sub nsw <8 x i32> zeroinitializer, %abdiff
+  %absel = select <8 x i1> %abcmp, <8 x i32> %ababs, <8 x i32> %abdiff
+  %rdx.shuf = shufflevector <8 x i32> %absel, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <8 x i32> %absel, %rdx.shuf
+  %rdx.shuf136 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx137 = add <8 x i32> %bin.rdx, %rdx.shuf136
+  %rdx.shuf138 = shufflevector <8 x i32> %bin.rdx137, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx139 = add <8 x i32> %bin.rdx137, %rdx.shuf138
+  %reduced_v = extractelement <8 x i32> %bin.rdx139, i32 0
+  ret i32 %reduced_v
+}
+
+define i64 @uabdl2d_log2_shuffle(<4 x i32>* %a, <4 x i32>* %b, i32 %h) {
+; CHECK: uabdl2d_log2_shuffle
+; CHECK: uabdl2.2d
+; CHECK: uabdl.2d
+  %aload = load <4 x i32>, <4 x i32>* %a, align 1
+  %bload = load <4 x i32>, <4 x i32>* %b, align 1
+  %aext = zext <4 x i32> %aload to <4 x i64>
+  %bext = zext <4 x i32> %bload to <4 x i64>
+  %abdiff = sub nsw <4 x i64> %aext, %bext
+  %abcmp = icmp slt <4 x i64> %abdiff, zeroinitializer
+  %ababs = sub nsw <4 x i64> zeroinitializer, %abdiff
+  %absel = select <4 x i1> %abcmp, <4 x i64> %ababs, <4 x i64> %abdiff
+  %rdx.shuf136 = shufflevector <4 x i64> %absel, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx137 = add <4 x i64> %absel, %rdx.shuf136
+  %rdx.shuf138 = shufflevector <4 x i64> %bin.rdx137, <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx139 = add <4 x i64> %bin.rdx137, %rdx.shuf138
+  %reduced_v = extractelement <4 x i64> %bin.rdx139, i16 0
+  ret i64 %reduced_v
+}
+
 define <2 x float> @fabd_2s(<2 x float>* %A, <2 x float>* %B) nounwind {
 ;CHECK-LABEL: fabd_2s:
 ;CHECK: fabd.2s

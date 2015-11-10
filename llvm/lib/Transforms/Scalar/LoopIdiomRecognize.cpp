@@ -667,10 +667,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {
-  if (recognizePopcount())
-    return true;
-
-  return false;
+  return recognizePopcount();
 }
 
 /// Check if the given conditional branch is based on the comparison between

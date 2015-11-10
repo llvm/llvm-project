@@ -486,6 +486,8 @@ endif
 ObjRootDir  := $(PROJ_OBJ_DIR)/$(BuildMode)
 ObjDir      := $(ObjRootDir)
 LibDir      := $(PROJ_OBJ_ROOT)/$(BuildMode)/lib
+LibexecDir  := $(PROJ_OBJ_ROOT)/$(BuildMode)/libexec
+ShareDir    := $(PROJ_OBJ_ROOT)/$(BuildMode)/share
 ToolDir     := $(PROJ_OBJ_ROOT)/$(BuildMode)/bin
 ExmplDir    := $(PROJ_OBJ_ROOT)/$(BuildMode)/examples
 LLVMLibDir  := $(LLVM_OBJ_ROOT)/$(BuildMode)/lib
@@ -857,6 +859,7 @@ $(DESTDIR)$(PROJ_bindir) $(DESTDIR)$(PROJ_libdir) $(DESTDIR)$(PROJ_includedir) $
 
 .PRECIOUS: $(LibDir)/.dir $(ToolDir)/.dir $(ExmplDir)/.dir
 .PRECIOUS: $(LLVMLibDir)/.dir $(LLVMToolDir)/.dir $(LLVMExmplDir)/.dir
+.PRECIOUS: $(LibexecDir)/.dir $(ShareDir)/.dir
 
 #---------------------------------------------------------
 # Collect the object directories (as there may be more
@@ -2144,6 +2147,8 @@ printvars::
 	$(Echo) "SrcMakefiles : " '$(SrcMakefiles)'
 	$(Echo) "ObjDir       : " '$(ObjDir)'
 	$(Echo) "LibDir       : " '$(LibDir)'
+	$(Echo) "LibexecDir   : " '$(LibexecDir)'
+	$(Echo) "ShareDir     : " '$(ShareDir)'
 	$(Echo) "ToolDir      : " '$(ToolDir)'
 	$(Echo) "ExmplDir     : " '$(ExmplDir)'
 	$(Echo) "Sources      : " '$(Sources)'

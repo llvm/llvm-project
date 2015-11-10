@@ -297,19 +297,47 @@ typedef detail::packed_endian_specific_integral
                    <int64_t, native, unaligned> unaligned_int64_t;
 
 namespace endian {
-inline uint16_t read16le(const void *p) { return *(const ulittle16_t *)p; }
-inline uint32_t read32le(const void *p) { return *(const ulittle32_t *)p; }
-inline uint64_t read64le(const void *p) { return *(const ulittle64_t *)p; }
-inline uint16_t read16be(const void *p) { return *(const ubig16_t *)p; }
-inline uint32_t read32be(const void *p) { return *(const ubig32_t *)p; }
-inline uint64_t read64be(const void *p) { return *(const ubig64_t *)p; }
+template <typename T, endianness E> inline T read(const void *P) {
+  return *(const detail::packed_endian_specific_integral<T, E, unaligned> *)P;
+}
 
-inline void write16le(void *p, uint16_t v) { *(ulittle16_t *)p = v; }
-inline void write32le(void *p, uint32_t v) { *(ulittle32_t *)p = v; }
-inline void write64le(void *p, uint64_t v) { *(ulittle64_t *)p = v; }
-inline void write16be(void *p, uint16_t v) { *(ubig16_t *)p = v; }
-inline void write32be(void *p, uint32_t v) { *(ubig32_t *)p = v; }
-inline void write64be(void *p, uint64_t v) { *(ubig64_t *)p = v; }
+template <endianness E> inline uint16_t read16(const void *P) {
+  return read<uint16_t, E>(P);
+}
+template <endianness E> inline uint32_t read32(const void *P) {
+  return read<uint32_t, E>(P);
+}
+template <endianness E> inline uint64_t read64(const void *P) {
+  return read<uint64_t, E>(P);
+}
+
+inline uint16_t read16le(const void *P) { return read16<little>(P); }
+inline uint32_t read32le(const void *P) { return read32<little>(P); }
+inline uint64_t read64le(const void *P) { return read64<little>(P); }
+inline uint16_t read16be(const void *P) { return read16<big>(P); }
+inline uint32_t read32be(const void *P) { return read32<big>(P); }
+inline uint64_t read64be(const void *P) { return read64<big>(P); }
+
+template <typename T, endianness E> inline void write(void *P, T V) {
+  *(detail::packed_endian_specific_integral<T, E, unaligned> *)P = V;
+}
+
+template <endianness E> inline void write16(void *P, uint16_t V) {
+  write<uint16_t, E>(P, V);
+}
+template <endianness E> inline void write32(void *P, uint32_t V) {
+  write<uint32_t, E>(P, V);
+}
+template <endianness E> inline void write64(void *P, uint64_t V) {
+  write<uint64_t, E>(P, V);
+}
+
+inline void write16le(void *P, uint16_t V) { write16<little>(P, V); }
+inline void write32le(void *P, uint32_t V) { write32<little>(P, V); }
+inline void write64le(void *P, uint64_t V) { write64<little>(P, V); }
+inline void write16be(void *P, uint16_t V) { write16<big>(P, V); }
+inline void write32be(void *P, uint32_t V) { write32<big>(P, V); }
+inline void write64be(void *P, uint64_t V) { write64<big>(P, V); }
 } // end namespace endian
 } // end namespace support
 } // end namespace llvm

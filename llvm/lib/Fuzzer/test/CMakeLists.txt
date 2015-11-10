@@ -34,6 +34,10 @@ set(CustomMainTests
   UserSuppliedFuzzerTest
   )
 
+set(UninstrumentedTests
+  UninstrumentedTest
+  )
+
 
 set(TestBinaries)
 
@@ -87,6 +91,12 @@ add_subdirectory(dfsan)
 
 foreach(Test ${DFSanTests})
   set(TestBinaries ${TestBinaries} LLVMFuzzer-${Test}-DFSan)
+endforeach()
+
+add_subdirectory(uninstrumented)
+
+foreach(Test ${UninstrumentedTests})
+  set(TestBinaries ${TestBinaries} LLVMFuzzer-${Test}-Uninstrumented)
 endforeach()
 
 

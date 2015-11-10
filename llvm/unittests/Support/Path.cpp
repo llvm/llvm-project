@@ -844,4 +844,37 @@ TEST(Support, RemoveLeadingDotSlash) {
   Path2 = path::remove_leading_dotslash(Path2);
   EXPECT_EQ(Path2, "");
 }
+
+static std::string remove_dots(StringRef path,
+    bool remove_dot_dot) {
+  SmallString<256> buffer(path);
+  path::remove_dots(buffer, remove_dot_dot);
+  return buffer.str();
+}
+
+TEST(Support, RemoveDots) {
+#if defined(LLVM_ON_WIN32)
+  EXPECT_EQ("foolz\\wat", remove_dots(".\\.\\\\foolz\\wat", false));
+  EXPECT_EQ("", remove_dots(".\\\\\\\\\\", false));
+
+  EXPECT_EQ("a\\..\\b\\c", remove_dots(".\\a\\..\\b\\c", false));
+  EXPECT_EQ("b\\c", remove_dots(".\\a\\..\\b\\c", true));
+  EXPECT_EQ("c", remove_dots(".\\.\\c", true));
+
+  SmallString<64> Path1(".\\.\\c");
+  EXPECT_TRUE(path::remove_dots(Path1, true));
+  EXPECT_EQ("c", Path1);
+#else
+  EXPECT_EQ("foolz/wat", remove_dots("././/foolz/wat", false));
+  EXPECT_EQ("", remove_dots("./////", false));
+
+  EXPECT_EQ("a/../b/c", remove_dots("./a/../b/c", false));
+  EXPECT_EQ("b/c", remove_dots("./a/../b/c", true));
+  EXPECT_EQ("c", remove_dots("././c", true));
+
+  SmallString<64> Path1("././c");
+  EXPECT_TRUE(path::remove_dots(Path1, true));
+  EXPECT_EQ("c", Path1);
+#endif
+}
 } // anonymous namespace

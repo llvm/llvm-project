@@ -63,16 +63,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asan"
 
-// VMA size definition for architecture that support multiple sizes.
-// AArch64 has 3 VMA sizes: 39, 42 and 48.
-#ifndef SANITIZER_AARCH64_VMA
-# define SANITIZER_AARCH64_VMA 39
-#else
-# if SANITIZER_AARCH64_VMA != 39 && SANITIZER_AARCH64_VMA != 42
-#  error "invalid SANITIZER_AARCH64_VMA size"
-# endif
-#endif
-
 static const uint64_t kDefaultShadowScale = 3;
 static const uint64_t kDefaultShadowOffset32 = 1ULL << 29;
 static const uint64_t kIOSShadowOffset32 = 1ULL << 30;
@@ -82,11 +72,7 @@ static const uint64_t kLinuxKasan_ShadowOffset64 = 0xdffffc0000000000;
 static const uint64_t kPPC64_ShadowOffset64 = 1ULL << 41;
 static const uint64_t kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const uint64_t kMIPS64_ShadowOffset64 = 1ULL << 37;
-#if SANITIZER_AARCH64_VMA == 39
 static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 36;
-#elif SANITIZER_AARCH64_VMA == 42
-static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 39;
-#endif
 static const uint64_t kFreeBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kFreeBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
@@ -395,7 +381,8 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
   // OR-ing shadow offset if more efficient (at least on x86) if the offset
   // is a power of two, but on ppc64 we have to use add since the shadow
   // offset is not necessary 1/8-th of the address space.
-  Mapping.OrShadowOffset = !IsPPC64 && !(Mapping.Offset & (Mapping.Offset - 1));
+  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64
+                           && !(Mapping.Offset & (Mapping.Offset - 1));
 
   return Mapping;
 }

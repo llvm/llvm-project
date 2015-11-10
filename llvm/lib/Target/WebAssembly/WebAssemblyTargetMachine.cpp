@@ -50,6 +50,12 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
                                : "e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, RM, CM, OL),
       TLOF(make_unique<WebAssemblyTargetObjectFile>()) {
+  // WebAssembly type-checks expressions, but a noreturn function with a return
+  // type that doesn't match the context will cause a check failure. So we lower
+  // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
+  // 'unreachable' expression which is meant for that case.
+  this->Options.TrapUnreachable = true;
+
   initAsmInfo();
 
   // We need a reducible CFG, so disable some optimizations which tend to

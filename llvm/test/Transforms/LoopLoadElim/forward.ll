@@ -11,7 +11,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i32* %A, i32* %B, i32* %C, i64 %N) {
 
-; CHECK:   for.body.lver.memcheck:
+; CHECK:   for.body.lver.check:
 ; CHECK:     %found.conflict{{.*}} =
 ; CHECK-NOT: %found.conflict{{.*}} =
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=bdver1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=bdver1 | FileCheck %s
 ; Verify that for the architectures that are known to have poor latency
 ; double precision shift instructions we generate alternative sequence 
 ; of instructions with lower latencies instead of shrd instruction.
@@ -61,10 +61,9 @@ define i64 @rshift7(i64 %a, i64 %b) nounwind readnone uwtable {
 ;    return (a >> 63) | (b << 1);
 ;}
 
-; CHECK:             rshift63:
-; CHECK:             shrq    $63, {{.*}}
-; CHECK-NEXT:        leaq    ({{.*}},{{.*}}), {{.*}}
-; CHECK-NEXT:        orq     {{.*}}, {{.*}}
+; CHECK-LABEL:       rshift63:
+; CHECK:             shrq    $63, %rdi
+; CHECK-NEXT:        leaq    (%rdi,%rsi,2), %rax
 
 define i64 @rshift63(i64 %a, i64 %b) nounwind readnone uwtable {
   %1 = lshr i64 %a, 63

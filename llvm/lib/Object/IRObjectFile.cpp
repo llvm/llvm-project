@@ -219,6 +219,12 @@ uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   uint32_t Res = BasicSymbolRef::SF_None;
   if (GV->isDeclarationForLinker())
     Res |= BasicSymbolRef::SF_Undefined;
+  else if (GV->hasHiddenVisibility() && !GV->hasLocalLinkage())
+    Res |= BasicSymbolRef::SF_Hidden;
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
+    if (GVar->isConstant())
+      Res |= BasicSymbolRef::SF_Const;
+  }
   if (GV->hasPrivateLinkage())
     Res |= BasicSymbolRef::SF_FormatSpecific;
   if (!GV->hasLocalLinkage())

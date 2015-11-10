@@ -1,6 +1,5 @@
 # RUN: llvm-mc -triple=hexagon -disassemble < %s | FileCheck %s
 # Hexagon Programmer's Reference Manual 11.8 ST
-# XFAIL: *
 
 # Store doubleword
 0x9e 0xf5 0xd1 0x3b

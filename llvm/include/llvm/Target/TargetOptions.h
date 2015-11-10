@@ -58,24 +58,29 @@ namespace llvm {
     };
   }
 
+  enum class EABI {
+    Unknown,
+    Default, // Default means not specified
+    EABI4,   // Target-specific (either 4, 5 or gnu depending on triple).
+    EABI5,
+    GNU
+  };
+
   class TargetOptions {
   public:
     TargetOptions()
-        : PrintMachineCode(false),
-          LessPreciseFPMADOption(false), UnsafeFPMath(false),
-          NoInfsFPMath(false), NoNaNsFPMath(false),
-          HonorSignDependentRoundingFPMathOption(false),
-          NoZerosInBSS(false),
-          GuaranteedTailCallOpt(false),
-          StackAlignmentOverride(0),
+        : PrintMachineCode(false), LessPreciseFPMADOption(false),
+          UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
+          HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
+          GuaranteedTailCallOpt(false), StackAlignmentOverride(0),
           EnableFastISel(false), PositionIndependentExecutable(false),
           UseInitArray(false), DisableIntegratedAS(false),
           CompressDebugSections(false), FunctionSections(false),
           DataSections(false), UniqueSectionNames(true), TrapUnreachable(false),
           EmulatedTLS(false), FloatABIType(FloatABI::Default),
           AllowFPOpFusion(FPOpFusion::Standard), Reciprocals(TargetRecip()),
-          JTType(JumpTable::Single),
-          ThreadModel(ThreadModel::POSIX) {}
+          JTType(JumpTable::Single), ThreadModel(ThreadModel::POSIX),
+          EABIVersion(EABI::Default) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -213,6 +218,9 @@ namespace llvm {
     /// for things like atomics
     ThreadModel::Model ThreadModel;
 
+    /// EABIVersion - This flag specifies the EABI version
+    EABI EABIVersion;
+
     /// Machine level options.
     MCTargetOptions MCOptions;
   };
@@ -241,6 +249,7 @@ inline bool operator==(const TargetOptions &LHS,
     ARE_EQUAL(Reciprocals) &&
     ARE_EQUAL(JTType) &&
     ARE_EQUAL(ThreadModel) &&
+    ARE_EQUAL(EABIVersion) &&
     ARE_EQUAL(MCOptions);
 #undef ARE_EQUAL
 }

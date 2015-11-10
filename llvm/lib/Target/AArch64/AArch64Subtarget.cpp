@@ -31,6 +31,11 @@ static cl::opt<bool>
 EnableEarlyIfConvert("aarch64-early-ifcvt", cl::desc("Enable the early if "
                      "converter pass"), cl::init(true), cl::Hidden);
 
+// If OS supports TBI, use this flag to enable it.
+static cl::opt<bool>
+UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
+                         "an address is ignored"), cl::init(false), cl::Hidden);
+
 AArch64Subtarget &
 AArch64Subtarget::initializeSubtargetDependencies(StringRef FS) {
   // Determine default and user-specified characteristics
@@ -123,6 +128,19 @@ void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
 
 bool AArch64Subtarget::enableEarlyIfConversion() const {
   return EnableEarlyIfConvert;
+}
+
+bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
+  if (!UseAddressTopByteIgnored)
+    return false;
+
+  if (TargetTriple.isiOS()) {
+    unsigned Major, Minor, Micro;
+    TargetTriple.getiOSVersion(Major, Minor, Micro);
+    return Major >= 8;
+  }
+
+  return false;
 }
 
 std::unique_ptr<PBQPRAConstraint>
