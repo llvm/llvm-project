@@ -23,6 +23,7 @@ class TestInOutVariables(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @unittest2.expectedFailure  # <rdar://problem/23485847>
     @swiftTest
     def test_in_out_variables(self):
         """Test that @inout variables display reasonably"""
