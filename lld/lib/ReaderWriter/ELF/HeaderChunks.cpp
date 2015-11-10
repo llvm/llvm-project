@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/ELF/HeaderChunks.cpp ------------------------------===//
+//===- lib/ReaderWriter/ELF/HeaderChunks.cpp --------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -135,7 +135,7 @@ SectionHeader<ELFT>::SectionHeader(const ELFLinkingContext &ctx, int32_t order)
   this->_alignment = 8;
   this->setOrder(order);
   // The first element in the list is always NULL
-  Elf_Shdr *nullshdr = new (_sectionAllocate.Allocate<Elf_Shdr>()) Elf_Shdr;
+  auto *nullshdr = new (_sectionAllocate.Allocate<Elf_Shdr>()) Elf_Shdr;
   ::memset(nullshdr, 0, sizeof(Elf_Shdr));
   _sectionInfo.push_back(nullshdr);
   this->_fsize += sizeof(Elf_Shdr);
@@ -143,7 +143,7 @@ SectionHeader<ELFT>::SectionHeader(const ELFLinkingContext &ctx, int32_t order)
 
 template <class ELFT>
 void SectionHeader<ELFT>::appendSection(OutputSection<ELFT> *section) {
-  Elf_Shdr *shdr = new (_sectionAllocate.Allocate<Elf_Shdr>()) Elf_Shdr;
+  auto *shdr = new (_sectionAllocate.Allocate<Elf_Shdr>()) Elf_Shdr;
   shdr->sh_name = _stringSection->addString(section->name());
   shdr->sh_type = section->type();
   shdr->sh_flags = section->flags();

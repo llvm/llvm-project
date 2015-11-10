@@ -90,7 +90,6 @@ SegmentInfo::SegmentInfo(StringRef n)
  : name(n), address(0), size(0), access(0), normalizedSegmentIndex(0) {
 }
 
-
 class Util {
 public:
   Util(const MachOLinkingContext &ctxt)
@@ -207,7 +206,7 @@ SectionInfo *Util::getRelocatableSection(DefinedAtom::ContentType type) {
     }
   }
   // Otherwise allocate new SectionInfo object.
-  SectionInfo *sect = new (_allocator)
+  auto *sect = new (_allocator)
       SectionInfo(segmentName, sectionName, sectionType, _ctx, sectionAttrs);
   _sectionInfos.push_back(sect);
   _sectionMap[type] = sect;
@@ -259,7 +258,6 @@ const MachOFinalSectionFromAtomType sectsToAtomType[] = {
 };
 #undef ENTRY
 
-
 SectionInfo *Util::getFinalSection(DefinedAtom::ContentType atomType) {
   for (auto &p : sectsToAtomType) {
     if (p.atomType != atomType)
@@ -286,7 +284,7 @@ SectionInfo *Util::getFinalSection(DefinedAtom::ContentType atomType) {
       }
     }
     // Otherwise allocate new SectionInfo object.
-    SectionInfo *sect = new (_allocator) SectionInfo(
+    auto *sect = new (_allocator) SectionInfo(
         p.segmentName, p.sectionName, p.sectionType, _ctx, sectionAttrs);
     _sectionInfos.push_back(sect);
     _sectionMap[atomType] = sect;
@@ -294,8 +292,6 @@ SectionInfo *Util::getFinalSection(DefinedAtom::ContentType atomType) {
   }
   llvm_unreachable("content type not yet supported");
 }
-
-
 
 SectionInfo *Util::sectionForAtom(const DefinedAtom *atom) {
   if (atom->sectionChoice() == DefinedAtom::sectionBasedOnContent) {
@@ -321,14 +317,13 @@ SectionInfo *Util::sectionForAtom(const DefinedAtom *atom) {
     assert(seperatorIndex != StringRef::npos);
     StringRef segName = customName.slice(0, seperatorIndex);
     StringRef sectName = customName.drop_front(seperatorIndex + 1);
-    SectionInfo *sect =
+    auto *sect =
         new (_allocator) SectionInfo(segName, sectName, S_REGULAR, _ctx);
     _customSections.push_back(sect);
     _sectionInfos.push_back(sect);
     return sect;
   }
 }
-
 
 void Util::appendAtom(SectionInfo *sect, const DefinedAtom *atom) {
   // Figure out offset for atom in this section given alignment constraints.
@@ -367,7 +362,7 @@ SegmentInfo *Util::segmentForName(StringRef segName) {
     if ( si->name.equals(segName) )
       return si;
   }
-  SegmentInfo *info = new (_allocator) SegmentInfo(segName);
+  auto *info = new (_allocator) SegmentInfo(segName);
   if (segName.equals("__TEXT"))
     info->access = VM_PROT_READ | VM_PROT_EXECUTE;
   else if (segName.equals("__DATA"))
@@ -407,7 +402,6 @@ bool Util::TextSectionSorter::operator()(const SectionInfo *left,
                                          const SectionInfo *right) {
   return (weight(left) < weight(right));
 }
-
 
 void Util::organizeSections() {
   if (_ctx.outputMachOType() == llvm::MachO::MH_OBJECT) {
@@ -456,9 +450,7 @@ void Util::organizeSections() {
       }
     }
   }
-
 }
-
 
 void Util::layoutSectionsInSegment(SegmentInfo *seg, uint64_t &addr) {
   seg->address = addr;
@@ -468,7 +460,6 @@ void Util::layoutSectionsInSegment(SegmentInfo *seg, uint64_t &addr) {
   }
   seg->size = llvm::RoundUpToAlignment(addr - seg->address, _ctx.pageSize());
 }
-
 
 // __TEXT segment lays out backwards so padding is at front after load commands.
 void Util::layoutSectionsInTextSegment(size_t hlcSize, SegmentInfo *seg,
@@ -492,7 +483,6 @@ void Util::layoutSectionsInTextSegment(size_t hlcSize, SegmentInfo *seg,
   }
   seg->size = llvm::RoundUpToAlignment(addr - seg->address, _ctx.pageSize());
 }
-
 
 void Util::assignAddressesToSections(const NormalizedFile &file) {
   size_t hlcSize = headerAndLoadCommandsSize(file);
@@ -544,7 +534,6 @@ void Util::assignAddressesToSections(const NormalizedFile &file) {
     );
   }
 }
-
 
 void Util::copySegmentInfo(NormalizedFile &file) {
   for (SegmentInfo *sgi : _segmentInfos) {
@@ -610,7 +599,6 @@ void Util::copySectionContent(NormalizedFile &file) {
     }
   }
 }
-
 
 void Util::copySectionInfo(NormalizedFile &file) {
   file.sections.reserve(_sectionInfos.size());
@@ -717,12 +705,10 @@ uint16_t Util::descBits(const DefinedAtom* atom) {
   return desc;
 }
 
-
 bool Util::AtomSorter::operator()(const AtomAndIndex &left,
                                   const AtomAndIndex &right) {
   return (left.atom->name().compare(right.atom->name()) < 0);
 }
-
 
 std::error_code Util::getSymbolTableRegion(const DefinedAtom* atom,
                                            bool &inGlobalsRegion,
@@ -837,7 +823,6 @@ std::error_code Util::addSymbols(const lld::File &atomFile,
     file.globalSymbols.push_back(sym);
   }
 
-
   // Sort undefined symbol alphabetically, then add to symbol table.
   std::vector<AtomAndIndex> undefs;
   undefs.reserve(128);
@@ -895,7 +880,6 @@ const Atom *Util::targetOfStub(const DefinedAtom *stubAtom) {
   return nullptr;
 }
 
-
 void Util::addIndirectSymbols(const lld::File &atomFile, NormalizedFile &file) {
   for (SectionInfo *si : _sectionInfos) {
     Section &normSect = file.sections[si->normalizedSectionIndex];
@@ -944,7 +928,6 @@ void Util::addIndirectSymbols(const lld::File &atomFile, NormalizedFile &file) {
       break;
     }
   }
-
 }
 
 void Util::addDependentDylibs(const lld::File &atomFile,NormalizedFile &nFile) {
@@ -994,7 +977,6 @@ void Util::addDependentDylibs(const lld::File &atomFile,NormalizedFile &nFile) {
   }
 }
 
-
 int Util::dylibOrdinal(const SharedLibraryAtom *sa) {
   return _dylibInfo[sa->loadName()].ordinal;
 }
@@ -1013,7 +995,6 @@ void Util::segIndexForSection(const SectionInfo *sect, uint8_t &segmentIndex,
   llvm_unreachable("section not in any segment");
 }
 
-
 uint32_t Util::sectionIndexForAtom(const Atom *atom) {
   uint64_t address = _atomToAddress[atom];
   uint32_t index = 1;
@@ -1028,7 +1009,6 @@ uint32_t Util::sectionIndexForAtom(const Atom *atom) {
 void Util::addSectionRelocs(const lld::File &, NormalizedFile &file) {
   if (_ctx.outputMachOType() != llvm::MachO::MH_OBJECT)
     return;
-
 
   // Utility function for ArchHandler to find symbol index for an atom.
   auto symIndexForAtom = [&] (const Atom &atom) -> uint32_t {
@@ -1207,7 +1187,6 @@ uint32_t Util::fileFlags() {
 
 } // end anonymous namespace
 
-
 namespace lld {
 namespace mach_o {
 namespace normalized {
@@ -1251,7 +1230,6 @@ normalizedFromAtoms(const lld::File &atomFile,
 
   return std::move(f);
 }
-
 
 } // namespace normalized
 } // namespace mach_o

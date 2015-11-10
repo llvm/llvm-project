@@ -28,7 +28,7 @@
 # SHELL = /bin/sh -x
 
 THIS_FILE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
-LLDB_BASE_DIR := $(THIS_FILE_DIR)../../
+LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
 
 #----------------------------------------------------------------------

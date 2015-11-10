@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/ELF/AMDGPU/AMDGPUTargetHandler.cpp ----------------===//
+//===- lib/ReaderWriter/ELF/AMDGPU/AMDGPUTargetHandler.cpp -------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -52,7 +52,7 @@ void AMDGPUTargetLayout::assignSectionsToSegments() {
       if (InputSectionName != ".hsatext")
         continue;
 
-      Segment<ELF64LE> *segment = new (_allocator) Segment<ELF64LE>(
+      auto *segment = new (_allocator) Segment<ELF64LE>(
           _ctx, "PT_AMDGPU_HSA_LOAD_CODE_AGENT", PT_AMDGPU_HSA_LOAD_CODE_AGENT);
       _segments.push_back(segment);
       assert(segment);

@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/MachO/GOTPass.cpp ---------------------------------===//
+//===- lib/ReaderWriter/MachO/GOTPass.cpp -----------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -46,7 +46,6 @@
 namespace lld {
 namespace mach_o {
 
-
 //
 //  GOT Entry Atom created by the GOT pass.
 //
@@ -85,7 +84,6 @@ private:
   const bool _is64;
   StringRef _name;
 };
-
 
 /// Pass for instantiating and optimizing GOT slots.
 ///
@@ -155,7 +153,7 @@ private:
   const DefinedAtom *makeGOTEntry(const Atom *target) {
     auto pos = _targetToGOT.find(target);
     if (pos == _targetToGOT.end()) {
-      GOTEntryAtom *gotEntry = new (_file.allocator())
+      auto *gotEntry = new (_file.allocator())
           GOTEntryAtom(_file, _ctx.is64Bit(), target->name());
       _targetToGOT[target] = gotEntry;
       const ArchHandler::ReferenceInfo &nlInfo = _archHandler.stubInfo().
@@ -173,13 +171,10 @@ private:
   llvm::DenseMap<const Atom*, const GOTEntryAtom*> _targetToGOT;
 };
 
-
-
 void addGOTPass(PassManager &pm, const MachOLinkingContext &ctx) {
   assert(ctx.needsGOTPass());
   pm.add(llvm::make_unique<GOTPass>(ctx));
 }
-
 
 } // end namesapce mach_o
 } // end namesapce lld

@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/ELF/ELFFile.h -------------------------------------===//
+//===- lib/ReaderWriter/ELF/ELFFile.h ---------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -291,7 +291,7 @@ protected:
                                          const Elf_Shdr *sectionHdr,
                                          ArrayRef<uint8_t> contentData,
                                          unsigned int offset) {
-    ELFMergeAtom<ELFT> *mergeAtom = new (_readerStorage)
+    auto *mergeAtom = new (_readerStorage)
         ELFMergeAtom<ELFT>(*this, sectionName, sectionHdr, contentData, offset);
     const MergeSectionKey mergedSectionKey = {sectionHdr, offset};
     if (_mergedSectionMap.find(mergedSectionKey) == _mergedSectionMap.end())

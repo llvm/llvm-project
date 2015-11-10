@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/MachO/File.h --------------------------------------===//
+//===- lib/ReaderWriter/MachO/File.h ----------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -45,7 +45,7 @@ public:
     DefinedAtom::Alignment align(
         inSection->alignment,
         sectionOffset % inSection->alignment);
-    MachODefinedAtom *atom =
+    auto *atom =
         new (allocator()) MachODefinedAtom(*this, name, scope, type, merge,
                                            thumb, noDeadStrip, content, align);
     addAtomForSection(inSection, atom, sectionOffset);
@@ -68,7 +68,7 @@ public:
     DefinedAtom::Alignment align(
         inSection->alignment,
         sectionOffset % inSection->alignment);
-    MachODefinedCustomSectionAtom *atom =
+    auto *atom =
         new (allocator()) MachODefinedCustomSectionAtom(*this, name, scope, type,
                                                         merge, thumb,
                                                         noDeadStrip, content,
@@ -87,7 +87,7 @@ public:
     DefinedAtom::Alignment align(
         inSection->alignment,
         sectionOffset % inSection->alignment);
-    MachODefinedAtom *atom =
+    auto *atom =
        new (allocator()) MachODefinedAtom(*this, name, scope, size, noDeadStrip,
                                           align);
     addAtomForSection(inSection, atom, sectionOffset);
@@ -98,8 +98,7 @@ public:
       // Make a copy of the atom's name that is owned by this file.
       name = name.copy(allocator());
     }
-    SimpleUndefinedAtom *atom =
-        new (allocator()) SimpleUndefinedAtom(*this, name);
+    auto *atom = new (allocator()) SimpleUndefinedAtom(*this, name);
     addAtom(*atom);
     _undefAtoms[name] = atom;
   }
@@ -110,7 +109,7 @@ public:
       // Make a copy of the atom's name that is owned by this file.
       name = name.copy(allocator());
     }
-    MachOTentativeDefAtom *atom =
+    auto *atom =
         new (allocator()) MachOTentativeDefAtom(*this, name, scope, size, align);
     addAtom(*atom);
     _undefAtoms[name] = atom;
@@ -199,7 +198,6 @@ private:
      _sectionAtoms[inSection].push_back(offAndAtom);
     addAtom(*atom);
   }
-
 
   typedef llvm::DenseMap<const normalized::Section *,
                          std::vector<SectionOffsetAndAtom>>  SectionToAtoms;
@@ -298,7 +296,6 @@ private:
     return nullptr;
   }
 
-
   struct ReExportedDylib {
     ReExportedDylib(StringRef p) : path(p), file(nullptr) { }
     StringRef       path;
@@ -324,4 +321,4 @@ private:
 } // end namespace mach_o
 } // end namespace lld
 
-#endif
+#endif // LLD_READER_WRITER_MACHO_FILE_H

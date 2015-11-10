@@ -73,6 +73,7 @@ ValueObjectPrinter::Init (ValueObject* valobj,
     assert (m_stream && "cannot print to a NULL Stream");
     m_should_print = eLazyBoolCalculate;
     m_is_nil = eLazyBoolCalculate;
+    m_is_uninit = eLazyBoolCalculate;
     m_is_ptr = eLazyBoolCalculate;
     m_is_ref = eLazyBoolCalculate;
     m_is_aggregate = eLazyBoolCalculate;
@@ -100,12 +101,12 @@ ValueObjectPrinter::PrintValueObject ()
         
         PrintDecl();
     }
-    
+
     bool value_printed = false;
     bool summary_printed = false;
     
     m_val_summary_ok = PrintValueAndSummaryIfNeeded (value_printed,summary_printed);
-    
+
     if (m_val_summary_ok)
         PrintChildrenIfNeeded (value_printed, summary_printed);
     else
@@ -194,8 +195,8 @@ const char*
 ValueObjectPrinter::GetRootNameForDisplay (const char* if_fail)
 {
     const char *root_valobj_name = m_options.m_root_valobj_name.empty() ?
-    m_valobj->GetName().AsCString() :
-    m_options.m_root_valobj_name.c_str();
+        m_valobj->GetName().AsCString() :
+        m_options.m_root_valobj_name.c_str();
     return root_valobj_name ? root_valobj_name : if_fail;
 }
 
@@ -211,8 +212,16 @@ bool
 ValueObjectPrinter::IsNil ()
 {
     if (m_is_nil == eLazyBoolCalculate)
-        m_is_nil = m_valobj->IsObjCNil() ? eLazyBoolYes : eLazyBoolNo;
+        m_is_nil = m_valobj->IsNilReference() ? eLazyBoolYes : eLazyBoolNo;
     return m_is_nil == eLazyBoolYes;
+}
+
+bool
+ValueObjectPrinter::IsUninitialized ()
+{
+    if (m_is_uninit == eLazyBoolCalculate)
+        m_is_uninit = m_valobj->IsUninitializedReference() ? eLazyBoolYes : eLazyBoolNo;
+    return m_is_uninit == eLazyBoolYes;
 }
 
 bool
@@ -426,6 +435,8 @@ ValueObjectPrinter::GetValueSummaryError (std::string& value,
     {
         if (IsNil())
             summary.assign("nil");
+        else if (IsUninitialized())
+            summary.assign("<uninitialized>");
         else if (m_options.m_omit_summary_depth == 0)
         {
             TypeSummaryImpl* entry = GetSummaryFormatter();
@@ -476,7 +487,7 @@ ValueObjectPrinter::PrintValueAndSummaryIfNeeded (bool& value_printed,
             // the value if this thing is nil
             // (but show the value if the user passes a format explicitly)
             TypeSummaryImpl* entry = GetSummaryFormatter();
-            if (!IsNil() && !m_value.empty() && (entry == NULL || (entry->DoesPrintValue(m_valobj) || m_options.m_format != eFormatDefault) || m_summary.empty()) && !m_options.m_hide_value)
+            if (!IsNil() && !IsUninitialized() && !m_value.empty() && (entry == NULL || (entry->DoesPrintValue(m_valobj) || m_options.m_format != eFormatDefault) || m_summary.empty()) && !m_options.m_hide_value)
             {
                 if (m_options.m_hide_pointer_value && IsPointerValue(m_valobj->GetCompilerType())) {}
                 else
@@ -503,7 +514,7 @@ ValueObjectPrinter::PrintObjectDescriptionIfNeeded (bool value_printed,
     if (ShouldPrintValueObject())
     {
         // let's avoid the overly verbose no description error for a nil thing
-        if (m_options.m_use_objc && !IsNil())
+        if (m_options.m_use_objc && !IsNil() && !IsUninitialized())
         {
             if (!m_options.m_hide_value || !m_options.m_hide_name)
                 m_stream->Printf(" ");
@@ -571,6 +582,10 @@ ValueObjectPrinter::ShouldPrintChildren (bool is_failed_description,
 {
     const bool is_ref = IsRef ();
     const bool is_ptr = IsPtr ();
+    const bool is_uninit = IsUninitialized();
+    
+    if (is_uninit)
+        return false;
     
     TypeSummaryImpl* entry = GetSummaryFormatter();
     

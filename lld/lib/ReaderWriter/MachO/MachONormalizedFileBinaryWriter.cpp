@@ -149,6 +149,7 @@ private:
     const uint8_t *bytes() {
       return reinterpret_cast<const uint8_t*>(_ostream.str().data());
     }
+
   private:
     SmallVector<char, 128>        _bytes;
     // Stream ivar must be after SmallVector ivar to construct properly.
@@ -168,14 +169,14 @@ private:
     TrieNode(StringRef s)
         : _cummulativeString(s), _address(0), _flags(0), _other(0),
           _trieOffset(0), _hasExportInfo(false) {}
-    ~TrieNode() {}
+    ~TrieNode() = default;
 
     void addSymbol(const Export &entry, BumpPtrAllocator &allocator,
                    std::vector<TrieNode *> &allNodes);
     bool updateOffset(uint32_t &offset);
     void appendToByteBuffer(ByteBuffer &out);
 
-private:
+  private:
     StringRef                 _cummulativeString;
     std::list<TrieEdge>       _children;
     uint64_t                  _address;
@@ -261,7 +262,6 @@ uint32_t MachOFileLayout::pointerAlign(uint32_t value) {
 size_t MachOFileLayout::headerAndLoadCommandsSize() const {
   return _endOfLoadCommands;
 }
-
 
 MachOFileLayout::MachOFileLayout(const NormalizedFile &file)
     : _file(file),
@@ -547,7 +547,6 @@ void MachOFileLayout::buildFileOffsets() {
   }
   _startOfLinkEdit = fileOffset;
 }
-
 
 size_t MachOFileLayout::size() const {
   return _endOfSymbolStrings;
@@ -881,7 +880,6 @@ std::error_code MachOFileLayout::writeLoadCommands() {
   return ec;
 }
 
-
 void MachOFileLayout::writeSectionContent() {
   for (const Section &s : _file.sections) {
     // Copy all section content to output buffer.
@@ -907,7 +905,6 @@ void MachOFileLayout::writeRelocations() {
     }
   }
 }
-
 
 void MachOFileLayout::appendSymbols(const std::vector<Symbol> &symbols,
                                    uint32_t &symOffset, uint32_t &strOffset) {
@@ -1099,7 +1096,7 @@ void MachOFileLayout::TrieNode::addSymbol(const Export& entry,
         // Splice in new node:  was A -> C,  now A -> B -> C
         StringRef bNodeStr = edge._child->_cummulativeString;
         bNodeStr = bNodeStr.drop_back(edgeStr.size()-n).copy(allocator);
-        TrieNode* bNode = new (allocator) TrieNode(bNodeStr);
+        auto *bNode = new (allocator) TrieNode(bNodeStr);
         allNodes.push_back(bNode);
         TrieNode* cNode = edge._child;
         StringRef abEdgeStr = edgeStr.substr(0,n).copy(allocator);
@@ -1112,7 +1109,7 @@ void MachOFileLayout::TrieNode::addSymbol(const Export& entry,
         TrieEdge& abEdge = edge;
         abEdge._subString = abEdgeStr;
         abEdge._child = bNode;
-        TrieEdge *bcEdge = new (allocator) TrieEdge(bcEdgeStr, cNode);
+        auto *bcEdge = new (allocator) TrieEdge(bcEdgeStr, cNode);
         bNode->_children.push_back(std::move(*bcEdge));
         bNode->addSymbol(entry, allocator, allNodes);
         return;
@@ -1126,8 +1123,8 @@ void MachOFileLayout::TrieNode::addSymbol(const Export& entry,
     assert(entry.otherOffset != 0);
   }
   // No commonality with any existing child, make a new edge.
-  TrieNode* newNode = new (allocator) TrieNode(entry.name.copy(allocator));
-  TrieEdge *newEdge = new (allocator) TrieEdge(partialStr, newNode);
+  auto *newNode = new (allocator) TrieNode(entry.name.copy(allocator));
+  auto *newEdge = new (allocator) TrieEdge(partialStr, newNode);
   _children.push_back(std::move(*newEdge));
   DEBUG_WITH_TYPE("trie-builder", llvm::dbgs()
                    << "new TrieNode('" << entry.name << "') with edge '"
@@ -1239,7 +1236,7 @@ void MachOFileLayout::buildExportTrie() {
   BumpPtrAllocator allocator;
 
   // Build trie of all exported symbols.
-  TrieNode* rootNode = new (allocator) TrieNode(StringRef());
+  auto *rootNode = new (allocator) TrieNode(StringRef());
   std::vector<TrieNode*> allNodes;
   allNodes.reserve(_file.exportInfo.size()*2);
   allNodes.push_back(rootNode);
@@ -1265,7 +1262,6 @@ void MachOFileLayout::buildExportTrie() {
   }
   _exportTrie.align(_is64 ? 8 : 4);
 }
-
 
 void MachOFileLayout::computeSymbolTableSizes() {
   // MachO symbol tables have three ranges: locals, globals, and undefines
@@ -1340,13 +1336,11 @@ std::error_code MachOFileLayout::writeBinary(StringRef path) {
   return std::error_code();
 }
 
-
 /// Takes in-memory normalized view and writes a mach-o object file.
 std::error_code writeBinary(const NormalizedFile &file, StringRef path) {
   MachOFileLayout layout(file);
   return layout.writeBinary(path);
 }
-
 
 } // namespace normalized
 } // namespace mach_o

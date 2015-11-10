@@ -153,6 +153,9 @@ public:
     GetFormatterPrefixSuffix (ValueObject& valobj, ConstString type_hint,
                               std::string& prefix, std::string& suffix) override;
     
+    bool
+    IsNilReference (ValueObject& valobj) override;
+    
     //------------------------------------------------------------------
     // Static Functions
     //------------------------------------------------------------------

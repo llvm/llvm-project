@@ -123,6 +123,17 @@ public:
     IsLogicalTrue (ValueObject& valobj,
                    Error& error);
     
+    // for a ValueObject of some "reference type", if the value points to the
+    // nil/null object, this method returns true
+    virtual bool
+    IsNilReference (ValueObject& valobj);
+    
+    // for a ValueObject of some "reference type", if the language provides a technique
+    // to decide whether the reference has ever been assigned to some object, this method
+    // will return true if such detection is possible, and if the reference has never been assigned
+    virtual bool
+    IsUninitializedReference (ValueObject& valobj);
+    
     // These are accessors for general information about the Languages lldb knows about:
     
     static lldb::LanguageType

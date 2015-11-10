@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/MachO/CompactUnwindPass.cpp -----------------------===//
+//===- lib/ReaderWriter/MachO/CompactUnwindPass.cpp -------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -342,7 +342,7 @@ private:
             << " has " << entriesInPage << " entries\n");
     } while (pageStart < unwindInfos.size());
 
-    UnwindInfoAtom *unwind = new (_file.allocator())
+    auto *unwind = new (_file.allocator())
         UnwindInfoAtom(_archHandler, _file, _isBig, personalities,
                        commonEncodings, pages, numLSDAs);
     mergedFile.addAtom(*unwind);
@@ -520,7 +520,6 @@ private:
     });
   }
 
-
   CompactUnwindEntry finalizeUnwindInfoEntryForAtom(
       const DefinedAtom *function,
       const std::map<const Atom *, CompactUnwindEntry> &unwindLocs,
@@ -548,7 +547,6 @@ private:
         entry.ehFrame = dwarfFrame->second;
       }
     }
-
 
     auto personality = std::find(personalities.begin(), personalities.end(),
                                  entry.personalityFunction);

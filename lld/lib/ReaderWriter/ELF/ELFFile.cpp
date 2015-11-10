@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/ELF/ELFFile.cpp -----------------------------------===//
+//===- lib/ReaderWriter/ELF/ELFFile.cpp -------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -462,7 +462,7 @@ std::error_code ELFFile<ELFT>::handleGnuLinkOnceSection(
   std::vector<ELFReference<ELFT> *> refs;
   for (auto ha : atomsForSection[*sectionName]) {
     _groupChild[ha->symbol()] = std::make_pair(*sectionName, section);
-    ELFReference<ELFT> *ref =
+    auto *ref =
         new (_readerStorage) ELFReference<ELFT>(Reference::kindGroupChild);
     ref->setTarget(ha);
     refs.push_back(ref);
@@ -536,7 +536,7 @@ std::error_code ELFFile<ELFT>::handleSectionGroup(
   for (auto name : sectionNames) {
     for (auto ha : atomsForSection[name]) {
       _groupChild[ha->symbol()] = std::make_pair(*symbolName, section);
-      ELFReference<ELFT> *ref =
+      auto *ref =
           new (_readerStorage) ELFReference<ELFT>(Reference::kindGroupChild);
       ref->setTarget(ha);
       refs.push_back(ref);
@@ -727,7 +727,7 @@ template <class ELFT>
 ELFDefinedAtom<ELFT> *
 ELFFile<ELFT>::createSectionAtom(const Elf_Shdr *section, StringRef sectionName,
                                  ArrayRef<uint8_t> content) {
-  Elf_Sym *sym = new (_readerStorage) Elf_Sym;
+  auto *sym = new (_readerStorage) Elf_Sym;
   sym->st_name = 0;
   sym->setBindingAndType(llvm::ELF::STB_LOCAL, llvm::ELF::STT_SECTION);
   sym->st_other = 0;
@@ -787,7 +787,7 @@ bool ELFFile<ELFT>::redirectReferenceUsingUndefAtom(
 template <class ELFT>
 void RuntimeFile<ELFT>::addAbsoluteAtom(StringRef symbolName, bool isHidden) {
   assert(!symbolName.empty() && "AbsoluteAtoms must have a name");
-  Elf_Sym *sym = new (this->_readerStorage) Elf_Sym;
+  auto *sym = new (this->_readerStorage) Elf_Sym;
   sym->st_name = 0;
   sym->st_value = 0;
   sym->st_shndx = llvm::ELF::SHN_ABS;
@@ -804,7 +804,7 @@ void RuntimeFile<ELFT>::addAbsoluteAtom(StringRef symbolName, bool isHidden) {
 template <class ELFT>
 void RuntimeFile<ELFT>::addUndefinedAtom(StringRef symbolName) {
   assert(!symbolName.empty() && "UndefinedAtoms must have a name");
-  Elf_Sym *sym = new (this->_readerStorage) Elf_Sym;
+  auto *sym = new (this->_readerStorage) Elf_Sym;
   sym->st_name = 0;
   sym->st_value = 0;
   sym->st_shndx = llvm::ELF::SHN_UNDEF;

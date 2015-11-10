@@ -863,3 +863,15 @@ ObjCLanguage::GetFormatterPrefixSuffix (ValueObject& valobj, ConstString type_hi
     
     return false;
 }
+
+bool
+ObjCLanguage::IsNilReference (ValueObject& valobj)
+{
+    const uint32_t mask = eTypeIsObjC | eTypeIsPointer;
+    bool isObjCpointer = (((valobj.GetCompilerType().GetTypeInfo(nullptr)) & mask) == mask);
+    if (!isObjCpointer)
+        return false;
+    bool canReadValue = true;
+    bool isZero = valobj.GetValueAsUnsigned(0,&canReadValue) == 0;
+    return canReadValue && isZero;
+}

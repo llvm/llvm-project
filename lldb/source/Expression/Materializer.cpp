@@ -112,7 +112,7 @@ public:
                                                                               m_persistent_variable_sp->GetName(),
                                                                               mem,
                                                                               eAddressTypeLoad,
-                                                                              m_persistent_variable_sp->GetByteSize());
+                                                                              map.GetAddressByteSize());
         
         // Clear the flag if the variable will never be deallocated.
         

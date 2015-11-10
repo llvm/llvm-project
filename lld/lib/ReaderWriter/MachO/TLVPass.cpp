@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/MachO/TLVPass.cpp ---------------------------------===//
+//===- lib/ReaderWriter/MachO/TLVPass.cpp -----------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -68,9 +68,7 @@ public:
         _file("<mach-o TLV Pass>") {}
 
 private:
-
   std::error_code perform(SimpleFile &mergedFile) override {
-
     bool allowTLV = _ctx.minOS("10.7", "1.0");
 
     for (const DefinedAtom *atom : mergedFile.defined()) {
@@ -114,7 +112,7 @@ private:
     if (pos != _targetToTLVP.end())
       return pos->second;
 
-    TLVPEntryAtom *tlvpEntry = new (_file.allocator())
+    auto *tlvpEntry = new (_file.allocator())
       TLVPEntryAtom(_file, _ctx.is64Bit(), target->name());
     _targetToTLVP[target] = tlvpEntry;
     const ArchHandler::ReferenceInfo &nlInfo =
@@ -134,7 +132,6 @@ void addTLVPass(PassManager &pm, const MachOLinkingContext &ctx) {
   assert(ctx.needsTLVPass());
   pm.add(llvm::make_unique<TLVPass>(ctx));
 }
-
 
 } // end namesapce mach_o
 } // end namesapce lld

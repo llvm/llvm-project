@@ -2145,15 +2145,23 @@ ValueObject::IsRuntimeSupportValue ()
 }
 
 bool
-ValueObject::IsObjCNil ()
+ValueObject::IsNilReference ()
 {
-    const uint32_t mask = eTypeIsObjC | eTypeIsPointer;
-    bool isObjCpointer = (((GetCompilerType().GetTypeInfo(NULL)) & mask) == mask);
-    if (!isObjCpointer)
-        return false;
-    bool canReadValue = true;
-    bool isZero = GetValueAsUnsigned(0,&canReadValue) == 0;
-    return canReadValue && isZero;
+    if (Language *language = Language::FindPlugin(GetObjectRuntimeLanguage()))
+    {
+        return language->IsNilReference(*this);
+    }
+    return false;
+}
+
+bool
+ValueObject::IsUninitializedReference ()
+{
+    if (Language *language = Language::FindPlugin(GetObjectRuntimeLanguage()))
+    {
+        return language->IsUninitializedReference(*this);
+    }
+    return false;
 }
 
 // This allows you to create an array member using and index

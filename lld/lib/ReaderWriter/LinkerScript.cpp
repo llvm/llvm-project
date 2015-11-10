@@ -1,4 +1,4 @@
-//===- ReaderWriter/LinkerScript.cpp --------------------------------------===//
+//===- ReaderWriter/LinkerScript.cpp ----------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -1019,7 +1019,6 @@ void Extern::dump(raw_ostream &os) const {
   os << ")\n";
 }
 
-
 // Parser functions
 std::error_code Parser::parse() {
   // Get the first token.
@@ -1183,7 +1182,7 @@ const Expression *Parser::parseExprOperand() {
   case Token::identifier: {
     if (peek()._kind== Token::l_paren)
       return parseFunctionCall();
-    Symbol *sym = new (_alloc) Symbol(*this, _tok._range);
+    auto *sym = new (_alloc) Symbol(*this, _tok._range);
     consumeToken();
     return sym;
   }
@@ -1201,7 +1200,7 @@ const Expression *Parser::parseExprOperand() {
       error(_tok, "Unrecognized number constant");
       return nullptr;
     }
-    Constant *c = new (_alloc) Constant(*this, *val);
+    auto *c = new (_alloc) Constant(*this, *val);
     consumeToken();
     return c;
   }
@@ -2354,8 +2353,7 @@ Memory *Parser::parseMemory() {
       if (!length)
         return nullptr;
 
-      MemoryBlock *block =
-          new (_alloc) MemoryBlock(name, attrs, origin, length);
+      auto *block = new (_alloc) MemoryBlock(name, attrs, origin, length);
       blocks.push_back(block);
     } else {
       unrecognizedToken = true;
@@ -2649,11 +2647,10 @@ int Sema::getLayoutOrder(const SectionKey &key, bool coarse) const {
 
   // If we still couldn't find a rule for this input section, try to match
   // wildcards
-  for (auto I = _memberNameWildcards.begin(), E = _memberNameWildcards.end();
-       I != E; ++I) {
-    if (!wildcardMatch(I->first, key.memberPath))
+  for (const auto &I : _memberNameWildcards) {
+    if (!wildcardMatch(I.first, key.memberPath))
       continue;
-    int order = I->second;
+    int order = I.second;
     int exprOrder = -1;
 
     if ((exprOrder = matchSectionName(order, key)) >= 0) {
@@ -2894,5 +2891,5 @@ void Sema::linearizeAST(const Sections *sections) {
   }
 }
 
-} // End namespace script
+} // end namespace script
 } // end namespace lld

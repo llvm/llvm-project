@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/MachO/StubsPass.cpp -------------------------------===//
+//===- lib/ReaderWriter/MachO/StubsPass.cpp ---------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -26,10 +26,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
-
 namespace lld {
 namespace mach_o {
-
 
 //
 //  Lazy Pointer Atom created by the stubs pass.
@@ -65,7 +63,6 @@ private:
   const bool _is64;
 };
 
-
 //
 //  NonLazyPointer (GOT) Atom created by the stubs pass.
 //
@@ -100,8 +97,6 @@ private:
   const bool _is64;
 };
 
-
-
 //
 // Stub Atom created by the stubs pass.
 //
@@ -133,7 +128,6 @@ public:
 private:
   const ArchHandler::StubInfo   &_stubInfo;
 };
-
 
 //
 // Stub Helper Atom created by the stubs pass.
@@ -168,7 +162,6 @@ private:
   const ArchHandler::StubInfo   &_stubInfo;
 };
 
-
 //
 // Stub Helper Common Atom created by the stubs pass.
 //
@@ -201,7 +194,6 @@ public:
 private:
   const ArchHandler::StubInfo   &_stubInfo;
 };
-
 
 class StubsPass : public Pass {
 public:
@@ -284,11 +276,10 @@ public:
     // Make and append stubs, lazy pointers, and helpers in alphabetical order.
     unsigned lazyOffset = 0;
     for (const Atom *target : targetsNeedingStubs) {
-      StubAtom *stub = new (_file.allocator()) StubAtom(_file, _stubInfo);
-      LazyPointerAtom *lp =
+      auto *stub = new (_file.allocator()) StubAtom(_file, _stubInfo);
+      auto *lp =
           new (_file.allocator()) LazyPointerAtom(_file, _ctx.is64Bit());
-      StubHelperAtom *helper =
-          new (_file.allocator()) StubHelperAtom(_file, _stubInfo);
+      auto *helper = new (_file.allocator()) StubHelperAtom(_file, _stubInfo);
 
       addReference(stub, _stubInfo.stubReferenceToLP, lp);
       addOptReference(stub, _stubInfo.stubReferenceToLP,
@@ -320,7 +311,6 @@ public:
   }
 
 private:
-
   bool noTextRelocs() {
     return true;
   }
@@ -364,8 +354,6 @@ private:
   MachOFile                                       _file;
   TargetToUses                                    _targetToUses;
 };
-
-
 
 void addStubsPass(PassManager &pm, const MachOLinkingContext &ctx) {
   pm.add(std::unique_ptr<Pass>(new StubsPass(ctx)));
