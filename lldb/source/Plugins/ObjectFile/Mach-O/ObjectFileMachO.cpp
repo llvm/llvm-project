@@ -4937,21 +4937,19 @@ ObjectFileMachO::GetArchitecture (const llvm::MachO::mach_header &header,
                 
                 switch (load_cmd.cmd)
                 {
-                    case LC_VERSION_MIN_IPHONEOS:
+                    case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
                         triple.setOS (llvm::Triple::IOS);
                         return true;
                         
-                    case LC_VERSION_MIN_MACOSX:
+                    case llvm::MachO::LC_VERSION_MIN_MACOSX:
                         triple.setOS (llvm::Triple::MacOSX);
                         return true;
 
-#if defined (DT_VARIANT_PONDEROSA) || TARGET_OS_TV == 1
-                    case LC_VERSION_MIN_TVOS:
+                    case llvm::MachO::LC_VERSION_MIN_TVOS:
                         triple.setOS (llvm::Triple::TvOS);
                         return true;
-#endif
                         
-                    case LC_VERSION_MIN_WATCHOS:
+                    case llvm::MachO::LC_VERSION_MIN_WATCHOS:
                         triple.setOS (llvm::Triple::WatchOS);
                         return true;
 
@@ -5594,11 +5592,10 @@ ObjectFileMachO::GetMinimumOSVersion (uint32_t *versions, uint32_t num_versions)
             version_min_command lc;
             if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
                 break;
-            if (lc.cmd == LC_VERSION_MIN_MACOSX || lc.cmd == LC_VERSION_MIN_IPHONEOS ||
-#if defined (DT_VARIANT_PONDEROSA) || TARGET_OS_TV == 1
-                lc.cmd == LC_VERSION_MIN_TVOS ||
-#endif
-                lc.cmd == LC_VERSION_MIN_WATCHOS)
+            if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX 
+                 || lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS 
+                 || lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS 
+                 || lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS)
             {
                 if (m_data.GetU32 (&offset, &lc.version, (sizeof(lc) / sizeof(uint32_t)) - 2))
                 {
@@ -5656,11 +5653,10 @@ ObjectFileMachO::GetSDKVersion(uint32_t *versions, uint32_t num_versions)
             version_min_command lc;
             if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
                 break;
-            if (lc.cmd == LC_VERSION_MIN_MACOSX || lc.cmd == LC_VERSION_MIN_IPHONEOS ||
-#if defined (DT_VARIANT_PONDEROSA) || TARGET_OS_TV == 1
-                lc.cmd == LC_VERSION_MIN_TVOS ||
-#endif
-                lc.cmd == LC_VERSION_MIN_WATCHOS)
+            if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX 
+                || lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS
+                || lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS
+                || lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS)
             {
                 if (m_data.GetU32 (&offset, &lc.version, (sizeof(lc) / sizeof(uint32_t)) - 2))
                 {
