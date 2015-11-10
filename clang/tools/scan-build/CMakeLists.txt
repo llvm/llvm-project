@@ -35,7 +35,8 @@ if(CLANG_INSTALL_SCANBUILD)
                          ${CMAKE_BINARY_DIR}/bin
                        COMMAND ${CMAKE_COMMAND} -E copy
                          ${CMAKE_CURRENT_SOURCE_DIR}/${BinFile}
-                         ${CMAKE_BINARY_DIR}/bin/)
+                         ${CMAKE_BINARY_DIR}/bin/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${BinFile})
     install(PROGRAMS ${BinFile} DESTINATION bin)
   endforeach()
 
@@ -45,7 +46,8 @@ if(CLANG_INSTALL_SCANBUILD)
                          ${CMAKE_BINARY_DIR}/libexec
                        COMMAND ${CMAKE_COMMAND} -E copy
                          ${CMAKE_CURRENT_SOURCE_DIR}/${LibexecFile}
-                         ${CMAKE_BINARY_DIR}/libexec/)
+                         ${CMAKE_BINARY_DIR}/libexec/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${LibexecFile})
     install(PROGRAMS ${LibexecFile} DESTINATION libexec)
   endforeach()
 
@@ -55,7 +57,8 @@ if(CLANG_INSTALL_SCANBUILD)
                          ${CMAKE_BINARY_DIR}/share/man/man1
                        COMMAND ${CMAKE_COMMAND} -E copy
                          ${CMAKE_CURRENT_SOURCE_DIR}/${ManPage}
-                         ${CMAKE_BINARY_DIR}/share/man/man1/)
+                         ${CMAKE_BINARY_DIR}/share/man/man1/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ManPage})
     install(PROGRAMS ${ManPage} DESTINATION share/man/man1)
   endforeach()
 
@@ -65,7 +68,8 @@ if(CLANG_INSTALL_SCANBUILD)
                          ${CMAKE_BINARY_DIR}/bin
                        COMMAND ${CMAKE_COMMAND} -E copy
                          ${CMAKE_CURRENT_SOURCE_DIR}/${ResourceFile}
-                         ${CMAKE_BINARY_DIR}/bin/)
+                         ${CMAKE_BINARY_DIR}/bin/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ResourceFile})
     install(FILES ${ResourceFile} DESTINATION bin)
   endforeach()
 endif()

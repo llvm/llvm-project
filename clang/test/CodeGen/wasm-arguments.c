@@ -5,8 +5,8 @@
 
 // Basic argument/attribute tests for WebAssembly
 
-// WEBASSEMBLY32: define void @f0(i32 %i, i32 %j, i64 %k, double %l, double %m)
-// WEBASSEMBLY64: define void @f0(i32 %i, i64 %j, i64 %k, double %l, double %m)
+// WEBASSEMBLY32: define void @f0(i32 %i, i32 %j, i64 %k, double %l, fp128 %m)
+// WEBASSEMBLY64: define void @f0(i32 %i, i64 %j, i64 %k, double %l, fp128 %m)
 void f0(int i, long j, long long k, double l, long double m) {}
 
 typedef struct {
