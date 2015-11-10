@@ -68,6 +68,9 @@ public:
     IsLogicalTrue (ValueObject& valobj,
                    Error& error) override;
     
+    bool
+    IsUninitializedReference (ValueObject& valobj) override;
+    
     //------------------------------------------------------------------
     // Static Functions
     //------------------------------------------------------------------

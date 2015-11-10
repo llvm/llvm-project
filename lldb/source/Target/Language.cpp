@@ -358,6 +358,18 @@ Language::IsLogicalTrue (ValueObject& valobj,
     return eLazyBoolCalculate;
 }
 
+bool
+Language::IsNilReference (ValueObject& valobj)
+{
+    return false;
+}
+
+bool
+Language::IsUninitializedReference (ValueObject& valobj)
+{
+    return false;
+}
+
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------

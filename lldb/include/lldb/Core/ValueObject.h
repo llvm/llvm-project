@@ -424,8 +424,11 @@ public:
     virtual bool
     IsPossibleDynamicType ();
 
-    virtual bool
-    IsObjCNil ();
+    bool
+    IsNilReference ();
+    
+    bool
+    IsUninitializedReference ();
     
     virtual bool
     IsBaseClass ()

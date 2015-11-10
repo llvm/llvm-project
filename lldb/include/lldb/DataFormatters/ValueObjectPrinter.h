@@ -82,13 +82,13 @@ protected:
     ShouldPrintValueObject ();
     
     bool
-    IsSwiftUninitializedClassInstance ();
-
-    bool
     ShouldPrintValidation ();
     
     bool
     IsNil ();
+    
+    bool
+    IsUninitialized ();
     
     bool
     IsPtr ();
@@ -184,11 +184,11 @@ private:
     uint32_t m_curr_depth;
     LazyBool m_should_print;
     LazyBool m_is_nil;
+    LazyBool m_is_uninit;
     LazyBool m_is_ptr;
     LazyBool m_is_ref;
     LazyBool m_is_aggregate;
     LazyBool m_is_instance_ptr;
-    LazyBool m_is_swift_uninit;
     std::pair<TypeSummaryImpl*,bool> m_summary_formatter;
     std::string m_value;
     std::string m_summary;

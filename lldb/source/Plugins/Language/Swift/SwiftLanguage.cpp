@@ -1093,6 +1093,18 @@ SwiftLanguage::IsLogicalTrue (ValueObject& valobj,
     return eLazyBoolNo;
 }
 
+bool
+SwiftLanguage::IsUninitializedReference (ValueObject& valobj)
+{
+    const uint32_t mask = eTypeIsSwift | eTypeIsClass;
+    bool isSwiftClass = (((valobj.GetCompilerType().GetTypeInfo(nullptr)) & mask) == mask);
+    if (!isSwiftClass)
+        return false;
+    bool canReadValue = true;
+    bool isZero = valobj.GetValueAsUnsigned(0,&canReadValue) == 0;
+    return canReadValue && isZero;
+}
+
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------

@@ -73,11 +73,11 @@ ValueObjectPrinter::Init (ValueObject* valobj,
     assert (m_stream && "cannot print to a NULL Stream");
     m_should_print = eLazyBoolCalculate;
     m_is_nil = eLazyBoolCalculate;
+    m_is_uninit = eLazyBoolCalculate;
     m_is_ptr = eLazyBoolCalculate;
     m_is_ref = eLazyBoolCalculate;
     m_is_aggregate = eLazyBoolCalculate;
     m_is_instance_ptr = eLazyBoolCalculate;
-    m_is_swift_uninit = eLazyBoolCalculate;
     m_summary_formatter = {nullptr,false};
     m_value.assign("");
     m_summary.assign("");
@@ -212,29 +212,16 @@ bool
 ValueObjectPrinter::IsNil ()
 {
     if (m_is_nil == eLazyBoolCalculate)
-        m_is_nil = m_valobj->IsObjCNil() ? eLazyBoolYes : eLazyBoolNo;
+        m_is_nil = m_valobj->IsNilReference() ? eLazyBoolYes : eLazyBoolNo;
     return m_is_nil == eLazyBoolYes;
 }
 
 bool
-ValueObjectPrinter::IsSwiftUninitializedClassInstance ()
+ValueObjectPrinter::IsUninitialized ()
 {
-    if (m_is_swift_uninit == eLazyBoolCalculate)
-    {
-        m_is_swift_uninit = eLazyBoolNo;
-        if (m_options.m_varformat_language == lldb::eLanguageTypeSwift)
-        {
-            CompilerType clang_type(m_valobj->GetCompilerType());
-            Flags flags(clang_type.IsValid() ? clang_type.GetTypeInfo() : 0);
-            if (flags.AllSet(eTypeIsSwift | eTypeIsClass))
-            {
-                if (m_valobj->GetValueAsUnsigned(LLDB_INVALID_ADDRESS) == 0)
-                    m_is_swift_uninit = eLazyBoolYes;
-            }
-        }
-    }
-    return m_is_swift_uninit == eLazyBoolYes;
-    
+    if (m_is_uninit == eLazyBoolCalculate)
+        m_is_uninit = m_valobj->IsUninitializedReference() ? eLazyBoolYes : eLazyBoolNo;
+    return m_is_uninit == eLazyBoolYes;
 }
 
 bool
@@ -448,7 +435,7 @@ ValueObjectPrinter::GetValueSummaryError (std::string& value,
     {
         if (IsNil())
             summary.assign("nil");
-        else if (IsSwiftUninitializedClassInstance())
+        else if (IsUninitialized())
             summary.assign("<uninitialized>");
         else if (m_options.m_omit_summary_depth == 0)
         {
@@ -500,7 +487,7 @@ ValueObjectPrinter::PrintValueAndSummaryIfNeeded (bool& value_printed,
             // the value if this thing is nil
             // (but show the value if the user passes a format explicitly)
             TypeSummaryImpl* entry = GetSummaryFormatter();
-            if (!IsNil() && !IsSwiftUninitializedClassInstance() && !m_value.empty() && (entry == NULL || (entry->DoesPrintValue(m_valobj) || m_options.m_format != eFormatDefault) || m_summary.empty()) && !m_options.m_hide_value)
+            if (!IsNil() && !IsUninitialized() && !m_value.empty() && (entry == NULL || (entry->DoesPrintValue(m_valobj) || m_options.m_format != eFormatDefault) || m_summary.empty()) && !m_options.m_hide_value)
             {
                 if (m_options.m_hide_pointer_value && IsPointerValue(m_valobj->GetCompilerType())) {}
                 else
@@ -527,7 +514,7 @@ ValueObjectPrinter::PrintObjectDescriptionIfNeeded (bool value_printed,
     if (ShouldPrintValueObject())
     {
         // let's avoid the overly verbose no description error for a nil thing
-        if (m_options.m_use_objc && !IsNil() && !IsSwiftUninitializedClassInstance())
+        if (m_options.m_use_objc && !IsNil() && !IsUninitialized())
         {
             if (!m_options.m_hide_value || !m_options.m_hide_name)
                 m_stream->Printf(" ");
@@ -595,9 +582,8 @@ ValueObjectPrinter::ShouldPrintChildren (bool is_failed_description,
 {
     const bool is_ref = IsRef ();
     const bool is_ptr = IsPtr ();
-    const bool is_uninit = IsSwiftUninitializedClassInstance();
+    const bool is_uninit = IsUninitialized();
     
-    // do not try to expand a Swift uninitialized class instance
     if (is_uninit)
         return false;
     

@@ -2247,18 +2247,21 @@ ValueObject::IsRuntimeSupportValue ()
 }
 
 bool
-ValueObject::IsObjCNil ()
+ValueObject::IsNilReference ()
 {
-    CompilerType clang_type(GetCompilerType());
-    if (clang_type.IsValid())
+    if (Language *language = Language::FindPlugin(GetObjectRuntimeLanguage()))
     {
-        const uint32_t mask = eTypeIsObjC | eTypeIsPointer;
-        bool isObjCpointer = (((clang_type.GetTypeInfo(NULL)) & mask) == mask);
-        if (!isObjCpointer)
-            return false;
-        bool canReadValue = true;
-        bool isZero = GetValueAsUnsigned(0,&canReadValue) == 0;
-        return canReadValue && isZero;
+        return language->IsNilReference(*this);
+    }
+    return false;
+}
+
+bool
+ValueObject::IsUninitializedReference ()
+{
+    if (Language *language = Language::FindPlugin(GetObjectRuntimeLanguage()))
+    {
+        return language->IsUninitializedReference(*this);
     }
     return false;
 }
