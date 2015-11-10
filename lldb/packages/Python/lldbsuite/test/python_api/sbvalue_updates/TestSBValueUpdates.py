@@ -11,7 +11,6 @@ class TestSBValueUpdates(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @unittest2.expectedFailure  # <rdar://problem/23485729>
     @lldbtest.swiftTest
     def test_update_and_format_with_type_change(self):
         """Test that an SBValue can update and format itself as its type
