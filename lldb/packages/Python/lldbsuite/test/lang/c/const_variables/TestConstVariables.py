@@ -25,7 +25,6 @@ class ConstVariableTestCase(TestBase):
     @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
     @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     @expectedFailureWindows("llvm.org/pr24490: We shouldn't be using platform-specific names like `getpid` in tests")
-    @expectedFailureDarwin
     def test_and_run_command(self):
         """Test interpreted and JITted expressions on constant values."""
         self.build()
