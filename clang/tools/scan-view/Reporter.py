@@ -175,7 +175,7 @@ class RadarReporter:
     @staticmethod
     def isAvailable():
         # FIXME: Find this .scpt better
-        path = os.path.join(os.path.dirname(__file__),'Resources/GetRadarVersion.scpt')
+        path = os.path.join(os.path.dirname(__file__),'../share/scan-view/GetRadarVersion.scpt')
         try:
           p = subprocess.Popen(['osascript',path], 
           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -206,7 +206,7 @@ class RadarReporter:
         if not componentVersion.strip():
             componentVersion = 'X'
 
-        script = os.path.join(os.path.dirname(__file__),'Resources/FileRadar.scpt')
+        script = os.path.join(os.path.dirname(__file__),'../share/scan-view/FileRadar.scpt')
         args = ['osascript', script, component, componentVersion, classification, personID, report.title,
                 report.description, diagnosis, config] + map(os.path.abspath, report.files)
 #        print >>sys.stderr, args

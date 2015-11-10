@@ -1741,11 +1741,20 @@
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \
 // RUN:   | FileCheck %s -check-prefix=CHECK_SPARC
+// RUN: %clang -mcpu=v9 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck %s -check-prefix=CHECK_SPARC-V9
 //
 // CHECK_SPARC: #define __BIG_ENDIAN__ 1
 // CHECK_SPARC: #define __sparc 1
 // CHECK_SPARC: #define __sparc__ 1
+// CHECK_SPARC-NOT: #define __sparcv9 1
 // CHECK_SPARC: #define __sparcv8 1
+// CHECK_SPARC-NOT: #define __sparcv9 1
+
+// CHECK_SPARC-V9-NOT: #define __sparcv8 1
+// CHECK_SPARC-V9: #define __sparcv9 1
+// CHECK_SPARC-V9-NOT: #define __sparcv8 1
 
 //
 // RUN: %clang -E -dM %s -o - 2>&1 \

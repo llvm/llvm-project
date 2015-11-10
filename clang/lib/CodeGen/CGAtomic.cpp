@@ -173,9 +173,14 @@ namespace {
       return CGF.CGM.getSize(size);
     }
 
-    /// Cast the given pointer to an integer pointer suitable for
-    /// atomic operations.
-    Address emitCastToAtomicIntPointer(Address addr) const;
+    /// Cast the given pointer to an integer pointer suitable for atomic
+    /// operations if the source.
+    Address emitCastToAtomicIntPointer(Address Addr) const;
+
+    /// If Addr is compatible with the iN that will be used for an atomic
+    /// operation, bitcast it. Otherwise, create a temporary that is suitable
+    /// and copy the value across.
+    Address convertToAtomicIntPointer(Address Addr) const;
 
     /// Turn an atomic-layout object into an r-value.
     RValue convertAtomicTempToRValue(Address addr, AggValueSlot resultSlot,
@@ -241,11 +246,11 @@ namespace {
     static AtomicExpr::AtomicOrderingKind
     translateAtomicOrdering(const llvm::AtomicOrdering AO);
 
+    /// \brief Creates temp alloca for intermediate operations on atomic value.
+    Address CreateTempAlloca() const;
   private:
     bool requiresMemSetZero(llvm::Type *type) const;
 
-    /// \brief Creates temp alloca for intermediate operations on atomic value.
-    Address CreateTempAlloca() const;
 
     /// \brief Emits atomic load as a libcall.
     void EmitAtomicLoadLibcall(llvm::Value *AddForLoaded,
@@ -554,7 +559,6 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n: {
-    assert(!Dest.isValid() && "Store does not return a value");
     llvm::Value *LoadVal1 = CGF.Builder.CreateLoad(Val1);
     llvm::StoreInst *Store = CGF.Builder.CreateStore(LoadVal1, Ptr);
     Store->setAtomic(Order);
@@ -666,7 +670,7 @@ AddDirectArgument(CodeGenFunction &CGF, CallArgList &Args,
   }
 }
 
-RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, Address Dest) {
+RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
   QualType MemTy = AtomicTy;
   if (const AtomicType *AT = AtomicTy->getAs<AtomicType>())
@@ -682,10 +686,10 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, Address Dest) {
 
   Address Val1 = Address::invalid();
   Address Val2 = Address::invalid();
+  Address Dest = Address::invalid();
   Address Ptr(EmitScalarExpr(E->getPtr()), alignChars);
 
   if (E->getOp() == AtomicExpr::AO__c11_atomic_init) {
-    assert(!Dest.isValid() && "Init does not return a value");
     LValue lvalue = MakeAddrLValue(Ptr, AtomicTy);
     EmitAtomicInit(E->getVal1(), lvalue);
     return RValue::get(nullptr);
@@ -771,12 +775,21 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, Address Dest) {
 
   QualType RValTy = E->getType().getUnqualifiedType();
 
-  auto GetDest = [&] {
-    if (!RValTy->isVoidType() && !Dest.isValid()) {
-      Dest = CreateMemTemp(RValTy, ".atomicdst");
-    }
-    return Dest;
-  };
+  // The inlined atomics only function on iN types, where N is a power of 2. We
+  // need to make sure (via temporaries if necessary) that all incoming values
+  // are compatible.
+  LValue AtomicVal = MakeAddrLValue(Ptr, AtomicTy);
+  AtomicInfo Atomics(*this, AtomicVal);
+
+  Ptr = Atomics.emitCastToAtomicIntPointer(Ptr);
+  if (Val1.isValid()) Val1 = Atomics.convertToAtomicIntPointer(Val1);
+  if (Val2.isValid()) Val2 = Atomics.convertToAtomicIntPointer(Val2);
+  if (Dest.isValid())
+    Dest = Atomics.emitCastToAtomicIntPointer(Dest);
+  else if (E->isCmpXChg())
+    Dest = CreateMemTemp(RValTy, "cmpxchg.bool");
+  else if (!RValTy->isVoidType())
+    Dest = Atomics.emitCastToAtomicIntPointer(Atomics.CreateTempAlloca());
 
   // Use a library call.  See: http://gcc.gnu.org/wiki/Atomic/GCCMM/LIbrary .
   if (UseLibcall) {
@@ -996,19 +1009,24 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, Address Dest) {
 
     RValue Res = emitAtomicLibcall(*this, LibCallName, RetTy, Args);
     // The value is returned directly from the libcall.
-    if (HaveRetTy && !RetTy->isVoidType())
+    if (E->isCmpXChg())
       return Res;
-    // The value is returned via an explicit out param.
-    if (RetTy->isVoidType())
-      return RValue::get(nullptr);
-    // The value is returned directly for optimized libcalls but the caller is
-    // expected an out-param.
-    if (UseOptimizedLibcall) {
+
+    // The value is returned directly for optimized libcalls but the expr
+    // provided an out-param.
+    if (UseOptimizedLibcall && Res.getScalarVal()) {
       llvm::Value *ResVal = Res.getScalarVal();
-      Builder.CreateStore(ResVal,
-          Builder.CreateBitCast(GetDest(), ResVal->getType()->getPointerTo()));
+      Builder.CreateStore(
+          ResVal,
+          Builder.CreateBitCast(Dest, ResVal->getType()->getPointerTo()));
     }
-    return convertTempToRValue(Dest, RValTy, E->getExprLoc());
+
+    if (RValTy->isVoidType())
+      return RValue::get(nullptr);
+
+    return convertTempToRValue(
+        Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo()),
+        RValTy, E->getExprLoc());
   }
 
   bool IsStore = E->getOp() == AtomicExpr::AO__c11_atomic_store ||
@@ -1017,16 +1035,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, Address Dest) {
   bool IsLoad = E->getOp() == AtomicExpr::AO__c11_atomic_load ||
                 E->getOp() == AtomicExpr::AO__atomic_load ||
                 E->getOp() == AtomicExpr::AO__atomic_load_n;
-
-  llvm::Type *ITy =
-      llvm::IntegerType::get(getLLVMContext(), Size * 8);
-  Address OrigDest = GetDest();
-  Ptr = Builder.CreateBitCast(
-      Ptr, ITy->getPointerTo(Ptr.getType()->getPointerAddressSpace()));
-  if (Val1.isValid()) Val1 = Builder.CreateBitCast(Val1, ITy->getPointerTo());
-  if (Val2.isValid()) Val2 = Builder.CreateBitCast(Val2, ITy->getPointerTo());
-  if (Dest.isValid() && !E->isCmpXChg())
-    Dest = Builder.CreateBitCast(Dest, ITy->getPointerTo());
 
   if (isa<llvm::ConstantInt>(Order)) {
     int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
@@ -1065,7 +1073,10 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, Address Dest) {
     }
     if (RValTy->isVoidType())
       return RValue::get(nullptr);
-    return convertTempToRValue(OrigDest, RValTy, E->getExprLoc());
+
+    return convertTempToRValue(
+        Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo()),
+        RValTy, E->getExprLoc());
   }
 
   // Long case, when Order isn't obviously constant.
@@ -1133,7 +1144,11 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E, Address Dest) {
   Builder.SetInsertPoint(ContBB);
   if (RValTy->isVoidType())
     return RValue::get(nullptr);
-  return convertTempToRValue(OrigDest, RValTy, E->getExprLoc());
+
+  assert(Atomics.getValueSizeInBits() <= Atomics.getAtomicSizeInBits());
+  return convertTempToRValue(
+      Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo()),
+      RValTy, E->getExprLoc());
 }
 
 Address AtomicInfo::emitCastToAtomicIntPointer(Address addr) const {
@@ -1142,6 +1157,19 @@ Address AtomicInfo::emitCastToAtomicIntPointer(Address addr) const {
   llvm::IntegerType *ty =
     llvm::IntegerType::get(CGF.getLLVMContext(), AtomicSizeInBits);
   return CGF.Builder.CreateBitCast(addr, ty->getPointerTo(addrspace));
+}
+
+Address AtomicInfo::convertToAtomicIntPointer(Address Addr) const {
+  llvm::Type *Ty = Addr.getElementType();
+  uint64_t SourceSizeInBits = CGF.CGM.getDataLayout().getTypeSizeInBits(Ty);
+  if (SourceSizeInBits != AtomicSizeInBits) {
+    Address Tmp = CreateTempAlloca();
+    CGF.Builder.CreateMemCpy(Tmp, Addr,
+                             std::min(AtomicSizeInBits, SourceSizeInBits) / 8);
+    Addr = Tmp;
+  }
+
+  return emitCastToAtomicIntPointer(Addr);
 }
 
 RValue AtomicInfo::convertAtomicTempToRValue(Address addr,

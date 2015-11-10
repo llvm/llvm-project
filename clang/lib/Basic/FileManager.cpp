@@ -526,39 +526,6 @@ void FileManager::modifyFileEntry(FileEntry *File,
   File->ModTime = ModificationTime;
 }
 
-/// Remove '.' and '..' path components from the given absolute path.
-/// \return \c true if any changes were made.
-// FIXME: Move this to llvm::sys::path.
-bool FileManager::removeDotPaths(SmallVectorImpl<char> &Path, bool RemoveDotDot) {
-  using namespace llvm::sys;
-
-  SmallVector<StringRef, 16> ComponentStack;
-  StringRef P(Path.data(), Path.size());
-
-  // Skip the root path, then look for traversal in the components.
-  StringRef Rel = path::relative_path(P);
-  for (StringRef C : llvm::make_range(path::begin(Rel), path::end(Rel))) {
-    if (C == ".")
-      continue;
-    if (RemoveDotDot) {
-      if (C == "..") {
-        if (!ComponentStack.empty())
-          ComponentStack.pop_back();
-        continue;
-      }
-    }
-    ComponentStack.push_back(C);
-  }
-
-  SmallString<256> Buffer = path::root_path(P);
-  for (StringRef C : ComponentStack)
-    path::append(Buffer, C);
-
-  bool Changed = (Path != Buffer);
-  Path.swap(Buffer);
-  return Changed;
-}
-
 StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
   // FIXME: use llvm::sys::fs::canonical() when it gets implemented
   llvm::DenseMap<const DirectoryEntry *, llvm::StringRef>::iterator Known
@@ -582,7 +549,7 @@ StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
   // '..' is pretty safe.
   // Ideally we'd have an equivalent of `realpath` and could implement
   // sys::fs::canonical across all the platforms.
-  removeDotPaths(CanonicalNameBuf, /*RemoveDotDot*/true);
+  llvm::sys::path::remove_dots(CanonicalNameBuf, /* remove_dot_dot */ true);
   CanonicalName = StringRef(CanonicalNameBuf).copy(CanonicalNameStorage);
 #endif
 

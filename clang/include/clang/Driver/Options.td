@@ -1289,6 +1289,8 @@ def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Group<m_Group>, Fla
   HelpText<"Set the stack probe size">;
 def mthread_model : Separate<["-"], "mthread-model">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"The thread model to use, e.g. posix, single (posix by default)">;
+def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Set EABI type, e.g. 4, 5 or gnu (default depends on triple)">;
 
 def mmmx : Flag<["-"], "mmmx">, Group<m_x86_Features_Group>;
 def mno_3dnowa : Flag<["-"], "mno-3dnowa">, Group<m_x86_Features_Group>;

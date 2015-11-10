@@ -324,12 +324,20 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   if (!needsProfileRT(Args)) return;
 
   // Select the appropriate runtime library for the target.
-  if (isTargetIOSBased())
+  if (isTargetWatchOSBased()) {
+    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_watchos.a",
+                      /*AlwaysLink*/ true);
+  } else if (isTargetTvOSBased()) {
+    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_tvos.a",
+                      /*AlwaysLink*/ true);
+  } else if (isTargetIOSBased()) {
     AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_ios.a",
                       /*AlwaysLink*/ true);
-  else
+  } else {
+    assert(isTargetMacOS() && "unexpected non MacOS platform");
     AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_osx.a",
                       /*AlwaysLink*/ true);
+  }
   return;
 }
 
@@ -3849,6 +3857,25 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 
+static std::string DetectLibcxxIncludePath(StringRef base) {
+  std::error_code EC;
+  int MaxVersion = 0;
+  std::string MaxVersionString = "";
+  for (llvm::sys::fs::directory_iterator LI(base, EC), LE; !EC && LI != LE;
+       LI = LI.increment(EC)) {
+    StringRef VersionText = llvm::sys::path::filename(LI->path());
+    int Version;
+    if (VersionText[0] == 'v' &&
+        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+      if (Version > MaxVersion) {
+        MaxVersion = Version;
+        MaxVersionString = VersionText;
+      }
+    }
+  }
+  return MaxVersion ? (base + "/" + MaxVersionString).str() : "";
+}
+
 void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                          ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
@@ -3858,17 +3885,14 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   // Check if libc++ has been enabled and provide its include paths if so.
   if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx) {
     const std::string LibCXXIncludePathCandidates[] = {
-        // The primary location is within the Clang installation.
-        // FIXME: We shouldn't hard code 'v1' here to make Clang future proof to
-        // newer ABI versions.
-        getDriver().Dir + "/../include/c++/v1",
+        DetectLibcxxIncludePath(getDriver().Dir + "/../include/c++"),
 
         // We also check the system as for a long time this is the only place
         // Clang looked.
         // FIXME: We should really remove this. It doesn't make any sense.
-        getDriver().SysRoot + "/usr/include/c++/v1"};
+        DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/include/c++")};
     for (const auto &IncludePath : LibCXXIncludePathCandidates) {
-      if (!getVFS().exists(IncludePath))
+      if (IncludePath.empty() || !getVFS().exists(IncludePath))
         continue;
       // Add the first candidate that exists.
       addSystemInclude(DriverArgs, CC1Args, IncludePath);

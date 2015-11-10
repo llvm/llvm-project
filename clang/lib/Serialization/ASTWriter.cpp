@@ -1112,7 +1112,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 static bool cleanPathForOutput(FileManager &FileMgr,
                                SmallVectorImpl<char> &Path) {
   bool Changed = FileMgr.makeAbsolutePath(Path);
-  return Changed | FileMgr.removeDotPaths(Path);
+  return Changed | llvm::sys::path::remove_dots(Path);
 }
 
 /// \brief Adjusts the given filename to only write out the portion of the

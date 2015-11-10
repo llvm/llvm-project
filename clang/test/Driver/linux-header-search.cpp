@@ -26,6 +26,42 @@
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 //
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-SYSROOT %s
+// CHECK-BASIC-LIBCXXV2-SYSROOT: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-BASIC-LIBCXXV2-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v2"
+// CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxxv2_tree/usr/bin \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-INSTALL %s
+// CHECK-BASIC-LIBCXXV2-INSTALL: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-BASIC-LIBCXXV2-INSTALL: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v2"
+// CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+//
+// Test Linux with both libc++ and libstdc++ installed.
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libstdcxx_libcxxv2_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT %s
+// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v2"
+// CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+//
 // Test a very broken version of multiarch that shipped in Ubuntu 11.04.
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target i386-unknown-linux \

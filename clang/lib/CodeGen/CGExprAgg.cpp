@@ -199,7 +199,8 @@ public:
   //  case Expr::ChooseExprClass:
   void VisitCXXThrowExpr(const CXXThrowExpr *E) { CGF.EmitCXXThrowExpr(E); }
   void VisitAtomicExpr(AtomicExpr *E) {
-    CGF.EmitAtomicExpr(E, EnsureSlot(E->getType()).getAddress());
+    RValue Res = CGF.EmitAtomicExpr(E);
+    EmitFinalDestCopy(E->getType(), Res);
   }
 };
 }  // end anonymous namespace.

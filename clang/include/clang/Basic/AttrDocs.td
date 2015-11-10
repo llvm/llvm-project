@@ -1655,44 +1655,44 @@ The ``not_tail_called`` attribute prevents tail-call optimization on statically 
 
 For example, it prevents tail-call optimization in the following case:
   .. code-block: c
-  int __attribute__((not_tail_called)) foo1(int);
+    int __attribute__((not_tail_called)) foo1(int);
 
-  int foo2(int a) {
-    return foo1(a); // No tail-call optimization on direct calls.
-  }
+    int foo2(int a) {
+      return foo1(a); // No tail-call optimization on direct calls.
+    }
 
 However, it doesn't prevent tail-call optimization in this case:
   .. code-block: c
-  int __attribute__((not_tail_called)) foo1(int);
+    int __attribute__((not_tail_called)) foo1(int);
 
-  int foo2(int a) {
-    int (*fn)(int) = &foo1;
+    int foo2(int a) {
+      int (*fn)(int) = &foo1;
 
-    // not_tail_called has no effect on an indirect call even if the call can be
-    // resolved at compile time.
-    return (*fn)(a);
-  }
+      // not_tail_called has no effect on an indirect call even if the call can be
+      // resolved at compile time.
+      return (*fn)(a);
+    }
 
 Marking virtual functions as ``not_tail_called`` is an error:
   .. code-block: c++
-  class Base {
-  public:
-    // not_tail_called on a virtual function is an error.
-    [[clang::not_tail_called]] virtual int foo1();
+    class Base {
+    public:
+      // not_tail_called on a virtual function is an error.
+      [[clang::not_tail_called]] virtual int foo1();
 
-    virtual int foo2();
+      virtual int foo2();
 
-    // Non-virtual functions can be marked ``not_tail_called``.
-    [[clang::not_tail_called]] int foo3();
-  };
+      // Non-virtual functions can be marked ``not_tail_called``.
+      [[clang::not_tail_called]] int foo3();
+    };
 
-  class Derived1 : public Base {
-  public:
-    int foo1() override;
+    class Derived1 : public Base {
+    public:
+      int foo1() override;
 
-    // not_tail_called on a virtual function is an error.
-    [[clang::not_tail_called]] int foo2() override;
-  };
+      // not_tail_called on a virtual function is an error.
+      [[clang::not_tail_called]] int foo2() override;
+    };
 
   }];
 }

@@ -61,8 +61,8 @@
 // RUN:   | FileCheck -check-prefix=CHECK-MIPS64EL-PIC %s
 // CHECK-AMD64-M32: as{{.*}}" "--32"
 // CHECK-POWERPC: as{{.*}}" "-mppc" "-many"
-// CHECK-SPARC: as{{.*}}" "-32"
-// CHECK-SPARC64: as{{.*}}" "-64" "-Av9a"
+// CHECK-SPARC: as{{.*}}" "-32" "-Av8"
+// CHECK-SPARC64: as{{.*}}" "-64" "-Av9"
 // CHECK-MIPS64: as{{.*}}" "-mabi" "64" "-EB"
 // CHECK-MIPS64-PIC: as{{.*}}" "-mabi" "64" "-EB" "-KPIC"
 // CHECK-MIPS64EL: as{{.*}}" "-mabi" "64" "-EL"
