@@ -20,7 +20,8 @@ if(CLANG_INSTALL_SCANVIEW)
                          ${CMAKE_BINARY_DIR}/bin
                        COMMAND ${CMAKE_COMMAND} -E copy
                          ${CMAKE_CURRENT_SOURCE_DIR}/${BinFile}
-                         ${CMAKE_BINARY_DIR}/bin/)
+                         ${CMAKE_BINARY_DIR}/bin/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${BinFile})
     install(PROGRAMS ${BinFile} DESTINATION bin)
   endforeach()
 
@@ -30,7 +31,8 @@ if(CLANG_INSTALL_SCANVIEW)
                          ${CMAKE_BINARY_DIR}/share/scan-view
                        COMMAND ${CMAKE_COMMAND} -E copy
                          ${CMAKE_CURRENT_SOURCE_DIR}/${ResourceFile}
-                         ${CMAKE_BINARY_DIR}/share/scan-view/)
+                         ${CMAKE_BINARY_DIR}/share/scan-view/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ResourceFile})
     install(FILES ${ResourceFile} DESTINATION share/scan-view)
   endforeach()
 endif()

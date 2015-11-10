@@ -37,7 +37,7 @@ int align_f = __alignof(float);
 // CHECK: @align_d = global i32 8
 int align_d = __alignof(double);
 
-// CHECK: @align_ld = global i32 8
+// CHECK: @align_ld = global i32 16
 int align_ld = __alignof(long double);
 
 // CHECK: @align_vl = global i32 4
@@ -97,7 +97,7 @@ float check_float() { return 0; }
 // CHECK: double @check_double()
 double check_double() { return 0; }
 
-// CHECK: double @check_longdouble()
+// CHECK: fp128 @check_longdouble()
 long double check_longdouble() { return 0; }
 
 }

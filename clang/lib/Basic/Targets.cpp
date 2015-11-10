@@ -5949,8 +5949,10 @@ public:
       break;
     case CG_V9:
       Builder.defineMacro("__sparcv9");
-      if (getTriple().getOS() != llvm::Triple::Solaris)
+      if (getTriple().getOS() != llvm::Triple::Solaris) {
         Builder.defineMacro("__sparcv9__");
+        Builder.defineMacro("__sparc_v9__");
+      }
       break;
     }
   }
@@ -7079,6 +7081,8 @@ public:
     LargeArrayAlign = 128;
     SimdDefaultAlign = 128;
     SigAtomicType = SignedLong;
+    LongDoubleWidth = LongDoubleAlign = 128;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad;
   }
 
 protected:
