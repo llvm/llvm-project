@@ -13,6 +13,7 @@
 //  is_null_pointer
 
 #include <type_traits>
+#include <cstddef>        // for std::nullptr_t
 
 #if _LIBCPP_STD_VER > 11
 template <class T>

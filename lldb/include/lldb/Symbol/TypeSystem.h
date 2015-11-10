@@ -116,11 +116,26 @@ public:
     virtual ConstString
     DeclGetName (void *opaque_decl) = 0;
 
+    virtual ConstString
+    DeclGetMangledName (void *opaque_decl);
+
     virtual lldb::VariableSP
     DeclGetVariable (void *opaque_decl) = 0;
 
     virtual void
     DeclLinkToObject (void *opaque_decl, std::shared_ptr<void> object) = 0;
+
+    virtual CompilerDeclContext
+    DeclGetDeclContext (void *opaque_decl);
+
+    virtual CompilerType
+    DeclGetFunctionReturnType(void *opaque_decl);
+
+    virtual size_t
+    DeclGetFunctionNumArguments(void *opaque_decl);
+
+    virtual CompilerType
+    DeclGetFunctionArgumentType (void *opaque_decl, size_t arg_idx);
 
     //----------------------------------------------------------------------
     // CompilerDeclContext functions

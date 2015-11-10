@@ -223,10 +223,10 @@ int main()
     assert(UINTMAX_MAX == std::numeric_limits<uintmax_t>::max());
 
     // PTRDIFF_MIN
-    assert(PTRDIFF_MIN == std::numeric_limits<ptrdiff_t>::min());
+    assert(PTRDIFF_MIN == std::numeric_limits<std::ptrdiff_t>::min());
 
     // PTRDIFF_MAX
-    assert(PTRDIFF_MAX == std::numeric_limits<ptrdiff_t>::max());
+    assert(PTRDIFF_MAX == std::numeric_limits<std::ptrdiff_t>::max());
 
     // SIG_ATOMIC_MIN
     assert(SIG_ATOMIC_MIN == std::numeric_limits<sig_atomic_t>::min());

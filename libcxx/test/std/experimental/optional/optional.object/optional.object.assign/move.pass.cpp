@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // optional<T>& operator=(optional<T>&& rhs)

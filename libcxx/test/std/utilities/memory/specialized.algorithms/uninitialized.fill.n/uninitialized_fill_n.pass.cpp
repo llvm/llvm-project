@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <memory>
 
 // template <class ForwardIterator, class Size, class T>

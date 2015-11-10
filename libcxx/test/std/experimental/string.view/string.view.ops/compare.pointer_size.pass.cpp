@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <string_view>
 
 // constexpr int compare(size_type pos1, size_type n1, const charT* s) const;

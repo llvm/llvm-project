@@ -25,10 +25,10 @@
 ; CHECK-NOT: p5
 
 ; CHECK: Arrays {
-; CHECK: double MemRef_A[*][(zext i32 %m to i64)][(zext i32 %o to i64)][8] // Element size 8
+; CHECK: double MemRef_A[*][(zext i32 %m to i64)][(zext i32 %o to i64)]; // Element size 8
 ; CHECK: }
 ; CHECK: Arrays (Bounds as pw_affs) {
-; CHECK: double MemRef_A[*][ [p_3] -> { [] -> [(p_3)] } ][ [p_4] -> { [] -> [(p_4)] } ][ { [] -> [(8)] } ] // Element size 8
+; CHECK: double MemRef_A[*][ [p_3] -> { [] -> [(p_3)] } ][ [p_4] -> { [] -> [(p_4)] } ]; // Element size 8
 ; CHECK: }
 
 

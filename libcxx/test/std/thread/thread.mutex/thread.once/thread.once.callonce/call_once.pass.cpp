@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 
 // <mutex>

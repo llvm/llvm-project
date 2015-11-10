@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <locale>
 
 // template <class Facet> const Facet& use_facet(const locale& loc);

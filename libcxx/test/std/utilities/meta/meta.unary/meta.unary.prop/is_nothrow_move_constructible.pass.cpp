@@ -12,6 +12,7 @@
 // has_nothrow_move_constructor
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T>
 void test_is_nothrow_move_constructible()

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <ostream>
 
 // template <class charT, class traits = char_traits<charT> >

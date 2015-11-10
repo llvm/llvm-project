@@ -13,6 +13,7 @@
 //   struct is_trivially_constructible;
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T>
 void test_is_trivially_constructible()

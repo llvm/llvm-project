@@ -6,7 +6,7 @@
 
 ; CHECK-NOT: Memref_scalar
 
-; SCALARS: float MemRef_scalar[*] // Element size 4
+; SCALARS: float MemRef_scalar; // Element size 4
 
 ; SCALARS: ReadAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; SCALARS:     { Stmt_stmt1[i0] -> MemRef_scalar[] };

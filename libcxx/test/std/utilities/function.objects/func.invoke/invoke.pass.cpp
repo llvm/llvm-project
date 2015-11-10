@@ -40,6 +40,7 @@
 
 #include <functional>
 #include <type_traits>
+#include <utility> // for std::move
 #include <cassert>
 
 struct NonCopyable {

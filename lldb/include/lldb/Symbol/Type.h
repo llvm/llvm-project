@@ -14,6 +14,7 @@
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/UserID.h"
+#include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
 
@@ -823,50 +824,33 @@ class TypeMemberFunctionImpl
 {
 public:
     TypeMemberFunctionImpl() :
-        m_type(),
-        m_objc_method_decl(nullptr),
+        m_type (),
+        m_decl (),
         m_name(),
-        m_kind(lldb::eMemberFunctionKindUnknown)
+        m_kind (lldb::eMemberFunctionKindUnknown)
     {
     }
     
     TypeMemberFunctionImpl (const CompilerType& type,
+                            const CompilerDecl& decl,
                             const std::string& name,
                             const lldb::MemberFunctionKind& kind) :
-        m_type(type),
-        m_objc_method_decl(nullptr),
+        m_type (type),
+        m_decl (decl),
         m_name(name),
-        m_kind(kind)
+        m_kind (kind)
     {
     }
-    
-    TypeMemberFunctionImpl (clang::ObjCMethodDecl *method,
-                            const std::string& name,
-                            const lldb::MemberFunctionKind& kind) :
-    m_type(),
-    m_objc_method_decl(method),
-    m_name(name),
-    m_kind(kind)
-    {
-    }
-    
-    TypeMemberFunctionImpl (const TypeMemberFunctionImpl& rhs) :
-        m_type(rhs.m_type),
-        m_objc_method_decl(rhs.m_objc_method_decl),
-        m_name(rhs.m_name),
-        m_kind(rhs.m_kind)
-    {
-    }
-    
-    TypeMemberFunctionImpl&
-    operator = (const TypeMemberFunctionImpl& rhs);
     
     bool
     IsValid ();
     
     ConstString
     GetName () const;
-    
+
+    ConstString
+    GetMangledName () const;
+
     CompilerType
     GetType () const;
     
@@ -891,7 +875,7 @@ protected:
 
 private:
     CompilerType m_type;
-    clang::ObjCMethodDecl *m_objc_method_decl;
+    CompilerDecl m_decl;
     ConstString m_name;
     lldb::MemberFunctionKind m_kind;
 };

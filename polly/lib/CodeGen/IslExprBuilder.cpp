@@ -151,7 +151,7 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     if (u + 1 >= e)
       break;
 
-    const SCEV *DimSCEV = SAI->getDimensionSize(u - 1);
+    const SCEV *DimSCEV = SAI->getDimensionSize(u);
 
     llvm::ValueToValueMap Map(GlobalMap.begin(), GlobalMap.end());
     DimSCEV = SCEVParameterRewriter::rewrite(DimSCEV, SE, Map);

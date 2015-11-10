@@ -11,7 +11,7 @@
 
 
 ; CHECK: Arrays {
-; CHECK:     double MemRef_A[*][%m][%o][8] // Element size 8
+; CHECK:     double MemRef_A[*][%m][%o]; // Element size 8
 ; CHECK: }
 
 ; CHECK: [m, o, n] -> { Stmt_for_body6[i0, i1, i2] -> MemRef_A[3 + i0, i1, 7 + i2] };

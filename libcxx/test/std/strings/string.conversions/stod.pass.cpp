@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <string>
 
 // double stod(const string& str, size_t *idx = 0);

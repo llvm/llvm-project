@@ -1253,19 +1253,6 @@ TypeImpl::GetDescription (lldb_private::Stream &strm,
     return true;
 }
 
-TypeMemberFunctionImpl&
-TypeMemberFunctionImpl::operator = (const TypeMemberFunctionImpl& rhs)
-{
-    if (this != &rhs)
-    {
-        m_type = rhs.m_type;
-        m_objc_method_decl = rhs.m_objc_method_decl;
-        m_name = rhs.m_name;
-        m_kind = rhs.m_kind;
-    }
-    return *this;
-}
-
 bool
 TypeMemberFunctionImpl::IsValid ()
 {
@@ -1276,6 +1263,12 @@ ConstString
 TypeMemberFunctionImpl::GetName () const
 {
     return m_name;
+}
+
+ConstString
+TypeMemberFunctionImpl::GetMangledName () const
+{
+    return m_decl.GetMangledName();
 }
 
 CompilerType
@@ -1290,21 +1283,6 @@ TypeMemberFunctionImpl::GetKind () const
     return m_kind;
 }
 
-std::string
-TypeMemberFunctionImpl::GetPrintableTypeName ()
-{
-    if (m_type)
-        return m_type.GetTypeName().AsCString("<unknown>");
-    if (m_objc_method_decl)
-    {
-        if (m_objc_method_decl->getClassInterface())
-        {
-            return m_objc_method_decl->getClassInterface()->getName();
-        }
-    }
-    return "<unknown>";
-}
-
 bool
 TypeMemberFunctionImpl::GetDescription (Stream& stream)
 {
@@ -1312,20 +1290,20 @@ TypeMemberFunctionImpl::GetDescription (Stream& stream)
         case lldb::eMemberFunctionKindUnknown:
             return false;
         case lldb::eMemberFunctionKindConstructor:
-            stream.Printf("constructor for %s", GetPrintableTypeName().c_str());
+            stream.Printf("constructor for %s", m_type.GetTypeName().AsCString("<unknown>"));
             break;
         case lldb::eMemberFunctionKindDestructor:
-            stream.Printf("destructor for %s",  GetPrintableTypeName().c_str());
+            stream.Printf("destructor for %s",  m_type.GetTypeName().AsCString("<unknown>"));
             break;
         case lldb::eMemberFunctionKindInstanceMethod:
             stream.Printf("instance method %s of type %s",
                           m_name.AsCString(),
-                          GetPrintableTypeName().c_str());
+                          m_decl.GetDeclContext().GetName().AsCString());
             break;
         case lldb::eMemberFunctionKindStaticMethod:
             stream.Printf("static method %s of type %s",
                           m_name.AsCString(),
-                          GetPrintableTypeName().c_str());
+                          m_decl.GetDeclContext().GetName().AsCString());
             break;
     }
     return true;
@@ -1336,9 +1314,7 @@ TypeMemberFunctionImpl::GetReturnType () const
 {
     if (m_type)
         return m_type.GetFunctionReturnType();
-    if (m_objc_method_decl)
-        return CompilerType(&m_objc_method_decl->getASTContext(), m_objc_method_decl->getReturnType());
-    return CompilerType();
+    return m_decl.GetFunctionReturnType();
 }
 
 size_t
@@ -1346,9 +1322,8 @@ TypeMemberFunctionImpl::GetNumArguments () const
 {
     if (m_type)
         return m_type.GetNumberOfFunctionArguments();
-    if (m_objc_method_decl)
-        return m_objc_method_decl->param_size();
-    return 0;
+    else
+        return m_decl.GetNumFunctionArguments();
 }
 
 CompilerType
@@ -1356,12 +1331,8 @@ TypeMemberFunctionImpl::GetArgumentAtIndex (size_t idx) const
 {
     if (m_type)
         return m_type.GetFunctionArgumentAtIndex (idx);
-    if (m_objc_method_decl)
-    {
-        if (idx < m_objc_method_decl->param_size())
-            return CompilerType(&m_objc_method_decl->getASTContext(), m_objc_method_decl->parameters()[idx]->getOriginalType());
-    }
-    return CompilerType();
+    else
+        return m_decl.GetFunctionArgumentType(idx);
 }
 
 TypeEnumMemberImpl::TypeEnumMemberImpl (const lldb::TypeImplSP &integer_type_sp,

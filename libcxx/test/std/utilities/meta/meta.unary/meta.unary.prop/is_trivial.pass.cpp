@@ -12,6 +12,7 @@
 // is_trivial
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T>
 void test_is_trivial()

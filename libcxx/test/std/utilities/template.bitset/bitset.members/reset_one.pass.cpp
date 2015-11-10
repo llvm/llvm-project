@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // test bitset<N>& reset(size_t pos);
 
 #include <bitset>

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <memory>
 
 // template <class Y, class D> explicit shared_ptr(unique_ptr<Y, D>&&r);

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // template <class... Args> void optional<T>::emplace(Args&&... args);

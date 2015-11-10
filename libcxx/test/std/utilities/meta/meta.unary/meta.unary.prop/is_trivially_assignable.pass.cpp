@@ -12,6 +12,7 @@
 // is_trivially_assignable
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T, class U>
 void test_is_trivially_assignable()

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// XFAIL: libcpp-no-exceptions
 // XFAIL: with_system_cxx_lib=x86_64-apple-darwin11
 // XFAIL: with_system_cxx_lib=x86_64-apple-darwin12
 

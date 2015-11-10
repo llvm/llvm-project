@@ -148,7 +148,8 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
       continue;
 
     // Argument is a struct member.
-    if (Prev.isOneOf(tok::period, tok::arrow, tok::coloncolon))
+    if (Prev.isOneOf(tok::period, tok::arrow, tok::coloncolon, tok::arrowstar,
+                     tok::periodstar))
       continue;
 
     // Argument is a namespace or class.

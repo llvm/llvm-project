@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // test operator new[]
 // NOTE: asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete

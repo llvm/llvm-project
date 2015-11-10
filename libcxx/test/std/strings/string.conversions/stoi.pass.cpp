@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <string>
 
 // int stoi(const string& str, size_t *idx = 0, int base = 10);

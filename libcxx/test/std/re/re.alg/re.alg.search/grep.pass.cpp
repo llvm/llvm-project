@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <regex>
 
 // template <class BidirectionalIterator, class Allocator, class charT, class traits>

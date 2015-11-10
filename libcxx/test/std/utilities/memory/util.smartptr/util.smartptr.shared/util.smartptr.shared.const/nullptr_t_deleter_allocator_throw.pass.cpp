@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <memory>
 
 // template<class D, class A> shared_ptr(nullptr_t, D d, A a);

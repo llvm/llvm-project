@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <locale>
 
 // wstring_convert<Codecvt, Elem, Wide_alloc, Byte_alloc>

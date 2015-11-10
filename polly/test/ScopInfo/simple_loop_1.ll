@@ -27,7 +27,7 @@ return:                                           ; preds = %bb, %entry
 ; CHECK: Assumed Context:
 ; CHECK:   {  :  }
 ; CHECK: Arrays {
-; CHECK:     i64 MemRef_a[*][8] // Element size 8
+; CHECK:     i64 MemRef_a[*]; // Element size 8
 ; CHECK: }
 
 ; CHECK:  Stmt_bb

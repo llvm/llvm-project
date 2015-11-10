@@ -2711,7 +2711,7 @@ SymbolFileDWARF::FindFunctions (const ConstString &name,
             // TODO: The arch in the object file isn't correct for MSVC
             // binaries on windows, we should find a way to make it
             // correct and handle those symbols as well.
-            if (sc_list.GetSize() == 0)
+            if (sc_list.GetSize() == original_size)
             {
                 ArchSpec arch;
                 if (!parent_decl_ctx &&

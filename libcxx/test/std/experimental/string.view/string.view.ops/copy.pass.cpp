@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 
+// XFAIL: libcpp-no-exceptions
 // <string_view>
 
 // size_type copy(charT* s, size_type n, size_type pos = 0) const;

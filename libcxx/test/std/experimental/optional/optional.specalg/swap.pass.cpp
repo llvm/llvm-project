@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // template <class T> void swap(optional<T>& x, optional<T>& y)

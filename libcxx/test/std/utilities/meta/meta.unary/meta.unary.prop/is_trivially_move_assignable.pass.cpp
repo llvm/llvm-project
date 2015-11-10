@@ -12,6 +12,7 @@
 // is_trivially_move_assignable
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T>
 void test_has_trivial_assign()

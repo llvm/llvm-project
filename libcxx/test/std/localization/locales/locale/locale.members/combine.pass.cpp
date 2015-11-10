@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <locale>
 
 // template <class Facet> locale combine(const locale& other) const;

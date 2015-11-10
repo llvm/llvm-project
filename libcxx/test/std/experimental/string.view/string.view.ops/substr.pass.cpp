@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 
+// XFAIL: libcpp-no-exceptions
 // <string_view>
 
 // constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const;

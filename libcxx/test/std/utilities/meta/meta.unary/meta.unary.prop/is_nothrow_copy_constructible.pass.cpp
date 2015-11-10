@@ -12,6 +12,7 @@
 // is_nothrow_copy_constructible
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T>
 void test_is_nothrow_copy_constructible()

@@ -12,6 +12,7 @@
 // is_literal_type
 
 #include <type_traits>
+#include <cstddef>       // for std::nullptr_t
 #include "test_macros.h"
 
 template <class T>
@@ -79,7 +80,7 @@ int main()
 // In C++14, cv-void is is a literal type
 #if TEST_STD_VER < 14
     test_is_not_literal_type<void>();
-#elif TEST_STD_VER > 14
+#else
     test_is_literal_type<void>();
 #endif
 

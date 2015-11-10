@@ -150,14 +150,16 @@ static const ScopArrayInfo *identifyBasePtrOriginSAI(Scop *S, Value *BasePtr) {
   if (!OriginBaseSCEVUnknown)
     return nullptr;
 
-  return S->getScopArrayInfo(OriginBaseSCEVUnknown->getValue(), false);
+  return S->getScopArrayInfo(OriginBaseSCEVUnknown->getValue(),
+                             ScopArrayInfo::KIND_ARRAY);
 }
 
 ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
-                             ArrayRef<const SCEV *> Sizes, bool IsPHI, Scop *S)
-    : BasePtr(BasePtr), ElementType(ElementType), IsPHI(IsPHI), S(*S) {
+                             ArrayRef<const SCEV *> Sizes, enum ARRAYKIND Kind,
+                             Scop *S)
+    : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), S(*S) {
   std::string BasePtrName =
-      getIslCompatibleName("MemRef_", BasePtr, IsPHI ? "__phi" : "");
+      getIslCompatibleName("MemRef_", BasePtr, Kind == KIND_PHI ? "__phi" : "");
   Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
 
   updateSizes(Sizes);
@@ -214,17 +216,24 @@ isl_id *ScopArrayInfo::getBasePtrId() const { return isl_id_copy(Id); }
 void ScopArrayInfo::dump() const { print(errs()); }
 
 void ScopArrayInfo::print(raw_ostream &OS, bool SizeAsPwAff) const {
-  OS.indent(8) << *getElementType() << " " << getName() << "[*]";
-  for (unsigned u = 0; u < getNumberOfDimensions(); u++) {
+  OS.indent(8) << *getElementType() << " " << getName();
+  if (getNumberOfDimensions() > 0)
+    OS << "[*]";
+  for (unsigned u = 1; u < getNumberOfDimensions(); u++) {
     OS << "[";
 
-    if (SizeAsPwAff)
-      OS << " " << DimensionSizesPw[u] << " ";
-    else
-      OS << *DimensionSizes[u];
+    if (SizeAsPwAff) {
+      auto Size = getDimensionSizePw(u);
+      OS << " " << Size << " ";
+      isl_pw_aff_free(Size);
+    } else {
+      OS << *getDimensionSize(u);
+    }
 
     OS << "]";
   }
+
+  OS << ";";
 
   if (BasePtrOriginSAI)
     OS << " [BasePtrOrigin: " << BasePtrOriginSAI->getName() << "]";
@@ -823,8 +832,16 @@ void ScopStmt::buildAccessRelations() {
   for (MemoryAccess *Access : MemAccs) {
     Type *ElementType = Access->getAccessValue()->getType();
 
+    ScopArrayInfo::ARRAYKIND Ty;
+    if (Access->isPHI())
+      Ty = ScopArrayInfo::KIND_PHI;
+    else if (Access->isImplicit())
+      Ty = ScopArrayInfo::KIND_SCALAR;
+    else
+      Ty = ScopArrayInfo::KIND_ARRAY;
+
     const ScopArrayInfo *SAI = getParent()->getOrCreateScopArrayInfo(
-        Access->getBaseAddr(), ElementType, Access->Sizes, Access->isPHI());
+        Access->getBaseAddr(), ElementType, Access->Sizes, Ty);
 
     Access->buildAccessRelation(SAI);
   }
@@ -2764,13 +2781,12 @@ void Scop::hoistInvariantLoads() {
 
 const ScopArrayInfo *
 Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *AccessType,
-                               ArrayRef<const SCEV *> Sizes, bool IsPHI) {
-  bool IsScalar = Sizes.empty();
-  auto ScalarTypePair = std::make_pair(IsScalar, IsPHI);
-  auto &SAI = ScopArrayInfoMap[std::make_pair(BasePtr, ScalarTypePair)];
+                               ArrayRef<const SCEV *> Sizes,
+                               ScopArrayInfo::ARRAYKIND Kind) {
+  auto &SAI = ScopArrayInfoMap[std::make_pair(BasePtr, Kind)];
   if (!SAI) {
-    SAI.reset(new ScopArrayInfo(BasePtr, AccessType, getIslCtx(), Sizes, IsPHI,
-                                this));
+    SAI.reset(
+        new ScopArrayInfo(BasePtr, AccessType, getIslCtx(), Sizes, Kind, this));
   } else {
     // In case of mismatching array sizes, we bail out by setting the run-time
     // context to false.
@@ -2780,10 +2796,9 @@ Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *AccessType,
   return SAI.get();
 }
 
-const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr, bool IsScalar,
-                                            bool IsPHI) {
-  auto ScalarTypePair = std::make_pair(IsScalar, IsPHI);
-  auto *SAI = ScopArrayInfoMap[std::make_pair(BasePtr, ScalarTypePair)].get();
+const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr,
+                                            ScopArrayInfo::ARRAYKIND Kind) {
+  auto *SAI = ScopArrayInfoMap[std::make_pair(BasePtr, Kind)].get();
   assert(SAI && "No ScopArrayInfo available for this base pointer");
   return SAI;
 }

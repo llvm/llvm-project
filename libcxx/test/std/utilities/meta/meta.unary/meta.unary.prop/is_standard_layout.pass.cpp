@@ -12,6 +12,7 @@
 // is_standard_layout
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T>
 void test_is_standard_layout()

@@ -13,15 +13,15 @@
 ; CHECK: }
 ;
 ; CHECK: Arrays {
-; CHECK:   i32** MemRef_A[*][8]
-; CHECK:   i32* MemRef_tmp3[*][8] [BasePtrOrigin: MemRef_A]
-; CHECK:   i32 MemRef_tmp5[*][4] [BasePtrOrigin: MemRef_tmp3]
+; CHECK:   i32** MemRef_A[*];
+; CHECK:   i32* MemRef_tmp3[*]; [BasePtrOrigin: MemRef_A]
+; CHECK:   i32 MemRef_tmp5[*]; [BasePtrOrigin: MemRef_tmp3]
 ; CHECK: }
 ;
 ; CHECK: Arrays (Bounds as pw_affs) {
-; CHECK:   i32** MemRef_A[*][ { [] -> [(8)] } ]
-; CHECK:   i32* MemRef_tmp3[*][ { [] -> [(8)] } ] [BasePtrOrigin: MemRef_A]
-; CHECK:   i32 MemRef_tmp5[*][ { [] -> [(4)] } ] [BasePtrOrigin: MemRef_tmp3]
+; CHECK:   i32** MemRef_A[*];
+; CHECK:   i32* MemRef_tmp3[*]; [BasePtrOrigin: MemRef_A]
+; CHECK:   i32 MemRef_tmp5[*]; [BasePtrOrigin: MemRef_tmp3]
 ; CHECK: }
 ;
 ;    void f(int ***A) {

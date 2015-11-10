@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // test constexpr bool test(size_t pos) const;
 
 #include <bitset>

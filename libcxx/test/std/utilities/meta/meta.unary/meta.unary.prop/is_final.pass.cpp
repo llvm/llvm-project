@@ -12,6 +12,7 @@
 // is_final
 
 #include <type_traits>
+#include "test_macros.h"
 
 #if _LIBCPP_STD_VER > 11
 

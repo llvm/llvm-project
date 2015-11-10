@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // <exception>
 
 // template<class E> exception_ptr make_exception_ptr(E e);

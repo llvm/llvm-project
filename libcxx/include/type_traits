@@ -3211,8 +3211,8 @@ struct _LIBCPP_TYPE_VIS_ONLY is_trivially_constructible<_Tp, _Tp&,
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
-template <class _Tp> _LIBCPP_CONSTEXPR bool is_trivially_constructible_v
-    = is_trivially_constructible<_Tp>::value;
+template <class _Tp, class... _Args> _LIBCPP_CONSTEXPR bool is_trivially_constructible_v
+    = is_trivially_constructible<_Tp, _Args...>::value;
 #endif
 
 // is_trivially_default_constructible
@@ -3629,6 +3629,11 @@ template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_nothrow_copy_assignable
     : public is_nothrow_assignable<typename add_lvalue_reference<_Tp>::type,
                   typename add_lvalue_reference<typename add_const<_Tp>::type>::type> {};
 
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp> _LIBCPP_CONSTEXPR bool is_nothrow_copy_assignable_v
+    = is_nothrow_copy_assignable<_Tp>::value;
+#endif
+
 // is_nothrow_move_assignable
 
 template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_nothrow_move_assignable
@@ -3641,8 +3646,8 @@ template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_nothrow_move_assignable
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
-template <class _Tp> _LIBCPP_CONSTEXPR bool is_nothrow_copy_assignable_v
-    = is_nothrow_copy_assignable<_Tp>::value;
+template <class _Tp> _LIBCPP_CONSTEXPR bool is_nothrow_move_assignable_v
+    = is_nothrow_move_assignable<_Tp>::value;
 #endif
 
 // is_nothrow_destructible

@@ -15,15 +15,15 @@
 ; CHECK:    Region: %bb1---%bb11
 ;
 ; CHECK: Arrays {
-; CHECK:   i32 MemRef_A[*][4]
-; CHECK:   i32 MemRef_x[*] [BasePtrOrigin: MemRef_A]
-; CHECK:   i32 MemRef_y__phi[*]
+; CHECK:   i32 MemRef_A[*];
+; CHECK:   i32 MemRef_x; [BasePtrOrigin: MemRef_A]
+; CHECK:   i32 MemRef_y__phi;
 ; CHECK: }
 ;
 ; CHECK: Arrays (Bounds as pw_affs) {
-; CHECK:   i32 MemRef_A[*][ { [] -> [(4)] } ]
-; CHECK:   i32 MemRef_x[*] [BasePtrOrigin: MemRef_A]
-; CHECK:   i32 MemRef_y__phi[*]
+; CHECK:   i32 MemRef_A[*];
+; CHECK:   i32 MemRef_x; [BasePtrOrigin: MemRef_A]
+; CHECK:   i32 MemRef_y__phi;
 ; CHECK: }
 ;
 ; CHECK:      Stmt_bb2__TO__bb7

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-no-exceptions
 // test bitset(string, pos, n, zero, one);
 
 #include <bitset>
