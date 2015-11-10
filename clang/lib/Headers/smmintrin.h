@@ -57,35 +57,28 @@
 #define _mm_floor_sd(X, Y)   _mm_round_sd((X), (Y), _MM_FROUND_FLOOR)
 
 #define _mm_round_ps(X, M) __extension__ ({ \
-  __m128 __X = (X); \
-  (__m128) __builtin_ia32_roundps((__v4sf)__X, (M)); })
+  (__m128)__builtin_ia32_roundps((__v4sf)(__m128)(X), (M)); })
 
 #define _mm_round_ss(X, Y, M) __extension__ ({ \
-  __m128 __X = (X); \
-  __m128 __Y = (Y); \
-  (__m128) __builtin_ia32_roundss((__v4sf)__X, (__v4sf)__Y, (M)); })
+  (__m128)__builtin_ia32_roundss((__v4sf)(__m128)(X), \
+                                 (__v4sf)(__m128)(Y), (M)); })
 
 #define _mm_round_pd(X, M) __extension__ ({ \
-  __m128d __X = (X); \
-  (__m128d) __builtin_ia32_roundpd((__v2df)__X, (M)); })
+  (__m128d)__builtin_ia32_roundpd((__v2df)(__m128d)(X), (M)); })
 
 #define _mm_round_sd(X, Y, M) __extension__ ({ \
-  __m128d __X = (X); \
-  __m128d __Y = (Y); \
-  (__m128d) __builtin_ia32_roundsd((__v2df)__X, (__v2df)__Y, (M)); })
+  (__m128d)__builtin_ia32_roundsd((__v2df)(__m128d)(X), \
+                                  (__v2df)(__m128d)(Y), (M)); })
 
 /* SSE4 Packed Blending Intrinsics.  */
 #define _mm_blend_pd(V1, V2, M) __extension__ ({ \
-  __m128d __V1 = (V1); \
-  __m128d __V2 = (V2); \
-  (__m128d)__builtin_shufflevector((__v2df)__V1, (__v2df)__V2, \
+  (__m128d)__builtin_shufflevector((__v2df)(__m128d)(V1), \
+                                   (__v2df)(__m128d)(V2), \
                                    (((M) & 0x01) ? 2 : 0), \
                                    (((M) & 0x02) ? 3 : 1)); })
 
 #define _mm_blend_ps(V1, V2, M) __extension__ ({ \
-  __m128 __V1 = (V1); \
-  __m128 __V2 = (V2); \
-  (__m128)__builtin_shufflevector((__v4sf)__V1, (__v4sf)__V2, \
+  (__m128)__builtin_shufflevector((__v4sf)(__m128)(V1), (__v4sf)(__m128)(V2), \
                                   (((M) & 0x01) ? 4 : 0), \
                                   (((M) & 0x02) ? 5 : 1), \
                                   (((M) & 0x04) ? 6 : 2), \
@@ -113,9 +106,8 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
 }
 
 #define _mm_blend_epi16(V1, V2, M) __extension__ ({ \
-  __m128i __V1 = (V1); \
-  __m128i __V2 = (V2); \
-  (__m128i)__builtin_shufflevector((__v8hi)__V1, (__v8hi)__V2, \
+  (__m128i)__builtin_shufflevector((__v8hi)(__m128i)(V1), \
+                                   (__v8hi)(__m128i)(V2), \
                                    (((M) & 0x01) ?  8 : 0), \
                                    (((M) & 0x02) ?  9 : 1), \
                                    (((M) & 0x04) ? 10 : 2), \
@@ -140,14 +132,12 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 
 /* SSE4 Floating Point Dot Product Instructions.  */
 #define _mm_dp_ps(X, Y, M) __extension__ ({ \
-  __m128 __X = (X); \
-  __m128 __Y = (Y); \
-  (__m128) __builtin_ia32_dpps((__v4sf)__X, (__v4sf)__Y, (M)); })
+  (__m128) __builtin_ia32_dpps((__v4sf)(__m128)(X), \
+                               (__v4sf)(__m128)(Y), (M)); })
 
 #define _mm_dp_pd(X, Y, M) __extension__ ({\
-  __m128d __X = (X); \
-  __m128d __Y = (Y); \
-  (__m128d) __builtin_ia32_dppd((__v2df)__X, (__v2df)__Y, (M)); })
+  (__m128d) __builtin_ia32_dppd((__v2df)(__m128d)(X), \
+                                (__v2df)(__m128d)(Y), (M)); })
 
 /* SSE4 Streaming Load Hint Instruction.  */
 static __inline__  __m128i __DEFAULT_FN_ATTRS
@@ -372,9 +362,8 @@ _mm_packus_epi32(__m128i __V1, __m128i __V2)
 
 /* SSE4 Multiple Packed Sums of Absolute Difference.  */
 #define _mm_mpsadbw_epu8(X, Y, M) __extension__ ({ \
-  __m128i __X = (X); \
-  __m128i __Y = (Y); \
-  (__m128i) __builtin_ia32_mpsadbw128((__v16qi)__X, (__v16qi)__Y, (M)); })
+  (__m128i) __builtin_ia32_mpsadbw128((__v16qi)(__m128i)(X), \
+                                      (__v16qi)(__m128i)(Y), (M)); })
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_minpos_epu16(__m128i __V)

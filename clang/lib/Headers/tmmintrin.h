@@ -66,14 +66,11 @@ _mm_abs_epi32(__m128i __a)
 }
 
 #define _mm_alignr_epi8(a, b, n) __extension__ ({ \
-  __m128i __a = (a); \
-  __m128i __b = (b); \
-  (__m128i)__builtin_ia32_palignr128((__v16qi)__a, (__v16qi)__b, (n)); })
+  (__m128i)__builtin_ia32_palignr128((__v16qi)(__m128i)(a), \
+                                     (__v16qi)(__m128i)(b), (n)); })
 
 #define _mm_alignr_pi8(a, b, n) __extension__ ({ \
-  __m64 __a = (a); \
-  __m64 __b = (b); \
-  (__m64)__builtin_ia32_palignr((__v8qi)__a, (__v8qi)__b, (n)); })
+  (__m64)__builtin_ia32_palignr((__v8qi)(__m64)(a), (__v8qi)(__m64)(b), (n)); })
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_hadd_epi16(__m128i __a, __m128i __b)

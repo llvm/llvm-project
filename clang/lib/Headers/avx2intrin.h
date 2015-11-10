@@ -124,10 +124,9 @@ _mm256_adds_epu16(__m256i __a, __m256i __b)
   return (__m256i)__builtin_ia32_paddusw256((__v16hi)__a, (__v16hi)__b);
 }
 
-#define _mm256_alignr_epi8(a, b, n) __extension__ ({ \
-  __m256i __a = (a); \
-  __m256i __b = (b); \
-  (__m256i)__builtin_ia32_palignr256((__v32qi)__a, (__v32qi)__b, (n)); })
+#define _mm256_alignr_epi8(a, b, n) __extension__ ({        \
+  (__m256i)__builtin_ia32_palignr256((__v32qi)(__m256i)(a), \
+                                     (__v32qi)(__m256i)(b), (n)); })
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_and_si256(__m256i __a, __m256i __b)
@@ -160,20 +159,19 @@ _mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M)
                                               (__v32qi)__M);
 }
 
-#define _mm256_blend_epi16(V1, V2, M) __extension__ ({ \
-  __m256i __V1 = (V1); \
-  __m256i __V2 = (V2); \
-  (__m256i)__builtin_shufflevector((__v16hi)__V1, (__v16hi)__V2, \
-                                   (((M) & 0x01) ? 16 : 0), \
-                                   (((M) & 0x02) ? 17 : 1), \
-                                   (((M) & 0x04) ? 18 : 2), \
-                                   (((M) & 0x08) ? 19 : 3), \
-                                   (((M) & 0x10) ? 20 : 4), \
-                                   (((M) & 0x20) ? 21 : 5), \
-                                   (((M) & 0x40) ? 22 : 6), \
-                                   (((M) & 0x80) ? 23 : 7), \
-                                   (((M) & 0x01) ? 24 : 8), \
-                                   (((M) & 0x02) ? 25 : 9), \
+#define _mm256_blend_epi16(V1, V2, M) __extension__ ({       \
+  (__m256i)__builtin_shufflevector((__v16hi)(__m256i)(V1),   \
+                                   (__v16hi)(__m256i)(V2),   \
+                                   (((M) & 0x01) ? 16 : 0),  \
+                                   (((M) & 0x02) ? 17 : 1),  \
+                                   (((M) & 0x04) ? 18 : 2),  \
+                                   (((M) & 0x08) ? 19 : 3),  \
+                                   (((M) & 0x10) ? 20 : 4),  \
+                                   (((M) & 0x20) ? 21 : 5),  \
+                                   (((M) & 0x40) ? 22 : 6),  \
+                                   (((M) & 0x80) ? 23 : 7),  \
+                                   (((M) & 0x01) ? 24 : 8),  \
+                                   (((M) & 0x02) ? 25 : 9),  \
                                    (((M) & 0x04) ? 26 : 10), \
                                    (((M) & 0x08) ? 27 : 11), \
                                    (((M) & 0x10) ? 28 : 12), \
@@ -490,8 +488,8 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
 }
 
 #define _mm256_shuffle_epi32(a, imm) __extension__ ({ \
-  __m256i __a = (a); \
-  (__m256i)__builtin_shufflevector((__v8si)__a, (__v8si)_mm256_set1_epi32(0), \
+  (__m256i)__builtin_shufflevector((__v8si)(__m256i)(a), \
+                                   (__v8si)_mm256_setzero_si256(), \
                                    (imm) & 0x3, ((imm) & 0xc) >> 2, \
                                    ((imm) & 0x30) >> 4, ((imm) & 0xc0) >> 6, \
                                    4 + (((imm) & 0x03) >> 0), \
@@ -500,8 +498,8 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
                                    4 + (((imm) & 0xc0) >> 6)); })
 
 #define _mm256_shufflehi_epi16(a, imm) __extension__ ({ \
-  __m256i __a = (a); \
-  (__m256i)__builtin_shufflevector((__v16hi)__a, (__v16hi)_mm256_set1_epi16(0), \
+  (__m256i)__builtin_shufflevector((__v16hi)(__m256i)(a), \
+                                   (__v16hi)_mm256_setzero_si256(), \
                                    0, 1, 2, 3, \
                                    4 + (((imm) & 0x03) >> 0), \
                                    4 + (((imm) & 0x0c) >> 2), \
@@ -514,8 +512,8 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
                                    12 + (((imm) & 0xc0) >> 6)); })
 
 #define _mm256_shufflelo_epi16(a, imm) __extension__ ({ \
-  __m256i __a = (a); \
-  (__m256i)__builtin_shufflevector((__v16hi)__a, (__v16hi)_mm256_set1_epi16(0), \
+  (__m256i)__builtin_shufflevector((__v16hi)(__m256i)(a), \
+                                   (__v16hi)_mm256_setzero_si256(), \
                                    (imm) & 0x3,((imm) & 0xc) >> 2, \
                                    ((imm) & 0x30) >> 4, ((imm) & 0xc0) >> 6, \
                                    4, 5, 6, 7, \
@@ -544,8 +542,7 @@ _mm256_sign_epi32(__m256i __a, __m256i __b)
 }
 
 #define _mm256_slli_si256(a, count) __extension__ ({ \
-  __m256i __a = (a); \
-  (__m256i)__builtin_ia32_pslldqi256(__a, (count)*8); })
+  (__m256i)__builtin_ia32_pslldqi256((__m256i)(a), (count)*8); })
 
 #define _mm256_bslli_epi128(a, count) _mm256_slli_si256((a), (count))
 
@@ -610,8 +607,7 @@ _mm256_sra_epi32(__m256i __a, __m128i __count)
 }
 
 #define _mm256_srli_si256(a, count) __extension__ ({ \
-  __m256i __a = (a); \
-  (__m256i)__builtin_ia32_psrldqi256(__a, (count)*8); })
+  (__m256i)__builtin_ia32_psrldqi256((__m256i)(a), (count)*8); })
 
 #define _mm256_bsrli_epi128(a, count) _mm256_srli_si256((a), (count))
 
@@ -790,18 +786,16 @@ _mm256_broadcastsi128_si256(__m128i __X)
 }
 
 #define _mm_blend_epi32(V1, V2, M) __extension__ ({ \
-  __m128i __V1 = (V1); \
-  __m128i __V2 = (V2); \
-  (__m128i)__builtin_shufflevector((__v4si)__V1, (__v4si)__V2, \
+  (__m128i)__builtin_shufflevector((__v4si)(__m128i)(V1),  \
+                                   (__v4si)(__m128i)(V2),  \
                                    (((M) & 0x01) ? 4 : 0), \
                                    (((M) & 0x02) ? 5 : 1), \
                                    (((M) & 0x04) ? 6 : 2), \
                                    (((M) & 0x08) ? 7 : 3)); })
 
 #define _mm256_blend_epi32(V1, V2, M) __extension__ ({ \
-  __m256i __V1 = (V1); \
-  __m256i __V2 = (V2); \
-  (__m256i)__builtin_shufflevector((__v8si)__V1, (__v8si)__V2, \
+  (__m256i)__builtin_shufflevector((__v8si)(__m256i)(V1),   \
+                                   (__v8si)(__m256i)(V2),   \
                                    (((M) & 0x01) ?  8 : 0), \
                                    (((M) & 0x02) ?  9 : 1), \
                                    (((M) & 0x04) ? 10 : 2), \
@@ -867,8 +861,8 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
 }
 
 #define _mm256_permute4x64_pd(V, M) __extension__ ({ \
-  __m256d __V = (V); \
-  (__m256d)__builtin_shufflevector((__v4df)__V, (__v4df) _mm256_setzero_pd(), \
+  (__m256d)__builtin_shufflevector((__v4df)(__m256d)(V), \
+                                   (__v4df)_mm256_setzero_pd(), \
                                    (M) & 0x3, ((M) & 0xc) >> 2, \
                                    ((M) & 0x30) >> 4, ((M) & 0xc0) >> 6); })
 
@@ -879,15 +873,13 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256 __b)
 }
 
 #define _mm256_permute4x64_epi64(V, M) __extension__ ({ \
-  __m256i __V = (V); \
-  (__m256i)__builtin_shufflevector((__v4di)__V, (__v4di) _mm256_setzero_si256(), \
+  (__m256i)__builtin_shufflevector((__v4di)(__m256i)(V), \
+                                   (__v4di)_mm256_setzero_si256(), \
                                    (M) & 0x3, ((M) & 0xc) >> 2, \
                                    ((M) & 0x30) >> 4, ((M) & 0xc0) >> 6); })
 
 #define _mm256_permute2x128_si256(V1, V2, M) __extension__ ({ \
-  __m256i __V1 = (V1); \
-  __m256i __V2 = (V2); \
-  (__m256i)__builtin_ia32_permti256(__V1, __V2, (M)); })
+  (__m256i)__builtin_ia32_permti256((__m256i)(V1), (__m256i)(V2), (M)); })
 
 #define _mm256_extracti128_si256(V, M) __extension__ ({ \
   (__m128i)__builtin_shufflevector( \
