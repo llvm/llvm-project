@@ -220,7 +220,6 @@ catchendblock:                                    ; preds = %catch.dispatch
 ; CHECK: # %catch.dispatch
 ; CHECK-NEXT:         movl    -24(%ebp), %esp
 ; CHECK-NEXT:         addl    $12, %ebp
-; CHECK: # %__except.ret
 ; CHECK-NEXT:         movl    $-1, -16(%ebp)
 ; CHECK-NEXT:         movl    $2, (%esp)
 ; CHECK-NEXT:         calll   _f

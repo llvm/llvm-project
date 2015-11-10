@@ -21401,15 +21401,7 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr *MI,
   MachineBasicBlock *TargetMBB = MI->getOperand(0).getMBB();
   DebugLoc DL = MI->getDebugLoc();
 
-  // SEH does not outline catch bodies into funclets. Turn CATCHRETs into
-  // JMP_4s, possibly with some extra restoration code for 32-bit EH.
-  if (IsSEH) {
-    if (Subtarget->is32Bit())
-      BuildMI(*BB, MI, DL, TII.get(X86::EH_RESTORE));
-    BuildMI(*BB, MI, DL, TII.get(X86::JMP_4)).addMBB(TargetMBB);
-    MI->eraseFromParent();
-    return BB;
-  }
+  assert(!IsSEH && "SEH does not use catchret!");
 
   // Only 32-bit EH needs to worry about manually restoring stack pointers.
   if (!Subtarget->is32Bit())
@@ -21428,6 +21420,22 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr *MI,
   auto RestoreMBBI = RestoreMBB->begin();
   BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::EH_RESTORE));
   BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::JMP_4)).addMBB(TargetMBB);
+  return BB;
+}
+
+MachineBasicBlock *
+X86TargetLowering::EmitLoweredCatchPad(MachineInstr *MI,
+                                       MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  const Constant *PerFn = MF->getFunction()->getPersonalityFn();
+  bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(PerFn));
+  // Only 32-bit SEH requires special handling for catchpad.
+  if (IsSEH && Subtarget->is32Bit()) {
+    const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
+    DebugLoc DL = MI->getDebugLoc();
+    BuildMI(*BB, MI, DL, TII.get(X86::EH_RESTORE));
+  }
+  MI->eraseFromParent();
   return BB;
 }
 
@@ -21813,6 +21821,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     return EmitLoweredWinAlloca(MI, BB);
   case X86::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
+  case X86::CATCHPAD:
+    return EmitLoweredCatchPad(MI, BB);
   case X86::SEG_ALLOCA_32:
   case X86::SEG_ALLOCA_64:
     return EmitLoweredSegAlloca(MI, BB);

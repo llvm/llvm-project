@@ -224,5 +224,37 @@ bool AddDiscriminators::runOnFunction(Function &F) {
       }
     }
   }
+
+  // Traverse all instructions and assign new discriminators to call
+  // instructions with the same lineno that are in the same basic block.
+  // Sample base profile needs to distinguish different function calls within
+  // a same source line for correct profile annotation.
+  for (BasicBlock &B : F) {
+    const DILocation *FirstDIL = NULL;
+    for (auto &I : B.getInstList()) {
+      CallInst *Current = dyn_cast<CallInst>(&I);
+      if (Current) {
+        DILocation *CurrentDIL = Current->getDebugLoc();
+        if (FirstDIL) {
+          if (CurrentDIL && CurrentDIL->getLine() == FirstDIL->getLine() &&
+              CurrentDIL->getFilename() == FirstDIL->getFilename()) {
+            auto *Scope = FirstDIL->getScope();
+            auto *File = Builder.createFile(FirstDIL->getFilename(),
+                                            Scope->getDirectory());
+            auto *NewScope = Builder.createLexicalBlockFile(
+                Scope, File, FirstDIL->computeNewDiscriminator());
+            Current->setDebugLoc(DILocation::get(
+                Ctx, CurrentDIL->getLine(), CurrentDIL->getColumn(), NewScope,
+                CurrentDIL->getInlinedAt()));
+            Changed = true;
+          } else {
+            FirstDIL = CurrentDIL;
+          }
+        } else {
+          FirstDIL = CurrentDIL;
+        }
+      }
+    }
+  }
   return Changed;
 }

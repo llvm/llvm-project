@@ -423,6 +423,13 @@ bool is_relative(const Twine &path);
 /// @result The cleaned-up \a path.
 StringRef remove_leading_dotslash(StringRef path);
 
+/// @brief In-place remove any './' and optionally '../' components from a path.
+///
+/// @param path processed path
+/// @param remove_dot_dot specify if '../' should be removed
+/// @result True if path was changed
+bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false);
+
 } // end namespace path
 } // end namespace sys
 } // end namespace llvm

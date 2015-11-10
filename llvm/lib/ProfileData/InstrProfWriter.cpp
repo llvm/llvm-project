@@ -20,6 +20,8 @@
 using namespace llvm;
 
 namespace {
+static support::endianness ValueProfDataEndianness = support::little;
+
 class InstrProfRecordTrait {
 public:
   typedef StringRef key_type;
@@ -51,20 +53,7 @@ public:
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
 
       // Value data
-      M += sizeof(uint64_t); // Number of value kinds with value sites.
-      for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
-        uint32_t NumValueSites = ProfRecord.getNumValueSites(Kind);
-        if (NumValueSites == 0)
-          continue;
-        M += sizeof(uint64_t); // Value kind
-        M += sizeof(uint64_t); // The number of value sites for given value kind
-        for (uint32_t I = 0; I < NumValueSites; I++) {
-          M += sizeof(uint64_t); // Number of value data pairs at a value site
-          uint64_t NumValueDataForSite =
-              ProfRecord.getNumValueDataForSite(Kind, I);
-          M += 2 * sizeof(uint64_t) * NumValueDataForSite; // Value data pairs
-        }
-      }
+      M += IndexedInstrProf::ValueProfData::getSize(ProfileData.second);
     }
     LE.write<offset_type>(M);
 
@@ -87,36 +76,12 @@ public:
       for (uint64_t I : ProfRecord.Counts)
         LE.write<uint64_t>(I);
 
-      // Compute the number of value kinds with value sites.
-      uint64_t NumValueKinds = ProfRecord.getNumValueKinds();
-      LE.write<uint64_t>(NumValueKinds);
-
       // Write value data
-      for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
-        uint32_t NumValueSites = ProfRecord.getNumValueSites(Kind);
-        if (NumValueSites == 0)
-          continue;
-        LE.write<uint64_t>(Kind); // Write value kind
-        // Write number of value sites for current value kind
-        LE.write<uint64_t>(NumValueSites);
-
-        for (uint32_t I = 0; I < NumValueSites; I++) {
-          // Write number of value data pairs at this value site
-          uint64_t NumValueDataForSite =
-              ProfRecord.getNumValueDataForSite(Kind, I);
-          LE.write<uint64_t>(NumValueDataForSite);
-          std::unique_ptr<InstrProfValueData[]> VD =
-              ProfRecord.getValueForSite(Kind, I);
-
-          for (uint32_t V = 0; V < NumValueDataForSite; V++) {
-            if (Kind == IPVK_IndirectCallTarget)
-              LE.write<uint64_t>(ComputeHash((const char *)VD[V].Value));
-            else
-              LE.write<uint64_t>(VD[V].Value);
-            LE.write<uint64_t>(VD[V].Count);
-          }
-        }
-      }
+      std::unique_ptr<IndexedInstrProf::ValueProfData> VDataPtr =
+          IndexedInstrProf::ValueProfData::serializeFrom(ProfileData.second);
+      uint32_t S = VDataPtr->getSize();
+      VDataPtr->swapBytesFromHost(ValueProfDataEndianness);
+      Out.write((const char *)VDataPtr.get(), S);
     }
   }
 };
@@ -146,6 +111,12 @@ static std::error_code combineInstrProfRecords(InstrProfRecord &Dest,
     MaxFunctionCount = Dest.Counts[0];
 
   return instrprof_error::success;
+}
+
+// Internal interface for testing purpose only.
+void InstrProfWriter::setValueProfDataEndianness(
+    support::endianness Endianness) {
+  ValueProfDataEndianness = Endianness;
 }
 
 void InstrProfWriter::updateStringTableReferences(InstrProfRecord &I) {

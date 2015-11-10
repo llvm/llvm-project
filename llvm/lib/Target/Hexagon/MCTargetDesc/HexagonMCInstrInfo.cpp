@@ -87,7 +87,8 @@ bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
   return true;
 }
 
-void HexagonMCInstrInfo::clampExtended(MCInstrInfo const &MCII, MCInst &MCI) {
+void HexagonMCInstrInfo::clampExtended(MCInstrInfo const &MCII,
+                                       MCContext &Context, MCInst &MCI) {
   assert(HexagonMCInstrInfo::isExtendable(MCII, MCI) ||
          HexagonMCInstrInfo::isExtended(MCII, MCI));
   MCOperand &exOp =
@@ -95,10 +96,10 @@ void HexagonMCInstrInfo::clampExtended(MCInstrInfo const &MCII, MCInst &MCI) {
   // If the extended value is a constant, then use it for the extended and
   // for the extender instructions, masking off the lower 6 bits and
   // including the assumed bits.
-  if (exOp.isImm()) {
+  int64_t Value;
+  if (exOp.getExpr()->evaluateAsAbsolute(Value)) {
     unsigned Shift = HexagonMCInstrInfo::getExtentAlignment(MCII, MCI);
-    int64_t Bits = exOp.getImm();
-    exOp.setImm((Bits & 0x3f) << Shift);
+    exOp.setExpr(MCConstantExpr::create((Value & 0x3f) << Shift, Context));
   }
 }
 

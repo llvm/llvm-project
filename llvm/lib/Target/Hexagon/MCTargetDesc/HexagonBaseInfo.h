@@ -246,7 +246,7 @@ namespace HexagonII {
     INST_PARSE_EXTENDER   = 0x00000000
   };
 
-  enum InstIClassBits {
+  enum InstIClassBits : unsigned {
     INST_ICLASS_MASK      = 0xf0000000,
     INST_ICLASS_EXTENDER  = 0x00000000,
     INST_ICLASS_J_1       = 0x10000000,

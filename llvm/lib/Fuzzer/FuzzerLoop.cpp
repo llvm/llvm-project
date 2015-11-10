@@ -14,12 +14,33 @@
 #include <algorithm>
 
 extern "C" {
+// Re-declare some of the sanitizer functions as "weak" so that
+// libFuzzer can be linked w/o the sanitizers and sanitizer-coveragte
+// (in which case it will complain at start-up time).
 __attribute__((weak)) void __sanitizer_print_stack_trace();
 __attribute__((weak)) size_t __sanitizer_get_total_unique_caller_callee_pairs();
+__attribute__((weak)) size_t __sanitizer_get_total_unique_coverage();
+__attribute__((weak))
+void __sanitizer_set_death_callback(void (*callback)(void));
+__attribute__((weak)) size_t __sanitizer_get_number_of_counters();
+__attribute__((weak))
+uintptr_t __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
 }
 
 namespace fuzzer {
 static const size_t kMaxUnitSizeToPrint = 256;
+
+static void MissingWeakApiFunction(const char *FnName) {
+  Printf("ERROR: %s is not defined. Exiting.\n"
+         "Did you use -fsanitize-coverage=... to build your code?\n", FnName);
+  exit(1);
+}
+
+#define CHECK_WEAK_API_FUNCTION(fn)                                            \
+  do {                                                                         \
+    if (!fn)                                                                   \
+      MissingWeakApiFunction(#fn);                                             \
+  } while (false)
 
 // Only one Fuzzer per process.
 static Fuzzer *F;
@@ -33,6 +54,7 @@ Fuzzer::Fuzzer(UserSuppliedFuzzer &USF, FuzzingOptions Options)
 }
 
 void Fuzzer::SetDeathCallback() {
+  CHECK_WEAK_API_FUNCTION(__sanitizer_set_death_callback);
   __sanitizer_set_death_callback(StaticDeathCallback);
 }
 
@@ -204,6 +226,7 @@ void Fuzzer::ExecuteCallback(const Unit &U) {
 }
 
 size_t Fuzzer::RecordBlockCoverage() {
+  CHECK_WEAK_API_FUNCTION(__sanitizer_get_total_unique_coverage);
   return LastRecordedBlockCoverage = __sanitizer_get_total_unique_coverage();
 }
 

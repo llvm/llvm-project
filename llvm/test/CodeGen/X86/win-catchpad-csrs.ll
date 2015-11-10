@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
+; RUN: llc -verify-machineinstrs -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
 
 %rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
 %eh.CatchableType = type { i32, i8*, i32, i32, i32, i32, i8* }

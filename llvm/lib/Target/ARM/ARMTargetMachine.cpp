@@ -188,6 +188,15 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   if (Options.FloatABIType == FloatABI::Default)
     this->Options.FloatABIType =
         Subtarget.isTargetHardFloat() ? FloatABI::Hard : FloatABI::Soft;
+
+  // Default to triple-appropriate EABI
+  if (Options.EABIVersion == EABI::Default ||
+      Options.EABIVersion == EABI::Unknown) {
+    if (Subtarget.isTargetGNUAEABI())
+      this->Options.EABIVersion = EABI::GNU;
+    else
+      this->Options.EABIVersion = EABI::EABI5;
+  }
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() {}

@@ -127,6 +127,12 @@ End-user Options
  implements an LLVM target.  This will permit the target name to be used with
  the :option:`-march` option so that code can be generated for that target.
 
+.. option:: -meabi=[default|gnu|4|5]
+
+ Specify which EABI version should conform to.  Valid EABI versions are *gnu*,
+ *4* and *5*.  Default value (*default*) depends on the triple.
+
+
 Tuning/Configuration Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

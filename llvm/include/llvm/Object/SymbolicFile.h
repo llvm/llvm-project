@@ -101,6 +101,7 @@ public:
                                  // (e.g. section symbols)
     SF_Thumb = 1U << 8,          // Thumb symbol in a 32-bit ARM binary
     SF_Hidden = 1U << 9,         // Symbol has hidden visibility
+    SF_Const = 1U << 10,         // Symbol value is constant
   };
 
   BasicSymbolRef() : OwningObject(nullptr) { }

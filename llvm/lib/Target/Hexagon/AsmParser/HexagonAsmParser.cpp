@@ -1189,7 +1189,8 @@ bool HexagonAsmParser::isLabel(AsmToken &Token) {
     return true;
   if (!MatchRegisterName(String.lower()))
     return true;
-  assert(Second.is(AsmToken::Colon)); (void)Second;
+  (void)Second;
+  assert(Second.is(AsmToken::Colon));
   StringRef Raw (String.data(), Third.getString().data() - String.data() +
                  Third.getString().size());
   std::string Collapsed = Raw;
@@ -1565,7 +1566,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &MO = Inst.getOperand(2);
     int64_t Value;
     bool Success = MO.getExpr()->evaluateAsAbsolute(Value);
-    assert(Success && "Assured by matcher"); (void)Success;
+    (void)Success;
+    assert(Success && "Assured by matcher");
     if (Value == 0) {
       MCInst TmpInst;
       MCOperand &Pd = Inst.getOperand(0);

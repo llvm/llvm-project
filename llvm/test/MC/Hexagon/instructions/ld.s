@@ -1,12 +1,6 @@
 # RUN: llvm-mc -triple hexagon -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
 # Hexagon Programmer's Reference Manual 11.5 LD
-# XFAIL: *
 
-# Load doubleword
-# CHECK: 90 ff d5 3a
-r17:16 = memd(r21 + r31<<#3)
-# CHECK: b0 c2 c0 49
-r17:16 = memd(#168)
 # CHECK: 02 40 00 00
 # CHECK-NEXT: 10 c5 c0 49
 r17:16 = memd(##168)

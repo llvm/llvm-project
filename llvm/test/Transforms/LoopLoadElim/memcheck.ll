@@ -16,7 +16,7 @@ define void @f(i32*  %A, i32*  %B, i32*  %C, i64 %N, i32* %D) {
 entry:
   br label %for.body
 
-; AGGRESSIVE: for.body.lver.memcheck:
+; AGGRESSIVE: for.body.lver.check:
 ; AGGRESSIVE: %found.conflict{{.*}} =
 ; AGGRESSIVE: %found.conflict{{.*}} =
 ; AGGRESSIVE-NOT: %found.conflict{{.*}} =

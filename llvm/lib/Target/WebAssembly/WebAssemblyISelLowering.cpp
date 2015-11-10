@@ -172,6 +172,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   for (auto T : MVT::integer_valuetypes())
     for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
       setLoadExtAction(Ext, T, MVT::i1, Promote);
+
+  // Trap lowers to wasm unreachable
+  setOperationAction(ISD::TRAP, MVT::Other, Legal);
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(

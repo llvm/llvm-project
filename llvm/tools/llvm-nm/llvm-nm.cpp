@@ -20,6 +20,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -207,8 +208,14 @@ static bool compareSymbolName(const NMSymbol &A, const NMSymbol &B) {
 }
 
 static char isSymbolList64Bit(SymbolicFile &Obj) {
-  if (isa<IRObjectFile>(Obj))
-    return false;
+  if (isa<IRObjectFile>(Obj)) {
+    IRObjectFile *IRobj = dyn_cast<IRObjectFile>(&Obj);
+    Module &M = IRobj->getModule();
+    if (M.getTargetTriple().empty())
+      return false;
+    Triple T(M.getTargetTriple());
+    return T.isArch64Bit();
+  }
   if (isa<COFFObjectFile>(Obj))
     return false;
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
@@ -220,54 +227,81 @@ static StringRef CurrentFilename;
 typedef std::vector<NMSymbol> SymbolListT;
 static SymbolListT SymbolList;
 
+static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I);
+
 // darwinPrintSymbol() is used to print a symbol from a Mach-O file when the
 // the OutputFormat is darwin or we are printing Mach-O symbols in hex.  For
 // the darwin format it produces the same output as darwin's nm(1) -m output
 // and when printing Mach-O symbols in hex it produces the same output as
 // darwin's nm(1) -x format.
-static void darwinPrintSymbol(MachOObjectFile *MachO, SymbolListT::iterator I,
-                              char *SymbolAddrStr, const char *printBlanks) {
+static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
+                              char *SymbolAddrStr, const char *printBlanks,
+                              const char *printDashes, const char *printFormat) {
   MachO::mach_header H;
   MachO::mach_header_64 H_64;
   uint32_t Filetype, Flags;
   MachO::nlist_64 STE_64;
   MachO::nlist STE;
-  uint8_t NType;
-  uint8_t NSect;
-  uint16_t NDesc;
-  uint32_t NStrx;
-  uint64_t NValue;
-  DataRefImpl SymDRI = I->Sym.getRawDataRefImpl();
-  if (MachO->is64Bit()) {
-    H_64 = MachO->MachOObjectFile::getHeader64();
-    Filetype = H_64.filetype;
-    Flags = H_64.flags;
-    STE_64 = MachO->getSymbol64TableEntry(SymDRI);
-    NType = STE_64.n_type;
-    NSect = STE_64.n_sect;
-    NDesc = STE_64.n_desc;
-    NStrx = STE_64.n_strx;
-    NValue = STE_64.n_value;
+  uint8_t NType = 0;
+  uint8_t NSect = 0;
+  uint16_t NDesc = 0;
+  uint32_t NStrx = 0;
+  uint64_t NValue = 0;
+  MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
+  if (Obj.isIR()) {
+    uint32_t SymFlags = I->Sym.getFlags();
+    if (SymFlags & SymbolRef::SF_Global)
+      NType |= MachO::N_EXT;
+    if (SymFlags & SymbolRef::SF_Hidden)
+      NType |= MachO::N_PEXT;
+    if (SymFlags & SymbolRef::SF_Undefined)
+      NType |= MachO::N_EXT | MachO::N_UNDF;
+    else {
+      // Here we have a symbol definition.  So to fake out a section name we
+      // use 1, 2 and 3 for section numbers.  See below where they are used to
+      // print out fake section names.
+      NType |= MachO::N_SECT;
+      if(SymFlags & SymbolRef::SF_Const)
+        NSect = 3;
+      else {
+        IRObjectFile *IRobj = dyn_cast<IRObjectFile>(&Obj);
+        char c = getSymbolNMTypeChar(*IRobj, I->Sym);
+        if (c == 't')
+          NSect = 1;
+        else
+          NSect = 2;
+      }
+    }
+    if (SymFlags & SymbolRef::SF_Weak)
+      NDesc |= MachO::N_WEAK_DEF;
   } else {
-    H = MachO->MachOObjectFile::getHeader();
-    Filetype = H.filetype;
-    Flags = H.flags;
-    STE = MachO->getSymbolTableEntry(SymDRI);
-    NType = STE.n_type;
-    NSect = STE.n_sect;
-    NDesc = STE.n_desc;
-    NStrx = STE.n_strx;
-    NValue = STE.n_value;
+    DataRefImpl SymDRI = I->Sym.getRawDataRefImpl();
+    if (MachO->is64Bit()) {
+      H_64 = MachO->MachOObjectFile::getHeader64();
+      Filetype = H_64.filetype;
+      Flags = H_64.flags;
+      STE_64 = MachO->getSymbol64TableEntry(SymDRI);
+      NType = STE_64.n_type;
+      NSect = STE_64.n_sect;
+      NDesc = STE_64.n_desc;
+      NStrx = STE_64.n_strx;
+      NValue = STE_64.n_value;
+    } else {
+      H = MachO->MachOObjectFile::getHeader();
+      Filetype = H.filetype;
+      Flags = H.flags;
+      STE = MachO->getSymbolTableEntry(SymDRI);
+      NType = STE.n_type;
+      NSect = STE.n_sect;
+      NDesc = STE.n_desc;
+      NStrx = STE.n_strx;
+      NValue = STE.n_value;
+    }
   }
 
   // If we are printing Mach-O symbols in hex do that and return.
   if (FormatMachOasHex) {
     char Str[18] = "";
-    const char *printFormat;
-    if (MachO->is64Bit())
-      printFormat = "%016" PRIx64;
-    else
-      printFormat = "%08" PRIx64;
     format(printFormat, NValue).print(Str, sizeof(Str));
     outs() << Str << ' ';
     format("%02x", NType).print(Str, sizeof(Str));
@@ -285,6 +319,8 @@ static void darwinPrintSymbol(MachOObjectFile *MachO, SymbolListT::iterator I,
   if (PrintAddress) {
     if ((NType & MachO::N_TYPE) == MachO::N_INDR)
       strcpy(SymbolAddrStr, printBlanks);
+    if (Obj.isIR() && (NType & MachO::N_TYPE) == MachO::N_TYPE)
+      strcpy(SymbolAddrStr, printDashes);
     outs() << SymbolAddrStr << ' ';
   }
 
@@ -319,6 +355,19 @@ static void darwinPrintSymbol(MachOObjectFile *MachO, SymbolListT::iterator I,
     outs() << "(indirect) ";
     break;
   case MachO::N_SECT: {
+    if (Obj.isIR()) {
+      // For llvm bitcode files print out a fake section name using the values
+      // use 1, 2 and 3 for section numbers as set above.
+      if (NSect == 1)
+        outs() << "(LTO,CODE) ";
+      else if (NSect == 2)
+        outs() << "(LTO,DATA) ";
+      else if (NSect == 3)
+        outs() << "(LTO,RODATA) ";
+      else
+        outs() << "(?,?) ";
+      break;
+    }
     section_iterator Sec = *MachO->getSymbolSection(I->Sym.getRawDataRefImpl());
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;
@@ -378,7 +427,8 @@ static void darwinPrintSymbol(MachOObjectFile *MachO, SymbolListT::iterator I,
   if ((NType & MachO::N_TYPE) == MachO::N_INDR) {
     outs() << I->Name << " (for ";
     StringRef IndirectName;
-    if (MachO->getIndirectName(I->Sym.getRawDataRefImpl(), IndirectName))
+    if (!MachO ||
+        MachO->getIndirectName(I->Sym.getRawDataRefImpl(), IndirectName))
       outs() << "?)";
     else
       outs() << IndirectName << ")";
@@ -396,7 +446,8 @@ static void darwinPrintSymbol(MachOObjectFile *MachO, SymbolListT::iterator I,
         outs() << " (dynamically looked up)";
       else {
         StringRef LibraryName;
-        if (MachO->getLibraryShortNameByIndex(LibraryOrdinal - 1, LibraryName))
+        if (!MachO ||
+            MachO->getLibraryShortNameByIndex(LibraryOrdinal - 1, LibraryName))
           outs() << " (from bad library ordinal " << LibraryOrdinal << ")";
         else
           outs() << " (from " << LibraryName << ")";
@@ -516,12 +567,14 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     }
   }
 
-  const char *printBlanks, *printFormat;
+  const char *printBlanks, *printDashes, *printFormat;
   if (isSymbolList64Bit(Obj)) {
     printBlanks = "                ";
+    printDashes = "----------------";
     printFormat = "%016" PRIx64;
   } else {
     printBlanks = "        ";
+    printDashes = "--------";
     printFormat = "%08" PRIx64;
   }
 
@@ -545,7 +598,8 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
         outs() << ArchiveName << ":";
       outs() << CurrentFilename << ": ";
     }
-    if (JustSymbolName || (UndefinedOnly && isa<MachOObjectFile>(Obj))) {
+    if ((JustSymbolName || (UndefinedOnly && isa<MachOObjectFile>(Obj) &&
+                            OutputFormat != darwin)) && OutputFormat != posix) {
       outs() << I->Name << "\n";
       continue;
     }
@@ -558,9 +612,13 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     if (OutputFormat == sysv)
       strcpy(SymbolSizeStr, printBlanks);
 
-    if (I->TypeChar != 'U')
-      format(printFormat, I->Address)
+    if (I->TypeChar != 'U') {
+      if (Obj.isIR())
+        strcpy(SymbolAddrStr, printDashes);
+      else
+        format(printFormat, I->Address)
           .print(SymbolAddrStr, sizeof(SymbolAddrStr));
+    }
     format(printFormat, I->Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
 
     // If OutputFormat is darwin or we are printing Mach-O symbols in hex and
@@ -569,11 +627,15 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     // printing Mach-O symbols in hex and not a Mach-O object fall back to
     // OutputFormat bsd (see below).
     MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
-    if ((OutputFormat == darwin || FormatMachOasHex) && MachO) {
-      darwinPrintSymbol(MachO, I, SymbolAddrStr, printBlanks);
+    if ((OutputFormat == darwin || FormatMachOasHex) && (MachO || Obj.isIR())) {
+      darwinPrintSymbol(Obj, I, SymbolAddrStr, printBlanks, printDashes,
+                        printFormat);
     } else if (OutputFormat == posix) {
-      outs() << I->Name << " " << I->TypeChar << " " << SymbolAddrStr
-             << SymbolSizeStr << "\n";
+      outs() << I->Name << " " << I->TypeChar << " ";
+      if (MachO)
+        outs() << I->Address << " " << "0" /* SymbolSizeStr */ << "\n";
+      else
+        outs() << SymbolAddrStr << SymbolSizeStr << "\n";
     } else if (OutputFormat == bsd || (OutputFormat == darwin && !MachO)) {
       if (PrintAddress)
         outs() << SymbolAddrStr << ' ';
@@ -771,8 +833,14 @@ static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {
   char Ret = '?';
   if (Symflags & object::SymbolRef::SF_Absolute)
     Ret = 'a';
-  else if (IRObjectFile *IR = dyn_cast<IRObjectFile>(&Obj))
+  else if (IRObjectFile *IR = dyn_cast<IRObjectFile>(&Obj)) {
     Ret = getSymbolNMTypeChar(*IR, I);
+    Triple Host(sys::getDefaultTargetTriple());
+    if (Ret == 'd' && Host.isOSDarwin()) {
+      if(Symflags & SymbolRef::SF_Const)
+        Ret = 's';
+    }
+  }
   else if (COFFObjectFile *COFF = dyn_cast<COFFObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*COFF, I);
   else if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))

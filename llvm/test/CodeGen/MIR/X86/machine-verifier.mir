@@ -15,7 +15,8 @@ body: |
   bb.0.entry:
     liveins: %edi
    ; CHECK: *** Bad machine code: Too few operands ***
-   ; CHECK: instruction: COPY2 operands expected, but 0 given.
+   ; CHECK: instruction: COPY
+   ; CHECK: 2 operands expected, but 0 given.
     COPY
     RETQ
 ...

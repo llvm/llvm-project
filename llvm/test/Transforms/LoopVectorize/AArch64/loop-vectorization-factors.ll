@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -basicaa -loop-vectorize -simplifycfg -instsimplify -instcombine -licm -force-vector-interleave=1 2>&1 | FileCheck %s
+; RUN: opt -S < %s -basicaa -loop-vectorize -force-vector-interleave=1 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"

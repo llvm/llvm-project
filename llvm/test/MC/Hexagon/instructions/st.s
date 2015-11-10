@@ -1,6 +1,5 @@
 # RUN: llvm-mc -triple=hexagon -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
 # Hexagon Programmer's Reference Manual 11.8 ST
-# XFAIL: *
 
 # Store doubleword
 # CHECK: 9e f5 d1 3b

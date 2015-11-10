@@ -34,7 +34,6 @@ endpad:
 ; CHECK: callq crash
 ; CHECK: retq
 ; CHECK: .LBB0_2: # %lpad
-; CHECK: # %catchall
 ; CHECK: leaq str(%rip), %rcx
 ; CHECK: movl %eax, %edx
 ; CHECK: callq printf

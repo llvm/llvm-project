@@ -21,6 +21,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MD5.h"
 #include <cstdint>
 #include <list>
@@ -318,6 +319,16 @@ uint32_t InstrProfRecord::getNumValueKinds() const {
   return NumValueKinds;
 }
 
+uint32_t InstrProfRecord::getNumValueData(uint32_t ValueKind) const {
+  uint32_t N = 0;
+  const std::vector<InstrProfValueSiteRecord> &SiteRecords =
+      getValueSitesForKind(ValueKind);
+  for (auto &SR : SiteRecords) {
+    N += SR.ValueData.size();
+  }
+  return N;
+}
+
 uint32_t InstrProfRecord::getNumValueSites(uint32_t ValueKind) const {
   return getValueSitesForKind(ValueKind).size();
 }
@@ -419,12 +430,113 @@ const uint64_t Magic = 0x8169666f72706cff;  // "\xfflprofi\x81"
 const uint64_t Version = 3;
 const HashT HashType = HashT::MD5;
 
+// This structure defines the file header of the LLVM profile
+// data file in indexed-format.
 struct Header {
   uint64_t Magic;
   uint64_t Version;
   uint64_t MaxFunctionCount;
   uint64_t HashType;
   uint64_t HashOffset;
+};
+
+inline support::endianness getHostEndianness() {
+  return sys::IsLittleEndianHost ? support::little : support::big;
+}
+
+/// This is the header of the data structure that defines the on-disk
+/// layout of the value profile data of a particular kind for one function.
+struct ValueProfRecord {
+  // The kind of the value profile record.
+  uint32_t Kind;
+  // The number of value profile sites. It is guaranteed to be non-zero;
+  // otherwise the record for this kind won't be emitted.
+  uint32_t NumValueSites;
+  // The first element of the array that stores the number of profiled
+  // values for each value site. The size of the array is NumValueSites.
+  // Since NumValueSites is greater than zero, there is at least one
+  // element in the array.
+  uint8_t SiteCountArray[1];
+
+  // The fake declaration is for documentation purpose only.
+  // Align the start of next field to be on 8 byte boundaries.
+  // uint8_t Padding[X];
+
+  // The array of value profile data. The size of the array is the sum
+  // of all elements in SiteCountArray[].
+  // InstrProfValueData ValueData[];
+
+  /// Return the \c ValueProfRecord header size including the padding bytes.
+  static uint32_t getHeaderSize(uint32_t NumValueSites);
+  /// Return the total size of the value profile record including the
+  /// header and the value data.
+  static uint32_t getSize(uint32_t NumValueSites, uint32_t NumValueData);
+  /// Return the total size of the value profile record including the
+  /// header and the value data.
+  uint32_t getSize() const { return getSize(NumValueSites, getNumValueData()); }
+  /// Use this method to advance to the next \c ValueProfRecord.
+  ValueProfRecord *getNext();
+  /// Return the pointer to the first value profile data.
+  InstrProfValueData *getValueData();
+  /// Return the number of value sites.
+  uint32_t getNumValueSites() const { return NumValueSites; }
+  /// Return the number of value data.
+  uint32_t getNumValueData() const;
+  /// Read data from this record and save it to Record.
+  void deserializeTo(InstrProfRecord &Record,
+                     InstrProfRecord::ValueMapType *VMap);
+  /// Extract data from \c Record and serialize into this instance.
+  void serializeFrom(const InstrProfRecord &Record, uint32_t ValueKind,
+                     uint32_t NumValueSites);
+  /// In-place byte swap:
+  /// Do byte swap for this instance. \c Old is the original order before
+  /// the swap, and \c New is the New byte order.
+  void swapBytes(support::endianness Old, support::endianness New);
+};
+
+/// Per-function header/control data structure for value profiling
+/// data in indexed format.
+struct ValueProfData {
+  // Total size in bytes including this field. It must be a multiple
+  // of sizeof(uint64_t).
+  uint32_t TotalSize;
+  // The number of value profile kinds that has value profile data.
+  // In this implementation, a value profile kind is considered to
+  // have profile data if the number of value profile sites for the
+  // kind is not zero. More aggressively, the implemnetation can
+  // choose to check the actual data value: if none of the value sites
+  // has any profiled values, the kind can be skipped.
+  uint32_t NumValueKinds;
+
+  // Following are a sequence of variable length records. The prefix/header
+  // of each record is defined by ValueProfRecord type. The number of
+  // records is NumValueKinds.
+  // ValueProfRecord Record_1;
+  // ValueProfRecord Record_N;
+
+  /// Return the total size in bytes of the on-disk value profile data
+  /// given the data stored in Record.
+  static uint32_t getSize(const InstrProfRecord &Record);
+  /// Return a pointer to \c ValueProfData instance ready to be streamed.
+  static std::unique_ptr<ValueProfData>
+  serializeFrom(const InstrProfRecord &Record);
+  /// Return a pointer to \c ValueProfileData instance ready to be read.
+  /// All data in the instance are properly byte swapped. The input
+  /// data is assumed to be in little endian order.
+  static ErrorOr<std::unique_ptr<ValueProfData>>
+  getValueProfData(const unsigned char *D, const unsigned char *const BufferEnd,
+                   support::endianness SrcDataEndianness);
+  /// Swap byte order from \c Endianness order to host byte order.
+  void swapBytesToHost(support::endianness Endianness);
+  /// Swap byte order from host byte order to \c Endianness order.
+  void swapBytesFromHost(support::endianness Endianness);
+  /// Return the total size of \c ValueProfileData.
+  uint32_t getSize() const { return TotalSize; }
+  /// Read data from this data and save it to \c Record.
+  void deserializeTo(InstrProfRecord &Record,
+                     InstrProfRecord::ValueMapType *VMap);
+  /// Return the first \c ValueProfRecord instance.
+  ValueProfRecord *getFirstValueProfRecord();
 };
 
 }  // end namespace IndexedInstrProf
@@ -458,20 +570,20 @@ inline uint64_t getMagic<uint32_t>() {
          uint64_t('R') << 8 | uint64_t(129);
 }
 
+// Per-function profile data header/control structure.
 // The definition should match the structure defined in
 // compiler-rt/lib/profile/InstrProfiling.h.
 // It should also match the synthesized type in
 // Transforms/Instrumentation/InstrProfiling.cpp:getOrCreateRegionCounters.
-
 template <class IntPtrT> struct ProfileData {
   #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Type Name;
   #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+// File header structure of the LLVM profile data in raw format.
 // The definition should match the header referenced in
 // compiler-rt/lib/profile/InstrProfilingFile.c  and
 // InstrProfilingBuffer.c.
-
 struct Header {
   const uint64_t Magic;
   const uint64_t Version;
@@ -486,6 +598,14 @@ struct Header {
 
 namespace coverage {
 
+// Profile coverage map has the following layout:
+// [CoverageMapFileHeader]
+// [ArrayStart]
+//  [CovMapFunctionRecord]
+//  [CovMapFunctionRecord]
+//  ...
+// [ArrayEnd]
+// [Encoded Region Mapping Data]
 LLVM_PACKED_START
 template <class IntPtrT> struct CovMapFunctionRecord {
   #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;

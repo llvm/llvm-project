@@ -256,8 +256,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::SRL_I128, nullptr);
   setLibcallName(RTLIB::SRA_I128, nullptr);
 
-  if (Subtarget->isAAPCS_ABI() && !Subtarget->isTargetMachO() &&
-      !Subtarget->isTargetWindows()) {
+  // RTLIB
+  if (Subtarget->isAAPCS_ABI() &&
+      (Subtarget->isTargetAEABI() || Subtarget->isTargetGNUAEABI() ||
+       Subtarget->isTargetAndroid())) {
     static const struct {
       const RTLIB::Libcall Op;
       const char * const Name;
@@ -345,12 +347,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       { RTLIB::UDIV_I16, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
       { RTLIB::UDIV_I32, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
       { RTLIB::UDIV_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-
-      // Memory operations
-      // RTABI chapter 4.3.4
-      { RTLIB::MEMCPY,  "__aeabi_memcpy",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::MEMSET,  "__aeabi_memset",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
     };
 
     for (const auto &LC : LibraryCalls) {
@@ -358,6 +354,30 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setLibcallCallingConv(LC.Op, LC.CC);
       if (LC.Cond != ISD::SETCC_INVALID)
         setCmpLibcallCC(LC.Op, LC.Cond);
+    }
+
+    // EABI dependent RTLIB
+    if (TM.Options.EABIVersion == EABI::EABI4 ||
+        TM.Options.EABIVersion == EABI::EABI5) {
+      static const struct {
+        const RTLIB::Libcall Op;
+        const char *const Name;
+        const CallingConv::ID CC;
+        const ISD::CondCode Cond;
+      } MemOpsLibraryCalls[] = {
+        // Memory operations
+        // RTABI chapter 4.3.4
+        { RTLIB::MEMCPY,  "__aeabi_memcpy",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+        { RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+        { RTLIB::MEMSET,  "__aeabi_memset",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      };
+
+      for (const auto &LC : MemOpsLibraryCalls) {
+        setLibcallName(LC.Op, LC.Name);
+        setLibcallCallingConv(LC.Op, LC.CC);
+        if (LC.Cond != ISD::SETCC_INVALID)
+          setCmpLibcallCC(LC.Op, LC.Cond);
+      }
     }
   }
 
@@ -10222,114 +10242,6 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static void computeKnownBits(SelectionDAG &DAG, SDValue Op, APInt &KnownZero,
-                             APInt &KnownOne) {
-  if (Op.getOpcode() == ARMISD::BFI) {
-    // Conservatively, we can recurse down the first operand
-    // and just mask out all affected bits.
-    computeKnownBits(DAG, Op.getOperand(0), KnownZero, KnownOne);
-
-    // The operand to BFI is already a mask suitable for removing the bits it
-    // sets.
-    ConstantSDNode *CI = cast<ConstantSDNode>(Op.getOperand(2));
-    APInt Mask = CI->getAPIntValue();
-    KnownZero &= Mask;
-    KnownOne &= Mask;
-    return;
-  }
-  if (Op.getOpcode() == ARMISD::CMOV) {
-    APInt KZ2(KnownZero.getBitWidth(), 0);
-    APInt KO2(KnownOne.getBitWidth(), 0);
-    computeKnownBits(DAG, Op.getOperand(1), KnownZero, KnownOne);
-    computeKnownBits(DAG, Op.getOperand(2), KZ2, KO2);
-
-    KnownZero &= KZ2;
-    KnownOne &= KO2;
-    return;
-  }
-  return DAG.computeKnownBits(Op, KnownZero, KnownOne);
-}
-
-SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &DAG) const {
-  // If we have a CMOV, OR and AND combination such as:
-  //   if (x & CN)
-  //     y |= CM;
-  //
-  // And:
-  //   * CN is a single bit;
-  //   * All bits covered by CM are known zero in y
-  //
-  // Then we can convert this into a sequence of BFI instructions. This will
-  // always be a win if CM is a single bit, will always be no worse than the
-  // TST&OR sequence if CM is two bits, and for thumb will be no worse if CM is
-  // three bits (due to the extra IT instruction).
-
-  SDValue Op0 = CMOV->getOperand(0);
-  SDValue Op1 = CMOV->getOperand(1);
-  SDValue CmpZ = CMOV->getOperand(4);
-
-  assert(CmpZ->getOpcode() == ARMISD::CMPZ);
-  SDValue And = CmpZ->getOperand(0);
-  if (And->getOpcode() != ISD::AND)
-    return SDValue();
-  ConstantSDNode *AndC = dyn_cast<ConstantSDNode>(And->getOperand(1));
-  if (!AndC || !AndC->getAPIntValue().isPowerOf2())
-    return SDValue();
-  SDValue X = And->getOperand(0);
-
-  // Canonicalize so that the OR is on the left.
-  if (Op1->getOpcode() == ISD::OR)
-    std::swap(Op0, Op1);
-  if (Op0->getOpcode() != ISD::OR)
-    return SDValue();
-
-  ConstantSDNode *OrC = dyn_cast<ConstantSDNode>(Op0->getOperand(1));
-  if (!OrC)
-    return SDValue();
-  SDValue Y = Op0->getOperand(0);
-
-  if (Op1 != Y)
-    return SDValue();
-
-  // Now, is it profitable to continue?
-  APInt OrCI = OrC->getAPIntValue();
-  unsigned Heuristic = Subtarget->isThumb() ? 3 : 2;
-  if (OrCI.countPopulation() > Heuristic)
-    return SDValue();
-
-  // Lastly, can we determine that the bits defined by OrCI
-  // are zero in Y?
-  APInt KnownZero, KnownOne;
-  computeKnownBits(DAG, Y, KnownZero, KnownOne);
-  if ((OrCI & KnownZero) != OrCI)
-    return SDValue();
-
-  // OK, we can do the combine.
-  SDValue V = Y;
-  SDLoc dl(X);
-  EVT VT = X.getValueType();
-  unsigned BitInX = AndC->getAPIntValue().logBase2();
-  
-  if (BitInX != 0) {
-    // We must shift X first.
-    X = DAG.getNode(ISD::SRL, dl, VT, X,
-                    DAG.getConstant(BitInX, dl, VT));
-  }
-
-  for (unsigned BitInY = 0, NumActiveBits = OrCI.getActiveBits();
-       BitInY < NumActiveBits; ++BitInY) {
-    if (OrCI[BitInY] == 0)
-      continue;
-    APInt Mask(VT.getSizeInBits(), 0);
-    Mask.setBit(BitInY);
-    V = DAG.getNode(ARMISD::BFI, dl, VT, V, X,
-                    // Confusingly, the operand is an *inverted* mask.
-                    DAG.getConstant(~Mask, dl, VT));
-  }
-
-  return V;
-}
-
 /// PerformCMOVCombine - Target-specific DAG combining for ARMISD::CMOV.
 SDValue
 ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
@@ -10347,13 +10259,6 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   SDValue ARMcc = N->getOperand(2);
   ARMCC::CondCodes CC =
     (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
-
-  // BFI is only available on V6T2+.
-  if (!Subtarget->isThumb1Only() && Subtarget->hasV6T2Ops()) {
-    SDValue R = PerformCMOVToBFICombine(N, DAG);
-    if (R)
-      return R;
-  }
 
   // Simplify
   //   mov     r1, r0

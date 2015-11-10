@@ -86,18 +86,18 @@ catch.inner:
   ; CHECK:   store i32 %z
   ; CHECK-NEXT: invoke void @f
   invoke void @f()
-          to label %catchret.inner unwind label %merge.outer
+          to label %catchret.inner unwind label %catchend.inner
 
 catchret.inner:
   catchret %cpinner to label %exit
 catchend.inner:
+  ; CHECK-NOT: = phi
+  %y = phi i32 [ %x, %merge.inner ], [ %z, %catch.inner ]
   catchendpad unwind label %merge.outer
 
 merge.outer:
   ; CHECK: merge.outer:
-  ; CHECK-NOT: = phi
   ; CHECK: [[CatchPad:%[^ ]+]] = catchpad []
-  %y = phi i32 [ %x, %catchend.inner ], [ %z, %catch.inner ]
   %cpouter = catchpad [] to label %catch.outer unwind label %catchend.outer
 
 catchend.outer:

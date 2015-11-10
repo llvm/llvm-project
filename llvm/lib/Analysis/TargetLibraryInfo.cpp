@@ -350,6 +350,16 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc::ffsll);
   }
 
+  // The following functions are available on at least FreeBSD:
+  // http://svn.freebsd.org/base/head/lib/libc/string/fls.c
+  // http://svn.freebsd.org/base/head/lib/libc/string/flsl.c
+  // http://svn.freebsd.org/base/head/lib/libc/string/flsll.c
+  if (!T.isOSFreeBSD()) {
+    TLI.setUnavailable(LibFunc::fls);
+    TLI.setUnavailable(LibFunc::flsl);
+    TLI.setUnavailable(LibFunc::flsll);
+  }
+
   // The following functions are available on at least Linux:
   if (!T.isOSLinux()) {
     TLI.setUnavailable(LibFunc::dunder_strdup);

@@ -1,7 +1,6 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Check that we generate absolute addressing mode instructions
 ; with immediate value.
-; XFAIL: *
 
 define i32 @f1(i32 %i) nounwind {
 ; CHECK: memw(##786432){{ *}}={{ *}}r{{[0-9]+}}

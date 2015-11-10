@@ -71,6 +71,14 @@ $(ObjDir)/BuildVariables.inc: $(BUILDVARIABLES_SRCPATH) Makefile $(ObjDir)/.dir
 	  >> temp.sed
 	$(Verb) $(ECHO) 's/@LLVM_TARGETS_BUILT@/$(subst /,\/,$(TARGETS_TO_BUILD))/' \
 	  >> temp.sed
+	$(if $(filter-out $(ENABLE_SHARED),0),\
+	  $(Verb) $(ECHO) 's/@LLVM_BUILD_LLVM_DYLIB@/ON/',\
+	  $(Verb) $(ECHO) 's/@LLVM_BUILD_LLVM_DYLIB@/OFF/') \
+	  >> temp.sed
+	$(Verb) $(ECHO) 's/@LLVM_ENABLE_SHARED@/OFF/' \
+	  >> temp.sed
+	$(Verb) $(ECHO) 's/@LLVM_DYLIB_COMPONENTS@/all/' \
+	  >> temp.sed
 	$(Verb) $(ECHO) 's/@LLVM_BUILD_SYSTEM@/autoconf/' \
 	  >> temp.sed
 	$(Verb) $(ECHO) 's/@LLVM_HAS_RTTI@/$(LLVM_HAS_RTTI)/' \

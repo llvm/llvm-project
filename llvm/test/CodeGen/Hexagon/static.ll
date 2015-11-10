@@ -1,5 +1,4 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv4 -disable-dfa-sched -disable-hexagon-misched < %s | FileCheck %s
-; XFAIL: *
 
 @num = external global i32
 @acc = external global i32

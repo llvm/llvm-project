@@ -406,6 +406,15 @@ TLI_DEFINE_STRING_INTERNAL("floorf")
 /// long double floorl(long double x);
 TLI_DEFINE_ENUM_INTERNAL(floorl)
 TLI_DEFINE_STRING_INTERNAL("floorl")
+/// int fls(int i);
+TLI_DEFINE_ENUM_INTERNAL(fls)
+TLI_DEFINE_STRING_INTERNAL("fls")
+/// int flsl(long int i);
+TLI_DEFINE_ENUM_INTERNAL(flsl)
+TLI_DEFINE_STRING_INTERNAL("flsl")
+/// int flsll(long long int i);
+TLI_DEFINE_ENUM_INTERNAL(flsll)
+TLI_DEFINE_STRING_INTERNAL("flsll")
 /// double fmax(double x, double y);
 TLI_DEFINE_ENUM_INTERNAL(fmax)
 TLI_DEFINE_STRING_INTERNAL("fmax")

@@ -96,6 +96,12 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
   assert(!HexagonMCInstrInfo::isBundle(HMB));
   uint64_t Binary;
 
+  // Compound instructions are limited to using registers 0-7 and 16-23
+  // and here we make a map 16-23 to 8-15 so they can be correctly encoded.
+  static unsigned RegMap[8] = {Hexagon::R8,  Hexagon::R9,  Hexagon::R10,
+                               Hexagon::R11, Hexagon::R12, Hexagon::R13,
+                               Hexagon::R14, Hexagon::R15};
+
   // Pseudo instructions don't get encoded and shouldn't be here
   // in the first place!
   assert(!HexagonMCInstrInfo::getDesc(MCII, HMB).isPseudo() &&
@@ -103,6 +109,16 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
   DEBUG(dbgs() << "Encoding insn"
                   " `" << HexagonMCInstrInfo::getName(MCII, HMB) << "'"
                                                                     "\n");
+
+  if (llvm::HexagonMCInstrInfo::getType(MCII, HMB) == HexagonII::TypeCOMPOUND) {
+    for (unsigned i = 0; i < HMB.getNumOperands(); ++i)
+      if (HMB.getOperand(i).isReg()) {
+        unsigned Reg =
+            MCT.getRegisterInfo()->getEncodingValue(HMB.getOperand(i).getReg());
+        if ((Reg <= 23) && (Reg >= 16))
+          HMB.getOperand(i).setReg(RegMap[Reg - 16]);
+      }
+  }
 
   if (HexagonMCInstrInfo::isNewValue(MCII, HMB)) {
     // Calculate the new value distance to the associated producer

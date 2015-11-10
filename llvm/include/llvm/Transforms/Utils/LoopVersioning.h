@@ -17,6 +17,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPVERSIONING_H
 
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -25,6 +26,7 @@ namespace llvm {
 class Loop;
 class LoopAccessInfo;
 class LoopInfo;
+class ScalarEvolution;
 
 /// \brief This class emits a version of the loop where run-time checks ensure
 /// that may-alias pointers can't overlap.
@@ -33,16 +35,13 @@ class LoopInfo;
 /// already has a preheader.
 class LoopVersioning {
 public:
-  /// \brief Expects MemCheck, LoopAccessInfo, Loop, LoopInfo, DominatorTree
-  /// as input. It uses runtime check provided by user.
-  LoopVersioning(SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks,
-                 const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
-                 DominatorTree *DT);
-
   /// \brief Expects LoopAccessInfo, Loop, LoopInfo, DominatorTree as input.
-  /// It uses default runtime check provided by LoopAccessInfo.
-  LoopVersioning(const LoopAccessInfo &LAInfo, Loop *L, LoopInfo *LI,
-                 DominatorTree *DT);
+  /// It uses runtime check provided by the user. If \p UseLAIChecks is true,
+  /// we will retain the default checks made by LAI. Otherwise, construct an
+  /// object having no checks and we expect the user to add them.
+  LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
+                 DominatorTree *DT, ScalarEvolution *SE,
+                 bool UseLAIChecks = true);
 
   /// \brief Performs the CFG manipulation part of versioning the loop including
   /// the DominatorTree and LoopInfo updates.
@@ -72,6 +71,13 @@ public:
   /// loop may alias (i.e. one of the memchecks failed).
   Loop *getNonVersionedLoop() { return NonVersionedLoop; }
 
+  /// \brief Sets the runtime alias checks for versioning the loop.
+  void setAliasChecks(
+      const SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks);
+
+  /// \brief Sets the runtime SCEV checks for versioning the loop.
+  void setSCEVChecks(SCEVUnionPredicate Check);
+
 private:
   /// \brief Adds the necessary PHI nodes for the versioned loops based on the
   /// loop-defined values used outside of the loop.
@@ -91,13 +97,17 @@ private:
   /// in NonVersionedLoop.
   ValueToValueMapTy VMap;
 
-  /// \brief The set of checks that we are versioning for.
-  SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
+  /// \brief The set of alias checks that we are versioning for.
+  SmallVector<RuntimePointerChecking::PointerCheck, 4> AliasChecks;
+
+  /// \brief The set of SCEV checks that we are versioning for.
+  SCEVUnionPredicate Preds;
 
   /// \brief Analyses used.
   const LoopAccessInfo &LAI;
   LoopInfo *LI;
   DominatorTree *DT;
+  ScalarEvolution *SE;
 };
 }
 

@@ -2100,7 +2100,6 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
   // If this scalar is unknown, assume that it is a constant or that it is
   // loop invariant. Broadcast V and save the value for future uses.
   Value *B = getBroadcastInstrs(V);
-
   return WidenMap.splat(V, B);
 }
 
@@ -5409,8 +5408,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF) {
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
-    if (VF > 1 && MinBWs.count(dyn_cast<Instruction>(I->getOperand(0))))
-      ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
+    Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
+    auto It = MinBWs.find(Op0AsInstruction);
+    if (VF > 1 && It != MinBWs.end())
+      ValTy = IntegerType::get(ValTy->getContext(), It->second);
     VectorTy = ToVectorTy(ValTy, VF);
     return TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy);
   }

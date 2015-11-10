@@ -418,6 +418,15 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
       SoftenFloatResult(Op.getNode(), 0);
   }
 
+  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat) {
+    Op = GetPromotedFloat(Op);
+    // If the promotion did the FP_EXTEND to the destination type for us,
+    // there's nothing left to do here.
+    if (Op.getValueType() == N->getValueType(0)) {
+      return BitConvertToInteger(Op);
+    }
+  }
+
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftenFloat)
     Op = GetSoftenedFloat(Op);

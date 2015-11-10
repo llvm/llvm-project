@@ -87,28 +87,23 @@ public:
     StringRef Contents(Buffer);
     auto PacketBundle = Contents.rsplit('\n');
     auto HeadTail = PacketBundle.first.split('\n');
-    auto Preamble = "\t{\n\t\t";
-    auto Separator = "";
-    while(!HeadTail.first.empty()) {
-      OS << Separator;
-      StringRef Inst;
+    StringRef Separator = "\n";
+    StringRef Indent = "\t\t";
+    OS << "\t{\n";
+    while (!HeadTail.first.empty()) {
+      StringRef InstTxt;
       auto Duplex = HeadTail.first.split('\v');
-      if(!Duplex.second.empty()){
-        OS << Duplex.first << "\n";
-        Inst = Duplex.second;
+      if (!Duplex.second.empty()) {
+        OS << Indent << Duplex.first << Separator;
+        InstTxt = Duplex.second;
+      } else if (!HeadTail.first.trim().startswith("immext")) {
+        InstTxt = Duplex.first;
       }
-      else {
-        if(!HeadTail.first.startswith("immext"))
-          Inst = Duplex.first;
-      }
-      OS << Preamble;
-      OS << Inst;
+      if (!InstTxt.empty())
+        OS << Indent << InstTxt << Separator;
       HeadTail = HeadTail.second.split('\n');
-      Preamble = "";
-      Separator = "\n\t\t";
     }
-    if(HexagonMCInstrInfo::bundleSize(Inst) != 0)
-      OS << "\n\t}" << PacketBundle.second;
+    OS << "\t}" << PacketBundle.second;
   }
 };
 }

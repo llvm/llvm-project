@@ -39,11 +39,19 @@ shared.cont:
   unreachable
 
 inner:
-  ; CHECK: %phi = phi i32 [ %x, %right ], [ 0, %invoke.cont2 ], [ %x.for.left, %left ]
   %phi = phi i32 [ %x, %shared ], [ 0, %invoke.cont2 ]
   %i = cleanuppad []
   call void @h(i32 %phi)
   unreachable
+
+; CHECK [[INNER_INVOKE_CONT2:inner.*]]:
+  ; CHECK: call void @h(i32 0)
+
+; CHECK [[INNER_RIGHT:inner.*]]:
+  ; CHECK: call void @h(i32 %x)
+
+; CHECK [[INNER_LEFT:inner.*]]:
+  ; CHECK: call void @h(i32 %x.for.left)
 
 exit:
   unreachable
@@ -76,11 +84,15 @@ shared.cont:
   unreachable
 
 inner:
-  ; CHECK: %x1 = phi i32 [ %x.for.left, %left ], [ %x, %right ]
-  ; CHECK: call void @h(i32 %x1)
   %i = cleanuppad []
   call void @h(i32 %x)
   unreachable
+
+; CHECK [[INNER_RIGHT:inner.*]]:
+  ; CHECK: call void @h(i32 %x)
+
+; CHECK [[INNER_LEFT:inner.*]]:
+  ; CHECK: call void @h(i32 %x.for.left)
 
 exit:
   unreachable

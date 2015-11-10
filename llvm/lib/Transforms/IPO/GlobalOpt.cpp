@@ -497,6 +497,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
                                                In, GV->getName()+"."+Twine(i),
                                                GV->getThreadLocalMode(),
                                               GV->getType()->getAddressSpace());
+      NGV->setExternallyInitialized(GV->isExternallyInitialized());
       Globals.insert(GV->getIterator(), NGV);
       NewGlobals.push_back(NGV);
 
@@ -530,6 +531,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
                                                In, GV->getName()+"."+Twine(i),
                                                GV->getThreadLocalMode(),
                                               GV->getType()->getAddressSpace());
+      NGV->setExternallyInitialized(GV->isExternallyInitialized());
       Globals.insert(GV->getIterator(), NGV);
       NewGlobals.push_back(NGV);
 

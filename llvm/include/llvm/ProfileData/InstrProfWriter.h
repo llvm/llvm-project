@@ -46,6 +46,9 @@ public:
   /// Write the profile, returning the raw data. For testing.
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
+  // Internal interface for testing purpose only.
+  void setValueProfDataEndianness(support::endianness Endianness);
+
 private:
   std::pair<uint64_t, uint64_t> writeImpl(raw_ostream &OS);
 };

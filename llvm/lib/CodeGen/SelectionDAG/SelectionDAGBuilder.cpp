@@ -198,6 +198,14 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
   if (PartEVT == ValueVT)
     return Val;
 
+  if (PartEVT.isInteger() && ValueVT.isFloatingPoint() &&
+      ValueVT.bitsLT(PartEVT)) {
+    // For an FP value in an integer part, we need to truncate to the right
+    // width first.
+    PartEVT = EVT::getIntegerVT(*DAG.getContext(),  ValueVT.getSizeInBits());
+    Val = DAG.getNode(ISD::TRUNCATE, DL, PartEVT, Val);
+  }
+
   if (PartEVT.isInteger() && ValueVT.isInteger()) {
     if (ValueVT.bitsLT(PartEVT)) {
       // For a truncate, see if we have any information to
@@ -384,6 +392,12 @@ static void getCopyToParts(SelectionDAG &DAG, SDLoc DL,
       assert(NumParts == 1 && "Do not know what to promote to!");
       Val = DAG.getNode(ISD::FP_EXTEND, DL, PartVT, Val);
     } else {
+      if (ValueVT.isFloatingPoint()) {
+        // FP values need to be bitcast, then extended if they are being put
+        // into a larger container.
+        ValueVT = EVT::getIntegerVT(*DAG.getContext(),  ValueVT.getSizeInBits());
+        Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
+      }
       assert((PartVT.isInteger() || PartVT == MVT::x86mmx) &&
              ValueVT.isInteger() &&
              "Unknown mismatch!");
@@ -1200,7 +1214,6 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 void SelectionDAGBuilder::visitCatchPad(const CatchPadInst &I) {
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsMSVCCXX = Pers == EHPersonality::MSVC_CXX;
-  bool IsSEH = isAsynchronousEHPersonality(Pers);
   bool IsCoreCLR = Pers == EHPersonality::CoreCLR;
   MachineBasicBlock *CatchPadMBB = FuncInfo.MBB;
   // In MSVC C++ and CoreCLR, catchblocks are funclets and need prologues.
@@ -1212,22 +1225,16 @@ void SelectionDAGBuilder::visitCatchPad(const CatchPadInst &I) {
   // Update machine-CFG edge.
   FuncInfo.MBB->addSuccessor(NormalDestMBB);
 
-  // CatchPads in SEH are not funclets, they are merely markers which indicate
-  // where to insert register restoration code.
-  if (IsSEH) {
-    DAG.setRoot(DAG.getNode(ISD::CATCHRET, getCurSDLoc(), MVT::Other,
-                            getControlRoot(), DAG.getBasicBlock(NormalDestMBB),
-                            DAG.getBasicBlock(&FuncInfo.MF->front())));
-    return;
-  }
+  SDValue Chain =
+      DAG.getNode(ISD::CATCHPAD, getCurSDLoc(), MVT::Other, getControlRoot());
 
   // If this is not a fall-through branch or optimizations are switched off,
   // emit the branch.
   if (NormalDestMBB != NextBlock(CatchPadMBB) ||
       TM.getOptLevel() == CodeGenOpt::None)
-    DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other,
-                            getControlRoot(),
-                            DAG.getBasicBlock(NormalDestMBB)));
+    Chain = DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other, Chain,
+                        DAG.getBasicBlock(NormalDestMBB));
+  DAG.setRoot(Chain);
 }
 
 void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {

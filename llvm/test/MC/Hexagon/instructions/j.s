@@ -1,6 +1,5 @@
 # RUN: llvm-mc -triple hexagon -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
 # Hexagon Programmer's Reference Manual 11.4 J
-# XFAIL: *
 
 # Call subroutine
 # CHECK: 00 c0 00 5a
