@@ -222,6 +222,9 @@ protected:
                                               const lldb_private::Section *mach_header_section,
                                               const lldb_private::Section *section);
 
+    lldb_private::UUID
+    GetSharedCacheUUID (lldb_private::FileSpec dyld_shared_cache, const lldb::ByteOrder byte_order, const uint32_t addr_byte_size);
+
     size_t
     ParseSymtab();
 

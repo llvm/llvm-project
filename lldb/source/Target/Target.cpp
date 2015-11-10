@@ -1243,44 +1243,70 @@ bool
 Target::SetArchitecture (const ArchSpec &arch_spec)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TARGET));
-    if (m_arch.IsCompatibleMatch(arch_spec) || !m_arch.IsValid())
+    bool missing_local_arch = (false == m_arch.IsValid());
+    bool replace_local_arch = true;
+    bool compatible_local_arch = false;
+    ArchSpec other(arch_spec);
+
+    if (!missing_local_arch)
     {
-        // If we haven't got a valid arch spec, or the architectures are
-        // compatible, so just update the architecture. Architectures can be
-        // equal, yet the triple OS and vendor might change, so we need to do
-        // the assignment here just in case.
-        m_arch = arch_spec;
+        if (m_arch.IsCompatibleMatch(arch_spec))
+        {
+            other.MergeFrom(m_arch);
+            
+            if (m_arch.IsCompatibleMatch(other))
+            {
+                compatible_local_arch = true;
+                bool arch_changed, vendor_changed, os_changed, os_ver_changed, env_changed;
+                
+                m_arch.PiecewiseTripleCompare(other,
+                                              arch_changed,
+                                              vendor_changed,
+                                              os_changed,
+                                              os_ver_changed,
+                                              env_changed);
+                
+                if (!arch_changed && !vendor_changed && !os_changed)
+                    replace_local_arch = false;
+            }
+        }
+    }
+
+    if (compatible_local_arch || missing_local_arch)
+    {
+        // If we haven't got a valid arch spec, or the architectures are compatible
+        // update the architecture, unless the one we already have is more specified
+        if (replace_local_arch)
+            m_arch = other;
         if (log)
-            log->Printf ("Target::SetArchitecture setting architecture to %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
+            log->Printf ("Target::SetArchitecture set architecture to %s (%s)", m_arch.GetArchitectureName(), m_arch.GetTriple().getTriple().c_str());
         return true;
     }
-    else
-    {
-        // If we have an executable file, try to reset the executable to the desired architecture
-        if (log)
-          log->Printf ("Target::SetArchitecture changing architecture to %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
-        m_arch = arch_spec;
-        ModuleSP executable_sp = GetExecutableModule ();
+    
+    // If we have an executable file, try to reset the executable to the desired architecture
+    if (log)
+      log->Printf ("Target::SetArchitecture changing architecture to %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
+    m_arch = other;
+    ModuleSP executable_sp = GetExecutableModule ();
 
-        ClearModules(true);
-        // Need to do something about unsetting breakpoints.
-        
-        if (executable_sp)
+    ClearModules(true);
+    // Need to do something about unsetting breakpoints.
+    
+    if (executable_sp)
+    {
+        if (log)
+          log->Printf("Target::SetArchitecture Trying to select executable file architecture %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
+        ModuleSpec module_spec (executable_sp->GetFileSpec(), other);
+        Error error = ModuleList::GetSharedModule (module_spec, 
+                                                   executable_sp, 
+                                                   &GetExecutableSearchPaths(),
+                                                   NULL, 
+                                                   NULL);
+                                      
+        if (!error.Fail() && executable_sp)
         {
-            if (log)
-              log->Printf("Target::SetArchitecture Trying to select executable file architecture %s (%s)", arch_spec.GetArchitectureName(), arch_spec.GetTriple().getTriple().c_str());
-            ModuleSpec module_spec (executable_sp->GetFileSpec(), arch_spec);
-            Error error = ModuleList::GetSharedModule (module_spec, 
-                                                       executable_sp, 
-                                                       &GetExecutableSearchPaths(),
-                                                       NULL, 
-                                                       NULL);
-                                          
-            if (!error.Fail() && executable_sp)
-            {
-                SetExecutableModule (executable_sp, true);
-                return true;
-            }
+            SetExecutableModule (executable_sp, true);
+            return true;
         }
     }
     return false;
@@ -1345,7 +1371,10 @@ Target::ModuleUpdated (const ModuleList& module_list, const ModuleSP &old_module
 {
     // A module is replacing an already added module
     if (m_valid)
+    {
         m_breakpoint_list.UpdateBreakpointsWhenModuleIsReplaced(old_module_sp, new_module_sp);
+        m_internal_breakpoint_list.UpdateBreakpointsWhenModuleIsReplaced(old_module_sp, new_module_sp);
+    }
 }
 
 void
@@ -1354,6 +1383,7 @@ Target::ModulesDidLoad (ModuleList &module_list)
     if (m_valid && module_list.GetSize())
     {
         m_breakpoint_list.UpdateBreakpoints (module_list, true, false);
+        m_internal_breakpoint_list.UpdateBreakpoints (module_list, true, false);
         if (m_process_sp)
         {
             m_process_sp->ModulesDidLoad (module_list);
@@ -1378,6 +1408,7 @@ Target::SymbolsDidLoad (ModuleList &module_list)
         }
         
         m_breakpoint_list.UpdateBreakpoints (module_list, true, false);
+        m_internal_breakpoint_list.UpdateBreakpoints (module_list, true, false);
         BroadcastEvent (eBroadcastBitSymbolsLoaded, new TargetEventData (this->shared_from_this(), module_list));
     }
 }
@@ -1389,6 +1420,7 @@ Target::ModulesDidUnload (ModuleList &module_list, bool delete_locations)
     {
         UnloadModuleSections (module_list);
         m_breakpoint_list.UpdateBreakpoints (module_list, false, delete_locations);
+        m_internal_breakpoint_list.UpdateBreakpoints (module_list, false, delete_locations);
         BroadcastEvent (eBroadcastBitModulesUnloaded, new TargetEventData (this->shared_from_this(), module_list));
     }
 }

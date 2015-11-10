@@ -840,7 +840,11 @@ public:
     {
         return symbol_name.str();
     }
-    
+
+    static lldb::SymbolType
+    GetSymbolTypeFromName (llvm::StringRef name,
+                           lldb::SymbolType symbol_type_hint = lldb::eSymbolTypeUndefined);
+
 protected:
     //------------------------------------------------------------------
     // Member variables.
