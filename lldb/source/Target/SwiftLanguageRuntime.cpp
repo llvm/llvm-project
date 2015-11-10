@@ -175,26 +175,89 @@ GetObjectDescription_ResultVariable (Process *process,
                                      Stream& str,
                                      ValueObject &object)
 {
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+
     StreamString expr_string;
     expr_string.Printf("$__lldb__DumpForDebugger(%s)", object.GetName().GetCString());
+    
+    if (log)
+        log->Printf("[GetObjectDescription_ResultVariable] expression: %s", expr_string.GetData());
     
     ValueObjectSP result_sp;
     EvaluateExpressionOptions eval_options;
     eval_options.SetLanguage(lldb::eLanguageTypeSwift);
     eval_options.SetResultIsInternal(true);
     eval_options.SetGenerateDebugInfo(true);
-    process->GetTarget().EvaluateExpression(expr_string.GetData(), process->GetThreadList().GetSelectedThread()->GetSelectedFrame().get(), result_sp, eval_options);
+    auto eval_result = process->GetTarget().EvaluateExpression(expr_string.GetData(), process->GetThreadList().GetSelectedThread()->GetSelectedFrame().get(), result_sp, eval_options);
+    
+    if (log)
+    {
+        switch (eval_result)
+        {
+            case eExpressionCompleted:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionCompleted");
+                break;
+            case eExpressionSetupError:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionSetupError");
+                break;
+            case eExpressionParseError:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionParseError");
+                break;
+            case eExpressionDiscarded:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionDiscarded");
+                break;
+            case eExpressionInterrupted:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionInterrupted");
+                break;
+            case eExpressionHitBreakpoint:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionHitBreakpoint");
+                break;
+            case eExpressionTimedOut:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionTimedOut");
+                break;
+            case eExpressionResultUnavailable:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionResultUnavailable");
+                break;
+            case eExpressionStoppedForDebug:
+                log->Printf("[GetObjectDescription_ResultVariable] eExpressionStoppedForDebug");
+                break;
+        }
+    }
+    
     // sanitize the result of the expression before moving forward
     if (!result_sp)
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ResultVariable] expression generated no result");
         return false;
+    }
     if (result_sp->GetError().Fail())
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ResultVariable] expression generated error: %s", result_sp->GetError().AsCString());
         return false;
+    }
     if (false == result_sp->GetCompilerType().IsValid())
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ResultVariable] expression generated invalid type");
         return false;
+    }
     
     lldb_private::formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
     dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(nullptr);
-    return lldb_private::formatters::swift::String_SummaryProvider(*result_sp.get(), str, TypeSummaryOptions().SetLanguage(lldb::eLanguageTypeSwift).SetCapping(eTypeSummaryUncapped), dump_options);
+    if (lldb_private::formatters::swift::String_SummaryProvider(*result_sp.get(), str, TypeSummaryOptions().SetLanguage(lldb::eLanguageTypeSwift).SetCapping(eTypeSummaryUncapped), dump_options))
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ResultVariable] expression completed successfully");
+        return true;
+    }
+    else
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ResultVariable] expression generated invalid string data");
+        return false;
+    }
 }
 
 static bool
@@ -202,6 +265,8 @@ GetObjectDescription_ObjectCopy (Process *process,
                                  Stream& str,
                                  ValueObject &object)
 {
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+    
     ValueObjectSP static_sp(object.GetStaticValue());
     
     CompilerType static_type(static_sp->GetCompilerType());
@@ -210,46 +275,115 @@ GetObjectDescription_ObjectCopy (Process *process,
     
     lldb::addr_t copy_location = process->AllocateMemory(static_type.GetByteStride(), ePermissionsReadable|ePermissionsWritable, error);
     if (copy_location == LLDB_INVALID_ADDRESS)
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] copy_location invalid");
         return false;
+    }
     lldb_utility::CleanUp<lldb::addr_t> cleanup( copy_location, [process] (lldb::addr_t value) { (void)process->DeallocateMemory(value); } );
     
     DataExtractor data_extractor;
     if (0 == static_sp->GetData(data_extractor, error))
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] data extraction failed");
         return false;
+    }
     
     if (0 == process->WriteMemory(copy_location, data_extractor.GetDataStart(), data_extractor.GetByteSize(), error))
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] memory copy failed");
         return false;
+    }
     
     StreamString expr_string;
     expr_string.Printf("$__lldb__DumpForDebugger(Swift.UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ").memory)",static_type.GetTypeName().GetCString(),copy_location);
+    
+    if (log)
+        log->Printf("[GetObjectDescription_ObjectCopy] expression: %s", expr_string.GetData());
     
     ValueObjectSP result_sp;
     EvaluateExpressionOptions eval_options;
     eval_options.SetLanguage(lldb::eLanguageTypeSwift);
     eval_options.SetResultIsInternal(true);
     eval_options.SetGenerateDebugInfo(true);
-    process->GetTarget().EvaluateExpression(expr_string.GetData(), process->GetThreadList().GetSelectedThread()->GetSelectedFrame().get(), result_sp, eval_options);
+    auto eval_result = process->GetTarget().EvaluateExpression(expr_string.GetData(), process->GetThreadList().GetSelectedThread()->GetSelectedFrame().get(), result_sp, eval_options);
+    
+    if (log)
+    {
+        switch (eval_result)
+        {
+            case eExpressionCompleted:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionCompleted");
+                break;
+            case eExpressionSetupError:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionSetupError");
+                break;
+            case eExpressionParseError:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionParseError");
+                break;
+            case eExpressionDiscarded:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionDiscarded");
+                break;
+            case eExpressionInterrupted:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionInterrupted");
+                break;
+            case eExpressionHitBreakpoint:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionHitBreakpoint");
+                break;
+            case eExpressionTimedOut:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionTimedOut");
+                break;
+            case eExpressionResultUnavailable:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionResultUnavailable");
+                break;
+            case eExpressionStoppedForDebug:
+                log->Printf("[GetObjectDescription_ObjectCopy] eExpressionStoppedForDebug");
+                break;
+        }
+    }
+    
     // sanitize the result of the expression before moving forward
     if (!result_sp)
     {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] expression generated no result");
+
         str.Printf("expression produced no result");
         return true;
     }
     if (result_sp->GetError().Fail())
     {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] expression generated error: %s", result_sp->GetError().AsCString());
+
         str.Printf("expression produced error: %s", result_sp->GetError().AsCString());
         return true;
     }
     if (false == result_sp->GetCompilerType().IsValid())
     {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] expression generated invalid type");
+
         str.Printf("expression produced invalid result type");
         return true;
     }
     
     lldb_private::formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
     dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(nullptr);
-    if (false == lldb_private::formatters::swift::String_SummaryProvider(*result_sp.get(), str, TypeSummaryOptions().SetLanguage(lldb::eLanguageTypeSwift).SetCapping(eTypeSummaryUncapped), dump_options))
+    if (lldb_private::formatters::swift::String_SummaryProvider(*result_sp.get(), str, TypeSummaryOptions().SetLanguage(lldb::eLanguageTypeSwift).SetCapping(eTypeSummaryUncapped), dump_options))
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] expression completed successfully");
+    }
+    else
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectCopy] expression generated invalid string data");
+        
         str.Printf("expression produced unprintable string");
+    }
     return true;
 }
 
