@@ -215,9 +215,9 @@ ClangExpressionDeclMap::AddPersistentVariable
 
         ClangASTContext *context(target->GetScratchClangASTContext());
 
-        TypeFromUser user_type(m_ast_importer->DeportType(context->getASTContext(),
-                                                          ast->getASTContext(),
-                                                          parser_type.GetOpaqueQualType()),
+        TypeFromUser user_type(m_ast_importer_sp->DeportType(context->getASTContext(),
+                                                             ast->getASTContext(),
+                                                             parser_type.GetOpaqueQualType()),
                                context);
         
         uint32_t offset = m_parser_vars->m_materializer->AddResultVariable(user_type,
@@ -258,9 +258,9 @@ ClangExpressionDeclMap::AddPersistentVariable
 
     ClangASTContext *context(target->GetScratchClangASTContext());
 
-    TypeFromUser user_type(m_ast_importer->DeportType(context->getASTContext(),
-                                                      ast->getASTContext(),
-                                                      parser_type.GetOpaqueQualType()),
+    TypeFromUser user_type(m_ast_importer_sp->DeportType(context->getASTContext(),
+                                                         ast->getASTContext(),
+                                                         parser_type.GetOpaqueQualType()),
                            context);
 
     if (!user_type.GetOpaqueQualType())
@@ -971,7 +971,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context)
 
     if (const NamespaceDecl *namespace_context = dyn_cast<NamespaceDecl>(context.m_decl_context))
     {
-        ClangASTImporter::NamespaceMapSP namespace_map = m_ast_importer->GetNamespaceMap(namespace_context);
+        ClangASTImporter::NamespaceMapSP namespace_map = m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
         if (log && log->GetVerbose())
             log->Printf("  CEDM::FEVD[%u] Inspecting (NamespaceMap*)%p (%d entries)",
@@ -1291,7 +1291,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
             if (!ptype_type_decl)
                 break;
 
-            Decl *parser_ptype_decl = m_ast_importer->CopyDecl(m_ast_context, scratch_ast_context, ptype_type_decl);
+            Decl *parser_ptype_decl = m_ast_importer_sp->CopyDecl(m_ast_context, scratch_ast_context, ptype_type_decl);
 
             if (!parser_ptype_decl)
                 break;
@@ -1473,7 +1473,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                     {
                         if (llvm::isa<clang::FunctionDecl>(decl))
                         {
-                            clang::NamedDecl *copied_decl = llvm::cast<FunctionDecl>(m_ast_importer->CopyDecl(m_ast_context, &decl->getASTContext(), decl));
+                            clang::NamedDecl *copied_decl = llvm::cast<FunctionDecl>(m_ast_importer_sp->CopyDecl(m_ast_context, &decl->getASTContext(), decl));
                             context.AddNamedDecl(copied_decl);
                             context.m_found.function_with_type_info = true;
                         }
@@ -1524,7 +1524,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                                             name.GetCString());
                             }
                             
-                            clang::Decl *copied_decl = m_ast_importer->CopyDecl(m_ast_context, &decl_from_modules->getASTContext(), decl_from_modules);
+                            clang::Decl *copied_decl = m_ast_importer_sp->CopyDecl(m_ast_context, &decl_from_modules->getASTContext(), decl_from_modules);
                             clang::FunctionDecl *copied_function_decl = copied_decl ? dyn_cast<clang::FunctionDecl>(copied_decl) : nullptr;
                             
                             if (!copied_function_decl)
@@ -1556,7 +1556,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                                             name.GetCString());
                             }
                             
-                            clang::Decl *copied_decl = m_ast_importer->CopyDecl(m_ast_context, &decl_from_modules->getASTContext(), decl_from_modules);
+                            clang::Decl *copied_decl = m_ast_importer_sp->CopyDecl(m_ast_context, &decl_from_modules->getASTContext(), decl_from_modules);
                             clang::VarDecl *copied_var_decl = copied_decl ? dyn_cast_or_null<clang::VarDecl>(copied_decl) : nullptr;
                             
                             if (!copied_var_decl)
@@ -1929,7 +1929,7 @@ ClangExpressionDeclMap::ResolveUnknownTypes()
             QualType var_type = var_decl->getType();
             TypeFromParser parser_type(var_type.getAsOpaquePtr(), ClangASTContext::GetASTContext(&var_decl->getASTContext()));
 
-            lldb::opaque_compiler_type_t copied_type = m_ast_importer->CopyType(scratch_ast_context->getASTContext(), &var_decl->getASTContext(), var_type.getAsOpaquePtr());
+            lldb::opaque_compiler_type_t copied_type = m_ast_importer_sp->CopyType(scratch_ast_context->getASTContext(), &var_decl->getASTContext(), var_type.getAsOpaquePtr());
 
             if (!copied_type)
             {

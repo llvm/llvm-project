@@ -83,7 +83,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch, const lldb::Plat
     m_process_sp (),
     m_search_filter_sp (),
     m_image_search_paths (ImageSearchPathsChanged, this),
-    m_ast_importer_ap (),
+    m_ast_importer_sp (),
     m_source_manager_ap(),
     m_stop_hooks (),
     m_stop_hook_next_id (0),
@@ -1178,7 +1178,7 @@ Target::ClearModules(bool delete_locations)
     m_section_load_history.Clear();
     m_images.Clear();
     m_scratch_type_system_map.Clear();
-    m_ast_importer_ap.reset();
+    m_ast_importer_sp.reset();
 }
 
 void
@@ -2107,21 +2107,18 @@ Target::GetScratchClangASTContext(bool create_on_demand)
     return nullptr;
 }
 
-ClangASTImporter *
+ClangASTImporterSP
 Target::GetClangASTImporter()
 {
     if (m_valid)
     {
-        ClangASTImporter *ast_importer = m_ast_importer_ap.get();
-        
-        if (!ast_importer)
+        if (!m_ast_importer_sp)
         {
-            ast_importer = new ClangASTImporter();
-            m_ast_importer_ap.reset(ast_importer);
+            m_ast_importer_sp.reset(new ClangASTImporter());
         }
-        return ast_importer;
+        return m_ast_importer_sp;
     }
-    return nullptr;
+    return ClangASTImporterSP();
 }
 
 void

@@ -410,7 +410,7 @@ ClangASTContext::CreateInstance (lldb::LanguageType language,
                 }
                 return ast_sp;
             }
-            else if (target)
+            else if (target && target->IsValid())
             {
                 std::shared_ptr<ClangASTContextForExpressions> ast_sp(new ClangASTContextForExpressions(*target));
                 if (ast_sp)

@@ -310,7 +310,7 @@ namespace lldb {
     typedef std::shared_ptr<lldb_private::BreakpointResolver> BreakpointResolverSP;
     typedef std::shared_ptr<lldb_private::Broadcaster> BroadcasterSP;
     typedef std::unique_ptr<lldb_private::ClangASTContext> ClangASTContextUP;
-    typedef std::unique_ptr<lldb_private::ClangASTImporter> ClangASTImporterUP;
+    typedef std::shared_ptr<lldb_private::ClangASTImporter> ClangASTImporterSP;
     typedef std::unique_ptr<lldb_private::ClangModulesDeclVendor> ClangModulesDeclVendorUP;
     typedef std::unique_ptr<lldb_private::ClangPersistentVariables> ClangPersistentVariablesUP;
     typedef std::shared_ptr<lldb_private::UserExpression> UserExpressionSP;

@@ -1287,7 +1287,7 @@ public:
     ClangASTContext *
     GetScratchClangASTContext(bool create_on_demand=true);
     
-    ClangASTImporter *
+    lldb::ClangASTImporterSP
     GetClangASTImporter();
     
     //----------------------------------------------------------------------
@@ -1568,7 +1568,7 @@ protected:
     typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
     REPLMap m_repl_map;
     
-    lldb::ClangASTImporterUP m_ast_importer_ap;
+    lldb::ClangASTImporterSP m_ast_importer_sp;
     lldb::ClangModulesDeclVendorUP m_clang_modules_decl_vendor_ap;
 
     lldb::SourceManagerUP m_source_manager_ap;
