@@ -5792,6 +5792,79 @@ public:
     // FIXME: Implement!
     return "";
   }
+
+  // No Sparc V7 for now, the backend doesn't support it anyway.
+  enum CPUKind {
+    CK_GENERIC,
+    CK_V8,
+    CK_SUPERSPARC,
+    CK_SPARCLITE,
+    CK_F934,
+    CK_HYPERSPARC,
+    CK_SPARCLITE86X,
+    CK_SPARCLET,
+    CK_TSC701,
+    CK_V9,
+    CK_ULTRASPARC,
+    CK_ULTRASPARC3,
+    CK_NIAGARA,
+    CK_NIAGARA2,
+    CK_NIAGARA3,
+    CK_NIAGARA4
+  } CPU = CK_GENERIC;
+
+  enum CPUGeneration {
+    CG_V8,
+    CG_V9,
+  };
+
+  CPUGeneration getCPUGeneration(CPUKind Kind) const {
+    switch (Kind) {
+    case CK_GENERIC:
+    case CK_V8:
+    case CK_SUPERSPARC:
+    case CK_SPARCLITE:
+    case CK_F934:
+    case CK_HYPERSPARC:
+    case CK_SPARCLITE86X:
+    case CK_SPARCLET:
+    case CK_TSC701:
+      return CG_V8;
+    case CK_V9:
+    case CK_ULTRASPARC:
+    case CK_ULTRASPARC3:
+    case CK_NIAGARA:
+    case CK_NIAGARA2:
+    case CK_NIAGARA3:
+    case CK_NIAGARA4:
+      return CG_V9;
+    }
+  }
+
+  CPUKind getCPUKind(StringRef Name) const {
+    return llvm::StringSwitch<CPUKind>(Name)
+        .Case("v8", CK_V8)
+        .Case("supersparc", CK_SUPERSPARC)
+        .Case("sparclite", CK_SPARCLITE)
+        .Case("f934", CK_F934)
+        .Case("hypersparc", CK_HYPERSPARC)
+        .Case("sparclite86x", CK_SPARCLITE86X)
+        .Case("sparclet", CK_SPARCLET)
+        .Case("tsc701", CK_TSC701)
+        .Case("v9", CK_V9)
+        .Case("ultrasparc", CK_ULTRASPARC)
+        .Case("ultrasparc3", CK_ULTRASPARC3)
+        .Case("niagara", CK_NIAGARA)
+        .Case("niagara2", CK_NIAGARA2)
+        .Case("niagara3", CK_NIAGARA3)
+        .Case("niagara4", CK_NIAGARA4)
+        .Default(CK_GENERIC);
+  }
+
+  bool setCPU(const std::string &Name) override {
+    CPU = getCPUKind(Name);
+    return CPU != CK_GENERIC;
+  }
 };
 
 const char * const SparcTargetInfo::GCCRegNames[] = {
@@ -5868,7 +5941,18 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
     SparcTargetInfo::getTargetDefines(Opts, Builder);
-    Builder.defineMacro("__sparcv8");
+    switch (getCPUGeneration(CPU)) {
+    case CG_V8:
+      Builder.defineMacro("__sparcv8");
+      if (getTriple().getOS() != llvm::Triple::Solaris)
+        Builder.defineMacro("__sparcv8__");
+      break;
+    case CG_V9:
+      Builder.defineMacro("__sparcv9");
+      if (getTriple().getOS() != llvm::Triple::Solaris)
+        Builder.defineMacro("__sparcv9__");
+      break;
+    }
   }
 };
 
@@ -5919,19 +6003,9 @@ public:
   }
 
   bool setCPU(const std::string &Name) override {
-    bool CPUKnown = llvm::StringSwitch<bool>(Name)
-      .Case("v9", true)
-      .Case("ultrasparc", true)
-      .Case("ultrasparc3", true)
-      .Case("niagara", true)
-      .Case("niagara2", true)
-      .Case("niagara3", true)
-      .Case("niagara4", true)
-      .Default(false);
-
-    // No need to store the CPU yet.  There aren't any CPU-specific
-    // macros to define.
-    return CPUKnown;
+    if (!SparcTargetInfo::setCPU(Name))
+      return false;
+    return getCPUGeneration(CPU) == CG_V9;
   }
 };
 

@@ -15,7 +15,7 @@ DIRS :=
 PARALLEL_DIRS := clang-format driver diagtool
 
 ifeq ($(ENABLE_CLANG_STATIC_ANALYZER), 1)
-  PARALLEL_DIRS += clang-check
+  PARALLEL_DIRS += clang-check scan-build scan-view
 endif
 
 ifeq ($(ENABLE_CLANG_ARCMT), 1)

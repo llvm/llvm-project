@@ -73,7 +73,7 @@ kReportReplacements.append((re.compile('<!-- REPORTSUMMARYEXTRA -->'),
 ###
 # Other simple parameters
 
-kResources = posixpath.join(posixpath.dirname(__file__), 'Resources')
+kResources = posixpath.join(posixpath.dirname(__file__), '../share/scan-view')
 kConfigPath = os.path.expanduser('~/.scanview.cfg')
 
 ###

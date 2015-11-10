@@ -204,6 +204,25 @@ void PR21606()
     s2().f(0);
 }
 
+// --- PR25392 --- //
+
+struct HasConstMemberFunction {
+public:
+  void constMemberFunction() const;
+};
+
+HasConstMemberFunction hasNoReturn() { } // expected-warning {{control reaches end of non-void function}}
+
+void testUnknownWithConstMemberFunction() {
+  hasNoReturn().constMemberFunction();
+}
+
+void testNonRegionLocWithConstMemberFunction() {
+  (*((HasConstMemberFunction *)(&&label))).constMemberFunction();
+
+  label: return;
+}
+
 // FIXME
 // When there is a circular reference to an object and a const method is called
 // the object is not invalidated because TK_PreserveContents has already been

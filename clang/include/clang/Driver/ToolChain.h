@@ -388,8 +388,8 @@ public:
   /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math flags.
   virtual bool AddFastMathRuntimeIfAvailable(
       const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const;
-  /// addProfileRTLibs - When -fprofile-instr-profile is specified, add profile
-  /// runtime library, otherwise return false.
+  /// addProfileRTLibs - When -fprofile-instr-profile is specified, try to pass
+  /// a suitable profile runtime library to the linker.
   virtual void addProfileRTLibs(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
 

@@ -206,7 +206,7 @@
 // ARM-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SPARC: clang{{.*}}" "-cc1" "-triple" "sparc--netbsd"
-// SPARC: as{{.*}}" "-32" "-o"
+// SPARC: as{{.*}}" "-32" "-Av8" "-o"
 // SPARC: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // SPARC: "-m" "elf32_sparc"
 // SPARC: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"

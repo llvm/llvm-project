@@ -207,13 +207,13 @@ static Optional<Visibility> getVisibilityOf(const NamedDecl *D,
   // If we're ultimately computing the visibility of a type, look for
   // a 'type_visibility' attribute before looking for 'visibility'.
   if (kind == NamedDecl::VisibilityForType) {
-    if (const TypeVisibilityAttr *A = D->getAttr<TypeVisibilityAttr>()) {
+    if (const auto *A = D->getAttr<TypeVisibilityAttr>()) {
       return getVisibilityFromAttr(A);
     }
   }
 
   // If this declaration has an explicit visibility attribute, use it.
-  if (const VisibilityAttr *A = D->getAttr<VisibilityAttr>()) {
+  if (const auto *A = D->getAttr<VisibilityAttr>()) {
     return getVisibilityFromAttr(A);
   }
 
@@ -252,8 +252,7 @@ getLVForTemplateParameterList(const TemplateParameterList *Params,
     //   template <enum X> class A { ... };
     // We have to be careful here, though, because we can be dealing with
     // dependent types.
-    if (const NonTypeTemplateParmDecl *NTTP =
-            dyn_cast<NonTypeTemplateParmDecl>(P)) {
+    if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
       // Handle the non-pack case first.
       if (!NTTP->isExpandedParameterPack()) {
         if (!NTTP->getType()->isDependentType()) {
@@ -273,7 +272,7 @@ getLVForTemplateParameterList(const TemplateParameterList *Params,
 
     // Template template parameters can be restricted by their
     // template parameters, recursively.
-    const TemplateTemplateParmDecl *TTP = cast<TemplateTemplateParmDecl>(P);
+    const auto *TTP = cast<TemplateTemplateParmDecl>(P);
 
     // Handle the non-pack case first.
     if (!TTP->isExpandedParameterPack()) {
@@ -329,7 +328,7 @@ static LinkageInfo getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
       continue;
 
     case TemplateArgument::Declaration:
-      if (NamedDecl *ND = dyn_cast<NamedDecl>(Arg.getAsDecl())) {
+      if (const auto *ND = dyn_cast<NamedDecl>(Arg.getAsDecl())) {
         assert(!usesTypeVisibility(ND));
         LV.merge(getLVForDecl(ND, computation));
       }
@@ -541,7 +540,7 @@ static bool useInlineVisibilityHidden(const NamedDecl *D) {
   if (!Opts.CPlusPlus || !Opts.InlineVisibilityHidden)
     return false;
 
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+  const auto *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
     return false;
 
@@ -569,7 +568,7 @@ template <typename T> static bool isFirstInExternCContext(T *D) {
 }
 
 static bool isSingleLineLanguageLinkage(const Decl &D) {
-  if (const LinkageSpecDecl *SD = dyn_cast<LinkageSpecDecl>(D.getDeclContext()))
+  if (const auto *SD = dyn_cast<LinkageSpecDecl>(D.getDeclContext()))
     if (!SD->hasBraces())
       return true;
   return false;
@@ -587,7 +586,7 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
   //     - an object, reference, function or function template that is
   //       explicitly declared static; or,
   // (This bullet corresponds to C99 6.2.2p3.)
-  if (const VarDecl *Var = dyn_cast<VarDecl>(D)) {
+  if (const auto *Var = dyn_cast<VarDecl>(D)) {
     // Explicitly declared static.
     if (Var->getStorageClass() == SC_Static)
       return LinkageInfo::internal();
@@ -634,8 +633,8 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 
   if (D->isInAnonymousNamespace()) {
-    const VarDecl *Var = dyn_cast<VarDecl>(D);
-    const FunctionDecl *Func = dyn_cast<FunctionDecl>(D);
+    const auto *Var = dyn_cast<VarDecl>(D);
+    const auto *Func = dyn_cast<FunctionDecl>(D);
     if ((!Var || !isFirstInExternCContext(Var)) &&
         (!Func || !isFirstInExternCContext(Func)))
       return LinkageInfo::uniqueExternal();
@@ -658,7 +657,7 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
       for (const DeclContext *DC = D->getDeclContext();
            !isa<TranslationUnitDecl>(DC);
            DC = DC->getParent()) {
-        const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
+        const auto *ND = dyn_cast<NamespaceDecl>(DC);
         if (!ND) continue;
         if (Optional<Visibility> Vis = getExplicitVisibility(ND, computation)) {
           LV.mergeVisibility(*Vis, true);
@@ -692,7 +691,7 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   name of
   //
   //     - an object or reference, unless it has internal linkage; or
-  if (const VarDecl *Var = dyn_cast<VarDecl>(D)) {
+  if (const auto *Var = dyn_cast<VarDecl>(D)) {
     // GCC applies the following optimization to variables and static
     // data members, but not to functions:
     //
@@ -732,13 +731,12 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
     // As per function and class template specializations (below),
     // consider LV for the template and template arguments.  We're at file
     // scope, so we do not need to worry about nested specializations.
-    if (const VarTemplateSpecializationDecl *spec
-              = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
+    if (const auto *spec = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
       mergeTemplateLV(LV, spec, computation);
     }
 
   //     - a function, unless it has internal linkage; or
-  } else if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(D)) {
+  } else if (const auto *Function = dyn_cast<FunctionDecl>(D)) {
     // In theory, we can modify the function's LV by the LV of its
     // type unless it has C linkage (see comment above about variables
     // for justification).  In practice, GCC doesn't do this, so it's
@@ -785,7 +783,7 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
   //     - a named enumeration (7.2), or an unnamed enumeration
   //       defined in a typedef declaration in which the enumeration
   //       has the typedef name for linkage purposes (7.1.3); or
-  } else if (const TagDecl *Tag = dyn_cast<TagDecl>(D)) {
+  } else if (const auto *Tag = dyn_cast<TagDecl>(D)) {
     // Unnamed tags have no linkage.
     if (!Tag->hasNameForLinkage())
       return LinkageInfo::none();
@@ -793,8 +791,7 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
     // If this is a class template specialization, consider the
     // linkage of the template and template arguments.  We're at file
     // scope, so we do not need to worry about nested specializations.
-    if (const ClassTemplateSpecializationDecl *spec
-          = dyn_cast<ClassTemplateSpecializationDecl>(Tag)) {
+    if (const auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(Tag)) {
       mergeTemplateLV(LV, spec, computation);
     }
 
@@ -808,7 +805,7 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
 
   //     - a template, unless it is a function template that has
   //       internal linkage (Clause 14);
-  } else if (const TemplateDecl *temp = dyn_cast<TemplateDecl>(D)) {
+  } else if (const auto *temp = dyn_cast<TemplateDecl>(D)) {
     bool considerVisibility = !hasExplicitVisibilityAlready(computation);
     LinkageInfo tempLV =
       getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
@@ -897,7 +894,7 @@ static LinkageInfo getLVForClassMember(const NamedDecl *D,
   // Specifically, if this decl exists and has an explicit attribute.
   const NamedDecl *explicitSpecSuppressor = nullptr;
 
-  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
     // If the type of the function uses a type with unique-external
     // linkage, it's not legally usable from outside this translation unit.
     // But only look at the type-as-written. If this function has an
@@ -928,9 +925,8 @@ static LinkageInfo getLVForClassMember(const NamedDecl *D,
       explicitSpecSuppressor = MD;
     }
 
-  } else if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
-    if (const ClassTemplateSpecializationDecl *spec
-        = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+  } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+    if (const auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
       mergeTemplateLV(LV, spec, computation);
       if (spec->isExplicitSpecialization()) {
         explicitSpecSuppressor = spec;
@@ -945,9 +941,8 @@ static LinkageInfo getLVForClassMember(const NamedDecl *D,
     }
 
   // Static data members.
-  } else if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
-    if (const VarTemplateSpecializationDecl *spec
-        = dyn_cast<VarTemplateSpecializationDecl>(VD))
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const auto *spec = dyn_cast<VarTemplateSpecializationDecl>(VD))
       mergeTemplateLV(LV, spec, computation);
 
     // Modify the variable's linkage by its type, but ignore the
@@ -962,7 +957,7 @@ static LinkageInfo getLVForClassMember(const NamedDecl *D,
     }
 
   // Template members.
-  } else if (const TemplateDecl *temp = dyn_cast<TemplateDecl>(D)) {
+  } else if (const auto *temp = dyn_cast<TemplateDecl>(D)) {
     bool considerVisibility =
       (!LV.isVisibilityExplicit() &&
        !classLV.isVisibilityExplicit() &&
@@ -971,8 +966,7 @@ static LinkageInfo getLVForClassMember(const NamedDecl *D,
       getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
     LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
 
-    if (const RedeclarableTemplateDecl *redeclTemp =
-          dyn_cast<RedeclarableTemplateDecl>(temp)) {
+    if (const auto *redeclTemp = dyn_cast<RedeclarableTemplateDecl>(temp)) {
       if (isExplicitMemberSpecialization(redeclTemp)) {
         explicitSpecSuppressor = temp->getTemplatedDecl();
       }
@@ -1048,7 +1042,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
 
   // If this is a member class of a specialization of a class template
   // and the corresponding decl has explicit visibility, use that.
-  if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(ND)) {
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
     CXXRecordDecl *InstantiatedFrom = RD->getInstantiatedFromMemberClass();
     if (InstantiatedFrom)
       return getVisibilityOf(InstantiatedFrom, kind);
@@ -1057,8 +1051,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   // If there wasn't explicit visibility there, and this is a
   // specialization of a class template, check for visibility
   // on the pattern.
-  if (const ClassTemplateSpecializationDecl *spec
-        = dyn_cast<ClassTemplateSpecializationDecl>(ND))
+  if (const auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(ND))
     return getVisibilityOf(spec->getSpecializedTemplate()->getTemplatedDecl(),
                            kind);
 
@@ -1069,7 +1062,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
       return getExplicitVisibilityAux(MostRecent, kind, true);
   }
 
-  if (const VarDecl *Var = dyn_cast<VarDecl>(ND)) {
+  if (const auto *Var = dyn_cast<VarDecl>(ND)) {
     if (Var->isStaticDataMember()) {
       VarDecl *InstantiatedFrom = Var->getInstantiatedFromStaticDataMember();
       if (InstantiatedFrom)
@@ -1083,7 +1076,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
     return None;
   }
   // Also handle function template specializations.
-  if (const FunctionDecl *fn = dyn_cast<FunctionDecl>(ND)) {
+  if (const auto *fn = dyn_cast<FunctionDecl>(ND)) {
     // If the function is a specialization of a template with an
     // explicit visibility attribute, use that.
     if (FunctionTemplateSpecializationInfo *templateInfo
@@ -1101,7 +1094,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   }
 
   // The visibility of a template is stored in the templated decl.
-  if (const TemplateDecl *TD = dyn_cast<TemplateDecl>(ND))
+  if (const auto *TD = dyn_cast<TemplateDecl>(ND))
     return getVisibilityOf(TD->getTemplatedDecl(), kind);
 
   return None;
@@ -1122,7 +1115,7 @@ static LinkageInfo getLVForClosure(const DeclContext *DC, Decl *ContextDecl,
       return getLVForDecl(cast<NamedDecl>(ContextDecl), computation);
   }
 
-  if (const NamedDecl *ND = dyn_cast<NamedDecl>(DC))
+  if (const auto *ND = dyn_cast<NamedDecl>(DC))
     return getLVForDecl(ND, computation);
 
   return LinkageInfo::external();
@@ -1130,7 +1123,7 @@ static LinkageInfo getLVForClosure(const DeclContext *DC, Decl *ContextDecl,
 
 static LinkageInfo getLVForLocalDecl(const NamedDecl *D,
                                      LVComputationKind computation) {
-  if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(D)) {
+  if (const auto *Function = dyn_cast<FunctionDecl>(D)) {
     if (Function->isInAnonymousNamespace() &&
         !Function->isInExternCContext())
       return LinkageInfo::uniqueExternal();
@@ -1153,7 +1146,7 @@ static LinkageInfo getLVForLocalDecl(const NamedDecl *D,
     return LV;
   }
 
-  if (const VarDecl *Var = dyn_cast<VarDecl>(D)) {
+  if (const auto *Var = dyn_cast<VarDecl>(D)) {
     if (Var->hasExternalStorage()) {
       if (Var->isInAnonymousNamespace() && !Var->isInExternCContext())
         return LinkageInfo::uniqueExternal();
@@ -1189,14 +1182,14 @@ static LinkageInfo getLVForLocalDecl(const NamedDecl *D,
     return LinkageInfo::none();
 
   LinkageInfo LV;
-  if (const BlockDecl *BD = dyn_cast<BlockDecl>(OuterD)) {
+  if (const auto *BD = dyn_cast<BlockDecl>(OuterD)) {
     if (!BD->getBlockManglingNumber())
       return LinkageInfo::none();
 
     LV = getLVForClosure(BD->getDeclContext()->getRedeclContext(),
                          BD->getBlockManglingContextDecl(), computation);
   } else {
-    const FunctionDecl *FD = cast<FunctionDecl>(OuterD);
+    const auto *FD = cast<FunctionDecl>(OuterD);
     if (!FD->isInlined() &&
         !isTemplateInstantiation(FD->getTemplateSpecializationKind()))
       return LinkageInfo::none();
@@ -1245,7 +1238,7 @@ static LinkageInfo computeLVForDecl(const NamedDecl *D,
       return LinkageInfo::external();
       
     case Decl::CXXRecord: {
-      const CXXRecordDecl *Record = cast<CXXRecordDecl>(D);
+      const auto *Record = cast<CXXRecordDecl>(D);
       if (Record->isLambda()) {
         if (!Record->getLambdaManglingNumber()) {
           // This lambda has no mangling number, so it's internal.
@@ -1336,7 +1329,7 @@ public:
     // computed also does.
     NamedDecl *Old = nullptr;
     for (auto I : D->redecls()) {
-      NamedDecl *T = cast<NamedDecl>(I);
+      auto *T = cast<NamedDecl>(I);
       if (T == D)
         continue;
       if (!T->isInvalidDecl() && T->hasCachedLinkage()) {
@@ -1388,15 +1381,14 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
 
   for (ContextsTy::reverse_iterator I = Contexts.rbegin(), E = Contexts.rend();
        I != E; ++I) {
-    if (const ClassTemplateSpecializationDecl *Spec
-          = dyn_cast<ClassTemplateSpecializationDecl>(*I)) {
+    if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(*I)) {
       OS << Spec->getName();
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
       TemplateSpecializationType::PrintTemplateArgumentList(OS,
                                                             TemplateArgs.data(),
                                                             TemplateArgs.size(),
                                                             P);
-    } else if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(*I)) {
+    } else if (const auto *ND = dyn_cast<NamespaceDecl>(*I)) {
       if (P.SuppressUnwrittenScope &&
           (ND->isAnonymousNamespace() || ND->isInline()))
         continue;
@@ -1404,12 +1396,12 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
         OS << "(anonymous namespace)";
       else
         OS << *ND;
-    } else if (const RecordDecl *RD = dyn_cast<RecordDecl>(*I)) {
+    } else if (const auto *RD = dyn_cast<RecordDecl>(*I)) {
       if (!RD->getIdentifier())
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
-    } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(*I)) {
+    } else if (const auto *FD = dyn_cast<FunctionDecl>(*I)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
         FT = dyn_cast<FunctionProtoType>(FD->getType()->castAs<FunctionType>());
@@ -1430,6 +1422,15 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
         }
       }
       OS << ')';
+    } else if (const auto *ED = dyn_cast<EnumDecl>(*I)) {
+      // C++ [dcl.enum]p10: Each enum-name and each unscoped
+      // enumerator is declared in the scope that immediately contains
+      // the enum-specifier. Each scoped enumerator is declared in the
+      // scope of the enumeration.
+      if (ED->isScoped() || ED->getIdentifier())
+        OS << *ED;
+      else
+        continue;
     } else {
       OS << *cast<NamedDecl>(*I);
     }
@@ -1556,10 +1557,10 @@ bool NamedDecl::hasLinkage() const {
 
 NamedDecl *NamedDecl::getUnderlyingDeclImpl() {
   NamedDecl *ND = this;
-  while (UsingShadowDecl *UD = dyn_cast<UsingShadowDecl>(ND))
+  while (auto *UD = dyn_cast<UsingShadowDecl>(ND))
     ND = UD->getTargetDecl();
 
-  if (ObjCCompatibleAliasDecl *AD = dyn_cast<ObjCCompatibleAliasDecl>(ND))
+  if (auto *AD = dyn_cast<ObjCCompatibleAliasDecl>(ND))
     return AD->getClassInterface();
 
   return ND;
@@ -1575,8 +1576,7 @@ bool NamedDecl::isCXXInstanceMember() const {
 
   if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D) || isa<MSPropertyDecl>(D))
     return true;
-  if (const CXXMethodDecl *MD =
-          dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()))
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()))
     return MD->isInstance();
   return false;
 }
@@ -1604,7 +1604,7 @@ void DeclaratorDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
     // Make sure the extended decl info is allocated.
     if (!hasExtInfo()) {
       // Save (non-extended) type source info pointer.
-      TypeSourceInfo *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
+      auto *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
       // Allocate external info struct.
       DeclInfo = new (getASTContext()) ExtInfo;
       // Restore savedTInfo into (extended) decl info.
@@ -1635,7 +1635,7 @@ void DeclaratorDecl::setTemplateParameterListsInfo(
   // Make sure the extended decl info is allocated.
   if (!hasExtInfo()) {
     // Save (non-extended) type source info pointer.
-    TypeSourceInfo *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
+    auto *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
     // Allocate external info struct.
     DeclInfo = new (getASTContext()) ExtInfo;
     // Restore savedTInfo into (extended) decl info.
@@ -1963,7 +1963,7 @@ VarDecl *VarDecl::getDefinition(ASTContext &C) {
 
 VarDecl::DefinitionKind VarDecl::hasDefinition(ASTContext &C) const {
   DefinitionKind Kind = DeclarationOnly;
-  
+
   const VarDecl *First = getFirstDecl();
   for (auto I : First->redecls()) {
     Kind = std::max(Kind, I->isThisDeclarationADefinition(C));
@@ -2013,7 +2013,7 @@ VarDecl *VarDecl::getOutOfLineDefinition() {
 }
 
 void VarDecl::setInit(Expr *I) {
-  if (EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>()) {
+  if (auto *Eval = Init.dyn_cast<EvaluatedStmt *>()) {
     Eval->~EvaluatedStmt();
     getASTContext().Deallocate(Eval);
   }
@@ -2052,9 +2052,9 @@ bool VarDecl::isUsableInConstantExpressions(ASTContext &C) const {
 /// form, which contains extra information on the evaluated value of the
 /// initializer.
 EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
-  EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>();
+  auto *Eval = Init.dyn_cast<EvaluatedStmt *>();
   if (!Eval) {
-    Stmt *S = Init.get<Stmt *>();
+    auto *S = Init.get<Stmt *>();
     // Note: EvaluatedStmt contains an APValue, which usually holds
     // resources not allocated from the ASTContext.  We need to do some
     // work to avoid leaking those, but we do so in VarDecl::evaluateValue
@@ -2088,7 +2088,7 @@ APValue *VarDecl::evaluateValue(
   if (Eval->WasEvaluated)
     return Eval->Evaluated.isUninit() ? nullptr : &Eval->Evaluated;
 
-  const Expr *Init = cast<Expr>(Eval->Value);
+  const auto *Init = cast<Expr>(Eval->Value);
   assert(!Init->isValueDependent());
 
   if (Eval->IsEvaluating) {
@@ -2135,7 +2135,7 @@ bool VarDecl::checkInitIsICE() const {
     // integral constant expression.
     return Eval->IsICE;
 
-  const Expr *Init = cast<Expr>(Eval->Value);
+  const auto *Init = cast<Expr>(Eval->Value);
   assert(!Init->isValueDependent());
 
   // In C++11, evaluate the initializer to check whether it's a constant
@@ -2168,8 +2168,7 @@ VarDecl *VarDecl::getInstantiatedFromStaticDataMember() const {
 }
 
 TemplateSpecializationKind VarDecl::getTemplateSpecializationKind() const {
-  if (const VarTemplateSpecializationDecl *Spec =
-          dyn_cast<VarTemplateSpecializationDecl>(this))
+  if (const auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(this))
     return Spec->getSpecializationKind();
 
   if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo())
@@ -2179,8 +2178,7 @@ TemplateSpecializationKind VarDecl::getTemplateSpecializationKind() const {
 }
 
 SourceLocation VarDecl::getPointOfInstantiation() const {
-  if (const VarTemplateSpecializationDecl *Spec =
-          dyn_cast<VarTemplateSpecializationDecl>(this))
+  if (const auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(this))
     return Spec->getPointOfInstantiation();
 
   if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo())
@@ -2253,7 +2251,7 @@ ParmVarDecl *ParmVarDecl::Create(ASTContext &C, DeclContext *DC,
 QualType ParmVarDecl::getOriginalType() const {
   TypeSourceInfo *TSI = getTypeSourceInfo();
   QualType T = TSI ? TSI->getType() : getType();
-  if (const DecayedType *DT = dyn_cast<DecayedType>(T))
+  if (const auto *DT = dyn_cast<DecayedType>(T))
     return DT->getOriginalType();
   return T;
 }
@@ -2283,9 +2281,9 @@ Expr *ParmVarDecl::getDefaultArg() {
   assert(!hasUnparsedDefaultArg() && "Default argument is not yet parsed!");
   assert(!hasUninstantiatedDefaultArg() &&
          "Default argument is not yet instantiated!");
-  
+
   Expr *Arg = getInit();
-  if (ExprWithCleanups *E = dyn_cast_or_null<ExprWithCleanups>(Arg))
+  if (auto *E = dyn_cast_or_null<ExprWithCleanups>(Arg))
     return E->getSubExpr();
 
   return Arg;
@@ -2328,7 +2326,7 @@ void FunctionDecl::getNameForDiagnostic(
 }
 
 bool FunctionDecl::isVariadic() const {
-  if (const FunctionProtoType *FT = getType()->getAs<FunctionProtoType>())
+  if (const auto *FT = getType()->getAs<FunctionProtoType>())
     return FT->isVariadic();
   return false;
 }
@@ -2389,7 +2387,7 @@ void FunctionDecl::setBody(Stmt *B) {
 void FunctionDecl::setPure(bool P) {
   IsPure = P;
   if (P)
-    if (CXXRecordDecl *Parent = dyn_cast<CXXRecordDecl>(getDeclContext()))
+    if (auto *Parent = dyn_cast<CXXRecordDecl>(getDeclContext()))
       Parent->markedVirtualFunctionPure();
 }
 
@@ -2444,7 +2442,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
-  const FunctionProtoType *proto = getType()->castAs<FunctionProtoType>();
+  const auto *proto = getType()->castAs<FunctionProtoType>();
   if (proto->getNumParams() != 2 || proto->isVariadic())
     return false;
 
@@ -2473,7 +2471,7 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction() const {
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
-  const FunctionProtoType *FPT = getType()->castAs<FunctionProtoType>();
+  const auto *FPT = getType()->castAs<FunctionProtoType>();
   if (FPT->getNumParams() == 0 || FPT->getNumParams() > 2 || FPT->isVariadic())
     return false;
 
@@ -2515,7 +2513,7 @@ bool FunctionDecl::isInExternCXXContext() const {
 }
 
 bool FunctionDecl::isGlobal() const {
-  if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(this))
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(this))
     return Method->isStatic();
 
   if (getCanonicalDecl()->getStorageClass() == SC_Static)
@@ -2524,7 +2522,7 @@ bool FunctionDecl::isGlobal() const {
   for (const DeclContext *DC = getDeclContext();
        DC->isNamespace();
        DC = DC->getParent()) {
-    if (const NamespaceDecl *Namespace = cast<NamespaceDecl>(DC)) {
+    if (const auto *Namespace = cast<NamespaceDecl>(DC)) {
       if (!Namespace->getDeclName())
         return false;
       break;
@@ -2576,8 +2574,8 @@ unsigned FunctionDecl::getBuiltinID() const {
 
   ASTContext &Context = getASTContext();
   if (Context.getLangOpts().CPlusPlus) {
-    const LinkageSpecDecl *LinkageDecl = dyn_cast<LinkageSpecDecl>(
-        getFirstDecl()->getDeclContext());
+    const auto *LinkageDecl =
+        dyn_cast<LinkageSpecDecl>(getFirstDecl()->getDeclContext());
     // In C++, the first declaration of a builtin is always inside an implicit
     // extern "C".
     // FIXME: A recognised library function may not be directly in an extern "C"
@@ -2617,7 +2615,7 @@ unsigned FunctionDecl::getBuiltinID() const {
 /// based on its FunctionType.  This is the length of the ParamInfo array
 /// after it has been created.
 unsigned FunctionDecl::getNumParams() const {
-  const FunctionProtoType *FPT = getType()->getAs<FunctionProtoType>();
+  const auto *FPT = getType()->getAs<FunctionProtoType>();
   return FPT ? FPT->getNumParams() : 0;
 }
 
@@ -2809,7 +2807,7 @@ bool FunctionDecl::hasUnusedResultAttr() const {
   QualType RetType = getReturnType();
   if (RetType->isRecordType()) {
     const CXXRecordDecl *Ret = RetType->getAsCXXRecordDecl();
-    const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(this);
+    const auto *MD = dyn_cast<CXXMethodDecl>(this);
     if (Ret && Ret->hasAttr<WarnUnusedResultAttr>() &&
         !(MD && MD->getCorrespondingMethodInClass(Ret, true)))
       return true;
@@ -3306,7 +3304,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
   if (!isImplicit() || getDeclName())
     return false;
 
-  if (const RecordType *Record = getType()->getAs<RecordType>())
+  if (const auto *Record = getType()->getAs<RecordType>())
     return Record->getDecl()->isAnonymousStructOrUnion();
 
   return false;
@@ -3314,7 +3312,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
 
 unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
   assert(isBitField() && "not a bitfield");
-  Expr *BitWidth = static_cast<Expr *>(InitStorage.getPointer());
+  auto *BitWidth = static_cast<Expr *>(InitStorage.getPointer());
   return BitWidth->EvaluateKnownConstInt(Ctx).getZExtValue();
 }
 
@@ -3343,7 +3341,7 @@ SourceRange FieldDecl::getSourceRange() const {
   case ISK_BitWidthOrNothing:
   case ISK_InClassCopyInit:
   case ISK_InClassListInit:
-    if (const Expr *E = static_cast<const Expr *>(InitStorage.getPointer()))
+    if (const auto *E = static_cast<const Expr *>(InitStorage.getPointer()))
       return SourceRange(getInnerLocStart(), E->getLocEnd());
     // FALLTHROUGH
 
@@ -3390,7 +3388,7 @@ void TagDecl::setTypedefNameForAnonDecl(TypedefNameDecl *TDD) {
 void TagDecl::startDefinition() {
   IsBeingDefined = true;
 
-  if (CXXRecordDecl *D = dyn_cast<CXXRecordDecl>(this)) {
+  if (auto *D = dyn_cast<CXXRecordDecl>(this)) {
     struct CXXRecordDecl::DefinitionData *Data =
       new (getASTContext()) struct CXXRecordDecl::DefinitionData(D);
     for (auto I : redecls())
@@ -3423,7 +3421,7 @@ TagDecl *TagDecl::getDefinition() const {
     }
   }
 
-  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(this))
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(this))
     return CXXRD->getDefinition();
 
   for (auto R : redecls())
@@ -3475,9 +3473,8 @@ EnumDecl *EnumDecl::Create(ASTContext &C, DeclContext *DC,
                            IdentifierInfo *Id,
                            EnumDecl *PrevDecl, bool IsScoped,
                            bool IsScopedUsingClassTag, bool IsFixed) {
-  EnumDecl *Enum = new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl,
-                                        IsScoped, IsScopedUsingClassTag,
-                                        IsFixed);
+  auto *Enum = new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl,
+                                    IsScoped, IsScopedUsingClassTag, IsFixed);
   Enum->MayHaveOutOfDateDef = C.getLangOpts().Modules;
   C.getTypeDeclType(Enum, PrevDecl);
   return Enum;
@@ -3650,7 +3647,7 @@ bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
       !Context.getLangOpts().SanitizeAddressFieldPadding)
     return false;
   const auto &Blacklist = Context.getSanitizerBlacklist();
-  const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(this);
+  const auto *CXXRD = dyn_cast<CXXRecordDecl>(this);
   // We may be able to relax some of these requirements.
   int ReasonToReject = -1;
   if (!CXXRD || CXXRD->isExternCContext())
@@ -3691,9 +3688,9 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
     if (I->getIdentifier())
       return I;
 
-    if (const RecordType *RT = I->getType()->getAs<RecordType>())
+    if (const auto *RT = I->getType()->getAs<RecordType>())
       if (const FieldDecl *NamedDataMember =
-          RT->getDecl()->findFirstNamedDataMember())
+              RT->getDecl()->findFirstNamedDataMember())
         return NamedDataMember;
   }
 
@@ -3993,7 +3990,7 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
     NextLocalImport()
 {
   assert(getNumModuleIdentifiers(Imported) == IdentifierLocs.size());
-  SourceLocation *StoredLocs = getTrailingObjects<SourceLocation>();
+  auto *StoredLocs = getTrailingObjects<SourceLocation>();
   std::uninitialized_copy(IdentifierLocs.begin(), IdentifierLocs.end(),
                           StoredLocs);
 }
@@ -4034,7 +4031,7 @@ ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
   if (!ImportedAndComplete.getInt())
     return None;
 
-  const SourceLocation *StoredLocs = getTrailingObjects<SourceLocation>();
+  const auto *StoredLocs = getTrailingObjects<SourceLocation>();
   return llvm::makeArrayRef(StoredLocs,
                             getNumModuleIdentifiers(getImportedModule()));
 }
