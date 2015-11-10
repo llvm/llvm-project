@@ -782,6 +782,9 @@ void PEI::insertPrologEpilogCode(MachineFunction &Fn) {
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(Fn, *RestoreBlock);
 
+  for (MachineBasicBlock *SaveBlock : SaveBlocks)
+    TFI.inlineStackProbe(Fn, *SaveBlock);
+
   // Emit additional code that is required to support segmented stacks, if
   // we've been asked for it.  This, when linked with a runtime with support
   // for segmented stacks (libgcc is one), will result in allocating stack

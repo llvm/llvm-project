@@ -66,3 +66,21 @@ define void @store_int(<4 x i32> %x, <2 x float>* %p) {
   ret void
 }
 
+define void @store_h_double(<2 x double> %x, i64* %p) {
+; SSE-LABEL: store_h_double:
+; SSE:       # BB#0:
+; SSE-NEXT:    addpd %xmm0, %xmm0
+; SSE-NEXT:    movhpd %xmm0, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: store_h_double:
+; AVX:       # BB#0:
+; AVX-NEXT:    vaddpd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX-NEXT:    retq
+  %a = fadd <2 x double> %x, %x
+  %b = extractelement <2 x double> %a, i32 1
+  %c = bitcast double %b to i64
+  store i64 %c, i64* %p
+  ret void
+}

@@ -1296,7 +1296,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   else if (NumVectorInstructions <= NumInstructions / 2)
     Threshold -= (FiftyPercentVectorBonus - TenPercentVectorBonus);
 
-  return Cost < Threshold;
+  return Cost <= std::max(0, Threshold);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

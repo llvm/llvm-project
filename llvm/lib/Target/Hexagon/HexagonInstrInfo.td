@@ -5810,3 +5810,5 @@ include "HexagonInstrInfoV60.td"
 //===----------------------------------------------------------------------===///
 
 include "HexagonInstrInfoVector.td"
+
+include "HexagonInstrAlias.td"
