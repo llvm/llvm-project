@@ -47,11 +47,17 @@ public:
 
   unsigned StackPtr;
 
-  /// Emit a call to the target's stack probe function. This is required for all
+  /// Emit target stack probe code. This is required for all
   /// large stack allocations on Windows. The caller is required to materialize
-  /// the number of bytes to probe in RAX/EAX.
-  void emitStackProbeCall(MachineFunction &MF, MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc DL) const;
+  /// the number of bytes to probe in RAX/EAX. Returns instruction just
+  /// after the expansion.
+  MachineInstr *emitStackProbe(MachineFunction &MF, MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                               bool InProlog) const;
+
+  /// Replace a StackProbe inline-stub with the actual probe code inline.
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologMBB) const override;
 
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
@@ -127,6 +133,15 @@ public:
   /// \p MBB will be correctly handled by the target.
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
 
+  /// convertArgMovsToPushes - This method tries to convert a call sequence
+  /// that uses sub and mov instructions to put the argument onto the stack
+  /// into a series of pushes.
+  /// Returns true if the transformation succeeded, false if not.
+  bool convertArgMovsToPushes(MachineFunction &MF, 
+                              MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator I, 
+                              uint64_t Amount) const;
+
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 DebugLoc DL, MCCFIInstruction CFIInst) const;
@@ -140,6 +155,23 @@ public:
 
 private:
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
+
+  /// Emit target stack probe as a call to a helper function
+  MachineInstr *emitStackProbeCall(MachineFunction &MF, MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   DebugLoc DL, bool InProlog) const;
+
+  /// Emit target stack probe as an inline sequence.
+  MachineInstr *emitStackProbeInline(MachineFunction &MF,
+                                     MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     DebugLoc DL, bool InProlog) const;
+
+  /// Emit a stub to later inline the target stack probe.
+  MachineInstr *emitStackProbeInlineStub(MachineFunction &MF,
+                                         MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         DebugLoc DL, bool InProlog) const;
 
   /// Aligns the stack pointer by ANDing it with -MaxAlign.
   void BuildStackAlignAND(MachineBasicBlock &MBB,

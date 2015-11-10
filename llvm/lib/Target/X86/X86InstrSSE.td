@@ -1172,12 +1172,13 @@ multiclass sse12_mov_hilo_packed_base<bits<8>opc, SDNode psnode, SDNode pdnode,
 
 multiclass sse12_mov_hilo_packed<bits<8>opc, SDNode psnode, SDNode pdnode,
                                  string base_opc, InstrItinClass itin> {
-  defm V#NAME : sse12_mov_hilo_packed_base<opc, psnode, pdnode, base_opc,
+  let Predicates = [UseAVX] in
+    defm V#NAME : sse12_mov_hilo_packed_base<opc, psnode, pdnode, base_opc,
                                     "\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                                     itin>, VEX_4V;
 
-let Constraints = "$src1 = $dst" in
-  defm NAME : sse12_mov_hilo_packed_base<opc, psnode, pdnode, base_opc,
+  let Constraints = "$src1 = $dst" in
+    defm NAME : sse12_mov_hilo_packed_base<opc, psnode, pdnode, base_opc,
                                     "\t{$src2, $dst|$dst, $src2}",
                                     itin>;
 }
@@ -1188,6 +1189,7 @@ let AddedComplexity = 20 in {
 }
 
 let SchedRW = [WriteStore] in {
+let Predicates = [UseAVX] in {
 def VMOVLPSmr : VPSI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movlps\t{$src, $dst|$dst, $src}",
                    [(store (f64 (vector_extract (bc_v2f64 (v4f32 VR128:$src)),
@@ -1198,6 +1200,7 @@ def VMOVLPDmr : VPDI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    [(store (f64 (vector_extract (v2f64 VR128:$src),
                                  (iPTR 0))), addr:$dst)],
                                  IIC_SSE_MOV_LH>, VEX;
+}// UseAVX
 def MOVLPSmr : PSI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movlps\t{$src, $dst|$dst, $src}",
                    [(store (f64 (vector_extract (bc_v2f64 (v4f32 VR128:$src)),
@@ -1210,7 +1213,7 @@ def MOVLPDmr : PDI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                                  IIC_SSE_MOV_LH>;
 } // SchedRW
 
-let Predicates = [HasAVX] in {
+let Predicates = [UseAVX] in {
   // Shuffle with VMOVLPS
   def : Pat<(v4f32 (X86Movlps VR128:$src1, (load addr:$src2))),
             (VMOVLPSrm VR128:$src1, addr:$src2)>;
@@ -1297,6 +1300,7 @@ let AddedComplexity = 20 in {
 let SchedRW = [WriteStore] in {
 // v2f64 extract element 1 is always custom lowered to unpack high to low
 // and extract element 0 so the non-store version isn't too horrible.
+let Predicates = [UseAVX] in {
 def VMOVHPSmr : VPSI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movhps\t{$src, $dst|$dst, $src}",
                    [(store (f64 (vector_extract
@@ -1308,6 +1312,7 @@ def VMOVHPDmr : VPDI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    [(store (f64 (vector_extract
                                  (v2f64 (X86Unpckh VR128:$src, VR128:$src)),
                                  (iPTR 0))), addr:$dst)], IIC_SSE_MOV_LH>, VEX;
+} // UseAVX
 def MOVHPSmr : PSI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movhps\t{$src, $dst|$dst, $src}",
                    [(store (f64 (vector_extract
@@ -1321,7 +1326,7 @@ def MOVHPDmr : PDI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                                  (iPTR 0))), addr:$dst)], IIC_SSE_MOV_LH>;
 } // SchedRW
 
-let Predicates = [HasAVX] in {
+let Predicates = [UseAVX] in {
   // VMOVHPS patterns
   def : Pat<(X86Movlhps VR128:$src1,
                  (bc_v4f32 (v2i64 (scalar_to_vector (loadi64 addr:$src2))))),
