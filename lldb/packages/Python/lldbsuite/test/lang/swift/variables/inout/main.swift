@@ -22,14 +22,8 @@ class Other : Class {
     override init () 
     { 
         ovar = 112233
-	super.init()
-	ivar = 4321
-    }
-    init (in1 : Int, in2 : Int)
-    {
-        ovar = in2
         super.init()
-        ivar = in1
+        ivar = 4321
     }
 }
 
@@ -55,7 +49,7 @@ func main() {
 	foo(&x)
 	foo(&s)
 	foo(&x)
-        print ("Set breakpoint here after class access") 
+	print ("Set breakpoint here after class access") 
 	foo(&s)
 }
 

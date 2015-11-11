@@ -8200,7 +8200,7 @@ SwiftASTContext::IsPointerOrReferenceType (void* type, CompilerType *pointee_typ
 bool
 SwiftASTContext::ShouldTreatScalarValueAsAddress (lldb::opaque_compiler_type_t type)
 {
-    return Flags(GetTypeInfo(type, nullptr)).AnySet(eTypeInstanceIsPointer);
+    return Flags(GetTypeInfo(type, nullptr)).AnySet(eTypeInstanceIsPointer | eTypeIsReference);
 }
 
 bool
