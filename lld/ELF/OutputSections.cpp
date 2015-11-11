@@ -82,6 +82,12 @@ template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody *Sym) {
   Entries.push_back(Sym);
 }
 
+template <class ELFT> uint32_t GotSection<ELFT>::addLocalModuleTlsIndex() {
+  Entries.push_back(nullptr);
+  Entries.push_back(nullptr);
+  return (Entries.size() - 2) * sizeof(uintX_t);
+}
+
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getEntryAddr(const SymbolBody &B) const {
@@ -99,6 +105,8 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const SymbolBody *B : Entries) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
+    if (!B)
+      continue;
     // MIPS has special rules to fill up GOT entries.
     // See "Global Offset Table" in Chapter 5 in the following document
     // for detailed description:
@@ -177,6 +185,15 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       Body = Body->repl();
 
     uint32_t Type = RI.getType(Config->Mips64EL);
+
+    if (Type == Target->getTlsLocalDynamicReloc()) {
+      P->setSymbolAndType(0, Target->getTlsModuleIndexReloc(),
+                          Config->Mips64EL);
+      P->r_offset =
+          Out<ELFT>::Got->getVA() + Out<ELFT>::LocalModuleTlsIndexOffset;
+      continue;
+    }
+
     bool NeedsCopy = Body && Target->relocNeedsCopy(Type, *Body);
     bool NeedsGot = Body && Target->relocNeedsGot(Type, *Body);
     bool CanBePreempted = canBePreempted(Body, NeedsGot);
@@ -702,11 +719,16 @@ lld::elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
   if (!Sym)
     error("Unsupported relocation without symbol");
 
+  InputSectionBase<ELFT> *Section = File.getSection(*Sym);
+
+  if (Sym->getType() == STT_TLS)
+    return (Section->OutSec->getVA() + Section->getOffset(*Sym) + Addend) -
+           Out<ELF64LE>::TlsPhdr->p_vaddr;
+
   // According to the ELF spec reference to a local symbol from outside
   // the group are not allowed. Unfortunately .eh_frame breaks that rule
   // and must be treated specially. For now we just replace the symbol with
   // 0.
-  InputSectionBase<ELFT> *Section = File.getSection(*Sym);
   if (Section == &InputSection<ELFT>::Discarded || !Section->isLive())
     return Addend;
 

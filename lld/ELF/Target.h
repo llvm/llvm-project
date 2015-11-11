@@ -29,6 +29,8 @@ public:
   unsigned getPltReloc() const { return PltReloc; }
   unsigned getGotRefReloc() const { return GotRefReloc; }
   unsigned getRelativeReloc() const { return RelativeReloc; }
+  unsigned getTlsLocalDynamicReloc() const { return TlsLocalDynamicReloc; }
+  unsigned getTlsModuleIndexReloc() const { return TlsModuleIndexReloc; }
   unsigned getPltZeroEntrySize() const { return PltZeroEntrySize; }
   unsigned getPltEntrySize() const { return PltEntrySize; }
   bool supportsLazyRelocations() const { return LazyRelocations; }
@@ -67,6 +69,8 @@ protected:
   unsigned GotReloc;
   unsigned PltReloc;
   unsigned RelativeReloc;
+  unsigned TlsLocalDynamicReloc = 0;
+  unsigned TlsModuleIndexReloc;
   unsigned PltEntrySize = 8;
   unsigned PltZeroEntrySize = 0;
   unsigned GotHeaderEntriesNum = 0;

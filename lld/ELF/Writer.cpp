@@ -190,6 +190,15 @@ void Writer<ELFT>::scanRelocs(
     SymbolBody *Body = File.getSymbolBody(SymIndex);
     uint32_t Type = RI.getType(Config->Mips64EL);
 
+    if (Type == Target->getTlsLocalDynamicReloc()) {
+      if (Out<ELFT>::LocalModuleTlsIndexOffset == uint32_t(-1)) {
+        Out<ELFT>::LocalModuleTlsIndexOffset =
+            Out<ELFT>::Got->addLocalModuleTlsIndex();
+        Out<ELFT>::RelaDyn->addReloc({C, RI});
+      }
+      continue;
+    }
+
     // Set "used" bit for --as-needed.
     if (Body && Body->isUndefined() && !Body->isWeak())
       if (auto *S = dyn_cast<SharedSymbol<ELFT>>(Body->repl()))

@@ -215,6 +215,8 @@ X86_64TargetInfo::X86_64TargetInfo() {
   GotRefReloc = R_X86_64_PC32;
   PltReloc = R_X86_64_JUMP_SLOT;
   RelativeReloc = R_X86_64_RELATIVE;
+  TlsLocalDynamicReloc = R_X86_64_TLSLD;
+  TlsModuleIndexReloc = R_X86_64_DTPMOD64;
   LazyRelocations = true;
   PltEntrySize = 16;
   PltZeroEntrySize = 16;
@@ -320,6 +322,8 @@ bool X86_64TargetInfo::isRelRelative(uint32_t Type) const {
   case R_X86_64_PC16:
   case R_X86_64_PC8:
   case R_X86_64_PLT32:
+  case R_X86_64_DTPOFF32:
+  case R_X86_64_DTPOFF64:
     return true;
   }
 }
@@ -330,9 +334,11 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   case R_X86_64_PC32:
   case R_X86_64_GOTPCREL:
   case R_X86_64_PLT32:
+  case R_X86_64_TLSLD:
     write32le(Loc, SA - P);
     break;
   case R_X86_64_64:
+  case R_X86_64_DTPOFF64:
     write64le(Loc, SA);
     break;
   case R_X86_64_32:
@@ -341,6 +347,9 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
       error("R_X86_64_32 out of range");
     else if (!isInt<32>(SA))
       error("R_X86_64_32S out of range");
+    write32le(Loc, SA);
+    break;
+  case R_X86_64_DTPOFF32:
     write32le(Loc, SA);
     break;
   case R_X86_64_TPOFF32: {

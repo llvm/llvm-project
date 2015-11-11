@@ -90,14 +90,23 @@ void InputSection<ELFT>::relocate(
   for (const RelType &RI : Rels) {
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
     uint32_t Type = RI.getType(Config->Mips64EL);
+    uint8_t *BufLoc = Buf + RI.r_offset;
+    uintX_t AddrLoc = BaseAddr + RI.r_offset;
+
+    if (Type == Target->getTlsLocalDynamicReloc()) {
+      Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
+                          Out<ELFT>::Got->getVA() +
+                              Out<ELFT>::LocalModuleTlsIndexOffset +
+                              getAddend<ELFT>(RI));
+      continue;
+    }
 
     // Handle relocations for local symbols -- they never get
     // resolved so we don't allocate a SymbolBody.
     const Elf_Shdr *SymTab = File.getSymbolTable();
     if (SymIndex < SymTab->sh_info) {
       uintX_t SymVA = getLocalRelTarget(File, RI);
-      Target->relocateOne(Buf + RI.r_offset, BufEnd, Type,
-                          BaseAddr + RI.r_offset, SymVA);
+      Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA);
       continue;
     }
 
@@ -116,7 +125,7 @@ void InputSection<ELFT>::relocate(
                isa<SharedSymbol<ELFT>>(Body)) {
       continue;
     }
-    Target->relocateOne(Buf + RI.r_offset, BufEnd, Type, BaseAddr + RI.r_offset,
+    Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
                         SymVA + getAddend<ELFT>(RI));
   }
 }
