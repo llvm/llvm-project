@@ -252,12 +252,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     fail(DL, DAG, "WebAssembly doesn't support tail call yet");
   CLI.IsTailCall = false;
 
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-
-  bool IsStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
-  if (IsStructRet)
-    fail(DL, DAG, "WebAssembly doesn't support struct return yet");
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
   if (Ins.size() > 1)
@@ -316,6 +311,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, SDLoc DL,
     SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
 
   assert(Outs.size() <= 1 && "WebAssembly can only return up to one value");
   if (CallConv != CallingConv::C)
@@ -326,6 +322,33 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
   SmallVector<SDValue, 4> RetOps(1, Chain);
   RetOps.append(OutVals.begin(), OutVals.end());
   Chain = DAG.getNode(WebAssemblyISD::RETURN, DL, MVT::Other, RetOps);
+
+  // Record the number and types of the return values.
+  for (const ISD::OutputArg &Out : Outs) {
+    if (Out.Flags.isZExt())
+      fail(DL, DAG, "WebAssembly hasn't implemented zext results");
+    if (Out.Flags.isSExt())
+      fail(DL, DAG, "WebAssembly hasn't implemented sext results");
+    if (Out.Flags.isInReg())
+      fail(DL, DAG, "WebAssembly hasn't implemented inreg results");
+    if (Out.Flags.isSRet())
+      fail(DL, DAG, "WebAssembly hasn't implemented sret results");
+    if (Out.Flags.isByVal())
+      fail(DL, DAG, "WebAssembly hasn't implemented byval results");
+    if (Out.Flags.isInAlloca())
+      fail(DL, DAG, "WebAssembly hasn't implemented inalloca results");
+    if (Out.Flags.isNest())
+      fail(DL, DAG, "WebAssembly hasn't implemented nest results");
+    if (Out.Flags.isReturned())
+      fail(DL, DAG, "WebAssembly hasn't implemented returned results");
+    if (Out.Flags.isInConsecutiveRegs())
+      fail(DL, DAG, "WebAssembly hasn't implemented cons regs results");
+    if (Out.Flags.isInConsecutiveRegsLast())
+      fail(DL, DAG, "WebAssembly hasn't implemented cons regs last results");
+    if (!Out.IsFixed)
+      fail(DL, DAG, "WebAssembly doesn't support non-fixed results yet");
+    MF.getInfo<WebAssemblyFunctionInfo>()->addResult(Out.VT);
+  }
 
   return Chain;
 }
@@ -340,8 +363,6 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
   if (IsVarArg)
     fail(DL, DAG, "WebAssembly doesn't support varargs yet");
-  if (MF.getFunction()->hasStructRetAttr())
-    fail(DL, DAG, "WebAssembly doesn't support struct return yet");
 
   unsigned ArgNo = 0;
   for (const ISD::InputArg &In : Ins) {
@@ -365,20 +386,17 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs arguments");
     if (In.Flags.isInConsecutiveRegsLast())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs last arguments");
-    if (In.Flags.isSplit())
-      fail(DL, DAG, "WebAssembly hasn't implemented split arguments");
     // FIXME Do something with In.getOrigAlign()?
     InVals.push_back(
         In.Used
             ? DAG.getNode(WebAssemblyISD::ARGUMENT, DL, In.VT,
                           DAG.getTargetConstant(ArgNo, DL, MVT::i32))
             : DAG.getNode(ISD::UNDEF, DL, In.VT));
+
+    // Record the number and types of arguments.
+    MF.getInfo<WebAssemblyFunctionInfo>()->addParam(In.VT);
     ++ArgNo;
   }
-
-  // Record the number of arguments, since argument indices and local variable
-  // indices are in the same index space.
-  MF.getInfo<WebAssemblyFunctionInfo>()->setNumArguments(ArgNo);
 
   return Chain;
 }

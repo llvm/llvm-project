@@ -27,15 +27,19 @@ namespace llvm {
 class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   MachineFunction &MF;
 
-  unsigned NumArguments;
+  std::vector<MVT> Params;
+  std::vector<MVT> Results;
 
 public:
   explicit WebAssemblyFunctionInfo(MachineFunction &MF)
-      : MF(MF), NumArguments(0) {}
+      : MF(MF) {}
   ~WebAssemblyFunctionInfo() override;
 
-  void setNumArguments(unsigned N) { NumArguments = N; }
-  unsigned getNumArguments() const { return NumArguments; }
+  void addParam(MVT VT) { Params.push_back(VT); }
+  const std::vector<MVT> &getParams() const { return Params; }
+
+  void addResult(MVT VT) { Results.push_back(VT); }
+  const std::vector<MVT> &getResults() const { return Results; }
 };
 
 } // end namespace llvm
