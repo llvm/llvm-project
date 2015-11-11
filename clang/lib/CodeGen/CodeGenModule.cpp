@@ -2493,6 +2493,11 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
 
   StringRef MangledName = getMangledName(GD);
 
+  if (AA->getAliasee() == MangledName) {
+    Diags.Report(AA->getLocation(), diag::err_cyclic_alias);
+    return;
+  }
+
   // If there is a definition in the module, then it wins over the alias.
   // This is dubious, but allow it to be safe.  Just ignore the alias.
   llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
