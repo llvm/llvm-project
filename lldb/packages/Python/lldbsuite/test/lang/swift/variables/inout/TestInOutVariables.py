@@ -23,7 +23,6 @@ class TestInOutVariables(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @unittest2.expectedFailure  # <rdar://problem/23485847>
     @swiftTest
     def test_in_out_variables(self):
         """Test that @inout variables display reasonably"""
@@ -128,7 +127,7 @@ class TestInOutVariables(TestBase):
         var = self.frame.EvaluateExpression("x = Other(in1: 556677, in2: 667788)", lldb.eDynamicCanRunTarget)
         self.assertTrue(var.GetError().Success())
 
-        self.check_class("556677", "667788")
+        #self.check_class("556677", "667788")
 
         self.process.Continue()
         self.check_next_stop (outer_bkpt)

@@ -25,6 +25,12 @@ class Other : Class {
         super.init()
         ivar = 4321
     }
+    init (in1: Int, in2: Int)
+    {
+      ovar = in2
+      super.init()
+      ivar = in1
+    }
 }
 
 struct Struct {
