@@ -10502,7 +10502,7 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                     child_byte_offset = cached_member_info->member_infos[idx].byte_offset;
                     child_bitfield_bit_size = 0;
                     child_bitfield_bit_offset = 0;
-                    if (child_is_base_class = cached_member_info->member_infos[idx].member_type == MemberType::BaseClass)
+                    if ((child_is_base_class = cached_member_info->member_infos[idx].member_type == MemberType::BaseClass))
                     {
                         language_flags |= LanguageFlags::eIgnoreInstancePointerness;
                     }
