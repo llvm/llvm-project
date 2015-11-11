@@ -469,30 +469,14 @@ Trophies
 
 * `Harfbuzz <https://github.com/behdad/harfbuzz/issues/139>`_
 
+* `SQLite <http://www3.sqlite.org/cgi/src/info/088009efdd56160b>`_
+
 * `Libxml2
   <https://bugzilla.gnome.org/buglist.cgi?bug_status=__all__&content=libFuzzer&list_id=68957&order=Importance&product=libxml2&query_format=specific>`_
 
-* Linux Kernel's BPF verifier: https://github.com/iovisor/bpf-fuzzer
+* `Linux Kernel's BPF verifier <https://github.com/iovisor/bpf-fuzzer>`_
 
-* LLVM:
-
-  * Clang: https://llvm.org/bugs/show_bug.cgi?id=23057
-
-  * Clang-format: https://llvm.org/bugs/show_bug.cgi?id=23052
-
-  * libc++: https://llvm.org/bugs/show_bug.cgi?id=24411
-
-  * llvm-as: https://llvm.org/bugs/show_bug.cgi?id=24639
-
-  * Disassembler:
-
-    * Mips: Discovered a number of untested instructions for the Mips target
-      (see valid-mips*.s in http://reviews.llvm.org/rL247405,
-      http://reviews.llvm.org/rL247414, http://reviews.llvm.org/rL247416,
-      http://reviews.llvm.org/rL247417, http://reviews.llvm.org/rL247420,
-      and http://reviews.llvm.org/rL247422) as well some instructions that
-      successfully disassembled on ISA's where they were not valid (see
-      invalid-xfail.s files in the same commits).
+* LLVM: `Clang <https://llvm.org/bugs/show_bug.cgi?id=23057>`_, `Clang-format <https://llvm.org/bugs/show_bug.cgi?id=23052>`_, `libc++ <https://llvm.org/bugs/show_bug.cgi?id=24411>`_, `llvm-as <https://llvm.org/bugs/show_bug.cgi?id=24639>`_, Disassembler: http://reviews.llvm.org/rL247405, http://reviews.llvm.org/rL247414, http://reviews.llvm.org/rL247416, http://reviews.llvm.org/rL247417, http://reviews.llvm.org/rL247420, http://reviews.llvm.org/rL247422.
 
 .. _pcre2: http://www.pcre.org/
 
