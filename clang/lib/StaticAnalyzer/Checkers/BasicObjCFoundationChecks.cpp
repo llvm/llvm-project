@@ -307,8 +307,7 @@ void NilArgChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       warnIfNilArg(C, msg, /* Arg */1, Class);
     } else if (S == SetObjectForKeyedSubscriptSel) {
       CanBeSubscript = true;
-      Arg = 0;
-      warnIfNilArg(C, msg, /* Arg */1, Class, CanBeSubscript);
+      Arg = 1;
     } else if (S == RemoveObjectForKeySel) {
       Arg = 0;
     }

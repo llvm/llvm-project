@@ -2220,6 +2220,15 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeSwiftNameAttr(D, SNA->getRange(), SNA->getName(),
                                    AMK == Sema::AMK_Override,
                                    AttrSpellingListIndex);
+  else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
+    NewAttr = S.mergeInternalLinkageAttr(
+        D, InternalLinkageA->getRange(),
+        &S.Context.Idents.get(InternalLinkageA->getSpelling()),
+        AttrSpellingListIndex);
+  else if (const auto *CommonA = dyn_cast<CommonAttr>(Attr))
+    NewAttr = S.mergeCommonAttr(D, CommonA->getRange(),
+                                &S.Context.Idents.get(CommonA->getSpelling()),
+                                AttrSpellingListIndex);
   else if (isa<AlignedAttr>(Attr))
     // AlignedAttrs are handled separately, because we need to handle all
     // such attributes on a declaration at the same time.
@@ -2670,6 +2679,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     }
   }
 
+  if (New->hasAttr<InternalLinkageAttr>() &&
+      !Old->hasAttr<InternalLinkageAttr>()) {
+    Diag(New->getLocation(), diag::err_internal_linkage_redeclaration)
+        << New->getDeclName();
+    Diag(Old->getLocation(), diag::note_previous_definition);
+    New->dropAttr<InternalLinkageAttr>();
+  }
 
   // If a function is first declared with a calling convention, but is later
   // declared or defined without one, all following decls assume the calling
@@ -3381,6 +3397,14 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     Diag(Old->getLocation(), diag::note_previous_definition);
     // Remove weak_import attribute on new declaration.
     New->dropAttr<WeakImportAttr>();
+  }
+
+  if (New->hasAttr<InternalLinkageAttr>() &&
+      !Old->hasAttr<InternalLinkageAttr>()) {
+    Diag(New->getLocation(), diag::err_internal_linkage_redeclaration)
+        << New->getDeclName();
+    Diag(Old->getLocation(), diag::note_previous_definition);
+    New->dropAttr<InternalLinkageAttr>();
   }
 
   // Merge the types.

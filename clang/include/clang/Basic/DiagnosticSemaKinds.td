@@ -4110,6 +4110,12 @@ def warn_undefined_inline : Warning<"inline function %q0 is not defined">,
   InGroup<DiagGroup<"undefined-inline">>;
 def note_used_here : Note<"used here">;
 
+def err_internal_linkage_redeclaration : Error<
+  "'internal_linkage' attribute does not appear on the first declaration of %0">;
+def warn_internal_linkage_local_storage : Warning<
+  "'internal_linkage' attribute on a non-static local variable is ignored">,
+  InGroup<IgnoredAttributes>;
+
 def ext_internal_in_extern_inline : ExtWarn<
   "static %select{function|variable}0 %1 is used in an inline function with "
   "external linkage">, InGroup<StaticInInline>;
