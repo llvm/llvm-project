@@ -1,5 +1,5 @@
 ; RUN: llc -disable-fp-elim -O0 %s -mtriple armv7-apple-darwin -o - | FileCheck %s
-; RUN: llc -disable-fp-elim -O0 %s -mtriple thumbv1-apple-darwin -o - | FileCheck %s
+; RUN: llc -disable-fp-elim -O0 %s -mtriple thumbv7-apple-darwin -o - | FileCheck %s
 
 ; int func(void);
 ; void prologue_end_test() {

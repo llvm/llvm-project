@@ -39,16 +39,16 @@ static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input object files>"),
                cl::ZeroOrMore);
 
-static cl::opt<DIDumpType>
-DumpType("debug-dump", cl::init(DIDT_All),
-  cl::desc("Dump of debug sections:"),
-  cl::values(
+static cl::opt<DIDumpType> DumpType(
+    "debug-dump", cl::init(DIDT_All), cl::desc("Dump of debug sections:"),
+    cl::values(
         clEnumValN(DIDT_All, "all", "Dump all debug sections"),
         clEnumValN(DIDT_Abbrev, "abbrev", ".debug_abbrev"),
         clEnumValN(DIDT_AbbrevDwo, "abbrev.dwo", ".debug_abbrev.dwo"),
         clEnumValN(DIDT_AppleNames, "apple_names", ".apple_names"),
         clEnumValN(DIDT_AppleTypes, "apple_types", ".apple_types"),
-        clEnumValN(DIDT_AppleNamespaces, "apple_namespaces", ".apple_namespaces"),
+        clEnumValN(DIDT_AppleNamespaces, "apple_namespaces",
+                   ".apple_namespaces"),
         clEnumValN(DIDT_AppleObjC, "apple_objc", ".apple_objc"),
         clEnumValN(DIDT_Aranges, "aranges", ".debug_aranges"),
         clEnumValN(DIDT_Info, "info", ".debug_info"),
@@ -67,8 +67,9 @@ DumpType("debug-dump", cl::init(DIDT_All),
         clEnumValN(DIDT_GnuPubtypes, "gnu_pubtypes", ".debug_gnu_pubtypes"),
         clEnumValN(DIDT_Str, "str", ".debug_str"),
         clEnumValN(DIDT_StrDwo, "str.dwo", ".debug_str.dwo"),
-        clEnumValN(DIDT_StrOffsetsDwo, "str_offsets.dwo", ".debug_str_offsets.dwo"),
-        clEnumValEnd));
+        clEnumValN(DIDT_StrOffsetsDwo, "str_offsets.dwo",
+                   ".debug_str_offsets.dwo"),
+        clEnumValN(DIDT_CUIndex, "cu_index", ".debug_cu_index"), clEnumValEnd));
 
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)

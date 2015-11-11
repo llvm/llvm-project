@@ -108,3 +108,42 @@ define i32 @f9(i32 %x, i32 %y) {
   %sel = select i1 %cmp, i32 %y2, i32 %or
   ret i32 %sel
 }
+
+define i32 @f10(i32 %x, i32 %y) {
+; CHECK-LABEL: f10:
+; CHECK: bfi r1, r0, #4, #2
+  %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
+  %and = and i32 %x, 4
+  %or = or i32 %y2, 32
+  %cmp = icmp ne i32 %and, 0
+  %sel = select i1 %cmp, i32 %or, i32 %y2
+
+  %aand = and i32 %x, 2
+  %aor = or i32 %sel, 16
+  %acmp = icmp ne i32 %aand, 0
+  %asel = select i1 %acmp, i32 %aor, i32 %sel
+
+  ret i32 %asel
+}
+
+define i32 @f11(i32 %x, i32 %y) {
+; CHECK-LABEL: f11:
+; CHECK: bfi r1, r0, #4, #3
+  %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
+  %and = and i32 %x, 4
+  %or = or i32 %y2, 32
+  %cmp = icmp ne i32 %and, 0
+  %sel = select i1 %cmp, i32 %or, i32 %y2
+
+  %aand = and i32 %x, 2
+  %aor = or i32 %sel, 16
+  %acmp = icmp ne i32 %aand, 0
+  %asel = select i1 %acmp, i32 %aor, i32 %sel
+
+  %band = and i32 %x, 8
+  %bor = or i32 %asel, 64
+  %bcmp = icmp ne i32 %band, 0
+  %bsel = select i1 %bcmp, i32 %bor, i32 %asel
+
+  ret i32 %bsel
+}

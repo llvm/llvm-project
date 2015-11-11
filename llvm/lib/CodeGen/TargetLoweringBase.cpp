@@ -774,6 +774,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   MinFunctionAlignment = 0;
   PrefFunctionAlignment = 0;
   PrefLoopAlignment = 0;
+  GatherAllAliasesMaxDepth = 6;
   MinStackArgumentAlignment = 1;
   InsertFencesForAtomic = false;
   MinimumJumpTableEntries = 4;

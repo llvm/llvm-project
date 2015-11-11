@@ -9,6 +9,7 @@
 //
 // This file defines the pass that finds instructions that can be
 // re-written as LEA instructions in order to reduce pipeline delays.
+// When optimizing for size it replaces suitable LEAs with INC or DEC.
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,6 +62,11 @@ class FixupLEAPass : public MachineFunctionPass {
   void processInstructionForSLM(MachineBasicBlock::iterator &I,
                                 MachineFunction::iterator MFI);
 
+  /// \brief Look for LEAs that add 1 to reg or subtract 1 from reg
+  /// and convert them to INC or DEC respectively.
+  bool fixupIncDec(MachineBasicBlock::iterator &I,
+                   MachineFunction::iterator MFI) const;
+
   /// \brief Determine if an instruction references a machine register
   /// and, if so, whether it reads or writes the register.
   RegUsageState usesRegister(MachineOperand &p, MachineBasicBlock::iterator I);
@@ -89,6 +95,8 @@ public:
 private:
   MachineFunction *MF;
   const X86InstrInfo *TII; // Machine instruction info.
+  bool OptIncDec;
+  bool OptLEA;
 };
 char FixupLEAPass::ID = 0;
 }
@@ -150,7 +158,10 @@ FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
 bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
   MF = &Func;
   const X86Subtarget &ST = Func.getSubtarget<X86Subtarget>();
-  if (!ST.LEAusesAG() && !ST.slowLEA())
+  OptIncDec = !ST.slowIncDec() || Func.getFunction()->optForMinSize();
+  OptLEA = ST.LEAusesAG() || ST.slowLEA();
+
+  if (!OptLEA && !OptIncDec)
     return false;
 
   TII = ST.getInstrInfo();
@@ -222,6 +233,60 @@ FixupLEAPass::searchBackwards(MachineOperand &p, MachineBasicBlock::iterator &I,
   return nullptr;
 }
 
+static inline bool isLEA(const int opcode) {
+  return opcode == X86::LEA16r || opcode == X86::LEA32r ||
+         opcode == X86::LEA64r || opcode == X86::LEA64_32r;
+}
+
+/// isLEASimpleIncOrDec - Does this LEA have one these forms:
+/// lea  %reg, 1(%reg)
+/// lea  %reg, -1(%reg)
+static inline bool isLEASimpleIncOrDec(MachineInstr *LEA) {
+  unsigned SrcReg = LEA->getOperand(1 + X86::AddrBaseReg).getReg();
+  unsigned DstReg = LEA->getOperand(0).getReg();
+  unsigned AddrDispOp = 1 + X86::AddrDisp;
+  return SrcReg == DstReg &&
+         LEA->getOperand(1 + X86::AddrIndexReg).getReg() == 0 &&
+         LEA->getOperand(1 + X86::AddrSegmentReg).getReg() == 0 &&
+         LEA->getOperand(AddrDispOp).isImm() &&
+         (LEA->getOperand(AddrDispOp).getImm() == 1 ||
+          LEA->getOperand(AddrDispOp).getImm() == -1);
+}
+
+bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
+                               MachineFunction::iterator MFI) const {
+  MachineInstr *MI = I;
+  int Opcode = MI->getOpcode();
+  if (!isLEA(Opcode))
+    return false;
+
+  if (isLEASimpleIncOrDec(MI) && TII->isSafeToClobberEFLAGS(*MFI, I)) {
+    int NewOpcode;
+    bool isINC = MI->getOperand(4).getImm() == 1;
+    switch (Opcode) {
+    case X86::LEA16r:
+      NewOpcode = isINC ? X86::INC16r : X86::DEC16r;
+      break;
+    case X86::LEA32r:
+    case X86::LEA64_32r:
+      NewOpcode = isINC ? X86::INC32r : X86::DEC32r;
+      break;
+    case X86::LEA64r:
+      NewOpcode = isINC ? X86::INC64r : X86::DEC64r;
+      break;
+    }
+
+    MachineInstr *NewMI =
+        BuildMI(*MFI, I, MI->getDebugLoc(), TII->get(NewOpcode))
+            .addOperand(MI->getOperand(0))
+            .addOperand(MI->getOperand(1));
+    MFI->erase(I);
+    I = static_cast<MachineBasicBlock::iterator>(NewMI);
+    return true;
+  }
+  return false;
+}
+
 void FixupLEAPass::processInstruction(MachineBasicBlock::iterator &I,
                                       MachineFunction::iterator MFI) {
   // Process a load, store, or LEA instruction.
@@ -265,8 +330,7 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
                                             MachineFunction::iterator MFI) {
   MachineInstr *MI = I;
   const int opcode = MI->getOpcode();
-  if (opcode != X86::LEA16r && opcode != X86::LEA32r && opcode != X86::LEA64r &&
-      opcode != X86::LEA64_32r)
+  if (!isLEA(opcode))
     return;
   if (MI->getOperand(5).getReg() != 0 || !MI->getOperand(4).isImm() ||
       !TII->isSafeToClobberEFLAGS(*MFI, I))
@@ -280,7 +344,8 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
     return;
   int addrr_opcode, addri_opcode;
   switch (opcode) {
-  default: llvm_unreachable("Unexpected LEA instruction");
+  default:
+    llvm_unreachable("Unexpected LEA instruction");
   case X86::LEA16r:
     addrr_opcode = X86::ADD16rr;
     addri_opcode = X86::ADD16ri;
@@ -330,10 +395,16 @@ bool FixupLEAPass::processBasicBlock(MachineFunction &MF,
                                      MachineFunction::iterator MFI) {
 
   for (MachineBasicBlock::iterator I = MFI->begin(); I != MFI->end(); ++I) {
-    if (MF.getSubtarget<X86Subtarget>().isSLM())
-      processInstructionForSLM(I, MFI);
-    else
-      processInstruction(I, MFI);
+    if (OptIncDec)
+      if (fixupIncDec(I, MFI))
+        continue;
+
+    if (OptLEA) {
+      if (MF.getSubtarget<X86Subtarget>().isSLM())
+        processInstructionForSLM(I, MFI);
+      else
+        processInstruction(I, MFI);
+    }
   }
   return false;
 }

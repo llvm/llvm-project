@@ -1,19 +1,30 @@
 #Source:
 ##include <stdio.h>
-#static inline int inc (int *a) {
+#static inline int inctwo (int *a) {
 #  printf ("%d\n",(*a)++);
 #  return (*a)++;
 #}
+#static inline int inc (int *a) {
+#  printf ("%d\n",inctwo(a));
+#  return (*a)++;
+#}
+#
 #
 #int main () {
 #  int x = 1;
 #  return inc(&x);
 #}
+#
 #Build as : clang -g -O2 addr.c
 
-RUN: llvm-symbolizer -inlining -print-address -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
+RUN: llvm-symbolizer -print-address -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
+RUN: llvm-symbolizer -inlining -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck --check-prefix="PRETTY" %s 
 
 #CHECK: 0x40054d
 #CHECK: main
-#CHECK: {{[/\]+}}tmp{{[/\]+}}x.c:9:0
+#CHECK: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
+#
+#PRETTY: {{[0x]+}}40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3:3
+#PRETTY:  (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7:0
+#PRETTY   (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14:0
 

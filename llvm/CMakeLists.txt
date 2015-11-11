@@ -683,6 +683,13 @@ if( LLVM_INCLUDE_EXAMPLES )
 endif()
 
 if( LLVM_INCLUDE_TESTS )
+  if(EXISTS ${LLVM_MAIN_SRC_DIR}/projects/test-suite AND TARGET clang)
+    include(LLVMExternalProjectUtils)
+    llvm_ExternalProject_Add(test-suite ${LLVM_MAIN_SRC_DIR}/projects/test-suite
+      USE_TOOLCHAIN
+      EXCLUDE_FROM_ALL
+      NO_INSTALL)
+  endif()
   add_subdirectory(test)
   add_subdirectory(unittests)
   if (MSVC)

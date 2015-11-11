@@ -102,8 +102,6 @@ static void VisitComponent(StringRef Name,
 /// appear prior to their dependencies).
 ///
 /// \param Components - The names of the components to find libraries for.
-/// \param RequiredLibs [out] - On return, the ordered list of libraries that
-/// are required to link the given components.
 /// \param IncludeNonInstalled - Whether non-installed components should be
 /// reported.
 /// \param GetComponentNames - True if one would prefer the component names.

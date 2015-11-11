@@ -56,6 +56,14 @@ EXAMPLE
 
   foo(int)
   /tmp/a.cc:12
+  $cat addr.txt
+  0x40054d
+  $llvm-symbolizer -inlining -print-address -pretty-print -obj=addr.exe < addr.txt
+  0x40054d: inc at /tmp/x.c:3:3
+   (inlined by) main at /tmp/x.c:9:0
+  $llvm-symbolizer -inlining -pretty-print -obj=addr.exe < addr.txt
+  inc at /tmp/x.c:3:3
+   (inlined by) main at /tmp/x.c:9:0
 
 OPTIONS
 -------
@@ -100,6 +108,10 @@ OPTIONS
 
 .. option:: -print-address
  Print address before the source code location. Defaults to false.
+
+.. option:: -pretty-print
+ Print human readable output. If ``-inlining`` is specified, enclosing scope is
+ prefixed by (inlined by). Refer to listed examples.
 
 EXIT STATUS
 -----------

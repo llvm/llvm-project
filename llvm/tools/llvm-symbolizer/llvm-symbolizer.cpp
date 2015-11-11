@@ -78,6 +78,10 @@ static cl::opt<bool>
     ClPrintAddress("print-address", cl::init(false),
                    cl::desc("Show address before line information"));
 
+static cl::opt<bool>
+    ClPrettyPrint("pretty-print", cl::init(false),
+                  cl::desc("Make the output more human friendly"));
+
 static bool error(std::error_code ec) {
   if (!ec)
     return false;
@@ -143,6 +147,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm-symbolizer\n");
   LLVMSymbolizer::Options Opts(ClPrintFunctions, ClUseSymbolTable, ClDemangle,
                                ClUseRelativeAddress, ClDefaultArch);
+
   for (const auto &hint : ClDsymHint) {
     if (sys::path::extension(hint) == ".dSYM") {
       Opts.DsymHints.push_back(hint);
@@ -156,13 +161,15 @@ int main(int argc, char **argv) {
   bool IsData = false;
   std::string ModuleName;
   uint64_t ModuleOffset;
-  DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None);
+  DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
+                    ClPrettyPrint);
 
   while (parseCommand(IsData, ModuleName, ModuleOffset)) {
     if (ClPrintAddress) {
       outs() << "0x";
       outs().write_hex(ModuleOffset);
-      outs() << "\n";
+      StringRef Delimiter = (ClPrettyPrint == true) ? ": " : "\n";
+      outs() << Delimiter;
     }
     if (IsData) {
       auto ResOrErr = Symbolizer.symbolizeData(ModuleName, ModuleOffset);
