@@ -1243,8 +1243,8 @@ define void @misc.metadata() {
 ; CHECK: attributes #30 = { uwtable }
 ; CHECK: attributes #31 = { "cpu"="cortex-a8" }
 ; CHECK: attributes #32 = { nounwind readnone }
-; CHECK: attributes #33 = { nounwind readonly argmemonly }
-; CHECK: attributes #34 = { nounwind argmemonly }
+; CHECK: attributes #33 = { argmemonly nounwind readonly }
+; CHECK: attributes #34 = { argmemonly nounwind }
 ; CHECK: attributes #35 = { nounwind readonly }
 ; CHECK: attributes #36 = { builtin }
 

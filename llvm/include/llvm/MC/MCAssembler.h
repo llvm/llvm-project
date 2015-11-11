@@ -35,7 +35,7 @@ class MCSubtargetInfo;
 class MCValue;
 class MCAsmBackend;
 
-class MCFragment : public ilist_node<MCFragment> {
+class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
   friend class MCAsmLayout;
 
   MCFragment(const MCFragment &) = delete;

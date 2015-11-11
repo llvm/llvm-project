@@ -154,6 +154,11 @@ public:
     return const_cast<MCSection *>(this)->getFragmentList();
   }
 
+  /// Support for MCFragment::getNextNode().
+  static FragmentListType MCSection::*getSublistAccess(MCFragment *) {
+    return &MCSection::Fragments;
+  }
+
   const MCDummyFragment &getDummyFragment() const { return DummyFragment; }
   MCDummyFragment &getDummyFragment() { return DummyFragment; }
 
