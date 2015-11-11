@@ -7,9 +7,9 @@ namespace dr1346 { // dr1346: 3.5
   auto a(1); // expected-error 0-1{{extension}}
   auto b(1, 2); // expected-error {{multiple expressions}} expected-error 0-1{{extension}}
 #if __cplusplus >= 201103L
-  auto c({}); // expected-error {{parenthesized initializer list}} expected-error {{cannot deduce}}
-  auto d({1}); // expected-error {{parenthesized initializer list}} expected-error {{<initializer_list>}}
-  auto e({1, 2}); // expected-error {{parenthesized initializer list}} expected-error {{<initializer_list>}}
+  auto c({}); // expected-error {{parenthesized initializer list}}
+  auto d({1}); // expected-error {{parenthesized initializer list}}
+  auto e({1, 2}); // expected-error {{parenthesized initializer list}}
 #endif
   template<typename...Ts> void f(Ts ...ts) { // expected-error 0-1{{extension}}
     auto x(ts...); // expected-error {{empty}} expected-error 0-1{{extension}}
@@ -21,9 +21,9 @@ namespace dr1346 { // dr1346: 3.5
     [a(1)] {} (); // expected-error 0-1{{extension}}
     [b(1, 2)] {} (); // expected-error {{multiple expressions}} expected-error 0-1{{extension}}
 #if __cplusplus >= 201103L
-    [c({})] {} (); // expected-error {{parenthesized initializer list}} expected-error {{cannot deduce}} expected-error 0-1{{extension}}
-    [d({1})] {} (); // expected-error {{parenthesized initializer list}} expected-error {{<initializer_list>}} expected-error 0-1{{extension}}
-    [e({1, 2})] {} (); // expected-error {{parenthesized initializer list}} expected-error {{<initializer_list>}} expected-error 0-1{{extension}}
+    [c({})] {} (); // expected-error {{parenthesized initializer list}} expected-error 0-1{{extension}}
+    [d({1})] {} (); // expected-error {{parenthesized initializer list}} expected-error 0-1{{extension}}
+    [e({1, 2})] {} (); // expected-error {{parenthesized initializer list}} expected-error 0-1{{extension}}
 #endif
   }
 #endif

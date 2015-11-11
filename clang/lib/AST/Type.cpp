@@ -948,7 +948,7 @@ public:
           == T->getDeducedType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getAutoType(deducedType, T->isDecltypeAuto(),
+    return Ctx.getAutoType(deducedType, T->getKeyword(),
                            T->isDependentType());
   }
 

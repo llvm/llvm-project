@@ -117,8 +117,10 @@ void argument_deduction() {
 
 void auto_deduction() {
   auto l = {1, 2, 3, 4};
-  auto l2 {1, 2, 3, 4}; // expected-warning {{will change meaning in a future version of Clang}}
+  auto l2 {1, 2, 3, 4}; // expected-error {{initializer for variable 'l2' with type 'auto' contains multiple expressions}}
+  auto l3 {1};
   static_assert(same_type<decltype(l), std::initializer_list<int>>::value, "");
+  static_assert(same_type<decltype(l3), int>::value, "");
   auto bl = {1, 2.0}; // expected-error {{cannot deduce}}
 
   for (int i : {1, 2, 3, 4}) {}
@@ -190,7 +192,7 @@ namespace rdar11948732 {
 }
 
 namespace PR14272 {
-  auto x { { 0, 0 } }; // expected-error {{cannot deduce actual type for variable 'x' with type 'auto' from initializer list}}
+  auto x { { 0, 0 } }; // expected-error {{cannot deduce type for variable 'x' with type 'auto' from nested initializer list}}
 }
 
 namespace initlist_of_array {

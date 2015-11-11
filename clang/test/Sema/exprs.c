@@ -97,6 +97,7 @@ int test9(struct f *P) {
   R = __alignof(P->x);  // expected-error {{invalid application of 'alignof' to bit-field}}
   R = __alignof(P->y);   // ok.
   R = sizeof(P->x); // expected-error {{invalid application of 'sizeof' to bit-field}}
+  __extension__ ({ R = (__typeof__(P->x)) 2; }); // expected-error {{invalid application of 'typeof' to bit-field}}
   return R;
 }
 

@@ -49,7 +49,7 @@ decltype(auto) f1();
 decltype(auto) (*f2)(); // expected-error {{'decltype(auto)' can only be used as a return type in a function declaration}} expected-error {{requires an initializer}}
 decltype(auto) *f3(); // expected-error {{cannot form pointer to 'decltype(auto)'}}
 const decltype(auto) f4(); // expected-error {{'decltype(auto)' cannot be combined with other type specifiers}}
-typedef decltype(auto) f5(); // expected-error {{'decltype(auto)' can only be used as a return type in a function declaration}}
+typedef decltype(auto) f5(); // expected-error {{'decltype(auto)' not allowed in typedef}}
 decltype(auto) ((((((f6))))())); // ok
 decltype(auto) f7()(); // expected-error {{'decltype(auto)' can only be used as a return type in a function declaration}} expected-error {{function cannot return function type}}
 decltype(auto) (S::*f8)(); // expected-error {{'decltype(auto)' can only be used as a return type in a function declaration}} expected-error {{requires an initializer}}

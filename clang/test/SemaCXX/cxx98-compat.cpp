@@ -100,6 +100,9 @@ struct RefQualifier {
 };
 
 auto f() -> int; // expected-warning {{trailing return types are incompatible with C++98}}
+#ifdef CXX14COMPAT
+auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}}
+#endif
 
 void RangeFor() {
   int xs[] = {1, 2, 3};
