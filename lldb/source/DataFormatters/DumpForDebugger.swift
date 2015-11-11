@@ -59,6 +59,15 @@ func $__lldb__DumpForDebugger_impl<TargetStream : OutputStreamType>(
                              _ x_mirror_count: Int) -> String? {
             let ds = x_mirror.displayStyle ?? .Struct
             switch ds {
+            case .Optional:
+                if x_mirror_count > 0 {
+                    return "\(x_mirror.subjectType)"
+                }
+                else {
+                    if let x = x_opt {
+                        return String(reflecting: x)
+                    }
+                }
             case .Collection:
                 fallthrough
             case .Dictionary:
