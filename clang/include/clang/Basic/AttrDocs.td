@@ -1693,6 +1693,15 @@ Marking virtual functions as ``not_tail_called`` is an error:
       // not_tail_called on a virtual function is an error.
       [[clang::not_tail_called]] int foo2() override;
     };
+  }];
+}
 
+def InternalLinkageDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``internal_linkage`` attribute changes the linkage type of the declaration to internal.
+This is similar to C-style ``static``, but can be used on classes and class methods. When applied to a class definition,
+this attribute affects all methods and static data members of that class.
+This can be used to contain the ABI of a C++ library by excluding unwanted class methods from the export tables.
   }];
 }

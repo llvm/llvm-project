@@ -1217,6 +1217,10 @@ getOutermostEnclosingLambda(const CXXRecordDecl *Record) {
 
 static LinkageInfo computeLVForDecl(const NamedDecl *D,
                                     LVComputationKind computation) {
+  // Internal_linkage attribute overrides other considerations.
+  if (D->hasAttr<InternalLinkageAttr>())
+    return LinkageInfo::internal();
+
   // Objective-C: treat all Objective-C declarations as having external
   // linkage.
   switch (D->getKind()) {
@@ -1307,6 +1311,10 @@ class LinkageComputer {
 public:
   static LinkageInfo getLVForDecl(const NamedDecl *D,
                                   LVComputationKind computation) {
+    // Internal_linkage attribute overrides other considerations.
+    if (D->hasAttr<InternalLinkageAttr>())
+      return LinkageInfo::internal();
+
     if (computation == LVForLinkageOnly && D->hasCachedLinkage())
       return LinkageInfo(D->getCachedLinkage(), DefaultVisibility, false);
 

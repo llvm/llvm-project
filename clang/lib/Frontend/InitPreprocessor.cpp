@@ -867,6 +867,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
       LangOpts.getGC() != LangOptions::NonGC) {
     Builder.defineMacro("__weak", "__attribute__((objc_gc(weak)))");
     Builder.defineMacro("__strong", "__attribute__((objc_gc(strong)))");
+    Builder.defineMacro("__autoreleasing", "");
+    Builder.defineMacro("__unsafe_unretained", "");
   } else if (LangOpts.ObjC1) {
     Builder.defineMacro("__weak", "__attribute__((objc_ownership(weak)))");
     Builder.defineMacro("__strong", "__attribute__((objc_ownership(strong)))");

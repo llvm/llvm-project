@@ -24,3 +24,19 @@ void foo() {
 }
 // CHECK-DAG: @"\01??1B@test2@@UAE@XZ" = alias void (%"struct.test2::B"*), bitcast (void (%"struct.test2::A"*)* @"\01??1A@test2@@UAE@XZ" to void (%"struct.test2::B"*)*)
 }
+
+namespace test3 {
+struct A { virtual ~A(); };
+A::~A() {}
+}
+// CHECK-DAG: define x86_thiscallcc void @"\01??1A@test3@@UAE@XZ"(
+namespace test3 {
+template <typename T>
+struct B : A {
+  virtual ~B() { }
+};
+template struct B<int>;
+}
+// This has to be weak, and emitting weak aliases is fragile, so we don't do the
+// aliasing.
+// CHECK-DAG: define weak_odr x86_thiscallcc void @"\01??1?$B@H@test3@@UAE@XZ"(
