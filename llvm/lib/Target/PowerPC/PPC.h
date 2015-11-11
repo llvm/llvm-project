@@ -41,6 +41,7 @@ namespace llvm {
   FunctionPass *createPPCVSXCopyPass();
   FunctionPass *createPPCVSXFMAMutatePass();
   FunctionPass *createPPCVSXSwapRemovalPass();
+  FunctionPass *createPPCMIPeepholePass();
   FunctionPass *createPPCBranchSelectionPass();
   FunctionPass *createPPCISelDag(PPCTargetMachine &TM);
   FunctionPass *createPPCTLSDynamicCallPass();

@@ -199,23 +199,29 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP     , MVT::i32  , Promote);
   }
 
-  // In 32-bit mode these are custom lowered.  In 64-bit mode F32 and F64
-  // are Legal, f80 is custom lowered.
-  setOperationAction(ISD::FP_TO_SINT     , MVT::i64  , Custom);
-  setOperationAction(ISD::SINT_TO_FP     , MVT::i64  , Custom);
-
   // Promote i1/i8 FP_TO_SINT to larger FP_TO_SINTS's, as X86 doesn't have
   // this operation.
   setOperationAction(ISD::FP_TO_SINT       , MVT::i1   , Promote);
   setOperationAction(ISD::FP_TO_SINT       , MVT::i8   , Promote);
 
-  if (X86ScalarSSEf32) {
-    setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Promote);
-    // f32 and f64 cases are Legal, f80 case is not
-    setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
+  if (!Subtarget->useSoftFloat()) {
+    // In 32-bit mode these are custom lowered.  In 64-bit mode F32 and F64
+    // are Legal, f80 is custom lowered.
+    setOperationAction(ISD::FP_TO_SINT     , MVT::i64  , Custom);
+    setOperationAction(ISD::SINT_TO_FP     , MVT::i64  , Custom);
+
+    if (X86ScalarSSEf32) {
+      setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Promote);
+      // f32 and f64 cases are Legal, f80 case is not
+      setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
+    } else {
+      setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Custom);
+      setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
+    }
   } else {
-    setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Custom);
-    setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
+    setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Promote);
+    setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Expand);
+    setOperationAction(ISD::FP_TO_SINT     , MVT::i64  , Expand);
   }
 
   // Handle FP_TO_UINT by promoting the destination to a larger signed
@@ -21410,7 +21416,7 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr *MI,
   MachineBasicBlock *RestoreMBB =
       MF->CreateMachineBasicBlock(BB->getBasicBlock());
   assert(BB->succ_size() == 1);
-  MF->insert(TargetMBB->getIterator(), RestoreMBB);
+  MF->insert(std::next(BB->getIterator()), RestoreMBB);
   RestoreMBB->transferSuccessorsAndUpdatePHIs(BB);
   BB->addSuccessor(RestoreMBB);
   MI->getOperand(0).setMBB(RestoreMBB);

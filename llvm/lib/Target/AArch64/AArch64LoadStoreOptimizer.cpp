@@ -84,6 +84,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
 
   const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
+  const AArch64Subtarget *Subtarget;
 
   // Scan the instructions looking for a load/store that can be combined
   // with the current instruction into a load/store pair.
@@ -537,6 +538,10 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     if (!IsUnscaled)
       OffsetImm /= 2;
     MachineInstr *RtNewDest = MergeForward ? I : Paired;
+    // When merging small (< 32 bit) loads for big-endian targets, the order of
+    // the component parts gets swapped.
+    if (!Subtarget->isLittleEndian())
+      std::swap(RtMI, Rt2MI);
     // Construct the new load instruction.
     // FIXME: currently we support only halfword unsigned load. We need to
     // handle byte type, signed, and store instructions as well.
@@ -560,7 +565,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     DEBUG((NewMemMI)->print(dbgs()));
 
     MachineInstr *ExtDestMI = MergeForward ? Paired : I;
-    if (ExtDestMI == Rt2MI) {
+    if ((ExtDestMI == Rt2MI) == Subtarget->isLittleEndian()) {
       // Create the bitfield extract for high half.
       BitExtMI1 = BuildMI(*I->getParent(), InsertionPoint, I->getDebugLoc(),
                           TII->get(AArch64::UBFMWri))
@@ -1388,8 +1393,9 @@ bool AArch64LoadStoreOpt::enableNarrowLdMerge(MachineFunction &Fn) {
 }
 
 bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  TII = static_cast<const AArch64InstrInfo *>(Fn.getSubtarget().getInstrInfo());
-  TRI = Fn.getSubtarget().getRegisterInfo();
+  Subtarget = &static_cast<const AArch64Subtarget &>(Fn.getSubtarget());
+  TII = static_cast<const AArch64InstrInfo *>(Subtarget->getInstrInfo());
+  TRI = Subtarget->getRegisterInfo();
 
   bool Modified = false;
   bool enableNarrowLdOpt = enableNarrowLdMerge(Fn);

@@ -79,8 +79,6 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
                                           STI.getMaxWavesPerCU());
   unsigned VGPRLimit = getNumVGPRsAllowed(STI.getMaxWavesPerCU());
 
-  unsigned VSLimit = SGPRLimit + VGPRLimit;
-
   for (regclass_iterator I = regclass_begin(), E = regclass_end();
        I != E; ++I) {
     const TargetRegisterClass *RC = *I;
@@ -88,11 +86,7 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
     unsigned NumSubRegs = std::max((int)RC->getSize() / 4, 1);
     unsigned Limit;
 
-    if (isPseudoRegClass(RC)) {
-      // FIXME: This is a hack. We should never be considering the pressure of
-      // these since no virtual register should ever have this class.
-      Limit = VSLimit;
-    } else if (isSGPRClass(RC)) {
+    if (isSGPRClass(RC)) {
       Limit = SGPRLimit / NumSubRegs;
     } else {
       Limit = VGPRLimit / NumSubRegs;

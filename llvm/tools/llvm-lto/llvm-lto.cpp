@@ -101,6 +101,7 @@ struct ModuleInfo {
 
 static void handleDiagnostics(lto_codegen_diagnostic_severity_t Severity,
                               const char *Msg, void *) {
+  errs() << "llvm-lto: ";
   switch (Severity) {
   case LTO_DS_NOTE:
     errs() << "note: ";

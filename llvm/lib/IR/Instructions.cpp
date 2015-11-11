@@ -3990,6 +3990,10 @@ AddrSpaceCastInst *AddrSpaceCastInst::cloneImpl() const {
 }
 
 CallInst *CallInst::cloneImpl() const {
+  if (hasOperandBundles()) {
+    unsigned DescriptorBytes = getNumOperandBundles() * sizeof(BundleOpInfo);
+    return new(getNumOperands(), DescriptorBytes) CallInst(*this);
+  }
   return  new(getNumOperands()) CallInst(*this);
 }
 
@@ -4034,6 +4038,10 @@ IndirectBrInst *IndirectBrInst::cloneImpl() const {
 }
 
 InvokeInst *InvokeInst::cloneImpl() const {
+  if (hasOperandBundles()) {
+    unsigned DescriptorBytes = getNumOperandBundles() * sizeof(BundleOpInfo);
+    return new(getNumOperands(), DescriptorBytes) InvokeInst(*this);
+  }
   return new(getNumOperands()) InvokeInst(*this);
 }
 

@@ -127,6 +127,84 @@ define i1 @test9(i32 %length.i, i32 %i) {
   ret i1 %res
 }
 
+define i1 @test10(i32 %length.i, i32 %x.full) {
+; CHECK-LABEL: @test10(
+; CHECK:  ret i1 true
+
+  %x = and i32 %x.full, 4294901760  ;; 4294901760 == 0xffff0000
+  %large = or i32 %x, 100
+  %small = or i32 %x, 90
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
+define i1 @test11(i32 %length.i, i32 %x) {
+; CHECK-LABEL: @test11(
+; CHECK: %res = icmp ule i1 %known, %to.prove
+; CHECK: ret i1 %res
+
+  %large = or i32 %x, 100
+  %small = or i32 %x, 90
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
+define i1 @test12(i32 %length.i, i32 %x.full) {
+; CHECK-LABEL: @test12(
+; CHECK: %res = icmp ule i1 %known, %to.prove
+; CHECK: ret i1 %res
+
+  %x = and i32 %x.full, 4294901760  ;; 4294901760 == 0xffff0000
+  %large = or i32 %x, 65536 ;; 65536 == 0x00010000
+  %small = or i32 %x, 90
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
+define i1 @test13(i32 %length.i, i32 %x) {
+; CHECK-LABEL: @test13(
+; CHECK:  ret i1 true
+
+  %large = add nuw i32 %x, 100
+  %small = add nuw i32 %x, 90
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
+define i1 @test14(i32 %length.i, i32 %x.full) {
+; CHECK-LABEL: @test14(
+; CHECK:  ret i1 true
+
+  %x = and i32 %x.full, 4294905615  ;; 4294905615 == 0xffff0f0f
+  %large = or i32 %x, 8224 ;; == 0x2020
+  %small = or i32 %x, 4112 ;; == 0x1010
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
+define i1 @test15(i32 %length.i, i32 %x) {
+; CHECK-LABEL: @test15(
+; CHECK:  %res = icmp ule i1 %known, %to.prove
+; CHECK:  ret i1 %res
+
+  %large = add nuw i32 %x, 100
+  %small = add nuw i32 %x, 110
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
 ; X >=(s) Y == X ==> Y (i1 1 becomes -1 for reasoning)
 define i1 @test_sge(i32 %length.i, i32 %i) {
 ; CHECK-LABEL: @test_sge

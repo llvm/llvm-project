@@ -1077,6 +1077,22 @@ static void computeKnownBitsFromOperator(Operator *I, APInt &KnownZero,
     KnownOne &= KnownOne2;
     // Output known-0 are known to be clear if zero in either the LHS | RHS.
     KnownZero |= KnownZero2;
+
+    // and(x, add (x, -1)) is a common idiom that always clears the low bit;
+    // here we handle the more general case of adding any odd number by
+    // matching the form add(x, add(x, y)) where y is odd.
+    // TODO: This could be generalized to clearing any bit set in y where the
+    // following bit is known to be unset in y.
+    Value *Y = nullptr;
+    if (match(I->getOperand(0), m_Add(m_Specific(I->getOperand(1)),
+                                      m_Value(Y))) ||
+        match(I->getOperand(1), m_Add(m_Specific(I->getOperand(0)),
+                                      m_Value(Y)))) {
+      APInt KnownZero3(BitWidth, 0), KnownOne3(BitWidth, 0);
+      computeKnownBits(Y, KnownZero3, KnownOne3, DL, Depth + 1, Q);
+      if (KnownOne3.countTrailingOnes() > 0)
+        KnownZero |= APInt::getLowBitsSet(BitWidth, 1);
+    }
     break;
   }
   case Instruction::Or: {
@@ -4087,6 +4103,7 @@ static bool isTruePredicate(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
                             const DataLayout &DL, unsigned Depth,
                             AssumptionCache *AC, const Instruction *CxtI,
                             const DominatorTree *DT) {
+  assert(!LHS->getType()->isVectorTy() && "TODO: extend to handle vectors!");
   if (ICmpInst::isTrueWhenEqual(Pred) && LHS == RHS)
     return true;
 
@@ -4094,31 +4111,48 @@ static bool isTruePredicate(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
   default:
     return false;
 
-  case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SLE: {
-    ConstantInt *CI;
+    const APInt *C;
 
-    // LHS s<  LHS +_{nsw} C   if C > 0
     // LHS s<= LHS +_{nsw} C   if C >= 0
-    if (match(RHS, m_NSWAdd(m_Specific(LHS), m_ConstantInt(CI)))) {
-      if (Pred == CmpInst::ICMP_SLT)
-        return CI->getValue().isStrictlyPositive();
-      return !CI->isNegative();
-    }
+    if (match(RHS, m_NSWAdd(m_Specific(LHS), m_APInt(C))))
+      return !C->isNegative();
     return false;
   }
 
-  case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE: {
-    ConstantInt *CI;
+    const APInt *C;
 
-    // LHS u<  LHS +_{nuw} C   if C != 0
-    // LHS u<= LHS +_{nuw} C
-    if (match(RHS, m_NUWAdd(m_Specific(LHS), m_ConstantInt(CI)))) {
-      if (Pred == CmpInst::ICMP_ULT)
-        return !CI->isZero();
+    // LHS u<= LHS +_{nuw} C   for any C
+    if (match(RHS, m_NUWAdd(m_Specific(LHS), m_APInt(C))))
       return true;
-    }
+
+    // Match A to (X +_{nuw} CA) and B to (X +_{nuw} CB)
+    auto MatchNUWAddsToSameValue = [&](Value *A, Value *B, Value *&X,
+                                       const APInt *&CA, const APInt *&CB) {
+      if (match(A, m_NUWAdd(m_Value(X), m_APInt(CA))) &&
+          match(B, m_NUWAdd(m_Specific(X), m_APInt(CB))))
+        return true;
+
+      // If X & C == 0 then (X | C) == X +_{nuw} C
+      if (match(A, m_Or(m_Value(X), m_APInt(CA))) &&
+          match(B, m_Or(m_Specific(X), m_APInt(CB)))) {
+        unsigned BitWidth = CA->getBitWidth();
+        APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
+        computeKnownBits(X, KnownZero, KnownOne, DL, Depth + 1, AC, CxtI, DT);
+
+        if ((KnownZero & *CA) == *CA && (KnownZero & *CB) == *CB)
+          return true;
+      }
+
+      return false;
+    };
+
+    Value *X;
+    const APInt *CLHS, *CRHS;
+    if (MatchNUWAddsToSameValue(LHS, RHS, X, CLHS, CRHS))
+      return CLHS->ule(*CRHS);
+
     return false;
   }
   }

@@ -632,10 +632,10 @@ define double @reassociate_adds_from_calls() {
 ; AVX-NEXT:  callq   bar
 ; AVX-NEXT:  vmovsd  %xmm0, (%rsp)
 ; AVX-NEXT:  callq   bar
-; AVX-NEXT:  vmovsd  (%rsp), %xmm1
-; AVX:       vaddsd  8(%rsp), %xmm1, %xmm1
+; AVX-NEXT:  vmovsd  8(%rsp), %xmm1
+; AVX:       vaddsd  16(%rsp), %xmm1, %xmm1
+; AVX-NEXT:  vaddsd  (%rsp), %xmm0, %xmm0
 ; AVX-NEXT:  vaddsd  %xmm0, %xmm1, %xmm0
-; AVX-NEXT:  vaddsd  16(%rsp), %xmm0, %xmm0
 
   %x0 = call double @bar()
   %x1 = call double @bar()
@@ -656,9 +656,10 @@ define double @already_reassociated() {
 ; AVX-NEXT:  callq   bar
 ; AVX-NEXT:  vmovsd  %xmm0, (%rsp)
 ; AVX-NEXT:  callq   bar
+; AVX-NEXT:  vmovsd  8(%rsp), %xmm1
+; AVX:       vaddsd  16(%rsp), %xmm1, %xmm1
 ; AVX-NEXT:  vaddsd  (%rsp), %xmm0, %xmm0
-; AVX-NEXT:  vaddsd  8(%rsp), %xmm0, %xmm0
-; AVX-NEXT:  vaddsd  16(%rsp), %xmm0, %xmm0
+; AVX-NEXT:  vaddsd  %xmm0, %xmm1, %xmm0
 
   %x0 = call double @bar()
   %x1 = call double @bar()

@@ -564,7 +564,6 @@ static unsigned SelectInt64CountDirect(int64_t Imm) {
 
   // Handle first 32 bits.
   unsigned Lo = Imm & 0xFFFF;
-  unsigned Hi = (Imm >> 16) & 0xFFFF;
 
   // Simple value.
   if (isInt<16>(Imm)) {
@@ -586,9 +585,9 @@ static unsigned SelectInt64CountDirect(int64_t Imm) {
     ++Result;
 
   // Add in the last bits as required.
-  if ((Hi = (Remainder >> 16) & 0xFFFF))
+  if ((Remainder >> 16) & 0xFFFF)
     ++Result;
-  if ((Lo = Remainder & 0xFFFF))
+  if (Remainder & 0xFFFF)
     ++Result;
 
   return Result;

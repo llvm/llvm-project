@@ -381,6 +381,14 @@ public:
     return AArch64::X1;
   }
 
+  bool isCheapToSpeculateCttz() const override {
+    return true;
+  }
+
+  bool isCheapToSpeculateCtlz() const override {
+    return true;
+  }
+
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
 

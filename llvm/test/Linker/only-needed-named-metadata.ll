@@ -25,17 +25,6 @@
 ; ONLYNEEDED-NOT:@globalfunc1()
 ; ONLYNEEDED-NOT:@analias
 ; ONLYNEEDED-NOT:@globalfunc2()
-; ONLYNEEDED-NOT:@c1_c
-; ONLYNEEDED-NOT:@c1()
-
-$c1 = comdat any
-@c1_c = global i32 0, comdat($c1)
-define void @c1() comdat {
-  ret void
-}
-define void @c1_a() comdat($c1) {
-  ret void
-}
 
 @X = global i32 5
 @U = global i32 6
@@ -64,7 +53,7 @@ entry:
   ret void
 }
 
-!llvm.named = !{!0, !1, !2, !3, !4, !5, !6, !7}
+!llvm.named = !{!0, !1, !2, !3, !4, !5, !6}
 !0 = !{i32 ()* @unused}
 !1 = !{i32* @U}
 !2 = !{i32 ()* @unused_linkonce}
@@ -72,4 +61,3 @@ entry:
 !4 = !{void (...)* @weakalias}
 !5 = !{void (...)* @analias}
 !6 = !{void (...)* @linkoncealias}
-!7 = !{void ()* @c1}

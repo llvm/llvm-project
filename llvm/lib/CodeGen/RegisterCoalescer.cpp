@@ -2975,22 +2975,25 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
     if (MRI->recomputeRegClass(Reg)) {
       DEBUG(dbgs() << PrintReg(Reg) << " inflated to "
                    << TRI->getRegClassName(MRI->getRegClass(Reg)) << '\n');
+      ++NumInflated;
+
       LiveInterval &LI = LIS->getInterval(Reg);
-      LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
-      if (MaxMask == 0) {
+      if (LI.hasSubRanges()) {
         // If the inflated register class does not support subregisters anymore
         // remove the subranges.
-        LI.clearSubRanges();
-      } else {
+        if (!MRI->shouldTrackSubRegLiveness(Reg)) {
+          LI.clearSubRanges();
+        } else {
 #ifndef NDEBUG
-        // If subranges are still supported, then the same subregs should still
-        // be supported.
-        for (LiveInterval::SubRange &S : LI.subranges()) {
-          assert ((S.LaneMask & ~MaxMask) == 0);
-        }
+          LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
+          // If subranges are still supported, then the same subregs
+          // should still be supported.
+          for (LiveInterval::SubRange &S : LI.subranges()) {
+            assert((S.LaneMask & ~MaxMask) == 0);
+          }
 #endif
+        }
       }
-      ++NumInflated;
     }
   }
 

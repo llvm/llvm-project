@@ -85,6 +85,7 @@
 ; reference should turned into an external_weak declaration.
 ; RUN: llvm-link %t2.bc -functionindex=%t3.thinlto.bc -import=callweakfunc:%t.bc -import=weakfunc:%t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORTWEAKFUNC
 ; IMPORTWEAKFUNC: Ignoring import request for weak-any function weakfunc
+; IMPORTWEAKFUNC: @weakvar = extern_weak global i32, align 4
 ; IMPORTWEAKFUNC: declare extern_weak void @weakfunc
 ; IMPORTWEAKFUNC: define available_externally void @callweakfunc
 
@@ -158,6 +159,7 @@ entry:
   ret void
 }
 
+@weakvar = weak global i32 1, align 4
 define weak void @weakfunc() #0 {
 entry:
   ret void

@@ -2195,7 +2195,11 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
           Info.Ctxt->getCanonicalDIEOffset() && isODRAttribute(AttrSpec.Attr))
         continue;
 
-      Info.Prune = false;
+      // Keep a module forward declaration if there is no definition.
+      if (!(isODRAttribute(AttrSpec.Attr) && Info.Ctxt &&
+            Info.Ctxt->getCanonicalDIEOffset()))
+        Info.Prune = false;
+
       unsigned ODRFlag = UseODR ? TF_ODR : 0;
       lookForDIEsToKeep(RelocMgr, *RefDIE, DMO, *ReferencedCU,
                         TF_Keep | TF_DependencyWalk | ODRFlag);
@@ -2767,11 +2771,19 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
     Unit.addTypeAccelerator(Die, AttrInfo.Name, AttrInfo.NameOffset);
   }
 
+  // Determine whether there are any children that we want to keep.
+  bool HasChildren = false;
+  for (auto *Child = InputDIE.getFirstChild(); Child && !Child->isNULL();
+       Child = Child->getSibling()) {
+    unsigned Idx = U.getDIEIndex(Child);
+    if (Unit.getInfo(Idx).Keep) {
+      HasChildren = true;
+      break;
+    }
+  }
+
   DIEAbbrev NewAbbrev = Die->generateAbbrev();
-  // If a scope DIE is kept, we must have kept at least one child. If
-  // it's not the case, we'll just be emitting one wasteful end of
-  // children marker, but things won't break.
-  if (InputDIE.hasChildren())
+  if (HasChildren)
     NewAbbrev.setChildrenFlag(dwarf::DW_CHILDREN_yes);
   // Assign a permanent abbrev number
   Linker.AssignAbbrev(NewAbbrev);
@@ -2780,7 +2792,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
   // Add the size of the abbreviation number to the output offset.
   OutOffset += getULEB128Size(Die->getAbbrevNumber());
 
-  if (!Abbrev->hasChildren()) {
+  if (!HasChildren) {
     // Update our size.
     Die->setSize(OutOffset - Die->getOffset());
     return Die;

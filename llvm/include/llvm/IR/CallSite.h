@@ -383,6 +383,10 @@ public:
     CALLSITE_DELEGATE_GETTER(getOperandBundle(Name));
   }
 
+  Optional<OperandBundleUse> getOperandBundle(uint32_t ID) const {
+    CALLSITE_DELEGATE_GETTER(getOperandBundle(ID));
+  }
+
 #undef CALLSITE_DELEGATE_GETTER
 #undef CALLSITE_DELEGATE_SETTER
 

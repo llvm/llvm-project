@@ -59,13 +59,6 @@ public:
   /// \returns true if this class contains VGPR registers.
   bool hasVGPRs(const TargetRegisterClass *RC) const;
 
-  /// returns true if this is a pseudoregister class combination of VGPRs and
-  /// SGPRs for operand modeling. FIXME: We should set isAllocatable = 0 on
-  /// them.
-  static bool isPseudoRegClass(const TargetRegisterClass *RC) {
-    return RC == &AMDGPU::VS_32RegClass || RC == &AMDGPU::VS_64RegClass;
-  }
-
   /// \returns A VGPR reg class with the same width as \p SRC
   const TargetRegisterClass *getEquivalentVGPRClass(
                                           const TargetRegisterClass *SRC) const;

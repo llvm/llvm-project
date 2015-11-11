@@ -247,8 +247,9 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
 std::unique_ptr<ValueProfData>
 ValueProfData::serializeFrom(const InstrProfRecord &Record) {
   uint32_t TotalSize = getSize(Record);
-  std::unique_ptr<ValueProfData> VPD(
-      reinterpret_cast<ValueProfData *>(new char[TotalSize]));
+  void *RawMem = ::operator new(TotalSize);
+  ValueProfData *VPDMem = new (RawMem) ValueProfData();
+  std::unique_ptr<ValueProfData> VPD(VPDMem);
 
   VPD->TotalSize = TotalSize;
   VPD->NumValueKinds = Record.getNumValueKinds();

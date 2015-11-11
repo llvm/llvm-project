@@ -4058,12 +4058,24 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ReplaceNode(Node, Results.data());
 }
 
+// Determine the vector type to use in place of an original scalar element when
+// promoting equally sized vectors.
+static MVT getPromotedVectorElementType(const TargetLowering &TLI,
+                                        MVT EltVT, MVT NewEltVT) {
+  unsigned OldEltsPerNewElt = EltVT.getSizeInBits() / NewEltVT.getSizeInBits();
+  MVT MidVT = MVT::getVectorVT(NewEltVT, OldEltsPerNewElt);
+  assert(TLI.isTypeLegal(MidVT) && "unexpected");
+  return MidVT;
+}
+
 void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   SmallVector<SDValue, 8> Results;
   MVT OVT = Node->getSimpleValueType(0);
   if (Node->getOpcode() == ISD::UINT_TO_FP ||
       Node->getOpcode() == ISD::SINT_TO_FP ||
-      Node->getOpcode() == ISD::SETCC) {
+      Node->getOpcode() == ISD::SETCC ||
+      Node->getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+      Node->getOpcode() == ISD::INSERT_VECTOR_ELT) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
   if (Node->getOpcode() == ISD::BR_CC)
@@ -4317,9 +4329,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
            "Invalid promote type for build_vector");
     assert(NewEltVT.bitsLT(EltVT) && "not handled");
 
-    unsigned OldEltsPerNewElt = EltVT.getSizeInBits() / NewEltVT.getSizeInBits();
-    MVT MidVT = MVT::getVectorVT(NewEltVT, OldEltsPerNewElt);
-    assert(TLI.isTypeLegal(MidVT) && "unexpected");
+    MVT MidVT = getPromotedVectorElementType(TLI, EltVT, NewEltVT);
 
     SmallVector<SDValue, 8> NewOps;
     for (unsigned I = 0, E = Node->getNumOperands(); I != E; ++I) {
@@ -4329,6 +4339,129 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
 
     SDLoc SL(Node);
     SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, SL, NVT, NewOps);
+    SDValue CvtVec = DAG.getNode(ISD::BITCAST, SL, OVT, Concat);
+    Results.push_back(CvtVec);
+    break;
+  }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    MVT EltVT = OVT.getVectorElementType();
+    MVT NewEltVT = NVT.getVectorElementType();
+
+    // Handle bitcasts to a different vector type with the same total bit size.
+    //
+    // e.g. v2i64 = extract_vector_elt x:v2i64, y:i32
+    //  =>
+    //  v4i32:castx = bitcast x:v2i64
+    //
+    // i64 = bitcast
+    //   (v2i32 build_vector (i32 (extract_vector_elt castx, (2 * y))),
+    //                       (i32 (extract_vector_elt castx, (2 * y + 1)))
+    //
+
+    assert(NVT.isVector() && OVT.getSizeInBits() == NVT.getSizeInBits() &&
+           "Invalid promote type for extract_vector_elt");
+    assert(NewEltVT.bitsLT(EltVT) && "not handled");
+
+    MVT MidVT = getPromotedVectorElementType(TLI, EltVT, NewEltVT);
+    unsigned NewEltsPerOldElt = MidVT.getVectorNumElements();
+
+    SDValue Idx = Node->getOperand(1);
+    EVT IdxVT = Idx.getValueType();
+    SDLoc SL(Node);
+    SDValue Factor = DAG.getConstant(NewEltsPerOldElt, SL, IdxVT);
+    SDValue NewBaseIdx = DAG.getNode(ISD::MUL, SL, IdxVT, Idx, Factor);
+
+    SDValue CastVec = DAG.getNode(ISD::BITCAST, SL, NVT, Node->getOperand(0));
+
+    SmallVector<SDValue, 8> NewOps;
+    for (unsigned I = 0; I < NewEltsPerOldElt; ++I) {
+      SDValue IdxOffset = DAG.getConstant(I, SL, IdxVT);
+      SDValue TmpIdx = DAG.getNode(ISD::ADD, SL, IdxVT, NewBaseIdx, IdxOffset);
+
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, NewEltVT,
+                                CastVec, TmpIdx);
+      NewOps.push_back(Elt);
+    }
+
+    SDValue NewVec = DAG.getNode(ISD::BUILD_VECTOR, SL, MidVT, NewOps);
+
+    Results.push_back(DAG.getNode(ISD::BITCAST, SL, EltVT, NewVec));
+    break;
+  }
+  case ISD::INSERT_VECTOR_ELT: {
+    MVT EltVT = OVT.getVectorElementType();
+    MVT NewEltVT = NVT.getVectorElementType();
+
+    // Handle bitcasts to a different vector type with the same total bit size
+    //
+    // e.g. v2i64 = insert_vector_elt x:v2i64, y:i64, z:i32
+    //  =>
+    //  v4i32:castx = bitcast x:v2i64
+    //  v2i32:casty = bitcast y:i64
+    //
+    // v2i64 = bitcast
+    //   (v4i32 insert_vector_elt
+    //       (v4i32 insert_vector_elt v4i32:castx,
+    //                                (extract_vector_elt casty, 0), 2 * z),
+    //        (extract_vector_elt casty, 1), (2 * z + 1))
+
+    assert(NVT.isVector() && OVT.getSizeInBits() == NVT.getSizeInBits() &&
+           "Invalid promote type for insert_vector_elt");
+    assert(NewEltVT.bitsLT(EltVT) && "not handled");
+
+    MVT MidVT = getPromotedVectorElementType(TLI, EltVT, NewEltVT);
+    unsigned NewEltsPerOldElt = MidVT.getVectorNumElements();
+
+    SDValue Val = Node->getOperand(1);
+    SDValue Idx = Node->getOperand(2);
+    EVT IdxVT = Idx.getValueType();
+    SDLoc SL(Node);
+
+    SDValue Factor = DAG.getConstant(NewEltsPerOldElt, SDLoc(), IdxVT);
+    SDValue NewBaseIdx = DAG.getNode(ISD::MUL, SL, IdxVT, Idx, Factor);
+
+    SDValue CastVec = DAG.getNode(ISD::BITCAST, SL, NVT, Node->getOperand(0));
+    SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, MidVT, Val);
+
+    SDValue NewVec = CastVec;
+    for (unsigned I = 0; I < NewEltsPerOldElt; ++I) {
+      SDValue IdxOffset = DAG.getConstant(I, SL, IdxVT);
+      SDValue InEltIdx = DAG.getNode(ISD::ADD, SL, IdxVT, NewBaseIdx, IdxOffset);
+
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, NewEltVT,
+                                CastVal, IdxOffset);
+
+      NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, SL, NVT,
+                           NewVec, Elt, InEltIdx);
+    }
+
+    Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewVec));
+    break;
+  }
+  case ISD::SCALAR_TO_VECTOR: {
+    MVT EltVT = OVT.getVectorElementType();
+    MVT NewEltVT = NVT.getVectorElementType();
+
+    // Handle bitcasts to different vector type with the smae total bit size.
+    //
+    // e.g. v2i64 = scalar_to_vector x:i64
+    //   =>
+    //  concat_vectors (v2i32 bitcast x:i64), (v2i32 undef)
+    //
+
+    MVT MidVT = getPromotedVectorElementType(TLI, EltVT, NewEltVT);
+    SDValue Val = Node->getOperand(0);
+    SDLoc SL(Node);
+
+    SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, MidVT, Val);
+    SDValue Undef = DAG.getUNDEF(MidVT);
+
+    SmallVector<SDValue, 8> NewElts;
+    NewElts.push_back(CastVal);
+    for (unsigned I = 1, NElts = OVT.getVectorNumElements(); I != NElts; ++I)
+      NewElts.push_back(Undef);
+
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, SL, NVT, NewElts);
     SDValue CvtVec = DAG.getNode(ISD::BITCAST, SL, OVT, Concat);
     Results.push_back(CvtVec);
     break;

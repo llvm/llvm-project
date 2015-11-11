@@ -1933,11 +1933,11 @@ void MachineInstr::clearRegisterDeads(unsigned Reg) {
   }
 }
 
-void MachineInstr::addRegisterDefReadUndef(unsigned Reg) {
+void MachineInstr::setRegisterDefReadUndef(unsigned Reg, bool IsUndef) {
   for (MachineOperand &MO : operands()) {
     if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg || MO.getSubReg() == 0)
       continue;
-    MO.setIsUndef();
+    MO.setIsUndef(IsUndef);
   }
 }
 

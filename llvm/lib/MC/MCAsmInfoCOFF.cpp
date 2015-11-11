@@ -37,8 +37,7 @@ MCAsmInfoCOFF::MCAsmInfoCOFF() {
 
   UseIntegratedAssembler = true;
 
-  // FIXME: For now keep the previous behavior, AShr. Need to double-check
-  // other COFF-targeting assemblers and change this if necessary.
+  // At least MSVC inline-asm does AShr.
   UseLogicalShr = false;
 }
 
