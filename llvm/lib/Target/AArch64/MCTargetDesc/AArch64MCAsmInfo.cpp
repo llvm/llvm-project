@@ -48,10 +48,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin() {
   UseDataRegionDirectives = true;
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
-
-  // AArch64 Darwin doesn't have the baggage of X86/ARM, so it's fine to use
-  // LShr instead of AShr.
-  UseLogicalShr = true;
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(

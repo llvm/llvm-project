@@ -126,3 +126,27 @@ define float @nearest32_via_rint(float %x) {
   %a = call float @llvm.rint.f32(float %x)
   ret float %a
 }
+
+; Min and max tests. LLVM currently only forms fminnan and fmaxnan nodes in
+; cases where there's a single fcmp with a select and it can prove that one
+; of the arms is never NaN, so we only test that case. In the future if LLVM
+; learns to form fminnan/fmaxnan in more cases, we can write more general
+; tests.
+
+; CHECK-LABEL: fmin32:
+; CHECK: f32.min push, (get_local 1), (get_local 2){{$}}
+; CHECK-NEXT: set_local 3, pop{{$}}
+define float @fmin32(float %x) {
+  %a = fcmp ult float %x, 0.0
+  %b = select i1 %a, float %x, float 0.0
+  ret float %b
+}
+
+; CHECK-LABEL: fmax32:
+; CHECK: f32.max push, (get_local 1), (get_local 2){{$}}
+; CHECK-NEXT: set_local 3, pop{{$}}
+define float @fmax32(float %x) {
+  %a = fcmp ugt float %x, 0.0
+  %b = select i1 %a, float %x, float 0.0
+  ret float %b
+}

@@ -126,3 +126,27 @@ define double @nearest64_via_rint(double %x) {
   %a = call double @llvm.rint.f64(double %x)
   ret double %a
 }
+
+; Min and max tests. LLVM currently only forms fminnan and fmaxnan nodes in
+; cases where there's a single fcmp with a select and it can prove that one
+; of the arms is never NaN, so we only test that case. In the future if LLVM
+; learns to form fminnan/fmaxnan in more cases, we can write more general
+; tests.
+
+; CHECK-LABEL: fmin64:
+; CHECK: f64.min push, (get_local 1), (get_local 2){{$}}
+; CHECK-NEXT: set_local 3, pop{{$}}
+define double @fmin64(double %x) {
+  %a = fcmp ult double %x, 0.0
+  %b = select i1 %a, double %x, double 0.0
+  ret double %b
+}
+
+; CHECK-LABEL: fmax64:
+; CHECK: f64.max push, (get_local 1), (get_local 2){{$}}
+; CHECK-NEXT: set_local 3, pop{{$}}
+define double @fmax64(double %x) {
+  %a = fcmp ugt double %x, 0.0
+  %b = select i1 %a, double %x, double 0.0
+  ret double %b
+}

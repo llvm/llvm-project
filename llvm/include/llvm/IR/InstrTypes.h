@@ -1114,12 +1114,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CmpInst, Value)
 /// \brief A lightweight accessor for an operand bundle meant to be passed
 /// around by value.
 struct OperandBundleUse {
-  StringRef Tag;
   ArrayRef<Use> Inputs;
 
   OperandBundleUse() {}
-  explicit OperandBundleUse(StringRef Tag, ArrayRef<Use> Inputs)
-      : Tag(Tag), Inputs(Inputs) {}
+  explicit OperandBundleUse(StringMapEntry<uint32_t> *Tag, ArrayRef<Use> Inputs)
+      : Inputs(Inputs), Tag(Tag) {}
 
   /// \brief Return true if all the operands in this operand bundle have the
   /// attribute A.
@@ -1130,6 +1129,24 @@ struct OperandBundleUse {
     // Conservative answer:  no operands have any attributes.
     return false;
   };
+
+  /// \brief Return the tag of this operand bundle as a string.
+  StringRef getTagName() const {
+    return Tag->getKey();
+  }
+
+  /// \brief Return the tag of this operand bundle as an integer.
+  ///
+  /// Operand bundle tags are interned by LLVMContextImpl::getOrInsertBundleTag,
+  /// and this function returns the unique integer getOrInsertBundleTag
+  /// associated the tag of this operand bundle to.
+  uint32_t getTagID() const {
+    return Tag->getValue();
+  }
+
+private:
+  /// \brief Pointer to an entry in LLVMContextImpl::getOrInsertBundleTag.
+  StringMapEntry<uint32_t> *Tag;
 };
 
 /// \brief A container for an operand bundle being viewed as a set of values
@@ -1242,7 +1259,18 @@ public:
   unsigned countOperandBundlesOfType(StringRef Name) const {
     unsigned Count = 0;
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
-      if (getOperandBundleAt(i).Tag == Name)
+      if (getOperandBundleAt(i).getTagName() == Name)
+        Count++;
+
+    return Count;
+  }
+
+  /// \brief Return the number of operand bundles with the tag ID attached to
+  /// this instruction.
+  unsigned countOperandBundlesOfType(uint32_t ID) const {
+    unsigned Count = 0;
+    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
+      if (getOperandBundleAt(i).getTagID() == ID)
         Count++;
 
     return Count;
@@ -1257,7 +1285,23 @@ public:
 
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
       OperandBundleUse U = getOperandBundleAt(i);
-      if (U.Tag == Name)
+      if (U.getTagName() == Name)
+        return U;
+    }
+
+    return None;
+  }
+
+  /// \brief Return an operand bundle by tag ID, if present.
+  ///
+  /// It is an error to call this for operand bundle types that may have
+  /// multiple instances of them on the same instruction.
+  Optional<OperandBundleUse> getOperandBundle(uint32_t ID) const {
+    assert(countOperandBundlesOfType(ID) < 2 && "Precondition violated!");
+
+    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
+      OperandBundleUse U = getOperandBundleAt(i);
+      if (U.getTagID() == ID)
         return U;
     }
 
@@ -1345,7 +1389,7 @@ protected:
   operandBundleFromBundleOpInfo(const BundleOpInfo &BOI) const {
     auto op_begin = static_cast<const InstrTy *>(this)->op_begin();
     ArrayRef<Use> Inputs(op_begin + BOI.Begin, op_begin + BOI.End);
-    return OperandBundleUse(BOI.Tag->getKey(), Inputs);
+    return OperandBundleUse(BOI.Tag, Inputs);
   }
 
   typedef BundleOpInfo *bundle_op_iterator;

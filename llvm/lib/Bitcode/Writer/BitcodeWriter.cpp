@@ -1743,7 +1743,7 @@ static void WriteOperandBundles(BitstreamWriter &Stream, ImmutableCallSite CS,
 
   for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i) {
     const auto &Bundle = CS.getOperandBundleAt(i);
-    Record.push_back(C.getOperandBundleTagID(Bundle.Tag));
+    Record.push_back(C.getOperandBundleTagID(Bundle.getTagName()));
 
     for (auto &Input : Bundle.Inputs)
       PushValueAndType(Input, InstID, Record, VE);

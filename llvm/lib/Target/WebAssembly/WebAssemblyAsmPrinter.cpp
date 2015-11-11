@@ -271,27 +271,11 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case TargetOpcode::COPY:
     OS << "get_local push, " << regToString(MI->getOperand(1));
     break;
-  case WebAssembly::GLOBAL:
-    // TODO: wasm64
-    OS << "i32.const push, " << toSymbol(MI->getOperand(1).getGlobal()->getName());
-    break;
   case WebAssembly::ARGUMENT_I32:
   case WebAssembly::ARGUMENT_I64:
   case WebAssembly::ARGUMENT_F32:
   case WebAssembly::ARGUMENT_F64:
     OS << "get_local push, " << argToString(MI->getOperand(1));
-    break;
-  case WebAssembly::Const_I32:
-    OS << "i32.const push, " << MI->getOperand(1).getImm();
-    break;
-  case WebAssembly::Const_I64:
-    OS << "i64.const push, " << MI->getOperand(1).getImm();
-    break;
-  case WebAssembly::Const_F32:
-    OS << "f32.const push, " << toString(MI->getOperand(1).getFPImm()->getValueAPF());
-    break;
-  case WebAssembly::Const_F64:
-    OS << "f64.const push, " << toString(MI->getOperand(1).getFPImm()->getValueAPF());
     break;
   default: {
     OS << OpcodeName(TII, MI);

@@ -20,8 +20,7 @@ entry:
 ; CHECK-LABEL: @bar0
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
 ; CHECK-DAG: lxsdx [[REG2:[0-9]+]]
-; CHECK: xxswapd [[REG3:[0-9]+]], [[REG2]]
-; CHECK: xxspltd [[REG4:[0-9]+]], [[REG3]], 1
+; CHECK: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
 ; CHECK: xxpermdi [[REG5:[0-9]+]], [[REG4]], [[REG1]], 1
 ; CHECK: stxvd2x [[REG5]]
 
@@ -37,8 +36,7 @@ entry:
 ; CHECK-LABEL: @bar1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
 ; CHECK-DAG: lxsdx [[REG2:[0-9]+]]
-; CHECK: xxswapd [[REG3:[0-9]+]], [[REG2]]
-; CHECK: xxspltd [[REG4:[0-9]+]], [[REG3]], 1
+; CHECK: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
 ; CHECK: xxmrghd [[REG5:[0-9]+]], [[REG1]], [[REG4]]
 ; CHECK: stxvd2x [[REG5]]
 

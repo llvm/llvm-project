@@ -490,7 +490,7 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
     if (MRI->shouldTrackSubRegLiveness(VReg)) {
       if ((I == LI.begin() || std::prev(I)->end < Def) && !VNI->isPHIDef()) {
         MachineInstr *MI = getInstructionFromIndex(Def);
-        MI->addRegisterDefReadUndef(VReg);
+        MI->setRegisterDefReadUndef(VReg);
         DeadBeforeDef = true;
       }
     }

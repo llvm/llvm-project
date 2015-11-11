@@ -33,12 +33,8 @@ define double @teste0(<2 x double>* %p1) {
   %r = extractelement <2 x double> %v, i32 0
   ret double %r
 
-; FIXME: Swap optimization will collapse this into lxvd2x 1, 0, 3.
-
 ; CHECK-LABEL: teste0
-; CHECK: lxvd2x 0, 0, 3
-; CHECK: xxswapd 0, 0
-; CHECK: xxswapd 1, 0
+; CHECK: lxvd2x 1, 0, 3
 }
 
 define double @teste1(<2 x double>* %p1) {

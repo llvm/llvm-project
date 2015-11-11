@@ -132,6 +132,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
                     ISD::FRINT})
       setOperationAction(Op, T, Legal);
+    // Support minnan and maxnan, which otherwise default to expand.
+    setOperationAction(ISD::FMINNAN, T, Legal);
+    setOperationAction(ISD::FMAXNAN, T, Legal);
   }
 
   for (auto T : {MVT::i32, MVT::i64}) {

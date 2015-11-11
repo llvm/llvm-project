@@ -285,22 +285,7 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N) const {
   return N;
 }
 
-static unsigned selectVectorRegClassID(unsigned NumVectorElts, bool UseVGPR) {
-  if (UseVGPR) {
-    switch (NumVectorElts) {
-    case 1:
-      return AMDGPU::VGPR_32RegClassID;
-    case 2:
-      return AMDGPU::VReg_64RegClassID;
-    case 4:
-      return AMDGPU::VReg_128RegClassID;
-    case 8:
-      return AMDGPU::VReg_256RegClassID;
-    case 16:
-      return AMDGPU::VReg_512RegClassID;
-    }
-  }
-
+static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
   switch (NumVectorElts) {
   case 1:
     return AMDGPU::SReg_32RegClassID;
@@ -350,23 +335,7 @@ SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
     EVT EltVT = VT.getVectorElementType();
     assert(EltVT.bitsEq(MVT::i32));
     if (Subtarget->getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-      bool UseVReg = false;
-
-      for (SDNode::use_iterator U = N->use_begin(), E = SDNode::use_end();
-                                                    U != E; ++U) {
-        if (!U->isMachineOpcode()) {
-          continue;
-        }
-        const TargetRegisterClass *RC = getOperandRegClass(*U, U.getOperandNo());
-        if (!RC) {
-          continue;
-        }
-        if (static_cast<const SIRegisterInfo *>(TRI)->isSGPRClass(RC)) {
-          UseVReg = false;
-        }
-      }
-
-      RegClassID = selectVectorRegClassID(NumVectorElts, UseVReg);
+      RegClassID = selectSGPRVectorRegClassID(NumVectorElts);
     } else {
       // BUILD_VECTOR was lowered into an IMPLICIT_DEF + 4 INSERT_SUBREG
       // that adds a 128 bits reg copy when going through TwoAddressInstructions

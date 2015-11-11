@@ -63,7 +63,7 @@ entry:
   ret <2 x i64> %splat.splat
 ; CHECK: mtvsrd {{[0-9]+}}, 3
 ; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxswapd {{[0-9]+}}, [[REG1]]
+; CHECK-LE: xxspltd [[REG1]], [[REG1]], 0
 }
 
 ; Function Attrs: nounwind

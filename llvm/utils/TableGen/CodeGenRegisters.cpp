@@ -1274,6 +1274,12 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
         continue;
       LaneMask |= SubRegIndex.LaneMask;
     }
+
+    // For classes without any subregisters set LaneMask to ~0u instead of 0.
+    // This makes it easier for client code to handle classes uniformly.
+    if (LaneMask == 0)
+      LaneMask = ~0u;
+
     RegClass.LaneMask = LaneMask;
   }
 }

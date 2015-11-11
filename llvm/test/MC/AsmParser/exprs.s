@@ -34,7 +34,7 @@ k:
         check_expr 1 | 2, 3
         check_expr 1 << 1, 2
         check_expr 2 >> 1, 1
-        check_expr (~0 >> 1), -1
+        check_expr (~0 >> 62), 3
         check_expr 3 - 2, 1
         check_expr 1 ^ 3, 2
         check_expr 1 && 2, 1

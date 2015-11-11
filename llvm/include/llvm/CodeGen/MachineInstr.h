@@ -1063,7 +1063,7 @@ public:
   /// Mark all subregister defs of register @p Reg with the undef flag.
   /// This function is used when we determined to have a subregister def in an
   /// otherwise undefined super register.
-  void addRegisterDefReadUndef(unsigned Reg);
+  void setRegisterDefReadUndef(unsigned Reg, bool IsUndef = true);
 
   /// We have determined MI defines a register. Make sure there is an operand
   /// defining Reg.
