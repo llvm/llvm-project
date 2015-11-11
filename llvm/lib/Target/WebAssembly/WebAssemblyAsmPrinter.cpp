@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -66,7 +67,7 @@ private:
     const auto &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
     TII = Subtarget.getInstrInfo();
     MRI = &MF.getRegInfo();
-    NumArgs = MF.getInfo<WebAssemblyFunctionInfo>()->getNumArguments();
+    NumArgs = MF.getInfo<WebAssemblyFunctionInfo>()->getParams().size();
     return AsmPrinter::runOnMachineFunction(MF);
   }
 
@@ -82,7 +83,7 @@ private:
 
   std::string getRegTypeName(unsigned RegNo) const;
   static std::string toString(const APFloat &APF);
-  const char *toString(Type *Ty) const;
+  const char *toString(MVT VT) const;
   std::string regToString(const MachineOperand &MO);
   std::string argToString(const MachineOperand &MO);
 };
@@ -167,40 +168,20 @@ std::string WebAssemblyAsmPrinter::argToString(const MachineOperand &MO) {
   return utostr(ArgNo);
 }
 
-const char *WebAssemblyAsmPrinter::toString(Type *Ty) const {
-  switch (Ty->getTypeID()) {
+const char *WebAssemblyAsmPrinter::toString(MVT VT) const {
+  switch (VT.SimpleTy) {
   default:
     break;
-  // Treat all pointers as the underlying integer into linear memory.
-  case Type::PointerTyID:
-    switch (getPointerSize()) {
-    case 4:
-      return "i32";
-    case 8:
-      return "i64";
-    default:
-      llvm_unreachable("unsupported pointer size");
-    }
-    break;
-  case Type::FloatTyID:
+  case MVT::f32:
     return "f32";
-  case Type::DoubleTyID:
+  case MVT::f64:
     return "f64";
-  case Type::IntegerTyID:
-    switch (Ty->getIntegerBitWidth()) {
-    case 8:
-      return "i8";
-    case 16:
-      return "i16";
-    case 32:
-      return "i32";
-    case 64:
-      return "i64";
-    default:
-      break;
-    }
+  case MVT::i32:
+    return "i32";
+  case MVT::i64:
+    return "i64";
   }
-  DEBUG(dbgs() << "Invalid type "; Ty->print(dbgs()); dbgs() << '\n');
+  DEBUG(dbgs() << "Invalid type " << EVT(VT).getEVTString() << '\n');
   llvm_unreachable("invalid type");
   return "<invalid>";
 }
@@ -219,40 +200,37 @@ void WebAssemblyAsmPrinter::EmitJumpTableInfo() {
 }
 
 void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
-  const Function *F = MF->getFunction();
-  Type *Rt = F->getReturnType();
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
-  bool First = true;
 
-  if (!Rt->isVoidTy() || !F->arg_empty()) {
-    for (const Argument &A : F->args()) {
-      OS << (First ? "" : "\n") << "\t.param " << toString(A.getType());
-      First = false;
-    }
-    if (!Rt->isVoidTy()) {
-      OS << (First ? "" : "\n") << "\t.result " << toString(Rt);
-      First = false;
-    }
-  }
+  for (MVT VT : MF->getInfo<WebAssemblyFunctionInfo>()->getParams())
+    OS << "\t" ".param "
+       << toString(VT) << '\n';
+  for (MVT VT : MF->getInfo<WebAssemblyFunctionInfo>()->getResults())
+    OS << "\t" ".result "
+       << toString(VT) << '\n';
 
   bool FirstVReg = true;
   for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(Idx);
     // FIXME: Don't skip dead virtual registers for now: that would require
     //        remapping all locals' numbers.
-    //if (!MRI->use_empty(VReg)) {
-      if (FirstVReg) {
-        OS << (First ? "" : "\n") << "\t.local ";
-        First = false;
-      }
-      OS << (FirstVReg ? "" : ", ") << getRegTypeName(VReg);
-      FirstVReg = false;
+    // if (!MRI->use_empty(VReg)) {
+    if (FirstVReg)
+      OS << "\t" ".local ";
+    else
+      OS << ", ";
+    OS << getRegTypeName(VReg);
+    FirstVReg = false;
     //}
   }
+  if (!FirstVReg)
+    OS << '\n';
 
-  if (!First)
-    OutStreamer->EmitRawText(OS.str());
+  // EmitRawText appends a newline, so strip off the last newline.
+  StringRef Text = OS.str();
+  if (!Text.empty())
+    OutStreamer->EmitRawText(Text.substr(0, Text.size() - 1));
   AsmPrinter::EmitFunctionBodyStart();
 }
 
@@ -334,27 +312,75 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
 }
 
+static void ComputeLegalValueVTs(LLVMContext &Context,
+                                 const WebAssemblyTargetLowering &TLI,
+                                 const DataLayout &DL, Type *Ty,
+                                 SmallVectorImpl<MVT> &ValueVTs) {
+  SmallVector<EVT, 4> VTs;
+  ComputeValueVTs(TLI, DL, Ty, VTs);
+
+  for (EVT VT : VTs) {
+    unsigned NumRegs = TLI.getNumRegisters(Context, VT);
+    MVT RegisterVT = TLI.getRegisterType(Context, VT);
+    for (unsigned i = 0; i != NumRegs; ++i)
+      ValueVTs.push_back(RegisterVT);
+  }
+}
+
 void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  const DataLayout &DL = M.getDataLayout();
+
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
   for (const Function &F : M)
     if (F.isDeclarationForLinker()) {
       assert(F.hasName() && "imported functions must have a name");
-      if (F.getName().startswith("llvm."))
+      if (F.isIntrinsic())
         continue;
       if (Str.empty())
         OS << "\t.imports\n";
-      Type *Rt = F.getReturnType();
+
       OS << "\t.import " << toSymbol(F.getName()) << " \"\" \"" << F.getName()
-         << "\" (param";
-      for (const Argument &A : F.args())
-        OS << ' ' << toString(A.getType());
-      OS << ')';
-      if (!Rt->isVoidTy())
-        OS << " (result " << toString(Rt) << ')';
+         << "\"";
+
+      const WebAssemblyTargetLowering &TLI =
+          *TM.getSubtarget<WebAssemblySubtarget>(F).getTargetLowering();
+
+      // If we need to legalize the return type, it'll get converted into
+      // passing a pointer.
+      bool SawParam = false;
+      SmallVector<MVT, 4> ResultVTs;
+      ComputeLegalValueVTs(M.getContext(), TLI, DL, F.getReturnType(),
+                           ResultVTs);
+      if (ResultVTs.size() > 1) {
+        ResultVTs.clear();
+        OS << " (param " << toString(TLI.getPointerTy(DL));
+        SawParam = true;
+      }
+
+      for (const Argument &A : F.args()) {
+        SmallVector<MVT, 4> ParamVTs;
+        ComputeLegalValueVTs(M.getContext(), TLI, DL, A.getType(), ParamVTs);
+        for (EVT VT : ParamVTs) {
+          if (!SawParam) {
+            OS << " (param";
+            SawParam = true;
+          }
+          OS << ' ' << toString(VT.getSimpleVT());
+        }
+      }
+      if (SawParam)
+        OS << ')';
+
+      for (EVT VT : ResultVTs)
+        OS << " (result " << toString(VT.getSimpleVT()) << ')';
+
       OS << '\n';
     }
-  OutStreamer->EmitRawText(OS.str());
+
+  StringRef Text = OS.str();
+  if (!Text.empty())
+    OutStreamer->EmitRawText(Text.substr(0, Text.size() - 1));
 }
 
 // Force static initialization.
