@@ -33,7 +33,7 @@ enum : SanitizerMask {
   NeedsUnwindTables = Address | Thread | Memory | DataFlow,
   SupportsCoverage = Address | Memory | Leak | Undefined | Integer | DataFlow,
   RecoverableByDefault = Undefined | Integer,
-  Unrecoverable = Address | Unreachable | Return,
+  Unrecoverable = Unreachable | Return,
   LegacyFsanitizeRecoverMask = Undefined | Integer,
   NeedsLTO = CFI,
   TrappingSupported =
