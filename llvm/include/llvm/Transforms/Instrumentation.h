@@ -95,8 +95,10 @@ ModulePass *createInstrProfilingPass(
     const InstrProfOptions &Options = InstrProfOptions());
 
 // Insert AddressSanitizer (address sanity checking) instrumentation
-FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false);
-ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false);
+FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false,
+                                                 bool Recover = false);
+ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
+                                             bool Recover = false);
 
 // Insert MemorySanitizer instrumentation (detection of uninitialized reads)
 FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0);

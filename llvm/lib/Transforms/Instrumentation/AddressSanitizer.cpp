@@ -122,6 +122,10 @@ static const unsigned kAllocaRzSize = 32;
 static cl::opt<bool> ClEnableKasan(
     "asan-kernel", cl::desc("Enable KernelAddressSanitizer instrumentation"),
     cl::Hidden, cl::init(false));
+static cl::opt<bool> ClRecover(
+    "asan-recover",
+    cl::desc("Enable recovery mode (continue-after-error)."),
+    cl::Hidden, cl::init(false));
 
 // This flag may need to be replaced with -f[no-]asan-reads.
 static cl::opt<bool> ClInstrumentReads("asan-instrument-reads",
@@ -395,8 +399,9 @@ static size_t RedzoneSizeForScale(int MappingScale) {
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer : public FunctionPass {
-  explicit AddressSanitizer(bool CompileKernel = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel || ClEnableKasan) {
+  explicit AddressSanitizer(bool CompileKernel = false, bool Recover = false)
+      : FunctionPass(ID), CompileKernel(CompileKernel || ClEnableKasan),
+        Recover(Recover || ClRecover) {
     initializeAddressSanitizerPass(*PassRegistry::getPassRegistry());
   }
   const char *getPassName() const override {
@@ -471,6 +476,7 @@ struct AddressSanitizer : public FunctionPass {
   Triple TargetTriple;
   int LongSize;
   bool CompileKernel;
+  bool Recover;
   Type *IntptrTy;
   ShadowMapping Mapping;
   DominatorTree *DT;
@@ -494,8 +500,10 @@ struct AddressSanitizer : public FunctionPass {
 
 class AddressSanitizerModule : public ModulePass {
  public:
-  explicit AddressSanitizerModule(bool CompileKernel = false)
-      : ModulePass(ID), CompileKernel(CompileKernel || ClEnableKasan) {}
+  explicit AddressSanitizerModule(bool CompileKernel = false,
+                                  bool Recover = false)
+      : ModulePass(ID), CompileKernel(CompileKernel || ClEnableKasan),
+        Recover(Recover || ClRecover) {}
   bool runOnModule(Module &M) override;
   static char ID;  // Pass identification, replacement for typeid
   const char *getPassName() const override { return "AddressSanitizerModule"; }
@@ -513,6 +521,7 @@ class AddressSanitizerModule : public ModulePass {
 
   GlobalsMetadata GlobalsMD;
   bool CompileKernel;
+  bool Recover;
   Type *IntptrTy;
   LLVMContext *C;
   Triple TargetTriple;
@@ -729,8 +738,10 @@ INITIALIZE_PASS_END(
     AddressSanitizer, "asan",
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs.", false,
     false)
-FunctionPass *llvm::createAddressSanitizerFunctionPass(bool CompileKernel) {
-  return new AddressSanitizer(CompileKernel);
+FunctionPass *llvm::createAddressSanitizerFunctionPass(bool CompileKernel,
+                                                       bool Recover) {
+  assert(!CompileKernel || Recover);
+  return new AddressSanitizer(CompileKernel, Recover);
 }
 
 char AddressSanitizerModule::ID = 0;
@@ -739,8 +750,10 @@ INITIALIZE_PASS(
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs."
     "ModulePass",
     false, false)
-ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel) {
-  return new AddressSanitizerModule(CompileKernel);
+ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel,
+                                                   bool Recover) {
+  assert(!CompileKernel || Recover);
+  return new AddressSanitizerModule(CompileKernel, Recover);
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
@@ -1069,13 +1082,17 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     BasicBlock *NextBB = CheckTerm->getSuccessor(0);
     IRB.SetInsertPoint(CheckTerm);
     Value *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeSize);
-    BasicBlock *CrashBlock =
+    if (Recover) {
+      CrashTerm = SplitBlockAndInsertIfThen(Cmp2, CheckTerm, false);
+    } else {
+      BasicBlock *CrashBlock =
         BasicBlock::Create(*C, "", NextBB->getParent(), NextBB);
-    CrashTerm = new UnreachableInst(*C, CrashBlock);
-    BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
-    ReplaceInstWithInst(CheckTerm, NewTerm);
+      CrashTerm = new UnreachableInst(*C, CrashBlock);
+      BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
+      ReplaceInstWithInst(CheckTerm, NewTerm);
+    }
   } else {
-    CrashTerm = SplitBlockAndInsertIfThen(Cmp, InsertBefore, true);
+    CrashTerm = SplitBlockAndInsertIfThen(Cmp, InsertBefore, !Recover);
   }
 
   Instruction *Crash = generateCrashCode(CrashTerm, AddrLong, IsWrite,
@@ -1420,13 +1437,11 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
       const std::string TypeStr = AccessIsWrite ? "store" : "load";
       const std::string ExpStr = Exp ? "exp_" : "";
       const std::string SuffixStr = CompileKernel ? "N" : "_n";
-      const std::string EndingStr = CompileKernel ? "_noabort" : "";
+      const std::string EndingStr = Recover ? "_noabort" : "";
       Type *ExpType = Exp ? Type::getInt32Ty(*C) : nullptr;
-      // TODO(glider): for KASan builds add _noabort to error reporting
-      // functions and make them actually noabort (remove the UnreachableInst).
       AsanErrorCallbackSized[AccessIsWrite][Exp] =
           checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-              kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr,
+              kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr + EndingStr,
               IRB.getVoidTy(), IntptrTy, IntptrTy, ExpType, nullptr));
       AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =
           checkSanitizerInterfaceFunction(M.getOrInsertFunction(
@@ -1437,7 +1452,7 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
         const std::string Suffix = TypeStr + itostr(1 << AccessSizeIndex);
         AsanErrorCallback[AccessIsWrite][Exp][AccessSizeIndex] =
             checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-                kAsanReportErrorTemplate + ExpStr + Suffix,
+                kAsanReportErrorTemplate + ExpStr + Suffix + EndingStr,
                 IRB.getVoidTy(), IntptrTy, ExpType, nullptr));
         AsanMemoryAccessCallback[AccessIsWrite][Exp][AccessSizeIndex] =
             checkSanitizerInterfaceFunction(M.getOrInsertFunction(
