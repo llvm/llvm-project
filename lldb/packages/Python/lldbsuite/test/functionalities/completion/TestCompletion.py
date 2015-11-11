@@ -254,6 +254,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('target va', 'target variable ')
 
     @expectedFailureHostWindows("llvm.org/pr24679")
+    @expectedFailureDarwin("llvm.org/pr25485")
     def test_symbol_name(self):
         self.build()
         self.complete_from_to('''file a.out

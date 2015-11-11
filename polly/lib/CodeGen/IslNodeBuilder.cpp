@@ -819,6 +819,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
   // If the Id is already mapped, skip it.
   if (!IDToValue.count(Id)) {
     auto *ParamSCEV = (const SCEV *)isl_id_get_user(Id);
+    Value *V = nullptr;
 
     // Parameters could refere to invariant loads that need to be
     // preloaded before we can generate code for the parameter. Thus,
@@ -827,13 +828,22 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
     SetVector<Value *> Values;
     findValues(ParamSCEV, Values);
     for (auto *Val : Values)
-      if (const auto *IAClass = S.lookupInvariantEquivClass(Val))
+      if (const auto *IAClass = S.lookupInvariantEquivClass(Val)) {
+
+        // Check if this invariant access class is empty, hence if we never
+        // actually added a loads instruction to it. In that case it has no
+        // (meaningful) users and we should not try to code generate it.
+        if (std::get<1>(*IAClass).empty())
+          V = UndefValue::get(ParamSCEV->getType());
+
         if (!preloadInvariantEquivClass(*IAClass)) {
           isl_id_free(Id);
           return false;
         }
+      }
 
-    auto *V = generateSCEV(ParamSCEV);
+    if (!V)
+      V = generateSCEV(ParamSCEV);
     IDToValue[Id] = V;
   }
 
@@ -859,7 +869,24 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   isl_ast_expr *Access =
       isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
   Value *PreloadVal = ExprBuilder.create(Access);
-  PreloadVal = Builder.CreateBitOrPointerCast(PreloadVal, Ty);
+
+  // Correct the type as the SAI might have a different type than the user
+  // expects, especially if the base pointer is a struct.
+  if (Ty == PreloadVal->getType())
+    return PreloadVal;
+
+  if (!Ty->isFloatingPointTy() && !PreloadVal->getType()->isFloatingPointTy())
+    return PreloadVal = Builder.CreateBitOrPointerCast(PreloadVal, Ty);
+
+  // We do not want to cast floating point to non-floating point types and vice
+  // versa, thus we simply create a new load with a casted pointer expression.
+  auto *LInst = dyn_cast<LoadInst>(PreloadVal);
+  assert(LInst && "Preloaded value was not a load instruction");
+  auto *Ptr = LInst->getPointerOperand();
+  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(),
+                                  Ptr->getName() + ".cast");
+  PreloadVal = Builder.CreateLoad(Ptr, LInst->getName());
+  LInst->eraseFromParent();
   return PreloadVal;
 }
 
@@ -947,7 +974,9 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   // elements of the class to the one preloaded load as they are referenced
   // during the code generation and therefor need to be mapped.
   const MemoryAccessList &MAs = std::get<1>(IAClass);
-  assert(!MAs.empty());
+  if (MAs.empty())
+    return true;
+
   MemoryAccess *MA = MAs.front();
   assert(MA->isExplicit() && MA->isRead());
 
@@ -980,6 +1009,8 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   assert(PreloadVal->getType() == AccInst->getType());
   for (const MemoryAccess *MA : MAs) {
     Instruction *MAAccInst = MA->getAccessInstruction();
+    // TODO: The bitcast here is wrong. In case of floating and non-floating
+    //       point values we need to reload the value or convert it.
     ValueMap[MAAccInst] =
         Builder.CreateBitOrPointerCast(PreloadVal, MAAccInst->getType());
   }
@@ -1005,6 +1036,8 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
       // should only change the base pointer of the derived SAI if we actually
       // preloaded it.
       if (BasePtr == MA->getBaseAddr()) {
+        // TODO: The bitcast here is wrong. In case of floating and non-floating
+        //       point values we need to reload the value or convert it.
         BasePtr =
             Builder.CreateBitOrPointerCast(PreloadVal, BasePtr->getType());
         DerivedSAI->setBasePtr(BasePtr);

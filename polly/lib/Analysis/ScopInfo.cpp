@@ -1637,10 +1637,14 @@ void Scop::buildInvariantEquivalenceClasses() {
     const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
 
     LoadInst *&ClassRep = EquivClasses[PointerSCEV];
-    if (!ClassRep)
-      ClassRep = LInst;
-    else
+    if (ClassRep) {
       InvEquivClassVMap[LInst] = ClassRep;
+      continue;
+    }
+
+    ClassRep = LInst;
+    InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList(),
+                                       nullptr);
   }
 }
 
@@ -2656,8 +2660,11 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
 
       // Unify the execution context of the class and this statement.
       isl_set *&IAClassDomainCtx = std::get<2>(IAClass);
-      IAClassDomainCtx = isl_set_coalesce(
-          isl_set_union(IAClassDomainCtx, isl_set_copy(DomainCtx)));
+      if (IAClassDomainCtx)
+        IAClassDomainCtx = isl_set_coalesce(
+            isl_set_union(IAClassDomainCtx, isl_set_copy(DomainCtx)));
+      else
+        IAClassDomainCtx = isl_set_copy(DomainCtx);
       break;
     }
 
@@ -2759,9 +2766,6 @@ void Scop::hoistInvariantLoads() {
     isl_set_free(Domain);
   }
   isl_union_map_free(Writes);
-
-  if (!InvariantEquivClasses.empty())
-    IsOptimized = true;
 
   auto &ScopRIL = *SD.getRequiredInvariantLoads(&getRegion());
   // Check required invariant loads that were tagged during SCoP detection.

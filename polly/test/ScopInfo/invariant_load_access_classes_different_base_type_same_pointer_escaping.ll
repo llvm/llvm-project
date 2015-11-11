@@ -35,23 +35,22 @@
 ; CODEGEN:   br label %polly.split_new_and_old
 ;
 ; CODEGEN: polly.preload.begin:
-; CODEGEN:   %U.load = load i32, i32* @U
-; CODEGEN:   %0 = bitcast i32 %U.load to float
-; CODEGEN:   %1 = bitcast float %0 to i32
-; CODEGEN:   store float %0, float* %U.f.preload.s2a
+; CODEGEN:   %U.load1 = load float, float* bitcast (i32* @U to float*)
+; CODEGEN:   %0 = bitcast float %U.load1 to i32
+; CODEGEN:   store float %U.load1, float* %U.f.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:
 ; CODEGEN-DAG:   %U.f.merge = phi float [ %U.f.final_reload, %polly.loop_exit ], [ %U.f, %do.cond ]
-; CODEGEN-DAG:   %U.i.merge = phi i32 [ %6, %polly.loop_exit ], [ %U.i, %do.cond ]
+; CODEGEN-DAG:   %U.i.merge = phi i32 [ %5, %polly.loop_exit ], [ %U.i, %do.cond ]
 ;
 ; CODEGEN: polly.loop_exit:
 ; CODEGEN-DAG:   %U.f.final_reload = load float, float* %U.f.preload.s2a
 ; CODEGEN-DAG:   %U.i.final_reload = load float, float* %U.f.preload.s2a
-; CODEGEN-DAG:   %6 = bitcast float %U.i.final_reload to i32
+; CODEGEN-DAG:   %5 = bitcast float %U.i.final_reload to i32
 ;
 ; CODEGEN: polly.stmt.do.body:
-; CODEGEN:   %p_conv = fptosi float %0 to i32
-; CODEGEN:   %p_add = add nsw i32 %1, %p_conv
+; CODEGEN:   %p_conv = fptosi float %U.load1 to i32
+; CODEGEN:   %p_add = add nsw i32 %0, %p_conv
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

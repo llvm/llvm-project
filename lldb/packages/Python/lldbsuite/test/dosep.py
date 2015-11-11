@@ -1048,6 +1048,9 @@ def getDefaultTimeout(platform_name):
 
     if platform_name.startswith("remote-"):
         return "10m"
+    elif platform_name == 'darwin':
+        # We are consistently needing more time on a few tests.
+        return "6m"
     else:
         return "4m"
 

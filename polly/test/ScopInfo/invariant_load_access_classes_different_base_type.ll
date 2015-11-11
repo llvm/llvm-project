@@ -25,13 +25,12 @@
 ;
 ; CODEGEN:    %.load = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0)
 ; CODEGEN:    store i32 %.load, i32* %S.a.preload.s2a
-; CODEGEN:    %.load1 = load i32, i32* getelementptr (i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0), i64 1)
-; CODEGEN:    %0 = bitcast i32 %.load1 to float
-; CODEGEN:    store float %0, float* %S.b.preload.s2a
+; CODEGEN:    %.load12 = load float, float* bitcast (i32* getelementptr (i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0), i64 1) to float*)
+; CODEGEN:    store float %.load12, float* %S.b.preload.s2a
 ;
 ; CODEGEN:  polly.stmt.for.body:
 ; CODEGEN:    %p_conv = sitofp i32 %.load to float
-; CODEGEN:    %p_add = fadd float %p_conv, %0
+; CODEGEN:    %p_add = fadd float %p_conv, %.load12
 ; CODEGEN:    %p_conv1 = fptosi float %p_add to i32
 
 %struct.anon = type { i32, float }
