@@ -48,7 +48,8 @@ class MachineMemOperand;
 /// MachineFunction is deleted, all the contained MachineInstrs are deallocated
 /// without having their destructor called.
 ///
-class MachineInstr : public ilist_node<MachineInstr> {
+class MachineInstr
+    : public ilist_node_with_parent<MachineInstr, MachineBasicBlock> {
 public:
   typedef MachineMemOperand **mmo_iterator;
 

@@ -251,11 +251,11 @@ public:
   pointer operator->() const { return &operator*(); }
 
   // Comparison operators
-  bool operator==(const ilist_iterator &RHS) const {
-    return NodePtr == RHS.NodePtr;
+  template <class Y> bool operator==(const ilist_iterator<Y> &RHS) const {
+    return NodePtr == RHS.getNodePtrUnchecked();
   }
-  bool operator!=(const ilist_iterator &RHS) const {
-    return NodePtr != RHS.NodePtr;
+  template <class Y> bool operator!=(const ilist_iterator<Y> &RHS) const {
+    return NodePtr != RHS.getNodePtrUnchecked();
   }
 
   // Increment and decrement operators...
@@ -687,6 +687,30 @@ public:
     merge(RightHalf, comp);
   }
   void sort() { sort(op_less); }
+
+  /// \brief Get the previous node, or \c nullptr for the list head.
+  NodeTy *getPrevNode(NodeTy &N) const {
+    auto I = N.getIterator();
+    if (I == begin())
+      return nullptr;
+    return &*std::prev(I);
+  }
+  /// \brief Get the previous node, or \c nullptr for the list head.
+  const NodeTy *getPrevNode(const NodeTy &N) const {
+    return getPrevNode(const_cast<NodeTy &>(N));
+  }
+
+  /// \brief Get the next node, or \c nullptr for the list tail.
+  NodeTy *getNextNode(NodeTy &N) const {
+    auto Next = std::next(N.getIterator());
+    if (Next == end())
+      return nullptr;
+    return &*Next;
+  }
+  /// \brief Get the next node, or \c nullptr for the list tail.
+  const NodeTy *getNextNode(const NodeTy &N) const {
+    return getNextNode(const_cast<NodeTy &>(N));
+  }
 };
 
 

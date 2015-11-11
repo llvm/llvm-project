@@ -43,6 +43,7 @@ class TestingProgressDisplay(object):
                                     test.getFullName())
 
         shouldShow = test.result.code.isFailure or \
+            self.opts.showAllOutput or \
             (not self.opts.quiet and not self.opts.succinct)
         if not shouldShow:
             return

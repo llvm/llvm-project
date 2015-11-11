@@ -331,6 +331,12 @@ public:
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
   typedef std::reverse_iterator<iterator>             reverse_iterator;
 
+  /// Support for MachineBasicBlock::getNextNode().
+  static BasicBlockListType MachineFunction::*
+  getSublistAccess(MachineBasicBlock *) {
+    return &MachineFunction::BasicBlocks;
+  }
+
   /// addLiveIn - Add the specified physical register as a live-in value and
   /// create a corresponding virtual register for it.
   unsigned addLiveIn(unsigned PReg, const TargetRegisterClass *RC);

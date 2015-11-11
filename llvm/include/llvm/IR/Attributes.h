@@ -68,12 +68,16 @@ public:
                            ///< stored as log2 of alignment with +1 bias
                            ///< 0 means unaligned (different from align(1))
     AlwaysInline,          ///< inline=always
+    ArgMemOnly,            ///< Funciton can access memory only using pointers
+                           ///< based on its arguments.
     Builtin,               ///< Callee is recognized as a builtin, despite
                            ///< nobuiltin attribute on its declaration.
     ByVal,                 ///< Pass structure by value
-    InAlloca,              ///< Pass structure in an alloca
     Cold,                  ///< Marks function as being in a cold path.
     Convergent,            ///< Can only be moved to control-equivalent blocks
+    Dereferenceable,       ///< Pointer is known to be dereferenceable
+    DereferenceableOrNull, ///< Pointer is either null or dereferenceable
+    InAlloca,              ///< Pass structure in an alloca
     InlineHint,            ///< Source said inlining was desirable
     InReg,                 ///< Force argument to be passed in register
     JumpTable,             ///< Build jump-instruction tables and replace refs.
@@ -86,12 +90,10 @@ public:
     NoDuplicate,           ///< Call cannot be duplicated
     NoImplicitFloat,       ///< Disable implicit floating point insts
     NoInline,              ///< inline=never
-    NoRecurse,             ///< The function does not recurse
     NonLazyBind,           ///< Function is called early and/or
                            ///< often, so lazy binding isn't worthwhile
     NonNull,               ///< Pointer is known to be not null
-    Dereferenceable,       ///< Pointer is known to be dereferenceable
-    DereferenceableOrNull, ///< Pointer is either null or dereferenceable
+    NoRecurse,             ///< The function does not recurse
     NoRedZone,             ///< Disable redzone
     NoReturn,              ///< Mark the function as not returning
     NoUnwind,              ///< Function doesn't unwind stack
@@ -99,10 +101,12 @@ public:
     OptimizeNone,          ///< Function must not be optimized.
     ReadNone,              ///< Function does not access memory
     ReadOnly,              ///< Function only reads from memory
-    ArgMemOnly,            ///< Funciton can access memory only using pointers
-                           ///< based on its arguments.
     Returned,              ///< Return value is always equal to this argument
     ReturnsTwice,          ///< Function can return twice
+    SafeStack,             ///< Safe Stack protection.
+    SanitizeAddress,       ///< AddressSanitizer is on.
+    SanitizeMemory,        ///< MemorySanitizer is on.
+    SanitizeThread,        ///< ThreadSanitizer is on.
     SExt,                  ///< Sign extended before/after call
     StackAlignment,        ///< Alignment of stack for function (3 bits)
                            ///< stored as log2 of alignment with +1 bias 0
@@ -111,11 +115,7 @@ public:
     StackProtect,          ///< Stack protection.
     StackProtectReq,       ///< Stack protection required.
     StackProtectStrong,    ///< Strong Stack protection.
-    SafeStack,             ///< Safe Stack protection.
     StructRet,             ///< Hidden pointer to structure to return
-    SanitizeAddress,       ///< AddressSanitizer is on.
-    SanitizeThread,        ///< ThreadSanitizer is on.
-    SanitizeMemory,        ///< MemorySanitizer is on.
     SwiftError,            ///< Argument is swift error.
     SwiftSelf,             ///< Argument is swift self/context.
     UWTable,               ///< Function must be in a unwind table
