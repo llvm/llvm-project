@@ -235,6 +235,9 @@ namespace llvm {
       return MVT::i32;
     }
 
+    bool isCheapToSpeculateCttz() const override;
+    bool isCheapToSpeculateCtlz() const override;
+
     void LowerOperationWrapper(SDNode *N,
                                SmallVectorImpl<SDValue> &Results,
                                SelectionDAG &DAG) const override;

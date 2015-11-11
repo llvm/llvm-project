@@ -18,7 +18,7 @@
 ; ATOM-NEXT: movsd A(,%rax,8)
 ; ATOM-NEXT: mulsd
 ; ATOM-NEXT: movsd
-; ATOM-NEXT: leaq 1(%rax), %rax
+; ATOM-NEXT: incq %rax
 
 @A = external global [0 x double]
 

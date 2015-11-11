@@ -419,6 +419,15 @@ namespace {
                                          SmallVectorImpl<SDValue> &Chains,
                                          EVT Ty) const;
 
+    /// This is a helper function for visitAND and visitZERO_EXTEND.  Returns
+    /// true if the (and (load x) c) pattern matches an extload.  ExtVT returns
+    /// the type of the loaded value to be extended.  LoadedVT returns the type
+    /// of the original loaded value.  NarrowLoad returns whether the load would
+    /// need to be narrowed in order to match.
+    bool isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
+                          EVT LoadResultTy, EVT &ExtVT, EVT &LoadedVT,
+                          bool &NarrowLoad);
+
     /// This is a helper function for MergeConsecutiveStores. When the source
     /// elements of the consecutive stores are all constants or all extracted
     /// vector elements, try to merge them into one larger store.
@@ -2977,6 +2986,46 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1,
   return SDValue();
 }
 
+bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
+                                   EVT LoadResultTy, EVT &ExtVT, EVT &LoadedVT,
+                                   bool &NarrowLoad) {
+  uint32_t ActiveBits = AndC->getAPIntValue().getActiveBits();
+
+  if (ActiveBits == 0 || !APIntOps::isMask(ActiveBits, AndC->getAPIntValue()))
+    return false;
+
+  ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
+  LoadedVT = LoadN->getMemoryVT();
+
+  if (ExtVT == LoadedVT &&
+      (!LegalOperations ||
+       TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy, ExtVT))) {
+    // ZEXTLOAD will match without needing to change the size of the value being
+    // loaded.
+    NarrowLoad = false;
+    return true;
+  }
+
+  // Do not change the width of a volatile load.
+  if (LoadN->isVolatile())
+    return false;
+
+  // Do not generate loads of non-round integer types since these can
+  // be expensive (and would be wrong if the type is not byte sized).
+  if (!LoadedVT.bitsGT(ExtVT) || !ExtVT.isRound())
+    return false;
+
+  if (LegalOperations &&
+      !TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy, ExtVT))
+    return false;
+
+  if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT))
+    return false;
+
+  NarrowLoad = true;
+  return true;
+}
+
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -3169,16 +3218,12 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       : cast<LoadSDNode>(N0);
     if (LN0->getExtensionType() != ISD::SEXTLOAD &&
         LN0->isUnindexed() && N0.hasOneUse() && SDValue(LN0, 0).hasOneUse()) {
-      uint32_t ActiveBits = N1C->getAPIntValue().getActiveBits();
-      if (ActiveBits > 0 && APIntOps::isMask(ActiveBits, N1C->getAPIntValue())){
-        EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
-        EVT LoadedVT = LN0->getMemoryVT();
-        EVT LoadResultTy = HasAnyExt ? LN0->getValueType(0) : VT;
-
-        if (ExtVT == LoadedVT &&
-            (!LegalOperations || TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy,
-                                                    ExtVT))) {
-
+      auto NarrowLoad = false;
+      EVT LoadResultTy = HasAnyExt ? LN0->getValueType(0) : VT;
+      EVT ExtVT, LoadedVT;
+      if (isAndLoadExtLoad(N1C, LN0, LoadResultTy, ExtVT, LoadedVT,
+                           NarrowLoad)) {
+        if (!NarrowLoad) {
           SDValue NewLoad =
             DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(LN0), LoadResultTy,
                            LN0->getChain(), LN0->getBasePtr(), ExtVT,
@@ -3186,15 +3231,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
           AddToWorklist(N);
           CombineTo(LN0, NewLoad, NewLoad.getValue(1));
           return SDValue(N, 0);   // Return N so it doesn't get rechecked!
-        }
-
-        // Do not change the width of a volatile load.
-        // Do not generate loads of non-round integer types since these can
-        // be expensive (and would be wrong if the type is not byte sized).
-        if (!LN0->isVolatile() && LoadedVT.bitsGT(ExtVT) && ExtVT.isRound() &&
-            (!LegalOperations || TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy,
-                                                    ExtVT)) &&
-            TLI.shouldReduceLoadWidth(LN0, ISD::ZEXTLOAD, ExtVT)) {
+        } else {
           EVT PtrType = LN0->getOperand(1).getValueType();
 
           unsigned Alignment = LN0->getAlignment();
@@ -6334,6 +6371,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
 
   // fold (zext (and/or/xor (load x), cst)) ->
   //      (and/or/xor (zextload x), (zext cst))
+  // Unless (and (load x) cst) will match as a zextload already and has
+  // additional users.
   if ((N0.getOpcode() == ISD::AND || N0.getOpcode() == ISD::OR ||
        N0.getOpcode() == ISD::XOR) &&
       isa<LoadSDNode>(N0.getOperand(0)) &&
@@ -6344,9 +6383,20 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     if (LN0->getExtensionType() != ISD::SEXTLOAD && LN0->isUnindexed()) {
       bool DoXform = true;
       SmallVector<SDNode*, 4> SetCCs;
-      if (!N0.hasOneUse())
-        DoXform = ExtendUsesToFormExtLoad(N, N0.getOperand(0), ISD::ZERO_EXTEND,
-                                          SetCCs, TLI);
+      if (!N0.hasOneUse()) {
+        if (N0.getOpcode() == ISD::AND) {
+          auto *AndC = cast<ConstantSDNode>(N0.getOperand(1));
+          auto NarrowLoad = false;
+          EVT LoadResultTy = AndC->getValueType(0);
+          EVT ExtVT, LoadedVT;
+          if (isAndLoadExtLoad(AndC, LN0, LoadResultTy, ExtVT, LoadedVT,
+                               NarrowLoad))
+            DoXform = false;
+        }
+        if (DoXform)
+          DoXform = ExtendUsesToFormExtLoad(N, N0.getOperand(0),
+                                            ISD::ZERO_EXTEND, SetCCs, TLI);
+      }
       if (DoXform) {
         SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(LN0), VT,
                                          LN0->getChain(), LN0->getBasePtr(),
@@ -14455,7 +14505,7 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
     // FIXME: The depth check could be made to return the last non-aliasing
     // chain we found before we hit a tokenfactor rather than the original
     // chain.
-    if (Depth > 6) {
+    if (Depth > TLI.getGatherAllAliasesMaxDepth()) {
       Aliases.clear();
       Aliases.push_back(OriginalChain);
       return;

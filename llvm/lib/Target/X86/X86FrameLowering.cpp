@@ -531,16 +531,24 @@ MachineInstr *X86FrameLowering::emitStackProbeInline(
   // registers. For the prolog expansion we use RAX, RCX and RDX.
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterClass *RegClass = &X86::GR64RegClass;
-  const unsigned
-      SizeReg = InProlog ? X86::RAX : MRI.createVirtualRegister(RegClass),
-      ZeroReg = InProlog ? X86::RCX : MRI.createVirtualRegister(RegClass),
-      CopyReg = InProlog ? X86::RDX : MRI.createVirtualRegister(RegClass),
-      TestReg = InProlog ? X86::RDX : MRI.createVirtualRegister(RegClass),
-      FinalReg = InProlog ? X86::RDX : MRI.createVirtualRegister(RegClass),
-      RoundedReg = InProlog ? X86::RDX : MRI.createVirtualRegister(RegClass),
-      LimitReg = InProlog ? X86::RCX : MRI.createVirtualRegister(RegClass),
-      JoinReg = InProlog ? X86::RCX : MRI.createVirtualRegister(RegClass),
-      ProbeReg = InProlog ? X86::RCX : MRI.createVirtualRegister(RegClass);
+  const unsigned SizeReg = InProlog ? (unsigned)X86::RAX
+                                    : MRI.createVirtualRegister(RegClass),
+                 ZeroReg = InProlog ? (unsigned)X86::RCX
+                                    : MRI.createVirtualRegister(RegClass),
+                 CopyReg = InProlog ? (unsigned)X86::RDX
+                                    : MRI.createVirtualRegister(RegClass),
+                 TestReg = InProlog ? (unsigned)X86::RDX
+                                    : MRI.createVirtualRegister(RegClass),
+                 FinalReg = InProlog ? (unsigned)X86::RDX
+                                     : MRI.createVirtualRegister(RegClass),
+                 RoundedReg = InProlog ? (unsigned)X86::RDX
+                                       : MRI.createVirtualRegister(RegClass),
+                 LimitReg = InProlog ? (unsigned)X86::RCX
+                                     : MRI.createVirtualRegister(RegClass),
+                 JoinReg = InProlog ? (unsigned)X86::RCX
+                                    : MRI.createVirtualRegister(RegClass),
+                 ProbeReg = InProlog ? (unsigned)X86::RCX
+                                     : MRI.createVirtualRegister(RegClass);
 
   // SP-relative offsets where we can save RCX and RDX.
   int64_t RCXShadowSlot = 0;

@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Format.h"
@@ -153,6 +154,24 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
         LineTable.dump(OS);
       }
     }
+  }
+
+  if (DumpType == DIDT_All || DumpType == DIDT_CUIndex) {
+    OS << "\n.debug_cu_index contents:\n";
+    DataExtractor CUIndexData(getCUIndexSection(), isLittleEndian(),
+                              savedAddressByteSize);
+    DWARFUnitIndex CUIndex;
+    CUIndex.parse(CUIndexData);
+    CUIndex.dump(OS);
+  }
+
+  if (DumpType == DIDT_All || DumpType == DIDT_TUIndex) {
+    OS << "\n.debug_tu_index contents:\n";
+    DataExtractor TUIndexData(getTUIndexSection(), isLittleEndian(),
+                              savedAddressByteSize);
+    DWARFUnitIndex TUIndex;
+    TUIndex.parse(TUIndexData);
+    TUIndex.dump(OS);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_LineDwo) {
@@ -608,6 +627,8 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
             .Case("apple_namespaces", &AppleNamespacesSection.Data)
             .Case("apple_namespac", &AppleNamespacesSection.Data)
             .Case("apple_objc", &AppleObjCSection.Data)
+            .Case("debug_cu_index", &CUIndexSection)
+            .Case("debug_tu_index", &TUIndexSection)
             // Any more debug info sections go here.
             .Default(nullptr);
     if (SectionData) {

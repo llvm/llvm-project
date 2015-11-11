@@ -988,6 +988,8 @@ void X86MCCodeEmitter::EmitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
 static unsigned DetermineREXPrefix(const MCInst &MI, uint64_t TSFlags,
                                    const MCInstrDesc &Desc) {
   unsigned REX = 0;
+  bool UsesHighByteReg = false;
+
   if (TSFlags & X86II::REX_W)
     REX |= 1 << 3; // set REX.W
 
@@ -1004,6 +1006,8 @@ static unsigned DetermineREXPrefix(const MCInst &MI, uint64_t TSFlags,
     const MCOperand &MO = MI.getOperand(i);
     if (!MO.isReg()) continue;
     unsigned Reg = MO.getReg();
+    if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
+      UsesHighByteReg = true;
     if (!X86II::isX86_64NonExtLowByteReg(Reg)) continue;
     // FIXME: The caller of DetermineREXPrefix slaps this prefix onto anything
     // that returns non-zero.
@@ -1073,6 +1077,9 @@ static unsigned DetermineREXPrefix(const MCInst &MI, uint64_t TSFlags,
     }
     break;
   }
+  if (REX && UsesHighByteReg)
+    report_fatal_error("Cannot encode high byte register in REX-prefixed instruction");
+
   return REX;
 }
 

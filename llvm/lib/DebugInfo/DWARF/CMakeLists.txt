@@ -13,6 +13,7 @@ add_llvm_library(LLVMDebugInfoDWARF
   DWARFDebugRangeList.cpp
   DWARFFormValue.cpp
   DWARFTypeUnit.cpp
+  DWARFUnitIndex.cpp
   DWARFUnit.cpp
   SyntaxHighlighting.cpp
 

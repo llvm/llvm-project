@@ -161,8 +161,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         // Based on GCC's support for TLS:
         if (!DD->useSplitDwarf()) {
           // 1) Start with a constNu of the appropriate pointer size
-          addUInt(*Loc, dwarf::DW_FORM_data1,
-                  PointerSize == 4 ? dwarf::DW_OP_const4u : dwarf::DW_OP_const8u);
+          addUInt(*Loc, dwarf::DW_FORM_data1, PointerSize == 4
+                                                  ? dwarf::DW_OP_const4u
+                                                  : dwarf::DW_OP_const8u);
           // 2) containing the (relocated) offset of the TLS variable
           //    within the module's TLS block.
           addExpr(*Loc, dwarf::DW_FORM_udata,
@@ -439,6 +440,9 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   addUInt(*ScopeDIE, dwarf::DW_AT_call_file, None,
           getOrCreateSourceID(IA->getFilename(), IA->getDirectory()));
   addUInt(*ScopeDIE, dwarf::DW_AT_call_line, None, IA->getLine());
+  if (IA->getDiscriminator())
+    addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, None,
+            IA->getDiscriminator());
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_inlined_subprogram nodes.
@@ -521,8 +525,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     unsigned FrameReg = 0;
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
     int Offset = TFI->getFrameIndexReference(*Asm->MF, FI, FrameReg);
-    assert(Expr != DV.getExpression().end() &&
-           "Wrong number of expressions");
+    assert(Expr != DV.getExpression().end() && "Wrong number of expressions");
     DwarfExpr.AddMachineRegIndirect(FrameReg, Offset);
     DwarfExpr.AddExpression((*Expr)->expr_op_begin(), (*Expr)->expr_op_end());
     ++Expr;
@@ -601,8 +604,8 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   return ObjectPointer;
 }
 
-void
-DwarfCompileUnit::constructAbstractSubprogramScopeDIE(LexicalScope *Scope) {
+void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
+    LexicalScope *Scope) {
   DIE *&AbsDef = DU->getAbstractSPDies()[Scope->getScopeNode()];
   if (AbsDef)
     return;

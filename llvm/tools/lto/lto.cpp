@@ -85,13 +85,21 @@ static void lto_initialize() {
 
 namespace {
 
+static void handleLibLTODiagnostic(lto_codegen_diagnostic_severity_t Severity,
+                                   const char *Msg, void *) {
+  sLastErrorString = Msg;
+  sLastErrorString += "\n";
+}
+
 // This derived class owns the native object file. This helps implement the
 // libLTO API semantics, which require that the code generator owns the object
 // file.
 struct LibLTOCodeGenerator : LTOCodeGenerator {
-  LibLTOCodeGenerator() {}
+  LibLTOCodeGenerator() {
+    setDiagnosticHandler(handleLibLTODiagnostic, nullptr); }
   LibLTOCodeGenerator(std::unique_ptr<LLVMContext> Context)
-      : LTOCodeGenerator(std::move(Context)) {}
+      : LTOCodeGenerator(std::move(Context)) {
+    setDiagnosticHandler(handleLibLTODiagnostic, nullptr); }
 
   std::unique_ptr<MemoryBuffer> NativeObjectFile;
 };
