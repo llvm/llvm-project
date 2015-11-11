@@ -564,33 +564,33 @@ as the draft C++1z standard evolves.</p>
     <tr>
       <td>New <tt>auto</tt> rules for direct-list-initialization
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3922.html">N3922</a></td>
-      <td class="none" align="center">No</td>
+      <td class="svn" align="center">Clang 3.8 <a href="#n3922">(7)</a></td>
     </tr>
     <!-- Urbana papers -->
     <tr>
       <td>Fold expressions</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4295.html">N4295</a></td>
-      <td class="svn" align="center">Clang 3.6</td>
+      <td class="full" align="center">Clang 3.6</td>
     </tr>
     <tr>
       <td><tt>u8</tt> character literals</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4267.html">N4267</a></td>
-      <td class="svn" align="center">Clang 3.6</td>
+      <td class="full" align="center">Clang 3.6</td>
     </tr>
     <tr>
       <td>Nested namespace definition</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4230.html">N4230</a></td>
-      <td class="svn" align="center">Clang 3.6</td>
+      <td class="full" align="center">Clang 3.6</td>
     </tr>
     <tr>
       <td>Attributes for namespaces and enumerators</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4266.html">N4266</a></td>
-      <td class="svn" align="center">Clang 3.6</td>
+      <td class="full" align="center">Clang 3.6</td>
     </tr>
     <tr>
       <td>Allow constant evaluation for all non-type template arguments</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4268.html">N4268</a></td>
-      <td class="svn" align="center">Clang 3.6</td>
+      <td class="full" align="center">Clang 3.6</td>
     </tr>
     <!-- Kona papers -->
     <tr>
@@ -615,6 +615,14 @@ as the draft C++1z standard evolves.</p>
     </tr>
 </table>
 
+<p>
+<span id="n3922">(7): This is a backwards-incompatible change that is applied to
+all language versions that allow type deduction from <tt>auto</tt>
+(per the request of the C++ committee).
+In Clang 3.7, a warning is emitted for all cases that would change meaning.
+</span>
+</p>
+
 <h2 id="ts">Technical specifications and standing documents</h2>
 
 <p>ISO C++ also publishes a number of documents describing additional language
@@ -636,7 +644,7 @@ Clang version they became available:</p>
       </td>
     </tr>
     <tr>
-      <td class="svn" align="center">
+      <td class="full" align="center">
         Clang 3.6 (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4200">N4200</a>)</a>
       </td>
     </tr>

@@ -41,4 +41,4 @@ void noalias_caller(int *x) { noalias_callee(x); }
 // CHECK: attributes [[NUW]] = { nounwind{{.*}} }
 // CHECK: attributes [[NI]] = { noinline nounwind{{.*}} }
 // CHECK: attributes [[NR]] = { noreturn }
-// CHECK: attributes [[NA]] = { nounwind argmemonly{{.*}} }
+// CHECK: attributes [[NA]] = { argmemonly nounwind{{.*}} }

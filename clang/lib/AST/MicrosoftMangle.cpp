@@ -1818,6 +1818,8 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       Out << '?';
       mangleQualifiers(ResultType.getLocalQualifiers(), /*IsMember=*/false);
       Out << '?';
+      assert(AT->getKeyword() != AutoTypeKeyword::GNUAutoType &&
+             "shouldn't need to mangle __auto_type!");
       mangleSourceName(AT->isDecltypeAuto() ? "<decltype-auto>" : "<auto>");
       Out << '@';
     } else {

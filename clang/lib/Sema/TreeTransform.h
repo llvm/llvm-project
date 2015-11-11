@@ -848,11 +848,11 @@ public:
   /// \brief Build a new C++11 auto type.
   ///
   /// By default, builds a new AutoType with the given deduced type.
-  QualType RebuildAutoType(QualType Deduced, bool IsDecltypeAuto) {
+  QualType RebuildAutoType(QualType Deduced, AutoTypeKeyword Keyword) {
     // Note, IsDependent is always false here: we implicitly convert an 'auto'
     // which has been deduced to a dependent type into an undeduced 'auto', so
     // that we'll retry deduction after the transformation.
-    return SemaRef.Context.getAutoType(Deduced, IsDecltypeAuto, 
+    return SemaRef.Context.getAutoType(Deduced, Keyword,
                                        /*IsDependent*/ false);
   }
 
@@ -3888,7 +3888,7 @@ TreeTransform<Derived>::TransformQualifiedType(TypeLocBuilder &TLB,
         Qs.removeObjCLifetime();
         Deduced = SemaRef.Context.getQualifiedType(Deduced.getUnqualifiedType(),
                                                    Qs);
-        Result = SemaRef.Context.getAutoType(Deduced, AutoTy->isDecltypeAuto(), 
+        Result = SemaRef.Context.getAutoType(Deduced, AutoTy->getKeyword(),
                                 AutoTy->isDependentType());
         TLB.TypeWasModifiedSafely(Result);
       } else {
@@ -5091,7 +5091,7 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || NewDeduced != OldDeduced ||
       T->isDependentType()) {
-    Result = getDerived().RebuildAutoType(NewDeduced, T->isDecltypeAuto());
+    Result = getDerived().RebuildAutoType(NewDeduced, T->getKeyword());
     if (Result.isNull())
       return QualType();
   }
@@ -9623,9 +9623,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     VarDecl *OldVD = C->getCapturedVar();
     QualType NewInitCaptureType =
-        getSema().performLambdaInitCaptureInitialization(C->getLocation(),
-            OldVD->getType()->isReferenceType(), OldVD->getIdentifier(),
-            NewExprInit);
+        getSema().buildLambdaInitCaptureInitialization(
+            C->getLocation(), OldVD->getType()->isReferenceType(),
+            OldVD->getIdentifier(),
+            C->getCapturedVar()->getInitStyle() != VarDecl::CInit, NewExprInit);
     NewExprInitResult = NewExprInit;
     InitCaptureExprsAndTypes[C - E->capture_begin()] =
         std::make_pair(NewExprInitResult, NewInitCaptureType);
@@ -9732,8 +9733,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       }
       VarDecl *OldVD = C->getCapturedVar();
       VarDecl *NewVD = getSema().createLambdaInitCaptureVarDecl(
-          OldVD->getLocation(), InitExprTypePair.second, 
-          OldVD->getIdentifier(), Init.get());
+          OldVD->getLocation(), InitExprTypePair.second, OldVD->getIdentifier(),
+          OldVD->getInitStyle(), Init.get());
       if (!NewVD)
         Invalid = true;
       else {

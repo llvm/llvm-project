@@ -288,6 +288,7 @@ bool Declarator::isDeclarationOfFunction() const {
   switch (DS.getTypeSpecType()) {
     case TST_atomic:
     case TST_auto:
+    case TST_auto_type:
     case TST_bool:
     case TST_char:
     case TST_char16:
@@ -476,6 +477,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_auto:        return "auto";
+  case DeclSpec::TST_auto_type:   return "__auto_type";
   case DeclSpec::TST_decltype:    return "(decltype)";
   case DeclSpec::TST_decltype_auto: return "decltype(auto)";
   case DeclSpec::TST_underlyingType: return "__underlying_type";

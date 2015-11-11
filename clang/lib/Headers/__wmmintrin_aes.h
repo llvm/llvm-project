@@ -59,7 +59,7 @@ _mm_aesimc_si128(__m128i __V)
 }
 
 #define _mm_aeskeygenassist_si128(C, R) \
-  __builtin_ia32_aeskeygenassist128((C), (R))
+  (__m128i)__builtin_ia32_aeskeygenassist128((__v2di)(__m128i)(C), (int)(R))
 
 #undef __DEFAULT_FN_ATTRS
 

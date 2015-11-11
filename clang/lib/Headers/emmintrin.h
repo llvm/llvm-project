@@ -1439,8 +1439,8 @@ _mm_movemask_pd(__m128d __a)
 }
 
 #define _mm_shuffle_pd(a, b, i) __extension__ ({ \
-  __builtin_shufflevector((__m128d)(a), (__m128d)(b), \
-                          (i) & 1, (((i) & 2) >> 1) + 2); })
+  (__m128d)__builtin_shufflevector((__v2df)(__m128d)(a), (__v2df)(__m128d)(b), \
+                                   (i) & 1, (((i) & 2) >> 1) + 2); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_castpd_ps(__m128d __a)
