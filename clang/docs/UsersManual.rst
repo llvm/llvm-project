@@ -1096,8 +1096,9 @@ are listed below.
 
    By default, non-fatal checks are those enabled by UndefinedBehaviorSanitizer,
    except for ``-fsanitize=return`` and ``-fsanitize=unreachable``. Some
-   sanitizers (e.g. :doc:`AddressSanitizer`) may not support recovery,
-   and always crash the program after the issue is detected.
+   sanitizers may not support recovery (or not support it by default
+   e.g. :doc:`AddressSanitizer`), and always crash the program after the issue
+   is detected.
 
    Note that the ``-fsanitize-trap`` flag has precedence over this flag.
    This means that if a check has been configured to trap elsewhere on the

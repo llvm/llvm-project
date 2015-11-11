@@ -194,14 +194,20 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
 
 static void addAddressSanitizerPasses(const PassManagerBuilder &Builder,
                                       legacy::PassManagerBase &PM) {
-  PM.add(createAddressSanitizerFunctionPass(/*CompileKernel*/false));
-  PM.add(createAddressSanitizerModulePass(/*CompileKernel*/false));
+  const PassManagerBuilderWrapper &BuilderWrapper =
+      static_cast<const PassManagerBuilderWrapper&>(Builder);
+  const CodeGenOptions &CGOpts = BuilderWrapper.getCGOpts();
+  bool Recover = CGOpts.SanitizeRecover.has(SanitizerKind::Address);
+  PM.add(createAddressSanitizerFunctionPass(/*CompileKernel*/false, Recover));
+  PM.add(createAddressSanitizerModulePass(/*CompileKernel*/false, Recover));
 }
 
 static void addKernelAddressSanitizerPasses(const PassManagerBuilder &Builder,
                                             legacy::PassManagerBase &PM) {
-  PM.add(createAddressSanitizerFunctionPass(/*CompileKernel*/true));
-  PM.add(createAddressSanitizerModulePass(/*CompileKernel*/true));
+  PM.add(createAddressSanitizerFunctionPass(/*CompileKernel*/true,
+                                            /*Recover*/true));
+  PM.add(createAddressSanitizerModulePass(/*CompileKernel*/true,
+                                          /*Recover*/true));
 }
 
 static void addMemorySanitizerPass(const PassManagerBuilder &Builder,

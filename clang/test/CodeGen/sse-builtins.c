@@ -495,3 +495,27 @@ __m128i test_mm_undefined_si128() {
   // CHECK: ret <2 x i64> undef
   return _mm_undefined_si128();
 }
+
+__m64 test_mm_add_si64(__m64 __a, __m64 __b) {
+  // CHECK-LABEL: @test_mm_add_si64
+  // CHECK @llvm.x86.mmx.padd.q(x86_mmx %{{.*}}, x86_mmx %{{.*}})
+  return _mm_add_si64(__a, __b);
+}
+
+__m64 test_mm_sub_si64(__m64 __a, __m64 __b) {
+  // CHECK-LABEL: @test_mm_sub_si64
+  // CHECK @llvm.x86.mmx.psub.q(x86_mmx %{{.*}}, x86_mmx %{{.*}})
+  return _mm_sub_si64(__a, __b);
+}
+
+__m64 test_mm_mul_su32(__m64 __a, __m64 __b) {
+  // CHECK-LABEL: @test_mm_mul_su32
+  // CHECK @llvm.x86.mmx.pmulu.dq(x86_mmx %{{.*}}, x86_mmx %{{.*}})
+  return _mm_mul_su32(__a, __b);
+}
+
+void test_mm_pause() {
+  // CHECK-LABEL: @test_mm_pause
+  // CHECK @llvm.x86.sse2.pause()
+  return _mm_pause();
+}
