@@ -58,3 +58,40 @@ TEST(Local, RecursivelyDeleteDeadPHINodes) {
   delete bb0;
   delete bb1;
 }
+
+TEST(Local, RemoveDuplicatePHINodes) {
+  LLVMContext &C(getGlobalContext());
+  IRBuilder<> B(C);
+
+  std::unique_ptr<Function> F(
+      Function::Create(FunctionType::get(B.getVoidTy(), false),
+                       GlobalValue::ExternalLinkage, "F"));
+  BasicBlock *Entry(BasicBlock::Create(C, "", F.get()));
+  BasicBlock *BB(BasicBlock::Create(C, "", F.get()));
+  BranchInst::Create(BB, Entry);
+
+  B.SetInsertPoint(BB);
+
+  AssertingVH<PHINode> P1 = B.CreatePHI(Type::getInt32Ty(C), 2);
+  P1->addIncoming(B.getInt32(42), Entry);
+
+  PHINode *P2 = B.CreatePHI(Type::getInt32Ty(C), 2);
+  P2->addIncoming(B.getInt32(42), Entry);
+
+  AssertingVH<PHINode> P3 = B.CreatePHI(Type::getInt32Ty(C), 2);
+  P3->addIncoming(B.getInt32(42), Entry);
+  P3->addIncoming(B.getInt32(23), BB);
+
+  PHINode *P4 = B.CreatePHI(Type::getInt32Ty(C), 2);
+  P4->addIncoming(B.getInt32(42), Entry);
+  P4->addIncoming(B.getInt32(23), BB);
+
+  P1->addIncoming(P3, BB);
+  P2->addIncoming(P4, BB);
+  BranchInst::Create(BB, BB);
+
+  // Verify that we can eliminate PHIs that become duplicates after chaning PHIs
+  // downstream.
+  EXPECT_TRUE(EliminateDuplicatePHINodes(BB));
+  EXPECT_EQ(3U, BB->size());
+}
