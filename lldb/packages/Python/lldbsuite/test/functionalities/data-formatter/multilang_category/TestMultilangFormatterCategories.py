@@ -10,20 +10,12 @@ class TestMultilangFormatterCategories(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @dsym_test
     @swiftTest
     @skipUnlessDarwin
-    def test_with_dsym(self):
+    @expectedFailureDarwin("rdar://problem/23524024")
+    def test_multilang_formatter_categories(self):
         """Test that formatter categories can work for multiple languages"""
-        self.buildDsym()
-        self.do_test()
-
-    @dwarf_test
-    @swiftTest
-    @skipUnlessDarwin
-    def test_with_dwarf(self):
-        """Test that formatter categories can work for multiple languages"""
-        self.buildDwarf()
+        self.build()
         self.do_test()
 
     def setUp(self):
