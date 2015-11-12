@@ -41,8 +41,8 @@ N: Anton Korobeynikov
 E: anton@korobeynikov.info
 D: Exception handling, Windows codegen, ARM EABI
 
-N: Ted Kremenek
-E: kremenek@apple.com
+N: Anna Zaks
+E: ganna@apple.com
 D: Clang Static Analyzer
 
 N: John McCall

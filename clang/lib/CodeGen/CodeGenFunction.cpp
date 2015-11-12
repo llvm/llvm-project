@@ -29,6 +29,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/CodeGenOptions.h"
+#include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -1841,3 +1842,72 @@ template void CGBuilderInserter<PreserveNames>::InsertHelper(
     llvm::Instruction *I, const llvm::Twine &Name, llvm::BasicBlock *BB,
     llvm::BasicBlock::iterator InsertPt) const;
 #undef PreserveNames
+
+static bool hasRequiredFeatures(const SmallVectorImpl<StringRef> &ReqFeatures,
+                                CodeGenModule &CGM, const FunctionDecl *FD) {
+  // If there aren't any required features listed then go ahead and return.
+  if (ReqFeatures.empty())
+    return false;
+
+  // Now build up the set of caller features and verify that all the required
+  // features are there.
+  llvm::StringMap<bool> CallerFeatureMap;
+  CGM.getFunctionFeatureMap(CallerFeatureMap, FD);
+
+  // If we have at least one of the features in the feature list return
+  // true, otherwise return false.
+  return std::all_of(
+      ReqFeatures.begin(), ReqFeatures.end(), [&](StringRef Feature) {
+        SmallVector<StringRef, 1> OrFeatures;
+        Feature.split(OrFeatures, "|");
+        return std::any_of(OrFeatures.begin(), OrFeatures.end(),
+                           [&](StringRef Feature) {
+                             return CallerFeatureMap.lookup(Feature);
+                           });
+      });
+}
+
+// Emits an error if we don't have a valid set of target features for the
+// called function.
+void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
+                                          const FunctionDecl *TargetDecl) {
+  // Early exit if this is an indirect call.
+  if (!TargetDecl)
+    return;
+
+  // Get the current enclosing function if it exists. If it doesn't
+  // we can't check the target features anyhow.
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl);
+  if (!FD)
+    return;
+
+  // Grab the required features for the call. For a builtin this is listed in
+  // the td file with the default cpu, for an always_inline function this is any
+  // listed cpu and any listed features.
+  unsigned BuiltinID = TargetDecl->getBuiltinID();
+  if (BuiltinID) {
+    SmallVector<StringRef, 1> ReqFeatures;
+    const char *FeatureList =
+        CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
+    // Return if the builtin doesn't have any required features.
+    if (!FeatureList || StringRef(FeatureList) == "")
+      return;
+    StringRef(FeatureList).split(ReqFeatures, ",");
+
+    if (!hasRequiredFeatures(ReqFeatures, CGM, FD))
+      CGM.getDiags().Report(E->getLocStart(), diag::err_builtin_needs_feature)
+          << TargetDecl->getDeclName()
+          << CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
+
+  } else if (TargetDecl->hasAttr<TargetAttr>()) {
+    // Get the required features for the callee.
+    SmallVector<StringRef, 1> ReqFeatures;
+    llvm::StringMap<bool> CalleeFeatureMap;
+    CGM.getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
+    for (const auto &F : CalleeFeatureMap)
+      ReqFeatures.push_back(F.getKey());
+    if (!hasRequiredFeatures(ReqFeatures, CGM, FD))
+      CGM.getDiags().Report(E->getLocStart(), diag::err_function_needs_feature)
+          << FD->getDeclName() << TargetDecl->getDeclName();
+  }
+}

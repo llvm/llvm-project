@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -x c++ %s
-// RUN: not %clang_cc1 -fdiagnostics-parseable-fixits -x c++ %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -verify -x c++ -std=c++98 %s
+// RUN: not %clang_cc1 -fdiagnostics-parseable-fixits -x c++ -std=c++98 %s 2>&1 | FileCheck %s
 
 struct S {
   int n;

@@ -2315,12 +2315,17 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D) {
   llvm::GlobalValue::LinkageTypes Linkage =
       getLLVMLinkageVarDefinition(D, GV->isConstant());
 
-  // On Darwin, the backing variable for a C++11 thread_local variable always
-  // has internal linkage; all accesses should just be calls to the
+  // On Darwin, if the normal linkage of a C++ thread_local variable is
+  // LinkOnce or Weak, we keep the normal linkage to prevent multiple
+  // copies within a linkage unit; otherwise, the backing variable has
+  // internal linkage and all accesses should just be calls to the
   // Itanium-specified entry point, which has the normal linkage of the
-  // variable.
+  // variable. This is to preserve the ability to change the implementation
+  // behind the scenes.
   if (!D->isStaticLocal() && D->getTLSKind() == VarDecl::TLS_Dynamic &&
-      Context.getTargetInfo().getTriple().isMacOSX())
+      Context.getTargetInfo().getTriple().isOSDarwin() &&
+      !llvm::GlobalVariable::isLinkOnceLinkage(Linkage) &&
+      !llvm::GlobalVariable::isWeakLinkage(Linkage))
     Linkage = llvm::GlobalValue::InternalLinkage;
 
   GV->setLinkage(Linkage);
@@ -3871,4 +3876,33 @@ llvm::MDTuple *CodeGenModule::CreateVTableBitSetEntry(
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(Int64Ty, Offset.getQuantity()))};
   return llvm::MDTuple::get(getLLVMContext(), BitsetOps);
+}
+
+// Fills in the supplied string map with the set of target features for the
+// passed in function.
+void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
+                                          const FunctionDecl *FD) {
+  StringRef TargetCPU = Target.getTargetOpts().CPU;
+  if (const auto *TD = FD->getAttr<TargetAttr>()) {
+    // If we have a TargetAttr build up the feature map based on that.
+    TargetAttr::ParsedTargetAttr ParsedAttr = TD->parse();
+
+    // Make a copy of the features as passed on the command line into the
+    // beginning of the additional features from the function to override.
+    ParsedAttr.first.insert(ParsedAttr.first.begin(),
+                            Target.getTargetOpts().FeaturesAsWritten.begin(),
+                            Target.getTargetOpts().FeaturesAsWritten.end());
+
+    if (ParsedAttr.second != "")
+      TargetCPU = ParsedAttr.second;
+
+    // Now populate the feature map, first with the TargetCPU which is either
+    // the default or a new one from the target attribute string. Then we'll use
+    // the passed in features (FeaturesAsWritten) along with the new ones from
+    // the attribute.
+    Target.initFeatureMap(FeatureMap, getDiags(), TargetCPU, ParsedAttr.first);
+  } else {
+    Target.initFeatureMap(FeatureMap, getDiags(), TargetCPU,
+                          Target.getTargetOpts().Features);
+  }
 }

@@ -7573,7 +7573,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S,
   assert(IdentLoc.isValid() && "Invalid NamespceName location.");
 
   // This can only happen along a recovery path.
-  while (S->getFlags() & Scope::TemplateParamScope)
+  while (S->isTemplateParamScope())
     S = S->getParent();
   assert(S->getFlags() & Scope::DeclScope && "Invalid Scope.");
 
@@ -8533,7 +8533,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S,
                                   TypeResult Type,
                                   Decl *DeclFromDeclSpec) {
   // Skip up to the relevant declaration scope.
-  while (S->getFlags() & Scope::TemplateParamScope)
+  while (S->isTemplateParamScope())
     S = S->getParent();
   assert((S->getFlags() & Scope::DeclScope) &&
          "got alias-declaration outside of declaration scope");

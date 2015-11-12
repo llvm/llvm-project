@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -verify -std=c++11 %s
 
 struct ValueInt
 {
@@ -20,8 +22,15 @@ struct TwoValueInts : ValueInt, IndirectValueInt { }; // expected-warning{{direc
 
 
 void test() {
-  (void)new int[ValueInt(10)]; // expected-warning{{implicit conversion from array size expression of type 'ValueInt' to integral type 'int' is a C++11 extension}}
-  (void)new int[ValueEnum()]; // expected-warning{{implicit conversion from array size expression of type 'ValueEnum' to enumeration type 'E' is a C++11 extension}}
+  (void)new int[ValueInt(10)];
+#if __cplusplus <= 199711L // C++03 or earlier modes
+  // expected-warning@-2{{implicit conversion from array size expression of type 'ValueInt' to integral type 'int' is a C++11 extension}}
+#endif
+
+  (void)new int[ValueEnum()];
+#if __cplusplus <= 199711L
+// expected-warning@-2{{implicit conversion from array size expression of type 'ValueEnum' to enumeration type 'E' is a C++11 extension}}
+#endif
   (void)new int[ValueBoth()]; // expected-error{{ambiguous conversion of array size expression of type 'ValueBoth' to an integral or enumeration type}}
 
   (void)new int[TwoValueInts()]; // expected-error{{ambiguous conversion of array size expression of type 'TwoValueInts' to an integral or enumeration type}}

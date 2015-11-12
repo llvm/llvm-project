@@ -157,10 +157,8 @@ def ext_unknown_escape : ExtWarn<"unknown escape sequence '\\%0'">,
 def err_invalid_decimal_digit : Error<"invalid digit '%0' in decimal constant">;
 def err_invalid_binary_digit : Error<"invalid digit '%0' in binary constant">;
 def err_invalid_octal_digit : Error<"invalid digit '%0' in octal constant">;
-def err_invalid_suffix_integer_constant : Error<
-  "invalid suffix '%0' on integer constant">;
-def err_invalid_suffix_float_constant : Error<
-  "invalid suffix '%0' on floating constant">;
+def err_invalid_suffix_constant : Error<
+  "invalid suffix '%0' on %select{integer|floating}1 constant">;
 def warn_cxx11_compat_digit_separator : Warning<
   "digit separators are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;

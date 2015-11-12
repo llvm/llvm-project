@@ -518,14 +518,14 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       llvm::Value *GuardVal = Builder.CreateLoad(Guard);
       llvm::Value *Uninit = Builder.CreateIsNull(GuardVal,
                                                  "guard.uninitialized");
-      // Mark as initialized before initializing anything else. If the
-      // initializers use previously-initialized thread_local vars, that's
-      // probably supposed to be OK, but the standard doesn't say.
-      Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(),1), Guard);
       llvm::BasicBlock *InitBlock = createBasicBlock("init");
       ExitBlock = createBasicBlock("exit");
       Builder.CreateCondBr(Uninit, InitBlock, ExitBlock);
       EmitBlock(InitBlock);
+      // Mark as initialized before initializing anything else. If the
+      // initializers use previously-initialized thread_local vars, that's
+      // probably supposed to be OK, but the standard doesn't say.
+      Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(),1), Guard);
     }
 
     RunCleanupsScope Scope(*this);

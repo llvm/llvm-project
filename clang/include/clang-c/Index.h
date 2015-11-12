@@ -3863,6 +3863,12 @@ CINDEX_LINKAGE CXString clang_Cursor_getBriefCommentText(CXCursor C);
 CINDEX_LINKAGE CXString clang_Cursor_getMangling(CXCursor);
 
 /**
+ * \brief Retrieve the CXStrings representing the mangled symbols of the C++
+ * constructor or destructor at the cursor.
+ */
+CINDEX_LINKAGE CXStringSet *clang_Cursor_getCXXManglings(CXCursor);
+
+/**
  * @}
  */
 

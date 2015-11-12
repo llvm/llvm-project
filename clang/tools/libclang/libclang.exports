@@ -15,6 +15,7 @@ clang_Cursor_getTemplateArgumentValue
 clang_Cursor_getTemplateArgumentUnsignedValue
 clang_Cursor_getBriefCommentText
 clang_Cursor_getCommentRange
+clang_Cursor_getCXXManglings
 clang_Cursor_getMangling
 clang_Cursor_getParsedComment
 clang_Cursor_getRawCommentText
@@ -120,6 +121,7 @@ clang_disposeOverriddenCursors
 clang_disposeCXPlatformAvailability
 clang_disposeSourceRangeList
 clang_disposeString
+clang_disposeStringSet
 clang_disposeTokens
 clang_disposeTranslationUnit
 clang_enableStackTraces

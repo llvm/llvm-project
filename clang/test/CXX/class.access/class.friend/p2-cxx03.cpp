@@ -1,7 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 template<typename T>
 class X0 {
-  friend T; // expected-warning{{non-class friend type 'T' is a C++11 extension}}
+  friend T;
+#if __cplusplus <= 199711L // C++03 or earlier modes
+  // expected-warning@-2{{non-class friend type 'T' is a C++11 extension}}
+#else
+  // expected-no-diagnostics
+#endif
 };
 
 class X1 { };
