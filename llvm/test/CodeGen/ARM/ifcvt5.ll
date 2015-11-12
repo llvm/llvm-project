@@ -13,10 +13,10 @@ entry:
 
 define i32 @t1(i32 %a, i32 %b) {
 ; A8-LABEL: t1:
-; A8: poplt {r7, pc}
+; A8: bxlt lr
 
 ; SWIFT-LABEL: t1:
-; SWIFT: pop {r7, pc}
+; SWIFT: bxlt lr
 ; SWIFT: pop {r7, pc}
 entry:
 	%tmp1 = icmp sgt i32 %a, 10		; <i1> [#uses=1]

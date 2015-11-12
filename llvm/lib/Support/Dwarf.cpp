@@ -468,6 +468,7 @@ const char *llvm::dwarf::MacinfoString(unsigned Encoding) {
   case DW_MACINFO_start_file:            return "DW_MACINFO_start_file";
   case DW_MACINFO_end_file:              return "DW_MACINFO_end_file";
   case DW_MACINFO_vendor_ext:            return "DW_MACINFO_vendor_ext";
+  case DW_MACINFO_invalid:               return "DW_MACINFO_invalid";
   }
   return nullptr;
 }

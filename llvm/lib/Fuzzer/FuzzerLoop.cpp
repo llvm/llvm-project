@@ -18,6 +18,7 @@ extern "C" {
 // libFuzzer can be linked w/o the sanitizers and sanitizer-coveragte
 // (in which case it will complain at start-up time).
 __attribute__((weak)) void __sanitizer_print_stack_trace();
+__attribute__((weak)) void __sanitizer_reset_coverage();
 __attribute__((weak)) size_t __sanitizer_get_total_unique_caller_callee_pairs();
 __attribute__((weak)) size_t __sanitizer_get_total_unique_coverage();
 __attribute__((weak))
@@ -107,9 +108,23 @@ void Fuzzer::AlarmCallback() {
 }
 
 void Fuzzer::PrintStats(const char *Where, const char *End) {
-  if (!Options.Verbosity) return;
   size_t Seconds = secondsSinceProcessStartUp();
   size_t ExecPerSec = (Seconds ? TotalNumberOfRuns / Seconds : 0);
+
+  if (Options.OutputCSV) {
+    static bool csvHeaderPrinted = false;
+    if (!csvHeaderPrinted) {
+      csvHeaderPrinted = true;
+      Printf("runs,block_cov,bits,cc_cov,corpus,execs_per_sec,tbms,reason\n");
+    }
+    Printf("%zd,%zd,%zd,%zd,%zd,%zd,%zd,%s\n", TotalNumberOfRuns,
+           LastRecordedBlockCoverage, TotalBits(),
+           LastRecordedCallerCalleeCoverage, Corpus.size(), ExecPerSec,
+           TotalNumberOfExecutedTraceBasedMutations, Where);
+  }
+
+  if (!Options.Verbosity)
+    return;
   Printf("#%zd\t%s", TotalNumberOfRuns, Where);
   if (LastRecordedBlockCoverage)
     Printf(" cov: %zd", LastRecordedBlockCoverage);
@@ -143,8 +158,7 @@ void Fuzzer::RereadOutputCorpus() {
       CurrentUnit.insert(CurrentUnit.begin(), X.begin(), X.end());
       if (RunOne(CurrentUnit)) {
         Corpus.push_back(X);
-        if (Options.Verbosity >= 1)
-          PrintStats("RELOAD");
+        PrintStats("RELOAD");
       }
     }
   }
@@ -197,9 +211,8 @@ bool Fuzzer::RunOne(const Unit &U) {
   auto UnitStopTime = system_clock::now();
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
-  if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1))
-      && secondsSinceProcessStartUp() >= 2
-      && Options.Verbosity)
+  if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
+      secondsSinceProcessStartUp() >= 2)
     PrintStats("pulse ");
   if (TimeOfUnit > TimeOfLongestUnitInSeconds &&
       TimeOfUnit >= Options.ReportSlowUnits) {
@@ -293,9 +306,9 @@ void Fuzzer::SaveCorpus() {
            Options.OutputCorpus.c_str());
 }
 
-void Fuzzer::ReportNewCoverage(const Unit &U) {
-  Corpus.push_back(U);
-  UnitHashesAddedToCorpus.insert(Hash(U));
+void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
+  if (!Options.PrintNEW)
+    return;
   PrintStats("NEW   ", "");
   if (Options.Verbosity) {
     Printf(" L: %zd", U.size());
@@ -306,6 +319,12 @@ void Fuzzer::ReportNewCoverage(const Unit &U) {
     }
     Printf("\n");
   }
+}
+
+void Fuzzer::ReportNewCoverage(const Unit &U) {
+  Corpus.push_back(U);
+  UnitHashesAddedToCorpus.insert(Hash(U));
+  PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
   if (Options.ExitOnFirst)
     exit(0);
@@ -374,7 +393,7 @@ void Fuzzer::MutateAndTestOne(Unit *U) {
 // Returns an index of random unit from the corpus to mutate.
 // Hypothesis: units added to the corpus last are more likely to be interesting.
 // This function gives more wieght to the more recent units.
-size_t Fuzzer::ChooseUnitToMutate() {
+size_t Fuzzer::ChooseUnitIdxToMutate() {
     size_t N = Corpus.size();
     size_t Total = (N + 1) * N / 2;
     size_t R = USF.GetRand()(Total);
@@ -391,24 +410,69 @@ size_t Fuzzer::ChooseUnitToMutate() {
     return IdxBeg;
 }
 
-void Fuzzer::Loop() {
-  for (auto &U: Options.Dictionary)
-    USF.GetMD().AddWordToDictionary(U.data(), U.size());
+// Experimental search heuristic: drilling.
+// - Read, shuffle, execute and minimize the corpus.
+// - Choose one random unit.
+// - Reset the coverage.
+// - Start fuzzing as if the chosen unit was the only element of the corpus.
+// - When done, reset the coverage again.
+// - Merge the newly created corpus into the original one.
+void Fuzzer::Drill() {
+  // The corpus is already read, shuffled, and minimized.
+  assert(!Corpus.empty());
+  Options.PrintNEW = false;  // Don't print NEW status lines when drilling.
 
+  Unit U = ChooseUnitToMutate();
+
+  CHECK_WEAK_API_FUNCTION(__sanitizer_reset_coverage);
+  __sanitizer_reset_coverage();
+
+  std::vector<Unit> SavedCorpus;
+  SavedCorpus.swap(Corpus);
+  Corpus.push_back(U);
+  assert(Corpus.size() == 1);
+  RunOne(U);
+  PrintStats("DRILL ");
+  std::string SavedOutputCorpusPath; // Don't write new units while drilling.
+  SavedOutputCorpusPath.swap(Options.OutputCorpus);
+  Loop();
+
+  __sanitizer_reset_coverage();
+
+  PrintStats("REINIT");
+  SavedOutputCorpusPath.swap(Options.OutputCorpus);
+  for (auto &U : SavedCorpus)
+    RunOne(U);
+  PrintStats("MERGE ");
+  Options.PrintNEW = true;
+  size_t NumMerged = 0;
+  for (auto &U : Corpus) {
+    if (RunOne(U)) {
+      PrintStatusForNewUnit(U);
+      NumMerged++;
+      WriteToOutputCorpus(U);
+    }
+  }
+  PrintStats("MERGED");
+  if (NumMerged && Options.Verbosity)
+    Printf("Drilling discovered %zd new units\n", NumMerged);
+}
+
+void Fuzzer::Loop() {
   while (true) {
-    size_t J1 = ChooseUnitToMutate();;
+    size_t J1 = ChooseUnitIdxToMutate();;
     SyncCorpus();
     RereadOutputCorpus();
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
-      return;
+      break;
     if (Options.MaxTotalTimeSec > 0 &&
         secondsSinceProcessStartUp() >
         static_cast<size_t>(Options.MaxTotalTimeSec))
-      return;
+      break;
     CurrentUnit = Corpus[J1];
     // Optionally, cross with another unit.
     if (Options.DoCrossOver && USF.GetRand().RandBool()) {
-      size_t J2 = ChooseUnitToMutate();
+      size_t J2 = ChooseUnitIdxToMutate();
       if (!Corpus[J1].empty() && !Corpus[J2].empty()) {
         assert(!Corpus[J2].empty());
         CurrentUnit.resize(Options.MaxLen);
@@ -424,6 +488,8 @@ void Fuzzer::Loop() {
     // Perform several mutations and runs.
     MutateAndTestOne(&CurrentUnit);
   }
+
+  PrintStats("DONE  ", "\n");
 }
 
 void Fuzzer::SyncCorpus() {

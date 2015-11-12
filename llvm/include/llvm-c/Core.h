@@ -1187,6 +1187,7 @@ LLVMTypeRef LLVMX86MMXType(void);
       macro(ConstantInt)                    \
       macro(ConstantPointerNull)            \
       macro(ConstantStruct)                 \
+      macro(ConstantTokenNone)              \
       macro(ConstantVector)                 \
       macro(GlobalValue)                    \
         macro(GlobalAlias)                  \

@@ -81,8 +81,10 @@ bool Constant::isNullValue() const {
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     return CFP->isZero() && !CFP->isNegative();
 
-  // constant zero is zero for aggregates and cpnull is null for pointers.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this);
+  // constant zero is zero for aggregates, cpnull is null for pointers, none for
+  // tokens.
+  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
+         isa<ConstantTokenNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -204,6 +206,8 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::ArrayTyID:
   case Type::VectorTyID:
     return ConstantAggregateZero::get(Ty);
+  case Type::TokenTyID:
+    return ConstantTokenNone::get(Ty->getContext());
   default:
     // Function, Label, or Opaque type?
     llvm_unreachable("Cannot create a null constant of that type!");
@@ -1170,6 +1174,17 @@ Constant *ConstantVector::getSplat(unsigned NumElts, Constant *V) {
   return get(Elts);
 }
 
+ConstantTokenNone *ConstantTokenNone::get(LLVMContext &Context) {
+  LLVMContextImpl *pImpl = Context.pImpl;
+  if (!pImpl->TheNoneToken)
+    pImpl->TheNoneToken = new ConstantTokenNone(Context);
+  return pImpl->TheNoneToken;
+}
+
+/// Remove the constant from the constant table.
+void ConstantTokenNone::destroyConstantImpl() {
+  llvm_unreachable("You can't ConstantTokenNone->destroyConstantImpl()!");
+}
 
 // Utility function for determining if a ConstantExpr is a CastOp or not. This
 // can't be inline because we don't want to #include Instruction.h into
@@ -2872,6 +2887,11 @@ Value *ConstantInt::handleOperandChangeImpl(Value *From, Value *To, Use *U) {
 }
 
 Value *ConstantFP::handleOperandChangeImpl(Value *From, Value *To, Use *U) {
+  llvm_unreachable("Unsupported class for handleOperandChange()!");
+}
+
+Value *ConstantTokenNone::handleOperandChangeImpl(Value *From, Value *To,
+                                                  Use *U) {
   llvm_unreachable("Unsupported class for handleOperandChange()!");
 }
 

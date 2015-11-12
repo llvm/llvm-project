@@ -23,7 +23,7 @@ define i32* @bar() {
 
 ; CHECK: .globl	baz
 ; CHECK-NEXT: .align	2
-; CHECK: adr.w
+; CHECK: tbb
 define i32 @baz() {
   %1 = load i32, i32* @c, align 4
   switch i32 %1, label %7 [

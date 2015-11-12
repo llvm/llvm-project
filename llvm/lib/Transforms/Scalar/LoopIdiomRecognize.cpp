@@ -107,6 +107,9 @@ public:
   }
 
 private:
+  typedef SmallVector<StoreInst *, 8> StoreList;
+  StoreList StoreRefs;
+
   /// \name Countable Loop Idiom Handling
   /// @{
 
@@ -114,6 +117,7 @@ private:
   bool runOnLoopBlock(BasicBlock *BB, const SCEV *BECount,
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
+  void collectStores(BasicBlock *BB);
   bool processLoopStore(StoreInst *SI, const SCEV *BECount);
   bool processLoopMemSet(MemSetInst *MSI, const SCEV *BECount);
 
@@ -240,6 +244,22 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   return MadeChange;
 }
 
+void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
+  StoreRefs.clear();
+  for (Instruction &I : *BB) {
+    StoreInst *SI = dyn_cast<StoreInst>(&I);
+    if (!SI)
+      continue;
+
+    // Don't touch volatile stores.
+    if (!SI->isSimple())
+      continue;
+
+    // Save the store locations.
+    StoreRefs.push_back(SI);
+  }
+}
+
 /// runOnLoopBlock - Process the specified block, which lives in a counted loop
 /// with the specified backedge count.  This block is known to be in the current
 /// loop and not in any subloops.
@@ -254,22 +274,13 @@ bool LoopIdiomRecognize::runOnLoopBlock(
       return false;
 
   bool MadeChange = false;
+  // Look for store instructions, which may be optimized to memset/memcpy.
+  collectStores(BB);
+  for (auto &SI : StoreRefs)
+    MadeChange |= processLoopStore(SI, BECount);
+
   for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
     Instruction *Inst = &*I++;
-    // Look for store instructions, which may be optimized to memset/memcpy.
-    if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-      WeakVH InstPtr(&*I);
-      if (!processLoopStore(SI, BECount))
-        continue;
-      MadeChange = true;
-
-      // If processing the store invalidated our iterator, start over from the
-      // top of the block.
-      if (!InstPtr)
-        I = BB->begin();
-      continue;
-    }
-
     // Look for memset instructions, which may be optimized to a larger memset.
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
       WeakVH InstPtr(&*I);
@@ -290,8 +301,7 @@ bool LoopIdiomRecognize::runOnLoopBlock(
 
 /// processLoopStore - See if this store can be promoted to a memset or memcpy.
 bool LoopIdiomRecognize::processLoopStore(StoreInst *SI, const SCEV *BECount) {
-  if (!SI->isSimple())
-    return false;
+  assert(SI->isSimple() && "Expected only non-volatile stores.");
 
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();

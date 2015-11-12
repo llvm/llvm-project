@@ -49,7 +49,7 @@ namespace lltok {
     kw_external, kw_thread_local,
     kw_localdynamic, kw_initialexec, kw_localexec,
     kw_zeroinitializer,
-    kw_undef, kw_null,
+    kw_undef, kw_null, kw_none,
     kw_to,
     kw_caller,
     kw_tail,

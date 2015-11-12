@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
@@ -45,6 +46,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugAranges> Aranges;
   std::unique_ptr<DWARFDebugLine> Line;
   std::unique_ptr<DWARFDebugFrame> DebugFrame;
+  std::unique_ptr<DWARFDebugMacro> Macro;
 
   DWARFUnitSection<DWARFCompileUnit> DWOCUs;
   std::vector<DWARFUnitSection<DWARFTypeUnit>> DWOTUs;
@@ -161,6 +163,9 @@ public:
   /// Get a pointer to the parsed frame information object.
   const DWARFDebugFrame *getDebugFrame();
 
+  /// Get a pointer to the parsed DebugMacro object.
+  const DWARFDebugMacro *getDebugMacro();
+
   /// Get a pointer to a parsed line table corresponding to a compile unit.
   const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *cu);
 
@@ -184,6 +189,7 @@ public:
   virtual const DWARFSection &getLineSection() = 0;
   virtual StringRef getStringSection() = 0;
   virtual StringRef getRangeSection() = 0;
+  virtual StringRef getMacinfoSection() = 0;
   virtual StringRef getPubNamesSection() = 0;
   virtual StringRef getPubTypesSection() = 0;
   virtual StringRef getGnuPubNamesSection() = 0;
@@ -234,6 +240,7 @@ class DWARFContextInMemory : public DWARFContext {
   DWARFSection LineSection;
   StringRef StringSection;
   StringRef RangeSection;
+  StringRef MacinfoSection;
   StringRef PubNamesSection;
   StringRef PubTypesSection;
   StringRef GnuPubNamesSection;
@@ -272,6 +279,7 @@ public:
   const DWARFSection &getLineSection() override { return LineSection; }
   StringRef getStringSection() override { return StringSection; }
   StringRef getRangeSection() override { return RangeSection; }
+  StringRef getMacinfoSection() override { return MacinfoSection; }
   StringRef getPubNamesSection() override { return PubNamesSection; }
   StringRef getPubTypesSection() override { return PubTypesSection; }
   StringRef getGnuPubNamesSection() override { return GnuPubNamesSection; }

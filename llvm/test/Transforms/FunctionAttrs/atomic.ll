@@ -19,5 +19,5 @@ entry:
   ret i32 %r
 }
 
-; CHECK: attributes #0 = { readnone ssp uwtable }
-; CHECK: attributes #1 = { ssp uwtable }
+; CHECK: attributes #0 = { norecurse readnone ssp uwtable }
+; CHECK: attributes #1 = { norecurse ssp uwtable }

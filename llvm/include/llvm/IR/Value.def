@@ -70,6 +70,7 @@ HANDLE_CONSTANT(ConstantArray)
 HANDLE_CONSTANT(ConstantStruct)
 HANDLE_CONSTANT(ConstantVector)
 HANDLE_CONSTANT(ConstantPointerNull)
+HANDLE_CONSTANT(ConstantTokenNone)
 
 HANDLE_METADATA_VALUE(MetadataAsValue)
 HANDLE_INLINE_ASM_VALUE(InlineAsm)
@@ -79,7 +80,7 @@ HANDLE_INSTRUCTION(Instruction)
 // don't add new values here!
 
 HANDLE_CONSTANT_MARKER(ConstantFirstVal, Function)
-HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantPointerNull)
+HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantTokenNone)
 
 #undef HANDLE_GLOBAL_VALUE
 #undef HANDLE_CONSTANT

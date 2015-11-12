@@ -16,9 +16,11 @@ define void @test_optnone(i8* %p) noinline optnone {
 
 declare i8 @strlen(i8*) noinline optnone
 ; CHECK-LABEL: @strlen
-; CHECK: (i8*) #1
+; CHECK: (i8*) #2
 
 ; CHECK-LABEL: attributes #0
-; CHECK: = { readnone }
+; CHECK: = { norecurse readnone }
 ; CHECK-LABEL: attributes #1
+; CHECK: = { noinline norecurse optnone }
+; CHECK-LABEL: attributes #2
 ; CHECK: = { noinline optnone }

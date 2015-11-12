@@ -50,6 +50,7 @@ STATISTIC(NumReadOnlyArg, "Number of arguments marked readonly");
 STATISTIC(NumNoAlias, "Number of function returns marked noalias");
 STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
 STATISTIC(NumAnnotated, "Number of attributes added to library functions");
+STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 
 namespace {
 typedef SmallSetVector<Function *, 8> SCCNodeSet;
@@ -63,7 +64,12 @@ struct FunctionAttrs : public CallGraphSCCPass {
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
-
+  bool doInitialization(CallGraph &CG) override {
+    Revisit.clear();
+    return false;
+  }
+  bool doFinalization(CallGraph &CG) override;
+  
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<AssumptionCacheTracker>();
@@ -73,6 +79,7 @@ struct FunctionAttrs : public CallGraphSCCPass {
 
 private:
   TargetLibraryInfo *TLI;
+  SmallVector<WeakVH,16> Revisit;
 };
 }
 
@@ -976,6 +983,14 @@ static void setDoesNotAlias(Function &F, unsigned n) {
   }
 }
 
+static bool setDoesNotRecurse(Function &F) {
+  if (F.doesNotRecurse())
+    return false;
+  F.setDoesNotRecurse();
+  ++NumNoRecurse;
+  return true;
+}
+
 /// Analyze the name and prototype of the given function and set any applicable
 /// attributes.
 ///
@@ -1779,6 +1794,55 @@ static bool inferPrototypeAttributes(Function &F, const TargetLibraryInfo &TLI) 
   return true;
 }
 
+static bool addNoRecurseAttrs(const CallGraphSCC &SCC,
+                              SmallVectorImpl<WeakVH> &Revisit) {
+  // Try and identify functions that do not recurse.
+
+  // If the SCC contains multiple nodes we know for sure there is recursion.
+  if (!SCC.isSingular())
+    return false;
+
+  const CallGraphNode *CGN = *SCC.begin();
+  Function *F = CGN->getFunction();
+  if (!F || F->isDeclaration() || F->doesNotRecurse())
+    return false;
+
+  // If all of the calls in F are identifiable and are to norecurse functions, F
+  // is norecurse. This check also detects self-recursion as F is not currently
+  // marked norecurse, so any called from F to F will not be marked norecurse.
+  if (std::all_of(CGN->begin(), CGN->end(),
+                  [](const CallGraphNode::CallRecord &CR) {
+                    Function *F = CR.second->getFunction();
+                    return F && F->doesNotRecurse();
+                  }))
+    // Function calls a potentially recursive function.
+    return setDoesNotRecurse(*F);
+
+  // We know that F is not obviously recursive, but we haven't been able to
+  // prove that it doesn't actually recurse. Add it to the Revisit list to try
+  // again top-down later.
+  Revisit.push_back(F);
+  return false;
+}
+
+static bool addNoRecurseAttrsTopDownOnly(Function *F) {
+  // If F is internal and all uses are in norecurse functions, then F is also
+  // norecurse.
+  if (F->doesNotRecurse())
+    return false;
+  if (F->hasInternalLinkage()) {
+    for (auto *U : F->users())
+      if (auto *I = dyn_cast<Instruction>(U)) {
+        if (!I->getParent()->getParent()->doesNotRecurse())
+          return false;
+      } else {
+        return false;
+      }
+    return setDoesNotRecurse(*F);
+  }
+  return false;
+}
+
 bool FunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
@@ -1826,6 +1890,19 @@ bool FunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
     Changed |= addNoAliasAttrs(SCCNodes);
     Changed |= addNonNullAttrs(SCCNodes, *TLI);
   }
+  
+  Changed |= addNoRecurseAttrs(SCC, Revisit);
+  return Changed;
+}
 
+bool FunctionAttrs::doFinalization(CallGraph &CG) {
+  bool Changed = false;
+  // When iterating over SCCs we visit functions in a bottom-up fashion. Some of
+  // the rules we have for identifying norecurse functions work best with a
+  // top-down walk, so look again at all the functions we previously marked as
+  // worth revisiting, in top-down order.
+  for (auto &F : reverse(Revisit))
+    if (F)
+      Changed |= addNoRecurseAttrsTopDownOnly(cast<Function>((Value*)F));
   return Changed;
 }

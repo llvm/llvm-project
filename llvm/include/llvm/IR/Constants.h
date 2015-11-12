@@ -795,7 +795,32 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+/// ConstantTokenNone - a constant token which is empty
+///
+class ConstantTokenNone : public Constant {
+  void *operator new(size_t, unsigned) = delete;
+  ConstantTokenNone(const ConstantTokenNone &) = delete;
 
+  friend class Constant;
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+
+protected:
+  explicit ConstantTokenNone(LLVMContext &Context)
+      : Constant(Type::getTokenTy(Context), ConstantTokenNoneVal, nullptr, 0) {}
+  // allocate space for exactly zero operands
+  void *operator new(size_t s) { return User::operator new(s, 0); }
+
+public:
+  /// Return the ConstantTokenNone.
+  static ConstantTokenNone *get(LLVMContext &Context);
+
+  /// @brief Methods to support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const Value *V) {
+    return V->getValueID() == ConstantTokenNoneVal;
+  }
+};
 
 /// BlockAddress - The address of a basic block.
 ///

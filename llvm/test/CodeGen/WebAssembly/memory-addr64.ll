@@ -12,7 +12,7 @@ declare void @llvm.wasm.grow.memory.i64(i64) nounwind
 ; CHECK-NEXT: .result i64{{$}}
 ; CHECK-NEXT: .local i64{{$}}
 ; CHECK-NEXT: memory_size
-; CHECK-NEXT: set_local 0, pop{{$}}
+; CHECK-NEXT: set_local 0, $pop{{$}}
 ; CHECK-NEXT: return (get_local 0){{$}}
 define i64 @memory_size() {
   %a = call i64 @llvm.wasm.memory.size.i64()
@@ -22,7 +22,7 @@ define i64 @memory_size() {
 ; CHECK-LABEL: grow_memory:
 ; CHECK-NEXT: .param i64
 ; CHECK-NEXT: .local i64{{$}}
-; CHECK: grow_memory (get_local 1)
+; CHECK: grow_memory (get_local 0)
 ; CHECK-NEXT: return
 define void @grow_memory(i64 %n) {
   call void @llvm.wasm.grow.memory.i64(i64 %n)

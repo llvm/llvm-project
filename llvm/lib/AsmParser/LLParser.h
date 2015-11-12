@@ -46,15 +46,15 @@ namespace llvm {
   /// or a symbolic (%var) reference.  This is just a discriminated union.
   struct ValID {
     enum {
-      t_LocalID, t_GlobalID,      // ID in UIntVal.
-      t_LocalName, t_GlobalName,  // Name in StrVal.
-      t_APSInt, t_APFloat,        // Value in APSIntVal/APFloatVal.
-      t_Null, t_Undef, t_Zero,    // No value.
-      t_EmptyArray,               // No value:  []
-      t_Constant,                 // Value in ConstantVal.
-      t_InlineAsm,                // Value in FTy/StrVal/StrVal2/UIntVal.
-      t_ConstantStruct,           // Value in ConstantStructElts.
-      t_PackedConstantStruct      // Value in ConstantStructElts.
+      t_LocalID, t_GlobalID,           // ID in UIntVal.
+      t_LocalName, t_GlobalName,       // Name in StrVal.
+      t_APSInt, t_APFloat,             // Value in APSIntVal/APFloatVal.
+      t_Null, t_Undef, t_Zero, t_None, // No value.
+      t_EmptyArray,                    // No value:  []
+      t_Constant,                      // Value in ConstantVal.
+      t_InlineAsm,                     // Value in FTy/StrVal/StrVal2/UIntVal.
+      t_ConstantStruct,                // Value in ConstantStructElts.
+      t_PackedConstantStruct           // Value in ConstantStructElts.
     } Kind = t_LocalID;
 
     LLLexer::LocTy Loc;

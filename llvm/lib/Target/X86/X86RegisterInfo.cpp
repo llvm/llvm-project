@@ -353,6 +353,10 @@ X86RegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
 }
 
+const uint32_t *X86RegisterInfo::getDarwinTLSCallPreservedMask() const {
+  return CSR_64_TLS_Darwin_RegMask;
+}
+
 BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const X86FrameLowering *TFI = getFrameLowering(MF);

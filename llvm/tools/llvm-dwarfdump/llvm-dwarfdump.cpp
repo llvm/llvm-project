@@ -60,6 +60,7 @@ static cl::opt<DIDumpType> DumpType(
         clEnumValN(DIDT_Loc, "loc", ".debug_loc"),
         clEnumValN(DIDT_LocDwo, "loc.dwo", ".debug_loc.dwo"),
         clEnumValN(DIDT_Frames, "frames", ".debug_frame"),
+        clEnumValN(DIDT_Macro, "macro", ".debug_macinfo"),
         clEnumValN(DIDT_Ranges, "ranges", ".debug_ranges"),
         clEnumValN(DIDT_Pubnames, "pubnames", ".debug_pubnames"),
         clEnumValN(DIDT_Pubtypes, "pubtypes", ".debug_pubtypes"),
@@ -69,7 +70,8 @@ static cl::opt<DIDumpType> DumpType(
         clEnumValN(DIDT_StrDwo, "str.dwo", ".debug_str.dwo"),
         clEnumValN(DIDT_StrOffsetsDwo, "str_offsets.dwo",
                    ".debug_str_offsets.dwo"),
-        clEnumValN(DIDT_CUIndex, "cu_index", ".debug_cu_index"), clEnumValEnd));
+        clEnumValN(DIDT_CUIndex, "cu_index", ".debug_cu_index"),
+        clEnumValN(DIDT_TUIndex, "tu_index", ".debug_tu_index"), clEnumValEnd));
 
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)

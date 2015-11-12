@@ -30,7 +30,7 @@ define void @test1_yes(i32* %p) nounwind {
   ret void
 }
 
-; CHECK: define void @test1_no(i32* %p) #1 {
+; CHECK: define void @test1_no(i32* %p) #3 {
 define void @test1_no(i32* %p) nounwind {
   call void @callee(i32* %p), !tbaa !2
   ret void
@@ -72,9 +72,11 @@ define i32 @test3_no(i8* %p) nounwind {
 declare void @callee(i32* %p) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i32, i1) nounwind
 
-; CHECK: attributes #0 = { nounwind readnone }
-; CHECK: attributes #1 = { nounwind }
+; CHECK: attributes #0 = { norecurse nounwind readnone }
+; CHECK: attributes #1 = { norecurse nounwind }
 ; CHECK: attributes #2 = { nounwind readonly }
+; CHECK: attributes #3 = { nounwind }
+; CHECK: attributes #4 = { argmemonly nounwind }
 
 ; Root note.
 !0 = !{ }

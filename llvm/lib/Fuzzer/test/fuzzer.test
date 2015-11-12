@@ -31,7 +31,11 @@ NullDerefTestPrefix: Test unit written to ZZZcrash-
 
 #not LLVMFuzzer-FullCoverageSetTest -timeout=15 -seed=1 -mutate_depth=2 -use_full_coverage_set=1 2>&1 | FileCheck %s
 
-#not LLVMFuzzer-FourIndependentBranchesTest -timeout=15 -seed=1 -use_traces=1 2>&1 | FileCheck %s
+RUN: rm -rf FourIndependentBranchesTestCORPUS
+RUN: mkdir FourIndependentBranchesTestCORPUS
+RUN:     LLVMFuzzer-FourIndependentBranchesTest -seed=1 -runs=1000000 FourIndependentBranchesTestCORPUS
+RUN: not LLVMFuzzer-FourIndependentBranchesTest         -runs=100000 -drill=1 -jobs=200 FourIndependentBranchesTestCORPUS 2>&1 | FileCheck %s
+RUN: rm -rf FourIndependentBranchesTestCORPUS
 
 RUN: not LLVMFuzzer-CounterTest -use_counters=1 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
 

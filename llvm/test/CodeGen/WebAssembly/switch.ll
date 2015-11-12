@@ -13,26 +13,26 @@ declare void @foo4()
 declare void @foo5()
 
 ; CHECK-LABEL: bar32:
-; CHECK: block $BB0_8{{$}}
-; CHECK: block $BB0_7{{$}}
-; CHECK: block $BB0_6{{$}}
-; CHECK: block $BB0_5{{$}}
-; CHECK: block $BB0_4{{$}}
-; CHECK: block $BB0_3{{$}}
-; CHECK: block $BB0_2{{$}}
-; CHECK: switch {{.*}}, $BB0_2, $BB0_2, $BB0_2, $BB0_2, $BB0_2, $BB0_2, $BB0_2, $BB0_2, $BB0_3, $BB0_3, $BB0_3, $BB0_3, $BB0_3, $BB0_3, $BB0_3, $BB0_3, $BB0_4, $BB0_4, $BB0_4, $BB0_4, $BB0_4, $BB0_4, $BB0_5, $BB0_6, $BB0_7{{$}}
+; CHECK: block BB0_8{{$}}
+; CHECK: block BB0_7{{$}}
+; CHECK: block BB0_6{{$}}
+; CHECK: block BB0_5{{$}}
+; CHECK: block BB0_4{{$}}
+; CHECK: block BB0_3{{$}}
+; CHECK: block BB0_2{{$}}
+; CHECK: switch {{.*}}, BB0_2, BB0_2, BB0_2, BB0_2, BB0_2, BB0_2, BB0_2, BB0_2, BB0_3, BB0_3, BB0_3, BB0_3, BB0_3, BB0_3, BB0_3, BB0_3, BB0_4, BB0_4, BB0_4, BB0_4, BB0_4, BB0_4, BB0_5, BB0_6, BB0_7{{$}}
 ; CHECK: BB0_2:
-; CHECK:   call $foo0
+; CHECK:   call foo0
 ; CHECK: BB0_3:
-; CHECK:   call $foo1
+; CHECK:   call foo1
 ; CHECK: BB0_4:
-; CHECK:   call $foo2
+; CHECK:   call foo2
 ; CHECK: BB0_5:
-; CHECK:   call $foo3
+; CHECK:   call foo3
 ; CHECK: BB0_6:
-; CHECK:   call $foo4
+; CHECK:   call foo4
 ; CHECK: BB0_7:
-; CHECK:   call $foo5
+; CHECK:   call foo5
 ; CHECK: BB0_8:
 ; CHECK:   return{{$}}
 define void @bar32(i32 %n) {
@@ -93,26 +93,26 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 }
 
 ; CHECK-LABEL: bar64:
-; CHECK: block $BB1_8{{$}}
-; CHECK: block $BB1_7{{$}}
-; CHECK: block $BB1_6{{$}}
-; CHECK: block $BB1_5{{$}}
-; CHECK: block $BB1_4{{$}}
-; CHECK: block $BB1_3{{$}}
-; CHECK: block $BB1_2{{$}}
-; CHECK: switch {{.*}}, $BB1_2, $BB1_2, $BB1_2, $BB1_2, $BB1_2, $BB1_2, $BB1_2, $BB1_2, $BB1_3, $BB1_3, $BB1_3, $BB1_3, $BB1_3, $BB1_3, $BB1_3, $BB1_3, $BB1_4, $BB1_4, $BB1_4, $BB1_4, $BB1_4, $BB1_4, $BB1_5, $BB1_6, $BB1_7{{$}}
+; CHECK: block BB1_8{{$}}
+; CHECK: block BB1_7{{$}}
+; CHECK: block BB1_6{{$}}
+; CHECK: block BB1_5{{$}}
+; CHECK: block BB1_4{{$}}
+; CHECK: block BB1_3{{$}}
+; CHECK: block BB1_2{{$}}
+; CHECK: switch {{.*}}, BB1_2, BB1_2, BB1_2, BB1_2, BB1_2, BB1_2, BB1_2, BB1_2, BB1_3, BB1_3, BB1_3, BB1_3, BB1_3, BB1_3, BB1_3, BB1_3, BB1_4, BB1_4, BB1_4, BB1_4, BB1_4, BB1_4, BB1_5, BB1_6, BB1_7{{$}}
 ; CHECK: BB1_2:
-; CHECK:   call $foo0
+; CHECK:   call foo0
 ; CHECK: BB1_3:
-; CHECK:   call $foo1
+; CHECK:   call foo1
 ; CHECK: BB1_4:
-; CHECK:   call $foo2
+; CHECK:   call foo2
 ; CHECK: BB1_5:
-; CHECK:   call $foo3
+; CHECK:   call foo3
 ; CHECK: BB1_6:
-; CHECK:   call $foo4
+; CHECK:   call foo4
 ; CHECK: BB1_7:
-; CHECK:   call $foo5
+; CHECK:   call foo5
 ; CHECK: BB1_8:
 ; CHECK:   return{{$}}
 define void @bar64(i64 %n) {

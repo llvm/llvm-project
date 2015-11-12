@@ -16,13 +16,13 @@ define void @f(i32 %a, float %b, i128 %c, i1 %d) {
 }
 
 ; CHECK-LABEL: .imports
-; CHECK-NEXT:  .import $printi "" "printi" (param i32) (result i32){{$}}
-; CHECK-NEXT:  .import $printf "" "printf" (param f32) (result f32){{$}}
-; CHECK-NEXT:  .import $printv "" "printv"{{$}}
-; CHECK-NEXT:  .import $add2 "" "add2" (param i32 i32) (result i32){{$}}
-; CHECK-NEXT:  .import $split_arg "" "split_arg" (param i64 i64){{$}}
-; CHECK-NEXT:  .import $expanded_arg "" "expanded_arg" (param i32){{$}}
-; CHECK-NEXT:  .import $lowered_result "" "lowered_result" (result i32){{$}}
+; CHECK-NEXT:  .import printi "" printi (param i32) (result i32){{$}}
+; CHECK-NEXT:  .import printf "" printf (param f32) (result f32){{$}}
+; CHECK-NEXT:  .import printv "" printv{{$}}
+; CHECK-NEXT:  .import add2 "" add2 (param i32 i32) (result i32){{$}}
+; CHECK-NEXT:  .import split_arg "" split_arg (param i64 i64){{$}}
+; CHECK-NEXT:  .import expanded_arg "" expanded_arg (param i32){{$}}
+; CHECK-NEXT:  .import lowered_result "" lowered_result (result i32){{$}}
 declare i32 @printi(i32)
 declare float @printf(float)
 declare void @printv()

@@ -14,7 +14,7 @@ declare void @something()
 ; CHECK: i32.add
 ; CHECK: br_if
 ; CHECK: call
-; CHECK: br $BB0_1{{$}}
+; CHECK: br BB0_1{{$}}
 ; CHECK: return{{$}}
 define void @test0(i32 %n) {
 entry:
@@ -42,7 +42,7 @@ back:
 ; CHECK: i32.add
 ; CHECK: br_if
 ; CHECK: call
-; CHECK: br $BB1_1{{$}}
+; CHECK: br BB1_1{{$}}
 ; CHECK: return{{$}}
 define void @test1(i32 %n) {
 entry:
@@ -66,10 +66,10 @@ back:
 ; Test that a simple loop is handled as expected.
 
 ; CHECK-LABEL: test2:
-; CHECK: block $BB2_2{{$}}
-; CHECK: br_if $BB2_2, {{.*}}
+; CHECK: block BB2_2{{$}}
+; CHECK: br_if BB2_2, {{.*}}
 ; CHECK: BB2_1:
-; CHECK: br_if $BB2_1, (get_local 16){{$}}
+; CHECK: br_if BB2_1, (get_local 10){{$}}
 ; CHECK: BB2_2:
 ; CHECK: return{{$}}
 define void @test2(double* nocapture %p, i32 %n) {
@@ -98,17 +98,17 @@ for.end:
 }
 
 ; CHECK-LABEL: doublediamond:
-; CHECK: block $BB3_5{{$}}
-; CHECK: block $BB3_4{{$}}
-; CHECK: block $BB3_2{{$}}
-; CHECK: br_if $BB3_2, (get_local 7){{$}}
-; CHECK: br $BB3_5{{$}}
+; CHECK: block BB3_5{{$}}
+; CHECK: block BB3_4{{$}}
+; CHECK: block BB3_2{{$}}
+; CHECK: br_if BB3_2, (get_local 4){{$}}
+; CHECK: br BB3_5{{$}}
 ; CHECK: BB3_2:
-; CHECK: br_if $BB3_4, (get_local 10){{$}}
-; CHECK: br $BB3_5{{$}}
+; CHECK: br_if BB3_4, (get_local 6){{$}}
+; CHECK: br BB3_5{{$}}
 ; CHECK: BB3_4:
 ; CHECK: BB3_5:
-; CHECK: return (get_local 6){{$}}
+; CHECK: return (get_local 3){{$}}
 define i32 @doublediamond(i32 %a, i32 %b, i32* %p) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -133,10 +133,10 @@ exit:
 }
 
 ; CHECK-LABEL: triangle:
-; CHECK: block $BB4_2{{$}}
-; CHECK: br_if $BB4_2, (get_local 5){{$}}
+; CHECK: block BB4_2{{$}}
+; CHECK: br_if BB4_2, (get_local 3){{$}}
 ; CHECK: BB4_2:
-; CHECK: return (get_local 4){{$}}
+; CHECK: return (get_local 2){{$}}
 define i32 @triangle(i32* %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -151,13 +151,13 @@ exit:
 }
 
 ; CHECK-LABEL: diamond:
-; CHECK: block $BB5_3{{$}}
-; CHECK: block $BB5_2{{$}}
-; CHECK: br_if $BB5_2, (get_local 5){{$}}
-; CHECK: br $BB5_3{{$}}
+; CHECK: block BB5_3{{$}}
+; CHECK: block BB5_2{{$}}
+; CHECK: br_if BB5_2, (get_local 3){{$}}
+; CHECK: br BB5_3{{$}}
 ; CHECK: BB5_2:
 ; CHECK: BB5_3:
-; CHECK: return (get_local 4){{$}}
+; CHECK: return (get_local 2){{$}}
 define i32 @diamond(i32* %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -176,7 +176,7 @@ exit:
 
 ; CHECK-LABEL: single_block:
 ; CHECK-NOT: br
-; CHECK: return (get_local 2){{$}}
+; CHECK: return (get_local 1){{$}}
 define i32 @single_block(i32* %p) {
 entry:
   store volatile i32 0, i32* %p
@@ -186,8 +186,8 @@ entry:
 ; CHECK-LABEL: minimal_loop:
 ; CHECK-NOT: br
 ; CHECK: BB7_1:
-; CHECK: i32.store (get_local 1), (get_local 3){{$}}
-; CHECK: br $BB7_1{{$}}
+; CHECK: i32.store (get_local 0), (get_local 2){{$}}
+; CHECK: br BB7_1{{$}}
 define i32 @minimal_loop(i32* %p) {
 entry:
   store volatile i32 0, i32* %p
@@ -200,9 +200,9 @@ loop:
 ; CHECK-LABEL: simple_loop:
 ; CHECK-NOT: br
 ; CHECK: BB8_1:
-; CHECK: loop $BB8_2{{$}}
-; CHECK: br_if $BB8_1, (get_local 6){{$}}
-; CHECK: return (get_local 4){{$}}
+; CHECK: loop BB8_2{{$}}
+; CHECK: br_if BB8_1, (get_local 3){{$}}
+; CHECK: return (get_local 2){{$}}
 define i32 @simple_loop(i32* %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -217,13 +217,13 @@ exit:
 }
 
 ; CHECK-LABEL: doubletriangle:
-; CHECK: block $BB9_4{{$}}
-; CHECK: block $BB9_3{{$}}
-; CHECK: br_if $BB9_4, (get_local 7){{$}}
-; CHECK: br_if $BB9_3, (get_local 10){{$}}
+; CHECK: block BB9_4{{$}}
+; CHECK: block BB9_3{{$}}
+; CHECK: br_if BB9_4, (get_local 4){{$}}
+; CHECK: br_if BB9_3, (get_local 6){{$}}
 ; CHECK: BB9_3:
 ; CHECK: BB9_4:
-; CHECK: return (get_local 6){{$}}
+; CHECK: return (get_local 3){{$}}
 define i32 @doubletriangle(i32 %a, i32 %b, i32* %p) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -245,14 +245,14 @@ exit:
 }
 
 ; CHECK-LABEL: ifelse_earlyexits:
-; CHECK: block $BB10_4{{$}}
-; CHECK: block $BB10_2{{$}}
-; CHECK: br_if $BB10_2, (get_local 7){{$}}
-; CHECK: br $BB10_4{{$}}
+; CHECK: block BB10_4{{$}}
+; CHECK: block BB10_2{{$}}
+; CHECK: br_if BB10_2, (get_local 4){{$}}
+; CHECK: br BB10_4{{$}}
 ; CHECK: BB10_2:
-; CHECK: br_if $BB10_4, (get_local 10){{$}}
+; CHECK: br_if BB10_4, (get_local 6){{$}}
 ; CHECK: BB10_4:
-; CHECK: return (get_local 6){{$}}
+; CHECK: return (get_local 3){{$}}
 define i32 @ifelse_earlyexits(i32 %a, i32 %b, i32* %p) {
 entry:
   %c = icmp eq i32 %a, 0
