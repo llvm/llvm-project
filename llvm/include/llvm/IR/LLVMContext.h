@@ -67,6 +67,14 @@ public:
     MD_align = 17 // "align"
   };
 
+  /// Known operand bundle tag IDs, which always have the same value.  All
+  /// operand bundle tags that LLVM has special knowledge of are listed here.
+  /// Additionally, this scheme allows LLVM to efficiently check for specific
+  /// operand bundle tags without comparing strings.
+  enum {
+    OB_deopt = 0,  // "deopt"
+  };
+
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
   /// This ID is uniqued across modules in the current LLVMContext.
   unsigned getMDKindID(StringRef Name) const;

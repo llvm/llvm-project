@@ -15,8 +15,8 @@ define void @f0() {
 ; CHECK-LABEL: f1:
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: .local i32{{$}}
-; CHECK-NEXT: i32.const push, 0{{$}}
-; CHECK-NEXT: set_local 0, pop{{$}}
+; CHECK-NEXT: i32.const $push, 0{{$}}
+; CHECK-NEXT: set_local 0, $pop{{$}}
 ; CHECK-NEXT: return (get_local 0){{$}}
 ; CHECK: .size f1,
 define i32 @f1() {
@@ -28,8 +28,8 @@ define i32 @f1() {
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: .local i32{{$}}
-; CHECK-NEXT: i32.const push, 0{{$}}
-; CHECK-NEXT: set_local 2, pop{{$}}
+; CHECK-NEXT: i32.const $push, 0{{$}}
+; CHECK-NEXT: set_local 2, $pop{{$}}
 ; CHECK-NEXT: return (get_local 2){{$}}
 ; CHECK: .size f2,
 define i32 @f2(i32 %p1, float %p2) {

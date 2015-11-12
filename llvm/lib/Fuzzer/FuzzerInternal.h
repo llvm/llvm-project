@@ -43,7 +43,7 @@ void PrintASCII(const Unit &U, const char *PrintAfter = "");
 std::string Hash(const Unit &U);
 void SetTimer(int Seconds);
 void PrintFileAsBase64(const std::string &Path);
-void ExecuteCommand(const std::string &Command);
+int ExecuteCommand(const std::string &Command);
 
 // Private copy of SHA1 implementation.
 static const int kSHA1NumBytes = 20;
@@ -94,13 +94,16 @@ class Fuzzer {
     std::string OutputCorpus;
     std::string SyncCommand;
     std::string ArtifactPrefix = "./";
-    std::vector<Unit> Dictionary;
     bool SaveArtifacts = true;
+    bool PrintNEW = true;  // Print a status line when new units are found;
+    bool OutputCSV = false;
   };
   Fuzzer(UserSuppliedFuzzer &USF, FuzzingOptions Options);
   void AddToCorpus(const Unit &U) { Corpus.push_back(U); }
-  size_t ChooseUnitToMutate();
+  size_t ChooseUnitIdxToMutate();
+  const Unit &ChooseUnitToMutate() { return Corpus[ChooseUnitIdxToMutate()]; };
   void Loop();
+  void Drill();
   void ShuffleAndMinimize();
   void InitializeTraceState();
   size_t CorpusSize() const { return Corpus.size(); }
@@ -135,6 +138,7 @@ class Fuzzer {
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n");
+  void PrintStatusForNewUnit(const Unit &U);
   void PrintUnitInASCII(const Unit &U, const char *PrintAfter = "");
 
   void SyncCorpus();

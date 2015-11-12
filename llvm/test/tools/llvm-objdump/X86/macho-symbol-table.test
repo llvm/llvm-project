@@ -1,8 +1,8 @@
 RUN: llvm-objdump -macho -t %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
 CHECK: SYMBOL TABLE:
-CHECK: 000000000000003b l     F __TEXT,__cstring	L_.str
-CHECK: 0000000000000068 l     F __TEXT,__eh_frame	EH_frame0
+CHECK: 000000000000003b l       __TEXT,__cstring	L_.str
+CHECK: 0000000000000068 l       __TEXT,__eh_frame	EH_frame0
 CHECK: 0000000000000000 g     F __TEXT,__text	        _main
-CHECK: 0000000000000080 g     F __TEXT,__eh_frame	_main.eh
+CHECK: 0000000000000080 g       __TEXT,__eh_frame	_main.eh
 CHECK: 0000000000000000         *UND*	                _printf

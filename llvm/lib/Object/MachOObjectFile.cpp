@@ -401,6 +401,9 @@ SymbolRef::Type MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
     case MachO::N_UNDF :
       return SymbolRef::ST_Unknown;
     case MachO::N_SECT :
+      section_iterator Sec = *getSymbolSection(Symb);
+      if (Sec->isData() || Sec->isBSS())
+        return SymbolRef::ST_Data;
       return SymbolRef::ST_Function;
   }
   return SymbolRef::ST_Other;

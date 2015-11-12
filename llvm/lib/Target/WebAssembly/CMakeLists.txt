@@ -21,6 +21,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
   WebAssemblyRegisterInfo.cpp
+  WebAssemblyRegNumbering.cpp
   WebAssemblySelectionDAGInfo.cpp
   WebAssemblySubtarget.cpp
   WebAssemblyTargetMachine.cpp

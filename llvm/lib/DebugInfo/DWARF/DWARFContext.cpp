@@ -127,6 +127,11 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
     getDebugFrame()->dump(OS);
   }
 
+  if (DumpType == DIDT_All || DumpType == DIDT_Macro) {
+    OS << "\n.debug_macinfo contents:\n";
+    getDebugMacro()->dump(OS);
+  }
+
   uint32_t offset = 0;
   if (DumpType == DIDT_All || DumpType == DIDT_Aranges) {
     OS << "\n.debug_aranges contents:\n";
@@ -161,8 +166,8 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
     DataExtractor CUIndexData(getCUIndexSection(), isLittleEndian(),
                               savedAddressByteSize);
     DWARFUnitIndex CUIndex;
-    CUIndex.parse(CUIndexData);
-    CUIndex.dump(OS);
+    if (CUIndex.parse(CUIndexData))
+      CUIndex.dump(OS);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_TUIndex) {
@@ -170,8 +175,8 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
     DataExtractor TUIndexData(getTUIndexSection(), isLittleEndian(),
                               savedAddressByteSize);
     DWARFUnitIndex TUIndex;
-    TUIndex.parse(TUIndexData);
-    TUIndex.dump(OS);
+    if (TUIndex.parse(TUIndexData))
+      TUIndex.dump(OS);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_LineDwo) {
@@ -339,6 +344,16 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   DebugFrame.reset(new DWARFDebugFrame());
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
+}
+
+const DWARFDebugMacro *DWARFContext::getDebugMacro() {
+  if (Macro)
+    return Macro.get();
+
+  DataExtractor MacinfoData(getMacinfoSection(), isLittleEndian(), 0);
+  Macro.reset(new DWARFDebugMacro());
+  Macro->parse(MacinfoData);
+  return Macro.get();
 }
 
 const DWARFLineTable *
@@ -611,6 +626,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
             .Case("debug_frame", &DebugFrameSection)
             .Case("debug_str", &StringSection)
             .Case("debug_ranges", &RangeSection)
+            .Case("debug_macinfo", &MacinfoSection)
             .Case("debug_pubnames", &PubNamesSection)
             .Case("debug_pubtypes", &PubTypesSection)
             .Case("debug_gnu_pubnames", &GnuPubNamesSection)

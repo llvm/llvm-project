@@ -18,18 +18,42 @@
 namespace llvm {
 
 class DWARFUnitIndex {
-  class Header {
+  struct Header {
     uint32_t Version;
     uint32_t NumColumns;
     uint32_t NumUnits;
     uint32_t NumBuckets;
 
-  public:
     bool parse(DataExtractor IndexData, uint32_t *OffsetPtr);
     void dump(raw_ostream &OS) const;
   };
 
-  class Header Header;
+  struct HashRow {
+    uint64_t Signature;
+    struct SectionContribution {
+      uint32_t Offset;
+      uint32_t Size;
+    };
+    std::unique_ptr<SectionContribution[]> Contributions;
+  };
+
+  enum DwarfSection {
+    DW_SECT_INFO = 1,
+    DW_SECT_TYPES,
+    DW_SECT_ABBREV,
+    DW_SECT_LINE,
+    DW_SECT_LOC,
+    DW_SECT_STR_OFFSETS,
+    DW_SECT_MACINFO,
+    DW_SECT_MACRO,
+  };
+
+  struct Header Header;
+
+  std::unique_ptr<DwarfSection[]> ColumnKinds;
+  std::unique_ptr<HashRow[]> Rows;
+
+  static StringRef getColumnHeader(DwarfSection DS);
 
 public:
   bool parse(DataExtractor IndexData);

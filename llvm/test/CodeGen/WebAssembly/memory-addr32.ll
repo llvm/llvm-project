@@ -12,7 +12,7 @@ declare void @llvm.wasm.grow.memory.i32(i32) nounwind
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: .local i32{{$}}
 ; CHECK-NEXT: memory_size
-; CHECK-NEXT: set_local 0, pop{{$}}
+; CHECK-NEXT: set_local 0, $pop{{$}}
 ; CHECK-NEXT: return (get_local 0){{$}}
 define i32 @memory_size() {
   %a = call i32 @llvm.wasm.memory.size.i32()
@@ -22,7 +22,7 @@ define i32 @memory_size() {
 ; CHECK-LABEL: grow_memory:
 ; CHECK-NEXT: .param i32
 ; CHECK-NEXT: .local i32{{$}}
-; CHECK: grow_memory (get_local 1)
+; CHECK: grow_memory (get_local 0)
 ; CHECK-NEXT: return
 define void @grow_memory(i32 %n) {
   call void @llvm.wasm.grow.memory.i32(i32 %n)

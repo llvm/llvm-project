@@ -1,11 +1,6 @@
 ; RUN: llc < %s -asm-verbose=false | FileCheck %s
 
-; Check that unused vregs don't prevent locals from being numbered wrong.
-;
-; The test currently checks that the dead virtual registers still appear as
-; locals, which isn't what we want long term. Removing them from the list of
-; locals will require remapping the local numbers, and checking that the
-; get_/set_local have the right numbers.
+; Check that unused vregs aren't assigned registers.
 
 target datalayout = "e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -15,7 +10,7 @@ define void @foo(i32* nocapture %a, i32 %w, i32 %h) {
 ; CHECK-NEXT: .param i32
 ; CHECK-NEXT: .param i32
 ; CHECK-NEXT: .param i32
-; CHECK-NEXT: .local i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32{{$}}
+; CHECK-NEXT: .local i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32{{$}}
 entry:
   %cmp.19 = icmp sgt i32 %h, 0
   br i1 %cmp.19, label %for.cond.1.preheader.lr.ph, label %for.end.7

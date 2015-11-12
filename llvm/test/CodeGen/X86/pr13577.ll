@@ -6,10 +6,7 @@
 ; CHECK-NEXT: .long 2139095040
 
 ; CHECK-LABEL: foo:
-; CHECK: movq {{.*}}, %rax
-; CHECK: shlq $48, %rax
-; CHECK: sets %al
-; CHECK: testb %al, %al
+; CHECK: testb $-128, -15(%rsp)
 ; CHECK: flds LCPI0_0(%rip)
 ; CHECK: flds LCPI0_1(%rip)
 ; CHECK: fcmovne %st(1), %st(0)

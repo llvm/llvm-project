@@ -107,9 +107,11 @@ OPTIONS
  ``-dsym-hint`` flag. This flag can be used multiple times.
 
 .. option:: -print-address
+
  Print address before the source code location. Defaults to false.
 
 .. option:: -pretty-print
+
  Print human readable output. If ``-inlining`` is specified, enclosing scope is
  prefixed by (inlined by). Refer to listed examples.
 

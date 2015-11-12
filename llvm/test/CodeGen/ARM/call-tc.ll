@@ -83,9 +83,11 @@ declare void @foo() nounwind
 define void @t7() nounwind {
 entry:
 ; CHECKT2D-LABEL: t7:
-; CHECKT2D: blxeq _foo
-; CHECKT2D-NEXT: pop.w
-; CHECKT2D-NEXT: b.w _foo
+; CHECKT2D: it ne
+; CHECKT2D-NEXT: bne.w _foo
+; CHECKT2D-NEXT: push
+; CHECKT2D-NEXT: mov r7, sp
+; CHECKT2D-NEXT: blx _foo
   br i1 undef, label %bb, label %bb1.lr.ph
 
 bb1.lr.ph:

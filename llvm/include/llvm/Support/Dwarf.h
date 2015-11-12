@@ -40,6 +40,7 @@ enum LLVMConstants : uint32_t {
   // LLVM mock tags (see also llvm/Support/Dwarf.def).
   DW_TAG_invalid = ~0U,        // Tag for invalid results.
   DW_VIRTUALITY_invalid = ~0U, // Virtuality for invalid results.
+  DW_MACINFO_invalid = ~0U,    // Macinfo type for invalid results.
 
   // Other constants.
   DWARF_VERSION = 4,       // Default dwarf version we output.

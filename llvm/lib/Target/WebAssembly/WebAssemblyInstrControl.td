@@ -41,9 +41,11 @@ def BR   : I<(outs), (ins bb_op:$dst),
 // currently.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 def SWITCH_I32 : I<(outs), (ins I32:$index, variable_ops),
-                   [(WebAssemblyswitch I32:$index)]>;
+                   [(WebAssemblyswitch I32:$index)],
+                   "switch $index">;
 def SWITCH_I64 : I<(outs), (ins I64:$index, variable_ops),
-                   [(WebAssemblyswitch I64:$index)]>;
+                   [(WebAssemblyswitch I64:$index)],
+                   "switch $index">;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Placemarkers to indicate the start of a block or loop scope.

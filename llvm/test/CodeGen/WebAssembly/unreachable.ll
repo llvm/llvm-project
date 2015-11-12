@@ -12,7 +12,7 @@ declare void @llvm.debugtrap()
 declare void @abort()
 
 ; CHECK-LABEL: f1:
-; CHECK: call $abort
+; CHECK: call abort
 ; CHECK: unreachable
 define i32 @f1() {
   call void @abort()

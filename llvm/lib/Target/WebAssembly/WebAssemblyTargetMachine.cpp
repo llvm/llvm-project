@@ -175,4 +175,5 @@ void WebAssemblyPassConfig::addPreSched2() {}
 
 void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyCFGStackify());
+  addPass(createWebAssemblyRegNumbering());
 }
