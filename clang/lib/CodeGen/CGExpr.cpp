@@ -3747,6 +3747,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
   assert(CalleeType->isFunctionPointerType() &&
          "Call must have function pointer type!");
 
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+    // If this isn't an always_inline function we can't guarantee that any
+    // function isn't being used correctly so only check if we have the
+    // attribute and a set of target attributes that might be different from
+    // our default.
+    if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
+        TargetDecl->hasAttr<TargetAttr>())
+      checkTargetFeatures(E, FD);
+
   CalleeType = getContext().getCanonicalType(CalleeType);
 
   const auto *FnType =

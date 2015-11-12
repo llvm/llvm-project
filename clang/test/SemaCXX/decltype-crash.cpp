@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wc++11-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wc++11-compat -std=c++98 %s
 
 int& a();
 

@@ -37,4 +37,5 @@ if(CLANG_INSTALL_SCANVIEW)
   endforeach()
 
   add_custom_target(scan-view ALL DEPENDS ${Depends})
+  set_target_properties(scan-view PROPERTIES FOLDER "Misc")
 endif()

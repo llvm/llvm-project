@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -target-feature +3dnow -emit-llvm -o - -Werror | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -target-feature +3dnow -S -o - -Werror | FileCheck %s --check-prefix=CHECK-ASM
+// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -target-feature +3dnowa -emit-llvm -o - -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -target-feature +3dnowa -S -o - -Werror | FileCheck %s --check-prefix=CHECK-ASM
 
 // Don't include mm_malloc.h, it's system specific.
 #define __MM_MALLOC_H

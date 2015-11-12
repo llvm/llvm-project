@@ -76,5 +76,6 @@ if(CLANG_INSTALL_SCANBUILD)
   endforeach()
 
   add_custom_target(scan-build ALL DEPENDS ${Depends})
+  set_target_properties(scan-build PROPERTIES FOLDER "Misc")
 endif()
 

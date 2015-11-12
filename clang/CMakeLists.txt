@@ -354,7 +354,7 @@ endmacro()
 
 macro(add_clang_library name)
   cmake_parse_arguments(ARG
-    ""
+    "SHARED"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -390,17 +390,29 @@ macro(add_clang_library name)
       ${ARG_ADDITIONAL_HEADERS} # It may contain unparsed unknown args.
       )
   endif()
-  llvm_add_library(${name} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
+  if(ARG_SHARED)
+    set(ARG_ENABLE_SHARED SHARED)
+  endif()
+  llvm_add_library(${name} ${ARG_ENABLE_SHARED} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
   if(TARGET ${name})
     target_link_libraries(${name} ${cmake_2_8_12_INTERFACE} ${LLVM_COMMON_LIBS})
 
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libclang")
       install(TARGETS ${name}
+        COMPONENT ${name}
         EXPORT ClangTargets
         LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         RUNTIME DESTINATION bin)
+
+      if (${ARG_SHARED} AND NOT CMAKE_CONFIGURATION_TYPES)
+        add_custom_target(install-${name}
+                          DEPENDS ${name}
+                          COMMAND "${CMAKE_COMMAND}"
+                                  -DCMAKE_INSTALL_COMPONENT=${name}
+                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      endif()
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
   else()
@@ -451,6 +463,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 endif()
 
 install(DIRECTORY include/clang-c
+  COMPONENT libclang
   DESTINATION include
   FILES_MATCHING
   PATTERN "*.h"

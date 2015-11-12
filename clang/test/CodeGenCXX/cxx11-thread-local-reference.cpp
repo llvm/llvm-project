@@ -1,11 +1,14 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
 int &f();
 
-// CHECK: @r = thread_local global i32* null
+// LINUX: @r = thread_local global i32* null
+// DARWIN: @r = internal thread_local global i32* null
 thread_local int &r = f();
 
-// CHECK: @_ZTH1r = alias void (), void ()* @__tls_init
+// LINUX: @_ZTH1r = alias void (), void ()* @__tls_init
+// DARWIN: @_ZTH1r = internal alias void (), void ()* @__tls_init
 
 int &g() { return r; }
 
@@ -17,7 +20,8 @@ int &g() { return r; }
 // CHECK: call i32* @_ZTW1r()
 // CHECK: ret i32* %{{.*}}
 
-// CHECK: define weak_odr hidden i32* @_ZTW1r() {
+// LINUX: define weak_odr hidden i32* @_ZTW1r() {
+// DARWIN: define i32* @_ZTW1r() {
 // CHECK: call void @_ZTH1r()
 // CHECK: load i32*, i32** @r, align 8
 // CHECK: ret i32* %{{.*}}

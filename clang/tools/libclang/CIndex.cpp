@@ -3911,6 +3911,75 @@ CXString clang_Cursor_getMangling(CXCursor C) {
   return cxstring::createDup(FinalBufOS.str());
 }
 
+static std::string getMangledStructor(std::unique_ptr<MangleContext> &M,
+                                      std::unique_ptr<llvm::DataLayout> &DL,
+                                      const NamedDecl *ND,
+                                      unsigned StructorType) {
+  std::string FrontendBuf;
+  llvm::raw_string_ostream FOS(FrontendBuf);
+
+  if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(ND))
+    M->mangleCXXCtor(CD, static_cast<CXXCtorType>(StructorType), FOS);
+  else if (const auto *DD = dyn_cast_or_null<CXXDestructorDecl>(ND))
+    M->mangleCXXDtor(DD, static_cast<CXXDtorType>(StructorType), FOS);
+
+  std::string BackendBuf;
+  llvm::raw_string_ostream BOS(BackendBuf);
+
+  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
+
+  return BOS.str();
+}
+
+CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {
+  if (clang_isInvalid(C.kind) || !clang_isDeclaration(C.kind))
+    return nullptr;
+
+  const Decl *D = getCursorDecl(C);
+  if (!(isa<CXXRecordDecl>(D) || isa<CXXMethodDecl>(D)))
+    return nullptr;
+
+  const NamedDecl *ND = cast<NamedDecl>(D);
+
+  ASTContext &Ctx = ND->getASTContext();
+  std::unique_ptr<MangleContext> M(Ctx.createMangleContext());
+  std::unique_ptr<llvm::DataLayout> DL(
+      new llvm::DataLayout(Ctx.getTargetInfo().getDataLayoutString()));
+
+  std::vector<std::string> Manglings;
+
+  auto hasDefaultCXXMethodCC = [](ASTContext &C, const CXXMethodDecl *MD) {
+    auto DefaultCC = C.getDefaultCallingConvention(/*IsVariadic=*/false,
+                                                   /*IsCSSMethod=*/true);
+    auto CC = MD->getType()->getAs<FunctionProtoType>()->getCallConv();
+    return CC == DefaultCC;
+  };
+
+  if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(ND)) {
+    Manglings.emplace_back(getMangledStructor(M, DL, CD, Ctor_Base));
+
+    if (Ctx.getTargetInfo().getCXXABI().isItaniumFamily())
+      if (!CD->getParent()->isAbstract())
+        Manglings.emplace_back(getMangledStructor(M, DL, CD, Ctor_Complete));
+
+    if (Ctx.getTargetInfo().getCXXABI().isMicrosoft())
+      if (CD->hasAttr<DLLExportAttr>() && CD->isDefaultConstructor())
+        if (!(hasDefaultCXXMethodCC(Ctx, CD) && CD->getNumParams() == 0))
+          Manglings.emplace_back(getMangledStructor(M, DL, CD,
+                                                    Ctor_DefaultClosure));
+  } else if (const auto *DD = dyn_cast_or_null<CXXDestructorDecl>(ND)) {
+    Manglings.emplace_back(getMangledStructor(M, DL, DD, Dtor_Base));
+    if (Ctx.getTargetInfo().getCXXABI().isItaniumFamily()) {
+      Manglings.emplace_back(getMangledStructor(M, DL, DD, Dtor_Complete));
+
+      if (!DD->isVirtual())
+        Manglings.emplace_back(getMangledStructor(M, DL, DD, Dtor_Deleting));
+    }
+  }
+
+  return cxstring::createSet(Manglings);
+}
+
 CXString clang_getCursorDisplayName(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return clang_getCursorSpelling(C);

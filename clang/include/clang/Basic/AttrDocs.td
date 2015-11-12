@@ -1654,7 +1654,9 @@ def NotTailCalledDocs : Documentation {
 The ``not_tail_called`` attribute prevents tail-call optimization on statically bound calls. It has no effect on indirect calls. Virtual functions, objective-c methods, and functions marked as ``always_inline`` cannot be marked as ``not_tail_called``.
 
 For example, it prevents tail-call optimization in the following case:
+
   .. code-block: c
+
     int __attribute__((not_tail_called)) foo1(int);
 
     int foo2(int a) {
@@ -1662,7 +1664,9 @@ For example, it prevents tail-call optimization in the following case:
     }
 
 However, it doesn't prevent tail-call optimization in this case:
+
   .. code-block: c
+
     int __attribute__((not_tail_called)) foo1(int);
 
     int foo2(int a) {
@@ -1674,7 +1678,9 @@ However, it doesn't prevent tail-call optimization in this case:
     }
 
 Marking virtual functions as ``not_tail_called`` is an error:
+
   .. code-block: c++
+
     class Base {
     public:
       // not_tail_called on a virtual function is an error.

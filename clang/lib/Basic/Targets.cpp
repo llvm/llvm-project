@@ -5839,6 +5839,7 @@ public:
     case CK_NIAGARA4:
       return CG_V9;
     }
+    llvm_unreachable("Unexpected CPU kind");
   }
 
   CPUKind getCPUKind(StringRef Name) const {

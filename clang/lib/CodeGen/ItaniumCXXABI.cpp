@@ -2088,7 +2088,7 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
   const char *Name = "__cxa_atexit";
   if (TLS) {
     const llvm::Triple &T = CGF.getTarget().getTriple();
-    Name = T.isMacOSX() ?  "_tlv_atexit" : "__cxa_thread_atexit";
+    Name = T.isOSDarwin() ?  "_tlv_atexit" : "__cxa_thread_atexit";
   }
 
   // We're assuming that the destructor function is something we can
@@ -2144,10 +2144,10 @@ void ItaniumCXXABI::registerGlobalDtor(CodeGenFunction &CGF,
 static bool isThreadWrapperReplaceable(const VarDecl *VD,
                                        CodeGen::CodeGenModule &CGM) {
   assert(!VD->isStaticLocal() && "static local VarDecls don't need wrappers!");
-  // OS X prefers to have references to thread local variables to go through
+  // Darwin prefers to have references to thread local variables to go through
   // the thread wrapper instead of directly referencing the backing variable.
   return VD->getTLSKind() == VarDecl::TLS_Dynamic &&
-         CGM.getTarget().getTriple().isMacOSX();
+         CGM.getTarget().getTriple().isOSDarwin();
 }
 
 /// Get the appropriate linkage for the wrapper function. This is essentially
@@ -2163,12 +2163,10 @@ getThreadLocalWrapperLinkage(const VarDecl *VD, CodeGen::CodeGenModule &CGM) {
     return VarLinkage;
 
   // If the thread wrapper is replaceable, give it appropriate linkage.
-  if (isThreadWrapperReplaceable(VD, CGM)) {
-    if (llvm::GlobalVariable::isLinkOnceLinkage(VarLinkage) ||
-        llvm::GlobalVariable::isWeakODRLinkage(VarLinkage))
-      return llvm::GlobalVariable::WeakAnyLinkage;
-    return VarLinkage;
-  }
+  if (isThreadWrapperReplaceable(VD, CGM))
+    if (!llvm::GlobalVariable::isLinkOnceLinkage(VarLinkage) &&
+        !llvm::GlobalVariable::isWeakODRLinkage(VarLinkage))
+      return VarLinkage;
   return llvm::GlobalValue::WeakODRLinkage;
 }
 
@@ -2194,7 +2192,9 @@ ItaniumCXXABI::getOrCreateThreadLocalWrapper(const VarDecl *VD,
       llvm::Function::Create(FnTy, getThreadLocalWrapperLinkage(VD, CGM),
                              WrapperName.str(), &CGM.getModule());
   // Always resolve references to the wrapper at link time.
-  if (!Wrapper->hasLocalLinkage() && !isThreadWrapperReplaceable(VD, CGM))
+  if (!Wrapper->hasLocalLinkage() && !(isThreadWrapperReplaceable(VD, CGM) &&
+      !llvm::GlobalVariable::isLinkOnceLinkage(Wrapper->getLinkage()) &&
+      !llvm::GlobalVariable::isWeakODRLinkage(Wrapper->getLinkage())))
     Wrapper->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return Wrapper;
 }

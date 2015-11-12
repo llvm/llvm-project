@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 class X {};
 
@@ -23,9 +25,17 @@ void test2() {
 // PR6327
 namespace test3 {
   template <class A, class B> struct pair {};
+  template <class _E> class initializer_list {};
+  template <typename _Tp> pair<_Tp, _Tp> minmax(initializer_list<_Tp> __l) {};
 
   void test0() {
-    pair<int, int> z = minmax({}); // expected-error {{expected expression}}
+    pair<int, int> z = minmax({});
+#if __cplusplus <= 199711L // C++03 or earlier modes
+    // expected-error@-2 {{expected expression}}
+#else
+    // expected-error@-4 {{no matching function for call to 'minmax'}}
+    // expected-note@-8 {{candidate template ignored: couldn't infer template argument '_Tp'}}
+#endif
   }
 
   struct string {

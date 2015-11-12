@@ -939,9 +939,9 @@ int foobar() {
 // CHECK-TLS:      define internal void @__tls_init()
 // CHECK-TLS:      [[GRD:%.*]] = load i8, i8* @__tls_guard
 // CHECK-TLS-NEXT: [[IS_INIT:%.*]] = icmp eq i8 [[GRD]], 0
-// CHECK-TLS-NEXT: store i8 1, i8* @__tls_guard
 // CHECK-TLS-NEXT: br i1 [[IS_INIT]], label %[[INIT_LABEL:[^,]+]], label %[[DONE_LABEL:[^,]+]]{{.*}}
 // CHECK-TLS:      [[INIT_LABEL]]
+// CHECK-TLS-NEXT: store i8 1, i8* @__tls_guard
 // CHECK-TLS:      call void [[GS1_CXX_INIT]]
 // CHECK-TLS-NOT:  call void [[GS2_CXX_INIT]]
 // CHECK-TLS:      call void [[ARR_X_CXX_INIT]]

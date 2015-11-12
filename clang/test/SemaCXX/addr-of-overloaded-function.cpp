@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
 int f(double); // expected-note{{candidate function}}
 int f(int); // expected-note{{candidate function}}
 
@@ -79,7 +81,10 @@ struct C {
   void q3(); // expected-note{{possible target for call}}
   template<typename T1, typename T2>
   void q4(); // expected-note{{possible target for call}}
-  template<typename T1 = int> // expected-warning{{default template arguments for a function template are a C++11 extension}}
+  template<typename T1 = int>
+#if __cplusplus <= 199711L // C++03 or earlier modes
+  // expected-warning@-2{{default template arguments for a function template are a C++11 extension}}
+#endif
   void q5(); // expected-note{{possible target for call}}
 
   void h() {

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 template<typename T, typename U> 
 struct is_same {
   static const bool value = false;
@@ -27,8 +29,11 @@ struct make_pair {
 int a0[is_same<metafun_apply2<make_pair, int, float>::type, 
                pair<int, float> >::value? 1 : -1];
 int a1[is_same<
-         typename make_pair::template apply<int, float>, // expected-warning{{'template' keyword outside of a template}} \
-       // expected-warning{{'typename' occurs outside of a template}}
+         typename make_pair::template apply<int, float>, 
+#if __cplusplus <= 199711L // C++03 and earlier modes
+         // expected-warning@-2 {{'template' keyword outside of a template}}
+         // expected-warning@-3 {{'typename' occurs outside of a template}}
+#endif
          make_pair::apply<int, float>
        >::value? 1 : -1];
 

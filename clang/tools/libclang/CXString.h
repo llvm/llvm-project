@@ -68,6 +68,8 @@ CXString createRef(std::string String) = delete;
 /// \brief Create a CXString object that is backed by a string buffer.
 CXString createCXString(CXStringBuf *buf);
 
+CXStringSet *createSet(const std::vector<std::string> &Strings);
+
 /// \brief A string pool used for fast allocation/deallocation of strings.
 class CXStringPool {
 public:

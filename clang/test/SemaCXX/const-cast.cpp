@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 struct A {};
 
@@ -38,8 +40,10 @@ char ***good_const_cast_test(ccvpcvpp var)
   f *fpp = const_cast<f*>(&fp);
   int const A::* const A::*icapcap = 0;
   int A::* A::* iapap = const_cast<int A::* A::*>(icapcap);
-  (void)const_cast<A&&>(A()); // expected-warning {{C++11}}
-
+  (void)const_cast<A&&>(A());
+#if __cplusplus <= 199711L // C++03 or earlier modes
+  // expected-warning@-2 {{rvalue references are a C++11 extension}}
+#endif
   return var4;
 }
 
@@ -61,7 +65,10 @@ short *bad_const_cast_test(char const *volatile *const volatile *var)
   f fp2 = const_cast<f>(fp1); // expected-error {{const_cast to 'f' (aka 'int (*)(int)'), which is not a reference, pointer-to-object, or pointer-to-data-member}}
   void (A::*mfn)() = 0;
   (void)const_cast<void (A::*)()>(mfn); // expected-error-re {{const_cast to 'void (A::*)(){{( __attribute__\(\(thiscall\)\))?}}', which is not a reference, pointer-to-object, or pointer-to-data-member}}
-  (void)const_cast<int&&>(0); // expected-error {{const_cast from rvalue to reference type 'int &&'}} expected-warning {{C++11}}
+  (void)const_cast<int&&>(0); // expected-error {{const_cast from rvalue to reference type 'int &&'}}
+#if __cplusplus <= 199711L // C++03 or earlier modes
+  // expected-warning@-2 {{rvalue references are a C++11 extension}}
+#endif
   return **var3;
 }
 

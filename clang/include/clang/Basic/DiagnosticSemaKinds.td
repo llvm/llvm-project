@@ -431,6 +431,9 @@ def err_builtin_definition : Error<"definition of builtin function %0">;
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_invalid_cpu_supports : Error<"invalid cpu feature string for builtin">;
 def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
+def err_function_needs_feature
+    : Error<"function %0 and always_inline callee function %1 are required to "
+            "have matching target features">;
 def warn_builtin_unknown : Warning<"use of unknown builtin %0">,
   InGroup<ImplicitFunctionDeclare>, DefaultError;
 def warn_dyn_class_memaccess : Warning<
@@ -1996,6 +1999,8 @@ def err_function_concept_exception_spec : Error<
 def err_concept_decl_invalid_specifiers : Error<
   "%select{variable|function}0 concept cannot be declared "
   "'%select{thread_local|inline|friend|constexpr}1'">;
+def err_function_concept_with_params : Error<
+  "function concept cannot have any parameters">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<

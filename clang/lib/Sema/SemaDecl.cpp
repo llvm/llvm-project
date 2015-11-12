@@ -7613,6 +7613,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         } else {
           Context.adjustExceptionSpec(NewFD, EST_BasicNoexcept);
         }
+
+        // C++ Concepts TS [dcl.spec.concept]p5: A function concept has the
+        // following restrictions:
+        // - The declaration's parameter list shall be equivalent to an empty
+        //   parameter list.
+        if (FPT->getNumParams() > 0 || FPT->isVariadic())
+          Diag(NewFD->getLocation(), diag::err_function_concept_with_params);
       }
 
       // C++ Concepts TS [dcl.spec.concept]p2: Every concept definition is
