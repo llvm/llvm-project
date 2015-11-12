@@ -1,4 +1,4 @@
 LEVEL = ../../../../make
 SWIFT_SOURCES := main.swift
-SWIFTFLAGS := -framework AppKit
+SWIFT_OBJC_INTEROP := 1
 include $(LEVEL)/Makefile.rules
