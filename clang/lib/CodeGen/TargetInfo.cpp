@@ -3071,10 +3071,6 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     if (RT->getDecl()->hasFlexibleArrayMember())
       return ABIArgInfo::getIndirect(0, /*ByVal=*/false);
 
-    // FIXME: mingw-w64-gcc emits 128-bit struct as i128
-    if (Width == 128 && getTarget().getTriple().isWindowsGNUEnvironment())
-      return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(),
-                                                          Width));
   }
 
   // vectorcall adds the concept of a homogenous vector aggregate, similar to
