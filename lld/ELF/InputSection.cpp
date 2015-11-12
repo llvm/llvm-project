@@ -43,10 +43,21 @@ ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
 
 template <class ELFT>
 typename ELFFile<ELFT>::uintX_t
+InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
+  switch (SectionKind) {
+  case Regular:
+    return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
+  case EHFrame:
+    return cast<EHInputSection<ELFT>>(this)->getOffset(Offset);
+  case Merge:
+    return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
+  }
+}
+
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t
 InputSectionBase<ELFT>::getOffset(const Elf_Sym &Sym) {
-  if (auto *S = dyn_cast<InputSection<ELFT>>(this))
-    return S->OutSecOff + Sym.st_value;
-  return cast<MergeInputSection<ELFT>>(this)->getOffset(Sym.st_value);
+  return getOffset(Sym.st_value);
 }
 
 // Returns a section that Rel relocation is pointing to.
@@ -82,16 +93,19 @@ bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 
 template <class ELFT>
 template <bool isRela>
-void InputSection<ELFT>::relocate(
+void InputSectionBase<ELFT>::relocate(
     uint8_t *Buf, uint8_t *BufEnd,
-    iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels,
-    const ObjectFile<ELFT> &File, uintX_t BaseAddr) {
+    iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels) {
   typedef Elf_Rel_Impl<ELFT, isRela> RelType;
   for (const RelType &RI : Rels) {
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
     uint32_t Type = RI.getType(Config->Mips64EL);
-    uint8_t *BufLoc = Buf + RI.r_offset;
-    uintX_t AddrLoc = BaseAddr + RI.r_offset;
+    uintX_t Offset = getOffset(RI.r_offset);
+    if (Offset == (uintX_t)-1)
+      continue;
+
+    uint8_t *BufLoc = Buf + Offset;
+    uintX_t AddrLoc = OutSec->getVA() + Offset;
 
     if (Type == Target->getTlsLocalDynamicReloc()) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
@@ -103,14 +117,14 @@ void InputSection<ELFT>::relocate(
 
     // Handle relocations for local symbols -- they never get
     // resolved so we don't allocate a SymbolBody.
-    const Elf_Shdr *SymTab = File.getSymbolTable();
+    const Elf_Shdr *SymTab = File->getSymbolTable();
     if (SymIndex < SymTab->sh_info) {
-      uintX_t SymVA = getLocalRelTarget(File, RI);
+      uintX_t SymVA = getLocalRelTarget(*File, RI);
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA);
       continue;
     }
 
-    SymbolBody &Body = *File.getSymbolBody(SymIndex)->repl();
+    SymbolBody &Body = *File->getSymbolBody(SymIndex)->repl();
     uintX_t SymVA = getSymVA<ELFT>(Body);
     if (Target->relocNeedsPlt(Type, Body)) {
       SymVA = Out<ELFT>::Plt->getEntryAddr(Body);
@@ -138,32 +152,59 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   memcpy(Buf + OutSecOff, Data.data(), Data.size());
 
   ELFFile<ELFT> &EObj = this->File->getObj();
-  uint8_t *Base = Buf + OutSecOff;
-  uintX_t BaseAddr = this->OutSec->getVA() + OutSecOff;
+  uint8_t *BufEnd = Buf + OutSecOff + Data.size();
   // Iterate over all relocation sections that apply to this section.
-  for (const Elf_Shdr *RelSec : RelocSections) {
+  for (const Elf_Shdr *RelSec : this->RelocSections) {
     if (RelSec->sh_type == SHT_RELA)
-      relocate(Base, Base + Data.size(), EObj.relas(RelSec), *this->File,
-               BaseAddr);
+      this->relocate(Buf, BufEnd, EObj.relas(RelSec));
     else
-      relocate(Base, Base + Data.size(), EObj.rels(RelSec), *this->File,
-               BaseAddr);
+      this->relocate(Buf, BufEnd, EObj.rels(RelSec));
   }
+}
+
+template <class ELFT>
+SplitInputSection<ELFT>::SplitInputSection(
+    ObjectFile<ELFT> *File, const Elf_Shdr *Header,
+    typename InputSectionBase<ELFT>::Kind SectionKind)
+    : InputSectionBase<ELFT>(File, Header, SectionKind) {}
+
+template <class ELFT>
+EHInputSection<ELFT>::EHInputSection(ObjectFile<ELFT> *F,
+                                     const Elf_Shdr *Header)
+    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {}
+
+template <class ELFT>
+bool EHInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+  return S->SectionKind == InputSectionBase<ELFT>::EHFrame;
+}
+
+template <class ELFT>
+typename EHInputSection<ELFT>::uintX_t
+EHInputSection<ELFT>::getOffset(uintX_t Offset) {
+  std::pair<uintX_t, uintX_t> *I = this->getRangeAndSize(Offset).first;
+  uintX_t Base = I->second;
+  if (Base == size_t(-1))
+    return -1; // Not in the output
+
+  uintX_t Addend = Offset - I->first;
+  return Base + Addend;
 }
 
 template <class ELFT>
 MergeInputSection<ELFT>::MergeInputSection(ObjectFile<ELFT> *F,
                                            const Elf_Shdr *Header)
-    : InputSectionBase<ELFT>(F, Header, Base::Merge) {}
+    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
 
 template <class ELFT>
 bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
-  return S->SectionKind == Base::Merge;
+  return S->SectionKind == InputSectionBase<ELFT>::Merge;
 }
 
 template <class ELFT>
-typename MergeInputSection<ELFT>::uintX_t
-MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
+std::pair<std::pair<typename ELFFile<ELFT>::uintX_t,
+                    typename ELFFile<ELFT>::uintX_t> *,
+          typename ELFFile<ELFT>::uintX_t>
+SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t Size = Data.size();
@@ -172,21 +213,33 @@ MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
 
   // Find the element this offset points to.
   auto I = std::upper_bound(
-      this->Offsets.begin(), this->Offsets.end(), Offset,
-      [](const uintX_t &A, const std::pair<uintX_t, size_t> &B) {
+      Offsets.begin(), Offsets.end(), Offset,
+      [](const uintX_t &A, const std::pair<uintX_t, uintX_t> &B) {
         return A < B.first;
       });
-  size_t End = I == this->Offsets.end() ? Data.size() : I->first;
+  uintX_t End = I == Offsets.end() ? Data.size() : I->first;
   --I;
+  return std::make_pair(&*I, End);
+}
+
+template <class ELFT>
+typename MergeInputSection<ELFT>::uintX_t
+MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
+  std::pair<std::pair<uintX_t, uintX_t> *, size_t> T =
+      this->getRangeAndSize(Offset);
+  std::pair<uintX_t, uintX_t> *I = T.first;
+  uintX_t End = T.second;
   uintX_t Start = I->first;
 
   // Compute the Addend and if the Base is cached, return.
   uintX_t Addend = Offset - Start;
-  size_t &Base = I->second;
-  if (Base != size_t(-1))
+  uintX_t &Base = I->second;
+  if (Base != uintX_t(-1))
     return Base + Addend;
 
   // Map the base to the offset in the output section and cashe it.
+  ArrayRef<uint8_t> D = this->getSectionData();
+  StringRef Data((const char *)D.data(), D.size());
   StringRef Entry = Data.substr(Start, End - Start);
   Base =
       static_cast<MergeOutputSection<ELFT> *>(this->OutSec)->getOffset(Entry);
@@ -204,6 +257,11 @@ template class InputSection<object::ELF32LE>;
 template class InputSection<object::ELF32BE>;
 template class InputSection<object::ELF64LE>;
 template class InputSection<object::ELF64BE>;
+
+template class EHInputSection<object::ELF32LE>;
+template class EHInputSection<object::ELF32BE>;
+template class EHInputSection<object::ELF64LE>;
+template class EHInputSection<object::ELF64BE>;
 
 template class MergeInputSection<object::ELF32LE>;
 template class MergeInputSection<object::ELF32BE>;

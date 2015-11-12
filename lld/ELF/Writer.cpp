@@ -42,9 +42,10 @@ private:
   void copyLocalSymbols();
   void createSections();
   template <bool isRela>
-  void scanRelocs(const InputSection<ELFT> &C,
+  void scanRelocs(InputSectionBase<ELFT> &C,
                   iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels);
-  void scanRelocs(const InputSection<ELFT> &C);
+  void scanRelocs(InputSection<ELFT> &C);
+  void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
   void assignAddresses();
   void openFile(StringRef OutputPath);
   void writeHeader();
@@ -66,6 +67,7 @@ private:
 
   SpecificBumpPtrAllocator<OutputSection<ELFT>> SecAlloc;
   SpecificBumpPtrAllocator<MergeOutputSection<ELFT>> MSecAlloc;
+  SpecificBumpPtrAllocator<EHOutputSection<ELFT>> EHSecAlloc;
   BumpPtrAllocator Alloc;
   std::vector<OutputSectionBase<ELFT> *> OutputSections;
   unsigned getNumSections() const { return OutputSections.size() + 1; }
@@ -181,7 +183,7 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 template <class ELFT>
 template <bool isRela>
 void Writer<ELFT>::scanRelocs(
-    const InputSection<ELFT> &C,
+    InputSectionBase<ELFT> &C,
     iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels) {
   typedef Elf_Rel_Impl<ELFT, isRela> RelType;
   const ObjectFile<ELFT> &File = *C.getFile();
@@ -254,20 +256,22 @@ void Writer<ELFT>::scanRelocs(
   }
 }
 
-template <class ELFT>
-void Writer<ELFT>::scanRelocs(const InputSection<ELFT> &C) {
-  ObjectFile<ELFT> *File = C.getFile();
-  ELFFile<ELFT> &EObj = File->getObj();
-
+template <class ELFT> void Writer<ELFT>::scanRelocs(InputSection<ELFT> &C) {
   if (!(C.getSectionHdr()->sh_flags & SHF_ALLOC))
     return;
 
-  for (const Elf_Shdr *RelSec : C.RelocSections) {
-    if (RelSec->sh_type == SHT_RELA)
-      scanRelocs(C, EObj.relas(RelSec));
-    else
-      scanRelocs(C, EObj.rels(RelSec));
-  }
+  for (const Elf_Shdr *RelSec : C.RelocSections)
+    scanRelocs(C, *RelSec);
+}
+
+template <class ELFT>
+void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &S,
+                              const Elf_Shdr &RelSec) {
+  ELFFile<ELFT> &EObj = S.getFile()->getObj();
+  if (RelSec.sh_type == SHT_RELA)
+    scanRelocs(S, EObj.relas(&RelSec));
+  else
+    scanRelocs(S, EObj.rels(&RelSec));
 }
 
 template <class ELFT>
@@ -488,26 +492,47 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       // For SHF_MERGE we create different output sections for each sh_entsize.
       // This makes each output section simple and keeps a single level
       // mapping from input to output.
-      auto *IS = dyn_cast<InputSection<ELFT>>(C);
-      uintX_t EntSize = IS ? 0 : H->sh_entsize;
+      typename InputSectionBase<ELFT>::Kind K = C->SectionKind;
+      uintX_t EntSize = K != InputSectionBase<ELFT>::Merge ? 0 : H->sh_entsize;
+      uint32_t OutType = H->sh_type;
+      if (OutType == SHT_PROGBITS && C->getSectionName() == ".eh_frame" &&
+          Config->EMachine == EM_X86_64)
+        OutType = SHT_X86_64_UNWIND;
       SectionKey<ELFT::Is64Bits> Key{getOutputName(C->getSectionName()),
-                                     H->sh_type, OutFlags, EntSize};
+                                     OutType, OutFlags, EntSize};
       OutputSectionBase<ELFT> *&Sec = Map[Key];
       if (!Sec) {
-        if (IS)
+        switch (K) {
+        case InputSectionBase<ELFT>::Regular:
           Sec = new (SecAlloc.Allocate())
               OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
-        else
+          break;
+        case InputSectionBase<ELFT>::EHFrame:
+          Sec = new (EHSecAlloc.Allocate())
+              EHOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+          break;
+        case InputSectionBase<ELFT>::Merge:
           Sec = new (MSecAlloc.Allocate())
               MergeOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+          break;
+        }
         OutputSections.push_back(Sec);
         RegularSections.push_back(Sec);
       }
-      if (IS)
-        static_cast<OutputSection<ELFT> *>(Sec)->addSection(IS);
-      else
+      switch (K) {
+      case InputSectionBase<ELFT>::Regular:
+        static_cast<OutputSection<ELFT> *>(Sec)
+            ->addSection(cast<InputSection<ELFT>>(C));
+        break;
+      case InputSectionBase<ELFT>::EHFrame:
+        static_cast<EHOutputSection<ELFT> *>(Sec)
+            ->addSection(cast<EHInputSection<ELFT>>(C));
+        break;
+      case InputSectionBase<ELFT>::Merge:
         static_cast<MergeOutputSection<ELFT> *>(Sec)
             ->addSection(cast<MergeInputSection<ELFT>>(C));
+        break;
+      }
     }
   }
 
@@ -551,12 +576,17 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles())
-    for (InputSectionBase<ELFT> *B : F->getSections())
-      if (auto *S = dyn_cast_or_null<InputSection<ELFT>>(B))
-        if (S != &InputSection<ELFT>::Discarded)
-          if (S->isLive())
-            scanRelocs(*S);
+  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
+    for (InputSectionBase<ELFT> *B : F->getSections()) {
+      if (auto *S = dyn_cast_or_null<InputSection<ELFT>>(B)) {
+        if (S != &InputSection<ELFT>::Discarded && S->isLive())
+          scanRelocs(*S);
+      } else if (auto *S = dyn_cast_or_null<EHInputSection<ELFT>>(B)) {
+        if (S->RelocSection)
+          scanRelocs(*S, *S->RelocSection);
+      }
+    }
+  }
 
   std::vector<DefinedCommon<ELFT> *> CommonSymbols;
   std::vector<SharedSymbol<ELFT> *> SharedCopySymbols;

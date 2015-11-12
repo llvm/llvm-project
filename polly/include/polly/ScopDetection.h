@@ -341,12 +341,19 @@ private:
 
   /// @brief Check if the control flow in a basic block is valid.
   ///
-  /// @param BB           The BB to check the control flow.
-  /// @param IsLoopBranch Flag to indicate the branch is a loop exit/latch.
-  /// @param Context      The context of scop detection.
+  /// This function checks if a certain basic block is terminated by a
+  /// Terminator instruction we can handle or, if this is not the case,
+  /// registers this basic block as the start of a non-affine region.
+  ///
+  /// This function optionally allows unreachable statements.
+  ///
+  /// @param BB               The BB to check the control flow.
+  /// @param IsLoopBranch     Flag to indicate the branch is a loop exit/latch.
+  //  @param AllowUnreachable Allow unreachable statements.
+  /// @param Context          The context of scop detection.
   ///
   /// @return True if the BB contains only valid control flow.
-  bool isValidCFG(BasicBlock &BB, bool IsLoopBranch,
+  bool isValidCFG(BasicBlock &BB, bool IsLoopBranch, bool AllowUnreachable,
                   DetectionContext &Context) const;
 
   /// @brief Is a loop valid with respect to a given region.

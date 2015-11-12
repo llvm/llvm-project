@@ -56,7 +56,7 @@ class ExprOptionsTestCase(TestBase):
 
         # test --language on C++ expression using the SB API's
 
-        # Make sure we can evaluate 'ns::func'.
+        # Make sure we can evaluate a C++11 expression.
         val = frame.EvaluateExpression('foo != nullptr')
         self.assertTrue(val.IsValid())
         self.assertTrue(val.GetError().Success())

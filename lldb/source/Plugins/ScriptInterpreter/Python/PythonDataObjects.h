@@ -69,6 +69,9 @@ enum class PyObjectType
     Dictionary,
     List,
     String,
+    Module,
+    Callable,
+    Tuple,
     File
 };
 
@@ -185,21 +188,27 @@ public:
         return result;
     }
 
-    PyObjectType
-    GetObjectType() const;
-
-    PythonString
-    Repr ();
-        
-    PythonString
-    Str ();
-
     PythonObject &
     operator=(const PythonObject &other)
     {
         Reset(PyRefType::Borrowed, other.get());
         return *this;
     }
+
+    PyObjectType
+    GetObjectType() const;
+
+    PythonString
+    Repr() const;
+
+    PythonString
+    Str() const;
+
+    static PythonObject
+    ResolveNameWithDictionary(llvm::StringRef name, PythonDictionary dict);
+
+    PythonObject
+    ResolveName(llvm::StringRef name) const;
 
     bool
     HasAttribute(llvm::StringRef attribute) const;
@@ -224,7 +233,8 @@ public:
         return T(PyRefType::Borrowed, m_py_obj);
     }
 
-    StructuredData::ObjectSP CreateStructuredObject() const;
+    StructuredData::ObjectSP
+    CreateStructuredObject() const;
 
 protected:
     PyObject* m_py_obj;
@@ -287,6 +297,7 @@ public:
 class PythonList : public PythonObject
 {
 public:
+    PythonList() {}
     explicit PythonList(PyInitialValue value);
     explicit PythonList(int list_size);
     PythonList(PyRefType type, PyObject *o);
@@ -312,9 +323,39 @@ public:
     StructuredData::ArraySP CreateStructuredArray() const;
 };
 
+class PythonTuple : public PythonObject
+{
+public:
+    PythonTuple() {}
+    explicit PythonTuple(PyInitialValue value);
+    explicit PythonTuple(int tuple_size);
+    PythonTuple(PyRefType type, PyObject *o);
+    PythonTuple(const PythonTuple &tuple);
+    PythonTuple(std::initializer_list<PythonObject> objects);
+    PythonTuple(std::initializer_list<PyObject*> objects);
+
+    ~PythonTuple() override;
+
+    static bool Check(PyObject *py_obj);
+
+    // Bring in the no-argument base class version
+    using PythonObject::Reset;
+
+    void Reset(PyRefType type, PyObject *py_obj) override;
+
+    uint32_t GetSize() const;
+
+    PythonObject GetItemAtIndex(uint32_t index) const;
+
+    void SetItemAtIndex(uint32_t index, const PythonObject &object);
+
+    StructuredData::ArraySP CreateStructuredArray() const;
+};
+
 class PythonDictionary : public PythonObject
 {
 public:
+    PythonDictionary() {}
     explicit PythonDictionary(PyInitialValue value);
     PythonDictionary(PyRefType type, PyObject *o);
     PythonDictionary(const PythonDictionary &dict);
@@ -337,6 +378,63 @@ public:
 
     StructuredData::DictionarySP CreateStructuredDictionary() const;
 };
+
+class PythonModule : public PythonObject
+{
+  public:
+    PythonModule();
+    PythonModule(PyRefType type, PyObject *o);
+    PythonModule(const PythonModule &dict);
+
+    ~PythonModule() override;
+
+    static bool Check(PyObject *py_obj);
+
+    static PythonModule
+    BuiltinsModule();
+
+    static PythonModule
+    MainModule();
+
+    static PythonModule
+    AddModule(llvm::StringRef module);
+
+    // Bring in the no-argument base class version
+    using PythonObject::Reset;
+
+    void Reset(PyRefType type, PyObject *py_obj) override;
+
+    PythonDictionary GetDictionary() const;
+};
+
+class PythonCallable : public PythonObject
+{
+public:
+    PythonCallable();
+    PythonCallable(PyRefType type, PyObject *o);
+    PythonCallable(const PythonCallable &dict);
+
+    ~PythonCallable() override;
+
+    static bool
+    Check(PyObject *py_obj);
+
+    // Bring in the no-argument base class version
+    using PythonObject::Reset;
+
+    void
+    Reset(PyRefType type, PyObject *py_obj) override;
+
+    void
+    GetNumArguments(size_t &num_args, bool &has_varargs, bool &has_kwargs) const;
+
+    PythonObject
+    operator ()(std::initializer_list<PyObject*> args);
+
+    PythonObject
+    operator ()(std::initializer_list<PythonObject> args);
+};
+
 
 class PythonFile : public PythonObject
 {

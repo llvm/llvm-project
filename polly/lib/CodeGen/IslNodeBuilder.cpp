@@ -827,7 +827,38 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
     // and if so make sure its equivalence class is preloaded.
     SetVector<Value *> Values;
     findValues(ParamSCEV, Values);
-    for (auto *Val : Values)
+    for (auto *Val : Values) {
+
+      // Check if the value is an instruction in a dead block within the SCoP
+      // and if so do not code generate it.
+      if (auto *Inst = dyn_cast<Instruction>(Val)) {
+        if (S.getRegion().contains(Inst)) {
+          bool IsDead = true;
+
+          // Check for "undef" loads first, then if there is a statement for
+          // the parent of Inst and lastly if the parent of Inst has an empty
+          // domain. In the first and last case the instruction is dead but if
+          // there is a statement or the domain is not empty Inst is not dead.
+          auto *Address = getPointerOperand(*Inst);
+          if (Address &&
+              SE.getUnknown(UndefValue::get(Address->getType())) ==
+                  SE.getPointerBase(SE.getSCEV(Address))) {
+          } else if (S.getStmtForBasicBlock(Inst->getParent())) {
+            IsDead = false;
+          } else {
+            auto *Domain = S.getDomainConditions(Inst->getParent());
+            isl_set_dump(Domain);
+            IsDead = isl_set_is_empty(Domain);
+            isl_set_free(Domain);
+          }
+
+          if (IsDead) {
+            V = UndefValue::get(ParamSCEV->getType());
+            break;
+          }
+        }
+      }
+
       if (const auto *IAClass = S.lookupInvariantEquivClass(Val)) {
 
         // Check if this invariant access class is empty, hence if we never
@@ -841,9 +872,9 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           return false;
         }
       }
+    }
 
-    if (!V)
-      V = generateSCEV(ParamSCEV);
+    V = V ? V : generateSCEV(ParamSCEV);
     IDToValue[Id] = V;
   }
 

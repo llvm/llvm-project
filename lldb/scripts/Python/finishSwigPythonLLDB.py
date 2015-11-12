@@ -267,6 +267,37 @@ def make_symlink_other_platforms(vstrSrcPath, vstrTargetPath):
 
     return (bOk, strErrMsg)
 
+def make_symlink_native(vDictArgs, strSrc, strTarget):
+    eOSType = utilsOsType.determine_os_type()
+    bDbg = "-d" in vDictArgs
+    bOk = True
+    strErrMsg = ""
+
+    target_filename = os.path.basename(strTarget)
+    if eOSType == utilsOsType.EnumOsType.Unknown:
+        bOk = False
+        strErrMsg = strErrMsgOsTypeUnknown
+    elif eOSType == utilsOsType.EnumOsType.Windows:
+        if os.path.isfile(strTarget):
+            if bDbg:
+                print((strMsgSymlinkExists % target_filename))
+            return (bOk, strErrMsg)
+        if bDbg:
+            print((strMsgSymlinkMk % (target_filename, strSrc, strTarget)))
+        bOk, strErrMsg = make_symlink_windows(strSrc,
+                                              strTarget)
+    else:
+        if os.path.islink(strTarget):
+            if bDbg:
+                print((strMsgSymlinkExists % target_filename))
+            return (bOk, strErrMsg)
+        if bDbg:
+            print((strMsgSymlinkMk % (target_filename, strSrc, strTarget)))
+        bOk, strErrMsg = make_symlink_other_platforms(strSrc,
+                                                      strTarget)
+
+    return (bOk, strErrMsg)
+
 #++---------------------------------------------------------------------------
 # Details:  Make the symbolic link.
 # Args:     vDictArgs               - (R) Program input parameters.
@@ -303,29 +334,16 @@ def make_symlink(vDictArgs, vstrFrameworkPythonDir, vstrSrcFile, vstrTargetFile)
             strBuildDir = os.path.join("..", "..", "..", "..")
         strSrc = os.path.normcase(os.path.join(strBuildDir, vstrSrcFile))
 
-    if eOSType == utilsOsType.EnumOsType.Unknown:
-        bOk = False
-        strErrMsg = strErrMsgOsTypeUnknown
-    elif eOSType == utilsOsType.EnumOsType.Windows:
-        if os.path.isfile(strTarget):
-            if bDbg:
-                print((strMsgSymlinkExists % vstrTargetFile))
-            return (bOk, strErrMsg)
-        if bDbg:
-            print((strMsgSymlinkMk % (vstrTargetFile, strSrc, strTarget)))
-        bOk, strErrMsg = make_symlink_windows(strSrc,
-                                              strTarget)
-    else:
-        if os.path.islink(strTarget):
-            if bDbg:
-                print((strMsgSymlinkExists % vstrTargetFile))
-            return (bOk, strErrMsg)
-        if bDbg:
-            print((strMsgSymlinkMk % (vstrTargetFile, strSrc, strTarget)))
-        bOk, strErrMsg = make_symlink_other_platforms(strSrc,
-                                                      strTarget)
+    return make_symlink_native(vDictArgs, strSrc, strTarget)
 
-    return (bOk, strErrMsg)
+def make_symlink_six(vDictArgs, vstrFrameworkPythonDir):
+    dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_six()")
+    site_packages_dir = os.path.dirname(vstrFrameworkPythonDir)
+    six_module_filename = "six.py"
+    src_file = os.path.join(vDictArgs['--srcRoot'], "third_party", "Python", "module", "six", six_module_filename)
+    src_file = os.path.normpath(src_file)
+    target = os.path.join(site_packages_dir, six_module_filename)
+    return make_symlink_native(vDictArgs, src_file, target)
 
 #++---------------------------------------------------------------------------
 # Details:  Make the symbolic that the script bridge for Python will need in
@@ -453,6 +471,9 @@ def create_symlinks(vDictArgs, vstrFrameworkPythonDir):
         bOk, strErrMsg = make_symlink_liblldb(vDictArgs,
                                               vstrFrameworkPythonDir,
                                               strLibLldbFileName)
+
+    if bOk:
+        bOk, strErrMsg = make_symlink_six(vDictArgs, vstrFrameworkPythonDir)
 
     # Make symlink for darwin-debug on Darwin
     strDarwinDebugFileName = "darwin-debug"

@@ -352,7 +352,14 @@ bool polly::isErrorBlock(BasicBlock &BB, const Region &R, LoopInfo &LI,
   if (LI.isLoopHeader(&BB))
     return false;
 
-  if (DT.dominates(&BB, R.getExit()))
+  // Basic blocks that are always executed are not considered error blocks,
+  // as their execution can not be a rare event.
+  bool DominatesAllPredecessors = true;
+  for (auto Pred : predecessors(R.getExit()))
+    if (R.contains(Pred) && !DT.dominates(&BB, Pred))
+      DominatesAllPredecessors = false;
+
+  if (DominatesAllPredecessors)
     return false;
 
   // FIXME: This is a simple heuristic to determine if the load is executed
@@ -368,6 +375,9 @@ bool polly::isErrorBlock(BasicBlock &BB, const Region &R, LoopInfo &LI,
 
   for (Instruction &Inst : BB)
     if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+      if (isIgnoredIntrinsic(CI))
+        return false;
+
       if (!CI->doesNotAccessMemory())
         return true;
       if (CI->doesNotReturn())

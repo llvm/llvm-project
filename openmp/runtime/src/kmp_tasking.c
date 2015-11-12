@@ -1148,6 +1148,18 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
         KMP_COUNT_BLOCK(TASK_executed);
         KMP_TIME_BLOCK (TASK_execution);
 #endif // OMP_40_ENABLED
+
+#if OMPT_SUPPORT && OMPT_TRACE
+        /* let OMPT know that we're about to run this task */
+        if (ompt_enabled &&
+             ompt_callbacks.ompt_callback(ompt_event_task_switch))
+        {
+          ompt_callbacks.ompt_callback(ompt_event_task_switch)(
+            current_task->ompt_task_info.task_id,
+            taskdata->ompt_task_info.task_id);
+        }
+#endif
+
 #ifdef KMP_GOMP_COMPAT
         if (taskdata->td_flags.native) {
             ((void (*)(void *))(*(task->routine)))(task->shareds);
@@ -1157,6 +1169,18 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
         {
             (*(task->routine))(gtid, task);
         }
+
+#if OMPT_SUPPORT && OMPT_TRACE
+        /* let OMPT know that we're returning to the callee task */
+        if (ompt_enabled &&
+             ompt_callbacks.ompt_callback(ompt_event_task_switch))
+        {
+          ompt_callbacks.ompt_callback(ompt_event_task_switch)(
+            taskdata->ompt_task_info.task_id,
+            current_task->ompt_task_info.task_id);
+        }
+#endif
+
 #if OMP_40_ENABLED
     }
 #endif // OMP_40_ENABLED

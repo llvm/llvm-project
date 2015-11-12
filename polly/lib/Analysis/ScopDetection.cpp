@@ -402,10 +402,14 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
 }
 
 bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
+                               bool AllowUnreachable,
                                DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
   TerminatorInst *TI = BB.getTerminator();
+
+  if (AllowUnreachable && isa<UnreachableInst>(TI))
+    return true;
 
   // Return instructions are only valid if the region is the top level region.
   if (isa<ReturnInst>(TI) && !CurRegion.getExit() && TI->getNumOperands() == 0)
@@ -725,6 +729,16 @@ bool ScopDetection::isValidMemoryAccess(Instruction &Inst,
 
 bool ScopDetection::isValidInstruction(Instruction &Inst,
                                        DetectionContext &Context) const {
+  for (auto &Op : Inst.operands()) {
+    auto *OpInst = dyn_cast<Instruction>(&Op);
+
+    if (!OpInst)
+      continue;
+
+    if (isErrorBlock(*OpInst->getParent(), Context.CurRegion, *LI, *DT))
+      return false;
+  }
+
   // We only check the call instruction but not invoke instruction.
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
     if (isValidCallInst(*CI))
@@ -768,7 +782,7 @@ bool ScopDetection::canUseISLTripCount(Loop *L,
   L->getLoopLatches(LoopControlBlocks);
   L->getExitingBlocks(LoopControlBlocks);
   for (BasicBlock *ControlBB : LoopControlBlocks) {
-    if (!isValidCFG(*ControlBB, true, Context))
+    if (!isValidCFG(*ControlBB, true, false, Context))
       return false;
   }
 
@@ -977,12 +991,17 @@ bool ScopDetection::allBlocksValid(DetectionContext &Context) const {
   }
 
   for (BasicBlock *BB : CurRegion.blocks()) {
-    // Do not check exception blocks as we will never include them in the SCoP.
-    if (isErrorBlock(*BB, CurRegion, *LI, *DT))
+    bool IsErrorBlock = isErrorBlock(*BB, CurRegion, *LI, *DT);
+
+    // Also check exception blocks (and possibly register them as non-affine
+    // regions). Even though exception blocks are not modeled, we use them
+    // to forward-propagate domain constraints during ScopInfo construction.
+    if (!isValidCFG(*BB, false, IsErrorBlock, Context) && !KeepGoing)
+      return false;
+
+    if (IsErrorBlock)
       continue;
 
-    if (!isValidCFG(*BB, false, Context) && !KeepGoing)
-      return false;
     for (BasicBlock::iterator I = BB->begin(), E = --BB->end(); I != E; ++I)
       if (!isValidInstruction(*I, Context) && !KeepGoing)
         return false;

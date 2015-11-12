@@ -10,6 +10,7 @@
 #include "UnusedParametersCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -20,36 +21,39 @@ void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl().bind("function"), this);
 }
 
-static FixItHint removeParameter(const FunctionDecl *Function, unsigned Index) {
-  const ParmVarDecl *Param = Function->getParamDecl(Index);
-  unsigned ParamCount = Function->getNumParams();
-  SourceRange RemovalRange = Param->getSourceRange();
-  if (ParamCount == 1)
-    return FixItHint::CreateRemoval(RemovalRange);
+template <typename T>
+static CharSourceRange removeNode(const MatchFinder::MatchResult &Result,
+                                  const T *PrevNode, const T *Node,
+                                  const T *NextNode) {
+  if (NextNode)
+    return CharSourceRange::getCharRange(Node->getLocStart(),
+                                         NextNode->getLocStart());
 
-  if (Index == 0)
-    RemovalRange.setEnd(
-        Function->getParamDecl(Index + 1)->getLocStart().getLocWithOffset(-1));
-  else
-    RemovalRange.setBegin(
-        Function->getParamDecl(Index - 1)->getLocEnd().getLocWithOffset(1));
+  if (PrevNode)
+    return CharSourceRange::getTokenRange(
+        Lexer::getLocForEndOfToken(PrevNode->getLocEnd(), 0,
+                                   *Result.SourceManager,
+                                   Result.Context->getLangOpts()),
+        Node->getLocEnd());
 
-  return FixItHint::CreateRemoval(RemovalRange);
+  return CharSourceRange::getTokenRange(Node->getSourceRange());
 }
 
-static FixItHint removeArgument(const CallExpr *Call, unsigned Index) {
-  unsigned ArgCount = Call->getNumArgs();
-  const Expr *Arg = Call->getArg(Index);
-  SourceRange RemovalRange = Arg->getSourceRange();
-  if (ArgCount == 1)
-    return FixItHint::CreateRemoval(RemovalRange);
-  if (Index == 0)
-    RemovalRange.setEnd(
-        Call->getArg(Index + 1)->getLocStart().getLocWithOffset(-1));
-  else
-    RemovalRange.setBegin(
-        Call->getArg(Index - 1)->getLocEnd().getLocWithOffset(1));
-  return FixItHint::CreateRemoval(RemovalRange);
+static FixItHint removeParameter(const MatchFinder::MatchResult &Result,
+                                 const FunctionDecl *Function, unsigned Index) {
+  return FixItHint::CreateRemoval(removeNode(
+      Result, Index > 0 ? Function->getParamDecl(Index - 1) : nullptr,
+      Function->getParamDecl(Index),
+      Index + 1 < Function->getNumParams() ? Function->getParamDecl(Index + 1)
+                                           : nullptr));
+}
+
+static FixItHint removeArgument(const MatchFinder::MatchResult &Result,
+                                const CallExpr *Call, unsigned Index) {
+  return FixItHint::CreateRemoval(removeNode(
+      Result, Index > 0 ? Call->getArg(Index - 1) : nullptr,
+      Call->getArg(Index),
+      Index + 1 < Call->getNumArgs() ? Call->getArg(Index + 1) : nullptr));
 }
 
 void UnusedParametersCheck::warnOnUnusedParameter(
@@ -85,7 +89,7 @@ void UnusedParametersCheck::warnOnUnusedParameter(
   // Fix all redeclarations.
   for (const FunctionDecl *FD : Function->redecls())
     if (FD->param_size())
-      MyDiag << removeParameter(FD, ParamIndex);
+      MyDiag << removeParameter(Result, FD, ParamIndex);
 
   // Fix all call sites.
   auto CallMatches = ast_matchers::match(
@@ -93,7 +97,8 @@ void UnusedParametersCheck::warnOnUnusedParameter(
           callExpr(callee(functionDecl(equalsNode(Function)))).bind("x"))),
       *Result.Context->getTranslationUnitDecl(), *Result.Context);
   for (const auto &Match : CallMatches)
-    MyDiag << removeArgument(Match.getNodeAs<CallExpr>("x"), ParamIndex);
+    MyDiag << removeArgument(Result, Match.getNodeAs<CallExpr>("x"),
+                             ParamIndex);
 }
 
 void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {

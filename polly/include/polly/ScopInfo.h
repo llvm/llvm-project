@@ -1298,7 +1298,7 @@ private:
   ///
   /// @param BB         The basic block we build the statement for (or null)
   /// @param R          The region we build the statement for (or null).
-  ScopStmt *addScopStmt(BasicBlock *BB, Region *R);
+  void addScopStmt(BasicBlock *BB, Region *R);
 
   /// @param Update access dimensionalities.
   ///

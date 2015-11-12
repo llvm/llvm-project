@@ -15,7 +15,6 @@
  * ompt include files
  ****************************************************************************/
 
-#include "ompt-internal.h"
 #include "ompt-specific.c"
 
 

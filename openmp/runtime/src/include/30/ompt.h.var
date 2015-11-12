@@ -121,7 +121,7 @@
     macro (ompt_event_initial_task_begin,       ompt_parallel_callback_t,      24) /* initial task begin   */   \
     macro (ompt_event_initial_task_end,         ompt_parallel_callback_t,      25) /* initial task end  */      \
                                                                                                                 \
-    macro (ompt_event_task_switch,              ompt_task_switch_callback_t,   26) /* task switch */            \
+    macro (ompt_event_task_switch,              ompt_task_pair_callback_t,     26) /* task switch */            \
                                                                                                                 \
     macro (ompt_event_loop_begin,               ompt_new_workshare_callback_t, 27) /* task at loop begin */     \
     macro (ompt_event_loop_end,                 ompt_parallel_callback_t,      28) /* task at loop end */       \
@@ -313,9 +313,9 @@ typedef void (*ompt_task_callback_t) (
     ompt_task_id_t task_id            /* id of task                   */
 );
 
-typedef void (*ompt_task_switch_callback_t) (
-    ompt_task_id_t suspended_task_id, /* tool data for suspended task */
-    ompt_task_id_t resumed_task_id    /* tool data for resumed task   */
+typedef void (*ompt_task_pair_callback_t) (
+    ompt_task_id_t first_task_id,
+    ompt_task_id_t second_task_id
 );
 
 typedef void (*ompt_new_task_callback_t) (

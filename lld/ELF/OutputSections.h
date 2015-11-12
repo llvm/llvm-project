@@ -27,7 +27,9 @@ class SymbolBody;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
+template <class ELFT> class EHInputSection;
 template <class ELFT> class InputSection;
+template <class ELFT> class InputSectionBase;
 template <class ELFT> class MergeInputSection;
 template <class ELFT> class OutputSection;
 template <class ELFT> class ObjectFile;
@@ -158,7 +160,7 @@ private:
 
 template <class ELFT> struct DynamicReloc {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  const InputSection<ELFT> &C;
+  InputSectionBase<ELFT> &C;
   const Elf_Rel &RI;
 };
 
@@ -244,6 +246,46 @@ public:
 
 private:
   llvm::StringTableBuilder Builder{llvm::StringTableBuilder::RAW};
+};
+
+// FDE or CIE
+template <class ELFT> struct EHRegion {
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  EHRegion(EHInputSection<ELFT> *S, unsigned Index);
+  StringRef data() const;
+  EHInputSection<ELFT> *S;
+  unsigned Index;
+};
+
+template <class ELFT> struct Cie : public EHRegion<ELFT> {
+  Cie(EHInputSection<ELFT> *S, unsigned Index);
+  std::vector<EHRegion<ELFT>> Fdes;
+};
+
+template <class ELFT>
+class EHOutputSection final : public OutputSectionBase<ELFT> {
+public:
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
+  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
+  EHOutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
+  void writeTo(uint8_t *Buf) override;
+
+  template <bool IsRela>
+  void addSectionAux(
+      EHInputSection<ELFT> *S,
+      llvm::iterator_range<const llvm::object::Elf_Rel_Impl<ELFT, IsRela> *>
+          Rels);
+
+  void addSection(EHInputSection<ELFT> *S);
+
+private:
+  std::vector<EHInputSection<ELFT> *> Sections;
+  std::vector<Cie<ELFT>> Cies;
+
+  // Maps CIE content + personality to a index in Cies.
+  llvm::DenseMap<std::pair<StringRef, StringRef>, unsigned> CieMap;
 };
 
 template <class ELFT>

@@ -35,7 +35,7 @@ protected:
   ObjectFile<ELFT> *File;
 
 public:
-  enum Kind { Regular, Merge };
+  enum Kind { Regular, EHFrame, Merge };
   Kind SectionKind;
 
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
@@ -64,11 +64,21 @@ public:
   }
 
   uintX_t getOffset(const Elf_Sym &Sym);
+
+  // Translate an offset in the input section to an offset in the output
+  // section.
+  uintX_t getOffset(uintX_t Offset);
+
   ArrayRef<uint8_t> getSectionData() const;
 
   // Returns a section that Rel is pointing to. Used by the garbage collector.
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Rel &Rel);
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Rela &Rel);
+
+  template <bool isRela>
+  void relocate(uint8_t *Buf, uint8_t *BufEnd,
+                llvm::iterator_range<
+                    const llvm::object::Elf_Rel_Impl<ELFT, isRela> *> Rels);
 };
 
 template <class ELFT>
@@ -76,20 +86,46 @@ InputSectionBase<ELFT>
     InputSectionBase<ELFT>::Discarded(nullptr, nullptr,
                                       InputSectionBase<ELFT>::Regular);
 
+template <class ELFT> class SplitInputSection : public InputSectionBase<ELFT> {
+  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+
+public:
+  SplitInputSection(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
+                    typename InputSectionBase<ELFT>::Kind SectionKind);
+  std::vector<std::pair<uintX_t, uintX_t>> Offsets;
+  std::pair<std::pair<uintX_t, uintX_t> *, uintX_t>
+  getRangeAndSize(uintX_t Offset);
+};
+
 // This corresponds to a SHF_MERGE section of an input file.
-template <class ELFT> class MergeInputSection : public InputSectionBase<ELFT> {
-  typedef InputSectionBase<ELFT> Base;
+template <class ELFT> class MergeInputSection : public SplitInputSection<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
 
 public:
-  std::vector<std::pair<uintX_t, size_t>> Offsets;
   MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
   // Translate an offset in the input section to an offset in the output
   // section.
   uintX_t getOffset(uintX_t Offset);
+};
+
+// This corresponds to a .eh_frame section of an input file.
+template <class ELFT> class EHInputSection : public SplitInputSection<ELFT> {
+public:
+  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  EHInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
+  static bool classof(const InputSectionBase<ELFT> *S);
+
+  // Translate an offset in the input section to an offset in the output
+  // section.
+  uintX_t getOffset(uintX_t Offset);
+
+  // Relocation section that refer to this one.
+  const Elf_Shdr *RelocSection = nullptr;
 };
 
 // This corresponds to a non SHF_MERGE section of an input file.
@@ -116,13 +152,6 @@ public:
   uint64_t OutSecOff = 0;
 
   static bool classof(const InputSectionBase<ELFT> *S);
-
-private:
-  template <bool isRela>
-  void relocate(uint8_t *Buf, uint8_t *BufEnd,
-                llvm::iterator_range<
-                    const llvm::object::Elf_Rel_Impl<ELFT, isRela> *> Rels,
-                const ObjectFile<ELFT> &File, uintX_t BaseAddr);
 };
 
 } // namespace elf2

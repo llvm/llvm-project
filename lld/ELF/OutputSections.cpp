@@ -176,7 +176,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     auto *P = reinterpret_cast<Elf_Rel *>(Buf);
     Buf += EntrySize;
 
-    const InputSection<ELFT> &C = Rel.C;
+    InputSectionBase<ELFT> &C = Rel.C;
     const Elf_Rel &RI = Rel.RI;
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
     const ObjectFile<ELFT> &File = *C.getFile();
@@ -223,7 +223,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       P->r_offset = Out<ELFT>::Bss->getVA() +
                     dyn_cast<SharedSymbol<ELFT>>(Body)->OffsetInBSS;
     } else {
-      P->r_offset = RI.r_offset + C.OutSec->getVA() + C.OutSecOff;
+      P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
     }
 
     uintX_t OrigAddend = 0;
@@ -789,6 +789,150 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
+EHOutputSection<ELFT>::EHOutputSection(StringRef Name, uint32_t sh_type,
+                                       uintX_t sh_flags)
+    : OutputSectionBase<ELFT>(Name, sh_type, sh_flags) {}
+
+template <class ELFT>
+EHRegion<ELFT>::EHRegion(EHInputSection<ELFT> *S, unsigned Index)
+    : S(S), Index(Index) {}
+
+template <class ELFT> StringRef EHRegion<ELFT>::data() const {
+  ArrayRef<uint8_t> SecData = S->getSectionData();
+  ArrayRef<std::pair<uintX_t, uintX_t>> Offsets = S->Offsets;
+  size_t Start = Offsets[Index].first;
+  size_t End =
+      Index == Offsets.size() - 1 ? SecData.size() : Offsets[Index + 1].first;
+  return StringRef((const char *)SecData.data() + Start, End - Start);
+}
+
+template <class ELFT>
+Cie<ELFT>::Cie(EHInputSection<ELFT> *S, unsigned Index)
+    : EHRegion<ELFT>(S, Index) {}
+
+template <class ELFT>
+template <bool IsRela>
+void EHOutputSection<ELFT>::addSectionAux(
+    EHInputSection<ELFT> *S,
+    iterator_range<const Elf_Rel_Impl<ELFT, IsRela> *> Rels) {
+  const endianness E = ELFT::TargetEndianness;
+
+  S->OutSec = this;
+  uint32_t Align = S->getAlign();
+  if (Align > this->Header.sh_addralign)
+    this->Header.sh_addralign = Align;
+
+  Sections.push_back(S);
+
+  ArrayRef<uint8_t> SecData = S->getSectionData();
+  ArrayRef<uint8_t> D = SecData;
+  uintX_t Offset = 0;
+  auto RelI = Rels.begin();
+  auto RelE = Rels.end();
+
+  DenseMap<unsigned, unsigned> OffsetToIndex;
+  while (!D.empty()) {
+    if (D.size() < 4)
+      error("Truncated CIE/FDE length");
+    uint32_t Length = read32<E>(D.data());
+    Length += 4;
+
+    unsigned Index = S->Offsets.size();
+    S->Offsets.push_back(std::make_pair(Offset, -1));
+
+    if (Length > D.size())
+      error("CIE/FIE ends past the end of the section");
+    StringRef Entry((const char *)D.data(), Length);
+
+    while (RelI != RelE && RelI->r_offset < Offset)
+      ++RelI;
+    uintX_t NextOffset = Offset + Length;
+    bool HasReloc = RelI != RelE && RelI->r_offset < NextOffset;
+
+    uint32_t ID = read32<E>(D.data() + 4);
+    if (ID == 0) {
+      // CIE
+      Cie<ELFT> C(S, Index);
+
+      StringRef Personality;
+      if (HasReloc) {
+        uint32_t SymIndex = RelI->getSymbol(Config->Mips64EL);
+        SymbolBody &Body = *S->getFile()->getSymbolBody(SymIndex)->repl();
+        Personality = Body.getName();
+      }
+
+      std::pair<StringRef, StringRef> CieInfo(Entry, Personality);
+      auto P = CieMap.insert(std::make_pair(CieInfo, Cies.size()));
+      if (P.second) {
+        Cies.push_back(C);
+        this->Header.sh_size += Length;
+      }
+      OffsetToIndex[Offset] = P.first->second;
+    } else {
+      if (!HasReloc)
+        error("FDE doesn't reference another section");
+      InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI);
+      if (Target != &InputSection<ELFT>::Discarded && Target->isLive()) {
+        uint32_t CieOffset = Offset + 4 - ID;
+        auto I = OffsetToIndex.find(CieOffset);
+        if (I == OffsetToIndex.end())
+          error("Invalid CIE reference");
+        Cies[I->second].Fdes.push_back(EHRegion<ELFT>(S, Index));
+        this->Header.sh_size += Length;
+      }
+    }
+
+    Offset = NextOffset;
+    D = D.slice(Length);
+  }
+}
+
+template <class ELFT>
+void EHOutputSection<ELFT>::addSection(EHInputSection<ELFT> *S) {
+  const Elf_Shdr *RelSec = S->RelocSection;
+  if (!RelSec)
+    return addSectionAux(
+        S, make_range((const Elf_Rela *)nullptr, (const Elf_Rela *)nullptr));
+  ELFFile<ELFT> &Obj = S->getFile()->getObj();
+  if (RelSec->sh_type == SHT_RELA)
+    return addSectionAux(S, Obj.relas(RelSec));
+  return addSectionAux(S, Obj.rels(RelSec));
+}
+
+template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  const endianness E = ELFT::TargetEndianness;
+  size_t Offset = 0;
+  for (const Cie<ELFT> &C : Cies) {
+    size_t CieOffset = Offset;
+
+    StringRef CieData = C.data();
+    memcpy(Buf + Offset, CieData.data(), CieData.size());
+    C.S->Offsets[C.Index].second = Offset;
+    Offset += CieData.size();
+
+    for (const EHRegion<ELFT> &F : C.Fdes) {
+      StringRef FdeData = F.data();
+      memcpy(Buf + Offset, FdeData.data(), 4);              // Legnth
+      write32<E>(Buf + Offset + 4, Offset + 4 - CieOffset); // Pointer
+      memcpy(Buf + Offset + 8, FdeData.data() + 8, FdeData.size() - 8);
+      F.S->Offsets[F.Index].second = Offset;
+      Offset += FdeData.size();
+    }
+  }
+
+  for (EHInputSection<ELFT> *S : Sections) {
+    const Elf_Shdr *RelSec = S->RelocSection;
+    if (!RelSec)
+      continue;
+    ELFFile<ELFT> &EObj = S->getFile()->getObj();
+    if (RelSec->sh_type == SHT_RELA)
+      S->relocate(Buf, nullptr, EObj.relas(RelSec));
+    else
+      S->relocate(Buf, nullptr, EObj.relas(RelSec));
+  }
+}
+
+template <class ELFT>
 MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t sh_type,
                                              uintX_t sh_flags)
     : OutputSectionBase<ELFT>(Name, sh_type, sh_flags) {}
@@ -1140,6 +1284,11 @@ template class OutputSection<ELF32LE>;
 template class OutputSection<ELF32BE>;
 template class OutputSection<ELF64LE>;
 template class OutputSection<ELF64BE>;
+
+template class EHOutputSection<ELF32LE>;
+template class EHOutputSection<ELF32BE>;
+template class EHOutputSection<ELF64LE>;
+template class EHOutputSection<ELF64BE>;
 
 template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;
