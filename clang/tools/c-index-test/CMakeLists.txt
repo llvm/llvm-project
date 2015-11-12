@@ -30,7 +30,7 @@ if (CLANG_HAVE_LIBXML)
 endif()
 
 install(TARGETS c-index-test
-  RUNTIME DESTINATION local/bin
+  RUNTIME DESTINATION bin
   COMPONENT c-index-test)
 add_custom_target(install-c-index-test
   DEPENDS c-index-test
