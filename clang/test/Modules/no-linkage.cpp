@@ -6,21 +6,18 @@
 namespace NS { int n; } // expected-note {{candidate}}
 struct Typedef { int n; }; // expected-note {{candidate}}
 int AliasDecl; // expected-note {{candidate}}
-enum AlsoAnEnum { Enumerator }; // expected-note {{candidate}}
 int UsingDecl; // expected-note {{candidate}}
 
 // expected-note@decls.h:2 {{candidate}}
 // expected-note@decls.h:3 {{candidate}}
 // expected-note@decls.h:4 {{candidate}}
 // expected-note@decls.h:5 {{candidate}}
-// expected-note@decls.h:6 {{candidate}}
 
 void use(int);
 void use_things() {
   use(Typedef().n);
   use(NS::n);
   use(AliasDecl);
-  use(Enumerator);
   use(UsingDecl);
 }
 
@@ -30,6 +27,5 @@ void use_things_again() {
   use(Typedef().n); // expected-error {{ambiguous}}
   use(NS::n); // expected-error {{ambiguous}}
   use(AliasDecl); // expected-error {{ambiguous}}
-  use(Enumerator); // expected-error {{ambiguous}}
   use(UsingDecl); // expected-error {{ambiguous}}
 }

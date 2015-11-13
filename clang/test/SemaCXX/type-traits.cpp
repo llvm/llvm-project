@@ -1991,6 +1991,9 @@ void constructible_checks() {
   // PR20228
   { int arr[T(__is_constructible(VariadicCtor,
                                  int, int, int, int, int, int, int, int, int))]; }
+
+  // PR25513
+  { int arr[F(__is_constructible(int(int)))]; }
 }
 
 // Instantiation of __is_trivially_constructible

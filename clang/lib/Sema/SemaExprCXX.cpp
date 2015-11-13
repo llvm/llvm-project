@@ -4084,12 +4084,13 @@ static bool evaluateTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
         return false;
     }
 
-    // Make sure the first argument is a complete type.
-    if (Args[0]->getType()->isIncompleteType())
+    // Make sure the first argument is not incomplete nor a function type.
+    QualType T = Args[0]->getType();
+    if (T->isIncompleteType() || T->isFunctionType())
       return false;
 
     // Make sure the first argument is not an abstract type.
-    CXXRecordDecl *RD = Args[0]->getType()->getAsCXXRecordDecl();
+    CXXRecordDecl *RD = T->getAsCXXRecordDecl();
     if (RD && RD->isAbstract())
       return false;
 
@@ -4097,13 +4098,13 @@ static bool evaluateTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
     SmallVector<Expr *, 2> ArgExprs;
     ArgExprs.reserve(Args.size() - 1);
     for (unsigned I = 1, N = Args.size(); I != N; ++I) {
-      QualType T = Args[I]->getType();
-      if (T->isObjectType() || T->isFunctionType())
-        T = S.Context.getRValueReferenceType(T);
+      QualType ArgTy = Args[I]->getType();
+      if (ArgTy->isObjectType() || ArgTy->isFunctionType())
+        ArgTy = S.Context.getRValueReferenceType(ArgTy);
       OpaqueArgExprs.push_back(
-        OpaqueValueExpr(Args[I]->getTypeLoc().getLocStart(),
-                        T.getNonLValueExprType(S.Context),
-                        Expr::getValueKindForType(T)));
+          OpaqueValueExpr(Args[I]->getTypeLoc().getLocStart(),
+                          ArgTy.getNonLValueExprType(S.Context),
+                          Expr::getValueKindForType(ArgTy)));
     }
     for (Expr &E : OpaqueArgExprs)
       ArgExprs.push_back(&E);
@@ -4134,7 +4135,7 @@ static bool evaluateTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
       // Under Objective-C ARC, if the destination has non-trivial Objective-C
       // lifetime, this is a non-trivial construction.
       if (S.getLangOpts().ObjCAutoRefCount &&
-          hasNontrivialObjCLifetime(Args[0]->getType().getNonReferenceType()))
+          hasNontrivialObjCLifetime(T.getNonReferenceType()))
         return false;
 
       // The initialization succeeded; now make sure there are no non-trivial

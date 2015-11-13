@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
 
-// CHECK: define i{{.*}} @main({{.*}}) #0
+// CHECK: define {{.*}} @main({{.*}}) #0
 int main(int argc, char **argv) {
     return 1;
 }

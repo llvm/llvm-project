@@ -1239,7 +1239,6 @@ static LinkageInfo computeLVForDecl(const NamedDecl *D,
     // Note that the name of a typedef, namespace alias, using declaration,
     // and so on are not the name of the corresponding type, namespace, or
     // declaration, so they do *not* have linkage.
-    case Decl::EnumConstant: // FIXME: This has linkage, but that's dumb.
     case Decl::ImplicitParam:
     case Decl::Label:
     case Decl::NamespaceAlias:
@@ -1248,6 +1247,10 @@ static LinkageInfo computeLVForDecl(const NamedDecl *D,
     case Decl::UsingShadow:
     case Decl::UsingDirective:
       return LinkageInfo::none();
+
+    case Decl::EnumConstant:
+      // C++ [basic.link]p4: an enumerator has the linkage of its enumeration.
+      return getLVForDecl(cast<EnumDecl>(D->getDeclContext()), computation);
 
     case Decl::Typedef:
     case Decl::TypeAlias:

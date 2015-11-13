@@ -1880,7 +1880,8 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
 /// how to resolve this situation, merging decls or emitting
 /// diagnostics as appropriate. If there was an error, set New to be invalid.
 ///
-void Sema::MergeTypedefNameDecl(TypedefNameDecl *New, LookupResult &OldDecls) {
+void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
+                                LookupResult &OldDecls) {
   // If the new decl is known invalid already, don't bother doing any
   // merging checks.
   if (New->isInvalidDecl()) return;
@@ -1961,6 +1962,19 @@ void Sema::MergeTypedefNameDecl(TypedefNameDecl *New, LookupResult &OldDecls) {
 
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden, NewTag->getLocation());
+
+      // If this was an unscoped enumeration, yank all of its enumerators
+      // out of the scope.
+      if (isa<EnumDecl>(NewTag)) {
+        Scope *EnumScope = getNonFieldDeclScope(S);
+        for (auto *D : NewTag->decls()) {
+          auto *ED = cast<EnumConstantDecl>(D);
+          assert(EnumScope->isDeclScope(ED));
+          EnumScope->RemoveDecl(ED);
+          IdResolver.RemoveDecl(ED);
+          ED->getLexicalDeclContext()->removeDecl(ED);
+        }
+      }
     }
   }
 
@@ -5218,7 +5232,7 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   filterNonConflictingPreviousTypedefDecls(*this, NewTD, Previous);
   if (!Previous.empty()) {
     Redeclaration = true;
-    MergeTypedefNameDecl(NewTD, Previous);
+    MergeTypedefNameDecl(S, NewTD, Previous);
   }
 
   // If this is the C FILE type, notify the AST context.
@@ -14003,21 +14017,6 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
     PrevDecl = nullptr;
   }
 
-  if (PrevDecl) {
-    // When in C++, we may get a TagDecl with the same name; in this case the
-    // enum constant will 'hide' the tag.
-    assert((getLangOpts().CPlusPlus || !isa<TagDecl>(PrevDecl)) &&
-           "Received TagDecl when not in C++!");
-    if (!isa<TagDecl>(PrevDecl) && isDeclInScope(PrevDecl, CurContext, S)) {
-      if (isa<EnumConstantDecl>(PrevDecl))
-        Diag(IdLoc, diag::err_redefinition_of_enumerator) << Id;
-      else
-        Diag(IdLoc, diag::err_redefinition) << Id;
-      Diag(PrevDecl->getLocation(), diag::note_previous_definition);
-      return nullptr;
-    }
-  }
-
   // C++ [class.mem]p15:
   // If T is the name of a class, then each of the following shall have a name 
   // different from T:
@@ -14029,16 +14028,31 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   
   EnumConstantDecl *New =
     CheckEnumConstant(TheEnumDecl, LastEnumConst, IdLoc, Id, Val);
+  if (!New)
+    return nullptr;
 
-  if (New) {
-    // Process attributes.
-    if (Attr) ProcessDeclAttributeList(S, New, Attr);
-    ProcessAPINotes(New);
-
-    // Register this decl in the current scope stack.
-    New->setAccess(TheEnumDecl->getAccess());
-    PushOnScopeChains(New, S);
+  if (PrevDecl) {
+    // When in C++, we may get a TagDecl with the same name; in this case the
+    // enum constant will 'hide' the tag.
+    assert((getLangOpts().CPlusPlus || !isa<TagDecl>(PrevDecl)) &&
+           "Received TagDecl when not in C++!");
+    if (!isa<TagDecl>(PrevDecl) && isDeclInScope(PrevDecl, CurContext, S) &&
+        shouldLinkPossiblyHiddenDecl(PrevDecl, New)) {
+      if (isa<EnumConstantDecl>(PrevDecl))
+        Diag(IdLoc, diag::err_redefinition_of_enumerator) << Id;
+      else
+        Diag(IdLoc, diag::err_redefinition) << Id;
+      Diag(PrevDecl->getLocation(), diag::note_previous_definition);
+      return nullptr;
+    }
   }
+
+  // Process attributes.
+  if (Attr) ProcessDeclAttributeList(S, New, Attr);
+
+  // Register this decl in the current scope stack.
+  New->setAccess(TheEnumDecl->getAccess());
+  PushOnScopeChains(New, S);
 
   ActOnDocumentableDecl(New);
 

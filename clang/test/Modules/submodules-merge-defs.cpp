@@ -116,4 +116,12 @@ void use_static_inline() { StaticInline::g({}); }
 // expected-note@defs.h:71 {{declared here in module 'redef'}}
 // expected-note@defs.h:71 {{declared here in module 'stuff.use'}}
 #endif
+int use_anon_enum = G::g;
+#ifdef EARLY_INDIRECT_INCLUDE
+// expected-warning@-2 3{{ambiguous use of internal linkage declaration 'g' defined in multiple modules}}
+// FIXME: These notes are produced, but -verify can't match them?
+// FIXME-note@defs.h:51 3{{declared here in module 'redef'}}
+// FIXME-note@defs.h:51 3{{declared here in module 'stuff.use'}}
+#endif
+int use_named_enum = G::i;
 #endif

@@ -5,8 +5,6 @@
 //        Ideally, we'd like to have an --llvm-toolchain option similar to
 //        the --gcc-toolchain one.
 
-// REQUIRES: shell
-
 // = Big-endian, mips32r2, hard float
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-mti-linux -mips32r2 -mhard-float \
@@ -21,7 +19,7 @@
 // CHECK-BE-HF-32R2-SAME: "[[SYSROOT]]/mips-r2-hard-musl/usr/lib{{/|\\\\}}crt1.o"
 // CHECK-BE-HF-32R2-SAME: "[[SYSROOT]]/mips-r2-hard-musl/usr/lib{{/|\\\\}}crti.o"
 // CHECK-BE-HF-32R2-SAME: "-L[[SYSROOT]]/mips-r2-hard-musl/usr/lib"
-// CHECK-BE-HF-32R2-SAME: "{{[^"]+}}/mips-r2-hard-musl/lib/linux/libclang_rt.builtins-mips.a"
+// CHECK-BE-HF-32R2-SAME: "{{[^"]+}}/mips-r2-hard-musl{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.builtins-mips.a"
 // CHECK-BE-HF-32R2-SAME: "-lc"
 // CHECK-BE-HF-32R2-SAME: "[[SYSROOT]]/mips-r2-hard-musl/usr/lib{{/|\\\\}}crtn.o"
 
@@ -39,6 +37,6 @@
 // CHECK-LE-HF-32R2-SAME: "[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib{{/|\\\\}}crt1.o"
 // CHECK-LE-HF-32R2-SAME: "[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LE-HF-32R2-SAME: "-L[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib"
-// CHECK-LE-HF-32R2-SAME: "{{[^"]+}}/mipsel-r2-hard-musl/lib/linux/libclang_rt.builtins-mipsel.a"
+// CHECK-LE-HF-32R2-SAME: "{{[^"]+}}/mipsel-r2-hard-musl{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.builtins-mipsel.a"
 // CHECK-LE-HF-32R2-SAME: "-lc"
 // CHECK-LE-HF-32R2-SAME: "[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib{{/|\\\\}}crtn.o"
