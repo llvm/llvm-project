@@ -118,6 +118,10 @@ N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
 
+N: John McCall
+E: rjmccall@apple.com
+D: Swift language-specific changes
+
 N: Dylan McKay
 E: dylanmckay34@gmail.com
 D: AVR Backend
