@@ -103,18 +103,16 @@ if(ENABLE_SHARED)
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
-  else()
-    set_target_properties(libclang
-      PROPERTIES
-      VERSION ${LIBCLANG_LIBRARY_VERSION}
-      DEFINE_SYMBOL _CINDEX_LIB_)
-  endif()
-
-  if(APPLE)
+  elseif(APPLE)
     set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
     set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 
     set_property(TARGET libclang APPEND_STRING PROPERTY
                  LINK_FLAGS ${LIBCLANG_LINK_FLAGS})
+  else()
+    set_target_properties(libclang
+      PROPERTIES
+      VERSION ${LIBCLANG_LIBRARY_VERSION}
+      DEFINE_SYMBOL _CINDEX_LIB_)
   endif()
 endif()

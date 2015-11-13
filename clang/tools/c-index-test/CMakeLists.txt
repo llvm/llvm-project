@@ -28,3 +28,12 @@ if (CLANG_HAVE_LIBXML)
   include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})
   target_link_libraries(c-index-test ${LIBXML2_LIBRARIES})
 endif()
+
+install(TARGETS c-index-test
+  RUNTIME DESTINATION local/bin
+  COMPONENT c-index-test)
+add_custom_target(install-c-index-test
+  DEPENDS c-index-test
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=c-index-test
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
