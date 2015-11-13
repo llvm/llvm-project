@@ -35,15 +35,13 @@ public:
     void
     ClearStackFrames() override;
 
-    const char *
-    GetName() override;
-
     void
-    SetName(const char *name);
+    SetContext(const void *context);
 
 protected:
-    std::string m_thread_name;
     lldb::RegisterContextSP m_reg_context_sp;
+    class Data;
+    std::unique_ptr<Data> m_data;  // for WinAPI-specific data
 
     bool CalculateStopInfo() override;
 };

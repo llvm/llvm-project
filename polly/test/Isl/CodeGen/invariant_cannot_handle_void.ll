@@ -1,11 +1,9 @@
 ; RUN: opt %loadPolly -S -polly-codegen %s | FileCheck %s
 ;
 ; The offset of the %tmp1 load wrt. to %buff (62 bytes) is not divisible
-; by the type size (i32 = 4 bytes), thus the access function build for
-; %tmp1 is empty. As a result the code generation crashed when hoisting
-; %tmp1. This test verifies we do not crash anymore.
+; by the type size (i32 = 4 bytes), thus we will bail out.
 ;
-; CHECK: polly.start
+; CHECK-NOT: polly.start
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

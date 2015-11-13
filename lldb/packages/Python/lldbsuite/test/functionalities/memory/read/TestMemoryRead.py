@@ -22,7 +22,6 @@ class MemoryReadTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     def test_memory_read(self):
         """Test the 'memory read' command with plain and vector formats."""
         self.build()

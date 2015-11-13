@@ -48,6 +48,7 @@ import six
 
 /* C++ headers to be included. */
 %{
+#include <algorithm>
 #include <string>
 %}
 

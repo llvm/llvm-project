@@ -86,6 +86,9 @@ UnwindLLDB::AddFirstFrame ()
     if (m_frames.size() > 0)
         return true;
         
+    ProcessSP process_sp (m_thread.GetProcess());
+    ABI *abi = process_sp ? process_sp->GetABI().get() : NULL;
+
     // First, set up the 0th (initial) frame
     CursorSP first_cursor_sp(new Cursor ());
     RegisterContextLLDBSP reg_ctx_sp (new RegisterContextLLDB (m_thread, 
@@ -108,6 +111,10 @@ UnwindLLDB::AddFirstFrame ()
     // cursor own it in its shared pointer
     first_cursor_sp->reg_ctx_lldb_sp = reg_ctx_sp;
     m_frames.push_back (first_cursor_sp);
+
+    // Update the Full Unwind Plan for this frame if not valid
+    UpdateUnwindPlanForFirstFrameIfInvalid(abi);
+
     return true;
 
 unwind_done:
@@ -161,7 +168,14 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
         // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to that and return
         // true.  Subsequent calls to TryFallbackUnwindPlan() will return false.
         if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan())
+        {
+            // TryFallbackUnwindPlan for prev_frame succeeded and updated reg_ctx_lldb_sp field of
+            // prev_frame. However, cfa field of prev_frame still needs to be updated. Hence updating it.
+            if ( !(prev_frame->reg_ctx_lldb_sp->GetCFA(prev_frame->cfa)))
+                return nullptr;
+
             return GetOneMoreFrame (abi);
+        }
 
         if (log)
             log->Printf ("%*sFrame %d did not get a RegisterContext, stopping.",
@@ -175,7 +189,14 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
         // See if the regctx below this on the stack has a fallback unwind plan it can use.
         // Subsequent calls to TryFallbackUnwindPlan() will return false.
         if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan())
+        {
+            // TryFallbackUnwindPlan for prev_frame succeeded and updated reg_ctx_lldb_sp field of
+            // prev_frame. However, cfa field of prev_frame still needs to be updated. Hence updating it.
+            if ( !(prev_frame->reg_ctx_lldb_sp->GetCFA(prev_frame->cfa)))
+                return nullptr;
+
             return GetOneMoreFrame (abi);
+        }
 
         if (log)
             log->Printf("%*sFrame %d invalid RegisterContext for this frame, stopping stack walk", 
@@ -187,7 +208,14 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
         // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to that and return
         // true.  Subsequent calls to TryFallbackUnwindPlan() will return false.
         if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan())
+        {
+            // TryFallbackUnwindPlan for prev_frame succeeded and updated reg_ctx_lldb_sp field of
+            // prev_frame. However, cfa field of prev_frame still needs to be updated. Hence updating it.
+            if ( !(prev_frame->reg_ctx_lldb_sp->GetCFA(prev_frame->cfa)))
+                return nullptr;
+
             return GetOneMoreFrame (abi);
+        }
 
         if (log)
             log->Printf("%*sFrame %d did not get CFA for this frame, stopping stack walk",
@@ -212,7 +240,14 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
                 || abi->CallFrameAddressIsValid(cursor_sp->cfa) == false)
             {
                 if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan())
+                {
+                    // TryFallbackUnwindPlan for prev_frame succeeded and updated reg_ctx_lldb_sp field of
+                    // prev_frame. However, cfa field of prev_frame still needs to be updated. Hence updating it.
+                    if ( !(prev_frame->reg_ctx_lldb_sp->GetCFA(prev_frame->cfa)))
+                        return nullptr;
+
                     return GetOneMoreFrame (abi);
+                }
 
                 if (log)
                     log->Printf("%*sFrame %d did not get a valid CFA for this frame, stopping stack walk",
@@ -232,7 +267,14 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
         // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to that and return
         // true.  Subsequent calls to TryFallbackUnwindPlan() will return false.
         if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan())
+        {
+            // TryFallbackUnwindPlan for prev_frame succeeded and updated reg_ctx_lldb_sp field of
+            // prev_frame. However, cfa field of prev_frame still needs to be updated. Hence updating it.
+            if ( !(prev_frame->reg_ctx_lldb_sp->GetCFA(prev_frame->cfa)))
+                return nullptr;
+
             return GetOneMoreFrame (abi);
+        }
 
         if (log)
             log->Printf("%*sFrame %d did not get PC for this frame, stopping stack walk",
@@ -244,7 +286,14 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
         // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to that and return
         // true.  Subsequent calls to TryFallbackUnwindPlan() will return false.
         if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan())
+        {
+            // TryFallbackUnwindPlan for prev_frame succeeded and updated reg_ctx_lldb_sp field of
+            // prev_frame. However, cfa field of prev_frame still needs to be updated. Hence updating it.
+            if ( !(prev_frame->reg_ctx_lldb_sp->GetCFA(prev_frame->cfa)))
+                return nullptr;
+
             return GetOneMoreFrame (abi);
+        }
 
         if (log)
             log->Printf("%*sFrame %d did not get a valid PC, stopping stack walk",
@@ -262,6 +311,33 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
     cursor_sp->reg_ctx_lldb_sp = reg_ctx_sp;
     return cursor_sp;
 }
+
+void
+UnwindLLDB::UpdateUnwindPlanForFirstFrameIfInvalid (ABI *abi)
+{
+    // This function is called for First Frame only.
+    assert (m_frames.size() == 1 && "No. of cursor frames are not 1");
+
+    bool old_m_unwind_complete = m_unwind_complete;
+    CursorSP old_m_candidate_frame = m_candidate_frame;
+
+    // Try to unwind 2 more frames using the Unwinder. It uses Full UnwindPlan
+    // and if Full UnwindPlan fails, then uses FallBack UnwindPlan. Also
+    // update the cfa of Frame 0 (if required).
+    AddOneMoreFrame(abi);
+
+    // Remove all the frames added by above function as the purpose of
+    // using above function was just to check whether Unwinder of Frame 0
+    // works or not.
+    for(uint32_t i=1; i<m_frames.size(); i++)
+        m_frames.pop_back();
+
+    // Restore status after calling AddOneMoreFrame
+    m_unwind_complete = old_m_unwind_complete;
+    m_candidate_frame = old_m_candidate_frame;
+    return;
+}
+
 
 bool
 UnwindLLDB::AddOneMoreFrame (ABI *abi)
@@ -321,9 +397,17 @@ UnwindLLDB::AddOneMoreFrame (ABI *abi)
     m_frames.push_back(new_frame_v2);
     m_candidate_frame = GetOneMoreFrame(abi);
     if (m_candidate_frame)
+    {
+        // If control reached here then TryFallbackUnwindPlan had succeeded for Cursor::m_frames[m_frames.size() - 2].
+        // It also succeeded to Unwind next 2 frames i.e. m_frames[m_frames.size() - 1] and a frame after that.
+        // For Cursor::m_frames[m_frames.size() - 2], reg_ctx_lldb_sp field was already updated during TryFallbackUnwindPlan
+        // call above. However, cfa field still needs to be updated. Hence updating it here and then returning.
+        if ( !(m_frames[m_frames.size() - 2]->reg_ctx_lldb_sp->GetCFA(m_frames[m_frames.size() - 2]->cfa)))
+            return false;
         return true;
+    }
 
-    // The new frame isn't helped in unwinding. Fall back to the original one as the default unwind
+    // The new frame hasn't helped in unwinding. Fall back to the original one as the default unwind
     // plan is usually more reliable then the fallback one.
     m_frames.pop_back();
     m_frames.push_back(new_frame);

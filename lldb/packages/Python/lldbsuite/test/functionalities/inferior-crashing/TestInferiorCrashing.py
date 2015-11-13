@@ -40,7 +40,6 @@ class CrashingInferiorTestCase(TestBase):
         self.build()
         self.inferior_crashing_expr()
 
-    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     @expectedFailureWindows("llvm.org/pr24778")
     def test_inferior_crashing_step(self):
         """Test that stepping after a crash behaves correctly."""

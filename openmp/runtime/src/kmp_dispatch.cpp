@@ -685,7 +685,9 @@ __kmp_dispatch_init(
             }
             // Use the chunk size specified by OMP_SCHEDULE (or default if not specified)
             chunk = team -> t.t_sched.chunk;
-
+#if USE_ITT_BUILD
+            cur_chunk = chunk;
+#endif
             #ifdef KMP_DEBUG
             {
                 const char * buff;

@@ -32,6 +32,20 @@ class MiniDumpTestCase(TestBase):
         stop_description = thread.GetStopDescription(256);
         self.assertTrue("0xc0000005" in stop_description);
 
+    @no_debug_info_test
+    def test_stack_info_in_mini_dump(self):
+        """Test that we can see the stack."""
+        self.assertEqual(self.process.GetNumThreads(), 1)
+        thread = self.process.GetThreadAtIndex(0)
+        # The crash is in main, so there should be one frame on the stack.
+        self.assertEqual(thread.GetNumFrames(), 1)
+        frame = thread.GetFrameAtIndex(0)
+        self.assertTrue(frame.IsValid())
+        pc = frame.GetPC()
+        eip = frame.FindRegister("pc")
+        self.assertTrue(eip.IsValid())
+        self.assertEqual(pc, eip.GetValueAsUnsigned())
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

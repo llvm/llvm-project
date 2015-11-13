@@ -205,10 +205,24 @@ public:
     Str() const;
 
     static PythonObject
-    ResolveNameWithDictionary(llvm::StringRef name, PythonDictionary dict);
+    ResolveNameWithDictionary(llvm::StringRef name, const PythonDictionary &dict);
+
+    template<typename T>
+    static T
+    ResolveNameWithDictionary(llvm::StringRef name, const PythonDictionary &dict)
+    {
+        return ResolveNameWithDictionary(name, dict).AsType<T>();
+    }
 
     PythonObject
     ResolveName(llvm::StringRef name) const;
+
+    template<typename T>
+    T
+    ResolveName(llvm::StringRef name) const
+    {
+        return ResolveName(name).AsType<T>();
+    }
 
     bool
     HasAttribute(llvm::StringRef attribute) const;
@@ -410,6 +424,12 @@ class PythonModule : public PythonObject
 class PythonCallable : public PythonObject
 {
 public:
+    struct ArgInfo {
+        size_t count;
+        bool has_varargs : 1;
+        bool has_kwargs : 1;
+    };
+
     PythonCallable();
     PythonCallable(PyRefType type, PyObject *o);
     PythonCallable(const PythonCallable &dict);
@@ -425,14 +445,24 @@ public:
     void
     Reset(PyRefType type, PyObject *py_obj) override;
 
-    void
-    GetNumArguments(size_t &num_args, bool &has_varargs, bool &has_kwargs) const;
+    ArgInfo
+    GetNumArguments() const;
+
+    PythonObject
+    operator ()();
 
     PythonObject
     operator ()(std::initializer_list<PyObject*> args);
 
     PythonObject
     operator ()(std::initializer_list<PythonObject> args);
+
+    template<typename Arg, typename... Args>
+    PythonObject
+    operator ()(const Arg &arg, Args... args)
+    {
+        return operator()({ arg, args... });
+    }
 };
 
 

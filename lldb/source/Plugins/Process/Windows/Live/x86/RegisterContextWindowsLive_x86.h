@@ -28,8 +28,6 @@ class RegisterContextWindowsLive_x86 : public RegisterContextWindows_x86
 
     virtual ~RegisterContextWindowsLive_x86();
 
-    bool ReadRegister(const RegisterInfo *reg_info, RegisterValue &reg_value) override;
-
     bool WriteRegister(const RegisterInfo *reg_info, const RegisterValue &reg_value) override;
 };
 

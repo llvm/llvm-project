@@ -109,7 +109,7 @@ PythonObject::Str() const
 }
 
 PythonObject
-PythonObject::ResolveNameWithDictionary(llvm::StringRef name, PythonDictionary dict)
+PythonObject::ResolveNameWithDictionary(llvm::StringRef name, const PythonDictionary &dict)
 {
     size_t dot_pos = name.find_first_of('.');
     llvm::StringRef piece = name.substr(0, dot_pos);
@@ -904,31 +904,35 @@ PythonCallable::Reset(PyRefType type, PyObject *py_obj)
 }
 
 
-void
-PythonCallable::GetNumArguments(size_t &num_args, bool &has_varargs, bool &has_kwargs) const
+PythonCallable::ArgInfo
+PythonCallable::GetNumArguments() const
 {
-    num_args = 0;
-    has_varargs = false;
-    has_kwargs = false;
+    ArgInfo result = { 0, false, false };
     if (!IsValid())
-        return;
+        return result;
 
     PyObject *py_func_obj = m_py_obj;
     if (PyMethod_Check(py_func_obj))
         py_func_obj = PyMethod_GET_FUNCTION(py_func_obj);
 
     if (!py_func_obj)
-        return;
+        return result;
 
     PyCodeObject* code = (PyCodeObject*)PyFunction_GET_CODE(py_func_obj);
     if (!code)
-        return;
+        return result;
 
-    num_args = code->co_argcount;
-    if (code->co_flags & CO_VARARGS)
-        has_varargs = true;
-    if (code->co_flags & CO_VARKEYWORDS)
-        has_kwargs = true;
+    result.count = code->co_argcount;
+    result.has_varargs = !!(code->co_flags & CO_VARARGS);
+    result.has_kwargs = !!(code->co_flags & CO_VARKEYWORDS);
+    return result;
+}
+
+PythonObject
+PythonCallable::operator ()()
+{
+    return PythonObject(PyRefType::Owned,
+        PyObject_CallObject(m_py_obj, nullptr));
 }
 
 PythonObject

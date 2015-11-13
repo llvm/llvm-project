@@ -11,6 +11,10 @@
   leaq  a@dtpoff(%rax), %rcx
   leaq  b@dtpoff(%rax), %rcx
   .long	b@dtpoff, 0
+  leaq  c@tlsgd(%rip), %rdi
+  rex64
+  callq __tls_get_addr@PLT
+  leaq  c@dtpoff(%rax), %rcx
 
   .global	a
   .hidden a
@@ -23,8 +27,14 @@ a:
   .align 4
 b:
 	.long	0
+  
+  .global c
+  .section	.tbss,"awT",@nobits
+  .align 4
+c:
+	.long	0
 
-// Get the address of the got, and check that it has two entries.
+// Get the address of the got, and check that it has 4 entries.
 
 // CHECK:      Sections [
 // CHECK:          Name: .got
@@ -35,15 +45,18 @@ b:
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x20D0
 // CHECK-NEXT:     Offset:
-// CHECK-NEXT:     Size: 16
+// CHECK-NEXT:     Size: 32
 
 // CHECK:      Relocations [
 // CHECK:        Section ({{.+}}) .rela.dyn {
 // CHECK-NEXT:     0x20D0 R_X86_64_DTPMOD64 - 0x0
+// CHECK-NEXT:     0x20E0 R_X86_64_DTPMOD64 c 0x0
+// CHECK-NEXT:     0x20E8 R_X86_64_DTPOFF64 c 0x0
 // CHECK-NEXT:   }
 
 // 4297 = (0x20D0 + -4) - (0x1000 + 3) // PC relative offset to got entry.
 // 4285 = (0x20D0 + -4) - (0x100c + 3) // PC relative offset to got entry.
+// 4267 = (0x20E0 + -4) - (0x102e + 3) // PC relative offset to got entry.
 
 // DIS:      Disassembly of section .text:
 // DIS-NEXT: .text:
@@ -57,3 +70,6 @@ b:
 // DIS-NEXT:     1028: 00 00
 // DIS-NEXT:     102a: 00 00
 // DIS-NEXT:     102c: 00 00
+// DIS-NEXT:     102e: {{.+}} leaq    4267(%rip), %rdi
+// DIS-NEXT:     1035: {{.+}} callq
+// DIS-NEXT:     103b: {{.+}} leaq    8(%rax), %rcx

@@ -1574,8 +1574,6 @@ Scalar::ULongLong(unsigned long long fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
-        if(m_integer.isAllOnesValue())
-            return *(const ulonglong_t *)(llvm::APInt::getAllOnesValue(128)).getRawData();
         return *(const ulonglong_t *)m_integer.getRawData();
     case e_float:
         return (ulonglong_t)m_float.convertToFloat();

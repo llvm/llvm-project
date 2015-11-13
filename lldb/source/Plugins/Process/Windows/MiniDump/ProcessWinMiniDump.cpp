@@ -14,7 +14,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
-
+#include <memory>
 #include <mutex>
 
 #include "lldb/Core/PluginManager.h"
@@ -189,7 +189,13 @@ ProcessWinMiniDump::UpdateThreadList(ThreadList &old_thread_list, ThreadList &ne
     {
         const ULONG32 thread_count = thread_list_ptr->NumberOfThreads;
         for (ULONG32 i = 0; i < thread_count; ++i) {
-            std::shared_ptr<ThreadWinMiniDump> thread_sp(new ThreadWinMiniDump(*this, thread_list_ptr->Threads[i].ThreadId));
+            const auto &mini_dump_thread = thread_list_ptr->Threads[i];
+            auto thread_sp = std::make_shared<ThreadWinMiniDump>(*this, mini_dump_thread.ThreadId);
+            if (mini_dump_thread.ThreadContext.DataSize >= sizeof(CONTEXT))
+            {
+                const CONTEXT *context = reinterpret_cast<const CONTEXT *>(static_cast<const char *>(m_data_up->m_base_addr) + mini_dump_thread.ThreadContext.Rva);
+                thread_sp->SetContext(context);
+            }
             new_thread_list.AddThread(thread_sp);
         }
     }

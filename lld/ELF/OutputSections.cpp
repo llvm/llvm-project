@@ -80,6 +80,9 @@ GotSection<ELFT>::GotSection()
 template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody *Sym) {
   Sym->GotIndex = Target->getGotHeaderEntriesNum() + Entries.size();
   Entries.push_back(Sym);
+  // Global Dynamic TLS entries take two GOT slots.
+  if (Sym->isTLS())
+    Entries.push_back(nullptr);
 }
 
 template <class ELFT> uint32_t GotSection<ELFT>::addLocalModuleTlsIndex() {
@@ -92,6 +95,17 @@ template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getEntryAddr(const SymbolBody &B) const {
   return this->getVA() + B.GotIndex * sizeof(uintX_t);
+}
+
+template <class ELFT>
+const SymbolBody *GotSection<ELFT>::getMipsFirstGlobalEntry() const {
+  return Entries.empty() ? nullptr : Entries.front();
+}
+
+template <class ELFT>
+unsigned GotSection<ELFT>::getMipsLocalEntriesNum() const {
+  // TODO: Update when the suppoort of GOT entries for local symbols is added.
+  return Target->getGotHeaderEntriesNum();
 }
 
 template <class ELFT> void GotSection<ELFT>::finalize() {
@@ -176,8 +190,13 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     auto *P = reinterpret_cast<Elf_Rel *>(Buf);
     Buf += EntrySize;
 
-    InputSectionBase<ELFT> &C = Rel.C;
-    const Elf_Rel &RI = Rel.RI;
+    // Skip placeholder for global dynamic TLS relocation pair. It was already
+    // handled by the previous relocation.
+    if (!Rel.C || !Rel.RI)
+      continue;
+
+    InputSectionBase<ELFT> &C = *Rel.C;
+    const Elf_Rel &RI = *Rel.RI;
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
     const ObjectFile<ELFT> &File = *C.getFile();
     SymbolBody *Body = File.getSymbolBody(SymIndex);
@@ -186,11 +205,22 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
 
     uint32_t Type = RI.getType(Config->Mips64EL);
 
-    if (Type == Target->getTlsLocalDynamicReloc()) {
+    if (Target->isTlsLocalDynamicReloc(Type)) {
       P->setSymbolAndType(0, Target->getTlsModuleIndexReloc(),
                           Config->Mips64EL);
       P->r_offset =
           Out<ELFT>::Got->getVA() + Out<ELFT>::LocalModuleTlsIndexOffset;
+      continue;
+    }
+
+    if (Body && Target->isTlsGlobalDynamicReloc(Type)) {
+      P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
+                          Target->getTlsModuleIndexReloc(), Config->Mips64EL);
+      P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
+      auto *PNext = reinterpret_cast<Elf_Rel *>(Buf);
+      PNext->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
+                              Target->getTlsOffsetReloc(), Config->Mips64EL);
+      PNext->r_offset = Out<ELFT>::Got->getEntryAddr(*Body) + sizeof(uintX_t);
       continue;
     }
 
@@ -477,6 +507,12 @@ DynamicSection<ELFT>::DynamicSection(SymbolTable<ELFT> &SymTab)
   Elf_Shdr &Header = this->Header;
   Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
   Header.sh_entsize = ELFT::Is64Bits ? 16 : 8;
+
+  // .dynamic section is not writable on MIPS.
+  // See "Special Section" in Chapter 4 in the following document:
+  // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+  if (Config->EMachine == EM_MIPS)
+    Header.sh_flags = llvm::ELF::SHF_ALLOC;
 }
 
 template <class ELFT> void DynamicSection<ELFT>::finalize() {
@@ -495,7 +531,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
     ++NumEntries; // DT_JMPREL
     ++NumEntries; // DT_PLTRELSZ
-    ++NumEntries; // DT_PLTGOT
+    ++NumEntries; // DT_PLTGOT / DT_MIPS_PLTGOT
     ++NumEntries; // DT_PLTREL
   }
 
@@ -558,6 +594,19 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     ++NumEntries; // DT_FLAGS
   if (DtFlags1)
     ++NumEntries; // DT_FLAGS_1
+
+  if (Config->EMachine == EM_MIPS) {
+    ++NumEntries; // DT_MIPS_RLD_VERSION
+    ++NumEntries; // DT_MIPS_FLAGS
+    ++NumEntries; // DT_MIPS_BASE_ADDRESS
+    ++NumEntries; // DT_MIPS_SYMTABNO
+    ++NumEntries; // DT_MIPS_LOCAL_GOTNO
+    ++NumEntries; // DT_MIPS_GOTSYM;
+    ++NumEntries; // DT_PLTGOT
+    if (Out<ELFT>::MipsRldMap)
+      ++NumEntries; // DT_MIPS_RLD_MAP
+  }
+
   ++NumEntries; // DT_NULL
 
   Header.sh_size = NumEntries * Header.sh_entsize;
@@ -588,7 +637,12 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
   if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
     WritePtr(DT_JMPREL, Out<ELFT>::RelaPlt->getVA());
     WriteVal(DT_PLTRELSZ, Out<ELFT>::RelaPlt->getSize());
-    WritePtr(DT_PLTGOT, Out<ELFT>::GotPlt->getVA());
+    // On MIPS, the address of the .got.plt section is stored in
+    // the DT_MIPS_PLTGOT entry because the DT_PLTGOT entry points to
+    // the .got section. See "Dynamic Section" in the following document:
+    // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+    WritePtr((Config->EMachine == EM_MIPS) ? DT_MIPS_PLTGOT : DT_PLTGOT,
+             Out<ELFT>::GotPlt->getVA());
     WriteVal(DT_PLTREL, Out<ELFT>::RelaPlt->isRela() ? DT_RELA : DT_REL);
   }
 
@@ -640,6 +694,25 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
     WriteVal(DT_FLAGS, DtFlags);
   if (DtFlags1)
     WriteVal(DT_FLAGS_1, DtFlags1);
+
+  // See "Dynamic Section" in Chapter 5 in the following document
+  // for detailed description:
+  // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+  if (Config->EMachine == EM_MIPS) {
+    WriteVal(DT_MIPS_RLD_VERSION, 1);
+    WriteVal(DT_MIPS_FLAGS, RHF_NOTPOT);
+    WritePtr(DT_MIPS_BASE_ADDRESS, Target->getVAStart());
+    WriteVal(DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols());
+    WriteVal(DT_MIPS_LOCAL_GOTNO, Out<ELFT>::Got->getMipsLocalEntriesNum());
+    if (const SymbolBody *B = Out<ELFT>::Got->getMipsFirstGlobalEntry())
+      WriteVal(DT_MIPS_GOTSYM, B->getDynamicSymbolTableIndex());
+    else
+      WriteVal(DT_MIPS_GOTSYM, Out<ELFT>::DynSymTab->getNumSymbols());
+    WritePtr(DT_PLTGOT, Out<ELFT>::Got->getVA());
+    if (Out<ELFT>::MipsRldMap)
+      WritePtr(DT_MIPS_RLD_MAP, Out<ELFT>::MipsRldMap->getVA());
+  }
+
   WriteVal(DT_NULL, 0);
 }
 
@@ -1081,6 +1154,17 @@ SymbolTableSection<ELFT>::SymbolTableSection(
   Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
 }
 
+// Orders symbols according to their positions in the GOT,
+// in compliance with MIPS ABI rules.
+// See "Global Offset Table" in Chapter 5 in the following document
+// for detailed description:
+// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+static bool sortMipsSymbols(SymbolBody *L, SymbolBody *R) {
+  if (!L->isInGot() || !R->isInGot())
+    return R->isInGot();
+  return L->GotIndex < R->GotIndex;
+}
+
 template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   if (this->Header.sh_size)
     return; // Already finalized.
@@ -1100,6 +1184,8 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   if (Out<ELFT>::GnuHashTab)
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
     Out<ELFT>::GnuHashTab->addSymbols(Symbols);
+  else if (Config->EMachine == EM_MIPS)
+    std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
   size_t I = 0;
   for (SymbolBody *B : Symbols)
     B->setDynamicSymbolTableIndex(++I);

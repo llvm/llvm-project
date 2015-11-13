@@ -29,8 +29,14 @@ public:
   unsigned getPltReloc() const { return PltReloc; }
   unsigned getGotRefReloc() const { return GotRefReloc; }
   unsigned getRelativeReloc() const { return RelativeReloc; }
-  unsigned getTlsLocalDynamicReloc() const { return TlsLocalDynamicReloc; }
+  bool isTlsLocalDynamicReloc(unsigned Type) const {
+    return Type == TlsLocalDynamicReloc;
+  }
+  bool isTlsGlobalDynamicReloc(unsigned Type) const {
+    return Type == TlsGlobalDynamicReloc;
+  }
   unsigned getTlsModuleIndexReloc() const { return TlsModuleIndexReloc; }
+  unsigned getTlsOffsetReloc() const { return TlsOffsetReloc; }
   unsigned getPltZeroEntrySize() const { return PltZeroEntrySize; }
   unsigned getPltEntrySize() const { return PltEntrySize; }
   bool supportsLazyRelocations() const { return LazyRelocations; }
@@ -70,7 +76,9 @@ protected:
   unsigned PltReloc;
   unsigned RelativeReloc;
   unsigned TlsLocalDynamicReloc = 0;
+  unsigned TlsGlobalDynamicReloc = 0;
   unsigned TlsModuleIndexReloc;
+  unsigned TlsOffsetReloc;
   unsigned PltEntrySize = 8;
   unsigned PltZeroEntrySize = 0;
   unsigned GotHeaderEntriesNum = 0;

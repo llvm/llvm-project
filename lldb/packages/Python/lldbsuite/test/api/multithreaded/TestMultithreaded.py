@@ -17,7 +17,6 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfRemote
     @skipIfNoSBHeaders
     @skipIfWindows # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["x86_64"])
     def test_breakpoint_callback(self):
         """Test the that SBBreakpoint callback is invoked when a breakpoint is hit. """
         self.build_and_test('driver.cpp test_breakpoint_callback.cpp',
@@ -27,7 +26,6 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfNoSBHeaders
     @skipIfWindows # clang-cl does not support throw or catch (llvm.org/pr24538)
     @expectedFlakeyFreeBSD
-    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["x86_64"])
     def test_sb_api_listener_event_description(self):
         """ Test the description of an SBListener breakpoint event is valid."""
         self.build_and_test('driver.cpp listener_test.cpp test_listener_event_description.cpp',
@@ -39,7 +37,6 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfWindows # clang-cl does not support throw or catch (llvm.org/pr24538)
     @expectedFlakeyFreeBSD
     @expectedFlakeyLinux # Driver occasionally returns '1' as exit status
-    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["x86_64"])
     def test_sb_api_listener_event_process_state(self):
         """ Test that a registered SBListener receives events when a process
             changes state.

@@ -38,6 +38,9 @@ class RegisterContextWindows_x86 : public RegisterContextWindows
     size_t GetRegisterSetCount() override;
 
     const RegisterSet *GetRegisterSet(size_t reg_set) override;
+
+    bool ReadRegister(const RegisterInfo *reg_info, RegisterValue &reg_value) override;
+
 };
 
 }

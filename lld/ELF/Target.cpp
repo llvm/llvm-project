@@ -216,7 +216,9 @@ X86_64TargetInfo::X86_64TargetInfo() {
   PltReloc = R_X86_64_JUMP_SLOT;
   RelativeReloc = R_X86_64_RELATIVE;
   TlsLocalDynamicReloc = R_X86_64_TLSLD;
+  TlsGlobalDynamicReloc = R_X86_64_TLSGD;
   TlsModuleIndexReloc = R_X86_64_DTPMOD64;
+  TlsOffsetReloc = R_X86_64_DTPOFF64;
   LazyRelocations = true;
   PltEntrySize = 16;
   PltZeroEntrySize = 16;
@@ -335,6 +337,7 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   case R_X86_64_GOTPCREL:
   case R_X86_64_PLT32:
   case R_X86_64_TLSLD:
+  case R_X86_64_TLSGD:
     write32le(Loc, SA - P);
     break;
   case R_X86_64_64:
@@ -660,6 +663,17 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     if (!isInt<33>(X))
       error("Relocation R_AARCH64_ADR_PREL_PG_HI21 out of range");
     updateAArch64Adr(Loc, (X >> 12) & 0x1FFFFF); // X[32:12]
+    break;
+  }
+  case R_AARCH64_JUMP26:
+  case R_AARCH64_CALL26: {
+    uint64_t X = SA - P;
+    if (!isInt<28>(X)) {
+      if (Type == R_AARCH64_JUMP26)
+        error("Relocation R_AARCH64_JUMP26 out of range");
+      error("Relocation R_AARCH64_CALL26 out of range");
+    }
+    or32le(Loc, (X & 0x0FFFFFFC) >> 2);
     break;
   }
   case R_AARCH64_LDST64_ABS_LO12_NC:

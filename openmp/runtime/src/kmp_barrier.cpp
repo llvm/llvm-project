@@ -766,6 +766,8 @@ __kmp_hierarchical_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr,
         if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME && thr_bar->use_oncore_barrier) {
             if (thr_bar->leaf_kids) { // First, wait for leaf children to check-in on my b_arrived flag
                 kmp_uint64 leaf_state = KMP_MASTER_TID(tid) ? thr_bar->b_arrived | thr_bar->leaf_state : team->t.t_bar[bt].b_arrived | thr_bar->leaf_state;
+                KA_TRACE(20, ("__kmp_hierarchical_barrier_gather: T#%d(%d:%d) waiting for leaf kids\n",
+                              gtid, team->t.t_id, tid));
                 kmp_flag_64 flag(&thr_bar->b_arrived, leaf_state);
                 flag.wait(this_thr, FALSE
                           USE_ITT_BUILD_ARG(itt_sync_obj) );

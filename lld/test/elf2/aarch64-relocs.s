@@ -57,3 +57,38 @@ foo:
 # CHECK: Disassembly of section .R_AARCH64_LDST64_ABS_LO12_NC:
 # CHECK-NEXT: $x.6:
 # CHECK-NEXT:   11024:       7c 17 40 f9     ldr     x28, [x27, #40]
+
+.section .SUB,"ax",@progbits
+  nop
+sub:
+  nop
+
+# CHECK: Disassembly of section .SUB:
+# CHECK-NEXT: $x.8:
+# CHECK-NEXT:   1102c:       1f 20 03 d5     nop
+# CHECK: sub:
+# CHECK-NEXT:   11030:       1f 20 03 d5     nop
+
+.section .R_AARCH64_CALL26,"ax",@progbits
+call26:
+        bl sub
+
+# S = 0x1102c, A = 0x4, P = 0x11034
+# R = S + A - P = -0x4 = 0xfffffffc
+# (R & 0x0ffffffc) >> 2 = 0x03ffffff
+# 0x94000000 | 0x03ffffff = 0x97ffffff
+# CHECK: Disassembly of section .R_AARCH64_CALL26:
+# CHECK-NEXT: call26:
+# CHECK-NEXT:   11034:       ff ff ff 97     bl     #-4
+
+.section .R_AARCH64_JUMP26,"ax",@progbits
+jump26:
+        b sub
+
+# S = 0x1102c, A = 0x4, P = 0x11038
+# R = S + A - P = -0x8 = 0xfffffff8
+# (R & 0x0ffffffc) >> 2 = 0x03fffffe
+# 0x14000000 | 0x03fffffe = 0x17fffffe
+# CHECK: Disassembly of section .R_AARCH64_JUMP26:
+# CHECK-NEXT: jump26:
+# CHECK-NEXT:   11038:       fe ff ff 17     b      #-8

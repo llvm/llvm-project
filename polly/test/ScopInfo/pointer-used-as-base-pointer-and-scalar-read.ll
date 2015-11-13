@@ -6,17 +6,17 @@
 
 ; CHECK: Arrays {
 ; CHECK:     float MemRef_A[*]; // Element size 4
-; CHECK:     float* MemRef_A; // Element size 0
-; CHECK:     float* MemRef_x__phi; // Element size 0
-; CHECK:     float* MemRef_B; // Element size 0
-; CHECK:     float* MemRef_C[*]; // Element size 0
+; CHECK:     float* MemRef_A; // Element size 8
+; CHECK:     float* MemRef_x__phi; // Element size 8
+; CHECK:     float* MemRef_B; // Element size 8
+; CHECK:     float* MemRef_C[*]; // Element size 8
 ; CHECK: }
 ; CHECK: Arrays (Bounds as pw_affs) {
 ; CHECK:     float MemRef_A[*]; // Element size 4
-; CHECK:     float* MemRef_A; // Element size 0
-; CHECK:     float* MemRef_x__phi; // Element size 0
-; CHECK:     float* MemRef_B; // Element size 0
-; CHECK:     float* MemRef_C[*]; // Element size 0
+; CHECK:     float* MemRef_A; // Element size 8
+; CHECK:     float* MemRef_x__phi; // Element size 8
+; CHECK:     float* MemRef_B; // Element size 8
+; CHECK:     float* MemRef_C[*]; // Element size 8
 ; CHECK: }
 ; CHECK: Alias Groups (0):
 ; CHECK:     n/a

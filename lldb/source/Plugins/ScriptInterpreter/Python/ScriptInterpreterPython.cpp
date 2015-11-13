@@ -16,6 +16,7 @@
 #include "lldb-python.h"
 #include "ScriptInterpreterPython.h"
 #include "PythonDataObjects.h"
+#include "PythonExceptionState.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -177,8 +178,6 @@ private:
 };
 
 }
-
-static std::string ReadPythonBacktrace(PythonObject py_backtrace);
 
 ScriptInterpreterPython::Locker::Locker (ScriptInterpreterPython *py_interpreter,
                                          uint16_t on_entry,
@@ -1245,37 +1244,9 @@ ScriptInterpreterPython::ExecuteMultipleLines (const char *in_string, const Exec
         }
     }
 
-    py_error.Reset(PyRefType::Borrowed, PyErr_Occurred());
-    if (py_error.IsValid())
-    {
-        // puts(in_string);
-        // _PyObject_Dump (py_error);
-        // PyErr_Print();
-        // success = false;
-
-        PyObject *py_type = nullptr;
-        PyObject *py_value = nullptr;
-        PyObject *py_traceback = nullptr;
-        PyErr_Fetch(&py_type, &py_value, &py_traceback);
-
-        PythonObject type(PyRefType::Owned, py_type);
-        PythonObject value(PyRefType::Owned, py_value);
-        PythonObject traceback(PyRefType::Owned, py_traceback);
-
-        // get the backtrace
-        std::string bt = ReadPythonBacktrace(traceback);
-
-        if (value.IsAllocated())
-        {
-            PythonString str = value.Str();
-            llvm::StringRef value_str(str.GetString());
-            error.SetErrorStringWithFormat("%s\n%s", value_str.str().c_str(), bt.c_str());
-        }
-        else
-            error.SetErrorStringWithFormat("%s",bt.c_str());
-        if (options.GetMaskoutErrors())
-            PyErr_Clear();
-    }
+    PythonExceptionState exception_state(!options.GetMaskoutErrors());
+    if (exception_state.IsError())
+        error.SetErrorString(exception_state.Format().c_str());
 
     return error;
 }
@@ -2375,58 +2346,6 @@ ScriptInterpreterPython::GetSyntheticValue(const StructuredData::ObjectSP &imple
     }
     
     return ret_val;
-}
-
-static std::string
-ReadPythonBacktrace(PythonObject py_backtrace)
-{
-    PythonObject traceback_module;
-    PythonObject stringIO_module;
-    PythonObject stringIO_builder;
-    PythonObject stringIO_buffer;
-    PythonObject printTB;
-    PythonObject printTB_args;
-    PythonObject printTB_result;
-    PythonObject stringIO_getvalue;
-    PythonObject printTB_string;
-
-    std::string retval("backtrace unavailable");
-
-    if (!py_backtrace.IsAllocated())
-        return retval;
-
-    traceback_module.Reset(PyRefType::Owned, PyImport_ImportModule("traceback"));
-    stringIO_module.Reset(PyRefType::Owned, PyImport_ImportModule("StringIO"));
-    if (!traceback_module.IsAllocated() || !stringIO_module.IsAllocated())
-        return retval;
-
-    stringIO_builder.Reset(PyRefType::Owned, PyObject_GetAttrString(stringIO_module.get(), "StringIO"));
-    if (!stringIO_builder.IsAllocated())
-        return retval;
-
-    stringIO_buffer.Reset(PyRefType::Owned, PyObject_CallObject(stringIO_builder.get(), nullptr));
-    if (!stringIO_buffer.IsAllocated())
-        return retval;
-
-    printTB.Reset(PyRefType::Owned, PyObject_GetAttrString(traceback_module.get(), "print_tb"));
-    if (!printTB.IsAllocated())
-        return retval;
-
-    printTB_args.Reset(PyRefType::Owned, Py_BuildValue("OOO", py_backtrace.get(), Py_None, stringIO_buffer.get()));
-    printTB_result.Reset(PyRefType::Owned, PyObject_CallObject(printTB.get(), printTB_args.get()));
-    stringIO_getvalue.Reset(PyRefType::Owned, PyObject_GetAttrString(stringIO_buffer.get(), "getvalue"));
-    if (!stringIO_getvalue.IsAllocated())
-        return retval;
-
-    printTB_string.Reset(PyRefType::Owned, PyObject_CallObject(stringIO_getvalue.get(), nullptr));
-    if (!printTB_string.IsAllocated())
-        return retval;
-
-    PythonString str(PyRefType::Borrowed, printTB_string.get());
-    llvm::StringRef string_data(str.GetString());
-    retval.assign(string_data.data(), string_data.size());
-
-    return retval;
 }
 
 bool

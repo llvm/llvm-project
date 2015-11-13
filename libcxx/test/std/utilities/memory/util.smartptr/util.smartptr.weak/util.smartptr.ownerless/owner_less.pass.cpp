@@ -30,9 +30,28 @@
 //     bool operator()(shared_ptr<T> const&, weak_ptr<T> const&) const;
 //     bool operator()(weak_ptr<T> const&, shared_ptr<T> const&) const;
 // };
+// 
+// Added in C++17
+// template<> struct owner_less<void>
+// {
+//     template<class T, class U>
+//         bool operator()(shared_ptr<T> const&, shared_ptr<U> const&) const;
+//     template<class T, class U>
+//         bool operator()(shared_ptr<T> const&, weak_ptr<U> const&) const;
+//     template<class T, class U>
+//         bool operator()(weak_ptr<T> const&, shared_ptr<U> const&) const;
+//     template<class T, class U>
+//         bool operator()(weak_ptr<T> const&, weak_ptr<U> const&) const;
+// 
+//     typedef unspecified is_transparent;
+// };
 
 #include <memory>
 #include <cassert>
+#include <set>
+#include "test_macros.h"
+
+struct X {};
 
 int main()
 {
@@ -79,4 +98,25 @@ int main()
     assert(cs(w1, p3) || cs(w3, p1));
     assert(cs(w3, p1) == cs(w3, p2));
     }
+#if TEST_STD_VER > 14
+    {
+    std::shared_ptr<int> sp1;
+    std::shared_ptr<void> sp2;
+    std::shared_ptr<long> sp3;
+    std::weak_ptr<int> wp1;
+
+    std::owner_less<> cmp;
+    cmp(sp1, sp2);
+    cmp(sp1, wp1);
+    cmp(sp1, sp3);
+    cmp(wp1, sp1);
+    cmp(wp1, wp1);
+    }
+    {
+    // test heterogeneous lookups 
+    std::set<std::shared_ptr<X>, std::owner_less<>> s;
+    std::shared_ptr<void> vp;
+    s.find(vp);
+    }
+#endif
 }

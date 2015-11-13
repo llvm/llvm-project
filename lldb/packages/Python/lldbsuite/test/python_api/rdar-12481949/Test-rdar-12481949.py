@@ -50,5 +50,5 @@ class Radar12481949DataFormatterTestCase(TestBase):
         self.assertTrue(self.frame().FindVariable("myvar").GetValueAsSigned() != 0xFFFFFFFFFFFFFFFF, "GetValueAsSigned() does not say 0xFFFFFFFFFFFFFFFF")
 
         self.assertTrue(self.frame().FindVariable("myvar").GetValueAsUnsigned() != -1, "GetValueAsUnsigned() does not say -1")
-        self.assertTrue(self.frame().FindVariable("myvar").GetValueAsUnsigned() == 0xFFFFFFFFFFFFFFFF, "GetValueAsUnsigned() says 0xFFFFFFFFFFFFFFFF")
-        self.assertTrue(self.frame().FindVariable("myvar").GetValueAsSigned() != 0xFFFFFFFF, "GetValueAsUnsigned() does not say 0xFFFFFFFF")
+        self.assertTrue(self.frame().FindVariable("myvar").GetValueAsUnsigned() == 0xFFFFFFFF, "GetValueAsUnsigned() says 0xFFFFFFFF")
+        self.assertTrue(self.frame().FindVariable("myvar").GetValueAsUnsigned() != 0xFFFFFFFFFFFFFFFF, "GetValueAsUnsigned() does not says 0xFFFFFFFFFFFFFFFF")

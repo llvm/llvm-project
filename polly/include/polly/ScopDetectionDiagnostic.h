@@ -43,6 +43,9 @@ class Region;
 
 namespace polly {
 
+/// @brief Set the begin and end source location for the given region @p R.
+void getDebugLocations(const Region *R, DebugLoc &Begin, DebugLoc &End);
+
 class RejectLog;
 /// @brief Emit optimization remarks about the rejected regions to the user.
 ///
@@ -51,12 +54,6 @@ class RejectLog;
 /// @param F The function we emit remarks for.
 /// @param Log The error log containing all messages being emitted as remark.
 void emitRejectionRemarks(const llvm::Function &F, const RejectLog &Log);
-
-/// @brief Emit diagnostic remarks for a valid Scop
-///
-/// @param F The function we emit remarks for
-/// @param R The region that marks a valid Scop
-void emitValidRemarks(const llvm::Function &F, const Region *R);
 
 // Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
 enum RejectReasonKind {

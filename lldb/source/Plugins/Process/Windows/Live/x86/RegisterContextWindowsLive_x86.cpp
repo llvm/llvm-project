@@ -36,63 +36,6 @@ RegisterContextWindowsLive_x86::~RegisterContextWindowsLive_x86()
 
 
 bool
-RegisterContextWindowsLive_x86::ReadRegister(const RegisterInfo *reg_info, RegisterValue &reg_value)
-{
-    if (!CacheAllRegisterValues())
-        return false;
-
-    uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    switch (reg)
-    {
-        case lldb_eax_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EAX", m_context.Eax);
-            reg_value.SetUInt32(m_context.Eax);
-            break;
-        case lldb_ebx_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EBX", m_context.Ebx);
-            reg_value.SetUInt32(m_context.Ebx);
-            break;
-        case lldb_ecx_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from ECX", m_context.Ecx);
-            reg_value.SetUInt32(m_context.Ecx);
-            break;
-        case lldb_edx_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EDX", m_context.Edx);
-            reg_value.SetUInt32(m_context.Edx);
-            break;
-        case lldb_edi_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EDI", m_context.Edi);
-            reg_value.SetUInt32(m_context.Edi);
-            break;
-        case lldb_esi_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from ESI", m_context.Esi);
-            reg_value.SetUInt32(m_context.Esi);
-            break;
-        case lldb_ebp_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EBP", m_context.Ebp);
-            reg_value.SetUInt32(m_context.Ebp);
-            break;
-        case lldb_esp_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from ESP", m_context.Esp);
-            reg_value.SetUInt32(m_context.Esp);
-            break;
-        case lldb_eip_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EIP", m_context.Eip);
-            reg_value.SetUInt32(m_context.Eip);
-            break;
-        case lldb_eflags_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EFLAGS", m_context.EFlags);
-            reg_value.SetUInt32(m_context.EFlags);
-            break;
-        default:
-            WINWARN_IFALL(WINDOWS_LOG_REGISTERS, "Requested unknown register %u", reg);
-            break;
-    }
-    return true;
-}
-
-
-bool
 RegisterContextWindowsLive_x86::WriteRegister(const RegisterInfo *reg_info, const RegisterValue &reg_value)
 {
     // Since we cannot only write a single register value to the inferior, we need to make sure

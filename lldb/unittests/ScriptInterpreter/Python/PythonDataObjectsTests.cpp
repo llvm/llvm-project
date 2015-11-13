@@ -16,25 +16,17 @@
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 
+#include "PythonTestSuite.h"
+
 using namespace lldb_private;
 
-class PythonDataObjectsTest : public testing::Test
+class PythonDataObjectsTest : public PythonTestSuite
 {
   public:
     void
     SetUp() override
     {
-        HostInfoBase::Initialize();
-        // ScriptInterpreterPython::Initialize() depends on HostInfo being
-        // initializedso it can compute the python directory etc.
-        ScriptInterpreterPython::Initialize();
-
-        // Although we don't care about concurrency for the purposes of running
-        // this test suite, Python requires the GIL to be locked even for
-        // deallocating memory, which can happen when you call Py_DECREF or
-        // Py_INCREF.  So acquire the GIL for the entire duration of this
-        // test suite.
-        m_gil_state = PyGILState_Ensure();
+        PythonTestSuite::SetUp();
 
         PythonString sys_module("sys");
         m_sys_module.Reset(PyRefType::Owned, PyImport_Import(sys_module.get()));
@@ -48,18 +40,14 @@ class PythonDataObjectsTest : public testing::Test
         m_sys_module.Reset();
         m_main_module.Reset();
         m_builtins_module.Reset();
-        PyGILState_Release(m_gil_state);
 
-        ScriptInterpreterPython::Terminate();
+        PythonTestSuite::TearDown();
     }
 
   protected:
     PythonModule m_sys_module;
     PythonModule m_main_module;
     PythonModule m_builtins_module;
-
-  private:
-    PyGILState_STATE m_gil_state;
 };
 
 TEST_F(PythonDataObjectsTest, TestOwnedReferences)

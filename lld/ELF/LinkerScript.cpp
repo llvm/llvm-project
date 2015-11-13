@@ -36,6 +36,7 @@ private:
   static std::vector<StringRef> tokenize(StringRef S);
   static StringRef skipSpace(StringRef S);
   StringRef next();
+  bool skip(StringRef Tok);
   bool atEOF() { return Tokens.size() == Pos; }
   void expect(StringRef Expect);
 
@@ -50,6 +51,9 @@ private:
   void readOutputArch();
   void readOutputFormat();
   void readSearchDir();
+  void readSections();
+
+  void readOutputSectionDescription();
 
   StringSaver Saver;
   std::vector<StringRef> Tokens;
@@ -78,6 +82,8 @@ void LinkerScript::run() {
       readOutputFormat();
     } else if (Tok == "SEARCH_DIR") {
       readSearchDir();
+    } else if (Tok == "SECTIONS") {
+      readSections();
     } else {
       error("unknown directive: " + Tok);
     }
@@ -133,9 +139,18 @@ StringRef LinkerScript::skipSpace(StringRef S) {
 }
 
 StringRef LinkerScript::next() {
-  if (Pos == Tokens.size())
+  if (atEOF())
     error("unexpected EOF");
   return Tokens[Pos++];
+}
+
+bool LinkerScript::skip(StringRef Tok) {
+  if (atEOF())
+    error("unexpected EOF");
+  if (Tok != Tokens[Pos])
+    return false;
+  ++Pos;
+  return true;
 }
 
 void LinkerScript::expect(StringRef Expect) {
@@ -253,6 +268,26 @@ void LinkerScript::readSearchDir() {
   expect("(");
   Config->SearchPaths.push_back(next());
   expect(")");
+}
+
+void LinkerScript::readSections() {
+  expect("{");
+  while (!skip("}"))
+    readOutputSectionDescription();
+}
+
+void LinkerScript::readOutputSectionDescription() {
+  StringRef Name = next();
+  std::vector<StringRef> &InputSections = Config->OutputSections[Name];
+
+  expect(":");
+  expect("{");
+  while (!skip("}")) {
+    next(); // Skip input file name.
+    expect("(");
+    while (!skip(")"))
+      InputSections.push_back(next());
+  }
 }
 
 // Entry point. The other functions or classes are private to this file.

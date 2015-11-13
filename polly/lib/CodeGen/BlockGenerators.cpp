@@ -1141,7 +1141,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   // replacement for SCEVs refering to the old loop.
   for (BasicBlock *BB : SeenBlocks) {
     Loop *L = LI.getLoopFor(BB);
-    if (L == nullptr || L->getHeader() != BB)
+    if (L == nullptr || L->getHeader() != BB || !R->contains(L))
       continue;
 
     BasicBlock *BBCopy = BlockMap[BB];

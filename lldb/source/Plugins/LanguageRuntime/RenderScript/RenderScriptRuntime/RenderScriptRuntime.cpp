@@ -665,6 +665,45 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
             }
             break;
         }
+        case llvm::Triple::ArchType::mipsel:
+        {
+
+            // read from the registers
+            if (arg < 4){
+                const RegisterInfo* rArg = reg_ctx->GetRegisterInfoAtIndex(arg + 4);
+                RegisterValue rVal;
+                success = reg_ctx->ReadRegister(rArg, rVal);
+                if (success)
+                {
+                    *data = rVal.GetAsUInt64();
+                }
+                else
+                {
+                    if (log)
+                        log->Printf("RenderScriptRuntime::GetArgSimple() - Mips - Error while reading the argument #%d", arg);
+                }
+
+            }
+
+            // read from the stack
+            else
+            {
+                uint64_t sp = reg_ctx->GetSP();
+                uint32_t offset = arg * sizeof(uint32_t);
+                process->ReadMemory(sp + offset, &data, sizeof(uint32_t), error);
+                if (error.Fail())
+                {
+                    if (log)
+                        log->Printf ("RenderScriptRuntime::GetArgSimple - error reading Mips stack: %s.", error.AsCString());
+                }
+                else
+                {
+                    success = true;
+                }
+            }
+
+            break;
+        }
         case llvm::Triple::ArchType::mips64el:
         {
             // read from the registers
@@ -883,11 +922,12 @@ RenderScriptRuntime::LoadRuntimeHooks(lldb::ModuleSP module, ModuleKind kind)
     if (targetArchType != llvm::Triple::ArchType::x86
         && targetArchType != llvm::Triple::ArchType::arm
         && targetArchType != llvm::Triple::ArchType::aarch64
+        && targetArchType != llvm::Triple::ArchType::mipsel
         && targetArchType != llvm::Triple::ArchType::mips64el
     )
     {
         if (log)
-            log->Printf ("RenderScriptRuntime::LoadRuntimeHooks - Unable to hook runtime. Only X86, ARM, Mips64 supported currently.");
+            log->Printf ("RenderScriptRuntime::LoadRuntimeHooks - Unable to hook runtime. Only X86, ARM, Mips supported currently.");
 
         return;
     }

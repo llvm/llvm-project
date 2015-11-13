@@ -29,6 +29,7 @@ DerivedData/
 .remote-build.conf
 
 build/
+pyproj/
 llvm-build/
 *xcuserdata
 xcshareddata/

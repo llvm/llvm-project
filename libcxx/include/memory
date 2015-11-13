@@ -5351,7 +5351,11 @@ weak_ptr<_Tp>::lock() const _NOEXCEPT
     return __r;
 }
 
+#if _LIBCPP_STD_VER > 14
+template <class _Tp = void> struct owner_less;
+#else
 template <class _Tp> struct owner_less;
+#endif
 
 template <class _Tp>
 struct _LIBCPP_TYPE_VIS_ONLY owner_less<shared_ptr<_Tp> >
@@ -5384,6 +5388,30 @@ struct _LIBCPP_TYPE_VIS_ONLY owner_less<weak_ptr<_Tp> >
     bool operator()(  weak_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const
         {return __x.owner_before(__y);}
 };
+
+#if _LIBCPP_STD_VER > 14
+template <>
+struct _LIBCPP_TYPE_VIS_ONLY owner_less<void>
+{
+    template <class _Tp, class _Up>
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator()( shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const
+        {return __x.owner_before(__y);}
+    template <class _Tp, class _Up>
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator()( shared_ptr<_Tp> const& __x,  weak_ptr<_Up> const& __y) const
+        {return __x.owner_before(__y);}
+    template <class _Tp, class _Up>
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator()(   weak_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const
+        {return __x.owner_before(__y);}
+    template <class _Tp, class _Up>
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator()(   weak_ptr<_Tp> const& __x,   weak_ptr<_Up> const& __y) const
+        {return __x.owner_before(__y);}
+    typedef void is_transparent;
+};
+#endif
 
 template<class _Tp>
 class _LIBCPP_TYPE_VIS_ONLY enable_shared_from_this

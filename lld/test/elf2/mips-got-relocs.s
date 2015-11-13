@@ -68,25 +68,25 @@ v1:
 # EXE_DIS_EL:  20000:  18 80 02 3c  lui $2, 32792
 
 # DSO_SYM: Sections:
-# DSO_SYM: .got 0000000c 0000000000020034 DATA
+# DSO_SYM: .got 0000000c 0000000000020004 DATA
 # DSO_SYM: SYMBOL TABLE:
-# DSO_SYM: 00028024         *ABS*		 00000000 _gp
+# DSO_SYM: 00027ff4         *ABS*		 00000000 _gp
 #          ^-- .got + GP offset (0x7ff0)
 # DSO_SYM: 00020000 g       .data		 00000004 v1
 
 # DSO_GOT_BE: Contents of section .got:
-# DSO_GOT_BE:  20034 00000000 80000000 00020000
+# DSO_GOT_BE:  20004 00000000 80000000 00020000
 #                    ^        ^        ^-- v1 (0x20000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
 # DSO_GOT_EL: Contents of section .got:
-# DSO_GOT_EL:  20034 00000000 00000080 00000200
+# DSO_GOT_EL:  20004 00000000 00000080 00000200
 #                    ^        ^        ^-- v1 (0x20000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
-# v1GotAddr (0x2003c) - _gp (0x28024) = -0x7fe8 => 0x8018 = 32792
+# v1GotAddr (0x2000c) - _gp (0x27ff4) = -0x7fe8 => 0x8018 = 32792
 # DSO_DIS_BE:  10000:  3c 02 80 18  lui $2, 32792
 # DSO_DIS_EL:  10000:  18 80 02 3c  lui $2, 32792
 

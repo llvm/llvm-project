@@ -587,6 +587,44 @@ bool isAffineExpr(const Region *R, const SCEV *Expr, ScalarEvolution &SE,
   return Result.isValid();
 }
 
+static bool isAffineParamExpr(Value *V, const Region *R, ScalarEvolution &SE,
+                              std::vector<const SCEV *> &Params) {
+  auto *E = SE.getSCEV(V);
+  if (isa<SCEVCouldNotCompute>(E))
+    return false;
+
+  SCEVValidator Validator(R, SE, nullptr, nullptr);
+  ValidatorResult Result = Validator.visit(E);
+  if (!Result.isConstant())
+    return false;
+
+  auto ResultParams = Result.getParameters();
+  Params.insert(Params.end(), ResultParams.begin(), ResultParams.end());
+
+  return true;
+}
+
+bool isAffineParamConstraint(Value *V, const Region *R, ScalarEvolution &SE,
+                             std::vector<const SCEV *> &Params, bool OrExpr) {
+  if (auto *ICmp = dyn_cast<ICmpInst>(V)) {
+    return isAffineParamConstraint(ICmp->getOperand(0), R, SE, Params, true) &&
+           isAffineParamConstraint(ICmp->getOperand(1), R, SE, Params, true);
+  } else if (auto *BinOp = dyn_cast<BinaryOperator>(V)) {
+    auto Opcode = BinOp->getOpcode();
+    if (Opcode == Instruction::And || Opcode == Instruction::Or)
+      return isAffineParamConstraint(BinOp->getOperand(0), R, SE, Params,
+                                     false) &&
+             isAffineParamConstraint(BinOp->getOperand(1), R, SE, Params,
+                                     false);
+    /* Fall through */
+  }
+
+  if (!OrExpr)
+    return false;
+
+  return isAffineParamExpr(V, R, SE, Params);
+}
+
 std::vector<const SCEV *> getParamsInAffineExpr(const Region *R,
                                                 const SCEV *Expr,
                                                 ScalarEvolution &SE,

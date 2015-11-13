@@ -122,6 +122,16 @@ public:
   bool empty() const { return Entries.empty(); }
   uintX_t getEntryAddr(const SymbolBody &B) const;
 
+  // Returns the symbol which corresponds to the first entry of the global part
+  // of GOT on MIPS platform. It is required to fill up MIPS-specific dynamic
+  // table properties.
+  // Returns nullptr if the global part is empty.
+  const SymbolBody *getMipsFirstGlobalEntry() const;
+
+  // Returns the number of entries in the local part of GOT including
+  // the number of reserved entries. This method is MIPS-specific.
+  unsigned getMipsLocalEntriesNum() const;
+
 private:
   std::vector<const SymbolBody *> Entries;
 };
@@ -160,8 +170,8 @@ private:
 
 template <class ELFT> struct DynamicReloc {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  InputSectionBase<ELFT> &C;
-  const Elf_Rel &RI;
+  InputSectionBase<ELFT> *C;
+  const Elf_Rel *RI;
 };
 
 template <class ELFT>
@@ -403,6 +413,7 @@ template <class ELFT> struct Out {
   static HashTableSection<ELFT> *HashTab;
   static InterpSection<ELFT> *Interp;
   static OutputSection<ELFT> *Bss;
+  static OutputSection<ELFT> *MipsRldMap;
   static OutputSectionBase<ELFT> *Opd;
   static uint8_t *OpdBuf;
   static PltSection<ELFT> *Plt;
@@ -424,6 +435,7 @@ template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;
 template <class ELFT> HashTableSection<ELFT> *Out<ELFT>::HashTab;
 template <class ELFT> InterpSection<ELFT> *Out<ELFT>::Interp;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
+template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::Opd;
 template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
 template <class ELFT> PltSection<ELFT> *Out<ELFT>::Plt;

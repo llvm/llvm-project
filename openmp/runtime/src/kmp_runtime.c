@@ -5801,9 +5801,6 @@ __kmp_internal_end(void)
         // contain valid data, but it is only valid in the parent process,
         // not the child.
         //
-        // One of the possible fixes for CQ138434 / CQ140126
-        // (used in 20091103_dreamworks patch)
-        //
         // New behavior (201008): instead of keying off of the flag
         // __kmp_init_parallel, the monitor thread creation is keyed off
         // of the new flag __kmp_init_monitor.

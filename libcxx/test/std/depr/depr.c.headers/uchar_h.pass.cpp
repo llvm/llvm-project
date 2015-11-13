@@ -9,7 +9,6 @@
 //
 // XFAIL: apple-darwin
 // XFAIL: newlib
-// XFAIL: libcpp-no-exceptions
 
 // <uchar.h>
 

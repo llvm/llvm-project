@@ -49,6 +49,13 @@ bool hasScalarDepsInsideRegion(const llvm::SCEV *S, const llvm::Region *R);
 bool isAffineExpr(const llvm::Region *R, const llvm::SCEV *Expression,
                   llvm::ScalarEvolution &SE, const llvm::Value *BaseAddress = 0,
                   InvariantLoadsSetTy *ILS = nullptr);
+
+/// @brief Check if @p V describes an affine parameter constraint in @p R.
+bool isAffineParamConstraint(llvm::Value *V, const llvm::Region *R,
+                             llvm::ScalarEvolution &SE,
+                             std::vector<const llvm::SCEV *> &Params,
+                             bool OrExpr = false);
+
 std::vector<const llvm::SCEV *>
 getParamsInAffineExpr(const llvm::Region *R, const llvm::SCEV *Expression,
                       llvm::ScalarEvolution &SE,

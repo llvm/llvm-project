@@ -1138,9 +1138,6 @@ bool ScopDetection::runOnFunction(llvm::Function &F) {
     emitMissedRemarksForLeaves(F, TopRegion);
   }
 
-  for (const Region *R : ValidRegions)
-    emitValidRemarks(F, R);
-
   if (ReportLevel)
     printLocations(F);
 
