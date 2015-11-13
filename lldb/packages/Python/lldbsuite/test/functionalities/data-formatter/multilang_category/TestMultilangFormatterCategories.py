@@ -12,7 +12,6 @@ class TestMultilangFormatterCategories(TestBase):
     
     @swiftTest
     @skipUnlessDarwin
-    @expectedFailureDarwin("rdar://problem/23524024")
     def test_multilang_formatter_categories(self):
         """Test that formatter categories can work for multiple languages"""
         self.build()
