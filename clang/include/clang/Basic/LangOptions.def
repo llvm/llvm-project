@@ -133,7 +133,6 @@ COMPATIBLE_LANGOPT(ModulesStrictDeclUse, 1, 0, "require declaration of module us
 BENIGN_LANGOPT(ModulesErrorRecovery, 1, 1, "automatically import modules as needed when performing error recovery")
 BENIGN_LANGOPT(ImplicitModules, 1, 1, "build modules that are not specified via -fmodule-file")
 COMPATIBLE_LANGOPT(ModulesLocalVisibility, 1, 0, "local submodule visibility")
-COMPATIBLE_LANGOPT(ModulesHideInternalLinkage, 1, 1, "hiding non-visible internal linkage declarations from redeclaration lookup")
 COMPATIBLE_LANGOPT(Optimize          , 1, 0, "__OPTIMIZE__ predefined macro")
 COMPATIBLE_LANGOPT(OptimizeSize      , 1, 0, "__OPTIMIZE_SIZE__ predefined macro")
 LANGOPT(Static            , 1, 0, "__STATIC__ predefined macro (as opposed to __DYNAMIC__)")

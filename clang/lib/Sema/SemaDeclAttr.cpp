@@ -1603,6 +1603,15 @@ static void handleCommonAttr(Sema &S, Decl *D, const AttributeList &Attr) {
     D->addAttr(CA);
 }
 
+static void handleNakedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (checkAttrMutualExclusion<DisableTailCallsAttr>(S, D, Attr.getRange(),
+                                                     Attr.getName()))
+    return;
+
+  D->addAttr(::new (S.Context) NakedAttr(Attr.getRange(), S.Context,
+                                         Attr.getAttributeSpellingListIndex()));
+}
+
 static void handleNoReturnAttr(Sema &S, Decl *D, const AttributeList &attr) {
   if (hasDeclarator(D)) return;
 
@@ -1730,6 +1739,16 @@ static void handleNotTailCalledAttr(Sema &S, Decl *D,
     return;
 
   D->addAttr(::new (S.Context) NotTailCalledAttr(
+      Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+}
+
+static void handleDisableTailCallsAttr(Sema &S, Decl *D,
+                                       const AttributeList &Attr) {
+  if (checkAttrMutualExclusion<NakedAttr>(S, D, Attr.getRange(),
+                                          Attr.getName()))
+    return;
+
+  D->addAttr(::new (S.Context) DisableTailCallsAttr(
       Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
 }
 
@@ -5194,7 +5213,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleHotAttr(S, D, Attr);
     break;
   case AttributeList::AT_Naked:
-    handleSimpleAttribute<NakedAttr>(S, D, Attr);
+    handleNakedAttr(S, D, Attr);
     break;
   case AttributeList::AT_NoReturn:
     handleNoReturnAttr(S, D, Attr);
@@ -5322,6 +5341,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_NotTailCalled:
     handleNotTailCalledAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_DisableTailCalls:
+    handleDisableTailCallsAttr(S, D, Attr);
     break;
   case AttributeList::AT_Used:
     handleUsedAttr(S, D, Attr);

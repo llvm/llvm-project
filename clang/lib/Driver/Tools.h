@@ -270,6 +270,8 @@ NanEncoding getSupportedNanEncoding(StringRef &CPU);
 void getMipsCPUAndABI(const llvm::opt::ArgList &Args,
                       const llvm::Triple &Triple, StringRef &CPUName,
                       StringRef &ABIName);
+std::string getMipsABILibSuffix(const llvm::opt::ArgList &Args,
+                                const llvm::Triple &Triple);
 bool hasMipsAbiArg(const llvm::opt::ArgList &Args, const char *Value);
 bool isUCLibc(const llvm::opt::ArgList &Args);
 bool isNaN2008(const llvm::opt::ArgList &Args, const llvm::Triple &Triple);

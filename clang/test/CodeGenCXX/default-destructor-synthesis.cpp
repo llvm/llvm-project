@@ -35,4 +35,4 @@ int f() {
   return count;
 }
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { norecurse nounwind{{.*}} }

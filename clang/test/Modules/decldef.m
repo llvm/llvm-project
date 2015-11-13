@@ -11,7 +11,13 @@ Def *def;
 #ifdef USE_EARLY
 A *a1; // expected-error{{declaration of 'A' must be imported from module 'decldef.Def' before it is required}}
 #endif
-B *b1; // expected-error{{must use 'struct' tag to refer to type 'B'}}
+B *b1;
+#ifdef USE_EARLY
+// expected-error@-2{{must use 'struct' tag to refer to type 'B'}}
+#else
+// expected-error@-4{{declaration of 'B' must be imported from module 'decldef.Decl' before it is required}}
+// expected-note@Inputs/decl.h:2 {{previous}}
+#endif
 @import decldef.Decl;
 
 A *a2;

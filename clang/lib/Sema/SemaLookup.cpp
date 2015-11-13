@@ -368,13 +368,17 @@ static bool isPreferredLookupResult(Sema &S, Sema::LookupNameKind Kind,
   auto *DUnderlying = D->getUnderlyingDecl();
   auto *EUnderlying = Existing->getUnderlyingDecl();
 
-  // If they have different underlying declarations, pick one arbitrarily
-  // (this happens when two type declarations denote the same type).
-  // FIXME: Should we prefer a struct declaration over a typedef or vice versa?
-  //        If a name could be a typedef-name or a class-name, which is it?
+  // If they have different underlying declarations, prefer a typedef over the
+  // original type (this happens when two type declarations denote the same
+  // type), per a generous reading of C++ [dcl.typedef]p3 and p4. The typedef
+  // might carry additional semantic information, such as an alignment override.
+  // However, per C++ [dcl.typedef]p5, when looking up a tag name, prefer a tag
+  // declaration over a typedef.
   if (DUnderlying->getCanonicalDecl() != EUnderlying->getCanonicalDecl()) {
     assert(isa<TypeDecl>(DUnderlying) && isa<TypeDecl>(EUnderlying));
-    return false;
+    bool HaveTag = isa<TagDecl>(EUnderlying);
+    bool WantTag = Kind == Sema::LookupTagName;
+    return HaveTag != WantTag;
   }
 
   // Pick the function with more default arguments.
@@ -434,6 +438,23 @@ static bool isPreferredLookupResult(Sema &S, Sema::LookupNameKind Kind,
   return !S.isVisible(Existing);
 }
 
+/// Determine whether \p D can hide a tag declaration.
+static bool canHideTag(NamedDecl *D) {
+  // C++ [basic.scope.declarative]p4:
+  //   Given a set of declarations in a single declarative region [...]
+  //   exactly one declaration shall declare a class name or enumeration name
+  //   that is not a typedef name and the other declarations shall all refer to
+  //   the same variable or enumerator, or all refer to functions and function
+  //   templates; in this case the class name or enumeration name is hidden.
+  // C++ [basic.scope.hiding]p2:
+  //   A class name or enumeration name can be hidden by the name of a
+  //   variable, data member, function, or enumerator declared in the same
+  //   scope.
+  D = D->getUnderlyingDecl();
+  return isa<VarDecl>(D) || isa<EnumConstantDecl>(D) || isa<FunctionDecl>(D) ||
+         isa<FunctionTemplateDecl>(D) || isa<FieldDecl>(D);
+}
+
 /// Resolves the result kind of this lookup.
 void LookupResult::resolveKind() {
   unsigned N = Decls.size();
@@ -489,15 +510,12 @@ void LookupResult::resolveKind() {
     // no ambiguity if they all refer to the same type, so unique based on the
     // canonical type.
     if (TypeDecl *TD = dyn_cast<TypeDecl>(D)) {
-      // FIXME: Why are nested type declarations treated differently?
-      if (!TD->getDeclContext()->isRecord()) {
-        QualType T = getSema().Context.getTypeDeclType(TD);
-        auto UniqueResult = UniqueTypes.insert(
-            std::make_pair(getSema().Context.getCanonicalType(T), I));
-        if (!UniqueResult.second) {
-          // The type is not unique.
-          ExistingI = UniqueResult.first->second;
-        }
+      QualType T = getSema().Context.getTypeDeclType(TD);
+      auto UniqueResult = UniqueTypes.insert(
+          std::make_pair(getSema().Context.getCanonicalType(T), I));
+      if (!UniqueResult.second) {
+        // The type is not unique.
+        ExistingI = UniqueResult.first->second;
       }
     }
 
@@ -564,10 +582,13 @@ void LookupResult::resolveKind() {
   //   wherever the object, function, or enumerator name is visible.
   // But it's still an error if there are distinct tag types found,
   // even if they're not visible. (ref?)
-  if (HideTags && HasTag && !Ambiguous &&
+  if (N > 1 && HideTags && HasTag && !Ambiguous &&
       (HasFunction || HasNonFunction || HasUnresolved)) {
-    if (getContextForScopeMatching(Decls[UniqueTagIndex])->Equals(
-            getContextForScopeMatching(Decls[UniqueTagIndex ? 0 : N - 1])))
+    NamedDecl *OtherDecl = Decls[UniqueTagIndex ? 0 : N - 1];
+    if (isa<TagDecl>(Decls[UniqueTagIndex]->getUnderlyingDecl()) &&
+        getContextForScopeMatching(Decls[UniqueTagIndex])->Equals(
+            getContextForScopeMatching(OtherDecl)) &&
+        canHideTag(OtherDecl))
       Decls[UniqueTagIndex] = Decls[--N];
     else
       Ambiguous = true;

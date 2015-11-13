@@ -635,6 +635,8 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
   if (D->isInAnonymousNamespace()) {
     const auto *Var = dyn_cast<VarDecl>(D);
     const auto *Func = dyn_cast<FunctionDecl>(D);
+    // FIXME: In C++11 onwards, anonymous namespaces should give decls
+    // within them internal linkage, not unique external linkage.
     if ((!Var || !isFirstInExternCContext(Var)) &&
         (!Func || !isFirstInExternCContext(Func)))
       return LinkageInfo::uniqueExternal();
@@ -821,10 +823,14 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
   } else if (isa<ObjCInterfaceDecl>(D)) {
     // fallout
 
+  } else if (auto *TD = dyn_cast<TypedefNameDecl>(D)) {
+    // A typedef declaration has linkage if it gives a type a name for
+    // linkage purposes.
+    if (!TD->getAnonDeclWithTypedefName(/*AnyRedecl*/true))
+      return LinkageInfo::none();
+
   // Everything not covered here has no linkage.
   } else {
-    // FIXME: A typedef declaration has linkage if it gives a type a name for
-    // linkage purposes.
     return LinkageInfo::none();
   }
 
@@ -1226,8 +1232,32 @@ static LinkageInfo computeLVForDecl(const NamedDecl *D,
   switch (D->getKind()) {
     default:
       break;
+
+    // Per C++ [basic.link]p2, only the names of objects, references,
+    // functions, types, templates, namespaces, and values ever have linkage.
+    //
+    // Note that the name of a typedef, namespace alias, using declaration,
+    // and so on are not the name of the corresponding type, namespace, or
+    // declaration, so they do *not* have linkage.
+    case Decl::EnumConstant: // FIXME: This has linkage, but that's dumb.
+    case Decl::ImplicitParam:
+    case Decl::Label:
+    case Decl::NamespaceAlias:
     case Decl::ParmVar:
+    case Decl::Using:
+    case Decl::UsingShadow:
+    case Decl::UsingDirective:
       return LinkageInfo::none();
+
+    case Decl::Typedef:
+    case Decl::TypeAlias:
+      // A typedef declaration has linkage if it gives a type a name for
+      // linkage purposes.
+      if (!cast<TypedefNameDecl>(D)
+               ->getAnonDeclWithTypedefName(/*AnyRedecl*/true))
+        return LinkageInfo::none();
+      break;
+
     case Decl::TemplateTemplateParm: // count these as external
     case Decl::NonTypeTemplateParm:
     case Decl::ObjCAtDefsField:

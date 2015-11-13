@@ -3538,6 +3538,26 @@ static SourceLocation getLocationFromExpr(const Expr *E) {
   return E->getLocStart();
 }
 
+static std::string getMangledStructor(std::unique_ptr<MangleContext> &M,
+                                      std::unique_ptr<llvm::DataLayout> &DL,
+                                      const NamedDecl *ND,
+                                      unsigned StructorType) {
+  std::string FrontendBuf;
+  llvm::raw_string_ostream FOS(FrontendBuf);
+
+  if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(ND))
+    M->mangleCXXCtor(CD, static_cast<CXXCtorType>(StructorType), FOS);
+  else if (const auto *DD = dyn_cast_or_null<CXXDestructorDecl>(ND))
+    M->mangleCXXDtor(DD, static_cast<CXXDtorType>(StructorType), FOS);
+
+  std::string BackendBuf;
+  llvm::raw_string_ostream BOS(BackendBuf);
+
+  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
+
+  return BOS.str();
+}
+
 extern "C" {
 
 unsigned clang_visitChildren(CXCursor parent,
@@ -3909,26 +3929,6 @@ CXString clang_Cursor_getMangling(CXCursor C) {
                                    *DL);
 
   return cxstring::createDup(FinalBufOS.str());
-}
-
-static std::string getMangledStructor(std::unique_ptr<MangleContext> &M,
-                                      std::unique_ptr<llvm::DataLayout> &DL,
-                                      const NamedDecl *ND,
-                                      unsigned StructorType) {
-  std::string FrontendBuf;
-  llvm::raw_string_ostream FOS(FrontendBuf);
-
-  if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(ND))
-    M->mangleCXXCtor(CD, static_cast<CXXCtorType>(StructorType), FOS);
-  else if (const auto *DD = dyn_cast_or_null<CXXDestructorDecl>(ND))
-    M->mangleCXXDtor(DD, static_cast<CXXDtorType>(StructorType), FOS);
-
-  std::string BackendBuf;
-  llvm::raw_string_ostream BOS(BackendBuf);
-
-  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
-
-  return BOS.str();
 }
 
 CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {

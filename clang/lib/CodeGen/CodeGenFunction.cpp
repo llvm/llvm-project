@@ -716,6 +716,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     }
   }
 
+  // If we're in C++ mode and the function name is "main", it is guaranteed
+  // to be norecurse by the standard (3.6.1.3 "The function main shall not be
+  // used within a program").
+  if (getLangOpts().CPlusPlus)
+    if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
+      if (FD->isMain())
+        Fn->addFnAttr(llvm::Attribute::NoRecurse);
+  
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 
   // Create a marker to make it easy to insert allocas into the entryblock

@@ -1,8 +1,6 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify -DEARLY_IMPORT
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify -UEARLY_IMPORT
-// RUN: %clang_cc1 -x objective-c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify -DEARLY_IMPORT -fno-modules-hide-internal-linkage
-// RUN: %clang_cc1 -x objective-c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify -UEARLY_IMPORT -fno-modules-hide-internal-linkage
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify -DEARLY_IMPORT -fmodules-local-submodule-visibility
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify -UEARLY_IMPORT -fmodules-local-submodule-visibility
 

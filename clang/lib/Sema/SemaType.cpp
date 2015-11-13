@@ -5191,6 +5191,18 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
     type = S.Context.getAttributedType(AttributedType::attr_objc_ownership,
                                        origType, type);
 
+  auto diagnoseOrDelay = [](Sema &S, SourceLocation loc,
+                            unsigned diagnostic, QualType type) {
+    if (S.DelayedDiagnostics.shouldDelayDiagnostics()) {
+      S.DelayedDiagnostics.add(
+          sema::DelayedDiagnostic::makeForbiddenType(
+              S.getSourceManager().getExpansionLoc(loc),
+              diagnostic, type, /*ignored*/ 0));
+    } else {
+      S.Diag(loc, diagnostic);
+    }
+  };
+
   // Sometimes, __weak isn't allowed.
   if (lifetime == Qualifiers::OCL_Weak &&
       !S.getLangOpts().ObjCWeak && !NonObjCPointer) {
@@ -5201,24 +5213,10 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
                                        : diag::err_arc_weak_no_runtime);
 
     // In any case, delay the diagnostic until we know what we're parsing.
-    if (S.DelayedDiagnostics.shouldDelayDiagnostics()) {
-      S.DelayedDiagnostics.add(
-          sema::DelayedDiagnostic::makeForbiddenType(
-              S.getSourceManager().getExpansionLoc(AttrLoc),
-              diagnostic, type, /*ignored*/ 0));
-    } else {
-      S.Diag(AttrLoc, diagnostic);
-    }
+    diagnoseOrDelay(S, AttrLoc, diagnostic, type);
 
     attr.setInvalid();
     return true;
-  }
-
-  // If we accepted __weak, we might still need to warn about it.
-  if (lifetime == Qualifiers::OCL_Weak &&
-      !S.getLangOpts().ObjCAutoRefCount &&
-      S.getLangOpts().ObjCWeak) {
-    S.Diag(AttrLoc, diag::warn_objc_weak_compat);
   }
 
   // Forbid __weak for class objects marked as
