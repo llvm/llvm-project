@@ -142,7 +142,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   5
 ; X64-NEXT: .long   ($ip2state$nested_cleanup)@IMGREL
-; X64-NEXT: .long   40
+; X64-NEXT: .long   56
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
 

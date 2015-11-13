@@ -30,6 +30,13 @@ using namespace llvm::sampleprof;
 using namespace llvm;
 
 /// \brief Write samples to a text file.
+///
+/// Note: it may be tempting to implement this in terms of
+/// FunctionSamples::dump().  Please don't.  The dump functionality is intended
+/// for debugging and has no specified form.
+///
+/// The format used here is more structured and deliberate because
+/// it needs to be parsed by the SampleProfileReaderText class.
 std::error_code SampleProfileWriterText::write(StringRef FName,
                                                const FunctionSamples &S) {
   OS << FName << ":" << S.getTotalSamples();

@@ -100,8 +100,8 @@ INITIALIZE_PASS_END(GlobalOpt, "globalopt",
 
 ModulePass *llvm::createGlobalOptimizerPass() { return new GlobalOpt(); }
 
-/// isLeakCheckerRoot - Is this global variable possibly used by a leak checker
-/// as a root?  If so, we might not really want to eliminate the stores to it.
+/// Is this global variable possibly used by a leak checker as a root?  If so,
+/// we might not really want to eliminate the stores to it.
 static bool isLeakCheckerRoot(GlobalVariable *GV) {
   // A global variable is a root if it is a pointer, or could plausibly contain
   // a pointer.  There are two challenges; one is that we could have a struct
@@ -176,10 +176,9 @@ static bool IsSafeComputationToRemove(Value *V, const TargetLibraryInfo *TLI) {
   } while (1);
 }
 
-/// CleanupPointerRootUsers - This GV is a pointer root.  Loop over all users
-/// of the global and clean up any that obviously don't assign the global a
-/// value that isn't dynamically allocated.
-///
+/// This GV is a pointer root.  Loop over all users of the global and clean up
+/// any that obviously don't assign the global a value that isn't dynamically
+/// allocated.
 static bool CleanupPointerRootUsers(GlobalVariable *GV,
                                     const TargetLibraryInfo *TLI) {
   // A brief explanation of leak checkers.  The goal is to find bugs where
@@ -263,10 +262,9 @@ static bool CleanupPointerRootUsers(GlobalVariable *GV,
   return Changed;
 }
 
-/// CleanupConstantGlobalUsers - We just marked GV constant.  Loop over all
-/// users of the global, cleaning up the obvious ones.  This is largely just a
-/// quick scan over the use list to clean up the easy and obvious cruft.  This
-/// returns true if it made a change.
+/// We just marked GV constant.  Loop over all users of the global, cleaning up
+/// the obvious ones.  This is largely just a quick scan over the use list to
+/// clean up the easy and obvious cruft.  This returns true if it made a change.
 static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
                                        const DataLayout &DL,
                                        TargetLibraryInfo *TLI) {
@@ -353,8 +351,8 @@ static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
   return Changed;
 }
 
-/// isSafeSROAElementUse - Return true if the specified instruction is a safe
-/// user of a derived expression from a global that we want to SROA.
+/// Return true if the specified instruction is a safe user of a derived
+/// expression from a global that we want to SROA.
 static bool isSafeSROAElementUse(Value *V) {
   // We might have a dead and dangling constant hanging off of here.
   if (Constant *C = dyn_cast<Constant>(V))
@@ -385,9 +383,8 @@ static bool isSafeSROAElementUse(Value *V) {
 }
 
 
-/// IsUserOfGlobalSafeForSRA - U is a direct user of the specified global value.
-/// Look at it and its uses and decide whether it is safe to SROA this global.
-///
+/// U is a direct user of the specified global value.  Look at it and its uses
+/// and decide whether it is safe to SROA this global.
 static bool IsUserOfGlobalSafeForSRA(User *U, GlobalValue *GV) {
   // The user of the global must be a GEP Inst or a ConstantExpr GEP.
   if (!isa<GetElementPtrInst>(U) &&
@@ -452,9 +449,8 @@ static bool IsUserOfGlobalSafeForSRA(User *U, GlobalValue *GV) {
   return true;
 }
 
-/// GlobalUsersSafeToSRA - Look at all uses of the global and decide whether it
-/// is safe for us to perform this transformation.
-///
+/// Look at all uses of the global and decide whether it is safe for us to
+/// perform this transformation.
 static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
   for (User *U : GV->users())
     if (!IsUserOfGlobalSafeForSRA(U, GV))
@@ -464,10 +460,10 @@ static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
 }
 
 
-/// SRAGlobal - Perform scalar replacement of aggregates on the specified global
-/// variable.  This opens the door for other optimizations by exposing the
-/// behavior of the program in a more fine-grained way.  We have determined that
-/// this transformation is safe already.  We return the first global variable we
+/// Perform scalar replacement of aggregates on the specified global variable.
+/// This opens the door for other optimizations by exposing the behavior of the
+/// program in a more fine-grained way.  We have determined that this
+/// transformation is safe already.  We return the first global variable we
 /// insert so that the caller can reprocess it.
 static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   // Make sure this global only has simple uses that we can SRA.
@@ -612,9 +608,9 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   return FirstGlobal != NewGlobals.size() ? NewGlobals[FirstGlobal] : nullptr;
 }
 
-/// AllUsesOfValueWillTrapIfNull - Return true if all users of the specified
-/// value will trap if the value is dynamically null.  PHIs keeps track of any
-/// phi nodes we've seen to avoid reprocessing them.
+/// Return true if all users of the specified value will trap if the value is
+/// dynamically null.  PHIs keeps track of any phi nodes we've seen to avoid
+/// reprocessing them.
 static bool AllUsesOfValueWillTrapIfNull(const Value *V,
                                         SmallPtrSetImpl<const PHINode*> &PHIs) {
   for (const User *U : V->users())
@@ -655,9 +651,9 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
   return true;
 }
 
-/// AllUsesOfLoadedValueWillTrapIfNull - Return true if all uses of any loads
-/// from GV will trap if the loaded value is null.  Note that this also permits
-/// comparisons of the loaded value against null, as a special case.
+/// Return true if all uses of any loads from GV will trap if the loaded value
+/// is null.  Note that this also permits comparisons of the loaded value
+/// against null, as a special case.
 static bool AllUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
   for (const User *U : GV->users())
     if (const LoadInst *LI = dyn_cast<LoadInst>(U)) {
@@ -737,10 +733,10 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
 }
 
 
-/// OptimizeAwayTrappingUsesOfLoads - The specified global has only one non-null
-/// value stored into it.  If there are uses of the loaded value that would trap
-/// if the loaded value is dynamically null, then we know that they cannot be
-/// reachable with a null optimize away the load.
+/// The specified global has only one non-null value stored into it.  If there
+/// are uses of the loaded value that would trap if the loaded value is
+/// dynamically null, then we know that they cannot be reachable with a null
+/// optimize away the load.
 static bool OptimizeAwayTrappingUsesOfLoads(GlobalVariable *GV, Constant *LV,
                                             const DataLayout &DL,
                                             TargetLibraryInfo *TLI) {
@@ -803,8 +799,8 @@ static bool OptimizeAwayTrappingUsesOfLoads(GlobalVariable *GV, Constant *LV,
   return Changed;
 }
 
-/// ConstantPropUsersOf - Walk the use list of V, constant folding all of the
-/// instructions that are foldable.
+/// Walk the use list of V, constant folding all of the instructions that are
+/// foldable.
 static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
                                 TargetLibraryInfo *TLI) {
   for (Value::user_iterator UI = V->user_begin(), E = V->user_end(); UI != E; )
@@ -820,11 +816,11 @@ static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
       }
 }
 
-/// OptimizeGlobalAddressOfMalloc - This function takes the specified global
-/// variable, and transforms the program as if it always contained the result of
-/// the specified malloc.  Because it is always the result of the specified
-/// malloc, there is no reason to actually DO the malloc.  Instead, turn the
-/// malloc into a global, and any loads of GV as uses of the new global.
+/// This function takes the specified global variable, and transforms the
+/// program as if it always contained the result of the specified malloc.
+/// Because it is always the result of the specified malloc, there is no reason
+/// to actually DO the malloc.  Instead, turn the malloc into a global, and any
+/// loads of GV as uses of the new global.
 static GlobalVariable *
 OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
                               ConstantInt *NElements, const DataLayout &DL,
@@ -953,10 +949,9 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
   return NewGV;
 }
 
-/// ValueIsOnlyUsedLocallyOrStoredToOneGlobal - Scan the use-list of V checking
-/// to make sure that there are no complex uses of V.  We permit simple things
-/// like dereferencing the pointer, but not storing through the address, unless
-/// it is to the specified global.
+/// Scan the use-list of V checking to make sure that there are no complex uses
+/// of V.  We permit simple things like dereferencing the pointer, but not
+/// storing through the address, unless it is to the specified global.
 static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(const Instruction *V,
                                                       const GlobalVariable *GV,
                                         SmallPtrSetImpl<const PHINode*> &PHIs) {
@@ -1000,10 +995,9 @@ static bool ValueIsOnlyUsedLocallyOrStoredToOneGlobal(const Instruction *V,
   return true;
 }
 
-/// ReplaceUsesOfMallocWithGlobal - The Alloc pointer is stored into GV
-/// somewhere.  Transform all uses of the allocation into loads from the
-/// global and uses of the resultant pointer.  Further, delete the store into
-/// GV.  This assumes that these value pass the
+/// The Alloc pointer is stored into GV somewhere.  Transform all uses of the
+/// allocation into loads from the global and uses of the resultant pointer.
+/// Further, delete the store into GV.  This assumes that these value pass the
 /// 'ValueIsOnlyUsedLocallyOrStoredToOneGlobal' predicate.
 static void ReplaceUsesOfMallocWithGlobal(Instruction *Alloc,
                                           GlobalVariable *GV) {
@@ -1045,9 +1039,9 @@ static void ReplaceUsesOfMallocWithGlobal(Instruction *Alloc,
   }
 }
 
-/// LoadUsesSimpleEnoughForHeapSRA - Verify that all uses of V (a load, or a phi
-/// of a load) are simple enough to perform heap SRA on.  This permits GEP's
-/// that index through the array and struct field, icmps of null, and PHIs.
+/// Verify that all uses of V (a load, or a phi of a load) are simple enough to
+/// perform heap SRA on.  This permits GEP's that index through the array and
+/// struct field, icmps of null, and PHIs.
 static bool LoadUsesSimpleEnoughForHeapSRA(const Value *V,
                         SmallPtrSetImpl<const PHINode*> &LoadUsingPHIs,
                         SmallPtrSetImpl<const PHINode*> &LoadUsingPHIsPerLoad) {
@@ -1098,8 +1092,8 @@ static bool LoadUsesSimpleEnoughForHeapSRA(const Value *V,
 }
 
 
-/// AllGlobalLoadUsesSimpleEnoughForHeapSRA - If all users of values loaded from
-/// GV are simple enough to perform HeapSRA, return true.
+/// If all users of values loaded from GV are simple enough to perform HeapSRA,
+/// return true.
 static bool AllGlobalLoadUsesSimpleEnoughForHeapSRA(const GlobalVariable *GV,
                                                     Instruction *StoredVal) {
   SmallPtrSet<const PHINode*, 32> LoadUsingPHIs;
@@ -1188,8 +1182,8 @@ static Value *GetHeapSROAValue(Value *V, unsigned FieldNo,
   return FieldVals[FieldNo] = Result;
 }
 
-/// RewriteHeapSROALoadUser - Given a load instruction and a value derived from
-/// the load, rewrite the derived value to use the HeapSRoA'd load.
+/// Given a load instruction and a value derived from the load, rewrite the
+/// derived value to use the HeapSRoA'd load.
 static void RewriteHeapSROALoadUser(Instruction *LoadUser,
              DenseMap<Value*, std::vector<Value*> > &InsertedScalarizedValues,
                    std::vector<std::pair<PHINode*, unsigned> > &PHIsToRewrite) {
@@ -1250,10 +1244,9 @@ static void RewriteHeapSROALoadUser(Instruction *LoadUser,
   }
 }
 
-/// RewriteUsesOfLoadForHeapSRoA - We are performing Heap SRoA on a global.  Ptr
-/// is a value loaded from the global.  Eliminate all uses of Ptr, making them
-/// use FieldGlobals instead.  All uses of loaded values satisfy
-/// AllGlobalLoadUsesSimpleEnoughForHeapSRA.
+/// We are performing Heap SRoA on a global.  Ptr is a value loaded from the
+/// global.  Eliminate all uses of Ptr, making them use FieldGlobals instead.
+/// All uses of loaded values satisfy AllGlobalLoadUsesSimpleEnoughForHeapSRA.
 static void RewriteUsesOfLoadForHeapSRoA(LoadInst *Load,
                DenseMap<Value*, std::vector<Value*> > &InsertedScalarizedValues,
                    std::vector<std::pair<PHINode*, unsigned> > &PHIsToRewrite) {
@@ -1268,8 +1261,8 @@ static void RewriteUsesOfLoadForHeapSRoA(LoadInst *Load,
   }
 }
 
-/// PerformHeapAllocSRoA - CI is an allocation of an array of structures.  Break
-/// it up into multiple allocations of arrays of the fields.
+/// CI is an allocation of an array of structures.  Break it up into multiple
+/// allocations of arrays of the fields.
 static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
                                             Value *NElems, const DataLayout &DL,
                                             const TargetLibraryInfo *TLI) {
@@ -1379,9 +1372,8 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
   // CI is no longer needed, remove it.
   CI->eraseFromParent();
 
-  /// InsertedScalarizedLoads - As we process loads, if we can't immediately
-  /// update all uses of the load, keep track of what scalarized loads are
-  /// inserted for a given load.
+  /// As we process loads, if we can't immediately update all uses of the load,
+  /// keep track of what scalarized loads are inserted for a given load.
   DenseMap<Value*, std::vector<Value*> > InsertedScalarizedValues;
   InsertedScalarizedValues[GV] = FieldGlobals;
 
@@ -1457,9 +1449,8 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
   return cast<GlobalVariable>(FieldGlobals[0]);
 }
 
-/// TryToOptimizeStoreOfMallocToGlobal - This function is called when we see a
-/// pointer global variable with a single value stored it that is a malloc or
-/// cast of malloc.
+/// This function is called when we see a pointer global variable with a single
+/// value stored it that is a malloc or cast of malloc.
 static bool TryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
                                                Type *AllocTy,
                                                AtomicOrdering Ordering,
@@ -1592,10 +1583,10 @@ static bool OptimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
   return false;
 }
 
-/// TryToShrinkGlobalToBoolean - At this point, we have learned that the only
-/// two values ever stored into GV are its initializer and OtherVal.  See if we
-/// can shrink the global into a boolean and select between the two values
-/// whenever it is used.  This exposes the values to other scalar optimizations.
+/// At this point, we have learned that the only two values ever stored into GV
+/// are its initializer and OtherVal.  See if we can shrink the global into a
+/// boolean and select between the two values whenever it is used.  This exposes
+/// the values to other scalar optimizations.
 static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
   Type *GVElType = GV->getType()->getElementType();
 
@@ -1694,8 +1685,8 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
 }
 
 
-/// ProcessGlobal - Analyze the specified global variable and optimize it if
-/// possible.  If we make a change, return true.
+/// Analyze the specified global variable and optimize it if possible.  If we
+/// make a change, return true.
 bool GlobalOpt::ProcessGlobal(GlobalVariable *GV,
                               Module::global_iterator &GVI) {
   // Do more involved optimizations if the global is internal.
@@ -1727,7 +1718,7 @@ bool GlobalOpt::ProcessGlobal(GlobalVariable *GV,
   return ProcessInternalGlobal(GV, GVI, GS);
 }
 
-/// ProcessInternalGlobal - Analyze the specified global variable and optimize
+/// Analyze the specified global variable and optimize
 /// it if possible.  If we make a change, return true.
 bool GlobalOpt::ProcessInternalGlobal(GlobalVariable *GV,
                                       Module::global_iterator &GVI,
@@ -1747,7 +1738,7 @@ bool GlobalOpt::ProcessInternalGlobal(GlobalVariable *GV,
       GS.AccessingFunction->getName() == "main" &&
       GS.AccessingFunction->hasExternalLinkage() &&
       GV->getType()->getAddressSpace() == 0) {
-    DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV);
+    DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV << "\n");
     Instruction &FirstI = const_cast<Instruction&>(*GS.AccessingFunction
                                                    ->getEntryBlock().begin());
     Type *ElemTy = GV->getType()->getElementType();
@@ -1766,7 +1757,7 @@ bool GlobalOpt::ProcessInternalGlobal(GlobalVariable *GV,
   // If the global is never loaded (but may be stored to), it is dead.
   // Delete it now.
   if (!GS.IsLoaded) {
-    DEBUG(dbgs() << "GLOBAL NEVER LOADED: " << *GV);
+    DEBUG(dbgs() << "GLOBAL NEVER LOADED: " << *GV << "\n");
 
     bool Changed;
     if (isLeakCheckerRoot(GV)) {
@@ -1855,8 +1846,8 @@ bool GlobalOpt::ProcessInternalGlobal(GlobalVariable *GV,
   return false;
 }
 
-/// ChangeCalleesToFastCall - Walk all of the direct calls of the specified
-/// function, changing them to FastCC.
+/// Walk all of the direct calls of the specified function, changing them to
+/// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
   for (User *U : F->users()) {
     if (isa<BlockAddress>(U))
@@ -1973,8 +1964,8 @@ isSimpleEnoughValueToCommit(Constant *C,
                             SmallPtrSetImpl<Constant *> &SimpleConstants,
                             const DataLayout &DL);
 
-/// isSimpleEnoughValueToCommit - Return true if the specified constant can be
-/// handled by the code generator.  We don't want to generate something like:
+/// Return true if the specified constant can be handled by the code generator.
+/// We don't want to generate something like:
 ///   void *X = &X/42;
 /// because the code generator doesn't have a relocation that can handle that.
 ///
@@ -2049,11 +2040,11 @@ isSimpleEnoughValueToCommit(Constant *C,
 }
 
 
-/// isSimpleEnoughPointerToCommit - Return true if this constant is simple
-/// enough for us to understand.  In particular, if it is a cast to anything
-/// other than from one pointer type to another pointer type, we punt.
-/// We basically just support direct accesses to globals and GEP's of
-/// globals.  This should be kept up to date with CommitValueTo.
+/// Return true if this constant is simple enough for us to understand.  In
+/// particular, if it is a cast to anything other than from one pointer type to
+/// another pointer type, we punt.  We basically just support direct accesses to
+/// globals and GEP's of globals.  This should be kept up to date with
+/// CommitValueTo.
 static bool isSimpleEnoughPointerToCommit(Constant *C) {
   // Conservatively, avoid aggregate types. This is because we don't
   // want to worry about them partially overlapping other stores.
@@ -2100,9 +2091,9 @@ static bool isSimpleEnoughPointerToCommit(Constant *C) {
   return false;
 }
 
-/// EvaluateStoreInto - Evaluate a piece of a constantexpr store into a global
-/// initializer.  This returns 'Init' modified to reflect 'Val' stored into it.
-/// At this point, the GEP operands of Addr [0, OpNo) have been stepped into.
+/// Evaluate a piece of a constantexpr store into a global initializer.  This
+/// returns 'Init' modified to reflect 'Val' stored into it.  At this point, the
+/// GEP operands of Addr [0, OpNo) have been stepped into.
 static Constant *EvaluateStoreInto(Constant *Init, Constant *Val,
                                    ConstantExpr *Addr, unsigned OpNo) {
   // Base case of the recursion.
@@ -2149,7 +2140,7 @@ static Constant *EvaluateStoreInto(Constant *Init, Constant *Val,
   return ConstantVector::get(Elts);
 }
 
-/// CommitValueTo - We have decided that Addr (which satisfies the predicate
+/// We have decided that Addr (which satisfies the predicate
 /// isSimpleEnoughPointerToCommit) should get Val as its value.  Make it happen.
 static void CommitValueTo(Constant *Val, Constant *Addr) {
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Addr)) {
@@ -2165,10 +2156,10 @@ static void CommitValueTo(Constant *Val, Constant *Addr) {
 
 namespace {
 
-/// Evaluator - This class evaluates LLVM IR, producing the Constant
-/// representing each SSA instruction.  Changes to global variables are stored
-/// in a mapping that can be iterated over after the evaluation is complete.
-/// Once an evaluation call fails, the evaluation object should not be reused.
+/// This class evaluates LLVM IR, producing the Constant representing each SSA
+/// instruction.  Changes to global variables are stored in a mapping that can
+/// be iterated over after the evaluation is complete.  Once an evaluation call
+/// fails, the evaluation object should not be reused.
 class Evaluator {
 public:
   Evaluator(const DataLayout &DL, const TargetLibraryInfo *TLI)
@@ -2185,15 +2176,15 @@ public:
         Tmp->replaceAllUsesWith(Constant::getNullValue(Tmp->getType()));
   }
 
-  /// EvaluateFunction - Evaluate a call to function F, returning true if
-  /// successful, false if we can't evaluate it.  ActualArgs contains the formal
-  /// arguments for the function.
+  /// Evaluate a call to function F, returning true if successful, false if we
+  /// can't evaluate it.  ActualArgs contains the formal arguments for the
+  /// function.
   bool EvaluateFunction(Function *F, Constant *&RetVal,
                         const SmallVectorImpl<Constant*> &ActualArgs);
 
-  /// EvaluateBlock - Evaluate all instructions in block BB, returning true if
-  /// successful, false if we can't evaluate it.  NewBB returns the next BB that
-  /// control flows into, or null upon return.
+  /// Evaluate all instructions in block BB, returning true if successful, false
+  /// if we can't evaluate it.  NewBB returns the next BB that control flows
+  /// into, or null upon return.
   bool EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB);
 
   Constant *getVal(Value *V) {
@@ -2218,32 +2209,31 @@ public:
 private:
   Constant *ComputeLoadResult(Constant *P);
 
-  /// ValueStack - As we compute SSA register values, we store their contents
-  /// here. The back of the deque contains the current function and the stack
-  /// contains the values in the calling frames.
+  /// As we compute SSA register values, we store their contents here. The back
+  /// of the deque contains the current function and the stack contains the
+  /// values in the calling frames.
   std::deque<DenseMap<Value*, Constant*>> ValueStack;
 
-  /// CallStack - This is used to detect recursion.  In pathological situations
-  /// we could hit exponential behavior, but at least there is nothing
-  /// unbounded.
+  /// This is used to detect recursion.  In pathological situations we could hit
+  /// exponential behavior, but at least there is nothing unbounded.
   SmallVector<Function*, 4> CallStack;
 
-  /// MutatedMemory - For each store we execute, we update this map.  Loads
-  /// check this to get the most up-to-date value.  If evaluation is successful,
-  /// this state is committed to the process.
+  /// For each store we execute, we update this map.  Loads check this to get
+  /// the most up-to-date value.  If evaluation is successful, this state is
+  /// committed to the process.
   DenseMap<Constant*, Constant*> MutatedMemory;
 
-  /// AllocaTmps - To 'execute' an alloca, we create a temporary global variable
-  /// to represent its body.  This vector is needed so we can delete the
-  /// temporary globals when we are done.
+  /// To 'execute' an alloca, we create a temporary global variable to represent
+  /// its body.  This vector is needed so we can delete the temporary globals
+  /// when we are done.
   SmallVector<std::unique_ptr<GlobalVariable>, 32> AllocaTmps;
 
-  /// Invariants - These global variables have been marked invariant by the
-  /// static constructor.
+  /// These global variables have been marked invariant by the static
+  /// constructor.
   SmallPtrSet<GlobalVariable*, 8> Invariants;
 
-  /// SimpleConstants - These are constants we have checked and know to be
-  /// simple enough to live in a static initializer of a global.
+  /// These are constants we have checked and know to be simple enough to live
+  /// in a static initializer of a global.
   SmallPtrSet<Constant*, 8> SimpleConstants;
 
   const DataLayout &DL;
@@ -2252,9 +2242,8 @@ private:
 
 }  // anonymous namespace
 
-/// ComputeLoadResult - Return the value that would be computed by a load from
-/// P after the stores reflected by 'memory' have been performed.  If we can't
-/// decide, return null.
+/// Return the value that would be computed by a load from P after the stores
+/// reflected by 'memory' have been performed.  If we can't decide, return null.
 Constant *Evaluator::ComputeLoadResult(Constant *P) {
   // If this memory location has been recently stored, use the stored value: it
   // is the most up-to-date.
@@ -2280,9 +2269,9 @@ Constant *Evaluator::ComputeLoadResult(Constant *P) {
   return nullptr;  // don't know how to evaluate.
 }
 
-/// EvaluateBlock - Evaluate all instructions in block BB, returning true if
-/// successful, false if we can't evaluate it.  NewBB returns the next BB that
-/// control flows into, or null upon return.
+/// Evaluate all instructions in block BB, returning true if successful, false
+/// if we can't evaluate it.  NewBB returns the next BB that control flows into,
+/// or null upon return.
 bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
                               BasicBlock *&NextBB) {
   // This is the main evaluation loop.
@@ -2624,9 +2613,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
   }
 }
 
-/// EvaluateFunction - Evaluate a call to function F, returning true if
-/// successful, false if we can't evaluate it.  ActualArgs contains the formal
-/// arguments for the function.
+/// Evaluate a call to function F, returning true if successful, false if we
+/// can't evaluate it.  ActualArgs contains the formal arguments for the
+/// function.
 bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
                                  const SmallVectorImpl<Constant*> &ActualArgs) {
   // Check to see if this function is already executing (recursion).  If so,
@@ -2688,8 +2677,8 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
   }
 }
 
-/// EvaluateStaticConstructor - Evaluate static constructors in the function, if
-/// we can.  Return true if we can, false otherwise.
+/// Evaluate static constructors in the function, if we can.  Return true if we
+/// can, false otherwise.
 static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
                                       const TargetLibraryInfo *TLI) {
   // Call the function.
@@ -2752,7 +2741,7 @@ static void setUsedInitializer(GlobalVariable &V,
 }
 
 namespace {
-/// \brief An easy to access representation of llvm.used and llvm.compiler.used.
+/// An easy to access representation of llvm.used and llvm.compiler.used.
 class LLVMUsed {
   SmallPtrSet<GlobalValue *, 8> Used;
   SmallPtrSet<GlobalValue *, 8> CompilerUsed;
@@ -2946,8 +2935,8 @@ static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
   return Fn;
 }
 
-/// cxxDtorIsEmpty - Returns whether the given function is an empty C++
-/// destructor and can therefore be eliminated.
+/// Returns whether the given function is an empty C++ destructor and can
+/// therefore be eliminated.
 /// Note that we assume that other optimization passes have already simplified
 /// the code so we only look for a function with a single basic block, where
 /// the only allowed instructions are 'ret', 'call' to an empty C++ dtor and

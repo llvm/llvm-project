@@ -494,6 +494,19 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
 }
 
+// If we have a negative stride, Start refers to the end of the memory location
+// we're trying to memset.  Therefore, we need to recompute the base pointer,
+// which is just Start - BECount*Size.
+static const SCEV *getStartForNegStride(const SCEV *Start, const SCEV *BECount,
+                                        Type *IntPtr, unsigned StoreSize,
+                                        ScalarEvolution *SE) {
+  const SCEV *Index = SE->getTruncateOrZeroExtend(BECount, IntPtr);
+  if (StoreSize != 1)
+    Index = SE->getMulExpr(Index, SE->getConstant(IntPtr, StoreSize),
+                           SCEV::FlagNUW);
+  return SE->getMinusSCEV(Start, Index);
+}
+
 /// processLoopStridedStore - We see a strided store of some value.  If we can
 /// transform this into a memset or memset_pattern in the loop preheader, do so.
 bool LoopIdiomRecognize::processLoopStridedStore(
@@ -539,16 +552,9 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Type *IntPtr = Builder.getIntPtrTy(*DL, DestAS);
 
   const SCEV *Start = Ev->getStart();
-  // If we have a negative stride, Start refers to the end of the memory
-  // location we're trying to memset.  Therefore, we need to recompute the start
-  // point, which is just Start - BECount*Size.
-  if (NegStride) {
-    const SCEV *Index = SE->getTruncateOrZeroExtend(BECount, IntPtr);
-    if (StoreSize != 1)
-      Index = SE->getMulExpr(Index, SE->getConstant(IntPtr, StoreSize),
-                             SCEV::FlagNUW);
-    Start = SE->getMinusSCEV(Ev->getStart(), Index);
-  }
+  // Handle negative strided loops.
+  if (NegStride)
+    Start = getStartForNegStride(Start, BECount, IntPtr, StoreSize, SE);
 
   // Okay, we have a strided store "p[i]" of a splattable value.  We can turn
   // this into a memset in the loop preheader now if we want.  However, this

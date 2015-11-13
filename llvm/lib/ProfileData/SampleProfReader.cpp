@@ -38,8 +38,7 @@ using namespace llvm;
 /// \param OS Stream to emit the output to.
 void SampleProfileReader::dumpFunctionProfile(StringRef FName,
                                               raw_ostream &OS) {
-  OS << "Function: " << FName << ": ";
-  Profiles[FName].print(OS);
+  OS << "Function: " << FName << ": " << Profiles[FName];
 }
 
 /// \brief Dump all the function profiles found on stream \p OS.

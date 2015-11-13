@@ -67,7 +67,6 @@ catchendblock:                                    ; preds = %catch,
 ; X86: retl
 
 ; X86: [[restorebb:LBB0_[0-9]+]]:
-; X86: movl -16(%ebp), %esp
 ; X86: addl $12, %ebp
 ; X86: jmp [[contbb]]
 
@@ -106,6 +105,7 @@ catchendblock:                                    ; preds = %catch,
 ; X64: leaq 32(%rsp), %rbp
 ; X64: .seh_setframe 5, 32
 ; X64: .seh_endprologue
+; X64: movq $-2, (%rbp)
 ; X64: callq getint
 ; X64: callq getint
 ; X64: callq getint

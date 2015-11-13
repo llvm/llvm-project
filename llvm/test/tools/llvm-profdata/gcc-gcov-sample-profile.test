@@ -9,10 +9,10 @@ Tests for sample profiles encoded in GCC's gcov format.
    inlined callees.
 RUN: llvm-profdata show --sample %p/Inputs/gcc-sample-profile.gcov | FileCheck %s --check-prefix=SHOW1
 SHOW1: Function: main: 364084, 0, 6 sampled lines
-SHOW1: line offset: 2, discriminator: 3, inlined callee: _Z3fool: 243786, 0, 3 sampled lines
-SHOW1:   line offset: 1, discriminator: 3, inlined callee: _Z3bari: 0, 0, 2 sampled lines
-SHOW1:   line offset: 1, discriminator: 8, inlined callee: _Z3bari: 0, 0, 2 sampled lines
-SHOW1:   line offset: 1, discriminator: 7, inlined callee: _Z3bari: 98558, 0, 2 sampled lines
+SHOW1: 2.3: inlined callee: _Z3fool: 243786, 0, 3 sampled lines
+SHOW1:   1.3: inlined callee: _Z3bari: 0, 0, 2 sampled lines
+SHOW1:   1.8: inlined callee: _Z3bari: 0, 0, 2 sampled lines
+SHOW1:   1.7: inlined callee: _Z3bari: 98558, 0, 2 sampled lines
 
 2- Convert the profile to text encoding and check that they are both
    identical.

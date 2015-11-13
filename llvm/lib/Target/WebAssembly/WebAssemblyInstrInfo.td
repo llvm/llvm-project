@@ -93,16 +93,16 @@ defm : ARGUMENT<F32>;
 defm : ARGUMENT<F64>;
 
 
-def Const_I32 : I<(outs I32:$res), (ins i32imm:$imm),
+def CONST_I32 : I<(outs I32:$res), (ins i32imm:$imm),
                   [(set I32:$res, imm:$imm)],
                   "i32.const $res, $imm">;
-def Const_I64 : I<(outs I64:$res), (ins i64imm:$imm),
+def CONST_I64 : I<(outs I64:$res), (ins i64imm:$imm),
                   [(set I64:$res, imm:$imm)],
                   "i64.const $res, $imm">;
-def Const_F32 : I<(outs F32:$res), (ins f32imm:$imm),
+def CONST_F32 : I<(outs F32:$res), (ins f32imm:$imm),
                   [(set F32:$res, fpimm:$imm)],
                   "f32.const $res, $imm">;
-def Const_F64 : I<(outs F64:$res), (ins f64imm:$imm),
+def CONST_F64 : I<(outs F64:$res), (ins f64imm:$imm),
                   [(set F64:$res, fpimm:$imm)],
                   "f64.const $res, $imm">;
 

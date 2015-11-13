@@ -640,7 +640,7 @@ For target specific directives, the MCStreamer has a MCTargetStreamer instance.
 Each target that needs it defines a class that inherits from it and is a lot
 like MCStreamer itself: It has one method per directive and two classes that
 inherit from it, a target object streamer and a target asm streamer. The target
-asm streamer just prints it (``emitFnStart -> .fnstrart``), and the object
+asm streamer just prints it (``emitFnStart -> .fnstart``), and the object
 streamer implement the assembler logic for it.
 
 To make llvm use these classes, the target initialization must call

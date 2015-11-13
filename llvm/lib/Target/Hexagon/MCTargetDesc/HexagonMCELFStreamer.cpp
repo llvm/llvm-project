@@ -37,9 +37,7 @@ static cl::opt<unsigned>
 
 void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
                                            const MCSubtargetInfo &STI) {
-  MCInst HMI;
-  HMI.setOpcode(Hexagon::BUNDLE);
-  HMI.addOperand(MCOperand::createImm(0));
+  MCInst HMI = HexagonMCInstrInfo::createBundle();
   MCInst *MCB;
 
   if (MCK.getOpcode() != Hexagon::BUNDLE) {

@@ -2880,20 +2880,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   if (MMI.hasWinEHFuncInfo(Fn)) {
     EHPersonality Personality = classifyEHPersonality(Fn->getPersonalityFn());
-    if (Personality == EHPersonality::MSVC_CXX) {
-      if (Is64Bit) {
-        int UnwindHelpFI = MFI->CreateStackObject(8, 8, /*isSS=*/false);
-        SDValue StackSlot = DAG.getFrameIndex(UnwindHelpFI, MVT::i64);
-        MMI.getWinEHFuncInfo(MF.getFunction()).UnwindHelpFrameIdx =
-            UnwindHelpFI;
-        SDValue Neg2 = DAG.getConstant(-2, dl, MVT::i64);
-        Chain = DAG.getStore(Chain, dl, Neg2, StackSlot,
-                             MachinePointerInfo::getFixedStack(
-                                 DAG.getMachineFunction(), UnwindHelpFI),
-                             /*isVolatile=*/true,
-                             /*isNonTemporal=*/false, /*Alignment=*/0);
-      }
-    } else if (Personality == EHPersonality::CoreCLR) {
+    if (Personality == EHPersonality::CoreCLR) {
       assert(Is64Bit);
       // TODO: Add a mechanism to frame lowering that will allow us to indicate
       // that we'd prefer this slot be allocated towards the bottom of the frame
@@ -22873,6 +22860,41 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
     Mask = getPSHUFShuffleMask(N);
     assert(Mask.size() == 4);
     break;
+  case X86ISD::UNPCKL: {
+    // Combine X86ISD::UNPCKL and ISD::VECTOR_SHUFFLE into X86ISD::UNPCKH, in
+    // which X86ISD::UNPCKL has a ISD::UNDEF operand, and ISD::VECTOR_SHUFFLE
+    // moves upper half elements into the lower half part. For example:
+    //
+    // t2: v16i8 = vector_shuffle<8,9,10,11,12,13,14,15,u,u,u,u,u,u,u,u> t1,
+    //     undef:v16i8
+    // t3: v16i8 = X86ISD::UNPCKL undef:v16i8, t2
+    //
+    // will be combined to:
+    //
+    // t3: v16i8 = X86ISD::UNPCKH undef:v16i8, t1
+
+    // This is only for 128-bit vectors. From SSE4.1 onward this combine may not
+    // happen due to advanced instructions.
+    if (!VT.is128BitVector())
+      return SDValue();
+
+    auto Op0 = N.getOperand(0);
+    auto Op1 = N.getOperand(1);
+    if (Op0.getOpcode() == ISD::UNDEF &&
+        Op1.getNode()->getOpcode() == ISD::VECTOR_SHUFFLE) {
+      ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Op1.getNode())->getMask();
+
+      unsigned NumElts = VT.getVectorNumElements();
+      SmallVector<int, 8> ExpectedMask(NumElts, -1);
+      std::iota(ExpectedMask.begin(), ExpectedMask.begin() + NumElts / 2,
+                NumElts / 2);
+
+      auto ShufOp = Op1.getOperand(0);
+      if (isShuffleEquivalent(Op1, ShufOp, Mask, ExpectedMask))
+        return DAG.getNode(X86ISD::UNPCKH, DL, VT, N.getOperand(0), ShufOp);
+    }
+    return SDValue();
+  }
   default:
     return SDValue();
   }

@@ -137,8 +137,7 @@ public:
   HexagonAsmParser(MCSubtargetInfo &_STI, MCAsmParser &_Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
     : MCTargetAsmParser(Options), STI(_STI), Parser(_Parser),
-      MCII (MII), InBrackets(false) {
-  MCB.setOpcode(Hexagon::BUNDLE);
+      MCII (MII), MCB(HexagonMCInstrInfo::createBundle()), InBrackets(false) {
   setAvailableFeatures(
     ComputeAvailableFeatures(_STI.getFeatureBits()));
 

@@ -19,6 +19,7 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/Analysis/LibCallSemantics.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -144,7 +145,9 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
   case X86::EH_RESTORE: {
     // Restore ESP and EBP, and optionally ESI if required.
-    X86FL->restoreWin32EHStackPointers(MBB, MBBI, DL, /*RestoreSP=*/true);
+    bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(
+        MBB.getParent()->getFunction()->getPersonalityFn()));
+    X86FL->restoreWin32EHStackPointers(MBB, MBBI, DL, /*RestoreSP=*/IsSEH);
     MBBI->eraseFromParent();
     return true;
   }

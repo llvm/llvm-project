@@ -108,21 +108,21 @@ def STORE32_I64 : I<(outs), (ins I32:$addr, I64:$val),
                     "i64.store32 $addr, $val">;
 
 // Memory size.
-def memory_size_I32 : I<(outs I32:$dst), (ins),
+def MEMORY_SIZE_I32 : I<(outs I32:$dst), (ins),
                         [(set I32:$dst, (int_wasm_memory_size))],
                         "i32.memory_size $dst">,
                       Requires<[HasAddr32]>;
-def memory_size_I64 : I<(outs I64:$dst), (ins),
+def MEMORY_SIZE_I64 : I<(outs I64:$dst), (ins),
                         [(set I64:$dst, (int_wasm_memory_size))],
                         "i64.memory_size $dst">,
                       Requires<[HasAddr64]>;
 
 // Grow memory.
-def grow_memory_I32 : I<(outs), (ins I32:$delta),
+def GROW_MEMORY_I32 : I<(outs), (ins I32:$delta),
                         [(int_wasm_grow_memory I32:$delta)],
                         "i32.grow_memory $delta">,
                       Requires<[HasAddr32]>;
-def grow_memory_I64 : I<(outs), (ins I64:$delta),
+def GROW_MEMORY_I64 : I<(outs), (ins I64:$delta),
                         [(int_wasm_grow_memory I64:$delta)],
                         "i64.grow_memory $delta">,
                       Requires<[HasAddr64]>;

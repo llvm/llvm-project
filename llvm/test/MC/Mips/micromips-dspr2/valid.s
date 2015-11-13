@@ -16,3 +16,7 @@
   dpax.w.ph $ac3, $2, $1       # CHECK: dpax.w.ph $ac3, $2, $1     # encoding: [0x00,0x22,0xd0,0xbc]
   shra.qb $3, $4, 5            # CHECK: shra.qb $3, $4, 5       # encoding: [0x00,0x64,0xa1,0xfc]
   shra_r.qb $3, $4, 5          # CHECK: shra_r.qb $3, $4, 5     # encoding: [0x00,0x64,0xb1,0xfc]
+  shrav.qb $3, $4, $5          # CHECK: shrav.qb $3, $4, $5     # encoding: [0x00,0x85,0x19,0xcd]
+  shrav_r.qb $3, $4, $5        # CHECK: shrav_r.qb $3, $4, $5   # encoding: [0x00,0x85,0x1d,0xcd]
+  shrl.ph $3, $4, 5            # CHECK: shrl.ph $3, $4, 5       # encoding: [0x00,0x64,0x53,0xfc]
+  shrlv.ph $3, $4, $5          # CHECK: shrlv.ph $3, $4, $5     # encoding: [0x00,0x85,0x1b,0x15]

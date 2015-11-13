@@ -14,9 +14,11 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
 
@@ -33,12 +35,26 @@ class HexagonAsmBackend : public MCAsmBackend {
   mutable uint64_t relaxedCnt;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
+  MCInst * Extender;
 public:
   HexagonAsmBackend(Target const &T,  uint8_t OSABI, StringRef CPU) :
-    OSABI(OSABI), MCII (T.createMCInstrInfo()), RelaxTarget(new MCInst *){}
+    OSABI(OSABI), MCII (T.createMCInstrInfo()), RelaxTarget(new MCInst *),
+    Extender(nullptr) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createHexagonELFObjectWriter(OS, OSABI, CPU);
+  }
+
+  void setExtender(MCContext &Context) const {
+    if (Extender == nullptr)
+      const_cast<HexagonAsmBackend *>(this)->Extender = new (Context) MCInst;
+  }
+
+  MCInst *takeExtender() const {
+    assert(Extender != nullptr);
+    MCInst * Result = Extender;
+    const_cast<HexagonAsmBackend *>(this)->Extender = nullptr;
+    return Result;
   }
 
   unsigned getNumFixupKinds() const override {
@@ -222,6 +238,7 @@ public:
         if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
           ++relaxedCnt;
           *RelaxTarget = &MCI;
+          setExtender(Layout.getAssembler().getContext());
           return true;
         } else {
           return false;
@@ -262,6 +279,7 @@ public:
       if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
         ++relaxedCnt;
         *RelaxTarget = &MCI;
+        setExtender(Layout.getAssembler().getContext());
         return true;
       }
     }
@@ -281,8 +299,7 @@ public:
     assert(HexagonMCInstrInfo::isBundle(Inst) &&
            "Hexagon relaxInstruction only works on bundles");
 
-    Res.setOpcode(Hexagon::BUNDLE);
-    Res.addOperand(MCOperand::createImm(0));
+    Res = HexagonMCInstrInfo::createBundle();
     // Copy the results into the bundle.
     bool Update = false;
     for (auto &I : HexagonMCInstrInfo::bundleInstructions(Inst)) {
@@ -294,11 +311,10 @@ public:
         assert((HexagonMCInstrInfo::bundleSize(Res) < HEXAGON_PACKET_SIZE) &&
                "No room to insert extender for relaxation");
 
-        MCInst *HMIx =
-            new MCInst(HexagonMCInstrInfo::deriveExtender(
+        MCInst *HMIx = takeExtender();
+        *HMIx = HexagonMCInstrInfo::deriveExtender(
                 *MCII, CrntHMI,
-                HexagonMCInstrInfo::getExtendableOperand(*MCII, CrntHMI)));
-
+                HexagonMCInstrInfo::getExtendableOperand(*MCII, CrntHMI));
         Res.addOperand(MCOperand::createInst(HMIx));
         *RelaxTarget = nullptr;
       }
