@@ -27,7 +27,7 @@ D: Debug Information, autotools/configure/make build, inline assembly
 
 N: Doug Gregor
 E: dgregor@apple.com
-D: Emeritus owner
+D: Emeritus owner, Swift language-specific changes
 
 N: Reid Kleckner
 E: rnk@google.com
