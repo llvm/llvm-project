@@ -462,13 +462,27 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 endif()
 
+if(INTERNAL_INSTALL_PREFIX)
+  set(LIBCLANG_HEADERS_INSTALL_DESTINATION "${INTERNAL_INSTALL_PREFIX}/include")
+else()
+  set(LIBCLANG_HEADERS_INSTALL_DESTINATION include)
+endif()
+
 install(DIRECTORY include/clang-c
-  COMPONENT libclang
-  DESTINATION include
+  COMPONENT libclang-headers
+  DESTINATION "${LIBCLANG_HEADERS_INSTALL_DESTINATION}"
   FILES_MATCHING
   PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
   )
+
+if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
+  add_custom_target(install-libclang-headers
+    DEPENDS
+    COMMAND "${CMAKE_COMMAND}"
+            -DCMAKE_INSTALL_COMPONENT=libclang-headers
+            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+endif()
 
 add_definitions( -D_GNU_SOURCE )
 

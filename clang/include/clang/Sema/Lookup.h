@@ -139,8 +139,7 @@ public:
       Redecl(Redecl != Sema::NotForRedeclaration),
       HideTags(true),
       Diagnose(Redecl == Sema::NotForRedeclaration),
-      AllowHidden(Redecl == Sema::ForRedeclaration),
-      AllowHiddenInternal(AllowHidden),
+      AllowHidden(false),
       Shadowed(false)
   {
     configure();
@@ -162,8 +161,7 @@ public:
       Redecl(Redecl != Sema::NotForRedeclaration),
       HideTags(true),
       Diagnose(Redecl == Sema::NotForRedeclaration),
-      AllowHidden(Redecl == Sema::ForRedeclaration),
-      AllowHiddenInternal(AllowHidden),
+      AllowHidden(false),
       Shadowed(false)
   {
     configure();
@@ -184,7 +182,6 @@ public:
       HideTags(Other.HideTags),
       Diagnose(false),
       AllowHidden(Other.AllowHidden),
-      AllowHiddenInternal(Other.AllowHiddenInternal),
       Shadowed(false)
   {}
 
@@ -226,27 +223,16 @@ public:
   /// \brief Specify whether hidden declarations are visible, e.g.,
   /// for recovery reasons.
   void setAllowHidden(bool AH) {
-    AllowHiddenInternal = AllowHidden = AH;
-  }
-
-  /// \brief Specify whether hidden internal declarations are visible.
-  void setAllowHiddenInternal(bool AHI) {
-    AllowHiddenInternal = AHI;
+    AllowHidden = AH;
   }
 
   /// \brief Determine whether this lookup is permitted to see hidden
   /// declarations, such as those in modules that have not yet been imported.
   bool isHiddenDeclarationVisible(NamedDecl *ND) const {
-    // If a using-shadow declaration is hidden, it's never visible, not
-    // even to redeclaration lookup.
-    // FIXME: Should this apply to typedefs and namespace aliases too?
-    if (isa<UsingShadowDecl>(ND) && LookupKind != Sema::LookupUsingDeclName)
-      return false;
-    return (AllowHidden &&
-            (AllowHiddenInternal || ND->isExternallyVisible())) ||
-           LookupKind == Sema::LookupTagName;
+    return AllowHidden ||
+           (isForRedeclaration() && ND->isExternallyVisible());
   }
-  
+
   /// Sets whether tag declarations should be hidden by non-tag
   /// declarations during resolution.  The default is true.
   void setHideTags(bool Hide) {
@@ -317,7 +303,8 @@ public:
     if (!D->isInIdentifierNamespace(IDNS))
       return nullptr;
 
-    if (isHiddenDeclarationVisible(D) || isVisible(getSema(), D))
+    if (!D->isHidden() || isHiddenDeclarationVisible(D) ||
+        isVisibleSlow(getSema(), D))
       return D;
 
     return getAcceptableDeclSlow(D);
@@ -526,7 +513,6 @@ public:
   /// \brief Change this lookup's redeclaration kind.
   void setRedeclarationKind(Sema::RedeclarationKind RK) {
     Redecl = RK;
-    AllowHiddenInternal = AllowHidden = (RK == Sema::ForRedeclaration);
     configure();
   }
 
@@ -697,9 +683,6 @@ private:
 
   /// \brief True if we should allow hidden declarations to be 'visible'.
   bool AllowHidden;
-
-  /// \brief True if we should allow hidden internal declarations to be visible.
-  bool AllowHiddenInternal;
 
   /// \brief True if the found declarations were shadowed by some other
   /// declaration that we skipped. This only happens when \c LookupKind

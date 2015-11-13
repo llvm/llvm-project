@@ -47,7 +47,7 @@ $(ShareDir)/man/man1/%: % Makefile $(ShareDir)/man/man1/.dir
 	$(Echo) "Copying $(notdir $<) to the 'share' directory..."
 	$(Verb)cp $< $@
 
-$(ShareDir)/scan-build/%: % Makefile $(ShareDir)/scan-build/.dir
+$(ShareDir)/scan-build/%: share/% Makefile $(ShareDir)/scan-build/.dir
 	$(Echo) "Copying $(notdir $<) to the 'share' directory..."
 	$(Verb)cp $< $@
 

@@ -21,7 +21,7 @@ endif()
 set(ManPages
       scan-build.1)
 
-set(ResourceFiles
+set(ShareFiles
       scanview.css
       sorttable.js)
 
@@ -63,16 +63,16 @@ if(CLANG_INSTALL_SCANBUILD)
     install(PROGRAMS ${ManPage} DESTINATION share/man/man1)
   endforeach()
 
-  foreach(ResourceFile ${ResourceFiles})
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/bin/${ResourceFile}
+  foreach(ShareFile ${ShareFiles})
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/share/scan-view/${ShareFile}
                        COMMAND ${CMAKE_COMMAND} -E make_directory
-                         ${CMAKE_BINARY_DIR}/bin
+                         ${CMAKE_BINARY_DIR}/share/scan-view
                        COMMAND ${CMAKE_COMMAND} -E copy
-                         ${CMAKE_CURRENT_SOURCE_DIR}/${ResourceFile}
-                         ${CMAKE_BINARY_DIR}/bin/
-                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ResourceFile})
-    list(APPEND Depends ${CMAKE_BINARY_DIR}/bin/${ResourceFile})
-    install(FILES ${ResourceFile} DESTINATION bin)
+                         ${CMAKE_CURRENT_SOURCE_DIR}/share/${ShareFile}
+                         ${CMAKE_BINARY_DIR}/share/scan-view/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/share/${ShareFile})
+    list(APPEND Depends ${CMAKE_BINARY_DIR}/share/scan-view/${ShareFile})
+    install(FILES ${ShareFile} DESTINATION share/scan-view)
   endforeach()
 
   add_custom_target(scan-build ALL DEPENDS ${Depends})

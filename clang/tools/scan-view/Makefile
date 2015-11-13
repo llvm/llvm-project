@@ -31,7 +31,7 @@ $(ToolDir)/%: % Makefile $(ToolDir)/.dir
 	$(Verb)cp $< $@
 	$(Verb)chmod +x $@
 
-$(ShareDir)/scan-view/%: Resources/% Makefile $(ShareDir)/scan-view/.dir
+$(ShareDir)/scan-view/%: share/% Makefile $(ShareDir)/scan-view/.dir
 	$(Echo) "Copying $(notdir $<) to the 'share' directory..."
 	$(Verb)cp $< $@
 

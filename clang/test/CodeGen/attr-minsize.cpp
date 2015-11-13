@@ -76,4 +76,4 @@ void test5<float>(float arg);
 
 // Oz: attributes [[MINSIZE]] = { minsize{{.*}} }
 
-// OTHER: attributes [[MS]] = { minsize nounwind{{.*}} }
+// OTHER: attributes [[MS]] = { minsize {{(norecurse )?}}nounwind{{.*}} }

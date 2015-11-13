@@ -388,10 +388,6 @@ def fmodules_local_submodule_visibility :
 def fmodule_format_EQ : Joined<["-"], "fmodule-format=">,
   HelpText<"Select the container format for clang modules and PCH. "
            "Supported options are 'raw' and 'obj'.">;
-def fno_modules_hide_internal_linkage :
-  Flag<["-"], "fno-modules-hide-internal-linkage">,
-  HelpText<"Make all declarations visible to redeclaration lookup, "
-           "even if they have internal linkage.">;
 def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "

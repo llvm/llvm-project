@@ -533,6 +533,9 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
     LookupName(Found, S);
   }
 
+  if (Found.isAmbiguous())
+    return true;
+
   // If we performed lookup into a dependent context and did not find anything,
   // that's fine: just build a dependent nested-name-specifier.
   if (Found.empty() && isDependent &&
@@ -551,8 +554,6 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
     return false;
   }
 
-  // FIXME: Deal with ambiguities cleanly.
-
   if (Found.empty() && !ErrorRecoveryLookup) {
     // If identifier is not found as class-name-or-namespace-name, but is found
     // as other entity, don't look for typos.
@@ -562,6 +563,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
     else if (S && !isDependent)
       LookupName(R, S);
     if (!R.empty()) {
+      // Don't diagnose problems with this speculative lookup.
+      R.suppressDiagnostics();
       // The identifier is found in ordinary lookup. If correction to colon is
       // allowed, suggest replacement to ':'.
       if (IsCorrectedToColon) {

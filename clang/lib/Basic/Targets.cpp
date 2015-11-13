@@ -4366,15 +4366,10 @@ class ARMTargetInfo : public TargetInfo {
     default:
       return llvm::ARM::getCPUAttr(ArchKind);
     case llvm::ARM::AK_ARMV6M:
-    case llvm::ARM::AK_ARMV6SM:
-    case llvm::ARM::AK_ARMV6HL:
       return "6M";
     case llvm::ARM::AK_ARMV7S:
       return "7S";
-    case llvm::ARM::AK_ARMV7:
     case llvm::ARM::AK_ARMV7A:
-    case llvm::ARM::AK_ARMV7L:
-    case llvm::ARM::AK_ARMV7HL:
       return "7A";
     case llvm::ARM::AK_ARMV7R:
       return "7R";

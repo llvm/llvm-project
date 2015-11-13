@@ -613,8 +613,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     break;
 
   case AtomicExpr::AO__atomic_nand_fetch:
-    PostOp = llvm::Instruction::And;
-    // Fall through.
+    PostOp = llvm::Instruction::And; // the NOT is special cased below
+  // Fall through.
   case AtomicExpr::AO__atomic_fetch_nand:
     Op = llvm::AtomicRMWInst::Nand;
     break;
@@ -853,6 +853,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       MemTy->isPointerType() ? getContext().getIntPtrType() : MemTy;
     QualType RetTy;
     bool HaveRetTy = false;
+    llvm::Instruction::BinaryOps PostOp = (llvm::Instruction::BinaryOps)0;
     switch (E->getOp()) {
     case AtomicExpr::AO__c11_atomic_init:
       llvm_unreachable("Already handled!");
@@ -906,81 +907,68 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__atomic_load_n:
       LibCallName = "__atomic_load";
       break;
+    // T __atomic_add_fetch_N(T *mem, T val, int order)
     // T __atomic_fetch_add_N(T *mem, T val, int order)
+    case AtomicExpr::AO__atomic_add_fetch:
+      PostOp = llvm::Instruction::Add;
+    // Fall through.
     case AtomicExpr::AO__c11_atomic_fetch_add:
     case AtomicExpr::AO__atomic_fetch_add:
       LibCallName = "__atomic_fetch_add";
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         LoweredMemTy, E->getExprLoc(), sizeChars);
       break;
+    // T __atomic_and_fetch_N(T *mem, T val, int order)
     // T __atomic_fetch_and_N(T *mem, T val, int order)
+    case AtomicExpr::AO__atomic_and_fetch:
+      PostOp = llvm::Instruction::And;
+    // Fall through.
     case AtomicExpr::AO__c11_atomic_fetch_and:
     case AtomicExpr::AO__atomic_fetch_and:
       LibCallName = "__atomic_fetch_and";
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         MemTy, E->getExprLoc(), sizeChars);
       break;
+    // T __atomic_or_fetch_N(T *mem, T val, int order)
     // T __atomic_fetch_or_N(T *mem, T val, int order)
+    case AtomicExpr::AO__atomic_or_fetch:
+      PostOp = llvm::Instruction::Or;
+    // Fall through.
     case AtomicExpr::AO__c11_atomic_fetch_or:
     case AtomicExpr::AO__atomic_fetch_or:
       LibCallName = "__atomic_fetch_or";
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         MemTy, E->getExprLoc(), sizeChars);
       break;
+    // T __atomic_sub_fetch_N(T *mem, T val, int order)
     // T __atomic_fetch_sub_N(T *mem, T val, int order)
+    case AtomicExpr::AO__atomic_sub_fetch:
+      PostOp = llvm::Instruction::Sub;
+    // Fall through.
     case AtomicExpr::AO__c11_atomic_fetch_sub:
     case AtomicExpr::AO__atomic_fetch_sub:
       LibCallName = "__atomic_fetch_sub";
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         LoweredMemTy, E->getExprLoc(), sizeChars);
       break;
+    // T __atomic_xor_fetch_N(T *mem, T val, int order)
     // T __atomic_fetch_xor_N(T *mem, T val, int order)
+    case AtomicExpr::AO__atomic_xor_fetch:
+      PostOp = llvm::Instruction::Xor;
+    // Fall through.
     case AtomicExpr::AO__c11_atomic_fetch_xor:
     case AtomicExpr::AO__atomic_fetch_xor:
       LibCallName = "__atomic_fetch_xor";
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         MemTy, E->getExprLoc(), sizeChars);
       break;
+    // T __atomic_nand_fetch_N(T *mem, T val, int order)
     // T __atomic_fetch_nand_N(T *mem, T val, int order)
+    case AtomicExpr::AO__atomic_nand_fetch:
+      PostOp = llvm::Instruction::And; // the NOT is special cased below
+    // Fall through.
     case AtomicExpr::AO__atomic_fetch_nand:
       LibCallName = "__atomic_fetch_nand";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), sizeChars);
-      break;
-
-    // T __atomic_add_fetch_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_add_fetch:
-      LibCallName = "__atomic_add_fetch";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        LoweredMemTy, E->getExprLoc(), sizeChars);
-      break;
-    // T __atomic_and_fetch_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_and_fetch:
-      LibCallName = "__atomic_and_fetch";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), sizeChars);
-      break;
-    // T __atomic_or_fetch_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_or_fetch:
-      LibCallName = "__atomic_or_fetch";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), sizeChars);
-      break;
-    // T __atomic_sub_fetch_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_sub_fetch:
-      LibCallName = "__atomic_sub_fetch";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        LoweredMemTy, E->getExprLoc(), sizeChars);
-      break;
-    // T __atomic_xor_fetch_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_xor_fetch:
-      LibCallName = "__atomic_xor_fetch";
-      AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
-                        MemTy, E->getExprLoc(), sizeChars);
-      break;
-    // T __atomic_nand_fetch_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_nand_fetch:
-      LibCallName = "__atomic_nand_fetch";
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         MemTy, E->getExprLoc(), sizeChars);
       break;
@@ -1007,6 +995,11 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     Args.add(RValue::get(Order),
              getContext().IntTy);
 
+    // PostOp is only needed for the atomic_*_fetch operations, and
+    // thus is only needed for and implemented in the
+    // UseOptimizedLibcall codepath.
+    assert(UseOptimizedLibcall || !PostOp);
+
     RValue Res = emitAtomicLibcall(*this, LibCallName, RetTy, Args);
     // The value is returned directly from the libcall.
     if (E->isCmpXChg())
@@ -1016,6 +1009,13 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     // provided an out-param.
     if (UseOptimizedLibcall && Res.getScalarVal()) {
       llvm::Value *ResVal = Res.getScalarVal();
+      if (PostOp) {
+        llvm::Value *LoadVal1 = Args[1].RV.getScalarVal();
+        ResVal = Builder.CreateBinOp(PostOp, ResVal, LoadVal1);
+      }
+      if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch)
+        ResVal = Builder.CreateNot(ResVal);
+
       Builder.CreateStore(
           ResVal,
           Builder.CreateBitCast(Dest, ResVal->getType()->getPointerTo()));

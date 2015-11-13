@@ -295,4 +295,4 @@ U u;
 // CHECK-GLOBAL: @_ZN11IndirectPDM1uE = global %"union.IndirectPDM::U" { %union.anon { i64 -1 } }, align 8
 }
 
-// CHECK-O3: attributes [[NUW]] = { nounwind readnone{{.*}} }
+// CHECK-O3: attributes [[NUW]] = { norecurse nounwind readnone{{.*}} }

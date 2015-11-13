@@ -128,9 +128,9 @@ void f20(void) {
   _setjmp(0);
 }
 
-// CHECK: attributes [[NUW]] = { nounwind optsize readnone{{.*}} }
-// CHECK: attributes [[AI]] = { alwaysinline nounwind optsize readnone{{.*}} }
-// CHECK: attributes [[ALIGN]] = { nounwind optsize readnone alignstack=16{{.*}} }
+// CHECK: attributes [[NUW]] = { norecurse nounwind optsize readnone{{.*}} }
+// CHECK: attributes [[AI]] = { alwaysinline norecurse nounwind optsize readnone{{.*}} }
+// CHECK: attributes [[ALIGN]] = { norecurse nounwind optsize readnone alignstack=16{{.*}} }
 // CHECK: attributes [[RT]] = { nounwind optsize returns_twice{{.*}} }
 // CHECK: attributes [[NR]] = { noreturn nounwind optsize }
 // CHECK: attributes [[NUW_RN]] = { nounwind optsize readnone }

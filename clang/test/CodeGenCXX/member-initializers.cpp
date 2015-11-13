@@ -32,4 +32,4 @@ int test_fold() {
   return A(2).i;
 }
 
-// CHECK: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
+// CHECK: attributes [[NUW_RN]] = { norecurse nounwind readnone{{.*}} }

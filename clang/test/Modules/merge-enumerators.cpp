@@ -16,11 +16,13 @@
 
 #ifdef MERGE_LATE
 namespace N {
-  // FIXME: Should we accept this and reject the usage below due to ambiguity instead?
-  enum { A } a; // expected-error {{redefinition of enumerator 'A'}}
-  // expected-note@a.h:1 {{here}} (from module B.b)
+  enum { A } a; // expected-note {{candidate}}
+  // expected-note@a.h:1 {{candidate}} (from module B.b)
 }
 #include "a.h"
 #endif
 
 N::E e = N::A;
+#ifdef MERGE_LATE
+// expected-error@-2 {{ambiguous}}
+#endif

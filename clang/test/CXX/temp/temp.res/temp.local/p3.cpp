@@ -14,8 +14,7 @@ template <class T> struct Derived: Base<int>, Base<char> {
     t->Derived::Base<T>::f();
     t->Base<T>::f();
     t->Base::f(); // expected-error{{member 'Base' found in multiple base classes of different types}} \
-    // expected-error{{no member named 'f' in 'X0'}} \
-    // expected-error{{'Base' is not a class, namespace, or enumeration}}
+    // expected-error{{no member named 'f' in 'X0'}}
   }
 };
 

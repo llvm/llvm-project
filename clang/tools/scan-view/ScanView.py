@@ -73,7 +73,7 @@ kReportReplacements.append((re.compile('<!-- REPORTSUMMARYEXTRA -->'),
 ###
 # Other simple parameters
 
-kResources = posixpath.join(posixpath.dirname(__file__), '../share/scan-view')
+kShare = posixpath.join(posixpath.dirname(__file__), '../share/scan-view')
 kConfigPath = os.path.expanduser('~/.scanview.cfg')
 
 ###
@@ -680,7 +680,7 @@ File Bug</h3>
                     overrides['Radar']['Component Version'] = 'X'
                     return self.send_report(None, overrides)
                 elif name=='favicon.ico':
-                    return self.send_path(posixpath.join(kResources,'bugcatcher.ico'))
+                    return self.send_path(posixpath.join(kShare,'bugcatcher.ico'))
         
         # Match directory entries.
         if components[-1] == '':
