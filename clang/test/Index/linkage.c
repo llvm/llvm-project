@@ -20,7 +20,7 @@ void f16(void) {
 
 
 // CHECK: EnumDecl=Baz:3:6 (Definition)linkage=External
-// CHECK: EnumConstantDecl=Qux:3:12 (Definition)linkage=NoLinkage
+// CHECK: EnumConstantDecl=Qux:3:12 (Definition)linkage=External
 // CHECK: VarDecl=x:4:5linkage=External
 // CHECK: FunctionDecl=foo:5:6linkage=External
 // CHECK: VarDecl=w:6:12linkage=Internal

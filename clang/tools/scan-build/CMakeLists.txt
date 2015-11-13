@@ -72,7 +72,7 @@ if(CLANG_INSTALL_SCANBUILD)
                          ${CMAKE_BINARY_DIR}/share/scan-view/
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/share/${ShareFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/share/scan-view/${ShareFile})
-    install(FILES ${ShareFile} DESTINATION share/scan-view)
+    install(FILES share/${ShareFile} DESTINATION share/scan-view)
   endforeach()
 
   add_custom_target(scan-build ALL DEPENDS ${Depends})

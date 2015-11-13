@@ -448,17 +448,8 @@ public:
   /// explicit instantiation declaration, or explicit instantiation
   /// definition.
   bool isExplicitInstantiationOrSpecialization() const {
-    switch (getTemplateSpecializationKind()) {
-    case TSK_ExplicitSpecialization:
-    case TSK_ExplicitInstantiationDeclaration:
-    case TSK_ExplicitInstantiationDefinition:
-      return true;
-
-    case TSK_Undeclared:
-    case TSK_ImplicitInstantiation:
-      return false;
-    }
-    llvm_unreachable("bad template specialization kind");
+    return isTemplateExplicitInstantiationOrSpecialization(
+        getTemplateSpecializationKind());
   }
 
   /// \brief Set the template specialization kind.
@@ -1644,17 +1635,8 @@ public:
   /// explicit instantiation declaration, or explicit instantiation
   /// definition.
   bool isExplicitInstantiationOrSpecialization() const {
-    switch (getTemplateSpecializationKind()) {
-    case TSK_ExplicitSpecialization:
-    case TSK_ExplicitInstantiationDeclaration:
-    case TSK_ExplicitInstantiationDefinition:
-      return true;
-
-    case TSK_Undeclared:
-    case TSK_ImplicitInstantiation:
-      return false;
-    }
-    llvm_unreachable("bad template specialization kind");
+    return isTemplateExplicitInstantiationOrSpecialization(
+        getTemplateSpecializationKind());
   }
 
   void setSpecializationKind(TemplateSpecializationKind TSK) {
@@ -2499,17 +2481,8 @@ public:
   /// explicit instantiation declaration, or explicit instantiation
   /// definition.
   bool isExplicitInstantiationOrSpecialization() const {
-    switch (getTemplateSpecializationKind()) {
-    case TSK_ExplicitSpecialization:
-    case TSK_ExplicitInstantiationDeclaration:
-    case TSK_ExplicitInstantiationDefinition:
-      return true;
-
-    case TSK_Undeclared:
-    case TSK_ImplicitInstantiation:
-      return false;
-    }
-    llvm_unreachable("bad template specialization kind");
+    return isTemplateExplicitInstantiationOrSpecialization(
+        getTemplateSpecializationKind());
   }
 
   void setSpecializationKind(TemplateSpecializationKind TSK) {

@@ -8576,22 +8576,55 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
 }
 
 /// Determine whether two declarations are "equivalent" for the purposes of
-/// name lookup and overload resolution. This applies when the same internal
-/// linkage variable or function is defined by two modules (textually including
+/// name lookup and overload resolution. This applies when the same internal/no
+/// linkage entity is defined by two modules (probably by textually including
 /// the same header). In such a case, we don't consider the declarations to
 /// declare the same entity, but we also don't want lookups with both
 /// declarations visible to be ambiguous in some cases (this happens when using
 /// a modularized libstdc++).
 bool Sema::isEquivalentInternalLinkageDeclaration(const NamedDecl *A,
                                                   const NamedDecl *B) {
-  return A && B && isa<ValueDecl>(A) && isa<ValueDecl>(B) &&
-         A->getDeclContext()->getRedeclContext()->Equals(
-             B->getDeclContext()->getRedeclContext()) &&
-         getOwningModule(const_cast<NamedDecl *>(A)) !=
-             getOwningModule(const_cast<NamedDecl *>(B)) &&
-         !A->isExternallyVisible() && !B->isExternallyVisible() &&
-         Context.hasSameType(cast<ValueDecl>(A)->getType(),
-                             cast<ValueDecl>(B)->getType());
+  auto *VA = dyn_cast_or_null<ValueDecl>(A);
+  auto *VB = dyn_cast_or_null<ValueDecl>(B);
+  if (!VA || !VB)
+    return false;
+
+  // The declarations must be declaring the same name as an internal linkage
+  // entity in different modules.
+  if (!VA->getDeclContext()->getRedeclContext()->Equals(
+          VB->getDeclContext()->getRedeclContext()) ||
+      getOwningModule(const_cast<ValueDecl *>(VA)) ==
+          getOwningModule(const_cast<ValueDecl *>(VB)) ||
+      VA->isExternallyVisible() || VB->isExternallyVisible())
+    return false;
+
+  // Check that the declarations appear to be equivalent.
+  //
+  // FIXME: Checking the type isn't really enough to resolve the ambiguity.
+  // For constants and functions, we should check the initializer or body is
+  // the same. For non-constant variables, we shouldn't allow it at all.
+  if (Context.hasSameType(VA->getType(), VB->getType()))
+    return true;
+
+  // Enum constants within unnamed enumerations will have different types, but
+  // may still be similar enough to be interchangeable for our purposes.
+  if (auto *EA = dyn_cast<EnumConstantDecl>(VA)) {
+    if (auto *EB = dyn_cast<EnumConstantDecl>(VB)) {
+      // Only handle anonymous enums. If the enumerations were named and
+      // equivalent, they would have been merged to the same type.
+      auto *EnumA = cast<EnumDecl>(EA->getDeclContext());
+      auto *EnumB = cast<EnumDecl>(EB->getDeclContext());
+      if (EnumA->hasNameForLinkage() || EnumB->hasNameForLinkage() ||
+          !Context.hasSameType(EnumA->getIntegerType(),
+                               EnumB->getIntegerType()))
+        return false;
+      // Allow this only if the value is the same for both enumerators.
+      return llvm::APSInt::isSameValue(EA->getInitVal(), EB->getInitVal());
+    }
+  }
+
+  // Nothing else is sufficiently similar.
+  return false;
 }
 
 void Sema::diagnoseEquivalentInternalLinkageDeclarations(

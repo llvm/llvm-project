@@ -303,8 +303,7 @@ public:
     if (!D->isInIdentifierNamespace(IDNS))
       return nullptr;
 
-    if (!D->isHidden() || isHiddenDeclarationVisible(D) ||
-        isVisibleSlow(getSema(), D))
+    if (isVisible(getSema(), D) || isHiddenDeclarationVisible(D))
       return D;
 
     return getAcceptableDeclSlow(D);
