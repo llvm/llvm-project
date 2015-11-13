@@ -211,6 +211,23 @@ WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+std::pair<unsigned, const TargetRegisterClass *>
+WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
+    const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
+  // First, see if this is a constraint that directly corresponds to a
+  // WebAssembly register class.
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 'r':
+      return std::make_pair(0U, &WebAssembly::I32RegClass);
+    default:
+      break;
+    }
+  }
+
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Lowering private implementation.
 //===----------------------------------------------------------------------===//

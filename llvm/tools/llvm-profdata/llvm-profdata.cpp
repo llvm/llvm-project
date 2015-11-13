@@ -29,16 +29,32 @@
 
 using namespace llvm;
 
-static void exitWithError(const Twine &Message, StringRef Whence = "") {
+static void exitWithError(const Twine &Message,
+                          StringRef Whence = "",
+                          StringRef Hint = "") {
   errs() << "error: ";
   if (!Whence.empty())
     errs() << Whence << ": ";
   errs() << Message << "\n";
+  if (!Hint.empty())
+    errs() << Hint << "\n";
   ::exit(1);
 }
 
+static void exitWithErrorCode(const std::error_code &Error, StringRef Whence = "") {
+  if (Error.category() == instrprof_category()) {
+    instrprof_error instrError = static_cast<instrprof_error>(Error.value());
+    if (instrError == instrprof_error::unrecognized_format) {
+      // Hint for common error of forgetting -sample for sample profiles.
+      exitWithError(Error.message(), Whence,
+                    "Perhaps you forgot to use the -sample option?");
+    }
+  }
+  exitWithError(Error.message(), Whence);
+}
+
 namespace {
-enum ProfileKinds { instr, sample };
+    enum ProfileKinds { instr, sample };
 }
 
 static void mergeInstrProfile(const cl::list<std::string> &Inputs,
@@ -49,20 +65,20 @@ static void mergeInstrProfile(const cl::list<std::string> &Inputs,
   std::error_code EC;
   raw_fd_ostream Output(OutputFilename.data(), EC, sys::fs::F_None);
   if (EC)
-    exitWithError(EC.message(), OutputFilename);
+    exitWithErrorCode(EC, OutputFilename);
 
   InstrProfWriter Writer;
   for (const auto &Filename : Inputs) {
     auto ReaderOrErr = InstrProfReader::create(Filename);
     if (std::error_code ec = ReaderOrErr.getError())
-      exitWithError(ec.message(), Filename);
+      exitWithErrorCode(ec, Filename);
 
     auto Reader = std::move(ReaderOrErr.get());
     for (auto &I : *Reader)
       if (std::error_code EC = Writer.addRecord(std::move(I)))
         errs() << Filename << ": " << I.Name << ": " << EC.message() << "\n";
     if (Reader->hasError())
-      exitWithError(Reader->getError().message(), Filename);
+      exitWithErrorCode(Reader->getError(), Filename);
   }
   Writer.write(Output);
 }
@@ -73,7 +89,7 @@ static void mergeSampleProfile(const cl::list<std::string> &Inputs,
   using namespace sampleprof;
   auto WriterOrErr = SampleProfileWriter::create(OutputFilename, OutputFormat);
   if (std::error_code EC = WriterOrErr.getError())
-    exitWithError(EC.message(), OutputFilename);
+    exitWithErrorCode(EC, OutputFilename);
 
   auto Writer = std::move(WriterOrErr.get());
   StringMap<FunctionSamples> ProfileMap;
@@ -82,7 +98,7 @@ static void mergeSampleProfile(const cl::list<std::string> &Inputs,
     auto ReaderOrErr =
         SampleProfileReader::create(Filename, getGlobalContext());
     if (std::error_code EC = ReaderOrErr.getError())
-      exitWithError(EC.message(), Filename);
+      exitWithErrorCode(EC, Filename);
 
     // We need to keep the readers around until after all the files are
     // read so that we do not lose the function names stored in each
@@ -91,7 +107,7 @@ static void mergeSampleProfile(const cl::list<std::string> &Inputs,
     Readers.push_back(std::move(ReaderOrErr.get()));
     const auto Reader = Readers.back().get();
     if (std::error_code EC = Reader->read())
-      exitWithError(EC.message(), Filename);
+      exitWithErrorCode(EC, Filename);
 
     StringMap<FunctionSamples> &Profiles = Reader->getProfiles();
     for (StringMap<FunctionSamples>::iterator I = Profiles.begin(),
@@ -143,7 +159,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
                             std::string ShowFunction, raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
   if (std::error_code EC = ReaderOrErr.getError())
-    exitWithError(EC.message(), Filename);
+    exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   uint64_t MaxFunctionCount = 0, MaxBlockCount = 0;
@@ -198,7 +214,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
     }
   }
   if (Reader->hasError())
-    exitWithError(Reader->getError().message(), Filename);
+    exitWithErrorCode(Reader->getError(), Filename);
 
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
@@ -214,11 +230,11 @@ static int showSampleProfile(std::string Filename, bool ShowCounts,
   using namespace sampleprof;
   auto ReaderOrErr = SampleProfileReader::create(Filename, getGlobalContext());
   if (std::error_code EC = ReaderOrErr.getError())
-    exitWithError(EC.message(), Filename);
+    exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   if (std::error_code EC = Reader->read())
-    exitWithError(EC.message(), Filename);
+    exitWithErrorCode(EC, Filename);
 
   if (ShowAllFunctions || ShowFunction.empty())
     Reader->dump(OS);
@@ -259,7 +275,7 @@ static int show_main(int argc, const char *argv[]) {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::F_Text);
   if (EC)
-    exitWithError(EC.message(), OutputFilename);
+      exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !ShowFunction.empty())
     errs() << "warning: -function argument ignored: showing all functions\n";

@@ -178,7 +178,7 @@ class CoverageData {
       return;
     symbolize::LLVMSymbolizer::Options SymbolizerOptions;
     SymbolizerOptions.Demangle = ClDemangle;
-    symbolize::LLVMSymbolizer Symbolizer;
+    symbolize::LLVMSymbolizer Symbolizer(SymbolizerOptions);
 
     struct FileLoc {
       std::string FileName;
@@ -226,8 +226,11 @@ class CoverageData {
         if (!ProcessedFunctions.insert(FunctionName).second)
           continue;
 
-        out << FileName.substr(FilePrefix.size()) << ":" << Line << " "
-            << FunctionName << "\n";
+        // Don't strip prefix if we only have a single file.
+        if (FileName.size() > FilePrefix.size())
+          FileName = FileName.substr(FilePrefix.size());
+
+        out << FileName << ":" << Line << " " << FunctionName << "\n";
       }
     }
   }

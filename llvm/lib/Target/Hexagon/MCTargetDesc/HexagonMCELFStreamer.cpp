@@ -50,7 +50,7 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
 
   // Examines packet and pad the packet, if needed, when an
   // end-loop is in the bundle.
-  HexagonMCInstrInfo::padEndloop(*MCB);
+  HexagonMCInstrInfo::padEndloop(getContext(), *MCB);
   HexagonMCShuffle(*MCII, STI, *MCB);
 
   assert(HexagonMCInstrInfo::bundleSize(*MCB) <= HEXAGON_PACKET_SIZE);

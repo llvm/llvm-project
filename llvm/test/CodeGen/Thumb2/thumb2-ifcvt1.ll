@@ -72,10 +72,9 @@ entry:
 define void @t3(i32 %a, i32 %b) nounwind {
 entry:
 ; CHECK-LABEL: t3:
-; CHECK: it lt
-; CHECK-NEXT: bxlt lr
-; CHECK: mov r0, r1
-; CHECK: bl  {{_?}}foo
+; CHECK: itt ge
+; CHECK: movge r0, r1
+; CHECK: blge  {{_?}}foo
 	%tmp1 = icmp sgt i32 %a, 10		; <i1> [#uses=1]
 	br i1 %tmp1, label %cond_true, label %UnifiedReturnBlock
 

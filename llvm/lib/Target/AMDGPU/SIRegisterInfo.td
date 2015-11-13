@@ -272,12 +272,9 @@ def SCSrc_32 : RegInlineOperand<SReg_32> {
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
-def VS_32 : RegisterClass<"AMDGPU", [i32, f32], 32, (add SReg_32, VGPR_32)> {
-  let isAllocatable = 0;
-}
+def VS_32 : RegisterClass<"AMDGPU", [i32, f32], 32, (add VGPR_32, SReg_32)>;
 
-def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 32, (add SReg_64, VReg_64)> {
-  let isAllocatable = 0;
+def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 32, (add VReg_64, SReg_64)> {
   let CopyCost = 2;
 }
 

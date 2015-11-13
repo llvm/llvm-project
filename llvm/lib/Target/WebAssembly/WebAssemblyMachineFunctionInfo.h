@@ -43,11 +43,11 @@ public:
   void addResult(MVT VT) { Results.push_back(VT); }
   const std::vector<MVT> &getResults() const { return Results; }
 
-  void initWARegs() {
-    assert(WARegs.empty());
-    WARegs.resize(MF.getRegInfo().getNumVirtRegs(), -1u);
-  }
+  static const unsigned UnusedReg = -1u;
+
+  void initWARegs();
   void setWAReg(unsigned VReg, unsigned WAReg) {
+    assert(WAReg != UnusedReg);
     WARegs[TargetRegisterInfo::virtReg2Index(VReg)] = WAReg;
   }
   unsigned getWAReg(unsigned VReg) const {

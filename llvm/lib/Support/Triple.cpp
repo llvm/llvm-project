@@ -487,9 +487,7 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
     return Triple::NoSubArch;
   case ARM::AK_ARMV4T:
     return Triple::ARMSubArch_v4t;
-  case ARM::AK_ARMV5:
   case ARM::AK_ARMV5T:
-  case ARM::AK_ARMV5E:
     return Triple::ARMSubArch_v5;
   case ARM::AK_ARMV5TE:
   case ARM::AK_IWMMXT:
@@ -503,18 +501,13 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
     return Triple::ARMSubArch_v6;
   case ARM::AK_ARMV6K:
   case ARM::AK_ARMV6ZK:
-  case ARM::AK_ARMV6HL:
     return Triple::ARMSubArch_v6k;
   case ARM::AK_ARMV6T2:
     return Triple::ARMSubArch_v6t2;
   case ARM::AK_ARMV6M:
-  case ARM::AK_ARMV6SM:
     return Triple::ARMSubArch_v6m;
-  case ARM::AK_ARMV7:
   case ARM::AK_ARMV7A:
   case ARM::AK_ARMV7R:
-  case ARM::AK_ARMV7L:
-  case ARM::AK_ARMV7HL:
     return Triple::ARMSubArch_v7;
   case ARM::AK_ARMV7K:
     return Triple::ARMSubArch_v7k;

@@ -124,6 +124,8 @@ public:
                                  const MCSymbol *Label);
   void EmitGPRel32Value(const MCExpr *Value) override;
   void EmitGPRel64Value(const MCExpr *Value) override;
+  bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
+                          const MCExpr *Expr, SMLoc Loc) override;
   void EmitFill(uint64_t NumBytes, uint8_t FillValue) override;
   void FinishImpl() override;
 

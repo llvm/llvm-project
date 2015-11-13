@@ -67,6 +67,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UNDEF:             R = ScalarizeVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:    R = ScalarizeVecRes_VECTOR_SHUFFLE(N); break;
   case ISD::ANY_EXTEND:
+  case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
@@ -616,6 +617,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N), Lo, Hi);
     break;
 
+  case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CONVERT_RNDSAT:
   case ISD::CTLZ:
@@ -2027,6 +2029,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_Convert(N);
     break;
 
+  case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CTLZ:
   case ISD::CTPOP:

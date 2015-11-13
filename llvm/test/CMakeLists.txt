@@ -19,11 +19,12 @@ endif()
 # Set the depends list as a variable so that it can grow conditionally.
 # NOTE: Sync the substitutions in test/lit.cfg when adding to this list.
 set(LLVM_TEST_DEPENDS
-          llvm-config
-          UnitTests
           BugpointPasses
+          FileCheck
           LLVMHello
+          UnitTests
           bugpoint
+          count
           llc
           lli
           lli-child-target
@@ -31,6 +32,7 @@ set(LLVM_TEST_DEPENDS
           llvm-as
           llvm-bcanalyzer
           llvm-c-test
+          llvm-config
           llvm-cov
           llvm-cxxdump
           llvm-diff
@@ -54,14 +56,13 @@ set(LLVM_TEST_DEPENDS
           llvm-split
           llvm-symbolizer
           llvm-tblgen
-          opt
-          FileCheck
-          count
           not
+          obj2yaml
+          opt
+          sancov
+          verify-uselistorder
           yaml-bench
           yaml2obj
-          obj2yaml
-          verify-uselistorder
         )
 
 # If Intel JIT events are supported, depend on a tool that tests the listener.

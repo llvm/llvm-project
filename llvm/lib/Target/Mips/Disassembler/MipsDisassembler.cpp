@@ -1380,8 +1380,11 @@ static DecodeStatus DecodeMemMMImm4(MCInst &Inst,
         return MCDisassembler::Fail;
       break;
     case Mips::SB16_MM:
+    case Mips::SB16_MMR6:
     case Mips::SH16_MM:
+    case Mips::SH16_MMR6:
     case Mips::SW16_MM:
+    case Mips::SW16_MMR6:
       if (DecodeGPRMM16ZeroRegisterClass(Inst, Reg, Address, Decoder)
             == MCDisassembler::Fail)
         return MCDisassembler::Fail;
@@ -1400,14 +1403,17 @@ static DecodeStatus DecodeMemMMImm4(MCInst &Inst,
         Inst.addOperand(MCOperand::createImm(Offset));
       break;
     case Mips::SB16_MM:
+    case Mips::SB16_MMR6:
       Inst.addOperand(MCOperand::createImm(Offset));
       break;
     case Mips::LHU16_MM:
     case Mips::SH16_MM:
+    case Mips::SH16_MMR6:
       Inst.addOperand(MCOperand::createImm(Offset << 1));
       break;
     case Mips::LW16_MM:
     case Mips::SW16_MM:
+    case Mips::SW16_MMR6:
       Inst.addOperand(MCOperand::createImm(Offset << 2));
       break;
   }
@@ -1451,7 +1457,16 @@ static DecodeStatus DecodeMemMMReglistImm4Lsl2(MCInst &Inst,
                                                unsigned Insn,
                                                uint64_t Address,
                                                const void *Decoder) {
-  int Offset = SignExtend32<4>(Insn & 0xf);
+  int Offset;
+  switch (Inst.getOpcode()) {
+  case Mips::LWM16_MMR6:
+  case Mips::SWM16_MMR6:
+    Offset = fieldFromInstruction(Insn, 4, 4);
+    break;
+  default:
+    Offset = SignExtend32<4>(Insn & 0xf);
+    break;
+  }
 
   if (DecodeRegListOperand16(Inst, Insn, Address, Decoder)
       == MCDisassembler::Fail)
@@ -2009,7 +2024,16 @@ static DecodeStatus DecodeRegListOperand16(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const void *Decoder) {
   unsigned Regs[] = {Mips::S0, Mips::S1, Mips::S2, Mips::S3};
-  unsigned RegLst = fieldFromInstruction(Insn, 4, 2);
+  unsigned RegLst;
+  switch(Inst.getOpcode()) {
+  default:
+    RegLst = fieldFromInstruction(Insn, 4, 2);
+    break;
+  case Mips::LWM16_MMR6:
+  case Mips::SWM16_MMR6:
+    RegLst = fieldFromInstruction(Insn, 8, 2);
+    break;
+  }
   unsigned RegNum = RegLst & 0x3;
 
   for (unsigned i = 0; i <= RegNum; i++)

@@ -198,7 +198,7 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
   else {
     HexagonLowerToMC(MI, MCB, *this);
-    HexagonMCInstrInfo::padEndloop(MCB);
+    HexagonMCInstrInfo::padEndloop(OutStreamer->getContext(), MCB);
   }
   // Examine the packet and try to find instructions that can be converted
   // to compounds.

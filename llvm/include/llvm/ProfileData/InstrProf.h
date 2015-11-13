@@ -149,6 +149,7 @@ const std::error_category &instrprof_category();
 enum class instrprof_error {
   success = 0,
   eof,
+  unrecognized_format,
   bad_magic,
   bad_header,
   unsupported_version,

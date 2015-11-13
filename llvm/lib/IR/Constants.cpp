@@ -414,22 +414,6 @@ bool Constant::isConstantUsed() const {
   return false;
 }
 
-
-
-/// getRelocationInfo - This method classifies the entry according to
-/// whether or not it may generate a relocation entry.  This must be
-/// conservative, so if it might codegen to a relocatable entry, it should say
-/// so.  The return values are:
-/// 
-///  NoRelocation: This constant pool entry is guaranteed to never have a
-///     relocation applied to it (because it holds a simple constant like
-///     '4').
-///  LocalRelocation: This entry has relocations, but the entries are
-///     guaranteed to be resolvable by the static linker, so the dynamic
-///     linker will never see them.
-///  GlobalRelocations: This entry may have arbitrary relocations.
-///
-/// FIXME: This really should not be in IR.
 Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(this)) {
     if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())

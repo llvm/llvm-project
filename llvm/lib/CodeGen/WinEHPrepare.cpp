@@ -1665,18 +1665,12 @@ void WinEHPrepare::cloneCommonBlocks(
 
         // Remove this block from the FuncletBlocks set of any funclet that
         // isn't the funclet whose color we just selected.
-        for (auto It = BlockColors[BB].begin(), End = BlockColors[BB].end();
-             It != End; ) {
-          // The iterator must be incremented here because we are removing
-          // elements from the set we're walking.
-          auto Temp = It++;
-          BasicBlock *ContainingFunclet = *Temp;
-          if (ContainingFunclet != CorrectColor) {
+        for (BasicBlock *ContainingFunclet : BlockColors[BB])
+          if (ContainingFunclet != CorrectColor)
             FuncletBlocks[ContainingFunclet].erase(BB);
-            BlockColors[BB].remove(ContainingFunclet);
-          }
-        }
-
+        BlockColors[BB].remove_if([&](BasicBlock *ContainingFunclet) {
+          return ContainingFunclet != CorrectColor;
+        });
         // This should leave just one color for BB.
         assert(BlockColors[BB].size() == 1);
         continue;

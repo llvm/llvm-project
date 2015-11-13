@@ -63,11 +63,13 @@
 #include "llvm/CodeGen/Passes.h"
 // To know about callee-saved.
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 // To query the target about frame lowering.
 #include "llvm/Target/TargetFrameLowering.h"
 // To know about frame setup operation.
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetMachine.h"
 // To access TargetInstrInfo.
 #include "llvm/Target/TargetSubtargetInfo.h"
 
@@ -377,6 +379,11 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
     DEBUG(dbgs() << "Look into: " << MBB.getNumber() << ' ' << MBB.getName()
                  << '\n');
 
+    if (MBB.isEHFuncletEntry()) {
+      DEBUG(dbgs() << "EH Funclets are not supported yet.\n");
+      return false;
+    }
+
     for (const MachineInstr &MI : MBB) {
       if (!useOrDefCSROrFI(MI))
         continue;
@@ -458,7 +465,10 @@ bool ShrinkWrap::isShrinkWrapEnabled(const MachineFunction &MF) {
 
   switch (EnableShrinkWrapOpt) {
   case cl::BOU_UNSET:
-    return TFI->enableShrinkWrapping(MF);
+    return TFI->enableShrinkWrapping(MF) &&
+      // Windows with CFI has some limitations that make it impossible
+      // to use shrink-wrapping.
+      !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   // If EnableShrinkWrap is set, it takes precedence on whatever the
   // target sets. The rational is that we assume we want to test
   // something related to shrink-wrapping.

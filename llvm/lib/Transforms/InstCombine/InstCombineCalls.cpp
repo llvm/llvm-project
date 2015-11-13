@@ -788,6 +788,16 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
+  case Intrinsic::bitreverse: {
+    Value *IIOperand = II->getArgOperand(0);
+    Value *X = nullptr;
+
+    // bitreverse(bitreverse(x)) -> x
+    if (match(IIOperand, m_Intrinsic<Intrinsic::bitreverse>(m_Value(X))))
+      return ReplaceInstUsesWith(CI, X);
+    break;
+  }
+
   case Intrinsic::powi:
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
       // powi(x, 0) -> 1.0

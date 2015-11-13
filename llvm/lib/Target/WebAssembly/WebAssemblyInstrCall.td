@@ -42,9 +42,3 @@ let Uses = [SP32, SP64], isCall = 1 in {
                              [(WebAssemblycall0 I32:$callee)],
                              "call_indirect $callee">;
 } // Uses = [SP32,SP64], isCall = 1
-
-/*
- * TODO(jfb): Add the following.
- *
- * addressof: obtain a function pointer value for a given function
- */

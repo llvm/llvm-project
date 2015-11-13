@@ -871,7 +871,7 @@ bool HexagonAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                           MatchingInlineAsm, MustExtend))
     return true;
   HexagonMCInstrInfo::extendIfNeeded(
-      MCII, MCB, *SubInst,
+      getParser().getContext(), MCII, MCB, *SubInst,
       HexagonMCInstrInfo::isExtended(MCII, *SubInst) || MustExtend);
   MCB.addOperand(MCOperand::createInst(SubInst));
   if (!InBrackets)

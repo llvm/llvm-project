@@ -77,6 +77,12 @@ private:
   void EmitFunctionBodyStart() override;
   void EmitInstruction(const MachineInstr *MI) override;
   void EmitEndOfAsmFile(Module &M) override;
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       unsigned AsmVariant, const char *ExtraCode,
+                       raw_ostream &OS) override;
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             unsigned AsmVariant, const char *ExtraCode,
+                             raw_ostream &OS) override;
 
   std::string getRegTypeName(unsigned RegNo) const;
   const char *toString(MVT VT) const;
@@ -104,7 +110,9 @@ std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
   if (TargetRegisterInfo::isPhysicalRegister(RegNo))
     return WebAssemblyInstPrinter::getRegisterName(RegNo);
 
-  return utostr(MFI->getWAReg(RegNo));
+  unsigned WAReg = MFI->getWAReg(RegNo);
+  assert(WAReg != WebAssemblyFunctionInfo::UnusedReg);
+  return utostr(WAReg);
 }
 
 const char *WebAssemblyAsmPrinter::toString(MVT VT) const {
@@ -172,8 +180,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
 void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
 
-  unsigned NumDefs = MI->getDesc().getNumDefs();
-  assert(NumDefs <= 1 &&
+  assert(MI->getDesc().getNumDefs() <= 1 &&
          "Instructions with multiple result values not implemented");
 
   switch (MI->getOpcode()) {
@@ -272,6 +279,41 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   StringRef Text = OS.str();
   if (!Text.empty())
     OutStreamer->EmitRawText(Text.substr(0, Text.size() - 1));
+}
+
+bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                            unsigned OpNo, unsigned AsmVariant,
+                                            const char *ExtraCode,
+                                            raw_ostream &OS) {
+  if (AsmVariant != 0)
+    report_fatal_error("There are no defined alternate asm variants");
+
+  if (!ExtraCode) {
+    const MachineOperand &MO = MI->getOperand(OpNo);
+    if (MO.isImm())
+      OS << MO.getImm();
+    else
+      OS << regToString(MO);
+    return false;
+  }
+
+  return AsmPrinter::PrintAsmOperand(MI, OpNo, AsmVariant, ExtraCode, OS);
+}
+
+bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                                  unsigned OpNo,
+                                                  unsigned AsmVariant,
+                                                  const char *ExtraCode,
+                                                  raw_ostream &OS) {
+  if (AsmVariant != 0)
+    report_fatal_error("There are no defined alternate asm variants");
+
+  if (!ExtraCode) {
+    OS << regToString(MI->getOperand(OpNo));
+    return false;
+  }
+
+  return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, AsmVariant, ExtraCode, OS);
 }
 
 // Force static initialization.

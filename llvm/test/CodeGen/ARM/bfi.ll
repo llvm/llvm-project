@@ -147,3 +147,14 @@ define i32 @f11(i32 %x, i32 %y) {
 
   ret i32 %bsel
 }
+
+define i32 @f12(i32 %x, i32 %y) {
+; CHECK-LABEL: f12:
+; CHECK: bfi r1, r0, #4, #1
+  %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
+  %and = and i32 %x, 4
+  %or = or i32 %y2, 16
+  %cmp = icmp eq i32 %and, 0
+  %sel = select i1 %cmp, i32 %y2, i32 %or
+  ret i32 %sel
+}

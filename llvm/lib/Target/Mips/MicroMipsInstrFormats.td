@@ -943,7 +943,7 @@ class LWM_FM_MM<bits<4> funct> : MMArch {
   let Inst{11-0}  = addr{11-0};
 }
 
-class LWM_FM_MM16<bits<4> funct> : MMArch {
+class LWM_FM_MM16<bits<4> funct> : MMArch, PredicateControl {
   bits<2> rt;
   bits<4> addr;
 

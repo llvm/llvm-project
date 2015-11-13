@@ -1,6 +1,4 @@
-; Disable shrink-wrapping on the first test otherwise we wouldn't
-; exerce the path for PR18136.
-; RUN: llc -mtriple=thumbv7-apple-none-macho < %s -enable-shrink-wrap=false | FileCheck %s
+; RUN: llc -mtriple=thumbv7-apple-none-macho < %s | FileCheck %s
 ; RUN: llc -mtriple=thumbv6m-apple-none-macho -disable-fp-elim < %s | FileCheck %s --check-prefix=CHECK-T1
 ; RUN: llc -mtriple=thumbv7-apple-darwin-ios -disable-fp-elim < %s | FileCheck %s --check-prefix=CHECK-IOS
 ; RUN: llc -mtriple=thumbv7--linux-gnueabi -disable-fp-elim < %s | FileCheck %s --check-prefix=CHECK-LINUX

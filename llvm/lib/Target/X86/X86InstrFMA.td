@@ -164,15 +164,15 @@ multiclass fma3s_rm<bits<8> opc, string OpcodeStr,
 // sence they are similar to existing ADD*_Int, SUB*_Int, MUL*_Int, etc.
 // instructions.
 //
-// FIXME: The FMA*_Int instructions are TEMPORARILY defined as NOT commutable.
+// All of the FMA*_Int opcodes are defined as commutable here.
 // Commuting the 2nd and 3rd source register operands of FMAs is quite trivial
-// and the corresponding optimization has been developed (please see
-// http://reviews.llvm.org/D13269 for details). The optimization though needs
-// some minor tuning to enable it for FMA*_Int opcodes.
+// and the corresponding optimizations have been developed.
 // Commuting the 1st operand of FMA*_Int requires some additional analysis,
 // the commute optimization is legal only if all users of FMA*_Int use only
-// the lowest element of the FMA*_Int instruction.
-let Constraints = "$src1 = $dst", isCommutable = 0, isCodeGenOnly =1,
+// the lowest element of the FMA*_Int instruction. Even though such analysis
+// may be not implemened yet we allow the routines doing the actual commute
+// transformation to decide if one or another instruction is commutable or not.
+let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
     hasSideEffects = 0 in
 multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
                         Operand memopr, RegisterClass RC> {
