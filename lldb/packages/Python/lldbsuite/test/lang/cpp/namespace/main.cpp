@@ -72,9 +72,31 @@ namespace A {
     }
 }
 
+namespace ns1 {
+    int value = 100;
+}
+
+namespace ns2 {
+    int value = 200;
+}
+
 #include <stdio.h>
+void test_namespace_scopes() {
+    do {
+        using namespace ns1;
+        printf("ns1::value = %d\n", value); // Evaluate ns1::value
+    } while(0);
+    
+    do {
+        using namespace ns2;
+        printf("ns2::value = %d\n", value); // Evaluate ns2::value
+    } while(0);
+}
+
 int Foo::myfunc(int a)
 {
+    test_namespace_scopes();    
+
     ::my_uint_t anon_uint = 0;
     A::uint_t a_uint = 1;
     B::uint_t b_uint = 2;

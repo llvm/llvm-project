@@ -216,17 +216,18 @@ void Writer<ELFT>::scanRelocs(
     if (Body)
       Body = Body->repl();
 
-    if (Body && Body->isTLS()) {
-      if (!Target->isTlsGlobalDynamicReloc(Type))
-        continue;
+    if (Body && Body->isTLS() && Target->isTlsGlobalDynamicReloc(Type)) {
       if (Body->isInGot())
         continue;
-      Out<ELFT>::Got->addEntry(Body);
+      Out<ELFT>::Got->addDynTlsEntry(Body);
       Out<ELFT>::RelaDyn->addReloc({&C, &RI});
       Out<ELFT>::RelaDyn->addReloc({nullptr, nullptr});
       Body->setUsedInDynamicReloc();
       continue;
     }
+
+    if ((Body && Body->isTLS()) && Type != Target->getTlsPcRelGotReloc())
+      continue;
 
     bool NeedsGot = false;
     bool NeedsPlt = false;

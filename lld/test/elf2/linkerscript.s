@@ -48,7 +48,7 @@
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "ENTRY(_wrong_label)" > %t.script
-# RUN: not lld -flavor gnu2 -o %t2 %t.script %t > %t.log 2>&1
+# RUN: not ld.lld2 -o %t2 %t.script %t > %t.log 2>&1
 # RUN: FileCheck -check-prefix=ERR-ENTRY %s < %t.log
 
 # ERR-ENTRY: undefined symbol: _wrong_label

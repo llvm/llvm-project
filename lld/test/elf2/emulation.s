@@ -92,9 +92,9 @@
 # PPC64-NEXT: }
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %tmips
-# RUN: lld -flavor gnu2 -m elf32btsmip -e _start %tmips -o %t2mips
+# RUN: ld.lld2 -m elf32btsmip -e _start %tmips -o %t2mips
 # RUN: llvm-readobj -file-headers %t2mips | FileCheck --check-prefix=MIPS %s
-# RUN: lld -flavor gnu2 %tmips -e _start -o %t3mips
+# RUN: ld.lld2 %tmips -e _start -o %t3mips
 # RUN: llvm-readobj -file-headers %t3mips | FileCheck --check-prefix=MIPS %s
 # MIPS:      ElfHeader {
 # MIPS-NEXT:   Ident {
@@ -116,11 +116,11 @@
 # MIPS-NEXT:   ]
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %tmipsel
-# RUN: lld -flavor gnu2 -m elf32ltsmip -e _start %tmipsel -o %t2mipsel
+# RUN: ld.lld2 -m elf32ltsmip -e _start %tmipsel -o %t2mipsel
 # RUN: llvm-readobj -file-headers %t2mipsel | FileCheck --check-prefix=MIPSEL %s
-# RUN: lld -flavor gnu2 -melf32ltsmip -e _start %tmipsel -o %t2mipsel
+# RUN: ld.lld2 -melf32ltsmip -e _start %tmipsel -o %t2mipsel
 # RUN: llvm-readobj -file-headers %t2mipsel | FileCheck --check-prefix=MIPSEL %s
-# RUN: lld -flavor gnu2 %tmipsel -e _start -o %t3mipsel
+# RUN: ld.lld2 %tmipsel -e _start -o %t3mipsel
 # RUN: llvm-readobj -file-headers %t3mipsel | FileCheck --check-prefix=MIPSEL %s
 # MIPSEL:      ElfHeader {
 # MIPSEL-NEXT:   Ident {

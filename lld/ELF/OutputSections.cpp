@@ -80,9 +80,13 @@ GotSection<ELFT>::GotSection()
 template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody *Sym) {
   Sym->GotIndex = Target->getGotHeaderEntriesNum() + Entries.size();
   Entries.push_back(Sym);
+}
+
+template <class ELFT> void GotSection<ELFT>::addDynTlsEntry(SymbolBody *Sym) {
+  Sym->GotIndex = Target->getGotHeaderEntriesNum() + Entries.size();
   // Global Dynamic TLS entries take two GOT slots.
-  if (Sym->isTLS())
-    Entries.push_back(nullptr);
+  Entries.push_back(Sym);
+  Entries.push_back(nullptr);
 }
 
 template <class ELFT> uint32_t GotSection<ELFT>::addLocalModuleTlsIndex() {
@@ -231,10 +235,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
                      Target->relocNeedsPlt(Type, *Body);
 
     if (CanBePreempted) {
+      unsigned GotReloc =
+          Body->isTLS() ? Target->getTlsGotReloc() : Target->getGotReloc();
       if (NeedsGot)
         P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                            LazyReloc ? Target->getPltReloc()
-                                      : Target->getGotReloc(),
+                            LazyReloc ? Target->getPltReloc() : GotReloc,
                             Config->Mips64EL);
       else
         P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
@@ -1053,7 +1058,7 @@ void MergeOutputSection<ELFT>::addSection(MergeInputSection<ELFT> *S) {
       if (End == StringRef::npos)
         error("String is not null terminated");
       StringRef Entry = Data.substr(0, End + EntSize);
-      size_t OutputOffset = Builder.add(Entry);
+      uintX_t OutputOffset = Builder.add(Entry);
       if (shouldTailMerge())
         OutputOffset = -1;
       S->Offsets.push_back(std::make_pair(Offset, OutputOffset));

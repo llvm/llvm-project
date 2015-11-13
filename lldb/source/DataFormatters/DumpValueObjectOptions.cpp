@@ -19,30 +19,30 @@ using namespace lldb;
 using namespace lldb_private;
 
 DumpValueObjectOptions::DumpValueObjectOptions() :
-m_summary_sp(),
-m_root_valobj_name(),
-m_max_ptr_depth(PointerDepth{PointerDepth::Mode::Default,0}),
-m_decl_printing_helper(),
-m_use_synthetic(true),
-m_scope_already_checked(false),
-m_flat_output(false),
-m_ignore_cap(false),
-m_show_types(false),
-m_show_location(false),
-m_use_objc(false),
-m_hide_root_type(false),
-m_hide_name(false),
-m_hide_value(false),
-m_run_validator(false),
-m_use_type_display_name(true),
-m_allow_oneliner_mode(true),
-m_hide_pointer_value(false),
-m_reveal_empty_aggregates(true)
+    m_summary_sp(),
+    m_root_valobj_name(),
+    m_max_ptr_depth(PointerDepth{PointerDepth::Mode::Default,0}),
+    m_decl_printing_helper(),
+    m_use_synthetic(true),
+    m_scope_already_checked(false),
+    m_flat_output(false),
+    m_ignore_cap(false),
+    m_show_types(false),
+    m_show_location(false),
+    m_use_objc(false),
+    m_hide_root_type(false),
+    m_hide_name(false),
+    m_hide_value(false),
+    m_run_validator(false),
+    m_use_type_display_name(true),
+    m_allow_oneliner_mode(true),
+    m_hide_pointer_value(false),
+    m_reveal_empty_aggregates(true)
 {}
 
 
 DumpValueObjectOptions::DumpValueObjectOptions (ValueObject& valobj) :
-DumpValueObjectOptions()
+    DumpValueObjectOptions()
 {
     m_use_dynamic = valobj.GetDynamicValueType();
     m_use_synthetic = valobj.IsSynthetic();
@@ -242,4 +242,4 @@ DumpValueObjectOptions::SetRevealEmptyAggregates (bool reveal)
     m_reveal_empty_aggregates = reveal;
     return *this;
 }
-
+                                

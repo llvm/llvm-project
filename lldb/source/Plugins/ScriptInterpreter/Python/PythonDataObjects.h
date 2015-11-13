@@ -10,6 +10,8 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 
+#ifndef LLDB_DISABLE_PYTHON
+
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
@@ -413,6 +415,9 @@ class PythonModule : public PythonObject
     static PythonModule
     AddModule(llvm::StringRef module);
 
+    static PythonModule
+    ImportModule(llvm::StringRef module);
+
     // Bring in the no-argument base class version
     using PythonObject::Reset;
 
@@ -487,5 +492,7 @@ class PythonFile : public PythonObject
 };
 
 } // namespace lldb_private
+
+#endif
 
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H

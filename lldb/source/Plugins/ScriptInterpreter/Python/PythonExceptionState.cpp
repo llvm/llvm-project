@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_DISABLE_PYTHON
+
 #include "lldb-python.h"
 #include "PythonExceptionState.h"
 
@@ -155,51 +157,45 @@ PythonExceptionState::Format() const
 std::string
 PythonExceptionState::ReadBacktrace() const
 {
-    PythonObject traceback_module;
-    PythonObject stringIO_module;
-    PythonObject stringIO_builder;
-    PythonObject stringIO_buffer;
-    PythonObject printTB;
-    PythonObject printTB_args;
-    PythonObject printTB_result;
-    PythonObject stringIO_getvalue;
-    PythonObject printTB_string;
-
     std::string retval("backtrace unavailable");
 
+    auto traceback_module = PythonModule::ImportModule("traceback");
+#if PY_MAJOR_VERSION >= 3
+    auto stringIO_module = PythonModule::ImportModule("io");
+#else
+    auto stringIO_module = PythonModule::ImportModule("StringIO");
+#endif
     if (!m_traceback.IsAllocated())
         return retval;
 
-    traceback_module.Reset(PyRefType::Owned, PyImport_ImportModule("traceback"));
-    stringIO_module.Reset(PyRefType::Owned, PyImport_ImportModule("StringIO"));
     if (!traceback_module.IsAllocated() || !stringIO_module.IsAllocated())
         return retval;
 
-    stringIO_builder.Reset(PyRefType::Owned, PyObject_GetAttrString(stringIO_module.get(), "StringIO"));
+    auto stringIO_builder = stringIO_module.ResolveName<PythonCallable>("StringIO");
     if (!stringIO_builder.IsAllocated())
         return retval;
 
-    stringIO_buffer.Reset(PyRefType::Owned, PyObject_CallObject(stringIO_builder.get(), nullptr));
+    auto stringIO_buffer = stringIO_builder();
     if (!stringIO_buffer.IsAllocated())
         return retval;
 
-    printTB.Reset(PyRefType::Owned, PyObject_GetAttrString(traceback_module.get(), "print_tb"));
+    auto printTB = traceback_module.ResolveName<PythonCallable>("print_tb");
     if (!printTB.IsAllocated())
         return retval;
 
-    printTB_args.Reset(PyRefType::Owned, Py_BuildValue("OOO", m_traceback.get(), Py_None, stringIO_buffer.get()));
-    printTB_result.Reset(PyRefType::Owned, PyObject_CallObject(printTB.get(), printTB_args.get()));
-    stringIO_getvalue.Reset(PyRefType::Owned, PyObject_GetAttrString(stringIO_buffer.get(), "getvalue"));
+    auto printTB_result = printTB(m_traceback.get(), Py_None, stringIO_buffer.get());
+    auto stringIO_getvalue = stringIO_buffer.ResolveName<PythonCallable>("getvalue");
     if (!stringIO_getvalue.IsAllocated())
         return retval;
 
-    printTB_string.Reset(PyRefType::Owned, PyObject_CallObject(stringIO_getvalue.get(), nullptr));
+    auto printTB_string = stringIO_getvalue().AsType<PythonString>();
     if (!printTB_string.IsAllocated())
         return retval;
 
-    PythonString str(PyRefType::Borrowed, printTB_string.get());
-    llvm::StringRef string_data(str.GetString());
+    llvm::StringRef string_data(printTB_string.GetString());
     retval.assign(string_data.data(), string_data.size());
 
     return retval;
 }
+
+#endif

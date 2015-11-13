@@ -9186,7 +9186,8 @@ ClangASTContext::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString na
 
             for (auto it = search_queue.find(decl_context); it != search_queue.end(); it++)
             {
-                searched.insert(it->second);
+                if (!searched.insert(it->second).second)
+                    continue;
                 symbol_file->ParseDeclsForContext(CompilerDeclContext(this, it->second));
 
                 for (clang::Decl *child : it->second->decls())

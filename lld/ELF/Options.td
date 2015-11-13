@@ -133,9 +133,9 @@ def alias_script_T : Separate<["-"], "T">, Alias<script>;
 def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_undefined_u : Separate<["-"], "u">, Alias<undefined>;
 
-// Our symbol resolution algorithm handles symbols in archive files better
+// Our symbol resolution algorithm handles symbols in archive files differently
 // than traditional linkers, so we don't need --start-group and --end-group.
-// These options are recongized but ignored for compatibility.
+// These options are recongized for compatibility but ignored.
 def end_group : Flag<["--"], "end-group">;
 def end_group_paren: Flag<["-"], ")">;
 def start_group : Flag<["--"], "start-group">;

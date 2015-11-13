@@ -653,6 +653,7 @@
 		3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692E1ABB7A6D001DA9DF /* SystemInitializer.cpp */; };
 		3F8169321ABB7A6D001DA9DF /* SystemInitializerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692F1ABB7A6D001DA9DF /* SystemInitializerCommon.cpp */; };
 		3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8169301ABB7A6D001DA9DF /* SystemLifetimeManager.cpp */; };
+		3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FA093141BF65D3A0037DD08 /* PythonExceptionStateTests.cpp */; };
 		3FBA69DF1B6067020008F44A /* ScriptInterpreterNone.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
 		3FBA69E01B6067020008F44A /* ScriptInterpreterNone.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69DE1B6067020008F44A /* ScriptInterpreterNone.h */; };
 		3FBA69E11B6067120008F44A /* ScriptInterpreterNone.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
@@ -2225,6 +2226,7 @@
 		3F8169341ABB7A80001DA9DF /* SystemInitializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemInitializer.h; path = include/lldb/Initialization/SystemInitializer.h; sourceTree = "<group>"; };
 		3F8169351ABB7A80001DA9DF /* SystemInitializerCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemInitializerCommon.h; path = include/lldb/Initialization/SystemInitializerCommon.h; sourceTree = "<group>"; };
 		3F8169361ABB7A80001DA9DF /* SystemLifetimeManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemLifetimeManager.h; path = include/lldb/Initialization/SystemLifetimeManager.h; sourceTree = "<group>"; };
+		3FA093141BF65D3A0037DD08 /* PythonExceptionStateTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PythonExceptionStateTests.cpp; sourceTree = "<group>"; };
 		3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ScriptInterpreterNone.cpp; path = ScriptInterpreter/None/ScriptInterpreterNone.cpp; sourceTree = "<group>"; };
 		3FBA69DE1B6067020008F44A /* ScriptInterpreterNone.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ScriptInterpreterNone.h; path = ScriptInterpreter/None/ScriptInterpreterNone.h; sourceTree = "<group>"; };
 		3FBA69E21B60672A0008F44A /* lldb-python.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "lldb-python.h"; path = "ScriptInterpreter/Python/lldb-python.h"; sourceTree = "<group>"; };
@@ -3098,6 +3100,7 @@
 			children = (
 				2321F94C1BDD360F00BA9A93 /* CMakeLists.txt */,
 				2321F94D1BDD360F00BA9A93 /* PythonDataObjectsTests.cpp */,
+				3FA093141BF65D3A0037DD08 /* PythonExceptionStateTests.cpp */,
 				AF45E1FC1BF57C8D000563EB /* PythonTestSuite.cpp */,
 				AF45E1FD1BF57C8D000563EB /* PythonTestSuite.h */,
 			);
@@ -6311,6 +6314,7 @@
 				AEC6FFA01BE970A2007882C1 /* GoParserTest.cpp in Sources */,
 				239504E51BDD454B00963CEA /* UriParserTest.cpp in Sources */,
 				AF45E1FE1BF57C8D000563EB /* PythonTestSuite.cpp in Sources */,
+				3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */,
 				239504DF1BDD453200963CEA /* SocketTest.cpp in Sources */,
 				239504E11BDD453E00963CEA /* TestArgs.cpp in Sources */,
 				239504E21BDD454500963CEA /* PythonDataObjectsTests.cpp in Sources */,

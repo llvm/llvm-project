@@ -215,10 +215,12 @@ X86_64TargetInfo::X86_64TargetInfo() {
   GotRefReloc = R_X86_64_PC32;
   PltReloc = R_X86_64_JUMP_SLOT;
   RelativeReloc = R_X86_64_RELATIVE;
+  TlsGotReloc = R_X86_64_TPOFF64;
   TlsLocalDynamicReloc = R_X86_64_TLSLD;
   TlsGlobalDynamicReloc = R_X86_64_TLSGD;
   TlsModuleIndexReloc = R_X86_64_DTPMOD64;
   TlsOffsetReloc = R_X86_64_DTPOFF64;
+  TlsPcRelGotReloc = R_X86_64_GOTTPOFF;
   LazyRelocations = true;
   PltEntrySize = 16;
   PltZeroEntrySize = 16;
@@ -266,7 +268,8 @@ bool X86_64TargetInfo::relocNeedsCopy(uint32_t Type,
 }
 
 bool X86_64TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
-  return Type == R_X86_64_GOTPCREL || relocNeedsPlt(Type, S);
+  return Type == R_X86_64_GOTTPOFF || Type == R_X86_64_GOTPCREL ||
+         relocNeedsPlt(Type, S);
 }
 
 unsigned X86_64TargetInfo::getPLTRefReloc(unsigned Type) const {
@@ -338,6 +341,7 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   case R_X86_64_PLT32:
   case R_X86_64_TLSLD:
   case R_X86_64_TLSGD:
+  case R_X86_64_TPOFF64:
     write32le(Loc, SA - P);
     break;
   case R_X86_64_64:

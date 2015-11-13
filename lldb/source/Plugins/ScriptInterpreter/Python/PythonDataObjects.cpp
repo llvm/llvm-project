@@ -825,6 +825,14 @@ PythonModule::AddModule(llvm::StringRef module)
     return PythonModule(PyRefType::Borrowed, PyImport_AddModule(str.c_str()));
 }
 
+
+PythonModule
+PythonModule::ImportModule(llvm::StringRef module)
+{
+    std::string str = module.str();
+    return PythonModule(PyRefType::Owned, PyImport_ImportModule(str.c_str()));
+}
+
 bool
 PythonModule::Check(PyObject *py_obj)
 {

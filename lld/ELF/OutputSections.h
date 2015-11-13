@@ -118,6 +118,7 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
+  void addDynTlsEntry(SymbolBody *Sym);
   uint32_t addLocalModuleTlsIndex();
   bool empty() const { return Entries.empty(); }
   uintX_t getEntryAddr(const SymbolBody &B) const;

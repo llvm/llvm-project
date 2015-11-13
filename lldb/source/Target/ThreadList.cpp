@@ -538,7 +538,7 @@ ThreadList::WillResume ()
     
     for (pos = m_threads.begin(); pos != end; ++pos)
     {
-        if ((*pos)->GetResumeState() != eStateSuspended &&
+        if ((*pos)->GetResumeState() != eStateSuspended && (*pos)->GetCurrentPlan() &&
                  (*pos)->GetCurrentPlan()->StopOthers())
         {
             if ((*pos)->IsOperatingSystemPluginThread() && !(*pos)->GetBackingThread())

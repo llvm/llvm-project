@@ -1634,6 +1634,7 @@ void Scop::buildBoundaryContext() {
   // TODO: We can probably get around using isl_set_complement and directly
   // AST generate BoundaryContext.
   long MaxOpsOld = isl_ctx_get_max_operations(getIslCtx());
+  isl_ctx_reset_operations(getIslCtx());
   isl_ctx_set_max_operations(getIslCtx(), 300000);
   isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_CONTINUE);
 

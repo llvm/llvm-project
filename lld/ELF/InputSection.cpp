@@ -140,7 +140,7 @@ void InputSectionBase<ELFT>::relocate(
       Type = Target->getPLTRefReloc(Type);
     } else if (Target->relocNeedsGot(Type, Body)) {
       SymVA = Out<ELFT>::Got->getEntryAddr(Body);
-      Type = Target->getGotRefReloc();
+      Type = Body.isTLS() ? Target->getTlsGotReloc() : Target->getGotRefReloc();
     } else if (Target->relocPointsToGot(Type)) {
       SymVA = Out<ELFT>::Got->getVA();
       Type = Target->getPCRelReloc();
@@ -192,7 +192,7 @@ typename EHInputSection<ELFT>::uintX_t
 EHInputSection<ELFT>::getOffset(uintX_t Offset) {
   std::pair<uintX_t, uintX_t> *I = this->getRangeAndSize(Offset).first;
   uintX_t Base = I->second;
-  if (Base == size_t(-1))
+  if (Base == uintX_t(-1))
     return -1; // Not in the output
 
   uintX_t Addend = Offset - I->first;
@@ -234,7 +234,7 @@ SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
 template <class ELFT>
 typename MergeInputSection<ELFT>::uintX_t
 MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
-  std::pair<std::pair<uintX_t, uintX_t> *, size_t> T =
+  std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
       this->getRangeAndSize(Offset);
   std::pair<uintX_t, uintX_t> *I = T.first;
   uintX_t End = T.second;
