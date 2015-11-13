@@ -340,9 +340,9 @@ class SHLL_QB_R3_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
 
 class SHLL_QB_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                            SDPatternOperator ImmPat, InstrItinClass itin,
-                           RegisterOperand RO> {
+                           RegisterOperand RO, Operand ImmOpnd> {
   dag OutOperandList = (outs RO:$rd);
-  dag InOperandList = (ins RO:$rt, uimm16:$rs_sa);
+  dag InOperandList = (ins RO:$rt, ImmOpnd:$rs_sa);
   string AsmString = !strconcat(instr_asm, "\t$rd, $rt, $rs_sa");
   list<dag> Pattern = [(set RO:$rd, (OpNode RO:$rt, ImmPat:$rs_sa))];
   InstrItinClass Itinerary = itin;
@@ -649,7 +649,7 @@ class PRECEU_PH_QBRA_DESC : ABSQ_S_PH_R2_DESC_BASE<"preceu.ph.qbra",
 
 // Shift
 class SHLL_QB_DESC : SHLL_QB_R2_DESC_BASE<"shll.qb", null_frag, immZExt3,
-                                          NoItinerary, DSPROpnd>,
+                                          NoItinerary, DSPROpnd, uimm3>,
                      Defs<[DSPOutFlag22]>;
 
 class SHLLV_QB_DESC : SHLL_QB_R3_DESC_BASE<"shllv.qb", int_mips_shll_qb,
@@ -657,13 +657,13 @@ class SHLLV_QB_DESC : SHLL_QB_R3_DESC_BASE<"shllv.qb", int_mips_shll_qb,
                       Defs<[DSPOutFlag22]>;
 
 class SHRL_QB_DESC : SHLL_QB_R2_DESC_BASE<"shrl.qb", null_frag, immZExt3,
-                                          NoItinerary, DSPROpnd>;
+                                          NoItinerary, DSPROpnd, uimm3>;
 
 class SHRLV_QB_DESC : SHLL_QB_R3_DESC_BASE<"shrlv.qb", int_mips_shrl_qb,
                                            NoItinerary, DSPROpnd>;
 
 class SHLL_PH_DESC : SHLL_QB_R2_DESC_BASE<"shll.ph", null_frag, immZExt4,
-                                          NoItinerary, DSPROpnd>,
+                                          NoItinerary, DSPROpnd, uimm4>,
                      Defs<[DSPOutFlag22]>;
 
 class SHLLV_PH_DESC : SHLL_QB_R3_DESC_BASE<"shllv.ph", int_mips_shll_ph,
@@ -671,7 +671,8 @@ class SHLLV_PH_DESC : SHLL_QB_R3_DESC_BASE<"shllv.ph", int_mips_shll_ph,
                       Defs<[DSPOutFlag22]>;
 
 class SHLL_S_PH_DESC : SHLL_QB_R2_DESC_BASE<"shll_s.ph", int_mips_shll_s_ph,
-                                            immZExt4, NoItinerary, DSPROpnd>,
+                                            immZExt4, NoItinerary, DSPROpnd,
+                                            uimm4>,
                        Defs<[DSPOutFlag22]>;
 
 class SHLLV_S_PH_DESC : SHLL_QB_R3_DESC_BASE<"shllv_s.ph", int_mips_shll_s_ph,
@@ -679,19 +680,21 @@ class SHLLV_S_PH_DESC : SHLL_QB_R3_DESC_BASE<"shllv_s.ph", int_mips_shll_s_ph,
                         Defs<[DSPOutFlag22]>;
 
 class SHRA_PH_DESC : SHLL_QB_R2_DESC_BASE<"shra.ph", null_frag, immZExt4,
-                                          NoItinerary, DSPROpnd>;
+                                          NoItinerary, DSPROpnd, uimm4>;
 
 class SHRAV_PH_DESC : SHLL_QB_R3_DESC_BASE<"shrav.ph", int_mips_shra_ph,
                                            NoItinerary, DSPROpnd>;
 
 class SHRA_R_PH_DESC : SHLL_QB_R2_DESC_BASE<"shra_r.ph", int_mips_shra_r_ph,
-                                            immZExt4, NoItinerary, DSPROpnd>;
+                                            immZExt4, NoItinerary, DSPROpnd,
+                                            uimm4>;
 
 class SHRAV_R_PH_DESC : SHLL_QB_R3_DESC_BASE<"shrav_r.ph", int_mips_shra_r_ph,
                                              NoItinerary, DSPROpnd>;
 
 class SHLL_S_W_DESC : SHLL_QB_R2_DESC_BASE<"shll_s.w", int_mips_shll_s_w,
-                                           immZExt5, NoItinerary, GPR32Opnd>,
+                                           immZExt5, NoItinerary, GPR32Opnd,
+                                           uimm5>,
                       Defs<[DSPOutFlag22]>;
 
 class SHLLV_S_W_DESC : SHLL_QB_R3_DESC_BASE<"shllv_s.w", int_mips_shll_s_w,
@@ -699,7 +702,8 @@ class SHLLV_S_W_DESC : SHLL_QB_R3_DESC_BASE<"shllv_s.w", int_mips_shll_s_w,
                        Defs<[DSPOutFlag22]>;
 
 class SHRA_R_W_DESC : SHLL_QB_R2_DESC_BASE<"shra_r.w", int_mips_shra_r_w,
-                                           immZExt5, NoItinerary, GPR32Opnd>;
+                                           immZExt5, NoItinerary, GPR32Opnd,
+                                           uimm5>;
 
 class SHRAV_R_W_DESC : SHLL_QB_R3_DESC_BASE<"shrav_r.w", int_mips_shra_r_w,
                                             NoItinerary, GPR32Opnd>;
@@ -1049,19 +1053,20 @@ class PRECR_SRA_R_PH_W_DESC : PRECR_SRA_PH_W_DESC_BASE<"precr_sra_r.ph.w",
 
 // Shift
 class SHRA_QB_DESC : SHLL_QB_R2_DESC_BASE<"shra.qb", null_frag, immZExt3,
-                                          NoItinerary, DSPROpnd>;
+                                          NoItinerary, DSPROpnd, uimm3>;
 
 class SHRAV_QB_DESC : SHLL_QB_R3_DESC_BASE<"shrav.qb", int_mips_shra_qb,
                                            NoItinerary, DSPROpnd>;
 
 class SHRA_R_QB_DESC : SHLL_QB_R2_DESC_BASE<"shra_r.qb", int_mips_shra_r_qb,
-                                            immZExt3, NoItinerary, DSPROpnd>;
+                                            immZExt3, NoItinerary, DSPROpnd,
+                                            uimm3>;
 
 class SHRAV_R_QB_DESC : SHLL_QB_R3_DESC_BASE<"shrav_r.qb", int_mips_shra_r_qb,
                                              NoItinerary, DSPROpnd>;
 
 class SHRL_PH_DESC : SHLL_QB_R2_DESC_BASE<"shrl.ph", null_frag, immZExt4,
-                                          NoItinerary, DSPROpnd>;
+                                          NoItinerary, DSPROpnd, uimm4>;
 
 class SHRLV_PH_DESC : SHLL_QB_R3_DESC_BASE<"shrlv.ph", int_mips_shrl_ph,
                                            NoItinerary, DSPROpnd>;
@@ -1114,20 +1119,20 @@ def PRECEU_PH_QBLA : PRECEU_PH_QBLA_ENC, PRECEU_PH_QBLA_DESC;
 def PRECEU_PH_QBRA : PRECEU_PH_QBRA_ENC, PRECEU_PH_QBRA_DESC;
 def SHLL_QB : DspMMRel, SHLL_QB_ENC, SHLL_QB_DESC;
 def SHLLV_QB : DspMMRel, SHLLV_QB_ENC, SHLLV_QB_DESC;
-def SHRL_QB : SHRL_QB_ENC, SHRL_QB_DESC;
-def SHRLV_QB : SHRLV_QB_ENC, SHRLV_QB_DESC;
+def SHRL_QB : DspMMRel, SHRL_QB_ENC, SHRL_QB_DESC;
+def SHRLV_QB : DspMMRel, SHRLV_QB_ENC, SHRLV_QB_DESC;
 def SHLL_PH : DspMMRel, SHLL_PH_ENC, SHLL_PH_DESC;
 def SHLLV_PH : DspMMRel, SHLLV_PH_ENC, SHLLV_PH_DESC;
 def SHLL_S_PH : DspMMRel, SHLL_S_PH_ENC, SHLL_S_PH_DESC;
 def SHLLV_S_PH : DspMMRel, SHLLV_S_PH_ENC, SHLLV_S_PH_DESC;
-def SHRA_PH : SHRA_PH_ENC, SHRA_PH_DESC;
-def SHRAV_PH : SHRAV_PH_ENC, SHRAV_PH_DESC;
-def SHRA_R_PH : SHRA_R_PH_ENC, SHRA_R_PH_DESC;
-def SHRAV_R_PH : SHRAV_R_PH_ENC, SHRAV_R_PH_DESC;
+def SHRA_PH : DspMMRel, SHRA_PH_ENC, SHRA_PH_DESC;
+def SHRAV_PH : DspMMRel, SHRAV_PH_ENC, SHRAV_PH_DESC;
+def SHRA_R_PH : DspMMRel, SHRA_R_PH_ENC, SHRA_R_PH_DESC;
+def SHRAV_R_PH : DspMMRel, SHRAV_R_PH_ENC, SHRAV_R_PH_DESC;
 def SHLL_S_W : DspMMRel, SHLL_S_W_ENC, SHLL_S_W_DESC;
 def SHLLV_S_W : DspMMRel, SHLLV_S_W_ENC, SHLLV_S_W_DESC;
-def SHRA_R_W : SHRA_R_W_ENC, SHRA_R_W_DESC;
-def SHRAV_R_W : SHRAV_R_W_ENC, SHRAV_R_W_DESC;
+def SHRA_R_W : DspMMRel, SHRA_R_W_ENC, SHRA_R_W_DESC;
+def SHRAV_R_W : DspMMRel, SHRAV_R_W_ENC, SHRAV_R_W_DESC;
 def MULEU_S_PH_QBL : MULEU_S_PH_QBL_ENC, MULEU_S_PH_QBL_DESC;
 def MULEU_S_PH_QBR : MULEU_S_PH_QBR_ENC, MULEU_S_PH_QBR_DESC;
 def MULEQ_S_W_PHL : MULEQ_S_W_PHL_ENC, MULEQ_S_W_PHL_DESC;
@@ -1237,11 +1242,11 @@ def PRECR_QB_PH : PRECR_QB_PH_ENC, PRECR_QB_PH_DESC;
 def PRECR_SRA_PH_W : PRECR_SRA_PH_W_ENC, PRECR_SRA_PH_W_DESC;
 def PRECR_SRA_R_PH_W : PRECR_SRA_R_PH_W_ENC, PRECR_SRA_R_PH_W_DESC;
 def SHRA_QB : DspMMRel, SHRA_QB_ENC, SHRA_QB_DESC;
-def SHRAV_QB : SHRAV_QB_ENC, SHRAV_QB_DESC;
+def SHRAV_QB : DspMMRel, SHRAV_QB_ENC, SHRAV_QB_DESC;
 def SHRA_R_QB : DspMMRel, SHRA_R_QB_ENC, SHRA_R_QB_DESC;
-def SHRAV_R_QB : SHRAV_R_QB_ENC, SHRAV_R_QB_DESC;
-def SHRL_PH : SHRL_PH_ENC, SHRL_PH_DESC;
-def SHRLV_PH : SHRLV_PH_ENC, SHRLV_PH_DESC;
+def SHRAV_R_QB : DspMMRel, SHRAV_R_QB_ENC, SHRAV_R_QB_DESC;
+def SHRL_PH : DspMMRel, SHRL_PH_ENC, SHRL_PH_DESC;
+def SHRLV_PH : DspMMRel, SHRLV_PH_ENC, SHRLV_PH_DESC;
 def APPEND : APPEND_ENC, APPEND_DESC;
 def BALIGN : BALIGN_ENC, BALIGN_DESC;
 def PREPEND : PREPEND_ENC, PREPEND_DESC;

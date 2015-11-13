@@ -38,13 +38,14 @@ return:                                           ; preds = %entry, %catch
 ; X64: pushq %rsi
 ; X64: subq $56, %rsp
 ; X64: leaq 48(%rsp), %rbp
+; X64: movq $-2, (%rbp)
 ; X64: callq g
 ; X64: movl %esi, %eax
 ; X64: addq $56, %rsp
 ; X64: popq %rsi
 ; X64: popq %rbp
 
-; X64: movl 4(%rbp), %esi
+; X64: movl -4(%rbp), %esi
 ; X64: jmp
 
 ; X64-LABEL: "?catch$1@?0?f@4HA":
@@ -64,7 +65,7 @@ return:                                           ; preds = %entry, %catch
 ; - 48 for setframe
 ; = 40
 ; X64:         movl    40(%rbp), %eax
-; X64:         movl    %eax, 4(%rbp)
+; X64:         movl    %eax, -4(%rbp)
 ; X64:         leaq    .LBB0_2(%rip), %rax
 ; X64:         addq    $40, %rsp
 ; X64: 	       popq    %rsi

@@ -104,6 +104,13 @@ void HexagonMCInstrInfo::clampExtended(MCInstrInfo const &MCII,
   }
 }
 
+MCInst HexagonMCInstrInfo::createBundle() {
+  MCInst Result;
+  Result.setOpcode(Hexagon::BUNDLE);
+  Result.addOperand(MCOperand::createImm(0));
+  return Result;
+}
+
 MCInst *HexagonMCInstrInfo::deriveDuplex(MCContext &Context, unsigned iClass,
                                          MCInst const &inst0,
                                          MCInst const &inst1) {

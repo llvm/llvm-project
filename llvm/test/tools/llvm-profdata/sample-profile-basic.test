@@ -3,15 +3,15 @@ Basic tests for sample profiles.
 1- Show all functions
 RUN: llvm-profdata show --sample %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=SHOW1
 SHOW1: Function: main: 184019, 0, 7 sampled lines
-SHOW1: line offset: 9, discriminator: 0, number of samples: 2064, calls: _Z3fooi:631 _Z3bari:1471
+SHOW1: 9: 2064, calls: _Z3fooi:631 _Z3bari:1471
 SHOW1: Function: _Z3fooi: 7711, 610, 1 sampled lines
 SHOW1: Function: _Z3bari: 20301, 1437, 1 sampled lines
-SHOW1: line offset: 1, discriminator: 0, number of samples: 1437
+SHOW1: 1: 1437
 
 2- Show only bar
 RUN: llvm-profdata show --sample --function=_Z3bari %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=SHOW2
 SHOW2: Function: _Z3bari: 20301, 1437, 1 sampled lines
-SHOW2: line offset: 1, discriminator: 0, number of samples: 1437
+SHOW2: 1: 1437
 SHOW2-NOT: Function: main: 184019, 0, 7 sampled lines
 SHOW2-NOT: Function: _Z3fooi: 7711, 610, 1 sampled lines
 

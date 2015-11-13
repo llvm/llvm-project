@@ -411,7 +411,7 @@ bool lookForCompound(MCInstrInfo const &MCII, MCContext &Context, MCInst &MCI) {
 /// additional slot.
 void HexagonMCInstrInfo::tryCompound(MCInstrInfo const &MCII,
                                      MCContext &Context, MCInst &MCI) {
-  assert(MCI.getOpcode() == Hexagon::BUNDLE &&
+  assert(HexagonMCInstrInfo::isBundle(MCI) &&
          "Non-Bundle where Bundle expected");
 
   // By definition a compound must have 2 insn.

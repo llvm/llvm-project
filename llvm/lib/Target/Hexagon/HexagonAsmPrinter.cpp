@@ -178,9 +178,7 @@ bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 /// the current output stream.
 ///
 void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
-  MCInst MCB;
-  MCB.setOpcode(Hexagon::BUNDLE);
-  MCB.addOperand(MCOperand::createImm(0));
+  MCInst MCB = HexagonMCInstrInfo::createBundle();
 
   if (MI->isBundle()) {
     const MachineBasicBlock* MBB = MI->getParent();

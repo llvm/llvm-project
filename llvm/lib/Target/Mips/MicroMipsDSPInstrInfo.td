@@ -55,6 +55,18 @@ class SHLLV_S_W_MM_ENC : POOL32A_3RB0_FMT<"shllv_s.w", 0b1111010101>;
 class SHLL_S_W_MM_ENC : POOL32A_2RSA5B0_FMT<"shll_s.w", 0b1111110101>;
 class SHRA_QB_MMR2_ENC : POOL32A_2RSA3_FMT<"shra.qb", 0b0000111>;
 class SHRA_R_QB_MMR2_ENC : POOL32A_2RSA3_FMT<"shra_r.qb", 0b1000111>;
+class SHRA_PH_MM_ENC : POOL32A_2RSA4B0_FMT<"shra.ph", 0b01100110101>;
+class SHRA_R_PH_MM_ENC : POOL32A_2RSA4B0_FMT<"shra_r.ph", 0b11100110101>;
+class SHRAV_PH_MM_ENC : POOL32A_3R_FMT<"shrav.ph", 0b00110001101>;
+class SHRAV_R_PH_MM_ENC : POOL32A_3R_FMT<"shrav_r.ph", 0b10110001101>;
+class SHRAV_QB_MMR2_ENC : POOL32A_3R_FMT<"shrav.qb", 0b00111001101>;
+class SHRAV_R_QB_MMR2_ENC : POOL32A_3R_FMT<"shrav_r.qb", 0b10111001101>;
+class SHRAV_R_W_MM_ENC : POOL32A_3RB0_FMT<"shrav_r.w", 0b1011010101>;
+class SHRA_R_W_MM_ENC : POOL32A_2RSA5B0_FMT<"shra_r.w", 0b1011110101>;
+class SHRL_PH_MMR2_ENC : POOL32A_2RSA4OP6_FMT<"shrl.ph", 0b001111>;
+class SHRL_QB_MM_ENC : POOL32A_2RSA3_FMT<"shrl.qb", 0b1100001>;
+class SHRLV_PH_MMR2_ENC : POOL32A_3RB0_FMT<"shrlv.ph", 0b1100010101>;
+class SHRLV_QB_MM_ENC : POOL32A_3RB0_FMT<"shrlv.qb", 0b1101010101>;
 
 // Instruction desc.
 class ABSQ_S_PH_MM_R2_DESC_BASE<string opstr, SDPatternOperator OpNode,
@@ -99,6 +111,16 @@ class SHRA_QB_MMR2_DESC : SHLL_R2_MM_DESC_BASE<
   "shra.qb", null_frag, immZExt3, NoItinerary, DSPROpnd, uimm3>;
 class SHRA_R_QB_MMR2_DESC : SHLL_R2_MM_DESC_BASE<
   "shra_r.qb", int_mips_shra_r_qb, immZExt3, NoItinerary, DSPROpnd, uimm3>;
+class SHRA_PH_MM_DESC : SHLL_R2_MM_DESC_BASE<
+  "shra.ph", null_frag, immZExt4, NoItinerary, DSPROpnd, uimm4>;
+class SHRA_R_PH_MM_DESC : SHLL_R2_MM_DESC_BASE<
+  "shra_r.ph", int_mips_shra_r_ph, immZExt4, NoItinerary, DSPROpnd, uimm4>;
+class SHRA_R_W_MM_DESC : SHLL_R2_MM_DESC_BASE<
+  "shra_r.w", int_mips_shra_r_w, immZExt5, NoItinerary, GPR32Opnd, uimm5>;
+class SHRL_QB_MM_DESC : SHLL_R2_MM_DESC_BASE<
+  "shrl.qb", null_frag, immZExt3, NoItinerary, DSPROpnd, uimm3>;
+class SHRL_PH_MMR2_DESC : SHLL_R2_MM_DESC_BASE<
+  "shrl.ph", null_frag, immZExt4, NoItinerary, DSPROpnd, uimm4>;
 
 class SHLLV_R3_MM_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                             InstrItinClass itin, RegisterOperand RO> {
@@ -117,6 +139,20 @@ class SHLLV_QB_MM_DESC : SHLLV_R3_MM_DESC_BASE<
   "shllv.qb", int_mips_shll_qb, NoItinerary, DSPROpnd>, Defs<[DSPOutFlag22]>;
 class SHLLV_S_W_MM_DESC : SHLLV_R3_MM_DESC_BASE<
   "shllv_s.w", int_mips_shll_s_w, NoItinerary, GPR32Opnd>, Defs<[DSPOutFlag22]>;
+class SHRAV_PH_MM_DESC : SHLLV_R3_MM_DESC_BASE<
+  "shrav.ph", int_mips_shra_ph, NoItinerary, DSPROpnd>;
+class SHRAV_R_PH_MM_DESC : SHLLV_R3_MM_DESC_BASE<
+  "shrav_r.ph", int_mips_shra_r_ph, NoItinerary, DSPROpnd>;
+class SHRAV_QB_MMR2_DESC : SHLLV_R3_MM_DESC_BASE<
+  "shrav.qb", int_mips_shra_qb, NoItinerary, DSPROpnd>;
+class SHRAV_R_QB_MMR2_DESC : SHLLV_R3_MM_DESC_BASE<
+  "shrav_r.qb", int_mips_shra_r_qb, NoItinerary, DSPROpnd>;
+class SHRAV_R_W_MM_DESC : SHLLV_R3_MM_DESC_BASE<
+  "shrav_r.w", int_mips_shra_r_w, NoItinerary, GPR32Opnd>;
+class SHRLV_PH_MMR2_DESC : SHLLV_R3_MM_DESC_BASE<
+  "shrlv.ph", int_mips_shrl_ph, NoItinerary, DSPROpnd>;
+class SHRLV_QB_MM_DESC : SHLLV_R3_MM_DESC_BASE<
+  "shrlv.qb", int_mips_shrl_qb, NoItinerary, DSPROpnd>;
 
 // Instruction defs.
 // microMIPS DSP Rev 1
@@ -148,6 +184,14 @@ def SHLLV_S_PH_MM : DspMMRel, SHLLV_S_PH_MM_ENC, SHLLV_S_PH_MM_DESC;
 def SHLLV_QB_MM : DspMMRel, SHLLV_QB_MM_ENC, SHLLV_QB_MM_DESC;
 def SHLLV_S_W_MM : DspMMRel, SHLLV_S_W_MM_ENC, SHLLV_S_W_MM_DESC;
 def SHLL_S_W_MM : DspMMRel, SHLL_S_W_MM_ENC, SHLL_S_W_MM_DESC;
+def SHRA_PH_MM : DspMMRel, SHRA_PH_MM_ENC, SHRA_PH_MM_DESC;
+def SHRA_R_PH_MM : DspMMRel, SHRA_R_PH_MM_ENC, SHRA_R_PH_MM_DESC;
+def SHRAV_PH_MM : DspMMRel, SHRAV_PH_MM_ENC, SHRAV_PH_MM_DESC;
+def SHRAV_R_PH_MM : DspMMRel, SHRAV_R_PH_MM_ENC, SHRAV_R_PH_MM_DESC;
+def SHRAV_R_W_MM : DspMMRel, SHRAV_R_W_MM_ENC, SHRAV_R_W_MM_DESC;
+def SHRA_R_W_MM : DspMMRel, SHRA_R_W_MM_ENC, SHRA_R_W_MM_DESC;
+def SHRL_QB_MM : DspMMRel, SHRL_QB_MM_ENC, SHRL_QB_MM_DESC;
+def SHRLV_QB_MM : DspMMRel, SHRLV_QB_MM_ENC, SHRLV_QB_MM_DESC;
 // microMIPS DSP Rev 2
 def ABSQ_S_QB_MMR2 : DspMMRel, ABSQ_S_QB_MMR2_ENC, ABSQ_S_QB_MMR2_DESC,
                      ISA_DSPR2;
@@ -168,3 +212,8 @@ def DPAX_W_PH_MMR2 : DspMMRel, DPAX_W_PH_MMR2_ENC, DPAX_W_PH_DESC, ISA_DSPR2;
 def SHRA_QB_MMR2 : DspMMRel, SHRA_QB_MMR2_ENC, SHRA_QB_MMR2_DESC, ISA_DSPR2;
 def SHRA_R_QB_MMR2 : DspMMRel, SHRA_R_QB_MMR2_ENC, SHRA_R_QB_MMR2_DESC,
                      ISA_DSPR2;
+def SHRAV_QB_MMR2 : DspMMRel, SHRAV_QB_MMR2_ENC, SHRAV_QB_MMR2_DESC, ISA_DSPR2;
+def SHRAV_R_QB_MMR2 : DspMMRel, SHRAV_R_QB_MMR2_ENC, SHRAV_R_QB_MMR2_DESC,
+                      ISA_DSPR2;
+def SHRL_PH_MMR2 : DspMMRel, SHRL_PH_MMR2_ENC, SHRL_PH_MMR2_DESC, ISA_DSPR2;
+def SHRLV_PH_MMR2 : DspMMRel, SHRLV_PH_MMR2_ENC, SHRLV_PH_MMR2_DESC, ISA_DSPR2;

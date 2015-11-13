@@ -10,14 +10,14 @@ entry:
 ; CHECK-NEXT: .set  macro
 ; CHECK-NEXT: .set  reorder
 ; CHECK:      addi $9, ${{[2-9][0-9]?}}, 8
-; CHECK:      subi ${{[2-9][0-9]?}}, $9, 6
+; CHECK:      ori ${{[2-9][0-9]?}}, $9, 6
 ; CHECK:      .set  pop
 ; CHECK-NEXT: #NO_APP
   %a = alloca i32, align 4
   %b = alloca i32, align 4
   store i32 20, i32* %a, align 4
   %0 = load i32, i32* %a, align 4
-  %1 = call i32 asm sideeffect "addi $$9, $1, 8\0A\09subi $0, $$9, 6", "=r,r,~{$1}"(i32 %0)
+  %1 = call i32 asm sideeffect "addi $$9, $1, 8\0A\09ori $0, $$9, 6", "=r,r,~{$1}"(i32 %0)
   store i32 %1, i32* %b, align 4
   ret void
 }

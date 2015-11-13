@@ -18,7 +18,8 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -62,107 +63,34 @@ STATISTIC(NumUnsafeStackRestorePoints, "Number of setjmps and landingpads");
 
 namespace {
 
-/// Check whether a given alloca instruction (AI) should be put on the safe
-/// stack or not. The function analyzes all uses of AI and checks whether it is
-/// only accessed in a memory safe way (as decided statically).
-bool IsSafeStackAlloca(const AllocaInst *AI) {
-  // Go through all uses of this alloca and check whether all accesses to the
-  // allocated object are statically known to be memory safe and, hence, the
-  // object can be placed on the safe stack.
+/// Rewrite an SCEV expression for a memory access address to an expression that
+/// represents offset from the given alloca.
+///
+/// The implementation simply replaces all mentions of the alloca with zero.
+class AllocaOffsetRewriter : public SCEVRewriteVisitor<AllocaOffsetRewriter> {
+  const AllocaInst *AI;
 
-  SmallPtrSet<const Value *, 16> Visited;
-  SmallVector<const Instruction *, 8> WorkList;
-  WorkList.push_back(AI);
+public:
+  AllocaOffsetRewriter(ScalarEvolution &SE, const AllocaInst *AI)
+      : SCEVRewriteVisitor(SE), AI(AI) {}
 
-  // A DFS search through all uses of the alloca in bitcasts/PHI/GEPs/etc.
-  while (!WorkList.empty()) {
-    const Instruction *V = WorkList.pop_back_val();
-    for (const Use &UI : V->uses()) {
-      auto I = cast<const Instruction>(UI.getUser());
-      assert(V == UI.get());
-
-      switch (I->getOpcode()) {
-      case Instruction::Load:
-        // Loading from a pointer is safe.
-        break;
-      case Instruction::VAArg:
-        // "va-arg" from a pointer is safe.
-        break;
-      case Instruction::Store:
-        if (V == I->getOperand(0))
-          // Stored the pointer - conservatively assume it may be unsafe.
-          return false;
-        // Storing to the pointee is safe.
-        break;
-
-      case Instruction::GetElementPtr:
-        if (!cast<const GetElementPtrInst>(I)->hasAllConstantIndices())
-          // GEP with non-constant indices can lead to memory errors.
-          // This also applies to inbounds GEPs, as the inbounds attribute
-          // represents an assumption that the address is in bounds, rather than
-          // an assertion that it is.
-          return false;
-
-        // We assume that GEP on static alloca with constant indices is safe,
-        // otherwise a compiler would detect it and warn during compilation.
-
-        if (!isa<const ConstantInt>(AI->getArraySize()))
-          // However, if the array size itself is not constant, the access
-          // might still be unsafe at runtime.
-          return false;
-
-      /* fallthrough */
-
-      case Instruction::BitCast:
-      case Instruction::IntToPtr:
-      case Instruction::PHI:
-      case Instruction::PtrToInt:
-      case Instruction::Select:
-        // The object can be safe or not, depending on how the result of the
-        // instruction is used.
-        if (Visited.insert(I).second)
-          WorkList.push_back(cast<const Instruction>(I));
-        break;
-
-      case Instruction::Call:
-      case Instruction::Invoke: {
-        // FIXME: add support for memset and memcpy intrinsics.
-        ImmutableCallSite CS(I);
-
-        // LLVM 'nocapture' attribute is only set for arguments whose address
-        // is not stored, passed around, or used in any other non-trivial way.
-        // We assume that passing a pointer to an object as a 'nocapture'
-        // argument is safe.
-        // FIXME: a more precise solution would require an interprocedural
-        // analysis here, which would look at all uses of an argument inside
-        // the function being called.
-        ImmutableCallSite::arg_iterator B = CS.arg_begin(), E = CS.arg_end();
-        for (ImmutableCallSite::arg_iterator A = B; A != E; ++A)
-          if (A->get() == V && !CS.doesNotCapture(A - B))
-            // The parameter is not marked 'nocapture' - unsafe.
-            return false;
-        continue;
-      }
-
-      default:
-        // The object is unsafe if it is used in any other way.
-        return false;
-      }
-    }
+  const SCEV *visitUnknown(const SCEVUnknown *Expr) {
+    if (Expr->getValue() == AI)
+      return SE.getZero(Expr->getType());
+    return Expr;
   }
+};
 
-  // All uses of the alloca are safe, we can place it on the safe stack.
-  return true;
-}
-
-/// The SafeStack pass splits the stack of each function into the
-/// safe stack, which is only accessed through memory safe dereferences
-/// (as determined statically), and the unsafe stack, which contains all
-/// local variables that are accessed in unsafe ways.
+/// The SafeStack pass splits the stack of each function into the safe
+/// stack, which is only accessed through memory safe dereferences (as
+/// determined statically), and the unsafe stack, which contains all
+/// local variables that are accessed in ways that we can't prove to
+/// be safe.
 class SafeStack : public FunctionPass {
   const TargetMachine *TM;
-  const TargetLoweringBase *TLI;
+  const TargetLoweringBase *TL;
   const DataLayout *DL;
+  ScalarEvolution *SE;
 
   Type *StackPtrTy;
   Type *IntPtrTy;
@@ -217,16 +145,22 @@ class SafeStack : public FunctionPass {
                                        AllocaInst *DynamicTop,
                                        ArrayRef<AllocaInst *> DynamicAllocas);
 
+  bool IsSafeStackAlloca(const AllocaInst *AI);
+
+  bool IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
+                          const AllocaInst *AI);
+  bool IsAccessSafe(Value *Addr, uint64_t Size, const AllocaInst *AI);
+
 public:
   static char ID; // Pass identification, replacement for typeid.
   SafeStack(const TargetMachine *TM)
-      : FunctionPass(ID), TM(TM), TLI(nullptr), DL(nullptr) {
+      : FunctionPass(ID), TM(TM), TL(nullptr), DL(nullptr) {
     initializeSafeStackPass(*PassRegistry::getPassRegistry());
   }
   SafeStack() : SafeStack(nullptr) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
   }
 
   bool doInitialization(Module &M) override {
@@ -243,10 +177,141 @@ public:
   bool runOnFunction(Function &F) override;
 }; // class SafeStack
 
+bool SafeStack::IsAccessSafe(Value *Addr, uint64_t Size, const AllocaInst *AI) {
+  AllocaOffsetRewriter Rewriter(*SE, AI);
+  const SCEV *Expr = Rewriter.visit(SE->getSCEV(Addr));
+
+  uint64_t BitWidth = SE->getTypeSizeInBits(Expr->getType());
+  ConstantRange AccessStartRange = SE->getUnsignedRange(Expr);
+  ConstantRange SizeRange =
+      ConstantRange(APInt(BitWidth, 0), APInt(BitWidth, Size));
+  ConstantRange AccessRange = AccessStartRange.add(SizeRange);
+  ConstantRange AllocaRange = ConstantRange(
+      APInt(BitWidth, 0),
+      APInt(BitWidth, DL->getTypeStoreSize(AI->getAllocatedType())));
+  bool Safe = AllocaRange.contains(AccessRange);
+
+  DEBUG(dbgs() << "[SafeStack] Alloca " << *AI << "\n"
+               << "            Access " << *Addr << "\n"
+               << "            SCEV " << *Expr
+               << " U: " << SE->getUnsignedRange(Expr)
+               << ", S: " << SE->getSignedRange(Expr) << "\n"
+               << "            Range " << AccessRange << "\n"
+               << "            AllocaRange " << AllocaRange << "\n"
+               << "            " << (Safe ? "safe" : "unsafe") << "\n");
+
+  return Safe;
+}
+
+bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
+                                   const AllocaInst *AI) {
+  // All MemIntrinsics have destination address in Arg0 and size in Arg2.
+  if (MI->getRawDest() != U) return true;
+  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
+  // Non-constant size => unsafe. FIXME: try SCEV getRange.
+  if (!Len) return false;
+  return IsAccessSafe(U, Len->getZExtValue(), AI);
+}
+
+/// Check whether a given alloca instruction (AI) should be put on the safe
+/// stack or not. The function analyzes all uses of AI and checks whether it is
+/// only accessed in a memory safe way (as decided statically).
+bool SafeStack::IsSafeStackAlloca(const AllocaInst *AI) {
+  // Go through all uses of this alloca and check whether all accesses to the
+  // allocated object are statically known to be memory safe and, hence, the
+  // object can be placed on the safe stack.
+  SmallPtrSet<const Value *, 16> Visited;
+  SmallVector<const Instruction *, 8> WorkList;
+  WorkList.push_back(AI);
+
+  // A DFS search through all uses of the alloca in bitcasts/PHI/GEPs/etc.
+  while (!WorkList.empty()) {
+    const Instruction *V = WorkList.pop_back_val();
+    for (const Use &UI : V->uses()) {
+      auto I = cast<const Instruction>(UI.getUser());
+      assert(V == UI.get());
+
+      switch (I->getOpcode()) {
+      case Instruction::Load: {
+        if (!IsAccessSafe(UI, DL->getTypeStoreSize(I->getType()), AI))
+          return false;
+        break;
+      }
+      case Instruction::VAArg:
+        // "va-arg" from a pointer is safe.
+        break;
+      case Instruction::Store: {
+        if (V == I->getOperand(0)) {
+          // Stored the pointer - conservatively assume it may be unsafe.
+          DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AI
+                       << "\n            store of address: " << *I << "\n");
+          return false;
+        }
+
+        if (!IsAccessSafe(
+                UI, DL->getTypeStoreSize(I->getOperand(0)->getType()), AI))
+          return false;
+        break;
+      }
+      case Instruction::Ret: {
+        // Information leak.
+        return false;
+      }
+
+      case Instruction::Call:
+      case Instruction::Invoke: {
+        ImmutableCallSite CS(I);
+
+        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+          if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+              II->getIntrinsicID() == Intrinsic::lifetime_end)
+            continue;
+        }
+
+        if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
+          if (!IsMemIntrinsicSafe(MI, UI, AI)) {
+            DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AI
+                         << "\n            unsafe memintrinsic: " << *I
+                         << "\n");
+            return false;
+          }
+          continue;
+        }
+
+        // LLVM 'nocapture' attribute is only set for arguments whose address
+        // is not stored, passed around, or used in any other non-trivial way.
+        // We assume that passing a pointer to an object as a 'nocapture
+        // readnone' argument is safe.
+        // FIXME: a more precise solution would require an interprocedural
+        // analysis here, which would look at all uses of an argument inside
+        // the function being called.
+        ImmutableCallSite::arg_iterator B = CS.arg_begin(), E = CS.arg_end();
+        for (ImmutableCallSite::arg_iterator A = B; A != E; ++A)
+          if (A->get() == V)
+            if (!(CS.doesNotCapture(A - B) &&
+                  (CS.doesNotAccessMemory(A - B) || CS.doesNotAccessMemory()))) {
+              DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AI
+                           << "\n            unsafe call: " << *I << "\n");
+              return false;
+            }
+        continue;
+      }
+
+      default:
+        if (Visited.insert(I).second)
+          WorkList.push_back(cast<const Instruction>(I));
+      }
+    }
+  }
+
+  // All uses of the alloca are safe, we can place it on the safe stack.
+  return true;
+}
+
 Value *SafeStack::getOrCreateUnsafeStackPtr(IRBuilder<> &IRB, Function &F) {
   // Check if there is a target-specific location for the unsafe stack pointer.
-  if (TLI)
-    if (Value *V = TLI->getSafeStackPointerLocation(IRB))
+  if (TL)
+    if (Value *V = TL->getSafeStackPointerLocation(IRB))
       return V;
 
   // Otherwise, assume the target links with compiler-rt, which provides a
@@ -525,9 +590,8 @@ bool SafeStack::runOnFunction(Function &F) {
     return false;
   }
 
-  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-  TLI = TM ? TM->getSubtargetImpl(F)->getTargetLowering() : nullptr;
+  TL = TM ? TM->getSubtargetImpl(F)->getTargetLowering() : nullptr;
+  SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
   {
     // Make sure the regular stack protector won't run on this function
@@ -539,12 +603,6 @@ bool SafeStack::runOnFunction(Function &F) {
     F.removeAttributes(
         AttributeSet::FunctionIndex,
         AttributeSet::get(F.getContext(), AttributeSet::FunctionIndex, B));
-  }
-
-  if (AA->onlyReadsMemory(&F)) {
-    // XXX: we don't protect against information leak attacks for now.
-    DEBUG(dbgs() << "[SafeStack]     function only reads memory\n");
-    return false;
   }
 
   ++NumFunctions;

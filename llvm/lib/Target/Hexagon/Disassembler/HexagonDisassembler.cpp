@@ -162,8 +162,7 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   Size = 0;
 
   *CurrentBundle = &MI;
-  MI.setOpcode(Hexagon::BUNDLE);
-  MI.addOperand(MCOperand::createImm(0));
+  MI = HexagonMCInstrInfo::createBundle();
   while (Result == Success && Complete == false) {
     if (Bytes.size() < HEXAGON_INSTR_SIZE)
       return MCDisassembler::Fail;

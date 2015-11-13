@@ -402,6 +402,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
 
 void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
                                                   ELFYAML::ELF_SHF &Value) {
+  const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
 #define BCase(X) IO.bitSetCase(Value, #X, ELF::X);
   BCase(SHF_WRITE)
   BCase(SHF_ALLOC)
@@ -414,6 +415,17 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
   BCase(SHF_OS_NONCONFORMING)
   BCase(SHF_GROUP)
   BCase(SHF_TLS)
+  switch(Object->Header.Machine) {
+  case ELF::EM_AMDGPU:
+    BCase(SHF_AMDGPU_HSA_GLOBAL)
+    BCase(SHF_AMDGPU_HSA_READONLY)
+    BCase(SHF_AMDGPU_HSA_CODE)
+    BCase(SHF_AMDGPU_HSA_AGENT)
+    break;
+  default:
+    // Nothing to do.
+    break;
+  }
 #undef BCase
 }
 

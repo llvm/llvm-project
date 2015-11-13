@@ -50,15 +50,16 @@ ehcleanup:                                        ; preds = %entry
 ; X64:         .seh_pushreg 5
 ; X64:         pushq   %rbx
 ; X64:         .seh_pushreg 3
-; X64:         subq    $72, %rsp
-; X64:         .seh_stackalloc 72
-; X64:         leaq    64(%rsp), %rbp
-; X64:         .seh_setframe 5, 64
+; X64:         subq    $104, %rsp
+; X64:         .seh_stackalloc 104
+; X64:         leaq    96(%rsp), %rbp
+; X64:         .seh_setframe 5, 96
 ; X64:         .seh_endprologue
 ; X64:         andq    $-32, %rsp
 ; X64:         movq    %rsp, %rbx
 ;	RBP will reload from this offset.
-; X64:         movq    %rbp, 48(%rbx)
+; X64:         movq    %rbp, 56(%rbx)
+; X64: 	       movq    $-2, (%rbp)
 
 ; X64-LABEL: "?dtor$2@?0?realigned_cleanup@4HA":
 ; X64:         movq    %rdx, 16(%rsp)
@@ -68,7 +69,7 @@ ehcleanup:                                        ; preds = %entry
 ; X64:         .seh_pushreg 3
 ; X64:         subq    $40, %rsp
 ; X64:         .seh_stackalloc 40
-; X64:         leaq    64(%rdx), %rbp
+; X64:         leaq    96(%rdx), %rbp
 ; X64:         .seh_endprologue
 ; X64: 	       andq    $-32, %rdx
 ; X64: 	       movq    %rdx, %rbx

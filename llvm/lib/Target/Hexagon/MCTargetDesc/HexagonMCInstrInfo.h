@@ -70,6 +70,8 @@ bool canonicalizePacket(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
 // Clamp off upper 26 bits of extendable operand for emission
 void clampExtended(MCInstrInfo const &MCII, MCContext &Context, MCInst &MCI);
 
+MCInst createBundle();
+
 // Return the extender for instruction at Index or nullptr if none
 MCInst const *extenderForIndex(MCInst const &MCB, size_t Index);
 void extendIfNeeded(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,

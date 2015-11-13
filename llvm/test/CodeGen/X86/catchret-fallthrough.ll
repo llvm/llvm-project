@@ -41,6 +41,5 @@ nrvo.skipdtor:                                    ; preds = %invoke.cont.3, %inv
 ; CHECK-NOT: jmp
 ; CHECK-NOT: movl {{.*}}, %esp
 ; CHECK: retl
-; CHECK: movl {{.*}}, %esp
 ; CHECK: addl $12, %ebp
 ; CHECK: jmp LBB0_{{.*}}

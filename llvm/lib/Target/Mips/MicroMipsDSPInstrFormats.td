@@ -102,3 +102,29 @@ class POOL32A_2RSA5B0_FMT<string opstr, bits<10> op> : MMDSPInst<opstr> {
   let Inst{10}    = 0b0;
   let Inst{9-0}   = op;
 }
+
+class POOL32A_2RSA4B0_FMT<string opstr, bits<11> op> : MMDSPInst<opstr> {
+  bits<5> rt;
+  bits<5> rs;
+  bits<4> sa;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-12} = sa;
+  let Inst{11}    = 0b0;
+  let Inst{10-0}  = op;
+}
+
+class POOL32A_2RSA4OP6_FMT<string opstr, bits<6> op> : MMDSPInst<opstr> {
+  bits<5> rt;
+  bits<5> rs;
+  bits<4> sa;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-12} = sa;
+  let Inst{11-6}  = op;
+  let Inst{5-0}   = 0b111100;
+}

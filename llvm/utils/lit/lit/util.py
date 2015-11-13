@@ -94,7 +94,7 @@ def which(command, paths = None):
     for path in paths.split(os.pathsep):
         for ext in pathext:
             p = os.path.join(path, command + ext)
-            if os.path.exists(p):
+            if os.path.exists(p) and not os.path.isdir(p):
                 return p
 
     return None

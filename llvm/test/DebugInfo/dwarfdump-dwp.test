@@ -9,17 +9,17 @@ RUN: llvm-dwarfdump %p/Inputs/dwarfdump-dwp.x86_64.o | FileCheck %s
 ;   bar b;
 
 ; CHECK: .debug_cu_index contents:
-; CHECK-NEXT: Index header:
-; CHECK-NEXT: version: 2
-; CHECK-NEXT: columns: 4
-; CHECK-NEXT:   units: 2
-; CHECK-NEXT: buckets: 16
+; CHECK-NEXT: version = 2 slots = 16
+; CHECK:      Index Signature          INFO                     ABBREV                   LINE                     STR_OFFSETS            
+; CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------
+; CHECK-NEXT:     8 0x03c30756e2d45008 [0x00000000, 0x00000045) [0x00000000, 0x00000067) [0x00000000, 0x00000026) [0x00000000, 0x00000016)
+; CHECK-NEXT:    12 0x9aeb3a61ed48510c [0x00000045, 0x00000090) [0x00000067, 0x00000134) [0x00000026, 0x00000052) [0x00000016, 0x00000032)
 
 ; CHECK: .debug_tu_index contents:
-; CHECK-NEXT: Index header:
-; CHECK-NEXT: version: 2
-; CHECK-NEXT: columns: 4
-; CHECK-NEXT:   units: 2
-; CHECK-NEXT: buckets: 16
+; CHECK-NEXT: version = 2 slots = 16
+; CHECK:      Index Signature          TYPES                    ABBREV                   LINE                     STR_OFFSETS
+; CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------
+; CHECK-NEXT:     8 0x1d02f3be30cc5688 [0x00000036, 0x00000072) [0x00000067, 0x00000134) [0x00000026, 0x00000052) [0x00000016, 0x00000032)
+; CHECK-NEXT:    12 0x3875c0e21cda63fc [0x00000000, 0x00000036) [0x00000000, 0x00000067) [0x00000000, 0x00000026) [0x00000000, 0x00000016)
 
 ; TODO: use the index section offset info to correctly dump debug_info
