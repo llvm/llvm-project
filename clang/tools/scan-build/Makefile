@@ -33,21 +33,21 @@ endif
 
 all:: $(InstallTargets)
 
-$(ToolDir)/%: % Makefile $(ToolDir)/.dir
+$(ToolDir)/%: bin/% Makefile $(ToolDir)/.dir
 	$(Echo) "Copying $(notdir $<) to the 'bin' directory..."
 	$(Verb)cp $< $@
 	$(Verb)chmod +x $@
 
-$(LibexecDir)/%: % Makefile $(LibexecDir)/.dir
+$(LibexecDir)/%: libexec/% Makefile $(LibexecDir)/.dir
 	$(Echo) "Copying $(notdir $<) to the 'libexec' directory..."
 	$(Verb)cp $< $@
 	$(Verb)chmod +x $@
 
-$(ShareDir)/man/man1/%: % Makefile $(ShareDir)/man/man1/.dir
-	$(Echo) "Copying $(notdir $<) to the 'share' directory..."
+$(ShareDir)/man/man1/%: man/% Makefile $(ShareDir)/man/man1/.dir
+	$(Echo) "Copying $(notdir $<) to the 'man' directory..."
 	$(Verb)cp $< $@
 
-$(ShareDir)/scan-build/%: share/% Makefile $(ShareDir)/scan-build/.dir
+$(ShareDir)/scan-build/%: share/scan-build/% Makefile $(ShareDir)/scan-build/.dir
 	$(Echo) "Copying $(notdir $<) to the 'share' directory..."
 	$(Verb)cp $< $@
 
