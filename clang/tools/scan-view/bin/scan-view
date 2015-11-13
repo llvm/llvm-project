@@ -4,6 +4,8 @@
 """
 
 import sys
+import imp
+import os
 import posixpath
 import thread
 import time
@@ -54,6 +56,13 @@ def start_browser(port, options):
     webbrowser.open(url)
 
 def run(port, options, root):
+    # Prefer to look relative to the installed binary
+    share = os.path.dirname(__file__) + "/../share/scan-view"
+    if not os.path.isdir(share):
+      # Otherwise look relative to the source
+      share = os.path.dirname(__file__) + "/../../scan-view/share"
+    sys.path.append(share)
+
     import ScanView
     try:
         print 'Starting scan-view at: http://%s:%d'%(options.host,

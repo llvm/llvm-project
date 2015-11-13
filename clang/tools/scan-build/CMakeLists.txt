@@ -32,11 +32,11 @@ if(CLANG_INSTALL_SCANBUILD)
                        COMMAND ${CMAKE_COMMAND} -E make_directory
                          ${CMAKE_BINARY_DIR}/bin
                        COMMAND ${CMAKE_COMMAND} -E copy
-                         ${CMAKE_CURRENT_SOURCE_DIR}/${BinFile}
+                         ${CMAKE_CURRENT_SOURCE_DIR}/bin/${BinFile}
                          ${CMAKE_BINARY_DIR}/bin/
-                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${BinFile})
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/bin/${BinFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/bin/${BinFile})
-    install(PROGRAMS ${BinFile} DESTINATION bin)
+    install(PROGRAMS bin/${BinFile} DESTINATION bin)
   endforeach()
 
   foreach(LibexecFile ${LibexecFiles})
@@ -44,11 +44,11 @@ if(CLANG_INSTALL_SCANBUILD)
                        COMMAND ${CMAKE_COMMAND} -E make_directory
                          ${CMAKE_BINARY_DIR}/libexec
                        COMMAND ${CMAKE_COMMAND} -E copy
-                         ${CMAKE_CURRENT_SOURCE_DIR}/${LibexecFile}
+                         ${CMAKE_CURRENT_SOURCE_DIR}/libexec/${LibexecFile}
                          ${CMAKE_BINARY_DIR}/libexec/
-                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${LibexecFile})
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libexec/${LibexecFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/libexec/${LibexecFile})
-    install(PROGRAMS ${LibexecFile} DESTINATION libexec)
+    install(PROGRAMS libexec/${LibexecFile} DESTINATION libexec)
   endforeach()
 
   foreach(ManPage ${ManPages})
@@ -56,23 +56,23 @@ if(CLANG_INSTALL_SCANBUILD)
                        COMMAND ${CMAKE_COMMAND} -E make_directory
                          ${CMAKE_BINARY_DIR}/share/man/man1
                        COMMAND ${CMAKE_COMMAND} -E copy
-                         ${CMAKE_CURRENT_SOURCE_DIR}/${ManPage}
+                         ${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage}
                          ${CMAKE_BINARY_DIR}/share/man/man1/
-                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ManPage})
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/share/man/man1/${ManPage})
-    install(PROGRAMS ${ManPage} DESTINATION share/man/man1)
+    install(PROGRAMS man/${ManPage} DESTINATION share/man/man1)
   endforeach()
 
   foreach(ShareFile ${ShareFiles})
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/share/scan-view/${ShareFile}
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/share/scan-build/${ShareFile}
                        COMMAND ${CMAKE_COMMAND} -E make_directory
-                         ${CMAKE_BINARY_DIR}/share/scan-view
+                         ${CMAKE_BINARY_DIR}/share/scan-build
                        COMMAND ${CMAKE_COMMAND} -E copy
-                         ${CMAKE_CURRENT_SOURCE_DIR}/share/${ShareFile}
-                         ${CMAKE_BINARY_DIR}/share/scan-view/
-                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/share/${ShareFile})
-    list(APPEND Depends ${CMAKE_BINARY_DIR}/share/scan-view/${ShareFile})
-    install(FILES share/${ShareFile} DESTINATION share/scan-view)
+                         ${CMAKE_CURRENT_SOURCE_DIR}/share/scan-build/${ShareFile}
+                         ${CMAKE_BINARY_DIR}/share/scan-build/
+                       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/share/scan-build/${ShareFile})
+    list(APPEND Depends ${CMAKE_BINARY_DIR}/share/scan-build/${ShareFile})
+    install(FILES share/scan-build/${ShareFile} DESTINATION share/scan-build)
   endforeach()
 
   add_custom_target(scan-build ALL DEPENDS ${Depends})
