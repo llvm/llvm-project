@@ -9397,11 +9397,8 @@ SwiftASTContext::GetSwiftTypeInfo (void* type)
                 swift::MetatypeType* metatype_type = swift_can_type->getAs<swift::MetatypeType>();
                 if (!metatype_type)
                     return nullptr;
-                if (metatype_type->hasRepresentation() && metatype_type->getRepresentation() == swift::MetatypeRepresentation::Thin)
-                    return GetSwiftTypeInfo(GetASTContext()->TheEmptyTupleType.getPointer());
                 else
                     return GetSwiftTypeInfo(GetASTContext()->TheRawPointerType.getPointer());
-                break;
             }
             case swift::TypeKind::ExistentialMetatype:
             {
