@@ -68,6 +68,8 @@ unsigned MipsELFObjectWriter::GetRelocType(const MCValue &Target,
   unsigned Kind = (unsigned)Fixup.getKind();
 
   switch (Kind) {
+  case Mips::fixup_Mips_NONE:
+    return ELF::R_MIPS_NONE;
   case Mips::fixup_Mips_16:
   case FK_Data_2:
     return IsPCRel ? ELF::R_MIPS_PC16 : ELF::R_MIPS_16;

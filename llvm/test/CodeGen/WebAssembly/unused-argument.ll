@@ -24,3 +24,12 @@ define i32 @unused_first(i32 %x, i32 %y) {
 define i32 @unused_second(i32 %x, i32 %y) {
   ret i32 %x
 }
+
+; CHECK-LABEL: call_something:
+; CHECK-NEXT: call return_something, $discard{{$}}
+; CHECK-NEXT: return{{$}}
+declare i32 @return_something()
+define void @call_something() {
+    call i32 @return_something()
+    ret void
+}

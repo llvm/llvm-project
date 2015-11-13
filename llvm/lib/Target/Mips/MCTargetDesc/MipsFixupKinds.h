@@ -23,8 +23,11 @@ namespace Mips {
   // in MipsAsmBackend.cpp.
   //
   enum Fixups {
+    // Branch fixups resulting in R_MIPS_NONE.
+    fixup_Mips_NONE = FirstTargetFixupKind,
+
     // Branch fixups resulting in R_MIPS_16.
-    fixup_Mips_16 = FirstTargetFixupKind,
+    fixup_Mips_16,
 
     // Pure 32 bit data fixup resulting in - R_MIPS_32.
     fixup_Mips_32,

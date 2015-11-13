@@ -17,3 +17,9 @@
 using namespace llvm;
 
 WebAssemblyFunctionInfo::~WebAssemblyFunctionInfo() {}
+
+void WebAssemblyFunctionInfo::initWARegs() {
+  assert(WARegs.empty());
+  unsigned Reg = UnusedReg;
+  WARegs.resize(MF.getRegInfo().getNumVirtRegs(), Reg);
+}

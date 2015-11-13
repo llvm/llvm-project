@@ -57,11 +57,6 @@ public:
   void adjustForSegmentedStacks(MachineFunction &MF,
                                 MachineBasicBlock &MBB) const override;
 
-  /// Returns true if the target will correctly handle shrink wrapping.
-  bool enableShrinkWrapping(const MachineFunction &MF) const override {
-    return true;
-  }
-
  private:
   void emitPushInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const std::vector<CalleeSavedInfo> &CSI, unsigned StmOpc,

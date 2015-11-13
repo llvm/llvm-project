@@ -118,6 +118,7 @@ private:
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
   void collectStores(BasicBlock *BB);
+  bool isLegalStore(StoreInst *SI);
   bool processLoopStore(StoreInst *SI, const SCEV *BECount);
   bool processLoopMemSet(MemSetInst *MSI, const SCEV *BECount);
 
@@ -244,6 +245,42 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   return MadeChange;
 }
 
+static unsigned getStoreSizeInBytes(StoreInst *SI, const DataLayout *DL) {
+  uint64_t SizeInBits = DL->getTypeSizeInBits(SI->getValueOperand()->getType());
+  assert(((SizeInBits & 7) || (SizeInBits >> 32) == 0) &&
+         "Don't overflow unsigned.");
+  return (unsigned)SizeInBits >> 3;
+}
+
+static unsigned getStoreStride(const SCEVAddRecExpr *StoreEv) {
+  const SCEVConstant *ConstStride = cast<SCEVConstant>(StoreEv->getOperand(1));
+  return ConstStride->getValue()->getValue().getZExtValue();
+}
+
+bool LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
+  Value *StoredVal = SI->getValueOperand();
+  Value *StorePtr = SI->getPointerOperand();
+
+  // Reject stores that are so large that they overflow an unsigned.
+  uint64_t SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
+  if ((SizeInBits & 7) || (SizeInBits >> 32) != 0)
+    return false;
+
+  // See if the pointer expression is an AddRec like {base,+,1} on the current
+  // loop, which indicates a strided store.  If we have something else, it's a
+  // random store we can't handle.
+  const SCEVAddRecExpr *StoreEv =
+      dyn_cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
+  if (!StoreEv || StoreEv->getLoop() != CurLoop || !StoreEv->isAffine())
+    return false;
+
+  // Check to see if we have a constant stride.
+  if (!isa<SCEVConstant>(StoreEv->getOperand(1)))
+    return false;
+
+  return true;
+}
+
 void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
   StoreRefs.clear();
   for (Instruction &I : *BB) {
@@ -253,6 +290,10 @@ void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
 
     // Don't touch volatile stores.
     if (!SI->isSimple())
+      continue;
+
+    // Make sure this is a strided store with a constant stride.
+    if (!isLegalStore(SI))
       continue;
 
     // Save the store locations.
@@ -306,29 +347,11 @@ bool LoopIdiomRecognize::processLoopStore(StoreInst *SI, const SCEV *BECount) {
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();
 
-  // Reject stores that are so large that they overflow an unsigned.
-  uint64_t SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
-  if ((SizeInBits & 7) || (SizeInBits >> 32) != 0)
-    return false;
-
-  // See if the pointer expression is an AddRec like {base,+,1} on the current
-  // loop, which indicates a strided store.  If we have something else, it's a
-  // random store we can't handle.
-  const SCEVAddRecExpr *StoreEv =
-      dyn_cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
-  if (!StoreEv || StoreEv->getLoop() != CurLoop || !StoreEv->isAffine())
-    return false;
-
   // Check to see if the stride matches the size of the store.  If so, then we
   // know that every byte is touched in the loop.
-  unsigned StoreSize = (unsigned)SizeInBits >> 3;
-
-  const SCEVConstant *ConstStride =
-      dyn_cast<SCEVConstant>(StoreEv->getOperand(1));
-  if (!ConstStride)
-    return false;
-
-  APInt Stride = ConstStride->getValue()->getValue();
+  const SCEVAddRecExpr *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
+  unsigned Stride = getStoreStride(StoreEv);
+  unsigned StoreSize = getStoreSizeInBytes(SI, DL);
   if (StoreSize != Stride && StoreSize != -Stride)
     return false;
 

@@ -121,5 +121,14 @@ a:
         sdbbp16 8                # CHECK: sdbbp16 8                # encoding: [0x46,0x3b]
         subu16 $5, $16, $3       # CHECK: subu16 $5, $16, $3       # encoding: [0x04,0x3b]
         xor16 $17, $5            # CHECK: xor16 $17, $5            # encoding: [0x44,0xd8]
+        lwm $16, $17, $ra, 8($sp)   # CHECK: lwm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x22]
+        lwm16 $16, $17, $ra, 8($sp) # CHECK: lwm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x22]
+        sb16 $3, 4($16)          # CHECK: sb16 $3, 4($16)     # encoding: [0x89,0x84]
+        sh16 $4, 8($17)          # CHECK: sh16 $4, 8($17)     # encoding: [0xaa,0x14]
+        sw $4, 124($sp)          # CHECK: sw $4, 124($sp)     # encoding: [0xc8,0x9f]
+        sw16 $4, 4($17)          # CHECK: sw16 $4, 4($17)     # encoding: [0xea,0x11]
+        sw16 $0, 4($17)          # CHECK: sw16 $zero, 4($17)  # encoding: [0xe8,0x11]
+        swm $16, $17, $ra, 8($sp)   # CHECK: swm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x2a]
+        swm16 $16, $17, $ra, 8($sp) # CHECK: swm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x2a]
 
 1:

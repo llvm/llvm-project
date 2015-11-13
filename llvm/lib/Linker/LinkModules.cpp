@@ -777,7 +777,7 @@ GlobalValue::LinkageTypes ModuleLinker::getLinkage(const GlobalValue *SGV) {
     // since it would cause global constructors/destructors to be
     // executed multiple times. This should have already been handled
     // by linkGlobalValueProto.
-    assert(false && "Cannot import appending linkage variable");
+    llvm_unreachable("Cannot import appending linkage variable");
 
   case GlobalValue::InternalLinkage:
   case GlobalValue::PrivateLinkage:

@@ -189,6 +189,8 @@ private:
                                            DebugLoc DL, int64_t Offset,
                                            bool InEpilogue) const;
 
+  unsigned getPSPSlotOffsetFromSP(const MachineFunction &MF) const;
+
   unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
 };
 

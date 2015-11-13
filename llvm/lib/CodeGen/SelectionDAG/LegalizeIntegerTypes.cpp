@@ -53,6 +53,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertSext:  Res = PromoteIntRes_AssertSext(N); break;
   case ISD::AssertZext:  Res = PromoteIntRes_AssertZext(N); break;
   case ISD::BITCAST:     Res = PromoteIntRes_BITCAST(N); break;
+  case ISD::BITREVERSE:  Res = PromoteIntRes_BITREVERSE(N); break;
   case ISD::BSWAP:       Res = PromoteIntRes_BSWAP(N); break;
   case ISD::BUILD_PAIR:  Res = PromoteIntRes_BUILD_PAIR(N); break;
   case ISD::Constant:    Res = PromoteIntRes_Constant(N); break;
@@ -316,6 +317,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
   return DAG.getNode(
       ISD::SRL, dl, NVT, DAG.getNode(ISD::BSWAP, dl, NVT, Op),
+      DAG.getConstant(DiffBits, dl,
+                      TLI.getShiftAmountTy(NVT, DAG.getDataLayout())));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  EVT OVT = N->getValueType(0);
+  EVT NVT = Op.getValueType();
+  SDLoc dl(N);
+
+  unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
+  return DAG.getNode(
+      ISD::SRL, dl, NVT, DAG.getNode(ISD::BITREVERSE, dl, NVT, Op),
       DAG.getConstant(DiffBits, dl,
                       TLI.getShiftAmountTy(NVT, DAG.getDataLayout())));
 }
@@ -1263,6 +1277,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ANY_EXTEND:  ExpandIntRes_ANY_EXTEND(N, Lo, Hi); break;
   case ISD::AssertSext:  ExpandIntRes_AssertSext(N, Lo, Hi); break;
   case ISD::AssertZext:  ExpandIntRes_AssertZext(N, Lo, Hi); break;
+  case ISD::BITREVERSE:  ExpandIntRes_BITREVERSE(N, Lo, Hi); break;
   case ISD::BSWAP:       ExpandIntRes_BSWAP(N, Lo, Hi); break;
   case ISD::Constant:    ExpandIntRes_Constant(N, Lo, Hi); break;
   case ISD::CTLZ_ZERO_UNDEF:
@@ -1831,6 +1846,14 @@ void DAGTypeLegalizer::ExpandIntRes_AssertZext(SDNode *N,
     // The high part must be zero, make it explicit.
     Hi = DAG.getConstant(0, dl, NVT);
   }
+}
+
+void DAGTypeLegalizer::ExpandIntRes_BITREVERSE(SDNode *N,
+                                               SDValue &Lo, SDValue &Hi) {
+  SDLoc dl(N);
+  GetExpandedInteger(N->getOperand(0), Hi, Lo);  // Note swapped operands.
+  Lo = DAG.getNode(ISD::BITREVERSE, dl, Lo.getValueType(), Lo);
+  Hi = DAG.getNode(ISD::BITREVERSE, dl, Hi.getValueType(), Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_BSWAP(SDNode *N,

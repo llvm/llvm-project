@@ -832,7 +832,9 @@ getMemEncodingMMImm4sp(const MCInst &MI, unsigned OpNo,
   default:
     break;
   case Mips::SWM16_MM:
+  case Mips::SWM16_MMR6:
   case Mips::LWM16_MM:
+  case Mips::LWM16_MMR6:
     OpNo = MI.getNumOperands() - 2;
     break;
   }

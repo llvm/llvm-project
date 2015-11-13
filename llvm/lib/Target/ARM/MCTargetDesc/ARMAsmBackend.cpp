@@ -1007,24 +1007,20 @@ static MachO::CPUSubTypeARM getMachOSubTypeFromArch(StringRef Arch) {
     return MachO::CPU_SUBTYPE_ARM_V7;
   case ARM::AK_ARMV4T:
     return MachO::CPU_SUBTYPE_ARM_V4T;
+  case ARM::AK_ARMV5T:
+  case ARM::AK_ARMV5TE:
+  case ARM::AK_ARMV5TEJ:
+    return MachO::CPU_SUBTYPE_ARM_V5;
   case ARM::AK_ARMV6:
   case ARM::AK_ARMV6K:
     return MachO::CPU_SUBTYPE_ARM_V6;
-  case ARM::AK_ARMV5:
-    return MachO::CPU_SUBTYPE_ARM_V5;
-  case ARM::AK_ARMV5T:
-  case ARM::AK_ARMV5E:
-  case ARM::AK_ARMV5TE:
-  case ARM::AK_ARMV5TEJ:
-    return MachO::CPU_SUBTYPE_ARM_V5TEJ;
-  case ARM::AK_ARMV7:
+  case ARM::AK_ARMV7A:
     return MachO::CPU_SUBTYPE_ARM_V7;
   case ARM::AK_ARMV7S:
     return MachO::CPU_SUBTYPE_ARM_V7S;
   case ARM::AK_ARMV7K:
     return MachO::CPU_SUBTYPE_ARM_V7K;
   case ARM::AK_ARMV6M:
-  case ARM::AK_ARMV6SM:
     return MachO::CPU_SUBTYPE_ARM_V6M;
   case ARM::AK_ARMV7M:
     return MachO::CPU_SUBTYPE_ARM_V7M;

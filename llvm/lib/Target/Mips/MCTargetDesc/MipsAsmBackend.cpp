@@ -232,6 +232,18 @@ void MipsAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   }
 }
 
+bool MipsAsmBackend::getFixupKind(StringRef Name, MCFixupKind &MappedKind) const {
+  if (Name == "R_MIPS_NONE") {
+    MappedKind = (MCFixupKind)Mips::fixup_Mips_NONE;
+    return true;
+  }
+  if (Name == "R_MIPS_32") {
+    MappedKind = FK_Data_4;
+    return true;
+  }
+  return MCAsmBackend::getFixupKind(Name, MappedKind);
+}
+
 const MCFixupKindInfo &MipsAsmBackend::
 getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo LittleEndianInfos[Mips::NumTargetFixupKinds] = {
@@ -239,6 +251,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     // MipsFixupKinds.h.
     //
     // name                    offset  bits  flags
+    { "fixup_Mips_NONE",         0,      0,   0 },
     { "fixup_Mips_16",           0,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
@@ -304,6 +317,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     // MipsFixupKinds.h.
     //
     // name                    offset  bits  flags
+    { "fixup_Mips_NONE",         0,      0,   0 },
     { "fixup_Mips_16",          16,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },

@@ -73,3 +73,31 @@
   jrcaddiusp 33            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   jrcaddiusp 125           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   jrcaddiusp 132           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  lwm16 $5, $6, $ra, 8($sp)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: $16 or $31 expected
+  lwm16 $16, $19, $ra, 8($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: consecutive register numbers expected
+  lwm16 $16-$25, $ra, 8($sp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register operand
+  lwm16 $16, 8($sp)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  lwm16 $16, $17, 8($sp)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  lwm16 $16-$20, 8($sp)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  lwm16 $16, $17, $ra, 8($fp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  lwm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sb16 $9, 4($16)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sb16 $3, 64($16)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
+  sb16 $16, 4($16)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sb16 $7, 4($9)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sh16  $9, 8($17)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sh16  $4, 68($17)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
+  sh16  $16, 8($17)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sh16  $7, 8($9)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sw16  $9, 4($17)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sw16  $4, 64($17)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
+  sw16  $16, 4($17)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  sw16  $7, 4($10)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swm16 $5, $6, $ra, 8($sp)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: $16 or $31 expected
+  swm16 $16, $19, $ra, 8($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: consecutive register numbers expected
+  swm16 $16-$25, $ra, 8($sp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register operand
+  swm16 $16, 8($sp)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swm16 $16, $17, 8($sp)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swm16 $16-$20, 8($sp)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swm16 $16, $17, $ra, 8($fp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

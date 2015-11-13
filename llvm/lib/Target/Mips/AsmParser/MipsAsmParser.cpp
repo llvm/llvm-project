@@ -1007,8 +1007,13 @@ public:
       return false;
 
     int Size = RegList.List->size();
-    if (Size < 2 || Size > 5 || *RegList.List->begin() != Mips::S0 ||
-        RegList.List->back() != Mips::RA)
+    if (Size < 2 || Size > 5)
+      return false;
+
+    unsigned R0 = RegList.List->front();
+    unsigned R1 = RegList.List->back();
+    if (!((R0 == Mips::S0 && R1 == Mips::RA) ||
+          (R0 == Mips::S0_64 && R1 == Mips::RA_64)))
       return false;
 
     int PrevReg = *RegList.List->begin();
@@ -1841,6 +1846,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       case Mips::TLTU_MM:
       case Mips::TNE_MM:
       case Mips::SB16_MM:
+      case Mips::SB16_MMR6:
         Opnd = Inst.getOperand(2);
         if (!Opnd.isImm())
           return Error(IDLoc, "expected immediate operand kind");
@@ -1850,6 +1856,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         break;
       case Mips::LHU16_MM:
       case Mips::SH16_MM:
+      case Mips::SH16_MMR6:
         Opnd = Inst.getOperand(2);
         if (!Opnd.isImm())
           return Error(IDLoc, "expected immediate operand kind");
@@ -1859,6 +1866,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         break;
       case Mips::LW16_MM:
       case Mips::SW16_MM:
+      case Mips::SW16_MMR6:
         Opnd = Inst.getOperand(2);
         if (!Opnd.isImm())
           return Error(IDLoc, "expected immediate operand kind");
@@ -2612,10 +2620,16 @@ MipsAsmParser::expandLoadStoreMultiple(MCInst &Inst, SMLoc IDLoc,
 
   if (OpNum < 8 && Inst.getOperand(OpNum - 1).getImm() <= 60 &&
       Inst.getOperand(OpNum - 1).getImm() >= 0 &&
-      Inst.getOperand(OpNum - 2).getReg() == Mips::SP &&
-      Inst.getOperand(OpNum - 3).getReg() == Mips::RA)
+      (Inst.getOperand(OpNum - 2).getReg() == Mips::SP ||
+       Inst.getOperand(OpNum - 2).getReg() == Mips::SP_64) &&
+      (Inst.getOperand(OpNum - 3).getReg() == Mips::RA ||
+       Inst.getOperand(OpNum - 3).getReg() == Mips::RA_64)) {
     // It can be implemented as SWM16 or LWM16 instruction.
-    NewOpcode = Opcode == Mips::SWM_MM ? Mips::SWM16_MM : Mips::LWM16_MM;
+    if (inMicroMipsMode() && hasMips32r6())
+      NewOpcode = Opcode == Mips::SWM_MM ? Mips::SWM16_MMR6 : Mips::LWM16_MMR6;
+    else
+      NewOpcode = Opcode == Mips::SWM_MM ? Mips::SWM16_MM : Mips::LWM16_MM;
+  }
 
   Inst.setOpcode(NewOpcode);
   Instructions.push_back(Inst);
@@ -4145,12 +4159,15 @@ MipsAsmParser::parseRegisterList(OperandVector &Operands) {
     if (RegRange) {
       // Remove last register operand because registers from register range
       // should be inserted first.
-      if (RegNo == Mips::RA) {
+      if ((isGP64bit() && RegNo == Mips::RA_64) ||
+          (!isGP64bit() && RegNo == Mips::RA)) {
         Regs.push_back(RegNo);
       } else {
         unsigned TmpReg = PrevReg + 1;
         while (TmpReg <= RegNo) {
-          if ((TmpReg < Mips::S0) || (TmpReg > Mips::S7)) {
+          if ((((TmpReg < Mips::S0) || (TmpReg > Mips::S7)) && !isGP64bit()) ||
+              (((TmpReg < Mips::S0_64) || (TmpReg > Mips::S7_64)) &&
+               isGP64bit())) {
             Error(E, "invalid register operand");
             return MatchOperand_ParseFail;
           }
@@ -4162,16 +4179,23 @@ MipsAsmParser::parseRegisterList(OperandVector &Operands) {
 
       RegRange = false;
     } else {
-      if ((PrevReg == Mips::NoRegister) && (RegNo != Mips::S0) &&
-          (RegNo != Mips::RA)) {
+      if ((PrevReg == Mips::NoRegister) &&
+          ((isGP64bit() && (RegNo != Mips::S0_64) && (RegNo != Mips::RA_64)) ||
+          (!isGP64bit() && (RegNo != Mips::S0) && (RegNo != Mips::RA)))) {
         Error(E, "$16 or $31 expected");
         return MatchOperand_ParseFail;
-      } else if (((RegNo < Mips::S0) || (RegNo > Mips::S7)) &&
-                 (RegNo != Mips::FP) && (RegNo != Mips::RA)) {
+      } else if (!(((RegNo == Mips::FP || RegNo == Mips::RA ||
+                    (RegNo >= Mips::S0 && RegNo <= Mips::S7)) &&
+                    !isGP64bit()) ||
+                   ((RegNo == Mips::FP_64 || RegNo == Mips::RA_64 ||
+                    (RegNo >= Mips::S0_64 && RegNo <= Mips::S7_64)) &&
+                    isGP64bit()))) {
         Error(E, "invalid register operand");
         return MatchOperand_ParseFail;
       } else if ((PrevReg != Mips::NoRegister) && (RegNo != PrevReg + 1) &&
-                 (RegNo != Mips::FP) && (RegNo != Mips::RA)) {
+                 ((RegNo != Mips::FP && RegNo != Mips::RA && !isGP64bit()) ||
+                  (RegNo != Mips::FP_64 && RegNo != Mips::RA_64 &&
+                   isGP64bit()))) {
         Error(E, "consecutive register numbers expected");
         return MatchOperand_ParseFail;
       }

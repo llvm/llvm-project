@@ -2878,18 +2878,34 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   FuncInfo->setArgumentStackSize(StackSize);
 
-  if (MMI.hasWinEHFuncInfo(Fn) && Is64Bit &&
-      classifyEHPersonality(Fn->getPersonalityFn()) ==
-          EHPersonality::MSVC_CXX) {
-    int UnwindHelpFI = MFI->CreateStackObject(8, 8, /*isSS=*/false);
-    SDValue StackSlot = DAG.getFrameIndex(UnwindHelpFI, MVT::i64);
-    MMI.getWinEHFuncInfo(MF.getFunction()).UnwindHelpFrameIdx = UnwindHelpFI;
-    SDValue Neg2 = DAG.getConstant(-2, dl, MVT::i64);
-    Chain = DAG.getStore(Chain, dl, Neg2, StackSlot,
-                         MachinePointerInfo::getFixedStack(
-                             DAG.getMachineFunction(), UnwindHelpFI),
-                         /*isVolatile=*/true,
-                         /*isNonTemporal=*/false, /*Alignment=*/0);
+  if (MMI.hasWinEHFuncInfo(Fn)) {
+    EHPersonality Personality = classifyEHPersonality(Fn->getPersonalityFn());
+    if (Personality == EHPersonality::MSVC_CXX) {
+      if (Is64Bit) {
+        int UnwindHelpFI = MFI->CreateStackObject(8, 8, /*isSS=*/false);
+        SDValue StackSlot = DAG.getFrameIndex(UnwindHelpFI, MVT::i64);
+        MMI.getWinEHFuncInfo(MF.getFunction()).UnwindHelpFrameIdx =
+            UnwindHelpFI;
+        SDValue Neg2 = DAG.getConstant(-2, dl, MVT::i64);
+        Chain = DAG.getStore(Chain, dl, Neg2, StackSlot,
+                             MachinePointerInfo::getFixedStack(
+                                 DAG.getMachineFunction(), UnwindHelpFI),
+                             /*isVolatile=*/true,
+                             /*isNonTemporal=*/false, /*Alignment=*/0);
+      }
+    } else if (Personality == EHPersonality::CoreCLR) {
+      assert(Is64Bit);
+      // TODO: Add a mechanism to frame lowering that will allow us to indicate
+      // that we'd prefer this slot be allocated towards the bottom of the frame
+      // (i.e. near the stack pointer after allocating the frame).  Every
+      // funclet needs a copy of this slot in its (mostly empty) frame, and the
+      // offset from the bottom of this and each funclet's frame must be the
+      // same, so the size of funclets' (mostly empty) frames is dictated by
+      // how far this slot is from the bottom (since they allocate just enough
+      // space to accomodate holding this slot at the correct offset).
+      int PSPSymFI = MFI->CreateStackObject(8, 8, /*isSS=*/false);
+      MMI.getWinEHFuncInfo(MF.getFunction()).PSPSymFrameIdx = PSPSymFI;
+    }
   }
 
   return Chain;

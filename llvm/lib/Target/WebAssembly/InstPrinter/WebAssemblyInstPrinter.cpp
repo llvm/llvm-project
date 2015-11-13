@@ -14,6 +14,7 @@
 
 #include "InstPrinter/WebAssemblyInstPrinter.h"
 #include "WebAssembly.h"
+#include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -36,6 +37,7 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
 
 void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
                                           unsigned RegNo) const {
+  assert(RegNo != WebAssemblyFunctionInfo::UnusedReg);
   // FIXME: Revisit whether we actually print the get_local explicitly.
   OS << "(get_local " << RegNo << ")";
 }
@@ -60,9 +62,14 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
          "Instructions with multiple result values not implemented");
 
   // FIXME: Revisit whether we actually print the set_local explicitly.
-  if (NumDefs != 0)
-    OS << "\n"
-          "\t" "set_local " << MI->getOperand(0).getReg() << ", $pop";
+  if (NumDefs != 0) {
+    unsigned WAReg = MI->getOperand(0).getReg();
+    // Only print the set_local if the register is used.
+    // TODO: Revisit this once the spec explains what should happen here.
+    if (WAReg != WebAssemblyFunctionInfo::UnusedReg)
+      OS << "\n"
+            "\t" "set_local " << WAReg << ", $pop";
+  }
 }
 
 static std::string toString(const APFloat &FP) {
@@ -86,10 +93,14 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                           raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    if (OpNo < MII.get(MI->getOpcode()).getNumDefs())
-      O << "$push";
-    else
+    if (OpNo >= MII.get(MI->getOpcode()).getNumDefs())
       printRegName(O, Op.getReg());
+    else {
+      if (Op.getReg() != WebAssemblyFunctionInfo::UnusedReg)
+        O << "$push";
+      else
+        O << "$discard";
+    }
   } else if (Op.isImm())
     O << Op.getImm();
   else if (Op.isFPImm())

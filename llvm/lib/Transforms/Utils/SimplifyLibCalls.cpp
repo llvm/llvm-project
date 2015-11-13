@@ -53,16 +53,8 @@ static cl::opt<bool>
 //===----------------------------------------------------------------------===//
 
 static bool ignoreCallingConv(LibFunc::Func Func) {
-  switch (Func) {
-  case LibFunc::abs:
-  case LibFunc::labs:
-  case LibFunc::llabs:
-  case LibFunc::strlen:
-    return true;
-  default:
-    return false;
-  }
-  llvm_unreachable("All cases should be covered in the switch.");
+  return Func == LibFunc::abs || Func == LibFunc::labs ||
+         Func == LibFunc::llabs || Func == LibFunc::strlen;
 }
 
 /// isOnlyUsedInZeroEqualityComparison - Return true if it only matters that the

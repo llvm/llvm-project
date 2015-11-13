@@ -143,3 +143,10 @@
 0x46 0x3b # CHECK: sdbbp16 8
 0x04 0x3b # CHECK: subu16 $5, $16, $3
 0x44 0xd8 # CHECK: xor16 $17, $5
+0x45 0x22 # CHECK: lwm16 $16, $17, $ra, 8($sp)
+0x89 0x84 # CHECK: sb16 $3, 4($16)
+0xaa 0x14 # CHECK: sh16 $4, 8($17)
+0xc8 0x9f # CHECK: sw $4, 124($sp)
+0xea 0x11 # CHECK: sw16 $4, 4($17)
+0xe8 0x11 # CHECK: sw16 $zero, 4($17)
+0x45 0x2a # CHECK: swm16 $16, $17, $ra, 8($sp)

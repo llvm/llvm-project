@@ -108,6 +108,98 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
+/// \brief Detect re-ordering hazards and dependencies.
+///
+/// This class keeps track of defs and uses, and can be queried if a given
+/// machine instruction can be re-ordered from after the machine instructions
+/// seen so far to before them.
+class HazardDetector {
+  DenseSet<unsigned> RegDefs;
+  DenseSet<unsigned> RegUses;
+  const TargetRegisterInfo &TRI;
+  bool hasSeenClobber;
+
+public:
+  explicit HazardDetector(const TargetRegisterInfo &TRI) :
+    TRI(TRI), hasSeenClobber(false) {}
+
+  /// \brief Make a note of \p MI for later queries to isSafeToHoist.
+  ///
+  /// May clobber this HazardDetector instance.  \see isClobbered.
+  void rememberInstruction(MachineInstr *MI);
+
+  /// \brief Return true if it is safe to hoist \p MI from after all the
+  /// instructions seen so far (via rememberInstruction) to before it.
+  bool isSafeToHoist(MachineInstr *MI);
+
+  /// \brief Return true if this instance of HazardDetector has been clobbered
+  /// (i.e. has no more useful information).
+  ///
+  /// A HazardDetecter is clobbered when it sees a construct it cannot
+  /// understand, and it would have to return a conservative answer for all
+  /// future queries.  Having a separate clobbered state lets the client code
+  /// bail early, without making queries about all of the future instructions
+  /// (which would have returned the most conservative answer anyway).
+  ///
+  /// Calling rememberInstruction or isSafeToHoist on a clobbered HazardDetector
+  /// is an error.
+  bool isClobbered() { return hasSeenClobber; }
+};
+}
+
+
+void HazardDetector::rememberInstruction(MachineInstr *MI) {
+  assert(!isClobbered() &&
+         "Don't add instructions to a clobbered hazard detector");
+
+  if (MI->mayStore() || MI->hasUnmodeledSideEffects()) {
+    hasSeenClobber = true;
+    return;
+  }
+
+  for (auto *MMO : MI->memoperands()) {
+    // Right now we don't want to worry about LLVM's memory model.
+    if (!MMO->isUnordered()) {
+      hasSeenClobber = true;
+      return;
+    }
+  }
+
+  for (auto &MO : MI->operands()) {
+    if (!MO.isReg() || !MO.getReg())
+      continue;
+
+    if (MO.isDef())
+      RegDefs.insert(MO.getReg());
+    else
+      RegUses.insert(MO.getReg());
+  }
+}
+
+bool HazardDetector::isSafeToHoist(MachineInstr *MI) {
+  assert(!isClobbered() && "isSafeToHoist cannot do anything useful!");
+
+  // Right now we don't want to worry about LLVM's memory model.  This can be
+  // made more precise later.
+  for (auto *MMO : MI->memoperands())
+    if (!MMO->isUnordered())
+      return false;
+
+  for (auto &MO : MI->operands()) {
+    if (MO.isReg() && MO.getReg()) {
+      for (unsigned Reg : RegDefs)
+        if (TRI.regsOverlap(Reg, MO.getReg()))
+          return false;  // We found a write-after-write or read-after-write
+
+      if (MO.isDef())
+        for (unsigned Reg : RegUses)
+          if (TRI.regsOverlap(Reg, MO.getReg()))
+            return false;  // We found a write-after-read
+    }
+  }
+
+  return true;
 }
 
 bool ImplicitNullChecks::runOnMachineFunction(MachineFunction &MF) {
@@ -133,10 +225,10 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
     MachineBasicBlock &MBB, SmallVectorImpl<NullCheck> &NullCheckList) {
   typedef TargetInstrInfo::MachineBranchPredicate MachineBranchPredicate;
 
-  MDNode *BranchMD =
-      MBB.getBasicBlock()
-          ? MBB.getBasicBlock()->getTerminator()->getMetadata(LLVMContext::MD_make_implicit)
-          : nullptr;
+  MDNode *BranchMD = nullptr;
+  if (auto *BB = MBB.getBasicBlock())
+    BranchMD = BB->getTerminator()->getMetadata(LLVMContext::MD_make_implicit);
+
   if (!BranchMD)
     return false;
 
@@ -189,7 +281,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   //
   // we want to end up with
   //
-  //   Def = TrappingLoad (%RAX + <offset>), LblNull
+  //   Def = FaultingLoad (%RAX + <offset>), LblNull
   //   jmp LblNotNull ;; explicit or fallthrough
   //
   //  LblNotNull:
@@ -200,38 +292,34 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   //  LblNull:
   //   callq throw_NullPointerException
   //
+  //
+  // To see why this is legal, consider the two possibilities:
+  //
+  //  1. %RAX is null: since we constrain <offset> to be less than PageSize, the
+  //     load instruction dereferences the null page, causing a segmentation
+  //     fault.
+  //
+  //  2. %RAX is not null: in this case we know that the load cannot fault, as
+  //     otherwise the load would've faulted in the original program too and the
+  //     original program would've been undefined.
+  //
+  // This reasoning cannot be extended to justify hoisting through arbitrary
+  // control flow.  For instance, in the example below (in pseudo-C)
+  //
+  //    if (ptr == null) { throw_npe(); unreachable; }
+  //    if (some_cond) { return 42; }
+  //    v = ptr->field;  // LD
+  //    ...
+  //
+  // we cannot (without code duplication) use the load marked "LD" to null check
+  // ptr -- clause (2) above does not apply in this case.  In the above program
+  // the safety of ptr->field can be dependent on some_cond; and, for instance,
+  // ptr could be some non-null invalid reference that never gets loaded from
+  // because some_cond is always true.
 
   unsigned PointerReg = MBP.LHS.getReg();
 
-  // As we scan NotNullSucc for a suitable load instruction, we keep track of
-  // the registers defined and used by the instructions we scan past.  This bit
-  // of information lets us decide if it is legal to hoist the load instruction
-  // we find (if we do find such an instruction) to before NotNullSucc.
-  DenseSet<unsigned> RegDefs, RegUses;
-
-  // Returns true if it is safe to reorder MI to before NotNullSucc.
-  auto IsSafeToHoist = [&](MachineInstr *MI) {
-    // Right now we don't want to worry about LLVM's memory model.  This can be
-    // made more precise later.
-    for (auto *MMO : MI->memoperands())
-      if (!MMO->isUnordered())
-        return false;
-
-    for (auto &MO : MI->operands()) {
-      if (MO.isReg() && MO.getReg()) {
-        for (unsigned Reg : RegDefs)
-          if (TRI->regsOverlap(Reg, MO.getReg()))
-            return false;  // We found a write-after-write or read-after-write
-
-        if (MO.isDef())
-          for (unsigned Reg : RegUses)
-            if (TRI->regsOverlap(Reg, MO.getReg()))
-              return false;  // We found a write-after-read
-      }
-    }
-
-    return true;
-  };
+  HazardDetector HD(*TRI);
 
   for (auto MII = NotNullSucc->begin(), MIE = NotNullSucc->end(); MII != MIE;
        ++MII) {
@@ -240,36 +328,15 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
     if (TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
       if (MI->mayLoad() && !MI->isPredicable() && BaseReg == PointerReg &&
           Offset < PageSize && MI->getDesc().getNumDefs() <= 1 &&
-          IsSafeToHoist(MI)) {
+          HD.isSafeToHoist(MI)) {
         NullCheckList.emplace_back(MI, MBP.ConditionDef, &MBB, NotNullSucc,
                                    NullSucc);
         return true;
       }
 
-    // MI did not match our criteria for conversion to a trapping load.  Check
-    // if we can continue looking.
-
-    if (MI->mayStore() || MI->hasUnmodeledSideEffects())
+    HD.rememberInstruction(MI);
+    if (HD.isClobbered())
       return false;
-
-    for (auto *MMO : MI->memoperands())
-      // Right now we don't want to worry about LLVM's memory model.
-      if (!MMO->isUnordered())
-        return false;
-
-    // It _may_ be okay to reorder a later load instruction across MI.  Make a
-    // note of its operands so that we can make the legality check if we find a
-    // suitable load instruction:
-
-    for (auto &MO : MI->operands()) {
-      if (!MO.isReg() || !MO.getReg())
-        continue;
-
-      if (MO.isDef())
-        RegDefs.insert(MO.getReg());
-      else
-        RegUses.insert(MO.getReg());
-    }
   }
 
   return false;

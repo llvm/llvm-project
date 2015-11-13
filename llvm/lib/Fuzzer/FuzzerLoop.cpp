@@ -10,12 +10,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerInternal.h"
-#include <sanitizer/coverage_interface.h>
 #include <algorithm>
+
+#if defined(__has_include)
+# if __has_include(<sanitizer/coverage_interface.h>)
+#  include <sanitizer/coverage_interface.h>
+# endif
+#endif
 
 extern "C" {
 // Re-declare some of the sanitizer functions as "weak" so that
-// libFuzzer can be linked w/o the sanitizers and sanitizer-coveragte
+// libFuzzer can be linked w/o the sanitizers and sanitizer-coverage
 // (in which case it will complain at start-up time).
 __attribute__((weak)) void __sanitizer_print_stack_trace();
 __attribute__((weak)) void __sanitizer_reset_coverage();

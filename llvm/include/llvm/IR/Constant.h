@@ -92,10 +92,9 @@ public:
     GlobalRelocations = 2
   };
 
-  /// getRelocationInfo - This method classifies the entry according to
-  /// whether or not it may generate a relocation entry.  This must be
-  /// conservative, so if it might codegen to a relocatable entry, it should say
-  /// so.  The return values are:
+  /// This method classifies the entry according to whether or not it may
+  /// generate a relocation entry.  This must be conservative, so if it might
+  /// codegen to a relocatable entry, it should say so.  The return values are:
   ///
   ///  NoRelocation: This constant pool entry is guaranteed to never have a
   ///     relocation applied to it (because it holds a simple constant like
@@ -105,7 +104,7 @@ public:
   ///     linker will never see them.
   ///  GlobalRelocations: This entry may have arbitrary relocations.
   ///
-  /// FIXME: This really should not be in VMCore.
+  /// FIXME: This really should not be in IR.
   PossibleRelocationsTy getRelocationInfo() const;
 
   /// getAggregateElement - For aggregates (struct/array/vector) return the

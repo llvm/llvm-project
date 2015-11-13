@@ -660,6 +660,14 @@ def BREAK16_MM : BrkSdbbp16MM<"break16">, BRKSDBBP16_FM_MM<0x28>,
 def SDBBP16_MM : BrkSdbbp16MM<"sdbbp16">, BRKSDBBP16_FM_MM<0x2C>,
     ISA_MICROMIPS_NOT_32R6_64R6;
 
+let DecoderNamespace = "MicroMips" in {
+  /// Load and Store Instructions - multiple
+  def SWM16_MM : StoreMultMM16<"swm16">, LWM_FM_MM16<0x5>,
+                 ISA_MICROMIPS32_NOT_MIPS32R6;
+  def LWM16_MM : LoadMultMM16<"lwm16">, LWM_FM_MM16<0x4>,
+                 ISA_MICROMIPS32_NOT_MIPS32R6;
+}
+
 class WaitMM<string opstr> :
   InstSE<(outs), (ins uimm10:$code_), !strconcat(opstr, "\t$code_"), [],
          NoItinerary, FrmOther, opstr>;
@@ -790,8 +798,6 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   /// Load and Store Instructions - multiple
   def SWM32_MM  : StoreMultMM<"swm32">, LWM_FM_MM<0xd>;
   def LWM32_MM  : LoadMultMM<"lwm32">, LWM_FM_MM<0x5>;
-  def SWM16_MM : StoreMultMM16<"swm16">, LWM_FM_MM16<0x5>;
-  def LWM16_MM : LoadMultMM16<"lwm16">, LWM_FM_MM16<0x4>;
 
   /// Load and Store Pair Instructions
   def SWP_MM  : StorePairMM<"swp">, LWM_FM_MM<0x9>;

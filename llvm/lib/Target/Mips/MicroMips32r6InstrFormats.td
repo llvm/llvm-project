@@ -62,6 +62,18 @@ class POOL16C_JRCADDIUSP_FM_MM16R6<bits<5> op> {
   let Inst{4-0}   = op;
 }
 
+class POOL16C_LWM_SWM_FM_MM16R6<bits<4> funct> {
+  bits<2> rt;
+  bits<4> addr;
+
+  bits<16> Inst;
+
+  let Inst{15-10} = 0x11;
+  let Inst{9-8}   = rt;
+  let Inst{7-4}   = addr;
+  let Inst{3-0}   = funct;
+}
+
 class POOL32A_BITSWAP_FM_MMR6<bits<6> funct> : MipsR6Inst {
   bits<5> rd;
   bits<5> rt;

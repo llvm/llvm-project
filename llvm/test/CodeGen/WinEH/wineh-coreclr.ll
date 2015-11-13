@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-coreclr < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-coreclr -verify-machineinstrs < %s | FileCheck %s
 
 declare void @ProcessCLRException()
 declare void @f(i32)
@@ -32,7 +32,9 @@ declare i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token)
 define void @test1() personality i8* bitcast (void ()* @ProcessCLRException to i8*) {
 entry:
 ; CHECK: # %entry
+; CHECK: leaq [[FPOffset:[0-9]+]](%rsp), %rbp
 ; CHECK: .seh_endprologue
+; CHECK: movq %rsp, [[PSPSymOffset:[0-9]+]](%rsp)
 ; CHECK: [[L_before_f1:.+]]:
 ; CHECK-NEXT: movl $1, %ecx
 ; CHECK-NEXT: callq f
@@ -52,8 +54,12 @@ catch1.pad:
   %catch1 = catchpad [i32 1]
     to label %catch1.body unwind label %catch2.pad
 catch1.body:
-; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                        ^ establisher frame pointer passed in rcx
+; CHECK: .seh_stackalloc [[FuncletFrameSize:[0-9]+]]
+;                        ^ all funclets use the same frame size
+; CHECK: movq [[PSPSymOffset]](%rcx), %rcx
+;                              ^ establisher frame pointer passed in rcx
+; CHECK: movq %rcx, [[PSPSymOffset]](%rsp)
+; CHECK: leaq [[FPOffset]](%rcx), %rbp
 ; CHECK: .seh_endprologue
 ; CHECK: movq %rdx, %rcx
 ;             ^ exception pointer passed in rdx
@@ -73,8 +79,12 @@ catch2.pad:
   %catch2 = catchpad [i32 2]
     to label %catch2.body unwind label %catch.end
 catch2.body:
-; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                        ^ establisher frame pointer passed in rcx
+; CHECK: .seh_stackalloc [[FuncletFrameSize:[0-9]+]]
+;                        ^ all funclets use the same frame size
+; CHECK: movq [[PSPSymOffset]](%rcx), %rcx
+;                              ^ establisher frame pointer passed in rcx
+; CHECK: movq %rcx, [[PSPSymOffset]](%rsp)
+; CHECK: leaq [[FPOffset]](%rcx), %rbp
 ; CHECK: .seh_endprologue
 ; CHECK: movq %rdx, %rcx
 ;             ^ exception pointer passed in rdx
@@ -98,8 +108,12 @@ try_in_catch:
 fault.pad:
 ; CHECK: .seh_proc [[L_fault:[^ ]+]]
   %fault = cleanuppad [i32 undef]
-; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                        ^ establisher frame pointer passed in rcx
+; CHECK: .seh_stackalloc [[FuncletFrameSize:[0-9]+]]
+;                        ^ all funclets use the same frame size
+; CHECK: movq [[PSPSymOffset]](%rcx), %rcx
+;                              ^ establisher frame pointer passed in rcx
+; CHECK: movq %rcx, [[PSPSymOffset]](%rsp)
+; CHECK: leaq [[FPOffset]](%rcx), %rbp
 ; CHECK: .seh_endprologue
 ; CHECK: [[L_before_f6:.+]]:
 ; CHECK-NEXT: movl $6, %ecx
@@ -121,8 +135,12 @@ finally.clone:
 finally.pad:
 ; CHECK: .seh_proc [[L_finally:[^ ]+]]
   %finally = cleanuppad []
-; CHECK: leaq {{[0-9]+}}(%rcx), %rbp
-;                        ^ establisher frame pointer passed in rcx
+; CHECK: .seh_stackalloc [[FuncletFrameSize:[0-9]+]]
+;                        ^ all funclets use the same frame size
+; CHECK: movq [[PSPSymOffset]](%rcx), %rcx
+;                              ^ establisher frame pointer passed in rcx
+; CHECK: movq %rcx, [[PSPSymOffset]](%rsp)
+; CHECK: leaq [[FPOffset]](%rcx), %rbp
 ; CHECK: .seh_endprologue
 ; CHECK: [[L_before_f7:.+]]:
 ; CHECK-NEXT: movl $7, %ecx

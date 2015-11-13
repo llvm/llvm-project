@@ -54,8 +54,10 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
     Result.reset(new RawInstrProfReader64(std::move(Buffer)));
   else if (RawInstrProfReader32::hasFormat(*Buffer))
     Result.reset(new RawInstrProfReader32(std::move(Buffer)));
-  else
+  else if (TextInstrProfReader::hasFormat(*Buffer))
     Result.reset(new TextInstrProfReader(std::move(Buffer)));
+  else
+    return instrprof_error::unrecognized_format;
 
   // Initialize the reader and return the result.
   if (std::error_code EC = initializeReader(*Result))
@@ -95,6 +97,15 @@ IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
 void InstrProfIterator::Increment() {
   if (Reader->readNextRecord(Record))
     *this = InstrProfIterator();
+}
+
+bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
+  // Verify that this really looks like plain ASCII text by checking a
+  // 'reasonable' number of characters (up to profile magic size).
+  size_t count = std::min(Buffer.getBufferSize(), sizeof(uint64_t));
+  StringRef buffer = Buffer.getBufferStart();
+  return count == 0 || std::all_of(buffer.begin(), buffer.begin() + count,
+    [](char c) { return ::isprint(c) || ::isspace(c); });
 }
 
 std::error_code TextInstrProfReader::readNextRecord(InstrProfRecord &Record) {

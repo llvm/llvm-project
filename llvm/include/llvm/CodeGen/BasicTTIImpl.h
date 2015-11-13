@@ -143,10 +143,6 @@ public:
     return getTLI()->isTruncateFree(Ty1, Ty2);
   }
 
-  bool isZExtFree(Type *Ty1, Type *Ty2) const {
-    return getTLI()->isZExtFree(Ty1, Ty2);
-  }
-
   bool isProfitableToHoist(Instruction *I) {
     return getTLI()->isProfitableToHoist(I);
   }

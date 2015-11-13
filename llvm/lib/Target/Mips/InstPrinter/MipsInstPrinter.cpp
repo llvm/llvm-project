@@ -235,7 +235,9 @@ printMemOperand(const MCInst *MI, int opNum, raw_ostream &O) {
   case Mips::SWM32_MM:
   case Mips::LWM32_MM:
   case Mips::SWM16_MM:
+  case Mips::SWM16_MMR6:
   case Mips::LWM16_MM:
+  case Mips::LWM16_MMR6:
     opNum = MI->getNumOperands() - 2;
     break;
   }

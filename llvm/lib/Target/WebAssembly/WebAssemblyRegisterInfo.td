@@ -33,22 +33,17 @@ def FP64 : WebAssemblyReg<"%FP64">;
 def SP32 : WebAssemblyReg<"%SP32">;
 def SP64 : WebAssemblyReg<"%SP64">;
 
-// TODO(jfb) The following comes from NVPTX. Is it really needed, or can we do
-//           away with it? Try deleting once the backend works.
-// WebAssembly uses virtual registers, but the backend defines a few physical
-// registers here to keep SDAG and the MachineInstr layers happy.
-foreach i = 0-4 in {
-  def I#i : WebAssemblyReg<"%i."#i>; // i32
-  def L#i : WebAssemblyReg<"%l."#i>; // i64
-  def F#i : WebAssemblyReg<"%f."#i>; // f32
-  def D#i : WebAssemblyReg<"%d."#i>; // f64
-}
+// The register allocation framework requires register classes have at least
+// one register, so we define a few for the floating point register classes
+// since we otherwise don't need a physical register in those classes.
+def F32_0 : WebAssemblyReg<"%f32.0">;
+def F64_0 : WebAssemblyReg<"%f64.0">;
 
 //===----------------------------------------------------------------------===//
 //  Register classes
 //===----------------------------------------------------------------------===//
 
-def I32 : WebAssemblyRegClass<[i32], 32, (add (sequence "I%u", 0, 4), SP32)>;
-def I64 : WebAssemblyRegClass<[i64], 64, (add (sequence "L%u", 0, 4), SP64)>;
-def F32 : WebAssemblyRegClass<[f32], 32, (add (sequence "F%u", 0, 4))>;
-def F64 : WebAssemblyRegClass<[f64], 64, (add (sequence "D%u", 0, 4))>;
+def I32 : WebAssemblyRegClass<[i32], 32, (add FP32, SP32)>;
+def I64 : WebAssemblyRegClass<[i64], 64, (add FP64, SP64)>;
+def F32 : WebAssemblyRegClass<[f32], 32, (add F32_0)>;
+def F64 : WebAssemblyRegClass<[f64], 64, (add F64_0)>;

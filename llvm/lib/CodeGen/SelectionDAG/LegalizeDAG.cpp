@@ -145,6 +145,7 @@ private:
   SDValue PromoteLegalFP_TO_INT(SDValue LegalOp, EVT DestVT, bool isSigned,
                                 SDLoc dl);
 
+  SDValue ExpandBITREVERSE(SDValue Op, SDLoc dl);
   SDValue ExpandBSWAP(SDValue Op, SDLoc dl);
   SDValue ExpandBitCount(unsigned Opc, SDValue Op, SDLoc dl);
 
@@ -2775,6 +2776,31 @@ SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDValue LegalOp,
   return DAG.getNode(ISD::TRUNCATE, dl, DestVT, Operation);
 }
 
+/// Open code the operations for BITREVERSE.
+SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, SDLoc dl) {
+  EVT VT = Op.getValueType();
+  EVT SHVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
+  unsigned Sz = VT.getScalarSizeInBits();
+  
+  SDValue Tmp, Tmp2;
+  Tmp = DAG.getConstant(0, dl, VT);
+  for (unsigned I = 0, J = Sz-1; I < Sz; ++I, --J) {
+    if (I < J)
+      Tmp2 =
+          DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(J - I, dl, SHVT));
+    else
+      Tmp2 =
+          DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(I - J, dl, SHVT));
+    
+    APInt Shift(Sz, 1);
+    Shift = Shift.shl(J);
+    Tmp2 = DAG.getNode(ISD::AND, dl, VT, Tmp2, DAG.getConstant(Shift, dl, VT));
+    Tmp = DAG.getNode(ISD::OR, dl, VT, Tmp, Tmp2);
+  }
+
+  return Tmp;
+}
+
 /// Open code the operations for BSWAP of the specified operation.
 SDValue SelectionDAGLegalize::ExpandBSWAP(SDValue Op, SDLoc dl) {
   EVT VT = Op.getValueType();
@@ -2940,6 +2966,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::CTTZ_ZERO_UNDEF:
     Tmp1 = ExpandBitCount(Node->getOpcode(), Node->getOperand(0), dl);
     Results.push_back(Tmp1);
+    break;
+  case ISD::BITREVERSE:
+    Results.push_back(ExpandBITREVERSE(Node->getOperand(0), dl));
     break;
   case ISD::BSWAP:
     Results.push_back(ExpandBSWAP(Node->getOperand(0), dl));

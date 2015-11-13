@@ -369,9 +369,11 @@ static StringRef getFPUSynonym(StringRef FPU) {
 
 static StringRef getArchSynonym(StringRef Arch) {
   return StringSwitch<StringRef>(Arch)
-      .Case("v6sm", "v6s-m")
-      .Case("v6m", "v6-m")
-      .Case("v7a", "v7-a")
+      .Case("v5", "v5t")
+      .Case("v5e", "v5te")
+      .Case("v6hl", "v6k")
+      .Cases("v6m", "v6sm", "v6s-m", "v6-m")
+      .Cases("v7", "v7a", "v7hl", "v7l", "v7-a")
       .Case("v7r", "v7-r")
       .Case("v7m", "v7-m")
       .Case("v7em", "v7e-m")
@@ -513,15 +515,12 @@ unsigned llvm::ARM::parseArchProfile(StringRef Arch) {
   switch (parseArch(Arch)) {
   case ARM::AK_ARMV6M:
   case ARM::AK_ARMV7M:
-  case ARM::AK_ARMV6SM:
   case ARM::AK_ARMV7EM:
     return ARM::PK_M;
   case ARM::AK_ARMV7R:
     return ARM::PK_R;
-  case ARM::AK_ARMV7:
   case ARM::AK_ARMV7A:
   case ARM::AK_ARMV7K:
-  case ARM::AK_ARMV7L:
   case ARM::AK_ARMV8A:
   case ARM::AK_ARMV8_1A:
     return ARM::PK_A;
@@ -542,13 +541,11 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   case ARM::AK_ARMV4:
   case ARM::AK_ARMV4T:
     return 4;
-  case ARM::AK_ARMV5:
   case ARM::AK_ARMV5T:
   case ARM::AK_ARMV5TE:
   case ARM::AK_IWMMXT:
   case ARM::AK_IWMMXT2:
   case ARM::AK_XSCALE:
-  case ARM::AK_ARMV5E:
   case ARM::AK_ARMV5TEJ:
     return 5;
   case ARM::AK_ARMV6:
@@ -558,15 +555,10 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   case ARM::AK_ARMV6Z:
   case ARM::AK_ARMV6ZK:
   case ARM::AK_ARMV6M:
-  case ARM::AK_ARMV6SM:
-  case ARM::AK_ARMV6HL:
     return 6;
-  case ARM::AK_ARMV7:
   case ARM::AK_ARMV7A:
   case ARM::AK_ARMV7R:
   case ARM::AK_ARMV7M:
-  case ARM::AK_ARMV7L:
-  case ARM::AK_ARMV7HL:
   case ARM::AK_ARMV7S:
   case ARM::AK_ARMV7EM:
   case ARM::AK_ARMV7K:

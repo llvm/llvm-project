@@ -49,6 +49,9 @@ private:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
   const char *getTargetNodeName(unsigned Opcode) const override;
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;

@@ -228,8 +228,6 @@ public:
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) { return false; }
 
-  bool isZExtFree(Type *Ty1, Type *Ty2) { return false; }
-
   bool isProfitableToHoist(Instruction *I) { return true; }
 
   bool isTypeLegal(Type *Ty) { return false; }

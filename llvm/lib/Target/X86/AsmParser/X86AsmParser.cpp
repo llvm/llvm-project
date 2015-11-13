@@ -2218,6 +2218,20 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       (isPrefix && getLexer().is(AsmToken::Slash)))
     Parser.Lex();
 
+  // This is for gas compatibility and cannot be done in td.
+  // Adding "p" for some floating point with no argument.
+  // For example: fsub --> fsubp
+  bool IsFp =
+    Name == "fsub" || Name == "fdiv" || Name == "fsubr" || Name == "fdivr";
+  if (IsFp && Operands.size() == 1) {
+    const char *Repl = StringSwitch<const char *>(Name)
+      .Case("fsub", "fsubp")
+      .Case("fdiv", "fdivp")
+      .Case("fsubr", "fsubrp")
+      .Case("fdivr", "fdivrp");
+    static_cast<X86Operand &>(*Operands[0]).setTokenValue(Repl);
+  }
+
   // This is a terrible hack to handle "out[bwl]? %al, (%dx)" ->
   // "outb %al, %dx".  Out doesn't take a memory form, but this is a widely
   // documented form in various unofficial manuals, so a lot of code uses it.

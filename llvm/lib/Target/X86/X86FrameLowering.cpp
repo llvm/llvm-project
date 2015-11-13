@@ -900,9 +900,10 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI->getStackSize();    // Number of bytes to allocate.
   bool IsFunclet = MBB.isEHFuncletEntry();
-  bool IsClrFunclet =
-      IsFunclet &&
+  bool FnHasClrFunclet =
+      MMI.hasEHFunclets() &&
       classifyEHPersonality(Fn->getPersonalityFn()) == EHPersonality::CoreCLR;
+  bool IsClrFunclet = IsFunclet && FnHasClrFunclet;
   bool HasFP = hasFP(MF);
   bool IsWin64CC = STI.isCallingConvWin64(Fn->getCallingConv());
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
@@ -1194,7 +1195,36 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameSetup);
 
   int SEHFrameOffset = 0;
-  unsigned SPOrEstablisher = IsFunclet ? Establisher : StackPtr;
+  unsigned SPOrEstablisher;
+  if (IsFunclet) {
+    if (IsClrFunclet) {
+      // The establisher parameter passed to a CLR funclet is actually a pointer
+      // to the (mostly empty) frame of its nearest enclosing funclet; we have
+      // to find the root function establisher frame by loading the PSPSym from
+      // the intermediate frame.
+      unsigned PSPSlotOffset = getPSPSlotOffsetFromSP(MF);
+      MachinePointerInfo NoInfo;
+      MBB.addLiveIn(Establisher);
+      addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64rm), Establisher),
+                   Establisher, false, PSPSlotOffset)
+          .addMemOperand(MF.getMachineMemOperand(
+              NoInfo, MachineMemOperand::MOLoad, SlotSize, SlotSize));
+      ;
+      // Save the root establisher back into the current funclet's (mostly
+      // empty) frame, in case a sub-funclet or the GC needs it.
+      addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64mr)), StackPtr,
+                   false, PSPSlotOffset)
+          .addReg(Establisher)
+          .addMemOperand(
+              MF.getMachineMemOperand(NoInfo, MachineMemOperand::MOStore |
+                                                  MachineMemOperand::MOVolatile,
+                                      SlotSize, SlotSize));
+    }
+    SPOrEstablisher = Establisher;
+  } else {
+    SPOrEstablisher = StackPtr;
+  }
+
   if (IsWin64Prologue && HasFP) {
     // Set RBP to a small fixed offset from RSP. In the funclet case, we base
     // this calculation on the incoming establisher, which holds the value of
@@ -1242,6 +1272,21 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   if (NeedsWinCFI)
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_EndPrologue))
         .setMIFlag(MachineInstr::FrameSetup);
+
+  if (FnHasClrFunclet && !IsFunclet) {
+    // Save the so-called Initial-SP (i.e. the value of the stack pointer
+    // immediately after the prolog)  into the PSPSlot so that funclets
+    // and the GC can recover it.
+    unsigned PSPSlotOffset = getPSPSlotOffsetFromSP(MF);
+    auto PSPInfo = MachinePointerInfo::getFixedStack(
+        MF, MF.getMMI().getWinEHFuncInfo(Fn).PSPSymFrameIdx);
+    addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64mr)), StackPtr, false,
+                 PSPSlotOffset)
+        .addReg(StackPtr)
+        .addMemOperand(MF.getMachineMemOperand(
+            PSPInfo, MachineMemOperand::MOStore | MachineMemOperand::MOVolatile,
+            SlotSize, SlotSize));
+  }
 
   // Realign stack after we spilled callee-saved registers (so that we'll be
   // able to calculate their offsets from the frame pointer).
@@ -1328,17 +1373,54 @@ static bool isFuncletReturnInstr(MachineInstr *MI) {
   llvm_unreachable("impossible");
 }
 
-unsigned X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
+// CLR funclets use a special "Previous Stack Pointer Symbol" slot on the
+// stack. It holds a pointer to the bottom of the root function frame.  The
+// establisher frame pointer passed to a nested funclet may point to the
+// (mostly empty) frame of its parent funclet, but it will need to find
+// the frame of the root function to access locals.  To facilitate this,
+// every funclet copies the pointer to the bottom of the root function
+// frame into a PSPSym slot in its own (mostly empty) stack frame. Using the
+// same offset for the PSPSym in the root function frame that's used in the
+// funclets' frames allows each funclet to dynamically accept any ancestor
+// frame as its establisher argument (the runtime doesn't guarantee the
+// immediate parent for some reason lost to history), and also allows the GC,
+// which uses the PSPSym for some bookkeeping, to find it in any funclet's
+// frame with only a single offset reported for the entire method.
+unsigned
+X86FrameLowering::getPSPSlotOffsetFromSP(const MachineFunction &MF) const {
+  MachineModuleInfo &MMI = MF.getMMI();
+  WinEHFuncInfo &Info = MMI.getWinEHFuncInfo(MF.getFunction());
+  // getFrameIndexReferenceFromSP has an out ref parameter for the stack
+  // pointer register; pass a dummy that we ignore
+  unsigned SPReg;
+  int Offset = getFrameIndexReferenceFromSP(MF, Info.PSPSymFrameIdx, SPReg);
+  assert(Offset >= 0);
+  return static_cast<unsigned>(Offset);
+}
+
+unsigned
+X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
   // This is the size of the pushed CSRs.
   unsigned CSSize =
       MF.getInfo<X86MachineFunctionInfo>()->getCalleeSavedFrameSize();
   // This is the amount of stack a funclet needs to allocate.
-  unsigned MaxCallSize = MF.getFrameInfo()->getMaxCallFrameSize();
+  unsigned UsedSize;
+  EHPersonality Personality =
+      classifyEHPersonality(MF.getFunction()->getPersonalityFn());
+  if (Personality == EHPersonality::CoreCLR) {
+    // CLR funclets need to hold enough space to include the PSPSym, at the
+    // same offset from the stack pointer (immediately after the prolog) as it
+    // resides at in the main function.
+    UsedSize = getPSPSlotOffsetFromSP(MF) + SlotSize;
+  } else {
+    // Other funclets just need enough stack for outgoing call arguments.
+    UsedSize = MF.getFrameInfo()->getMaxCallFrameSize();
+  }
   // RBP is not included in the callee saved register block. After pushing RBP,
   // everything is 16 byte aligned. Everything we allocate before an outgoing
   // call must also be 16 byte aligned.
   unsigned FrameSizeMinusRBP =
-      RoundUpToAlignment(CSSize + MaxCallSize, getStackAlignment());
+      RoundUpToAlignment(CSSize + UsedSize, getStackAlignment());
   // Subtract out the size of the callee saved registers. This is how much stack
   // each funclet will allocate.
   return FrameSizeMinusRBP - CSSize;

@@ -96,6 +96,7 @@ struct WinEHFuncInfo {
   SmallVector<SEHUnwindMapEntry, 4> SEHUnwindMap;
   SmallVector<ClrEHUnwindMapEntry, 4> ClrEHUnwindMap;
   int UnwindHelpFrameIdx = INT_MAX;
+  int PSPSymFrameIdx = INT_MAX;
 
   int getLastStateNumber() const { return CxxUnwindMap.size() - 1; }
 

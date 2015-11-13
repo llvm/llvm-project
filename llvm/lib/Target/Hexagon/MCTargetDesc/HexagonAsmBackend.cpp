@@ -276,9 +276,37 @@ public:
     llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
 
-  void relaxInstruction(MCInst const & /*Inst*/,
-                        MCInst & /*Res*/) const override {
-    llvm_unreachable("relaxInstruction() unimplemented");
+  void relaxInstruction(MCInst const & Inst,
+                        MCInst & Res) const override {
+    assert(HexagonMCInstrInfo::isBundle(Inst) &&
+           "Hexagon relaxInstruction only works on bundles");
+
+    Res.setOpcode(Hexagon::BUNDLE);
+    Res.addOperand(MCOperand::createImm(0));
+    // Copy the results into the bundle.
+    bool Update = false;
+    for (auto &I : HexagonMCInstrInfo::bundleInstructions(Inst)) {
+      MCInst &CrntHMI = const_cast<MCInst &>(*I.getInst());
+
+      // if immediate extender needed, add it in
+      if (*RelaxTarget == &CrntHMI) {
+        Update = true;
+        assert((HexagonMCInstrInfo::bundleSize(Res) < HEXAGON_PACKET_SIZE) &&
+               "No room to insert extender for relaxation");
+
+        MCInst *HMIx =
+            new MCInst(HexagonMCInstrInfo::deriveExtender(
+                *MCII, CrntHMI,
+                HexagonMCInstrInfo::getExtendableOperand(*MCII, CrntHMI)));
+
+        Res.addOperand(MCOperand::createInst(HMIx));
+        *RelaxTarget = nullptr;
+      }
+      // now copy over the original instruction(the one we may have extended)
+      Res.addOperand(MCOperand::createInst(I.getInst()));
+    }
+    (void)Update;
+    assert(Update && "Didn't find relaxation target");
   }
 
   bool writeNopData(uint64_t Count,

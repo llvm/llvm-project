@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=false | FileCheck %s
+; Make sure shrink-wrapping does not break the lowering of exception handling.
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=true | FileCheck %s
 
 ; Repro cases from PR25168
 

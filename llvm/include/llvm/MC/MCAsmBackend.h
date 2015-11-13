@@ -67,6 +67,11 @@ public:
   /// Get the number of target specific fixup kinds.
   virtual unsigned getNumFixupKinds() const = 0;
 
+  /// Map a relocation name used in .reloc to a fixup kind.
+  /// Returns true and sets MappedKind if Name is successfully mapped.
+  /// Otherwise returns false and leaves MappedKind unchanged.
+  virtual bool getFixupKind(StringRef Name, MCFixupKind &MappedKind) const;
+
   /// Get information on a fixup kind.
   virtual const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const;
 

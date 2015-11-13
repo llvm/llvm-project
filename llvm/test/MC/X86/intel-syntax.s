@@ -533,6 +533,20 @@ fsubrp ST(1)
 fdivp ST(1)
 fdivrp ST(1)
 
+
+// CHECK: faddp %st(1)
+// CHECK: fmulp %st(1)
+// CHECK: fsubrp %st(1)
+// CHECK: fsubp %st(1)
+// CHECK: fdivrp %st(1)
+// CHECK: fdivp %st(1)
+fadd 
+fmul
+fsub
+fsubr
+fdiv
+fdivr
+
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)
 // CHECK: fsubrp %st(1)

@@ -111,6 +111,9 @@ public:
   TextInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer_)
       : DataBuffer(std::move(DataBuffer_)), Line(*DataBuffer, true, '#') {}
 
+  /// Return true if the given buffer is in text instrprof format.
+  static bool hasFormat(const MemoryBuffer &Buffer);
+
   /// Read the header.
   std::error_code readHeader() override { return success(); }
   /// Read a single record.

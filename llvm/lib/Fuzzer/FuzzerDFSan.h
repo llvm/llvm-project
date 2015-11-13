@@ -12,15 +12,17 @@
 #ifndef LLVM_FUZZER_DFSAN_H
 #define LLVM_FUZZER_DFSAN_H
 
-#ifndef LLVM_FUZZER_SUPPORTS_DFSAN
-# if defined(__linux__)
-#  define LLVM_FUZZER_SUPPORTS_DFSAN 1
-# else
-#  define LLVM_FUZZER_SUPPORTS_DFSAN 0
-# endif  // __linux__
-#endif  // LLVM_FUZZER_SUPPORTS_DFSAN
+#define LLVM_FUZZER_SUPPORTS_DFSAN 0
+#if defined(__has_include)
+# if __has_include(<sanitizer/dfsan_interface.h>)
+#  if defined (__linux__)
+#   undef LLVM_FUZZER_SUPPORTS_DFSAN
+#   define LLVM_FUZZER_SUPPORTS_DFSAN 1
+#   include <sanitizer/dfsan_interface.h>
+#  endif  // __linux__
+# endif
+#endif  // defined(__has_include)
 
-#include <sanitizer/dfsan_interface.h>
 #if LLVM_FUZZER_SUPPORTS_DFSAN
 
 extern "C" {
@@ -42,6 +44,14 @@ static bool ReallyHaveDFSan() {
 }
 }  // namespace fuzzer
 #else
+// When compiling with a compiler which does not support dfsan,
+// this code is still expected to build (but not necessary work).
+typedef unsigned short dfsan_label;
+struct dfsan_label_info {
+  dfsan_label l1, l2;
+  const char *desc;
+  void *userdata;
+};
 namespace fuzzer {
 static bool ReallyHaveDFSan() { return false; }
 }  // namespace fuzzer

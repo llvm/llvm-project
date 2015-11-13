@@ -471,6 +471,8 @@ Trophies
 
 * `SQLite <http://www3.sqlite.org/cgi/src/info/088009efdd56160b>`_
 
+* `Python <http://bugs.python.org/issue25388>`_
+
 * `Libxml2
   <https://bugzilla.gnome.org/buglist.cgi?bug_status=__all__&content=libFuzzer&list_id=68957&order=Importance&product=libxml2&query_format=specific>`_
 
