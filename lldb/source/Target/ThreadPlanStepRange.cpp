@@ -390,19 +390,12 @@ ThreadPlanStepRange::SetNextBranchBreakpoint ()
         if (branch_index == UINT32_MAX)
         {
             branch_index = instructions->GetSize() - 1;
-            InstructionSP last_inst = instructions->GetInstructionAtIndex(branch_index);
-            size_t last_inst_size = last_inst->GetOpcode().GetByteSize();
-            run_to_address = last_inst->GetAddress();
-            run_to_address.Slide(last_inst_size);
-        }
-        else if (branch_index - pc_index > 1)
-        {
-            run_to_address = instructions->GetInstructionAtIndex(branch_index)->GetAddress();
         }
         
-        if (run_to_address.IsValid())
+        if (branch_index - pc_index > 1)
         {
             const bool is_internal = true;
+            run_to_address = instructions->GetInstructionAtIndex(branch_index)->GetAddress();
             m_next_branch_bp_sp = GetTarget().CreateBreakpoint(run_to_address, is_internal, false);
             if (m_next_branch_bp_sp)
             {
