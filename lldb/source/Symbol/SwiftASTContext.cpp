@@ -8226,6 +8226,37 @@ SwiftASTContext::IsReferenceType (void* type, CompilerType *pointee_type, bool* 
 }
 
 bool
+SwiftASTContext::IsInoutType (const CompilerType& compiler_type, CompilerType *original_type)
+{
+    bool return_value = false;
+    
+    if (compiler_type.IsValid())
+    {
+        if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem()))
+        {
+            swift::CanType swift_can_type (GetCanonicalSwiftType (compiler_type));
+            const swift::TypeKind type_kind = swift_can_type->getKind();
+            switch (type_kind)
+            {
+                case swift::TypeKind::LValue:
+                {
+                    swift::LValueType *lvalue = swift_can_type->getAs<swift::LValueType>();
+                    if (lvalue)
+                    {
+                        if (original_type)
+                            *original_type = CompilerType(ast, lvalue->getObjectType().getPointer());
+                        return_value = true;
+                    }
+                }
+                    break;
+            }
+        }
+    }
+    
+    return return_value;
+}
+
+bool
 SwiftASTContext::IsFloatingPointType (void* type, uint32_t &count, bool &is_complex)
 {
     if (type)
@@ -10530,41 +10561,19 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
             {
                 CompilerType pointee_clang_type (GetNonReferenceType(type));
                 Flags pointee_clang_type_flags(pointee_clang_type.GetTypeInfo());
-                if (transparent_pointers && pointee_clang_type.IsAggregateType () && !(pointee_clang_type_flags.AllSet(eTypeIsSwift | eTypeInstanceIsPointer)))
+                const char *parent_name = valobj ? valobj->GetName().GetCString() : NULL;
+                if (parent_name)
                 {
-                    child_is_deref_of_parent = false;
-                    bool tmp_child_is_deref_of_parent = false;
-                    return pointee_clang_type.GetChildCompilerTypeAtIndex (exe_ctx,
-                                                                           idx,
-                                                                           transparent_pointers,
-                                                                           omit_empty_base_classes,
-                                                                           ignore_array_bounds,
-                                                                           child_name,
-                                                                           child_byte_size,
-                                                                           child_byte_offset,
-                                                                           child_bitfield_bit_size,
-                                                                           child_bitfield_bit_offset,
-                                                                           child_is_base_class,
-                                                                           tmp_child_is_deref_of_parent,
-                                                                           valobj,
-                                                                           language_flags);
+                    child_name.assign(1, '&');
+                    child_name += parent_name;
                 }
-                else
+                
+                // We have a pointer to an simple type
+                if (idx == 0)
                 {
-                    const char *parent_name = valobj ? valobj->GetName().GetCString() : NULL;
-                    if (parent_name)
-                    {
-                        child_name.assign(1, '&');
-                        child_name += parent_name;
-                    }
-                    
-                    // We have a pointer to an simple type
-                    if (idx == 0)
-                    {
-                        child_byte_size = pointee_clang_type.GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
-                        child_byte_offset = 0;
-                        return pointee_clang_type;
-                    }
+                    child_byte_size = pointee_clang_type.GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+                    child_byte_offset = 0;
+                    return pointee_clang_type;
                 }
             }
             break;
@@ -11277,9 +11286,10 @@ SwiftASTContext::DumpTypeValue (void* type, Stream *s,
         case swift::TypeKind::BuiltinUnknownObject:
         case swift::TypeKind::BuiltinBridgeObject:
         case swift::TypeKind::Archetype:
-        case swift::TypeKind::PolymorphicFunction:
-        case swift::TypeKind::GenericFunction:
         case swift::TypeKind::Function:
+        case swift::TypeKind::GenericFunction:
+        case swift::TypeKind::PolymorphicFunction:
+        case swift::TypeKind::LValue:
         {
             uint32_t item_count = 1;
             // A few formats, we might need to modify our size and count for depending
@@ -11456,7 +11466,6 @@ SwiftASTContext::DumpTypeValue (void* type, Stream *s,
         case swift::TypeKind::Substituted:
         case swift::TypeKind::ArraySlice:
         case swift::TypeKind::ProtocolComposition:
-        case swift::TypeKind::LValue:
         case swift::TypeKind::UnboundGeneric:
         case swift::TypeKind::BoundGenericStruct:
         case swift::TypeKind::TypeVariable:

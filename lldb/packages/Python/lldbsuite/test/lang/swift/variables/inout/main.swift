@@ -48,14 +48,21 @@ func foo(inout x : Struct) {
 	x.ivar++ // Set breakpoint here for Struct access
 }
 
+func foo (inout x : String) {
+  print(x)
+  x = "Set breakpoint here for String access"
+}
+
 func main() {
 	var x : Class = Other()
 	var s = Struct()
+  var t = "Keep going, nothing to see"
 
 	foo(&x)
 	foo(&s)
 	foo(&x)
-	print ("Set breakpoint here after class access") 
+  foo(&t)
+	foo(&x)
 	foo(&s)
 }
 

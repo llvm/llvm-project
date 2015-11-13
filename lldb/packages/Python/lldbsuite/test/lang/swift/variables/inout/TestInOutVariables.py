@@ -73,6 +73,7 @@ class TestInOutVariables(TestBase):
         self.assertTrue(x.IsValid(), "did not find x %s"%(message_end))
         self.assertTrue(x.GetNumChildren() == 1, "x has too many children %s"%(message_end))
         ivar = x.GetChildAtIndex(0)
+        if not use_expression: ivar = ivar.GetChildAtIndex(0)
         self.assertTrue(ivar.GetName() == "ivar", "ivar is not ivar %s"%(message_end))
         self.assertTrue(ivar.GetValue() == ivar_value, "ivar wrong %s"%(message_end))
 
@@ -103,7 +104,7 @@ class TestInOutVariables(TestBase):
         struct_bkpt = target.BreakpointCreateBySourceRegex('Set breakpoint here for Struct access', self.main_source_spec)
         self.assertTrue(struct_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
-        outer_bkpt = target.BreakpointCreateBySourceRegex('Set breakpoint here after class access', self.main_source_spec)
+        outer_bkpt = target.BreakpointCreateBySourceRegex('Set breakpoint here for String access', self.main_source_spec)
         self.assertTrue(outer_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -124,14 +125,20 @@ class TestInOutVariables(TestBase):
         self.check_class("4322","112233")
 
         # Now on the way out let's modify the class and make sure it gets modified both here and outside the functions:
-        var = self.frame.EvaluateExpression("x = Other(in1: 556677, in2: 667788)", lldb.eDynamicCanRunTarget)
+        var = self.frame.EvaluateExpression("x = Other(in1: 556678, in2: 667788)", lldb.eDynamicCanRunTarget)
         self.assertTrue(var.GetError().Success())
 
         #self.check_class("556677", "667788")
 
         self.process.Continue()
         self.check_next_stop (outer_bkpt)
-        self.check_class ("556678", "667788", False)
+        
+        svar = self.frame.FindVariable("x").GetChildAtIndex(0)
+        self.assertTrue(svar.GetSummary() == '"Keep going, nothing to see"')
+
+        self.process.Continue()
+        self.check_next_stop (class_bkpt)
+        self.check_class ("556679", "667788")
  
         self.process.Continue()
         self.check_next_stop (struct_bkpt)
