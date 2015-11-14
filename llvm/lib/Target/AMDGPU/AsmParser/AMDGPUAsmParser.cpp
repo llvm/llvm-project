@@ -327,14 +327,13 @@ public:
 };
 
 class AMDGPUAsmParser : public MCTargetAsmParser {
-  MCSubtargetInfo &STI;
   const MCInstrInfo &MII;
   MCAsmParser &Parser;
 
   unsigned ForcedEncodingSize;
 
   bool isVI() const {
-    return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
+    return getSTI().getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
   }
 
   bool hasSGPR102_SGPR103() const {
@@ -365,18 +364,19 @@ public:
     Match_PreferE32 = FIRST_TARGET_MATCH_RESULT_TY
   };
 
-  AMDGPUAsmParser(MCSubtargetInfo &STI, MCAsmParser &_Parser,
+  AMDGPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &_Parser,
                const MCInstrInfo &MII,
                const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options), STI(STI), MII(MII), Parser(_Parser),
+      : MCTargetAsmParser(Options, STI), MII(MII), Parser(_Parser),
         ForcedEncodingSize(0) {
+    MCAsmParserExtension::Initialize(Parser);
 
-    if (STI.getFeatureBits().none()) {
+    if (getSTI().getFeatureBits().none()) {
       // Set default features.
-      STI.ToggleFeature("SOUTHERN_ISLANDS");
+      copySTI().ToggleFeature("SOUTHERN_ISLANDS");
     }
 
-    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+    setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
 
   AMDGPUTargetStreamer &getTargetStreamer() {
@@ -603,7 +603,7 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     default: break;
     case Match_Success:
       Inst.setLoc(IDLoc);
-      Out.EmitInstruction(Inst, STI);
+      Out.EmitInstruction(Inst, getSTI());
       return false;
     case Match_MissingFeature:
       return Error(IDLoc, "instruction not supported on this GPU");
@@ -697,7 +697,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
   // If this directive has no arguments, then use the ISA version for the
   // targeted GPU.
   if (getLexer().is(AsmToken::EndOfStatement)) {
-    AMDGPU::IsaVersion Isa = AMDGPU::getIsaVersion(STI.getFeatureBits());
+    AMDGPU::IsaVersion Isa = AMDGPU::getIsaVersion(getSTI().getFeatureBits());
     getTargetStreamer().EmitDirectiveHSACodeObjectISA(Isa.Major, Isa.Minor,
                                                       Isa.Stepping,
                                                       "AMD", "AMDGPU");
@@ -909,7 +909,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
 
   amd_kernel_code_t Header;
-  AMDGPU::initDefaultAMDKernelCodeT(Header, STI.getFeatureBits());
+  AMDGPU::initDefaultAMDKernelCodeT(Header, getSTI().getFeatureBits());
 
   while (true) {
 

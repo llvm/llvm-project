@@ -469,7 +469,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK: ret void
 }
 
-; We don't handle memcpy-able loops with negative stride.
+; Handle memcpy-able loops with negative stride.
 define noalias i32* @test17(i32* nocapture readonly %a, i32 %c) {
 entry:
   %conv = sext i32 %c to i64
@@ -499,8 +499,35 @@ while.end.loopexit:                               ; preds = %while.body
 while.end:                                        ; preds = %while.end.loopexit, %entry
   ret i32* %0
 ; CHECK-LABEL: @test17(
-; CHECK-NOT: call void @llvm.memcpy
+; CHECK: call void @llvm.memcpy
 ; CHECK: ret i32*
 }
 
 declare noalias i8* @malloc(i64)
+
+; Handle memcpy-able loops with negative stride.
+; void test18(unsigned *__restrict__ a, unsigned *__restrict__ b) {
+;   for (int i = 2047; i >= 0; --i) {
+;     a[i] = b[i];
+;   }
+; }
+define void @test18(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) #0 {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 2047, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  store i32 %0, i32* %arrayidx2, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %cmp = icmp sgt i64 %indvars.iv, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+; CHECK-LABEL: @test18(
+; CHECK: call void @llvm.memcpy
+; CHECK: ret
+}

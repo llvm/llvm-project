@@ -468,7 +468,14 @@ bool ShrinkWrap::isShrinkWrapEnabled(const MachineFunction &MF) {
     return TFI->enableShrinkWrapping(MF) &&
       // Windows with CFI has some limitations that make it impossible
       // to use shrink-wrapping.
-      !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+      !MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+      // Sanitizers look at the value of the stack at the location
+      // of the crash. Since a crash can happen anywhere, the
+      // frame must be lowered before anything else happen for the
+      // sanitizers to be able to get a correct stack frame.
+      !(MF.getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
+        MF.getFunction()->hasFnAttribute(Attribute::SanitizeThread) ||
+        MF.getFunction()->hasFnAttribute(Attribute::SanitizeMemory));
   // If EnableShrinkWrap is set, it takes precedence on whatever the
   // target sets. The rational is that we assume we want to test
   // something related to shrink-wrapping.

@@ -129,7 +129,7 @@ private:
   bool processLoopStoreOfLoopLoad(StoreInst *SI, unsigned StoreSize,
                                   const SCEVAddRecExpr *StoreEv,
                                   const SCEVAddRecExpr *LoadEv,
-                                  const SCEV *BECount);
+                                  const SCEV *BECount, bool NegStride);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -362,10 +362,6 @@ bool LoopIdiomRecognize::processLoopStore(StoreInst *SI, const SCEV *BECount) {
                               StoredVal, SI, StoreEv, BECount, NegStride))
     return true;
 
-  // TODO: We don't handle negative stride memcpys.
-  if (NegStride)
-    return false;
-
   // If the stored value is a strided load in the same loop with the same stride
   // this may be transformable into a memcpy.  This kicks in for stuff like
   //   for (i) A[i] = B[i];
@@ -374,7 +370,8 @@ bool LoopIdiomRecognize::processLoopStore(StoreInst *SI, const SCEV *BECount) {
         dyn_cast<SCEVAddRecExpr>(SE->getSCEV(LI->getOperand(0)));
     if (LoadEv && LoadEv->getLoop() == CurLoop && LoadEv->isAffine() &&
         StoreEv->getOperand(1) == LoadEv->getOperand(1) && LI->isSimple())
-      if (processLoopStoreOfLoopLoad(SI, StoreSize, StoreEv, LoadEv, BECount))
+      if (processLoopStoreOfLoopLoad(SI, StoreSize, StoreEv, LoadEv, BECount,
+                                     NegStride))
         return true;
   }
   // errs() << "UNHANDLED strided store: " << *StoreEv << " - " << *SI << "\n";
@@ -626,7 +623,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 /// same-strided load.
 bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     StoreInst *SI, unsigned StoreSize, const SCEVAddRecExpr *StoreEv,
-    const SCEVAddRecExpr *LoadEv, const SCEV *BECount) {
+    const SCEVAddRecExpr *LoadEv, const SCEV *BECount, bool NegStride) {
   // If we're not allowed to form memcpy, we fail.
   if (!TLI->has(LibFunc::memcpy))
     return false;
@@ -640,6 +637,14 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   IRBuilder<> Builder(Preheader->getTerminator());
   SCEVExpander Expander(*SE, *DL, "loop-idiom");
 
+  const SCEV *StrStart = StoreEv->getStart();
+  unsigned StrAS = SI->getPointerAddressSpace();
+  Type *IntPtrTy = Builder.getIntPtrTy(*DL, StrAS);
+
+  // Handle negative strided loops.
+  if (NegStride)
+    StrStart = getStartForNegStride(StrStart, BECount, IntPtrTy, StoreSize, SE);
+
   // Okay, we have a strided store "p[i]" of a loaded value.  We can turn
   // this into a memcpy in the loop preheader now if we want.  However, this
   // would be unsafe to do if there is anything else in the loop that may read
@@ -647,8 +652,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // feeds the stores.  Check for an alias by generating the base address and
   // checking everything.
   Value *StoreBasePtr = Expander.expandCodeFor(
-      StoreEv->getStart(), Builder.getInt8PtrTy(SI->getPointerAddressSpace()),
-      Preheader->getTerminator());
+      StrStart, Builder.getInt8PtrTy(StrAS), Preheader->getTerminator());
 
   if (mayLoopAccessLocation(StoreBasePtr, MRI_ModRef, CurLoop, BECount,
                             StoreSize, *AA, SI)) {
@@ -658,11 +662,17 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     return false;
   }
 
+  const SCEV *LdStart = LoadEv->getStart();
+  unsigned LdAS = LI->getPointerAddressSpace();
+
+  // Handle negative strided loops.
+  if (NegStride)
+    LdStart = getStartForNegStride(LdStart, BECount, IntPtrTy, StoreSize, SE);
+
   // For a memcpy, we have to make sure that the input array is not being
   // mutated by the loop.
   Value *LoadBasePtr = Expander.expandCodeFor(
-      LoadEv->getStart(), Builder.getInt8PtrTy(LI->getPointerAddressSpace()),
-      Preheader->getTerminator());
+      LdStart, Builder.getInt8PtrTy(LdAS), Preheader->getTerminator());
 
   if (mayLoopAccessLocation(LoadBasePtr, MRI_Mod, CurLoop, BECount, StoreSize,
                             *AA, SI)) {
@@ -677,7 +687,6 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   // The # stored bytes is (BECount+1)*Size.  Expand the trip count out to
   // pointer size if it isn't already.
-  Type *IntPtrTy = Builder.getIntPtrTy(*DL, SI->getPointerAddressSpace());
   BECount = SE->getTruncateOrZeroExtend(BECount, IntPtrTy);
 
   const SCEV *NumBytesS =

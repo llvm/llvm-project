@@ -182,7 +182,7 @@ public:
     std::vector<unsigned> BusyRegs;
   };
 
-  X86AddressSanitizer(const MCSubtargetInfo &STI)
+  X86AddressSanitizer(const MCSubtargetInfo *&STI)
       : X86AsmInstrumentation(STI), RepPrefix(false), OrigSPOffset(0) {}
 
   ~X86AddressSanitizer() override {}
@@ -261,13 +261,13 @@ protected:
                                               MCContext &Ctx, int64_t *Residue);
 
   bool is64BitMode() const {
-    return STI.getFeatureBits()[X86::Mode64Bit];
+    return STI->getFeatureBits()[X86::Mode64Bit];
   }
   bool is32BitMode() const {
-    return STI.getFeatureBits()[X86::Mode32Bit];
+    return STI->getFeatureBits()[X86::Mode32Bit];
   }
   bool is16BitMode() const {
-    return STI.getFeatureBits()[X86::Mode16Bit];
+    return STI->getFeatureBits()[X86::Mode16Bit];
   }
 
   unsigned getPointerWidth() {
@@ -503,7 +503,7 @@ class X86AddressSanitizer32 : public X86AddressSanitizer {
 public:
   static const long kShadowOffset = 0x20000000;
 
-  X86AddressSanitizer32(const MCSubtargetInfo &STI)
+  X86AddressSanitizer32(const MCSubtargetInfo *&STI)
       : X86AddressSanitizer(STI) {}
 
   ~X86AddressSanitizer32() override {}
@@ -760,7 +760,7 @@ class X86AddressSanitizer64 : public X86AddressSanitizer {
 public:
   static const long kShadowOffset = 0x7fff8000;
 
-  X86AddressSanitizer64(const MCSubtargetInfo &STI)
+  X86AddressSanitizer64(const MCSubtargetInfo *&STI)
       : X86AddressSanitizer(STI) {}
 
   ~X86AddressSanitizer64() override {}
@@ -1030,7 +1030,7 @@ void X86AddressSanitizer64::InstrumentMOVSImpl(unsigned AccessSize,
 
 } // End anonymous namespace
 
-X86AsmInstrumentation::X86AsmInstrumentation(const MCSubtargetInfo &STI)
+X86AsmInstrumentation::X86AsmInstrumentation(const MCSubtargetInfo *&STI)
     : STI(STI), InitialFrameReg(0) {}
 
 X86AsmInstrumentation::~X86AsmInstrumentation() {}
@@ -1043,7 +1043,7 @@ void X86AsmInstrumentation::InstrumentAndEmitInstruction(
 
 void X86AsmInstrumentation::EmitInstruction(MCStreamer &Out,
                                             const MCInst &Inst) {
-  Out.EmitInstruction(Inst, STI);
+  Out.EmitInstruction(Inst, *STI);
 }
 
 unsigned X86AsmInstrumentation::GetFrameRegGeneric(const MCContext &Ctx,
@@ -1067,14 +1067,14 @@ unsigned X86AsmInstrumentation::GetFrameRegGeneric(const MCContext &Ctx,
 
 X86AsmInstrumentation *
 CreateX86AsmInstrumentation(const MCTargetOptions &MCOptions,
-                            const MCContext &Ctx, const MCSubtargetInfo &STI) {
-  Triple T(STI.getTargetTriple());
+                            const MCContext &Ctx, const MCSubtargetInfo *&STI) {
+  Triple T(STI->getTargetTriple());
   const bool hasCompilerRTSupport = T.isOSLinux();
   if (ClAsanInstrumentAssembly && hasCompilerRTSupport &&
       MCOptions.SanitizeAddress) {
-    if (STI.getFeatureBits()[X86::Mode32Bit] != 0)
+    if (STI->getFeatureBits()[X86::Mode32Bit] != 0)
       return new X86AddressSanitizer32(STI);
-    if (STI.getFeatureBits()[X86::Mode64Bit] != 0)
+    if (STI->getFeatureBits()[X86::Mode64Bit] != 0)
       return new X86AddressSanitizer64(STI);
   }
   return new X86AsmInstrumentation(STI);

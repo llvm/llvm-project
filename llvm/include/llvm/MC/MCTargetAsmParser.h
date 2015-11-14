@@ -20,6 +20,7 @@ class AsmToken;
 class MCInst;
 class MCParsedAsmOperand;
 class MCStreamer;
+class MCSubtargetInfo;
 class SMLoc;
 class StringRef;
 template <typename T> class SmallVectorImpl;
@@ -92,7 +93,10 @@ private:
   MCTargetAsmParser(const MCTargetAsmParser &) = delete;
   void operator=(const MCTargetAsmParser &) = delete;
 protected: // Can only create subclasses.
-  MCTargetAsmParser(MCTargetOptions const &);
+  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI);
+
+  /// Create a copy of STI and return a non-const reference to it.
+  MCSubtargetInfo &copySTI();
 
   /// AvailableFeatures - The current set of available features.
   uint64_t AvailableFeatures;
@@ -107,8 +111,13 @@ protected: // Can only create subclasses.
   /// Set of options which affects instrumentation of inline assembly.
   MCTargetOptions MCOptions;
 
+  /// Current STI.
+  const MCSubtargetInfo *STI;
+
 public:
   ~MCTargetAsmParser() override;
+
+  const MCSubtargetInfo &getSTI() const;
 
   uint64_t getAvailableFeatures() const { return AvailableFeatures; }
   void setAvailableFeatures(uint64_t Value) { AvailableFeatures = Value; }

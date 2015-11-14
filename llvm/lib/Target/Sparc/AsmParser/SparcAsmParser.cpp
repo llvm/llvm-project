@@ -35,7 +35,6 @@ namespace {
 class SparcOperand;
 class SparcAsmParser : public MCTargetAsmParser {
 
-  MCSubtargetInfo &STI;
   MCAsmParser &Parser;
 
   /// @name Auto-generated Match Functions
@@ -82,19 +81,19 @@ class SparcAsmParser : public MCTargetAsmParser {
   bool parseDirectiveWord(unsigned Size, SMLoc L);
 
   bool is64Bit() const {
-    return STI.getTargetTriple().getArch() == Triple::sparcv9;
+    return getSTI().getTargetTriple().getArch() == Triple::sparcv9;
   }
 
   void expandSET(MCInst &Inst, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
 
 public:
-  SparcAsmParser(MCSubtargetInfo &sti, MCAsmParser &parser,
+  SparcAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII,
                 const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options), STI(sti), Parser(parser) {
+      : MCTargetAsmParser(Options, sti), Parser(parser) {
     // Initialize the set of available features.
-    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+    setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
 
 };
@@ -528,7 +527,7 @@ bool SparcAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
 
     for (const MCInst &I : Instructions) {
-      Out.EmitInstruction(I, STI);
+      Out.EmitInstruction(I, getSTI());
     }
     return false;
   }

@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -207,6 +208,8 @@ namespace llvm {
     std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
     StringMap<bool> ELFRelSecNames;
 
+    SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
+
     /// Do automatic reset in destructor
     bool AutoReset;
 
@@ -379,6 +382,9 @@ namespace llvm {
     /// as Sec and the function symbol as KeySym.
     MCSectionCOFF *getAssociativeCOFFSection(MCSectionCOFF *Sec,
                                              const MCSymbol *KeySym);
+
+    // Create and save a copy of STI and return a reference to the copy.
+    MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
 
     /// @}
 
