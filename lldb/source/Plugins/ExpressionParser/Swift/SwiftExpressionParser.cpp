@@ -1594,7 +1594,7 @@ SwiftExpressionParser::Parse (Stream &stream,
             {
                 VariableMetadataPersistent *variable_metadata = static_cast<VariableMetadataPersistent*>(variable.m_metadata.get());
                 
-                needs_init = llvm::cast<SwiftExpressionVariable>(variable_metadata->m_persistent_variable_sp.get())->m_flags & SwiftExpressionVariable::EVSNeedsInit;
+                needs_init = llvm::cast<SwiftExpressionVariable>(variable_metadata->m_persistent_variable_sp.get())->m_swift_flags & SwiftExpressionVariable::EVSNeedsInit;
                 
                 Error error;
                 
