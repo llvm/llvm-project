@@ -481,7 +481,7 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 $(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) -o "$(EXE)"
+	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) -linker-path $(CXX) -o "$(EXE)"
 else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""

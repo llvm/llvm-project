@@ -9,7 +9,7 @@ set(module_cache_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/repl_swift_module_
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
   add_custom_command_target(
       repl_swift_target
-      COMMAND "${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc" -o "${output_dir}/repl_swift" -module-cache-path "${module_cache_dir}" -Xlinker -rpath -Xlinker \$ORIGIN/../lib/swift/linux "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
+      COMMAND "${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc" -o "${output_dir}/repl_swift" -linker-path "${CMAKE_CXX_COMPILER}" -module-cache-path "${module_cache_dir}" -Xlinker -rpath -Xlinker \$ORIGIN/../lib/swift/linux "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
       OUTPUT "${output_dir}/repl_swift"
       VERBATIM
       ALL
@@ -17,7 +17,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 else()
   add_custom_command_target(
       repl_swift_target
-      COMMAND "${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc" -o "${output_dir}/repl_swift" -module-cache-path "${module_cache_dir}" "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
+      COMMAND "${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc" -o "${output_dir}/repl_swift" -linker-path "${CMAKE_CXX_COMPILER}" -module-cache-path "${module_cache_dir}" "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
       OUTPUT "${output_dir}/repl_swift"
       VERBATIM
       ALL
