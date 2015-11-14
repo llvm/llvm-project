@@ -26,3 +26,22 @@ USEDLIBS = clangTidy.a clangTidyLLVMModule.a clangTidyGoogleModule.a \
 	   clangEdit.a clangAST.a clangLex.a clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile
+
+PROJ_sharedir := $(DESTDIR)$(PROJ_prefix)/share/clang
+
+FILESLIST := $(notdir $(wildcard $(PROJ_SRC_DIR)/*.py))
+
+SRCFILES := $(addprefix $(PROJ_SRC_DIR)/, $(FILESLIST))
+DESTFILES := $(addprefix $(PROJ_sharedir)/, $(FILESLIST))
+
+$(PROJ_sharedir):
+	$(Echo) Making install directory: $@
+	$(Verb) $(MKDIR) $@
+
+$(DESTFILES): $(SRCFILES)
+
+$(PROJ_sharedir)/%.py: $(PROJ_SRC_DIR)/%.py
+	$(Echo) Installing script file: $(notdir $<)
+	$(Verb) $(ScriptInstall) $< $(PROJ_sharedir)
+
+install-local:: $(PROJ_sharedir) $(DESTFILES)
