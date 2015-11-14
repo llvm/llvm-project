@@ -1638,37 +1638,38 @@ relocation_iterator RuntimeDyldELF::processRelocationRef(
         StubMap::const_iterator i = Stubs.find(Value);
         uintptr_t StubAddress;
         if (i != Stubs.end()) {
-        StubAddress = uintptr_t(Section.Address) + i->second;
-        DEBUG(dbgs() << " Stub function found\n");
+          StubAddress = uintptr_t(Section.Address) + i->second;
+          DEBUG(dbgs() << " Stub function found\n");
         } else {
-        // Create a new stub function (equivalent to a PLT entry).
-        DEBUG(dbgs() << " Create a new stub function\n");
+          // Create a new stub function (equivalent to a PLT entry).
+          DEBUG(dbgs() << " Create a new stub function\n");
 
-        uintptr_t BaseAddress = uintptr_t(Section.Address);
-        uintptr_t StubAlignment = getStubAlignment();
-        StubAddress = (BaseAddress + Section.StubOffset + StubAlignment - 1) &
-                -StubAlignment;
-        unsigned StubOffset = StubAddress - BaseAddress;
-        Stubs[Value] = StubOffset;
-        createStubFunction((uint8_t *)StubAddress);
+          uintptr_t BaseAddress = uintptr_t(Section.Address);
+          uintptr_t StubAlignment = getStubAlignment();
+          StubAddress = (BaseAddress + Section.StubOffset + StubAlignment - 1) &
+                        -StubAlignment;
+          unsigned StubOffset = StubAddress - BaseAddress;
+          Stubs[Value] = StubOffset;
+          createStubFunction((uint8_t *)StubAddress);
 
-        // Bump our stub offset counter
-        Section.StubOffset = StubOffset + getMaxStubSize();
+          // Bump our stub offset counter
+          Section.StubOffset = StubOffset + getMaxStubSize();
 
-        // Allocate a GOT Entry
-        uint64_t GOTOffset = allocateGOTEntries(SectionID, 1);
+          // Allocate a GOT Entry
+          uint64_t GOTOffset = allocateGOTEntries(SectionID, 1);
 
-        // The load of the GOT address has an addend of -4
-        resolveGOTOffsetRelocation(SectionID, StubOffset + 2, GOTOffset - 4);
+          // The load of the GOT address has an addend of -4
+          resolveGOTOffsetRelocation(SectionID, StubOffset + 2, GOTOffset - 4);
 
-        // Fill in the value of the symbol we're targeting into the GOT
-        addRelocationForSymbol(computeGOTOffsetRE(SectionID,GOTOffset,0,ELF::R_X86_64_64),
-          Value.SymbolName);
+          // Fill in the value of the symbol we're targeting into the GOT
+          addRelocationForSymbol(
+              computeGOTOffsetRE(SectionID, GOTOffset, 0, ELF::R_X86_64_64),
+              Value.SymbolName);
         }
 
         // Make the target call a call into the stub table.
         resolveRelocation(Section, Offset, StubAddress, ELF::R_X86_64_PC32,
-                Addend);
+                          Addend);
       } else {
         RelocationEntry RE(SectionID, Offset, ELF::R_X86_64_PC32, Value.Addend,
                   Value.Offset);
