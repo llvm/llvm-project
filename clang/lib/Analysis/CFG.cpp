@@ -1942,7 +1942,15 @@ CFGBlock *CFGBuilder::VisitChooseExpr(ChooseExpr *C,
 
 
 CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C) {
-  addLocalScopeAndDtors(C);
+  LocalScope::const_iterator scopeBeginPos = ScopePos;
+  if (BuildOpts.AddImplicitDtors) {
+    addLocalScopeForStmt(C);
+  }
+  if (!C->body_empty() && !isa<ReturnStmt>(*C->body_rbegin())) {
+    // If the body ends with a ReturnStmt, the dtors will be added in VisitReturnStmt
+    addAutomaticObjDtors(ScopePos, scopeBeginPos, C);
+  }
+
   CFGBlock *LastBlock = Block;
 
   for (CompoundStmt::reverse_body_iterator I=C->body_rbegin(), E=C->body_rend();
