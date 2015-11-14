@@ -15,11 +15,11 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @unittest2.expectedFailure("llvm.org/pr23478")
+    @expectedFailureAll("llvm.org/pr23478", oslist = not_in(["macosx"]))
     def test (self):
         self.build ()
         self.consecutive_breakpoints_tests()
-
+        
     def consecutive_breakpoints_tests(self):
         exe = os.path.join (os.getcwd(), "a.out")
 
@@ -40,24 +40,15 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
         thread = process.GetThreadAtIndex(0)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
 
-        # Step to the next instruction
-        thread.StepInstruction(False)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
-        address = thread.GetFrameAtIndex(0).GetPC()
-
-        # Run the process until termination
-        process.Continue()
-
-        # Now launch the process again, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # We should be stopped at the first breakpoint
-        thread = process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
-
         # Set breakpoint to the next instruction
-        target.BreakpointCreateByAddress(address)
+        frame = thread.GetFrameAtIndex(0)
+        
+        address = frame.GetPCAddress()
+        instructions = target.ReadInstructions(address, 2)
+        self.assertTrue(len(instructions) == 2)
+        address = instructions[1].GetAddress()
+        
+        target.BreakpointCreateByAddress(address.GetLoadAddress(target))
         process.Continue()
 
         # We should be stopped at the second breakpoint

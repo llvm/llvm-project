@@ -142,6 +142,9 @@ public:
     void
     LoopThroughCategories (CategoryCallback callback, void* param);
 
+    void
+    ForEachCategory (TypeCategoryMap::ForEachCallback callback);
+    
     lldb::TypeCategoryImplSP
     GetCategory(const char* category_name = nullptr,
                 bool can_create = true)

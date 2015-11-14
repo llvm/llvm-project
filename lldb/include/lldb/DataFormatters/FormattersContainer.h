@@ -82,6 +82,8 @@ public:
     typedef typename MapType::iterator MapIterator;
     typedef std::function<bool(void*, KeyType, const ValueSP&)> CallbackType;
     
+    typedef std::function<bool(KeyType, const ValueSP&)> ForEachCallback;
+    
     FormatMap(IFormatChangeListener* lst) :
     m_map(),
     m_map_mutex(Mutex::eMutexTypeRecursive),
@@ -149,6 +151,22 @@ public:
             {
                 KeyType type = pos->first;
                 if (!callback(param, type, pos->second))
+                    break;
+            }
+        }
+    }
+    
+    void
+    ForEach (ForEachCallback callback)
+    {
+        if (callback)
+        {
+            Mutex::Locker locker(m_map_mutex);
+            MapIterator pos, end = m_map.end();
+            for (pos = m_map.begin(); pos != end; pos++)
+            {
+                KeyType type = pos->first;
+                if (!callback(type, pos->second))
                     break;
             }
         }
@@ -225,6 +243,7 @@ public:
     typedef typename MapType::key_type MapKeyType;
     typedef typename MapType::mapped_type MapValueType;
     typedef typename BackEndType::CallbackType CallbackType;
+    typedef typename BackEndType::ForEachCallback ForEachCallback;
     typedef typename std::shared_ptr<FormattersContainer<KeyType, ValueType> > SharedPointer;
     
     friend class TypeCategoryImpl;
@@ -300,6 +319,12 @@ public:
     LoopThrough (CallbackType callback, void* param)
     {
         m_format_map.LoopThrough(callback,param);
+    }
+    
+    void
+    ForEach (ForEachCallback callback)
+    {
+        m_format_map.ForEach(callback);
     }
     
     uint32_t

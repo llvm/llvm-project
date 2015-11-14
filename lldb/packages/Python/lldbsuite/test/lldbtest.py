@@ -620,13 +620,30 @@ def expectedFailure(expected_fn, bugnumber=None):
 # @expectedFailureAll, xfail for all platform/compiler/arch,
 # @expectedFailureAll(compiler='gcc'), xfail for gcc on all platform/architecture
 # @expectedFailureAll(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), xfail for gcc>=4.9 on linux with i386
+
+# You can also pass not_in(list) to reverse the sense of the test for the arguments that
+# are simple lists, namely oslist, compiler and debug_info.
+ 
+def not_in (iterable):
+    return lambda x : x not in iterable
+
+def check_list_or_lambda (list_or_lambda, value):
+    if six.callable(list_or_lambda):
+        return list_or_lambda(value)
+    else:
+        return list_or_lambda is None or value in list_or_lambda
+
 def expectedFailureAll(bugnumber=None, oslist=None, compiler=None, compiler_version=None, archs=None, triple=None, debug_info=None):
     def fn(self):
-        return ((oslist is None or self.getPlatform() in oslist) and
-                (compiler is None or (compiler in self.getCompiler() and self.expectedCompilerVersion(compiler_version))) and
+        os_list_passes = check_list_or_lambda(oslist, self.getPlatform())
+        compiler_passes = check_list_or_lambda(compiler, self.getCompiler()) and self.expectedCompilerVersion(compiler_version)
+        debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
+
+        return (os_list_passes  and
+                compiler_passes and
                 self.expectedArch(archs) and
                 (triple is None or re.match(triple, lldb.DBG.GetSelectedPlatform().GetTriple())) and
-                (debug_info is None or self.debug_info in debug_info))
+                debug_info_passes)
     return expectedFailure(fn, bugnumber)
 
 def expectedFailureDwarf(bugnumber=None):

@@ -405,6 +405,39 @@ TypeCategoryMap::LoopThrough(CallbackType callback, void* param)
     }
 }
 
+void
+TypeCategoryMap::ForEach(ForEachCallback callback)
+{
+    if (callback)
+    {
+        Mutex::Locker locker(m_map_mutex);
+        
+        // loop through enabled categories in respective order
+        {
+            ActiveCategoriesIterator begin, end = m_active_categories.end();
+            for (begin = m_active_categories.begin(); begin != end; begin++)
+            {
+                lldb::TypeCategoryImplSP category = *begin;
+                if (!callback(category))
+                    break;
+            }
+        }
+        
+        // loop through disabled categories in just any order
+        {
+            MapIterator pos, end = m_map.end();
+            for (pos = m_map.begin(); pos != end; pos++)
+            {
+                if (pos->second->IsEnabled())
+                    continue;
+                KeyType type = pos->first;
+                if (!callback(pos->second))
+                    break;
+            }
+        }
+    }
+}
+
 TypeCategoryImplSP
 TypeCategoryMap::GetAtIndex (uint32_t index)
 {

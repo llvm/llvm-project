@@ -160,6 +160,9 @@ public:
         static void
         LoopThrough (FormatManager::CategoryCallback callback, void* callback_baton);
         
+        static void
+        ForEach (TypeCategoryMap::ForEachCallback callback);
+        
         static uint32_t
         GetCount ();
         

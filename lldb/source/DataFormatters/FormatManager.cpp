@@ -500,6 +500,21 @@ FormatManager::LoopThroughCategories (CategoryCallback callback, void* param)
     }
 }
 
+void
+FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback)
+{
+    m_categories_map.ForEach(callback);
+    Mutex::Locker locker(m_language_categories_mutex);
+    for (const auto& entry : m_language_categories_map)
+    {
+        if (auto category_sp = entry.second->GetCategory())
+        {
+            if (!callback(category_sp))
+                break;
+        }
+    }
+}
+
 lldb::TypeCategoryImplSP
 FormatManager::GetCategory (const ConstString& category_name,
                             bool can_create)

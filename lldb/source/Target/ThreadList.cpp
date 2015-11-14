@@ -18,6 +18,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConvertEnum.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -538,7 +539,8 @@ ThreadList::WillResume ()
     
     for (pos = m_threads.begin(); pos != end; ++pos)
     {
-        if ((*pos)->GetResumeState() != eStateSuspended && (*pos)->GetCurrentPlan() &&
+        lldbassert((*pos)->GetCurrentPlan() && "thread should not have null thread plan");
+        if ((*pos)->GetResumeState() != eStateSuspended &&
                  (*pos)->GetCurrentPlan()->StopOthers())
         {
             if ((*pos)->IsOperatingSystemPluginThread() && !(*pos)->GetBackingThread())

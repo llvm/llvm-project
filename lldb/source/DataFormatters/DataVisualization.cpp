@@ -231,6 +231,12 @@ DataVisualization::Categories::LoopThrough (FormatManager::CategoryCallback call
     GetFormatManager().LoopThroughCategories(callback, callback_baton);
 }
 
+void
+DataVisualization::Categories::ForEach (TypeCategoryMap::ForEachCallback callback)
+{
+    GetFormatManager().ForEachCategory(callback);
+}
+
 uint32_t
 DataVisualization::Categories::GetCount ()
 {
