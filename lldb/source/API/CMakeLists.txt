@@ -123,7 +123,7 @@ endif()
 target_link_libraries(liblldb ${cmake_2_8_12_PRIVATE} ${LLDB_SYSTEM_LIBS})
 
 set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
-file(GLOB CLANG_RESOURCE_PATHS "${LLDB_PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang/*.*.*")
+file(GLOB CLANG_RESOURCE_PATHS "${LLDB_PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang")
 list(GET CLANG_RESOURCE_PATHS 0 CLANG_RESOURCE_PATH)
 add_custom_command_target(
     unused_var
