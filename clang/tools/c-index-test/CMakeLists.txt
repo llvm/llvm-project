@@ -29,20 +29,22 @@ if (CLANG_HAVE_LIBXML)
   target_link_libraries(c-index-test ${LIBXML2_LIBRARIES})
 endif()
 
-if(INTERNAL_INSTALL_PREFIX)
-  set(INSTALL_DESTINATION "${INTERNAL_INSTALL_PREFIX}/bin")
-else()
-  set(INSTALL_DESTINATION bin)
-endif()
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  if(INTERNAL_INSTALL_PREFIX)
+    set(INSTALL_DESTINATION "${INTERNAL_INSTALL_PREFIX}/bin")
+  else()
+    set(INSTALL_DESTINATION bin)
+  endif()
 
-install(TARGETS c-index-test
-  RUNTIME DESTINATION "${INSTALL_DESTINATION}"
-  COMPONENT c-index-test)
+  install(TARGETS c-index-test
+    RUNTIME DESTINATION "${INSTALL_DESTINATION}"
+    COMPONENT c-index-test)
 
-if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
-  add_custom_target(install-c-index-test
-    DEPENDS c-index-test
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=c-index-test
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
+    add_custom_target(install-c-index-test
+      DEPENDS c-index-test
+      COMMAND "${CMAKE_COMMAND}"
+              -DCMAKE_INSTALL_COMPONENT=c-index-test
+              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  endif()
 endif()

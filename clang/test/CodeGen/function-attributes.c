@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -Os -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -Os -std=c99 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -disable-llvm-optzns -Os -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -disable-llvm-optzns -Os -std=c99 -o - %s | FileCheck %s
 // CHECK: define signext i8 @f0(i32 %x) [[NUW:#[0-9]+]]
 // CHECK: define zeroext i8 @f1(i32 %x) [[NUW]]
 // CHECK: define void @f2(i8 signext %x) [[NUW]]
@@ -56,30 +56,10 @@ int f12(int arg) {
   return arg ? 0 : f10_t();
 }
 
-// CHECK: define void @f13() [[NUW]]
+// CHECK: define void @f13() [[NUW_OS_RN:#[0-9]+]]
 void f13(void) __attribute__((pure)) __attribute__((const));
 void f13(void){}
 
-
-// Ensure that these get inlined: rdar://6853279
-// CHECK-LABEL: define void @f14
-// CHECK-NOT: @ai_
-// CHECK: call void @f14_end
-static __inline__ __attribute__((always_inline))
-int ai_1() {  return 4; }
-
-static __inline__ __attribute__((always_inline))
-struct {
-  int a, b, c, d, e;
-} ai_2() { while (1) {} }
-
-void f14(int a) {
-  extern void f14_end(void);
-  if (a)
-    ai_2();
-  ai_1();
-  f14_end();
-}
 
 // <rdar://problem/7102668> [irgen] clang isn't setting the optsize bit on functions
 // CHECK-LABEL: define void @f15
@@ -128,10 +108,11 @@ void f20(void) {
   _setjmp(0);
 }
 
-// CHECK: attributes [[NUW]] = { norecurse nounwind optsize readnone{{.*}} }
-// CHECK: attributes [[AI]] = { alwaysinline norecurse nounwind optsize readnone{{.*}} }
-// CHECK: attributes [[ALIGN]] = { norecurse nounwind optsize readnone alignstack=16{{.*}} }
+// CHECK: attributes [[NUW]] = { nounwind optsize{{.*}} }
+// CHECK: attributes [[AI]] = { alwaysinline nounwind optsize{{.*}} }
+// CHECK: attributes [[NUW_OS_RN]] = { nounwind optsize readnone{{.*}} }
+// CHECK: attributes [[ALIGN]] = { nounwind optsize alignstack=16{{.*}} }
 // CHECK: attributes [[RT]] = { nounwind optsize returns_twice{{.*}} }
-// CHECK: attributes [[NR]] = { noreturn nounwind optsize }
+// CHECK: attributes [[NR]] = { noreturn optsize }
 // CHECK: attributes [[NUW_RN]] = { nounwind optsize readnone }
-// CHECK: attributes [[RT_CALL]] = { nounwind optsize returns_twice }
+// CHECK: attributes [[RT_CALL]] = { optsize returns_twice }

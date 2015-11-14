@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -o %t.ll -triple=x86_64-apple-darwin10
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck -check-prefix=CHECK-GLOBAL %s < %t.ll
-// RUN: %clang_cc1 %s -emit-llvm -o %t-opt.ll -triple=x86_64-apple-darwin10 -O3
-// RUN: FileCheck --check-prefix=CHECK-O3 %s < %t-opt.ll
 
 struct A { int a; int b; };
 struct B { int b; };
@@ -128,40 +126,6 @@ struct A {
 // CHECK: store i64 -1, i64*
 // CHECK: ret void
 A::A() : a() {}
-
-}
-
-namespace PR7139 {
-
-struct pair {
-  int first;
-  int second;
-};
-
-typedef int pair::*ptr_to_member_type;
-
-struct ptr_to_member_struct { 
-  ptr_to_member_type data;
-  int i;
-};
-
-struct A {
-  ptr_to_member_struct a;
-
-  A() : a() {}
-};
-
-// CHECK-O3: define zeroext i1 @_ZN6PR71395checkEv() [[NUW:#[0-9]+]]
-bool check() {
-  // CHECK-O3: ret i1 true
-  return A().a.data == 0;
-}
-
-// CHECK-O3: define zeroext i1 @_ZN6PR71396check2Ev() [[NUW]]
-bool check2() {
-  // CHECK-O3: ret i1 true
-  return ptr_to_member_type() == 0;
-}
 
 }
 
@@ -294,5 +258,3 @@ union U {
 U u;
 // CHECK-GLOBAL: @_ZN11IndirectPDM1uE = global %"union.IndirectPDM::U" { %union.anon { i64 -1 } }, align 8
 }
-
-// CHECK-O3: attributes [[NUW]] = { norecurse nounwind readnone{{.*}} }
