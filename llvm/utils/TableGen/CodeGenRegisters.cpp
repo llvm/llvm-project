@@ -1574,6 +1574,12 @@ void CodeGenRegBank::pruneUnitSets() {
           && UnitWeight == RegUnits[SuperSet.Units.back()].Weight) {
         DEBUG(dbgs() << "UnitSet " << SubIdx << " subsumed by " << SuperIdx
               << "\n");
+        // We can pick any of the set names for the merged set. Go for the
+        // shortest one to avoid picking the name of one of the classes that are
+        // artificially created by tablegen. So "FPR128_lo" instead of
+        // "QQQQ_with_qsub3_in_FPR128_lo".
+        if (RegUnitSets[SubIdx].Name.size() < RegUnitSets[SuperIdx].Name.size())
+          RegUnitSets[SuperIdx].Name = RegUnitSets[SubIdx].Name;
         break;
       }
     }

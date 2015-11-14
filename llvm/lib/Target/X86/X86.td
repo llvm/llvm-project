@@ -52,12 +52,6 @@ def FeatureXSAVEC  : SubtargetFeature<"xsavec", "HasXSAVEC", "true",
 def FeatureXSAVES  : SubtargetFeature<"xsaves", "HasXSAVES", "true",
                                        "Support xsaves instructions">;
 
-// The MMX subtarget feature is separate from the rest of the SSE features
-// because it's important (for odd compatibility reasons) to be able to
-// turn it off explicitly while allowing SSE+ to be on.
-def FeatureMMX     : SubtargetFeature<"mmx","HasMMX", "true",
-                                      "Enable MMX instructions">;
-
 def FeatureSSE1    : SubtargetFeature<"sse", "X86SSELevel", "SSE1",
                                       "Enable SSE instructions",
                                       // SSE codegen depends on cmovs, and all
@@ -78,6 +72,11 @@ def FeatureSSE41   : SubtargetFeature<"sse4.1", "X86SSELevel", "SSE41",
 def FeatureSSE42   : SubtargetFeature<"sse4.2", "X86SSELevel", "SSE42",
                                       "Enable SSE 4.2 instructions",
                                       [FeatureSSE41]>;
+// The MMX subtarget feature is separate from the rest of the SSE features
+// because it's important (for odd compatibility reasons) to be able to
+// turn it off explicitly while allowing SSE+ to be on.
+def FeatureMMX     : SubtargetFeature<"mmx","X863DNowLevel", "MMX",
+                                      "Enable MMX instructions">;
 def Feature3DNow   : SubtargetFeature<"3dnow", "X863DNowLevel", "ThreeDNow",
                                       "Enable 3DNow! instructions",
                                       [FeatureMMX]>;

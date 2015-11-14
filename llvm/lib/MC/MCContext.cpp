@@ -78,6 +78,7 @@ void MCContext::reset() {
   ELFAllocator.DestroyAll();
   MachOAllocator.DestroyAll();
 
+  MCSubtargetAllocator.DestroyAll();
   UsedNames.clear();
   Symbols.clear();
   SectionSymbols.clear();
@@ -437,6 +438,10 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
   return getCOFFSection(Sec->getSectionName(), Characteristics, Sec->getKind(),
                         KeySym->getName(),
                         COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE);
+}
+
+MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
+  return *new (MCSubtargetAllocator.Allocate()) MCSubtargetInfo(STI);
 }
 
 //===----------------------------------------------------------------------===//

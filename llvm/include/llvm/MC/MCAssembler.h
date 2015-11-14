@@ -266,9 +266,7 @@ class MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
   MCInst Inst;
 
   /// STI - The MCSubtargetInfo in effect when the instruction was encoded.
-  /// Keep a copy instead of a reference to make sure that updates to STI
-  /// in the assembler are not seen here.
-  const MCSubtargetInfo STI;
+  const MCSubtargetInfo &STI;
 
 public:
   MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI,

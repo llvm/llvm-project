@@ -115,7 +115,7 @@ public:
                                               const MCRegisterInfo &MRI,
                                               const Triple &TT, StringRef CPU);
   typedef MCTargetAsmParser *(*MCAsmParserCtorTy)(
-      MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
+      const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
       const MCTargetOptions &Options);
   typedef MCDisassembler *(*MCDisassemblerCtorTy)(const Target &T,
                                                   const MCSubtargetInfo &STI,
@@ -382,7 +382,7 @@ public:
   ///
   /// \param Parser The target independent parser implementation to use for
   /// parsing and lexing.
-  MCTargetAsmParser *createMCAsmParser(MCSubtargetInfo &STI,
+  MCTargetAsmParser *createMCAsmParser(const MCSubtargetInfo &STI,
                                        MCAsmParser &Parser,
                                        const MCInstrInfo &MII,
                                        const MCTargetOptions &Options) const {
@@ -1133,8 +1133,8 @@ template <class MCAsmParserImpl> struct RegisterMCAsmParser {
   }
 
 private:
-  static MCTargetAsmParser *Allocator(MCSubtargetInfo &STI, MCAsmParser &P,
-                                      const MCInstrInfo &MII,
+  static MCTargetAsmParser *Allocator(const MCSubtargetInfo &STI,
+                                      MCAsmParser &P, const MCInstrInfo &MII,
                                       const MCTargetOptions &Options) {
     return new MCAsmParserImpl(STI, P, MII, Options);
   }

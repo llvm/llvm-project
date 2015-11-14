@@ -51,7 +51,7 @@ protected:
   };
 
   enum X863DNowEnum {
-    NoThreeDNow, ThreeDNow, ThreeDNowA
+    NoThreeDNow, MMX, ThreeDNow, ThreeDNowA
   };
 
   enum X86ProcFamilyEnum {
@@ -67,15 +67,12 @@ protected:
   /// SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, or none supported.
   X86SSEEnum X86SSELevel;
 
-  /// 3DNow, 3DNow Athlon, or none supported.
+  /// MMX, 3DNow, 3DNow Athlon, or none supported.
   X863DNowEnum X863DNowLevel;
 
   /// True if this processor has conditional move instructions
   /// (generally pentium pro+).
   bool HasCMov;
-
-  /// True if this processor supports MMX instructions.
-  bool HasMMX;
 
   /// True if the processor supports X86-64 instructions.
   bool HasX86_64;
@@ -334,7 +331,6 @@ public:
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
 
   bool hasCMov() const { return HasCMov; }
-  bool hasMMX() const { return HasMMX; }
   bool hasSSE1() const { return X86SSELevel >= SSE1; }
   bool hasSSE2() const { return X86SSELevel >= SSE2; }
   bool hasSSE3() const { return X86SSELevel >= SSE3; }
@@ -347,6 +343,7 @@ public:
   bool hasFp256() const { return hasAVX(); }
   bool hasInt256() const { return hasAVX2(); }
   bool hasSSE4A() const { return HasSSE4A; }
+  bool hasMMX() const { return X863DNowLevel >= MMX; }
   bool has3DNow() const { return X863DNowLevel >= ThreeDNow; }
   bool has3DNowA() const { return X863DNowLevel >= ThreeDNowA; }
   bool hasPOPCNT() const { return HasPOPCNT; }
