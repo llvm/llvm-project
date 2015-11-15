@@ -5,7 +5,7 @@
 target datalayout = "e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-declare i32 @llvm.wasm.memory.size.i32() nounwind readnone
+declare i32 @llvm.wasm.memory.size.i32() nounwind readonly
 declare void @llvm.wasm.grow.memory.i32(i32) nounwind
 
 ; CHECK-LABEL: memory_size:

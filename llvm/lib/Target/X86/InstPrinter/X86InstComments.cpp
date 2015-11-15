@@ -16,10 +16,30 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+static unsigned getVectorRegSize(unsigned RegNo) {
+  if (X86MCRegisterClasses[X86::VR512RegClassID].contains(RegNo))
+    return 512;
+  else if (X86MCRegisterClasses[X86::VR256XRegClassID].contains(RegNo))
+    return 256;
+  else if (X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
+    return 128;
+
+  llvm_unreachable("Unknown vector reg!");
+  return 0;
+}
+
+static MVT getRegOperandVectorVT(const MCInst *MI, const MVT &ScalarVT,
+                                 unsigned OperandIndex) {
+  unsigned OpReg = MI->getOperand(OperandIndex).getReg();
+  return MVT::getVectorVT(ScalarVT,
+                          getVectorRegSize(OpReg)/ScalarVT.getSizeInBits());
+}
 
 /// \brief Extracts the src/dst types for a given zero extension instruction.
 /// \note While the number of elements in DstVT type correct, the
@@ -107,19 +127,30 @@ static void getZeroExtensionTypes(const MCInst *MI, MVT &SrcVT, MVT &DstVT) {
   }
 }
 
-#define CASE_VSHUF_COMMON(Inst, Suffix, src2)       \
-  case X86::VSHUFF##Inst##Suffix##r##src2##i:       \
-  case X86::VSHUFF##Inst##Suffix##r##src2##ik:      \
-  case X86::VSHUFF##Inst##Suffix##r##src2##ikz:     \
-  case X86::VSHUFI##Inst##Suffix##r##src2##i:       \
-  case X86::VSHUFI##Inst##Suffix##r##src2##ik:      \
-  case X86::VSHUFI##Inst##Suffix##r##src2##ikz:
+#define CASE_MASK_INS_COMMON(Inst, Suffix, src)  \
+  case X86::V##Inst##Suffix##src:                \
+  case X86::V##Inst##Suffix##src##k:             \
+  case X86::V##Inst##Suffix##src##kz:
 
-#define CASE_VSHUF(Inst)            \
-  CASE_VSHUF_COMMON(Inst, Z, r)     \
-  CASE_VSHUF_COMMON(Inst, Z, m)     \
-  CASE_VSHUF_COMMON(Inst, Z256, r)  \
-  CASE_VSHUF_COMMON(Inst, Z256, m)  \
+#define CASE_SSE_INS_COMMON(Inst, src)           \
+  case X86::Inst##src:
+
+#define CASE_AVX_INS_COMMON(Inst, Suffix, src)  \
+  case X86::V##Inst##Suffix##src:
+
+#define CASE_MOVDUP(Inst, src)                  \
+  CASE_MASK_INS_COMMON(Inst, Z, r##src)         \
+  CASE_MASK_INS_COMMON(Inst, Z256, r##src)      \
+  CASE_MASK_INS_COMMON(Inst, Z128, r##src)      \
+  CASE_AVX_INS_COMMON(Inst, , r##src)           \
+  CASE_AVX_INS_COMMON(Inst, Y, r##src)          \
+  CASE_SSE_INS_COMMON(Inst, r##src)             \
+
+#define CASE_VSHUF(Inst, src)                          \
+  CASE_MASK_INS_COMMON(SHUFF##Inst, Z, r##src##i)      \
+  CASE_MASK_INS_COMMON(SHUFI##Inst, Z, r##src##i)      \
+  CASE_MASK_INS_COMMON(SHUFF##Inst, Z256, r##src##i)   \
+  CASE_MASK_INS_COMMON(SHUFI##Inst, Z256, r##src##i)   \
 
 /// \brief Extracts the types and if it has memory operand for a given
 /// (SHUFF32x4/SHUFF64x2/SHUFI32x4/SHUFI64x2) instruction.
@@ -129,25 +160,15 @@ static void getVSHUF64x2FamilyInfo(const MCInst *MI, MVT &VT, bool &HasMemOp) {
   default:
     llvm_unreachable("Unknown VSHUF64x2 family instructions.");
     break;
-  CASE_VSHUF_COMMON(64X2, Z, m)
+  CASE_VSHUF(64X2, m)
     HasMemOp = true;        // FALL THROUGH.
-  CASE_VSHUF_COMMON(64X2, Z, r)
-    VT = MVT::v8i64;
+  CASE_VSHUF(64X2, r)
+    VT = getRegOperandVectorVT(MI, MVT::i64, 0);
     break;
-  CASE_VSHUF_COMMON(64X2, Z256, m)
+  CASE_VSHUF(32X4, m)
     HasMemOp = true;        // FALL THROUGH.
-  CASE_VSHUF_COMMON(64X2, Z256, r)
-    VT = MVT::v4i64;
-    break;
-  CASE_VSHUF_COMMON(32X4, Z, m)
-    HasMemOp = true;        // FALL THROUGH.
-  CASE_VSHUF_COMMON(32X4, Z, r)
-    VT = MVT::v16i32;
-    break;
-  CASE_VSHUF_COMMON(32X4, Z256, m)
-    HasMemOp = true;        // FALL THROUGH.
-  CASE_VSHUF_COMMON(32X4, Z256, r)
-    VT = MVT::v8i32;
+  CASE_VSHUF(32X4, r)
+    VT = getRegOperandVectorVT(MI, MVT::i32, 0);
     break;
   }
 }
@@ -297,43 +318,24 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     DecodeMOVHLPSMask(2, ShuffleMask);
     break;
-
-  case X86::MOVSLDUPrr:
-  case X86::VMOVSLDUPrr:
-    Src1Name = getRegName(MI->getOperand(1).getReg());
+  CASE_MOVDUP(MOVSLDUP, r)
+    Src1Name = getRegName(MI->getOperand(MI->getNumOperands() - 1).getReg());
     // FALL THROUGH.
-  case X86::MOVSLDUPrm:
-  case X86::VMOVSLDUPrm:
+  CASE_MOVDUP(MOVSLDUP, m) {
+    MVT VT = getRegOperandVectorVT(MI, MVT::f32, 0);
     DestName = getRegName(MI->getOperand(0).getReg());
-    DecodeMOVSLDUPMask(MVT::v4f32, ShuffleMask);
+    DecodeMOVSLDUPMask(VT, ShuffleMask);
     break;
-
-  case X86::VMOVSHDUPYrr:
-    Src1Name = getRegName(MI->getOperand(1).getReg());
+  }
+  CASE_MOVDUP(MOVSHDUP, r)
+    Src1Name = getRegName(MI->getOperand(MI->getNumOperands() - 1).getReg());
     // FALL THROUGH.
-  case X86::VMOVSHDUPYrm:
+  CASE_MOVDUP(MOVSHDUP, m) {
+    MVT VT = getRegOperandVectorVT(MI, MVT::f32, 0);
     DestName = getRegName(MI->getOperand(0).getReg());
-    DecodeMOVSHDUPMask(MVT::v8f32, ShuffleMask);
+    DecodeMOVSHDUPMask(VT, ShuffleMask);
     break;
-
-  case X86::VMOVSLDUPYrr:
-    Src1Name = getRegName(MI->getOperand(1).getReg());
-    // FALL THROUGH.
-  case X86::VMOVSLDUPYrm:
-    DestName = getRegName(MI->getOperand(0).getReg());
-    DecodeMOVSLDUPMask(MVT::v8f32, ShuffleMask);
-    break;
-
-  case X86::MOVSHDUPrr:
-  case X86::VMOVSHDUPrr:
-    Src1Name = getRegName(MI->getOperand(1).getReg());
-    // FALL THROUGH.
-  case X86::MOVSHDUPrm:
-  case X86::VMOVSHDUPrm:
-    DestName = getRegName(MI->getOperand(0).getReg());
-    DecodeMOVSHDUPMask(MVT::v4f32, ShuffleMask);
-    break;
-
+  }
   case X86::VMOVDDUPYrr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
     // FALL THROUGH.
@@ -771,8 +773,10 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     Src1Name = getRegName(MI->getOperand(1).getReg());
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_VSHUF(64X2)
-  CASE_VSHUF(32X4) {
+  CASE_VSHUF(64X2, r)
+  CASE_VSHUF(64X2, m)
+  CASE_VSHUF(32X4, r)
+  CASE_VSHUF(32X4, m) {
     MVT VT;
     bool HasMemOp;
     unsigned NumOp = MI->getNumOperands();

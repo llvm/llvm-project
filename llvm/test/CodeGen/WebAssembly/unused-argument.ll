@@ -30,6 +30,6 @@ define i32 @unused_second(i32 %x, i32 %y) {
 ; CHECK-NEXT: return{{$}}
 declare i32 @return_something()
 define void @call_something() {
-    call i32 @return_something()
-    ret void
+  call i32 @return_something()
+  ret void
 }

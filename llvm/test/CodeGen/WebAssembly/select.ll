@@ -11,9 +11,9 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: set_local 4, $pop
 ; CHECK: i32.select $push, (get_local 4), (get_local 0), (get_local 1)
 define i32 @select_i32(i32 %a, i32 %b, i32 %cond) {
- %cc = icmp eq i32 %cond, 0
- %result = select i1 %cc, i32 %a, i32 %b
- ret i32 %result
+  %cc = icmp eq i32 %cond, 0
+  %result = select i1 %cc, i32 %a, i32 %b
+  ret i32 %result
 }
 
 ; CHECK-LABEL: select_i64:
@@ -21,9 +21,9 @@ define i32 @select_i32(i32 %a, i32 %b, i32 %cond) {
 ; CHECK: set_local 4, $pop
 ; CHECK: i64.select $push, (get_local 4), (get_local 0), (get_local 1)
 define i64 @select_i64(i64 %a, i64 %b, i32 %cond) {
- %cc = icmp eq i32 %cond, 0
- %result = select i1 %cc, i64 %a, i64 %b
- ret i64 %result
+  %cc = icmp eq i32 %cond, 0
+  %result = select i1 %cc, i64 %a, i64 %b
+  ret i64 %result
 }
 
 ; CHECK-LABEL: select_f32:
@@ -31,9 +31,9 @@ define i64 @select_i64(i64 %a, i64 %b, i32 %cond) {
 ; CHECK: set_local 4, $pop
 ; CHECK: f32.select $push, (get_local 4), (get_local 0), (get_local 1)
 define float @select_f32(float %a, float %b, i32 %cond) {
- %cc = icmp eq i32 %cond, 0
- %result = select i1 %cc, float %a, float %b
- ret float %result
+  %cc = icmp eq i32 %cond, 0
+  %result = select i1 %cc, float %a, float %b
+  ret float %result
 }
 
 ; CHECK-LABEL: select_f64:
@@ -41,7 +41,7 @@ define float @select_f32(float %a, float %b, i32 %cond) {
 ; CHECK: set_local 4, $pop
 ; CHECK: f64.select $push, (get_local 4), (get_local 0), (get_local 1)
 define double @select_f64(double %a, double %b, i32 %cond) {
- %cc = icmp eq i32 %cond, 0
- %result = select i1 %cc, double %a, double %b
- ret double %result
+  %cc = icmp eq i32 %cond, 0
+  %result = select i1 %cc, double %a, double %b
+  ret double %result
 }
