@@ -219,7 +219,9 @@ void elf2::ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &Comdats) {
     default: {
       ErrorOr<StringRef> NameOrErr = this->ELFObj.getSectionName(&Sec);
       error(NameOrErr);
-      if (*NameOrErr == ".eh_frame")
+      if (*NameOrErr == ".note.GNU-stack")
+        Sections[I] = &InputSection<ELFT>::Discarded;
+      else if (*NameOrErr == ".eh_frame")
         Sections[I] = new (this->Alloc) EHInputSection<ELFT>(this, &Sec);
       else if (shouldMerge<ELFT>(Sec))
         Sections[I] = new (this->Alloc) MergeInputSection<ELFT>(this, &Sec);

@@ -46,7 +46,7 @@
 // CHECK-NEXT:     SHF_ALLOC
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   Address: [[DYNSYMADDR:.*]]
-// CHECK-NEXT:   Offset: 0x110
+// CHECK-NEXT:   Offset: 0x130
 // CHECK-NEXT:   Size:
 // CHECK-NEXT:   Link: [[DYNSTR:.*]]
 // CHECK-NEXT:   Info: 1

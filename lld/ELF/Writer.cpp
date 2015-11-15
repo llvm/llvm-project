@@ -864,6 +864,11 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     copyPhdr(PH, Out<ELFT>::Dynamic);
   }
 
+  Elf_Phdr *PH = &Phdrs[++PhdrIdx];
+  PH->p_type = PT_GNU_STACK;
+  PH->p_flags = Config->ZExecStack ? toPhdrFlags(SHF_WRITE | SHF_EXECINSTR)
+                                   : toPhdrFlags(SHF_WRITE);
+
   // Fix up PT_INTERP as we now know the address of .interp section.
   if (Interp) {
     Interp->p_type = PT_INTERP;
@@ -882,7 +887,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 // Returns the number of PHDR entries.
 template <class ELFT> int Writer<ELFT>::getPhdrsNum() const {
   bool Tls = false;
-  int I = 2; // 2 for PT_PHDR and the first PT_LOAD
+  int I = 3; // 3 for PT_PHDR, first PT_LOAD and PT_GNU_STACK
   if (needsInterpSection())
     ++I;
   if (isOutputDynamic())
