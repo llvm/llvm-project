@@ -90,6 +90,17 @@ void testReturnValue() {
   clang_analyzer_eval(b == 8); // expected-warning{{TRUE}}
 }
 
+void testAliasingBetweenParameterAndCapture() {
+  int i = 5;
+
+  auto l = [&i](int &p) {
+    i++;
+    p++;
+  };
+  l(i);
+  clang_analyzer_eval(i == 7); // expected-warning{{TRUE}}
+}
+
 // Nested lambdas.
 
 void testNestedLambdas() {
@@ -209,6 +220,67 @@ void captureConstants() {
       clang_analyzer_warnIfReached();
   }();
 }
+
+void captureReferenceByCopy(int &p) {
+  int v = 7;
+  p = 8;
+
+  // p is a reference captured by copy
+  [&v,p]() mutable {
+    v = p;
+    p = 22;
+  }();
+
+  clang_analyzer_eval(v == 8); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 8); // expected-warning{{TRUE}}
+}
+
+void captureReferenceByReference(int &p) {
+  int v = 7;
+  p = 8;
+
+  // p is a reference captured by reference
+  [&v,&p]() {
+    v = p;
+    p = 22;
+  }();
+
+  clang_analyzer_eval(v == 8); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 22); // expected-warning{{TRUE}}
+}
+
+void callMutableLambdaMultipleTimes(int &p) {
+  int v = 0;
+  p = 8;
+
+  auto l = [&v, p]() mutable {
+    v = p;
+    p++;
+  };
+
+  l();
+
+  clang_analyzer_eval(v == 8); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 8); // expected-warning{{TRUE}}
+
+  l();
+
+  clang_analyzer_eval(v == 9); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 8); // expected-warning{{TRUE}}
+}
+
+// PR 24914
+struct StructPR24914{
+  int x;
+};
+
+void takesConstStructArgument(const StructPR24914&);
+void captureStructReference(const StructPR24914& s) {
+  [s]() {
+    takesConstStructArgument(s);
+  }();
+}
+
 
 // CHECK: [B2 (ENTRY)]
 // CHECK:   Succs (1): B1

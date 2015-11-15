@@ -13,9 +13,8 @@
 
 let Component = "Lex", CategoryName = "Lexical or Preprocessor Issue" in {
 
-def null_in_string : Warning<"null character(s) preserved in string literal">,
-  InGroup<NullCharacter>;
-def null_in_char : Warning<"null character(s) preserved in character literal">,
+def null_in_char_or_string : Warning<
+  "null character(s) preserved in %select{char|string}0 literal">,
   InGroup<NullCharacter>;
 def null_in_file : Warning<"null character ignored">, InGroup<NullCharacter>;
 def warn_nested_block_comment : Warning<"'/*' within block comment">,
@@ -67,10 +66,8 @@ def ext_token_used : Extension<"extension used">,
 def warn_cxx11_keyword : Warning<"'%0' is a keyword in C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
 
-def ext_unterminated_string : ExtWarn<"missing terminating '\"' character">,
-  InGroup<InvalidPPToken>;
-def ext_unterminated_char : ExtWarn<"missing terminating ' character">,
-  InGroup<InvalidPPToken>;
+def ext_unterminated_char_or_string : ExtWarn<
+  "missing terminating %select{'|'\"'}0 character">, InGroup<InvalidPPToken>;
 def ext_empty_character : ExtWarn<"empty character constant">,
   InGroup<InvalidPPToken>;
 def err_unterminated_block_comment : Error<"unterminated /* comment">;
@@ -154,9 +151,8 @@ def ext_nonstandard_escape : Extension<
   "use of non-standard escape character '\\%0'">;
 def ext_unknown_escape : ExtWarn<"unknown escape sequence '\\%0'">,
   InGroup<DiagGroup<"unknown-escape-sequence">>;
-def err_invalid_decimal_digit : Error<"invalid digit '%0' in decimal constant">;
-def err_invalid_binary_digit : Error<"invalid digit '%0' in binary constant">;
-def err_invalid_octal_digit : Error<"invalid digit '%0' in octal constant">;
+def err_invalid_digit : Error<
+  "invalid digit '%0' in %select{decimal|octal|binary}1 constant">;
 def err_invalid_suffix_constant : Error<
   "invalid suffix '%0' on %select{integer|floating}1 constant">;
 def warn_cxx11_compat_digit_separator : Warning<
@@ -173,10 +169,8 @@ def err_multichar_utf_character_literal : Error<
 def err_exponent_has_no_digits : Error<"exponent has no digits">;
 def ext_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
-def err_hexconstant_requires_exponent : Error<
-  "hexadecimal floating constants require an exponent">;
-def err_hexconstant_requires_digits : Error<
-  "hexadecimal floating constants require a significand">;
+def err_hexconstant_requires: Error<
+  "hexadecimal floating constants require %select{an exponent|a significand}0">;
 def ext_hexconstant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
 def ext_binary_literal : Extension<
@@ -187,8 +181,8 @@ def warn_cxx11_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14CompatPedantic>, DefaultIgnore;
 def err_pascal_string_too_long : Error<"Pascal string is too long">;
-def err_octal_escape_too_large : Error<"octal escape sequence out of range">;
-def err_hex_escape_too_large : Error<"hex escape sequence out of range">;
+def err_escape_too_large : Error<
+  "%select{hex|octal}0 escape sequence out of range">;
 def ext_string_too_long : Extension<"string literal of length %0 exceeds "
   "maximum length %1 that %select{C90|ISO C99|C++}2 compilers are required to "
   "support">, InGroup<OverlengthStrings>;
@@ -304,10 +298,9 @@ def pp_invalid_string_literal : Warning<
   "invalid string literal, ignoring final '\\'">;
 def warn_pp_expr_overflow : Warning<
   "integer overflow in preprocessor expression">;
-def warn_pp_convert_lhs_to_positive : Warning<
-  "left side of operator converted from negative value to unsigned: %0">;
-def warn_pp_convert_rhs_to_positive : Warning<
-  "right side of operator converted from negative value to unsigned: %0">;
+def warn_pp_convert_to_positive : Warning<
+  "%select{left|right}0 side of operator converted from negative value to "
+  "unsigned: %1">;
 
 def ext_pp_import_directive : Extension<"#import is a language extension">,
   InGroup<DiagGroup<"import-preprocessor-directive-pedantic">>;

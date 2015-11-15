@@ -148,6 +148,23 @@ const ImplicitParamDecl *AnalysisDeclContext::getSelfDecl() const {
     }    
   }
 
+  auto *CXXMethod = dyn_cast<CXXMethodDecl>(D);
+  if (!CXXMethod)
+    return nullptr;
+
+  const CXXRecordDecl *parent = CXXMethod->getParent();
+  if (!parent->isLambda())
+    return nullptr;
+
+  for (const LambdaCapture &LC : parent->captures()) {
+    if (!LC.capturesVariable())
+      continue;
+
+    VarDecl *VD = LC.getCapturedVar();
+    if (VD->getName() == "self")
+      return dyn_cast<ImplicitParamDecl>(VD);
+  }
+
   return nullptr;
 }
 

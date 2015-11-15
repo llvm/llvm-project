@@ -120,8 +120,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     FieldCollector.reset(new CXXFieldCollector());
 
   // Tell diagnostics how to render things from the AST library.
-  PP.getDiagnostics().SetArgToStringFn(&FormatASTNodeDiagnosticArgument,
-                                       &Context);
+  Diags.SetArgToStringFn(&FormatASTNodeDiagnosticArgument, &Context);
 
   ExprEvalContexts.emplace_back(PotentiallyEvaluated, 0, false, nullptr, false);
 
@@ -168,7 +167,7 @@ void Sema::Initialize() {
 
 
   // Initialize predefined Objective-C types:
-  if (PP.getLangOpts().ObjC1) {
+  if (getLangOpts().ObjC1) {
     // If 'SEL' does not yet refer to any declarations, make it refer to the
     // predefined 'SEL'.
     DeclarationName SEL = &Context.Idents.get("SEL");
@@ -193,8 +192,8 @@ void Sema::Initialize() {
   }
 
   // Initialize Microsoft "predefined C++ types".
-  if (PP.getLangOpts().MSVCCompat) {
-    if (PP.getLangOpts().CPlusPlus &&
+  if (getLangOpts().MSVCCompat) {
+    if (getLangOpts().CPlusPlus &&
         IdResolver.begin(&Context.Idents.get("type_info")) == IdResolver.end())
       PushOnScopeChains(Context.buildImplicitRecord("type_info", TTK_Class),
                         TUScope);
@@ -203,7 +202,7 @@ void Sema::Initialize() {
   }
 
   // Initialize predefined OpenCL types.
-  if (PP.getLangOpts().OpenCL) {
+  if (getLangOpts().OpenCL) {
     addImplicitTypedef("image1d_t", Context.OCLImage1dTy);
     addImplicitTypedef("image1d_array_t", Context.OCLImage1dArrayTy);
     addImplicitTypedef("image1d_buffer_t", Context.OCLImage1dBufferTy);
@@ -249,7 +248,7 @@ void Sema::Initialize() {
     }
   }
 
-  if (PP.getTargetInfo().hasBuiltinMSVaList()) {
+  if (Context.getTargetInfo().hasBuiltinMSVaList()) {
     DeclarationName MSVaList = &Context.Idents.get("__builtin_ms_va_list");
     if (IdResolver.begin(MSVaList) == IdResolver.end())
       PushOnScopeChains(Context.getBuiltinMSVaListDecl(), TUScope);
@@ -1469,7 +1468,7 @@ bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
     // arguments and that it returns something of a reasonable type,
     // so we can emit a fixit and carry on pretending that E was
     // actually a CallExpr.
-    SourceLocation ParenInsertionLoc = PP.getLocForEndOfToken(Range.getEnd());
+    SourceLocation ParenInsertionLoc = getLocForEndOfToken(Range.getEnd());
     Diag(Loc, PD)
       << /*zero-arg*/ 1 << Range
       << (IsCallableWithAppend(E.get())

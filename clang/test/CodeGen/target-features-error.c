@@ -3,6 +3,6 @@ int __attribute__((target("avx"), always_inline)) foo(int a) {
   return a + 4;
 }
 int bar() {
-  return foo(4); // expected-error {{function 'bar' and always_inline callee function 'foo' are required to have matching target features}}
+  return foo(4); // expected-error {{always_inline function 'foo' requires target feature 'sse4.2', but would be inlined into function 'bar' that is compiled without support for 'sse4.2'}}
 }
 

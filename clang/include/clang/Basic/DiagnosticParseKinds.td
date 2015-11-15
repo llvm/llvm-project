@@ -51,14 +51,6 @@ def warn_extra_semi_after_mem_fn_def : Warning<
   "extra ';' after member function definition">,
   InGroup<ExtraSemi>, DefaultIgnore;
 
-def ext_duplicate_declspec : ExtWarn<"duplicate '%0' declaration specifier">,
-  InGroup<DuplicateDeclSpecifier>;
-def warn_duplicate_declspec : Warning<"duplicate '%0' declaration specifier">,
-  InGroup<DuplicateDeclSpecifier>;
-def ext_plain_complex : ExtWarn<
-  "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
-def ext_integer_complex : Extension<
-  "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
 def ext_thread_before : Extension<"'__thread' before '%0'">;
 def ext_keyword_as_ident : ExtWarn<
   "keyword '%0' will be made available as an identifier "
@@ -70,12 +62,6 @@ def ext_nullability : Extension<
   InGroup<DiagGroup<"nullability-extension">>;
 
 def error_empty_enum : Error<"use of empty enum">;
-def err_invalid_sign_spec : Error<"'%0' cannot be signed or unsigned">;
-def err_invalid_short_spec : Error<"'short %0' is invalid">;
-def err_invalid_long_spec : Error<"'long %0' is invalid">;
-def err_invalid_longlong_spec : Error<"'long long %0' is invalid">;
-def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
-def err_friend_decl_spec : Error<"'%0' is invalid in friend declarations">;
 
 def ext_ident_list_in_param : Extension<
   "type-less parameter names in function declaration">;
@@ -286,11 +272,6 @@ def err_init_list_bin_op : Error<"initializer list cannot be used on the "
 def warn_cxx98_compat_trailing_return_type : Warning<
   "trailing return types are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_auto_type_specifier : ExtWarn<
-  "'auto' type specifier is a C++11 extension">, InGroup<CXX11>;
-def warn_auto_storage_class : Warning<
-  "'auto' storage class specifier is redundant and incompatible with C++11">,
-  InGroup<CXX11Compat>, DefaultIgnore;
 def ext_auto_storage_class : ExtWarn<
   "'auto' storage class specifier is not permitted in C++11, and will not "
   "be supported in future releases">, InGroup<DiagGroup<"auto-storage-class">>;
@@ -330,9 +311,6 @@ def err_unspecified_vla_size_with_static : Error<
   "'static' may not be used with an unspecified variable length array size">;
 def err_unspecified_size_with_static : Error<
   "'static' may not be used without an array size">;
-def warn_deprecated_register : Warning<
-  "'register' storage class specifier is deprecated">,
-  InGroup<DeprecatedRegister>;
 def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
 
@@ -351,39 +329,10 @@ def err_typename_invalid_constexpr : Error<
 def err_typename_identifiers_only : Error<
   "typename is allowed for identifiers only">;
 
-def err_invalid_decl_spec_combination : Error<
-  "cannot combine with previous '%0' declaration specifier">;
-def err_invalid_vector_decl_spec_combination : Error<
-  "cannot combine with previous '%0' declaration specifier. "
-  "'__vector' must be first">;
-def err_invalid_pixel_decl_spec_combination : Error<
-  "'__pixel' must be preceded by '__vector'.  "
-  "'%0' declaration specifier not allowed here">;
-def err_invalid_vector_bool_decl_spec : Error<
-  "cannot use '%0' with '__vector bool'">;
-def err_invalid_vector_long_decl_spec : Error<
-  "cannot use 'long' with '__vector'">;
-def err_invalid_vector_float_decl_spec : Error<
-  "cannot use 'float' with '__vector'">;
-def err_invalid_vector_double_decl_spec : Error <
-  "use of 'double' with '__vector' requires VSX support to be enabled "
-  "(available on POWER7 or later)">;
-def err_invalid_vector_long_long_decl_spec : Error <
-  "use of 'long long' with '__vector bool' requires VSX support (available on "
-  "POWER7 or later) or extended Altivec support (available on POWER8 or later) " 
-  "to be enabled">;
-def err_invalid_vector_long_double_decl_spec : Error<
-  "cannot use 'long double' with '__vector'">;
-def warn_vector_long_decl_spec_combination : Warning<
-  "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 def err_friend_invalid_in_context : Error<
   "'friend' used outside of class">;
-def err_use_of_tag_name_without_tag : Error<
-  "must use '%1' tag to refer to type %0%select{| in this scope}2">;
-def err_templated_using_directive : Error<
-  "cannot template a using directive">;
-def err_templated_using_declaration : Error<
-  "cannot template a using declaration">;
+def err_templated_using_directive_declaration : Error<
+  "cannot template a using %select{directive|declaration}0">;
 def err_unexpected_colon_in_nested_name_spec : Error<
   "unexpected ':' in nested name specifier; did you mean '::'?">;
 def err_unexpected_token_in_nested_name_spec : Error<
@@ -698,12 +647,9 @@ def warn_static_inline_explicit_inst_ignored : Warning<
 // Constructor template diagnostics.
 def err_out_of_line_constructor_template_id : Error<
   "out-of-line constructor for %0 cannot have template arguments">;
-def err_out_of_line_template_id_names_constructor : Error<
+def err_out_of_line_template_id_type_names_constructor : Error<
   "qualified reference to %0 is a constructor name rather than a "
-  "template name wherever a constructor can be declared">;
-def err_out_of_line_type_names_constructor : Error<
-  "qualified reference to %0 is a constructor name rather than a "
-  "type wherever a constructor can be declared">;
+  "%select{template name|type}1 wherever a constructor can be declared">;
 
 def err_expected_qualified_after_typename : Error<
   "expected a qualified name after 'typename'">;
@@ -743,15 +689,11 @@ def err_missing_whitespace_digraph : Error<
   "%select{template name|const_cast|dynamic_cast|reinterpret_cast|static_cast}0"
   " which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?">;
 
-def ext_deleted_function : ExtWarn<
-  "deleted function definitions are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_deleted_function : Warning<
-  "deleted function definitions are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
-def ext_defaulted_function : ExtWarn<
-  "defaulted function definitions are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_defaulted_function : Warning<
-  "defaulted function definitions are incompatible with C++98">,
+def ext_defaulted_deleted_function : ExtWarn<
+  "%select{defaulted|deleted}0 function definitions are a C++11 extension">,
+  InGroup<CXX11>;
+def warn_cxx98_compat_defaulted_deleted_function : Warning<
+  "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
 // C++11 in-class member initialization
@@ -959,10 +901,6 @@ def err_pragma_optimize_invalid_argument : Error<
   "expected 'on' or 'off'">;
 def err_pragma_optimize_extra_argument : Error<
   "unexpected extra argument '%0' to '#pragma clang optimize'">;
-
-// OpenCL Section 6.8.g
-def err_opencl_unknown_type_specifier : Error<
-  "OpenCL does not support the '%0' %select{type qualifier|storage class specifier}1">;
 
 // OpenCL EXTENSION pragma (OpenCL 1.1 [9.1])
 def warn_pragma_expected_colon : Warning<

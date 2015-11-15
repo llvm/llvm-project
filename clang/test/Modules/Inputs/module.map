@@ -379,3 +379,10 @@ module DebugSubmodules {
 module ExtensionTestA {
   header "ExtensionTestA.h"
 }
+
+module TypedefTag {
+  header "typedef-tag.h"
+  explicit module Hidden {
+    header "typedef-tag-hidden.h"
+  }
+}
