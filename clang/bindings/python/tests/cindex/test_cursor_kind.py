@@ -13,6 +13,7 @@ def test_get_all_kinds():
     assert CursorKind.OBJ_SELF_EXPR in kinds
     assert CursorKind.MS_ASM_STMT in kinds
     assert CursorKind.MODULE_IMPORT_DECL in kinds
+    assert CursorKind.TYPE_ALIAS_TEMPLATE_DECL in kinds
 
 def test_kind_groups():
     """Check that every kind classifies to exactly one group."""

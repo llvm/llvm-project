@@ -58,8 +58,8 @@ bool ConversionFixItGenerator::tryToFixConversion(const Expr *FullExpr,
   const CanQualType FromQTy = S.Context.getCanonicalType(FromTy);
   const CanQualType ToQTy = S.Context.getCanonicalType(ToTy);
   const SourceLocation Begin = FullExpr->getSourceRange().getBegin();
-  const SourceLocation End = S.PP.getLocForEndOfToken(FullExpr->getSourceRange()
-                                                      .getEnd());
+  const SourceLocation End = S.getLocForEndOfToken(FullExpr->getSourceRange()
+                                                   .getEnd());
 
   // Strip the implicit casts - those are implied by the compiler, not the
   // original source code.
