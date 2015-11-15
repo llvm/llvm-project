@@ -5135,7 +5135,7 @@ def rm : S3SI<op, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
                       IIC_SSE_MOV_LH>, Sched<[WriteLoad]>;
 }
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX] in {
   defm VMOVSHDUP  : sse3_replicate_sfp<0x16, X86Movshdup, "vmovshdup",
                                        v4f32, VR128, loadv4f32, f128mem>, VEX;
   defm VMOVSLDUP  : sse3_replicate_sfp<0x12, X86Movsldup, "vmovsldup",
@@ -5150,7 +5150,7 @@ defm MOVSHDUP : sse3_replicate_sfp<0x16, X86Movshdup, "movshdup", v4f32, VR128,
 defm MOVSLDUP : sse3_replicate_sfp<0x12, X86Movsldup, "movsldup", v4f32, VR128,
                                    memopv4f32, f128mem>;
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v4i32 (X86Movshdup VR128:$src)),
             (VMOVSHDUPrr VR128:$src)>;
   def : Pat<(v4i32 (X86Movshdup (bc_v4i32 (loadv2i64 addr:$src)))),

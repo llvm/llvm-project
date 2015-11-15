@@ -4676,3 +4676,49 @@ define <8 x i64>@test_int_x86_avx512_maskz_pternlog_q_512(<8 x i64> %x0, <8 x i6
   ret <8 x i64> %res2
 }
 
+declare <16 x float> @llvm.x86.avx512.mask.movsldup.512(<16 x float>, <16 x float>, i16)
+
+define <16 x float>@test_int_x86_avx512_mask_movsldup_512(<16 x float> %x0, <16 x float> %x1, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movsldup_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vmovsldup %zmm0, %zmm1 {%k1} 
+; CHECK-NEXT:    ## zmm1 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vmovsldup %zmm0, %zmm2 {%k1} {z} 
+; CHECK-NEXT:    ## zmm2 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vmovsldup %zmm0, %zmm0 
+; CHECK-NEXT:    ## zmm0 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0 
+; CHECK-NEXT:    vaddps %zmm0, %zmm2, %zmm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x float> @llvm.x86.avx512.mask.movsldup.512(<16 x float> %x0, <16 x float> %x1, i16 %x2)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.movsldup.512(<16 x float> %x0, <16 x float> %x1, i16 -1)
+  %res2 = call <16 x float> @llvm.x86.avx512.mask.movsldup.512(<16 x float> %x0, <16 x float> zeroinitializer, i16 %x2)
+  %res3 = fadd <16 x float> %res, %res1
+  %res4 = fadd <16 x float> %res2, %res3
+  ret <16 x float> %res4
+}
+
+declare <16 x float> @llvm.x86.avx512.mask.movshdup.512(<16 x float>, <16 x float>, i16)
+
+define <16 x float>@test_int_x86_avx512_mask_movshdup_512(<16 x float> %x0, <16 x float> %x1, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movshdup_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vmovshdup %zmm0, %zmm1 {%k1} 
+; CHECK-NEXT:    ## zmm1 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
+; CHECK-NEXT:    vmovshdup %zmm0, %zmm2 {%k1} {z} 
+; CHECK-NEXT:    ## zmm2 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
+; CHECK-NEXT:    vmovshdup %zmm0, %zmm0 
+; CHECK-NEXT:    ## zmm0 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
+; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0 
+; CHECK-NEXT:    vaddps %zmm0, %zmm2, %zmm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x float> @llvm.x86.avx512.mask.movshdup.512(<16 x float> %x0, <16 x float> %x1, i16 %x2)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.movshdup.512(<16 x float> %x0, <16 x float> %x1, i16 -1)
+  %res2 = call <16 x float> @llvm.x86.avx512.mask.movshdup.512(<16 x float> %x0, <16 x float> zeroinitializer, i16 %x2)
+  %res3 = fadd <16 x float> %res, %res1
+  %res4 = fadd <16 x float> %res2, %res3
+  ret <16 x float> %res4
+}
+

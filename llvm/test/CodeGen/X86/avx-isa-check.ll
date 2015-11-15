@@ -344,6 +344,30 @@ define <16 x i16> @shuffle_v16i16_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_0
   ret <16 x i16> %shuffle
 }
 
+define <8 x float> @shuffle_v8f32_11335577(<8 x float> %a, <8 x float> %b) {
+; vmovshdup 256 test
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  ret <8 x float> %shuffle
+}
+
+define <4 x float> @shuffle_v4f32_1133(<4 x float> %a, <4 x float> %b) {
+; vmovshdup 128 test 
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  ret <4 x float> %shuffle
+}
+
+define <8 x float> @shuffle_v8f32_00224466(<8 x float> %a, <8 x float> %b) {
+; vmovsldup 256 test
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  ret <8 x float> %shuffle
+}
+
+define <4 x float> @shuffle_v4f32_0022(<4 x float> %a, <4 x float> %b) {
+; vmovsldup 128 test
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x float> %shuffle
+}
+
 define <2 x double> @insert_mem_lo_v2f64(double* %ptr, <2 x double> %b) {
   %a = load double, double* %ptr
   %v = insertelement <2 x double> undef, double %a, i32 0

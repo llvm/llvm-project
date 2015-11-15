@@ -405,6 +405,8 @@ private:
   std::error_code globalCleanup();
   std::error_code resolveGlobalAndAliasInits();
   std::error_code parseMetadata();
+  std::error_code parseMetadataKinds();
+  std::error_code parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record);
   std::error_code parseMetadataAttachment(Function &F);
   ErrorOr<std::string> parseModuleTriple();
   std::error_code parseUseLists();
@@ -1897,6 +1899,21 @@ std::error_code BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
   }
 }
 
+/// Parse a single METADATA_KIND record, inserting result in MDKindMap.
+std::error_code
+BitcodeReader::parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record) {
+  if (Record.size() < 2)
+    return error("Invalid record");
+
+  unsigned Kind = Record[0];
+  SmallString<8> Name(Record.begin() + 1, Record.end());
+
+  unsigned NewKind = TheModule->getMDKindID(Name.str());
+  if (!MDKindMap.insert(std::make_pair(Kind, NewKind)).second)
+    return error("Conflicting METADATA_KIND records");
+  return std::error_code();
+}
+
 static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
 
 std::error_code BitcodeReader::parseMetadata() {
@@ -2372,20 +2389,52 @@ std::error_code BitcodeReader::parseMetadata() {
       break;
     }
     case bitc::METADATA_KIND: {
-      if (Record.size() < 2)
-        return error("Invalid record");
-
-      unsigned Kind = Record[0];
-      SmallString<8> Name(Record.begin()+1, Record.end());
-
-      unsigned NewKind = TheModule->getMDKindID(Name.str());
-      if (!MDKindMap.insert(std::make_pair(Kind, NewKind)).second)
-        return error("Conflicting METADATA_KIND records");
+      // Support older bitcode files that had METADATA_KIND records in a
+      // block with METADATA_BLOCK_ID.
+      if (std::error_code EC = parseMetadataKindRecord(Record))
+        return EC;
       break;
     }
     }
   }
 #undef GET_OR_DISTINCT
+}
+
+/// Parse the metadata kinds out of the METADATA_KIND_BLOCK.
+std::error_code BitcodeReader::parseMetadataKinds() {
+  if (Stream.EnterSubBlock(bitc::METADATA_KIND_BLOCK_ID))
+    return error("Invalid record");
+
+  SmallVector<uint64_t, 64> Record;
+
+  // Read all the records.
+  while (1) {
+    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+
+    switch (Entry.Kind) {
+    case BitstreamEntry::SubBlock: // Handled for us already.
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      return std::error_code();
+    case BitstreamEntry::Record:
+      // The interesting case.
+      break;
+    }
+
+    // Read a record.
+    Record.clear();
+    unsigned Code = Stream.readRecord(Entry.ID, Record);
+    switch (Code) {
+    default: // Default behavior: ignore.
+      break;
+    case bitc::METADATA_KIND: {
+      if (std::error_code EC = parseMetadataKindRecord(Record))
+        return EC;
+      break;
+    }
+    }
+  }
 }
 
 /// Decode a signed value stored with the sign bit in the LSB for dense VBR
@@ -3248,6 +3297,10 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
         }
         assert(DeferredMetadataInfo.empty() && "Unexpected deferred metadata");
         if (std::error_code EC = parseMetadata())
+          return EC;
+        break;
+      case bitc::METADATA_KIND_BLOCK_ID:
+        if (std::error_code EC = parseMetadataKinds())
           return EC;
         break;
       case bitc::FUNCTION_BLOCK_ID:

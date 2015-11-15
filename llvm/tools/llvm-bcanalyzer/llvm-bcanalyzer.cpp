@@ -114,6 +114,7 @@ static const char *GetBlockName(unsigned BlockID,
     return "IDENTIFICATION_BLOCK_ID";
   case bitc::VALUE_SYMTAB_BLOCK_ID:    return "VALUE_SYMTAB";
   case bitc::METADATA_BLOCK_ID:        return "METADATA_BLOCK";
+  case bitc::METADATA_KIND_BLOCK_ID:   return "METADATA_KIND_BLOCK";
   case bitc::METADATA_ATTACHMENT_ID:   return "METADATA_ATTACHMENT_BLOCK";
   case bitc::USELIST_BLOCK_ID:         return "USELIST_BLOCK_ID";
   case bitc::FUNCTION_SUMMARY_BLOCK_ID:
@@ -305,7 +306,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
     default:return nullptr;
       STRINGIFY_CODE(METADATA, STRING)
       STRINGIFY_CODE(METADATA, NAME)
-      STRINGIFY_CODE(METADATA, KIND)
+      STRINGIFY_CODE(METADATA, KIND) // Older bitcode has it in a MODULE_BLOCK
       STRINGIFY_CODE(METADATA, NODE)
       STRINGIFY_CODE(METADATA, VALUE)
       STRINGIFY_CODE(METADATA, OLD_NODE)
@@ -334,6 +335,12 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(METADATA, OBJC_PROPERTY)
       STRINGIFY_CODE(METADATA, IMPORTED_ENTITY)
       STRINGIFY_CODE(METADATA, MODULE)
+    }
+  case bitc::METADATA_KIND_BLOCK_ID:
+    switch (CodeID) {
+    default:
+      return nullptr;
+      STRINGIFY_CODE(METADATA, KIND)
     }
   case bitc::USELIST_BLOCK_ID:
     switch(CodeID) {

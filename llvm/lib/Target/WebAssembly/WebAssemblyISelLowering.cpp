@@ -309,8 +309,6 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = Res.getValue(1);
   }
 
-  // FIXME: handle CLI.RetSExt and CLI.RetZExt?
-
   Chain = DAG.getCALLSEQ_END(Chain, NB, Zero, SDValue(), DL);
 
   return Chain;
@@ -342,22 +340,12 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
 
   // Record the number and types of the return values.
   for (const ISD::OutputArg &Out : Outs) {
-    if (Out.Flags.isZExt())
-      fail(DL, DAG, "WebAssembly hasn't implemented zext results");
-    if (Out.Flags.isSExt())
-      fail(DL, DAG, "WebAssembly hasn't implemented sext results");
-    if (Out.Flags.isInReg())
-      fail(DL, DAG, "WebAssembly hasn't implemented inreg results");
-    if (Out.Flags.isSRet())
-      fail(DL, DAG, "WebAssembly hasn't implemented sret results");
     if (Out.Flags.isByVal())
       fail(DL, DAG, "WebAssembly hasn't implemented byval results");
     if (Out.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca results");
     if (Out.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest results");
-    if (Out.Flags.isReturned())
-      fail(DL, DAG, "WebAssembly hasn't implemented returned results");
     if (Out.Flags.isInConsecutiveRegs())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs results");
     if (Out.Flags.isInConsecutiveRegsLast())
@@ -381,24 +369,13 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
   if (IsVarArg)
     fail(DL, DAG, "WebAssembly doesn't support varargs yet");
 
-  unsigned ArgNo = 0;
   for (const ISD::InputArg &In : Ins) {
-    if (In.Flags.isZExt())
-      fail(DL, DAG, "WebAssembly hasn't implemented zext arguments");
-    if (In.Flags.isSExt())
-      fail(DL, DAG, "WebAssembly hasn't implemented sext arguments");
-    if (In.Flags.isInReg())
-      fail(DL, DAG, "WebAssembly hasn't implemented inreg arguments");
-    if (In.Flags.isSRet())
-      fail(DL, DAG, "WebAssembly hasn't implemented sret arguments");
     if (In.Flags.isByVal())
       fail(DL, DAG, "WebAssembly hasn't implemented byval arguments");
     if (In.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca arguments");
     if (In.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
-    if (In.Flags.isReturned())
-      fail(DL, DAG, "WebAssembly hasn't implemented returned arguments");
     if (In.Flags.isInConsecutiveRegs())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs arguments");
     if (In.Flags.isInConsecutiveRegsLast())
@@ -407,12 +384,11 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     InVals.push_back(
         In.Used
             ? DAG.getNode(WebAssemblyISD::ARGUMENT, DL, In.VT,
-                          DAG.getTargetConstant(ArgNo, DL, MVT::i32))
+                          DAG.getTargetConstant(InVals.size(), DL, MVT::i32))
             : DAG.getNode(ISD::UNDEF, DL, In.VT));
 
     // Record the number and types of arguments.
     MF.getInfo<WebAssemblyFunctionInfo>()->addParam(In.VT);
-    ++ArgNo;
   }
 
   return Chain;

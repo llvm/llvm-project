@@ -50,7 +50,9 @@ enum BlockIDs {
   MODULE_STRTAB_BLOCK_ID,
   FUNCTION_SUMMARY_BLOCK_ID,
 
-  OPERAND_BUNDLE_TAGS_BLOCK_ID
+  OPERAND_BUNDLE_TAGS_BLOCK_ID,
+
+  METADATA_KIND_BLOCK_ID
 };
 
 /// Identification block contains a string that describes the producer details,
