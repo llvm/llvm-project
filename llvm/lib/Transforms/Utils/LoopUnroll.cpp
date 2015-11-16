@@ -550,7 +550,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     if (!OuterL && !CompletelyUnroll)
       OuterL = L;
     if (OuterL) {
-      simplifyLoop(OuterL, DT, LI, PP, SE, AC);
+      bool Simplified = simplifyLoop(OuterL, DT, LI, PP, SE, AC);
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
@@ -560,7 +560,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         while (OuterL->getParentLoop() != LatchLoop)
           OuterL = OuterL->getParentLoop();
 
-      if (CompletelyUnroll && !AllExitsAreInsideParentLoop)
+      if (CompletelyUnroll && (!AllExitsAreInsideParentLoop || Simplified))
         formLCSSARecursively(*OuterL, *DT, LI, SE);
       else
         assert(OuterL->isLCSSAForm(*DT) &&
