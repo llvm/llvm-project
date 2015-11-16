@@ -43,6 +43,8 @@ func $__lldb__DumpForDebugger_impl<TargetStream : OutputStreamType>(
         func isCollectionMirror(x_mirror: Mirror) -> Bool {
             let ds = x_mirror.displayStyle ?? .Struct
             switch ds {
+            case .Optional:
+                fallthrough
             case .Collection:
                 fallthrough
             case .Dictionary:
