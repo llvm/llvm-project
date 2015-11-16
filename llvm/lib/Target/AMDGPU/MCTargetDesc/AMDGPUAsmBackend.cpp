@@ -71,12 +71,26 @@ void AMDGPUMCObjectWriter::writeObject(MCAssembler &Asm,
   }
 }
 
+static unsigned getFixupKindNumBytes(unsigned Kind) {
+  switch (Kind) {
+  case FK_Data_1:
+    return 1;
+  case FK_Data_2:
+    return 2;
+  case FK_Data_4:
+    return 4;
+  case FK_Data_8:
+    return 8;
+  default:
+    llvm_unreachable("Unknown fixup kind!");
+  }
+}
+
 void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                   unsigned DataSize, uint64_t Value,
                                   bool IsPCRel) const {
 
   switch ((unsigned)Fixup.getKind()) {
-    default: llvm_unreachable("Unknown fixup kind");
     case AMDGPU::fixup_si_sopp_br: {
       uint16_t *Dst = (uint16_t*)(Data + Fixup.getOffset());
       *Dst = (Value - 4) / 4;
@@ -95,6 +109,24 @@ void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
       // need to add 4 bytes to get to the start of the constants.
       *Dst = Value + 4;
       break;
+    }
+    default: {
+      // FIXME: Copied from AArch64
+      unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
+      if (!Value)
+        return; // Doesn't change encoding.
+      MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
+
+      // Shift the value into position.
+      Value <<= Info.TargetOffset;
+
+      unsigned Offset = Fixup.getOffset();
+      assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
+
+      // For each byte of the fragment that the fixup touches, mask in the
+      // bits from the fixup value.
+      for (unsigned i = 0; i != NumBytes; ++i)
+        Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
     }
   }
 }
