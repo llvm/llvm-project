@@ -264,6 +264,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       // TODO: CodeSize should account for multiple functions.
+
+      // TODO: Should we count size of debug info?
+      if (MI.isDebugValue())
+        continue;
+
+      // FIXME: This is reporting 0 for many instructions.
       CodeSize += MI.getDesc().Size;
 
       unsigned numOperands = MI.getNumOperands();
