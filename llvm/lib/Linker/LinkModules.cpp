@@ -1628,8 +1628,9 @@ void ModuleLinker::linkNamedMDNodes() {
     NamedMDNode *DestNMD = DstM->getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *op : NMD.operands())
-      DestNMD->addOperand(MapMetadata(op, ValueMap, RF_MoveDistinctMDs,
-                                      &TypeMap, &ValMaterializer));
+      DestNMD->addOperand(MapMetadata(
+          op, ValueMap, RF_MoveDistinctMDs | RF_NullMapMissingGlobalValues,
+          &TypeMap, &ValMaterializer));
   }
 }
 

@@ -11,7 +11,7 @@
 @G = internal global i8** null
 @G2 = internal global i8** null
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, i8** %argv) norecurse {
 ; CHECK: alloca
   store i8** %argv, i8*** @G
   ret i32 0

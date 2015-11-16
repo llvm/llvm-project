@@ -169,7 +169,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
         return false;
   }
 
-  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst))
+  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst) || Inst->isEHPad())
     return false;
 
   // Convergent operations cannot be made control-dependent on additional

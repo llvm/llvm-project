@@ -16,18 +16,18 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 static unsigned getVectorRegSize(unsigned RegNo) {
-  if (X86MCRegisterClasses[X86::VR512RegClassID].contains(RegNo))
+
+  if (X86::ZMM0 <= RegNo && RegNo <= X86::ZMM31)
     return 512;
-  else if (X86MCRegisterClasses[X86::VR256XRegClassID].contains(RegNo))
+  if (X86::YMM0 <= RegNo && RegNo <= X86::YMM31)
     return 256;
-  else if (X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
+  if (X86::XMM0 <= RegNo && RegNo <= X86::XMM31)
     return 128;
 
   llvm_unreachable("Unknown vector reg!");

@@ -25,48 +25,48 @@
 // Basic load.
 def LOAD_I32 : I<(outs I32:$dst), (ins I32:$addr),
                  [(set I32:$dst, (load I32:$addr))],
-                 "i32.load $dst, $addr">;
+                 "i32.load\t$dst, $addr">;
 def LOAD_I64 : I<(outs I64:$dst), (ins I32:$addr),
                  [(set I64:$dst, (load I32:$addr))],
-                 "i64.load $dst, $addr">;
+                 "i64.load\t$dst, $addr">;
 def LOAD_F32 : I<(outs F32:$dst), (ins I32:$addr),
                  [(set F32:$dst, (load I32:$addr))],
-                 "f32.load $dst, $addr">;
+                 "f32.load\t$dst, $addr">;
 def LOAD_F64 : I<(outs F64:$dst), (ins I32:$addr),
                  [(set F64:$dst, (load I32:$addr))],
-                 "f64.load $dst, $addr">;
+                 "f64.load\t$dst, $addr">;
 
 // Extending load.
 def LOAD8_S_I32  : I<(outs I32:$dst), (ins I32:$addr),
                      [(set I32:$dst, (sextloadi8 I32:$addr))],
-                     "i32.load8_s $dst, $addr">;
+                     "i32.load8_s\t$dst, $addr">;
 def LOAD8_U_I32  : I<(outs I32:$dst), (ins I32:$addr),
                      [(set I32:$dst, (zextloadi8 I32:$addr))],
-                     "i32.load8_u $dst, $addr">;
+                     "i32.load8_u\t$dst, $addr">;
 def LOAD16_S_I32 : I<(outs I32:$dst), (ins I32:$addr),
                      [(set I32:$dst, (sextloadi16 I32:$addr))],
-                     "i32.load16_s $dst, $addr">;
+                     "i32.load16_s\t$dst, $addr">;
 def LOAD16_U_I32 : I<(outs I32:$dst), (ins I32:$addr),
                      [(set I32:$dst, (zextloadi16 I32:$addr))],
-                     "i32.load16_u $dst, $addr">;
+                     "i32.load16_u\t$dst, $addr">;
 def LOAD8_S_I64  : I<(outs I64:$dst), (ins I32:$addr),
                      [(set I64:$dst, (sextloadi8 I32:$addr))],
-                     "i64.load8_s $dst, $addr">;
+                     "i64.load8_s\t$dst, $addr">;
 def LOAD8_U_I64  : I<(outs I64:$dst), (ins I32:$addr),
                      [(set I64:$dst, (zextloadi8 I32:$addr))],
-                     "i64.load8_u $dst, $addr">;
+                     "i64.load8_u\t$dst, $addr">;
 def LOAD16_S_I64 : I<(outs I64:$dst), (ins I32:$addr),
                      [(set I64:$dst, (sextloadi16 I32:$addr))],
-                     "i64.load16_s $dst, $addr">;
+                     "i64.load16_s\t$dst, $addr">;
 def LOAD16_U_I64 : I<(outs I64:$dst), (ins I32:$addr),
                      [(set I64:$dst, (zextloadi16 I32:$addr))],
-                     "i64.load16_u $dst, $addr">;
+                     "i64.load16_u\t$dst, $addr">;
 def LOAD32_S_I64 : I<(outs I64:$dst), (ins I32:$addr),
                      [(set I64:$dst, (sextloadi32 I32:$addr))],
-                     "i64.load32_s $dst, $addr">;
+                     "i64.load32_s\t$dst, $addr">;
 def LOAD32_U_I64 : I<(outs I64:$dst), (ins I32:$addr),
                      [(set I64:$dst, (zextloadi32 I32:$addr))],
-                     "i64.load32_u $dst, $addr">;
+                     "i64.load32_u\t$dst, $addr">;
 
 // "Don't care" extending load become zero-extending load.
 def : Pat<(i32 (extloadi8 I32:$addr)),  (LOAD8_U_I32 $addr)>;
@@ -79,50 +79,50 @@ def : Pat<(i64 (extloadi32 I32:$addr)), (LOAD32_U_I64 $addr)>;
 // Note: WebAssembly inverts SelectionDAG's usual operand order.
 def STORE_I32  : I<(outs), (ins I32:$addr, I32:$val),
                    [(store i32:$val, I32:$addr)],
-                   "i32.store $addr, $val">;
+                   "i32.store\t$addr, $val">;
 def STORE_I64  : I<(outs), (ins I32:$addr, I64:$val),
                    [(store i64:$val, I32:$addr)],
-                   "i64.store $addr, $val">;
+                   "i64.store\t$addr, $val">;
 def STORE_F32  : I<(outs), (ins I32:$addr, F32:$val),
                    [(store f32:$val, I32:$addr)],
-                   "f32.store $addr, $val">;
+                   "f32.store\t$addr, $val">;
 def STORE_F64  : I<(outs), (ins I32:$addr, F64:$val),
                    [(store f64:$val, I32:$addr)],
-                   "f64.store $addr, $val">;
+                   "f64.store\t$addr, $val">;
 
 // Truncating store.
 def STORE8_I32  : I<(outs), (ins I32:$addr, I32:$val),
                     [(truncstorei8 I32:$val, I32:$addr)],
-                    "i32.store8 $addr, $val">;
+                    "i32.store8\t$addr, $val">;
 def STORE16_I32 : I<(outs), (ins I32:$addr, I32:$val),
                     [(truncstorei16 I32:$val, I32:$addr)],
-                    "i32.store16 $addr, $val">;
+                    "i32.store16\t$addr, $val">;
 def STORE8_I64  : I<(outs), (ins I32:$addr, I64:$val),
                     [(truncstorei8 I64:$val, I32:$addr)],
-                    "i64.store8 $addr, $val">;
+                    "i64.store8\t$addr, $val">;
 def STORE16_I64 : I<(outs), (ins I32:$addr, I64:$val),
                     [(truncstorei16 I64:$val, I32:$addr)],
-                    "i64.store16 $addr, $val">;
+                    "i64.store16\t$addr, $val">;
 def STORE32_I64 : I<(outs), (ins I32:$addr, I64:$val),
                     [(truncstorei32 I64:$val, I32:$addr)],
-                    "i64.store32 $addr, $val">;
+                    "i64.store32\t$addr, $val">;
 
 // Memory size.
 def MEMORY_SIZE_I32 : I<(outs I32:$dst), (ins),
                         [(set I32:$dst, (int_wasm_memory_size))],
-                        "i32.memory_size $dst">,
+                        "i32.memory_size\t$dst">,
                       Requires<[HasAddr32]>;
 def MEMORY_SIZE_I64 : I<(outs I64:$dst), (ins),
                         [(set I64:$dst, (int_wasm_memory_size))],
-                        "i64.memory_size $dst">,
+                        "i64.memory_size\t$dst">,
                       Requires<[HasAddr64]>;
 
 // Grow memory.
 def GROW_MEMORY_I32 : I<(outs), (ins I32:$delta),
                         [(int_wasm_grow_memory I32:$delta)],
-                        "i32.grow_memory $delta">,
+                        "i32.grow_memory\t$delta">,
                       Requires<[HasAddr32]>;
 def GROW_MEMORY_I64 : I<(outs), (ins I64:$delta),
                         [(int_wasm_grow_memory I64:$delta)],
-                        "i64.grow_memory $delta">,
+                        "i64.grow_memory\t$delta">,
                       Requires<[HasAddr64]>;

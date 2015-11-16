@@ -255,10 +255,12 @@ DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
                             DITypeRef::get(Base));
 }
 
-DIDerivedType *DIBuilder::createReferenceType(unsigned Tag, DIType *RTy) {
+DIDerivedType *DIBuilder::createReferenceType(unsigned Tag, DIType *RTy,
+                                              uint64_t SizeInBits,
+                                              uint64_t AlignInBits) {
   assert(RTy && "Unable to create reference type");
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr,
-                            DITypeRef::get(RTy), 0, 0, 0, 0);
+                            DITypeRef::get(RTy), SizeInBits, AlignInBits, 0, 0);
 }
 
 DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,

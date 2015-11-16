@@ -58,6 +58,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -233,26 +234,27 @@ bool AddDiscriminators::runOnFunction(Function &F) {
     const DILocation *FirstDIL = NULL;
     for (auto &I : B.getInstList()) {
       CallInst *Current = dyn_cast<CallInst>(&I);
-      if (Current) {
-        DILocation *CurrentDIL = Current->getDebugLoc();
-        if (FirstDIL) {
-          if (CurrentDIL && CurrentDIL->getLine() == FirstDIL->getLine() &&
-              CurrentDIL->getFilename() == FirstDIL->getFilename()) {
-            auto *Scope = FirstDIL->getScope();
-            auto *File = Builder.createFile(FirstDIL->getFilename(),
-                                            Scope->getDirectory());
-            auto *NewScope = Builder.createLexicalBlockFile(
-                Scope, File, FirstDIL->computeNewDiscriminator());
-            Current->setDebugLoc(DILocation::get(
-                Ctx, CurrentDIL->getLine(), CurrentDIL->getColumn(), NewScope,
-                CurrentDIL->getInlinedAt()));
-            Changed = true;
-          } else {
-            FirstDIL = CurrentDIL;
-          }
+      if (!Current || isa<DbgInfoIntrinsic>(&I))
+        continue;
+
+      DILocation *CurrentDIL = Current->getDebugLoc();
+      if (FirstDIL) {
+        if (CurrentDIL && CurrentDIL->getLine() == FirstDIL->getLine() &&
+            CurrentDIL->getFilename() == FirstDIL->getFilename()) {
+          auto *Scope = FirstDIL->getScope();
+          auto *File = Builder.createFile(FirstDIL->getFilename(),
+                                          Scope->getDirectory());
+          auto *NewScope = Builder.createLexicalBlockFile(
+              Scope, File, FirstDIL->computeNewDiscriminator());
+          Current->setDebugLoc(DILocation::get(
+              Ctx, CurrentDIL->getLine(), CurrentDIL->getColumn(), NewScope,
+              CurrentDIL->getInlinedAt()));
+          Changed = true;
         } else {
           FirstDIL = CurrentDIL;
         }
+      } else {
+        FirstDIL = CurrentDIL;
       }
     }
   }

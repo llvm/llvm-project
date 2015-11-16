@@ -10399,6 +10399,12 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
   auto CC = CCNode->getAPIntValue().getLimitedValue();
   SDValue CmpZ = CMOV->getOperand(4);
 
+  // The compare must be against zero.
+  SDValue Zero = CmpZ->getOperand(1);
+  if (!isa<ConstantSDNode>(Zero.getNode()) ||
+      !cast<ConstantSDNode>(Zero.getNode())->isNullValue())
+    return SDValue();
+
   assert(CmpZ->getOpcode() == ARMISD::CMPZ);
   SDValue And = CmpZ->getOperand(0);
   if (And->getOpcode() != ISD::AND)

@@ -396,7 +396,7 @@ would be easy enough to eliminate the map and do the comparisons in the
 With the helper above defined, we can now start parsing binary
 expressions. The basic idea of operator precedence parsing is to break
 down an expression with potentially ambiguous binary operators into
-pieces. Consider ,for example, the expression "a+b+(c+d)\*e\*f+g".
+pieces. Consider, for example, the expression "a+b+(c+d)\*e\*f+g".
 Operator precedence parsing considers this as a stream of primary
 expressions separated by binary operators. As such, it will first parse
 the leading primary expression "a", then it will see the pairs [+, b]

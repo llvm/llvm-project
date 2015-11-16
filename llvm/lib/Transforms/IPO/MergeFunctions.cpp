@@ -1249,6 +1249,7 @@ int FunctionComparator::compare() {
   return 0;
 }
 
+namespace {
 // Accumulate the hash of a sequence of 64-bit integers. This is similar to a
 // hash of a sequence of 64bit ints, but the entire input does not need to be
 // available at once. This interface is necessary for functionHash because it
@@ -1267,6 +1268,7 @@ public:
   // No finishing is required, because the entire hash value is used.
   uint64_t getHash() { return Hash; }
 };
+} // end anonymous namespace
 
 // A function hash is calculated by considering only the number of arguments and
 // whether a function is varargs, the order of basic blocks (given by the
