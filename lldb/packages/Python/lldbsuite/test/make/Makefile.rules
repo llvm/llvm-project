@@ -195,12 +195,6 @@ endif
 CFLAGS ?= -g -O0 -fno-builtin
 SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
 
-# swiftc needs to know which clang++ to use for linking.  On
-# everything but Darwin, we collect that here.
-ifneq "$(OS)" "Darwin"
-	SWIFT_LINKER_PATH_FLAGS="-linker-path $(call cxx_compiler,$(CC))"
-endif
-
 # Setup a default per-user Swift module cache directory.
 SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
 SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
@@ -487,7 +481,7 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 $(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) $(SWIFT_LINKER_PATH_FLAGS) -o "$(EXE)"
+	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) -linker-path $(CXX) -o "$(EXE)"
 else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
