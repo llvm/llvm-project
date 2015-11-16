@@ -831,13 +831,13 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   if (getFrontendOpts().ShowStats)
     llvm::EnableStatistics();
 
-  for (unsigned i = 0, e = getFrontendOpts().Inputs.size(); i != e; ++i) {
+  for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
     // Reset the ID tables if we are reusing the SourceManager and parsing
     // regular files.
     if (hasSourceManager() && !Act.isModelParsingAction())
       getSourceManager().clearIDTables();
 
-    if (Act.BeginSourceFile(*this, getFrontendOpts().Inputs[i])) {
+    if (Act.BeginSourceFile(*this, FIF)) {
       Act.Execute();
       Act.EndSourceFile();
     }
