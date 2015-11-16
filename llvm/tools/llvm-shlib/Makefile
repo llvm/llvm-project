@@ -61,7 +61,7 @@ endif
 
 ifeq ($(HOST_OS), $(filter $(HOST_OS), DragonFly Linux FreeBSD GNU/kFreeBSD GNU))
     # Add soname to the library.
-    LLVMLibsOptions += -Wl,--soname,lib$(LIBRARYNAME)$(SHLIBEXT)
+    LLVMLibsOptions += -Wl,--soname,lib$(LIBRARYNAME).1$(SHLIBEXT)
 endif
 
 ifeq ($(HOST_OS), $(filter $(HOST_OS), Linux GNU GNU/kFreeBSD))
