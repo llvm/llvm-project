@@ -23,7 +23,10 @@
 namespace llvm {
 
 struct SIRegisterInfo : public AMDGPURegisterInfo {
+private:
+  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
 
+public:
   SIRegisterInfo();
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
