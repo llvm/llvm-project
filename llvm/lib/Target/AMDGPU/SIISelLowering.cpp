@@ -157,6 +157,7 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
 
   setTruncStoreAction(MVT::i64, MVT::i32, Expand);
   setTruncStoreAction(MVT::v8i32, MVT::v8i16, Expand);
+  setTruncStoreAction(MVT::v16i32, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v16i32, MVT::v16i16, Expand);
 
   setOperationAction(ISD::LOAD, MVT::i1, Custom);
