@@ -58,10 +58,12 @@ __interface I6 : X {
 struct S { };
 class C { };
 __interface I { };
+union U;
 
 static_assert(!__is_interface_class(S), "oops");
 static_assert(!__is_interface_class(C), "oops");
-static_assert(__is_interface_class(I), "oops");
+static_assert(!__is_interface_class(I), "oops");
+static_assert(!__is_interface_class(U), "oops");
 
 // expected-error@55 {{interface type cannot inherit from 'struct S'}}
 // expected-note@+1 {{in instantiation of template class 'I6<S>' requested here}}
