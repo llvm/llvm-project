@@ -353,7 +353,7 @@ public:
   }
 
   uint64_t getDefaultRsrcDataFormat() const;
-
+  uint64_t getScratchRsrcWords23() const;
 };
 
 namespace AMDGPU {

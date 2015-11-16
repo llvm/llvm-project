@@ -2778,3 +2778,16 @@ uint64_t SIInstrInfo::getDefaultRsrcDataFormat() const {
 
   return RsrcDataFormat;
 }
+
+uint64_t SIInstrInfo::getScratchRsrcWords23() const {
+  uint64_t Rsrc23 = getDefaultRsrcDataFormat() |
+                    AMDGPU::RSRC_TID_ENABLE |
+                    0xffffffff; // Size;
+
+  // If TID_ENABLE is set, DATA_FORMAT specifies stride bits [14:17].
+  // Clear them unless we want a huge stride.
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    Rsrc23 &= ~AMDGPU::RSRC_DATA_FORMAT;
+
+  return Rsrc23;
+}
