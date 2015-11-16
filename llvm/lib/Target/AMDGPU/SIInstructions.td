@@ -1548,6 +1548,12 @@ defm V_WRITELANE_B32 : VOP2SI_3VI_m <
 // These instructions only exist on SI and CI
 let SubtargetPredicate = isSICI in {
 
+let isCommutable = 1 in {
+defm V_MAC_LEGACY_F32 : VOP2InstSI <vop2<0x6>, "v_mac_legacy_f32",
+  VOP_F32_F32_F32
+>;
+} // End isCommutable = 1
+
 defm V_MIN_LEGACY_F32 : VOP2InstSI <vop2<0xd>, "v_min_legacy_f32",
   VOP_F32_F32_F32, AMDGPUfmin_legacy
 >;
@@ -1561,12 +1567,6 @@ defm V_ASHR_I32 : VOP2InstSI <vop2<0x17>, "v_ashr_i32", VOP_I32_I32_I32>;
 defm V_LSHL_B32 : VOP2InstSI <vop2<0x19>, "v_lshl_b32", VOP_I32_I32_I32>;
 } // End isCommutable = 1
 } // End let SubtargetPredicate = SICI
-
-let isCommutable = 1 in {
-defm V_MAC_LEGACY_F32 : VOP2_VI3_Inst <vop23<0x6, 0x28e>, "v_mac_legacy_f32",
-  VOP_F32_F32_F32
->;
-} // End isCommutable = 1
 
 defm V_BFM_B32 : VOP2_VI3_Inst <vop23<0x1e, 0x293>, "v_bfm_b32",
   VOP_I32_I32_I32
