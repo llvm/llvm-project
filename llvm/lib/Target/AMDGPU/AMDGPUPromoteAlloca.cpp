@@ -240,7 +240,12 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
   for (User *User : Val->users()) {
     if(std::find(WorkList.begin(), WorkList.end(), User) != WorkList.end())
       continue;
-    if (isa<CallInst>(User)) {
+    if (CallInst *CI = dyn_cast<CallInst>(User)) {
+      // TODO: We might be able to handle some cases where the callee is a
+      // constantexpr bitcast of a function.
+      if (!CI->getCalledFunction())
+        return false;
+
       WorkList.push_back(User);
       continue;
     }
