@@ -28,6 +28,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -69,6 +70,7 @@ namespace {
   struct GlobalOpt : public ModulePass {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<TargetLibraryInfoWrapperPass>();
+      AU.addRequired<DominatorTreeWrapperPass>();
     }
     static char ID; // Pass identification, replacement for typeid
     GlobalOpt() : ModulePass(ID) {
@@ -86,6 +88,9 @@ namespace {
                                const GlobalStatus &GS);
     bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn);
 
+    bool isPointerValueDeadOnEntryToFunction(const Function *F,
+                                             GlobalValue *GV);
+
     TargetLibraryInfo *TLI;
     SmallSet<const Comdat *, 8> NotDiscardableComdats;
   };
@@ -95,6 +100,7 @@ char GlobalOpt::ID = 0;
 INITIALIZE_PASS_BEGIN(GlobalOpt, "globalopt",
                 "Global Variable Optimizer", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(GlobalOpt, "globalopt",
                 "Global Variable Optimizer", false, false)
 
@@ -1718,15 +1724,91 @@ bool GlobalOpt::ProcessGlobal(GlobalVariable *GV,
   return ProcessInternalGlobal(GV, GVI, GS);
 }
 
+bool GlobalOpt::isPointerValueDeadOnEntryToFunction(const Function *F, GlobalValue *GV) {
+  // Find all uses of GV. We expect them all to be in F, and if we can't
+  // identify any of the uses we bail out.
+  //
+  // On each of these uses, identify if the memory that GV points to is
+  // used/required/live at the start of the function. If it is not, for example
+  // if the first thing the function does is store to the GV, the GV can
+  // possibly be demoted.
+  //
+  // We don't do an exhaustive search for memory operations - simply look
+  // through bitcasts as they're quite common and benign.
+  const DataLayout &DL = GV->getParent()->getDataLayout();
+  SmallVector<LoadInst *, 4> Loads;
+  SmallVector<StoreInst *, 4> Stores;
+  for (auto *U : GV->users()) {
+    if (Operator::getOpcode(U) == Instruction::BitCast) {
+      for (auto *UU : U->users()) {
+        if (auto *LI = dyn_cast<LoadInst>(UU))
+          Loads.push_back(LI);
+        else if (auto *SI = dyn_cast<StoreInst>(UU))
+          Stores.push_back(SI);
+        else
+          return false;
+      }
+      continue;
+    }
+
+    Instruction *I = dyn_cast<Instruction>(U);
+    if (!I)
+      return false;
+    assert(I->getParent()->getParent() == F);
+
+    if (auto *LI = dyn_cast<LoadInst>(I))
+      Loads.push_back(LI);
+    else if (auto *SI = dyn_cast<StoreInst>(I))
+      Stores.push_back(SI);
+    else
+      return false;
+  }
+
+  // We have identified all uses of GV into loads and stores. Now check if all
+  // of them are known not to depend on the value of the global at the function
+  // entry point. We do this by ensuring that every load is dominated by at
+  // least one store.
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>(*const_cast<Function *>(F))
+                 .getDomTree();
+
+  // The below check is quadratic. Check we're not going to do too many tests.
+  // FIXME: Even though this will always have worst-case quadratic time, we
+  // could put effort into minimizing the average time by putting stores that
+  // have been shown to dominate at least one load at the beginning of the
+  // Stores array, making subsequent dominance checks more likely to succeed
+  // early.
+  //
+  // The threshold here is fairly large because global->local demotion is a
+  // very powerful optimization should it fire.
+  const unsigned Threshold = 100;
+  if (Loads.size() * Stores.size() > Threshold)
+    return false;
+
+  for (auto *L : Loads) {
+    auto *LTy = L->getType();
+    if (!std::any_of(Stores.begin(), Stores.end(), [&](StoreInst *S) {
+          auto *STy = S->getValueOperand()->getType();
+          // The load is only dominated by the store if DomTree says so
+          // and the number of bits loaded in L is less than or equal to
+          // the number of bits stored in S.
+          return DT.dominates(S, L) &&
+                 DL.getTypeStoreSize(LTy) <= DL.getTypeStoreSize(STy);
+        }))
+      return false;
+  }
+  // All loads have known dependences inside F, so the global can be localized.
+  return true;
+}
+
 /// Analyze the specified global variable and optimize
 /// it if possible.  If we make a change, return true.
 bool GlobalOpt::ProcessInternalGlobal(GlobalVariable *GV,
                                       Module::global_iterator &GVI,
                                       const GlobalStatus &GS) {
   auto &DL = GV->getParent()->getDataLayout();
-  // If this is a first class global and has only one accessing function
-  // and this function is main (which we know is not recursive), we replace
-  // the global with a local alloca in this function.
+  // If this is a first class global and has only one accessing function and
+  // this function is non-recursive, we replace the global with a local alloca
+  // in this function.
   //
   // NOTE: It doesn't make sense to promote non-single-value types since we
   // are just replacing static memory to stack memory.
@@ -1735,9 +1817,10 @@ bool GlobalOpt::ProcessInternalGlobal(GlobalVariable *GV,
   if (!GS.HasMultipleAccessingFunctions &&
       GS.AccessingFunction && !GS.HasNonInstructionUser &&
       GV->getType()->getElementType()->isSingleValueType() &&
-      GS.AccessingFunction->getName() == "main" &&
-      GS.AccessingFunction->hasExternalLinkage() &&
-      GV->getType()->getAddressSpace() == 0) {
+      GV->getType()->getAddressSpace() == 0 &&
+      !GV->isExternallyInitialized() &&
+      GS.AccessingFunction->doesNotRecurse() &&
+      isPointerValueDeadOnEntryToFunction(GS.AccessingFunction, GV) ) {
     DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV << "\n");
     Instruction &FirstI = const_cast<Instruction&>(*GS.AccessingFunction
                                                    ->getEntryBlock().begin());

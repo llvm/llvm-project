@@ -158,7 +158,9 @@ namespace llvm {
 
     /// Create debugging information entry for a c++
     /// style reference or rvalue reference type.
-    DIDerivedType *createReferenceType(unsigned Tag, DIType *RTy);
+    DIDerivedType *createReferenceType(unsigned Tag, DIType *RTy,
+                                       uint64_t SizeInBits = 0,
+                                       uint64_t AlignInBits = 0);
 
     /// Create debugging information entry for a typedef.
     /// \param Ty          Original type.

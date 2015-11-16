@@ -95,24 +95,24 @@ defm : ARGUMENT<F64>;
 
 def CONST_I32 : I<(outs I32:$res), (ins i32imm:$imm),
                   [(set I32:$res, imm:$imm)],
-                  "i32.const $res, $imm">;
+                  "i32.const\t$res, $imm">;
 def CONST_I64 : I<(outs I64:$res), (ins i64imm:$imm),
                   [(set I64:$res, imm:$imm)],
-                  "i64.const $res, $imm">;
+                  "i64.const\t$res, $imm">;
 def CONST_F32 : I<(outs F32:$res), (ins f32imm:$imm),
                   [(set F32:$res, fpimm:$imm)],
-                  "f32.const $res, $imm">;
+                  "f32.const\t$res, $imm">;
 def CONST_F64 : I<(outs F64:$res), (ins f64imm:$imm),
                   [(set F64:$res, fpimm:$imm)],
-                  "f64.const $res, $imm">;
+                  "f64.const\t$res, $imm">;
 
 // Special types of immediates. FIXME: Hard-coded as 32-bit for now.
 def GLOBAL : I<(outs I32:$dst), (ins global:$addr),
                [(set I32:$dst, (WebAssemblywrapper tglobaladdr:$addr))],
-               "global $dst, $addr">;
+               "global\t$dst, $addr">;
 def JUMP_TABLE : I<(outs I32:$dst), (ins tjumptable_op:$addr),
                    [(set I32:$dst, (WebAssemblywrapper tjumptable:$addr))],
-                   "jump_table $dst, $addr">;
+                   "jump_table\t$dst, $addr">;
 
 //===----------------------------------------------------------------------===//
 // Additional sets of instructions.

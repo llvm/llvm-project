@@ -158,3 +158,14 @@ define i32 @f12(i32 %x, i32 %y) {
   %sel = select i1 %cmp, i32 %y2, i32 %or
   ret i32 %sel
 }
+
+define i32 @f13(i32 %x, i32 %y) {
+; CHECK-LABEL: f13:
+; CHECK-NOT: bfi
+  %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
+  %and = and i32 %x, 4
+  %or = or i32 %y2, 16
+  %cmp = icmp eq i32 %and, 42 ; Not comparing against zero!
+  %sel = select i1 %cmp, i32 %y2, i32 %or
+  ret i32 %sel
+}

@@ -57,7 +57,7 @@ def : Pat<(setge f64:$lhs, f64:$rhs), (GE_F64 f64:$lhs, f64:$rhs)>;
 
 def SELECT_F32 : I<(outs F32:$dst), (ins I32:$cond, F32:$lhs, F32:$rhs),
                    [(set F32:$dst, (select I32:$cond, F32:$lhs, F32:$rhs))],
-                   "f32.select $dst, $cond, $lhs, $rhs">;
+                   "f32.select\t$dst, $cond, $lhs, $rhs">;
 def SELECT_F64 : I<(outs F64:$dst), (ins I32:$cond, F64:$lhs, F64:$rhs),
                    [(set F64:$dst, (select I32:$cond, F64:$lhs, F64:$rhs))],
-                   "f64.select $dst, $cond, $lhs, $rhs">;
+                   "f64.select\t$dst, $cond, $lhs, $rhs">;

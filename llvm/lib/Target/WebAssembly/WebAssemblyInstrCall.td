@@ -24,10 +24,10 @@ def : I<(outs), (ins i64imm:$amt1, i64imm:$amt2),
 multiclass CALL<WebAssemblyRegClass vt> {
   def CALL_#vt : I<(outs vt:$dst), (ins global:$callee, variable_ops),
                    [(set vt:$dst, (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee)))],
-                   "call $callee, $dst">;
+                   "call\t$callee, $dst">;
   def CALL_INDIRECT_#vt : I<(outs vt:$dst), (ins I32:$callee, variable_ops),
                             [(set vt:$dst, (WebAssemblycall1 I32:$callee))],
-                            "call_indirect $callee, $dst">;
+                            "call_indirect\t$callee, $dst">;
 }
 let Uses = [SP32, SP64], isCall = 1 in {
   defm : CALL<I32>;
@@ -37,8 +37,8 @@ let Uses = [SP32, SP64], isCall = 1 in {
 
   def CALL_VOID : I<(outs), (ins global:$callee, variable_ops),
                     [(WebAssemblycall0 (WebAssemblywrapper tglobaladdr:$callee))],
-                    "call $callee">;
+                    "call\t$callee">;
   def CALL_INDIRECT_VOID : I<(outs), (ins I32:$callee, variable_ops),
                              [(WebAssemblycall0 I32:$callee)],
-                             "call_indirect $callee">;
+                             "call_indirect\t$callee">;
 } // Uses = [SP32,SP64], isCall = 1

@@ -69,6 +69,10 @@ namespace llvm {
     /// Instruct the remapper to move distinct metadata instead of duplicating
     /// it when there are module-level changes.
     RF_MoveDistinctMDs = 4,
+
+    /// Any global values not in value map are mapped to null instead of
+    /// mapping to self. Illegal if RF_IgnoreMissingEntries is also set.
+    RF_NullMapMissingGlobalValues = 8,
   };
 
   static inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
