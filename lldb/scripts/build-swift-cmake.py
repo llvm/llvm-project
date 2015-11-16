@@ -57,7 +57,7 @@ checkout_git("clang", "ssh://git@github.com/apple/swift-clang.git", "stable")
 checkout_git("swift", "ssh://git@github.com/apple/swift.git", "master")
 # checkout_git("swift/benchmark/PerfTestSuite", "*TODO somewhere*", "master")
 checkout_git("cmark", "ssh://git@github.com/apple/swift-cmark.git", "master")
-checkout_git("ninja", "https://git@github.com/martine/ninja.git", "master")
+checkout_git("ninja", "https://github.com/ninja-build/ninja.git", "master")
 # checkout_git("swig", "*TODO somewhere*", "master")
 checkout_git("lldb", "ssh://git@github.com/apple/swift-lldb.git", "master")
 
