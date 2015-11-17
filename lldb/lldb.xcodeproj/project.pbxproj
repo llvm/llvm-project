@@ -6355,7 +6355,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2668020B115FD0EE008E1FE4 /* Build configuration list for PBXNativeTarget "LLDB" */;
 			buildPhases = (
-				26DC6A5813380D4300FF7998 /* Build swig wrapper classes */,
+				26DC6A5813380D4300FF7998 /* Prepare Swig Bindings */,
 				26680202115FD0ED008E1FE4 /* Headers */,
 				26680203115FD0ED008E1FE4 /* Resources */,
 				26680204115FD0ED008E1FE4 /* Sources */,
@@ -6625,19 +6625,18 @@
 			shellScript = "if [ \"$CONFIGURATION\" != 'BuildAndIntegration' ]\nthen\n  # Create a swift module cache, ensure it's totally clean before building.\n  module_cache_path=\"$CONFIGURATION_BUILD_DIR/repl_swift_module_cache\"\n  rm -rf \"$module_cache_path\"\n  mkdir -p \"$module_cache_path\"\n\n  swift_path=\"${LLDB_PATH_TO_SWIFT_BUILD:-$LLVM_BUILD_DIR/swift-macosx-$CURRENT_ARCH}/bin/swiftc\"\n  rpath_flags=`echo \"${REPL_SWIFT_RPATH}\" | sed -e 's/@/-Xlinker -rpath -Xlinker @/g'`\n\n  target=''\n  if [ \"$MACOSX_DEPLOYMENT_TARGET\" != '' ]\n  then\n    target=\"-target $ARCHS-apple-macosx$MACOSX_DEPLOYMENT_TARGET\"\n  fi\n  if [ -e \"$swift_path\" ]\n  then\n    \"$swift_path\" -DXCODE_BUILD_ME $target -g -o \"$CONFIGURATION_BUILD_DIR/$EXECUTABLE_NAME\" \"$SCRIPT_INPUT_FILE_0\" -module-cache-path \"${module_cache_path}\" $rpath_flags\n  fi\nfi";
 		};
 		26DC6A5813380D4300FF7998 /* Prepare Swig Bindings */ = {
-		26DC6A5813380D4300FF7998 /* Build swig wrapper classes */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
 			);
-			name = "Build swig wrapper classes";
+			name = "Prepare Swig Bindings";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "$SRCROOT/scripts/build-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $CONFIGURATION_BUILD_DIR \"\"\n";
+			shellPath = /bin/bash;
+			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $CONFIGURATION_BUILD_DIR --swig-executable `which swig`";
 		};
 		496C2F9B1BD8342F00C70FEA /* Delete debugserver (build) */ = {
 			isa = PBXShellScriptBuildPhase;
