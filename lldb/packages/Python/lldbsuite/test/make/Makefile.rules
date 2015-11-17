@@ -104,7 +104,13 @@ endif
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-CC ?= clang
+
+# On Darwin, we default to specifying the default toolchain.
+ifeq "$(OS)" "Darwin"
+    CC ?= xcrun -toolchain default clang
+else
+    CC ?= clang
+endif
 ifeq "$(CC)" "cc"
 	ifneq "$(shell which clang)" ""
 		CC = clang
