@@ -25,7 +25,35 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the `releases
 page <http://llvm.org/releases/>`_.
 
-Non-comprehensive list of changes in this release
+Major changes in 3.7.1
+======================
+
+* 3.7.0 was released with an inadvertent change to the signature of the C
+  API function: LLVMBuildLandingPad, which made the C API incompatible with
+  prior releases.  This has been corrected in LLVM 3.7.1.
+
+  As a result of this change, 3.7.0 is not ABI compatible with 3.7.1.
+
+  +----------------------------------------------------------------------------+
+  | History of the LLVMBuildLandingPad() function                              |
+  +===========================+================================================+
+  | 3.6.2 and prior releases  | LLVMBuildLandingPad(LLVMBuilderRef,            |
+  |                           |                     LLVMTypeRef,               |
+  |                           |                     LLVMValueRef,              |
+  |                           |                     unsigned, const char*)     |
+  +---------------------------+------------------------------------------------+
+  | 3.7.0                     | LLVMBuildLandingPad(LLVMBuilderRef,            |
+  |                           |                     LLVMTypeRef,               |
+  |                           |                     unsigned, const char*)     |
+  +---------------------------+------------------------------------------------+
+  | 3.7.1 and future releases | LLVMBuildLandingPad(LLVMBuilderRef,            |
+  |                           |                     LLVMTypeRef,               |
+  |                           |                     LLVMValueRef,              |
+  |                           |                     unsigned, const char*)     |
+  +---------------------------+------------------------------------------------+
+
+
+Non-comprehensive list of changes in 3.7.0
 =================================================
 
 .. NOTE
