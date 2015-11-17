@@ -1035,6 +1035,12 @@ PythonFile::Reset(PyRefType type, PyObject *py_obj)
 void
 PythonFile::Reset(File &file, const char *mode)
 {
+    if (!file.IsValid())
+    {
+        Reset();
+        return;
+    }
+
     char *cmode = const_cast<char *>(mode);
 #if PY_MAJOR_VERSION >= 3
     Reset(PyRefType::Owned,

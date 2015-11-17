@@ -689,6 +689,9 @@ public:
     lldb::SBBreakpoint
     BreakpointCreateByAddress (addr_t address);
 
+    lldb::SBBreakpoint
+    BreakpointCreateBySBAddress (SBAddress &address);
+
     uint32_t
     GetNumBreakpoints () const;
 

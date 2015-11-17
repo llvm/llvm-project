@@ -21,6 +21,12 @@
 #include "min_allocator.h"
 
 template <class C>
+void rehash_postcondition(const C& c, size_t n)
+{
+	assert(c.bucket_count() >= c.size() / c.max_load_factor() && c.bucket_count() >= n);
+}
+
+template <class C>
 void test(const C& c)
 {
     assert(c.size() == 4);
@@ -48,13 +54,16 @@ int main()
         test(c);
         assert(c.bucket_count() >= 5);
         c.rehash(3);
+        rehash_postcondition(c, 3);
         assert(c.bucket_count() == 5);
         test(c);
         c.max_load_factor(2);
         c.rehash(3);
+        rehash_postcondition(c, 3);
         assert(c.bucket_count() == 3);
         test(c);
         c.rehash(31);
+        rehash_postcondition(c, 31);
         assert(c.bucket_count() == 31);
         test(c);
     }
@@ -76,13 +85,16 @@ int main()
         test(c);
         assert(c.bucket_count() >= 5);
         c.rehash(3);
+        rehash_postcondition(c, 3);
         assert(c.bucket_count() == 5);
         test(c);
         c.max_load_factor(2);
         c.rehash(3);
+        rehash_postcondition(c, 3);
         assert(c.bucket_count() == 3);
         test(c);
         c.rehash(31);
+        rehash_postcondition(c, 31);
         assert(c.bucket_count() == 31);
         test(c);
     }

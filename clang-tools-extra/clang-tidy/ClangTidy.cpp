@@ -114,9 +114,8 @@ public:
     SmallVector<std::pair<SourceLocation, bool>, 4> FixLocations;
     {
       auto Level = static_cast<DiagnosticsEngine::Level>(Error.DiagLevel);
-      DiagnosticBuilder Diag =
-          Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
-          << Message.Message << Error.CheckName;
+      auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
+                  << Message.Message << Error.CheckName;
       for (const tooling::Replacement &Fix : Error.Fix) {
         SourceLocation FixLoc = getLocation(Fix.getFilePath(), Fix.getOffset());
         SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Fix.getLength());

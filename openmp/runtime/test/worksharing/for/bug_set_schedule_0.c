@@ -9,13 +9,14 @@ int a = 0;
 
 int test_set_schedule_0()
 {
+  int i;
   a = 0;
   omp_set_schedule(omp_sched_dynamic,0);
 
   #pragma omp parallel
   {
     #pragma omp for schedule(runtime)
-    for(int i = 0; i < 10; i++) {
+    for(i = 0; i < 10; i++) {
       #pragma omp atomic
       a++;
       if(a > 10)

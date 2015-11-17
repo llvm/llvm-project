@@ -1,6 +1,0 @@
-RUN: lld -flavor gnu -shared -target i386 -e main %p/Inputs/writersyms.o \
-RUN:   -o %t -soname libtest.so
-RUN: llvm-readobj -dynamic-table %t | FileCheck %s
-
-CHECK: LoadName: libtest.so
-CHECK: 0x0000000E SONAME LibrarySoname (libtest.so)

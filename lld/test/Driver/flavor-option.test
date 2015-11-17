@@ -2,7 +2,7 @@
 #    argument in the command line (bug 20975);
 # b) UniversalDriver correctly removes -flavor along with its value and the
 #    underlying linker does not get a corrupted command line (bug 20977).
-RUN: lld --help -flavor gnu | FileCheck %s
+RUN: lld --help -flavor old-gnu | FileCheck %s
 
 CHECK: --noinhibit-exec
 CHECK: --output-filetype

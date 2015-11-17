@@ -52,6 +52,9 @@ template <class T>
     >::type
     move_if_noexcept(T& x) noexcept; // constexpr in C++14
 
+template <class T> constexpr add_const<T>_t& as_const(T& t) noexcept;      // C++17
+template <class T>                      void as_const(const T&&) = delete; // C++17
+
 template <class T> typename add_rvalue_reference<T>::type declval() noexcept;
 
 template <class T1, class T2>
@@ -241,6 +244,11 @@ move_if_noexcept(_Tp& __x) _NOEXCEPT
 {
     return _VSTD::move(__x);
 }
+
+#if _LIBCPP_STD_VER > 14
+template <class _Tp> constexpr add_const_t<_Tp>& as_const(_Tp& __t) noexcept { return __t; }
+template <class _Tp>                        void as_const(const _Tp&&) = delete;
+#endif
 
 struct _LIBCPP_TYPE_VIS_ONLY piecewise_construct_t { };
 #if defined(_LIBCPP_HAS_NO_CONSTEXPR) || defined(_LIBCPP_BUILDING_UTILITY)

@@ -417,11 +417,22 @@ Target::CreateBreakpoint (lldb::addr_t addr, bool internal, bool hardware)
 }
 
 BreakpointSP
-Target::CreateBreakpoint (Address &addr, bool internal, bool hardware)
+Target::CreateBreakpoint (const Address &addr, bool internal, bool hardware)
 {
     SearchFilterSP filter_sp(new SearchFilterForUnconstrainedSearches (shared_from_this()));
     BreakpointResolverSP resolver_sp (new BreakpointResolverAddress (NULL, addr));
     return CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, false);
+}
+
+lldb::BreakpointSP
+Target::CreateAddressInModuleBreakpoint (lldb::addr_t file_addr,
+                                         bool internal,
+                                         const FileSpec *file_spec,
+                                         bool request_hardware)
+{
+    SearchFilterSP filter_sp(new SearchFilterForUnconstrainedSearches (shared_from_this()));
+    BreakpointResolverSP resolver_sp (new BreakpointResolverAddress (NULL, file_addr, file_spec));
+    return CreateBreakpoint (filter_sp, resolver_sp, internal, request_hardware, false);
 }
 
 BreakpointSP

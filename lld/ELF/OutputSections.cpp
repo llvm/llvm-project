@@ -35,17 +35,15 @@ GotPltSection<ELFT>::GotPltSection()
     : OutputSectionBase<ELFT>(".got.plt", llvm::ELF::SHT_PROGBITS,
                               llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_WRITE) {
   this->Header.sh_addralign = sizeof(uintX_t);
-  // .got.plt has 3 reserved entry
-  Entries.resize(3);
 }
 
 template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody *Sym) {
-  Sym->GotPltIndex = Entries.size();
+  Sym->GotPltIndex = Target->getGotPltHeaderEntriesNum() + Entries.size();
   Entries.push_back(Sym);
 }
 
 template <class ELFT> bool GotPltSection<ELFT>::empty() const {
-  return Entries.size() == 3;
+  return Entries.empty();
 }
 
 template <class ELFT>
@@ -55,15 +53,15 @@ GotPltSection<ELFT>::getEntryAddr(const SymbolBody &B) const {
 }
 
 template <class ELFT> void GotPltSection<ELFT>::finalize() {
-  this->Header.sh_size = Entries.size() * sizeof(uintX_t);
+  this->Header.sh_size =
+      (Target->getGotPltHeaderEntriesNum() + Entries.size()) * sizeof(uintX_t);
 }
 
 template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
-  write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(
-      Buf, Out<ELFT>::Dynamic->getVA());
+  Target->writeGotPltHeaderEntries(Buf);
+  Buf += Target->getGotPltHeaderEntriesNum() * sizeof(uintX_t);
   for (const SymbolBody *B : Entries) {
-    if (B)
-      Target->writeGotPltEntry(Buf, Out<ELFT>::Plt->getEntryAddr(*B));
+    Target->writeGotPltEntry(Buf, Out<ELFT>::Plt->getEntryAddr(*B));
     Buf += sizeof(uintX_t);
   }
 }

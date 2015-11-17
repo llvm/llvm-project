@@ -43,8 +43,10 @@ public:
   unsigned getPltEntrySize() const { return PltEntrySize; }
   bool supportsLazyRelocations() const { return LazyRelocations; }
   unsigned getGotHeaderEntriesNum() const { return GotHeaderEntriesNum; }
+  unsigned getGotPltHeaderEntriesNum() const { return GotPltHeaderEntriesNum; }
   virtual unsigned getPLTRefReloc(unsigned Type) const;
   virtual void writeGotHeaderEntries(uint8_t *Buf) const;
+  virtual void writeGotPltHeaderEntries(uint8_t *Buf) const;
   virtual void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const = 0;
   virtual void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
                                  uint64_t PltEntryAddr) const = 0;
@@ -86,6 +88,7 @@ protected:
   unsigned PltEntrySize = 8;
   unsigned PltZeroEntrySize = 0;
   unsigned GotHeaderEntriesNum = 0;
+  unsigned GotPltHeaderEntriesNum = 3;
   bool LazyRelocations = false;
 };
 

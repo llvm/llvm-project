@@ -1053,6 +1053,41 @@ SBTarget::BreakpointCreateByAddress (addr_t address)
     return sb_bp;
 }
 
+SBBreakpoint
+SBTarget::BreakpointCreateBySBAddress (SBAddress &sb_address)
+{
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
+
+    SBBreakpoint sb_bp;
+    TargetSP target_sp(GetSP());
+    if (!sb_address.IsValid())
+    {
+        if (log)
+            log->Printf ("SBTarget(%p)::BreakpointCreateBySBAddress called with invalid address",
+                         static_cast<void*>(target_sp.get()));
+        return sb_bp;
+    }
+    
+    if (target_sp)
+    {
+        Mutex::Locker api_locker (target_sp->GetAPIMutex());
+        const bool hardware = false;
+        *sb_bp = target_sp->CreateBreakpoint (sb_address.ref(), false, hardware);
+    }
+
+    if (log)
+    {
+        SBStream s;
+        sb_address.GetDescription(s);
+        log->Printf ("SBTarget(%p)::BreakpointCreateBySBAddress (address=%s) => SBBreakpoint(%p)",
+                     static_cast<void*>(target_sp.get()),
+                     s.GetData(),
+                     static_cast<void*>(sb_bp.get()));
+    }
+
+    return sb_bp;
+}
+
 lldb::SBBreakpoint
 SBTarget::BreakpointCreateBySourceRegex (const char *source_regex,
                                          const lldb::SBFileSpec &source_file,

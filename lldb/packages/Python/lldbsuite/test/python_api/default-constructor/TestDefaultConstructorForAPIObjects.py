@@ -227,6 +227,8 @@ class APIDefaultConstructorTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    # Py3 asserts due to a bug in SWIG.  Trying to upstream a patch to fix this in 3.0.8
+    @skipIf(py_version=['>=', (3,0)], swig_version=['<', (3,0,8)])
     def test_SBModule(self):
         obj = lldb.SBModule()
         if self.TraceOn():

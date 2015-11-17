@@ -62,6 +62,7 @@ class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
   unsigned getPLTRefReloc(unsigned Type) const override;
+  void writeGotPltHeaderEntries(uint8_t *Buf) const override;
   void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
                          uint64_t PltEntryAddr) const override;
@@ -159,6 +160,8 @@ bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
 
 void TargetInfo::writeGotHeaderEntries(uint8_t *Buf) const {}
 
+void TargetInfo::writeGotPltHeaderEntries(uint8_t *Buf) const {}
+
 X86TargetInfo::X86TargetInfo() {
   PCRelReloc = R_386_PC32;
   GotReloc = R_386_GLOB_DAT;
@@ -224,6 +227,10 @@ X86_64TargetInfo::X86_64TargetInfo() {
   LazyRelocations = true;
   PltEntrySize = 16;
   PltZeroEntrySize = 16;
+}
+
+void X86_64TargetInfo::writeGotPltHeaderEntries(uint8_t *Buf) const {
+  write64le(Buf, Out<ELF64LE>::Dynamic->getVA());
 }
 
 void X86_64TargetInfo::writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const {

@@ -552,6 +552,11 @@
    File file($1, false);
    PythonFile py_file(file, mode);
    $result = py_file.release();
+   if (!$result)
+   {
+       $result = Py_None;
+       Py_INCREF(Py_None);
+   }
 }
 
 %typemap(in) (const char* string, int len) {

@@ -1,4 +1,0 @@
-RUN: lld -flavor gnu -target hexagon %p/Inputs/sda-base.o -o %t1 --noinhibit-exec
-RUN: llvm-nm -n %t1 | FileCheck %s -check-prefix=sdabase
-
-sdabase: 00002000 A _SDA_BASE_

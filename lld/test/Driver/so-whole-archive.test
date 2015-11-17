@@ -3,8 +3,8 @@
 
 # RUN: yaml2obj -format=elf -docnum=1 %s > %t-so.o
 # RUN: yaml2obj -format=elf -docnum=2 %s > %t-exe.o
-# RUN: lld -flavor gnu -target mipsel -shared -o %t.so %t-so.o
-# RUN: lld -flavor gnu -target mipsel -o %t.exe %t-exe.o --whole-archive %t.so
+# RUN: lld -flavor old-gnu -target mipsel -shared -o %t.so %t-so.o
+# RUN: lld -flavor old-gnu -target mipsel -o %t.exe %t-exe.o --whole-archive %t.so
 
 # so.o
 ---

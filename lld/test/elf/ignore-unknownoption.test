@@ -1,5 +1,0 @@
-# This test tests that lld is able to print unknown options that are not
-# recognized.
-RUN: not lld -flavor gnu -target x86_64 --gc-sections 2> %t
-RUN: FileCheck %s < %t
-CHECK: warning: ignoring unknown argument: --gc-sections

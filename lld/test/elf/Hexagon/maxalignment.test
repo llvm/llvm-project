@@ -1,8 +1,0 @@
-# This tests that we lld is able to get the contentType properly for archives
-# when they intermittently get loaded at an address whose alignment is 2
-
-RUN: lld -flavor gnu -target hexagon --whole-archive %p/Inputs/libMaxAlignment.a \
-RUN: --noinhibit-exec -static -o %t
-RUN: llvm-nm %t | FileCheck %s
-
-CHECK: {{[0-9a-f]+}} D a

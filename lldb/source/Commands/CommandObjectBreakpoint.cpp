@@ -507,11 +507,32 @@ protected:
                 break;
 
             case eSetTypeAddress: // Breakpoint by address
-                bp = target->CreateBreakpoint (m_options.m_load_addr,
-                                               internal,
-                                               m_options.m_hardware).get();
+                {
+                    // If a shared library has been specified, make an lldb_private::Address with the library, and
+                    // use that.  That way the address breakpoint will track the load location of the library.
+                    size_t num_modules_specified = m_options.m_modules.GetSize();
+                    if (num_modules_specified == 1)
+                    {
+                        const FileSpec *file_spec = m_options.m_modules.GetFileSpecPointerAtIndex(0);
+                        bp = target->CreateAddressInModuleBreakpoint (m_options.m_load_addr,
+                                                                      internal,
+                                                                      file_spec,
+                                                                      m_options.m_hardware).get();
+                    }
+                    else if (num_modules_specified == 0)
+                    {
+                        bp = target->CreateBreakpoint (m_options.m_load_addr,
+                                                       internal,
+                                                       m_options.m_hardware).get();
+                    }
+                    else
+                    {
+                        result.AppendError("Only one shared library can be specified for address breakpoints.");
+                        result.SetStatus(eReturnStatusFailed);
+                        return false;
+                    }
                 break;
-
+                }
             case eSetTypeFunctionName: // Breakpoint by function name
                 {
                     uint32_t name_type_mask = m_options.m_func_name_type_mask;
@@ -766,7 +787,14 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
     //    "Set the breakpoint by source location at this particular column."},
 
     { LLDB_OPT_SET_2, true, "address", 'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeAddressOrExpression,
-        "Set the breakpoint by address, at the specified address."},
+        "Set the breakpoint at the specified address.  "
+        "If the address maps uniquely to a particular "
+        "binary, then the address will be converted to a \"file\" address, so that the breakpoint will track that binary+offset no matter where "
+        "the binary eventually loads.  "
+        "Alternately, if you also specify the module - with the -s option - then the address will be treated as "
+        "a file address in that module, and resolved accordingly.  Again, this will allow lldb to track that offset on "
+        "subsequent reloads.  The module need not have been loaded at the time you specify this breakpoint, and will "
+        "get resolved when the module is loaded."},
 
     { LLDB_OPT_SET_3, true, "name", 'n', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
         "Set the breakpoint by function name.  Can be repeated multiple times to make one breakpoint for multiple names" },

@@ -233,7 +233,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
                     if ( indep->dn.task ) {
                         __kmp_track_dependence(indep,node);
                         indep->dn.successors = __kmp_add_node(thread, indep->dn.successors, node);
-                        KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p",
+                        KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n",
                                  filter,gtid, KMP_TASK_TO_TASKDATA(indep->dn.task), KMP_TASK_TO_TASKDATA(node->dn.task)));
                         npredecessors++;
                     }
@@ -249,7 +249,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
             if ( last_out->dn.task ) {
                 __kmp_track_dependence(last_out,node);
                 last_out->dn.successors = __kmp_add_node(thread, last_out->dn.successors, node);
-                KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p", 
+                KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n", 
                              filter,gtid, KMP_TASK_TO_TASKDATA(last_out->dn.task), KMP_TASK_TO_TASKDATA(node->dn.task)));
                 
                 npredecessors++;

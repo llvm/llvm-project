@@ -2120,12 +2120,16 @@ __kmp_fork_call(
             // Store master's task_state on stack
             master_th->th.th_task_state_memo_stack[master_th->th.th_task_state_top] = master_th->th.th_task_state;
             master_th->th.th_task_state_top++;
+#if KMP_NESTED_HOT_TEAMS
             if (team == master_th->th.th_hot_teams[level].hot_team) { // Restore master's nested state if nested hot team
                 master_th->th.th_task_state = master_th->th.th_task_state_memo_stack[master_th->th.th_task_state_top];
             }
             else {
+#endif
                 master_th->th.th_task_state = 0;
+#if KMP_NESTED_HOT_TEAMS
             }
+#endif
         }
 #if !KMP_NESTED_HOT_TEAMS
         KMP_DEBUG_ASSERT((master_th->th.th_task_team == NULL) || (team == root->r.r_hot_team));
@@ -5280,7 +5284,9 @@ __kmp_free_team( kmp_root_t *root, kmp_team_t *team  USE_NESTED_HOT_ARG(kmp_info
                         team->t.t_threads[f]->th.th_task_team = NULL;
                     }
                     KA_TRACE( 20, ( "__kmp_free_team: T#%d deactivating task_team %p on team %d\n", __kmp_get_gtid(), task_team, team->t.t_id ) );
+#if KMP_NESTED_HOT_TEAMS
                     __kmp_free_task_team( master, task_team );
+#endif
                     team->t.t_task_team[tt_idx] = NULL;
                 }
             }

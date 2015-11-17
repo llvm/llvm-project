@@ -15,6 +15,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointResolver.h"
+#include "lldb/Core/ModuleSpec.h"
 
 namespace lldb_private {
 
@@ -30,6 +31,10 @@ class BreakpointResolverAddress:
 public:
     BreakpointResolverAddress (Breakpoint *bkpt,
                        const Address &addr);
+
+    BreakpointResolverAddress (Breakpoint *bkpt,
+                       const Address &addr,
+                       const FileSpec &module_spec);
 
     ~BreakpointResolverAddress() override;
 
@@ -65,8 +70,11 @@ public:
     CopyForBreakpoint (Breakpoint &breakpoint) override;
 
 protected:
-    Address m_addr;
-
+    Address      m_addr;     // The address - may be Section Offset or may be just an offset
+    lldb::addr_t m_resolved_addr; // The current value of the resolved load address for this breakpoint,
+    FileSpec     m_module_filespec; // If this filespec is Valid, and m_addr is an offset, then it will be converted
+                                    // to a Section+Offset address in this module, whenever that module gets around to
+                                    // being loaded.
 private:
     DISALLOW_COPY_AND_ASSIGN(BreakpointResolverAddress);
 };

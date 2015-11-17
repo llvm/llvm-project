@@ -1,5 +1,0 @@
-# Check for errors from invalid linker scripts
-RUN: not lld -flavor gnu -target x86_64 %p/Inputs/invalid.ls 2> %t.err
-RUN: FileCheck %s < %t.err
-
-CHECK: {{.*}}invalid.ls: Error parsing linker script

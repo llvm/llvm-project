@@ -1,16 +1,16 @@
-RUN: not lld -flavor gnu -t -ltest -L%p/Inputs 2> %t.err
+RUN: not lld -flavor old-gnu -t -ltest -L%p/Inputs 2> %t.err
 RUN: FileCheck %s < %t.err
 
-RUN: not lld -flavor gnu -target x86_64--netbsd -t -ltest \
+RUN: not lld -flavor old-gnu -target x86_64--netbsd -t -ltest \
 RUN:    --sysroot=%p/Inputs 2> %t2
 RUN: FileCheck -check-prefix=NETBSD-AMD64 %s < %t2
-RUN: not lld -flavor gnu -target x86_64--netbsd -nostdlib -t -ltest \
+RUN: not lld -flavor old-gnu -target x86_64--netbsd -nostdlib -t -ltest \
 RUN:    --sysroot=%p/Inputs 2> %t3
 RUN: FileCheck -check-prefix=NETBSD-AMD64-NS %s < %t3
-RUN: not lld -flavor gnu -target i386--netbsd -t -ltest \
+RUN: not lld -flavor old-gnu -target i386--netbsd -t -ltest \
 RUN:    --sysroot=%p/Inputs 2> %t4
 RUN: FileCheck -check-prefix=NETBSD-I386 %s < %t4
-RUN: not lld -flavor gnu -target x86_64--netbsd -m elf_i386 -t -ltest \
+RUN: not lld -flavor old-gnu -target x86_64--netbsd -m elf_i386 -t -ltest \
 RUN:    --sysroot=%p/Inputs 2> %t5
 RUN: FileCheck -check-prefix=NETBSD-AMD64_32 %s < %t5
 

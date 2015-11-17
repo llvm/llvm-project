@@ -1,5 +1,5 @@
 # This test, tests the Gnu lld option --help
-RUN: lld -flavor gnu --help | FileCheck %s
+RUN: lld -flavor old-gnu --help | FileCheck %s
 
 CHECK: --noinhibit-exec
 CHECK: --output-filetype

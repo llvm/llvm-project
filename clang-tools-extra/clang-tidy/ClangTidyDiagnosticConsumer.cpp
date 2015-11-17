@@ -132,7 +132,7 @@ static bool ConsumeNegativeIndicator(StringRef &GlobList) {
 static llvm::Regex ConsumeGlob(StringRef &GlobList) {
   StringRef Glob = GlobList.substr(0, GlobList.find(',')).trim();
   GlobList = GlobList.substr(Glob.size() + 1);
-  llvm::SmallString<128> RegexText("^");
+  SmallString<128> RegexText("^");
   StringRef MetaChars("()^$|*+?.[]\\{}");
   for (char C : Glob) {
     if (C == '*')

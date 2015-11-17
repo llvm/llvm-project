@@ -3,6 +3,7 @@ List of clang-tidy Checks
 
 .. toctree::
    cert-setlongjmp
+   cert-thrown-exception-type
    cert-variadic-function-def
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-pointer-arithmetic

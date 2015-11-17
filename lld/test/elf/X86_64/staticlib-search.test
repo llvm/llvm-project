@@ -1,6 +1,0 @@
-# This tests the functionality for finding the static library libfn.a for ELF
-RUN: lld -flavor gnu -target x86_64 %p/Inputs/main.o -L%p/Inputs/ -lfn -o %t \
-RUN: --noinhibit-exec -static -t 2> %t1
-RUN: FileCheck %s < %t1
-
-CHECK: {{[\/0-9A-Za-z_]+}}libfn.a

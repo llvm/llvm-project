@@ -1,4 +1,4 @@
-# RUN: lld -flavor gnu -u undefinedsymbol -e entrysymbol %s \
+# RUN: lld -flavor old-gnu -u undefinedsymbol -e entrysymbol %s \
 # RUN: --output-filetype=yaml --noinhibit-exec | FileCheck %s
 
 #
