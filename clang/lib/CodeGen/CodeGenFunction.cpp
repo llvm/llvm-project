@@ -1917,8 +1917,11 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
     SmallVector<StringRef, 1> ReqFeatures;
     llvm::StringMap<bool> CalleeFeatureMap;
     CGM.getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
-    for (const auto &F : CalleeFeatureMap)
-      ReqFeatures.push_back(F.getKey());
+    for (const auto &F : CalleeFeatureMap) {
+      // Only positive features are "required".
+      if (F.getValue())
+        ReqFeatures.push_back(F.getKey());
+    }
     if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
       CGM.getDiags().Report(E->getLocStart(), diag::err_function_needs_feature)
           << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;

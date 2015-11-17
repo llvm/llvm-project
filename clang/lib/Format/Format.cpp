@@ -284,6 +284,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyExcessCharacter", Style.PenaltyExcessCharacter);
     IO.mapOptional("PenaltyReturnTypeOnItsOwnLine",
                    Style.PenaltyReturnTypeOnItsOwnLine);
+    IO.mapOptional("SortIncludes", Style.SortIncludes);
     IO.mapOptional("PointerAlignment", Style.PointerAlignment);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
     IO.mapOptional("SpaceBeforeAssignmentOperators",
@@ -507,6 +508,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
 
   LLVMStyle.DisableFormat = false;
+  LLVMStyle.SortIncludes = true;
 
   return LLVMStyle;
 }
@@ -635,6 +637,7 @@ FormatStyle getGNUStyle() {
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
+  NoStyle.SortIncludes = false;
   return NoStyle;
 }
 
@@ -1743,6 +1746,9 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName) {
   tooling::Replacements Replaces;
+  if (!Style.SortIncludes)
+    return Replaces;
+
   unsigned Prev = 0;
   unsigned SearchFrom = 0;
   llvm::Regex IncludeRegex(

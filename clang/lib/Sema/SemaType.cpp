@@ -2146,7 +2146,7 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     } else if (ASM != ArrayType::Normal || Quals != 0)
       Diag(Loc,
            getLangOpts().CPlusPlus? diag::err_c99_array_usage_cxx
-                                     : diag::ext_c99_array_usage) << ASM;
+                                  : diag::ext_c99_array_usage) << ASM;
   }
 
   if (T->isVariableArrayType()) {

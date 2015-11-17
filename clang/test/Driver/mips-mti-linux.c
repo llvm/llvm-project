@@ -37,6 +37,6 @@
 // CHECK-LE-HF-32R2-SAME: "[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib{{/|\\\\}}crt1.o"
 // CHECK-LE-HF-32R2-SAME: "[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LE-HF-32R2-SAME: "-L[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib"
-// CHECK-LE-HF-32R2-SAME: "{{[^"]+}}/mipsel-r2-hard-musl{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.builtins-mipsel.a"
+// CHECK-LE-HF-32R2-SAME: "{{[^"]+}}/mipsel-r2-hard-musl{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.builtins-mips.a"
 // CHECK-LE-HF-32R2-SAME: "-lc"
 // CHECK-LE-HF-32R2-SAME: "[[SYSROOT]]/mipsel-r2-hard-musl/usr/lib{{/|\\\\}}crtn.o"

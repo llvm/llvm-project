@@ -98,9 +98,11 @@ static cl::opt<unsigned>
                     "clang-format from an editor integration"),
            cl::init(0), cl::cat(ClangFormatCategory));
 
-static cl::opt<bool> SortIncludes("sort-includes",
-                                  cl::desc("Sort touched include lines"),
-                                  cl::cat(ClangFormatCategory));
+static cl::opt<bool> SortIncludes(
+    "sort-includes",
+    cl::desc("If set, overrides the include sorting behavior determined by the "
+             "SortIncludes style flag"),
+    cl::cat(ClangFormatCategory));
 
 static cl::list<std::string> FileNames(cl::Positional, cl::desc("[<file> ...]"),
                                        cl::cat(ClangFormatCategory));
@@ -252,17 +254,14 @@ static bool format(StringRef FileName) {
     return true;
   StringRef AssumedFileName = (FileName == "-") ? AssumeFileName : FileName;
   FormatStyle FormatStyle = getStyle(Style, AssumedFileName, FallbackStyle);
-  Replacements Replaces;
-  std::string ChangedCode;
-  if (SortIncludes) {
-    Replaces =
-        sortIncludes(FormatStyle, Code->getBuffer(), Ranges, AssumedFileName);
-    ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
-    for (const auto &R : Replaces)
-      Ranges.push_back({R.getOffset(), R.getLength()});
-  } else {
-    ChangedCode = Code->getBuffer().str();
-  }
+  if (SortIncludes.getNumOccurrences() != 0)
+    FormatStyle.SortIncludes = SortIncludes;
+  Replacements Replaces =
+      sortIncludes(FormatStyle, Code->getBuffer(), Ranges, AssumedFileName);
+  std::string ChangedCode =
+      tooling::applyAllReplacements(Code->getBuffer(), Replaces);
+  for (const auto &R : Replaces)
+    Ranges.push_back({R.getOffset(), R.getLength()});
 
   bool IncompleteFormat = false;
   Replaces = tooling::mergeReplacements(

@@ -72,7 +72,7 @@ def main():
     startupinfo.wShowWindow = subprocess.SW_HIDE
 
   # Call formatter.
-  command = [binary, '-style', style, '-cursor', str(cursor), '-sort-includes']
+  command = [binary, '-style', style, '-cursor', str(cursor)]
   if lines != 'all':
     command.extend(['-lines', lines])
   if fallback_style:

@@ -3216,7 +3216,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
         }
         // return (some void expression); is legal in C++.
         else if (D != diag::ext_return_has_void_expr ||
-            !getLangOpts().CPlusPlus) {
+                 !getLangOpts().CPlusPlus) {
           NamedDecl *CurDecl = getCurFunctionOrMethodDecl();
 
           int FunctionKind = 0;

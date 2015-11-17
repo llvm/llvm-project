@@ -1547,6 +1547,14 @@ bool Sema::isVisibleSlow(const NamedDecl *D) {
   return LookupResult::isVisible(*this, const_cast<NamedDecl*>(D));
 }
 
+bool Sema::shouldLinkPossiblyHiddenDecl(LookupResult &R, const NamedDecl *New) {
+  for (auto *D : R) {
+    if (isVisible(D))
+      return true;
+  }
+  return New->isExternallyVisible();
+}
+
 /// \brief Retrieve the visible declaration corresponding to D, if any.
 ///
 /// This routine determines whether the declaration D is visible in the current

@@ -469,6 +469,9 @@ struct FormatStyle {
   /// Pointer and reference alignment style.
   PointerAlignmentStyle PointerAlignment;
 
+  /// \brief If true, clang-format will sort #includes.
+  bool SortIncludes;
+
   /// \brief If \c true, a space may be inserted after C style casts.
   bool SpaceAfterCStyleCast;
 
