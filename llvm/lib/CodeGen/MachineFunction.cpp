@@ -816,42 +816,26 @@ Type *MachineConstantPoolEntry::getType() const {
   return Val.ConstVal->getType();
 }
 
-
-unsigned MachineConstantPoolEntry::getRelocationInfo() const {
+bool MachineConstantPoolEntry::needsRelocation() const {
   if (isMachineConstantPoolEntry())
-    return Val.MachineCPVal->getRelocationInfo();
-  return Val.ConstVal->getRelocationInfo();
+    return true;
+  return Val.ConstVal->needsRelocation();
 }
 
 SectionKind
 MachineConstantPoolEntry::getSectionKind(const DataLayout *DL) const {
-  SectionKind Kind;
-  switch (getRelocationInfo()) {
+  if (needsRelocation())
+    return SectionKind::getReadOnlyWithRel();
+  switch (DL->getTypeAllocSize(getType())) {
+  case 4:
+    return SectionKind::getMergeableConst4();
+  case 8:
+    return SectionKind::getMergeableConst8();
+  case 16:
+    return SectionKind::getMergeableConst16();
   default:
-    llvm_unreachable("Unknown section kind");
-  case Constant::GlobalRelocations:
-    Kind = SectionKind::getReadOnlyWithRel();
-    break;
-  case Constant::LocalRelocation:
-    Kind = SectionKind::getReadOnlyWithRelLocal();
-    break;
-  case Constant::NoRelocation:
-    switch (DL->getTypeAllocSize(getType())) {
-    case 4:
-      Kind = SectionKind::getMergeableConst4();
-      break;
-    case 8:
-      Kind = SectionKind::getMergeableConst8();
-      break;
-    case 16:
-      Kind = SectionKind::getMergeableConst16();
-      break;
-    default:
-      Kind = SectionKind::getReadOnly();
-      break;
-    }
+    return SectionKind::getReadOnly();
   }
-  return Kind;
 }
 
 MachineConstantPool::~MachineConstantPool() {

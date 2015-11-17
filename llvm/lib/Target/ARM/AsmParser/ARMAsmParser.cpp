@@ -5122,6 +5122,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     // FALLTHROUGH
   }
   case AsmToken::Colon: {
+    S = Parser.getTok().getLoc();
     // ":lower16:" and ":upper16:" expression prefixes
     // FIXME: Check it's an expression prefix,
     // e.g. (FOO - :lower16:BAR) isn't legal.
@@ -5140,8 +5141,9 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     return false;
   }
   case AsmToken::Equal: {
+    S = Parser.getTok().getLoc();
     if (Mnemonic != "ldr") // only parse for ldr pseudo (e.g. ldr r0, =val)
-      return Error(Parser.getTok().getLoc(), "unexpected token in operand");
+      return Error(S, "unexpected token in operand");
 
     Parser.Lex(); // Eat '='
     const MCExpr *SubExprVal;
@@ -5149,7 +5151,8 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
-    const MCExpr *CPLoc = getTargetStreamer().addConstantPoolEntry(SubExprVal);
+    const MCExpr *CPLoc =
+        getTargetStreamer().addConstantPoolEntry(SubExprVal, S);
     Operands.push_back(ARMOperand::CreateImm(CPLoc, S, E));
     return false;
   }
@@ -8801,7 +8804,7 @@ bool ARMAsmParser::parseLiteralValues(unsigned Size, SMLoc L) {
         return false;
       }
 
-      getParser().getStreamer().EmitValue(Value, Size);
+      getParser().getStreamer().EmitValue(Value, Size, L);
 
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
@@ -9040,7 +9043,7 @@ bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
 
   Triple T;
   MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures(T.getARMCPUForArch(Arch));
+  STI.setDefaultFeatures("", ("+" + ARM::getArchName(ID)).str());
   setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
   getTargetStreamer().emitArch(ID);
@@ -9173,7 +9176,7 @@ bool ARMAsmParser::parseDirectiveCPU(SMLoc L) {
   }
 
   MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures(CPU);
+  STI.setDefaultFeatures(CPU, "");
   setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
   return false;

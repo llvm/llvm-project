@@ -108,7 +108,7 @@ define float @test7(float %A, float %B, float %C) {
 ; CHECK-LABEL: @test7
 ; CHECK-NEXT: fadd fast float %C, %B
 ; CHECK-NEXT: fmul fast float %A, %A
-; CHECK-NEXT: fmul fast float %1, %tmp2
+; CHECK-NEXT: fmul fast float %tmp3, %tmp2
 ; CHECK-NEXT: ret float
 
   %aa = fmul fast float %A, %A

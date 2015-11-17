@@ -103,7 +103,7 @@ entry:
 
 ;;;;; 32-bit targets
 
-; X32:      .section .data.rel.local,
+; X32:      .section .data.rel,
 ; X32-LABEL: __emutls_v.i:
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 4
@@ -114,7 +114,7 @@ entry:
 ; X32-LABEL: __emutls_t.i:
 ; X32-NEXT: .long 15
 
-; X32:      .section .data.rel.local,
+; X32:      .section .data.rel,
 ; X32-LABEL: __emutls_v.j:
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 4
@@ -136,7 +136,7 @@ entry:
 
 ;;;;; 64-bit targets
 
-; X64:      .section .data.rel.local,
+; X64:      .section .data.rel,
 ; X64-LABEL: __emutls_v.i:
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 4
@@ -147,7 +147,7 @@ entry:
 ; X64-LABEL: __emutls_t.i:
 ; X64-NEXT: .long 15
 
-; X64:      .section .data.rel.local,
+; X64:      .section .data.rel,
 ; X64-LABEL: __emutls_v.j:
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 4

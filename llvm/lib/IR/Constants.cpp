@@ -414,16 +414,13 @@ bool Constant::isConstantUsed() const {
   return false;
 }
 
-Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(this)) {
-    if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
-      return LocalRelocation;  // Local to this file/library.
-    return GlobalRelocations;    // Global reference.
-  }
-  
+bool Constant::needsRelocation() const {
+  if (isa<GlobalValue>(this))
+    return true; // Global reference.
+
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(this))
-    return BA->getFunction()->getRelocationInfo();
-  
+    return BA->getFunction()->needsRelocation();
+
   // While raw uses of blockaddress need to be relocated, differences between
   // two of them don't when they are for labels in the same function.  This is a
   // common idiom when creating a table for the indirect goto extension, so we
@@ -432,20 +429,18 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
     if (CE->getOpcode() == Instruction::Sub) {
       ConstantExpr *LHS = dyn_cast<ConstantExpr>(CE->getOperand(0));
       ConstantExpr *RHS = dyn_cast<ConstantExpr>(CE->getOperand(1));
-      if (LHS && RHS &&
-          LHS->getOpcode() == Instruction::PtrToInt &&
+      if (LHS && RHS && LHS->getOpcode() == Instruction::PtrToInt &&
           RHS->getOpcode() == Instruction::PtrToInt &&
           isa<BlockAddress>(LHS->getOperand(0)) &&
           isa<BlockAddress>(RHS->getOperand(0)) &&
           cast<BlockAddress>(LHS->getOperand(0))->getFunction() ==
-            cast<BlockAddress>(RHS->getOperand(0))->getFunction())
-        return NoRelocation;
+              cast<BlockAddress>(RHS->getOperand(0))->getFunction())
+        return false;
     }
 
-  PossibleRelocationsTy Result = NoRelocation;
+  bool Result = false;
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-    Result = std::max(Result,
-                      cast<Constant>(getOperand(i))->getRelocationInfo());
+    Result |= cast<Constant>(getOperand(i))->needsRelocation();
 
   return Result;
 }
@@ -1161,8 +1156,8 @@ Constant *ConstantVector::getSplat(unsigned NumElts, Constant *V) {
 ConstantTokenNone *ConstantTokenNone::get(LLVMContext &Context) {
   LLVMContextImpl *pImpl = Context.pImpl;
   if (!pImpl->TheNoneToken)
-    pImpl->TheNoneToken = new ConstantTokenNone(Context);
-  return pImpl->TheNoneToken;
+    pImpl->TheNoneToken.reset(new ConstantTokenNone(Context));
+  return pImpl->TheNoneToken.get();
 }
 
 /// Remove the constant from the constant table.

@@ -32,15 +32,15 @@ target triple = "x86_64-unknown-linux-gnu"
 ; PIC: .section .rodata.cst16,"aM",@progbits,16
 ; PIC: e:
 ; PIC: e1:
-; PIC: .section .data.rel.ro.local,"aw",@progbits
+; PIC: .section .data.rel.ro,"aw",@progbits
 ; PIC: p:
 ; PIC: t:
-; PIC: .section .data.rel.ro,"aw",@progbits
+; PIC-NOT: .section
 ; PIC: p1:
 ; PIC: t1:
 ; PIC: .section .data.rel,"aw",@progbits
 ; PIC: p2:
 ; PIC: t2:
-; PIC: .section .data.rel.local,"aw",@progbits
+; PIC-NOT: .section
 ; PIC: p3:
 ; PIC: t3:

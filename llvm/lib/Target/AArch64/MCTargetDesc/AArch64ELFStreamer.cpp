@@ -130,7 +130,7 @@ public:
   /// if necessary.
   void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     EmitDataMappingSymbol();
-    MCELFStreamer::EmitValueImpl(Value, Size);
+    MCELFStreamer::EmitValueImpl(Value, Size, Loc);
   }
 
 private:

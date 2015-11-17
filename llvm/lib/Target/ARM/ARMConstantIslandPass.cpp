@@ -589,6 +589,8 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   MachineBasicBlock *LastCorrectlyNumberedBB = nullptr;
   for (MachineBasicBlock &MBB : *MF) {
     auto MI = MBB.getLastNonDebugInstr();
+    if (MI == MBB.end())
+      continue;
 
     unsigned JTOpcode;
     switch (MI->getOpcode()) {

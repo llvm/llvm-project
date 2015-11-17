@@ -556,6 +556,58 @@ void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
     }
 }
 
+bool PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
+                                           bool UseAtEnd,
+                                           unsigned *ScratchRegister) const {
+  RegScavenger RS;
+  unsigned     R0 = Subtarget.isPPC64() ? PPC::X0 : PPC::R0;
+
+  if (ScratchRegister)
+    *ScratchRegister = R0;
+
+  // If MBB is an entry or exit block, use R0 as the scratch register
+  if ((UseAtEnd && MBB->isReturnBlock()) ||
+      (!UseAtEnd && (&MBB->getParent()->front() == MBB)))
+    return true;
+    
+  RS.initRegState();
+  RS.enterBasicBlock(MBB);
+
+  // The scratch register will be used at the end of the block, so must consider
+  // all registers used within the block
+  if (UseAtEnd && MBB->begin() != MBB->getFirstTerminator())
+    RS.forward(MBB->getFirstTerminator());
+  
+  if (!RS.isRegUsed(R0)) 
+    return true;
+
+  unsigned Reg = RS.FindUnusedReg(Subtarget.isPPC64() ? &PPC::G8RCRegClass
+                                  : &PPC::GPRCRegClass);
+  
+  // Make sure the register scavenger was able to find an available register
+  // If not, use R0 but return false to indicate no register was available and
+  // R0 must be used (as recommended by the ABI)
+  if (Reg == 0)
+    return false;
+
+  if (ScratchRegister)
+    *ScratchRegister = Reg;
+
+  return true;
+}
+
+bool PPCFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
+  MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
+
+  return findScratchRegister(TmpMBB, false, nullptr);
+}
+
+bool PPCFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
+  MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
+
+  return findScratchRegister(TmpMBB, true, nullptr);
+}
+
 void PPCFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -613,7 +665,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned BPReg       = RegInfo->getBaseRegister(MF);
   unsigned FPReg       = isPPC64 ? PPC::X31 : PPC::R31;
   unsigned LRReg       = isPPC64 ? PPC::LR8 : PPC::LR;
-  unsigned ScratchReg  = isPPC64 ? PPC::X0  : PPC::R0;
+  unsigned ScratchReg  = 0;
   unsigned TempReg     = isPPC64 ? PPC::X12 : PPC::R12; // another scratch reg
   //  ...(R12/X12 is volatile in both Darwin & SVR4, & can't be a function arg.)
   const MCInstrDesc& MFLRInst = TII.get(isPPC64 ? PPC::MFLR8
@@ -642,6 +694,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   assert((isPPC64 || !isSVR4ABI || !(!FrameSize && (MustSaveLR || HasFP))) &&
          "FrameSize must be >0 to save/restore the FP or LR for 32-bit SVR4.");
 
+  findScratchRegister(&MBB, false, &ScratchReg);
+  assert(ScratchReg && "No scratch register!");
+         
   int LROffset = getReturnSaveOffset();
 
   int FPOffset = 0;
@@ -950,7 +1005,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned SPReg      = isPPC64 ? PPC::X1  : PPC::R1;
   unsigned BPReg      = RegInfo->getBaseRegister(MF);
   unsigned FPReg      = isPPC64 ? PPC::X31 : PPC::R31;
-  unsigned ScratchReg  = isPPC64 ? PPC::X0  : PPC::R0;
+  unsigned ScratchReg = 0;
   unsigned TempReg     = isPPC64 ? PPC::X12 : PPC::R12; // another scratch reg
   const MCInstrDesc& MTLRInst = TII.get( isPPC64 ? PPC::MTLR8
                                                  : PPC::MTLR );
@@ -964,10 +1019,14 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
                                                    : PPC::ADDI );
   const MCInstrDesc& AddInst = TII.get( isPPC64 ? PPC::ADD8
                                                 : PPC::ADD4 );
-
+  
   int LROffset = getReturnSaveOffset();
 
   int FPOffset = 0;
+
+  findScratchRegister(&MBB, true, &ScratchReg);
+  assert(ScratchReg && "No scratch register!");
+  
   if (HasFP) {
     if (isSVR4ABI) {
       MachineFrameInfo *FFI = MF.getFrameInfo();
@@ -1062,7 +1121,6 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
         .addImm(0)
         .addReg(SPReg);
     }
-
   }
 
   if (MustSaveLR)

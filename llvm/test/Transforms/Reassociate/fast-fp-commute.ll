@@ -33,8 +33,8 @@ define float @test2(float %x, float %y) {
 
 define float @test3(float %x, float %y) {
 ; CHECK-LABEL: test3
-; CHECK-NEXT: %factor = fmul fast float %y, 2.000000e+00
-; CHECK-NEXT: %tmp1 = fmul fast float %factor, %x
+; CHECK-NEXT: %factor = fmul fast float %x, 2.000000e+00
+; CHECK-NEXT: %tmp1 = fmul fast float %factor, %y
 ; CHECK-NEXT: ret float %tmp1
 
   %1 = fmul fast float %x, %y

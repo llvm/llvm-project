@@ -326,8 +326,6 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, SDLoc DL,
     SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-
   assert(Outs.size() <= 1 && "WebAssembly can only return up to one value");
   if (CallConv != CallingConv::C)
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
@@ -352,7 +350,6 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs last results");
     if (!Out.IsFixed)
       fail(DL, DAG, "WebAssembly doesn't support non-fixed results yet");
-    MF.getInfo<WebAssemblyFunctionInfo>()->addResult(Out.VT);
   }
 
   return Chain;

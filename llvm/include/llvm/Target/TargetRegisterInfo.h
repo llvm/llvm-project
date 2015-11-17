@@ -35,24 +35,21 @@ class VirtRegMap;
 class raw_ostream;
 class LiveRegMatrix;
 
-/// A bitmask representing the parts of a register are alive.
+/// A bitmask representing the covering of a register with sub-registers.
 ///
+/// This is typically used to track liveness at sub-register granularity.
 /// Lane masks for sub-register indices are similar to register units for
 /// physical registers. The individual bits in a lane mask can't be assigned
 /// any specific meaning. They can be used to check if two sub-register
 /// indices overlap.
 ///
-/// If the target has a register such that:
+/// Iff the target has a register such that:
 ///
 ///   getSubReg(Reg, A) overlaps getSubReg(Reg, B)
 ///
 /// then:
 ///
 ///   (getSubRegIndexLaneMask(A) & getSubRegIndexLaneMask(B)) != 0
-///
-/// The converse is not necessarily true. If two lane masks have a common
-/// bit, the corresponding sub-registers may not overlap, but it can be
-/// assumed that they usually will.
 typedef unsigned LaneBitmask;
 
 class TargetRegisterClass {
@@ -367,19 +364,6 @@ public:
   LaneBitmask getSubRegIndexLaneMask(unsigned SubIdx) const {
     assert(SubIdx < getNumSubRegIndices() && "This is not a subregister index");
     return SubRegIndexLaneMasks[SubIdx];
-  }
-
-  /// Returns true if the given lane mask is imprecise.
-  ///
-  /// LaneMasks as given by getSubRegIndexLaneMask() have a limited number of
-  /// bits, so for targets with more than 31 disjunct subregister indices there
-  /// may be cases where:
-  ///    getSubReg(Reg,A) does not overlap getSubReg(Reg,B)
-  /// but we still have
-  ///    (getSubRegIndexLaneMask(A) & getSubRegIndexLaneMask(B)) != 0.
-  /// This function returns true in those cases.
-  static bool isImpreciseLaneMask(LaneBitmask LaneMask) {
-    return LaneMask & 0x80000000u;
   }
 
   /// The lane masks returned by getSubRegIndexLaneMask() above can only be

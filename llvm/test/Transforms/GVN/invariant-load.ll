@@ -114,6 +114,23 @@ entry:
   ret i32 %res
 }
 
+define i32 @test8(i1 %cnd, i32* %p) {
+; CHECK-LABEL: test8
+; CHECK: @bar
+; CHECK: load i32, i32* %p2, !invariant.load
+; CHECK: br label %merge
+entry:
+  %v1 = load i32, i32* %p, !invariant.load !0
+  br i1 %cnd, label %taken, label %merge
+taken:
+  %p2 = call i32* (...) @bar(i32* %p)
+  br label %merge
+merge:
+  %p3 = phi i32* [%p, %entry], [%p2, %taken]
+  %v2 = load i32, i32* %p3, !invariant.load !0
+  %res = sub i32 %v1, %v2
+  ret i32 %res
+}
 
 !0 = !{ }
 

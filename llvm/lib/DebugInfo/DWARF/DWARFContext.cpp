@@ -274,6 +274,28 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
                      getStringSection(), isLittleEndian());
 }
 
+const DWARFUnitIndex &DWARFContext::getCUIndex() {
+  if (CUIndex)
+    return *CUIndex;
+
+  DataExtractor CUIndexData(getCUIndexSection(), isLittleEndian(), 0);
+
+  CUIndex = llvm::make_unique<DWARFUnitIndex>();
+  CUIndex->parse(CUIndexData);
+  return *CUIndex;
+}
+
+const DWARFUnitIndex &DWARFContext::getTUIndex() {
+  if (TUIndex)
+    return *TUIndex;
+
+  DataExtractor TUIndexData(getTUIndexSection(), isLittleEndian(), 0);
+
+  TUIndex = llvm::make_unique<DWARFUnitIndex>();
+  TUIndex->parse(TUIndexData);
+  return *TUIndex;
+}
+
 const DWARFDebugAbbrev *DWARFContext::getDebugAbbrev() {
   if (Abbrev)
     return Abbrev.get();

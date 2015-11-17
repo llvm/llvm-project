@@ -830,7 +830,7 @@ declare float @sf_sf(float) #1
 ; stel: .section .mips16.call.fp.sf_sf,"ax",@progbits
 ; stel: .ent __call_stub_fp_sf_sf
 ; stel: mtc1 $4, $f12
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal sf_sf
 ; stel: mfc1 $2, $f0
 ; stel: jr $18
@@ -841,7 +841,7 @@ declare float @sf_df(double) #1
 ; stel: .ent __call_stub_fp_sf_df
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $5, $f13
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal sf_df
 ; stel: mfc1 $2, $f0
 ; stel: jr $18
@@ -852,7 +852,7 @@ declare float @sf_sf_sf(float, float) #1
 ; stel: .ent __call_stub_fp_sf_sf_sf
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $5, $f14
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal sf_sf_sf
 ; stel: mfc1 $2, $f0
 ; stel: jr $18
@@ -864,7 +864,7 @@ declare float @sf_sf_df(float, double) #1
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $6, $f14
 ; stel: mtc1 $7, $f15
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal sf_sf_df
 ; stel: mfc1 $2, $f0
 ; stel: jr $18
@@ -876,7 +876,7 @@ declare float @sf_df_sf(double, float) #1
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $5, $f13
 ; stel: mtc1 $6, $f14
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal sf_df_sf
 ; stel: mfc1 $2, $f0
 ; stel: jr $18
@@ -889,7 +889,7 @@ declare float @sf_df_df(double, double) #1
 ; stel: mtc1 $5, $f13
 ; stel: mtc1 $6, $f14
 ; stel: mtc1 $7, $f15
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal sf_df_df
 ; stel: mfc1 $2, $f0
 ; stel: jr $18
@@ -909,7 +909,7 @@ declare double @df_sf(float) #1
 ; stel: .section .mips16.call.fp.df_sf,"ax",@progbits
 ; stel: .ent __call_stub_fp_df_sf
 ; stel: mtc1 $4, $f12
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal df_sf
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f1
@@ -921,7 +921,7 @@ declare double @df_df(double) #1
 ; stel: .ent __call_stub_fp_df_df
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $5, $f13
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal df_df
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f1
@@ -933,7 +933,7 @@ declare double @df_sf_sf(float, float) #1
 ; stel: .ent __call_stub_fp_df_sf_sf
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $5, $f14
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal df_sf_sf
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f1
@@ -946,7 +946,7 @@ declare double @df_sf_df(float, double) #1
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $6, $f14
 ; stel: mtc1 $7, $f15
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal df_sf_df
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f1
@@ -959,7 +959,7 @@ declare double @df_df_sf(double, float) #1
 ; stel: mtc1 $4, $f12
 ; stel: mtc1 $5, $f13
 ; stel: mtc1 $6, $f14
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal df_df_sf
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f1
@@ -973,7 +973,7 @@ declare double @df_df_df(double, double) #1
 ; stel: mtc1 $5, $f13
 ; stel: mtc1 $6, $f14
 ; stel: mtc1 $7, $f15
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal df_df_df
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f1
@@ -994,7 +994,7 @@ declare { float, float } @sc_sf(float) #1
 ; stel: .section .mips16.call.fp.sc_sf,"ax",@progbits
 ; stel: .ent __call_stub_fp_sc_sf
 ; stel: mtc1 $4, $f12
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal sc_sf
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f2
@@ -1017,7 +1017,7 @@ declare { double, double } @dc_sf(float) #1
 ; stel: .section .mips16.call.fp.dc_sf,"ax",@progbits
 ; stel: .ent __call_stub_fp_dc_sf
 ; stel: mtc1 $4, $f12
-; stel: move $18, $31
+; stel: move $18, ${{31|ra}}
 ; stel: jal dc_sf
 ; stel: mfc1 $4, $f2
 ; stel: mfc1 $5, $f3

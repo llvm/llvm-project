@@ -104,12 +104,6 @@ class SectionKind {
            /// globals.
            DataRel,
 
-               /// DataRelLocal - This is writeable data that has a non-zero
-               /// initializer and has relocations in it, but all of the
-               /// relocations are known to be within the final linked image
-               /// the global is linked into.
-               DataRelLocal,
-
                    /// DataNoRel - This is writeable data that has a non-zero
                    /// initializer, but whose initializer is known to have no
                    /// relocations.
@@ -121,15 +115,7 @@ class SectionKind {
            /// can write to them.  If it chooses to, the dynamic linker can
            /// mark the pages these globals end up on as read-only after it is
            /// done with its relocation phase.
-           ReadOnlyWithRel,
-
-               /// ReadOnlyWithRelLocal - This is data that is readonly by the
-               /// program, but must be writeable so that the dynamic linker
-               /// can perform relocations in it.  This is used when we know
-               /// that all the relocations are to globals in this final
-               /// linked image.
-               ReadOnlyWithRelLocal
-
+           ReadOnlyWithRel
   } K : 8;
 public:
 
@@ -179,21 +165,13 @@ public:
   bool isCommon() const { return K == Common; }
 
   bool isDataRel() const {
-    return K == DataRel || K == DataRelLocal || K == DataNoRel;
-  }
-
-  bool isDataRelLocal() const {
-    return K == DataRelLocal || K == DataNoRel;
+    return K == DataRel || K == DataNoRel;
   }
 
   bool isDataNoRel() const { return K == DataNoRel; }
 
   bool isReadOnlyWithRel() const {
-    return K == ReadOnlyWithRel || K == ReadOnlyWithRelLocal;
-  }
-
-  bool isReadOnlyWithRelLocal() const {
-    return K == ReadOnlyWithRelLocal;
+    return K == ReadOnlyWithRel;
   }
 private:
   static SectionKind get(Kind K) {
@@ -225,12 +203,8 @@ public:
   static SectionKind getBSSExtern() { return get(BSSExtern); }
   static SectionKind getCommon() { return get(Common); }
   static SectionKind getDataRel() { return get(DataRel); }
-  static SectionKind getDataRelLocal() { return get(DataRelLocal); }
   static SectionKind getDataNoRel() { return get(DataNoRel); }
   static SectionKind getReadOnlyWithRel() { return get(ReadOnlyWithRel); }
-  static SectionKind getReadOnlyWithRelLocal(){
-    return get(ReadOnlyWithRelLocal);
-  }
 };
 
 } // end namespace llvm

@@ -21,7 +21,6 @@ using namespace llvm;
 
 LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
   : TheTrueVal(nullptr), TheFalseVal(nullptr),
-    TheNoneToken(nullptr),
     VoidTy(C, Type::VoidTyID),
     LabelTy(C, Type::LabelTyID),
     HalfTy(C, Type::HalfTyID),

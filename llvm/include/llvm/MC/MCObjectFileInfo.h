@@ -150,9 +150,7 @@ protected:
 
   // ELF specific sections.
   MCSection *DataRelSection;
-  const MCSection *DataRelLocalSection;
   MCSection *DataRelROSection;
-  MCSection *DataRelROLocalSection;
   MCSection *MergeableConst4Section;
   MCSection *MergeableConst8Section;
   MCSection *MergeableConst16Section;
@@ -279,11 +277,7 @@ public:
 
   // ELF specific sections.
   MCSection *getDataRelSection() const { return DataRelSection; }
-  const MCSection *getDataRelLocalSection() const {
-    return DataRelLocalSection;
-  }
   MCSection *getDataRelROSection() const { return DataRelROSection; }
-  MCSection *getDataRelROLocalSection() const { return DataRelROLocalSection; }
   const MCSection *getMergeableConst4Section() const {
     return MergeableConst4Section;
   }

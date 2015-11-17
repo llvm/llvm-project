@@ -26,6 +26,8 @@ class FunctionPass;
 FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
                                        CodeGenOpt::Level OptLevel);
 
+FunctionPass *createWebAssemblyRegStackify();
+FunctionPass *createWebAssemblyRegColoring();
 FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyRegNumbering();
 

@@ -86,8 +86,9 @@ protected:
   void InitMCProcessorInfo(StringRef CPU, StringRef FS);
 
 public:
-  /// Set the features to the default for the given CPU.
-  void setDefaultFeatures(StringRef CPU);
+  /// Set the features to the default for the given CPU with an appended feature
+  /// string.
+  void setDefaultFeatures(StringRef CPU, StringRef FS);
 
   /// ToggleFeature - Toggle a feature and returns the re-computed feature
   /// bits. This version does not change the implied bits.

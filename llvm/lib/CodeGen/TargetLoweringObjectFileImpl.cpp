@@ -235,12 +235,8 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
     return ".tbss";
   if (Kind.isDataNoRel())
     return ".data";
-  if (Kind.isDataRelLocal())
-    return ".data.rel.local";
   if (Kind.isDataRel())
     return ".data.rel";
-  if (Kind.isReadOnlyWithRelLocal())
-    return ".data.rel.ro.local";
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return ".data.rel.ro";
 }
@@ -362,7 +358,6 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
   if (Kind.isReadOnly())
     return ReadOnlySection;
 
-  if (Kind.isReadOnlyWithRelLocal()) return DataRelROLocalSection;
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return DataRelROSection;
 }

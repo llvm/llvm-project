@@ -198,7 +198,7 @@ class MachineFrameInfo {
   /// This contains the size of the largest call frame if the target uses frame
   /// setup/destroy pseudo instructions (as defined in the TargetFrameInfo
   /// class).  This information is important for frame pointer elimination.
-  /// If is only valid during and after prolog/epilog code insertion.
+  /// It is only valid during and after prolog/epilog code insertion.
   unsigned MaxCallFrameSize;
 
   /// The prolog/epilog code inserter fills in this vector with each

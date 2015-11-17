@@ -139,7 +139,7 @@ void DWARFDebugInfoEntryMinimal::dumpAttribute(raw_ostream &OS,
   std::string File;
   auto Color = syntax::Enumerator;
   if (attr == DW_AT_decl_file || attr == DW_AT_call_file) {
-  Color = syntax::String;
+    Color = syntax::String;
     if (const auto *LT = u->getContext().getLineTableForUnit(u))
       if (LT->getFileNameByIndex(
              formValue.getAsUnsignedConstant().getValue(),

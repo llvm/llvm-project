@@ -43,7 +43,6 @@ public:
     Create(const GlobalValue *GV, SystemZCP::SystemZCPModifier Modifier);
 
   // Override MachineConstantPoolValue.
-  unsigned getRelocationInfo() const override;
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 unsigned Alignment) override;
   void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;

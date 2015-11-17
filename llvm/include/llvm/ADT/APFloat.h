@@ -448,6 +448,9 @@ public:
   /// Returns true if and only if the number has the largest possible finite
   /// magnitude in the current semantics.
   bool isLargest() const;
+  
+  /// Returns true if and only if the number is an exact integer.
+  bool isInteger() const;
 
   /// @}
 

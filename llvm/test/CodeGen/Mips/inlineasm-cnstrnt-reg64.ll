@@ -12,9 +12,9 @@ entry:
 
 ; r with long long
 ;CHECK:	#APP
-;CHECK:	addiu ${{[0-9]+}},${{[0-9]+}},3
+;CHECK:	addiu ${{[0-9]+}}, ${{[0-9]+}}, 3
 ;CHECK:	#NO_APP
-  tail call i64 asm sideeffect "addiu $0,$1,$2", "=r,r,i"(i64 7, i64 3) nounwind
+  tail call i64 asm sideeffect "addiu $0, $1, $2", "=r,r,i"(i64 7, i64 3) nounwind
   ret i32 0
 }
 

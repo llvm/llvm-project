@@ -52,8 +52,6 @@ public:
     addDirectiveHandler<
       &ELFAsmParser::ParseSectionDirectiveDataRelRo>(".data.rel.ro");
     addDirectiveHandler<
-      &ELFAsmParser::ParseSectionDirectiveDataRelRoLocal>(".data.rel.ro.local");
-    addDirectiveHandler<
       &ELFAsmParser::ParseSectionDirectiveEhFrame>(".eh_frame");
     addDirectiveHandler<&ELFAsmParser::ParseDirectiveSection>(".section");
     addDirectiveHandler<
@@ -122,12 +120,6 @@ public:
                               ELF::SHF_ALLOC |
                               ELF::SHF_WRITE,
                               SectionKind::getReadOnlyWithRel());
-  }
-  bool ParseSectionDirectiveDataRelRoLocal(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data.rel.ro.local", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getReadOnlyWithRelLocal());
   }
   bool ParseSectionDirectiveEhFrame(StringRef, SMLoc) {
     return ParseSectionSwitch(".eh_frame", ELF::SHT_PROGBITS,
