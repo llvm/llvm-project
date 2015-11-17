@@ -3,8 +3,8 @@
 **Welcome to the Swift Debugger and REPL!**
 
 Swift is a new, high performance systems programming language.  It has a clean
-and modern syntax, and offers seamless access to existing C and Objective-C code
-and frameworks, and is memory safe (by default).
+and modern syntax, and offers seamless access to existing C and Objective-C
+code and frameworks, and is memory safe (by default).
 
 This repository covers the Swift Debugger and REPL support, built on
 top of the LLDB Debugger.
@@ -33,12 +33,12 @@ installed on your development system:
 Once the pre-requisites are satisfied, follow these steps from a
 bash-like shell:
 
-{% highlight bash %}
+```
 mkdir myswift
 cd myswift
 git clone https://github.com/apple/swift-lldb.git
 lldb/scripts/build-swift-cmake.py --test
-{% endhighlight %}
+```
 
 The lldb build script will clone additional repositories for required
 dependencies if they are not already present. An optional `--update`
@@ -55,7 +55,7 @@ Swift codebase.
 Each one of directories listed below underneath the overall
 source_root are backed by a Swift.org repository:
 
-{% highlight bash %}
+```
 .
 +-- clang/
 |
@@ -68,7 +68,7 @@ source_root are backed by a Swift.org repository:
 +-- ninja/
 |
 +-- swift/
-{% endhighlight %}
+```
 
 Details on the contents:
 
@@ -98,7 +98,5 @@ Details on the contents:
 * swift
 
   Contains the Swift Language and Swift Runtime code.
-
-_________________________________________________________
 
 [cmake]: https://cmake.org
