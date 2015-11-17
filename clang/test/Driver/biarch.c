@@ -6,8 +6,9 @@
 // RUN: %clang -target x86_64--netbsd -m64 %s -### 2>&1 | FileCheck -check-prefix=X86_64 %s
 // X86_64: "-cc1" "-triple" "x86_64--netbsd"
 
+// r196538 set arm1176jzf-s as default CPU for ARMv6 on NetBSD
 // RUN: %clang -target armv6--netbsd-eabihf -m32 %s -### 2>&1 | FileCheck -check-prefix=ARMV6 %s
-// ARMV6: "-cc1" "-triple" "armv6k--netbsd-eabihf"
+// ARMV6: "-cc1" "-triple" "armv6kz--netbsd-eabihf"
 
 // RUN: %clang -target sparcv9--netbsd -m32 %s -### 2>&1 | FileCheck -check-prefix=SPARC %s
 // RUN: %clang -target sparc--netbsd -m32 %s -### 2>&1 | FileCheck -check-prefix=SPARC %s

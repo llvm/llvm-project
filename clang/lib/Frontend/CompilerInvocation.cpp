@@ -1337,7 +1337,6 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.ZVector = 0;
     Opts.CXXOperatorNames = 1;
     Opts.LaxVectorConversions = 0;
-    Opts.DefaultFPContract = 1;
     Opts.NativeHalfType = 1;
   }
 

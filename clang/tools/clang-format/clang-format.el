@@ -126,7 +126,6 @@ is no active region.  If no style is given uses `clang-format-style'."
                  nil `(,temp-buffer ,temp-file) nil
 
                  "-output-replacements-xml"
-                 "-sort-includes"
                  "-assume-filename" (or (buffer-file-name) "")
                  "-style" style
                  "-offset" (number-to-string start)

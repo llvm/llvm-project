@@ -4501,13 +4501,14 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override {
 
     std::vector<const char*> TargetFeatures;
+    unsigned Arch = llvm::ARM::parseArch(getTriple().getArchName());
 
     // get default FPU features
-    unsigned FPUKind = llvm::ARM::getDefaultFPU(CPU);
+    unsigned FPUKind = llvm::ARM::getDefaultFPU(CPU, Arch);
     llvm::ARM::getFPUFeatures(FPUKind, TargetFeatures);
 
     // get default Extension features
-    unsigned Extensions = llvm::ARM::getDefaultExtensions(CPU);
+    unsigned Extensions = llvm::ARM::getDefaultExtensions(CPU, Arch);
     llvm::ARM::getExtensionFeatures(Extensions, TargetFeatures);
 
     for (const char *Feature : TargetFeatures)

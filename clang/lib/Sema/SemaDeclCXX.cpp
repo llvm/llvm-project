@@ -8687,9 +8687,11 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
   assert(!R.isAmbiguous() && !R.empty());
 
   // Check if we have a previous declaration with the same name.
-  NamedDecl *PrevDecl = LookupSingleName(S, Alias, AliasLoc, LookupOrdinaryName,
-                                         ForRedeclaration);
-  if (PrevDecl && !isDeclInScope(PrevDecl, CurContext, S))
+  LookupResult PrevR(*this, Alias, AliasLoc, LookupOrdinaryName,
+                     ForRedeclaration);
+  LookupQualifiedName(PrevR, CurContext->getRedeclContext());
+  NamedDecl *PrevDecl = PrevR.getAsSingle<NamedDecl>();
+  if (PrevDecl && !isVisible(PrevDecl))
     PrevDecl = nullptr;
 
   NamedDecl *ND = R.getFoundDecl();

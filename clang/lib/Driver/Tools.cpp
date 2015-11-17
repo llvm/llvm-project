@@ -9917,7 +9917,7 @@ void tools::SHAVE::Compiler::ConstructJob(Compilation &C, const JobAction &JA,
   // 'f' flags, optimize flags, and warning options.
   // These are spelled the same way in clang and moviCompile.
   Args.AddAllArgs(CmdArgs, {options::OPT_I_Group, options::OPT_clang_i_Group,
-                            options::OPT_D, options::OPT_U,
+                            options::OPT_std_EQ, options::OPT_D, options::OPT_U,
                             options::OPT_f_Group, options::OPT_f_clang_Group,
                             options::OPT_g_Group, options::OPT_M_Group,
                             options::OPT_O_Group, options::OPT_W_Group});

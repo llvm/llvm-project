@@ -175,14 +175,18 @@ static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
   return __ror(__rev(t), 16);
 }
 
-static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
-  __rev16l(unsigned long t) {
-    return __rorl(__revl(t), sizeof(long) / 2);
-}
-
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
   __rev16ll(uint64_t t) {
-  return __rorll(__revll(t), 32);
+  return (((uint64_t)__rev16(t >> 32)) << 32) | __rev16(t);
+}
+
+static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
+  __rev16l(unsigned long t) {
+#if __SIZEOF_LONG__ == 4
+    return __rev16(t);
+#else
+    return __rev16ll(t);
+#endif
 }
 
 /* REVSH */

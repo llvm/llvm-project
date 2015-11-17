@@ -7575,13 +7575,12 @@ static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,
                                                ExprResult &RHS,
                                                SourceLocation Loc, bool IsDiv) {
   // Check for division/remainder by zero.
-  unsigned Diag = (IsDiv) ? diag::warn_division_by_zero :
-                            diag::warn_remainder_by_zero;
   llvm::APSInt RHSValue;
   if (!RHS.get()->isValueDependent() &&
       RHS.get()->EvaluateAsInt(RHSValue, S.Context) && RHSValue == 0)
     S.DiagRuntimeBehavior(Loc, RHS.get(),
-                          S.PDiag(Diag) << RHS.get()->getSourceRange());
+                          S.PDiag(diag::warn_remainder_division_by_zero)
+                            << IsDiv << RHS.get()->getSourceRange());
 }
 
 QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,

@@ -2517,8 +2517,7 @@ std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
   llvm::sys::path::append(Path, SelectedMultilib.osSuffix(), "lib" + LibSuffix,
                           getOS());
   llvm::sys::path::append(Path, Twine("libclang_rt." + Component + "-" +
-                                      getTriple().getArchName() +
-                                      (Shared ? ".so" : ".a")));
+                                      "mips" + (Shared ? ".so" : ".a")));
   return Path.str();
 }
 

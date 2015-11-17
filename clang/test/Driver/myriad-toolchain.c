@@ -60,6 +60,10 @@
 // RUN:   | FileCheck %s -check-prefix=MDMF
 // MDMF: "-S" "-MD" "-MF" "dep.d" "-MT" "foo.o"
 
+// RUN: %clang -target shave-myriad -std=gnu++11 -S %s -o foo.o -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=STDEQ
+// STDEQ: "-mcpu=myriad2" "-S" "-std=gnu++11"
+
 // RUN: %clang -target sparc-myriad -### --driver-mode=g++ %s 2>&1 | FileCheck %s --check-prefix=STDLIBCXX
 // STDLIBCXX: "-lstdc++" "-lc" "-lgcc"
 

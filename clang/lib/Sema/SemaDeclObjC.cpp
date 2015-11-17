@@ -2268,7 +2268,7 @@ static bool CheckMethodOverrideReturn(Sema &S,
 
       DiagID = 
         IsOverridingMode ? diag::warn_non_covariant_overriding_ret_types 
-                          : diag::warn_non_covariant_ret_types;
+                         : diag::warn_non_covariant_ret_types;
     }
   }
 
@@ -2352,7 +2352,7 @@ static bool CheckMethodOverrideParam(Sema &S,
 
       DiagID = 
       IsOverridingMode ? diag::warn_non_contravariant_overriding_param_types 
-                       :  diag::warn_non_contravariant_param_types;
+                       : diag::warn_non_contravariant_param_types;
     }
   }
 
@@ -2361,7 +2361,7 @@ static bool CheckMethodOverrideParam(Sema &S,
     << MethodImpl->getDeclName() << IfaceTy << ImplTy;
   S.Diag(IfaceVar->getLocation(), 
          (IsOverridingMode ? diag::note_previous_declaration 
-                        : diag::note_previous_definition))
+                           : diag::note_previous_definition))
     << getTypeRange(IfaceVar->getTypeSourceInfo());
   return false;
 }
