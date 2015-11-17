@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -S -O3 -fno-builtin -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -S -O3 -fno-builtin -o - %s | FileCheck %s
 // rdar://10551066
 
 typedef __SIZE_TYPE__ size_t;

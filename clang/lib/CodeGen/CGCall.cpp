@@ -1279,12 +1279,7 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
     }
     break;
 
-  case ABIArgInfo::Indirect: {
-    assert(!retAI.getIndirectAlign() && "Align unused on indirect return.");
-    resultType = llvm::Type::getVoidTy(getLLVMContext());
-    break;
-  }
-
+  case ABIArgInfo::Indirect:
   case ABIArgInfo::Ignore:
     resultType = llvm::Type::getVoidTy(getLLVMContext());
     break;
