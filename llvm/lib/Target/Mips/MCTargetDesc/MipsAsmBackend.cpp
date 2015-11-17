@@ -63,15 +63,19 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     // address range. Forcing a signed division because Value can be negative.
     Value = (int64_t)Value / 4;
     // We now check if Value can be encoded as a 16-bit signed immediate.
-    if (!isInt<16>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC16 fixup");
+    if (!isInt<16>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC16 fixup");
+      return 0;
+    }
     break;
   case Mips::fixup_MIPS_PC19_S2:
     // Forcing a signed division because Value can be negative.
     Value = (int64_t)Value / 4;
     // We now check if Value can be encoded as a 19-bit signed immediate.
-    if (!isInt<19>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC19 fixup");
+    if (!isInt<19>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC19 fixup");
+      return 0;
+    }
     break;
   case Mips::fixup_Mips_26:
     // So far we are only using this type for jumps.
@@ -104,45 +108,57 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     // Forcing a signed division because Value can be negative.
     Value = (int64_t) Value / 2;
     // We now check if Value can be encoded as a 7-bit signed immediate.
-    if (!isInt<7>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC7 fixup");
+    if (!isInt<7>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC7 fixup");
+      return 0;
+    }
     break;
   case Mips::fixup_MICROMIPS_PC10_S1:
     Value -= 2;
     // Forcing a signed division because Value can be negative.
     Value = (int64_t) Value / 2;
     // We now check if Value can be encoded as a 10-bit signed immediate.
-    if (!isInt<10>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC10 fixup");
+    if (!isInt<10>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC10 fixup");
+      return 0;
+    }
     break;
   case Mips::fixup_MICROMIPS_PC16_S1:
     Value -= 4;
     // Forcing a signed division because Value can be negative.
     Value = (int64_t)Value / 2;
     // We now check if Value can be encoded as a 16-bit signed immediate.
-    if (!isInt<16>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC16 fixup");
+    if (!isInt<16>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC16 fixup");
+      return 0;
+    }
     break;
   case Mips::fixup_MIPS_PC18_S3:
     // Forcing a signed division because Value can be negative.
     Value = (int64_t)Value / 8;
     // We now check if Value can be encoded as a 18-bit signed immediate.
-    if (!isInt<18>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC18 fixup");
+    if (!isInt<18>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC18 fixup");
+      return 0;
+    }
     break;
   case Mips::fixup_MIPS_PC21_S2:
     // Forcing a signed division because Value can be negative.
     Value = (int64_t) Value / 4;
     // We now check if Value can be encoded as a 21-bit signed immediate.
-    if (!isInt<21>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC21 fixup");
+    if (!isInt<21>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC21 fixup");
+      return 0;
+    }
     break;
   case Mips::fixup_MIPS_PC26_S2:
     // Forcing a signed division because Value can be negative.
     Value = (int64_t) Value / 4;
     // We now check if Value can be encoded as a 26-bit signed immediate.
-    if (!isInt<26>(Value) && Ctx)
-      Ctx->reportFatalError(Fixup.getLoc(), "out of range PC26 fixup");
+    if (!isInt<26>(Value) && Ctx) {
+      Ctx->reportError(Fixup.getLoc(), "out of range PC26 fixup");
+      return 0;
+    }
     break;
   }
 

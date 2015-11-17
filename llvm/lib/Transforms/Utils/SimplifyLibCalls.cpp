@@ -116,8 +116,8 @@ static bool canUseUnsafeFPMath(Function *F) {
   // FIXME: For finer-grain optimization, we need intrinsics to have the same
   // fast-math flag decorations that are applied to FP instructions. For now,
   // we have to rely on the function-level unsafe-fp-math attribute to do this
-  // optimization because there's no other way to express that the sqrt can be
-  // reassociated.
+  // optimization because there's no other way to express that the call can be
+  // relaxed.
   if (F->hasFnAttribute("unsafe-fp-math")) {
     Attribute Attr = F->getFnAttribute("unsafe-fp-math");
     if (Attr.getValueAsString() == "true")

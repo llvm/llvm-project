@@ -39,10 +39,10 @@ bool DWARFUnitIndex::parse(DataExtractor IndexData) {
                       (2 * Header.NumUnits + 1) * 4 * Header.NumColumns))
     return false;
 
-  Rows = llvm::make_unique<HashRow[]>(Header.NumBuckets);
+  Rows = llvm::make_unique<Entry[]>(Header.NumBuckets);
   auto Contribs =
-      llvm::make_unique<HashRow::SectionContribution *[]>(Header.NumUnits);
-  ColumnKinds = llvm::make_unique<DwarfSection[]>(Header.NumColumns);
+      llvm::make_unique<Entry::SectionContribution *[]>(Header.NumUnits);
+  ColumnKinds = llvm::make_unique<DWARFSectionKind[]>(Header.NumColumns);
 
   // Read Hash Table of Signatures
   for (unsigned i = 0; i != Header.NumBuckets; ++i)
@@ -53,35 +53,43 @@ bool DWARFUnitIndex::parse(DataExtractor IndexData) {
     auto Index = IndexData.getU32(&Offset);
     if (!Index)
       continue;
+    Rows[i].Index = this;
     Rows[i].Contributions =
-        llvm::make_unique<HashRow::SectionContribution[]>(Header.NumColumns);
+        llvm::make_unique<Entry::SectionContribution[]>(Header.NumColumns);
     Contribs[Index - 1] = Rows[i].Contributions.get();
   }
 
   // Read the Column Headers
-  for (unsigned i = 0; i != Header.NumColumns; ++i)
-    ColumnKinds[i] = static_cast<DwarfSection>(IndexData.getU32(&Offset));
+  for (unsigned i = 0; i != Header.NumColumns; ++i) {
+    ColumnKinds[i] = static_cast<DWARFSectionKind>(IndexData.getU32(&Offset));
+    if (ColumnKinds[i] == DW_SECT_INFO || ColumnKinds[i] == DW_SECT_TYPES) {
+      if (InfoColumn != -1)
+        return false;
+      InfoColumn = i;
+    }
+  }
+
+  if (InfoColumn == -1)
+    return false;
 
   // Read Table of Section Offsets
   for (unsigned i = 0; i != Header.NumUnits; ++i) {
     auto *Contrib = Contribs[i];
-    for (unsigned i = 0; i != Header.NumColumns; ++i) {
+    for (unsigned i = 0; i != Header.NumColumns; ++i)
       Contrib[i].Offset = IndexData.getU32(&Offset);
-    }
   }
 
   // Read Table of Section Sizes
   for (unsigned i = 0; i != Header.NumUnits; ++i) {
     auto *Contrib = Contribs[i];
-    for (unsigned i = 0; i != Header.NumColumns; ++i) {
-      Contrib[i].Size = IndexData.getU32(&Offset);
-    }
+    for (unsigned i = 0; i != Header.NumColumns; ++i)
+      Contrib[i].Length = IndexData.getU32(&Offset);
   }
 
   return true;
 }
 
-StringRef DWARFUnitIndex::getColumnHeader(DwarfSection DS) {
+StringRef DWARFUnitIndex::getColumnHeader(DWARFSectionKind DS) {
 #define CASE(DS)                                                               \
   case DW_SECT_##DS:                                                           \
     return #DS;
@@ -95,7 +103,7 @@ StringRef DWARFUnitIndex::getColumnHeader(DwarfSection DS) {
     CASE(MACINFO);
     CASE(MACRO);
   }
-  llvm_unreachable("unknown DwarfSection");
+  llvm_unreachable("unknown DWARFSectionKind");
 }
 
 void DWARFUnitIndex::dump(raw_ostream &OS) const {
@@ -113,11 +121,33 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
       OS << format("%5u 0x%016" PRIx64 " ", i, Row.Signature);
       for (unsigned i = 0; i != Header.NumColumns; ++i) {
         auto &Contrib = Contribs[i];
-        OS << format("[0x%08u, 0x%08u) ", Contrib.Offset,
-                     Contrib.Offset + Contrib.Size);
+        OS << format("[0x%08x, 0x%08x) ", Contrib.Offset,
+                     Contrib.Offset + Contrib.Length);
       }
       OS << '\n';
     }
   }
+}
+
+const DWARFUnitIndex::Entry::SectionContribution *
+DWARFUnitIndex::Entry::getOffset(DWARFSectionKind Sec) const {
+  uint32_t i = 0;
+  for (; i != Index->Header.NumColumns; ++i)
+    if (Index->ColumnKinds[i] == Sec)
+      return &Contributions[i];
+  return nullptr;
+}
+const DWARFUnitIndex::Entry::SectionContribution *
+DWARFUnitIndex::Entry::getOffset() const {
+  return &Contributions[Index->InfoColumn];
+}
+
+const DWARFUnitIndex::Entry *
+DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
+  for (uint32_t i = 0; i != Header.NumBuckets; ++i)
+    if (const auto &Contribs = Rows[i].Contributions)
+      if (Contribs[InfoColumn].Offset == Offset)
+        return &Rows[i];
+  return nullptr;
 }
 }

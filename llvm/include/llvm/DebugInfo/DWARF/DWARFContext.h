@@ -41,6 +41,8 @@ class DWARFContext : public DIContext {
 
   DWARFUnitSection<DWARFCompileUnit> CUs;
   std::vector<DWARFUnitSection<DWARFTypeUnit>> TUs;
+  std::unique_ptr<DWARFUnitIndex> CUIndex;
+  std::unique_ptr<DWARFUnitIndex> TUIndex;
   std::unique_ptr<DWARFDebugAbbrev> Abbrev;
   std::unique_ptr<DWARFDebugLoc> Loc;
   std::unique_ptr<DWARFDebugAranges> Aranges;
@@ -144,6 +146,9 @@ public:
     parseDWOCompileUnits();
     return DWOCUs[index].get();
   }
+
+  const DWARFUnitIndex &getCUIndex();
+  const DWARFUnitIndex &getTUIndex();
 
   /// Get a pointer to the parsed DebugAbbrev object.
   const DWARFDebugAbbrev *getDebugAbbrev();

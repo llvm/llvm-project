@@ -455,14 +455,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
   DataRelSection = Ctx->getELFSection(".data.rel", ELF::SHT_PROGBITS,
                                       ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
-  DataRelLocalSection = Ctx->getELFSection(".data.rel.local", ELF::SHT_PROGBITS,
-                                           ELF::SHF_ALLOC | ELF::SHF_WRITE);
-
   DataRelROSection = Ctx->getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_WRITE);
-
-  DataRelROLocalSection = Ctx->getELFSection(
-      ".data.rel.ro.local", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
   MergeableConst4Section =
       Ctx->getELFSection(".rodata.cst4", ELF::SHT_PROGBITS,

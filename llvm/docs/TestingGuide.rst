@@ -240,6 +240,10 @@ The recommended way to examine output to figure out if the test passes is using
 the :doc:`FileCheck tool <CommandGuide/FileCheck>`. *[The usage of grep in RUN
 lines is deprecated - please do not send or commit patches that use it.]*
 
+Put related tests into a single file rather than having a separate file per
+test. Check if there are files already covering your feature and consider
+adding your code there instead of creating a new file.
+
 Extra files
 -----------
 

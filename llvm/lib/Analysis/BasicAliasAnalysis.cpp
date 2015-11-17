@@ -1277,7 +1277,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, uint64_t PNSize,
   return Alias;
 }
 
-/// Provideis a bunch of ad-hoc rules to disambiguate in common cases, such as
+/// Provides a bunch of ad-hoc rules to disambiguate in common cases, such as
 /// array references.
 AliasResult BasicAAResult::aliasCheck(const Value *V1, uint64_t V1Size,
                                       AAMDNodes V1AAInfo, const Value *V2,

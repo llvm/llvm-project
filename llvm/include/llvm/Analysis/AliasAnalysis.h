@@ -421,6 +421,26 @@ public:
     return getModRefInfo(I, MemoryLocation(P, Size));
   }
 
+  /// getModRefInfo (for catchpads) - Return information about whether
+  /// a particular catchpad modifies or reads the specified memory location.
+  ModRefInfo getModRefInfo(const CatchPadInst *I, const MemoryLocation &Loc);
+
+  /// getModRefInfo (for catchpads) - A convenience wrapper.
+  ModRefInfo getModRefInfo(const CatchPadInst *I, const Value *P,
+                           uint64_t Size) {
+    return getModRefInfo(I, MemoryLocation(P, Size));
+  }
+
+  /// getModRefInfo (for catchrets) - Return information about whether
+  /// a particular catchret modifies or reads the specified memory location.
+  ModRefInfo getModRefInfo(const CatchReturnInst *I, const MemoryLocation &Loc);
+
+  /// getModRefInfo (for catchrets) - A convenience wrapper.
+  ModRefInfo getModRefInfo(const CatchReturnInst *I, const Value *P,
+                           uint64_t Size) {
+    return getModRefInfo(I, MemoryLocation(P, Size));
+  }
+
   /// Check whether or not an instruction may read or write memory (without
   /// regard to a specific location).
   ///
@@ -461,6 +481,10 @@ public:
       return getModRefInfo((const AtomicRMWInst*)I, Loc);
     case Instruction::Call:   return getModRefInfo((const CallInst*)I,  Loc);
     case Instruction::Invoke: return getModRefInfo((const InvokeInst*)I,Loc);
+    case Instruction::CatchPad:
+      return getModRefInfo((const CatchPadInst *)I, Loc);
+    case Instruction::CatchRet:
+      return getModRefInfo((const CatchReturnInst *)I, Loc);
     default:
       return MRI_NoModRef;
     }

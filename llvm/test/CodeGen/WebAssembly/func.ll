@@ -45,3 +45,24 @@ define i32 @f2(i32 %p1, float %p2) {
 define void @f3(i32 %p1, float %p2) {
   ret void
 }
+
+; CHECK-LABEL: f4:
+; CHECK-NEXT: .param i32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .local
+define i32 @f4(i32 %x) {
+entry:
+   %c = trunc i32 %x to i1
+   br i1 %c, label %true, label %false
+true:
+   ret i32 0
+false:
+   ret i32 1
+}
+
+; CHECK-LABEL: f5:
+; CHECK-NEXT: .result f32{{$}}
+; CHECK-NEXT: unreachable
+define float @f5()  {
+ unreachable
+}

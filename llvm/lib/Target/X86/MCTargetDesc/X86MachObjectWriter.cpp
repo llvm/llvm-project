@@ -175,9 +175,10 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     // non-relocatable expression.
     if (A->isUndefined() || B->isUndefined()) {
       StringRef Name = A->isUndefined() ? A->getName() : B->getName();
-      Asm.getContext().reportFatalError(Fixup.getLoc(),
+      Asm.getContext().reportError(Fixup.getLoc(),
         "unsupported relocation with subtraction expression, symbol '" +
         Name + "' can not be undefined in a subtraction expression");
+      return;
     }
 
     Value += Writer->getSymbolAddress(*A, Layout) -
@@ -387,12 +388,12 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     if (FixupOffset > 0xffffff) {
       char Buffer[32];
       format("0x%x", FixupOffset).print(Buffer, sizeof(Buffer));
-      Asm.getContext().reportFatalError(Fixup.getLoc(),
+      Asm.getContext().reportError(Fixup.getLoc(),
                          Twine("Section too large, can't encode "
                                 "r_address (") + Buffer +
                          ") into 24 bits of scattered "
                          "relocation entry.");
-      llvm_unreachable("fatal error returned?!");
+      return false;
     }
 
     MachO::any_relocation_info MRE;

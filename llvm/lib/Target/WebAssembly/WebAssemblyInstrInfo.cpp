@@ -54,8 +54,8 @@ bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
     case WebAssembly::BR_IF:
       if (HaveCond)
         return true;
-      Cond.push_back(MI.getOperand(1));
-      TBB = MI.getOperand(0).getMBB();
+      Cond.push_back(MI.getOperand(0));
+      TBB = MI.getOperand(1).getMBB();
       HaveCond = true;
       break;
     case WebAssembly::BR:
@@ -105,8 +105,8 @@ unsigned WebAssemblyInstrInfo::InsertBranch(
   }
 
   BuildMI(&MBB, DL, get(WebAssembly::BR_IF))
-      .addMBB(TBB)
-      .addOperand(Cond[0]);
+      .addOperand(Cond[0])
+      .addMBB(TBB);
   if (!FBB)
     return 1;
 

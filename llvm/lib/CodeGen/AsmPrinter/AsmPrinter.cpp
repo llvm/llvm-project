@@ -357,10 +357,10 @@ void AsmPrinter::EmitEmulatedTLSControlVariable(const GlobalVariable *GV,
                                                 bool AllZeroInitValue) {
   // If there is init value, use .data.rel.local section;
   // otherwise use the .data section.
-  MCSection *TLSVarSection = const_cast<MCSection*>(
-      (GV->hasInitializer() && !AllZeroInitValue)
-      ? getObjFileLowering().getDataRelLocalSection()
-      : getObjFileLowering().getDataSection());
+  MCSection *TLSVarSection =
+      const_cast<MCSection *>((GV->hasInitializer() && !AllZeroInitValue)
+                                  ? getObjFileLowering().getDataRelSection()
+                                  : getObjFileLowering().getDataSection());
   OutStreamer->SwitchSection(TLSVarSection);
   MCSymbol *GVSym = getSymbol(GV);
   EmitLinkage(GV, EmittedSym);  // same linkage as GV
@@ -390,8 +390,6 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   bool IsEmuTLSVar =
       GV->getThreadLocalMode() != llvm::GlobalVariable::NotThreadLocal &&
       TM.Options.EmulatedTLS;
-  assert((!IsEmuTLSVar || getObjFileLowering().getDataRelLocalSection()) &&
-         "Need relocatable local section for emulated TLS variables");
   assert(!(IsEmuTLSVar && GV->hasCommonLinkage()) &&
          "No emulated TLS variables in the common section");
 

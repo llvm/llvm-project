@@ -706,14 +706,17 @@ void WinCOFFObjectWriter::recordRelocation(
 
   const MCSymbol &Symbol = Target.getSymA()->getSymbol();
   const MCSymbol &A = Symbol;
-  if (!A.isRegistered())
-    Asm.getContext().reportFatalError(Fixup.getLoc(),
+  if (!A.isRegistered()) {
+    Asm.getContext().reportError(Fixup.getLoc(),
                                       Twine("symbol '") + A.getName() +
                                           "' can not be undefined");
+    return;
+  }
   if (A.isTemporary() && A.isUndefined()) {
-    Asm.getContext().reportFatalError(Fixup.getLoc(),
+    Asm.getContext().reportError(Fixup.getLoc(),
                                       Twine("assembler label '") + A.getName() +
                                           "' can not be undefined");
+    return;
   }
 
   MCSection *Section = Fragment->getParent();
@@ -731,17 +734,21 @@ void WinCOFFObjectWriter::recordRelocation(
 
   if (SymB) {
     const MCSymbol *B = &SymB->getSymbol();
-    if (!B->getFragment())
-      Asm.getContext().reportFatalError(
+    if (!B->getFragment()) {
+      Asm.getContext().reportError(
           Fixup.getLoc(),
           Twine("symbol '") + B->getName() +
               "' can not be undefined in a subtraction expression");
+      return;
+    }
 
-    if (!A.getFragment())
-      Asm.getContext().reportFatalError(
+    if (!A.getFragment()) {
+      Asm.getContext().reportError(
           Fixup.getLoc(),
           Twine("symbol '") + Symbol.getName() +
               "' can not be undefined in a subtraction expression");
+      return;
+    }
 
     CrossSection = &Symbol.getSection() != &B->getSection();
 

@@ -19,6 +19,36 @@ ehcleanup:                                        ; preds = %entry
   cleanupret %0 unwind to caller
 }
 
+; CHECK: simple_cleanup:                         # @simple_cleanup
+; CHECK:         pushq   %rbp
+; CHECK:         subq    $48, %rsp
+; CHECK:         leaq    48(%rsp), %rbp
+; CHECK:         movq    $-2, -8(%rbp)
+; CHECK:         movl    $1, %ecx
+; CHECK:         callq   f
+; CHECK:         callq   "??1Dtor@@QAE@XZ"
+; CHECK:         nop
+; CHECK:         addq    $48, %rsp
+; CHECK:         popq    %rbp
+; CHECK:         retq
+
+; CHECK: "?dtor$2@?0?simple_cleanup@4HA":
+; CHECK:         callq   "??1Dtor@@QAE@XZ"
+; CHECK:         retq
+
+; CHECK: $cppxdata$simple_cleanup:
+; CHECK-NEXT:         .long   429065506
+; CHECK-NEXT:         .long   1
+; CHECK-NEXT:         .long   ($stateUnwindMap$simple_cleanup)@IMGREL
+; CHECK-NEXT:         .long   0
+; CHECK-NEXT:         .long   0
+; CHECK-NEXT:         .long   3
+; CHECK-NEXT:         .long   ($ip2state$simple_cleanup)@IMGREL
+; UnwindHelp offset should match the -2 store above
+; CHECK-NEXT:         .long   40
+; CHECK-NEXT:         .long   0
+; CHECK-NEXT:         .long   1
+
 declare void @f(i32) #0
 
 declare i32 @__CxxFrameHandler3(...)

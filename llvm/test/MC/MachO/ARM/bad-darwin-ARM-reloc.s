@@ -7,3 +7,9 @@
 L___fcommon: 
     .word 0
 @ CHECK-ERROR: unsupported relocation on symbol
+
+c:
+  .word a - b
+@ CHECK-ERROR: symbol 'a' can not be undefined in a subtraction expression
+  .word c - b
+@ CHECK-ERROR: symbol 'b' can not be undefined in a subtraction expression

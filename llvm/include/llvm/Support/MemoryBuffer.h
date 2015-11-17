@@ -152,6 +152,8 @@ class MemoryBufferRef {
 
 public:
   MemoryBufferRef() {}
+  MemoryBufferRef(MemoryBuffer& Buffer)
+      : Buffer(Buffer.getBuffer()), Identifier(Buffer.getBufferIdentifier()) {}
   MemoryBufferRef(StringRef Buffer, StringRef Identifier)
       : Buffer(Buffer), Identifier(Identifier) {}
 

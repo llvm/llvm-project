@@ -586,8 +586,8 @@ static bool CanEvaluateShuffled(Value *V, ArrayRef<int> Mask,
     case Instruction::FPTrunc:
     case Instruction::FPExt:
     case Instruction::GetElementPtr: {
-      for (int i = 0, e = I->getNumOperands(); i != e; ++i) {
-        if (!CanEvaluateShuffled(I->getOperand(i), Mask, Depth-1))
+      for (Value *Operand : I->operands()) {
+        if (!CanEvaluateShuffled(Operand, Mask, Depth-1))
           return false;
       }
       return true;

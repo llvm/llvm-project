@@ -29,17 +29,17 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
        I != E; ++I) {
     Streamer.EmitCodeAlignment(I->Size); // align naturally
     Streamer.EmitLabel(I->Label);
-    Streamer.EmitValue(I->Value, I->Size);
+    Streamer.EmitValue(I->Value, I->Size, I->Loc);
   }
   Streamer.EmitDataRegion(MCDR_DataRegionEnd);
   Entries.clear();
 }
 
 const MCExpr *ConstantPool::addEntry(const MCExpr *Value, MCContext &Context,
-                                     unsigned Size) {
+                                     unsigned Size, SMLoc Loc) {
   MCSymbol *CPEntryLabel = Context.createTempSymbol();
 
-  Entries.push_back(ConstantPoolEntry(CPEntryLabel, Value, Size));
+  Entries.push_back(ConstantPoolEntry(CPEntryLabel, Value, Size, Loc));
   return MCSymbolRefExpr::create(CPEntryLabel, Context);
 }
 
@@ -90,8 +90,8 @@ void AssemblerConstantPools::emitForCurrentSection(MCStreamer &Streamer) {
 
 const MCExpr *AssemblerConstantPools::addEntry(MCStreamer &Streamer,
                                                const MCExpr *Expr,
-                                               unsigned Size) {
+                                               unsigned Size, SMLoc Loc) {
   MCSection *Section = Streamer.getCurrentSection().first;
   return getOrCreateConstantPool(Section).addEntry(Expr, Streamer.getContext(),
-                                                   Size);
+                                                   Size, Loc);
 }

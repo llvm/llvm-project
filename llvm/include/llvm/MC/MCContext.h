@@ -213,6 +213,8 @@ namespace llvm {
     /// Do automatic reset in destructor
     bool AutoReset;
 
+    bool HadError;
+
     MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
                                bool CanBeUnnamed);
     MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
@@ -514,11 +516,13 @@ namespace llvm {
     }
     void deallocate(void *Ptr) {}
 
+    bool hadError() { return HadError; }
+    void reportError(SMLoc L, const Twine &Msg);
     // Unrecoverable error has occurred. Display the best diagnostic we can
     // and bail via exit(1). For now, most MC backend errors are unrecoverable.
     // FIXME: We should really do something about that.
     LLVM_ATTRIBUTE_NORETURN void reportFatalError(SMLoc L,
-                                                  const Twine &Msg) const;
+                                                  const Twine &Msg);
   };
 
 } // end namespace llvm

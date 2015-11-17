@@ -2569,8 +2569,7 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   // not taking a chance at messing with them.
   // I.e., unless this block is already an exit block, we can't use
   // it as an epilogue.
-  if (MBB.getParent()->getSubtarget<X86Subtarget>().isTargetWin64() &&
-      !MBB.succ_empty() && !MBB.isReturnBlock())
+  if (STI.isTargetWin64() && !MBB.succ_empty() && !MBB.isReturnBlock())
     return false;
 
   if (canUseLEAForSPInEpilogue(*MBB.getParent()))
@@ -2664,17 +2663,17 @@ void X86FrameLowering::processFunctionBeforeFrameFinalized(
   // If this function isn't doing Win64-style C++ EH, we don't need to do
   // anything.
   const Function *Fn = MF.getFunction();
-  if (!STI.is64Bit() || !Fn->hasPersonalityFn() ||
-      classifyEHPersonality(MF.getFunction()->getPersonalityFn()) !=
-          EHPersonality::MSVC_CXX)
+  if (!STI.is64Bit() || !MF.getMMI().hasEHFunclets() ||
+      classifyEHPersonality(Fn->getPersonalityFn()) != EHPersonality::MSVC_CXX)
     return;
 
   // Win64 C++ EH needs to allocate the UnwindHelp object at some fixed offset
   // relative to RSP after the prologue.  Find the offset of the last fixed
-  // object, so that we can allocate a slot immediately following it. Fixed
-  // objects have negative frame indices.
+  // object, so that we can allocate a slot immediately following it. If there
+  // were no fixed objects, use offset -SlotSize, which is immediately after the
+  // return address. Fixed objects have negative frame indices.
   MachineFrameInfo *MFI = MF.getFrameInfo();
-  int64_t MinFixedObjOffset = 0;
+  int64_t MinFixedObjOffset = -SlotSize;
   for (int I = MFI->getObjectIndexBegin(); I < 0; ++I)
     MinFixedObjOffset = std::min(MinFixedObjOffset, MFI->getObjectOffset(I));
 

@@ -881,7 +881,11 @@ void Reassociate::RewriteExprTree(BinaryOperator *I,
 /// that computes the negative version of the value specified.  The negative
 /// version of the value is returned, and BI is left pointing at the instruction
 /// that should be processed next by the reassociation pass.
-static Value *NegateValue(Value *V, Instruction *BI) {
+/// Also add intermediate instructions to the redo list that are modified while
+/// pushing the negates through adds.  These will be revisited to see if
+/// additional opportunities have been exposed.
+static Value *NegateValue(Value *V, Instruction *BI,
+                          SetVector<AssertingVH<Instruction>> &ToRedo) {
   if (Constant *C = dyn_cast<Constant>(V)) {
     if (C->getType()->isFPOrFPVectorTy()) {
       return ConstantExpr::getFNeg(C);
@@ -902,8 +906,8 @@ static Value *NegateValue(Value *V, Instruction *BI) {
   if (BinaryOperator *I =
           isReassociableOp(V, Instruction::Add, Instruction::FAdd)) {
     // Push the negates through the add.
-    I->setOperand(0, NegateValue(I->getOperand(0), BI));
-    I->setOperand(1, NegateValue(I->getOperand(1), BI));
+    I->setOperand(0, NegateValue(I->getOperand(0), BI, ToRedo));
+    I->setOperand(1, NegateValue(I->getOperand(1), BI, ToRedo));
     if (I->getOpcode() == Instruction::Add) {
       I->setHasNoUnsignedWrap(false);
       I->setHasNoSignedWrap(false);
@@ -916,6 +920,10 @@ static Value *NegateValue(Value *V, Instruction *BI) {
     //
     I->moveBefore(BI);
     I->setName(I->getName()+".neg");
+
+    // Add the intermediate negates to the redo list as processing them later
+    // could expose more reassociating opportunities.
+    ToRedo.insert(I);
     return I;
   }
 
@@ -955,12 +963,15 @@ static Value *NegateValue(Value *V, Instruction *BI) {
     } else {
       TheNeg->andIRFlags(BI);
     }
+    ToRedo.insert(TheNeg);
     return TheNeg;
   }
 
   // Insert a 'neg' instruction that subtracts the value from zero to get the
   // negation.
-  return CreateNeg(V, V->getName() + ".neg", BI, BI);
+  BinaryOperator *NewNeg = CreateNeg(V, V->getName() + ".neg", BI, BI);
+  ToRedo.insert(NewNeg);
+  return NewNeg;
 }
 
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
@@ -994,14 +1005,15 @@ static bool ShouldBreakUpSubtract(Instruction *Sub) {
 
 /// If we have (X-Y), and if either X is an add, or if this is only used by an
 /// add, transform this into (X+(0-Y)) to promote better reassociation.
-static BinaryOperator *BreakUpSubtract(Instruction *Sub) {
+static BinaryOperator *
+BreakUpSubtract(Instruction *Sub, SetVector<AssertingVH<Instruction>> &ToRedo) {
   // Convert a subtract into an add and a neg instruction. This allows sub
   // instructions to be commuted with other add instructions.
   //
   // Calculate the negative value of Operand 1 of the sub instruction,
   // and set it as the RHS of the add instruction we just made.
   //
-  Value *NegVal = NegateValue(Sub->getOperand(1), Sub);
+  Value *NegVal = NegateValue(Sub->getOperand(1), Sub, ToRedo);
   BinaryOperator *New = CreateAdd(Sub->getOperand(0), NegVal, "", Sub, Sub);
   Sub->setOperand(0, Constant::getNullValue(Sub->getType())); // Drop use of op.
   Sub->setOperand(1, Constant::getNullValue(Sub->getType())); // Drop use of op.
@@ -2068,7 +2080,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
   // see if we can convert it to X+-Y.
   if (I->getOpcode() == Instruction::Sub) {
     if (ShouldBreakUpSubtract(I)) {
-      Instruction *NI = BreakUpSubtract(I);
+      Instruction *NI = BreakUpSubtract(I, RedoInsts);
       RedoInsts.insert(I);
       MadeChange = true;
       I = NI;
@@ -2079,6 +2091,12 @@ void Reassociate::OptimizeInst(Instruction *I) {
           (!I->hasOneUse() ||
            !isReassociableOp(I->user_back(), Instruction::Mul))) {
         Instruction *NI = LowerNegateToMultiply(I);
+        // If the negate was simplified, revisit the users to see if we can
+        // reassociate further.
+        for (User *U : NI->users()) {
+          if (BinaryOperator *Tmp = dyn_cast<BinaryOperator>(U))
+            RedoInsts.insert(Tmp);
+        }
         RedoInsts.insert(I);
         MadeChange = true;
         I = NI;
@@ -2086,7 +2104,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
     }
   } else if (I->getOpcode() == Instruction::FSub) {
     if (ShouldBreakUpSubtract(I)) {
-      Instruction *NI = BreakUpSubtract(I);
+      Instruction *NI = BreakUpSubtract(I, RedoInsts);
       RedoInsts.insert(I);
       MadeChange = true;
       I = NI;
@@ -2096,7 +2114,13 @@ void Reassociate::OptimizeInst(Instruction *I) {
       if (isReassociableOp(I->getOperand(1), Instruction::FMul) &&
           (!I->hasOneUse() ||
            !isReassociableOp(I->user_back(), Instruction::FMul))) {
+        // If the negate was simplified, revisit the users to see if we can
+        // reassociate further.
         Instruction *NI = LowerNegateToMultiply(I);
+        for (User *U : NI->users()) {
+          if (BinaryOperator *Tmp = dyn_cast<BinaryOperator>(U))
+            RedoInsts.insert(Tmp);
+        }
         RedoInsts.insert(I);
         MadeChange = true;
         I = NI;
@@ -2111,8 +2135,14 @@ void Reassociate::OptimizeInst(Instruction *I) {
   // If this is an interior node of a reassociable tree, ignore it until we
   // get to the root of the tree, to avoid N^2 analysis.
   unsigned Opcode = BO->getOpcode();
-  if (BO->hasOneUse() && BO->user_back()->getOpcode() == Opcode)
+  if (BO->hasOneUse() && BO->user_back()->getOpcode() == Opcode) {
+    // During the initial run we will get to the root of the tree.
+    // But if we get here while we are redoing instructions, there is no
+    // guarantee that the root will be visited. So Redo later
+    if (BO->user_back() != BO)
+      RedoInsts.insert(BO->user_back());
     return;
+  }
 
   // If this is an add tree that is used by a sub instruction, ignore it
   // until we process the subtract.

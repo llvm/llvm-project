@@ -106,10 +106,10 @@ def CONST_F64 : I<(outs F64:$res), (ins f64imm:$imm),
                   [(set F64:$res, fpimm:$imm)],
                   "f64.const\t$res, $imm">;
 
-// Special types of immediates. FIXME: Hard-coded as 32-bit for now.
-def GLOBAL : I<(outs I32:$dst), (ins global:$addr),
-               [(set I32:$dst, (WebAssemblywrapper tglobaladdr:$addr))],
-               "global\t$dst, $addr">;
+
+def : Pat<(i32 (WebAssemblywrapper tglobaladdr :$dst)),
+          (CONST_I32 tglobaladdr :$dst)>;
+
 def JUMP_TABLE : I<(outs I32:$dst), (ins tjumptable_op:$addr),
                    [(set I32:$dst, (WebAssemblywrapper tjumptable:$addr))],
                    "jump_table\t$dst, $addr">;

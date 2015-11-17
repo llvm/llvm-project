@@ -43,10 +43,16 @@ class ARMSubtarget : public ARMGenSubtargetInfo {
 protected:
   enum ARMProcFamilyEnum {
     Others, CortexA5, CortexA7, CortexA8, CortexA9, CortexA12, CortexA15,
-    CortexA17, CortexR4, CortexR4F, CortexR5, Swift, CortexA53, CortexA57, Krait,
+    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexA53, CortexA57,
+    CortexA72, Krait, Swift
   };
   enum ARMProcClassEnum {
     None, AClass, RClass, MClass
+  };
+  enum ARMArchEnum {
+    ARMv2, ARMv2a, ARMv3, ARMv3m, ARMv4, ARMv4t, ARMv5, ARMv5t, ARMv5te,
+    ARMv5tej, ARMv6, ARMv6k, ARMv6kz, ARMv6t2, ARMv6m, ARMv6sm, ARMv7a, ARMv7r,
+    ARMv7m, ARMv7em, ARMv8a, ARMv81a
   };
 
   /// ARMProcFamily - ARM processor family: Cortex-A8, Cortex-A9, and others.
@@ -54,6 +60,9 @@ protected:
 
   /// ARMProcClass - ARM processor class: None, AClass, RClass or MClass.
   ARMProcClassEnum ARMProcClass;
+
+  /// ARMArch - ARM architecture
+  ARMArchEnum ARMArch;
 
   /// HasV4TOps, HasV5TOps, HasV5TEOps,
   /// HasV6Ops, HasV6MOps, HasV6KOps, HasV6T2Ops, HasV7Ops, HasV8Ops -

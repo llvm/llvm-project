@@ -630,28 +630,36 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     // In general, ELF has no relocations for -B. It can only represent (A + C)
     // or (A + C - R). If B = R + K and the relocation is not pcrel, we can
     // replace B to implement it: (A - R - K + C)
-    if (IsPCRel)
-      Asm.getContext().reportFatalError(
+    if (IsPCRel) {
+      Asm.getContext().reportError(
           Fixup.getLoc(),
           "No relocation available to represent this relative expression");
+      return;
+    }
 
     const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
 
-    if (SymB.isUndefined())
-      Asm.getContext().reportFatalError(
+    if (SymB.isUndefined()) {
+      Asm.getContext().reportError(
           Fixup.getLoc(),
           Twine("symbol '") + SymB.getName() +
               "' can not be undefined in a subtraction expression");
+      return;
+    }
 
     assert(!SymB.isAbsolute() && "Should have been folded");
     const MCSection &SecB = SymB.getSection();
-    if (&SecB != &FixupSection)
-      Asm.getContext().reportFatalError(
+    if (&SecB != &FixupSection) {
+      Asm.getContext().reportError(
           Fixup.getLoc(), "Cannot represent a difference across sections");
+      return;
+    }
 
-    if (::isWeak(SymB))
-      Asm.getContext().reportFatalError(
+    if (::isWeak(SymB)) {
+      Asm.getContext().reportError(
           Fixup.getLoc(), "Cannot represent a subtraction with a weak symbol");
+      return;
+    }
 
     uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
     uint64_t K = SymBOffset - FixupOffset;
@@ -784,8 +792,10 @@ void ELFObjectWriter::computeSymbolTable(
                     Renames.count(&Symbol)))
       continue;
 
-    if (Symbol.isTemporary() && Symbol.isUndefined())
-      Ctx.reportFatalError(SMLoc(), "Undefined temporary");
+    if (Symbol.isTemporary() && Symbol.isUndefined()) {
+      Ctx.reportError(SMLoc(), "Undefined temporary symbol");
+      continue;
+    }
 
     ELFSymbolData MSD;
     MSD.Symbol = cast<MCSymbolELF>(&Symbol);

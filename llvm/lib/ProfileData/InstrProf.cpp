@@ -184,11 +184,13 @@ void ValueProfRecord::serializeFrom(const InstrProfRecord &Record,
   }
 }
 
-template <class T> static T swapToHostOrder(T v, support::endianness Orig) {
-  if (Orig == getHostEndianness())
-    return v;
-  sys::swapByteOrder<T>(v);
-  return v;
+template <class T>
+static T swapToHostOrder(const unsigned char *&D, support::endianness Orig) {
+  using namespace support;
+  if (Orig == little)
+    return endian::readNext<T, little, unaligned>(D);
+  else
+    return endian::readNext<T, big, unaligned>(D);
 }
 
 // For writing/serializing,  Old is the host endianness, and  New is
@@ -278,10 +280,9 @@ ValueProfData::getValueProfData(const unsigned char *D,
   if (D + sizeof(ValueProfData) > BufferEnd)
     return instrprof_error::truncated;
 
-  uint32_t TotalSize = swapToHostOrder<uint32_t>(
-      reinterpret_cast<const uint32_t *>(D)[0], Endianness);
-  uint32_t NumValueKinds = swapToHostOrder<uint32_t>(
-      reinterpret_cast<const uint32_t *>(D)[1], Endianness);
+  const unsigned char *Header = D;
+  uint32_t TotalSize = swapToHostOrder<uint32_t>(Header, Endianness);
+  uint32_t NumValueKinds = swapToHostOrder<uint32_t>(Header, Endianness);
 
   if (D + TotalSize > BufferEnd)
     return instrprof_error::too_large;
@@ -307,7 +308,6 @@ ValueProfData::getValueProfData(const unsigned char *D,
       return instrprof_error::malformed;
   }
 
-  D += TotalSize;
   return std::move(VPD);
 }
 

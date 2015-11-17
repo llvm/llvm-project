@@ -1171,20 +1171,13 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   CoveringLanes = ~0u;
   for (auto &Idx : SubRegIndices) {
     if (Idx.getComposites().empty()) {
+      if (Bit > 32) {
+        PrintFatalError(
+          Twine("Ran out of lanemask bits to represent subregister ")
+          + Idx.getName());
+      }
       Idx.LaneMask = 1u << Bit;
-      // Share bit 31 in the unlikely case there are more than 32 leafs.
-      //
-      // Sharing bits is harmless; it allows graceful degradation in targets
-      // with more than 32 vector lanes. They simply get a limited resolution
-      // view of lanes beyond the 32nd.
-      //
-      // See also the comment for getSubRegIndexLaneMask().
-      if (Bit < 31)
-        ++Bit;
-      else
-        // Once bit 31 is shared among multiple leafs, the 'lane' it represents
-        // is no longer covering its registers.
-        CoveringLanes &= ~(1u << Bit);
+      ++Bit;
     } else {
       Idx.LaneMask = 0;
     }

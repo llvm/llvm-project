@@ -924,7 +924,7 @@ public:
   ConstantInt *TheTrueVal;
   ConstantInt *TheFalseVal;
 
-  ConstantTokenNone *TheNoneToken;
+  std::unique_ptr<ConstantTokenNone> TheNoneToken;
 
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, FloatTy, DoubleTy, MetadataTy, TokenTy;

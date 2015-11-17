@@ -55,7 +55,7 @@ entry:
 ; X86_32:      calll __emutls_get_address
 ; X86_32-NOT:   __emutls_t.external_x
 ; X86_32-NOT:   __emutls_v.external_x:
-; X86_32:        .section .data.rel.local
+; X86_32:        .section .data.rel
 ; X86_32:        .align 4
 ; X86_32-LABEL:  __emutls_v.external_y:
 ; X86_32-NEXT:   .long 1
@@ -65,7 +65,7 @@ entry:
 ; X86_32:        .section .rodata,
 ; X86_32-LABEL:  __emutls_t.external_y:
 ; X86_32-NEXT:   .byte 7
-; X86_32:        .section .data.rel.local
+; X86_32:        .section .data.rel
 ; X86_32:        .align 4
 ; X86_32-LABEL:  __emutls_v.internal_y:
 ; X86_32-NEXT:   .long 8
@@ -95,7 +95,7 @@ entry:
 ; X86_64:        .section .rodata,
 ; X86_64-LABEL:  __emutls_t.external_y:
 ; X86_64-NEXT:   .byte 7
-; X86_64:        .section .data.rel.local
+; X86_64:        .section .data.rel
 ; X86_64:        .align 8
 ; X86_64-LABEL:  __emutls_v.internal_y:
 ; X86_64-NEXT:   .quad 8

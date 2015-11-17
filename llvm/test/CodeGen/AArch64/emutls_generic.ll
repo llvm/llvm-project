@@ -47,7 +47,7 @@ entry:
 ; ARM_64:        .section .rodata,
 ; ARM_64-LABEL:  __emutls_t.external_y:
 ; ARM_64-NEXT:   .byte 7
-; ARM_64:        .section .data.rel.local
+; ARM_64:        .section .data.rel
 ; ARM_64:        .align 3
 ; ARM_64-LABEL:  __emutls_v.internal_y:
 ; ARM_64-NEXT:   .xword 8

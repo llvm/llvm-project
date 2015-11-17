@@ -32,8 +32,8 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef FS) {
     CPUSchedModel = &MCSchedModel::GetDefaultSchedModel();
 }
 
-void MCSubtargetInfo::setDefaultFeatures(StringRef CPU) {
-  FeatureBits = getFeatures(CPU, "", ProcDesc, ProcFeatures);
+void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef FS) {
+  FeatureBits = getFeatures(CPU, FS, ProcDesc, ProcFeatures);
 }
 
 MCSubtargetInfo::MCSubtargetInfo(

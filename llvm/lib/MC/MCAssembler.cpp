@@ -179,14 +179,19 @@ const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
 
   const MCExpr *Expr = Symbol.getVariableValue();
   MCValue Value;
-  if (!Expr->evaluateAsValue(Value, *this))
-    llvm_unreachable("Invalid Expression");
+  if (!Expr->evaluateAsValue(Value, *this)) {
+    Assembler.getContext().reportError(
+        SMLoc(), "expression could not be evaluated");
+    return nullptr;
+  }
 
   const MCSymbolRefExpr *RefB = Value.getSymB();
-  if (RefB)
-    Assembler.getContext().reportFatalError(
+  if (RefB) {
+    Assembler.getContext().reportError(
         SMLoc(), Twine("symbol '") + RefB->getSymbol().getName() +
                      "' could not be evaluated in a subtraction expression");
+    return nullptr;
+  }
 
   const MCSymbolRefExpr *A = Value.getSymA();
   if (!A)
@@ -196,9 +201,10 @@ const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
   const MCAssembler &Asm = getAssembler();
   if (ASym.isCommon()) {
     // FIXME: we should probably add a SMLoc to MCExpr.
-    Asm.getContext().reportFatalError(SMLoc(),
-                                "Common symbol " + ASym.getName() +
-                                    " cannot be used in assignment expr");
+    Asm.getContext().reportError(SMLoc(),
+                                 "Common symbol '" + ASym.getName() +
+                                     "' cannot be used in assignment expr");
+    return nullptr;
   }
 
   return &ASym;
@@ -436,8 +442,13 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   // probably merge the two into a single callback that tries to evaluate a
   // fixup and records a relocation if one is needed.
   const MCExpr *Expr = Fixup.getValue();
-  if (!Expr->evaluateAsRelocatable(Target, &Layout, &Fixup))
-    getContext().reportFatalError(Fixup.getLoc(), "expected relocatable expression");
+  if (!Expr->evaluateAsRelocatable(Target, &Layout, &Fixup)) {
+    getContext().reportError(Fixup.getLoc(), "expected relocatable expression");
+    // Claim to have completely evaluated the fixup, to prevent any further
+    // processing from being done.
+    Value = 0;
+    return true;
+  }
 
   bool IsPCRel = Backend.getFixupKindInfo(
     Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel;
