@@ -1,8 +1,8 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
-// RUN: ld.lld2 -shared %t2.o -o %t2.so
-// RUN: ld.lld2 -shared %t.o %t2.so -o %t
-// RUN: ld.lld2 %t.o %t2.so -o %t3
+// RUN: ld.lld -shared %t2.o -o %t2.so
+// RUN: ld.lld -shared %t.o %t2.so -o %t
+// RUN: ld.lld %t.o %t2.so -o %t3
 // RUN: llvm-readobj -s -r %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 // RUN: llvm-readobj -s -r %t3 | FileCheck --check-prefix=CHECK2 %s
@@ -76,13 +76,13 @@
 // DISASM-NEXT:   102c:  0f 1f 40 00        nopl (%rax)
 // DISASM-NEXT:   1030:  ff 25 92 10 00 00  jmpq *4242(%rip)
 // DISASM-NEXT:   1036:  68 00 00 00 00     pushq $0
-// DISASM-NEXT:   103b:  e9 e0 ff ff ff     jmp -32 <bar+1020>
+// DISASM-NEXT:   103b:  e9 e0 ff ff ff     jmp -32 <.plt>
 // DISASM-NEXT:   1040:  ff 25 8a 10 00 00  jmpq *4234(%rip)
 // DISASM-NEXT:   1046:  68 01 00 00 00     pushq $1
-// DISASM-NEXT:   104b:  e9 d0 ff ff ff     jmp -48 <bar+1020>
+// DISASM-NEXT:   104b:  e9 d0 ff ff ff     jmp -48 <.plt>
 // DISASM-NEXT:   1050:  ff 25 82 10 00 00  jmpq *4226(%rip)
 // DISASM-NEXT:   1056:  68 02 00 00 00     pushq $2
-// DISASM-NEXT:   105b:  e9 c0 ff ff ff     jmp -64 <bar+1020>
+// DISASM-NEXT:   105b:  e9 c0 ff ff ff     jmp -64 <.plt>
 
 // 0x11030 - (0x11000 + 1) - 4 = 43
 // 0x11030 - (0x11005 + 1) - 4 = 38
@@ -105,10 +105,10 @@
 // DISASM2-NEXT:  1102c:  0f 1f 40 00         nopl  (%rax)
 // DISASM2-NEXT:  11030:  ff 25 92 10 00 00   jmpq *4242(%rip)
 // DISASM2-NEXT:  11036:  68 00 00 00 00      pushq $0
-// DISASM2-NEXT:  1103b:  e9 e0 ff ff ff      jmp -32 <bar+11020>
+// DISASM2-NEXT:  1103b:  e9 e0 ff ff ff      jmp -32 <.plt>
 // DISASM2-NEXT:  11040:  ff 25 8a 10 00 00   jmpq *4234(%rip)
 // DISASM2-NEXT:  11046:  68 01 00 00 00      pushq $1
-// DISASM2-NEXT:  1104b:  e9 d0 ff ff ff      jmp -48 <bar+11020>
+// DISASM2-NEXT:  1104b:  e9 d0 ff ff ff      jmp -48 <.plt>
 // DISASM2-NEXT-NOT: 110C0
 
 .global _start

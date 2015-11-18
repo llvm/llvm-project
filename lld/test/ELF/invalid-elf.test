@@ -1,33 +1,33 @@
 # RUN: llvm-mc %s -o %t -filetype=obj -triple x86_64-pc-linux
 
-# RUN: not ld.lld2 %t %p/Inputs/invalid-data-encoding.a -o %t2 2>&1 | \
+# RUN: not ld.lld %t %p/Inputs/invalid-data-encoding.a -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-DATA-ENC %s
 # INVALID-DATA-ENC: Invalid data encoding: test.o
 
-# RUN: not ld.lld2 %t %p/Inputs/invalid-file-class.a -o %t2 2>&1 | \
+# RUN: not ld.lld %t %p/Inputs/invalid-file-class.a -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-FILE-CLASS %s
 # INVALID-FILE-CLASS: Invalid file class: test.o
 
-# RUN: not ld.lld2 %p/Inputs/invalid-symtab-sh_info.elf -o %t2 2>&1 | \
+# RUN: not ld.lld %p/Inputs/invalid-symtab-sh_info.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-SYMTAB-SHINFO %s
 # INVALID-SYMTAB-SHINFO: Invalid sh_info in symbol table
 
-# RUN: not ld.lld2 %p/Inputs/invalid-binding.elf -o %t2 2>&1 | \
+# RUN: not ld.lld %p/Inputs/invalid-binding.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-BINDING %s
 # INVALID-BINDING: unexpected binding
 
-# RUN: not ld.lld2 %p/Inputs/invalid-section-index.elf -o %t2 2>&1 | \
+# RUN: not ld.lld %p/Inputs/invalid-section-index.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 # INVALID-SECTION-INDEX: Invalid section index
 
-# RUN: not ld.lld2 %p/Inputs/invalid-shstrndx.so -o %t2 2>&1 | \
+# RUN: not ld.lld %p/Inputs/invalid-shstrndx.so -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 
-# RUN: not ld.lld2 %p/Inputs/invalid-shentsize-zero.elf -o %t2 2>&1 | \
+# RUN: not ld.lld %p/Inputs/invalid-shentsize-zero.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-SHENTSIZE-ZERO %s
 # INVALID-SHENTSIZE-ZERO: SHF_MERGE section size must be a multiple of sh_entsize
 
-# RUN: not ld.lld2 %p/Inputs/invalid-multiple-eh-relocs.elf -o %t2 2>&1 | \
+# RUN: not ld.lld %p/Inputs/invalid-multiple-eh-relocs.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-EH-RELOCS %s
 # INVALID-EH-RELOCS: Multiple relocation sections to .eh_frame are not supported
 

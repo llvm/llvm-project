@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/resolution.s -o %t2
-// RUN: ld.lld2 -discard-all %t %t2 -o %t3
+// RUN: ld.lld -discard-all %t %t2 -o %t3
 // RUN: llvm-readobj -t %t3 | FileCheck %s
 // REQUIRES: x86
 

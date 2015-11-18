@@ -86,7 +86,7 @@ static Flavor strToFlavor(StringRef str) {
   return llvm::StringSwitch<Flavor>(str)
       .Case("old-gnu", Flavor::old_gnu_ld)
       .Case("gnu", Flavor::gnu_ld)
-      .Case("ld.lld2", Flavor::gnu_ld)
+      .Case("ld.lld", Flavor::gnu_ld)
       .Case("link", Flavor::win_link)
       .Case("lld-link", Flavor::win_link)
       .Case("darwin", Flavor::darwin_ld)

@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/archive3.s -o %t4
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/archive4.s -o %t5
 # RUN: llvm-ar rcs %tar %t2 %t3 %t4
-# RUN: ld.lld2 %t %tar %t5 -o %tout
+# RUN: ld.lld %t %tar %t5 -o %tout
 # RUN: llvm-nm %tout | FileCheck %s
 # REQUIRES: x86
 
@@ -27,7 +27,7 @@
 
 # Test that the hitting the first object file after having a lazy symbol for
 # _start is handled correctly.
-# RUN: ld.lld2 %tar %t -o %tout
+# RUN: ld.lld %tar %t -o %tout
 # RUN: llvm-nm %tout | FileCheck --check-prefix=AR-FIRST %s
 
 # AR-FIRST:      T _start

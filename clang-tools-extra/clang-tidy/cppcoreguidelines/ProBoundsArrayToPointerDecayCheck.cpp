@@ -28,6 +28,22 @@ AST_MATCHER(Stmt, isInsideOfRangeBeginEndStmt) {
       .matches(Node, Finder, Builder);
 }
 
+AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  const Expr *E = &Node;
+  do {
+    ASTContext::DynTypedNodeList Parents =
+        Finder->getASTContext().getParents(*E);
+    if (Parents.size() != 1)
+      return false;
+    E = Parents[0].get<Expr>();
+    if (!E)
+      return false;
+  } while (isa<ImplicitCastExpr>(E));
+
+  return InnerMatcher.matches(*E, Finder, Builder);
+}
+
 void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
@@ -38,7 +54,7 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
   // 3) if it converts a string literal to a pointer
   Finder->addMatcher(
       implicitCastExpr(unless(hasParent(arraySubscriptExpr())),
-                       unless(hasParent(explicitCastExpr())),
+                       unless(hasParentIgnoringImpCasts(explicitCastExpr())),
                        unless(isInsideOfRangeBeginEndStmt()),
                        unless(hasSourceExpression(stringLiteral())))
           .bind("cast"),

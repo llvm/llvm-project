@@ -6,7 +6,7 @@
 # RUN: cd %t.dir
 # RUN: rm -f a.out
 # RUN: not llvm-readobj a.out > /dev/null 2>&1
-# RUN: ld.lld2 %t
+# RUN: ld.lld %t
 # RUN: llvm-readobj a.out > /dev/null 2>&1
 
 .globl _start;

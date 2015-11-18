@@ -1,11 +1,11 @@
 # Check the order of dynamic symbols for the MIPS target.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t-be.o
-# RUN: ld.lld2 -shared %t-be.o -o %t-be.so
+# RUN: ld.lld -shared %t-be.o -o %t-be.so
 # RUN: llvm-readobj -symbols -dyn-symbols %t-be.so | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t-el.o
-# RUN: ld.lld2 -shared %t-el.o -o %t-el.so
+# RUN: ld.lld -shared %t-el.o -o %t-el.so
 # RUN: llvm-readobj -symbols -dyn-symbols %t-el.so | FileCheck %s
 
 # REQUIRES: mips

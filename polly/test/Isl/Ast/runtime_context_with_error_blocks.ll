@@ -4,7 +4,7 @@
 ; constraints as the test contains an error block that influenced the domains
 ; already.
 ;
-; CHECK: if (this <= -1 || this >= 1)
+; CHECK: if (p_0_loaded_from_this <= -1 || p_0_loaded_from_this >= 1)
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

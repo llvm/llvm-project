@@ -1,7 +1,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
-// RUN: ld.lld2 -shared %t2.o -o %t2.so
-// RUN: ld.lld2 %t.o %t2.so -o %t
+// RUN: ld.lld -shared %t2.o -o %t2.so
+// RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-readobj -s -r -section-data %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 

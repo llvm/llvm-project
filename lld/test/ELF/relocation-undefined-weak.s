@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
-// RUN: ld.lld2 %t -o %tout
+// RUN: ld.lld %t -o %tout
 // RUN: llvm-readobj -sections %tout | FileCheck %s
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix DISASM
 // REQUIRES: x86

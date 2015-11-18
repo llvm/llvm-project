@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t
-# RUN: ld.lld2 -discard-all %t -o %t2
+# RUN: ld.lld -discard-all %t -o %t2
 # RUN: llvm-readobj -file-headers -sections -section-data -program-headers %t2 | FileCheck %s
 # REQUIRES: ppc
 

@@ -1,8 +1,8 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
-# RUN: ld.lld2 %t1 -z execstack -o %t
+# RUN: ld.lld %t1 -z execstack -o %t
 # RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=CHECK_RWX %s
-# RUN: ld.lld2 %t1 -o %t
+# RUN: ld.lld %t1 -o %t
 # RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=CHECK_RW %s
 
 # CHECK_RW:       Sections [

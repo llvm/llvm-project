@@ -202,7 +202,7 @@ class Configuration(object):
             if os.path.isdir(possible_root):
                 self.libcxx_obj_root = possible_root
             else:
-                self.libcxx_obj_root = self.project_root
+                self.libcxx_obj_root = self.project_obj_root
 
     def configure_cxx_library_root(self):
         self.cxx_library_root = self.get_lit_conf('cxx_library_root',

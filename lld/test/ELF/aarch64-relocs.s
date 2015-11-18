@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
-# RUN: ld.lld2 %t -o %t2
+# RUN: ld.lld %t -o %t2
 # RUN: llvm-objdump -d %t2 | FileCheck %s
 # REQUIRES: aarch64
 

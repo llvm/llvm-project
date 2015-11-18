@@ -39,3 +39,9 @@ void f() {
 const char *g() {
   return "clang"; // OK, decay string literal to pointer
 }
+
+void f2(void *const *);
+void bug25362() {
+  void *a[2];
+  f2(static_cast<void *const*>(a)); // OK, explicit cast
+}

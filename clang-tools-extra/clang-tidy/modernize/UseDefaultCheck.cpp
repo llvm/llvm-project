@@ -302,7 +302,7 @@ void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
       if (!StartLoc.isValid())
         return;
     }
-  } else if (dyn_cast<CXXDestructorDecl>(SpecialFunctionDecl)) {
+  } else if (isa<CXXDestructorDecl>(SpecialFunctionDecl)) {
     SpecialFunctionName = "destructor";
   } else {
     if (!isCopyAssignmentAndCanBeDefaulted(Result.Context, SpecialFunctionDecl))

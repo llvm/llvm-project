@@ -406,15 +406,14 @@ std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
 
   CG->setModule(BitcodeFiles[0]->takeModule());
   for (unsigned I = 1, E = BitcodeFiles.size(); I != E; ++I)
-    CG->addModule(BitcodeFiles[I]->getModule());
+    CG->addModule(BitcodeFiles[I]->takeModule().get());
 
   bool DisableVerify = true;
 #ifdef NDEBUG
   DisableVerify = false;
 #endif
-  std::string ErrMsg;
-  if (!CG->optimize(DisableVerify, false, false, false, ErrMsg))
-    error(ErrMsg);
+  if (!CG->optimize(DisableVerify, false, false, false))
+    error(""); // optimize() should have emitted any error message.
 
   Objs.resize(Config->LTOJobs);
   // Use std::list to avoid invalidation of pointers in OSPtrs.
@@ -425,8 +424,8 @@ std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
     OSPtrs.push_back(&OSs.back());
   }
 
-  if (!CG->compileOptimized(OSPtrs, ErrMsg))
-    error(ErrMsg);
+  if (!CG->compileOptimized(OSPtrs))
+    error(""); // compileOptimized() should have emitted any error message.
 
   std::vector<ObjectFile *> ObjFiles;
   for (SmallVector<char, 0> &Obj : Objs) {

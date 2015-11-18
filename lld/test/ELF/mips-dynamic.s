@@ -2,13 +2,13 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %p/Inputs/mips-dynamic.s -o %td.o
-# RUN: ld.lld2 -shared %td.o -o %td.so
+# RUN: ld.lld -shared %td.o -o %td.so
 
-# RUN: ld.lld2 %t.o %td.so -o %t.exe
+# RUN: ld.lld %t.o %td.so -o %t.exe
 # RUN: llvm-readobj -sections -dynamic-table %t.exe \
 # RUN:   | FileCheck -check-prefix=EXE %s
 
-# RUN: ld.lld2 -shared %t.o %td.so -o %t.so
+# RUN: ld.lld -shared %t.o %td.so -o %t.so
 # RUN: llvm-readobj -sections -dyn-symbols -dynamic-table %t.so \
 # RUN:   | FileCheck -check-prefix=DSO %s
 

@@ -1,8 +1,8 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/shared.s -o %t.o
-// RUN: ld.lld2 %t.o -o %t.so -shared
+// RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t2.o
-// RUN: ld.lld2 %t2.o %t.so -o %t
+// RUN: ld.lld %t2.o %t.so -o %t
 // RUN: llvm-readobj -r %t | FileCheck %s
 
 	.globl	_start

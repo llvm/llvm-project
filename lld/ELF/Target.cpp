@@ -61,7 +61,7 @@ public:
 class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
-  unsigned getPLTRefReloc(unsigned Type) const override;
+  unsigned getPltRefReloc(unsigned Type) const override;
   void writeGotPltHeaderEntries(uint8_t *Buf) const override;
   void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
@@ -94,6 +94,7 @@ public:
 class AArch64TargetInfo final : public TargetInfo {
 public:
   AArch64TargetInfo();
+  unsigned getPltRefReloc(unsigned Type) const override;
   void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
                          uint64_t PltEntryAddr) const override;
@@ -152,7 +153,7 @@ bool TargetInfo::relocNeedsCopy(uint32_t Type, const SymbolBody &S) const {
   return false;
 }
 
-unsigned TargetInfo::getPLTRefReloc(unsigned Type) const { return PCRelReloc; }
+unsigned TargetInfo::getPltRefReloc(unsigned Type) const { return PCRelReloc; }
 
 bool TargetInfo::relocPointsToGot(uint32_t Type) const { return false; }
 
@@ -279,7 +280,7 @@ bool X86_64TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
          relocNeedsPlt(Type, S);
 }
 
-unsigned X86_64TargetInfo::getPLTRefReloc(unsigned Type) const {
+unsigned X86_64TargetInfo::getPltRefReloc(unsigned Type) const {
   if (Type == R_X86_64_PLT32)
     return R_X86_64_PC32;
   return Type;
@@ -606,20 +607,74 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   }
 }
 
-AArch64TargetInfo::AArch64TargetInfo() {}
+AArch64TargetInfo::AArch64TargetInfo() {
+  PltReloc = R_AARCH64_JUMP_SLOT;
+  LazyRelocations = true;
+  PltEntrySize = 16;
+  PltZeroEntrySize = 32;
+}
 
-void AArch64TargetInfo::writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const {}
+unsigned AArch64TargetInfo::getPltRefReloc(unsigned Type) const { return Type; }
+
+void AArch64TargetInfo::writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const {
+  write64le(Buf, Out<ELF64LE>::Plt->getVA());
+}
+
 void AArch64TargetInfo::writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
-                                          uint64_t PltEntryAddr) const {}
+                                          uint64_t PltEntryAddr) const {
+  const uint8_t PltData[] = {
+      0xf0, 0x7b, 0xbf, 0xa9, // stp	x16, x30, [sp,#-16]!
+      0x10, 0x00, 0x00, 0x90, // adrp	x16, Page(&(.plt.got[2]))
+      0x11, 0x02, 0x40, 0xf9, // ldr	x17, [x16, Offset(&(.plt.got[2]))]
+      0x10, 0x02, 0x00, 0x91, // add	x16, x16, Offset(&(.plt.got[2]))
+      0x20, 0x02, 0x1f, 0xd6, // br	x17
+      0x1f, 0x20, 0x03, 0xd5, // nop
+      0x1f, 0x20, 0x03, 0xd5, // nop
+      0x1f, 0x20, 0x03, 0xd5  // nop
+  };
+  memcpy(Buf, PltData, sizeof(PltData));
+
+  relocateOne(Buf + 4, Buf + 8, R_AARCH64_ADR_PREL_PG_HI21, PltEntryAddr + 4,
+              GotEntryAddr + 16);
+  relocateOne(Buf + 8, Buf + 12, R_AARCH64_LDST64_ABS_LO12_NC, PltEntryAddr + 8,
+              GotEntryAddr + 16);
+  relocateOne(Buf + 12, Buf + 16, R_AARCH64_ADD_ABS_LO12_NC, PltEntryAddr + 12,
+              GotEntryAddr + 16);
+}
+
 void AArch64TargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotEntryAddr,
-                                      uint64_t PltEntryAddr, int32_t Index) const {}
+                                      uint64_t PltEntryAddr,
+                                      int32_t Index) const {
+  const uint8_t Inst[] = {
+      0x10, 0x00, 0x00, 0x90, // adrp x16, Page(&(.plt.got[n]))
+      0x11, 0x02, 0x40, 0xf9, // ldr  x17, [x16, Offset(&(.plt.got[n]))]
+      0x10, 0x02, 0x00, 0x91, // add  x16, x16, Offset(&(.plt.got[n]))
+      0x20, 0x02, 0x1f, 0xd6  // br   x17
+  };
+  memcpy(Buf, Inst, sizeof(Inst));
+
+  relocateOne(Buf, Buf + 4, R_AARCH64_ADR_PREL_PG_HI21, PltEntryAddr,
+              GotEntryAddr);
+  relocateOne(Buf + 4, Buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, PltEntryAddr + 4,
+              GotEntryAddr);
+  relocateOne(Buf + 8, Buf + 12, R_AARCH64_ADD_ABS_LO12_NC, PltEntryAddr + 8,
+              GotEntryAddr);
+}
+
 bool AArch64TargetInfo::relocNeedsGot(uint32_t Type,
                                       const SymbolBody &S) const {
-  return false;
+  return relocNeedsPlt(Type, S);
 }
+
 bool AArch64TargetInfo::relocNeedsPlt(uint32_t Type,
                                       const SymbolBody &S) const {
-  return false;
+  switch (Type) {
+  default:
+    return false;
+  case R_AARCH64_JUMP26:
+  case R_AARCH64_CALL26:
+    return canBePreempted(&S, true);
+  }
 }
 
 static void updateAArch64Adr(uint8_t *L, uint64_t Imm) {

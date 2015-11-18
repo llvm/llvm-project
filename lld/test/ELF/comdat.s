@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/comdat.s -o %t2.o
-// RUN: ld.lld2 -shared %t.o %t.o %t2.o -o %t
+// RUN: ld.lld -shared %t.o %t.o %t2.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
 // RUN: llvm-readobj -s -t %t | FileCheck --check-prefix=READ %s
 // REQUIRES: x86

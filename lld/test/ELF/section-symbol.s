@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
-// RUN: ld.lld2 %t -o %t.so -shared -discard-none
+// RUN: ld.lld %t -o %t.so -shared -discard-none
 // RUN: llvm-readobj -t %t.so | FileCheck %s
 
 // Test that we don't include the section symbols from the .o in the .so

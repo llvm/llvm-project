@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t.o
-# RUN: ld.lld2 %t.o -o %t.exe
+# RUN: ld.lld %t.o -o %t.exe
 # RUN: llvm-readobj -file-headers -sections -program-headers -symbols %t.exe \
 # RUN:   | FileCheck %s
 

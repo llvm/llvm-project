@@ -1,12 +1,12 @@
 # Check R_MIPS_32 relocation calculation.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t-be.o
-# RUN: ld.lld2 %t-be.o -o %t-be.exe
+# RUN: ld.lld %t-be.o -o %t-be.exe
 # RUN: llvm-objdump -t %t-be.exe | FileCheck %s
 # RUN: llvm-objdump -s %t-be.exe | FileCheck -check-prefix=BE %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t-el.o
-# RUN: ld.lld2 %t-el.o -o %t-el.exe
+# RUN: ld.lld %t-el.o -o %t-el.exe
 # RUN: llvm-objdump -t %t-el.exe | FileCheck %s
 # RUN: llvm-objdump -s %t-el.exe | FileCheck -check-prefix=EL %s
 

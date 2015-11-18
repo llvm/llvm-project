@@ -5984,7 +5984,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2668020B115FD0EE008E1FE4 /* Build configuration list for PBXNativeTarget "LLDB" */;
 			buildPhases = (
-				26DC6A5813380D4300FF7998 /* Build swig wrapper classes */,
+				26DC6A5813380D4300FF7998 /* Prepare Swig Bindings */,
 				26680202115FD0ED008E1FE4 /* Headers */,
 				26680203115FD0ED008E1FE4 /* Resources */,
 				26680204115FD0ED008E1FE4 /* Sources */,
@@ -6214,19 +6214,19 @@
 			shellPath = /bin/sh;
 			shellScript = "perl $SRCROOT/scripts/build-llvm.pl";
 		};
-		26DC6A5813380D4300FF7998 /* Build swig wrapper classes */ = {
+		26DC6A5813380D4300FF7998 /* Prepare Swig Bindings */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
 			);
-			name = "Build swig wrapper classes";
+			name = "Prepare Swig Bindings";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "$SRCROOT/scripts/build-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $CONFIGURATION_BUILD_DIR \"\"\n";
+			shellPath = /bin/bash;
+			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $CONFIGURATION_BUILD_DIR --allow-static-binding";
 		};
 		4959511A1A1ACE9500F6F8FC /* Install Clang compiler headers */ = {
 			isa = PBXShellScriptBuildPhase;

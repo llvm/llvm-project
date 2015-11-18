@@ -1,5 +1,5 @@
 # RUN: yaml2obj -format elf %s -o %t
-# RUN: not ld.lld2 %t -o %tout 2>&1 | FileCheck %s
+# RUN: not ld.lld %t -o %tout 2>&1 | FileCheck %s
 
 FileHeader:
   Class:           ELFCLASS64

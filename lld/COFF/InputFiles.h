@@ -205,7 +205,6 @@ public:
   std::vector<SymbolBody *> &getSymbols() override { return SymbolBodies; }
   MachineTypes getMachineType() override;
 
-  LTOModule *getModule() const { return M.get(); }
   std::unique_ptr<LTOModule> takeModule() { return std::move(M); }
 
 private:

@@ -6,10 +6,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux    %s    -o %t-x86_64.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-pc-linux %s    -o %t-ppc64.o
 
-# RUN: ld.lld2 -shared --hash-style=gnu  -o %te-i386.so  %te-i386.o
-# RUN: ld.lld2 -shared  -hash-style=gnu  -o %t-i386.so   %t-i386.o
-# RUN: ld.lld2 -shared  -hash-style=gnu  -o %t-x86_64.so %t-x86_64.o
-# RUN: ld.lld2 -shared --hash-style both -o %t-ppc64.so  %t-ppc64.o
+# RUN: ld.lld -shared --hash-style=gnu  -o %te-i386.so  %te-i386.o
+# RUN: ld.lld -shared  -hash-style=gnu  -o %t-i386.so   %t-i386.o
+# RUN: ld.lld -shared  -hash-style=gnu  -o %t-x86_64.so %t-x86_64.o
+# RUN: ld.lld -shared --hash-style both -o %t-ppc64.so  %t-ppc64.o
 
 # RUN: llvm-readobj -dyn-symbols -gnu-hash-table %te-i386.so \
 # RUN:   | FileCheck %s -check-prefix=EMPTY

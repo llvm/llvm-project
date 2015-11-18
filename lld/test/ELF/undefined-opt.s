@@ -8,7 +8,7 @@
 # REQUIRES: x86
 
 # Symbols from the archive are not in if not needed
-# RUN: ld.lld2 -o %t1 %t.o %tar.a
+# RUN: ld.lld -o %t1 %t.o %tar.a
 # RUN: llvm-readobj --symbols %t1 | FileCheck --check-prefix=NO-UNDEFINED %s
 # NO-UNDEFINED: Symbols [
 # NO-UNDEFINED-NOT: Name: abs
@@ -19,7 +19,7 @@
 
 # Symbols from the archive are in if needed, but only from the
 # containing object file
-# RUN: ld.lld2 -o %t2 %t.o %tar.a -u bar
+# RUN: ld.lld -o %t2 %t.o %tar.a -u bar
 # RUN: llvm-readobj --symbols %t2 | FileCheck --check-prefix=ONE-UNDEFINED %s
 # ONE-UNDEFINED: Symbols [
 # ONE-UNDEFINED-NOT: Name: abs
@@ -29,7 +29,7 @@
 # ONE-UNDEFINED: ]
 
 # Use the option couple of times, both short and long forms
-# RUN: ld.lld2 -o %t3 %t.o %tar.a -u bar --undefined=abs
+# RUN: ld.lld -o %t3 %t.o %tar.a -u bar --undefined=abs
 # RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TWO-UNDEFINED %s
 # TWO-UNDEFINED: Symbols [
 # TWO-UNDEFINED: Name: abs
@@ -39,12 +39,12 @@
 # TWO-UNDEFINED: ]
 # Now the same logic but linker script is used to set undefines
 # RUN: echo "EXTERN( bar abs )" > %t.script
-# RUN: ld.lld2 -o %t3 %t.o %tar.a %t.script
+# RUN: ld.lld -o %t3 %t.o %tar.a %t.script
 # RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TWO-UNDEFINED %s
 
 # Added undefined symbol may be left undefined without error, but
 # shouldn't show up in the dynamic table.
-# RUN: ld.lld2 -shared -o %t4 %t.o %tar.a -u unknown
+# RUN: ld.lld -shared -o %t4 %t.o %tar.a -u unknown
 # RUN: llvm-readobj --dyn-symbols %t4 | \
 # RUN:     FileCheck --check-prefix=UNK-UNDEFINED-SO %s
 # UNK-UNDEFINED-SO: DynamicSymbols [

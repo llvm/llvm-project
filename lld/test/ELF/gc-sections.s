@@ -1,11 +1,11 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: ld.lld2 %t -o %t2
+# RUN: ld.lld %t -o %t2
 # RUN: llvm-readobj -sections -symbols %t2 | FileCheck -check-prefix=NOGC %s
-# RUN: ld.lld2 --gc-sections %t -o %t2
+# RUN: ld.lld --gc-sections %t -o %t2
 # RUN: llvm-readobj -sections -symbols %t2 | FileCheck -check-prefix=GC1 %s
-# RUN: ld.lld2 --export-dynamic --gc-sections %t -o %t2
+# RUN: ld.lld --export-dynamic --gc-sections %t -o %t2
 # RUN: llvm-readobj -sections -symbols %t2 | FileCheck -check-prefix=GC2 %s
 
 # NOGC: Name: .eh_frame

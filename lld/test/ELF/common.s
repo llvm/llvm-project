@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/common.s -o %t2
-// RUN: ld.lld2 %t %t2 -o %t3
+// RUN: ld.lld %t %t2 -o %t3
 // RUN: llvm-readobj -t -s %t3 | FileCheck %s
 // REQUIRES: x86
 

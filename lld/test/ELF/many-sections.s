@@ -11,7 +11,7 @@
 // CHECK-NEXT: Section: dm (0xFF00)
 
 
-// RUN: ld.lld2 %t -o %t2
+// RUN: ld.lld %t -o %t2
 // RUN: llvm-readobj -t %t2 | FileCheck --check-prefix=LINKED %s
 
 // Test that _start is in the correct section.

@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux -save-temp-labels %s -o %t
-// RUN: ld.lld2 -discard-none -shared %t -o %t2
+// RUN: ld.lld -discard-none -shared %t -o %t2
 // RUN: llvm-readobj -s -sd -t %t2 | FileCheck %s
 // REQUIRES: x86
 

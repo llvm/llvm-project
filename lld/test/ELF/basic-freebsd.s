@@ -1,7 +1,7 @@
 # Verify that OSABI is set to the correct value.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-freebsd %s -o %t
-# RUN: ld.lld2 %t -o %t2
+# RUN: ld.lld %t -o %t2
 # RUN: llvm-readobj -file-headers %t2 | FileCheck %s
 # REQUIRES: x86
 

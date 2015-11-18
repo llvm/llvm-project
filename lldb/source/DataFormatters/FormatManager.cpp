@@ -486,21 +486,6 @@ FormatManager::GetValidatorForType (lldb::TypeNameSpecifierImplSP type_sp)
 }
 
 void
-FormatManager::LoopThroughCategories (CategoryCallback callback, void* param)
-{
-    m_categories_map.LoopThrough(callback, param);
-    Mutex::Locker locker(m_language_categories_mutex);
-    for (const auto& entry : m_language_categories_map)
-    {
-        if (auto category_sp = entry.second->GetCategory())
-        {
-            if (!callback(param, category_sp))
-                break;
-        }
-    }
-}
-
-void
 FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback)
 {
     m_categories_map.ForEach(callback);

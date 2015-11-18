@@ -1,7 +1,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/archive.s -o %ta.o
 // RUN: llvm-ar rc %t.a %ta.o
 // RUN: llvm-mc -filetype=obj -triple=i686-linux %s -o %tb.o
-// RUN: not ld.lld2 %t.a %tb.o 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.a %tb.o 2>&1 | FileCheck %s
 
 // We used to crash when
 // * The first object seen by the symbol table is from an archive.

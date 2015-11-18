@@ -1,6 +1,6 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-// RUN: ld.lld2 %t -o %tout -shared
+// RUN: ld.lld %t -o %tout -shared
 // RUN: llvm-readobj -program-headers %tout | FileCheck %s
 
         .section        .tbss,"awT",@nobits

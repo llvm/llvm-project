@@ -448,14 +448,15 @@ void __cxa_end_catch()
   static_assert(sizeof(__cxa_exception) == sizeof(__cxa_dependent_exception),
                 "sizeof(__cxa_exception) must be equal to "
                 "sizeof(__cxa_dependent_exception)");
-    static_assert(offsetof(__cxa_exception, referenceCount) ==
-                      offsetof(__cxa_dependent_exception, primaryException),
-                  "the layout of __cxa_exception must match the layout of "
-                  "__cxa_dependent_exception");
-    static_assert(offsetof(__cxa_exception, handlerCount) ==
-                      offsetof(__cxa_dependent_exception, handlerCount),
-                  "the layout of __cxa_exception must match the layout of "
-                  "__cxa_dependent_exception");
+  static_assert(__builtin_offsetof(__cxa_exception, referenceCount) ==
+                    __builtin_offsetof(__cxa_dependent_exception,
+                                       primaryException),
+                "the layout of __cxa_exception must match the layout of "
+                "__cxa_dependent_exception");
+  static_assert(__builtin_offsetof(__cxa_exception, handlerCount) ==
+                    __builtin_offsetof(__cxa_dependent_exception, handlerCount),
+                "the layout of __cxa_exception must match the layout of "
+                "__cxa_dependent_exception");
     __cxa_eh_globals* globals = __cxa_get_globals_fast(); // __cxa_get_globals called in __cxa_begin_catch
     __cxa_exception* exception_header = globals->caughtExceptions;
     // If we've rethrown a foreign exception, then globals->caughtExceptions

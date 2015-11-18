@@ -32,12 +32,16 @@ class DisassemblyTestCase(TestBase):
         disassembly = self.res.GetOutput()
 
         # ARCH, if not specified, defaults to x86_64.
-        if self.getArchitecture() in ["", 'x86_64', 'i386', 'i686']:
+        arch = self.getArchitecture()
+        if arch in ["", 'x86_64', 'i386', 'i686']:
             breakpoint_opcodes = ["int3"]
             instructions = [' mov', ' addl ', 'ret']
-        elif self.getArchitecture() in ["arm", "aarch64"]:
+        elif arch in ["arm", "aarch64"]:
             breakpoint_opcodes = ["brk", "udf"]
             instructions = [' add ', ' ldr ', ' str ']
+        elif re.match("mips" , arch):
+            breakpoint_opcodes = ["break"]
+            instructions = ['lw', 'sw', 'jr']
         else:
             # TODO please add your arch here
             self.fail('unimplemented for arch = "{arch}"'.format(arch=self.getArchitecture()))

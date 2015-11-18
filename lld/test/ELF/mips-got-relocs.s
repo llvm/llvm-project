@@ -1,7 +1,7 @@
 # Check R_MIPS_GOT16 relocation calculation.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t-be.o
-# RUN: ld.lld2 %t-be.o -o %t-be.exe
+# RUN: ld.lld %t-be.o -o %t-be.exe
 # RUN: llvm-objdump -section-headers -t %t-be.exe | FileCheck -check-prefix=EXE_SYM %s
 # RUN: llvm-objdump -s -section=.got %t-be.exe | FileCheck -check-prefix=EXE_GOT_BE %s
 # RUN: llvm-objdump -d %t-be.exe | FileCheck -check-prefix=EXE_DIS_BE %s
@@ -9,21 +9,21 @@
 # RUN: llvm-readobj -sections %t-be.exe | FileCheck -check-prefix=SHFLAGS %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t-el.o
-# RUN: ld.lld2 %t-el.o -o %t-el.exe
+# RUN: ld.lld %t-el.o -o %t-el.exe
 # RUN: llvm-objdump -section-headers -t %t-el.exe | FileCheck -check-prefix=EXE_SYM %s
 # RUN: llvm-objdump -s -section=.got %t-el.exe | FileCheck -check-prefix=EXE_GOT_EL %s
 # RUN: llvm-objdump -d %t-el.exe | FileCheck -check-prefix=EXE_DIS_EL %s
 # RUN: llvm-readobj -relocations %t-el.exe | FileCheck -check-prefix=NORELOC %s
 # RUN: llvm-readobj -sections %t-el.exe | FileCheck -check-prefix=SHFLAGS %s
 
-# RUN: ld.lld2 -shared %t-be.o -o %t-be.so
+# RUN: ld.lld -shared %t-be.o -o %t-be.so
 # RUN: llvm-objdump -section-headers -t %t-be.so | FileCheck -check-prefix=DSO_SYM %s
 # RUN: llvm-objdump -s -section=.got %t-be.so | FileCheck -check-prefix=DSO_GOT_BE %s
 # RUN: llvm-objdump -d %t-be.so | FileCheck -check-prefix=DSO_DIS_BE %s
 # RUN: llvm-readobj -relocations %t-be.so | FileCheck -check-prefix=NORELOC %s
 # RUN: llvm-readobj -sections %t-be.so | FileCheck -check-prefix=SHFLAGS %s
 
-# RUN: ld.lld2 -shared %t-el.o -o %t-el.so
+# RUN: ld.lld -shared %t-el.o -o %t-el.so
 # RUN: llvm-objdump -section-headers -t %t-el.so | FileCheck -check-prefix=DSO_SYM %s
 # RUN: llvm-objdump -s -section=.got %t-el.so | FileCheck -check-prefix=DSO_GOT_EL %s
 # RUN: llvm-objdump -d %t-el.so | FileCheck -check-prefix=DSO_DIS_EL %s

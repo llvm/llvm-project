@@ -7,30 +7,30 @@
 // REQUIRES: x86
 
 // Should not link because of undefined symbol _bar
-// RUN: not ld.lld2 -o %t/r %t/m.o 2>&1 \
+// RUN: not ld.lld -o %t/r %t/m.o 2>&1 \
 // RUN:     | FileCheck --check-prefix=UNDEFINED %s
 // UNDEFINED: undefined symbol: _bar
 
 // We need to be sure that there is no suitable library in the /lib directory
-// RUN: not ld.lld2 -o %t/r %t/m.o -L/lib -l:libls.a 2>&1 \
+// RUN: not ld.lld -o %t/r %t/m.o -L/lib -l:libls.a 2>&1 \
 // RUN:     | FileCheck --check-prefix=NOLIB %s
 // NOLIB: Unable to find library -l:libls.a
 
 // Should just remove the '=' symbol if --sysroot is not specified.
 // Case 1: relative path
-// RUN: cd %t && ld.lld2 -o %t/r %t/m.o -L=lib -l:libls.a
+// RUN: cd %t && ld.lld -o %t/r %t/m.o -L=lib -l:libls.a
 // Case 2: absolute path
-// RUN: cd %p && ld.lld2 -o %t/r %t/m.o -L=%t/lib -l:libls.a
+// RUN: cd %p && ld.lld -o %t/r %t/m.o -L=%t/lib -l:libls.a
 
 // RUN: cd %p
 
 // Should substitute SysRoot if specified
-// RUN: ld.lld2 -o %t/r %t/m.o --sysroot=%t -L=lib -l:libls.a
-// RUN: ld.lld2 -o %t/r %t/m.o --sysroot=%t -L=/lib -l:libls.a
+// RUN: ld.lld -o %t/r %t/m.o --sysroot=%t -L=lib -l:libls.a
+// RUN: ld.lld -o %t/r %t/m.o --sysroot=%t -L=/lib -l:libls.a
 
 // Should not substitute SysRoot if the directory name does not start with '='
-// RUN: not ld.lld2 -o %t/r %r/m.o --sysroot=%t -Llib -l:libls.a
-// RUN: not ld.lld2 -o %t/r %r/m.o --sysroot=%t -L/lib -l:libls.a
+// RUN: not ld.lld -o %t/r %r/m.o --sysroot=%t -Llib -l:libls.a
+// RUN: not ld.lld -o %t/r %r/m.o --sysroot=%t -L/lib -l:libls.a
 
 .globl _start,_bar;
 _start:
