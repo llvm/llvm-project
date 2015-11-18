@@ -36,10 +36,8 @@
 // RUN: %clang -### -S -ffp-contract=fast %s 2>&1 | FileCheck -check-prefix=FP-CONTRACT-FAST-CHECK %s
 // RUN: %clang -### -S -ffast-math %s 2>&1 | FileCheck -check-prefix=FP-CONTRACT-FAST-CHECK %s
 // RUN: %clang -### -S -ffp-contract=off %s 2>&1 | FileCheck -check-prefix=FP-CONTRACT-OFF-CHECK %s
-// RUN: %clang -### -S -ffp-contract=on %s 2>&1 | FileCheck -check-prefix=FP-CONTRACT-ON-CHECK %s
 // FP-CONTRACT-FAST-CHECK: -ffp-contract=fast
 // FP-CONTRACT-OFF-CHECK: -ffp-contract=off
-// FP-CONTRACT-ON-CHECK: -ffp-contract=on
 
 // RUN: %clang -### -S -funroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-UNROLL-LOOPS %s
 // RUN: %clang -### -S -fno-unroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-UNROLL-LOOPS %s

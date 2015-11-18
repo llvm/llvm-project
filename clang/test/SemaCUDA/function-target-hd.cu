@@ -8,9 +8,9 @@
 // host device functions are not allowed to call device functions.
 
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -triple nvptx-unknown-cuda -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fcuda-allow-host-calls-from-host-device -verify %s -DTEST_WARN_HD
-// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -fcuda-allow-host-calls-from-host-device -verify %s -DTEST_WARN_HD
+// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -triple nvptx-unknown-cuda -fcuda-allow-host-calls-from-host-device -verify %s -DTEST_WARN_HD
 
 #include "Inputs/cuda.h"
 

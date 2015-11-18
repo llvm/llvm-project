@@ -644,6 +644,19 @@ public:
     }
   };
 
+  /// \brief Validate register name used for global register variables.
+  ///
+  /// This function returns true if the register passed in RegName can be used
+  /// for global register variables on this target. In addition, it returns
+  /// true in HasSizeMismatch if the size of the register doesn't match the
+  /// variable size passed in RegSize.
+  virtual bool validateGlobalRegisterVariable(StringRef RegName,
+                                              unsigned RegSize,
+                                              bool &HasSizeMismatch) const {
+    HasSizeMismatch = false;
+    return true;
+  }
+
   // validateOutputConstraint, validateInputConstraint - Checks that
   // a constraint is valid and provides information about it.
   // FIXME: These should return a real error instead of just true/false.

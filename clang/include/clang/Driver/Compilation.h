@@ -38,6 +38,9 @@ class Compilation {
   /// The default tool chain.
   const ToolChain &DefaultToolChain;
 
+  const ToolChain *CudaHostToolChain;
+  const ToolChain *CudaDeviceToolChain;
+
   /// The original (untranslated) input argument list.
   llvm::opt::InputArgList *Args;
 
@@ -81,6 +84,17 @@ public:
   const Driver &getDriver() const { return TheDriver; }
 
   const ToolChain &getDefaultToolChain() const { return DefaultToolChain; }
+  const ToolChain *getCudaHostToolChain() const { return CudaHostToolChain; }
+  const ToolChain *getCudaDeviceToolChain() const {
+    return CudaDeviceToolChain;
+  }
+
+  void setCudaHostToolChain(const ToolChain *HostToolChain) {
+    CudaHostToolChain = HostToolChain;
+  }
+  void setCudaDeviceToolChain(const ToolChain *DeviceToolChain) {
+    CudaDeviceToolChain = DeviceToolChain;
+  }
 
   const llvm::opt::InputArgList &getInputArgs() const { return *Args; }
 

@@ -166,6 +166,7 @@ protected:
     std::string CudaLibPath;
     std::string CudaLibDevicePath;
     std::string CudaIncludePath;
+    llvm::StringMap<std::string> CudaLibDeviceMap;
 
   public:
     CudaInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
@@ -185,6 +186,9 @@ protected:
     /// \brief Get the detected Cuda device library path.
     StringRef getLibDevicePath() const { return CudaLibDevicePath; }
     /// \brief Get libdevice file for given architecture
+    std::string getLibDeviceFile(StringRef Gpu) const {
+      return CudaLibDeviceMap.lookup(Gpu);
+    }
   };
 
   CudaInstallationDetector CudaInstallation;
@@ -784,6 +788,8 @@ public:
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
+  void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
   bool isPIEDefault() const override;
   SanitizerMask getSupportedSanitizers() const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,

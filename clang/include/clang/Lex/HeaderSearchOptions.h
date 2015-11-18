@@ -141,7 +141,7 @@ public:
 
   /// \brief The set of macro names that should be ignored for the purposes
   /// of computing the module hash.
-  llvm::SetVector<std::string> ModulesIgnoreMacros;
+  llvm::SmallSetVector<std::string, 16> ModulesIgnoreMacros;
 
   /// \brief The set of user-provided virtual filesystem overlay files.
   std::vector<std::string> VFSOverlayFiles;

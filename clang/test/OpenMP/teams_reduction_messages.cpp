@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s
 
 void foo() {
 }
@@ -55,6 +57,9 @@ public:
   S5(int v) : a(v) {}
 };
 class S6 { // expected-note 2 {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'int' to 'const S6' for 1st argument}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 2 {{candidate function (the implicit move assignment operator) not viable}}
+#endif
   int a;
 
 public:

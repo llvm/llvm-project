@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+
 void f(int i);
 void f(int i = 0); // expected-note {{previous definition is here}}
 void f(int i = 17); // expected-error {{redefinition of default argument}}
@@ -23,7 +26,11 @@ struct X {
 
 void j(X x = 17); // expected-note{{'::j' declared here}}
 
-struct Y { // expected-note 2{{candidate}}
+struct Y { // expected-note 2{{candidate constructor (the implicit copy constructor) not viable}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 2 {{candidate constructor (the implicit move constructor) not viable}}
+#endif
+
   explicit Y(int);
 };
 

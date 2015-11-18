@@ -13,7 +13,9 @@ static int sii;
 #pragma omp threadprivate(sii)
 static int globalii;
 
-register int reg0 __asm__("0");
+// Currently, we cannot use "0" for global register variables.
+// register int reg0 __asm__("0");
+int reg0;
 
 int test_iteration_spaces() {
   const int N = 100;

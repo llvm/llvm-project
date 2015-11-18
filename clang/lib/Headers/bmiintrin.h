@@ -39,7 +39,12 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("bmi")))
 
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
+/* Allow using the tzcnt intrinsics even for non-BMI targets. Since the TZCNT
+   instruction behaves as BSF on non-BMI targets, there is code that expects
+   to use it as a potentially faster version of BSF. */
+#define __RELAXED_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+
+static __inline__ unsigned short __RELAXED_FN_ATTRS
 __tzcnt_u16(unsigned short __X)
 {
   return __X ? __builtin_ctzs(__X) : 16;
@@ -83,7 +88,7 @@ __blsr_u32(unsigned int __X)
   return __X & (__X - 1);
 }
 
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
+static __inline__ unsigned int __RELAXED_FN_ATTRS
 __tzcnt_u32(unsigned int __X)
 {
   return __X ? __builtin_ctz(__X) : 32;
@@ -136,7 +141,7 @@ __blsr_u64(unsigned long long __X)
   return __X & (__X - 1);
 }
 
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
+static __inline__ unsigned long long __RELAXED_FN_ATTRS
 __tzcnt_u64(unsigned long long __X)
 {
   return __X ? __builtin_ctzll(__X) : 64;
@@ -145,5 +150,6 @@ __tzcnt_u64(unsigned long long __X)
 #endif /* __x86_64__ */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __RELAXED_FN_ATTRS
 
 #endif /* __BMIINTRIN_H */

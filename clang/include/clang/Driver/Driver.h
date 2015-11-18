@@ -297,22 +297,21 @@ public:
   /// BuildActions - Construct the list of actions to perform for the
   /// given arguments, which are only done for a single architecture.
   ///
+  /// \param C - The compilation that is being built.
   /// \param TC - The default host tool chain.
   /// \param Args - The input arguments.
   /// \param Actions - The list to store the resulting actions onto.
-  void BuildActions(const ToolChain &TC, llvm::opt::DerivedArgList &Args,
-                    const InputList &Inputs, ActionList &Actions) const;
+  void BuildActions(Compilation &C, const ToolChain &TC,
+                    llvm::opt::DerivedArgList &Args, const InputList &Inputs,
+                    ActionList &Actions) const;
 
   /// BuildUniversalActions - Construct the list of actions to perform
   /// for the given arguments, which may require a universal build.
   ///
+  /// \param C - The compilation that is being built.
   /// \param TC - The default host tool chain.
-  /// \param Args - The input arguments.
-  /// \param Actions - The list to store the resulting actions onto.
-  void BuildUniversalActions(const ToolChain &TC,
-                             llvm::opt::DerivedArgList &Args,
-                             const InputList &BAInputs,
-                             ActionList &Actions) const;
+  void BuildUniversalActions(Compilation &C, const ToolChain &TC,
+                             const InputList &BAInputs) const;
 
   /// BuildJobs - Bind actions to concrete tools and translate
   /// arguments to form the list of jobs to run.

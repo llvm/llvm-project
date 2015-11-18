@@ -1053,12 +1053,8 @@ bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
       getTriple().getArch() != llvm::Triple::thumb)
     return false;
 
-  // We can't check directly for watchOS here. ComputeLLVMTriple only
-  // fills in the ArchName correctly.
-  llvm::Triple Triple(ComputeLLVMTriple(Args));
-  return !(Triple.getArchName() == "armv7k" ||
-           Triple.getArchName() == "thumbv7k");
-
+  // Only watchOS uses the new DWARF/Compact unwinding method.
+  return !isTargetWatchOS();
 }
 
 bool MachO::isPICDefault() const { return true; }
@@ -1633,6 +1629,7 @@ void Generic_GCC::CudaInstallationDetector::init(
         Args.getLastArgValue(options::OPT_cuda_path_EQ));
   else {
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda");
+    CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.5");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.0");
   }
 
@@ -1650,6 +1647,31 @@ void Generic_GCC::CudaInstallationDetector::init(
           D.getVFS().exists(CudaLibPath) &&
           D.getVFS().exists(CudaLibDevicePath)))
       continue;
+
+    std::error_code EC;
+    for (llvm::sys::fs::directory_iterator LI(CudaLibDevicePath, EC), LE;
+         !EC && LI != LE; LI = LI.increment(EC)) {
+      StringRef FilePath = LI->path();
+      StringRef FileName = llvm::sys::path::filename(FilePath);
+      // Process all bitcode filenames that look like libdevice.compute_XX.YY.bc
+      const StringRef LibDeviceName = "libdevice.";
+      if (!(FileName.startswith(LibDeviceName) && FileName.endswith(".bc")))
+        continue;
+      StringRef GpuArch = FileName.slice(
+          LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
+      CudaLibDeviceMap[GpuArch] = FilePath.str();
+      // Insert map entries for specifc devices with this compute capability.
+      if (GpuArch == "compute_20") {
+        CudaLibDeviceMap["sm_20"] = FilePath;
+        CudaLibDeviceMap["sm_21"] = FilePath;
+      } else if (GpuArch == "compute_30") {
+        CudaLibDeviceMap["sm_30"] = FilePath;
+        CudaLibDeviceMap["sm_32"] = FilePath;
+      } else if (GpuArch == "compute_35") {
+        CudaLibDeviceMap["sm_35"] = FilePath;
+        CudaLibDeviceMap["sm_37"] = FilePath;
+      }
+    }
 
     IsValid = true;
     break;
@@ -4108,6 +4130,18 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
+void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                               ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nocudainc))
+    return;
+
+  if (CudaInstallation.isValid()) {
+    addSystemInclude(DriverArgs, CC1Args, CudaInstallation.getIncludePath());
+    CC1Args.push_back("-include");
+    CC1Args.push_back("cuda_runtime.h");
+  }
+}
+
 bool Linux::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
 
 SanitizerMask Linux::getSupportedSanitizers() const {
@@ -4190,6 +4224,22 @@ CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args) const {
   Linux::addClangTargetOptions(DriverArgs, CC1Args);
   CC1Args.push_back("-fcuda-is-device");
+
+  if (DriverArgs.hasArg(options::OPT_nocudalib))
+    return;
+
+  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(
+      DriverArgs.getLastArgValue(options::OPT_march_EQ));
+  if (!LibDeviceFile.empty()) {
+    CC1Args.push_back("-mlink-cuda-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
+
+    // Libdevice in CUDA-7.0 requires PTX version that's more recent
+    // than LLVM defaults to. Use PTX4.2 which is the PTX version that
+    // came with CUDA-7.0.
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+ptx42");
+  }
 }
 
 llvm::opt::DerivedArgList *
