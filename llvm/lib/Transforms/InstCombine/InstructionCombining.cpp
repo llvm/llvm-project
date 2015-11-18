@@ -2486,10 +2486,24 @@ Instruction *InstCombiner::visitLandingPadInst(LandingPadInst &LI) {
             SawCatchAll = true;
             break;
           }
-          if (AlreadyCaught.count(TypeInfo))
-            // Already caught by an earlier clause, so having it in the filter
-            // is pointless.
-            continue;
+
+          // Even if we've seen a type in a catch clause, we don't want to
+          // remove it from the filter.  An unexpected type handler may be
+          // set up for a call site which throws an exception of the same
+          // type caught.  In order for the exception thrown by the unexpected
+          // handler to propogate correctly, the filter must be correctly
+          // described for the call site.
+          //
+          // Example:
+          //
+          // void unexpected() { throw 1;}
+          // void foo() throw (int) {
+          //   std::set_unexpected(unexpected);
+          //   try {
+          //     throw 2.0;
+          //   } catch (int i) {}
+          // }
+
           // There is no point in having multiple copies of the same typeinfo in
           // a filter, so only add it if we didn't already.
           if (SeenInFilter.insert(TypeInfo).second)

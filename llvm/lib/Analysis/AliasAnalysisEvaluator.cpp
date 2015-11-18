@@ -145,7 +145,7 @@ bool AAEval::runOnFunction(Function &F) {
   AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   SetVector<Value *> Pointers;
-  SetVector<CallSite> CallSites;
+  SmallSetVector<CallSite, 16> CallSites;
   SetVector<Value *> Loads;
   SetVector<Value *> Stores;
 
@@ -284,8 +284,7 @@ bool AAEval::runOnFunction(Function &F) {
   }
 
   // Mod/ref alias analysis: compare all pairs of calls and values
-  for (SetVector<CallSite>::iterator C = CallSites.begin(),
-         Ce = CallSites.end(); C != Ce; ++C) {
+  for (auto C = CallSites.begin(), Ce = CallSites.end(); C != Ce; ++C) {
     Instruction *I = C->getInstruction();
 
     for (SetVector<Value *>::iterator V = Pointers.begin(), Ve = Pointers.end();
@@ -316,9 +315,8 @@ bool AAEval::runOnFunction(Function &F) {
   }
 
   // Mod/ref alias analysis: compare all pairs of calls
-  for (SetVector<CallSite>::iterator C = CallSites.begin(),
-         Ce = CallSites.end(); C != Ce; ++C) {
-    for (SetVector<CallSite>::iterator D = CallSites.begin(); D != Ce; ++D) {
+  for (auto C = CallSites.begin(), Ce = CallSites.end(); C != Ce; ++C) {
+    for (auto D = CallSites.begin(); D != Ce; ++D) {
       if (D == C)
         continue;
       switch (AA.getModRefInfo(*C, *D)) {

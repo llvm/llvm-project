@@ -49,10 +49,10 @@ static MCSection *getUnwindInfoSection(StringRef SecName,
       if (CodeSecName.startswith(".text$"))
         CodeSecName = CodeSecName.substr(6);
 
-      return Context.getCOFFSection(
-          (SecName + Twine('$') + CodeSecName).str(),
-          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
-          SectionKind::getDataRel());
+      return Context.getCOFFSection((SecName + Twine('$') + CodeSecName).str(),
+                                    COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                        COFF::IMAGE_SCN_MEM_READ,
+                                    SectionKind::getData());
     }
   }
 

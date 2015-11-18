@@ -6,8 +6,8 @@ target triple = "thumbv7-apple-macosx10.6.7"
 ;CHECK-NEXT: Ltmp1
 ;CHECK-NEXT: LBB0_1
 
-;CHECK:@DEBUG_VALUE: x <- Q4{{$}}
-;CHECK-NEXT:@DEBUG_VALUE: y <- Q4{{$}}
+;CHECK:@DEBUG_VALUE: x <- %Q4{{$}}
+;CHECK-NEXT:@DEBUG_VALUE: y <- %Q4{{$}}
 
 
 @.str = external constant [13 x i8]

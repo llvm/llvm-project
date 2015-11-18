@@ -21,10 +21,10 @@ private:
 public:
   DWARFTypeUnit(DWARFContext &Context, const DWARFSection &Section,
                 const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-                StringRef SOS, StringRef AOS, bool LE,
+                StringRef SOS, StringRef AOS, StringRef LS, bool LE,
                 const DWARFUnitSectionBase &UnitSection,
                 const DWARFUnitIndex::Entry *Entry)
-      : DWARFUnit(Context, Section, DA, RS, SS, SOS, AOS, LE, UnitSection,
+      : DWARFUnit(Context, Section, DA, RS, SS, SOS, AOS, LS, LE, UnitSection,
                   Entry) {}
   uint32_t getHeaderSize() const override {
     return DWARFUnit::getHeaderSize() + 12;

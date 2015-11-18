@@ -20,6 +20,7 @@
 #ifndef LLVM_ADT_SETVECTOR_H
 #define LLVM_ADT_SETVECTOR_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include <algorithm>
 #include <cassert>
@@ -33,7 +34,7 @@ namespace llvm {
 /// property of a deterministic iteration order. The order of iteration is the
 /// order of insertion.
 template <typename T, typename Vector = std::vector<T>,
-                      typename Set = SmallSet<T, 16> >
+          typename Set = DenseSet<T>>
 class SetVector {
 public:
   typedef T value_type;

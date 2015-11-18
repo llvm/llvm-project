@@ -295,7 +295,8 @@ def SDTFPUnaryOpImmRound: SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                               SDTCisInt<2>, SDTCisInt<3>]>;
 
 def SDTVBroadcast  : SDTypeProfile<1, 1, [SDTCisVec<0>]>;
-def SDTVBroadcastm : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>]>;
+def SDTVBroadcastm : SDTypeProfile<1, 1, [SDTCisVec<0>,
+                                          SDTCisInt<0>, SDTCisInt<1>]>;
 
 def SDTBlend : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                              SDTCisSameAs<1,2>, SDTCisVT<3, i8>]>;
@@ -387,6 +388,7 @@ def X86SubV32x2Broadcast : SDNode<"X86ISD::SUBV_BROADCAST",
                     SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>, []>;
 
 def X86VBroadcast : SDNode<"X86ISD::VBROADCAST", SDTVBroadcast>;
+def X86VBroadcastm : SDNode<"X86ISD::VBROADCASTM", SDTVBroadcastm>;
 def X86Vinsert   : SDNode<"X86ISD::VINSERT",  SDTypeProfile<1, 3,
                               [SDTCisSameAs<0, 1>, SDTCisPtrTy<3>]>, []>;
 def X86Vextract   : SDNode<"X86ISD::VEXTRACT",  SDTypeProfile<1, 2,

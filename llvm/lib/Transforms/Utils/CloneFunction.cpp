@@ -380,6 +380,12 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
     VMap[&*II] = NewInst; // Add instruction map to value.
     NewBB->getInstList().push_back(NewInst);
     hasCalls |= (isa<CallInst>(II) && !isa<DbgInfoIntrinsic>(II));
+
+    if (CodeInfo)
+      if (auto CS = ImmutableCallSite(&*II))
+        if (CS.hasOperandBundles())
+          CodeInfo->OperandBundleCallSites.push_back(NewInst);
+
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
       if (isa<ConstantInt>(AI->getArraySize()))
         hasStaticAllocas = true;
@@ -451,7 +457,12 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
       NewInst->setName(OldTI->getName()+NameSuffix);
     NewBB->getInstList().push_back(NewInst);
     VMap[OldTI] = NewInst;             // Add instruction map to value.
-    
+
+    if (CodeInfo)
+      if (auto CS = ImmutableCallSite(OldTI))
+        if (CS.hasOperandBundles())
+          CodeInfo->OperandBundleCallSites.push_back(NewInst);
+
     // Recursively clone any reachable successor blocks.
     const TerminatorInst *TI = BB->getTerminator();
     for (const BasicBlock *Succ : TI->successors())

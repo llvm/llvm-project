@@ -355,12 +355,7 @@ static MCSymbol *getOrCreateEmuTLSInitSym(MCSymbol *GVSym, MCContext &C) {
 void AsmPrinter::EmitEmulatedTLSControlVariable(const GlobalVariable *GV,
                                                 MCSymbol *EmittedSym,
                                                 bool AllZeroInitValue) {
-  // If there is init value, use .data.rel.local section;
-  // otherwise use the .data section.
-  MCSection *TLSVarSection =
-      const_cast<MCSection *>((GV->hasInitializer() && !AllZeroInitValue)
-                                  ? getObjFileLowering().getDataRelSection()
-                                  : getObjFileLowering().getDataSection());
+  MCSection *TLSVarSection = getObjFileLowering().getDataSection();
   OutStreamer->SwitchSection(TLSVarSection);
   MCSymbol *GVSym = getSymbol(GV);
   EmitLinkage(GV, EmittedSym);  // same linkage as GV
@@ -724,19 +719,27 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
 /// that is an implicit def.
 void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   unsigned RegNo = MI->getOperand(0).getReg();
-  OutStreamer->AddComment(Twine("implicit-def: ") +
-                          MMI->getContext().getRegisterInfo()->getName(RegNo));
+
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << "implicit-def: "
+     << PrintReg(RegNo, MF->getSubtarget().getRegisterInfo());
+
+  OutStreamer->AddComment(OS.str());
   OutStreamer->AddBlankLine();
 }
 
 static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
-  std::string Str = "kill:";
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << "kill:";
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &Op = MI->getOperand(i);
     assert(Op.isReg() && "KILL instruction must have only register operands");
-    Str += ' ';
-    Str += AP.MMI->getContext().getRegisterInfo()->getName(Op.getReg());
-    Str += (Op.isDef() ? "<def>" : "<kill>");
+    OS << ' '
+       << PrintReg(Op.getReg(),
+                   AP.MF->getSubtarget().getRegisterInfo())
+       << (Op.isDef() ? "<def>" : "<kill>");
   }
   AP.OutStreamer->AddComment(Str);
   AP.OutStreamer->AddBlankLine();
@@ -811,7 +814,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     }
     if (Deref)
       OS << '[';
-    OS << AP.MMI->getContext().getRegisterInfo()->getName(Reg);
+    OS << PrintReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
   }
 
   if (Deref)
@@ -1131,7 +1134,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     // Output stubs for external and common global variables.
     MachineModuleInfoELF::SymbolListTy Stubs = MMIELF.GetGVStubList();
     if (!Stubs.empty()) {
-      OutStreamer->SwitchSection(TLOF.getDataRelSection());
+      OutStreamer->SwitchSection(TLOF.getDataSection());
       const DataLayout &DL = M.getDataLayout();
 
       for (const auto &Stub : Stubs) {

@@ -382,20 +382,23 @@ const DWARFLineTable *
 DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   if (!Line)
     Line.reset(new DWARFDebugLine(&getLineSection().Relocs));
+
   const auto *UnitDIE = U->getUnitDIE();
   if (UnitDIE == nullptr)
     return nullptr;
+
   unsigned stmtOffset =
       UnitDIE->getAttributeValueAsSectionOffset(U, DW_AT_stmt_list, -1U);
   if (stmtOffset == -1U)
     return nullptr; // No line table for this compile unit.
 
+  stmtOffset += U->getLineTableOffset();
   // See if the line table is cached.
   if (const DWARFLineTable *lt = Line->getLineTable(stmtOffset))
     return lt;
 
   // We have to parse it first.
-  DataExtractor lineData(getLineSection().Data, isLittleEndian(),
+  DataExtractor lineData(U->getLineSection(), isLittleEndian(),
                          U->getAddressByteSize());
   return Line->getOrParseLineTable(lineData, stmtOffset);
 }
@@ -701,7 +704,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
     // relocation point already factors in the section address
     // (actually applying the relocations will produce wrong results
     // as the section address will be added twice).
-    if (!L && dyn_cast<MachOObjectFile>(&Obj))
+    if (!L && isa<MachOObjectFile>(&Obj))
       continue;
 
     RelSecName = RelSecName.substr(

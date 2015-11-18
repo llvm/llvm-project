@@ -1155,13 +1155,30 @@ private:
 /// Unlike OperandBundleUse, OperandBundleDefT owns the memory it carries, and
 /// so it is possible to create and pass around "self-contained" instances of
 /// OperandBundleDef and ConstOperandBundleDef.
-template <typename InputTy> struct OperandBundleDefT {
+template <typename InputTy> class OperandBundleDefT {
   std::string Tag;
   std::vector<InputTy> Inputs;
 
-  OperandBundleDefT() {}
-  explicit OperandBundleDefT(StringRef Tag, const std::vector<InputTy> &Inputs)
+public:
+  explicit OperandBundleDefT(StringRef Tag, std::vector<InputTy> &&Inputs)
       : Tag(Tag), Inputs(Inputs) {}
+
+  explicit OperandBundleDefT(std::string &&Tag, std::vector<InputTy> &&Inputs)
+      : Tag(Tag), Inputs(Inputs) {}
+
+  explicit OperandBundleDefT(const OperandBundleUse &OBU) {
+    Tag = OBU.getTagName();
+    Inputs.insert(Inputs.end(), OBU.Inputs.begin(), OBU.Inputs.end());
+  }
+
+  ArrayRef<InputTy> getInputs() const { return Inputs; }
+
+  typedef typename std::vector<InputTy>::const_iterator input_iterator;
+  size_t input_size() const { return Inputs.size(); }
+  input_iterator input_begin() const { return Inputs.begin(); }
+  input_iterator input_end() const { return Inputs.end(); }
+
+  StringRef getTag() const { return Tag; }
 };
 
 typedef OperandBundleDefT<Value *> OperandBundleDef;
@@ -1453,7 +1470,7 @@ protected:
                                           const unsigned BeginIndex) {
     auto It = static_cast<InstrTy *>(this)->op_begin() + BeginIndex;
     for (auto &B : Bundles)
-      It = std::copy(B.Inputs.begin(), B.Inputs.end(), It);
+      It = std::copy(B.input_begin(), B.input_end(), It);
 
     auto *ContextImpl = static_cast<InstrTy *>(this)->getContext().pImpl;
     auto BI = Bundles.begin();
@@ -1462,9 +1479,9 @@ protected:
     for (auto &BOI : bundle_op_infos()) {
       assert(BI != Bundles.end() && "Incorrect allocation?");
 
-      BOI.Tag = ContextImpl->getOrInsertBundleTag(BI->Tag);
+      BOI.Tag = ContextImpl->getOrInsertBundleTag(BI->getTag());
       BOI.Begin = CurrentIndex;
-      BOI.End = CurrentIndex + BI->Inputs.size();
+      BOI.End = CurrentIndex + BI->input_size();
       CurrentIndex = BOI.End;
       BI++;
     }
@@ -1478,7 +1495,7 @@ protected:
   static unsigned CountBundleInputs(ArrayRef<OperandBundleDef> Bundles) {
     unsigned Total = 0;
     for (auto &B : Bundles)
-      Total += B.Inputs.size();
+      Total += B.input_size();
     return Total;
   }
 };

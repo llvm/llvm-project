@@ -985,7 +985,7 @@ public:
   bool isRegIdx() const { return Kind == k_RegisterIndex; }
   bool isImm() const override { return Kind == k_Immediate; }
   bool isConstantImm() const {
-    return isImm() && dyn_cast<MCConstantExpr>(getImm());
+    return isImm() && isa<MCConstantExpr>(getImm());
   }
   bool isConstantImmz() const {
     return isConstantImm() && getConstantImm() == 0;
@@ -1003,7 +1003,7 @@ public:
   }
   bool isMem() const override { return Kind == k_Memory; }
   bool isConstantMemOff() const {
-    return isMem() && dyn_cast<MCConstantExpr>(getMemOff());
+    return isMem() && isa<MCConstantExpr>(getMemOff());
   }
   template <unsigned Bits> bool isMemWithSimmOffset() const {
     return isMem() && isConstantMemOff() && isInt<Bits>(getConstantMemOff())

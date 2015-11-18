@@ -227,11 +227,11 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
   // globals together onto fewer pages, improving the locality of the dynamic
   // linker.
   if (ReloModel == Reloc::Static)
-    return SectionKind::getDataNoRel();
+    return SectionKind::getData();
 
   if (C->needsRelocation())
-    return SectionKind::getDataRel();
-  return SectionKind::getDataNoRel();
+    return SectionKind::getData();
+  return SectionKind::getData();
 }
 
 /// This method computes the appropriate section to emit the specified global

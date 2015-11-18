@@ -99,15 +99,8 @@ class SectionKind {
            /// marked 'constant'.
            Common,
 
-           /// DataRel - This is the most general form of data that is written
-           /// to by the program, it can have random relocations to arbitrary
-           /// globals.
-           DataRel,
-
-                   /// DataNoRel - This is writeable data that has a non-zero
-                   /// initializer, but whose initializer is known to have no
-                   /// relocations.
-                   DataNoRel,
+           /// This is writeable data that has a non-zero initializer.
+           Data,
 
            /// ReadOnlyWithRel - These are global variables that are never
            /// written to by the program, but that have relocations, so they
@@ -155,7 +148,7 @@ public:
   bool isThreadData() const { return K == ThreadData; }
 
   bool isGlobalWriteableData() const {
-    return isBSS() || isCommon() || isDataRel() || isReadOnlyWithRel();
+    return isBSS() || isCommon() || isData() || isReadOnlyWithRel();
   }
 
   bool isBSS() const { return K == BSS || K == BSSLocal || K == BSSExtern; }
@@ -164,11 +157,7 @@ public:
 
   bool isCommon() const { return K == Common; }
 
-  bool isDataRel() const {
-    return K == DataRel || K == DataNoRel;
-  }
-
-  bool isDataNoRel() const { return K == DataNoRel; }
+  bool isData() const { return K == Data; }
 
   bool isReadOnlyWithRel() const {
     return K == ReadOnlyWithRel;
@@ -202,8 +191,7 @@ public:
   static SectionKind getBSSLocal() { return get(BSSLocal); }
   static SectionKind getBSSExtern() { return get(BSSExtern); }
   static SectionKind getCommon() { return get(Common); }
-  static SectionKind getDataRel() { return get(DataRel); }
-  static SectionKind getDataNoRel() { return get(DataNoRel); }
+  static SectionKind getData() { return get(Data); }
   static SectionKind getReadOnlyWithRel() { return get(ReadOnlyWithRel); }
 };
 

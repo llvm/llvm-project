@@ -101,7 +101,7 @@ struct LTOCodeGenerator {
 
   /// Write the merged module to the file specified by the given path.  Return
   /// true on success.
-  bool writeMergedModules(const char *Path, std::string &ErrMsg);
+  bool writeMergedModules(const char *Path);
 
   /// Compile the merged module into a *single* object file; the path to object
   /// file is returned to the caller via argument "name". Return true on
@@ -112,7 +112,7 @@ struct LTOCodeGenerator {
   /// don't who (LTOCodeGenerator or the obj file) will last longer.
   bool compile_to_file(const char **Name, bool DisableVerify,
                        bool DisableInline, bool DisableGVNLoadPRE,
-                       bool DisableVectorization, std::string &ErrMsg);
+                       bool DisableVectorization);
 
   /// As with compile_to_file(), this function compiles the merged module into
   /// single object file. Instead of returning the object-file-path to the
@@ -122,24 +122,23 @@ struct LTOCodeGenerator {
   /// successful.
   std::unique_ptr<MemoryBuffer> compile(bool DisableVerify, bool DisableInline,
                                         bool DisableGVNLoadPRE,
-                                        bool DisableVectorization,
-                                        std::string &errMsg);
+                                        bool DisableVectorization);
 
   /// Optimizes the merged module.  Returns true on success.
   bool optimize(bool DisableVerify, bool DisableInline, bool DisableGVNLoadPRE,
-                bool DisableVectorization, std::string &ErrMsg);
+                bool DisableVectorization);
 
   /// Compiles the merged optimized module into a single object file. It brings
   /// the object to a buffer, and returns the buffer to the caller. Return NULL
   /// if the compilation was not successful.
-  std::unique_ptr<MemoryBuffer> compileOptimized(std::string &ErrMsg);
+  std::unique_ptr<MemoryBuffer> compileOptimized();
 
   /// Compile the merged optimized module into out.size() object files each
   /// representing a linkable partition of the module. If out contains more
   /// than one element, code generation is done in parallel with out.size()
   /// threads.  Object files will be written to members of out. Returns true on
   /// success.
-  bool compileOptimized(ArrayRef<raw_pwrite_stream *> Out, std::string &ErrMsg);
+  bool compileOptimized(ArrayRef<raw_pwrite_stream *> Out);
 
   void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
 
@@ -148,17 +147,19 @@ struct LTOCodeGenerator {
 private:
   void initializeLTOPasses();
 
-  bool compileOptimizedToFile(const char **Name, std::string &ErrMsg);
+  bool compileOptimizedToFile(const char **Name);
   void applyScopeRestrictions();
   void applyRestriction(GlobalValue &GV, ArrayRef<StringRef> Libcalls,
                         std::vector<const char *> &MustPreserveList,
                         SmallPtrSetImpl<GlobalValue *> &AsmUsed,
                         Mangler &Mangler);
-  bool determineTarget(std::string &ErrMsg);
+  bool determineTarget();
 
   static void DiagnosticHandler(const DiagnosticInfo &DI, void *Context);
 
   void DiagnosticHandler2(const DiagnosticInfo &DI);
+
+  void emitError(const std::string &ErrMsg);
 
   typedef StringMap<uint8_t> StringSet;
 

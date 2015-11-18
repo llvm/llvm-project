@@ -1257,10 +1257,8 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Figure out the funclet membership for the catchret's successor.
   // This will be used by the FuncletLayout pass to determine how to order the
   // BB's.
-  MachineModuleInfo &MMI = DAG.getMachineFunction().getMMI();
-  WinEHFuncInfo &EHInfo =
-      MMI.getWinEHFuncInfo(DAG.getMachineFunction().getFunction());
-  const BasicBlock *SuccessorColor = EHInfo.CatchRetSuccessorColorMap[&I];
+  WinEHFuncInfo *EHInfo = DAG.getMachineFunction().getWinEHFuncInfo();
+  const BasicBlock *SuccessorColor = EHInfo->CatchRetSuccessorColorMap[&I];
   assert(SuccessorColor && "No parent funclet for catchret!");
   MachineBasicBlock *SuccessorColorMBB = FuncInfo.MBBMap[SuccessorColor];
   assert(SuccessorColorMBB && "No MBB for SuccessorColor!");
@@ -5474,9 +5472,8 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
 
     // Inform MachineModuleInfo of range.
     if (MMI.hasEHFunclets()) {
-      WinEHFuncInfo &EHInfo =
-          MMI.getWinEHFuncInfo(DAG.getMachineFunction().getFunction());
-      EHInfo.addIPToStateRange(EHPadBB, BeginLabel, EndLabel);
+      WinEHFuncInfo *EHInfo = DAG.getMachineFunction().getWinEHFuncInfo();
+      EHInfo->addIPToStateRange(EHPadBB, BeginLabel, EndLabel);
     } else {
       MMI.addInvoke(FuncInfo.MBBMap[EHPadBB], BeginLabel, EndLabel);
     }

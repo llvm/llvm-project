@@ -144,7 +144,7 @@ static cl::opt<bool> MaximizeBandwidth(
 ///      ...
 static cl::opt<bool> EnableMemAccessVersioning(
     "enable-mem-access-versioning", cl::init(true), cl::Hidden,
-    cl::desc("Enable symblic stride memory access versioning"));
+    cl::desc("Enable symbolic stride memory access versioning"));
 
 static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,

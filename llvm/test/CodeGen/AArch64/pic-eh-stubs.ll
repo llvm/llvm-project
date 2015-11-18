@@ -15,7 +15,7 @@
 ; CHECK-NEXT: .xword  .L_ZTIi.DW.stub-[[TYPEINFO_LBL]]
 
   ; .. and which is properly defined (in a writable section for the dynamic loader) later.
-; CHECK: .section .data.rel,"aw"
+; CHECK: .data
 ; CHECK: .L_ZTIi.DW.stub:
 ; CHECK-NEXT: .xword _ZTIi
 

@@ -519,7 +519,7 @@ public:
 
   /// \brief Emit the abbreviation table \p Abbrevs to the
   /// debug_abbrev section.
-  void emitAbbrevs(const std::vector<DIEAbbrev *> &Abbrevs);
+  void emitAbbrevs(const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs);
 
   /// \brief Emit the string table described by \p Pool.
   void emitStrings(const NonRelocatableStringpool &Pool);
@@ -683,7 +683,8 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
 
 /// \brief Emit the \p Abbrevs array as the shared abbreviation table
 /// for the linked Dwarf file.
-void DwarfStreamer::emitAbbrevs(const std::vector<DIEAbbrev *> &Abbrevs) {
+void DwarfStreamer::emitAbbrevs(
+    const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs) {
   MS->SwitchSection(MOFI->getDwarfAbbrevSection());
   Asm->emitDwarfAbbrevs(Abbrevs);
 }
@@ -1111,11 +1112,6 @@ public:
       : OutputFilename(OutputFilename), Options(Options),
         BinHolder(Options.Verbose), LastCIEOffset(0) {}
 
-  ~DwarfLinker() {
-    for (auto *Abbrev : Abbreviations)
-      delete Abbrev;
-  }
-
   /// \brief Link the contents of the DebugMap.
   bool link(const DebugMap &);
 
@@ -1379,7 +1375,7 @@ private:
   /// \brief Storage for the unique Abbreviations.
   /// This is passed to AsmPrinter::emitDwarfAbbrevs(), thus it cannot
   /// be changed to a vecot of unique_ptrs.
-  std::vector<DIEAbbrev *> Abbreviations;
+  std::vector<std::unique_ptr<DIEAbbrev>> Abbreviations;
 
   /// \brief Compute and emit debug_ranges section for \p Unit, and
   /// patch the attributes referencing it.
@@ -2282,10 +2278,10 @@ void DwarfLinker::AssignAbbrev(DIEAbbrev &Abbrev) {
   } else {
     // Add to abbreviation list.
     Abbreviations.push_back(
-        new DIEAbbrev(Abbrev.getTag(), Abbrev.hasChildren()));
+        llvm::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
       Abbreviations.back()->AddAttribute(Attr.getAttribute(), Attr.getForm());
-    AbbreviationsSet.InsertNode(Abbreviations.back(), InsertToken);
+    AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());
     Abbreviations.back()->setNumber(Abbreviations.size());

@@ -333,7 +333,7 @@ static void maybeParseOptions(lto_code_gen_t cg) {
 
 bool lto_codegen_write_merged_modules(lto_code_gen_t cg, const char *path) {
   maybeParseOptions(cg);
-  return !unwrap(cg)->writeMergedModules(path, sLastErrorString);
+  return !unwrap(cg)->writeMergedModules(path);
 }
 
 const void *lto_codegen_compile(lto_code_gen_t cg, size_t *length) {
@@ -341,7 +341,7 @@ const void *lto_codegen_compile(lto_code_gen_t cg, size_t *length) {
   LibLTOCodeGenerator *CG = unwrap(cg);
   CG->NativeObjectFile =
       CG->compile(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                  DisableLTOVectorization, sLastErrorString);
+                  DisableLTOVectorization);
   if (!CG->NativeObjectFile)
     return nullptr;
   *length = CG->NativeObjectFile->getBufferSize();
@@ -351,13 +351,13 @@ const void *lto_codegen_compile(lto_code_gen_t cg, size_t *length) {
 bool lto_codegen_optimize(lto_code_gen_t cg) {
   maybeParseOptions(cg);
   return !unwrap(cg)->optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                               DisableLTOVectorization, sLastErrorString);
+                               DisableLTOVectorization);
 }
 
 const void *lto_codegen_compile_optimized(lto_code_gen_t cg, size_t *length) {
   maybeParseOptions(cg);
   LibLTOCodeGenerator *CG = unwrap(cg);
-  CG->NativeObjectFile = CG->compileOptimized(sLastErrorString);
+  CG->NativeObjectFile = CG->compileOptimized();
   if (!CG->NativeObjectFile)
     return nullptr;
   *length = CG->NativeObjectFile->getBufferSize();
@@ -368,7 +368,7 @@ bool lto_codegen_compile_to_file(lto_code_gen_t cg, const char **name) {
   maybeParseOptions(cg);
   return !unwrap(cg)->compile_to_file(
       name, DisableVerify, DisableInline, DisableGVNLoadPRE,
-      DisableLTOVectorization, sLastErrorString);
+      DisableLTOVectorization);
 }
 
 void lto_codegen_debug_options(lto_code_gen_t cg, const char *opt) {

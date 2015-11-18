@@ -208,8 +208,21 @@ HandleCallsInBlockInlinedThroughInvoke(BasicBlock *BB, BasicBlock *UnwindEdge) {
     // Create the new invoke instruction.
     ImmutableCallSite CS(CI);
     SmallVector<Value*, 8> InvokeArgs(CS.arg_begin(), CS.arg_end());
-    InvokeInst *II = InvokeInst::Create(CI->getCalledValue(), Split, UnwindEdge,
-                                        InvokeArgs, CI->getName(), BB);
+    SmallVector<OperandBundleDef, 1> OpBundles;
+
+    // Copy the OperandBundeUse instances to OperandBundleDefs.  These two are
+    // *different* representations of operand bundles: see the documentation in
+    // InstrTypes.h for more details.
+    for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i)
+      OpBundles.emplace_back(CS.getOperandBundleAt(i));
+
+    // Note: we're round tripping operand bundles through memory here, and that
+    // can potentially be avoided with a cleverer API design that we do not have
+    // as of this time.
+
+    InvokeInst *II =
+        InvokeInst::Create(CI->getCalledValue(), Split, UnwindEdge, InvokeArgs,
+                           OpBundles, CI->getName(), BB);
     II->setDebugLoc(CI->getDebugLoc());
     II->setCallingConv(CI->getCallingConv());
     II->setAttributes(CI->getAttributes());
@@ -1029,9 +1042,16 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       CalledFunc->isDeclaration() || // call, or call to a vararg function!
       CalledFunc->getFunctionType()->isVarArg()) return false;
 
-  // The inliner does not know how to inline through calls with operand bundles.
-  if (CS.hasOperandBundles())
-    return false;
+  // The inliner does not know how to inline through calls with operand bundles
+  // in general ...
+  if (CS.hasOperandBundles()) {
+    // ... but it knows how to inline through "deopt" operand bundles.
+    bool CanInline =
+        CS.getNumOperandBundles() == 1 &&
+        CS.getOperandBundleAt(0).getTagID() == LLVMContext::OB_deopt;
+    if (!CanInline)
+      return false;
+  }
 
   // If the call to the callee cannot throw, set the 'nounwind' flag on any
   // calls that we inline.
@@ -1137,6 +1157,61 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     for (std::pair<Value*, Value*> &Init : ByValInit)
       HandleByValArgumentInit(Init.first, Init.second, Caller->getParent(),
                               &*FirstNewBlock, IFI);
+
+    if (CS.hasOperandBundles()) {
+      auto ParentDeopt = CS.getOperandBundleAt(0);
+      assert(ParentDeopt.getTagID() == LLVMContext::OB_deopt &&
+             "Checked on entry!");
+
+      SmallVector<OperandBundleDef, 2> OpDefs;
+
+      for (auto &VH : InlinedFunctionInfo.OperandBundleCallSites) {
+        Instruction *I = VH;
+
+        OpDefs.clear();
+
+        CallSite ICS(I);
+        OpDefs.reserve(ICS.getNumOperandBundles());
+
+        for (unsigned i = 0, e = ICS.getNumOperandBundles(); i < e; ++i) {
+          auto ChildOB = ICS.getOperandBundleAt(i);
+          if (ChildOB.getTagID() != LLVMContext::OB_deopt) {
+            // If the inlined call has other operand bundles, let them be
+            OpDefs.emplace_back(ChildOB);
+            continue;
+          }
+
+          // It may be useful to separate this logic (of handling operand
+          // bundles) out to a separate "policy" component if this gets crowded.
+          // Prepend the parent's deoptimization continuation to the newly
+          // inlined call's deoptimization continuation.
+          std::vector<Value *> MergedDeoptArgs;
+          MergedDeoptArgs.reserve(ParentDeopt.Inputs.size() +
+                                  ChildOB.Inputs.size());
+
+          MergedDeoptArgs.insert(MergedDeoptArgs.end(),
+                                 ParentDeopt.Inputs.begin(),
+                                 ParentDeopt.Inputs.end());
+          MergedDeoptArgs.insert(MergedDeoptArgs.end(), ChildOB.Inputs.begin(),
+                                 ChildOB.Inputs.end());
+
+          OpDefs.emplace_back(StringRef("deopt"), std::move(MergedDeoptArgs));
+        }
+
+        Instruction *NewI = nullptr;
+        if (isa<CallInst>(I))
+          NewI = CallInst::Create(cast<CallInst>(I), OpDefs, I);
+        else
+          NewI = InvokeInst::Create(cast<InvokeInst>(I), OpDefs, I);
+
+        // Note: the RAUW does the appropriate fixup in VMap, so we need to do
+        // this even if the call returns void.
+        I->replaceAllUsesWith(NewI);
+
+        VH = nullptr;
+        I->eraseFromParent();
+      }
+    }
 
     // Update the callgraph if requested.
     if (IFI.CG)

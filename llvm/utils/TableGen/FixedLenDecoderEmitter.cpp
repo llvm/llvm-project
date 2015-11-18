@@ -65,8 +65,8 @@ typedef std::vector<uint8_t> DecoderTable;
 typedef uint32_t DecoderFixup;
 typedef std::vector<DecoderFixup> FixupList;
 typedef std::vector<FixupList> FixupScopeList;
-typedef SetVector<std::string> PredicateSet;
-typedef SetVector<std::string> DecoderSet;
+typedef SmallSetVector<std::string, 16> PredicateSet;
+typedef SmallSetVector<std::string, 16> DecoderSet;
 struct DecoderTableInfo {
   DecoderTable Table;
   FixupScopeList FixupStack;

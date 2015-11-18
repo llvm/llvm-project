@@ -76,7 +76,7 @@ bool MipsTargetObjectFile::
 IsGlobalInSmallSection(const GlobalValue *GV, const TargetMachine &TM,
                        SectionKind Kind) const {
   return (IsGlobalInSmallSectionImpl(GV, TM) &&
-          (Kind.isDataRel() || Kind.isBSS() || Kind.isCommon()));
+          (Kind.isData() || Kind.isBSS() || Kind.isCommon()));
 }
 
 /// Return true if this global address should be placed into small data/bss
@@ -121,7 +121,7 @@ MipsTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
   // Handle Small Section classification here.
   if (Kind.isBSS() && IsGlobalInSmallSection(GV, TM, Kind))
     return SmallBSSSection;
-  if (Kind.isDataRel() && IsGlobalInSmallSection(GV, TM, Kind))
+  if (Kind.isData() && IsGlobalInSmallSection(GV, TM, Kind))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.

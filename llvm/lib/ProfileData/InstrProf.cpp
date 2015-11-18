@@ -51,13 +51,13 @@ class InstrProfErrorCategoryType : public std::error_category {
     case instrprof_error::unknown_function:
       return "No profile data available for function";
     case instrprof_error::hash_mismatch:
-      return "Function hash mismatch";
+      return "Function control flow change detected (hash mismatch)";
     case instrprof_error::count_mismatch:
-      return "Function count mismatch";
+      return "Function basic block count change detected (counter mismatch)";
     case instrprof_error::counter_overflow:
       return "Counter overflow";
     case instrprof_error::value_site_count_mismatch:
-      return "Function's value site counts mismatch";
+      return "Function value site count change detected (counter mismatch)";
     }
     llvm_unreachable("A value of instrprof_error has no message.");
   }
@@ -131,8 +131,6 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), FuncName);
 }
 
-namespace IndexedInstrProf {
-
 uint32_t ValueProfRecord::getHeaderSize(uint32_t NumValueSites) {
   uint32_t Size = offsetof(ValueProfRecord, SiteCountArray) +
                   sizeof(uint8_t) * NumValueSites;
@@ -174,7 +172,8 @@ void ValueProfRecord::serializeFrom(const InstrProfRecord &Record,
       DstVD[I] = SrcVD[I];
       switch (ValueKind) {
       case IPVK_IndirectCallTarget:
-        DstVD[I].Value = ComputeHash(HashType, (const char *)DstVD[I].Value);
+        DstVD[I].Value = IndexedInstrProf::ComputeHash(
+            IndexedInstrProf::HashType, (const char *)DstVD[I].Value);
         break;
       default:
         llvm_unreachable("value kind not handled !");
@@ -361,6 +360,4 @@ InstrProfValueData *ValueProfRecord::getValueData() {
   return reinterpret_cast<InstrProfValueData *>((char *)this +
                                                 getHeaderSize(NumValueSites));
 }
-
-} // End of IndexedInstrProf namespace.
 }

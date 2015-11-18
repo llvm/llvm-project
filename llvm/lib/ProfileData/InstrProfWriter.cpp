@@ -53,7 +53,7 @@ public:
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
 
       // Value data
-      M += IndexedInstrProf::ValueProfData::getSize(ProfileData.second);
+      M += ValueProfData::getSize(ProfileData.second);
     }
     LE.write<offset_type>(M);
 
@@ -77,8 +77,8 @@ public:
         LE.write<uint64_t>(I);
 
       // Write value data
-      std::unique_ptr<IndexedInstrProf::ValueProfData> VDataPtr =
-          IndexedInstrProf::ValueProfData::serializeFrom(ProfileData.second);
+      std::unique_ptr<ValueProfData> VDataPtr =
+          ValueProfData::serializeFrom(ProfileData.second);
       uint32_t S = VDataPtr->getSize();
       VDataPtr->swapBytesFromHost(ValueProfDataEndianness);
       Out.write((const char *)VDataPtr.get(), S);

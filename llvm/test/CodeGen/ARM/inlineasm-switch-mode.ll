@@ -15,8 +15,8 @@ define hidden i32 @bah(i8* %start) #0 align 2 {
 ; ARM: $t
 ; ARM-NEXT: 48 1c
 
-; THUMB: $a
+; THUMB: $a{{.*}}:
 ; THUMB-NEXT: 04 70
 ; THUMB-NEXT: 2d e5
-; THUMB: $t
+; THUMB: $t{{.*}}:
 ; THUMB-NEXT: 48 1c   adds    r0, r1, #1

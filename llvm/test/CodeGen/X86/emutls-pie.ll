@@ -100,7 +100,7 @@ entry:
 
 ;;;;; 32-bit targets
 
-; X32:      .section .data.rel,
+; X32:      .data
 ; X32-LABEL: __emutls_v.i:
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 4
@@ -116,7 +116,7 @@ entry:
 
 ;;;;; 64-bit targets
 
-; X64:      .section .data.rel,
+; X64:      .data
 ; X64-LABEL: __emutls_v.i:
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 4

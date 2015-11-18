@@ -287,7 +287,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     return;
 
   // Calculate state numbers if we haven't already.
-  WinEHFuncInfo &EHInfo = MMI.getWinEHFuncInfo(&fn);
+  WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
   if (Personality == EHPersonality::MSVC_CXX)
     calculateWinCXXEHStateNumbers(&fn, EHInfo);
   else if (isAsynchronousEHPersonality(Personality))
@@ -320,24 +320,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
     const BasicBlock *BB = CME.Handler.get<const BasicBlock *>();
     CME.Handler = MBBMap[BB];
-  }
-
-  // If there's an explicit EH registration node on the stack, record its
-  // frame index.
-  if (EHInfo.EHRegNode && EHInfo.EHRegNode->getParent()->getParent() == Fn) {
-    assert(StaticAllocaMap.count(EHInfo.EHRegNode));
-    EHInfo.EHRegNodeFrameIndex = StaticAllocaMap[EHInfo.EHRegNode];
-  }
-
-  // Copy the state numbers to LandingPadInfo for the current function, which
-  // could be a handler or the parent. This should happen for 32-bit SEH and
-  // C++ EH.
-  if (Personality == EHPersonality::MSVC_CXX ||
-      Personality == EHPersonality::MSVC_X86SEH) {
-    for (const LandingPadInst *LP : LPads) {
-      MachineBasicBlock *LPadMBB = MBBMap[LP->getParent()];
-      MMI.addWinEHState(LPadMBB, EHInfo.EHPadStateMap[LP]);
-    }
   }
 }
 

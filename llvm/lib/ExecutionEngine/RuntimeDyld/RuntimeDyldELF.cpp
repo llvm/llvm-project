@@ -983,7 +983,7 @@ void RuntimeDyldELF::resolvePPC64Relocation(const SectionEntry &Section,
   case ELF::R_PPC64_REL24: {
     uint64_t FinalAddress = (Section.LoadAddress + Offset);
     int32_t delta = static_cast<int32_t>(Value - FinalAddress + Addend);
-    if (SignExtend32<24>(delta) != delta)
+    if (SignExtend32<26>(delta) != delta)
       llvm_unreachable("Relocation R_PPC64_REL24 overflow");
     // Generates a 'bl <address>' instruction
     writeInt32BE(LocalAddress, 0x48000001 | (delta & 0x03FFFFFC));
@@ -1443,8 +1443,8 @@ relocation_iterator RuntimeDyldELF::processRelocationRef(
         }
         uint8_t *RelocTarget = Sections[Value.SectionID].Address + Value.Addend;
         int32_t delta = static_cast<int32_t>(Target - RelocTarget);
-        // If it is within 24-bits branch range, just set the branch target
-        if (SignExtend32<24>(delta) == delta) {
+        // If it is within 26-bits branch range, just set the branch target
+        if (SignExtend32<26>(delta) == delta) {
           RelocationEntry RE(SectionID, Offset, RelType, Value.Addend);
           if (Value.SymbolName)
             addRelocationForSymbol(RE, Value.SymbolName);

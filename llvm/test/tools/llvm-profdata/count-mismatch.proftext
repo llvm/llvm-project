@@ -14,7 +14,8 @@ foo
 
 # The hash matches, but we can't combine these because the number of
 # counters differs.
-# MERGE_ERRS: count-mismatch.proftext: foo: Function count mismatch
+# MERGE_ERRS: count-mismatch.proftext: foo: Function basic block count change detected (counter mismatch)
+# MERGE_ERRS: Make sure that all profile data to be merged is generated from the same binary.
 foo
 1024
 3

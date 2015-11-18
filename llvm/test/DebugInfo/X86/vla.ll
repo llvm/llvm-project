@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
 ; Ensure that we generate an indirect location for the variable length array a.
-; CHECK: ##DEBUG_VALUE: vla:a <- RDX
+; CHECK: ##DEBUG_VALUE: vla:a <- %RDX
 ; CHECK: DW_OP_breg1
 ; rdar://problem/13658587
 ;

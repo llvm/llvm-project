@@ -476,7 +476,7 @@ public:
   /// Normalize probabilities of all successors so that the sum of them becomes
   /// one.
   void normalizeSuccProbs() {
-    BranchProbability::normalizeProbabilities(Probs);
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
   }
 
   /// Remove successor from the successors list of this MachineBasicBlock. The

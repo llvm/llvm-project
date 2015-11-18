@@ -664,7 +664,7 @@ bool ModuleLinker::doImportAsDefinition(const GlobalValue *SGV) {
   // global variables with external linkage are transformed to
   // available_externally definitions, which are ultimately turned into
   // declarations after the EliminateAvailableExternally pass).
-  if (dyn_cast<GlobalVariable>(SGV) && !SGV->isDeclaration() &&
+  if (isa<GlobalVariable>(SGV) && !SGV->isDeclaration() &&
       !SGV->hasWeakAnyLinkage())
     return true;
   // Only import the function requested for importing.

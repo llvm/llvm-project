@@ -9,7 +9,7 @@ RUN: llvm-dwarfdump %p/Inputs/dwarfdump-dwp.x86_64.o | FileCheck %s
 ;   bar b() {
 ;   }
 
-; CHECK: .debug_info.dwo contents:
+; CHECK-LABEL: .debug_info.dwo contents:
 ; CHECK: Compile Unit
 
 ; Verify that the second CU uses the index for its abbrev offset
@@ -17,12 +17,23 @@ RUN: llvm-dwarfdump %p/Inputs/dwarfdump-dwp.x86_64.o | FileCheck %s
 ; CHECK-SAME: abbr_offset = 0x0043
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
-; FIXME: Implement str_offsets support so we find b.cpp here \/
-; CHECK:   DW_AT_name {{.*}} "a.cpp"
+; CHECK:   DW_AT_name {{.*}} "b.cpp"
 
 ; Verify that abbreviations are decoded using the abbrev offset in the index
-; CHECK:   DW_TAG_subprogram
 ; CHECK:   DW_TAG_structure_type
+; CHECK:   DW_TAG_subprogram
+
+; CHECK-LABEL: .debug_types.dwo contents:
+; CHECK: Type Unit
+; CHECK:   DW_TAG_type_unit
+; CHECK:     DW_AT_stmt_list {{.*}}(0x00000000)
+; CHECK:     DW_TAG_structure_type
+; CHECK:       DW_AT_decl_file {{.*}} ("a.cpp")
+; CHECK: Type Unit
+; CHECK:   DW_TAG_type_unit
+; CHECK:     DW_AT_stmt_list {{.*}}(0x00000000)
+; CHECK:     DW_TAG_structure_type
+; CHECK:       DW_AT_decl_file {{.*}} ("b.cpp")
 
 ; CHECK: .debug_cu_index contents:
 ; CHECK-NEXT: version = 2 slots = 16

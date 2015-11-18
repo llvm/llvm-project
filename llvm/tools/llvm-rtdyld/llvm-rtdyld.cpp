@@ -155,12 +155,6 @@ public:
 
   bool finalizeMemory(std::string *ErrMsg) override { return false; }
 
-  // Invalidate instruction cache for sections with execute permissions.
-  // Some platforms with separate data cache and instruction cache require
-  // explicit cache flush, otherwise JIT code manipulations (like resolved
-  // relocations) will get to the data cache but not to the instruction cache.
-  virtual void invalidateInstructionCache();
-
   void addDummySymbol(const std::string &Name, uint64_t Addr) {
     DummyExterns[Name] = Addr;
   }
@@ -242,14 +236,6 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
     report_fatal_error("MemoryManager allocation failed: " + Err);
   DataMemory.push_back(MB);
   return (uint8_t*)MB.base();
-}
-
-void TrivialMemoryManager::invalidateInstructionCache() {
-  for (auto &FM : FunctionMemory)
-    sys::Memory::InvalidateInstructionCache(FM.base(), FM.size());
-
-  for (auto &DM : DataMemory)
-    sys::Memory::InvalidateInstructionCache(DM.base(), DM.size());
 }
 
 static const char *ProgramName;
@@ -424,12 +410,9 @@ static int executeInput() {
     }
   }
 
-  // Resolve all the relocations we can.
-  Dyld.resolveRelocations();
-  // Clear instruction cache before code will be executed.
-  MemMgr.invalidateInstructionCache();
-
+  // Resove all the relocations we can.
   // FIXME: Error out if there are unresolved relocations.
+  Dyld.resolveRelocations();
 
   // Get the address of the entry point (_main by default).
   void *MainAddress = Dyld.getSymbolLocalAddress(EntryPoint);
@@ -438,9 +421,10 @@ static int executeInput() {
 
   // Invalidate the instruction cache for each loaded function.
   for (auto &FM : MemMgr.FunctionMemory) {
+
     // Make sure the memory is executable.
+    // setExecutable will call InvalidateInstructionCache.
     std::string ErrorStr;
-    sys::Memory::InvalidateInstructionCache(FM.base(), FM.size());
     if (!sys::Memory::setExecutable(FM, &ErrorStr))
       return Error("unable to mark function executable: '" + ErrorStr + "'");
   }

@@ -31,7 +31,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "memory-builtins"
 
-enum AllocType {
+enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
   MallocLike         = 1<<1 | OpNewLike, // allocates; may return null
   CallocLike         = 1<<2, // allocates + bzero

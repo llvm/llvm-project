@@ -38,7 +38,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; PIC-NOT: .section
 ; PIC: p1:
 ; PIC: t1:
-; PIC: .section .data.rel,"aw",@progbits
+; PIC: .data
 ; PIC: p2:
 ; PIC: t2:
 ; PIC-NOT: .section

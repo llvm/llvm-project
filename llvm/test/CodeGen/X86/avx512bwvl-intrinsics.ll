@@ -4104,7 +4104,9 @@ declare <16 x i8> @llvm.x86.avx512.mask.punpckhb.w.128(<16 x i8>, <16 x i8>, <16
 define <16 x i8>@test_int_x86_avx512_mask_punpckhb_w_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpckhb_w_128:
 ; CHECK:         vpunpckhbw %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    ## xmm2 = xmm2[8],k1[8],xmm2[9],k1[9],xmm2[10],k1[10],xmm2[11],k1[11],xmm2[12],k1[12],xmm2[13],k1[13],xmm2[14],k1[14],xmm2[15],k1[15]
 ; CHECK-NEXT:    vpunpckhbw %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x68,0xc1]
+; CHECK-NEXT:    ## xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
   %res = call <16 x i8> @llvm.x86.avx512.mask.punpckhb.w.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
   %res1 = call <16 x i8> @llvm.x86.avx512.mask.punpckhb.w.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 -1)
   %res2 = add <16 x i8> %res, %res1
@@ -4116,7 +4118,9 @@ declare <16 x i8> @llvm.x86.avx512.mask.punpcklb.w.128(<16 x i8>, <16 x i8>, <16
 define <16 x i8>@test_int_x86_avx512_mask_punpcklb_w_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpcklb_w_128:
 ; CHECK:         vpunpcklbw %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    ## xmm2 = xmm2[0],k1[0],xmm2[1],k1[1],xmm2[2],k1[2],xmm2[3],k1[3],xmm2[4],k1[4],xmm2[5],k1[5],xmm2[6],k1[6],xmm2[7],k1[7]
 ; CHECK-NEXT:    vpunpcklbw %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x60,0xc1]
+; CHECK-NEXT:    ## xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
   %res = call <16 x i8> @llvm.x86.avx512.mask.punpcklb.w.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
   %res1 = call <16 x i8> @llvm.x86.avx512.mask.punpcklb.w.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 -1)
   %res2 = add <16 x i8> %res, %res1
@@ -4128,7 +4132,9 @@ declare <32 x i8> @llvm.x86.avx512.mask.punpckhb.w.256(<32 x i8>, <32 x i8>, <32
 define <32 x i8>@test_int_x86_avx512_mask_punpckhb_w_256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpckhb_w_256:
 ; CHECK:         vpunpckhbw %ymm1, %ymm0, %ymm2 {%k1}
+; CHECK-NEXT:    ## ymm2 = ymm2[8],k1[8],ymm2[9],k1[9],ymm2[10],k1[10],ymm2[11],k1[11],ymm2[12],k1[12],ymm2[13],k1[13],ymm2[14],k1[14],ymm2[15],k1[15],ymm2[24],k1[24],ymm2[25],k1[25],ymm2[26],k1[26],ymm2[27],k1[27],ymm2[28],k1[28],ymm2[29],k1[29],ymm2[30],k1[30],ymm2[31],k1[31]
 ; CHECK-NEXT:    vpunpckhbw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x68,0xc1]
+; CHECK-NEXT:    ## ymm0 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
   %res = call <32 x i8> @llvm.x86.avx512.mask.punpckhb.w.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3)
   %res1 = call <32 x i8> @llvm.x86.avx512.mask.punpckhb.w.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 -1)
   %res2 = add <32 x i8> %res, %res1
@@ -4140,7 +4146,9 @@ declare <32 x i8> @llvm.x86.avx512.mask.punpcklb.w.256(<32 x i8>, <32 x i8>, <32
 define <32 x i8>@test_int_x86_avx512_mask_punpcklb_w_256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpcklb_w_256:
 ; CHECK:         vpunpcklbw %ymm1, %ymm0, %ymm2 {%k1}
+; CHECK-NEXT:    ## ymm2 = ymm2[0],k1[0],ymm2[1],k1[1],ymm2[2],k1[2],ymm2[3],k1[3],ymm2[4],k1[4],ymm2[5],k1[5],ymm2[6],k1[6],ymm2[7],k1[7],ymm2[16],k1[16],ymm2[17],k1[17],ymm2[18],k1[18],ymm2[19],k1[19],ymm2[20],k1[20],ymm2[21],k1[21],ymm2[22],k1[22],ymm2[23],k1[23]
 ; CHECK-NEXT:    vpunpcklbw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x60,0xc1]
+; CHECK-NEXT:    ## ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
   %res = call <32 x i8> @llvm.x86.avx512.mask.punpcklb.w.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3)
   %res1 = call <32 x i8> @llvm.x86.avx512.mask.punpcklb.w.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 -1)
   %res2 = add <32 x i8> %res, %res1
@@ -4152,7 +4160,9 @@ declare <8 x i16> @llvm.x86.avx512.mask.punpcklw.d.128(<8 x i16>, <8 x i16>, <8 
 define <8 x i16>@test_int_x86_avx512_mask_punpcklw_d_128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpcklw_d_128:
 ; CHECK:         vpunpcklwd %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    ## xmm2 = xmm2[0],k1[0],xmm2[1],k1[1],xmm2[2],k1[2],xmm2[3],k1[3]
 ; CHECK-NEXT:    vpunpcklwd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x61,0xc1]
+; CHECK-NEXT:    ## xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
   %res = call <8 x i16> @llvm.x86.avx512.mask.punpcklw.d.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3)
   %res1 = call <8 x i16> @llvm.x86.avx512.mask.punpcklw.d.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 -1)
   %res2 = add <8 x i16> %res, %res1
@@ -4164,7 +4174,9 @@ declare <8 x i16> @llvm.x86.avx512.mask.punpckhw.d.128(<8 x i16>, <8 x i16>, <8 
 define <8 x i16>@test_int_x86_avx512_mask_punpckhw_d_128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpckhw_d_128:
 ; CHECK:         vpunpckhwd %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    ## xmm2 = xmm2[4],k1[4],xmm2[5],k1[5],xmm2[6],k1[6],xmm2[7],k1[7]
 ; CHECK-NEXT:    vpunpckhwd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x69,0xc1]
+; CHECK-NEXT:    ## xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
   %res = call <8 x i16> @llvm.x86.avx512.mask.punpckhw.d.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3)
   %res1 = call <8 x i16> @llvm.x86.avx512.mask.punpckhw.d.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 -1)
   %res2 = add <8 x i16> %res, %res1
@@ -4176,7 +4188,9 @@ declare <16 x i16> @llvm.x86.avx512.mask.punpcklw.d.256(<16 x i16>, <16 x i16>, 
 define <16 x i16>@test_int_x86_avx512_mask_punpcklw_d_256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpcklw_d_256:
 ; CHECK:         vpunpcklwd %ymm1, %ymm0, %ymm2 {%k1}
+; CHECK-NEXT:    ## ymm2 = ymm2[0],k1[0],ymm2[1],k1[1],ymm2[2],k1[2],ymm2[3],k1[3],ymm2[8],k1[8],ymm2[9],k1[9],ymm2[10],k1[10],ymm2[11],k1[11]
 ; CHECK-NEXT:    vpunpcklwd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x61,0xc1]
+; CHECK-NEXT:    ## ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
   %res = call <16 x i16> @llvm.x86.avx512.mask.punpcklw.d.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3)
   %res1 = call <16 x i16> @llvm.x86.avx512.mask.punpcklw.d.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 -1)
   %res2 = add <16 x i16> %res, %res1
@@ -4188,7 +4202,9 @@ declare <16 x i16> @llvm.x86.avx512.mask.punpckhw.d.256(<16 x i16>, <16 x i16>, 
 define <16 x i16>@test_int_x86_avx512_mask_punpckhw_d_256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_punpckhw_d_256:
 ; CHECK:         vpunpckhwd %ymm1, %ymm0, %ymm2 {%k1}
+; CHECK-NEXT:    ## ymm2 = ymm2[4],k1[4],ymm2[5],k1[5],ymm2[6],k1[6],ymm2[7],k1[7],ymm2[12],k1[12],ymm2[13],k1[13],ymm2[14],k1[14],ymm2[15],k1[15]
 ; CHECK-NEXT:    vpunpckhwd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x69,0xc1]
+; CHECK-NEXT:    ## ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
   %res = call <16 x i16> @llvm.x86.avx512.mask.punpckhw.d.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3)
   %res1 = call <16 x i16> @llvm.x86.avx512.mask.punpckhw.d.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 -1)
   %res2 = add <16 x i16> %res, %res1

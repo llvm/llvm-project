@@ -1722,7 +1722,7 @@ void MatchableInfo::buildAliasResultOperands() {
 }
 
 static unsigned getConverterOperandID(const std::string &Name,
-                                      SetVector<std::string> &Table,
+                                      SmallSetVector<std::string, 16> &Table,
                                       bool &IsNew) {
   IsNew = Table.insert(Name);
 
@@ -1738,8 +1738,8 @@ static unsigned getConverterOperandID(const std::string &Name,
 static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                              std::vector<std::unique_ptr<MatchableInfo>> &Infos,
                              raw_ostream &OS) {
-  SetVector<std::string> OperandConversionKinds;
-  SetVector<std::string> InstructionConversionKinds;
+  SmallSetVector<std::string, 16> OperandConversionKinds;
+  SmallSetVector<std::string, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t> > ConversionTable;
   size_t MaxRowLength = 2; // minimum is custom converter plus terminator.
 

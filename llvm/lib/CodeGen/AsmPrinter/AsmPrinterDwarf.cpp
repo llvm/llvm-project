@@ -281,17 +281,10 @@ void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
   }
 }
 
-void
-AsmPrinter::emitDwarfAbbrevs(const std::vector<DIEAbbrev *>& Abbrevs) const {
-  // For each abbreviation.
-  for (const DIEAbbrev *Abbrev : Abbrevs) {
-    // Emit the abbreviations code (base 1 index.)
-    EmitULEB128(Abbrev->getNumber(), "Abbreviation Code");
+void AsmPrinter::emitDwarfAbbrev(const DIEAbbrev &Abbrev) const {
+  // Emit the abbreviations code (base 1 index.)
+  EmitULEB128(Abbrev.getNumber(), "Abbreviation Code");
 
-    // Emit the abbreviations data.
-    Abbrev->Emit(this);
-  }
-
-  // Mark end of abbreviations.
-  EmitULEB128(0, "EOM(3)");
+  // Emit the abbreviations data.
+  Abbrev.Emit(this);
 }

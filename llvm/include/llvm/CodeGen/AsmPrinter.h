@@ -453,7 +453,16 @@ public:
   void emitCFIInstruction(const MCCFIInstruction &Inst) const;
 
   /// \brief Emit Dwarf abbreviation table.
-  void emitDwarfAbbrevs(const std::vector<DIEAbbrev *>& Abbrevs) const;
+  template <typename T> void emitDwarfAbbrevs(const T &Abbrevs) const {
+    // For each abbreviation.
+    for (const auto &Abbrev : Abbrevs)
+      emitDwarfAbbrev(*Abbrev);
+
+    // Mark end of abbreviations.
+    EmitULEB128(0, "EOM(3)");
+  }
+
+  void emitDwarfAbbrev(const DIEAbbrev &Abbrev) const;
 
   /// \brief Recursively emit Dwarf DIE tree.
   void emitDwarfDIE(const DIE &Die) const;

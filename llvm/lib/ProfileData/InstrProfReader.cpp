@@ -313,9 +313,8 @@ typedef InstrProfLookupTrait::offset_type offset_type;
 
 bool InstrProfLookupTrait::ReadValueProfilingData(
     const unsigned char *&D, const unsigned char *const End) {
-  ErrorOr<std::unique_ptr<IndexedInstrProf::ValueProfData>> VDataPtrOrErr =
-      IndexedInstrProf::ValueProfData::getValueProfData(
-          D, End, ValueProfDataEndianness);
+  ErrorOr<std::unique_ptr<ValueProfData>> VDataPtrOrErr =
+      ValueProfData::getValueProfData(D, End, ValueProfDataEndianness);
 
   if (VDataPtrOrErr.getError())
     return false;

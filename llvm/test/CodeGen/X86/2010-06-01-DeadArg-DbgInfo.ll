@@ -8,7 +8,7 @@ target triple = "x86_64-apple-darwin10.2"
 @llvm.used = appending global [1 x i8*] [i8* bitcast (i32 (%struct.foo*, i32)* @_ZN3foo3bazEi to i8*)], section "llvm.metadata" ; <[1 x i8*]*> [#uses=0]
 
 define i32 @_ZN3foo3bazEi(%struct.foo* nocapture %this, i32 %x) nounwind readnone optsize noinline ssp align 2 !dbg !8 {
-;CHECK: DEBUG_VALUE: baz:this <- RDI{{$}}
+;CHECK: DEBUG_VALUE: baz:this <- %RDI{{$}}
 entry:
   tail call void @llvm.dbg.value(metadata %struct.foo* %this, i64 0, metadata !15, metadata !DIExpression()), !dbg !DILocation(scope: !8)
   tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !16, metadata !DIExpression()), !dbg !DILocation(scope: !8)

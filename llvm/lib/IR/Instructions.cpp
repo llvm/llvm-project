@@ -297,6 +297,19 @@ CallInst::CallInst(const CallInst &CI)
   SubclassOptionalData = CI.SubclassOptionalData;
 }
 
+CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
+                           Instruction *InsertPt) {
+  CallSite CS(CI);
+  std::vector<Value *> Args(CS.arg_begin(), CS.arg_end());
+
+  auto *NewCI = CallInst::Create(CI->getCalledValue(), Args, OpB, CI->getName(),
+                                 InsertPt);
+  NewCI->setTailCallKind(CI->getTailCallKind());
+  NewCI->setCallingConv(CI->getCallingConv());
+  NewCI->SubclassOptionalData = CI->SubclassOptionalData;
+  return NewCI;
+}
+
 void CallInst::addAttribute(unsigned i, Attribute::AttrKind attr) {
   AttributeSet PAL = getAttributes();
   PAL = PAL.addAttribute(getContext(), i, attr);
@@ -569,6 +582,19 @@ InvokeInst::InvokeInst(const InvokeInst &II)
   std::copy(II.bundle_op_info_begin(), II.bundle_op_info_end(),
             bundle_op_info_begin());
   SubclassOptionalData = II.SubclassOptionalData;
+}
+
+InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
+                               Instruction *InsertPt) {
+  CallSite CS(II);
+  std::vector<Value *> Args(CS.arg_begin(), CS.arg_end());
+
+  auto *NewII = InvokeInst::Create(II->getCalledValue(), II->getNormalDest(),
+                                   II->getUnwindDest(), Args, OpB,
+                                   II->getName(), InsertPt);
+  NewII->setCallingConv(II->getCallingConv());
+  NewII->SubclassOptionalData = II->SubclassOptionalData;
+  return NewII;
 }
 
 BasicBlock *InvokeInst::getSuccessorV(unsigned idx) const {

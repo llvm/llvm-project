@@ -2430,8 +2430,8 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
   // ***************************************************************************
 
   // If this is a tail call via a function pointer, then don't do it!
-  if (!(dyn_cast<GlobalAddressSDNode>(Callee))
-      && !(dyn_cast<ExternalSymbolSDNode>(Callee))) {
+  if (!(isa<GlobalAddressSDNode>(Callee)) &&
+      !(isa<ExternalSymbolSDNode>(Callee))) {
     return false;
   }
 
