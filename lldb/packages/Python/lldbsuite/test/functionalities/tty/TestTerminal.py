@@ -27,6 +27,7 @@ class LaunchInTerminalTestCase(TestBase):
     # This env var is only defined when the shell is running in a local mac terminal window
     @unittest2.skipUnless('TERM_PROGRAM' in os.environ, "test must be run on local system")
     @no_debug_info_test
+    @expectedFailureDarwin("rdar://23590073")
     def test_launch_in_terminal (self):
         exe = "/bin/ls"
         target = self.dbg.CreateTarget(exe)
