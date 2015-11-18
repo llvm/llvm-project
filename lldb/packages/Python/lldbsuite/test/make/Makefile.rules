@@ -122,6 +122,17 @@ ifeq "$(CC)" "cc"
 endif
 
 #----------------------------------------------------------------------
+# Handle SDKROOT on Darwin
+#----------------------------------------------------------------------
+
+ifeq "$(OS)" "Darwin"
+    ifeq "$(SDKROOT)" ""
+        # We haven't otherwise set the SDKROOT, so set it now to macosx
+        SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+    endif
+endif
+
+#----------------------------------------------------------------------
 # SWIFTCC defaults to swift.
 # TODO:
 # If you change the defaults of SWIFTCC, be sure to also change it in the file
@@ -207,6 +218,9 @@ SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
 
 ifeq "$(OS)" "Darwin"
 	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
+	ifneq "$(SDKROOT)" ""
+		CFLAGS += -isysroot $(SDKROOT)
+	endif
 else
 	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 endif
