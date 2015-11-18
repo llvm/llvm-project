@@ -149,7 +149,6 @@ protected:
   MCSection *EHFrameSection;
 
   // ELF specific sections.
-  MCSection *DataRelSection;
   MCSection *DataRelROSection;
   MCSection *MergeableConst4Section;
   MCSection *MergeableConst8Section;
@@ -276,7 +275,6 @@ public:
   MCSection *getFaultMapSection() const { return FaultMapSection; }
 
   // ELF specific sections.
-  MCSection *getDataRelSection() const { return DataRelSection; }
   MCSection *getDataRelROSection() const { return DataRelROSection; }
   const MCSection *getMergeableConst4Section() const {
     return MergeableConst4Section;

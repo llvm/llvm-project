@@ -120,7 +120,7 @@ public:
 
   void addOption(Option *O) {
     bool HadErrors = false;
-    if (O->ArgStr[0]) {
+    if (O->hasArgStr()) {
       // Add argument to the argument map!
       if (!OptionsMap.insert(std::make_pair(O->ArgStr, O)).second) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
@@ -151,12 +151,12 @@ public:
   }
 
   void removeOption(Option *O) {
-    SmallVector<const char *, 16> OptionNames;
+    SmallVector<StringRef, 16> OptionNames;
     O->getExtraOptionNames(OptionNames);
-    if (O->ArgStr[0])
+    if (O->hasArgStr())
       OptionNames.push_back(O->ArgStr);
     for (auto Name : OptionNames)
-      OptionsMap.erase(StringRef(Name));
+      OptionsMap.erase(Name);
 
     if (O->getFormattingFlag() == cl::Positional)
       for (auto Opt = PositionalOpts.begin(); Opt != PositionalOpts.end();
@@ -182,13 +182,13 @@ public:
             nullptr != ConsumeAfterOpt);
   }
 
-  void updateArgStr(Option *O, const char *NewName) {
+  void updateArgStr(Option *O, StringRef NewName) {
     if (!OptionsMap.insert(std::make_pair(NewName, O)).second) {
       errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
              << "' registered more than once!\n";
       report_fatal_error("inconsistency in registered CommandLine options");
     }
-    OptionsMap.erase(StringRef(O->ArgStr));
+    OptionsMap.erase(O->ArgStr);
   }
 
   void printOptionValues();
@@ -227,7 +227,7 @@ void Option::addArgument() {
 
 void Option::removeArgument() { GlobalParser->removeOption(this); }
 
-void Option::setArgStr(const char *S) {
+void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
     GlobalParser->updateArgStr(this, S);
   ArgStr = S;
@@ -296,24 +296,23 @@ static Option *LookupNearestOption(StringRef Arg,
                                            ie = OptionsMap.end();
        it != ie; ++it) {
     Option *O = it->second;
-    SmallVector<const char *, 16> OptionNames;
+    SmallVector<StringRef, 16> OptionNames;
     O->getExtraOptionNames(OptionNames);
-    if (O->ArgStr[0])
+    if (O->hasArgStr())
       OptionNames.push_back(O->ArgStr);
 
     bool PermitValue = O->getValueExpectedFlag() != cl::ValueDisallowed;
     StringRef Flag = PermitValue ? LHS : Arg;
-    for (size_t i = 0, e = OptionNames.size(); i != e; ++i) {
-      StringRef Name = OptionNames[i];
+    for (auto Name : OptionNames) {
       unsigned Distance = StringRef(Name).edit_distance(
           Flag, /*AllowReplacements=*/true, /*MaxEditDistance=*/BestDistance);
       if (!Best || Distance < BestDistance) {
         Best = O;
         BestDistance = Distance;
         if (RHS.empty() || !PermitValue)
-          NearestString = OptionNames[i];
+          NearestString = Name;
         else
-          NearestString = (Twine(OptionNames[i]) + "=" + RHS).str();
+          NearestString = (Twine(Name) + "=" + RHS).str();
       }
     }
   }
@@ -859,7 +858,7 @@ void CommandLineParser::ParseCommandLineOptions(int argc,
               "error - this positional option will never be matched, "
               "because it does not Require a value, and a "
               "cl::ConsumeAfter option is active!");
-      } else if (UnboundedFound && !Opt->ArgStr[0]) {
+      } else if (UnboundedFound && !Opt->hasArgStr()) {
         // This option does not "require" a value...  Make sure this option is
         // not specified after an option that eats all extra arguments, or this
         // one will never get any!
@@ -1144,8 +1143,8 @@ bool Option::addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
 // getValueStr - Get the value description string, using "DefaultMsg" if nothing
 // has been specified yet.
 //
-static const char *getValueStr(const Option &O, const char *DefaultMsg) {
-  if (O.ValueStr[0] == 0)
+static StringRef getValueStr(const Option &O, StringRef DefaultMsg) {
+  if (O.ValueStr.empty())
     return DefaultMsg;
   return O.ValueStr;
 }
@@ -1155,7 +1154,7 @@ static const char *getValueStr(const Option &O, const char *DefaultMsg) {
 //
 
 // Return the width of the option tag for printing...
-size_t alias::getOptionWidth() const { return std::strlen(ArgStr) + 6; }
+size_t alias::getOptionWidth() const { return ArgStr.size() + 6; }
 
 static void printHelpStr(StringRef HelpStr, size_t Indent,
                          size_t FirstLineIndentedBy) {
@@ -1170,7 +1169,7 @@ static void printHelpStr(StringRef HelpStr, size_t Indent,
 // Print out the option for the alias.
 void alias::printOptionInfo(size_t GlobalWidth) const {
   outs() << "  -" << ArgStr;
-  printHelpStr(HelpStr, GlobalWidth, std::strlen(ArgStr) + 6);
+  printHelpStr(HelpStr, GlobalWidth, ArgStr.size() + 6);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1182,9 +1181,9 @@ void alias::printOptionInfo(size_t GlobalWidth) const {
 
 // Return the width of the option tag for printing...
 size_t basic_parser_impl::getOptionWidth(const Option &O) const {
-  size_t Len = std::strlen(O.ArgStr);
+  size_t Len = O.ArgStr.size();
   if (const char *ValName = getValueName())
-    Len += std::strlen(getValueStr(O, ValName)) + 3;
+    Len += getValueStr(O, ValName).size() + 3;
 
   return Len + 6;
 }
@@ -1205,7 +1204,7 @@ void basic_parser_impl::printOptionInfo(const Option &O,
 void basic_parser_impl::printOptionName(const Option &O,
                                         size_t GlobalWidth) const {
   outs() << "  -" << O.ArgStr;
-  outs().indent(GlobalWidth - std::strlen(O.ArgStr));
+  outs().indent(GlobalWidth - O.ArgStr.size());
 }
 
 // parser<bool> implementation
@@ -1319,7 +1318,7 @@ unsigned generic_parser_base::findOption(const char *Name) {
 // Return the width of the option tag for printing...
 size_t generic_parser_base::getOptionWidth(const Option &O) const {
   if (O.hasArgStr()) {
-    size_t Size = std::strlen(O.ArgStr) + 6;
+    size_t Size = O.ArgStr.size() + 6;
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i)
       Size = std::max(Size, std::strlen(getOption(i)) + 8);
     return Size;
@@ -1338,7 +1337,7 @@ void generic_parser_base::printOptionInfo(const Option &O,
                                           size_t GlobalWidth) const {
   if (O.hasArgStr()) {
     outs() << "  -" << O.ArgStr;
-    printHelpStr(O.HelpStr, GlobalWidth, std::strlen(O.ArgStr) + 6);
+    printHelpStr(O.HelpStr, GlobalWidth, O.ArgStr.size() + 6);
 
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
       size_t NumSpaces = GlobalWidth - strlen(getOption(i)) - 8;
@@ -1346,7 +1345,7 @@ void generic_parser_base::printOptionInfo(const Option &O,
       outs().indent(NumSpaces) << " -   " << getDescription(i) << '\n';
     }
   } else {
-    if (O.HelpStr[0])
+    if (!O.HelpStr.empty())
       outs() << "  " << O.HelpStr << '\n';
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
       const char *Option = getOption(i);
@@ -1365,7 +1364,7 @@ void generic_parser_base::printGenericOptionDiff(
     const Option &O, const GenericOptionValue &Value,
     const GenericOptionValue &Default, size_t GlobalWidth) const {
   outs() << "  -" << O.ArgStr;
-  outs().indent(GlobalWidth - std::strlen(O.ArgStr));
+  outs().indent(GlobalWidth - O.ArgStr.size());
 
   unsigned NumOpts = getNumOptions();
   for (unsigned i = 0; i != NumOpts; ++i) {
@@ -1508,7 +1507,7 @@ public:
     outs() << "USAGE: " << GlobalParser->ProgramName << " [options]";
 
     for (auto Opt : GlobalParser->PositionalOpts) {
-      if (Opt->ArgStr[0])
+      if (Opt->hasArgStr())
         outs() << " --" << Opt->ArgStr;
       outs() << " " << Opt->HelpStr;
     }

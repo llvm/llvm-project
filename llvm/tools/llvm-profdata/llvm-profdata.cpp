@@ -27,6 +27,8 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <set>
+
 using namespace llvm;
 
 static void exitWithError(const Twine &Message,
@@ -41,7 +43,8 @@ static void exitWithError(const Twine &Message,
   ::exit(1);
 }
 
-static void exitWithErrorCode(const std::error_code &Error, StringRef Whence = "") {
+static void exitWithErrorCode(const std::error_code &Error,
+                              StringRef Whence = "") {
   if (Error.category() == instrprof_category()) {
     instrprof_error instrError = static_cast<instrprof_error>(Error.value());
     if (instrError == instrprof_error::unrecognized_format) {
@@ -57,6 +60,38 @@ namespace {
     enum ProfileKinds { instr, sample };
 }
 
+static void handleMergeWriterError(std::error_code &Error,
+                                   StringRef WhenceFile = "",
+                                   StringRef WhenceFunction = "",
+                                   bool ShowHint = true)
+{
+  if (!WhenceFile.empty())
+    errs() << WhenceFile << ": ";
+  if (!WhenceFunction.empty())
+    errs() << WhenceFunction << ": ";
+  errs() << Error.message() << "\n";
+
+  if (ShowHint) {
+    StringRef Hint = "";
+    if (Error.category() == instrprof_category()) {
+      instrprof_error instrError = static_cast<instrprof_error>(Error.value());
+      switch (instrError) {
+      case instrprof_error::hash_mismatch:
+      case instrprof_error::count_mismatch:
+      case instrprof_error::value_site_count_mismatch:
+        Hint = "Make sure that all profile data to be merged is generated " \
+               "from the same binary.";
+        break;
+      default:
+        break;
+      }
+    }
+
+    if (!Hint.empty())
+      errs() << Hint << "\n";
+  }
+}
+
 static void mergeInstrProfile(const cl::list<std::string> &Inputs,
                               StringRef OutputFilename) {
   if (OutputFilename.compare("-") == 0)
@@ -68,15 +103,20 @@ static void mergeInstrProfile(const cl::list<std::string> &Inputs,
     exitWithErrorCode(EC, OutputFilename);
 
   InstrProfWriter Writer;
+  std::set<std::error_code> WriterErrorCodes;
   for (const auto &Filename : Inputs) {
     auto ReaderOrErr = InstrProfReader::create(Filename);
     if (std::error_code ec = ReaderOrErr.getError())
       exitWithErrorCode(ec, Filename);
 
     auto Reader = std::move(ReaderOrErr.get());
-    for (auto &I : *Reader)
-      if (std::error_code EC = Writer.addRecord(std::move(I)))
-        errs() << Filename << ": " << I.Name << ": " << EC.message() << "\n";
+    for (auto &I : *Reader) {
+      if (std::error_code EC = Writer.addRecord(std::move(I))) {
+        // Only show hint the first time an error occurs.
+        bool firstTime = WriterErrorCodes.insert(EC).second;
+        handleMergeWriterError(EC, Filename, I.Name, firstTime);
+      }
+    }
     if (Reader->hasError())
       exitWithErrorCode(Reader->getError(), Filename);
   }

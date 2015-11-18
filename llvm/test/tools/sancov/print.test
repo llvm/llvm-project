@@ -1,3 +1,4 @@
+REQUIRES: x86_64-linux
 RUN: sancov -obj %p/Inputs/test-linux_x86_64 -print %p/Inputs/test-linux_x86_64.sancov | FileCheck %s
 
 CHECK: 0x4db18b

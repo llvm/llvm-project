@@ -64,8 +64,7 @@ entry:
 ; CHECK: pushl %esi
 
 ; CHECK: Lmain$frame_escape_0 = [[code_offs:[-0-9]+]]
-; CHECK: Lmain$frame_escape_1 = [[reg_offs:[-0-9]+]]
-; CHECK: movl %esp, [[reg_offs]](%ebp)
+; CHECK: movl %esp, [[reg_offs:[-0-9]+]](%ebp)
 ; CHECK: movl $L__ehtable$main,
 ;       EH state 0
 ; CHECK: movl $0, -16(%ebp)
@@ -84,7 +83,7 @@ entry:
 ; CHECK: calll _printf
 
 ; CHECK: .section .xdata,"dr"
-; CHECK: Lmain$parent_frame_offset = Lmain$frame_escape_1
+; CHECK: Lmain$parent_frame_offset = [[reg_offs]]
 ; CHECK: .align 4
 ; CHECK: L__ehtable$main
 ; CHECK-NEXT: .long -1

@@ -79,8 +79,8 @@ public:
   // the best way for us to get access to it?
   bool ParseSectionDirectiveData(StringRef, SMLoc) {
     return ParseSectionSwitch(".data", ELF::SHT_PROGBITS,
-                              ELF::SHF_WRITE |ELF::SHF_ALLOC,
-                              SectionKind::getDataRel());
+                              ELF::SHF_WRITE | ELF::SHF_ALLOC,
+                              SectionKind::getData());
   }
   bool ParseSectionDirectiveText(StringRef, SMLoc) {
     return ParseSectionSwitch(".text", ELF::SHT_PROGBITS,
@@ -111,9 +111,8 @@ public:
   }
   bool ParseSectionDirectiveDataRel(StringRef, SMLoc) {
     return ParseSectionSwitch(".data.rel", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getDataRel());
+                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
+                              SectionKind::getData());
   }
   bool ParseSectionDirectiveDataRelRo(StringRef, SMLoc) {
     return ParseSectionSwitch(".data.rel.ro", ELF::SHT_PROGBITS,
@@ -123,9 +122,8 @@ public:
   }
   bool ParseSectionDirectiveEhFrame(StringRef, SMLoc) {
     return ParseSectionSwitch(".eh_frame", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getDataRel());
+                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
+                              SectionKind::getData());
   }
   bool ParseDirectivePushSection(StringRef, SMLoc);
   bool ParseDirectivePopSection(StringRef, SMLoc);

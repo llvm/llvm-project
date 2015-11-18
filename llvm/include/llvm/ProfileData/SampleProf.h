@@ -75,21 +75,14 @@ static inline uint64_t SPVersion() { return 102; }
 /// (e.g., the two post-increment instructions in "if (p) x++; else y++;").
 struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Discriminator(D) {}
-  void print(raw_ostream &OS) const {
-    OS << LineOffset;
-    if (Discriminator > 0)
-      OS << "." << Discriminator;
-  }
-  void dump() const { print(dbgs()); }
+  void print(raw_ostream &OS) const;
+  void dump() const;
 
   uint32_t LineOffset;
   uint32_t Discriminator;
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc) {
-  Loc.print(OS);
-  return OS;
-}
+raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
 /// Represents the relative location of a callsite.
 ///
@@ -100,19 +93,13 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc) {
 struct CallsiteLocation : public LineLocation {
   CallsiteLocation(uint32_t L, uint32_t D, StringRef N)
       : LineLocation(L, D), CalleeName(N) {}
-  StringRef CalleeName;
+  void print(raw_ostream &OS) const;
+  void dump() const;
 
-  void print(raw_ostream &OS) const {
-    LineLocation::print(OS);
-    OS << ": inlined callee: " << CalleeName;
-  }
-  void dump() const { print(dbgs()); }
+  StringRef CalleeName;
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteLocation &Loc) {
-  Loc.print(OS);
-  return OS;
-}
+raw_ostream &operator<<(raw_ostream &OS, const CallsiteLocation &Loc);
 
 } // End namespace sampleprof
 
@@ -218,17 +205,14 @@ public:
   }
 
   void print(raw_ostream &OS, unsigned Indent) const;
-  void dump() const { print(dbgs(), 0); }
+  void dump() const;
 
 private:
   uint64_t NumSamples;
   CallTargetMap CallTargets;
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample) {
-  Sample.print(OS, 0);
-  return OS;
-}
+raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
 
 typedef DenseMap<LineLocation, SampleRecord> BodySampleMap;
 class FunctionSamples;
@@ -243,7 +227,7 @@ class FunctionSamples {
 public:
   FunctionSamples() : TotalSamples(0), TotalHeadSamples(0) {}
   void print(raw_ostream &OS = dbgs(), unsigned Indent = 0) const;
-  void dump(void) const { print(); }
+  void dump() const;
   void addTotalSamples(uint64_t Num) { TotalSamples += Num; }
   void addHeadSamples(uint64_t Num) { TotalHeadSamples += Num; }
   void addBodySamples(uint32_t LineOffset, uint32_t Discriminator,
@@ -355,10 +339,7 @@ private:
   CallsiteSampleMap CallsiteSamples;
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS) {
-  FS.print(OS);
-  return OS;
-}
+raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 
 } // end namespace sampleprof
 

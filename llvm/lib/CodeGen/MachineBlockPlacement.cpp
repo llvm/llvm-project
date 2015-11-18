@@ -389,22 +389,50 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
   uint32_t BestWeight = 0;
   uint32_t WeightScale = 0;
   uint32_t SumWeight = MBPI->getSumForBlock(BB, WeightScale);
-  DEBUG(dbgs() << "Attempting merge from: " << getBlockName(BB) << "\n");
-  for (MachineBasicBlock *Succ : BB->successors()) {
-    if (BlockFilter && !BlockFilter->count(Succ))
-      continue;
-    BlockChain &SuccChain = *BlockToChain[Succ];
-    if (&SuccChain == &Chain) {
-      DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> Already merged!\n");
-      continue;
-    }
-    if (Succ != *SuccChain.begin()) {
-      DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> Mid chain!\n");
-      continue;
-    }
 
+  // Adjust sum of weights by excluding weights on edges pointing to blocks that
+  // is either not in BlockFilter or is already in the current chain. Consider
+  // the following CFG:
+  //
+  //     --->A
+  //     |  / \
+  //     | B   C
+  //     |  \ / \
+  //     ----D   E
+  //
+  // Assume A->C is very hot (>90%), and C->D has a 50% probability, then after
+  // A->C is chosen as a fall-through, D won't be selected as a successor of C
+  // due to CFG constraint (the probability of C->D is not greater than
+  // HotProb). If we exclude E that is not in BlockFilter when calculating the
+  // probability of C->D, D will be selected and we will get A C D B as the
+  // layout of this loop.
+  uint32_t AdjustedSumWeight = SumWeight;
+  SmallVector<MachineBasicBlock *, 4> Successors;
+  for (MachineBasicBlock *Succ : BB->successors()) {
+    bool SkipSucc = false;
+    if (BlockFilter && !BlockFilter->count(Succ)) {
+      SkipSucc = true;
+    } else {
+      BlockChain *SuccChain = BlockToChain[Succ];
+      if (SuccChain == &Chain) {
+        DEBUG(dbgs() << "    " << getBlockName(Succ)
+                     << " -> Already merged!\n");
+        SkipSucc = true;
+      } else if (Succ != *SuccChain->begin()) {
+        DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> Mid chain!\n");
+        continue;
+      }
+    }
+    if (SkipSucc)
+      AdjustedSumWeight -= MBPI->getEdgeWeight(BB, Succ) / WeightScale;
+    else
+      Successors.push_back(Succ);
+  }
+
+  DEBUG(dbgs() << "Attempting merge from: " << getBlockName(BB) << "\n");
+  for (MachineBasicBlock *Succ : Successors) {
     uint32_t SuccWeight = MBPI->getEdgeWeight(BB, Succ);
-    BranchProbability SuccProb(SuccWeight / WeightScale, SumWeight);
+    BranchProbability SuccProb(SuccWeight / WeightScale, AdjustedSumWeight);
 
     // If we outline optional branches, look whether Succ is unavoidable, i.e.
     // dominates all terminators of the MachineFunction. If it does, other
@@ -432,6 +460,7 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
 
     // Only consider successors which are either "hot", or wouldn't violate
     // any CFG constraints.
+    BlockChain &SuccChain = *BlockToChain[Succ];
     if (SuccChain.LoopPredecessors != 0) {
       if (SuccProb < HotProb) {
         DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> " << SuccProb
@@ -441,8 +470,9 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
 
       // Make sure that a hot successor doesn't have a globally more
       // important predecessor.
+      BranchProbability RealSuccProb(SuccWeight / WeightScale, SumWeight);
       BlockFrequency CandidateEdgeFreq =
-          MBFI->getBlockFreq(BB) * SuccProb * HotProb.getCompl();
+          MBFI->getBlockFreq(BB) * RealSuccProb * HotProb.getCompl();
       bool BadCFGConflict = false;
       for (MachineBasicBlock *Pred : Succ->predecessors()) {
         if (Pred == Succ || (BlockFilter && !BlockFilter->count(Pred)) ||

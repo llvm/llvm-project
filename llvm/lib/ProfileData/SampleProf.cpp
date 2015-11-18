@@ -57,6 +57,33 @@ const std::error_category &llvm::sampleprof_category() {
   return *ErrorCategory;
 }
 
+void LineLocation::print(raw_ostream &OS) const {
+  OS << LineOffset;
+  if (Discriminator > 0)
+    OS << "." << Discriminator;
+}
+
+raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
+                                          const LineLocation &Loc) {
+  Loc.print(OS);
+  return OS;
+}
+
+void LineLocation::dump() const { print(dbgs()); }
+
+void CallsiteLocation::print(raw_ostream &OS) const {
+  LineLocation::print(OS);
+  OS << ": inlined callee: " << CalleeName;
+}
+
+void CallsiteLocation::dump() const { print(dbgs()); }
+
+inline raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
+                                                 const CallsiteLocation &Loc) {
+  Loc.print(OS);
+  return OS;
+}
+
 /// \brief Print the sample record to the stream \p OS indented by \p Indent.
 void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   OS << NumSamples;
@@ -66,6 +93,14 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
       OS << " " << I.first() << ":" << I.second;
   }
   OS << "\n";
+}
+
+void SampleRecord::dump() const { print(dbgs(), 0); }
+
+raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
+                                          const SampleRecord &Sample) {
+  Sample.print(OS, 0);
+  return OS;
 }
 
 /// \brief Print the samples collected for a function on stream \p OS.
@@ -84,3 +119,11 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     CS.second.print(OS, Indent + 2);
   }
 }
+
+raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
+                                          const FunctionSamples &FS) {
+  FS.print(OS);
+  return OS;
+}
+
+void FunctionSamples::dump(void) const { print(dbgs(), 0); }

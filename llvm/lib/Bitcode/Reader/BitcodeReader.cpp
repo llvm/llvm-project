@@ -5143,10 +5143,7 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       if (Record.size() < 1 || Record[0] >= BundleTags.size())
         return error("Invalid record");
 
-      OperandBundles.emplace_back();
-      OperandBundles.back().Tag = BundleTags[Record[0]];
-
-      std::vector<Value *> &Inputs = OperandBundles.back().Inputs;
+      std::vector<Value *> Inputs;
 
       unsigned OpNum = 1;
       while (OpNum != Record.size()) {
@@ -5156,6 +5153,7 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
         Inputs.push_back(Op);
       }
 
+      OperandBundles.emplace_back(BundleTags[Record[0]], std::move(Inputs));
       continue;
     }
     }

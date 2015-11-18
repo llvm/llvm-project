@@ -857,7 +857,7 @@ static bool ReadCheckFile(SourceMgr &SM,
   for (const auto &PatternString : ImplicitCheckNot) {
     // Create a buffer with fake command line content in order to display the
     // command line option responsible for the specific implicit CHECK-NOT.
-    std::string Prefix = std::string("-") + ImplicitCheckNot.ArgStr + "='";
+    std::string Prefix = (Twine("-") + ImplicitCheckNot.ArgStr + "='").str();
     std::string Suffix = "'";
     std::unique_ptr<MemoryBuffer> CmdLine = MemoryBuffer::getMemBufferCopy(
         Prefix + PatternString + Suffix, "command line");

@@ -299,7 +299,8 @@ const MCExpr *WinException::getOffsetPlusOne(const MCSymbol *OffsetOf,
                                  Asm->OutContext);
 }
 
-int WinException::getFrameIndexOffset(int FrameIndex, WinEHFuncInfo &FuncInfo) {
+int WinException::getFrameIndexOffset(int FrameIndex,
+                                      const WinEHFuncInfo &FuncInfo) {
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   unsigned UnusedReg;
   if (Asm->MAI->usesWindowsCFI())
@@ -340,7 +341,7 @@ struct InvokeStateChange {
 /// reported is the first change to something other than NullState, and a
 /// change back to NullState is always reported at the end of iteration).
 class InvokeStateChangeIterator {
-  InvokeStateChangeIterator(WinEHFuncInfo &EHInfo,
+  InvokeStateChangeIterator(const WinEHFuncInfo &EHInfo,
                             MachineFunction::const_iterator MFI,
                             MachineFunction::const_iterator MFE,
                             MachineBasicBlock::const_iterator MBBI)
@@ -353,7 +354,7 @@ class InvokeStateChangeIterator {
 
 public:
   static iterator_range<InvokeStateChangeIterator>
-  range(WinEHFuncInfo &EHInfo, const MachineFunction &MF) {
+  range(const WinEHFuncInfo &EHInfo, const MachineFunction &MF) {
     // Reject empty MFs to simplify bookkeeping by ensuring that we can get the
     // end of the last block.
     assert(!MF.empty());
@@ -366,7 +367,7 @@ public:
         InvokeStateChangeIterator(EHInfo, FuncEnd, FuncEnd, BlockEnd));
   }
   static iterator_range<InvokeStateChangeIterator>
-  range(WinEHFuncInfo &EHInfo, MachineFunction::const_iterator Begin,
+  range(const WinEHFuncInfo &EHInfo, MachineFunction::const_iterator Begin,
         MachineFunction::const_iterator End) {
     // Reject empty ranges to simplify bookkeeping by ensuring that we can get
     // the end of the last block.
@@ -402,7 +403,7 @@ public:
 private:
   InvokeStateChangeIterator &scan();
 
-  WinEHFuncInfo &EHInfo;
+  const WinEHFuncInfo &EHInfo;
   const MCSymbol *CurrentEndLabel = nullptr;
   MachineFunction::const_iterator MFI;
   MachineFunction::const_iterator MFE;
@@ -521,7 +522,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   auto &OS = *Asm->OutStreamer;
   MCContext &Ctx = Asm->OutContext;
 
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(MF->getFunction());
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
   // Use the assembler to compute the number of table entries through label
   // difference and division.
   MCSymbol *TableBegin =
@@ -564,7 +565,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   OS.EmitLabel(TableEnd);
 }
 
-void WinException::emitSEHActionsForRange(WinEHFuncInfo &FuncInfo,
+void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
                                           const MCSymbol *BeginLabel,
                                           const MCSymbol *EndLabel, int State) {
   auto &OS = *Asm->OutStreamer;
@@ -572,7 +573,7 @@ void WinException::emitSEHActionsForRange(WinEHFuncInfo &FuncInfo,
 
   assert(BeginLabel && EndLabel);
   while (State != -1) {
-    SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[State];
+    const SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[State];
     const MCExpr *FilterOrFinally;
     const MCExpr *ExceptOrNull;
     auto *Handler = UME.Handler.get<MachineBasicBlock *>();
@@ -600,7 +601,7 @@ void WinException::emitSEHActionsForRange(WinEHFuncInfo &FuncInfo,
 void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   const Function *F = MF->getFunction();
   auto &OS = *Asm->OutStreamer;
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(F);
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
 
   StringRef FuncLinkageName = GlobalValue::getRealLinkageName(F->getName());
 
@@ -688,7 +689,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
     OS.EmitLabel(TryBlockMapXData);
     SmallVector<MCSymbol *, 1> HandlerMaps;
     for (size_t I = 0, E = FuncInfo.TryBlockMap.size(); I != E; ++I) {
-      WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
+      const WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
 
       MCSymbol *HandlerMapXData = nullptr;
       if (!TBME.HandlerArray.empty())
@@ -721,7 +722,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
     }
 
     for (size_t I = 0, E = FuncInfo.TryBlockMap.size(); I != E; ++I) {
-      WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
+      const WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
       MCSymbol *HandlerMapXData = HandlerMaps[I];
       if (!HandlerMapXData)
         continue;
@@ -772,7 +773,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
 }
 
 void WinException::computeIP2StateTable(
-    const MachineFunction *MF, WinEHFuncInfo &FuncInfo,
+    const MachineFunction *MF, const WinEHFuncInfo &FuncInfo,
     SmallVectorImpl<std::pair<const MCExpr *, int>> &IPToStateTable) {
   // Indicate that all calls from the prologue to the first invoke unwind to
   // caller. We handle this as a special case since other ranges starting at end
@@ -803,15 +804,15 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   // registration in order to recover the parent frame pointer. Now that we know
   // we've code generated the parent, we can emit the label assignment that
   // those helpers use to get the offset of the registration node.
-  assert(FuncInfo.EHRegNodeEscapeIndex != INT_MAX &&
-         "no EH reg node localescape index");
+  MCContext &Ctx = Asm->OutContext;
   MCSymbol *ParentFrameOffset =
-      Asm->OutContext.getOrCreateParentFrameOffsetSymbol(FLinkageName);
-  MCSymbol *RegistrationOffsetSym = Asm->OutContext.getOrCreateFrameAllocSymbol(
-      FLinkageName, FuncInfo.EHRegNodeEscapeIndex);
-  const MCExpr *RegistrationOffsetSymRef =
-      MCSymbolRefExpr::create(RegistrationOffsetSym, Asm->OutContext);
-  Asm->OutStreamer->EmitAssignment(ParentFrameOffset, RegistrationOffsetSymRef);
+      Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
+  unsigned UnusedReg;
+  const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
+  int64_t Offset = TFI->getFrameIndexReference(
+      *Asm->MF, FuncInfo.EHRegNodeFrameIndex, UnusedReg);
+  const MCExpr *MCOffset = MCConstantExpr::create(Offset, Ctx);
+  Asm->OutStreamer->EmitAssignment(ParentFrameOffset, MCOffset);
 }
 
 /// Emit the language-specific data that _except_handler3 and 4 expect. This is
@@ -822,7 +823,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   const Function *F = MF->getFunction();
   StringRef FLinkageName = GlobalValue::getRealLinkageName(F->getName());
 
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(F);
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
   emitEHRegistrationOffsetLabel(FuncInfo, FLinkageName);
 
   // Emit the __ehtable label that we use for llvm.x86.seh.lsda.
@@ -857,7 +858,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   }
 
   assert(!FuncInfo.SEHUnwindMap.empty());
-  for (SEHUnwindMapEntry &UME : FuncInfo.SEHUnwindMap) {
+  for (const SEHUnwindMapEntry &UME : FuncInfo.SEHUnwindMap) {
     MCSymbol *ExceptOrFinally =
         UME.Handler.get<MachineBasicBlock *>()->getSymbol();
     // -1 is usually the base state for "unwind to caller", but for
@@ -869,7 +870,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   }
 }
 
-static int getRank(WinEHFuncInfo &FuncInfo, int State) {
+static int getRank(const WinEHFuncInfo &FuncInfo, int State) {
   int Rank = 0;
   while (State != -1) {
     ++Rank;
@@ -878,7 +879,7 @@ static int getRank(WinEHFuncInfo &FuncInfo, int State) {
   return Rank;
 }
 
-static int getAncestor(WinEHFuncInfo &FuncInfo, int Left, int Right) {
+static int getAncestor(const WinEHFuncInfo &FuncInfo, int Left, int Right) {
   int LeftRank = getRank(FuncInfo, Left);
   int RightRank = getRank(FuncInfo, Right);
 
@@ -905,8 +906,7 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
   // states, handlers, and funclets all have 1:1 mappings between them, and a
   // handler/funclet's "state" is its index in the ClrEHUnwindMap.
   MCStreamer &OS = *Asm->OutStreamer;
-  const Function *F = MF->getFunction();
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(F);
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
   MCSymbol *FuncBeginSym = Asm->getFunctionBegin();
   MCSymbol *FuncEndSym = Asm->getFunctionEnd();
 
@@ -1085,7 +1085,7 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
         getOffsetPlusOne(Clause.StartLabel, FuncBeginSym);
     const MCExpr *ClauseEnd = getOffsetPlusOne(Clause.EndLabel, FuncBeginSym);
 
-    ClrEHUnwindMapEntry &Entry = FuncInfo.ClrEHUnwindMap[Clause.State];
+    const ClrEHUnwindMapEntry &Entry = FuncInfo.ClrEHUnwindMap[Clause.State];
     MachineBasicBlock *HandlerBlock = Entry.Handler.get<MachineBasicBlock *>();
     MCSymbol *BeginSym = getMCSymbolForMBB(Asm, HandlerBlock);
     const MCExpr *HandlerBegin = getOffset(BeginSym, FuncBeginSym);

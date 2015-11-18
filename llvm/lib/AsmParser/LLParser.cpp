@@ -1980,17 +1980,13 @@ bool LLParser::ParseOptionalOperandBundles(
     if (ParseStringConstant(Tag))
       return true;
 
-    BundleList.emplace_back();
-    auto &OBI = BundleList.back();
-
-    OBI.Tag = std::move(Tag);
-
     if (ParseToken(lltok::lparen, "expected '(' in operand bundle"))
       return true;
 
+    std::vector<Value *> Inputs;
     while (Lex.getKind() != lltok::rparen) {
       // If this isn't the first input, we need a comma.
-      if (!OBI.Inputs.empty() &&
+      if (!Inputs.empty() &&
           ParseToken(lltok::comma, "expected ',' in input list"))
         return true;
 
@@ -1998,8 +1994,10 @@ bool LLParser::ParseOptionalOperandBundles(
       Value *Input = nullptr;
       if (ParseType(Ty) || ParseValue(Ty, Input, PFS))
         return true;
-      OBI.Inputs.push_back(Input);
+      Inputs.push_back(Input);
     }
+
+    BundleList.emplace_back(std::move(Tag), std::move(Inputs));
 
     Lex.Lex(); // Lex the ')'.
   }

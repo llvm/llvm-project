@@ -9,7 +9,7 @@
 ; CHECK-NEXT: b
 ; CHECK: [[JUMPTARGET]]:{{.*}}%if.else173
 ; CHECK-NEXT: mov.w
-; CHECK-NEXT: pop
+; CHECK-NEXT: bx lr
 ; CHECK-NEXT: %if.else145
 ; CHECK-NEXT: mov.w
 

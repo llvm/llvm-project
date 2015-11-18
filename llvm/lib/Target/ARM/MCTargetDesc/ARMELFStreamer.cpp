@@ -1079,19 +1079,14 @@ inline void ARMELFStreamer::SwitchToEHSection(const char *Prefix,
 }
 
 inline void ARMELFStreamer::SwitchToExTabSection(const MCSymbol &FnStart) {
-  SwitchToEHSection(".ARM.extab",
-                    ELF::SHT_PROGBITS,
-                    ELF::SHF_ALLOC,
-                    SectionKind::getDataRel(),
-                    FnStart);
+  SwitchToEHSection(".ARM.extab", ELF::SHT_PROGBITS, ELF::SHF_ALLOC,
+                    SectionKind::getData(), FnStart);
 }
 
 inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
-  SwitchToEHSection(".ARM.exidx",
-                    ELF::SHT_ARM_EXIDX,
+  SwitchToEHSection(".ARM.exidx", ELF::SHT_ARM_EXIDX,
                     ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER,
-                    SectionKind::getDataRel(),
-                    FnStart);
+                    SectionKind::getData(), FnStart);
 }
 void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
   MCDataFragment *Frag = getOrCreateDataFragment();

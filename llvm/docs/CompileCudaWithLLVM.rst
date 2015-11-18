@@ -18,11 +18,9 @@ familiarity with CUDA. Information about CUDA programming can be found in the
 How to Build LLVM with CUDA Support
 ===================================
 
-The support for CUDA is still in progress and temporarily relies on `this patch
-<http://reviews.llvm.org/D14452>`_. Below is a quick summary of downloading and
-building LLVM with CUDA support. Consult the `Getting Started
-<http://llvm.org/docs/GettingStarted.html>`_ page for more details on setting
-up LLVM.
+Below is a quick summary of downloading and building LLVM. Consult the `Getting
+Started <http://llvm.org/docs/GettingStarted.html>`_ page for more details on
+setting up LLVM.
 
 #. Checkout LLVM
 
@@ -38,27 +36,6 @@ up LLVM.
      $ cd where-you-want-llvm-to-live
      $ cd llvm/tools
      $ svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
-
-#. Apply the temporary patch for CUDA support.
-
-   If you have installed `Arcanist
-   <http://llvm.org/docs/Phabricator.html#requesting-a-review-via-the-command-line>`_,
-   you can apply this patch using
-
-   .. code-block:: console
-
-     $ cd where-you-want-llvm-to-live
-     $ cd llvm/tools/clang
-     $ arc patch D14452
-
-   Otherwise, go to `its review page <http://reviews.llvm.org/D14452>`_,
-   download the raw diff, and apply it manually using
-
-   .. code-block:: console
-
-     $ cd where-you-want-llvm-to-live
-     $ cd llvm/tools/clang
-     $ patch -p0 < D14452.diff
 
 #. Configure and build LLVM and Clang
 

@@ -1,10 +1,10 @@
 ; RUN: llc -generate-arange-section -relocation-model=pic < %s | FileCheck %s
 
-; CHECK:   .section        .data.rel,"aw",@progbits
+; CHECK:   .data
 ; CHECK-NOT: .section
 ; CHECK: .L_ZTId.DW.stub:
 
-; CHECK:  .section        .data.rel,"aw",@progbits
+; CHECK:  .data
 ; CHECK-NEXT: .Lsec_end0:
 
 target triple = "x86_64-linux-gnu"

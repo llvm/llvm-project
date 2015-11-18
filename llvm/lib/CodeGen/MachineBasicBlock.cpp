@@ -544,24 +544,8 @@ void MachineBasicBlock::addSuccessorWithoutProb(MachineBasicBlock *Succ) {
 }
 
 void MachineBasicBlock::removeSuccessor(MachineBasicBlock *Succ) {
-  Succ->removePredecessor(this);
   succ_iterator I = std::find(Successors.begin(), Successors.end(), Succ);
-  assert(I != Successors.end() && "Not a current successor!");
-
-  // If Weight list is empty it means we don't use it (disabled optimization).
-  if (!Weights.empty()) {
-    weight_iterator WI = getWeightIterator(I);
-    Weights.erase(WI);
-  }
-
-  // If probability list is empty it means we don't use it (disabled
-  // optimization).
-  if (!Probs.empty()) {
-    probability_iterator WI = getProbabilityIterator(I);
-    Probs.erase(WI);
-  }
-
-  Successors.erase(I);
+  removeSuccessor(I);
 }
 
 MachineBasicBlock::succ_iterator
@@ -606,10 +590,10 @@ void MachineBasicBlock::replaceSuccessor(MachineBasicBlock *Old,
     }
   }
   assert(OldI != E && "Old is not a successor of this block");
-  Old->removePredecessor(this);
 
   // If New isn't already a successor, let it take Old's place.
   if (NewI == E) {
+    Old->removePredecessor(this);
     New->addPredecessor(this);
     *OldI = New;
     return;
@@ -617,18 +601,13 @@ void MachineBasicBlock::replaceSuccessor(MachineBasicBlock *Old,
 
   // New is already a successor.
   // Update its weight instead of adding a duplicate edge.
-  if (!Weights.empty()) {
-    weight_iterator OldWI = getWeightIterator(OldI);
-    *getWeightIterator(NewI) += *OldWI;
-    Weights.erase(OldWI);
-  }
+  if (!Weights.empty())
+    *getWeightIterator(NewI) += *getWeightIterator(OldI);
   // Update its probability instead of adding a duplicate edge.
-  if (!Probs.empty()) {
-    probability_iterator OldPI = getProbabilityIterator(OldI);
-    *getProbabilityIterator(NewI) += *OldPI;
-    Probs.erase(OldPI);
-  }
-  Successors.erase(OldI);
+  if (!Probs.empty())
+    *getProbabilityIterator(NewI) += *getProbabilityIterator(OldI);
+
+  removeSuccessor(OldI);
 }
 
 void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {

@@ -318,10 +318,10 @@ int main(int argc, char **argv) {
     CodeGen.setAttr(attrs.c_str());
 
   if (!OutputFilename.empty()) {
-    std::string ErrorInfo;
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                          DisableLTOVectorization, ErrorInfo)) {
-      errs() << argv[0] << ": error optimizing the code: " << ErrorInfo << "\n";
+                          DisableLTOVectorization)) {
+      // Diagnostic messages should have been printed by the handler.
+      errs() << argv[0] << ": error optimizing the code\n";
       return 1;
     }
 
@@ -341,8 +341,9 @@ int main(int argc, char **argv) {
       OSPtrs.push_back(&OSs.back().os());
     }
 
-    if (!CodeGen.compileOptimized(OSPtrs, ErrorInfo)) {
-      errs() << argv[0] << ": error compiling the code: " << ErrorInfo << "\n";
+    if (!CodeGen.compileOptimized(OSPtrs)) {
+      // Diagnostic messages should have been printed by the handler.
+      errs() << argv[0] << ": error compiling the code\n";
       return 1;
     }
 
@@ -354,14 +355,11 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    std::string ErrorInfo;
     const char *OutputName = nullptr;
     if (!CodeGen.compile_to_file(&OutputName, DisableVerify, DisableInline,
-                                 DisableGVNLoadPRE, DisableLTOVectorization,
-                                 ErrorInfo)) {
-      errs() << argv[0]
-             << ": error compiling the code: " << ErrorInfo
-             << "\n";
+                                 DisableGVNLoadPRE, DisableLTOVectorization)) {
+      // Diagnostic messages should have been printed by the handler.
+      errs() << argv[0] << ": error compiling the code\n";
       return 1;
     }
 

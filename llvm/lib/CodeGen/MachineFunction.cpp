@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/LibCallSemantics.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionInitializer.h"
@@ -27,6 +28,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
@@ -88,6 +90,11 @@ MachineFunction::MachineFunction(const Function *F, const TargetMachine &TM,
   FunctionNumber = FunctionNum;
   JumpTableInfo = nullptr;
 
+  if (isFuncletEHPersonality(classifyEHPersonality(
+          F->hasPersonalityFn() ? F->getPersonalityFn() : nullptr))) {
+    WinEHInfo = new (Allocator) WinEHFuncInfo();
+  }
+
   assert(TM.isCompatibleDataLayout(getDataLayout()) &&
          "Can't create a MachineFunction using a Module with a "
          "Target-incompatible DataLayout attached\n");
@@ -124,6 +131,11 @@ MachineFunction::~MachineFunction() {
   if (JumpTableInfo) {
     JumpTableInfo->~MachineJumpTableInfo();
     Allocator.Deallocate(JumpTableInfo);
+  }
+
+  if (WinEHInfo) {
+    WinEHInfo->~WinEHFuncInfo();
+    Allocator.Deallocate(WinEHInfo);
   }
 }
 

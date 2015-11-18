@@ -1520,6 +1520,46 @@ operand bundles do not capture their operands except during
 deoptimization, in which case control will not be returned to the
 compiled frame.
 
+The inliner knows how to inline through calls that have deoptimization
+operand bundles.  Just like inlining through a normal call site
+involves composing the normal and exceptional continuations, inlining
+through a call site with a deoptimization operand bundle needs to
+appropriately compose the "safe" deoptimization continuation.  The
+inliner does this by prepending the parent's deoptimization
+continuation to every deoptimization continuation in the inlined body.
+E.g. inlining ``@f`` into ``@g`` in the following example
+
+.. code-block:: llvm
+
+    define void @f() {
+      call void @x()  ;; no deopt state
+      call void @y() [ "deopt"(i32 10) ]
+      call void @y() [ "deopt"(i32 10), "unknown"(i8* null) ]
+      ret void
+    }
+
+    define void @g() {
+      call void @f() [ "deopt"(i32 20) ]
+      ret void
+    }
+
+will result in
+
+.. code-block:: llvm
+
+    define void @g() {
+      call void @x()  ;; still no deopt state
+      call void @y() [ "deopt"(i32 20, i32 10) ]
+      call void @y() [ "deopt"(i32 20, i32 10), "unknown"(i8* null) ]
+      ret void
+    }
+
+It is the frontend's responsibility to structure or encode the
+deoptimization state in a way that syntactically prepending the
+caller's deoptimization state to the callee's deoptimization state is
+semantically equivalent to composing the caller's deoptimization
+continuation after the callee's deoptimization continuation.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly

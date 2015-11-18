@@ -76,16 +76,15 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
                            MachO::S_ATTR_PURE_INSTRUCTIONS,
                            SectionKind::getText());
   DataSection // .data
-    = Ctx->getMachOSection("__DATA", "__data", 0,
-                           SectionKind::getDataRel());
+      = Ctx->getMachOSection("__DATA", "__data", 0, SectionKind::getData());
 
   // BSSSection might not be expected initialized on msvc.
   BSSSection = nullptr;
 
   TLSDataSection // .tdata
-    = Ctx->getMachOSection("__DATA", "__thread_data",
-                           MachO::S_THREAD_LOCAL_REGULAR,
-                           SectionKind::getDataRel());
+      = Ctx->getMachOSection("__DATA", "__thread_data",
+                             MachO::S_THREAD_LOCAL_REGULAR,
+                             SectionKind::getData());
   TLSBSSSection // .tbss
     = Ctx->getMachOSection("__DATA", "__thread_bss",
                            MachO::S_THREAD_LOCAL_ZEROFILL,
@@ -93,14 +92,13 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
 
   // TODO: Verify datarel below.
   TLSTLVSection // .tlv
-    = Ctx->getMachOSection("__DATA", "__thread_vars",
-                           MachO::S_THREAD_LOCAL_VARIABLES,
-                           SectionKind::getDataRel());
+      = Ctx->getMachOSection("__DATA", "__thread_vars",
+                             MachO::S_THREAD_LOCAL_VARIABLES,
+                             SectionKind::getData());
 
-  TLSThreadInitSection
-    = Ctx->getMachOSection("__DATA", "__thread_init",
-                          MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
-                          SectionKind::getDataRel());
+  TLSThreadInitSection = Ctx->getMachOSection(
+      "__DATA", "__thread_init", MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
+      SectionKind::getData());
 
   CStringSection // .cstring
     = Ctx->getMachOSection("__TEXT", "__cstring",
@@ -145,10 +143,8 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
       = Ctx->getMachOSection("__TEXT", "__const_coal",
                              MachO::S_COALESCED,
                              SectionKind::getReadOnly());
-    DataCoalSection
-      = Ctx->getMachOSection("__DATA","__datacoal_nt",
-                             MachO::S_COALESCED,
-                             SectionKind::getDataRel());
+    DataCoalSection = Ctx->getMachOSection(
+        "__DATA", "__datacoal_nt", MachO::S_COALESCED, SectionKind::getData());
   } else {
     TextCoalSection = TextSection;
     ConstTextCoalSection = ReadOnlySection;
@@ -177,21 +173,17 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
                            SectionKind::getMetadata());
 
   if (RelocM == Reloc::Static) {
-    StaticCtorSection
-      = Ctx->getMachOSection("__TEXT", "__constructor", 0,
-                             SectionKind::getDataRel());
-    StaticDtorSection
-      = Ctx->getMachOSection("__TEXT", "__destructor", 0,
-                             SectionKind::getDataRel());
+    StaticCtorSection = Ctx->getMachOSection("__TEXT", "__constructor", 0,
+                                             SectionKind::getData());
+    StaticDtorSection = Ctx->getMachOSection("__TEXT", "__destructor", 0,
+                                             SectionKind::getData());
   } else {
-    StaticCtorSection
-      = Ctx->getMachOSection("__DATA", "__mod_init_func",
-                             MachO::S_MOD_INIT_FUNC_POINTERS,
-                             SectionKind::getDataRel());
-    StaticDtorSection
-      = Ctx->getMachOSection("__DATA", "__mod_term_func",
-                             MachO::S_MOD_TERM_FUNC_POINTERS,
-                             SectionKind::getDataRel());
+    StaticCtorSection = Ctx->getMachOSection("__DATA", "__mod_init_func",
+                                             MachO::S_MOD_INIT_FUNC_POINTERS,
+                                             SectionKind::getData());
+    StaticDtorSection = Ctx->getMachOSection("__DATA", "__mod_term_func",
+                                             MachO::S_MOD_TERM_FUNC_POINTERS,
+                                             SectionKind::getData());
   }
 
   // Exception Handling.
@@ -452,9 +444,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
   TLSBSSSection = Ctx->getELFSection(
       ".tbss", ELF::SHT_NOBITS, ELF::SHF_ALLOC | ELF::SHF_TLS | ELF::SHF_WRITE);
 
-  DataRelSection = Ctx->getELFSection(".data.rel", ELF::SHT_PROGBITS,
-                                      ELF::SHF_ALLOC | ELF::SHF_WRITE);
-
   DataRelROSection = Ctx->getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
@@ -556,7 +545,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
   EHFrameSection = Ctx->getCOFFSection(
       ".eh_frame", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                        COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-      SectionKind::getDataRel());
+      SectionKind::getData());
 
   bool IsWoA = T.getArch() == Triple::arm || T.getArch() == Triple::thumb;
 
@@ -576,7 +565,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
   DataSection = Ctx->getCOFFSection(
       ".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
                    COFF::IMAGE_SCN_MEM_WRITE,
-      SectionKind::getDataRel());
+      SectionKind::getData());
   ReadOnlySection = Ctx->getCOFFSection(
       ".rdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getReadOnly());
@@ -594,11 +583,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
     StaticCtorSection = Ctx->getCOFFSection(
         ".ctors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                       COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-        SectionKind::getDataRel());
+        SectionKind::getData());
     StaticDtorSection = Ctx->getCOFFSection(
         ".dtors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                       COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-        SectionKind::getDataRel());
+        SectionKind::getData());
   }
 
   // FIXME: We're emitting LSDA info into a readonly section on COFF, even
@@ -751,11 +740,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
 
   PDataSection = Ctx->getCOFFSection(
       ".pdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getDataRel());
+      SectionKind::getData());
 
   XDataSection = Ctx->getCOFFSection(
       ".xdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getDataRel());
+      SectionKind::getData());
 
   SXDataSection = Ctx->getCOFFSection(".sxdata", COFF::IMAGE_SCN_LNK_INFO,
                                       SectionKind::getMetadata());
@@ -763,7 +752,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
   TLSDataSection = Ctx->getCOFFSection(
       ".tls$", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
                    COFF::IMAGE_SCN_MEM_WRITE,
-      SectionKind::getDataRel());
+      SectionKind::getData());
 
   StackMapSection = Ctx->getCOFFSection(".llvm_stackmaps",
                                         COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |

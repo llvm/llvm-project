@@ -390,9 +390,8 @@ bool DarwinAsmParser::parseSectionSwitch(const char *Segment,
   // FIXME: Arch specific.
   bool isText = TAA & MachO::S_ATTR_PURE_INSTRUCTIONS;
   getStreamer().SwitchSection(getContext().getMachOSection(
-                                Segment, Section, TAA, StubSize,
-                                isText ? SectionKind::getText()
-                                       : SectionKind::getDataRel()));
+      Segment, Section, TAA, StubSize,
+      isText ? SectionKind::getText() : SectionKind::getData()));
 
   // Set the implicit alignment, if any.
   //
@@ -614,9 +613,8 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
   // FIXME: Arch specific.
   bool isText = Segment == "__TEXT";  // FIXME: Hack.
   getStreamer().SwitchSection(getContext().getMachOSection(
-                                Segment, Section, TAA, StubSize,
-                                isText ? SectionKind::getText()
-                                : SectionKind::getDataRel()));
+      Segment, Section, TAA, StubSize,
+      isText ? SectionKind::getText() : SectionKind::getData()));
   return false;
 }
 

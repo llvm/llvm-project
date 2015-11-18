@@ -833,8 +833,12 @@ static bool translateRM(MCInst &mcInst, const OperandSpecifier &operand,
   case TYPE_XMM256:
   case TYPE_XMM512:
   case TYPE_VK1:
+  case TYPE_VK2:
+  case TYPE_VK4:
   case TYPE_VK8:
   case TYPE_VK16:
+  case TYPE_VK32:
+  case TYPE_VK64:
   case TYPE_DEBUGREG:
   case TYPE_CONTROLREG:
   case TYPE_BNDR:

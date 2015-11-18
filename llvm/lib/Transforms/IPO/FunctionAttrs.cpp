@@ -154,7 +154,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, AAResults &AAR,
       for (CallSite::arg_iterator CI = CS.arg_begin(), CE = CS.arg_end();
            CI != CE; ++CI) {
         Value *Arg = *CI;
-        if (!Arg->getType()->isPointerTy())
+        if (!Arg->getType()->isPtrOrPtrVectorTy())
           continue;
 
         AAMDNodes AAInfo;

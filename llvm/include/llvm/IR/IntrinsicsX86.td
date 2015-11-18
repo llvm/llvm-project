@@ -22,6 +22,9 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 let TargetPrefix = "x86" in {
   def int_x86_seh_lsda : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [IntrNoMem]>;
 
+  // Marks the EH registration node created in LLVM IR prior to code generation.
+  def int_x86_seh_ehregnode : Intrinsic<[], [llvm_ptr_ty], []>;
+
   // Restores the frame, base, and stack pointers as necessary after recovering
   // from an exception. Any block resuming control flow in the parent function
   // should call this before accessing any stack memory.
@@ -4952,6 +4955,24 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
   def int_x86_avx512_pbroadcastq_i64_512 :
          Intrinsic<[llvm_v8i64_ty], [llvm_i64_ty], [IntrNoMem]>;
+   def int_x86_avx512_broadcastmw_512 :
+          GCCBuiltin<"__builtin_ia32_broadcastmw512">,
+          Intrinsic<[llvm_v16i32_ty], [llvm_i16_ty], [IntrNoMem]>;
+   def int_x86_avx512_broadcastmw_256 :
+          GCCBuiltin<"__builtin_ia32_broadcastmw256">,
+          Intrinsic<[llvm_v8i32_ty], [llvm_i16_ty], [IntrNoMem]>;
+   def int_x86_avx512_broadcastmw_128 :
+          GCCBuiltin<"__builtin_ia32_broadcastmw128">,
+          Intrinsic<[llvm_v4i32_ty], [llvm_i16_ty], [IntrNoMem]>;
+   def int_x86_avx512_broadcastmb_512 :
+          GCCBuiltin<"__builtin_ia32_broadcastmb512">,
+          Intrinsic<[llvm_v8i64_ty], [llvm_i8_ty], [IntrNoMem]>;
+   def int_x86_avx512_broadcastmb_256 :
+          GCCBuiltin<"__builtin_ia32_broadcastmb256">,
+          Intrinsic<[llvm_v4i64_ty], [llvm_i8_ty], [IntrNoMem]>;
+   def int_x86_avx512_broadcastmb_128 :
+          GCCBuiltin<"__builtin_ia32_broadcastmb128">,
+          Intrinsic<[llvm_v2i64_ty], [llvm_i8_ty], [IntrNoMem]>;
 }
 
 // Vector sign and zero extend

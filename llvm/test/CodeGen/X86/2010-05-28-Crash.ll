@@ -46,7 +46,7 @@ entry:
 !18 = !DIFile(filename: "f.c", directory: "/tmp")
 !19 = !{}
 
-;CHECK: DEBUG_VALUE: bar:x <- E
+;CHECK: DEBUG_VALUE: bar:x <- %E
 ;CHECK: Ltmp
 ;CHECK:	DEBUG_VALUE: foo:y <- 1{{$}}
 !20 = !{i32 1, !"Debug Info Version", i32 3}

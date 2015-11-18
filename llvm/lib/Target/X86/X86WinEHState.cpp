@@ -66,17 +66,12 @@ private:
 
   void linkExceptionRegistration(IRBuilder<> &Builder, Function *Handler);
   void unlinkExceptionRegistration(IRBuilder<> &Builder);
-  void addCXXStateStores(Function &F, WinEHFuncInfo &FuncInfo);
-  void addSEHStateStores(Function &F, WinEHFuncInfo &FuncInfo);
-  void addStateStoresToFunclet(Value *ParentRegNode, WinEHFuncInfo &FuncInfo,
-                               Function &F, int BaseState);
+  void addStateStores(Function &F, WinEHFuncInfo &FuncInfo);
   void insertStateNumberStore(Value *ParentRegNode, Instruction *IP, int State);
 
   Value *emitEHLSDA(IRBuilder<> &Builder, Function *F);
 
   Function *generateLSDAInEAXThunk(Function *ParentFunc);
-
-  int escapeRegNode(Function &F);
 
   // Module-level type getters.
   Type *getEHLinkRegistrationType();
@@ -178,26 +173,13 @@ bool WinEHStatePass::runOnFunction(Function &F) {
 
   emitExceptionRegistrationRecord(&F);
 
-  auto *MMI = getAnalysisIfAvailable<MachineModuleInfo>();
-  // If MMI is null, create our own WinEHFuncInfo.  This only happens in opt
-  // tests.
-  std::unique_ptr<WinEHFuncInfo> FuncInfoPtr;
-  if (!MMI)
-    FuncInfoPtr.reset(new WinEHFuncInfo());
-  WinEHFuncInfo &FuncInfo =
-      *(MMI ? &MMI->getWinEHFuncInfo(&F) : FuncInfoPtr.get());
-
-  FuncInfo.EHRegNode = RegNode;
-
-  switch (Personality) {
-  default: llvm_unreachable("unexpected personality function");
-  case EHPersonality::MSVC_CXX:
-    addCXXStateStores(F, FuncInfo);
-    break;
-  case EHPersonality::MSVC_X86SEH:
-    addSEHStateStores(F, FuncInfo);
-    break;
-  }
+  // The state numbers calculated here in IR must agree with what we calculate
+  // later on for the MachineFunction. In particular, if an IR pass deletes an
+  // unreachable EH pad after this point before machine CFG construction, we
+  // will be in trouble. If this assumption is ever broken, we should turn the
+  // numbers into an immutable analysis pass.
+  WinEHFuncInfo FuncInfo;
+  addStateStores(F, FuncInfo);
 
   // Reset per-function state.
   PersonalityFn = nullptr;
@@ -418,65 +400,21 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
   Builder.CreateStore(Next, FSZero);
 }
 
-void WinEHStatePass::addCXXStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
-  // Set up RegNodeEscapeIndex
-  int RegNodeEscapeIndex = escapeRegNode(F);
-  FuncInfo.EHRegNodeEscapeIndex = RegNodeEscapeIndex;
+void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
+  // Mark the registration node. The backend needs to know which alloca it is so
+  // that it can recover the original frame pointer.
+  IRBuilder<> Builder(RegNode->getParent(), std::next(RegNode->getIterator()));
+  Value *RegNodeI8 = Builder.CreateBitCast(RegNode, Builder.getInt8PtrTy());
+  Builder.CreateCall(
+      Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_ehregnode),
+      {RegNodeI8});
 
-  calculateWinCXXEHStateNumbers(&F, FuncInfo);
-  addStateStoresToFunclet(RegNode, FuncInfo, F, -1);
-}
+  // Calculate state numbers.
+  if (isAsynchronousEHPersonality(Personality))
+    calculateSEHStateNumbers(&F, FuncInfo);
+  else
+    calculateWinCXXEHStateNumbers(&F, FuncInfo);
 
-/// Assign every distinct landingpad a unique state number for SEH. Unlike C++
-/// EH, we can use this very simple algorithm while C++ EH cannot because catch
-/// handlers aren't outlined and the runtime doesn't have to figure out which
-/// catch handler frame to unwind to.
-void WinEHStatePass::addSEHStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
-  // Remember and return the index that we used. We save it in WinEHFuncInfo so
-  // that we can lower llvm.x86.seh.recoverfp later in filter functions without
-  // too much trouble.
-  int RegNodeEscapeIndex = escapeRegNode(F);
-  FuncInfo.EHRegNodeEscapeIndex = RegNodeEscapeIndex;
-
-  calculateSEHStateNumbers(&F, FuncInfo);
-  addStateStoresToFunclet(RegNode, FuncInfo, F, -1);
-}
-
-/// Escape RegNode so that we can access it from child handlers. Find the call
-/// to localescape, if any, in the entry block and append RegNode to the list
-/// of arguments.
-int WinEHStatePass::escapeRegNode(Function &F) {
-  // Find the call to localescape and extract its arguments.
-  IntrinsicInst *EscapeCall = nullptr;
-  for (Instruction &I : F.getEntryBlock()) {
-    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-    if (II && II->getIntrinsicID() == Intrinsic::localescape) {
-      EscapeCall = II;
-      break;
-    }
-  }
-  SmallVector<Value *, 8> Args;
-  if (EscapeCall) {
-    auto Ops = EscapeCall->arg_operands();
-    Args.append(Ops.begin(), Ops.end());
-  }
-  Args.push_back(RegNode);
-
-  // Replace the call (if it exists) with new one. Otherwise, insert at the end
-  // of the entry block.
-  Instruction *InsertPt = EscapeCall;
-  if (!EscapeCall)
-    InsertPt = F.getEntryBlock().getTerminator();
-  IRBuilder<> Builder(InsertPt);
-  Builder.CreateCall(FrameEscape, Args);
-  if (EscapeCall)
-    EscapeCall->eraseFromParent();
-  return Args.size() - 1;
-}
-
-void WinEHStatePass::addStateStoresToFunclet(Value *ParentRegNode,
-                                             WinEHFuncInfo &FuncInfo,
-                                             Function &F, int BaseState) {
   // Iterate all the instructions and emit state number stores.
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
@@ -485,14 +423,14 @@ void WinEHStatePass::addStateStoresToFunclet(Value *ParentRegNode,
         // an unwind. Ensure they are in the -1 state.
         if (CI->doesNotThrow())
           continue;
-        insertStateNumberStore(ParentRegNode, CI, BaseState);
+        insertStateNumberStore(RegNode, CI, -1);
       } else if (auto *II = dyn_cast<InvokeInst>(&I)) {
         // Look up the state number of the landingpad this unwinds to.
         Instruction *PadInst = II->getUnwindDest()->getFirstNonPHI();
         // FIXME: Why does this assertion fail?
         //assert(FuncInfo.EHPadStateMap.count(PadInst) && "EH Pad has no state!");
         int State = FuncInfo.EHPadStateMap[PadInst];
-        insertStateNumberStore(ParentRegNode, II, State);
+        insertStateNumberStore(RegNode, II, State);
       }
     }
   }

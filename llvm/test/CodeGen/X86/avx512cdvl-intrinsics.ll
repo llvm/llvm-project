@@ -146,3 +146,34 @@ define <4 x i64>@test_int_x86_avx512_mask_vpconflict_q_256(<4 x i64> %x0, <4 x i
   ret <4 x i64> %res2
 }
 
+define <8 x i32> @test_x86_vbroadcastmw_256(i16 %a0) {
+  ; CHECK: test_x86_vbroadcastmw_256
+  ; CHECK: vpbroadcastmw2d %k0, %ymm0
+  %res = call <8 x i32> @llvm.x86.avx512.broadcastmw.256(i16 %a0) ; 
+  ret <8 x i32> %res
+}
+declare <8 x i32> @llvm.x86.avx512.broadcastmw.256(i16)
+
+define <4 x i32> @test_x86_vbroadcastmw_128(i16 %a0) {
+  ; CHECK: test_x86_vbroadcastmw_128
+  ; CHECK: vpbroadcastmw2d %k0, %xmm0
+  %res = call <4 x i32> @llvm.x86.avx512.broadcastmw.128(i16 %a0) ; 
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.x86.avx512.broadcastmw.128(i16)
+
+define <4 x i64> @test_x86_broadcastmb_256(i8 %a0) {
+  ; CHECK: test_x86_broadcastmb_256
+  ; CHECK: vpbroadcastmb2q %k0, %ymm0
+  %res = call <4 x i64> @llvm.x86.avx512.broadcastmb.256(i8 %a0) ; 
+  ret <4 x i64> %res
+}
+declare <4 x i64> @llvm.x86.avx512.broadcastmb.256(i8)
+
+define <2 x i64> @test_x86_broadcastmb_128(i8 %a0) {
+  ; CHECK: test_x86_broadcastmb_128
+  ; CHECK: vpbroadcastmb2q %k0, %xmm0
+  %res = call <2 x i64> @llvm.x86.avx512.broadcastmb.128(i8 %a0) ; 
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.avx512.broadcastmb.128(i8)

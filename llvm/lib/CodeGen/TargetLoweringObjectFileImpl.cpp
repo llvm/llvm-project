@@ -233,10 +233,8 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
     return ".tdata";
   if (Kind.isThreadBSS())
     return ".tbss";
-  if (Kind.isDataNoRel())
+  if (Kind.isData())
     return ".data";
-  if (Kind.isDataRel())
-    return ".data.rel";
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return ".data.rel.ro";
 }
@@ -502,7 +500,7 @@ emitModuleFlags(MCStreamer &Streamer,
 
   // Get the section.
   MCSectionMachO *S = getContext().getMachOSection(
-      Segment, Section, TAA, StubSize, SectionKind::getDataNoRel());
+      Segment, Section, TAA, StubSize, SectionKind::getData());
   Streamer.SwitchSection(S);
   Streamer.EmitLabel(getContext().
                      getOrCreateSymbol(StringRef("L_OBJC_IMAGE_INFO")));
@@ -635,7 +633,7 @@ MCSection *TargetLoweringObjectFileMachO::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C) const {
   // If this constant requires a relocation, we have to put it in the data
   // segment, not in the text segment.
-  if (Kind.isDataRel() || Kind.isReadOnlyWithRel())
+  if (Kind.isData() || Kind.isReadOnlyWithRel())
     return ConstDataSection;
 
   if (Kind.isMergeableConst4())

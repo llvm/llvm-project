@@ -1113,30 +1113,27 @@ def : Pat<(v8f64 (X86VBroadcast FR64X:$src)),
 //===----------------------------------------------------------------------===//
 // AVX-512 BROADCAST MASK TO VECTOR REGISTER
 //---
-
-multiclass avx512_mask_broadcast<bits<8> opc, string OpcodeStr,
-                       RegisterClass KRC> {
-let Predicates = [HasCDI] in
-def Zrr : AVX512XS8I<opc, MRMSrcReg, (outs VR512:$dst), (ins KRC:$src),
+multiclass avx512_mask_broadcastm<bits<8> opc, string OpcodeStr,
+                                  X86VectorVTInfo _, RegisterClass KRC> {
+  def rr : AVX512XS8I<opc, MRMSrcReg, (outs _.RC:$dst), (ins KRC:$src),
                   !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                  []>, EVEX, EVEX_V512;
-
-let Predicates = [HasCDI, HasVLX] in {
-def Z128rr : AVX512XS8I<opc, MRMSrcReg, (outs VR128X:$dst), (ins KRC:$src),
-                  !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                  []>, EVEX, EVEX_V128;
-def Z256rr : AVX512XS8I<opc, MRMSrcReg, (outs VR256X:$dst), (ins KRC:$src),
-                  !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                  []>, EVEX, EVEX_V256;
-}
+                  [(set _.RC:$dst, (_.VT (X86VBroadcastm KRC:$src)))]>, EVEX;
 }
 
-let Predicates = [HasCDI] in {
+multiclass avx512_mask_broadcast<bits<8> opc, string OpcodeStr, 
+                                 AVX512VLVectorVTInfo VTInfo, RegisterClass KRC> {
+  let Predicates = [HasCDI] in
+    defm Z : avx512_mask_broadcastm<opc, OpcodeStr, VTInfo.info512, KRC>, EVEX_V512;
+  let Predicates = [HasCDI, HasVLX] in {
+    defm Z256 : avx512_mask_broadcastm<opc, OpcodeStr, VTInfo.info256, KRC>, EVEX_V256;
+    defm Z128 : avx512_mask_broadcastm<opc, OpcodeStr, VTInfo.info128, KRC>, EVEX_V128;
+  }
+}
+
 defm VPBROADCASTMW2D : avx512_mask_broadcast<0x3A, "vpbroadcastmw2d",
-                                             VK16>;
+                                               avx512vl_i32_info, VK16>;
 defm VPBROADCASTMB2Q : avx512_mask_broadcast<0x2A, "vpbroadcastmb2q",
-                                             VK8>, VEX_W;
-}
+                                               avx512vl_i64_info, VK8>, VEX_W;
 
 //===----------------------------------------------------------------------===//
 // -- VPERM2I - 3 source operands form --
@@ -7198,6 +7195,11 @@ multiclass avx512_extract_elt_w<string OpcodeStr, X86VectorVTInfo _> {
                   [(set GR32orGR64:$dst,
                         (X86pextrw (_.VT _.RC:$src1), imm:$src2))]>,
                   EVEX, PD;
+
+    def rr_REV : AVX512Ii8<0x15, MRMDestReg, (outs GR32orGR64:$dst),
+                   (ins _.RC:$src1, u8imm:$src2),
+                   OpcodeStr#".s\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
+                   EVEX, TAPD;
 
     defm NAME : avx512_extract_elt_bw_m<0x15, OpcodeStr, X86pextrw, _>, TAPD;
   }

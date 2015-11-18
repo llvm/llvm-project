@@ -48,8 +48,7 @@ public:
   void Initialize(MCContext &ctx, const TargetMachine &TM) override {
     TargetLoweringObjectFile::Initialize(ctx, TM);
     TextSection = new NVPTXSection(MCSection::SV_ELF, SectionKind::getText());
-    DataSection =
-        new NVPTXSection(MCSection::SV_ELF, SectionKind::getDataRel());
+    DataSection = new NVPTXSection(MCSection::SV_ELF, SectionKind::getData());
     BSSSection = new NVPTXSection(MCSection::SV_ELF, SectionKind::getBSS());
     ReadOnlySection =
         new NVPTXSection(MCSection::SV_ELF, SectionKind::getReadOnly());

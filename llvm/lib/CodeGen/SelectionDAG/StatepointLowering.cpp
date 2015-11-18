@@ -333,13 +333,17 @@ lowerCallFromStatepoint(ImmutableStatepoint ISP, const BasicBlock *EHPadBB,
   //   ch, glue = callseq_end ch, glue
   //   get_return_value ch, glue
   //
-  // get_return_value can either be a CopyFromReg to grab the return value from
-  // %RAX, or it can be a LOAD to load a value returned by reference via a stack
-  // slot.
+  // get_return_value can either be a sequence of CopyFromReg instructions
+  // to grab the return value from the return register(s), or it can be a LOAD
+  // to load a value returned by reference via a stack slot.
 
-  if (HasDef && (CallEnd->getOpcode() == ISD::CopyFromReg ||
-                 CallEnd->getOpcode() == ISD::LOAD))
-    CallEnd = CallEnd->getOperand(0).getNode();
+  if (HasDef) {
+    if (CallEnd->getOpcode() == ISD::LOAD)
+      CallEnd = CallEnd->getOperand(0).getNode();
+    else
+      while (CallEnd->getOpcode() == ISD::CopyFromReg)
+        CallEnd = CallEnd->getOperand(0).getNode();
+  }
 
   assert(CallEnd->getOpcode() == ISD::CALLSEQ_END && "expected!");
 

@@ -46,7 +46,8 @@ public:
 protected:
   virtual void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                          const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-                         StringRef SOS, StringRef AOS, bool isLittleEndian) = 0;
+                         StringRef SOS, StringRef AOS, StringRef LS,
+                         bool isLittleEndian) = 0;
 
   ~DWARFUnitSectionBase() = default;
 };
@@ -83,16 +84,16 @@ public:
 private:
   void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                  const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-                 StringRef SOS, StringRef AOS, bool LE) override {
+                 StringRef SOS, StringRef AOS, StringRef LS, bool LE) override {
     if (Parsed)
       return;
     const auto &Index = getDWARFUnitIndex(Context, UnitType::Section);
     DataExtractor Data(Section.Data, LE, 0);
     uint32_t Offset = 0;
     while (Data.isValidOffset(Offset)) {
-      auto U =
-          llvm::make_unique<UnitType>(Context, Section, DA, RS, SS, SOS, AOS,
-                                      LE, *this, Index.getFromOffset(Offset));
+      auto U = llvm::make_unique<UnitType>(Context, Section, DA, RS, SS, SOS,
+                                           AOS, LS, LE, *this,
+                                           Index.getFromOffset(Offset));
       if (!U->extract(Data, &Offset))
         break;
       this->push_back(std::move(U));
@@ -110,6 +111,7 @@ class DWARFUnit {
   const DWARFDebugAbbrev *Abbrev;
   StringRef RangeSection;
   uint32_t RangeSectionBase;
+  StringRef LineSection;
   StringRef StringSection;
   StringRef StringOffsetSection;
   StringRef AddrOffsetSection;
@@ -146,7 +148,7 @@ protected:
 public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
             const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-            StringRef SOS, StringRef AOS, bool LE,
+            StringRef SOS, StringRef AOS, StringRef LS, bool LE,
             const DWARFUnitSectionBase &UnitSection,
             const DWARFUnitIndex::Entry *IndexEntry = nullptr);
 
@@ -154,6 +156,7 @@ public:
 
   DWARFContext& getContext() const { return Context; }
 
+  StringRef getLineSection() const { return LineSection; }
   StringRef getStringSection() const { return StringSection; }
   StringRef getStringOffsetSection() const { return StringOffsetSection; }
   void setAddrOffsetSection(StringRef AOS, uint32_t Base) {
@@ -251,10 +254,17 @@ public:
     assert(!DieArray.empty());
     auto it = std::lower_bound(
         DieArray.begin(), DieArray.end(), Offset,
-        [=](const DWARFDebugInfoEntryMinimal &LHS, uint32_t Offset) {
+        [](const DWARFDebugInfoEntryMinimal &LHS, uint32_t Offset) {
           return LHS.getOffset() < Offset;
         });
     return it == DieArray.end() ? nullptr : &*it;
+  }
+
+  uint32_t getLineTableOffset() const {
+    if (IndexEntry)
+      if (const auto *Contrib = IndexEntry->getOffset(DW_SECT_LINE))
+        return Contrib->Offset;
+    return 0;
   }
 
 private:

@@ -98,11 +98,10 @@ class COFFAsmParser : public MCAsmParserExtension {
                               SectionKind::getText());
   }
   bool ParseSectionDirectiveData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data",
-                              COFF::IMAGE_SCN_CNT_INITIALIZED_DATA
-                            | COFF::IMAGE_SCN_MEM_READ
-                            | COFF::IMAGE_SCN_MEM_WRITE,
-                              SectionKind::getDataRel());
+    return ParseSectionSwitch(".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                           COFF::IMAGE_SCN_MEM_READ |
+                                           COFF::IMAGE_SCN_MEM_WRITE,
+                              SectionKind::getData());
   }
   bool ParseSectionDirectiveBSS(StringRef, SMLoc) {
     return ParseSectionSwitch(".bss",
@@ -153,7 +152,7 @@ static SectionKind computeSectionKind(unsigned Flags) {
   if (Flags & COFF::IMAGE_SCN_MEM_READ &&
       (Flags & COFF::IMAGE_SCN_MEM_WRITE) == 0)
     return SectionKind::getReadOnly();
-  return SectionKind::getDataRel();
+  return SectionKind::getData();
 }
 
 bool COFFAsmParser::ParseSectionFlags(StringRef FlagsString, unsigned* Flags) {

@@ -74,6 +74,10 @@ struct ClonedCodeInfo {
   /// size.
   bool ContainsDynamicAllocas;
 
+  /// All cloned call sites that have operand bundles attached are appended to
+  /// this vector.
+  std::vector<AssertingVH<Instruction>> OperandBundleCallSites;
+
   ClonedCodeInfo() : ContainsCalls(false), ContainsDynamicAllocas(false) {}
 };
 

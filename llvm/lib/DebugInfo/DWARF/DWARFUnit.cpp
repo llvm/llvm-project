@@ -20,7 +20,7 @@ using namespace dwarf;
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
   parseImpl(C, Section, C.getDebugAbbrev(), C.getRangeSection(),
             C.getStringSection(), StringRef(), C.getAddrSection(),
-            C.isLittleEndian());
+            C.getLineSection().Data, C.isLittleEndian());
 }
 
 void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
@@ -28,17 +28,23 @@ void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
                                     DWARFUnitIndex *Index) {
   parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), C.getRangeDWOSection(),
             C.getStringDWOSection(), C.getStringOffsetDWOSection(),
-            C.getAddrSection(), C.isLittleEndian());
+            C.getAddrSection(), C.getLineDWOSection().Data, C.isLittleEndian());
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-                     StringRef SOS, StringRef AOS, bool LE,
+                     StringRef SOS, StringRef AOS, StringRef LS, bool LE,
                      const DWARFUnitSectionBase &UnitSection,
                      const DWARFUnitIndex::Entry *IndexEntry)
     : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
-      StringSection(SS), StringOffsetSection(SOS), AddrOffsetSection(AOS),
-      isLittleEndian(LE), UnitSection(UnitSection), IndexEntry(IndexEntry) {
+      LineSection(LS), StringSection(SS), StringOffsetSection([&]() {
+        if (IndexEntry)
+          if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
+            return SOS.slice(C->Offset, C->Offset + C->Length);
+        return SOS;
+      }()),
+      AddrOffsetSection(AOS), isLittleEndian(LE), UnitSection(UnitSection),
+      IndexEntry(IndexEntry) {
   clear();
 }
 

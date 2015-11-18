@@ -5,10 +5,13 @@
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
+%struct = type { i64, i64 }
+
 declare zeroext i1 @return_i1()
 declare zeroext i32 @return_i32()
 declare i32* @return_i32ptr()
 declare float @return_float()
+declare %struct @return_struct()
 declare void @varargf(i32, ...)
 
 define i1 @test_i1_return() gc "statepoint-example" {
@@ -61,12 +64,24 @@ entry:
   ret float %call1
 }
 
+define %struct @test_struct_return() gc "statepoint-example" {
+; CHECK-LABEL: test_struct_return
+; CHECK: pushq %rax
+; CHECK: callq return_struct
+; CHECK: popq %rcx
+; CHECK: retq
+entry:
+  %safepoint_token = tail call i32 (i64, i32, %struct ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_structf(i64 0, i32 0, %struct ()* @return_struct, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call %struct @llvm.experimental.gc.result.struct(i32 %safepoint_token)
+  ret %struct %call1
+}
+
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-LABEL: test_relocate
 ; Check that an ununsed relocate has no code-generation impact
 ; CHECK: pushq %rax
 ; CHECK: callq return_i1
-; CHECK-NEXT: .Ltmp9:
+; CHECK-NEXT: .Ltmp11:
 ; CHECK-NEXT: popq %rdx
 ; CHECK-NEXT: retq
 entry:
@@ -136,6 +151,9 @@ declare i32* @llvm.experimental.gc.result.p0i32(i32)
 
 declare i32 @llvm.experimental.gc.statepoint.p0f_f32f(i64, i32, float ()*, i32, i32, ...)
 declare float @llvm.experimental.gc.result.f32(i32)
+
+declare i32 @llvm.experimental.gc.statepoint.p0f_structf(i64, i32, %struct ()*, i32, i32, ...)
+declare %struct @llvm.experimental.gc.result.struct(i32)
 
 declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidi32varargf(i64, i32, void (i32, ...)*, i32, i32, ...)
 

@@ -210,7 +210,7 @@ class TraceState {
   }
   bool RecordingTraces = false;
   std::vector<TraceBasedMutation> Mutations;
-  LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)] = {};
+  LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
   const Fuzzer::FuzzingOptions &Options;
   const Unit &CurrentUnit;
 };

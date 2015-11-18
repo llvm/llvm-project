@@ -403,6 +403,8 @@ namespace llvm {
       VFPCLASS, 
       // Broadcast scalar to vector
       VBROADCAST,
+      // Broadcast mask to vector
+      VBROADCASTM,
       // Broadcast subvector to vector
       SUBV_BROADCAST,
       // Insert/Extract vector element
