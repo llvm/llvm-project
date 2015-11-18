@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -O3 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
 
-#pragma STDC FP_CONTRACT OFF
-
 // Is FP_CONTRACT is honored in a simple case?
 float fp_contract_1(float a, float b, float c) {
 // CHECK: _Z13fp_contract_1fff

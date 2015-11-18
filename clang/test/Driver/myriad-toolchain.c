@@ -68,6 +68,7 @@
 // STDLIBCXX: "-lstdc++" "-lc" "-lgcc"
 
 // RUN: %clang -target sparc-myriad -### -nostdlib %s 2>&1 | FileCheck %s --check-prefix=NOSTDLIB
+// NOSTDLIB-NOT: crtbegin.o
 // NOSTDLIB-NOT: "-lc"
 
 // RUN: %clang -### -c -g %s -target sparc-myriad 2>&1 | FileCheck -check-prefix=G_SPARC %s

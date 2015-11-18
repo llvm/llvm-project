@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 %s -Wno-private-extern -triple i386-pc-linux-gnu -verify -fsyntax-only
 
 
-
 void f() {
   int i;
 
@@ -154,10 +153,13 @@ double test15() {
 // PR19837
 struct foo {
   int a;
-  char b;
 };
-register struct foo bar asm("sp"); // expected-error {{bad type for named register variable}}
-register float baz asm("sp"); // expected-error {{bad type for named register variable}}
+register struct foo bar asm("esp"); // expected-error {{bad type for named register variable}}
+register float baz asm("esp"); // expected-error {{bad type for named register variable}}
+
+register int r0 asm ("edi"); // expected-error {{register 'edi' unsuitable for global register variables on this target}}
+register long long r1 asm ("esp"); // expected-error {{size of register 'esp' does not match variable size}}
+register int r2 asm ("esp");
 
 double f_output_constraint(void) {
   double result;
@@ -212,7 +214,7 @@ typedef struct test16_foo {
   unsigned int field3 : 3;
 } test16_foo;
 typedef __attribute__((vector_size(16))) int test16_bar;
-register int test16_baz asm("rbx");
+register int test16_baz asm("esp");
 
 void test16()
 {

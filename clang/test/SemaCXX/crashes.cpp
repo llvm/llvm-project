@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // <rdar://problem/8124080>
 template<typename _Alloc> class allocator;
@@ -31,7 +33,11 @@ template<typename T> struct a : T {
 namespace rdar8605381 {
 struct X {};
 
-struct Y { // expected-note{{candidate}}
+struct Y { // expected-note{{candidate constructor (the implicit copy constructor) not viable}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 {{candidate constructor (the implicit move constructor) not viable}}
+#endif
+
   Y();
 };
 

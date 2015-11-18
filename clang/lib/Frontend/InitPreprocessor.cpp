@@ -411,6 +411,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)
     Builder.defineMacro("__ASSEMBLER__");
+  if (LangOpts.CUDA)
+    Builder.defineMacro("__CUDA__");
 }
 
 /// Initialize the predefined C++ language feature test macros defined in

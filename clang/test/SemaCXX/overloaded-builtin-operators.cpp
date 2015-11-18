@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fshow-overloads=best -verify -triple x86_64-linux-gnu %s
+// RUN: %clang_cc1 -fsyntax-only -fshow-overloads=best -verify -triple x86_64-linux-gnu -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -fshow-overloads=best -verify -triple x86_64-linux-gnu -std=c++11 %s
 
 struct yes;
 struct no;
@@ -60,7 +62,10 @@ void f(Short s, Long l, Enum1 e1, Enum2 e2, Xpmf pmf) {
   // FIXME: should pass (void)static_cast<no&>(islong(e1 % e2));
 }
 
-struct ShortRef { // expected-note{{candidate function (the implicit copy assignment operator)}}
+struct ShortRef { // expected-note{{candidate function (the implicit copy assignment operator) not viable}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 {{candidate function (the implicit move assignment operator) not viable}}
+#endif
   operator short&();
 };
 
@@ -68,7 +73,10 @@ struct LongRef {
   operator volatile long&();
 };
 
-struct XpmfRef { // expected-note{{candidate function (the implicit copy assignment operator)}}
+struct XpmfRef { // expected-note{{candidate function (the implicit copy assignment operator) not viable}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 {{candidate function (the implicit move assignment operator) not viable}}
+#endif
   operator pmf&();
 };
 

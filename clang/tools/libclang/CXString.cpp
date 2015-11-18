@@ -186,6 +186,8 @@ void clang_disposeString(CXString string) {
 }
 
 void clang_disposeStringSet(CXStringSet *set) {
+  for (unsigned SI = 0, SE = set->Count; SI < SE; ++SI)
+    clang_disposeString(set->Strings[SI]);
   delete[] set->Strings;
   delete set;
 }

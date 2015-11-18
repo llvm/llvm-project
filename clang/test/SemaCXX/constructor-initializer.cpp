@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -Wreorder -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wreorder -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -Wreorder -fsyntax-only -verify -std=c++11 %s
+
 class A { 
   int m;
 public:
@@ -98,9 +101,11 @@ struct Current : Derived {
                                                   // expected-error {{member initializer 'NonExisting' does not name a non-static data member or}}
 };
 
-struct M {              // expected-note 2 {{candidate constructor (the implicit copy constructor)}} \
-                        // expected-note {{declared here}} \
-                        // expected-note {{declared here}}
+struct M {              // expected-note 2 {{candidate constructor (the implicit copy constructor)}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 2 {{candidate constructor (the implicit move constructor) not viable}}
+#endif
+// expected-note@-4 2 {{'M' declared here}}
   M(int i, int j);      // expected-note 2 {{candidate constructor}}
 };
 
@@ -233,7 +238,13 @@ namespace PR7402 {
 // <rdar://problem/8308215>: don't crash.
 // Lots of questionable recovery here;  errors can change.
 namespace test3 {
-  class A : public std::exception {}; // expected-error {{undeclared identifier}} expected-error {{expected class name}} expected-note 2 {{candidate}}
+  class A : public std::exception {}; // expected-error {{undeclared identifier}} expected-error {{expected class name}}
+  // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable}}
+#if __cplusplus >= 201103L // C++11 or later
+  // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable}}
+#endif
+  // expected-note@-5 {{candidate constructor (the implicit default constructor) not viable}}
+
   class B : public A {
   public:
     B(const String& s, int e=0) // expected-error {{unknown type name}} 
