@@ -33,6 +33,7 @@ if (NOT LLDB_DISABLE_PYTHON)
     add_custom_target( finish_swig ALL
         COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py "--srcRoot=${LLDB_SOURCE_DIR}" "--targetDir=${CMAKE_CURRENT_BINARY_DIR}/scripts" "--cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}/scripts" "--prefix=${CMAKE_BINARY_DIR}" "--cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}" -m
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
     # We depend on liblldb being built before we can do this step.
     add_dependencies(finish_swig liblldb lldb-argdumper)
