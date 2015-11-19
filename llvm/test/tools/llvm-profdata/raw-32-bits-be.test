@@ -1,27 +1,36 @@
 RUN: printf '\377lprofR\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\1' >> %t
+RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\3' >> %t
 RUN: printf '\0\0\0\0\0\0\0\6' >> %t
 RUN: printf '\0\0\0\0\1\0\0\0' >> %t
 RUN: printf '\0\0\0\0\2\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\0\0\0\3' >> %t
 RUN: printf '\0\0\0\1' >> %t
 RUN: printf '\0\0\0\0\0\0\0\1' >> %t
 RUN: printf '\2\0\0\0' >> %t
 RUN: printf '\1\0\0\0' >> %t
+RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\0\0\0\3' >> %t
 RUN: printf '\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\2\0\0\03' >> %t
 RUN: printf '\1\0\0\10' >> %t
+RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\0\0\0\0\0\0\0\023' >> %t
 RUN: printf '\0\0\0\0\0\0\0\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\101' >> %t
-RUN: printf 'foobar' >> %t
+RUN: printf 'foobar\0\0' >> %t
 
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s
 

@@ -522,10 +522,10 @@ bb1:
 
 ; CHECK-LABEL: realign_conditional2
 ; Extra realignment in the prologue (performance issue).
+; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
 ; CHECK:  sub  x9, sp, #32            // =32
 ; CHECK:  and  sp, x9, #0xffffffffffffffe0
 ; CHECK:  mov   x19, sp
-; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
 ; Stack is realigned in a non-entry BB.
 ; CHECK:  sub  [[REG:x[01-9]+]], sp, #64
 ; CHECK:  and  sp, [[REG]], #0xffffffffffffffe0

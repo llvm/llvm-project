@@ -611,7 +611,7 @@ bool DSE::runOnBasicBlock(BasicBlock &BB) {
           // as any store/memset/memcpy is likely using vector instructions so
           // shortening it to not vector size is likely to be slower
           MemIntrinsic* DepIntrinsic = cast<MemIntrinsic>(DepWrite);
-          unsigned DepWriteAlign = DepIntrinsic->getAlignment();
+          unsigned DepWriteAlign = DepIntrinsic->getDestAlignment();
           if (llvm::isPowerOf2_64(InstWriteOffset) ||
               ((DepWriteAlign != 0) && InstWriteOffset % DepWriteAlign == 0)) {
 

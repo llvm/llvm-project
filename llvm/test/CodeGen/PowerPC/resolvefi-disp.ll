@@ -30,17 +30,17 @@ entry:
   %b2 = alloca %struct.S2760, align 32
   %2 = bitcast %struct.S2760* %arg0 to i8*
   %3 = bitcast %struct.S2760* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 11104, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 11104, i1 false)
   %4 = bitcast %struct.S2760* %arg2 to i8*
   %5 = bitcast %struct.S2760* %1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 11104, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 11104, i1 false)
   store %struct.S2760* %arg1, %struct.S2760** %arg1.addr, align 8
   %6 = bitcast %struct.S2760* %ret to i8*
-  call void @llvm.memset.p0i8.i64(i8* %6, i8 0, i64 11104, i32 32, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %6, i8 0, i64 11104, i1 false)
   %7 = bitcast %struct.S2760* %b1 to i8*
-  call void @llvm.memset.p0i8.i64(i8* %7, i8 0, i64 11104, i32 32, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %7, i8 0, i64 11104, i1 false)
   %8 = bitcast %struct.S2760* %b2 to i8*
-  call void @llvm.memset.p0i8.i64(i8* %8, i8 0, i64 11104, i32 32, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %8, i8 0, i64 11104, i1 false)
   %b = getelementptr inbounds %struct.S2760, %struct.S2760* %arg0, i32 0, i32 1
   %g = getelementptr inbounds %struct.anon, %struct.anon* %b, i32 0, i32 1
   %9 = load i64, i64* %g, align 8
@@ -61,11 +61,11 @@ if.end:                                           ; preds = %if.then, %entry
   store i64 %12, i64* %g4, align 8
   %13 = bitcast %struct.S2760* %agg.result to i8*
   %14 = bitcast %struct.S2760* %ret to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %13, i8* %14, i64 11104, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %13, i8* %14, i64 11104, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 

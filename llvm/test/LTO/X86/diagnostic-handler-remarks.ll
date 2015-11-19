@@ -32,8 +32,11 @@
 
 target triple = "x86_64-apple-darwin"
 
+declare i32 @bar()
+
 define i32 @foo() {
-  ret i32 7
+  %a = call i32 @bar()
+  ret i32 %a
 }
 
 define i32 @main() {

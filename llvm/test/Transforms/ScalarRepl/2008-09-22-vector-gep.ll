@@ -18,8 +18,8 @@ entry:
         ; because the type of the first element in %struct.two is i8.
 	%tmpS = getelementptr %struct.two, %struct.two* %S, i32 0, i32 0, i32 0 
 	%tmpD = bitcast %struct.two* %D to i8*
-        call void @llvm.memmove.p0i8.p0i8.i32(i8* %tmpD, i8* %tmpS, i32 4, i32 1, i1 false)
+        call void @llvm.memmove.p0i8.p0i8.i32(i8* %tmpD, i8* %tmpS, i32 4, i1 false)
         ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

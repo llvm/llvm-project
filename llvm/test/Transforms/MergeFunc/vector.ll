@@ -59,7 +59,7 @@ declare void @_ZNSt6vectorIPvSaIS0_EE13_M_insert_auxEN9__gnu_cxx17__normal_itera
 
 declare void @_ZdlPv(i8*) nounwind
 
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 declare void @_ZSt17__throw_bad_allocv() noreturn
 

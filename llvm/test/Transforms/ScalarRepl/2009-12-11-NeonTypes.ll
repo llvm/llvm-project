@@ -51,14 +51,14 @@ entry:
   %18 = getelementptr inbounds %union..0anon, %union..0anon* %__rv, i32 0, i32 0
   %19 = bitcast %struct.int16x8x2_t* %0 to i8*
   %20 = bitcast %struct.int16x8x2_t* %18 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %19, i8* %20, i32 32, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %19, i8* %20, i32 32, i1 false)
   %tmp21 = bitcast %struct.int16x8x2_t* %tmp2 to i8*
   %21 = bitcast %struct.int16x8x2_t* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp21, i8* %21, i32 32, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp21, i8* %21, i32 32, i1 false)
   %22 = load %struct.int16x8x2_t*, %struct.int16x8x2_t** %dst_addr, align 4
   %23 = bitcast %struct.int16x8x2_t* %22 to i8*
   %tmp22 = bitcast %struct.int16x8x2_t* %tmp2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %23, i8* %tmp22, i32 32, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %23, i8* %tmp22, i32 32, i1 false)
   br label %return
 
 return:                                           ; preds = %entry
@@ -76,7 +76,7 @@ entry:
 cond.true:                                        ; preds = %entry
   %tmp3 = bitcast %struct._NSRange* %range to i8*
   %tmp4 = bitcast %struct._NSRange* %range to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp3, i8* %tmp4, i32 8, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp3, i8* %tmp4, i32 8, i1 false)
   ret void
 
 cond.false:                                       ; preds = %entry
@@ -87,4 +87,4 @@ cond.false:                                       ; preds = %entry
 ; CHECK: br i1
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

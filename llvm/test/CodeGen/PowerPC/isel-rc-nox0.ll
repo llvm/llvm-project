@@ -21,7 +21,7 @@ crc32_gentab.exit:                                ; preds = %for.cond1.preheader
   br label %for.cond1.preheader.i2961.i
 
 for.cond1.preheader.i2961.i:                      ; preds = %for.inc44.i2977.i, %crc32_gentab.exit
-  call void @llvm.memset.p0i8.i64(i8* bitcast ([1 x [9 x i32]]* @g_62 to i8*), i8 -1, i64 36, i32 4, i1 false) #1
+  call void @llvm.memset.p0i8.i64(i8* bitcast ([1 x [9 x i32]]* @g_62 to i8*), i8 -1, i64 36, i1 false) #1
   %0 = load i32, i32* %retval.0.i.i.i, align 4
   %tobool.i2967.i = icmp eq i32 %0, 0
   br label %for.body21.i2968.i
@@ -40,7 +40,7 @@ func_80.exit2978.i:                               ; preds = %for.inc44.i2977.i
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #1
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #1
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "ssp-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }

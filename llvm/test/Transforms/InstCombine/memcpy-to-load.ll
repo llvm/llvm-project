@@ -6,8 +6,8 @@ define void @foo(double* %X, double* %Y) {
 entry:
   %tmp2 = bitcast double* %X to i8*
   %tmp13 = bitcast double* %Y to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp13, i32 8, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp13, i32 8, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

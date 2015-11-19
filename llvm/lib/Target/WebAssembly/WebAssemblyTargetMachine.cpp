@@ -155,7 +155,10 @@ bool WebAssemblyPassConfig::addInstSelector() {
 
 bool WebAssemblyPassConfig::addILPOpts() { return true; }
 
-void WebAssemblyPassConfig::addPreRegAlloc() {}
+void WebAssemblyPassConfig::addPreRegAlloc() {
+  // Mark registers as representing wasm's expression stack.
+  addPass(createWebAssemblyRegStackify());
+}
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
   // FIXME: the following passes dislike virtual registers. Disable them for now
@@ -169,6 +172,9 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // TODO: Until we get ReverseBranchCondition support, MachineBlockPlacement
   // can create ugly-looking control flow.
   disablePass(&MachineBlockPlacementID);
+
+  // Run the register coloring pass to reduce the total number of registers.
+  addPass(createWebAssemblyRegColoring());
 }
 
 void WebAssemblyPassConfig::addPreSched2() {}

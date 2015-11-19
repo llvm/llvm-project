@@ -41,24 +41,7 @@ entry:
 define void @mp_11193(<8 x float> * nocapture %aFOO, <8 x float>* nocapture %RET) nounwind {
 ; CHECK-LABEL: mp_11193:
 ; CHECK:       # BB#0: # %allocas
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [3.000000e+00,3.000000e+00,3.000000e+00,3.000000e+00]
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [9.000000e+00,1.000000e+00,9.000000e+00,1.000000e+00]
-; CHECK-NEXT:    cmpltps %xmm0, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; CHECK-NEXT:    pshufb %xmm2, %xmm1
-; CHECK-NEXT:    movaps {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
-; CHECK-NEXT:    cmpltps %xmm0, %xmm3
-; CHECK-NEXT:    pshufb %xmm2, %xmm3
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
-; CHECK-NEXT:    psllw $15, %xmm3
-; CHECK-NEXT:    psraw $15, %xmm3
-; CHECK-NEXT:    pextrb $0, %xmm3, %eax
-; CHECK-NEXT:    shlb $7, %al
-; CHECK-NEXT:    sarb $7, %al
-; CHECK-NEXT:    movsbl %al, %eax
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cvtsi2ssl %eax, %xmm0
-; CHECK-NEXT:    movss %xmm0, (%rsi)
+; CHECK-NEXT:    movl $-1082130432, (%rsi) # imm = 0xFFFFFFFFBF800000
 ; CHECK-NEXT:    retq
 allocas:
   %bincmp = fcmp olt <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 9.000000e+00, float 1.000000e+00, float 9.000000e+00, float 1.000000e+00> , <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>

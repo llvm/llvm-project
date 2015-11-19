@@ -16,6 +16,7 @@
 #include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include <cctype>
 
 using namespace llvm;
@@ -82,10 +83,14 @@ static const struct {
   const char *NameCStr;
   size_t NameLength;
   unsigned ID;
+  const char *Feature;
+  const char *NegFeature;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
+  StringRef getNegName() const { return (Twine("no") + getName()).str(); }
 } ARCHExtNames[] = {
-#define ARM_ARCH_EXT_NAME(NAME, ID) { NAME, sizeof(NAME) - 1, ID },
+#define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE) \
+  { NAME, sizeof(NAME) - 1, ID, FEATURE, NEGFEATURE },
 #include "llvm/Support/ARMTargetParser.def"
 };
 
@@ -324,6 +329,17 @@ StringRef llvm::ARM::getArchExtName(unsigned ArchExtKind) {
       return AE.getName();
   }
   return StringRef();
+}
+
+const char *llvm::ARM::getArchExtFeature(StringRef ArchExt) {
+  for (const auto AE : ARCHExtNames) {
+    if (AE.Feature && ArchExt == AE.getName())
+      return AE.Feature;
+    else if (AE.NegFeature && ArchExt == AE.getNegName())
+      return AE.NegFeature;
+  }
+
+  return nullptr;
 }
 
 StringRef llvm::ARM::getHWDivName(unsigned HWDivKind) {

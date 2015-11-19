@@ -11,8 +11,8 @@ define void @test_memcpy_self() nounwind {
 ; CHECK: ret void
   %1 = alloca %struct.test
   %2 = bitcast %struct.test* %1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %2, i8* %2, i32 24, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %2, i8* %2, i32 24, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

@@ -13,7 +13,7 @@ entry:
   %0 = bitcast %deque* %var3 to i8*
   %1 = bitcast %iterator* %var1 to i8*
   call void @llvm.lifetime.start(i64 16, i8* %1) nounwind
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %0, i32 16, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %0, i32 16, i1 false)
   call void @llvm.lifetime.end(i64 16, i8* %1) nounwind
 
   %2 = bitcast %insert_iterator* %var2 to i8*
@@ -22,7 +22,7 @@ entry:
   ret i32 0
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
 

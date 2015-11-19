@@ -482,6 +482,7 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   PM.add(createIPSCCPPass());
 
   // Now that we internalized some globals, see if we can hack on them!
+  PM.add(createFunctionAttrsPass()); // Add norecurse if possible.
   PM.add(createGlobalOptimizerPass());
 
   // Linking modules together can lead to duplicated global constants, only

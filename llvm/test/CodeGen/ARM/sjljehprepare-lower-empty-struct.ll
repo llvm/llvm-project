@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=armv7-apple-ios -O1 < %s | FileCheck %s
 ; RUN: llc -mtriple=armv7-apple-ios -O2 < %s | FileCheck %s
 ; RUN: llc -mtriple=armv7-apple-ios -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=armv7k-apple-ios < %s | FileCheck %s
 
 ; SjLjEHPrepare shouldn't crash when lowering empty structs.
 ;

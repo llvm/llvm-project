@@ -1618,6 +1618,11 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     SpeculatedStore->setOperand(0, S);
   }
 
+  // Metadata can be dependent on the condition we are hoisting above.
+  // Conservatively strip all metadata on the instruction.
+  for (auto &I: *ThenBB)
+    I.dropUnknownNonDebugMetadata();
+
   // Hoist the instructions.
   BB->getInstList().splice(BI->getIterator(), ThenBB->getInstList(),
                            ThenBB->begin(), std::prev(ThenBB->end()));

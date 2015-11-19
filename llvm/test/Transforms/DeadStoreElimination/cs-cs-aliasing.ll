@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %union.anon = type { i64, [8 x i8] }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #0
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #0
 
 ; Function Attrs: noinline nounwind readonly uwtable
 declare zeroext i1 @callee_takes_string(%class.basic_string* nonnull) #1 align 2
@@ -61,10 +61,10 @@ _ZN9__gnu_cxx17__sso_string_baseIcSt11char_traitsIcESaIcEED2Ev.exit3: ; preds = 
 ; CHECK: store i8 0, i8* %tmp14, align 1
 
   %tmp17 = call zeroext i1 @callee_takes_string(%class.basic_string* nonnull %tmp1)
-  call void @llvm.memset.p0i8.i64(i8* %tmp11, i8 -51, i64 16, i32 8, i1 false) #0
-  call void @llvm.memset.p0i8.i64(i8* %tmp15, i8 -51, i64 32, i32 8, i1 false) #0
-  call void @llvm.memset.p0i8.i64(i8* %tmp4, i8 -51, i64 16, i32 8, i1 false) #0
-  call void @llvm.memset.p0i8.i64(i8* %tmp8, i8 -51, i64 32, i32 8, i1 false) #0
+  call void @llvm.memset.p0i8.i64(i8* %tmp11, i8 -51, i64 16, i1 false) #0
+  call void @llvm.memset.p0i8.i64(i8* %tmp15, i8 -51, i64 32, i1 false) #0
+  call void @llvm.memset.p0i8.i64(i8* %tmp4, i8 -51, i64 16, i1 false) #0
+  call void @llvm.memset.p0i8.i64(i8* %tmp8, i8 -51, i64 32, i1 false) #0
   ret i1 %tmp17
 }
 

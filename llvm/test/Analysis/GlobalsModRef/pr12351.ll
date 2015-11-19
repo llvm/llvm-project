@@ -1,8 +1,8 @@
 ; RUN: opt < %s -basicaa -globals-aa -gvn -S | FileCheck %s
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 define void @foo(i8* %x, i8* %y) {
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x, i8* %y, i32 1, i32 1, i1 false);
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x, i8* %y, i32 1, i1 false);
   ret void
 }
 

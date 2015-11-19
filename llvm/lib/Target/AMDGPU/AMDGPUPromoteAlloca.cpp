@@ -400,15 +400,15 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
     case Intrinsic::memcpy: {
       MemCpyInst *MemCpy = cast<MemCpyInst>(Intr);
       Builder.CreateMemCpy(MemCpy->getRawDest(), MemCpy->getRawSource(),
-                           MemCpy->getLength(), MemCpy->getAlignment(),
-                           MemCpy->isVolatile());
+                           MemCpy->getLength(), MemCpy->getDestAlignment(),
+                           MemCpy->getSrcAlignment(), MemCpy->isVolatile());
       Intr->eraseFromParent();
       continue;
     }
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
       Builder.CreateMemSet(MemSet->getRawDest(), MemSet->getValue(),
-                           MemSet->getLength(), MemSet->getAlignment(),
+                           MemSet->getLength(), MemSet->getDestAlignment(),
                            MemSet->isVolatile());
       Intr->eraseFromParent();
       continue;

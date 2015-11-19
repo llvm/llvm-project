@@ -61,13 +61,16 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
+  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
+                                   const TargetRegisterInfo *TRI,
+                                   std::vector<CalleeSavedInfo> &CSI,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCSFrameIndex) const override;
 
-  bool
-  assignCalleeSavedSpillSlots(MachineFunction &MF,
-                              const TargetRegisterInfo *TRI,
-                              std::vector<CalleeSavedInfo> &CSI,
-                              unsigned &MinCSFrameIndex,
-                              unsigned &MaxCSFrameIndex) const override;
+  /// Returns true if the target will correctly handle shrink wrapping.
+  bool enableShrinkWrapping(const MachineFunction &MF) const override {
+    return true;
+  }
 };
 
 } // End llvm namespace

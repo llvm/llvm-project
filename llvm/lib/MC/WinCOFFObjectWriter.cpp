@@ -962,7 +962,7 @@ void WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
 
   // Assign file offsets to COFF object file structures.
 
-  unsigned offset = 0;
+  unsigned offset = getInitialOffset();
 
   if (UseBigObj)
     offset += COFF::Header32Size;

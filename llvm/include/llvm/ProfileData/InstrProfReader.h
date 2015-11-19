@@ -23,6 +23,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iterator>
 
 namespace llvm {
@@ -132,15 +133,21 @@ class RawInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
-
   bool ShouldSwapBytes;
   uint64_t CountersDelta;
   uint64_t NamesDelta;
+  uint64_t ValueDataDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
   const uint64_t *CountersStart;
   const char *NamesStart;
+  const uint8_t *ValueDataStart;
   const char *ProfileEnd;
+  uint32_t ValueKindLast;
+
+  // String table for holding a unique copy of all the strings in the profile.
+  InstrProfStringTable StringTable;
+  InstrProfRecord::ValueMapType FunctionPtrToNameMap;
 
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
@@ -159,10 +166,13 @@ private:
   IntT swap(IntT Int) const {
     return ShouldSwapBytes ? sys::getSwappedBytes(Int) : Int;
   }
-
+  inline uint8_t getNumPaddingBytes(uint64_t SizeInBytes) {
+    return 7 & (sizeof(uint64_t) - SizeInBytes % sizeof(uint64_t));
+  }
   std::error_code readName(InstrProfRecord &Record);
   std::error_code readFuncHash(InstrProfRecord &Record);
   std::error_code readRawCounts(InstrProfRecord &Record);
+  std::error_code readValueData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
   void advanceData() { Data++; }
 
@@ -173,6 +183,17 @@ private:
   const char *getName(IntPtrT NamePtr) const {
     ptrdiff_t Offset = (swap(NamePtr) - NamesDelta) / sizeof(char);
     return NamesStart + Offset;
+  }
+  const uint8_t *getValueDataCounts(IntPtrT ValueCountsPtr) const {
+    ptrdiff_t Offset =
+        (swap(ValueCountsPtr) - ValueDataDelta) / sizeof(uint8_t);
+    return ValueDataStart + Offset;
+  }
+  // This accepts an already byte-swapped ValueDataPtr argument.
+  const InstrProfValueData *getValueData(IntPtrT ValueDataPtr) const {
+    ptrdiff_t Offset = (ValueDataPtr - ValueDataDelta) / sizeof(uint8_t);
+    return reinterpret_cast<const InstrProfValueData *>(ValueDataStart +
+                                                        Offset);
   }
 };
 
@@ -303,6 +324,7 @@ private:
   /// Fill Counts with the profile data for the given function name.
   std::error_code getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
                                     std::vector<uint64_t> &Counts);
+
   /// Return the maximum of all known function counts.
   uint64_t getMaximumFunctionCount() { return MaxFunctionCount; }
 

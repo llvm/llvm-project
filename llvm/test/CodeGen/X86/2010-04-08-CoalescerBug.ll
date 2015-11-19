@@ -19,8 +19,8 @@ entry:
   %tmp4 = getelementptr inbounds %struct.FC, %struct.FC* %tmp3, i64 0, i32 1, i64 0
   %tmp5 = bitcast [32 x i32]* %BitValueArray to i8*
   %tmp6 = bitcast i32* %tmp4 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp5, i8* %tmp6, i64 128, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp5, i8* %tmp6, i64 128, i1 false)
   unreachable
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind

@@ -10,21 +10,21 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; CHECK: @baz_prof_name = hidden constant [3 x i8] c"baz", section "__DATA,__llvm_prf_names", align 1
 
 ; CHECK: @__llvm_profile_counters_foo = hidden global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
-; CHECK: @__llvm_profile_data_foo = hidden constant {{.*}}, section "__DATA,__llvm_prf_data", align 8
+; CHECK: @__llvm_profile_data_foo = hidden {{.*}}, section "__DATA,__llvm_prf_data", align 8
 define void @foo() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_foo, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
 }
 
 ; CHECK: @__llvm_profile_counters_bar = hidden global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
-; CHECK: @__llvm_profile_data_bar = hidden constant {{.*}}, section "__DATA,__llvm_prf_data", align 8
+; CHECK: @__llvm_profile_data_bar = hidden {{.*}}, section "__DATA,__llvm_prf_data", align 8
 define void @bar() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @__llvm_profile_name_bar, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
 }
 
 ; CHECK: @__llvm_profile_counters_baz = hidden global [3 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
-; CHECK: @__llvm_profile_data_baz = hidden constant {{.*}}, section "__DATA,__llvm_prf_data", align 8
+; CHECK: @__llvm_profile_data_baz = hidden {{.*}}, section "__DATA,__llvm_prf_data", align 8
 define void @baz() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @baz_prof_name, i32 0, i32 0), i64 0, i32 3, i32 0)
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @baz_prof_name, i32 0, i32 0), i64 0, i32 3, i32 1)

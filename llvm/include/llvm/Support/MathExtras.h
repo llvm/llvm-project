@@ -653,6 +653,32 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
   return int64_t(X << (64 - B)) >> (64 - B);
 }
 
+/// \brief Add two unsigned integers, X and Y, of type T.
+/// Clamp the result to the maximum representable value of T on overflow.
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, T>::type
+SaturatingAdd(T X, T Y) {
+  // Hacker's Delight, p. 29
+  T Z = X + Y;
+  if (Z < X || Z < Y)
+    return std::numeric_limits<T>::max();
+  else
+    return Z;
+}
+
+/// \brief Multiply two unsigned integers, X and Y, of type T.
+/// Clamp the result to the maximum representable value of T on overflow.
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, T>::type
+SaturatingMultiply(T X, T Y) {
+  // Hacker's Delight, p. 30
+  T Z = X * Y;
+  if (Y != 0 && Z / Y != X)
+    return std::numeric_limits<T>::max();
+  else
+    return Z;
+}
+
 extern const float huge_valf;
 } // End llvm namespace
 

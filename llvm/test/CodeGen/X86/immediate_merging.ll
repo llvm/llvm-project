@@ -64,7 +64,7 @@ entry:
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) #1
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #1
 
 @AA = common global [100 x i8] zeroinitializer, align 1
 
@@ -77,6 +77,6 @@ define void @foomemset() optsize {
 ; CHECK: mov{{l|q}} %{{e|r}}ax, AA
 
 entry:
-  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i1 false)
   ret void
 }

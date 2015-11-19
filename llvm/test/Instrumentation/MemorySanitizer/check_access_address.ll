@@ -13,7 +13,7 @@ entry:
 }
 
 ; CHECK-LABEL: @ByValArgumentShadowLargeAlignment
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 16, i32 8, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 {{.*}}, i8* align 8 {{.*}}, i64 16, i1 false)
 ; CHECK: ret <2 x i64>
 
 
@@ -24,5 +24,5 @@ entry:
 }
 
 ; CHECK-LABEL: @ByValArgumentShadowSmallAlignment
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 2, i32 2, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 {{.*}}, i8* align 2 {{.*}}, i64 2, i1 false)
 ; CHECK: ret i16

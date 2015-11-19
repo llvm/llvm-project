@@ -172,7 +172,7 @@ bb23:		; preds = %bb24, %bb.nph
 	%55 = mul i32 %y.21, %w		; <i32> [#uses=1]
 	%.sum5 = add i32 %55, %.sum3		; <i32> [#uses=1]
 	%56 = getelementptr i8, i8* %j, i32 %.sum5		; <i8*> [#uses=1]
-	tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %56, i8* %54, i32 %w, i32 1, i1 false)
+	tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %56, i8* %54, i32 %w, i1 false)
 	%57 = add i32 %y.21, 1		; <i32> [#uses=2]
 	br label %bb24
 
@@ -189,7 +189,7 @@ bb26:		; preds = %bb24.bb26_crit_edge, %bb22
 	%60 = getelementptr i8, i8* %j, i32 %.sum4		; <i8*> [#uses=1]
 	%61 = mul i32 %x, %w		; <i32> [#uses=1]
 	%62 = sdiv i32 %61, 2		; <i32> [#uses=1]
-	tail call void @llvm.memset.p0i8.i32(i8* %60, i8 -128, i32 %62, i32 1, i1 false)
+	tail call void @llvm.memset.p0i8.i32(i8* %60, i8 -128, i32 %62, i1 false)
 	ret void
 
 bb29:		; preds = %bb20, %entry
@@ -207,7 +207,7 @@ bb30:		; preds = %bb31, %bb.nph11
 	%67 = getelementptr i8, i8* %r, i32 %66		; <i8*> [#uses=1]
 	%68 = mul i32 %y.310, %w		; <i32> [#uses=1]
 	%69 = getelementptr i8, i8* %j, i32 %68		; <i8*> [#uses=1]
-	tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %69, i8* %67, i32 %w, i32 1, i1 false)
+	tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %69, i8* %67, i32 %w, i1 false)
 	%70 = add i32 %y.310, 1		; <i32> [#uses=2]
 	br label %bb31
 
@@ -223,12 +223,12 @@ bb33:		; preds = %bb31.bb33_crit_edge, %bb29
 	%73 = getelementptr i8, i8* %j, i32 %72		; <i8*> [#uses=1]
 	%74 = mul i32 %x, %w		; <i32> [#uses=1]
 	%75 = sdiv i32 %74, 2		; <i32> [#uses=1]
-	tail call void @llvm.memset.p0i8.i32(i8* %73, i8 -128, i32 %75, i32 1, i1 false)
+	tail call void @llvm.memset.p0i8.i32(i8* %73, i8 -128, i32 %75, i1 false)
 	ret void
 
 return:		; preds = %bb20
 	ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind

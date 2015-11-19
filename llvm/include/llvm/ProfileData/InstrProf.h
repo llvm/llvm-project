@@ -226,7 +226,7 @@ struct InstrProfValueSiteRecord {
       while (I != IE && I->Value < J->Value)
         ++I;
       if (I != IE && I->Value == J->Value) {
-        I->Count += J->Count;
+        I->Count = SaturatingAdd(I->Count, J->Count);
         ++I;
         continue;
       }
@@ -265,13 +265,19 @@ struct InstrProfRecord {
   inline void addValueData(uint32_t ValueKind, uint32_t Site,
                            InstrProfValueData *VData, uint32_t N,
                            ValueMapType *HashKeys);
-  /// Merge Value Profile ddata from Src record to this record for ValueKind.
+  /// Merge Value Profile data from Src record to this record for ValueKind.
   inline instrprof_error mergeValueProfData(uint32_t ValueKind,
                                             InstrProfRecord &Src);
 
   /// Used by InstrProfWriter: update the value strings to commoned strings in
   /// the writer instance.
   inline void updateStrings(InstrProfStringTable *StrTab);
+
+  /// Clear value data entries
+  inline void clearValueData() {
+    for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+      getValueSitesForKind(Kind).clear();
+  }
 
 private:
   std::vector<InstrProfValueSiteRecord> IndirectCallSites;
@@ -292,6 +298,7 @@ private:
         const_cast<const InstrProfRecord *>(this)
             ->getValueSitesForKind(ValueKind));
   }
+
   // Map indirect call target name hash to name string.
   uint64_t remapValue(uint64_t Value, uint32_t ValueKind,
                       ValueMapType *HashKeys) {
@@ -303,9 +310,8 @@ private:
           std::lower_bound(HashKeys->begin(), HashKeys->end(), Value,
                            [](const std::pair<uint64_t, const char *> &LHS,
                               uint64_t RHS) { return LHS.first < RHS; });
-      assert(Result != HashKeys->end() &&
-             "Hash does not match any known keys\n");
-      Value = (uint64_t)Result->second;
+      if (Result != HashKeys->end())
+        Value = (uint64_t)Result->second;
       break;
     }
     }
@@ -464,7 +470,7 @@ struct ValueProfData {
   // The number of value profile kinds that has value profile data.
   // In this implementation, a value profile kind is considered to
   // have profile data if the number of value profile sites for the
-  // kind is not zero. More aggressively, the implemnetation can
+  // kind is not zero. More aggressively, the implementation can
   // choose to check the actual data value: if none of the value sites
   // has any profiled values, the kind can be skipped.
   uint32_t NumValueKinds;
@@ -545,7 +551,7 @@ struct Header {
 
 namespace RawInstrProf {
 
-const uint64_t Version = 1;
+const uint64_t Version = 2;
 
 // Magic number to detect file format and endianness.
 // Use 255 at one end, since no UTF-8 file can use that character.  Avoid 0,
@@ -577,7 +583,7 @@ inline uint64_t getMagic<uint32_t>() {
 // compiler-rt/lib/profile/InstrProfiling.h.
 // It should also match the synthesized type in
 // Transforms/Instrumentation/InstrProfiling.cpp:getOrCreateRegionCounters.
-template <class IntPtrT> struct ProfileData {
+template <class IntPtrT> struct LLVM_ALIGNAS(8) ProfileData {
   #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Type Name;
   #include "llvm/ProfileData/InstrProfData.inc"
 };
@@ -594,6 +600,9 @@ struct Header {
   const uint64_t NamesSize;
   const uint64_t CountersDelta;
   const uint64_t NamesDelta;
+  const uint64_t ValueKindLast;
+  const uint64_t ValueDataSize;
+  const uint64_t ValueDataDelta;
 };
 
 }  // end namespace RawInstrProf

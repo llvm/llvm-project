@@ -15,11 +15,11 @@
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
 def BR_IF : I<(outs), (ins I32:$a, bb_op:$dst),
               [(brcond I32:$a, bb:$dst)],
-               "br_if\t$a, $dst">;
+               "br_if   \t$a, $dst">;
 let isBarrier = 1 in {
 def BR   : I<(outs), (ins bb_op:$dst),
              [(br bb:$dst)],
-             "br\t$dst">;
+             "br      \t$dst">;
 } // isBarrier = 1
 } // isBranch = 1, isTerminator = 1, hasCtrlDep = 1
 
@@ -29,19 +29,19 @@ def BR   : I<(outs), (ins bb_op:$dst),
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 def SWITCH_I32 : I<(outs), (ins I32:$index, variable_ops),
                    [(WebAssemblyswitch I32:$index)],
-                   "switch\t$index">;
+                   "switch  \t$index">;
 def SWITCH_I64 : I<(outs), (ins I64:$index, variable_ops),
                    [(WebAssemblyswitch I64:$index)],
-                   "switch\t$index">;
+                   "switch  \t$index">;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Placemarkers to indicate the start of a block or loop scope.
-def BLOCK     : I<(outs), (ins bb_op:$dst), [], "block\t$dst">;
-def LOOP      : I<(outs), (ins bb_op:$dst), [], "loop\t$dst">;
+def BLOCK     : I<(outs), (ins bb_op:$dst), [], "block   \t$dst">;
+def LOOP      : I<(outs), (ins bb_op:$dst), [], "loop    \t$dst">;
 
 multiclass RETURN<WebAssemblyRegClass vt> {
   def RETURN_#vt : I<(outs), (ins vt:$val), [(WebAssemblyreturn vt:$val)],
-                     "return\t$val">;
+                     "return  \t$val">;
 }
 
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {

@@ -150,16 +150,13 @@ namespace llvm {
     const Use &getLengthUse() const { return getArgOperandUse(2); }
     Use &getLengthUse() { return getArgOperandUse(2); }
 
-    ConstantInt *getAlignmentCst() const {
-      return cast<ConstantInt>(const_cast<Value*>(getArgOperand(3)));
-    }
-
-    unsigned getAlignment() const {
-      return getAlignmentCst()->getZExtValue();
+    unsigned getDestAlignment() const {
+      // Note, param attributes start at 1, so offset dest index from 0 to 1.
+      return getParamAlignment(1);
     }
 
     ConstantInt *getVolatileCst() const {
-      return cast<ConstantInt>(const_cast<Value*>(getArgOperand(4)));
+      return cast<ConstantInt>(const_cast<Value*>(getArgOperand(3)));
     }
     bool isVolatile() const {
       return !getVolatileCst()->isZero();
@@ -188,16 +185,13 @@ namespace llvm {
       setArgOperand(2, L);
     }
 
-    void setAlignment(Constant* A) {
-      setArgOperand(3, A);
+    void setDestAlignment(unsigned Align) {
+      // Note, param attributes start at 1, so offset dest index from 0 to 1.
+      setParamAlignment(1, Align);
     }
 
     void setVolatile(Constant* V) {
-      setArgOperand(4, V);
-    }
-
-    Type *getAlignmentType() const {
-      return getArgOperand(3)->getType();
+      setArgOperand(3, V);
     }
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -259,10 +253,20 @@ namespace llvm {
       return cast<PointerType>(getRawSource()->getType())->getAddressSpace();
     }
 
+    unsigned getSrcAlignment() const {
+      // Note, param attributes start at 1, so offset src index from 1 to 2.
+      return getParamAlignment(2);
+    }
+
     void setSource(Value *Ptr) {
       assert(getRawSource()->getType() == Ptr->getType() &&
              "setSource called with pointer of wrong type!");
       setArgOperand(1, Ptr);
+    }
+
+    void setSrcAlignment(unsigned Align) {
+      // Note, param attributes start at 1, so offset src index from 1 to 2.
+      setParamAlignment(2, Align);
     }
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -372,6 +376,39 @@ namespace llvm {
       return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
     }
   };
-}
+
+  /// This represents the llvm.instrprof_value_profile intrinsic.
+  class InstrProfValueProfileInst : public IntrinsicInst {
+  public:
+    static inline bool classof(const IntrinsicInst *I) {
+      return I->getIntrinsicID() == Intrinsic::instrprof_value_profile;
+    }
+    static inline bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+
+    GlobalVariable *getName() const {
+      return cast<GlobalVariable>(
+          const_cast<Value *>(getArgOperand(0))->stripPointerCasts());
+    }
+
+    ConstantInt *getHash() const {
+      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
+    }
+
+    Value *getTargetValue() const {
+      return cast<Value>(const_cast<Value *>(getArgOperand(2)));
+    }
+
+    ConstantInt *getValueKind() const {
+      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+    }
+
+    // Returns the value site index.
+    ConstantInt *getIndex() const {
+      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(4)));
+    }
+  };
+} // namespace llvm
 
 #endif

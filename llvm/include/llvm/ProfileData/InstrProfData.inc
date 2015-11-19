@@ -56,6 +56,12 @@ INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), NamePtr, \
 INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt64PtrTy(Ctx), CounterPtr, \
                 ConstantExpr::getBitCast(CounterPtr, \
                 llvm::Type::getInt64PtrTy(Ctx)))
+INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), FunctionPointer, \
+                FunctionAddr)
+INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
+                ConstantPointerNull::get(Int8PtrTy))
+INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
+                ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
 // INSTR_PROF_DATA_END
 
 #ifdef INSTR_PROF_DATA

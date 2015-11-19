@@ -1665,8 +1665,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
       unsigned Align = getKnownAlignment(MI->getDest(), *DL);
       if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
         Align = std::min(Align, getKnownAlignment(MTI->getSource(), *DL));
-      if (Align > MI->getAlignment())
-        MI->setAlignment(ConstantInt::get(MI->getAlignmentType(), Align));
+      if (Align > MI->getDestAlignment())
+        MI->setDestAlignment(Align);
     }
   }
 

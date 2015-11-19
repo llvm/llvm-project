@@ -60,14 +60,18 @@ static Type *reduceToSingleValueType(Type *T) {
   return T;
 }
 
-Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
+Instruction *InstCombiner::SimplifyMemTransfer(MemTransferInst *MI) {
   unsigned DstAlign = getKnownAlignment(MI->getArgOperand(0), DL, MI, AC, DT);
   unsigned SrcAlign = getKnownAlignment(MI->getArgOperand(1), DL, MI, AC, DT);
-  unsigned MinAlign = std::min(DstAlign, SrcAlign);
-  unsigned CopyAlign = MI->getAlignment();
+  unsigned CopyDestAlign = MI->getDestAlignment();
+  unsigned CopySrcAlign = MI->getSrcAlignment();
 
-  if (CopyAlign < MinAlign) {
-    MI->setAlignment(ConstantInt::get(MI->getAlignmentType(), MinAlign, false));
+  if (CopyDestAlign < DstAlign) {
+    MI->setDestAlignment(DstAlign);
+    return MI;
+  }
+  if (CopySrcAlign < SrcAlign) {
+    MI->setSrcAlignment(SrcAlign);
     return MI;
   }
 
@@ -135,8 +139,8 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
 
   // If the memcpy/memmove provides better alignment info than we can
   // infer, use it.
-  SrcAlign = std::max(SrcAlign, CopyAlign);
-  DstAlign = std::max(DstAlign, CopyAlign);
+  SrcAlign = std::max(SrcAlign, CopySrcAlign);
+  DstAlign = std::max(DstAlign, CopyDestAlign);
 
   Value *Src = Builder->CreateBitCast(MI->getArgOperand(1), NewSrcPtrTy);
   Value *Dest = Builder->CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
@@ -156,9 +160,8 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
 
 Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
   unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, AC, DT);
-  if (MI->getAlignment() < Alignment) {
-    MI->setAlignment(ConstantInt::get(MI->getAlignmentType(),
-                                             Alignment, false));
+  if (MI->getDestAlignment() < Alignment) {
+    MI->setDestAlignment(Alignment);
     return MI;
   }
 
@@ -168,7 +171,7 @@ Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
   if (!LenC || !FillC || !FillC->getType()->isIntegerTy(8))
     return nullptr;
   uint64_t Len = LenC->getLimitedValue();
-  Alignment = MI->getAlignment();
+  Alignment = MI->getDestAlignment();
   assert(Len && "0-sized memory setting should be removed already.");
 
   // memset(s,c,n) -> store s, c (for n=1,2,4,8)
@@ -743,8 +746,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // If we can determine a pointer alignment that is bigger than currently
     // set, update the alignment.
-    if (isa<MemTransferInst>(MI)) {
-      if (Instruction *I = SimplifyMemTransfer(MI))
+    if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {
+      if (Instruction *I = SimplifyMemTransfer(MTI))
         return I;
     } else if (MemSetInst *MSI = dyn_cast<MemSetInst>(MI)) {
       if (Instruction *I = SimplifyMemSet(MSI))

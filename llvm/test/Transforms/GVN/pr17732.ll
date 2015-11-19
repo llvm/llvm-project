@@ -14,10 +14,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @main() {
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds (%struct.with_array, %struct.with_array* @array_with_zeroinit, i64 0, i32 0, i64 0), i8* getelementptr inbounds ({ [2 x i8], i32, i8, [3 x i8] }, { [2 x i8], i32, i8, [3 x i8] }* @main.obj_with_array, i64 0, i32 0, i64 0), i64 12, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds (%struct.with_array, %struct.with_array* @array_with_zeroinit, i64 0, i32 0, i64 0), i8* getelementptr inbounds ({ [2 x i8], i32, i8, [3 x i8] }, { [2 x i8], i32, i8, [3 x i8] }* @main.obj_with_array, i64 0, i32 0, i64 0), i64 12, i1 false)
   %0 = load i8, i8* getelementptr inbounds (%struct.with_array, %struct.with_array* @array_with_zeroinit, i64 0, i32 2), align 4
 
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds (%struct.with_vector, %struct.with_vector* @vector_with_zeroinit, i64 0, i32 0, i64 0), i8* getelementptr inbounds ({ <2 x i8>, i32, i8, [3 x i8] }, { <2 x i8>, i32, i8, [3 x i8] }* @main.obj_with_vector, i64 0, i32 0, i64 0), i64 12, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds (%struct.with_vector, %struct.with_vector* @vector_with_zeroinit, i64 0, i32 0, i64 0), i8* getelementptr inbounds ({ <2 x i8>, i32, i8, [3 x i8] }, { <2 x i8>, i32, i8, [3 x i8] }* @main.obj_with_vector, i64 0, i32 0, i64 0), i64 12, i1 false)
   %1 = load i8, i8* getelementptr inbounds (%struct.with_vector, %struct.with_vector* @vector_with_zeroinit, i64 0, i32 2), align 4
   %conv0 = sext i8 %0 to i32
   %conv1 = sext i8 %1 to i32
@@ -27,4 +27,4 @@ entry:
 ; CHECK: ret i32 1
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
