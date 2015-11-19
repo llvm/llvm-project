@@ -1687,8 +1687,9 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                 if (log)
                 {
                     log->Printf ("((Module*)%p) [%s]->GetSwiftASTContext() returning NULL - couldn't create a ClangImporter", module, module->GetFileSpec().GetFilename().AsCString("<anonymous>"));
-                    return TypeSystemSP();
                 }
+                
+                return TypeSystemSP();
             }
             
             std::vector<std::string> module_names;
@@ -1970,10 +1971,10 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
             {
                 if (log)
                 {
-                    swift_ast_sp->m_error.SetErrorStringWithFormat("Error creating target Swift AST context: couldn't get a ClangImporter");
                     log->Printf ("((Target*)%p)->GetSwiftASTContext() returning NULL - couldn't create a ClangImporter", target);
-                    return nullptr;
                 }
+                
+                return TypeSystemSP();
             }
             
             if (log)
