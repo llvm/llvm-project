@@ -36,4 +36,4 @@ class REPLBreakpointsTestCase (REPLTest):
         function_pattern = '''foo \(\) -> \(\)'''
         source_pattern = 'at repl.swift:2'
         self.command(':b 2', prompt_sync=False, patterns=['Breakpoint 1', function_pattern, source_pattern, 'address = 0x', '4>'])
-        self.command('foo()', prompt_sync=False, patterns=['Execution stopped at breakpoint', 'Process [0-9]+ stopped', 'thread #1: tid = 0x', function_pattern, source_pattern, 'stop reason = breakpoint 1.1', '-> 2', '''print\("hello"\)'''])
+        self.command('foo()', prompt_sync=False, patterns=['Execution stopped at breakpoint', 'Process [0-9]+ stopped', 'thread #1: tid = 0x', 'foo\(\) -> \(\)', source_pattern, 'stop reason = breakpoint 1.1', '-> 2', '''print\("hello"\)'''])

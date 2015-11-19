@@ -43,31 +43,31 @@ class SwiftTypeMetadataTest(TestBase):
             substrs = ['stopped',
                        'stop reason = breakpoint'])
 
-        self.expect("frame select 0", substrs = ['a.foo'])
-        self.expect("frame variable -d run -- x", substrs = ['(a.AClass) x','x = 3735928559']) # first stop on foo
+        self.expect("frame select 0", substrs = ['foo', 'x', 'ivar'])
+        self.expect("frame variable -d run -- x", substrs = ['(a.AClass) x','ivar = 3735928559']) # first stop on foo
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs = ['a.bar'])
+        self.expect("frame select 0", substrs = ['bar', 'x', 'y'])
         self.expect("frame variable -d run -- x y", substrs = ['(Int64) x', '(Float) y']) # first stop on bar
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs = ['a.foo'])
-        self.expect("frame variable -d run -- x", substrs = ['(a.AClass) x','x = 3735928559']) # second stop on foo
+        self.expect("frame select 0", substrs = ['foo', 'x'])
+        self.expect("frame variable -d run -- x", substrs = ['(a.AClass) x','ivar = 3735928559']) # second stop on foo
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs = ['a.baz'])
-        self.expect("frame variable -d run -- x", substrs = ['(a.AClass) x','x = 3735928559']) # first stop on baz
+        self.expect("frame select 0", substrs = ['baz', 'x'])
+        self.expect("frame variable -d run -- x", substrs = ['(a.AClass) x','ivar = 3735928559']) # first stop on baz
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs = ['a.bar'])
+        self.expect("frame select 0", substrs = ['bar', 'x'])
         self.expect("frame variable -d run -- x y", substrs = ['(a.AClass) x', '(a.AClass) y']) # second stop on bar
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs = [])
+        self.expect("frame select 0", substrs = ['bat', 'x'])
         self.expect("frame variable -d run -- x", substrs = ['(a.ADerivedClass) x']) # first stop on bat
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs = [])
+        self.expect("frame select 0", substrs = ['bat', 'x'])
         self.expect("frame variable -d run -- x", substrs = ['(a.AnotherDerivedClass) x']) # second stop on bat
         self.runCmd("continue", RUN_SUCCEEDED)
 

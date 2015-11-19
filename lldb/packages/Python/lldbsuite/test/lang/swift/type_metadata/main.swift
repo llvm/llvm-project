@@ -19,8 +19,8 @@ protocol AProtocol {
 class AClass : AProtocol {
 	typealias AType = Int
 	func makeOne() -> Int { return 1; }
-	var x : Int
-	init() { x = 0xDEADBEEF }
+	var ivar : Int
+	init() { ivar = 0xDEADBEEF }
 }
 
 class AParentClass {
