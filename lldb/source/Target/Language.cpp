@@ -372,6 +372,7 @@ Language::IsUninitializedReference (ValueObject& valobj)
 
 bool
 Language::GetFunctionDisplayName (const SymbolContext *sc,
+                                  const ExecutionContext *exe_ctx,
                                   FunctionNameRepresentation representation,
                                   Stream& s)
 {
