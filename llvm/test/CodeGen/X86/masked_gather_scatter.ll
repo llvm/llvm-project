@@ -330,3 +330,13 @@ define <3 x i32> @test16(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
   ret <3 x i32>%res
 }
 
+declare <16 x float*> @llvm.masked.gather.v16p0f32(<16 x float**>, i32, <16 x i1>, <16 x float*>)
+
+; KNL-LABEL: test17
+; KNL: vpgatherqq
+; KNL: vpgatherqq
+define <16 x float*> @test17(<16 x float**> %ptrs) {
+
+  %res = call <16 x float*> @llvm.masked.gather.v16p0f32(<16 x float**> %ptrs, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float*> undef)
+  ret <16 x float*>%res
+}

@@ -8,8 +8,8 @@
 define void @t(%struct.CMTimeMapping* noalias nocapture sret %agg.result) nounwind optsize ssp {
 entry:
   %agg.result1 = bitcast %struct.CMTimeMapping* %agg.result to i8* ; <i8*> [#uses=1]
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.result1, i8* null, i64 96, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.result1, i8* null, i64 96, i32 4, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind

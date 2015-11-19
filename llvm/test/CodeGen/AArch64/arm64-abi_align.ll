@@ -301,14 +301,14 @@ entry:
   %tmp = alloca %struct.s42, align 4
   %tmp1 = alloca %struct.s42, align 4
   %0 = bitcast %struct.s42* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 bitcast (%struct.s42* @g42 to i8*), i64 24, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s42* @g42 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s42* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 bitcast (%struct.s42* @g42_2 to i8*), i64 24, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s42* @g42_2 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
   %call = call i32 @f42(i32 3, %struct.s42* %tmp, %struct.s42* %tmp1) #5
   ret i32 %call
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #4
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) #4
 
 declare i32 @f42_stack(i32 %i, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6,
                        i32 %i7, i32 %i8, i32 %i9, %struct.s42* nocapture %s1,
@@ -347,9 +347,9 @@ entry:
   %tmp = alloca %struct.s42, align 4
   %tmp1 = alloca %struct.s42, align 4
   %0 = bitcast %struct.s42* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 bitcast (%struct.s42* @g42 to i8*), i64 24, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s42* @g42 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s42* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 bitcast (%struct.s42* @g42_2 to i8*), i64 24, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s42* @g42_2 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
   %call = call i32 @f42_stack(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                        i32 8, i32 9, %struct.s42* %tmp, %struct.s42* %tmp1) #5
   ret i32 %call
@@ -415,9 +415,9 @@ entry:
   %tmp = alloca %struct.s43, align 16
   %tmp1 = alloca %struct.s43, align 16
   %0 = bitcast %struct.s43* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %0, i8* align 16 bitcast (%struct.s43* @g43 to i8*), i64 32, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s43* @g43 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s43* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %1, i8* align 16 bitcast (%struct.s43* @g43_2 to i8*), i64 32, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s43* @g43_2 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
   %call = call i32 @f43(i32 3, %struct.s43* %tmp, %struct.s43* %tmp1) #5
   ret i32 %call
 }
@@ -466,9 +466,9 @@ entry:
   %tmp = alloca %struct.s43, align 16
   %tmp1 = alloca %struct.s43, align 16
   %0 = bitcast %struct.s43* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %0, i8* align 16 bitcast (%struct.s43* @g43 to i8*), i64 32, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s43* @g43 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s43* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %1, i8* align 16 bitcast (%struct.s43* @g43_2 to i8*), i64 32, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s43* @g43_2 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
   %call = call i32 @f43_stack(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                        i32 8, i32 9, %struct.s43* %tmp, %struct.s43* %tmp1) #5
   ret i32 %call

@@ -12,11 +12,11 @@ entry:
 
 for_test158.preheader:                            ; preds = %entry
   %a156286305 = bitcast [4 x <4 x float>]* %a156286 to i8*
-  call void @llvm.memset.p0i8.i64(i8* %a156286305, i8 -1, i64 64, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %a156286305, i8 -1, i64 64, i32 16, i1 false)
   unreachable
 
 cif_done:                                         ; preds = %entry
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind

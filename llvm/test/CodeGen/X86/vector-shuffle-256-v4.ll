@@ -188,6 +188,16 @@ define <4 x double> @shuffle_v4f64_0022(<4 x double> %a, <4 x double> %b) {
   ret <4 x double> %shuffle
 }
 
+define <4 x double> @shuffle_v4f64mem_0022(<4 x double>* %ptr, <4 x double> %b) {
+; ALL-LABEL: shuffle_v4f64mem_0022:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
+; ALL-NEXT:    retq
+  %a = load  <4 x double>,  <4 x double>* %ptr
+  %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x double> %shuffle
+}
+
 define <4 x double> @shuffle_v4f64_1032(<4 x double> %a, <4 x double> %b) {
 ; ALL-LABEL: shuffle_v4f64_1032:
 ; ALL:       # BB#0:

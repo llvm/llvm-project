@@ -23,7 +23,7 @@ entry:
 ; CHECK-T1: strb [[TREG1]],
 ; CHECK-T1: ldrh [[TREG2:r[0-9]]],
 ; CHECK-T1: strh [[TREG2]]
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @dst, i32 0, i32 0), i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @src, i32 0, i32 0), i32 11, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds (%struct.x, %struct.x* @dst, i32 0, i32 0), i8* getelementptr inbounds (%struct.x, %struct.x* @src, i32 0, i32 0), i32 11, i32 8, i1 false)
   ret i32 0
 }
 
@@ -36,7 +36,7 @@ entry:
 ; CHECK: adds r1, #15
 ; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
 ; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str1, i64 0, i64 0), i64 31, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str1, i64 0, i64 0), i64 31, i32 1, i1 false)
   ret void
 }
 
@@ -50,7 +50,7 @@ entry:
 ; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]!
 ; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
 ; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str2, i64 0, i64 0), i64 36, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str2, i64 0, i64 0), i64 36, i32 1, i1 false)
   ret void
 }
 
@@ -61,7 +61,7 @@ entry:
 ; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]!
 ; CHECK: vldr d{{[0-9]+}}, [r1]
 ; CHECK: vst1.8 {d{{[0-9]+}}}, [r0]
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([24 x i8], [24 x i8]* @.str3, i64 0, i64 0), i64 24, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([24 x i8], [24 x i8]* @.str3, i64 0, i64 0), i64 24, i32 1, i1 false)
   ret void
 }
 
@@ -71,7 +71,7 @@ entry:
 ; CHECK: vld1.64 {[[REG3:d[0-9]+]], [[REG4:d[0-9]+]]}, [r1]
 ; CHECK: vst1.8 {[[REG3]], [[REG4]]}, [r0]!
 ; CHECK: strh [[REG5:r[0-9]+]], [r0]
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str4, i64 0, i64 0), i64 18, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str4, i64 0, i64 0), i64 18, i32 1, i1 false)
   ret void
 }
 
@@ -90,7 +90,7 @@ entry:
 ; CHECK-T1: strb [[TREG3]],
 ; CHECK-T1: movs [[TREG4:r[0-9]]],
 ; CHECK-T1: strb [[TREG4]],
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str5, i64 0, i64 0), i64 7, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str5, i64 0, i64 0), i64 7, i32 1, i1 false)
   ret void
 }
 
@@ -108,7 +108,7 @@ entry:
 ; CHECK-T1: strh [[TREG5]],
 ; CHECK-T1: ldr [[TREG6:r[0-9]]],
 ; CHECK-T1: str [[TREG6]]
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([512 x i8], [512 x i8]* @spool.splbuf, i64 0, i64 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str6, i64 0, i64 0), i64 14, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([512 x i8], [512 x i8]* @spool.splbuf, i64 0, i64 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str6, i64 0, i64 0), i64 14, i32 1, i1 false)
   ret void
 }
 
@@ -124,9 +124,9 @@ entry:
 ; CHECK-T1: str
   %0 = bitcast %struct.Foo* %a to i8*
   %1 = bitcast %struct.Foo* %b to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 %1, i32 16, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 16, i32 4, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind

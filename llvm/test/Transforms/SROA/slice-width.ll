@@ -1,8 +1,8 @@
 ; RUN: opt < %s -sroa -S | FileCheck %s
 target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-f80:128-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
 
 define void @no_split_on_non_byte_width(i32) {
 ; This tests that allocas are not split into slices that are not byte width multiple
@@ -39,7 +39,7 @@ define void @memcpy_fp80_padding() {
 
   ; Copy from a global.
   %x_i8 = bitcast %union.Foo* %x to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x_i8, i8* bitcast (%union.Foo* @foo_copy_source to i8*), i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x_i8, i8* bitcast (%union.Foo* @foo_copy_source to i8*), i32 32, i32 16, i1 false)
 
   ; Access a slice of the alloca to trigger SROA.
   %mid_p = getelementptr %union.Foo, %union.Foo* %x, i32 0, i32 1
@@ -58,7 +58,7 @@ define void @memset_fp80_padding() {
 
   ; Set to all ones.
   %x_i8 = bitcast %union.Foo* %x to i8*
-  call void @llvm.memset.p0i8.i32(i8* %x_i8, i8 -1, i32 32, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %x_i8, i8 -1, i32 32, i32 16, i1 false)
 
   ; Access a slice of the alloca to trigger SROA.
   %mid_p = getelementptr %union.Foo, %union.Foo* %x, i32 0, i32 1
@@ -68,7 +68,7 @@ define void @memset_fp80_padding() {
 }
 ; CHECK-LABEL: define void @memset_fp80_padding
 ; CHECK: alloca x86_fp80
-; CHECK: call void @llvm.memset.p0i8.i32(i8* align 16 %{{.*}}, i8 -1, i32 16, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i32(i8* %{{.*}}, i8 -1, i32 16, i32 16, i1 false)
 ; CHECK: store i64 -1, i64* @i64_sink
 
 %S.vec3float = type { float, float, float }
@@ -85,7 +85,7 @@ entry:
   %tmp1 = alloca %S.vec3float, align 4
   %0 = bitcast %S.vec3float* %tmp1 to i8*
   %1 = bitcast %S.vec3float* %x to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 12, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 12, i32 4, i1 false)
 
   ; The following block does nothing; but appears to confuse SROA
   %unused1 = bitcast %S.vec3float* %tmp1 to %U.vec3float*
@@ -98,7 +98,7 @@ entry:
   %3 = bitcast %S.vec3float* %tmp1 to i8*
 ; CHECK: alloca
 ; CHECK-NOT: store <4 x float>
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %2, i8* %3, i32 12, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %2, i8* %3, i32 12, i32 4, i1 false)
 
   %result = call i32 @memcpy_vec3float_helper(%S.vec3float* %tmp2)
   ret i32 %result

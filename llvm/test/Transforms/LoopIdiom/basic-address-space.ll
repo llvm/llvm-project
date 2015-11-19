@@ -7,7 +7,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 define void @test10(i8 addrspace(2)* %X) nounwind ssp {
 ; CHECK-LABEL: @test10(
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.memset.p2i8.i16(i8 addrspace(2)* align 1 %X, i8 0, i16 10000, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p2i8.i16(i8 addrspace(2)* %X, i8 0, i16 10000, i32 1, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 

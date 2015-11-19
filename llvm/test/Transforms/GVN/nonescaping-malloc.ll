@@ -80,7 +80,7 @@ bb.i.i:                                           ; preds = %bb4.i
 _ZN4llvm14StringMapEntryIPvE6CreateINS_15MallocAllocatorES1_EEPS2_PKcS7_RT_T0_.exit.i: ; preds = %bb.i.i, %bb4.i
   %tmp.i18.i.i = getelementptr inbounds i8, i8* %tmp.i20.i.i, i64 16
   %tmp15.i.i = zext i32 %tmp4.i.i to i64
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp.i18.i.i, i8* %tmp41.i, i64 %tmp15.i.i, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp.i18.i.i, i8* %tmp41.i, i64 %tmp15.i.i, i32 1, i1 false)
   %tmp.i18.sum.i.i = add i64 %tmp15.i.i, 16
   %tmp17.i.i = getelementptr inbounds i8, i8* %tmp.i20.i.i, i64 %tmp.i18.sum.i.i
   store i8 0, i8* %tmp17.i.i, align 1
@@ -106,4 +106,4 @@ _ZN4llvm9StringMapIPvNS_15MallocAllocatorEE16GetOrCreateValueIS1_EERNS_14StringM
   ret %"struct.llvm::StringMapEntry<void*>"* %tmp10.i.i
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind

@@ -297,7 +297,7 @@ static bool shouldSkip(uint32_t Symflags) {
   return false;
 }
 
-static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
+static void diagnosticHandler(const DiagnosticInfo &DI) {
   if (const auto *BDI = dyn_cast<BitcodeDiagnosticInfo>(&DI)) {
     std::error_code EC = BDI->getError();
     if (EC == BitcodeError::InvalidBitcodeSignature)
@@ -325,6 +325,11 @@ static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
     break;
   }
   message(Level, "LLVM gold plugin: %s",  ErrStorage.c_str());
+}
+
+static void diagnosticHandlerForContext(const DiagnosticInfo &DI,
+                                        void *Context) {
+  diagnosticHandler(DI);
 }
 
 /// Called by gold to see whether this file is one that our plugin can handle.
@@ -361,7 +366,7 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
     BufferRef = Buffer->getMemBufferRef();
   }
 
-  Context.setDiagnosticHandler(diagnosticHandler);
+  Context.setDiagnosticHandler(diagnosticHandlerForContext);
   ErrorOr<std::unique_ptr<object::IRObjectFile>> ObjOrErr =
       object::IRObjectFile::create(BufferRef, Context);
   std::error_code EC = ObjOrErr.getError();
@@ -617,7 +622,7 @@ getFunctionIndexForFile(LLVMContext &Context, claimed_file &F,
   MemoryBufferRef BufferRef(StringRef((const char *)View, Info.filesize),
                             Info.name);
   ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-      object::FunctionIndexObjectFile::create(BufferRef, Context);
+      object::FunctionIndexObjectFile::create(BufferRef, diagnosticHandler);
 
   if (std::error_code EC = ObjOrErr.getError())
     message(LDPL_FATAL, "Could not read function index bitcode from file : %s",
@@ -892,7 +897,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     return LDPS_OK;
 
   LLVMContext Context;
-  Context.setDiagnosticHandler(diagnosticHandler, nullptr, true);
+  Context.setDiagnosticHandler(diagnosticHandlerForContext, nullptr, true);
 
   // If we are doing ThinLTO compilation, simply build the combined
   // function index/summary and emit it. We don't need to parse the modules

@@ -23,6 +23,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -51,6 +52,13 @@ STATISTIC(NumNoAlias, "Number of function returns marked noalias");
 STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
 STATISTIC(NumAnnotated, "Number of attributes added to library functions");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
+
+static cl::list<std::string>
+ForceAttributes("force-attribute", cl::Hidden,
+                cl::desc("Add an attribute to a function. This should be a "
+                         "pair of 'function-name:attribute-name', for "
+                         "example -force-add-attribute=foo:noinline. This "
+                         "option can be specified multiple times."));
 
 namespace {
 typedef SmallSetVector<Function *, 8> SCCNodeSet;
@@ -1843,6 +1851,64 @@ static bool addNoRecurseAttrsTopDownOnly(Function *F) {
   return false;
 }
 
+static Attribute::AttrKind parseAttrKind(StringRef Kind) {
+  return StringSwitch<Attribute::AttrKind>(Kind)
+    .Case("alwaysinline", Attribute::AlwaysInline)
+    .Case("builtin", Attribute::Builtin)
+    .Case("cold", Attribute::Cold)
+    .Case("convergent", Attribute::Convergent)
+    .Case("inlinehint", Attribute::InlineHint)
+    .Case("jumptable", Attribute::JumpTable)
+    .Case("minsize", Attribute::MinSize)
+    .Case("naked", Attribute::Naked)
+    .Case("nobuiltin", Attribute::NoBuiltin)
+    .Case("noduplicate", Attribute::NoDuplicate)
+    .Case("noimplicitfloat", Attribute::NoImplicitFloat)
+    .Case("noinline", Attribute::NoInline)
+    .Case("nonlazybind", Attribute::NonLazyBind)
+    .Case("noredzone", Attribute::NoRedZone)
+    .Case("noreturn", Attribute::NoReturn)
+    .Case("norecurse", Attribute::NoRecurse)
+    .Case("nounwind", Attribute::NoUnwind)
+    .Case("optnone", Attribute::OptimizeNone)
+    .Case("optsize", Attribute::OptimizeForSize)
+    .Case("readnone", Attribute::ReadNone)
+    .Case("readonly", Attribute::ReadOnly)
+    .Case("argmemonly", Attribute::ArgMemOnly)
+    .Case("returns_twice", Attribute::ReturnsTwice)
+    .Case("safestack", Attribute::SafeStack)
+    .Case("sanitize_address", Attribute::SanitizeAddress)
+    .Case("sanitize_memory", Attribute::SanitizeMemory)
+    .Case("sanitize_thread", Attribute::SanitizeThread)
+    .Case("ssp", Attribute::StackProtect)
+    .Case("sspreq", Attribute::StackProtectReq)
+    .Case("sspstrong", Attribute::StackProtectStrong)
+    .Case("uwtable", Attribute::UWTable)
+    .Default(Attribute::None);
+}
+
+/// If F has any forced attributes given on the command line, add them.
+static bool addForcedAttributes(Function *F) {
+  bool Changed = false;
+  for (auto &S : ForceAttributes) {
+    auto KV = StringRef(S).split(':');
+    if (KV.first != F->getName())
+      continue;
+
+    auto Kind = parseAttrKind(KV.second);
+    if (Kind == Attribute::None) {
+      DEBUG(dbgs() << "ForcedAttribute: " << KV.second
+                   << " unknown or not handled!\n");
+      continue;
+    }
+    if (F->hasFnAttribute(Kind))
+      continue;
+    Changed = true;
+    F->addFnAttr(Kind);
+  }
+  return Changed;
+}
+
 bool FunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
@@ -1878,6 +1944,7 @@ bool FunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
     if (F->isDeclaration())
       Changed |= inferPrototypeAttributes(*F, *TLI);
 
+    Changed |= addForcedAttributes(F);
     SCCNodes.insert(F);
   }
 

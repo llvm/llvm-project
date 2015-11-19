@@ -836,6 +836,11 @@ AttributeSet AttributeSet::removeAttributes(LLVMContext &C, unsigned Index,
   if (!pImpl) return AttributeSet();
   if (!Attrs.pImpl) return *this;
 
+  // FIXME it is not obvious how this should work for alignment.
+  // For now, say we can't pass in alignment, which no current use does.
+  assert(!Attrs.hasAttribute(Index, Attribute::Alignment) &&
+         "Attempt to change alignment!");
+
   // Add the attribute slots before the one we're trying to add.
   SmallVector<AttributeSet, 4> AttrSet;
   uint64_t NumAttrs = pImpl->getNumAttributes();

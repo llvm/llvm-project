@@ -5206,21 +5206,30 @@ def rr  : S3DI<0x12, MRMSrcReg, (outs VR256:$dst), (ins VR256:$src),
 def rm  : S3DI<0x12, MRMSrcMem, (outs VR256:$dst), (ins f256mem:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                     [(set VR256:$dst,
-                      (v4f64 (X86Movddup
-                              (scalar_to_vector (loadf64 addr:$src)))))]>,
+                      (v4f64 (X86Movddup (loadv4f64 addr:$src))))]>,
                     Sched<[WriteLoad]>;
 }
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX] in {
   defm VMOVDDUP  : sse3_replicate_dfp<"vmovddup">, VEX;
   defm VMOVDDUPY : sse3_replicate_dfp_y<"vmovddup">, VEX, VEX_L;
 }
 
 defm MOVDDUP : sse3_replicate_dfp<"movddup">;
 
-let Predicates = [HasAVX] in {
+
+let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(X86Movddup (loadv2f64 addr:$src)),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
+
+  // 256-bit version
+  def : Pat<(X86Movddup (loadv4i64 addr:$src)),
+            (VMOVDDUPYrm addr:$src)>;
+  def : Pat<(X86Movddup (v4i64 VR256:$src)),
+            (VMOVDDUPYrr VR256:$src)>;
+}
+
+let Predicates = [HasAVX] in {
   def : Pat<(X86Movddup (bc_v2f64 (loadv4f32 addr:$src))),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
   def : Pat<(X86Movddup (bc_v2f64 (loadv2i64 addr:$src))),
@@ -5228,16 +5237,6 @@ let Predicates = [HasAVX] in {
   def : Pat<(X86Movddup (bc_v2f64
                              (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
-
-  // 256-bit version
-  def : Pat<(X86Movddup (loadv4f64 addr:$src)),
-            (VMOVDDUPYrm addr:$src)>;
-  def : Pat<(X86Movddup (loadv4i64 addr:$src)),
-            (VMOVDDUPYrm addr:$src)>;
-  def : Pat<(X86Movddup (v4i64 (scalar_to_vector (loadi64 addr:$src)))),
-            (VMOVDDUPYrm addr:$src)>;
-  def : Pat<(X86Movddup (v4i64 VR256:$src)),
-            (VMOVDDUPYrr VR256:$src)>;
 }
 
 let Predicates = [UseAVX, OptForSize] in {

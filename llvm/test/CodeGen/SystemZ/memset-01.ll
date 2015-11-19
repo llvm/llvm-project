@@ -2,8 +2,8 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-declare void @llvm.memset.p0i8.i32(i8 *nocapture, i8, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i64(i8 *nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8 *nocapture, i8, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8 *nocapture, i8, i64, i32, i1) nounwind
 
 ; No bytes, i32 version.
 define void @f1(i8 *%dest, i8 %val) {
@@ -11,7 +11,7 @@ define void @f1(i8 *%dest, i8 %val) {
 ; CHECK-NOT: %r2
 ; CHECK-NOT: %r3
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 0, i32 1, i1 false)
   ret void
 }
 
@@ -21,7 +21,7 @@ define void @f2(i8 *%dest, i8 %val) {
 ; CHECK-NOT: %r2
 ; CHECK-NOT: %r3
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 0, i1 false)
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 0, i32 1, i1 false)
   ret void
 }
 
@@ -30,7 +30,7 @@ define void @f3(i8 *%dest, i8 %val) {
 ; CHECK-LABEL: f3:
 ; CHECK: stc %r3, 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 1, i32 1, i1 false)
   ret void
 }
 
@@ -39,7 +39,7 @@ define void @f4(i8 *%dest, i8 %val) {
 ; CHECK-LABEL: f4:
 ; CHECK: stc %r3, 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 1, i32 1, i1 false)
   ret void
 }
 
@@ -49,7 +49,7 @@ define void @f5(i8 *%dest, i8 %val) {
 ; CHECK-DAG: stc %r3, 0(%r2)
 ; CHECK-DAG: stc %r3, 1(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 2, i1 false)
+  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 2, i32 1, i1 false)
   ret void
 }
 
@@ -59,7 +59,7 @@ define void @f6(i8 *%dest, i8 %val) {
 ; CHECK-DAG: stc %r3, 0(%r2)
 ; CHECK-DAG: stc %r3, 1(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 2, i1 false)
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 2, i32 1, i1 false)
   ret void
 }
 
@@ -69,7 +69,7 @@ define void @f7(i8 *%dest, i8 %val) {
 ; CHECK: stc %r3, 0(%r2)
 ; CHECK: mvc 1(2,%r2), 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 3, i1 false)
+  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 3, i32 1, i1 false)
   ret void
 }
 
@@ -79,7 +79,7 @@ define void @f8(i8 *%dest, i8 %val) {
 ; CHECK: stc %r3, 0(%r2)
 ; CHECK: mvc 1(2,%r2), 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 3, i1 false)
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 3, i32 1, i1 false)
   ret void
 }
 
@@ -89,7 +89,7 @@ define void @f9(i8 *%dest, i8 %val) {
 ; CHECK: stc %r3, 0(%r2)
 ; CHECK: mvc 1(256,%r2), 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 257, i1 false)
+  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 257, i32 1, i1 false)
   ret void
 }
 
@@ -99,7 +99,7 @@ define void @f10(i8 *%dest, i8 %val) {
 ; CHECK: stc %r3, 0(%r2)
 ; CHECK: mvc 1(256,%r2), 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 257, i1 false)
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 257, i32 1, i1 false)
   ret void
 }
 
@@ -110,7 +110,7 @@ define void @f11(i8 *%dest, i8 %val) {
 ; CHECK: mvc 1(256,%r2), 0(%r2)
 ; CHECK: mvc 257(1,%r2), 256(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 258, i1 false)
+  call void @llvm.memset.p0i8.i32(i8 *%dest, i8 %val, i32 258, i32 1, i1 false)
   ret void
 }
 
@@ -121,7 +121,7 @@ define void @f12(i8 *%dest, i8 %val) {
 ; CHECK: mvc 1(256,%r2), 0(%r2)
 ; CHECK: mvc 257(1,%r2), 256(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 258, i1 false)
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 258, i32 1, i1 false)
   ret void
 }
 
@@ -136,7 +136,7 @@ define void @f13(i8 *%dest, i8 %val) {
 ; CHECK: mvc 1025(256,%r2), 1024(%r2)
 ; CHECK: mvc 1281(256,%r2), 1280(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 1537,
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 1537, i32 1,
                                   i1 false)
   ret void
 }
@@ -154,7 +154,7 @@ define void @f14(i8 *%dest, i8 %val) {
 ; CHECK: brctg [[COUNT]], [[LABEL]]
 ; CHECK: mvc 1(1,%r2), 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 1538,
+  call void @llvm.memset.p0i8.i64(i8 *%dest, i8 %val, i64 1538, i32 1,
                                   i1 false)
   ret void
 }

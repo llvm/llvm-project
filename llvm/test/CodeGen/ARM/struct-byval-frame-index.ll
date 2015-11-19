@@ -61,10 +61,10 @@ target triple = "armv7l-unknown-linux-gnueabihf"
 @brefframe = external global [4 x [4 x i8]], align 1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) #0
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #0
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) #0
 
 ; Function Attrs: nounwind
 declare void @SetMotionVectorsMB(%structK* nocapture, i32) #1
@@ -123,10 +123,10 @@ for.cond210.preheader:                            ; preds = %if.then169
   unreachable
 
 if.end230:                                        ; preds = %if.end164
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* bitcast ([4 x i32]* @b8mode to i8*), i32 16, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* bitcast ([4 x i32]* @b8mode to i8*), i32 16, i32 4, i1 false)
   %b8pdir = getelementptr inbounds %structK, %structK* %2, i32 %1, i32 15
   %3 = bitcast [4 x i32]* %b8pdir to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %3, i8* bitcast ([4 x i32]* @b8pdir to i8*), i32 16, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %3, i8* bitcast ([4 x i32]* @b8pdir to i8*), i32 16, i32 4, i1 false)
   br i1 undef, label %if.end236, label %if.then233
 
 if.then233:                                       ; preds = %if.end230

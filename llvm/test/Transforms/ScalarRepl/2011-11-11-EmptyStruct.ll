@@ -17,10 +17,10 @@ entry:
   store double 1.000000e+00, double* %b, align 8
   %0 = bitcast %struct.S* %retval to i8*
   %1 = bitcast %struct.S* %ret to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 8, i32 8, i1 false)
   %2 = bitcast %struct.S* %retval to double*
   %3 = load double, double* %2, align 1
   ret double %3
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind

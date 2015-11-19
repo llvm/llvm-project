@@ -5483,4 +5483,50 @@ define <8 x float>@test_int_x86_avx512_mask_movshdup_256(<8 x float> %x0, <8 x f
   %res4 = fadd <8 x float> %res2, %res3
   ret <8 x float> %res4
 }
+declare <2 x double> @llvm.x86.avx512.mask.movddup.128(<2 x double>, <2 x double>, i8)
 
+define <2 x double>@test_int_x86_avx512_mask_movddup_128(<2 x double> %x0, <2 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movddup_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vmovddup %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    ## xmm1 = xmm0[0,0]
+; CHECK-NEXT:    vmovddup %xmm0, %xmm2 {%k1} {z}
+; CHECK-NEXT:    ## xmm2 = xmm0[0,0]
+; CHECK-NEXT:    vmovddup %xmm0, %xmm0
+; CHECK-NEXT:    ## xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <2 x double> @llvm.x86.avx512.mask.movddup.128(<2 x double> %x0, <2 x double> %x1, i8 %x2)
+  %res1 = call <2 x double> @llvm.x86.avx512.mask.movddup.128(<2 x double> %x0, <2 x double> %x1, i8 -1)
+  %res2 = call <2 x double> @llvm.x86.avx512.mask.movddup.128(<2 x double> %x0, <2 x double> zeroinitializer, i8 %x2)
+  %res3 = fadd <2 x double> %res, %res1
+  %res4 = fadd <2 x double> %res2, %res3
+  ret <2 x double> %res4
+}
+
+declare <4 x double> @llvm.x86.avx512.mask.movddup.256(<4 x double>, <4 x double>, i8)
+
+define <4 x double>@test_int_x86_avx512_mask_movddup_256(<4 x double> %x0, <4 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movddup_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vmovddup %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    ## ymm1 = ymm0[0,0,2,2]
+; CHECK-NEXT:    vmovddup %ymm0, %ymm2 {%k1} {z}
+; CHECK-NEXT:    ## ymm2 = ymm0[0,0,2,2]
+; CHECK-NEXT:    vmovddup %ymm0, %ymm0
+; CHECK-NEXT:    ## ymm0 = ymm0[0,0,2,2]
+; CHECK-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <4 x double> @llvm.x86.avx512.mask.movddup.256(<4 x double> %x0, <4 x double> %x1, i8 %x2)
+  %res1 = call <4 x double> @llvm.x86.avx512.mask.movddup.256(<4 x double> %x0, <4 x double> %x1, i8 -1)
+  %res2 = call <4 x double> @llvm.x86.avx512.mask.movddup.256(<4 x double> %x0, <4 x double> zeroinitializer, i8 %x2)
+  %res3 = fadd <4 x double> %res, %res1
+  %res4 = fadd <4 x double> %res2, %res3
+  ret <4 x double> %res4
+}

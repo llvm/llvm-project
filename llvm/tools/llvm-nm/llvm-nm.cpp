@@ -239,9 +239,8 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
                               const char *printDashes, const char *printFormat) {
   MachO::mach_header H;
   MachO::mach_header_64 H_64;
-  uint32_t Filetype, Flags;
-  MachO::nlist_64 STE_64;
-  MachO::nlist STE;
+  uint32_t Filetype = MachO::MH_OBJECT;
+  uint32_t Flags = 0;
   uint8_t NType = 0;
   uint8_t NSect = 0;
   uint16_t NDesc = 0;
@@ -280,7 +279,7 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
       H_64 = MachO->MachOObjectFile::getHeader64();
       Filetype = H_64.filetype;
       Flags = H_64.flags;
-      STE_64 = MachO->getSymbol64TableEntry(SymDRI);
+      MachO::nlist_64 STE_64 = MachO->getSymbol64TableEntry(SymDRI);
       NType = STE_64.n_type;
       NSect = STE_64.n_sect;
       NDesc = STE_64.n_desc;
@@ -290,7 +289,7 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
       H = MachO->MachOObjectFile::getHeader();
       Filetype = H.filetype;
       Flags = H.flags;
-      STE = MachO->getSymbolTableEntry(SymDRI);
+      MachO::nlist STE = MachO->getSymbolTableEntry(SymDRI);
       NType = STE.n_type;
       NSect = STE.n_sect;
       NDesc = STE.n_desc;

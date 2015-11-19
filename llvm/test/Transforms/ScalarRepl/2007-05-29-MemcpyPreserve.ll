@@ -13,12 +13,12 @@ entry:
   %tmp = alloca %struct.UnionType, align 8
   %tmp2 = getelementptr %struct.UnionType, %struct.UnionType* %tmp, i32 0, i32 0, i32 0
   %tmp13 = getelementptr %struct.UnionType, %struct.UnionType* %p, i32 0, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp13, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp13, i32 8, i32 0, i1 false)
   %tmp5 = load %struct.UnionType*, %struct.UnionType** %pointerToUnion
   %tmp56 = getelementptr %struct.UnionType, %struct.UnionType* %tmp5, i32 0, i32 0, i32 0
   %tmp7 = getelementptr %struct.UnionType, %struct.UnionType* %tmp, i32 0, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp56, i8* %tmp7, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp56, i8* %tmp7, i32 8, i32 0, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind

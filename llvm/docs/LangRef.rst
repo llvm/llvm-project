@@ -11439,12 +11439,16 @@ LLVM provides intrinsics for predicated vector load and store operations. The pr
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The loaded data is a vector of any integer or floating point data type.
+This is an overloaded intrinsic. The loaded data is a vector of any integer, floating point or pointer data type.
 
 ::
 
-      declare <16 x float> @llvm.masked.load.v16f32 (<16 x float>* <ptr>, i32 <alignment>, <16 x i1> <mask>, <16 x float> <passthru>)
-      declare <2 x double> @llvm.masked.load.v2f64  (<2 x double>* <ptr>, i32 <alignment>, <2 x i1>  <mask>, <2 x double> <passthru>)
+      declare <16 x float>  @llvm.masked.load.v16f32 (<16 x float>* <ptr>, i32 <alignment>, <16 x i1> <mask>, <16 x float> <passthru>)
+      declare <2 x double>  @llvm.masked.load.v2f64  (<2 x double>* <ptr>, i32 <alignment>, <2 x i1>  <mask>, <2 x double> <passthru>)
+      ;; The data is a vector of pointers to double
+      declare <8 x double*> @llvm.masked.load.v8p0f64    (<8 x double*>* <ptr>, i32 <alignment>, <8 x i1> <mask>, <8 x double*> <passthru>)
+      ;; The data is a vector of function pointers
+      declare <8 x i32 ()*> @llvm.masked.load.v8p0f_i32f (<8 x i32 ()*>* <ptr>, i32 <alignment>, <8 x i1> <mask>, <8 x i32 ()*> <passthru>)
 
 Overview:
 """""""""
@@ -11480,12 +11484,16 @@ The result of this operation is equivalent to a regular vector load instruction 
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The data stored in memory is a vector of any integer or floating point data type.
+This is an overloaded intrinsic. The data stored in memory is a vector of any integer, floating point or pointer data type.
 
 ::
 
-       declare void @llvm.masked.store.v8i32 (<8 x i32>  <value>, <8 x i32> * <ptr>, i32 <alignment>,  <8 x i1>  <mask>)
-       declare void @llvm.masked.store.v16f32(<16 x i32> <value>, <16 x i32>* <ptr>, i32 <alignment>,  <16 x i1> <mask>)
+       declare void @llvm.masked.store.v8i32  (<8  x i32>   <value>, <8  x i32>*   <ptr>, i32 <alignment>,  <8  x i1> <mask>)
+       declare void @llvm.masked.store.v16f32 (<16 x float> <value>, <16 x float>* <ptr>, i32 <alignment>,  <16 x i1> <mask>)
+       ;; The data is a vector of pointers to double
+       declare void @llvm.masked.store.v8p0f64    (<8 x double*> <value>, <8 x double*>* <ptr>, i32 <alignment>, <8 x i1> <mask>)
+       ;; The data is a vector of function pointers
+       declare void @llvm.masked.store.v4p0f_i32f (<4 x i32 ()*> <value>, <4 x i32 ()*>* <ptr>, i32 <alignment>, <4 x i1> <mask>)
 
 Overview:
 """""""""
@@ -11526,12 +11534,13 @@ LLVM provides intrinsics for vector gather and scatter operations. They are simi
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The loaded data are multiple scalar values of any integer or floating point data type gathered together into one vector.
+This is an overloaded intrinsic. The loaded data are multiple scalar values of any integer, floating point or pointer data type gathered together into one vector.
 
 ::
 
-      declare <16 x float> @llvm.masked.gather.v16f32 (<16 x float*> <ptrs>, i32 <alignment>, <16 x i1> <mask>, <16 x float> <passthru>)
-      declare <2 x double> @llvm.masked.gather.v2f64  (<2 x double*> <ptrs>, i32 <alignment>, <2 x i1>  <mask>, <2 x double> <passthru>)
+      declare <16 x float> @llvm.masked.gather.v16f32   (<16 x float*> <ptrs>, i32 <alignment>, <16 x i1> <mask>, <16 x float> <passthru>)
+      declare <2 x double> @llvm.masked.gather.v2f64    (<2 x double*> <ptrs>, i32 <alignment>, <2 x i1>  <mask>, <2 x double> <passthru>)
+      declare <8 x float*> @llvm.masked.gather.v8p0f32  (<8 x float**> <ptrs>, i32 <alignment>, <8 x i1>  <mask>, <8 x float*> <passthru>)
 
 Overview:
 """""""""
@@ -11579,12 +11588,13 @@ The semantics of this operation are equivalent to a sequence of conditional scal
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The data stored in memory is a vector of any integer or floating point data type. Each vector element is stored in an arbitrary memory addresses. Scatter with overlapping addresses is guaranteed to be ordered from least-significant to most-significant element.
+This is an overloaded intrinsic. The data stored in memory is a vector of any integer, floating point or pointer data type. Each vector element is stored in an arbitrary memory address. Scatter with overlapping addresses is guaranteed to be ordered from least-significant to most-significant element.
 
 ::
 
-       declare void @llvm.masked.scatter.v8i32 (<8 x i32>  <value>, <8 x i32*>  <ptrs>, i32 <alignment>,  <8 x i1>  <mask>)
-       declare void @llvm.masked.scatter.v16f32(<16 x i32> <value>, <16 x i32*> <ptrs>, i32 <alignment>,  <16 x i1> <mask>)
+       declare void @llvm.masked.scatter.v8i32   (<8 x i32>     <value>, <8 x i32*>     <ptrs>, i32 <alignment>, <8 x i1>  <mask>)
+       declare void @llvm.masked.scatter.v16f32  (<16 x float>  <value>, <16 x float*>  <ptrs>, i32 <alignment>, <16 x i1> <mask>)
+       declare void @llvm.masked.scatter.v4p0f64 (<4 x double*> <value>, <4 x double**> <ptrs>, i32 <alignment>, <4 x i1>  <mask>)
 
 Overview:
 """""""""

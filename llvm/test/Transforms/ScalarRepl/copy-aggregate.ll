@@ -75,9 +75,9 @@ entry:
   %var = alloca [4 x %padded], align 4
   %vari8 = bitcast [4 x %padded]* %var to i8*
   %pi8 = bitcast [4 x %padded]* %p to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %vari8, i8* %pi8, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %vari8, i8* %pi8, i32 16, i32 4, i1 false)
   %qi8 = bitcast [4 x %padded]* %q to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %qi8, i8* %vari8, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %qi8, i8* %vari8, i32 16, i32 4, i1 false)
   ret void
 }
 
@@ -98,10 +98,10 @@ entry:
   store %homogeneous %res, %homogeneous* %varcast
   %tmp1 = bitcast %wrapped_array* %arr to i8*
   %tmp2 = bitcast %wrapped_array* %var to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp1, i8* %tmp2, i32 48, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp1, i8* %tmp2, i32 48, i32 16, i1 false)
   ret void
 }
 
 declare %homogeneous @test6callee(i8* nocapture) nounwind
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind

@@ -144,36 +144,6 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   }
-  case 'm': {
-    if (Name.startswith("memcpy.") && F->arg_size() == 5) {
-      F->setName(Name + ".old");
-      // Get the types of dest, src, and len.
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memcpy,
-                                        ParamTypes);
-      return true;
-    }
-    if (Name.startswith("memmove.") && F->arg_size() == 5) {
-      F->setName(Name + ".old");
-      // Get the types of dest, src, and len.
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memmove,
-                                        ParamTypes);
-      return true;
-    }
-    if (Name.startswith("memset.") && F->arg_size() == 5) {
-      F->setName(Name + ".old");
-      // Get the types of dest and len.
-      Type *ParamTypes[2] = {
-        F->getFunctionType()->getParamType(0),
-        F->getFunctionType()->getParamType(2)
-      };
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memset,
-                                        ParamTypes);
-      return true;
-    }
-    break;
-  }
 
   case 'o':
     // We only need to change the name to match the mangling including the
@@ -756,31 +726,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         NewFn, {CI->getArgOperand(0), Builder.getFalse()}, Name));
     CI->eraseFromParent();
     return;
-
-  case Intrinsic::memcpy:
-  case Intrinsic::memmove:
-  case Intrinsic::memset: {
-    // Remove alignment argument (3), and add alignment attributes to the
-    // dest/src pointers.
-    Value *Args[4] = {
-      CI->getArgOperand(0),
-      CI->getArgOperand(1),
-      CI->getArgOperand(2),
-      CI->getArgOperand(4)
-    };
-    auto *MemCI = cast<MemIntrinsic>(Builder.CreateCall(NewFn, Args, Name));
-
-    // All mem intrinsics support dest alignment.
-    const ConstantInt *Align = cast<ConstantInt>(CI->getArgOperand(3));
-    MemCI->setDestAlignment(Align->getZExtValue());
-
-    // Memcpy/Memmove also support source alignment.
-    if (auto *MemTransferI = dyn_cast<MemTransferInst>(MemCI))
-      MemTransferI->setSrcAlignment(Align->getZExtValue());
-    CI->replaceAllUsesWith(MemCI);
-    CI->eraseFromParent();
-    return;
-  }
 
   case Intrinsic::objectsize:
     CI->replaceAllUsesWith(Builder.CreateCall(

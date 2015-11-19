@@ -207,7 +207,7 @@ entry:
 
 declare i32 @callee12()
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
 define i32 @caller12(%struct.S* nocapture byval %a0) nounwind {
 entry:
@@ -221,7 +221,7 @@ entry:
 ; PIC16: jalrc
 
   %0 = bitcast %struct.S* %a0 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast (%struct.S* @gs1 to i8*), i8* %0, i32 8, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast (%struct.S* @gs1 to i8*), i8* %0, i32 8, i32 4, i1 false)
   %call = tail call i32 @callee12() nounwind
   ret i32 %call
 }

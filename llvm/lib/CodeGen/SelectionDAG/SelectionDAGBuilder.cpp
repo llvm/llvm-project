@@ -4498,73 +4498,69 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::longjmp:
     return &"_longjmp"[!TLI.usesUnderscoreLongJmp()];
   case Intrinsic::memcpy: {
-    const MemCpyInst &MemCpyI = cast<MemCpyInst>(I);
     // FIXME: this definition of "user defined address space" is x86-specific
     // Assert for address < 256 since we support only user defined address
     // spaces.
-    assert(MemCpyI.getDestAddressSpace() < 256 &&
-           MemCpyI.getSourceAddressSpace() < 256 &&
+    assert(cast<PointerType>(I.getArgOperand(0)->getType())->getAddressSpace()
+           < 256 &&
+           cast<PointerType>(I.getArgOperand(1)->getType())->getAddressSpace()
+           < 256 &&
            "Unknown address space");
-    SDValue Op1 = getValue(MemCpyI.getDest());
-    SDValue Op2 = getValue(MemCpyI.getSource());
-    SDValue Op3 = getValue(MemCpyI.getLength());
-    // FIXME: Support passing different dest/src alignments to the memcpy
-    // DAG node.
-    unsigned Align = std::min(MemCpyI.getDestAlignment(),
-                              MemCpyI.getSrcAlignment());
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    SDValue Op3 = getValue(I.getArgOperand(2));
+    unsigned Align = cast<ConstantInt>(I.getArgOperand(3))->getZExtValue();
     if (!Align)
       Align = 1; // @llvm.memcpy defines 0 and 1 to both mean no alignment.
-    bool isVol = MemCpyI.isVolatile();
+    bool isVol = cast<ConstantInt>(I.getArgOperand(4))->getZExtValue();
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     SDValue MC = DAG.getMemcpy(getRoot(), sdl, Op1, Op2, Op3, Align, isVol,
                                false, isTC,
-                               MachinePointerInfo(MemCpyI.getDest()),
-                               MachinePointerInfo(MemCpyI.getSource()));
+                               MachinePointerInfo(I.getArgOperand(0)),
+                               MachinePointerInfo(I.getArgOperand(1)));
     updateDAGForMaybeTailCall(MC);
     return nullptr;
   }
   case Intrinsic::memset: {
-    const MemSetInst &MemSetI = cast<MemSetInst>(I);
     // FIXME: this definition of "user defined address space" is x86-specific
     // Assert for address < 256 since we support only user defined address
     // spaces.
-    assert(MemSetI.getDestAddressSpace() < 256 &&
+    assert(cast<PointerType>(I.getArgOperand(0)->getType())->getAddressSpace()
+           < 256 &&
            "Unknown address space");
-    SDValue Op1 = getValue(MemSetI.getDest());
-    SDValue Op2 = getValue(MemSetI.getValue());
-    SDValue Op3 = getValue(MemSetI.getLength());
-    unsigned Align = MemSetI.getDestAlignment();
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    SDValue Op3 = getValue(I.getArgOperand(2));
+    unsigned Align = cast<ConstantInt>(I.getArgOperand(3))->getZExtValue();
     if (!Align)
       Align = 1; // @llvm.memset defines 0 and 1 to both mean no alignment.
-    bool isVol = MemSetI.isVolatile();
+    bool isVol = cast<ConstantInt>(I.getArgOperand(4))->getZExtValue();
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     SDValue MS = DAG.getMemset(getRoot(), sdl, Op1, Op2, Op3, Align, isVol,
-                               isTC, MachinePointerInfo(MemSetI.getDest()));
+                               isTC, MachinePointerInfo(I.getArgOperand(0)));
     updateDAGForMaybeTailCall(MS);
     return nullptr;
   }
   case Intrinsic::memmove: {
-    const MemMoveInst &MemMoveI = cast<MemMoveInst>(I);
     // FIXME: this definition of "user defined address space" is x86-specific
     // Assert for address < 256 since we support only user defined address
     // spaces.
-    assert(MemMoveI.getDestAddressSpace() < 256 &&
-           MemMoveI.getSourceAddressSpace() < 256 &&
+    assert(cast<PointerType>(I.getArgOperand(0)->getType())->getAddressSpace()
+           < 256 &&
+           cast<PointerType>(I.getArgOperand(1)->getType())->getAddressSpace()
+           < 256 &&
            "Unknown address space");
-    SDValue Op1 = getValue(MemMoveI.getDest());
-    SDValue Op2 = getValue(MemMoveI.getSource());
-    SDValue Op3 = getValue(MemMoveI.getLength());
-    // FIXME: Support passing different dest/src alignments to the memcpy
-    // DAG node.
-    unsigned Align = std::min(MemMoveI.getDestAlignment(),
-                              MemMoveI.getSrcAlignment());
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    SDValue Op3 = getValue(I.getArgOperand(2));
+    unsigned Align = cast<ConstantInt>(I.getArgOperand(3))->getZExtValue();
     if (!Align)
       Align = 1; // @llvm.memmove defines 0 and 1 to both mean no alignment.
-    bool isVol = MemMoveI.isVolatile();
+    bool isVol = cast<ConstantInt>(I.getArgOperand(4))->getZExtValue();
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     SDValue MM = DAG.getMemmove(getRoot(), sdl, Op1, Op2, Op3, Align, isVol,
-                                isTC, MachinePointerInfo(MemMoveI.getDest()),
-                                MachinePointerInfo(MemMoveI.getSource()));
+                                isTC, MachinePointerInfo(I.getArgOperand(0)),
+                                MachinePointerInfo(I.getArgOperand(1)));
     updateDAGForMaybeTailCall(MM);
     return nullptr;
   }

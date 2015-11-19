@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 declare i32 @printf(i8* nocapture, ...) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
 
 
 ; Make sure that the initial memcpy call does not go away
@@ -21,10 +21,10 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) n
 
 define i32 @main() nounwind uwtable ssp {
 main_entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (%struct.anon* @b to i8*), i8* bitcast (%struct.anon* @a to i8*), i64 12, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (%struct.anon* @b to i8*), i8* bitcast (%struct.anon* @a to i8*), i64 12, i32 4, i1 false)
   %0 = load volatile i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @b, i64 0, i32 0), align 4
   store i32 %0, i32* @c, align 4
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (%struct.anon* @b to i8*), i8* bitcast (%struct.anon* @a to i8*), i64 12, i1 false) nounwind
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (%struct.anon* @b to i8*), i8* bitcast (%struct.anon* @a to i8*), i64 12, i32 4, i1 false) nounwind
   %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %0) nounwind
   ret i32 0
 }

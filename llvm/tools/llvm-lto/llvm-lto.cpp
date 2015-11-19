@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
@@ -119,6 +120,32 @@ static void handleDiagnostics(lto_codegen_diagnostic_severity_t Severity,
   errs() << Msg << "\n";
 }
 
+static void diagnosticHandler(const DiagnosticInfo &DI) {
+  raw_ostream &OS = errs();
+  OS << "llvm-lto: ";
+  switch (DI.getSeverity()) {
+  case DS_Error:
+    OS << "error: ";
+    break;
+  case DS_Warning:
+    OS << "warning: ";
+    break;
+  case DS_Remark:
+    OS << "remark: ";
+    break;
+  case DS_Note:
+    OS << "note: ";
+    break;
+  }
+
+  DiagnosticPrinterRawOStream DP(OS);
+  DI.print(DP);
+  OS << '\n';
+
+  if (DI.getSeverity() == DS_Error)
+    exit(1);
+}
+
 static std::unique_ptr<LTOModule>
 getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
                   const TargetOptions &Options, std::string &Error) {
@@ -163,7 +190,7 @@ static int listSymbols(StringRef Command, const TargetOptions &Options) {
 /// index object if found, or nullptr if not.
 static std::unique_ptr<FunctionInfoIndex>
 getFunctionIndexForFile(StringRef Path, std::string &Error,
-                        LLVMContext &Context) {
+                        DiagnosticHandlerFunction DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buffer;
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Path);
@@ -174,7 +201,7 @@ getFunctionIndexForFile(StringRef Path, std::string &Error,
   Buffer = std::move(BufferOrErr.get());
   ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
       object::FunctionIndexObjectFile::create(Buffer->getMemBufferRef(),
-                                              Context);
+                                              DiagnosticHandler);
   if (std::error_code EC = ObjOrErr.getError()) {
     Error = EC.message();
     return nullptr;
@@ -187,13 +214,12 @@ getFunctionIndexForFile(StringRef Path, std::string &Error,
 /// This is meant to enable testing of ThinLTO combined index generation,
 /// currently available via the gold plugin via -thinlto.
 static int createCombinedFunctionIndex(StringRef Command) {
-  LLVMContext Context;
   FunctionInfoIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     std::string Error;
     std::unique_ptr<FunctionInfoIndex> Index =
-        getFunctionIndexForFile(Filename, Error, Context);
+        getFunctionIndexForFile(Filename, Error, diagnosticHandler);
     if (!Index) {
       errs() << Command << ": error loading file '" << Filename
              << "': " << Error << "\n";

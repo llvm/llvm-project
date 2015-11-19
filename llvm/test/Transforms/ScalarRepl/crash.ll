@@ -157,7 +157,7 @@ cond_next114.i:         ; preds = %cond_true
 
 cond_next:              ; preds = %cond_true
         %SB19 = bitcast %struct.aal_spanbucket_t* %SB to i8*            ; <i8*> [#uses=1]
-        call void @llvm.memcpy.p0i8.p0i8.i32(i8* %SB19, i8* null, i32 12, i1 false)
+        call void @llvm.memcpy.p0i8.p0i8.i32(i8* %SB19, i8* null, i32 12, i32 0, i1 false)
         br i1 false, label %cond_next34, label %cond_next79
 
 cond_next34:            ; preds = %cond_next
@@ -195,7 +195,7 @@ entry:
         %.compoundliteral = alloca %0           
         %tmp228 = getelementptr %0, %0* %.compoundliteral, i32 0, i32 7
         %tmp229 = bitcast [0 x i16]* %tmp228 to i8*             
-        call void @llvm.memset.p0i8.i64(i8* %tmp229, i8 0, i64 0, i1 false)
+        call void @llvm.memset.p0i8.i64(i8* %tmp229, i8 0, i64 0, i32 2, i1 false)
         unreachable
 }
 
@@ -282,5 +282,5 @@ for.end:                                          ; preds = %for.body10
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind

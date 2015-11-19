@@ -21,7 +21,7 @@ define i32 @main(i32 %arg, i8** nocapture %arg1) nounwind {
 bb:
   %tmp = alloca %0, align 8                       ; <%0*> [#uses=11]
   %tmp2 = bitcast %0* %tmp to i8*                 ; <i8*> [#uses=1]
-  call void @llvm.memset.p0i8.i64(i8* %tmp2, i8 0, i64 16, i1 false) nounwind
+  call void @llvm.memset.p0i8.i64(i8* %tmp2, i8 0, i64 16, i32 8, i1 false) nounwind
   %tmp3 = getelementptr inbounds %0, %0* %tmp, i64 0, i32 0 ; <%0**> [#uses=3]
   store %0* %tmp, %0** %tmp3
   %tmp4 = getelementptr inbounds %0, %0* %tmp, i64 0, i32 1 ; <%0**> [#uses=1]
@@ -98,7 +98,7 @@ declare void @_ZNSt15_List_node_base4hookEPS_(%0*, %0*)
 
 declare noalias i8* @_Znwm(i64)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 
 declare void @_ZdlPv(i8*) nounwind
 
