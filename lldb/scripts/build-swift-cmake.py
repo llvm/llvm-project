@@ -58,7 +58,6 @@ checkout_git("swift", "ssh://git@github.com/apple/swift.git", "master")
 # checkout_git("swift/benchmark/PerfTestSuite", "*TODO somewhere*", "master")
 checkout_git("cmark", "ssh://git@github.com/apple/swift-cmark.git", "master")
 checkout_git("ninja", "https://github.com/ninja-build/ninja.git", "master")
-# checkout_git("swig", "*TODO somewhere*", "master")
 checkout_git("lldb", "ssh://git@github.com/apple/swift-lldb.git", "master")
 
 if args.package:
@@ -73,7 +72,6 @@ if args.update:
     update_git("swift")
     update_git("cmark")
     update_git("ninja")
-    # update_git("swig")
     update_git("lldb")
     # update_git("swift/benchmark/PerfTestSuite")
     if args.package:

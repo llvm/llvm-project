@@ -23,6 +23,8 @@ endif()
 
 set(LLDB_DISABLE_PYTHON ${LLDB_DEFAULT_DISABLE_PYTHON} CACHE BOOL
   "Disables the Python scripting integration.")
+set(LLDB_ALLOW_STATIC_BINDINGS FALSE CACHE BOOL
+  "Enable using static/baked language bindings if swig is not present.")
 set(LLDB_DISABLE_CURSES ${LLDB_DEFAULT_DISABLE_CURSES} CACHE BOOL
   "Disables the Curses integration.")
 
