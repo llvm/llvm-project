@@ -2381,6 +2381,35 @@ FileSpec::EnumerateDirectoryResult DirectoryEnumerator(void *baton,
     
     return FileSpec::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
 };
+    
+static ConstString
+EnumerateSDKsForVersion (FileSpec sdks_spec, SDKType sdk_type, uint32_t least_major, uint32_t least_minor)
+{
+    if (!sdks_spec.IsDirectory())
+        return ConstString();
+    
+    const bool find_directories = true;
+    const bool find_files = false;
+    const bool find_other = true; // include symlinks
+    
+    SDKEnumeratorInfo enumerator_info;
+    
+    enumerator_info.sdk_type = sdk_type;
+    enumerator_info.least_major = least_major;
+    enumerator_info.least_minor = least_minor;
+    
+    FileSpec::EnumerateDirectory(sdks_spec.GetPath().c_str(),
+                                 find_directories,
+                                 find_files,
+                                 find_other,
+                                 DirectoryEnumerator,
+                                 &enumerator_info);
+    
+    if (enumerator_info.found_path.IsDirectory())
+        return ConstString(enumerator_info.found_path.GetPath());
+    else
+        return ConstString();
+}
 
 static ConstString
 GetSDKDirectory (SDKType sdk_type, uint32_t least_major, uint32_t least_minor)
@@ -2433,30 +2462,7 @@ GetSDKDirectory (SDKType sdk_type, uint32_t least_major, uint32_t least_minor)
         
         FileSpec sdks_spec(sdks_path.c_str(), false);
         
-        if (!sdks_spec.IsDirectory())
-            return ConstString();
-        
-        const bool find_directories = true;
-        const bool find_files = false;
-        const bool find_other = true; // include symlinks
-        
-        SDKEnumeratorInfo enumerator_info;
-        
-        enumerator_info.sdk_type = sdk_type;
-        enumerator_info.least_major = least_major;
-        enumerator_info.least_minor = least_minor;
-        
-        FileSpec::EnumerateDirectory(sdks_spec.GetPath().c_str(),
-                                     find_directories,
-                                     find_files,
-                                     find_other,
-                                     DirectoryEnumerator,
-                                     &enumerator_info);
-        
-        if (enumerator_info.found_path.IsDirectory())
-            return ConstString(enumerator_info.found_path.GetPath());
-        else
-            return ConstString();
+        return EnumerateSDKsForVersion(sdks_spec, sdk_type, least_major, least_major);
     }
     
     // The SDK type is Mac OS X
@@ -2511,7 +2517,7 @@ GetSDKDirectory (SDKType sdk_type, uint32_t least_major, uint32_t least_minor)
         else if ((least_major != major) || (least_minor != minor))
         {
             // Try the required SDK
-            
+            sdk_path.Clear();
             sdk_path.Printf("%sDeveloper/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%u.%u.sdk", xcode_contents_path.c_str(), least_major, least_minor);
             fspec.SetFile(sdk_path.GetString().c_str(), false);
             if (fspec.Exists())
@@ -2520,6 +2526,23 @@ GetSDKDirectory (SDKType sdk_type, uint32_t least_major, uint32_t least_minor)
                 // Cache results
                 g_sdk_cache[major_minor] = path;
                 return path;
+            }
+            else
+            {
+                // Okay, we're going to do an exhaustive search for *any* SDK that has an adequate version.
+                
+                std::string sdks_path = GetXcodeContentsPath();
+                sdks_path.append("Developer/Platforms/MacOSX.platform/Developer/SDKs");
+
+                FileSpec sdks_spec(sdks_path.c_str(), false);
+                
+                ConstString sdk_path = EnumerateSDKsForVersion(sdks_spec, sdk_type, least_major, least_major);
+
+                if (sdk_path)
+                {
+                    g_sdk_cache[major_minor] = sdk_path;
+                    return sdk_path;
+                }
             }
         }
     }
