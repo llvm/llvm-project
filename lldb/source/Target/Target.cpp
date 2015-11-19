@@ -213,6 +213,8 @@ Target::GetProcessSP () const
 lldb::REPLSP
 Target::GetREPL (Error &err, lldb::LanguageType language, const char *repl_options, bool can_create)
 {
+    err.Clear();
+    
     if (language == eLanguageTypeUnknown)
     {
         std::set<LanguageType> repl_languages;
