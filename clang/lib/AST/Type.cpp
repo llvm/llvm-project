@@ -510,6 +510,28 @@ bool Type::isObjCClassOrClassKindOfType() const {
   return OPT->isObjCClassType() || OPT->isObjCQualifiedClassType();
 }
 
+/// Was this type written with the special inert-in-MRC __unsafe_unretained
+/// qualifier?
+///
+/// This approximates the answer to the following question: if this
+/// translation unit were compiled in ARC, would this type be qualified
+/// with __unsafe_unretained?
+bool Type::isObjCInertUnsafeUnretainedType() const {
+  const Type *cur = this;
+  while (true) {
+    if (auto attributed = dyn_cast<AttributedType>(cur)) {
+      if (attributed->getAttrKind() ==
+            AttributedType::attr_objc_inert_unsafe_unretained)
+        return true;
+    }
+
+    // Single-step desugar until we run out of sugar.
+    QualType next = cur->getLocallyUnqualifiedSingleStepDesugaredType();
+    if (next.getTypePtr() == cur) return false;
+    cur = next.getTypePtr();
+  }
+}
+
 ObjCObjectType::ObjCObjectType(QualType Canonical, QualType Base,
                                ArrayRef<QualType> typeArgs,
                                ArrayRef<ObjCProtocolDecl *> protocols,
@@ -2952,6 +2974,7 @@ bool AttributedType::isQualifier() const {
   case AttributedType::attr_address_space:
   case AttributedType::attr_objc_gc:
   case AttributedType::attr_objc_ownership:
+  case AttributedType::attr_objc_inert_unsafe_unretained:
   case AttributedType::attr_nonnull:
   case AttributedType::attr_nullable:
   case AttributedType::attr_null_unspecified:
@@ -3010,6 +3033,7 @@ bool AttributedType::isCallingConv() const {
   case attr_neon_polyvector_type:
   case attr_objc_gc:
   case attr_objc_ownership:
+  case attr_objc_inert_unsafe_unretained:
   case attr_noreturn:
   case attr_nonnull:
   case attr_nullable:

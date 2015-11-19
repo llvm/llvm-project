@@ -77,10 +77,10 @@ unsigned testMixedStruct() {
   // CHECK: %[[l:.*]] = alloca %[[ListInt:[^ ]*]], align 8
   // CHECK: %[[r:.*]] = alloca %[[ListInt]], align 8
 
-  // CHECK: call {{.*}}memcpy{{.*}}(i8* align 8 %{{.*}}, i8* align 8 bitcast ({{.*}}* @_ZZ15testMixedStructvE1l to i8*), i64 16,
+  // CHECK: call {{.*}}memcpy{{.*}}(i8* %{{.*}}, i8* bitcast ({{.*}}* @_ZZ15testMixedStructvE1l to i8*), i64 16,
   ListInt_left l{0, 1};
 
-  // CHECK: call {{.*}}memcpy{{.*}}(i8* align 8 %{{.*}}, i8* align 8 bitcast ({{.*}}* @_ZZ15testMixedStructvE1r to i8*), i64 16,
+  // CHECK: call {{.*}}memcpy{{.*}}(i8* %{{.*}}, i8* bitcast ({{.*}}* @_ZZ15testMixedStructvE1r to i8*), i64 16,
   ListInt_right r{0, 2};
 
   // CHECK: call void @_Z10useListIntR4ListIiE(%[[ListInt]]* dereferenceable({{[0-9]+}}) %[[l]])

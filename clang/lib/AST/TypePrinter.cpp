@@ -1191,6 +1191,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   printAfter(T->getModifiedType(), OS);
 
+  // Don't print the inert __unsafe_unretained attribute at all.
+  if (T->getAttrKind() == AttributedType::attr_objc_inert_unsafe_unretained)
+    return;
+
   // Print nullability type specifiers that occur after
   if (T->getAttrKind() == AttributedType::attr_nonnull ||
       T->getAttrKind() == AttributedType::attr_nullable ||

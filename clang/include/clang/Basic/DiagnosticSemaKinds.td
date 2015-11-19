@@ -2828,6 +2828,10 @@ def err_mode_not_primitive : Error<
   "mode attribute only supported for integer and floating-point types">;
 def err_mode_wrong_type : Error<
   "type of machine mode does not match type of base type">;
+def warn_vector_mode_deprecated : Warning<
+  "specifying vector types with the 'mode' attribute is deprecated; "
+  "use the 'vector_size' attribute instead">,
+  InGroup<DeprecatedAttributes>;
 def err_complex_mode_vector_type : Error<
   "type of machine mode does not support base vector types">;
 def err_attr_wrong_decl : Error<
@@ -7996,14 +8000,14 @@ def ext_coroutine_without_co_await_co_yield : ExtWarn<
 def err_implied_std_coroutine_traits_not_found : Error<
   "you need to include <coroutine> before defining a coroutine">;
 def err_malformed_std_coroutine_traits : Error<
-  "std::coroutine_traits must be a class template">;
+  "'std::coroutine_traits' must be a class template">;
 def err_implied_std_coroutine_traits_promise_type_not_found : Error<
-  "this function cannot be a coroutine: %0 has no member named 'promise_type'">;
+  "this function cannot be a coroutine: %q0 has no member named 'promise_type'">;
 def err_implied_std_coroutine_traits_promise_type_not_class : Error<
   "this function cannot be a coroutine: %0 is not a class">;
 def err_coroutine_traits_missing_specialization : Error<
   "this function cannot be a coroutine: missing definition of "
-  "specialization %0">;
+  "specialization %q0">;
 }
 
 let CategoryName = "Documentation Issue" in {

@@ -507,7 +507,7 @@ void test19() {
   // CHECK:      [[X:%.*]] = alloca [5 x i8*], align 16
   // CHECK: call void @llvm.lifetime.start
   // CHECK-NEXT: [[T0:%.*]] = bitcast [5 x i8*]* [[X]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[T0]], i8 0, i64 40, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 40, i32 16, i1 false)
   id x[5];
 
   extern id test19_helper(void);
@@ -556,7 +556,7 @@ void test20(unsigned n) {
   // Zero-initialize.
   // CHECK-NEXT: [[T0:%.*]] = bitcast i8** [[VLA]] to i8*
   // CHECK-NEXT: [[T1:%.*]] = mul nuw i64 [[DIM]], 8
-  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 16 [[T0]], i8 0, i64 [[T1]], i1 false)
+  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 [[T1]], i32 16, i1 false)
 
   // Destroy.
   // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds i8*, i8** [[VLA]], i64 [[DIM]]
@@ -599,7 +599,7 @@ void test21(unsigned n) {
   // CHECK-NEXT: [[T0:%.*]] = bitcast [3 x i8*]* [[VLA]] to i8*
   // CHECK-NEXT: [[T1:%.*]] = mul nuw i64 2, [[DIM]]
   // CHECK-NEXT: [[T2:%.*]] = mul nuw i64 [[T1]], 24
-  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 16 [[T0]], i8 0, i64 [[T2]], i1 false)
+  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 [[T2]], i32 16, i1 false)
 
   // Destroy.
   // CHECK-NEXT: [[T0:%.*]] = mul nuw i64 2, [[DIM]]

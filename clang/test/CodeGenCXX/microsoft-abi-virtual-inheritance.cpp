@@ -479,5 +479,5 @@ C::C() : B() {}
 // CHECK:   %[[B:.*]] = bitcast %"struct.test5::C"* %[[THIS]] to %"struct.test5::B"*
 // CHECK:   %[[B_i8:.*]] = bitcast %"struct.test5::B"* %[[B]] to i8*
 // CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[B_i8]], i32 4
-// CHECK:   call void @llvm.memset.p0i8.i32(i8* align 4 %[[FIELD]], i8 0, i32 4, i1 false)
+// CHECK:   call void @llvm.memset.p0i8.i32(i8* %[[FIELD]], i8 0, i32 4, i32 4, i1 false)
 }

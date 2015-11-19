@@ -215,7 +215,7 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
 // firstprivate vec(vec)
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* align 4 [[VEC_DEST]], i8* align 4 bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*),
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST]], i8* bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*),
 
 // firstprivate s_arr(s_arr)
 // CHECK: [[S_ARR_PRIV_BEGIN:%.+]] = getelementptr inbounds [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR_PRIV]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -281,7 +281,7 @@ int main() {
 // firstprivate vec(vec)
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
 // CHECK: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_REF]] to i8*
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* align 4 [[VEC_DEST]], i8* align 4 [[VEC_SRC]],
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST]], i8* [[VEC_SRC]],
 
 // firstprivate s_arr(s_arr)
 // CHECK: [[S_ARR_PRIV_BEGIN:%.+]] = getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[S_ARR_PRIV]], i{{[0-9]+}} 0, i{{[0-9]+}} 0

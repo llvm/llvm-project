@@ -275,11 +275,17 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 
   case Stmt::ImplicitCastExprClass: {
     const CastExpr *CE = cast<CastExpr>(E);
-    if (CE->getCastKind() == CK_ArrayToPointerDecay) {
-      Optional<SVal> ArrayVal = getConstantVal(CE->getSubExpr());
-      if (!ArrayVal)
+    switch (CE->getCastKind()) {
+    default:
+      break;
+    case CK_ArrayToPointerDecay:
+    case CK_BitCast: {
+      const Expr *SE = CE->getSubExpr();
+      Optional<SVal> Val = getConstantVal(SE);
+      if (!Val)
         return None;
-      return evalCast(*ArrayVal, CE->getType(), CE->getSubExpr()->getType());
+      return evalCast(*Val, CE->getType(), SE->getType());
+    }
     }
     // FALLTHROUGH
   }

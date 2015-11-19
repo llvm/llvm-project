@@ -82,6 +82,12 @@ static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
   // The promise type is required to be a class type.
   QualType PromiseType = S.Context.getTypeDeclType(Promise);
   if (!PromiseType->getAsCXXRecordDecl()) {
+    // Use the fully-qualified name of the type.
+    auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, Std);
+    NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
+                                      CoroTrait.getTypePtr());
+    PromiseType = S.Context.getElaboratedType(ETK_None, NNS, PromiseType);
+
     S.Diag(Loc, diag::err_implied_std_coroutine_traits_promise_type_not_class)
       << PromiseType;
     return QualType();

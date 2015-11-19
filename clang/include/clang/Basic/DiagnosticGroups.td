@@ -83,6 +83,7 @@ def AbstractFinalClass : DiagGroup<"abstract-final-class">;
 def CXX11CompatDeprecatedWritableStr :
   DiagGroup<"c++11-compat-deprecated-writable-strings">;
 
+def DeprecatedAttributes : DiagGroup<"deprecated-attributes">;
 def DeprecatedDeclarations : DiagGroup<"deprecated-declarations">;
 def UnavailableDeclarations : DiagGroup<"unavailable-declarations">;
 def PartialAvailability : DiagGroup<"partial-availability">;
@@ -92,7 +93,8 @@ def DeprecatedRegister : DiagGroup<"deprecated-register">;
 def DeprecatedWritableStr : DiagGroup<"deprecated-writable-strings",
                                       [CXX11CompatDeprecatedWritableStr]>;
 // FIXME: Why is DeprecatedImplementations not in this group?
-def Deprecated : DiagGroup<"deprecated", [DeprecatedDeclarations,
+def Deprecated : DiagGroup<"deprecated", [DeprecatedAttributes,
+                                          DeprecatedDeclarations,
                                           DeprecatedIncrementBool,
                                           DeprecatedRegister,
                                           DeprecatedWritableStr]>,

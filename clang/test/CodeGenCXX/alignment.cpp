@@ -204,7 +204,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A_P]], i32 0, i32 0
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     AlignedArray result = a.aArray;
   }
 
@@ -223,7 +223,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A_P]], i32 0, i32 0
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     AlignedArray result = b.aArray;
   }
 
@@ -234,7 +234,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 8 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 8, i1 false)
     AlignedArray result = b.bArray;
   }
 
@@ -245,7 +245,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 8 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 8, i1 false)
     AlignedArray result = b->bArray;
   }
 
@@ -256,7 +256,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     B b;
     AlignedArray result = b.bArray;
   }
@@ -277,7 +277,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A_P]], i32 0, i32 0
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     D d;
     AlignedArray result = d.aArray;
   }
@@ -292,7 +292,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 8 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 8, i1 false)
     D d;
     AlignedArray result = d.bArray;
   }
