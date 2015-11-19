@@ -28,7 +28,7 @@ void f() {
   // CHECK-NEXT: store i32 [[TMP]], i32* [[CY]]
   // CHECK-NEXT: [[SI8:%[a-zA-Z0-9.]+]] = bitcast [[STRUCT]]* [[S]] to i8*
   // CHECK-NEXT: [[COMPOUNDLITI8:%[a-zA-Z0-9.]+]] = bitcast [[STRUCT]]* [[COMPOUNDLIT]] to i8*
-  // CHECK-NEXT: call void @llvm.memcpy{{.*}}(i8* [[SI8]], i8* [[COMPOUNDLITI8]]
+  // CHECK-NEXT: call void @llvm.memcpy{{.*}}(i8* align 4 [[SI8]], i8* align 4 [[COMPOUNDLITI8]]
   s = (S){s.y,s.x};
   // CHECK-NEXT: ret void
 }
@@ -62,7 +62,7 @@ struct G g(int x, int y, int z) {
 
   // CHECK-NEXT: [[T0:%.*]] = bitcast i48* [[COERCE_TEMP]] to i8*
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[G]]* [[RESULT]] to i8*
-  // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 6
+  // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[T0]], i8* align 2 [[T1]], i64 6
   // CHECK-NEXT: [[T0:%.*]] = load i48, i48* [[COERCE_TEMP]]
   // CHECK-NEXT: ret i48 [[T0]]
 }

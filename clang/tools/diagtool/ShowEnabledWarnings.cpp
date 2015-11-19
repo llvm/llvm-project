@@ -64,9 +64,11 @@ createDiagnostics(unsigned int argc, char **argv) {
     new DiagnosticsEngine(DiagIDs, new DiagnosticOptions(), DiagsBuffer));
 
   // Try to build a CompilerInvocation.
+  SmallVector<const char *, 4> Args;
+  Args.push_back("diagtool");
+  Args.append(argv, argv + argc);
   std::unique_ptr<CompilerInvocation> Invocation(
-      createInvocationFromCommandLine(llvm::makeArrayRef(argv, argc),
-                                      InterimDiags));
+      createInvocationFromCommandLine(Args, InterimDiags));
   if (!Invocation)
     return nullptr;
 

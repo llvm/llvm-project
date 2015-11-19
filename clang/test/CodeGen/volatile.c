@@ -199,7 +199,7 @@ int main() {
 // CHECK: store volatile i32 {{.*}}, i32* @vtS
   (void)vF2;
   // From vF2 to a temporary
-// CHECK: call void @llvm.memcpy.{{.*}}(i8* %{{.*}}, i8* {{.*}} @vF2 {{.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(i8* align {{[0-9]*}} %{{[0-9]*}}, i8* align {{[0-9]*}} {{.*@vF2.*}}, i{{[0-9]*}} {{[0-9]*}}, i1 true)
   vF2 = vF2;
   // vF2 to itself
 // CHECK: call void @llvm.memcpy.{{.*}}(i8* {{.*@vF2.*}}, i8* {{.*@vF2.*}}, i1 true)
@@ -209,6 +209,6 @@ int main() {
 // CHECK: call void @llvm.memcpy.{{.*}}(i8* {{.*@vF2.*}}, i8* {{.*@vF2.*}}, i1 true)
   vF2 = (vF2, vF2);
   // vF2 to a temporary, then vF2 to itself
-// CHECK: call void @llvm.memcpy.{{.*}}(i8* %{{.*}}, i8* {{.*@vF2.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(i8* align {{[0-9]*}} %{{[0-9]*}}, i8* align {{[0-9]*}} {{.*@vF2.*}}, i{{[0-9]*}} {{[0-9]*}}, i1 true)
 // CHECK: call void @llvm.memcpy.{{.*}}(i8* {{.*@vF2.*}}, i8* {{.*@vF2.*}}, i1 true)
 }

@@ -379,8 +379,10 @@ public:
       Filename = Path.str();
       Files.insert(Filename);
     }
+    llvm::sys::fs::create_directories(llvm::sys::path::parent_path(Filename));
     std::ofstream OS(Filename);
     OS << Contents;
+    assert(OS.good());
   }
   void DisplayDiagnostics() {
     unsigned NumDiagnostics = clang_getNumDiagnostics(ClangTU);
@@ -464,4 +466,28 @@ TEST_F(LibclangReparseTest, ReparseWithModule) {
   // Reparse after fix.
   ASSERT_TRUE(ReparseTU(0, nullptr /* No unsaved files. */));
   EXPECT_EQ(0U, clang_getNumDiagnostics(ClangTU));
+}
+
+TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
+  std::string EmptyFiles[] = {"lib/gcc/arm-linux-gnueabi/4.6.1/crtbegin.o",
+                              "include/arm-linux-gnueabi/.keep",
+                              "include/c++/4.6.1/vector"};
+
+  for (auto &Name : EmptyFiles)
+    WriteFile(Name, "\n");
+
+  std::string Filename = "test.cc";
+  WriteFile(Filename, "#include <vector>\n");
+
+  std::string Clang = "bin/clang";
+  WriteFile(Clang, "");
+
+  const char *Argv[] = {Clang.c_str(), "-target", "arm-linux-gnueabi"};
+
+  EXPECT_EQ(CXError_Success,
+            clang_parseTranslationUnit2FullArgv(Index, Filename.c_str(), Argv,
+                                                sizeof(Argv) / sizeof(Argv[0]),
+                                                nullptr, 0, TUFlags, &ClangTU));
+  EXPECT_EQ(0U, clang_getNumDiagnostics(ClangTU));
+  DisplayDiagnostics();
 }

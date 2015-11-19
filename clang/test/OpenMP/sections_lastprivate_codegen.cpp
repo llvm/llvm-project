@@ -338,7 +338,7 @@ int main() {
 // original vec[]=private_vec[];
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_REF]] to i8*
 // CHECK: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST]], i8* [[VEC_SRC]],
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align 4 [[VEC_DEST]], i8* align 4 [[VEC_SRC]],
 
 // original s_arr[]=private_s_arr[];
 // CHECK: [[S_ARR_BEGIN:%.+]] = getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[S_ARR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0

@@ -244,7 +244,7 @@ namespace PR11124 {
   struct C : B { C(); };      
   C::C() : A(3), B() {}
   // CHECK-LABEL: define void @_ZN7PR111241CC1Ev
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* {{.*}}, i8 0, i64 12, i32 8, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 {{.*}}, i8 0, i64 12, i1 false)
   // CHECK-NEXT: call void @_ZN7PR111241BC2Ev
   // Make sure C::C doesn't overwrite parts of A while it is zero-initializing B
 
@@ -252,7 +252,7 @@ namespace PR11124 {
   struct C2 : B2 { C2(); };      
   C2::C2() : A(3), B2() {}
   // CHECK-LABEL: define void @_ZN7PR111242C2C1Ev
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* {{.*}}, i64 16, i32 8, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 {{.*}}, i64 16, i1 false)
   // CHECK-NEXT: call void @_ZN7PR111242B2C2Ev
 }
 

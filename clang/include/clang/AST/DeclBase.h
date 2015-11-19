@@ -1147,6 +1147,11 @@ class DeclContext {
   /// that are missing from the lookup table.
   mutable bool HasLazyExternalLexicalLookups : 1;
 
+  /// \brief If \c true, lookups should only return identifier from
+  /// DeclContext scope (for example TranslationUnit). Used in
+  /// LookupQualifiedName()
+  mutable bool UseQualifiedLookup : 1;
+
   /// \brief Pointer to the data structure used to lookup declarations
   /// within this context (or a DependentStoredDeclsMap if this is a
   /// dependent context). We maintain the invariant that, if the map
@@ -1181,6 +1186,7 @@ protected:
         ExternalVisibleStorage(false),
         NeedToReconcileExternalVisibleStorage(false),
         HasLazyLocalLexicalLookups(false), HasLazyExternalLexicalLookups(false),
+        UseQualifiedLookup(false),
         LookupPtr(nullptr), FirstDecl(nullptr), LastDecl(nullptr) {}
 
 public:
@@ -1759,6 +1765,16 @@ public:
   bool isDeclInLexicalTraversal(const Decl *D) const {
     return D && (D->NextInContextAndBits.getPointer() || D == FirstDecl || 
                  D == LastDecl);
+  }
+
+  bool setUseQualifiedLookup(bool use = true) {
+    bool old_value = UseQualifiedLookup;
+    UseQualifiedLookup = use;
+    return old_value;
+  }
+
+  bool shouldUseQualifiedLookup() const {
+    return UseQualifiedLookup;
   }
 
   static bool classof(const Decl *D);

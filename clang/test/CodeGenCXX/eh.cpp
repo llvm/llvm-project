@@ -13,7 +13,7 @@ void test1() {
 // CHECK:       [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 8)
 // CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[DSTAR:%[^*]*\*]]
 // CHECK-NEXT:  [[EXN2:%.*]] = bitcast [[DSTAR]] [[EXN]] to i8*
-// CHECK-NEXT:  call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[EXN2]], i8* bitcast ([[DSTAR]] @d1 to i8*), i64 8, i32 8, i1 false)
+// CHECK-NEXT:  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[EXN2]], i8* align 8 bitcast ([[DSTAR]] @d1 to i8*), i64 8, i1 false)
 // CHECK-NEXT:  call void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({ i8*, i8* }* @_ZTI7test1_D to i8*), i8* null) [[NR:#[0-9]+]]
 // CHECK-NEXT:  unreachable
 

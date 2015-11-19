@@ -39,15 +39,13 @@ clang::createInvocationFromCommandLine(ArrayRef<const char *> ArgList,
     Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions);
   }
 
-  SmallVector<const char *, 16> Args;
-  Args.push_back("<clang>"); // FIXME: Remove dummy argument.
-  Args.insert(Args.end(), ArgList.begin(), ArgList.end());
+  SmallVector<const char *, 16> Args(ArgList.begin(), ArgList.end());
 
   // FIXME: Find a cleaner way to force the driver into restricted modes.
   Args.push_back("-fsyntax-only");
 
   // FIXME: We shouldn't have to pass in the path info.
-  driver::Driver TheDriver("clang", llvm::sys::getDefaultTargetTriple(),
+  driver::Driver TheDriver(Args[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
 
   // Don't check that inputs exist, they may have been remapped.

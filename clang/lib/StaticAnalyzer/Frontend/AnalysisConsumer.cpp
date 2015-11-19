@@ -368,7 +368,11 @@ public:
   bool VisitBlockDecl(BlockDecl *BD) {
     if (BD->hasBody()) {
       assert(RecVisitorMode == AM_Syntax || Mgr->shouldInlineCall() == false);
-      HandleCode(BD, RecVisitorMode);
+      // Since we skip function template definitions, we should skip blocks
+      // declared in those functions as well.
+      if (!BD->isDependentContext()) {
+        HandleCode(BD, RecVisitorMode);
+      }
     }
     return true;
   }

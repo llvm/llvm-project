@@ -4367,6 +4367,26 @@ MyriadToolChain::MyriadToolChain(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::shave:
     GCCInstallation.init(Triple, Args, {"sparc-myriad-elf"});
   }
+
+  if (GCCInstallation.isValid()) {
+    // The contents of LibDir are independent of the version of gcc.
+    // This contains libc, libg (a superset of libc), libm, libstdc++, libssp.
+    SmallString<128> LibDir(GCCInstallation.getParentLibPath());
+    if (Triple.getArch() == llvm::Triple::sparcel)
+      llvm::sys::path::append(LibDir, "../sparc-myriad-elf/lib/le");
+    else
+      llvm::sys::path::append(LibDir, "../sparc-myriad-elf/lib");
+    addPathIfExists(D, LibDir, getFilePaths());
+
+    // This directory contains crt{i,n,begin,end}.o as well as libgcc.
+    // These files are tied to a particular version of gcc.
+    SmallString<128> CompilerSupportDir(GCCInstallation.getInstallPath());
+    // There are actually 4 choices: {le,be} x {fpu,nofpu}
+    // but as this toolchain is for LEON sparc, it can assume FPU.
+    if (Triple.getArch() == llvm::Triple::sparcel)
+      llvm::sys::path::append(CompilerSupportDir, "le");
+    addPathIfExists(D, CompilerSupportDir, getFilePaths());
+  }
 }
 
 MyriadToolChain::~MyriadToolChain() {}
@@ -4411,27 +4431,6 @@ Tool *MyriadToolChain::SelectTool(const JobAction &JA) const {
   default:
     return ToolChain::getTool(JA.getKind());
   }
-}
-
-void MyriadToolChain::getCompilerSupportDir(std::string &Dir) const {
-  // This directory contains crt{i,n,begin,end}.o as well as libgcc.
-  // These files are tied to a particular version of gcc.
-  SmallString<128> Result(GCCInstallation.getInstallPath());
-  // There are actually 4 choices: {le,be} x {fpu,nofpu}
-  // but as this toolchain is for LEON sparc, it can assume FPU.
-  if (this->getTriple().getArch() == llvm::Triple::sparcel)
-    llvm::sys::path::append(Result, "le");
-  Dir.assign(Result.str());
-}
-void MyriadToolChain::getBuiltinLibDir(std::string &Dir) const {
-  // The contents of LibDir are independent of the version of gcc.
-  // This contains libc, libg (a superset of libc), libm, libstdc++, libssp.
-  SmallString<128> Result(GCCInstallation.getParentLibPath());
-  if (this->getTriple().getArch() == llvm::Triple::sparcel)
-    llvm::sys::path::append(Result, "../sparc-myriad-elf/lib/le");
-  else
-    llvm::sys::path::append(Result, "../sparc-myriad-elf/lib");
-  Dir.assign(Result.str());
 }
 
 Tool *MyriadToolChain::buildLinker() const {

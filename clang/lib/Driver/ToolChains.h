@@ -1068,8 +1068,6 @@ public:
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
   Tool *SelectTool(const JobAction &JA) const override;
-  void getCompilerSupportDir(std::string &Dir) const;
-  void getBuiltinLibDir(std::string &Dir) const;
   unsigned GetDefaultDwarfVersion() const override { return 2; }
 
 protected:
