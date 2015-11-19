@@ -24,7 +24,7 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test1(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -47,7 +47,7 @@ for.body.cont:
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test1a(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -70,7 +70,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test2(
 ; CHECK: br i1 %cmp10,
 ; CHECK: %0 = shl i64 %Size, 2
-; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %Base1, i8 1, i64 %0, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base1, i8 1, i64 %0, i32 4, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -119,7 +119,7 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-TODO-LABEL: @test4(
-; CHECK-TODO: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 100, i1 false)
+; CHECK-TODO: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 100, i32 1, i1 false)
 ; CHECK-TODO-NOT: store
 }
 
@@ -166,7 +166,7 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test6(
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %Dest, i8* align 1 %Base, i64 %Size, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %Dest, i8* %Base, i64 %Size, i32 1, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -191,7 +191,7 @@ for.body.cont:
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test7(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -276,7 +276,7 @@ for.end13:                                        ; preds = %for.inc10
   ret void
 ; CHECK-LABEL: @test10(
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 1 %X, i8 0, i64 10000, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %X, i8 0, i64 10000, i32 1, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -324,7 +324,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: bitcast
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 4 %P1, i8 0, i64 80000, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %P1, i8 0, i64 80000, i32 4, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -441,7 +441,7 @@ for.body:
 for.cond.cleanup:
   ret void
 ; CHECK-LABEL: @test15(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %f1, i8 0, i64 262148, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* %f1, i8 0, i64 262148, i32 4, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }

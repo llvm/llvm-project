@@ -14,9 +14,9 @@ entry:
   call void @ccoshl(%0* sret %memtmp, x86_fp80 %tmp5, x86_fp80 %z.0) nounwind
   %tmp219 = bitcast %0* %tmp2 to i8*
   %memtmp20 = bitcast %0* %memtmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %tmp219, i8* align 16 %memtmp20, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp219, i8* %memtmp20, i32 32, i32 16, i1 false)
   %agg.result21 = bitcast %0* %agg.result to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %agg.result21, i8* align 16 %tmp219, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %agg.result21, i8* %tmp219, i32 32, i32 16, i1 false)
   ret void
 
 ; Check that one of the memcpy's are removed.
@@ -37,12 +37,12 @@ declare void @ccoshl(%0* nocapture sret, x86_fp80, x86_fp80) nounwind
 define void @test2(i8* %P, i8* %Q) nounwind  {
   %memtmp = alloca %0, align 16
   %R = bitcast %0* %memtmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %R, i8* align 16 %P, i32 32, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %Q, i8* align 16 %R, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %R, i8* %P, i32 32, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %Q, i8* %R, i32 32, i32 16, i1 false)
   ret void
         
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT: call void @llvm.memmove{{.*}}(i8* align 16 %Q, i8* align 16 %P
+; CHECK-NEXT: call void @llvm.memmove{{.*}}(i8* %Q, i8* %P
 ; CHECK-NEXT: ret void
 }
 
@@ -54,9 +54,9 @@ define void @test2(i8* %P, i8* %Q) nounwind  {
 define void @test3(%0* noalias sret %agg.result) nounwind  {
   %x.0 = alloca %0
   %x.01 = bitcast %0* %x.0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %x.01, i8* align 16 bitcast (%0* @x to i8*), i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x.01, i8* bitcast (%0* @x to i8*), i32 32, i32 16, i1 false)
   %agg.result2 = bitcast %0* %agg.result to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %agg.result2, i8* align 16 %x.01, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %agg.result2, i8* %x.01, i32 32, i32 16, i1 false)
   ret void
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT: %agg.result1 = bitcast 
@@ -69,7 +69,7 @@ define void @test3(%0* noalias sret %agg.result) nounwind  {
 define void @test4(i8 *%P) {
   %A = alloca %1
   %a = bitcast %1* %A to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 %P, i64 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %P, i64 8, i32 4, i1 false)
   call void @test4a(i8* align 1 byval %a)
   ret void
 ; CHECK-LABEL: @test4(
@@ -77,8 +77,8 @@ define void @test4(i8 *%P) {
 }
 
 declare void @test4a(i8* align 1 byval)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i32, i1) nounwind
 
 %struct.S = type { i128, [4 x i8]}
 
@@ -92,7 +92,7 @@ define i32 @test5(i32 %x) nounwind ssp {
 entry:
   %y = alloca %struct.S, align 16
   %tmp = bitcast %struct.S* %y to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp, i8* bitcast (%struct.S* @sS to i8*), i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp, i8* bitcast (%struct.S* @sS to i8*), i64 32, i32 16, i1 false)
   %a = getelementptr %struct.S, %struct.S* %y, i64 0, i32 1, i64 0
   store i8 4, i8* %a
   call void @test5a(%struct.S* align 16 byval %y)
@@ -104,7 +104,7 @@ entry:
 
 ;; Noop memcpy should be zapped.
 define void @test6(i8 *%P) {
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %P, i64 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %P, i64 8, i32 4, i1 false)
   ret void
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT: ret void
@@ -120,7 +120,7 @@ entry:
   %agg.tmp = alloca %struct.p, align 4
   %tmp = bitcast %struct.p* %agg.tmp to i8*
   %tmp1 = bitcast %struct.p* %q to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp, i8* %tmp1, i64 48, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp, i8* %tmp1, i64 48, i32 4, i1 false)
   %call = call i32 @g(%struct.p* align 8 byval %agg.tmp) nounwind
   ret i32 %call
 ; CHECK-LABEL: @test7(
@@ -129,7 +129,7 @@ entry:
 
 declare i32 @g(%struct.p* align 8 byval)
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
 ; PR11142 - When looking for a memcpy-memcpy dependency, don't get stuck on
 ; instructions between the memcpy's that only affect the destination pointer.
@@ -140,10 +140,10 @@ define void @test8() {
 ; CHECK-NOT: memcpy
   %A = tail call i8* @malloc(i32 10)
   %B = getelementptr inbounds i8, i8* %A, i64 2
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %B, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @test8.str, i64 0, i64 0), i32 7, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %B, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @test8.str, i64 0, i64 0), i32 7, i32 1, i1 false)
   %C = tail call i8* @malloc(i32 10)
   %D = getelementptr inbounds i8, i8* %C, i64 2
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %D, i8* %B, i32 7, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %D, i8* %B, i32 7, i32 1, i1 false)
   ret void
 ; CHECK: ret void
 }
@@ -164,7 +164,7 @@ entry:
   call void @f1(%struct.big* sret %tmp)
   %0 = addrspacecast %struct.big* %b to i8 addrspace(1)*
   %1 = addrspacecast %struct.big* %tmp to i8 addrspace(1)*
-  call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i64 200, i1 false)
+  call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i64 200, i32 4, i1 false)
   call void @f2(%struct.big* %b)
   ret void
 }
@@ -180,7 +180,7 @@ entry:
   call void @f1(%struct.big* sret %tmp)
   %0 = bitcast %struct.big* %b to i8*
   %1 = bitcast %struct.big* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 200, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 200, i32 4, i1 false)
   call void @f2(%struct.big* %b)
   ret void
 }

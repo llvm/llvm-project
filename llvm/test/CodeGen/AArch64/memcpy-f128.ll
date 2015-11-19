@@ -12,8 +12,8 @@ define void @test1() {
 ; CHECK: str q0
 ; CHECK: ret
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* bitcast (%structA* @stubA to i8*), i64 48, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* bitcast (%structA* @stubA to i8*), i64 48, i32 8, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)

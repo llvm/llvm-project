@@ -406,3 +406,26 @@ define void @store_h_double(<2 x double> %x, i64* %p) {
   ret void
 }
 
+define <2 x double> @test39(double* %ptr) nounwind {
+  %a = load double, double* %ptr
+  %v = insertelement <2 x double> undef, double %a, i32 0
+  %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %shuffle
+  }
+
+define <2 x double> @test40(<2 x double>* %ptr) nounwind {
+  %v = load  <2 x double>,  <2 x double>* %ptr
+  %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %shuffle
+  }
+
+define <2 x double> @shuffle_v2f64_00(<2 x double> %a, <2 x double> %b) {
+  %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %shuffle
+}
+
+define <4 x double> @shuffle_v4f64_0022(<4 x double> %a, <4 x double> %b) {
+  %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x double> %shuffle
+}
+

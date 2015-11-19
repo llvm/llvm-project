@@ -6,7 +6,7 @@ define float @test1(i32 %hash, float %x, float %y, float %z, float %w) {
 entry:
 	%lookupTable = alloca [128 x float], align 16		; <[128 x float]*> [#uses=5]
 	%lookupTable1 = bitcast [128 x float]* %lookupTable to i8*		; <i8*> [#uses=1]
-	call void @llvm.memcpy.p0i8.p0i8.i64(i8* %lookupTable1, i8* bitcast ([128 x float]* @C.0.1248 to i8*), i64 512, i1 false)
+	call void @llvm.memcpy.p0i8.p0i8.i64(i8* %lookupTable1, i8* bitcast ([128 x float]* @C.0.1248 to i8*), i64 512, i32 16, i1 false)
 
 ; CHECK-LABEL: @test1(
 ; CHECK-NOT: alloca
@@ -36,10 +36,10 @@ entry:
 	ret float %tmp43
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i32, i1) nounwind
 
 %T = type { i8, [123 x i8] }
 %U = type { i32, i32, i32, i32, i32 }
@@ -60,9 +60,9 @@ define void @test2() {
 ; CHECK-NEXT: getelementptr inbounds [124 x i8], [124 x i8]*
 
 ; use @G instead of %A
-; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 16 getelementptr inbounds (%T, %T* @G, i64 0, i32 0)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %b, i8* %a, i64 124, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %b, i8* %a, i64 124, i32 4, i1 false)
   call void @bar(i8* %b)
   ret void
 }
@@ -83,9 +83,9 @@ define void @test2_addrspacecast() {
 ; CHECK-NEXT: addrspacecast
 
 ; use @G instead of %A
-; CHECK-NEXT: call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* align 8 %{{.*}},
-  call void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* %a, i8* bitcast (%T* @G to i8*), i64 124, i1 false)
-  call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %b, i8 addrspace(1)* %a, i64 124, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %{{.*}},
+  call void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* %a, i8* bitcast (%T* @G to i8*), i64 124, i32 4, i1 false)
+  call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %b, i8 addrspace(1)* %a, i64 124, i32 4, i1 false)
   call void @bar_as1(i8 addrspace(1)* %b)
   ret void
 }
@@ -98,7 +98,7 @@ declare void @bar_as1(i8 addrspace(1)*)
 define void @test3() {
   %A = alloca %T
   %a = bitcast %T* %A to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i32 4, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT: call void @bar(i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
@@ -108,7 +108,7 @@ define void @test3() {
 define void @test3_addrspacecast() {
   %A = alloca %T
   %a = bitcast %T* %A to i8*
-  call void @llvm.memcpy.p0i8.p1i8.i64(i8* %a, i8 addrspace(1)* addrspacecast (%T* @G to i8 addrspace(1)*), i64 124, i1 false)
+  call void @llvm.memcpy.p0i8.p1i8.i64(i8* %a, i8 addrspace(1)* addrspacecast (%T* @G to i8 addrspace(1)*), i64 124, i32 4, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test3_addrspacecast(
 ; CHECK-NEXT: call void @bar(i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
@@ -119,7 +119,7 @@ define void @test3_addrspacecast() {
 define void @test4() {
   %A = alloca %T
   %a = bitcast %T* %A to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i32 4, i1 false)
   call void @baz(i8* byval %a)
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT: call void @baz(i8* byval getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
@@ -131,7 +131,7 @@ define void @test5() {
   %A = alloca %T
   %a = bitcast %T* %A to i8*
   call void @llvm.lifetime.start(i64 -1, i8* %a)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i32 4, i1 false)
   call void @baz(i8* byval %a)
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT: call void @baz(i8* byval getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
@@ -145,7 +145,7 @@ declare void @baz(i8* byval)
 define void @test6() {
   %A = alloca %U, align 16
   %a = bitcast %U* %A to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast ([2 x %U]* @H to i8*), i64 20, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast ([2 x %U]* @H to i8*), i64 20, i32 16, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT: call void @bar(i8* bitcast ([2 x %U]* @H to i8*))
@@ -155,7 +155,7 @@ define void @test6() {
 define void @test7() {
   %A = alloca %U, align 16
   %a = bitcast %U* %A to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 0) to i8*), i64 20, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 0) to i8*), i64 20, i32 4, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT: call void @bar(i8* bitcast ([2 x %U]* @H to i8*))
@@ -165,7 +165,7 @@ define void @test7() {
 define void @test8() {
   %A = alloca %U, align 16
   %a = bitcast %U* %A to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8*), i64 20, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8*), i64 20, i32 4, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test8(
 ; CHECK: llvm.memcpy
@@ -177,7 +177,7 @@ define void @test8() {
 define void @test8_addrspacecast() {
   %A = alloca %U, align 16
   %a = bitcast %U* %A to i8*
-  call void @llvm.memcpy.p0i8.p1i8.i64(i8* %a, i8 addrspace(1)* addrspacecast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8 addrspace(1)*), i64 20, i1 false)
+  call void @llvm.memcpy.p0i8.p1i8.i64(i8* %a, i8 addrspace(1)* addrspacecast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8 addrspace(1)*), i64 20, i32 4, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK: llvm.memcpy
@@ -188,7 +188,7 @@ define void @test8_addrspacecast() {
 define void @test9() {
   %A = alloca %U, align 4
   %a = bitcast %U* %A to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8*), i64 20, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8*), i64 20, i32 4, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT: call void @bar(i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*))
@@ -198,7 +198,7 @@ define void @test9() {
 define void @test9_addrspacecast() {
   %A = alloca %U, align 4
   %a = bitcast %U* %A to i8*
-  call void @llvm.memcpy.p0i8.p1i8.i64(i8* %a, i8 addrspace(1)* addrspacecast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8 addrspace(1)*), i64 20, i1 false)
+  call void @llvm.memcpy.p0i8.p1i8.i64(i8* %a, i8 addrspace(1)* addrspacecast (%U* getelementptr ([2 x %U], [2 x %U]* @H, i64 0, i32 1) to i8 addrspace(1)*), i64 20, i32 4, i1 false)
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test9_addrspacecast(
 ; CHECK-NEXT: call void @bar(i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*))

@@ -30,10 +30,10 @@ bb:
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 define void @test4(i8* %dest, i8* %src) {
 ; CHECK: test4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i32 1, i1 false)
   br label %bb
 bb:
   icmp ne i8* %dest, null
@@ -42,10 +42,10 @@ bb:
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i1)
+declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 define void @test5(i8* %dest, i8* %src) {
 ; CHECK: test5
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i32 1, i1 false)
   br label %bb
 bb:
   icmp ne i8* %dest, null
@@ -54,10 +54,10 @@ bb:
   ret void
 }
 
-declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)
+declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i32, i1)
 define void @test6(i8* %dest) {
 ; CHECK: test6
-  call void @llvm.memset.p0i8.i32(i8* %dest, i8 255, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %dest, i8 255, i32 1, i32 1, i1 false)
   br label %bb
 bb:
   icmp ne i8* %dest, null
@@ -67,7 +67,7 @@ bb:
 
 define void @test7(i8* %dest, i8* %src, i32 %len) {
 ; CHECK: test7
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i32 1, i1 false)
   br label %bb
 bb:
   %KEEP1 = icmp ne i8* %dest, null
@@ -77,10 +77,10 @@ bb:
   ret void
 }
 
-declare void @llvm.memcpy.p1i8.p1i8.i32(i8 addrspace(1) *, i8 addrspace(1) *, i32, i1)
+declare void @llvm.memcpy.p1i8.p1i8.i32(i8 addrspace(1) *, i8 addrspace(1) *, i32, i32, i1)
 define void @test8(i8 addrspace(1) * %dest, i8 addrspace(1) * %src) {
 ; CHECK: test8
-  call void @llvm.memcpy.p1i8.p1i8.i32(i8 addrspace(1) * %dest, i8 addrspace(1) * %src, i32 1, i1 false)
+  call void @llvm.memcpy.p1i8.p1i8.i32(i8 addrspace(1) * %dest, i8 addrspace(1) * %src, i32 1, i32 1, i1 false)
   br label %bb
 bb:
   %KEEP1 = icmp ne i8 addrspace(1) * %dest, null
@@ -92,7 +92,7 @@ bb:
 
 define void @test9(i8* %dest, i8* %src) {
 ; CHECK: test9
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i1 true)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i32 1, i1 true)
   br label %bb
 bb:
   %KEEP1 = icmp ne i8* %dest, null

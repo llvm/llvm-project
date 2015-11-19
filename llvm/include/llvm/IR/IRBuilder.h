@@ -362,56 +362,34 @@ public:
   /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
-  CallInst *CreateMemSet(Value *Ptr, Value *Val, uint64_t Size,
-                         unsigned DstAlign,
+  CallInst *CreateMemSet(Value *Ptr, Value *Val, uint64_t Size, unsigned Align,
                          bool isVolatile = false, MDNode *TBAATag = nullptr,
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr) {
-    return CreateMemSet(Ptr, Val, getInt64(Size), DstAlign, isVolatile,
+    return CreateMemSet(Ptr, Val, getInt64(Size), Align, isVolatile,
                         TBAATag, ScopeTag, NoAliasTag);
   }
 
-  CallInst *CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned DstAlign,
+  CallInst *CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
                          bool isVolatile = false, MDNode *TBAATag = nullptr,
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
 
-  /// Create and insert a memcpy between the specified pointers.
+  /// \brief Create and insert a memcpy between the specified pointers.
   ///
   /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
-  ///
-  /// Note!  This is very temporary.  It is only intended to catch calls to
-  /// CreateMemCpy in out of tree code which would otherwise silently pass the
-  /// volatile flag to source alignment.
-  class IntegerAlignment {
-  private:
-    uint64_t Align;
-
-    IntegerAlignment() = delete;
-    IntegerAlignment(bool) = delete;
-  public:
-    IntegerAlignment(int Align) : Align(Align) { }
-    IntegerAlignment(long long Align) : Align(Align) { }
-    IntegerAlignment(unsigned Align) : Align(Align) { }
-    IntegerAlignment(uint64_t Align) : Align(Align) { }
-
-    operator unsigned() { return Align; }
-  };
-  CallInst *CreateMemCpy(Value *Dst, Value *Src, uint64_t Size,
-                         unsigned DstAlign, IntegerAlignment SrcAlign,
+  CallInst *CreateMemCpy(Value *Dst, Value *Src, uint64_t Size, unsigned Align,
                          bool isVolatile = false, MDNode *TBAATag = nullptr,
                          MDNode *TBAAStructTag = nullptr,
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr) {
-    return CreateMemCpy(Dst, Src, getInt64(Size), DstAlign, SrcAlign,
-                        isVolatile, TBAATag,
+    return CreateMemCpy(Dst, Src, getInt64(Size), Align, isVolatile, TBAATag,
                         TBAAStructTag, ScopeTag, NoAliasTag);
   }
 
-  CallInst *CreateMemCpy(Value *Dst, Value *Src, Value *Size,
-                         unsigned DstAlign, IntegerAlignment SrcAlign,
+  CallInst *CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
                          bool isVolatile = false, MDNode *TBAATag = nullptr,
                          MDNode *TBAAStructTag = nullptr,
                          MDNode *ScopeTag = nullptr,
@@ -423,18 +401,15 @@ public:
   /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
-  CallInst *CreateMemMove(Value *Dst, Value *Src, uint64_t Size,
-                          unsigned DstAlign, IntegerAlignment SrcAlign,
+  CallInst *CreateMemMove(Value *Dst, Value *Src, uint64_t Size, unsigned Align,
                           bool isVolatile = false, MDNode *TBAATag = nullptr,
                           MDNode *ScopeTag = nullptr,
                           MDNode *NoAliasTag = nullptr) {
-    return CreateMemMove(Dst, Src, getInt64(Size), DstAlign, SrcAlign,
-                         isVolatile,
+    return CreateMemMove(Dst, Src, getInt64(Size), Align, isVolatile,
                          TBAATag, ScopeTag, NoAliasTag);
   }
 
-  CallInst *CreateMemMove(Value *Dst, Value *Src, Value *Size,
-                          unsigned DstAlign, IntegerAlignment SrcAlign,
+  CallInst *CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
                           bool isVolatile = false, MDNode *TBAATag = nullptr,
                           MDNode *ScopeTag = nullptr,
                           MDNode *NoAliasTag = nullptr);

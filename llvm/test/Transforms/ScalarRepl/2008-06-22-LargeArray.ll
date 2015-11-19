@@ -8,10 +8,10 @@ define void @memtest1(i8* %dst, i8* %src) nounwind {
 entry:
   %temp = alloca [200 x i8]
   %temp1 = bitcast [200 x i8]* %temp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %temp1, i8* %src, i32 200, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %temp1, i8* %src, i32 200, i32 1, i1 false)
   %temp3 = bitcast [200 x i8]* %temp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %temp3, i32 200, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %temp3, i32 200, i32 1, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind

@@ -2618,7 +2618,8 @@ private:
       assert(!IsSplit);
       assert(NewBeginOffset == BeginOffset);
       II.setDest(getNewAllocaSlicePtr(IRB, OldPtr->getType()));
-      II.setDestAlignment(getSliceAlign());
+      Type *CstTy = II.getAlignmentCst()->getType();
+      II.setAlignment(ConstantInt::get(CstTy, getSliceAlign()));
 
       deleteIfTriviallyDead(OldPtr);
       return false;
@@ -2734,16 +2735,15 @@ private:
     // update both source and dest of a single call.
     if (!IsSplittable) {
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
-      if (IsDest) {
+      if (IsDest)
         II.setDest(AdjustedPtr);
-
-        if (II.getDestAlignment() > SliceAlign)
-          II.setDestAlignment(MinAlign(II.getDestAlignment(), SliceAlign));
-      } else {
+      else
         II.setSource(AdjustedPtr);
 
-        if (II.getSrcAlignment() > SliceAlign)
-          II.setSrcAlignment(MinAlign(II.getSrcAlignment(), SliceAlign));
+      if (II.getAlignment() > SliceAlign) {
+        Type *CstTy = II.getAlignmentCst()->getType();
+        II.setAlignment(
+            ConstantInt::get(CstTy, MinAlign(II.getAlignment(), SliceAlign)));
       }
 
       DEBUG(dbgs() << "          to: " << II << "\n");
@@ -2796,10 +2796,8 @@ private:
     // Compute the relative offset for the other pointer within the transfer.
     unsigned IntPtrWidth = DL.getPointerSizeInBits(OtherAS);
     APInt OtherOffset(IntPtrWidth, NewBeginOffset - BeginOffset);
-    unsigned OtherDestAlign = MinAlign(II.getDestAlignment() ? II.getDestAlignment() : 1,
-                                       OtherOffset.zextOrTrunc(64).getZExtValue());
-    unsigned OtherSrcAlign = MinAlign(II.getSrcAlignment() ? II.getSrcAlignment() : 1,
-                                       OtherOffset.zextOrTrunc(64).getZExtValue());
+    unsigned OtherAlign = MinAlign(II.getAlignment() ? II.getAlignment() : 1,
+                                   OtherOffset.zextOrTrunc(64).getZExtValue());
 
     if (EmitMemCpy) {
       // Compute the other pointer, folding as much as possible to produce
@@ -2811,11 +2809,9 @@ private:
       Type *SizeTy = II.getLength()->getType();
       Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
 
-      CallInst *New = IRB.CreateMemCpy(IsDest ? OurPtr : OtherPtr,
-                                       IsDest ? OtherPtr : OurPtr, Size,
-                                       MinAlign(SliceAlign, OtherDestAlign),
-                                       MinAlign(SliceAlign, OtherSrcAlign),
-                                       II.isVolatile());
+      CallInst *New = IRB.CreateMemCpy(
+          IsDest ? OurPtr : OtherPtr, IsDest ? OtherPtr : OurPtr, Size,
+          MinAlign(SliceAlign, OtherAlign), II.isVolatile());
       (void)New;
       DEBUG(dbgs() << "          to: " << *New << "\n");
       return false;
@@ -2847,7 +2843,7 @@ private:
 
     Value *SrcPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
                                    OtherPtr->getName() + ".");
-    unsigned SrcAlign = OtherSrcAlign;
+    unsigned SrcAlign = OtherAlign;
     Value *DstPtr = &NewAI;
     unsigned DstAlign = SliceAlign;
     if (!IsDest) {

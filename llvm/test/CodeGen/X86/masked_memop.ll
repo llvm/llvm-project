@@ -300,3 +300,28 @@ declare void @llvm.masked.store.v8f64(<8 x double>, <8 x double>*, i32, <8 x i1>
 declare void @llvm.masked.store.v2f64(<2 x double>, <2 x double>*, i32, <2 x i1>)
 declare void @llvm.masked.store.v2i64(<2 x i64>, <2 x i64>*, i32, <2 x i1>)
 
+declare <16 x i32*> @llvm.masked.load.v16p0i32(<16 x i32*>*, i32, <16 x i1>, <16 x i32*>)
+
+; AVX512-LABEL: test23
+; AVX512: vmovdqu64       64(%rdi), %zmm1 {%k2} {z}
+; AVX512: vmovdqu64       (%rdi), %zmm0 {%k1} {z}
+
+define <16 x i32*> @test23(<16 x i32*> %trigger, <16 x i32*>* %addr) {
+  %mask = icmp eq <16 x i32*> %trigger, zeroinitializer
+  %res = call <16 x i32*> @llvm.masked.load.v16p0i32(<16 x i32*>* %addr, i32 4, <16 x i1>%mask, <16 x i32*>zeroinitializer)
+  ret <16 x i32*> %res
+}
+
+%mystruct = type { i16, i16, [1 x i8*] }
+
+declare <16 x %mystruct*> @llvm.masked.load.v16p0mystruct(<16 x %mystruct*>*, i32, <16 x i1>, <16 x %mystruct*>)
+
+; AVX512-LABEL: test24
+; AVX512: vmovdqu64       (%rdi), %zmm0 {%k1} {z}
+; AVX512: kshiftrw        $8, %k1, %k1
+; AVX512: vmovdqu64       64(%rdi), %zmm1 {%k1} {z}
+
+define <16 x %mystruct*> @test24(<16 x i1> %mask, <16 x %mystruct*>* %addr) {
+  %res = call <16 x %mystruct*> @llvm.masked.load.v16p0mystruct(<16 x %mystruct*>* %addr, i32 4, <16 x i1>%mask, <16 x %mystruct*>zeroinitializer)
+  ret <16 x %mystruct*> %res
+}

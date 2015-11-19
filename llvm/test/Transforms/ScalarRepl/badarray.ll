@@ -48,10 +48,10 @@ entry:
   %callret = call %padded *@test3f() ; <i32> [#uses=2]
   %callretcast = bitcast %padded* %callret to i8*                     ; <i8*> [#uses=1]
   %var_11 = bitcast %padded* %var_1 to i8*        ; <i8*> [#uses=1]
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %callretcast, i8* %var_11, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %callretcast, i8* %var_11, i32 8, i32 4, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
 declare %padded* @test3f()

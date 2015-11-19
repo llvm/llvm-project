@@ -22,7 +22,7 @@ entry:
   %z.i60 = getelementptr inbounds %rs, %rs* %r, i64 0, i32 9, i32 2
   %na = getelementptr inbounds %rs, %rs* %r, i64 0, i32 0
   %0 = bitcast double* %x.i to i8*
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 72, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 72, i32 8, i1 false)
   %1 = load i32, i32* %na, align 4
   %cmp70 = icmp sgt i32 %1, 0
   br i1 %cmp70, label %for.body.lr.ph, label %for.end
@@ -87,5 +87,5 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
 

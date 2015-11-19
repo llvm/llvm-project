@@ -129,6 +129,7 @@ namespace {
     uint32_t lookup(Value *V) const;
     uint32_t lookup_or_add_cmp(unsigned Opcode, CmpInst::Predicate Pred,
                                Value *LHS, Value *RHS);
+    bool exists(Value *V) const;
     void add(Value *V, uint32_t num);
     void clear();
     void erase(Value *v);
@@ -388,6 +389,9 @@ uint32_t ValueTable::lookup_or_add_call(CallInst *C) {
     return nextValueNumber++;
   }
 }
+
+/// Returns true if a value number exists for the specified value.
+bool ValueTable::exists(Value *V) const { return valueNumbering.count(V) != 0; }
 
 /// lookup_or_add - Returns the value number for the specified value, assigning
 /// it a new number if it did not have one before.
@@ -2534,7 +2538,14 @@ bool GVN::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
     Value *Op = Instr->getOperand(i);
     if (isa<Argument>(Op) || isa<Constant>(Op) || isa<GlobalValue>(Op))
       continue;
-
+    // This could be a newly inserted instruction, in which case, we won't
+    // find a value number, and should give up before we hurt ourselves.
+    // FIXME: Rewrite the infrastructure to let it easier to value number
+    // and process newly inserted instructions.
+    if (!VN.exists(Op)) {
+      success = false;
+      break;
+    }
     if (Value *V = findLeader(Pred, VN.lookup(Op))) {
       Instr->setOperand(i, V);
     } else {

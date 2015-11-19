@@ -347,8 +347,6 @@ bool AlignmentFromAssumptions::processAssumption(CallInst *ACall) {
       // instruction, but only for one operand, save it. If we reach the
       // other operand through another assumption later, then we may
       // change the alignment at that point.
-      // FIXME: The above statement is no longer true.  Fix the code below
-      // to be able to reason about different dest/src alignments.
       if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
         unsigned NewSrcAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
           MTI->getSource(), SE);
@@ -378,23 +376,20 @@ bool AlignmentFromAssumptions::processAssumption(CallInst *ACall) {
         if (AltSrcAlignment <= std::max(NewDestAlignment, AltDestAlignment))
           NewAlignment = std::max(NewAlignment, AltSrcAlignment);
 
-        if (NewAlignment > MTI->getDestAlignment()) {
-          MTI->setDestAlignment(NewAlignment);
-          ++NumMemIntAlignChanged;
-        }
-
-        if (NewAlignment > MTI->getSrcAlignment()) {
-          MTI->setSrcAlignment(NewAlignment);
+        if (NewAlignment > MI->getAlignment()) {
+          MI->setAlignment(ConstantInt::get(Type::getInt32Ty(
+            MI->getParent()->getContext()), NewAlignment));
           ++NumMemIntAlignChanged;
         }
 
         NewDestAlignments.insert(std::make_pair(MTI, NewDestAlignment));
         NewSrcAlignments.insert(std::make_pair(MTI, NewSrcAlignment));
-      } else if (NewDestAlignment > MI->getDestAlignment()) {
+      } else if (NewDestAlignment > MI->getAlignment()) {
         assert((!isa<MemIntrinsic>(MI) || isa<MemSetInst>(MI)) &&
                "Unknown memory intrinsic");
 
-        MI->setDestAlignment(NewDestAlignment);
+        MI->setAlignment(ConstantInt::get(Type::getInt32Ty(
+          MI->getParent()->getContext()), NewDestAlignment));
         ++NumMemIntAlignChanged;
       }
     }

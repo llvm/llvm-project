@@ -1361,26 +1361,47 @@ define <2 x double> @insert_dup_mem_v2f64(double* %ptr) {
 ; SSE41-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: insert_dup_mem_v2f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_dup_mem_v2f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_dup_mem_v2f64:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovsd (%rdi), %xmm0
-; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: insert_dup_mem_v2f64:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; AVX-NEXT:    retq
   %a = load double, double* %ptr
   %v = insertelement <2 x double> undef, double %a, i32 0
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   ret <2 x double> %shuffle
 }
+
+define <2 x double> @insert_dup_mem128_v2f64(<2 x double>* %ptr) nounwind {
+; SSE2-LABEL: insert_dup_mem128_v2f64:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movaps (%rdi), %xmm0
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; SSE2-NEXT:    retq
+;
+; SSE3-LABEL: insert_dup_mem128_v2f64:
+; SSE3:       # BB#0:
+; SSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: insert_dup_mem128_v2f64:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: insert_dup_mem128_v2f64:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: insert_dup_mem128_v2f64:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; AVX-NEXT:    retq
+  %v = load  <2 x double>,  <2 x double>* %ptr
+  %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %shuffle
+}
+
 
 define <2 x i64> @insert_dup_mem_v2i64(i64* %ptr) {
 ; SSE-LABEL: insert_dup_mem_v2i64:

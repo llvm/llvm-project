@@ -21,7 +21,7 @@ entry:
   %0 = load %struct.empty*, %struct.empty** %a2.addr, align 8
   %1 = bitcast %struct.empty* %agg.result to i8*
   %2 = bitcast %struct.empty* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 0, i32 1, i1 false)
   ret void
 }
 
@@ -31,7 +31,7 @@ entry:
 ; CHECK-NOT: std 6,
 ; CHECK: blr
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
 
 define void @caller(%struct.empty* noalias sret %agg.result) nounwind {
 entry:

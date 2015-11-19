@@ -25,7 +25,7 @@ declare i8* @objc_msgSend(i8*, i8*, ...)
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
 define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %loadedMydata, [4 x i32] %bounds.coerce0, [4 x i32] %data.coerce0) ssp !dbg !23 {
   %1 = alloca %0*, align 4
@@ -67,7 +67,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
   %24 = bitcast i8* %23 to %struct.CR*, !dbg !143
   %25 = bitcast %struct.CR* %24 to i8*, !dbg !143
   %26 = bitcast %struct.CR* %data to i8*, !dbg !143
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %25, i8* %26, i32 16, i1 false), !dbg !143
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %25, i8* %26, i32 16, i32 4, i1 false), !dbg !143
   %27 = getelementptr inbounds %2, %2* %6, i32 0, i32 6, !dbg !144
   %28 = load %3*, %3** %27, align 4, !dbg !144
   %29 = load i32, i32* @"OBJC_IVAR_$_MyWork._bounds", !dbg !144
@@ -76,7 +76,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
   %32 = bitcast i8* %31 to %struct.CR*, !dbg !144
   %33 = bitcast %struct.CR* %32 to i8*, !dbg !144
   %34 = bitcast %struct.CR* %bounds to i8*, !dbg !144
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %33, i8* %34, i32 16, i1 false), !dbg !144
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %33, i8* %34, i32 16, i32 4, i1 false), !dbg !144
   %35 = getelementptr inbounds %2, %2* %6, i32 0, i32 6, !dbg !145
   %36 = load %3*, %3** %35, align 4, !dbg !145
   %37 = getelementptr inbounds %2, %2* %6, i32 0, i32 5, !dbg !145

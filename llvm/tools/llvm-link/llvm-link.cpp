@@ -148,7 +148,7 @@ loadIndex(LLVMContext &Context, const Module *ExportingModule = nullptr) {
     return EC;
   MemoryBufferRef BufferRef = (FileOrErr.get())->getMemBufferRef();
   ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-      object::FunctionIndexObjectFile::create(BufferRef, Context,
+      object::FunctionIndexObjectFile::create(BufferRef, diagnosticHandler,
                                               ExportingModule);
   EC = ObjOrErr.getError();
   if (EC)

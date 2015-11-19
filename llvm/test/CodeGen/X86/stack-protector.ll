@@ -3342,7 +3342,7 @@ entry:
   %test.coerce = alloca { i64, i8 }
   %0 = bitcast { i64, i8 }* %test.coerce to i8*
   %1 = bitcast %struct.small_char* %test to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i32 0, i1 false)
   %2 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 0
   %3 = load i64, i64* %2, align 1
   %4 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 1
@@ -3376,7 +3376,7 @@ entry:
   %test.coerce = alloca { i64, i8 }
   %0 = bitcast { i64, i8 }* %test.coerce to i8*
   %1 = bitcast %struct.small_char* %test to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i32 0, i1 false)
   %2 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 0
   %3 = load i64, i64* %2, align 1
   %4 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 1
@@ -3453,7 +3453,7 @@ declare void @_Z3exceptPi(i32*)
 declare i32 @__gxx_personality_v0(...)
 declare i32* @getp()
 declare i32 @dummy(...)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
 
 attributes #0 = { ssp }
 attributes #1 = { sspstrong }

@@ -14,7 +14,7 @@ target triple = "i386-apple-macosx10.7"
 
 @Exception = external unnamed_addr constant { i8*, i8* }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
 
 define void @f(i32* nocapture %arg, i32* nocapture %arg1, i32* nocapture %arg2, i32* nocapture %arg3, i32 %arg4, i32 %arg5) optsize ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 bb:
@@ -85,7 +85,7 @@ bb41:                                             ; preds = %bb38
           to label %bb42 unwind label %bb20
 
 bb42:                                             ; preds = %bb41
-  tail call void @llvm.memset.p0i8.i32(i8* %tmp32, i8 0, i32 %tmp9, i1 false) nounwind
+  tail call void @llvm.memset.p0i8.i32(i8* %tmp32, i8 0, i32 %tmp9, i32 1, i1 false) nounwind
   br i1 %tmp35, label %bb43, label %bb45
 
 bb43:                                             ; preds = %bb42
@@ -101,7 +101,7 @@ bb45:                                             ; preds = %bb57, %bb42
   br i1 %tmp47, label %bb48, label %bb59
 
 bb48:                                             ; preds = %bb45
-  tail call void @llvm.memset.p0i8.i32(i8* %tmp32, i8 0, i32 %tmp9, i1 false) nounwind
+  tail call void @llvm.memset.p0i8.i32(i8* %tmp32, i8 0, i32 %tmp9, i32 1, i1 false) nounwind
   br i1 %tmp36, label %bb49, label %bb57
 
 bb49:                                             ; preds = %bb49, %bb48
@@ -120,7 +120,7 @@ bb57:                                             ; preds = %bb49, %bb48
 
 bb59:                                             ; preds = %bb45
   %tmp60 = ashr i32 %tmp46, 31
-  tail call void @llvm.memset.p0i8.i32(i8* null, i8 0, i32 %tmp37, i1 false) nounwind
+  tail call void @llvm.memset.p0i8.i32(i8* null, i8 0, i32 %tmp37, i32 1, i1 false) nounwind
   br i1 %tmp36, label %bb61, label %bb67
 
 bb61:                                             ; preds = %bb61, %bb59

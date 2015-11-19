@@ -78,10 +78,10 @@ if.end:                                           ; preds = %entry
   %y3 = getelementptr inbounds %struct.r, %struct.r* %r, i32 0, i32 2, !dbg !32
   %2 = bitcast %struct.p* %y3 to i8*, !dbg !32
   %3 = bitcast %struct.p* %y to i8*, !dbg !32
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i1 false), !dbg !32
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 8, i1 false), !dbg !32
   %4 = bitcast %struct.r* %agg.tmp to i8*, !dbg !33
   %5 = bitcast %struct.r* %r to i8*, !dbg !33
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 40, i1 false), !dbg !33
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 40, i32 8, i1 false), !dbg !33
   %call4 = call i32 @_Z7call_me1r(%struct.r* byval align 8 %agg.tmp), !dbg !33
   store i32 %call4, i32* %retval, !dbg !33
   br label %return, !dbg !33
@@ -97,7 +97,7 @@ declare i32 @_Z5maybev()
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #3
 
 declare i32 @_Z7call_me1r(%struct.r* byval align 8)
 

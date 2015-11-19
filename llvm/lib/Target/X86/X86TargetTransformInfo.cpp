@@ -1160,10 +1160,8 @@ int X86TTIImpl::getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
   Type *ScalarTy = DataTy->getScalarType();
-  // TODO: Pointers should also be legal,
-  // but it requires additional support in composing intrinsics name.
-  // getPrimitiveSizeInBits() returns 0 for PointerType
-  int DataWidth = ScalarTy->getPrimitiveSizeInBits();
+  int DataWidth = isa<PointerType>(ScalarTy) ?
+    DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
 
   return (DataWidth >= 32 && ST->hasAVX2());
 }
@@ -1186,10 +1184,8 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
   if (isa<VectorType>(DataTy) && !isPowerOf2_32(DataTy->getVectorNumElements()))
     return false;
   Type *ScalarTy = DataTy->getScalarType();
-  // TODO: Pointers should also be legal,
-  // but it requires additional support in composing intrinsics name.
-  // getPrimitiveSizeInBits() returns 0 for PointerType
-  int DataWidth = ScalarTy->getPrimitiveSizeInBits();
+  int DataWidth = isa<PointerType>(ScalarTy) ?
+    DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
 
   // AVX-512 allows gather and scatter
   return DataWidth >= 32 && ST->hasAVX512();

@@ -43,9 +43,9 @@ entry:
   %tmp14 = bitcast double* %arraydecay5.3.1 to i8*
   %arraydecay11.3.1 = getelementptr inbounds %struct.Bicubic_Patch_Struct, %struct.Bicubic_Patch_Struct* %Shape, i64 0, i32 12, i64 1, i64 3, i64 0
   %tmp15 = bitcast double* %arraydecay11.3.1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp14, i8* %tmp15, i64 24, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp14, i8* %tmp15, i64 24, i32 1, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1)

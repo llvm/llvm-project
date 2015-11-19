@@ -43,8 +43,8 @@ entry:
 
   %0 = bitcast i32* %d to i8*
   %1 = bitcast i32* %s to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 %n, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 %n, i32 4, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind

@@ -4,7 +4,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
 declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
-declare void @llvm.memset.p0i8.i8(i8* nocapture, i8, i8, i1) nounwind
+declare void @llvm.memset.p0i8.i8(i8* nocapture, i8, i8, i32, i1) nounwind
 
 define void @test1() {
 ; CHECK-LABEL: @test1(
@@ -14,7 +14,7 @@ define void @test1() {
   call void @llvm.lifetime.end(i64 1, i8* %A)
 ; CHECK: lifetime.end
 
-  call void @llvm.memset.p0i8.i8(i8* %A, i8 0, i8 -1, i1 false)
+  call void @llvm.memset.p0i8.i8(i8* %A, i8 0, i8 -1, i32 0, i1 false)
 ; CHECK-NOT: memset
 
   ret void

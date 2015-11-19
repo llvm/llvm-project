@@ -9,11 +9,11 @@
 ; CHECK: memset
 define void @fct1(i8* nocapture %ptr) {
 entry:
-  tail call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 256, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 256, i32 1, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
 
 ; CHECK: @fct2
 ; When the size is bigger than 256, change into bzero.
@@ -21,7 +21,7 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 ; CHECK-LINUX: memset
 define void @fct2(i8* nocapture %ptr) {
 entry:
-  tail call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 257, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 257, i32 1, i1 false)
   ret void
 }
 
@@ -32,7 +32,7 @@ entry:
 define void @fct3(i8* nocapture %ptr, i32 %unknown) {
 entry:
   %conv = sext i32 %unknown to i64
-  tail call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 %conv, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 %conv, i32 1, i1 false)
   ret void
 }
 

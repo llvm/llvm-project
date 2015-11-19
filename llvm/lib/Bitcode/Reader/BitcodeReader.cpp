@@ -470,12 +470,11 @@ public:
   std::error_code error(BitcodeError E);
   std::error_code error(const Twine &Message);
 
-  FunctionIndexBitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context,
+  FunctionIndexBitcodeReader(MemoryBuffer *Buffer,
                              DiagnosticHandlerFunction DiagnosticHandler,
                              bool IsLazy = false,
                              bool CheckFuncSummaryPresenceOnly = false);
-  FunctionIndexBitcodeReader(LLVMContext &Context,
-                             DiagnosticHandlerFunction DiagnosticHandler,
+  FunctionIndexBitcodeReader(DiagnosticHandlerFunction DiagnosticHandler,
                              bool IsLazy = false,
                              bool CheckFuncSummaryPresenceOnly = false);
   ~FunctionIndexBitcodeReader() { freeState(); }
@@ -5429,18 +5428,15 @@ std::error_code FunctionIndexBitcodeReader::error(BitcodeError E) {
 }
 
 FunctionIndexBitcodeReader::FunctionIndexBitcodeReader(
-    MemoryBuffer *Buffer, LLVMContext &Context,
-    DiagnosticHandlerFunction DiagnosticHandler, bool IsLazy,
-    bool CheckFuncSummaryPresenceOnly)
-    : DiagnosticHandler(getDiagHandler(DiagnosticHandler, Context)),
-      Buffer(Buffer), IsLazy(IsLazy),
+    MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
+    bool IsLazy, bool CheckFuncSummaryPresenceOnly)
+    : DiagnosticHandler(DiagnosticHandler), Buffer(Buffer), IsLazy(IsLazy),
       CheckFuncSummaryPresenceOnly(CheckFuncSummaryPresenceOnly) {}
 
 FunctionIndexBitcodeReader::FunctionIndexBitcodeReader(
-    LLVMContext &Context, DiagnosticHandlerFunction DiagnosticHandler,
-    bool IsLazy, bool CheckFuncSummaryPresenceOnly)
-    : DiagnosticHandler(getDiagHandler(DiagnosticHandler, Context)),
-      Buffer(nullptr), IsLazy(IsLazy),
+    DiagnosticHandlerFunction DiagnosticHandler, bool IsLazy,
+    bool CheckFuncSummaryPresenceOnly)
+    : DiagnosticHandler(DiagnosticHandler), Buffer(nullptr), IsLazy(IsLazy),
       CheckFuncSummaryPresenceOnly(CheckFuncSummaryPresenceOnly) {}
 
 void FunctionIndexBitcodeReader::freeState() { Buffer = nullptr; }
@@ -5964,11 +5960,11 @@ llvm::getBitcodeProducerString(MemoryBufferRef Buffer, LLVMContext &Context,
 // an index object with a map from function name to function summary offset.
 // The index is used to perform lazy function summary reading later.
 ErrorOr<std::unique_ptr<FunctionInfoIndex>>
-llvm::getFunctionInfoIndex(MemoryBufferRef Buffer, LLVMContext &Context,
+llvm::getFunctionInfoIndex(MemoryBufferRef Buffer,
                            DiagnosticHandlerFunction DiagnosticHandler,
                            const Module *ExportingModule, bool IsLazy) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
-  FunctionIndexBitcodeReader R(Buf.get(), Context, DiagnosticHandler, IsLazy);
+  FunctionIndexBitcodeReader R(Buf.get(), DiagnosticHandler, IsLazy);
 
   std::unique_ptr<FunctionInfoIndex> Index =
       llvm::make_unique<FunctionInfoIndex>(ExportingModule);
@@ -5986,11 +5982,10 @@ llvm::getFunctionInfoIndex(MemoryBufferRef Buffer, LLVMContext &Context,
 }
 
 // Check if the given bitcode buffer contains a function summary block.
-bool llvm::hasFunctionSummary(MemoryBufferRef Buffer, LLVMContext &Context,
+bool llvm::hasFunctionSummary(MemoryBufferRef Buffer,
                               DiagnosticHandlerFunction DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
-  FunctionIndexBitcodeReader R(Buf.get(), Context, DiagnosticHandler, false,
-                               true);
+  FunctionIndexBitcodeReader R(Buf.get(), DiagnosticHandler, false, true);
 
   auto cleanupOnError = [&](std::error_code EC) {
     R.releaseBuffer(); // Never take ownership on error.
@@ -6010,13 +6005,11 @@ bool llvm::hasFunctionSummary(MemoryBufferRef Buffer, LLVMContext &Context,
 // Then this method is called for each function considered for importing,
 // to parse the summary information for the given function name into
 // the index.
-std::error_code
-llvm::readFunctionSummary(MemoryBufferRef Buffer, LLVMContext &Context,
-                          DiagnosticHandlerFunction DiagnosticHandler,
-                          StringRef FunctionName,
-                          std::unique_ptr<FunctionInfoIndex> Index) {
+std::error_code llvm::readFunctionSummary(
+    MemoryBufferRef Buffer, DiagnosticHandlerFunction DiagnosticHandler,
+    StringRef FunctionName, std::unique_ptr<FunctionInfoIndex> Index) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
-  FunctionIndexBitcodeReader R(Buf.get(), Context, DiagnosticHandler);
+  FunctionIndexBitcodeReader R(Buf.get(), DiagnosticHandler);
 
   auto cleanupOnError = [&](std::error_code EC) {
     R.releaseBuffer(); // Never take ownership on error.
