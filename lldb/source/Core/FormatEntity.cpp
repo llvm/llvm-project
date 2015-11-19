@@ -1653,201 +1653,264 @@ FormatEntity::Format (const Entry &entry,
 
         case Entry::Type::FunctionName:
             {
-                const char *name = NULL;
+                Language *language_plugin = nullptr;
+                bool language_plugin_handled = false;
+                StreamString ss;
                 if (sc->function)
-                    name = sc->function->GetName().AsCString (NULL);
+                    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
                 else if (sc->symbol)
-                    name = sc->symbol->GetName().AsCString (NULL);
-                if (name)
+                    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+                if (language_plugin)
                 {
-                    s.PutCString(name);
-
-                    if (sc->block)
+                    language_plugin_handled = language_plugin->GetFunctionDisplayName(sc,
+                                                                                      Language::FunctionNameRepresentation::eName,
+                                                                                      ss);
+                }
+                if (language_plugin_handled)
+                {
+                    s.PutCString(ss.GetData());
+                    return true;
+                }
+                else
+                {
+                    const char *name = NULL;
+                    if (sc->function)
+                        name = sc->function->GetName().AsCString (NULL);
+                    else if (sc->symbol)
+                        name = sc->symbol->GetName().AsCString (NULL);
+                    if (name)
                     {
-                        Block *inline_block = sc->block->GetContainingInlinedBlock ();
-                        if (inline_block)
+                        s.PutCString(name);
+
+                        if (sc->block)
                         {
-                            const InlineFunctionInfo *inline_info = sc->block->GetInlinedFunctionInfo();
-                            if (inline_info)
+                            Block *inline_block = sc->block->GetContainingInlinedBlock ();
+                            if (inline_block)
                             {
-                                s.PutCString(" [inlined] ");
-                                inline_info->GetName(sc->function->GetLanguage()).Dump(&s);
+                                const InlineFunctionInfo *inline_info = sc->block->GetInlinedFunctionInfo();
+                                if (inline_info)
+                                {
+                                    s.PutCString(" [inlined] ");
+                                    inline_info->GetName(sc->function->GetLanguage()).Dump(&s);
+                                }
                             }
                         }
+                        return true;
                     }
-                    return true;
                 }
             }
             return false;
 
         case Entry::Type::FunctionNameNoArgs:
             {
-                ConstString name;
+                Language *language_plugin = nullptr;
+                bool language_plugin_handled = false;
+                StreamString ss;
                 if (sc->function)
-                    name = sc->function->GetNameNoArguments();
+                    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
                 else if (sc->symbol)
-                    name = sc->symbol->GetNameNoArguments();
-                if (name)
+                    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+                if (language_plugin)
                 {
-                    s.PutCString(name.GetCString());
+                    language_plugin_handled = language_plugin->GetFunctionDisplayName(sc,
+                                                                                      Language::FunctionNameRepresentation::eNameWithNoArgs,
+                                                                                      ss);
+                }
+                if (language_plugin_handled)
+                {
+                    s.PutCString(ss.GetData());
                     return true;
+                }
+                else
+                {
+                    ConstString name;
+                    if (sc->function)
+                        name = sc->function->GetNameNoArguments();
+                    else if (sc->symbol)
+                        name = sc->symbol->GetNameNoArguments();
+                    if (name)
+                    {
+                        s.PutCString(name.GetCString());
+                        return true;
+                    }
                 }
             }
             return false;
 
         case Entry::Type::FunctionNameWithArgs:
             {
-                // Print the function name with arguments in it
+                Language *language_plugin = nullptr;
+                bool language_plugin_handled = false;
+                StreamString ss;
                 if (sc->function)
+                    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+                else if (sc->symbol)
+                    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+                if (language_plugin)
                 {
-                    ExecutionContextScope *exe_scope = exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
-                    const char *cstr = sc->function->GetName().AsCString (NULL);
-                    if (cstr)
+                    language_plugin_handled = language_plugin->GetFunctionDisplayName(sc,
+                                                                                      Language::FunctionNameRepresentation::eNameWithArgs,
+                                                                                      ss);
+                }
+                if (language_plugin_handled)
+                {
+                    s.PutCString(ss.GetData());
+                    return true;
+                }
+                else
+                {
+                    // Print the function name with arguments in it
+                    if (sc->function)
                     {
-                        const InlineFunctionInfo *inline_info = NULL;
-                        VariableListSP variable_list_sp;
-                        bool get_function_vars = true;
-                        if (sc->block)
+                        ExecutionContextScope *exe_scope = exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
+                        const char *cstr = sc->function->GetName().AsCString (NULL);
+                        if (cstr)
                         {
-                            Block *inline_block = sc->block->GetContainingInlinedBlock ();
-
-                            if (inline_block)
+                            const InlineFunctionInfo *inline_info = NULL;
+                            VariableListSP variable_list_sp;
+                            bool get_function_vars = true;
+                            if (sc->block)
                             {
-                                get_function_vars = false;
-                                inline_info = sc->block->GetInlinedFunctionInfo();
-                                if (inline_info)
-                                    variable_list_sp = inline_block->GetBlockVariableList (true);
-                            }
-                        }
-
-                        if (get_function_vars)
-                        {
-                            variable_list_sp = sc->function->GetBlock(true).GetBlockVariableList (true);
-                        }
-
-                        if (inline_info)
-                        {
-                            s.PutCString (cstr);
-                            s.PutCString (" [inlined] ");
-                            cstr = inline_info->GetName(sc->function->GetLanguage()).GetCString();
-                        }
-
-                        VariableList args;
-                        if (variable_list_sp)
-                            variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument, args);
-                        if (args.GetSize() > 0)
-                        {
-                            const char *open_paren = strchr (cstr, '(');
-                            const char *close_paren = nullptr;
-                            const char *generic = strchr(cstr, '<');
-                            // if before the arguments list begins there is a template sign
-                            // then scan to the end of the generic args before you try to find
-                            // the arguments list
-                            if (generic && open_paren && generic < open_paren)
-                            {
-                                int generic_depth = 1;
-                                ++generic;
-                                for (;
-                                     *generic && generic_depth > 0;
-                                     generic++)
+                                Block *inline_block = sc->block->GetContainingInlinedBlock ();
+                                
+                                if (inline_block)
                                 {
-                                    if (*generic == '<')
-                                        generic_depth++;
-                                    if (*generic == '>')
-                                        generic_depth--;
+                                    get_function_vars = false;
+                                    inline_info = sc->block->GetInlinedFunctionInfo();
+                                    if (inline_info)
+                                        variable_list_sp = inline_block->GetBlockVariableList (true);
                                 }
-                                if (*generic)
-                                    open_paren = strchr(generic, '(');
-                                else
-                                    open_paren = nullptr;
                             }
-                            if (open_paren)
+                            
+                            if (get_function_vars)
                             {
-                                if (IsToken (open_paren, "(anonymous namespace)"))
-                                {
-                                    open_paren = strchr (open_paren + strlen("(anonymous namespace)"), '(');
-                                    if (open_paren)
-                                        close_paren = strchr (open_paren, ')');
-                                }
-                                else
-                                    close_paren = strchr (open_paren, ')');
+                                variable_list_sp = sc->function->GetBlock(true).GetBlockVariableList (true);
                             }
-
-                            if (open_paren)
-                                s.Write(cstr, open_paren - cstr + 1);
-                            else
+                            
+                            if (inline_info)
                             {
                                 s.PutCString (cstr);
-                                s.PutChar ('(');
+                                s.PutCString (" [inlined] ");
+                                cstr = inline_info->GetName(sc->function->GetLanguage()).GetCString();
                             }
-                            const size_t num_args = args.GetSize();
-                            for (size_t arg_idx = 0; arg_idx < num_args; ++arg_idx)
+                            
+                            VariableList args;
+                            if (variable_list_sp)
+                                variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument, args);
+                            if (args.GetSize() > 0)
                             {
-                                std::string buffer;
-
-                                VariableSP var_sp (args.GetVariableAtIndex (arg_idx));
-                                ValueObjectSP var_value_sp (ValueObjectVariable::Create (exe_scope, var_sp));
-                                StreamString ss;
-                                const char *var_representation = nullptr;
-                                const char *var_name = var_value_sp->GetName().GetCString();
-                                if (var_value_sp->GetCompilerType().IsValid())
+                                const char *open_paren = strchr (cstr, '(');
+                                const char *close_paren = nullptr;
+                                const char *generic = strchr(cstr, '<');
+                                // if before the arguments list begins there is a template sign
+                                // then scan to the end of the generic args before you try to find
+                                // the arguments list
+                                if (generic && open_paren && generic < open_paren)
                                 {
-                                    if (var_value_sp && exe_scope->CalculateTarget())
-                                        var_value_sp = var_value_sp->GetQualifiedRepresentationIfAvailable(exe_scope->CalculateTarget()->TargetProperties::GetPreferDynamicValue(),
-                                                                                                           exe_scope->CalculateTarget()->TargetProperties::GetEnableSyntheticValue());
-                                    if (var_value_sp->GetCompilerType().IsAggregateType() &&
-                                        DataVisualization::ShouldPrintAsOneLiner(*var_value_sp.get()))
+                                    int generic_depth = 1;
+                                    ++generic;
+                                    for (;
+                                         *generic && generic_depth > 0;
+                                         generic++)
                                     {
-                                        static StringSummaryFormat format(TypeSummaryImpl::Flags()
-                                                                          .SetHideItemNames(false)
-                                                                          .SetShowMembersOneLiner(true),
-                                                                          "");
-                                        format.FormatObject(var_value_sp.get(), buffer, TypeSummaryOptions());
-                                        var_representation = buffer.c_str();
+                                        if (*generic == '<')
+                                            generic_depth++;
+                                        if (*generic == '>')
+                                            generic_depth--;
+                                    }
+                                    if (*generic)
+                                        open_paren = strchr(generic, '(');
+                                    else
+                                        open_paren = nullptr;
+                                }
+                                if (open_paren)
+                                {
+                                    if (IsToken (open_paren, "(anonymous namespace)"))
+                                    {
+                                        open_paren = strchr (open_paren + strlen("(anonymous namespace)"), '(');
+                                        if (open_paren)
+                                            close_paren = strchr (open_paren, ')');
                                     }
                                     else
-                                        var_value_sp->DumpPrintableRepresentation(ss,
-                                                                                  ValueObject::ValueObjectRepresentationStyle::eValueObjectRepresentationStyleSummary,
-                                                                                  eFormatDefault,
-                                                                                  ValueObject::PrintableRepresentationSpecialCases::ePrintableRepresentationSpecialCasesAllow,
-                                                                                  false);
+                                        close_paren = strchr (open_paren, ')');
                                 }
                                 
-                                if (ss.GetData() && ss.GetSize())
-                                    var_representation = ss.GetData();
-                                if (arg_idx > 0)
-                                    s.PutCString (", ");
-                                if (var_value_sp->GetError().Success())
-                                {
-                                    if (var_representation)
-                                        s.Printf ("%s=%s", var_name, var_representation);
-                                    else
-                                        s.Printf ("%s=%s at %s", var_name, var_value_sp->GetTypeName().GetCString(), var_value_sp->GetLocationAsCString());
-                                }
+                                if (open_paren)
+                                    s.Write(cstr, open_paren - cstr + 1);
                                 else
-                                    s.Printf ("%s=<unavailable>", var_name);
+                                {
+                                    s.PutCString (cstr);
+                                    s.PutChar ('(');
+                                }
+                                const size_t num_args = args.GetSize();
+                                for (size_t arg_idx = 0; arg_idx < num_args; ++arg_idx)
+                                {
+                                    std::string buffer;
+                                    
+                                    VariableSP var_sp (args.GetVariableAtIndex (arg_idx));
+                                    ValueObjectSP var_value_sp (ValueObjectVariable::Create (exe_scope, var_sp));
+                                    StreamString ss;
+                                    const char *var_representation = nullptr;
+                                    const char *var_name = var_value_sp->GetName().GetCString();
+                                    if (var_value_sp->GetCompilerType().IsValid())
+                                    {
+                                        if (var_value_sp && exe_scope->CalculateTarget())
+                                            var_value_sp = var_value_sp->GetQualifiedRepresentationIfAvailable(exe_scope->CalculateTarget()->TargetProperties::GetPreferDynamicValue(),
+                                                                                                               exe_scope->CalculateTarget()->TargetProperties::GetEnableSyntheticValue());
+                                        if (var_value_sp->GetCompilerType().IsAggregateType() &&
+                                            DataVisualization::ShouldPrintAsOneLiner(*var_value_sp.get()))
+                                        {
+                                            static StringSummaryFormat format(TypeSummaryImpl::Flags()
+                                                                              .SetHideItemNames(false)
+                                                                              .SetShowMembersOneLiner(true),
+                                                                              "");
+                                            format.FormatObject(var_value_sp.get(), buffer, TypeSummaryOptions());
+                                            var_representation = buffer.c_str();
+                                        }
+                                        else
+                                            var_value_sp->DumpPrintableRepresentation(ss,
+                                                                                      ValueObject::ValueObjectRepresentationStyle::eValueObjectRepresentationStyleSummary,
+                                                                                      eFormatDefault,
+                                                                                      ValueObject::PrintableRepresentationSpecialCases::ePrintableRepresentationSpecialCasesAllow,
+                                                                                      false);
+                                    }
+                                    
+                                    if (ss.GetData() && ss.GetSize())
+                                        var_representation = ss.GetData();
+                                    if (arg_idx > 0)
+                                        s.PutCString (", ");
+                                    if (var_value_sp->GetError().Success())
+                                    {
+                                        if (var_representation)
+                                            s.Printf ("%s=%s", var_name, var_representation);
+                                        else
+                                            s.Printf ("%s=%s at %s", var_name, var_value_sp->GetTypeName().GetCString(), var_value_sp->GetLocationAsCString());
+                                    }
+                                    else
+                                        s.Printf ("%s=<unavailable>", var_name);
+                                }
+                                
+                                if (close_paren)
+                                    s.PutCString (close_paren);
+                                else
+                                    s.PutChar(')');
+                                
                             }
-
-                            if (close_paren)
-                                s.PutCString (close_paren);
                             else
-                                s.PutChar(')');
-
+                            {
+                                s.PutCString(cstr);
+                            }
+                            return true;
                         }
-                        else
+                    }
+                    else if (sc->symbol)
+                    {
+                        const char *cstr = sc->symbol->GetName().AsCString (NULL);
+                        if (cstr)
                         {
                             s.PutCString(cstr);
+                            return true;
                         }
-                        return true;
-                    }
-                }
-                else if (sc->symbol)
-                {
-                    const char *cstr = sc->symbol->GetName().AsCString (NULL);
-                    if (cstr)
-                    {
-                        s.PutCString(cstr);
-                        return true;
                     }
                 }
             }

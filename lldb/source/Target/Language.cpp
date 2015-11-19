@@ -370,6 +370,14 @@ Language::IsUninitializedReference (ValueObject& valobj)
     return false;
 }
 
+bool
+Language::GetFunctionDisplayName (const SymbolContext *sc,
+                                  FunctionNameRepresentation representation,
+                                  Stream& s)
+{
+    return false;
+}
+
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------

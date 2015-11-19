@@ -32,7 +32,6 @@ class Language :
 public PluginInterface
 {
 public:
-    
     class TypeScavenger
     {
     public:
@@ -66,6 +65,13 @@ public:
         Find_Impl (ExecutionContextScope *exe_scope,
                    const char *key,
                    ResultSet &results) = 0;
+    };
+    
+    enum class FunctionNameRepresentation
+    {
+        eName,
+        eNameWithArgs,
+        eNameWithNoArgs
     };
 
     ~Language() override;
@@ -133,6 +139,11 @@ public:
     // will return true if such detection is possible, and if the reference has never been assigned
     virtual bool
     IsUninitializedReference (ValueObject& valobj);
+    
+    virtual bool
+    GetFunctionDisplayName (const SymbolContext *sc,
+                            FunctionNameRepresentation representation,
+                            Stream& s);
     
     // These are accessors for general information about the Languages lldb knows about:
     
