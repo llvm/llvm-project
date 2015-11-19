@@ -1669,6 +1669,7 @@ FormatEntity::Format (const Entry &entry,
                 if (language_plugin)
                 {
                     language_plugin_handled = language_plugin->GetFunctionDisplayName(sc,
+                                                                                      exe_ctx,
                                                                                       Language::FunctionNameRepresentation::eName,
                                                                                       ss);
                 }
@@ -1719,6 +1720,7 @@ FormatEntity::Format (const Entry &entry,
                 if (language_plugin)
                 {
                     language_plugin_handled = language_plugin->GetFunctionDisplayName(sc,
+                                                                                      exe_ctx,
                                                                                       Language::FunctionNameRepresentation::eNameWithNoArgs,
                                                                                       ss);
                 }
@@ -1755,6 +1757,7 @@ FormatEntity::Format (const Entry &entry,
                 if (language_plugin)
                 {
                     language_plugin_handled = language_plugin->GetFunctionDisplayName(sc,
+                                                                                      exe_ctx,
                                                                                       Language::FunctionNameRepresentation::eNameWithArgs,
                                                                                       ss);
                 }

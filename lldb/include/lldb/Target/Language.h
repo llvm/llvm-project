@@ -142,6 +142,7 @@ public:
     
     virtual bool
     GetFunctionDisplayName (const SymbolContext *sc,
+                            const ExecutionContext *exe_ctx,
                             FunctionNameRepresentation representation,
                             Stream& s);
     
