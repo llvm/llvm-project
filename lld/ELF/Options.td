@@ -67,7 +67,7 @@ def no_allow_shlib_undefined : Flag<["--"], "no-allow-shlib-undefined">;
 
 def no_as_needed : Flag<["--"], "no-as-needed">;
 
-def no_whole_archive : Flag<["--"], "no-whole-archive">,
+def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
   HelpText<"Restores the default behavior of loading archive members">;
 
 def noinhibit_exec : Flag<["--"], "noinhibit-exec">,
@@ -103,7 +103,7 @@ def undefined : Joined<["--"], "undefined=">,
 
 def verbose : Flag<["--"], "verbose">;
 
-def whole_archive : Flag<["--"], "whole-archive">,
+def whole_archive : Flag<["--", "-"], "whole-archive">,
   HelpText<"Force load of all members in a static library">;
 
 def z : JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,

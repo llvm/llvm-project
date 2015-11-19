@@ -56,7 +56,7 @@ On Unix-like Systems
 
 5. Test::
 
-     $ make lld-test
+     $ make check-lld
 
 Using Visual Studio
 ~~~~~~~~~~~~~~~~~~~
@@ -64,7 +64,7 @@ Using Visual Studio
 #. Get the required tools.
 
   * `CMake 2.8`_\+.
-  * `Visual Studio 11 (2012) or later`_ (required for C++11 support)
+  * `Visual Studio 12 (2013) or later`_ (required for C++11 support)
   * `Python 2.4`_\+ (not 3.x) for running tests.
 
 .. _CMake 2.8: http://www.cmake.org/cmake/resources/software.html

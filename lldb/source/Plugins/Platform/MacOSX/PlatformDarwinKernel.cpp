@@ -19,6 +19,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -79,11 +80,29 @@ PlatformDarwinKernel::Terminate ()
 PlatformSP
 PlatformDarwinKernel::CreateInstance (bool force, const ArchSpec *arch)
 {
+    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
+    if (log)
+    {
+        const char *arch_name;
+        if (arch && arch->GetArchitectureName ())
+            arch_name = arch->GetArchitectureName ();
+        else
+            arch_name = "<null>";
+
+        const char *triple_cstr = arch ? arch->GetTriple ().getTriple ().c_str() : "<null>";
+
+        log->Printf ("PlatformDarwinKernel::%s(force=%s, arch={%s,%s})", __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    }
+
     // This is a special plugin that we don't want to activate just based on an ArchSpec for normal
     // userland debugging.  It is only useful in kernel debug sessions and the DynamicLoaderDarwinPlugin
     // (or a user doing 'platform select') will force the creation of this Platform plugin.
     if (force == false)
+    {
+        if (log)
+            log->Printf ("PlatformDarwinKernel::%s() aborting creation of platform because force == false", __FUNCTION__);
         return PlatformSP();
+    }
 
     bool create = force;
     LazyBool is_ios_debug_session = eLazyBoolCalculate;
@@ -150,7 +169,16 @@ PlatformDarwinKernel::CreateInstance (bool force, const ArchSpec *arch)
         }
     }
     if (create)
+    {
+        if (log)
+            log->Printf ("PlatformDarwinKernel::%s() creating platform", __FUNCTION__);
+
         return PlatformSP(new PlatformDarwinKernel (is_ios_debug_session));
+    }
+
+    if (log)
+        log->Printf ("PlatformDarwinKernel::%s() aborting creation of platform", __FUNCTION__);
+
     return PlatformSP();
 }
 

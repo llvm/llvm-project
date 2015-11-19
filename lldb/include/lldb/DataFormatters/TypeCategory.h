@@ -119,14 +119,14 @@ namespace lldb_private {
             
             template<typename U = TypeFormatImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (FormatContainer::ExactMatchForEachCallback callback)
+            SetExact (FormatContainer::ExactMatchForEachCallback callback)
             {
                 m_format_exact = callback;
                 return *this;
             }
             template<typename U = TypeFormatImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (FormatContainer::RegexMatchForEachCallback callback)
+            SetWithRegex (FormatContainer::RegexMatchForEachCallback callback)
             {
                 m_format_regex = callback;
                 return *this;
@@ -134,14 +134,14 @@ namespace lldb_private {
 
             template<typename U = TypeSummaryImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (SummaryContainer::ExactMatchForEachCallback callback)
+            SetExact (SummaryContainer::ExactMatchForEachCallback callback)
             {
                 m_summary_exact = callback;
                 return *this;
             }
             template<typename U = TypeSummaryImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (SummaryContainer::RegexMatchForEachCallback callback)
+            SetWithRegex (SummaryContainer::RegexMatchForEachCallback callback)
             {
                 m_summary_regex = callback;
                 return *this;
@@ -149,14 +149,14 @@ namespace lldb_private {
 
             template<typename U = TypeFilterImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (FilterContainer::ExactMatchForEachCallback callback)
+            SetExact (FilterContainer::ExactMatchForEachCallback callback)
             {
                 m_filter_exact = callback;
                 return *this;
             }
             template<typename U = TypeFilterImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (FilterContainer::RegexMatchForEachCallback callback)
+            SetWithRegex (FilterContainer::RegexMatchForEachCallback callback)
             {
                 m_filter_regex = callback;
                 return *this;
@@ -165,14 +165,14 @@ namespace lldb_private {
 #ifndef LLDB_DISABLE_PYTHON
             template<typename U = SyntheticChildren>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (SynthContainer::ExactMatchForEachCallback callback)
+            SetExact (SynthContainer::ExactMatchForEachCallback callback)
             {
                 m_synth_exact = callback;
                 return *this;
             }
             template<typename U = SyntheticChildren>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (SynthContainer::RegexMatchForEachCallback callback)
+            SetWithRegex (SynthContainer::RegexMatchForEachCallback callback)
             {
                 m_synth_regex = callback;
                 return *this;
@@ -180,14 +180,14 @@ namespace lldb_private {
 #endif // LLDB_DISABLE_PYTHON
             template<typename U = TypeValidatorImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (ValidatorContainer::ExactMatchForEachCallback callback)
+            SetExact (ValidatorContainer::ExactMatchForEachCallback callback)
             {
                 m_validator_exact = callback;
                 return *this;
             }
             template<typename U = TypeValidatorImpl>
             typename std::enable_if<std::is_same<U,T>::value, ForEachCallbacks&>::type
-            Set (ValidatorContainer::RegexMatchForEachCallback callback)
+            SetWithRegex (ValidatorContainer::RegexMatchForEachCallback callback)
             {
                 m_validator_regex = callback;
                 return *this;

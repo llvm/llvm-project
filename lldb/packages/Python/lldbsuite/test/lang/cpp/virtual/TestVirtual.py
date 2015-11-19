@@ -32,6 +32,7 @@ class CppVirtualMadness(TestBase):
         self.line = line_number(self.source, '// Set first breakpoint here.')
 
     @expectedFailureIcc('llvm.org/pr16808') # lldb does not call the correct virtual function with icc
+    @expectedFailureAll(oslist=['windows'])
     def test_virtual_madness(self):
         """Test that expression works correctly with virtual inheritance as well as virtual function."""
         self.build()
@@ -60,6 +61,8 @@ class CppVirtualMadness(TestBase):
         # series of printf statements.
         stdout = process.GetSTDOUT(1024)
         
+        self.assertIsNotNone(stdout, "Encountered an error reading the process's output")
+
         # This golden list contains a list of "my_expr = 'value' pairs extracted
         # from the golden output.
         gl = []

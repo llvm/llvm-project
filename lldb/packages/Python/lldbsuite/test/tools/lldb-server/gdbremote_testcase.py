@@ -61,8 +61,12 @@ class GdbRemoteTestCaseBase(TestBase):
         self.named_pipe_fd = None
         self.stub_sends_two_stop_notifications_on_kill = False
         if lldb.platform_url:
-            scheme, host = re.match('(.+)://(.+):\d+', lldb.platform_url).groups()
-            if scheme == 'adb':
+            if lldb.platform_url.startswith('unix-'):
+                url_pattern = '(.+)://\[?(.+?)\]?/.*'
+            else:
+                url_pattern = '(.+)://(.+):\d+'
+            scheme, host = re.match(url_pattern, lldb.platform_url).groups()
+            if lldb.remote_platform_name == 'remote-android' and host != 'localhost':
                 self.stub_device = host
                 self.stub_hostname = 'localhost'
             else:

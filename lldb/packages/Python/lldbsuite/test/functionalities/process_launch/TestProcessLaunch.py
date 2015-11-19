@@ -192,10 +192,16 @@ class ProcessLaunchTestCase(TestBase):
         process = target.LaunchSimple(None, ['EVIL=' + evil_var], self.get_process_working_directory())
         self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
 
-        out = process.GetSTDOUT(len(evil_var))[:len(evil_var)]
+        out = process.GetSTDOUT(len(evil_var))
+        self.assertIsNotNone(out, "Encountered an error reading the process's output")
+
+        out = out[:len(evil_var)]
         if out != evil_var:
             self.fail('The environment variable was mis-coded: %s\n' % repr(out))
 
-        newline = process.GetSTDOUT(1)[0]
+        newline = process.GetSTDOUT(1)
+        self.assertIsNotNone(newline, "Encountered an error reading the process's output")
+
+        newline = newline[0]
         if newline != '\r' and newline != '\n':
             self.fail('Garbage at end of environment variable')

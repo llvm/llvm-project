@@ -1256,6 +1256,8 @@ public:
 template <typename FormatterType>
 class CommandObjectTypeFormatterList : public CommandObjectParsed
 {
+    typedef typename FormatterType::SharedPointer FormatterSharedPointer;
+
     class CommandOptions : public Options
     {
     public:
@@ -1403,8 +1405,12 @@ protected:
 
             result.GetOutputStream().Printf("-----------------------\nCategory: %s\n-----------------------\n", category->GetName());
             
+            typedef const std::shared_ptr<FormatterType> Bar;
+            typedef std::function<bool(ConstString,Bar)> Func1Type;
+            typedef std::function<bool(RegularExpressionSP,Bar)> Func2Type;
+
             TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
-            foreach.Set( [&result, &formatter_regex] (ConstString name, const typename FormatterType::SharedPointer& format_sp) -> bool {
+            foreach.SetExact([&result, &formatter_regex] (ConstString name, const FormatterSharedPointer& format_sp) -> bool {
                 if (formatter_regex)
                 {
                     bool escape = true;
@@ -1426,7 +1432,7 @@ protected:
                 return true;
             });
 
-            foreach.Set( [&result, &formatter_regex] (RegularExpressionSP regex_sp, const typename FormatterType::SharedPointer& format_sp) -> bool {
+            foreach.SetWithRegex( [&result, &formatter_regex] (RegularExpressionSP regex_sp, const FormatterSharedPointer& format_sp) -> bool {
                 if (formatter_regex)
                 {
                     bool escape = true;

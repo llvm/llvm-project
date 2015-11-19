@@ -151,8 +151,14 @@
 // See also SBThread::GetStopDescription.
 %typemap(argout) (char *dst, size_t dst_len) {
    Py_XDECREF($result);   /* Blow away any previous result */
-   lldb_private::PythonString str($1);
-   $result = str.release();
+   if (result == 0) {
+      $result = Py_None;
+      Py_INCREF($result);
+   } else {
+      llvm::StringRef ref(static_cast<const char*>($1), result);
+      lldb_private::PythonString string(ref);
+      $result = string.release();
+   }
    free($1);
 }
 
@@ -242,9 +248,14 @@
 // See also SBProcess::ReadMemory.
 %typemap(argout) (void *buf, size_t size) {
    Py_XDECREF($result);   /* Blow away any previous result */
-   llvm::StringRef ref(static_cast<const char*>($1), result);
-   lldb_private::PythonString string(ref);
-   $result = string.release();
+   if (result == 0) {
+      $result = Py_None;
+      Py_INCREF($result);
+   } else {
+      llvm::StringRef ref(static_cast<const char*>($1), result);
+      lldb_private::PythonString string(ref);
+      $result = string.release();
+   }
    free($1);
 }
 
