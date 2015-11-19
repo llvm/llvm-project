@@ -589,23 +589,47 @@ static void getARMFPUFeatures(const Driver &D, const Arg *A,
     D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
 
+// Decode ARM features from string like +[no]featureA+[no]featureB+...
+static bool DecodeARMFeatures(const Driver &D, StringRef text,
+                              std::vector<const char *> &Features) {
+  SmallVector<StringRef, 8> Split;
+  text.split(Split, StringRef("+"), -1, false);
+
+  for (StringRef Feature : Split) {
+    const char *FeatureName = llvm::ARM::getArchExtFeature(Feature);
+    if (FeatureName)
+      Features.push_back(FeatureName);
+    else
+      return false;
+  }
+  return true;
+}
+
 // Check if -march is valid by checking if it can be canonicalised and parsed.
 // getARMArch is used here instead of just checking the -march value in order
 // to handle -march=native correctly.
 static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
                              llvm::StringRef ArchName,
+                             std::vector<const char *> &Features,
                              const llvm::Triple &Triple) {
+  std::pair<StringRef, StringRef> Split = ArchName.split("+");
+
   std::string MArch = arm::getARMArch(ArchName, Triple);
-  if (llvm::ARM::parseArch(MArch) == llvm::ARM::AK_INVALID)
+  if (llvm::ARM::parseArch(MArch) == llvm::ARM::AK_INVALID ||
+      (Split.second.size() && !DecodeARMFeatures(D, Split.second, Features)))
     D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
 
 // Check -mcpu=. Needs ArchName to handle -mcpu=generic.
 static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
                             llvm::StringRef CPUName, llvm::StringRef ArchName,
+                            std::vector<const char *> &Features,
                             const llvm::Triple &Triple) {
+  std::pair<StringRef, StringRef> Split = CPUName.split("+");
+
   std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
-  if (arm::getLLVMArchSuffixForARM(CPU, ArchName, Triple).empty())
+  if (arm::getLLVMArchSuffixForARM(CPU, ArchName, Triple).empty() ||
+      (Split.second.size() && !DecodeARMFeatures(D, Split.second, Features)))
     D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
 
@@ -771,12 +795,12 @@ static void getARMTargetFeatures(const ToolChain &TC,
       D.Diag(clang::diag::warn_drv_unused_argument)
           << ArchArg->getAsString(Args);
     ArchName = StringRef(WaArch->getValue()).substr(7);
-    checkARMArchName(D, WaArch, Args, ArchName, Triple);
+    checkARMArchName(D, WaArch, Args, ArchName, Features, Triple);
     // FIXME: Set Arch.
     D.Diag(clang::diag::warn_drv_unused_argument) << WaArch->getAsString(Args);
   } else if (ArchArg) {
     ArchName = ArchArg->getValue();
-    checkARMArchName(D, ArchArg, Args, ArchName, Triple);
+    checkARMArchName(D, ArchArg, Args, ArchName, Features, Triple);
   }
 
   // Check -mcpu. ClangAs gives preference to -Wa,-mcpu=.
@@ -787,10 +811,10 @@ static void getARMTargetFeatures(const ToolChain &TC,
       D.Diag(clang::diag::warn_drv_unused_argument)
           << CPUArg->getAsString(Args);
     CPUName = StringRef(WaCPU->getValue()).substr(6);
-    checkARMCPUName(D, WaCPU, Args, CPUName, ArchName, Triple);
+    checkARMCPUName(D, WaCPU, Args, CPUName, ArchName, Features, Triple);
   } else if (CPUArg) {
     CPUName = CPUArg->getValue();
-    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, Triple);
+    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, Features, Triple);
   }
 
   // Add CPU features for generic CPUs
@@ -6301,7 +6325,7 @@ const std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
     MArch = Arch;
   else
     MArch = Triple.getArchName();
-  MArch = StringRef(MArch).lower();
+  MArch = StringRef(MArch).split("+").first.lower();
 
   // Handle -march=native.
   if (MArch == "native") {
@@ -6340,7 +6364,7 @@ std::string arm::getARMTargetCPU(StringRef CPU, StringRef Arch,
   // FIXME: Warn on inconsistent use of -mcpu and -march.
   // If we have -mcpu=, use that.
   if (!CPU.empty()) {
-    std::string MCPU = StringRef(CPU).lower();
+    std::string MCPU = StringRef(CPU).split("+").first.lower();
     // Handle -mcpu=native.
     if (MCPU == "native")
       return llvm::sys::getHostCPUName();
@@ -9972,10 +9996,6 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool UseDefaultLibs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs);
 
-  std::string StartFilesDir, BuiltinLibDir;
-  TC.getCompilerSupportDir(StartFilesDir);
-  TC.getBuiltinLibDir(BuiltinLibDir);
-
   if (T.getArch() == llvm::Triple::sparc)
     CmdArgs.push_back("-EB");
   else // SHAVE assumes little-endian, and sparcel is expressly so.
@@ -9999,19 +10019,15 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (UseStartfiles) {
     // If you want startfiles, it means you want the builtin crti and crtbegin,
     // but not crt0. Myriad link commands provide their own crt0.o as needed.
-    CmdArgs.push_back(Args.MakeArgString(StartFilesDir + "/crti.o"));
-    CmdArgs.push_back(Args.MakeArgString(StartFilesDir + "/crtbegin.o"));
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crti.o")));
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtbegin.o")));
   }
 
   Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_e, options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_r});
 
-  // The linker doesn't use these builtin paths unless directed to,
-  // because it was not compiled for support with sysroots, nor does
-  // it have a default of little-endian with FPU.
-  CmdArgs.push_back(Args.MakeArgString("-L" + BuiltinLibDir));
-  CmdArgs.push_back(Args.MakeArgString("-L" + StartFilesDir));
+  TC.AddFilePathLibArgs(Args, CmdArgs);
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs);
 
@@ -10031,8 +10047,8 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lgcc");
   }
   if (UseStartfiles) {
-    CmdArgs.push_back(Args.MakeArgString(StartFilesDir + "/crtend.o"));
-    CmdArgs.push_back(Args.MakeArgString(StartFilesDir + "/crtn.o"));
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtend.o")));
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtn.o")));
   }
 
   std::string Exec =

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10  -Os -emit-llvm %s -o -  | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10  -O0 -emit-llvm %s -o -  | FileCheck %s
 // rdar://16095748
 
 @interface NSObject 
@@ -31,7 +31,7 @@ extern void foo(int);
 // CHECK: [[ADDPTR:%.*]] = getelementptr inbounds i8, i8* [[THREE]], i64 [[IVAR]]
 // CHECK: [[FOUR:%.*]] = bitcast i8* [[ADDPTR]] to i32*
 // CHECK: [[FIVE:%.*]] = load i32, i32* [[FOUR]], align 4
-// CHECK:   tail call void @foo(i32 [[FIVE]])
+// CHECK:   call void @foo(i32 [[FIVE]])
 
 @implementation SampleClass
 + (SampleClass*) new { return 0; }

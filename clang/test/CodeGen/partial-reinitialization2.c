@@ -15,7 +15,7 @@ union ULP3 { struct LP3 l3; };
 // CHECK-LABEL: test1
 void test1(void)
 {
-  // CHECK: call void @llvm.memcpy{{.*}}%struct.P1, %struct.P1* @g1{{.*}}i64 6, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}(i8* align 1 %{{.*}}, i8* align 1 {{.*}} (%struct.P1, %struct.P1* @g1{{.*}}i64 6, i1 false)
   // CHECK: store i8 120, i8* %
 
   struct LP1 l = { .p1 = g1, .p1.x[2] = 'x' };
@@ -24,7 +24,7 @@ void test1(void)
 // CHECK-LABEL: test2
 void test2(void)
 {
-  // CHECK: call void @llvm.memcpy{{.*}}%struct.P1, %struct.P1* @g1{{.*}}i64 6, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}(i8* align 1 %{{.*}}, i8* align 1 {{.*}} (%struct.P1, %struct.P1* @g1{{.*}}i64 6, i1 false)
   // CHECK: store i8 114, i8* %
 
   struct LP1 l = { .p1 = g1, .p1.x[1] = 'r' };
@@ -33,7 +33,7 @@ void test2(void)
 // CHECK-LABEL: test3
 void test3(void)
 {
-  // CHECK: call void @llvm.memcpy{{.*}}%struct.P2* @g2{{.*}}i64 12, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}(i8* align 4 %{{.*}}, i8* align 4 {{.*}} (%struct.P2* @g2{{.*}}i64 12, i1 false)
   // CHECK: store i32 10, i32* %
 
   struct LP2 l = { .p2 = g2, .p2.b = 10 };
@@ -66,7 +66,7 @@ void test4(void)
   // CHECK: [[CALL:%[a-z0-9]+]] = call {{.*}}@get123()
   // CHECK: store{{.*}}[[CALL]], {{.*}}[[TMP0:%[a-z0-9]+]]
   // CHECK: [[TMP1:%[a-z0-9]+]] = bitcast {{.*}}[[TMP0]]
-  // CHECK: call void @llvm.memcpy{{.*}}[[TMP1]], i64 12, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}(i8* align 4 %{{.*}}, i8* align 8 [[TMP1]], i64 12, i1 false)
   // CHECK: store i32 100, i32* %
 
   struct LUP2 { union UP2 up; } var = { get123(), .up.p2.a = 100 };
@@ -76,12 +76,12 @@ void test4(void)
 void test5(void)
 {
   // .l3 = g3
-  // CHECK: call void @llvm.memcpy{{.*}}%struct.LP3, %struct.LP3* @g3{{.*}}i64 12, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}(i8* align 1 %{{.*}}, i8* align 1 {{.*}} (%struct.LP3, %struct.LP3* @g3{{.*}}i64 12, i1 false)
 
   // .l3.p1 = { [0] = g1 } implicitly sets [1] to zero
-  // CHECK: call void @llvm.memcpy{{.*}}%struct.P1, %struct.P1* @g1{{.*}}i64 6, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}(i8* align 1 %{{.*}}, i8* align 1 {{.*}} (%struct.P1, %struct.P1* @g1{{.*}}i64 6, i1 false)
   // CHECK: getelementptr{{.*}}%struct.P1, %struct.P1*{{.*}}i64 1
-  // CHECK: call void @llvm.memset{{.*}}i8 0, i64 6, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memset{{.*}}(i8* align 1 %{{.*}}, i8 0, i64 6, i1 false)
 
   // .l3.p1[1].x[1] = 'x'
   // CHECK: store i8 120, i8* %
@@ -98,7 +98,7 @@ void test6(void)
   // CHECK: [[CALL:%[a-z0-9]+]] = call {{.*}}@get235()
   // CHECK: store{{.*}}[[CALL]], {{.*}}[[TMP0:%[a-z0-9]+]]
   // CHECK: [[TMP1:%[a-z0-9]+]] = bitcast {{.*}}[[TMP0]]
-  // CHECK: call void @llvm.memcpy{{.*}}[[TMP1]], i64 12, i32 {{[0-9]}}, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}(i8* align 4 %{{.*}}, i8* align 8 [[TMP1]], i64 12, i1 false)
 
   // CHECK: store i32 10, i32* %
 

@@ -1907,7 +1907,18 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
           cast<TagDecl>(LookupCtx)->isBeingDefined()) &&
          "Declaration context must already be complete!");
 
-  // Perform qualified name lookup into the LookupCtx.
+  struct QualifiedLookupInScope {
+    bool oldVal;
+    DeclContext *Context;
+    // Set flag in DeclContext informing debugger that we're looking for qualified name
+    QualifiedLookupInScope(DeclContext *ctx) : Context(ctx) { 
+      oldVal = ctx->setUseQualifiedLookup(); 
+    }
+    ~QualifiedLookupInScope() { 
+      Context->setUseQualifiedLookup(oldVal); 
+    }
+  } QL(LookupCtx);
+
   if (LookupDirect(*this, R, LookupCtx)) {
     R.resolveKind();
     if (isa<CXXRecordDecl>(LookupCtx))
@@ -3879,8 +3890,6 @@ void TypoCorrectionConsumer::addNamespaces(
   auto &Types = SemaRef.getASTContext().getTypes();
   for (unsigned I = 0; I != Types.size(); ++I) {
     const auto *TI = Types[I];
-    if (!TI->isClassType() && isa<TemplateSpecializationType>(TI))
-      continue;
     if (CXXRecordDecl *CD = TI->getAsCXXRecordDecl()) {
       CD = CD->getCanonicalDecl();
       if (!CD->isDependentType() && !CD->isAnonymousStructOrUnion() &&

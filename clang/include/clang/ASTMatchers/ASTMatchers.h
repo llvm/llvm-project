@@ -2544,6 +2544,54 @@ AST_MATCHER(VarDecl, hasGlobalStorage) {
   return Node.hasGlobalStorage();
 }
 
+/// \brief Matches a variable declaration that has automatic storage duration.
+///
+/// Example matches x, but not y, z, or a.
+/// (matcher = varDecl(hasAutomaticStorageDuration())
+/// \code
+/// void f() {
+///   int x;
+///   static int y;
+///   thread_local int z;
+/// }
+/// int a;
+/// \endcode
+AST_MATCHER(VarDecl, hasAutomaticStorageDuration) {
+  return Node.getStorageDuration() == SD_Automatic;
+}
+
+/// \brief Matches a variable declaration that has static storage duration.
+///
+/// Example matches y and a, but not x or z.
+/// (matcher = varDecl(hasStaticStorageDuration())
+/// \code
+/// void f() {
+///   int x;
+///   static int y;
+///   thread_local int z;
+/// }
+/// int a;
+/// \endcode
+AST_MATCHER(VarDecl, hasStaticStorageDuration) {
+  return Node.getStorageDuration() == SD_Static;
+}
+
+/// \brief Matches a variable declaration that has thread storage duration.
+///
+/// Example matches z, but not x, z, or a.
+/// (matcher = varDecl(hasThreadStorageDuration())
+/// \code
+/// void f() {
+///   int x;
+///   static int y;
+///   thread_local int z;
+/// }
+/// int a;
+/// \endcode
+AST_MATCHER(VarDecl, hasThreadStorageDuration) {
+  return Node.getStorageDuration() == SD_Thread;
+}
+
 /// \brief Matches a variable declaration that is an exception variable from
 /// a C++ catch block, or an Objective-C \@catch statement.
 ///

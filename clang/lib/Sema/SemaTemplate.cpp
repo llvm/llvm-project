@@ -6409,7 +6409,17 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
     if (!PrevDecl)
       ClassTemplate->AddSpecialization(Specialization, InsertPos);
 
-    CanonType = Context.getTypeDeclType(Specialization);
+    if (CurContext->isDependentContext()) {
+      // -fms-extensions permits specialization of nested classes without
+      // fully specializing the outer class(es).
+      assert(getLangOpts().MicrosoftExt &&
+             "Only possible with -fms-extensions!");
+      TemplateName CanonTemplate = Context.getCanonicalTemplateName(Name);
+      CanonType = Context.getTemplateSpecializationType(
+          CanonTemplate, Converted.data(), Converted.size());
+    } else {
+      CanonType = Context.getTypeDeclType(Specialization);
+    }
   }
 
   // C++ [temp.expl.spec]p6:

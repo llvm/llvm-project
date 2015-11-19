@@ -134,7 +134,7 @@ int main() {
   dx = dv;
 // CHECK: [[LD:%.+]] = load x86_fp80, x86_fp80*
 // CHECK: [[BITCAST:%.+]] = bitcast x86_fp80* [[LDTEMP:%.*]] to i8*
-// CHECK: call void @llvm.memset.p0i8.i64(i8* [[BITCAST]], i8 0, i64 16, i32 16, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[BITCAST]], i8 0, i64 16, i1 false)
 // CHECK: store x86_fp80 [[LD]], x86_fp80* [[LDTEMP]]
 // CHECK: [[BITCAST:%.+]] = bitcast x86_fp80* [[LDTEMP:%.*]] to i128*
 // CHECK: [[LD:%.+]] = load i128, i128* [[BITCAST]]
@@ -223,7 +223,7 @@ int main() {
 // CHECK: load i64, i64*
 // CHECK: [[VAL:%.+]] = uitofp i64 %{{.+}} to x86_fp80
 // CHECK: [[BITCAST:%.+]] = bitcast x86_fp80* [[TEMP:%.+]] to i8*
-// CHECK: call void @llvm.memset.p0i8.i64(i8* [[BITCAST]], i8 0, i64 16, i32 16, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[BITCAST]], i8 0, i64 16, i1 false)
 // CHECK: store x86_fp80 [[VAL]], x86_fp80* [[TEMP]]
 // CHECK: [[BITCAST:%.+]] = bitcast x86_fp80* [[TEMP]] to i128*
 // CHECK: [[VAL:%.+]] = load i128, i128* [[BITCAST]]

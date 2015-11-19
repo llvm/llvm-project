@@ -2718,8 +2718,7 @@ def warn_impcast_floating_point_to_bool : Warning<
     InGroup<ImplicitConversionFloatingPointToBool>;
 def ext_ms_impcast_fn_obj : ExtWarn<
   "implicit conversion between pointer-to-function and pointer-to-object is a "
-  "Microsoft extension">,
-  InGroup<MicrosoftCast>, DefaultError, SFINAEFailure;
+  "Microsoft extension">, InGroup<MicrosoftCast>;
 
 def warn_impcast_pointer_to_bool : Warning<
     "address of%select{| function| array}0 '%1' will always evaluate to "
@@ -5605,8 +5604,7 @@ def ext_cast_fn_obj : Extension<
   "cast between pointer-to-function and pointer-to-object is an extension">;
 def ext_ms_cast_fn_obj : ExtWarn<
   "static_cast between pointer-to-function and pointer-to-object is a "
-  "Microsoft extension">,
-  InGroup<MicrosoftCast>, DefaultError, SFINAEFailure;
+  "Microsoft extension">, InGroup<MicrosoftCast>;
 def warn_cxx98_compat_cast_fn_obj : Warning<
   "cast between pointer-to-function and pointer-to-object is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;

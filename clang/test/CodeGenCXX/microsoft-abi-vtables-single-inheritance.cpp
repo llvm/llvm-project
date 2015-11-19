@@ -299,3 +299,18 @@ struct S {
 };
 
 S::S() {}
+
+struct T {
+  struct U {};
+};
+struct V : T {
+  // CHECK-LABEL: VFTable for 'V' (2 entries).
+  // CHECK-NEXT:   0 | void V::U()
+  // CHECK-NEXT:   1 | void V::f()
+  using T::U;
+  virtual void f();
+  virtual void U();
+  V();
+};
+
+V::V() {}

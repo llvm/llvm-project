@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -analyze -analyzer-checker=deadcode.DeadStores -verify -Wno-unreachable-code %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -analyze -analyzer-store=region -analyzer-constraints=range -analyzer-checker=deadcode.DeadStores -verify -Wno-unreachable-code %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fblocks -std=c++11 -analyze -analyzer-checker=deadcode.DeadStores -verify -Wno-unreachable-code %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fblocks -std=c++11 -analyze -analyzer-store=region -analyzer-constraints=range -analyzer-checker=deadcode.DeadStores -verify -Wno-unreachable-code %s
 
 //===----------------------------------------------------------------------===//
 // Basic dead store checking (but in C++ mode).
@@ -173,6 +173,20 @@ template <bool f> int radar13213575_testit(int i) {
 int radar_13213575() {
   return radar13213575_testit<true>(5) + radar13213575_testit<false>(3);
 }
+
+template <class T>
+void test_block_in_dependent_context(typename T::some_t someArray) {
+  ^{
+     int i = someArray[0]; // no-warning
+  }();
+}
+
+void test_block_in_non_dependent_context(int *someArray) {
+  ^{
+     int i = someArray[0]; // expected-warning {{Value stored to 'i' during its initialization is never read}}
+  }();
+}
+
 
 //===----------------------------------------------------------------------===//
 // Dead store checking involving lambdas.

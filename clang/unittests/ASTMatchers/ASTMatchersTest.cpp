@@ -1355,6 +1355,29 @@ TEST(Matcher, VarDecl_Storage) {
   EXPECT_TRUE(matches("void f() { static int X; }", M));
 }
 
+TEST(Matcher, VarDecl_StorageDuration) {
+  std::string T =
+      "void f() { int x; static int y; } int a;";
+
+  EXPECT_TRUE(matches(T, varDecl(hasName("x"), hasAutomaticStorageDuration())));
+  EXPECT_TRUE(
+      notMatches(T, varDecl(hasName("y"), hasAutomaticStorageDuration())));
+  EXPECT_TRUE(
+      notMatches(T, varDecl(hasName("a"), hasAutomaticStorageDuration())));
+
+  EXPECT_TRUE(matches(T, varDecl(hasName("y"), hasStaticStorageDuration())));
+  EXPECT_TRUE(matches(T, varDecl(hasName("a"), hasStaticStorageDuration())));
+  EXPECT_TRUE(notMatches(T, varDecl(hasName("x"), hasStaticStorageDuration())));
+
+  // FIXME: It is really hard to test with thread_local itself because not all
+  // targets support TLS, which causes this to be an error depending on what
+  // platform the test is being run on. We do not have access to the TargetInfo
+  // object to be able to test whether the platform supports TLS or not.
+  EXPECT_TRUE(notMatches(T, varDecl(hasName("x"), hasThreadStorageDuration())));
+  EXPECT_TRUE(notMatches(T, varDecl(hasName("y"), hasThreadStorageDuration())));
+  EXPECT_TRUE(notMatches(T, varDecl(hasName("a"), hasThreadStorageDuration())));
+}
+
 TEST(Matcher, FindsVarDeclInFunctionParameter) {
   EXPECT_TRUE(matches(
       "void f(int i) {}",

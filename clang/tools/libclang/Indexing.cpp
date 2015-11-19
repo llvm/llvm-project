@@ -907,6 +907,22 @@ int clang_indexSourceFile(CXIndexAction idxAction,
                           unsigned num_unsaved_files,
                           CXTranslationUnit *out_TU,
                           unsigned TU_options) {
+  SmallVector<const char *, 4> Args;
+  Args.push_back("clang");
+  Args.append(command_line_args, command_line_args + num_command_line_args);
+  return clang_indexSourceFileFullArgv(
+      idxAction, client_data, index_callbacks, index_callbacks_size,
+      index_options, source_filename, Args.data(), Args.size(), unsaved_files,
+      num_unsaved_files, out_TU, TU_options);
+}
+
+int clang_indexSourceFileFullArgv(
+    CXIndexAction idxAction, CXClientData client_data,
+    IndexerCallbacks *index_callbacks, unsigned index_callbacks_size,
+    unsigned index_options, const char *source_filename,
+    const char *const *command_line_args, int num_command_line_args,
+    struct CXUnsavedFile *unsaved_files, unsigned num_unsaved_files,
+    CXTranslationUnit *out_TU, unsigned TU_options) {
   LOG_FUNC_SECTION {
     *Log << source_filename << ": ";
     for (int i = 0; i != num_command_line_args; ++i)

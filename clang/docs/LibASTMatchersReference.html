@@ -1774,6 +1774,21 @@ cxxMethodDecl(isConst()) matches A::foo() but not A::bar()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isCopyAssignmentOperator0')"><a name="isCopyAssignmentOperator0Anchor">isCopyAssignmentOperator</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isCopyAssignmentOperator0"><pre>Matches if the given method declaration declares a copy assignment
+operator.
+
+Given
+struct A {
+  A &amp;operator=(const A &amp;);
+  A &amp;operator=(A &amp;&amp;);
+};
+
+cxxMethodDecl(isCopyAssignmentOperator()) matches the first method but not
+the second one.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isFinal1')"><a name="isFinal1Anchor">isFinal</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isFinal1"><pre>Matches if the given method or class declaration is final.
 
@@ -2749,6 +2764,20 @@ Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasAutomaticStorageDuration0')"><a name="hasAutomaticStorageDuration0Anchor">hasAutomaticStorageDuration</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="hasAutomaticStorageDuration0"><pre>Matches a variable declaration that has automatic storage duration.
+
+Example matches x, but not y, z, or a.
+(matcher = varDecl(hasAutomaticStorageDuration())
+void f() {
+  int x;
+  static int y;
+  thread_local int z;
+}
+int a;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasGlobalStorage0')"><a name="hasGlobalStorage0Anchor">hasGlobalStorage</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="hasGlobalStorage0"><pre>Matches a variable declaration that does not have local storage.
 
@@ -2771,6 +2800,34 @@ void f() {
   static int y;
 }
 int z;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasStaticStorageDuration0')"><a name="hasStaticStorageDuration0Anchor">hasStaticStorageDuration</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="hasStaticStorageDuration0"><pre>Matches a variable declaration that has static storage duration.
+
+Example matches y and a, but not x or z.
+(matcher = varDecl(hasStaticStorageDuration())
+void f() {
+  int x;
+  static int y;
+  thread_local int z;
+}
+int a;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasThreadStorageDuration0')"><a name="hasThreadStorageDuration0Anchor">hasThreadStorageDuration</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="hasThreadStorageDuration0"><pre>Matches a variable declaration that has thread storage duration.
+
+Example matches z, but not x, z, or a.
+(matcher = varDecl(hasThreadStorageDuration())
+void f() {
+  int x;
+  static int y;
+  thread_local int z;
+}
+int a;
 </pre></td></tr>
 
 
@@ -3037,6 +3094,22 @@ Given
   void f() { i[1] = 42; }
 arraySubscriptExpression(hasIndex(integerLiteral()))
   matches i[1] with the integerLiteral() matching 1
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasLHS1')"><a name="hasLHS1Anchor">hasLHS</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasLHS1"><pre>Matches the left hand side of binary operator expressions.
+
+Example matches a (matcher = binaryOperator(hasLHS()))
+  a || b
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasRHS1')"><a name="hasRHS1Anchor">hasRHS</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasRHS1"><pre>Matches the right hand side of binary operator expressions.
+
+Example matches b (matcher = binaryOperator(hasRHS()))
+  a || b
 </pre></td></tr>
 
 
