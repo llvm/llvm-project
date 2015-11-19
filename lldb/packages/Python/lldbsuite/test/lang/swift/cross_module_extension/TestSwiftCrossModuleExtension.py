@@ -35,6 +35,7 @@ class TestSwiftCrossModuleExtension(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    @expectedFailureDarwin("rdar://23620214")
     def test_cross_module_extension(self):
         """Test that we correctly find private extension decls across modules"""
         self.buildAll()
