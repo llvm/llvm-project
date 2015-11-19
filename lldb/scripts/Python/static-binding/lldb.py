@@ -4,7 +4,6 @@
 # Do not make changes to this file unless you know what you are doing--modify
 # the SWIG interface file instead.
 # This file is compatible with both classic and new-style classes.
-swig_version = (1, 3, 40)
 
 """
 The lldb module contains the public APIs for Python binding.
@@ -94,8 +93,6 @@ except AttributeError:
 import uuid
 import re
 import os
-
-import six
 
 INT32_MAX = _lldb.INT32_MAX
 UINT32_MAX = _lldb.UINT32_MAX
@@ -500,7 +497,10 @@ eSymbolTypeUndefined = _lldb.eSymbolTypeUndefined
 eSymbolTypeObjCClass = _lldb.eSymbolTypeObjCClass
 eSymbolTypeObjCMetaClass = _lldb.eSymbolTypeObjCMetaClass
 eSymbolTypeObjCIVar = _lldb.eSymbolTypeObjCIVar
+eSymbolTypeIVarOffset = _lldb.eSymbolTypeIVarOffset
 eSymbolTypeReExported = _lldb.eSymbolTypeReExported
+eSymbolTypeMetadata = _lldb.eSymbolTypeMetadata
+eSymbolTypeASTFile = _lldb.eSymbolTypeASTFile
 eSectionTypeInvalid = _lldb.eSectionTypeInvalid
 eSectionTypeCode = _lldb.eSectionTypeCode
 eSectionTypeContainer = _lldb.eSectionTypeContainer
@@ -531,6 +531,7 @@ eSectionTypeDWARFDebugStr = _lldb.eSectionTypeDWARFDebugStr
 eSectionTypeDWARFDebugStrOffsets = _lldb.eSectionTypeDWARFDebugStrOffsets
 eSectionTypeDWARFAppleNames = _lldb.eSectionTypeDWARFAppleNames
 eSectionTypeDWARFAppleTypes = _lldb.eSectionTypeDWARFAppleTypes
+eSectionTypeDWARFAppleExternalTypes = _lldb.eSectionTypeDWARFAppleExternalTypes
 eSectionTypeDWARFAppleNamespaces = _lldb.eSectionTypeDWARFAppleNamespaces
 eSectionTypeDWARFAppleObjC = _lldb.eSectionTypeDWARFAppleObjC
 eSectionTypeELFSymbolTable = _lldb.eSectionTypeELFSymbolTable
@@ -538,6 +539,7 @@ eSectionTypeELFDynamicSymbols = _lldb.eSectionTypeELFDynamicSymbols
 eSectionTypeELFRelocationEntries = _lldb.eSectionTypeELFRelocationEntries
 eSectionTypeELFDynamicLinkInfo = _lldb.eSectionTypeELFDynamicLinkInfo
 eSectionTypeEHFrame = _lldb.eSectionTypeEHFrame
+eSectionTypeSwiftModules = _lldb.eSectionTypeSwiftModules
 eSectionTypeARMexidx = _lldb.eSectionTypeARMexidx
 eSectionTypeARMextab = _lldb.eSectionTypeARMextab
 eSectionTypeCompactUnwind = _lldb.eSectionTypeCompactUnwind
@@ -684,6 +686,7 @@ eGdbSignalSoftware = _lldb.eGdbSignalSoftware
 eGdbSignalBreakpoint = _lldb.eGdbSignalBreakpoint
 ePathTypeLLDBShlibDir = _lldb.ePathTypeLLDBShlibDir
 ePathTypeSupportExecutableDir = _lldb.ePathTypeSupportExecutableDir
+ePathTypeSupportFileDir = _lldb.ePathTypeSupportFileDir
 ePathTypeHeaderDir = _lldb.ePathTypeHeaderDir
 ePathTypePythonDir = _lldb.ePathTypePythonDir
 ePathTypeLLDBSystemPlugins = _lldb.ePathTypeLLDBSystemPlugins
@@ -691,6 +694,7 @@ ePathTypeLLDBUserPlugins = _lldb.ePathTypeLLDBUserPlugins
 ePathTypeLLDBTempSystemDir = _lldb.ePathTypeLLDBTempSystemDir
 ePathTypeGlobalLLDBTempSystemDir = _lldb.ePathTypeGlobalLLDBTempSystemDir
 ePathTypeClangDir = _lldb.ePathTypeClangDir
+ePathTypeSwiftDir = _lldb.ePathTypeSwiftDir
 eMemberFunctionKindUnknown = _lldb.eMemberFunctionKindUnknown
 eMemberFunctionKindConstructor = _lldb.eMemberFunctionKindConstructor
 eMemberFunctionKindDestructor = _lldb.eMemberFunctionKindDestructor
@@ -722,6 +726,13 @@ eTypeIsFloat = _lldb.eTypeIsFloat
 eTypeIsComplex = _lldb.eTypeIsComplex
 eTypeIsSigned = _lldb.eTypeIsSigned
 eTypeInstanceIsPointer = _lldb.eTypeInstanceIsPointer
+eTypeIsSwift = _lldb.eTypeIsSwift
+eTypeIsArchetype = _lldb.eTypeIsArchetype
+eTypeIsProtocol = _lldb.eTypeIsProtocol
+eTypeIsTuple = _lldb.eTypeIsTuple
+eTypeIsMetatype = _lldb.eTypeIsMetatype
+eTypeIsGeneric = _lldb.eTypeIsGeneric
+eTypeIsBound = _lldb.eTypeIsBound
 eCommandRequiresTarget = _lldb.eCommandRequiresTarget
 eCommandRequiresProcess = _lldb.eCommandRequiresProcess
 eCommandRequiresThread = _lldb.eCommandRequiresThread
@@ -2745,7 +2756,7 @@ class SBData(_object):
                 for x in range(*key.indices(self.__len__())):
                     list.append(self.__getitem__(x))
                 return list
-            if not (isinstance(key,six.integer_types)):
+            if not (isinstance(key,(int,long))):
                 raise TypeError('must be int')
             key = key * self.item_size # SBData uses byte-based indexes, but we want to use itemsize-based indexes here
             error = SBError()
@@ -4075,6 +4086,17 @@ class SBExpressionOptions(_object):
         """
         return _lldb.SBExpressionOptions_SetTrapExceptions(self, trap_exceptions)
 
+    def GetPlaygroundTransformEnabled(self):
+        """GetPlaygroundTransformEnabled(self) -> bool"""
+        return _lldb.SBExpressionOptions_GetPlaygroundTransformEnabled(self)
+
+    def SetPlaygroundTransformEnabled(self, enable_playground_transform = True):
+        """
+        SetPlaygroundTransformEnabled(self, bool enable_playground_transform = True)
+        SetPlaygroundTransformEnabled(self)
+        """
+        return _lldb.SBExpressionOptions_SetPlaygroundTransformEnabled(self, enable_playground_transform)
+
     def SetLanguage(self, *args):
         """
         SetLanguage(self, LanguageType language)
@@ -4791,10 +4813,6 @@ class SBFunction(_object):
     def GetEndAddress(self):
         """GetEndAddress(self) -> SBAddress"""
         return _lldb.SBFunction_GetEndAddress(self)
-
-    def GetArgumentName(self, *args):
-        """GetArgumentName(self, uint32_t arg_idx) -> str"""
-        return _lldb.SBFunction_GetArgumentName(self, *args)
 
     def GetPrologueByteSize(self):
         """GetPrologueByteSize(self) -> uint32_t"""
@@ -5976,6 +5994,10 @@ class SBModule(_object):
     def GetObjectFileHeaderAddress(self):
         """GetObjectFileHeaderAddress(self) -> SBAddress"""
         return _lldb.SBModule_GetObjectFileHeaderAddress(self)
+
+    def IsTypeSystemCompatible(self, *args):
+        """IsTypeSystemCompatible(self, LanguageType language) -> SBError"""
+        return _lldb.SBModule_IsTypeSystemCompatible(self, *args)
 
     def __eq__(self, *args):
         """__eq__(self, SBModule rhs) -> bool"""
@@ -8730,16 +8752,16 @@ class SBTarget(_object):
         return _lldb.SBTarget_BreakpointCreateBySourceRegex(self, *args)
 
     def BreakpointCreateForException(self, *args):
-        """BreakpointCreateForException(self, LanguageType language, bool catch_bp, bool throw_bp) -> SBBreakpoint"""
+        """
+        BreakpointCreateForException(self, LanguageType language, bool catch_bp, bool throw_bp) -> SBBreakpoint
+        BreakpointCreateForException(self, LanguageType language, bool catch_bp, bool throw_bp, 
+            SBStringList extra_args) -> SBBreakpoint
+        """
         return _lldb.SBTarget_BreakpointCreateForException(self, *args)
 
     def BreakpointCreateByAddress(self, *args):
         """BreakpointCreateByAddress(self, addr_t address) -> SBBreakpoint"""
         return _lldb.SBTarget_BreakpointCreateByAddress(self, *args)
-
-    def BreakpointCreateBySBAddress(self, *args):
-        """BreakpointCreateBySBAddress(self, SBAddress sb_address) -> SBBreakpoint"""
-        return _lldb.SBTarget_BreakpointCreateBySBAddress(self, *args)
 
     def GetNumBreakpoints(self):
         """GetNumBreakpoints(self) -> uint32_t"""
@@ -9178,8 +9200,20 @@ class SBThread(_object):
         return _lldb.SBThread_GetStopDescription(self, *args)
 
     def GetStopReturnValue(self):
-        """GetStopReturnValue(self) -> SBValue"""
+        """
+        If the last stop on this thread was a thread plan that gathered a return value from the stop,
+        this function will fetch that stop result.  At present only the "step-out" thread plan gathers
+        stop return values.
+        """
         return _lldb.SBThread_GetStopReturnValue(self)
+
+    def GetStopErrorValue(self):
+        """
+        If the last stop on this thread was a thread plan that gathered an error value from the stop,
+        this function will fetch that stop result.  At present only the "step-out" thread plan gathers
+        stop error values, and that only for stepping out of Swift functions.
+        """
+        return _lldb.SBThread_GetStopErrorValue(self)
 
     def GetThreadID(self):
         """
@@ -9721,14 +9755,6 @@ class SBTypeMemberFunction(_object):
         """GetName(self) -> str"""
         return _lldb.SBTypeMemberFunction_GetName(self)
 
-    def GetDemangledName(self):
-        """GetDemangledName(self) -> str"""
-        return _lldb.SBTypeMemberFunction_GetDemangledName(self)
-
-    def GetMangledName(self):
-        """GetMangledName(self) -> str"""
-        return _lldb.SBTypeMemberFunction_GetMangledName(self)
-
     def GetType(self):
         """GetType(self) -> SBType"""
         return _lldb.SBTypeMemberFunction_GetType(self)
@@ -9752,10 +9778,6 @@ class SBTypeMemberFunction(_object):
     def GetDescription(self, *args):
         """GetDescription(self, SBStream description, DescriptionLevel description_level) -> bool"""
         return _lldb.SBTypeMemberFunction_GetDescription(self, *args)
-
-    def __str__(self):
-        """__str__(self) -> PyObject"""
-        return _lldb.SBTypeMemberFunction___str__(self)
 
 SBTypeMemberFunction_swigregister = _lldb.SBTypeMemberFunction_swigregister
 SBTypeMemberFunction_swigregister(SBTypeMemberFunction)
