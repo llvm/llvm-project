@@ -33,8 +33,9 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
   SupportsDebugInformation = true;
 
   // Exceptions handling
-  ExceptionsType = TheTriple.isWatchOS() ? ExceptionHandling::DwarfCFI
-                                         : ExceptionHandling::SjLj;
+  ExceptionsType = TheTriple.isOSDarwin() && !TheTriple.isWatchOS()
+                       ? ExceptionHandling::SjLj
+                       : ExceptionHandling::DwarfCFI;
 
   UseIntegratedAssembler = true;
 }

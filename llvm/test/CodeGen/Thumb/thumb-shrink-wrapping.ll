@@ -22,7 +22,7 @@
 ;
 ; Prologue code.
 ; CHECK: push {r7, lr}
-; CHECK-NEXT: sub sp, #8
+; CHECK: sub sp, #8
 ;
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
@@ -418,7 +418,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ;
 ; Prologue code.
 ; CHECK: push {[[TMP:r[0-9]+]], lr}
-; CHECK-NEXT: sub sp, #16
+; CHECK: sub sp, #16
 ;
 ; DISABLE: cmp r0, #0
 ; DISABLE-NEXT: beq [[ELSE_LABEL:LBB[0-9_]+]]

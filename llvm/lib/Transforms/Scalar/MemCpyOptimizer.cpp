@@ -229,7 +229,8 @@ public:
 
   void addMemSet(int64_t OffsetFromFirst, MemSetInst *MSI) {
     int64_t Size = cast<ConstantInt>(MSI->getLength())->getZExtValue();
-    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getAlignment(), MSI);
+    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getDestAlignment(),
+             MSI);
   }
 
   void addRange(int64_t Start, int64_t Size, Value *Ptr,
@@ -819,20 +820,17 @@ bool MemCpyOpt::processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep) {
 
   // If all checks passed, then we can transform M.
 
-  // Make sure to use the lesser of the alignment of the source and the dest
-  // since we're changing where we're reading from, but don't want to increase
-  // the alignment past what can be read from or written to.
   // TODO: Is this worth it if we're creating a less aligned memcpy? For
   // example we could be moving from movaps -> movq on x86.
-  unsigned Align = std::min(MDep->getAlignment(), M->getAlignment());
-
   IRBuilder<> Builder(M);
   if (UseMemMove)
     Builder.CreateMemMove(M->getRawDest(), MDep->getRawSource(), M->getLength(),
-                          Align, M->isVolatile());
+                          M->getDestAlignment(), MDep->getSrcAlignment(),
+                          M->isVolatile());
   else
     Builder.CreateMemCpy(M->getRawDest(), MDep->getRawSource(), M->getLength(),
-                         Align, M->isVolatile());
+                         M->getDestAlignment(), MDep->getSrcAlignment(),
+                         M->isVolatile());
 
   // Remove the instruction we're replacing.
   MD->removeInstruction(M);
@@ -878,7 +876,7 @@ bool MemCpyOpt::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   // If Dest is aligned, and SrcSize is constant, use the minimum alignment
   // of the sum.
   const unsigned DestAlign =
-      std::max(MemSet->getAlignment(), MemCpy->getAlignment());
+      std::max(MemSet->getDestAlignment(), MemCpy->getDestAlignment());
   if (DestAlign > 1)
     if (ConstantInt *SrcSizeC = dyn_cast<ConstantInt>(SrcSize))
       Align = MinAlign(SrcSizeC->getZExtValue(), DestAlign);
@@ -935,7 +933,7 @@ bool MemCpyOpt::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 
   IRBuilder<> Builder(MemCpy);
   Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
-                       CopySize, MemCpy->getAlignment());
+                       CopySize, MemCpy->getDestAlignment());
   return true;
 }
 
@@ -961,7 +959,7 @@ bool MemCpyOpt::processMemCpy(MemCpyInst *M) {
       if (Value *ByteVal = isBytewiseValue(GV->getInitializer())) {
         IRBuilder<> Builder(M);
         Builder.CreateMemSet(M->getRawDest(), ByteVal, M->getLength(),
-                             M->getAlignment(), false);
+                             M->getDestAlignment(), false);
         MD->removeInstruction(M);
         M->eraseFromParent();
         ++NumCpyToSet;
@@ -990,8 +988,11 @@ bool MemCpyOpt::processMemCpy(MemCpyInst *M) {
   //   d) memcpy from a just-memset'd source can be turned into memset.
   if (DepInfo.isClobber()) {
     if (CallInst *C = dyn_cast<CallInst>(DepInfo.getInst())) {
+      // FIXME: Can we pass in either of dest/src alignment here instead of
+      // convervatively taking the minimum?
+      unsigned Align = std::min(M->getDestAlignment(), M->getSrcAlignment());
       if (performCallSlotOptzn(M, M->getDest(), M->getSource(),
-                               CopySize->getZExtValue(), M->getAlignment(),
+                               CopySize->getZExtValue(), Align,
                                C)) {
         MD->removeInstruction(M);
         M->eraseFromParent();
@@ -1108,7 +1109,11 @@ bool MemCpyOpt::processByValArgument(CallSite CS, unsigned ArgNo) {
       getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
           *CS->getParent()->getParent());
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  if (MDep->getAlignment() < ByValAlign &&
+  // FIXME: Can we use either of dest/src alignment here instead of
+  // convervatively taking the minimum?
+  unsigned MinAlign = std::min(MDep->getDestAlignment(),
+                               MDep->getSrcAlignment());
+  if (MinAlign < ByValAlign &&
       getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL,
                                  CS.getInstruction(), &AC, &DT) < ByValAlign)
     return false;

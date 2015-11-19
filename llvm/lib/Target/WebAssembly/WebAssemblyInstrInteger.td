@@ -12,22 +12,24 @@
 ///
 //===----------------------------------------------------------------------===//
 
-defm ADD : BinaryInt<add, "add">;
-defm SUB : BinaryInt<sub, "sub">;
-defm MUL : BinaryInt<mul, "mul">;
+// The spaces after the names are for aesthetic purposes only, to make
+// operands line up vertically after tab expansion.
+defm ADD : BinaryInt<add, "add ">;
+defm SUB : BinaryInt<sub, "sub ">;
+defm MUL : BinaryInt<mul, "mul ">;
 defm DIV_S : BinaryInt<sdiv, "div_s">;
 defm DIV_U : BinaryInt<udiv, "div_u">;
 defm REM_S : BinaryInt<srem, "rem_s">;
 defm REM_U : BinaryInt<urem, "rem_u">;
-defm AND : BinaryInt<and, "and">;
-defm OR : BinaryInt<or, "or">;
-defm XOR : BinaryInt<xor, "xor">;
-defm SHL : BinaryInt<shl, "shl">;
+defm AND : BinaryInt<and, "and ">;
+defm OR : BinaryInt<or, "or  ">;
+defm XOR : BinaryInt<xor, "xor ">;
+defm SHL : BinaryInt<shl, "shl ">;
 defm SHR_U : BinaryInt<srl, "shr_u">;
 defm SHR_S : BinaryInt<sra, "shr_s">;
 
-defm EQ : ComparisonInt<SETEQ, "eq">;
-defm NE : ComparisonInt<SETNE, "ne">;
+defm EQ : ComparisonInt<SETEQ, "eq  ">;
+defm NE : ComparisonInt<SETNE, "ne  ">;
 defm LT_S : ComparisonInt<SETLT, "lt_s">;
 defm LE_S : ComparisonInt<SETLE, "le_s">;
 defm LT_U : ComparisonInt<SETULT, "lt_u">;
@@ -37,8 +39,8 @@ defm GE_S : ComparisonInt<SETGE, "ge_s">;
 defm GT_U : ComparisonInt<SETUGT, "gt_u">;
 defm GE_U : ComparisonInt<SETUGE, "ge_u">;
 
-defm CLZ : UnaryInt<ctlz, "clz">;
-defm CTZ : UnaryInt<cttz, "ctz">;
+defm CLZ : UnaryInt<ctlz, "clz ">;
+defm CTZ : UnaryInt<cttz, "ctz ">;
 defm POPCNT : UnaryInt<ctpop, "popcnt">;
 
 // Expand the "don't care" operations to supported operations.

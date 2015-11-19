@@ -558,7 +558,7 @@ private:
   Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);
   Instruction *MatchBSwap(BinaryOperator &I);
   bool SimplifyStoreAtEndOfBlock(StoreInst &SI);
-  Instruction *SimplifyMemTransfer(MemIntrinsic *MI);
+  Instruction *SimplifyMemTransfer(MemTransferInst *MI);
   Instruction *SimplifyMemSet(MemSetInst *MI);
 
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);

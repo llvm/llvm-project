@@ -22,6 +22,7 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -96,6 +97,14 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
 
         // There's no use in nesting implicit defs inside anything.
         if (Def->getOpcode() == TargetOpcode::IMPLICIT_DEF)
+          continue;
+
+        // Argument instructions represent live-in registers and not real
+        // instructions.
+        if (Def->getOpcode() == WebAssembly::ARGUMENT_I32 ||
+            Def->getOpcode() == WebAssembly::ARGUMENT_I64 ||
+            Def->getOpcode() == WebAssembly::ARGUMENT_F32 ||
+            Def->getOpcode() == WebAssembly::ARGUMENT_F64)
           continue;
 
         // Single-use expression trees require defs that have one use, or that

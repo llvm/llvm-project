@@ -4,7 +4,7 @@
 define internal void @foo(i32* %p, i32* %q) {
 	%pp = bitcast i32* %p to i8*
 	%qq = bitcast i32* %q to i8*
-	tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %pp, i8* %qq, i32 4, i32 1, i1 false)
+	tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %pp, i8* %qq, i32 4, i1 false)
 	ret void
 }
 
@@ -30,4 +30,4 @@ lpad:
 
 declare i32 @__gxx_personality_v0(...)
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

@@ -19,6 +19,7 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -45,6 +46,7 @@ public:
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
     AU.addPreservedID(MachineDominatorsID);
+    AU.addRequired<SlotIndexes>(); // for ARGUMENT fixups
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -93,6 +95,32 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
   unsigned NumVRegs = MRI->getNumVirtRegs();
   SmallVector<LiveInterval *, 0> SortedIntervals;
   SortedIntervals.reserve(NumVRegs);
+
+  // FIXME: If scheduling has moved an ARGUMENT virtual register, move it back,
+  // and recompute liveness. This is a temporary hack.
+  bool SawNonArg = false;
+  bool MovedArg = false;
+  MachineBasicBlock &EntryMBB = MF.front();
+  for (auto MII = EntryMBB.begin(); MII != EntryMBB.end(); ) {
+    MachineInstr *MI = &*MII++;
+    if (MI->getOpcode() == WebAssembly::ARGUMENT_I32 ||
+        MI->getOpcode() == WebAssembly::ARGUMENT_I64 ||
+        MI->getOpcode() == WebAssembly::ARGUMENT_F32 ||
+        MI->getOpcode() == WebAssembly::ARGUMENT_F64) {
+      EntryMBB.insert(EntryMBB.begin(), MI->removeFromParent());
+      if (SawNonArg)
+        MovedArg = true;
+    } else {
+      SawNonArg = true;
+    }
+  }
+  if (MovedArg) {
+    SlotIndexes &Slots = getAnalysis<SlotIndexes>();
+    Liveness->releaseMemory();
+    Slots.releaseMemory();
+    Slots.runOnMachineFunction(MF);
+    Liveness->runOnMachineFunction(MF);
+  }
 
   DEBUG(dbgs() << "Interesting register intervals:\n");
   for (unsigned i = 0; i < NumVRegs; ++i) {

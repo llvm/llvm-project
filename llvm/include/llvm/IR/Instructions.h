@@ -1650,6 +1650,23 @@ public:
     return AttributeList.getParamAlignment(i);
   }
 
+  /// Set the alignment for a call or parameter (0=unknown).
+  void setParamAlignment(unsigned Index, unsigned Align) {
+    // Its not valid to change the parameter alignment.  Instead we have to
+    // remove the old one if its there, and add a new one.
+    if (AttributeList.hasAttribute(Index, Attribute::Alignment))
+      AttributeList = AttributeList.removeAttribute(getContext(),
+                                                    Index,
+                                                    Attribute::Alignment);
+
+    // Now add the new alignment.
+    llvm::AttrBuilder B;
+    B.addAlignmentAttr(Align);
+    AttributeList = AttributeList.addAttributes(getContext(), Index,
+                                                AttributeSet::get(getContext(),
+                                                                  Index, B));
+  }
+
   /// \brief Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableBytes(unsigned i) const {

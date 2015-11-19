@@ -38,7 +38,7 @@ namespace llvm {
 ///
 ///   { 2, x|y, 1 }
 ///      indicates that the stage occupies either FU x or FU y for 2
-///      consecuative cycles and that the next stage starts one cycle
+///      consecutive cycles and that the next stage starts one cycle
 ///      after this stage starts. That is, the stage requirements
 ///      overlap in time.
 ///

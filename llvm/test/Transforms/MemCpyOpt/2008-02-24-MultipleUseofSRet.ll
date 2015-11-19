@@ -25,12 +25,12 @@ entry:
   call fastcc void @initialize(%0* noalias sret %memtmp)
   %tmp1 = bitcast %0* %tmp to i8*
   %memtmp2 = bitcast %0* %memtmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp1, i8* %memtmp2, i32 24, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp1, i8* %memtmp2, i32 24, i1 false)
   %z3 = bitcast %0* %z to i8*
   %tmp4 = bitcast %0* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %z3, i8* %tmp4, i32 24, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %z3, i8* %tmp4, i32 24, i1 false)
   %tmp5 = call fastcc x86_fp80 @passed_uninitialized(%0* %z)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

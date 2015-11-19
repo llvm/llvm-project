@@ -65,18 +65,17 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
 
   // WebAssembly argument registers are in the same index space as local
   // variables. Assign the numbers for them first.
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      switch (MI.getOpcode()) {
-      case WebAssembly::ARGUMENT_I32:
-      case WebAssembly::ARGUMENT_I64:
-      case WebAssembly::ARGUMENT_F32:
-      case WebAssembly::ARGUMENT_F64:
-        MFI.setWAReg(MI.getOperand(0).getReg(), MI.getOperand(1).getImm());
-        break;
-      default:
-        break;
-      }
+  MachineBasicBlock &EntryMBB = MF.front();
+  for (MachineInstr &MI : EntryMBB) {
+    switch (MI.getOpcode()) {
+    case WebAssembly::ARGUMENT_I32:
+    case WebAssembly::ARGUMENT_I64:
+    case WebAssembly::ARGUMENT_F32:
+    case WebAssembly::ARGUMENT_F64:
+      MFI.setWAReg(MI.getOperand(0).getReg(), MI.getOperand(1).getImm());
+      break;
+    default:
+      break;
     }
   }
 
@@ -84,9 +83,15 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   // virtual registers.
   unsigned NumArgRegs = MFI.getParams().size();
   unsigned NumVRegs = MF.getRegInfo().getNumVirtRegs();
+  unsigned NumStackRegs = 0;
   unsigned CurReg = 0;
   for (unsigned VRegIdx = 0; VRegIdx < NumVRegs; ++VRegIdx) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(VRegIdx);
+    // Handle stackified registers.
+    if (MFI.isVRegStackified(VReg)) {
+      MFI.setWAReg(VReg, INT32_MIN | NumStackRegs++);
+      continue;
+    }
     // Skip unused registers.
     if (MRI.use_empty(VReg))
       continue;

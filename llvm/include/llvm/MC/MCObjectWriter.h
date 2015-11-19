@@ -49,6 +49,10 @@ protected: // Can only create subclasses.
   MCObjectWriter(raw_pwrite_stream &OS, bool IsLittleEndian)
       : OS(&OS), IsLittleEndian(IsLittleEndian) {}
 
+  unsigned getInitialOffset() {
+    return OS->tell();
+  }
+
 public:
   virtual ~MCObjectWriter();
 

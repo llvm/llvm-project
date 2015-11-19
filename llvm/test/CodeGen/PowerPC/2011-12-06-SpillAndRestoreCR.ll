@@ -213,7 +213,7 @@ for.end23:                                        ; preds = %for.end17
   ret i32 0
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 declare i32 @puts(i8* nocapture) nounwind
 

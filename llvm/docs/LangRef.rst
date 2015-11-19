@@ -9525,6 +9525,55 @@ structures and the code to increment the appropriate value, in a
 format that can be written out by a compiler runtime and consumed via
 the ``llvm-profdata`` tool.
 
+'``llvm.instrprof_value_profile``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof_value_profile(i8* <name>, i64 <hash>,
+                                                 i64 <value>, i32 <value_kind>,
+                                                 i32 <index>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof_value_profile``' intrinsic can be emitted by a
+frontend for use with instrumentation based profiling. This will be
+lowered by the ``-instrprof`` pass to find out the target values,
+instrumented expressions take in a program at runtime.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. ``name`` should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source. It
+is an error if ``hash`` differs between two instances of
+``llvm.instrprof_*`` that refer to the same name.
+
+The third argument is the value of the expression being profiled. The profiled
+expression's value should be representable as an unsigned 64-bit value. The
+fourth argument represents the kind of value profiling that is being done. The
+supported value profiling kinds are enumerated through the
+``InstrProfValueKind`` type declared in the
+``<include/llvm/ProfileData/InstrProf.h>`` header file. The last argument is the
+index of the instrumented expression within ``name``. It should be >= 0.
+
+Semantics:
+""""""""""
+
+This intrinsic represents the point where a call to a runtime routine
+should be inserted for value profiling of target expressions. ``-instrprof``
+pass will generate the appropriate data structures and replace the
+``llvm.instrprof_value_profile`` intrinsic with the call to the profile
+runtime library with proper arguments.
+
 Standard C Library Intrinsics
 -----------------------------
 

@@ -156,7 +156,7 @@ customizable target-independent optimization pipeline.
   effective on code along dominator paths.
 
 * **Memory-space alias analysis**. `This alias analysis
-  <http://llvm.org/docs/NVPTXUsage.html>`_ infers that two pointers in different
+  <http://reviews.llvm.org/D12414>`_ infers that two pointers in different
   special memory spaces do not alias. It has yet to be integrated to the new
   alias analysis infrastructure; the new infrastructure does not run
   target-specific alias analysis.

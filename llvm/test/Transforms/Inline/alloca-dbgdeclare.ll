@@ -31,7 +31,7 @@ declare void @_Z3fn31A(%struct.A* nocapture readonly %p1) #0
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 ; Function Attrs: nounwind
 define void @_Z3fn4v() #0 !dbg !21 {
@@ -46,14 +46,14 @@ entry:
   %agg.tmp.sroa.0.0.copyload = load i32, i32* getelementptr inbounds (%struct.A, %struct.A* @b, i64 0, i32 0), align 8, !dbg !50
   tail call void @llvm.dbg.value(metadata i32 %agg.tmp.sroa.0.0.copyload, i64 0, metadata !46, metadata !51), !dbg !49
   %agg.tmp.sroa.3.0..sroa_idx = getelementptr inbounds [20 x i8], [20 x i8]* %agg.tmp.sroa.3, i64 0, i64 0, !dbg !50
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.3.0..sroa_idx, i8* getelementptr (i8, i8* bitcast (%struct.A* @b to i8*), i64 4), i64 20, i32 4, i1 false), !dbg !50
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.3.0..sroa_idx, i8* getelementptr (i8, i8* bitcast (%struct.A* @b to i8*), i64 4), i64 20, i1 false), !dbg !50
   tail call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !46, metadata !31) #2, !dbg !49
   %tobool.i = icmp eq i32 %agg.tmp.sroa.0.0.copyload, 0, !dbg !52
   br i1 %tobool.i, label %_Z3fn31A.exit, label %if.then.i, !dbg !53
 
 if.then.i:                                        ; preds = %entry
   store i32 %agg.tmp.sroa.0.0.copyload, i32* getelementptr inbounds (%struct.A, %struct.A* @a, i64 0, i32 0), align 8, !dbg !54
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr (i8, i8* bitcast (%struct.A* @a to i8*), i64 4), i8* %agg.tmp.sroa.3.0..sroa_idx, i64 20, i32 4, i1 false), !dbg !54
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr (i8, i8* bitcast (%struct.A* @a to i8*), i64 4), i8* %agg.tmp.sroa.3.0..sroa_idx, i64 20, i1 false), !dbg !54
   br label %_Z3fn31A.exit, !dbg !54
 
 _Z3fn31A.exit:                                    ; preds = %entry, %if.then.i

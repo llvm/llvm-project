@@ -1,48 +1,51 @@
 RUN: printf '\201rforpl\377' > %t-foo.profraw
-RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\3\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf 'foo' >> %t-foo.profraw
+RUN: printf 'foo\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
-RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\3\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\2\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\3\0\0\0' >> %t-bar.profraw
 RUN: printf '\2\0\0\0' >> %t-bar.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\2\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf 'bar' >> %t-bar.profraw
+RUN: printf 'bar\0\0\0\0\0' >> %t-bar.profraw
 
-Versions of the profiles that are padded to eight byte alignment.
-RUN: cat %t-foo.profraw > %t-foo-padded.profraw
-RUN: printf '\0\0\0\0\0' >> %t-foo-padded.profraw
-RUN: cat %t-bar.profraw > %t-bar-padded.profraw
-RUN: printf '\0\0\0\0\0' >> %t-bar-padded.profraw
-
-RUN: cat %t-foo-padded.profraw %t-bar.profraw > %t-pad-between.profraw
-RUN: cat %t-foo-padded.profraw %t-bar-padded.profraw > %t-pad.profraw
-
-RUN: llvm-profdata show %t-pad-between.profraw -all-functions -counts | FileCheck %s
+RUN: cat %t-foo.profraw %t-bar.profraw > %t-pad.profraw
 RUN: llvm-profdata show %t-pad.profraw -all-functions -counts | FileCheck %s
 
 CHECK: Counters:

@@ -110,9 +110,10 @@ std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
   if (TargetRegisterInfo::isPhysicalRegister(RegNo))
     return WebAssemblyInstPrinter::getRegisterName(RegNo);
 
+  assert(!MFI->isVRegStackified(RegNo));
   unsigned WAReg = MFI->getWAReg(RegNo);
   assert(WAReg != WebAssemblyFunctionInfo::UnusedReg);
-  return utostr(WAReg);
+  return '$' + utostr(WAReg);
 }
 
 const char *WebAssemblyAsmPrinter::toString(MVT VT) const {
@@ -179,19 +180,27 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
   if (ResultVTs.size() == 1)
     OS << "\t" ".result " << toString(ResultVTs.front()) << '\n';
 
-  bool FirstVReg = true;
+  bool FirstWAReg = true;
   for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(Idx);
-    if (!MRI->use_empty(VReg)) {
-      if (FirstVReg)
-        OS << "\t" ".local ";
-      else
-        OS << ", ";
-      OS << getRegTypeName(VReg);
-      FirstVReg = false;
-    }
+    unsigned WAReg = MFI->getWAReg(VReg);
+    // Don't declare unused registers.
+    if (WAReg == WebAssemblyFunctionInfo::UnusedReg)
+      continue;
+    // Don't redeclare parameters.
+    if (WAReg < MFI->getParams().size())
+      continue;
+    // Don't declare stackified registers.
+    if (int(WAReg) < 0)
+      continue;
+    if (FirstWAReg)
+      OS << "\t" ".local ";
+    else
+      OS << ", ";
+    OS << getRegTypeName(VReg);
+    FirstWAReg = false;
   }
-  if (!FirstVReg)
+  if (!FirstWAReg)
     OS << '\n';
 
   // EmitRawText appends a newline, so strip off the last newline.
@@ -204,19 +213,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
 void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
 
-  assert(MI->getDesc().getNumDefs() <= 1 &&
-         "Instructions with multiple result values not implemented");
-
   switch (MI->getOpcode()) {
-  case TargetOpcode::COPY: {
-    // TODO: Figure out a way to lower COPY instructions to MCInst form.
-    SmallString<128> Str;
-    raw_svector_ostream OS(Str);
-    OS << "\t" "set_local " << regToString(MI->getOperand(0)) << ", "
-               "(get_local " << regToString(MI->getOperand(1)) << ")";
-    OutStreamer->EmitRawText(OS.str());
-    break;
-  }
   case WebAssembly::ARGUMENT_I32:
   case WebAssembly::ARGUMENT_I64:
   case WebAssembly::ARGUMENT_F32:
@@ -233,8 +230,6 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
   }
 }
-
-
 
 void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   const DataLayout &DL = M.getDataLayout();

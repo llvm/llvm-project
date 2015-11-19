@@ -7,19 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass lowers instrprof_increment intrinsics emitted by a frontend for
-// profiling. It also builds the data structures and initialization code needed
-// for updating execution counts and emitting the profile at runtime.
+// This pass lowers instrprof_* intrinsics emitted by a frontend for profiling.
+// It also builds the data structures and initialization code needed for
+// updating execution counts and emitting the profile at runtime.
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Transforms/Instrumentation.h"
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -50,7 +49,15 @@ public:
 private:
   InstrProfOptions Options;
   Module *M;
-  DenseMap<GlobalVariable *, GlobalVariable *> RegionCounters;
+  typedef struct PerFunctionProfileData {
+    uint32_t NumValueSites[IPVK_Last+1];
+    GlobalVariable* RegionCounters;
+    GlobalVariable* DataVar;
+    PerFunctionProfileData() : RegionCounters(nullptr), DataVar(nullptr) {
+      memset(NumValueSites, 0, sizeof(uint32_t) * (IPVK_Last+1));
+    }
+  } PerFunctionProfileData;
+  DenseMap<GlobalVariable *, PerFunctionProfileData> ProfileDataMap;
   std::vector<Value *> UsedVars;
 
   bool isMachO() const {
@@ -76,6 +83,12 @@ private:
   StringRef getCoverageSection() const {
     return getInstrProfCoverageSectionName(isMachO());
   }
+
+  /// Count the number of instrumented value sites for the function.
+  void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);
+
+  /// Replace instrprof_value_profile with a call to runtime library.
+  void lowerValueProfileInst(InstrProfValueProfileInst *Ins);
 
   /// Replace instrprof_increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
@@ -118,21 +131,37 @@ bool InstrProfiling::runOnModule(Module &M) {
   bool MadeChange = false;
 
   this->M = &M;
-  RegionCounters.clear();
+  ProfileDataMap.clear();
   UsedVars.clear();
 
+  // We did not know how many value sites there would be inside
+  // the instrumented function. This is counting the number of instrumented
+  // target value sites to enter it as field in the profile data variable.
   for (Function &F : M)
     for (BasicBlock &BB : F)
       for (auto I = BB.begin(), E = BB.end(); I != E;)
-        if (auto *Inc = dyn_cast<InstrProfIncrementInst>(I++)) {
+        if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I++))
+          computeNumValueSiteCounts(Ind);
+
+  for (Function &F : M)
+    for (BasicBlock &BB : F)
+      for (auto I = BB.begin(), E = BB.end(); I != E;) {
+        auto Instr = I++;
+        if (auto *Inc = dyn_cast<InstrProfIncrementInst>(Instr)) {
           lowerIncrement(Inc);
           MadeChange = true;
+        } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(Instr)) {
+          lowerValueProfileInst(Ind);
+          MadeChange = true;
         }
+      }
+
   if (GlobalVariable *Coverage =
           M.getNamedGlobal(getCoverageMappingVarName())) {
     lowerCoverageData(Coverage);
     MadeChange = true;
   }
+
   if (!MadeChange)
     return false;
 
@@ -141,6 +170,54 @@ bool InstrProfiling::runOnModule(Module &M) {
   emitUses();
   emitInitialization();
   return true;
+}
+
+static Constant *getOrInsertValueProfilingCall(Module &M) {
+  auto *VoidTy = Type::getVoidTy(M.getContext());
+  auto *VoidPtrTy = Type::getInt8PtrTy(M.getContext());
+  auto *Int32Ty = Type::getInt32Ty(M.getContext());
+  auto *Int64Ty = Type::getInt64Ty(M.getContext());
+  Type *ArgTypes[] = {Int64Ty, VoidPtrTy, Int32Ty};
+  auto *ValueProfilingCallTy =
+      FunctionType::get(VoidTy, makeArrayRef(ArgTypes), false);
+  return M.getOrInsertFunction("__llvm_profile_instrument_target",
+                               ValueProfilingCallTy);
+}
+
+void InstrProfiling::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {
+
+  GlobalVariable *Name = Ind->getName();
+  uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
+  uint64_t Index = Ind->getIndex()->getZExtValue();
+  auto It = ProfileDataMap.find(Name);
+  if (It == ProfileDataMap.end()) {
+    PerFunctionProfileData PD;
+    PD.NumValueSites[ValueKind] = Index + 1;
+    ProfileDataMap[Name] = PD;
+  } else if (It->second.NumValueSites[ValueKind] <= Index)
+    It->second.NumValueSites[ValueKind] = Index + 1;
+}
+
+void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
+
+  GlobalVariable *Name = Ind->getName();
+  auto It = ProfileDataMap.find(Name);
+  assert(It != ProfileDataMap.end() && It->second.DataVar &&
+    "value profiling detected in function with no counter incerement");
+
+  GlobalVariable *DataVar = It->second.DataVar;
+  uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
+  uint64_t Index = Ind->getIndex()->getZExtValue();
+  for (uint32_t Kind = IPVK_First; Kind < ValueKind; ++Kind)
+    Index += It->second.NumValueSites[Kind];
+
+  IRBuilder<> Builder(Ind);
+  Value* Args[3] = {Ind->getTargetValue(),
+      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
+      Builder.getInt32(Index)};
+  Ind->replaceAllUsesWith(
+      Builder.CreateCall(getOrInsertValueProfilingCall(*M), Args));
+  Ind->eraseFromParent();
 }
 
 void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
@@ -174,9 +251,10 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageData) {
     GlobalVariable *Name = cast<GlobalVariable>(V);
 
     // If we have region counters for this name, we've already handled it.
-    auto It = RegionCounters.find(Name);
-    if (It != RegionCounters.end())
-      continue;
+    auto It = ProfileDataMap.find(Name);
+    if (It != ProfileDataMap.end())
+      if (It->second.RegionCounters)
+        continue;
 
     // Move the name variable to the right section.
     Name->setSection(getNameSection());
@@ -191,12 +269,25 @@ static std::string getVarName(InstrProfIncrementInst *Inc, StringRef Prefix) {
   return (Prefix + Name).str();
 }
 
+static inline bool shouldRecordFunctionAddr(Function *F) {
+  // Check the linkage
+  if (!F->hasLinkOnceLinkage() && !F->hasLocalLinkage() &&
+      !F->hasAvailableExternallyLinkage())
+    return true;
+  // Check uses of this function for other than direct calls or invokes to it.
+  return F->hasAddressTaken();
+}
+
 GlobalVariable *
 InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
-  auto It = RegionCounters.find(NamePtr);
-  if (It != RegionCounters.end())
-    return It->second;
+  auto It = ProfileDataMap.find(NamePtr);
+  PerFunctionProfileData PD;
+  if (It != ProfileDataMap.end()) {
+    if (It->second.RegionCounters)
+      return It->second.RegionCounters;
+    PD = It->second;
+  }
 
   // Move the name variable to the right section. Place them in a COMDAT group
   // if the associated function is a COMDAT. This will make sure that
@@ -225,28 +316,39 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   CounterPtr->setAlignment(8);
   CounterPtr->setComdat(ProfileVarsComdat);
 
-  RegionCounters[Inc->getName()] = CounterPtr;
-
   // Create data variable.
-
+  auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
+  auto *Int16Ty = Type::getInt16Ty(Ctx);
+  auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last+1);
   Type *DataTypes[] = {
     #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
     #include "llvm/ProfileData/InstrProfData.inc"
   };
   auto *DataTy = StructType::get(Ctx, makeArrayRef(DataTypes));
 
+  Constant *FunctionAddr = shouldRecordFunctionAddr(Fn) ?
+                           ConstantExpr::getBitCast(Fn, Int8PtrTy) :
+                           ConstantPointerNull::get(Int8PtrTy);
+
+  Constant *Int16ArrayVals[IPVK_Last+1];
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+    Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
+
   Constant *DataVals[] = {
     #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
     #include "llvm/ProfileData/InstrProfData.inc"
   };
-
-  auto *Data = new GlobalVariable(*M, DataTy, true, NamePtr->getLinkage(),
+  auto *Data = new GlobalVariable(*M, DataTy, false, NamePtr->getLinkage(),
                                   ConstantStruct::get(DataTy, DataVals),
                                   getVarName(Inc, getInstrProfDataVarPrefix()));
   Data->setVisibility(NamePtr->getVisibility());
   Data->setSection(getDataSection());
   Data->setAlignment(8);
   Data->setComdat(ProfileVarsComdat);
+
+  PD.RegionCounters = CounterPtr;
+  PD.DataVar = Data;
+  ProfileDataMap[NamePtr] = PD;
 
   // Mark the data variable as used so that it isn't stripped out.
   UsedVars.push_back(Data);
@@ -341,7 +443,6 @@ void InstrProfiling::emitUses() {
   LLVMUsed =
       new GlobalVariable(*M, ATy, false, GlobalValue::AppendingLinkage,
                          ConstantArray::get(ATy, MergedVars), "llvm.used");
-
   LLVMUsed->setSection("llvm.metadata");
 }
 

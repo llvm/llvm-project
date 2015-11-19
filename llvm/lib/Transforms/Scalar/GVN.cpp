@@ -1701,6 +1701,10 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
 /// Attempt to eliminate a load whose dependencies are
 /// non-local by performing PHI construction.
 bool GVN::processNonLocalLoad(LoadInst *LI) {
+  // non-local speculations are not allowed under asan.
+  if (LI->getParent()->getParent()->hasFnAttribute(Attribute::SanitizeAddress))
+    return false;
+
   // Step 1: Find the non-local dependencies of the load.
   LoadDepVect Deps;
   MD->getNonLocalPointerDependency(LI, Deps);
@@ -2705,7 +2709,7 @@ bool GVN::performPRE(Function &F) {
                               BE = CurrentBlock->end();
          BI != BE;) {
       Instruction *CurInst = &*BI++;
-      Changed = performScalarPRE(CurInst);
+      Changed |= performScalarPRE(CurInst);
     }
   }
 

@@ -120,6 +120,13 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
 
   // Hoist.
   I->moveBefore(InsertPt);
+
+  // There is possibility of hoisting this instruction above some arbitrary
+  // condition. Any metadata defined on it can be control dependent on this
+  // condition. Conservatively strip it here so that we don't give any wrong
+  // information to the optimizer.
+  I->dropUnknownNonDebugMetadata();
+
   Changed = true;
   return true;
 }

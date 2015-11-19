@@ -15,14 +15,14 @@ entry:
   store i64 %x.coerce, i64* %0, align 1
   %1 = bitcast %struct.fab* %agg.result to i8*
   %2 = bitcast %struct.fab* %x to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 8, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 8, i1 false)
   ret void
 }
 
 ; CHECK: func_fab
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #1
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "target-features"="" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }

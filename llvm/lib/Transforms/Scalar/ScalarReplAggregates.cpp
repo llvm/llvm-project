@@ -716,7 +716,7 @@ void ConvertToScalarInfo::ConvertUsesToScalar(Value *Ptr, AllocaInst *NewAI,
         SrcPtr = Builder.CreateBitCast(SrcPtr, AIPTy);
 
         LoadInst *SrcVal = Builder.CreateLoad(SrcPtr, "srcval");
-        SrcVal->setAlignment(MTI->getAlignment());
+        SrcVal->setAlignment(MTI->getSrcAlignment());
         Builder.CreateStore(SrcVal, NewAI);
       } else if (GetUnderlyingObject(MTI->getDest(), DL, 0) != OrigAI) {
         // Src must be OrigAI, change this to be a load from NewAI then a store
@@ -733,7 +733,7 @@ void ConvertToScalarInfo::ConvertUsesToScalar(Value *Ptr, AllocaInst *NewAI,
         Value *DstPtr = Builder.CreateBitCast(MTI->getDest(), AIPTy);
 
         StoreInst *NewStore = Builder.CreateStore(SrcVal, DstPtr);
-        NewStore->setAlignment(MTI->getAlignment());
+        NewStore->setAlignment(MTI->getDestAlignment());
       } else {
         // Noop transfer. Src == Dst
       }
@@ -2182,7 +2182,8 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
   // that doesn't have anything to do with the alloca that we are promoting. For
   // memset, this Value* stays null.
   Value *OtherPtr = nullptr;
-  unsigned MemAlignment = MI->getAlignment();
+  unsigned DestMemAlignment = MI->getDestAlignment();
+  unsigned SrcMemAlignment = 0;
   if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) { // memmove/memcopy
     if (Inst == MTI->getRawDest())
       OtherPtr = MTI->getRawSource();
@@ -2190,6 +2191,7 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
       assert(Inst == MTI->getRawSource());
       OtherPtr = MTI->getRawDest();
     }
+    SrcMemAlignment = MTI->getSrcAlignment();
   }
 
   // If there is an other pointer, we want to convert it to the same pointer
@@ -2235,7 +2237,8 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
   for (unsigned i = 0, e = NewElts.size(); i != e; ++i) {
     // If this is a memcpy/memmove, emit a GEP of the other element address.
     Value *OtherElt = nullptr;
-    unsigned OtherEltAlign = MemAlignment;
+    unsigned OtherDestEltAlign = DestMemAlignment;
+    unsigned OtherSrcEltAlign = SrcMemAlignment;
 
     if (OtherPtr) {
       Value *Idx[2] = { Zero,
@@ -2258,7 +2261,8 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
       // mem intrinsic and the alignment of the element.  If the alignment of
       // the memcpy (f.e.) is 32 but the element is at a 4-byte offset, then the
       // known alignment is just 4 bytes.
-      OtherEltAlign = (unsigned)MinAlign(OtherEltAlign, EltOffset);
+      OtherDestEltAlign = (unsigned)MinAlign(OtherDestEltAlign, EltOffset);
+      OtherSrcEltAlign = (unsigned)MinAlign(OtherSrcEltAlign, EltOffset);
     }
 
     Value *EltPtr = NewElts[i];
@@ -2269,12 +2273,13 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
       if (isa<MemTransferInst>(MI)) {
         if (SROADest) {
           // From Other to Alloca.
-          Value *Elt = new LoadInst(OtherElt, "tmp", false, OtherEltAlign, MI);
+          Value *Elt = new LoadInst(OtherElt, "tmp", false,
+                                    OtherSrcEltAlign, MI);
           new StoreInst(Elt, EltPtr, MI);
         } else {
           // From Alloca to Other.
           Value *Elt = new LoadInst(EltPtr, "tmp", MI);
-          new StoreInst(Elt, OtherElt, false, OtherEltAlign, MI);
+          new StoreInst(Elt, OtherElt, false, OtherDestEltAlign, MI);
         }
         continue;
       }
@@ -2337,9 +2342,11 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
       Value *Src = SROADest ? OtherElt : EltPtr;  // Src ptr
 
       if (isa<MemCpyInst>(MI))
-        Builder.CreateMemCpy(Dst, Src, EltSize, OtherEltAlign,MI->isVolatile());
+        Builder.CreateMemCpy(Dst, Src, EltSize, OtherDestEltAlign,
+                             OtherSrcEltAlign, MI->isVolatile());
       else
-        Builder.CreateMemMove(Dst, Src, EltSize,OtherEltAlign,MI->isVolatile());
+        Builder.CreateMemMove(Dst, Src, EltSize, OtherDestEltAlign,
+                              OtherSrcEltAlign, MI->isVolatile());
     }
   }
   DeadInsts.push_back(MI);

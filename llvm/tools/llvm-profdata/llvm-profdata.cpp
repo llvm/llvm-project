@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/ProfileData/InstrProfReader.h"
@@ -26,8 +27,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <set>
 
 using namespace llvm;
 
@@ -103,7 +102,7 @@ static void mergeInstrProfile(const cl::list<std::string> &Inputs,
     exitWithErrorCode(EC, OutputFilename);
 
   InstrProfWriter Writer;
-  std::set<std::error_code> WriterErrorCodes;
+  SmallSet<std::error_code, 4> WriterErrorCodes;
   for (const auto &Filename : Inputs) {
     auto ReaderOrErr = InstrProfReader::create(Filename);
     if (std::error_code ec = ReaderOrErr.getError())

@@ -26,6 +26,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetOptions.h"
@@ -151,8 +152,15 @@ void ARMSubtarget::initializeEnvironment() {
   UseNaClTrap = false;
   GenLongCalls = false;
   UnsafeFPMath = false;
-  UseSjLjEH = (isTargetDarwin() &&
-               TargetTriple.getSubArch() != Triple::ARMSubArch_v7k);
+
+  // MCAsmInfo isn't always present (e.g. in opt) so we can't initialize this
+  // directly from it, but we can try to make sure they're consistent when both
+  // available.
+  UseSjLjEH = isTargetDarwin() && !isTargetWatchOS();
+  assert((!TM.getMCAsmInfo() ||
+          (TM.getMCAsmInfo()->getExceptionHandlingType() ==
+           ExceptionHandling::SjLj) == UseSjLjEH) &&
+         "inconsistent sjlj choice between CodeGen and MC");
 }
 
 void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {

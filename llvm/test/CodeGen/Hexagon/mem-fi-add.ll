@@ -13,14 +13,14 @@ define void @foo() #0 {
 entry:
   %t = alloca [4 x [2 x i32]], align 8
   %0 = bitcast [4 x [2 x i32]]* %t to i8*
-  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 32, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 32, i1 false)
   %arraydecay = getelementptr inbounds [4 x [2 x i32]], [4 x [2 x i32]]* %t, i32 0, i32 0
   call void @bar([2 x i32]* %arraydecay) #1
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) #1
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #1
 
 declare void @bar([2 x i32]*) #2
 

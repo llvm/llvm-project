@@ -15,6 +15,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Statepoint.h"
@@ -79,11 +80,11 @@ static InvokeInst *createInvokeHelper(Value *Invokee, BasicBlock *NormalDest,
 }
 
 CallInst *IRBuilderBase::
-CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
+CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned DstAlign,
              bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
              MDNode *NoAliasTag) {
   Ptr = getCastedInt8PtrValue(Ptr);
-  Value *Ops[] = { Ptr, Val, Size, getInt32(Align), getInt1(isVolatile) };
+  Value *Ops[] = { Ptr, Val, Size, getInt1(isVolatile) };
   Type *Tys[] = { Ptr->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memset, Tys);
@@ -99,18 +100,21 @@ CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
  
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+
+  cast<MemSetInst>(CI)->setDestAlignment(DstAlign);
  
   return CI;
 }
 
 CallInst *IRBuilderBase::
-CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
+CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned DstAlign,
+             IntegerAlignment SrcAlign,
              bool isVolatile, MDNode *TBAATag, MDNode *TBAAStructTag,
              MDNode *ScopeTag, MDNode *NoAliasTag) {
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
-  Value *Ops[] = { Dst, Src, Size, getInt32(Align), getInt1(isVolatile) };
+  Value *Ops[] = { Dst, Src, Size, getInt1(isVolatile) };
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memcpy, Tys);
@@ -130,18 +134,23 @@ CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
  
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+
+  auto *MCI = cast<MemCpyInst>(CI);
+  MCI->setDestAlignment(DstAlign);
+  MCI->setSrcAlignment(SrcAlign);
  
   return CI;  
 }
 
 CallInst *IRBuilderBase::
-CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
+CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned DstAlign,
+              IntegerAlignment SrcAlign,
               bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
               MDNode *NoAliasTag) {
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
   
-  Value *Ops[] = { Dst, Src, Size, getInt32(Align), getInt1(isVolatile) };
+  Value *Ops[] = { Dst, Src, Size, getInt1(isVolatile) };
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memmove, Tys);
@@ -157,6 +166,10 @@ CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
  
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+
+  auto *MMI = cast<MemMoveInst>(CI);
+  MMI->setDestAlignment(DstAlign);
+  MMI->setSrcAlignment(SrcAlign);
  
   return CI;  
 }

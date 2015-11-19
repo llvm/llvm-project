@@ -32,9 +32,9 @@ entry:
   %agg.tmp117 = alloca %struct.S1998, align 16
   %agg.tmp118 = alloca %struct.S1998, align 16
   %agg.tmp119 = alloca %struct.S1998, align 16
-  call void @llvm.memset.p0i8.i64(i8* bitcast (%struct.S1998* @s1998 to i8*), i8 0, i64 5168, i32 16, i1 false)
-  call void @llvm.memset.p0i8.i64(i8* bitcast ([5 x %struct.S1998]* @a1998 to i8*), i8 0, i64 25840, i32 16, i1 false)
-  call void @llvm.memset.p0i8.i64(i8* bitcast (%struct.Info* @info to i8*), i8 0, i64 832, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* bitcast (%struct.S1998* @s1998 to i8*), i8 0, i64 5168, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* bitcast ([5 x %struct.S1998]* @a1998 to i8*), i8 0, i64 25840, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* bitcast (%struct.Info* @info to i8*), i8 0, i64 832, i1 false)
   store i8* bitcast (%struct.S1998* @s1998 to i8*), i8** getelementptr inbounds (%struct.Info, %struct.Info* @info, i32 0, i32 2), align 8
   store i8* bitcast ([5 x %struct.S1998]* @a1998 to i8*), i8** getelementptr inbounds (%struct.Info, %struct.Info* @info, i32 0, i32 3), align 8
   store i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 3) to i8*), i8** getelementptr inbounds (%struct.Info, %struct.Info* @info, i32 0, i32 4), align 8
@@ -329,32 +329,32 @@ if.end:                                           ; preds = %if.then, %entry
   %61 = load i32, i32* %j, align 4
   store i32 %61, i32* getelementptr inbounds (%struct.Info, %struct.Info* @info, i32 0, i32 1), align 4
   %62 = bitcast %struct.S1998* %agg.tmp111 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %62, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %62, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %63 = bitcast %struct.S1998* %agg.tmp112 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %63, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %63, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
   call void @check1998(%struct.S1998* sret %agg.tmp, %struct.S1998* byval align 16 %agg.tmp111, %struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 1), %struct.S1998* byval align 16 %agg.tmp112)
   call void @checkx1998(%struct.S1998* byval align 16 %agg.tmp)
   %64 = bitcast %struct.S1998* %agg.tmp113 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %64, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %64, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %65 = bitcast %struct.S1998* %agg.tmp114 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %65, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %65, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
   %66 = bitcast %struct.S1998* %agg.tmp115 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %66, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %66, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
   call void (i32, ...) @check1998va(i32 signext 1, double 1.000000e+00, %struct.S1998* byval align 16 %agg.tmp113, i64 2, %struct.S1998* byval align 16 %agg.tmp114, %struct.S1998* byval align 16 %agg.tmp115)
   %67 = bitcast %struct.S1998* %agg.tmp116 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %67, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %67, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %68 = bitcast %struct.S1998* %agg.tmp117 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %68, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %68, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %69 = bitcast %struct.S1998* %agg.tmp118 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %69, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %69, i8* bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
   %70 = bitcast %struct.S1998* %agg.tmp119 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %70, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %70, i8* bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   call void (i32, ...) @check1998va(i32 signext 2, %struct.S1998* byval align 16 %agg.tmp116, %struct.S1998* byval align 16 %agg.tmp117, ppc_fp128 0xM40000000000000000000000000000000, %struct.S1998* byval align 16 %agg.tmp118, %struct.S1998* byval align 16 %agg.tmp119)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 
 declare void @check1998(%struct.S1998* sret, %struct.S1998* byval align 16, %struct.S1998*, %struct.S1998* byval align 16)
 declare void @check1998va(i32 signext, ...)

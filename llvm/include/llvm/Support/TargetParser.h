@@ -119,6 +119,7 @@ unsigned getArchAttr(unsigned ArchKind);
 StringRef getCPUAttr(unsigned ArchKind);
 StringRef getSubArch(unsigned ArchKind);
 StringRef getArchExtName(unsigned ArchExtKind);
+const char *getArchExtFeature(StringRef ArchExt);
 StringRef getHWDivName(unsigned HWDivKind);
 
 // Information by Name

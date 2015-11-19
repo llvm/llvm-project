@@ -6,7 +6,7 @@ REGENERATE: $ SRC=path/to/llvm
 REGENERATE: $ CFE=$SRC/tools/clang
 REGENERATE: $ TESTDIR=$SRC/test/tools/llvm-profdata
 REGENERATE: $ CFE_TESTDIR=$CFE/test/Profile
-REGENERATE: $ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/test/Profile/c-general.c
+REGENERATE: $ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
 REGENERATE: $ LLVM_PROFILE_FILE=$TESTDIR/Inputs/c-general.profraw ./a.out
 
 RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - | FileCheck %s -check-prefix=CHECK
@@ -14,11 +14,11 @@ RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - --function=switches | F
 
 SWITCHES-LABEL: Counters:
 SWITCHES-NEXT:   switches:
-SWITCHES-NEXT:     Hash: 0x0000000000000013
+SWITCHES-NEXT:     Hash: 0x2618e4f23f2e8daa
 SWITCHES-NEXT:     Counters: 19
 SWITCHES-NEXT:     Function count: 1
 SWITCHES-LABEL: Functions shown: 1
 
-CHECK-LABEL: Total functions: 11
+CHECK-LABEL: Total functions: 12
 CHECK-NEXT: Maximum function count: 1
 CHECK-NEXT: Maximum internal block count: 100

@@ -1160,18 +1160,18 @@ template <typename InputTy> class OperandBundleDefT {
   std::vector<InputTy> Inputs;
 
 public:
-  explicit OperandBundleDefT(StringRef Tag, std::vector<InputTy> &&Inputs)
-      : Tag(Tag), Inputs(Inputs) {}
+  explicit OperandBundleDefT(StringRef Tag, std::vector<InputTy> Inputs)
+      : Tag(Tag), Inputs(std::move(Inputs)) {}
 
-  explicit OperandBundleDefT(std::string &&Tag, std::vector<InputTy> &&Inputs)
-      : Tag(Tag), Inputs(Inputs) {}
+  explicit OperandBundleDefT(std::string Tag, std::vector<InputTy> Inputs)
+      : Tag(std::move(Tag)), Inputs(std::move(Inputs)) {}
 
   explicit OperandBundleDefT(const OperandBundleUse &OBU) {
     Tag = OBU.getTagName();
     Inputs.insert(Inputs.end(), OBU.Inputs.begin(), OBU.Inputs.end());
   }
 
-  ArrayRef<InputTy> getInputs() const { return Inputs; }
+  ArrayRef<InputTy> inputs() const { return Inputs; }
 
   typedef typename std::vector<InputTy>::const_iterator input_iterator;
   size_t input_size() const { return Inputs.size(); }

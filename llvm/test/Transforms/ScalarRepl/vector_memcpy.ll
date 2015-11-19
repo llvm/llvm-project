@@ -9,7 +9,7 @@ define <16 x float> @foo(<16 x float> %A) nounwind {
 	store <16 x float> %A, <16 x float>* %tmp
 	%s = bitcast <16 x float>* %tmp to i8*
 	%s2 = bitcast <16 x float>* %tmp2 to i8*
-	call void @llvm.memcpy.p0i8.p0i8.i64(i8* %s2, i8* %s, i64 64, i32 16, i1 false)
+	call void @llvm.memcpy.p0i8.p0i8.i64(i8* %s2, i8* %s, i64 64, i1 false)
 	%R = load <16 x float>, <16 x float>* %tmp2
 	ret <16 x float> %R
 }
@@ -18,11 +18,11 @@ define <16 x float> @foo2(<16 x float> %A) nounwind {
 	%tmp2 = alloca <16 x float>, align 16
 
 	%s2 = bitcast <16 x float>* %tmp2 to i8*
-	call void @llvm.memset.p0i8.i64(i8* %s2, i8 0, i64 64, i32 16, i1 false)
+	call void @llvm.memset.p0i8.i64(i8* %s2, i8 0, i64 64, i1 false)
 	
 	%R = load <16 x float>, <16 x float>* %tmp2
 	ret <16 x float> %R
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind

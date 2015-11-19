@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "align 32" | count 1
+; RUN: opt < %s -instcombine -S | FileCheck %s
 
 ; It's tempting to have an instcombine in which the src pointer of a
 ; memcpy is aligned up to the alignment of the destination, however
@@ -15,15 +15,20 @@
 
 @dst = global [1024 x i8] zeroinitializer, align 32
 
+; Make sure the dest gets the align 32 from the global
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 32
+; But that the source continues to not have an alignment set.
+; CHECK: i8* %src1
+
 define void @foo() nounwind {
 entry:
   %src = alloca [1024 x i8], align 1
   %src1 = getelementptr [1024 x i8], [1024 x i8]* %src, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dst, i32 0, i32 0), i8* %src1, i32 1024, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dst, i32 0, i32 0), i8* %src1, i32 1024, i1 false)
   call void @frob(i8* %src1) nounwind
   ret void
 }
 
 declare void @frob(i8*)
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

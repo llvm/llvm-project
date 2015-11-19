@@ -104,23 +104,24 @@ ARM_ARCH("armv7k", AK_ARMV7K, "7-K", "v7k", ARMBuildAttrs::CPUArch::v7,
 #undef ARM_ARCH
 
 #ifndef ARM_ARCH_EXT_NAME
-#define ARM_ARCH_EXT_NAME(NAME, ID)
+#define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)
 #endif
-ARM_ARCH_EXT_NAME("invalid", AEK_INVALID)
-ARM_ARCH_EXT_NAME("none", AEK_NONE)
-ARM_ARCH_EXT_NAME("crc", AEK_CRC)
-ARM_ARCH_EXT_NAME("crypto", AEK_CRYPTO)
-ARM_ARCH_EXT_NAME("fp", AEK_FP)
-ARM_ARCH_EXT_NAME("idiv", (AEK_HWDIVARM | AEK_HWDIV))
-ARM_ARCH_EXT_NAME("mp", AEK_MP)
-ARM_ARCH_EXT_NAME("simd", AEK_SIMD)
-ARM_ARCH_EXT_NAME("sec", AEK_SEC)
-ARM_ARCH_EXT_NAME("virt", AEK_VIRT)
-ARM_ARCH_EXT_NAME("os", AEK_OS)
-ARM_ARCH_EXT_NAME("iwmmxt", AEK_IWMMXT)
-ARM_ARCH_EXT_NAME("iwmmxt2", AEK_IWMMXT2)
-ARM_ARCH_EXT_NAME("maverick", AEK_MAVERICK)
-ARM_ARCH_EXT_NAME("xscale", AEK_XSCALE)
+// FIXME: This would be nicer were it tablegen
+ARM_ARCH_EXT_NAME("invalid",  AEK_INVALID,  nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("none",     AEK_NONE,     nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("crc",      AEK_CRC,      "+crc",   "-crc")
+ARM_ARCH_EXT_NAME("crypto",   AEK_CRYPTO,   "+crypto","-crypto")
+ARM_ARCH_EXT_NAME("fp",       AEK_FP,       nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("idiv",     (AEK_HWDIVARM | AEK_HWDIV), nullptr, nullptr)
+ARM_ARCH_EXT_NAME("mp",       AEK_MP,       nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("simd",     AEK_SIMD,     nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("sec",      AEK_SEC,      nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("virt",     AEK_VIRT,     nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("os",       AEK_OS,       nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("iwmmxt",   AEK_IWMMXT,   nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("iwmmxt2",  AEK_IWMMXT2,  nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("maverick", AEK_MAVERICK, nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("xscale",   AEK_XSCALE,   nullptr,  nullptr)
 #undef ARM_ARCH_EXT_NAME
 
 #ifndef ARM_HW_DIV_NAME

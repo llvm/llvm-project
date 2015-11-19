@@ -38,8 +38,8 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
 void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
                                           unsigned RegNo) const {
   assert(RegNo != WebAssemblyFunctionInfo::UnusedReg);
-  // FIXME: Revisit whether we actually print the get_local explicitly.
-  OS << "(get_local " << RegNo << ")";
+  // Note that there's an implicit get_local/set_local here!
+  OS << "$" << RegNo;
 }
 
 void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
@@ -56,20 +56,6 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
     }
 
   printAnnotation(OS, Annot);
-
-  unsigned NumDefs = MII.get(MI->getOpcode()).getNumDefs();
-  assert(NumDefs <= 1 &&
-         "Instructions with multiple result values not implemented");
-
-  // FIXME: Revisit whether we actually print the set_local explicitly.
-  if (NumDefs != 0) {
-    unsigned WAReg = MI->getOperand(0).getReg();
-    // Only print the set_local if the register is used.
-    // TODO: Revisit this once the spec explains what should happen here.
-    if (WAReg != WebAssemblyFunctionInfo::UnusedReg)
-      OS << "\n"
-            "\t" "set_local " << WAReg << ", $pop";
-  }
 }
 
 static std::string toString(const APFloat &FP) {
@@ -93,14 +79,15 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                           raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    if (OpNo >= MII.get(MI->getOpcode()).getNumDefs())
-      printRegName(O, Op.getReg());
-    else {
-      if (Op.getReg() != WebAssemblyFunctionInfo::UnusedReg)
-        O << "$push";
-      else
-        O << "$discard";
-    }
+    unsigned WAReg = Op.getReg();
+    if (int(WAReg) >= 0)
+      printRegName(O, WAReg);
+    else if (OpNo >= MII.get(MI->getOpcode()).getNumDefs())
+      O << "$pop" << (WAReg & INT32_MAX);
+    else if (WAReg != WebAssemblyFunctionInfo::UnusedReg)
+      O << "$push" << (WAReg & INT32_MAX);
+    else
+      O << "$discard";
   } else if (Op.isImm())
     O << Op.getImm();
   else if (Op.isFPImm())

@@ -105,11 +105,11 @@ define void @test7() {
 entry:
   %0 = alloca %real_type, align 4
   %1 = bitcast %real_type* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* bitcast (%opaque_type* @opaque_global to i8*), i32 8, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* bitcast (%opaque_type* @opaque_global to i8*), i32 8, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 
 ; Check that the GEP indices use the pointer size, or 64 if unknown
@@ -145,7 +145,7 @@ entry:
   %0 = getelementptr inbounds <{ %struct_type }>, <{ %struct_type }>* %argmem, i32 0, i32 0
   %1 = bitcast %struct_type* %0 to i8*
   %2 = bitcast %struct_type* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 8, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 8, i1 false)
   call void @test9_aux(<{ %struct_type }>* inalloca %argmem)
   call void @llvm.stackrestore(i8* %inalloca.save)
   ret void

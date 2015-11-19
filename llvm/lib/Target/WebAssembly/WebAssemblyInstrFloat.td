@@ -12,18 +12,18 @@
 ///
 //===----------------------------------------------------------------------===//
 
-defm ADD : BinaryFP<fadd, "add">;
-defm SUB : BinaryFP<fsub, "sub">;
-defm MUL : BinaryFP<fmul, "mul">;
-defm DIV : BinaryFP<fdiv, "div">;
+defm ADD : BinaryFP<fadd, "add ">;
+defm SUB : BinaryFP<fsub, "sub ">;
+defm MUL : BinaryFP<fmul, "mul ">;
+defm DIV : BinaryFP<fdiv, "div ">;
 defm SQRT : UnaryFP<fsqrt, "sqrt">;
 
-defm ABS : UnaryFP<fabs, "abs">;
-defm NEG : UnaryFP<fneg, "neg">;
+defm ABS : UnaryFP<fabs, "abs ">;
+defm NEG : UnaryFP<fneg, "neg ">;
 defm COPYSIGN : BinaryFP<fcopysign, "copysign">;
 
-defm MIN : BinaryFP<fminnan, "min">;
-defm MAX : BinaryFP<fmaxnan, "max">;
+defm MIN : BinaryFP<fminnan, "min ">;
+defm MAX : BinaryFP<fmaxnan, "max ">;
 
 defm CEIL : UnaryFP<fceil, "ceil">;
 defm FLOOR : UnaryFP<ffloor, "floor">;
@@ -34,12 +34,12 @@ defm NEAREST : UnaryFP<fnearbyint, "nearest">;
 def : Pat<(frint f32:$src), (NEAREST_F32 f32:$src)>;
 def : Pat<(frint f64:$src), (NEAREST_F64 f64:$src)>;
 
-defm EQ : ComparisonFP<SETOEQ, "eq">;
-defm NE : ComparisonFP<SETUNE, "ne">;
-defm LT : ComparisonFP<SETOLT, "lt">;
-defm LE : ComparisonFP<SETOLE, "le">;
-defm GT : ComparisonFP<SETOGT, "gt">;
-defm GE : ComparisonFP<SETOGE, "ge">;
+defm EQ : ComparisonFP<SETOEQ, "eq  ">;
+defm NE : ComparisonFP<SETUNE, "ne  ">;
+defm LT : ComparisonFP<SETOLT, "lt  ">;
+defm LE : ComparisonFP<SETOLE, "le  ">;
+defm GT : ComparisonFP<SETOGT, "gt  ">;
+defm GE : ComparisonFP<SETOGE, "ge  ">;
 
 // Don't care floating-point comparisons, supported via other comparisons.
 def : Pat<(seteq f32:$lhs, f32:$rhs), (EQ_F32 f32:$lhs, f32:$rhs)>;

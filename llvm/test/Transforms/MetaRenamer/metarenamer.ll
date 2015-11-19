@@ -35,11 +35,11 @@ define void @func_4_xxx(%struct.foo_xxx* sret %agg.result) nounwind uwtable ssp 
   store double 4.000000e+00, double* %6, align 8
   %7 = bitcast %struct.foo_xxx* %agg.result to i8*
   %8 = bitcast %struct.foo_xxx* %1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %7, i8* %8, i64 24, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %7, i8* %8, i64 24, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 define i32 @func_5_xxx(i32 %arg_1_xxx, i32 %arg_2_xxx, i32 %arg_3_xxx, i32 %arg_4_xxx) nounwind uwtable ssp {
   %1 = alloca i32, align 4

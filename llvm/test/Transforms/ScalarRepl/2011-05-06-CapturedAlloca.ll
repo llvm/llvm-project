@@ -15,7 +15,7 @@ define i32 @main() nounwind {
 entry:
   %l_10 = alloca [4 x i32], align 16
   %tmp = bitcast [4 x i32]* %l_10 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp, i8* bitcast ([4 x i32]* @func_1.l_10 to i8*), i64 16, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp, i8* bitcast ([4 x i32]* @func_1.l_10 to i8*), i64 16, i1 false)
 ; CHECK: call void @llvm.memcpy
   %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %l_10, i64 0, i64 0
   %call = call i32* @noop(i32* %arrayidx)
@@ -23,4 +23,4 @@ entry:
   ret i32 0
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind

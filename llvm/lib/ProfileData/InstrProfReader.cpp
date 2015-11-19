@@ -206,15 +206,21 @@ std::error_code RawInstrProfReader<IntPtrT>::readHeader(
 
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
+  ValueDataDelta = swap(Header.ValueDataDelta);
   auto DataSize = swap(Header.DataSize);
   auto CountersSize = swap(Header.CountersSize);
   auto NamesSize = swap(Header.NamesSize);
+  auto ValueDataSize = swap(Header.ValueDataSize);
+  ValueKindLast = swap(Header.ValueKindLast);
+
+  auto DataSizeInBytes = DataSize * sizeof(RawInstrProf::ProfileData<IntPtrT>);
+  auto PaddingSize = getNumPaddingBytes(NamesSize);
 
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header);
-  ptrdiff_t CountersOffset =
-      DataOffset + sizeof(RawInstrProf::ProfileData<IntPtrT>) * DataSize;
+  ptrdiff_t CountersOffset = DataOffset + DataSizeInBytes;
   ptrdiff_t NamesOffset = CountersOffset + sizeof(uint64_t) * CountersSize;
-  size_t ProfileSize = NamesOffset + sizeof(char) * NamesSize;
+  ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
+  size_t ProfileSize = ValueDataOffset + ValueDataSize;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ProfileSize > DataBuffer->getBufferEnd())
@@ -225,8 +231,23 @@ std::error_code RawInstrProfReader<IntPtrT>::readHeader(
   DataEnd = Data + DataSize;
   CountersStart = reinterpret_cast<const uint64_t *>(Start + CountersOffset);
   NamesStart = Start + NamesOffset;
+  ValueDataStart = reinterpret_cast<const uint8_t*>(Start + ValueDataOffset);
   ProfileEnd = Start + ProfileSize;
 
+  FunctionPtrToNameMap.clear();
+  for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
+    const IntPtrT FPtr = swap(I->FunctionPointer);
+    if (!FPtr)
+      continue;
+    StringRef FunctionName(getName(I->NamePtr), swap(I->NameSize));
+    const char* NameEntryPtr = StringTable.insertString(FunctionName);
+    FunctionPtrToNameMap.push_back(std::pair<const IntPtrT, const char*>
+                                   (FPtr, NameEntryPtr));
+  }
+  std::sort(FunctionPtrToNameMap.begin(), FunctionPtrToNameMap.end(), less_first());
+  FunctionPtrToNameMap.erase(std::unique(FunctionPtrToNameMap.begin(),
+                                         FunctionPtrToNameMap.end()),
+                                         FunctionPtrToNameMap.end());
   return success();
 }
 
@@ -234,9 +255,9 @@ template <class IntPtrT>
 std::error_code RawInstrProfReader<IntPtrT>::readName(InstrProfRecord &Record) {
   Record.Name = StringRef(getName(Data->NamePtr), swap(Data->NameSize));
   if (Record.Name.data() < NamesStart ||
-      Record.Name.data() + Record.Name.size() > DataBuffer->getBufferEnd())
+      Record.Name.data() + Record.Name.size() >
+          reinterpret_cast<const char *>(ValueDataStart))
     return error(instrprof_error::malformed);
-
   return success();
 }
 
@@ -275,8 +296,55 @@ std::error_code RawInstrProfReader<IntPtrT>::readRawCounts(
 }
 
 template <class IntPtrT>
-std::error_code
-RawInstrProfReader<IntPtrT>::readNextRecord(InstrProfRecord &Record) {
+std::error_code RawInstrProfReader<IntPtrT>::readValueData(
+    InstrProfRecord &Record) {
+
+  Record.clearValueData();
+  if (!Data->Values || (ValueDataDelta == 0))
+    return success();
+
+  // Read value data.
+  uint64_t NumVSites = 0;
+  for (uint32_t Kind = IPVK_First; Kind <= ValueKindLast; ++Kind)
+    NumVSites += swap(Data->NumValueSites[Kind]);
+  NumVSites += getNumPaddingBytes(NumVSites);
+
+  auto VDataCounts = makeArrayRef(getValueDataCounts(Data->Values), NumVSites);
+  // Check bounds.
+  if (VDataCounts.data() < ValueDataStart ||
+      VDataCounts.data() + VDataCounts.size() >
+          reinterpret_cast<const uint8_t *>(ProfileEnd))
+    return error(instrprof_error::malformed);
+
+  const InstrProfValueData *VDataPtr =
+      getValueData(swap(Data->Values) + NumVSites);
+  for (uint32_t Kind = IPVK_First; Kind <= ValueKindLast; ++Kind) {
+    NumVSites = swap(Data->NumValueSites[Kind]);
+    Record.reserveSites(Kind, NumVSites);
+    for (uint32_t VSite = 0; VSite < NumVSites; ++VSite) {
+
+      uint32_t VDataCount = VDataCounts[VSite];
+      if ((const char *)(VDataPtr + VDataCount) > ProfileEnd)
+        return error(instrprof_error::malformed);
+
+      std::vector<InstrProfValueData> CurrentValues;
+      CurrentValues.reserve(VDataCount);
+      for (uint32_t VIndex = 0; VIndex < VDataCount; ++VIndex) {
+        uint64_t TargetValue = swap(VDataPtr->Value);
+        uint64_t Count = swap(VDataPtr->Count);
+        CurrentValues.push_back({TargetValue, Count});
+        ++VDataPtr;
+      }
+      Record.addValueData(Kind, VSite, CurrentValues.data(),
+                          VDataCount, &FunctionPtrToNameMap);
+    }
+  }
+  return success();
+}
+
+template <class IntPtrT>
+std::error_code RawInstrProfReader<IntPtrT>::readNextRecord(
+    InstrProfRecord &Record) {
   if (atEnd())
     if (std::error_code EC = readNextHeader(ProfileEnd))
       return EC;
@@ -292,6 +360,9 @@ RawInstrProfReader<IntPtrT>::readNextRecord(InstrProfRecord &Record) {
   // Read raw counts and set Record.
   if (std::error_code EC = readRawCounts(Record))
     return EC;
+
+  // Read value data and set Record.
+  if (std::error_code EC = readValueData(Record)) return EC;
 
   // Iterate.
   advanceData();

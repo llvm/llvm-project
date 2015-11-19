@@ -672,6 +672,10 @@ static bool hoist(Instruction &I, BasicBlock *Preheader) {
   // Move the new node to the Preheader, before its terminator.
   I.moveBefore(Preheader->getTerminator());
 
+  // Metadata can be dependent on the condition we are hoisting above.
+  // Conservatively strip all metadata on the instruction.
+  I.dropUnknownNonDebugMetadata();
+
   if (isa<LoadInst>(I)) ++NumMovedLoads;
   else if (isa<CallInst>(I)) ++NumMovedCalls;
   ++NumHoisted;

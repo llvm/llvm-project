@@ -13,10 +13,10 @@ entry:
 ; CHECK-NEXT: mov.w #5, r14
 ; CHECK-NEXT: mov.w #128, r13
 ; CHECK-NEXT: call #memset
-  call void @llvm.memset.p0i8.i16(i8* %0, i8 5, i16 128, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i16(i8* %0, i8 5, i16 128, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i16(i8* nocapture, i8, i16, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i16(i8* nocapture, i8, i16, i1) nounwind
 

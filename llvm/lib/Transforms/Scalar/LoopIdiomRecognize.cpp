@@ -414,8 +414,8 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
     return false;
 
   return processLoopStridedStore(Pointer, (unsigned)SizeInBytes,
-                                 MSI->getAlignment(), MSI->getValue(), MSI, Ev,
-                                 BECount, /*NegStride=*/false);
+                                 MSI->getDestAlignment(), MSI->getValue(), MSI,
+                                 Ev, BECount, /*NegStride=*/false);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -700,7 +700,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   CallInst *NewCall =
       Builder.CreateMemCpy(StoreBasePtr, LoadBasePtr, NumBytes,
-                           std::min(SI->getAlignment(), LI->getAlignment()));
+                           SI->getAlignment(), LI->getAlignment());
   NewCall->setDebugLoc(SI->getDebugLoc());
 
   DEBUG(dbgs() << "  Formed memcpy: " << *NewCall << "\n"

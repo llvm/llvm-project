@@ -34,7 +34,22 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        DebugLoc DL, unsigned DestReg,
                                        unsigned SrcReg, bool KillSrc) const {
-  BuildMI(MBB, I, DL, get(WebAssembly::COPY), DestReg)
+  const TargetRegisterClass *RC =
+      MBB.getParent()->getRegInfo().getRegClass(SrcReg);
+
+  unsigned SetLocalOpcode;
+  if (RC == &WebAssembly::I32RegClass)
+    SetLocalOpcode = WebAssembly::SET_LOCAL_I32;
+  else if (RC == &WebAssembly::I64RegClass)
+    SetLocalOpcode = WebAssembly::SET_LOCAL_I64;
+  else if (RC == &WebAssembly::F32RegClass)
+    SetLocalOpcode = WebAssembly::SET_LOCAL_F32;
+  else if (RC == &WebAssembly::F64RegClass)
+    SetLocalOpcode = WebAssembly::SET_LOCAL_F64;
+  else
+    llvm_unreachable("Unexpected register class");
+
+  BuildMI(MBB, I, DL, get(SetLocalOpcode), DestReg)
       .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
 }
 

@@ -5,7 +5,7 @@
 
 ; CHECK: @foo
 ; CHECK:      entry:
-; CHECK-NEXT:   %tmp3 = load double*, double** @P, !tbaa !0
+; CHECK-NEXT:   %tmp3 = load double*, double** @P
 ; CHECK-NEXT:   br label %for.body
 
 @P = common global double* null

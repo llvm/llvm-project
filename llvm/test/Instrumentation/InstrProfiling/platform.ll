@@ -12,10 +12,11 @@
 ; MACHO: @__llvm_profile_counters_foo = hidden global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 ; ELF: @__llvm_profile_counters_foo = hidden global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", align 8
 
-; MACHO: @__llvm_profile_data_foo = hidden constant {{.*}}, section "__DATA,__llvm_prf_data", align 8
-; LINUX: @__llvm_profile_data_foo = hidden constant {{.*}}, section "__llvm_prf_data", align 8
-; FREEBSD: @__llvm_profile_data_foo = hidden constant {{.*}}, section "__llvm_prf_data", align 8
-; SOLARIS: @__llvm_profile_data_foo = hidden constant {{.*}}, section "__llvm_prf_data", align 8
+; MACHO: @__llvm_profile_data_foo = hidden {{.*}}, section "__DATA,__llvm_prf_data", align 8
+; LINUX: @__llvm_profile_data_foo = hidden {{.*}}, section "__llvm_prf_data", align 8
+; FREEBSD: @__llvm_profile_data_foo = hidden {{.*}}, section "__llvm_prf_data", align 8
+; SOLARIS: @__llvm_profile_data_foo = hidden {{.*}}, section "__llvm_prf_data", align 8
+
 define void @foo() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_foo, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void

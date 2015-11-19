@@ -1074,6 +1074,9 @@ class HandleSDNode : public SDNode {
 public:
   explicit HandleSDNode(SDValue X)
     : SDNode(ISD::HANDLENODE, 0, DebugLoc(), getSDVTList(MVT::Other)) {
+    // HandleSDNodes are never inserted into the DAG, so they won't be
+    // auto-numbered. Use ID 65535 as a sentinel.
+    PersistentId = 0xffff;
     InitOperands(&Op, X);
   }
   ~HandleSDNode();

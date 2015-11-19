@@ -16,7 +16,7 @@ entry:
   %vector = alloca %struct.Vector4, align 16
   %agg.tmp = alloca %struct.Vector4, align 16
   %tmp = bitcast %struct.Vector4* %vector to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp, i8* bitcast (%struct.Vector4* @f.vector to i8*), i32 16, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp, i8* bitcast (%struct.Vector4* @f.vector to i8*), i32 16, i1 false)
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
@@ -28,7 +28,7 @@ for.cond:                                         ; preds = %for.body, %entry
 for.body:                                         ; preds = %for.cond
   %tmp2 = bitcast %struct.Vector4* %agg.tmp to i8*
   %tmp3 = bitcast %struct.Vector4* %vector to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp3, i32 16, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp3, i32 16, i1 false)
   %0 = bitcast %struct.Vector4* %agg.tmp to [2 x i64]*
   %1 = load [2 x i64], [2 x i64]* %0, align 16
   %tmp2.i = extractvalue [2 x i64] %1, 0
@@ -49,5 +49,5 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 declare i32 @printf(...)

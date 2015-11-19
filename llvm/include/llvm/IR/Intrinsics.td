@@ -319,23 +319,31 @@ def int_instrprof_increment : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
                                          llvm_i32_ty, llvm_i32_ty],
                                         []>;
-                                        
+
+// A call to profile runtime for value profiling of target expressions
+// through instrumentation based profiling.
+def int_instrprof_value_profile : Intrinsic<[],
+                                            [llvm_ptr_ty, llvm_i64_ty,
+                                             llvm_i64_ty, llvm_i32_ty,
+                                             llvm_i32_ty],
+                                            []>;
+
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 
 def int_memcpy  : Intrinsic<[],
                              [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
-                              llvm_i32_ty, llvm_i1_ty],
+                              llvm_i1_ty],
                             [IntrReadWriteArgMem, NoCapture<0>, NoCapture<1>,
                              ReadOnly<1>]>;
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
-                             llvm_i32_ty, llvm_i1_ty],
+                             llvm_i1_ty],
                             [IntrReadWriteArgMem, NoCapture<0>, NoCapture<1>,
                              ReadOnly<1>]>;
 def int_memset  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
-                             llvm_i32_ty, llvm_i1_ty],
+                             llvm_i1_ty],
                             [IntrReadWriteArgMem, NoCapture<0>]>;
 
 let Properties = [IntrNoMem] in {

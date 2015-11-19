@@ -13,9 +13,9 @@ define void @good() nounwind {
 entry:
   %x0 = alloca %struct.anon, align 4              ; <%struct.anon*> [#uses=2]
   %tmp = bitcast %struct.anon* %x0 to i8*         ; <i8*> [#uses=1]
-  call void @llvm.memset.p0i8.i32(i8* %tmp, i8 0, i32 4, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %tmp, i8 0, i32 4, i1 false)
   %tmp1 = bitcast %struct.anon* %x0 to i8*        ; <i8*> [#uses=1]
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds (%0, %0* @c, i32
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds (%0, %0* @c, i32
 0, i32 0, i32 0, i32 0), i8* %tmp1, i32 4, i32 4, i1 false)
   ret void
   
@@ -25,7 +25,7 @@ entry:
 ; CHECK: store i8 0, i8*{{.*}}, align 1
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32,
 i1) nounwind
