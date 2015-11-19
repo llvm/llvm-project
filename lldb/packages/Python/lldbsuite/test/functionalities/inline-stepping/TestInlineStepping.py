@@ -8,7 +8,9 @@ import os, time, sys
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
+import unittest2
 
+@unittest2.skip("rdar://TestInlineStepping.py")
 class TestInlineStepping(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
