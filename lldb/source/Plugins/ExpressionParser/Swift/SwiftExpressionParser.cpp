@@ -1023,6 +1023,12 @@ SwiftExpressionParser::Parse (Stream &stream,
         return 1;
     }
     
+    if (m_swift_ast_context->HasFatalErrors())
+    {
+        stream.PutCString("error: The AST context is in a fatal error state.");
+        return 1;
+    }
+    
     swift::ASTContext *ast_context = m_swift_ast_context->GetASTContext();
     
     if (!ast_context)
