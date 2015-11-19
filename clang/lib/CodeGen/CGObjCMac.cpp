@@ -4929,7 +4929,7 @@ CGObjCCommonMac::BuildIvarLayout(const ObjCImplementationDecl *OMD,
   // ARC layout strings only include the class's ivars.  In non-fragile
   // runtimes, that means starting at InstanceStart, rounded up to word
   // alignment.  In fragile runtimes, there's no InstanceStart, so it means
-  // starting at the end of the superclass, rounded up to word alignment.
+  // starting at the offset of the first ivar, rounded up to word alignment.
   //
   // MRC weak layout strings follow the ARC style.
   CharUnits baseOffset;
@@ -4940,10 +4940,9 @@ CGObjCCommonMac::BuildIvarLayout(const ObjCImplementationDecl *OMD,
 
     if (isNonFragileABI()) {
       baseOffset = beginOffset; // InstanceStart
-    } else if (auto superClass = OI->getSuperClass()) {
-      auto startOffset =
-        CGM.getContext().getASTObjCInterfaceLayout(superClass).getSize();
-      baseOffset = startOffset;
+    } else if (!ivars.empty()) {
+      baseOffset =
+        CharUnits::fromQuantity(ComputeIvarBaseOffset(CGM, OMD, ivars[0]));
     } else {
       baseOffset = CharUnits::Zero();
     }

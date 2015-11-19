@@ -15,7 +15,7 @@ int main(int argc, const char **argv)
     [(id)(argc&~255) method];
     // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (%struct.stret*, i8*, i8*)*)(%struct.stret* sret [[T0:%[^,]+]]
     // CHECK: [[T0P:%.*]] = bitcast %struct.stret* [[T0]] to i8*
-    // CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 [[T0P]], i8 0, i64 400, i1 false)
+    // CHECK: call void @llvm.memset.p0i8.i64(i8* [[T0P]], i8 0, i64 400, i32 4, i1 false)
 
     [Test method];
     // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (%struct.stret*, i8*, i8*)*)(%struct.stret* sret [[T1:%[^,]+]]

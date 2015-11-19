@@ -80,7 +80,7 @@ void testva (int n, ...) {
   // CHECK: store i8* [[IN]], i8** [[AP]]
   // CHECK: [[V1:%[a-z0-9]+]] = bitcast %struct.x* [[V:%[a-z0-9]+]] to i8*
   // CHECK: [[P1:%[a-z0-9]+]] = bitcast %struct.x* [[P]] to i8*
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[V1]], i8* align 4 [[P1]], i32 20, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[V1]], i8* [[P1]], i32 20, i32 4, i1 false)
   // CHECK: [[V2:%[a-z0-9]+]] = bitcast %struct.x* [[V]] to i8*
   // CHECK: call void @f(i8* [[V2]])
 
@@ -93,7 +93,7 @@ void testva (int n, ...) {
   // CHECK: store i8* [[IN]], i8** [[AP]]
   // CHECK: [[V1:%[a-z0-9]+]] = bitcast [4 x i32]* [[V0:%[a-z0-9]+]] to i8*
   // CHECK: [[P1:%[a-z0-9]+]] = bitcast [4 x i32]* [[P]] to i8*
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[V1]], i8* align 4 [[P1]], i32 16, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[V1]], i8* [[P1]], i32 16, i32 4, i1 false)
   // CHECK: [[V2:%[a-z0-9]+]] = getelementptr inbounds [4 x i32], [4 x i32]* [[V0]], i32 0, i32 0
   // CHECK: store i32* [[V2]], i32** [[V:%[a-z0-9]+]], align 4
   // CHECK: [[V3:%[a-z0-9]+]] = load i32*, i32** [[V]], align 4

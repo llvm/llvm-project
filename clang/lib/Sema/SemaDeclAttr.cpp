@@ -3262,38 +3262,31 @@ bool Sema::checkMSInheritanceAttrOnDefinition(
   return true;
 }
 
-/// handleModeAttr - This attribute modifies the width of a decl with primitive
-/// type.
-///
-/// Despite what would be logical, the mode attribute is a decl attribute, not a
-/// type attribute: 'int ** __attribute((mode(HI))) *G;' tries to make 'G' be
-/// HImode, not an intermediate pointer.
-static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  // This attribute isn't documented, but glibc uses it.  It changes
-  // the width of an int or unsigned int to the specified size.
-  if (!Attr.isArgIdent(0)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type) << Attr.getName()
-      << AANT_ArgumentIdentifier;
-    return;
-  }
-  
-  IdentifierInfo *Name = Attr.getArgAsIdent(0)->Ident;
-  StringRef Str = Name->getName();
-
-  normalizeName(Str);
-
-  unsigned DestWidth = 0;
-  bool IntegerMode = true;
-  bool ComplexMode = false;
+/// parseModeAttrArg - Parses attribute mode string and returns parsed type
+/// attribute.
+static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
+                             bool &IntegerMode, bool &ComplexMode) {
   switch (Str.size()) {
   case 2:
     switch (Str[0]) {
-    case 'Q': DestWidth = 8; break;
-    case 'H': DestWidth = 16; break;
-    case 'S': DestWidth = 32; break;
-    case 'D': DestWidth = 64; break;
-    case 'X': DestWidth = 96; break;
-    case 'T': DestWidth = 128; break;
+    case 'Q':
+      DestWidth = 8;
+      break;
+    case 'H':
+      DestWidth = 16;
+      break;
+    case 'S':
+      DestWidth = 32;
+      break;
+    case 'D':
+      DestWidth = 64;
+      break;
+    case 'X':
+      DestWidth = 96;
+      break;
+    case 'T':
+      DestWidth = 128;
+      break;
     }
     if (Str[1] == 'F') {
       IntegerMode = false;
@@ -3321,6 +3314,52 @@ static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
       DestWidth = S.Context.getTargetInfo().getUnwindWordWidth();
     break;
   }
+}
+
+/// handleModeAttr - This attribute modifies the width of a decl with primitive
+/// type.
+///
+/// Despite what would be logical, the mode attribute is a decl attribute, not a
+/// type attribute: 'int ** __attribute((mode(HI))) *G;' tries to make 'G' be
+/// HImode, not an intermediate pointer.
+static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  // This attribute isn't documented, but glibc uses it.  It changes
+  // the width of an int or unsigned int to the specified size.
+  if (!Attr.isArgIdent(0)) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type) << Attr.getName()
+      << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierInfo *Name = Attr.getArgAsIdent(0)->Ident;
+  StringRef Str = Name->getName();
+
+  normalizeName(Str);
+
+  unsigned DestWidth = 0;
+  bool IntegerMode = true;
+  bool ComplexMode = false;
+  llvm::APInt VectorSize(64, 0);
+  if (Str.size() >= 4 && Str[0] == 'V') {
+    // Minimal length of vector mode is 4: 'V' + NUMBER(>=1) + TYPE(>=2).
+    size_t StrSize = Str.size();
+    size_t VectorStringLength = 0;
+    while ((VectorStringLength + 1) < StrSize &&
+           isdigit(Str[VectorStringLength + 1]))
+      ++VectorStringLength;
+    if (VectorStringLength &&
+        !Str.substr(1, VectorStringLength).getAsInteger(10, VectorSize) &&
+        VectorSize.isPowerOf2()) {
+      parseModeAttrArg(S, Str.substr(VectorStringLength + 1), DestWidth,
+                       IntegerMode, ComplexMode);
+      S.Diag(Attr.getLoc(), diag::warn_vector_mode_deprecated);
+    } else {
+      VectorSize = 0;
+    }
+  }
+
+  if (!VectorSize)
+    parseModeAttrArg(S, Str, DestWidth, IntegerMode, ComplexMode);
 
   QualType OldTy;
   if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
@@ -3379,7 +3418,10 @@ static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   }
 
   QualType NewTy = NewElemTy;
-  if (const VectorType *OldVT = OldTy->getAs<VectorType>()) {
+  if (VectorSize.getBoolValue()) {
+    NewTy = S.Context.getVectorType(NewTy, VectorSize.getZExtValue(),
+                                    VectorType::GenericVector);
+  } else if (const VectorType *OldVT = OldTy->getAs<VectorType>()) {
     // Complex machine mode does not support base vector types.
     if (ComplexMode) {
       S.Diag(Attr.getLoc(), diag::err_complex_mode_vector_type);

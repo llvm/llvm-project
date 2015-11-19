@@ -399,9 +399,15 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
     // Block pointers require copy/dispose.  So do Objective-C pointers.
     } else if (variable->getType()->isObjCRetainableType()) {
-      info.NeedsCopyDispose = true;
-      // used for mrr below.
-      lifetime = Qualifiers::OCL_Strong;
+      // But honor the inert __unsafe_unretained qualifier, which doesn't
+      // actually make it into the type system.
+       if (variable->getType()->isObjCInertUnsafeUnretainedType()) {
+        lifetime = Qualifiers::OCL_ExplicitNone;
+      } else {
+        info.NeedsCopyDispose = true;
+        // used for mrr below.
+        lifetime = Qualifiers::OCL_Strong;
+      }
 
     // So do types that require non-trivial copy construction.
     } else if (CI.hasCopyExpr()) {

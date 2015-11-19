@@ -15,12 +15,12 @@ long double testinc(_Atomic long double *addr) {
   // CHECK: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK: [[INC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 16
   // CHECK: [[OLD_INT_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i128*
   // CHECK: [[OLD_INT:%.+]] = load i128, i128* [[OLD_INT_ADDR]], align 16
   // CHECK: [[NEW_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[INC_VALUE]], x86_fp80* [[NEW_VALUE_ADDR]], align 16
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
@@ -46,10 +46,10 @@ long double testinc(_Atomic long double *addr) {
   // CHECK32: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK32: [[INC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK32: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 4
   // CHECK32: [[DESIRED_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[DESIRED_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[INC_VALUE]], x86_fp80* [[DESIRED_VALUE_ADDR]], align 4
   // CHECK32: [[OBJ:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[EXPECTED:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i8*
@@ -77,12 +77,12 @@ long double testdec(_Atomic long double *addr) {
   // CHECK: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[ORIG_LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK: [[DEC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 16
   // CHECK: [[OLD_INT_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i128*
   // CHECK: [[OLD_INT:%.+]] = load i128, i128* [[OLD_INT_ADDR]], align 16
   // CHECK: [[NEW_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[DEC_VALUE]], x86_fp80* [[NEW_VALUE_ADDR]], align 16
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
@@ -108,10 +108,10 @@ long double testdec(_Atomic long double *addr) {
   // CHECK32: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[ORIG_LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK32: [[DEC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK32: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 4
   // CHECK32: [[DESIRED_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[DESIRED_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[DEC_VALUE]], x86_fp80* [[DESIRED_VALUE_ADDR]], align 4
   // CHECK32: [[OBJ:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[EXPECTED:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i8*
@@ -140,12 +140,12 @@ long double testcompassign(_Atomic long double *addr) {
   // CHECK: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK: [[SUB_VALUE:%.+]] = fsub x86_fp80 [[OLD_VALUE]],
   // CHECK: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 16
   // CHECK: [[OLD_INT_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i128*
   // CHECK: [[OLD_INT:%.+]] = load i128, i128* [[OLD_INT_ADDR]], align 16
   // CHECK: [[NEW_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[SUB_VALUE]], x86_fp80* [[NEW_VALUE_ADDR]], align 16
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
@@ -177,10 +177,10 @@ long double testcompassign(_Atomic long double *addr) {
   // CHECK32: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK32: [[INC_VALUE:%.+]] = fsub x86_fp80 [[OLD_VALUE]],
   // CHECK32: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 4
   // CHECK32: [[DESIRED_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[DESIRED_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[INC_VALUE]], x86_fp80* [[DESIRED_VALUE_ADDR]], align 4
   // CHECK32: [[OBJ:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[EXPECTED:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i8*
@@ -203,7 +203,7 @@ long double testassign(_Atomic long double *addr) {
   // CHECK: store x86_fp80* %{{.+}}, x86_fp80** [[ADDR_ADDR:%.+]], align 8
   // CHECK: [[ADDR:%.+]] = load x86_fp80*, x86_fp80** [[ADDR_ADDR]], align 8
   // CHECK: [[STORE_TEMP_VOID_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[STORE_TEMP_VOID_PTR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[STORE_TEMP_VOID_PTR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 {{.+}}, x86_fp80* [[STORE_TEMP_PTR]], align 16
   // CHECK: [[STORE_TEMP_INT_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR]] to i128*
   // CHECK: [[STORE_TEMP_INT:%.+]] = load i128, i128* [[STORE_TEMP_INT_PTR]], align 16
@@ -213,7 +213,7 @@ long double testassign(_Atomic long double *addr) {
   // CHECK32: store x86_fp80* %{{.+}}, x86_fp80** [[ADDR_ADDR:%.+]], align 4
   // CHECK32: [[ADDR:%.+]] = load x86_fp80*, x86_fp80** [[ADDR_ADDR]], align 4
   // CHECK32: [[STORE_TEMP_VOID_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[STORE_TEMP_VOID_PTR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[STORE_TEMP_VOID_PTR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 {{.+}}, x86_fp80* [[STORE_TEMP_PTR]], align 4
   // CHECK32: [[ADDR_VOID:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[STORE_TEMP_VOID_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR]] to i8*
@@ -250,12 +250,12 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
   // CHECK: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK: [[INC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 16
   // CHECK: [[OLD_INT_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i128*
   // CHECK: [[OLD_INT:%.+]] = load i128, i128* [[OLD_INT_ADDR]], align 16
   // CHECK: [[NEW_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[INC_VALUE]], x86_fp80* [[NEW_VALUE_ADDR]], align 16
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
@@ -281,10 +281,10 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
   // CHECK32: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK32: [[INC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK32: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 4
   // CHECK32: [[DESIRED_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[DESIRED_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[INC_VALUE]], x86_fp80* [[DESIRED_VALUE_ADDR]], align 4
   // CHECK32: [[OBJ:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[EXPECTED:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i8*
@@ -311,12 +311,12 @@ long double test_volatile_dec(volatile _Atomic long double *addr) {
   // CHECK: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[ORIG_LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK: [[DEC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 16
   // CHECK: [[OLD_INT_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i128*
   // CHECK: [[OLD_INT:%.+]] = load i128, i128* [[OLD_INT_ADDR]], align 16
   // CHECK: [[NEW_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[DEC_VALUE]], x86_fp80* [[NEW_VALUE_ADDR]], align 16
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
@@ -342,10 +342,10 @@ long double test_volatile_dec(volatile _Atomic long double *addr) {
   // CHECK32: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[ORIG_LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK32: [[DEC_VALUE:%.+]] = fadd x86_fp80 [[OLD_VALUE]],
   // CHECK32: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 4
   // CHECK32: [[DESIRED_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[DESIRED_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[DEC_VALUE]], x86_fp80* [[DESIRED_VALUE_ADDR]], align 4
   // CHECK32: [[OBJ:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[EXPECTED:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i8*
@@ -373,12 +373,12 @@ long double test_volatile_compassign(volatile _Atomic long double *addr) {
   // CHECK: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK: [[SUB_VALUE:%.+]] = fsub x86_fp80 [[OLD_VALUE]],
   // CHECK: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 16
   // CHECK: [[OLD_INT_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i128*
   // CHECK: [[OLD_INT:%.+]] = load i128, i128* [[OLD_INT_ADDR]], align 16
   // CHECK: [[NEW_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[NEW_VALUE_VOID_ADDR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 [[SUB_VALUE]], x86_fp80* [[NEW_VALUE_ADDR]], align 16
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
@@ -409,10 +409,10 @@ long double test_volatile_compassign(volatile _Atomic long double *addr) {
   // CHECK32: [[OLD_VALUE:%.+]] = phi x86_fp80 [ [[LD_VALUE]], %{{.+}} ], [ [[LD_VALUE:%.+]], %[[ATOMIC_OP]] ]
   // CHECK32: [[INC_VALUE:%.+]] = fsub x86_fp80 [[OLD_VALUE]],
   // CHECK32: [[OLD_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[OLD_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[OLD_VALUE]], x86_fp80* [[OLD_VALUE_ADDR]], align 4
   // CHECK32: [[DESIRED_VALUE_VOID_ADDR:%.+]] = bitcast x86_fp80* [[DESIRED_VALUE_ADDR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[DESIRED_VALUE_VOID_ADDR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 [[INC_VALUE]], x86_fp80* [[DESIRED_VALUE_ADDR]], align 4
   // CHECK32: [[OBJ:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[EXPECTED:%.+]] = bitcast x86_fp80* [[OLD_VALUE_ADDR]] to i8*
@@ -435,7 +435,7 @@ long double test_volatile_assign(volatile _Atomic long double *addr) {
   // CHECK: store x86_fp80* %{{.+}}, x86_fp80** [[ADDR_ADDR:%.+]], align 8
   // CHECK: [[ADDR:%.+]] = load x86_fp80*, x86_fp80** [[ADDR_ADDR]], align 8
   // CHECK: [[STORE_TEMP_VOID_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR:%.+]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[STORE_TEMP_VOID_PTR]], i8 0, i64 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[STORE_TEMP_VOID_PTR]], i8 0, i64 16, i32 16, i1 false)
   // CHECK: store x86_fp80 {{.+}}, x86_fp80* [[STORE_TEMP_PTR]], align 16
   // CHECK: [[STORE_TEMP_INT_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR]] to i128*
   // CHECK: [[STORE_TEMP_INT:%.+]] = load i128, i128* [[STORE_TEMP_INT_PTR]], align 16
@@ -445,7 +445,7 @@ long double test_volatile_assign(volatile _Atomic long double *addr) {
   // CHECK32: store x86_fp80* %{{.+}}, x86_fp80** [[ADDR_ADDR:%.+]], align 4
   // CHECK32: [[ADDR:%.+]] = load x86_fp80*, x86_fp80** [[ADDR_ADDR]], align 4
   // CHECK32: [[STORE_TEMP_VOID_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR:%.+]] to i8*
-  // CHECK32: call void @llvm.memset.p0i8.i64(i8* align 4 [[STORE_TEMP_VOID_PTR]], i8 0, i64 12, i1 false)
+  // CHECK32: call void @llvm.memset.p0i8.i64(i8* [[STORE_TEMP_VOID_PTR]], i8 0, i64 12, i32 4, i1 false)
   // CHECK32: store x86_fp80 {{.+}}, x86_fp80* [[STORE_TEMP_PTR]], align 4
   // CHECK32: [[ADDR_VOID:%.+]] = bitcast x86_fp80* [[ADDR]] to i8*
   // CHECK32: [[STORE_TEMP_VOID_PTR:%.+]] = bitcast x86_fp80* [[STORE_TEMP_PTR]] to i8*

@@ -201,7 +201,7 @@ int main() {
 // CHECK: [[SHAREDS_REF_ADDR:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], [[KMP_TASK_T_TY]]* [[TASK]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[SHAREDS_REF:%.+]] = load i8*, i8** [[SHAREDS_REF_ADDR]],
 // CHECK: [[CAPTURES_ADDR:%.+]] = bitcast [[CAP_MAIN_TY]]* %{{.+}} to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[SHAREDS_REF]], i8* align 8 [[CAPTURES_ADDR]], i64 40, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[SHAREDS_REF]], i8* [[CAPTURES_ADDR]], i64 40, i32 8, i1 false)
 
 // Initialize kmp_task_t->privates with default values (no init for simple types, default constructors for classes).
 // Also copy address of private copy to the corresponding shareds reference.
@@ -355,7 +355,7 @@ int main() {
 // CHECK: [[SHAREDS_REF_ADDR:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], [[KMP_TASK_T_TY]]* [[TASK]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[SHAREDS_REF:%.+]] = load i8*, i8** [[SHAREDS_REF_ADDR]],
 // CHECK: [[CAPTURES_ADDR:%.+]] = bitcast [[CAP_TMAIN_TY]]* %{{.+}} to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[SHAREDS_REF]], i8* align 8 [[CAPTURES_ADDR]], i64 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[SHAREDS_REF]], i8* [[CAPTURES_ADDR]], i64 32, i32 8, i1 false)
 
 // Initialize kmp_task_t->privates with default values (no init for simple types, default constructors for classes).
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_TMAIN_TY]], [[KMP_TASK_TMAIN_TY]]* [[RES_KMP_TASK]], i{{[0-9]+}} 0, i{{[0-9]+}} 2

@@ -49,7 +49,7 @@ void testva (int n, ...)
 // CHECK-PPC-NEXT:  [[AGGR:%[a-z0-9]+]] = load %struct.x*, %struct.x** [[VAARG_ADDR]]
 // CHECK-PPC-NEXT:  [[DEST:%[0-9]+]] = bitcast %struct.x* %t to i8*
 // CHECK-PPC-NEXT:  [[SRC:%.+]] = bitcast %struct.x* [[AGGR]] to i8*
-// CHECK-PPC-NEXT:  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 [[DEST]], i8* align 8 [[SRC]], i32 16, i1 false)
+// CHECK-PPC-NEXT:  call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[DEST]], i8* [[SRC]], i32 16, i32 8, i1 false)
 
   int v = va_arg (ap, int);
   

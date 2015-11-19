@@ -101,7 +101,7 @@ namespace test4 {
   //   Construct array.
   // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[A]], [[A]]* [[THIS]], i32 0, i32 1
   // CHECK-NEXT: [[T0:%.*]] = bitcast [2 x [3 x i8*]]* [[ARRAY]] to i8*
-  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 8 [[T0]], i8 0, i64 48, i1 false)
+  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 48, i32 8, i1 false)
   //   throw 0;
   // CHECK:      invoke void @__cxa_throw(
   //   Landing pad from throw site:

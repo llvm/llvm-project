@@ -56,7 +56,7 @@ void test7 (int x, struct test7 y)
 // CHECK: [[T0:%.*]] = bitcast i8* %[[CUR]] to %struct.test1*
 // CHECK: [[DEST:%.*]] = bitcast %struct.test1* %y to i8*
 // CHECK: [[SRC:%.*]] = bitcast %struct.test1* [[T0]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[DEST]], i8* align 8 [[SRC]], i64 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST]], i8* [[SRC]], i64 8, i32 4, i1 false)
 struct test1 test1va (int x, ...)
 {
   struct test1 y;
@@ -79,7 +79,7 @@ struct test1 test1va (int x, ...)
 // CHECK: [[T0:%.*]] = bitcast i8* %[[ALIGN]] to %struct.test2*
 // CHECK: [[DEST:%.*]] = bitcast %struct.test2* %y to i8*
 // CHECK: [[SRC:%.*]] = bitcast %struct.test2* [[T0]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[DEST]], i8* align 16 [[SRC]], i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST]], i8* [[SRC]], i64 16, i32 16, i1 false)
 struct test2 test2va (int x, ...)
 {
   struct test2 y;
@@ -102,7 +102,7 @@ struct test2 test2va (int x, ...)
 // CHECK: [[T0:%.*]] = bitcast i8* %[[ALIGN]] to %struct.test3*
 // CHECK: [[DEST:%.*]] = bitcast %struct.test3* %y to i8*
 // CHECK: [[SRC:%.*]] = bitcast %struct.test3* [[T0]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 32 [[DEST]], i8* align 16 [[SRC]], i64 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST]], i8* [[SRC]], i64 32, i32 16, i1 false)
 struct test3 test3va (int x, ...)
 {
   struct test3 y;
@@ -121,7 +121,7 @@ struct test3 test3va (int x, ...)
 // CHECK: [[T0:%.*]] = bitcast i8* %[[CUR]] to %struct.test4*
 // CHECK: [[DEST:%.*]] = bitcast %struct.test4* %y to i8*
 // CHECK: [[SRC:%.*]] = bitcast %struct.test4* [[T0]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[DEST]], i8* align 8 [[SRC]], i64 12, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST]], i8* [[SRC]], i64 12, i32 4, i1 false)
 struct test4 test4va (int x, ...)
 {
   struct test4 y;
@@ -140,7 +140,7 @@ struct test4 test4va (int x, ...)
 // CHECK: [[T0:%.*]] = bitcast i8* %[[CUR]] to %struct.test_longdouble*
 // CHECK: [[DEST:%.*]] = bitcast %struct.test_longdouble* %y to i8*
 // CHECK: [[SRC:%.*]] = bitcast %struct.test_longdouble* [[T0]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[DEST]], i8* align 8 [[SRC]], i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST]], i8* [[SRC]], i64 16, i32 8, i1 false)
 struct test_longdouble { long double x; };
 struct test_longdouble testva_longdouble (int x, ...)
 {
@@ -164,7 +164,7 @@ struct test_longdouble testva_longdouble (int x, ...)
 // CHECK: [[T0:%.*]] = bitcast i8* %[[ALIGN]] to %struct.test_vector*
 // CHECK: [[DEST:%.*]] = bitcast %struct.test_vector* %y to i8*
 // CHECK: [[SRC:%.*]] = bitcast %struct.test_vector* [[T0]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[DEST]], i8* align 16 [[SRC]], i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST]], i8* [[SRC]], i64 16, i32 16, i1 false)
 struct test_vector { vector int x; };
 struct test_vector testva_vector (int x, ...)
 {

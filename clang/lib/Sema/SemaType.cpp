@@ -4456,6 +4456,7 @@ static AttributeList::Kind getAttrListKind(AttributedType::Kind kind) {
   case AttributedType::attr_objc_gc:
     return AttributeList::AT_ObjCGC;
   case AttributedType::attr_objc_ownership:
+  case AttributedType::attr_objc_inert_unsafe_unretained:
     return AttributeList::AT_ObjCOwnership;
   case AttributedType::attr_noreturn:
     return AttributeList::AT_NoReturn;
@@ -5178,6 +5179,25 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
     }
     S.Diag(AttrLoc, diag::warn_type_attribute_wrong_type) << name
       << TDS_ObjCObjOrBlock << type;
+  }
+
+  // Don't actually add the __unsafe_unretained qualifier in non-ARC files,
+  // because having both 'T' and '__unsafe_unretained T' exist in the type
+  // system causes unfortunate widespread consistency problems.  (For example,
+  // they're not considered compatible types, and we mangle them identicially
+  // as template arguments.)  These problems are all individually fixable,
+  // but it's easier to just not add the qualifier and instead sniff it out
+  // in specific places using isObjCInertUnsafeUnretainedType().
+  //
+  // Doing this does means we miss some trivial consistency checks that
+  // would've triggered in ARC, but that's better than trying to solve all
+  // the coexistence problems with __unsafe_unretained.
+  if (!S.getLangOpts().ObjCAutoRefCount &&
+      lifetime == Qualifiers::OCL_ExplicitNone) {
+    type = S.Context.getAttributedType(
+                             AttributedType::attr_objc_inert_unsafe_unretained,
+                                       type, type);
+    return true;
   }
 
   QualType origType = type;

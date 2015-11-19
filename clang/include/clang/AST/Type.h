@@ -1668,6 +1668,7 @@ public:
   bool isObjCQualifiedClassType() const;        // Class<foo>
   bool isObjCObjectOrInterfaceType() const;
   bool isObjCIdType() const;                    // id
+  bool isObjCInertUnsafeUnretainedType() const;
 
   /// Whether the type is Objective-C 'id' or a __kindof type of an
   /// object type, e.g., __kindof NSView * or __kindof id
@@ -3636,6 +3637,7 @@ public:
     attr_nullable,
     attr_null_unspecified,
     attr_objc_kindof,
+    attr_objc_inert_unsafe_unretained,
   };
 
 private:

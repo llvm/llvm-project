@@ -65,7 +65,7 @@ void test3(pointer_pair_t pair) {
 // CHECK:      [[TEMP:%.*]] = alloca [[QUAD_T:%.*]], align 8
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[QUAD_T]]* [[TEMP]] to i8*
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[QUAD_T]]* {{%.*}} to i8*
-// CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[T0]], i8* align 8 [[T1]], i64 32, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 32, i32 8, i1 false)
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[QUAD_T]]* [[TEMP]] to i256*
 // CHECK-NEXT: [[T1:%.*]] = bitcast i256* [[T0]] to i8*
 // CHECK-NEXT: call void @__atomic_store(i64 32, i8* bitcast ([[QUAD_T]]* @a_pointer_quad to i8*), i8* [[T1]], i32 5)
