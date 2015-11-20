@@ -92,6 +92,7 @@ private:
 
 protected:
   MultilibSet Multilibs;
+  const char *DefaultLinker = "ld";
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);

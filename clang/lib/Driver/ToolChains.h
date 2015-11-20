@@ -796,7 +796,6 @@ public:
                         llvm::opt::ArgStringList &CmdArgs) const override;
   virtual std::string computeSysRoot() const;
 
-  std::string Linker;
   std::vector<std::string> ExtraOpts;
 
 protected:
@@ -921,7 +920,6 @@ public:
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
                                           types::ID InputType) const override;
-  std::string Linker;
 
 protected:
   Tool *buildLinker() const override;

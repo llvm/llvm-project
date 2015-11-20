@@ -29,11 +29,28 @@ void foo() {
   i = 8;
 }
 
+// A funky reinterpret cast idiom that we used to crash on.
+template <class T>
+unsigned char *buildBytes(const T v) {
+  static union {
+    unsigned char result[sizeof(T)];
+    T value;
+  };
+  value = v;
+  return result;
+}
+
+void instantiate(int x) {
+  buildBytes(x);
+}
+
 // CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}debug-info-anon-union-vars.cpp",
 // CHECK: !DIGlobalVariable(name: "c",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "d",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "a",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "b",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
+// CHECK: !DIGlobalVariable(name: "result", {{.*}} isLocal: false, isDefinition: true
+// CHECK: !DIGlobalVariable(name: "value", {{.*}} isLocal: false, isDefinition: true
 // CHECK: !DILocalVariable(name: "i", {{.*}}, flags: DIFlagArtificial
 // CHECK: !DILocalVariable(name: "c", {{.*}}, flags: DIFlagArtificial
 // CHECK: !DILocalVariable(

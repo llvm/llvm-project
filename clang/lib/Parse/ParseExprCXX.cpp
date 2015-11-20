@@ -1568,7 +1568,8 @@ ExprResult Parser::ParseCoyieldExpression() {
   assert(Tok.is(tok::kw_co_yield) && "Not co_yield!");
 
   SourceLocation Loc = ConsumeToken();
-  ExprResult Expr = ParseAssignmentExpression();
+  ExprResult Expr = Tok.is(tok::l_brace) ? ParseBraceInitializer()
+                                         : ParseAssignmentExpression();
   if (!Expr.isInvalid())
     Expr = Actions.ActOnCoyieldExpr(getCurScope(), Loc, Expr.get());
   return Expr;

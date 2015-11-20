@@ -45,5 +45,4 @@ compiler and header files into the prefix directory selected when LLVM was
 configured.
 
 The Clang compiler is available as 'clang' and 'clang++'. It supports a gcc like
-command line interface. See the man page for clang (installed into
-$prefix/share/man/man1) for more information.
+command line interface. See the man page for clang for more information.

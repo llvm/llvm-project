@@ -29,6 +29,13 @@ double bad_promise_type(double) {
   co_await a; // expected-error {{this function cannot be a coroutine: 'std::coroutine_traits<double, double>::promise_type' (aka 'int') is not a class}}
 }
 
+template<> struct std::coroutine_traits<double, int> {
+  struct promise_type {};
+};
+double bad_promise_type_2(int) {
+  co_yield 0; // expected-error {{no member named 'yield_value' in 'std::coroutine_traits<double, int>::promise_type'}}
+}
+
 struct promise; // expected-note {{forward declaration}}
 template<typename ...T> struct std::coroutine_traits<void, T...> { using promise_type = promise; };
 
@@ -37,7 +44,21 @@ void undefined_promise() { // expected-error {{variable has incomplete type 'pro
   co_await a;
 }
 
-struct promise {};
+struct yielded_thing { const char *p; short a, b; };
+
+struct promise {
+  awaitable yield_value(int); // expected-note {{candidate}}
+  awaitable yield_value(yielded_thing); // expected-note {{candidate}}
+};
+
+void yield() {
+  co_yield 0;
+  co_yield {"foo", 1, 2};
+  co_yield {1e100}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}} expected-warning {{braces around scalar}}
+  co_yield {"foo", __LONG_LONG_MAX__}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}}
+  co_yield {"foo"};
+  co_yield "foo"; // expected-error {{no matching}}
+}
 
 void mixed_yield() {
   co_yield 0; // expected-note {{use of 'co_yield'}}
@@ -118,4 +139,19 @@ namespace dependent_operator_co_await_lookup {
   };
   template void await_template(outer); // expected-note {{instantiation}}
   template void await_template_2(outer);
+}
+
+namespace placeholder {
+  awaitable f(), f(int); // expected-note 2{{possible target}}
+  int g(), g(int); // expected-note 4{{possible target}}
+  void x() {
+    co_await f; // expected-error {{reference to overloaded function}}
+  }
+  void y() {
+    co_yield g; // expected-error {{reference to overloaded function}}
+  }
+  void z() {
+    co_await a;
+    co_return g; // expected-error {{reference to overloaded function}}
+  }
 }

@@ -2455,8 +2455,7 @@ MipsLLVMToolChain::MipsLLVMToolChain(const Driver &D,
   getFilePaths().push_back(computeSysRoot() + "/usr/lib" + LibSuffix);
 
   // Use LLD by default.
-  if (!Args.getLastArg(options::OPT_fuse_ld_EQ))
-    Linker = GetProgramPath("lld");
+  DefaultLinker = "lld";
 }
 
 void MipsLLVMToolChain::AddClangSystemIncludeArgs(
@@ -2837,8 +2836,6 @@ NaClToolChain::NaClToolChain(const Driver &D, const llvm::Triple &Triple,
     break;
   }
 
-  // Use provided linker, not system linker
-  Linker = GetLinkerPath();
   NaClArmMacrosPath = GetFilePath("nacl-arm-macros.s");
 }
 
@@ -3692,8 +3689,6 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   PPaths.push_back(Twine(GCCInstallation.getParentLibPath() + "/../" +
                          GCCInstallation.getTriple().str() + "/bin")
                        .str());
-
-  Linker = GetLinkerPath();
 
   Distro Distro = DetectDistro(D, Arch);
 
