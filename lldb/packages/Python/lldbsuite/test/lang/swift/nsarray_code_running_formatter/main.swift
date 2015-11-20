@@ -25,6 +25,7 @@ func main() -> Int {
   
   return 6 //% self.expect("expr -d run -- array", substrs=['Int64(3)','Int64(4)','Int64(5)'])
            //% self.expect("frame variable -d run -- array", substrs=['Int64(3)','Int64(4)','Int64(5)'])
+           //% self.process().Kill()
 }
 
 main()
