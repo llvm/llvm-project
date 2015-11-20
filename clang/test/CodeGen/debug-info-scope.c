@@ -10,6 +10,7 @@ int main() {
 
 // GMLT-NOT: !DILexicalBlock
 // GMLT: !DILexicalBlockFile({{.*}}, discriminator: 1)
+// GMLT: !DILexicalBlockFile({{.*}}, discriminator: 2)
 // Make sure we don't have any more lexical blocks because we don't need them in
 // -gmlt.
 // GMLT-NOT: !DILexicalBlock

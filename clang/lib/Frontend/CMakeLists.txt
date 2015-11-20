@@ -43,6 +43,7 @@ add_clang_library(clangFrontend
 
   DEPENDS
   ClangDriverOptions
+  intrinsics_gen
 
   LINK_LIBS
   clangAST

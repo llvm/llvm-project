@@ -323,21 +323,35 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
 
+  // TODO: Clean this up once autoconf is gone
+  SmallString<128> P(getDriver().ResourceDir);
+  llvm::sys::path::append(P, "lib", "darwin");
+  const char *Library = "libclang_rt.profile_osx.a";
+
   // Select the appropriate runtime library for the target.
-  if (isTargetWatchOSBased()) {
-    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_watchos.a",
-                      /*AlwaysLink*/ true);
-  } else if (isTargetTvOSBased()) {
-    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_tvos.a",
-                      /*AlwaysLink*/ true);
-  } else if (isTargetIOSBased()) {
-    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_ios.a",
-                      /*AlwaysLink*/ true);
+  if (isTargetWatchOS()) {
+    Library = "libclang_rt.profile_watchos.a";
+  } else if (isTargetWatchOSSimulator()) {
+    llvm::sys::path::append(P, "libclang_rt.profile_watchossim.a");
+    Library = getVFS().exists(P) ? "libclang_rt.profile_watchossim.a"
+                                 : "libclang_rt.profile_watchos.a";
+  } else if (isTargetTvOS()) {
+    Library = "libclang_rt.profile_tvos.a";
+  } else if (isTargetTvOSSimulator()) {
+    llvm::sys::path::append(P, "libclang_rt.profile_tvossim.a");
+    Library = getVFS().exists(P) ? "libclang_rt.profile_tvossim.a"
+                                 : "libclang_rt.profile_tvos.a";
+  } else if (isTargetIPhoneOS()) {
+    Library = "libclang_rt.profile_ios.a";
+  } else if (isTargetIOSSimulator()) {
+    llvm::sys::path::append(P, "libclang_rt.profile_iossim.a");
+    Library = getVFS().exists(P) ? "libclang_rt.profile_iossim.a"
+                                 : "libclang_rt.profile_ios.a";
   } else {
     assert(isTargetMacOS() && "unexpected non MacOS platform");
-    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_osx.a",
-                      /*AlwaysLink*/ true);
   }
+  AddLinkRuntimeLib(Args, CmdArgs, Library,
+                    /*AlwaysLink*/ true);
   return;
 }
 

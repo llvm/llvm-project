@@ -1826,8 +1826,15 @@ public:
   }
 
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &info) const override {
-    return true;
+                             TargetInfo::ConstraintInfo &Info) const override {
+    switch (*Name) {
+    default: break;
+    case 'v': // vgpr
+    case 's': // sgpr
+      Info.setAllowsRegister();
+      return true;
+    }
+    return false;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
