@@ -359,7 +359,7 @@ std::string ToolChain::GetLinkerPath() const {
     return "";
   }
 
-  return GetProgramPath("ld");
+  return GetProgramPath(DefaultLinker);
 }
 
 types::ID ToolChain::LookupTypeForExtension(const char *Ext) const {

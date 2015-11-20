@@ -111,6 +111,8 @@ TEST_F(FormatTestJS, ReservedWords) {
                "  interface: 1,\n"
                "  switch: 1,\n"
                "};");
+  verifyFormat("var struct = 2;");
+  verifyFormat("var union = 2;");
 }
 
 TEST_F(FormatTestJS, ES6DestructuringAssignment) {
@@ -446,6 +448,12 @@ TEST_F(FormatTestJS, InliningFunctionLiterals) {
                "  }\n"
                "}",
                Style);
+
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
+  verifyFormat("var func = function() {\n"
+               "  return 1;\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTestJS, MultipleFunctionLiterals) {
@@ -540,6 +548,11 @@ TEST_F(FormatTestJS, ArrowFunctions) {
 TEST_F(FormatTestJS, ReturnStatements) {
   verifyFormat("function() {\n"
                "  return [hello, world];\n"
+               "}");
+}
+
+TEST_F(FormatTestJS, ForLoops) {
+  verifyFormat("for (var i in [2, 3]) {\n"
                "}");
 }
 

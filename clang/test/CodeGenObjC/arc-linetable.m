@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -fblocks -fobjc-arc -debug-info-kind=standalone -dwarf-version=4 -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fblocks -fobjc-arc -debug-info-kind=standalone -dwarf-version=4 -disable-llvm-passes -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 
 // Legend: EXP = Return expression, RET = ret instruction
 
@@ -34,9 +34,9 @@
 
 // CHECK: define {{.*}}testCleanupVoid
 // CHECK: icmp ne {{.*}}!dbg ![[SKIP1:[0-9]+]]
-// CHECK: store i32 0, i32* {{.*}}, !dbg ![[STORE8:[0-9]+]]
-// CHECK: @objc_storeStrong{{.*}}, !dbg ![[ARC8:[0-9]+]]
-// CHECK: ret {{.*}} !dbg ![[RET8:[0-9]+]]
+// CHECK: store i32 0, i32* {{.*}}, !dbg ![[RET8:[0-9]+]]
+// CHECK: @objc_storeStrong{{.*}}, !dbg ![[RET8]]
+// CHECK: ret {{.*}} !dbg ![[RET8]]
 
 typedef signed char BOOL;
 
@@ -112,8 +112,6 @@ typedef signed char BOOL;
       [delegate testVoid :s];
     }
   }
-  // CHECK: ![[STORE8]] = !DILocation(line: [[@LINE+3]], scope:
-  // CHECK: ![[ARC8]] = !DILocation(line: [[@LINE+2]], scope:
   // CHECK: ![[RET8]] = !DILocation(line: [[@LINE+1]], scope:
 }
 

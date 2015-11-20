@@ -1949,13 +1949,14 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_Proto) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
-                     Keywords.kw_repeated))
+                     Keywords.kw_repeated, Keywords.kw_extend))
       return true;
     if (Right.is(tok::l_paren) &&
         Left.isOneOf(Keywords.kw_returns, Keywords.kw_option))
       return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
-    if (Left.isOneOf(Keywords.kw_let, Keywords.kw_var, TT_JsFatArrow))
+    if (Left.isOneOf(Keywords.kw_let, Keywords.kw_var, TT_JsFatArrow,
+                     Keywords.kw_in))
       return true;
     if (Right.isOneOf(TT_JsTypeColon, TT_JsTypeOptionalQuestion))
       return false;
@@ -2047,7 +2048,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return Style.SpacesInAngles;
   if ((Right.is(TT_BinaryOperator) && !Left.is(tok::l_paren)) ||
-      Left.isOneOf(TT_BinaryOperator, TT_ConditionalExpr))
+      (Left.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) &&
+       !Right.is(tok::r_paren)))
     return true;
   if (Left.is(TT_TemplateCloser) && Right.is(tok::l_paren) &&
       Right.isNot(TT_FunctionTypeLParen))
@@ -2102,6 +2104,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         !Left.Children.empty())
       // Support AllowShortFunctionsOnASingleLine for JavaScript.
       return Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_None ||
+             Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Empty ||
              (Left.NestingLevel == 0 && Line.Level == 0 &&
               Style.AllowShortFunctionsOnASingleLine ==
                   FormatStyle::SFS_Inline);

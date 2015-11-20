@@ -1,5 +1,7 @@
 option(CLANG_INSTALL_SCANBUILD "Install the scan-build tool" ON)
 
+include(GNUInstallDirs)
+
 if (WIN32 AND NOT CYGWIN)
   set(BinFiles
         scan-build.bat)
@@ -52,15 +54,15 @@ if(CLANG_INSTALL_SCANBUILD)
   endforeach()
 
   foreach(ManPage ${ManPages})
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/share/man/man1/${ManPage}
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/${ManPage}
                        COMMAND ${CMAKE_COMMAND} -E make_directory
-                         ${CMAKE_BINARY_DIR}/share/man/man1
+                         ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1
                        COMMAND ${CMAKE_COMMAND} -E copy
                          ${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage}
-                         ${CMAKE_BINARY_DIR}/share/man/man1/
+                         ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage})
-    list(APPEND Depends ${CMAKE_BINARY_DIR}/share/man/man1/${ManPage})
-    install(PROGRAMS man/${ManPage} DESTINATION share/man/man1)
+    list(APPEND Depends ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/${ManPage})
+    install(PROGRAMS man/${ManPage} DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
   endforeach()
 
   foreach(ShareFile ${ShareFiles})
@@ -78,4 +80,3 @@ if(CLANG_INSTALL_SCANBUILD)
   add_custom_target(scan-build ALL DEPENDS ${Depends})
   set_target_properties(scan-build PROPERTIES FOLDER "Misc")
 endif()
-
