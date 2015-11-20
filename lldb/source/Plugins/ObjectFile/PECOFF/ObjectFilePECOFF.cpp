@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjectFilePECOFF.h"
+#include "WindowsMiniDump.h"
 
 #include "llvm/Support/COFF.h"
 
@@ -24,6 +25,7 @@
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 
@@ -42,7 +44,8 @@ ObjectFilePECOFF::Initialize()
                                    GetPluginDescriptionStatic(),
                                    CreateInstance,
                                    CreateMemoryInstance,
-                                   GetModuleSpecifications);
+                                   GetModuleSpecifications,
+                                   SaveCore);
 }
 
 void
@@ -146,6 +149,14 @@ ObjectFilePECOFF::GetModuleSpecifications (const lldb_private::FileSpec& file,
     }
 
     return specs.GetSize() - initial_count;
+}
+
+bool
+ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
+                           const lldb_private::FileSpec &outfile,
+                           lldb_private::Error &error)
+{
+    return SaveMiniDump(process_sp, outfile, error);
 }
 
 

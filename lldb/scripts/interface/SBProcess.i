@@ -398,6 +398,9 @@ public:
     bool
     IsInstrumentationRuntimePresent(lldb::InstrumentationRuntimeType type);
 
+    lldb::SBError
+    SaveCore(const char *file_name);
+
     %pythoncode %{
         def __get_is_alive__(self):
             '''Returns "True" if the process is currently alive, "False" otherwise'''

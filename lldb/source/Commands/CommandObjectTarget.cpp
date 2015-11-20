@@ -256,7 +256,7 @@ protected:
                 {
                     if (!symfile.Readable())
                     {
-                        result.AppendErrorWithFormat("symbol file '%s' is not readable", core_file.GetPath().c_str());
+                        result.AppendErrorWithFormat("symbol file '%s' is not readable", symfile.GetPath().c_str());
                         result.SetStatus (eReturnStatusFailed);
                         return false;
                     }

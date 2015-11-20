@@ -341,6 +341,10 @@ public:
     bool
     IsInstrumentationRuntimePresent(InstrumentationRuntimeType type);
 
+    // Save the state of the process in a core file (or mini dump on Windows).
+    lldb::SBError
+    SaveCore(const char *file_name);
+
 protected:
     friend class SBAddress;
     friend class SBBreakpoint;

@@ -19,6 +19,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
@@ -1424,4 +1425,28 @@ SBProcess::IsInstrumentationRuntimePresent(InstrumentationRuntimeType type)
         return false;
     
     return runtime_sp->IsActive();
+}
+
+lldb::SBError
+SBProcess::SaveCore(const char *file_name)
+{
+    lldb::SBError error;
+    ProcessSP process_sp(GetSP());
+    if (!process_sp)
+    {
+        error.SetErrorString("SBProcess is invalid");
+        return error;
+    }
+
+    Mutex::Locker api_locker(process_sp->GetTarget().GetAPIMutex());
+
+    if (process_sp->GetState() != eStateStopped)
+    {
+        error.SetErrorString("the process is not stopped");
+        return error;
+    }
+
+    FileSpec core_file(file_name, false);
+    error.ref() = PluginManager::SaveCore(process_sp, core_file);
+    return error;
 }
