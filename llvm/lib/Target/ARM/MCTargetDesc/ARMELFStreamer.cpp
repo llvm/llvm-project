@@ -710,7 +710,6 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::AK_ARMV5T:
   case ARM::AK_ARMV5TE:
   case ARM::AK_ARMV6:
-  case ARM::AK_ARMV6J:
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, Allowed, false);
     break;

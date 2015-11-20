@@ -16,10 +16,10 @@
 ;    12    }
 ;
 ; CHECK: remark: coverage.cc:10:12: inlined hot callee '_Z3fool' with 172746 samples into 'main'
-; CHECK: remark: coverage.cc:9:19: Applied 23478 samples from profile
-; CHECK: remark: coverage.cc:10:16: Applied 23478 samples from profile
-; CHECK: remark: coverage.cc:4:10: Applied 31878 samples from profile
-; CHECK: remark: coverage.cc:11:10: Applied 0 samples from profile
+; CHECK: remark: coverage.cc:9:19: Applied 23478 samples from profile (offset: 2.1)
+; CHECK: remark: coverage.cc:10:16: Applied 23478 samples from profile (offset: 3)
+; CHECK: remark: coverage.cc:4:10: Applied 31878 samples from profile (offset: 1)
+; CHECK: remark: coverage.cc:11:10: Applied 0 samples from profile (offset: 4)
 ; CHECK: remark: coverage.cc:10:16: most popular destination for conditional branches at coverage.cc:9:3
 ;
 ; There is one sample record with 0 samples at offset 4 in main() that we never

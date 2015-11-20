@@ -119,6 +119,7 @@ public:
   unsigned getMetadataOrNullID(const Metadata *MD) const {
     return MDValueMap.lookup(MD);
   }
+  unsigned numMDs() const { return MDs.size(); }
 
   bool hasMDString() const { return HasMDString; }
   bool hasDILocation() const { return HasDILocation; }

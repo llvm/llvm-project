@@ -93,8 +93,9 @@ function(llvm_ExternalProject_Add name source_dir)
   get_cmake_property(variableNames VARIABLES)
   foreach(varaibleName ${variableNames})
     if(varaibleName MATCHES "^${nameCanon}")
+      string(REPLACE ";" "\;" value "${${varaibleName}}")
       list(APPEND PASSTHROUGH_VARIABLES
-        -D${varaibleName}=${${varaibleName}})
+        -D${varaibleName}=${${value}})
     endif()
   endforeach()
 

@@ -102,6 +102,9 @@ enum { BITCODE_CURRENT_EPOCH = 0 };
 
     // ALIAS: [alias value type, addrspace, aliasee val#, linkage, visibility]
     MODULE_CODE_ALIAS       = 14,
+
+    // METADATA_VALUES: [numvals]
+    MODULE_CODE_METADATA_VALUES = 15,
   };
 
   /// PARAMATTR blocks have code for defining a parameter attribute set.

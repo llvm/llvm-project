@@ -12,6 +12,19 @@ define void @test1() {
   ret void
 }
 
+define half @test2() {
+; CHECK-LABEL: @test2
+; CHECK: fsub
+; CHECK: fsub
+; CHECK: fadd
+  %tmp15 = fsub fast half undef, undef
+  %tmp17 = fsub fast half undef, %tmp15
+  %tmp18 = fadd fast half undef, %tmp17
+  ret half %tmp18
+}
+
+
+
 ; Function Attrs: optsize
 declare <4 x float> @blam()
 

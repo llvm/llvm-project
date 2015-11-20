@@ -405,10 +405,8 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
     return cast<MCConstantExpr>(ME)->getValue();
   }
   if (MK == MCExpr::Binary) {
-    unsigned Res;
-    Res = getExprOpValue(MI, MO, cast<MCBinaryExpr>(ME)->getLHS(), Fixups, STI);
-    Res +=
-        getExprOpValue(MI, MO, cast<MCBinaryExpr>(ME)->getRHS(), Fixups, STI);
+    getExprOpValue(MI, MO, cast<MCBinaryExpr>(ME)->getLHS(), Fixups, STI);
+    getExprOpValue(MI, MO, cast<MCBinaryExpr>(ME)->getRHS(), Fixups, STI);
     return 0;
   }
 

@@ -42,6 +42,7 @@ STATISTIC(NumPreFolded, "Number of pre-index updates folded");
 STATISTIC(NumUnscaledPairCreated,
           "Number of load/store from unscaled generated");
 STATISTIC(NumNarrowLoadsPromoted, "Number of narrow loads promoted");
+STATISTIC(NumZeroStoresPromoted, "Number of narrow zero stores promoted");
 
 static cl::opt<unsigned> ScanLimit("aarch64-load-store-scan-limit",
                                    cl::init(20), cl::Hidden);
@@ -152,6 +153,8 @@ static bool isUnscaledLdSt(unsigned Opc) {
   case AArch64::STURSi:
   case AArch64::STURDi:
   case AArch64::STURQi:
+  case AArch64::STURBBi:
+  case AArch64::STURHHi:
   case AArch64::STURWi:
   case AArch64::STURXi:
   case AArch64::LDURSi:
@@ -189,6 +192,22 @@ static unsigned getBitExtrOpcode(MachineInstr *MI) {
   }
 }
 
+static bool isNarrowStore(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
+  case AArch64::STRBBui:
+  case AArch64::STURBBi:
+  case AArch64::STRHHui:
+  case AArch64::STURHHi:
+    return true;
+  }
+}
+
+static bool isNarrowStore(MachineInstr *MI) {
+  return isNarrowStore(MI->getOpcode());
+}
+
 static bool isNarrowLoad(unsigned Opc) {
   switch (Opc) {
   default:
@@ -219,12 +238,14 @@ static int getMemScale(MachineInstr *MI) {
   case AArch64::LDRSBWui:
   case AArch64::LDURSBWi:
   case AArch64::STRBBui:
+  case AArch64::STURBBi:
     return 1;
   case AArch64::LDRHHui:
   case AArch64::LDURHHi:
   case AArch64::LDRSHWui:
   case AArch64::LDURSHWi:
   case AArch64::STRHHui:
+  case AArch64::STURHHi:
     return 2;
   case AArch64::LDRSui:
   case AArch64::LDURSi:
@@ -278,6 +299,10 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
   case AArch64::STURDi:
   case AArch64::STRQui:
   case AArch64::STURQi:
+  case AArch64::STRBBui:
+  case AArch64::STURBBi:
+  case AArch64::STRHHui:
+  case AArch64::STURHHi:
   case AArch64::STRWui:
   case AArch64::STURWi:
   case AArch64::STRXui:
@@ -327,6 +352,14 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
   case AArch64::STRQui:
   case AArch64::STURQi:
     return AArch64::STPQi;
+  case AArch64::STRBBui:
+    return AArch64::STRHHui;
+  case AArch64::STRHHui:
+    return AArch64::STRWui;
+  case AArch64::STURBBi:
+    return AArch64::STURHHi;
+  case AArch64::STURHHi:
+    return AArch64::STURWi;
   case AArch64::STRWui:
   case AArch64::STURWi:
     return AArch64::STPWi;
@@ -681,17 +714,33 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     return NextI;
   }
 
-  // Handle Unscaled
-  if (IsUnscaled)
-    OffsetImm /= OffsetStride;
-
   // Construct the new instruction.
-  MachineInstrBuilder MIB = BuildMI(*I->getParent(), InsertionPoint,
-                                    I->getDebugLoc(), TII->get(NewOpc))
-                                .addOperand(getLdStRegOp(RtMI))
-                                .addOperand(getLdStRegOp(Rt2MI))
-                                .addOperand(BaseRegOp)
-                                .addImm(OffsetImm);
+  MachineInstrBuilder MIB;
+  if (isNarrowStore(Opc)) {
+    // Change the scaled offset from small to large type.
+    if (!IsUnscaled) {
+      assert(((OffsetImm & 1) == 0) && "Unexpected offset to merge");
+      OffsetImm /= 2;
+    }
+    MIB = BuildMI(*I->getParent(), InsertionPoint, I->getDebugLoc(),
+                  TII->get(NewOpc))
+              .addOperand(getLdStRegOp(I))
+              .addOperand(BaseRegOp)
+              .addImm(OffsetImm);
+    // Copy MachineMemOperands from the original stores.
+    concatenateMemOperands(MIB, I, Paired);
+  } else {
+    // Handle Unscaled
+    if (IsUnscaled)
+      OffsetImm /= OffsetStride;
+    MIB = BuildMI(*I->getParent(), InsertionPoint, I->getDebugLoc(),
+                  TII->get(NewOpc))
+              .addOperand(getLdStRegOp(RtMI))
+              .addOperand(getLdStRegOp(Rt2MI))
+              .addOperand(BaseRegOp)
+              .addImm(OffsetImm);
+  }
+
   (void)MIB;
 
   // FIXME: Do we need/want to copy the mem operands from the source
@@ -830,6 +879,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   unsigned Reg = getLdStRegOp(FirstMI).getReg();
   unsigned BaseReg = getLdStBaseOp(FirstMI).getReg();
   int Offset = getLdStOffsetOp(FirstMI).getImm();
+  bool IsNarrowStore = isNarrowStore(Opc);
+
+  // For narrow stores, find only the case where the stored value is WZR.
+  if (IsNarrowStore && Reg != AArch64::WZR)
+    return E;
 
   // Early exit if the first instruction modifies the base register.
   // e.g., ldr x0, [x0]
@@ -840,7 +894,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   // range, plus allow an extra one in case we find a later insn that matches
   // with Offset-1)
   int OffsetStride = IsUnscaled ? getMemScale(FirstMI) : 1;
-  if (!isNarrowLoad(Opc) && !inBoundsForPair(IsUnscaled, Offset, OffsetStride))
+  if (!(isNarrowLoad(Opc) || IsNarrowStore) &&
+      !inBoundsForPair(IsUnscaled, Offset, OffsetStride))
     return E;
 
   // Track which registers have been modified and used between the first insn
@@ -907,9 +962,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           continue;
         }
 
-        if (IsNarrowLoad) {
-          // If the alignment requirements of the larger type scaled load
-          // instruction can't express the scaled offset of the smaller type
+        if (IsNarrowLoad || IsNarrowStore) {
+          // If the alignment requirements of the scaled wide load/store
+          // instruction can't express the offset of the scaled narrow
           // input, bail and keep looking.
           if (!IsUnscaled && alignTo(MinOffset, 2) != MinOffset) {
             trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
@@ -929,7 +984,10 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // If the destination register of the loads is the same register, bail
         // and keep looking. A load-pair instruction with both destination
         // registers the same is UNPREDICTABLE and will result in an exception.
-        if (MayLoad && Reg == getLdStRegOp(MI).getReg()) {
+        // For narrow stores, allow only when the stored value is the same
+        // (i.e., WZR).
+        if ((MayLoad && Reg == getLdStRegOp(MI).getReg()) ||
+            (IsNarrowStore && Reg != getLdStRegOp(MI).getReg())) {
           trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
           MemInsns.push_back(MI);
           continue;
@@ -1228,6 +1286,8 @@ bool AArch64LoadStoreOpt::tryToMergeLdStInst(
   if (Paired != E) {
     if (isNarrowLoad(MI)) {
       ++NumNarrowLoadsPromoted;
+    } else if (isNarrowStore(MI)) {
+      ++NumZeroStoresPromoted;
     } else {
       ++NumPairCreated;
       if (isUnscaledLdSt(MI))
@@ -1284,11 +1344,15 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     case AArch64::LDRHHui:
     case AArch64::LDRSBWui:
     case AArch64::LDRSHWui:
+    case AArch64::STRBBui:
+    case AArch64::STRHHui:
     // Unscaled instructions.
     case AArch64::LDURBBi:
     case AArch64::LDURHHi:
     case AArch64::LDURSBWi:
-    case AArch64::LDURSHWi: {
+    case AArch64::LDURSHWi:
+    case AArch64::STURBBi:
+    case AArch64::STURHHi: {
       if (tryToMergeLdStInst(MBBI)) {
         Modified = true;
         break;

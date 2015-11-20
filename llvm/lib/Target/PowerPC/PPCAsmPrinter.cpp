@@ -669,28 +669,22 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
             MO.isBlockAddress()) &&
            "Invalid operand for ADDIStocHA!");
     MCSymbol *MOSymbol = nullptr;
-    bool IsExternal = false;
-    bool IsNonLocalFunction = false;
-    bool IsCommon = false;
-    bool IsAvailExt = false;
+    bool GlobalToc = false;
 
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
       MOSymbol = getSymbol(GV);
-      IsExternal = GV->isDeclaration();
-      IsCommon = GV->hasCommonLinkage();
-      IsNonLocalFunction = GV->getType()->getElementType()->isFunctionTy() &&
-        !GV->isStrongDefinitionForLinker();
-      IsAvailExt = GV->hasAvailableExternallyLinkage();
-    } else if (MO.isCPI())
+      unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
+      GlobalToc = (GVFlags & PPCII::MO_NLP_FLAG);
+    } else if (MO.isCPI()) {
       MOSymbol = GetCPISymbol(MO.getIndex());
-    else if (MO.isJTI())
+    } else if (MO.isJTI()) {
       MOSymbol = GetJTISymbol(MO.getIndex());
-    else if (MO.isBlockAddress())
+    } else if (MO.isBlockAddress()) {
       MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
+    }
 
-    if (IsExternal || IsNonLocalFunction || IsCommon || IsAvailExt ||
-        MO.isJTI() || MO.isBlockAddress() ||
+    if (GlobalToc || MO.isJTI() || MO.isBlockAddress() ||
         TM.getCodeModel() == CodeModel::Large)
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
 
@@ -727,13 +721,14 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
         MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
     }
     else if (MO.isGlobal()) {
-      const GlobalValue *GValue = MO.getGlobal();
-      MOSymbol = getSymbol(GValue);
-      if (GValue->getType()->getElementType()->isFunctionTy() ||
-          GValue->isDeclaration() || GValue->hasCommonLinkage() ||
-          GValue->hasAvailableExternallyLinkage() ||
-          TM.getCodeModel() == CodeModel::Large)
-        MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
+      const GlobalValue *GV = MO.getGlobal();
+      MOSymbol = getSymbol(GV);
+      DEBUG(
+        unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
+        assert((GVFlags & PPCII::MO_NLP_FLAG) &&
+               "LDtocL used on symbol that could be accessed directly is "
+               "invalid. Must match ADDIStocHA."));
+      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
     }
 
     const MCExpr *Exp =
@@ -754,21 +749,18 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(2);
     assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL");
     MCSymbol *MOSymbol = nullptr;
-    bool IsExternal = false;
-    bool IsNonLocalFunction = false;
 
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
+      DEBUG(
+        unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
+        assert (
+            !(GVFlags & PPCII::MO_NLP_FLAG) &&
+            "Interposable definitions must use indirect access."));
       MOSymbol = getSymbol(GV);
-      IsExternal = GV->isDeclaration();
-      IsNonLocalFunction = GV->getType()->getElementType()->isFunctionTy() &&
-        !GV->isStrongDefinitionForLinker();
-    } else if (MO.isCPI())
+    } else if (MO.isCPI()) {
       MOSymbol = GetCPISymbol(MO.getIndex());
-
-    if (IsNonLocalFunction || IsExternal ||
-        TM.getCodeModel() == CodeModel::Large)
-      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
+    }
 
     const MCExpr *Exp =
       MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_TOC_LO,

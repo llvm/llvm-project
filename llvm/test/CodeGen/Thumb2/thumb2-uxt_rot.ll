@@ -3,17 +3,17 @@
 ; rdar://11318438
 
 define zeroext i8 @test1(i32 %A.u)  {
-; A8: test1
+; A8-LABEL: test1:
 ; A8: uxtb r0, r0
     %B.u = trunc i32 %A.u to i8
     ret i8 %B.u
 }
 
 define zeroext i32 @test2(i32 %A.u, i32 %B.u)  {
-; A8: test2
+; A8-LABEL: test2:
 ; A8: uxtab  r0, r0, r1
 
-; M3: test2
+; M3-LABEL: test2:
 ; M3: uxtb  r1, r1
 ; M3-NOT: uxtab
 ; M3: add   r0, r1
@@ -24,7 +24,7 @@ define zeroext i32 @test2(i32 %A.u, i32 %B.u)  {
 }
 
 define zeroext i32 @test3(i32 %A.u)  {
-; A8-LABEL: test3
+; A8-LABEL: test3:
 ; A8: ubfx  r0, r0, #8, #16
     %B.u = lshr i32 %A.u, 8
     %C.u = shl i32 %A.u, 24

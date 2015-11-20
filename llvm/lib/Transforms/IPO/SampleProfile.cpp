@@ -225,20 +225,39 @@ bool SampleCoverageTracker::markSamplesUsed(const FunctionSamples *Samples,
 unsigned
 SampleCoverageTracker::countUsedSamples(const FunctionSamples *Samples) const {
   auto I = SampleCoverage.find(Samples);
+
+  // The size of the coverage map for Samples represents the number of records
+  // that were marked used at least once.
   unsigned Count = (I != SampleCoverage.end()) ? I->second.size() : 0;
-  for (const auto &I : Samples->getCallsiteSamples())
-    Count += countUsedSamples(&I.second);
+
+  // If there are inlined callsites in this function, count the samples found
+  // in the respective bodies. However, do not bother counting callees with 0
+  // total samples, these are callees that were never invoked at runtime.
+  for (const auto &I : Samples->getCallsiteSamples()) {
+    const FunctionSamples *CalleeSamples = &I.second;
+    if (CalleeSamples->getTotalSamples() > 0)
+      Count += countUsedSamples(&I.second);
+  }
+
   return Count;
 }
 
 /// Return the number of sample records in the body of this profile.
 ///
-/// The count includes all the samples in inlined callees.
+/// The count includes all the samples in inlined callees. However, callsites
+/// with 0 samples indicate inlined function calls that were never actually
+/// invoked at runtime. Ignore these callsites for coverage purposes.
 unsigned
 SampleCoverageTracker::countBodySamples(const FunctionSamples *Samples) const {
   unsigned Count = Samples->getBodySamples().size();
-  for (const auto &I : Samples->getCallsiteSamples())
-    Count += countBodySamples(&I.second);
+
+  // Count all the callsites with non-zero samples.
+  for (const auto &I : Samples->getCallsiteSamples()) {
+    const FunctionSamples *CalleeSamples = &I.second;
+    if (CalleeSamples->getTotalSamples() > 0)
+      Count += countBodySamples(&I.second);
+  }
+
   return Count;
 }
 
@@ -344,9 +363,11 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
     if (FirstMark) {
       const Function *F = Inst.getParent()->getParent();
       LLVMContext &Ctx = F->getContext();
-      emitOptimizationRemark(Ctx, DEBUG_TYPE, *F, DLoc,
-                             Twine("Applied ") + Twine(*R) +
-                                 " samples from profile");
+      emitOptimizationRemark(
+          Ctx, DEBUG_TYPE, *F, DLoc,
+          Twine("Applied ") + Twine(*R) + " samples from profile (offset: " +
+              Twine(LineOffset) +
+              ((Discriminator) ? Twine(".") + Twine(Discriminator) : "") + ")");
     }
     DEBUG(dbgs() << "    " << Lineno << "." << DIL->getDiscriminator() << ":"
                  << Inst << " (line offset: " << Lineno - HeaderLineno << "."
