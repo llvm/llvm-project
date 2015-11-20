@@ -64,9 +64,9 @@ struct Configuration {
   bool SysvHash = true;
   bool Verbose;
   bool ZExecStack;
-  bool ZNodelete = false;
-  bool ZNow = false;
-  bool ZOrigin = false;
+  bool ZNodelete;
+  bool ZNow;
+  bool ZOrigin;
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint64_t EntryAddr = -1;

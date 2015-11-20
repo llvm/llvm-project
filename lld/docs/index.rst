@@ -3,15 +3,18 @@
 lld - The LLVM Linker
 =====================
 
-lld is a new set of modular code for creating linker tools.
+lld contains two linkers whose architectures are different from each other.
+One is a linker that implements native features directly.
+They are in `COFF` or `ELF` directories. Other directories contains the other
+implementation that is designed to be a set of modular code for creating
+linker tools. This document covers mainly the latter.
+For the former, please read README.md in `COFF` directory.
 
 * End-User Features:
 
   * Compatible with existing linker options
   * Reads standard Object Files (e.g. ELF, Mach-O, PE/COFF)
   * Writes standard Executable Files (e.g. ELF, Mach-O, PE)
-  * Fast link times
-  * Minimal memory use
   * Remove clang's reliance on "the system linker"
   * Uses the LLVM `"UIUC" BSD-Style license`__.
 

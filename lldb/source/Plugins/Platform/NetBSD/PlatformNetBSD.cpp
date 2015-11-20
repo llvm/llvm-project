@@ -94,10 +94,12 @@ PlatformNetBSD::Initialize ()
 
     if (g_initialize_count++ == 0)
     {
+#if defined(__NetBSD__)
         // Force a host flag to true for the default platform object.
         PlatformSP default_platform_sp (new PlatformNetBSD(true));
         default_platform_sp->SetSystemArchitecture(HostInfo::GetArchitecture());
         Platform::SetHostPlatform (default_platform_sp);
+#endif
         PluginManager::RegisterPlugin(PlatformNetBSD::GetPluginNameStatic(false),
                                       PlatformNetBSD::GetDescriptionStatic(false),
                                       PlatformNetBSD::CreateInstance);

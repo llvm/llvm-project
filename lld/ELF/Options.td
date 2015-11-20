@@ -119,6 +119,7 @@ def alias_L__library_path : Joined<["--"], "library-path=">, Alias<L>;
 def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
 def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_entry_e : Separate<["-"], "e">, Alias<entry>;
+def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_fini_fini : Joined<["-"], "fini=">, Alias<fini>;
 def alias_hash_style_hash_style : Joined<["--", "-"], "hash-style=">, Alias<hash_style>;
 def alias_init_init : Joined<["-"], "init=">, Alias<init>;

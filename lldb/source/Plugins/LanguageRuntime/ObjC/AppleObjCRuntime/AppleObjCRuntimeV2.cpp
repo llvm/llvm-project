@@ -207,6 +207,14 @@ struct objc_opt_t {
     int32_t clsopt_offset;
 };
 
+struct objc_opt_v14_t {
+    uint32_t version;
+    uint32_t flags;
+    int32_t selopt_offset;
+    int32_t headeropt_offset;
+    int32_t clsopt_offset;
+};
+
 struct ClassInfo
 {
     Class isa;
@@ -225,16 +233,34 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
     if (objc_opt_ro_ptr)
     {
         const objc_opt_t *objc_opt = (objc_opt_t *)objc_opt_ro_ptr;
-        DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt->version);
-        DEBUG_PRINTF ("objc_opt->selopt_offset = %d\n", objc_opt->selopt_offset);
-        DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt->headeropt_offset);
-        DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt->clsopt_offset);
-        if (objc_opt->version == 12 || objc_opt->version == 13)
+        const objc_opt_v14_t* objc_opt_v14 = (objc_opt_v14_t*)objc_opt_ro_ptr;
+        const bool is_v14_format = objc_opt->version >= 14;
+        if (is_v14_format)
         {
-            const objc_clsopt_t* clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt + objc_opt->clsopt_offset);
+            DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt_v14->version);
+            DEBUG_PRINTF ("objc_opt->flags = %u\n", objc_opt_v14->flags);
+            DEBUG_PRINTF ("objc_opt->selopt_offset = %d\n", objc_opt_v14->selopt_offset);
+            DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt_v14->headeropt_offset);
+            DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt_v14->clsopt_offset);
+        }
+        else
+        {
+            DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt->version);
+            DEBUG_PRINTF ("objc_opt->selopt_offset = %d\n", objc_opt->selopt_offset);
+            DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt->headeropt_offset);
+            DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt->clsopt_offset);
+        }
+        if (objc_opt->version == 12 || objc_opt->version == 13 || objc_opt->version == 14)
+        {
+            const objc_clsopt_t* clsopt = NULL;
+            if (is_v14_format)
+                clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt_v14 + objc_opt_v14->clsopt_offset);
+            else
+                clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt + objc_opt->clsopt_offset);
             const size_t max_class_infos = class_infos_byte_size/sizeof(ClassInfo);
             ClassInfo *class_infos = (ClassInfo *)class_infos_ptr;
             int32_t invalidEntryOffset = 0;
+            // this is safe to do because the version field order is invariant
             if (objc_opt->version == 12)
                 invalidEntryOffset = 16;
             const uint8_t *checkbytes = &clsopt->tab[clsopt->mask+1];

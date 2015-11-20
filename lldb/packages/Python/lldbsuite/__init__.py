@@ -11,7 +11,7 @@ def find_lldb_root():
         if lldb_root is None:
             return None
 
-        test_path = os.path.join(lldb_root, "lldb.root")
+        test_path = os.path.join(lldb_root, "use_lldb_suite_root.py")
         if os.path.isfile(test_path):
             return lldb_root
     return None

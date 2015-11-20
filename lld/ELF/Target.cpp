@@ -742,9 +742,17 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     or32le(Loc, (X & 0x0FFFFFFC) >> 2);
     break;
   }
+  case R_AARCH64_LDST32_ABS_LO12_NC:
+    // No overflow check needed.
+    or32le(Loc, (SA & 0xFFC) << 8);
+    break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
     // No overflow check needed.
     or32le(Loc, (SA & 0xFF8) << 7);
+    break;
+  case R_AARCH64_LDST8_ABS_LO12_NC:
+    // No overflow check needed.
+    or32le(Loc, (SA & 0xFFF) << 10);
     break;
   case R_AARCH64_PREL16:
     if (!isInt<16>(SA))

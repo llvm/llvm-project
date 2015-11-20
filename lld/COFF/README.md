@@ -10,6 +10,9 @@ generally 2x faster than that. It can be used to link real-world
 programs such as LLD itself or Clang, or even web browsers which
 are probably the largest open-source programs for Windows.
 
+This document is also applicable to ELF linker because the linker
+shares the same design as this COFF linker.
+
 Overall Design
 --------------
 

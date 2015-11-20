@@ -10,29 +10,28 @@
   callq __tls_get_addr@PLT
   leaq  a@dtpoff(%rax), %rcx
   leaq  b@dtpoff(%rax), %rcx
-  .long	b@dtpoff, 0
+  .long b@dtpoff, 0
   leaq  c@tlsgd(%rip), %rdi
   rex64
   callq __tls_get_addr@PLT
   leaq  c@dtpoff(%rax), %rcx
 
-  .global	a
+  .global a
   .hidden a
-	.section	.tbss,"awT",@nobits
+  .section .tbss,"awT",@nobits
   .align 4
 a:
-	.long	0
+  .long 0
 
-	.section	.tbss,"awT",@nobits
+  .section .tbss,"awT",@nobits
   .align 4
 b:
-	.long	0
-  
+  .long 0
   .global c
-  .section	.tbss,"awT",@nobits
+  .section .tbss,"awT",@nobits
   .align 4
 c:
-	.long	0
+  .long 0
 
 // Get the address of the got, and check that it has 4 entries.
 

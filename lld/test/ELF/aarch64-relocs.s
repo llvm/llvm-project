@@ -92,3 +92,31 @@ jump26:
 # CHECK: Disassembly of section .R_AARCH64_JUMP26:
 # CHECK-NEXT: jump26:
 # CHECK-NEXT:   11038:       fe ff ff 17     b      #-8
+
+.section .R_AARCH64_LDST32_ABS_LO12_NC,"ax",@progbits
+ldst32:
+  ldr s4, [x5, :lo12:foo32]
+foo32:
+  .asciz "foo"
+  .size mystr, 3
+
+# S = 0x1103c, A = 0x4
+# R = ((S + A) & 0xFFC) << 8 = 0x00004000
+# 0x00004000 | 0xbd4000a4 = 0xbd4040a4
+# CHECK: Disassembly of section .R_AARCH64_LDST32_ABS_LO12_NC:
+# CHECK-NEXT: ldst32:
+# CHECK-NEXT:   1103c:       a4 40 40 bd     ldr s4, [x5, #64]
+
+.section .R_AARCH64_LDST8_ABS_LO12_NC,"ax",@progbits
+ldst8:
+  ldrsb x11, [x13, :lo12:foo8]
+foo8:
+  .asciz "foo"
+  .size mystr, 3
+
+# S = 0x11044, A = 0x4
+# R = ((S + A) & 0xFFF) << 10 = 0x00012000
+# 0x00012000 | 0x398001ab = 0x398121ab
+# CHECK: Disassembly of section .R_AARCH64_LDST8_ABS_LO12_NC:
+# CHECK-NEXT: ldst8:
+# CHECK-NEXT:   11044:       ab 21 81 39     ldrsb x11, [x13, #72]
