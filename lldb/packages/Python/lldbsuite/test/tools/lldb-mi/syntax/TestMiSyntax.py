@@ -65,6 +65,7 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll("rdar://problem/23625311", oslist=["macosx", "linux"])
     def test_lldbmi_process_output(self):
         """Test that 'lldb-mi --interpreter' wraps process output correctly."""
 
