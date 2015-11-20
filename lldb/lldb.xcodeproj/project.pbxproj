@@ -6606,8 +6606,8 @@
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "perl $SRCROOT/scripts/build-llvm.pl";
+			shellPath = "/bin/sh -x";
+			shellScript = "if [ \"${CONFIGURATION}\" == CustomSwift-* ]\nthen\n    LLDB_PATH_TO_LLVM_BUILD=\"${LLDB_PATH_TO_LLVM_BUILD}\"\n    LLDB_PATH_TO_SWIFT_BUILD=\"${LLDB_PATH_TO_SWIFT_BUILD}\"\n    LLDB_PATH_TO_CMARK_BUILD=\"${LLDB_PATH_TO_CMARK_BUILD}\"\n    perl $SRCROOT/scripts/build-llvm.pl\nelse\n    perl $SRCROOT/scripts/build-llvm.pl\nfi\n\n";
 		};
 		26B60735191A961000523C8D /* Compile REPL */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -7803,6 +7803,13 @@
 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
@@ -7905,6 +7912,13 @@
 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
@@ -8774,6 +8788,13 @@
 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "/$(DT_VARIANT)/Applications/Xcode.app/Contents/Developer/usr/bin";
 				"LLDB_TOOLS_INSTALL_DIR[sdk=iphoneos*]" = "/$(DT_VARIANT)/usr/local/bin";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
@@ -9765,6 +9786,13 @@
 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
@@ -10378,6 +10406,13 @@
 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
@@ -11331,6 +11366,13 @@
 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
@@ -11340,6 +11382,7 @@
 				LLVM_CONFIGURATION = DebugAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				OBJROOT = "$(SYMROOT)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-flimit-debug-info",
@@ -11356,6 +11399,7 @@
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
+				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
 				WARNING_CFLAGS = "-Wreorder";
 			};
 			name = "CustomSwift-Debug";
@@ -11934,6 +11978,13 @@
 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
@@ -11943,6 +11994,7 @@
 				LLVM_CONFIGURATION = ReleaseAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				OBJROOT = "$(SYMROOT)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-flimit-debug-info",
@@ -11959,6 +12011,7 @@
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
+				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				WARNING_CFLAGS = "-Wreorder";
 			};
 			name = "CustomSwift-Release";
