@@ -30,7 +30,7 @@ def SDT_WebAssemblyCallSeqEnd :
     SDCallSeqEnd<[SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
 def SDT_WebAssemblyCall0    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyCall1    : SDTypeProfile<1, -1, [SDTCisPtrTy<1>]>;
-def SDT_WebAssemblySwitch   : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyTableswitch : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyArgument : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
 def SDT_WebAssemblyReturn   : SDTypeProfile<0, -1, []>;
 def SDT_WebAssemblyWrapper  : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
@@ -52,9 +52,9 @@ def WebAssemblycall0 : SDNode<"WebAssemblyISD::CALL0",
 def WebAssemblycall1 : SDNode<"WebAssemblyISD::CALL1",
                               SDT_WebAssemblyCall1,
                               [SDNPHasChain, SDNPVariadic]>;
-def WebAssemblyswitch : SDNode<"WebAssemblyISD::SWITCH",
-                               SDT_WebAssemblySwitch,
-                               [SDNPHasChain, SDNPVariadic]>;
+def WebAssemblytableswitch : SDNode<"WebAssemblyISD::TABLESWITCH",
+                                    SDT_WebAssemblyTableswitch,
+                                    [SDNPHasChain, SDNPVariadic]>;
 def WebAssemblyargument : SDNode<"WebAssemblyISD::ARGUMENT",
                                  SDT_WebAssemblyArgument>;
 def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",

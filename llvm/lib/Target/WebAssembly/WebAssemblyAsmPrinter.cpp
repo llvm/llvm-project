@@ -107,9 +107,8 @@ std::string WebAssemblyAsmPrinter::getRegTypeName(unsigned RegNo) const {
 
 std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
   unsigned RegNo = MO.getReg();
-  if (TargetRegisterInfo::isPhysicalRegister(RegNo))
-    return WebAssemblyInstPrinter::getRegisterName(RegNo);
-
+  assert(TargetRegisterInfo::isVirtualRegister(RegNo) &&
+         "Unlowered physical register encountered during assembly printing");
   assert(!MFI->isVRegStackified(RegNo));
   unsigned WAReg = MFI->getWAReg(RegNo);
   assert(WAReg != WebAssemblyFunctionInfo::UnusedReg);

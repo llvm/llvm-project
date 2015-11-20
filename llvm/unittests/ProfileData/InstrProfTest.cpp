@@ -350,38 +350,6 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
   ASSERT_EQ(2U, VD_4[2].Count);
 }
 
-TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
-  const uint64_t Max = std::numeric_limits<uint64_t>::max();
-
-  InstrProfRecord Record1("caller", 0x1234, {1});
-  InstrProfRecord Record2("caller", 0x1234, {1});
-  InstrProfRecord Record3("callee1", 0x1235, {3, 4});
-
-  Record1.reserveSites(IPVK_IndirectCallTarget, 1);
-  InstrProfValueData VD1[] = {{(uint64_t) "callee1", 1}};
-  Record1.addValueData(IPVK_IndirectCallTarget, 0, VD1, 1, nullptr);
-
-  Record2.reserveSites(IPVK_IndirectCallTarget, 1);
-  InstrProfValueData VD2[] = {{(uint64_t) "callee1", Max}};
-  Record2.addValueData(IPVK_IndirectCallTarget, 0, VD2, 1, nullptr);
-
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
-
-  auto Profile = Writer.writeBuffer();
-  readProfile(std::move(Profile));
-
-  // Verify saturation of counts.
-  ErrorOr<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
-  ASSERT_TRUE(NoError(R.getError()));
-  ASSERT_EQ(1U, R.get().getNumValueSites(IPVK_IndirectCallTarget));
-  std::unique_ptr<InstrProfValueData[]> VD =
-          R.get().getValueForSite(IPVK_IndirectCallTarget, 0);
-  ASSERT_EQ(StringRef("callee1"), StringRef((const char *)VD[0].Value, 7));
-  ASSERT_EQ(Max, VD[0].Count);
-}
-
 TEST_F(InstrProfTest, get_max_function_count) {
   InstrProfRecord Record1("foo", 0x1234, {1ULL << 31, 2});
   InstrProfRecord Record2("bar", 0, {1ULL << 63});

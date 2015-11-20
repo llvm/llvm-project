@@ -58,6 +58,18 @@ FunctionPass *llvm::createWebAssemblyRegStackify() {
   return new WebAssemblyRegStackify();
 }
 
+// Decorate the given instruction with implicit operands that enforce the
+// expression stack ordering constraints.
+static void ImposeStackOrdering(MachineInstr *MI) {
+  // Read and write the opaque EXPR_STACK register.
+  MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
+                                           /*isDef=*/true,
+                                           /*isImp=*/true));
+  MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
+                                           /*isDef=*/false,
+                                           /*isImp=*/true));
+}
+
 bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** Register Stackifying **********\n"
                   "********** Function: "
@@ -80,6 +92,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
 
       // Iterate through the inputs in reverse order, since we'll be pulling
       // operands off the stack in FIFO order.
+      bool AnyStackified = false;
       for (MachineOperand &Op : reverse(Insert->uses())) {
         // We're only interested in explicit virtual register operands.
         if (!Op.isReg() || Op.isImplicit())
@@ -128,11 +141,13 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           continue;
 
         Changed = true;
+        AnyStackified = true;
         if (OneUse) {
           // Move the def down and nest it in the current instruction.
           MBB.insert(MachineBasicBlock::instr_iterator(Insert),
                      Def->removeFromParent());
           MFI.stackifyVReg(Reg);
+          ImposeStackOrdering(Def);
           Insert = Def;
         } else {
           // Clone the def down and nest it in the current instruction.
@@ -145,11 +160,45 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           Clone->getOperand(0).setReg(NewReg);
           MBB.insert(MachineBasicBlock::instr_iterator(Insert), Clone);
           MFI.stackifyVReg(Reg);
+          ImposeStackOrdering(Clone);
           Insert = Clone;
         }
       }
+      if (AnyStackified)
+        ImposeStackOrdering(&MI);
     }
   }
+
+  // If we used EXPR_STACK anywhere, add it to the live-in sets everywhere
+  // so that it never looks like a use-before-def.
+  if (Changed) {
+    MF.getRegInfo().addLiveIn(WebAssembly::EXPR_STACK);
+    for (MachineBasicBlock &MBB : MF)
+      MBB.addLiveIn(WebAssembly::EXPR_STACK);
+  }
+
+#ifndef NDEBUG
+  // Verify that pushes and pops are performed in FIFO order.
+  SmallVector<unsigned, 0> Stack;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      for (MachineOperand &MO : reverse(MI.explicit_operands())) {
+        if (!MO.isReg()) continue;
+        unsigned VReg = MO.getReg();
+
+        if (MFI.isVRegStackified(VReg)) {
+          if (MO.isDef())
+            Stack.push_back(VReg);
+          else
+            assert(Stack.pop_back_val() == VReg);
+        }
+      }
+    }
+    // TODO: Generalize this code to support keeping values on the stack across
+    // basic block boundaries.
+    assert(Stack.empty());
+  }
+#endif
 
   return Changed;
 }

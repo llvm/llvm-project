@@ -68,3 +68,8 @@
   dpsq_sa.l.w $ac1, $4, $6     # CHECK: dpsq_sa.l.w $ac1, $4, $6   # encoding: [0x00,0xc4,0x56,0xbc]
   dpsu.h.qbl $ac1, $4, $6      # CHECK: dpsu.h.qbl $ac1, $4, $6    # encoding: [0x00,0xc4,0x64,0xbc]
   dpsu.h.qbr $ac1, $4, $6      # CHECK: dpsu.h.qbr $ac1, $4, $6    # encoding: [0x00,0xc4,0x74,0xbc]
+  muleq_s.w.phl $1, $2, $3     # CHECK: muleq_s.w.phl $1, $2, $3   # encoding: [0x00,0x62,0x08,0x25]
+  muleq_s.w.phr $1, $2, $3     # CHECK: muleq_s.w.phr $1, $2, $3   # encoding: [0x00,0x62,0x08,0x65]
+  muleu_s.ph.qbl $1, $2, $3    # CHECK: muleu_s.ph.qbl $1, $2, $3  # encoding: [0x00,0x62,0x08,0x95]
+  muleu_s.ph.qbr $1, $2, $3    # CHECK: muleu_s.ph.qbr $1, $2, $3  # encoding: [0x00,0x62,0x08,0xd5]
+  mulq_rs.ph $1, $2, $3        # CHECK: mulq_rs.ph $1, $2, $3      # encoding: [0x00,0x62,0x09,0x15]
