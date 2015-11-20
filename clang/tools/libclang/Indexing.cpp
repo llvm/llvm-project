@@ -566,6 +566,10 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (index_options & CXIndexOpt_SuppressWarnings)
     CInvok->getDiagnosticOpts().IgnoreWarnings = true;
 
+  // Make sure to use the raw module format.
+  CInvok->getHeaderSearchOpts().ModuleFormat =
+    CXXIdx->getPCHContainerOperations()->getRawReader().getFormat();
+
   ASTUnit *Unit = ASTUnit::create(CInvok.get(), Diags, CaptureDiagnostics,
                                   /*UserFilesAreVolatile=*/true);
   if (!Unit)

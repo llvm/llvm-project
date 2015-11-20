@@ -1934,6 +1934,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
     bool AllowPCHWithCompilerErrors, bool SkipFunctionBodies,
     bool UserFilesAreVolatile, bool ForSerialization,
+    llvm::Optional<StringRef> ModuleFormat,
     std::unique_ptr<ASTUnit> *ErrAST) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
 
@@ -1966,6 +1967,9 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   CI->getHeaderSearchOpts().ResourceDir = ResourceFilesPath;
 
   CI->getFrontendOpts().SkipFunctionBodies = SkipFunctionBodies;
+
+  if (ModuleFormat)
+    CI->getHeaderSearchOpts().ModuleFormat = ModuleFormat.getValue();
 
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST;

@@ -9922,17 +9922,22 @@ void tools::SHAVE::Compiler::ConstructJob(Compilation &C, const JobAction &JA,
                                           const InputInfoList &Inputs,
                                           const ArgList &Args,
                                           const char *LinkingOutput) const {
-
   ArgStringList CmdArgs;
-
   assert(Inputs.size() == 1);
   const InputInfo &II = Inputs[0];
-  assert(II.getType() == types::TY_C || II.getType() == types::TY_CXX);
-  assert(Output.getType() == types::TY_PP_Asm); // Require preprocessed asm.
+  assert(II.getType() == types::TY_C || II.getType() == types::TY_CXX ||
+         II.getType() == types::TY_PP_CXX);
 
-  CmdArgs.push_back("-DMYRIAD2");
+  if (JA.getKind() == Action::PreprocessJobClass) {
+    Args.ClaimAllArgs();
+    CmdArgs.push_back("-E");
+  } else {
+    assert(Output.getType() == types::TY_PP_Asm); // Require preprocessed asm.
+    CmdArgs.push_back("-S");
+    CmdArgs.push_back("-fno-exceptions"); // Always do this even if unspecified.
+  }
   CmdArgs.push_back("-mcpu=myriad2");
-  CmdArgs.push_back("-S");
+  CmdArgs.push_back("-DMYRIAD2");
 
   // Append all -I, -iquote, -isystem paths, defines/undefines,
   // 'f' flags, optimize flags, and warning options.
@@ -9957,8 +9962,6 @@ void tools::SHAVE::Compiler::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(A->getValue()));
     }
   }
-
-  CmdArgs.push_back("-fno-exceptions"); // Always do this even if unspecified.
 
   CmdArgs.push_back(II.getFilename());
   CmdArgs.push_back("-o");

@@ -4434,6 +4434,7 @@ Tool *MyriadToolChain::SelectTool(const JobAction &JA) const {
   if (!isShaveCompilation(getTriple()))
     return ToolChain::SelectTool(JA);
   switch (JA.getKind()) {
+  case Action::PreprocessJobClass:
   case Action::CompileJobClass:
     if (!Compiler)
       Compiler.reset(new tools::SHAVE::Compiler(*this));

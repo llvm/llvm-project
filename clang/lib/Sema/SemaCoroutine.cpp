@@ -99,10 +99,11 @@ static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
 /// Check that this is a context in which a coroutine suspension can appear.
 static FunctionScopeInfo *
 checkCoroutineContext(Sema &S, SourceLocation Loc, StringRef Keyword) {
-  // 'co_await' and 'co_yield' are permitted in unevaluated operands.
-  // FIXME: Not in 'noexcept'.
-  if (S.isUnevaluatedContext())
+  // 'co_await' and 'co_yield' are not permitted in unevaluated operands.
+  if (S.isUnevaluatedContext()) {
+    S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
     return nullptr;
+  }
 
   // Any other usage must be within a function.
   auto *FD = dyn_cast<FunctionDecl>(S.CurContext);
@@ -206,11 +207,12 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
 }
 ExprResult Sema::BuildCoawaitExpr(SourceLocation Loc, Expr *E) {
   auto *Coroutine = checkCoroutineContext(*this, Loc, "co_await");
+  if (!Coroutine)
+    return ExprError();
 
   if (E->getType()->isDependentType()) {
     Expr *Res = new (Context) CoawaitExpr(Loc, Context.DependentTy, E);
-    if (Coroutine)
-      Coroutine->CoroutineStmts.push_back(Res);
+    Coroutine->CoroutineStmts.push_back(Res);
     return Res;
   }
 
@@ -230,8 +232,7 @@ ExprResult Sema::BuildCoawaitExpr(SourceLocation Loc, Expr *E) {
 
   Expr *Res = new (Context) CoawaitExpr(Loc, E, RSS.Results[0], RSS.Results[1],
                                         RSS.Results[2]);
-  if (Coroutine)
-    Coroutine->CoroutineStmts.push_back(Res);
+  Coroutine->CoroutineStmts.push_back(Res);
   return Res;
 }
 
@@ -244,11 +245,12 @@ ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
 }
 ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   auto *Coroutine = checkCoroutineContext(*this, Loc, "co_yield");
+  if (!Coroutine)
+    return ExprError();
 
   // FIXME: Build await_* calls.
   Expr *Res = new (Context) CoyieldExpr(Loc, Context.VoidTy, E);
-  if (Coroutine)
-    Coroutine->CoroutineStmts.push_back(Res);
+  Coroutine->CoroutineStmts.push_back(Res);
   return Res;
 }
 
@@ -257,11 +259,12 @@ StmtResult Sema::ActOnCoreturnStmt(SourceLocation Loc, Expr *E) {
 }
 StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E) {
   auto *Coroutine = checkCoroutineContext(*this, Loc, "co_return");
+  if (!Coroutine)
+    return StmtError();
 
   // FIXME: Build return_* calls.
   Stmt *Res = new (Context) CoreturnStmt(Loc, E);
-  if (Coroutine)
-    Coroutine->CoroutineStmts.push_back(Res);
+  Coroutine->CoroutineStmts.push_back(Res);
   return Res;
 }
 

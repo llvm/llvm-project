@@ -401,6 +401,11 @@ public:
     // Check for '&'. Any VarDecl whose address has been taken we treat as
     // escaped.
     // FIXME: What about references?
+    if (auto *LE = dyn_cast<LambdaExpr>(S)) {
+      findLambdaReferenceCaptures(LE);
+      return;
+    }
+
     const UnaryOperator *U = dyn_cast<UnaryOperator>(S);
     if (!U)
       return;
@@ -411,6 +416,28 @@ public:
     if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E))
       if (const VarDecl *VD = dyn_cast<VarDecl>(DR->getDecl()))
         Escaped.insert(VD);
+  }
+
+  // Treat local variables captured by reference in C++ lambdas as escaped.
+  void findLambdaReferenceCaptures(const LambdaExpr *LE)  {
+    const CXXRecordDecl *LambdaClass = LE->getLambdaClass();
+    llvm::DenseMap<const VarDecl *, FieldDecl *> CaptureFields;
+    FieldDecl *ThisCaptureField;
+    LambdaClass->getCaptureFields(CaptureFields, ThisCaptureField);
+
+    for (const LambdaCapture &C : LE->captures()) {
+      if (!C.capturesVariable())
+        continue;
+
+      VarDecl *VD = C.getCapturedVar();
+      const FieldDecl *FD = CaptureFields[VD];
+      if (!FD)
+        continue;
+
+      // If the capture field is a reference type, it is capture-by-reference.
+      if (FD->getType()->isReferenceType())
+        Escaped.insert(VD);
+    }
   }
 };
 } // end anonymous namespace

@@ -1009,6 +1009,24 @@ public:
     bool OldFPContractState : 1;
   };
 
+  /// Records and restores the vtordisp state on entry/exit of C++ method body.
+  class VtorDispStackRAII {
+  public:
+    VtorDispStackRAII(Sema &S, bool ShouldSaveAndRestore)
+      : S(S), ShouldSaveAndRestore(ShouldSaveAndRestore), OldVtorDispStack() {
+      if (ShouldSaveAndRestore)
+        OldVtorDispStack = S.VtorDispModeStack;
+    }
+    ~VtorDispStackRAII() {
+      if (ShouldSaveAndRestore)
+        S.VtorDispModeStack = OldVtorDispStack;
+    }
+  private:
+    Sema &S;
+    bool ShouldSaveAndRestore;
+    SmallVector<MSVtorDispAttr::Mode, 2> OldVtorDispStack;
+  };
+
   void addImplicitTypedef(StringRef Name, QualType T);
 
 public:
