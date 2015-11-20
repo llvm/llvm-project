@@ -165,8 +165,8 @@ bool MemsetRange::isProfitableToUseMemset(const DataLayout &DL) const {
 
   // If any of the stores are a memset, then it is always good to extend the
   // memset.
-  for (unsigned i = 0, e = TheStores.size(); i != e; ++i)
-    if (!isa<StoreInst>(TheStores[i]))
+  for (Instruction *SI : TheStores)
+    if (!isa<StoreInst>(SI))
       return true;
 
   // Assume that the code generator is capable of merging pairs of stores
@@ -439,9 +439,7 @@ Instruction *MemCpyOpt::tryMergingIntoMemset(Instruction *StartInst,
   // Now that we have full information about ranges, loop over the ranges and
   // emit memset's for anything big enough to be worthwhile.
   Instruction *AMemSet = nullptr;
-  for (MemsetRanges::const_iterator I = Ranges.begin(), E = Ranges.end();
-       I != E; ++I) {
-    const MemsetRange &Range = *I;
+  for (const MemsetRange &Range : Ranges) {
 
     if (Range.TheStores.size() == 1) continue;
 
@@ -465,19 +463,17 @@ Instruction *MemCpyOpt::tryMergingIntoMemset(Instruction *StartInst,
       Builder.CreateMemSet(StartPtr, ByteVal, Range.End-Range.Start, Alignment);
 
     DEBUG(dbgs() << "Replace stores:\n";
-          for (unsigned i = 0, e = Range.TheStores.size(); i != e; ++i)
-            dbgs() << *Range.TheStores[i] << '\n';
+          for (Instruction *SI : Range.TheStores)
+            dbgs() << *SI << '\n';
           dbgs() << "With: " << *AMemSet << '\n');
 
     if (!Range.TheStores.empty())
       AMemSet->setDebugLoc(Range.TheStores[0]->getDebugLoc());
 
     // Zap all the stores.
-    for (SmallVectorImpl<Instruction *>::const_iterator
-         SI = Range.TheStores.begin(),
-         SE = Range.TheStores.end(); SI != SE; ++SI) {
-      MD->removeInstruction(*SI);
-      (*SI)->eraseFromParent();
+    for (Instruction *SI : Range.TheStores) {
+      MD->removeInstruction(SI);
+      SI->eraseFromParent();
     }
     ++NumMemSetInfer;
   }

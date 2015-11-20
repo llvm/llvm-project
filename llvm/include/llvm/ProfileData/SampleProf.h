@@ -177,7 +177,10 @@ public:
   /// Sample counts accumulate using saturating arithmetic, to avoid wrapping
   /// around unsigned integers.
   void addSamples(uint64_t S) {
-    NumSamples = SaturatingAdd(NumSamples, S);
+    if (NumSamples <= std::numeric_limits<uint64_t>::max() - S)
+      NumSamples += S;
+    else
+      NumSamples = std::numeric_limits<uint64_t>::max();
   }
 
   /// Add called function \p F with samples \p S.
@@ -186,7 +189,10 @@ public:
   /// around unsigned integers.
   void addCalledTarget(StringRef F, uint64_t S) {
     uint64_t &TargetSamples = CallTargets[F];
-    TargetSamples = SaturatingAdd(TargetSamples, S);
+    if (TargetSamples <= std::numeric_limits<uint64_t>::max() - S)
+      TargetSamples += S;
+    else
+      TargetSamples = std::numeric_limits<uint64_t>::max();
   }
 
   /// Return true if this sample record contains function calls.

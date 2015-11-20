@@ -437,8 +437,8 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
 SDValue WebAssemblyTargetLowering::LowerJumpTable(SDValue Op,
                                                   SelectionDAG &DAG) const {
   // There's no need for a Wrapper node because we always incorporate a jump
-  // table operand into a SWITCH instruction, rather than ever materializing
-  // it in a register.
+  // table operand into a TABLESWITCH instruction, rather than ever
+  // materializing it in a register.
   const JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
   return DAG.getTargetJumpTable(JT->getIndex(), Op.getValueType(),
                                 JT->getTargetFlags());
@@ -468,7 +468,7 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   for (auto MBB : MBBs)
     Ops.push_back(DAG.getBasicBlock(MBB));
 
-  return DAG.getNode(WebAssemblyISD::SWITCH, DL, MVT::Other, Ops);
+  return DAG.getNode(WebAssemblyISD::TABLESWITCH, DL, MVT::Other, Ops);
 }
 
 //===----------------------------------------------------------------------===//

@@ -226,7 +226,7 @@ struct InstrProfValueSiteRecord {
       while (I != IE && I->Value < J->Value)
         ++I;
       if (I != IE && I->Value == J->Value) {
-        I->Count = SaturatingAdd(I->Count, J->Count);
+        I->Count += J->Count;
         ++I;
         continue;
       }

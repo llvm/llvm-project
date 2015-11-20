@@ -19,8 +19,22 @@ Interesting work that remains to be done:
   level. Note that LLVM's GPU code has such a pass, but it linearizes control
   flow (e.g. both sides of branches execute and are masked) which is undesirable
   for WebAssembly.
-* Basic relooper to expose control flow as an AST.
-* Figure out how to properly use MC for virtual ISAs. This may require some
-  refactoring of MC.
+
+//===---------------------------------------------------------------------===//
+
+set_local and store instructions have a return value. We should (a) model this,
+and (b) write optimizations which take advantage of it. Keep in mind that
+many set_local instructions are implicit!
+
+//===---------------------------------------------------------------------===//
+
+Load and store instructions can have a constant offset. We should (a) model
+this, and (b) do address-mode folding with it.
+
+//===---------------------------------------------------------------------===//
+
+Br, br_if, and tableswitch instructions can support having a value on the
+expression stack across the jump (sometimes). We should (a) model this, and
+(b) extend the stackifier to utilize it.
 
 //===---------------------------------------------------------------------===//

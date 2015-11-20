@@ -2064,7 +2064,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
     return;
 
   // Don't optimize floating point instructions that don't have unsafe algebra.
-  if (I->getType()->isFloatingPointTy() && !I->hasUnsafeAlgebra())
+  if (I->getType()->isFPOrFPVectorTy() && !I->hasUnsafeAlgebra())
     return;
 
   // Do not reassociate boolean (i1) expressions.  We want to preserve the
