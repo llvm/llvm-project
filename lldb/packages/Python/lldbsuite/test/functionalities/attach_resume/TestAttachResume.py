@@ -20,7 +20,7 @@ class AttachResumeTestCase(TestBase):
     @skipIfRemote
     @expectedFailureFreeBSD('llvm.org/pr19310')
     @expectedFailureWindows("llvm.org/pr24778")
-    @expectedFlakeyLinux('llvm.org/pr19310')
+    @expectedFailureAll('rdar://23625387', oslist=['macosx', 'linux'])
     def test_attach_continue_interrupt_detach(self):
         """Test attach/continue/interrupt/detach"""
         self.build()
