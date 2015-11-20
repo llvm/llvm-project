@@ -1,6 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
 # RUN: not ld.lld %t1 -o %t2
-# RUN: ld.lld %t1 -o %t2 -e _end
+# RUN: ld.lld %t1 -o %t2 -e entry
 
 # RUN: ld.lld %t1 -o %t2 -e 4096
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=DEC %s
@@ -13,5 +13,5 @@
 # HEX: Entry: 0xCAFE
 # OCT: Entry: 0x1FF
 
-.globl _end
-_end:
+.globl entry
+entry:

@@ -177,9 +177,14 @@ template <class ELFT> class DefinedAbsolute : public Defined<ELFT> {
 public:
   static Elf_Sym IgnoreUndef;
 
+  // The following symbols must be added early to reserve their places
+  // in symbol tables. The value of the symbols are set when all sections
+  // are finalized and their addresses are determined.
+
+  // The content for _end and end symbols.
+  static Elf_Sym End;
+
   // The content for _gp symbol for MIPS target.
-  // The symbol has to be added early to reserve a place in symbol tables.
-  // The value of the symbol is computed later by Writer.
   static Elf_Sym MipsGp;
 
   DefinedAbsolute(StringRef N, const Elf_Sym &Sym)
@@ -192,6 +197,9 @@ public:
 
 template <class ELFT>
 typename DefinedAbsolute<ELFT>::Elf_Sym DefinedAbsolute<ELFT>::IgnoreUndef;
+
+template <class ELFT>
+typename DefinedAbsolute<ELFT>::Elf_Sym DefinedAbsolute<ELFT>::End;
 
 template <class ELFT>
 typename DefinedAbsolute<ELFT>::Elf_Sym DefinedAbsolute<ELFT>::MipsGp;

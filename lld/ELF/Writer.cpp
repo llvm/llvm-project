@@ -623,6 +623,23 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   if (!isOutputDynamic())
     Symtab.addIgnoredSym("__tls_get_addr");
 
+  // If the "_end" symbol is referenced, it is expected to point to the address
+  // right after the data segment. Usually, this symbol points to the end
+  // of .bss section or to the end of .data section if .bss section is absent.
+  // The order of the sections can be affected by linker script,
+  // so it is hard to predict which section will be the last one.
+  // So, if this symbol is referenced, we just add the placeholder here
+  // and update its value later.
+  if (Symtab.find("_end"))
+    Symtab.addAbsoluteSym("_end", DefinedAbsolute<ELFT>::End);
+
+  // If there is an undefined symbol "end", we should initialize it
+  // with the same value as "_end". In any other case it should stay intact,
+  // because it is an allowable name for a user symbol.
+  if (SymbolBody *B = Symtab.find("end"))
+    if (B->isUndefined())
+      Symtab.addAbsoluteSym("end", DefinedAbsolute<ELFT>::End);
+
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
@@ -878,6 +895,10 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   // Add space for section headers.
   SectionHeaderOff = RoundUpToAlignment(FileOff, ELFT::Is64Bits ? 8 : 4);
   FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);
+
+  // Update "_end" and "end" symbols so that they
+  // point to the end of the data segment.
+  DefinedAbsolute<ELFT>::End.st_value = VA;
 
   // Update MIPS _gp absolute symbol so that it points to the static data.
   if (Config->EMachine == EM_MIPS)

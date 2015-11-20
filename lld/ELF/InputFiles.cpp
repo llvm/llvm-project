@@ -36,6 +36,14 @@ ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef M)
     : InputFile(K, M), ELFObj(MB.getBuffer(), ECRAII().getEC()) {}
 
 template <class ELFT>
+ELFKind ELFFileBase<ELFT>::getELFKind() {
+  using llvm::support::little;
+  if (ELFT::Is64Bits)
+    return ELFT::TargetEndianness == little ? ELF64LEKind : ELF64BEKind;
+  return ELFT::TargetEndianness == little ? ELF32LEKind : ELF32BEKind;
+}
+
+template <class ELFT>
 typename ELFFileBase<ELFT>::Elf_Sym_Range
 ELFFileBase<ELFT>::getSymbolsHelper(bool Local) {
   if (!Symtab)
@@ -427,44 +435,40 @@ static std::unique_ptr<InputFile> createELFFileAux(MemoryBufferRef MB) {
 
 template <template <class> class T>
 std::unique_ptr<InputFile> lld::elf2::createELFFile(MemoryBufferRef MB) {
-  using namespace llvm;
-
-  std::pair<unsigned char, unsigned char> Type =
-    object::getElfArchType(MB.getBuffer());
+  std::pair<unsigned char, unsigned char> Type = getElfArchType(MB.getBuffer());
   if (Type.second != ELF::ELFDATA2LSB && Type.second != ELF::ELFDATA2MSB)
     error("Invalid data encoding: " + MB.getBufferIdentifier());
 
   if (Type.first == ELF::ELFCLASS32) {
     if (Type.second == ELF::ELFDATA2LSB)
-      return createELFFileAux<T<object::ELF32LE>>(MB);
-    return createELFFileAux<T<object::ELF32BE>>(MB);
+      return createELFFileAux<T<ELF32LE>>(MB);
+    return createELFFileAux<T<ELF32BE>>(MB);
   }
   if (Type.first == ELF::ELFCLASS64) {
     if (Type.second == ELF::ELFDATA2LSB)
-      return createELFFileAux<T<object::ELF64LE>>(MB);
-    return createELFFileAux<T<object::ELF64BE>>(MB);
+      return createELFFileAux<T<ELF64LE>>(MB);
+    return createELFFileAux<T<ELF64BE>>(MB);
   }
   error("Invalid file class: " + MB.getBufferIdentifier());
 }
 
-namespace lld {
-namespace elf2 {
-template class ELFFileBase<llvm::object::ELF32LE>;
-template class ELFFileBase<llvm::object::ELF32BE>;
-template class ELFFileBase<llvm::object::ELF64LE>;
-template class ELFFileBase<llvm::object::ELF64BE>;
+template class elf2::ELFFileBase<ELF32LE>;
+template class elf2::ELFFileBase<ELF32BE>;
+template class elf2::ELFFileBase<ELF64LE>;
+template class elf2::ELFFileBase<ELF64BE>;
 
-template class ObjectFile<llvm::object::ELF32LE>;
-template class ObjectFile<llvm::object::ELF32BE>;
-template class ObjectFile<llvm::object::ELF64LE>;
-template class ObjectFile<llvm::object::ELF64BE>;
+template class elf2::ObjectFile<ELF32LE>;
+template class elf2::ObjectFile<ELF32BE>;
+template class elf2::ObjectFile<ELF64LE>;
+template class elf2::ObjectFile<ELF64BE>;
 
-template class SharedFile<llvm::object::ELF32LE>;
-template class SharedFile<llvm::object::ELF32BE>;
-template class SharedFile<llvm::object::ELF64LE>;
-template class SharedFile<llvm::object::ELF64BE>;
+template class elf2::SharedFile<ELF32LE>;
+template class elf2::SharedFile<ELF32BE>;
+template class elf2::SharedFile<ELF64LE>;
+template class elf2::SharedFile<ELF64BE>;
 
-template std::unique_ptr<InputFile> createELFFile<ObjectFile>(MemoryBufferRef);
-template std::unique_ptr<InputFile> createELFFile<SharedFile>(MemoryBufferRef);
-}
-}
+template std::unique_ptr<InputFile>
+elf2::createELFFile<ObjectFile>(MemoryBufferRef);
+
+template std::unique_ptr<InputFile>
+elf2::createELFFile<SharedFile>(MemoryBufferRef);

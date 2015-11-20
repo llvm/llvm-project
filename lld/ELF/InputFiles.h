@@ -59,17 +59,7 @@ public:
     return K == ObjectKind || K == SharedKind;
   }
 
-  static ELFKind getELFKind() {
-    if (!ELFT::Is64Bits) {
-      if (ELFT::TargetEndianness == llvm::support::little)
-        return ELF32LEKind;
-      return ELF32BEKind;
-    }
-    if (ELFT::TargetEndianness == llvm::support::little)
-      return ELF64LEKind;
-    return ELF64BEKind;
-  }
-
+  static ELFKind getELFKind();
   const llvm::object::ELFFile<ELFT> &getObj() const { return ELFObj; }
   llvm::object::ELFFile<ELFT> &getObj() { return ELFObj; }
 

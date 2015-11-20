@@ -85,6 +85,7 @@ std::unique_ptr<InputFile> Lazy::getMember() {
 }
 
 template <class ELFT> static void doInitSymbols() {
+  DefinedAbsolute<ELFT>::End.setBinding(STB_GLOBAL);
   DefinedAbsolute<ELFT>::IgnoreUndef.setBinding(STB_WEAK);
   DefinedAbsolute<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
   Undefined<ELFT>::Optional.setVisibility(STV_HIDDEN);

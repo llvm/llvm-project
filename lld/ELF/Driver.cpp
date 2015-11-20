@@ -50,6 +50,8 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
     return {ELF32LEKind, EM_386};
   if (S == "elf_x86_64")
     return {ELF64LEKind, EM_X86_64};
+  if (S == "aarch64linux")
+    return {ELF64LEKind, EM_AARCH64};
   error("Unknown emulation: " + S);
 }
 

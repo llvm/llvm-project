@@ -1100,10 +1100,10 @@ def skipIfLinuxClang(func):
 # TODO: refactor current code, to make skipIfxxx functions to call this function
 def skipIf(bugnumber=None, oslist=None, compiler=None, compiler_version=None, archs=None, debug_info=None, swig_version=None, py_version=None):
     def fn(self):
-        oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
-        compiler_passes = check_list_or_lambda(compiler, self.getCompiler()) and self.expectedCompilerVersion(compiler_version)
+        oslist_passes = oslist is None or self.getPlatform() in oslist
+        compiler_passes = compiler is None or (compiler in self.getCompiler() and self.expectedCompilerVersion(compiler_version))
         arch_passes = self.expectedArch(archs)
-        debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
+        debug_info_passes = debug_info is None or self.debug_info in debug_info
         swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
         py_version_passes = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)
 
