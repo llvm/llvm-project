@@ -188,6 +188,6 @@ contents = open(DOC_FILE).read()
 
 contents = substitute(contents, 'FORMAT_STYLE_OPTIONS', options_text)
 
-with open(DOC_FILE, 'w') as output:
+with open(DOC_FILE, 'wb') as output:
   output.write(contents)
 

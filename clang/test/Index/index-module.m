@@ -6,6 +6,8 @@ int glob;
 // RUN: rm -rf %t.cache
 // RUN: c-index-test -index-file %s -fmodules-cache-path=%t.cache -fmodules -F %S/../Modules/Inputs \
 // RUN:      -Xclang -fdisable-module-hash | FileCheck %s
+// RUN: c-index-test -index-file %s -fmodules-cache-path=%t.cache -fmodules -gmodules -F %S/../Modules/Inputs \
+// RUN:      -Xclang -fdisable-module-hash | FileCheck %s
 
 // CHECK-NOT: [indexDeclaration]
 // CHECK: [ppIncludedFile]: {{.*}}/Modules/Inputs/DependsOnModule.framework{{[/\\]}}Headers{{[/\\]}}DependsOnModule.h | name: "DependsOnModule/DependsOnModule.h" | hash loc: 2:1 | isImport: 0 | isAngled: 1 | isModule: 1

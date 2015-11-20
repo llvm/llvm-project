@@ -364,6 +364,6 @@ reference = re.sub(r'<!-- START_NARROWING_MATCHERS.*END_NARROWING_MATCHERS -->',
 reference = re.sub(r'<!-- START_TRAVERSAL_MATCHERS.*END_TRAVERSAL_MATCHERS -->',
                    '%s', reference, flags=re.S) % traversal_matcher_table
 
-with open('../LibASTMatchersReference.html', 'w') as output:
+with open('../LibASTMatchersReference.html', 'wb') as output:
   output.write(reference)
 

@@ -78,8 +78,17 @@ struct CtorDtor {
   }
 };
 
-constexpr void constexpr_coroutine() { // expected-error {{never produces a constant expression}}
-  co_yield 0; // expected-error {{'co_yield' cannot be used in a constexpr function}} expected-note {{subexpression}}
+void unevaluated() {
+  decltype(co_await a); // expected-error {{cannot be used in an unevaluated context}}
+  sizeof(co_await a); // expected-error {{cannot be used in an unevaluated context}}
+  typeid(co_await a); // expected-error {{cannot be used in an unevaluated context}}
+  decltype(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
+  sizeof(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
+  typeid(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
+}
+
+constexpr void constexpr_coroutine() {
+  co_yield 0; // expected-error {{'co_yield' cannot be used in a constexpr function}}
 }
 
 void varargs_coroutine(const char *, ...) {

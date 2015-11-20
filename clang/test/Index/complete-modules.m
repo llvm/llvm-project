@@ -5,6 +5,7 @@
 
 // RUN: rm -rf %t
 // RUN: c-index-test -code-completion-at=%s:4:9 -fmodules-cache-path=%t -fmodules -F %S/Inputs/Frameworks -I %S/Inputs/Headers %s | FileCheck -check-prefix=CHECK-TOP-LEVEL %s
+// RUN: c-index-test -code-completion-at=%s:4:9 -fmodules-cache-path=%t -fmodules -gmodules -F %S/Inputs/Frameworks -I %S/Inputs/Headers %s | FileCheck -check-prefix=CHECK-TOP-LEVEL %s
 // CHECK-TOP-LEVEL: ModuleImport:{TypedText Framework} (50)
 // CHECK-TOP-LEVEL: ModuleImport:{TypedText LibA} (50)
 // CHECK-TOP-LEVEL: ModuleImport:{TypedText nested} (50)
