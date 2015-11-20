@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
 #include <vector>
@@ -74,6 +75,10 @@ struct LTOCodeGenerator {
   void setTargetOptions(TargetOptions Options);
   void setDebugInfo(lto_debug_model);
   void setCodePICModel(Reloc::Model Model) { RelocModel = Model; }
+  
+  /// Set the file type to be emitted (assembly or object code).
+  /// The default is TargetMachine::CGFT_ObjectFile. 
+  void setFileType(TargetMachine::CodeGenFileType FT) { FileType = FT; }
 
   void setCpu(const char *MCpu) { this->MCpu = MCpu; }
   void setAttr(const char *MAttr) { this->MAttr = MAttr; }
@@ -103,21 +108,21 @@ struct LTOCodeGenerator {
   /// true on success.
   bool writeMergedModules(const char *Path);
 
-  /// Compile the merged module into a *single* object file; the path to object
+  /// Compile the merged module into a *single* output file; the path to output
   /// file is returned to the caller via argument "name". Return true on
   /// success.
   ///
-  /// \note It is up to the linker to remove the intermediate object file.  Do
+  /// \note It is up to the linker to remove the intermediate output file.  Do
   /// not try to remove the object file in LTOCodeGenerator's destructor as we
-  /// don't who (LTOCodeGenerator or the obj file) will last longer.
+  /// don't who (LTOCodeGenerator or the output file) will last longer.
   bool compile_to_file(const char **Name, bool DisableVerify,
                        bool DisableInline, bool DisableGVNLoadPRE,
                        bool DisableVectorization);
 
   /// As with compile_to_file(), this function compiles the merged module into
-  /// single object file. Instead of returning the object-file-path to the
-  /// caller (linker), it brings the object to a buffer, and return the buffer
-  /// to the caller. This function should delete intermediate object file once
+  /// single output file. Instead of returning the output file path to the
+  /// caller (linker), it brings the output to a buffer, and returns the buffer
+  /// to the caller. This function should delete the intermediate file once
   /// its content is brought to memory. Return NULL if the compilation was not
   /// successful.
   std::unique_ptr<MemoryBuffer> compile(bool DisableVerify, bool DisableInline,
@@ -128,15 +133,15 @@ struct LTOCodeGenerator {
   bool optimize(bool DisableVerify, bool DisableInline, bool DisableGVNLoadPRE,
                 bool DisableVectorization);
 
-  /// Compiles the merged optimized module into a single object file. It brings
-  /// the object to a buffer, and returns the buffer to the caller. Return NULL
+  /// Compiles the merged optimized module into a single output file. It brings
+  /// the output to a buffer, and returns the buffer to the caller. Return NULL
   /// if the compilation was not successful.
   std::unique_ptr<MemoryBuffer> compileOptimized();
 
-  /// Compile the merged optimized module into out.size() object files each
+  /// Compile the merged optimized module into out.size() output files each
   /// representing a linkable partition of the module. If out contains more
   /// than one element, code generation is done in parallel with out.size()
-  /// threads.  Object files will be written to members of out. Returns true on
+  /// threads.  Output files will be written to members of out. Returns true on
   /// success.
   bool compileOptimized(ArrayRef<raw_pwrite_stream *> Out);
 
@@ -185,6 +190,7 @@ private:
   void *DiagContext = nullptr;
   bool ShouldInternalize = true;
   bool ShouldEmbedUselists = false;
+  TargetMachine::CodeGenFileType FileType = TargetMachine::CGFT_ObjectFile;
 };
 }
 #endif

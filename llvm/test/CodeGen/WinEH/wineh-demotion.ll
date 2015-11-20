@@ -118,49 +118,6 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: @test3(
-define void @test3(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
-entry:
-  ; need to spill parameter %B and def %x since they're used in a funclet
-  ; CHECK: entry:
-  ; CHECK-DAG: store i1 %B, i1* [[SlotB:%[^ ]+]]
-  ; CHECK-DAG: store i32 %x, i32* [[SlotX:%[^ ]+]]
-  ; CHECK: invoke void @f
-  %x = call i32 @g()
-  invoke void @f()
-          to label %exit unwind label %catchpad
-
-catchpad:
-  %cp = catchpad [] to label %catch unwind label %catchend
-
-catch:
-  ; Need to reload %B here
-  ; CHECK: catch:
-  ; CHECK: [[ReloadB:%[^ ]+]] = load i1, i1* [[SlotB]]
-  ; CHECK: br i1 [[ReloadB]]
-  br i1 %B, label %left, label %right
-left:
-  ; Use of %x is in a phi, so need reload here in pred
-  ; CHECK: left:
-  ; CHECK: [[ReloadX:%[^ ]+]] = load i32, i32* [[SlotX]]
-  ; CHECK: br label %merge
-  br label %merge
-right:
-  br label %merge
-merge:
-  ; CHECK: merge:
-  ; CHECK:   %phi = phi i32 [ [[ReloadX]], %left ]
-  %phi = phi i32 [ %x, %left ], [ 42, %right ]
-  call void @h(i32 %phi)
-  catchret %cp to label %exit
-
-catchend:
-  catchendpad unwind to caller
-
-exit:
-  ret void
-}
-
 ; test4: don't need stores for %phi.inner, as its only use is to feed %phi.outer
 ;        %phi.outer needs stores in %left, %right, and %join
 ; CHECK-LABEL: @test4(
@@ -295,20 +252,15 @@ exit:
   ret void
 }
 
+; We used to demote %x, but we don't need to anymore.
 ; CHECK-LABEL: @test6(
 define void @test6() personality i32 (...)* @__CxxFrameHandler3 {
 entry:
-  ; Since %x needs to be stored but the edge to loop is critical,
-  ; it needs to be split
   ; CHECK: entry:
-  ; CHECK: invoke i32 @g
-  ; CHECK-NEXT: to label %[[SplitBlock:[^ ]+]] unwind label %to_caller
+  ; CHECK: %x = invoke i32 @g()
+  ; CHECK-NEXT: to label %loop unwind label %to_caller
   %x = invoke i32 @g()
           to label %loop unwind label %to_caller
-  ; The store should be in the split block
-  ; CHECK: [[SplitBlock]]:
-  ; CHECK: store i32 %x, i32* [[SpillSlot:%[^ ]+]]
-  ; CHECK: br label %loop
 to_caller:
   %cp1 = cleanuppad []
   cleanupret %cp1 unwind to caller
@@ -317,8 +269,7 @@ loop:
           to label %loop unwind label %cleanup
 cleanup:
   ; CHECK: cleanup:
-  ; CHECK:   [[Load:%[^ ]+]] = load i32, i32* [[SpillSlot]]
-  ; CHECK:   call void @h(i32 [[Load]])
+  ; CHECK:   call void @h(i32 %x)
   %cp2 = cleanuppad []
   call void @h(i32 %x)
   cleanupret %cp2 unwind to caller
@@ -362,18 +313,15 @@ right:
   ; Edge from %right to %join needs to be split so that
   ; the load of %y can be inserted *after* the catchret
   ; CHECK: right:
-  ; CHECK:   store i32 %y, i32* [[SlotY:%[^ ]+]]
-  ; CHECK:   catchret %[[CatchPad]] to label %[[SplitRight:[^ ]+]]
+  ; CHECK:   %y = call i32 @g()
+  ; CHECK:   catchret %[[CatchPad]] to label %join
   %y = call i32 @g()
   catchret %cp to label %join
-  ; CHECK: [[SplitRight]]:
-  ; CHECK:   [[LoadY:%[^ ]+]] = load i32, i32* [[SlotY]]
-  ; CHECK:   br label %join
 catchend:
   catchendpad unwind to caller
 join:
   ; CHECK: join:
-  ; CHECK:   %phi = phi i32 [ [[LoadX]], %[[SplitLeft]] ], [ [[LoadY]], %[[SplitRight]] ]
+  ; CHECK:   %phi = phi i32 [ [[LoadX]], %[[SplitLeft]] ], [ %y, %right ]
   %phi = phi i32 [ %x, %left ], [ %y, %right ]
   call void @h(i32 %phi)
   br label %exit

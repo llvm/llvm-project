@@ -52,7 +52,7 @@
 // http://wiki.dwarfstd.org/index.php?title=Path_Discriminators
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -65,6 +65,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
@@ -169,60 +170,45 @@ bool AddDiscriminators::runOnFunction(Function &F) {
   LLVMContext &Ctx = M->getContext();
   DIBuilder Builder(*M, /*AllowUnresolved*/ false);
 
-  // Traverse all the blocks looking for instructions in different
-  // blocks that are at the same file:line location.
+  typedef std::pair<StringRef, unsigned> Location;
+  typedef DenseMap<const BasicBlock *, Metadata *> BBScopeMap;
+  typedef DenseMap<Location, BBScopeMap> LocationBBMap;
+
+  LocationBBMap LBM;
+
+  // Traverse all instructions in the function. If the source line location
+  // of the instruction appears in other basic block, assign a new
+  // discriminator for this instruction.
   for (BasicBlock &B : F) {
-    TerminatorInst *Last = B.getTerminator();
-    const DILocation *LastDIL = Last->getDebugLoc();
-    if (!LastDIL)
-      continue;
-
-    for (unsigned I = 0; I < Last->getNumSuccessors(); ++I) {
-      BasicBlock *Succ = Last->getSuccessor(I);
-      Instruction *First = Succ->getFirstNonPHIOrDbgOrLifetime();
-      const DILocation *FirstDIL = First->getDebugLoc();
-      if (!FirstDIL || FirstDIL->getDiscriminator())
+    for (auto &I : B.getInstList()) {
+      if (isa<DbgInfoIntrinsic>(&I))
         continue;
-
-      // If the first instruction (First) of Succ is at the same file
-      // location as B's last instruction (Last), add a new
-      // discriminator for First's location and all the instructions
-      // in Succ that share the same location with First.
-      if (!FirstDIL->canDiscriminate(*LastDIL)) {
-        // Create a new lexical scope and compute a new discriminator
-        // number for it.
-        StringRef Filename = FirstDIL->getFilename();
-        auto *Scope = FirstDIL->getScope();
-        auto *File = Builder.createFile(Filename, Scope->getDirectory());
-
-        // FIXME: Calculate the discriminator here, based on local information,
-        // and delete DILocation::computeNewDiscriminator().  The current
-        // solution gives different results depending on other modules in the
-        // same context.  All we really need is to discriminate between
-        // FirstDIL and LastDIL -- a local map would suffice.
-        unsigned Discriminator = FirstDIL->computeNewDiscriminator();
-        auto *NewScope =
-            Builder.createLexicalBlockFile(Scope, File, Discriminator);
-
-        // Attach this new debug location to First and every
-        // instruction following First that shares the same location.
-        for (BasicBlock::iterator I1(*First), E1 = Succ->end(); I1 != E1;
-             ++I1) {
-          const DILocation *CurrentDIL = I1->getDebugLoc();
-          if (CurrentDIL && CurrentDIL->getLine() == FirstDIL->getLine() &&
-              CurrentDIL->getFilename() == FirstDIL->getFilename()) {
-            I1->setDebugLoc(DILocation::get(Ctx, CurrentDIL->getLine(),
-                                            CurrentDIL->getColumn(), NewScope,
-                                            CurrentDIL->getInlinedAt()));
-            DEBUG(dbgs() << CurrentDIL->getFilename() << ":"
-                         << CurrentDIL->getLine() << ":"
-                         << CurrentDIL->getColumn() << ":"
-                         << CurrentDIL->getDiscriminator() << *I1 << "\n");
-          }
-        }
-        DEBUG(dbgs() << "\n");
-        Changed = true;
+      const DILocation *DIL = I.getDebugLoc();
+      if (!DIL)
+        continue;
+      Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
+      auto &BBMap = LBM[L];
+      auto R = BBMap.insert(std::make_pair(&B, (Metadata *)nullptr));
+      if (BBMap.size() == 1)
+        continue;
+      bool InsertSuccess = R.second;
+      Metadata *&NewScope = R.first->second;
+      // If we could insert a different block in the same location, a
+      // discriminator is needed to distinguish both instructions.
+      if (InsertSuccess) {
+        auto *Scope = DIL->getScope();
+        auto *File =
+            Builder.createFile(DIL->getFilename(), Scope->getDirectory());
+        NewScope = Builder.createLexicalBlockFile(
+            Scope, File, DIL->computeNewDiscriminator());
       }
+      I.setDebugLoc(DILocation::get(Ctx, DIL->getLine(), DIL->getColumn(),
+                                    NewScope, DIL->getInlinedAt()));
+      DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                   << DIL->getColumn() << ":"
+                   << dyn_cast<DILexicalBlockFile>(NewScope)->getDiscriminator()
+                   << I << "\n");
+      Changed = true;
     }
   }
 

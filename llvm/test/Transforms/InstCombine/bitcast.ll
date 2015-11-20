@@ -64,6 +64,35 @@ define float @test3(<2 x float> %A, <2 x i64> %B) {
 ; CHECK-NEXT:  ret float %add
 }
 
+; TODO: Both bitcasts are unnecessary; change the extractelement.
+
+define float @bitcast_extelt1(<2 x float> %A) {
+  %bc1 = bitcast <2 x float> %A to <2 x i32>
+  %ext = extractelement <2 x i32> %bc1, i32 0
+  %bc2 = bitcast i32 %ext to float
+  ret float %bc2
+
+; CHECK-LABEL: @bitcast_extelt1(
+; CHECK-NEXT:  %bc1 = bitcast <2 x float> %A to <2 x i32>
+; CHECK-NEXT:  %ext = extractelement <2 x i32> %bc1, i32 0
+; CHECK-NEXT:  %bc2 = bitcast i32 %ext to float
+; CHECK-NEXT:  ret float %bc2
+}
+
+; TODO: Second bitcast can be folded into the first.
+
+define i64 @bitcast_extelt2(<4 x float> %A) {
+  %bc1 = bitcast <4 x float> %A to <2 x double>
+  %ext = extractelement <2 x double> %bc1, i32 1
+  %bc2 = bitcast double %ext to i64
+  ret i64 %bc2
+
+; CHECK-LABEL: @bitcast_extelt2(
+; CHECK-NEXT:  %bc1 = bitcast <4 x float> %A to <2 x double>
+; CHECK-NEXT:  %ext = extractelement <2 x double> %bc1, i32 1
+; CHECK-NEXT:  %bc2 = bitcast double %ext to i64
+; CHECK-NEXT:  ret i64 %bc2
+}
 
 define <2 x i32> @test4(i32 %A, i32 %B){
   %tmp38 = zext i32 %A to i64

@@ -87,7 +87,6 @@ static const struct {
   const char *NegFeature;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
-  StringRef getNegName() const { return (Twine("no") + getName()).str(); }
 } ARCHExtNames[] = {
 #define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE) \
   { NAME, sizeof(NAME) - 1, ID, FEATURE, NEGFEATURE },
@@ -332,11 +331,16 @@ StringRef llvm::ARM::getArchExtName(unsigned ArchExtKind) {
 }
 
 const char *llvm::ARM::getArchExtFeature(StringRef ArchExt) {
+  if (ArchExt.startswith("no")) {
+    StringRef ArchExtBase(ArchExt.substr(2));
+    for (const auto AE : ARCHExtNames) {
+      if (AE.NegFeature && ArchExtBase == AE.getName())
+        return AE.NegFeature;
+    }
+  }
   for (const auto AE : ARCHExtNames) {
     if (AE.Feature && ArchExt == AE.getName())
       return AE.Feature;
-    else if (AE.NegFeature && ArchExt == AE.getNegName())
-      return AE.NegFeature;
   }
 
   return nullptr;

@@ -421,9 +421,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::SETCC           , MVT::f32  , Custom);
   setOperationAction(ISD::SETCC           , MVT::f64  , Custom);
   setOperationAction(ISD::SETCC           , MVT::f80  , Custom);
+  setOperationAction(ISD::SETCCE          , MVT::i8   , Custom);
+  setOperationAction(ISD::SETCCE          , MVT::i16  , Custom);
+  setOperationAction(ISD::SETCCE          , MVT::i32  , Custom);
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::SELECT        , MVT::i64  , Custom);
     setOperationAction(ISD::SETCC         , MVT::i64  , Custom);
+    setOperationAction(ISD::SETCCE        , MVT::i64  , Custom);
   }
   setOperationAction(ISD::EH_RETURN       , MVT::Other, Custom);
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
@@ -3957,6 +3961,22 @@ static bool isX86CCUnsigned(unsigned X86CC) {
   }
 }
 
+static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
+  switch (SetCCOpcode) {
+  default: llvm_unreachable("Invalid integer condition!");
+  case ISD::SETEQ:  return X86::COND_E;
+  case ISD::SETGT:  return X86::COND_G;
+  case ISD::SETGE:  return X86::COND_GE;
+  case ISD::SETLT:  return X86::COND_L;
+  case ISD::SETLE:  return X86::COND_LE;
+  case ISD::SETNE:  return X86::COND_NE;
+  case ISD::SETULT: return X86::COND_B;
+  case ISD::SETUGT: return X86::COND_A;
+  case ISD::SETULE: return X86::COND_BE;
+  case ISD::SETUGE: return X86::COND_AE;
+  }
+}
+
 /// Do a one-to-one translation of a ISD::CondCode to the X86-specific
 /// condition code, returning the condition code and the LHS/RHS of the
 /// comparison to make.
@@ -3980,19 +4000,7 @@ static unsigned TranslateX86CC(ISD::CondCode SetCCOpcode, SDLoc DL, bool isFP,
       }
     }
 
-    switch (SetCCOpcode) {
-    default: llvm_unreachable("Invalid integer condition!");
-    case ISD::SETEQ:  return X86::COND_E;
-    case ISD::SETGT:  return X86::COND_G;
-    case ISD::SETGE:  return X86::COND_GE;
-    case ISD::SETLT:  return X86::COND_L;
-    case ISD::SETLE:  return X86::COND_LE;
-    case ISD::SETNE:  return X86::COND_NE;
-    case ISD::SETULT: return X86::COND_B;
-    case ISD::SETUGT: return X86::COND_A;
-    case ISD::SETULE: return X86::COND_BE;
-    case ISD::SETUGE: return X86::COND_AE;
-    }
+    return TranslateIntegerX86CC(SetCCOpcode);
   }
 
   // First determine if it is required or is profitable to flip the operands.
@@ -7343,8 +7351,9 @@ static SDValue lowerVectorShuffleWithSSE4A(SDLoc DL, MVT VT, SDValue V1,
       SDValue &V = (M < Size ? V1 : V2);
       M = M % Size;
 
-      // All mask elements must be in the lower half.
-      if (M >= HalfSize)
+      // The extracted elements must start at a valid index and all mask
+      // elements must be in the lower half.
+      if (i > M || M >= HalfSize)
         return SDValue();
 
       if (Idx < 0 || (Src == V && Idx == (M - i))) {
@@ -14576,6 +14585,23 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   return SetCC;
 }
 
+SDValue X86TargetLowering::LowerSETCCE(SDValue Op, SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Carry = Op.getOperand(2);
+  SDValue Cond = Op.getOperand(3);
+  SDLoc DL(Op);
+
+  assert(LHS.getSimpleValueType().isInteger() && "SETCCE is integer only.");
+  X86::CondCode CC = TranslateIntegerX86CC(cast<CondCodeSDNode>(Cond)->get());
+
+  assert(Carry.getOpcode() != ISD::CARRY_FALSE);
+  SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
+  SDValue Cmp = DAG.getNode(X86ISD::SBB, DL, VTs, LHS, RHS, Carry);
+  return DAG.getNode(X86ISD::SETCC, DL, Op.getValueType(),
+                     DAG.getConstant(CC, DL, MVT::i8), Cmp.getValue(1));
+}
+
 // isX86LogicalCmp - Return true if opcode is a X86 logical comparison.
 static bool isX86LogicalCmp(SDValue Op) {
   unsigned Opc = Op.getNode()->getOpcode();
@@ -19685,6 +19711,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
+  case ISD::SETCCE:             return LowerSETCCE(Op, DAG);
   case ISD::SELECT:             return LowerSELECT(Op, DAG);
   case ISD::BRCOND:             return LowerBRCOND(Op, DAG);
   case ISD::JumpTable:          return LowerJumpTable(Op, DAG);

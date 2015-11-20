@@ -108,15 +108,33 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS << TotalSamples << ", " << TotalHeadSamples << ", " << BodySamples.size()
      << " sampled lines\n";
 
-  for (const auto &SI : BodySamples) {
+  OS.indent(Indent);
+  if (BodySamples.size() > 0) {
+    OS << "Samples collected in the function's body {\n";
+    SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
+    for (const auto &SI : SortedBodySamples.get()) {
+      OS.indent(Indent + 2);
+      OS << SI->first << ": " << SI->second;
+    }
     OS.indent(Indent);
-    OS << SI.first << ": " << SI.second;
+    OS << "}\n";
+  } else {
+    OS << "No samples collected in the function's body\n";
   }
 
-  for (const auto &CS : CallsiteSamples) {
-    OS.indent(Indent);
-    OS << CS.first << ": ";
-    CS.second.print(OS, Indent + 2);
+  OS.indent(Indent);
+  if (CallsiteSamples.size() > 0) {
+    OS << "Samples collected in inlined callsites {\n";
+    SampleSorter<CallsiteLocation, FunctionSamples> SortedCallsiteSamples(
+        CallsiteSamples);
+    for (const auto &CS : SortedCallsiteSamples.get()) {
+      OS.indent(Indent + 2);
+      OS << CS->first << ": ";
+      CS->second.print(OS, Indent + 4);
+    }
+    OS << "}\n";
+  } else {
+    OS << "No inlined callsites in this function\n";
   }
 }
 

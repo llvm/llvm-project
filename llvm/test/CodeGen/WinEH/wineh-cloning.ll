@@ -29,18 +29,16 @@ endcatch:
 ; for the use in entry's copy.
 ; CHECK-LABEL: define void @test1(
 ; CHECK: entry:
-; CHECK:   store i32 %x, i32* [[Slot:%[^ ]+]]
+; CHECK:   %x = call i32 @g()
 ; CHECK:   invoke void @f()
 ; CHECK:     to label %[[EntryCopy:[^ ]+]] unwind label %catch
 ; CHECK: catch:
 ; CHECK:   catchpad []
 ; CHECK-NEXT: to label %[[CatchCopy:[^ ]+]] unwind
 ; CHECK: [[CatchCopy]]:
-; CHECK:   [[LoadX2:%[^ ]+]] = load i32, i32* [[Slot]]
-; CHECK:   call void @h(i32 [[LoadX2]]
+; CHECK:   call void @h(i32 %x)
 ; CHECK: [[EntryCopy]]:
-; CHECK:   [[LoadX1:%[^ ]+]] = load i32, i32* [[Slot]]
-; CHECK:   call void @h(i32 [[LoadX1]]
+; CHECK:   call void @h(i32 %x)
 
 
 define void @test2() personality i32 (...)* @__CxxFrameHandler3 {
@@ -281,12 +279,14 @@ exit:
 ; then calls @h, and that the call to @h doesn't return.
 ; CHECK-LABEL: define void @test6(
 ; CHECK:     left:
+; CHECK:       %x.for.left = call i32 @g()
+; CHECK:       invoke void @f()
 ; CHECK:           to label %[[SHARED_CONT_LEFT:.+]] unwind label %[[INNER_LEFT:.+]]
 ; CHECK:     right:
+; CHECK:       catchpad
 ; CHECK:           to label %right.catch unwind label %right.end
 ; CHECK:     right.catch:
 ; CHECK:       %x = call i32 @g()
-; CHECK:       store i32 %x, i32* %x.wineh.spillslot
 ; CHECK:           to label %shared.cont unwind label %[[INNER_RIGHT:.+]]
 ; CHECK:     right.end:
 ; CHECK:       catchendpad unwind to caller
@@ -296,13 +296,11 @@ exit:
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_RIGHT]]:
 ; CHECK:       [[I_R:\%.+]] = cleanuppad []
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       cleanupret [[I_R]] unwind label %right.end
 ; CHECK:     [[INNER_LEFT]]:
 ; CHECK:       [[I_L:\%.+]] = cleanuppad []
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 
 

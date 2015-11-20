@@ -1230,6 +1230,9 @@ public:
   /// Returns True if V is an induction variable in this loop.
   bool isInductionVariable(const Value *V);
 
+  /// Returns True if PN is a reduction variable in this loop.
+  bool isReductionVariable(PHINode *PN) { return Reductions.count(PN); }
+
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
   bool blockNeedsPredication(BasicBlock *BB);
@@ -3310,7 +3313,7 @@ void InnerLoopVectorizer::vectorizeLoop() {
     assert(RdxPhi && "Unable to recover vectorized PHI");
 
     // Find the reduction variable descriptor.
-    assert(Legal->getReductionVars()->count(RdxPhi) &&
+    assert(Legal->isReductionVariable(RdxPhi) &&
            "Unable to find the reduction variable");
     RecurrenceDescriptor RdxDesc = (*Legal->getReductionVars())[RdxPhi];
 
@@ -3610,7 +3613,7 @@ void InnerLoopVectorizer::widenPHIInstruction(
     unsigned VF, PhiVector *PV) {
   PHINode* P = cast<PHINode>(PN);
   // Handle reduction variables:
-  if (Legal->getReductionVars()->count(P)) {
+  if (Legal->isReductionVariable(P)) {
     for (unsigned part = 0; part < UF; ++part) {
       // This is phase one of vectorizing PHIs.
       Type *VecTy = (VF == 1) ? PN->getType() :
@@ -4888,7 +4891,7 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
       // Examine PHI nodes that are reduction variables. Update the type to
       // account for the recurrence type.
       if (PHINode *PN = dyn_cast<PHINode>(it)) {
-        if (!Legal->getReductionVars()->count(PN))
+        if (!Legal->isReductionVariable(PN))
           continue;
         RecurrenceDescriptor RdxDesc = (*Legal->getReductionVars())[PN];
         T = RdxDesc.getRecurrenceType();
@@ -5055,8 +5058,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(bool OptForSize,
   }
 
   // Interleave if this is a large loop (small loops are already dealt with by
-  // this
-  // point) that could benefit from interleaving.
+  // this point) that could benefit from interleaving.
   bool HasReductions = (Legal->getReductionVars()->size() > 0);
   if (TTI.enableAggressiveInterleaving(HasReductions)) {
     DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");

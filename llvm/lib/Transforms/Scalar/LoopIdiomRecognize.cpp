@@ -128,7 +128,6 @@ private:
                                const SCEV *BECount, bool NegStride);
   bool processLoopStoreOfLoopLoad(StoreInst *SI, unsigned StoreSize,
                                   const SCEVAddRecExpr *StoreEv,
-                                  const SCEVAddRecExpr *LoadEv,
                                   const SCEV *BECount, bool NegStride);
 
   /// @}
@@ -362,21 +361,8 @@ bool LoopIdiomRecognize::processLoopStore(StoreInst *SI, const SCEV *BECount) {
                               StoredVal, SI, StoreEv, BECount, NegStride))
     return true;
 
-  // If the stored value is a strided load in the same loop with the same stride
-  // this may be transformable into a memcpy.  This kicks in for stuff like
-  //   for (i) A[i] = B[i];
-  if (LoadInst *LI = dyn_cast<LoadInst>(StoredVal)) {
-    const SCEVAddRecExpr *LoadEv =
-        dyn_cast<SCEVAddRecExpr>(SE->getSCEV(LI->getOperand(0)));
-    if (LoadEv && LoadEv->getLoop() == CurLoop && LoadEv->isAffine() &&
-        StoreEv->getOperand(1) == LoadEv->getOperand(1) && LI->isSimple())
-      if (processLoopStoreOfLoopLoad(SI, StoreSize, StoreEv, LoadEv, BECount,
-                                     NegStride))
-        return true;
-  }
-  // errs() << "UNHANDLED strided store: " << *StoreEv << " - " << *SI << "\n";
-
-  return false;
+  // Optimize the store into a memcpy, if it feeds an similarly strided load.
+  return processLoopStoreOfLoopLoad(SI, StoreSize, StoreEv, BECount, NegStride);
 }
 
 /// processLoopMemSet - See if this memset can be promoted to a large memset.
@@ -619,16 +605,32 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   return true;
 }
 
-/// processLoopStoreOfLoopLoad - We see a strided store whose value is a
-/// same-strided load.
+/// If the stored value is a strided load in the same loop with the same stride
+/// this may be transformable into a memcpy.  This kicks in for stuff like
+///   for (i) A[i] = B[i];
 bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     StoreInst *SI, unsigned StoreSize, const SCEVAddRecExpr *StoreEv,
-    const SCEVAddRecExpr *LoadEv, const SCEV *BECount, bool NegStride) {
+    const SCEV *BECount, bool NegStride) {
   // If we're not allowed to form memcpy, we fail.
   if (!TLI->has(LibFunc::memcpy))
     return false;
 
-  LoadInst *LI = cast<LoadInst>(SI->getValueOperand());
+  // The store must be feeding a non-volatile load.
+  LoadInst *LI = dyn_cast<LoadInst>(SI->getValueOperand());
+  if (!LI || !LI->isSimple())
+    return false;
+
+  // See if the pointer expression is an AddRec like {base,+,1} on the current
+  // loop, which indicates a strided load.  If we have something else, it's a
+  // random load we can't handle.
+  const SCEVAddRecExpr *LoadEv =
+      dyn_cast<SCEVAddRecExpr>(SE->getSCEV(LI->getPointerOperand()));
+  if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+    return false;
+
+  // The store and load must share the same stride.
+  if (StoreEv->getOperand(1) != LoadEv->getOperand(1))
+    return false;
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
   // guaranteed to be loop invariant, which means that it should dominate the

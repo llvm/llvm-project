@@ -867,6 +867,8 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 
   if (IsMicroMips) {
     Result = readInstruction16(Bytes, Address, Size, Insn, IsBigEndian);
+    if (Result == MCDisassembler::Fail)
+      return MCDisassembler::Fail;
 
     if (hasMips32r6()) {
       DEBUG(dbgs() << "Trying MicroMipsR616 table (16-bit instructions):\n");
@@ -913,12 +915,17 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       Size = 4;
       return Result;
     }
+    // This is an invalid instruction. Let the disassembler move forward by the
+    // minimum instruction size.
+    Size = 2;
     return MCDisassembler::Fail;
   }
 
   Result = readInstruction32(Bytes, Address, Size, Insn, IsBigEndian, false);
-  if (Result == MCDisassembler::Fail)
+  if (Result == MCDisassembler::Fail) {
+    Size = 4;
     return MCDisassembler::Fail;
+  }
 
   if (hasCOP3()) {
     DEBUG(dbgs() << "Trying COP3_ table (32-bit opcodes):\n");
@@ -979,6 +986,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     return Result;
   }
 
+  Size = 4;
   return MCDisassembler::Fail;
 }
 

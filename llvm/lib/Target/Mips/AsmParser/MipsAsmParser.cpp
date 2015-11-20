@@ -224,6 +224,15 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandUlw(MCInst &Inst, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
 
+  bool expandRotation(MCInst &Inst, SMLoc IDLoc,
+                      SmallVectorImpl<MCInst> &Instructions);
+  bool expandRotationImm(MCInst &Inst, SMLoc IDLoc,
+                         SmallVectorImpl<MCInst> &Instructions);
+  bool expandDRotation(MCInst &Inst, SMLoc IDLoc,
+                       SmallVectorImpl<MCInst> &Instructions);
+  bool expandDRotationImm(MCInst &Inst, SMLoc IDLoc,
+                          SmallVectorImpl<MCInst> &Instructions);
+
   void createNop(bool hasShortDelaySlot, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
 
@@ -2095,6 +2104,22 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc,
                                                              : MER_Success;
     }
     return MER_NotAMacro;
+  case Mips::ROL:
+  case Mips::ROR:
+    return expandRotation(Inst, IDLoc, Instructions) ? MER_Fail
+                                                     : MER_Success;
+  case Mips::ROLImm:
+  case Mips::RORImm:
+    return expandRotationImm(Inst, IDLoc, Instructions) ? MER_Fail
+                                                        : MER_Success;
+  case Mips::DROL:
+  case Mips::DROR:
+    return expandDRotation(Inst, IDLoc, Instructions) ? MER_Fail
+                                                      : MER_Success;
+  case Mips::DROLImm:
+  case Mips::DRORImm:
+    return expandDRotationImm(Inst, IDLoc, Instructions) ? MER_Fail
+                                                         : MER_Success;
   }
 }
 
@@ -3240,6 +3265,292 @@ bool MipsAsmParser::expandAliasImmediate(MCInst &Inst, SMLoc IDLoc,
               Instructions);
     return false;
   }
+  return true;
+}
+
+bool MipsAsmParser::expandRotation(MCInst &Inst, SMLoc IDLoc,
+                                   SmallVectorImpl<MCInst> &Instructions) {
+  unsigned ATReg = Mips::NoRegister;
+  unsigned DReg = Inst.getOperand(0).getReg();
+  unsigned SReg = Inst.getOperand(1).getReg();
+  unsigned TReg = Inst.getOperand(2).getReg();
+  unsigned TmpReg = DReg;
+
+  unsigned FirstShift = Mips::NOP;
+  unsigned SecondShift = Mips::NOP;
+
+  if (hasMips32r2()) {
+
+    if (DReg == SReg) {
+      TmpReg = getATReg(Inst.getLoc());
+      if (!TmpReg)
+        return true;
+    }
+
+    if (Inst.getOpcode() == Mips::ROL) {
+      emitRRR(Mips::SUBu, TmpReg, Mips::ZERO, TReg, Inst.getLoc(), Instructions);
+      emitRRR(Mips::ROTRV, DReg, SReg, TmpReg, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    if (Inst.getOpcode() == Mips::ROR) {
+      emitRRR(Mips::ROTRV, DReg, SReg, TReg, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    return true;
+  }
+
+  if (hasMips32()) {
+
+    switch (Inst.getOpcode()) {
+    default:
+      llvm_unreachable("unexpected instruction opcode");
+    case Mips::ROL:
+      FirstShift = Mips::SRLV;
+      SecondShift = Mips::SLLV;
+      break;
+    case Mips::ROR:
+      FirstShift = Mips::SLLV;
+      SecondShift = Mips::SRLV;
+      break;
+    }
+
+    ATReg = getATReg(Inst.getLoc());
+    if (!ATReg)
+      return true;
+
+    emitRRR(Mips::SUBu, ATReg, Mips::ZERO, TReg, Inst.getLoc(), Instructions);
+    emitRRR(FirstShift, ATReg, SReg, ATReg, Inst.getLoc(), Instructions);
+    emitRRR(SecondShift, DReg, SReg, TReg, Inst.getLoc(), Instructions);
+    emitRRR(Mips::OR, DReg, DReg, ATReg, Inst.getLoc(), Instructions);
+
+    return false;
+  }
+
+  return true;
+}
+
+bool MipsAsmParser::expandRotationImm(MCInst &Inst, SMLoc IDLoc,
+                                      SmallVectorImpl<MCInst> &Instructions) {
+
+  unsigned ATReg = Mips::NoRegister;
+  unsigned DReg = Inst.getOperand(0).getReg();
+  unsigned SReg = Inst.getOperand(1).getReg();
+  int64_t ImmValue = Inst.getOperand(2).getImm();
+
+  unsigned FirstShift = Mips::NOP;
+  unsigned SecondShift = Mips::NOP;
+
+  if (hasMips32r2()) {
+
+    if (Inst.getOpcode() == Mips::ROLImm) {
+      uint64_t MaxShift = 32;
+      uint64_t ShiftValue = ImmValue;
+      if (ImmValue != 0)
+        ShiftValue = MaxShift - ImmValue;
+      emitRRI(Mips::ROTR, DReg, SReg, ShiftValue, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    if (Inst.getOpcode() == Mips::RORImm) {
+      emitRRI(Mips::ROTR, DReg, SReg, ImmValue, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    return true;
+  }
+
+  if (hasMips32()) {
+
+    if (ImmValue == 0) {
+      emitRRI(Mips::SRL, DReg, SReg, 0, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    switch (Inst.getOpcode()) {
+    default:
+      llvm_unreachable("unexpected instruction opcode");
+    case Mips::ROLImm:
+      FirstShift = Mips::SLL;
+      SecondShift = Mips::SRL;
+      break;
+    case Mips::RORImm:
+      FirstShift = Mips::SRL;
+      SecondShift = Mips::SLL;
+      break;
+    }
+
+    ATReg = getATReg(Inst.getLoc());
+    if (!ATReg)
+      return true;
+
+    emitRRI(FirstShift, ATReg, SReg, ImmValue, Inst.getLoc(), Instructions);
+    emitRRI(SecondShift, DReg, SReg, 32 - ImmValue, Inst.getLoc(), Instructions);
+    emitRRR(Mips::OR, DReg, DReg, ATReg, Inst.getLoc(), Instructions);
+
+    return false;
+  }
+
+  return true;
+}
+
+bool MipsAsmParser::expandDRotation(MCInst &Inst, SMLoc IDLoc,
+                                    SmallVectorImpl<MCInst> &Instructions) {
+
+  unsigned ATReg = Mips::NoRegister;
+  unsigned DReg = Inst.getOperand(0).getReg();
+  unsigned SReg = Inst.getOperand(1).getReg();
+  unsigned TReg = Inst.getOperand(2).getReg();
+  unsigned TmpReg = DReg;
+
+  unsigned FirstShift = Mips::NOP;
+  unsigned SecondShift = Mips::NOP;
+
+  if (hasMips64r2()) {
+
+    if (TmpReg == SReg) {
+      TmpReg = getATReg(Inst.getLoc());
+      if (!TmpReg)
+        return true;
+    }
+
+    if (Inst.getOpcode() == Mips::DROL) {
+      emitRRR(Mips::DSUBu, TmpReg, Mips::ZERO, TReg, Inst.getLoc(), Instructions);
+      emitRRR(Mips::DROTRV, DReg, SReg, TmpReg, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    if (Inst.getOpcode() == Mips::DROR) {
+      emitRRR(Mips::DROTRV, DReg, SReg, TReg, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    return true;
+  }
+
+  if (hasMips64()) {
+
+    switch (Inst.getOpcode()) {
+    default:
+      llvm_unreachable("unexpected instruction opcode");
+    case Mips::DROL:
+      FirstShift = Mips::DSRLV;
+      SecondShift = Mips::DSLLV;
+      break;
+    case Mips::DROR:
+      FirstShift = Mips::DSLLV;
+      SecondShift = Mips::DSRLV;
+      break;
+    }
+
+    ATReg = getATReg(Inst.getLoc());
+    if (!ATReg)
+      return true;
+
+    emitRRR(Mips::DSUBu, ATReg, Mips::ZERO, TReg, Inst.getLoc(), Instructions);
+    emitRRR(FirstShift, ATReg, SReg, ATReg, Inst.getLoc(), Instructions);
+    emitRRR(SecondShift, DReg, SReg, TReg, Inst.getLoc(), Instructions);
+    emitRRR(Mips::OR, DReg, DReg, ATReg, Inst.getLoc(), Instructions);
+
+    return false;
+  }
+
+  return true;
+}
+
+bool MipsAsmParser::expandDRotationImm(MCInst &Inst, SMLoc IDLoc,
+                                       SmallVectorImpl<MCInst> &Instructions) {
+
+  unsigned ATReg = Mips::NoRegister;
+  unsigned DReg = Inst.getOperand(0).getReg();
+  unsigned SReg = Inst.getOperand(1).getReg();
+  int64_t ImmValue = Inst.getOperand(2).getImm() % 64;
+
+  unsigned FirstShift = Mips::NOP;
+  unsigned SecondShift = Mips::NOP;
+
+  MCInst TmpInst;
+
+  if (hasMips64r2()) {
+
+    unsigned FinalOpcode = Mips::NOP;
+    if (ImmValue == 0)
+      FinalOpcode = Mips::DROTR;
+    else if (ImmValue % 32 == 0)
+      FinalOpcode = Mips::DROTR32;
+    else if ((ImmValue >= 1) && (ImmValue <= 32)) {
+      if (Inst.getOpcode() == Mips::DROLImm)
+        FinalOpcode = Mips::DROTR32;
+      else
+        FinalOpcode = Mips::DROTR;
+    } else if (ImmValue >= 33) {
+      if (Inst.getOpcode() == Mips::DROLImm)
+        FinalOpcode = Mips::DROTR;
+      else
+        FinalOpcode = Mips::DROTR32;
+    }
+
+    uint64_t ShiftValue = ImmValue % 32;
+    if (Inst.getOpcode() == Mips::DROLImm)
+      ShiftValue = (32 - ImmValue % 32) % 32;
+
+    emitRRI(FinalOpcode, DReg, SReg, ShiftValue, Inst.getLoc(), Instructions);
+
+    return false;
+  }
+
+  if (hasMips64()) {
+
+    if (ImmValue == 0) {
+      emitRRI(Mips::DSRL, DReg, SReg, 0, Inst.getLoc(), Instructions);
+      return false;
+    }
+
+    switch (Inst.getOpcode()) {
+    default:
+      llvm_unreachable("unexpected instruction opcode");
+    case Mips::DROLImm:
+      if ((ImmValue >= 1) && (ImmValue <= 31)) {
+        FirstShift = Mips::DSLL;
+        SecondShift = Mips::DSRL32;
+      }
+      if (ImmValue == 32) {
+        FirstShift = Mips::DSLL32;
+        SecondShift = Mips::DSRL32;
+      }
+      if ((ImmValue >= 33) && (ImmValue <= 63)) {
+        FirstShift = Mips::DSLL32;
+        SecondShift = Mips::DSRL;
+      }
+      break;
+    case Mips::DRORImm:
+      if ((ImmValue >= 1) && (ImmValue <= 31)) {
+        FirstShift = Mips::DSRL;
+        SecondShift = Mips::DSLL32;
+      }
+      if (ImmValue == 32) {
+        FirstShift = Mips::DSRL32;
+        SecondShift = Mips::DSLL32;
+      }
+      if ((ImmValue >= 33) && (ImmValue <= 63)) {
+        FirstShift = Mips::DSRL32;
+        SecondShift = Mips::DSLL;
+      }
+      break;
+    }
+
+    ATReg = getATReg(Inst.getLoc());
+    if (!ATReg)
+      return true;
+
+    emitRRI(FirstShift, ATReg, SReg, ImmValue % 32, Inst.getLoc(), Instructions);
+    emitRRI(SecondShift, DReg, SReg, (32 - ImmValue % 32) % 32, Inst.getLoc(), Instructions);
+    emitRRR(Mips::OR, DReg, DReg, ATReg, Inst.getLoc(), Instructions);
+
+    return false;
+  }
+
   return true;
 }
 

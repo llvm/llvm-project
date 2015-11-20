@@ -935,22 +935,6 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
                             IIC_SSE_MOVU_P_RR>, VEX, VEX_L;
 }
 
-let Predicates = [HasAVX] in {
-def : Pat<(v8i32 (X86vzmovl
-                  (insert_subvector undef, (v4i32 VR128:$src), (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVAPSrr VR128:$src), sub_xmm)>;
-def : Pat<(v4i64 (X86vzmovl
-                  (insert_subvector undef, (v2i64 VR128:$src), (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVAPSrr VR128:$src), sub_xmm)>;
-def : Pat<(v8f32 (X86vzmovl
-                  (insert_subvector undef, (v4f32 VR128:$src), (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVAPSrr VR128:$src), sub_xmm)>;
-def : Pat<(v4f64 (X86vzmovl
-                  (insert_subvector undef, (v2f64 VR128:$src), (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVAPSrr VR128:$src), sub_xmm)>;
-}
-
-
 def : Pat<(int_x86_avx_storeu_ps_256 addr:$dst, VR256:$src),
           (VMOVUPSYmr addr:$dst, VR256:$src)>;
 def : Pat<(int_x86_avx_storeu_pd_256 addr:$dst, VR256:$src),
@@ -2934,7 +2918,7 @@ multiclass sse12_fp_packed_vector_logical_alias<
   defm V#NAME#PSY : sse12_fp_packed<opc, !strconcat(OpcodeStr, "ps"), OpNode,
         VR256, v8f32, f256mem, loadv8f32, SSEPackedSingle, itins, 0>,
         PS, VEX_4V, VEX_L;
-        
+
   defm V#NAME#PDY : sse12_fp_packed<opc, !strconcat(OpcodeStr, "pd"), OpNode,
         VR256, v4f64, f256mem, loadv4f64, SSEPackedDouble, itins, 0>,
         PD, VEX_4V, VEX_L;
@@ -4191,7 +4175,7 @@ defm VPSRADY : PDI_binop_rmi<0xE2, 0x72, MRM4r, "vpsrad", X86vsra, X86vsrai,
                              SSE_INTSHIFT_ITINS_P, 0>, VEX_4V, VEX_L;
 }// Predicates = [HasAVX2]
 
-let ExeDomain = SSEPackedInt, SchedRW = [WriteVecShift], hasSideEffects = 0 , 
+let ExeDomain = SSEPackedInt, SchedRW = [WriteVecShift], hasSideEffects = 0 ,
                                     Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   // 256-bit logical shifts.
   def VPSLLDQYri : PDIi8<0x73, MRM7r,

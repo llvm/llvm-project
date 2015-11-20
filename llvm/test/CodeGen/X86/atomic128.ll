@@ -119,16 +119,9 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rsi, %rax
-; CHECK:         setbe [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         setle [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         setg
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx
@@ -151,16 +144,9 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rsi, %rax
-; CHECK:         setae [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         setge [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         setge
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx
@@ -183,16 +169,9 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rsi, %rax
-; CHECK:         setbe [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         setbe [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         seta
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx
@@ -215,16 +194,9 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rax, %rsi
-; CHECK:         setb [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         seta [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         setb
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx

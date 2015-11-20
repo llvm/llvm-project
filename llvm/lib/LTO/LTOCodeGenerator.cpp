@@ -206,11 +206,15 @@ bool LTOCodeGenerator::writeMergedModules(const char *Path) {
 }
 
 bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
-  // make unique temp .o file to put generated object file
+  // make unique temp output file to put generated code
   SmallString<128> Filename;
   int FD;
+
+  const char *Extension =
+      (FileType == TargetMachine::CGFT_AssemblyFile ? "s" : "o");
+
   std::error_code EC =
-      sys::fs::createTemporaryFile("lto-llvm", "o", FD, Filename);
+      sys::fs::createTemporaryFile("lto-llvm", Extension, FD, Filename);
   if (EC) {
     emitError(EC.message());
     return false;
@@ -514,7 +518,7 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
   // MergedModule.
   MergedModule =
       splitCodeGen(std::move(MergedModule), Out, MCpu, FeatureStr, Options,
-                   RelocModel, CodeModel::Default, CGOptLevel);
+                   RelocModel, CodeModel::Default, CGOptLevel, FileType);
 
   return true;
 }

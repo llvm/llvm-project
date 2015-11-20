@@ -32,7 +32,7 @@ using namespace llvm;
 /// \brief Write samples to a text file.
 ///
 /// Note: it may be tempting to implement this in terms of
-/// FunctionSamples::dump().  Please don't.  The dump functionality is intended
+/// FunctionSamples::print().  Please don't.  The dump functionality is intended
 /// for debugging and has no specified form.
 ///
 /// The format used here is more structured and deliberate because
@@ -44,9 +44,10 @@ std::error_code SampleProfileWriterText::write(StringRef FName,
     OS << ":" << S.getHeadSamples();
   OS << "\n";
 
-  for (const auto &I : S.getBodySamples()) {
-    LineLocation Loc = I.first;
-    const SampleRecord &Sample = I.second;
+  SampleSorter<LineLocation, SampleRecord> SortedSamples(S.getBodySamples());
+  for (const auto &I : SortedSamples.get()) {
+    LineLocation Loc = I->first;
+    const SampleRecord &Sample = I->second;
     OS.indent(Indent + 1);
     if (Loc.Discriminator == 0)
       OS << Loc.LineOffset << ": ";
@@ -60,10 +61,12 @@ std::error_code SampleProfileWriterText::write(StringRef FName,
     OS << "\n";
   }
 
+  SampleSorter<CallsiteLocation, FunctionSamples> SortedCallsiteSamples(
+      S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : S.getCallsiteSamples()) {
-    CallsiteLocation Loc = I.first;
-    const FunctionSamples &CalleeSamples = I.second;
+  for (const auto &I : SortedCallsiteSamples.get()) {
+    CallsiteLocation Loc = I->first;
+    const FunctionSamples &CalleeSamples = I->second;
     OS.indent(Indent);
     if (Loc.Discriminator == 0)
       OS << Loc.LineOffset << ": ";

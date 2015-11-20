@@ -319,5 +319,42 @@ define <16 x i8> @shuffle_8_18_uuuuuuuuuuuuuu(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %1
 }
 
+define <16 x i8> @shuffle_uu_0_5_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(<16 x i8> %v) {
+; BTVER1-LABEL: shuffle_uu_0_5_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; BTVER1:       # BB#0:
+; BTVER1-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,0,5,5,4,4,5,5,4,4,5,5,6,6,7,7]
+; BTVER1-NEXT:    retq
+;
+; BTVER2-LABEL: shuffle_uu_0_5_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,5,5,4,4,5,5,4,4,5,5,6,6,7,7]
+; BTVER2-NEXT:    retq
+  %1 = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 undef, i32 0, i32 5, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <16 x i8> %1
+}
+
+define <16 x i8> @shuffle_uu_16_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(<16 x i8> %v) {
+; BTVER1-LABEL: shuffle_uu_16_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; BTVER1:       # BB#0:
+; BTVER1-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u],zero,xmm0[4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; BTVER1-NEXT:    retq
+;
+; BTVER2-LABEL: shuffle_uu_16_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u],zero,xmm0[4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; BTVER2-NEXT:    retq
+  %1 = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 undef, i32 16, i32 4, i32 16, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <16 x i8> %1
+}
+
+define <16 x i8> @shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(<16 x i8> %v) {
+; ALL-LABEL: shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; ALL:       # BB#0:
+; ALL-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3,4],zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ALL-NEXT:    retq
+  %1 = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 undef, i32 undef, i32 4, i32 16, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <16 x i8> %1
+}
+
 declare <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64>, i8, i8) nounwind
 declare <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64>, <2 x i64>, i8, i8) nounwind

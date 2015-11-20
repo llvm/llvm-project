@@ -51,12 +51,14 @@ exit:
 ; then calls @h, and that the call to @h doesn't return.
 ; CHECK-LABEL: define void @test1(
 ; CHECK:     left:
+; CHECK:       cleanuppad
+; CHECK:       %x.for.left = call i32 @g()
+; CHECK:       invoke void @f()
 ; CHECK:           to label %[[SHARED_CONT_LEFT:.+]] unwind label %[[INNER_LEFT:.+]]
 ; CHECK:     right:
 ; CHECK:           to label %right.catch unwind label %right.end
 ; CHECK:     right.catch:
 ; CHECK:       %x = call i32 @g()
-; CHECK:       store i32 %x, i32* %x.wineh.spillslot
 ; CHECK:           to label %shared.cont unwind label %[[INNER_RIGHT:.+]]
 ; CHECK:     right.end:
 ; CHECK:       catchendpad unwind to caller
@@ -66,13 +68,11 @@ exit:
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_RIGHT]]:
 ; CHECK:       [[I_R:\%.+]] = cleanuppad []
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       cleanupret [[I_R]] unwind label %right.end
 ; CHECK:     [[INNER_LEFT]]:
 ; CHECK:       [[I_L:\%.+]] = cleanuppad []
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 
 
@@ -118,6 +118,9 @@ exit:
 ; %right.end (which belongs to the entry funclet).
 ; CHECK-LABEL: define void @test2(
 ; CHECK:     left:
+; CHECK:       cleanuppad
+; CHECK:       %x.for.left = call i32 @g()
+; CHECK:       invoke void @f()
 ; CHECK:           to label %[[SHARED_CONT_LEFT:.+]] unwind label %[[INNER_LEFT:.+]]
 ; CHECK:     right:
 ; CHECK:           to label %right.catch unwind label %[[RIGHT_END:.+]]
@@ -136,12 +139,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_LEFT]]:
 ; CHECK:       catchendpad unwind to caller
@@ -190,6 +191,8 @@ exit:
 ; CHECK-LABEL: define void @test3(
 ; CHECK:     left:
 ; CHECK:       %l = cleanuppad []
+; CHECK:       %x.for.left = call i32 @g()
+; CHECK:       invoke void @f()
 ; CHECK:           to label %[[SHARED_CONT_LEFT:.+]] unwind label %[[INNER_LEFT:.+]]
 ; CHECK:     [[LEFT_END:left.end.*]]:
 ; CHECK:       cleanupendpad %l unwind label %right
@@ -210,12 +213,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_LEFT]]:
 ; CHECK:       catchendpad unwind label %[[LEFT_END]]
@@ -270,6 +271,8 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %left.catch unwind label %[[LEFT_END:.+]]
 ; CHECK:     left.catch:
+; CHECK:       %x.for.left = call i32 @g()
+; CHECK:       invoke void @f()
 ; CHECK:           to label %[[SHARED_CONT_LEFT:.+]] unwind label %[[INNER_LEFT:.+]]
 ; CHECK:     [[LEFT_END]]:
 ; CHECK:       catchendpad unwind label %right
@@ -290,12 +293,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_RIGHT]]:
 ; CHECK:       catchendpad unwind to caller
@@ -362,12 +363,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_RIGHT]]:
 ; CHECK:       catchendpad unwind to caller
@@ -446,12 +445,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_RIGHT]]:
 ; CHECK:       catchendpad unwind to caller
@@ -522,12 +519,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_RIGHT]]:
 ; CHECK:       catchendpad unwind label %[[INNER_SIBLING_RIGHT:.+]]
@@ -803,12 +798,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_RIGHT]]:
 ; CHECK:       catchendpad unwind to caller
@@ -875,12 +868,10 @@ exit:
 ; CHECK:       catchpad []
 ; CHECK:           to label %[[INNER_CATCH_LEFT:.+]] unwind label %[[INNER_END_LEFT:.+]]
 ; CHECK:     [[INNER_CATCH_RIGHT]]:
-; CHECK:       [[X_RELOAD_R:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_R]])
+; CHECK:       call void @h(i32 %x)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_CATCH_LEFT]]:
-; CHECK:       [[X_RELOAD_L:\%.+]] = load i32, i32* %x.wineh.spillslot
-; CHECK:       call void @h(i32 [[X_RELOAD_L]])
+; CHECK:       call void @h(i32 %x.for.left)
 ; CHECK:       unreachable
 ; CHECK:     [[INNER_END_RIGHT]]:
 ; CHECK:       catchendpad unwind label %[[RIGHT_END]]

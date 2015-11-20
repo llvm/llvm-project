@@ -4267,15 +4267,58 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   return 0;
 }
 
-inline static bool MaskRegClassContains(unsigned Reg) {
+static bool MaskRegClassContains(unsigned Reg) {
   return X86::VK8RegClass.contains(Reg) ||
          X86::VK16RegClass.contains(Reg) ||
          X86::VK32RegClass.contains(Reg) ||
          X86::VK64RegClass.contains(Reg) ||
          X86::VK1RegClass.contains(Reg);
 }
+
+static bool GRRegClassContains(unsigned Reg) {
+  return X86::GR64RegClass.contains(Reg) ||
+         X86::GR32RegClass.contains(Reg) ||
+         X86::GR16RegClass.contains(Reg) ||
+         X86::GR8RegClass.contains(Reg);
+}
 static
-unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg) {
+unsigned copyPhysRegOpcode_AVX512_DQ(unsigned& DestReg, unsigned& SrcReg) {
+  if (MaskRegClassContains(SrcReg) && X86::GR8RegClass.contains(DestReg)) {
+    DestReg = getX86SubSuperRegister(DestReg, MVT::i32);
+    return X86::KMOVBrk;
+  }
+  if (MaskRegClassContains(DestReg) && X86::GR8RegClass.contains(SrcReg)) {
+    SrcReg = getX86SubSuperRegister(SrcReg, MVT::i32);
+    return X86::KMOVBkr;
+  }
+  return 0;
+}
+
+static
+unsigned copyPhysRegOpcode_AVX512_BW(unsigned& DestReg, unsigned& SrcReg) {
+  if (MaskRegClassContains(SrcReg) && MaskRegClassContains(DestReg))
+    return X86::KMOVQkk;
+  if (MaskRegClassContains(SrcReg) && X86::GR32RegClass.contains(DestReg))
+    return X86::KMOVDrk;
+  if (MaskRegClassContains(SrcReg) && X86::GR64RegClass.contains(DestReg))
+    return X86::KMOVQrk;
+  if (MaskRegClassContains(DestReg) && X86::GR32RegClass.contains(SrcReg))
+    return X86::KMOVDkr;
+  if (MaskRegClassContains(DestReg) && X86::GR64RegClass.contains(SrcReg))
+    return X86::KMOVQkr;
+  return 0;
+}
+
+static
+unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg,
+                                  const X86Subtarget &Subtarget)
+{
+  if (Subtarget.hasDQI())
+    if (auto Opc = copyPhysRegOpcode_AVX512_DQ(DestReg, SrcReg))
+      return Opc;
+  if (Subtarget.hasBWI())
+    if (auto Opc = copyPhysRegOpcode_AVX512_BW(DestReg, SrcReg))
+      return Opc;
   if (X86::VR128XRegClass.contains(DestReg, SrcReg) ||
       X86::VR256XRegClass.contains(DestReg, SrcReg) ||
       X86::VR512RegClass.contains(DestReg, SrcReg)) {
@@ -4283,20 +4326,13 @@ unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg) {
      SrcReg = get512BitSuperRegister(SrcReg);
      return X86::VMOVAPSZrr;
   }
-  if (MaskRegClassContains(DestReg) &&
-      MaskRegClassContains(SrcReg))
+  if (MaskRegClassContains(DestReg) && MaskRegClassContains(SrcReg))
     return X86::KMOVWkk;
-  if (MaskRegClassContains(DestReg) &&
-      (X86::GR32RegClass.contains(SrcReg) ||
-       X86::GR16RegClass.contains(SrcReg) ||
-       X86::GR8RegClass.contains(SrcReg))) {
+  if (MaskRegClassContains(DestReg) && GRRegClassContains(SrcReg)) {
     SrcReg = getX86SubSuperRegister(SrcReg, MVT::i32);
     return X86::KMOVWkr;
   }
-  if ((X86::GR32RegClass.contains(DestReg) ||
-       X86::GR16RegClass.contains(DestReg) ||
-       X86::GR8RegClass.contains(DestReg)) &&
-       MaskRegClassContains(SrcReg)) {
+  if (GRRegClassContains(DestReg) && MaskRegClassContains(SrcReg)) {
     DestReg = getX86SubSuperRegister(DestReg, MVT::i32);
     return X86::KMOVWrk;
   }
@@ -4332,7 +4368,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (X86::VR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MMX_MOVQ64rr;
   else if (HasAVX512)
-    Opc = copyPhysRegOpcode_AVX512(DestReg, SrcReg);
+    Opc = copyPhysRegOpcode_AVX512(DestReg, SrcReg, Subtarget);
   else if (X86::VR128RegClass.contains(DestReg, SrcReg))
     Opc = HasAVX ? X86::VMOVAPSrr : X86::MOVAPSrr;
   else if (X86::VR256RegClass.contains(DestReg, SrcReg))
@@ -5279,14 +5315,7 @@ static void addOperands(MachineInstrBuilder &MIB, ArrayRef<MachineOperand> MOs,
     for (unsigned i = 0; i != NumAddrOps; ++i) {
       const MachineOperand &MO = MOs[i];
       if (i == 3 && PtrOffset != 0) {
-        assert((MO.isImm() || MO.isGlobal()) &&
-               "Unexpected memory operand type");
-        if (MO.isImm()) {
-          MIB.addImm(MO.getImm() + PtrOffset);
-        } else {
-          MIB.addGlobalAddress(MO.getGlobal(), MO.getOffset() + PtrOffset,
-                               MO.getTargetFlags());
-        }
+        MIB.addDisp(MO, PtrOffset);
       } else {
         MIB.addOperand(MO);
       }

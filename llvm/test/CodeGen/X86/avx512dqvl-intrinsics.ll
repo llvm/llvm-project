@@ -1654,7 +1654,7 @@ declare <2 x double> @llvm.x86.avx512.mask.vextractf64x2.256(<4 x double>, i32, 
 define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_256(<4 x double> %x0, <2 x double> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf64x2_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    kmovb %edi, %k1
 ; CHECK-NEXT:    vextractf64x2 $1, %ymm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vextractf64x2 $1, %ymm0, %xmm2 {%k1} {z}
 ; CHECK-NEXT:    vextractf64x2 $1, %ymm0, %xmm0

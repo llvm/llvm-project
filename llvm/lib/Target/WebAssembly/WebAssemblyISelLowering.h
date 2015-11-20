@@ -52,6 +52,8 @@ private:
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
+  bool isCheapToSpeculateCttz() const override;
+  bool isCheapToSpeculateCtlz() const override;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;

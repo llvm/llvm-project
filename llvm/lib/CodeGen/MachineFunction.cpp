@@ -620,10 +620,9 @@ BitVector MachineFrameInfo::getPristineRegs(const MachineFunction &MF) const {
     BV.set(*CSR);
 
   // Saved CSRs are not pristine.
-  const std::vector<CalleeSavedInfo> &CSI = getCalleeSavedInfo();
-  for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
-         E = CSI.end(); I != E; ++I)
-    BV.reset(I->getReg());
+  for (auto &I : getCalleeSavedInfo())
+    for (MCSubRegIterator S(I.getReg(), TRI, true); S.isValid(); ++S)
+      BV.reset(*S);
 
   return BV;
 }

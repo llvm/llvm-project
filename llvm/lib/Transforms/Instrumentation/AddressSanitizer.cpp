@@ -1216,10 +1216,7 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
       bool TAAParsed;
       std::string ErrorCode = MCSectionMachO::ParseSectionSpecifier(
           Section, ParsedSegment, ParsedSection, TAA, TAAParsed, StubSize);
-      if (!ErrorCode.empty()) {
-        assert(false && "Invalid section specifier.");
-        return false;
-      }
+      assert(ErrorCode.empty() && "Invalid section specifier.");
 
       // Ignore the globals from the __OBJC section. The ObjC runtime assumes
       // those conform to /usr/lib/objc/runtime.h, so we can't add redzones to

@@ -1682,6 +1682,50 @@ def CACHE : MMRel, CacheOp<"cache", mem>, CACHEOP_FM<0b101111>,
 def PREF :  MMRel, CacheOp<"pref", mem>, CACHEOP_FM<0b110011>,
             INSN_MIPS3_32_NOT_32R6_64R6;
 
+def ROL : MipsAsmPseudoInst<(outs),
+                            (ins GPR32Opnd:$rs, GPR32Opnd:$rt, GPR32Opnd:$rd),
+                            "rol\t$rs, $rt, $rd">;
+def ROLImm : MipsAsmPseudoInst<(outs),
+                               (ins GPR32Opnd:$rs, GPR32Opnd:$rt, simm16:$imm),
+                               "rol\t$rs, $rt, $imm">;
+def : MipsInstAlias<"rol $rd, $rs",
+                    (ROL GPR32Opnd:$rd, GPR32Opnd:$rd, GPR32Opnd:$rs), 0>;
+def : MipsInstAlias<"rol $rd, $imm",
+                    (ROLImm GPR32Opnd:$rd, GPR32Opnd:$rd, simm16:$imm), 0>;
+
+def ROR : MipsAsmPseudoInst<(outs),
+                            (ins GPR32Opnd:$rs, GPR32Opnd:$rt, GPR32Opnd:$rd),
+                            "ror\t$rs, $rt, $rd">;
+def RORImm : MipsAsmPseudoInst<(outs),
+                               (ins GPR32Opnd:$rs, GPR32Opnd:$rt, simm16:$imm),
+                               "ror\t$rs, $rt, $imm">;
+def : MipsInstAlias<"ror $rd, $rs",
+                    (ROR GPR32Opnd:$rd, GPR32Opnd:$rd, GPR32Opnd:$rs), 0>;
+def : MipsInstAlias<"ror $rd, $imm",
+                    (RORImm GPR32Opnd:$rd, GPR32Opnd:$rd, simm16:$imm), 0>;
+
+def DROL : MipsAsmPseudoInst<(outs),
+                             (ins GPR32Opnd:$rs, GPR32Opnd:$rt, GPR32Opnd:$rd),
+                             "drol\t$rs, $rt, $rd">, ISA_MIPS64;
+def DROLImm : MipsAsmPseudoInst<(outs),
+                                (ins GPR32Opnd:$rs, GPR32Opnd:$rt, simm16:$imm),
+                                "drol\t$rs, $rt, $imm">, ISA_MIPS64;
+def : MipsInstAlias<"drol $rd, $rs",
+                    (DROL GPR32Opnd:$rd, GPR32Opnd:$rd, GPR32Opnd:$rs), 0>, ISA_MIPS64;
+def : MipsInstAlias<"drol $rd, $imm",
+                    (DROLImm GPR32Opnd:$rd, GPR32Opnd:$rd, simm16:$imm), 0>, ISA_MIPS64;
+
+def DROR : MipsAsmPseudoInst<(outs),
+                             (ins GPR32Opnd:$rs, GPR32Opnd:$rt, GPR32Opnd:$rd),
+                             "dror\t$rs, $rt, $rd">, ISA_MIPS64;
+def DRORImm : MipsAsmPseudoInst<(outs),
+                                (ins GPR32Opnd:$rs, GPR32Opnd:$rt, simm16:$imm),
+                                "dror\t$rs, $rt, $imm">, ISA_MIPS64;
+def : MipsInstAlias<"dror $rd, $rs",
+                    (DROR GPR32Opnd:$rd, GPR32Opnd:$rd, GPR32Opnd:$rs), 0>, ISA_MIPS64;
+def : MipsInstAlias<"dror $rd, $imm",
+                    (DRORImm GPR32Opnd:$rd, GPR32Opnd:$rd, simm16:$imm), 0>, ISA_MIPS64;
+
 //===----------------------------------------------------------------------===//
 // Instruction aliases
 //===----------------------------------------------------------------------===//
