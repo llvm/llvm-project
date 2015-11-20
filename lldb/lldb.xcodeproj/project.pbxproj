@@ -6591,7 +6591,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -x";
-			shellScript = "cd $SOURCE_ROOT\nVCS_FILE=$CONFIGURATION_BUILD_DIR/lldb_revision.h\nif [ -f \"$VCS_FILE\" ]; then\n    rm $VCS_FILE\nfi\ntouch $VCS_FILE\n\nLLDB_REVISION=$(python $SOURCE_ROOT/scripts/get_vcs_revision.py)\nif [ -n \"$LLDB_REVISION\" ]; then\n    echo \"#define LLDB_REVISION \\\"${LLDB_REVISION}\\\"\" >> $VCS_FILE\nfi";
+			shellScript = "cd $SOURCE_ROOT\n\n# Ensure the build directory exists.\nmkdir -p $CONFIGURATION_BUILD_DIR\n\n# Delete the file if it already exists.\nVCS_FILE=$CONFIGURATION_BUILD_DIR/lldb_revision.h\nif [ -f \"$VCS_FILE\" ]; then\n    rm $VCS_FILE\nfi\n\n# Create it empty.\ntouch $VCS_FILE\n\n# Fill the contents of the file with the revision if we can detect it.\nLLDB_REVISION=$(python $SOURCE_ROOT/scripts/get_vcs_revision.py)\nif [ -n \"$LLDB_REVISION\" ]; then\n    echo \"#define LLDB_REVISION \\\"${LLDB_REVISION}\\\"\" >> $VCS_FILE\nfi";
 		};
 		261B5A7511C3FA6F00AABD0A /* Fixup Framework Headers */ = {
 			isa = PBXShellScriptBuildPhase;
