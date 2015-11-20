@@ -2173,7 +2173,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /W1                    Enable -Wall
       /W2                    Enable -Wall
       /W3                    Enable -Wall
-      /W4                    Enable -Wall
+      /W4                    Enable -Wall and -Wextra
       /Wall                  Enable -Wall
       /WX-                   Do not treat warnings as errors
       /WX                    Treat warnings as errors

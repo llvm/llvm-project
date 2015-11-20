@@ -5711,6 +5711,26 @@ void Clang::AddClangCLArgs(const ArgList &Args, ArgStringList &CmdArgs,
     else
       CmdArgs.push_back("msvc");
   }
+
+  if (Arg *A =
+          Args.getLastArg(options::OPT__SLASH_W0, options::OPT__SLASH_W1,
+                          options::OPT__SLASH_W2, options::OPT__SLASH_W3,
+                          options::OPT__SLASH_W4, options::OPT__SLASH_Wall)) {
+    switch (A->getOption().getID()) {
+    case options::OPT__SLASH_W0:
+      CmdArgs.push_back("-w");
+      break;
+    case options::OPT__SLASH_W4:
+      CmdArgs.push_back("-Wextra");
+      // Fallthrough.
+    case options::OPT__SLASH_W1:
+    case options::OPT__SLASH_W2:
+    case options::OPT__SLASH_W3:
+    case options::OPT__SLASH_Wall:
+      CmdArgs.push_back("-Wall");
+      break;
+    }
+  }
 }
 
 visualstudio::Compiler *Clang::getCLFallback() const {
