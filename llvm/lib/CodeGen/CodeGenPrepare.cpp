@@ -1606,6 +1606,85 @@ static void ScalarizeMaskedScatter(CallInst *CI) {
   CI->eraseFromParent();
 }
 
+/// If counting leading or trailing zeros is an expensive operation and a zero
+/// input is defined, add a check for zero to avoid calling the intrinsic.
+///
+/// We want to transform:
+///     %z = call i64 @llvm.cttz.i64(i64 %A, i1 false)
+///
+/// into:
+///   entry:
+///     %cmpz = icmp eq i64 %A, 0
+///     br i1 %cmpz, label %cond.end, label %cond.false
+///   cond.false:
+///     %z = call i64 @llvm.cttz.i64(i64 %A, i1 true)
+///     br label %cond.end
+///   cond.end:
+///     %ctz = phi i64 [ 64, %entry ], [ %z, %cond.false ]
+///
+/// If the transform is performed, return true and set ModifiedDT to true.
+static bool despeculateCountZeros(IntrinsicInst *CountZeros,
+                                  const TargetLowering *TLI,
+                                  const DataLayout *DL,
+                                  bool &ModifiedDT) {
+  if (!TLI || !DL)
+    return false;
+
+  // If a zero input is undefined, it doesn't make sense to despeculate that.
+  if (match(CountZeros->getOperand(1), m_One()))
+    return false;
+
+  // If it's cheap to speculate, there's nothing to do.
+  auto IntrinsicID = CountZeros->getIntrinsicID();
+  if ((IntrinsicID == Intrinsic::cttz && TLI->isCheapToSpeculateCttz()) ||
+      (IntrinsicID == Intrinsic::ctlz && TLI->isCheapToSpeculateCtlz()))
+    return false;
+
+  // Only handle legal scalar cases. Anything else requires too much work.
+  Type *Ty = CountZeros->getType();
+  unsigned SizeInBits = Ty->getPrimitiveSizeInBits();
+  if (Ty->isVectorTy() || SizeInBits > DL->getLargestLegalIntTypeSize())
+    return false;
+
+  // The intrinsic will be sunk behind a compare against zero and branch.
+  BasicBlock *StartBlock = CountZeros->getParent();
+  BasicBlock *CallBlock = StartBlock->splitBasicBlock(CountZeros, "cond.false");
+
+  // Create another block after the count zero intrinsic. A PHI will be added
+  // in this block to select the result of the intrinsic or the bit-width
+  // constant if the input to the intrinsic is zero.
+  BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(CountZeros));
+  BasicBlock *EndBlock = CallBlock->splitBasicBlock(SplitPt, "cond.end");
+
+  // Set up a builder to create a compare, conditional branch, and PHI.
+  IRBuilder<> Builder(CountZeros->getContext());
+  Builder.SetInsertPoint(StartBlock->getTerminator());
+  Builder.SetCurrentDebugLocation(CountZeros->getDebugLoc());
+
+  // Replace the unconditional branch that was created by the first split with
+  // a compare against zero and a conditional branch.
+  Value *Zero = Constant::getNullValue(Ty);
+  Value *Cmp = Builder.CreateICmpEQ(CountZeros->getOperand(0), Zero, "cmpz");
+  Builder.CreateCondBr(Cmp, EndBlock, CallBlock);
+  StartBlock->getTerminator()->eraseFromParent();
+
+  // Create a PHI in the end block to select either the output of the intrinsic
+  // or the bit width of the operand.
+  Builder.SetInsertPoint(&EndBlock->front());
+  PHINode *PN = Builder.CreatePHI(Ty, 2, "ctz");
+  CountZeros->replaceAllUsesWith(PN);
+  Value *BitWidth = Builder.getInt(APInt(SizeInBits, SizeInBits));
+  PN->addIncoming(BitWidth, StartBlock);
+  PN->addIncoming(CountZeros, CallBlock);
+
+  // We are explicitly handling the zero case, so we can set the intrinsic's
+  // undefined zero argument to 'true'. This will also prevent reprocessing the
+  // intrinsic; we only despeculate when a zero input is defined.
+  CountZeros->setArgOperand(1, Builder.getTrue());
+  ModifiedDT = true;
+  return true;
+}
+
 bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
   BasicBlock *BB = CI->getParent();
 
@@ -1746,6 +1825,11 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
       II->replaceAllUsesWith(II->getArgOperand(0));
       II->eraseFromParent();
       return true;
+
+    case Intrinsic::cttz:
+    case Intrinsic::ctlz:
+      // If counting zeros is expensive, try to avoid it.
+      return despeculateCountZeros(II, TLI, DL, ModifiedDT);
     }
 
     if (TLI) {

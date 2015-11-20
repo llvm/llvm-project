@@ -98,20 +98,30 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
 
   // FIXME: If scheduling has moved an ARGUMENT virtual register, move it back,
   // and recompute liveness. This is a temporary hack.
-  bool SawNonArg = false;
   bool MovedArg = false;
   MachineBasicBlock &EntryMBB = MF.front();
-  for (auto MII = EntryMBB.begin(); MII != EntryMBB.end(); ) {
-    MachineInstr *MI = &*MII++;
+  MachineBasicBlock::iterator InsertPt = EntryMBB.end();
+  // Look for the first NonArg instruction.
+  for (auto MII = EntryMBB.begin(), MIE = EntryMBB.end(); MII != MIE; ++MII) {
+    MachineInstr *MI = MII;
+    if (MI->getOpcode() != WebAssembly::ARGUMENT_I32 &&
+        MI->getOpcode() != WebAssembly::ARGUMENT_I64 &&
+        MI->getOpcode() != WebAssembly::ARGUMENT_F32 &&
+        MI->getOpcode() != WebAssembly::ARGUMENT_F64) {
+      InsertPt = MII;
+      break;
+    }
+  }
+  // Now move any argument instructions later in the block
+  // to before our first NonArg instruction.
+  for (auto I = InsertPt, E = EntryMBB.end(); I != E; ++I) {
+    MachineInstr *MI = I;
     if (MI->getOpcode() == WebAssembly::ARGUMENT_I32 ||
         MI->getOpcode() == WebAssembly::ARGUMENT_I64 ||
         MI->getOpcode() == WebAssembly::ARGUMENT_F32 ||
         MI->getOpcode() == WebAssembly::ARGUMENT_F64) {
-      EntryMBB.insert(EntryMBB.begin(), MI->removeFromParent());
-      if (SawNonArg)
-        MovedArg = true;
-    } else {
-      SawNonArg = true;
+      EntryMBB.insert(InsertPt, MI->removeFromParent());
+      MovedArg = true;
     }
   }
   if (MovedArg) {

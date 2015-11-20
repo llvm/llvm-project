@@ -63,7 +63,7 @@ template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
   }
 };
 
-#if __GNUC__ >= 4 || _MSC_VER
+#if __GNUC__ >= 4 || defined(_MSC_VER)
 template <typename T> struct TrailingZerosCounter<T, 4> {
   static std::size_t count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
@@ -71,7 +71,7 @@ template <typename T> struct TrailingZerosCounter<T, 4> {
 
 #if __has_builtin(__builtin_ctz) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_ctz(Val);
-#elif _MSC_VER
+#elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanForward(&Index, Val);
     return Index;
@@ -87,7 +87,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 
 #if __has_builtin(__builtin_ctzll) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_ctzll(Val);
-#elif _MSC_VER
+#elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanForward64(&Index, Val);
     return Index;
@@ -132,7 +132,7 @@ template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
   }
 };
 
-#if __GNUC__ >= 4 || _MSC_VER
+#if __GNUC__ >= 4 || defined(_MSC_VER)
 template <typename T> struct LeadingZerosCounter<T, 4> {
   static std::size_t count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
@@ -140,7 +140,7 @@ template <typename T> struct LeadingZerosCounter<T, 4> {
 
 #if __has_builtin(__builtin_clz) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_clz(Val);
-#elif _MSC_VER
+#elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanReverse(&Index, Val);
     return Index ^ 31;
@@ -156,7 +156,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 
 #if __has_builtin(__builtin_clzll) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_clzll(Val);
-#elif _MSC_VER
+#elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanReverse64(&Index, Val);
     return Index ^ 63;

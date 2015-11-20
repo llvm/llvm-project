@@ -228,6 +228,16 @@ WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
+bool WebAssemblyTargetLowering::isCheapToSpeculateCttz() const {
+  // Assume ctz is a relatively cheap operation.
+  return true;
+}
+
+bool WebAssemblyTargetLowering::isCheapToSpeculateCtlz() const {
+  // Assume clz is a relatively cheap operation.
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Lowering private implementation.
 //===----------------------------------------------------------------------===//

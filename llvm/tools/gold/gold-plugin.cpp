@@ -609,8 +609,7 @@ static void freeSymName(ld_plugin_symbol &Sym) {
 }
 
 static std::unique_ptr<FunctionInfoIndex>
-getFunctionIndexForFile(LLVMContext &Context, claimed_file &F,
-                        ld_plugin_input_file &Info) {
+getFunctionIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
 
   if (get_symbols(F.handle, F.syms.size(), &F.syms[0]) != LDPS_OK)
     message(LDPL_FATAL, "Failed to get symbol information");
@@ -911,7 +910,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
         message(LDPL_FATAL, "Failed to get file information");
 
       std::unique_ptr<FunctionInfoIndex> Index =
-          getFunctionIndexForFile(Context, F, File);
+          getFunctionIndexForFile(F, File);
       CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
     }
 

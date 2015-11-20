@@ -118,3 +118,49 @@ define i8 @test10(i32 %X) {
 ; CHECK: and
 ; CHECK: ret
 }
+
+; PR25543
+; https://llvm.org/bugs/show_bug.cgi?id=25543
+; TODO: This could be extractelement.
+
+define i32 @trunc_bitcast1(<4 x i32> %v) {
+  %bc = bitcast <4 x i32> %v to i128
+  %shr = lshr i128 %bc, 32
+  %ext = trunc i128 %shr to i32
+  ret i32 %ext
+
+; CHECK-LABEL: @trunc_bitcast1(
+; CHECK-NEXT:  %bc = bitcast <4 x i32> %v to i128
+; CHECK-NEXT:  %shr = lshr i128 %bc, 32
+; CHECK-NEXT:  %ext = trunc i128 %shr to i32
+; CHECK-NEXT:  ret i32 %ext
+}
+
+; TODO: This could be bitcast + extractelement.
+
+define i32 @trunc_bitcast2(<2 x i64> %v) {
+  %bc = bitcast <2 x i64> %v to i128
+  %shr = lshr i128 %bc, 64
+  %ext = trunc i128 %shr to i32
+  ret i32 %ext
+
+; CHECK-LABEL: @trunc_bitcast2(
+; CHECK-NEXT:  %bc = bitcast <2 x i64> %v to i128
+; CHECK-NEXT:  %shr = lshr i128 %bc, 64
+; CHECK-NEXT:  %ext = trunc i128 %shr to i32
+; CHECK-NEXT:  ret i32 %ext
+}
+
+; TODO: The shift is optional. This could be extractelement.
+
+define i32 @trunc_bitcast3(<4 x i32> %v) {
+  %bc = bitcast <4 x i32> %v to i128
+  %ext = trunc i128 %bc to i32
+  ret i32 %ext
+
+; CHECK-LABEL: @trunc_bitcast3(
+; CHECK-NEXT:  %bc = bitcast <4 x i32> %v to i128
+; CHECK-NEXT:  %ext = trunc i128 %bc to i32
+; CHECK-NEXT:  ret i32 %ext
+}
+

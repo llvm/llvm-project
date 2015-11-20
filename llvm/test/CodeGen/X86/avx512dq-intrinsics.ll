@@ -322,7 +322,7 @@ declare <2 x double> @llvm.x86.avx512.mask.vextractf64x2.512(<8 x double>, i32, 
 define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_512(<8 x double> %x0, <2 x double> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf64x2_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    kmovb %edi, %k1
 ; CHECK-NEXT:    vextractf64x2 $1, %zmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vextractf64x2 $1, %zmm0, %xmm2 {%k1} {z}
 ; CHECK-NEXT:    vextractf64x2 $1, %zmm0, %xmm0
@@ -342,7 +342,7 @@ declare <8 x float> @llvm.x86.avx512.mask.vextractf32x8.512(<16 x float>, i32, <
 define <8 x float>@test_int_x86_avx512_mask_vextractf32x8(<16 x float> %x0, <8 x float> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf32x8:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    kmovb %edi, %k1
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm2 {%k1} {z}
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm0

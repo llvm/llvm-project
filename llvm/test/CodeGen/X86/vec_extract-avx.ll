@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-unknown"
 ; When extracting multiple consecutive elements from a larger
 ; vector into a smaller one, do it efficiently. We should use
 ; an EXTRACT_SUBVECTOR node internally rather than a bunch of
-; single element extractions. 
+; single element extractions.
 
 ; Extracting the low elements only requires using the right kind of store.
 define void @low_v8f32_to_v4f32(<8 x float> %v, <4 x float>* %ptr) {
@@ -26,7 +26,7 @@ define void @low_v8f32_to_v4f32(<8 x float> %v, <4 x float>* %ptr) {
 ; CHECK-NEXT: retq
 }
 
-; Extracting the high elements requires just one AVX instruction. 
+; Extracting the high elements requires just one AVX instruction.
 define void @high_v8f32_to_v4f32(<8 x float> %v, <4 x float>* %ptr) {
   %ext0 = extractelement <8 x float> %v, i32 4
   %ext1 = extractelement <8 x float> %v, i32 5
@@ -77,6 +77,73 @@ define void @high_v4f64_to_v2f64(<4 x double> %v, <2 x double>* %ptr) {
 
 ; CHECK-LABEL: high_v4f64_to_v2f64
 ; CHECK: vextractf128
+; CHECK-NEXT: vzeroupper
+; CHECK-NEXT: retq
+}
+
+; PR25320 Make sure that a widened (possibly legalized) vector correctly zero-extends upper elements.
+; FIXME - Ideally these should just call VMOVD/VMOVQ/VMOVSS/VMOVSD
+
+define void @legal_vzmovl_2i32_8i32(<2 x i32>* %in, <8 x i32>* %out) {
+  %ld = load <2 x i32>, <2 x i32>* %in, align 8
+  %ext = extractelement <2 x i32> %ld, i64 0
+  %ins = insertelement <8 x i32> <i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 %ext, i64 0
+  store <8 x i32> %ins, <8 x i32>* %out, align 32
+  ret void
+
+; CHECK-LABEL: legal_vzmovl_2i32_8i32
+; CHECK: vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; CHECK-NEXT: vxorps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT: vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
+; CHECK-NEXT: vmovaps %ymm0, (%rsi)
+; CHECK-NEXT: vzeroupper
+; CHECK-NEXT: retq
+}
+
+define void @legal_vzmovl_2i64_4i64(<2 x i64>* %in, <4 x i64>* %out) {
+  %ld = load <2 x i64>, <2 x i64>* %in, align 8
+  %ext = extractelement <2 x i64> %ld, i64 0
+  %ins = insertelement <4 x i64> <i64 undef, i64 0, i64 0, i64 0>, i64 %ext, i64 0
+  store <4 x i64> %ins, <4 x i64>* %out, align 32
+  ret void
+
+; CHECK-LABEL: legal_vzmovl_2i64_4i64
+; CHECK: vmovupd (%rdi), %xmm0
+; CHECK-NEXT: vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT: vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
+; CHECK-NEXT: vmovapd %ymm0, (%rsi)
+; CHECK-NEXT: vzeroupper
+; CHECK-NEXT: retq
+}
+
+define void @legal_vzmovl_2f32_8f32(<2 x float>* %in, <8 x float>* %out) {
+  %ld = load <2 x float>, <2 x float>* %in, align 8
+  %ext = extractelement <2 x float> %ld, i64 0
+  %ins = insertelement <8 x float> <float undef, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0>, float %ext, i64 0
+  store <8 x float> %ins, <8 x float>* %out, align 32
+  ret void
+
+; CHECK-LABEL: legal_vzmovl_2f32_8f32
+; CHECK: vmovq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT: vxorps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT: vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
+; CHECK-NEXT: vmovaps %ymm0, (%rsi)
+; CHECK-NEXT: vzeroupper
+; CHECK-NEXT: retq
+}
+
+define void @legal_vzmovl_2f64_4f64(<2 x double>* %in, <4 x double>* %out) {
+  %ld = load <2 x double>, <2 x double>* %in, align 8
+  %ext = extractelement <2 x double> %ld, i64 0
+  %ins = insertelement <4 x double> <double undef, double 0.0, double 0.0, double 0.0>, double %ext, i64 0
+  store <4 x double> %ins, <4 x double>* %out, align 32
+  ret void
+
+; CHECK-LABEL: legal_vzmovl_2f64_4f64
+; CHECK: vmovupd (%rdi), %xmm0
+; CHECK-NEXT: vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT: vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
+; CHECK-NEXT: vmovapd %ymm0, (%rsi)
 ; CHECK-NEXT: vzeroupper
 ; CHECK-NEXT: retq
 }

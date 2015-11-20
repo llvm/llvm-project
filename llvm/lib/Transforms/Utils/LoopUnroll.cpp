@@ -221,12 +221,6 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Are we eliminating the loop control altogether?
   bool CompletelyUnroll = Count == TripCount;
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-  Loop *ParentL = L->getParentLoop();
-  bool AllExitsAreInsideParentLoop = !ParentL ||
-      std::all_of(ExitBlocks.begin(), ExitBlocks.end(),
-                  [&](BasicBlock *BB) { return ParentL->contains(BB); });
 
   // We assume a run-time trip count if the compiler cannot
   // figure out the loop trip count and the unroll-runtime
@@ -550,7 +544,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     if (!OuterL && !CompletelyUnroll)
       OuterL = L;
     if (OuterL) {
-      bool Simplified = simplifyLoop(OuterL, DT, LI, PP, SE, AC);
+      simplifyLoop(OuterL, DT, LI, PP, SE, AC);
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
@@ -560,11 +554,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         while (OuterL->getParentLoop() != LatchLoop)
           OuterL = OuterL->getParentLoop();
 
-      if (CompletelyUnroll && (!AllExitsAreInsideParentLoop || Simplified))
-        formLCSSARecursively(*OuterL, *DT, LI, SE);
-      else
-        assert(OuterL->isLCSSAForm(*DT) &&
-               "Loops should be in LCSSA form after loop-unroll.");
+      formLCSSARecursively(*OuterL, *DT, LI, SE);
     }
   }
 

@@ -754,7 +754,6 @@ void RelooperAlgorithm::Calculate(Block *Entry) {
           loop(cast<LoopShape>(var));
           break;
         }
-        default: llvm_unreachable("invalid shape");
       }
     }
 

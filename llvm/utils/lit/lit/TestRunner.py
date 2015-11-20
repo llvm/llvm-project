@@ -469,7 +469,9 @@ def applySubstitutions(script, substitutions):
 
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()
-    return map(processLine, script)
+    # Note Python 3 map() gives an iterator rather than a list so explicitly
+    # convert to list before returning.
+    return list(map(processLine, script))
 
 def parseIntegratedTestScript(test, require_script=True):
     """parseIntegratedTestScript - Scan an LLVM/Clang style integrated test

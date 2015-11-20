@@ -64,6 +64,10 @@ static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
             cl::desc("Only write combined global index for ThinLTO backends"));
 
+static cl::opt<bool>
+SaveModuleFile("save-merged-module", cl::init(false),
+               cl::desc("Write merged LTO module to file before CodeGen"));
+
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::OneOrMore,
   cl::desc("<input bitcode files>"));
@@ -343,12 +347,26 @@ int main(int argc, char **argv) {
   if (!attrs.empty())
     CodeGen.setAttr(attrs.c_str());
 
+  if (FileType.getNumOccurrences())
+    CodeGen.setFileType(FileType);
+
   if (!OutputFilename.empty()) {
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
                           DisableLTOVectorization)) {
       // Diagnostic messages should have been printed by the handler.
       errs() << argv[0] << ": error optimizing the code\n";
       return 1;
+    }
+
+    if (SaveModuleFile) {
+      std::string ModuleFilename = OutputFilename;
+      ModuleFilename += ".merged.bc";
+      std::string ErrMsg;
+
+      if (!CodeGen.writeMergedModules(ModuleFilename.c_str())) {
+        errs() << argv[0] << ": writing merged module failed.\n";
+        return 1;
+      }
     }
 
     std::list<tool_output_file> OSs;
@@ -378,6 +396,11 @@ int main(int argc, char **argv) {
   } else {
     if (Parallelism != 1) {
       errs() << argv[0] << ": -j must be specified together with -o\n";
+      return 1;
+    }
+
+    if (SaveModuleFile) {
+      errs() << argv[0] << ": -save-merged-module must be specified with -o\n";
       return 1;
     }
 

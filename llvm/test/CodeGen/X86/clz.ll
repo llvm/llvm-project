@@ -87,55 +87,74 @@ define i64 @ctlz_i64(i64 %x) {
   ret i64 %tmp
 }
 
-define i32 @ctlz_i32_cmov(i32 %n) {
-; CHECK-LABEL: ctlz_i32_cmov:
+define i32 @ctlz_i32_zero_test(i32 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: ctlz_i32_zero_test:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    bsrl %edi, %ecx
-; CHECK-NEXT:    movl $63, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    movl $32, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    je .LBB8_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsrl %edi, %eax
 ; CHECK-NEXT:    xorl $31, %eax
+; CHECK-NEXT:  .LBB8_2: # %cond.end
 ; CHECK-NEXT:    retq
-; Generate a cmov to handle zero inputs when necessary.
   %tmp1 = call i32 @llvm.ctlz.i32(i32 %n, i1 false)
   ret i32 %tmp1
 }
 
 define i32 @ctlz_i32_fold_cmov(i32 %n) {
-; CHECK-LABEL: ctlz_i32_fold_cmov:
-; CHECK:       # BB#0:
-; CHECK-NEXT:    orl $1, %edi
-; CHECK-NEXT:    bsrl %edi, %eax
-; CHECK-NEXT:    xorl $31, %eax
-; CHECK-NEXT:    retq
 ; Don't generate the cmovne when the source is known non-zero (and bsr would
 ; not set ZF).
 ; rdar://9490949
+; FIXME: The compare and branch are produced late in IR (by CodeGenPrepare), and
+;        codegen doesn't know how to delete the movl and je.
+
+; CHECK-LABEL: ctlz_i32_fold_cmov:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    orl $1, %edi
+; CHECK-NEXT:    movl $32, %eax
+; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsrl %edi, %eax
+; CHECK-NEXT:    xorl $31, %eax
+; CHECK-NEXT:  .LBB9_2: # %cond.end
+; CHECK-NEXT:    retq
   %or = or i32 %n, 1
   %tmp1 = call i32 @llvm.ctlz.i32(i32 %or, i1 false)
   ret i32 %tmp1
 }
 
 define i32 @ctlz_bsr(i32 %n) {
+; Don't generate any xors when a 'ctlz' intrinsic is actually used to compute
+; the most significant bit, which is what 'bsr' does natively.
+
 ; CHECK-LABEL: ctlz_bsr:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    bsrl %edi, %eax
 ; CHECK-NEXT:    retq
-; Don't generate any xors when a 'ctlz' intrinsic is actually used to compute
-; the most significant bit, which is what 'bsr' does natively.
   %ctlz = call i32 @llvm.ctlz.i32(i32 %n, i1 true)
   %bsr = xor i32 %ctlz, 31
   ret i32 %bsr
 }
 
-define i32 @ctlz_bsr_cmov(i32 %n) {
-; CHECK-LABEL: ctlz_bsr_cmov:
+define i32 @ctlz_bsr_zero_test(i32 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+; FIXME: The compare and branch are produced late in IR (by CodeGenPrepare), and
+;        codegen doesn't know how to combine the $32 and $31 into $63.
+
+; CHECK-LABEL: ctlz_bsr_zero_test:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    bsrl %edi, %ecx
-; CHECK-NEXT:    movl $63, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    movl $32, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    je .LBB11_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsrl %edi, %eax
+; CHECK-NEXT:    xorl $31, %eax
+; CHECK-NEXT:  .LBB11_2: # %cond.end
+; CHECK-NEXT:    xorl $31, %eax
 ; CHECK-NEXT:    retq
-; Same as ctlz_bsr, but ensure this happens even when there is a potential
-; zero.
   %ctlz = call i32 @llvm.ctlz.i32(i32 %n, i1 false)
   %bsr = xor i32 %ctlz, 31
   ret i32 %bsr

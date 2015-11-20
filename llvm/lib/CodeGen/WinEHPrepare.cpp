@@ -69,8 +69,6 @@ private:
   AllocaInst *insertPHILoads(PHINode *PN, Function &F);
   void replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
                           DenseMap<BasicBlock *, Value *> &Loads, Function &F);
-  void demoteNonlocalUses(Value *V, SetVector<BasicBlock *> &ColorsForBB,
-                          Function &F);
   bool prepareExplicitEH(Function &F,
                          SmallVectorImpl<BasicBlock *> &EntryBlocks);
   void replaceTerminatePadWithCleanup(Function &F);
@@ -90,8 +88,6 @@ private:
       std::map<BasicBlock *, BasicBlock *> &Orig2Clone);
 
   void demotePHIsOnFunclets(Function &F);
-  void demoteUsesBetweenFunclets(Function &F);
-  void demoteArgumentUses(Function &F);
   void cloneCommonBlocks(Function &F,
                          SmallVectorImpl<BasicBlock *> &EntryBlocks);
   void removeImplausibleTerminators(Function &F);
@@ -1588,30 +1584,6 @@ void WinEHPrepare::demotePHIsOnFunclets(Function &F) {
   }
 }
 
-void WinEHPrepare::demoteUsesBetweenFunclets(Function &F) {
-  // Turn all inter-funclet uses of a Value into loads and stores.
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE;) {
-    BasicBlock *BB = &*FI++;
-    SetVector<BasicBlock *> &ColorsForBB = BlockColors[BB];
-    for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
-      Instruction *I = &*BI++;
-      // Funclets are permitted to use static allocas.
-      if (auto *AI = dyn_cast<AllocaInst>(I))
-        if (AI->isStaticAlloca())
-          continue;
-
-      demoteNonlocalUses(I, ColorsForBB, F);
-    }
-  }
-}
-
-void WinEHPrepare::demoteArgumentUses(Function &F) {
-  // Also demote function parameters used in funclets.
-  SetVector<BasicBlock *> &ColorsForEntry = BlockColors[&F.getEntryBlock()];
-  for (Argument &Arg : F.args())
-    demoteNonlocalUses(&Arg, ColorsForEntry, F);
-}
-
 void WinEHPrepare::cloneCommonBlocks(
     Function &F, SmallVectorImpl<BasicBlock *> &EntryBlocks) {
   // We need to clone all blocks which belong to multiple funclets.  Values are
@@ -1914,12 +1886,10 @@ void WinEHPrepare::verifyPreparedFunclets(Function &F) {
       report_fatal_error("Uncolored BB!");
     if (NumColors > 1)
       report_fatal_error("Multicolor BB!");
-    if (!DisableDemotion) {
-      bool EHPadHasPHI = BB.isEHPad() && isa<PHINode>(BB.begin());
-      assert(!EHPadHasPHI && "EH Pad still has a PHI!");
-      if (EHPadHasPHI)
-        report_fatal_error("EH Pad still has a PHI!");
-    }
+    bool EHPadHasPHI = BB.isEHPad() && isa<PHINode>(BB.begin());
+    assert(!EHPadHasPHI && "EH Pad still has a PHI!");
+    if (EHPadHasPHI)
+      report_fatal_error("EH Pad still has a PHI!");
   }
 }
 
@@ -1930,13 +1900,8 @@ bool WinEHPrepare::prepareExplicitEH(
   // Determine which blocks are reachable from which funclet entries.
   colorFunclets(F, EntryBlocks);
 
-  if (!DisableDemotion) {
+  if (!DisableDemotion)
     demotePHIsOnFunclets(F);
-
-    demoteUsesBetweenFunclets(F);
-
-    demoteArgumentUses(F);
-  }
 
   cloneCommonBlocks(F, EntryBlocks);
 
@@ -2048,83 +2013,6 @@ void WinEHPrepare::insertPHIStore(
 
   // Otherwise, insert the store at the end of the basic block.
   new StoreInst(PredVal, SpillSlot, PredBlock->getTerminator());
-}
-
-// The SetVector == operator uses the std::vector == operator, so it doesn't
-// actually tell us whether or not the two sets contain the same colors. This
-// function does that.
-// FIXME: Would it be better to add a isSetEquivalent() method to SetVector?
-static bool isBlockColorSetEquivalent(SetVector<BasicBlock *> &SetA,
-                                      SetVector<BasicBlock *> &SetB) {
-  if (SetA.size() != SetB.size())
-    return false;
-  for (auto *Color : SetA)
-    if (!SetB.count(Color))
-      return false;
-  return true;
-}
-
-// TODO: Share loads for same-funclet uses (requires dominators if funclets
-// aren't properly nested).
-void WinEHPrepare::demoteNonlocalUses(Value *V,
-                                      SetVector<BasicBlock *> &ColorsForBB,
-                                      Function &F) {
-  // Tokens can only be used non-locally due to control flow involving
-  // unreachable edges.  Don't try to demote the token usage, we'll simply
-  // delete the cloned user later.
-  if (isa<CatchPadInst>(V) || isa<CleanupPadInst>(V))
-    return;
-
-  DenseMap<BasicBlock *, Value *> Loads;
-  AllocaInst *SpillSlot = nullptr;
-  for (Value::use_iterator UI = V->use_begin(), UE = V->use_end(); UI != UE;) {
-    Use &U = *UI++;
-    auto *UsingInst = cast<Instruction>(U.getUser());
-    BasicBlock *UsingBB = UsingInst->getParent();
-
-    // Is the Use inside a block which is colored the same as the Def?
-    // If so, we don't need to escape the Def because we will clone
-    // ourselves our own private copy.
-    SetVector<BasicBlock *> &ColorsForUsingBB = BlockColors[UsingBB];
-    if (isBlockColorSetEquivalent(ColorsForUsingBB, ColorsForBB))
-      continue;
-
-    replaceUseWithLoad(V, U, SpillSlot, Loads, F);
-  }
-  if (SpillSlot) {
-    // Insert stores of the computed value into the stack slot.
-    // We have to be careful if I is an invoke instruction,
-    // because we can't insert the store AFTER the terminator instruction.
-    BasicBlock::iterator InsertPt;
-    if (isa<Argument>(V)) {
-      InsertPt = F.getEntryBlock().getTerminator()->getIterator();
-    } else if (isa<TerminatorInst>(V)) {
-      auto *II = cast<InvokeInst>(V);
-      // We cannot demote invoke instructions to the stack if their normal
-      // edge is critical. Therefore, split the critical edge and create a
-      // basic block into which the store can be inserted.
-      if (!II->getNormalDest()->getSinglePredecessor()) {
-        unsigned SuccNum =
-            GetSuccessorNumber(II->getParent(), II->getNormalDest());
-        assert(isCriticalEdge(II, SuccNum) && "Expected a critical edge!");
-        BasicBlock *NewBlock = SplitCriticalEdge(II, SuccNum);
-        assert(NewBlock && "Unable to split critical edge.");
-        // Update the color mapping for the newly split edge.
-        SetVector<BasicBlock *> &ColorsForUsingBB = BlockColors[II->getParent()];
-        BlockColors[NewBlock] = ColorsForUsingBB;
-        for (BasicBlock *FuncletPad : ColorsForUsingBB)
-          FuncletBlocks[FuncletPad].insert(NewBlock);
-      }
-      InsertPt = II->getNormalDest()->getFirstInsertionPt();
-    } else {
-      InsertPt = cast<Instruction>(V)->getIterator();
-      ++InsertPt;
-      // Don't insert before PHI nodes or EH pad instrs.
-      for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
-        ;
-    }
-    new StoreInst(V, SpillSlot, &*InsertPt);
-  }
 }
 
 void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,

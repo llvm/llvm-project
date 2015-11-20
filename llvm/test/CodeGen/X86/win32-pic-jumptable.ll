@@ -7,10 +7,10 @@
 ; CHECK-NEXT:   jmpl *%eax
 
 ; CHECK:      LJTI0_0:
+; CHECK-NEXT:   .long LBB0_2-L0$pb
+; CHECK-NEXT:   .long LBB0_3-L0$pb
 ; CHECK-NEXT:   .long LBB0_4-L0$pb
 ; CHECK-NEXT:   .long LBB0_5-L0$pb
-; CHECK-NEXT:   .long LBB0_6-L0$pb
-; CHECK-NEXT:   .long LBB0_7-L0$pb
 
 
 target triple = "i686--windows-itanium"

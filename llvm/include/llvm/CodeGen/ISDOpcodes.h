@@ -372,6 +372,12 @@ namespace ISD {
     /// then the result type must also be a vector type.
     SETCC,
 
+    /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, but
+    /// op #2 is a *carry value*. This operator checks the result of
+    /// "LHS - RHS - Carry", and can be used to compare two wide integers:
+    /// (setcce lhshi rhshi (subc lhslo rhslo) cc). Only valid for integers.
+    SETCCE,
+
     /// SHL_PARTS/SRA_PARTS/SRL_PARTS - These operators are used for expanded
     /// integer shift operations.  The operation ordering is:
     ///       [Lo,Hi] = op [LoLHS,HiLHS], Amt

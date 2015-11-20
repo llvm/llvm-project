@@ -77,6 +77,10 @@ struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Discriminator(D) {}
   void print(raw_ostream &OS) const;
   void dump() const;
+  bool operator<(const LineLocation &O) const {
+    return LineOffset < O.LineOffset ||
+           (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
+  }
 
   uint32_t LineOffset;
   uint32_t Discriminator;
@@ -334,6 +338,29 @@ private:
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
+
+/// Sort a LocationT->SampleT map by LocationT.
+///
+/// It produces a sorted list of <LocationT, SampleT> records by ascending
+/// order of LocationT.
+template <class LocationT, class SampleT> class SampleSorter {
+public:
+  typedef detail::DenseMapPair<LocationT, SampleT> SamplesWithLoc;
+  typedef SmallVector<const SamplesWithLoc *, 20> SamplesWithLocList;
+
+  SampleSorter(const DenseMap<LocationT, SampleT> &Samples) {
+    for (const auto &I : Samples)
+      V.push_back(&I);
+    std::stable_sort(V.begin(), V.end(),
+                     [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
+                       return A->first < B->first;
+                     });
+  }
+  const SamplesWithLocList &get() const { return V; }
+
+private:
+  SamplesWithLocList V;
+};
 
 } // end namespace sampleprof
 
