@@ -63,6 +63,7 @@
 #include "llvm/CodeGen/Passes.h"
 // To know about callee-saved.
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 // To query the target about frame lowering.
@@ -130,15 +131,15 @@ class ShrinkWrap : public MachineFunctionPass {
   /// \brief Check if \p MI uses or defines a callee-saved register or
   /// a frame index. If this is the case, this means \p MI must happen
   /// after Save and before Restore.
-  bool useOrDefCSROrFI(const MachineInstr &MI) const;
+  bool useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS) const;
 
-  const SetOfRegs &getCurrentCSRs() const {
+  const SetOfRegs &getCurrentCSRs(RegScavenger *RS) const {
     if (CurrentCSRs.empty()) {
       BitVector SavedRegs;
       const TargetFrameLowering *TFI =
           MachineFunc->getSubtarget().getFrameLowering();
 
-      TFI->determineCalleeSaves(*MachineFunc, SavedRegs, nullptr);
+      TFI->determineCalleeSaves(*MachineFunc, SavedRegs, RS);
 
       for (int Reg = SavedRegs.find_first(); Reg != -1;
            Reg = SavedRegs.find_next(Reg))
@@ -152,7 +153,7 @@ class ShrinkWrap : public MachineFunctionPass {
   /// and Save and Restore still match the safe point definition.
   /// Such point may not exist and Save and/or Restore may be null after
   /// this call.
-  void updateSaveRestorePoints(MachineBasicBlock &MBB);
+  void updateSaveRestorePoints(MachineBasicBlock &MBB, RegScavenger *RS);
 
   /// \brief Initialize the pass for \p MF.
   void init(MachineFunction &MF) {
@@ -180,7 +181,7 @@ class ShrinkWrap : public MachineFunctionPass {
 
   /// \brief Check if shrink wrapping is enabled for this target and function.
   static bool isShrinkWrapEnabled(const MachineFunction &MF);
-  
+
 public:
   static char ID;
 
@@ -218,7 +219,8 @@ INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(ShrinkWrap, "shrink-wrap", "Shrink Wrap Pass", false, false)
 
-bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI) const {
+bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
+                                 RegScavenger *RS) const {
   if (MI.getOpcode() == FrameSetupOpcode ||
       MI.getOpcode() == FrameDestroyOpcode) {
     DEBUG(dbgs() << "Frame instruction: " << MI << '\n');
@@ -235,7 +237,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI) const {
       UseOrDefCSR = RCI.getLastCalleeSavedAlias(PhysReg);
     } else if (MO.isRegMask()) {
       // Check if this regmask clobbers any of the CSRs.
-      for (unsigned Reg : getCurrentCSRs()) {
+      for (unsigned Reg : getCurrentCSRs(RS)) {
         if (MO.clobbersPhysReg(Reg)) {
           UseOrDefCSR = true;
           break;
@@ -264,7 +266,8 @@ MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
   return IDom;
 }
 
-void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB) {
+void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
+                                         RegScavenger *RS) {
   // Get rid of the easy cases first.
   if (!Save)
     Save = &MBB;
@@ -285,7 +288,7 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB) {
   // terminator.
   if (Restore == &MBB) {
     for (const MachineInstr &Terminator : MBB.terminators()) {
-      if (!useOrDefCSROrFI(Terminator))
+      if (!useOrDefCSROrFI(Terminator, RS))
         continue;
       // One of the terminator needs to happen before the restore point.
       if (MBB.succ_empty()) {
@@ -331,7 +334,7 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB) {
         MLI->getLoopFor(Save) != MLI->getLoopFor(Restore)) {
       if (MLI->getLoopDepth(Save) > MLI->getLoopDepth(Restore)) {
         // Push Save outside of this loop if immediate dominator is different
-        // from save block. If immediate dominator is not different, bail out. 
+        // from save block. If immediate dominator is not different, bail out.
         MachineBasicBlock *IDom = FindIDom<>(*Save, Save->predecessors(), *MDT);
         if (IDom != Save)
           Save = IDom;
@@ -357,12 +360,12 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB) {
         // then we are stuck in a program with an infinite loop.
         // In that case, we will not find a safe point, hence, bail out.
         if (IPdom && MLI->getLoopDepth(IPdom) < MLI->getLoopDepth(Restore))
-          Restore = IPdom; 
+          Restore = IPdom;
         else {
           Restore = nullptr;
           break;
         }
-      }      
+      }
     }
   }
 }
@@ -375,6 +378,10 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
 
   init(MF);
 
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  std::unique_ptr<RegScavenger> RS(
+      TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr);
+
   for (MachineBasicBlock &MBB : MF) {
     DEBUG(dbgs() << "Look into: " << MBB.getNumber() << ' ' << MBB.getName()
                  << '\n');
@@ -385,11 +392,11 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
     }
 
     for (const MachineInstr &MI : MBB) {
-      if (!useOrDefCSROrFI(MI))
+      if (!useOrDefCSROrFI(MI, RS.get()))
         continue;
       // Save (resp. restore) point must dominate (resp. post dominate)
       // MI. Look for the proper basic block for those.
-      updateSaveRestorePoints(MBB);
+      updateSaveRestorePoints(MBB, RS.get());
       // If we are at a point where we cannot improve the placement of
       // save/restore instructions, just give up.
       if (!ArePointsInteresting()) {
@@ -441,7 +448,7 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
         break;
       NewBB = Restore;
     }
-    updateSaveRestorePoints(*NewBB);
+    updateSaveRestorePoints(*NewBB, RS.get());
   } while (Save && Restore);
 
   if (!ArePointsInteresting()) {

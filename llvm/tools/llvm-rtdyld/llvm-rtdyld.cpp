@@ -240,12 +240,8 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
 
 static const char *ProgramName;
 
-static void Message(const char *Type, const Twine &Msg) {
-  errs() << ProgramName << ": " << Type << ": " << Msg << "\n";
-}
-
 static int Error(const Twine &Msg) {
-  Message("error", Msg);
+  errs() << ProgramName << ": error: " << Msg << "\n";
   return 1;
 }
 

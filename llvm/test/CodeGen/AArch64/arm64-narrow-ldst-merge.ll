@@ -316,3 +316,91 @@ define i32 @Ldursb_szext_merge(i8* %p) nounwind {
   ret i32 %add
 }
 
+; CHECK-LABEL: Strh_zero
+; CHECK: str wzr
+define void @Strh_zero(i16* nocapture %P, i32 %n) {
+entry:
+ %idxprom = sext i32 %n to i64
+  %arrayidx = getelementptr inbounds i16, i16* %P, i64 %idxprom
+ store i16 0, i16* %arrayidx
+  %add = add nsw i32 %n, 1
+  %idxprom1 = sext i32 %add to i64
+  %arrayidx2 = getelementptr inbounds i16, i16* %P, i64 %idxprom1
+  store i16 0, i16* %arrayidx2
+  ret void
+}
+
+; CHECK-LABEL: Strh_zero_4
+; CHECK: stp wzr, wzr
+define void @Strh_zero_4(i16* nocapture %P, i32 %n) {
+entry:
+  %idxprom = sext i32 %n to i64
+  %arrayidx = getelementptr inbounds i16, i16* %P, i64 %idxprom
+  store i16 0, i16* %arrayidx
+  %add = add nsw i32 %n, 1
+  %idxprom1 = sext i32 %add to i64
+  %arrayidx2 = getelementptr inbounds i16, i16* %P, i64 %idxprom1
+  store i16 0, i16* %arrayidx2
+  %add3 = add nsw i32 %n, 2
+  %idxprom4 = sext i32 %add3 to i64
+  %arrayidx5 = getelementptr inbounds i16, i16* %P, i64 %idxprom4
+  store i16 0, i16* %arrayidx5
+  %add6 = add nsw i32 %n, 3
+  %idxprom7 = sext i32 %add6 to i64
+  %arrayidx8 = getelementptr inbounds i16, i16* %P, i64 %idxprom7
+  store i16 0, i16* %arrayidx8
+  ret void
+}
+
+; CHECK-LABEL: Sturb_zero
+; CHECK: sturh wzr
+define void @Sturb_zero(i8* nocapture %P, i32 %n) #0 {
+entry:
+  %sub = add nsw i32 %n, -2
+  %idxprom = sext i32 %sub to i64
+  %arrayidx = getelementptr inbounds i8, i8* %P, i64 %idxprom
+  store i8 0, i8* %arrayidx
+  %sub2= add nsw i32 %n, -1
+  %idxprom1 = sext i32 %sub2 to i64
+  %arrayidx2 = getelementptr inbounds i8, i8* %P, i64 %idxprom1
+  store i8 0, i8* %arrayidx2
+  ret void
+}
+
+; CHECK-LABEL: Sturh_zero
+; CHECK: stur wzr
+define void @Sturh_zero(i16* nocapture %P, i32 %n) {
+entry:
+  %sub = add nsw i32 %n, -2
+  %idxprom = sext i32 %sub to i64
+  %arrayidx = getelementptr inbounds i16, i16* %P, i64 %idxprom
+  store i16 0, i16* %arrayidx
+  %sub1 = add nsw i32 %n, -3
+  %idxprom2 = sext i32 %sub1 to i64
+  %arrayidx3 = getelementptr inbounds i16, i16* %P, i64 %idxprom2
+  store i16 0, i16* %arrayidx3
+  ret void
+}
+
+; CHECK-LABEL: Sturh_zero_4
+; CHECK: stp wzr, wzr
+define void @Sturh_zero_4(i16* nocapture %P, i32 %n) {
+entry:
+  %sub = add nsw i32 %n, -3
+  %idxprom = sext i32 %sub to i64
+  %arrayidx = getelementptr inbounds i16, i16* %P, i64 %idxprom
+  store i16 0, i16* %arrayidx
+  %sub1 = add nsw i32 %n, -4
+  %idxprom2 = sext i32 %sub1 to i64
+  %arrayidx3 = getelementptr inbounds i16, i16* %P, i64 %idxprom2
+  store i16 0, i16* %arrayidx3
+  %sub4 = add nsw i32 %n, -2
+  %idxprom5 = sext i32 %sub4 to i64
+  %arrayidx6 = getelementptr inbounds i16, i16* %P, i64 %idxprom5
+  store i16 0, i16* %arrayidx6
+  %sub7 = add nsw i32 %n, -1
+  %idxprom8 = sext i32 %sub7 to i64
+  %arrayidx9 = getelementptr inbounds i16, i16* %P, i64 %idxprom8
+  store i16 0, i16* %arrayidx9
+  ret void
+}

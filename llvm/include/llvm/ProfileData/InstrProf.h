@@ -226,7 +226,7 @@ struct InstrProfValueSiteRecord {
       while (I != IE && I->Value < J->Value)
         ++I;
       if (I != IE && I->Value == J->Value) {
-        I->Count += J->Count;
+        I->Count = SaturatingAdd(I->Count, J->Count);
         ++I;
         continue;
       }
@@ -265,9 +265,9 @@ struct InstrProfRecord {
   inline void addValueData(uint32_t ValueKind, uint32_t Site,
                            InstrProfValueData *VData, uint32_t N,
                            ValueMapType *HashKeys);
-  /// Merge Value Profile data from Src record to this record for ValueKind.
-  inline instrprof_error mergeValueProfData(uint32_t ValueKind,
-                                            InstrProfRecord &Src);
+
+  /// Merge the counts in \p Other into this one.
+  inline instrprof_error merge(InstrProfRecord &Other);
 
   /// Used by InstrProfWriter: update the value strings to commoned strings in
   /// the writer instance.
@@ -316,6 +316,21 @@ private:
     }
     }
     return Value;
+  }
+
+  // Merge Value Profile data from Src record to this record for ValueKind.
+  instrprof_error mergeValueProfData(uint32_t ValueKind, InstrProfRecord &Src) {
+    uint32_t ThisNumValueSites = getNumValueSites(ValueKind);
+    uint32_t OtherNumValueSites = Src.getNumValueSites(ValueKind);
+    if (ThisNumValueSites != OtherNumValueSites)
+      return instrprof_error::value_site_count_mismatch;
+    std::vector<InstrProfValueSiteRecord> &ThisSiteRecords =
+        getValueSitesForKind(ValueKind);
+    std::vector<InstrProfValueSiteRecord> &OtherSiteRecords =
+        Src.getValueSitesForKind(ValueKind);
+    for (uint32_t I = 0; I < ThisNumValueSites; I++)
+      ThisSiteRecords[I].mergeValueData(OtherSiteRecords[I]);
+    return instrprof_error::success;
   }
 };
 
@@ -382,21 +397,6 @@ void InstrProfRecord::reserveSites(uint32_t ValueKind, uint32_t NumValueSites) {
   ValueSites.reserve(NumValueSites);
 }
 
-instrprof_error InstrProfRecord::mergeValueProfData(uint32_t ValueKind,
-                                                    InstrProfRecord &Src) {
-  uint32_t ThisNumValueSites = getNumValueSites(ValueKind);
-  uint32_t OtherNumValueSites = Src.getNumValueSites(ValueKind);
-  if (ThisNumValueSites != OtherNumValueSites)
-    return instrprof_error::value_site_count_mismatch;
-  std::vector<InstrProfValueSiteRecord> &ThisSiteRecords =
-      getValueSitesForKind(ValueKind);
-  std::vector<InstrProfValueSiteRecord> &OtherSiteRecords =
-      Src.getValueSitesForKind(ValueKind);
-  for (uint32_t I = 0; I < ThisNumValueSites; I++)
-    ThisSiteRecords[I].mergeValueData(OtherSiteRecords[I]);
-  return instrprof_error::success;
-}
-
 void InstrProfRecord::updateStrings(InstrProfStringTable *StrTab) {
   if (!StrTab)
     return;
@@ -405,6 +405,27 @@ void InstrProfRecord::updateStrings(InstrProfStringTable *StrTab) {
   for (auto &VSite : IndirectCallSites)
     for (auto &VData : VSite.ValueData)
       VData.Value = (uint64_t)StrTab->insertString((const char *)VData.Value);
+}
+
+instrprof_error InstrProfRecord::merge(InstrProfRecord &Other) {
+  // If the number of counters doesn't match we either have bad data
+  // or a hash collision.
+  if (Counts.size() != Other.Counts.size())
+    return instrprof_error::count_mismatch;
+
+  for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
+    if (Counts[I] + Other.Counts[I] < Counts[I])
+      return instrprof_error::counter_overflow;
+    Counts[I] += Other.Counts[I];
+  }
+
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
+    instrprof_error result = mergeValueProfData(Kind, Other);
+    if (result != instrprof_error::success)
+      return result;
+  }
+
+  return instrprof_error::success;
 }
 
 inline support::endianness getHostEndianness() {

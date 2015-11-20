@@ -1972,19 +1972,15 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA),
             HighPartReg).addReg(PPC::X2).addGlobalAddress(GV);
 
-    // If/when switches are implemented, jump tables should be handled
-    // on the "if" path here.
-    if (CModel == CodeModel::Large ||
-        (GV->getType()->getElementType()->isFunctionTy() &&
-         !GV->isStrongDefinitionForLinker()) ||
-        GV->isDeclaration() || GV->hasCommonLinkage() ||
-        GV->hasAvailableExternallyLinkage())
+    unsigned char GVFlags = PPCSubTarget->classifyGlobalReference(GV);
+    if (GVFlags & PPCII::MO_NLP_FLAG) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::LDtocL),
               DestReg).addGlobalAddress(GV).addReg(HighPartReg);
-    else
+    } else {
       // Otherwise generate the ADDItocL.
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDItocL),
               DestReg).addReg(HighPartReg).addGlobalAddress(GV);
+    }
   }
 
   return DestReg;

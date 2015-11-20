@@ -154,6 +154,11 @@ class BitcodeReader : public GVMaterializer {
   uint64_t VSTOffset = 0;
   // Contains an arbitrary and optional string identifying the bitcode producer
   std::string ProducerIdentification;
+  // Number of module level metadata records specified by the
+  // MODULE_CODE_METADATA_VALUES record.
+  unsigned NumModuleMDs = 0;
+  // Support older bitcode without the MODULE_CODE_METADATA_VALUES record.
+  bool SeenModuleValuesRecord = false;
 
   std::vector<Type*> TypeList;
   BitcodeReaderValueList ValueList;
@@ -404,7 +409,7 @@ private:
   std::error_code parseFunctionBody(Function *F);
   std::error_code globalCleanup();
   std::error_code resolveGlobalAndAliasInits();
-  std::error_code parseMetadata();
+  std::error_code parseMetadata(bool ModuleLevel = false);
   std::error_code parseMetadataKinds();
   std::error_code parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record);
   std::error_code parseMetadataAttachment(Function &F);
@@ -1915,9 +1920,25 @@ BitcodeReader::parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record) {
 
 static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
 
-std::error_code BitcodeReader::parseMetadata() {
+/// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
+/// module level metadata.
+std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
   IsMetadataMaterialized = true;
   unsigned NextMDValueNo = MDValueList.size();
+  if (ModuleLevel && SeenModuleValuesRecord) {
+    // Now that we are parsing the module level metadata, we want to restart
+    // the numbering of the MD values, and replace temp MD created earlier
+    // with their real values. If we saw a METADATA_VALUE record then we
+    // would have set the MDValueList size to the number specified in that
+    // record, to support parsing function-level metadata first, and we need
+    // to reset back to 0 to fill the MDValueList in with the parsed module
+    // The function-level metadata parsing should have reset the MDValueList
+    // size back to the value reported by the METADATA_VALUE record, saved in
+    // NumModuleMDs.
+    assert(NumModuleMDs == MDValueList.size() &&
+           "Expected MDValueList to only contain module level values");
+    NextMDValueNo = 0;
+  }
 
   if (Stream.EnterSubBlock(bitc::METADATA_BLOCK_ID))
     return error("Invalid record");
@@ -2396,6 +2417,9 @@ std::error_code BitcodeReader::parseMetadata() {
     }
     }
   }
+  assert((!(ModuleLevel && SeenModuleValuesRecord) ||
+          NumModuleMDs == MDValueList.size()) &&
+         "Inconsistent bitcode: METADATA_VALUES mismatch");
 #undef GET_OR_DISTINCT
 }
 
@@ -3083,7 +3107,7 @@ std::error_code BitcodeReader::materializeMetadata() {
   for (uint64_t BitPos : DeferredMetadataInfo) {
     // Move the bit stream to the saved position.
     Stream.JumpToBit(BitPos);
-    if (std::error_code EC = parseMetadata())
+    if (std::error_code EC = parseMetadata(true))
       return EC;
   }
   DeferredMetadataInfo.clear();
@@ -3295,7 +3319,7 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
           break;
         }
         assert(DeferredMetadataInfo.empty() && "Unexpected deferred metadata");
-        if (std::error_code EC = parseMetadata())
+        if (std::error_code EC = parseMetadata(true))
           return EC;
         break;
       case bitc::METADATA_KIND_BLOCK_ID:
@@ -3674,6 +3698,28 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       if (Record.size() < 1)
         return error("Invalid record");
       VSTOffset = Record[0];
+      break;
+    /// MODULE_CODE_METADATA_VALUES: [numvals]
+    case bitc::MODULE_CODE_METADATA_VALUES:
+      if (Record.size() < 1)
+        return error("Invalid record");
+      assert(!IsMetadataMaterialized);
+      // This record contains the number of metadata values in the module-level
+      // METADATA_BLOCK. It is used to support lazy parsing of metadata as
+      // a postpass, where we will parse function-level metadata first.
+      // This is needed because the ids of metadata are assigned implicitly
+      // based on their ordering in the bitcode, with the function-level
+      // metadata ids starting after the module-level metadata ids. Otherwise,
+      // we would have to parse the module-level metadata block to prime the
+      // MDValueList when we are lazy loading metadata during function
+      // importing. Initialize the MDValueList size here based on the
+      // record value, regardless of whether we are doing lazy metadata
+      // loading, so that we have consistent handling and assertion
+      // checking in parseMetadata for module-level metadata.
+      NumModuleMDs = Record[0];
+      SeenModuleValuesRecord = true;
+      assert(MDValueList.size() == 0);
+      MDValueList.resize(NumModuleMDs);
       break;
     }
     Record.clear();
@@ -5235,8 +5281,12 @@ std::error_code BitcodeReader::findFunctionInStream(
 void BitcodeReader::releaseBuffer() { Buffer.release(); }
 
 std::error_code BitcodeReader::materialize(GlobalValue *GV) {
-  if (std::error_code EC = materializeMetadata())
-    return EC;
+  // In older bitcode we must materialize the metadata before parsing
+  // any functions, in order to set up the MDValueList properly.
+  if (!SeenModuleValuesRecord) {
+    if (std::error_code EC = materializeMetadata())
+      return EC;
+  }
 
   Function *F = dyn_cast<Function>(GV);
   // If it's not a function or is already material, ignore the request.

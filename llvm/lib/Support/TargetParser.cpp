@@ -400,6 +400,7 @@ static StringRef getArchSynonym(StringRef Arch) {
   return StringSwitch<StringRef>(Arch)
       .Case("v5", "v5t")
       .Case("v5e", "v5te")
+      .Case("v6j", "v6")
       .Case("v6hl", "v6k")
       .Cases("v6m", "v6sm", "v6s-m", "v6-m")
       .Cases("v6z", "v6zk", "v6kz")
@@ -579,7 +580,6 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   case ARM::AK_ARMV5TEJ:
     return 5;
   case ARM::AK_ARMV6:
-  case ARM::AK_ARMV6J:
   case ARM::AK_ARMV6K:
   case ARM::AK_ARMV6T2:
   case ARM::AK_ARMV6KZ:
