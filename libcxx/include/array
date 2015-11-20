@@ -89,12 +89,12 @@ template <class T, size_t N >
   void swap(array<T,N>& x, array<T,N>& y) noexcept(noexcept(x.swap(y)));
 
 template <class T> class tuple_size;
-template <int I, class T> class tuple_element;
+template <size_t I, class T> class tuple_element;
 template <class T, size_t N> struct tuple_size<array<T, N>>;
-template <int I, class T, size_t N> struct tuple_element<I, array<T, N>>;
-template <int I, class T, size_t N> T& get(array<T, N>&) noexcept; // constexpr in C++14
-template <int I, class T, size_t N> const T& get(const array<T, N>&) noexcept; // constexpr in C++14
-template <int I, class T, size_t N> T&& get(array<T, N>&&) noexcept; // constexpr in C++14
+template <size_t I, class T, size_t N> struct tuple_element<I, array<T, N>>;
+template <size_t I, class T, size_t N> T& get(array<T, N>&) noexcept; // constexpr in C++14
+template <size_t I, class T, size_t N> const T& get(const array<T, N>&) noexcept; // constexpr in C++14
+template <size_t I, class T, size_t N> T&& get(array<T, N>&&) noexcept; // constexpr in C++14
 
 }  // std
 

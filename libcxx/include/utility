@@ -113,7 +113,7 @@ template<size_t I, class T1, class T2>
     get(pair<T1, T2>&) noexcept; // constexpr in C++14
 
 template<size_t I, class T1, class T2>
-    const typename const tuple_element<I, pair<T1, T2> >::type&
+    const typename tuple_element<I, pair<T1, T2> >::type&
     get(const pair<T1, T2>&) noexcept; // constexpr in C++14
 
 template<size_t I, class T1, class T2>
@@ -124,7 +124,7 @@ template<class T1, class T2>
     constexpr T1& get(pair<T1, T2>&) noexcept; // C++14
 
 template<size_t I, class T1, class T2>
-    constexpr T1 const& get(pair<T1, T2> const &) noexcept; // C++14
+    constexpr const T1& get(const pair<T1, T2>&) noexcept; // C++14
 
 template<size_t I, class T1, class T2>
     constexpr T1&& get(pair<T1, T2>&&) noexcept; // C++14

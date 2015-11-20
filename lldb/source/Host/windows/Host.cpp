@@ -245,7 +245,7 @@ Host::ShellExpandArguments (ProcessLaunchInfo &launch_info)
         std::replace(quoted_cmd_string.begin(), quoted_cmd_string.end(), '\\', '/');
         StreamString expand_command;
         
-        expand_command.Printf("%s %s",
+        expand_command.Printf("\"%s\" %s",
                               expand_tool_spec.GetPath().c_str(),
                               quoted_cmd_string.c_str());
         

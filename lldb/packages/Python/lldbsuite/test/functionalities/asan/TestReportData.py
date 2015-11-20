@@ -24,6 +24,7 @@ class AsanTestReportDataCase(TestBase):
     @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
+    @expectedFailureDarwin
     def test(self):
         compiler = self.findBuiltClang ()
         self.build (None, compiler)
@@ -45,7 +46,7 @@ class AsanTestReportDataCase(TestBase):
 
         # ASan will relaunch the process to insert its library.
         self.expect("thread list", "Process should be stopped due to exec.",
-            substrs = ['stopped', 'stop reason = exec'])
+            substrs = ['stopped', 'stop reason = '])
 
         # no extended info when we have no ASan report
         thread = self.dbg.GetSelectedTarget().process.GetSelectedThread()

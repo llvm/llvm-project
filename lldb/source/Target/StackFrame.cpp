@@ -24,6 +24,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -667,7 +668,8 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
             {
                 var_path.erase (0, name_const_string.GetLength ());
             }
-            else if (options & eExpressionPathOptionsAllowDirectIVarAccess)
+            
+            if (!var_sp && (options & eExpressionPathOptionsAllowDirectIVarAccess))
             {
                 // Check for direct ivars access which helps us with implicit
                 // access to ivars with the "this->" or "self->"
@@ -689,13 +691,43 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
                     }
                 }
             }
+            
+            if (!var_sp && (options & eExpressionPathOptionsInspectAnonymousUnions))
+            {
+                // Check if any anonymous unions are there which contain a variable with the name we need
+                for (size_t i = 0;
+                     i < variable_list->GetSize();
+                     i++)
+                {
+                    if (VariableSP variable_sp = variable_list->GetVariableAtIndex(i))
+                    {
+                        if (variable_sp->GetName().IsEmpty())
+                        {
+                            if (Type *var_type = variable_sp->GetType())
+                            {
+                                if (var_type->GetForwardCompilerType().IsAnonymousType())
+                                {
+                                    valobj_sp = GetValueObjectForFrameVariable (variable_sp, use_dynamic);
+                                    if (!valobj_sp)
+                                        return valobj_sp;
+                                    valobj_sp = valobj_sp->GetChildMemberWithName(name_const_string, true);
+                                    if (valobj_sp)
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-            if (var_sp)
+            if (var_sp && !valobj_sp)
             {
                 valobj_sp = GetValueObjectForFrameVariable (var_sp, use_dynamic);
                 if (!valobj_sp)
                     return valobj_sp;
-                    
+            }
+            if (valobj_sp)
+            {
                 // We are dumping at least one child
                 while (separator_idx != std::string::npos)
                 {

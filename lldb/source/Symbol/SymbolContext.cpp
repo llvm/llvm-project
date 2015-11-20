@@ -659,172 +659,114 @@ SymbolContext::GetFunctionMethodInfo (lldb::LanguageType &language,
     return false;
 }
 
-class TypeMoveMatchingBlock
-{
-public:
-    TypeMoveMatchingBlock(Block * block, TypeMap &typem, TypeList &typel) :
-        curr_block(block),type_map(typem),type_list(typel)
-    {
-    }
-
-    bool
-    operator() (const lldb::TypeSP& type)
-    {
-        if (type && type->GetSymbolContextScope() != nullptr && curr_block == type->GetSymbolContextScope()->CalculateSymbolContextBlock())
-        {
-            type_list.Insert(type);
-            type_map.RemoveTypeWithUID(type->GetID());
-            return false;
-        }
-        return true;
-    }
-
-private:
-    const Block * const curr_block;
-    TypeMap &type_map;
-    TypeList &type_list;
-};
-
-class TypeMoveMatchingFunction
-{
-public:
-    TypeMoveMatchingFunction(Function * block, TypeMap &typem, TypeList &typel) :
-        func(block),type_map(typem),type_list(typel)
-    {
-    }
-
-    bool
-    operator() (const lldb::TypeSP& type)
-    {
-        if (type && type->GetSymbolContextScope() != nullptr && func == type->GetSymbolContextScope()->CalculateSymbolContextFunction())
-        {
-            type_list.Insert(type);
-            type_map.RemoveTypeWithUID(type->GetID());
-            return false;
-        }
-        return true;
-    }
-
-private:
-    const Function * const func;
-    TypeMap &type_map;
-    TypeList &type_list;
-};
-
-class TypeMoveMatchingCompileUnit
-{
-public:
-    TypeMoveMatchingCompileUnit(CompileUnit * cunit, TypeMap &typem, TypeList &typel) :
-        comp_unit(cunit),type_map(typem),type_list(typel)
-    {
-    }
-
-    bool
-    operator() (const lldb::TypeSP& type)
-    {
-        if (type && type->GetSymbolContextScope() != nullptr && comp_unit == type->GetSymbolContextScope()->CalculateSymbolContextCompileUnit())
-        {
-            type_list.Insert(type);
-            type_map.RemoveTypeWithUID(type->GetID());
-            return false;
-        }
-        return true;
-    }
-
-private:
-    const CompileUnit * const comp_unit;
-    TypeMap &type_map;
-    TypeList &type_list;
-};
-
-class TypeMoveMatchingModule
-{
-public:
-    TypeMoveMatchingModule(lldb::ModuleSP modsp, TypeMap &typem, TypeList &typel) :
-        modulesp(modsp),type_map(typem),type_list(typel)
-    {
-    }
-
-    bool
-    operator() (const lldb::TypeSP& type)
-    {
-        if (type && type->GetSymbolContextScope() != nullptr && modulesp.get() == type->GetSymbolContextScope()->CalculateSymbolContextModule().get())
-        {
-            type_list.Insert(type);
-            type_map.RemoveTypeWithUID(type->GetID());
-            return false;
-        }
-        return true;
-    }
-
-private:
-    lldb::ModuleSP modulesp;
-    TypeMap &type_map;
-    TypeList &type_list;
-};
-
-class TypeMaptoList
-{
-public:
-    TypeMaptoList(TypeMap &typem, TypeList &typel) :
-        type_map(typem),type_list(typel)
-    {
-    }
-
-    bool
-    operator() (const lldb::TypeSP& type)
-    {
-        if(type)
-        {
-            type_list.Insert(type);
-            type_map.RemoveTypeWithUID(type->GetID());
-            if (type_map.Empty())
-                return false;
-        }
-        return true;
-    }
-
-private:
-    TypeMap &type_map;
-    TypeList &type_list;
-};
-
 void
-SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list ) const
+SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const
 {
     Block * curr_block = block;
     bool isInlinedblock = false;
     if (curr_block != nullptr && curr_block->GetContainingInlinedBlock() != nullptr)
         isInlinedblock = true;
 
+    //----------------------------------------------------------------------
+    // Find all types that match the current block if we have one and put
+    // them first in the list. Keep iterating up through all blocks.
+    //----------------------------------------------------------------------
     while (curr_block != nullptr && !isInlinedblock)
     {
-        TypeMoveMatchingBlock callbackBlock (curr_block, type_map, type_list);
-        type_map.ForEach(callbackBlock);
+        type_map.ForEach([curr_block, &type_list](const lldb::TypeSP& type_sp) -> bool {
+            SymbolContextScope *scs = type_sp->GetSymbolContextScope();
+            if (scs && curr_block == scs->CalculateSymbolContextBlock())
+                type_list.Insert(type_sp);
+            return true; // Keep iterating
+        });
+
+        // Remove any entries that are now in "type_list" from "type_map"
+        // since we can't remove from type_map while iterating
+        type_list.ForEach([&type_map](const lldb::TypeSP& type_sp) -> bool {
+            type_map.Remove(type_sp);
+            return true; // Keep iterating
+        });
         curr_block = curr_block->GetParent();
     }
-    if(function != nullptr && type_map.GetSize() > 0)
+    //----------------------------------------------------------------------
+    // Find all types that match the current function, if we have onem, and
+    // put them next in the list.
+    //----------------------------------------------------------------------
+    if (function != nullptr && !type_map.Empty())
     {
-        TypeMoveMatchingFunction callbackFunction (function, type_map, type_list);
-        type_map.ForEach(callbackFunction);
-    }
-    if(comp_unit != nullptr && type_map.GetSize() > 0)
-    {
-        TypeMoveMatchingCompileUnit callbackCompileUnit (comp_unit, type_map, type_list);
-        type_map.ForEach(callbackCompileUnit);
-    }
-    if(module_sp && type_map.GetSize() > 0)
-    {
-        TypeMoveMatchingModule callbackModule (module_sp, type_map, type_list);
-        type_map.ForEach(callbackModule);
-    }
-    if(type_map.GetSize() > 0)
-    {
-        TypeMaptoList callbackM2L (type_map, type_list);
-        type_map.ForEach(callbackM2L);
+        const size_t old_type_list_size = type_list.GetSize();
+        type_map.ForEach([this, &type_list](const lldb::TypeSP& type_sp) -> bool {
+            SymbolContextScope *scs = type_sp->GetSymbolContextScope();
+            if (scs && function == scs->CalculateSymbolContextFunction())
+                type_list.Insert(type_sp);
+            return true; // Keep iterating
+        });
 
+        // Remove any entries that are now in "type_list" from "type_map"
+        // since we can't remove from type_map while iterating
+        const size_t new_type_list_size = type_list.GetSize();
+        if (new_type_list_size > old_type_list_size)
+        {
+            for (size_t i=old_type_list_size; i<new_type_list_size; ++i)
+                type_map.Remove(type_list.GetTypeAtIndex(i));
+        }
     }
-	return ;
+    //----------------------------------------------------------------------
+    // Find all types that match the current compile unit, if we have one,
+    // and put them next in the list.
+    //----------------------------------------------------------------------
+    if (comp_unit != nullptr && !type_map.Empty())
+    {
+        const size_t old_type_list_size = type_list.GetSize();
+
+        type_map.ForEach([this, &type_list](const lldb::TypeSP& type_sp) -> bool {
+            SymbolContextScope *scs = type_sp->GetSymbolContextScope();
+            if (scs && comp_unit == scs->CalculateSymbolContextCompileUnit())
+                type_list.Insert(type_sp);
+            return true; // Keep iterating
+        });
+
+        // Remove any entries that are now in "type_list" from "type_map"
+        // since we can't remove from type_map while iterating
+        const size_t new_type_list_size = type_list.GetSize();
+        if (new_type_list_size > old_type_list_size)
+        {
+            for (size_t i=old_type_list_size; i<new_type_list_size; ++i)
+                type_map.Remove(type_list.GetTypeAtIndex(i));
+        }
+    }
+    //----------------------------------------------------------------------
+    // Find all types that match the current module, if we have one, and put
+    // them next in the list.
+    //----------------------------------------------------------------------
+    if (module_sp && !type_map.Empty())
+    {
+        const size_t old_type_list_size = type_list.GetSize();
+        type_map.ForEach([this, &type_list](const lldb::TypeSP& type_sp) -> bool {
+            SymbolContextScope *scs = type_sp->GetSymbolContextScope();
+            if (scs &&  module_sp == scs->CalculateSymbolContextModule())
+                type_list.Insert(type_sp);
+            return true; // Keep iterating
+        });
+        // Remove any entries that are now in "type_list" from "type_map"
+        // since we can't remove from type_map while iterating
+        const size_t new_type_list_size = type_list.GetSize();
+        if (new_type_list_size > old_type_list_size)
+        {
+            for (size_t i=old_type_list_size; i<new_type_list_size; ++i)
+                type_map.Remove(type_list.GetTypeAtIndex(i));
+        }
+    }
+    //----------------------------------------------------------------------
+    // Any types that are left get copied into the list an any order.
+    //----------------------------------------------------------------------
+    if (!type_map.Empty())
+    {
+        type_map.ForEach([&type_list](const lldb::TypeSP& type_sp) -> bool {
+            type_list.Insert(type_sp);
+            return true; // Keep iterating
+        });
+    }
 }
 
 ConstString

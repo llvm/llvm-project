@@ -632,6 +632,8 @@
 		26E152261419CAD4007967D0 /* ObjectFilePECOFF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26E152231419CACA007967D0 /* ObjectFilePECOFF.cpp */; };
 		26ECA04313665FED008D1F18 /* ARM_DWARF_Registers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26ECA04213665FED008D1F18 /* ARM_DWARF_Registers.cpp */; };
 		26ED3D6D13C563810017D45E /* OptionGroupVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26ED3D6C13C563810017D45E /* OptionGroupVariable.cpp */; };
+		26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26EFB6181BFE8D3E00544801 /* PlatformNetBSD.cpp */; settings = {ASSET_TAGS = (); }; };
+		26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */ = {isa = PBXBuildFile; fileRef = 26EFB6191BFE8D3E00544801 /* PlatformNetBSD.h */; settings = {ASSET_TAGS = (); }; };
 		26EFC4CD18CFAF0D00865D87 /* ObjectFileJIT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26EFC4CA18CFAF0D00865D87 /* ObjectFileJIT.cpp */; };
 		26F006561B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26F006541B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp */; };
 		26F4A21C13FBA31A0064B613 /* ThreadMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26F4A21A13FBA31A0064B613 /* ThreadMemory.cpp */; };
@@ -2177,6 +2179,8 @@
 		26ECA04213665FED008D1F18 /* ARM_DWARF_Registers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ARM_DWARF_Registers.cpp; path = source/Utility/ARM_DWARF_Registers.cpp; sourceTree = "<group>"; };
 		26ED3D6C13C563810017D45E /* OptionGroupVariable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OptionGroupVariable.cpp; path = source/Interpreter/OptionGroupVariable.cpp; sourceTree = "<group>"; };
 		26ED3D6F13C5638A0017D45E /* OptionGroupVariable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = OptionGroupVariable.h; path = include/lldb/Interpreter/OptionGroupVariable.h; sourceTree = "<group>"; };
+		26EFB6181BFE8D3E00544801 /* PlatformNetBSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformNetBSD.cpp; sourceTree = "<group>"; };
+		26EFB6191BFE8D3E00544801 /* PlatformNetBSD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformNetBSD.h; sourceTree = "<group>"; };
 		26EFC4CA18CFAF0D00865D87 /* ObjectFileJIT.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjectFileJIT.cpp; sourceTree = "<group>"; };
 		26EFC4CB18CFAF0D00865D87 /* ObjectFileJIT.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectFileJIT.h; sourceTree = "<group>"; };
 		26F006541B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DynamicLoaderWindowsDYLD.cpp; sourceTree = "<group>"; };
@@ -4958,6 +4962,7 @@
 				23042D0F1976C9D800621B2C /* Kalimba */,
 				2694E99F14FC0BBD0076DE67 /* Linux */,
 				26C5577F132575C8008FD8FE /* MacOSX */,
+				26EFB6151BFE8D3E00544801 /* NetBSD */,
 				9457596415349416005A9070 /* POSIX */,
 				490A36BA180F0E6F00BA31F8 /* Windows */,
 			);
@@ -5077,6 +5082,15 @@
 				26E152241419CACA007967D0 /* ObjectFilePECOFF.h */,
 			);
 			path = PECOFF;
+			sourceTree = "<group>";
+		};
+		26EFB6151BFE8D3E00544801 /* NetBSD */ = {
+			isa = PBXGroup;
+			children = (
+				26EFB6181BFE8D3E00544801 /* PlatformNetBSD.cpp */,
+				26EFB6191BFE8D3E00544801 /* PlatformNetBSD.h */,
+			);
+			path = NetBSD;
 			sourceTree = "<group>";
 		};
 		26EFC4C718CFAF0D00865D87 /* JIT */ = {
@@ -5902,6 +5916,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AF8AD6381BEC28C400150209 /* PlatformRemoteAppleTV.h in Headers */,
+				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				AF8AD62F1BEC28A400150209 /* PlatformAppleTVSimulator.h in Headers */,
 				AF8AD63A1BEC28C400150209 /* PlatformRemoteAppleWatch.h in Headers */,
@@ -6226,7 +6241,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $CONFIGURATION_BUILD_DIR --allow-static-binding";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $CONFIGURATION_BUILD_DIR";
 		};
 		4959511A1A1ACE9500F6F8FC /* Install Clang compiler headers */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -6941,6 +6956,7 @@
 				945759671534941F005A9070 /* PlatformPOSIX.cpp in Sources */,
 				26B1EFAE154638AF00E2DAC7 /* DWARFDeclContext.cpp in Sources */,
 				945215DF17F639EE00521C0B /* ValueObjectPrinter.cpp in Sources */,
+				26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */,
 				260CC64815D0440D002BF2E0 /* OptionValueArgs.cpp in Sources */,
 				260CC64915D0440D002BF2E0 /* OptionValueArray.cpp in Sources */,
 				260CC64A15D0440D002BF2E0 /* OptionValueBoolean.cpp in Sources */,

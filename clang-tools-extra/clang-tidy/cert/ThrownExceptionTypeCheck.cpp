@@ -19,9 +19,12 @@ AST_MATCHER(CXXConstructorDecl, isNoThrowCopyConstructor) {
   if (!Node.isCopyConstructor())
     return false;
 
-  if (const auto *FnTy = Node.getType()->getAs<FunctionProtoType>())
-    return FnTy->isNothrow(Node.getASTContext());
-  llvm_unreachable("Copy constructor with no prototype");
+  const auto *FnTy = Node.getType()->getAs<FunctionProtoType>();
+  // Assume the best for any unresolved exception specification.
+  if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
+    return true;
+
+  return FnTy->isNothrow(Node.getASTContext());
 }
 } // end namespace
 
@@ -36,7 +39,6 @@ void ThrownExceptionTypeCheck::registerMatchers(MatchFinder *Finder) {
               isCopyConstructor(), unless(isNoThrowCopyConstructor()))))
           .bind("expr"))),
       this);
-
 }
 
 void ThrownExceptionTypeCheck::check(const MatchFinder::MatchResult &Result) {

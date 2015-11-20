@@ -658,16 +658,15 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
   if (Out<ELFT>::HashTab)
     WritePtr(DT_HASH, Out<ELFT>::HashTab->getVA());
 
+  // If --enable-new-dtags is set, lld emits DT_RUNPATH
+  // instead of DT_RPATH. The two tags are functionally
+  // equivalent except for the following:
+  // - DT_RUNPATH is searched after LD_LIBRARY_PATH, while
+  //   DT_RPATH is searched before.
+  // - DT_RUNPATH is used only to search for direct
+  //   dependencies of the object it's contained in, while
+  //   DT_RPATH is used for indirect dependencies as well.
   if (!Config->RPath.empty())
-
-    // If --enable-new-dtags is set lld emits DT_RUNPATH
-    // instead of DT_RPATH. The two tags are functionally
-    // equivalent except for the following:
-    // - DT_RUNPATH is searched after LD_LIBRARY_PATH, while
-    // DT_RPATH is searched before.
-    // - DT_RUNPATH is used only to search for direct
-    // dependencies of the object it's contained in, while
-    // DT_RPATH is used for indirect dependencies as well.
     WriteVal(Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
              Out<ELFT>::DynStrTab->getOffset(Config->RPath));
 

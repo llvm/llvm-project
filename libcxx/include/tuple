@@ -80,26 +80,26 @@ template <class... Tuples> tuple<CTypes...> tuple_cat(Tuples&&... tpls); // cons
 // 20.4.1.4, tuple helper classes:
 template <class T> class tuple_size; // undefined
 template <class... T> class tuple_size<tuple<T...>>;
-template <intsize_t I, class T> class tuple_element; // undefined
-template <intsize_t I, class... T> class tuple_element<I, tuple<T...>>;
-template <size_t _Ip, class ..._Tp>
-  using tuple_element_t = typename tuple_element <_Ip, _Tp...>::type; // C++14
+template <size_t I, class T> class tuple_element; // undefined
+template <size_t I, class... T> class tuple_element<I, tuple<T...>>;
+template <size_t I, class T>
+  using tuple_element_t = typename tuple_element <I, T>::type; // C++14
 
 // 20.4.1.5, element access:
-template <intsize_t I, class... T>
+template <size_t I, class... T>
     typename tuple_element<I, tuple<T...>>::type&
     get(tuple<T...>&) noexcept; // constexpr in C++14
-template <intsize_t I, class... T>
-    typename const tuple_element<I, tuple<T...>>::type &
+template <size_t I, class... T>
+    const typename tuple_element<I, tuple<T...>>::type&
     get(const tuple<T...>&) noexcept; // constexpr in C++14
-template <intsize_t I, class... T>
+template <size_t I, class... T>
     typename tuple_element<I, tuple<T...>>::type&&
     get(tuple<T...>&&) noexcept; // constexpr in C++14
 
 template <class T1, class... T>
     constexpr T1& get(tuple<T...>&) noexcept;  // C++14
 template <class T1, class... T>
-    constexpr T1 const& get(const tuple<T...>&) noexcept;   // C++14
+    constexpr const T1& get(const tuple<T...>&) noexcept;   // C++14
 template <class T1, class... T>
     constexpr T1&& get(tuple<T...>&&) noexcept;   // C++14
 

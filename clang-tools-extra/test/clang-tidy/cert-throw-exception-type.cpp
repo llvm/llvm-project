@@ -108,5 +108,20 @@ void f() {
   throw Allocates(); // match, copy constructor throws
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: thrown exception type is not nothrow copy constructible
   throw OptionallyAllocates(); // ok
+}
 
+namespace PR25574 {
+struct B {
+  B(const B&) noexcept;
+};
+
+struct D : B {
+  D();
+  virtual ~D() noexcept;
+};
+
+template <typename T>
+void f() {
+  throw D();
+}
 }

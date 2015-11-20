@@ -139,7 +139,8 @@ void SymbolTable<ELFT>::reportConflict(const Twine &Message,
   }
 
   std::string Msg = (Message + ": " + Old.getName() + " in " +
-                     OldFile->getName() + " and " + NewFile->getName())
+                     (OldFile ? OldFile->getName() : "(internal)") + " and " +
+                     (NewFile ? NewFile->getName() : "(internal)"))
                         .str();
   if (Warning)
     warning(Msg);

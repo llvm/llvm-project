@@ -1,6 +1,6 @@
 LEVEL = ../../make
 
 C_SOURCES := main.c
-CFLAGS := $(CFLAGS) -fsanitize=address -g
+CFLAGS_EXTRAS := -fsanitize=address -g
 
 include $(LEVEL)/Makefile.rules

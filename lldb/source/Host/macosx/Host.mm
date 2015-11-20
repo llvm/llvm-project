@@ -1366,8 +1366,11 @@ Host::ShellExpandArguments (ProcessLaunchInfo &launch_info)
             error.SetErrorStringWithFormat("could not find the lldb-argdumper tool: %s", expand_tool_spec.GetPath().c_str());
             return error;
         }
+        
+        StreamString expand_tool_spec_stream;
+        expand_tool_spec_stream.Printf("\"%s\"",expand_tool_spec.GetPath().c_str());
 
-        Args expand_command(expand_tool_spec.GetPath().c_str());
+        Args expand_command(expand_tool_spec_stream.GetData());
         expand_command.AppendArguments (launch_info.GetArguments());
         
         int status;
