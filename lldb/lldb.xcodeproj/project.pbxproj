@@ -593,6 +593,8 @@
 		26BF51F61B3C754400016294 /* ABISysV_i386.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BF51EF1B3C754400016294 /* ABISysV_i386.cpp */; };
 		26C72C94124322890068DC16 /* SBStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 26C72C93124322890068DC16 /* SBStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		26C72C961243229A0068DC16 /* SBStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C72C951243229A0068DC16 /* SBStream.cpp */; };
+		26C7C4831BFFEA7E009BD01F /* WindowsMiniDump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C7C4811BFFEA7E009BD01F /* WindowsMiniDump.cpp */; settings = {ASSET_TAGS = (); }; };
+		26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */ = {isa = PBXBuildFile; fileRef = 26C7C4821BFFEA7E009BD01F /* WindowsMiniDump.h */; settings = {ASSET_TAGS = (); }; };
 		26CA97A1172B1FD5005DC71B /* RegisterContextThreadMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CA979F172B1FD5005DC71B /* RegisterContextThreadMemory.cpp */; };
 		26CEB5EF18761CB2008F575A /* libedit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 26F5C32A10F3DFDD009D5894 /* libedit.dylib */; };
 		26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CEB5F018762056008F575A /* CommandObjectGUI.cpp */; };
@@ -2100,6 +2102,8 @@
 		26C6886E137880C400407EDF /* RegisterValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterValue.cpp; path = source/Core/RegisterValue.cpp; sourceTree = "<group>"; };
 		26C72C93124322890068DC16 /* SBStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBStream.h; path = include/lldb/API/SBStream.h; sourceTree = "<group>"; };
 		26C72C951243229A0068DC16 /* SBStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBStream.cpp; path = source/API/SBStream.cpp; sourceTree = "<group>"; };
+		26C7C4811BFFEA7E009BD01F /* WindowsMiniDump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WindowsMiniDump.cpp; sourceTree = "<group>"; };
+		26C7C4821BFFEA7E009BD01F /* WindowsMiniDump.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowsMiniDump.h; sourceTree = "<group>"; };
 		26C81CA411335651004BDC5A /* UUID.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UUID.h; path = include/lldb/Core/UUID.h; sourceTree = "<group>"; };
 		26C81CA511335651004BDC5A /* UUID.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UUID.cpp; path = source/Core/UUID.cpp; sourceTree = "<group>"; };
 		26CA979F172B1FD5005DC71B /* RegisterContextThreadMemory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextThreadMemory.cpp; path = Utility/RegisterContextThreadMemory.cpp; sourceTree = "<group>"; };
@@ -5080,6 +5084,8 @@
 			children = (
 				26E152231419CACA007967D0 /* ObjectFilePECOFF.cpp */,
 				26E152241419CACA007967D0 /* ObjectFilePECOFF.h */,
+				26C7C4811BFFEA7E009BD01F /* WindowsMiniDump.cpp */,
+				26C7C4821BFFEA7E009BD01F /* WindowsMiniDump.h */,
 			);
 			path = PECOFF;
 			sourceTree = "<group>";
@@ -5918,6 +5924,7 @@
 				AF8AD6381BEC28C400150209 /* PlatformRemoteAppleTV.h in Headers */,
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
+				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				AF8AD62F1BEC28A400150209 /* PlatformAppleTVSimulator.h in Headers */,
 				AF8AD63A1BEC28C400150209 /* PlatformRemoteAppleWatch.h in Headers */,
 				257906651BD5AFD000178368 /* Acceptor.h in Headers */,
@@ -6732,6 +6739,7 @@
 				268900D613353E6F00698AC0 /* Declaration.cpp in Sources */,
 				2579065C1BD0488100178368 /* TCPSocket.cpp in Sources */,
 				268900D713353E6F00698AC0 /* DWARFCallFrameInfo.cpp in Sources */,
+				26C7C4831BFFEA7E009BD01F /* WindowsMiniDump.cpp in Sources */,
 				268900D813353E6F00698AC0 /* Function.cpp in Sources */,
 				268900D913353E6F00698AC0 /* FuncUnwinders.cpp in Sources */,
 				268900DA13353E6F00698AC0 /* LineEntry.cpp in Sources */,
