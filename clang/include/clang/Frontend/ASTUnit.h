@@ -827,6 +827,8 @@ public:
   ///
   /// \param ResourceFilesPath - The path to the compiler resource files.
   ///
+  /// \param ModuleFormat - If provided, uses the specific module format.
+  ///
   /// \param ErrAST - If non-null and parsing failed without any AST to return
   /// (e.g. because the PCH could not be loaded), this accepts the ASTUnit
   /// mainly to allow the caller to see the diagnostics.
@@ -845,6 +847,7 @@ public:
       bool IncludeBriefCommentsInCodeCompletion = false,
       bool AllowPCHWithCompilerErrors = false, bool SkipFunctionBodies = false,
       bool UserFilesAreVolatile = false, bool ForSerialization = false,
+      llvm::Optional<StringRef> ModuleFormat = llvm::None,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr);
 
   /// \brief Reparse the source files using the same command-line options that

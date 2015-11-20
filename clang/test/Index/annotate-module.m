@@ -6,6 +6,8 @@ int glob;
 // RUN: rm -rf %t.cache
 // RUN: c-index-test -test-annotate-tokens=%s:2:1:5:1 %s -fmodules-cache-path=%t.cache -fmodules -F %S/../Modules/Inputs \
 // RUN:      | FileCheck %s
+// RUN: c-index-test -test-annotate-tokens=%s:2:1:5:1 %s -fmodules-cache-path=%t.cache -fmodules -gmodules -F %S/../Modules/Inputs \
+// RUN:      | FileCheck %s
 
 // CHECK:      Punctuation: "#" [2:1 - 2:2] inclusion directive=[[INC_DIR:DependsOnModule[/\\]DependsOnModule\.h \(.*/Modules/Inputs/DependsOnModule\.framework[/\\]Headers[/\\]DependsOnModule.h\)]]
 // CHECK-NEXT: Identifier: "include" [2:2 - 2:9] inclusion directive=[[INC_DIR]]
