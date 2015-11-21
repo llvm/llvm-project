@@ -40,6 +40,25 @@ TEST_F(SortIncludesTest, BasicSorting) {
                  "#include \"b.h\"\n"));
 }
 
+TEST_F(SortIncludesTest, SupportClangFormatOff) {
+  EXPECT_EQ("#include <a>\n"
+            "#include <b>\n"
+            "#include <c>\n"
+            "// clang-format off\n"
+            "#include <b>\n"
+            "#include <a>\n"
+            "#include <c>\n"
+            "// clang-format on\n",
+            sort("#include <b>\n"
+                 "#include <a>\n"
+                 "#include <c>\n"
+                 "// clang-format off\n"
+                 "#include <b>\n"
+                 "#include <a>\n"
+                 "#include <c>\n"
+                 "// clang-format on\n"));
+}
+
 TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
   Style.SortIncludes = false;
   EXPECT_EQ("#include \"a.h\"\n"
