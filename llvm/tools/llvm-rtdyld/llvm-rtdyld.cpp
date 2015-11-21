@@ -250,10 +250,9 @@ static void loadDylibs() {
     if (sys::fs::is_regular_file(Dylib)) {
       std::string ErrMsg;
       if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
-        llvm::errs() << "Error loading '" << Dylib << "': "
-                     << ErrMsg << "\n";
+        report_fatal_error("Error loading '" + Dylib + "': " + ErrMsg);
     } else
-      llvm::errs() << "Dylib not found: '" << Dylib << "'.\n";
+      report_fatal_error("Dylib not found: '" + Dylib + "'.");
   }
 }
 
@@ -463,11 +462,9 @@ applySpecificSectionMappings(RuntimeDyldChecker &Checker) {
     std::string SectionIDStr = Mapping.substr(0, EqualsIdx);
     size_t ComaIdx = Mapping.find_first_of(",");
 
-    if (ComaIdx == StringRef::npos) {
-      errs() << "Invalid section specification '" << Mapping
-             << "'. Should be '<file name>,<section name>=<addr>'\n";
-      exit(1);
-    }
+    if (ComaIdx == StringRef::npos)
+      report_fatal_error("Invalid section specification '" + Mapping +
+                         "'. Should be '<file name>,<section name>=<addr>'");
 
     std::string FileName = SectionIDStr.substr(0, ComaIdx);
     std::string SectionName = SectionIDStr.substr(ComaIdx + 1);
@@ -477,20 +474,17 @@ applySpecificSectionMappings(RuntimeDyldChecker &Checker) {
     std::tie(OldAddrInt, ErrorMsg) =
       Checker.getSectionAddr(FileName, SectionName, true);
 
-    if (ErrorMsg != "") {
-      errs() << ErrorMsg;
-      exit(1);
-    }
+    if (ErrorMsg != "")
+      report_fatal_error(ErrorMsg);
 
     void* OldAddr = reinterpret_cast<void*>(static_cast<uintptr_t>(OldAddrInt));
 
     std::string NewAddrStr = Mapping.substr(EqualsIdx + 1);
     uint64_t NewAddr;
 
-    if (StringRef(NewAddrStr).getAsInteger(0, NewAddr)) {
-      errs() << "Invalid section address in mapping '" << Mapping << "'.\n";
-      exit(1);
-    }
+    if (StringRef(NewAddrStr).getAsInteger(0, NewAddr))
+      report_fatal_error("Invalid section address in mapping '" + Mapping +
+                         "'.");
 
     Checker.getRTDyld().mapSectionAddress(OldAddr, NewAddr);
     SpecificMappings[OldAddr] = NewAddr;
@@ -579,20 +573,16 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
   for (const auto &Mapping : DummySymbolMappings) {
     size_t EqualsIdx = Mapping.find_first_of("=");
 
-    if (EqualsIdx == StringRef::npos) {
-      errs() << "Invalid dummy symbol specification '" << Mapping
-             << "'. Should be '<symbol name>=<addr>'\n";
-      exit(1);
-    }
+    if (EqualsIdx == StringRef::npos)
+      report_fatal_error("Invalid dummy symbol specification '" + Mapping +
+                         "'. Should be '<symbol name>=<addr>'");
 
     std::string Symbol = Mapping.substr(0, EqualsIdx);
     std::string AddrStr = Mapping.substr(EqualsIdx + 1);
 
     uint64_t Addr;
-    if (StringRef(AddrStr).getAsInteger(0, Addr)) {
-      errs() << "Invalid symbol mapping '" << Mapping << "'.\n";
-      exit(1);
-    }
+    if (StringRef(AddrStr).getAsInteger(0, Addr))
+      report_fatal_error("Invalid symbol mapping '" + Mapping + "'.");
 
     MemMgr.addDummySymbol(Symbol, Addr);
   }
@@ -604,38 +594,38 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
 static int linkAndVerify() {
 
   // Check for missing triple.
-  if (TripleName == "") {
-    llvm::errs() << "Error: -triple required when running in -verify mode.\n";
-    return 1;
-  }
+  if (TripleName == "")
+    return Error("-triple required when running in -verify mode.");
 
   // Look up the target and build the disassembler.
   Triple TheTriple(Triple::normalize(TripleName));
   std::string ErrorStr;
   const Target *TheTarget =
     TargetRegistry::lookupTarget("", TheTriple, ErrorStr);
-  if (!TheTarget) {
-    llvm::errs() << "Error accessing target '" << TripleName << "': "
-                 << ErrorStr << "\n";
-    return 1;
-  }
+  if (!TheTarget)
+    return Error("Error accessing target '" + TripleName + "': " + ErrorStr);
+
   TripleName = TheTriple.getTriple();
 
   std::unique_ptr<MCSubtargetInfo> STI(
     TheTarget->createMCSubtargetInfo(TripleName, MCPU, ""));
-  assert(STI && "Unable to create subtarget info!");
+  if (!STI)
+    return Error("Unable to create subtarget info!");
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
-  assert(MRI && "Unable to create target register info!");
+  if (!MRI)
+    return Error("Unable to create target register info!");
 
   std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
-  assert(MAI && "Unable to create target asm info!");
+  if (!MAI)
+    return Error("Unable to create target asm info!");
 
   MCContext Ctx(MAI.get(), MRI.get(), nullptr);
 
   std::unique_ptr<MCDisassembler> Disassembler(
     TheTarget->createMCDisassembler(*STI, Ctx));
-  assert(Disassembler && "Unable to create disassembler!");
+  if (!Disassembler)
+    return Error("Unable to create disassembler!");
 
   std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
 
@@ -696,11 +686,9 @@ static int linkAndVerify() {
   Dyld.registerEHFrames();
 
   int ErrorCode = checkAllExpressions(Checker);
-  if (Dyld.hasError()) {
-    errs() << "RTDyld reported an error applying relocations:\n  "
-           << Dyld.getErrorString() << "\n";
-    ErrorCode = 1;
-  }
+  if (Dyld.hasError())
+    return Error("RTDyld reported an error applying relocations:\n  " +
+                 Dyld.getErrorString());
 
   return ErrorCode;
 }

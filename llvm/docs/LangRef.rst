@@ -1468,7 +1468,7 @@ incorrect and will change program semantics.
 
 Syntax::
 
-    operand bundle set ::= '[' operand bundle ']'
+    operand bundle set ::= '[' operand bundle (, operand bundle )* ']'
     operand bundle ::= tag '(' [ bundle operand ] (, bundle operand )* ')'
     bundle operand ::= SSA value
     tag ::= string constant
@@ -1504,13 +1504,14 @@ More specific types of operand bundles are described below.
 Deoptimization Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Deoptimization operand bundles are characterized by the ``"deopt``
+Deoptimization operand bundles are characterized by the ``"deopt"``
 operand bundle tag.  These operand bundles represent an alternate
 "safe" continuation for the call site they're attached to, and can be
 used by a suitable runtime to deoptimize the compiled frame at the
-specified call site.  Exact details of deoptimization is out of scope
-for the language reference, but it usually involves rewriting a
-compiled frame into a set of interpreted frames.
+specified call site.  There can be at most one ``"deopt"`` operand
+bundle attached to a call site.  Exact details of deoptimization is
+out of scope for the language reference, but it usually involves
+rewriting a compiled frame into a set of interpreted frames.
 
 From the compiler's perspective, deoptimization operand bundles make
 the call sites they're attached to at least ``readonly``.  They read
