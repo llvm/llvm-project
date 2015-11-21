@@ -28,8 +28,9 @@ parser.add_argument('--release', action='store_true',
                     help='build in release mode')
 parser.add_argument('--no-debugserver', action='store_true',
                     help='build without debugserver')
-parser.add_argument('--use-system-debugserver', action='store_true',
-                    help='build without debugserver')
+parser.add_argument('--no-system-debugserver', action='store_false',
+                    dest='use_system_debugserver',
+                    help='do not copy in the system debugserver (default is to copy it in)')
 parser.add_argument('--package', action='store_true',
                     help='build for packaging')
 
@@ -129,8 +130,7 @@ else:
 
     if args.no_debugserver:
         build_script_impl_arguments += ['--lldb-no-debugserver']
-
-    if args.use_system_debugserver:
+    elif args.use_system_debugserver:
         build_script_impl_arguments += ['--lldb-use-system-debugserver']
 
 args = ["./swift/utils/build-script"] + build_script_arguments + ["--"] + build_script_impl_arguments
