@@ -36,7 +36,7 @@ bash-like shell:
 ```
 mkdir myswift
 cd myswift
-git clone https://github.com/apple/swift-lldb.git
+git clone https://github.com/apple/swift-lldb.git lldb
 lldb/scripts/build-swift-cmake.py --test
 ```
 
