@@ -78,6 +78,7 @@ class HelpCommandTestCase(TestBase):
 
     @no_debug_info_test
     @expectedFailureDarwin("rdar://problem/23629980")
+    @expectedFailureLinux("rdar://problem/23629980")
     def test_help_version(self):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",

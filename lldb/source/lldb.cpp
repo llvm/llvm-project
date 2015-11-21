@@ -13,6 +13,9 @@ using namespace lldb;
 using namespace lldb_private;
 
 #if defined (__APPLE__)
+// Xcode writes this file out in a build step.
+// cmake builds get this through another mechanism.
+// Both produce LLDB_REVISION.
 #include "lldb_revision.h"
 extern "C" const unsigned char liblldb_coreVersionString[];
 #endif
@@ -80,19 +83,30 @@ std::string ExtractSwiftRevision(const std::string &fullVersion)
     return fullVersion.substr(prefix_start_pos + search_prefix.length(), revision_end_pos - prefix_start_pos - search_prefix.length());
 }
 
+static const char*
+_GetVersionOSS ()
+{
+    static std::string g_version_string;
+    if (g_version_string.empty())
+    {
+        std::string build_string;
+        llvm::raw_string_ostream out(build_string);
+
+#if defined (LLDB_IS_BUILDBOT_BUILD) && LLDB_IS_BUILDBOT_BUILD
+        const std::string build_flavor = "buildbot";
+#else
+        const std::string build_flavor = "local";
+#endif
+        out << "lldb-" << build_flavor;
+
+#if defined (LLDB_BUILD_DATE)
+        const std::string build_date(LLDB_BUILD_DATE);
+        if (!build_date.empty())
+            out << "-" << build_date;
 #endif
 
-const char *
-lldb_private::GetVersion ()
-{
-#if defined (__APPLE__)
-#if LLDB_IS_OSS_VERSION
-    static std::string g_version_str;
-    if (g_version_str.empty())
-    {
-        llvm::raw_string_ostream out(g_version_str);
+        out << " (";
 
-        out << "lldb (";
         std::string lldb_revision = GetLLDBRevision();
         if (lldb_revision.length() > 0)
         {
@@ -113,38 +127,65 @@ lldb_private::GetVersion ()
             // once added.
             const std::string swift_revision = ExtractSwiftRevision(swift::version::getSwiftFullVersion());
             if (!swift_revision.empty())
-                out << ", Swift " << swift_revision.substr(0, MAX_REVISION_LENGTH);
+            {
+                auto const swift_version = swift::version::getSwiftNumericVersion();
+                out << ", Swift-" << swift_version.first << "." << swift_version.second << " " << swift_revision.substr(0, MAX_REVISION_LENGTH);
+            }
         }
         out << ")";
 
-        g_version_str = out.str();
+        g_version_string = out.str();
     }
-   return g_version_str.c_str();
-#else
+    return g_version_string.c_str();
+}
+
+#endif
+
+#if defined(__APPLE__) && !LLDB_IS_OSS_VERSION
+
+static const char*
+_GetVersionAppleStandard ()
+{
     static char g_version_string[32];
     if (g_version_string[0] == '\0')
     {
         const char *version_string = ::strstr ((const char *)liblldb_coreVersionString, "PROJECT:");
-        
+
         if (version_string)
             version_string += sizeof("PROJECT:") - 1;
         else
             version_string = "unknown";
-        
+
         const char *newline_loc = strchr(version_string, '\n');
-        
+
         size_t version_len = sizeof(g_version_string) - 1;
-        
+
         if (newline_loc &&
             (newline_loc - version_string < static_cast<ptrdiff_t>(version_len)))
             version_len = newline_loc - version_string;
-        
+
         ::snprintf(g_version_string, version_len + 1, "%s", version_string);
     }
-
+    
     return g_version_string;
+}
+
 #endif
+
+
+const char *
+lldb_private::GetVersion ()
+{
+#if defined (__APPLE__)
+# if LLDB_IS_OSS_VERSION
+    return _GetVersionOSS ();
+# else
+    return _GetVersionAppleStandard ();
+# endif
 #else
+# if LLDB_IS_OSS_VERSION
+    return _GetVersionOSS ();
+# else
     // On platforms other than Darwin, report a version number in the same style as the clang tool.
     static std::string g_version_str;
     if (g_version_str.empty())
@@ -181,5 +222,6 @@ lldb_private::GetVersion ()
             g_version_str += ")";
     }
     return g_version_str.c_str();
+# endif
 #endif
 }
