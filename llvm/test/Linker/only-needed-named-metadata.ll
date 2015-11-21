@@ -26,6 +26,11 @@
 ; ONLYNEEDED-NOT:@analias
 ; ONLYNEEDED-NOT:@globalfunc2()
 
+; Test -only-needed link with the modules preserved instead of freeing to
+; catch any cross-module references to metadata, which the bitcode writer
+; will assert on.
+; RUN: llvm-link -preserve-modules -o %t3.bc -only-needed %t2.bc %t.bc
+
 @X = global i32 5
 @U = global i32 6
 @U_linkonce = linkonce_odr hidden global i32 6
