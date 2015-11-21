@@ -16,6 +16,10 @@ import os
 import platform
 import sys
 
+# LLDB modules:
+import use_lldb_suite
+from lldbsuite.support import fs
+
 
 def prepare_binding_for_language(scripts_dir, script_lang, options):
     """Prepares the binding for a specific language.
@@ -178,63 +182,6 @@ def process_args(args):
     return options
 
 
-def find_file_in_paths(paths, exe_basename):
-    """Returns the full exe path for the first path match.
-
-    @params paths the list of directories to search for the exe_basename
-    executable
-    @params exe_basename the name of the file for which to search.
-    e.g. "swig" or "swig.exe".
-
-    @return the full path to the executable if found in one of the
-    given paths; otherwise, returns None.
-    """
-    for path in paths:
-        trial_exe_path = os.path.join(path, exe_basename)
-        if os.path.exists(trial_exe_path):
-            return os.path.normcase(trial_exe_path)
-    return None
-
-
-def find_swig_executable(options):
-    """Finds the swig executable in the PATH or known good locations.
-
-    Replaces options.swig_executable with the full swig executable path.
-    """
-    # Figure out what we're looking for.
-    if platform.system() == 'Windows':
-        exe_basename = "swig.exe"
-        extra_dirs = []
-    else:
-        exe_basename = "swig"
-        extra_dirs = ["/usr/local/bin"]
-
-    # Figure out what paths to check.
-    path_env = os.environ.get("PATH", None)
-    if path_env is not None:
-        paths_to_check = path_env.split(os.path.pathsep)
-    else:
-        paths_to_check = []
-
-    # Add in the extra dirs
-    paths_to_check.extend(extra_dirs)
-    if len(paths_to_check) < 1:
-        logging.error(
-            "swig executable was not specified, PATH has no "
-            "contents, and there are no extra directories to search")
-        sys.exit(-6)
-
-    # Find the swig executable
-    options.swig_executable = find_file_in_paths(paths_to_check, exe_basename)
-    if not options.swig_executable or len(options.swig_executable) < 1:
-        logging.error(
-            "failed to find exe='%s' in paths='%s'",
-            exe_basename,
-            paths_to_check)
-        sys.exit(-6)
-    logging.info("found swig executable: %s", options.swig_executable)
-
-
 def main(args):
     """Drives the main script preparation steps.
 
@@ -247,7 +194,11 @@ def main(args):
     # Ensure we have a swig executable.
     if not options.swig_executable or len(options.swig_executable) == 0:
         if options.find_swig:
-            find_swig_executable(options)
+            try:
+                options.swig_executable = fs.find_executable("swig")
+            except Exception as e:
+                logging.error("Unable to find swig executable: %s" % e.message)
+                sys.exit(-6)
         else:
             logging.error(
                 "The --find-swig option must be specified "

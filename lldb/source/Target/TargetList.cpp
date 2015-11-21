@@ -245,7 +245,11 @@ TargetList::CreateTargetInternal (Debugger &debugger,
                             }
                             
                             // Just find a platform that matches the architecture in the executable file
-                            platforms.push_back(Platform::GetPlatformForArchitecture(module_spec.GetArchitecture(), nullptr));
+                            PlatformSP fallback_platform_sp (Platform::GetPlatformForArchitecture(module_spec.GetArchitecture(), nullptr));
+                            if (fallback_platform_sp)
+                            {
+                                platforms.push_back(fallback_platform_sp);
+                            }
                         }
                     }
                     
