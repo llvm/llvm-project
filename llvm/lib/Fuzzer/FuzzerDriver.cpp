@@ -273,8 +273,10 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   if (Flags.timeout > 0)
     SetTimer(Flags.timeout / 2 + 1);
 
-  if (Flags.test_single_input)
-    return RunOneTest(&F, Flags.test_single_input);
+  if (Flags.test_single_input) {
+    RunOneTest(&F, Flags.test_single_input);
+    exit(0);
+  }
 
   if (Flags.merge) {
     F.Merge(*Inputs);

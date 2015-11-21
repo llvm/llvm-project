@@ -1432,44 +1432,13 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
 
 /// Returns true if instruction is a memory operation that this pass is capable
 /// of operating on.
-static bool isMemoryOp(const MachineInstr *MI) {
-  // When no memory operands are present, conservatively assume unaligned,
-  // volatile, unfoldable.
-  if (!MI->hasOneMemOperand())
-    return false;
-
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
-
-  // Don't touch volatile memory accesses - we may be changing their order.
-  if (MMO->isVolatile())
-    return false;
-
-  // Unaligned ldr/str is emulated by some kernels, but unaligned ldm/stm is
-  // not.
-  if (MMO->getAlignment() < 4)
-    return false;
-
-  // str <undef> could probably be eliminated entirely, but for now we just want
-  // to avoid making a mess of it.
-  // FIXME: Use str <undef> as a wildcard to enable better stm folding.
-  if (MI->getNumOperands() > 0 && MI->getOperand(0).isReg() &&
-      MI->getOperand(0).isUndef())
-    return false;
-
-  // Likewise don't mess with references to undefined addresses.
-  if (MI->getNumOperands() > 1 && MI->getOperand(1).isReg() &&
-      MI->getOperand(1).isUndef())
-    return false;
-
-  unsigned Opcode = MI->getOpcode();
+static bool isMemoryOp(const MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
-  default: break;
   case ARM::VLDRS:
   case ARM::VSTRS:
-    return MI->getOperand(1).isReg();
   case ARM::VLDRD:
   case ARM::VSTRD:
-    return MI->getOperand(1).isReg();
   case ARM::LDRi12:
   case ARM::STRi12:
   case ARM::tLDRi:
@@ -1480,9 +1449,40 @@ static bool isMemoryOp(const MachineInstr *MI) {
   case ARM::t2LDRi12:
   case ARM::t2STRi8:
   case ARM::t2STRi12:
-    return MI->getOperand(1).isReg();
+    break;
+  default:
+    return false;
   }
-  return false;
+  if (!MI.getOperand(1).isReg())
+    return false;
+
+  // When no memory operands are present, conservatively assume unaligned,
+  // volatile, unfoldable.
+  if (!MI.hasOneMemOperand())
+    return false;
+
+  const MachineMemOperand &MMO = **MI.memoperands_begin();
+
+  // Don't touch volatile memory accesses - we may be changing their order.
+  if (MMO.isVolatile())
+    return false;
+
+  // Unaligned ldr/str is emulated by some kernels, but unaligned ldm/stm is
+  // not.
+  if (MMO.getAlignment() < 4)
+    return false;
+
+  // str <undef> could probably be eliminated entirely, but for now we just want
+  // to avoid making a mess of it.
+  // FIXME: Use str <undef> as a wildcard to enable better stm folding.
+  if (MI.getOperand(0).isReg() && MI.getOperand(0).isUndef())
+    return false;
+
+  // Likewise don't mess with references to undefined addresses.
+  if (MI.getOperand(1).isUndef())
+    return false;
+
+  return true;
 }
 
 static void InsertLDR_STR(MachineBasicBlock &MBB,
@@ -1648,7 +1648,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
       continue;
     ++Position;
 
-    if (isMemoryOp(MBBI)) {
+    if (isMemoryOp(*MBBI)) {
       unsigned Opcode = MBBI->getOpcode();
       const MachineOperand &MO = MBBI->getOperand(0);
       unsigned Reg = MO.getReg();
@@ -2233,7 +2233,7 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       if (!MI->isDebugValue())
         MI2LocMap[MI] = ++Loc;
 
-      if (!isMemoryOp(MI))
+      if (!isMemoryOp(*MI))
         continue;
       unsigned PredReg = 0;
       if (getInstrPredicate(MI, PredReg) != ARMCC::AL)
