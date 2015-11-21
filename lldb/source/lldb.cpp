@@ -92,10 +92,11 @@ _GetVersionOSS ()
         std::string build_string;
         llvm::raw_string_ostream out(build_string);
 
-#if defined (LLDB_IS_BUILDBOT_BUILD) && LLDB_IS_BUILDBOT_BUILD
-        const std::string build_flavor = "buildbot";
-#else
-        const std::string build_flavor = "local";
+        std::string build_flavor = "local";
+#if defined (LLDB_IS_BUILDBOT_BUILD)
+# if (LLDB_IS_BUILDBOT_BUILD != 0)
+        build_flavor = "buildbot";
+# endif
 #endif
         out << "lldb-" << build_flavor;
 

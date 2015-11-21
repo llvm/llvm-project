@@ -20,6 +20,13 @@ include_directories(
   )
 endif ()
 
+# Keep track of whether this is a buildbot build.
+set(LLDB_IS_BUILDBOT_BUILD FALSE CACHE BOOL
+  "Indicate whether this is a buildbot build")
+
+# Keep track of when we did this build.  Note incremental
+# builds could get burnt by this.
+string(TIMESTAMP INTERNAL_BUILD_DATE "%Y-%m-%d")
 
 set(lldbBase_SOURCES
     lldb.cpp
@@ -27,7 +34,7 @@ set(lldbBase_SOURCES
 
 set(LLDB_CPP_COMPILE_DEFINITIONS
   "LLDB_IS_BUILDBOT_BUILD=${LLDB_IS_BUILDBOT_BUILD}"
-  "LLDB_BUILD_DATE=${LLDB_BUILD_DATE}"
+  "LLDB_BUILD_DATE=\"${INTERNAL_BUILD_DATE}\""
   )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
