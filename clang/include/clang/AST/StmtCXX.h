@@ -328,50 +328,47 @@ public:
 ///
 /// This statament models the initialization of the coroutine promise
 /// (encapsulating the eventual notional return value) from an expression
-/// (or braced-init-list).
+/// (or braced-init-list), followed by termination of the coroutine.
 ///
-/// This initialization is modeled by a call to one of:
+/// This initialization is modeled by the evaluation of the operand
+/// followed by a call to one of:
 ///   <promise>.return_value(<operand>)
 ///   <promise>.return_void()
 /// which we name the "promise call".
 class CoreturnStmt : public Stmt {
   SourceLocation CoreturnLoc;
 
-  /// The operand of the 'co_return' statement.
-  Stmt *Operand;
-  /// The implied call to the promise object. May be null if the
-  /// coroutine has not yet been finalized.
-  Stmt *PromiseCall;
+  enum SubStmt { Operand, PromiseCall, Count };
+  Stmt *SubStmts[SubStmt::Count];
 
   friend class ASTStmtReader;
 public:
-  CoreturnStmt(SourceLocation CoreturnLoc, Stmt *Operand)
-      : Stmt(CoreturnStmtClass), CoreturnLoc(CoreturnLoc),
-        Operand(Operand), PromiseCall(nullptr) {}
+  CoreturnStmt(SourceLocation CoreturnLoc, Stmt *Operand, Stmt *PromiseCall)
+      : Stmt(CoreturnStmtClass), CoreturnLoc(CoreturnLoc) {
+    SubStmts[SubStmt::Operand] = Operand;
+    SubStmts[SubStmt::PromiseCall] = PromiseCall;
+  }
 
   SourceLocation getKeywordLoc() const { return CoreturnLoc; }
 
   /// \brief Retrieve the operand of the 'co_return' statement. Will be nullptr
   /// if none was specified.
-  Expr *getOperand() const { return static_cast<Expr*>(Operand); }
+  Expr *getOperand() const { return static_cast<Expr*>(SubStmts[Operand]); }
 
   /// \brief Retrieve the promise call that results from this 'co_return'
   /// statement. Will be nullptr if either the coroutine has not yet been
   /// finalized or the coroutine has no eventual return type.
-  Expr *getPromiseCall() const { return static_cast<Expr*>(PromiseCall); }
-
-  /// \brief Set the resolved promise call. This is delayed until the
-  /// complete coroutine body has been parsed and the promise type is known.
-  void finalize(Stmt *PC) { PromiseCall = PC; }
+  Expr *getPromiseCall() const {
+    return static_cast<Expr*>(SubStmts[PromiseCall]);
+  }
 
   SourceLocation getLocStart() const LLVM_READONLY { return CoreturnLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY {
-    return Operand->getLocEnd();
+    return getOperand()->getLocEnd();
   }
 
   child_range children() {
-    Stmt **Which = PromiseCall ? &PromiseCall : &Operand;
-    return child_range(Which, Which + 1);
+    return child_range(SubStmts, SubStmts + SubStmt::Count);
   }
 
   static bool classof(const Stmt *T) {

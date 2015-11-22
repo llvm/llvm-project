@@ -52,6 +52,8 @@ static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
   Args.addArgument(TemplateArgumentLoc(
       TemplateArgument(FnType->getReturnType()),
       S.Context.getTrivialTypeSourceInfo(FnType->getReturnType(), Loc)));
+  // FIXME: If the function is a non-static member function, add the type
+  // of the implicit object parameter before the formal parameters.
   for (QualType T : FnType->getParamTypes())
     Args.addArgument(TemplateArgumentLoc(
         TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, Loc)));
@@ -195,7 +197,7 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, SourceLocation Loc,
   const StringRef Funcs[] = {"await_ready", "await_suspend", "await_resume"};
   for (size_t I = 0, N = llvm::array_lengthof(Funcs); I != N; ++I) {
     Expr *Operand = new (S.Context) OpaqueValueExpr(
-        Loc, E->getType(), E->getValueKind(), E->getObjectKind(), E);
+        Loc, E->getType(), VK_LValue, E->getObjectKind(), E);
 
     // FIXME: Pass coroutine handle to await_suspend.
     ExprResult Result = buildMemberCall(S, Operand, Loc, Funcs[I], None);
@@ -237,8 +239,10 @@ ExprResult Sema::BuildCoawaitExpr(SourceLocation Loc, Expr *E) {
     return Res;
   }
 
-  // FIXME: If E is a prvalue, create a temporary.
-  // FIXME: If E is an xvalue, convert to lvalue.
+  // If the expression is a temporary, materialize it as an lvalue so that we
+  // can use it multiple times.
+  if (E->getValueKind() == VK_RValue)
+    E = new (Context) MaterializeTemporaryExpr(E->getType(), E, true);
 
   // Build the await_ready, await_suspend, await_resume calls.
   ReadySuspendResumeResult RSS = buildCoawaitCalls(*this, Loc, E);
@@ -251,8 +255,9 @@ ExprResult Sema::BuildCoawaitExpr(SourceLocation Loc, Expr *E) {
   return Res;
 }
 
-static ExprResult buildYieldValueCall(Sema &S, FunctionScopeInfo *Coroutine,
-                                      SourceLocation Loc, Expr *E) {
+static ExprResult buildPromiseCall(Sema &S, FunctionScopeInfo *Coroutine,
+                                   SourceLocation Loc, StringRef Name,
+                                   MutableArrayRef<Expr *> Args) {
   assert(Coroutine->CoroutinePromise && "no promise for coroutine");
 
   // Form a reference to the promise.
@@ -263,22 +268,17 @@ static ExprResult buildYieldValueCall(Sema &S, FunctionScopeInfo *Coroutine,
     return ExprError();
 
   // Call 'yield_value', passing in E.
-  return buildMemberCall(S, PromiseRef.get(), Loc, "yield_value", E);
+  return buildMemberCall(S, PromiseRef.get(), Loc, Name, Args);
 }
 
 ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
-  if (E->getType()->isPlaceholderType()) {
-    ExprResult R = CheckPlaceholderExpr(E);
-    if (R.isInvalid()) return ExprError();
-    E = R.get();
-  }
-
   auto *Coroutine = checkCoroutineContext(*this, Loc, "co_yield");
   if (!Coroutine)
     return ExprError();
 
   // Build yield_value call.
-  ExprResult Awaitable = buildYieldValueCall(*this, Coroutine, Loc, E);
+  ExprResult Awaitable =
+      buildPromiseCall(*this, Coroutine, Loc, "yield_value", E);
   if (Awaitable.isInvalid())
     return ExprError();
 
@@ -300,8 +300,24 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
     E = R.get();
   }
 
-  // FIXME: Build await_* calls.
-  Expr *Res = new (Context) CoyieldExpr(Loc, Context.VoidTy, E);
+  if (E->getType()->isDependentType()) {
+    Expr *Res = new (Context) CoyieldExpr(Loc, Context.DependentTy, E);
+    Coroutine->CoroutineStmts.push_back(Res);
+    return Res;
+  }
+
+  // If the expression is a temporary, materialize it as an lvalue so that we
+  // can use it multiple times.
+  if (E->getValueKind() == VK_RValue)
+    E = new (Context) MaterializeTemporaryExpr(E->getType(), E, true);
+
+  // Build the await_ready, await_suspend, await_resume calls.
+  ReadySuspendResumeResult RSS = buildCoawaitCalls(*this, Loc, E);
+  if (RSS.IsInvalid)
+    return ExprError();
+
+  Expr *Res = new (Context) CoyieldExpr(Loc, E, RSS.Results[0], RSS.Results[1],
+                                        RSS.Results[2]);
   Coroutine->CoroutineStmts.push_back(Res);
   return Res;
 }
@@ -310,18 +326,33 @@ StmtResult Sema::ActOnCoreturnStmt(SourceLocation Loc, Expr *E) {
   return BuildCoreturnStmt(Loc, E);
 }
 StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E) {
-  if (E && E->getType()->isPlaceholderType()) {
+  auto *Coroutine = checkCoroutineContext(*this, Loc, "co_return");
+  if (!Coroutine)
+    return StmtError();
+
+  if (E && E->getType()->isPlaceholderType() &&
+      !E->getType()->isSpecificPlaceholderType(BuiltinType::Overload)) {
     ExprResult R = CheckPlaceholderExpr(E);
     if (R.isInvalid()) return StmtError();
     E = R.get();
   }
 
-  auto *Coroutine = checkCoroutineContext(*this, Loc, "co_return");
-  if (!Coroutine)
+  // FIXME: If the operand is a reference to a variable that's about to go out
+  // ot scope, we should treat the operand as an xvalue for this overload
+  // resolution.
+  ExprResult PC;
+  if (E && !E->getType()->isVoidType()) {
+    PC = buildPromiseCall(*this, Coroutine, Loc, "return_value", E);
+  } else {
+    E = MakeFullDiscardedValueExpr(E).get();
+    PC = buildPromiseCall(*this, Coroutine, Loc, "return_void", None);
+  }
+  if (PC.isInvalid())
     return StmtError();
 
-  // FIXME: Build return_* calls.
-  Stmt *Res = new (Context) CoreturnStmt(Loc, E);
+  Expr *PCE = ActOnFinishFullExpr(PC.get()).get();
+
+  Stmt *Res = new (Context) CoreturnStmt(Loc, E, PCE);
   Coroutine->CoroutineStmts.push_back(Res);
   return Res;
 }
