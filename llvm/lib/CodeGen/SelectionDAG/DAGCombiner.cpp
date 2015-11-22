@@ -11529,7 +11529,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
   StartAddress = LoadNodes[0].OffsetFromBase;
   SDValue FirstChain = FirstLoad->getChain();
   for (unsigned i = 1; i < LoadNodes.size(); ++i) {
-    // All loads much share the same chain.
+    // All loads must share the same chain.
     if (LoadNodes[i].MemNode->getChain() != FirstChain)
       break;
 
@@ -11621,8 +11621,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
   SDLoc LoadDL(LoadNodes[0].MemNode);
   SDLoc StoreDL(StoreNodes[0].MemNode);
 
-  // The merged loads are required to have the same chain, so using the first's
-  // chain is acceptable.
+  // The merged loads are required to have the same incoming chain, so
+  // using the first's chain is acceptable.
   SDValue NewLoad = DAG.getLoad(
       JointMemOpVT, LoadDL, FirstLoad->getChain(), FirstLoad->getBasePtr(),
       FirstLoad->getPointerInfo(), false, false, false, FirstLoadAlign);
@@ -11634,17 +11634,11 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
     NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
       FirstInChain->getPointerInfo(), false, false, FirstStoreAlign);
 
-  // Replace one of the loads with the new load.
-  LoadSDNode *Ld = cast<LoadSDNode>(LoadNodes[0].MemNode);
-  DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1),
-                                SDValue(NewLoad.getNode(), 1));
-
-  // Remove the rest of the load chains.
-  for (unsigned i = 1; i < NumElem ; ++i) {
-    // Replace all chain users of the old load nodes with the chain of the new
-    // load node.
+  // Transfer chain users from old loads to the new load.
+  for (unsigned i = 0; i < NumElem; ++i) {
     LoadSDNode *Ld = cast<LoadSDNode>(LoadNodes[i].MemNode);
-    DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Ld->getChain());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1),
+                                  SDValue(NewLoad.getNode(), 1));
   }
 
   // Replace the last store with the new store.

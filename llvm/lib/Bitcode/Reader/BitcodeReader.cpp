@@ -5589,12 +5589,14 @@ std::error_code FunctionIndexBitcodeReader::parseModule() {
 
     case BitstreamEntry::SubBlock:
       if (CheckFuncSummaryPresenceOnly) {
-        if (Entry.ID == bitc::FUNCTION_SUMMARY_BLOCK_ID)
+        if (Entry.ID == bitc::FUNCTION_SUMMARY_BLOCK_ID) {
           SeenFuncSummary = true;
+          // No need to parse the rest since we found the summary.
+          return std::error_code();
+        }
         if (Stream.SkipBlock())
           return error("Invalid record");
-        // No need to parse the rest since we found the summary.
-        return std::error_code();
+        continue;
       }
       switch (Entry.ID) {
       default: // Skip unknown content.

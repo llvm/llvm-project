@@ -26,7 +26,7 @@ unwind_dest:
 
 normal_dest:
 ; CHECK: normal_dest:
-; CHECK-NEXT: %merge = phi i8 addrspace(1)* [ null, %entry ], [ %obj.2, %normal_dest1 ]
+; CHECK-NEXT: %merge = phi i8 addrspace(1)* [ null, %entry ], [ %obj2, %normal_dest1 ]
   %merge = phi i8 addrspace(1)* [ null, %entry ], [ %obj, %gc_invoke ]
   ret i8 addrspace(1)* %merge
 }

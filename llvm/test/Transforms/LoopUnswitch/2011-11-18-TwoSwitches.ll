@@ -65,7 +65,7 @@
 ; CHECK-NEXT:   br label %loop_begin.us1
 
 ; CHECK:      loop_begin.us1:                                   ; preds = %loop_begin.backedge.us6, %.split.split.us
-; CHECK-NEXT:   %var_val.us.2 = load i32, i32* %var
+; CHECK-NEXT:   %var_val.us2 = load i32, i32* %var
 ; CHECK-NEXT:   switch i32 %c, label %second_switch.us3 [
 ; CHECK-NEXT:     i32 1, label %loop_begin.inc_crit_edge.us
 ; CHECK-NEXT:   ]

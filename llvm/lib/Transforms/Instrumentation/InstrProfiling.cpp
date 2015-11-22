@@ -173,14 +173,15 @@ bool InstrProfiling::runOnModule(Module &M) {
 }
 
 static Constant *getOrInsertValueProfilingCall(Module &M) {
-  auto *VoidTy = Type::getVoidTy(M.getContext());
-  auto *VoidPtrTy = Type::getInt8PtrTy(M.getContext());
-  auto *Int32Ty = Type::getInt32Ty(M.getContext());
-  auto *Int64Ty = Type::getInt64Ty(M.getContext());
-  Type *ArgTypes[] = {Int64Ty, VoidPtrTy, Int32Ty};
+  LLVMContext &Ctx = M.getContext();
+  auto *ReturnTy = Type::getVoidTy(M.getContext());
+  Type *ParamTypes[] = {
+#define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
   auto *ValueProfilingCallTy =
-      FunctionType::get(VoidTy, makeArrayRef(ArgTypes), false);
-  return M.getOrInsertFunction("__llvm_profile_instrument_target",
+      FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
+  return M.getOrInsertFunction(getInstrProfValueProfFuncName(),
                                ValueProfilingCallTy);
 }
 

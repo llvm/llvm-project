@@ -94,7 +94,7 @@ join:
 ; CHECK-LABEL: join:
 ; CHECK: phi i8 addrspace(1)*
 ; CHECK-DAG: [ %arg.relocated, %if_branch ]
-; CHECK-DAG: [ %arg.relocated3, %else_branch ]
+; CHECK-DAG: [ %arg.relocated4, %else_branch ]
 ; CHECK-NOT: phi
   call void (i8 addrspace(1)*) @some_call(i8 addrspace(1)* %arg)
   ret void

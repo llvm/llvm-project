@@ -187,8 +187,8 @@ define i32 @test21(i32 %X) {
         %c2 = sext i8 %c1 to i32                ; <i32> [#uses=1]
         %RV = and i32 %c2, 255          ; <i32> [#uses=1]
         ret i32 %RV
-; CHECK: %c2.1 = and i32 %X, 255
-; CHECK: ret i32 %c2.1
+; CHECK: %c21 = and i32 %X, 255
+; CHECK: ret i32 %c21
 }
 
 define i32 @test22(i32 %X) {

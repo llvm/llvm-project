@@ -247,12 +247,11 @@ static int Error(const Twine &Msg) {
 
 static void loadDylibs() {
   for (const std::string &Dylib : Dylibs) {
-    if (sys::fs::is_regular_file(Dylib)) {
-      std::string ErrMsg;
-      if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
-        report_fatal_error("Error loading '" + Dylib + "': " + ErrMsg);
-    } else
+    if (!sys::fs::is_regular_file(Dylib))
       report_fatal_error("Dylib not found: '" + Dylib + "'.");
+    std::string ErrMsg;
+    if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
+      report_fatal_error("Error loading '" + Dylib + "': " + ErrMsg);
   }
 }
 

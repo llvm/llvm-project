@@ -3,7 +3,7 @@
 ; Test that we don't crash and have a different basic block for each incoming edge.
 define void @test0() {
 ; CHECK-LABEL: @test0
-; CHECK: %merge = phi i64 [ 1, %BB3 ], [ 0, %NewDefault ], [ 0, %NodeBlock.5 ], [ 0, %LeafBlock.1 ]
+; CHECK: %merge = phi i64 [ 1, %BB3 ], [ 0, %NewDefault ], [ 0, %NodeBlock5 ], [ 0, %LeafBlock1 ]
 BB1:
   switch i32 undef, label %BB2 [
     i32 3, label %BB2
@@ -43,9 +43,9 @@ bb2:
 
 bb3:
 ; CHECK-LABEL: bb3
-; CHECK: %tmp = phi i32 [ 1, %NodeBlock ], [ 0, %bb2 ], [ 1, %LeafBlock.3 ]
+; CHECK: %tmp = phi i32 [ 1, %NodeBlock ], [ 0, %bb2 ], [ 1, %LeafBlock3 ]
   %tmp = phi i32 [ 1, %bb1 ], [ 0, %bb2 ], [ 1, %bb1 ], [ 1, %bb1 ]
-; CHECK-NEXT: %tmp2 = phi i32 [ 2, %NodeBlock ], [ 5, %bb2 ], [ 2, %LeafBlock.3 ]
+; CHECK-NEXT: %tmp2 = phi i32 [ 2, %NodeBlock ], [ 5, %bb2 ], [ 2, %LeafBlock3 ]
   %tmp2 = phi i32 [ 2, %bb1 ], [ 2, %bb1 ], [ 5, %bb2 ], [ 2, %bb1 ]
   br label %exit
 

@@ -74,7 +74,7 @@ define i1 @test_call_with_result() gc "statepoint-example" {
 ; CHECK: gc.statepoint.p0f_isVoidf
 ; CHECK: gc.statepoint.p0f_i1i1f
 ; CHECK: (i64 2882400000, i32 0, i1 (i1)* @i1_return_i1, i32 1, i32 0, i1 false, i32 0, i32 0)
-; CHECK: %call1.2 = call i1 @llvm.experimental.gc.result.i1
+; CHECK: %call12 = call i1 @llvm.experimental.gc.result.i1
 entry:
   %call1 = tail call i1 (i1) @i1_return_i1(i1 false)
   ret i1 %call1

@@ -31,6 +31,10 @@ void FunctionInfoIndex::mergeFrom(std::unique_ptr<FunctionInfoIndex> Other,
     assert(List.size() == 1);
     std::unique_ptr<FunctionInfo> Info = std::move(List.front());
 
+    // Skip if there was no function summary section.
+    if (!Info->functionSummary())
+      continue;
+
     // Add the module path string ref for this module if we haven't already
     // saved a reference to it.
     if (ModPath.empty())

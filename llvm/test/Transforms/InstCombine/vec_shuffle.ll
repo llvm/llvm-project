@@ -406,6 +406,21 @@ define i32 @pr19737(<4 x i32> %in0) {
   ret i32 %rv
 }
 
+; In PR20059 ( http://llvm.org/pr20059 ), shufflevector operations are reordered/removed
+; for an srem operation. This is not a valid optimization because it may cause a trap
+; on div-by-zero.
+
+define <4 x i32> @pr20059(<4 x i32> %p1, <4 x i32> %p2) {
+; CHECK-LABEL: @pr20059(
+; CHECK-NEXT: %splat1 = shufflevector <4 x i32> %p1, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT: %splat2 = shufflevector <4 x i32> %p2, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT: %retval = srem <4 x i32> %splat1, %splat2
+  %splat1 = shufflevector <4 x i32> %p1, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat2 = shufflevector <4 x i32> %p2, <4 x i32> undef, <4 x i32> zeroinitializer
+  %retval = srem <4 x i32> %splat1, %splat2
+  ret <4 x i32> %retval
+}
+
 define <4 x i32> @pr20114(<4 x i32> %__mask) {
 ; CHECK-LABEL: @pr20114
 ; CHECK: shufflevector

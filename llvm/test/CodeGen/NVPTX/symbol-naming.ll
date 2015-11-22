@@ -7,10 +7,10 @@
 ; PTX32-NOT: .str
 ; PTX64-NOT: .str
 
-; PTX32-DAG: _$_str1
+; PTX32-DAG: _$_str.1
 ; PTX32-DAG: _$_str
 
-; PTX64-DAG: _$_str1
+; PTX64-DAG: _$_str.1
 ; PTX64-DAG: _$_str
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"

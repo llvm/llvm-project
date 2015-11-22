@@ -620,6 +620,13 @@ getFunctionIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
 
   MemoryBufferRef BufferRef(StringRef((const char *)View, Info.filesize),
                             Info.name);
+
+  // Don't bother trying to build an index if there is no summary information
+  // in this bitcode file.
+  if (!object::FunctionIndexObjectFile::hasFunctionSummaryInMemBuffer(
+          BufferRef, diagnosticHandler))
+    return std::unique_ptr<FunctionInfoIndex>(nullptr);
+
   ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
       object::FunctionIndexObjectFile::create(BufferRef, diagnosticHandler);
 
@@ -911,6 +918,11 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
 
       std::unique_ptr<FunctionInfoIndex> Index =
           getFunctionIndexForFile(F, File);
+
+      // Skip files without a function summary.
+      if (!Index)
+        continue;
+
       CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
     }
 

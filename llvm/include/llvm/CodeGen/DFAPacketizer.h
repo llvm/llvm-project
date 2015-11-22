@@ -27,6 +27,7 @@
 #define LLVM_CODEGEN_DFAPACKETIZER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/DFAPacketizerDefs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include <map>
 
@@ -42,25 +43,34 @@ class SUnit;
 
 class DFAPacketizer {
 private:
-  typedef std::pair<unsigned, unsigned> UnsignPair;
+  typedef std::pair<unsigned, DFAInput> UnsignPair;
+
   const InstrItineraryData *InstrItins;
   int CurrentState;
-  const int (*DFAStateInputTable)[2];
+  const DFAStateInput (*DFAStateInputTable)[2];
   const unsigned *DFAStateEntryTable;
 
   // CachedTable is a map from <FromState, Input> to ToState.
   DenseMap<UnsignPair, unsigned> CachedTable;
 
   // ReadTable - Read the DFA transition table and update CachedTable.
-  void ReadTable(unsigned int state);
+  void ReadTable(unsigned state);
 
 public:
-  DFAPacketizer(const InstrItineraryData *I, const int (*SIT)[2],
+  DFAPacketizer(const InstrItineraryData *I, const DFAStateInput (*SIT)[2],
                 const unsigned *SET);
 
   // Reset the current state to make all resources available.
   void clearResources() {
     CurrentState = 0;
+  }
+
+  // getInsnInput - Return the DFAInput for an instruction class.
+  DFAInput getInsnInput(unsigned InsnClass);
+
+  // getInsnInput - Return the DFAInput for an instruction class input vector.
+  static DFAInput getInsnInput(const std::vector<unsigned> &InsnClass) {
+    return getDFAInsnInput(InsnClass);
   }
 
   // canReserveResources - Check if the resources occupied by a MCInstrDesc

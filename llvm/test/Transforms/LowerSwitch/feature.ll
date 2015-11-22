@@ -4,49 +4,49 @@
 ; On output we should got binary comparison tree. Check that all is fine.
 
 ;CHECK:     entry:
-;CHECK-NEXT:  br label %NodeBlock.19
+;CHECK-NEXT:  br label %NodeBlock19
 
-;CHECK:     NodeBlock.19:                                      ; preds = %entry
-;CHECK-NEXT:  %Pivot.20 = icmp slt i32 %tmp158, 10
-;CHECK-NEXT:  br i1 %Pivot.20, label %NodeBlock.5, label %NodeBlock.17
+;CHECK:     NodeBlock19:                                      ; preds = %entry
+;CHECK-NEXT:  %Pivot20 = icmp slt i32 %tmp158, 10
+;CHECK-NEXT:  br i1 %Pivot20, label %NodeBlock5, label %NodeBlock17
 
-;CHECK:     NodeBlock.17:                                      ; preds = %NodeBlock.19
-;CHECK-NEXT:  %Pivot.18 = icmp slt i32 %tmp158, 13
-;CHECK-NEXT:  br i1 %Pivot.18, label %NodeBlock.9, label %NodeBlock.15
+;CHECK:     NodeBlock17:                                      ; preds = %NodeBlock19
+;CHECK-NEXT:  %Pivot18 = icmp slt i32 %tmp158, 13
+;CHECK-NEXT:  br i1 %Pivot18, label %NodeBlock9, label %NodeBlock15
 
-;CHECK:     NodeBlock.15:                                      ; preds = %NodeBlock.17
-;CHECK-NEXT:  %Pivot.16 = icmp slt i32 %tmp158, 14
-;CHECK-NEXT:  br i1 %Pivot.16, label %bb330, label %NodeBlock.13
+;CHECK:     NodeBlock15:                                      ; preds = %NodeBlock17
+;CHECK-NEXT:  %Pivot16 = icmp slt i32 %tmp158, 14
+;CHECK-NEXT:  br i1 %Pivot16, label %bb330, label %NodeBlock13
 
-;CHECK:     NodeBlock.13:                                      ; preds = %NodeBlock.15
-;CHECK-NEXT:  %Pivot.14 = icmp slt i32 %tmp158, 15
-;CHECK-NEXT:  br i1 %Pivot.14, label %bb332, label %LeafBlock.11
+;CHECK:     NodeBlock13:                                      ; preds = %NodeBlock15
+;CHECK-NEXT:  %Pivot14 = icmp slt i32 %tmp158, 15
+;CHECK-NEXT:  br i1 %Pivot14, label %bb332, label %LeafBlock11
 
-;CHECK:     LeafBlock.11:                                      ; preds = %NodeBlock.13
+;CHECK:     LeafBlock11:                                      ; preds = %NodeBlock13
 ;CHECK-NEXT:  %SwitchLeaf12 = icmp eq i32 %tmp158, 15
 ;CHECK-NEXT:  br i1 %SwitchLeaf12, label %bb334, label %NewDefault
 
-;CHECK:     NodeBlock.9:                                       ; preds = %NodeBlock.17
-;CHECK-NEXT:  %Pivot.10 = icmp slt i32 %tmp158, 11
-;CHECK-NEXT:  br i1 %Pivot.10, label %bb324, label %NodeBlock.7
+;CHECK:     NodeBlock9:                                       ; preds = %NodeBlock17
+;CHECK-NEXT:  %Pivot10 = icmp slt i32 %tmp158, 11
+;CHECK-NEXT:  br i1 %Pivot10, label %bb324, label %NodeBlock7
 
-;CHECK:     NodeBlock.7:                                       ; preds = %NodeBlock.9
-;CHECK-NEXT:  %Pivot.8 = icmp slt i32 %tmp158, 12
-;CHECK-NEXT:  br i1 %Pivot.8, label %bb326, label %bb328
+;CHECK:     NodeBlock7:                                       ; preds = %NodeBlock9
+;CHECK-NEXT:  %Pivot8 = icmp slt i32 %tmp158, 12
+;CHECK-NEXT:  br i1 %Pivot8, label %bb326, label %bb328
 
-;CHECK:     NodeBlock.5:                                       ; preds = %NodeBlock.19
-;CHECK-NEXT:  %Pivot.6 = icmp slt i32 %tmp158, 7
-;CHECK-NEXT:  br i1 %Pivot.6, label %NodeBlock, label %NodeBlock.3
+;CHECK:     NodeBlock5:                                       ; preds = %NodeBlock19
+;CHECK-NEXT:  %Pivot6 = icmp slt i32 %tmp158, 7
+;CHECK-NEXT:  br i1 %Pivot6, label %NodeBlock, label %NodeBlock3
 
-;CHECK:     NodeBlock.3:                                       ; preds = %NodeBlock.5
-;CHECK-NEXT:  %Pivot.4 = icmp slt i32 %tmp158, 8
-;CHECK-NEXT:  br i1 %Pivot.4, label %bb, label %NodeBlock.1
+;CHECK:     NodeBlock3:                                       ; preds = %NodeBlock5
+;CHECK-NEXT:  %Pivot4 = icmp slt i32 %tmp158, 8
+;CHECK-NEXT:  br i1 %Pivot4, label %bb, label %NodeBlock1
 
-;CHECK:     NodeBlock.1:                                       ; preds = %NodeBlock.3
-;CHECK-NEXT:  %Pivot.2 = icmp slt i32 %tmp158, 9
-;CHECK-NEXT:  br i1 %Pivot.2, label %bb338, label %bb322
+;CHECK:     NodeBlock1:                                       ; preds = %NodeBlock3
+;CHECK-NEXT:  %Pivot2 = icmp slt i32 %tmp158, 9
+;CHECK-NEXT:  br i1 %Pivot2, label %bb338, label %bb322
 
-;CHECK:     NodeBlock:                                        ; preds = %NodeBlock.5
+;CHECK:     NodeBlock:                                        ; preds = %NodeBlock5
 ;CHECK-NEXT:  %Pivot = icmp slt i32 %tmp158, 0
 ;CHECK-NEXT:  br i1 %Pivot, label %LeafBlock, label %bb338
 
