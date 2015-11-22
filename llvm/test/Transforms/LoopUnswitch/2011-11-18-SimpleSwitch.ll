@@ -34,7 +34,7 @@
 ; CHECK-NEXT:   br label %loop_begin.us1
 
 ; CHECK:      loop_begin.us1:                                   ; preds = %loop_begin.backedge.us5, %.split.split.us
-; CHECK-NEXT:   %var_val.us.2 = load i32, i32* %var
+; CHECK-NEXT:   %var_val.us2 = load i32, i32* %var
 ; CHECK-NEXT:   switch i32 2, label %default.us-lcssa.us-lcssa.us [
 ; CHECK-NEXT:     i32 1, label %inc.us4
 ; CHECK-NEXT:     i32 2, label %dec.us3

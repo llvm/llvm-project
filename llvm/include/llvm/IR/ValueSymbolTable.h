@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_VALUESYMBOLTABLE_H
 #define LLVM_IR_VALUESYMBOLTABLE_H
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/DataTypes.h"
@@ -99,6 +100,8 @@ public:
   /// @name Mutators
   /// @{
 private:
+  ValueName *makeUniqueName(Value *V, SmallString<256> &UniqueName);
+
   /// This method adds the provided value \p N to the symbol table.  The Value
   /// must have a name which is used to place the value in the symbol table.
   /// If the inserted name conflicts, this renames the value.

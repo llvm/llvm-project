@@ -1288,9 +1288,8 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
         LShuf->getMask() == RShuf->getMask()) {
       Value *NewBO = CreateBinOpAsGiven(Inst, LShuf->getOperand(0),
           RShuf->getOperand(0), Builder);
-      Value *Res = Builder->CreateShuffleVector(NewBO,
+      return Builder->CreateShuffleVector(NewBO,
           UndefValue::get(NewBO->getType()), LShuf->getMask());
-      return Res;
     }
   }
 
@@ -1326,18 +1325,11 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
     }
     if (MayChange) {
       Constant *C2 = ConstantVector::get(C2M);
-      Value *NewLHS, *NewRHS;
-      if (isa<Constant>(LHS)) {
-        NewLHS = C2;
-        NewRHS = Shuffle->getOperand(0);
-      } else {
-        NewLHS = Shuffle->getOperand(0);
-        NewRHS = C2;
-      }
+      Value *NewLHS = isa<Constant>(LHS) ? C2 : Shuffle->getOperand(0);
+      Value *NewRHS = isa<Constant>(LHS) ? Shuffle->getOperand(0) : C2;
       Value *NewBO = CreateBinOpAsGiven(Inst, NewLHS, NewRHS, Builder);
-      Value *Res = Builder->CreateShuffleVector(NewBO,
+      return Builder->CreateShuffleVector(NewBO,
           UndefValue::get(Inst.getType()), Shuffle->getMask());
-      return Res;
     }
   }
 

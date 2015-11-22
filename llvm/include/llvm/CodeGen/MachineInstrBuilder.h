@@ -200,22 +200,24 @@ public:
   // Add a displacement from an existing MachineOperand with an added offset.
   const MachineInstrBuilder &addDisp(const MachineOperand &Disp, int64_t off,
                                      unsigned char TargetFlags = 0) const {
+    // If caller specifies new TargetFlags then use it, otherwise the
+    // default behavior is to copy the target flags from the existing
+    // MachineOperand. This means if the caller wants to clear the
+    // target flags it needs to do so explicitly.
+    if (0 == TargetFlags)
+      TargetFlags = Disp.getTargetFlags();
+
     switch (Disp.getType()) {
       default:
         llvm_unreachable("Unhandled operand type in addDisp()");
       case MachineOperand::MO_Immediate:
         return addImm(Disp.getImm() + off);
-      case MachineOperand::MO_GlobalAddress: {
-        // If caller specifies new TargetFlags then use it, otherwise the
-        // default behavior is to copy the target flags from the existing
-        // MachineOperand. This means if the caller wants to clear the
-        // target flags it needs to do so explicitly.
-        if (TargetFlags)
-          return addGlobalAddress(Disp.getGlobal(), Disp.getOffset() + off,
-                                  TargetFlags);
+      case MachineOperand::MO_ConstantPoolIndex:
+        return addConstantPoolIndex(Disp.getIndex(), Disp.getOffset() + off,
+                                    TargetFlags);
+      case MachineOperand::MO_GlobalAddress:
         return addGlobalAddress(Disp.getGlobal(), Disp.getOffset() + off,
-                                Disp.getTargetFlags());
-      }
+                                TargetFlags);
     }
   }
 

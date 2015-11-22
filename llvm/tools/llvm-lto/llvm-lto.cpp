@@ -192,24 +192,27 @@ static int listSymbols(StringRef Command, const TargetOptions &Options) {
 
 /// Parse the function index out of an IR file and return the function
 /// index object if found, or nullptr if not.
-static std::unique_ptr<FunctionInfoIndex>
-getFunctionIndexForFile(StringRef Path, std::string &Error,
+static ErrorOr<std::unique_ptr<FunctionInfoIndex>>
+getFunctionIndexForFile(StringRef Path,
                         DiagnosticHandlerFunction DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buffer;
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Path);
-  if (std::error_code EC = BufferOrErr.getError()) {
-    Error = EC.message();
-    return nullptr;
-  }
+  if (std::error_code EC = BufferOrErr.getError())
+    return EC;
   Buffer = std::move(BufferOrErr.get());
+
+  // Don't bother trying to build an index if there is no summary information
+  // in this bitcode file.
+  if (!object::FunctionIndexObjectFile::hasFunctionSummaryInMemBuffer(
+          Buffer->getMemBufferRef(), DiagnosticHandler))
+    return std::unique_ptr<FunctionInfoIndex>(nullptr);
+
   ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
       object::FunctionIndexObjectFile::create(Buffer->getMemBufferRef(),
                                               DiagnosticHandler);
-  if (std::error_code EC = ObjOrErr.getError()) {
-    Error = EC.message();
-    return nullptr;
-  }
+  if (std::error_code EC = ObjOrErr.getError())
+    return EC;
   return (*ObjOrErr)->takeIndex();
 }
 
@@ -221,14 +224,18 @@ static int createCombinedFunctionIndex(StringRef Command) {
   FunctionInfoIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
-    std::string Error;
-    std::unique_ptr<FunctionInfoIndex> Index =
-        getFunctionIndexForFile(Filename, Error, diagnosticHandler);
-    if (!Index) {
+    ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
+        getFunctionIndexForFile(Filename, diagnosticHandler);
+    if (std::error_code EC = IndexOrErr.getError()) {
+      std::string Error = EC.message();
       errs() << Command << ": error loading file '" << Filename
              << "': " << Error << "\n";
       return 1;
     }
+    std::unique_ptr<FunctionInfoIndex> Index = std::move(IndexOrErr.get());
+    // Skip files without a function summary.
+    if (!Index)
+      continue;
     CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
   }
   std::error_code EC;

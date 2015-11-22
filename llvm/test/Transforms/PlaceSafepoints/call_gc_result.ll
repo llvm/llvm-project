@@ -21,8 +21,8 @@ branch2:
 
 merge:
 ;; CHECK: 		%phi = phi i32 [ %a, %branch2 ], [ %b, %branch1 ]
-;; CHECK-NEXT:  %safepoint_token.1 = call i32 (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* @foo, i32 0, i32 0, i32 0, i32 0)
-;; CHECK-NEXT:  %ret.2 = call i32 @llvm.experimental.gc.result.i32(i32 %safepoint_token.1)
+;; CHECK-NEXT:  %safepoint_token1 = call i32 (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* @foo, i32 0, i32 0, i32 0, i32 0)
+;; CHECK-NEXT:  %ret2 = call i32 @llvm.experimental.gc.result.i32(i32 %safepoint_token1)
   %phi = phi i32 [ %a, %branch2 ], [ %b, %branch1 ]
   %ret = call i32 @foo()
   ret i32 %ret

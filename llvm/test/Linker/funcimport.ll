@@ -1,3 +1,10 @@
+; First ensure that the ThinLTO handling in llvm-link and llvm-lto handles
+; bitcode without function summary sections gracefully.
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-as %p/Inputs/funcimport.ll -o %t2.bc
+; RUN: llvm-link %t.bc -functionindex=%t.bc -S
+; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
+
 ; Do setup work for all below tests: generate bitcode and combined index
 ; RUN: llvm-as -function-summary %s -o %t.bc
 ; RUN: llvm-as -function-summary %p/Inputs/funcimport.ll -o %t2.bc

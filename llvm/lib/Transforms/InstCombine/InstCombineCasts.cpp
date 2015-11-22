@@ -1210,7 +1210,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
   if (Instruction *I = commonCastTransforms(CI))
     return I;
   // If we have fptrunc(OpI (fpextend x), (fpextend y)), we would like to
-  // simpilify this expression to avoid one or more of the trunc/extend
+  // simplify this expression to avoid one or more of the trunc/extend
   // operations if we can do so without changing the numerical results.
   //
   // The exact manner in which the widths of the operands interact to limit

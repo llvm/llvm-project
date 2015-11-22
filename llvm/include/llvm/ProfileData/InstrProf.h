@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -36,19 +37,28 @@ class Module;
 
 /// Return the name of data section containing profile counter variables.
 inline StringRef getInstrProfCountersSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA,__llvm_prf_cnts" : "__llvm_prf_cnts";
+  return AddSegment ? "__DATA," INSTR_PROF_CNTS_SECT_NAME_STR
+                    : INSTR_PROF_CNTS_SECT_NAME_STR;
 }
 
 /// Return the name of data section containing names of instrumented
 /// functions.
 inline StringRef getInstrProfNameSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA,__llvm_prf_names" : "__llvm_prf_names";
+  return AddSegment ? "__DATA," INSTR_PROF_NAME_SECT_NAME_STR
+                    : INSTR_PROF_NAME_SECT_NAME_STR;
 }
 
 /// Return the name of the data section containing per-function control
 /// data.
 inline StringRef getInstrProfDataSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA,__llvm_prf_data" : "__llvm_prf_data";
+  return AddSegment ? "__DATA," INSTR_PROF_DATA_SECT_NAME_STR
+                    : INSTR_PROF_DATA_SECT_NAME_STR;
+}
+
+/// Return the name profile runtime entry point to do value profiling
+/// for a given site.
+inline StringRef getInstrProfValueProfFuncName() {
+  return INSTR_PROF_VALUE_PROF_FUNC_STR;
 }
 
 /// Return the name of the section containing function coverage mapping
@@ -169,10 +179,8 @@ inline std::error_code make_error_code(instrprof_error E) {
 }
 
 enum InstrProfValueKind : uint32_t {
-  IPVK_IndirectCallTarget = 0,
-
-  IPVK_First = IPVK_IndirectCallTarget,
-  IPVK_Last = IPVK_IndirectCallTarget
+#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
+#include "llvm/ProfileData/InstrProfData.inc"
 };
 
 struct InstrProfStringTable {
@@ -572,31 +580,15 @@ struct Header {
 
 namespace RawInstrProf {
 
-const uint64_t Version = 2;
+const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
-// Magic number to detect file format and endianness.
-// Use 255 at one end, since no UTF-8 file can use that character.  Avoid 0,
-// so that utilities, like strings, don't grab it as a string.  129 is also
-// invalid UTF-8, and high enough to be interesting.
-// Use "lprofr" in the centre to stand for "LLVM Profile Raw", or "lprofR"
-// for 32-bit platforms.
-// The magic and version need to be kept in sync with
-// projects/compiler-rt/lib/profile/InstrProfiling.c
-
-template <class IntPtrT>
-inline uint64_t getMagic();
-template <>
-inline uint64_t getMagic<uint64_t>() {
-  return uint64_t(255) << 56 | uint64_t('l') << 48 | uint64_t('p') << 40 |
-         uint64_t('r') << 32 | uint64_t('o') << 24 | uint64_t('f') << 16 |
-         uint64_t('r') << 8 | uint64_t(129);
+template <class IntPtrT> inline uint64_t getMagic();
+template <> inline uint64_t getMagic<uint64_t>() {
+  return INSTR_PROF_RAW_MAGIC_64;
 }
 
-template <>
-inline uint64_t getMagic<uint32_t>() {
-  return uint64_t(255) << 56 | uint64_t('l') << 48 | uint64_t('p') << 40 |
-         uint64_t('r') << 32 | uint64_t('o') << 24 | uint64_t('f') << 16 |
-         uint64_t('R') << 8 | uint64_t(129);
+template <> inline uint64_t getMagic<uint32_t>() {
+  return INSTR_PROF_RAW_MAGIC_32;
 }
 
 // Per-function profile data header/control structure.
@@ -614,16 +606,8 @@ template <class IntPtrT> struct LLVM_ALIGNAS(8) ProfileData {
 // compiler-rt/lib/profile/InstrProfilingFile.c  and
 // InstrProfilingBuffer.c.
 struct Header {
-  const uint64_t Magic;
-  const uint64_t Version;
-  const uint64_t DataSize;
-  const uint64_t CountersSize;
-  const uint64_t NamesSize;
-  const uint64_t CountersDelta;
-  const uint64_t NamesDelta;
-  const uint64_t ValueKindLast;
-  const uint64_t ValueDataSize;
-  const uint64_t ValueDataDelta;
+#define INSTR_PROF_RAW_HEADER(Type, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
 };
 
 }  // end namespace RawInstrProf

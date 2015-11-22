@@ -43,7 +43,7 @@
 
 ; This should get renamed since there is a definition that is non-internal in
 ; the other module.
-; CHECK-DAG: @Intern2{{[0-9]+}} = internal constant i32 792
+; CHECK-DAG: @Intern2.{{[0-9]+}} = internal constant i32 792
 @Intern2 = internal constant i32 792
 
 @UseIntern2 = global i32* @Intern2

@@ -575,7 +575,7 @@ entry:
 ; CHECK: %0 = shl i8 %tmp4, 2
 ; CHECK: %tmp54 = and i8 %0, 16
   %tmp55 = xor i8 %tmp54, %tmp51
-; CHECK: ret i8 %tmp55.1
+; CHECK: ret i8 %tmp551
   ret i8 %tmp55
 }
 
@@ -743,7 +743,7 @@ define i32 @test57(i32 %x) {
   %or = or i32 %shl, 7
   ret i32 %or
 ; CHECK-LABEL: @test57(
-; CHECK: %shl = shl i32 %shr.1, 4
+; CHECK: %shl = shl i32 %shr1, 4
 }
 
 

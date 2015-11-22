@@ -196,8 +196,10 @@ public:
 
   /// Add a function info for a function of the given name.
   void addFunctionInfo(StringRef FuncName, std::unique_ptr<FunctionInfo> Info) {
-    if (ExportingModule) {
-      assert(Info->functionSummary());
+    // Update the HasExportedFunctions flag, but only if we had a function
+    // summary (i.e. we aren't parsing them lazily or have a bitcode file
+    // without a function summary section).
+    if (ExportingModule && Info->functionSummary()) {
       if (ExportingModule->getModuleIdentifier() ==
           Info->functionSummary()->modulePath())
         HasExportedFunctions = true;

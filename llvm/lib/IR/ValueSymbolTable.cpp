@@ -32,6 +32,24 @@ ValueSymbolTable::~ValueSymbolTable() {
 #endif
 }
 
+ValueName *ValueSymbolTable::makeUniqueName(Value *V,
+                                            SmallString<256> &UniqueName) {
+  unsigned BaseSize = UniqueName.size();
+  while (1) {
+    // Trim any suffix off and append the next number.
+    UniqueName.resize(BaseSize);
+    raw_svector_ostream S(UniqueName);
+    if (isa<GlobalValue>(V))
+      S << ".";
+    S << ++LastUnique;
+
+    // Try insert the vmap entry with this suffix.
+    auto IterBool = vmap.insert(std::make_pair(UniqueName, V));
+    if (IterBool.second)
+      return &*IterBool.first;
+  }
+}
+
 // Insert a value into the symbol table with the specified name...
 //
 void ValueSymbolTable::reinsertValue(Value* V) {
@@ -49,21 +67,8 @@ void ValueSymbolTable::reinsertValue(Value* V) {
   // The name is too already used, just free it so we can allocate a new name.
   V->getValueName()->Destroy();
 
-  unsigned BaseSize = UniqueName.size();
-  while (1) {
-    // Trim any suffix off and append the next number.
-    UniqueName.resize(BaseSize);
-    raw_svector_ostream(UniqueName) << "." << ++LastUnique;
-
-    // Try insert the vmap entry with this suffix.
-    auto IterBool = vmap.insert(std::make_pair(UniqueName, V));
-    if (IterBool.second) {
-      // Newly inserted name.  Success!
-      V->setValueName(&*IterBool.first);
-     //DEBUG(dbgs() << " Inserted value: " << UniqueName << ": " << *V << "\n");
-      return;
-    }
-  }
+  ValueName *VN = makeUniqueName(V, UniqueName);
+  V->setValueName(VN);
 }
 
 void ValueSymbolTable::removeValueName(ValueName *V) {
@@ -86,20 +91,7 @@ ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
   
   // Otherwise, there is a naming conflict.  Rename this value.
   SmallString<256> UniqueName(Name.begin(), Name.end());
-  
-  while (1) {
-    // Trim any suffix off and append the next number.
-    UniqueName.resize(Name.size());
-    raw_svector_ostream(UniqueName) << ++LastUnique;
-    
-    // Try insert the vmap entry with this suffix.
-    auto IterBool = vmap.insert(std::make_pair(UniqueName, V));
-    if (IterBool.second) {
-      // DEBUG(dbgs() << " Inserted value: " << UniqueName << ": " << *V <<
-      //       "\n");
-      return &*IterBool.first;
-    }
-  }
+  return makeUniqueName(V, UniqueName);
 }
 
 
