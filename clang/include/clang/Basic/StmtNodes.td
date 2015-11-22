@@ -145,8 +145,9 @@ def LambdaExpr : DStmt<Expr>;
 def CXXFoldExpr : DStmt<Expr>;
 
 // C++ Coroutines TS expressions
-def CoawaitExpr : DStmt<Expr>;
-def CoyieldExpr : DStmt<Expr>;
+def CoroutineSuspendExpr : DStmt<Expr, 1>;
+def CoawaitExpr : DStmt<CoroutineSuspendExpr>;
+def CoyieldExpr : DStmt<CoroutineSuspendExpr>;
 
 // Obj-C Expressions.
 def ObjCStringLiteral : DStmt<Expr>;

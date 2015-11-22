@@ -46,9 +46,14 @@ void undefined_promise() { // expected-error {{variable has incomplete type 'pro
 
 struct yielded_thing { const char *p; short a, b; };
 
+struct not_awaitable {};
+
 struct promise {
-  awaitable yield_value(int); // expected-note {{candidate}}
-  awaitable yield_value(yielded_thing); // expected-note {{candidate}}
+  awaitable yield_value(int); // expected-note 2{{candidate}}
+  awaitable yield_value(yielded_thing); // expected-note 2{{candidate}}
+  not_awaitable yield_value(void()); // expected-note 2{{candidate}}
+  void return_void();
+  void return_value(int); // expected-note 2{{here}}
 };
 
 void yield() {
@@ -58,6 +63,19 @@ void yield() {
   co_yield {"foo", __LONG_LONG_MAX__}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}}
   co_yield {"foo"};
   co_yield "foo"; // expected-error {{no matching}}
+  co_yield 1.0;
+  co_yield yield; // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
+}
+
+void coreturn(int n) {
+  co_await a;
+  if (n == 0)
+    co_return 3;
+  if (n == 1)
+    co_return {4};
+  if (n == 2)
+    co_return "foo"; // expected-error {{cannot initialize a parameter of type 'int' with an lvalue of type 'const char [4]'}}
+  co_return;
 }
 
 void mixed_yield() {
@@ -141,17 +159,37 @@ namespace dependent_operator_co_await_lookup {
   template void await_template_2(outer);
 }
 
+struct yield_fn_tag {};
+template<> struct std::coroutine_traits<void, yield_fn_tag> {
+  struct promise_type {
+    // FIXME: add an await_transform overload for functions
+    awaitable yield_value(int());
+    void return_value(int());
+  };
+};
+
 namespace placeholder {
-  awaitable f(), f(int); // expected-note 2{{possible target}}
-  int g(), g(int); // expected-note 4{{possible target}}
+  awaitable f(), f(int); // expected-note 4{{possible target}}
+  int g(), g(int); // expected-note 2{{candidate}}
   void x() {
     co_await f; // expected-error {{reference to overloaded function}}
   }
   void y() {
-    co_yield g; // expected-error {{reference to overloaded function}}
+    co_yield g; // expected-error {{no matching member function for call to 'yield_value'}}
   }
   void z() {
     co_await a;
-    co_return g; // expected-error {{reference to overloaded function}}
+    co_return g; // expected-error {{address of overloaded function 'g' does not match required type 'int'}}
+  }
+
+  void x(yield_fn_tag) {
+    co_await f; // expected-error {{reference to overloaded function}}
+  }
+  void y(yield_fn_tag) {
+    co_yield g;
+  }
+  void z(yield_fn_tag) {
+    co_await a;
+    co_return g;
   }
 }

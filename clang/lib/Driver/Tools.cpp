@@ -9505,7 +9505,14 @@ void MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   StringRef LinkerName = Args.getLastArgValue(options::OPT_fuse_ld_EQ, "ld");
   if (LinkerName.equals_lower("lld")) {
     CmdArgs.push_back("-flavor");
-    CmdArgs.push_back("old-gnu");
+    CmdArgs.push_back("gnu");
+    CmdArgs.push_back("-target");
+    if (TC.getArch() == llvm::Triple::x86)
+      CmdArgs.push_back("i686--windows-gnu");
+    if (TC.getArch() == llvm::Triple::x86_64)
+      CmdArgs.push_back("x86_64--windows-gnu");
+    if (TC.getArch() == llvm::Triple::arm)
+      CmdArgs.push_back("armv7--windows-gnu");
   } else if (!LinkerName.equals_lower("ld")) {
     D.Diag(diag::err_drv_unsupported_linker) << LinkerName;
   }

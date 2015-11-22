@@ -7493,18 +7493,16 @@ void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC) {
     CheckImplicitConversion(S, E, T, CC);
 
   // Now continue drilling into this expression.
-  
-  if (PseudoObjectExpr * POE = dyn_cast<PseudoObjectExpr>(E)) {
-    if (POE->getResultExpr())
-      E = POE->getResultExpr();
+
+  if (PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(E)) {
+    // The bound subexpressions in a PseudoObjectExpr are not reachable
+    // as transitive children.
+    // FIXME: Use a more uniform representation for this.
+    for (auto *SE : POE->semantics())
+      if (auto *OVE = dyn_cast<OpaqueValueExpr>(SE))
+        AnalyzeImplicitConversions(S, OVE->getSourceExpr(), CC);
   }
-  
-  if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(E)) {
-    if (OVE->getSourceExpr())
-      AnalyzeImplicitConversions(S, OVE->getSourceExpr(), CC);
-    return;
-  }
-  
+
   // Skip past explicit casts.
   if (isa<ExplicitCastExpr>(E)) {
     E = cast<ExplicitCastExpr>(E)->getSubExpr()->IgnoreParenImpCasts();
