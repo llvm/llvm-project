@@ -1904,6 +1904,7 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
            "destination type must be a record type!");
     Value = CGM.getCXXABI().EmitDynamicCastCall(*this, ThisAddr, SrcRecordTy,
                                                 DestTy, DestRecordTy, CastEnd);
+    CastNotNull = Builder.GetInsertBlock();
   }
 
   if (ShouldNullCheckSrcValue) {

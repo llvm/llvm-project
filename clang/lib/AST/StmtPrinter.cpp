@@ -842,6 +842,23 @@ void OMPClausePrinter::VisitOMPDependClause(OMPDependClause *Node) {
     OS << ")";
   }
 }
+
+void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
+  if (!Node->varlist_empty()) {
+    OS << "map(";
+    if (Node->getMapType() != OMPC_MAP_unknown) {
+      if (Node->getMapTypeModifier() != OMPC_MAP_unknown) {
+        OS << getOpenMPSimpleClauseTypeName(OMPC_map, 
+                                            Node->getMapTypeModifier());
+        OS << ',';
+      }
+      OS << getOpenMPSimpleClauseTypeName(OMPC_map, Node->getMapType());
+      OS << ':';
+    }
+    VisitOMPClauseList(Node, ' ');
+    OS << ")";
+  }
+}
 }
 
 //===----------------------------------------------------------------------===//

@@ -7910,6 +7910,16 @@ def note_omp_ordered_param : Note<
   "'ordered' clause with specified parameter">;
 def err_omp_expected_base_var_name : Error<
   "expected variable name as a base of the array %select{subscript|section}0">;
+def err_omp_map_shared_storage : Error<
+  "variable already marked as mapped in current construct">;
+def err_omp_not_mappable_type : Error<
+  "type %0 is not mappable to target">;
+def note_omp_polymorphic_in_target : Note<
+  "mappable type cannot be polymorphic">;
+def note_omp_static_member_in_target : Note<
+  "mappable type cannot contain static members">;
+def err_omp_threadprivate_in_map : Error<
+  "threadprivate variables are not allowed in map clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

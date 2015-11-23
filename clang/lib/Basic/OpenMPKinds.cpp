@@ -101,6 +101,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
 #define OPENMP_LINEAR_KIND(Name) .Case(#Name, OMPC_LINEAR_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_LINEAR_unknown);
+  case OMPC_map:
+    return llvm::StringSwitch<OpenMPMapClauseKind>(Str)
+#define OPENMP_MAP_KIND(Name) .Case(#Name, OMPC_MAP_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_MAP_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -187,6 +192,18 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'linear' clause type");
+  case OMPC_map:
+    switch (Type) {
+    case OMPC_MAP_unknown:
+      return "unknown";
+#define OPENMP_MAP_KIND(Name)                                                \
+  case OMPC_MAP_##Name:                                                      \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    llvm_unreachable("Invalid OpenMP 'map' clause type");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:

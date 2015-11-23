@@ -193,7 +193,7 @@ public:
   void initCompilationForDiagnostics();
 
   /// Return true if we're compiling for diagnostics.
-  bool isForDiagnostics() { return ForDiagnostics; }
+  bool isForDiagnostics() const { return ForDiagnostics; }
 };
 
 } // end namespace driver

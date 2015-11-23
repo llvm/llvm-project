@@ -1840,6 +1840,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_device:
     C = new (Context) OMPDeviceClause();
     break;
+  case OMPC_map:
+    C = OMPMapClause::CreateEmpty(Context, Record[Idx++]);
+    break;
   }
   Visit(C);
   C->setLocStart(Reader->ReadSourceLocation(Record, Idx));
@@ -2145,6 +2148,23 @@ void OMPClauseReader::VisitOMPDependClause(OMPDependClause *C) {
 void OMPClauseReader::VisitOMPDeviceClause(OMPDeviceClause *C) {
   C->setDevice(Reader->Reader.ReadSubExpr());
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+}
+
+void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
+  C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+  C->setMapTypeModifier(
+     static_cast<OpenMPMapClauseKind>(Record[Idx++]));
+  C->setMapType(
+     static_cast<OpenMPMapClauseKind>(Record[Idx++]));
+  C->setMapLoc(Reader->ReadSourceLocation(Record, Idx));
+  C->setColonLoc(Reader->ReadSourceLocation(Record, Idx));
+  auto NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i) {
+    Vars.push_back(Reader->Reader.ReadSubExpr());
+  }
+  C->setVarRefs(Vars);
 }
 
 //===----------------------------------------------------------------------===//

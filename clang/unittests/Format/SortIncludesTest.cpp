@@ -28,7 +28,14 @@ protected:
                                 reformat(Style, Sorted, Ranges, FileName));
   }
 
+  unsigned newCursor(llvm::StringRef Code, unsigned Cursor) {
+    std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
+    sortIncludes(Style, Code, Ranges, "input.cpp", &Cursor);
+    return Cursor;
+  }
+
   FormatStyle Style = getLLVMStyle();
+
 };
 
 TEST_F(SortIncludesTest, BasicSorting) {
@@ -176,6 +183,19 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
                  "#include \"c.h\"\n"
                  "#include \"b.h\"\n",
                  "some_header.h"));
+}
+
+TEST_F(SortIncludesTest, CalculatesCorrectCursorPosition) {
+  std::string Code = "#include <ccc>\n"    // Start of line: 0
+                     "#include <bbbbbb>\n" // Start of line: 15
+                     "#include <a>\n";     // Start of line: 33
+  EXPECT_EQ(31u, newCursor(Code, 0));
+  EXPECT_EQ(13u, newCursor(Code, 15));
+  EXPECT_EQ(0u, newCursor(Code, 33));
+
+  EXPECT_EQ(41u, newCursor(Code, 10));
+  EXPECT_EQ(23u, newCursor(Code, 25));
+  EXPECT_EQ(10u, newCursor(Code, 43));
 }
 
 } // end namespace
