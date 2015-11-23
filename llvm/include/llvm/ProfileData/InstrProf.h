@@ -199,13 +199,6 @@ struct InstrProfStringTable {
   }
 };
 
-struct InstrProfValueData {
-  // Profiled value.
-  uint64_t Value;
-  // Number of times the value appears in the training run.
-  uint64_t Count;
-};
-
 struct InstrProfValueSiteRecord {
   /// Value profiling data pairs at a given value site.
   std::list<InstrProfValueData> ValueData;
@@ -606,7 +599,7 @@ template <class IntPtrT> struct LLVM_ALIGNAS(8) ProfileData {
 // compiler-rt/lib/profile/InstrProfilingFile.c  and
 // InstrProfilingBuffer.c.
 struct Header {
-#define INSTR_PROF_RAW_HEADER(Type, Name, Init) Type Name;
+#define INSTR_PROF_RAW_HEADER(Type, Name, Init) const Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 

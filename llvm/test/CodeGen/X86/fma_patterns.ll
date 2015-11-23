@@ -235,10 +235,10 @@ define float @test_x86_fnmsub_ss(float %a0, float %a1, float %a2) {
 }
 
 define <4 x float> @test_x86_fmadd_ps_load(<4 x float>* %a0, <4 x float> %a1, <4 x float> %a2) {
-; CHECK-FMA-LABEL: test_x86_fmadd_ps_load:
-; CHECK-FMA:       # BB#0:
-; CHECK-FMA-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0
-; CHECK-FMA-NEXT:    retq
+; CHECK_FMA-LABEL: test_x86_fmadd_ps_load:
+; CHECK_FMA:       # BB#0:
+; CHECK_FMA-NEXT:    vfmadd132ps (%rdi), %xmm1, %xmm0
+; CHECK_FMA-NEXT:    retq
 ;
 ; CHECK_FMA4-LABEL: test_x86_fmadd_ps_load:
 ; CHECK_FMA4:       # BB#0:
@@ -251,10 +251,10 @@ define <4 x float> @test_x86_fmadd_ps_load(<4 x float>* %a0, <4 x float> %a1, <4
 }
 
 define <4 x float> @test_x86_fmsub_ps_load(<4 x float>* %a0, <4 x float> %a1, <4 x float> %a2) {
-; CHECK-FMA-LABEL: test_x86_fmsub_ps_load:
-; CHECK-FMA:       # BB#0:
-; CHECK-FMA-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0
-; CHECK-FMA-NEXT:    retq
+; CHECK_FMA-LABEL: test_x86_fmsub_ps_load:
+; CHECK_FMA:       # BB#0:
+; CHECK_FMA-NEXT:    vfmsub132ps (%rdi), %xmm1, %xmm0
+; CHECK_FMA-NEXT:    retq
 ;
 ; CHECK_FMA4-LABEL: test_x86_fmsub_ps_load:
 ; CHECK_FMA4:       # BB#0:

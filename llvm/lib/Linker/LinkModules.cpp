@@ -428,7 +428,7 @@ class ModuleLinker {
 
   /// Function index passed into ModuleLinker for using in function
   /// importing/exporting handling.
-  FunctionInfoIndex *ImportIndex;
+  const FunctionInfoIndex *ImportIndex;
 
   /// Function to import from source module, all other functions are
   /// imported as declarations instead of definitions.
@@ -448,7 +448,7 @@ class ModuleLinker {
 public:
   ModuleLinker(Module *dstM, Linker::IdentifiedStructTypeSet &Set, Module *srcM,
                DiagnosticHandlerFunction DiagnosticHandler, unsigned Flags,
-               FunctionInfoIndex *Index = nullptr,
+               const FunctionInfoIndex *Index = nullptr,
                Function *FuncToImport = nullptr)
       : DstM(dstM), SrcM(srcM), TypeMap(Set),
         ValMaterializer(TypeMap, DstM, LazilyLinkGlobalValues, this),
@@ -2088,7 +2088,8 @@ void Linker::deleteModule() {
   Composite = nullptr;
 }
 
-bool Linker::linkInModule(Module *Src, unsigned Flags, FunctionInfoIndex *Index,
+bool Linker::linkInModule(Module *Src, unsigned Flags,
+                          const FunctionInfoIndex *Index,
                           Function *FuncToImport) {
   ModuleLinker TheLinker(Composite, IdentifiedStructTypes, Src,
                          DiagnosticHandler, Flags, Index, FuncToImport);

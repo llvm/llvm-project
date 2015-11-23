@@ -833,35 +833,24 @@ namespace llvm {
                            SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
     const SCEV *getAddExpr(const SCEV *LHS, const SCEV *RHS,
                            SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
-      SmallVector<const SCEV *, 2> Ops;
-      Ops.push_back(LHS);
-      Ops.push_back(RHS);
+      SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
       return getAddExpr(Ops, Flags);
     }
     const SCEV *getAddExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
                            SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
-      SmallVector<const SCEV *, 3> Ops;
-      Ops.push_back(Op0);
-      Ops.push_back(Op1);
-      Ops.push_back(Op2);
+      SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
       return getAddExpr(Ops, Flags);
     }
     const SCEV *getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
                            SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
     const SCEV *getMulExpr(const SCEV *LHS, const SCEV *RHS,
-                           SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap)
-    {
-      SmallVector<const SCEV *, 2> Ops;
-      Ops.push_back(LHS);
-      Ops.push_back(RHS);
+                           SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
+      SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
       return getMulExpr(Ops, Flags);
     }
     const SCEV *getMulExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
                            SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
-      SmallVector<const SCEV *, 3> Ops;
-      Ops.push_back(Op0);
-      Ops.push_back(Op1);
-      Ops.push_back(Op2);
+      SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
       return getMulExpr(Ops, Flags);
     }
     const SCEV *getUDivExpr(const SCEV *LHS, const SCEV *RHS);

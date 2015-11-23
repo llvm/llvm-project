@@ -145,11 +145,10 @@ void RegSortData::print(raw_ostream &OS) const {
   OS << "[NumUses=" << UsedByIndices.count() << ']';
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void RegSortData::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 namespace {
 
@@ -500,11 +499,10 @@ void Formula::print(raw_ostream &OS) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void Formula::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 /// Return true if the given addrec can be sign-extended without changing its
 /// value.
@@ -1079,11 +1077,10 @@ void Cost::print(raw_ostream &OS) const {
     OS << ", plus " << SetupCost << " setup cost";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void Cost::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 namespace {
 
@@ -1165,11 +1162,10 @@ void LSRFixup::print(raw_ostream &OS) const {
     OS << ", Offset=" << Offset;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void LSRFixup::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 namespace {
 
@@ -1368,11 +1364,10 @@ void LSRUse::print(raw_ostream &OS) const {
     OS << ", widest fixup type: " << *WidestFixupType;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void LSRUse::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
@@ -3662,11 +3657,10 @@ void WorkItem::print(raw_ostream &OS) const {
      << " , add offset " << Imm;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void WorkItem::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 /// Look for registers which are a constant distance apart and try to form reuse
 /// opportunities between them.
@@ -4940,11 +4934,10 @@ void LSRInstance::print(raw_ostream &OS) const {
   print_uses(OS);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void LSRInstance::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 namespace {
 
