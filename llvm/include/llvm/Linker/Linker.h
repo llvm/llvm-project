@@ -82,7 +82,7 @@ public:
   /// function is imported from the source module.
   /// Returns true on error.
   bool linkInModule(Module *Src, unsigned Flags = Flags::None,
-                    FunctionInfoIndex *Index = nullptr,
+                    const FunctionInfoIndex *Index = nullptr,
                     Function *FuncToImport = nullptr);
 
   /// \brief Set the composite to the passed-in module.

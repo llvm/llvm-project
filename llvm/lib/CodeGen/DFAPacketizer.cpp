@@ -31,6 +31,28 @@
 #include "llvm/Target/TargetInstrInfo.h"
 using namespace llvm;
 
+// --------------------------------------------------------------------
+// Definitions shared between DFAPacketizer.cpp and DFAPacketizerEmitter.cpp
+
+namespace {
+  DFAInput addDFAFuncUnits(DFAInput Inp, unsigned FuncUnits) {
+    return (Inp << DFA_MAX_RESOURCES) | FuncUnits;
+  }
+
+  /// Return the DFAInput for an instruction class input vector.
+  /// This function is used in both DFAPacketizer.cpp and in
+  /// DFAPacketizerEmitter.cpp.
+  DFAInput getDFAInsnInput(const std::vector<unsigned> &InsnClass) {
+    DFAInput InsnInput = 0;
+    assert ((InsnClass.size() <= DFA_MAX_RESTERMS) &&
+            "Exceeded maximum number of DFA terms");
+    for (auto U : InsnClass)
+      InsnInput = addDFAFuncUnits(InsnInput, U);
+    return InsnInput;
+  }
+}
+// --------------------------------------------------------------------
+
 DFAPacketizer::DFAPacketizer(const InstrItineraryData *I,
                              const DFAStateInput (*SIT)[2],
                              const unsigned *SET):
@@ -80,6 +102,11 @@ DFAInput DFAPacketizer::getInsnInput(unsigned InsnClass) {
     assert ((i < DFA_MAX_RESTERMS) && "Exceeded maximum number of DFA inputs");
   }
   return InsnInput;
+}
+
+// getInsnInput - Return the DFAInput for an instruction class input vector.
+DFAInput DFAPacketizer::getInsnInput(const std::vector<unsigned> &InsnClass) {
+  return getDFAInsnInput(InsnClass);
 }
 
 // canReserveResources - Check if the resources occupied by a MCInstrDesc

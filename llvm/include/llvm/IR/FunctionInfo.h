@@ -244,7 +244,7 @@ public:
 
   /// Check if the given Module has any functions available for exporting
   /// in the index.
-  bool hasExportedFunctions(const Module *M) {
+  bool hasExportedFunctions(const Module *M) const {
     assert(M == ExportingModule &&
            "Checking for exported functions on unexpected module");
     return HasExportedFunctions;
