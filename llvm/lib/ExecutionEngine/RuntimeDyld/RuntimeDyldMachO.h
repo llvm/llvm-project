@@ -146,7 +146,7 @@ private:
   Impl &impl() { return static_cast<Impl &>(*this); }
   const Impl &impl() const { return static_cast<const Impl &>(*this); }
 
-  unsigned char *processFDE(unsigned char *P, int64_t DeltaForText,
+  unsigned char *processFDE(uint8_t *P, int64_t DeltaForText,
                             int64_t DeltaForEH);
 
 public:

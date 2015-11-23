@@ -105,7 +105,7 @@ public:
 
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
     const auto Section = Sections[RE.SectionID];
-    uint8_t *Target = Section.Address + RE.Offset;
+    uint8_t *Target = Section.getAddressWithOffset(RE.Offset);
 
     switch (RE.RelType) {
     case COFF::IMAGE_REL_I386_ABSOLUTE:
@@ -116,7 +116,8 @@ public:
       uint64_t Result =
           RE.Sections.SectionA == static_cast<uint32_t>(-1)
               ? Value
-              : Sections[RE.Sections.SectionA].LoadAddress + RE.Addend;
+              : Sections[RE.Sections.SectionA].getLoadAddressWithOffset(
+                    RE.Addend);
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&
@@ -130,9 +131,10 @@ public:
     }
     case COFF::IMAGE_REL_I386_DIR32NB: {
       // The target's 32-bit RVA.
-      // NOTE: use Section[0].LoadAddress as an approximation of ImageBase
-      uint64_t Result = Sections[RE.Sections.SectionA].LoadAddress + RE.Addend -
-                        Sections[0].LoadAddress;
+      // NOTE: use Section[0].getLoadAddress() as an approximation of ImageBase
+      uint64_t Result =
+          Sections[RE.Sections.SectionA].getLoadAddressWithOffset(RE.Addend) -
+          Sections[0].getLoadAddress();
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&
@@ -146,8 +148,8 @@ public:
     }
     case COFF::IMAGE_REL_I386_REL32: {
       // 32-bit relative displacement to the target.
-      uint64_t Result = Sections[RE.Sections.SectionA].LoadAddress -
-                        Section.LoadAddress + RE.Addend - 4 - RE.Offset;
+      uint64_t Result = Sections[RE.Sections.SectionA].getLoadAddress() -
+                        Section.getLoadAddress() + RE.Addend - 4 - RE.Offset;
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&

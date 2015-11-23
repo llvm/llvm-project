@@ -83,10 +83,10 @@ public:
     DEBUG(dumpRelocationToResolve(RE, Value));
 
     const SectionEntry &Section = Sections[RE.SectionID];
-    uint8_t *LocalAddress = Section.Address + RE.Offset;
+    uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
 
     if (RE.IsPCRel) {
-      uint64_t FinalAddress = Section.LoadAddress + RE.Offset;
+      uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
       Value -= FinalAddress + 4; // see MachOX86_64::resolveRelocation.
     }
 
@@ -98,8 +98,8 @@ public:
       break;
     case MachO::GENERIC_RELOC_SECTDIFF:
     case MachO::GENERIC_RELOC_LOCAL_SECTDIFF: {
-      uint64_t SectionABase = Sections[RE.Sections.SectionA].LoadAddress;
-      uint64_t SectionBBase = Sections[RE.Sections.SectionB].LoadAddress;
+      uint64_t SectionABase = Sections[RE.Sections.SectionA].getLoadAddress();
+      uint64_t SectionBBase = Sections[RE.Sections.SectionB].getLoadAddress();
       assert((Value == SectionABase || Value == SectionBBase) &&
              "Unexpected SECTDIFF relocation value.");
       Value = SectionABase - SectionBBase + RE.Addend;
@@ -138,7 +138,7 @@ private:
     bool IsPCRel = Obj.getAnyRelocationPCRel(RE);
     unsigned Size = Obj.getAnyRelocationLength(RE);
     uint64_t Offset = RelI->getOffset();
-    uint8_t *LocalAddress = Section.Address + Offset;
+    uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
     unsigned NumBytes = 1 << Size;
     uint64_t Addend = readBytesUnaligned(LocalAddress, NumBytes);
 
