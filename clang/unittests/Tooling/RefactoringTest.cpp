@@ -176,8 +176,8 @@ TEST(ShiftedCodePositionTest, FindsNewCodePosition) {
   EXPECT_EQ(1u, shiftedCodePosition(Replaces, 2)); //  i|t   i;
   EXPECT_EQ(2u, shiftedCodePosition(Replaces, 3)); //  in|   i;
   EXPECT_EQ(3u, shiftedCodePosition(Replaces, 4)); //  int|  i;
-  EXPECT_EQ(4u, shiftedCodePosition(Replaces, 5)); //  int | i;
-  EXPECT_EQ(4u, shiftedCodePosition(Replaces, 6)); //  int  |i;
+  EXPECT_EQ(3u, shiftedCodePosition(Replaces, 5)); //  int | i;
+  EXPECT_EQ(3u, shiftedCodePosition(Replaces, 6)); //  int  |i;
   EXPECT_EQ(4u, shiftedCodePosition(Replaces, 7)); //  int   |;
   EXPECT_EQ(5u, shiftedCodePosition(Replaces, 8)); //  int   i|
 }
@@ -195,8 +195,8 @@ TEST(ShiftedCodePositionTest, VectorFindsNewCodePositionWithInserts) {
   EXPECT_EQ(1u, shiftedCodePosition(Replaces, 2)); //  i|t   i;
   EXPECT_EQ(2u, shiftedCodePosition(Replaces, 3)); //  in|   i;
   EXPECT_EQ(3u, shiftedCodePosition(Replaces, 4)); //  int|  i;
-  EXPECT_EQ(4u, shiftedCodePosition(Replaces, 5)); //  int | i;
-  EXPECT_EQ(4u, shiftedCodePosition(Replaces, 6)); //  int  |i;
+  EXPECT_EQ(3u, shiftedCodePosition(Replaces, 5)); //  int | i;
+  EXPECT_EQ(3u, shiftedCodePosition(Replaces, 6)); //  int  |i;
   EXPECT_EQ(4u, shiftedCodePosition(Replaces, 7)); //  int   |;
   EXPECT_EQ(5u, shiftedCodePosition(Replaces, 8)); //  int   i|
 }
@@ -205,8 +205,17 @@ TEST(ShiftedCodePositionTest, FindsNewCodePositionWithInserts) {
   Replacements Replaces;
   Replaces.insert(Replacement("", 4, 0, "\"\n\""));
   // Assume '"12345678"' is turned into '"1234"\n"5678"'.
-  EXPECT_EQ(4u, shiftedCodePosition(Replaces, 4)); // "123|5678"
-  EXPECT_EQ(8u, shiftedCodePosition(Replaces, 5)); // "1234|678"
+  EXPECT_EQ(3u, shiftedCodePosition(Replaces, 3)); // "123|5678"
+  EXPECT_EQ(7u, shiftedCodePosition(Replaces, 4)); // "1234|678"
+  EXPECT_EQ(8u, shiftedCodePosition(Replaces, 5)); // "12345|78"
+}
+
+TEST(ShiftedCodePositionTest, FindsNewCodePositionInReplacedText) {
+  Replacements Replaces;
+  // Replace the first four characters with "abcd".
+  Replaces.insert(Replacement("", 0, 4, "abcd"));
+  for (unsigned i = 0; i < 3; ++i)
+    EXPECT_EQ(i, shiftedCodePosition(Replaces, i));
 }
 
 class FlushRewrittenFilesTest : public ::testing::Test {

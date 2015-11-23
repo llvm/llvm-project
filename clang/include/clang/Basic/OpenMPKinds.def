@@ -84,6 +84,9 @@
 #ifndef OPENMP_LINEAR_KIND
 #define OPENMP_LINEAR_KIND(Name)
 #endif
+#ifndef OPENMP_MAP_KIND
+#define OPENMP_MAP_KIND(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -146,6 +149,7 @@ OPENMP_CLAUSE(depend, OMPDependClause)
 OPENMP_CLAUSE(device, OMPDeviceClause)
 OPENMP_CLAUSE(threads, OMPThreadsClause)
 OPENMP_CLAUSE(simd, OMPSIMDClause)
+OPENMP_CLAUSE(map, OMPMapClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -302,11 +306,13 @@ OPENMP_ATOMIC_CLAUSE(seq_cst)
 // TODO More clauses for 'target' directive.
 OPENMP_TARGET_CLAUSE(if)
 OPENMP_TARGET_CLAUSE(device)
+OPENMP_TARGET_CLAUSE(map)
 
 // Clauses allowed for OpenMP directive 'target data'.
 // TODO More clauses for 'target data' directive.
 OPENMP_TARGET_DATA_CLAUSE(if)
 OPENMP_TARGET_DATA_CLAUSE(device)
+OPENMP_TARGET_DATA_CLAUSE(map)
 
 // Clauses allowed for OpenMP directive 'teams'.
 // TODO More clauses for 'teams' directive.
@@ -320,6 +326,15 @@ OPENMP_TEAMS_CLAUSE(reduction)
 // TODO More clauses for 'ordered' directive.
 OPENMP_ORDERED_CLAUSE(threads)
 OPENMP_ORDERED_CLAUSE(simd)
+
+// Map types and map type modifier for 'map' clause.
+OPENMP_MAP_KIND(alloc)
+OPENMP_MAP_KIND(to)
+OPENMP_MAP_KIND(from)
+OPENMP_MAP_KIND(tofrom)
+OPENMP_MAP_KIND(delete)
+OPENMP_MAP_KIND(release)
+OPENMP_MAP_KIND(always)
 
 #undef OPENMP_LINEAR_KIND
 #undef OPENMP_DEPEND_KIND
@@ -345,4 +360,4 @@ OPENMP_ORDERED_CLAUSE(simd)
 #undef OPENMP_SIMD_CLAUSE
 #undef OPENMP_FOR_CLAUSE
 #undef OPENMP_FOR_SIMD_CLAUSE
-
+#undef OPENMP_MAP_KIND

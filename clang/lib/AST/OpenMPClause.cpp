@@ -438,3 +438,28 @@ OMPDependClause *OMPDependClause::CreateEmpty(const ASTContext &C, unsigned N) {
                          sizeof(Expr *) * N);
   return new (Mem) OMPDependClause(N);
 }
+
+OMPMapClause *OMPMapClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc, ArrayRef<Expr *> VL,
+                                   OpenMPMapClauseKind TypeModifier,
+                                   OpenMPMapClauseKind Type,
+                                   SourceLocation TypeLoc) {
+  void *Mem = C.Allocate(
+      llvm::RoundUpToAlignment(sizeof(OMPMapClause), llvm::alignOf<Expr *>()) +
+      sizeof(Expr *) * VL.size());
+  OMPMapClause *Clause = new (Mem) OMPMapClause(
+      TypeModifier, Type, TypeLoc, StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  Clause->setMapTypeModifier(TypeModifier);
+  Clause->setMapType(Type);
+  Clause->setMapLoc(TypeLoc);
+  return Clause;
+}
+
+OMPMapClause *OMPMapClause::CreateEmpty(const ASTContext &C, unsigned N) {
+  void *Mem = C.Allocate(
+      llvm::RoundUpToAlignment(sizeof(OMPMapClause), llvm::alignOf<Expr *>()) +
+      sizeof(Expr *) * N);
+  return new (Mem) OMPMapClause(N);
+}

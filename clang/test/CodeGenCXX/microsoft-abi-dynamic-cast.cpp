@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -O1 -o - -triple=i386-pc-win32 %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -O1 -o - -fexceptions -triple=i386-pc-win32 %s | FileCheck %s
 
 struct S { char a; };
 struct V { virtual void f(); };
@@ -122,3 +122,22 @@ void* test9(B* x) { return dynamic_cast<void*>(x); }
 // CHECK:        [[RET:%.*]] = phi i8*
 // CHECK-NEXT:   ret i8* [[RET]]
 
+namespace PR25606 {
+struct Cleanup {
+  ~Cleanup();
+};
+struct S1 { virtual ~S1(); };
+struct S2 : virtual S1 {};
+struct S3 : S2 {};
+
+S3 *f(S2 &s) {
+  Cleanup c;
+  return dynamic_cast<S3 *>(&s);
+}
+// CHECK-LABEL: define %"struct.PR25606::S3"* @"\01?f@PR25606@@YAPAUS3@1@AAUS2@1@@Z"(
+// CHECK:    [[CALL:%.*]] = invoke i8* @__RTDynamicCast
+
+// CHECK:    [[BC:%.*]] = bitcast i8* [[CALL]] to %"struct.PR25606::S3"*
+// CHECK:    call x86_thiscallcc void @"\01??_DCleanup@PR25606@@QAE@XZ"(
+// CHECK:    ret %"struct.PR25606::S3"* [[BC]]
+}

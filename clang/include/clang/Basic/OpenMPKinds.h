@@ -78,6 +78,14 @@ enum OpenMPLinearClauseKind {
   OMPC_LINEAR_unknown
 };
 
+/// \brief OpenMP mapping kind for 'map' clause.
+enum OpenMPMapClauseKind {
+#define OPENMP_MAP_KIND(Name) \
+  OMPC_MAP_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_MAP_unknown
+};
+
 OpenMPDirectiveKind getOpenMPDirectiveKind(llvm::StringRef Str);
 const char *getOpenMPDirectiveName(OpenMPDirectiveKind Kind);
 

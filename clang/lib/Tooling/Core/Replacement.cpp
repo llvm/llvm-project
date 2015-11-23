@@ -143,34 +143,32 @@ void Replacement::setFromSourceRange(const SourceManager &Sources,
                         ReplacementText);
 }
 
-unsigned shiftedCodePosition(const Replacements &Replaces, unsigned Position) {
-  unsigned NewPosition = Position;
-  for (Replacements::iterator I = Replaces.begin(), E = Replaces.end(); I != E;
-       ++I) {
-    if (I->getOffset() >= Position)
-      break;
-    if (I->getOffset() + I->getLength() > Position)
-      NewPosition += I->getOffset() + I->getLength() - Position;
-    NewPosition += I->getReplacementText().size() - I->getLength();
+template <typename T>
+unsigned shiftedCodePositionInternal(const T &Replaces, unsigned Position) {
+  unsigned Offset = 0;
+  for (const auto& R : Replaces) {
+    if (R.getOffset() + R.getLength() <= Position) {
+      Offset += R.getReplacementText().size() - R.getLength();
+      continue;
+    }
+    if (R.getOffset() < Position &&
+        R.getOffset() + R.getReplacementText().size() <= Position) {
+      Position = R.getOffset() + R.getReplacementText().size() - 1;
+    }
+    break;
   }
-  return NewPosition;
+  return Position + Offset;
+}
+
+unsigned shiftedCodePosition(const Replacements &Replaces, unsigned Position) {
+  return shiftedCodePositionInternal(Replaces, Position);
 }
 
 // FIXME: Remove this function when Replacements is implemented as std::vector
 // instead of std::set.
 unsigned shiftedCodePosition(const std::vector<Replacement> &Replaces,
                              unsigned Position) {
-  unsigned NewPosition = Position;
-  for (std::vector<Replacement>::const_iterator I = Replaces.begin(),
-                                                E = Replaces.end();
-       I != E; ++I) {
-    if (I->getOffset() >= Position)
-      break;
-    if (I->getOffset() + I->getLength() > Position)
-      NewPosition += I->getOffset() + I->getLength() - Position;
-    NewPosition += I->getReplacementText().size() - I->getLength();
-  }
-  return NewPosition;
+  return shiftedCodePositionInternal(Replaces, Position);
 }
 
 void deduplicate(std::vector<Replacement> &Replaces,

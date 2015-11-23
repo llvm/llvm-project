@@ -2613,6 +2613,121 @@ public:
   }
 };
 
+/// \brief This represents clause 'map' in the '#pragma omp ...'
+/// directives.
+///
+/// \code
+/// #pragma omp target map(a,b)
+/// \endcode
+/// In this example directive '#pragma omp target' has clause 'map'
+/// with the variables 'a' and 'b'.
+///
+class OMPMapClause : public OMPVarListClause<OMPMapClause> {
+  friend class OMPClauseReader;
+
+  /// \brief Map type modifier for the 'map' clause.
+  OpenMPMapClauseKind MapTypeModifier;
+  /// \brief Map type for the 'map' clause.
+  OpenMPMapClauseKind MapType;
+  /// \brief Location of the map type.
+  SourceLocation MapLoc;
+  /// \brief Colon location.
+  SourceLocation ColonLoc;
+
+  /// \brief Set type modifier for the clause.
+  ///
+  /// \param T Type Modifier for the clause.
+  ///
+  void setMapTypeModifier(OpenMPMapClauseKind T) { MapTypeModifier = T; }
+
+  /// \brief Set type for the clause.
+  ///
+  /// \param T Type for the clause.
+  ///
+  void setMapType(OpenMPMapClauseKind T) { MapType = T; }
+
+  /// \brief Set type location.
+  ///
+  /// \param TLoc Type location.
+  ///
+  void setMapLoc(SourceLocation TLoc) { MapLoc = TLoc; }
+
+  /// \brief Set colon location.
+  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
+
+  /// \brief Build clause with number of variables \a N.
+  ///
+  /// \param MapTypeModifier Map type modifier.
+  /// \param MapType Map type.
+  /// \param MapLoc Location of the map type.
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of the variables in the clause.
+  ///
+  explicit OMPMapClause(OpenMPMapClauseKind MapTypeModifier,
+                        OpenMPMapClauseKind MapType, SourceLocation MapLoc,
+                        SourceLocation StartLoc, SourceLocation LParenLoc,
+                        SourceLocation EndLoc, unsigned N)
+    : OMPVarListClause<OMPMapClause>(OMPC_map, StartLoc, LParenLoc, EndLoc, N),
+      MapTypeModifier(MapTypeModifier), MapType(MapType), MapLoc(MapLoc) {}
+
+  /// \brief Build an empty clause.
+  ///
+  /// \param N Number of variables.
+  ///
+  explicit OMPMapClause(unsigned N)
+      : OMPVarListClause<OMPMapClause>(OMPC_map, SourceLocation(),
+                                       SourceLocation(), SourceLocation(), N),
+        MapTypeModifier(OMPC_MAP_unknown), MapType(OMPC_MAP_unknown), MapLoc() {}
+
+public:
+  /// \brief Creates clause with a list of variables \a VL.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  /// \param VL List of references to the variables.
+  /// \param TypeModifier Map type modifier.
+  /// \param Type Map type.
+  /// \param TypeLoc Location of the map type.
+  ///
+  static OMPMapClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                              SourceLocation LParenLoc,
+                              SourceLocation EndLoc, ArrayRef<Expr *> VL,
+                              OpenMPMapClauseKind TypeModifier,
+                              OpenMPMapClauseKind Type, SourceLocation TypeLoc);
+  /// \brief Creates an empty clause with the place for \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  ///
+  static OMPMapClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  /// \brief Fetches mapping kind for the clause.
+  OpenMPMapClauseKind getMapType() const LLVM_READONLY { return MapType; }
+
+  /// \brief Fetches the map type modifier for the clause.
+  OpenMPMapClauseKind getMapTypeModifier() const LLVM_READONLY {
+    return MapTypeModifier;
+  }
+
+  /// \brief Fetches location of clause mapping kind.
+  SourceLocation getMapLoc() const LLVM_READONLY { return MapLoc; }
+
+  /// \brief Get colon location.
+  SourceLocation getColonLoc() const { return ColonLoc; }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_map;
+  }
+
+  child_range children() {
+    return child_range(
+        reinterpret_cast<Stmt **>(varlist_begin()),
+        reinterpret_cast<Stmt **>(varlist_end()));
+  }
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

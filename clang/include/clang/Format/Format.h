@@ -688,7 +688,8 @@ std::string configurationAsText(const FormatStyle &Style);
 /// are affected by 'Ranges'.
 tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
-                                   StringRef FileName);
+                                   StringRef FileName,
+                                   unsigned *Cursor = nullptr);
 
 /// \brief Reformats the given \p Ranges in the file \p ID.
 ///
