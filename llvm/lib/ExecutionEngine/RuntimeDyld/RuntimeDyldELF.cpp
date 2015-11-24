@@ -1259,13 +1259,13 @@ relocation_iterator RuntimeDyldELF::processRelocationRef(
                                 StubTargetAddr - Section.getAddress(),
                                 ELF::R_AARCH64_MOVW_UABS_G3, Value.Addend);
       RelocationEntry REmovk_g2(SectionID, StubTargetAddr -
-                                               Section.getAddressWithOffset(4),
+                                               Section.getAddress() + 4,
                                 ELF::R_AARCH64_MOVW_UABS_G2_NC, Value.Addend);
       RelocationEntry REmovk_g1(SectionID, StubTargetAddr -
-                                               Section.getAddressWithOffset(8),
+                                               Section.getAddress() + 8,
                                 ELF::R_AARCH64_MOVW_UABS_G1_NC, Value.Addend);
       RelocationEntry REmovk_g0(SectionID, StubTargetAddr -
-                                               Section.getAddressWithOffset(12),
+                                               Section.getAddress() + 12,
                                 ELF::R_AARCH64_MOVW_UABS_G0_NC, Value.Addend);
 
       if (Value.SymbolName) {
@@ -1364,7 +1364,7 @@ relocation_iterator RuntimeDyldELF::processRelocationRef(
         RelocationEntry REHi(SectionID, StubTargetAddr - Section.getAddress(),
                              ELF::R_MIPS_HI16, Value.Addend);
         RelocationEntry RELo(SectionID,
-                             StubTargetAddr - Section.getAddressWithOffset(4),
+                             StubTargetAddr - Section.getAddress() + 4,
                              ELF::R_MIPS_LO16, Value.Addend);
 
         if (Value.SymbolName) {
