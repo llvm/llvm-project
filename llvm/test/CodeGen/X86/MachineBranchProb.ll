@@ -18,9 +18,9 @@ for.cond2:                                        ; preds = %for.inc, %for.cond
   %or.cond = or i1 %tobool, %cmp4
   br i1 %or.cond, label %for.inc20, label %for.inc, !prof !0
 ; CHECK: BB#1: derived from LLVM BB %for.cond2
-; CHECK: Successors according to CFG: BB#3(56008718) BB#4(3615818718)
+; CHECK: Successors according to CFG: BB#3(32756933) BB#4(2114726715)
 ; CHECK: BB#4: derived from LLVM BB %for.cond2
-; CHECK: Successors according to CFG: BB#3(56008718) BB#2(3559810000)
+; CHECK: Successors according to CFG: BB#3(33264335) BB#2(2114219313)
 
 for.inc:                                          ; preds = %for.cond2
   %shl = shl i32 %bit.0, 1

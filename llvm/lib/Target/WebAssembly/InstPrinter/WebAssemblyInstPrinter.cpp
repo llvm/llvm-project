@@ -15,6 +15,7 @@
 #include "InstPrinter/WebAssemblyInstPrinter.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -51,7 +52,8 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   if (Desc.isVariadic())
     for (unsigned i = Desc.getNumOperands(), e = MI->getNumOperands(); i < e;
          ++i) {
-      OS << ", ";
+      if (i != 0)
+        OS << ", ";
       printOperand(MI, i, OS);
     }
 
@@ -88,9 +90,27 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       O << "$push" << (WAReg & INT32_MAX);
     else
       O << "$discard";
-  } else if (Op.isImm())
-    O << Op.getImm();
-  else if (Op.isFPImm())
+    // Add a '=' suffix if this is a def.
+    if (OpNo < MII.get(MI->getOpcode()).getNumDefs())
+      O << '=';
+  } else if (Op.isImm()) {
+    switch (MI->getOpcode()) {
+    case WebAssembly::PARAM:
+    case WebAssembly::RESULT:
+    case WebAssembly::LOCAL:
+      switch (Op.getImm()) {
+      case MVT::i32: O << "i32"; break;
+      case MVT::i64: O << "i64"; break;
+      case MVT::f32: O << "f32"; break;
+      case MVT::f64: O << "f64"; break;
+      default: llvm_unreachable("unexpected type");
+      }
+      break;
+    default:
+      O << Op.getImm();
+      break;
+    }
+  } else if (Op.isFPImm())
     O << toString(APFloat(Op.getFPImm()));
   else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");

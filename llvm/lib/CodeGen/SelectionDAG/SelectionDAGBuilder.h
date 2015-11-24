@@ -154,39 +154,39 @@ private:
       unsigned JTCasesIndex;
       unsigned BTCasesIndex;
     };
-    uint32_t Weight;
+    BranchProbability Prob;
 
     static CaseCluster range(const ConstantInt *Low, const ConstantInt *High,
-                             MachineBasicBlock *MBB, uint32_t Weight) {
+                             MachineBasicBlock *MBB, BranchProbability Prob) {
       CaseCluster C;
       C.Kind = CC_Range;
       C.Low = Low;
       C.High = High;
       C.MBB = MBB;
-      C.Weight = Weight;
+      C.Prob = Prob;
       return C;
     }
 
     static CaseCluster jumpTable(const ConstantInt *Low,
                                  const ConstantInt *High, unsigned JTCasesIndex,
-                                 uint32_t Weight) {
+                                 BranchProbability Prob) {
       CaseCluster C;
       C.Kind = CC_JumpTable;
       C.Low = Low;
       C.High = High;
       C.JTCasesIndex = JTCasesIndex;
-      C.Weight = Weight;
+      C.Prob = Prob;
       return C;
     }
 
     static CaseCluster bitTests(const ConstantInt *Low, const ConstantInt *High,
-                                unsigned BTCasesIndex, uint32_t Weight) {
+                                unsigned BTCasesIndex, BranchProbability Prob) {
       CaseCluster C;
       C.Kind = CC_BitTests;
       C.Low = Low;
       C.High = High;
       C.BTCasesIndex = BTCasesIndex;
-      C.Weight = Weight;
+      C.Prob = Prob;
       return C;
     }
   };
@@ -198,13 +198,13 @@ private:
     uint64_t Mask;
     MachineBasicBlock* BB;
     unsigned Bits;
-    uint32_t ExtraWeight;
+    BranchProbability ExtraProb;
 
     CaseBits(uint64_t mask, MachineBasicBlock* bb, unsigned bits,
-             uint32_t Weight):
-      Mask(mask), BB(bb), Bits(bits), ExtraWeight(Weight) { }
+             BranchProbability Prob):
+      Mask(mask), BB(bb), Bits(bits), ExtraProb(Prob) { }
 
-    CaseBits() : Mask(0), BB(nullptr), Bits(0), ExtraWeight(0) {}
+    CaseBits() : Mask(0), BB(nullptr), Bits(0) {}
   };
 
   typedef std::vector<CaseBits> CaseBitsVector;
@@ -217,13 +217,13 @@ private:
   /// blocks needed by multi-case switch statements.
   struct CaseBlock {
     CaseBlock(ISD::CondCode cc, const Value *cmplhs, const Value *cmprhs,
-              const Value *cmpmiddle,
-              MachineBasicBlock *truebb, MachineBasicBlock *falsebb,
-              MachineBasicBlock *me,
-              uint32_t trueweight = 0, uint32_t falseweight = 0)
-      : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
-        TrueBB(truebb), FalseBB(falsebb), ThisBB(me),
-        TrueWeight(trueweight), FalseWeight(falseweight) { }
+              const Value *cmpmiddle, MachineBasicBlock *truebb,
+              MachineBasicBlock *falsebb, MachineBasicBlock *me,
+              BranchProbability trueprob = BranchProbability::getUnknown(),
+              BranchProbability falseprob = BranchProbability::getUnknown())
+        : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
+          TrueBB(truebb), FalseBB(falsebb), ThisBB(me), TrueProb(trueprob),
+          FalseProb(falseprob) {}
 
     // CC - the condition code to use for the case block's setcc node
     ISD::CondCode CC;
@@ -239,8 +239,8 @@ private:
     // ThisBB - the block into which to emit the code for the setcc and branches
     MachineBasicBlock *ThisBB;
 
-    // TrueWeight/FalseWeight - branch weights.
-    uint32_t TrueWeight, FalseWeight;
+    // TrueProb/FalseProb - branch weights.
+    BranchProbability TrueProb, FalseProb;
   };
 
   struct JumpTable {
@@ -272,12 +272,12 @@ private:
 
   struct BitTestCase {
     BitTestCase(uint64_t M, MachineBasicBlock* T, MachineBasicBlock* Tr,
-                uint32_t Weight):
-      Mask(M), ThisBB(T), TargetBB(Tr), ExtraWeight(Weight) { }
+                BranchProbability Prob):
+      Mask(M), ThisBB(T), TargetBB(Tr), ExtraProb(Prob) { }
     uint64_t Mask;
     MachineBasicBlock *ThisBB;
     MachineBasicBlock *TargetBB;
-    uint32_t ExtraWeight;
+    BranchProbability ExtraProb;
   };
 
   typedef SmallVector<BitTestCase, 3> BitTestInfo;
@@ -285,10 +285,10 @@ private:
   struct BitTestBlock {
     BitTestBlock(APInt F, APInt R, const Value *SV, unsigned Rg, MVT RgVT,
                  bool E, bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
-                 BitTestInfo C, uint32_t W)
+                 BitTestInfo C, BranchProbability Pr)
         : First(F), Range(R), SValue(SV), Reg(Rg), RegVT(RgVT), Emitted(E),
           ContiguousRange(CR), Parent(P), Default(D), Cases(std::move(C)),
-          Weight(W), DefaultWeight(0) {}
+          Prob(Pr) {}
     APInt First;
     APInt Range;
     const Value *SValue;
@@ -299,8 +299,8 @@ private:
     MachineBasicBlock *Parent;
     MachineBasicBlock *Default;
     BitTestInfo Cases;
-    uint32_t Weight;
-    uint32_t DefaultWeight;
+    BranchProbability Prob;
+    BranchProbability DefaultProb;
   };
 
   /// Minimum jump table density, in percent.
@@ -342,7 +342,7 @@ private:
     CaseClusterIt LastCluster;
     const ConstantInt *GE;
     const ConstantInt *LT;
-    uint32_t DefaultWeight;
+    BranchProbability DefaultProb;
   };
   typedef SmallVector<SwitchWorkListItem, 4> SwitchWorkList;
 
@@ -694,13 +694,13 @@ public:
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
-                            Instruction::BinaryOps Opc,
-                            uint32_t TW, uint32_t FW);
+                            Instruction::BinaryOps Opc, BranchProbability TW,
+                            BranchProbability FW);
   void EmitBranchForMergedCondition(const Value *Cond, MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     MachineBasicBlock *CurBB,
                                     MachineBasicBlock *SwitchBB,
-                                    uint32_t TW, uint32_t FW);
+                                    BranchProbability TW, BranchProbability FW);
   bool ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases);
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
   void CopyToExportRegsIfNeeded(const Value *V);
@@ -744,10 +744,12 @@ private:
   void visitTerminatePad(const TerminatePadInst &TPI);
   void visitCleanupPad(const CleanupPadInst &CPI);
 
-  uint32_t getEdgeWeight(const MachineBasicBlock *Src,
-                         const MachineBasicBlock *Dst) const;
-  void addSuccessorWithWeight(MachineBasicBlock *Src, MachineBasicBlock *Dst,
-                              uint32_t Weight = 0);
+  BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
+                                       const MachineBasicBlock *Dst) const;
+  void addSuccessorWithProb(
+      MachineBasicBlock *Src, MachineBasicBlock *Dst,
+      BranchProbability Prob = BranchProbability::getUnknown());
+
 public:
   void visitSwitchCase(CaseBlock &CB,
                        MachineBasicBlock *SwitchBB);
@@ -757,7 +759,7 @@ public:
   void visitBitTestHeader(BitTestBlock &B, MachineBasicBlock *SwitchBB);
   void visitBitTestCase(BitTestBlock &BB,
                         MachineBasicBlock* NextMBB,
-                        uint32_t BranchWeightToNext,
+                        BranchProbability BranchProbToNext,
                         unsigned Reg,
                         BitTestCase &B,
                         MachineBasicBlock *SwitchBB);

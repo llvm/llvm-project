@@ -6,6 +6,7 @@ add_llvm_library(LLVMipo
   ElimAvailExtern.cpp
   ExtractGV.cpp
   FunctionAttrs.cpp
+  FunctionImport.cpp
   GlobalDCE.cpp
   GlobalOpt.cpp
   IPConstantPropagation.cpp

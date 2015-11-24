@@ -76,14 +76,14 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
   SmallVector<wchar_t, MAX_PATH> filenameUnicode;
   if (std::error_code ec = windows::UTF8ToUTF16(filename, filenameUnicode)) {
     SetLastError(ec.value());
-    MakeErrMsg(errMsg, std::string(filename) + ": Can't convert to UTF-16: ");
+    MakeErrMsg(errMsg, std::string(filename) + ": Can't convert to UTF-16");
     return DynamicLibrary();
   }
   
   HMODULE a_handle = LoadLibraryW(filenameUnicode.data());
 
   if (a_handle == 0) {
-    MakeErrMsg(errMsg, std::string(filename) + ": Can't open : ");
+    MakeErrMsg(errMsg, std::string(filename) + ": Can't open");
     return DynamicLibrary();
   }
 

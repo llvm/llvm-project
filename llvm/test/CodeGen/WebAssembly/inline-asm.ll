@@ -19,8 +19,7 @@ entry:
 }
 
 ; CHECK-LABEL: bar:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .param i32{{$}}
+; CHECK-NEXT: .param i32, i32{{$}}
 ; CHECK-NEXT: #APP{{$}}
 ; CHECK-NEXT: # $1 = bbb($0){{$}}
 ; CHECK-NEXT: #NO_APP{{$}}

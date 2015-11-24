@@ -50,7 +50,6 @@ class Twine;
 /// SectionEntry - represents a section emitted into memory by the dynamic
 /// linker.
 class SectionEntry {
-public:
   /// Name - section name.
   std::string Name;
 
@@ -70,15 +69,54 @@ public:
   /// relocations (like ARM).
   uintptr_t StubOffset;
 
+  /// The total amount of space allocated for this section.  This includes the
+  /// section size and the maximum amount of space that the stubs can occupy.
+  size_t AllocationSize;
+
   /// ObjAddress - address of the section in the in-memory object file.  Used
   /// for calculating relocations in some object formats (like MachO).
   uintptr_t ObjAddress;
 
+public:
   SectionEntry(StringRef name, uint8_t *address, size_t size,
-               uintptr_t objAddress)
+               size_t allocationSize, uintptr_t objAddress)
       : Name(name), Address(address), Size(size),
         LoadAddress(reinterpret_cast<uintptr_t>(address)), StubOffset(size),
-        ObjAddress(objAddress) {}
+        AllocationSize(allocationSize), ObjAddress(objAddress) {
+    // AllocationSize is used only in asserts, prevent an "unused private field"
+    // warning:
+    (void)AllocationSize;
+  }
+
+  StringRef getName() const { return Name; }
+
+  uint8_t *getAddress() const { return Address; }
+
+  /// \brief Return the address of this section with an offset.
+  uint8_t *getAddressWithOffset(unsigned OffsetBytes) const {
+    assert(OffsetBytes <= AllocationSize && "Offset out of bounds!");
+    return Address + OffsetBytes;
+  }
+
+  size_t getSize() const { return Size; }
+
+  uint64_t getLoadAddress() const { return LoadAddress; }
+  void setLoadAddress(uint64_t LA) { LoadAddress = LA; }
+
+  /// \brief Return the load address of this section with an offset.
+  uint64_t getLoadAddressWithOffset(unsigned OffsetBytes) const {
+    assert(OffsetBytes <= AllocationSize && "Offset out of bounds!");
+    return LoadAddress + OffsetBytes;
+  }
+
+  uintptr_t getStubOffset() const { return StubOffset; }
+
+  void advanceStubOffset(unsigned StubSize) {
+    StubOffset += StubSize;
+    assert(StubOffset <= AllocationSize && "Not enough space allocated!");
+  }
+
+  uintptr_t getObjAddress() const { return ObjAddress; }
 };
 
 /// RelocationEntry - used to represent relocations internally in the dynamic
@@ -271,11 +309,11 @@ protected:
   }
 
   uint64_t getSectionLoadAddress(unsigned SectionID) const {
-    return Sections[SectionID].LoadAddress;
+    return Sections[SectionID].getLoadAddress();
   }
 
   uint8_t *getSectionAddress(unsigned SectionID) const {
-    return (uint8_t *)Sections[SectionID].Address;
+    return Sections[SectionID].getAddress();
   }
 
   void writeInt16BE(uint8_t *Addr, uint16_t Value) {
@@ -381,6 +419,11 @@ protected:
 
   // \brief Implementation of the generic part of the loadObject algorithm.
   ObjSectionToIDMap loadObjectImpl(const object::ObjectFile &Obj);
+
+  // \brief Return true if the relocation R may require allocating a stub.
+  virtual bool relocationNeedsStub(const RelocationRef &R) const {
+    return true;    // Conservative answer
+  }
 
 public:
   RuntimeDyldImpl(RuntimeDyld::MemoryManager &MemMgr,

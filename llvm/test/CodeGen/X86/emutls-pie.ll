@@ -24,7 +24,7 @@ define i32 @my_get_xyz() {
 ; X64:      movq my_emutls_v_xyz@GOTPCREL(%rip), %rdi
 ; X64-NEXT: callq my_emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
-; X64-NEXT: popq %rdx
+; X64-NEXT: popq %rcx
 ; X64-NEXT: retq
 
 entry:
@@ -50,7 +50,7 @@ define i32 @f1() {
 ; X64:      movq __emutls_v.i@GOTPCREL(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
-; X64-NEXT: popq %rdx
+; X64-NEXT: popq %rcx
 ; X64-NEXT: retq
 
 entry:

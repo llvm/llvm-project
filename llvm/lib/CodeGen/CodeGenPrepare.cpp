@@ -730,6 +730,12 @@ static bool SinkCast(CastInst *CI) {
     // Preincrement use iterator so we don't invalidate it.
     ++UI;
 
+    // If the block selected to receive the cast is an EH pad that does not
+    // allow non-PHI instructions before the terminator, we can't sink the
+    // cast.
+    if (UserBB->getTerminator()->isEHPad())
+      continue;
+
     // If this user is in the same block as the cast, don't change the cast.
     if (UserBB == DefBB) continue;
 

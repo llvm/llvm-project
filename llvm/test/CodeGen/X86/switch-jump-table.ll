@@ -55,8 +55,8 @@ default:
 
 define void @bar(i32 %x, i32* %to) {
 ; CHECK-JT-WEIGHT-LABEL: bar:
-; CHECK-JT-WEIGHT: Successors according to CFG: BB#6(16) BB#8(96)
-; CHECK-JT-WEIGHT: Successors according to CFG: BB#1(16) BB#2(16) BB#3(16) BB#4(16) BB#5(32)
+; CHECK-JT-WEIGHT: Successors according to CFG: BB#6(306783378) BB#8(1840700268)
+; CHECK-JT-WEIGHT: Successors according to CFG: BB#1(306783378) BB#2(306783378) BB#3(306783378) BB#4(306783378) BB#5(613566756)
 
 entry:
   switch i32 %x, label %default [

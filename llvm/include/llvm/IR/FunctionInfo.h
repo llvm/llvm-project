@@ -194,6 +194,11 @@ public:
     return FunctionMap[FuncName];
   }
 
+  /// Get the list of function info objects for a given function.
+  const const_funcinfo_iterator findFunctionInfoList(StringRef FuncName) const {
+    return FunctionMap.find(FuncName);
+  }
+
   /// Add a function info for a function of the given name.
   void addFunctionInfo(StringRef FuncName, std::unique_ptr<FunctionInfo> Info) {
     // Update the HasExportedFunctions flag, but only if we had a function

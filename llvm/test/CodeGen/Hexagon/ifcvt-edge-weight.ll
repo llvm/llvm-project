@@ -2,7 +2,7 @@
 ; Check that the edge weights are updated correctly after if-conversion.
 
 ; CHECK: BB#3:
-; CHECK: Successors according to CFG: BB#2(10) BB#1(90)
+; CHECK: Successors according to CFG: BB#2(214748365) BB#1(1932735283)
 @a = external global i32
 @d = external global i32
 

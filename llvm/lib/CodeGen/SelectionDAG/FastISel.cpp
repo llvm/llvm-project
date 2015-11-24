@@ -1413,11 +1413,11 @@ void FastISel::fastEmitBranch(MachineBasicBlock *MSucc, DebugLoc DbgLoc) {
                      SmallVector<MachineOperand, 0>(), DbgLoc);
   }
   if (FuncInfo.BPI) {
-    uint32_t BranchWeight = FuncInfo.BPI->getEdgeWeight(
+    auto BranchProbability = FuncInfo.BPI->getEdgeProbability(
         FuncInfo.MBB->getBasicBlock(), MSucc->getBasicBlock());
-    FuncInfo.MBB->addSuccessor(MSucc, BranchWeight);
+    FuncInfo.MBB->addSuccessor(MSucc, BranchProbability);
   } else
-    FuncInfo.MBB->addSuccessorWithoutWeight(MSucc);
+    FuncInfo.MBB->addSuccessorWithoutProb(MSucc);
 }
 
 void FastISel::finishCondBranch(const BasicBlock *BranchBB,
@@ -1428,11 +1428,11 @@ void FastISel::finishCondBranch(const BasicBlock *BranchBB,
   // successor/predecessor lists.
   if (TrueMBB != FalseMBB) {
     if (FuncInfo.BPI) {
-      uint32_t BranchWeight =
-          FuncInfo.BPI->getEdgeWeight(BranchBB, TrueMBB->getBasicBlock());
-      FuncInfo.MBB->addSuccessor(TrueMBB, BranchWeight);
+      auto BranchProbability =
+          FuncInfo.BPI->getEdgeProbability(BranchBB, TrueMBB->getBasicBlock());
+      FuncInfo.MBB->addSuccessor(TrueMBB, BranchProbability);
     } else
-      FuncInfo.MBB->addSuccessorWithoutWeight(TrueMBB);
+      FuncInfo.MBB->addSuccessorWithoutProb(TrueMBB);
   }
 
   fastEmitBranch(FalseMBB, DbgLoc);

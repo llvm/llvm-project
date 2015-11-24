@@ -34,7 +34,7 @@ public:
   /// Extract the addend encoded in the instruction / memory location.
   int64_t decodeAddend(const RelocationEntry &RE) const {
     const SectionEntry &Section = Sections[RE.SectionID];
-    uint8_t *LocalAddress = Section.Address + RE.Offset;
+    uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
     unsigned NumBytes = 1 << RE.Size;
     int64_t Addend = 0;
     // Verify that the relocation has the correct size and alignment.
@@ -304,7 +304,7 @@ public:
     DEBUG(dumpRelocationToResolve(RE, Value));
 
     const SectionEntry &Section = Sections[RE.SectionID];
-    uint8_t *LocalAddress = Section.Address + RE.Offset;
+    uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
     MachO::RelocationInfoType RelType =
       static_cast<MachO::RelocationInfoType>(RE.RelType);
 
@@ -324,7 +324,7 @@ public:
     case MachO::ARM64_RELOC_BRANCH26: {
       assert(RE.IsPCRel && "not PCRel and ARM64_RELOC_BRANCH26 not supported");
       // Check if branch is in range.
-      uint64_t FinalAddress = Section.LoadAddress + RE.Offset;
+      uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
       int64_t PCRelVal = Value - FinalAddress + RE.Addend;
       encodeAddend(LocalAddress, /*Size=*/4, RelType, PCRelVal);
       break;
@@ -333,7 +333,7 @@ public:
     case MachO::ARM64_RELOC_PAGE21: {
       assert(RE.IsPCRel && "not PCRel and ARM64_RELOC_PAGE21 not supported");
       // Adjust for PC-relative relocation and offset.
-      uint64_t FinalAddress = Section.LoadAddress + RE.Offset;
+      uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
       int64_t PCRelVal =
         ((Value + RE.Addend) & (-4096)) - (FinalAddress & (-4096));
       encodeAddend(LocalAddress, /*Size=*/4, RelType, PCRelVal);
@@ -375,10 +375,10 @@ private:
     else {
       // FIXME: There must be a better way to do this then to check and fix the
       // alignment every time!!!
-      uintptr_t BaseAddress = uintptr_t(Section.Address);
+      uintptr_t BaseAddress = uintptr_t(Section.getAddress());
       uintptr_t StubAlignment = getStubAlignment();
       uintptr_t StubAddress =
-          (BaseAddress + Section.StubOffset + StubAlignment - 1) &
+          (BaseAddress + Section.getStubOffset() + StubAlignment - 1) &
           -StubAlignment;
       unsigned StubOffset = StubAddress - BaseAddress;
       Stubs[Value] = StubOffset;
@@ -391,7 +391,7 @@ private:
         addRelocationForSymbol(GOTRE, Value.SymbolName);
       else
         addRelocationForSection(GOTRE, Value.SectionID);
-      Section.StubOffset = StubOffset + getMaxStubSize();
+      Section.advanceStubOffset(getMaxStubSize());
       Offset = static_cast<int64_t>(StubOffset);
     }
     RelocationEntry TargetRE(RE.SectionID, RE.Offset, RE.RelType, Offset,

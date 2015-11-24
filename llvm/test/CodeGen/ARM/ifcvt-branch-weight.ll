@@ -19,7 +19,7 @@ bb:
   br i1 %9, label %return, label %bb2
 
 ; CHECK: BB#2: derived from LLVM BB %bb2
-; CHECK: Successors according to CFG: BB#3(192) BB#4(192)
+; CHECK: Successors according to CFG: BB#3(4294967289) BB#4(4294967287)
 
 bb2:
   %v10 = icmp eq i32 %3, 16

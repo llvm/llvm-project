@@ -39,6 +39,11 @@ def TABLESWITCH_I64 : I<(outs), (ins I64:$index, variable_ops),
 def BLOCK     : I<(outs), (ins bb_op:$dst), [], "block   \t$dst">;
 def LOOP      : I<(outs), (ins bb_op:$dst), [], "loop    \t$dst">;
 
+// No-op to indicate to the AsmPrinter that a loop ends here, so a
+// basic block label is needed even if it wouldn't otherwise appear so.
+let isTerminator = 1, hasCtrlDep = 1 in
+def LOOP_END : I<(outs), (ins), []>;
+
 multiclass RETURN<WebAssemblyRegClass vt> {
   def RETURN_#vt : I<(outs), (ins vt:$val), [(WebAssemblyreturn vt:$val)],
                      "return  \t$val">;

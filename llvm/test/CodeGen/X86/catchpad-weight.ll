@@ -2,7 +2,7 @@
 
 ; Check if the edge weight to the catchpad is calculated correctly.
 
-; CHECK: Successors according to CFG: BB#3(1048575) BB#1(1) BB#4(1) BB#6(1) BB#8(1)
+; CHECK: Successors according to CFG: BB#3(2147481600) BB#1(2048) BB#4(1024) BB#6(512) BB#8(256)
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--windows-msvc18.0.0"

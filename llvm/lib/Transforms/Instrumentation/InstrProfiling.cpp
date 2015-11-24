@@ -344,7 +344,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
                                   getVarName(Inc, getInstrProfDataVarPrefix()));
   Data->setVisibility(NamePtr->getVisibility());
   Data->setSection(getDataSection());
-  Data->setAlignment(8);
+  Data->setAlignment(INSTR_PROF_DATA_ALIGNMENT);
   Data->setComdat(ProfileVarsComdat);
 
   PD.RegionCounters = CounterPtr;

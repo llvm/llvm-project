@@ -62,7 +62,7 @@ public:
   // symbol in the target address space.
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
     const SectionEntry &Section = Sections[RE.SectionID];
-    uint8_t *Target = Section.Address + RE.Offset;
+    uint8_t *Target = Section.getAddressWithOffset(RE.Offset);
 
     switch (RE.RelType) {
 
@@ -72,7 +72,7 @@ public:
     case COFF::IMAGE_REL_AMD64_REL32_3:
     case COFF::IMAGE_REL_AMD64_REL32_4:
     case COFF::IMAGE_REL_AMD64_REL32_5: {
-      uint64_t FinalAddress = Section.LoadAddress + RE.Offset;
+      uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
       // Delta is the distance from the start of the reloc to the end of the
       // instruction with the reloc.
       uint64_t Delta = 4 + (RE.RelType - COFF::IMAGE_REL_AMD64_REL32);
@@ -125,7 +125,7 @@ public:
     uint64_t Offset = RelI->getOffset();
     uint64_t Addend = 0;
     SectionEntry &Section = Sections[SectionID];
-    uintptr_t ObjTarget = Section.ObjAddress + Offset;
+    uintptr_t ObjTarget = Section.getObjAddress() + Offset;
 
     switch (RelType) {
 
@@ -178,9 +178,9 @@ public:
   unsigned getStubAlignment() override { return 1; }
   void registerEHFrames() override {
     for (auto const &EHFrameSID : UnregisteredEHFrameSections) {
-      uint8_t *EHFrameAddr = Sections[EHFrameSID].Address;
-      uint64_t EHFrameLoadAddr = Sections[EHFrameSID].LoadAddress;
-      size_t EHFrameSize = Sections[EHFrameSID].Size;
+      uint8_t *EHFrameAddr = Sections[EHFrameSID].getAddress();
+      uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
+      size_t EHFrameSize = Sections[EHFrameSID].getSize();
       MemMgr.registerEHFrames(EHFrameAddr, EHFrameLoadAddr, EHFrameSize);
       RegisteredEHFrameSections.push_back(EHFrameSID);
     }

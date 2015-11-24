@@ -22,7 +22,7 @@ entry:
 ; for.body -> for.cond.backedge (130023362)
 ;          -> cond.false.i (62)
 ; CHECK: BB#1: derived from LLVM BB %for.body
-; CHECK: Successors according to CFG: BB#2(130023362) BB#4(62)
+; CHECK: Successors according to CFG: BB#2(4294967291) BB#4(2048)
 for.body:
   br i1 undef, label %for.cond.backedge, label %lor.lhs.false.i, !prof !1
 

@@ -21,8 +21,6 @@ def TypeMEMOP    : IType<9>;
 def TypeNV       : IType<10>;
 def TypeDUPLEX   : IType<11>;
 def TypeCOMPOUND : IType<12>;
-def TypeAG_VX    : IType<28>;
-def TypeAG_VM    : IType<29>;
 def TypePREFIX   : IType<30>;
 
 //                      Duplex Instruction Class Declaration

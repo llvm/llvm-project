@@ -152,6 +152,8 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   SmallVector<SID, 2> UnregisteredEHFrameSections;
   SmallVector<SID, 2> RegisteredEHFrameSections;
 
+  bool relocationNeedsStub(const RelocationRef &R) const override;
+
 public:
   RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
                  RuntimeDyld::SymbolResolver &Resolver);

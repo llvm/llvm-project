@@ -77,7 +77,7 @@ define i64 @test_fptosi_i64(half* %p) #0 {
 ; CHECK-LIBCALL-NEXT: movzwl (%rdi), %edi
 ; CHECK-LIBCALL-NEXT: callq __gnu_h2f_ieee
 ; CHECK-LIBCALL-NEXT: cvttss2si %xmm0, %rax
-; CHECK-LIBCALL-NEXT: popq %rdx
+; CHECK-LIBCALL-NEXT: popq %rcx
 ; CHECK-LIBCALL-NEXT: retq
 
 ; CHECK-F16C-NEXT: movswl (%rdi), [[REG0:%[a-z0-9]+]]
@@ -127,7 +127,7 @@ define i64 @test_fptoui_i64(half* %p) #0 {
 ; CHECK-LIBCALL-NEXT: cvttss2si %xmm0, [[REG5:%[a-z0-9]+]]
 ; CHECK-LIBCALL-NEXT: ucomiss [[REG1]], %xmm0
 ; CHECK-LIBCALL-NEXT: cmovaeq [[REG4]], [[REG5]]
-; CHECK-LIBCALL-NEXT: popq %rdx
+; CHECK-LIBCALL-NEXT: popq %rcx
 ; CHECK-LIBCALL-NEXT: retq
 
 ; CHECK-F16C-NEXT: movswl (%rdi), [[REG0:%[a-z0-9]+]]

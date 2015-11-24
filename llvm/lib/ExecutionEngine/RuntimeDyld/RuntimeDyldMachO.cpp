@@ -45,7 +45,7 @@ namespace llvm {
 
 int64_t RuntimeDyldMachO::memcpyAddend(const RelocationEntry &RE) const {
   unsigned NumBytes = 1 << RE.Size;
-  uint8_t *Src = Sections[RE.SectionID].Address + RE.Offset;
+  uint8_t *Src = Sections[RE.SectionID].getAddress() + RE.Offset;
 
   return static_cast<int64_t>(readBytesUnaligned(Src, NumBytes));
 }
@@ -64,7 +64,7 @@ relocation_iterator RuntimeDyldMachO::processScatteredVANILLA(
   bool IsPCRel = Obj.getAnyRelocationPCRel(RE);
   unsigned Size = Obj.getAnyRelocationLength(RE);
   uint64_t Offset = RelI->getOffset();
-  uint8_t *LocalAddress = Section.Address + Offset;
+  uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
   unsigned NumBytes = 1 << Size;
   int64_t Addend = readBytesUnaligned(LocalAddress, NumBytes);
 
@@ -135,8 +135,8 @@ void RuntimeDyldMachO::makeValueAddendPCRel(RelocationValueRef &Value,
 void RuntimeDyldMachO::dumpRelocationToResolve(const RelocationEntry &RE,
                                                uint64_t Value) const {
   const SectionEntry &Section = Sections[RE.SectionID];
-  uint8_t *LocalAddress = Section.Address + RE.Offset;
-  uint64_t FinalAddress = Section.LoadAddress + RE.Offset;
+  uint8_t *LocalAddress = Section.getAddress() + RE.Offset;
+  uint64_t FinalAddress = Section.getLoadAddress() + RE.Offset;
 
   dbgs() << "resolveRelocation Section: " << RE.SectionID
          << " LocalAddress: " << format("%p", LocalAddress)
@@ -183,10 +183,9 @@ void RuntimeDyldMachO::populateIndirectSymbolPointersSection(
          "Pointers section does not contain a whole number of stubs?");
 
   DEBUG(dbgs() << "Populating pointer table section "
-               << Sections[PTSectionID].Name
-               << ", Section ID " << PTSectionID << ", "
-               << NumPTEntries << " entries, " << PTEntrySize
-               << " bytes each:\n");
+               << Sections[PTSectionID].getName() << ", Section ID "
+               << PTSectionID << ", " << NumPTEntries << " entries, "
+               << PTEntrySize << " bytes each:\n");
 
   for (unsigned i = 0; i < NumPTEntries; ++i) {
     unsigned SymbolIndex =
@@ -240,7 +239,7 @@ void RuntimeDyldMachOCRTPBase<Impl>::finalizeLoad(const ObjectFile &Obj,
 }
 
 template <typename Impl>
-unsigned char *RuntimeDyldMachOCRTPBase<Impl>::processFDE(unsigned char *P,
+unsigned char *RuntimeDyldMachOCRTPBase<Impl>::processFDE(uint8_t *P,
                                                           int64_t DeltaForText,
                                                           int64_t DeltaForEH) {
   typedef typename Impl::TargetPtrT TargetPtrT;
@@ -249,7 +248,7 @@ unsigned char *RuntimeDyldMachOCRTPBase<Impl>::processFDE(unsigned char *P,
                << ", Delta for EH: " << DeltaForEH << "\n");
   uint32_t Length = readBytesUnaligned(P, 4);
   P += 4;
-  unsigned char *Ret = P + Length;
+  uint8_t *Ret = P + Length;
   uint32_t Offset = readBytesUnaligned(P, 4);
   if (Offset == 0) // is a CIE
     return Ret;
@@ -276,9 +275,9 @@ unsigned char *RuntimeDyldMachOCRTPBase<Impl>::processFDE(unsigned char *P,
 }
 
 static int64_t computeDelta(SectionEntry *A, SectionEntry *B) {
-  int64_t ObjDistance =
-    static_cast<int64_t>(A->ObjAddress) - static_cast<int64_t>(B->ObjAddress);
-  int64_t MemDistance = A->LoadAddress - B->LoadAddress;
+  int64_t ObjDistance = static_cast<int64_t>(A->getObjAddress()) -
+                        static_cast<int64_t>(B->getObjAddress());
+  int64_t MemDistance = A->getLoadAddress() - B->getLoadAddress();
   return ObjDistance - MemDistance;
 }
 
@@ -301,14 +300,14 @@ void RuntimeDyldMachOCRTPBase<Impl>::registerEHFrames() {
     if (ExceptTab)
       DeltaForEH = computeDelta(ExceptTab, EHFrame);
 
-    unsigned char *P = EHFrame->Address;
-    unsigned char *End = P + EHFrame->Size;
+    uint8_t *P = EHFrame->getAddress();
+    uint8_t *End = P + EHFrame->getSize();
     do {
       P = processFDE(P, DeltaForText, DeltaForEH);
     } while (P != End);
 
-    MemMgr.registerEHFrames(EHFrame->Address, EHFrame->LoadAddress,
-                            EHFrame->Size);
+    MemMgr.registerEHFrames(EHFrame->getAddress(), EHFrame->getLoadAddress(),
+                            EHFrame->getSize());
   }
   UnregisteredEHFrameSections.clear();
 }

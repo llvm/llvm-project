@@ -139,7 +139,7 @@ static HANDLE RedirectIO(const StringRef *path, int fd, std::string* ErrMsg) {
                   FILE_ATTRIBUTE_NORMAL, NULL);
   if (h == INVALID_HANDLE_VALUE) {
     MakeErrMsg(ErrMsg, fname + ": Can't open file for " +
-        (fd ? "input: " : "output: "));
+        (fd ? "input" : "output"));
   }
 
   return h;
@@ -431,7 +431,7 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     if (SecondsToWait) {
       if (!TerminateProcess(PI.ProcessHandle, 1)) {
         if (ErrMsg)
-          MakeErrMsg(ErrMsg, "Failed to terminate timed-out program.");
+          MakeErrMsg(ErrMsg, "Failed to terminate timed-out program");
 
         // -2 indicates a crash or timeout as opposed to failure to execute.
         WaitResult.ReturnCode = -2;
@@ -456,7 +456,7 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   if (!rc) {
     SetLastError(err);
     if (ErrMsg)
-      MakeErrMsg(ErrMsg, "Failed getting status for program.");
+      MakeErrMsg(ErrMsg, "Failed getting status for program");
 
     // -2 indicates a crash or timeout as opposed to failure to execute.
     WaitResult.ReturnCode = -2;
