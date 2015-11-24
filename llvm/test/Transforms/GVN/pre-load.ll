@@ -389,3 +389,50 @@ block5:
 ; CHECK: block4:
 ; CHECK-NEXT: phi i32
 }
+
+declare void @f()
+declare void @g(i32)
+declare i32 @__CxxFrameHandler3(...)
+
+; Test that loads aren't PRE'd into EH pads.
+define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
+; CHECK-LABEL: @test12(
+block1:
+  invoke void @f()
+          to label %block2 unwind label %catch
+
+block2:
+  invoke void @f()
+          to label %block3 unwind label %cleanup
+
+block3:
+  ret void
+
+catch:
+  %c = catchpad []
+    to label %catch.dispatch unwind label %catchend
+
+catch.dispatch:
+  catchret %c to label %block2
+
+; CHECK: catchend:
+; CHECK-NOT: load
+; CHECK-NEXT: catchendpad
+catchend:
+  catchendpad unwind label %cleanup2
+
+cleanup:
+  %c1 = cleanuppad []
+  store i32 0, i32* %p
+  cleanupret %c1 unwind label %cleanup2
+
+; CHECK: cleanup2:
+; CHECK-NOT: phi
+; CHECK-NEXT: %c2 = cleanuppad []
+; CHECK-NEXT: %NOTPRE = load i32, i32* %p
+cleanup2:
+  %c2 = cleanuppad []
+  %NOTPRE = load i32, i32* %p
+  call void @g(i32 %NOTPRE)
+  cleanupret %c2 unwind to caller
+}

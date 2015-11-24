@@ -2397,13 +2397,13 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::B))
         .addMBB(Target);
 
-    // Obtain the branch weight and add the target to the successor list.
+    // Obtain the branch probability and add the target to the successor list.
     if (FuncInfo.BPI) {
-      uint32_t BranchWeight =
-          FuncInfo.BPI->getEdgeWeight(BI->getParent(), Target->getBasicBlock());
-      FuncInfo.MBB->addSuccessor(Target, BranchWeight);
+      auto BranchProbability = FuncInfo.BPI->getEdgeProbability(
+          BI->getParent(), Target->getBasicBlock());
+      FuncInfo.MBB->addSuccessor(Target, BranchProbability);
     } else
-      FuncInfo.MBB->addSuccessorWithoutWeight(Target);
+      FuncInfo.MBB->addSuccessorWithoutProb(Target);
     return true;
   } else if (foldXALUIntrinsic(CC, I, BI->getCondition())) {
     // Fake request the condition, otherwise the intrinsic might be completely

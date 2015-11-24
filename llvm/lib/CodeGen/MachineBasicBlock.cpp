@@ -528,8 +528,13 @@ void MachineBasicBlock::addSuccessor(MachineBasicBlock *Succ,
                                      BranchProbability Prob) {
   // Probability list is either empty (if successor list isn't empty, this means
   // disabled optimization) or has the same size as successor list.
-  if (!(Probs.empty() && !Successors.empty()))
+  if (!(Probs.empty() && !Successors.empty())) {
     Probs.push_back(Prob);
+    // FIXME: Temporarily use the numerator of the probability to represent edge
+    // weight. This will be removed once all weight-version interfaces in MBB
+    // are replaced with probability-version interfaces.
+    Weights.push_back(Prob.getNumerator());
+  }
   Successors.push_back(Succ);
   Succ->addPredecessor(this);
 }
@@ -539,6 +544,7 @@ void MachineBasicBlock::addSuccessorWithoutProb(MachineBasicBlock *Succ) {
   // of successor list. When this function is called, we can safely delete all
   // probability in the list.
   Probs.clear();
+  Weights.clear();
   Successors.push_back(Succ);
   Succ->addPredecessor(this);
 }
@@ -558,12 +564,17 @@ MachineBasicBlock::removeSuccessor(succ_iterator I) {
     Weights.erase(WI);
   }
 
+  // FIXME: Temporarily comment the following code as probabilities are now only
+  // used during instruction lowering, but this interface is called in later
+  // passes. Uncomment it once all edge weights are replaced with probabilities.
+#if 0
   // If probability list is empty it means we don't use it (disabled
   // optimization).
   if (!Probs.empty()) {
     probability_iterator WI = getProbabilityIterator(I);
     Probs.erase(WI);
   }
+#endif
 
   (*I)->removePredecessor(this);
   return Successors.erase(I);
@@ -603,10 +614,14 @@ void MachineBasicBlock::replaceSuccessor(MachineBasicBlock *Old,
   // Update its weight instead of adding a duplicate edge.
   if (!Weights.empty())
     *getWeightIterator(NewI) += *getWeightIterator(OldI);
+  // FIXME: Temporarily comment the following code as probabilities are now only
+  // used during instruction lowering, but this interface is called in later
+  // passes. Uncomment it once all edge weights are replaced with probabilities.
+#if 0
   // Update its probability instead of adding a duplicate edge.
   if (!Probs.empty())
     *getProbabilityIterator(NewI) += *getProbabilityIterator(OldI);
-
+#endif
   removeSuccessor(OldI);
 }
 
@@ -1165,9 +1180,13 @@ void MachineBasicBlock::setSuccWeight(succ_iterator I, uint32_t Weight) {
 void MachineBasicBlock::setSuccProbability(succ_iterator I,
                                            BranchProbability Prob) {
   assert(!Prob.isUnknown());
-  if (Probs.empty())
+  if (Probs.empty() || Weights.empty())
     return;
   *getProbabilityIterator(I) = Prob;
+  // FIXME: Temporarily use the numerator of the probability to represent edge
+  // weight. This will be removed once all weight-version interfaces in MBB
+  // are replaces with probability-version interfaces.
+  *getWeightIterator(I) = Prob.getNumerator();
 }
 
 /// Return wight iterator corresonding to the I successor iterator.

@@ -1287,11 +1287,13 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
 /// This function skips over imaginary basic blocks that hold catchpad,
 /// terminatepad, or catchendpad instructions, and finds all the "real" machine
 /// basic block destinations. As those destinations may not be successors of
-/// EHPadBB, here we also calculate the edge weight to those destinations. The
-/// passed-in Weight is the edge weight to EHPadBB.
+/// EHPadBB, here we also calculate the edge probability to those destinations.
+/// The passed-in Prob is the edge probability to EHPadBB.
 static void findUnwindDestinations(
-    FunctionLoweringInfo &FuncInfo, const BasicBlock *EHPadBB, uint32_t Weight,
-    SmallVectorImpl<std::pair<MachineBasicBlock *, uint32_t>> &UnwindDests) {
+    FunctionLoweringInfo &FuncInfo, const BasicBlock *EHPadBB,
+    BranchProbability Prob,
+    SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
+        &UnwindDests) {
   EHPersonality Personality =
     classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsMSVCCXX = Personality == EHPersonality::MSVC_CXX;
@@ -1302,17 +1304,17 @@ static void findUnwindDestinations(
     BasicBlock *NewEHPadBB = nullptr;
     if (isa<LandingPadInst>(Pad)) {
       // Stop on landingpads. They are not funclets.
-      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Weight);
+      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
       break;
     } else if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads. Cleanups are always funclet entries for all known
       // personalities.
-      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Weight);
+      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
       UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (const auto *CPI = dyn_cast<CatchPadInst>(Pad)) {
       // Add the catchpad handler to the possible destinations.
-      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Weight);
+      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
       // In MSVC C++, catchblocks are funclets and need prologues.
       if (IsMSVCCXX || IsCoreCLR)
         UnwindDests.back().first->setIsEHFuncletEntry();
@@ -1325,28 +1327,27 @@ static void findUnwindDestinations(
       continue;
 
     BranchProbabilityInfo *BPI = FuncInfo.BPI;
-    if (BPI && NewEHPadBB) {
-      // When BPI is available, the calculated weight cannot be zero as zero
-      // will be turned to a default weight in MachineBlockFrequencyInfo.
-      Weight = std::max<uint32_t>(
-          BPI->getEdgeProbability(EHPadBB, NewEHPadBB).scale(Weight), 1);
-    }
+    if (BPI && NewEHPadBB)
+      Prob *= BPI->getEdgeProbability(EHPadBB, NewEHPadBB);
     EHPadBB = NewEHPadBB;
   }
 }
 
 void SelectionDAGBuilder::visitCleanupRet(const CleanupReturnInst &I) {
   // Update successor info.
-  SmallVector<std::pair<MachineBasicBlock *, uint32_t>, 1> UnwindDests;
+  SmallVector<std::pair<MachineBasicBlock *, BranchProbability>, 1> UnwindDests;
   auto UnwindDest = I.getUnwindDest();
   BranchProbabilityInfo *BPI = FuncInfo.BPI;
-  uint32_t UnwindDestWeight =
-      BPI ? BPI->getEdgeWeight(FuncInfo.MBB->getBasicBlock(), UnwindDest) : 0;
-  findUnwindDestinations(FuncInfo, UnwindDest, UnwindDestWeight, UnwindDests);
+  BranchProbability UnwindDestProb =
+      (BPI && UnwindDest)
+          ? BPI->getEdgeProbability(FuncInfo.MBB->getBasicBlock(), UnwindDest)
+          : BranchProbability::getZero();
+  findUnwindDestinations(FuncInfo, UnwindDest, UnwindDestProb, UnwindDests);
   for (auto &UnwindDest : UnwindDests) {
     UnwindDest.first->setIsEHPad();
-    addSuccessorWithWeight(FuncInfo.MBB, UnwindDest.first, UnwindDest.second);
+    addSuccessorWithProb(FuncInfo.MBB, UnwindDest.first, UnwindDest.second);
   }
+  FuncInfo.MBB->normalizeSuccProbs();
 
   // Create the terminator node.
   SDValue Ret =
@@ -1546,28 +1547,33 @@ bool SelectionDAGBuilder::isExportableFromCurrentBlock(const Value *V,
 }
 
 /// Return branch probability calculated by BranchProbabilityInfo for IR blocks.
-uint32_t SelectionDAGBuilder::getEdgeWeight(const MachineBasicBlock *Src,
-                                            const MachineBasicBlock *Dst) const {
+BranchProbability
+SelectionDAGBuilder::getEdgeProbability(const MachineBasicBlock *Src,
+                                        const MachineBasicBlock *Dst) const {
   BranchProbabilityInfo *BPI = FuncInfo.BPI;
-  if (!BPI)
-    return 0;
   const BasicBlock *SrcBB = Src->getBasicBlock();
   const BasicBlock *DstBB = Dst->getBasicBlock();
-  return BPI->getEdgeWeight(SrcBB, DstBB);
+  if (!BPI) {
+    // If BPI is not available, set the default probability as 1 / N, where N is
+    // the number of successors.
+    auto SuccSize = std::max<uint32_t>(
+        std::distance(succ_begin(SrcBB), succ_end(SrcBB)), 1);
+    return BranchProbability(1, SuccSize);
+  }
+  return BPI->getEdgeProbability(SrcBB, DstBB);
 }
 
-void SelectionDAGBuilder::
-addSuccessorWithWeight(MachineBasicBlock *Src, MachineBasicBlock *Dst,
-                       uint32_t Weight /* = 0 */) {
+void SelectionDAGBuilder::addSuccessorWithProb(MachineBasicBlock *Src,
+                                               MachineBasicBlock *Dst,
+                                               BranchProbability Prob) {
   if (!FuncInfo.BPI)
-    Src->addSuccessorWithoutWeight(Dst);
+    Src->addSuccessorWithoutProb(Dst);
   else {
-    if (!Weight)
-      Weight = getEdgeWeight(Src, Dst);
-    Src->addSuccessor(Dst, Weight);
+    if (Prob.isUnknown())
+      Prob = getEdgeProbability(Src, Dst);
+    Src->addSuccessor(Dst, Prob);
   }
 }
-
 
 static bool InBlock(const Value *V, const BasicBlock *BB) {
   if (const Instruction *I = dyn_cast<Instruction>(V))
@@ -1585,8 +1591,8 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
                                                   MachineBasicBlock *FBB,
                                                   MachineBasicBlock *CurBB,
                                                   MachineBasicBlock *SwitchBB,
-                                                  uint32_t TWeight,
-                                                  uint32_t FWeight) {
+                                                  BranchProbability TProb,
+                                                  BranchProbability FProb) {
   const BasicBlock *BB = CurBB->getBasicBlock();
 
   // If the leaf of the tree is a comparison, merge the condition into
@@ -1609,7 +1615,7 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
       }
 
       CaseBlock CB(Condition, BOp->getOperand(0), BOp->getOperand(1), nullptr,
-                   TBB, FBB, CurBB, TWeight, FWeight);
+                   TBB, FBB, CurBB, TProb, FProb);
       SwitchCases.push_back(CB);
       return;
     }
@@ -1617,16 +1623,8 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
 
   // Create a CaseBlock record representing this branch.
   CaseBlock CB(ISD::SETEQ, Cond, ConstantInt::getTrue(*DAG.getContext()),
-               nullptr, TBB, FBB, CurBB, TWeight, FWeight);
+               nullptr, TBB, FBB, CurBB, TProb, FProb);
   SwitchCases.push_back(CB);
-}
-
-/// Scale down both weights to fit into uint32_t.
-static void ScaleWeights(uint64_t &NewTrue, uint64_t &NewFalse) {
-  uint64_t NewMax = (NewTrue > NewFalse) ? NewTrue : NewFalse;
-  uint32_t Scale = (NewMax / UINT32_MAX) + 1;
-  NewTrue = NewTrue / Scale;
-  NewFalse = NewFalse / Scale;
 }
 
 /// FindMergedConditions - If Cond is an expression like
@@ -1636,8 +1634,8 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
                                                MachineBasicBlock *CurBB,
                                                MachineBasicBlock *SwitchBB,
                                                Instruction::BinaryOps Opc,
-                                               uint32_t TWeight,
-                                               uint32_t FWeight) {
+                                               BranchProbability TProb,
+                                               BranchProbability FProb) {
   // If this node is not part of the or/and tree, emit it as a branch.
   const Instruction *BOp = dyn_cast<Instruction>(Cond);
   if (!BOp || !(isa<BinaryOperator>(BOp) || isa<CmpInst>(BOp)) ||
@@ -1646,7 +1644,7 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
       !InBlock(BOp->getOperand(0), CurBB->getBasicBlock()) ||
       !InBlock(BOp->getOperand(1), CurBB->getBasicBlock())) {
     EmitBranchForMergedCondition(Cond, TBB, FBB, CurBB, SwitchBB,
-                                 TWeight, FWeight);
+                                 TProb, FProb);
     return;
   }
 
@@ -1670,26 +1668,25 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
     // The requirement is that
     //   TrueProb for BB1 + (FalseProb for BB1 * TrueProb for TmpBB)
     //     = TrueProb for original BB.
-    // Assuming the original weights are A and B, one choice is to set BB1's
-    // weights to A and A+2B, and set TmpBB's weights to A and 2B. This choice
-    // assumes that
+    // Assuming the original probabilities are A and B, one choice is to set
+    // BB1's probabilities to A/2 and A/2+B, and set TmpBB's probabilities to
+    // A/(1+B) and 2B/(1+B). This choice assumes that
     //   TrueProb for BB1 == FalseProb for BB1 * TrueProb for TmpBB.
     // Another choice is to assume TrueProb for BB1 equals to TrueProb for
     // TmpBB, but the math is more complicated.
 
-    uint64_t NewTrueWeight = TWeight;
-    uint64_t NewFalseWeight = (uint64_t)TWeight + 2 * (uint64_t)FWeight;
-    ScaleWeights(NewTrueWeight, NewFalseWeight);
+    auto NewTrueProb = TProb / 2;
+    auto NewFalseProb = TProb / 2 + FProb;
     // Emit the LHS condition.
     FindMergedConditions(BOp->getOperand(0), TBB, TmpBB, CurBB, SwitchBB, Opc,
-                         NewTrueWeight, NewFalseWeight);
+                         NewTrueProb, NewFalseProb);
 
-    NewTrueWeight = TWeight;
-    NewFalseWeight = 2 * (uint64_t)FWeight;
-    ScaleWeights(NewTrueWeight, NewFalseWeight);
+    // Normalize A/2 and B to get A/(1+B) and 2B/(1+B).
+    SmallVector<BranchProbability, 2> Probs{TProb / 2, FProb};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
     // Emit the RHS condition into TmpBB.
     FindMergedConditions(BOp->getOperand(1), TBB, FBB, TmpBB, SwitchBB, Opc,
-                         NewTrueWeight, NewFalseWeight);
+                         Probs[0], Probs[1]);
   } else {
     assert(Opc == Instruction::And && "Unknown merge op!");
     // Codegen X & Y as:
@@ -1706,24 +1703,23 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
     // The requirement is that
     //   FalseProb for BB1 + (TrueProb for BB1 * FalseProb for TmpBB)
     //     = FalseProb for original BB.
-    // Assuming the original weights are A and B, one choice is to set BB1's
-    // weights to 2A+B and B, and set TmpBB's weights to 2A and B. This choice
-    // assumes that
-    //   FalseProb for BB1 == TrueProb for BB1 * FalseProb for TmpBB.
+    // Assuming the original probabilities are A and B, one choice is to set
+    // BB1's probabilities to A+B/2 and B/2, and set TmpBB's probabilities to
+    // 2A/(1+A) and B/(1+A). This choice assumes that FalseProb for BB1 ==
+    // TrueProb for BB1 * FalseProb for TmpBB.
 
-    uint64_t NewTrueWeight = 2 * (uint64_t)TWeight + (uint64_t)FWeight;
-    uint64_t NewFalseWeight = FWeight;
-    ScaleWeights(NewTrueWeight, NewFalseWeight);
+    auto NewTrueProb = TProb + FProb / 2;
+    auto NewFalseProb = FProb / 2;
     // Emit the LHS condition.
     FindMergedConditions(BOp->getOperand(0), TmpBB, FBB, CurBB, SwitchBB, Opc,
-                         NewTrueWeight, NewFalseWeight);
+                         NewTrueProb, NewFalseProb);
 
-    NewTrueWeight = 2 * (uint64_t)TWeight;
-    NewFalseWeight = FWeight;
-    ScaleWeights(NewTrueWeight, NewFalseWeight);
+    // Normalize A and B/2 to get 2A/(1+A) and B/(1+A).
+    SmallVector<BranchProbability, 2> Probs{TProb, FProb / 2};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
     // Emit the RHS condition into TmpBB.
     FindMergedConditions(BOp->getOperand(1), TBB, FBB, TmpBB, SwitchBB, Opc,
-                         NewTrueWeight, NewFalseWeight);
+                         Probs[0], Probs[1]);
   }
 }
 
@@ -1805,8 +1801,9 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
         !I.getMetadata(LLVMContext::MD_unpredictable) &&
         (Opcode == Instruction::And || Opcode == Instruction::Or)) {
       FindMergedConditions(BOp, Succ0MBB, Succ1MBB, BrMBB, BrMBB,
-                           Opcode, getEdgeWeight(BrMBB, Succ0MBB),
-                           getEdgeWeight(BrMBB, Succ1MBB));
+                           Opcode,
+                           getEdgeProbability(BrMBB, Succ0MBB),
+                           getEdgeProbability(BrMBB, Succ1MBB));
       // If the compares in later blocks need to use values not currently
       // exported from this block, export them now.  This block should always
       // be the first entry.
@@ -1885,11 +1882,12 @@ void SelectionDAGBuilder::visitSwitchCase(CaseBlock &CB,
   }
 
   // Update successor info
-  addSuccessorWithWeight(SwitchBB, CB.TrueBB, CB.TrueWeight);
+  addSuccessorWithProb(SwitchBB, CB.TrueBB, CB.TrueProb);
   // TrueBB and FalseBB are always different unless the incoming IR is
   // degenerate. This only happens when running llc on weird IR.
   if (CB.TrueBB != CB.FalseBB)
-    addSuccessorWithWeight(SwitchBB, CB.FalseBB, CB.FalseWeight);
+    addSuccessorWithProb(SwitchBB, CB.FalseBB, CB.FalseProb);
+  SwitchBB->normalizeSuccProbs();
 
   // If the lhs block is the next block, invert the condition so that we can
   // fall through to the lhs instead of the rhs block.
@@ -2100,8 +2098,9 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
 
   MachineBasicBlock* MBB = B.Cases[0].ThisBB;
 
-  addSuccessorWithWeight(SwitchBB, B.Default, B.DefaultWeight);
-  addSuccessorWithWeight(SwitchBB, MBB, B.Weight);
+  addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
+  addSuccessorWithProb(SwitchBB, MBB, B.Prob);
+  SwitchBB->normalizeSuccProbs();
 
   SDValue BrRange = DAG.getNode(ISD::BRCOND, dl,
                                 MVT::Other, CopyTo, RangeCmp,
@@ -2118,7 +2117,7 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
 /// visitBitTestCase - this function produces one "bit test"
 void SelectionDAGBuilder::visitBitTestCase(BitTestBlock &BB,
                                            MachineBasicBlock* NextMBB,
-                                           uint32_t BranchWeightToNext,
+                                           BranchProbability BranchProbToNext,
                                            unsigned Reg,
                                            BitTestCase &B,
                                            MachineBasicBlock *SwitchBB) {
@@ -2154,10 +2153,14 @@ void SelectionDAGBuilder::visitBitTestCase(BitTestBlock &BB,
         AndOp, DAG.getConstant(0, dl, VT), ISD::SETNE);
   }
 
-  // The branch weight from SwitchBB to B.TargetBB is B.ExtraWeight.
-  addSuccessorWithWeight(SwitchBB, B.TargetBB, B.ExtraWeight);
-  // The branch weight from SwitchBB to NextMBB is BranchWeightToNext.
-  addSuccessorWithWeight(SwitchBB, NextMBB, BranchWeightToNext);
+  // The branch probability from SwitchBB to B.TargetBB is B.ExtraProb.
+  addSuccessorWithProb(SwitchBB, B.TargetBB, B.ExtraProb);
+  // The branch probability from SwitchBB to NextMBB is BranchProbToNext.
+  addSuccessorWithProb(SwitchBB, NextMBB, BranchProbToNext);
+  // It is not guaranteed that the sum of B.ExtraProb and BranchProbToNext is
+  // one as they are relative probabilities (and thus work more like weights),
+  // and hence we need to normalize them to let the sum of them become one.
+  SwitchBB->normalizeSuccProbs();
 
   SDValue BrAnd = DAG.getNode(ISD::BRCOND, dl,
                               MVT::Other, getControlRoot(),
@@ -2209,18 +2212,20 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     CopyToExportRegsIfNeeded(&I);
   }
 
-  SmallVector<std::pair<MachineBasicBlock *, uint32_t>, 1> UnwindDests;
+  SmallVector<std::pair<MachineBasicBlock *, BranchProbability>, 1> UnwindDests;
   BranchProbabilityInfo *BPI = FuncInfo.BPI;
-  uint32_t EHPadBBWeight =
-      BPI ? BPI->getEdgeWeight(InvokeMBB->getBasicBlock(), EHPadBB) : 0;
-  findUnwindDestinations(FuncInfo, EHPadBB, EHPadBBWeight, UnwindDests);
+  BranchProbability EHPadBBProb =
+      BPI ? BPI->getEdgeProbability(InvokeMBB->getBasicBlock(), EHPadBB)
+          : BranchProbability::getZero();
+  findUnwindDestinations(FuncInfo, EHPadBB, EHPadBBProb, UnwindDests);
 
   // Update successor info.
-  addSuccessorWithWeight(InvokeMBB, Return);
+  addSuccessorWithProb(InvokeMBB, Return);
   for (auto &UnwindDest : UnwindDests) {
     UnwindDest.first->setIsEHPad();
-    addSuccessorWithWeight(InvokeMBB, UnwindDest.first, UnwindDest.second);
+    addSuccessorWithProb(InvokeMBB, UnwindDest.first, UnwindDest.second);
   }
+  InvokeMBB->normalizeSuccProbs();
 
   // Drop into normal successor.
   DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(),
@@ -2301,8 +2306,7 @@ void SelectionDAGBuilder::sortAndRangeify(CaseClusterVector &Clusters) {
       // If this case has the same successor and is a neighbour, merge it into
       // the previous cluster.
       Clusters[DstIndex - 1].High = CaseVal;
-      Clusters[DstIndex - 1].Weight += CC.Weight;
-      assert(Clusters[DstIndex - 1].Weight >= CC.Weight && "Weight overflow!");
+      Clusters[DstIndex - 1].Prob += CC.Prob;
     } else {
       std::memmove(&Clusters[DstIndex++], &Clusters[SrcIndex],
                    sizeof(Clusters[SrcIndex]));
@@ -2336,7 +2340,7 @@ void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
         continue;
 
     MachineBasicBlock *Succ = FuncInfo.MBBMap[BB];
-    addSuccessorWithWeight(IndirectBrMBB, Succ);
+    addSuccessorWithProb(IndirectBrMBB, Succ);
   }
 
   DAG.setRoot(DAG.getNode(ISD::BRIND, getCurSDLoc(),
@@ -7833,7 +7837,7 @@ AddSuccessorMBB(const BasicBlock *BB,
   }
   // Add it as a successor of ParentMBB.
   ParentMBB->addSuccessor(
-      SuccMBB, BranchProbabilityInfo::getBranchWeightStackProtector(IsLikely));
+      SuccMBB, BranchProbabilityInfo::getBranchProbStackProtector(IsLikely));
   return SuccMBB;
 }
 
@@ -7895,14 +7899,18 @@ bool SelectionDAGBuilder::buildJumpTable(CaseClusterVector &Clusters,
                                          CaseCluster &JTCluster) {
   assert(First <= Last);
 
-  uint32_t Weight = 0;
+  auto Prob = BranchProbability::getZero();
   unsigned NumCmps = 0;
   std::vector<MachineBasicBlock*> Table;
-  DenseMap<MachineBasicBlock*, uint32_t> JTWeights;
+  DenseMap<MachineBasicBlock*, BranchProbability> JTProbs;
+
+  // Initialize probabilities in JTProbs.
+  for (unsigned I = First; I <= Last; ++I)
+    JTProbs[Clusters[I].MBB] = BranchProbability::getZero();
+
   for (unsigned I = First; I <= Last; ++I) {
     assert(Clusters[I].Kind == CC_Range);
-    Weight += Clusters[I].Weight;
-    assert(Weight >= Clusters[I].Weight && "Weight overflow!");
+    Prob += Clusters[I].Prob;
     APInt Low = Clusters[I].Low->getValue();
     APInt High = Clusters[I].High->getValue();
     NumCmps += (Low == High) ? 1 : 2;
@@ -7917,10 +7925,10 @@ bool SelectionDAGBuilder::buildJumpTable(CaseClusterVector &Clusters,
     uint64_t ClusterSize = (High - Low).getLimitedValue() + 1;
     for (uint64_t J = 0; J < ClusterSize; ++J)
       Table.push_back(Clusters[I].MBB);
-    JTWeights[Clusters[I].MBB] += Clusters[I].Weight;
+    JTProbs[Clusters[I].MBB] += Clusters[I].Prob;
   }
 
-  unsigned NumDests = JTWeights.size();
+  unsigned NumDests = JTProbs.size();
   if (isSuitableForBitTests(NumDests, NumCmps,
                             Clusters[First].Low->getValue(),
                             Clusters[Last].High->getValue())) {
@@ -7939,9 +7947,10 @@ bool SelectionDAGBuilder::buildJumpTable(CaseClusterVector &Clusters,
   for (MachineBasicBlock *Succ : Table) {
     if (Done.count(Succ))
       continue;
-    addSuccessorWithWeight(JumpTableMBB, Succ, JTWeights[Succ]);
+    addSuccessorWithProb(JumpTableMBB, Succ, JTProbs[Succ]);
     Done.insert(Succ);
   }
+  JumpTableMBB->normalizeSuccProbs();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned JTI = CurMF->getOrCreateJumpTableInfo(TLI.getJumpTableEncoding())
@@ -7955,7 +7964,7 @@ bool SelectionDAGBuilder::buildJumpTable(CaseClusterVector &Clusters,
   JTCases.emplace_back(std::move(JTH), std::move(JT));
 
   JTCluster = CaseCluster::jumpTable(Clusters[First].Low, Clusters[Last].High,
-                                     JTCases.size() - 1, Weight);
+                                     JTCases.size() - 1, Prob);
   return true;
 }
 
@@ -8155,7 +8164,7 @@ bool SelectionDAGBuilder::buildBitTests(CaseClusterVector &Clusters,
   }
 
   CaseBitsVector CBV;
-  uint32_t TotalWeight = 0;
+  auto TotalProb = BranchProbability::getZero();
   for (unsigned i = First; i <= Last; ++i) {
     // Find the CaseBits for this destination.
     unsigned j;
@@ -8163,40 +8172,40 @@ bool SelectionDAGBuilder::buildBitTests(CaseClusterVector &Clusters,
       if (CBV[j].BB == Clusters[i].MBB)
         break;
     if (j == CBV.size())
-      CBV.push_back(CaseBits(0, Clusters[i].MBB, 0, 0));
+      CBV.push_back(
+          CaseBits(0, Clusters[i].MBB, 0, BranchProbability::getZero()));
     CaseBits *CB = &CBV[j];
 
-    // Update Mask, Bits and ExtraWeight.
+    // Update Mask, Bits and ExtraProb.
     uint64_t Lo = (Clusters[i].Low->getValue() - LowBound).getZExtValue();
     uint64_t Hi = (Clusters[i].High->getValue() - LowBound).getZExtValue();
     assert(Hi >= Lo && Hi < 64 && "Invalid bit case!");
     CB->Mask |= (-1ULL >> (63 - (Hi - Lo))) << Lo;
     CB->Bits += Hi - Lo + 1;
-    CB->ExtraWeight += Clusters[i].Weight;
-    TotalWeight += Clusters[i].Weight;
-    assert(TotalWeight >= Clusters[i].Weight && "Weight overflow!");
+    CB->ExtraProb += Clusters[i].Prob;
+    TotalProb += Clusters[i].Prob;
   }
 
   BitTestInfo BTI;
   std::sort(CBV.begin(), CBV.end(), [](const CaseBits &a, const CaseBits &b) {
-    // Sort by weight first, number of bits second.
-    if (a.ExtraWeight != b.ExtraWeight)
-      return a.ExtraWeight > b.ExtraWeight;
+    // Sort by probability first, number of bits second.
+    if (a.ExtraProb != b.ExtraProb)
+      return a.ExtraProb > b.ExtraProb;
     return a.Bits > b.Bits;
   });
 
   for (auto &CB : CBV) {
     MachineBasicBlock *BitTestBB =
         FuncInfo.MF->CreateMachineBasicBlock(SI->getParent());
-    BTI.push_back(BitTestCase(CB.Mask, BitTestBB, CB.BB, CB.ExtraWeight));
+    BTI.push_back(BitTestCase(CB.Mask, BitTestBB, CB.BB, CB.ExtraProb));
   }
   BitTestCases.emplace_back(std::move(LowBound), std::move(CmpRange),
                             SI->getCondition(), -1U, MVT::Other, false,
                             ContiguousRange, nullptr, nullptr, std::move(BTI),
-                            TotalWeight);
+                            TotalProb);
 
   BTCluster = CaseCluster::bitTests(Clusters[First].Low, Clusters[Last].High,
-                                    BitTestCases.size() - 1, TotalWeight);
+                                    BitTestCases.size() - 1, TotalProb);
   return true;
 }
 
@@ -8343,13 +8352,16 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
             ISD::SETEQ);
 
         // Update successor info.
-        // Both Small and Big will jump to Small.BB, so we sum up the weights.
-        addSuccessorWithWeight(SwitchMBB, Small.MBB, Small.Weight + Big.Weight);
-        addSuccessorWithWeight(
-            SwitchMBB, DefaultMBB,
-            // The default destination is the first successor in IR.
-            BPI ? BPI->getEdgeWeight(SwitchMBB->getBasicBlock(), (unsigned)0)
-                : 0);
+        // Both Small and Big will jump to Small.BB, so we sum up the
+        // probabilities.
+        addSuccessorWithProb(SwitchMBB, Small.MBB, Small.Prob + Big.Prob);
+        if (BPI)
+          addSuccessorWithProb(
+              SwitchMBB, DefaultMBB,
+              // The default destination is the first successor in IR.
+              BPI->getEdgeProbability(SwitchMBB->getBasicBlock(), (unsigned)0));
+        else
+          addSuccessorWithProb(SwitchMBB, DefaultMBB);
 
         // Insert the true branch.
         SDValue BrCond =
@@ -8366,17 +8378,17 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
   }
 
   if (TM.getOptLevel() != CodeGenOpt::None) {
-    // Order cases by weight so the most likely case will be checked first.
+    // Order cases by probability so the most likely case will be checked first.
     std::sort(W.FirstCluster, W.LastCluster + 1,
               [](const CaseCluster &a, const CaseCluster &b) {
-      return a.Weight > b.Weight;
+      return a.Prob > b.Prob;
     });
 
     // Rearrange the case blocks so that the last one falls through if possible
-    // without without changing the order of weights.
+    // without without changing the order of probabilities.
     for (CaseClusterIt I = W.LastCluster; I > W.FirstCluster; ) {
       --I;
-      if (I->Weight > W.LastCluster->Weight)
+      if (I->Prob > W.LastCluster->Prob)
         break;
       if (I->Kind == CC_Range && I->MBB == NextMBB) {
         std::swap(*I, *W.LastCluster);
@@ -8385,13 +8397,11 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     }
   }
 
-  // Compute total weight.
-  uint32_t DefaultWeight = W.DefaultWeight;
-  uint32_t UnhandledWeights = DefaultWeight;
-  for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I) {
-    UnhandledWeights += I->Weight;
-    assert(UnhandledWeights >= I->Weight && "Weight overflow!");
-  }
+  // Compute total probability.
+  BranchProbability DefaultProb = W.DefaultProb;
+  BranchProbability UnhandledProbs = DefaultProb;
+  for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I)
+    UnhandledProbs += I->Prob;
 
   MachineBasicBlock *CurMBB = W.MBB;
   for (CaseClusterIt I = W.FirstCluster, E = W.LastCluster; I <= E; ++I) {
@@ -8405,7 +8415,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
       // Put Cond in a virtual register to make it available from the new blocks.
       ExportFromCurrentBlock(Cond);
     }
-    UnhandledWeights -= I->Weight;
+    UnhandledProbs -= I->Prob;
 
     switch (I->Kind) {
       case CC_JumpTable: {
@@ -8417,25 +8427,25 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         MachineBasicBlock *JumpMBB = JT->MBB;
         CurMF->insert(BBI, JumpMBB);
 
-        uint32_t JumpWeight = I->Weight;
-        uint32_t FallthroughWeight = UnhandledWeights;
+        auto JumpProb = I->Prob;
+        auto FallthroughProb = UnhandledProbs;
 
         // If the default statement is a target of the jump table, we evenly
-        // distribute the default weight to successors of CurMBB. Also update
-        // the weight on the edge from JumpMBB to Fallthrough.
+        // distribute the default probability to successors of CurMBB. Also
+        // update the probability on the edge from JumpMBB to Fallthrough.
         for (MachineBasicBlock::succ_iterator SI = JumpMBB->succ_begin(),
                                               SE = JumpMBB->succ_end();
              SI != SE; ++SI) {
           if (*SI == DefaultMBB) {
-            JumpWeight += DefaultWeight / 2;
-            FallthroughWeight -= DefaultWeight / 2;
-            JumpMBB->setSuccWeight(SI, DefaultWeight / 2);
+            JumpProb += DefaultProb / 2;
+            FallthroughProb -= DefaultProb / 2;
+            JumpMBB->setSuccProbability(SI, DefaultProb / 2);
             break;
           }
         }
 
-        addSuccessorWithWeight(CurMBB, Fallthrough, FallthroughWeight);
-        addSuccessorWithWeight(CurMBB, JumpMBB, JumpWeight);
+        addSuccessorWithProb(CurMBB, Fallthrough, FallthroughProb);
+        addSuccessorWithProb(CurMBB, JumpMBB, JumpProb);
 
         // The jump table header will be inserted in our current block, do the
         // range check, and fall through to our fallthrough block.
@@ -8461,13 +8471,13 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         BTB->Parent = CurMBB;
         BTB->Default = Fallthrough;
 
-        BTB->DefaultWeight = UnhandledWeights;
+        BTB->DefaultProb = UnhandledProbs;
         // If the cases in bit test don't form a contiguous range, we evenly
-        // distribute the weight on the edge to Fallthrough to two successors
-        // of CurMBB.
+        // distribute the probability on the edge to Fallthrough to two
+        // successors of CurMBB.
         if (!BTB->ContiguousRange) {
-          BTB->Weight += DefaultWeight / 2;
-          BTB->DefaultWeight -= DefaultWeight / 2;
+          BTB->Prob += DefaultProb / 2;
+          BTB->DefaultProb -= DefaultProb / 2;
         }
 
         // If we're in the right place, emit the bit test header right now.
@@ -8494,9 +8504,9 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
           RHS = I->High;
         }
 
-        // The false weight is the sum of all unhandled cases.
-        CaseBlock CB(CC, LHS, RHS, MHS, I->MBB, Fallthrough, CurMBB, I->Weight,
-                     UnhandledWeights);
+        // The false probability is the sum of all unhandled cases.
+        CaseBlock CB(CC, LHS, RHS, MHS, I->MBB, Fallthrough, CurMBB, I->Prob,
+                     UnhandledProbs);
 
         if (CurMBB == SwitchMBB)
           visitSwitchCase(CB, SwitchMBB);
@@ -8514,8 +8524,8 @@ unsigned SelectionDAGBuilder::caseClusterRank(const CaseCluster &CC,
                                               CaseClusterIt First,
                                               CaseClusterIt Last) {
   return std::count_if(First, Last + 1, [&](const CaseCluster &X) {
-    if (X.Weight != CC.Weight)
-      return X.Weight > CC.Weight;
+    if (X.Prob != CC.Prob)
+      return X.Prob > CC.Prob;
 
     // Ties are broken by comparing the case value.
     return X.Low->getValue().slt(CC.Low->getValue());
@@ -8531,24 +8541,24 @@ void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
 
   assert(W.LastCluster - W.FirstCluster + 1 >= 2 && "Too small to split!");
 
-  // Balance the tree based on branch weights to create a near-optimal (in terms
-  // of search time given key frequency) binary search tree. See e.g. Kurt
+  // Balance the tree based on branch probabilities to create a near-optimal (in
+  // terms of search time given key frequency) binary search tree. See e.g. Kurt
   // Mehlhorn "Nearly Optimal Binary Search Trees" (1975).
   CaseClusterIt LastLeft = W.FirstCluster;
   CaseClusterIt FirstRight = W.LastCluster;
-  uint32_t LeftWeight = LastLeft->Weight + W.DefaultWeight / 2;
-  uint32_t RightWeight = FirstRight->Weight + W.DefaultWeight / 2;
+  auto LeftProb = LastLeft->Prob + W.DefaultProb / 2;
+  auto RightProb = FirstRight->Prob + W.DefaultProb / 2;
 
   // Move LastLeft and FirstRight towards each other from opposite directions to
-  // find a partitioning of the clusters which balances the weight on both
-  // sides. If LeftWeight and RightWeight are equal, alternate which side is
-  // taken to ensure 0-weight nodes are distributed evenly.
+  // find a partitioning of the clusters which balances the probability on both
+  // sides. If LeftProb and RightProb are equal, alternate which side is
+  // taken to ensure 0-probability nodes are distributed evenly.
   unsigned I = 0;
   while (LastLeft + 1 < FirstRight) {
-    if (LeftWeight < RightWeight || (LeftWeight == RightWeight && (I & 1)))
-      LeftWeight += (++LastLeft)->Weight;
+    if (LeftProb < RightProb || (LeftProb == RightProb && (I & 1)))
+      LeftProb += (++LastLeft)->Prob;
     else
-      RightWeight += (--FirstRight)->Weight;
+      RightProb += (--FirstRight)->Prob;
     I++;
   }
 
@@ -8624,7 +8634,7 @@ void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
     LeftMBB = FuncInfo.MF->CreateMachineBasicBlock(W.MBB->getBasicBlock());
     FuncInfo.MF->insert(BBI, LeftMBB);
     WorkList.push_back(
-        {LeftMBB, FirstLeft, LastLeft, W.GE, Pivot, W.DefaultWeight / 2});
+        {LeftMBB, FirstLeft, LastLeft, W.GE, Pivot, W.DefaultProb / 2});
     // Put Cond in a virtual register to make it available from the new blocks.
     ExportFromCurrentBlock(Cond);
   }
@@ -8640,14 +8650,14 @@ void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
     RightMBB = FuncInfo.MF->CreateMachineBasicBlock(W.MBB->getBasicBlock());
     FuncInfo.MF->insert(BBI, RightMBB);
     WorkList.push_back(
-        {RightMBB, FirstRight, LastRight, Pivot, W.LT, W.DefaultWeight / 2});
+        {RightMBB, FirstRight, LastRight, Pivot, W.LT, W.DefaultProb / 2});
     // Put Cond in a virtual register to make it available from the new blocks.
     ExportFromCurrentBlock(Cond);
   }
 
   // Create the CaseBlock record that will be used to lower the branch.
   CaseBlock CB(ISD::SETLT, Cond, Pivot, nullptr, LeftMBB, RightMBB, W.MBB,
-               LeftWeight, RightWeight);
+               LeftProb, RightProb);
 
   if (W.MBB == SwitchMBB)
     visitSwitchCase(CB, SwitchMBB);
@@ -8663,9 +8673,10 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   for (auto I : SI.cases()) {
     MachineBasicBlock *Succ = FuncInfo.MBBMap[I.getCaseSuccessor()];
     const ConstantInt *CaseVal = I.getCaseValue();
-    uint32_t Weight =
-        BPI ? BPI->getEdgeWeight(SI.getParent(), I.getSuccessorIndex()) : 0;
-    Clusters.push_back(CaseCluster::range(CaseVal, CaseVal, Succ, Weight));
+    BranchProbability Prob =
+        BPI ? BPI->getEdgeProbability(SI.getParent(), I.getSuccessorIndex())
+            : BranchProbability(1, SI.getNumCases() + 1);
+    Clusters.push_back(CaseCluster::range(CaseVal, CaseVal, Succ, Prob));
   }
 
   MachineBasicBlock *DefaultMBB = FuncInfo.MBBMap[SI.getDefaultDest()];
@@ -8741,8 +8752,8 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   SwitchWorkList WorkList;
   CaseClusterIt First = Clusters.begin();
   CaseClusterIt Last = Clusters.end() - 1;
-  uint32_t DefaultWeight = getEdgeWeight(SwitchMBB, DefaultMBB);
-  WorkList.push_back({SwitchMBB, First, Last, nullptr, nullptr, DefaultWeight});
+  auto DefaultProb = getEdgeProbability(SwitchMBB, DefaultMBB);
+  WorkList.push_back({SwitchMBB, First, Last, nullptr, nullptr, DefaultProb});
 
   while (!WorkList.empty()) {
     SwitchWorkListItem W = WorkList.back();

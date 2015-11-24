@@ -120,3 +120,26 @@ std::error_code FunctionIndexObjectFile::findFunctionSummaryInMemBuffer(
     return object_error::invalid_file_type;
   }
 }
+
+// Parse the function index out of an IR file and return the function
+// index object if found, or nullptr if not.
+ErrorOr<std::unique_ptr<FunctionInfoIndex>>
+llvm::getFunctionIndexForFile(StringRef Path,
+                              DiagnosticHandlerFunction DiagnosticHandler,
+                              const Module *ExportingModule) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+      MemoryBuffer::getFileOrSTDIN(Path);
+  std::error_code EC = FileOrErr.getError();
+  if (EC)
+    return EC;
+  MemoryBufferRef BufferRef = (FileOrErr.get())->getMemBufferRef();
+  ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
+      object::FunctionIndexObjectFile::create(BufferRef, DiagnosticHandler,
+                                              ExportingModule);
+  EC = ObjOrErr.getError();
+  if (EC)
+    return EC;
+
+  object::FunctionIndexObjectFile &Obj = **ObjOrErr;
+  return Obj.takeIndex();
+}

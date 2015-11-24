@@ -613,8 +613,9 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   MCSectionELF *Sec = Context.getELFSection(".pdr", ELF::SHT_PROGBITS,
                                             ELF::SHF_ALLOC | ELF::SHT_REL);
 
+  MCSymbol *Sym = Context.getOrCreateSymbol(Name);
   const MCSymbolRefExpr *ExprRef =
-      MCSymbolRefExpr::create(Name, MCSymbolRefExpr::VK_None, Context);
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Context);
 
   MCA.registerSection(*Sec);
   Sec->setAlignment(4);
@@ -640,10 +641,25 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   GPRInfoSet = FPRInfoSet = FrameInfoSet = false;
 
   OS.PopSection();
+
+  // .end also implicitly sets the size.
+  MCSymbol *CurPCSym = Context.createTempSymbol();
+  OS.EmitLabel(CurPCSym);
+  const MCExpr *Size = MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Context),
+      ExprRef, Context);
+  int64_t AbsSize;
+  if (!Size->evaluateAsAbsolute(AbsSize, MCA))
+    llvm_unreachable("Function size must be evaluatable as absolute");
+  Size = MCConstantExpr::create(AbsSize, Context);
+  static_cast<MCSymbolELF *>(Sym)->setSize(Size);
 }
 
 void MipsTargetELFStreamer::emitDirectiveEnt(const MCSymbol &Symbol) {
   GPRInfoSet = FPRInfoSet = FrameInfoSet = false;
+
+  // .ent also acts like an implicit '.type symbol, STT_FUNC'
+  static_cast<const MCSymbolELF &>(Symbol).setType(ELF::STT_FUNC);
 }
 
 void MipsTargetELFStreamer::emitDirectiveAbiCalls() {

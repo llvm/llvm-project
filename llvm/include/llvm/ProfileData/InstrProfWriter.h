@@ -43,6 +43,11 @@ public:
   std::error_code addRecord(InstrProfRecord &&I);
   /// Write the profile to \c OS
   void write(raw_fd_ostream &OS);
+  /// Write the profile in text format to \c OS
+  void writeText(raw_fd_ostream &OS);
+  /// Write \c Record in text format to \c OS
+  static void writeRecordInText(const InstrProfRecord &Record,
+                                raw_fd_ostream &OS);
   /// Write the profile, returning the raw data. For testing.
   std::unique_ptr<MemoryBuffer> writeBuffer();
 

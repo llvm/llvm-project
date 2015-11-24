@@ -51,7 +51,17 @@ OPTIONS
 
 .. option:: -instr (default)
 
- Specify that the input profile is an instrumentation-based profile.
+ Specify that the input profile is an instrumentation-based profile. When
+ using instrumentation-based profiles, the format of the generated file
+ can be generated in one of the two ways:
+
+ .. option:: -binary (default)
+
+ Emit the profile using a binary encoding in indexed profile format.
+
+ .. option:: -text
+
+ Emit the profile in text format.
 
 .. option:: -sample
 
@@ -120,6 +130,13 @@ OPTIONS
 .. option:: -instr (default)
 
  Specify that the input profile is an instrumentation-based profile.
+
+.. option:: -text
+
+ Instruct the profile dumper to show profile counts in the text format of the
+ instrumentation-based profile data representation. By default, the profile
+ information is dumped in a more human readable form (also in text) with
+ annotations.
 
 .. option:: -sample
 

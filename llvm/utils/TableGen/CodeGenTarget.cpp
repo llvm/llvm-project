@@ -253,7 +253,7 @@ void CodeGenTarget::ReadLegalValueTypes() const {
     LegalValueTypes.insert(LegalValueTypes.end(), RC.VTs.begin(), RC.VTs.end());
 
   // Remove duplicates.
-  std::sort(LegalValueTypes.begin(), LegalValueTypes.end());
+  array_pod_sort(LegalValueTypes.begin(), LegalValueTypes.end());
   LegalValueTypes.erase(std::unique(LegalValueTypes.begin(),
                                     LegalValueTypes.end()),
                         LegalValueTypes.end());

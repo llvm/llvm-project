@@ -18,7 +18,7 @@ define i1 @test_i1_return() gc "statepoint-example" {
 ; state arguments to the statepoint
 ; CHECK: pushq %rax
 ; CHECK: callq return_i1
-; CHECK: popq %rdx
+; CHECK: popq %rcx
 ; CHECK: retq
 entry:
   %safepoint_token = tail call i32 (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 1, i32 0, i32 0)
@@ -30,7 +30,7 @@ define i32 @test_i32_return() gc "statepoint-example" {
 ; CHECK-LABEL: test_i32_return
 ; CHECK: pushq %rax
 ; CHECK: callq return_i32
-; CHECK: popq %rdx
+; CHECK: popq %rcx
 ; CHECK: retq
 entry:
   %safepoint_token = tail call i32 (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* @return_i32, i32 0, i32 1, i32 0, i32 0)
@@ -42,7 +42,7 @@ define i32* @test_i32ptr_return() gc "statepoint-example" {
 ; CHECK-LABEL: test_i32ptr_return
 ; CHECK: pushq %rax
 ; CHECK: callq return_i32ptr
-; CHECK: popq %rdx
+; CHECK: popq %rcx
 ; CHECK: retq
 entry:
   %safepoint_token = tail call i32 (i64, i32, i32* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p0i32f(i64 0, i32 0, i32* ()* @return_i32ptr, i32 0, i32 1, i32 0, i32 0)
@@ -68,7 +68,7 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK: pushq %rax
 ; CHECK: callq return_i1
 ; CHECK-NEXT: .Ltmp9:
-; CHECK-NEXT: popq %rdx
+; CHECK-NEXT: popq %rcx
 ; CHECK-NEXT: retq
 entry:
   %safepoint_token = tail call i32 (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 1, i32 0, i32 0, i32 addrspace(1)* %a)
@@ -92,7 +92,7 @@ define i32 @test_transition_args() gc "statepoint-example" {
 ; CHECK-LABEL: test_transition_args
 ; CHECK: pushq %rax
 ; CHECK: callq return_i32
-; CHECK: popq %rdx
+; CHECK: popq %rcx
 ; CHECK: retq
 entry:
   %val = alloca i32
@@ -105,7 +105,7 @@ define i32 @test_transition_args_2() gc "statepoint-example" {
 ; CHECK-LABEL: test_transition_args_2
 ; CHECK: pushq %rax
 ; CHECK: callq return_i32
-; CHECK: popq %rdx
+; CHECK: popq %rcx
 ; CHECK: retq
 entry:
   %val = alloca i32

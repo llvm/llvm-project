@@ -35,7 +35,7 @@ public:
 
   int64_t decodeAddend(const RelocationEntry &RE) const {
     const SectionEntry &Section = Sections[RE.SectionID];
-    uint8_t *LocalAddress = Section.Address + RE.Offset;
+    uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
 
     switch (RE.RelType) {
       default:
@@ -94,12 +94,12 @@ public:
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
     DEBUG(dumpRelocationToResolve(RE, Value));
     const SectionEntry &Section = Sections[RE.SectionID];
-    uint8_t *LocalAddress = Section.Address + RE.Offset;
+    uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
 
     // If the relocation is PC-relative, the value to be encoded is the
     // pointer difference.
     if (RE.IsPCRel) {
-      uint64_t FinalAddress = Section.LoadAddress + RE.Offset;
+      uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
       Value -= FinalAddress;
       // ARM PCRel relocations have an effective-PC offset of two instructions
       // (four bytes in Thumb mode, 8 bytes in ARM mode).
@@ -132,8 +132,8 @@ public:
       break;
     }
     case MachO::ARM_RELOC_HALF_SECTDIFF: {
-      uint64_t SectionABase = Sections[RE.Sections.SectionA].LoadAddress;
-      uint64_t SectionBBase = Sections[RE.Sections.SectionB].LoadAddress;
+      uint64_t SectionABase = Sections[RE.Sections.SectionA].getLoadAddress();
+      uint64_t SectionBBase = Sections[RE.Sections.SectionB].getLoadAddress();
       assert((Value == SectionABase || Value == SectionBBase) &&
              "Unexpected HALFSECTDIFF relocation value.");
       Value = SectionABase - SectionBBase + RE.Addend;
@@ -180,21 +180,21 @@ private:
     RuntimeDyldMachO::StubMap::const_iterator i = Stubs.find(Value);
     uint8_t *Addr;
     if (i != Stubs.end()) {
-      Addr = Section.Address + i->second;
+      Addr = Section.getAddressWithOffset(i->second);
     } else {
       // Create a new stub function.
-      Stubs[Value] = Section.StubOffset;
-      uint8_t *StubTargetAddr =
-          createStubFunction(Section.Address + Section.StubOffset);
-      RelocationEntry StubRE(RE.SectionID, StubTargetAddr - Section.Address,
-                             MachO::GENERIC_RELOC_VANILLA, Value.Offset, false,
-                             2);
+      Stubs[Value] = Section.getStubOffset();
+      uint8_t *StubTargetAddr = createStubFunction(
+          Section.getAddressWithOffset(Section.getStubOffset()));
+      RelocationEntry StubRE(
+          RE.SectionID, StubTargetAddr - Section.getAddress(),
+          MachO::GENERIC_RELOC_VANILLA, Value.Offset, false, 2);
       if (Value.SymbolName)
         addRelocationForSymbol(StubRE, Value.SymbolName);
       else
         addRelocationForSection(StubRE, Value.SectionID);
-      Addr = Section.Address + Section.StubOffset;
-      Section.StubOffset += getMaxStubSize();
+      Addr = Section.getAddressWithOffset(Section.getStubOffset());
+      Section.advanceStubOffset(getMaxStubSize());
     }
     RelocationEntry TargetRE(RE.SectionID, RE.Offset, RE.RelType, 0,
                              RE.IsPCRel, RE.Size);
@@ -223,7 +223,7 @@ private:
     uint32_t RelocType = MachO.getAnyRelocationType(RE);
     bool IsPCRel = MachO.getAnyRelocationPCRel(RE);
     uint64_t Offset = RelI->getOffset();
-    uint8_t *LocalAddress = Section.Address + Offset;
+    uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
     int64_t Immediate = readBytesUnaligned(LocalAddress, 4); // Copy the whole instruction out.
     Immediate = ((Immediate >> 4) & 0xf000) | (Immediate & 0xfff);
 

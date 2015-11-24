@@ -15,10 +15,9 @@ declare float @llvm.nearbyint.f32(float)
 declare float @llvm.rint.f32(float)
 
 ; CHECK-LABEL: fadd32:
-; CHECK-NEXT: .param f32{{$}}
-; CHECK-NEXT: .param f32{{$}}
+; CHECK-NEXT: .param f32, f32{{$}}
 ; CHECK-NEXT: .result f32{{$}}
-; CHECK-NEXT: f32.add $push0, $0, $1{{$}}
+; CHECK-NEXT: f32.add $push0=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @fadd32(float %x, float %y) {
   %a = fadd float %x, %y
@@ -26,7 +25,7 @@ define float @fadd32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fsub32:
-; CHECK: f32.sub $push0, $0, $1{{$}}
+; CHECK: f32.sub $push0=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @fsub32(float %x, float %y) {
   %a = fsub float %x, %y
@@ -34,7 +33,7 @@ define float @fsub32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fmul32:
-; CHECK: f32.mul $push0, $0, $1{{$}}
+; CHECK: f32.mul $push0=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @fmul32(float %x, float %y) {
   %a = fmul float %x, %y
@@ -42,7 +41,7 @@ define float @fmul32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fdiv32:
-; CHECK: f32.div $push0, $0, $1{{$}}
+; CHECK: f32.div $push0=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @fdiv32(float %x, float %y) {
   %a = fdiv float %x, %y
@@ -50,7 +49,7 @@ define float @fdiv32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fabs32:
-; CHECK: f32.abs $push0, $0{{$}}
+; CHECK: f32.abs $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @fabs32(float %x) {
   %a = call float @llvm.fabs.f32(float %x)
@@ -58,7 +57,7 @@ define float @fabs32(float %x) {
 }
 
 ; CHECK-LABEL: fneg32:
-; CHECK: f32.neg $push0, $0{{$}}
+; CHECK: f32.neg $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @fneg32(float %x) {
   %a = fsub float -0., %x
@@ -66,7 +65,7 @@ define float @fneg32(float %x) {
 }
 
 ; CHECK-LABEL: copysign32:
-; CHECK: f32.copysign $push0, $0, $1{{$}}
+; CHECK: f32.copysign $push0=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @copysign32(float %x, float %y) {
   %a = call float @llvm.copysign.f32(float %x, float %y)
@@ -74,7 +73,7 @@ define float @copysign32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: sqrt32:
-; CHECK: f32.sqrt $push0, $0{{$}}
+; CHECK: f32.sqrt $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @sqrt32(float %x) {
   %a = call float @llvm.sqrt.f32(float %x)
@@ -82,7 +81,7 @@ define float @sqrt32(float %x) {
 }
 
 ; CHECK-LABEL: ceil32:
-; CHECK: f32.ceil $push0, $0{{$}}
+; CHECK: f32.ceil $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @ceil32(float %x) {
   %a = call float @llvm.ceil.f32(float %x)
@@ -90,7 +89,7 @@ define float @ceil32(float %x) {
 }
 
 ; CHECK-LABEL: floor32:
-; CHECK: f32.floor $push0, $0{{$}}
+; CHECK: f32.floor $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @floor32(float %x) {
   %a = call float @llvm.floor.f32(float %x)
@@ -98,7 +97,7 @@ define float @floor32(float %x) {
 }
 
 ; CHECK-LABEL: trunc32:
-; CHECK: f32.trunc $push0, $0{{$}}
+; CHECK: f32.trunc $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @trunc32(float %x) {
   %a = call float @llvm.trunc.f32(float %x)
@@ -106,7 +105,7 @@ define float @trunc32(float %x) {
 }
 
 ; CHECK-LABEL: nearest32:
-; CHECK: f32.nearest $push0, $0{{$}}
+; CHECK: f32.nearest $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @nearest32(float %x) {
   %a = call float @llvm.nearbyint.f32(float %x)
@@ -114,7 +113,7 @@ define float @nearest32(float %x) {
 }
 
 ; CHECK-LABEL: nearest32_via_rint:
-; CHECK: f32.nearest $push0, $0{{$}}
+; CHECK: f32.nearest $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @nearest32_via_rint(float %x) {
   %a = call float @llvm.rint.f32(float %x)
@@ -128,7 +127,7 @@ define float @nearest32_via_rint(float %x) {
 ; tests.
 
 ; CHECK-LABEL: fmin32:
-; CHECK: f32.min $push1, $0, $pop0{{$}}
+; CHECK: f32.min $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define float @fmin32(float %x) {
   %a = fcmp ult float %x, 0.0
@@ -137,7 +136,7 @@ define float @fmin32(float %x) {
 }
 
 ; CHECK-LABEL: fmax32:
-; CHECK: f32.max $push1, $0, $pop0{{$}}
+; CHECK: f32.max $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define float @fmax32(float %x) {
   %a = fcmp ugt float %x, 0.0

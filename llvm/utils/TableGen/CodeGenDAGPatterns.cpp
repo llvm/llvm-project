@@ -194,8 +194,7 @@ bool EEVT::TypeSet::MergeInTypeInfo(const EEVT::TypeSet &InVT, TreePattern &TP){
     // multiple different integer types, replace them with a single iPTR.
     if ((InVT.TypeVec[0] == MVT::iPTR || InVT.TypeVec[0] == MVT::iPTRAny) &&
         TypeVec.size() != 1) {
-      TypeVec.resize(1);
-      TypeVec[0] = InVT.TypeVec[0];
+      TypeVec.assign(1, InVT.TypeVec[0]);
       MadeChange = true;
     }
 
@@ -204,21 +203,20 @@ bool EEVT::TypeSet::MergeInTypeInfo(const EEVT::TypeSet &InVT, TreePattern &TP){
 
   // If this is a type list and the RHS is a typelist as well, eliminate entries
   // from this list that aren't in the other one.
-  bool MadeChange = false;
   TypeSet InputSet(*this);
 
-  for (unsigned i = 0; i != TypeVec.size(); ++i) {
-    if (std::find(InVT.TypeVec.begin(), InVT.TypeVec.end(), TypeVec[i]) !=
-        InVT.TypeVec.end())
-      continue;
+  TypeVec.clear();
+  std::set_intersection(InputSet.TypeVec.begin(), InputSet.TypeVec.end(),
+                        InVT.TypeVec.begin(), InVT.TypeVec.end(),
+                        std::back_inserter(TypeVec));
 
-    TypeVec.erase(TypeVec.begin()+i--);
-    MadeChange = true;
-  }
+  // If the intersection is the same size as the original set then we're done.
+  if (TypeVec.size() == InputSet.TypeVec.size())
+    return false;
 
   // If we removed all of our types, we have a type contradiction.
   if (!TypeVec.empty())
-    return MadeChange;
+    return true;
 
   // FIXME: Really want an SMLoc here!
   TP.error("Type inference contradiction found, merging '" +
@@ -387,26 +385,27 @@ bool EEVT::TypeSet::EnforceSmallerThan(EEVT::TypeSet &Other, TreePattern &TP) {
   // type size is smaller than the scalar size of the smallest type. For
   // vectors, we also need to make sure that the total size is no larger than
   // the size of the smallest type.
-  TypeSet InputSet(Other);
-  MVT Smallest = TypeVec[0];
-  for (unsigned i = 0; i != Other.TypeVec.size(); ++i) {
-    MVT OtherVT = Other.TypeVec[i];
-    // Don't compare vector and non-vector types.
-    if (OtherVT.isVector() != Smallest.isVector())
-      continue;
-    // The getSizeInBits() check here is only needed for vectors, but is
-    // a subset of the scalar check for scalars so no need to qualify.
-    if (OtherVT.getScalarSizeInBits() <= Smallest.getScalarSizeInBits() ||
-        OtherVT.getSizeInBits() < Smallest.getSizeInBits()) {
-      Other.TypeVec.erase(Other.TypeVec.begin()+i--);
-      MadeChange = true;
-    }
-  }
+  {
+    TypeSet InputSet(Other);
+    MVT Smallest = TypeVec[0];
+    auto I = std::remove_if(Other.TypeVec.begin(), Other.TypeVec.end(),
+      [Smallest](MVT OtherVT) {
+        // Don't compare vector and non-vector types.
+        if (OtherVT.isVector() != Smallest.isVector())
+          return false;
+        // The getSizeInBits() check here is only needed for vectors, but is
+        // a subset of the scalar check for scalars so no need to qualify.
+        return OtherVT.getScalarSizeInBits() <= Smallest.getScalarSizeInBits()||
+               OtherVT.getSizeInBits() < Smallest.getSizeInBits();
+      });
+    MadeChange |= I != Other.TypeVec.end(); // If we're about to remove types.
+    Other.TypeVec.erase(I, Other.TypeVec.end());
 
-  if (Other.TypeVec.empty()) {
-    TP.error("Type inference contradiction found, '" + InputSet.getName() +
-             "' has nothing larger than '" + getName() +"'!");
-    return false;
+    if (Other.TypeVec.empty()) {
+      TP.error("Type inference contradiction found, '" + InputSet.getName() +
+               "' has nothing larger than '" + getName() +"'!");
+      return false;
+    }
   }
 
   // Okay, find the largest type from the other set and remove anything the
@@ -414,26 +413,25 @@ bool EEVT::TypeSet::EnforceSmallerThan(EEVT::TypeSet &Other, TreePattern &TP) {
   // type size is larger than the scalar size of the largest type. For
   // vectors, we also need to make sure that the total size is no smaller than
   // the size of the largest type.
-  InputSet = TypeSet(*this);
-  MVT Largest = Other.TypeVec[Other.TypeVec.size()-1];
-  for (unsigned i = 0; i != TypeVec.size(); ++i) {
-    MVT OtherVT = TypeVec[i];
-    // Don't compare vector and non-vector types.
-    if (OtherVT.isVector() != Largest.isVector())
-      continue;
-    // The getSizeInBits() check here is only needed for vectors, but is
-    // a subset of the scalar check for scalars so no need to qualify.
-    if (OtherVT.getScalarSizeInBits() >= Largest.getScalarSizeInBits() ||
-         OtherVT.getSizeInBits() > Largest.getSizeInBits()) {
-      TypeVec.erase(TypeVec.begin()+i--);
-      MadeChange = true;
-    }
-  }
+  {
+    TypeSet InputSet(*this);
+    MVT Largest = Other.TypeVec[Other.TypeVec.size()-1];
+    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
+      [Largest](MVT OtherVT) {
+        // Don't compare vector and non-vector types.
+        if (OtherVT.isVector() != Largest.isVector())
+          return false;
+        return OtherVT.getScalarSizeInBits() >= Largest.getScalarSizeInBits() ||
+               OtherVT.getSizeInBits() > Largest.getSizeInBits();
+      });
+    MadeChange |= I != TypeVec.end(); // If we're about to remove types.
+    TypeVec.erase(I, TypeVec.end());
 
-  if (TypeVec.empty()) {
-    TP.error("Type inference contradiction found, '" + InputSet.getName() +
-             "' has nothing smaller than '" + Other.getName() +"'!");
-    return false;
+    if (TypeVec.empty()) {
+      TP.error("Type inference contradiction found, '" + InputSet.getName() +
+               "' has nothing smaller than '" + Other.getName() +"'!");
+      return false;
+    }
   }
 
   return MadeChange;
@@ -450,17 +448,17 @@ bool EEVT::TypeSet::EnforceVectorEltTypeIs(MVT::SimpleValueType VT,
   TypeSet InputSet(*this);
 
   // Filter out all the types which don't have the right element type.
-  for (unsigned i = 0; i != TypeVec.size(); ++i) {
-    assert(isVector(TypeVec[i]) && "EnforceVector didn't work");
-    if (MVT(TypeVec[i]).getVectorElementType().SimpleTy != VT) {
-      TypeVec.erase(TypeVec.begin()+i--);
-      MadeChange = true;
-    }
-  }
+  auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
+    [VT](MVT VVT) {
+      return VVT.getVectorElementType().SimpleTy != VT;
+    });
+  MadeChange |= I != TypeVec.end();
+  TypeVec.erase(I, TypeVec.end());
 
   if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
     TP.error("Type inference contradiction found, forcing '" +
-             InputSet.getName() + "' to have a vector element");
+             InputSet.getName() + "' to have a vector element of type " +
+             getEnumName(VT));
     return false;
   }
 
@@ -483,8 +481,7 @@ bool EEVT::TypeSet::EnforceVectorEltTypeIs(EEVT::TypeSet &VTOperand,
   if (isConcrete()) {
     MVT IVT = getConcrete();
     IVT = IVT.getVectorElementType();
-    return MadeChange |
-      VTOperand.MergeInTypeInfo(IVT.SimpleTy, TP);
+    return MadeChange || VTOperand.MergeInTypeInfo(IVT.SimpleTy, TP);
   }
 
   // If the scalar type is known, filter out vector types whose element types
@@ -494,22 +491,8 @@ bool EEVT::TypeSet::EnforceVectorEltTypeIs(EEVT::TypeSet &VTOperand,
 
   MVT::SimpleValueType VT = VTOperand.getConcrete();
 
-  TypeSet InputSet(*this);
+  MadeChange |= EnforceVectorEltTypeIs(VT, TP);
 
-  // Filter out all the types which don't have the right element type.
-  for (unsigned i = 0; i != TypeVec.size(); ++i) {
-    assert(isVector(TypeVec[i]) && "EnforceVector didn't work");
-    if (MVT(TypeVec[i]).getVectorElementType().SimpleTy != VT) {
-      TypeVec.erase(TypeVec.begin()+i--);
-      MadeChange = true;
-    }
-  }
-
-  if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
-    TP.error("Type inference contradiction found, forcing '" +
-             InputSet.getName() + "' to have a vector element");
-    return false;
-  }
   return MadeChange;
 }
 
@@ -552,13 +535,13 @@ bool EEVT::TypeSet::EnforceVectorSubVectorTypeIs(EEVT::TypeSet &VTOperand,
     // Only keep types that have less elements than VTOperand.
     TypeSet InputSet(VTOperand);
 
-    for (unsigned i = 0; i != VTOperand.TypeVec.size(); ++i) {
-      assert(isVector(VTOperand.TypeVec[i]) && "EnforceVector didn't work");
-      if (MVT(VTOperand.TypeVec[i]).getVectorNumElements() >= NumElems) {
-        VTOperand.TypeVec.erase(VTOperand.TypeVec.begin()+i--);
-        MadeChange = true;
-      }
-    }
+    auto I = std::remove_if(VTOperand.TypeVec.begin(), VTOperand.TypeVec.end(),
+                            [NumElems](MVT VVT) {
+                              return VVT.getVectorNumElements() >= NumElems;
+                            });
+    MadeChange |= I != VTOperand.TypeVec.end();
+    VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
+
     if (VTOperand.TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
       TP.error("Type inference contradiction found, forcing '" +
                InputSet.getName() + "' to have less vector elements than '" +
@@ -576,13 +559,13 @@ bool EEVT::TypeSet::EnforceVectorSubVectorTypeIs(EEVT::TypeSet &VTOperand,
     // Only keep types that have more elements than 'this'.
     TypeSet InputSet(*this);
 
-    for (unsigned i = 0; i != TypeVec.size(); ++i) {
-      assert(isVector(TypeVec[i]) && "EnforceVector didn't work");
-      if (MVT(TypeVec[i]).getVectorNumElements() <= NumElems) {
-        TypeVec.erase(TypeVec.begin()+i--);
-        MadeChange = true;
-      }
-    }
+    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
+                            [NumElems](MVT VVT) {
+                              return VVT.getVectorNumElements() <= NumElems;
+                            });
+    MadeChange |= I != TypeVec.end();
+    TypeVec.erase(I, TypeVec.end());
+
     if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
       TP.error("Type inference contradiction found, forcing '" +
                InputSet.getName() + "' to have more vector elements than '" +
@@ -614,13 +597,13 @@ bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
     // Only keep types that have same elements as VTOperand.
     TypeSet InputSet(VTOperand);
 
-    for (unsigned i = 0; i != VTOperand.TypeVec.size(); ++i) {
-      assert(isVector(VTOperand.TypeVec[i]) && "EnforceVector didn't work");
-      if (MVT(VTOperand.TypeVec[i]).getVectorNumElements() != NumElems) {
-        VTOperand.TypeVec.erase(VTOperand.TypeVec.begin()+i--);
-        MadeChange = true;
-      }
-    }
+    auto I = std::remove_if(VTOperand.TypeVec.begin(), VTOperand.TypeVec.end(),
+                            [NumElems](MVT VVT) {
+                              return VVT.getVectorNumElements() != NumElems;
+                            });
+    MadeChange |= I != VTOperand.TypeVec.end();
+    VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
+
     if (VTOperand.TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
       TP.error("Type inference contradiction found, forcing '" +
                InputSet.getName() + "' to have same number elements as '" +
@@ -634,13 +617,13 @@ bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
     // Only keep types that have same elements as 'this'.
     TypeSet InputSet(*this);
 
-    for (unsigned i = 0; i != TypeVec.size(); ++i) {
-      assert(isVector(TypeVec[i]) && "EnforceVector didn't work");
-      if (MVT(TypeVec[i]).getVectorNumElements() != NumElems) {
-        TypeVec.erase(TypeVec.begin()+i--);
-        MadeChange = true;
-      }
-    }
+    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
+                            [NumElems](MVT VVT) {
+                              return VVT.getVectorNumElements() != NumElems;
+                            });
+    MadeChange |= I != TypeVec.end();
+    TypeVec.erase(I, TypeVec.end());
+
     if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
       TP.error("Type inference contradiction found, forcing '" +
                InputSet.getName() + "' to have same number elements than '" +

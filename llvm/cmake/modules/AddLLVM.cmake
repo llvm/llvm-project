@@ -660,6 +660,10 @@ endmacro(add_llvm_executable name)
 function(export_executable_symbols target)
   if (NOT MSVC) # MSVC's linker doesn't support exporting all symbols.
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
+    if (APPLE)
+      set_target_properties(${target} PROPERTIES
+        LINK_FLAGS "-rdynamic")
+    endif()
   endif()
 endfunction()
 

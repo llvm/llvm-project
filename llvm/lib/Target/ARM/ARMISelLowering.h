@@ -543,10 +543,10 @@ namespace llvm {
                               const ARMSubtarget *ST) const;
     SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDivRem(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
-    void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
+    SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG) const;
+    void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG,
                            SmallVectorImpl<SDValue> &Results) const;
-    SDValue LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG, bool Signed,
+    SDValue LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
                                    SDValue &Chain) const;
     SDValue LowerREM(SDNode *N, SelectionDAG &DAG) const;
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;

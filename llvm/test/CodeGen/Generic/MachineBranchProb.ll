@@ -16,11 +16,11 @@ entry:
     i64 5, label %sw.bb1
   ], !prof !0
 ; CHECK: BB#0: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#2(64) BB#4(21)
+; CHECK: Successors according to CFG: BB#2(1616928864) BB#4(530554784)
 ; CHECK: BB#4: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1(10) BB#5(11)
+; CHECK: Successors according to CFG: BB#1(252645135) BB#5(277909649)
 ; CHECK: BB#5: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1(4) BB#3(7)
+; CHECK: Successors according to CFG: BB#1(101058054) BB#3(176851595)
 
 sw.bb:
   br label %return
@@ -62,7 +62,7 @@ return: ret void
 ; CHECK-LABEL: Machine code for function left_leaning_weight_balanced_tree:
 ; CHECK: BB#0: derived from LLVM BB %entry
 ; CHECK-NOT: Successors
-; CHECK: Successors according to CFG: BB#8(13) BB#9(20)
+; CHECK: Successors according to CFG: BB#8(852677332) BB#9(1294806318)
 }
 
 !1 = !{!"branch_weights",

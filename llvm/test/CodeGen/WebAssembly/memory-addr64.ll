@@ -11,7 +11,7 @@ declare void @llvm.wasm.grow.memory.i64(i64) nounwind
 ; CHECK-LABEL: memory_size:
 ; CHECK-NEXT: .result i64{{$}}
 ; CHECK-NEXT: .local i64{{$}}
-; CHECK-NEXT: memory_size $0{{$}}
+; CHECK-NEXT: memory_size $0={{$}}
 ; CHECK-NEXT: return $0{{$}}
 define i64 @memory_size() {
   %a = call i64 @llvm.wasm.memory.size.i64()

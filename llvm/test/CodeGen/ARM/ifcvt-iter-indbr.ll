@@ -30,9 +30,9 @@ declare i8* @bar(i32, i8*, i8*)
 ; CHECK-NEXT:  blx _foo
 ;
 ; CHECK-WEIGHT: BB#0:
-; CHECK-WEIGHT: Successors according to CFG: BB#1(16) BB#2(8) BB#4(8)
+; CHECK-WEIGHT: Successors according to CFG: BB#1(1073741824) BB#2(536870912) BB#4(536870912)
 ; CHECK-WEIGHT: BB#1:
-; CHECK-WEIGHT: Successors according to CFG: BB#2(24) BB#4(8)
+; CHECK-WEIGHT: Successors according to CFG: BB#2(1610612736) BB#4(536870912)
 
 define i32 @test(i32 %a, i32 %a2, i32* %p, i32* %p2) {
 entry:

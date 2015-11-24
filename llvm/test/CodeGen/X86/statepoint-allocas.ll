@@ -16,7 +16,7 @@ define i32 addrspace(1)* @test(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK: movq   %rdi, (%rsp)
 ; CHECK: callq return_i1
 ; CHECK: movq   (%rsp), %rax
-; CHECK: popq   %rdx
+; CHECK: popq   %rcx
 ; CHECK: retq
 entry:
   %alloca = alloca i32 addrspace(1)*, align 8
@@ -33,7 +33,7 @@ define i32 addrspace(1)* @test2(i32 addrspace(1)* %ptr) gc "statepoint-example" 
 ; CHECK: movq   %rdi, (%rsp)
 ; CHECK: callq return_i1
 ; CHECK: xorl   %eax, %eax
-; CHECK: popq   %rdx
+; CHECK: popq   %rcx
 ; CHECK: retq
 entry:
   %alloca = alloca i32 addrspace(1)*, align 8

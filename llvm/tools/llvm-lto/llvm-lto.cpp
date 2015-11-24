@@ -190,32 +190,6 @@ static int listSymbols(StringRef Command, const TargetOptions &Options) {
   return 0;
 }
 
-/// Parse the function index out of an IR file and return the function
-/// index object if found, or nullptr if not.
-static ErrorOr<std::unique_ptr<FunctionInfoIndex>>
-getFunctionIndexForFile(StringRef Path,
-                        DiagnosticHandlerFunction DiagnosticHandler) {
-  std::unique_ptr<MemoryBuffer> Buffer;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(Path);
-  if (std::error_code EC = BufferOrErr.getError())
-    return EC;
-  Buffer = std::move(BufferOrErr.get());
-
-  // Don't bother trying to build an index if there is no summary information
-  // in this bitcode file.
-  if (!object::FunctionIndexObjectFile::hasFunctionSummaryInMemBuffer(
-          Buffer->getMemBufferRef(), DiagnosticHandler))
-    return std::unique_ptr<FunctionInfoIndex>(nullptr);
-
-  ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-      object::FunctionIndexObjectFile::create(Buffer->getMemBufferRef(),
-                                              DiagnosticHandler);
-  if (std::error_code EC = ObjOrErr.getError())
-    return EC;
-  return (*ObjOrErr)->takeIndex();
-}
-
 /// Create a combined index file from the input IR files and write it.
 ///
 /// This is meant to enable testing of ThinLTO combined index generation,
@@ -225,7 +199,7 @@ static int createCombinedFunctionIndex(StringRef Command) {
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-        getFunctionIndexForFile(Filename, diagnosticHandler);
+        llvm::getFunctionIndexForFile(Filename, diagnosticHandler);
     if (std::error_code EC = IndexOrErr.getError()) {
       std::string Error = EC.message();
       errs() << Command << ": error loading file '" << Filename

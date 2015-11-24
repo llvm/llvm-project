@@ -99,6 +99,13 @@ public:
                                  StringRef FunctionName);
 };
 }
+
+/// Parse the function index out of an IR file and return the function
+/// index object if found, or nullptr if not.
+ErrorOr<std::unique_ptr<FunctionInfoIndex>>
+getFunctionIndexForFile(StringRef Path,
+                        DiagnosticHandlerFunction DiagnosticHandler,
+                        const Module *ExportingModule = nullptr);
 }
 
 #endif

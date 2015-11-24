@@ -395,6 +395,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       { RTLIB::SINTTOFP_I64_F64, "__i64tod", CallingConv::ARM_AAPCS_VFP },
       { RTLIB::UINTTOFP_I64_F32, "__u64tos", CallingConv::ARM_AAPCS_VFP },
       { RTLIB::UINTTOFP_I64_F64, "__u64tod", CallingConv::ARM_AAPCS_VFP },
+      { RTLIB::SDIV_I32, "__rt_sdiv",   CallingConv::ARM_AAPCS_VFP },
+      { RTLIB::SDIV_I64, "__rt_sdiv64", CallingConv::ARM_AAPCS_VFP },
     };
 
     for (const auto &LC : LibraryCalls) {
@@ -782,10 +784,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->isTargetWindows() && !Subtarget->hasDivide()) {
-    setOperationAction(ISD::SDIV, MVT::i32, Custom);
     setOperationAction(ISD::UDIV, MVT::i32, Custom);
 
-    setOperationAction(ISD::SDIV, MVT::i64, Custom);
     setOperationAction(ISD::UDIV, MVT::i64, Custom);
   }
 
@@ -6668,7 +6668,6 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
-                                                  bool Signed,
                                                   SDValue &Chain) const {
   EVT VT = Op.getValueType();
   assert((VT == MVT::i32 || VT == MVT::i64) &&
@@ -6679,10 +6678,7 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   const auto &TLI = DAG.getTargetLoweringInfo();
 
   const char *Name = nullptr;
-  if (Signed)
-    Name = (VT == MVT::i32) ? "__rt_sdiv" : "__rt_sdiv64";
-  else
-    Name = (VT == MVT::i32) ? "__rt_udiv" : "__rt_udiv64";
+  Name = (VT == MVT::i32) ? "__rt_udiv" : "__rt_udiv64";
 
   SDValue ES = DAG.getExternalSymbol(Name, TLI.getPointerTy(DL));
 
@@ -6704,8 +6700,8 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   return LowerCallTo(CLI).first;
 }
 
-SDValue ARMTargetLowering::LowerDIV_Windows(SDValue Op, SelectionDAG &DAG,
-                                            bool Signed) const {
+SDValue ARMTargetLowering::LowerDIV_Windows(SDValue Op,
+                                            SelectionDAG &DAG) const {
   assert(Op.getValueType() == MVT::i32 &&
          "unexpected type for custom lowering DIV");
   SDLoc dl(Op);
@@ -6713,11 +6709,11 @@ SDValue ARMTargetLowering::LowerDIV_Windows(SDValue Op, SelectionDAG &DAG,
   SDValue DBZCHK = DAG.getNode(ARMISD::WIN__DBZCHK, dl, MVT::Other,
                                DAG.getEntryNode(), Op.getOperand(1));
 
-  return LowerWindowsDIVLibCall(Op, DAG, Signed, DBZCHK);
+  return LowerWindowsDIVLibCall(Op, DAG, DBZCHK);
 }
 
 void ARMTargetLowering::ExpandDIV_Windows(
-    SDValue Op, SelectionDAG &DAG, bool Signed,
+    SDValue Op, SelectionDAG &DAG,
     SmallVectorImpl<SDValue> &Results) const {
   const auto &DL = DAG.getDataLayout();
   const auto &TLI = DAG.getTargetLoweringInfo();
@@ -6735,7 +6731,7 @@ void ARMTargetLowering::ExpandDIV_Windows(
   SDValue DBZCHK =
       DAG.getNode(ARMISD::WIN__DBZCHK, dl, MVT::Other, DAG.getEntryNode(), Or);
 
-  SDValue Result = LowerWindowsDIVLibCall(Op, DAG, Signed, DBZCHK);
+  SDValue Result = LowerWindowsDIVLibCall(Op, DAG, DBZCHK);
 
   SDValue Lower = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Result);
   SDValue Upper = DAG.getNode(ISD::SRL, dl, MVT::i64, Result,
@@ -6836,13 +6832,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::FLT_ROUNDS_:   return LowerFLT_ROUNDS_(Op, DAG);
   case ISD::MUL:           return LowerMUL(Op, DAG);
-  case ISD::SDIV:
-    if (Subtarget->isTargetWindows())
-      return LowerDIV_Windows(Op, DAG, /* Signed */ true);
-    return LowerSDIV(Op, DAG);
+  case ISD::SDIV:          return LowerSDIV(Op, DAG);
   case ISD::UDIV:
     if (Subtarget->isTargetWindows())
-      return LowerDIV_Windows(Op, DAG, /* Signed */ false);
+      return LowerDIV_Windows(Op, DAG);
     return LowerUDIV(Op, DAG);
   case ISD::ADDC:
   case ISD::ADDE:
@@ -6895,10 +6888,8 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     ReplaceREADCYCLECOUNTER(N, Results, DAG, Subtarget);
     return;
   case ISD::UDIV:
-  case ISD::SDIV:
     assert(Subtarget->isTargetWindows() && "can only expand DIV on Windows");
-    return ExpandDIV_Windows(SDValue(N, 0), DAG, N->getOpcode() == ISD::SDIV,
-                             Results);
+    return ExpandDIV_Windows(SDValue(N, 0), DAG, Results);
   }
   if (Res.getNode())
     Results.push_back(Res);

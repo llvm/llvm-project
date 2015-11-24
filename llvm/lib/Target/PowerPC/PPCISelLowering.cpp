@@ -8413,8 +8413,8 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr *MI,
           .addMBB(mainMBB);
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(PPC::B)).addMBB(sinkMBB);
 
-  thisMBB->addSuccessor(mainMBB, /* weight */ 0);
-  thisMBB->addSuccessor(sinkMBB, /* weight */ 1);
+  thisMBB->addSuccessor(mainMBB, BranchProbability::getZero());
+  thisMBB->addSuccessor(sinkMBB, BranchProbability::getOne());
 
   // mainMBB:
   //  mainDstReg = 0

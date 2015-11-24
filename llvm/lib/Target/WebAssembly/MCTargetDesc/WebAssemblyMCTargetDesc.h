@@ -34,13 +34,18 @@ class StringRef;
 class Target;
 class Triple;
 class raw_ostream;
+class raw_pwrite_stream;
 
 extern Target TheWebAssemblyTarget32;
 extern Target TheWebAssemblyTarget64;
 
+MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
+                                              const MCRegisterInfo &MRI,
+                                              MCContext &Ctx);
+
 MCAsmBackend *createWebAssemblyAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          StringRef TT, StringRef CPU);
+                                          const Triple &TT, StringRef CPU);
 
 } // end namespace llvm
 

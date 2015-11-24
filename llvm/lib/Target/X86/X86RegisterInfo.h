@@ -87,6 +87,11 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
+  /// getGPRsForTailCall - Returns a register class with registers that can be
+  /// used in forming tail calls.
+  const TargetRegisterClass *
+  getGPRsForTailCall(const MachineFunction &MF) const;
+
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 

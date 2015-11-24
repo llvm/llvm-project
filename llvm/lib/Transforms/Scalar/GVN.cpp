@@ -1555,6 +1555,16 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   for (pred_iterator PI = pred_begin(LoadBB), E = pred_end(LoadBB);
        PI != E; ++PI) {
     BasicBlock *Pred = *PI;
+
+    // If any predecessor block is an EH pad that does not allow non-PHI
+    // instructions before the terminator, we can't PRE the load.
+    if (Pred->getTerminator()->isEHPad()) {
+      DEBUG(dbgs()
+            << "COULD NOT PRE LOAD BECAUSE OF AN EH PAD PREDECESSOR '"
+            << Pred->getName() << "': " << *LI << '\n');
+      return false;
+    }
+
     if (IsValueFullyAvailableInBlock(Pred, FullyAvailableBlocks, 0)) {
       continue;
     }

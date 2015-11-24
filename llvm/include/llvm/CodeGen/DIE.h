@@ -100,10 +100,8 @@ public:
   ///
   void Emit(const AsmPrinter *AP) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O);
   void dump();
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -143,9 +141,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -164,9 +160,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -185,9 +179,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -203,9 +195,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -223,9 +213,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -252,9 +240,7 @@ public:
                                            : sizeof(int32_t);
   }
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -273,9 +259,7 @@ public:
     return 8;
   }
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -295,9 +279,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -444,10 +426,8 @@ public:
   ///
   unsigned SizeOf(const AsmPrinter *AP) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
   void dump() const;
-#endif
 };
 
 struct IntrusiveBackListNode {
@@ -710,10 +690,8 @@ public:
   /// gives \a DIEValue::isNone) if no such attribute exists.
   DIEValue findAttribute(dwarf::Attribute Attribute) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O, unsigned IndentCount = 0) const;
   void dump();
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -747,9 +725,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 //===--------------------------------------------------------------------===//
@@ -780,9 +756,7 @@ public:
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
-#ifndef NDEBUG
   void print(raw_ostream &O) const;
-#endif
 };
 
 } // end llvm namespace

@@ -132,6 +132,12 @@ DummySymbolMappings("dummy-extern",
                     cl::ZeroOrMore,
                     cl::Hidden);
 
+static cl::opt<bool>
+PrintAllocationRequests("print-alloc-requests",
+                        cl::desc("Print allocation requests made to the memory "
+                                 "manager by RuntimeDyld"),
+                        cl::Hidden);
+
 /* *** */
 
 // A trivial memory manager that doesn't do anything fancy, just uses the
@@ -211,6 +217,10 @@ uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
                                                    unsigned Alignment,
                                                    unsigned SectionID,
                                                    StringRef SectionName) {
+  if (PrintAllocationRequests)
+    outs() << "allocateCodeSection(Size = " << Size << ", Alignment = "
+           << Alignment << ", SectionName = " << SectionName << ")\n";
+
   if (UsePreallocation)
     return allocateFromSlab(Size, Alignment, true /* isCode */);
 
@@ -227,6 +237,10 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
                                                    unsigned SectionID,
                                                    StringRef SectionName,
                                                    bool IsReadOnly) {
+  if (PrintAllocationRequests)
+    outs() << "allocateDataSection(Size = " << Size << ", Alignment = "
+           << Alignment << ", SectionName = " << SectionName << ")\n";
+
   if (UsePreallocation)
     return allocateFromSlab(Size, Alignment, false /* isCode */);
 

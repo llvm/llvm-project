@@ -112,6 +112,11 @@ public:
     return IsLikely ? (1u << 20) - 1 : 1;
   }
 
+  static BranchProbability getBranchProbStackProtector(bool IsLikely) {
+    static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
+    return IsLikely ? LikelyProb : LikelyProb.getCompl();
+  }
+
   void calculate(Function &F, const LoopInfo& LI);
 
 private:

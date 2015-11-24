@@ -41,20 +41,21 @@ void RuntimeDyldImpl::deregisterEHFrames() {}
 
 #ifndef NDEBUG
 static void dumpSectionMemory(const SectionEntry &S, StringRef State) {
-  dbgs() << "----- Contents of section " << S.Name << " " << State << " -----";
+  dbgs() << "----- Contents of section " << S.getName() << " " << State
+         << " -----";
 
-  if (S.Address == nullptr) {
+  if (S.getAddress() == nullptr) {
     dbgs() << "\n          <section not emitted>\n";
     return;
   }
 
   const unsigned ColsPerRow = 16;
 
-  uint8_t *DataAddr = S.Address;
-  uint64_t LoadAddr = S.LoadAddress;
+  uint8_t *DataAddr = S.getAddress();
+  uint64_t LoadAddr = S.getLoadAddress();
 
   unsigned StartPadding = LoadAddr & (ColsPerRow - 1);
-  unsigned BytesRemaining = S.Size;
+  unsigned BytesRemaining = S.getSize();
 
   if (StartPadding) {
     dbgs() << "\n" << format("0x%016" PRIx64,
@@ -97,7 +98,7 @@ void RuntimeDyldImpl::resolveRelocations() {
     // symbol for the relocation is located.  The SectionID in the relocation
     // entry provides the section to which the relocation will be applied.
     int Idx = it->getFirst();
-    uint64_t Addr = Sections[Idx].LoadAddress;
+    uint64_t Addr = Sections[Idx].getLoadAddress();
     DEBUG(dbgs() << "Resolving relocations Section #" << Idx << "\t"
                  << format("%p", (uintptr_t)Addr) << "\n");
     resolveRelocationList(it->getSecond(), Addr);
@@ -116,7 +117,7 @@ void RuntimeDyldImpl::mapSectionAddress(const void *LocalAddress,
                                         uint64_t TargetAddress) {
   MutexGuard locked(lock);
   for (unsigned i = 0, e = Sections.size(); i != e; ++i) {
-    if (Sections[i].Address == LocalAddress) {
+    if (Sections[i].getAddress() == LocalAddress) {
       reassignSectionAddress(i, TargetAddress);
       return;
     }
@@ -431,10 +432,9 @@ unsigned RuntimeDyldImpl::computeSectionStubBufSize(const ObjectFile &Obj,
     if (!(RelSecI == Section))
       continue;
 
-    for (const RelocationRef &Reloc : SI->relocations()) {
-      (void)Reloc;
-      StubBufSize += StubSize;
-    }
+    for (const RelocationRef &Reloc : SI->relocations())
+      if (relocationNeedsStub(Reloc))
+        StubBufSize += StubSize;
   }
 
   // Get section data size and alignment
@@ -517,7 +517,8 @@ void RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
   if (!Addr)
     report_fatal_error("Unable to allocate memory for common symbols!");
   uint64_t Offset = 0;
-  Sections.push_back(SectionEntry("<common symbols>", Addr, CommonSize, 0));
+  Sections.push_back(
+      SectionEntry("<common symbols>", Addr, CommonSize, CommonSize, 0));
   memset(Addr, 0, CommonSize);
 
   DEBUG(dbgs() << "emitCommonSection SectionID: " << SectionID << " new addr: "
@@ -642,7 +643,8 @@ unsigned RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
                  << " Allocate: " << Allocate << "\n");
   }
 
-  Sections.push_back(SectionEntry(Name, Addr, DataSize, (uintptr_t)pData));
+  Sections.push_back(
+      SectionEntry(Name, Addr, DataSize, Allocate, (uintptr_t)pData));
 
   if (Checker)
     Checker->registerSection(Obj.getFileName(), SectionID);
@@ -778,11 +780,11 @@ void RuntimeDyldImpl::reassignSectionAddress(unsigned SectionID,
   // Addr is a uint64_t because we can't assume the pointer width
   // of the target is the same as that of the host. Just use a generic
   // "big enough" type.
-  DEBUG(dbgs() << "Reassigning address for section "
-               << SectionID << " (" << Sections[SectionID].Name << "): "
-               << format("0x%016" PRIx64, Sections[SectionID].LoadAddress) << " -> "
-               << format("0x%016" PRIx64, Addr) << "\n");
-  Sections[SectionID].LoadAddress = Addr;
+  DEBUG(dbgs() << "Reassigning address for section " << SectionID << " ("
+               << Sections[SectionID].getName() << "): "
+               << format("0x%016" PRIx64, Sections[SectionID].getLoadAddress())
+               << " -> " << format("0x%016" PRIx64, Addr) << "\n");
+  Sections[SectionID].setLoadAddress(Addr);
 }
 
 void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
@@ -790,7 +792,7 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
   for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {
     const RelocationEntry &RE = Relocs[i];
     // Ignore relocations for sections that were not loaded
-    if (Sections[RE.SectionID].Address == nullptr)
+    if (Sections[RE.SectionID].getAddress() == nullptr)
       continue;
     resolveRelocation(RE, Value);
   }
@@ -856,17 +858,9 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
 uint64_t RuntimeDyld::LoadedObjectInfo::getSectionLoadAddress(
                                           const object::SectionRef &Sec) const {
 
-//   llvm::dbgs() << "Searching for " << Sec.getRawDataRefImpl() << " in:\n";
-//   for (auto E : ObjSecToIDMap)
-//     llvm::dbgs() << "Added: " << E.first.getRawDataRefImpl() << " -> " << E.second << "\n";
-
   auto I = ObjSecToIDMap.find(Sec);
-  if (I != ObjSecToIDMap.end()) {
-//    llvm::dbgs() << "Found ID " << I->second << " for Sec: " << Sec.getRawDataRefImpl() << ", LoadAddress = " << RTDyld.Sections[I->second].LoadAddress << "\n";
-    return RTDyld.Sections[I->second].LoadAddress;
-  } else {
-//    llvm::dbgs() << "Not found.\n";
-  }
+  if (I != ObjSecToIDMap.end())
+    return RTDyld.Sections[I->second].getLoadAddress();
 
   return 0;
 }

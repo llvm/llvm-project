@@ -137,6 +137,9 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(i);
     if (MFI.isVRegStackified(VReg))
       continue;
+    // Skip unused registers, which can use $discard.
+    if (MRI->use_empty(VReg))
+      continue;
 
     LiveInterval *LI = &Liveness->getInterval(VReg);
     assert(LI->weight == 0.0f);

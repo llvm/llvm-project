@@ -146,21 +146,14 @@ static unsigned getLEArOpcode(unsigned IsLP64) {
 /// to this register without worry about clobbering it.
 static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator &MBBI,
-                                       const TargetRegisterInfo *TRI,
+                                       const X86RegisterInfo *TRI,
                                        bool Is64Bit) {
   const MachineFunction *MF = MBB.getParent();
   const Function *F = MF->getFunction();
   if (!F || MF->getMMI().callsEHReturn())
     return 0;
 
-  static const uint16_t CallerSavedRegs32Bit[] = {
-    X86::EAX, X86::EDX, X86::ECX, 0
-  };
-
-  static const uint16_t CallerSavedRegs64Bit[] = {
-    X86::RAX, X86::RDX, X86::RCX, X86::RSI, X86::RDI,
-    X86::R8,  X86::R9,  X86::R10, X86::R11, 0
-  };
+  const TargetRegisterClass &AvailableRegs = *TRI->getGPRsForTailCall(*MF);
 
   unsigned Opc = MBBI->getOpcode();
   switch (Opc) {
@@ -189,10 +182,9 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
         Uses.insert(*AI);
     }
 
-    const uint16_t *CS = Is64Bit ? CallerSavedRegs64Bit : CallerSavedRegs32Bit;
-    for (; *CS; ++CS)
-      if (!Uses.count(*CS))
-        return *CS;
+    for (auto CS : AvailableRegs)
+      if (!Uses.count(CS) && CS != X86::RIP)
+        return CS;
   }
   }
 
@@ -2385,10 +2377,10 @@ void X86FrameLowering::adjustForHiPEPrologue(
                  .addReg(ScratchReg), PReg, false, SPLimitOffset);
     BuildMI(incStackMBB, DL, TII.get(X86::JLE_1)).addMBB(incStackMBB);
 
-    stackCheckMBB->addSuccessor(&PrologueMBB, 99);
-    stackCheckMBB->addSuccessor(incStackMBB, 1);
-    incStackMBB->addSuccessor(&PrologueMBB, 99);
-    incStackMBB->addSuccessor(incStackMBB, 1);
+    stackCheckMBB->addSuccessor(&PrologueMBB, {99, 100});
+    stackCheckMBB->addSuccessor(incStackMBB, {1, 100});
+    incStackMBB->addSuccessor(&PrologueMBB, {99, 100});
+    incStackMBB->addSuccessor(incStackMBB, {1, 100});
   }
 #ifdef XDEBUG
   MF.verify();

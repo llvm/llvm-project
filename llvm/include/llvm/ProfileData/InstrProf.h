@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Endian.h"
@@ -367,7 +368,7 @@ InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site) const {
   if (N == 0)
     return std::unique_ptr<InstrProfValueData[]>(nullptr);
 
-  std::unique_ptr<InstrProfValueData[]> VD(new InstrProfValueData[N]);
+  auto VD = llvm::make_unique<InstrProfValueData[]>(N);
   uint32_t I = 0;
   for (auto V : getValueSitesForKind(ValueKind)[Site].ValueData) {
     VD[I] = V;

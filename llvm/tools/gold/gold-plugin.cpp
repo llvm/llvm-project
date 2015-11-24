@@ -451,8 +451,6 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
       const Comdat *C = Base->getComdat();
       if (C)
         sym.comdat_key = strdup(C->getName().str().c_str());
-      else if (Base->hasWeakLinkage() || Base->hasLinkOnceLinkage())
-        sym.comdat_key = strdup(sym.name);
     }
 
     sym.resolution = LDPR_UNKNOWN;

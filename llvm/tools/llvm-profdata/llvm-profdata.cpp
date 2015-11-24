@@ -30,6 +30,8 @@
 
 using namespace llvm;
 
+enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
+
 static void exitWithError(const Twine &Message,
                           StringRef Whence = "",
                           StringRef Hint = "") {
@@ -92,9 +94,13 @@ static void handleMergeWriterError(std::error_code &Error,
 }
 
 static void mergeInstrProfile(const cl::list<std::string> &Inputs,
-                              StringRef OutputFilename) {
+                              StringRef OutputFilename,
+                              ProfileFormat OutputFormat) {
   if (OutputFilename.compare("-") == 0)
     exitWithError("Cannot write indexed profdata format to stdout.");
+
+  if (OutputFormat != PF_Binary && OutputFormat != PF_Text)
+    exitWithError("Unknown format is specified.");
 
   std::error_code EC;
   raw_fd_ostream Output(OutputFilename.data(), EC, sys::fs::F_None);
@@ -119,14 +125,22 @@ static void mergeInstrProfile(const cl::list<std::string> &Inputs,
     if (Reader->hasError())
       exitWithErrorCode(Reader->getError(), Filename);
   }
-  Writer.write(Output);
+  if (OutputFormat == PF_Text)
+    Writer.writeText(Output);
+  else
+    Writer.write(Output);
 }
+
+static sampleprof::SampleProfileFormat FormatMap[] = {
+    sampleprof::SPF_None, sampleprof::SPF_Text, sampleprof::SPF_Binary,
+    sampleprof::SPF_GCC};
 
 static void mergeSampleProfile(const cl::list<std::string> &Inputs,
                                StringRef OutputFilename,
-                               sampleprof::SampleProfileFormat OutputFormat) {
+                               ProfileFormat OutputFormat) {
   using namespace sampleprof;
-  auto WriterOrErr = SampleProfileWriter::create(OutputFilename, OutputFormat);
+  auto WriterOrErr =
+      SampleProfileWriter::create(OutputFilename, FormatMap[OutputFormat]);
   if (std::error_code EC = WriterOrErr.getError())
     exitWithErrorCode(EC, OutputFilename);
 
@@ -174,19 +188,18 @@ static int merge_main(int argc, const char *argv[]) {
       cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
                  clEnumVal(sample, "Sample profile"), clEnumValEnd));
 
-  cl::opt<sampleprof::SampleProfileFormat> OutputFormat(
-      cl::desc("Format of output profile (only meaningful with --sample)"),
-      cl::init(sampleprof::SPF_Binary),
-      cl::values(clEnumValN(sampleprof::SPF_Binary, "binary",
-                            "Binary encoding (default)"),
-                 clEnumValN(sampleprof::SPF_Text, "text", "Text encoding"),
-                 clEnumValN(sampleprof::SPF_GCC, "gcc", "GCC encoding"),
+  cl::opt<ProfileFormat> OutputFormat(
+      cl::desc("Format of output profile"), cl::init(PF_Binary),
+      cl::values(clEnumValN(PF_Binary, "binary", "Binary encoding (default)"),
+                 clEnumValN(PF_Text, "text", "Text encoding"),
+                 clEnumValN(PF_GCC, "gcc",
+                            "GCC encoding (only meaningful for -sample)"),
                  clEnumValEnd));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
   if (ProfileKind == instr)
-    mergeInstrProfile(Inputs, OutputFilename);
+    mergeInstrProfile(Inputs, OutputFilename, OutputFormat);
   else
     mergeSampleProfile(Inputs, OutputFilename, OutputFormat);
 
@@ -195,7 +208,8 @@ static int merge_main(int argc, const char *argv[]) {
 
 static int showInstrProfile(std::string Filename, bool ShowCounts,
                             bool ShowIndirectCallTargets, bool ShowAllFunctions,
-                            std::string ShowFunction, raw_fd_ostream &OS) {
+                            std::string ShowFunction, bool TextFormat,
+                            raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, Filename);
@@ -208,52 +222,68 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
         ShowAllFunctions || (!ShowFunction.empty() &&
                              Func.Name.find(ShowFunction) != Func.Name.npos);
 
+    bool doTextFormatDump = (Show && ShowCounts && TextFormat);
+
+    if (doTextFormatDump) {
+      InstrProfWriter::writeRecordInText(Func, OS);
+      continue;
+    }
+
     ++TotalFunctions;
     assert(Func.Counts.size() > 0 && "function missing entry counter");
     if (Func.Counts[0] > MaxFunctionCount)
       MaxFunctionCount = Func.Counts[0];
 
+    for (size_t I = 1, E = Func.Counts.size(); I < E; ++I) {
+      if (Func.Counts[I] > MaxBlockCount)
+        MaxBlockCount = Func.Counts[I];
+    }
+
     if (Show) {
+
       if (!ShownFunctions)
         OS << "Counters:\n";
+
       ++ShownFunctions;
 
       OS << "  " << Func.Name << ":\n"
          << "    Hash: " << format("0x%016" PRIx64, Func.Hash) << "\n"
          << "    Counters: " << Func.Counts.size() << "\n"
          << "    Function count: " << Func.Counts[0] << "\n";
+
       if (ShowIndirectCallTargets)
         OS << "    Indirect Call Site Count: "
            << Func.getNumValueSites(IPVK_IndirectCallTarget) << "\n";
-    }
 
-    if (Show && ShowCounts)
-      OS << "    Block counts: [";
-    for (size_t I = 1, E = Func.Counts.size(); I < E; ++I) {
-      if (Func.Counts[I] > MaxBlockCount)
-        MaxBlockCount = Func.Counts[I];
-      if (Show && ShowCounts)
-        OS << (I == 1 ? "" : ", ") << Func.Counts[I];
-    }
-    if (Show && ShowCounts)
-      OS << "]\n";
+      if (ShowCounts) {
+        OS << "    Block counts: [";
+        for (size_t I = 1, E = Func.Counts.size(); I < E; ++I) {
+          OS << (I == 1 ? "" : ", ") << Func.Counts[I];
+        }
+        OS << "]\n";
+      }
 
-    if (Show && ShowIndirectCallTargets) {
-      uint32_t NS = Func.getNumValueSites(IPVK_IndirectCallTarget);
-      OS << "    Indirect Target Results: \n";
-      for (size_t I = 0; I < NS; ++I) {
-        uint32_t NV = Func.getNumValueDataForSite(IPVK_IndirectCallTarget, I);
-        std::unique_ptr<InstrProfValueData[]> VD =
-            Func.getValueForSite(IPVK_IndirectCallTarget, I);
-        for (uint32_t V = 0; V < NV; V++) {
-          OS << "\t[ " << I << ", ";
-          OS << (const char *)VD[V].Value << ", " << VD[V].Count << " ]\n";
+      if (ShowIndirectCallTargets) {
+        uint32_t NS = Func.getNumValueSites(IPVK_IndirectCallTarget);
+        OS << "    Indirect Target Results: \n";
+        for (size_t I = 0; I < NS; ++I) {
+          uint32_t NV = Func.getNumValueDataForSite(IPVK_IndirectCallTarget, I);
+          std::unique_ptr<InstrProfValueData[]> VD =
+              Func.getValueForSite(IPVK_IndirectCallTarget, I);
+          for (uint32_t V = 0; V < NV; V++) {
+            OS << "\t[ " << I << ", ";
+            OS << (const char *)VD[V].Value << ", " << VD[V].Count << " ]\n";
+          }
         }
       }
     }
   }
+
   if (Reader->hasError())
     exitWithErrorCode(Reader->getError(), Filename);
+
+  if (ShowCounts && TextFormat)
+    return 0;
 
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
@@ -289,6 +319,9 @@ static int show_main(int argc, const char *argv[]) {
 
   cl::opt<bool> ShowCounts("counts", cl::init(false),
                            cl::desc("Show counter values for shown functions"));
+  cl::opt<bool> TextFormat(
+      "text", cl::init(false),
+      cl::desc("Show instr profile data in text dump format"));
   cl::opt<bool> ShowIndirectCallTargets(
       "ic-targets", cl::init(false),
       cl::desc("Show indirect call site target values for shown functions"));
@@ -314,14 +347,14 @@ static int show_main(int argc, const char *argv[]) {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::F_Text);
   if (EC)
-      exitWithErrorCode(EC, OutputFilename);
+    exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !ShowFunction.empty())
     errs() << "warning: -function argument ignored: showing all functions\n";
 
   if (ProfileKind == instr)
     return showInstrProfile(Filename, ShowCounts, ShowIndirectCallTargets,
-                            ShowAllFunctions, ShowFunction, OS);
+                            ShowAllFunctions, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
                              ShowFunction, OS);

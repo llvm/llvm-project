@@ -84,7 +84,7 @@ private:
                              unsigned AsmVariant, const char *ExtraCode,
                              raw_ostream &OS) override;
 
-  std::string getRegTypeName(unsigned RegNo) const;
+  MVT getRegType(unsigned RegNo) const;
   const char *toString(MVT VT) const;
   std::string regToString(const MachineOperand &MO);
 };
@@ -95,14 +95,14 @@ private:
 // Helpers.
 //===----------------------------------------------------------------------===//
 
-std::string WebAssemblyAsmPrinter::getRegTypeName(unsigned RegNo) const {
+MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
   const TargetRegisterClass *TRC = MRI->getRegClass(RegNo);
   for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
     if (TRC->hasType(T))
-      return EVT(T).getEVTString();
+      return T;
   DEBUG(errs() << "Unknown type for register number: " << RegNo);
   llvm_unreachable("Unknown register type");
-  return "?";
+  return MVT::Other;
 }
 
 std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
@@ -165,21 +165,30 @@ static void ComputeLegalValueVTs(const Function &F,
 }
 
 void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
+  if (!MFI->getParams().empty()) {
+    MCInst Param;
+    Param.setOpcode(WebAssembly::PARAM);
+    for (MVT VT : MFI->getParams())
+      Param.addOperand(MCOperand::createImm(VT.SimpleTy));
+    EmitToStreamer(*OutStreamer, Param);
+  }
 
-  for (MVT VT : MFI->getParams())
-    OS << "\t" ".param " << toString(VT) << '\n';
 
   SmallVector<MVT, 4> ResultVTs;
   const Function &F(*MF->getFunction());
   ComputeLegalValueVTs(F, TM, F.getReturnType(), ResultVTs);
   // If the return type needs to be legalized it will get converted into
   // passing a pointer.
-  if (ResultVTs.size() == 1)
-    OS << "\t" ".result " << toString(ResultVTs.front()) << '\n';
+  if (ResultVTs.size() == 1) {
+    MCInst Result;
+    Result.setOpcode(WebAssembly::RESULT);
+    Result.addOperand(MCOperand::createImm(ResultVTs.front().SimpleTy));
+    EmitToStreamer(*OutStreamer, Result);
+  }
 
-  bool FirstWAReg = true;
+  bool AnyWARegs = false;
+  MCInst Local;
+  Local.setOpcode(WebAssembly::LOCAL);
   for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(Idx);
     unsigned WAReg = MFI->getWAReg(VReg);
@@ -192,20 +201,12 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
     // Don't declare stackified registers.
     if (int(WAReg) < 0)
       continue;
-    if (FirstWAReg)
-      OS << "\t" ".local ";
-    else
-      OS << ", ";
-    OS << getRegTypeName(VReg);
-    FirstWAReg = false;
+    Local.addOperand(MCOperand::createImm(getRegType(VReg).SimpleTy));
+    AnyWARegs = true;
   }
-  if (!FirstWAReg)
-    OS << '\n';
+  if (AnyWARegs)
+    EmitToStreamer(*OutStreamer, Local);
 
-  // EmitRawText appends a newline, so strip off the last newline.
-  StringRef Text = OS.str();
-  if (!Text.empty())
-    OutStreamer->EmitRawText(Text.substr(0, Text.size() - 1));
   AsmPrinter::EmitFunctionBodyStart();
 }
 
@@ -219,6 +220,10 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case WebAssembly::ARGUMENT_F64:
     // These represent values which are live into the function entry, so there's
     // no instruction to emit.
+    break;
+  case WebAssembly::LOOP_END:
+    // This is a no-op which just exists to tell AsmPrinter.cpp that there's a
+    // fallthrough which nevertheless requires a label for the destination here.
     break;
   default: {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
@@ -283,6 +288,8 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   StringRef Text = OS.str();
   if (!Text.empty())
     OutStreamer->EmitRawText(Text.substr(0, Text.size() - 1));
+
+  AsmPrinter::EmitEndOfAsmFile(M);
 }
 
 bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
