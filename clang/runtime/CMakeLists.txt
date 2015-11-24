@@ -47,11 +47,11 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
   # Find all variables that start with COMPILER_RT and populate a variable with
   # them.
   get_cmake_property(variableNames VARIABLES)
-  foreach(varaibleName ${variableNames})
-    if(varaibleName MATCHES "^COMPILER_RT")
-      string(REPLACE ";" "\;" value "${${varaibleName}}")
+  foreach(variableName ${variableNames})
+    if(variableName MATCHES "^COMPILER_RT")
+      string(REPLACE ";" "\;" value "${${variableName}}")
       list(APPEND COMPILER_RT_PASSTHROUGH_VARIABLES
-        -D${varaibleName}=${${value}})
+        -D${variableName}=${${value}})
     endif()
   endforeach()
 

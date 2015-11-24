@@ -3524,6 +3524,25 @@ AST_MATCHER(QualType, isConstQualified) {
   return Node.isConstQualified();
 }
 
+/// \brief Matches QualType nodes that are volatile-qualified, i.e., that
+/// include "top-level" volatile.
+///
+/// Given
+/// \code
+///   void a(int);
+///   void b(int volatile);
+///   void c(volatile int);
+///   void d(volatile int*);
+///   void e(int volatile) {};
+/// \endcode
+/// functionDecl(hasAnyParameter(hasType(isVolatileQualified())))
+///   matches "void b(int volatile)", "void c(volatile int)" and
+///   "void e(int volatile) {}". It does not match d as there
+///   is no top-level volatile on the parameter type "volatile int *".
+AST_MATCHER(QualType, isVolatileQualified) {
+  return Node.isVolatileQualified();
+}
+
 /// \brief Matches QualType nodes that have local CV-qualifiers attached to
 /// the node, not hidden within a typedef.
 ///

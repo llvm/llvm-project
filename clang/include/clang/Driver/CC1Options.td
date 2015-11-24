@@ -381,6 +381,9 @@ def fmodules_embed_file_EQ : Joined<["-"], "fmodules-embed-file=">,
   MetaVarName<"<file>">,
   HelpText<"Embed the contents of the specified file into the module file "
            "being compiled.">;
+def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
+  HelpText<"Embed the contents of all files read by this compilation into "
+           "the produced module file.">;
 def fmodules_local_submodule_visibility :
   Flag<["-"], "fmodules-local-submodule-visibility">,
   HelpText<"Enforce name visibility rules across submodules of the same "

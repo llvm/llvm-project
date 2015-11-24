@@ -14,7 +14,7 @@
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "ModelInjector.h"
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/DataRecursiveASTVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -141,7 +141,7 @@ public:
 namespace {
 
 class AnalysisConsumer : public AnalysisASTConsumer,
-                         public DataRecursiveASTVisitor<AnalysisConsumer> {
+                         public RecursiveASTVisitor<AnalysisConsumer> {
   enum {
     AM_None = 0,
     AM_Syntax = 0x1,

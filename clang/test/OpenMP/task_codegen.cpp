@@ -119,7 +119,7 @@ int main() {
 // CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 1
 // CHECK: store i64 4, i64*
 // CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 2
-// CHECK: store i8 2, i8*
+// CHECK: store i8 3, i8*
 // CHECK: [[IDX1:%.+]] = mul nsw i64 4, [[A_VAL]]
 // CHECK: [[START:%.+]] = getelementptr inbounds i32, i32* %{{.+}}, i64 [[IDX1]]
 // CHECK: [[B_VAL:%.+]] = load i8, i8* [[B]]
@@ -141,7 +141,7 @@ int main() {
 // CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 1
 // CHECK: store i64 [[SIZEOF]], i64*
 // CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 2
-// CHECK: store i8 2, i8*
+// CHECK: store i8 3, i8*
 // CHECK: getelementptr inbounds [2 x [[KMP_DEPEND_INFO]]], [2 x [[KMP_DEPEND_INFO]]]* %{{[^,]+}}, i32 0, i32 0
 // CHECK: bitcast [[KMP_DEPEND_INFO]]* %{{.+}} to i8*
 // CHECK: call i32 @__kmpc_omp_task_with_deps([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i8* [[ORIG_TASK_PTR]], i32 2, i8* %{{[^,]+}}, i32 0, i8* null)

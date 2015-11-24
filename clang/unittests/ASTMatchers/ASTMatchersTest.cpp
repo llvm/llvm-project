@@ -3023,6 +3023,15 @@ TEST(Field, MatchesField) {
   EXPECT_TRUE(matches("class X { int m; };", fieldDecl(hasName("m"))));
 }
 
+TEST(IsVolatileQualified, QualifiersMatch) {
+  EXPECT_TRUE(matches("volatile int i = 42;",
+                      varDecl(hasType(isVolatileQualified()))));
+  EXPECT_TRUE(notMatches("volatile int *i;",
+                         varDecl(hasType(isVolatileQualified()))));
+  EXPECT_TRUE(matches("typedef volatile int v_int; v_int i = 42;",
+                      varDecl(hasType(isVolatileQualified()))));
+}
+
 TEST(IsConstQualified, MatchesConstInt) {
   EXPECT_TRUE(matches("const int i = 42;",
                       varDecl(hasType(isConstQualified()))));

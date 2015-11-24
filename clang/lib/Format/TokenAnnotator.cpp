@@ -1057,76 +1057,94 @@ private:
 
   /// \brief Determine whether ')' is ending a cast.
   bool rParenEndsCast(const FormatToken &Tok) {
-    FormatToken *LeftOfParens = nullptr;
-    if (Tok.MatchingParen)
-      LeftOfParens = Tok.MatchingParen->getPreviousNonComment();
-    if (LeftOfParens && LeftOfParens->is(tok::r_paren) &&
-        LeftOfParens->MatchingParen)
-      LeftOfParens = LeftOfParens->MatchingParen->Previous;
-    if (LeftOfParens && LeftOfParens->is(tok::r_square) &&
-        LeftOfParens->MatchingParen &&
-        LeftOfParens->MatchingParen->is(TT_LambdaLSquare))
+    // C-style casts are only used in C++ and Java.
+    if (Style.Language != FormatStyle::LK_Cpp &&
+        Style.Language != FormatStyle::LK_Java)
       return false;
-    if (Tok.Next) {
-      if (Tok.Next->is(tok::question))
+
+    // Empty parens aren't casts and there are no casts at the end of the line.
+    if (Tok.Previous == Tok.MatchingParen || !Tok.Next || !Tok.MatchingParen)
+      return false;
+
+    FormatToken *LeftOfParens = Tok.MatchingParen->getPreviousNonComment();
+    if (LeftOfParens) {
+      // If there is an opening parenthesis left of the current parentheses,
+      // look past it as these might be chained casts.
+      if (LeftOfParens->is(tok::r_paren)) {
+        if (!LeftOfParens->MatchingParen ||
+            !LeftOfParens->MatchingParen->Previous)
+          return false;
+        LeftOfParens = LeftOfParens->MatchingParen->Previous;
+      }
+
+      // If there is an identifier (or with a few exceptions a keyword) right
+      // before the parentheses, this is unlikely to be a cast.
+      if (LeftOfParens->Tok.getIdentifierInfo() &&
+          !LeftOfParens->isOneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
+                                 tok::kw_delete))
         return false;
-      if (Style.Language == FormatStyle::LK_JavaScript &&
-          Tok.Next->is(Keywords.kw_in))
+
+      // Certain other tokens right before the parentheses are also signals that
+      // this cannot be a cast.
+      if (LeftOfParens->isOneOf(tok::at, tok::r_square, TT_OverloadedOperator,
+                                TT_TemplateCloser))
         return false;
-      if (Style.Language == FormatStyle::LK_Java && Tok.Next->is(tok::l_paren))
-        return true;
     }
-    bool IsCast = false;
-    bool ParensAreEmpty = Tok.Previous == Tok.MatchingParen;
+
+    if (Tok.Next->is(tok::question))
+      return false;
+
+    // As Java has no function types, a "(" after the ")" likely means that this
+    // is a cast.
+    if (Style.Language == FormatStyle::LK_Java && Tok.Next->is(tok::l_paren))
+      return true;
+
+    // If a (non-string) literal follows, this is likely a cast.
+    if (Tok.Next->isNot(tok::string_literal) &&
+        (Tok.Next->Tok.isLiteral() ||
+         Tok.Next->isOneOf(tok::kw_sizeof, tok::kw_alignof)))
+      return true;
+
+    // Heuristically try to determine whether the parentheses contain a type.
     bool ParensAreType =
         !Tok.Previous ||
         Tok.Previous->isOneOf(TT_PointerOrReference, TT_TemplateCloser) ||
         Tok.Previous->isSimpleTypeSpecifier();
     bool ParensCouldEndDecl =
-        Tok.Next &&
         Tok.Next->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
-    bool IsSizeOfOrAlignOf =
-        LeftOfParens && LeftOfParens->isOneOf(tok::kw_sizeof, tok::kw_alignof);
-    if (ParensAreType && !ParensCouldEndDecl && !IsSizeOfOrAlignOf &&
+    if (ParensAreType && !ParensCouldEndDecl &&
         (Contexts.size() > 1 && Contexts[Contexts.size() - 2].IsExpression))
-      IsCast = true;
-    else if (Tok.Next && Tok.Next->isNot(tok::string_literal) &&
-             (Tok.Next->Tok.isLiteral() ||
-              Tok.Next->isOneOf(tok::kw_sizeof, tok::kw_alignof)))
-      IsCast = true;
-    // If there is an identifier after the (), it is likely a cast, unless
-    // there is also an identifier before the ().
-    else if (LeftOfParens && Tok.Next &&
-             (LeftOfParens->Tok.getIdentifierInfo() == nullptr ||
-              LeftOfParens->isOneOf(tok::kw_return, tok::kw_case)) &&
-             !LeftOfParens->isOneOf(TT_OverloadedOperator, tok::at,
-                                    TT_TemplateCloser)) {
-      if (Tok.Next->isOneOf(tok::identifier, tok::numeric_constant)) {
-        IsCast = true;
-      } else {
-        // Use heuristics to recognize c style casting.
-        FormatToken *Prev = Tok.Previous;
-        if (Prev && Prev->isOneOf(tok::amp, tok::star))
-          Prev = Prev->Previous;
+      return true;
 
-        if (Prev && Tok.Next && Tok.Next->Next) {
-          bool NextIsUnary = Tok.Next->isUnaryOperator() ||
-                             Tok.Next->isOneOf(tok::amp, tok::star);
-          IsCast =
-              NextIsUnary && !Tok.Next->is(tok::plus) &&
-              Tok.Next->Next->isOneOf(tok::identifier, tok::numeric_constant);
-        }
+    // At this point, we heuristically assume that there are no casts at the
+    // start of the line. We assume that we have found most cases where there
+    // are by the logic above, e.g. "(void)x;".
+    if (!LeftOfParens)
+      return false;
 
-        for (; Prev != Tok.MatchingParen; Prev = Prev->Previous) {
-          if (!Prev ||
-              !Prev->isOneOf(tok::kw_const, tok::identifier, tok::coloncolon)) {
-            IsCast = false;
-            break;
-          }
-        }
-      }
+    // If the following token is an identifier, this is a cast. All cases where
+    // this can be something else are handled above.
+    if (Tok.Next->is(tok::identifier))
+      return true;
+
+    if (!Tok.Next->Next)
+      return false;
+
+    // If the next token after the parenthesis is a unary operator, assume
+    // that this is cast, unless there are unexpected tokens inside the
+    // parenthesis.
+    bool NextIsUnary =
+        Tok.Next->isUnaryOperator() || Tok.Next->isOneOf(tok::amp, tok::star);
+    if (!NextIsUnary || Tok.Next->is(tok::plus) ||
+        !Tok.Next->Next->isOneOf(tok::identifier, tok::numeric_constant))
+      return false;
+    // Search for unexpected tokens.
+    for (FormatToken *Prev = Tok.Previous; Prev != Tok.MatchingParen;
+         Prev = Prev->Previous) {
+      if (!Prev->isOneOf(tok::kw_const, tok::identifier, tok::coloncolon))
+        return false;
     }
-    return IsCast && !ParensAreEmpty;
+    return true;
   }
 
   /// \brief Return the type of the given token assuming it is * or &.

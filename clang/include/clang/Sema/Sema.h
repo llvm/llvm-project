@@ -7756,7 +7756,7 @@ public:
   ExprResult BuildCoyieldExpr(SourceLocation KwLoc, Expr *E);
   StmtResult BuildCoreturnStmt(SourceLocation KwLoc, Expr *E);
 
-  void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *Body);
+  void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
 
   //===--------------------------------------------------------------------===//
   // OpenMP directives and clauses.

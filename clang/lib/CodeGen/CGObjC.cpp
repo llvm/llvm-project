@@ -949,11 +949,11 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     // FIXME: We shouldn't need to get the function info here, the
     // runtime already should have computed it to build the function.
     llvm::Instruction *CallInstruction;
-    RValue RV = EmitCall(getTypes().arrangeFreeFunctionCall(propType, args,
-                                                       FunctionType::ExtInfo(),
-                                                            RequiredArgs::All),
-                         getPropertyFn, ReturnValueSlot(), args, nullptr,
-                         &CallInstruction);
+    RValue RV = EmitCall(
+        getTypes().arrangeFreeFunctionCall(
+            propType, args, FunctionType::ExtInfo(), RequiredArgs::All),
+        getPropertyFn, ReturnValueSlot(), args, CGCalleeInfo(),
+        &CallInstruction);
     if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(CallInstruction))
       call->setTailCall();
 

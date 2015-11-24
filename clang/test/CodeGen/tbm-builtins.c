@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -O3 -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s
 // FIXME: The code generation checks for add/sub and/or are depending on the optimizer.
+// The REQUIRES keyword will be removed when the FIXME is complete.
+// REQUIRES: x86-registered-target
 
 // Don't include mm_malloc.h, it's system specific.
 #define __MM_MALLOC_H

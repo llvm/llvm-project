@@ -2517,6 +2517,23 @@ matches "a(int)", "b(long)", but not "c(double)".
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isVolatileQualified0')"><a name="isVolatileQualified0Anchor">isVolatileQualified</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isVolatileQualified0"><pre>Matches QualType nodes that are volatile-qualified, i.e., that
+include "top-level" volatile.
+
+Given
+  void a(int);
+  void b(int volatile);
+  void c(volatile int);
+  void d(volatile int*);
+  void e(int volatile) {};
+functionDecl(hasAnyParameter(hasType(isVolatileQualified())))
+  matches "void b(int volatile)", "void c(volatile int)" and
+  "void e(int volatile) {}". It does not match d as there
+  is no top-level volatile on the parameter type "volatile int *".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordDecl.html">RecordDecl</a>&gt;</td><td class="name" onclick="toggle('isClass0')"><a name="isClass0Anchor">isClass</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isClass0"><pre>Matches RecordDecl object that are spelled with "class."
 

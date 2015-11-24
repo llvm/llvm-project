@@ -1535,12 +1535,8 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
 
   // Check whether DeclModule is transitively exported to an import of
   // the lookup set.
-  for (llvm::DenseSet<Module *>::iterator I = LookupModules.begin(),
-                                          E = LookupModules.end();
-       I != E; ++I)
-    if ((*I)->isModuleVisible(DeclModule))
-      return true;
-  return false;
+  return std::any_of(LookupModules.begin(), LookupModules.end(),
+                     [=](Module *M) { return M->isModuleVisible(DeclModule); });
 }
 
 bool Sema::isVisibleSlow(const NamedDecl *D) {

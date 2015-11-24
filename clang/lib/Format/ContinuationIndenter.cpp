@@ -144,6 +144,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Previous.is(tok::semi) && State.LineContainsContinuedForLoopSection)
     return true;
   if ((startsNextParameter(Current, Style) || Previous.is(tok::semi) ||
+       (Previous.is(TT_TemplateCloser) && Current.is(TT_StartOfName)) ||
        (Style.BreakBeforeTernaryOperators && Current.is(TT_ConditionalExpr) &&
         Previous.isNot(tok::question)) ||
        (!Style.BreakBeforeTernaryOperators &&
