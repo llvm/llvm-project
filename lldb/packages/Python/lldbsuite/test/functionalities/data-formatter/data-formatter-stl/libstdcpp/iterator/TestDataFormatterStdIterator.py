@@ -22,7 +22,6 @@ class StdIteratorDataFormatterTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @skipIfWindows # libstdcpp not ported to Windows
-    @expectedFailureFreeBSD("llvm.org/pr20548") # fails to build on lab.llvm.org buildbot
     @expectedFailureIcc # llvm.org/pr15301 LLDB prints incorrect sizes of STL containers
     def test_with_run_command(self):
         """Test that libstdcpp iterators format properly."""

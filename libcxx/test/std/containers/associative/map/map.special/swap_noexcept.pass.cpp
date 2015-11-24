@@ -94,18 +94,19 @@ struct some_alloc3
 int main()
 {
 #if __has_feature(cxx_noexcept)
+    typedef std::pair<const MoveOnly, MoveOnly> V;
     {
         typedef std::map<MoveOnly, MoveOnly> C;
         C c1, c2;
         static_assert(noexcept(swap(c1, c2)), "");
     }
     {
-        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, test_allocator<MoveOnly>> C;
+        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, test_allocator<V>> C;
         C c1, c2;
         static_assert(noexcept(swap(c1, c2)), "");
     }
     {
-        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<MoveOnly>> C;
+        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<V>> C;
         C c1, c2;
         static_assert(noexcept(swap(c1, c2)), "");
     }
@@ -117,28 +118,28 @@ int main()
 
 #if TEST_STD_VER >= 14
     { // POCS allocator, throwable swap for comp
-    typedef std::map<MoveOnly, MoveOnly, some_comp <MoveOnly>, some_alloc <MoveOnly>> C;
+    typedef std::map<MoveOnly, MoveOnly, some_comp <MoveOnly>, some_alloc <V>> C;
     C c1, c2;
     static_assert(!noexcept(swap(c1, c2)), "");
     }
     { // always equal allocator, throwable swap for comp
-    typedef std::map<MoveOnly, MoveOnly, some_comp <MoveOnly>, some_alloc2<MoveOnly>> C;
+    typedef std::map<MoveOnly, MoveOnly, some_comp <MoveOnly>, some_alloc2<V>> C;
     C c1, c2;
     static_assert(!noexcept(swap(c1, c2)), "");
     }
     { // POCS allocator, nothrow swap for comp
-    typedef std::map<MoveOnly, MoveOnly, some_comp2<MoveOnly>, some_alloc <MoveOnly>> C;
+    typedef std::map<MoveOnly, MoveOnly, some_comp2<MoveOnly>, some_alloc <V>> C;
     C c1, c2;
     static_assert( noexcept(swap(c1, c2)), "");
     }
     { // always equal allocator, nothrow swap for comp
-    typedef std::map<MoveOnly, MoveOnly, some_comp2<MoveOnly>, some_alloc2<MoveOnly>> C;
+    typedef std::map<MoveOnly, MoveOnly, some_comp2<MoveOnly>, some_alloc2<V>> C;
     C c1, c2;
     static_assert( noexcept(swap(c1, c2)), "");
     }
 
     { // NOT always equal allocator, nothrow swap for comp
-    typedef std::map<MoveOnly, MoveOnly, some_comp2<MoveOnly>, some_alloc3<MoveOnly>> C;
+    typedef std::map<MoveOnly, MoveOnly, some_comp2<MoveOnly>, some_alloc3<V>> C;
     C c1, c2;
     static_assert( noexcept(swap(c1, c2)), "");
     }

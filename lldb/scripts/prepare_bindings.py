@@ -77,7 +77,7 @@ def prepare_all_bindings(options):
                   if os.path.isdir(os.path.join(scripts_dir, f))]
 
     # Remove directories that do not represent script languages.
-    for removal_dir in [".svn", "interface", "__pycache__", "sphinx"]:
+    for removal_dir in [".svn", "interface", "__pycache__", "sphinx", "swig_bot_lib"]:
         if removal_dir in child_dirs:
             child_dirs.remove(removal_dir)
 

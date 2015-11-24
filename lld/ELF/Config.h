@@ -63,7 +63,7 @@ struct Configuration {
   bool StripAll;
   bool SysvHash = true;
   bool Verbose;
-  bool ZExecStack = false;
+  bool ZExecStack;
   bool ZNodelete;
   bool ZNow;
   bool ZOrigin;

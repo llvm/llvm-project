@@ -38,7 +38,7 @@ int main()
     assert(m.size() == 2);
     }
     {
-    typedef std::pair<MoveOnly, double> V;
+    typedef std::pair<const MoveOnly, double> V;
     std::map<MoveOnly, double, std::less<MoveOnly>, min_allocator<V>> m;
     assert(m.size() == 0);
     assert(m[1] == 0.0);

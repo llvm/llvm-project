@@ -15,7 +15,7 @@ foo:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_MERGE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x190
+// CHECK-NEXT: Address: 0x1C8
 
 // CHECK:      Name: foo
-// CHECK-NEXT: Value: 0x192
+// CHECK-NEXT: Value: 0x1CA

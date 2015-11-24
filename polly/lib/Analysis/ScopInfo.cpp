@@ -100,6 +100,12 @@ static cl::opt<int> MaxDisjunctsAssumed(
              "context (this bounds compile time)"),
     cl::Hidden, cl::ZeroOrMore, cl::init(150), cl::cat(PollyCategory));
 
+static cl::opt<bool> IgnoreIntegerWrapping(
+    "polly-ignore-integer-wrapping",
+    cl::desc("Do not build run-time checks to proof absence of integer "
+             "wrapping"),
+    cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 // Create a sequence of two schedules. Either argument may be null and is
@@ -1634,6 +1640,11 @@ isl_set *Scop::addNonEmptyDomainConstraints(isl_set *C) const {
 }
 
 void Scop::buildBoundaryContext() {
+  if (IgnoreIntegerWrapping) {
+    BoundaryContext = isl_set_universe(getParamSpace());
+    return;
+  }
+
   BoundaryContext = Affinator.getWrappingContext();
 
   // The isl_set_complement operation used to create the boundary context

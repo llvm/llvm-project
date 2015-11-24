@@ -275,7 +275,7 @@ def run_post_process_for_each_script_supported(vDictArgs):
     # Iterate script directory find any script language directories
     for scriptLang in listDirs:
         # __pycache__ is a magic directory in Python 3 that holds .pyc files
-        if scriptLang != "__pycache__":
+        if scriptLang != "__pycache__" and scriptLang != "swig_bot_lib":
             dbg.dump_text("Executing language script for \'%s\'" % scriptLang)
             nResult, strStatusMsg = run_post_process(scriptLang, strFinishFileName,
                                                      vDictArgs)

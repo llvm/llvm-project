@@ -33,16 +33,17 @@ struct some_comp
 int main()
 {
 #if __has_feature(cxx_noexcept)
+    typedef std::pair<const MoveOnly, MoveOnly> V;
     {
         typedef std::map<MoveOnly, MoveOnly> C;
         static_assert(std::is_nothrow_move_assignable<C>::value, "");
     }
     {
-        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, test_allocator<MoveOnly>> C;
+        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, test_allocator<V>> C;
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");
     }
     {
-        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<MoveOnly>> C;
+        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<V>> C;
         static_assert(std::is_nothrow_move_assignable<C>::value, "");
     }
     {

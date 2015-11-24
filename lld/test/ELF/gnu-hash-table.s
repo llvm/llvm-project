@@ -149,8 +149,8 @@
 # PPC64-NEXT:     Flags [
 # PPC64-NEXT:       SHF_ALLOC
 # PPC64-NEXT:     ]
-# PPC64-NEXT:     Address: 0x1F0
-# PPC64-NEXT:     Offset: 0x1F0
+# PPC64-NEXT:     Address: 0x228
+# PPC64-NEXT:     Offset: 0x228
 # PPC64-NEXT:     Size: 36
 # PPC64-NEXT:     Link: 1
 # PPC64-NEXT:     Info: 0

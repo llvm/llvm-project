@@ -23,6 +23,7 @@ class TypedefTestCase(TestBase):
 
     @dwarf_test
     @expectedFailureClang("llvm.org/pr19238")
+    @expectedFailureFreeBSD("llvm.org/pr25626 expectedFailureClang fails on FreeBSD")
     def test_with_dwarf(self):
         """Test 'image lookup -t a' and check for correct display at different scopes."""
         self.buildDwarf()

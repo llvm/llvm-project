@@ -104,14 +104,14 @@ R_X86_64_64:
  .quad R_X86_64_64
 
 // CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   10190 90010100 00000000
+// CHECK-NEXT:   101c8 c8010100 00000000
 
 .section .R_X86_64_GOTPCREL,"a",@progbits
 .global R_X86_64_GOTPCREL
 R_X86_64_GOTPCREL:
  .long zed@gotpcrel
 
-// 0x120A8 - 0x10160 = 8008
-// 8008 = 0x481f0000   in little endian
+// 0x120E8 - 0x101D8 = 7952
+// 7952 = 0x101f0000 in little endian
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   10198 481f0000
+// CHECK-NEXT:   101d0 101f0000

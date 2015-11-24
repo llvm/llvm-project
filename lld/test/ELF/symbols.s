@@ -50,7 +50,7 @@ internal:
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x10120
+// CHECK-NEXT: Address: 0x10158
 
 // CHECK:      Name: .text
 // CHECK-NEXT: Type: SHT_PROGBITS
@@ -82,7 +82,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:     Name: hidden
-// CHECK-NEXT:     Value: 0x10128
+// CHECK-NEXT:     Value: 0x10160
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
@@ -91,7 +91,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: internal
-// CHECK-NEXT:     Value: 0x10128
+// CHECK-NEXT:     Value: 0x10160
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
@@ -145,7 +145,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: protected
-// CHECK-NEXT:     Value: 0x10128
+// CHECK-NEXT:     Value: 0x10160
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: None
@@ -154,7 +154,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: zed
-// CHECK-NEXT:     Value: 0x10120
+// CHECK-NEXT:     Value: 0x10158
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global (0x1)
 // CHECK-NEXT:     Type: None
@@ -163,7 +163,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: zed2
-// CHECK-NEXT:     Value: 0x10124
+// CHECK-NEXT:     Value: 0x1015C
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: None
@@ -172,7 +172,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: zed3
-// CHECK-NEXT:     Value: 0x10128
+// CHECK-NEXT:     Value: 0x10160
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: None
