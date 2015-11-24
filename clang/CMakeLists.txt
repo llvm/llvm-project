@@ -664,21 +664,21 @@ if (CLANG_ENABLE_BOOTSTRAP)
   # Find all variables that start with BOOTSTRAP_ and populate a variable with
   # them.
   get_cmake_property(variableNames VARIABLES)
-  foreach(varaibleName ${variableNames})
-    if(varaibleName MATCHES "^BOOTSTRAP_")
-      string(SUBSTRING ${varaibleName} 10 -1 varName)
-      string(REPLACE ";" "\;" value "${${varaibleName}}")
+  foreach(variableName ${variableNames})
+    if(variableName MATCHES "^BOOTSTRAP_")
+      string(SUBSTRING ${variableName} 10 -1 varName)
+      string(REPLACE ";" "\;" value "${${variableName}}")
       list(APPEND PASSTHROUGH_VARIABLES
         -D${varName}=${value})
     endif()
   endforeach()
 
   # Populate the passthrough variables
-  foreach(varaibleName ${CLANG_BOOTSTRAP_PASSTHROUGH} ${BOOTSTRAP_DEFAULT_PASSTHROUGH})
-    if(${varaibleName})
-      string(REPLACE ";" "\;" value ${${varaibleName}})
+  foreach(variableName ${CLANG_BOOTSTRAP_PASSTHROUGH} ${BOOTSTRAP_DEFAULT_PASSTHROUGH})
+    if(${variableName})
+      string(REPLACE ";" "\;" value ${${variableName}})
       list(APPEND PASSTHROUGH_VARIABLES
-        -D${varaibleName}=${value})
+        -D${variableName}=${value})
     endif()
   endforeach()
 

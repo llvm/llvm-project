@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 using namespace clang;
 using namespace sema;
@@ -108,6 +109,7 @@ checkCoroutineContext(Sema &S, SourceLocation Loc, StringRef Keyword) {
   }
 
   // Any other usage must be within a function.
+  // FIXME: Reject a coroutine with a deduced return type.
   auto *FD = dyn_cast<FunctionDecl>(S.CurContext);
   if (!FD) {
     S.Diag(Loc, isa<ObjCMethodDecl>(S.CurContext)
@@ -338,7 +340,7 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E) {
   }
 
   // FIXME: If the operand is a reference to a variable that's about to go out
-  // ot scope, we should treat the operand as an xvalue for this overload
+  // of scope, we should treat the operand as an xvalue for this overload
   // resolution.
   ExprResult PC;
   if (E && !E->getType()->isVoidType()) {
@@ -357,7 +359,7 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E) {
   return Res;
 }
 
-void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *Body) {
+void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   FunctionScopeInfo *Fn = getCurFunction();
   assert(Fn && !Fn->CoroutineStmts.empty() && "not a coroutine");
 
@@ -382,6 +384,65 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *Body) {
     Diag(Fn->CoroutineStmts.front()->getLocStart(),
          diag::ext_coroutine_without_co_await_co_yield);
 
-  // FIXME: Perform analysis of initial and final suspend,
-  // and set_exception call.
+  SourceLocation Loc = FD->getLocation();
+
+  // Form a declaration statement for the promise declaration, so that AST
+  // visitors can more easily find it.
+  StmtResult PromiseStmt =
+      ActOnDeclStmt(ConvertDeclToDeclGroup(Fn->CoroutinePromise), Loc, Loc);
+  if (PromiseStmt.isInvalid())
+    return FD->setInvalidDecl();
+
+  // Form and check implicit 'co_await p.initial_suspend();' statement.
+  ExprResult InitialSuspend =
+      buildPromiseCall(*this, Fn, Loc, "initial_suspend", None);
+  // FIXME: Support operator co_await here.
+  if (!InitialSuspend.isInvalid())
+    InitialSuspend = BuildCoawaitExpr(Loc, InitialSuspend.get());
+  InitialSuspend = ActOnFinishFullExpr(InitialSuspend.get());
+  if (InitialSuspend.isInvalid())
+    return FD->setInvalidDecl();
+
+  // Form and check implicit 'co_await p.final_suspend();' statement.
+  ExprResult FinalSuspend =
+      buildPromiseCall(*this, Fn, Loc, "final_suspend", None);
+  // FIXME: Support operator co_await here.
+  if (!FinalSuspend.isInvalid())
+    FinalSuspend = BuildCoawaitExpr(Loc, FinalSuspend.get());
+  FinalSuspend = ActOnFinishFullExpr(FinalSuspend.get());
+  if (FinalSuspend.isInvalid())
+    return FD->setInvalidDecl();
+
+  // FIXME: Perform analysis of set_exception call.
+
+  // FIXME: Try to form 'p.return_void();' expression statement to handle
+  // control flowing off the end of the coroutine.
+
+  // Build implicit 'p.get_return_object()' expression and form initialization
+  // of return type from it.
+  ExprResult ReturnObject =
+    buildPromiseCall(*this, Fn, Loc, "get_return_object", None);
+  if (ReturnObject.isInvalid())
+    return FD->setInvalidDecl();
+  QualType RetType = FD->getReturnType();
+  if (!RetType->isDependentType()) {
+    InitializedEntity Entity =
+        InitializedEntity::InitializeResult(Loc, RetType, false);
+    ReturnObject = PerformMoveOrCopyInitialization(Entity, nullptr, RetType,
+                                                   ReturnObject.get());
+    if (ReturnObject.isInvalid())
+      return FD->setInvalidDecl();
+  }
+  ReturnObject = ActOnFinishFullExpr(ReturnObject.get(), Loc);
+  if (ReturnObject.isInvalid())
+    return FD->setInvalidDecl();
+
+  // FIXME: Perform move-initialization of parameters into frame-local copies.
+  SmallVector<Expr*, 16> ParamMoves;
+
+  // Build body for the coroutine wrapper statement.
+  Body = new (Context) CoroutineBodyStmt(
+      Body, PromiseStmt.get(), InitialSuspend.get(), FinalSuspend.get(),
+      /*SetException*/nullptr, /*Fallthrough*/nullptr,
+      ReturnObject.get(), ParamMoves);
 }

@@ -509,6 +509,29 @@ public:
   }
 };
 
+/// CGCalleeInfo - Class to encapsulate the information about a callee to be
+/// used during the generation of call/invoke instructions.
+class CGCalleeInfo {
+  /// \brief The function proto type of the callee.
+  const FunctionProtoType *CalleeProtoTy;
+  /// \brief The function declaration of the callee.
+  const Decl *CalleeDecl;
+
+public:
+  explicit CGCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl(nullptr) {}
+  CGCalleeInfo(const FunctionProtoType *calleeProtoTy, const Decl *calleeDecl)
+      : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
+  CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
+      : CalleeProtoTy(calleeProtoTy), CalleeDecl(nullptr) {}
+  CGCalleeInfo(const Decl *calleeDecl)
+      : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
+
+  const FunctionProtoType *getCalleeFunctionProtoType() {
+    return CalleeProtoTy;
+  }
+  const Decl *getCalleeDecl() { return CalleeDecl; }
+};
+
 }  // end namespace CodeGen
 }  // end namespace clang
 

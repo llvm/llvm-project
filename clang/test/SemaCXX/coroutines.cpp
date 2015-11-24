@@ -6,12 +6,30 @@ struct awaitable {
   void await_resume();
 } a;
 
+struct suspend_always {
+  bool await_ready() { return false; }
+  void await_suspend() {}
+  void await_resume() {}
+};
+
+struct suspend_never {
+  bool await_ready() { return true; }
+  void await_suspend() {}
+  void await_resume() {}
+};
+
 void no_coroutine_traits() {
   co_await a; // expected-error {{need to include <coroutine>}}
 }
 
 namespace std {
   template<typename ...T> struct coroutine_traits; // expected-note {{declared here}}
+};
+
+template<typename Promise> struct coro {};
+template<typename Promise, typename... Ps>
+struct std::coroutine_traits<coro<Promise>, Ps...> {
+  using promise_type = Promise;
 };
 
 void no_specialization() {
@@ -36,11 +54,13 @@ double bad_promise_type_2(int) {
   co_yield 0; // expected-error {{no member named 'yield_value' in 'std::coroutine_traits<double, int>::promise_type'}}
 }
 
-struct promise; // expected-note {{forward declaration}}
+struct promise; // expected-note 2{{forward declaration}}
 template<typename ...T> struct std::coroutine_traits<void, T...> { using promise_type = promise; };
 
   // FIXME: This diagnostic is terrible.
 void undefined_promise() { // expected-error {{variable has incomplete type 'promise_type'}}
+  // FIXME: This diagnostic doesn't make any sense.
+  // expected-error@-2 {{incomplete definition of type 'promise'}}
   co_await a;
 }
 
@@ -49,6 +69,9 @@ struct yielded_thing { const char *p; short a, b; };
 struct not_awaitable {};
 
 struct promise {
+  void get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
   awaitable yield_value(int); // expected-note 2{{candidate}}
   awaitable yield_value(yielded_thing); // expected-note 2{{candidate}}
   not_awaitable yield_value(void()); // expected-note 2{{candidate}}
@@ -165,6 +188,10 @@ template<> struct std::coroutine_traits<void, yield_fn_tag> {
     // FIXME: add an await_transform overload for functions
     awaitable yield_value(int());
     void return_value(int());
+
+    suspend_never initial_suspend();
+    suspend_never final_suspend();
+    void get_return_object();
   };
 };
 
@@ -192,4 +219,50 @@ namespace placeholder {
     co_await a;
     co_return g;
   }
+}
+
+struct bad_promise_1 {
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+};
+coro<bad_promise_1> missing_get_return_object() { // expected-error {{no member named 'get_return_object' in 'bad_promise_1'}}
+  co_await a;
+}
+
+struct bad_promise_2 {
+  coro<bad_promise_2> get_return_object();
+  // FIXME: We shouldn't offer a typo-correction here!
+  suspend_always final_suspend(); // expected-note {{here}}
+};
+coro<bad_promise_2> missing_initial_suspend() { // expected-error {{no member named 'initial_suspend' in 'bad_promise_2'}}
+  co_await a;
+}
+
+struct bad_promise_3 {
+  coro<bad_promise_3> get_return_object();
+  // FIXME: We shouldn't offer a typo-correction here!
+  suspend_always initial_suspend(); // expected-note {{here}}
+};
+coro<bad_promise_3> missing_final_suspend() { // expected-error {{no member named 'final_suspend' in 'bad_promise_3'}}
+  co_await a;
+}
+
+struct bad_promise_4 {
+  coro<bad_promise_4> get_return_object();
+  not_awaitable initial_suspend();
+  suspend_always final_suspend();
+};
+// FIXME: This diagnostic is terrible.
+coro<bad_promise_4> bad_initial_suspend() { // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
+  co_await a;
+}
+
+struct bad_promise_5 {
+  coro<bad_promise_5> get_return_object();
+  suspend_always initial_suspend();
+  not_awaitable final_suspend();
+};
+// FIXME: This diagnostic is terrible.
+coro<bad_promise_5> bad_final_suspend() { // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
+  co_await a;
 }

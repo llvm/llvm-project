@@ -299,6 +299,8 @@ bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI,
     else
       CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
   }
+  if (CI.getFrontendOpts().ModulesEmbedAllFiles)
+    CI.getSourceManager().setEmbedAllFileContentsInModule(true);
 
   // If we're being run from the command-line, the module build stack will not
   // have been filled in yet, so complete it now in order to allow us to detect

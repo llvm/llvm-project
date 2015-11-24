@@ -2794,6 +2794,8 @@ static bool shouldUseFramePointer(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_fno_omit_frame_pointer,
                                options::OPT_fomit_frame_pointer))
     return A->getOption().matches(options::OPT_fno_omit_frame_pointer);
+  if (Args.hasArg(options::OPT_pg))
+    return true;
 
   return shouldUseFramePointerForTarget(Args, Triple);
 }
@@ -2803,6 +2805,8 @@ static bool shouldUseLeafFramePointer(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mno_omit_leaf_frame_pointer,
                                options::OPT_momit_leaf_frame_pointer))
     return A->getOption().matches(options::OPT_mno_omit_leaf_frame_pointer);
+  if (Args.hasArg(options::OPT_pg))
+    return true;
 
   if (Triple.isPS4CPU())
     return false;
@@ -9506,13 +9510,6 @@ void MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (LinkerName.equals_lower("lld")) {
     CmdArgs.push_back("-flavor");
     CmdArgs.push_back("gnu");
-    CmdArgs.push_back("-target");
-    if (TC.getArch() == llvm::Triple::x86)
-      CmdArgs.push_back("i686--windows-gnu");
-    if (TC.getArch() == llvm::Triple::x86_64)
-      CmdArgs.push_back("x86_64--windows-gnu");
-    if (TC.getArch() == llvm::Triple::arm)
-      CmdArgs.push_back("armv7--windows-gnu");
   } else if (!LinkerName.equals_lower("ld")) {
     D.Diag(diag::err_drv_unsupported_linker) << LinkerName;
   }

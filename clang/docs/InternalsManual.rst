@@ -1995,7 +1995,7 @@ are similar.
    * Make sure that ``children()`` visits all of the subexpressions.  This is
      important for a number of features (e.g., IDE support, C++ variadic
      templates).  If you have sub-types, you'll also need to visit those
-     sub-types in ``RecursiveASTVisitor`` and ``DataRecursiveASTVisitor``.
+     sub-types in ``RecursiveASTVisitor``.
    * Add printing support (``StmtPrinter.cpp``) for your expression.
    * Add profiling support (``StmtProfile.cpp``) for your AST node, noting the
      distinguishing (non-source location) characteristics of an instance of

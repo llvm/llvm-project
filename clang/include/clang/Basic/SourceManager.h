@@ -566,6 +566,11 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// (likely to change while trying to use them). Defaults to false.
   bool UserFilesAreVolatile;
 
+  /// \brief True if all files read during this compilation should be treated
+  /// as transient (may not be present in later compilations using a module
+  /// file created from this compilation). Defaults to false.
+  bool FilesAreTransient;
+
   struct OverriddenFilesInfoTy {
     /// \brief Files that have been overridden with the contents from another
     /// file.
@@ -863,6 +868,12 @@ public:
   /// (but does not make the file visible to header search and the like when
   /// the module is used).
   void embedFileContentsInModule(const FileEntry *SourceFile);
+
+  /// \brief Request that all files that are read during this compilation be
+  /// written to any created module file.
+  void setEmbedAllFileContentsInModule(bool Embed) {
+    FilesAreTransient = Embed;
+  }
 
   //===--------------------------------------------------------------------===//
   // FileID manipulation methods.
