@@ -222,6 +222,50 @@ private:
   /// @returns True if the subregion can be over approximated, false otherwise.
   bool addOverApproximatedRegion(Region *AR, DetectionContext &Context) const;
 
+  /// @brief Find for a given base pointer terms that hint towards dimension
+  ///        sizes of a multi-dimensional array.
+  ///
+  /// @param Context      The current detection context.
+  /// @param BasePointer  A base pointer indicating the virtual array we are
+  ///                     interested in.
+  SmallVector<const SCEV *, 4>
+  getDelinearizationTerms(DetectionContext &Context,
+                          const SCEVUnknown *BasePointer) const;
+
+  /// @brief Check if the dimension size of a delinearized array is valid.
+  ///
+  /// @param Context     The current detection context.
+  /// @param Sizes       The sizes of the different array dimensions.
+  /// @param BasePointer The base pointer we are interested in.
+  /// @returns True if one or more array sizes could be derived - meaning: we
+  ///          see this array as multi-dimensional.
+  bool hasValidArraySizes(DetectionContext &Context,
+                          SmallVectorImpl<const SCEV *> &Sizes,
+                          const SCEVUnknown *BasePointer) const;
+
+  /// @brief Derive access functions for a given base pointer.
+  ///
+  /// @param Context     The current detection context.
+  /// @param Sizes       The sizes of the different array dimensions.
+  /// @param BasePointer The base pointer of all the array for which to compute
+  ///                    access functions.
+  /// @param Shape       The shape that describes the derived array sizes and
+  ///                    which should be filled with newly computed access
+  ///                    functions.
+  /// @returns True if a set of affine access functions could be derived.
+  bool computeAccessFunctions(DetectionContext &Context,
+                              const SCEVUnknown *BasePointer,
+                              std::shared_ptr<ArrayShape> Shape) const;
+
+  /// @brief Check if all accesses to a given BasePointer are affine.
+  ///
+  /// @param Context     The current detection context.
+  /// @param basepointer the base pointer we are interested in.
+  /// @param True if consistent (multi-dimensional) array accesses could be
+  ///        derived for this array.
+  bool hasBaseAffineAccesses(DetectionContext &Context,
+                             const SCEVUnknown *BasePointer) const;
+
   // Delinearize all non affine memory accesses and return false when there
   // exists a non affine memory access that cannot be delinearized. Return true
   // when all array accesses are affine after delinearization.

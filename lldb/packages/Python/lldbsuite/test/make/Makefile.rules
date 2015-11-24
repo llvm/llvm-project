@@ -164,6 +164,10 @@ else
 		override ARCH :=
 		override ARCHFLAG :=
 	endif
+	ifeq "$(ARCH)" "arm"
+		override ARCH :=
+		override ARCHFLAG :=
+	endif
 
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug

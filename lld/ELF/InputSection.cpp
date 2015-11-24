@@ -134,13 +134,20 @@ void InputSectionBase<ELFT>::relocate(
       continue;
     }
 
+    if (Target->isTlsOptimized(Type, Body)) {
+      Target->relocateTlsOptimize(BufLoc, BufEnd, AddrLoc,
+                                  getSymVA<ELFT>(Body));
+      continue;
+    }
+
     uintX_t SymVA = getSymVA<ELFT>(Body);
     if (Target->relocNeedsPlt(Type, Body)) {
       SymVA = Out<ELFT>::Plt->getEntryAddr(Body);
       Type = Target->getPltRefReloc(Type);
     } else if (Target->relocNeedsGot(Type, Body)) {
       SymVA = Out<ELFT>::Got->getEntryAddr(Body);
-      Type = Body.isTLS() ? Target->getTlsGotReloc() : Target->getGotRefReloc();
+      Type = Body.isTLS() ? Target->getTlsGotReloc()
+                          : Target->getGotRefReloc(Type);
     } else if (Target->relocPointsToGot(Type)) {
       SymVA = Out<ELFT>::Got->getVA();
       Type = Target->getPCRelReloc();

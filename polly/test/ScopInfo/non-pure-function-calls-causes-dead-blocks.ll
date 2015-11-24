@@ -37,8 +37,7 @@
 ; CHECK:    Assumed Context:
 ; CHECK-NEXT:    [timeit, N] -> { : timeit = 0 }
 ; CHECK:    Statements {
-; CHECK:      Stmt_if_then_split
-; CHECK:        [timeit, N] -> { Stmt_if_then_split[] : timeit <= -1 or timeit >= 1 };
+; CHECK-NOT:      Stmt_if_then_split
 ; CHECK:      Stmt_for_body
 ; CHECK:      Stmt_for_body_9
 ; CHECK:    }

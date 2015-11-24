@@ -5211,7 +5211,21 @@ All parameters need to be named.
 		__isl_take isl_qpolynomial *qp,
 		__isl_take isl_space *model);
 
-=item * Unary Arithmethic Operations
+=item * Unary Arithmetic Operations
+
+	#include <isl/set.h>
+	__isl_give isl_set *isl_set_neg(
+		__isl_take isl_set *set);
+	#include <isl/map.h>
+	__isl_give isl_map *isl_map_neg(
+		__isl_take isl_map *map);
+
+C<isl_set_neg> constructs a set containing the opposites of
+the elements in its argument.
+The domain of the result of C<isl_map_neg> is the same
+as the domain of its argument.  The corresponding range
+elements are the opposites of the corresponding range
+elements in the argument.
 
 	#include <isl/val.h>
 	__isl_give isl_multi_val *isl_multi_val_neg(
@@ -6550,7 +6564,24 @@ to simplify the expression associated to each cell.
 		__isl_take isl_union_pw_qpolynomial_fold *upwf,
 		__isl_take isl_set *context);
 
-=item * Binary Arithmethic Operations
+=item * Binary Arithmetic Operations
+
+	#include <isl/set.h>
+	__isl_give isl_set *isl_set_sum(
+		__isl_take isl_set *set1,
+		__isl_take isl_set *set2);
+	#include <isl/map.h>
+	__isl_give isl_map *isl_map_sum(
+		__isl_take isl_map *map1,
+		__isl_take isl_map *map2);
+
+C<isl_set_sum> computes the Minkowski sum of its two arguments,
+i.e., the set containing the sums of pairs of elements from
+C<set1> and C<set2>.
+The domain of the result of C<isl_map_sum> is the intersection
+of the domains of its two arguments.  The corresponding range
+elements are the sums of the corresponding range elements
+in the two arguments.
 
 	#include <isl/val.h>
 	__isl_give isl_multi_val *isl_multi_val_add(
@@ -7392,6 +7423,8 @@ assigns a different value to two domain elements, while all previous
 schedule dimensions in the same band assign them the same value,
 then the two domain elements are ordered according to these two
 different values.
+Each expression is required to be total in the domain elements
+that reach the band node.
 
 =item C<isl_schedule_node_expansion>
 

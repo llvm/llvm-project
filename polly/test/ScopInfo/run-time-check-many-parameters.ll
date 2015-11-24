@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-code-generator=isl -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
 ; A valid Scop would print the list of it's statements, we check that we do not
 ; see that list.

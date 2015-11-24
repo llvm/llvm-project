@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-code-generator=isl -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-detect -analyze < %s | FileCheck %s
 ;
 ; CHECK: Valid Region for Scop:
 ;

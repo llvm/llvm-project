@@ -102,6 +102,7 @@ AX_SUBMODULE(clang,system|no,no)
 case "$with_clang" in
 system)
 	AC_PROG_GREP
+	AC_PROG_SED
 	llvm_config="llvm-config"
 	AC_CHECK_PROG([llvm_config_found], ["$llvm_config"], [yes])
 	if test "x$with_clang_prefix" != "x"; then
@@ -113,7 +114,8 @@ system)
 	if test "$llvm_config_found" != yes; then
 		AC_MSG_ERROR([llvm-config not found])
 	fi
-	CLANG_CXXFLAGS=`$llvm_config --cxxflags`
+	CLANG_CXXFLAGS=`$llvm_config --cxxflags | \
+		$SED -e 's/-Wcovered-switch-default//'`
 	CLANG_LDFLAGS=`$llvm_config --ldflags`
 	targets=`$llvm_config --targets-built`
 	components="$targets asmparser bitreader support mc"

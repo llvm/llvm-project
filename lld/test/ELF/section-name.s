@@ -26,12 +26,12 @@ _start:
 // CHECK:     Name: .rodata
 // CHECK-NOT: Name: .text.a
 // CHECK:     Name: .text
+// CHECK-NOT: Name: .data.rel.ro.a
+// CHECK-NOT: Name: .data.rel.ro.local.a
+// CHECK:     Name: .data.rel.ro
 // CHECK-NOT: Name: .data.a
 // CHECK:     Name: .data
 // CHECK:     Name: .foo.a
 // CHECK:     Name: .foo
-// CHECK-NOT: Name: .data.rel.ro.a
-// CHECK-NOT: Name: .data.rel.ro.local.a
-// CHECK:     Name: .data.rel.ro
 // CHECK-NOT: Name: .bss.a
 // CHECK:     Name: .bss

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-code-generator=isl -polly-ast -analyze          < %s | FileCheck %s --check-prefix=NOAA
-; RUN: opt %loadPolly -polly-code-generator=isl -polly-ast -analyze -tbaa    < %s | FileCheck %s --check-prefix=TBAA
+; RUN: opt %loadPolly -polly-ast -analyze          < %s | FileCheck %s --check-prefix=NOAA
+; RUN: opt %loadPolly -polly-ast -analyze -tbaa    < %s | FileCheck %s --check-prefix=TBAA
 ;
 ;    void jd(int *Int0, int *Int1, float *Float0, float *Float1) {
 ;      for (int i = 0; i < 1024; i++) {

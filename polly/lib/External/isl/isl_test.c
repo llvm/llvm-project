@@ -2858,6 +2858,31 @@ static int test_subtract(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that intersecting the empty basic set with another basic set
+ * does not increase the number of constraints.  In particular,
+ * the empty basic set should maintain its canonical representation.
+ */
+static int test_intersect(isl_ctx *ctx)
+{
+	int n1, n2;
+	isl_basic_set *bset1, *bset2;
+
+	bset1 = isl_basic_set_read_from_str(ctx, "{ [a,b,c] : 1 = 0 }");
+	bset2 = isl_basic_set_read_from_str(ctx, "{ [1,2,3] }");
+	n1 = isl_basic_set_n_constraint(bset1);
+	bset1 = isl_basic_set_intersect(bset1, bset2);
+	n2 = isl_basic_set_n_constraint(bset1);
+	isl_basic_set_free(bset1);
+	if (!bset1)
+		return -1;
+	if (n1 != n2)
+		isl_die(ctx, isl_error_unknown,
+			"number of constraints of empty set changed",
+			return -1);
+
+	return 0;
+}
+
 int test_factorize(isl_ctx *ctx)
 {
 	const char *str;
@@ -6105,6 +6130,7 @@ struct {
 	{ "factorize", &test_factorize },
 	{ "subset", &test_subset },
 	{ "subtract", &test_subtract },
+	{ "intersect", &test_intersect },
 	{ "lexmin", &test_lexmin },
 	{ "min", &test_min },
 	{ "gist", &test_gist },

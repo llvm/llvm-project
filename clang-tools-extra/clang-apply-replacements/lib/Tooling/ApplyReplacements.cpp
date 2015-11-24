@@ -209,14 +209,11 @@ RangeVector calculateChangedRanges(
   RangeVector ChangedRanges;
 
   // Generate the new ranges from the replacements.
-  //
-  // NOTE: This is O(n^2) in the number of replacements. If this starts to
-  // become a problem inline shiftedCodePosition() here and do shifts in a
-  // single run through this loop.
+  int Shift = 0;
   for (const tooling::Replacement &R : Replaces) {
-    unsigned Offset = tooling::shiftedCodePosition(Replaces, R.getOffset());
+    unsigned Offset = R.getOffset() + Shift;
     unsigned Length = R.getReplacementText().size();
-
+    Shift += Length - R.getLength();
     ChangedRanges.push_back(tooling::Range(Offset, Length));
   }
 

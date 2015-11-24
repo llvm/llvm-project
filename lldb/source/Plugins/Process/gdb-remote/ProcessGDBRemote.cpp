@@ -989,12 +989,7 @@ ProcessGDBRemote::DoLaunch (Module *exe_module, ProcessLaunchInfo &launch_info)
     ObjectFile * object_file = exe_module->GetObjectFile();
     if (object_file)
     {
-        // Make sure we aren't already connected?
-        if (!m_gdb_comm.IsConnected())
-        {
-            error = LaunchAndConnectToDebugserver (launch_info);
-        }
-        
+        error = EstablishConnectionIfNeeded (launch_info);
         if (error.Success())
         {
             lldb_utility::PseudoTerminal pty;
@@ -1374,21 +1369,7 @@ ProcessGDBRemote::DoAttachToProcessWithID (lldb::pid_t attach_pid, const Process
     Clear();
     if (attach_pid != LLDB_INVALID_PROCESS_ID)
     {
-        // Make sure we aren't already connected?
-        if (!m_gdb_comm.IsConnected())
-        {
-            error = LaunchAndConnectToDebugserver (attach_info);
-            
-            if (error.Fail())
-            {
-                const char *error_string = error.AsCString();
-                if (error_string == NULL)
-                    error_string = "unable to launch " DEBUGSERVER_BASENAME;
-
-                SetExitStatus (-1, error_string);
-            }
-        }
-    
+        error = EstablishConnectionIfNeeded (attach_info);
         if (error.Success())
         {
             m_gdb_comm.SetDetachOnError(attach_info.GetDetachOnError());
@@ -1398,6 +1379,8 @@ ProcessGDBRemote::DoAttachToProcessWithID (lldb::pid_t attach_pid, const Process
             SetID (attach_pid);            
             m_async_broadcaster.BroadcastEvent (eBroadcastBitAsyncContinue, new EventDataBytes (packet, packet_len));
         }
+        else
+            SetExitStatus (-1, error.AsCString());
     }
 
     return error;
@@ -1412,21 +1395,7 @@ ProcessGDBRemote::DoAttachToProcessWithName (const char *process_name, const Pro
 
     if (process_name && process_name[0])
     {
-        // Make sure we aren't already connected?
-        if (!m_gdb_comm.IsConnected())
-        {
-            error = LaunchAndConnectToDebugserver (attach_info);
-
-            if (error.Fail())
-            {
-                const char *error_string = error.AsCString();
-                if (error_string == NULL)
-                    error_string = "unable to launch " DEBUGSERVER_BASENAME;
-
-                SetExitStatus (-1, error_string);
-            }
-        }
-
+        error = EstablishConnectionIfNeeded (attach_info);
         if (error.Success())
         {
             StreamString packet;
@@ -1455,6 +1424,8 @@ ProcessGDBRemote::DoAttachToProcessWithName (const char *process_name, const Pro
             m_async_broadcaster.BroadcastEvent (eBroadcastBitAsyncContinue, new EventDataBytes (packet.GetData(), packet.GetSize()));
 
         }
+        else
+            SetExitStatus (-1, error.AsCString());
     }
     return error;
 }
@@ -3538,6 +3509,27 @@ ProcessGDBRemote::DoSignal (int signo)
 
     if (!m_gdb_comm.SendAsyncSignal (signo))
         error.SetErrorStringWithFormat("failed to send signal %i", signo);
+    return error;
+}
+
+Error
+ProcessGDBRemote::EstablishConnectionIfNeeded (const ProcessInfo &process_info)
+{
+    // Make sure we aren't already connected?
+    if (m_gdb_comm.IsConnected())
+        return Error();
+
+    PlatformSP platform_sp (GetTarget ().GetPlatform ());
+    if (platform_sp && !platform_sp->IsHost ())
+        return Error("Lost debug server connection");
+
+    auto error = LaunchAndConnectToDebugserver (process_info);
+    if (error.Fail())
+    {
+        const char *error_string = error.AsCString();
+        if (error_string == nullptr)
+            error_string = "unable to launch " DEBUGSERVER_BASENAME;
+    }
     return error;
 }
 

@@ -1109,7 +1109,8 @@ private:
   SCEVAffinator Affinator;
 
   typedef MapVector<std::pair<AssertingVH<const Value>, int>,
-                    std::unique_ptr<ScopArrayInfo>> ArrayInfoMapTy;
+                    std::unique_ptr<ScopArrayInfo>>
+      ArrayInfoMapTy;
   /// @brief A map to remember ScopArrayInfo objects for all base pointers.
   ///
   /// As PHI nodes may have two array info objects associated, we add a flag
@@ -1217,6 +1218,10 @@ private:
   ///
   /// @param R  The region we currently build branching conditions for.
   void propagateDomainConstraints(Region *R);
+
+  /// @brief Remove domains of error blocks/regions (and blocks dominated by
+  ///        them).
+  void removeErrorBlockDomains();
 
   /// @brief Compute the domain for each basic block in @p R.
   ///

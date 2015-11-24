@@ -804,7 +804,7 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_STDOUT
 #endif
 
-#if defined(__ANDROID__) || defined(__CloudABI__)
+#if defined(__ANDROID__) || defined(__CloudABI__) || defined(_LIBCPP_HAS_MUSL_LIBC)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 

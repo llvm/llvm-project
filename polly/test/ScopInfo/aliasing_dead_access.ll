@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-code-generator=isl -analyze -polly-scops < %s | FileCheck %s
+; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
 ;
 ; Check that we do not create a SCoP if there is no statement executed.
 ;

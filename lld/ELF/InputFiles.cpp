@@ -174,6 +174,7 @@ void elf2::ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &Comdats) {
   uint64_t Size = this->ELFObj.getNumSections();
   Sections.resize(Size);
   unsigned I = -1;
+  bool HasGnuStack = false;
   const ELFFile<ELFT> &Obj = this->ELFObj;
   for (const Elf_Shdr &Sec : Obj.sections()) {
     ++I;
@@ -224,21 +225,25 @@ void elf2::ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &Comdats) {
       }
       break;
     }
-    default: {
+    default:
       ErrorOr<StringRef> NameOrErr = this->ELFObj.getSectionName(&Sec);
       error(NameOrErr);
-      if (*NameOrErr == ".note.GNU-stack")
+      StringRef Name = *NameOrErr;
+      if (Name == ".note.GNU-stack") {
         Sections[I] = &InputSection<ELFT>::Discarded;
-      else if (*NameOrErr == ".eh_frame")
+        HasGnuStack = true;
+      } else if (Name == ".eh_frame") {
         Sections[I] = new (this->Alloc) EHInputSection<ELFT>(this, &Sec);
-      else if (shouldMerge<ELFT>(Sec))
+      } else if (shouldMerge<ELFT>(Sec)) {
         Sections[I] = new (this->Alloc) MergeInputSection<ELFT>(this, &Sec);
-      else
+      } else {
         Sections[I] = new (this->Alloc) InputSection<ELFT>(this, &Sec);
+      }
       break;
     }
-    }
   }
+  if (!HasGnuStack)
+    Config->ZExecStack = true;
 }
 
 template <class ELFT> void elf2::ObjectFile<ELFT>::initializeSymbols() {

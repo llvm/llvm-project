@@ -1003,7 +1003,7 @@ template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
     if (RelSec->sh_type == SHT_RELA)
       S->relocate(Buf, nullptr, EObj.relas(RelSec));
     else
-      S->relocate(Buf, nullptr, EObj.relas(RelSec));
+      S->relocate(Buf, nullptr, EObj.rels(RelSec));
   }
 }
 

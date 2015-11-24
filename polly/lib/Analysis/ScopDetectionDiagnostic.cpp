@@ -44,7 +44,6 @@ BADSCOP_STAT(LoopBound, "Loop bounds can not be computed");
 BADSCOP_STAT(FuncCall, "Function call with side effects appeared");
 BADSCOP_STAT(AffFunc, "Expression not affine");
 BADSCOP_STAT(Alias, "Found base address alias");
-BADSCOP_STAT(SimpleLoop, "Loop not in -loop-simplify form");
 BADSCOP_STAT(Other, "Others");
 
 namespace polly {
@@ -416,21 +415,6 @@ const DebugLoc &ReportAlias::getDebugLoc() const { return Inst->getDebugLoc(); }
 
 bool ReportAlias::classof(const RejectReason *RR) {
   return RR->getKind() == rrkAlias;
-}
-
-//===----------------------------------------------------------------------===//
-// ReportSimpleLoop.
-
-ReportSimpleLoop::ReportSimpleLoop() : RejectReason(rrkSimpleLoop) {
-  ++BadSimpleLoopForScop;
-}
-
-std::string ReportSimpleLoop::getMessage() const {
-  return "Loop not in simplify form is invalid!";
-}
-
-bool ReportSimpleLoop::classof(const RejectReason *RR) {
-  return RR->getKind() == rrkSimpleLoop;
 }
 
 //===----------------------------------------------------------------------===//

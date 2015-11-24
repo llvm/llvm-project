@@ -19,7 +19,7 @@ _start:
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:  SHF_ALLOC
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x10120
+// CHECK-NEXT: Address: 0x100E8
 
 // CHECK:      Name: foobar
 // CHECK-NEXT: Type: SHT_PROGBITS

@@ -2857,6 +2857,15 @@ struct isl_basic_map *isl_basic_map_intersect(
 		isl_assert(bmap1->ctx,
 			    isl_space_is_equal(bmap1->dim, bmap2->dim), goto error);
 
+	if (isl_basic_map_plain_is_empty(bmap1)) {
+		isl_basic_map_free(bmap2);
+		return bmap1;
+	}
+	if (isl_basic_map_plain_is_empty(bmap2)) {
+		isl_basic_map_free(bmap1);
+		return bmap2;
+	}
+
 	if (bmap1->sample &&
 	    isl_basic_map_contains(bmap1, bmap1->sample) > 0 &&
 	    isl_basic_map_contains(bmap2, bmap1->sample) > 0)

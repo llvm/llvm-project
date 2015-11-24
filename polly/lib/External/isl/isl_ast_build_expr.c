@@ -1492,6 +1492,14 @@ __isl_give isl_ast_expr *isl_ast_build_expr_from_basic_set(
  * the previous disjuncts have been removed from build->domain.
  * In particular, constraints that ensure that there is no overlap
  * with these previous disjuncts, can be removed.
+ * This is mostly useful for disjuncts that are only defined by
+ * a single constraint (relative to the build domain) as the opposite
+ * of that single constraint can then be removed from the other disjuncts.
+ * In order not to increase the number of disjuncts in the build domain
+ * after subtracting the previous disjuncts of "set", the simple hull
+ * is computed after taking the difference with each of these disjuncts.
+ * This means that constraints that prevent overlap with a union
+ * of multiple previous disjuncts are not removed.
  *
  * "set" lives in the internal schedule space.
  */
@@ -1524,8 +1532,11 @@ __isl_give isl_ast_expr *isl_ast_build_expr_from_set_internal(
 
 	for (i = 1; i < n; ++i) {
 		isl_ast_expr *expr;
+		isl_set *rest;
 
-		domain = isl_set_subtract(domain, set);
+		rest = isl_set_subtract(isl_set_copy(domain), set);
+		rest = isl_set_from_basic_set(isl_set_simple_hull(rest));
+		domain = isl_set_intersect(domain, rest);
 		bset = isl_basic_set_list_get_basic_set(list, i);
 		set = isl_set_from_basic_set(isl_basic_set_copy(bset));
 		bset = isl_basic_set_gist(bset,

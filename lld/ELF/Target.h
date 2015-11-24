@@ -27,7 +27,6 @@ public:
   unsigned getPCRelReloc() const { return PCRelReloc; }
   unsigned getGotReloc() const { return GotReloc; }
   unsigned getPltReloc() const { return PltReloc; }
-  unsigned getGotRefReloc() const { return GotRefReloc; }
   unsigned getRelativeReloc() const { return RelativeReloc; }
   unsigned getTlsGotReloc() const { return TlsGotReloc; }
   unsigned getTlsPcRelGotReloc() const { return TlsPcRelGotReloc; }
@@ -44,6 +43,7 @@ public:
   bool supportsLazyRelocations() const { return LazyRelocations; }
   unsigned getGotHeaderEntriesNum() const { return GotHeaderEntriesNum; }
   unsigned getGotPltHeaderEntriesNum() const { return GotPltHeaderEntriesNum; }
+  virtual unsigned getGotRefReloc(unsigned Type) const;
   virtual unsigned getPltRefReloc(unsigned Type) const;
   virtual void writeGotHeaderEntries(uint8_t *Buf) const;
   virtual void writeGotPltHeaderEntries(uint8_t *Buf) const;
@@ -59,7 +59,9 @@ public:
   virtual bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                            uint64_t P, uint64_t SA) const = 0;
-
+  virtual bool isTlsOptimized(unsigned Type, const SymbolBody &S) const;
+  virtual void relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                                   uint64_t SA) const;
   virtual ~TargetInfo();
 
 protected:

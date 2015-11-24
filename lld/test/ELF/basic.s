@@ -32,7 +32,7 @@ _start:
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 64
 # CHECK-NEXT:   ProgramHeaderEntrySize: 56
-# CHECK-NEXT:   ProgramHeaderCount: 4
+# CHECK-NEXT:   ProgramHeaderCount: 3
 # CHECK-NEXT:   SectionHeaderEntrySize: 64
 # CHECK-NEXT:   SectionHeaderCount: 5
 # CHECK-NEXT:   StringTableSectionIndex: 3
@@ -137,8 +137,8 @@ _start:
 # CHECK-NEXT:     Offset: 0x40
 # CHECK-NEXT:     VirtualAddress: 0x10040
 # CHECK-NEXT:     PhysicalAddress: 0x10040
-# CHECK-NEXT:     FileSize: 224
-# CHECK-NEXT:     MemSize: 224
+# CHECK-NEXT:     FileSize: 168
+# CHECK-NEXT:     MemSize: 168
 # CHECK-NEXT:     Flags [ (0x4)
 # CHECK-NEXT:       PF_R (0x4)
 # CHECK-NEXT:     ]
@@ -149,8 +149,8 @@ _start:
 # CHECK-NEXT:     Offset: 0x0
 # CHECK-NEXT:     VirtualAddress: 0x10000
 # CHECK-NEXT:     PhysicalAddress: 0x10000
-# CHECK-NEXT:     FileSize: 288
-# CHECK-NEXT:     MemSize: 288
+# CHECK-NEXT:     FileSize: 232
+# CHECK-NEXT:     MemSize: 232
 # CHECK-NEXT:     Flags [
 # CHECK-NEXT:       PF_R
 # CHECK-NEXT:     ]
@@ -168,19 +168,6 @@ _start:
 # CHECK-NEXT:       PF_X (0x1)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Alignment: 4096
-# CHECK-NEXT:   }
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_GNU_STACK
-# CHECK-NEXT:     Offset: 0x0
-# CHECK-NEXT:     VirtualAddress: 0x0
-# CHECK-NEXT:     PhysicalAddress: 0x0
-# CHECK-NEXT:     FileSize: 0
-# CHECK-NEXT:     MemSize: 0
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_W
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment: 0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

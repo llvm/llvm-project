@@ -1,9 +1,9 @@
 ; RUN: opt %loadPolly -polly-process-unprofitable=false \
-; RUN: -polly-code-generator=isl \
+; RUN: \
 ; RUN: -polly-detect -analyze < %s | FileCheck %s
 
 ; RUN: opt %loadPolly -polly-process-unprofitable=true \
-; RUN: -polly-code-generator=isl \
+; RUN: \
 ; RUN: -polly-detect -analyze < %s | FileCheck %s
 
 ; CHECK: Valid Region for Scop:

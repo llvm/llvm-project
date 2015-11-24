@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-code-generator=isl -polly-codegen -verify-loop-info < %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen -verify-loop-info < %s | FileCheck %s
 ;
 ; Check that we do not crash as described here: http://llvm.org/bugs/show_bug.cgi?id=21167
 ;

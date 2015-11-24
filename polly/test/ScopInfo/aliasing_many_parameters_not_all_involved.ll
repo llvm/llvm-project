@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -polly-code-generator=isl -polly-rtc-max-parameters=8 -analyze < %s | FileCheck %s --check-prefix=MAX8
-; RUN: opt %loadPolly -polly-scops -polly-code-generator=isl -polly-rtc-max-parameters=7 -analyze < %s | FileCheck %s --check-prefix=MAX7
+; RUN: opt %loadPolly -polly-scops -polly-rtc-max-parameters=8 -analyze < %s | FileCheck %s --check-prefix=MAX8
+; RUN: opt %loadPolly -polly-scops -polly-rtc-max-parameters=7 -analyze < %s | FileCheck %s --check-prefix=MAX7
 ;
 ; Check that we allow this SCoP even though it has 10 parameters involved in posisbly aliasing accesses.
 ; However, only 7 are involved in accesses through B, 8 through C and none in accesses through A.

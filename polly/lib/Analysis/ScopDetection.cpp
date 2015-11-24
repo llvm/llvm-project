@@ -487,142 +487,170 @@ bool ScopDetection::isInvariant(const Value &Val, const Region &Reg) const {
 
 MapInsnToMemAcc InsnToMemAcc;
 
-bool ScopDetection::hasAffineMemoryAccesses(DetectionContext &Context) const {
-  Region &CurRegion = Context.CurRegion;
+SmallVector<const SCEV *, 4>
+ScopDetection::getDelinearizationTerms(DetectionContext &Context,
+                                       const SCEVUnknown *BasePointer) const {
+  SmallVector<const SCEV *, 4> Terms;
+  for (const auto &Pair : Context.Accesses[BasePointer]) {
+    // In case the outermost expression is a plain add, we check if any of its
+    // terms has the form 4 * %inst * %param * %param ..., aka a term that
+    // contains a product between a parameter and an instruction that is
+    // inside the scop. Such instructions, if allowed at all, are instructions
+    // SCEV can not represent, but Polly is still looking through. As a
+    // result, these instructions can depend on induction variables and are
+    // most likely no array sizes. However, terms that are multiplied with
+    // them are likely candidates for array sizes.
+    if (auto *AF = dyn_cast<SCEVAddExpr>(Pair.second)) {
+      for (auto Op : AF->operands()) {
+        if (auto *AF2 = dyn_cast<SCEVAddRecExpr>(Op))
+          SE->collectParametricTerms(AF2, Terms);
+        if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
+          SmallVector<const SCEV *, 0> Operands;
 
-  for (const SCEVUnknown *BasePointer : Context.NonAffineAccesses) {
-    Value *BaseValue = BasePointer->getValue();
-    auto Shape = std::shared_ptr<ArrayShape>(new ArrayShape(BasePointer));
-    bool BasePtrHasNonAffine = false;
-
-    // First step: collect parametric terms in all array references.
-    SmallVector<const SCEV *, 4> Terms;
-    for (const auto &Pair : Context.Accesses[BasePointer]) {
-      // In case the outermost expression is a plain add, we check if any of its
-      // terms has the form 4 * %inst * %param * %param ..., aka a term that
-      // contains a product between a parameter and an instruction that is
-      // inside the scop. Such instructions, if allowed at all, are instructions
-      // SCEV can not represent, but Polly is still looking through. As a
-      // result, these instructions can depend on induction variables and are
-      // most likely no array sizes. However, terms that are multiplied with
-      // them are likely candidates for array sizes.
-      if (auto *AF = dyn_cast<SCEVAddExpr>(Pair.second)) {
-        for (auto Op : AF->operands()) {
-          if (auto *AF2 = dyn_cast<SCEVAddRecExpr>(Op))
-            SE->collectParametricTerms(AF2, Terms);
-          if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
-            SmallVector<const SCEV *, 0> Operands;
-
-            for (auto *MulOp : AF2->operands()) {
-              if (auto *Const = dyn_cast<SCEVConstant>(MulOp))
-                Operands.push_back(Const);
-              if (auto *Unknown = dyn_cast<SCEVUnknown>(MulOp)) {
-                if (auto *Inst = dyn_cast<Instruction>(Unknown->getValue())) {
-                  if (!Context.CurRegion.contains(Inst))
-                    Operands.push_back(MulOp);
-
-                } else {
+          for (auto *MulOp : AF2->operands()) {
+            if (auto *Const = dyn_cast<SCEVConstant>(MulOp))
+              Operands.push_back(Const);
+            if (auto *Unknown = dyn_cast<SCEVUnknown>(MulOp)) {
+              if (auto *Inst = dyn_cast<Instruction>(Unknown->getValue())) {
+                if (!Context.CurRegion.contains(Inst))
                   Operands.push_back(MulOp);
-                }
+
+              } else {
+                Operands.push_back(MulOp);
               }
             }
-            if (Operands.size())
-              Terms.push_back(SE->getMulExpr(Operands));
           }
+          if (Operands.size())
+            Terms.push_back(SE->getMulExpr(Operands));
         }
       }
-      if (Terms.empty())
-        SE->collectParametricTerms(Pair.second, Terms);
     }
+    if (Terms.empty())
+      SE->collectParametricTerms(Pair.second, Terms);
+  }
+  return Terms;
+}
 
-    // Second step: find array shape.
-    SE->findArrayDimensions(Terms, Shape->DelinearizedSizes,
-                            Context.ElementSize[BasePointer]);
-
-    for (const SCEV *DelinearizedSize : Shape->DelinearizedSizes) {
-      if (!isAffine(DelinearizedSize, Context, nullptr)) {
-        Shape->DelinearizedSizes.clear();
-        break;
-      }
-      if (auto *Unknown = dyn_cast<SCEVUnknown>(DelinearizedSize)) {
-        auto *V = dyn_cast<Value>(Unknown->getValue());
-        if (auto *Load = dyn_cast<LoadInst>(V)) {
-          if (Context.CurRegion.contains(Load) &&
-              isHoistableLoad(Load, CurRegion, *LI, *SE))
-            Context.RequiredILS.insert(Load);
-          continue;
-        }
-      }
-      if (hasScalarDepsInsideRegion(DelinearizedSize, &CurRegion))
-        invalid<ReportNonAffineAccess>(
-            Context, /*Assert=*/true, DelinearizedSize,
-            Context.Accesses[BasePointer].front().first, BaseValue);
+bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
+                                       SmallVectorImpl<const SCEV *> &Sizes,
+                                       const SCEVUnknown *BasePointer) const {
+  Value *BaseValue = BasePointer->getValue();
+  Region &CurRegion = Context.CurRegion;
+  for (const SCEV *DelinearizedSize : Sizes) {
+    if (!isAffine(DelinearizedSize, Context, nullptr)) {
+      Sizes.clear();
+      break;
     }
-
-    // No array shape derived.
-    if (Shape->DelinearizedSizes.empty()) {
-      if (AllowNonAffine)
+    if (auto *Unknown = dyn_cast<SCEVUnknown>(DelinearizedSize)) {
+      auto *V = dyn_cast<Value>(Unknown->getValue());
+      if (auto *Load = dyn_cast<LoadInst>(V)) {
+        if (Context.CurRegion.contains(Load) &&
+            isHoistableLoad(Load, CurRegion, *LI, *SE))
+          Context.RequiredILS.insert(Load);
         continue;
-
-      for (const auto &Pair : Context.Accesses[BasePointer]) {
-        const Instruction *Insn = Pair.first;
-        const SCEV *AF = Pair.second;
-
-        if (!isAffine(AF, Context, BaseValue)) {
-          invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Insn,
-                                         BaseValue);
-          if (!KeepGoing)
-            return false;
-        }
       }
-      continue;
     }
+    if (hasScalarDepsInsideRegion(DelinearizedSize, &CurRegion))
+      invalid<ReportNonAffineAccess>(
+          Context, /*Assert=*/true, DelinearizedSize,
+          Context.Accesses[BasePointer].front().first, BaseValue);
+  }
 
-    // Third step: compute the access functions for each subscript.
-    //
-    // We first store the resulting memory accesses in TempMemoryAccesses. Only
-    // if the access functions for all memory accesses have been successfully
-    // delinearized we continue. Otherwise, we either report a failure or, if
-    // non-affine accesses are allowed, we drop the information. In case the
-    // information is dropped the memory accesses need to be overapproximated
-    // when translated to a polyhedral representation.
-    MapInsnToMemAcc TempMemoryAccesses;
+  // No array shape derived.
+  if (Sizes.empty()) {
+    if (AllowNonAffine)
+      return true;
+
     for (const auto &Pair : Context.Accesses[BasePointer]) {
       const Instruction *Insn = Pair.first;
-      auto *AF = Pair.second;
-      bool IsNonAffine = false;
-      TempMemoryAccesses.insert(std::make_pair(Insn, MemAcc(Insn, Shape)));
-      MemAcc *Acc = &TempMemoryAccesses.find(Insn)->second;
+      const SCEV *AF = Pair.second;
 
-      if (!AF) {
-        if (isAffine(Pair.second, Context, BaseValue))
-          Acc->DelinearizedSubscripts.push_back(Pair.second);
-        else
-          IsNonAffine = true;
-      } else {
-        SE->computeAccessFunctions(AF, Acc->DelinearizedSubscripts,
-                                   Shape->DelinearizedSizes);
-        if (Acc->DelinearizedSubscripts.size() == 0)
-          IsNonAffine = true;
-        for (const SCEV *S : Acc->DelinearizedSubscripts)
-          if (!isAffine(S, Context, BaseValue))
-            IsNonAffine = true;
-      }
-
-      // (Possibly) report non affine access
-      if (IsNonAffine) {
-        BasePtrHasNonAffine = true;
-        if (!AllowNonAffine)
-          invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, Pair.second,
-                                         Insn, BaseValue);
-        if (!KeepGoing && !AllowNonAffine)
+      if (!isAffine(AF, Context, BaseValue)) {
+        invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Insn,
+                                       BaseValue);
+        if (!KeepGoing)
           return false;
       }
     }
-
-    if (!BasePtrHasNonAffine)
-      InsnToMemAcc.insert(TempMemoryAccesses.begin(), TempMemoryAccesses.end());
+    return false;
   }
+  return true;
+}
+
+// We first store the resulting memory accesses in TempMemoryAccesses. Only
+// if the access functions for all memory accesses have been successfully
+// delinearized we continue. Otherwise, we either report a failure or, if
+// non-affine accesses are allowed, we drop the information. In case the
+// information is dropped the memory accesses need to be overapproximated
+// when translated to a polyhedral representation.
+bool ScopDetection::computeAccessFunctions(
+    DetectionContext &Context, const SCEVUnknown *BasePointer,
+    std::shared_ptr<ArrayShape> Shape) const {
+  Value *BaseValue = BasePointer->getValue();
+  bool BasePtrHasNonAffine = false;
+  MapInsnToMemAcc TempMemoryAccesses;
+  for (const auto &Pair : Context.Accesses[BasePointer]) {
+    const Instruction *Insn = Pair.first;
+    auto *AF = Pair.second;
+    bool IsNonAffine = false;
+    TempMemoryAccesses.insert(std::make_pair(Insn, MemAcc(Insn, Shape)));
+    MemAcc *Acc = &TempMemoryAccesses.find(Insn)->second;
+
+    if (!AF) {
+      if (isAffine(Pair.second, Context, BaseValue))
+        Acc->DelinearizedSubscripts.push_back(Pair.second);
+      else
+        IsNonAffine = true;
+    } else {
+      SE->computeAccessFunctions(AF, Acc->DelinearizedSubscripts,
+                                 Shape->DelinearizedSizes);
+      if (Acc->DelinearizedSubscripts.size() == 0)
+        IsNonAffine = true;
+      for (const SCEV *S : Acc->DelinearizedSubscripts)
+        if (!isAffine(S, Context, BaseValue))
+          IsNonAffine = true;
+    }
+
+    // (Possibly) report non affine access
+    if (IsNonAffine) {
+      BasePtrHasNonAffine = true;
+      if (!AllowNonAffine)
+        invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, Pair.second,
+                                       Insn, BaseValue);
+      if (!KeepGoing && !AllowNonAffine)
+        return false;
+    }
+  }
+
+  if (!BasePtrHasNonAffine)
+    InsnToMemAcc.insert(TempMemoryAccesses.begin(), TempMemoryAccesses.end());
+
+  return true;
+}
+
+bool ScopDetection::hasBaseAffineAccesses(
+    DetectionContext &Context, const SCEVUnknown *BasePointer) const {
+  auto Shape = std::shared_ptr<ArrayShape>(new ArrayShape(BasePointer));
+
+  auto Terms = getDelinearizationTerms(Context, BasePointer);
+
+  SE->findArrayDimensions(Terms, Shape->DelinearizedSizes,
+                          Context.ElementSize[BasePointer]);
+
+  if (!hasValidArraySizes(Context, Shape->DelinearizedSizes, BasePointer))
+    return false;
+
+  return computeAccessFunctions(Context, BasePointer, Shape);
+}
+
+bool ScopDetection::hasAffineMemoryAccesses(DetectionContext &Context) const {
+  for (const SCEVUnknown *BasePointer : Context.NonAffineAccesses)
+    if (!hasBaseAffineAccesses(Context, BasePointer)) {
+      if (KeepGoing)
+        continue;
+      else
+        return false;
+    }
   return true;
 }
 
@@ -1029,14 +1057,6 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
       dbgs() << "\n";
     });
     return false;
-  }
-
-  if (!CurRegion.getEnteringBlock()) {
-    BasicBlock *entry = CurRegion.getEntry();
-    Loop *L = LI->getLoopFor(entry);
-
-    if (L && !L->isLoopSimplifyForm())
-      return invalid<ReportSimpleLoop>(Context, /*Assert=*/true);
   }
 
   // SCoP cannot contain the entry block of the function, because we need

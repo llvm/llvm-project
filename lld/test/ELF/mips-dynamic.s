@@ -20,15 +20,6 @@
 # EXE-NEXT:     Flags [
 # EXE-NEXT:       SHF_ALLOC
 # EXE-NEXT:     ]
-# EXE:          Name: .rld_map
-# EXE-NEXT:     Type: SHT_PROGBITS
-# EXE-NEXT:     Flags [
-# EXE-NEXT:       SHF_ALLOC
-# EXE-NEXT:       SHF_WRITE
-# EXE-NEXT:     ]
-# EXE-NEXT:     Address: [[RLDMAPADDR:0x[0-9a-f]+]]
-# EXE-NEXT:     Offset:
-# EXE-NEXT:     Size: 4
 # EXE:          Name: .got
 # EXE-NEXT:     Type: SHT_PROGBITS
 # EXE-NEXT:     Flags [ (0x10000003)
@@ -38,6 +29,15 @@
 # EXE-NEXT:     Address: [[GOTADDR:0x[0-9a-f]+]]
 # EXE-NEXT:     Offset:
 # EXE-NEXT:     Size: 8
+# EXE:          Name: .rld_map
+# EXE-NEXT:     Type: SHT_PROGBITS
+# EXE-NEXT:     Flags [
+# EXE-NEXT:       SHF_ALLOC
+# EXE-NEXT:       SHF_WRITE
+# EXE-NEXT:     ]
+# EXE-NEXT:     Address: [[RLDMAPADDR:0x[0-9a-f]+]]
+# EXE-NEXT:     Offset:
+# EXE-NEXT:     Size: 4
 # EXE:      ]
 # EXE:      DynamicSection [
 # EXE-NEXT:   Tag        Type                 Name/Value

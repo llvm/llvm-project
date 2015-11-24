@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-code-generator=isl -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
 ; Check that we cast the different pointer types correctly before we compare
 ; them in the RTC's. We use i8* as max pointer type.

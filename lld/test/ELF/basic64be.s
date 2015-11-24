@@ -43,7 +43,7 @@ _start:
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 64
 # CHECK-NEXT:   ProgramHeaderEntrySize: 56
-# CHECK-NEXT:   ProgramHeaderCount: 5
+# CHECK-NEXT:   ProgramHeaderCount: 4
 # CHECK-NEXT:   SectionHeaderEntrySize: 64
 # CHECK-NEXT:   SectionHeaderCount: 8
 # CHECK-NEXT:   StringTableSectionIndex: 6
@@ -199,8 +199,8 @@ _start:
 # CHECK-NEXT:     Offset: 0x40
 # CHECK-NEXT:     VirtualAddress: 0x10000040
 # CHECK-NEXT:     PhysicalAddress: 0x10000040
-# CHECK-NEXT:     FileSize: 280
-# CHECK-NEXT:     MemSize: 280
+# CHECK-NEXT:     FileSize: 224
+# CHECK-NEXT:     MemSize: 224
 # CHECK-NEXT:     Flags [ (0x4)
 # CHECK-NEXT:       PF_R (0x4)
 # CHECK-NEXT:     ]
@@ -211,8 +211,8 @@ _start:
 # CHECK-NEXT:    Offset: 0x0
 # CHECK-NEXT:    VirtualAddress: 0x10000000
 # CHECK-NEXT:    PhysicalAddress: 0x10000000
-# CHECK-NEXT:    FileSize: 344
-# CHECK-NEXT:    MemSize: 344
+# CHECK-NEXT:    FileSize: 288
+# CHECK-NEXT:    MemSize: 288
 # CHECK-NEXT:    Flags [
 # CHECK-NEXT:      PF_R
 # CHECK-NEXT:    ]
@@ -220,7 +220,7 @@ _start:
 # CHECK-NEXT:  }
 # CHECK-NEXT:  ProgramHeader {
 # CHECK-NEXT:    Type: PT_LOAD (0x1)
-# CHECK-NEXT:    Offset: 0x10000
+# CHECK-NEXT:    Offset: 0x1000
 # CHECK-NEXT:    VirtualAddress: 0x10010000
 # CHECK-NEXT:    PhysicalAddress: 0x10010000
 # CHECK-NEXT:    FileSize: 12
@@ -233,7 +233,7 @@ _start:
 # CHECK-NEXT:  }
 # CHECK-NEXT:  ProgramHeader {
 # CHECK-NEXT:    Type: PT_LOAD (0x1)
-# CHECK-NEXT:    Offset: 0x20000
+# CHECK-NEXT:    Offset: 0x2000
 # CHECK-NEXT:    VirtualAddress: 0x10020000
 # CHECK-NEXT:    PhysicalAddress: 0x10020000
 # CHECK-NEXT:    FileSize: 88
@@ -244,17 +244,4 @@ _start:
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Alignment: 65536
 # CHECK-NEXT:  }
-# CHECK-NEXT:  ProgramHeader {
-# CHECK-NEXT:    Type: PT_GNU_STACK (0x6474E551)
-# CHECK-NEXT:    Offset: 0x0
-# CHECK-NEXT:    VirtualAddress: 0x0
-# CHECK-NEXT:    PhysicalAddress: 0x0
-# CHECK-NEXT:    FileSize: 0
-# CHECK-NEXT:    MemSize: 0
-# CHECK-NEXT:    Flags [ (0x6)
-# CHECK-NEXT:      PF_R (0x4)
-# CHECK-NEXT:      PF_W (0x2)
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Alignment: 0
-# CHECK-NEXT:  }
-# CHECK-NEXT: ]
+# CHECK-NEXT:]

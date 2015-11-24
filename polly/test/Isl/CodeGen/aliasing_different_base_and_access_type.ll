@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-code-generator=isl -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
 ;
 ; We have to cast %B to "short *" before we create RTCs.
 ;

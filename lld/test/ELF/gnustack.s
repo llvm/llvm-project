@@ -1,8 +1,13 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t2
 # RUN: ld.lld %t1 -z execstack -o %t
 # RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=CHECK_RWX %s
 # RUN: ld.lld %t1 -o %t
+# RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=CHECK_RW %s
+# RUN: ld.lld %t1 %t2 -o %t
+# RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=CHECK_RWX %s
+# RUN: ld.lld %t1 %t2 -z noexecstack -o %t
 # RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=CHECK_RW %s
 
 # CHECK_RW:       Sections [
@@ -23,24 +28,8 @@
 # CHECK_RW-NEXT:   }
 # CHECK_RW-NEXT: ]
 
-# CHECK_RWX:       Sections [
-# CHECK_RWX-NOT:   Name: .note.GNU-stack
-# CHECK_RWX:       ProgramHeaders [
-# CHECK_RWX:        ProgramHeader {
-# CHECK_RWX:        Type: PT_GNU_STACK
-# CHECK_RWX-NEXT:   Offset: 0x0
-# CHECK_RWX-NEXT:   VirtualAddress: 0x0
-# CHECK_RWX-NEXT:   PhysicalAddress: 0x0
-# CHECK_RWX-NEXT:   FileSize: 0
-# CHECK_RWX-NEXT:   MemSize: 0
-# CHECK_RWX-NEXT:   Flags [
-# CHECK_RWX-NEXT:     PF_R
-# CHECK_RWX-NEXT:     PF_W
-# CHECK_RWX-NEXT:     PF_X
-# CHECK_RWX-NEXT:   ]
-# CHECK_RWX-NEXT:   Alignment: 0
-# CHECK_RWX-NEXT:   }
-# CHECK_RWX-NEXT: ]
+# CHECK_RWX-NOT: Type: PT_GNU_STACK
 
 .globl _start
 _start:
+.section .note.GNU-stack,""

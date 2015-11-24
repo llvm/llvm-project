@@ -47,6 +47,8 @@ private:
                   iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels);
   void scanRelocs(InputSection<ELFT> &C);
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
+  void updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr,
+                   OutputSectionBase<ELFT> *Sec, uintX_t VA);
   void assignAddresses();
   void buildSectionMap();
   void openFile(StringRef OutputPath);
@@ -81,6 +83,7 @@ private:
                uintX_t VA, uintX_t Size, uintX_t Align);
   void copyPhdr(Elf_Phdr *PH, OutputSectionBase<ELFT> *From);
 
+  bool HasRelro = false;
   SymbolTable<ELFT> &Symtab;
   std::vector<Elf_Phdr> Phdrs;
 
@@ -353,6 +356,26 @@ static int getPPC64SectionRank(StringRef SectionName) {
            .Default(1);
 }
 
+template <class ELFT> static bool isRelroSection(OutputSectionBase<ELFT> *Sec) {
+  typename OutputSectionBase<ELFT>::uintX_t Flags = Sec->getFlags();
+  if (!(Flags & SHF_ALLOC) || !(Flags & SHF_WRITE))
+    return false;
+  uint32_t Type = Sec->getType();
+  if ((Flags & SHF_TLS) || (Type == SHT_INIT_ARRAY || Type == SHT_FINI_ARRAY ||
+                            Type == SHT_PREINIT_ARRAY))
+    return true;
+  if (Sec == Out<ELFT>::GotPlt)
+    return Config->ZNow;
+  if (Sec == Out<ELFT>::Dynamic || Sec == Out<ELFT>::Got)
+    return true;
+
+  StringRef Name = Sec->getName();
+  StringRef WhiteList[] = {".data.rel.ro", ".ctors", ".dtors", ".jcr",
+                           ".eh_frame"};
+  return (std::find(std::begin(WhiteList), std::end(WhiteList), Name) !=
+          std::end(WhiteList));
+}
+
 // Output section ordering is determined by this function.
 template <class ELFT>
 static bool compareOutputSections(OutputSectionBase<ELFT> *A,
@@ -408,6 +431,12 @@ static bool compareOutputSections(OutputSectionBase<ELFT> *A,
   bool BIsNoBits = B->getType() == SHT_NOBITS;
   if (AIsNoBits != BIsNoBits)
     return BIsNoBits;
+
+  // We place RelRo section before plain r/w ones.
+  bool AIsRelRo = isRelroSection(A);
+  bool BIsRelRo = isRelroSection(B);
+  if (AIsRelRo != BIsRelRo)
+    return AIsRelRo;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
@@ -724,8 +753,10 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   std::stable_sort(OutputSections.begin(), OutputSections.end(),
                    compareSections<ELFT>);
 
-  for (unsigned I = 0, N = OutputSections.size(); I < N; ++I)
+  for (unsigned I = 0, N = OutputSections.size(); I < N; ++I) {
     OutputSections[I]->SectionIndex = I + 1;
+    HasRelro |= (Config->ZRelro && isRelroSection(OutputSections[I]));
+  }
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     Out<ELFT>::ShStrTab->add(Sec->getName());
@@ -793,6 +824,18 @@ static uint32_t toPhdrFlags(uint64_t Flags) {
   return Ret;
 }
 
+template <class ELFT>
+void Writer<ELFT>::updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr,
+                               OutputSectionBase<ELFT> *Sec, uintX_t VA) {
+  if (!Config->ZRelro || !(Cur->p_flags & PF_W) || !isRelroSection(Sec))
+    return;
+  if (!GnuRelroPhdr->p_type)
+    setPhdr(GnuRelroPhdr, PT_GNU_RELRO, PF_R, Cur->p_offset, Cur->p_vaddr,
+            VA - Cur->p_vaddr, 1 /*p_align*/);
+  GnuRelroPhdr->p_filesz = VA - Cur->p_vaddr;
+  GnuRelroPhdr->p_memsz = VA - Cur->p_vaddr;
+}
+
 // Visits all sections to create PHDRs and to assign incremental,
 // non-overlapping addresses to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
@@ -819,6 +862,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   setPhdr(&Phdrs[++PhdrIdx], PT_LOAD, PF_R, 0, Target->getVAStart(), FileOff,
           Target->getPageSize());
 
+  Elf_Phdr GnuRelroPhdr = {};
   Elf_Phdr TlsPhdr{};
   uintX_t ThreadBSSOffset = 0;
   // Create phdrs as we assign VAs and file offsets to all output sections.
@@ -852,6 +896,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
         VA = RoundUpToAlignment(VA, Sec->getAlign());
         Sec->setVA(VA);
         VA += Sec->getSize();
+        updateRelro(&Phdrs[PhdrIdx], &GnuRelroPhdr, Sec, VA);
       }
     }
 
@@ -881,10 +926,18 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     copyPhdr(PH, Out<ELFT>::Dynamic);
   }
 
-  Elf_Phdr *PH = &Phdrs[++PhdrIdx];
-  PH->p_type = PT_GNU_STACK;
-  PH->p_flags = Config->ZExecStack ? toPhdrFlags(SHF_WRITE | SHF_EXECINSTR)
-                                   : toPhdrFlags(SHF_WRITE);
+  if (HasRelro) {
+    Elf_Phdr *PH = &Phdrs[++PhdrIdx];
+    *PH = GnuRelroPhdr;
+  }
+
+  // PT_GNU_STACK is a special section to tell the loader to make the
+  // pages for the stack non-executable.
+  if (!Config->ZExecStack) {
+    Elf_Phdr *PH = &Phdrs[++PhdrIdx];
+    PH->p_type = PT_GNU_STACK;
+    PH->p_flags = PF_R | PF_W;
+  }
 
   // Fix up PT_INTERP as we now know the address of .interp section.
   if (Interp) {
@@ -908,10 +961,12 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 // Returns the number of PHDR entries.
 template <class ELFT> int Writer<ELFT>::getPhdrsNum() const {
   bool Tls = false;
-  int I = 3; // 3 for PT_PHDR, first PT_LOAD and PT_GNU_STACK
+  int I = 2; // 2 for PT_PHDR and first PT_LOAD
   if (needsInterpSection())
     ++I;
   if (isOutputDynamic())
+    ++I;
+  if (!Config->ZExecStack)
     ++I;
   uintX_t Last = PF_R;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
@@ -926,6 +981,8 @@ template <class ELFT> int Writer<ELFT>::getPhdrsNum() const {
     }
   }
   if (Tls)
+    ++I;
+  if (HasRelro)
     ++I;
   return I;
 }

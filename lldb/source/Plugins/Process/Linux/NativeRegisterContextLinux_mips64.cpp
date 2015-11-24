@@ -1092,7 +1092,7 @@ GetVacantWatchIndex (struct pt_watch_regs *regs, lldb::addr_t addr, uint32_t siz
             }
         }
     }
-    return 0;
+    return LLDB_INVALID_INDEX32;
 }
 
 bool
@@ -1221,7 +1221,7 @@ NativeRegisterContextLinux_mips64::SetHardwareWatchpoint (
     int index = GetVacantWatchIndex (&regs, addr, size, watch_flags, NumSupportedHardwareWatchpoints());
 
     // New watchpoint doesn't fit
-    if (!index)
+    if (index == LLDB_INVALID_INDEX32)
     return LLDB_INVALID_INDEX32;
 
 

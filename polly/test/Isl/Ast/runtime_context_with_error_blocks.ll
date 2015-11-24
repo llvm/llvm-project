@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-code-generator=isl -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s
 ;
 ; Verify we do not simplify the runtime check to "true" due to the domain
 ; constraints as the test contains an error block that influenced the domains

@@ -354,6 +354,9 @@ protected:
                       ThreadList &new_thread_list) override;
 
     Error
+    EstablishConnectionIfNeeded (const ProcessInfo &process_info);
+
+    Error
     LaunchAndConnectToDebugserver (const ProcessInfo &process_info);
 
     void
