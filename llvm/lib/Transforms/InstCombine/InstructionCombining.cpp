@@ -1245,16 +1245,11 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
 /// specified one but with other operands.
 static Value *CreateBinOpAsGiven(BinaryOperator &Inst, Value *LHS, Value *RHS,
                                  InstCombiner::BuilderTy *B) {
-  Value *BORes = B->CreateBinOp(Inst.getOpcode(), LHS, RHS);
-  if (BinaryOperator *NewBO = dyn_cast<BinaryOperator>(BORes)) {
-    if (isa<OverflowingBinaryOperator>(NewBO)) {
-      NewBO->setHasNoSignedWrap(Inst.hasNoSignedWrap());
-      NewBO->setHasNoUnsignedWrap(Inst.hasNoUnsignedWrap());
-    }
-    if (isa<PossiblyExactOperator>(NewBO))
-      NewBO->setIsExact(Inst.isExact());
-  }
-  return BORes;
+  Value *BO = B->CreateBinOp(Inst.getOpcode(), LHS, RHS);
+  // If LHS and RHS are constant, BO won't be a binary operator.
+  if (BinaryOperator *NewBO = dyn_cast<BinaryOperator>(BO))
+    NewBO->copyIRFlags(&Inst);
+  return BO;
 }
 
 /// \brief Makes transformation of binary operation specific for vector types.

@@ -1178,16 +1178,21 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
            "Custom lowering for non-i32 vectors hasn't been implemented.");
     unsigned NumElements = Op.getValueType().getVectorNumElements();
     assert(NumElements != 2 && "v2 loads are supported for all address spaces.");
+
     switch (Load->getAddressSpace()) {
       default: break;
       case AMDGPUAS::GLOBAL_ADDRESS:
       case AMDGPUAS::PRIVATE_ADDRESS:
+        if (NumElements >= 8)
+          return SplitVectorLoad(Op, DAG);
+
         // v4 loads are supported for private and global memory.
         if (NumElements <= 4)
           break;
         // fall-through
       case AMDGPUAS::LOCAL_ADDRESS:
-        return ScalarizeVectorLoad(Op, DAG);
+        // If properly aligned, if we split we might be able to use ds_read_b64.
+        return SplitVectorLoad(Op, DAG);
     }
   }
 
@@ -1409,7 +1414,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     return Ret;
 
   if (VT.isVector() && VT.getVectorNumElements() >= 8)
-      return ScalarizeVectorStore(Op, DAG);
+      return SplitVectorStore(Op, DAG);
 
   if (VT == MVT::i1)
     return DAG.getTruncStore(Store->getChain(), DL,

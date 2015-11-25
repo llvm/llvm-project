@@ -287,13 +287,30 @@ entry:
 ; CM: LDS_WRITE
 ; CM: LDS_WRITE
 
-; SI: ds_write_b32
-; SI: ds_write_b32
-; SI: ds_write_b32
-; SI: ds_write_b32
+; SI: ds_write_b64
+; SI: ds_write_b64
 define void @store_local_v4i32(<4 x i32> addrspace(3)* %out, <4 x i32> %in) {
 entry:
   store <4 x i32> %in, <4 x i32> addrspace(3)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}store_local_v4i32_align4:
+; EG: LDS_WRITE
+; EG: LDS_WRITE
+; EG: LDS_WRITE
+; EG: LDS_WRITE
+
+; CM: LDS_WRITE
+; CM: LDS_WRITE
+; CM: LDS_WRITE
+; CM: LDS_WRITE
+
+; SI: ds_write2_b32
+; SI: ds_write2_b32
+define void @store_local_v4i32_align4(<4 x i32> addrspace(3)* %out, <4 x i32> %in) {
+entry:
+  store <4 x i32> %in, <4 x i32> addrspace(3)* %out, align 4
   ret void
 }
 

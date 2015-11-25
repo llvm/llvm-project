@@ -74,12 +74,6 @@ entry:
   ret void
 }
 
-define void @callweakfunc() #0 {
-entry:
-  call void @weakfunc()
-  ret void
-}
-
 define internal i32 @staticfunc() #0 {
 entry:
   ret i32 1

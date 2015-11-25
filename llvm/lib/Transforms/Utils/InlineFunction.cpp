@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -210,11 +210,7 @@ HandleCallsInBlockInlinedThroughInvoke(BasicBlock *BB, BasicBlock *UnwindEdge) {
     SmallVector<Value*, 8> InvokeArgs(CS.arg_begin(), CS.arg_end());
     SmallVector<OperandBundleDef, 1> OpBundles;
 
-    // Copy the OperandBundeUse instances to OperandBundleDefs.  These two are
-    // *different* representations of operand bundles: see the documentation in
-    // InstrTypes.h for more details.
-    for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i)
-      OpBundles.emplace_back(CS.getOperandBundleAt(i));
+    CS.getOperandBundlesAsDefs(OpBundles);
 
     // Note: we're round tripping operand bundles through memory here, and that
     // can potentially be avoided with a cleverer API design that we do not have

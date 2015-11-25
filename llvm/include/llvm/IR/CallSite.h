@@ -390,6 +390,16 @@ public:
 #undef CALLSITE_DELEGATE_GETTER
 #undef CALLSITE_DELEGATE_SETTER
 
+  void getOperandBundlesAsDefs(SmallVectorImpl<OperandBundleDef> &Defs) const {
+    const Instruction *II = getInstruction();
+    // Since this is actually a getter that "looks like" a setter, don't use the
+    // above macros to avoid confusion.
+    if (isCall())
+      cast<CallInst>(II)->getOperandBundlesAsDefs(Defs);
+    else
+      cast<InvokeInst>(II)->getOperandBundlesAsDefs(Defs);
+  }
+
   /// @brief Determine whether this data operand is not captured.
   bool doesNotCapture(unsigned OpNo) const {
     return dataOperandHasImpliedAttr(OpNo + 1, Attribute::NoCapture);

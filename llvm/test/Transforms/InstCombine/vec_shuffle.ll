@@ -310,16 +310,16 @@ define <4 x i32> @shuffle_17addnuw(<4 x i32> %v1, <4 x i32> %v2) nounwind uwtabl
   ret <4 x i32> %r
 }
 
-define <4 x float> @shuffle_17fsub(<4 x float> %v1, <4 x float> %v2) nounwind uwtable {
-; CHECK-LABEL: @shuffle_17fsub(
-; CHECK-NOT: shufflevector
-; CHECK: fsub <4 x float> %v1, %v2
-; CHECK: shufflevector
+define <4 x float> @shuffle_17fsub_fast(<4 x float> %v1, <4 x float> %v2) nounwind uwtable {
+; CHECK-LABEL: @shuffle_17fsub_fast(
+; CHECK-NEXT: [[VAR1:%[a-zA-Z0-9.]+]] = fsub fast <4 x float> %v1, %v2
+; CHECK-NEXT: shufflevector <4 x float> [[VAR1]], <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT: ret <4 x float>
   %t1 = shufflevector <4 x float> %v1, <4 x float> zeroinitializer,
                       <4 x i32> <i32 1, i32 2, i32 3, i32 0>
   %t2 = shufflevector <4 x float> %v2, <4 x float> zeroinitializer,
                       <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-  %r = fsub <4 x float> %t1, %t2
+  %r = fsub fast <4 x float> %t1, %t2
   ret <4 x float> %r
 }
 

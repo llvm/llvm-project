@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -21,7 +22,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 
 using namespace llvm;
 

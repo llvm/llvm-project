@@ -137,14 +137,8 @@ define void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias %out, <7 x i8>
 ; SI-DAG: v_cvt_f32_ubyte0_e32 v{{[0-9]+}}, v[[HILOAD]]
 ; SI-NOT: bfe
 ; SI-NOT: lshr
-; SI: buffer_store_dword
-; SI: buffer_store_dword
-; SI: buffer_store_dword
-; SI: buffer_store_dword
-; SI: buffer_store_dword
-; SI: buffer_store_dword
-; SI: buffer_store_dword
-; SI: buffer_store_dword
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
 define void @load_v8i8_to_v8f32(<8 x float> addrspace(1)* noalias %out, <8 x i8> addrspace(1)* noalias %in) nounwind {
   %load = load <8 x i8>, <8 x i8> addrspace(1)* %in, align 8
   %cvt = uitofp <8 x i8> %load to <8 x float>

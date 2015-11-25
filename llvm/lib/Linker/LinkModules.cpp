@@ -517,11 +517,11 @@ private:
   GlobalValue *getLinkedToGlobal(const GlobalValue *SrcGV) {
     // If the source has no name it can't link.  If it has local linkage,
     // there is no name match-up going on.
-    if (!SrcGV->hasName() || SrcGV->hasLocalLinkage())
+    if (!SrcGV->hasName() || GlobalValue::isLocalLinkage(getLinkage(SrcGV)))
       return nullptr;
 
     // Otherwise see if we have a match in the destination module's symtab.
-    GlobalValue *DGV = DstM->getNamedValue(SrcGV->getName());
+    GlobalValue *DGV = DstM->getNamedValue(getName(SrcGV));
     if (!DGV)
       return nullptr;
 

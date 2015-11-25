@@ -713,6 +713,24 @@ bool LLParser::ParseAlias(const std::string &Name, LocTy NameLoc, unsigned L,
         ExplicitTypeLoc,
         "explicit pointee type doesn't match operand's pointee type");
 
+  GlobalValue *GVal = nullptr;
+
+  // See if the alias was forward referenced, if so, prepare to replace the
+  // forward reference.
+  if (!Name.empty()) {
+    GVal = M->getNamedValue(Name);
+    if (GVal) {
+      if (!ForwardRefVals.erase(Name))
+        return Error(NameLoc, "redefinition of global '@" + Name + "'");
+    }
+  } else {
+    auto I = ForwardRefValIDs.find(NumberedVals.size());
+    if (I != ForwardRefValIDs.end()) {
+      GVal = I->second.first;
+      ForwardRefValIDs.erase(I);
+    }
+  }
+
   // Okay, create the alias but do not insert it into the module yet.
   std::unique_ptr<GlobalAlias> GA(
       GlobalAlias::create(Ty, AddrSpace, (GlobalValue::LinkageTypes)Linkage,
@@ -725,26 +743,17 @@ bool LLParser::ParseAlias(const std::string &Name, LocTy NameLoc, unsigned L,
   if (Name.empty())
     NumberedVals.push_back(GA.get());
 
-  // See if this value already exists in the symbol table.  If so, it is either
-  // a redefinition or a definition of a forward reference.
-  if (GlobalValue *Val = M->getNamedValue(Name)) {
-    // See if this was a redefinition.  If so, there is no entry in
-    // ForwardRefVals.
-    auto I = ForwardRefVals.find(Name);
-    if (I == ForwardRefVals.end())
-      return Error(NameLoc, "redefinition of global named '@" + Name + "'");
-
-    // Otherwise, this was a definition of forward ref.  Verify that types
-    // agree.
-    if (Val->getType() != GA->getType())
-      return Error(NameLoc,
-              "forward reference and definition of alias have different types");
+  if (GVal) {
+    // Verify that types agree.
+    if (GVal->getType() != GA->getType())
+      return Error(
+          ExplicitTypeLoc,
+          "forward reference and definition of alias have different types");
 
     // If they agree, just RAUW the old value with the alias and remove the
     // forward ref info.
-    Val->replaceAllUsesWith(GA.get());
-    Val->eraseFromParent();
-    ForwardRefVals.erase(I);
+    GVal->replaceAllUsesWith(GA.get());
+    GVal->eraseFromParent();
   }
 
   // Insert into the module, we know its name won't collide now.
@@ -809,7 +818,7 @@ bool LLParser::ParseGlobal(const std::string &Name, LocTy NameLoc,
   if (!Name.empty()) {
     GVal = M->getNamedValue(Name);
     if (GVal) {
-      if (!ForwardRefVals.erase(Name) || !isa<GlobalValue>(GVal))
+      if (!ForwardRefVals.erase(Name))
         return Error(NameLoc, "redefinition of global '@" + Name + "'");
     }
   } else {

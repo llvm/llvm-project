@@ -25,10 +25,6 @@ using namespace llvm;
 #include "HexagonGenSubtargetInfo.inc"
 
 static cl::opt<bool>
-EnableV3("enable-hexagon-v3", cl::Hidden,
-         cl::desc("Enable Hexagon V3 instructions."));
-
-static cl::opt<bool>
 EnableMemOps(
     "enable-hexagon-memops",
     cl::Hidden, cl::ZeroOrMore, cl::ValueDisallowed, cl::init(true),
@@ -47,6 +43,9 @@ EnableIEEERndNear(
     "enable-hexagon-ieee-rnd-near",
     cl::Hidden, cl::ZeroOrMore, cl::init(false),
     cl::desc("Generate non-chopped conversion from fp to int."));
+
+static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
+    cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
 static cl::opt<bool> DisableHexagonMISched("disable-hexagon-misched",
       cl::Hidden, cl::ZeroOrMore, cl::init(false),
@@ -91,6 +90,8 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
     ModeIEEERndNear = true;
   else
     ModeIEEERndNear = false;
+
+  UseBSBScheduling = hasV60TOps() && EnableBSBSched;
 }
 
 // Pin the vtable to this file.

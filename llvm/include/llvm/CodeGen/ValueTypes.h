@@ -164,6 +164,11 @@ namespace llvm {
       return isSimple() ? V.is1024BitVector() : isExtended1024BitVector();
     }
 
+    /// is2048BitVector - Return true if this is a 2048-bit vector type.
+    bool is2048BitVector() const {
+      return isSimple() ? V.is2048BitVector() : isExtended2048BitVector();
+    }
+
     /// isOverloaded - Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       return (V==MVT::iAny || V==MVT::fAny || V==MVT::vAny || V==MVT::iPTRAny);
@@ -370,6 +375,7 @@ namespace llvm {
     bool isExtended256BitVector() const LLVM_READONLY;
     bool isExtended512BitVector() const LLVM_READONLY;
     bool isExtended1024BitVector() const LLVM_READONLY;
+    bool isExtended2048BitVector() const LLVM_READONLY;
     EVT getExtendedVectorElementType() const;
     unsigned getExtendedVectorNumElements() const LLVM_READONLY;
     unsigned getExtendedSizeInBits() const;

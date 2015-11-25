@@ -257,7 +257,9 @@ enum IIT_Info {
   IIT_SAME_VEC_WIDTH_ARG = 31,
   IIT_PTR_TO_ARG = 32,
   IIT_VEC_OF_PTRS_TO_ELT = 33,
-  IIT_I128 = 34
+  IIT_I128 = 34,
+  IIT_V512 = 35,
+  IIT_V1024 = 36
 };
 
 
@@ -372,6 +374,8 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
     case 16: Sig.push_back(IIT_V16); break;
     case 32: Sig.push_back(IIT_V32); break;
     case 64: Sig.push_back(IIT_V64); break;
+    case 512: Sig.push_back(IIT_V512); break;
+    case 1024: Sig.push_back(IIT_V1024); break;
     }
 
     return EncodeFixedValueType(VVT.getVectorElementType().SimpleTy, Sig);

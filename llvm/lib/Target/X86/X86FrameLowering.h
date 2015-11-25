@@ -145,11 +145,6 @@ public:
                               MachineBasicBlock::iterator I, 
                               uint64_t Amount) const;
 
-  /// Returns true if the target will correctly handle shrink wrapping.
-  bool enableShrinkWrapping(const MachineFunction &MF) const override {
-    return true;
-  }
-
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 DebugLoc DL, MCCFIInstruction CFIInst) const;

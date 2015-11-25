@@ -691,6 +691,13 @@ public:
     return Insert(InvokeInst::Create(Callee, NormalDest, UnwindDest, Args),
                   Name);
   }
+  InvokeInst *CreateInvoke(Value *Callee, BasicBlock *NormalDest,
+                           BasicBlock *UnwindDest, ArrayRef<Value *> Args,
+                           ArrayRef<OperandBundleDef> OpBundles,
+                           const Twine &Name = "") {
+    return Insert(InvokeInst::Create(Callee, NormalDest, UnwindDest, Args,
+                                     OpBundles), Name);
+  }
 
   ResumeInst *CreateResume(Value *Exn) {
     return Insert(ResumeInst::Create(Exn));
@@ -1528,7 +1535,12 @@ public:
   }
 
   CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args = None,
+                       ArrayRef<OperandBundleDef> OpBundles = None,
                        const Twine &Name = "") {
+    return Insert(CallInst::Create(Callee, Args, OpBundles), Name);
+  }
+  CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args,
+                       const Twine &Name) {
     return Insert(CallInst::Create(Callee, Args), Name);
   }
 

@@ -92,7 +92,7 @@ define <2 x i64> @testv2i64(<2 x i64> %in) nounwind {
 ; AVX-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %out = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %in)
   ret <2 x i64> %out
@@ -207,9 +207,9 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX-NEXT:    vpsadbw %xmm2, %xmm1, %xmm2
+; AVX-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
 ; AVX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %out = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %in)

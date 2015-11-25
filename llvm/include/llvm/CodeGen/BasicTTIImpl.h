@@ -496,13 +496,11 @@ public:
       // itself. Unless the corresponding extending load or truncating store is
       // legal, then this will scalarize.
       TargetLowering::LegalizeAction LA = TargetLowering::Expand;
-      EVT MemVT = getTLI()->getValueType(DL, Src, true);
-      if (MemVT.isSimple() && MemVT != MVT::Other) {
-        if (Opcode == Instruction::Store)
-          LA = getTLI()->getTruncStoreAction(LT.second, MemVT.getSimpleVT());
-        else
-          LA = getTLI()->getLoadExtAction(ISD::EXTLOAD, LT.second, MemVT);
-      }
+      EVT MemVT = getTLI()->getValueType(DL, Src);
+      if (Opcode == Instruction::Store)
+        LA = getTLI()->getTruncStoreAction(LT.second, MemVT);
+      else
+        LA = getTLI()->getLoadExtAction(ISD::EXTLOAD, LT.second, MemVT);
 
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.

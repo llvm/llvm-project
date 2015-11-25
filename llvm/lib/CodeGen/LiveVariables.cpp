@@ -522,11 +522,15 @@ void LiveVariables::runOnInstr(MachineInstr *MI,
       continue;
     unsigned MOReg = MO.getReg();
     if (MO.isUse()) {
-      MO.setIsKill(false);
+      if (!(TargetRegisterInfo::isPhysicalRegister(MOReg) &&
+            MRI->isReserved(MOReg)))
+        MO.setIsKill(false);
       if (MO.readsReg())
         UseRegs.push_back(MOReg);
     } else /*MO.isDef()*/ {
-      MO.setIsDead(false);
+      if (!(TargetRegisterInfo::isPhysicalRegister(MOReg) &&
+            MRI->isReserved(MOReg)))
+        MO.setIsDead(false);
       DefRegs.push_back(MOReg);
     }
   }

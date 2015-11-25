@@ -51,31 +51,25 @@ OPTIONS
 
 .. option:: -instr (default)
 
- Specify that the input profile is an instrumentation-based profile. When
- using instrumentation-based profiles, the format of the generated file
- can be generated in one of the two ways:
-
- .. option:: -binary (default)
-
- Emit the profile using a binary encoding in indexed profile format.
-
- .. option:: -text
-
- Emit the profile in text format.
+ Specify that the input profile is an instrumentation-based profile.
 
 .. option:: -sample
 
- Specify that the input profile is a sample-based profile. When using
- sample-based profiles, the format of the generated file can be generated
- in one of three ways:
+ Specify that the input profile is a sample-based profile.
+ 
+ The format of the generated file can be generated in one of three ways:
 
  .. option:: -binary (default)
 
- Emit the profile using a binary encoding.
+ Emit the profile using a binary encoding. For instrumentation-based profile
+ the output format is the indexed binary format. 
 
  .. option:: -text
 
- Emit the profile in text mode.
+ Emit the profile in text mode. This option can also be used with both
+ sample-based and instrumentation-based profile. When this option is used
+ the profile will be dumped in the text format that is parsable by the profile
+ reader.
 
  .. option:: -gcc
 

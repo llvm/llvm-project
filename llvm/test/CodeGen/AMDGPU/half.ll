@@ -105,6 +105,26 @@ define void @extload_v4f16_to_v4f32_arg(<4 x float> addrspace(1)* %out, <4 x hal
 }
 
 ; GCN-LABEL: {{^}}extload_v8f16_to_v8f32_arg:
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @extload_v8f16_to_v8f32_arg(<8 x float> addrspace(1)* %out, <8 x half> %arg) #0 {
   %ext = fpext <8 x half> %arg to <8 x float>
   store <8 x float> %ext, <8 x float> addrspace(1)* %out
@@ -298,6 +318,46 @@ define void @global_extload_v8f16_to_v8f32(<8 x float> addrspace(1)* %out, <8 x 
 }
 
 ; GCN-LABEL: {{^}}global_extload_v16f16_to_v16f32:
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+
+; GCN: s_endpgm
 define void @global_extload_v16f16_to_v16f32(<16 x float> addrspace(1)* %out, <16 x half> addrspace(1)* %in) #0 {
   %val = load <16 x half>, <16 x half> addrspace(1)* %in
   %cvt = fpext <16 x half> %val to <16 x float>
@@ -426,14 +486,8 @@ define void @global_truncstore_v4f32_to_v4f16(<4 x half> addrspace(1)* %out, <4 
 }
 
 ; GCN-LABEL: {{^}}global_truncstore_v8f32_to_v8f16:
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
 ; GCN: v_cvt_f16_f32_e32
 ; GCN: v_cvt_f16_f32_e32
 ; GCN: v_cvt_f16_f32_e32
@@ -459,22 +513,10 @@ define void @global_truncstore_v8f32_to_v8f16(<8 x half> addrspace(1)* %out, <8 
 }
 
 ; GCN-LABEL: {{^}}global_truncstore_v16f32_to_v16f16:
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
 ; GCN-DAG: v_cvt_f16_f32_e32
 ; GCN-DAG: v_cvt_f16_f32_e32
 ; GCN-DAG: v_cvt_f16_f32_e32
