@@ -125,10 +125,11 @@ public:
     return true;
   }
 
-  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
+  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *E,
+                                   DataRecursionQueue *Q = nullptr) {
     if (E->getOperatorLoc().isInvalid())
       return true; // implicit.
-    return base::TraverseCXXOperatorCallExpr(E);
+    return base::TraverseCXXOperatorCallExpr(E, Q);
   }
 
   bool VisitDeclStmt(DeclStmt *S) {

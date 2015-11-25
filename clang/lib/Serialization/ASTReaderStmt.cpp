@@ -1843,6 +1843,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_map:
     C = OMPMapClause::CreateEmpty(Context, Record[Idx++]);
     break;
+  case OMPC_num_teams:
+    C = new (Context) OMPNumTeamsClause();
+    break;
   }
   Visit(C);
   C->setLocStart(Reader->ReadSourceLocation(Record, Idx));
@@ -2165,6 +2168,11 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
     Vars.push_back(Reader->Reader.ReadSubExpr());
   }
   C->setVarRefs(Vars);
+}
+
+void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  C->setNumTeams(Reader->Reader.ReadSubExpr());
+  C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
 }
 
 //===----------------------------------------------------------------------===//

@@ -2728,6 +2728,61 @@ public:
   }
 };
 
+/// \brief This represents 'num_teams' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp teams num_teams(n)
+/// \endcode
+/// In this example directive '#pragma omp teams' has clause 'num_teams'
+/// with single expression 'n'.
+///
+class OMPNumTeamsClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief NumTeams number.
+  Stmt *NumTeams;
+  /// \brief Set the NumTeams number.
+  ///
+  /// \param E NumTeams number.
+  ///
+  void setNumTeams(Expr *E) { NumTeams = E; }
+
+public:
+  /// \brief Build 'num_teams' clause.
+  ///
+  /// \param E Expression associated with this clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  ///
+  OMPNumTeamsClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc)
+      : OMPClause(OMPC_num_teams, StartLoc, EndLoc), LParenLoc(LParenLoc), 
+        NumTeams(E) {}
+
+  /// \brief Build an empty clause.
+  ///
+  OMPNumTeamsClause()
+      : OMPClause(OMPC_num_teams, SourceLocation(), SourceLocation()), 
+        LParenLoc(SourceLocation()), NumTeams(nullptr) {}
+  /// \brief Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  /// \brief Return NumTeams number.
+  Expr *getNumTeams() { return cast<Expr>(NumTeams); }
+  /// \brief Return NumTeams number.
+  Expr *getNumTeams() const { return cast<Expr>(NumTeams); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_num_teams;
+  }
+
+  child_range children() { return child_range(&NumTeams, &NumTeams + 1); }
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

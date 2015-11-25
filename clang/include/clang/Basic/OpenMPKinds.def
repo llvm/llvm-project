@@ -150,6 +150,7 @@ OPENMP_CLAUSE(device, OMPDeviceClause)
 OPENMP_CLAUSE(threads, OMPThreadsClause)
 OPENMP_CLAUSE(simd, OMPSIMDClause)
 OPENMP_CLAUSE(map, OMPMapClause)
+OPENMP_CLAUSE(num_teams, OMPNumTeamsClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -321,6 +322,7 @@ OPENMP_TEAMS_CLAUSE(private)
 OPENMP_TEAMS_CLAUSE(firstprivate)
 OPENMP_TEAMS_CLAUSE(shared)
 OPENMP_TEAMS_CLAUSE(reduction)
+OPENMP_TEAMS_CLAUSE(num_teams)
 
 // Clauses allowed for OpenMP directive 'ordered'.
 // TODO More clauses for 'ordered' directive.
