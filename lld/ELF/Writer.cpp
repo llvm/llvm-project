@@ -933,12 +933,11 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
   // PT_GNU_STACK is a special section to tell the loader to make the
   // pages for the stack non-executable.
-  Elf_Phdr *PH = &Phdrs[++PhdrIdx];
-  PH->p_type = PT_GNU_STACK;
-  if (Config->ZExecStack)
-    PH->p_flags = PF_R | PF_W | PF_X;
-  else
+  if (!Config->ZExecStack) {
+    Elf_Phdr *PH = &Phdrs[++PhdrIdx];
+    PH->p_type = PT_GNU_STACK;
     PH->p_flags = PF_R | PF_W;
+  }
 
   // Fix up PT_INTERP as we now know the address of .interp section.
   if (Interp) {
@@ -962,10 +961,12 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 // Returns the number of PHDR entries.
 template <class ELFT> int Writer<ELFT>::getPhdrsNum() const {
   bool Tls = false;
-  int I = 3; // 3 for PT_PHDR, first PT_LOAD and PT_GNU_STACK
+  int I = 2; // 2 for PT_PHDR and first PT_LOAD
   if (needsInterpSection())
     ++I;
   if (isOutputDynamic())
+    ++I;
+  if (!Config->ZExecStack)
     ++I;
   uintX_t Last = PF_R;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {

@@ -51,6 +51,7 @@ public:
                          uint64_t PltEntryAddr) const override;
   void writePltEntry(uint8_t *Buf, uint64_t GotEntryAddr,
                      uint64_t PltEntryAddr, int32_t Index) const override;
+  bool relocNeedsCopy(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocPointsToGot(uint32_t Type) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
@@ -177,6 +178,7 @@ void TargetInfo::writeGotHeaderEntries(uint8_t *Buf) const {}
 void TargetInfo::writeGotPltHeaderEntries(uint8_t *Buf) const {}
 
 X86TargetInfo::X86TargetInfo() {
+  CopyReloc = R_386_COPY;
   PCRelReloc = R_386_PC32;
   GotReloc = R_386_GLOB_DAT;
   GotRefReloc = R_386_GOT32;
@@ -194,6 +196,13 @@ void X86TargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotEntryAddr,
   memcpy(Buf, Inst, sizeof(Inst));
   assert(isUInt<32>(GotEntryAddr));
   write32le(Buf + 2, GotEntryAddr);
+}
+
+bool X86TargetInfo::relocNeedsCopy(uint32_t Type, const SymbolBody &S) const {
+  if (Type == R_386_32 || Type == R_386_16 || Type == R_386_8)
+    if (auto *SS = dyn_cast<SharedSymbol<ELF32LE>>(&S))
+      return SS->Sym.getType() == STT_OBJECT;
+  return false;
 }
 
 bool X86TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {

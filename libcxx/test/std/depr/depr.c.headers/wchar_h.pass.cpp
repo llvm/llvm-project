@@ -31,7 +31,15 @@
 
 int main()
 {
+// mbstate_t comes from the underlying C library; it is defined (in C99) as:
+//    a complete object type other than an array type that can hold the conversion 
+//    state information necessary to convert between sequences of multibyte 
+//    characters and wide characters
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces"
     mbstate_t mb = {0};
+#pragma clang diagnostic pop
+
     size_t s = 0;
     tm *tm = 0;
     wint_t w = 0;

@@ -71,17 +71,7 @@ def prepare_all_bindings(options):
         logging.error("failed to find scripts dir: '%s'", scripts_dir)
         sys.exit(-8)
 
-    # Collect list of child directories.  We expect there to be one
-    # for each supported script language.
-    child_dirs = [f for f in os.listdir(scripts_dir)
-                  if os.path.isdir(os.path.join(scripts_dir, f))]
-
-    # Remove directories that do not represent script languages.
-    for removal_dir in [".svn", "interface", "__pycache__", "sphinx", "swig_bot_lib"]:
-        if removal_dir in child_dirs:
-            child_dirs.remove(removal_dir)
-
-    logging.info("found script directories: %s", child_dirs)
+    child_dirs = ["Python"]
 
     # Iterate script directory find any script language directories
     for script_lang in child_dirs:

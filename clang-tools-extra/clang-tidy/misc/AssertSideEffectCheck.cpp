@@ -33,11 +33,7 @@ AST_MATCHER_P(Expr, hasSideEffect, bool, CheckFunctionCalls) {
   }
 
   if (const auto *Op = dyn_cast<BinaryOperator>(E)) {
-    BinaryOperator::Opcode OC = Op->getOpcode();
-    return OC == BO_Assign || OC == BO_MulAssign || OC == BO_DivAssign ||
-           OC == BO_RemAssign || OC == BO_AddAssign || OC == BO_SubAssign ||
-           OC == BO_ShlAssign || OC == BO_ShrAssign || OC == BO_AndAssign ||
-           OC == BO_XorAssign || OC == BO_OrAssign;
+    return Op->isAssignmentOp();
   }
 
   if (const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
