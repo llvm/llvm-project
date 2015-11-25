@@ -277,15 +277,9 @@ entry:
 ; FUNC-LABEL: {{^}}load_v8i32:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-; XXX: We should be using DWORDX4 instructions on SI.
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 define void @load_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %in) {
 entry:
   %0 = load <8 x i32>, <8 x i32> addrspace(1)* %in
@@ -298,23 +292,11 @@ entry:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-; XXX: We should be using DWORDX4 instructions on SI.
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 define void @load_v16i32(<16 x i32> addrspace(1)* %out, <16 x i32> addrspace(1)* %in) {
 entry:
   %0 = load <16 x i32>, <16 x i32> addrspace(1)* %in

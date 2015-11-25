@@ -4066,22 +4066,18 @@ defm PADDUSW : PDI_binop_all_int<0xDD, "paddusw", int_x86_sse2_paddus_w,
                                  int_x86_avx2_paddus_w, SSE_INTALU_ITINS_P, 1>;
 defm PMADDWD : PDI_binop_all_int<0xF5, "pmaddwd", int_x86_sse2_pmadd_wd,
                                  int_x86_avx2_pmadd_wd, SSE_PMADD, 1>;
-defm PSADBW  : PDI_binop_all_int<0xF6, "psadbw", int_x86_sse2_psad_bw,
-                                 int_x86_avx2_psad_bw, SSE_PMADD, 1>;
-
-let Predicates = [HasAVX2] in
-  def : Pat<(v32i8 (X86psadbw (v32i8 VR256:$src1),
-                              (v32i8 VR256:$src2))),
-            (VPSADBWYrr VR256:$src2, VR256:$src1)>;
 
 let Predicates = [HasAVX] in
-  def : Pat<(v16i8 (X86psadbw (v16i8 VR128:$src1),
-                              (v16i8 VR128:$src2))),
-            (VPSADBWrr VR128:$src2, VR128:$src1)>;
-
-def : Pat<(v16i8 (X86psadbw (v16i8 VR128:$src1),
-                            (v16i8 VR128:$src2))),
-          (PSADBWrr VR128:$src2, VR128:$src1)>;
+defm VPSADBW : PDI_binop_rm2<0xF6, "vpsadbw", X86psadbw, v2i64, v16i8, VR128,
+                             loadv2i64, i128mem, SSE_INTMUL_ITINS_P, 1, 0>,
+                             VEX_4V;
+let Predicates = [HasAVX2] in
+defm VPSADBWY : PDI_binop_rm2<0xF6, "vpsadbw", X86psadbw, v4i64, v32i8, VR256,
+                             loadv4i64, i256mem, SSE_INTMUL_ITINS_P, 1, 0>,
+                             VEX_4V, VEX_L;
+let Constraints = "$src1 = $dst" in
+defm PSADBW : PDI_binop_rm2<0xF6, "psadbw", X86psadbw, v2i64, v16i8, VR128,
+                            memopv2i64, i128mem, SSE_INTALU_ITINS_P, 1>;
 
 let Predicates = [HasAVX] in
 defm VPMULUDQ : PDI_binop_rm2<0xF4, "vpmuludq", X86pmuludq, v2i64, v4i32, VR128,
@@ -4683,7 +4679,7 @@ def MASKMOVDQU64 : PDI<0xF7, MRMSrcReg, (outs), (ins VR128:$src, VR128:$mask),
 } // ExeDomain = SSEPackedInt
 
 //===---------------------------------------------------------------------===//
-// SSE2 - Move Doubleword
+// SSE2 - Move Doubleword/Quadword
 //===---------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------===//
@@ -4883,30 +4879,18 @@ let isCodeGenOnly = 1 in {
                         IIC_SSE_MOVDQ>, Sched<[WriteStore]>;
 }
 
-//===---------------------------------------------------------------------===//
-// Patterns and instructions to describe movd/movq to XMM register zero-extends
-//
-let isCodeGenOnly = 1, SchedRW = [WriteMove] in {
-let AddedComplexity = 15 in {
-def VMOVZQI2PQIrr : VS2I<0x6E, MRMSrcReg, (outs VR128:$dst), (ins GR64:$src),
-                       "movq\t{$src, $dst|$dst, $src}", // X86-64 only
-                       [(set VR128:$dst, (v2i64 (X86vzmovl
-                                      (v2i64 (scalar_to_vector GR64:$src)))))],
-                                      IIC_SSE_MOVDQ>,
-                                      VEX, VEX_W;
-def MOVZQI2PQIrr : RS2I<0x6E, MRMSrcReg, (outs VR128:$dst), (ins GR64:$src),
-                       "mov{d|q}\t{$src, $dst|$dst, $src}", // X86-64 only
-                       [(set VR128:$dst, (v2i64 (X86vzmovl
-                                      (v2i64 (scalar_to_vector GR64:$src)))))],
-                                      IIC_SSE_MOVDQ>;
-}
-} // isCodeGenOnly, SchedRW
-
 let Predicates = [UseAVX] in {
-  let AddedComplexity = 15 in
+  let AddedComplexity = 15 in {
     def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector GR32:$src)))),
               (VMOVDI2PDIrr GR32:$src)>;
 
+    def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector GR64:$src)))),
+              (VMOV64toPQIrr GR64:$src)>;
+
+    def : Pat<(v4i64 (X86vzmovl (insert_subvector undef,
+                (v2i64 (scalar_to_vector GR64:$src)),(iPTR 0)))),
+              (SUBREG_TO_REG (i64 0), (VMOV64toPQIrr GR64:$src), sub_xmm)>;
+  }
   // AVX 128-bit movd/movq instructions write zeros in the high 128-bit part.
   // These instructions also write zeros in the high part of a 256-bit register.
   let AddedComplexity = 20 in {
@@ -4924,16 +4908,16 @@ let Predicates = [UseAVX] in {
   def : Pat<(v8i32 (X86vzmovl (insert_subvector undef,
                                (v4i32 (scalar_to_vector GR32:$src)),(iPTR 0)))),
             (SUBREG_TO_REG (i32 0), (VMOVDI2PDIrr GR32:$src), sub_xmm)>;
-  def : Pat<(v4i64 (X86vzmovl (insert_subvector undef,
-                               (v2i64 (scalar_to_vector GR64:$src)),(iPTR 0)))),
-            (SUBREG_TO_REG (i64 0), (VMOVZQI2PQIrr GR64:$src), sub_xmm)>;
 }
 
 let Predicates = [UseSSE2] in {
-  let AddedComplexity = 15 in
+  let AddedComplexity = 15 in {
     def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector GR32:$src)))),
               (MOVDI2PDIrr GR32:$src)>;
 
+    def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector GR64:$src)))),
+              (MOV64toPQIrr GR64:$src)>;
+  }
   let AddedComplexity = 20 in {
     def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
               (MOVDI2PDIrm addr:$src)>;

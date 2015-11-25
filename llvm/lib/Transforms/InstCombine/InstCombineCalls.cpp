@@ -2267,16 +2267,19 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   const AttributeSet &NewCallerPAL = AttributeSet::get(Callee->getContext(),
                                                        attrVec);
 
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  CS.getOperandBundlesAsDefs(OpBundles);
+
   Instruction *NC;
   if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
-    NC = Builder->CreateInvoke(Callee, II->getNormalDest(),
-                               II->getUnwindDest(), Args);
+    NC = Builder->CreateInvoke(Callee, II->getNormalDest(), II->getUnwindDest(),
+                               Args, OpBundles);
     NC->takeName(II);
     cast<InvokeInst>(NC)->setCallingConv(II->getCallingConv());
     cast<InvokeInst>(NC)->setAttributes(NewCallerPAL);
   } else {
     CallInst *CI = cast<CallInst>(Caller);
-    NC = Builder->CreateCall(Callee, Args);
+    NC = Builder->CreateCall(Callee, Args, OpBundles);
     NC->takeName(CI);
     if (CI->isTailCall())
       cast<CallInst>(NC)->setTailCall();

@@ -191,7 +191,15 @@ namespace HexagonII {
 
     // Which operand consumes or produces a new value.
     NewValueOpPos2  = 51,
-    NewValueOpMask2 = 0x7
+    NewValueOpMask2 = 0x7,
+
+    // Accumulator instructions.
+    AccumulatorPos = 54,
+    AccumulatorMask = 0x1,
+
+    // Complex XU, prevent xu competition by prefering slot3
+    PrefersSlot3Pos = 55,
+    PrefersSlot3Mask = 0x1,
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //

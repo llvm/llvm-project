@@ -1255,15 +1255,15 @@ define <8 x i64>@test_int_x86_avx512_mask_psrl_dq_512(<8 x i64> %x0) {
   %res2 = add <8 x i64> %res, %res1
   ret <8 x i64> %res2
 }
-declare  <64 x i8> @llvm.x86.avx512.psad.bw.512(<64 x i8>, <64 x i8>)
+declare  <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8>, <64 x i8>)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_psadb_w_512
 ; CHECK-NOT: call 
 ; CHECK: vpsadbw %zmm1
 ; CHECK: vpsadbw %zmm2
-define  <64 x i8>@test_int_x86_avx512_mask_psadb_w_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2){
-  %res = call  <64 x i8> @llvm.x86.avx512.psad.bw.512(<64 x i8> %x0, <64 x i8> %x1)
-  %res1 = call  <64 x i8> @llvm.x86.avx512.psad.bw.512(<64 x i8> %x0, <64 x i8> %x2)
-  %res2 = add  <64 x i8> %res, %res1
-  ret  <64 x i8> %res2
+define  <8 x i64>@test_int_x86_avx512_mask_psadb_w_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2){
+  %res = call  <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8> %x0, <64 x i8> %x1)
+  %res1 = call  <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8> %x0, <64 x i8> %x2)
+  %res2 = add  <8 x i64> %res, %res1
+  ret  <8 x i64> %res2
 }

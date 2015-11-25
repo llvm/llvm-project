@@ -539,10 +539,15 @@ define void @merge_local_store_2_constants_i32(i32 addrspace(3)* %out) #0 {
 }
 
 ; GCN-LABEL: {{^}}merge_local_store_4_constants_i32:
-; GCN: ds_write_b32
-; GCN: ds_write_b32
-; GCN: ds_write_b32
-; GCN: ds_write_b32
+; GCN-DAG: v_mov_b32_e32 [[K2:v[0-9]+]], 0x1c8
+; GCN-DAG: v_mov_b32_e32 [[K3:v[0-9]+]], 0x14d
+; GCN-DAG: ds_write2_b32 v{{[0-9]+}}, [[K2]], [[K3]] offset0:2 offset1:3
+
+; GCN-DAG: v_mov_b32_e32 [[K0:v[0-9]+]], 0x4d2
+; GCN-DAG: v_mov_b32_e32 [[K1:v[0-9]+]], 0x7b
+; GCN-DAG: ds_write2_b32 v{{[0-9]+}}, [[K0]], [[K1]] offset1:1
+
+; GCN: s_endpgm
 define void @merge_local_store_4_constants_i32(i32 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(3)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(3)* %out, i32 2
@@ -613,22 +618,9 @@ define void @merge_global_store_7_constants_i32(i32 addrspace(1)* %out) {
   ret void
 }
 
-; FIXME: This should do 2 dwordx4 loads
 ; GCN-LABEL: {{^}}merge_global_store_8_constants_i32:
-
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-
-; GCN-AA: buffer_store_dwordx4
-; GCN-AA: buffer_store_dwordx2
-; GCN-AA: buffer_store_dwordx2
-
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 ; GCN: s_endpgm
 define void @merge_global_store_8_constants_i32(i32 addrspace(1)* %out) {
   store i32 34, i32 addrspace(1)* %out, align 4

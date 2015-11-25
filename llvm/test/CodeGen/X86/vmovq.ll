@@ -8,7 +8,6 @@ define <2 x i64> @PR25554(<2 x i64> %v0, <2 x i64> %v1) {
 ; SSE-NEXT:    movl $1, %eax
 ; SSE-NEXT:    movd %rax, %xmm1
 ; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    movd %rax, %xmm1
 ; SSE-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
 ; SSE-NEXT:    paddq %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -18,7 +17,6 @@ define <2 x i64> @PR25554(<2 x i64> %v0, <2 x i64> %v1) {
 ; AVX-NEXT:    movl $1, %eax
 ; AVX-NEXT:    vmovq %rax, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %rax, %xmm1
 ; AVX-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
 ; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq

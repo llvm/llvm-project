@@ -275,9 +275,9 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vpsadbw %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -297,9 +297,9 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm4, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX2-NEXT:    vpsadbw %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %out = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %in, i1 0)
@@ -430,9 +430,9 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vpsadbw %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -452,9 +452,9 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm4, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX2-NEXT:    vpsadbw %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %out = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %in, i1 -1)

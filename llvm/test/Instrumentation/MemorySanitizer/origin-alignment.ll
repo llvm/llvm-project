@@ -24,7 +24,7 @@ entry:
 ; CHECK-ORIGINS1: [[ORIGIN:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN0:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN:%[01-9a-z]+]] = call i32 @__msan_chain_origin(i32 [[ORIGIN0]])
-; CHECK: store i32 [[ORIGIN]], i32* inttoptr (i64 add (i64 xor (i64 ptrtoint (i8* @a8 to i64), i64 {{.*}}), i64 {{.*}}) to i32*), align 8
+; CHECK: store i32 [[ORIGIN]], {{.*}}, align 8
 ; CHECK: ret void
 
 
@@ -39,7 +39,7 @@ entry:
 ; CHECK-ORIGINS1: [[ORIGIN:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN0:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN:%[01-9a-z]+]] = call i32 @__msan_chain_origin(i32 [[ORIGIN0]])
-; CHECK: store i32 [[ORIGIN]], i32* inttoptr (i64 add (i64 xor (i64 ptrtoint (i8* @a4 to i64), i64 {{.*}}), i64 {{.*}}) to i32*), align 4
+; CHECK: store i32 [[ORIGIN]], {{.*}}, align 4
 ; CHECK: ret void
 
 
@@ -54,8 +54,7 @@ entry:
 ; CHECK-ORIGINS1: [[ORIGIN:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN0:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN:%[01-9a-z]+]] = call i32 @__msan_chain_origin(i32 [[ORIGIN0]])
-; CHECK: store i32 [[ORIGIN]],  i32* inttoptr (i64 and (i64 add (i64 xor (i64 ptrtoint (i8* @a2 to i64), i64 {{.*}}), i64 {{.*}}), i64 -4) to i32*), align 4
-
+; CHECK: store i32 [[ORIGIN]], {{.*}}, align 4
 ; CHECK: ret void
 
 
@@ -70,6 +69,6 @@ entry:
 ; CHECK-ORIGINS1: [[ORIGIN:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN0:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 ; CHECK-ORIGINS2: [[ORIGIN:%[01-9a-z]+]] = call i32 @__msan_chain_origin(i32 [[ORIGIN0]])
-; CHECK: store i32 [[ORIGIN]], i32* inttoptr (i64 and (i64 add (i64 xor (i64 ptrtoint (i8* @a1 to i64), i64 {{.*}}), i64 {{.*}}), i64 -4) to i32*), align 4
+; CHECK: store i32 [[ORIGIN]], {{.*}}, align 4
 
 ; CHECK: ret void

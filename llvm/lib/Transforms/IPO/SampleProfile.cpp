@@ -71,6 +71,10 @@ static cl::opt<unsigned> SampleProfileSampleCoverage(
     "sample-profile-check-sample-coverage", cl::init(0), cl::value_desc("N"),
     cl::desc("Emit a warning if less than N% of samples in the input profile "
              "are matched to the IR."));
+static cl::opt<unsigned> SampleProfileHotThreshold(
+    "sample-profile-inline-hot-threshold", cl::init(5), cl::value_desc("N"),
+    cl::desc("Inlined functions that account for more than N% of all samples "
+             "collected in the parent function, will be inlined again."));
 
 namespace {
 typedef DenseMap<const BasicBlock *, uint64_t> BlockWeightMap;
@@ -230,6 +234,38 @@ private:
 };
 
 SampleCoverageTracker CoverageTracker;
+
+/// Return true if the given callsite is hot wrt to its caller.
+///
+/// Functions that were inlined in the original binary will be represented
+/// in the inline stack in the sample profile. If the profile shows that
+/// the original inline decision was "good" (i.e., the callsite is executed
+/// frequently), then we will recreate the inline decision and apply the
+/// profile from the inlined callsite.
+///
+/// To decide whether an inlined callsite is hot, we compute the fraction
+/// of samples used by the callsite with respect to the total number of samples
+/// collected in the caller.
+///
+/// If that fraction is larger than the default given by
+/// SampleProfileHotThreshold, the callsite will be inlined again.
+bool callsiteIsHot(const FunctionSamples *CallerFS,
+                   const FunctionSamples *CallsiteFS) {
+  if (!CallsiteFS)
+    return false; // The callsite was not inlined in the original binary.
+
+  uint64_t ParentTotalSamples = CallerFS->getTotalSamples();
+  if (ParentTotalSamples == 0)
+    return false; // Avoid division by zero.
+
+  uint64_t CallsiteTotalSamples = CallsiteFS->getTotalSamples();
+  if (CallsiteTotalSamples == 0)
+    return false; // Callsite is trivially cold.
+
+  uint64_t PercentSamples = CallsiteTotalSamples * 100 / ParentTotalSamples;
+  return PercentSamples >= SampleProfileHotThreshold;
+}
+
 }
 
 /// Mark as used the sample record for the given function samples at
@@ -249,6 +285,8 @@ bool SampleCoverageTracker::markSamplesUsed(const FunctionSamples *FS,
 }
 
 /// Return the number of sample records that were applied from this profile.
+///
+/// This count does not include records from cold inlined callsites.
 unsigned
 SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
   auto I = SampleCoverage.find(FS);
@@ -262,7 +300,7 @@ SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
   // total samples, these are callees that were never invoked at runtime.
   for (const auto &I : FS->getCallsiteSamples()) {
     const FunctionSamples *CalleeSamples = &I.second;
-    if (CalleeSamples->getTotalSamples() > 0)
+    if (callsiteIsHot(FS, CalleeSamples))
       Count += countUsedRecords(CalleeSamples);
   }
 
@@ -271,17 +309,15 @@ SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
 
 /// Return the number of sample records in the body of this profile.
 ///
-/// The count includes all the samples in inlined callees. However, callsites
-/// with 0 samples indicate inlined function calls that were never actually
-/// invoked at runtime. Ignore these callsites for coverage purposes.
+/// This count does not include records from cold inlined callsites.
 unsigned
 SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS) const {
   unsigned Count = FS->getBodySamples().size();
 
-  // Count all the callsites with non-zero samples.
+  // Only count records in hot callsites.
   for (const auto &I : FS->getCallsiteSamples()) {
     const FunctionSamples *CalleeSamples = &I.second;
-    if (CalleeSamples->getTotalSamples() > 0)
+    if (callsiteIsHot(FS, CalleeSamples))
       Count += countBodyRecords(CalleeSamples);
   }
 
@@ -290,19 +326,17 @@ SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS) const {
 
 /// Return the number of samples collected in the body of this profile.
 ///
-/// The count includes all the samples in inlined callees. However, callsites
-/// with 0 samples indicate inlined function calls that were never actually
-/// invoked at runtime. Ignore these callsites for coverage purposes.
+/// This count does not include samples from cold inlined callsites.
 uint64_t
 SampleCoverageTracker::countBodySamples(const FunctionSamples *FS) const {
   uint64_t Total = 0;
   for (const auto &I : FS->getBodySamples())
     Total += I.second.getSamples();
 
-  // Count all the callsites with non-zero samples.
+  // Only count samples in hot callsites.
   for (const auto &I : FS->getCallsiteSamples()) {
     const FunctionSamples *CalleeSamples = &I.second;
-    if (CalleeSamples->getTotalSamples() > 0)
+    if (callsiteIsHot(FS, CalleeSamples))
       Total += countBodySamples(CalleeSamples);
   }
 
@@ -568,12 +602,8 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
     for (auto &BB : F) {
       for (auto &I : BB.getInstList()) {
         CallInst *CI = dyn_cast<CallInst>(&I);
-        if (CI) {
-          const FunctionSamples *FS = findCalleeFunctionSamples(*CI);
-          if (FS && FS->getTotalSamples() > 0) {
-            CIS.push_back(CI);
-          }
-        }
+        if (CI && callsiteIsHot(Samples, findCalleeFunctionSamples(*CI)))
+          CIS.push_back(CI);
       }
     }
     for (auto CI : CIS) {

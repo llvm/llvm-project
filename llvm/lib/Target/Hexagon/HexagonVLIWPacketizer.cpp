@@ -432,9 +432,9 @@ bool HexagonPacketizerList::PromoteToDotNew(MachineInstr* MI,
 
   int NewOpcode;
   if (RC == &Hexagon::PredRegsRegClass)
-    NewOpcode = QII->GetDotNewPredOp(MI, MBPI);
+    NewOpcode = QII->getDotNewPredOp(MI, MBPI);
   else
-    NewOpcode = QII->GetDotNewOp(MI);
+    NewOpcode = QII->getDotNewOp(MI);
   MI->setDesc(QII->get(NewOpcode));
 
   return true;
@@ -442,7 +442,7 @@ bool HexagonPacketizerList::PromoteToDotNew(MachineInstr* MI,
 
 bool HexagonPacketizerList::DemoteToDotOld(MachineInstr* MI) {
   const HexagonInstrInfo *QII = (const HexagonInstrInfo *) TII;
-  int NewOpcode = QII->GetDotOldOp(MI->getOpcode());
+  int NewOpcode = QII->getDotOldOp(MI->getOpcode());
   MI->setDesc(QII->get(NewOpcode));
   return true;
 }
@@ -757,7 +757,7 @@ bool HexagonPacketizerList::CanPromoteToDotNew(
   else {
     // Create a dot new machine instruction to see if resources can be
     // allocated. If not, bail out now.
-    int NewOpcode = QII->GetDotNewOp(MI);
+    int NewOpcode = QII->getDotNewOp(MI);
     const MCInstrDesc &desc = QII->get(NewOpcode);
     DebugLoc dl;
     MachineInstr *NewMI =

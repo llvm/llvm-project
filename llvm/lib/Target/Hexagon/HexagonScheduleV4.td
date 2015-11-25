@@ -35,7 +35,7 @@ def SLOT_ENDLOOP: FuncUnit;
 
 // Itinerary classes.
 def PSEUDO      : InstrItinClass;
-def PSEUDOM   : InstrItinClass;
+def PSEUDOM     : InstrItinClass;
 // ALU64/M/S Instruction classes of V2 are collectively knownn as XTYPE in V4.
 def DUPLEX      : InstrItinClass;
 def PREFIX      : InstrItinClass;

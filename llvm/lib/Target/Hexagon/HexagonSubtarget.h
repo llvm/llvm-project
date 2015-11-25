@@ -43,6 +43,10 @@ public:
   };
 
   HexagonArchEnum HexagonArchVersion;
+  /// True if the target should use Back-Skip-Back scheduling. This is the
+  /// default for V60.
+  bool UseBSBScheduling;
+
 private:
   std::string CPUString;
   HexagonInstrInfo InstrInfo;
@@ -89,6 +93,8 @@ public:
   bool modeIEEERndNear() const { return ModeIEEERndNear; }
   bool useHVXDblOps() const { return UseHVXDblOps; }
   bool useHVXSglOps() const { return UseHVXOps && !UseHVXDblOps; }
+
+  bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;
   // Always use the TargetLowering default scheduler.
   // FIXME: This will use the vliw scheduler which is probably just hurting

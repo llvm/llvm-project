@@ -132,32 +132,15 @@ define void @test_small_memcpy_i64_lds_to_lds_align2(i64 addrspace(3)* noalias %
 }
 
 ; FUNC-LABEL: {{^}}test_small_memcpy_i64_lds_to_lds_align4:
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
+; SI: ds_read2_b32
+; SI: ds_read2_b32
+; SI: ds_read2_b32
+; SI: ds_read2_b32
 
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
+; SI: ds_write2_b32
+; SI: ds_write2_b32
+; SI: ds_write2_b32
+; SI: ds_write2_b32
 
 ; SI: s_endpgm
 define void @test_small_memcpy_i64_lds_to_lds_align4(i64 addrspace(3)* noalias %out, i64 addrspace(3)* noalias %in) nounwind {
@@ -170,32 +153,15 @@ define void @test_small_memcpy_i64_lds_to_lds_align4(i64 addrspace(3)* noalias %
 ; FIXME: Use 64-bit ops
 ; FUNC-LABEL: {{^}}test_small_memcpy_i64_lds_to_lds_align8:
 
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
+; SI: ds_read_b64
+; SI: ds_read_b64
+; SI: ds_read_b64
+; SI: ds_read_b64
 
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
-
-; SI-DAG: ds_read_b32
-; SI-DAG: ds_write_b32
+; SI: ds_write_b64
+; SI: ds_write_b64
+; SI: ds_write_b64
+; SI: ds_write_b64
 
 ; SI-DAG: s_endpgm
 define void @test_small_memcpy_i64_lds_to_lds_align8(i64 addrspace(3)* noalias %out, i64 addrspace(3)* noalias %in) nounwind {

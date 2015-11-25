@@ -57,19 +57,19 @@ entry:
 define <8 x float> @funcE() nounwind {
 ; CHECK-LABEL: funcE:
 ; CHECK:       ## BB#0: ## %for_exit499
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    andq $-32, %rsp
+; CHECK-NEXT:    subq $1312, %rsp ## imm = 0x520
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ## implicit-def: %YMM0
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB4_2
 ; CHECK-NEXT:  ## BB#1: ## %load.i1247
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $1312, %rsp ## imm = 0x520
 ; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %ymm0
+; CHECK-NEXT:  LBB4_2: ## %__load_and_broadcast_32.exit1249
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:  LBB4_2: ## %__load_and_broadcast_32.exit1249
 ; CHECK-NEXT:    retq
 allocas:
   %udx495 = alloca [18 x [18 x float]], align 32

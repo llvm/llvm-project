@@ -89,8 +89,13 @@ define void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {
 }
 
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg_align8:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_W:[0-9]+]]:[[REG_Z:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:3 offset1:2{{$}}
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
+; CI-DAG: ds_read2_b64 v{{\[}}[[REG_W:[0-9]+]]:[[REG_Z:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
+
+; FIXME: These moves shouldn't be necessary, it should be able to
+; store the same register if offset1 was the non-zero offset.
+
+; CI: v_mov_b32
+; CI: v_mov_b32
 ; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) #0 {
@@ -103,8 +108,9 @@ define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) 
 }
 
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_W:[0-9]+]]:[[REG_Z:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:3 offset1:2{{$}}
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
+; CI: ds_read2_b64 v{{\[}}[[REG_W:[0-9]+]]:[[REG_Z:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
+; CI: v_mov_b32
+; CI: v_mov_b32
 ; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
@@ -116,19 +122,16 @@ define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
   ret void
 }
 
+; FIXME: Extra moves shuffling superregister
 ; CI-LABEL: {{^}}simple_read2_v8f32_superreg:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT7:[0-9]+]]:[[REG_ELT6:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:7 offset1:6{{$}}
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT5:[0-9]+]]:[[REG_ELT4:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:5 offset1:4{{$}}
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT3:[0-9]+]]:[[REG_ELT2:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:3 offset1:2{{$}}
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT1:[0-9]+]]:[[REG_ELT0:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
+; CI: ds_read2_b64 v{{\[}}[[REG_ELT3:[0-9]+]]:[[REG_ELT7:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:3{{$}}
+; CI: v_mov_b32
+; CI: v_mov_b32
+; CI: ds_read2_b64 v{{\[}}[[REG_ELT6:[0-9]+]]:[[REG_ELT5:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2{{$}}
+; CI: v_mov_b32
+; CI: v_mov_b32
+; CI: buffer_store_dwordx4
+; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
@@ -139,41 +142,24 @@ define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
   ret void
 }
 
+; FIXME: Extra moves shuffling superregister
 ; CI-LABEL: {{^}}simple_read2_v16f32_superreg:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT7:[0-9]+]]:[[REG_ELT6:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:15 offset1:14{{$}}
-; CI-NOT: v_mov_b32
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT7:[0-9]+]]:[[REG_ELT6:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:13 offset1:12{{$}}
-; CI-NOT: v_mov_b32
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT7:[0-9]+]]:[[REG_ELT6:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:11 offset1:10{{$}}
-; CI-NOT: v_mov_b32
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT7:[0-9]+]]:[[REG_ELT6:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:9 offset1:8{{$}}
-; CI-NOT: v_mov_b32
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT7:[0-9]+]]:[[REG_ELT6:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:7 offset1:6{{$}}
-; CI-NOT: v_mov_b32
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT5:[0-9]+]]:[[REG_ELT4:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:5 offset1:4{{$}}
-; CI-NOT: v_mov_b32
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT3:[0-9]+]]:[[REG_ELT2:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:3 offset1:2{{$}}
-; CI-NOT: v_mov_b32
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT1:[0-9]+]]:[[REG_ELT0:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
-; CI-NOT: v_mov_b32
+; CI: ds_read2_b64 v{{\[}}[[REG_ELT11:[0-9]+]]:[[REG_ELT15:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:3{{$}}
+; CI: v_mov_b32
+; CI: v_mov_b32
+; CI: ds_read2_b64 v{{\[}}[[REG_ELT14:[0-9]+]]:[[REG_ELT13:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:5 offset1:7{{$}}
+; CI: ds_read2_b64 v{{\[}}[[REG_ELT14:[0-9]+]]:[[REG_ELT13:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:6 offset1:4{{$}}
+; CI: v_mov_b32
+; CI: v_mov_b32
+; CI: ds_read2_b64 v{{\[}}[[REG_ELT12:[0-9]+]]:[[REG_ELT10:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2{{$}}
+; CI: v_mov_b32
+; CI: v_mov_b32
 
 ; CI: s_waitcnt lgkmcnt(0)
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
-; CI: buffer_store_dword
+; CI: buffer_store_dwordx4
+; CI: buffer_store_dwordx4
+; CI: buffer_store_dwordx4
+; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v16f32_superreg(<16 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.r600.read.tidig.x() #1

@@ -106,14 +106,8 @@ define void @sextload_global_v4i32_to_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 }
 
 ; FUNC-LABEL: {{^}}zextload_global_v8i32_to_v8i64:
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 ; SI-DAG: buffer_store_dwordx2
 ; SI-DAG: buffer_store_dwordx2
 ; SI-DAG: buffer_store_dwordx2
@@ -131,14 +125,8 @@ define void @zextload_global_v8i32_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i
 }
 
 ; FUNC-LABEL: {{^}}sextload_global_v8i32_to_v8i64:
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 
 ; SI-DAG: v_ashrrev_i32
 ; SI-DAG: v_ashrrev_i32
@@ -166,22 +154,10 @@ define void @sextload_global_v8i32_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i
 }
 
 ; FUNC-LABEL: {{^}}sextload_global_v16i32_to_v16i64:
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 
 ; SI-DAG: v_ashrrev_i32
 ; SI-DAG: v_ashrrev_i32
@@ -219,22 +195,10 @@ define void @sextload_global_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <16
 }
 
 ; FUNC-LABEL: {{^}}zextload_global_v16i32_to_v16i64
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 
 ; SI: buffer_store_dwordx2
 ; SI: buffer_store_dwordx2
@@ -262,41 +226,15 @@ define void @zextload_global_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <16
 }
 
 ; FUNC-LABEL: {{^}}sextload_global_v32i32_to_v32i64:
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
 
 ; SI-DAG: v_ashrrev_i32
 ; SI-DAG: v_ashrrev_i32
@@ -376,41 +314,14 @@ define void @sextload_global_v32i32_to_v32i64(<32 x i64> addrspace(1)* %out, <32
 }
 
 ; FUNC-LABEL: {{^}}zextload_global_v32i32_to_v32i64:
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
 
 ; SI-DAG: buffer_store_dwordx2
 ; SI-DAG: buffer_store_dwordx2

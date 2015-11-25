@@ -844,8 +844,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
         SDValue Result = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
         ReplaceNode(SDValue(Node, 0), Result);
       } else {
-        switch (TLI.getTruncStoreAction(ST->getValue().getSimpleValueType(),
-                                        StVT.getSimpleVT())) {
+        switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT)) {
         default: llvm_unreachable("This action is not supported yet!");
         case TargetLowering::Legal: {
           EVT MemVT = ST->getMemoryVT();

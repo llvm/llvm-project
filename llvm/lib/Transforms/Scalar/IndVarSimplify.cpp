@@ -981,12 +981,7 @@ Instruction *WidenIV::cloneBitwiseIVUser(NarrowIVDefUse DU) {
                                         NarrowBO->getName());
   IRBuilder<> Builder(NarrowUse);
   Builder.Insert(WideBO);
-  if (const auto *OBO = dyn_cast<OverflowingBinaryOperator>(NarrowBO)) {
-    if (OBO->hasNoUnsignedWrap())
-      WideBO->setHasNoUnsignedWrap();
-    if (OBO->hasNoSignedWrap())
-      WideBO->setHasNoSignedWrap();
-  }
+  WideBO->copyIRFlags(NarrowBO);
   return WideBO;
 }
 
@@ -1078,12 +1073,7 @@ Instruction *WidenIV::cloneArithmeticIVUser(NarrowIVDefUse DU,
 
   IRBuilder<> Builder(NarrowUse);
   Builder.Insert(WideBO);
-  if (const auto *OBO = dyn_cast<OverflowingBinaryOperator>(NarrowBO)) {
-    if (OBO->hasNoUnsignedWrap())
-      WideBO->setHasNoUnsignedWrap();
-    if (OBO->hasNoSignedWrap())
-      WideBO->setHasNoSignedWrap();
-  }
+  WideBO->copyIRFlags(NarrowBO);
   return WideBO;
 }
 
