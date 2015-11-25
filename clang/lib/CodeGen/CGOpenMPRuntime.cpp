@@ -2317,7 +2317,7 @@ void CGOpenMPRuntime::emitTaskCall(
                                      CGF.Builder.getInt32(/*C=*/0))
           : CGF.Builder.getInt32(Final.getInt() ? FinalFlag : 0);
   TaskFlags = CGF.Builder.CreateOr(TaskFlags, CGF.Builder.getInt32(Flags));
-  auto *SharedsSize = getTypeSize(CGF, SharedsTy);
+  auto *SharedsSize = CGM.getSize(C.getTypeSizeInChars(SharedsTy));
   llvm::Value *AllocArgs[] = {emitUpdateLocation(CGF, Loc),
                               getThreadID(CGF, Loc), TaskFlags,
                               KmpTaskTWithPrivatesTySize, SharedsSize,

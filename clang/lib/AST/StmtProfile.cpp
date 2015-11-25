@@ -453,6 +453,9 @@ void OMPClauseProfiler::VisitOMPDeviceClause(const OMPDeviceClause *C) {
 void OMPClauseProfiler::VisitOMPMapClause(const OMPMapClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  Profiler->VisitStmt(C->getNumTeams());
+}
 }
 
 void

@@ -37,7 +37,7 @@ T tmain(T argc, T *argv) {
 #pragma omp teams
   a=2;
 #pragma omp target
-#pragma omp teams default(none), private(argc,b) firstprivate(argv) shared (d) reduction(+:c) reduction(max:e)
+#pragma omp teams default(none), private(argc,b) firstprivate(argv) shared (d) reduction(+:c) reduction(max:e) num_teams(C)
   foo();
 #pragma omp target
 #pragma omp teams reduction(^:e, f) reduction(&& : g)
@@ -53,7 +53,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp teams
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp target
-// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e)
+// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(5)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target
 // CHECK-NEXT: #pragma omp teams reduction(^: e,f) reduction(&&: g)
@@ -66,7 +66,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp teams
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp target
-// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e)
+// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(1)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target
 // CHECK-NEXT: #pragma omp teams reduction(^: e,f) reduction(&&: g)
@@ -79,7 +79,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp teams
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp target
-// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e)
+// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(C)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target
 // CHECK-NEXT: #pragma omp teams reduction(^: e,f) reduction(&&: g)
@@ -101,9 +101,9 @@ int main (int argc, char **argv) {
   a=2;
 // CHECK-NEXT: a = 2;
 #pragma omp target
-#pragma omp teams default(none), private(argc,b) firstprivate(argv) reduction(| : c, d) reduction(* : e)
+#pragma omp teams default(none), private(argc,b) num_teams(f) firstprivate(argv) reduction(| : c, d) reduction(* : e)
 // CHECK-NEXT: #pragma omp target
-// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) firstprivate(argv) reduction(|: c,d) reduction(*: e)
+// CHECK-NEXT: #pragma omp teams default(none) private(argc,b) num_teams(f) firstprivate(argv) reduction(|: c,d) reduction(*: e)
   foo();
 // CHECK-NEXT: foo();
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);

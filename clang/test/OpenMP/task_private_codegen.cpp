@@ -138,6 +138,8 @@ int main() {
     s_arr[0] = var;
     sivar = 8;
   }
+#pragma omp task
+  g+=1;
   return tmain<int>();
 #endif
 }
@@ -188,6 +190,7 @@ int main() {
 
 // Start task.
 // CHECK: call i32 @__kmpc_omp_task([[LOC]], i32 [[GTID]], i8* [[RES]])
+// CHECK: call i32 @__kmpc_omp_task([[LOC]], i32 [[GTID]], i8*
 
 // CHECK: = call i{{.+}} [[TMAIN_INT:@.+]]()
 

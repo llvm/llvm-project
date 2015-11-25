@@ -238,6 +238,19 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   case 3: inlinedUnspecified(p); break;
   }
   if (getRandom())
-    takesNonnull(p);
+    takesNonnull(p);  // no-warning
+
+  if (getRandom()) {
+    Dummy *_Nonnull varWithInitializer = p; // no-warning
+
+     Dummy *_Nonnull var1WithInitializer = p,  // no-warning
+           *_Nonnull var2WithInitializer = p;  // no-warning
+  }
+
+  if (getRandom()) {
+    Dummy *_Nonnull varWithoutInitializer;
+    varWithoutInitializer = p; // no-warning
+  }
+
   return p;
 }

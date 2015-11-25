@@ -8134,11 +8134,15 @@ public:
   OMPClause *ActOnOpenMPDeviceClause(Expr *Device, SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
-   /// \brief Called on well-formed 'map' clause.
+  /// \brief Called on well-formed 'map' clause.
   OMPClause *ActOnOpenMPMapClause(
       OpenMPMapClauseKind MapTypeModifier, OpenMPMapClauseKind MapType,
       SourceLocation MapLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+  /// \brief Called on well-formed 'num_teams' clause.
+  OMPClause *ActOnOpenMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc);
 
   /// \brief The kind of conversion being performed.
   enum CheckedConversionKind {

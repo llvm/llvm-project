@@ -862,6 +862,30 @@ void NullabilityChecker::checkPostStmt(const ExplicitCastExpr *CE,
   }
 }
 
+/// For a given statement performing a bind, attempt to syntactically
+/// match the expression resulting in the bound value.
+static const Expr * matchValueExprForBind(const Stmt *S) {
+  // For `x = e` the value expression is the right-hand side.
+  if (auto *BinOp = dyn_cast<BinaryOperator>(S)) {
+    if (BinOp->getOpcode() == BO_Assign)
+      return BinOp->getRHS();
+  }
+
+  // For `int x = e` the value expression is the initializer.
+  if (auto *DS = dyn_cast<DeclStmt>(S))  {
+    if (DS->isSingleDecl()) {
+      auto *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
+      if (!VD)
+        return nullptr;
+
+      if (const Expr *Init = VD->getInit())
+        return Init;
+    }
+  }
+
+  return nullptr;
+}
+
 /// Propagate the nullability information through binds and warn when nullable
 /// pointer or null symbol is assigned to a pointer with a nonnull type.
 void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
@@ -898,8 +922,13 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)
       return;
+
+    const Stmt *ValueExpr = matchValueExprForBind(S);
+    if (!ValueExpr)
+      ValueExpr = S;
+
     reportBugIfPreconditionHolds(ErrorKind::NilAssignedToNonnull, N, nullptr, C,
-                                 S);
+                                 ValueExpr);
     return;
   }
   // Intentionally missing case: '0' is bound to a reference. It is handled by

@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_AST_RECURSIVEASTVISITOR_H
 #define LLVM_CLANG_AST_RECURSIVEASTVISITOR_H
 
+#include <type_traits>
+
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -132,13 +134,13 @@ namespace clang {
 /// instantiations will be visited at the same time as the pattern
 /// from which they were produced.
 template <typename Derived> class RecursiveASTVisitor {
+public:
   /// A queue used for performing data recursion over statements.
   /// Parameters involving this type are used to implement data
   /// recursion over Stmts and Exprs within this class, and should
-  /// not be explicitly specified by derived classes.
+  /// typically not be explicitly specified by derived classes.
   typedef SmallVectorImpl<Stmt *> DataRecursionQueue;
 
-public:
   /// \brief Return a reference to the derived class.
   Derived &getDerived() { return *static_cast<Derived *>(this); }
 
@@ -274,24 +276,32 @@ public:
 // ---- Methods on Stmts ----
 
 private:
-  template<typename T, T X, typename U, U Y>
-  struct is_same_member_pointer : std::false_type {};
-  template<typename T, T X>
-  struct is_same_member_pointer<T, X, T, X> : std::true_type {};
+  // Determine if the specified derived-class member M can be passed a
+  // DataRecursionQueue* argument.
+  template<typename P>
+  std::false_type callableWithQueue(...);
+  template<typename P, typename M>
+  std::true_type callableWithQueue(M m, Derived *d = nullptr, P *p = nullptr,
+                                   DataRecursionQueue *q = nullptr,
+                                   decltype((d->*m)(p, q)) = false);
 
-  // Traverse the given statement. If the traverse function was not overridden,
-  // pass on the data recursion queue information.
+  // Traverse the given statement. If the most-derived traverse function takes a
+  // data recursion queue, pass it on; otherwise, discard it. Note that the
+  // first branch of this conditional must compile whether or not the derived
+  // class can take a queue, so if we're taking the second arm, make the first
+  // arm call our function rather than the derived class version.
 #define TRAVERSE_STMT_BASE(NAME, CLASS, VAR, QUEUE)                            \
-  (is_same_member_pointer<decltype(&Derived::Traverse##NAME),                  \
-                          &Derived::Traverse##NAME,                            \
-                          decltype(&RecursiveASTVisitor::Traverse##NAME),      \
-                          &RecursiveASTVisitor::Traverse##NAME>::value         \
-       ? this->Traverse##NAME(static_cast<CLASS *>(VAR), QUEUE)                \
+  (decltype(callableWithQueue<CLASS>(&Derived::Traverse##NAME))::value         \
+       ? static_cast<typename std::conditional<                                \
+             decltype(                                                         \
+                 callableWithQueue<CLASS>(&Derived::Traverse##NAME))::value,   \
+             Derived &, RecursiveASTVisitor &>::type>(*this)                   \
+             .Traverse##NAME(static_cast<CLASS *>(VAR), QUEUE)                 \
        : getDerived().Traverse##NAME(static_cast<CLASS *>(VAR)))
 
-  // Try to traverse the given statement, or enqueue it if we're performing data
-  // recursion in the middle of traversing another statement. Can only be called
-  // from within a DEF_TRAVERSE_STMT body or similar context.
+// Try to traverse the given statement, or enqueue it if we're performing data
+// recursion in the middle of traversing another statement. Can only be called
+// from within a DEF_TRAVERSE_STMT body or similar context.
 #define TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S)                                     \
   do {                                                                         \
     if (!TRAVERSE_STMT_BASE(Stmt, Stmt, S, Queue))                             \
@@ -534,14 +544,6 @@ bool RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S,
                                                 DataRecursionQueue *Queue) {
   if (!S)
     return true;
-
-  // If TraverseStmt was overridden (and called the base class version), don't
-  // do any data recursion; it would be observable.
-  if (!is_same_member_pointer<decltype(&Derived::TraverseStmt),
-                              &Derived::TraverseStmt,
-                              decltype(&RecursiveASTVisitor::TraverseStmt),
-                              &RecursiveASTVisitor::TraverseStmt>::value)
-    return dataTraverseNode(S, nullptr);
 
   if (Queue) {
     Queue->push_back(S);
@@ -2714,6 +2716,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDeviceClause(OMPDeviceClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPMapClause(OMPMapClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
+    OMPNumTeamsClause *C) {
+  TRY_TO(TraverseStmt(C->getNumTeams()));
   return true;
 }
 
