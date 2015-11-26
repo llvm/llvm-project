@@ -6919,6 +6919,25 @@ TreeTransform<Derived>::TransformMSPropertyRefExpr(MSPropertyRefExpr *E) {
 }
 
 template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformMSPropertySubscriptExpr(
+    MSPropertySubscriptExpr *E) {
+  auto BaseRes = getDerived().TransformExpr(E->getBase());
+  if (BaseRes.isInvalid())
+    return ExprError();
+  auto IdxRes = getDerived().TransformExpr(E->getIdx());
+  if (IdxRes.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      BaseRes.get() == E->getBase() &&
+      IdxRes.get() == E->getIdx())
+    return E;
+
+  return getDerived().RebuildArraySubscriptExpr(
+      BaseRes.get(), SourceLocation(), IdxRes.get(), E->getRBracketLoc());
+}
+
+template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformSEHTryStmt(SEHTryStmt *S) {
   StmtResult TryBlock = getDerived().TransformCompoundStmt(S->getTryBlock());
   if (TryBlock.isInvalid())

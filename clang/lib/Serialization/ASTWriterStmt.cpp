@@ -1689,6 +1689,14 @@ void ASTStmtWriter::VisitMSPropertyRefExpr(MSPropertyRefExpr *E) {
   Code = serialization::EXPR_CXX_PROPERTY_REF_EXPR;
 }
 
+void ASTStmtWriter::VisitMSPropertySubscriptExpr(MSPropertySubscriptExpr *E) {
+  VisitExpr(E);
+  Writer.AddStmt(E->getBase());
+  Writer.AddStmt(E->getIdx());
+  Writer.AddSourceLocation(E->getRBracketLoc(), Record);
+  Code = serialization::EXPR_CXX_PROPERTY_SUBSCRIPT_EXPR;
+}
+
 void ASTStmtWriter::VisitCXXUuidofExpr(CXXUuidofExpr *E) {
   VisitExpr(E);
   Writer.AddSourceRange(E->getSourceRange(), Record);

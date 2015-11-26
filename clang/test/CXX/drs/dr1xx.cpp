@@ -524,8 +524,13 @@ namespace dr143 { // dr143: yes
 
 namespace dr145 { // dr145: yes
   void f(bool b) {
+#if __cplusplus <= 201402L
     ++b; // expected-warning {{deprecated}}
     b++; // expected-warning {{deprecated}}
+#else
+    ++b; // expected-error {{increment}}
+    b++; // expected-error {{increment}}
+#endif
   }
 }
 

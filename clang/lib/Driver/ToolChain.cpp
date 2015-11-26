@@ -619,7 +619,8 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 void ToolChain::AddFilePathLibArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
   for (const auto &LibPath : getFilePaths())
-    CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+    if(LibPath.length() > 0)
+      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
 }
 
 void ToolChain::AddCCKextLibArgs(const ArgList &Args,

@@ -17,6 +17,7 @@
 // CHECK-DAG: @mix2 = weak alias void (), void ()* @__mix2
 // CHECK-DAG: @a1 = weak alias void (), void ()* @__a1
 // CHECK-DAG: @xxx = weak alias void (), void ()* @__xxx
+// CHECK-DAG: @weakfoo = weak alias void {{.*}} @localfoo
 
 
 
@@ -173,6 +174,14 @@ label:
 // CHECK: declare extern_weak i32 @PR16705b()
 // CHECK: declare extern_weak i32 @PR16705c()
 
+// In this test case, we have a declaration of weakfoo before #pragma weak.
+// Test that 2 decls for the weakfoo are merged.
+extern void weakfoo();
+void localfoo() { }
+#pragma weak weakfoo=localfoo
+extern void externmain() { return weakfoo(); }
+// CHECK-LABEL: define void @externmain()
+// CHECK: call{{.*}}@weakfoo
 
 ///////////// TODO: stuff that still doesn't work
 

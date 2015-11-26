@@ -137,7 +137,7 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   // at the same time.  Therefore, if DirName is already in the cache,
   // we don't need to recurse as its ancestors must also already be in
   // the cache.
-  if (NamedDirEnt.second)
+  if (NamedDirEnt.second && NamedDirEnt.second != NON_EXISTENT_DIR)
     return;
 
   // Add the virtual directory to the cache.

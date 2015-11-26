@@ -52,11 +52,19 @@ T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}
 #pragma omp for ordered(1)
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
+#pragma omp for ordered(N-1) // expected-error 2 {{argument to 'ordered' clause must be a positive integer value}}
+  for (int i = ST; i < N; i++)
+    argv[0][i] = argv[0][i] - argv[0][i - ST];
 #pragma omp for ordered(N) // expected-error {{argument to 'ordered' clause must be a positive integer value}}
   for (T i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
 #pragma omp for ordered(2) // expected-note {{as specified in 'ordered' clause}}
   foo();                    // expected-error {{expected 2 for loops after '#pragma omp for'}}
+#pragma omp for ordered(N) collapse(N + 2) // expected-error {{the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause}} expected-note {{parameter of the 'collapse' clause}} expected-error {{argument to 'ordered' clause must be a positive integer value}}
+  for (int i = ST; i < N; i++)
+    for (int j = ST; j < N; j++)
+      for (int k = ST; k < N; k++)
+        foo();
   return argc;
 }
 
@@ -98,6 +106,14 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp for ordered(2) // expected-note {{as specified in 'ordered' clause}}
   foo();                    // expected-error {{expected 2 for loops after '#pragma omp for'}}
+#pragma omp for ordered(0)              // expected-error {{argument to 'ordered' clause must be a positive integer value}}
+  for (int i = 4; i < 12; i++)
+    argv[0][i] = argv[0][i] - argv[0][i - 4];
+#pragma omp for ordered(2) collapse(3) // expected-error {{the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause}} expected-note {{parameter of the 'collapse' clause}}
+  for (int i = 0; i < 10; i++)
+    for (int j = 0; j < 11; j++)
+      for (int k = 0; k < 12; k++)
+        foo();
   // expected-note@+1 {{in instantiation of function template specialization 'tmain<int, char, 1, 0>' requested here}}
   return tmain<int, char, 1, 0>(argc, argv);
 }

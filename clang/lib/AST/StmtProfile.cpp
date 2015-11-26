@@ -1129,6 +1129,11 @@ void StmtProfiler::VisitMSPropertyRefExpr(const MSPropertyRefExpr *S) {
   VisitDecl(S->getPropertyDecl());
 }
 
+void StmtProfiler::VisitMSPropertySubscriptExpr(
+    const MSPropertySubscriptExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitCXXThisExpr(const CXXThisExpr *S) {
   VisitExpr(S);
   ID.AddBoolean(S->isImplicit());

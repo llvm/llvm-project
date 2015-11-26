@@ -1179,6 +1179,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
     return CT_Cannot;
 
   case Expr::MSPropertyRefExprClass:
+  case Expr::MSPropertySubscriptExprClass:
     llvm_unreachable("Invalid class for expression");
 
 #define STMT(CLASS, PARENT) case Expr::CLASS##Class:

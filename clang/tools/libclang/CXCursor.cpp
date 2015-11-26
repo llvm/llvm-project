@@ -329,6 +329,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_UnaryExpr;
     break;
 
+  case Stmt::MSPropertySubscriptExprClass:
   case Stmt::ArraySubscriptExprClass:
     K = CXCursor_ArraySubscriptExpr;
     break;
