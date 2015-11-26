@@ -43,3 +43,6 @@
   mflo $15                     # CHECK: mflo $15                       # encoding: [0x00,0x00,0x78,0x12]
   mthi $16                     # CHECK: mthi $16                       # encoding: [0x02,0x00,0x00,0x11]
   mtlo $17                     # CHECK: mtlo $17                       # encoding: [0x02,0x20,0x00,0x13]
+  append $2, $3, 3             # CHECK: append $2, $3, 3               # encoding: [0x7c,0x62,0x18,0x31]
+  balign $4, $5, 1             # CHECK: balign $4, $5, 1               # encoding: [0x7c,0xa4,0x0c,0x31]
+  prepend $6, $7, 4            # CHECK: prepend $6, $7, 4              # encoding: [0x7c,0xe6,0x20,0x71]

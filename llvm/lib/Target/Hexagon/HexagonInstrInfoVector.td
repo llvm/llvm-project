@@ -35,6 +35,34 @@ multiclass bitconvert_64<ValueType a, ValueType b> {
              (a DoubleRegs:$src)>;
 }
 
+multiclass bitconvert_vec<ValueType a, ValueType b> {
+  def : Pat <(b (bitconvert (a VectorRegs:$src))),
+             (b  VectorRegs:$src)>;
+  def : Pat <(a (bitconvert (b VectorRegs:$src))),
+             (a  VectorRegs:$src)>;
+}
+
+multiclass bitconvert_dblvec<ValueType a, ValueType b> {
+  def : Pat <(b (bitconvert (a VecDblRegs:$src))),
+             (b  VecDblRegs:$src)>;
+  def : Pat <(a (bitconvert (b VecDblRegs:$src))),
+             (a  VecDblRegs:$src)>;
+}
+
+multiclass bitconvert_predvec<ValueType a, ValueType b> {
+  def : Pat <(b (bitconvert (a VecPredRegs:$src))),
+             (b  VectorRegs:$src)>;
+  def : Pat <(a (bitconvert (b VectorRegs:$src))),
+             (a  VecPredRegs:$src)>;
+}
+
+multiclass bitconvert_dblvec128B<ValueType a, ValueType b> {
+  def : Pat <(b (bitconvert (a VecDblRegs128B:$src))),
+             (b  VecDblRegs128B:$src)>;
+  def : Pat <(a (bitconvert (b VecDblRegs128B:$src))),
+             (a  VecDblRegs128B:$src)>;
+}
+
 // Bit convert vector types.
 defm : bitconvert_32<v4i8, i32>;
 defm : bitconvert_32<v2i16, i32>;
@@ -47,6 +75,21 @@ defm : bitconvert_64<v8i8, v4i16>;
 defm : bitconvert_64<v8i8, v2i32>;
 defm : bitconvert_64<v4i16, v2i32>;
 
+defm : bitconvert_vec<v64i8, v16i32>;
+defm : bitconvert_vec<v8i64 , v16i32>;
+defm : bitconvert_vec<v32i16, v16i32>;
+
+defm : bitconvert_dblvec<v16i64, v128i8>;
+defm : bitconvert_dblvec<v32i32, v128i8>;
+defm : bitconvert_dblvec<v64i16, v128i8>;
+
+defm : bitconvert_dblvec128B<v64i32, v128i16>;
+defm : bitconvert_dblvec128B<v256i8, v128i16>;
+defm : bitconvert_dblvec128B<v32i64, v128i16>;
+
+defm : bitconvert_dblvec128B<v64i32, v256i8>;
+defm : bitconvert_dblvec128B<v32i64, v256i8>;
+defm : bitconvert_dblvec128B<v128i16, v256i8>;
 
 // Vector shift support. Vector shifting in Hexagon is rather different
 // from internal representation of LLVM.

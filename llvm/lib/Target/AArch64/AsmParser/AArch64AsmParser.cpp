@@ -888,7 +888,8 @@ public:
   }
   bool isSystemPStateFieldWithImm0_1() const {
     if (!isSysReg()) return false;
-    return SysReg.PStateField == AArch64PState::PAN;
+    return (SysReg.PStateField == AArch64PState::PAN ||
+            SysReg.PStateField == AArch64PState::UAO);
   }
   bool isSystemPStateFieldWithImm0_15() const {
     if (!isSysReg() || isSystemPStateFieldWithImm0_1()) return false;
@@ -2465,6 +2466,13 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     } else if (!Op.compare_lower("cisw")) {
       // SYS #0, C7, C14, #2
       SYS_ALIAS(0, 7, 14, 2);
+    } else if (!Op.compare_lower("cvap")) {
+      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
+        // SYS #3, C7, C12, #1
+        SYS_ALIAS(3, 7, 12, 1);
+      } else {
+        return TokError("DC CVAP requires ARMv8.2a");
+      }
     } else {
       return TokError("invalid operand for DC instruction");
     }
@@ -2505,6 +2513,20 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     } else if (!Op.compare_lower("s12e0w")) {
       // SYS #4, C7, C8, #7
       SYS_ALIAS(4, 7, 8, 7);
+    } else if (!Op.compare_lower("s1e1rp")) {
+      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
+        // SYS #0, C7, C9, #0
+        SYS_ALIAS(0, 7, 9, 0);
+      } else {
+        return TokError("AT S1E1RP requires ARMv8.2a");
+      }
+    } else if (!Op.compare_lower("s1e1wp")) {
+      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
+        // SYS #0, C7, C9, #1
+        SYS_ALIAS(0, 7, 9, 1);
+      } else {
+        return TokError("AT S1E1WP requires ARMv8.2a");
+      }
     } else {
       return TokError("invalid operand for AT instruction");
     }

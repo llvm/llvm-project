@@ -65,8 +65,10 @@
   sb16  $7, 4($9)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   sh16  $7, 8($9)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   sw16  $7, 4($10)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  cache 256, 8($5)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
-  pref 256, 8($5)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
+  cache -1, 8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
+  cache 32, 8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
+  pref -1, 8($5)   # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
+  pref 32, 8($5)   # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
   beqz16 $9, 20 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   bnez16 $9, 20 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   movep   $5, $21, $2, $3 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -78,13 +80,14 @@
   break 7, 1024     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   break 1024, 1024  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   wait 1024         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  prefx 33, $8($5) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
-  jraddiusp 1       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 2       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 3       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 10      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 18      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 31      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 33      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 125     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  jraddiusp 132     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  prefx -1, $8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
+  prefx 32, $8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
+  jraddiusp 1       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 2       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 3       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 10      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 18      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 31      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 33      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 125     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
+  jraddiusp 132     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4

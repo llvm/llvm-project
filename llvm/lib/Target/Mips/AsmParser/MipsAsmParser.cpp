@@ -928,12 +928,13 @@ public:
     Inst.addOperand(MCOperand::createReg(getHWRegsReg()));
   }
 
-  template <unsigned Bits, int Offset = 0>
+  template <unsigned Bits, int Offset = 0, int AdjustOffset = 0>
   void addConstantUImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     uint64_t Imm = getConstantImm() - Offset;
     Imm &= (1 << Bits) - 1;
     Imm += Offset;
+    Imm += AdjustOffset;
     Inst.addOperand(MCOperand::createImm(Imm));
   }
 
@@ -1034,8 +1035,10 @@ public:
       && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
       && (getMemBase()->getGPR32Reg() == Mips::SP);
   }
-  bool isUImm5Lsl2() const {
-    return (isImm() && isConstantImm() && isShiftedUInt<5, 2>(getConstantImm()));
+  template <unsigned Bits, unsigned ShiftLeftAmount>
+  bool isScaledUImm() const {
+    return isConstantImm() &&
+           isShiftedUInt<Bits, ShiftLeftAmount>(getConstantImm());
   }
   bool isRegList16() const {
     if (!isRegList())
@@ -1620,32 +1623,6 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         }
         break;
 
-      case Mips::CINS:
-      case Mips::CINS32:
-      case Mips::EXTS:
-      case Mips::EXTS32:
-        assert(MCID.getNumOperands() == 4 && "unexpected number of operands");
-        // Check length
-        Opnd = Inst.getOperand(3);
-        if (!Opnd.isImm())
-          return Error(IDLoc, "expected immediate operand kind");
-        Imm = Opnd.getImm();
-        if (Imm < 0 || Imm > 31)
-          return Error(IDLoc, "immediate operand value out of range");
-        // Check position
-        Opnd = Inst.getOperand(2);
-        if (!Opnd.isImm())
-          return Error(IDLoc, "expected immediate operand kind");
-        Imm = Opnd.getImm();
-        if (Imm < 0 || Imm > (Opcode == Mips::CINS ||
-                              Opcode == Mips::EXTS ? 63 : 31))
-          return Error(IDLoc, "immediate operand value out of range");
-        if (Imm > 31) {
-          Inst.setOpcode(Opcode == Mips::CINS ? Mips::CINS32 : Mips::EXTS32);
-          Inst.getOperand(2).setImm(Imm - 32);
-        }
-        break;
-
       case Mips::SEQi:
       case Mips::SNEi:
         assert(MCID.getNumOperands() == 3 && "unexpected number of operands");
@@ -1907,16 +1884,6 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           return Error(IDLoc, "expected immediate operand kind");
         Imm = Opnd.getImm();
         if (Imm < 0 || Imm > 60 || (Imm % 4 != 0))
-          return Error(IDLoc, "immediate operand value out of range");
-        break;
-      case Mips::PREFX_MM:
-      case Mips::CACHE:
-      case Mips::PREF:
-        Opnd = Inst.getOperand(2);
-        if (!Opnd.isImm())
-          return Error(IDLoc, "expected immediate operand kind");
-        Imm = Opnd.getImm();
-        if (!isUInt<5>(Imm))
           return Error(IDLoc, "immediate operand value out of range");
         break;
       case Mips::ADDIUPC_MM:
@@ -3666,6 +3633,20 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm4_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 4-bit unsigned immediate");
+  case Match_UImm5_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 5-bit unsigned immediate");
+  case Match_UImm5_32:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range 32 .. 63");
+  case Match_UImm5_0_Report_UImm6:
+    // This is used on UImm5 operands that have a corresponding UImm5_32
+    // operand to avoid confusing the user.
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 6-bit unsigned immediate");
+  case Match_UImm5_Lsl2:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected both 7-bit unsigned immediate and multiple of 4");
   }
 
   llvm_unreachable("Implement any new match types added!");

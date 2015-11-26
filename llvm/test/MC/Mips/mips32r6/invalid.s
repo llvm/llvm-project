@@ -28,5 +28,11 @@ local_label:
         bgeul $7, $8, local_label  # -CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         bgtl  $7, $8, local_label  # -CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         bgtul $7, $8, local_label  # -CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        lsa     $2, $3, $4, 0     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
-        lsa     $2, $3, $4, 5     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
+        cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+        cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+        jalr.hb $31          # CHECK: :[[@LINE]]:9: error: source and destination must be different
+        jalr.hb $31, $31     # CHECK: :[[@LINE]]:9: error: source and destination must be different
+        lsa $2, $3, $4, 0    # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 4
+        lsa $2, $3, $4, 5    # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 4
+        pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
+        pref 32, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate

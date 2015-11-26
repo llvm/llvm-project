@@ -15,10 +15,14 @@
     sat_s.b $w31, $w31, 8   # CHECK: :[[@LINE]]:25: error: expected 3-bit unsigned immediate
     sat_s.h $w31, $w31, -1  # CHECK: :[[@LINE]]:25: error: expected 4-bit unsigned immediate
     sat_s.h $w31, $w31, 16  # CHECK: :[[@LINE]]:25: error: expected 4-bit unsigned immediate
+    sat_s.w $w31, $w31, -1  # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
+    sat_s.w $w31, $w31, 32  # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
     sat_u.b $w31, $w31, -1  # CHECK: :[[@LINE]]:25: error: expected 3-bit unsigned immediate
     sat_u.b $w31, $w31, 8   # CHECK: :[[@LINE]]:25: error: expected 3-bit unsigned immediate
     sat_u.h $w31, $w31, -1  # CHECK: :[[@LINE]]:25: error: expected 4-bit unsigned immediate
     sat_u.h $w31, $w31, 16  # CHECK: :[[@LINE]]:25: error: expected 4-bit unsigned immediate
+    sat_u.w $w31, $w31, -1  # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
+    sat_u.w $w31, $w31, 32  # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
     sldi.b $w0, $w29[-1]    # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
     sldi.b $w0, $w29[16]    # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
     sldi.d $w4, $w12[-1]    # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
