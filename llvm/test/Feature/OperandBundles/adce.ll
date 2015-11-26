@@ -39,3 +39,11 @@ define void @test3() {
   call void @readnone_function() readnone [ "tag"() ]
   ret void
 }
+
+define void @test4() {
+; CHECK-LABEL: @test4(
+ entry:
+; CHECK-NOT: @readonly_function()
+  call void @readonly_function() [ "deopt"() ]
+  ret void
+}

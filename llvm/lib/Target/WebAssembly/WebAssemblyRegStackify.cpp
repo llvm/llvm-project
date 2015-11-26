@@ -23,6 +23,7 @@
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -40,6 +41,7 @@ class WebAssemblyRegStackify final : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<AAResultsWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -70,6 +72,24 @@ static void ImposeStackOrdering(MachineInstr *MI) {
                                            /*isImp=*/true));
 }
 
+// Test whether it's safe to move Def to just before Insert. Note that this
+// doesn't account for physical register dependencies, because WebAssembly
+// doesn't have any (other than special ones like EXPR_STACK).
+// TODO: Compute memory dependencies in a way that doesn't require always
+// walking the block.
+// TODO: Compute memory dependencies in a way that uses AliasAnalysis to be
+// more precise.
+static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
+                         AliasAnalysis &AA) {
+  bool SawStore = false, SawSideEffects = false;
+  MachineBasicBlock::const_iterator D(Def), I(Insert);
+  for (--I; I != D; --I)
+    SawSideEffects |= I->isSafeToMove(&AA, SawStore);
+
+  return !(SawStore && Def->mayLoad() && !Def->isInvariantLoad(&AA)) &&
+         !(SawSideEffects && !Def->isSafeToMove(&AA, SawStore));
+}
+
 bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** Register Stackifying **********\n"
                   "********** Function: "
@@ -78,6 +98,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   // Walk the instructions from the bottom up. Currently we don't look past
   // block boundaries, and the blocks aren't ordered so the block visitation
@@ -90,12 +111,17 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       if (Insert->getOpcode() == TargetOpcode::PHI)
         break;
 
+      // Don't nest anything inside an inline asm, because we don't have
+      // constraints for $push inputs.
+      if (Insert->getOpcode() == TargetOpcode::INLINEASM)
+        break;
+
       // Iterate through the inputs in reverse order, since we'll be pulling
       // operands off the stack in FIFO order.
       bool AnyStackified = false;
       for (MachineOperand &Op : reverse(Insert->uses())) {
         // We're only interested in explicit virtual register operands.
-        if (!Op.isReg() || Op.isImplicit())
+        if (!Op.isReg() || Op.isImplicit() || !Op.isUse())
           continue;
 
         unsigned Reg = Op.getReg();
@@ -112,6 +138,15 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (Def->getOpcode() == TargetOpcode::IMPLICIT_DEF)
           continue;
 
+        // Don't nest an INLINE_ASM def into anything, because we don't have
+        // constraints for $pop outputs.
+        if (Def->getOpcode() == TargetOpcode::INLINEASM)
+          continue;
+
+        // Don't nest PHIs inside of anything.
+        if (Def->getOpcode() == TargetOpcode::PHI)
+          continue;
+
         // Argument instructions represent live-in registers and not real
         // instructions.
         if (Def->getOpcode() == WebAssembly::ARGUMENT_I32 ||
@@ -124,8 +159,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // they be trivially clonable.
         // TODO: Eventually we'll relax this, to take advantage of set_local
         // returning its result.
-        bool OneUse = MRI.hasOneUse(Reg);
-        if (!OneUse && !Def->isMoveImmediate())
+        if (!MRI.hasOneUse(Reg))
           continue;
 
         // For now, be conservative and don't look across block boundaries,
@@ -134,35 +168,19 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (Def->getParent() != &MBB && !Def->isMoveImmediate())
           continue;
 
-        // For now, be simple and don't reorder loads, stores, or side effects.
-        // TODO: Be more aggressive.
-        if ((Def->mayLoad() || Def->mayStore() ||
-             Def->hasUnmodeledSideEffects()))
+        // Don't move instructions that have side effects or memory dependencies
+        // or other complications.
+        if (!IsSafeToMove(Def, Insert, AA))
           continue;
 
         Changed = true;
         AnyStackified = true;
-        if (OneUse) {
-          // Move the def down and nest it in the current instruction.
-          MBB.insert(MachineBasicBlock::instr_iterator(Insert),
-                     Def->removeFromParent());
-          MFI.stackifyVReg(Reg);
-          ImposeStackOrdering(Def);
-          Insert = Def;
-        } else {
-          // Clone the def down and nest it in the current instruction.
-          MachineInstr *Clone = MF.CloneMachineInstr(Def);
-          unsigned OldReg = Def->getOperand(0).getReg();
-          unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
-          assert(Op.getReg() == OldReg);
-          assert(Clone->getOperand(0).getReg() == OldReg);
-          Op.setReg(NewReg);
-          Clone->getOperand(0).setReg(NewReg);
-          MBB.insert(MachineBasicBlock::instr_iterator(Insert), Clone);
-          MFI.stackifyVReg(Reg);
-          ImposeStackOrdering(Clone);
-          Insert = Clone;
-        }
+        // Move the def down and nest it in the current instruction.
+        MBB.insert(MachineBasicBlock::instr_iterator(Insert),
+                   Def->removeFromParent());
+        MFI.stackifyVReg(Reg);
+        ImposeStackOrdering(Def);
+        Insert = Def;
       }
       if (AnyStackified)
         ImposeStackOrdering(&MI);

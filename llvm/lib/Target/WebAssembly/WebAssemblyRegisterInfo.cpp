@@ -54,7 +54,7 @@ WebAssemblyRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 void WebAssemblyRegisterInfo::eliminateFrameIndex(
     MachineBasicBlock::iterator II, int SPAdj, unsigned FIOperandNum,
     RegScavenger *RS) const {
-  llvm_unreachable("WebAssemblyRegisterInfo::eliminateFrameIndex"); // FIXME
+  llvm_unreachable("TODO: implement WebAssemblyRegisterInfo::eliminateFrameIndex");
 }
 
 unsigned

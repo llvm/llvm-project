@@ -766,6 +766,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI)
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   unsigned Opc = MI->getOpcode();
+  const unsigned VecOffset = 1;
+  bool Is128B = false;
 
   switch (Opc) {
     case Hexagon::ALIGNA:
@@ -774,6 +776,84 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI)
           .addImm(-MI->getOperand(1).getImm());
       MBB.erase(MI);
       return true;
+    case Hexagon::STrivv_indexed_128B:
+      Is128B = true;
+    case Hexagon::STrivv_indexed: {
+      unsigned SrcReg = MI->getOperand(2).getReg();
+      unsigned SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::subreg_hireg);
+      unsigned SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::subreg_loreg);
+      unsigned NewOpcd = Is128B ? Hexagon::V6_vS32b_ai_128B
+                                : Hexagon::V6_vS32b_ai;
+      unsigned Offset = Is128B ? VecOffset << 7 : VecOffset << 6;
+      MachineInstr *MI1New = BuildMI(MBB, MI, DL, get(NewOpcd))
+          .addOperand(MI->getOperand(0))
+          .addImm(MI->getOperand(1).getImm())
+          .addReg(SrcSubLo)
+          .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      MI1New->getOperand(0).setIsKill(false);
+      BuildMI(MBB, MI, DL, get(NewOpcd))
+        .addOperand(MI->getOperand(0))
+        // The Vectors are indexed in multiples of vector size.
+        .addImm(MI->getOperand(1).getImm()+Offset)
+        .addReg(SrcSubHi)
+        .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      MBB.erase(MI);
+      return true;
+    }
+    case Hexagon::LDrivv_pseudo_V6_128B:
+    case Hexagon::LDrivv_indexed_128B:
+      Is128B = true;
+    case Hexagon::LDrivv_pseudo_V6:
+    case Hexagon::LDrivv_indexed: {
+      unsigned NewOpcd = Is128B ? Hexagon::V6_vL32b_ai_128B
+                                : Hexagon::V6_vL32b_ai;
+      unsigned DstReg = MI->getOperand(0).getReg();
+      unsigned Offset = Is128B ? VecOffset << 7 : VecOffset << 6;
+      MachineInstr *MI1New =
+          BuildMI(MBB, MI, DL, get(NewOpcd),
+                  HRI.getSubReg(DstReg, Hexagon::subreg_loreg))
+              .addOperand(MI->getOperand(1))
+              .addImm(MI->getOperand(2).getImm());
+      MI1New->getOperand(1).setIsKill(false);
+      BuildMI(MBB, MI, DL, get(NewOpcd),
+              HRI.getSubReg(DstReg, Hexagon::subreg_hireg))
+          .addOperand(MI->getOperand(1))
+          // The Vectors are indexed in multiples of vector size.
+          .addImm(MI->getOperand(2).getImm() + Offset)
+          .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      MBB.erase(MI);
+      return true;
+    }
+    case Hexagon::LDriv_pseudo_V6_128B:
+      Is128B = true;
+    case Hexagon::LDriv_pseudo_V6: {
+      unsigned DstReg = MI->getOperand(0).getReg();
+      unsigned NewOpc = Is128B ? Hexagon::V6_vL32b_ai_128B
+                               : Hexagon::V6_vL32b_ai;
+      int32_t Off = MI->getOperand(2).getImm();
+      int32_t Idx = Off;
+      BuildMI(MBB, MI, DL, get(NewOpc), DstReg)
+        .addOperand(MI->getOperand(1))
+        .addImm(Idx)
+        .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      MBB.erase(MI);
+      return true;
+    }
+    case Hexagon::STriv_pseudo_V6_128B:
+      Is128B = true;
+    case Hexagon::STriv_pseudo_V6: {
+      unsigned NewOpc = Is128B ? Hexagon::V6_vS32b_ai_128B
+                               : Hexagon::V6_vS32b_ai;
+      int32_t Off = MI->getOperand(1).getImm();
+      int32_t Idx = Is128B ? (Off >> 7) : (Off >> 6);
+      BuildMI(MBB, MI, DL, get(NewOpc))
+        .addOperand(MI->getOperand(0))
+        .addImm(Idx)
+        .addOperand(MI->getOperand(2))
+        .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      MBB.erase(MI);
+      return true;
+    }
     case Hexagon::TFR_PdTrue: {
       unsigned Reg = MI->getOperand(0).getReg();
       BuildMI(MBB, MI, DL, get(Hexagon::C2_orn), Reg)
@@ -869,6 +949,20 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI)
     case Hexagon::TCRETURNr:
       MI->setDesc(get(Hexagon::J2_jumpr));
       return true;
+    case Hexagon::TFRI_f:
+    case Hexagon::TFRI_cPt_f:
+    case Hexagon::TFRI_cNotPt_f: {
+      unsigned Opx = (Opc == Hexagon::TFRI_f) ? 1 : 2;
+      APFloat FVal = MI->getOperand(Opx).getFPImm()->getValueAPF();
+      APInt IVal = FVal.bitcastToAPInt();
+      MI->RemoveOperand(Opx);
+      unsigned NewOpc = (Opc == Hexagon::TFRI_f)     ? Hexagon::A2_tfrsi   :
+                        (Opc == Hexagon::TFRI_cPt_f) ? Hexagon::C2_cmoveit :
+                                                       Hexagon::C2_cmoveif;
+      MI->setDesc(get(NewOpc));
+      MI->addOperand(MachineOperand::CreateImm(IVal.getZExtValue()));
+      return true;
+    }
   }
 
   return false;

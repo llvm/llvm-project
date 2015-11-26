@@ -61,15 +61,11 @@ define void @simple_read2_v4f32_superreg_align4(float addrspace(1)* %out) #0 {
   ret void
 }
 
-
-; FIXME: the v_lshl_b64 x, x, 32 is a bad way of doing a copy
-
 ; CI-LABEL: {{^}}simple_read2_v3f32_superreg_align4:
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; CI-DAG: ds_read_b32 v[[REG_Z:[0-9]+]], v{{[0-9]+}} offset:8{{$}}
-; CI: v_lshr_b64 v{{\[}}[[Y_COPY:[0-9]+]]:{{[0-9]+\]}}, v{{\[}}[[REG_X]]:[[REG_Y]]{{\]}}, 32
 ; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_Z]], v[[REG_X]]
-; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[Y_COPY]], v[[ADD0]]
+; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_Y]], v[[ADD0]]
 ; CI: buffer_store_dword v[[ADD1]]
 ; CI: s_endpgm
 define void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {

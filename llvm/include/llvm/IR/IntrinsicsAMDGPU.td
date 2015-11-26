@@ -127,4 +127,8 @@ def int_amdgcn_s_dcache_wb_vol :
   GCCBuiltin<"__builtin_amdgcn_s_dcache_wb_vol">,
   Intrinsic<[], [], []>;
 
+def int_amdgcn_dispatch_ptr :
+  GCCBuiltin<"__builtin_amdgcn_dispatch_ptr">,
+  Intrinsic<[LLVMQualPointerType<llvm_i8_ty, 2>], [], [IntrNoMem]>;
+
 }

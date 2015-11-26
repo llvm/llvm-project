@@ -22,7 +22,7 @@ Interesting work that remains to be done:
 
 //===---------------------------------------------------------------------===//
 
-set_local and store instructions have a return value. We should (a) model this,
+set_local instructions have a return value. We should (a) model this,
 and (b) write optimizations which take advantage of it. Keep in mind that
 many set_local instructions are implicit!
 

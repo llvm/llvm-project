@@ -382,6 +382,98 @@ TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
   ASSERT_EQ(Max, VD[0].Count);
 }
 
+// Synthesize runtime value profile data.
+ValueProfNode Site1Values[5] = {{{uint64_t("callee1"), 400}, &Site1Values[1]},
+                                {{uint64_t("callee2"), 1000}, &Site1Values[2]},
+                                {{uint64_t("callee3"), 500}, &Site1Values[3]},
+                                {{uint64_t("callee4"), 300}, &Site1Values[4]},
+                                {{uint64_t("callee5"), 100}, 0}};
+
+ValueProfNode Site2Values[4] = {{{uint64_t("callee5"), 800}, &Site2Values[1]},
+                                {{uint64_t("callee3"), 1000}, &Site2Values[2]},
+                                {{uint64_t("callee2"), 2500}, &Site2Values[3]},
+                                {{uint64_t("callee1"), 1300}, 0}};
+
+ValueProfNode Site3Values[3] = {{{uint64_t("callee6"), 800}, &Site3Values[1]},
+                                {{uint64_t("callee3"), 1000}, &Site3Values[2]},
+                                {{uint64_t("callee4"), 5500}, 0}};
+
+ValueProfNode Site4Values[2] = {{{uint64_t("callee2"), 1800}, &Site4Values[1]},
+                                {{uint64_t("callee3"), 2000}, 0}};
+
+static ValueProfNode *ValueProfNodes[5] = {&Site1Values[0], &Site2Values[0],
+                                           &Site3Values[0], &Site4Values[0], 0};
+static uint16_t NumValueSites[IPVK_Last + 1] = {5};
+TEST_F(InstrProfTest, runtime_value_prof_data_read_write) {
+  ValueProfRuntimeRecord RTRecord;
+  initializeValueProfRuntimeRecord(&RTRecord, &NumValueSites[0],
+                                   &ValueProfNodes[0]);
+
+  ValueProfData *VPData = serializeValueProfDataFromRT(&RTRecord);
+
+  InstrProfRecord Record("caller", 0x1234, {1ULL << 31, 2});
+
+  VPData->deserializeTo(Record, 0);
+
+  // Now read data from Record and sanity check the data
+  ASSERT_EQ(5U, Record.getNumValueSites(IPVK_IndirectCallTarget));
+  ASSERT_EQ(5U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_EQ(4U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
+  ASSERT_EQ(3U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
+  ASSERT_EQ(2U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
+  ASSERT_EQ(0U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 4));
+
+  auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
+    return VD1.Count > VD2.Count;
+  };
+  std::unique_ptr<InstrProfValueData[]> VD_0(
+      Record.getValueForSite(IPVK_IndirectCallTarget, 0));
+  std::sort(&VD_0[0], &VD_0[5], Cmp);
+  ASSERT_EQ(StringRef((const char *)VD_0[0].Value, 7), StringRef("callee2"));
+  ASSERT_EQ(1000U, VD_0[0].Count);
+  ASSERT_EQ(StringRef((const char *)VD_0[1].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(500U, VD_0[1].Count);
+  ASSERT_EQ(StringRef((const char *)VD_0[2].Value, 7), StringRef("callee1"));
+  ASSERT_EQ(400U, VD_0[2].Count);
+  ASSERT_EQ(StringRef((const char *)VD_0[3].Value, 7), StringRef("callee4"));
+  ASSERT_EQ(300U, VD_0[3].Count);
+  ASSERT_EQ(StringRef((const char *)VD_0[4].Value, 7), StringRef("callee5"));
+  ASSERT_EQ(100U, VD_0[4].Count);
+
+  std::unique_ptr<InstrProfValueData[]> VD_1(
+      Record.getValueForSite(IPVK_IndirectCallTarget, 1));
+  std::sort(&VD_1[0], &VD_1[4], Cmp);
+  ASSERT_EQ(StringRef((const char *)VD_1[0].Value, 7), StringRef("callee2"));
+  ASSERT_EQ(2500U, VD_1[0].Count);
+  ASSERT_EQ(StringRef((const char *)VD_1[1].Value, 7), StringRef("callee1"));
+  ASSERT_EQ(1300U, VD_1[1].Count);
+  ASSERT_EQ(StringRef((const char *)VD_1[2].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(1000U, VD_1[2].Count);
+  ASSERT_EQ(StringRef((const char *)VD_1[3].Value, 7), StringRef("callee5"));
+  ASSERT_EQ(800U, VD_1[3].Count);
+
+  std::unique_ptr<InstrProfValueData[]> VD_2(
+      Record.getValueForSite(IPVK_IndirectCallTarget, 2));
+  std::sort(&VD_2[0], &VD_2[3], Cmp);
+  ASSERT_EQ(StringRef((const char *)VD_2[0].Value, 7), StringRef("callee4"));
+  ASSERT_EQ(5500U, VD_2[0].Count);
+  ASSERT_EQ(StringRef((const char *)VD_2[1].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(1000U, VD_2[1].Count);
+  ASSERT_EQ(StringRef((const char *)VD_2[2].Value, 7), StringRef("callee6"));
+  ASSERT_EQ(800U, VD_2[2].Count);
+
+  std::unique_ptr<InstrProfValueData[]> VD_3(
+      Record.getValueForSite(IPVK_IndirectCallTarget, 3));
+  std::sort(&VD_3[0], &VD_3[2], Cmp);
+  ASSERT_EQ(StringRef((const char *)VD_3[0].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(2000U, VD_3[0].Count);
+  ASSERT_EQ(StringRef((const char *)VD_3[1].Value, 7), StringRef("callee2"));
+  ASSERT_EQ(1800U, VD_3[1].Count);
+
+  finalizeValueProfRuntimeRecord(&RTRecord);
+  free(VPData);
+}
+
 TEST_F(InstrProfTest, get_max_function_count) {
   InstrProfRecord Record1("foo", 0x1234, {1ULL << 31, 2});
   InstrProfRecord Record2("bar", 0, {1ULL << 63});

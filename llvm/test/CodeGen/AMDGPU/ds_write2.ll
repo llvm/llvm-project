@@ -345,8 +345,9 @@ define void @store_constant_disjoint_offsets() {
 
 ; SI-LABEL: @store_misaligned64_constant_offsets
 ; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; SI: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
-; SI: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
+; SI-DAG: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; SI-DAG: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
+; SI: s_endpgm
 define void @store_misaligned64_constant_offsets() {
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4

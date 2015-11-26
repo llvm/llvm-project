@@ -80,6 +80,11 @@ class SDTCisSameNumEltsAs<int OpNum, int OtherOp> : SDTypeConstraint<OpNum> {
   int OtherOperandNum = OtherOp;
 }
 
+// SDTCisSameSizeAs - The two specified operands have identical size.
+class SDTCisSameSizeAs<int OpNum, int OtherOp> : SDTypeConstraint<OpNum> {
+  int OtherOperandNum = OtherOp;
+}
+
 //===----------------------------------------------------------------------===//
 // Selection DAG Type Profile definitions.
 //
@@ -205,11 +210,12 @@ def SDTIStore : SDTypeProfile<1, 3, [       // indexed store
 ]>;
 
 def SDTMaskedStore: SDTypeProfile<0, 3, [       // masked store
-  SDTCisPtrTy<0>, SDTCisVec<1>, SDTCisVec<2>
+  SDTCisPtrTy<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<1, 2>
 ]>;
 
 def SDTMaskedLoad: SDTypeProfile<1, 3, [       // masked load
-  SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameAs<0, 3>
+  SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameAs<0, 3>,
+  SDTCisSameNumEltsAs<0, 2>
 ]>;
 
 def SDTMaskedGather: SDTypeProfile<2, 3, [       // masked gather

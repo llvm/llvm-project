@@ -2174,6 +2174,11 @@ def : Pat <
      (S_MOV_B32 0), sub1))
 >;
 
+def : Pat <
+  (i32 (smax i32:$x, (i32 (ineg i32:$x)))),
+  (S_ABS_I32 $x)
+>;
+
 //===----------------------------------------------------------------------===//
 // SOP2 Patterns
 //===----------------------------------------------------------------------===//
@@ -2501,6 +2506,11 @@ def : Pat <
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/
 
+//def : Extract_Element<i64, v2i64, 0, sub0_sub1>;
+//def : Extract_Element<i64, v2i64, 1, sub2_sub3>;
+//def : Extract_Element<f64, v2f64, 0, sub0_sub1>;
+//def : Extract_Element<f64, v2f64, 1, sub2_sub3>;
+
 foreach Index = 0-2 in {
   def Extract_Element_v2i32_#Index : Extract_Element <
     i32, v2i32, Index, !cast<SubRegIndex>(sub#Index)
@@ -2585,6 +2595,16 @@ def : BitConvert <v2i32, f64, VReg_64>;
 def : BitConvert <f64, v2i32, VReg_64>;
 def : BitConvert <v4f32, v4i32, VReg_128>;
 def : BitConvert <v4i32, v4f32, VReg_128>;
+
+
+def : BitConvert <v2i64, v4i32, SReg_128>;
+def : BitConvert <v4i32, v2i64, SReg_128>;
+
+def : BitConvert <v2f64, v4i32, VReg_128>;
+def : BitConvert <v4i32, v2f64, VReg_128>;
+
+
+
 
 def : BitConvert <v8f32, v8i32, SReg_256>;
 def : BitConvert <v8i32, v8f32, SReg_256>;

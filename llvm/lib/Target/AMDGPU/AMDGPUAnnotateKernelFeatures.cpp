@@ -105,7 +105,8 @@ bool AMDGPUAnnotateKernelFeatures::runOnModule(Module &M) {
 
     { "llvm.r600.read.global.size.x", "amdgpu-dispatch-ptr" },
     { "llvm.r600.read.global.size.y", "amdgpu-dispatch-ptr" },
-    { "llvm.r600.read.global.size.z", "amdgpu-dispatch-ptr" }
+    { "llvm.r600.read.global.size.z", "amdgpu-dispatch-ptr" },
+    { "llvm.amdgcn.dispatch.ptr",     "amdgpu-dispatch-ptr" }
   };
 
   // TODO: Intrinsics that require queue ptr.

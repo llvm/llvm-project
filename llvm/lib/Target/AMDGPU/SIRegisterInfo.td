@@ -193,7 +193,7 @@ def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
   (add SGPR_64, VCC, EXEC, FLAT_SCR)
 >;
 
-def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8], 32, (add SGPR_128)> {
+def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128)> {
   // Requires 2 s_mov_b64 to copy
   let CopyCost = 2;
 }
@@ -221,7 +221,7 @@ def VReg_96 : RegisterClass<"AMDGPU", [untyped], 32, (add VGPR_96)> {
   let CopyCost = 3;
 }
 
-def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32], 32, (add VGPR_128)> {
+def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32, (add VGPR_128)> {
   // Requires 4 v_mov_b32 to copy
   let CopyCost = 4;
 }

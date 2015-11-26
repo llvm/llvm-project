@@ -510,6 +510,7 @@ bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
 unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
                                            enum PreloadedValue Value) const {
 
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   switch (Value) {
   case SIRegisterInfo::TGID_X:
@@ -525,6 +526,11 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
   case SIRegisterInfo::SCRATCH_PTR:
     return AMDGPU::SGPR2_SGPR3;
   case SIRegisterInfo::INPUT_PTR:
+    if (ST.isAmdHsaOS())
+      return MFI->hasDispatchPtr() ? AMDGPU::SGPR2_SGPR3 : AMDGPU::SGPR0_SGPR1;
+    return AMDGPU::SGPR0_SGPR1;
+  case SIRegisterInfo::DISPATCH_PTR:
+    assert(MFI->hasDispatchPtr());
     return AMDGPU::SGPR0_SGPR1;
   case SIRegisterInfo::TIDIG_X:
     return AMDGPU::VGPR0;

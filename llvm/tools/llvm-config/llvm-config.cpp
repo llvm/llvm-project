@@ -56,10 +56,10 @@ using namespace llvm;
 /// libraries.
 /// \param GetComponentNames - Get the component names instead of the
 /// library name.
-static void VisitComponent(StringRef Name,
+static void VisitComponent(const std::string& Name,
                            const StringMap<AvailableComponent*> &ComponentMap,
                            std::set<AvailableComponent*> &VisitedComponents,
-                           std::vector<StringRef> &RequiredLibs,
+                           std::vector<std::string> &RequiredLibs,
                            bool IncludeNonInstalled, bool GetComponentNames,
                            const std::string *ActiveLibDir, bool *HasMissing) {
   // Lookup the component.
@@ -105,11 +105,11 @@ static void VisitComponent(StringRef Name,
 /// \param IncludeNonInstalled - Whether non-installed components should be
 /// reported.
 /// \param GetComponentNames - True if one would prefer the component names.
-static std::vector<StringRef>
+static std::vector<std::string>
 ComputeLibsForComponents(const std::vector<StringRef> &Components,
                          bool IncludeNonInstalled, bool GetComponentNames,
                          const std::string *ActiveLibDir, bool *HasMissing) {
-  std::vector<StringRef> RequiredLibs;
+  std::vector<std::string> RequiredLibs;
   std::set<AvailableComponent *> VisitedComponents;
 
   // Build a map of component names to information.
@@ -195,8 +195,8 @@ std::string GetExecutablePath(const char *Argv0) {
 
 /// \brief Expand the semi-colon delimited LLVM_DYLIB_COMPONENTS into
 /// the full list of components.
-std::vector<StringRef> GetAllDyLibComponents(const bool IsInDevelopmentTree,
-                                             const bool GetComponentNames) {
+std::vector<std::string> GetAllDyLibComponents(const bool IsInDevelopmentTree,
+                                               const bool GetComponentNames) {
   std::vector<StringRef> DyLibComponents;
 
   StringRef DyLibComponentsStr(LLVM_DYLIB_COMPONENTS);
@@ -453,7 +453,7 @@ int main(int argc, char **argv) {
         /// If there are missing static archives and a dylib was
         /// built, print LLVM_DYLIB_COMPONENTS instead of everything
         /// in the manifest.
-        std::vector<StringRef> Components;
+        std::vector<std::string> Components;
         for (unsigned j = 0; j != array_lengthof(AvailableComponents); ++j) {
           // Only include non-installed components when in a development tree.
           if (!AvailableComponents[j].IsInstalled && !IsInDevelopmentTree)
@@ -526,14 +526,14 @@ int main(int argc, char **argv) {
 
     // Construct the list of all the required libraries.
     bool HasMissing = false;
-    std::vector<StringRef> RequiredLibs =
+    std::vector<std::string> RequiredLibs =
         ComputeLibsForComponents(Components,
                                  /*IncludeNonInstalled=*/IsInDevelopmentTree,
                                  false, &ActiveLibDir, &HasMissing);
 
     if (PrintSharedMode) {
       std::unordered_set<std::string> FullDyLibComponents;
-      std::vector<StringRef> DyLibComponents =
+      std::vector<std::string> DyLibComponents =
           GetAllDyLibComponents(IsInDevelopmentTree, false);
 
       for (auto &Component : DyLibComponents) {
@@ -585,7 +585,7 @@ int main(int argc, char **argv) {
         PrintForLib(DyLibName, true);
       } else {
         for (unsigned i = 0, e = RequiredLibs.size(); i != e; ++i) {
-          StringRef Lib = RequiredLibs[i];
+          auto Lib = RequiredLibs[i];
           if (i)
             OS << ' ';
 

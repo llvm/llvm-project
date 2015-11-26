@@ -29,11 +29,44 @@ void SIMachineFunctionInfo::anchor() {}
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
     TIDReg(AMDGPU::NoRegister),
-    HasSpilledSGPRs(false),
-    HasSpilledVGPRs(false),
+    ScratchRSrcReg(AMDGPU::NoRegister),
+    LDSWaveSpillSize(0),
     PSInputAddr(0),
     NumUserSGPRs(0),
-    LDSWaveSpillSize(0) { }
+    HasSpilledSGPRs(false),
+    HasSpilledVGPRs(false),
+    DispatchPtr(false),
+    QueuePtr(false),
+    DispatchID(false),
+    KernargSegmentPtr(true),
+    FlatScratchInit(false),
+    GridWorkgroupCountX(false),
+    GridWorkgroupCountY(false),
+    GridWorkgroupCountZ(false),
+    WorkGroupIDX(true),
+    WorkGroupIDY(false),
+    WorkGroupIDZ(false),
+    WorkGroupInfo(false),
+    WorkItemIDX(true),
+    WorkItemIDY(false),
+    WorkItemIDZ(false) {
+  const Function *F = MF.getFunction();
+
+  if (F->hasFnAttribute("amdgpu-dispatch-ptr"))
+    DispatchPtr = true;
+
+  if (F->hasFnAttribute("amdgpu-work-group-id-y"))
+    WorkGroupIDY = true;
+
+  if (F->hasFnAttribute("amdgpu-work-group-id-z"))
+    WorkGroupIDZ = true;
+
+  if (F->hasFnAttribute("amdgpu-work-item-id-y"))
+    WorkItemIDY = true;
+
+  if (F->hasFnAttribute("amdgpu-work-item-id-z"))
+    WorkItemIDZ = true;
+}
 
 SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
                                                        MachineFunction *MF,

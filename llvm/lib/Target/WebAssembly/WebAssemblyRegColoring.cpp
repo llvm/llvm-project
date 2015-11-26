@@ -19,7 +19,6 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -46,7 +45,6 @@ public:
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
     AU.addPreservedID(MachineDominatorsID);
-    AU.addRequired<SlotIndexes>(); // for ARGUMENT fixups
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -95,42 +93,6 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
   unsigned NumVRegs = MRI->getNumVirtRegs();
   SmallVector<LiveInterval *, 0> SortedIntervals;
   SortedIntervals.reserve(NumVRegs);
-
-  // FIXME: If scheduling has moved an ARGUMENT virtual register, move it back,
-  // and recompute liveness. This is a temporary hack.
-  bool MovedArg = false;
-  MachineBasicBlock &EntryMBB = MF.front();
-  MachineBasicBlock::iterator InsertPt = EntryMBB.end();
-  // Look for the first NonArg instruction.
-  for (auto MII = EntryMBB.begin(), MIE = EntryMBB.end(); MII != MIE; ++MII) {
-    MachineInstr *MI = MII;
-    if (MI->getOpcode() != WebAssembly::ARGUMENT_I32 &&
-        MI->getOpcode() != WebAssembly::ARGUMENT_I64 &&
-        MI->getOpcode() != WebAssembly::ARGUMENT_F32 &&
-        MI->getOpcode() != WebAssembly::ARGUMENT_F64) {
-      InsertPt = MII;
-      break;
-    }
-  }
-  // Now move any argument instructions later in the block
-  // to before our first NonArg instruction.
-  for (auto I = InsertPt, E = EntryMBB.end(); I != E; ++I) {
-    MachineInstr *MI = I;
-    if (MI->getOpcode() == WebAssembly::ARGUMENT_I32 ||
-        MI->getOpcode() == WebAssembly::ARGUMENT_I64 ||
-        MI->getOpcode() == WebAssembly::ARGUMENT_F32 ||
-        MI->getOpcode() == WebAssembly::ARGUMENT_F64) {
-      EntryMBB.insert(InsertPt, MI->removeFromParent());
-      MovedArg = true;
-    }
-  }
-  if (MovedArg) {
-    SlotIndexes &Slots = getAnalysis<SlotIndexes>();
-    Liveness->releaseMemory();
-    Slots.releaseMemory();
-    Slots.runOnMachineFunction(MF);
-    Liveness->runOnMachineFunction(MF);
-  }
 
   DEBUG(dbgs() << "Interesting register intervals:\n");
   for (unsigned i = 0; i < NumVRegs; ++i) {

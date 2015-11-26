@@ -21,6 +21,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
 
 namespace llvm {
@@ -1126,6 +1127,9 @@ struct OperandBundleUse {
   /// Currently there is no way to have attributes on operand bundles differ on
   /// a per operand granularity.
   bool operandsHaveAttr(Attribute::AttrKind A) const {
+    if (isDeoptOperandBundle())
+      return A == Attribute::ReadOnly || A == Attribute::NoCapture;
+
     // Conservative answer:  no operands have any attributes.
     return false;
   };
@@ -1142,6 +1146,11 @@ struct OperandBundleUse {
   /// associated the tag of this operand bundle to.
   uint32_t getTagID() const {
     return Tag->getValue();
+  }
+
+  /// \brief Return true if this is a "deopt" operand bundle.
+  bool isDeoptOperandBundle() const {
+    return getTagID() == LLVMContext::OB_deopt;
   }
 
 private:
@@ -1361,10 +1370,16 @@ public:
   /// \brief Return true if this operand bundle user has operand bundles that
   /// may write to the heap.
   bool hasClobberingOperandBundles() const {
-    // Implementation note: this is a conservative implementation of operand
-    // bundle semantics, where *any* operand bundle forces a callsite to be
-    // read-write.
-    return hasOperandBundles();
+    for (auto &BOI : bundle_op_infos()) {
+      if (BOI.Tag->second == LLVMContext::OB_deopt)
+        continue;
+
+      // This instruction has an operand bundle that is not a "deopt" operand
+      // bundle.  Assume the worst.
+      return true;
+    }
+
+    return false;
   }
 
 protected:

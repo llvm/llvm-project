@@ -135,7 +135,7 @@ public:
     return SDValue(Node, R);
   }
 
-  // Return true if this node is an operand of N.
+  /// Return true if this node is an operand of N.
   bool isOperandOf(const SDNode *N) const;
 
   /// Return the ValueType of the referenced return value.
@@ -1493,6 +1493,15 @@ public:
            N->getOpcode() == ISD::TargetConstantFP;
   }
 };
+
+/// Returns true if \p V is a constant integer zero.
+bool isNullConstant(SDValue V);
+/// Returns true if \p V is an FP constant with a value of positive zero.
+bool isNullFPConstant(SDValue V);
+/// Returns true if \p V is an integer constant with all bits set.
+bool isAllOnesConstant(SDValue V);
+/// Returns true if \p V is a constant integer one.
+bool isOneConstant(SDValue V);
 
 class GlobalAddressSDNode : public SDNode {
   const GlobalValue *TheGlobal;

@@ -12,6 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+let Defs = [ARGUMENTS] in {
+
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
 def BR_IF : I<(outs), (ins I32:$a, bb_op:$dst),
               [(brcond I32:$a, bb:$dst)],
@@ -59,3 +61,5 @@ let isReturn = 1 in {
 } // isReturn = 1
   def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable">;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
+
+} // Defs = [ARGUMENTS]

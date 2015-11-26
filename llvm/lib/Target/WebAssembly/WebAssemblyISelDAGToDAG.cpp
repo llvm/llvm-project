@@ -87,7 +87,7 @@ SDNode *WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   switch (Node->getOpcode()) {
   default:
     break;
-    // FIXME: Implement WebAssembly-specific selection.
+    // If we need WebAssembly-specific selection, it would go here.
     (void)VT;
   }
 

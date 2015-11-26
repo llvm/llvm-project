@@ -99,6 +99,7 @@ public:
   enum PreloadedValue {
     // SGPRS:
     SCRATCH_PTR         =  0,
+    DISPATCH_PTR        =  1,
     INPUT_PTR           =  3,
     TGID_X              = 10,
     TGID_Y              = 11,

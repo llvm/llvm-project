@@ -28,6 +28,8 @@ RUN: not LLVMFuzzer-NullDerefTest 2>&1 | FileCheck %s --check-prefix=NullDerefTe
 NullDerefTest: Test unit written to ./crash-
 RUN: not LLVMFuzzer-NullDerefTest  -artifact_prefix=ZZZ 2>&1 | FileCheck %s --check-prefix=NullDerefTestPrefix
 NullDerefTestPrefix: Test unit written to ZZZcrash-
+RUN: not LLVMFuzzer-NullDerefTest  -artifact_prefix=ZZZ -exact_artifact_path=FOOBAR 2>&1 | FileCheck %s --check-prefix=NullDerefTestExactPath
+NullDerefTestExactPath: Test unit written to FOOBAR
 
 #not LLVMFuzzer-FullCoverageSetTest -timeout=15 -seed=1 -mutate_depth=2 -use_full_coverage_set=1 2>&1 | FileCheck %s
 

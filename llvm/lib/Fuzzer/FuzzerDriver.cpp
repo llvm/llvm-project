@@ -256,6 +256,8 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   Options.ReportSlowUnits = Flags.report_slow_units;
   if (Flags.artifact_prefix)
     Options.ArtifactPrefix = Flags.artifact_prefix;
+  if (Flags.exact_artifact_path)
+    Options.ExactArtifactPath = Flags.exact_artifact_path;
   std::vector<Unit> Dictionary;
   if (Flags.dict)
     if (!ParseDictionaryFile(FileToString(Flags.dict), &Dictionary))

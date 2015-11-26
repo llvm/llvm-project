@@ -2,14 +2,10 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}no_reorder_v2f64_global_load_store:
-; SI: buffer_load_dwordx2
-; SI: buffer_load_dwordx2
-; SI: buffer_load_dwordx2
-; SI: buffer_load_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
 ; SI: s_endpgm
 define void @no_reorder_v2f64_global_load_store(<2 x double> addrspace(1)* nocapture %x, <2 x double> addrspace(1)* nocapture %y) nounwind {
   %tmp1 = load <2 x double>, <2 x double> addrspace(1)* %x, align 16

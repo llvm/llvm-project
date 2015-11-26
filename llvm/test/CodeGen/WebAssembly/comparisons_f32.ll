@@ -106,8 +106,8 @@ define i32 @ueq_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: one_f32:
-; CHECK-NEXT: .param f32
-; CHECK-NEXT: .result i32
+; CHECK-NEXT: .param f32, f32{{$}}
+; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: f32.ne $push[[NUM0:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: f32.eq $push[[NUM1:[0-9]+]]=, $0, $0{{$}}
 ; CHECK-NEXT: f32.eq $push[[NUM2:[0-9]+]]=, $1, $1{{$}}

@@ -12,6 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+let Defs = [ARGUMENTS] in {
+
 // The call sequence start/end LLVM-isms isn't useful to WebAssembly since it's
 // a virtual ISA.
 let isCodeGenOnly = 1 in {
@@ -42,3 +44,5 @@ let Uses = [SP32, SP64], isCall = 1 in {
                              [(WebAssemblycall0 I32:$callee)],
                              "call_indirect\t$callee">;
 } // Uses = [SP32,SP64], isCall = 1
+
+} // Defs = [ARGUMENTS]

@@ -25,7 +25,7 @@ entry:
   ; CHECK-NEXT: %[[INTTOPTR:.*]] = inttoptr i64 %[[AND]] to i8*
   ; CHECK-NEXT: store i8* %[[INTTOPTR]], i8** @__safestack_unsafe_stack_ptr
   ; CHECK-NEXT: store i8* %[[INTTOPTR]], i8** %unsafe_stack_dynamic_ptr
-  ; CHECK-NEXT: %[[ALLOCA:.*]] = inttoptr i64 %[[SUB]] to i32*
+  ; CHECK-NEXT: %[[ALLOCA:.*]] = bitcast i8* %[[INTTOPTR]] to i32*
   %a = alloca i32, i32 %size
 
   ; CHECK: setjmp

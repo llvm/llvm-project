@@ -63,10 +63,18 @@ public:
   void initWARegs();
   void setWAReg(unsigned VReg, unsigned WAReg) {
     assert(WAReg != UnusedReg);
+    assert(TargetRegisterInfo::virtReg2Index(VReg) < WARegs.size());
     WARegs[TargetRegisterInfo::virtReg2Index(VReg)] = WAReg;
   }
   unsigned getWAReg(unsigned VReg) const {
+    assert(TargetRegisterInfo::virtReg2Index(VReg) < WARegs.size());
     return WARegs[TargetRegisterInfo::virtReg2Index(VReg)];
+  }
+  // If new virtual registers are created after initWARegs has been called,
+  // this function can be used to add WebAssembly register mappings for them.
+  void addWAReg(unsigned VReg, unsigned WAReg) {
+    assert(VReg = WARegs.size());
+    WARegs.push_back(WAReg);
   }
 };
 
