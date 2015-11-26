@@ -553,7 +553,52 @@ typedef struct ValueProfRecordClosure {
   ValueProfData *(*AllocValueProfData)(size_t TotalSizeInBytes);
 } ValueProfRecordClosure;
 
-/// Return the \c ValueProfRecord header size including the padding bytes.
+/* A wrapper struct that represents value profile runtime data.
+ * Like InstrProfRecord class which is used by profiling host tools,
+ * ValueProfRuntimeRecord also implements the abstract intefaces defined in
+ * ValueProfRecordClosure so that the runtime data can be serialized using
+ * shared C implementation. In this structure, NumValueSites and Nodes
+ * members are the primary fields while other fields hold the derived
+ * information for fast implementation of closure interfaces.
+ */
+typedef struct ValueProfRuntimeRecord {
+  /* Number of sites for each value profile kind.  */
+  uint16_t *NumValueSites;
+  /* An array of linked-list headers. The size of of the array is the
+   * total number of value profile sites : sum(NumValueSites[*])). Each
+   * linked-list stores the values profiled for a value profile site. */
+  ValueProfNode **Nodes;
+
+  /* Total number of value profile kinds which have at least one
+   *  value profile sites. */
+  uint32_t NumValueKinds;
+  /* An array recording the number of values tracked at each site.
+   * The size of the array is TotalNumValueSites.
+   */
+  uint8_t *SiteCountArray[IPVK_Last + 1];
+  ValueProfNode **NodesKind[IPVK_Last + 1];
+} ValueProfRuntimeRecord;
+
+/* Initialize the record for runtime value profile data.  */
+void initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
+                                      uint16_t *NumValueSites,
+                                      ValueProfNode **Nodes);
+
+/* Release memory allocated for the runtime record.  */
+void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord);
+
+/* Return the size of ValueProfData structure that can be used to store
+   the value profile data collected at runtime. */
+uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record);
+
+/* Return a ValueProfData instance that stores the data collected at runtime. */
+ValueProfData *
+serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record);
+
+
+/*! \brief Return the \c ValueProfRecord header size including the
+ * padding bytes.
+ */
 inline uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
   uint32_t Size = offsetof(ValueProfRecord, SiteCountArray) +
                   sizeof(uint8_t) * NumValueSites;
@@ -562,21 +607,24 @@ inline uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
   return Size;
 }
 
-/// Return the total size of the value profile record including the
-/// header and the value data.
+/*! \brief Return the total size of the value profile record including the
+ * header and the value data.
+ */
 inline uint32_t getValueProfRecordSize(uint32_t NumValueSites,
                                        uint32_t NumValueData) {
   return getValueProfRecordHeaderSize(NumValueSites) +
          sizeof(InstrProfValueData) * NumValueData;
 }
 
-/// Return the pointer to the start of value data array.
+/*! \brief Return the pointer to the start of value data array.
+ */
 inline InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
   return (InstrProfValueData *)((char *)This + getValueProfRecordHeaderSize(
                                                    This->NumValueSites));
 }
 
-/// Return the total number of value data for \c This record.
+/*! \brief Return the total number of value data for \c This record.
+ */
 inline uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
   uint32_t NumValueData = 0;
   uint32_t I;
@@ -585,7 +633,8 @@ inline uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
   return NumValueData;
 }
 
-/// Use this method to advance to the next \c This \c ValueProfRecord.
+/* \brief Use this method to advance to the next \c This \c ValueProfRecord.
+ */
 inline ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
   uint32_t NumValueData = getValueProfRecordNumValueData(This);
   return (ValueProfRecord *)((char *)This +
@@ -593,10 +642,13 @@ inline ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
                                                     NumValueData));
 }
 
-/// Return the first \c ValueProfRecord instance.
+/*! \brief Return the first \c ValueProfRecord instance.
+ */
 inline ValueProfRecord *getFirstValueProfRecord(ValueProfData *This) {
   return (ValueProfRecord *)((char *)This + sizeof(ValueProfData));
 }
+
+
 
 namespace IndexedInstrProf {
 

@@ -5867,6 +5867,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::DIVSSrr_Int: case X86::VDIVSSrr_Int:
     case X86::MULSSrr_Int: case X86::VMULSSrr_Int:
     case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int:
+    case X86::VFMADDSSr132r_Int: case X86::VFNMADDSSr132r_Int:
+    case X86::VFMADDSSr213r_Int: case X86::VFNMADDSSr213r_Int:
+    case X86::VFMADDSSr231r_Int: case X86::VFNMADDSSr231r_Int:
+    case X86::VFMSUBSSr132r_Int: case X86::VFNMSUBSSr132r_Int:
+    case X86::VFMSUBSSr213r_Int: case X86::VFNMSUBSSr213r_Int:
+    case X86::VFMSUBSSr231r_Int: case X86::VFNMSUBSSr231r_Int:
       return false;
     default:
       return true;
@@ -5882,6 +5888,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::DIVSDrr_Int: case X86::VDIVSDrr_Int:
     case X86::MULSDrr_Int: case X86::VMULSDrr_Int:
     case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int:
+    case X86::VFMADDSDr132r_Int: case X86::VFNMADDSDr132r_Int:
+    case X86::VFMADDSDr213r_Int: case X86::VFNMADDSDr213r_Int:
+    case X86::VFMADDSDr231r_Int: case X86::VFNMADDSDr231r_Int:
+    case X86::VFMSUBSDr132r_Int: case X86::VFNMSUBSDr132r_Int:
+    case X86::VFMSUBSDr213r_Int: case X86::VFNMSUBSDr213r_Int:
+    case X86::VFMSUBSDr231r_Int: case X86::VFNMSUBSDr231r_Int:
       return false;
     default:
       return true;

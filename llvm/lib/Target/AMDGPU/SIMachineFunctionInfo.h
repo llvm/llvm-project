@@ -29,11 +29,40 @@ class SIMachineFunctionInfo : public AMDGPUMachineFunction {
   void anchor() override;
 
   unsigned TIDReg;
+  unsigned ScratchRSrcReg;
+
+public:
+  // FIXME: Make private
+  unsigned LDSWaveSpillSize;
+  unsigned PSInputAddr;
+  std::map<unsigned, unsigned> LaneVGPRs;
+  unsigned ScratchOffsetReg;
+  unsigned NumUserSGPRs;
+
+private:
   bool HasSpilledSGPRs;
   bool HasSpilledVGPRs;
 
-public:
+  // Feature bits required for inputs passed in user / system SGPRs.
+  bool DispatchPtr : 1;
+  bool QueuePtr : 1;
+  bool DispatchID : 1;
+  bool KernargSegmentPtr : 1;
+  bool FlatScratchInit : 1;
+  bool GridWorkgroupCountX : 1;
+  bool GridWorkgroupCountY : 1;
+  bool GridWorkgroupCountZ : 1;
 
+  bool WorkGroupIDX : 1; // Always initialized.
+  bool WorkGroupIDY : 1;
+  bool WorkGroupIDZ : 1;
+  bool WorkGroupInfo : 1;
+
+  bool WorkItemIDX : 1; // Always initialized.
+  bool WorkItemIDY : 1;
+  bool WorkItemIDZ : 1;
+
+public:
   struct SpilledReg {
     unsigned VGPR;
     int Lane;
@@ -47,14 +76,77 @@ public:
   SIMachineFunctionInfo(const MachineFunction &MF);
   SpilledReg getSpilledReg(MachineFunction *MF, unsigned FrameIndex,
                            unsigned SubIdx);
-  unsigned PSInputAddr;
-  unsigned NumUserSGPRs;
-  std::map<unsigned, unsigned> LaneVGPRs;
-  unsigned LDSWaveSpillSize;
-  unsigned ScratchOffsetReg;
   bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; };
   unsigned getTIDReg() const { return TIDReg; };
   void setTIDReg(unsigned Reg) { TIDReg = Reg; }
+
+  bool hasDispatchPtr() const {
+    return DispatchPtr;
+  }
+
+  bool hasQueuePtr() const {
+    return QueuePtr;
+  }
+
+  bool hasDispatchID() const {
+    return DispatchID;
+  }
+
+  bool hasKernargSegmentPtr() const {
+    return KernargSegmentPtr;
+  }
+
+  bool hasFlatScratchInit() const {
+    return FlatScratchInit;
+  }
+
+  bool hasGridWorkgroupCountX() const {
+    return GridWorkgroupCountX;
+  }
+
+  bool hasGridWorkgroupCountY() const {
+    return GridWorkgroupCountY;
+  }
+
+  bool hasGridWorkgroupCountZ() const {
+    return GridWorkgroupCountZ;
+  }
+
+  bool hasWorkGroupIDX() const {
+    return WorkGroupIDX;
+  }
+
+  bool hasWorkGroupIDY() const {
+    return WorkGroupIDY;
+  }
+
+  bool hasWorkGroupIDZ() const {
+    return WorkGroupIDZ;
+  }
+
+  bool hasWorkGroupInfo() const {
+    return WorkGroupInfo;
+  }
+
+  bool hasWorkItemIDX() const {
+    return WorkItemIDX;
+  }
+
+  bool hasWorkItemIDY() const {
+    return WorkItemIDY;
+  }
+
+  bool hasWorkItemIDZ() const {
+    return WorkItemIDZ;
+  }
+
+  /// \brief Returns the physical register reserved for use as the resource
+  /// descriptor for scratch accesses.
+  unsigned getScratchRSrcReg() const {
+    return ScratchRSrcReg;
+  }
+
+  void setScratchRSrcReg(const SIRegisterInfo *TRI);
 
   bool hasSpilledSGPRs() const {
     return HasSpilledSGPRs;

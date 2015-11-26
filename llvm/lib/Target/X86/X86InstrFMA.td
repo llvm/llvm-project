@@ -161,7 +161,7 @@ multiclass fma3s_rm<bits<8> opc, string OpcodeStr,
 
 // These FMA*_Int instructions are defined specially for being used when
 // the scalar FMA intrinsics are lowered to machine instructions, and in that
-// sence they are similar to existing ADD*_Int, SUB*_Int, MUL*_Int, etc.
+// sense, they are similar to existing ADD*_Int, SUB*_Int, MUL*_Int, etc.
 // instructions.
 //
 // All of the FMA*_Int opcodes are defined as commutable here.
@@ -170,7 +170,7 @@ multiclass fma3s_rm<bits<8> opc, string OpcodeStr,
 // Commuting the 1st operand of FMA*_Int requires some additional analysis,
 // the commute optimization is legal only if all users of FMA*_Int use only
 // the lowest element of the FMA*_Int instruction. Even though such analysis
-// may be not implemened yet we allow the routines doing the actual commute
+// may be not implemented yet we allow the routines doing the actual commute
 // transformation to decide if one or another instruction is commutable or not.
 let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
     hasSideEffects = 0 in
@@ -237,20 +237,12 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
   // require the pass-through values to come from the first source
   // operand, not the second.
   def : Pat<(IntF32 VR128:$src1, VR128:$src2, VR128:$src3),
-            (COPY_TO_REGCLASS
-              (!cast<Instruction>(NAME#"SSr213r_Int")
-                (COPY_TO_REGCLASS $src1, FR32),
-                (COPY_TO_REGCLASS $src2, FR32),
-                (COPY_TO_REGCLASS $src3, FR32)),
-              VR128)>;
+            (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"SSr213r_Int") 
+             $src1, $src2, $src3), VR128)>;
 
   def : Pat<(IntF64 VR128:$src1, VR128:$src2, VR128:$src3),
-            (COPY_TO_REGCLASS
-              (!cast<Instruction>(NAME#"SDr213r_Int")
-                (COPY_TO_REGCLASS $src1, FR64),
-                (COPY_TO_REGCLASS $src2, FR64),
-                (COPY_TO_REGCLASS $src3, FR64)),
-              VR128)>;
+            (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"SDr213r_Int") 
+             $src1, $src2, $src3), VR128)>;
 }
 
 defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", int_x86_fma_vfmadd_ss,

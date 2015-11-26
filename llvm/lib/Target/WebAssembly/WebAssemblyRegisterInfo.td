@@ -43,6 +43,11 @@ def F64_0 : WebAssemblyReg<"%f64.0">;
 // order uses and defs that must remain in FIFO order.
 def EXPR_STACK : WebAssemblyReg<"STACK">;
 
+// The incoming arguments "register". This is an opaque entity which serves to
+// order the ARGUMENT instructions that are emulating live-in registers and
+// must not be scheduled below other instructions.
+def ARGUMENTS : WebAssemblyReg<"ARGUMENTS">;
+
 //===----------------------------------------------------------------------===//
 //  Register classes
 //===----------------------------------------------------------------------===//

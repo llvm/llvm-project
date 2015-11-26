@@ -13,6 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+let Defs = [ARGUMENTS] in {
+
 def I32_WRAP_I64 : I<(outs I32:$dst), (ins I64:$src),
                       [(set I32:$dst, (trunc I64:$src))],
                       "i32.wrap/i64\t$dst, $src">;
@@ -93,3 +95,5 @@ def I64_REINTERPRET_F64 : I<(outs I64:$dst), (ins F64:$src),
 def F64_REINTERPRET_I64 : I<(outs F64:$dst), (ins I64:$src),
                             [(set F64:$dst, (bitconvert I64:$src))],
                             "f64.reinterpret/i64\t$dst, $src">;
+
+} // Defs = [ARGUMENTS]

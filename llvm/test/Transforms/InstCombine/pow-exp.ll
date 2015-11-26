@@ -13,6 +13,15 @@ entry:
 ; CHECK:   ret double %exp
 ; CHECK: }
 
+define double @test2(double ()* %fptr, double %p1) #0 {
+  %call1 = call double %fptr()
+  %pow = call double @llvm.pow.f64(double %call1, double %p1)
+  ret double %pow
+}
+
+; CHECK-LABEL: @test2
+; CHECK: llvm.pow.f64
+
 declare double @exp(double) #1
 declare double @llvm.pow.f64(double, double)
 attributes #0 = { "unsafe-fp-math"="true" }

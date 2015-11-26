@@ -293,6 +293,8 @@ void Fuzzer::WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix) {
   if (!Options.SaveArtifacts)
     return;
   std::string Path = Options.ArtifactPrefix + Prefix + Hash(U);
+  if (!Options.ExactArtifactPath.empty())
+    Path = Options.ExactArtifactPath;  // Overrides ArtifactPrefix.
   WriteToFile(U, Path);
   Printf("artifact_prefix='%s'; Test unit written to %s\n",
          Options.ArtifactPrefix.c_str(), Path.c_str());

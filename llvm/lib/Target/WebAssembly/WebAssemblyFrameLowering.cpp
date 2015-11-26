@@ -65,7 +65,7 @@ void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
 
 void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
                                             MachineBasicBlock &MBB) const {
-  // FIXME: Implement WebAssemblyFrameLowering::emitPrologue.
+  llvm_unreachable("TODO: implement emitPrologue");
 }
 
 void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,

@@ -1322,6 +1322,31 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f64, &Hexagon::DoubleRegsRegClass);
   }
 
+  if (Subtarget.hasV60TOps()) {
+    if (Subtarget.useHVXSglOps()) {
+      addRegisterClass(MVT::v64i8,  &Hexagon::VectorRegsRegClass);
+      addRegisterClass(MVT::v32i16, &Hexagon::VectorRegsRegClass);
+      addRegisterClass(MVT::v16i32, &Hexagon::VectorRegsRegClass);
+      addRegisterClass(MVT::v8i64,  &Hexagon::VectorRegsRegClass);
+      addRegisterClass(MVT::v128i8, &Hexagon::VecDblRegsRegClass);
+      addRegisterClass(MVT::v64i16, &Hexagon::VecDblRegsRegClass);
+      addRegisterClass(MVT::v32i32, &Hexagon::VecDblRegsRegClass);
+      addRegisterClass(MVT::v16i64, &Hexagon::VecDblRegsRegClass);
+      addRegisterClass(MVT::v512i1, &Hexagon::VecPredRegsRegClass);
+    } else if (Subtarget.useHVXDblOps()) {
+      addRegisterClass(MVT::v128i8,  &Hexagon::VectorRegs128BRegClass);
+      addRegisterClass(MVT::v64i16,  &Hexagon::VectorRegs128BRegClass);
+      addRegisterClass(MVT::v32i32,  &Hexagon::VectorRegs128BRegClass);
+      addRegisterClass(MVT::v16i64,  &Hexagon::VectorRegs128BRegClass);
+      addRegisterClass(MVT::v256i8,  &Hexagon::VecDblRegs128BRegClass);
+      addRegisterClass(MVT::v128i16, &Hexagon::VecDblRegs128BRegClass);
+      addRegisterClass(MVT::v64i32,  &Hexagon::VecDblRegs128BRegClass);
+      addRegisterClass(MVT::v32i64,  &Hexagon::VecDblRegs128BRegClass);
+      addRegisterClass(MVT::v1024i1, &Hexagon::VecPredRegs128BRegClass);
+    }
+
+  }
+
   //
   // Handling of scalar operations.
   //

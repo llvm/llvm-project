@@ -174,7 +174,7 @@ exit:
 
 ; CHECK-LABEL: single_block:
 ; CHECK-NOT: br
-; CHECK: return ${{[0-9]+}}{{$}}
+; CHECK: return $pop{{[0-9]+}}{{$}}
 define i32 @single_block(i32* %p) {
 entry:
   store volatile i32 0, i32* %p

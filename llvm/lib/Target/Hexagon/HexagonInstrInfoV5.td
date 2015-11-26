@@ -98,21 +98,21 @@ def CONST32_Float_Real : LDInst<(outs IntRegs:$dst), (ins f32imm:$src1),
 // HexagonInstrInfo.td patterns.
 let isExtended = 1, opExtendable = 1, isMoveImm = 1, isReMaterializable = 1,
     isPredicable = 1, AddedComplexity = 30, validSubTargets = HasV5SubT,
-    isCodeGenOnly = 1 in
+    isCodeGenOnly = 1, isPseudo = 1 in
 def TFRI_f : ALU32_ri<(outs IntRegs:$dst), (ins f32Ext:$src1),
                       "$dst = #$src1",
                       [(set F32:$dst, fpimm:$src1)]>,
                       Requires<[HasV5T]>;
 
-let isExtended = 1, opExtendable = 2, isPredicated = 1,
-    hasSideEffects = 0, validSubTargets = HasV5SubT, isCodeGenOnly = 1 in
+let isExtended = 1, opExtendable = 2, isPredicated = 1, hasSideEffects = 0,
+    validSubTargets = HasV5SubT, isCodeGenOnly = 1, isPseudo = 1 in
 def TFRI_cPt_f : ALU32_ri<(outs IntRegs:$dst),
                           (ins PredRegs:$src1, f32Ext:$src2),
                           "if ($src1) $dst = #$src2", []>,
                           Requires<[HasV5T]>;
 
-let isPseudo = 1, isExtended = 1, opExtendable = 2, isPredicated = 1,
-    isPredicatedFalse = 1, hasSideEffects = 0, validSubTargets = HasV5SubT in
+let isExtended = 1, opExtendable = 2, isPredicated = 1, isPredicatedFalse = 1,
+    hasSideEffects = 0, validSubTargets = HasV5SubT, isPseudo = 1 in
 def TFRI_cNotPt_f : ALU32_ri<(outs IntRegs:$dst),
                              (ins PredRegs:$src1, f32Ext:$src2),
                              "if (!$src1) $dst = #$src2", []>,

@@ -19,7 +19,7 @@ entry:
   ; On the other hand, if odd single precision registers are not permitted, it
   ; must copy $f13 to an even-numbered register before inserting into the
   ; vector.
-  call void asm sideeffect "# Clobber", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
+  call void asm sideeffect "teqi $$zero, 1", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
   %1 = insertelement <4 x float> %0, float %b, i32 0
   store <4 x float> %1, <4 x float>* @v4f32
   ret void
@@ -32,7 +32,7 @@ entry:
 ; NOODDSPREG:     mov.s $f[[F0:[0-9]+]], $f13
 ; NOODDSPREG:     insve.w $w[[W0]][0], $w[[F0]][0]
 ; ODDSPREG:       insve.w $w[[W0]][0], $w13[0]
-; ALL:            # Clobber
+; ALL:            teqi $zero, 1
 ; ALL-NOT: sdc1
 ; ALL-NOT: ldc1
 ; ALL:            st.w $w[[W0]], 0($[[R0]])
@@ -53,7 +53,7 @@ entry:
   ; On the other hand, if odd single precision registers are not permitted, it
   ; must copy $f13 to an even-numbered register before inserting into the
   ; vector.
-  call void asm sideeffect "# Clobber", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
+  call void asm sideeffect "teqi $$zero, 1", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
   %1 = insertelement <4 x float> %0, float %b, i32 1
   store <4 x float> %1, <4 x float>* @v4f32
   ret void
@@ -66,7 +66,7 @@ entry:
 ; NOODDSPREG:     mov.s $f[[F0:[0-9]+]], $f13
 ; NOODDSPREG:     insve.w $w[[W0]][1], $w[[F0]][0]
 ; ODDSPREG:       insve.w $w[[W0]][1], $w13[0]
-; ALL:            # Clobber
+; ALL:            teqi $zero, 1
 ; ALL-NOT: sdc1
 ; ALL-NOT: ldc1
 ; ALL:            st.w $w[[W0]], 0($[[R0]])
@@ -83,7 +83,7 @@ entry:
   ;
   ; On the other hand, if odd single precision registers are not permitted, it
   ; must move it to $f12/$w12.
-  call void asm sideeffect "# Clobber", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
+  call void asm sideeffect "teqi $$zero, 1", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
 
   %2 = extractelement <4 x float> %1, i32 0
   ret float %2
@@ -94,7 +94,7 @@ entry:
 ; ALL:            ld.w $w12, 0($[[R0]])
 ; ALL:            move.v $w[[W0:13]], $w12
 ; NOODDSPREG:     move.v $w[[W0:12]], $w13
-; ALL:            # Clobber
+; ALL:            teqi $zero, 1
 ; ALL-NOT: st.w
 ; ALL-NOT: ld.w
 ; ALL:            mov.s $f0, $f[[W0]]
@@ -111,7 +111,7 @@ entry:
   ;
   ; On the other hand, if odd single precision registers are not permitted, it
   ; must be spilled.
-  call void asm sideeffect "# Clobber", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f12},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
+  call void asm sideeffect "teqi $$zero, 1", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f12},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
 
   %2 = extractelement <4 x float> %1, i32 1
   ret float %2
@@ -124,7 +124,7 @@ entry:
 ; NOODDSPREG:     st.w $w[[W0]], 0($sp)
 ; ODDSPREG-NOT: st.w
 ; ODDSPREG-NOT: ld.w
-; ALL:            # Clobber
+; ALL:            teqi $zero, 1
 ; ODDSPREG-NOT: st.w
 ; ODDSPREG-NOT: ld.w
 ; NOODDSPREG:     ld.w $w0, 0($sp)

@@ -1519,8 +1519,8 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
     for (unsigned i = 0; i != Multiple-1; ++i) {
       if (!UniquedVals[i].getNode()) continue;  // Must have been undefs.
 
-      LeadingZero &= cast<ConstantSDNode>(UniquedVals[i])->isNullValue();
-      LeadingOnes &= cast<ConstantSDNode>(UniquedVals[i])->isAllOnesValue();
+      LeadingZero &= isNullConstant(UniquedVals[i]);
+      LeadingOnes &= isAllOnesConstant(UniquedVals[i]);
     }
     // Finally, check the least significant entry.
     if (LeadingZero) {
@@ -6811,8 +6811,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       for (unsigned i = 0; i < 4; ++i) {
         if (BVN->getOperand(i).getOpcode() == ISD::UNDEF)
           CV[i] = UndefValue::get(Type::getFloatTy(*DAG.getContext()));
-        else if (cast<ConstantSDNode>(BVN->getOperand(i))->
-                   getConstantIntValue()->isZero())
+        else if (isNullConstant(BVN->getOperand(i)))
           continue;
         else
           CV[i] = One;
@@ -10147,16 +10146,12 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default: break;
   case PPCISD::SHL:
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-      if (C->isNullValue())   // 0 << V -> 0.
+    if (isNullConstant(N->getOperand(0))) // 0 << V -> 0.
         return N->getOperand(0);
-    }
     break;
   case PPCISD::SRL:
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-      if (C->isNullValue())   // 0 >>u V -> 0.
+    if (isNullConstant(N->getOperand(0))) // 0 >>u V -> 0.
         return N->getOperand(0);
-    }
     break;
   case PPCISD::SRA:
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
@@ -10604,8 +10599,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1))->getZExtValue() ==
           Intrinsic::ppc_is_decremented_ctr_nonzero &&
         isa<ConstantSDNode>(LHS.getOperand(1)) &&
-        !cast<ConstantSDNode>(LHS.getOperand(1))->getConstantIntValue()->
-          isZero())
+        !isNullConstant(LHS.getOperand(1)))
       LHS = LHS.getOperand(0);
 
     if (LHS.getOpcode() == ISD::INTRINSIC_W_CHAIN &&

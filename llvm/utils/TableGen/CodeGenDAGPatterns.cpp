@@ -594,7 +594,7 @@ bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
     MVT IVT = getConcrete();
     unsigned NumElems = IVT.getVectorNumElements();
 
-    // Only keep types that have same elements as VTOperand.
+    // Only keep types that have same elements as 'this'.
     TypeSet InputSet(VTOperand);
 
     auto I = std::remove_if(VTOperand.TypeVec.begin(), VTOperand.TypeVec.end(),
@@ -614,7 +614,7 @@ bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
     MVT IVT = VTOperand.getConcrete();
     unsigned NumElems = IVT.getVectorNumElements();
 
-    // Only keep types that have same elements as 'this'.
+    // Only keep types that have same elements as VTOperand.
     TypeSet InputSet(*this);
 
     auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
@@ -627,6 +627,60 @@ bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
     if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
       TP.error("Type inference contradiction found, forcing '" +
                InputSet.getName() + "' to have same number elements than '" +
+               VTOperand.getName() + "'");
+      return false;
+    }
+  }
+
+  return MadeChange;
+}
+
+/// EnforceSameSize - 'this' is now constrained to be same size as VTOperand.
+bool EEVT::TypeSet::EnforceSameSize(EEVT::TypeSet &VTOperand,
+                                    TreePattern &TP) {
+  if (TP.hasError())
+    return false;
+
+  bool MadeChange = false;
+
+  // If we know one of the types, it forces the other type agree.
+  if (isConcrete()) {
+    MVT IVT = getConcrete();
+    unsigned Size = IVT.getSizeInBits();
+
+    // Only keep types that have the same size as 'this'.
+    TypeSet InputSet(VTOperand);
+
+    auto I = std::remove_if(VTOperand.TypeVec.begin(), VTOperand.TypeVec.end(),
+                            [&](MVT VT) {
+                              return VT.getSizeInBits() != Size;
+                            });
+    MadeChange |= I != VTOperand.TypeVec.end();
+    VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
+
+    if (VTOperand.TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
+      TP.error("Type inference contradiction found, forcing '" +
+               InputSet.getName() + "' to have same size as '" +
+               getName() + "'");
+      return false;
+    }
+  } else if (VTOperand.isConcrete()) {
+    MVT IVT = VTOperand.getConcrete();
+    unsigned Size = IVT.getSizeInBits();
+
+    // Only keep types that have the same size as VTOperand.
+    TypeSet InputSet(*this);
+
+    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
+                            [&](MVT VT) {
+                              return VT.getSizeInBits() != Size;
+                            });
+    MadeChange |= I != TypeVec.end();
+    TypeVec.erase(I, TypeVec.end());
+
+    if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
+      TP.error("Type inference contradiction found, forcing '" +
+               InputSet.getName() + "' to have same size as '" +
                VTOperand.getName() + "'");
       return false;
     }
@@ -874,6 +928,10 @@ SDTypeConstraint::SDTypeConstraint(Record *R) {
     ConstraintType = SDTCisSameNumEltsAs;
     x.SDTCisSameNumEltsAs_Info.OtherOperandNum =
       R->getValueAsInt("OtherOperandNum");
+  } else if (R->isSubClassOf("SDTCisSameSizeAs")) {
+    ConstraintType = SDTCisSameSizeAs;
+    x.SDTCisSameSizeAs_Info.OtherOperandNum =
+      R->getValueAsInt("OtherOperandNum");
   } else {
     PrintFatalError("Unrecognized SDTypeConstraint '" + R->getName() + "'!\n");
   }
@@ -1002,6 +1060,14 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode *N,
                     N, NodeInfo, OResNo);
     return OtherNode->getExtType(OResNo).
       EnforceVectorSameNumElts(NodeToApply->getExtType(ResNo), TP);
+  }
+  case SDTCisSameSizeAs: {
+    unsigned OResNo = 0;
+    TreePatternNode *OtherNode =
+      getOperandNum(x.SDTCisSameSizeAs_Info.OtherOperandNum,
+                    N, NodeInfo, OResNo);
+    return OtherNode->getExtType(OResNo).
+      EnforceSameSize(NodeToApply->getExtType(ResNo), TP);
   }
   }
   llvm_unreachable("Invalid ConstraintType!");

@@ -528,6 +528,9 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
       AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR |
       AMD_CODE_PROPERTY_IS_PTR64;
 
+  if (MFI->hasDispatchPtr())
+    header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
+
   header.kernarg_segment_byte_size = MFI->ABIArgOffset;
   header.wavefront_sgpr_count = KernelInfo.NumSGPR;
   header.workitem_vgpr_count = KernelInfo.NumVGPR;

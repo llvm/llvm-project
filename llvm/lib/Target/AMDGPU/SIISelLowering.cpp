@@ -52,6 +52,9 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   addRegisterClass(MVT::v2i32, &AMDGPU::SReg_64RegClass);
   addRegisterClass(MVT::v2f32, &AMDGPU::VReg_64RegClass);
 
+  addRegisterClass(MVT::v2i64, &AMDGPU::SReg_128RegClass);
+  addRegisterClass(MVT::v2f64, &AMDGPU::SReg_128RegClass);
+
   addRegisterClass(MVT::v4i32, &AMDGPU::SReg_128RegClass);
   addRegisterClass(MVT::v4f32, &AMDGPU::VReg_128RegClass);
 
@@ -156,12 +159,29 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   for (MVT VT : MVT::fp_valuetypes())
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
 
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
+
   setTruncStoreAction(MVT::i64, MVT::i32, Expand);
   setTruncStoreAction(MVT::v8i32, MVT::v8i16, Expand);
   setTruncStoreAction(MVT::v16i32, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v16i32, MVT::v16i16, Expand);
 
+
+  setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
+
+  setTruncStoreAction(MVT::v2f64, MVT::v2f32, Expand);
+  setTruncStoreAction(MVT::v2f64, MVT::v2f16, Expand);
+
   setOperationAction(ISD::LOAD, MVT::i1, Custom);
+
+  setOperationAction(ISD::LOAD, MVT::v2i64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v2i64, MVT::v4i32);
+
+  setOperationAction(ISD::STORE, MVT::v2i64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v2i64, MVT::v4i32);
+
+  setOperationAction(ISD::ConstantPool, MVT::v2i64, Expand);
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
@@ -174,9 +194,14 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::i1, Expand);
   setOperationAction(ISD::SELECT, MVT::i1, Promote);
 
+  setOperationAction(ISD::TRUNCATE, MVT::v2i32, Expand);
+
+
+  setOperationAction(ISD::FP_ROUND, MVT::v2f32, Expand);
+
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
-  for (MVT VT : {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32}) {
+  for (MVT VT : {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32, MVT::v2i64, MVT::v2f64}) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch(Op) {
       case ISD::LOAD:
@@ -187,6 +212,7 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
       case ISD::INSERT_VECTOR_ELT:
       case ISD::INSERT_SUBVECTOR:
       case ISD::EXTRACT_SUBVECTOR:
+      case ISD::SCALAR_TO_VECTOR:
         break;
       case ISD::CONCAT_VECTORS:
         setOperationAction(Op, VT, Custom);
@@ -196,6 +222,22 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
         break;
       }
     }
+  }
+
+  // Most operations are naturally 32-bit vector operations. We only support
+  // load and store of i64 vectors, so promote v2i64 vector operations to v4i32.
+  for (MVT Vec64 : { MVT::v2i64, MVT::v2f64 }) {
+    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v4i32);
+
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v4i32);
+
+    setOperationAction(ISD::INSERT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::INSERT_VECTOR_ELT, Vec64, MVT::v4i32);
+
+    setOperationAction(ISD::SCALAR_TO_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v4i32);
   }
 
   if (Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
@@ -604,6 +646,18 @@ SDValue SITargetLowering::LowerFormalArguments(
     CCInfo.AllocateReg(ScratchPtrRegHi);
     MF.addLiveIn(InputPtrReg, &AMDGPU::SReg_64RegClass);
     MF.addLiveIn(ScratchPtrReg, &AMDGPU::SReg_64RegClass);
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    if (Subtarget->isAmdHsaOS() && MFI->hasDispatchPtr()) {
+      unsigned DispatchPtrReg =
+        TRI->getPreloadedValue(MF, SIRegisterInfo::DISPATCH_PTR);
+      unsigned DispatchPtrRegLo =
+        TRI->getPhysRegSubReg(DispatchPtrReg, &AMDGPU::SReg_32RegClass, 0);
+      unsigned DispatchPtrRegHi =
+        TRI->getPhysRegSubReg(DispatchPtrReg, &AMDGPU::SReg_32RegClass, 1);
+      CCInfo.AllocateReg(DispatchPtrRegLo);
+      CCInfo.AllocateReg(DispatchPtrRegHi);
+      MF.addLiveIn(DispatchPtrReg, &AMDGPU::SReg_64RegClass);
+    }
   }
 
   if (Info->getShaderType() == ShaderType::COMPUTE) {
@@ -1011,6 +1065,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   // TODO: Should this propagate fast-math-flags?
 
   switch (IntrinsicID) {
+  case Intrinsic::amdgcn_dispatch_ptr:
+    return CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass,
+      TRI->getPreloadedValue(MF, SIRegisterInfo::DISPATCH_PTR), VT);
+
   case Intrinsic::r600_read_ngroups_x:
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_X, false);

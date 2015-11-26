@@ -94,6 +94,7 @@ class Fuzzer {
     std::string OutputCorpus;
     std::string SyncCommand;
     std::string ArtifactPrefix = "./";
+    std::string ExactArtifactPath;
     bool SaveArtifacts = true;
     bool PrintNEW = true;  // Print a status line when new units are found;
     bool OutputCSV = false;

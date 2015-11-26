@@ -217,21 +217,22 @@ def DoubleRegs : RegisterClass<"Hexagon", [i64, f64, v8i8, v4i16, v2i32], 64,
 def VectorRegs : RegisterClass<"Hexagon", [v64i8, v32i16, v16i32, v8i64], 512,
                                (add (sequence "V%u", 0, 31))>;
 
-def VecDblRegs : RegisterClass<"Hexagon", [v16i64], 1024,
+def VecDblRegs : RegisterClass<"Hexagon",
+                         [v128i8, v64i16, v32i32, v16i64], 1024,
                                (add (sequence "W%u", 0, 15))>;
 
 def VectorRegs128B : RegisterClass<"Hexagon",
-                         [v16i64], 1024,
+                         [v128i8, v64i16, v32i32, v16i64], 1024,
                                (add (sequence "V%u", 0, 31))>;
 
 def VecDblRegs128B : RegisterClass<"Hexagon",
-                         [v16i64], 2048,
+                         [v256i8,v128i16,v64i32,v32i64], 2048,
                                (add (sequence "W%u", 0, 15))>;
 
-def VecPredRegs : RegisterClass<"Hexagon", [v16i32], 512,
+def VecPredRegs : RegisterClass<"Hexagon", [v512i1], 512,
                                 (add (sequence "Q%u", 0, 3))>;
 
-def VecPredRegs128B : RegisterClass<"Hexagon", [v16i64], 1024,
+def VecPredRegs128B : RegisterClass<"Hexagon", [v1024i1], 1024,
                                    (add (sequence "Q%u", 0, 3))>;
 
 def PredRegs : RegisterClass<"Hexagon", 

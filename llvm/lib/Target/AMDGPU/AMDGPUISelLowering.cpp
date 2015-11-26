@@ -2611,20 +2611,14 @@ bool AMDGPUTargetLowering::isHWTrueValue(SDValue Op) const {
   if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
     return CFP->isExactlyValue(1.0);
   }
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-    return C->isAllOnesValue();
-  }
-  return false;
+  return isAllOnesConstant(Op);
 }
 
 bool AMDGPUTargetLowering::isHWFalseValue(SDValue Op) const {
   if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
     return CFP->getValueAPF().isZero();
   }
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-    return C->isNullValue();
-  }
-  return false;
+  return isNullConstant(Op);
 }
 
 SDValue AMDGPUTargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
@@ -2852,8 +2846,7 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
       return 1;
 
     unsigned SignBits = 32 - Width->getZExtValue() + 1;
-    ConstantSDNode *Offset = dyn_cast<ConstantSDNode>(Op.getOperand(1));
-    if (!Offset || !Offset->isNullValue())
+    if (!isNullConstant(Op.getOperand(1)))
       return SignBits;
 
     // TODO: Could probably figure something out with non-0 offsets.

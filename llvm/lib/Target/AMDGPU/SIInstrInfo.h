@@ -41,6 +41,9 @@ private:
 
   void swapOperands(MachineBasicBlock::iterator Inst) const;
 
+  void lowerScalarAbs(SmallVectorImpl<MachineInstr *> &Worklist,
+                      MachineInstr *Inst) const;
+
   void splitScalar64BitUnaryOp(SmallVectorImpl<MachineInstr *> &Worklist,
                                MachineInstr *Inst, unsigned Opcode) const;
 

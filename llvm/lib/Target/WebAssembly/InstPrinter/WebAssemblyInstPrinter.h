@@ -23,7 +23,7 @@ namespace llvm {
 class MCOperand;
 class MCSubtargetInfo;
 
-class WebAssemblyInstPrinter : public MCInstPrinter {
+class WebAssemblyInstPrinter final : public MCInstPrinter {
 public:
   WebAssemblyInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                          const MCRegisterInfo &MRI);

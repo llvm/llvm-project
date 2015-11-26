@@ -70,8 +70,9 @@ define void @dynamic_insertelement_v4f32(<4 x float> addrspace(1)* %out, <4 x fl
 }
 
 ; SI-LABEL: {{^}}dynamic_insertelement_v8f32:
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
+; SI: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
 define void @dynamic_insertelement_v8f32(<8 x float> addrspace(1)* %out, <8 x float> %a, i32 %b) nounwind {
   %vecins = insertelement <8 x float> %a, float 5.000000e+00, i32 %b
   store <8 x float> %vecins, <8 x float> addrspace(1)* %out, align 32
@@ -79,10 +80,11 @@ define void @dynamic_insertelement_v8f32(<8 x float> addrspace(1)* %out, <8 x fl
 }
 
 ; SI-LABEL: {{^}}dynamic_insertelement_v16f32:
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
+; SI: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
 define void @dynamic_insertelement_v16f32(<16 x float> addrspace(1)* %out, <16 x float> %a, i32 %b) nounwind {
   %vecins = insertelement <16 x float> %a, float 5.000000e+00, i32 %b
   store <16 x float> %vecins, <16 x float> addrspace(1)* %out, align 64
@@ -202,10 +204,28 @@ endif:
 }
 
 ; SI-LABEL: {{^}}dynamic_insertelement_v2f64:
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
+; SI: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x11|0x44}}{{$}}
+; SI-DAG: s_lshl_b32 [[SCALEDIDX:s[0-9]+]], [[IDX]], 1{{$}}
+; SI-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 0{{$}}
+
+; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+
+; SI: s_mov_b32 m0, [[SCALEDIDX]]
+; SI: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT0]]
+
+; Increment to next element.
+; FIXME: Should be able to manipulate m0 directly instead of add and
+; copy.
+
+; SI: s_or_b32 [[IDX1:s[0-9]+]], [[SCALEDIDX]], 1
+; SI-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0x40200000
+; SI-DAG: s_mov_b32 m0, [[IDX1]]
+; SI: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
+
+; SI: buffer_store_dwordx4
 ; SI: s_endpgm
 define void @dynamic_insertelement_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x double> %a, double 8.0, i32 %b
@@ -213,9 +233,16 @@ define void @dynamic_insertelement_v2f64(<2 x double> addrspace(1)* %out, <2 x d
   ret void
 }
 
+; FIXME: Inline immediate should be folded into v_movreld_b32.
 ; SI-LABEL: {{^}}dynamic_insertelement_v2i64:
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
+
+; SI-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 5{{$}}
+; SI-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0{{$}}
+
+; SI-DAG: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT0]]
+; SI-DAG: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
+
+; SI: buffer_store_dwordx4
 ; SI: s_endpgm
 define void @dynamic_insertelement_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x i64> %a, i64 5, i32 %b
@@ -223,12 +250,29 @@ define void @dynamic_insertelement_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64>
   ret void
 }
 
+; FIXME: Should be able to do without stack access. The used stack
+; space is also 2x what should be required.
+
 ; SI-LABEL: {{^}}dynamic_insertelement_v4f64:
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
+; SI: SCRATCH_RSRC_DWORD
+
+; Stack store
+; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+
+; Write element
+; SI: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+
+; Stack reload
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+
+; Store result
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
 ; SI: s_endpgm
+; SI: ScratchSize: 64
+
 define void @dynamic_insertelement_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %a, i32 %b) nounwind {
   %vecins = insertelement <4 x double> %a, double 8.0, i32 %b
   store <4 x double> %vecins, <4 x double> addrspace(1)* %out, align 16
@@ -236,15 +280,26 @@ define void @dynamic_insertelement_v4f64(<4 x double> addrspace(1)* %out, <4 x d
 }
 
 ; SI-LABEL: {{^}}dynamic_insertelement_v8f64:
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
-; SI: buffer_store_dwordx2
+; SI: SCRATCH_RSRC_DWORD
+
+; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:32{{$}}
+; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:48{{$}}
+
+; SI: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
 ; SI: s_endpgm
+; SI: ScratchSize: 128
 define void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)* %out, <8 x double> %a, i32 %b) nounwind {
   %vecins = insertelement <8 x double> %a, double 8.0, i32 %b
   store <8 x double> %vecins, <8 x double> addrspace(1)* %out, align 16

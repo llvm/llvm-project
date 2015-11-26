@@ -12,6 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+let Defs = [ARGUMENTS] in {
+
 // The spaces after the names are for aesthetic purposes only, to make
 // operands line up vertically after tab expansion.
 defm ADD : BinaryInt<add, "add ">;
@@ -43,11 +45,15 @@ defm CLZ : UnaryInt<ctlz, "clz ">;
 defm CTZ : UnaryInt<cttz, "ctz ">;
 defm POPCNT : UnaryInt<ctpop, "popcnt">;
 
+} // Defs = [ARGUMENTS]
+
 // Expand the "don't care" operations to supported operations.
 def : Pat<(ctlz_zero_undef I32:$src), (CLZ_I32 I32:$src)>;
 def : Pat<(ctlz_zero_undef I64:$src), (CLZ_I64 I64:$src)>;
 def : Pat<(cttz_zero_undef I32:$src), (CTZ_I32 I32:$src)>;
 def : Pat<(cttz_zero_undef I64:$src), (CTZ_I64 I64:$src)>;
+
+let Defs = [ARGUMENTS] in {
 
 def SELECT_I32 : I<(outs I32:$dst), (ins I32:$cond, I32:$lhs, I32:$rhs),
                    [(set I32:$dst, (select I32:$cond, I32:$lhs, I32:$rhs))],
@@ -55,3 +61,19 @@ def SELECT_I32 : I<(outs I32:$dst), (ins I32:$cond, I32:$lhs, I32:$rhs),
 def SELECT_I64 : I<(outs I64:$dst), (ins I32:$cond, I64:$lhs, I64:$rhs),
                    [(set I64:$dst, (select I32:$cond, I64:$lhs, I64:$rhs))],
                    "i64.select\t$dst, $cond, $lhs, $rhs">;
+
+} // Defs = [ARGUMENTS]
+
+// ISD::SELECT requires its operand to conform to getBooleanContents, but
+// WebAssembly's select interprets any non-zero value as true, so we can fold
+// a setne with 0 into a select.
+def : Pat<(select (i32 (setne I32:$cond, 0)), I32:$lhs, I32:$rhs),
+          (SELECT_I32 I32:$cond, I32:$lhs, I32:$rhs)>;
+def : Pat<(select (i32 (setne I32:$cond, 0)), I64:$lhs, I64:$rhs),
+          (SELECT_I64 I32:$cond, I64:$lhs, I64:$rhs)>;
+
+// And again, this time with seteq instead of setne and the arms reversed.
+def : Pat<(select (i32 (seteq I32:$cond, 0)), I32:$lhs, I32:$rhs),
+          (SELECT_I32 I32:$cond, I32:$rhs, I32:$lhs)>;
+def : Pat<(select (i32 (seteq I32:$cond, 0)), I64:$lhs, I64:$rhs),
+          (SELECT_I64 I32:$cond, I64:$rhs, I64:$lhs)>;

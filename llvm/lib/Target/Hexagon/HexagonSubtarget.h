@@ -54,6 +54,7 @@ private:
   HexagonSelectionDAGInfo TSInfo;
   HexagonFrameLowering FrameLowering;
   InstrItineraryData InstrItins;
+  void initializeEnvironment();
 
 public:
   HexagonSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
@@ -88,10 +89,13 @@ public:
   bool useMemOps() const { return UseMemOps; }
   bool hasV5TOps() const { return getHexagonArchVersion() >= V5; }
   bool hasV5TOpsOnly() const { return getHexagonArchVersion() == V5; }
+  bool hasV55TOps() const { return getHexagonArchVersion() >= V55; }
+  bool hasV55TOpsOnly() const { return getHexagonArchVersion() == V55; }
   bool hasV60TOps() const { return getHexagonArchVersion() >= V60; }
   bool hasV60TOpsOnly() const { return getHexagonArchVersion() == V60; }
   bool modeIEEERndNear() const { return ModeIEEERndNear; }
-  bool useHVXDblOps() const { return UseHVXDblOps; }
+  bool useHVXOps() const { return UseHVXOps; }
+  bool useHVXDblOps() const { return UseHVXOps && UseHVXDblOps; }
   bool useHVXSglOps() const { return UseHVXOps && !UseHVXDblOps; }
 
   bool useBSBScheduling() const { return UseBSBScheduling; }

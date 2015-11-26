@@ -6670,6 +6670,26 @@ void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
 //                              SDNode Class
 //===----------------------------------------------------------------------===//
 
+bool llvm::isNullConstant(SDValue V) {
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
+  return Const != nullptr && Const->isNullValue();
+}
+
+bool llvm::isNullFPConstant(SDValue V) {
+  ConstantFPSDNode *Const = dyn_cast<ConstantFPSDNode>(V);
+  return Const != nullptr && Const->isZero() && !Const->isNegative();
+}
+
+bool llvm::isAllOnesConstant(SDValue V) {
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
+  return Const != nullptr && Const->isAllOnesValue();
+}
+
+bool llvm::isOneConstant(SDValue V) {
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
+  return Const != nullptr && Const->isOne();
+}
+
 HandleSDNode::~HandleSDNode() {
   DropOperands();
 }

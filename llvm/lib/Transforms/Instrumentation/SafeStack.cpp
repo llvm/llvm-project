@@ -541,7 +541,7 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     if (DynamicTop)
       IRB.CreateStore(NewTop, DynamicTop);
 
-    Value *NewAI = IRB.CreateIntToPtr(SP, AI->getType());
+    Value *NewAI = IRB.CreatePointerCast(NewTop, AI->getType());
     if (AI->hasName() && isa<Instruction>(NewAI))
       NewAI->takeName(AI);
 
