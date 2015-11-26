@@ -35,6 +35,9 @@ def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
 def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
   "Enable ARMv8 PMUv3 Performance Monitors extension">;
 
+def FeatureFullFP16 : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
+  "Full FP16", [FeatureFPARMv8]>;
+
 /// Cyclone has register move instructions which are "free".
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
@@ -58,6 +61,9 @@ def FeatureReserveX18 : SubtargetFeature<"reserve-x18", "ReserveX18", "true",
 
 def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
   "Support ARM v8.1a instructions", [FeatureCRC]>;
+
+def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
+  "Support ARM v8.2a instructions", [HasV8_1aOps]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

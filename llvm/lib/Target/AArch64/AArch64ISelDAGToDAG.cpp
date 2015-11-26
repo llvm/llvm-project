@@ -2266,7 +2266,7 @@ SDNode *AArch64DAGToDAGISel::SelectWriteRegister(SDNode *N) {
               && "Expected a constant integer expression.");
     uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
     unsigned State;
-    if (Reg == AArch64PState::PAN) {
+    if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO) {
       assert(Immed < 2 && "Bad imm");
       State = AArch64::MSRpstateImm1;
     } else {

@@ -311,6 +311,10 @@ class INSN_MIPS5_32R2_NOT_32R6_64R6 {
   list<Predicate> InsnPredicates = [HasMips5_32r2, NotMips32r6, NotMips64r6];
 }
 
+class ASE_CNMIPS {
+  list<Predicate> InsnPredicates = [HasCnMips];
+}
+
 class ASE_MSA {
   list<Predicate> InsnPredicates = [HasMSA];
 }
@@ -390,8 +394,29 @@ class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
   let DiagnosticType = "UImm" # Bits # "_" # Offset;
 }
 
+def ConstantUImm5Plus32NormalizeAsmOperandClass
+    : ConstantUImmAsmOperandClass<5, [], 32> {
+  // We must also subtract 32 when we render the operand.
+  let RenderMethod = "addConstantUImmOperands<5, 32, -32>";
+}
+def ConstantUImm5Lsl2AsmOperandClass : AsmOperandClass {
+  let Name = "UImm5Lsl2";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isScaledUImm<5, 2>";
+  let SuperClasses = [];
+  let DiagnosticType = "UImm5_Lsl2";
+}
+def ConstantUImm5ReportUImm6AsmOperandClass
+    : ConstantUImmAsmOperandClass<5, []> {
+  let Name = "ConstantUImm5_0_Report_UImm6";
+  let DiagnosticType = "UImm5_0_Report_UImm6";
+}
+def ConstantUImm5AsmOperandClass
+    : ConstantUImmAsmOperandClass<5, []>;
 def ConstantUImm4AsmOperandClass
-    : ConstantUImmAsmOperandClass<4, []>;
+    : ConstantUImmAsmOperandClass<
+          4, [ConstantUImm5AsmOperandClass,
+              ConstantUImm5Plus32NormalizeAsmOperandClass]>;
 def ConstantUImm3AsmOperandClass
     : ConstantUImmAsmOperandClass<3, [ConstantUImm4AsmOperandClass]>;
 def ConstantUImm2Plus1AsmOperandClass
@@ -453,8 +478,8 @@ def simm18_lsl3 : Operand<i32> {
   let ParserMatchClass = MipsJumpTargetAsmOperand;
 }
 
-def simm20      : Operand<i32> {
-}
+def simm20      : Operand<i32>;
+def simm32      : Operand<i32>;
 
 def uimm20      : Operand<i32> {
 }
@@ -481,7 +506,7 @@ def uimmz       : Operand<i32> {
 }
 
 // Unsigned Operands
-foreach I = {1, 2, 3, 4} in
+foreach I = {1, 2, 3, 4, 5} in
   def uimm # I : Operand<i32> {
     let PrintMethod = "printUnsignedImm";
     let ParserMatchClass =
@@ -495,8 +520,34 @@ def uimm2_plus1 : Operand<i32> {
   let ParserMatchClass = ConstantUImm2Plus1AsmOperandClass;
 }
 
-def uimm5       : Operand<i32> {
+def uimm5_plus32_normalize : Operand<i32> {
   let PrintMethod = "printUnsignedImm";
+  let ParserMatchClass = ConstantUImm5Plus32NormalizeAsmOperandClass;
+}
+
+def uimm5_lsl2 : Operand<OtherVT> {
+  let EncoderMethod = "getUImm5Lsl2Encoding";
+  let DecoderMethod = "DecodeUImm5lsl2";
+  let ParserMatchClass = ConstantUImm5Lsl2AsmOperandClass;
+}
+
+def uimm5_plus32_normalize_64 : Operand<i64> {
+  let PrintMethod = "printUnsignedImm";
+  let ParserMatchClass = ConstantUImm5Plus32NormalizeAsmOperandClass;
+}
+
+foreach I = {5} in
+  def uimm # I # _64 : Operand<i64> {
+    let PrintMethod = "printUnsignedImm";
+    let ParserMatchClass =
+        !cast<AsmOperandClass>("ConstantUImm" # I # "AsmOperandClass");
+  }
+
+// Like uimm5_64 but reports a less confusing error for 32-63 when
+// an instruction alias permits that.
+def uimm5_64_report_uimm6 : Operand<i64> {
+  let PrintMethod = "printUnsignedImm";
+  let ParserMatchClass = ConstantUImm5ReportUImm6AsmOperandClass;
 }
 
 def uimm6 : Operand<i32> {
@@ -1847,7 +1898,7 @@ def : MipsInstAlias<"sync",
 class LoadImmediate32<string instr_asm, Operand Od, RegisterOperand RO> :
   MipsAsmPseudoInst<(outs RO:$rt), (ins Od:$imm32),
                      !strconcat(instr_asm, "\t$rt, $imm32")> ;
-def LoadImm32 : LoadImmediate32<"li", uimm5, GPR32Opnd>;
+def LoadImm32 : LoadImmediate32<"li", simm32, GPR32Opnd>;
 
 class LoadAddressFromReg32<string instr_asm, Operand MemOpnd,
                            RegisterOperand RO> :
@@ -1858,7 +1909,7 @@ def LoadAddrReg32 : LoadAddressFromReg32<"la", mem, GPR32Opnd>;
 class LoadAddressFromImm32<string instr_asm, Operand Od, RegisterOperand RO> :
   MipsAsmPseudoInst<(outs RO:$rt), (ins Od:$imm32),
                      !strconcat(instr_asm, "\t$rt, $imm32")> ;
-def LoadAddrImm32 : LoadAddressFromImm32<"la", uimm5, GPR32Opnd>;
+def LoadAddrImm32 : LoadAddressFromImm32<"la", simm32, GPR32Opnd>;
 
 def JalTwoReg : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rs),
                       "jal\t$rd, $rs"> ;

@@ -233,6 +233,11 @@ bool isPositiveHalfWord(SDNode *N);
     shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
       return AtomicExpansionKind::LLSC;
     }
+
+  protected:
+    std::pair<const TargetRegisterClass*, uint8_t>
+    findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
+        const override;
   };
 } // end namespace llvm
 

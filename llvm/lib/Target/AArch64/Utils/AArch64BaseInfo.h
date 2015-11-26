@@ -337,7 +337,9 @@ namespace AArch64AT {
     S12E1R = 0x63c4, // 01  100  0111  1000  100
     S12E1W = 0x63c5, // 01  100  0111  1000  101
     S12E0R = 0x63c6, // 01  100  0111  1000  110
-    S12E0W = 0x63c7  // 01  100  0111  1000  111
+    S12E0W = 0x63c7, // 01  100  0111  1000  111
+    S1E1RP = 0x43c8, // 01  000  0111  1001  000
+    S1E1WP = 0x43c9  // 01  000  0111  1001  001
   };
 
   struct ATMapper : AArch64NamedImmMapper {
@@ -463,6 +465,9 @@ namespace AArch64PState {
 
     // v8.1a "Privileged Access Never" extension-specific PStates
     PAN = 0x04,
+
+    // v8.2a "User Access Override" extension-specific PStates
+    UAO = 0x03
   };
 
   struct PStateMapper : AArch64NamedImmMapper {
@@ -594,6 +599,7 @@ namespace AArch64SysReg {
     ID_A64ISAR1_EL1   = 0xc031, // 11  000  0000  0110  001
     ID_A64MMFR0_EL1   = 0xc038, // 11  000  0000  0111  000
     ID_A64MMFR1_EL1   = 0xc039, // 11  000  0000  0111  001
+    ID_A64MMFR2_EL1   = 0xc03a, // 11  000  0000  0111  010
     MVFR0_EL1         = 0xc018, // 11  000  0000  0011  000
     MVFR1_EL1         = 0xc019, // 11  000  0000  0011  001
     MVFR2_EL1         = 0xc01a, // 11  000  0000  0011  010
@@ -1189,6 +1195,9 @@ namespace AArch64SysReg {
     CNTV_CVAL_EL02    = 0xef1a, // 11  101  1110  0011  010
     SPSR_EL12         = 0xea00, // 11  101  0100  0000  000
     ELR_EL12          = 0xea01, // 11  101  0100  0000  001
+
+    // v8.2a registers
+    UAO               = 0xc214, // 11  000  0100  0010  100
 
     // Cyclone specific system registers
     CPM_IOACC_CTL_EL3 = 0xff90,

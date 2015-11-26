@@ -1,55 +1,73 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -no-integrated-as -march=mipsel < %s | \
+; RUN:     FileCheck %s -check-prefix=ALL -check-prefix=GAS
 
-define i32 @main() nounwind {
-entry:
-
+define void @constraint_I() nounwind {
 ; First I with short
-; CHECK: #APP
-; CHECK: addiu ${{[0-9]+}}, ${{[0-9]+}}, 4096
-; CHECK: #NO_APP
+; ALL-LABEL: constraint_I:
+; ALL:           #APP
+; ALL:           addiu ${{[0-9]+}}, ${{[0-9]+}}, 4096
+; ALL:           #NO_APP
   tail call i16 asm sideeffect "addiu $0, $1, $2", "=r,r,I"(i16 7, i16 4096) nounwind
 
 ; Then I with int
-; CHECK: #APP
-; CHECK: addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
-; CHECK: #NO_APP
-   tail call i32 asm sideeffect "addiu $0, $1, $2", "=r,r,I"(i32 7, i32 -3) nounwind
+; ALL: #APP
+; ALL: addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
+; ALL: #NO_APP
+  tail call i32 asm sideeffect "addiu $0, $1, $2", "=r,r,I"(i32 7, i32 -3) nounwind
+  ret void
+}
 
+define void @constraint_J() nounwind {
 ; Now J with 0
-; CHECK: #APP
-; CHECK: addiu ${{[0-9]+}}, ${{[0-9]+}}, 0
-; CHECK: #NO_APP
+; ALL-LABEL: constraint_J:
+; ALL: #APP
+; ALL: addiu ${{[0-9]+}}, ${{[0-9]+}}, 0
+; ALL: #NO_APP
   tail call i32 asm sideeffect "addiu $0, $1, $2\0A\09 ", "=r,r,J"(i32 7, i16 0) nounwind
+  ret void
+}
 
+define void @constraint_K() nounwind {
 ; Now K with 64
-; CHECK: #APP
-; CHECK: addu ${{[0-9]+}}, ${{[0-9]+}}, 64
-; CHECK: #NO_APP	
+; ALL: #APP
+; GAS: addu ${{[0-9]+}}, ${{[0-9]+}}, 64
+; ALL: #NO_APP	
   tail call i16 asm sideeffect "addu $0, $1, $2\0A\09 ", "=r,r,K"(i16 7, i16 64) nounwind
+  ret void
+}
 
+define void @constraint_L() nounwind {
 ; Now L with 0x00100000
-; CHECK: #APP
-; CHECK: add ${{[0-9]+}}, ${{[0-9]+}}, ${{[0-9]+}}
-; CHECK: #NO_APP	
+; ALL: #APP
+; ALL: add ${{[0-9]+}}, ${{[0-9]+}}, ${{[0-9]+}}
+; ALL: #NO_APP	
   tail call i32 asm sideeffect "add $0, $1, $3\0A\09", "=r,r,L,r"(i32 7, i32 1048576, i32 0) nounwind
+  ret void
+}
 
+define void @constraint_N() nounwind {
 ; Now N with -3
-; CHECK: #APP
-; CHECK: addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
-; CHECK: #NO_APP	
+; ALL: #APP
+; ALL: addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
+; ALL: #NO_APP	
   tail call i32 asm sideeffect "addiu $0, $1, $2", "=r,r,N"(i32 7, i32 -3) nounwind
+  ret void
+}
 
+define void @constraint_O() nounwind {
 ; Now O with -3
-; CHECK: #APP
-; CHECK: addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
-; CHECK: #NO_APP	
+; ALL: #APP
+; ALL: addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
+; ALL: #NO_APP	
   tail call i32 asm sideeffect "addiu $0, $1, $2", "=r,r,O"(i32 7, i16 -3) nounwind
+  ret void
+}
 
+define void @constraint_P() nounwind {
 ; Now P with 65535
-; CHECK: #APP
-; CHECK: addiu ${{[0-9]+}}, ${{[0-9]+}}, 65535
-; CHECK: #NO_APP	
+; ALL: #APP
+; GAS: addiu ${{[0-9]+}}, ${{[0-9]+}}, 65535
+; ALL: #NO_APP
   tail call i32 asm sideeffect "addiu $0, $1, $2", "=r,r,P"(i32 7, i32 65535) nounwind
-
-  ret i32 0
+  ret void
 }

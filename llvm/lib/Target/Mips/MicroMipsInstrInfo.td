@@ -13,19 +13,6 @@ def simm12 : Operand<i32> {
   let DecoderMethod = "DecodeSimm12";
 }
 
-def MipsUimm5Lsl2AsmOperand : AsmOperandClass {
-  let Name = "Uimm5Lsl2";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseImm";
-  let PredicateMethod = "isUImm5Lsl2";
-}
-
-def uimm5_lsl2 : Operand<OtherVT> {
-  let EncoderMethod = "getUImm5Lsl2Encoding";
-  let DecoderMethod = "DecodeUImm5lsl2";
-  let ParserMatchClass = MipsUimm5Lsl2AsmOperand;
-}
-
 def uimm6_lsl2 : Operand<i32> {
   let EncoderMethod = "getUImm6Lsl2Encoding";
   let DecoderMethod = "DecodeUImm6Lsl2";

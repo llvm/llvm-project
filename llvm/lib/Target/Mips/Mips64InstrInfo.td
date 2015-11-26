@@ -16,10 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 // Unsigned Operand
-def uimm5_64      : Operand<i64> {
-  let PrintMethod = "printUnsignedImm";
-}
-
 def uimm16_64      : Operand<i64> {
   let PrintMethod = "printUnsignedImm";
 }
@@ -343,8 +339,8 @@ class SetCC64_I<string opstr, PatFrag cond_op>:
 }
 
 class CBranchBitNum<string opstr, DAGOperand opnd, PatFrag cond_op,
-                    RegisterOperand RO, bits<64> shift = 1> :
-  InstSE<(outs), (ins RO:$rs, uimm5_64:$p, opnd:$offset),
+                    RegisterOperand RO, Operand ImmOp, bits<64> shift = 1> :
+  InstSE<(outs), (ins RO:$rs, ImmOp:$p, opnd:$offset),
          !strconcat(opstr, "\t$rs, $p, $offset"),
          [(brcond (i32 (cond_op (and RO:$rs, (shl shift, immZExt5_64:$p)), 0)),
                   bb:$offset)], II_BBIT, FrmI, opstr> {
@@ -365,14 +361,17 @@ def BADDu  : ArithLogicR<"baddu", GPR64Opnd, 1, II_BADDU>,
                               ADD_FM<0x1c, 0x28>;
 
 // Branch on Bit Clear /+32
-def BBIT0  : CBranchBitNum<"bbit0", brtarget, seteq, GPR64Opnd>, BBIT_FM<0x32>;
-def BBIT032: CBranchBitNum<"bbit032", brtarget, seteq, GPR64Opnd, 0x100000000>,
+def BBIT0  : CBranchBitNum<"bbit0", brtarget, seteq, GPR64Opnd,
+                           uimm5_64_report_uimm6>, BBIT_FM<0x32>;
+def BBIT032: CBranchBitNum<"bbit032", brtarget, seteq, GPR64Opnd, uimm5_64,
+                           0x100000000>,
                            BBIT_FM<0x36>;
 
 // Branch on Bit Set /+32
-def BBIT1  : CBranchBitNum<"bbit1", brtarget, setne, GPR64Opnd>, BBIT_FM<0x3a>;
-def BBIT132: CBranchBitNum<"bbit132", brtarget, setne, GPR64Opnd, 0x100000000>,
-                           BBIT_FM<0x3e>;
+def BBIT1  : CBranchBitNum<"bbit1", brtarget, setne, GPR64Opnd,
+                           uimm5_64_report_uimm6>, BBIT_FM<0x3a>;
+def BBIT132: CBranchBitNum<"bbit132", brtarget, setne, GPR64Opnd, uimm5_64,
+                           0x100000000>, BBIT_FM<0x3e>;
 
 // Multiply Doubleword to GPR
 let Defs = [HI0, LO0, P0, P1, P2] in
@@ -633,6 +632,38 @@ def : MipsInstAlias<"syncs",      (SYNC 0x6), 0>;
 def : MipsInstAlias<"syncw",      (SYNC 0x4), 0>;
 def : MipsInstAlias<"syncws",     (SYNC 0x5), 0>;
 }
+
+// cnMIPS Aliases.
+
+// bbit* with $p 32-63 converted to bbit*32 with $p 0-31
+def : MipsInstAlias<"bbit0 $rs, $p, $offset",
+                    (BBIT032 GPR64Opnd:$rs, uimm5_plus32_normalize_64:$p,
+                             brtarget:$offset), 0>,
+      ASE_CNMIPS;
+def : MipsInstAlias<"bbit1 $rs, $p, $offset",
+                    (BBIT132 GPR64Opnd:$rs, uimm5_plus32_normalize_64:$p,
+                             brtarget:$offset), 0>,
+      ASE_CNMIPS;
+
+// exts with $pos 32-63 in converted to exts32 with $pos 0-31
+def : MipsInstAlias<"exts $rt, $rs, $pos, $lenm1",
+                    (EXTS32 GPR64Opnd:$rt, GPR64Opnd:$rs,
+                            uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
+      ASE_CNMIPS;
+def : MipsInstAlias<"exts $rt, $pos, $lenm1",
+                    (EXTS32 GPR64Opnd:$rt, GPR64Opnd:$rt,
+                            uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
+      ASE_CNMIPS;
+
+// cins with $pos 32-63 in converted to cins32 with $pos 0-31
+def : MipsInstAlias<"cins $rt, $rs, $pos, $lenm1",
+                    (CINS32 GPR64Opnd:$rt, GPR64Opnd:$rs,
+                            uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
+      ASE_CNMIPS;
+def : MipsInstAlias<"cins $rt, $pos, $lenm1",
+                    (CINS32 GPR64Opnd:$rt, GPR64Opnd:$rt,
+                            uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
+      ASE_CNMIPS;
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

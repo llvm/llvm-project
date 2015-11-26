@@ -48,7 +48,7 @@ def UseHVXDbl          : Predicate<"HST->useHVXDblOps()">,
                          AssemblerPredicate<"ExtensionHVXDbl">;
 def UseHVXSgl          : Predicate<"HST->useHVXSglOps()">;
 
-def UseHVX             : Predicate<"HST->useHVXOps()">,
+def UseHVX             : Predicate<"HST->useHVXSglOps() ||HST->useHVXDblOps()">,
                          AssemblerPredicate<"ExtensionHVX">;
 
 //===----------------------------------------------------------------------===//
