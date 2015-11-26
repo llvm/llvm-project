@@ -677,6 +677,69 @@ public:
   friend class ASTStmtReader;
 };
 
+/// MS property subscript expression.
+/// MSVC supports 'property' attribute and allows to apply it to the
+/// declaration of an empty array in a class or structure definition.
+/// For example:
+/// \code
+/// __declspec(property(get=GetX, put=PutX)) int x[];
+/// \endcode
+/// The above statement indicates that x[] can be used with one or more array
+/// indices. In this case, i=p->x[a][b] will be turned into i=p->GetX(a, b), and
+/// p->x[a][b] = i will be turned into p->PutX(a, b, i).
+/// This is a syntactic pseudo-object expression.
+class MSPropertySubscriptExpr : public Expr {
+  friend class ASTStmtReader;
+  enum { BASE_EXPR, IDX_EXPR, NUM_SUBEXPRS = 2 };
+  Stmt *SubExprs[NUM_SUBEXPRS];
+  SourceLocation RBracketLoc;
+
+  void setBase(Expr *Base) { SubExprs[BASE_EXPR] = Base; }
+  void setIdx(Expr *Idx) { SubExprs[IDX_EXPR] = Idx; }
+
+public:
+  MSPropertySubscriptExpr(Expr *Base, Expr *Idx, QualType Ty, ExprValueKind VK,
+                          ExprObjectKind OK, SourceLocation RBracketLoc)
+      : Expr(MSPropertySubscriptExprClass, Ty, VK, OK, Idx->isTypeDependent(),
+             Idx->isValueDependent(), Idx->isInstantiationDependent(),
+             Idx->containsUnexpandedParameterPack()),
+        RBracketLoc(RBracketLoc) {
+    SubExprs[BASE_EXPR] = Base;
+    SubExprs[IDX_EXPR] = Idx;
+  }
+
+  /// \brief Create an empty array subscript expression.
+  explicit MSPropertySubscriptExpr(EmptyShell Shell)
+      : Expr(MSPropertySubscriptExprClass, Shell) {}
+
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE_EXPR]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE_EXPR]); }
+
+  Expr *getIdx() { return cast<Expr>(SubExprs[IDX_EXPR]); }
+  const Expr *getIdx() const { return cast<Expr>(SubExprs[IDX_EXPR]); }
+
+  SourceLocation getLocStart() const LLVM_READONLY {
+    return getBase()->getLocStart();
+  }
+  SourceLocation getLocEnd() const LLVM_READONLY { return RBracketLoc; }
+
+  SourceLocation getRBracketLoc() const { return RBracketLoc; }
+  void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MSPropertySubscriptExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0] + NUM_SUBEXPRS);
+  }
+};
+
 /// A Microsoft C++ @c __uuidof expression, which gets
 /// the _GUID that corresponds to the supplied type or expression.
 ///

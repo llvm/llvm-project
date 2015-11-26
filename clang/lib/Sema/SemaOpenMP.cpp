@@ -3359,13 +3359,22 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // Found 'collapse' clause - calculate collapse number.
     llvm::APSInt Result;
     if (CollapseLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext()))
-      NestedLoopCount += Result.getLimitedValue() - 1;
+      NestedLoopCount = Result.getLimitedValue();
   }
   if (OrderedLoopCountExpr) {
     // Found 'ordered' clause - calculate collapse number.
     llvm::APSInt Result;
-    if (OrderedLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext()))
-      NestedLoopCount += Result.getLimitedValue() - 1;
+    if (OrderedLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext())) {
+      if (Result.getLimitedValue() < NestedLoopCount) {
+        SemaRef.Diag(OrderedLoopCountExpr->getExprLoc(),
+                     diag::err_omp_wrong_ordered_loop_count)
+            << OrderedLoopCountExpr->getSourceRange();
+        SemaRef.Diag(CollapseLoopCountExpr->getExprLoc(),
+                     diag::note_collapse_loop_count)
+            << CollapseLoopCountExpr->getSourceRange();
+      }
+      NestedLoopCount = Result.getLimitedValue();
+    }
   }
   // This is helper routine for loop directives (e.g., 'for', 'simd',
   // 'for simd', etc.).
@@ -5256,13 +5265,10 @@ ExprResult Sema::VerifyPositiveIntegerConstantInClause(Expr *E,
         << E->getSourceRange();
     return ExprError();
   }
-  if (CKind == OMPC_collapse) {
-    DSAStack->setCollapseNumber(DSAStack->getCollapseNumber() - 1 +
-                                Result.getExtValue());
-  } else if (CKind == OMPC_ordered) {
-    DSAStack->setCollapseNumber(DSAStack->getCollapseNumber() - 1 +
-                                Result.getExtValue());
-  }
+  if (CKind == OMPC_collapse)
+    DSAStack->setCollapseNumber(Result.getExtValue());
+  else if (CKind == OMPC_ordered)
+    DSAStack->setCollapseNumber(Result.getExtValue());
   return ICE;
 }
 

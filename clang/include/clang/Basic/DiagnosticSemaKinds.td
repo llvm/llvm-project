@@ -213,8 +213,11 @@ def warn_auto_storage_class : Warning<
   InGroup<CXX11Compat>, DefaultIgnore;
 
 def warn_deprecated_register : Warning<
-  "'register' storage class specifier is deprecated">,
-  InGroup<DeprecatedRegister>;
+  "'register' storage class specifier is deprecated "
+  "and incompatible with C++1z">, InGroup<DeprecatedRegister>;
+def ext_register_storage_class : ExtWarn<
+  "ISO C++1z does not allow 'register' storage class specifier">,
+  DefaultError, InGroup<Register>;
 
 def err_invalid_decl_spec_combination : Error<
   "cannot combine with previous '%0' declaration specifier">;
@@ -5749,8 +5752,11 @@ def note_member_declared_here : Note<
   "member %0 declared here">;
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;
 def warn_increment_bool : Warning<
-  "incrementing expression of type bool is deprecated">,
-  InGroup<DeprecatedIncrementBool>;
+  "incrementing expression of type bool is deprecated and "
+  "incompatible with C++1z">, InGroup<DeprecatedIncrementBool>;
+def ext_increment_bool : ExtWarn<
+  "ISO C++1z does not allow incrementing expression of type bool">,
+  DefaultError, InGroup<IncrementBool>;
 def err_increment_decrement_enum : Error<
   "cannot %select{decrement|increment}0 expression of enum type %1">;
 def err_catch_incomplete_ptr : Error<
@@ -7920,6 +7926,10 @@ def note_omp_static_member_in_target : Note<
   "mappable type cannot contain static members">;
 def err_omp_threadprivate_in_map : Error<
   "threadprivate variables are not allowed in map clause">;
+def err_omp_wrong_ordered_loop_count : Error<
+  "the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause">;
+def note_collapse_loop_count : Note<
+  "parameter of the 'collapse' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

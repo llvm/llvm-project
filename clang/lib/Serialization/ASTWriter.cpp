@@ -1485,6 +1485,7 @@ namespace  {
   struct InputFileEntry {
     const FileEntry *File;
     bool IsSystemFile;
+    bool IsTransient;
     bool BufferOverridden;
   };
 }
@@ -1502,6 +1503,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 12)); // Size
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32)); // Modification time
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Overridden
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Transient
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // File name
   unsigned IFAbbrevCode = Stream.EmitAbbrev(IFAbbrev);
 
@@ -1523,6 +1525,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     InputFileEntry Entry;
     Entry.File = Cache->OrigEntry;
     Entry.IsSystemFile = Cache->IsSystemFile;
+    Entry.IsTransient = Cache->IsTransient;
     Entry.BufferOverridden = Cache->BufferOverridden;
     if (Cache->IsSystemFile)
       SortedFiles.push_back(Entry);
@@ -1552,8 +1555,12 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     // Emit size/modification time for this file.
     // And whether this file was overridden.
     RecordData::value_type Record[] = {
-        INPUT_FILE, InputFileOffsets.size(), (uint64_t)Entry.File->getSize(),
-        (uint64_t)getTimestampForOutput(Entry.File), Entry.BufferOverridden};
+        INPUT_FILE,
+        InputFileOffsets.size(),
+        (uint64_t)Entry.File->getSize(),
+        (uint64_t)getTimestampForOutput(Entry.File),
+        Entry.BufferOverridden,
+        Entry.IsTransient};
 
     EmitRecordWithPath(IFAbbrevCode, Record, Entry.File->getName());
   }
@@ -1902,7 +1909,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
         
         Stream.EmitRecordWithAbbrev(SLocFileAbbrv, Record);
         
-        if (Content->BufferOverridden) {
+        if (Content->BufferOverridden || Content->IsTransient) {
           RecordData::value_type Record[] = {SM_SLOC_BUFFER_BLOB};
           const llvm::MemoryBuffer *Buffer
             = Content->getBuffer(PP.getDiagnostics(), PP.getSourceManager());

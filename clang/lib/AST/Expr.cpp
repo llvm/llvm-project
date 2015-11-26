@@ -3004,6 +3004,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     return true;
 
   case MSPropertyRefExprClass:
+  case MSPropertySubscriptExprClass:
   case CompoundAssignOperatorClass:
   case VAArgExprClass:
   case AtomicExprClass:

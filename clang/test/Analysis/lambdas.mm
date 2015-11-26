@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wno-objc-root-class -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-config inline-lambdas=true -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fblocks -Wno-objc-root-class -analyze -analyzer-checker=core,deadcode,debug.ExprInspection -analyzer-config inline-lambdas=true -verify %s
 
 int clang_analyzer_eval(int);
 
@@ -44,3 +44,43 @@ int clang_analyzer_eval(int);
 }
 
 @end
+
+int getValue();
+void useValue(int v);
+
+void castToBlockNoDeadStore() {
+  int v = getValue(); // no-warning
+
+  (void)(void(^)())[v]() { // This capture should count as a use, so no dead store warning above.
+  };
+}
+
+void takesBlock(void(^block)());
+
+void passToFunctionTakingBlockNoDeadStore() {
+  int v = 7; // no-warning
+  int x = 8; // no-warning
+  takesBlock([&v, x]() {
+    (void)v;
+  });
+}
+
+void castToBlockAndInline() {
+  int result = ((int(^)(int))[](int p) {
+    return p;
+  })(7);
+
+  // FIXME: This should be TRUE. We're not handling lambda to block conversions
+  // properly in ExprEngine::VisitBlockExpr.
+  clang_analyzer_eval(result == 7); // expected-warning{{UNKNOWN}}
+}
+
+void castLambdaInLocalBlock() {
+  // FIXME: This results in a spurious
+  // "Address of stack-allocated block declared on line XX returned to caller" warning
+  // because we're not handling lambda to block conversions properly in ExprEngine.
+  auto lambda = []{ }; // expected-warning {{Address of stack-allocated block declared on line}}
+
+  void(^block)() = lambda;
+  (void)block;
+}
