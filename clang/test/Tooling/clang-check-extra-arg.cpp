@@ -2,4 +2,4 @@
 
 // CHECK: unknown warning option '-Wunimplemented-warning-before'
 // CHECK: unknown warning option '-Wunimplemented-warning'
-int a(){}
+void a(){}

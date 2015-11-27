@@ -714,6 +714,46 @@ The semantics are as follows:
   }];
 }
 
+def MipsInterruptDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt("ARGUMENT")))`` attribute on
+MIPS targets. This attribute may be attached to a function definition and instructs
+the backend to generate appropriate function entry/exit code so that it can be used
+directly as an interrupt service routine.
+
+By default, the compiler will produce a function prologue and epilogue suitable for
+an interrupt service routine that handles an External Interrupt Controller (eic)
+generated interrupt. This behaviour can be explicitly requested with the "eic"
+argument.
+
+Otherwise, for use with vectored interrupt mode, the argument passed should be
+of the form "vector=LEVEL" where LEVEL is one of the following values:
+"sw0", "sw1", "hw0", "hw1", "hw2", "hw3", "hw4", "hw5". The compiler will
+then set the interrupt mask to the corresponding level which will mask all
+interrupts up to and including the argument.
+
+The semantics are as follows:
+
+- The prologue is modified so that the Exception Program Counter (EPC) and
+  Status coprocessor registers are saved to the stack. The interrupt mask is
+  set so that the function can only be interrupted by a higher priority
+  interrupt. The epilogue will restore the previous values of EPC and Status.
+
+- The prologue and epilogue are modified to save and restore all non-kernel
+  registers as necessary.
+
+- The FPU is disabled in the prologue, as the floating pointer registers are not
+  spilled to the stack.
+
+- The function return sequence is changed to use an exception return instruction.
+
+- The parameter sets the interrupt mask for the function corresponding to the
+  interrupt level specified. If no mask is specified the interrupt mask
+  defaults to "eic".
+  }];
+}
+
 def TargetDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

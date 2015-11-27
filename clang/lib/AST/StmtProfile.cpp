@@ -456,6 +456,10 @@ void OMPClauseProfiler::VisitOMPMapClause(const OMPMapClause *C) {
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
   Profiler->VisitStmt(C->getNumTeams());
 }
+void OMPClauseProfiler::VisitOMPThreadLimitClause(
+    const OMPThreadLimitClause *C) {
+  Profiler->VisitStmt(C->getThreadLimit());
+}
 }
 
 void

@@ -5097,6 +5097,9 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_num_teams:
     Res = ActOnOpenMPNumTeamsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_thread_limit:
+    Res = ActOnOpenMPThreadLimitClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_default:
   case OMPC_proc_bind:
@@ -5214,31 +5217,39 @@ ExprResult Sema::PerformOpenMPImplicitIntegerConversion(SourceLocation Loc,
   return PerformContextualImplicitConversion(Loc, Op, ConvertDiagnoser);
 }
 
+static bool IsNonNegativeIntegerValue(Expr *&ValExpr, Sema &SemaRef,
+                                      OpenMPClauseKind CKind) {
+  if (!ValExpr->isTypeDependent() && !ValExpr->isValueDependent() &&
+      !ValExpr->isInstantiationDependent()) {
+    SourceLocation Loc = ValExpr->getExprLoc();
+    ExprResult Value =
+        SemaRef.PerformOpenMPImplicitIntegerConversion(Loc, ValExpr);
+    if (Value.isInvalid())
+      return false;
+
+    ValExpr = Value.get();
+    // The expression must evaluate to a non-negative integer value.
+    llvm::APSInt Result;
+    if (ValExpr->isIntegerConstantExpr(Result, SemaRef.Context) &&
+        Result.isSigned() && !Result.isStrictlyPositive()) {
+      SemaRef.Diag(Loc, diag::err_omp_negative_expression_in_clause)
+          << getOpenMPClauseName(CKind) << ValExpr->getSourceRange();
+      return false;
+    }
+  }
+  return true;
+}
+
 OMPClause *Sema::ActOnOpenMPNumThreadsClause(Expr *NumThreads,
                                              SourceLocation StartLoc,
                                              SourceLocation LParenLoc,
                                              SourceLocation EndLoc) {
   Expr *ValExpr = NumThreads;
-  if (!NumThreads->isValueDependent() && !NumThreads->isTypeDependent() &&
-      !NumThreads->containsUnexpandedParameterPack()) {
-    SourceLocation NumThreadsLoc = NumThreads->getLocStart();
-    ExprResult Val =
-        PerformOpenMPImplicitIntegerConversion(NumThreadsLoc, NumThreads);
-    if (Val.isInvalid())
-      return nullptr;
 
-    ValExpr = Val.get();
-
-    // OpenMP [2.5, Restrictions]
-    //  The num_threads expression must evaluate to a positive integer value.
-    llvm::APSInt Result;
-    if (ValExpr->isIntegerConstantExpr(Result, Context) && Result.isSigned() &&
-        !Result.isStrictlyPositive()) {
-      Diag(NumThreadsLoc, diag::err_omp_negative_expression_in_clause)
-          << "num_threads" << NumThreads->getSourceRange();
-      return nullptr;
-    }
-  }
+  // OpenMP [2.5, Restrictions]
+  //  The num_threads expression must evaluate to a positive integer value.
+  if (!IsNonNegativeIntegerValue(ValExpr, *this, OMPC_num_threads))
+    return nullptr;
 
   return new (Context)
       OMPNumThreadsClause(ValExpr, StartLoc, LParenLoc, EndLoc);
@@ -5385,6 +5396,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_simd:
   case OMPC_map:
   case OMPC_num_teams:
+  case OMPC_thread_limit:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5516,6 +5528,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_simd:
   case OMPC_map:
   case OMPC_num_teams:
+  case OMPC_thread_limit:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5649,6 +5662,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_device:
   case OMPC_map:
   case OMPC_num_teams:
+  case OMPC_thread_limit:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5779,6 +5793,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_num_teams:
+  case OMPC_thread_limit:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -7458,23 +7473,12 @@ OMPClause *Sema::ActOnOpenMPDeviceClause(Expr *Device, SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc) {
   Expr *ValExpr = Device;
-  if (!ValExpr->isTypeDependent() && !ValExpr->isValueDependent() &&
-      !ValExpr->isInstantiationDependent()) {
-    SourceLocation Loc = ValExpr->getExprLoc();
-    ExprResult Value = PerformOpenMPImplicitIntegerConversion(Loc, ValExpr);
-    if (Value.isInvalid())
-      return nullptr;
 
-    // OpenMP [2.9.1, Restrictions]
-    // The device expression must evaluate to a non-negative integer value.
-    llvm::APSInt Result;
-    if (Value.get()->isIntegerConstantExpr(Result, Context) && 
-        Result.isSigned() && !Result.isStrictlyPositive()) {
-      Diag(Loc, diag::err_omp_negative_expression_in_clause)
-          << "device" << ValExpr->getSourceRange();
-      return nullptr;
-    }
-  }
+  // OpenMP [2.9.1, Restrictions]
+  // The device expression must evaluate to a non-negative integer value.
+  if (!IsNonNegativeIntegerValue(ValExpr, *this, OMPC_device))
+    return nullptr;
+
   return new (Context) OMPDeviceClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }
 
@@ -7659,23 +7663,26 @@ OMPClause *Sema::ActOnOpenMPNumTeamsClause(Expr *NumTeams,
                                            SourceLocation LParenLoc,
                                            SourceLocation EndLoc) {
   Expr *ValExpr = NumTeams;
-  if (!ValExpr->isTypeDependent() && !ValExpr->isValueDependent() &&
-      !ValExpr->isInstantiationDependent()) {
-    SourceLocation Loc = ValExpr->getExprLoc();
-    ExprResult Value = PerformOpenMPImplicitIntegerConversion(Loc, ValExpr);
-    if (Value.isInvalid())
-      return nullptr;
 
-    // OpenMP [teams Constrcut, Restrictions]
-    // The num_teams expression must evaluate to a positive integer value.
-    llvm::APSInt Result;
-    if (Value.get()->isIntegerConstantExpr(Result, Context) && 
-        Result.isSigned() && !Result.isStrictlyPositive()) {
-      Diag(Loc, diag::err_omp_negative_expression_in_clause)
-          << "num_teams" << ValExpr->getSourceRange();
-      return nullptr;
-    }
-  }
+  // OpenMP [teams Constrcut, Restrictions]
+  // The num_teams expression must evaluate to a positive integer value.
+  if (!IsNonNegativeIntegerValue(ValExpr, *this, OMPC_num_teams))
+    return nullptr;
 
   return new (Context) OMPNumTeamsClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,
+                                              SourceLocation StartLoc,
+                                              SourceLocation LParenLoc,
+                                              SourceLocation EndLoc) {
+  Expr *ValExpr = ThreadLimit;
+
+  // OpenMP [teams Constrcut, Restrictions]
+  // The thread_limit expression must evaluate to a positive integer value.
+  if (!IsNonNegativeIntegerValue(ValExpr, *this, OMPC_thread_limit))
+    return nullptr;
+
+  return new (Context) OMPThreadLimitClause(ValExpr, StartLoc, LParenLoc,
+                                            EndLoc);
 }

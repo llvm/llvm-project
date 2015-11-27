@@ -701,7 +701,8 @@ public:
   /// with the specified type instead of whatever the normal requested type
   /// would be.
   llvm::Constant *GetAddrOfGlobalVar(const VarDecl *D,
-                                     llvm::Type *Ty = nullptr);
+                                     llvm::Type *Ty = nullptr,
+                                     bool IsForDefinition = false);
 
   /// Return the address of the given function. If Ty is non-null, then this
   /// function will use the specified type if it has to create it.
@@ -1130,7 +1131,8 @@ private:
 
   llvm::Constant *GetOrCreateLLVMGlobal(StringRef MangledName,
                                         llvm::PointerType *PTy,
-                                        const VarDecl *D);
+                                        const VarDecl *D,
+                                        bool IsForDefinition = false);
 
   void setNonAliasAttributes(const Decl *D, llvm::GlobalObject *GO);
 
@@ -1141,7 +1143,7 @@ private:
   void EmitGlobalDefinition(GlobalDecl D, llvm::GlobalValue *GV = nullptr);
 
   void EmitGlobalFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
-  void EmitGlobalVarDefinition(const VarDecl *D);
+  void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitAliasDefinition(GlobalDecl GD);
   void EmitObjCPropertyImplementations(const ObjCImplementationDecl *D);
   void EmitObjCIvarInitializations(ObjCImplementationDecl *D);
