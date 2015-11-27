@@ -8143,6 +8143,11 @@ public:
   OMPClause *ActOnOpenMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
+  /// \brief Called on well-formed 'thread_limit' clause.
+  OMPClause *ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc);
 
   /// \brief The kind of conversion being performed.
   enum CheckedConversionKind {

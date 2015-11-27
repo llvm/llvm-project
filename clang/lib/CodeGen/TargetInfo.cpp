@@ -5893,6 +5893,26 @@ public:
     else if (FD->hasAttr<NoMips16Attr>()) {
       Fn->addFnAttr("nomips16");
     }
+
+    const MipsInterruptAttr *Attr = FD->getAttr<MipsInterruptAttr>();
+    if (!Attr)
+      return;
+
+    const char *Kind;
+    switch (Attr->getInterrupt()) {
+    case MipsInterruptAttr::eic:     Kind = "eic"; break;
+    case MipsInterruptAttr::sw0:     Kind = "sw0"; break;
+    case MipsInterruptAttr::sw1:     Kind = "sw1"; break;
+    case MipsInterruptAttr::hw0:     Kind = "hw0"; break;
+    case MipsInterruptAttr::hw1:     Kind = "hw1"; break;
+    case MipsInterruptAttr::hw2:     Kind = "hw2"; break;
+    case MipsInterruptAttr::hw3:     Kind = "hw3"; break;
+    case MipsInterruptAttr::hw4:     Kind = "hw4"; break;
+    case MipsInterruptAttr::hw5:     Kind = "hw5"; break;
+    }
+
+    Fn->addFnAttr("interrupt", Kind);
+
   }
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,

@@ -2377,9 +2377,6 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-  case llvm::Triple::sparcv9:
   case llvm::Triple::systemz:
     return true;
   default:

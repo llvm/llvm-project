@@ -394,7 +394,8 @@ bool Parser::ParseOpenMPSimpleVarList(OpenMPDirectiveKind Kind,
 ///       schedule-clause | copyin-clause | copyprivate-clause | untied-clause |
 ///       mergeable-clause | flush-clause | read-clause | write-clause |
 ///       update-clause | capture-clause | seq_cst-clause | device-clause |
-///       simdlen-clause | threads-clause | simd-clause | num_teams-clause
+///       simdlen-clause | threads-clause | simd-clause | num_teams-clause |
+///       thread_limit-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -416,6 +417,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_ordered:
   case OMPC_device:
   case OMPC_num_teams:
+  case OMPC_thread_limit:
     // OpenMP [2.5, Restrictions]
     //  At most one num_threads clause can appear on the directive.
     // OpenMP [2.8.1, simd construct, Restrictions]
@@ -429,6 +431,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     //  At most one final clause can appear on the directive.
     // OpenMP [teams Construct, Restrictions]
     //  At most one num_teams clause can appear on the directive.
+    //  At most one thread_limit clause can appear on the directive.
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;

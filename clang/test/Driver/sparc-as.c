@@ -1,3 +1,17 @@
+// Make sure Sparc does not use the integrated assembler by default.
+
+// RUN: %clang -target sparc-linux -### -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=NO-IAS %s
+
+// RUN: %clang -target sparc-linux -fintegrated-as -### -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=IAS %s
+
+// RUN: %clang -target sparc-linux -fno-integrated-as -### -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=NO-IAS %s
+
+// IAS-NOT: "-no-integrated-as"
+// NO-IAS: "-no-integrated-as"
+
 // RUN: %clang -no-canonical-prefixes -target sparc--netbsd \
 // RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=SPARC %s

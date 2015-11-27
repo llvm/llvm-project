@@ -2783,6 +2783,61 @@ public:
   child_range children() { return child_range(&NumTeams, &NumTeams + 1); }
 };
 
+/// \brief This represents 'thread_limit' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp teams thread_limit(n)
+/// \endcode
+/// In this example directive '#pragma omp teams' has clause 'thread_limit'
+/// with single expression 'n'.
+///
+class OMPThreadLimitClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief ThreadLimit number.
+  Stmt *ThreadLimit;
+  /// \brief Set the ThreadLimit number.
+  ///
+  /// \param E ThreadLimit number.
+  ///
+  void setThreadLimit(Expr *E) { ThreadLimit = E; }
+
+public:
+  /// \brief Build 'thread_limit' clause.
+  ///
+  /// \param E Expression associated with this clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  ///
+  OMPThreadLimitClause(Expr *E, SourceLocation StartLoc,
+                       SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_thread_limit, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        ThreadLimit(E) {}
+
+  /// \brief Build an empty clause.
+  ///
+  OMPThreadLimitClause()
+      : OMPClause(OMPC_thread_limit, SourceLocation(), SourceLocation()),
+        LParenLoc(SourceLocation()), ThreadLimit(nullptr) {}
+  /// \brief Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  /// \brief Return ThreadLimit number.
+  Expr *getThreadLimit() { return cast<Expr>(ThreadLimit); }
+  /// \brief Return ThreadLimit number.
+  Expr *getThreadLimit() const { return cast<Expr>(ThreadLimit); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_thread_limit;
+  }
+
+  child_range children() { return child_range(&ThreadLimit, &ThreadLimit + 1); }
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

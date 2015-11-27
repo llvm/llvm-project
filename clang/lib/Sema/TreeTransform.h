@@ -1677,6 +1677,18 @@ public:
                                                EndLoc);
   }
 
+  /// \brief Build a new OpenMP 'thread_limit' clause.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPThreadLimitClause(Expr *ThreadLimit,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPThreadLimitClause(ThreadLimit, StartLoc,
+                                                  LParenLoc, EndLoc);
+  }
+
   /// \brief Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -7715,6 +7727,16 @@ TreeTransform<Derived>::TransformOMPNumTeamsClause(OMPNumTeamsClause *C) {
   if (E.isInvalid())
     return nullptr;
   return getDerived().RebuildOMPNumTeamsClause(
+      E.get(), C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getThreadLimit());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPThreadLimitClause(
       E.get(), C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
 }
 

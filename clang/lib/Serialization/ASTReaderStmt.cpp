@@ -1853,6 +1853,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_num_teams:
     C = new (Context) OMPNumTeamsClause();
     break;
+  case OMPC_thread_limit:
+    C = new (Context) OMPThreadLimitClause();
+    break;
   }
   Visit(C);
   C->setLocStart(Reader->ReadSourceLocation(Record, Idx));
@@ -2179,6 +2182,11 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   C->setNumTeams(Reader->Reader.ReadSubExpr());
+  C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+}
+
+void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  C->setThreadLimit(Reader->Reader.ReadSubExpr());
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
 }
 

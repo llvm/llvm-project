@@ -255,6 +255,10 @@ def err_bad_variable_name : Error<
 def err_bad_parameter_name : Error<
   "%0 cannot be the name of a parameter">;
 def err_parameter_name_omitted : Error<"parameter name omitted">;
+def warn_mips_interrupt_attribute : Warning<
+   "MIPS 'interrupt' attribute only applies to functions that have "
+   "%select{no parameters|a 'void' return type}0">,
+   InGroup<IgnoredAttributes>;
 def warn_unused_parameter : Warning<"unused parameter %0">,
   InGroup<UnusedParameter>, DefaultIgnore;
 def warn_unused_variable : Warning<"unused variable %0">,
