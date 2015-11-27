@@ -857,7 +857,7 @@ getPatternComplexity(const CodeGenDAGPatterns &CGP) const {
 /// pattern's predicates concatenated with "&&" operators.
 ///
 std::string PatternToMatch::getPredicateCheck() const {
-  std::string PredicateCheck;
+  SmallVector<Record *, 4> PredicateRecs;
   for (Init *I : Predicates->getValues()) {
     if (DefInit *Pred = dyn_cast<DefInit>(I)) {
       Record *Def = Pred->getDef();
@@ -867,10 +867,17 @@ std::string PatternToMatch::getPredicateCheck() const {
 #endif
         llvm_unreachable("Unknown predicate type!");
       }
-      if (!PredicateCheck.empty())
-        PredicateCheck += " && ";
-      PredicateCheck += "(" + Def->getValueAsString("CondString") + ")";
+      PredicateRecs.push_back(Def);
     }
+  }
+  // Sort so that different orders get canonicalized to the same string.
+  std::sort(PredicateRecs.begin(), PredicateRecs.end(), LessRecord());
+
+  std::string PredicateCheck;
+  for (Record *Pred : PredicateRecs) {
+    if (!PredicateCheck.empty())
+      PredicateCheck += " && ";
+    PredicateCheck += "(" + Pred->getValueAsString("CondString") + ")";
   }
 
   return PredicateCheck;

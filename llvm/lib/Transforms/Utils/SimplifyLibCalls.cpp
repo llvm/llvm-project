@@ -86,11 +86,9 @@ static bool isOnlyUsedInEqualityComparison(Value *V, Value *With) {
 }
 
 static bool callHasFloatingPointArgument(const CallInst *CI) {
-  for (CallInst::const_op_iterator it = CI->op_begin(), e = CI->op_end();
-       it != e; ++it) {
-    if ((*it)->getType()->isFloatingPointTy())
+  for (const Use &OI : CI->operands())
+    if (OI->getType()->isFloatingPointTy())
       return true;
-  }
   return false;
 }
 

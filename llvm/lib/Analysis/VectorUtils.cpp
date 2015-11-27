@@ -438,7 +438,7 @@ llvm::Value *llvm::getSplatValue(Value *V) {
   return InsertEltInst->getOperand(1);
 }
 
-DenseMap<Instruction *, uint64_t>
+MapVector<Instruction *, uint64_t>
 llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                                const TargetTransformInfo *TTI) {
 
@@ -451,7 +451,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   SmallPtrSet<Value *, 16> Visited;
   DenseMap<Value *, uint64_t> DBits;
   SmallPtrSet<Instruction *, 4> InstructionSet;
-  DenseMap<Instruction *, uint64_t> MinBWs;
+  MapVector<Instruction *, uint64_t> MinBWs;
 
   // Determine the roots. We work bottom-up, from truncs or icmps.
   bool SeenExtFromIllegalType = false;
@@ -497,7 +497,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // If we encounter a type that is larger than 64 bits, we can't represent
     // it so bail out.
     if (DB.getDemandedBits(I).getBitWidth() > 64)
-      return DenseMap<Instruction *, uint64_t>();
+      return MapVector<Instruction *, uint64_t>();
 
     uint64_t V = DB.getDemandedBits(I).getZExtValue();
     DBits[Leader] |= V;

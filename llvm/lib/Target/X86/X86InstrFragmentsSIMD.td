@@ -378,15 +378,11 @@ def X86VPermilpv  : SDNode<"X86ISD::VPERMILPV", SDTShuff2OpM>;
 def X86VPermilpi  : SDNode<"X86ISD::VPERMILPI", SDTShuff2OpI>;
 def X86VPermv     : SDNode<"X86ISD::VPERMV",    SDTShuff2Op>;
 def X86VPermi     : SDNode<"X86ISD::VPERMI",    SDTShuff2OpI>;
-def X86VPermt2Fp   : SDNode<"X86ISD::VPERMV3",
-                    SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisFP<0>,
+def X86VPermt2     : SDNode<"X86ISD::VPERMV3",
+                    SDTypeProfile<1, 3, [SDTCisVec<0>,
                                          SDTCisSameAs<0,1>, SDTCisInt<2>,
                                          SDTCisVec<2>, SDTCisSameNumEltsAs<0, 2>,
                                          SDTCisSameSizeAs<0,2>,
-                                         SDTCisSameAs<0,3>]>, []>;
-def X86VPermt2Int  : SDNode<"X86ISD::VPERMV3",
-                    SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<0>,
-                                         SDTCisSameAs<0,1>, SDTCisSameAs<0,2>,
                                          SDTCisSameAs<0,3>]>, []>;
 
 def X86VPermi2X   : SDNode<"X86ISD::VPERMIV3", SDTShuff3Op>;
@@ -404,7 +400,7 @@ def X86Vfpclass    : SDNode<"X86ISD::VFPCLASS",
                                             SDTCisVec<1>, SDTCisFP<1>,
                                             SDTCisSameNumEltsAs<0,1>,
                                             SDTCisVT<2, i32>]>, []>;
-def X86Vfpclasss   : SDNode<"X86ISD::VFPCLASS",
+def X86Vfpclasss   : SDNode<"X86ISD::VFPCLASSS",
                        SDTypeProfile<1, 2, [SDTCisVT<0, i1>,
                                             SDTCisFP<1>, SDTCisVT<2, i32>]>,[]>;
 
