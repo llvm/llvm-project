@@ -11,6 +11,12 @@ declare void @f()
 ; CHECK: Alias must point to a definition
 ; CHECK-NEXT: @ga
 
+define available_externally void @f2() {
+  ret void
+}
+@fa2 = alias void(), void()* @f2
+; CHECK: Alias must point to a definition
+; CHECK-NEXT: @fa2
 
 @test2_a = alias i32, i32* @test2_b
 @test2_b = alias i32, i32* @test2_a

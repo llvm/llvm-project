@@ -325,7 +325,7 @@ public:
   // can be validly truncated to. The cost model has assumed this truncation
   // will happen when vectorizing.
   void vectorize(LoopVectorizationLegality *L,
-                 DenseMap<Instruction*,uint64_t> MinimumBitWidths) {
+                 MapVector<Instruction*,uint64_t> MinimumBitWidths) {
     MinBWs = MinimumBitWidths;
     Legal = L;
     // Create a new empty loop. Unlink the old loop and connect the new one.
@@ -546,7 +546,7 @@ protected:
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
   /// to this type.
-  DenseMap<Instruction*,uint64_t> MinBWs;
+  MapVector<Instruction*,uint64_t> MinBWs;
   LoopVectorizationLegality *Legal;
 
   // Record whether runtime check is added.
@@ -1505,7 +1505,7 @@ public:
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
   /// to this type.
-  DenseMap<Instruction*,uint64_t> MinBWs;
+  MapVector<Instruction*,uint64_t> MinBWs;
 
   /// The loop that we evaluate.
   Loop *TheLoop;

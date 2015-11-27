@@ -14,6 +14,7 @@ define i32 @main() #0 {
 entry:
   call void (...) @weakalias()
   call void (...) @analias()
+  call void (...) @linkoncealias()
   %call = call i32 (...) @referencestatics()
   %call1 = call i32 (...) @referenceglobals()
   %call2 = call i32 (...) @referencecommon()
@@ -27,10 +28,14 @@ entry:
 ; CHECK-DAG: declare extern_weak void @weakalias()
 declare void @weakalias(...) #1
 
-; Aliases import the aliasee function
-; CHECK-DAG: @analias = alias void (...), bitcast (void ()* @globalfunc2 to void (...)*)
-; CHECK-DAG: define available_externally void @globalfunc2()
+; Cannot create an alias to available_externally
+; CHECK-DAG: declare void @analias()
 declare void @analias(...) #1
+
+; Aliases import the aliasee function
+declare void @linkoncealias(...) #1
+; CHECK-DAG: define linkonce_odr void @linkoncefunc()
+; CHECK-DAG: @linkoncealias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*
 
 ; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i)
 ; INSTLIM5-DAG: declare i32 @referencestatics(...)

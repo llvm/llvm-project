@@ -655,7 +655,10 @@ bool ModuleLinker::doImportAsDefinition(const GlobalValue *SGV) {
   if (GA) {
     if (GA->hasWeakAnyLinkage())
       return false;
-    return doImportAsDefinition(GA->getBaseObject());
+    const GlobalObject *GO = GA->getBaseObject();
+    if (!GO->hasLinkOnceODRLinkage())
+      return false;
+    return doImportAsDefinition(GO);
   }
   // Always import GlobalVariable definitions, except for the special
   // case of WeakAny which are imported as ExternalWeak declarations

@@ -162,7 +162,7 @@ ReduceCrashingGlobalVariables::TestGlobalVariables(
   // playing with...
   for (GlobalVariable &I : M->globals())
     if (I.hasInitializer() && !GVSet.count(&I)) {
-      I.setInitializer(nullptr);
+      DeleteGlobalInitializer(&I);
       I.setLinkage(GlobalValue::ExternalLinkage);
     }
 
@@ -664,7 +664,7 @@ static bool DebugACrash(BugDriver &BD,
     for (Module::global_iterator I = M->global_begin(), E = M->global_end();
          I != E; ++I)
       if (I->hasInitializer()) {
-        I->setInitializer(nullptr);
+        DeleteGlobalInitializer(&*I);
         I->setLinkage(GlobalValue::ExternalLinkage);
         DeletedInit = true;
       }

@@ -179,11 +179,43 @@ std::unique_ptr<Module> BugDriver::extractLoop(Module *M) {
   return NewM;
 }
 
+static void eliminateAliases(GlobalValue *GV) {
+  // First, check whether a GlobalAlias references this definition.
+  // GlobalAlias MAY NOT reference declarations.
+  for (;;) {
+    // 1. Find aliases
+    SmallVector<GlobalAlias*,1> aliases;
+    Module *M = GV->getParent();
+    for (Module::alias_iterator I=M->alias_begin(), E=M->alias_end(); I!=E; ++I)
+      if (I->getAliasee()->stripPointerCasts() == GV)
+        aliases.push_back(&*I);
+    if (aliases.empty())
+      break;
+    // 2. Resolve aliases
+    for (unsigned i=0, e=aliases.size(); i<e; ++i) {
+      aliases[i]->replaceAllUsesWith(aliases[i]->getAliasee());
+      aliases[i]->eraseFromParent();
+    }
+    // 3. Repeat until no more aliases found; there might
+    // be an alias to an alias...
+  }
+}
+
+//
+// DeleteGlobalInitializer - "Remove" the global variable by deleting its initializer,
+// making it external.
+//
+void llvm::DeleteGlobalInitializer(GlobalVariable *GV) {
+  eliminateAliases(GV);
+  GV->setInitializer(nullptr);
+}
 
 // DeleteFunctionBody - "Remove" the function by deleting all of its basic
 // blocks, making it external.
 //
 void llvm::DeleteFunctionBody(Function *F) {
+  eliminateAliases(F);
+
   // delete the body of the function...
   F->deleteBody();
   assert(F->isDeclaration() && "This didn't make the function external!");
@@ -323,10 +355,10 @@ llvm::SplitFunctionsOutOfModule(Module *M,
                << "' and from test function '" << TestFn->getName() << "'.\n";
         exit(1);
       }
-      I.setInitializer(nullptr); // Delete the initializer to make it external
+      DeleteGlobalInitializer(&I); // Delete the initializer to make it external
     } else {
       // If we keep it in the safe module, then delete it in the test module
-      GV->setInitializer(nullptr);
+      DeleteGlobalInitializer(GV);
     }
   }
 

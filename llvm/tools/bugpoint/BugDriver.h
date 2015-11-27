@@ -321,6 +321,11 @@ void PrintFunctionList(const std::vector<Function*> &Funcs);
 ///
 void PrintGlobalVariableList(const std::vector<GlobalVariable*> &GVs);
 
+// DeleteGlobalInitializer - "Remove" the global variable by deleting its
+// initializer, making it external.
+//
+void DeleteGlobalInitializer(GlobalVariable *GV);
+
 // DeleteFunctionBody - "Remove" the function by deleting all of it's basic
 // blocks, making it external.
 //
