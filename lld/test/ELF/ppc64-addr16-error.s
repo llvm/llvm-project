@@ -4,4 +4,4 @@
 
 .short sym+65539
 
-// CHECK: Relocation R_PPC64_ADDR16 overflow
+// CHECK: Relocation R_PPC64_ADDR16 out of range

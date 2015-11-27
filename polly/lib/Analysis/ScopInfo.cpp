@@ -883,6 +883,8 @@ void ScopStmt::buildAccessRelations() {
     ScopArrayInfo::ARRAYKIND Ty;
     if (Access->isPHI())
       Ty = ScopArrayInfo::KIND_PHI;
+    else if (Access->isExitPHI())
+      Ty = ScopArrayInfo::KIND_EXIT_PHI;
     else if (Access->isImplicit())
       Ty = ScopArrayInfo::KIND_SCALAR;
     else
@@ -3932,7 +3934,7 @@ void ScopInfo::addPHIWriteAccess(PHINode *PHI, BasicBlock *IncomingBlock,
   addMemoryAccess(IncomingBlock, IncomingBlock->getTerminator(),
                   MemoryAccess::MUST_WRITE, PHI, 1, true, IncomingValue,
                   ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
-                  IsExitBlock ? MemoryAccess::SCALAR : MemoryAccess::PHI);
+                  IsExitBlock ? MemoryAccess::EXIT_PHI : MemoryAccess::PHI);
 }
 void ScopInfo::addPHIReadAccess(PHINode *PHI) {
   addMemoryAccess(PHI->getParent(), PHI, MemoryAccess::READ, PHI, 1, true, PHI,

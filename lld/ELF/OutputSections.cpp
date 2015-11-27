@@ -150,18 +150,25 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
     Target->writePltZeroEntry(Buf, Out<ELFT>::GotPlt->getVA(), this->getVA());
     Off += Target->getPltZeroEntrySize();
   }
-  for (const SymbolBody *E : Entries) {
-    uint64_t Got = LazyReloc ? Out<ELFT>::GotPlt->getEntryAddr(*E)
-                             : Out<ELFT>::Got->getEntryAddr(*E);
+  for (auto &I : Entries) {
+    const SymbolBody *E = I.first;
+    unsigned RelOff = I.second;
+    uint64_t GotVA =
+        LazyReloc ? Out<ELFT>::GotPlt->getVA() : Out<ELFT>::Got->getVA();
+    uint64_t GotE = LazyReloc ? Out<ELFT>::GotPlt->getEntryAddr(*E)
+                              : Out<ELFT>::Got->getEntryAddr(*E);
     uint64_t Plt = this->getVA() + Off;
-    Target->writePltEntry(Buf + Off, Got, Plt, E->PltIndex);
+    Target->writePltEntry(Buf + Off, GotVA, GotE, Plt, E->PltIndex, RelOff);
     Off += Target->getPltEntrySize();
   }
 }
 
 template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody *Sym) {
   Sym->PltIndex = Entries.size();
-  Entries.push_back(Sym);
+  unsigned RelOff = Target->supportsLazyRelocations()
+                        ? Out<ELFT>::RelaPlt->getRelocOffset()
+                        : Out<ELFT>::RelaDyn->getRelocOffset();
+  Entries.push_back(std::make_pair(Sym, RelOff));
 }
 
 template <class ELFT>
@@ -241,7 +248,8 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
                             Config->Mips64EL);
       else
         P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                            NeedsCopy ? Target->getCopyReloc() : Type,
+                            NeedsCopy ? Target->getCopyReloc()
+                                      : Target->getDynReloc(Type),
                             Config->Mips64EL);
     } else {
       P->setSymbolAndType(0, Target->getRelativeReloc(), Config->Mips64EL);
@@ -278,6 +286,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     if (IsRela)
       static_cast<Elf_Rela *>(P)->r_addend = Addend;
   }
+}
+
+template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
+  const unsigned EntrySize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+  return EntrySize * Relocs.size();
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalize() {

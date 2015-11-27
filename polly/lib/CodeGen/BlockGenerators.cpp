@@ -1201,7 +1201,7 @@ void RegionGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
     ValueMapT *LocalBBMap = &BBMap;
 
     // Implicit writes induced by PHIs must be written in the incoming blocks.
-    if (isa<TerminatorInst>(ScalarInst)) {
+    if (MA->isPHI() || MA->isExitPHI()) {
       BasicBlock *ExitingBB = ScalarInst->getParent();
       BasicBlock *ExitingBBCopy = BlockMap[ExitingBB];
       Builder.SetInsertPoint(ExitingBBCopy->getTerminator());
@@ -1217,7 +1217,7 @@ void RegionGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
     Builder.CreateStore(Val, Address);
 
     // Restore the insertion point if necessary.
-    if (isa<TerminatorInst>(ScalarInst))
+    if (MA->isPHI() || MA->isExitPHI())
       Builder.SetInsertPoint(SavedInsertBB, SavedInsertionPoint);
   }
 }

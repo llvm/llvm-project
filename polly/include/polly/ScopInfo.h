@@ -105,6 +105,10 @@ public:
     // Scalar references used to model PHI nodes
     KIND_PHI,
 
+    // Like KIND_PHI, but for PHIs in the exit node. Depending on context, these
+    // are handled like KIND_SCALAR.
+    KIND_EXIT_PHI,
+
     // References to (multi-dimensional) arrays
     KIND_ARRAY,
   };
@@ -324,7 +328,7 @@ public:
   /// #AccessValue is also the llvm::Value itself.
   ///
   ///
-  /// * Accesses to emulate PHI nodes
+  /// * Accesses to emulate PHI nodes within the SCoP
   ///
   /// PHIInst instructions such as
   ///
@@ -359,7 +363,15 @@ public:
   /// Note that there can also be a scalar write access for %PHI if used in a
   /// different BasicBlock, i.e. there can be a %PHI.phiops as well as a
   /// %PHI.s2a.
-  enum AccessOrigin { EXPLICIT, SCALAR, PHI };
+  ///
+  ///
+  /// * Accesses to emulate PHI nodes that are in the SCoP's exit block
+  ///
+  /// Like the previous, but the PHI itself is not located in the SCoP itself.
+  /// There will be no READ type MemoryAccess for such values. The PHINode's
+  /// llvm::Value is treated as a value escaping the SCoP. WRITE accesses write
+  /// directly to the escaping value's ".s2a" alloca.
+  enum AccessOrigin { EXPLICIT, SCALAR, PHI, EXIT_PHI };
 
   /// @brief The access type of a memory access
   ///
@@ -670,6 +682,10 @@ public:
 
   /// @brief Is this MemoryAccess modeling special PHI node accesses?
   bool isPHI() const { return Origin == PHI; }
+
+  /// @brief Is this MemoryAccess modeling the accesses of a PHI node in the
+  /// SCoP's exit block?
+  bool isExitPHI() const { return Origin == EXIT_PHI; }
 
   /// @brief Get the statement that contains this memory access.
   ScopStmt *getStatement() const { return Statement; }

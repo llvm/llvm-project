@@ -22,6 +22,7 @@ using namespace lldb_private;
 // Based on RegisterContextDarwin_arm.cpp
 #define GPR_OFFSET(idx) ((idx) * 4)
 #define FPU_OFFSET(idx) ((idx) * 4 + sizeof (RegisterContextLinux_arm::GPR))
+#define FPSCR_OFFSET (LLVM_EXTENSION offsetof (RegisterContextLinux_arm::FPU, fpscr) + sizeof (RegisterContextLinux_arm::GPR))
 #define EXC_OFFSET(idx) ((idx) * 4 + sizeof (RegisterContextLinux_arm::GPR) + sizeof (RegisterContextLinux_arm::FPU))
 #define DBG_OFFSET(reg) ((LLVM_EXTENSION offsetof (RegisterContextLinux_arm::DBG, reg) + sizeof (RegisterContextLinux_arm::GPR) + sizeof (RegisterContextLinux_arm::FPU) + sizeof (RegisterContextLinux_arm::EXC)))
 

@@ -25,61 +25,83 @@ class RegisterCommandsTestCase(TestBase):
         TestBase.tearDown(self)
 
     @skipIfiOSSimulator
+    @skipUnlessArch(['amd64', 'arm', 'i386', 'x86_64'])
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
-        if not self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
-            self.skipTest("This test requires x86 or x86_64 as the architecture for the inferior")
         self.build()
-        self.register_commands()
+        self.common_setup()
+
+        # verify that logging does not assert
+        self.log_enable("registers")
+
+        self.expect("register read -a", MISSING_EXPECTED_REGISTERS,
+            substrs = ['registers were unavailable'], matching = False)
+
+        if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
+            self.runCmd("register read xmm0")
+            self.runCmd("register read ymm15") # may be available
+        elif self.getArchitecture() in ['arm']:
+            self.runCmd("register read s0")
+            self.runCmd("register read q15") # may be available
+
+        self.expect("register read -s 3", substrs = ['invalid register set index: 3'], error = True)
 
     @skipIfiOSSimulator
     @skipIfTargetAndroid(archs=["i386"]) # Writing of mxcsr register fails, presumably due to a kernel/hardware problem
+    @skipUnlessArch(['amd64', 'arm', 'i386', 'x86_64'])
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
-        if not self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
-            self.skipTest("This test requires x86 or x86_64 as the architecture for the inferior")
         self.build()
         self.fp_register_write()
 
     @skipIfiOSSimulator
     @expectedFailureAndroid(archs=["i386"]) # "register read fstat" always return 0xffff
     @skipIfFreeBSD    #llvm.org/pr25057
+    @skipUnlessArch(['amd64', 'i386', 'x86_64'])
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
-        if not self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
-            self.skipTest("This test requires x86 or x86_64 as the architecture for the inferior")
         self.build()
         self.fp_special_purpose_register_read()
 
     @skipIfiOSSimulator
+    @skipUnlessArch(['amd64', 'arm', 'i386', 'x86_64'])
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
-        if not self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
-            self.skipTest("This test requires x86 or x86_64 as the architecture for the inferior")
         self.build()
-        self.register_expressions()
+        self.common_setup()
+
+        if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
+            gpr = "eax"
+            vector = "xmm0"
+        elif self.getArchitecture() in ['arm']:
+            gpr = "r0"
+            vector = "q0"
+
+        self.expect("expr/x $%s" % gpr, substrs = ['unsigned int', ' = 0x'])
+        self.expect("expr $%s" % vector, substrs = ['vector_type'])
+        self.expect("expr (unsigned int)$%s[0]" % vector, substrs = ['unsigned int'])
+
+        if self.getArchitecture() in ['amd64', 'x86_64']:
+            self.expect("expr -- ($rax & 0xffffffff) == $eax", substrs = ['true'])
 
     @skipIfiOSSimulator
+    @skipUnlessArch(['amd64', 'x86_64'])
     def test_convenience_registers(self):
         """Test convenience registers."""
-        if not self.getArchitecture() in ['amd64', 'x86_64']:
-            self.skipTest("This test requires x86_64 as the architecture for the inferior")
         self.build()
         self.convenience_registers()
 
     @skipIfiOSSimulator
+    @skipUnlessArch(['amd64', 'x86_64'])
     def test_convenience_registers_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
-        if not self.getArchitecture() in ['amd64', 'x86_64']:
-            self.skipTest("This test requires x86_64 as the architecture for the inferior")
         self.build()
         self.convenience_registers_with_process_attach(test_16bit_regs=False)
 
     @skipIfiOSSimulator
+    @skipUnlessArch(['amd64', 'x86_64'])
     def test_convenience_registers_16bit_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
-        if not self.getArchitecture() in ['amd64', 'x86_64']:
-            self.skipTest("This test requires x86_64 as the architecture for the inferior")
         self.build()
         self.convenience_registers_with_process_attach(test_16bit_regs=True)
 
@@ -96,11 +118,6 @@ class RegisterCommandsTestCase(TestBase):
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
             substrs = ['stopped', 'stop reason = breakpoint'])
-
-    def remove_log(self):
-        """ Remove the temporary log file generated by some tests."""
-        if os.path.exists(self.log_file):
-            os.remove(self.log_file)
 
     # platform specific logging of the specified category
     def log_enable(self, category):
@@ -120,44 +137,13 @@ class RegisterCommandsTestCase(TestBase):
             self.log_file = os.path.join(os.getcwd(), 'TestRegisters.log')
             self.runCmd("log enable " + self.platform + " " + str(category) + " registers -v -f " + self.log_file, RUN_SUCCEEDED)
             if not self.has_teardown:
+                def remove_log(self):
+                    if os.path.exists(self.log_file):
+                        os.remove(self.log_file)
                 self.has_teardown = True
-                self.addTearDownHook(self.remove_log)
+                self.addTearDownHook(remove_log)
 
-    def register_commands(self):
-        """Test commands related to registers, in particular vector registers."""
-        self.common_setup()
-
-        # verify that logging does not assert
-        self.log_enable("registers")
-
-        self.expect("register read -a", MISSING_EXPECTED_REGISTERS,
-            substrs = ['registers were unavailable'], matching = False)
-        self.runCmd("register read xmm0")
-        self.runCmd("register read ymm15") # may be available
-
-        self.expect("register read -s 3",
-            substrs = ['invalid register set index: 3'], error = True)
-
-    def write_and_restore(self, frame, register, must_exist = True):
-        value = frame.FindValue(register, lldb.eValueTypeRegister)
-        if must_exist:
-            self.assertTrue(value.IsValid(), "finding a value for register " + register)
-        elif not value.IsValid():
-            return # If register doesn't exist, skip this test
-
-        error = lldb.SBError()
-        register_value = value.GetValueAsUnsigned(error, 0)
-        self.assertTrue(error.Success(), "reading a value for " + register)
-
-        self.runCmd("register write " + register + " 0xff0e")
-        self.expect("register read " + register,
-            substrs = [register + ' = 0x', 'ff0e'])
-
-        self.runCmd("register write " + register + " " + str(register_value))
-        self.expect("register read " + register,
-            substrs = [register + ' = 0x'])
-
-    def vector_write_and_read(self, frame, register, new_value, must_exist = True):
+    def write_and_read(self, frame, register, new_value, must_exist = True):
         value = frame.FindValue(register, lldb.eValueTypeRegister)
         if must_exist:
             self.assertTrue(value.IsValid(), "finding a value for register " + register)
@@ -165,8 +151,7 @@ class RegisterCommandsTestCase(TestBase):
             return # If register doesn't exist, skip this test
 
         self.runCmd("register write " + register + " \'" + new_value + "\'")
-        self.expect("register read " + register,
-            substrs = [register + ' = ', new_value])
+        self.expect("register read " + register, substrs = [register + ' = ', new_value])
 
     def fp_special_purpose_register_read(self):
         exe = os.path.join(os.getcwd(), "a.out")
@@ -251,8 +236,7 @@ class RegisterCommandsTestCase(TestBase):
         process = target.LaunchSimple (None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertTrue(process.GetState() == lldb.eStateStopped, PROCESS_STOPPED)
 
         thread = process.GetThreadAtIndex(0)
         self.assertTrue(thread.IsValid(), "current thread is valid")
@@ -260,63 +244,61 @@ class RegisterCommandsTestCase(TestBase):
         currentFrame = thread.GetFrameAtIndex(0)
         self.assertTrue(currentFrame.IsValid(), "current frame is valid")
 
-        self.write_and_restore(currentFrame, "fcw", False)
-        self.write_and_restore(currentFrame, "fsw", False)
-        self.write_and_restore(currentFrame, "ftw", False)
-        self.write_and_restore(currentFrame, "ip", False)
-        self.write_and_restore(currentFrame, "dp", False)
-        self.write_and_restore(currentFrame, "mxcsr", False)
-        self.write_and_restore(currentFrame, "mxcsrmask", False)
+        if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
+            reg_list = [
+                # reg          value        must-have
+                ("fcw",       "0x0000ff0e", False),
+                ("fsw",       "0x0000ff0e", False),
+                ("ftw",       "0x0000ff0e", False),
+                ("ip",        "0x0000ff0e", False),
+                ("dp",        "0x0000ff0e", False),
+                ("mxcsr",     "0x0000ff0e", False),
+                ("mxcsrmask", "0x0000ff0e", False),
+            ]
 
-        st0regname = "st0"
-        if currentFrame.FindRegister(st0regname).IsValid() == False:
+            st0regname = None
+            if currentFrame.FindRegister("st0").IsValid():
+                st0regname = "st0"
+            elif currentFrame.FindRegister("stmm0").IsValid():
                 st0regname = "stmm0"
-        if currentFrame.FindRegister(st0regname).IsValid() == False:
-                return # TODO: anything smarter here
+            if st0regname is not None:
+                #                reg          value                                                                               must-have
+                reg_list.append((st0regname, "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x00 0x00}",                               True))
+                reg_list.append(("xmm0",     "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x2f 0x2f}", True))
+                reg_list.append(("xmm15",    "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}", False))
+        elif self.getArchitecture() in ['arm']:
+            reg_list = [
+                # reg      value                                                                               must-have
+                ("fpscr", "0xfbf79f9f",                                                                        True),
+                ("s0",    "1.25",                                                                              True),
+                ("s31",   "0.75",                                                                              True),
+                ("d1",    "123",                                                                               True),
+                ("d17",   "987",                                                                               False),
+                ("q1",    "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x2f 0x2f}", True),
+                ("q14",   "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}", False),
+            ]
 
-        new_value = "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
-        self.vector_write_and_read(currentFrame, st0regname, new_value)
+        for (reg, val, must) in reg_list:
+            self.write_and_read(currentFrame, reg, val, must)
 
-        new_value = "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x2f 0x2f}"
-        self.vector_write_and_read(currentFrame, "xmm0", new_value)
-        new_value = "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}"
-        self.vector_write_and_read(currentFrame, "xmm15", new_value, False)
+        if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
+            self.runCmd("register write " + st0regname + " \"{0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}\"")
+            self.expect("register read " + st0regname + " --format f", substrs = [st0regname + ' = 0'])
 
-        self.runCmd("register write " + st0regname + " \"{0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}\"")
-        self.expect("register read " + st0regname + " --format f",
-            substrs = [st0regname + ' = 0'])
+            has_avx = False 
+            registerSets = currentFrame.GetRegisters() # Returns an SBValueList.
+            for registerSet in registerSets:
+                if 'advanced vector extensions' in registerSet.GetName().lower():
+                    has_avx = True
+                    break
 
-        has_avx = False 
-        registerSets = currentFrame.GetRegisters() # Returns an SBValueList.
-        for registerSet in registerSets:
-            if 'advanced vector extensions' in registerSet.GetName().lower():
-                has_avx = True
-                break
-
-        if has_avx:
-            new_value = "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x0c 0x0d 0x0e 0x0f}"
-            self.vector_write_and_read(currentFrame, "ymm0", new_value)
-            self.vector_write_and_read(currentFrame, "ymm7", new_value)
-            self.expect("expr $ymm0", substrs = ['vector_type'])
-        else:
-            self.runCmd("register read ymm0")
-
-    def register_expressions(self):
-        """Test expression evaluation with commands related to registers."""
-        self.common_setup()
-
-        self.expect("expr/x $eax",
-            substrs = ['unsigned int', ' = 0x'])
-
-        if self.getArchitecture() in ['amd64', 'x86_64']:
-            self.expect("expr -- ($rax & 0xffffffff) == $eax",
-                substrs = ['true'])
-
-        self.expect("expr $xmm0",
-            substrs = ['vector_type'])
-
-        self.expect("expr (unsigned int)$xmm0[0]",
-            substrs = ['unsigned int'])
+            if has_avx:
+                new_value = "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x0c 0x0d 0x0e 0x0f}"
+                self.write_and_read(currentFrame, "ymm0", new_value)
+                self.write_and_read(currentFrame, "ymm7", new_value)
+                self.expect("expr $ymm0", substrs = ['vector_type'])
+            else:
+                self.runCmd("register read ymm0")
 
     def convenience_registers(self):
         """Test convenience registers."""

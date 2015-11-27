@@ -22,6 +22,7 @@
 #include "polly/RegisterPasses.h"
 #include "polly/Canonicalization.h"
 #include "polly/CodeGen/CodeGeneration.h"
+#include "polly/CodeGen/CodegenCleanup.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
@@ -153,6 +154,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializePollyCanonicalizePass(Registry);
   initializeScopDetectionPass(Registry);
   initializeScopInfoPass(Registry);
+  initializeCodegenCleanupPass(Registry);
 }
 
 /// @brief Register Polly passes such that they form a polyhedral optimizer.
@@ -263,7 +265,7 @@ registerPollyLoopOptimizerEndPasses(const llvm::PassManagerBuilder &Builder,
 
   PM.add(polly::createCodePreparationPass());
   polly::registerPollyPasses(PM);
-  // TODO: Add some cleanup passes
+  PM.add(createCodegenCleanupPass());
 }
 
 static void
@@ -277,7 +279,7 @@ registerPollyScalarOptimizerLatePasses(const llvm::PassManagerBuilder &Builder,
 
   PM.add(polly::createCodePreparationPass());
   polly::registerPollyPasses(PM);
-  // TODO: Add some cleanup passes
+  PM.add(createCodegenCleanupPass());
 }
 
 /// @brief Register Polly to be available as an optimizer

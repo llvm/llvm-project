@@ -2948,12 +2948,14 @@ Scalar::SetType (const RegisterInfo *reg_info)
         case eEncodingIEEE754:
             if (byte_size == sizeof(float))
             {
-                m_float = llvm::APFloat(m_float.convertToFloat());
+                bool losesInfo = false;
+                m_float.convert(llvm::APFloat::IEEEsingle, llvm::APFloat::rmTowardZero, &losesInfo);
                 m_type = e_float;
             }
             else if (byte_size == sizeof(double))
             {
-                m_float = llvm::APFloat(m_float.convertToDouble());
+                bool losesInfo = false;
+                m_float.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmTowardZero, &losesInfo);
                 m_type = e_double;
             }
             else if (byte_size == sizeof(long double))

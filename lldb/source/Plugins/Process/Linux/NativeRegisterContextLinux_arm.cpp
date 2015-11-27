@@ -100,6 +100,54 @@ static const uint32_t g_fpu_regnums_arm[] =
     fpu_s30_arm,
     fpu_s31_arm,
     fpu_fpscr_arm,
+    fpu_d0_arm,
+    fpu_d1_arm,
+    fpu_d2_arm,
+    fpu_d3_arm,
+    fpu_d4_arm,
+    fpu_d5_arm,
+    fpu_d6_arm,
+    fpu_d7_arm,
+    fpu_d8_arm,
+    fpu_d9_arm,
+    fpu_d10_arm,
+    fpu_d11_arm,
+    fpu_d12_arm,
+    fpu_d13_arm,
+    fpu_d14_arm,
+    fpu_d15_arm,
+    fpu_d16_arm,
+    fpu_d17_arm,
+    fpu_d18_arm,
+    fpu_d19_arm,
+    fpu_d20_arm,
+    fpu_d21_arm,
+    fpu_d22_arm,
+    fpu_d23_arm,
+    fpu_d24_arm,
+    fpu_d25_arm,
+    fpu_d26_arm,
+    fpu_d27_arm,
+    fpu_d28_arm,
+    fpu_d29_arm,
+    fpu_d30_arm,
+    fpu_d31_arm,
+    fpu_q0_arm,
+    fpu_q1_arm,
+    fpu_q2_arm,
+    fpu_q3_arm,
+    fpu_q4_arm,
+    fpu_q5_arm,
+    fpu_q6_arm,
+    fpu_q7_arm,
+    fpu_q8_arm,
+    fpu_q9_arm,
+    fpu_q10_arm,
+    fpu_q11_arm,
+    fpu_q12_arm,
+    fpu_q13_arm,
+    fpu_q14_arm,
+    fpu_q15_arm,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert(((sizeof g_fpu_regnums_arm / sizeof g_fpu_regnums_arm[0]) - 1) == k_num_fpr_registers_arm, \
@@ -246,6 +294,9 @@ NativeRegisterContextLinux_arm::ReadRegister (const RegisterInfo *reg_info, Regi
             break;
         case 8:
             reg_value.SetUInt64(*(uint64_t *)src);
+            break;
+        case 16:
+            reg_value.SetBytes(src, 16, GetByteOrder());
             break;
         default:
             assert(false && "Unhandled data size.");

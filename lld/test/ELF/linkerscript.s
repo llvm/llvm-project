@@ -38,6 +38,13 @@
 # RUN: ld.lld -o %t2 %t.script -L%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
+# RUN: echo "GROUP(" %t /libxyz.a ")" > %t.script
+# RUN: echo "GROUP(" %t /libxyz.a ")" > %t.dir/xyz.script
+# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script --sysroot=%t.dir
+# RUN: ld.lld -o %t2 %t.dir/xyz.script --sysroot=%t.dir
+# RUN: llvm-readobj %t2 > /dev/null
+
 # RUN: echo "GROUP(" %t.script2 ")" > %t.script1
 # RUN: echo "GROUP(" %t ")" > %t.script2
 # RUN: ld.lld -o %t2 %t.script1

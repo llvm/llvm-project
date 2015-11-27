@@ -38,6 +38,12 @@ import (
 	"llvm.org/llvm/bindings/go/llvm"
 )
 
+// /* Force exporting __morestack if it's available, so that it is
+//    available to the engine when linking with libLLVM.so. */
+//
+// void *__morestack __attribute__((weak));
+import "C"
+
 func getInstPrefix() (string, error) {
 	path, err := exec.LookPath(os.Args[0])
 	if err != nil {

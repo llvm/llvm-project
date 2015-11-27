@@ -840,6 +840,9 @@ public:
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
+    static_assert((is_same<typename allocator_type::value_type, value_type>::value),
+                  "Allocator::value_type must be same type as value_type");
+
     class _LIBCPP_TYPE_VIS_ONLY value_compare
         : public binary_function<value_type, value_type, bool>
     {
@@ -1695,6 +1698,9 @@ public:
     typedef _Allocator                               allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
+
+    static_assert((is_same<typename allocator_type::value_type, value_type>::value),
+                  "Allocator::value_type must be same type as value_type");
 
     class _LIBCPP_TYPE_VIS_ONLY value_compare
         : public binary_function<value_type, value_type, bool>

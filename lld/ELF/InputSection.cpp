@@ -98,7 +98,9 @@ void InputSectionBase<ELFT>::relocate(
     uint8_t *Buf, uint8_t *BufEnd,
     iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels) {
   typedef Elf_Rel_Impl<ELFT, isRela> RelType;
-  for (const RelType &RI : Rels) {
+  size_t Num = Rels.end() - Rels.begin();
+  for (size_t I = 0; I < Num; ++I) {
+    const RelType &RI = *(Rels.begin() + I);
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
     uint32_t Type = RI.getType(Config->Mips64EL);
     uintX_t Offset = getOffset(RI.r_offset);
@@ -108,7 +110,8 @@ void InputSectionBase<ELFT>::relocate(
     uint8_t *BufLoc = Buf + Offset;
     uintX_t AddrLoc = OutSec->getVA() + Offset;
 
-    if (Target->isTlsLocalDynamicReloc(Type)) {
+    if (Target->isTlsLocalDynamicReloc(Type) &&
+        !Target->isTlsOptimized(Type, nullptr)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
                           Out<ELFT>::Got->getVA() +
                               Out<ELFT>::LocalModuleTlsIndexOffset +
@@ -127,16 +130,20 @@ void InputSectionBase<ELFT>::relocate(
 
     SymbolBody &Body = *File->getSymbolBody(SymIndex)->repl();
 
-    if (Target->isTlsGlobalDynamicReloc(Type)) {
+    if (Target->isTlsGlobalDynamicReloc(Type) &&
+        !Target->isTlsOptimized(Type, &Body)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
                           Out<ELFT>::Got->getEntryAddr(Body) +
                               getAddend<ELFT>(RI));
       continue;
     }
 
-    if (Target->isTlsOptimized(Type, Body)) {
-      Target->relocateTlsOptimize(BufLoc, BufEnd, AddrLoc,
-                                  getSymVA<ELFT>(Body));
+    if (Target->isTlsOptimized(Type, &Body)) {
+      // By optimizing TLS relocations, it is sometimes needed to skip
+      // relocations that immediately follow TLS relocations. This function
+      // knows how many slots we need to skip.
+      I += Target->relocateTlsOptimize(BufLoc, BufEnd, Type, AddrLoc,
+                                       getSymVA<ELFT>(Body));
       continue;
     }
 
@@ -148,11 +155,10 @@ void InputSectionBase<ELFT>::relocate(
       SymVA = Out<ELFT>::Got->getEntryAddr(Body);
       Type = Body.isTLS() ? Target->getTlsGotReloc()
                           : Target->getGotRefReloc(Type);
-    } else if (Target->relocPointsToGot(Type)) {
-      SymVA = Out<ELFT>::Got->getVA();
-      Type = Target->getPCRelReloc();
     } else if (!Target->relocNeedsCopy(Type, Body) &&
                isa<SharedSymbol<ELFT>>(Body)) {
+      continue;
+    } else if (Target->isTlsDynReloc(Type)) {
       continue;
     }
     Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
@@ -253,7 +259,7 @@ MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
   if (Base != uintX_t(-1))
     return Base + Addend;
 
-  // Map the base to the offset in the output section and cashe it.
+  // Map the base to the offset in the output section and cache it.
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   StringRef Entry = Data.substr(Start, End - Start);

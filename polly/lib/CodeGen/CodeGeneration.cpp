@@ -176,6 +176,12 @@ public:
 
     assert(!verifyGeneratedFunction(S, *EnteringBB->getParent()) &&
            "Verification of generated function failed");
+
+    // Mark the function such that we run additional cleanup passes on this
+    // function (e.g. mem2reg to rediscover phi nodes).
+    Function *F = EnteringBB->getParent();
+    F->addFnAttr("polly-optimized");
+
     return true;
   }
 

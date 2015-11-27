@@ -22,9 +22,11 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
 
   // Flag all operators +, -, +=, -=, ++, -- that result in a pointer
   Finder->addMatcher(
-      binaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("-"),
-                           hasOperatorName("+="), hasOperatorName("-=")),
-                     hasType(pointerType()))
+      binaryOperator(
+          anyOf(hasOperatorName("+"), hasOperatorName("-"),
+                hasOperatorName("+="), hasOperatorName("-=")),
+          hasType(pointerType()),
+          unless(hasLHS(ignoringImpCasts(declRefExpr(to(isImplicit()))))))
           .bind("expr"),
       this);
 
@@ -36,8 +38,10 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
 
   // Array subscript on a pointer (not an array) is also pointer arithmetic
   Finder->addMatcher(
-      arraySubscriptExpr(hasBase(ignoringImpCasts(anyOf(hasType(pointerType()),
-                                                        hasType(decayedType(hasDecayedType(pointerType())))))))
+      arraySubscriptExpr(
+          hasBase(ignoringImpCasts(
+              anyOf(hasType(pointerType()),
+                    hasType(decayedType(hasDecayedType(pointerType())))))))
           .bind("expr"),
       this);
 }
