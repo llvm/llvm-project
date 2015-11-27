@@ -44,6 +44,7 @@
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Utility/JSON.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"
@@ -860,19 +861,28 @@ GDBRemoteCommunicationServerLLGS::ProcessStateChanged (NativeProcessProtocol *pr
                 StateAsCString (state));
     }
 
-    // Make sure we get all of the pending stdout/stderr from the inferior
-    // and send it to the lldb host before we send the state change
-    // notification
-    SendProcessOutput();
-
     switch (state)
     {
-    case StateType::eStateExited:
-        HandleInferiorState_Exited (process);
+    case StateType::eStateRunning:
+        StartSTDIOForwarding();
         break;
 
     case StateType::eStateStopped:
+        // Make sure we get all of the pending stdout/stderr from the inferior
+        // and send it to the lldb host before we send the state change
+        // notification
+        SendProcessOutput();
+        // Then stop the forwarding, so that any late output (see llvm.org/pr25652) does not
+        // interfere with our protocol.
+        StopSTDIOForwarding();
         HandleInferiorState_Stopped (process);
+        break;
+
+    case StateType::eStateExited:
+        // Same as above
+        SendProcessOutput();
+        StopSTDIOForwarding();
+        HandleInferiorState_Exited (process);
         break;
 
     default:
@@ -975,7 +985,6 @@ GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor (int fd)
         return error;
     }
 
-    Mutex::Locker locker(m_stdio_communication_mutex);
     m_stdio_communication.SetCloseOnEOF (false);
     m_stdio_communication.SetConnection (conn_up.release());
     if (!m_stdio_communication.IsConnected ())
@@ -984,33 +993,42 @@ GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor (int fd)
         return error;
     }
 
+    return Error();
+}
+
+void
+GDBRemoteCommunicationServerLLGS::StartSTDIOForwarding()
+{
+    // Don't forward if not connected (e.g. when attaching).
+    if (! m_stdio_communication.IsConnected())
+        return;
+
     // llgs local-process debugging may specify PTY paths, which will make these
     // file actions non-null
     // process launch -e/o will also make these file actions non-null
     // nullptr means that the traffic is expected to flow over gdb-remote protocol
-    if (
-        m_process_launch_info.GetFileActionForFD(STDOUT_FILENO) == nullptr ||
-        m_process_launch_info.GetFileActionForFD(STDERR_FILENO) == nullptr
-        )
-    {
-        // output from the process must be forwarded over gdb-remote
-        m_stdio_handle_up = m_mainloop.RegisterReadObject(
-                m_stdio_communication.GetConnection()->GetReadObject(),
-                [this] (MainLoopBase &) { SendProcessOutput(); }, error);
-        if (! m_stdio_handle_up)
-        {
-            m_stdio_communication.Disconnect();
-            return error;
-        }
-    }
+    if ( m_process_launch_info.GetFileActionForFD(STDOUT_FILENO) &&
+         m_process_launch_info.GetFileActionForFD(STDERR_FILENO))
+        return;
 
-    return Error();
+    Error error;
+    lldbassert(! m_stdio_handle_up);
+    m_stdio_handle_up = m_mainloop.RegisterReadObject(
+            m_stdio_communication.GetConnection()->GetReadObject(),
+            [this] (MainLoopBase &) { SendProcessOutput(); }, error);
+
+    if (! m_stdio_handle_up)
+    {
+        // Not much we can do about the failure. Log it and continue without forwarding.
+        if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS))
+            log->Printf("GDBRemoteCommunicationServerLLGS::%s Failed to set up stdio forwarding: %s",
+                        __FUNCTION__, error.AsCString());
+    }
 }
 
 void
 GDBRemoteCommunicationServerLLGS::StopSTDIOForwarding()
 {
-    Mutex::Locker locker(m_stdio_communication_mutex);
     m_stdio_handle_up.reset();
 }
 
@@ -1020,7 +1038,6 @@ GDBRemoteCommunicationServerLLGS::SendProcessOutput()
     char buffer[1024];
     ConnectionStatus status;
     Error error;
-    Mutex::Locker locker(m_stdio_communication_mutex);
     while (true)
     {
         size_t bytes_read = m_stdio_communication.Read(buffer, sizeof buffer, 0, status, &error);
@@ -1931,7 +1948,6 @@ GDBRemoteCommunicationServerLLGS::Handle_I (StringExtractorGDBRemote &packet)
         // TODO: enqueue this block in circular buffer and send window size to remote host
         ConnectionStatus status;
         Error error;
-        Mutex::Locker locker(m_stdio_communication_mutex);
         m_stdio_communication.Write(tmp, read, status, &error);
         if (error.Fail())
         {
@@ -2835,7 +2851,6 @@ GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection ()
 {
     Log *log (GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-    Mutex::Locker locker(m_stdio_communication_mutex);
     // Tell the stdio connection to shut down.
     if (m_stdio_communication.IsConnected())
     {
