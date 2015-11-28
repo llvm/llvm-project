@@ -1303,8 +1303,7 @@ static Value *ConstructSSAForLoadSet(LoadInst *LI,
   SSAUpdater SSAUpdate(&NewPHIs);
   SSAUpdate.Initialize(LI->getType(), LI->getName());
 
-  for (unsigned i = 0, e = ValuesPerBlock.size(); i != e; ++i) {
-    const AvailableValueInBlock &AV = ValuesPerBlock[i];
+  for (const AvailableValueInBlock &AV : ValuesPerBlock) {
     BasicBlock *BB = AV.BB;
 
     if (SSAUpdate.HasValueForBlock(BB))
@@ -1514,9 +1513,8 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // that we only have to insert *one* load (which means we're basically moving
   // the load, not inserting a new one).
 
-  SmallPtrSet<BasicBlock *, 4> Blockers;
-  for (unsigned i = 0, e = UnavailableBlocks.size(); i != e; ++i)
-    Blockers.insert(UnavailableBlocks[i]);
+  SmallPtrSet<BasicBlock *, 4> Blockers(UnavailableBlocks.begin(),
+                                        UnavailableBlocks.end());
 
   // Let's find the first basic block with more than one predecessor.  Walk
   // backwards through predecessors if needed.
@@ -1546,16 +1544,13 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // available.
   MapVector<BasicBlock *, Value *> PredLoads;
   DenseMap<BasicBlock*, char> FullyAvailableBlocks;
-  for (unsigned i = 0, e = ValuesPerBlock.size(); i != e; ++i)
-    FullyAvailableBlocks[ValuesPerBlock[i].BB] = true;
-  for (unsigned i = 0, e = UnavailableBlocks.size(); i != e; ++i)
-    FullyAvailableBlocks[UnavailableBlocks[i]] = false;
+  for (const AvailableValueInBlock &AV : ValuesPerBlock)
+    FullyAvailableBlocks[AV.BB] = true;
+  for (BasicBlock *UnavailableBB : UnavailableBlocks)
+    FullyAvailableBlocks[UnavailableBB] = false;
 
   SmallVector<BasicBlock *, 4> CriticalEdgePred;
-  for (pred_iterator PI = pred_begin(LoadBB), E = pred_end(LoadBB);
-       PI != E; ++PI) {
-    BasicBlock *Pred = *PI;
-
+  for (BasicBlock *Pred : predecessors(LoadBB)) {
     // If any predecessor block is an EH pad that does not allow non-PHI
     // instructions before the terminator, we can't PRE the load.
     if (Pred->getTerminator()->isEHPad()) {
@@ -1661,12 +1656,12 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
                  << *NewInsts.back() << '\n');
 
   // Assign value numbers to the new instructions.
-  for (unsigned i = 0, e = NewInsts.size(); i != e; ++i) {
+  for (Instruction *I : NewInsts) {
     // FIXME: We really _ought_ to insert these value numbers into their
     // parent's availability map.  However, in doing so, we risk getting into
     // ordering issues.  If a block hasn't been processed yet, we would be
     // marking a value as AVAIL-IN, which isn't what we intend.
-    VN.lookup_or_add(NewInsts[i]);
+    VN.lookup_or_add(I);
   }
 
   for (const auto &PredLoad : PredLoads) {
@@ -2615,9 +2610,7 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   BasicBlock *CurrentBlock = CurInst->getParent();
   predMap.clear();
 
-  for (pred_iterator PI = pred_begin(CurrentBlock), PE = pred_end(CurrentBlock);
-       PI != PE; ++PI) {
-    BasicBlock *P = *PI;
+  for (BasicBlock *P : predecessors(CurrentBlock)) {
     // We're not interested in PRE where the block is its
     // own predecessor, or in blocks with predecessors
     // that are not reachable.
@@ -2834,17 +2827,14 @@ void GVN::addDeadBlock(BasicBlock *BB) {
     DeadBlocks.insert(Dom.begin(), Dom.end());
     
     // Figure out the dominance-frontier(D).
-    for (SmallVectorImpl<BasicBlock *>::iterator I = Dom.begin(),
-           E = Dom.end(); I != E; I++) {
-      BasicBlock *B = *I;
-      for (succ_iterator SI = succ_begin(B), SE = succ_end(B); SI != SE; SI++) {
-        BasicBlock *S = *SI;
+    for (BasicBlock *B : Dom) {
+      for (BasicBlock *S : successors(B)) {
         if (DeadBlocks.count(S))
           continue;
 
         bool AllPredDead = true;
-        for (pred_iterator PI = pred_begin(S), PE = pred_end(S); PI != PE; PI++)
-          if (!DeadBlocks.count(*PI)) {
+        for (BasicBlock *P : predecessors(S))
+          if (!DeadBlocks.count(P)) {
             AllPredDead = false;
             break;
           }
@@ -2872,10 +2862,7 @@ void GVN::addDeadBlock(BasicBlock *BB) {
       continue;
 
     SmallVector<BasicBlock *, 4> Preds(pred_begin(B), pred_end(B));
-    for (SmallVectorImpl<BasicBlock *>::iterator PI = Preds.begin(),
-           PE = Preds.end(); PI != PE; PI++) {
-      BasicBlock *P = *PI;
-
+    for (BasicBlock *P : Preds) {
       if (!DeadBlocks.count(P))
         continue;
 
@@ -2935,14 +2922,10 @@ bool GVN::processFoldableCondBr(BranchInst *BI) {
 // instructions, it makes more sense just to "fabricate" a val-number for the
 // dead code than checking if instruction involved is dead or not.
 void GVN::assignValNumForDeadCode() {
-  for (SetVector<BasicBlock *>::iterator I = DeadBlocks.begin(),
-        E = DeadBlocks.end(); I != E; I++) {
-    BasicBlock *BB = *I;
-    for (BasicBlock::iterator II = BB->begin(), EE = BB->end();
-          II != EE; II++) {
-      Instruction *Inst = &*II;
-      unsigned ValNum = VN.lookup_or_add(Inst);
-      addToLeaderTable(ValNum, Inst, BB);
+  for (BasicBlock *BB : DeadBlocks) {
+    for (Instruction &Inst : *BB) {
+      unsigned ValNum = VN.lookup_or_add(&Inst);
+      addToLeaderTable(ValNum, &Inst, BB);
     }
   }
 }

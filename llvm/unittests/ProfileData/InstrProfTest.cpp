@@ -409,7 +409,7 @@ TEST_F(InstrProfTest, runtime_value_prof_data_read_write) {
   initializeValueProfRuntimeRecord(&RTRecord, &NumValueSites[0],
                                    &ValueProfNodes[0]);
 
-  ValueProfData *VPData = serializeValueProfDataFromRT(&RTRecord);
+  ValueProfData *VPData = serializeValueProfDataFromRT(&RTRecord, 0);
 
   InstrProfRecord Record("caller", 0x1234, {1ULL << 31, 2});
 

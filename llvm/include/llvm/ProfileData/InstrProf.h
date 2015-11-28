@@ -506,11 +506,15 @@ typedef struct ValueProfData {
   /// Return a pointer to \c ValueProfData instance ready to be streamed.
   static std::unique_ptr<ValueProfData>
   serializeFrom(const InstrProfRecord &Record);
+  /// Check the integrity of the record. Return the error code when
+  /// an error is detected, otherwise return instrprof_error::success.
+  instrprof_error checkIntegrity();
   /// Return a pointer to \c ValueProfileData instance ready to be read.
   /// All data in the instance are properly byte swapped. The input
   /// data is assumed to be in little endian order.
   static ErrorOr<std::unique_ptr<ValueProfData>>
-  getValueProfData(const unsigned char *D, const unsigned char *const BufferEnd,
+  getValueProfData(const unsigned char *SrcBuffer,
+                   const unsigned char *const SrcBufferEnd,
                    support::endianness SrcDataEndianness);
   /// Swap byte order from \c Endianness order to host byte order.
   void swapBytesToHost(support::endianness Endianness);
@@ -579,10 +583,13 @@ typedef struct ValueProfRuntimeRecord {
   ValueProfNode **NodesKind[IPVK_Last + 1];
 } ValueProfRuntimeRecord;
 
-/* Initialize the record for runtime value profile data.  */
-void initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
-                                      uint16_t *NumValueSites,
-                                      ValueProfNode **Nodes);
+/* Initialize the record for runtime value profile data. 
+ * Return 0 if the initialization is successful, otherwise
+ * return 1.
+ */
+int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
+                                     uint16_t *NumValueSites,
+                                     ValueProfNode **Nodes);
 
 /* Release memory allocated for the runtime record.  */
 void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord);
@@ -593,8 +600,8 @@ uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record);
 
 /* Return a ValueProfData instance that stores the data collected at runtime. */
 ValueProfData *
-serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record);
-
+serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
+                             ValueProfData *Dst);
 
 /*! \brief Return the \c ValueProfRecord header size including the
  * padding bytes.

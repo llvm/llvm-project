@@ -554,11 +554,11 @@ class LocalValueMaterializer final : public ValueMaterializer {
 
 public:
   LocalValueMaterializer(DenseSet<GlobalValue *> &Dropped) : Dropped(Dropped) {}
-  Value *materializeValueFor(Value *V) override;
+  Value *materializeDeclFor(Value *V) override;
 };
 }
 
-Value *LocalValueMaterializer::materializeValueFor(Value *V) {
+Value *LocalValueMaterializer::materializeDeclFor(Value *V) {
   auto *GO = dyn_cast<GlobalObject>(V);
   if (!GO)
     return nullptr;

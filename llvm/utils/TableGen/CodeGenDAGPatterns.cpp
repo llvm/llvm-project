@@ -14,6 +14,7 @@
 
 #include "CodeGenDAGPatterns.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
@@ -873,14 +874,14 @@ std::string PatternToMatch::getPredicateCheck() const {
   // Sort so that different orders get canonicalized to the same string.
   std::sort(PredicateRecs.begin(), PredicateRecs.end(), LessRecord());
 
-  std::string PredicateCheck;
+  SmallString<128> PredicateCheck;
   for (Record *Pred : PredicateRecs) {
     if (!PredicateCheck.empty())
       PredicateCheck += " && ";
     PredicateCheck += "(" + Pred->getValueAsString("CondString") + ")";
   }
 
-  return PredicateCheck;
+  return PredicateCheck.str();
 }
 
 //===----------------------------------------------------------------------===//

@@ -296,7 +296,7 @@ std::error_code RawInstrProfReader<IntPtrT>::readRawCounts(
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readValueData(
+std::error_code RawInstrProfReader<IntPtrT>::readValueProfilingData(
     InstrProfRecord &Record) {
 
   Record.clearValueData();
@@ -362,7 +362,7 @@ std::error_code RawInstrProfReader<IntPtrT>::readNextRecord(
     return EC;
 
   // Read value data and set Record.
-  if (std::error_code EC = readValueData(Record)) return EC;
+  if (std::error_code EC = readValueProfilingData(Record)) return EC;
 
   // Iterate.
   advanceData();
@@ -382,7 +382,7 @@ InstrProfLookupTrait::ComputeHash(StringRef K) {
 typedef InstrProfLookupTrait::data_type data_type;
 typedef InstrProfLookupTrait::offset_type offset_type;
 
-bool InstrProfLookupTrait::ReadValueProfilingData(
+bool InstrProfLookupTrait::readValueProfilingData(
     const unsigned char *&D, const unsigned char *const End) {
   ErrorOr<std::unique_ptr<ValueProfData>> VDataPtrOrErr =
       ValueProfData::getValueProfData(D, End, ValueProfDataEndianness);
@@ -433,7 +433,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer));
 
     // Read value profiling data.
-    if (FormatVersion > 2 && !ReadValueProfilingData(D, End)) {
+    if (FormatVersion > 2 && !readValueProfilingData(D, End)) {
       DataBuffer.clear();
       return data_type();
     }
