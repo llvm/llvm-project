@@ -53,13 +53,6 @@ exit:
 
 ;; ARM:        Symbol {
 ;; ARM:          Name: $d
-;; ARM-NEXT:     Value: 0
-;; ARM-NEXT:     Size: 0
-;; ARM-NEXT:     Binding: Local
-;; ARM-NEXT:     Type: None
-
-;; ARM:        Symbol {
-;; ARM:          Name: $d
 ;; ARM-NEXT:     Value: 0x{{[0-9A-F]+}}
 ;; ARM-NEXT:     Size: 0
 ;; ARM-NEXT:     Binding: Local
@@ -77,10 +70,17 @@ exit:
 ;; ARM-NEXT:     Section: .ARM.exidx
 ;; ARM-NEXT:   }
 
+;; ARM:        Symbol {
+;; ARM:          Name: $d
+;; ARM-NEXT:     Value: 0
+;; ARM-NEXT:     Size: 0
+;; ARM-NEXT:     Binding: Local
+;; ARM-NEXT:     Type: None
+
 ;; ARM-NOT:     ${{[atd]}}
 
 ;; TMB:        Symbol {
-;; TMB:          Name: $d.2
+;; TMB:          Name: $d.1
 ;; TMB-NEXT:     Value: 0x{{[0-9A-F]+}}
 ;; TMB-NEXT:     Size: 0
 ;; TMB-NEXT:     Binding: Local

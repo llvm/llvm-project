@@ -46,10 +46,15 @@ namespace llvm {
     ValueMaterializer &operator=(const ValueMaterializer&) = default;
 
   public:
-    /// materializeValueFor - The client should implement this method if they
-    /// want to generate a mapped Value on demand. For example, if linking
-    /// lazily.
-    virtual Value *materializeValueFor(Value *V) = 0;
+    /// The client should implement this method if they want to generate a
+    /// mapped Value on demand. For example, if linking lazily.
+    virtual Value *materializeDeclFor(Value *V) = 0;
+
+    /// If the data being mapped is recursive, the above function can map
+    /// just the declaration and this is called to compute the initializer.
+    /// It is called after the mapping is recorded, so it doesn't need to worry
+    /// about recursion.
+    virtual void materializeInitFor(GlobalValue *New, GlobalValue *Old);
   };
 
   /// RemapFlags - These are flags that the value mapping APIs allow.

@@ -71,10 +71,20 @@ static cl::opt<unsigned> SampleProfileSampleCoverage(
     "sample-profile-check-sample-coverage", cl::init(0), cl::value_desc("N"),
     cl::desc("Emit a warning if less than N% of samples in the input profile "
              "are matched to the IR."));
-static cl::opt<unsigned> SampleProfileHotThreshold(
-    "sample-profile-inline-hot-threshold", cl::init(5), cl::value_desc("N"),
+static cl::opt<double> SampleProfileHotThreshold(
+    "sample-profile-inline-hot-threshold", cl::init(0.1), cl::value_desc("N"),
     cl::desc("Inlined functions that account for more than N% of all samples "
              "collected in the parent function, will be inlined again."));
+static cl::opt<double> SampleProfileGlobalHotThreshold(
+    "sample-profile-global-hot-threshold", cl::init(30), cl::value_desc("N"),
+    cl::desc("Top-level functions that account for more than N% of all samples "
+             "collected in the profile, will be marked as hot for the inliner "
+             "to consider."));
+static cl::opt<double> SampleProfileGlobalColdThreshold(
+    "sample-profile-global-cold-threshold", cl::init(0.5), cl::value_desc("N"),
+    cl::desc("Top-level functions that account for less than N% of all samples "
+             "collected in the profile, will be marked as cold for the inliner "
+             "to consider."));
 
 namespace {
 typedef DenseMap<const BasicBlock *, uint64_t> BlockWeightMap;
@@ -96,7 +106,8 @@ public:
 
   SampleProfileLoader(StringRef Name = SampleProfileFile)
       : ModulePass(ID), DT(nullptr), PDT(nullptr), LI(nullptr), Reader(),
-        Samples(nullptr), Filename(Name), ProfileIsValid(false) {
+        Samples(nullptr), Filename(Name), ProfileIsValid(false),
+        TotalCollectedSamples(0) {
     initializeSampleProfileLoaderPass(*PassRegistry::getPassRegistry());
   }
 
@@ -121,6 +132,7 @@ protected:
   const FunctionSamples *findCalleeFunctionSamples(const CallInst &I) const;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineHotFunctions(Function &F);
+  bool emitInlineHints(Function &F);
   void printEdgeWeight(raw_ostream &OS, Edge E);
   void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
@@ -185,6 +197,12 @@ protected:
 
   /// \brief Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid;
+
+  /// \brief Total number of samples collected in this profile.
+  ///
+  /// This is the sum of all the samples collected in all the functions executed
+  /// at runtime.
+  uint64_t TotalCollectedSamples;
 };
 
 class SampleCoverageTracker {
@@ -262,7 +280,8 @@ bool callsiteIsHot(const FunctionSamples *CallerFS,
   if (CallsiteTotalSamples == 0)
     return false; // Callsite is trivially cold.
 
-  uint64_t PercentSamples = CallsiteTotalSamples * 100 / ParentTotalSamples;
+  double PercentSamples =
+      (double)CallsiteTotalSamples / (double)ParentTotalSamples * 100.0;
   return PercentSamples >= SampleProfileHotThreshold;
 }
 
@@ -579,6 +598,60 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
     FS = FS->findFunctionSamplesAt(S[i]);
   }
   return FS;
+}
+
+/// \brief Emit an inline hint if \p F is globally hot or cold.
+///
+/// If \p F consumes a significant fraction of samples (indicated by
+/// SampleProfileGlobalHotThreshold), apply the InlineHint attribute for the
+/// inliner to consider the function hot.
+///
+/// If \p F consumes a small fraction of samples (indicated by
+/// SampleProfileGlobalColdThreshold), apply the Cold attribute for the inliner
+/// to consider the function cold.
+///
+/// FIXME - This setting of inline hints is sub-optimal. Instead of marking a
+/// function globally hot or cold, we should be annotating individual callsites.
+/// This is not currently possible, but work on the inliner will eventually
+/// provide this ability. See http://reviews.llvm.org/D15003 for details and
+/// discussion.
+///
+/// \returns True if either attribute was applied to \p F.
+bool SampleProfileLoader::emitInlineHints(Function &F) {
+  if (TotalCollectedSamples == 0)
+    return false;
+
+  uint64_t FunctionSamples = Samples->getTotalSamples();
+  double SamplesPercent =
+      (double)FunctionSamples / (double)TotalCollectedSamples * 100.0;
+
+  // If the function collected more samples than the hot threshold, mark
+  // it globally hot.
+  if (SamplesPercent >= SampleProfileGlobalHotThreshold) {
+    F.addFnAttr(llvm::Attribute::InlineHint);
+    emitOptimizationRemark(
+        F.getContext(), DEBUG_TYPE, F, DebugLoc(),
+        Twine("Applied inline hint to globally hot function '" + F.getName() +
+              "' with " + Twine(std::to_string(SamplesPercent)) +
+              "% of samples (threshold: " +
+              Twine(std::to_string(SampleProfileGlobalHotThreshold)) + "%)"));
+    return true;
+  }
+
+  // If the function collected fewer samples than the cold threshold, mark
+  // it globally cold.
+  if (SamplesPercent <= SampleProfileGlobalColdThreshold) {
+    F.addFnAttr(llvm::Attribute::Cold);
+    emitOptimizationRemark(
+        F.getContext(), DEBUG_TYPE, F, DebugLoc(),
+        Twine("Applied cold hint to globally cold function '" + F.getName() +
+              "' with " + Twine(std::to_string(SamplesPercent)) +
+              "% of samples (threshold: " +
+              Twine(std::to_string(SampleProfileGlobalColdThreshold)) + "%)"));
+    return true;
+  }
+
+  return false;
 }
 
 /// \brief Iteratively inline hot callsites of a function.
@@ -1087,6 +1160,8 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   DEBUG(dbgs() << "Line number for the first instruction in " << F.getName()
                << ": " << getFunctionLoc(F) << "\n");
 
+  Changed |= emitInlineHints(F);
+
   Changed |= inlineHotFunctions(F);
 
   // Compute basic block weights.
@@ -1163,6 +1238,10 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
 bool SampleProfileLoader::runOnModule(Module &M) {
   if (!ProfileIsValid)
     return false;
+
+  // Compute the total number of samples collected in this profile.
+  for (const auto &I : Reader->getProfiles())
+    TotalCollectedSamples += I.second.getTotalSamples();
 
   bool retval = false;
   for (auto &F : M)

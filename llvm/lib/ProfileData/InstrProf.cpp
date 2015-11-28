@@ -170,10 +170,12 @@ void serializeValueProfRecordFrom(ValueProfRecord *This,
   }
 }
 
-ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure) {
+ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
+                                          ValueProfData *DstData) {
   uint32_t TotalSize = getValueProfDataSize(Closure);
 
-  ValueProfData *VPD = Closure->AllocValueProfData(TotalSize);
+  ValueProfData *VPD =
+      DstData ? DstData : Closure->AllocValueProfData(TotalSize);
 
   VPD->TotalSize = TotalSize;
   VPD->NumValueKinds = Closure->GetNumValueKinds(Closure->Record);
@@ -259,7 +261,7 @@ ValueProfData::serializeFrom(const InstrProfRecord &Record) {
   InstrProfRecordClosure.Record = &Record;
 
   std::unique_ptr<ValueProfData> VPD(
-      serializeValueProfDataFrom(&InstrProfRecordClosure));
+      serializeValueProfDataFrom(&InstrProfRecordClosure, 0));
   return VPD;
 }
 
@@ -269,9 +271,9 @@ ValueProfData::serializeFrom(const InstrProfRecord &Record) {
  * pre-compute the information needed to efficiently implement
  * ValueProfRecordClosure's callback interfaces.
  */
-void initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
-                                      uint16_t *NumValueSites,
-                                      ValueProfNode **Nodes) {
+int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
+                                     uint16_t *NumValueSites,
+                                     ValueProfNode **Nodes) {
   unsigned I, J, S = 0, NumValueKinds = 0;
   RuntimeRecord->NumValueSites = NumValueSites;
   RuntimeRecord->Nodes = Nodes;
@@ -284,6 +286,8 @@ void initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
     NumValueKinds++;
     RuntimeRecord->SiteCountArray[I] = (uint8_t *)calloc(N, 1);
     RuntimeRecord->NodesKind[I] = &RuntimeRecord->Nodes[S];
+    if (!RuntimeRecord->NodesKind[I])
+      return 1;
     for (J = 0; J < N; J++) {
       uint8_t C = 0;
       ValueProfNode *Site = RuntimeRecord->Nodes[S + J];
@@ -298,6 +302,7 @@ void initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
     S += N;
   }
   RuntimeRecord->NumValueKinds = NumValueKinds;
+  return 0;
 }
 
 void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord) {
@@ -367,15 +372,17 @@ uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record) {
 }
 
 /* Return a ValueProfData instance that stores the data collected
-   from runtime. */
+ * from runtime. If \c DstData is provided by the caller, the value
+ * profile data will be store in *DstData and DstData is returned,
+ * otherwise the method will allocate space for the value data and
+ * return pointer to the newly allocated space.
+ */
 ValueProfData *
-serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record) {
+serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
+                             ValueProfData *DstData) {
   RTRecordClosure.Record = Record;
-  return serializeValueProfDataFrom(&RTRecordClosure);
+  return serializeValueProfDataFrom(&RTRecordClosure, DstData);
 }
-
-
-
 
 void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
                                     InstrProfRecord::ValueMapType *VMap) {
@@ -442,6 +449,24 @@ static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
                                             ValueProfData());
 }
 
+instrprof_error ValueProfData::checkIntegrity() {
+  if (NumValueKinds > IPVK_Last + 1)
+    return instrprof_error::malformed;
+  // Total size needs to be mulltiple of quadword size.
+  if (TotalSize % sizeof(uint64_t))
+    return instrprof_error::malformed;
+
+  ValueProfRecord *VR = getFirstValueProfRecord(this);
+  for (uint32_t K = 0; K < this->NumValueKinds; K++) {
+    if (VR->Kind > IPVK_Last)
+      return instrprof_error::malformed;
+    VR = getValueProfRecordNext(VR);
+    if ((char *)VR - (char *)this > (ptrdiff_t)TotalSize)
+      return instrprof_error::malformed;
+  }
+  return instrprof_error::success;
+}
+
 ErrorOr<std::unique_ptr<ValueProfData>>
 ValueProfData::getValueProfData(const unsigned char *D,
                                 const unsigned char *const BufferEnd,
@@ -452,31 +477,17 @@ ValueProfData::getValueProfData(const unsigned char *D,
 
   const unsigned char *Header = D;
   uint32_t TotalSize = swapToHostOrder<uint32_t>(Header, Endianness);
-  uint32_t NumValueKinds = swapToHostOrder<uint32_t>(Header, Endianness);
-
   if (D + TotalSize > BufferEnd)
     return instrprof_error::too_large;
-  if (NumValueKinds > IPVK_Last + 1)
-    return instrprof_error::malformed;
-  // Total size needs to be mulltiple of quadword size.
-  if (TotalSize % sizeof(uint64_t))
-    return instrprof_error::malformed;
 
   std::unique_ptr<ValueProfData> VPD = allocValueProfData(TotalSize);
-
   memcpy(VPD.get(), D, TotalSize);
   // Byte swap.
   VPD->swapBytesToHost(Endianness);
 
-  // Data integrity check:
-  ValueProfRecord *VR = getFirstValueProfRecord(VPD.get());
-  for (uint32_t K = 0; K < VPD->NumValueKinds; K++) {
-    if (VR->Kind > IPVK_Last)
-      return instrprof_error::malformed;
-    VR = getValueProfRecordNext(VR);
-    if ((char *)VR - (char *)VPD.get() > (ptrdiff_t)TotalSize)
-      return instrprof_error::malformed;
-  }
+  instrprof_error EC = VPD->checkIntegrity();
+  if (EC != instrprof_error::success)
+    return EC;
 
   return std::move(VPD);
 }

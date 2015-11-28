@@ -1,7 +1,5 @@
-; RUN: llvm-as -function-summary %s -o %t.bc
-
 ; Ensure complete comdat group is materialized
-; RUN: llvm-link %t.bc -S | FileCheck %s
+; RUN: llvm-link %s -S | FileCheck %s
 ; CHECK: $linkoncecomdat = comdat any
 ; CHECK: @linkoncecomdat = linkonce global i32 2
 ; CHECK: @linkoncecomdat_unref_var = linkonce global i32 2, comdat($linkoncecomdat)

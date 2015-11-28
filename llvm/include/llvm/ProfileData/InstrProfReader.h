@@ -172,7 +172,7 @@ private:
   std::error_code readName(InstrProfRecord &Record);
   std::error_code readFuncHash(InstrProfRecord &Record);
   std::error_code readRawCounts(InstrProfRecord &Record);
-  std::error_code readValueData(InstrProfRecord &Record);
+  std::error_code readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
   void advanceData() { Data++; }
 
@@ -249,7 +249,7 @@ public:
     return StringRef((const char *)D, N);
   }
 
-  bool ReadValueProfilingData(const unsigned char *&D,
+  bool readValueProfilingData(const unsigned char *&D,
                               const unsigned char *const End);
   data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
 

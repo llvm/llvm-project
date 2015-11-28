@@ -152,6 +152,9 @@
 /* Define to 1 if you have the `shell32' library (-lshell32). */
 #undef HAVE_LIBSHELL32
 
+/* Define to 1 if you have the `uuid' library (-luuid). */
+#undef HAVE_LIBUUID
+
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
 

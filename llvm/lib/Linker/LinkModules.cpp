@@ -366,19 +366,13 @@ class ModuleLinker;
 /// speeds up linking for modules with many/ lazily linked functions of which
 /// few get used.
 class ValueMaterializerTy final : public ValueMaterializer {
-  TypeMapTy &TypeMap;
-  Module *DstM;
-  std::vector<GlobalValue *> &LazilyLinkGlobalValues;
   ModuleLinker *ModLinker;
 
 public:
-  ValueMaterializerTy(TypeMapTy &TypeMap, Module *DstM,
-                      std::vector<GlobalValue *> &LazilyLinkGlobalValues,
-                      ModuleLinker *ModLinker)
-      : ValueMaterializer(), TypeMap(TypeMap), DstM(DstM),
-        LazilyLinkGlobalValues(LazilyLinkGlobalValues), ModLinker(ModLinker) {}
+  ValueMaterializerTy(ModuleLinker *ModLinker) : ModLinker(ModLinker) {}
 
-  Value *materializeValueFor(Value *V) override;
+  Value *materializeDeclFor(Value *V) override;
+  void materializeInitFor(GlobalValue *New, GlobalValue *Old) override;
 };
 
 class LinkDiagnosticInfo : public DiagnosticInfo {
@@ -418,9 +412,6 @@ class ModuleLinker {
   // Set of items not to link in from source.
   SmallPtrSet<const Value *, 16> DoNotLinkFromSource;
 
-  // Vector of GlobalValues to lazily link in.
-  std::vector<GlobalValue *> LazilyLinkGlobalValues;
-
   DiagnosticHandlerFunction DiagnosticHandler;
 
   /// For symbol clashes, prefer those from Src.
@@ -450,8 +441,7 @@ public:
                DiagnosticHandlerFunction DiagnosticHandler, unsigned Flags,
                const FunctionInfoIndex *Index = nullptr,
                Function *FuncToImport = nullptr)
-      : DstM(dstM), SrcM(srcM), TypeMap(Set),
-        ValMaterializer(TypeMap, DstM, LazilyLinkGlobalValues, this),
+      : DstM(dstM), SrcM(srcM), TypeMap(Set), ValMaterializer(this),
         DiagnosticHandler(DiagnosticHandler), Flags(Flags), ImportIndex(Index),
         ImportFunction(FuncToImport), HasExportedFunctions(false),
         DoneLinkingBodies(false) {
@@ -466,7 +456,10 @@ public:
   }
 
   bool run();
+  Value *materializeDeclFor(Value *V);
+  void materializeInitFor(GlobalValue *New, GlobalValue *Old);
 
+private:
   bool shouldOverrideFromSrc() { return Flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() { return Flags & Linker::LinkOnlyNeeded; }
   bool shouldInternalizeLinkedSymbols() {
@@ -484,7 +477,6 @@ public:
   /// Check if all global value body linking is complete.
   bool doneLinkingBodies() { return DoneLinkingBodies; }
 
-private:
   bool shouldLinkFromSource(bool &LinkFromSrc, const GlobalValue &Dest,
                             const GlobalValue &Src);
 
@@ -901,7 +893,11 @@ GlobalValue *ModuleLinker::copyGlobalValueProto(TypeMapTy &TypeMap,
   return NewGV;
 }
 
-Value *ValueMaterializerTy::materializeValueFor(Value *V) {
+Value *ValueMaterializerTy::materializeDeclFor(Value *V) {
+  return ModLinker->materializeDeclFor(V);
+}
+
+Value *ModuleLinker::materializeDeclFor(Value *V) {
   auto *SGV = dyn_cast<GlobalValue>(V);
   if (!SGV)
     return nullptr;
@@ -909,10 +905,10 @@ Value *ValueMaterializerTy::materializeValueFor(Value *V) {
   // If we are done linking global value bodies (i.e. we are performing
   // metadata linking), don't link in the global value due to this
   // reference, simply map it to null.
-  if (ModLinker->doneLinkingBodies())
+  if (doneLinkingBodies())
     return nullptr;
 
-  GlobalValue *DGV = ModLinker->copyGlobalValueProto(TypeMap, SGV);
+  GlobalValue *DGV = copyGlobalValueProto(TypeMap, SGV);
 
   if (Comdat *SC = SGV->getComdat()) {
     if (auto *DGO = dyn_cast<GlobalObject>(DGV)) {
@@ -921,8 +917,25 @@ Value *ValueMaterializerTy::materializeValueFor(Value *V) {
     }
   }
 
-  LazilyLinkGlobalValues.push_back(SGV);
   return DGV;
+}
+
+void ValueMaterializerTy::materializeInitFor(GlobalValue *New,
+                                             GlobalValue *Old) {
+  return ModLinker->materializeInitFor(New, Old);
+}
+
+void ModuleLinker::materializeInitFor(GlobalValue *New, GlobalValue *Old) {
+  if (isPerformingImport() && !doImportAsDefinition(Old))
+    return;
+
+  // Skip declarations that ValueMaterializer may have created in
+  // case we link in only some of SrcM.
+  if (shouldLinkOnlyNeeded() && Old->isDeclaration())
+    return;
+
+  assert(!Old->isDeclaration() && "users should not pass down decls");
+  linkGlobalValueBody(*Old);
 }
 
 bool ModuleLinker::getComdatLeader(Module *M, StringRef ComdatName,
@@ -1602,10 +1615,10 @@ bool ModuleLinker::linkGlobalValueBody(GlobalValue &Src) {
     // are linked in. Otherwise, linkonce and other lazy linked GVs will
     // not be materialized if they aren't referenced.
     for (auto *SGV : ComdatMembers[SC]) {
-      if (ValueMap[SGV])
+      auto *DGV = cast_or_null<GlobalValue>(ValueMap[SGV]);
+      if (DGV && !DGV->isDeclaration())
         continue;
-      Value *NewV = ValMaterializer.materializeValueFor(SGV);
-      ValueMap[SGV] = NewV;
+      MapValue(SGV, ValueMap, RF_MoveDistinctMDs, &TypeMap, &ValMaterializer);
     }
   }
   if (shouldInternalizeLinkedSymbols())
@@ -1937,23 +1950,6 @@ bool ModuleLinker::run() {
     if (!Src.hasInitializer() || DoNotLinkFromSource.count(&Src))
       continue;
     linkGlobalValueBody(Src);
-  }
-
-  // Process vector of lazily linked in functions.
-  while (!LazilyLinkGlobalValues.empty()) {
-    GlobalValue *SGV = LazilyLinkGlobalValues.back();
-    LazilyLinkGlobalValues.pop_back();
-    if (isPerformingImport() && !doImportAsDefinition(SGV))
-      continue;
-
-    // Skip declarations that ValueMaterializer may have created in
-    // case we link in only some of SrcM.
-    if (shouldLinkOnlyNeeded() && SGV->isDeclaration())
-      continue;
-
-    assert(!SGV->isDeclaration() && "users should not pass down decls");
-    if (linkGlobalValueBody(*SGV))
-      return true;
   }
 
   // Note that we are done linking global value bodies. This prevents

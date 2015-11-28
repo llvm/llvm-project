@@ -3963,7 +3963,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     AArch64Operand &ImmOp = static_cast<AArch64Operand &>(*Operands[2]);
     if (RegOp.isReg() && ImmOp.isFPImm() && ImmOp.getFPImm() == (unsigned)-1) {
       unsigned zreg =
-          AArch64MCRegisterClasses[AArch64::FPR32RegClassID].contains(
+          !AArch64MCRegisterClasses[AArch64::FPR64RegClassID].contains(
               RegOp.getReg())
               ? AArch64::WZR
               : AArch64::XZR;
