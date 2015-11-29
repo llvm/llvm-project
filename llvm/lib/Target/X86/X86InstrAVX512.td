@@ -2913,6 +2913,11 @@ def VMOVPQIto64Zmr : I<0xD6, MRMDestMem, (outs),
                        EVEX, PD, VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>,
                        Sched<[WriteStore]>, Requires<[HasAVX512, In64BitMode]>;
 
+def VMOV64toPQIZrr_REV : AVX512BI<0xD6, MRMDestReg, (outs VR128X:$dst),
+                            (ins VR128X:$src),
+                            "vmovq.s\t{$src, $dst|$dst, $src}",[]>,
+                            EVEX, VEX_W, VEX_LIG;
+
 // Move Scalar Single to Double Int
 //
 let isCodeGenOnly = 1 in {

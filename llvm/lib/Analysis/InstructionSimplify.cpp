@@ -2090,8 +2090,7 @@ static Constant *computePointerICmp(const DataLayout &DL,
 
     // Is the set of underlying objects all noalias calls?
     auto IsNAC = [](SmallVectorImpl<Value *> &Objects) {
-      return std::all_of(Objects.begin(), Objects.end(),
-                         [](Value *V){ return isNoAliasCall(V); });
+      return std::all_of(Objects.begin(), Objects.end(), isNoAliasCall);
     };
 
     // Is the set of underlying objects all things which must be disjoint from

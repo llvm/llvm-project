@@ -537,7 +537,7 @@ private:
   bool linkGlobalValueProto(GlobalValue *GV);
   bool linkModuleFlagsMetadata();
 
-  void linkAppendingVarInit(const AppendingVarInfo &AVI);
+  void linkAppendingVarInit(AppendingVarInfo &AVI);
 
   void linkGlobalInit(GlobalVariable &Dst, GlobalVariable &Src);
   bool linkFunctionBody(Function &Dst, Function &Src);
@@ -1314,54 +1314,57 @@ void ModuleLinker::upgradeMismatchedGlobals() {
 /// Return true on error.
 bool ModuleLinker::linkAppendingVarProto(GlobalVariable *DstGV,
                                          const GlobalVariable *SrcGV) {
-
-  if (!SrcGV->hasAppendingLinkage() || !DstGV->hasAppendingLinkage())
-    return emitError("Linking globals named '" + SrcGV->getName() +
-           "': can only link appending global with another appending global!");
-
-  ArrayType *DstTy = cast<ArrayType>(DstGV->getType()->getElementType());
   ArrayType *SrcTy =
-    cast<ArrayType>(TypeMap.get(SrcGV->getType()->getElementType()));
-  Type *EltTy = DstTy->getElementType();
+      cast<ArrayType>(TypeMap.get(SrcGV->getType()->getElementType()));
+  Type *EltTy = SrcTy->getElementType();
 
-  // Check to see that they two arrays agree on type.
-  if (EltTy != SrcTy->getElementType())
-    return emitError("Appending variables with different element types!");
-  if (DstGV->isConstant() != SrcGV->isConstant())
-    return emitError("Appending variables linked with different const'ness!");
+  uint64_t NewSize = SrcTy->getNumElements();
+  if (DstGV) {
+    ArrayType *DstTy = cast<ArrayType>(DstGV->getType()->getElementType());
+    NewSize += DstTy->getNumElements();
 
-  if (DstGV->getAlignment() != SrcGV->getAlignment())
-    return emitError(
-             "Appending variables with different alignment need to be linked!");
+    if (!SrcGV->hasAppendingLinkage() || !DstGV->hasAppendingLinkage())
+      return emitError(
+          "Linking globals named '" + SrcGV->getName() +
+          "': can only link appending global with another appending global!");
 
-  if (DstGV->getVisibility() != SrcGV->getVisibility())
-    return emitError(
-            "Appending variables with different visibility need to be linked!");
+    // Check to see that they two arrays agree on type.
+    if (EltTy != DstTy->getElementType())
+      return emitError("Appending variables with different element types!");
+    if (DstGV->isConstant() != SrcGV->isConstant())
+      return emitError("Appending variables linked with different const'ness!");
 
-  if (DstGV->hasUnnamedAddr() != SrcGV->hasUnnamedAddr())
-    return emitError(
-        "Appending variables with different unnamed_addr need to be linked!");
+    if (DstGV->getAlignment() != SrcGV->getAlignment())
+      return emitError(
+          "Appending variables with different alignment need to be linked!");
 
-  if (StringRef(DstGV->getSection()) != SrcGV->getSection())
-    return emitError(
+    if (DstGV->getVisibility() != SrcGV->getVisibility())
+      return emitError(
+          "Appending variables with different visibility need to be linked!");
+
+    if (DstGV->hasUnnamedAddr() != SrcGV->hasUnnamedAddr())
+      return emitError(
+          "Appending variables with different unnamed_addr need to be linked!");
+
+    if (StringRef(DstGV->getSection()) != SrcGV->getSection())
+      return emitError(
           "Appending variables with different section name need to be linked!");
+  }
 
-  uint64_t NewSize = DstTy->getNumElements() + SrcTy->getNumElements();
   ArrayType *NewType = ArrayType::get(EltTy, NewSize);
 
   // Create the new global variable.
-  GlobalVariable *NG =
-    new GlobalVariable(*DstGV->getParent(), NewType, SrcGV->isConstant(),
-                       DstGV->getLinkage(), /*init*/nullptr, /*name*/"", DstGV,
-                       DstGV->getThreadLocalMode(),
-                       DstGV->getType()->getAddressSpace());
+  GlobalVariable *NG = new GlobalVariable(
+      *DstM, NewType, SrcGV->isConstant(), SrcGV->getLinkage(),
+      /*init*/ nullptr, /*name*/ "", DstGV, SrcGV->getThreadLocalMode(),
+      SrcGV->getType()->getAddressSpace());
 
   // Propagate alignment, visibility and section info.
-  copyGVAttributes(NG, DstGV);
+  copyGVAttributes(NG, SrcGV);
 
   AppendingVarInfo AVI;
   AVI.NewGV = NG;
-  AVI.DstInit = DstGV->getInitializer();
+  AVI.DstInit = DstGV ? DstGV->getInitializer() : nullptr;
   AVI.SrcInit = SrcGV->getInitializer();
   AppendingVars.push_back(AVI);
 
@@ -1369,8 +1372,10 @@ bool ModuleLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   // global.
   ValueMap[SrcGV] = ConstantExpr::getBitCast(NG, TypeMap.get(SrcGV->getType()));
 
-  DstGV->replaceAllUsesWith(ConstantExpr::getBitCast(NG, DstGV->getType()));
-  DstGV->eraseFromParent();
+  if (DstGV) {
+    DstGV->replaceAllUsesWith(ConstantExpr::getBitCast(NG, DstGV->getType()));
+    DstGV->eraseFromParent();
+  }
 
   // Track the source variable so we don't try to link it.
   DoNotLinkFromSource.insert(SrcGV);
@@ -1391,8 +1396,8 @@ bool ModuleLinker::linkGlobalValueProto(GlobalValue *SGV) {
     DoNotLinkFromSource.insert(SGV);
     return false;
   }
-  if (DGV && DGV->hasAppendingLinkage())
-    return linkAppendingVarProto(cast<GlobalVariable>(DGV),
+  if (SGV->hasAppendingLinkage())
+    return linkAppendingVarProto(cast_or_null<GlobalVariable>(DGV),
                                  cast<GlobalVariable>(SGV));
 
   bool LinkFromSrc = true;
@@ -1493,10 +1498,11 @@ static void getArrayElements(const Constant *C,
     Dest.push_back(C->getAggregateElement(i));
 }
 
-void ModuleLinker::linkAppendingVarInit(const AppendingVarInfo &AVI) {
+void ModuleLinker::linkAppendingVarInit(AppendingVarInfo &AVI) {
   // Merge the initializer.
   SmallVector<Constant *, 16> DstElements;
-  getArrayElements(AVI.DstInit, DstElements);
+  if (AVI.DstInit)
+    getArrayElements(AVI.DstInit, DstElements);
 
   SmallVector<Constant *, 16> SrcElements;
   getArrayElements(AVI.SrcInit, SrcElements);
@@ -1517,9 +1523,18 @@ void ModuleLinker::linkAppendingVarInit(const AppendingVarInfo &AVI) {
     DstElements.push_back(
         MapValue(V, ValueMap, RF_MoveDistinctMDs, &TypeMap, &ValMaterializer));
   }
-  if (IsNewStructor) {
+  if (DstElements.size() != NewType->getNumElements()) {
     NewType = ArrayType::get(NewType->getElementType(), DstElements.size());
-    AVI.NewGV->mutateType(PointerType::get(NewType, 0));
+    GlobalVariable *Old = AVI.NewGV;
+    GlobalVariable *NG = new GlobalVariable(
+        *DstM, NewType, Old->isConstant(), Old->getLinkage(), /*init*/ nullptr,
+        /*name*/ "", Old, Old->getThreadLocalMode(),
+        Old->getType()->getAddressSpace());
+    copyGVAttributes(NG, Old);
+    AVI.NewGV->replaceAllUsesWith(
+        ConstantExpr::getBitCast(NG, AVI.NewGV->getType()));
+    AVI.NewGV->eraseFromParent();
+    AVI.NewGV = NG;
   }
 
   AVI.NewGV->setInitializer(ConstantArray::get(NewType, DstElements));
@@ -1909,7 +1924,7 @@ bool ModuleLinker::run() {
     if (linkGlobalValueProto(&GA))
       return true;
 
-  for (const AppendingVarInfo &AppendingVar : AppendingVars)
+  for (AppendingVarInfo &AppendingVar : AppendingVars)
     linkAppendingVarInit(AppendingVar);
 
   for (const auto &Entry : DstM->getComdatSymbolTable()) {
