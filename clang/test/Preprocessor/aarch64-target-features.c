@@ -71,6 +71,9 @@
 // CHECK-NEON: __ARM_NEON 1
 // CHECK-NEON: __ARM_NEON_FP 0xE
 
+// RUN: %clang -target aarch64-none-eabi -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-V81A %s
+// CHECK-V81A: __ARM_FEATURE_QRDMX 1
+
 // RUN: %clang -target aarch64 -march=arm64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ARCH-NOT-ACCEPT %s
 // RUN: %clang -target aarch64 -march=aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ARCH-NOT-ACCEPT %s
 // CHECK-ARCH-NOT-ACCEPT: error: the clang compiler does not support
