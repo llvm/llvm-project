@@ -86,10 +86,9 @@ static bool isOnlyUsedInEqualityComparison(Value *V, Value *With) {
 }
 
 static bool callHasFloatingPointArgument(const CallInst *CI) {
-  for (const Use &OI : CI->operands())
-    if (OI->getType()->isFloatingPointTy())
-      return true;
-  return false;
+  return std::any_of(CI->op_begin(), CI->op_end(), [](const Use &OI) {
+    return OI->getType()->isFloatingPointTy();
+  });
 }
 
 /// \brief Check whether the overloaded unary floating point function
@@ -1454,8 +1453,8 @@ LibCallSimplifier::classifyArgUse(Value *Val, BasicBlock *BB, bool IsFloat,
 
   Function *Callee = CI->getCalledFunction();
   LibFunc::Func Func;
-  if (Callee && (!TLI->getLibFunc(Callee->getName(), Func) || !TLI->has(Func) ||
-                 !isTrigLibCall(CI)))
+  if (!Callee || !TLI->getLibFunc(Callee->getName(), Func) || !TLI->has(Func) ||
+      !isTrigLibCall(CI))
     return;
 
   if (IsFloat) {

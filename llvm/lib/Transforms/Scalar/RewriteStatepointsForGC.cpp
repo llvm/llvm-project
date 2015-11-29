@@ -253,9 +253,8 @@ static bool containsGCPtrType(Type *Ty) {
   if (ArrayType *AT = dyn_cast<ArrayType>(Ty))
     return containsGCPtrType(AT->getElementType());
   if (StructType *ST = dyn_cast<StructType>(Ty))
-    return std::any_of(
-        ST->subtypes().begin(), ST->subtypes().end(),
-        [](Type *SubType) { return containsGCPtrType(SubType); });
+    return std::any_of(ST->subtypes().begin(), ST->subtypes().end(),
+                       containsGCPtrType);
   return false;
 }
 

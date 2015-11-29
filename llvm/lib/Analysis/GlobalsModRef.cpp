@@ -878,9 +878,7 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(ImmutableCallSite CS,
     GetUnderlyingObjects(A, Objects, DL);
     
     // All objects must be identified.
-    if (!std::all_of(Objects.begin(), Objects.end(), [&GV](const Value *V) {
-          return isIdentifiedObject(V);
-        }))
+    if (!std::all_of(Objects.begin(), Objects.end(), isIdentifiedObject))
       return ConservativeResult;
 
     if (std::find(Objects.begin(), Objects.end(), GV) != Objects.end())

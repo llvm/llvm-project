@@ -19077,3 +19077,19 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x81,0x7c,0xce,0x11,0xe3]
           vmovups.s %zmm20, %zmm27 {%k6} {z}
 
+// CHECK: vmovq.s %xmm9, %xmm29
+// CHECK:  encoding: [0x62,0x11,0xfd,0x08,0xd6,0xcd]
+          vmovq.s %xmm9, %xmm29
+
+// CHECK: vmovq.s %xmm5, %xmm18
+// CHECK:  encoding: [0x62,0xb1,0xfd,0x08,0xd6,0xea]
+          vmovq.s %xmm5, %xmm18
+
+// CHECK: vmovq.s  %xmm14, %xmm25
+// CHECK:  encoding: [0x62,0x11,0xfd,0x08,0xd6,0xf1]
+          vmovq.s  %xmm14, %xmm25
+
+// CHECK: vmovq.s  %xmm24, %xmm12
+// CHECK:  encoding: [0x62,0x41,0xfd,0x08,0xd6,0xc4]
+          vmovq.s  %xmm24, %xmm12
+

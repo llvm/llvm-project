@@ -11317,15 +11317,11 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
         break;
     }
 
-    bool Alias = false;
     // Check if this store interferes with any of the loads that we found.
-    for (unsigned ld = 0, lde = AliasLoadNodes.size(); ld < lde; ++ld)
-      if (isAlias(AliasLoadNodes[ld], StoreNodes[i].MemNode)) {
-        Alias = true;
-        break;
-      }
-    // We found a load that alias with this store. Stop the sequence.
-    if (Alias)
+    // If we find a load that alias with this store. Stop the sequence.
+    if (std::any_of(AliasLoadNodes.begin(), AliasLoadNodes.end(),
+                    std::bind(std::mem_fn(&DAGCombiner::isAlias), this,
+                              std::placeholders::_1, StoreNodes[i].MemNode)))
       break;
 
     // Mark this node as useful.

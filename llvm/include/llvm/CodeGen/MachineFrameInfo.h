@@ -125,6 +125,16 @@ class MachineFrameInfo {
   unsigned StackAlignment;
 
   /// Can the stack be realigned.
+  /// Targets that set this to false don't have the ability to overalign
+  /// their stack frame, and thus, overaligned allocas are all treated
+  /// as dynamic allocations and the target must handle them as part
+  /// of DYNAMIC_STACKALLOC lowering.
+  /// FIXME: There is room for improvement in this case, in terms of
+  /// grouping overaligned allocas into a "secondary stack frame" and
+  /// then only use a single alloca to allocate this frame and only a
+  /// single virtual register to access it. Currently, without such an
+  /// optimization, each such alloca gets it's own dynamic
+  /// realignment.
   bool StackRealignable;
 
   /// The list of stack objects allocated.
