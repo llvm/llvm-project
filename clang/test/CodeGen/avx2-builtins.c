@@ -862,7 +862,7 @@ __m256d test_mm256_permute4x64_pd(__m256d a) {
   return _mm256_permute4x64_pd(a, 25);
 }
 
-__m256 test_mm256_permutevar8x32_ps(__m256 a, __m256 b) {
+__m256 test_mm256_permutevar8x32_ps(__m256 a, __m256i b) {
   // CHECK: @llvm.x86.avx2.permps
   // CHECK-ASM: vpermps %ymm{{.*}}, %ymm{{.*}}, %ymm{{.*}}
   return _mm256_permutevar8x32_ps(a, b);

@@ -962,8 +962,7 @@ class RedirectingFileSystemParser {
       KeyStatusPair("use-external-name", false),
     };
 
-    DenseMap<StringRef, KeyStatus> Keys(
-        &Fields[0], Fields + sizeof(Fields)/sizeof(Fields[0]));
+    DenseMap<StringRef, KeyStatus> Keys(std::begin(Fields), std::end(Fields));
 
     bool HasContents = false; // external or otherwise
     std::vector<std::unique_ptr<Entry>> EntryArrayContents;
@@ -1121,8 +1120,7 @@ public:
       KeyStatusPair("roots", true),
     };
 
-    DenseMap<StringRef, KeyStatus> Keys(
-        &Fields[0], Fields + sizeof(Fields)/sizeof(Fields[0]));
+    DenseMap<StringRef, KeyStatus> Keys(std::begin(Fields), std::end(Fields));
 
     // Parse configuration and 'roots'
     for (yaml::MappingNode::iterator I = Top->begin(), E = Top->end(); I != E;

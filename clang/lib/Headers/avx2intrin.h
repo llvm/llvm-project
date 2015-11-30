@@ -867,9 +867,9 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
                                    ((M) & 0x30) >> 4, ((M) & 0xc0) >> 6); })
 
 static __inline__ __m256 __DEFAULT_FN_ATTRS
-_mm256_permutevar8x32_ps(__m256 __a, __m256 __b)
+_mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
 {
-  return (__m256)__builtin_ia32_permvarsf256((__v8sf)__a, (__v8sf)__b);
+  return (__m256)__builtin_ia32_permvarsf256((__v8sf)__a, (__v8si)__b);
 }
 
 #define _mm256_permute4x64_epi64(V, M) __extension__ ({ \
