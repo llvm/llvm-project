@@ -17,9 +17,7 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -34,8 +32,8 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   return Printer.getSymbol(MO.getGlobal());
 }
 
-MCSymbol *
-WebAssemblyMCInstLower::GetExternalSymbolSymbol(const MachineOperand &MO) const {
+MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
+    const MachineOperand &MO) const {
   return Printer.GetExternalSymbolSymbol(MO.getSymbolName());
 }
 
@@ -66,7 +64,6 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
       // Ignore all implicit register operands.
       if (MO.isImplicit())
         continue;
-      // TODO: Handle physical registers.
       const WebAssemblyFunctionInfo &MFI =
           *MI->getParent()->getParent()->getInfo<WebAssemblyFunctionInfo>();
       unsigned WAReg = MFI.getWAReg(MO.getReg());

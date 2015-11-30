@@ -225,7 +225,7 @@ static int GetLoopDepth(const MachineLoop *Loop) {
 }
 
 /// Insert a BLOCK marker for branches to MBB (if needed).
-static void PlaceBlockMarkers(MachineBasicBlock &MBB, MachineFunction &MF,
+static void PlaceBlockMarkers(MachineBasicBlock &MBB,
                               const WebAssemblyInstrInfo &TII,
                               MachineDominatorTree &MDT,
                               const MachineLoopInfo &MLI) {
@@ -307,7 +307,7 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
       }
 
     // Place the BLOCK for MBB if MBB is branched to from above.
-    PlaceBlockMarkers(MBB, MF, TII, MDT, MLI);
+    PlaceBlockMarkers(MBB, TII, MDT, MLI);
   }
 }
 

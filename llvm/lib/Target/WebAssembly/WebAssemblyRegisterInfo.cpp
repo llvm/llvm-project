@@ -43,7 +43,7 @@ WebAssemblyRegisterInfo::getCalleeSavedRegs(const MachineFunction *) const {
 }
 
 BitVector
-WebAssemblyRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
+WebAssemblyRegisterInfo::getReservedRegs(const MachineFunction & /*MF*/) const {
   BitVector Reserved(getNumRegs());
   for (auto Reg : {WebAssembly::SP32, WebAssembly::SP64, WebAssembly::FP32,
                    WebAssembly::FP64})
@@ -52,9 +52,10 @@ WebAssemblyRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 }
 
 void WebAssemblyRegisterInfo::eliminateFrameIndex(
-    MachineBasicBlock::iterator II, int SPAdj, unsigned FIOperandNum,
-    RegScavenger *RS) const {
-  llvm_unreachable("TODO: implement WebAssemblyRegisterInfo::eliminateFrameIndex");
+    MachineBasicBlock::iterator /*II*/, int /*SPAdj*/,
+    unsigned /*FIOperandNum*/, RegScavenger * /*RS*/) const {
+  llvm_unreachable(
+      "TODO: implement WebAssemblyRegisterInfo::eliminateFrameIndex");
 }
 
 unsigned

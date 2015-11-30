@@ -668,15 +668,15 @@ define <8 x i32> @test_x86_avx2_permd(<8 x i32> %a0, <8 x i32> %a1) {
 declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>) nounwind readonly
 
 
-define <8 x float> @test_x86_avx2_permps(<8 x float> %a0, <8 x float> %a1) {
+define <8 x float> @test_x86_avx2_permps(<8 x float> %a0, <8 x i32> %a1) {
   ; Check that the arguments are swapped between the intrinsic definition
   ; and its lowering. Indeed, the offsets are the first source in
   ; the instruction.
   ; CHECK: vpermps %ymm0, %ymm1, %ymm0
-  %res = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x float> %a1) ; <<8 x float>> [#uses=1]
+  %res = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> %a1) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }
-declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x float>) nounwind readonly
+declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>) nounwind readonly
 
 
 define <4 x i64> @test_x86_avx2_vperm2i128(<4 x i64> %a0, <4 x i64> %a1) {

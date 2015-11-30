@@ -1497,31 +1497,17 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      X86ISD::VPERMILPV, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_d_128, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_d_128, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_d_256, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_d_256, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_d_512, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_hi_128, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_hi_128, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_hi_256, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_hi_256, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_hi_512, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_hi_512, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_pd_128, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_pd_128, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_pd_256, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_pd_256, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
@@ -1529,19 +1515,11 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_ps_128, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_ps_128, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_ps_256, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_ps_256, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_ps_512, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_q_128, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_q_128, VPERM_3OP_MASK,
-                    X86ISD::VPERMV3, 0),
-  X86_INTRINSIC_DATA(avx512_mask_vpermt2var_q_256, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpermt2var_q_256, VPERM_3OP_MASK,
                     X86ISD::VPERMV3, 0),
@@ -1834,6 +1812,13 @@ static void verifyIntrinsicTables() {
          std::is_sorted(std::begin(IntrinsicsWithChain),
                         std::end(IntrinsicsWithChain)) &&
          "Intrinsic data tables should be sorted by Intrinsic ID");
+  assert((std::adjacent_find(std::begin(IntrinsicsWithoutChain),
+                             std::end(IntrinsicsWithoutChain)) ==
+          std::end(IntrinsicsWithoutChain)) &&
+         (std::adjacent_find(std::begin(IntrinsicsWithChain),
+                             std::end(IntrinsicsWithChain)) ==
+          std::end(IntrinsicsWithChain)) &&
+         "Intrinsic data tables should have unique entries");
 }
 
 } // End llvm namespace

@@ -26,6 +26,8 @@ def I64_EXTEND_U_I32 : I<(outs I64:$dst), (ins I32:$src),
                          [(set I64:$dst, (zext I32:$src))],
                          "i64.extend_u/i32\t$dst, $src">;
 
+// Conversion from floating point to integer traps on overflow and invalid.
+let hasSideEffects = 1 in {
 def I32_TRUNC_S_F32 : I<(outs I32:$dst), (ins F32:$src),
                         [(set I32:$dst, (fp_to_sint F32:$src))],
                         "i32.trunc_s/f32\t$dst, $src">;
@@ -50,6 +52,7 @@ def I64_TRUNC_S_F64 : I<(outs I64:$dst), (ins F64:$src),
 def I64_TRUNC_U_F64 : I<(outs I64:$dst), (ins F64:$src),
                         [(set I64:$dst, (fp_to_uint F64:$src))],
                         "i64.trunc_u/f64\t$dst, $src">;
+} // hasSideEffects = 1
 
 def F32_CONVERT_S_I32 : I<(outs F32:$dst), (ins I32:$src),
                           [(set F32:$dst, (sint_to_fp I32:$src))],

@@ -26,8 +26,7 @@ WebAssemblyTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   return TargetTransformInfo::PSK_FastHardware;
 }
 
-bool
-WebAssemblyTTIImpl::haveFastSqrt(Type *Ty) const {
+bool WebAssemblyTTIImpl::haveFastSqrt(Type *Ty) const {
   assert(Ty->isFPOrFPVectorTy() && "Ty must be floating point");
   return true;
 }

@@ -46,9 +46,8 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Reloc::Model RM, CodeModel::Model CM,
     CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T, TT.isArch64Bit()
-                               ? "e-p:64:64-i64:64-n32:64-S128"
-                               : "e-p:32:32-i64:64-n32:64-S128",
+    : LLVMTargetMachine(T, TT.isArch64Bit() ? "e-p:64:64-i64:64-n32:64-S128"
+                                            : "e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, RM, CM, OL),
       TLOF(make_unique<WebAssemblyTargetObjectFile>()) {
   // WebAssembly type-checks expressions, but a noreturn function with a return
@@ -103,12 +102,10 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override;
 
   void addIRPasses() override;
-  bool addPreISel() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
-  void addPreSched2() override;
   void addPreEmitPass() override;
 };
 } // end anonymous namespace
@@ -148,8 +145,6 @@ void WebAssemblyPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
-bool WebAssemblyPassConfig::addPreISel() { return false; }
-
 bool WebAssemblyPassConfig::addInstSelector() {
   addPass(
       createWebAssemblyISelDag(getWebAssemblyTargetMachine(), getOptLevel()));
@@ -183,8 +178,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // Run the register coloring pass to reduce the total number of registers.
   addPass(createWebAssemblyRegColoring());
 }
-
-void WebAssemblyPassConfig::addPreSched2() {}
 
 void WebAssemblyPassConfig::addPreEmitPass() {
   // Put the CFG in structured form; insert BLOCK and LOOP markers.

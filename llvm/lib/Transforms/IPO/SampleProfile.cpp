@@ -44,6 +44,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -629,12 +630,14 @@ bool SampleProfileLoader::emitInlineHints(Function &F) {
   // it globally hot.
   if (SamplesPercent >= SampleProfileGlobalHotThreshold) {
     F.addFnAttr(llvm::Attribute::InlineHint);
-    emitOptimizationRemark(
-        F.getContext(), DEBUG_TYPE, F, DebugLoc(),
-        Twine("Applied inline hint to globally hot function '" + F.getName() +
-              "' with " + Twine(std::to_string(SamplesPercent)) +
-              "% of samples (threshold: " +
-              Twine(std::to_string(SampleProfileGlobalHotThreshold)) + "%)"));
+    std::string Msg;
+    raw_string_ostream S(Msg);
+    S << "Applied inline hint to globally hot function '" << F.getName()
+      << "' with " << format("%.2f", SamplesPercent)
+      << "% of samples (threshold: "
+      << format("%.2f", SampleProfileGlobalHotThreshold.getValue()) << "%)";
+    S.flush();
+    emitOptimizationRemark(F.getContext(), DEBUG_TYPE, F, DebugLoc(), Msg);
     return true;
   }
 
@@ -642,12 +645,14 @@ bool SampleProfileLoader::emitInlineHints(Function &F) {
   // it globally cold.
   if (SamplesPercent <= SampleProfileGlobalColdThreshold) {
     F.addFnAttr(llvm::Attribute::Cold);
-    emitOptimizationRemark(
-        F.getContext(), DEBUG_TYPE, F, DebugLoc(),
-        Twine("Applied cold hint to globally cold function '" + F.getName() +
-              "' with " + Twine(std::to_string(SamplesPercent)) +
-              "% of samples (threshold: " +
-              Twine(std::to_string(SampleProfileGlobalColdThreshold)) + "%)"));
+    std::string Msg;
+    raw_string_ostream S(Msg);
+    S << "Applied cold hint to globally cold function '" << F.getName()
+      << "' with " << format("%.2f", SamplesPercent)
+      << "% of samples (threshold: "
+      << format("%.2f", SampleProfileGlobalColdThreshold.getValue()) << "%)";
+    S.flush();
+    emitOptimizationRemark(F.getContext(), DEBUG_TYPE, F, DebugLoc(), Msg);
     return true;
   }
 

@@ -1742,6 +1742,9 @@ public:
   /// \brief Determine if the call returns a structure through first
   /// pointer argument.
   bool hasStructRetAttr() const {
+    if (getNumArgOperands() == 0)
+      return false;
+
     // Be friendly and also check the callee.
     return paramHasAttr(1, Attribute::StructRet);
   }
@@ -3626,6 +3629,9 @@ public:
   /// \brief Determine if the call returns a structure through first
   /// pointer argument.
   bool hasStructRetAttr() const {
+    if (getNumArgOperands() == 0)
+      return false;
+
     // Be friendly and also check the callee.
     return paramHasAttr(1, Attribute::StructRet);
   }

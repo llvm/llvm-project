@@ -162,7 +162,7 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       }
     }
 
-    // If the this extractelement is directly using a bitcast from a vector of
+    // If this extractelement is directly using a bitcast from a vector of
     // the same number of elements, see if we can find the source element from
     // it.  In this case, we will end up needing to bitcast the scalars.
     if (BitCastInst *BCI = dyn_cast<BitCastInst>(EI.getOperand(0))) {
@@ -183,7 +183,7 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
 
   if (Instruction *I = dyn_cast<Instruction>(EI.getOperand(0))) {
     // Push extractelement into predecessor operation if legal and
-    // profitable to do so
+    // profitable to do so.
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I)) {
       if (I->hasOneUse() &&
           cheapToScalarize(BO, isa<ConstantInt>(EI.getOperand(1)))) {
@@ -229,8 +229,9 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
                                                            SrcIdx, false));
       }
     } else if (CastInst *CI = dyn_cast<CastInst>(I)) {
-      // Canonicalize extractelement(cast) -> cast(extractelement)
-      // bitcasts can change the number of vector elements and they cost nothing
+      // Canonicalize extractelement(cast) -> cast(extractelement).
+      // Bitcasts can change the number of vector elements, and they cost
+      // nothing.
       if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
         Value *EE = Builder->CreateExtractElement(CI->getOperand(0),
                                                   EI.getIndexOperand());
@@ -244,7 +245,8 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
         // fight the vectorizer.
 
         // If we are extracting an element from a vector select or a select on
-        // vectors, a select on the scalars extracted from the vector arguments.
+        // vectors, create a select on the scalars extracted from the vector
+        // arguments.
         Value *TrueVal = SI->getTrueValue();
         Value *FalseVal = SI->getFalseValue();
 
@@ -434,7 +436,7 @@ static ShuffleOps collectShuffleElements(Value *V,
     }
   }
 
-  // Otherwise, can't do anything fancy.  Return an identity vector.
+  // Otherwise, we can't do anything fancy. Return an identity vector.
   for (unsigned i = 0; i != NumElts; ++i)
     Mask.push_back(ConstantInt::get(Type::getInt32Ty(V->getContext()), i));
   return std::make_pair(V, nullptr);
