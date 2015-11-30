@@ -783,7 +783,7 @@ public:
         const bool has_payload = false;
         const bool is_indirect = false;
         uint64_t case_counter = 0;
-        m_nopayload_elems_bitmask = enum_impl_strategy.getBitMaskForNoPayloadElements(irgen_module);
+        m_nopayload_elems_bitmask = enum_impl_strategy.getBitMaskForNoPayloadElements();
         
         if (log)
             log->Printf("m_nopayload_elems_bitmask = %s", Dump(m_nopayload_elems_bitmask).c_str());
@@ -792,7 +792,7 @@ public:
         for (auto enum_case : elements_with_no_payload)
         {
             ConstString case_name(enum_case.decl->getName().str().data());
-            swift::ClusteredBitVector case_value = enum_impl_strategy.getBitPatternForNoPayloadElement(irgen_module, enum_case.decl);
+            swift::ClusteredBitVector case_value = enum_impl_strategy.getBitPatternForNoPayloadElement(enum_case.decl);
             
             if (log)
                 log->Printf("case_name = %s, unmasked value = %s", case_name.AsCString(), Dump(case_value).c_str());
@@ -947,7 +947,7 @@ public:
         swift::irgen::IRGenModule & irgen_module = swift_ast_ctx->GetIRGenModule();
         const swift::irgen::EnumImplStrategy& enum_impl_strategy = swift::irgen::getEnumImplStrategy(irgen_module, swift_can_type);
         llvm::ArrayRef<swift::irgen::EnumImplStrategy::Element> elements_with_payload = enum_impl_strategy.getElementsWithPayload();
-        m_tag_bits = enum_impl_strategy.getTagBitsForPayloads(irgen_module);
+        m_tag_bits = enum_impl_strategy.getTagBitsForPayloads();
         
         if (log)
             log->Printf("tag_bits = %s", Dump(m_tag_bits).c_str());
