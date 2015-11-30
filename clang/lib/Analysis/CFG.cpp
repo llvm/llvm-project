@@ -825,10 +825,7 @@ private:
     // * Variable x is equal to the largest literal.
     // * Variable x is greater than largest literal.
     bool AlwaysTrue = true, AlwaysFalse = true;
-    for (unsigned int ValueIndex = 0;
-         ValueIndex < sizeof(Values) / sizeof(Values[0]);
-         ++ValueIndex) {
-      llvm::APSInt Value = Values[ValueIndex];
+    for (llvm::APSInt Value : Values) {
       TryResult Res1, Res2;
       Res1 = analyzeLogicOperatorCondition(BO1, Value, L1);
       Res2 = analyzeLogicOperatorCondition(BO2, Value, L2);

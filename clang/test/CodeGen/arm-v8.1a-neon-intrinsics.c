@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
 // RUN:  -target-feature +v8.1a -O3 -S -o - %s \
 // RUN:  | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH64
+// REQUIRES: arm-registered-target,aarch64-registered-target
 
 #include <arm_neon.h>
 
