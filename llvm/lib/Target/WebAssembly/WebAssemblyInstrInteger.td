@@ -16,22 +16,31 @@ let Defs = [ARGUMENTS] in {
 
 // The spaces after the names are for aesthetic purposes only, to make
 // operands line up vertically after tab expansion.
+let isCommutable = 1 in
 defm ADD : BinaryInt<add, "add ">;
 defm SUB : BinaryInt<sub, "sub ">;
+let isCommutable = 1 in
 defm MUL : BinaryInt<mul, "mul ">;
+// Divide and remainder trap on a zero denominator.
+let hasSideEffects = 1 in {
 defm DIV_S : BinaryInt<sdiv, "div_s">;
 defm DIV_U : BinaryInt<udiv, "div_u">;
 defm REM_S : BinaryInt<srem, "rem_s">;
 defm REM_U : BinaryInt<urem, "rem_u">;
+} // hasSideEffects = 1
+let isCommutable = 1 in {
 defm AND : BinaryInt<and, "and ">;
 defm OR : BinaryInt<or, "or  ">;
 defm XOR : BinaryInt<xor, "xor ">;
+} // isCommutable = 1
 defm SHL : BinaryInt<shl, "shl ">;
 defm SHR_U : BinaryInt<srl, "shr_u">;
 defm SHR_S : BinaryInt<sra, "shr_s">;
 
+let isCommutable = 1 in {
 defm EQ : ComparisonInt<SETEQ, "eq  ">;
 defm NE : ComparisonInt<SETNE, "ne  ">;
+} // isCommutable = 1
 defm LT_S : ComparisonInt<SETLT, "lt_s">;
 defm LE_S : ComparisonInt<SETLE, "le_s">;
 defm LT_U : ComparisonInt<SETULT, "lt_u">;

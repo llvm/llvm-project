@@ -130,8 +130,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(Op, T, Expand);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
-    for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
-                    ISD::FRINT})
+    for (auto Op :
+         {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT, ISD::FRINT})
       setOperationAction(Op, T, Legal);
     // Support minnan and maxnan, which otherwise default to expand.
     setOperationAction(ISD::FMINNAN, T, Legal);
@@ -140,11 +140,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   for (auto T : {MVT::i32, MVT::i64}) {
     // Expand unavailable integer operations.
-    for (auto Op : {ISD::BSWAP, ISD::ROTL, ISD::ROTR,
-                    ISD::SMUL_LOHI, ISD::UMUL_LOHI,
-                    ISD::MULHS, ISD::MULHU, ISD::SDIVREM, ISD::UDIVREM,
-                    ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS,
-                    ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}) {
+    for (auto Op :
+         {ISD::BSWAP, ISD::ROTL, ISD::ROTR, ISD::SMUL_LOHI, ISD::UMUL_LOHI,
+          ISD::MULHS, ISD::MULHU, ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS,
+          ISD::SRA_PARTS, ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC,
+          ISD::SUBE}) {
       setOperationAction(Op, T, Expand);
     }
   }
@@ -187,13 +187,13 @@ FastISel *WebAssemblyTargetLowering::createFastISel(
 }
 
 bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
-    const GlobalAddressSDNode *GA) const {
+    const GlobalAddressSDNode * /*GA*/) const {
   // The WebAssembly target doesn't support folding offsets into global
   // addresses.
   return false;
 }
 
-MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
+MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
                                                       EVT VT) const {
   return VT.getSimpleVT();
 }
@@ -267,8 +267,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
 
   CallingConv::ID CallConv = CLI.CallConv;
-  if (CallConv != CallingConv::C &&
-      CallConv != CallingConv::Fast &&
+  if (CallConv != CallingConv::C && CallConv != CallingConv::Fast &&
       CallConv != CallingConv::Cold)
     fail(DL, DAG,
          "WebAssembly doesn't support language-specific or target-specific "
@@ -330,8 +329,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 }
 
 bool WebAssemblyTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    CallingConv::ID /*CallConv*/, MachineFunction & /*MF*/, bool /*IsVarArg*/,
+    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    LLVMContext & /*Context*/) const {
   // WebAssembly can't currently handle returning tuples.
   return Outs.size() <= 1;
 }
@@ -446,8 +446,9 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
                      DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT));
 }
 
-SDValue WebAssemblyTargetLowering::LowerExternalSymbol(SDValue Op,
-                                                       SelectionDAG &DAG) const {
+SDValue
+WebAssemblyTargetLowering::LowerExternalSymbol(SDValue Op,
+                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
   const auto *ES = cast<ExternalSymbolSDNode>(Op);
   EVT VT = Op.getValueType();
@@ -498,8 +499,8 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
 //===----------------------------------------------------------------------===//
 
 MCSection *WebAssemblyTargetObjectFile::SelectSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, Mangler &Mang,
-    const TargetMachine &TM) const {
+    const GlobalValue *GV, SectionKind /*Kind*/, Mangler & /*Mang*/,
+    const TargetMachine & /*TM*/) const {
   // TODO: Be more sophisticated than this.
   return isa<Function>(GV) ? getTextSection() : getDataSection();
 }

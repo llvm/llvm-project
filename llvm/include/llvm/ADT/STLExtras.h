@@ -364,7 +364,7 @@ void DeleteContainerSeconds(Container &C) {
 }
 
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
-/// being/end explicitly.
+/// begin/end explicitly.
 template<typename R, class UnaryPredicate>
 bool all_of(R &&Range, UnaryPredicate &&P) {
   return std::all_of(Range.begin(), Range.end(),

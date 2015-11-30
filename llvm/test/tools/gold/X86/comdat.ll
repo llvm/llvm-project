@@ -27,27 +27,27 @@ bb11:
 ; CHECK: $c1 = comdat any
 ; CHECK: $c2 = comdat any
 
-; CHECK: @v1 = weak_odr global i32 42, comdat($c1)
+; CHECK-DAG: @v1 = weak_odr global i32 42, comdat($c1)
 
-; CHECK: @r11 = global i32* @v1{{$}}
-; CHECK: @r12 = global i32 (i8*)* @f1{{$}}
+; CHECK-DAG: @r11 = global i32* @v1{{$}}
+; CHECK-DAG: @r12 = global i32 (i8*)* @f1{{$}}
 
-; CHECK: @r21 = global i32* @v1{{$}}
-; CHECK: @r22 = global i32 (i8*)* @f1{{$}}
+; CHECK-DAG: @r21 = global i32* @v1{{$}}
+; CHECK-DAG: @r22 = global i32 (i8*)* @f1{{$}}
 
-; CHECK: @v1.1 = internal global i32 41, comdat($c2)
+; CHECK-DAG: @v1.1 = internal global i32 41, comdat($c2)
 
-; CHECK: @a11 = alias i32, i32* @v1{{$}}
-; CHECK: @a12 = alias i16, bitcast (i32* @v1 to i16*)
+; CHECK-DAG: @a11 = alias i32, i32* @v1{{$}}
+; CHECK-DAG: @a12 = alias i16, bitcast (i32* @v1 to i16*)
 
-; CHECK: @a13 = alias i32 (i8*), i32 (i8*)* @f1{{$}}
-; CHECK: @a14 = alias i16, bitcast (i32 (i8*)* @f1 to i16*)
+; CHECK-DAG: @a13 = alias i32 (i8*), i32 (i8*)* @f1{{$}}
+; CHECK-DAG: @a14 = alias i16, bitcast (i32 (i8*)* @f1 to i16*)
 
-; CHECK: @a21 = alias i32, i32* @v1.1{{$}}
-; CHECK: @a22 = alias i16, bitcast (i32* @v1.1 to i16*)
+; CHECK-DAG: @a21 = alias i32, i32* @v1.1{{$}}
+; CHECK-DAG: @a22 = alias i16, bitcast (i32* @v1.1 to i16*)
 
-; CHECK: @a23 = alias i32 (i8*), i32 (i8*)* @f1.2{{$}}
-; CHECK: @a24 = alias i16, bitcast (i32 (i8*)* @f1.2 to i16*)
+; CHECK-DAG: @a23 = alias i32 (i8*), i32 (i8*)* @f1.2{{$}}
+; CHECK-DAG: @a24 = alias i16, bitcast (i32 (i8*)* @f1.2 to i16*)
 
 ; CHECK:      define weak_odr protected i32 @f1(i8*) comdat($c1) {
 ; CHECK-NEXT: bb10:

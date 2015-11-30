@@ -295,6 +295,7 @@ class CMP_EQ_QB_R3_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string AsmString = !strconcat(instr_asm, "\t$rd, $rs, $rt");
   list<dag> Pattern = [(set ROD:$rd, (OpNode ROS:$rs, ROT:$rt))];
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class PRECR_SRA_PH_W_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -306,6 +307,7 @@ class PRECR_SRA_PH_W_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   list<dag> Pattern = [(set ROT:$rt, (OpNode ROS:$src, ROS:$rs, immZExt5:$sa))];
   InstrItinClass Itinerary = itin;
   string Constraints = "$src = $rt";
+  string BaseOpcode = instr_asm;
 }
 
 class ABSQ_S_PH_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -1105,10 +1107,10 @@ def MODSUB : MODSUB_ENC, MODSUB_DESC;
 def RADDU_W_QB : RADDU_W_QB_ENC, RADDU_W_QB_DESC;
 def ABSQ_S_PH : DspMMRel, ABSQ_S_PH_ENC, ABSQ_S_PH_DESC;
 def ABSQ_S_W : DspMMRel, ABSQ_S_W_ENC, ABSQ_S_W_DESC;
-def PRECRQ_QB_PH : PRECRQ_QB_PH_ENC, PRECRQ_QB_PH_DESC;
-def PRECRQ_PH_W : PRECRQ_PH_W_ENC, PRECRQ_PH_W_DESC;
-def PRECRQ_RS_PH_W : PRECRQ_RS_PH_W_ENC, PRECRQ_RS_PH_W_DESC;
-def PRECRQU_S_QB_PH : PRECRQU_S_QB_PH_ENC, PRECRQU_S_QB_PH_DESC;
+def PRECRQ_QB_PH : DspMMRel, PRECRQ_QB_PH_ENC, PRECRQ_QB_PH_DESC;
+def PRECRQ_PH_W : DspMMRel, PRECRQ_PH_W_ENC, PRECRQ_PH_W_DESC;
+def PRECRQ_RS_PH_W : DspMMRel, PRECRQ_RS_PH_W_ENC, PRECRQ_RS_PH_W_DESC;
+def PRECRQU_S_QB_PH : DspMMRel, PRECRQU_S_QB_PH_ENC, PRECRQU_S_QB_PH_DESC;
 def PRECEQ_W_PHL : DspMMRel, PRECEQ_W_PHL_ENC, PRECEQ_W_PHL_DESC;
 def PRECEQ_W_PHR : DspMMRel, PRECEQ_W_PHR_ENC, PRECEQ_W_PHR_DESC;
 def PRECEQU_PH_QBL : DspMMRel, PRECEQU_PH_QBL_ENC, PRECEQU_PH_QBL_DESC;
@@ -1240,9 +1242,9 @@ def DPSX_W_PH : DspMMRel, DPSX_W_PH_ENC, DPSX_W_PH_DESC;
 def DPSQX_S_W_PH : DspMMRel, DPSQX_S_W_PH_ENC, DPSQX_S_W_PH_DESC;
 def DPSQX_SA_W_PH : DspMMRel, DPSQX_SA_W_PH_ENC, DPSQX_SA_W_PH_DESC;
 def MULSA_W_PH : MULSA_W_PH_ENC, MULSA_W_PH_DESC;
-def PRECR_QB_PH : PRECR_QB_PH_ENC, PRECR_QB_PH_DESC;
-def PRECR_SRA_PH_W : PRECR_SRA_PH_W_ENC, PRECR_SRA_PH_W_DESC;
-def PRECR_SRA_R_PH_W : PRECR_SRA_R_PH_W_ENC, PRECR_SRA_R_PH_W_DESC;
+def PRECR_QB_PH : DspMMRel, PRECR_QB_PH_ENC, PRECR_QB_PH_DESC;
+def PRECR_SRA_PH_W : DspMMRel, PRECR_SRA_PH_W_ENC, PRECR_SRA_PH_W_DESC;
+def PRECR_SRA_R_PH_W : DspMMRel, PRECR_SRA_R_PH_W_ENC, PRECR_SRA_R_PH_W_DESC;
 def SHRA_QB : DspMMRel, SHRA_QB_ENC, SHRA_QB_DESC;
 def SHRAV_QB : DspMMRel, SHRAV_QB_ENC, SHRAV_QB_DESC;
 def SHRA_R_QB : DspMMRel, SHRA_R_QB_ENC, SHRA_R_QB_DESC;

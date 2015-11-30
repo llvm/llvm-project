@@ -35,7 +35,7 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "WebAssemblyGenRegisterInfo.inc"
 
-static MCAsmInfo *createWebAssemblyMCAsmInfo(const MCRegisterInfo &MRI,
+static MCAsmInfo *createWebAssemblyMCAsmInfo(const MCRegisterInfo & /*MRI*/,
                                              const Triple &TT) {
   return new WebAssemblyMCAsmInfo(TT);
 }
@@ -47,7 +47,7 @@ static MCInstrInfo *createWebAssemblyMCInstrInfo() {
 }
 
 static MCInstPrinter *
-createWebAssemblyMCInstPrinter(const Triple &T, unsigned SyntaxVariant,
+createWebAssemblyMCInstPrinter(const Triple & /*T*/, unsigned SyntaxVariant,
                                const MCAsmInfo &MAI, const MCInstrInfo &MII,
                                const MCRegisterInfo &MRI) {
   assert(SyntaxVariant == 0);

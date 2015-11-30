@@ -58,7 +58,7 @@ bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
                                          MachineBasicBlock *&TBB,
                                          MachineBasicBlock *&FBB,
                                          SmallVectorImpl<MachineOperand> &Cond,
-                                         bool AllowModify) const {
+                                         bool /*AllowModify*/) const {
   bool HaveCond = false;
   for (MachineInstr &MI : iterator_range<MachineBasicBlock::instr_iterator>(
            MBB.getFirstInstrTerminator(), MBB.instr_end())) {
@@ -106,9 +106,11 @@ unsigned WebAssemblyInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
   return Count;
 }
 
-unsigned WebAssemblyInstrInfo::InsertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, DebugLoc DL) const {
+unsigned WebAssemblyInstrInfo::InsertBranch(MachineBasicBlock &MBB,
+                                            MachineBasicBlock *TBB,
+                                            MachineBasicBlock *FBB,
+                                            ArrayRef<MachineOperand> Cond,
+                                            DebugLoc DL) const {
   assert(Cond.size() <= 1);
 
   if (Cond.empty()) {
@@ -119,9 +121,7 @@ unsigned WebAssemblyInstrInfo::InsertBranch(
     return 1;
   }
 
-  BuildMI(&MBB, DL, get(WebAssembly::BR_IF))
-      .addOperand(Cond[0])
-      .addMBB(TBB);
+  BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addOperand(Cond[0]).addMBB(TBB);
   if (!FBB)
     return 1;
 

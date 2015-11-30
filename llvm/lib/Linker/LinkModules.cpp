@@ -627,19 +627,6 @@ void ModuleLinker::copyGVAttributes(GlobalValue *NewGV,
   forceRenaming(NewGV, getName(SrcGV));
 }
 
-static bool isLessConstraining(GlobalValue::VisibilityTypes a,
-                               GlobalValue::VisibilityTypes b) {
-  if (a == GlobalValue::HiddenVisibility)
-    return false;
-  if (b == GlobalValue::HiddenVisibility)
-    return true;
-  if (a == GlobalValue::ProtectedVisibility)
-    return false;
-  if (b == GlobalValue::ProtectedVisibility)
-    return true;
-  return false;
-}
-
 bool ModuleLinker::doImportAsDefinition(const GlobalValue *SGV) {
   if (!isPerformingImport())
     return false;
@@ -864,13 +851,22 @@ GlobalValue *ModuleLinker::copyGlobalAliasProto(TypeMapTy &TypeMap,
                              getLinkage(SGA), getName(SGA), DstM);
 }
 
+static GlobalValue::VisibilityTypes
+getMinVisibility(GlobalValue::VisibilityTypes A,
+                 GlobalValue::VisibilityTypes B) {
+  if (A == GlobalValue::HiddenVisibility || B == GlobalValue::HiddenVisibility)
+    return GlobalValue::HiddenVisibility;
+  if (A == GlobalValue::ProtectedVisibility ||
+      B == GlobalValue::ProtectedVisibility)
+    return GlobalValue::ProtectedVisibility;
+  return GlobalValue::DefaultVisibility;
+}
+
 void ModuleLinker::setVisibility(GlobalValue *NewGV, const GlobalValue *SGV,
                                  const GlobalValue *DGV) {
   GlobalValue::VisibilityTypes Visibility = SGV->getVisibility();
   if (DGV)
-    Visibility = isLessConstraining(Visibility, DGV->getVisibility())
-                     ? DGV->getVisibility()
-                     : Visibility;
+    Visibility = getMinVisibility(DGV->getVisibility(), Visibility);
   // For promoted locals, mark them hidden so that they can later be
   // stripped from the symbol table to reduce bloat.
   if (SGV->hasLocalLinkage() && doPromoteLocalToGlobal(SGV))

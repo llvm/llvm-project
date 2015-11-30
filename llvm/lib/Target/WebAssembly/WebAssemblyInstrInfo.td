@@ -115,6 +115,7 @@ defm : LOCAL<I64>;
 defm : LOCAL<F32>;
 defm : LOCAL<F64>;
 
+let isMoveImm = 1 in {
 def CONST_I32 : I<(outs I32:$res), (ins i32imm:$imm),
                   [(set I32:$res, imm:$imm)],
                   "i32.const\t$res, $imm">;
@@ -127,6 +128,7 @@ def CONST_F32 : I<(outs F32:$res), (ins f32imm:$imm),
 def CONST_F64 : I<(outs F64:$res), (ins f64imm:$imm),
                   [(set F64:$res, fpimm:$imm)],
                   "f64.const\t$res, $imm">;
+} // isMoveImm = 1
 
 } // Defs = [ARGUMENTS]
 

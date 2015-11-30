@@ -58,17 +58,17 @@ bool WebAssemblyFrameLowering::hasReservedCallFrame(
 }
 
 void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator I) const {
+    MachineFunction & /*MF*/, MachineBasicBlock & /*MBB*/,
+    MachineBasicBlock::iterator /*I*/) const {
   llvm_unreachable("TODO: implement eliminateCallFramePseudoInstr");
 }
 
-void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
-                                            MachineBasicBlock &MBB) const {
+void WebAssemblyFrameLowering::emitPrologue(MachineFunction & /*MF*/,
+                                            MachineBasicBlock & /*MBB*/) const {
   llvm_unreachable("TODO: implement emitPrologue");
 }
 
-void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
-                                            MachineBasicBlock &MBB) const {
+void WebAssemblyFrameLowering::emitEpilogue(MachineFunction & /*MF*/,
+                                            MachineBasicBlock & /*MBB*/) const {
   llvm_unreachable("TODO: implement emitEpilogue");
 }

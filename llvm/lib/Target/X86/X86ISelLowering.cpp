@@ -10539,9 +10539,7 @@ static SDValue lowerV8F32VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
     if (Subtarget->hasAVX2())
       return DAG.getNode(
           X86ISD::VPERMV, DL, MVT::v8f32,
-          DAG.getBitcast(MVT::v8f32, DAG.getNode(ISD::BUILD_VECTOR, DL,
-                                                 MVT::v8i32, VPermMask)),
-          V1);
+          DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v8i32, VPermMask), V1);
 
     // Otherwise, fall back.
     return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v8f32, V1, V2, Mask,
@@ -16356,7 +16354,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget *Subtarget
       if (IntrData->Type == VPERM_3OP_MASKZ)
         PassThru = getZeroVector(VT, Subtarget, DAG, dl);
       else
-        PassThru = Src2;
+        PassThru = DAG.getBitcast(VT, Src2);
 
       // Swap Src1 and Src2 in the node creation
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
@@ -23141,14 +23139,19 @@ static SDValue combineShuffleToAddSub(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   auto *SVN = cast<ShuffleVectorSDNode>(N);
-  ArrayRef<int> Mask = SVN->getMask();
+  SmallVector<int, 8> Mask;
+  for (int M : SVN->getMask())
+    Mask.push_back(M);
+
   SDValue V1 = N->getOperand(0);
   SDValue V2 = N->getOperand(1);
 
-  // We require the first shuffle operand to be the SUB node, and the second to
-  // be the ADD node.
-  // FIXME: We should support the commuted patterns.
-  if (V1->getOpcode() != ISD::FSUB || V2->getOpcode() != ISD::FADD)
+  // We require the first shuffle operand to be the FSUB node, and the second to
+  // be the FADD node.
+  if (V1.getOpcode() == ISD::FADD && V2.getOpcode() == ISD::FSUB) {
+    ShuffleVectorSDNode::commuteMask(Mask);
+    std::swap(V1, V2);
+  } else if (V1.getOpcode() != ISD::FSUB || V2.getOpcode() != ISD::FADD)
     return SDValue();
 
   // If there are other uses of these operations we can't fold them.

@@ -1957,11 +1957,11 @@ StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
       ScalarEvolution::maskFlags(Flags, SignOrUnsignMask);
 
   // If FlagNSW is true and all the operands are non-negative, infer FlagNUW.
-  auto IsKnownNonNegative =
-    std::bind(std::mem_fn(&ScalarEvolution::isKnownNonNegative), SE, _1);
+  auto IsKnownNonNegative = [&](const SCEV *S) {
+    return SE->isKnownNonNegative(S);
+  };
 
-  if (SignOrUnsignWrap == SCEV::FlagNSW &&
-      std::all_of(Ops.begin(), Ops.end(), IsKnownNonNegative))
+  if (SignOrUnsignWrap == SCEV::FlagNSW && all_of(Ops, IsKnownNonNegative))
     Flags =
         ScalarEvolution::setFlags(Flags, (SCEV::NoWrapFlags)SignOrUnsignMask);
 
@@ -2888,9 +2888,8 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
       // AddRecs require their operands be loop-invariant with respect to their
       // loops. Don't perform this transformation if it would break this
       // requirement.
-      bool AllInvariant =
-          std::all_of(Operands.begin(), Operands.end(),
-                      [&](const SCEV *Op) { return isLoopInvariant(Op, L); });
+      bool AllInvariant = all_of(
+          Operands, [&](const SCEV *Op) { return isLoopInvariant(Op, L); });
 
       if (AllInvariant) {
         // Create a recurrence for the outer loop with the same step size.
@@ -2901,9 +2900,9 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
           maskFlags(Flags, SCEV::FlagNW | NestedAR->getNoWrapFlags());
 
         NestedOperands[0] = getAddRecExpr(Operands, L, OuterFlags);
-        AllInvariant = std::all_of(
-            NestedOperands.begin(), NestedOperands.end(),
-            [&](const SCEV *Op) { return isLoopInvariant(Op, NestedLoop); });
+        AllInvariant = all_of(NestedOperands, [&](const SCEV *Op) {
+          return isLoopInvariant(Op, NestedLoop);
+        });
 
         if (AllInvariant) {
           // Ok, both add recurrences are valid after the transformation.
@@ -9673,8 +9672,8 @@ SCEVUnionPredicate::SCEVUnionPredicate()
     : SCEVPredicate(FoldingSetNodeIDRef(nullptr, 0), P_Union) {}
 
 bool SCEVUnionPredicate::isAlwaysTrue() const {
-  return std::all_of(Preds.begin(), Preds.end(),
-                     [](const SCEVPredicate *I) { return I->isAlwaysTrue(); });
+  return all_of(Preds,
+                [](const SCEVPredicate *I) { return I->isAlwaysTrue(); });
 }
 
 ArrayRef<const SCEVPredicate *>
@@ -9687,9 +9686,8 @@ SCEVUnionPredicate::getPredicatesForExpr(const SCEV *Expr) {
 
 bool SCEVUnionPredicate::implies(const SCEVPredicate *N) const {
   if (const auto *Set = dyn_cast<const SCEVUnionPredicate>(N))
-    return std::all_of(
-        Set->Preds.begin(), Set->Preds.end(),
-        [this](const SCEVPredicate *I) { return this->implies(I); });
+    return all_of(Set->Preds,
+                  [this](const SCEVPredicate *I) { return this->implies(I); });
 
   auto ScevPredsIt = SCEVToPreds.find(N->getExpr());
   if (ScevPredsIt == SCEVToPreds.end())

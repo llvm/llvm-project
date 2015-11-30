@@ -12,6 +12,7 @@
 ; RUN:    -shared %t.o -o %t3.o
 ; RUN: llvm-dis %t3.o.bc -o - | FileCheck %s
 ; RUN: llvm-dis %t3.o.opt.bc -o - | FileCheck --check-prefix=OPT %s
+; RUN: llvm-dis %t3.o.opt.bc -o - | FileCheck --check-prefix=OPT2 %s
 ; RUN: llvm-nm %t3.o.o | FileCheck --check-prefix=NM %s
 
 ; RUN: rm -f %t4.o
@@ -29,42 +30,42 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @g8 = external global i32
 
-; CHECK: define internal void @f1()
-; OPT-NOT: @f1
+; CHECK-DAG: define internal void @f1()
+; OPT2-NOT: @f1
 define hidden void @f1() {
   ret void
 }
 
-; CHECK: define hidden void @f2()
-; OPT: define hidden void @f2()
+; CHECK-DAG: define hidden void @f2()
+; OPT-DAG: define hidden void @f2()
 define hidden void @f2() {
   ret void
 }
 
 @llvm.used = appending global [1 x i8*] [ i8* bitcast (void ()* @f2 to i8*)]
 
-; CHECK: define void @f3()
-; OPT: define void @f3()
+; CHECK-DAG: define void @f3()
+; OPT-DAG: define void @f3()
 define void @f3() {
   call void @f4()
   ret void
 }
 
-; CHECK: define internal void @f4()
-; OPT-NOT: @f4
+; CHECK-DAG: define internal void @f4()
+; OPT2-NOT: @f4
 define linkonce_odr void @f4() {
   ret void
 }
 
-; CHECK: define linkonce_odr void @f5()
-; OPT: define linkonce_odr void @f5()
+; CHECK-DAG: define linkonce_odr void @f5()
+; OPT-DAG: define linkonce_odr void @f5()
 define linkonce_odr void @f5() {
   ret void
 }
 @g5 = global void()* @f5
 
-; CHECK: define internal void @f6() unnamed_addr
-; OPT: define internal void @f6() unnamed_addr
+; CHECK-DAG: define internal void @f6() unnamed_addr
+; OPT-DAG: define internal void @f6() unnamed_addr
 define linkonce_odr void @f6() unnamed_addr {
   ret void
 }

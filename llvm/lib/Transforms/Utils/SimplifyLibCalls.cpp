@@ -1284,6 +1284,47 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
   return B.CreateSelect(Cmp, Op0, Op1);
 }
 
+Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
+  Function *Callee = CI->getCalledFunction();
+  Value *Ret = nullptr;
+  StringRef Name = Callee->getName();
+  if (UnsafeFPShrink && hasFloatVersion(Name))
+    Ret = optimizeUnaryDoubleFP(CI, B, true);
+  FunctionType *FT = Callee->getFunctionType();
+
+  // Just make sure this has 1 argument of FP type, which matches the
+  // result type.
+  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
+      !FT->getParamType(0)->isFloatingPointTy())
+    return Ret;
+
+  if (!canUseUnsafeFPMath(CI->getParent()->getParent()))
+    return Ret;
+  Value *Op1 = CI->getArgOperand(0);
+  auto *OpC = dyn_cast<CallInst>(Op1);
+  if (!OpC)
+    return Ret;
+
+  // log(pow(x,y)) -> y*log(x)
+  // This is only applicable to log, log2, log10.
+  if (Name != "log" && Name != "log2" && Name != "log10")
+    return Ret;
+
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  FastMathFlags FMF;
+  FMF.setUnsafeAlgebra();
+  B.SetFastMathFlags(FMF);
+
+  LibFunc::Func Func;
+  Function *F = OpC->getCalledFunction();
+  if (F && ((TLI->getLibFunc(F->getName(), Func) && TLI->has(Func) &&
+      Func == LibFunc::pow) || F->getIntrinsicID() == Intrinsic::pow))
+    return B.CreateFMul(OpC->getArgOperand(1),
+      EmitUnaryFloatFnCall(OpC->getOperand(0), Callee->getName(), B,
+                           Callee->getAttributes()), "mul");
+  return Ret;
+}
+
 Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
   
@@ -2088,6 +2129,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeExp2(CI, Builder);
     case Intrinsic::fabs:
       return optimizeFabs(CI, Builder);
+    case Intrinsic::log:
+      return optimizeLog(CI, Builder);
     case Intrinsic::sqrt:
       return optimizeSqrt(CI, Builder);
     default:
@@ -2170,6 +2213,12 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeFWrite(CI, Builder);
     case LibFunc::fputs:
       return optimizeFPuts(CI, Builder);
+    case LibFunc::log:
+    case LibFunc::log10:
+    case LibFunc::log1p:
+    case LibFunc::log2:
+    case LibFunc::logb:
+      return optimizeLog(CI, Builder);
     case LibFunc::puts:
       return optimizePuts(CI, Builder);
     case LibFunc::tan:
@@ -2203,11 +2252,6 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
     case LibFunc::exp:
     case LibFunc::exp10:
     case LibFunc::expm1:
-    case LibFunc::log:
-    case LibFunc::log10:
-    case LibFunc::log1p:
-    case LibFunc::log2:
-    case LibFunc::logb:
     case LibFunc::sin:
     case LibFunc::sinh:
     case LibFunc::tanh:
@@ -2256,12 +2300,10 @@ void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
 //
 // log, logf, logl:
 //   * log(exp(x))   -> x
-//   * log(x**y)     -> y*log(x)
 //   * log(exp(y))   -> y*log(e)
 //   * log(exp2(y))  -> y*log(2)
 //   * log(exp10(y)) -> y*log(10)
 //   * log(sqrt(x))  -> 0.5*log(x)
-//   * log(pow(x,y)) -> y*log(x)
 //
 // lround, lroundf, lroundl:
 //   * lround(cnst) -> cnst'

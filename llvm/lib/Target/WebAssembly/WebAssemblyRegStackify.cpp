@@ -21,8 +21,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "WebAssemblyMachineFunctionInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
+#include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -201,7 +201,8 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       for (MachineOperand &MO : reverse(MI.explicit_operands())) {
-        if (!MO.isReg()) continue;
+        if (!MO.isReg())
+          continue;
         unsigned VReg = MO.getReg();
 
         if (MFI.isVRegStackified(VReg)) {

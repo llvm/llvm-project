@@ -31,11 +31,7 @@
         alnv.ob         $v31,$v23,$v30,$at
         alnv.ob         $v8,$v17,$v30,$a1
         alnv.ps         $f12,$f18,$f30,$12
-        and.v           $w10,$w25,$w29
         bitrev          $14,$at
-        bmnz.v          $w15,$w2,$w28
-        bmz.v           $w13,$w11,$w21
-        bsel.v          $w28,$w7,$w0
         c.eq.d          $fcc1,$f15,$f15
         c.eq.ps         $fcc5,$f0,$f9
         c.eq.s          $fcc5,$f24,$f17
@@ -126,43 +122,7 @@
         extrv_r.w       $8,$ac1,$s6
         extrv_rs.w      $gp,$ac1,$s6
         extrv_s.h       $s2,$ac1,$14
-        fclass.d        $w14,$w27
-        fclass.w        $w19,$w28
-        fexupl.d        $w10,$w29
-        fexupl.w        $w12,$w27
-        fexupr.d        $w31,$w15
-        fexupr.w        $w29,$w12
-        ffint_s.d       $w1,$w30
-        ffint_s.w       $w16,$w14
-        ffint_u.d       $w23,$w18
-        ffint_u.w       $w19,$w12
-        ffql.d          $w2,$w3
-        ffql.w          $w9,$w0
-        ffqr.d          $w25,$w24
-        ffqr.w          $w10,$w6
-        fill.b          $w9,$v1
-        fill.d          $w28,$8
-        fill.h          $w9,$8
-        fill.w          $w31,$15
-        flog2.d         $w12,$w16
-        flog2.w         $w19,$w23
         fork            $s2,$8,$a0
-        frcp.d          $w12,$w4
-        frcp.w          $w30,$w8
-        frint.d         $w20,$w8
-        frint.w         $w11,$w29
-        frsqrt.d        $w29,$w2
-        frsqrt.w        $w9,$w8
-        fsqrt.d         $w3,$w1
-        fsqrt.w         $w5,$w15
-        ftint_s.d       $w31,$w26
-        ftint_s.w       $w27,$w14
-        ftint_u.d       $w5,$w31
-        ftint_u.w       $w12,$w29
-        ftrunc_s.d      $w4,$w22
-        ftrunc_s.w      $w24,$w7
-        ftrunc_u.d      $w20,$w25
-        ftrunc_u.w      $w7,$w26
         insv            $s2,$at
         iret
         lbe $14,122($9)
@@ -212,23 +172,9 @@
         mulsa.w.ph      $ac1,$s4,$s6
         mulsaq_s.w.ph   $ac0,$ra,$s2
         neg.ps          $f19,$f13
-        nloc.b          $w12,$w30
-        nloc.d          $w16,$w7
-        nloc.h          $w21,$w17
-        nloc.w          $w17,$w16
-        nlzc.b          $w12,$w7
-        nlzc.d          $w14,$w14
-        nlzc.h          $w24,$w24
-        nlzc.w          $w10,$w4
         nmadd.ps        $f27,$f4,$f9,$f25
         nmsub.ps        $f6,$f12,$f14,$f17
-        nor.v           $w20,$w20,$w15
-        or.v            $w13,$w23,$w12
         packrl.ph       $ra,$24,$14
-        pcnt.b          $w30,$w15
-        pcnt.d          $w5,$w16
-        pcnt.h          $w20,$w24
-        pcnt.w          $w22,$w20
         pick.ph         $ra,$a2,$gp
         pick.qb         $11,$a0,$gp
         pll.ps          $f25,$f9,$f30
@@ -302,5 +248,4 @@
         tlbinv
         tlbinvf
         wrpgpr          $zero,$13
-        xor.v           $w20,$w21,$w30
         yield           $v1,$s0

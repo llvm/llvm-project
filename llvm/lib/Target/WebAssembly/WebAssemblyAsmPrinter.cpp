@@ -145,11 +145,9 @@ void WebAssemblyAsmPrinter::EmitJumpTableInfo() {
   // Nothing to do; jump tables are incorporated into the instruction stream.
 }
 
-static void ComputeLegalValueVTs(const Function &F,
-                                 const TargetMachine &TM,
-                                 Type *Ty,
-                                 SmallVectorImpl<MVT> &ValueVTs) {
-  const DataLayout& DL(F.getParent()->getDataLayout());
+static void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM,
+                                 Type *Ty, SmallVectorImpl<MVT> &ValueVTs) {
+  const DataLayout &DL(F.getParent()->getDataLayout());
   const WebAssemblyTargetLowering &TLI =
       *TM.getSubtarget<WebAssemblySubtarget>(F).getTargetLowering();
   SmallVector<EVT, 4> VTs;
@@ -171,7 +169,6 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
       Param.addOperand(MCOperand::createImm(VT.SimpleTy));
     EmitToStreamer(*OutStreamer, Param);
   }
-
 
   SmallVector<MVT, 4> ResultVTs;
   const Function &F(*MF->getFunction());

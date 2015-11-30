@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstPrinter/WebAssemblyInstPrinter.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -45,7 +45,7 @@ void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
 
 void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                        StringRef Annot,
-                                       const MCSubtargetInfo &STI) {
+                                       const MCSubtargetInfo & /*STI*/) {
   printInstruction(MI, OS);
 
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
@@ -99,11 +99,20 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     case WebAssembly::RESULT:
     case WebAssembly::LOCAL:
       switch (Op.getImm()) {
-      case MVT::i32: O << "i32"; break;
-      case MVT::i64: O << "i64"; break;
-      case MVT::f32: O << "f32"; break;
-      case MVT::f64: O << "f64"; break;
-      default: llvm_unreachable("unexpected type");
+      case MVT::i32:
+        O << "i32";
+        break;
+      case MVT::i64:
+        O << "i64";
+        break;
+      case MVT::f32:
+        O << "f32";
+        break;
+      case MVT::f64:
+        O << "f64";
+        break;
+      default:
+        llvm_unreachable("unexpected type");
       }
       break;
     default:
