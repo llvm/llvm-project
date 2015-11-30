@@ -13,6 +13,8 @@
 
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, unsigned A>
 void test_extent()
 {
@@ -20,6 +22,12 @@ void test_extent()
     static_assert((std::extent<const T>::value == A), "");
     static_assert((std::extent<volatile T>::value == A), "");
     static_assert((std::extent<const volatile T>::value == A), "");
+#if TEST_STD_VER > 14
+    static_assert((std::extent_v<T> == A), "");
+    static_assert((std::extent_v<const T> == A), "");
+    static_assert((std::extent_v<volatile T> == A), "");
+    static_assert((std::extent_v<const volatile T> == A), "");
+#endif
 }
 
 template <class T, unsigned A>
@@ -29,6 +37,12 @@ void test_extent1()
     static_assert((std::extent<const T, 1>::value == A), "");
     static_assert((std::extent<volatile T, 1>::value == A), "");
     static_assert((std::extent<const volatile T, 1>::value == A), "");
+#if TEST_STD_VER > 14
+    static_assert((std::extent_v<T, 1> == A), "");
+    static_assert((std::extent_v<const T, 1> == A), "");
+    static_assert((std::extent_v<volatile T, 1> == A), "");
+    static_assert((std::extent_v<const volatile T, 1> == A), "");
+#endif
 }
 
 class Class

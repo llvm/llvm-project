@@ -18,7 +18,9 @@
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Core/RegularExpression.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
@@ -133,42 +135,61 @@ struct RenderScriptRuntime::ScriptDetails
     empirical_type<lldb::addr_t> script;
 };
 
+// This Element class represents the Element object in RS,
+// defining the type associated with an Allocation.
+struct RenderScriptRuntime::Element
+{
+    // Taken from rsDefines.h
+    enum DataKind
+    {
+        RS_KIND_USER,
+        RS_KIND_PIXEL_L = 7,
+        RS_KIND_PIXEL_A,
+        RS_KIND_PIXEL_LA,
+        RS_KIND_PIXEL_RGB,
+        RS_KIND_PIXEL_RGBA,
+        RS_KIND_PIXEL_DEPTH,
+        RS_KIND_PIXEL_YUV,
+        RS_KIND_INVALID = 100
+    };
+
+    // Taken from rsDefines.h
+    enum DataType
+    {
+        RS_TYPE_NONE = 0,
+        RS_TYPE_FLOAT_16,
+        RS_TYPE_FLOAT_32,
+        RS_TYPE_FLOAT_64,
+        RS_TYPE_SIGNED_8,
+        RS_TYPE_SIGNED_16,
+        RS_TYPE_SIGNED_32,
+        RS_TYPE_SIGNED_64,
+        RS_TYPE_UNSIGNED_8,
+        RS_TYPE_UNSIGNED_16,
+        RS_TYPE_UNSIGNED_32,
+        RS_TYPE_UNSIGNED_64,
+        RS_TYPE_BOOLEAN
+    };
+
+    std::vector<Element> children;                       // Child Element fields for structs
+    empirical_type<lldb::addr_t> element_ptr;            // Pointer to the RS Element of the Type
+    empirical_type<DataType> type;                       // Type of each data pointer stored by the allocation
+    empirical_type<DataKind> type_kind;                  // Defines pixel type if Allocation is created from an image
+    empirical_type<uint32_t> type_vec_size;              // Vector size of each data point, e.g '4' for uchar4
+    empirical_type<uint32_t> field_count;                // Number of Subelements
+    empirical_type<uint32_t> datum_size;                 // Size of a single Element with padding
+    empirical_type<uint32_t> padding;                    // Number of padding bytes
+    empirical_type<uint32_t> array_size;                 // Number of items in array, only needed for strucrs
+    ConstString type_name;                               // Name of type, only needed for structs
+
+    static const ConstString FallbackStructName;         // Print this as the type name of a struct Element
+                                                         // If we can't resolve the actual struct name
+};
+
 // This AllocationDetails class collects data associated with a single
 // allocation instance.
 struct RenderScriptRuntime::AllocationDetails
 {
-   // Taken from rsDefines.h
-   enum DataKind
-   {
-       RS_KIND_USER,
-       RS_KIND_PIXEL_L = 7,
-       RS_KIND_PIXEL_A,
-       RS_KIND_PIXEL_LA,
-       RS_KIND_PIXEL_RGB,
-       RS_KIND_PIXEL_RGBA,
-       RS_KIND_PIXEL_DEPTH,
-       RS_KIND_PIXEL_YUV,
-       RS_KIND_INVALID = 100
-   };
-
-   // Taken from rsDefines.h
-   enum DataType
-   {
-       RS_TYPE_NONE = 0,
-       RS_TYPE_FLOAT_16,
-       RS_TYPE_FLOAT_32,
-       RS_TYPE_FLOAT_64,
-       RS_TYPE_SIGNED_8,
-       RS_TYPE_SIGNED_16,
-       RS_TYPE_SIGNED_32,
-       RS_TYPE_SIGNED_64,
-       RS_TYPE_UNSIGNED_8,
-       RS_TYPE_UNSIGNED_16,
-       RS_TYPE_UNSIGNED_32,
-       RS_TYPE_UNSIGNED_64,
-       RS_TYPE_BOOLEAN
-    };
-
     struct Dimension
     {
         uint32_t dim_1;
@@ -214,14 +235,11 @@ struct RenderScriptRuntime::AllocationDetails
     // for commands to reference it.
     const unsigned int id;
 
-    empirical_type<DataType> type;            // Type of each data pointer stored by the allocation
-    empirical_type<DataKind> type_kind;       // Defines pixel type if Allocation is created from an image
-    empirical_type<uint32_t> type_vec_size;   // Vector size of each data point, e.g '4' for uchar4
+    RenderScriptRuntime::Element element;     // Allocation Element type
     empirical_type<Dimension> dimension;      // Dimensions of the Allocation
     empirical_type<lldb::addr_t> address;     // Pointer to address of the RS Allocation
     empirical_type<lldb::addr_t> data_ptr;    // Pointer to the data held by the Allocation
     empirical_type<lldb::addr_t> type_ptr;    // Pointer to the RS Type of the Allocation
-    empirical_type<lldb::addr_t> element_ptr; // Pointer to the RS Element of the Type
     empirical_type<lldb::addr_t> context;     // Pointer to the RS Context of the Allocation
     empirical_type<uint32_t> size;            // Size of the allocation
     empirical_type<uint32_t> stride;          // Stride between rows of the allocation
@@ -231,6 +249,8 @@ struct RenderScriptRuntime::AllocationDetails
     {
     }
 };
+
+const ConstString RenderScriptRuntime::Element::FallbackStructName("struct");
 
 unsigned int RenderScriptRuntime::AllocationDetails::ID = 1;
 
@@ -1099,7 +1119,11 @@ enum ExpressionStrings
    eExprTypeElemPtr,
    eExprElementType,
    eExprElementKind,
-   eExprElementVec
+   eExprElementVec,
+   eExprElementFieldCount,
+   eExprSubelementsId,
+   eExprSubelementsName,
+   eExprSubelementsArrSize
 };
 
 // Format strings containing the expressions we may need to evaluate.
@@ -1122,9 +1146,22 @@ const char runtimeExpressions[][256] =
 
  // rsaElementGetNativeData(Context*, Element*, uint32_t* elemData,size)
  // Pack mType; mKind; mNormalized; mVectorSize; NumSubElements into elemData
- "uint32_t data[6]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[0]", // Type
- "uint32_t data[6]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[1]", // Kind
- "uint32_t data[6]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[3]"  // Vector Size
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[0]", // Type
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[1]", // Kind
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[3]", // Vector Size
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[4]", // Field Count
+
+  // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
+  // size_t *arraySizes, uint32_t dataSize)
+  // Needed for Allocations of structs to gather details about fields/Subelements
+ "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
+ "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); ids[%u]",     // Element* of field
+
+ "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
+ "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); names[%u]",   // Name of field
+
+ "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
+ "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); arr_size[%u]" // Array size of field
 };
 
 // JITs the RS runtime for the internal data pointer of an allocation.
@@ -1272,7 +1309,7 @@ RenderScriptRuntime::JITTypePacked(AllocationDetails* allocation, StackFrame* fr
     allocation->dimension = dims;
 
     addr_t elem_ptr = static_cast<lldb::addr_t>(results[3]);
-    allocation->element_ptr = elem_ptr;
+    allocation->element.element_ptr = elem_ptr;
 
     if (log)
         log->Printf("RenderScriptRuntime::JITTypePacked - dims (%u, %u, %u) Element*: 0x%" PRIx64,
@@ -1282,23 +1319,23 @@ RenderScriptRuntime::JITTypePacked(AllocationDetails* allocation, StackFrame* fr
 }
 
 // JITs the RS runtime for information about the Element of an allocation
-// Then sets type, type_vec_size, and type_kind members in Allocation with the result.
+// Then sets type, type_vec_size, field_count and type_kind members in Element with the result.
 // Returns true on success, false otherwise
 bool
-RenderScriptRuntime::JITElementPacked(AllocationDetails* allocation, StackFrame* frame_ptr)
+RenderScriptRuntime::JITElementPacked(Element& elem, const lldb::addr_t context, StackFrame* frame_ptr)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
-    if (!allocation->element_ptr.isValid() || !allocation->context.isValid())
+    if (!elem.element_ptr.isValid())
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITElementPacked - Failed to find allocation details");
         return false;
     }
 
-    // We want 3 elements from packed data
-    const unsigned int num_exprs = 3;
-    assert(num_exprs == (eExprElementVec - eExprElementType + 1) && "Invalid number of expressions");
+    // We want 4 elements from packed data
+    const unsigned int num_exprs = 4;
+    assert(num_exprs == (eExprElementFieldCount - eExprElementType + 1) && "Invalid number of expressions");
 
     const int max_expr_size = 512; // Max expression size
     char buffer[num_exprs][max_expr_size];
@@ -1306,11 +1343,11 @@ RenderScriptRuntime::JITElementPacked(AllocationDetails* allocation, StackFrame*
 
     for (unsigned int i = 0; i < num_exprs; i++)
     {
-        int chars_written = snprintf(buffer[i], max_expr_size, runtimeExpressions[eExprElementType + i], *allocation->context.get(), *allocation->element_ptr.get());
+        int chars_written = snprintf(buffer[i], max_expr_size, runtimeExpressions[eExprElementType + i], context, *elem.element_ptr.get());
         if (chars_written < 0)
         {
             if (log)
-                log->Printf("RenderScriptRuntime::JITDataPointer - Encoding error in snprintf()");
+                log->Printf("RenderScriptRuntime::JITElementPacked - Encoding error in snprintf()");
             return false;
         }
         else if (chars_written >= max_expr_size)
@@ -1326,13 +1363,109 @@ RenderScriptRuntime::JITElementPacked(AllocationDetails* allocation, StackFrame*
     }
 
     // Assign results to allocation members
-    allocation->type = static_cast<RenderScriptRuntime::AllocationDetails::DataType>(results[0]);
-    allocation->type_kind = static_cast<RenderScriptRuntime::AllocationDetails::DataKind>(results[1]);
-    allocation->type_vec_size = static_cast<uint32_t>(results[2]);
+    elem.type = static_cast<RenderScriptRuntime::Element::DataType>(results[0]);
+    elem.type_kind = static_cast<RenderScriptRuntime::Element::DataKind>(results[1]);
+    elem.type_vec_size = static_cast<uint32_t>(results[2]);
+    elem.field_count = static_cast<uint32_t>(results[3]);
 
     if (log)
-        log->Printf("RenderScriptRuntime::JITElementPacked - data type %u, pixel type %u, vector size %u",
-                    *allocation->type.get(), *allocation->type_kind.get(), *allocation->type_vec_size.get());
+        log->Printf("RenderScriptRuntime::JITElementPacked - data type %u, pixel type %u, vector size %u, field count %u",
+                    *elem.type.get(), *elem.type_kind.get(), *elem.type_vec_size.get(), *elem.field_count.get());
+
+    // If this Element has subelements then JIT rsaElementGetSubElements() for details about its fields
+    if (*elem.field_count.get() > 0 && !JITSubelements(elem, context, frame_ptr))
+        return false;
+
+    return true;
+}
+
+// JITs the RS runtime for information about the subelements/fields of a struct allocation
+// This is necessary for infering the struct type so we can pretty print the allocation's contents.
+// Returns true on success, false otherwise
+bool
+RenderScriptRuntime::JITSubelements(Element& elem, const lldb::addr_t context, StackFrame* frame_ptr)
+{
+    Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+
+    if (!elem.element_ptr.isValid() || !elem.field_count.isValid())
+    {
+        if (log)
+            log->Printf("RenderScriptRuntime::JITSubelements - Failed to find allocation details");
+        return false;
+    }
+
+    const short num_exprs = 3;
+    assert(num_exprs == (eExprSubelementsArrSize - eExprSubelementsId + 1) && "Invalid number of expressions");
+
+    const int max_expr_size = 512; // Max expression size
+    char expr_buffer[max_expr_size];
+    uint64_t results;
+
+    // Iterate over struct fields.
+    const uint32_t field_count = *elem.field_count.get();
+    for (unsigned int field_index = 0; field_index < field_count; ++field_index)
+    {
+        Element child;
+        for (unsigned int expr_index = 0; expr_index < num_exprs; ++expr_index)
+        {
+            int chars_written = snprintf(expr_buffer, max_expr_size, runtimeExpressions[eExprSubelementsId + expr_index],
+                                         field_count, field_count, field_count,
+                                         context, *elem.element_ptr.get(), field_count, field_index);
+            if (chars_written < 0)
+            {
+                if (log)
+                    log->Printf("RenderScriptRuntime::JITSubelements - Encoding error in snprintf()");
+                return false;
+            }
+            else if (chars_written >= max_expr_size)
+            {
+                if (log)
+                    log->Printf("RenderScriptRuntime::JITSubelements - Expression too long");
+                return false;
+            }
+
+            // Perform expression evaluation
+            if (!EvalRSExpression(expr_buffer, frame_ptr, &results))
+                return false;
+
+            if (log)
+                log->Printf("RenderScriptRuntime::JITSubelements - Expr result 0x%" PRIx64, results);
+
+            switch(expr_index)
+            {
+                case 0: // Element* of child
+                    child.element_ptr = static_cast<addr_t>(results);
+                    break;
+                case 1: // Name of child
+                {
+                    lldb::addr_t address = static_cast<addr_t>(results);
+                    Error err;
+                    std::string name;
+                    GetProcess()->ReadCStringFromMemory(address, name, err);
+                    if (!err.Fail())
+                        child.type_name = ConstString(name);
+                    else
+                    {
+                        if (log)
+                            log->Printf("RenderScriptRuntime::JITSubelements - Warning: Couldn't read field name");
+                    }
+                    break;
+                }
+                case 2: // Array size of child
+                    child.array_size = static_cast<uint32_t>(results);
+                    break;
+            }
+        }
+
+        // We need to recursively JIT each Element field of the struct since
+        // structs can be nested inside structs.
+        if (!JITElementPacked(child, context, frame_ptr))
+            return false;
+        elem.children.push_back(child);
+    }
+
+    // Try to infer the name of the struct type so we can pretty print the allocation contents.
+    FindStructTypeName(elem, frame_ptr);
 
     return true;
 }
@@ -1343,27 +1476,42 @@ RenderScriptRuntime::JITElementPacked(AllocationDetails* allocation, StackFrame*
 // Using this offset minus the starting address we can calculate the size of the allocation.
 // Returns true on success, false otherwise
 bool
-RenderScriptRuntime::JITAllocationSize(AllocationDetails* allocation, StackFrame* frame_ptr,
-                                       const uint32_t elem_size)
+RenderScriptRuntime::JITAllocationSize(AllocationDetails* allocation, StackFrame* frame_ptr)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
     if (!allocation->address.isValid() || !allocation->dimension.isValid()
-        || !allocation->data_ptr.isValid())
+        || !allocation->data_ptr.isValid() || !allocation->element.datum_size.isValid())
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITAllocationSize - Failed to find allocation details");
         return false;
     }
 
-    const char* expr_cstr = runtimeExpressions[eExprGetOffsetPtr];
-    const int max_expr_size = 512; // Max expression size
-    char buffer[max_expr_size];
-
     // Find dimensions
     unsigned int dim_x = allocation->dimension.get()->dim_1;
     unsigned int dim_y = allocation->dimension.get()->dim_2;
     unsigned int dim_z = allocation->dimension.get()->dim_3;
+
+    // Our plan of jitting the last element address doesn't seem to work for struct Allocations
+    // Instead try to infer the size ourselves without any inter element padding.
+    if (allocation->element.children.size() > 0)
+    {
+        if (dim_x == 0) dim_x = 1;
+        if (dim_y == 0) dim_y = 1;
+        if (dim_z == 0) dim_z = 1;
+
+        allocation->size = dim_x * dim_y * dim_z * *allocation->element.datum_size.get();
+
+        if (log)
+            log->Printf("RenderScriptRuntime::JITAllocationSize - Infered size of struct allocation %u", *allocation->size.get());
+
+        return true;
+    }
+
+    const char* expr_cstr = runtimeExpressions[eExprGetOffsetPtr];
+    const int max_expr_size = 512;
+    char buffer[max_expr_size];
 
     // Calculate last element
     dim_x = dim_x == 0 ? 0 : dim_x - 1;
@@ -1391,7 +1539,7 @@ RenderScriptRuntime::JITAllocationSize(AllocationDetails* allocation, StackFrame
 
     addr_t mem_ptr = static_cast<lldb::addr_t>(result);
     // Find pointer to last element and add on size of an element
-    allocation->size = static_cast<uint32_t>(mem_ptr - *allocation->data_ptr.get()) + elem_size;
+    allocation->size = static_cast<uint32_t>(mem_ptr - *allocation->data_ptr.get()) + *allocation->element.datum_size.get();
 
     return true;
 }
@@ -1457,31 +1605,140 @@ RenderScriptRuntime::RefreshAllocation(AllocationDetails* allocation, StackFrame
         return false;
 
     // rsaElementGetNativeData()
-    if (!JITElementPacked(allocation, frame_ptr))
+    if (!JITElementPacked(allocation->element, *allocation->context.get(), frame_ptr))
         return false;
 
+    // Sets the datum_size member in Element
+    SetElementSize(allocation->element);
+
     // Use GetOffsetPointer() to infer size of the allocation
-    const unsigned int element_size = GetElementSize(allocation);
-    if (!JITAllocationSize(allocation, frame_ptr, element_size))
+    if (!JITAllocationSize(allocation, frame_ptr))
         return false;
 
     return true;
 }
 
-// Returns the size of a single allocation element including padding.
-// Assumes the relevant allocation information has already been jitted.
-unsigned int
-RenderScriptRuntime::GetElementSize(const AllocationDetails* allocation)
+// Function attempts to set the type_name member of the paramaterised Element object.
+// This string should be the name of the struct type the Element represents.
+// We need this string for pretty printing the Element to users.
+void
+RenderScriptRuntime::FindStructTypeName(Element& elem, StackFrame* frame_ptr)
 {
-    const AllocationDetails::DataType type = *allocation->type.get();
-    assert(type >= AllocationDetails::RS_TYPE_NONE && type <= AllocationDetails::RS_TYPE_BOOLEAN
+    Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+
+    if (!elem.type_name.IsEmpty()) // Name already set
+        return;
+    else
+        elem.type_name = Element::FallbackStructName; // Default type name if we don't succeed
+
+    // Find all the global variables from the script rs modules
+    VariableList variable_list;
+    for (auto module_sp : m_rsmodules)
+        module_sp->m_module->FindGlobalVariables(RegularExpression("."), true, UINT32_MAX, variable_list);
+
+    // Iterate over all the global variables looking for one with a matching type to the Element.
+    // We make the assumption a match exists since there needs to be a global variable to reflect the
+    // struct type back into java host code.
+    for (uint32_t var_index = 0; var_index < variable_list.GetSize(); ++var_index)
+    {
+        const VariableSP var_sp(variable_list.GetVariableAtIndex(var_index));
+        if (!var_sp)
+           continue;
+
+        ValueObjectSP valobj_sp = ValueObjectVariable::Create(frame_ptr, var_sp);
+        if (!valobj_sp)
+            continue;
+
+        // Find the number of variable fields.
+        // If it has no fields, or more fields than our Element, then it can't be the struct we're looking for.
+        // Don't check for equality since RS can add extra struct members for padding.
+        size_t num_children = valobj_sp->GetNumChildren();
+        if (num_children > elem.children.size() || num_children == 0)
+            continue;
+
+        // Iterate over children looking for members with matching field names.
+        // If all the field names match, this is likely the struct we want.
+        //
+        //   TODO: This could be made more robust by also checking children data sizes, or array size
+        bool found = true;
+        for (size_t child_index = 0; child_index < num_children; ++child_index)
+        {
+            ValueObjectSP child = valobj_sp->GetChildAtIndex(child_index, true);
+            if (!child || (child->GetName() != elem.children[child_index].type_name))
+            {
+                found = false;
+                break;
+            }
+        }
+
+        // RS can add extra struct members for padding in the format '#rs_padding_[0-9]+'
+        if (found && num_children < elem.children.size())
+        {
+            const unsigned int size_diff = elem.children.size() - num_children;
+            if (log)
+                log->Printf("RenderScriptRuntime::FindStructTypeName - %u padding struct entries", size_diff);
+
+            for (unsigned int padding_index = 0; padding_index < size_diff; ++padding_index)
+            {
+                const ConstString& name = elem.children[num_children + padding_index].type_name;
+                if (strcmp(name.AsCString(), "#rs_padding") < 0)
+                    found = false;
+            }
+        }
+
+        // We've found a global var with matching type
+        if (found)
+        {
+            // Dereference since our Element type isn't a pointer.
+            if (valobj_sp->IsPointerType())
+            {
+                Error err;
+                ValueObjectSP deref_valobj = valobj_sp->Dereference(err);
+                if (!err.Fail())
+                    valobj_sp = deref_valobj;
+            }
+
+            // Save name of variable in Element.
+            elem.type_name = valobj_sp->GetTypeName();
+            if (log)
+                log->Printf("RenderScriptRuntime::FindStructTypeName - Element name set to %s", elem.type_name.AsCString());
+
+            return;
+        }
+    }
+}
+
+// Function sets the datum_size member of Element. Representing the size of a single instance including padding.
+// Assumes the relevant allocation information has already been jitted.
+void
+RenderScriptRuntime::SetElementSize(Element& elem)
+{
+    Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+    const Element::DataType type = *elem.type.get();
+    assert(type >= Element::RS_TYPE_NONE && type <= Element::RS_TYPE_BOOLEAN
                                                    && "Invalid allocation type");
 
-    const unsigned int vec_size = *allocation->type_vec_size.get();
-    const unsigned int data_size = vec_size * AllocationDetails::RSTypeToFormat[type][eElementSize];
+    const unsigned int vec_size = *elem.type_vec_size.get();
+    unsigned int data_size = 0;
     const unsigned int padding = vec_size == 3 ? AllocationDetails::RSTypeToFormat[type][eElementSize] : 0;
 
-    return data_size + padding;
+    // Element is of a struct type, calculate size recursively.
+    if ((type == Element::RS_TYPE_NONE) && (elem.children.size() > 0))
+    {
+        for (Element& child : elem.children)
+        {
+            SetElementSize(child);
+            const unsigned int array_size = child.array_size.isValid() ? *child.array_size.get() : 1;
+            data_size += *child.datum_size.get() * array_size;
+        }
+    }
+    else
+        data_size = vec_size * AllocationDetails::RSTypeToFormat[type][eElementSize];
+
+    elem.padding = padding;
+    elem.datum_size = data_size + padding;
+    if (log)
+        log->Printf("RenderScriptRuntime::SetElementSize - element size set to %u", data_size + padding);
 }
 
 // Given an allocation, this function copies the allocation contents from device into a buffer on the heap.
@@ -1492,8 +1749,8 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails* allocation, StackFrame
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
     // JIT all the allocation details
-    if (!allocation->data_ptr.isValid() || !allocation->type.isValid() || !allocation->type_vec_size.isValid()
-        || !allocation->size.isValid())
+    if (!allocation->data_ptr.isValid() || !allocation->element.type.isValid()
+        || !allocation->element.type_vec_size.isValid() || !allocation->size.isValid())
     {
         if (log)
             log->Printf("RenderScriptRuntime::GetAllocationData - Allocation details not calculated yet, jitting info");
@@ -1506,7 +1763,7 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails* allocation, StackFrame
         }
     }
 
-    assert(allocation->data_ptr.isValid() && allocation->type.isValid() && allocation->type_vec_size.isValid()
+    assert(allocation->data_ptr.isValid() && allocation->element.type.isValid() && allocation->element.type_vec_size.isValid()
            && allocation->size.isValid() && "Allocation information not available");
 
     // Allocate a buffer to copy data into
@@ -1551,7 +1808,8 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
         log->Printf("RenderScriptRuntime::LoadAllocation - Found allocation 0x%" PRIx64, *alloc->address.get());
 
     // JIT all the allocation details
-    if (!alloc->data_ptr.isValid() || !alloc->type.isValid() || !alloc->type_vec_size.isValid() || !alloc->size.isValid())
+    if (!alloc->data_ptr.isValid() || !alloc->element.type.isValid() || !alloc->element.datum_size.isValid()
+        || !alloc->element.type_vec_size.isValid() || !alloc->size.isValid())
     {
         if (log)
             log->Printf("RenderScriptRuntime::LoadAllocation - Allocation details not calculated yet, jitting info");
@@ -1564,8 +1822,8 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
         }
     }
 
-    assert(alloc->data_ptr.isValid() && alloc->type.isValid() && alloc->type_vec_size.isValid() && alloc->size.isValid()
-           && "Allocation information not available");
+    assert(alloc->data_ptr.isValid() && alloc->element.type.isValid() && alloc->element.type_vec_size.isValid()
+           && alloc->size.isValid() && alloc->element.datum_size.isValid() && "Allocation information not available");
 
     // Check we can read from file
     FileSpec file(filename, true);
@@ -1598,16 +1856,15 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
                     head->type, head->element_size);
 
     // Check if the target allocation and file both have the same number of bytes for an Element
-    const unsigned int elem_size = GetElementSize(alloc);
-    if (elem_size != head->element_size)
+    if (*alloc->element.datum_size.get() != head->element_size)
     {
         strm.Printf("Warning: Mismatched Element sizes - file %u bytes, allocation %u bytes",
-                    head->element_size, elem_size);
+                    head->element_size, *alloc->element.datum_size.get());
         strm.EOL();
     }
 
     // Check if the target allocation and file both have the same integral type
-    const unsigned int type = static_cast<unsigned int>(*alloc->type.get());
+    const unsigned int type = static_cast<unsigned int>(*alloc->element.type.get());
     if (type != head->type)
     {
         const char* file_type_cstr = AllocationDetails::RsDataTypeToString[head->type][0];
@@ -1665,8 +1922,8 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
         log->Printf("RenderScriptRuntime::SaveAllocation - Found allocation 0x%" PRIx64, *alloc->address.get());
 
      // JIT all the allocation details
-    if (!alloc->data_ptr.isValid() || !alloc->type.isValid() || !alloc->type_vec_size.isValid()
-        || !alloc->type_kind.isValid() || !alloc->dimension.isValid())
+    if (!alloc->data_ptr.isValid() || !alloc->element.type.isValid() || !alloc->element.type_vec_size.isValid()
+        || !alloc->element.type_kind.isValid() || !alloc->dimension.isValid())
     {
         if (log)
             log->Printf("RenderScriptRuntime::SaveAllocation - Allocation details not calculated yet, jitting info");
@@ -1679,8 +1936,8 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
         }
     }
 
-    assert(alloc->data_ptr.isValid() && alloc->type.isValid() && alloc->type_vec_size.isValid() && alloc->type_kind.isValid()
-           && alloc->dimension.isValid() && "Allocation information not available");
+    assert(alloc->data_ptr.isValid() && alloc->element.type.isValid() && alloc->element.type_vec_size.isValid() && alloc->element.datum_size.get()
+           && alloc->element.type_kind.isValid() && alloc->dimension.isValid() && "Allocation information not available");
 
     // Check we can create writable file
     FileSpec file_spec(filename, true);
@@ -1705,12 +1962,12 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     AllocationDetails::FileHeader head;
     head.ident[0] = 'R'; head.ident[1] = 'S'; head.ident[2] = 'A'; head.ident[3] = 'D';
     head.hdr_size = static_cast<uint16_t>(sizeof(AllocationDetails::FileHeader));
-    head.type = static_cast<uint16_t>(*alloc->type.get());
-    head.kind = static_cast<uint32_t>(*alloc->type_kind.get());
+    head.type = static_cast<uint16_t>(*alloc->element.type.get());
+    head.kind = static_cast<uint32_t>(*alloc->element.type_kind.get());
     head.dims[0] = static_cast<uint32_t>(alloc->dimension.get()->dim_1);
     head.dims[1] = static_cast<uint32_t>(alloc->dimension.get()->dim_2);
     head.dims[2] = static_cast<uint32_t>(alloc->dimension.get()->dim_3);
-    head.element_size = static_cast<uint32_t>(GetElementSize(alloc));
+    head.element_size = static_cast<uint32_t>(*alloc->element.datum_size.get());
 
     // Write the file header
     size_t num_bytes = sizeof(AllocationDetails::FileHeader);
@@ -2080,8 +2337,8 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
         log->Printf("RenderScriptRuntime::DumpAllocation - Found allocation 0x%" PRIx64, *alloc->address.get());
 
     // Check we have information about the allocation, if not calculate it
-    if (!alloc->data_ptr.isValid() || !alloc->type.isValid() ||
-        !alloc->type_vec_size.isValid() || !alloc->dimension.isValid())
+    if (!alloc->data_ptr.isValid() || !alloc->element.type.isValid() ||
+        !alloc->element.type_vec_size.isValid() || !alloc->dimension.isValid() || !alloc->element.datum_size.isValid())
     {
         if (log)
             log->Printf("RenderScriptRuntime::DumpAllocation - Allocation details not calculated yet, jitting info");
@@ -2096,22 +2353,19 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
     }
 
     // Establish format and size of each data element
-    const unsigned int vec_size = *alloc->type_vec_size.get();
-    const AllocationDetails::DataType type = *alloc->type.get();
+    const unsigned int vec_size = *alloc->element.type_vec_size.get();
+    const Element::DataType type = *alloc->element.type.get();
 
-    assert(type >= AllocationDetails::RS_TYPE_NONE && type <= AllocationDetails::RS_TYPE_BOOLEAN
+    assert(type >= Element::RS_TYPE_NONE && type <= Element::RS_TYPE_BOOLEAN
                                                    && "Invalid allocation type");
 
     lldb::Format format = vec_size == 1 ? static_cast<lldb::Format>(AllocationDetails::RSTypeToFormat[type][eFormatSingle])
                                         : static_cast<lldb::Format>(AllocationDetails::RSTypeToFormat[type][eFormatVector]);
 
-    const unsigned int data_size = vec_size * AllocationDetails::RSTypeToFormat[type][eElementSize];
-    // Renderscript pads vector 3 elements to vector 4
-    const unsigned int elem_padding = vec_size == 3 ? AllocationDetails::RSTypeToFormat[type][eElementSize] : 0;
+    const unsigned int data_size = *alloc->element.datum_size.get();
 
     if (log)
-        log->Printf("RenderScriptRuntime::DumpAllocation - Element size %u bytes, element padding %u bytes",
-                    data_size, elem_padding);
+        log->Printf("RenderScriptRuntime::DumpAllocation - Element size %u bytes, including padding", data_size);
 
     // Allocate a buffer to copy data into
     std::shared_ptr<uint8_t> buffer = GetAllocationData(alloc, frame_ptr);
@@ -2136,10 +2390,10 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
         }
     }
     const unsigned int stride = *alloc->stride.get();
-    const unsigned int size = *alloc->size.get(); //size of last element
-
+    const unsigned int size = *alloc->size.get(); // Size of whole allocation
+    const unsigned int padding = alloc->element.padding.isValid() ? *alloc->element.padding.get() : 0;
     if (log)
-        log->Printf("RenderScriptRuntime::DumpAllocation - stride %u bytes, size %u bytes", stride, size);
+        log->Printf("RenderScriptRuntime::DumpAllocation - stride %u bytes, size %u bytes, padding %u", stride, size, padding);
 
     // Find dimensions used to index loops, so need to be non-zero
     unsigned int dim_x = alloc->dimension.get()->dim_1;
@@ -2173,8 +2427,41 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
             for (unsigned int x = 0; x < dim_x; ++x)
             {
                 strm.Printf("\n(%u, %u, %u) = ", x, y, z);
-                alloc_data.Dump(&strm, offset, format, data_size, 1, 1, LLDB_INVALID_ADDRESS, 0, 0);
-                offset += data_size + elem_padding;
+                if ((type == Element::RS_TYPE_NONE) && (alloc->element.children.size() > 0) &&
+                    (alloc->element.type_name != Element::FallbackStructName))
+                {
+                    // Here we are dumping an Element of struct type.
+                    // This is done using expression evaluation with the name of the struct type and pointer to element.
+
+                    // Don't print the name of the resulting expression, since this will be '$[0-9]+'
+                    DumpValueObjectOptions expr_options;
+                    expr_options.SetHideName(true);
+
+                    // Setup expression as derefrencing a pointer cast to element address.
+                    const int max_expr_size = 512;
+                    char expr_char_buffer[max_expr_size];
+                    int chars_written = snprintf(expr_char_buffer, max_expr_size, "*(%s*) 0x%" PRIx64,
+                                        alloc->element.type_name.AsCString(), *alloc->data_ptr.get() + offset);
+
+                    if (chars_written < 0 || chars_written >= max_expr_size)
+                    {
+                        if (log)
+                            log->Printf("RenderScriptRuntime::DumpAllocation- Error in snprintf()");
+                        continue;
+                    }
+
+                    // Evaluate expression
+                    ValueObjectSP expr_result;
+                    GetProcess()->GetTarget().EvaluateExpression(expr_char_buffer, frame_ptr, expr_result);
+
+                    // Print the results to our stream.
+                    expr_result->Dump(strm, expr_options);
+                }
+                else
+                {
+                    alloc_data.Dump(&strm, offset, format, data_size - padding, 1, 1, LLDB_INVALID_ADDRESS, 0, 0);
+                }
+                offset += data_size;
             }
         }
     }
@@ -2234,27 +2521,29 @@ RenderScriptRuntime::ListAllocations(Stream &strm, StackFrame* frame_ptr, bool r
                                           alloc->dimension.get()->dim_3);
 
         strm.Indent("Data Type: ");
-        if (!alloc->type.isValid() || !alloc->type_vec_size.isValid())
+        if (!alloc->element.type.isValid() || !alloc->element.type_vec_size.isValid())
             strm.Printf("unknown\n");
         else
         {
-            const int vector_size = *alloc->type_vec_size.get();
-            const AllocationDetails::DataType type = *alloc->type.get();
+            const int vector_size = *alloc->element.type_vec_size.get();
+            const Element::DataType type = *alloc->element.type.get();
 
-            if (vector_size > 4 || vector_size < 1 ||
-                type < AllocationDetails::RS_TYPE_NONE || type > AllocationDetails::RS_TYPE_BOOLEAN)
+            if (!alloc->element.type_name.IsEmpty())
+                strm.Printf("%s\n", alloc->element.type_name.AsCString());
+            else if (vector_size > 4 || vector_size < 1 ||
+                type < Element::RS_TYPE_NONE || type > Element::RS_TYPE_BOOLEAN)
                 strm.Printf("invalid type\n");
             else
                 strm.Printf("%s\n", AllocationDetails::RsDataTypeToString[static_cast<unsigned int>(type)][vector_size-1]);
         }
 
         strm.Indent("Data Kind: ");
-        if (!alloc->type_kind.isValid())
+        if (!alloc->element.type_kind.isValid())
             strm.Printf("unknown\n");
         else
         {
-            const AllocationDetails::DataKind kind = *alloc->type_kind.get();
-            if (kind < AllocationDetails::RS_KIND_USER || kind > AllocationDetails::RS_KIND_PIXEL_YUV)
+            const Element::DataKind kind = *alloc->element.type_kind.get();
+            if (kind < Element::RS_KIND_USER || kind > Element::RS_KIND_PIXEL_YUV)
                 strm.Printf("invalid kind\n");
             else
                 strm.Printf("%s\n", AllocationDetails::RsDataKindToString[static_cast<unsigned int>(kind)]);

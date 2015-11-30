@@ -11,8 +11,8 @@
 // CHECK3: :[[@LINE+1]]:9: warning: implicit conversion from 'double' to 'int' changes value
 int a = 1.5;
 
-// CHECK2: :[[@LINE+2]]:11: warning: single-argument constructors must be explicit [google-explicit-constructor]
-// CHECK3: :[[@LINE+1]]:11: warning: single-argument constructors must be explicit [google-explicit-constructor]
+// CHECK2: :[[@LINE+2]]:11: warning: single-argument constructors must be marked explicit
+// CHECK3: :[[@LINE+1]]:11: warning: single-argument constructors must be marked explicit
 class A { A(int) {} };
 
 #define MACRO_FROM_COMMAND_LINE

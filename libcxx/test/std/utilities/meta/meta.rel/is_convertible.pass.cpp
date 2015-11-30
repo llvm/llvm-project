@@ -13,6 +13,8 @@
 
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, class U>
 void test_is_convertible()
 {
@@ -20,6 +22,12 @@ void test_is_convertible()
     static_assert((std::is_convertible<const T, U>::value), "");
     static_assert((std::is_convertible<T, const U>::value), "");
     static_assert((std::is_convertible<const T, const U>::value), "");
+#if TEST_STD_VER > 14
+    static_assert((std::is_convertible_v<T, U>), "");
+    static_assert((std::is_convertible_v<const T, U>), "");
+    static_assert((std::is_convertible_v<T, const U>), "");
+    static_assert((std::is_convertible_v<const T, const U>), "");
+#endif
 }
 
 template <class T, class U>
@@ -29,6 +37,12 @@ void test_is_not_convertible()
     static_assert((!std::is_convertible<const T, U>::value), "");
     static_assert((!std::is_convertible<T, const U>::value), "");
     static_assert((!std::is_convertible<const T, const U>::value), "");
+#if TEST_STD_VER > 14
+    static_assert((!std::is_convertible_v<T, U>), "");
+    static_assert((!std::is_convertible_v<const T, U>), "");
+    static_assert((!std::is_convertible_v<T, const U>), "");
+    static_assert((!std::is_convertible_v<const T, const U>), "");
+#endif
 }
 
 typedef void Function();

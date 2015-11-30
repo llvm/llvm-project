@@ -8,7 +8,7 @@
 
 #include "header1.h"
 // CHECK-NOT: warning:
-// CHECK2: header1.h:1:12: warning: single-argument constructors must be explicit [google-explicit-constructor]
+// CHECK2: header1.h:1:12: warning: single-argument constructors must be marked explicit
 // CHECK3-NOT: warning:
 // CHECK4: header1.h:1:12: warning: single-argument constructors
 

@@ -44,11 +44,11 @@ struct A {
   // CHECK-FIXES: {{^  }}A(const A& a) {}
 
   A(int x1) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: single-argument constructors must be explicit [google-explicit-constructor]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: single-argument constructors must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor]
   // CHECK-FIXES: {{^  }}explicit A(int x1) {}
 
   A(double x2, double y = 3.14) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructors that are callable with a single argument must be marked explicit [google-explicit-constructor]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructors that are callable with a single argument must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor]
   // CHECK-FIXES: {{^  }}explicit A(double x2, double y = 3.14) {}
 
   template <typename... T>

@@ -119,9 +119,11 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   bool SingleArgument =
       Ctor->getNumParams() == 1 && !Ctor->getParamDecl(0)->isParameterPack();
   SourceLocation Loc = Ctor->getLocation();
-  diag(Loc, SingleArgument ? "single-argument constructors must be explicit"
-                           : "constructors that are callable with a single "
-                             "argument must be marked explicit")
+  diag(Loc,
+       "%0 must be marked explicit to avoid unintentional implicit conversions")
+      << (SingleArgument
+              ? "single-argument constructors"
+              : "constructors that are callable with a single argument")
       << FixItHint::CreateInsertion(Loc, "explicit ");
 }
 

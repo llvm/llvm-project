@@ -26,6 +26,9 @@ duration_cast(const duration<Rep, Period>& fd);
 
 template <class Rep> struct treat_as_floating_point : is_floating_point<Rep> {};
 
+template <class Rep> constexpr bool treat_as_floating_point_v
+    = treat_as_floating_point<Rep>::value;                       // C++17
+
 template <class Rep>
 struct duration_values
 {
@@ -412,6 +415,11 @@ duration_cast(const duration<_Rep, _Period>& __fd)
 
 template <class _Rep>
 struct _LIBCPP_TYPE_VIS_ONLY treat_as_floating_point : is_floating_point<_Rep> {};
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Rep> _LIBCPP_CONSTEXPR bool treat_as_floating_point_v
+    = treat_as_floating_point<_Rep>::value;
+#endif
 
 template <class _Rep>
 struct _LIBCPP_TYPE_VIS_ONLY duration_values

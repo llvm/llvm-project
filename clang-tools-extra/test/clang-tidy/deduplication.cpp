@@ -1,10 +1,8 @@
-// RUN: clang-tidy -checks='-*,google-explicit-constructor' %s -- | FileCheck %s
+// RUN: %check_clang_tidy %s google-explicit-constructor %t
 
 template<typename T>
 struct A { A(T); };
-// CHECK: :[[@LINE-1]]:12: warning: single-argument constructors must be explicit [google-explicit-constructor]
-// CHECK-NOT: warning:
-
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: single-argument constructors must be marked explicit
 
 void f() {
   A<int> a(0);

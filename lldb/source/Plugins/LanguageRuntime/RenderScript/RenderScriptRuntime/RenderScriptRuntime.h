@@ -231,6 +231,7 @@ public:
 protected:
     struct ScriptDetails;
     struct AllocationDetails;
+    struct Element;
 
     void InitSearchFilter(lldb::TargetSP target)
     {
@@ -311,8 +312,9 @@ private:
 
     AllocationDetails* FindAllocByID(Stream &strm, const uint32_t alloc_id);
     std::shared_ptr<uint8_t> GetAllocationData(AllocationDetails* allocation, StackFrame* frame_ptr);
-    unsigned int GetElementSize(const AllocationDetails* allocation);
+    void SetElementSize(Element& elem);
     static bool GetFrameVarAsUnsigned(const lldb::StackFrameSP, const char* var_name, uint64_t& val);
+    void FindStructTypeName(Element& elem, StackFrame* frame_ptr);
 
     //
     // Helper functions for jitting the runtime
@@ -324,9 +326,11 @@ private:
 
     bool JITTypePacked(AllocationDetails* allocation, StackFrame* frame_ptr);
 
-    bool JITElementPacked(AllocationDetails* allocation, StackFrame* frame_ptr);
+    bool JITElementPacked(Element& elem, const lldb::addr_t context, StackFrame* frame_ptr);
 
-    bool JITAllocationSize(AllocationDetails* allocation, StackFrame* frame_ptr, const uint32_t elem_size);
+    bool JITAllocationSize(AllocationDetails* allocation, StackFrame* frame_ptr);
+
+    bool JITSubelements(Element& elem, const lldb::addr_t context, StackFrame* frame_ptr);
 
     bool JITAllocationStride(AllocationDetails* allocation, StackFrame* frame_ptr);
 
