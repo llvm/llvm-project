@@ -871,20 +871,26 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr *MI,
 
   MachineOperand &Src1 = MI->getOperand(Src1Idx);
 
-  // Make sure it's legal to commute operands for VOP2.
-  if (isVOP2(*MI) &&
-      (!isOperandLegal(MI, Src0Idx, &Src1) ||
-       !isOperandLegal(MI, Src1Idx, &Src0))) {
-    return nullptr;
+
+  if (isVOP2(*MI)) {
+    const MCInstrDesc &InstrDesc = MI->getDesc();
+    // For VOP2 instructions, any operand type is valid to use for src0.  Make
+    // sure we can use the src1 as src0.
+    //
+    // We could be stricter here and only allow commuting if there is a reason
+    // to do so. i.e. if both operands are VGPRs there is no real benefit,
+    // although MachineCSE attempts to find matches by commuting.
+    const MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
+    if (!isLegalRegOperand(MRI, InstrDesc.OpInfo[Src1Idx], Src0))
+      return nullptr;
   }
 
   if (!Src1.isReg()) {
     // Allow commuting instructions with Imm operands.
     if (NewMI || !Src1.isImm() ||
-       (!isVOP2(*MI) && !isVOP3(*MI))) {
+        (!isVOP2(*MI) && !isVOP3(*MI))) {
       return nullptr;
     }
-
     // Be sure to copy the source modifiers to the right place.
     if (MachineOperand *Src0Mods
           = getNamedOperand(*MI, AMDGPU::OpName::src0_modifiers)) {
@@ -1720,6 +1726,41 @@ void SIInstrInfo::swapOperands(MachineBasicBlock::iterator Inst) const {
   Inst->addOperand(Op1);
 }
 
+bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
+                                    const MCOperandInfo &OpInfo,
+                                    const MachineOperand &MO) const {
+  if (!MO.isReg())
+    return false;
+
+  unsigned Reg = MO.getReg();
+  const TargetRegisterClass *RC =
+    TargetRegisterInfo::isVirtualRegister(Reg) ?
+    MRI.getRegClass(Reg) :
+    RI.getPhysRegClass(Reg);
+
+  // In order to be legal, the common sub-class must be equal to the
+  // class of the current operand.  For example:
+  //
+  // v_mov_b32 s0 ; Operand defined as vsrc_32
+  //              ; RI.getCommonSubClass(s0,vsrc_32) = sgpr ; LEGAL
+  //
+  // s_sendmsg 0, s0 ; Operand defined as m0reg
+  //                 ; RI.getCommonSubClass(s0,m0reg) = m0reg ; NOT LEGAL
+
+  return RI.getCommonSubClass(RC, RI.getRegClass(OpInfo.RegClass)) == RC;
+}
+
+bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
+                                     const MCOperandInfo &OpInfo,
+                                     const MachineOperand &MO) const {
+  if (MO.isReg())
+    return isLegalRegOperand(MRI, OpInfo, MO);
+
+  // Handle non-register types that are treated like immediates.
+  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI());
+  return true;
+}
+
 bool SIInstrInfo::isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
                                  const MachineOperand *MO) const {
   const MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
@@ -1747,21 +1788,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
 
   if (MO->isReg()) {
     assert(DefinedRC);
-    const TargetRegisterClass *RC =
-        TargetRegisterInfo::isVirtualRegister(MO->getReg()) ?
-            MRI.getRegClass(MO->getReg()) :
-            RI.getPhysRegClass(MO->getReg());
-
-    // In order to be legal, the common sub-class must be equal to the
-    // class of the current operand.  For example:
-    //
-    // v_mov_b32 s0 ; Operand defined as vsrc_32
-    //              ; RI.getCommonSubClass(s0,vsrc_32) = sgpr ; LEGAL
-    //
-    // s_sendmsg 0, s0 ; Operand defined as m0reg
-    //                 ; RI.getCommonSubClass(s0,m0reg) = m0reg ; NOT LEGAL
-
-    return RI.getCommonSubClass(RC, RI.getRegClass(OpInfo.RegClass)) == RC;
+    return isLegalRegOperand(MRI, OpInfo, *MO);
   }
 
 
@@ -1774,6 +1801,81 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
   }
 
   return isImmOperandLegal(MI, OpIdx, *MO);
+}
+
+void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
+                                       MachineInstr *MI) const {
+  unsigned Opc = MI->getOpcode();
+  const MCInstrDesc &InstrDesc = get(Opc);
+
+  int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+  MachineOperand &Src1 = MI->getOperand(Src1Idx);
+
+  // If there is an implicit SGPR use such as VCC use for v_addc_u32/v_subb_u32
+  // we need to only have one constant bus use.
+  //
+  // Note we do not need to worry about literal constants here. They are
+  // disabled for the operand type for instructions because they will always
+  // violate the one constant bus use rule.
+  bool HasImplicitSGPR = findImplicitSGPRRead(*MI) != AMDGPU::NoRegister;
+  if (HasImplicitSGPR) {
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    MachineOperand &Src0 = MI->getOperand(Src0Idx);
+
+    if (Src0.isReg() && RI.isSGPRReg(MRI, Src0.getReg()))
+      legalizeOpWithMove(MI, Src0Idx);
+  }
+
+  // VOP2 src0 instructions support all operand types, so we don't need to check
+  // their legality. If src1 is already legal, we don't need to do anything.
+  if (isLegalRegOperand(MRI, InstrDesc.OpInfo[Src1Idx], Src1))
+    return;
+
+  // We do not use commuteInstruction here because it is too aggressive and will
+  // commute if it is possible. We only want to commute here if it improves
+  // legality. This can be called a fairly large number of times so don't waste
+  // compile time pointlessly swapping and checking legality again.
+  if (HasImplicitSGPR || !MI->isCommutable()) {
+    legalizeOpWithMove(MI, Src1Idx);
+    return;
+  }
+
+  int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  MachineOperand &Src0 = MI->getOperand(Src0Idx);
+
+  // If src0 can be used as src1, commuting will make the operands legal.
+  // Otherwise we have to give up and insert a move.
+  //
+  // TODO: Other immediate-like operand kinds could be commuted if there was a
+  // MachineOperand::ChangeTo* for them.
+  if ((!Src1.isImm() && !Src1.isReg()) ||
+      !isLegalRegOperand(MRI, InstrDesc.OpInfo[Src1Idx], Src0)) {
+    legalizeOpWithMove(MI, Src1Idx);
+    return;
+  }
+
+  int CommutedOpc = commuteOpcode(*MI);
+  if (CommutedOpc == -1) {
+    legalizeOpWithMove(MI, Src1Idx);
+    return;
+  }
+
+  MI->setDesc(get(CommutedOpc));
+
+  unsigned Src0Reg = Src0.getReg();
+  unsigned Src0SubReg = Src0.getSubReg();
+  bool Src0Kill = Src0.isKill();
+
+  if (Src1.isImm())
+    Src0.ChangeToImmediate(Src1.getImm());
+  else if (Src1.isReg()) {
+    Src0.ChangeToRegister(Src1.getReg(), false, false, Src1.isKill());
+    Src0.setSubReg(Src1.getSubReg());
+  } else
+    llvm_unreachable("Should only have register or immediate operands");
+
+  Src1.ChangeToRegister(Src0Reg, false, false, Src0Kill);
+  Src1.setSubReg(Src0SubReg);
 }
 
 // Legalize VOP3 operands. Because all operand types are supported for any
@@ -1821,32 +1923,10 @@ void SIInstrInfo::legalizeOperandsVOP3(
 
 void SIInstrInfo::legalizeOperands(MachineInstr *MI) const {
   MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
-  unsigned Opc = MI->getOpcode();
 
   // Legalize VOP2
   if (isVOP2(*MI)) {
-    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
-    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
-
-    // Legalize src0
-    if (!isOperandLegal(MI, Src0Idx))
-      legalizeOpWithMove(MI, Src0Idx);
-
-    // Legalize src1
-    if (isOperandLegal(MI, Src1Idx))
-      return;
-
-    // Usually src0 of VOP2 instructions allow more types of inputs
-    // than src1, so try to commute the instruction to decrease our
-    // chances of having to insert a MOV instruction to legalize src1.
-    if (MI->isCommutable()) {
-      if (commuteInstruction(MI))
-        // If we are successful in commuting, then we know MI is legal, so
-        // we are done.
-        return;
-    }
-
-    legalizeOpWithMove(MI, Src1Idx);
+    legalizeOperandsVOP2(MRI, MI);
     return;
   }
 

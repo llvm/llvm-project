@@ -381,6 +381,23 @@ public:
   bool isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
+  /// \brief Check if \p MO would be a valid operand for the given operand
+  /// definition \p OpInfo. Note this does not attempt to validate constant bus
+  /// restrictions (e.g. literal constant usage).
+  bool isLegalVSrcOperand(const MachineRegisterInfo &MRI,
+                          const MCOperandInfo &OpInfo,
+                          const MachineOperand &MO) const;
+
+  /// \brief Check if \p MO (a register operand) is a legal register for the
+  /// given operand description.
+  bool isLegalRegOperand(const MachineRegisterInfo &MRI,
+                         const MCOperandInfo &OpInfo,
+                         const MachineOperand &MO) const;
+
+  /// \brief Legalize operands in \p MI by either commuting it or inserting a
+  /// copy of src1.
+  void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr *MI) const;
+
   /// \brief Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr *MI) const;
 

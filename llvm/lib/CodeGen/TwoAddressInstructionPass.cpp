@@ -869,8 +869,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   SmallSet<unsigned, 2> Uses;
   SmallSet<unsigned, 2> Kills;
   SmallSet<unsigned, 2> Defs;
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg())
       continue;
     unsigned MOReg = MO.getReg();
@@ -912,8 +911,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
         OtherMI->isBranch() || OtherMI->isTerminator())
       // Don't move pass calls, etc.
       return false;
-    for (unsigned i = 0, e = OtherMI->getNumOperands(); i != e; ++i) {
-      const MachineOperand &MO = OtherMI->getOperand(i);
+    for (const MachineOperand &MO : OtherMI->operands()) {
       if (!MO.isReg())
         continue;
       unsigned MOReg = MO.getReg();
@@ -1052,8 +1050,7 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
   SmallSet<unsigned, 2> Kills;
   SmallSet<unsigned, 2> Defs;
   SmallSet<unsigned, 2> LiveDefs;
-  for (unsigned i = 0, e = KillMI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = KillMI->getOperand(i);
+  for (const MachineOperand &MO : KillMI->operands()) {
     if (!MO.isReg())
       continue;
     unsigned MOReg = MO.getReg();
@@ -1091,8 +1088,7 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
       // Don't move pass calls, etc.
       return false;
     SmallVector<unsigned, 2> OtherDefs;
-    for (unsigned i = 0, e = OtherMI->getNumOperands(); i != e; ++i) {
-      const MachineOperand &MO = OtherMI->getOperand(i);
+    for (const MachineOperand &MO : OtherMI->operands()) {
       if (!MO.isReg())
         continue;
       unsigned MOReg = MO.getReg();
@@ -1564,8 +1560,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
   if (AllUsesCopied) {
     if (!IsEarlyClobber) {
       // Replace other (un-tied) uses of regB with LastCopiedReg.
-      for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-        MachineOperand &MO = MI->getOperand(i);
+      for (MachineOperand &MO : MI->operands()) {
         if (MO.isReg() && MO.getReg() == RegB && MO.getSubReg() == SubRegB &&
             MO.isUse()) {
           if (MO.isKill()) {
@@ -1602,8 +1597,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     // regB is still used in this instruction, but a kill flag was
     // removed from a different tied use of regB, so now we need to add
     // a kill flag to one of the remaining uses of regB.
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (MachineOperand &MO : MI->operands()) {
       if (MO.isReg() && MO.getReg() == RegB && MO.isUse()) {
         MO.setIsKill(true);
         break;

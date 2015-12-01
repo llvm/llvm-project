@@ -332,6 +332,14 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
 
   unsigned ForcedEncodingSize;
 
+  bool isSI() const {
+    return STI->getFeatureBits()[AMDGPU::FeatureSouthernIslands];
+  }
+
+  bool isCI() const {
+    return STI->getFeatureBits()[AMDGPU::FeatureSeaIslands];
+  }
+
   bool isVI() const {
     return getSTI().getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
   }
@@ -504,12 +512,14 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &End
   const AsmToken Tok = Parser.getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+
   StringRef RegName = Tok.getString();
   RegNo = getRegForName(RegName);
 
   if (RegNo) {
     Parser.Lex();
-    return false;
+    return !subtargetHasRegister(*TRI, RegNo);
   }
 
   // Match vgprs and sgprs
@@ -562,7 +572,6 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &End
     }
   }
 
-  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   int RCID = getRegClass(IsVgpr, RegWidth);
   if (RCID == -1)
     return true;
@@ -980,8 +989,20 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
 bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
                                            unsigned RegNo) const {
-  if (!isVI())
+  if (isCI())
     return true;
+
+  if (isSI()) {
+    // No flat_scr
+    switch (RegNo) {
+    case AMDGPU::FLAT_SCR:
+    case AMDGPU::FLAT_SCR_LO:
+    case AMDGPU::FLAT_SCR_HI:
+      return false;
+    default:
+      return true;
+    }
+  }
 
   // VI only has 102 SGPRs, so make sure we aren't trying to use the 2 more that
   // SI/CI have.

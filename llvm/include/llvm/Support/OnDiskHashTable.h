@@ -263,11 +263,12 @@ template <typename Info> class OnDiskChainedHashTable {
   Info InfoObj;
 
 public:
+  typedef Info InfoType;
   typedef typename Info::internal_key_type internal_key_type;
   typedef typename Info::external_key_type external_key_type;
-  typedef typename Info::data_type         data_type;
-  typedef typename Info::hash_value_type   hash_value_type;
-  typedef typename Info::offset_type       offset_type;
+  typedef typename Info::data_type data_type;
+  typedef typename Info::hash_value_type hash_value_type;
+  typedef typename Info::offset_type offset_type;
 
   OnDiskChainedHashTable(offset_type NumBuckets, offset_type NumEntries,
                          const unsigned char *Buckets,

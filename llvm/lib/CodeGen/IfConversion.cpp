@@ -1254,9 +1254,8 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
     auto NewNext = BBNext + BBCvt * CvtNext;
     auto NewTrueBBIter =
         std::find(BBI.BB->succ_begin(), BBI.BB->succ_end(), NewTrueBB);
-    assert(NewTrueBBIter != BBI.BB->succ_end() &&
-           "NewTrueBB is not a successor of BBI.BB.");
-    BBI.BB->setSuccProbability(NewTrueBBIter, NewNext);
+    if (NewTrueBBIter != BBI.BB->succ_end())
+      BBI.BB->setSuccProbability(NewTrueBBIter, NewNext);
 
     auto NewFalse = BBCvt * CvtFalse;
     TII->InsertBranch(*BBI.BB, CvtBBI->FalseBB, nullptr, RevCond, dl);
