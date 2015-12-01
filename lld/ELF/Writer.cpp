@@ -205,11 +205,8 @@ void Writer<ELFT>::scanRelocs(
     if (Target->isTlsLocalDynamicReloc(Type)) {
       if (Target->isTlsOptimized(Type, nullptr))
         continue;
-      if (Out<ELFT>::LocalModuleTlsIndexOffset == uint32_t(-1)) {
-        Out<ELFT>::LocalModuleTlsIndexOffset =
-            Out<ELFT>::Got->addLocalModuleTlsIndex();
+      if (Out<ELFT>::Got->addLocalModelTlsIndex())
         Out<ELFT>::RelaDyn->addReloc({&C, &RI});
-      }
       continue;
     }
 

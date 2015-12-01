@@ -1,8 +1,9 @@
 List of clang-tidy Checks
 =========================
 
-.. toctree::
+.. toctree::   
    cert-setlongjmp
+   cert-static-object-exception
    cert-thrown-exception-type
    cert-variadic-function-def
    cppcoreguidelines-pro-bounds-array-to-pointer-decay

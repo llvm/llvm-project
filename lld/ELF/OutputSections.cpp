@@ -87,10 +87,13 @@ template <class ELFT> void GotSection<ELFT>::addDynTlsEntry(SymbolBody *Sym) {
   Entries.push_back(nullptr);
 }
 
-template <class ELFT> uint32_t GotSection<ELFT>::addLocalModuleTlsIndex() {
+template <class ELFT> bool GotSection<ELFT>::addLocalModelTlsIndex() {
+  if (LocalTlsIndexOff != uint32_t(-1))
+    return false;
   Entries.push_back(nullptr);
   Entries.push_back(nullptr);
-  return (Entries.size() - 2) * sizeof(uintX_t);
+  LocalTlsIndexOff = (Entries.size() - 2) * sizeof(uintX_t);
+  return true;
 }
 
 template <class ELFT>
@@ -201,8 +204,7 @@ bool RelocationSection<ELFT>::applyTlsDynamicReloc(SymbolBody *Body,
                                                    Elf_Rel *N) {
   if (Target->isTlsLocalDynamicReloc(Type)) {
     P->setSymbolAndType(0, Target->getTlsModuleIndexReloc(), Config->Mips64EL);
-    P->r_offset =
-        Out<ELFT>::Got->getVA() + Out<ELFT>::LocalModuleTlsIndexOffset;
+    P->r_offset = Out<ELFT>::Got->getLocalTlsIndexVA();
     return true;
   }
 

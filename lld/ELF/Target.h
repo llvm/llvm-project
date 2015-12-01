@@ -43,7 +43,6 @@ public:
   unsigned getGotPltHeaderEntriesNum() const { return GotPltHeaderEntriesNum; }
   virtual unsigned getDynReloc(unsigned Type) const { return Type; }
   virtual bool isTlsDynReloc(unsigned Type) const { return false; }
-  virtual unsigned getGotRefReloc(unsigned Type) const;
   virtual unsigned getPltRefReloc(unsigned Type) const;
   virtual void writeGotHeaderEntries(uint8_t *Buf) const;
   virtual void writeGotPltHeaderEntries(uint8_t *Buf) const;
@@ -78,7 +77,6 @@ protected:
 
   unsigned CopyReloc;
   unsigned PCRelReloc;
-  unsigned GotRefReloc;
   unsigned GotReloc;
   unsigned PltReloc;
   unsigned RelativeReloc;
