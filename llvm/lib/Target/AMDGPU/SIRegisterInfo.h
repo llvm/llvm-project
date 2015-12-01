@@ -18,6 +18,7 @@
 
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 namespace llvm {
@@ -63,6 +64,12 @@ public:
   /// \returns true if this class ID contains only SGPR registers
   bool isSGPRClassID(unsigned RCID) const {
     return isSGPRClass(getRegClass(RCID));
+  }
+
+  bool isSGPRReg(const MachineRegisterInfo &MRI, unsigned Reg) const {
+    if (TargetRegisterInfo::isVirtualRegister(Reg))
+      return isSGPRClass(MRI.getRegClass(Reg));
+    return getPhysRegClass(Reg);
   }
 
   /// \returns true if this class contains VGPR registers.
