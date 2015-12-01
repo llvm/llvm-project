@@ -3029,7 +3029,10 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct (ValueObject &in_value,
     if (0 == struct_address || LLDB_INVALID_ADDRESS == struct_address)
         struct_address = in_value.GetAddressOf(true, nullptr);
     if (0 == struct_address || LLDB_INVALID_ADDRESS == struct_address)
-        return false;
+    {
+        if (false == SwiftASTContext::IsPossibleZeroSizeType(class_type_or_name.GetCompilerType()))
+            return false;
+    }
     
     address.SetLoadAddress(struct_address, in_value.GetTargetSP().get());
     return true;
@@ -3077,7 +3080,10 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum (ValueObject &in_value,
     if (0 == enum_address || LLDB_INVALID_ADDRESS == enum_address)
         enum_address = in_value.GetAddressOf(true, nullptr);
     if (0 == enum_address || LLDB_INVALID_ADDRESS == enum_address)
-        return false;
+    {
+        if (false == SwiftASTContext::IsPossibleZeroSizeType(class_type_or_name.GetCompilerType()))
+            return false;
+    }
 
     address.SetLoadAddress(enum_address, in_value.GetTargetSP().get());
     return true;
