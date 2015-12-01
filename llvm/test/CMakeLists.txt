@@ -39,6 +39,7 @@ set(LLVM_TEST_DEPENDS
           llvm-dis
           llvm-dsymutil
           llvm-dwarfdump
+          llvm-dwp
           llvm-extract
           llvm-lib
           llvm-link

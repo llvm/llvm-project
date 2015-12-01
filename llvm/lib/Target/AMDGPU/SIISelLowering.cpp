@@ -514,7 +514,7 @@ SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
   MachineFunction &MF = DAG.getMachineFunction();
   const SIRegisterInfo *TRI =
       static_cast<const SIRegisterInfo*>(Subtarget->getRegisterInfo());
-  unsigned InputPtrReg = TRI->getPreloadedValue(MF, SIRegisterInfo::INPUT_PTR);
+  unsigned InputPtrReg = TRI->getPreloadedValue(MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);
 
   Type *Ty = VT.getTypeForEVT(*DAG.getContext());
 
@@ -552,6 +552,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   MachineFunction &MF = DAG.getMachineFunction();
   FunctionType *FType = MF.getFunction()->getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
 
   if (Subtarget->isAmdHsaOS() && Info->getShaderType() != ShaderType::COMPUTE) {
     const Function *Fn = MF.getFunction();
@@ -618,51 +619,28 @@ SDValue SITargetLowering::LowerFormalArguments(
     CCInfo.AllocateReg(AMDGPU::VGPR1);
   }
 
-  // The pointer to the list of arguments is stored in SGPR0, SGPR1
-  // The pointer to the scratch buffer is stored in SGPR2, SGPR3
-  if (Info->getShaderType() == ShaderType::COMPUTE) {
-    if (Subtarget->isAmdHsaOS())
-      Info->NumUserSGPRs = 2;  // FIXME: Need to support scratch buffers.
-    else
-      Info->NumUserSGPRs = 4;
-
-    unsigned InputPtrReg =
-        TRI->getPreloadedValue(MF, SIRegisterInfo::INPUT_PTR);
-    unsigned InputPtrRegLo =
-        TRI->getPhysRegSubReg(InputPtrReg, &AMDGPU::SReg_32RegClass, 0);
-    unsigned InputPtrRegHi =
-        TRI->getPhysRegSubReg(InputPtrReg, &AMDGPU::SReg_32RegClass, 1);
-
-    unsigned ScratchPtrReg =
-        TRI->getPreloadedValue(MF, SIRegisterInfo::SCRATCH_PTR);
-    unsigned ScratchPtrRegLo =
-        TRI->getPhysRegSubReg(ScratchPtrReg, &AMDGPU::SReg_32RegClass, 0);
-    unsigned ScratchPtrRegHi =
-        TRI->getPhysRegSubReg(ScratchPtrReg, &AMDGPU::SReg_32RegClass, 1);
-
-    CCInfo.AllocateReg(InputPtrRegLo);
-    CCInfo.AllocateReg(InputPtrRegHi);
-    CCInfo.AllocateReg(ScratchPtrRegLo);
-    CCInfo.AllocateReg(ScratchPtrRegHi);
-    MF.addLiveIn(InputPtrReg, &AMDGPU::SReg_64RegClass);
-    MF.addLiveIn(ScratchPtrReg, &AMDGPU::SReg_64RegClass);
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    if (Subtarget->isAmdHsaOS() && MFI->hasDispatchPtr()) {
-      unsigned DispatchPtrReg =
-        TRI->getPreloadedValue(MF, SIRegisterInfo::DISPATCH_PTR);
-      unsigned DispatchPtrRegLo =
-        TRI->getPhysRegSubReg(DispatchPtrReg, &AMDGPU::SReg_32RegClass, 0);
-      unsigned DispatchPtrRegHi =
-        TRI->getPhysRegSubReg(DispatchPtrReg, &AMDGPU::SReg_32RegClass, 1);
-      CCInfo.AllocateReg(DispatchPtrRegLo);
-      CCInfo.AllocateReg(DispatchPtrRegHi);
-      MF.addLiveIn(DispatchPtrReg, &AMDGPU::SReg_64RegClass);
-    }
-  }
-
   if (Info->getShaderType() == ShaderType::COMPUTE) {
     getOriginalFunctionArgs(DAG, DAG.getMachineFunction().getFunction(), Ins,
                             Splits);
+  }
+
+  // FIXME: How should these inputs interact with inreg / custom SGPR inputs?
+  if (Info->hasPrivateSegmentBuffer()) {
+    unsigned PrivateSegmentBufferReg = Info->addPrivateSegmentBuffer(*TRI);
+    MF.addLiveIn(PrivateSegmentBufferReg, &AMDGPU::SReg_128RegClass);
+    CCInfo.AllocateReg(PrivateSegmentBufferReg);
+  }
+
+  if (Info->hasDispatchPtr()) {
+    unsigned DispatchPtrReg = Info->addDispatchPtr(*TRI);
+    MF.addLiveIn(DispatchPtrReg, &AMDGPU::SReg_64RegClass);
+    CCInfo.AllocateReg(DispatchPtrReg);
+  }
+
+  if (Info->hasKernargSegmentPtr()) {
+    unsigned InputPtrReg = Info->addKernargSegmentPtr(*TRI);
+    MF.addLiveIn(InputPtrReg, &AMDGPU::SReg_64RegClass);
+    CCInfo.AllocateReg(InputPtrReg);
   }
 
   AnalyzeFormalArguments(CCInfo, Splits);
@@ -752,10 +730,113 @@ SDValue SITargetLowering::LowerFormalArguments(
     InVals.push_back(Val);
   }
 
-  if (Info->getShaderType() != ShaderType::COMPUTE) {
-    unsigned ScratchIdx = CCInfo.getFirstUnallocated(makeArrayRef(
-        AMDGPU::SGPR_32RegClass.begin(), AMDGPU::SGPR_32RegClass.getNumRegs()));
-    Info->ScratchOffsetReg = AMDGPU::SGPR_32RegClass.getRegister(ScratchIdx);
+  // TODO: Add GridWorkGroupCount user SGPRs when used. For now with HSA we read
+  // these from the dispatch pointer.
+
+  // Start adding system SGPRs.
+  if (Info->hasWorkGroupIDX()) {
+    unsigned Reg = Info->addWorkGroupIDX();
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    CCInfo.AllocateReg(Reg);
+  } else
+    llvm_unreachable("work group id x is always enabled");
+
+  if (Info->hasWorkGroupIDY()) {
+    unsigned Reg = Info->addWorkGroupIDY();
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    CCInfo.AllocateReg(Reg);
+  }
+
+  if (Info->hasWorkGroupIDZ()) {
+    unsigned Reg = Info->addWorkGroupIDZ();
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    CCInfo.AllocateReg(Reg);
+  }
+
+  if (Info->hasWorkGroupInfo()) {
+    unsigned Reg = Info->addWorkGroupInfo();
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    CCInfo.AllocateReg(Reg);
+  }
+
+  if (Info->hasPrivateSegmentWaveByteOffset()) {
+    // Scratch wave offset passed in system SGPR.
+    unsigned PrivateSegmentWaveByteOffsetReg
+      = Info->addPrivateSegmentWaveByteOffset();
+
+    MF.addLiveIn(PrivateSegmentWaveByteOffsetReg, &AMDGPU::SGPR_32RegClass);
+    CCInfo.AllocateReg(PrivateSegmentWaveByteOffsetReg);
+  }
+
+  // Now that we've figured out where the scratch register inputs are, see if
+  // should reserve the arguments and use them directly.
+
+  bool HasStackObjects = MF.getFrameInfo()->hasStackObjects();
+
+  if (ST.isAmdHsaOS()) {
+    // TODO: Assume we will spill without optimizations.
+    if (HasStackObjects) {
+      // If we have stack objects, we unquestionably need the private buffer
+      // resource. For the HSA ABI, this will be the first 4 user SGPR
+      // inputs. We can reserve those and use them directly.
+
+      unsigned PrivateSegmentBufferReg = TRI->getPreloadedValue(
+        MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
+      Info->setScratchRSrcReg(PrivateSegmentBufferReg);
+
+      unsigned PrivateSegmentWaveByteOffsetReg = TRI->getPreloadedValue(
+        MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
+      Info->setScratchWaveOffsetReg(PrivateSegmentWaveByteOffsetReg);
+    } else {
+      unsigned ReservedBufferReg
+        = TRI->reservedPrivateSegmentBufferReg(MF);
+      unsigned ReservedOffsetReg
+        = TRI->reservedPrivateSegmentWaveByteOffsetReg(MF);
+
+      // We tentatively reserve the last registers (skipping the last two
+      // which may contain VCC). After register allocation, we'll replace
+      // these with the ones immediately after those which were really
+      // allocated. In the prologue copies will be inserted from the argument
+      // to these reserved registers.
+      Info->setScratchRSrcReg(ReservedBufferReg);
+      Info->setScratchWaveOffsetReg(ReservedOffsetReg);
+    }
+  } else {
+    unsigned ReservedBufferReg = TRI->reservedPrivateSegmentBufferReg(MF);
+
+    // Without HSA, relocations are used for the scratch pointer and the
+    // buffer resource setup is always inserted in the prologue. Scratch wave
+    // offset is still in an input SGPR.
+    Info->setScratchRSrcReg(ReservedBufferReg);
+
+    if (HasStackObjects) {
+      unsigned ScratchWaveOffsetReg = TRI->getPreloadedValue(
+        MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
+      Info->setScratchWaveOffsetReg(ScratchWaveOffsetReg);
+    } else {
+      unsigned ReservedOffsetReg
+        = TRI->reservedPrivateSegmentWaveByteOffsetReg(MF);
+      Info->setScratchWaveOffsetReg(ReservedOffsetReg);
+    }
+  }
+
+  if (Info->hasWorkItemIDX()) {
+    unsigned Reg = TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_X);
+    MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+    CCInfo.AllocateReg(Reg);
+  } else
+    llvm_unreachable("workitem id x should always be enabled");
+
+  if (Info->hasWorkItemIDY()) {
+    unsigned Reg = TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_Y);
+    MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+    CCInfo.AllocateReg(Reg);
+  }
+
+  if (Info->hasWorkItemIDZ()) {
+    unsigned Reg = TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_Z);
+    MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+    CCInfo.AllocateReg(Reg);
   }
 
   if (Chains.empty())
@@ -1051,6 +1132,18 @@ SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
                                                       // a glue result.
 }
 
+SDValue SITargetLowering::lowerImplicitZextParam(SelectionDAG &DAG,
+                                                 SDValue Op,
+                                                 MVT VT,
+                                                 unsigned Offset) const {
+  SDLoc SL(Op);
+  SDValue Param = LowerParameter(DAG, MVT::i32, MVT::i32, SL,
+                                 DAG.getEntryNode(), Offset, false);
+  // The local size values will have the hi 16-bits as zero.
+  return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Param,
+                     DAG.getValueType(VT));
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -1088,37 +1181,36 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::GLOBAL_SIZE_Z, false);
   case Intrinsic::r600_read_local_size_x:
-    return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                          SI::KernelInputOffsets::LOCAL_SIZE_X, false);
+    return lowerImplicitZextParam(DAG, Op, MVT::i16,
+                                  SI::KernelInputOffsets::LOCAL_SIZE_X);
   case Intrinsic::r600_read_local_size_y:
-    return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                          SI::KernelInputOffsets::LOCAL_SIZE_Y, false);
+    return lowerImplicitZextParam(DAG, Op, MVT::i16,
+                                  SI::KernelInputOffsets::LOCAL_SIZE_Y);
   case Intrinsic::r600_read_local_size_z:
-    return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                          SI::KernelInputOffsets::LOCAL_SIZE_Z, false);
-
+    return lowerImplicitZextParam(DAG, Op, MVT::i16,
+                                  SI::KernelInputOffsets::LOCAL_SIZE_Z);
   case Intrinsic::AMDGPU_read_workdim:
-    return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                          getImplicitParameterOffset(MFI, GRID_DIM), false);
-
+    // Really only 2 bits.
+    return lowerImplicitZextParam(DAG, Op, MVT::i8,
+                                  getImplicitParameterOffset(MFI, GRID_DIM));
   case Intrinsic::r600_read_tgid_x:
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
-      TRI->getPreloadedValue(MF, SIRegisterInfo::TGID_X), VT);
+      TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_X), VT);
   case Intrinsic::r600_read_tgid_y:
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
-      TRI->getPreloadedValue(MF, SIRegisterInfo::TGID_Y), VT);
+      TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_Y), VT);
   case Intrinsic::r600_read_tgid_z:
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
-      TRI->getPreloadedValue(MF, SIRegisterInfo::TGID_Z), VT);
+      TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_Z), VT);
   case Intrinsic::r600_read_tidig_x:
     return CreateLiveInRegister(DAG, &AMDGPU::VGPR_32RegClass,
-      TRI->getPreloadedValue(MF, SIRegisterInfo::TIDIG_X), VT);
+      TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_X), VT);
   case Intrinsic::r600_read_tidig_y:
     return CreateLiveInRegister(DAG, &AMDGPU::VGPR_32RegClass,
-      TRI->getPreloadedValue(MF, SIRegisterInfo::TIDIG_Y), VT);
+      TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_Y), VT);
   case Intrinsic::r600_read_tidig_z:
     return CreateLiveInRegister(DAG, &AMDGPU::VGPR_32RegClass,
-      TRI->getPreloadedValue(MF, SIRegisterInfo::TIDIG_Z), VT);
+      TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_Z), VT);
   case AMDGPUIntrinsic::SI_load_const: {
     SDValue Ops[] = {
       Op.getOperand(1),
@@ -2330,15 +2422,6 @@ MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG,
   };
 
   return DAG.getMachineNode(AMDGPU::REG_SEQUENCE, DL, MVT::v4i32, Ops);
-}
-
-MachineSDNode *SITargetLowering::buildScratchRSRC(SelectionDAG &DAG,
-                                                  SDLoc DL,
-                                                  SDValue Ptr) const {
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
-
-  return buildRSRC(DAG, DL, Ptr, 0, TII->getScratchRsrcWords23());
 }
 
 SDValue SITargetLowering::CreateLiveInRegister(SelectionDAG &DAG,

@@ -153,3 +153,28 @@ class POOL32A_2RSA5_FMT<string opstr, bits<11> op> : MMDSPInst<opstr> {
   let Inst{15-11} = sa;
   let Inst{10-0}  = op;
 }
+
+class POOL32A_1RMEMB0_FMT<string opstr, bits<10> funct> : MMDSPInst<opstr> {
+  bits<5> index;
+  bits<5> base;
+  bits<5> rd;
+
+  let Inst{31-26} = 0;
+  let Inst{25-21} = index;
+  let Inst{20-16} = base;
+  let Inst{15-11} = rd;
+  let Inst{10}    = 0b0;
+  let Inst{9-0}   = funct;
+}
+
+class POOL32A_1RAC_FMT<string instr_asm, bits<8> funct> : MMDSPInst<instr_asm> {
+  bits<5> rs;
+  bits<2> ac;
+
+  let Inst{31-26} = 0;
+  let Inst{25-21} = 0;
+  let Inst{20-16} = rs;
+  let Inst{15-14} = ac;
+  let Inst{13-6}  = funct;
+  let Inst{5-0}   = 0b111100;
+}

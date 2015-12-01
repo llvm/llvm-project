@@ -137,6 +137,13 @@ public:
                                     SmallVectorImpl<MCFixup> &Fixups,
                                     const MCSubtargetInfo &STI) const;
 
+  // getBranchTarget26OpValueMM - Return binary encoding of the branch
+  // offset operand. If the machine operand requires relocation,
+  // record the relocation and return zero.
+  unsigned getBranchTarget26OpValueMM(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const;
+
   // getJumpOffset16OpValue - Return binary encoding of the jump
   // offset operand. If the machine operand requires relocation,
   // record the relocation and return zero.

@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple thumbv7s-apple-darwin  -asm-verbose=false | FileCheck %s
-; RUN: llc < %s -mtriple thumbv7s-apple-darwin  -asm-verbose=false -print-machineinstrs=if-converter 2>&1 | FileCheck --check-prefix=CHECK-WEIGHT %s
+; RUN: llc < %s -mtriple thumbv7s-apple-darwin  -asm-verbose=false -print-machineinstrs=if-converter 2>&1 | FileCheck --check-prefix=CHECK-PROB %s
 
 declare i32 @foo(i32)
 declare i8* @bar(i32, i8*, i8*)
@@ -29,10 +29,10 @@ declare i8* @bar(i32, i8*, i8*)
 ; CHECK-NEXT: [[FOOCALL]]:
 ; CHECK-NEXT:  blx _foo
 ;
-; CHECK-WEIGHT: BB#0:
-; CHECK-WEIGHT: Successors according to CFG: BB#1(1073741824) BB#2(536870912) BB#4(536870912)
-; CHECK-WEIGHT: BB#1:
-; CHECK-WEIGHT: Successors according to CFG: BB#2(1610612736) BB#4(536870912)
+; CHECK-PROB: BB#0:
+; CHECK-PROB: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}50.00%) BB#2({{[0-9a-fx/= ]+}}25.00%) BB#4({{[0-9a-fx/= ]+}}25.00%)
+; CHECK-PROB: BB#1:
+; CHECK-PROB: Successors according to CFG: BB#2({{[0-9a-fx/= ]+}}75.00%) BB#4({{[0-9a-fx/= ]+}}25.00%)
 
 define i32 @test(i32 %a, i32 %a2, i32* %p, i32* %p2) {
 entry:

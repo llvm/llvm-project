@@ -478,6 +478,21 @@ namespace AArch64PState {
 
 }
 
+namespace AArch64PSBHint {
+  enum PSBHintValues {
+    Invalid = -1,
+    // v8.2a "Statistical Profiling" extension-specific PSB operands
+    CSync = 0x11,  // psb csync = hint #0x11
+  };
+
+  struct PSBHintMapper : AArch64NamedImmMapper {
+    const static Mapping PSBHintMappings[];
+
+    PSBHintMapper();
+  };
+
+}
+
 namespace AArch64SE {
     enum ShiftExtSpecifiers {
         Invalid = -1,
@@ -1198,6 +1213,21 @@ namespace AArch64SysReg {
 
     // v8.2a registers
     UAO               = 0xc214, // 11  000  0100  0010  100
+
+    // v8.2a "Statistical Profiling extension" registers
+    PMBLIMITR_EL1     = 0xc4d0, // 11  000  1001  1010  000
+    PMBPTR_EL1        = 0xc4d1, // 11  000  1001  1010  001
+    PMBSR_EL1         = 0xc4d3, // 11  000  1001  1010  011
+    PMBIDR_EL1        = 0xc4d7, // 11  000  1001  1010  111
+    PMSCR_EL2         = 0xe4c8, // 11  100  1001  1001  000
+    PMSCR_EL12        = 0xecc8, // 11  101  1001  1001  000
+    PMSCR_EL1         = 0xc4c8, // 11  000  1001  1001  000
+    PMSICR_EL1        = 0xc4ca, // 11  000  1001  1001  010
+    PMSIRR_EL1        = 0xc4cb, // 11  000  1001  1001  011
+    PMSFCR_EL1        = 0xc4cc, // 11  000  1001  1001  100
+    PMSEVFR_EL1       = 0xc4cd, // 11  000  1001  1001  101
+    PMSLATFR_EL1      = 0xc4ce, // 11  000  1001  1001  110
+    PMSIDR_EL1        = 0xc4cf, // 11  000  1001  1001  111
 
     // Cyclone specific system registers
     CPM_IOACC_CTL_EL3 = 0xff90,

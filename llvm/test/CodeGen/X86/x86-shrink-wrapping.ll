@@ -445,9 +445,9 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK-NEXT: xorl %eax, %eax
 ; CHECK-NEXT: %esi, %edi
 ; CHECK-NEXT: %esi, %edx
+; CHECK-NEXT: %esi, %ecx
 ; CHECK-NEXT: %esi, %r8d
 ; CHECK-NEXT: %esi, %r9d
-; CHECK-NEXT: %esi, %ecx
 ; CHECK-NEXT: callq _someVariadicFunc
 ; CHECK-NEXT: movl %eax, %esi
 ; CHECK-NEXT: shll $3, %esi

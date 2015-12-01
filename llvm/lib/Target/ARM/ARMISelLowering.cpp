@@ -7347,7 +7347,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
       }
     }
 
-    BB->addSuccessor(DispatchBB);
+    BB->addSuccessor(DispatchBB, BranchProbability::getZero());
 
     // Find the invoke call and mark all of the callee-saved registers as
     // 'implicit defined' so that they're spilled. This prevents code from

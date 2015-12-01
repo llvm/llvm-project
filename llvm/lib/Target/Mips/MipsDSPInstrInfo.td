@@ -360,6 +360,7 @@ class LX_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   list<dag> Pattern = [(set GPR32Opnd:$rd, (OpNode iPTR:$base, iPTR:$index))];
   InstrItinClass Itinerary = itin;
   bit mayLoad = 1;
+  string BaseOpcode = instr_asm;
 }
 
 class ADDUH_QB_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -487,6 +488,7 @@ class MFHI_DESC_BASE<string instr_asm, RegisterOperand RO, SDNode OpNode,
   string AsmString = !strconcat(instr_asm, "\t$rd, $ac");
   list<dag> Pattern = [(set GPR32Opnd:$rd, (OpNode RO:$ac))];
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class MTHI_DESC_BASE<string instr_asm, RegisterOperand RO, InstrItinClass itin> {
@@ -494,6 +496,7 @@ class MTHI_DESC_BASE<string instr_asm, RegisterOperand RO, InstrItinClass itin> 
   dag InOperandList = (ins GPR32Opnd:$rs);
   string AsmString = !strconcat(instr_asm, "\t$rs, $ac");
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class BPOSGE32_PSEUDO_DESC_BASE<SDPatternOperator OpNode, InstrItinClass itin> :
@@ -1143,14 +1146,14 @@ def MULEQ_S_W_PHL : DspMMRel, MULEQ_S_W_PHL_ENC, MULEQ_S_W_PHL_DESC;
 def MULEQ_S_W_PHR : DspMMRel, MULEQ_S_W_PHR_ENC, MULEQ_S_W_PHR_DESC;
 def MULQ_RS_PH : DspMMRel, MULQ_RS_PH_ENC, MULQ_RS_PH_DESC;
 def MULSAQ_S_W_PH : MULSAQ_S_W_PH_ENC, MULSAQ_S_W_PH_DESC;
-def MAQ_S_W_PHL : MAQ_S_W_PHL_ENC, MAQ_S_W_PHL_DESC;
-def MAQ_S_W_PHR : MAQ_S_W_PHR_ENC, MAQ_S_W_PHR_DESC;
-def MAQ_SA_W_PHL : MAQ_SA_W_PHL_ENC, MAQ_SA_W_PHL_DESC;
-def MAQ_SA_W_PHR : MAQ_SA_W_PHR_ENC, MAQ_SA_W_PHR_DESC;
-def MFHI_DSP : MFHI_ENC, MFHI_DESC;
-def MFLO_DSP : MFLO_ENC, MFLO_DESC;
-def MTHI_DSP : MTHI_ENC, MTHI_DESC;
-def MTLO_DSP : MTLO_ENC, MTLO_DESC;
+def MAQ_S_W_PHL : DspMMRel, MAQ_S_W_PHL_ENC, MAQ_S_W_PHL_DESC;
+def MAQ_S_W_PHR : DspMMRel, MAQ_S_W_PHR_ENC, MAQ_S_W_PHR_DESC;
+def MAQ_SA_W_PHL : DspMMRel, MAQ_SA_W_PHL_ENC, MAQ_SA_W_PHL_DESC;
+def MAQ_SA_W_PHR : DspMMRel, MAQ_SA_W_PHR_ENC, MAQ_SA_W_PHR_DESC;
+def MFHI_DSP : DspMMRel, MFHI_ENC, MFHI_DESC;
+def MFLO_DSP : DspMMRel, MFLO_ENC, MFLO_DESC;
+def MTHI_DSP : DspMMRel, MTHI_ENC, MTHI_DESC;
+def MTLO_DSP : DspMMRel, MTLO_ENC, MTLO_DESC;
 def DPAU_H_QBL : DspMMRel, DPAU_H_QBL_ENC, DPAU_H_QBL_DESC;
 def DPAU_H_QBR : DspMMRel, DPAU_H_QBR_ENC, DPAU_H_QBR_DESC;
 def DPSU_H_QBL : DspMMRel, DPSU_H_QBL_ENC, DPSU_H_QBL_DESC;
@@ -1182,9 +1185,9 @@ def REPLV_QB : REPLV_QB_ENC, REPLV_QB_DESC;
 def REPLV_PH : REPLV_PH_ENC, REPLV_PH_DESC;
 def PICK_QB : PICK_QB_ENC, PICK_QB_DESC;
 def PICK_PH : PICK_PH_ENC, PICK_PH_DESC;
-def LWX : LWX_ENC, LWX_DESC;
-def LHX : LHX_ENC, LHX_DESC;
-def LBUX : LBUX_ENC, LBUX_DESC;
+def LWX : DspMMRel, LWX_ENC, LWX_DESC;
+def LHX : DspMMRel, LHX_ENC, LHX_DESC;
+def LBUX : DspMMRel, LBUX_ENC, LBUX_DESC;
 def BPOSGE32 : BPOSGE32_ENC, BPOSGE32_DESC;
 def INSV : DspMMRel, INSV_ENC, INSV_DESC;
 def EXTP : DspMMRel, EXTP_ENC, EXTP_DESC;

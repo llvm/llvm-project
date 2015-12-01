@@ -647,6 +647,12 @@ getEdgeProbability(const BasicBlock *Src, const BasicBlock *Dst) const {
   return BranchProbability(N, D);
 }
 
+BranchProbability
+BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
+                                          succ_const_iterator Dst) const {
+  return getEdgeProbability(Src, Dst.getSuccessorIndex());
+}
+
 raw_ostream &
 BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
                                             const BasicBlock *Src,

@@ -901,7 +901,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
                 break; // No conditions on this operand at all
             }
             Cond = Target.getName() + ClassName + "ValidateMCOperand(" +
-                   Op + ", " + llvm::utostr(Entry) + ")";
+                   Op + ", STI, " + llvm::utostr(Entry) + ")";
           }
           // for all subcases of ResultOperand::K_Record:
           IAP.addCond(Cond);
@@ -996,8 +996,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
   if (!MCOpPredicates.empty())
     O << "static bool " << Target.getName() << ClassName
-      << "ValidateMCOperand(\n"
-      << "       const MCOperand &MCOp, unsigned PredicateIndex);\n";
+      << "ValidateMCOperand(const MCOperand &MCOp,\n"
+      << "                  const MCSubtargetInfo &STI,\n"
+      << "                  unsigned PredicateIndex);\n";
 
   O << HeaderO.str();
   O.indent(2) << "const char *AsmString;\n";
@@ -1069,8 +1070,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
   if (!MCOpPredicates.empty()) {
     O << "static bool " << Target.getName() << ClassName
-      << "ValidateMCOperand(\n"
-      << "       const MCOperand &MCOp, unsigned PredicateIndex) {\n"
+      << "ValidateMCOperand(const MCOperand &MCOp,\n"
+      << "                  const MCSubtargetInfo &STI,\n"
+      << "                  unsigned PredicateIndex) {\n"      
       << "  switch (PredicateIndex) {\n"
       << "  default:\n"
       << "    llvm_unreachable(\"Unknown MCOperandPredicate kind\");\n"

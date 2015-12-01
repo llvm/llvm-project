@@ -556,10 +556,8 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   BuildMI(MBB, MI, DL, get(Opcode))
     .addReg(SrcReg)                   // src
     .addFrameIndex(FrameIndex)        // frame_idx
-    // Place-holder registers, these will be filled in by
-    // SIPrepareScratchRegs.
-    .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
-    .addReg(AMDGPU::SGPR0, RegState::Undef)
+    .addReg(MFI->getScratchRSrcReg())       // scratch_rsrc
+    .addReg(MFI->getScratchWaveOffsetReg()) // scratch_offset
     .addMemOperand(MMO);
 }
 
@@ -640,10 +638,8 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   unsigned Opcode = getVGPRSpillRestoreOpcode(RC->getSize());
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
     .addFrameIndex(FrameIndex)        // frame_idx
-    // Place-holder registers, these will be filled in by
-    // SIPrepareScratchRegs.
-    .addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Undef)
-    .addReg(AMDGPU::SGPR0, RegState::Undef)
+    .addReg(MFI->getScratchRSrcReg())       // scratch_rsrc
+    .addReg(MFI->getScratchWaveOffsetReg()) // scratch_offset
     .addMemOperand(MMO);
 }
 
@@ -676,11 +672,14 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(MachineBasicBlock &MBB,
     if (MFI->getShaderType() == ShaderType::COMPUTE &&
         WorkGroupSize > WavefrontSize) {
 
-      unsigned TIDIGXReg = TRI->getPreloadedValue(*MF, SIRegisterInfo::TIDIG_X);
-      unsigned TIDIGYReg = TRI->getPreloadedValue(*MF, SIRegisterInfo::TIDIG_Y);
-      unsigned TIDIGZReg = TRI->getPreloadedValue(*MF, SIRegisterInfo::TIDIG_Z);
+      unsigned TIDIGXReg
+        = TRI->getPreloadedValue(*MF, SIRegisterInfo::WORKGROUP_ID_X);
+      unsigned TIDIGYReg
+        = TRI->getPreloadedValue(*MF, SIRegisterInfo::WORKGROUP_ID_Y);
+      unsigned TIDIGZReg
+        = TRI->getPreloadedValue(*MF, SIRegisterInfo::WORKGROUP_ID_Z);
       unsigned InputPtrReg =
-          TRI->getPreloadedValue(*MF, SIRegisterInfo::INPUT_PTR);
+          TRI->getPreloadedValue(*MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);
       for (unsigned Reg : {TIDIGXReg, TIDIGYReg, TIDIGZReg}) {
         if (!Entry.isLiveIn(Reg))
           Entry.addLiveIn(Reg);

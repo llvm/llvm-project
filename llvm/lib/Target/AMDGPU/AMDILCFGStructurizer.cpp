@@ -1570,8 +1570,7 @@ void AMDGPUCFGStructurizer::mergeLooplandBlock(MachineBasicBlock *DstBlk,
 
   insertInstrBefore(DstBlk, AMDGPU::WHILELOOP, DebugLoc());
   insertInstrEnd(DstBlk, AMDGPU::ENDLOOP, DebugLoc());
-  DstBlk->addSuccessor(LandMBB);
-  DstBlk->removeSuccessor(DstBlk);
+  DstBlk->replaceSuccessor(DstBlk, LandMBB);
 }
 
 
@@ -1666,8 +1665,7 @@ AMDGPUCFGStructurizer::cloneBlockForPredecessor(MachineBasicBlock *MBB,
   replaceInstrUseOfBlockWith(PredMBB, MBB, CloneMBB);
   //srcBlk, oldBlk, newBlk
 
-  PredMBB->removeSuccessor(MBB);
-  PredMBB->addSuccessor(CloneMBB);
+  PredMBB->replaceSuccessor(MBB, CloneMBB);
 
   // add all successor to cloneBlk
   cloneSuccessorList(CloneMBB, MBB);

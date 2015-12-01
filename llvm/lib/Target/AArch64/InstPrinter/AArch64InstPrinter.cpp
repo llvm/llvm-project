@@ -1144,6 +1144,19 @@ void AArch64InstPrinter::printPrefetchOp(const MCInst *MI, unsigned OpNum,
     O << '#' << prfop;
 }
 
+void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned psbhintop = MI->getOperand(OpNum).getImm();
+  bool Valid;
+  StringRef Name =
+      AArch64PSBHint::PSBHintMapper().toString(psbhintop, STI.getFeatureBits(), Valid);
+  if (Valid)
+    O << Name;
+  else
+    O << '#' << psbhintop;
+}
+
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {

@@ -9,9 +9,9 @@
 ; EG: .long 166120
 ; EG-NEXT: .long 128
 ; SI: .long 47180
-; SI-NEXT: .long 71560
+; SI-NEXT: .long 65668
 ; CI: .long 47180
-; CI-NEXT: .long 38792
+; CI-NEXT: .long 32900
 
 ; FUNC-LABEL: {{^}}local_memory:
 

@@ -911,6 +911,25 @@ def msr_sysreg_op : Operand<i32> {
   let PrintMethod = "printMSRSystemRegister";
 }
 
+def PSBHintOperand : AsmOperandClass {
+  let Name = "PSBHint";
+  let ParserMethod = "tryParsePSBHint";
+}
+def psbhint_op : Operand<i32> {
+  let ParserMatchClass = PSBHintOperand;
+  let PrintMethod = "printPSBHintOp";
+  let MCOperandPredicate = [{
+    // Check, if operand is valid, to fix exhaustive aliasing in disassembly.
+    // "psb" is an alias to "hint" only for certain values of CRm:Op2 fields.
+    if (!MCOp.isImm())
+      return false;
+    bool ValidNamed;
+    (void)AArch64PSBHint::PSBHintMapper().toString(MCOp.getImm(),
+      STI.getFeatureBits(), ValidNamed);
+    return ValidNamed;
+  }];
+}
+
 class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
                        "mrs", "\t$Rt, $systemreg"> {
   bits<16> systemreg;

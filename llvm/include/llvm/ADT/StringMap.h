@@ -232,6 +232,13 @@ public:
     : StringMapImpl(InitialSize, static_cast<unsigned>(sizeof(MapEntryTy))),
       Allocator(A) {}
 
+  StringMap(std::initializer_list<std::pair<StringRef, ValueTy>> List)
+      : StringMapImpl(static_cast<unsigned>(sizeof(MapEntryTy))) {
+    for (const auto &P : List) {
+      insert(P);
+    }
+  }
+
   StringMap(StringMap &&RHS)
       : StringMapImpl(std::move(RHS)), Allocator(std::move(RHS.Allocator)) {}
 

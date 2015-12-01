@@ -1300,9 +1300,9 @@ example:
     that are recognized by LLVM to handle asynchronous exceptions, such
     as SEH, will still provide their implementation defined semantics.
 ``optnone``
-    This function attribute indicates that the function is not optimized
-    by any optimization or code generator passes with the
-    exception of interprocedural optimization passes.
+    This function attribute indicates that most optimization passes will skip
+    this function, with the exception of interprocedural optimization passes.
+    Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the ``alwaysinline``
     attribute; this attribute is also incompatible
     with the ``minsize`` attribute and the ``optsize`` attribute.

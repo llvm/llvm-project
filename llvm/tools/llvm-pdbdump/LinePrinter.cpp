@@ -11,15 +11,12 @@
 
 #include "llvm-pdbdump.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Regex.h"
 
 #include <algorithm>
 
 namespace {
-template <class T, class Pred> bool any_of_range(T &&R, Pred P) {
-  return std::any_of(R.begin(), R.end(), P);
-}
-
 bool IsItemExcluded(llvm::StringRef Item,
                     std::list<llvm::Regex> &IncludeFilters,
                     std::list<llvm::Regex> &ExcludeFilters) {
@@ -30,10 +27,10 @@ bool IsItemExcluded(llvm::StringRef Item,
 
   // Include takes priority over exclude.  If the user specified include
   // filters, and none of them include this item, them item is gone.
-  if (!IncludeFilters.empty() && !any_of_range(IncludeFilters, match_pred))
+  if (!IncludeFilters.empty() && !any_of(IncludeFilters, match_pred))
     return true;
 
-  if (any_of_range(ExcludeFilters, match_pred))
+  if (any_of(ExcludeFilters, match_pred))
     return true;
 
   return false;

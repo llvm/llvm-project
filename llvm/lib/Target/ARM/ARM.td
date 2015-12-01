@@ -62,6 +62,9 @@ def FeatureVFP4   : SubtargetFeature<"vfp4", "HasVFPv4", "true",
 def FeatureFPARMv8 : SubtargetFeature<"fp-armv8", "HasFPARMv8",
                                    "true", "Enable ARMv8 FP",
                                    [FeatureVFP4]>;
+def FeatureFullFP16 : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
+                                       "Enable full half-precision floating point",
+                                       [FeatureFPARMv8]>;
 def FeatureD16    : SubtargetFeature<"d16", "HasD16", "true",
                                      "Restrict FP to 16 double registers">;
 def FeatureHWDiv  : SubtargetFeature<"hwdiv", "HasHardwareDivide", "true",
@@ -212,6 +215,9 @@ def HasV8Ops    : SubtargetFeature<"v8", "HasV8Ops", "true",
 def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
                                    "Support ARM v8.1a instructions",
                                    [HasV8Ops]>;
+def HasV8_2aOps   : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
+                                   "Support ARM v8.2a instructions",
+                                   [HasV8_1aOps]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -343,6 +349,18 @@ def ARMv8a    : Architecture<"armv8-a",   "ARMv8a",   [HasV8Ops,
                                                        FeatureCRC]>;
 
 def ARMv81a   : Architecture<"armv8.1-a", "ARMv81a",  [HasV8_1aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCrypto,
+                                                       FeatureCRC]>;
+
+def ARMv82a   : Architecture<"armv8.2-a", "ARMv82a",  [HasV8_2aOps,
                                                        FeatureAClass,
                                                        FeatureDB,
                                                        FeatureFPARMv8,

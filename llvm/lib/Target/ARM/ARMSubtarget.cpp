@@ -112,6 +112,7 @@ void ARMSubtarget::initializeEnvironment() {
   HasV7Ops = false;
   HasV8Ops = false;
   HasV8_1aOps = false;
+  HasV8_2aOps = false;
   HasVFPv2 = false;
   HasVFPv3 = false;
   HasVFPv4 = false;
@@ -130,6 +131,7 @@ void ARMSubtarget::initializeEnvironment() {
   NoMovt = false;
   SupportsTailCall = false;
   HasFP16 = false;
+  HasFullFP16 = false;
   HasD16 = false;
   HasHardwareDivide = false;
   HasHardwareDivideInARM = false;

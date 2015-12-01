@@ -32,7 +32,7 @@
 name:            foo
 body: |
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:         successors: %bb.1.less(0), %bb.2.exit(0)
+  ; CHECK:         successors: %bb.1.less(0x40000000 / 0x80000000 = 50.00%), %bb.2.exit(0x40000000 / 0x80000000 = 50.00%)
   ; CHECK-LABEL: bb.1.less:
   bb.0.entry:
     successors: %bb.1.less, %bb.2.exit
@@ -58,7 +58,7 @@ body: |
   ; Verify that we can have multiple lists of successors that will be merged
   ; into one.
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:         successors: %bb.1(0), %bb.2(0)
+  ; CHECK:         successors: %bb.1(0x80000000 / 0x80000000 = 100.00%), %bb.2(0x00000000 / 0x80000000 = 0.00%)
   bb.0.entry:
     liveins: %edi
     successors: %bb.1

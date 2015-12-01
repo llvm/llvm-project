@@ -314,70 +314,87 @@ static bool containsReg(ArrayRef<unsigned> RegUnits, unsigned RegUnit) {
 }
 
 namespace {
-/// Collect this instruction's unique uses and defs into SmallVectors for
-/// processing defs and uses in order.
-///
-/// FIXME: always ignore tied opers
-class RegisterOperands {
-  const TargetRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
-  bool IgnoreDead;
 
+/// List of register defined and used by a machine instruction.
+class RegisterOperands {
 public:
   SmallVector<unsigned, 8> Uses;
   SmallVector<unsigned, 8> Defs;
   SmallVector<unsigned, 8> DeadDefs;
 
-  RegisterOperands(const TargetRegisterInfo *tri,
-                   const MachineRegisterInfo *mri, bool ID = false):
-    TRI(tri), MRI(mri), IgnoreDead(ID) {}
+  void collect(const MachineInstr &MI, const TargetRegisterInfo &TRI,
+               const MachineRegisterInfo &MRI, bool IgnoreDead = false);
+};
 
-  /// Push this operand's register onto the correct vector.
-  void collect(const MachineOperand &MO) {
+/// Collect this instruction's unique uses and defs into SmallVectors for
+/// processing defs and uses in order.
+///
+/// FIXME: always ignore tied opers
+class RegisterOperandsCollector {
+  RegisterOperands &RegOpers;
+  const TargetRegisterInfo &TRI;
+  const MachineRegisterInfo &MRI;
+  bool IgnoreDead;
+
+  RegisterOperandsCollector(RegisterOperands &RegOpers,
+                            const TargetRegisterInfo &TRI,
+                            const MachineRegisterInfo &MRI,
+                            bool IgnoreDead)
+    : RegOpers(RegOpers), TRI(TRI), MRI(MRI), IgnoreDead(IgnoreDead) {}
+
+  void collectInstr(const MachineInstr &MI) const {
+    for (ConstMIBundleOperands OperI(&MI); OperI.isValid(); ++OperI)
+      collectOperand(*OperI);
+
+    // Remove redundant physreg dead defs.
+    SmallVectorImpl<unsigned>::iterator I =
+      std::remove_if(RegOpers.DeadDefs.begin(), RegOpers.DeadDefs.end(),
+                     std::bind1st(std::ptr_fun(containsReg), RegOpers.Defs));
+    RegOpers.DeadDefs.erase(I, RegOpers.DeadDefs.end());
+  }
+
+  /// Push this operand's register onto the correct vectors.
+  void collectOperand(const MachineOperand &MO) const {
     if (!MO.isReg() || !MO.getReg())
       return;
+    unsigned Reg = MO.getReg();
     if (MO.readsReg())
-      pushRegUnits(MO.getReg(), Uses);
+      pushRegUnits(Reg, RegOpers.Uses);
     if (MO.isDef()) {
       if (MO.isDead()) {
         if (!IgnoreDead)
-          pushRegUnits(MO.getReg(), DeadDefs);
-      }
-      else
-        pushRegUnits(MO.getReg(), Defs);
+          pushRegUnits(Reg, RegOpers.DeadDefs);
+      } else
+        pushRegUnits(Reg, RegOpers.Defs);
     }
   }
 
-protected:
-  void pushRegUnits(unsigned Reg, SmallVectorImpl<unsigned> &RegUnits) {
+  void pushRegUnits(unsigned Reg, SmallVectorImpl<unsigned> &RegUnits) const {
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
       if (containsReg(RegUnits, Reg))
         return;
       RegUnits.push_back(Reg);
-    }
-    else if (MRI->isAllocatable(Reg)) {
-      for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
+    } else if (MRI.isAllocatable(Reg)) {
+      for (MCRegUnitIterator Units(Reg, &TRI); Units.isValid(); ++Units) {
         if (containsReg(RegUnits, *Units))
           continue;
         RegUnits.push_back(*Units);
       }
     }
   }
+
+  friend class RegisterOperands;
 };
-} // namespace
 
-/// Collect physical and virtual register operands.
-static void collectOperands(const MachineInstr *MI,
-                            RegisterOperands &RegOpers) {
-  for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
-    RegOpers.collect(*OperI);
-
-  // Remove redundant physreg dead defs.
-  SmallVectorImpl<unsigned>::iterator I =
-    std::remove_if(RegOpers.DeadDefs.begin(), RegOpers.DeadDefs.end(),
-                   std::bind1st(std::ptr_fun(containsReg), RegOpers.Defs));
-  RegOpers.DeadDefs.erase(I, RegOpers.DeadDefs.end());
+void RegisterOperands::collect(const MachineInstr &MI,
+                               const TargetRegisterInfo &TRI,
+                               const MachineRegisterInfo &MRI,
+                               bool IgnoreDead) {
+  RegisterOperandsCollector Collector(*this, TRI, MRI, IgnoreDead);
+  Collector.collectInstr(MI);
 }
+
+} // namespace
 
 /// Initialize an array of N PressureDiffs.
 void PressureDiffs::init(unsigned N) {
@@ -474,13 +491,9 @@ void RegPressureTracker::discoverLiveOut(unsigned Reg) {
 /// registers that are both defined and used by the instruction.  If a pressure
 /// difference pointer is provided record the changes is pressure caused by this
 /// instruction independent of liveness.
-bool RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
+void RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
                                 PressureDiff *PDiff) {
-  // Check for the top of the analyzable region.
-  if (CurrPos == MBB->begin()) {
-    closeRegion();
-    return false;
-  }
+  assert(CurrPos != MBB->begin());
   if (!isBottomClosed())
     closeBottom();
 
@@ -492,11 +505,8 @@ bool RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
   do
     --CurrPos;
   while (CurrPos != MBB->begin() && CurrPos->isDebugValue());
+  assert(!CurrPos->isDebugValue());
 
-  if (CurrPos->isDebugValue()) {
-    closeRegion();
-    return false;
-  }
   SlotIndex SlotIdx;
   if (RequireIntervals)
     SlotIdx = LIS->getInstructionIndex(CurrPos).getRegSlot();
@@ -505,8 +515,8 @@ bool RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
   if (RequireIntervals && isTopClosed())
     static_cast<IntervalPressure&>(P).openTop(SlotIdx);
 
-  RegisterOperands RegOpers(TRI, MRI);
-  collectOperands(CurrPos, RegOpers);
+  RegisterOperands RegOpers;
+  RegOpers.collect(*CurrPos, *TRI, *MRI);
 
   if (PDiff)
     collectPDiff(*PDiff, RegOpers, MRI);
@@ -567,18 +577,13 @@ bool RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
         UntiedDefs.insert(Reg);
     }
   }
-  return true;
 }
 
 /// Advance across the current instruction.
-bool RegPressureTracker::advance() {
+void RegPressureTracker::advance() {
   assert(!TrackUntiedDefs && "unsupported mode");
 
-  // Check for the bottom of the analyzable region.
-  if (CurrPos == MBB->end()) {
-    closeRegion();
-    return false;
-  }
+  assert(CurrPos != MBB->end());
   if (!isTopClosed())
     closeTop();
 
@@ -594,8 +599,8 @@ bool RegPressureTracker::advance() {
       static_cast<RegionPressure&>(P).openBottom(CurrPos);
   }
 
-  RegisterOperands RegOpers(TRI, MRI);
-  collectOperands(CurrPos, RegOpers);
+  RegisterOperands RegOpers;
+  RegOpers.collect(*CurrPos, *TRI, *MRI);
 
   for (unsigned i = 0, e = RegOpers.Uses.size(); i < e; ++i) {
     unsigned Reg = RegOpers.Uses[i];
@@ -636,7 +641,6 @@ bool RegPressureTracker::advance() {
   do
     ++CurrPos;
   while (CurrPos != MBB->end() && CurrPos->isDebugValue());
-  return true;
 }
 
 /// Find the max change in excess pressure across all sets.
@@ -728,13 +732,9 @@ void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
   assert(!MI->isDebugValue() && "Expect a nondebug instruction.");
 
   // Account for register pressure similar to RegPressureTracker::recede().
-  RegisterOperands RegOpers(TRI, MRI, /*IgnoreDead=*/true);
-  collectOperands(MI, RegOpers);
-
-  // Boost max pressure for all dead defs together.
-  // Since CurrSetPressure and MaxSetPressure
-  increaseRegPressure(RegOpers.DeadDefs);
-  decreaseRegPressure(RegOpers.DeadDefs);
+  RegisterOperands RegOpers;
+  RegOpers.collect(*MI, *TRI, *MRI, /*IgnoreDead=*/true);
+  assert(RegOpers.DeadDefs.size() == 0);
 
   // Kill liveness at live defs.
   for (unsigned i = 0, e = RegOpers.Defs.size(); i < e; ++i) {
@@ -923,8 +923,8 @@ void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
   assert(!MI->isDebugValue() && "Expect a nondebug instruction.");
 
   // Account for register pressure similar to RegPressureTracker::recede().
-  RegisterOperands RegOpers(TRI, MRI);
-  collectOperands(MI, RegOpers);
+  RegisterOperands RegOpers;
+  RegOpers.collect(*MI, *TRI, *MRI);
 
   // Kill liveness at last uses. Assume allocatable physregs are single-use
   // rather than checking LiveIntervals.

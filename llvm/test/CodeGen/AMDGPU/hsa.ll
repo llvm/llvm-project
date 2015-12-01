@@ -38,8 +38,10 @@
 ; HSA: .amdgpu_hsa_kernel simple
 ; HSA: {{^}}simple:
 ; HSA: .amd_kernel_code_t
+; HSA: enable_sgpr_private_segment_buffer = 1
+; HSA: enable_sgpr_kernarg_segment_ptr = 1
 ; HSA: .end_amd_kernel_code_t
-; HSA: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[0:1], 0x0
+; HSA: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x0
 
 ; Make sure we are setting the ATC bit:
 ; HSA-CI: s_mov_b32 s[[HI:[0-9]]], 0x100f000

@@ -1,7 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+vgpr-spilling < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+vgpr-spilling < %s | FileCheck %s
-
-; FIXME: Enable -verify-instructions
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; This ends up using all 255 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -11,9 +9,19 @@
 
 ; FIXME: The same register is initialized to 0 for every spill.
 
-; CHECK-LABEL: {{^}}main:
-; CHECK: NumVgprs: 256
-; CHECK: ScratchSize: 1024
+; GCN-LABEL: {{^}}main:
+
+; GCN: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GCN-NEXT: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCN-NEXT: s_mov_b32 s14, -1
+; SI-NEXT: s_mov_b32 s15, 0x80f000
+; VI-NEXT: s_mov_b32 s15, 0x800000
+
+; s12 is offset user SGPR
+; GCN: buffer_store_dword {{v[0-9]+}}, s[12:15], s11 offset:{{[0-9]+}} ; 4-byte Folded Spill
+
+; GCN: NumVgprs: 256
+; GCN: ScratchSize: 1024
 
 define void @main([9 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <4 x i32>] addrspace(2)* byval %arg2, [34 x <8 x i32>] addrspace(2)* byval %arg3, [16 x <16 x i8>] addrspace(2)* byval %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
 bb:

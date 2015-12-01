@@ -6431,7 +6431,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   SmallVector<SDValue, 8> V(NumElems);
   if (NumElems == 4 && NumZero > 0) {
     for (unsigned i = 0; i < 4; ++i) {
-      bool isZero = !(NonZeros & (1 << i));
+      bool isZero = !(NonZeros & (1ULL << i));
       if (isZero)
         V[i] = getZeroVector(VT, Subtarget, DAG, dl);
       else
@@ -25594,8 +25594,8 @@ static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
     SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
     for (unsigned i = 0; i != NumElems; ++i)
       ShuffleVec[i] = i * SizeRatio;
-    for (unsigned i = NumElems; i != NumElems*SizeRatio; ++i)
-      ShuffleVec[i] = NumElems*SizeRatio;
+    for (unsigned i = NumElems; i != NumElems * SizeRatio; ++i)
+      ShuffleVec[i] = NumElems * SizeRatio;
     NewMask = DAG.getVectorShuffle(WideVecVT, dl, NewMask,
                                    DAG.getConstant(0, dl, WideVecVT),
                                    &ShuffleVec[0]);
@@ -25676,8 +25676,8 @@ static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
          "WideVecVT should be legal");
 
   SDValue TruncatedVal = DAG.getVectorShuffle(WideVecVT, dl, WideVec,
-                                        DAG.getUNDEF(WideVecVT),
-                                        &ShuffleVec[0]);
+                                              DAG.getUNDEF(WideVecVT),
+                                              &ShuffleVec[0]);
 
   SDValue NewMask;
   SDValue Mask = Mst->getMask();
@@ -25709,8 +25709,9 @@ static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
     NewMask = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewMaskVT, Ops);
   }
 
-  return DAG.getMaskedStore(Mst->getChain(), dl, TruncatedVal, Mst->getBasePtr(),
-                            NewMask, StVT, Mst->getMemOperand(), false);
+  return DAG.getMaskedStore(Mst->getChain(), dl, TruncatedVal,
+                            Mst->getBasePtr(), NewMask, StVT,
+                            Mst->getMemOperand(), false);
 }
 /// PerformSTORECombine - Do target-specific dag combines on STORE nodes.
 static SDValue PerformSTORECombine(SDNode *N, SelectionDAG &DAG,

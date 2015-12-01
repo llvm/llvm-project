@@ -2,13 +2,13 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -print-machineinstrs=expand-isel-pseudos -enable-selectiondag-sp=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=IR
 
 ; SELDAG: # Machine code for function test_branch_weights:
-; SELDAG: Successors according to CFG: BB#[[SUCCESS:[0-9]+]](2147481600) BB#[[FAILURE:[0-9]+]](2048)
+; SELDAG: Successors according to CFG: BB#[[SUCCESS:[0-9]+]]({{[0-9a-fx/= ]+}}100.00%) BB#[[FAILURE:[0-9]+]]
 ; SELDAG: BB#[[FAILURE]]:
 ; SELDAG: CALL64pcrel32 <es:__stack_chk_fail>
 ; SELDAG: BB#[[SUCCESS]]:
 
 ; IR: # Machine code for function test_branch_weights:
-; IR: Successors according to CFG: BB#[[SUCCESS:[0-9]+]](2147481600) BB#[[FAILURE:[0-9]+]](2048)
+; IR: Successors according to CFG: BB#[[SUCCESS:[0-9]+]]({{[0-9a-fx/= ]+}}100.00%) BB#[[FAILURE:[0-9]+]]
 ; IR: BB#[[SUCCESS]]:
 ; IR: BB#[[FAILURE]]:
 ; IR: CALL64pcrel32 <ga:@__stack_chk_fail>

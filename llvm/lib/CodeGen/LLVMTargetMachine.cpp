@@ -125,9 +125,10 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
   PM.add(new MachineFunctionAnalysis(*TM, MFInitializer));
 
   // Enable FastISel with -fast, but allow that to be overridden.
+  TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
   if (EnableFastISelOption == cl::BOU_TRUE ||
       (TM->getOptLevel() == CodeGenOpt::None &&
-       EnableFastISelOption != cl::BOU_FALSE))
+       TM->getO0WantsFastISel()))
     TM->setFastISel(true);
 
   // Ask the target for an isel.

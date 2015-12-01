@@ -328,16 +328,12 @@ public:
   // position changes while pressure does not.
   void setPos(MachineBasicBlock::const_iterator Pos) { CurrPos = Pos; }
 
-  /// \brief Get the SlotIndex for the first nondebug instruction including or
-  /// after the current position.
-  SlotIndex getCurrSlot() const;
-
   /// Recede across the previous instruction.
-  bool recede(SmallVectorImpl<unsigned> *LiveUses = nullptr,
+  void recede(SmallVectorImpl<unsigned> *LiveUses = nullptr,
               PressureDiff *PDiff = nullptr);
 
   /// Advance across the current instruction.
-  bool advance();
+  void advance();
 
   /// Finalize the region boundaries and recored live ins and live outs.
   void closeRegion();
@@ -354,8 +350,7 @@ public:
   ArrayRef<unsigned> getLiveThru() const { return LiveThruPressure; }
 
   /// Get the resulting register pressure over the traversed region.
-  /// This result is complete if either advance() or recede() has returned true,
-  /// or if closeRegion() was explicitly invoked.
+  /// This result is complete if closeRegion() was explicitly invoked.
   RegisterPressure &getPressure() { return P; }
   const RegisterPressure &getPressure() const { return P; }
 
@@ -364,9 +359,6 @@ public:
   const std::vector<unsigned> &getRegSetPressureAtPos() const {
     return CurrSetPressure;
   }
-
-  void discoverLiveOut(unsigned Reg);
-  void discoverLiveIn(unsigned Reg);
 
   bool isTopClosed() const;
   bool isBottomClosed() const;
@@ -442,6 +434,13 @@ public:
   void dump() const;
 
 protected:
+  void discoverLiveOut(unsigned Reg);
+  void discoverLiveIn(unsigned Reg);
+
+  /// \brief Get the SlotIndex for the first nondebug instruction including or
+  /// after the current position.
+  SlotIndex getCurrSlot() const;
+
   const LiveRange *getLiveRange(unsigned Reg) const;
 
   void increaseRegPressure(ArrayRef<unsigned> Regs);
