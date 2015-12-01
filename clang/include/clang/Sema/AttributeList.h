@@ -557,11 +557,6 @@ public:
   /// Create a new pool for a factory.
   AttributePool(AttributeFactory &factory) : Factory(factory), Head(nullptr) {}
 
-  /// Move the given pool's allocations to this pool.
-  AttributePool(AttributePool &pool) : Factory(pool.Factory), Head(pool.Head) {
-    pool.Head = nullptr;
-  }
-
   AttributeFactory &getFactory() const { return Factory; }
 
   void clear() {

@@ -561,6 +561,7 @@ struct AdditionalKeywords {
     kw_returns = &IdentTable.get("returns");
 
     kw_signals = &IdentTable.get("signals");
+    kw_qsignals = &IdentTable.get("Q_SIGNALS");
     kw_slots = &IdentTable.get("slots");
     kw_qslots = &IdentTable.get("Q_SLOTS");
   }
@@ -607,6 +608,7 @@ struct AdditionalKeywords {
 
   // QT keywords.
   IdentifierInfo *kw_signals;
+  IdentifierInfo *kw_qsignals;
   IdentifierInfo *kw_slots;
   IdentifierInfo *kw_qslots;
 };

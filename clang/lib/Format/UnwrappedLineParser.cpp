@@ -784,7 +784,8 @@ void UnwrappedLineParser::parseStructuralElement() {
       parseJavaScriptEs6ImportExport();
       return;
     }
-    if (FormatTok->is(Keywords.kw_signals)) {
+    if (FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
+                           Keywords.kw_slots, Keywords.kw_qslots)) {
       nextToken();
       if (FormatTok->is(tok::colon)) {
         nextToken();

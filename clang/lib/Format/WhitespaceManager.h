@@ -81,7 +81,6 @@ public:
   /// \brief Returns all the \c Replacements created during formatting.
   const tooling::Replacements &generateReplacements();
 
-private:
   /// \brief Represents a change before a token, a break inside a token,
   /// or the layout of an unchanged token (or whitespace within).
   struct Change {
@@ -160,6 +159,7 @@ private:
     int IndentationOffset;
   };
 
+private:
   /// \brief Calculate \c IsTrailingComment, \c TokenLength for the last tokens
   /// or token parts in a line and \c PreviousEndOfTokenColumn and
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
@@ -168,19 +168,8 @@ private:
   /// \brief Align consecutive assignments over all \c Changes.
   void alignConsecutiveAssignments();
 
-  /// \brief Align consecutive assignments from change \p Start to change \p End
-  /// at
-  /// the specified \p Column.
-  void alignConsecutiveAssignments(unsigned Start, unsigned End,
-                                   unsigned Column);
-
   /// \brief Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
-
-  /// \brief Align consecutive declarations from change \p Start to change \p
-  /// End at the specified \p Column.
-  void alignConsecutiveDeclarations(unsigned Start, unsigned End,
-                                    unsigned Column);
 
   /// \brief Align trailing comments over all \c Changes.
   void alignTrailingComments();

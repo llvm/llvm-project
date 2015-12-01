@@ -466,8 +466,11 @@ struct FormatStyle {
     PAS_Middle
   };
 
-  /// Pointer and reference alignment style.
+  /// \brief Pointer and reference alignment style.
   PointerAlignmentStyle PointerAlignment;
+
+  /// \brief If true, clang-format will attempt to re-flow comments.
+  bool ReflowComments;
 
   /// \brief If true, clang-format will sort #includes.
   bool SortIncludes;
