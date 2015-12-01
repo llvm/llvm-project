@@ -607,6 +607,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPCancelDirectiveClass:
     K = CXCursor_OMPCancelDirective;
     break;
+  case Stmt::OMPTaskLoopDirectiveClass:
+    K = CXCursor_OMPTaskLoopDirective;
+    break;
   }
 
   CXCursor C = { K, 0, { Parent, S, TU } };

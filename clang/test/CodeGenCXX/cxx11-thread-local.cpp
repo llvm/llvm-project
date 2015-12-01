@@ -20,6 +20,18 @@ struct U { static thread_local int m; };
 // DARWIN: @_ZN1U1mE = internal thread_local global i32 0
 thread_local int U::m = f();
 
+namespace MismatchedInitType {
+  // Check that we don't crash here when we're forced to create a new global
+  // variable (with a different type) when we add the initializer.
+  union U {
+    int a;
+    float f;
+    constexpr U() : f(0.0) {}
+  };
+  static thread_local U u;
+  void *p = &u;
+}
+
 template<typename T> struct V { static thread_local int m; };
 template<typename T> thread_local int V<T>::m = g();
 

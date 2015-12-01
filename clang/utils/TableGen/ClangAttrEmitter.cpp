@@ -279,6 +279,8 @@ namespace {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n"; 
       } else if (type == "IdentifierInfo *") {
+        if (isOptional())
+          OS << "    if (SA->get" << getUpperName() << "())\n  ";
         OS << "    OS << \" \" << SA->get" << getUpperName()
            << "()->getName();\n";
       } else if (type == "TypeSourceInfo *") {

@@ -1517,10 +1517,19 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
       if (!MemPtrArg)
         return Sema::TDK_NonDeducedMismatch;
 
+      QualType ParamPointeeType = MemPtrParam->getPointeeType();
+      if (ParamPointeeType->isFunctionType())
+        S.adjustMemberFunctionCC(ParamPointeeType, /*IsStatic=*/true,
+                                 /*IsCtorOrDtor=*/false, Info.getLocation());
+      QualType ArgPointeeType = MemPtrArg->getPointeeType();
+      if (ArgPointeeType->isFunctionType())
+        S.adjustMemberFunctionCC(ArgPointeeType, /*IsStatic=*/true,
+                                 /*IsCtorOrDtor=*/false, Info.getLocation());
+
       if (Sema::TemplateDeductionResult Result
             = DeduceTemplateArgumentsByTypeMatch(S, TemplateParams,
-                                                 MemPtrParam->getPointeeType(),
-                                                 MemPtrArg->getPointeeType(),
+                                                 ParamPointeeType,
+                                                 ArgPointeeType,
                                                  Info, Deduced,
                                                  TDF & TDF_IgnoreQualifiers))
         return Result;

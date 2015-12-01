@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -triple x86_64-unknown-unknown -verify %s
 
-// expected-error@+1 {{unexpected OpenMP directive '#pragma omp for'}}
-#pragma omp for
+// expected-error@+1 {{unexpected OpenMP directive '#pragma omp taskloop'}}
+#pragma omp taskloop
 
-// expected-error@+1 {{unexpected OpenMP directive '#pragma omp for'}}
-#pragma omp for foo
+// expected-error@+1 {{unexpected OpenMP directive '#pragma omp taskloop'}}
+#pragma omp taskloop foo
 
 void test_no_clause() {
   int i;
-#pragma omp for
+#pragma omp taskloop
   for (i = 0; i < 16; ++i)
     ;
 
-// expected-error@+2 {{statement after '#pragma omp for' must be a for loop}}
-#pragma omp for
+// expected-error@+2 {{statement after '#pragma omp taskloop' must be a for loop}}
+#pragma omp taskloop
   ++i;
 }
 
@@ -25,7 +25,7 @@ L1:
   int x[24];
 
 #pragma omp parallel
-#pragma omp for
+#pragma omp taskloop
   for (i = 0; i < 16; ++i) {
     if (i == 5)
       goto L1; // expected-error {{use of undeclared label 'L1'}}
@@ -48,8 +48,8 @@ L1:
 void test_invalid_clause() {
   int i;
 #pragma omp parallel
-// expected-warning@+1 {{extra tokens at the end of '#pragma omp for' are ignored}}
-#pragma omp for foo bar
+// expected-warning@+1 {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
+#pragma omp taskloop foo bar
   for (i = 0; i < 16; ++i)
     ;
 }
@@ -58,25 +58,26 @@ void test_non_identifiers() {
   int i, x;
 
 #pragma omp parallel
-// expected-warning@+1 {{extra tokens at the end of '#pragma omp for' are ignored}}
-#pragma omp for;
+// expected-warning@+1 {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
+#pragma omp taskloop;
   for (i = 0; i < 16; ++i)
     ;
-// expected-warning@+2 {{extra tokens at the end of '#pragma omp for' are ignored}}
+// expected-warning@+3 {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
+// expected-error@+2 {{unexpected OpenMP clause 'linear' in directive '#pragma omp taskloop'}}
 #pragma omp parallel
-#pragma omp for linear(x);
-  for (i = 0; i < 16; ++i)
-    ;
-
-#pragma omp parallel
-// expected-warning@+1 {{extra tokens at the end of '#pragma omp for' are ignored}}
-#pragma omp for private(x);
+#pragma omp taskloop linear(x);
   for (i = 0; i < 16; ++i)
     ;
 
 #pragma omp parallel
-// expected-warning@+1 {{extra tokens at the end of '#pragma omp for' are ignored}}
-#pragma omp for, private(x);
+// expected-warning@+1 {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
+#pragma omp taskloop private(x);
+  for (i = 0; i < 16; ++i)
+    ;
+
+#pragma omp parallel
+// expected-warning@+1 {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
+#pragma omp taskloop, private(x);
   for (i = 0; i < 16; ++i)
     ;
 }
@@ -87,72 +88,72 @@ void test_collapse() {
   int i;
 #pragma omp parallel
 // expected-error@+1 {{expected '('}}
-#pragma omp for collapse
+#pragma omp taskloop collapse
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
-#pragma omp for collapse(
+#pragma omp taskloop collapse(
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}
-#pragma omp for collapse()
+#pragma omp taskloop collapse()
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
-#pragma omp for collapse(,
+#pragma omp taskloop collapse(,
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}  expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
-#pragma omp for collapse(, )
+#pragma omp taskloop collapse(, )
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-warning@+2 {{extra tokens at the end of '#pragma omp for' are ignored}}
+// expected-warning@+2 {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
 // expected-error@+1 {{expected '('}}
-#pragma omp for collapse 4)
+#pragma omp taskloop collapse 4)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}}
 // expected-note@+1 {{to match this '('}} expected-note@+1 {{as specified in 'collapse' clause}}
-#pragma omp for collapse(4
+#pragma omp taskloop collapse(4
   for (i = 0; i < 16; ++i)
-    ; // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
+    ; // expected-error {{expected 4 for loops after '#pragma omp taskloop', but found only 1}}
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}}
 // expected-note@+1 {{to match this '('}} expected-note@+1 {{as specified in 'collapse' clause}}
-#pragma omp for collapse(4,
+#pragma omp taskloop collapse(4,
   for (i = 0; i < 16; ++i)
-    ; // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
+    ; // expected-error {{expected 4 for loops after '#pragma omp taskloop', but found only 1}}
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}}
 // expected-note@+1 {{to match this '('}} expected-note@+1 {{as specified in 'collapse' clause}}
-#pragma omp for collapse(4, )
+#pragma omp taskloop collapse(4, )
   for (i = 0; i < 16; ++i)
-    ; // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
+    ; // expected-error {{expected 4 for loops after '#pragma omp taskloop', but found only 1}}
 #pragma omp parallel
 // expected-note@+1 {{as specified in 'collapse' clause}}
-#pragma omp for collapse(4)
+#pragma omp taskloop collapse(4)
   for (i = 0; i < 16; ++i)
-    ; // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
+    ; // expected-error {{expected 4 for loops after '#pragma omp taskloop', but found only 1}}
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}}
 // expected-note@+1 {{to match this '('}} expected-note@+1 {{as specified in 'collapse' clause}}
-#pragma omp for collapse(4 4)
+#pragma omp taskloop collapse(4 4)
   for (i = 0; i < 16; ++i)
-    ; // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
+    ; // expected-error {{expected 4 for loops after '#pragma omp taskloop', but found only 1}}
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}}
 // expected-note@+1 {{to match this '('}} expected-note@+1 {{as specified in 'collapse' clause}}
-#pragma omp for collapse(4, , 4)
+#pragma omp taskloop collapse(4, , 4)
   for (i = 0; i < 16; ++i)
-    ; // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
+    ; // expected-error {{expected 4 for loops after '#pragma omp taskloop', but found only 1}}
 #pragma omp parallel
-#pragma omp for collapse(4)
+#pragma omp taskloop collapse(4)
   for (int i1 = 0; i1 < 16; ++i1)
     for (int i2 = 0; i2 < 16; ++i2)
       for (int i3 = 0; i3 < 16; ++i3)
@@ -161,44 +162,34 @@ void test_collapse() {
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}}
 // expected-note@+1 {{to match this '('}} expected-note@+1 {{as specified in 'collapse' clause}}
-#pragma omp for collapse(4, 8)
+#pragma omp taskloop collapse(4, 8)
   for (i = 0; i < 16; ++i)
-    ; // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
+    ; // expected-error {{expected 4 for loops after '#pragma omp taskloop', but found only 1}}
 #pragma omp parallel
 // expected-error@+1 {{expression is not an integer constant expression}}
-#pragma omp for collapse(2.5)
+#pragma omp taskloop collapse(2.5)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expression is not an integer constant expression}}
-#pragma omp for collapse(foo())
+#pragma omp taskloop collapse(foo())
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
-#pragma omp for collapse(-5)
+#pragma omp taskloop collapse(-5)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
-#pragma omp for collapse(0)
+#pragma omp taskloop collapse(0)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
-#pragma omp for collapse(5 - 5)
+#pragma omp taskloop collapse(5 - 5)
   for (i = 0; i < 16; ++i)
     ;
-#pragma omp parallel
-#pragma omp for collapse(2)
-  for (i = 0; i < 16; ++i)
-// expected-note@+1 {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp for' directive into a parallel or another task region?}}
-    for (int j = 0; j < 16; ++j)
-// expected-error@+2 {{private variable cannot be reduction}}
-// expected-error@+1 {{region cannot be closely nested inside 'for' region; perhaps you forget to enclose 'omp for' directive into a parallel region?}}
-#pragma omp for reduction(+ : i, j)
-      for (int k = 0; k < 16; ++k)
-        i += j;
 }
 
 void test_private() {
@@ -206,47 +197,47 @@ void test_private() {
 #pragma omp parallel
 // expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
-#pragma omp for private(
+#pragma omp taskloop private(
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 2 {{expected expression}}
-#pragma omp for private(,
+#pragma omp taskloop private(,
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 2 {{expected expression}}
-#pragma omp for private(, )
+#pragma omp taskloop private(, )
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}
-#pragma omp for private()
+#pragma omp taskloop private()
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}
-#pragma omp for private(int)
+#pragma omp taskloop private(int)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected variable name}}
-#pragma omp for private(0)
+#pragma omp taskloop private(0)
   for (i = 0; i < 16; ++i)
     ;
 
   int x, y, z;
 #pragma omp parallel
-#pragma omp for private(x)
+#pragma omp taskloop private(x)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-#pragma omp for private(x, y)
+#pragma omp taskloop private(x, y)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-#pragma omp for private(x, y, z)
+#pragma omp taskloop private(x, y, z)
   for (i = 0; i < 16; ++i) {
     x = y * i + z;
   }
@@ -257,48 +248,48 @@ void test_lastprivate() {
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}
-#pragma omp for lastprivate(
+#pragma omp taskloop lastprivate(
   for (i = 0; i < 16; ++i)
     ;
 
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 2 {{expected expression}}
-#pragma omp for lastprivate(,
+#pragma omp taskloop lastprivate(,
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 2 {{expected expression}}
-#pragma omp for lastprivate(, )
+#pragma omp taskloop lastprivate(, )
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}
-#pragma omp for lastprivate()
+#pragma omp taskloop lastprivate()
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}
-#pragma omp for lastprivate(int)
+#pragma omp taskloop lastprivate(int)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected variable name}}
-#pragma omp for lastprivate(0)
+#pragma omp taskloop lastprivate(0)
   for (i = 0; i < 16; ++i)
     ;
 
   int x, y, z;
 #pragma omp parallel
-#pragma omp for lastprivate(x)
+#pragma omp taskloop lastprivate(x)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-#pragma omp for lastprivate(x, y)
+#pragma omp taskloop lastprivate(x, y)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-#pragma omp for lastprivate(x, y, z)
+#pragma omp taskloop lastprivate(x, y, z)
   for (i = 0; i < 16; ++i)
     ;
 }
@@ -308,48 +299,48 @@ void test_firstprivate() {
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}
-#pragma omp for firstprivate(
+#pragma omp taskloop firstprivate(
   for (i = 0; i < 16; ++i)
     ;
 
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 2 {{expected expression}}
-#pragma omp for firstprivate(,
+#pragma omp taskloop firstprivate(,
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 2 {{expected expression}}
-#pragma omp for firstprivate(, )
+#pragma omp taskloop firstprivate(, )
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}
-#pragma omp for firstprivate()
+#pragma omp taskloop firstprivate()
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected expression}}
-#pragma omp for firstprivate(int)
+#pragma omp taskloop firstprivate(int)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
 // expected-error@+1 {{expected variable name}}
-#pragma omp for firstprivate(0)
+#pragma omp taskloop firstprivate(0)
   for (i = 0; i < 16; ++i)
     ;
 
   int x, y, z;
 #pragma omp parallel
-#pragma omp for lastprivate(x) firstprivate(x)
+#pragma omp taskloop lastprivate(x) firstprivate(x)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-#pragma omp for lastprivate(x, y) firstprivate(x, y)
+#pragma omp taskloop lastprivate(x, y) firstprivate(x, y)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-#pragma omp for lastprivate(x, y, z) firstprivate(x, y, z)
+#pragma omp taskloop lastprivate(x, y, z) firstprivate(x, y, z)
   for (i = 0; i < 16; ++i)
     ;
 }
@@ -358,19 +349,19 @@ void test_loop_messages() {
   float a[100], b[100], c[100];
 #pragma omp parallel
 // expected-error@+2 {{variable must be of integer or pointer type}}
-#pragma omp for
+#pragma omp taskloop
   for (float fi = 0; fi < 10.0; fi++) {
     c[(int)fi] = a[(int)fi] + b[(int)fi];
   }
 #pragma omp parallel
 // expected-error@+2 {{variable must be of integer or pointer type}}
-#pragma omp for
+#pragma omp taskloop
   for (double fi = 0; fi < 10.0; fi++) {
     c[(int)fi] = a[(int)fi] + b[(int)fi];
   }
 
   // expected-warning@+2 {{OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed}}
-  #pragma omp for
+  #pragma omp taskloop
   for (__int128 ii = 0; ii < 10; ii++) {
     c[ii] = a[ii] + b[ii];
   }

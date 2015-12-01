@@ -460,6 +460,9 @@ void OMPClauseProfiler::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
   Profiler->VisitStmt(C->getThreadLimit());
 }
+void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
+  Profiler->VisitStmt(C->getPriority());
+}
 }
 
 void
@@ -580,6 +583,10 @@ void StmtProfiler::VisitOMPCancellationPointDirective(
 
 void StmtProfiler::VisitOMPCancelDirective(const OMPCancelDirective *S) {
   VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPTaskLoopDirective(const OMPTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
 }
 
 void StmtProfiler::VisitExpr(const Expr *S) {

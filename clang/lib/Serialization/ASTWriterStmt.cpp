@@ -2011,6 +2011,11 @@ void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
   Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
 }
 
+void OMPClauseWriter::VisitOMPPriorityClause(OMPPriorityClause *C) {
+  Writer->Writer.AddStmt(C->getPriority());
+  Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
@@ -2237,6 +2242,11 @@ void ASTStmtWriter::VisitOMPCancelDirective(OMPCancelDirective *D) {
   VisitOMPExecutableDirective(D);
   Record.push_back(D->getCancelRegion());
   Code = serialization::STMT_OMP_CANCEL_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPTaskLoopDirective(OMPTaskLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_TASKLOOP_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

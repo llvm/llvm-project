@@ -150,3 +150,7 @@ void f() {
   // CHECK: DeprecatedAttr
 }
 }
+
+struct __attribute__((objc_bridge_related(NSParagraphStyle,,))) TestBridgedRef;
+// CHECK: CXXRecordDecl{{.*}} struct TestBridgedRef
+// CHECK-NEXT: ObjCBridgeRelatedAttr{{.*}} NSParagraphStyle

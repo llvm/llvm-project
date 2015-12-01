@@ -275,6 +275,7 @@ they will be called by the instrumented code.
   void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases);
 
 This interface is a subject to change.
+The current implementation is not thread-safe and thus can be safely used only for single-threaded targets.
 
 Output directory
 ================

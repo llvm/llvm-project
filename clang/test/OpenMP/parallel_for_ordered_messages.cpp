@@ -26,7 +26,7 @@ T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}
 #pragma omp parallel for ordered(argc
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
-// expected-error@+1 2 {{argument to 'ordered' clause must be a positive integer value}}
+// expected-error@+1 2 {{argument to 'ordered' clause must be a strictly positive integer value}}
 #pragma omp parallel for ordered(ST // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
@@ -37,7 +37,7 @@ T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST]; // expected-error 2 {{expected 2 for loops after '#pragma omp parallel for', but found only 1}}
 // expected-error@+3 2 {{directive '#pragma omp parallel for' cannot contain more than one 'ordered' clause}}
-// expected-error@+2 2 {{argument to 'ordered' clause must be a positive integer value}}
+// expected-error@+2 2 {{argument to 'ordered' clause must be a strictly positive integer value}}
 // expected-error@+1 2 {{expression is not an integral constant expression}}
 #pragma omp parallel for ordered(foobool(argc)), ordered(true), ordered(-5)
   for (int i = ST; i < N; i++)
@@ -52,7 +52,7 @@ T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}
 #pragma omp parallel for ordered(1)
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
-#pragma omp parallel for ordered(N) // expected-error {{argument to 'ordered' clause must be a positive integer value}}
+#pragma omp parallel for ordered(N) // expected-error {{argument to 'ordered' clause must be a strictly positive integer value}}
   for (T i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
 #pragma omp parallel for ordered(2) // expected-note {{as specified in 'ordered' clause}}
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     argv[0][i] = argv[0][i] - argv[0][i - 4];
 // expected-error@+3 {{expression is not an integral constant expression}}
 // expected-error@+2 2 {{directive '#pragma omp parallel for' cannot contain more than one 'ordered' clause}}
-// expected-error@+1 2 {{argument to 'ordered' clause must be a positive integer value}}
+// expected-error@+1 2 {{argument to 'ordered' clause must be a strictly positive integer value}}
 #pragma omp parallel for ordered(foobool(argc)), ordered(true), ordered(-5)
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i - 4];

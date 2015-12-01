@@ -2838,6 +2838,61 @@ public:
   child_range children() { return child_range(&ThreadLimit, &ThreadLimit + 1); }
 };
 
+/// \brief This represents 'priority' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp task priority(n)
+/// \endcode
+/// In this example directive '#pragma omp teams' has clause 'priority' with
+/// single expression 'n'.
+///
+class OMPPriorityClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief Priority number.
+  Stmt *Priority;
+  /// \brief Set the Priority number.
+  ///
+  /// \param E Priority number.
+  ///
+  void setPriority(Expr *E) { Priority = E; }
+
+public:
+  /// \brief Build 'priority' clause.
+  ///
+  /// \param E Expression associated with this clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  ///
+  OMPPriorityClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc)
+      : OMPClause(OMPC_priority, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Priority(E) {}
+
+  /// \brief Build an empty clause.
+  ///
+  OMPPriorityClause()
+      : OMPClause(OMPC_priority, SourceLocation(), SourceLocation()),
+        LParenLoc(SourceLocation()), Priority(nullptr) {}
+  /// \brief Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  /// \brief Return Priority number.
+  Expr *getPriority() { return cast<Expr>(Priority); }
+  /// \brief Return Priority number.
+  Expr *getPriority() const { return cast<Expr>(Priority); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_priority;
+  }
+
+  child_range children() { return child_range(&Priority, &Priority + 1); }
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

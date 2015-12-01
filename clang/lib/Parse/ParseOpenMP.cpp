@@ -137,6 +137,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
   case OMPD_cancellation_point:
   case OMPD_cancel:
   case OMPD_target_data:
+  case OMPD_taskloop:
     Diag(Tok, diag::err_omp_unexpected_directive)
         << getOpenMPDirectiveName(DKind);
     break;
@@ -232,7 +233,8 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
   case OMPD_target:
   case OMPD_teams:
   case OMPD_taskgroup:
-  case OMPD_target_data: {
+  case OMPD_target_data:
+  case OMPD_taskloop: {
     ConsumeToken();
     // Parse directive name of the 'critical' directive if any.
     if (DKind == OMPD_critical) {
@@ -395,7 +397,7 @@ bool Parser::ParseOpenMPSimpleVarList(OpenMPDirectiveKind Kind,
 ///       mergeable-clause | flush-clause | read-clause | write-clause |
 ///       update-clause | capture-clause | seq_cst-clause | device-clause |
 ///       simdlen-clause | threads-clause | simd-clause | num_teams-clause |
-///       thread_limit-clause
+///       thread_limit-clause | priority-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -418,6 +420,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_device:
   case OMPC_num_teams:
   case OMPC_thread_limit:
+  case OMPC_priority:
     // OpenMP [2.5, Restrictions]
     //  At most one num_threads clause can appear on the directive.
     // OpenMP [2.8.1, simd construct, Restrictions]
@@ -432,6 +435,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     // OpenMP [teams Construct, Restrictions]
     //  At most one num_teams clause can appear on the directive.
     //  At most one thread_limit clause can appear on the directive.
+    // OpenMP [2.9.1, task Construct, Restrictions]
+    // At most one priority clause can appear on the directive.
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
@@ -521,8 +526,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
 }
 
 /// \brief Parsing of OpenMP clauses with single expressions like 'final',
-/// 'collapse', 'safelen', 'num_threads', 'simdlen', 'num_teams', 'thread_limit'
-/// or 'simdlen'.
+/// 'collapse', 'safelen', 'num_threads', 'simdlen', 'num_teams',
+/// 'thread_limit', 'simdlen' or 'priority'.
 ///
 ///    final-clause:
 ///      'final' '(' expression ')'
@@ -538,6 +543,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
 ///
 ///    collapse-clause:
 ///      'collapse' '(' expression ')'
+///
+///    priority-clause:
+///      'priority' '(' expression ')'
 ///
 OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind) {
   SourceLocation Loc = ConsumeToken();

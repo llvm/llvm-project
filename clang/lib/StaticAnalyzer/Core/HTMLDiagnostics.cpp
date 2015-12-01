@@ -255,8 +255,8 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
     os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
-       << GetIssueHash(SMgr, L, D.getCheckName(), D.getBugType(), DeclWithIssue)
-       << " -->\n";
+       << GetIssueHash(SMgr, L, D.getCheckName(), D.getBugType(), DeclWithIssue,
+                       PP.getLangOpts()) << " -->\n";
 
     os << "\n<!-- BUGLINE "
        << LineNumber

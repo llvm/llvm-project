@@ -378,13 +378,12 @@ private:
   StaticExternCMap StaticExternCValues;
 
   /// \brief thread_local variables defined or used in this TU.
-  std::vector<std::pair<const VarDecl *, llvm::GlobalVariable *> >
-    CXXThreadLocals;
+  std::vector<const VarDecl *> CXXThreadLocals;
 
   /// \brief thread_local variables with initializers that need to run
   /// before any thread_local variable in this TU is odr-used.
   std::vector<llvm::Function *> CXXThreadLocalInits;
-  std::vector<llvm::GlobalVariable *> CXXThreadLocalInitVars;
+  std::vector<const VarDecl *> CXXThreadLocalInitVars;
 
   /// Global variables with initializers that need to run before main.
   std::vector<llvm::Function *> CXXGlobalInits;
