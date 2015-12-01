@@ -80,3 +80,14 @@ unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   // Semi-arbitrary large amount.
   return 64;
 }
+
+int AMDGPUTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                      unsigned Index) {
+  switch (Opcode) {
+  case Instruction::ExtractElement:
+    // Dynamic indexing isn't free and is best avoided.
+    return Index == ~0u ? 2 : 0;
+  default:
+    return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
+  }
+}

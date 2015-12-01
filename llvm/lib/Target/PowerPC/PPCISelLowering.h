@@ -79,6 +79,11 @@ namespace llvm {
       /// compute an allocation on the stack.
       DYNALLOC,
 
+      /// This instruction is lowered in PPCRegisterInfo::eliminateFrameIndex to
+      /// compute an offset from native SP to the address  of the most recent
+      /// dynamic alloca.
+      DYNAREAOFFSET,
+
       /// GlobalBaseReg - On Darwin, this node represents the result of the mflr
       /// at function entry, used for PIC code.
       GlobalBaseReg,
@@ -728,6 +733,8 @@ namespace llvm {
                         const PPCSubtarget &Subtarget) const;
     SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG,
                                 const PPCSubtarget &Subtarget) const;
+    SDValue LowerGET_DYNAMIC_AREA_OFFSET(SDValue Op, SelectionDAG &DAG,
+                                         const PPCSubtarget &Subtarget) const;
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                       const PPCSubtarget &Subtarget) const;
     SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;

@@ -1942,36 +1942,6 @@ def SI_KILL : InstSI <
 
 let Uses = [EXEC], Defs = [EXEC,VCC,M0] in {
 
-//defm SI_ : RegisterLoadStore <VGPR_32, FRAMEri, ADDRIndirect>;
-
-let UseNamedOperandTable = 1 in {
-
-def SI_RegisterLoad : InstSI <
-  (outs VGPR_32:$dst, SReg_64:$temp),
-  (ins FRAMEri32:$addr, i32imm:$chan),
-  "", []
-> {
-  let isRegisterLoad = 1;
-  let mayLoad = 1;
-}
-
-class SIRegStore<dag outs> : InstSI <
-  outs,
-  (ins VGPR_32:$val, FRAMEri32:$addr, i32imm:$chan),
-  "", []
-> {
-  let isRegisterStore = 1;
-  let mayStore = 1;
-}
-
-let usesCustomInserter = 1 in {
-def SI_RegisterStorePseudo : SIRegStore<(outs)>;
-} // End usesCustomInserter = 1
-def SI_RegisterStore : SIRegStore<(outs SReg_64:$temp)>;
-
-
-} // End UseNamedOperandTable = 1
-
 class SI_INDIRECT_SRC<RegisterClass rc> : InstSI <
   (outs VGPR_32:$dst, SReg_64:$temp),
   (ins rc:$src, VSrc_32:$idx, i32imm:$off),

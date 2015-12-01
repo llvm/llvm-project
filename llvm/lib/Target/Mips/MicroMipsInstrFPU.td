@@ -43,7 +43,7 @@ def BC1T_MM : MMRel, BC1F_FT<"bc1t", brtarget_mm, II_BC1T, MIPS_BRANCH_T>,
               BC1F_FM_MM<0x1d>, ISA_MIPS1_NOT_32R6_64R6;
 def CVT_W_S_MM   : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
                    ROUND_W_FM_MM<0, 0x24>;
-def ROUND_W_S_MM : MMRel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
+def ROUND_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
                    ROUND_W_FM_MM<0, 0xec>;
 
 def CEIL_W_MM  : MMRel, ABSS_FT<"ceil.w.d", FGR32Opnd, AFGR64Opnd, II_CEIL>,
@@ -52,7 +52,7 @@ def CVT_W_MM   : MMRel, ABSS_FT<"cvt.w.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
                  ROUND_W_FM_MM<1, 0x24>;
 def FLOOR_W_MM : MMRel, ABSS_FT<"floor.w.d", FGR32Opnd, AFGR64Opnd, II_FLOOR>,
                  ROUND_W_FM_MM<1, 0x2c>;
-def ROUND_W_MM : MMRel, ABSS_FT<"round.w.d", FGR32Opnd, AFGR64Opnd, II_ROUND>,
+def ROUND_W_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.d", FGR32Opnd, AFGR64Opnd, II_ROUND>,
                  ROUND_W_FM_MM<1, 0xec>;
 def TRUNC_W_MM : MMRel, ABSS_FT<"trunc.w.d", FGR32Opnd, AFGR64Opnd, II_TRUNC>,
                  ROUND_W_FM_MM<1, 0xac>;

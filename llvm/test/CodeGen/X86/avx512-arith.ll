@@ -1,4 +1,8 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512f | FileCheck --check-prefix=CHECK --check-prefix=AVX512F %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512vl | FileCheck --check-prefix=CHECK --check-prefix=AVX512VL %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512bw | FileCheck --check-prefix=CHECK --check-prefix=AVX512BW %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512dq | FileCheck --check-prefix=CHECK --check-prefix=AVX512DQ %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512dq -mattr=+avx512bw -mattr=+avx512vl| FileCheck --check-prefix=CHECK --check-prefix=SKX %s
 
 define <8 x double> @addpd512(<8 x double> %y, <8 x double> %x) {
 ; CHECK-LABEL: addpd512:
@@ -83,18 +87,54 @@ entry:
 }
 
 define <8 x i64> @imulq512(<8 x i64> %y, <8 x i64> %x) {
-; CHECK-LABEL: imulq512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2
-; CHECK-NEXT:    vpsrlq $32, %zmm0, %zmm3
-; CHECK-NEXT:    vpmuludq %zmm3, %zmm1, %zmm3
-; CHECK-NEXT:    vpsllq $32, %zmm3, %zmm3
-; CHECK-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
-; CHECK-NEXT:    vpsrlq $32, %zmm1, %zmm1
-; CHECK-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    vpsllq $32, %zmm0, %zmm0
-; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
-; CHECK-NEXT:    retq
+; AVX512F-LABEL: imulq512:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpsrlq $32, %zmm0, %zmm3
+; AVX512F-NEXT:    vpmuludq %zmm3, %zmm1, %zmm3
+; AVX512F-NEXT:    vpsllq $32, %zmm3, %zmm3
+; AVX512F-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsrlq $32, %zmm1, %zmm1
+; AVX512F-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vpsllq $32, %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: imulq512:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2
+; AVX512VL-NEXT:    vpsrlq $32, %zmm0, %zmm3
+; AVX512VL-NEXT:    vpmuludq %zmm3, %zmm1, %zmm3
+; AVX512VL-NEXT:    vpsllq $32, %zmm3, %zmm3
+; AVX512VL-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; AVX512VL-NEXT:    vpsrlq $32, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
+; AVX512VL-NEXT:    vpsllq $32, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: imulq512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2
+; AVX512BW-NEXT:    vpsrlq $32, %zmm0, %zmm3
+; AVX512BW-NEXT:    vpmuludq %zmm3, %zmm1, %zmm3
+; AVX512BW-NEXT:    vpsllq $32, %zmm3, %zmm3
+; AVX512BW-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; AVX512BW-NEXT:    vpsrlq $32, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpsllq $32, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: imulq512:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: imulq512:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
+; SKX-NEXT:    retq
   %z = mul <8 x i64>%x, %y
   ret <8 x i64>%z
 }
@@ -463,10 +503,13 @@ entry:
   ret <8 x i64>%d
 }
 
-; CHECK-LABEL: test_mask_vaddps
-; CHECK: vaddps {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <16 x float> @test_mask_vaddps(<16 x float> %dst, <16 x float> %i,
+; CHECK-LABEL: test_mask_vaddps:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; CHECK-NEXT:    vaddps %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <16 x float> %j, <16 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
@@ -475,10 +518,13 @@ define <16 x float> @test_mask_vaddps(<16 x float> %dst, <16 x float> %i,
   ret <16 x float> %r
 }
 
-; CHECK-LABEL: test_mask_vmulps
-; CHECK: vmulps {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <16 x float> @test_mask_vmulps(<16 x float> %dst, <16 x float> %i,
+; CHECK-LABEL: test_mask_vmulps:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; CHECK-NEXT:    vmulps %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <16 x float> %j, <16 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
@@ -487,10 +533,13 @@ define <16 x float> @test_mask_vmulps(<16 x float> %dst, <16 x float> %i,
   ret <16 x float> %r
 }
 
-; CHECK-LABEL: test_mask_vminps
-; CHECK: vminps {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <16 x float> @test_mask_vminps(<16 x float> %dst, <16 x float> %i,
+; CHECK-LABEL: test_mask_vminps:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; CHECK-NEXT:    vminps %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <16 x float> %j, <16 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
@@ -500,10 +549,41 @@ define <16 x float> @test_mask_vminps(<16 x float> %dst, <16 x float> %i,
   ret <16 x float> %r
 }
 
-; CHECK-LABEL: test_mask_vminpd
-; CHECK: vminpd {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <8 x double> @test_mask_vminpd(<8 x double> %dst, <8 x double> %i,
+; AVX512F-LABEL: test_mask_vminpd:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512F-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; AVX512F-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_mask_vminpd:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512VL-NEXT:    vpcmpneqd %ymm4, %ymm3, %k1
+; AVX512VL-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: test_mask_vminpd:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512BW-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; AVX512BW-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_mask_vminpd:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512DQ-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; AVX512DQ-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: test_mask_vminpd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; SKX-NEXT:    vpcmpneqd %ymm4, %ymm3, %k1
+; SKX-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; SKX-NEXT:    retq
                                      <8 x double> %j, <8 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
@@ -513,10 +593,13 @@ define <8 x double> @test_mask_vminpd(<8 x double> %dst, <8 x double> %i,
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_mask_vmaxps
-; CHECK: vmaxps {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <16 x float> @test_mask_vmaxps(<16 x float> %dst, <16 x float> %i,
+; CHECK-LABEL: test_mask_vmaxps:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; CHECK-NEXT:    vmaxps %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <16 x float> %j, <16 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
@@ -526,10 +609,41 @@ define <16 x float> @test_mask_vmaxps(<16 x float> %dst, <16 x float> %i,
   ret <16 x float> %r
 }
 
-; CHECK-LABEL: test_mask_vmaxpd
-; CHECK: vmaxpd {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <8 x double> @test_mask_vmaxpd(<8 x double> %dst, <8 x double> %i,
+; AVX512F-LABEL: test_mask_vmaxpd:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512F-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; AVX512F-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_mask_vmaxpd:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512VL-NEXT:    vpcmpneqd %ymm4, %ymm3, %k1
+; AVX512VL-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: test_mask_vmaxpd:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512BW-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; AVX512BW-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_mask_vmaxpd:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX512DQ-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; AVX512DQ-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: test_mask_vmaxpd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; SKX-NEXT:    vpcmpneqd %ymm4, %ymm3, %k1
+; SKX-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; SKX-NEXT:    retq
                                      <8 x double> %j, <8 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
@@ -539,10 +653,13 @@ define <8 x double> @test_mask_vmaxpd(<8 x double> %dst, <8 x double> %i,
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_mask_vsubps
-; CHECK: vsubps {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <16 x float> @test_mask_vsubps(<16 x float> %dst, <16 x float> %i,
+; CHECK-LABEL: test_mask_vsubps:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; CHECK-NEXT:    vsubps %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <16 x float> %j, <16 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
@@ -551,10 +668,13 @@ define <16 x float> @test_mask_vsubps(<16 x float> %dst, <16 x float> %i,
   ret <16 x float> %r
 }
 
-; CHECK-LABEL: test_mask_vdivps
-; CHECK: vdivps {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <16 x float> @test_mask_vdivps(<16 x float> %dst, <16 x float> %i,
+; CHECK-LABEL: test_mask_vdivps:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vpcmpneqd %zmm4, %zmm3, %k1
+; CHECK-NEXT:    vdivps %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <16 x float> %j, <16 x i32> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
@@ -563,10 +683,13 @@ define <16 x float> @test_mask_vdivps(<16 x float> %dst, <16 x float> %i,
   ret <16 x float> %r
 }
 
-; CHECK-LABEL: test_mask_vaddpd
-; CHECK: vaddpd {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}}}
-; CHECK: ret
 define <8 x double> @test_mask_vaddpd(<8 x double> %dst, <8 x double> %i,
+; CHECK-LABEL: test_mask_vaddpd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vpcmpneqq %zmm4, %zmm3, %k1
+; CHECK-NEXT:    vaddpd %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <8 x double> %j, <8 x i64> %mask1)
                                      nounwind readnone {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
@@ -575,10 +698,13 @@ define <8 x double> @test_mask_vaddpd(<8 x double> %dst, <8 x double> %i,
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_maskz_vaddpd
-; CHECK: vaddpd {{%zmm[0-9]{1,2}, %zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]} {z}}}
-; CHECK: ret
 define <8 x double> @test_maskz_vaddpd(<8 x double> %i, <8 x double> %j,
+; CHECK-LABEL: test_maskz_vaddpd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; CHECK-NEXT:    vpcmpneqq %zmm3, %zmm2, %k1
+; CHECK-NEXT:    vaddpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
                                       <8 x i64> %mask1) nounwind readnone {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %x = fadd <8 x double> %i, %j
@@ -586,10 +712,13 @@ define <8 x double> @test_maskz_vaddpd(<8 x double> %i, <8 x double> %j,
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_mask_fold_vaddpd
-; CHECK: vaddpd (%rdi), {{.*%zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]}.*}}
-; CHECK: ret
 define <8 x double> @test_mask_fold_vaddpd(<8 x double> %dst, <8 x double> %i,
+; CHECK-LABEL: test_mask_fold_vaddpd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; CHECK-NEXT:    vpcmpneqq %zmm3, %zmm2, %k1
+; CHECK-NEXT:    vaddpd (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
                                      <8 x double>* %j,  <8 x i64> %mask1)
                                      nounwind {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
@@ -599,10 +728,13 @@ define <8 x double> @test_mask_fold_vaddpd(<8 x double> %dst, <8 x double> %i,
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_maskz_fold_vaddpd
-; CHECK: vaddpd (%rdi), {{.*%zmm[0-9]{1,2}, %zmm[0-9]{1,2} {%k[1-7]} {z}.*}}
-; CHECK: ret
 define <8 x double> @test_maskz_fold_vaddpd(<8 x double> %i, <8 x double>* %j,
+; CHECK-LABEL: test_maskz_fold_vaddpd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; CHECK-NEXT:    vpcmpneqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vaddpd (%rdi), %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
                                       <8 x i64> %mask1) nounwind {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %tmp = load <8 x double>, <8 x double>* %j, align 8
@@ -611,10 +743,11 @@ define <8 x double> @test_maskz_fold_vaddpd(<8 x double> %i, <8 x double>* %j,
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_broadcast_vaddpd
-; CHECK: vaddpd (%rdi){1to8}, %zmm{{.*}}
-; CHECK: ret
 define <8 x double> @test_broadcast_vaddpd(<8 x double> %i, double* %j) nounwind {
+; CHECK-LABEL: test_broadcast_vaddpd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vaddpd (%rdi){1to8}, %zmm0, %zmm0
+; CHECK-NEXT:    retq
   %tmp = load double, double* %j
   %b = insertelement <8 x double> undef, double %tmp, i32 0
   %c = shufflevector <8 x double> %b, <8 x double> undef,
@@ -623,10 +756,14 @@ define <8 x double> @test_broadcast_vaddpd(<8 x double> %i, double* %j) nounwind
   ret <8 x double> %x
 }
 
-; CHECK-LABEL: test_mask_broadcast_vaddpd
-; CHECK: vaddpd (%rdi){1to8}, %zmm{{.*{%k[1-7]}.*}}
-; CHECK: ret
 define <8 x double> @test_mask_broadcast_vaddpd(<8 x double> %dst, <8 x double> %i,
+; CHECK-LABEL: test_mask_broadcast_vaddpd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpcmpneqq %zmm0, %zmm2, %k1
+; CHECK-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm1 {%k1}
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    retq
                                       double* %j, <8 x i64> %mask1) nounwind {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %tmp = load double, double* %j
@@ -638,10 +775,13 @@ define <8 x double> @test_mask_broadcast_vaddpd(<8 x double> %dst, <8 x double> 
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_maskz_broadcast_vaddpd
-; CHECK: vaddpd (%rdi){1to8}, %zmm{{.*{%k[1-7]} {z}.*}}
-; CHECK: ret
 define <8 x double> @test_maskz_broadcast_vaddpd(<8 x double> %i, double* %j,
+; CHECK-LABEL: test_maskz_broadcast_vaddpd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; CHECK-NEXT:    vpcmpneqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vaddpd (%rdi){1to8}, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
                                        <8 x i64> %mask1) nounwind {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %tmp = load double, double* %j
@@ -653,10 +793,31 @@ define <8 x double> @test_maskz_broadcast_vaddpd(<8 x double> %i, double* %j,
   ret <8 x double> %r
 }
 
-; CHECK-LABEL: test_fxor
-; CHECK: vpxord
-; CHECK: ret
 define <16 x float>  @test_fxor(<16 x float> %a) {
+; AVX512F-LABEL: test_fxor:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vpxord {{.*}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_fxor:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vpxord {{.*}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: test_fxor:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpxord {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_fxor:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    vxorps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: test_fxor:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vxorps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    retq
 
   %res = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
   ret <16 x float>%res

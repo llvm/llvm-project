@@ -329,6 +329,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::STACKRESTORE      , MVT::Other, Custom);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32  , Custom);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64  , Custom);
+  setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i32, Custom);
+  setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i64, Custom);
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -998,6 +1000,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::Lo:              return "PPCISD::Lo";
   case PPCISD::TOC_ENTRY:       return "PPCISD::TOC_ENTRY";
   case PPCISD::DYNALLOC:        return "PPCISD::DYNALLOC";
+  case PPCISD::DYNAREAOFFSET:   return "PPCISD::DYNAREAOFFSET";
   case PPCISD::GlobalBaseReg:   return "PPCISD::GlobalBaseReg";
   case PPCISD::SRL:             return "PPCISD::SRL";
   case PPCISD::SRA:             return "PPCISD::SRA";
@@ -5808,6 +5811,22 @@ PPCTargetLowering::LowerReturn(SDValue Chain,
   return DAG.getNode(PPCISD::RET_FLAG, dl, MVT::Other, RetOps);
 }
 
+SDValue PPCTargetLowering::LowerGET_DYNAMIC_AREA_OFFSET(
+    SDValue Op, SelectionDAG &DAG, const PPCSubtarget &Subtarget) const {
+  SDLoc dl(Op);
+
+  // Get the corect type for integers.
+  EVT IntVT = Op.getValueType();
+
+  // Get the inputs.
+  SDValue Chain = Op.getOperand(0);
+  SDValue FPSIdx = getFramePointerFrameIndex(DAG);
+  // Build a DYNAREAOFFSET node.
+  SDValue Ops[2] = {Chain, FPSIdx};
+  SDVTList VTs = DAG.getVTList(IntVT);
+  return DAG.getNode(PPCISD::DYNAREAOFFSET, dl, VTs, Ops);
+}
+
 SDValue PPCTargetLowering::LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG,
                                    const PPCSubtarget &Subtarget) const {
   // When we pop the dynamic allocation we need to restore the SP link.
@@ -7938,6 +7957,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STACKRESTORE:       return LowerSTACKRESTORE(Op, DAG, Subtarget);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG, Subtarget);
+  case ISD::GET_DYNAMIC_AREA_OFFSET: return LowerGET_DYNAMIC_AREA_OFFSET(Op, DAG, Subtarget);
 
   case ISD::EH_SJLJ_SETJMP:     return lowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP:    return lowerEH_SJLJ_LONGJMP(Op, DAG);

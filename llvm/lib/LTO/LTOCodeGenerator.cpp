@@ -67,14 +67,14 @@ const char* LTOCodeGenerator::getVersionString() {
 LTOCodeGenerator::LTOCodeGenerator()
     : Context(getGlobalContext()),
       MergedModule(new Module("ld-temp.o", Context)),
-      IRLinker(MergedModule.get()) {
+      IRLinker(new Linker(*MergedModule)) {
   initializeLTOPasses();
 }
 
 LTOCodeGenerator::LTOCodeGenerator(std::unique_ptr<LLVMContext> Context)
     : OwnedContext(std::move(Context)), Context(*OwnedContext),
       MergedModule(new Module("ld-temp.o", *OwnedContext)),
-      IRLinker(MergedModule.get()) {
+      IRLinker(new Linker(*MergedModule)) {
   initializeLTOPasses();
 }
 
@@ -114,7 +114,7 @@ bool LTOCodeGenerator::addModule(LTOModule *Mod) {
   assert(&Mod->getModule().getContext() == &Context &&
          "Expected module in same context");
 
-  bool ret = IRLinker.linkInModule(&Mod->getModule());
+  bool ret = IRLinker->linkInModule(Mod->getModule());
 
   const std::vector<const char *> &undefs = Mod->getAsmUndefinedRefs();
   for (int i = 0, e = undefs.size(); i != e; ++i)
@@ -130,7 +130,7 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
   AsmUndefinedRefs.clear();
 
   MergedModule = Mod->takeModule();
-  IRLinker.setModule(MergedModule.get());
+  IRLinker = make_unique<Linker>(*MergedModule);
 
   const std::vector<const char*> &Undefs = Mod->getAsmUndefinedRefs();
   for (int I = 0, E = Undefs.size(); I != E; ++I)

@@ -1148,7 +1148,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTTZ_ZERO_UNDEF,   MVT::v8i32, Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF,   MVT::v4i64, Custom);
 
-    if (Subtarget->hasFMA() || Subtarget->hasFMA4() || Subtarget->hasAVX512()) {
+    if (Subtarget->hasAnyFMA()) {
       setOperationAction(ISD::FMA,             MVT::v8f32, Legal);
       setOperationAction(ISD::FMA,             MVT::v4f64, Legal);
       setOperationAction(ISD::FMA,             MVT::v4f32, Legal);
@@ -20463,7 +20463,7 @@ bool X86TargetLowering::isVectorLoadExtDesirable(SDValue) const { return true; }
 
 bool
 X86TargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
-  if (!(Subtarget->hasFMA() || Subtarget->hasFMA4() || Subtarget->hasAVX512()))
+  if (!Subtarget->hasAnyFMA())
     return false;
 
   VT = VT.getScalarType();
@@ -26471,9 +26471,7 @@ static SDValue PerformFMACombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   EVT ScalarVT = VT.getScalarType();
-  if ((ScalarVT != MVT::f32 && ScalarVT != MVT::f64) ||
-      (!Subtarget->hasFMA() && !Subtarget->hasFMA4() &&
-       !Subtarget->hasAVX512()))
+  if ((ScalarVT != MVT::f32 && ScalarVT != MVT::f64) || !Subtarget->hasAnyFMA())
     return SDValue();
 
   SDValue A = N->getOperand(0);

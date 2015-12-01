@@ -510,13 +510,8 @@ void MachineBasicBlock::addSuccessor(MachineBasicBlock *Succ,
                                      BranchProbability Prob) {
   // Probability list is either empty (if successor list isn't empty, this means
   // disabled optimization) or has the same size as successor list.
-  if (!(Probs.empty() && !Successors.empty())) {
-    assert((Probs.empty() || (Prob.isUnknown() && Probs.back().isUnknown()) ||
-            (!Prob.isUnknown() && !Probs.back().isUnknown())) &&
-           "Successors with both known and unknwon probabilities are not "
-           "allowed.");
+  if (!(Probs.empty() && !Successors.empty()))
     Probs.push_back(Prob);
-  }
   Successors.push_back(Succ);
   Succ->addPredecessor(this);
 }
@@ -1116,10 +1111,24 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
 /// Return probability of the edge from this block to MBB.
 BranchProbability
 MachineBasicBlock::getSuccProbability(const_succ_iterator Succ) const {
-  if (Probs.empty() || Probs.back().isUnknown())
+  if (Probs.empty())
     return BranchProbability(1, succ_size());
 
-  return *getProbabilityIterator(Succ);
+  const auto &Prob = *getProbabilityIterator(Succ);
+  if (Prob.isUnknown()) {
+    // For unknown probabilities, collect the sum of all known ones, and evenly
+    // ditribute the complemental of the sum to each unknown probability.
+    unsigned KnownProbNum = 0;
+    auto Sum = BranchProbability::getZero();
+    for (auto &P : Probs) {
+      if (!P.isUnknown()) {
+        Sum += P;
+        KnownProbNum++;
+      }
+    }
+    return Sum.getCompl() / (Probs.size() - KnownProbNum);
+  } else
+    return Prob;
 }
 
 /// Set successor probability of a given iterator.

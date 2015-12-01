@@ -9,6 +9,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -21,6 +22,7 @@
 #include <unordered_set>
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace cl;
 
 OptionCategory DwpCategory("Specific Options");
@@ -36,39 +38,94 @@ static int error(const Twine &Error, const Twine &Context) {
   return 1;
 }
 
-static std::error_code writeSection(MCStreamer &Out, MCSection *OutSection,
-                                    const object::SectionRef &Sym) {
-  StringRef Contents;
-  if (auto Err = Sym.getContents(Contents))
-    return Err;
-  Out.SwitchSection(OutSection);
-  Out.EmitBytes(Contents);
+static std::error_code
+writeStringsAndOffsets(MCStreamer &Out, StringMap<uint32_t> &Strings,
+                       uint32_t &StringOffset, MCSection *StrSection,
+                       MCSection *StrOffsetSection, StringRef CurStrSection,
+                       StringRef CurStrOffsetSection) {
+  // Could possibly produce an error or warning if one of these was non-null but
+  // the other was null.
+  if (CurStrSection.empty() || CurStrOffsetSection.empty())
+    return std::error_code();
+
+  DenseMap<uint32_t, uint32_t> OffsetRemapping;
+
+  DataExtractor Data(CurStrSection, true, 0);
+  uint32_t LocalOffset = 0;
+  uint32_t PrevOffset = 0;
+  while (const char *s = Data.getCStr(&LocalOffset)) {
+    StringRef Str(s, LocalOffset - PrevOffset - 1);
+    auto Pair = Strings.insert(std::make_pair(Str, StringOffset));
+    if (Pair.second) {
+      Out.SwitchSection(StrSection);
+      Out.EmitBytes(
+          StringRef(Pair.first->getKeyData(), Pair.first->getKeyLength() + 1));
+      StringOffset += Str.size() + 1;
+    }
+    OffsetRemapping[PrevOffset] = Pair.first->second;
+    PrevOffset = LocalOffset;
+  }
+
+  Data = DataExtractor(CurStrOffsetSection, true, 0);
+
+  Out.SwitchSection(StrOffsetSection);
+
+  uint32_t Offset = 0;
+  uint64_t Size = CurStrOffsetSection.size();
+  while (Offset < Size) {
+    auto OldOffset = Data.getU32(&Offset);
+    auto NewOffset = OffsetRemapping[OldOffset];
+    Out.EmitIntValue(NewOffset, 4);
+  }
+
   return std::error_code();
 }
 
 static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
+  const auto &MCOFI = *Out.getContext().getObjectFileInfo();
+  MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
+  MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
+  const StringMap<MCSection *> KnownSections = {
+      {"debug_info.dwo", MCOFI.getDwarfInfoDWOSection()},
+      {"debug_types.dwo", MCOFI.getDwarfTypesDWOSection()},
+      {"debug_str_offsets.dwo", StrOffsetSection},
+      {"debug_str.dwo", StrSection},
+      {"debug_loc.dwo", MCOFI.getDwarfLocDWOSection()},
+      {"debug_abbrev.dwo", MCOFI.getDwarfAbbrevDWOSection()}};
+
+  StringMap<uint32_t> Strings;
+  uint32_t StringOffset = 0;
+
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);
     if (!ErrOrObj)
       return ErrOrObj.getError();
     const auto *Obj = ErrOrObj->getBinary();
+    StringRef CurStrSection;
+    StringRef CurStrOffsetSection;
     for (const auto &Section : Obj->sections()) {
-      const auto &MCOFI = *Out.getContext().getObjectFileInfo();
-      static const StringMap<MCSection *> KnownSections = {
-          {"debug_info.dwo", MCOFI.getDwarfInfoDWOSection()},
-          {"debug_types.dwo", MCOFI.getDwarfTypesDWOSection()},
-          {"debug_str_offsets.dwo", MCOFI.getDwarfStrOffDWOSection()},
-          {"debug_str.dwo", MCOFI.getDwarfStrDWOSection()},
-          {"debug_loc.dwo", MCOFI.getDwarfLocDWOSection()},
-          {"debug_abbrev.dwo", MCOFI.getDwarfAbbrevDWOSection()}};
       StringRef Name;
       if (std::error_code Err = Section.getName(Name))
         return Err;
       if (MCSection *OutSection =
-              KnownSections.lookup(Name.substr(Name.find_first_not_of("._"))))
-        if (auto Err = writeSection(Out, OutSection, Section))
+              KnownSections.lookup(Name.substr(Name.find_first_not_of("._")))) {
+        StringRef Contents;
+        if (auto Err = Section.getContents(Contents))
           return Err;
+        if (OutSection == StrOffsetSection)
+          CurStrOffsetSection = Contents;
+        else if (OutSection == StrSection)
+          CurStrSection = Contents;
+        else {
+          Out.SwitchSection(OutSection);
+          Out.EmitBytes(Contents);
+        }
+      }
     }
+    if (auto Err = writeStringsAndOffsets(Out, Strings, StringOffset,
+                                          StrSection, StrOffsetSection,
+                                          CurStrSection, CurStrOffsetSection))
+      return Err;
   }
   return std::error_code();
 }

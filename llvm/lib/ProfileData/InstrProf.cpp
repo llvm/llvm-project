@@ -207,7 +207,7 @@ ValueProfData::serializeFrom(const InstrProfRecord &Record) {
   InstrProfRecordClosure.Record = &Record;
 
   std::unique_ptr<ValueProfData> VPD(
-      serializeValueProfDataFrom(&InstrProfRecordClosure, 0));
+      serializeValueProfDataFrom(&InstrProfRecordClosure, nullptr));
   return VPD;
 }
 

@@ -417,9 +417,11 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 /// the input value is (1) a splat constants vector or (2) a sequence
 /// of instructions that broadcast a single value into a vector.
 ///
-llvm::Value *llvm::getSplatValue(Value *V) {
-  if (auto *CV = dyn_cast<ConstantDataVector>(V))
-    return CV->getSplatValue();
+const llvm::Value *llvm::getSplatValue(const Value *V) {
+
+  if (auto *C = dyn_cast<Constant>(V))
+    if (isa<VectorType>(V->getType()))
+      return C->getSplatValue();
 
   auto *ShuffleInst = dyn_cast<ShuffleVectorInst>(V);
   if (!ShuffleInst)

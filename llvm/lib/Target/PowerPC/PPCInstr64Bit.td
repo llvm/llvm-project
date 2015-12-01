@@ -369,6 +369,8 @@ let Defs = [X1], Uses = [X1] in
 def DYNALLOC8 : Pseudo<(outs g8rc:$result), (ins g8rc:$negsize, memri:$fpsi),"#DYNALLOC8",
                        [(set i64:$result,
                              (PPCdynalloc i64:$negsize, iaddr:$fpsi))]>;
+def DYNAREAOFFSET8 : Pseudo<(outs i64imm:$result), (ins memri:$fpsi), "#DYNAREAOFFSET8",
+                       [(set i64:$result, (PPCdynareaoffset iaddr:$fpsi))]>;
 
 let Defs = [LR8] in {
 def MTLR8  : XFXForm_7_ext<31, 467, 8, (outs), (ins g8rc:$rS),
