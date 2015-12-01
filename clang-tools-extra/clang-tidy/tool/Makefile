@@ -38,10 +38,10 @@ $(PROJ_sharedir):
 	$(Echo) Making install directory: $@
 	$(Verb) $(MKDIR) $@
 
-$(DESTFILES): $(SRCFILES)
+$(DESTFILES): $(SRCFILES) $(PROJ_sharedir)
 
 $(PROJ_sharedir)/%.py: $(PROJ_SRC_DIR)/%.py
 	$(Echo) Installing script file: $(notdir $<)
 	$(Verb) $(ScriptInstall) $< $(PROJ_sharedir)
 
-install-local:: $(PROJ_sharedir) $(DESTFILES)
+install-local:: $(DESTFILES)
