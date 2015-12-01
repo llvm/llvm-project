@@ -358,6 +358,7 @@ public:
   // has equal or better performance on all supported targets.
   bool hasFMA() const { return HasFMA && !HasFMA4; }
   bool hasFMA4() const { return HasFMA4; }
+  bool hasAnyFMA() const { return hasFMA() || hasFMA4() || hasAVX512(); }
   bool hasXOP() const { return HasXOP; }
   bool hasTBM() const { return HasTBM; }
   bool hasMOVBE() const { return HasMOVBE; }

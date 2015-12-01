@@ -39,7 +39,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Linker/Linker.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
@@ -49,6 +48,7 @@ namespace llvm {
   class LLVMContext;
   class DiagnosticInfo;
   class GlobalValue;
+  class Linker;
   class Mangler;
   class MemoryBuffer;
   class TargetLibraryInfo;
@@ -171,7 +171,7 @@ private:
   std::unique_ptr<LLVMContext> OwnedContext;
   LLVMContext &Context;
   std::unique_ptr<Module> MergedModule;
-  Linker IRLinker;
+  std::unique_ptr<Linker> IRLinker;
   std::unique_ptr<TargetMachine> TargetMach;
   bool EmitDwarfDebugInfo = false;
   bool ScopeRestrictionsDone = false;

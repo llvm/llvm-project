@@ -222,7 +222,7 @@ static Module *TestMergedProgram(const BugDriver &BD, Module *M1, Module *M2,
     M1 = CloneModule(M1);
     M2 = CloneModule(M2);
   }
-  if (Linker::LinkModules(M1, M2))
+  if (Linker::linkModules(*M1, *M2))
     exit(1);
   delete M2;   // We are done with this module.
 
@@ -390,7 +390,7 @@ static bool ExtractLoops(BugDriver &BD,
         MisCompFunctions.emplace_back(F->getName(), F->getFunctionType());
       }
 
-      if (Linker::LinkModules(ToNotOptimize, ToOptimizeLoopExtracted))
+      if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted))
         exit(1);
 
       MiscompiledFunctions.clear();
@@ -418,7 +418,7 @@ static bool ExtractLoops(BugDriver &BD,
     // extraction both didn't break the program, and didn't mask the problem.
     // Replace the current program with the loop extracted version, and try to
     // extract another loop.
-    if (Linker::LinkModules(ToNotOptimize, ToOptimizeLoopExtracted))
+    if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted))
       exit(1);
 
     delete ToOptimizeLoopExtracted;
@@ -594,7 +594,7 @@ static bool ExtractBlocks(BugDriver &BD,
     if (!I->isDeclaration())
       MisCompFunctions.emplace_back(I->getName(), I->getFunctionType());
 
-  if (Linker::LinkModules(ProgClone, Extracted.get()))
+  if (Linker::linkModules(*ProgClone, *Extracted))
     exit(1);
 
   // Set the new program and delete the old one.

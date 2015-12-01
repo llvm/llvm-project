@@ -95,6 +95,12 @@ private:
     Write(&*I);
   }
 
+  void Write(const Module *M) {
+    if (!M)
+      return;
+    OS << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
+  }
+
   void Write(const Value *V) {
     if (!V)
       return;
@@ -1737,7 +1743,8 @@ void Verifier::visitFunction(const Function &F) {
     auto *Per = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
     if (Per)
       Assert(Per->getParent() == F.getParent(),
-             "Referencing personality function in another module!", &F, Per);
+             "Referencing personality function in another module!",
+             &F, F.getParent(), Per, Per->getParent());
   }
 
   if (F.isMaterializable()) {
@@ -3192,7 +3199,7 @@ void Verifier::visitInstruction(Instruction &I) {
           " donothing or patchpoint",
           &I);
       Assert(F->getParent() == M, "Referencing function in another module!",
-             &I);
+             &I, M, F, F->getParent());
     } else if (BasicBlock *OpBB = dyn_cast<BasicBlock>(I.getOperand(i))) {
       Assert(OpBB->getParent() == BB->getParent(),
              "Referring to a basic block in another function!", &I);
@@ -3200,7 +3207,7 @@ void Verifier::visitInstruction(Instruction &I) {
       Assert(OpArg->getParent() == BB->getParent(),
              "Referring to an argument in another function!", &I);
     } else if (GlobalValue *GV = dyn_cast<GlobalValue>(I.getOperand(i))) {
-      Assert(GV->getParent() == M, "Referencing global in another module!", &I);
+      Assert(GV->getParent() == M, "Referencing global in another module!", &I, M, GV, GV->getParent());
     } else if (isa<Instruction>(I.getOperand(i))) {
       verifyDominatesUse(I, i);
     } else if (isa<InlineAsm>(I.getOperand(i))) {

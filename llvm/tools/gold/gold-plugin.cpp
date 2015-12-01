@@ -938,7 +938,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
   }
 
   std::unique_ptr<Module> Combined(new Module("ld-temp.o", Context));
-  Linker L(Combined.get());
+  Linker L(*Combined);
 
   std::string DefaultTriple = sys::getDefaultTargetTriple();
 
@@ -956,7 +956,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
       M->setTargetTriple(DefaultTriple);
     }
 
-    if (L.linkInModule(M.get()))
+    if (L.linkInModule(*M))
       message(LDPL_FATAL, "Failed to link module");
     if (release_input_file(F.handle) != LDPS_OK)
       message(LDPL_FATAL, "Failed to release file information");
@@ -986,7 +986,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
       path = output_name;
     else
       path = output_name + ".bc";
-    saveBCFile(path, *L.getModule());
+    saveBCFile(path, *Combined);
     if (options::TheOutputType == options::OT_BC_ONLY)
       return LDPS_OK;
   }

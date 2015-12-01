@@ -136,7 +136,7 @@ multiclass ABSS_M<string opstr, InstrItinClass Itin,
 
 multiclass ROUND_M<string opstr, InstrItinClass Itin> {
   def _D32 : MMRel, ABSS_FT<opstr, FGR32Opnd, AFGR64Opnd, Itin>, FGR_32;
-  def _D64 : ABSS_FT<opstr, FGR32Opnd, FGR64Opnd, Itin>, FGR_64 {
+  def _D64 : StdMMR6Rel, ABSS_FT<opstr, FGR32Opnd, FGR64Opnd, Itin>, FGR_64 {
     let DecoderNamespace = "Mips64";
   }
 }
@@ -267,31 +267,29 @@ defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
 //===----------------------------------------------------------------------===//
 // Floating Point Instructions
 //===----------------------------------------------------------------------===//
-def ROUND_W_S  : MMRel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
+def ROUND_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
                  ABSS_FM<0xc, 16>, ISA_MIPS2;
-let AdditionalPredicates = [NotInMicroMips] in {
+defm ROUND_W : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
 def TRUNC_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
                  ABSS_FM<0xd, 16>, ISA_MIPS2;
 def CEIL_W_S   : MMRel, StdMMR6Rel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
                  ABSS_FM<0xe, 16>, ISA_MIPS2;
 def FLOOR_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
                  ABSS_FM<0xf, 16>, ISA_MIPS2;
-}
 def CVT_W_S    : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
                  ABSS_FM<0x24, 16>;
 
-defm ROUND_W : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
 defm TRUNC_W : ROUND_M<"trunc.w.d", II_TRUNC>, ABSS_FM<0xd, 17>, ISA_MIPS2;
 defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
 defm FLOOR_W : ROUND_M<"floor.w.d", II_FLOOR>, ABSS_FM<0xf, 17>, ISA_MIPS2;
 defm CVT_W   : ROUND_M<"cvt.w.d", II_CVT>, ABSS_FM<0x24, 17>;
 
 let DecoderNamespace = "Mips64" in {
+  let AdditionalPredicates = [NotInMicroMips] in {
   def ROUND_L_S : ABSS_FT<"round.l.s", FGR64Opnd, FGR32Opnd, II_ROUND>,
                   ABSS_FM<0x8, 16>, FGR_64;
   def ROUND_L_D64 : ABSS_FT<"round.l.d", FGR64Opnd, FGR64Opnd, II_ROUND>,
                     ABSS_FM<0x8, 17>, FGR_64;
-  let AdditionalPredicates = [NotInMicroMips] in {
   def TRUNC_L_S : ABSS_FT<"trunc.l.s", FGR64Opnd, FGR32Opnd, II_TRUNC>,
                   ABSS_FM<0x9, 16>, FGR_64;
   def TRUNC_L_D64 : ABSS_FT<"trunc.l.d", FGR64Opnd, FGR64Opnd, II_TRUNC>,

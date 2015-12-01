@@ -132,6 +132,26 @@ class LLE_MMR6_ENC : LOAD_WORD_EVA_FM_MMR6<0b110>;
 class LWE_MMR6_ENC : LOAD_WORD_EVA_FM_MMR6<0b111>;
 class LW_MMR6_ENC : LOAD_WORD_FM_MMR6;
 class LUI_MMR6_ENC : LOAD_UPPER_IMM_FM_MMR6;
+class RECIP_S_MMR6_ENC : POOL32F_RECIP_ROUND_FM_MMR6<"recip.s", 0, 0b01001000>;
+class RECIP_D_MMR6_ENC : POOL32F_RECIP_ROUND_FM_MMR6<"recip.d", 1, 0b01001000>;
+class RINT_S_MMR6_ENC : POOL32F_RINT_FM_MMR6<"rint.s", 0>;
+class RINT_D_MMR6_ENC : POOL32F_RINT_FM_MMR6<"rint.d", 1>;
+class ROUND_L_S_MMR6_ENC : POOL32F_RECIP_ROUND_FM_MMR6<"round.l.s", 0,
+                                                       0b11001100>;
+class ROUND_L_D_MMR6_ENC : POOL32F_RECIP_ROUND_FM_MMR6<"round.l.d", 1,
+                                                       0b11001100>;
+class ROUND_W_S_MMR6_ENC : POOL32F_RECIP_ROUND_FM_MMR6<"round.w.s", 0,
+                                                       0b11101100>;
+class ROUND_W_D_MMR6_ENC : POOL32F_RECIP_ROUND_FM_MMR6<"round.w.d", 1,
+                                                       0b11101100>;
+class SEL_S_MMR6_ENC : POOL32F_SEL_FM_MMR6<"sel.s", 0, 0b010111000>;
+class SEL_D_MMR6_ENC : POOL32F_SEL_FM_MMR6<"sel.d", 1, 0b010111000>;
+class SELEQZ_S_MMR6_ENC : POOL32F_SEL_FM_MMR6<"seleqz.s", 0, 0b000111000>;
+class SELEQZ_D_MMR6_ENC : POOL32F_SEL_FM_MMR6<"seleqz.d", 1, 0b000111000>;
+class SELENZ_S_MMR6_ENC : POOL32F_SEL_FM_MMR6<"selenz.s", 0, 0b001111000>;
+class SELENZ_D_MMR6_ENC : POOL32F_SEL_FM_MMR6<"selenz.d", 1, 0b001111000>;
+class CLASS_S_MMR6_ENC : POOL32F_CLASS_FM_MMR6<"class.s", 0, 0b001100000>;
+class CLASS_D_MMR6_ENC : POOL32F_CLASS_FM_MMR6<"class.d", 1, 0b001100000>;
 
 class ADDU16_MMR6_ENC : POOL16A_ADDU16_FM_MMR6;
 class AND16_MMR6_ENC : POOL16C_AND16_FM_MMR6;
@@ -724,6 +744,33 @@ class RSQRT_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"rsqrt.s", FGR32Opnd,
                                                   FGR32Opnd, II_TRUNC>;
 class RSQRT_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"rsqrt.d", FGR32Opnd,
                                                   AFGR64Opnd, II_TRUNC>;
+class RECIP_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"recip.s", FGR32Opnd,
+                                                 FGR32Opnd, II_ROUND>;
+class RECIP_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"recip.d", FGR32Opnd, FGR32Opnd,
+                                                 II_ROUND>;
+class ROUND_L_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"round.l.s", FGR64Opnd,
+                                                   FGR32Opnd, II_ROUND>;
+class ROUND_L_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"round.l.d", FGR64Opnd,
+                                                   FGR64Opnd, II_ROUND>;
+class ROUND_W_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"round.w.s", FGR32Opnd,
+                                                   FGR32Opnd, II_ROUND>;
+class ROUND_W_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"round.w.d", FGR64Opnd,
+                                                   FGR64Opnd, II_ROUND>;
+
+class SEL_S_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.s", FGR32Opnd>;
+class SEL_D_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.d", FGR64Opnd> {
+  // We must insert a SUBREG_TO_REG around $fd_in
+  bit usesCustomInserter = 1;
+}
+
+class SELEQZ_S_MMR6_DESC : SELEQNEZ_DESC_BASE<"seleqz.s", FGR32Opnd>;
+class SELEQZ_D_MMR6_DESC : SELEQNEZ_DESC_BASE<"seleqz.d", FGR64Opnd>;
+class SELENZ_S_MMR6_DESC : SELEQNEZ_DESC_BASE<"selnez.s", FGR32Opnd>;
+class SELENZ_D_MMR6_DESC : SELEQNEZ_DESC_BASE<"selnez.d", FGR64Opnd>;
+class RINT_S_MMR6_DESC : CLASS_RINT_DESC_BASE<"rint.s", FGR32Opnd>;
+class RINT_D_MMR6_DESC : CLASS_RINT_DESC_BASE<"rint.d", FGR64Opnd>;
+class CLASS_S_MMR6_DESC  : CLASS_RINT_DESC_BASE<"class.s", FGR32Opnd>;
+class CLASS_D_MMR6_DESC  : CLASS_RINT_DESC_BASE<"class.d", FGR64Opnd>;
 
 class STORE_MMR6_DESC_BASE<string opstr, DAGOperand RO>
     : Store<opstr, RO>, MMR6Arch<opstr> {
@@ -1121,6 +1168,34 @@ def SUBU16_MMR6 : StdMMR6Rel, SUBU16_MMR6_DESC, SUBU16_MMR6_ENC,
                   ISA_MICROMIPS32R6;
 def XOR16_MMR6 : StdMMR6Rel, XOR16_MMR6_DESC, XOR16_MMR6_ENC,
                  ISA_MICROMIPS32R6;
+def RECIP_S_MMR6 : StdMMR6Rel, RECIP_S_MMR6_ENC, RECIP_S_MMR6_DESC,
+                   ISA_MICROMIPS32R6;
+def RECIP_D_MMR6 : StdMMR6Rel, RECIP_D_MMR6_ENC, RECIP_D_MMR6_DESC, ISA_MICROMIPS32R6;
+def RINT_S_MMR6 : StdMMR6Rel, RINT_S_MMR6_ENC, RINT_S_MMR6_DESC,
+                  ISA_MICROMIPS32R6;
+def RINT_D_MMR6 : StdMMR6Rel, RINT_D_MMR6_ENC, RINT_D_MMR6_DESC, ISA_MICROMIPS32R6;
+def ROUND_L_S_MMR6 : StdMMR6Rel, ROUND_L_S_MMR6_ENC, ROUND_L_S_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+def ROUND_L_D_MMR6 : StdMMR6Rel, ROUND_L_D_MMR6_ENC, ROUND_L_D_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+def ROUND_W_S_MMR6 : StdMMR6Rel, ROUND_W_S_MMR6_ENC, ROUND_W_S_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+def ROUND_W_D_MMR6 : StdMMR6Rel, ROUND_W_D_MMR6_ENC, ROUND_W_D_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+def SEL_S_MMR6 : StdMMR6Rel, SEL_S_MMR6_ENC, SEL_S_MMR6_DESC, ISA_MICROMIPS32R6;
+def SEL_D_MMR6 : StdMMR6Rel, SEL_D_MMR6_ENC, SEL_D_MMR6_DESC, ISA_MICROMIPS32R6;
+def SELEQZ_S_MMR6 : StdMMR6Rel, SELEQZ_S_MMR6_ENC, SELEQZ_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+def SELEQZ_D_MMR6 : StdMMR6Rel, SELEQZ_D_MMR6_ENC, SELEQZ_D_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+def SELENZ_S_MMR6 : StdMMR6Rel, SELENZ_S_MMR6_ENC, SELENZ_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+def SELENZ_D_MMR6 : StdMMR6Rel, SELENZ_D_MMR6_ENC, SELENZ_D_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+def CLASS_S_MMR6 : StdMMR6Rel, CLASS_S_MMR6_ENC, CLASS_S_MMR6_DESC,
+                   ISA_MICROMIPS32R6;
+def CLASS_D_MMR6 : StdMMR6Rel, CLASS_D_MMR6_ENC, CLASS_D_MMR6_DESC,
+                   ISA_MICROMIPS32R6;
 }
 
 //===----------------------------------------------------------------------===//

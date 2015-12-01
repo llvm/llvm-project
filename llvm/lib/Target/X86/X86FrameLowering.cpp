@@ -297,6 +297,28 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
   }
 }
 
+// Check if \p MBB defines the flags register before the first terminator.
+static bool flagsDefinedLocally(const MachineBasicBlock &MBB) {
+  MachineBasicBlock::const_iterator FirstTerminator = MBB.getFirstTerminator();
+  for (MachineBasicBlock::const_iterator MII : MBB) {
+    if (MII == FirstTerminator)
+      return false;
+
+    for (const MachineOperand &MO : MII->operands()) {
+      if (!MO.isReg())
+        continue;
+      unsigned Reg = MO.getReg();
+      if (Reg != X86::EFLAGS)
+        continue;
+
+      // This instruction sets the eflag.
+      if (MO.isDef())
+        return true;
+    }
+  }
+  return false;
+}
+
 MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc DL,
     int64_t Offset, bool InEpilogue) const {
@@ -306,7 +328,16 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   // is tricky.
   bool UseLEA;
   if (!InEpilogue) {
-    UseLEA = STI.useLeaForSP();
+    // Check if inserting the prologue at the beginning
+    // of MBB would require to use LEA operations.
+    // We need to use LEA operations if both conditions are true:
+    // 1. One of the terminators need the flags.
+    // 2. The flags are not defined after the insertion point of the prologue.
+    // Note: Checking for the predecessors is a shortcut when obviously nothing
+    // will live accross the prologue.
+    UseLEA = STI.useLeaForSP() ||
+             (!MBB.pred_empty() && terminatorsNeedFlagsAsInput(MBB) &&
+              !flagsDefinedLocally(MBB));
   } else {
     // If we can use LEA for SP but we shouldn't, check that none
     // of the terminators uses the eflags. Otherwise we will insert

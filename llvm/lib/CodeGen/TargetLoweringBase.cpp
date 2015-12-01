@@ -840,6 +840,9 @@ void TargetLoweringBase::initActions() {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Expand);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Expand);
     }
+
+    // For most targets @llvm.get.dynamic.area.offest just returns 0.
+    setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.

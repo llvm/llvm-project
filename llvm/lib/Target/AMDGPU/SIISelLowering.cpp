@@ -848,27 +848,11 @@ SDValue SITargetLowering::LowerFormalArguments(
 MachineBasicBlock * SITargetLowering::EmitInstrWithCustomInserter(
     MachineInstr * MI, MachineBasicBlock * BB) const {
 
-  MachineBasicBlock::iterator I = *MI;
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
-
   switch (MI->getOpcode()) {
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   case AMDGPU::BRANCH:
     return BB;
-  case AMDGPU::SI_RegisterStorePseudo: {
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    unsigned Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-    MachineInstrBuilder MIB =
-        BuildMI(*BB, I, MI->getDebugLoc(), TII->get(AMDGPU::SI_RegisterStore),
-                Reg);
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i)
-      MIB.addOperand(MI->getOperand(i));
-
-    MI->eraseFromParent();
-    break;
-  }
   }
   return BB;
 }

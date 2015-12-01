@@ -754,6 +754,12 @@ namespace ISD {
     GC_TRANSITION_START,
     GC_TRANSITION_END,
 
+    /// GET_DYNAMIC_AREA_OFFSET - get offset from native SP to the address of
+    /// the most recent dynamic alloca. For most targets that would be 0, but
+    /// for some others (e.g. PowerPC, PowerPC64) that would be compile-time
+    /// known nonzero constant. The only operand here is the chain.
+    GET_DYNAMIC_AREA_OFFSET,
+
     /// BUILTIN_OP_END - This must be the last enum value in this list.
     /// The target-specific pre-isel opcode values start here.
     BUILTIN_OP_END

@@ -215,3 +215,25 @@ define void @test_32bit_opnd1_better(i32* %existing, i32* %new) {
 
   ret void
 }
+
+; Tests when all the bits from one operand are not useful
+define i32 @test_nouseful_bits(i8 %a, i32 %b) {
+; CHECK-LABEL: test_nouseful_bits:
+; CHECK: bfi
+; CHECK: bfi
+; CHECK: bfi
+; CHECK-NOT: bfi
+; CHECK-NOT: or
+; CHECK: lsl
+  %conv = zext i8 %a to i32     ;   0  0  0  A
+  %shl = shl i32 %b, 8          ;   B2 B1 B0 0
+  %or = or i32 %conv, %shl      ;   B2 B1 B0 A
+  %shl.1 = shl i32 %or, 8       ;   B1 B0 A 0
+  %or.1 = or i32 %conv, %shl.1  ;   B1 B0 A A
+  %shl.2 = shl i32 %or.1, 8     ;   B0 A A 0
+  %or.2 = or i32 %conv, %shl.2  ;   B0 A A A
+  %shl.3 = shl i32 %or.2, 8     ;   A A A 0
+  %or.3 = or i32 %conv, %shl.3  ;   A A A A
+  %shl.4 = shl i32 %or.3, 8     ;   A A A 0
+  ret i32 %shl.4
+}

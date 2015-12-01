@@ -5911,12 +5911,12 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          EVEX_B, EVEX_RC;
 
   let isCodeGenOnly = 1 in {
-    def r : SI<opc, MRMSrcReg, (outs _.FRC:$dst),
+    def r : I<opc, MRMSrcReg, (outs _.FRC:$dst),
                (ins _.FRC:$src1, _.FRC:$src2),
                OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>;
 
     let mayLoad = 1 in
-      def m : SI<opc, MRMSrcMem, (outs _.FRC:$dst),
+      def m : I<opc, MRMSrcMem, (outs _.FRC:$dst),
                  (ins _.FRC:$src1, _.ScalarMemOp:$src2),
                  OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>;
   }

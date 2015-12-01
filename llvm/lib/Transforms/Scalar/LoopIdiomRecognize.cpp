@@ -257,6 +257,10 @@ static unsigned getStoreStride(const SCEVAddRecExpr *StoreEv) {
 }
 
 bool LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
+  // Don't touch volatile stores.
+  if (!SI->isSimple())
+    return false;
+
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();
 
@@ -285,10 +289,6 @@ void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
   for (Instruction &I : *BB) {
     StoreInst *SI = dyn_cast<StoreInst>(&I);
     if (!SI)
-      continue;
-
-    // Don't touch volatile stores.
-    if (!SI->isSimple())
       continue;
 
     // Make sure this is a strided store with a constant stride.

@@ -304,6 +304,8 @@ def int_stacksave     : Intrinsic<[llvm_ptr_ty]>,
 def int_stackrestore  : Intrinsic<[], [llvm_ptr_ty]>,
                         GCCBuiltin<"__builtin_stack_restore">;
 
+def int_get_dynamic_area_offset : Intrinsic<[llvm_anyint_ty]>;
+
 // IntrReadWriteArgMem is more pessimistic than strictly necessary for prefetch,
 // however it does conveniently prevent the prefetch from being reordered
 // with respect to nearby accesses to the same memory.

@@ -86,7 +86,7 @@ Value *findScalarElement(Value *V, unsigned EltNo);
 /// \brief Get splat value if the input is a splat vector or return nullptr.
 /// The value may be extracted from a splat constants vector or from
 /// a sequence of instructions that broadcast a single value into a vector.
-Value *getSplatValue(Value *V);
+const Value *getSplatValue(const Value *V);
 
 /// \brief Compute a map of integer instructions to their minimum legal type
 /// size.

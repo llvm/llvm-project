@@ -458,41 +458,6 @@ SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
     N = glueCopyToM0(N);
     break;
   }
-  case AMDGPUISD::REGISTER_LOAD: {
-    if (Subtarget->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS)
-      break;
-    SDValue Addr, Offset;
-
-    SDLoc DL(N);
-    SelectADDRIndirect(N->getOperand(1), Addr, Offset);
-    const SDValue Ops[] = {
-      Addr,
-      Offset,
-      CurDAG->getTargetConstant(0, DL, MVT::i32),
-      N->getOperand(0),
-    };
-    return CurDAG->getMachineNode(AMDGPU::SI_RegisterLoad, DL,
-                                  CurDAG->getVTList(MVT::i32, MVT::i64,
-                                                    MVT::Other),
-                                  Ops);
-  }
-  case AMDGPUISD::REGISTER_STORE: {
-    if (Subtarget->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS)
-      break;
-    SDValue Addr, Offset;
-    SelectADDRIndirect(N->getOperand(2), Addr, Offset);
-    SDLoc DL(N);
-    const SDValue Ops[] = {
-      N->getOperand(1),
-      Addr,
-      Offset,
-      CurDAG->getTargetConstant(0, DL, MVT::i32),
-      N->getOperand(0),
-    };
-    return CurDAG->getMachineNode(AMDGPU::SI_RegisterStorePseudo, DL,
-                                        CurDAG->getVTList(MVT::Other),
-                                        Ops);
-  }
 
   case AMDGPUISD::BFE_I32:
   case AMDGPUISD::BFE_U32: {

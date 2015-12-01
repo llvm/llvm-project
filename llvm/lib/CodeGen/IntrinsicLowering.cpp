@@ -424,6 +424,13 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     break;
   }
     
+  case Intrinsic::get_dynamic_area_offset:
+    errs() << "WARNING: this target does not support the custom llvm.get."
+              "dynamic.area.offset.  It is being lowered to a constant 0\n";
+    // Just lower it to a constant 0 because for most targets
+    // @llvm.get.dynamic.area.offset is lowered to zero.
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
+    break;
   case Intrinsic::returnaddress:
   case Intrinsic::frameaddress:
     errs() << "WARNING: this target does not support the llvm."

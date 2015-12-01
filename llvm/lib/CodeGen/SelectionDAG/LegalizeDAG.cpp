@@ -1213,6 +1213,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STACKSAVE:
     Action = TLI.getOperationAction(Node->getOpcode(), MVT::Other);
     break;
+  case ISD::GET_DYNAMIC_AREA_OFFSET:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    Node->getValueType(0));
+    break;
   case ISD::VAARG:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getValueType(0));
@@ -3294,6 +3298,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     } else {
       Results.push_back(Node->getOperand(0));
     }
+    break;
+  case ISD::GET_DYNAMIC_AREA_OFFSET:
+    Results.push_back(DAG.getConstant(0, dl, Node->getValueType(0)));
+    Results.push_back(Results[0].getValue(0));
     break;
   case ISD::FCOPYSIGN:
     Results.push_back(ExpandFCOPYSIGN(Node));

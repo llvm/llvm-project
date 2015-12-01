@@ -9348,6 +9348,48 @@ Semantics:
 
 See the description for :ref:`llvm.stacksave <int_stacksave>`.
 
+.. _int_get_dynamic_area_offset:
+
+'``llvm.get.dynamic.area.offset``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i32 @llvm.get.dynamic.area.offset.i32()
+      declare i64 @llvm.get.dynamic.area.offset.i64()
+
+      Overview:
+      """""""""
+
+      The '``llvm.get.dynamic.area.offset.*``' intrinsic family is used to
+      get the offset from native stack pointer to the address of the most
+      recent dynamic alloca on the caller's stack. These intrinsics are
+      intendend for use in combination with
+      :ref:`llvm.stacksave <int_stacksave>` to get a
+      pointer to the most recent dynamic alloca. This is useful, for example,
+      for AddressSanitizer's stack unpoisoning routines.
+
+Semantics:
+""""""""""
+
+      These intrinsics return a non-negative integer value that can be used to
+      get the address of the most recent dynamic alloca, allocated by :ref:`alloca <i_alloca>`
+      on the caller's stack. In particular, for targets where stack grows downwards,
+      adding this offset to the native stack pointer would get the address of the most
+      recent dynamic alloca. For targets where stack grows upwards, the situation is a bit more
+      complicated, because substracting this value from stack pointer would get the address
+      one past the end of the most recent dynamic alloca.
+
+      Although for most targets `llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
+      returns just a zero, for others, such as PowerPC and PowerPC64, it returns a
+      compile-time-known constant value.
+
+      The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
+      must match the target's generic address space's (address space 0) pointer type.
+
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

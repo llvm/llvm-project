@@ -60,6 +60,8 @@ public:
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector);
   unsigned getMaxInterleaveFactor(unsigned VF);
+
+  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
 };
 
 } // end namespace llvm

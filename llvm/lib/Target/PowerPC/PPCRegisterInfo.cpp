@@ -430,6 +430,27 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   MBB.erase(II);
 }
 
+void PPCRegisterInfo::lowerDynamicAreaOffset(
+    MachineBasicBlock::iterator II) const {
+  // Get the instruction.
+  MachineInstr &MI = *II;
+  // Get the instruction's basic block.
+  MachineBasicBlock &MBB = *MI.getParent();
+  // Get the basic block's function.
+  MachineFunction &MF = *MBB.getParent();
+  // Get the frame info.
+  MachineFrameInfo *MFI = MF.getFrameInfo();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  // Get the instruction info.
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+
+  unsigned maxCallFrameSize = MFI->getMaxCallFrameSize();
+  DebugLoc dl = MI.getDebugLoc();
+  BuildMI(MBB, II, dl, TII.get(PPC::LI), MI.getOperand(0).getReg())
+      .addImm(maxCallFrameSize);
+  MBB.erase(II);
+}
+
 /// lowerCRSpilling - Generate the code for spilling a CR register. Instead of
 /// reserving a whole register (R0), we scrounge for one here. This generates
 /// code like this:
@@ -753,6 +774,11 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FPSI = FI->getFramePointerSaveIndex();
   // Get the instruction opcode.
   unsigned OpC = MI.getOpcode();
+
+  if ((OpC == PPC::DYNAREAOFFSET || OpC == PPC::DYNAREAOFFSET8)) {
+    lowerDynamicAreaOffset(II);
+    return;
+  }
 
   // Special case for dynamic alloca.
   if (FPSI && FrameIndex == FPSI &&

@@ -68,11 +68,10 @@ public:
     InternalizeLinkedSymbols = (1 << 2)
   };
 
-  Linker(Module *M, DiagnosticHandlerFunction DiagnosticHandler);
-  Linker(Module *M);
+  Linker(Module &M, DiagnosticHandlerFunction DiagnosticHandler);
+  Linker(Module &M);
 
-  Module *getModule() const { return Composite; }
-  void deleteModule();
+  Module &getModule() const { return Composite; }
 
   /// \brief Link \p Src into the composite. The source is destroyed.
   /// Passing OverrideSymbols as true will have symbols from Src
@@ -81,23 +80,19 @@ public:
   /// is passed. If a \p FuncToImport is provided, only that single
   /// function is imported from the source module.
   /// Returns true on error.
-  bool linkInModule(Module *Src, unsigned Flags = Flags::None,
+  bool linkInModule(Module &Src, unsigned Flags = Flags::None,
                     const FunctionInfoIndex *Index = nullptr,
                     Function *FuncToImport = nullptr);
 
-  /// \brief Set the composite to the passed-in module.
-  void setModule(Module *Dst);
-
-  static bool LinkModules(Module *Dest, Module *Src,
+  static bool linkModules(Module &Dest, Module &Src,
                           DiagnosticHandlerFunction DiagnosticHandler,
                           unsigned Flags = Flags::None);
 
-  static bool LinkModules(Module *Dest, Module *Src,
+  static bool linkModules(Module &Dest, Module &Src,
                           unsigned Flags = Flags::None);
 
 private:
-  void init(Module *M, DiagnosticHandlerFunction DiagnosticHandler);
-  Module *Composite;
+  Module &Composite;
 
   IdentifiedStructTypeSet IdentifiedStructTypes;
 

@@ -22,13 +22,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT) : MCAsmInfoELF() {
   InlineAsmEnd = ";#ASMEND";
 
   //===--- Data Emission Directives -------------------------------------===//
-  ZeroDirective = ".zero";
-  AsciiDirective = ".ascii\t";
-  AscizDirective = ".asciz\t";
-  Data8bitsDirective = ".byte\t";
-  Data16bitsDirective = ".short\t";
-  Data32bitsDirective = ".long\t";
-  Data64bitsDirective = ".quad\t";
   SunStyleELFSectionSwitchSyntax = true;
   UsesELFSectionDirectiveForBSS = true;
 

@@ -788,3 +788,94 @@ end:
   %tmp.0 = phi i32 [ %tmp4, %true ], [ %tmp5, %false ]
   ret i32 %tmp.0
 }
+
+@b = internal unnamed_addr global i1 false
+@c = internal unnamed_addr global i8 0, align 1
+@a = common global i32 0, align 4
+
+; Make sure the prologue does not clobber the EFLAGS when
+; it is live accross.
+; PR25629.
+; Note: The registers may change in the following patterns, but
+; because they imply register hierarchy (e.g., eax, al) this is
+; tricky to write robust patterns.
+;
+; CHECK-LABEL: useLEAForPrologue:
+;
+; Prologue is at the beginning of the function when shrink-wrapping
+; is disabled.
+; DISABLE: pushq
+; The stack adjustment can use SUB instr because we do not need to
+; preserve the EFLAGS at this point.
+; DISABLE-NEXT: subq $16, %rsp
+;
+; Load the value of b.
+; CHECK: movb _b(%rip), [[BOOL:%cl]]
+; Extract i1 from the loaded value.
+; CHECK-NEXT: andb $1, [[BOOL]]
+; Create the zero value for the select assignment.
+; CHECK-NEXT: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
+; CHECK-NEXT: testb [[BOOL]], [[BOOL]]
+; CHECK-NEXT: jne [[STOREC_LABEL:LBB[0-9_]+]]
+;
+; CHECK: movb $48, [[CMOVE_VAL:%al]]
+;
+; CHECK: [[STOREC_LABEL]]:
+;
+; ENABLE-NEXT: pushq
+; For the stack adjustment, we need to preserve the EFLAGS.
+; ENABLE-NEXT: leaq -16(%rsp), %rsp
+;
+; Technically, we should use CMOVE_VAL here or its subregister.
+; CHECK-NEXT: movb %al, _c(%rip)
+; testb set the EFLAGS read here.
+; CHECK-NEXT: je [[VARFUNC_CALL:LBB[0-9_]+]]
+;
+; The code of the loop is not interesting.
+; [...]
+;
+; CHECK: [[VARFUNC_CALL]]:
+; Set the null parameter.
+; CHECK-NEXT: xorl %edi, %edi
+; CHECK-NEXT: callq _varfunc
+;
+; Set the return value.
+; CHECK-NEXT: xorl %eax, %eax
+;
+; Epilogue code.
+; CHECK-NEXT: addq $16, %rsp
+; CHECK-NEXT: popq
+; CHECK-NEXT: retq
+define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
+entry:
+  %tmp = alloca i3
+  %.b = load i1, i1* @b, align 1
+  %bool = select i1 %.b, i8 0, i8 48
+  store i8 %bool, i8* @c, align 1
+  br i1 %.b, label %for.body.lr.ph, label %for.end
+
+for.body.lr.ph:                                   ; preds = %entry
+  tail call void asm sideeffect "nop", "~{ebx}"()
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %inc6 = phi i8 [ %c, %for.body.lr.ph ], [ %inc, %for.body ]
+  %cond5 = phi i32 [ %a, %for.body.lr.ph ], [ %conv3, %for.body ]
+  %cmp2 = icmp slt i32 %d, %cond5
+  %conv3 = zext i1 %cmp2 to i32
+  %inc = add i8 %inc6, 1
+  %cmp = icmp slt i8 %inc, 45
+  br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge
+
+for.cond.for.end_crit_edge:                       ; preds = %for.body
+  store i32 %conv3, i32* @a, align 4
+  br label %for.end
+
+for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry
+  %call = tail call i32 (i8*) @varfunc(i8* null)
+  ret i32 0
+}
+
+declare i32 @varfunc(i8* nocapture readonly)
+
+attributes #3 = { nounwind }
