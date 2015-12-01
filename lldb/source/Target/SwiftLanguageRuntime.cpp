@@ -2857,7 +2857,6 @@ SwiftLanguageRuntime::GetMetadataForTypeNameAndFrame (const char* type_name, Sta
 {
     if (!frame || !type_name || !type_name[0])
         return MetadataSP();
-    // FIXME: is this really the best idea? how about putting this in as a field?
     StreamString type_metadata_ptr_var_name;
     type_metadata_ptr_var_name.Printf("$swift.type.%s",type_name);
     VariableList* var_list = frame->GetVariableList(false);
@@ -3008,19 +3007,20 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct (ValueObject &in_value,
     SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(struct_type.GetTypeSystem());
     
     size_t num_type_args = struct_type.GetNumTemplateArguments();
+    
     for (size_t i = 0; i < num_type_args; i++)
     {
+        bool failed = false;
+        
         lldb::TemplateArgumentKind kind;
         CompilerType type_arg;
         type_arg = struct_type.GetTemplateArgument(i, kind);
         if (kind != lldb::eTemplateArgumentKindType || type_arg.IsValid() == false)
             return false;
-        MetadataSP type_arg_metadata = GetMetadataForTypeNameAndFrame(type_arg.GetTypeName().GetCString(), frame);
-        Error error;
-        CompilerType realized_type_arg = GetTypeForMetadata(type_arg_metadata, swift_ast_ctx, error);
-        if (error.Fail() || !realized_type_arg)
+        CompilerType resolved_type_arg(DoArchetypeBindingForType(*frame, type_arg, swift_ast_ctx));
+        if (!resolved_type_arg)
             return false;
-        generic_args.push_back(realized_type_arg);
+        generic_args.push_back(resolved_type_arg);
     }
     
     class_type_or_name.SetCompilerType(swift_ast_ctx->BindGenericType(struct_type, generic_args, true));
@@ -3066,12 +3066,10 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum (ValueObject &in_value,
         type_arg = enum_type.GetTemplateArgument(i, kind);
         if (kind != lldb::eTemplateArgumentKindType || type_arg.IsValid() == false)
             return false;
-        MetadataSP type_arg_metadata = GetMetadataForTypeNameAndFrame(type_arg.GetTypeName().GetCString(), frame);
-        Error error;
-        CompilerType realized_type_arg = GetTypeForMetadata(type_arg_metadata, swift_ast_ctx, error);
-        if (error.Fail() || !realized_type_arg)
+        CompilerType resolved_type_arg(DoArchetypeBindingForType(*frame, type_arg, swift_ast_ctx));
+        if (!resolved_type_arg)
             return false;
-        generic_args.push_back(realized_type_arg);
+        generic_args.push_back(resolved_type_arg);
     }
     
     class_type_or_name.SetCompilerType(swift_ast_ctx->BindGenericType(enum_type, generic_args, true));
