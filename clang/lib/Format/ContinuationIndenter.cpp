@@ -1076,7 +1076,8 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
       return 0;
     }
   } else if (Current.is(TT_BlockComment) && Current.isTrailingComment()) {
-    if (CommentPragmasRegex.match(Current.TokenText.substr(2)))
+    if (!Style.ReflowComments ||
+        CommentPragmasRegex.match(Current.TokenText.substr(2)))
       return 0;
     Token.reset(new BreakableBlockComment(
         Current, State.Line->Level, StartColumn, Current.OriginalColumn,
@@ -1084,7 +1085,8 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
   } else if (Current.is(TT_LineComment) &&
              (Current.Previous == nullptr ||
               Current.Previous->isNot(TT_ImplicitStringLiteral))) {
-    if (CommentPragmasRegex.match(Current.TokenText.substr(2)))
+    if (!Style.ReflowComments ||
+        CommentPragmasRegex.match(Current.TokenText.substr(2)))
       return 0;
     Token.reset(new BreakableLineComment(Current, State.Line->Level,
                                          StartColumn, /*InPPDirective=*/false,

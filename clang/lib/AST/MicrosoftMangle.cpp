@@ -697,7 +697,6 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
     // Function templates aren't considered for name back referencing.  This
     // makes sense since function templates aren't likely to occur multiple
     // times in a symbol.
-    // FIXME: Test alias template mangling with MSVC 2013.
     if (!isa<ClassTemplateDecl>(TD)) {
       mangleTemplateInstantiationName(TD, *TemplateArgs);
       Out << '@';
@@ -1226,12 +1225,13 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
     QualType T = TA.getNullPtrType();
     if (const MemberPointerType *MPT = T->getAs<MemberPointerType>()) {
       const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
-      if (MPT->isMemberFunctionPointerType() && isa<ClassTemplateDecl>(TD)) {
+      if (MPT->isMemberFunctionPointerType() &&
+          !isa<FunctionTemplateDecl>(TD)) {
         mangleMemberFunctionPointer(RD, nullptr);
         return;
       }
       if (MPT->isMemberDataPointer()) {
-        if (isa<ClassTemplateDecl>(TD)) {
+        if (!isa<FunctionTemplateDecl>(TD)) {
           mangleMemberDataPointer(RD, nullptr);
           return;
         }

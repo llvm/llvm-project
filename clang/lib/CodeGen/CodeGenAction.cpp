@@ -165,7 +165,7 @@ namespace clang {
       for (auto &I : LinkModules) {
         unsigned LinkFlags = I.first;
         llvm::Module *LinkModule = I.second.get();
-        if (Linker::LinkModules(M, LinkModule,
+        if (Linker::linkModules(*M, *LinkModule,
                                 [=](const DiagnosticInfo &DI) {
                                   linkerDiagnosticHandler(DI, LinkModule);
                                 },
