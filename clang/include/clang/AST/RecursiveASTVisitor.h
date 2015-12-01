@@ -2431,6 +2431,9 @@ DEF_TRAVERSE_STMT(OMPTargetDataDirective,
 DEF_TRAVERSE_STMT(OMPTeamsDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPTaskLoopDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 // OpenMP clauses.
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
@@ -2732,6 +2735,13 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
     OMPThreadLimitClause *C) {
   TRY_TO(TraverseStmt(C->getThreadLimit()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPPriorityClause(
+    OMPPriorityClause *C) {
+  TRY_TO(TraverseStmt(C->getPriority()));
   return true;
 }
 

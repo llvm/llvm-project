@@ -22,7 +22,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   // expected-note@+1 2 {{read of non-const variable 'argc' is not allowed in a constant expression}}
   #pragma omp for simd simdlen (argc 
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  // expected-error@+1 {{argument to 'simdlen' clause must be a positive integer value}}
+  // expected-error@+1 {{argument to 'simdlen' clause must be a strictly positive integer value}}
   #pragma omp for simd simdlen (ST // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp for simd simdlen (1)) // expected-warning {{extra tokens at the end of '#pragma omp for simd' are ignored}}
@@ -30,7 +30,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   #pragma omp for simd simdlen ((ST > 0) ? 1 + ST : 2)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   // expected-error@+3 2 {{directive '#pragma omp for simd' cannot contain more than one 'simdlen' clause}}
-  // expected-error@+2 2 {{argument to 'simdlen' clause must be a positive integer value}}
+  // expected-error@+2 2 {{argument to 'simdlen' clause must be a strictly positive integer value}}
   // expected-error@+1 2 {{expression is not an integral constant expression}}
   #pragma omp for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
@@ -41,7 +41,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp for simd simdlen (4)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  #pragma omp for simd simdlen (N) // expected-error {{argument to 'simdlen' clause must be a positive integer value}}
+  #pragma omp for simd simdlen (N) // expected-error {{argument to 'simdlen' clause must be a strictly positive integer value}}
   for (T i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   return argc;
 }
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   // expected-error@+3 {{expression is not an integral constant expression}}
   // expected-error@+2 2 {{directive '#pragma omp for simd' cannot contain more than one 'simdlen' clause}}
-  // expected-error@+1 2 {{argument to 'simdlen' clause must be a positive integer value}}
+  // expected-error@+1 2 {{argument to 'simdlen' clause must be a strictly positive integer value}}
   #pragma omp for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5) 
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp for simd simdlen (S1) // expected-error {{'S1' does not refer to a value}}

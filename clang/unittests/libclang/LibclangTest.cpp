@@ -482,7 +482,8 @@ TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
   std::string Clang = "bin/clang";
   WriteFile(Clang, "");
 
-  const char *Argv[] = {Clang.c_str(), "-target", "arm-linux-gnueabi"};
+  const char *Argv[] = {Clang.c_str(), "-target", "arm-linux-gnueabi",
+                        "--gcc-toolchain="};
 
   EXPECT_EQ(CXError_Success,
             clang_parseTranslationUnit2FullArgv(Index, Filename.c_str(), Argv,

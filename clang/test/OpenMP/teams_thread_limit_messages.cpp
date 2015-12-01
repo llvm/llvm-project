@@ -46,7 +46,7 @@ T tmain(T argc) {
 #pragma omp teams thread_limit(S1) // expected-error {{'S1' does not refer to a value}}
   foo();
 #pragma omp target
-#pragma omp teams thread_limit(-2) // expected-error {{argument to 'thread_limit' clause must be a positive integer value}}
+#pragma omp teams thread_limit(-2) // expected-error {{argument to 'thread_limit' clause must be a strictly positive integer value}}
   foo();
 #pragma omp target
 #pragma omp teams thread_limit(-10u)
@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
   foo();
 
 #pragma omp target
-#pragma omp teams thread_limit (-2) // expected-error {{argument to 'thread_limit' clause must be a positive integer value}}
+#pragma omp teams thread_limit (-2) // expected-error {{argument to 'thread_limit' clause must be a strictly positive integer value}}
   foo();
 
 #pragma omp target

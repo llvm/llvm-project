@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   #pragma omp target device (argc + argc)
   #pragma omp target device (argc), device (argc+1) // expected-error {{directive '#pragma omp target' cannot contain more than one 'device' clause}}
   #pragma omp target device (S1) // expected-error {{'S1' does not refer to a value}}
-  #pragma omp target device (-2) // expected-error {{argument to 'device' clause must be a positive integer value}}
+  #pragma omp target device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
   #pragma omp target device (-10u)
   #pragma omp target device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();

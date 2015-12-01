@@ -519,23 +519,12 @@ namespace dr546 { // dr546: yes
 }
 
 namespace dr547 { // dr547: yes
-  // When targeting the MS x86 ABI, the type of a member function includes a
-  // __thiscall qualifier. This is non-conforming, but we still implement
-  // the intent of dr547
-#if defined(_M_IX86) || (defined(__MINGW32__) && !defined(__MINGW64__))
-#define THISCALL __thiscall
-#else
-#define THISCALL
-#endif
-
   template<typename T> struct X;
-  template<typename T> struct X<THISCALL T() const> {};
+  template<typename T> struct X<T() const> {};
   template<typename T, typename C> X<T> f(T C::*) { return X<T>(); }
 
   struct S { void f() const; };
-  X<THISCALL void() const> x = f(&S::f);
-
-#undef THISCALL
+  X<void() const> x = f(&S::f);
 }
 
 namespace dr548 { // dr548: dup 482

@@ -46,7 +46,7 @@ T tmain(T argc) {
 #pragma omp teams num_teams(S1) // expected-error {{'S1' does not refer to a value}}
   foo();
 #pragma omp target
-#pragma omp teams num_teams(-2) // expected-error {{argument to 'num_teams' clause must be a positive integer value}}
+#pragma omp teams num_teams(-2) // expected-error {{argument to 'num_teams' clause must be a strictly positive integer value}}
   foo();
 #pragma omp target
 #pragma omp teams num_teams(-10u)
@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
   foo();
 
 #pragma omp target
-#pragma omp teams num_teams (-2) // expected-error {{argument to 'num_teams' clause must be a positive integer value}}
+#pragma omp teams num_teams (-2) // expected-error {{argument to 'num_teams' clause must be a strictly positive integer value}}
   foo();
 
 #pragma omp target

@@ -949,7 +949,7 @@ void callInMacroArg() {
 // CHECK-NEXT:   <key>type</key><string>Bad deallocator</string>
 // CHECK-NEXT:   <key>check_name</key><string>unix.MismatchedDeallocator</string>
 // CHECK-NEXT:   <!-- This hash is experimental and going to change! -->
-// CHECK-NEXT:   <key>issue_hash_content_of_line_in_context</key><string>f21ac032efaa3d1459a5ed31f0ad44f0</string>
+// CHECK-NEXT:   <key>issue_hash_content_of_line_in_context</key><string>f689fbd54138491e228f0f89bb02bfb2</string>
 // CHECK-NEXT:  <key>issue_context_kind</key><string>function</string>
 // CHECK-NEXT:  <key>issue_context</key><string>mainPlusHeader</string>
 // CHECK-NEXT:  <key>issue_hash_function_offset</key><string>2</string>

@@ -127,14 +127,13 @@ static StringRef GetNthLineOfFile(llvm::MemoryBuffer *Buffer, int Line) {
 }
 
 static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
-                                 const Decl *D) {
+                                 const LangOptions &LangOpts) {
   static StringRef Whitespaces = " \t\n";
 
-  const LangOptions &Opts = D->getASTContext().getLangOpts();
   StringRef Str = GetNthLineOfFile(SM.getBuffer(L.getFileID(), L),
                                    L.getExpansionLineNumber());
   unsigned col = Str.find_first_not_of(Whitespaces);
-
+  col++;
   SourceLocation StartOfLine =
       SM.translateLineCol(SM.getFileID(L), L.getExpansionLineNumber(), col);
   llvm::MemoryBuffer *Buffer =
@@ -145,7 +144,7 @@ static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
   const char *BufferPos = SM.getCharacterData(StartOfLine);
 
   Token Token;
-  Lexer Lexer(SM.getLocForStartOfFile(SM.getFileID(StartOfLine)), Opts,
+  Lexer Lexer(SM.getLocForStartOfFile(SM.getFileID(StartOfLine)), LangOpts,
               Buffer->getBufferStart(), BufferPos, Buffer->getBufferEnd());
 
   size_t NextStart = 0;
@@ -175,20 +174,23 @@ static llvm::SmallString<32> GetHashOfContent(StringRef Content) {
 std::string clang::GetIssueString(const SourceManager &SM,
                                   FullSourceLoc &IssueLoc,
                                   StringRef CheckerName, StringRef BugType,
-                                  const Decl *D) {
+                                  const Decl *D,
+                                  const LangOptions &LangOpts) {
   static StringRef Delimiter = "$";
 
   return (llvm::Twine(CheckerName) + Delimiter +
           GetEnclosingDeclContextSignature(D) + Delimiter +
           llvm::utostr(IssueLoc.getExpansionColumnNumber()) + Delimiter +
-          NormalizeLine(SM, IssueLoc, D) + Delimiter + BugType)
+          NormalizeLine(SM, IssueLoc, LangOpts) + Delimiter + BugType)
       .str();
 }
 
 SmallString<32> clang::GetIssueHash(const SourceManager &SM,
                                     FullSourceLoc &IssueLoc,
                                     StringRef CheckerName, StringRef BugType,
-                                    const Decl *D) {
+                                    const Decl *D,
+                                    const LangOptions &LangOpts) {
+
   return GetHashOfContent(
-      GetIssueString(SM, IssueLoc, CheckerName, BugType, D));
+      GetIssueString(SM, IssueLoc, CheckerName, BugType, D, LangOpts));
 }

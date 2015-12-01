@@ -399,7 +399,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
                     *SM);
     const Decl *DeclWithIssue = D->getDeclWithIssue();
     EmitString(o, GetIssueHash(*SM, L, D->getCheckName(), D->getBugType(),
-                               DeclWithIssue))
+                               DeclWithIssue, LangOpts))
         << '\n';
 
     // Output information about the semantic context where

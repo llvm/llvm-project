@@ -28,7 +28,7 @@ T tmain(T argc, S **argv) {
   // expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
   #pragma omp parallel for schedule (guided argc
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  // expected-error@+1 2 {{argument to 'schedule' clause must be a positive integer value}}
+  // expected-error@+1 2 {{argument to 'schedule' clause must be a strictly positive integer value}}
   #pragma omp parallel for schedule (static, ST // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp parallel for schedule (dynamic, 1)) // expected-warning {{extra tokens at the end of '#pragma omp parallel for' are ignored}}
@@ -36,7 +36,7 @@ T tmain(T argc, S **argv) {
   #pragma omp parallel for schedule (guided, (ST > 0) ? 1 + ST : 2)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   // expected-error@+2 2 {{directive '#pragma omp parallel for' cannot contain more than one 'schedule' clause}}
-  // expected-error@+1 {{argument to 'schedule' clause must be a positive integer value}}
+  // expected-error@+1 {{argument to 'schedule' clause must be a strictly positive integer value}}
   #pragma omp parallel for schedule (static, foobool(argc)), schedule (dynamic, true), schedule (guided, -5)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp parallel for schedule (static, S) // expected-error {{'S' does not refer to a value}}
@@ -46,7 +46,7 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp parallel for schedule (dynamic, 1)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  #pragma omp parallel for schedule (static, N) // expected-error {{argument to 'schedule' clause must be a positive integer value}}
+  #pragma omp parallel for schedule (static, N) // expected-error {{argument to 'schedule' clause must be a strictly positive integer value}}
   for (T i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   return argc;
 }
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel for schedule (dynamic, foobool(1) > 0 ? 1 : 2)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   // expected-error@+2 2 {{directive '#pragma omp parallel for' cannot contain more than one 'schedule' clause}}
-  // expected-error@+1 {{argument to 'schedule' clause must be a positive integer value}}
+  // expected-error@+1 {{argument to 'schedule' clause must be a strictly positive integer value}}
   #pragma omp parallel for schedule (guided, foobool(argc)), schedule (static, true), schedule (dynamic, -5)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp parallel for schedule (guided, S1) // expected-error {{'S1' does not refer to a value}}

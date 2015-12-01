@@ -288,17 +288,17 @@ void testLambda() {
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>depth</key><integer>0</integer>
 // CHECK-NEXT:     <key>extended_message</key>
-// CHECK-NEXT:     <string>debug.DumpBugHash$int f()$28$namespaceAA{$debug</string>
+// CHECK-NEXT:     <string>debug.DumpBugHash$int f()$28$constexprintf(){return5;}$debug</string>
 // CHECK-NEXT:     <key>message</key>
-// CHECK-NEXT:     <string>debug.DumpBugHash$int f()$28$namespaceAA{$debug</string>
+// CHECK-NEXT:     <string>debug.DumpBugHash$int f()$28$constexprintf(){return5;}$debug</string>
 // CHECK-NEXT:    </dict>
 // CHECK-NEXT:   </array>
-// CHECK-NEXT:   <key>description</key><string>debug.DumpBugHash$int f()$28$namespaceAA{$debug</string>
+// CHECK-NEXT:   <key>description</key><string>debug.DumpBugHash$int f()$28$constexprintf(){return5;}$debug</string>
 // CHECK-NEXT:   <key>category</key><string>debug</string>
 // CHECK-NEXT:   <key>type</key><string>Dump hash components</string>
 // CHECK-NEXT:   <key>check_name</key><string>debug.DumpBugHash</string>
 // CHECK-NEXT:   <!-- This hash is experimental and going to change! -->
-// CHECK-NEXT:   <key>issue_hash_content_of_line_in_context</key><string>f8ee38da3de42e209c4afa886b5531ab</string>
+// CHECK-NEXT:   <key>issue_hash_content_of_line_in_context</key><string>f5471f52854dc14167fe96db50c4ba5f</string>
 // CHECK-NEXT:  <key>issue_context_kind</key><string>function</string>
 // CHECK-NEXT:  <key>issue_context</key><string>f</string>
 // CHECK-NEXT:  <key>issue_hash_function_offset</key><string>0</string>

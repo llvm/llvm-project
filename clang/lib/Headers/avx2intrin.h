@@ -1100,103 +1100,112 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                        (__v4di)(__m256i)(mask), (s)); })
 
 #define _mm_i32gather_pd(m, i, s) __extension__ ({ \
-  (__m128d)__builtin_ia32_gatherd_pd((__v2df)_mm_setzero_pd(), \
+  (__m128d)__builtin_ia32_gatherd_pd((__v2df)_mm_undefined_pd(), \
                                      (double const *)(m), \
                                      (__v4si)(__m128i)(i), \
-                                     (__v2df)_mm_set1_pd( \
-                                       (double)(long long int)-1), \
+                                     (__v2df)_mm_cmpeq_pd(_mm_setzero_pd(), \
+                                                          _mm_setzero_pd()), \
                                      (s)); })
 
 #define _mm256_i32gather_pd(m, i, s) __extension__ ({ \
-  (__m256d)__builtin_ia32_gatherd_pd256((__v4df)_mm256_setzero_pd(), \
+  (__m256d)__builtin_ia32_gatherd_pd256((__v4df)_mm256_undefined_pd(), \
                                         (double const *)(m), \
                                         (__v4si)(__m128i)(i), \
-                                        (__v4df)_mm256_set1_pd( \
-                                          (double)(long long int)-1), \
+                                        (__v4df)_mm256_cmp_pd(_mm256_setzero_pd(), \
+                                                              _mm256_setzero_pd(), \
+                                                              _CMP_EQ_OQ), \
                                         (s)); })
 
 #define _mm_i64gather_pd(m, i, s) __extension__ ({ \
-  (__m128d)__builtin_ia32_gatherq_pd((__v2df)_mm_setzero_pd(), \
+  (__m128d)__builtin_ia32_gatherq_pd((__v2df)_mm_undefined_pd(), \
                                      (double const *)(m), \
                                      (__v2di)(__m128i)(i), \
-                                     (__v2df)_mm_set1_pd( \
-                                       (double)(long long int)-1), \
+                                     (__v2df)_mm_cmpeq_pd(_mm_setzero_pd(), \
+                                                          _mm_setzero_pd()), \
                                      (s)); })
 
 #define _mm256_i64gather_pd(m, i, s) __extension__ ({ \
-  (__m256d)__builtin_ia32_gatherq_pd256((__v4df)_mm256_setzero_pd(), \
+  (__m256d)__builtin_ia32_gatherq_pd256((__v4df)_mm256_undefined_pd(), \
                                         (double const *)(m), \
                                         (__v4di)(__m256i)(i), \
-                                        (__v4df)_mm256_set1_pd( \
-                                          (double)(long long int)-1), \
+                                        (__v4df)_mm256_cmp_pd(_mm256_setzero_pd(), \
+                                                              _mm256_setzero_pd(), \
+                                                              _CMP_EQ_OQ), \
                                         (s)); })
 
 #define _mm_i32gather_ps(m, i, s) __extension__ ({ \
-  (__m128)__builtin_ia32_gatherd_ps((__v4sf)_mm_setzero_ps(), \
-                                    (float const *)(m), (__v4si)(__m128i)(i), \
-                                    (__v4sf)_mm_set1_ps((float)(int)-1), \
+  (__m128)__builtin_ia32_gatherd_ps((__v4sf)_mm_undefined_ps(), \
+                                    (float const *)(m), \
+                                    (__v4si)(__m128i)(i), \
+                                    (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), \
+                                                         _mm_setzero_ps()), \
                                     (s)); })
 
 #define _mm256_i32gather_ps(m, i, s) __extension__ ({ \
-  (__m256)__builtin_ia32_gatherd_ps256((__v8sf)_mm256_setzero_ps(), \
+  (__m256)__builtin_ia32_gatherd_ps256((__v8sf)_mm256_undefined_ps(), \
                                        (float const *)(m), \
                                        (__v8si)(__m256i)(i), \
-                                       (__v8sf)_mm256_set1_ps((float)(int)-1), \
+                                       (__v8sf)_mm256_cmp_ps(_mm256_setzero_ps(), \
+                                                             _mm256_setzero_ps(), \
+                                                             _CMP_EQ_OQ), \
                                        (s)); })
 
 #define _mm_i64gather_ps(m, i, s) __extension__ ({ \
-  (__m128)__builtin_ia32_gatherq_ps((__v4sf)_mm_setzero_ps(), \
-                                    (float const *)(m), (__v2di)(__m128i)(i), \
-                                    (__v4sf)_mm_set1_ps((float)(int)-1), \
+  (__m128)__builtin_ia32_gatherq_ps((__v4sf)_mm_undefined_ps(), \
+                                    (float const *)(m), \
+                                    (__v2di)(__m128i)(i), \
+                                    (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), \
+                                                         _mm_setzero_ps()), \
                                     (s)); })
 
 #define _mm256_i64gather_ps(m, i, s) __extension__ ({ \
-  (__m128)__builtin_ia32_gatherq_ps256((__v4sf)_mm_setzero_ps(), \
+  (__m128)__builtin_ia32_gatherq_ps256((__v4sf)_mm_undefined_ps(), \
                                        (float const *)(m), \
                                        (__v4di)(__m256i)(i), \
-                                       (__v4sf)_mm_set1_ps((float)(int)-1), \
+                                       (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), \
+                                                            _mm_setzero_ps()), \
                                        (s)); })
 
 #define _mm_i32gather_epi32(m, i, s) __extension__ ({ \
-  (__m128i)__builtin_ia32_gatherd_d((__v4si)_mm_setzero_si128(), \
+  (__m128i)__builtin_ia32_gatherd_d((__v4si)_mm_undefined_si128(), \
                                     (int const *)(m), (__v4si)(__m128i)(i), \
                                     (__v4si)_mm_set1_epi32(-1), (s)); })
 
 #define _mm256_i32gather_epi32(m, i, s) __extension__ ({ \
-  (__m256i)__builtin_ia32_gatherd_d256((__v8si)_mm256_setzero_si256(), \
+  (__m256i)__builtin_ia32_gatherd_d256((__v8si)_mm256_undefined_si256(), \
                                        (int const *)(m), (__v8si)(__m256i)(i), \
                                        (__v8si)_mm256_set1_epi32(-1), (s)); })
 
 #define _mm_i64gather_epi32(m, i, s) __extension__ ({ \
-  (__m128i)__builtin_ia32_gatherq_d((__v4si)_mm_setzero_si128(), \
+  (__m128i)__builtin_ia32_gatherq_d((__v4si)_mm_undefined_si128(), \
                                     (int const *)(m), (__v2di)(__m128i)(i), \
                                     (__v4si)_mm_set1_epi32(-1), (s)); })
 
 #define _mm256_i64gather_epi32(m, i, s) __extension__ ({ \
-  (__m128i)__builtin_ia32_gatherq_d256((__v4si)_mm_setzero_si128(), \
+  (__m128i)__builtin_ia32_gatherq_d256((__v4si)_mm_undefined_si128(), \
                                        (int const *)(m), (__v4di)(__m256i)(i), \
                                        (__v4si)_mm_set1_epi32(-1), (s)); })
 
 #define _mm_i32gather_epi64(m, i, s) __extension__ ({ \
-  (__m128i)__builtin_ia32_gatherd_q((__v2di)_mm_setzero_si128(), \
+  (__m128i)__builtin_ia32_gatherd_q((__v2di)_mm_undefined_si128(), \
                                     (long long const *)(m), \
                                     (__v4si)(__m128i)(i), \
                                     (__v2di)_mm_set1_epi64x(-1), (s)); })
 
 #define _mm256_i32gather_epi64(m, i, s) __extension__ ({ \
-  (__m256i)__builtin_ia32_gatherd_q256((__v4di)_mm256_setzero_si256(), \
+  (__m256i)__builtin_ia32_gatherd_q256((__v4di)_mm256_undefined_si256(), \
                                        (long long const *)(m), \
                                        (__v4si)(__m128i)(i), \
                                        (__v4di)_mm256_set1_epi64x(-1), (s)); })
 
 #define _mm_i64gather_epi64(m, i, s) __extension__ ({ \
-  (__m128i)__builtin_ia32_gatherq_q((__v2di)_mm_setzero_si128(), \
+  (__m128i)__builtin_ia32_gatherq_q((__v2di)_mm_undefined_si128(), \
                                     (long long const *)(m), \
                                     (__v2di)(__m128i)(i), \
                                     (__v2di)_mm_set1_epi64x(-1), (s)); })
 
 #define _mm256_i64gather_epi64(m, i, s) __extension__ ({ \
-  (__m256i)__builtin_ia32_gatherq_q256((__v4di)_mm256_setzero_si256(), \
+  (__m256i)__builtin_ia32_gatherq_q256((__v4di)_mm256_undefined_si256(), \
                                        (long long const *)(m), \
                                        (__v4di)(__m256i)(i), \
                                        (__v4di)_mm256_set1_epi64x(-1), (s)); })
