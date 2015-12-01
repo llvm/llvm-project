@@ -277,7 +277,92 @@ likely to occur if the virtual tables are padded.
 Forward-Edge CFI for Indirect Function Calls
 ============================================
 
-Sorry, no documentation yet, but see the comments at the top of
-``LowerBitSets::buildBitSetsFromFunctions`` in `LowerBitSets.cpp`_.
+Under forward-edge CFI for indirect function calls, each unique function
+type has its own bit vector, and at each call site we need to check that the
+function pointer is a member of the function type's bit vector. This scheme
+works in a similar way to forward-edge CFI for virtual calls, the distinction
+being that we need to build bit vectors of function entry points rather than
+of virtual tables.
 
-.. _LowerBitSets.cpp: http://llvm.org/klaus/llvm/blob/master/lib/Transforms/IPO/LowerBitSets.cpp
+Unlike when re-arranging global variables, we cannot re-arrange functions
+in a particular order and base our calculations on the layout of the
+functions' entry points, as we have no idea how large a particular function
+will end up being (the function sizes could even depend on how we arrange
+the functions). Instead, we build a jump table, which is a block of code
+consisting of one branch instruction for each of the functions in the bit
+set that branches to the target function, and redirect any taken function
+addresses to the corresponding jump table entry. In this way, the distance
+between function entry points is predictable and controllable. In the object
+file's symbol table, the symbols for the target functions also refer to the
+jump table entries, so that addresses taken outside the module will pass
+any verification done inside the module.
+
+In more concrete terms, suppose we have three functions ``f``, ``g``, ``h``
+which are members of a single bitset, and a function foo that returns their
+addresses:
+
+.. code-block:: none
+
+  f:
+  mov 0, %eax
+  ret
+
+  g:
+  mov 1, %eax
+  ret
+
+  h:
+  mov 2, %eax
+  ret
+
+  foo:
+  mov f, %eax
+  mov g, %edx
+  mov h, %ecx
+  ret
+
+Our jump table will (conceptually) look like this:
+
+.. code-block:: none
+
+  f:
+  jmp .Ltmp0 ; 5 bytes
+  int3       ; 1 byte
+  int3       ; 1 byte
+  int3       ; 1 byte
+
+  g:
+  jmp .Ltmp1 ; 5 bytes
+  int3       ; 1 byte
+  int3       ; 1 byte
+  int3       ; 1 byte
+
+  h:
+  jmp .Ltmp2 ; 5 bytes
+  int3       ; 1 byte
+  int3       ; 1 byte
+  int3       ; 1 byte
+
+  .Ltmp0:
+  mov 0, %eax
+  ret
+
+  .Ltmp1:
+  mov 1, %eax
+  ret
+
+  .Ltmp2:
+  mov 2, %eax
+  ret
+
+  foo:
+  mov f, %eax
+  mov g, %edx
+  mov h, %ecx
+  ret
+
+Because the addresses of ``f``, ``g``, ``h`` are evenly spaced at a power of
+2, and function types do not overlap (unlike class types with base classes),
+we can normally apply the `Alignment`_ and `Eliminating Bit Vector Checks
+for All-Ones Bit Vectors`_ optimizations thus simplifying the check at each
+call site to a range and alignment check.
