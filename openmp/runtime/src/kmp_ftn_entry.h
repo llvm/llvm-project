@@ -257,7 +257,7 @@ FTN_GET_AFFINITY_MAX_PROC( void )
             return 0;
         }
 
-    #if KMP_GROUP_AFFINITY
+    #if KMP_GROUP_AFFINITY && !KMP_USE_HWLOC
         if ( __kmp_num_proc_groups > 1 ) {
             return (int)KMP_CPU_SETSIZE;
         }
@@ -278,7 +278,11 @@ FTN_CREATE_AFFINITY_MASK( void **mask )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+    # if KMP_USE_HWLOC
+        *mask = (hwloc_cpuset_t)hwloc_bitmap_alloc();
+    # else
         *mask = kmpc_malloc( __kmp_affin_mask_size );
+    # endif
         KMP_CPU_ZERO( (kmp_affin_mask_t *)(*mask) );
     #endif
 }
@@ -300,7 +304,11 @@ FTN_DESTROY_AFFINITY_MASK( void **mask )
 	        KMP_FATAL( AffinityInvalidMask, "kmp_destroy_affinity_mask" );
 	    }
         }
+    # if KMP_USE_HWLOC
+        hwloc_bitmap_free((hwloc_cpuset_t)(*mask));
+    # else
         kmpc_free( *mask );
+    # endif
         *mask = NULL;
     #endif
 }

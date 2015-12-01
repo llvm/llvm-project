@@ -57,6 +57,13 @@ public:
     bool operator!=(const Address &b) const {
         return !operator==(b);
     }
+    void print() const {
+        unsigned i;
+        printf("Depth: %u --- ", depth);
+        for(i=0;i<depth;i++) {
+            printf("%u ", labels[i]);
+        }
+    }
 };
 
 class AddrUnsPair {
@@ -71,6 +78,18 @@ public:
         first = b.first;
         second = b.second;
         return *this;
+    }
+    void print() const {
+        printf("first = "); first.print();
+        printf(" --- second = %u", second);
+    }
+    bool operator==(const AddrUnsPair &b) const {
+        if(first != b.first) return false;
+        if(second != b.second) return false;
+        return true;
+    }
+    bool operator!=(const AddrUnsPair &b) const {
+        return !operator==(b);
     }
 };
 

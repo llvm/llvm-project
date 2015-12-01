@@ -182,7 +182,7 @@ struct RenderScriptRuntime::Element
     empirical_type<uint32_t> array_size;                 // Number of items in array, only needed for strucrs
     ConstString type_name;                               // Name of type, only needed for structs
 
-    static const ConstString FallbackStructName;         // Print this as the type name of a struct Element
+    static const ConstString &GetFallbackStructName();   // Print this as the type name of a struct Element
                                                          // If we can't resolve the actual struct name
 };
 
@@ -250,7 +250,13 @@ struct RenderScriptRuntime::AllocationDetails
     }
 };
 
-const ConstString RenderScriptRuntime::Element::FallbackStructName("struct");
+
+const ConstString &
+RenderScriptRuntime::Element::GetFallbackStructName()
+{
+    static const ConstString FallbackStructName("struct");
+    return FallbackStructName;
+}
 
 unsigned int RenderScriptRuntime::AllocationDetails::ID = 1;
 
@@ -1629,7 +1635,7 @@ RenderScriptRuntime::FindStructTypeName(Element& elem, StackFrame* frame_ptr)
     if (!elem.type_name.IsEmpty()) // Name already set
         return;
     else
-        elem.type_name = Element::FallbackStructName; // Default type name if we don't succeed
+        elem.type_name = Element::GetFallbackStructName(); // Default type name if we don't succeed
 
     // Find all the global variables from the script rs modules
     VariableList variable_list;
@@ -2428,7 +2434,7 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
             {
                 strm.Printf("\n(%u, %u, %u) = ", x, y, z);
                 if ((type == Element::RS_TYPE_NONE) && (alloc->element.children.size() > 0) &&
-                    (alloc->element.type_name != Element::FallbackStructName))
+                    (alloc->element.type_name != Element::GetFallbackStructName()))
                 {
                     // Here we are dumping an Element of struct type.
                     // This is done using expression evaluation with the name of the struct type and pointer to element.

@@ -223,6 +223,9 @@ public:
   bool isRela() const { return IsRela; }
 
 private:
+  bool applyTlsDynamicReloc(SymbolBody *Body, uint32_t Type, Elf_Rel *P,
+                            Elf_Rel *N);
+
   std::vector<DynamicReloc<ELFT>> Relocs;
   const bool IsRela;
 };

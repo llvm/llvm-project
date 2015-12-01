@@ -7,6 +7,8 @@ config.libomp_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.omp_header_directory = "@LIBOMP_BINARY_DIR@/src"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.hwloc_library_dir = "@LIBOMP_HWLOC_LIBRARY_DIR@"
+config.using_hwloc = @LIBOMP_USE_HWLOC@
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBOMP_BASE_DIR@/test/lit.cfg")

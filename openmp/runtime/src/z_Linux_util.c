@@ -175,8 +175,11 @@ __kmp_set_system_affinity( kmp_affin_mask_t const *mask, int abort_on_error )
 {
     KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
       "Illegal set affinity operation when not capable");
-
+#if KMP_USE_HWLOC
+    int retval = hwloc_set_cpubind(__kmp_hwloc_topology, (hwloc_cpuset_t)mask, HWLOC_CPUBIND_THREAD);
+#else
     int retval = syscall( __NR_sched_setaffinity, 0, __kmp_affin_mask_size, mask );
+#endif
     if (retval >= 0) {
         return 0;
     }
@@ -198,7 +201,11 @@ __kmp_get_system_affinity( kmp_affin_mask_t *mask, int abort_on_error )
     KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
       "Illegal get affinity operation when not capable");
 
+#if KMP_USE_HWLOC
+    int retval = hwloc_get_cpubind(__kmp_hwloc_topology, (hwloc_cpuset_t)mask, HWLOC_CPUBIND_THREAD);
+#else
     int retval = syscall( __NR_sched_getaffinity, 0, __kmp_affin_mask_size, mask );
+#endif
     if (retval >= 0) {
         return 0;
     }
@@ -220,10 +227,12 @@ __kmp_affinity_bind_thread( int which )
     KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
       "Illegal set affinity operation when not capable");
 
-    kmp_affin_mask_t *mask = (kmp_affin_mask_t *)KMP_ALLOCA(__kmp_affin_mask_size);
+    kmp_affin_mask_t *mask;
+    KMP_CPU_ALLOC_ON_STACK(mask);
     KMP_CPU_ZERO(mask);
     KMP_CPU_SET(which, mask);
     __kmp_set_system_affinity(mask, TRUE);
+    KMP_CPU_FREE_FROM_STACK(mask);
 }
 
 /*

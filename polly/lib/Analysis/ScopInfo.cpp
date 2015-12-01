@@ -1464,29 +1464,16 @@ void ScopStmt::print(raw_ostream &OS) const {
 void ScopStmt::dump() const { print(dbgs()); }
 
 void ScopStmt::removeMemoryAccesses(MemoryAccessList &InvMAs) {
-
-  // Remove all memory accesses in @p InvMAs from this statement together
-  // with all scalar accesses that were caused by them. The tricky iteration
-  // order uses is needed because the MemAccs is a vector and the order in
-  // which the accesses of each memory access list (MAL) are stored in this
-  // vector is reversed.
+  // Remove all memory accesses in @p InvMAs from this statement
+  // together with all scalar accesses that were caused by them.
   for (MemoryAccess *MA : InvMAs) {
-    auto &MAL = *lookupAccessesFor(MA->getAccessInstruction());
-    MAL.reverse();
-
-    auto MALIt = MAL.begin();
-    auto MALEnd = MAL.end();
-    auto MemAccsIt = MemAccs.begin();
-    while (MALIt != MALEnd) {
-      while (*MemAccsIt != *MALIt)
-        MemAccsIt++;
-
-      MALIt++;
-      MemAccs.erase(MemAccsIt);
-    }
-
+    auto Predicate = [&](MemoryAccess *Acc) {
+      return Acc->getAccessInstruction() == MA->getAccessInstruction();
+    };
+    MemAccs.erase(std::remove_if(MemAccs.begin(), MemAccs.end(), Predicate),
+                  MemAccs.end());
     InstructionToAccess.erase(MA->getAccessInstruction());
-    delete &MAL;
+    delete lookupAccessesFor(MA->getAccessInstruction());
   }
 }
 

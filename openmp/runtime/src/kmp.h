@@ -77,8 +77,16 @@
 
 #include "kmp_os.h"
 
+#include "kmp_safe_c_api.h"
+
 #if KMP_STATS_ENABLED
 class kmp_stats_list;
+#endif
+
+#if KMP_USE_HWLOC
+#include "hwloc.h"
+extern hwloc_topology_t __kmp_hwloc_topology;
+extern int __kmp_hwloc_error;
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
@@ -488,6 +496,78 @@ extern size_t __kmp_affin_mask_size;
 # define KMP_AFFINITY_ENABLE(mask_size) (__kmp_affin_mask_size = mask_size)
 # define KMP_CPU_SETSIZE        (__kmp_affin_mask_size * CHAR_BIT)
 
+#if KMP_USE_HWLOC
+
+typedef hwloc_cpuset_t kmp_affin_mask_t;
+# define KMP_CPU_SET(i,mask)       hwloc_bitmap_set((hwloc_cpuset_t)mask, (unsigned)i)
+# define KMP_CPU_ISSET(i,mask)     hwloc_bitmap_isset((hwloc_cpuset_t)mask, (unsigned)i)
+# define KMP_CPU_CLR(i,mask)       hwloc_bitmap_clr((hwloc_cpuset_t)mask, (unsigned)i)
+# define KMP_CPU_ZERO(mask)        hwloc_bitmap_zero((hwloc_cpuset_t)mask)
+# define KMP_CPU_COPY(dest, src)   hwloc_bitmap_copy((hwloc_cpuset_t)dest, (hwloc_cpuset_t)src)
+# define KMP_CPU_COMPLEMENT(max_bit_number, mask) \
+    { \
+        unsigned i; \
+        for(i=0;i<(unsigned)max_bit_number+1;i++) { \
+            if(hwloc_bitmap_isset((hwloc_cpuset_t)mask, i)) { \
+                hwloc_bitmap_clr((hwloc_cpuset_t)mask, i); \
+            } else { \
+                hwloc_bitmap_set((hwloc_cpuset_t)mask, i); \
+            } \
+        } \
+    } \
+
+# define KMP_CPU_UNION(dest, src)  hwloc_bitmap_or((hwloc_cpuset_t)dest, (hwloc_cpuset_t)dest, (hwloc_cpuset_t)src)
+# define KMP_CPU_SET_ITERATE(i,mask) \
+    for(i = hwloc_bitmap_first((hwloc_cpuset_t)mask); (int)i != -1; i = hwloc_bitmap_next((hwloc_cpuset_t)mask, i))
+
+# define KMP_CPU_ALLOC(ptr) ptr = (kmp_affin_mask_t*)hwloc_bitmap_alloc()
+# define KMP_CPU_FREE(ptr) hwloc_bitmap_free((hwloc_bitmap_t)ptr);
+# define KMP_CPU_ALLOC_ON_STACK(ptr) KMP_CPU_ALLOC(ptr)
+# define KMP_CPU_FREE_FROM_STACK(ptr) KMP_CPU_FREE(ptr)
+# define KMP_CPU_INTERNAL_ALLOC(ptr) KMP_CPU_ALLOC(ptr)
+# define KMP_CPU_INTERNAL_FREE(ptr) KMP_CPU_FREE(ptr)
+
+//
+// The following macro should be used to index an array of masks.
+// The array should be declared as "kmp_affinity_t *" and allocated with
+// size "__kmp_affinity_mask_size * len".  The macro takes care of the fact
+// that on Windows* OS, sizeof(kmp_affin_t) is really the size of the mask, but
+// on Linux* OS, sizeof(kmp_affin_t) is 1.
+//
+# define KMP_CPU_INDEX(array,i) ((kmp_affin_mask_t*)(array[i]))
+# define KMP_CPU_ALLOC_ARRAY(arr, n) {                                   \
+    arr = (kmp_affin_mask_t *)__kmp_allocate(n*sizeof(kmp_affin_mask_t)); \
+    unsigned i;                                                           \
+    for(i=0;i<(unsigned)n;i++) {                                          \
+        arr[i] = hwloc_bitmap_alloc();                                    \
+    }                                                                     \
+   }
+# define KMP_CPU_FREE_ARRAY(arr, n) { \
+    unsigned i;                        \
+    for(i=0;i<(unsigned)n;i++) {       \
+        hwloc_bitmap_free(arr[i]);     \
+    }                                  \
+    __kmp_free(arr);                   \
+   }
+# define KMP_CPU_INTERNAL_ALLOC_ARRAY(arr, n) {                               \
+    arr = (kmp_affin_mask_t *)KMP_INTERNAL_MALLOC(n*sizeof(kmp_affin_mask_t)); \
+    unsigned i;                                                                \
+    for(i=0;i<(unsigned)n;i++) {                                               \
+        arr[i] = hwloc_bitmap_alloc();                                         \
+    }                                                                          \
+   }
+# define KMP_CPU_INTERNAL_FREE_ARRAY(arr, n) { \
+    unsigned i;                                 \
+    for(i=0;i<(unsigned)n;i++) {                \
+        hwloc_bitmap_free(arr[i]);              \
+    }                                           \
+    KMP_INTERNAL_FREE(arr);                     \
+   }
+
+#else /* KMP_USE_HWLOC */
+#  define KMP_CPU_SET_ITERATE(i,mask) \
+    for(i = 0; (size_t)i < KMP_CPU_SETSIZE; ++i)
+
 # if KMP_OS_LINUX
 //
 // On Linux* OS, the mask is actually a vector of length __kmp_affin_mask_size
@@ -526,7 +606,7 @@ typedef unsigned char kmp_affin_mask_t;
             }                                                                \
         }
 
-#  define KMP_CPU_COMPLEMENT(mask) \
+#  define KMP_CPU_COMPLEMENT(max_bit_number, mask) \
         {                                                                    \
             size_t __i;                                                      \
             for (__i = 0; __i < __kmp_affin_mask_size; __i++) {              \
@@ -605,7 +685,7 @@ extern int __kmp_num_proc_groups;
             }                                                                \
         }
 
-#   define KMP_CPU_COMPLEMENT(mask) \
+#   define KMP_CPU_COMPLEMENT(max_bit_number, mask) \
         {                                                                    \
             int __i;                                                         \
             for (__i = 0; __i < __kmp_num_proc_groups; __i++) {              \
@@ -637,7 +717,7 @@ extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
 
 extern int __kmp_get_proc_group(kmp_affin_mask_t const *mask);
 
-#  else
+#  else /* KMP_GROUP_AFFINITY */
 
 typedef DWORD kmp_affin_mask_t; /* for compatibility with older winbase.h */
 
@@ -646,7 +726,7 @@ typedef DWORD kmp_affin_mask_t; /* for compatibility with older winbase.h */
 #   define KMP_CPU_CLR(i,mask)      (*(mask) &= ~(((kmp_affin_mask_t)1) << (i)))
 #   define KMP_CPU_ZERO(mask)       (*(mask) = 0)
 #   define KMP_CPU_COPY(dest, src)  (*(dest) = *(src))
-#   define KMP_CPU_COMPLEMENT(mask) (*(mask) = ~*(mask))
+#   define KMP_CPU_COMPLEMENT(max_bit_number, mask) (*(mask) = ~*(mask))
 #   define KMP_CPU_UNION(dest, src) (*(dest) |= *(src))
 
 #  endif /* KMP_GROUP_AFFINITY */
@@ -660,6 +740,10 @@ typedef DWORD kmp_affin_mask_t; /* for compatibility with older winbase.h */
 # define KMP_CPU_ALLOC(ptr) \
         (ptr = ((kmp_affin_mask_t *)__kmp_allocate(__kmp_affin_mask_size)))
 # define KMP_CPU_FREE(ptr) __kmp_free(ptr)
+# define KMP_CPU_ALLOC_ON_STACK(ptr) (ptr = ((kmp_affin_mask_t *)KMP_ALLOCA(__kmp_affin_mask_size)))
+# define KMP_CPU_FREE_FROM_STACK(ptr) /* Nothing */
+# define KMP_CPU_INTERNAL_ALLOC(ptr) (ptr = ((kmp_affin_mask_t *)KMP_INTERNAL_MALLOC(__kmp_affin_mask_size)))
+# define KMP_CPU_INTERNAL_FREE(ptr)  KMP_INTERNAL_FREE(ptr)
 
 //
 // The following macro should be used to index an array of masks.
@@ -670,6 +754,12 @@ typedef DWORD kmp_affin_mask_t; /* for compatibility with older winbase.h */
 //
 # define KMP_CPU_INDEX(array,i) \
         ((kmp_affin_mask_t *)(((char *)(array)) + (i) * __kmp_affin_mask_size))
+# define KMP_CPU_ALLOC_ARRAY(arr, n)  arr = (kmp_affin_mask_t *)__kmp_allocate(n * __kmp_affin_mask_size)
+# define KMP_CPU_FREE_ARRAY(arr, n) __kmp_free(arr);
+# define KMP_CPU_INTERNAL_ALLOC_ARRAY(arr, n)  arr = (kmp_affin_mask_t *)KMP_INTERNAL_MALLOC(n * __kmp_affin_mask_size)
+# define KMP_CPU_INTERNAL_FREE_ARRAY(arr, n) KMP_INTERNAL_FREE(arr);
+
+#endif /* KMP_USE_HWLOC */
 
 //
 // Declare local char buffers with this size for printing debug and info
@@ -716,6 +806,9 @@ enum affinity_top_method {
     affinity_top_method_group,
 #endif /* KMP_GROUP_AFFINITY */
     affinity_top_method_flat,
+#if KMP_USE_HWLOC
+    affinity_top_method_hwloc,
+#endif
     affinity_top_method_default
 };
 

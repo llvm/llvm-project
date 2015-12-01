@@ -2537,7 +2537,6 @@ __kmp_wait_to_unref_task_teams(void)
 //------------------------------------------------------------------------------
 // __kmp_task_team_setup:  Create a task_team for the current team, but use
 // an already created, unused one if it already exists.
-// This may be called by any thread, but only for teams with # threads >1.
 void
 __kmp_task_team_setup( kmp_info_t *this_thr, kmp_team_t *team, int always )
 {
@@ -2557,28 +2556,30 @@ __kmp_task_team_setup( kmp_info_t *this_thr, kmp_team_t *team, int always )
     // previous task_team struct(above), until they receive the signal to stop checking for tasks (they can't safely
     // reference the kmp_team_t struct, which could be reallocated by the master thread). No task teams are formed for 
     // serialized teams.
-    int other_team = 1 - this_thr->th.th_task_state;
-    if (team->t.t_task_team[other_team] == NULL && team->t.t_nproc > 1) { // setup other team as well
-        team->t.t_task_team[other_team] = __kmp_allocate_task_team( this_thr, team );
-        KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d created second new task_team %p for team %d at parity=%d\n",
-                      __kmp_gtid_from_thread( this_thr ), team->t.t_task_team[other_team],
-                      ((team != NULL) ? team->t.t_id : -1), other_team ));
-    }
-    else { // Leave the old task team struct in place for the upcoming region; adjust as needed
-        kmp_task_team_t *task_team = team->t.t_task_team[other_team];
-        if (!task_team->tt.tt_active || team->t.t_nproc != task_team->tt.tt_nproc) {
-            TCW_4(task_team->tt.tt_nproc, team->t.t_nproc);
-            TCW_4(task_team->tt.tt_found_tasks, FALSE);
-#if OMP_41_ENABLED
-            TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
-#endif
-            TCW_4(task_team->tt.tt_unfinished_threads, team->t.t_nproc );
-            TCW_4(task_team->tt.tt_active, TRUE );
+    if (team->t.t_nproc > 1) {
+        int other_team = 1 - this_thr->th.th_task_state;
+        if (team->t.t_task_team[other_team] == NULL) { // setup other team as well
+                team->t.t_task_team[other_team] = __kmp_allocate_task_team( this_thr, team );
+                KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d created second new task_team %p for team %d at parity=%d\n",
+                                __kmp_gtid_from_thread( this_thr ), team->t.t_task_team[other_team],
+                              ((team != NULL) ? team->t.t_id : -1), other_team ));
         }
-        // if team size has changed, the first thread to enable tasking will realloc threads_data if necessary
-        KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d reset next task_team %p for team %d at parity=%d\n",
-                      __kmp_gtid_from_thread( this_thr ), team->t.t_task_team[other_team],
-                      ((team != NULL) ? team->t.t_id : -1), other_team ));
+        else { // Leave the old task team struct in place for the upcoming region; adjust as needed
+            kmp_task_team_t *task_team = team->t.t_task_team[other_team];
+            if (!task_team->tt.tt_active || team->t.t_nproc != task_team->tt.tt_nproc) {
+                TCW_4(task_team->tt.tt_nproc, team->t.t_nproc);
+                TCW_4(task_team->tt.tt_found_tasks, FALSE);
+#if OMP_41_ENABLED
+                TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
+#endif
+                TCW_4(task_team->tt.tt_unfinished_threads, team->t.t_nproc );
+                TCW_4(task_team->tt.tt_active, TRUE );
+            }
+            // if team size has changed, the first thread to enable tasking will realloc threads_data if necessary
+            KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d reset next task_team %p for team %d at parity=%d\n",
+                          __kmp_gtid_from_thread( this_thr ), team->t.t_task_team[other_team],
+                          ((team != NULL) ? team->t.t_id : -1), other_team ));
+        }
     }
 }
 

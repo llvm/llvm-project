@@ -1376,6 +1376,9 @@ NativeRegisterContextLinux_mips64::DoReadRegisterValue(uint32_t offset,
 {
     GPR_linux_mips regs;
     ::memset(&regs, 0, sizeof(GPR_linux_mips));
+
+    // Clear all bits in RegisterValue before writing actual value read from ptrace to avoid garbage value in 32-bit MSB 
+    value.SetBytes((void *)(((unsigned char *)&regs) + offset), 8, GetByteOrder());
     Error error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
     if (error.Success())
     {

@@ -135,6 +135,12 @@ set(LIBOMP_FFLAGS "" CACHE STRING
 set(LIBOMP_COPY_EXPORTS TRUE CACHE STRING
   "Should exports be copied into source exports/ directory?")
 
+# HWLOC-support
+set(LIBOMP_USE_HWLOC FALSE CACHE BOOL
+  "Use Hwloc (http://www.open-mpi.org/projects/hwloc/) library for affinity?")
+set(LIBOMP_HWLOC_INSTALL_DIR /usr/local CACHE PATH
+  "Install path for hwloc library")
+
 # Get the build number from kmp_version.c
 libomp_get_build_number("${CMAKE_CURRENT_SOURCE_DIR}" LIBOMP_VERSION_BUILD)
 math(EXPR LIBOMP_VERSION_BUILD_YEAR "${LIBOMP_VERSION_BUILD}/10000")
@@ -285,6 +291,11 @@ if(LIBOMP_OMPT_SUPPORT AND (NOT LIBOMP_HAVE_OMPT_SUPPORT))
   libomp_error_say("OpenMP Tools Interface requested but not available")
 endif()
 
+# Error check hwloc support after config-ix has run
+if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))
+  libomp_error_say("Hwloc requested but not available")
+endif()
+
 # Setting final library name
 set(LIBOMP_DEFAULT_LIB_NAME libomp)
 if(${PROFILE_LIBRARY})
@@ -323,6 +334,7 @@ if(${LIBOMP_STANDALONE_BUILD})
   endif()
   libomp_say("Use Adaptive locks   -- ${LIBOMP_USE_ADAPTIVE_LOCKS}")
   libomp_say("Use quad precision   -- ${LIBOMP_USE_QUAD_PRECISION}")
+  libomp_say("Use Hwloc library    -- ${LIBOMP_USE_HWLOC}")
 endif()
 
 add_subdirectory(src)

@@ -42,6 +42,9 @@ include_directories(
   ${LIBOMP_INC_DIR}
   ${LIBOMP_SRC_DIR}/thirdparty/ittnotify
 )
+if(${LIBOMP_USE_HWLOC})
+  include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
+endif()
 
 # Getting correct source files to build library
 set(LIBOMP_CFILES)

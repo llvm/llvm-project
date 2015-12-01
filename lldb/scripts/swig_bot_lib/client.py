@@ -11,6 +11,7 @@ from __future__ import print_function
 
 # Python modules
 import argparse
+import io
 import logging
 import os
 import socket
@@ -23,8 +24,8 @@ from lldbsuite.support import fs
 from lldbsuite.support import sockutil
 
 # package imports
-from . import config
 from . import local
+from . import remote
 
 default_ip = "127.0.0.1"
 default_port = 8537
@@ -132,7 +133,7 @@ def establish_remote_connection(ip_port):
     logging.info("Connection established...")
     return s
 
-def transmit_data(connection, packed_input):
+def transmit_request(connection, packed_input):
     logging.info("Sending {} bytes of compressed data."
                  .format(len(packed_input)))
     connection.sendall(struct.pack("!I", len(packed_input)))
@@ -143,6 +144,35 @@ def transmit_data(connection, packed_input):
     response = sockutil.recvall(connection, response_len)
     return response
 
+def handle_response(options, connection, response):
+    logging.debug("Received {} byte response.".format(len(response)))
+    logging.debug("Creating output directory {}"
+                    .format(options.target_dir))
+    os.makedirs(options.target_dir, exist_ok=True)
+
+    logging.info("Unpacking response archive into {}"
+                    .format(options.target_dir))
+    local.unpack_archive(options.target_dir, response)
+    response_file_path = os.path.normpath(
+        os.path.join(options.target_dir, "swig_output.json"))
+    if not os.path.isfile(response_file_path):
+        logging.error("Response file '{}' does not exist."
+                        .format(response_file_path))
+        return
+    try:
+        response = remote.deserialize_response_status(
+            io.open(response_file_path))
+        if response[0] != 0:
+            logging.error("An error occurred during generation.  Status={}"
+                            .format(response[0]))
+            logging.error(response[1])
+        else:
+            logging.info("SWIG generation successful.")
+            if len(response[1]) > 0:
+                logging.info(response[1])
+    finally:
+        os.unlink(response_file_path)
+
 def run(args):
     options = process_args(args)
 
@@ -152,22 +182,32 @@ def run(args):
         if not os.path.isfile(options.swig_executable):
             logging.error("Swig executable '{}' does not exist."
                           .format(options.swig_executable))
-        gen_options = local.GenOptions()
-        gen_options.languages = options.languages
-        gen_options.src_root = options.src_root
-        gen_options.target_dir = options.target_dir
-        gen_options.swig_executable = options.swig_executable
-        local.generate(gen_options)
+        config = local.LocalConfig()
+        config.languages = options.languages
+        config.src_root = options.src_root
+        config.target_dir = options.target_dir
+        config.swig_executable = options.swig_executable
+        local.generate(config)
     else:
         logging.info("swig bot client using remote generation with server '{}'"
                      .format(options.remote))
         connection = None
         try:
-            config_json = config.generate_config_json(options)
-            packed_input = local.pack_archive(config_json, options)
+            config = remote.generate_config(options.languages)
+            logging.debug("Generated config json {}".format(config))
+            inputs = [("include/lldb", ".h"),
+                      ("include/lldb/API", ".h"),
+                      ("scripts", ".swig"),
+                      ("scripts/Python", ".swig"),
+                      ("scripts/interface", ".i")]
+            zip_data = io.BytesIO()
+            packed_input = local.pack_archive(zip_data, options.src_root, inputs)
+            logging.info("(null) -> config.json")
+            packed_input.writestr("config.json", config)
+            packed_input.close()
             connection = establish_remote_connection(options.remote)
-            response = transmit_data(connection, packed_input)
-            logging.debug("Received {} byte response.".format(len(response)))
+            response = transmit_request(connection, zip_data.getvalue())
+            handle_response(options, connection, response)
         finally:
             if connection is not None:
                 connection.close()

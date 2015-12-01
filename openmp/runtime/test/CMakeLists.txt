@@ -1,11 +1,22 @@
 # CMakeLists.txt file for unit testing OpenMP Library
 include(FindPythonInterp)
 include(CheckTypeSize)
+
 if(NOT PYTHONINTERP_FOUND)
   libomp_warning_say("Could not find Python.")
   libomp_warning_say("The check-libomp target will not be available!")
   return()
 endif()
+
+macro(pythonize_bool var)
+  if (${var})
+    set(${var} True)
+  else()
+    set(${var} False)
+  endif()
+endmacro()
+
+pythonize_bool(LIBOMP_USE_HWLOC)
 
 set(LIBOMP_TEST_CFLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler")

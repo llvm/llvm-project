@@ -159,6 +159,18 @@ Should include stats-gathering code be included in the build?
 -DLIBOMP_USE_DEBUGGER=off|on
 Should the friendly debugger interface be included in the build?
 
+-DLIBOMP_USE_HWLOC=off|on
+Should the Hwloc library be used for affinity?
+This option is not supported on Windows.
+http://www.open-mpi.org/projects/hwloc
+
+-DLIBOMP_HWLOC_INSTALL_DIR=/path/to/hwloc/install/dir
+Default: /usr/local
+This option is only used if LIBOMP_USE_HWLOC is on.
+Specifies install location of Hwloc. The configuration system will look for
+hwloc.h in ${LIBOMP_HWLOC_INSTALL_DIR}/include and the library in 
+${LIBOMP_HWLOC_INSTALL_DIR}/lib.
+
 ================================
 How to append flags to the build
 ================================

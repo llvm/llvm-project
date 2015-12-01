@@ -405,6 +405,9 @@ AffGranTopGroup              "%1$s: granularity=%2$s is not supported with KMP_T
 AffGranGroupType             "%1$s: granularity=group is not supported with KMP_AFFINITY=%2$s. Using \"granularity=core\"."
 AffThrPlaceManySockets       "KMP_PLACE_THREADS ignored: too many sockets requested."
 AffThrPlaceDeprecated        "KMP_PLACE_THREADS \"o\" offset designator deprecated, please use @ prefix for offset value."
+AffUsingHwloc                "%1$s: Affinity capable, using hwloc."
+AffIgnoringHwloc             "%1$s: Ignoring hwloc mechanism."
+AffHwlocErrorOccurred        "%1$s: Hwloc failed in %2$s. Relying on internal affinity mechanisms."
 
 
 # --------------------------------------------------------------------------------------------------

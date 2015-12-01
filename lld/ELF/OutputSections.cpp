@@ -193,6 +193,31 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool IsRela)
   this->Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
 }
 
+// Applies corresponding symbol and type for dynamic tls relocation.
+// Returns true if relocation was handled.
+template <class ELFT>
+bool RelocationSection<ELFT>::applyTlsDynamicReloc(SymbolBody *Body,
+                                                   uint32_t Type, Elf_Rel *P,
+                                                   Elf_Rel *N) {
+  if (Target->isTlsLocalDynamicReloc(Type)) {
+    P->setSymbolAndType(0, Target->getTlsModuleIndexReloc(), Config->Mips64EL);
+    P->r_offset =
+        Out<ELFT>::Got->getVA() + Out<ELFT>::LocalModuleTlsIndexOffset;
+    return true;
+  }
+
+  if (Body && Target->isTlsGlobalDynamicReloc(Type)) {
+    P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
+                        Target->getTlsModuleIndexReloc(), Config->Mips64EL);
+    P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
+    N->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
+                        Target->getTlsOffsetReloc(), Config->Mips64EL);
+    N->r_offset = Out<ELFT>::Got->getEntryAddr(*Body) + sizeof(uintX_t);
+    return true;
+  }
+  return false;
+}
+
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   const unsigned EntrySize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
@@ -213,26 +238,8 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       Body = Body->repl();
 
     uint32_t Type = RI.getType(Config->Mips64EL);
-
-    if (Target->isTlsLocalDynamicReloc(Type)) {
-      P->setSymbolAndType(0, Target->getTlsModuleIndexReloc(),
-                          Config->Mips64EL);
-      P->r_offset =
-          Out<ELFT>::Got->getVA() + Out<ELFT>::LocalModuleTlsIndexOffset;
+    if (applyTlsDynamicReloc(Body, Type, P, reinterpret_cast<Elf_Rel *>(Buf)))
       continue;
-    }
-
-    if (Body && Target->isTlsGlobalDynamicReloc(Type)) {
-      P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                          Target->getTlsModuleIndexReloc(), Config->Mips64EL);
-      P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
-      auto *PNext = reinterpret_cast<Elf_Rel *>(Buf);
-      PNext->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                              Target->getTlsOffsetReloc(), Config->Mips64EL);
-      PNext->r_offset = Out<ELFT>::Got->getEntryAddr(*Body) + sizeof(uintX_t);
-      continue;
-    }
-
     bool NeedsCopy = Body && Target->relocNeedsCopy(Type, *Body);
     bool NeedsGot = Body && Target->relocNeedsGot(Type, *Body);
     bool CanBePreempted = canBePreempted(Body, NeedsGot);

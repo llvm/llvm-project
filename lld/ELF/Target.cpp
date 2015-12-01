@@ -948,11 +948,9 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     write32le(Loc, SA);
     break;
   case R_AARCH64_ABS64:
-    // No overflow check needed.
     write64le(Loc, SA);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
-    // No overflow check needed.
     // This relocation stores 12 bits and there's no instruction
     // to do it. Instead, we do a 32 bits store of the value
     // of r_addend bitwise-or'ed Loc. This assumes that the addend
@@ -980,20 +978,16 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     break;
   }
   case R_AARCH64_LDST32_ABS_LO12_NC:
-    // No overflow check needed.
     or32le(Loc, (SA & 0xFFC) << 8);
     break;
   case R_AARCH64_LD64_GOT_LO12_NC:
     checkAlignment<8>(SA, Type);
-    // No overflow check needed.
     or32le(Loc, (SA & 0xFF8) << 7);
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
-    // No overflow check needed.
     or32le(Loc, (SA & 0xFF8) << 7);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
-    // No overflow check needed.
     or32le(Loc, (SA & 0xFFF) << 10);
     break;
   case R_AARCH64_PREL16:
@@ -1005,7 +999,6 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     write32le(Loc, SA - P);
     break;
   case R_AARCH64_PREL64:
-    // No overflow check needed.
     write64le(Loc, SA - P);
     break;
   default:

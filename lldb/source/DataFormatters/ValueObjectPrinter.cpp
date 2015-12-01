@@ -839,7 +839,7 @@ ValueObjectPrinter::PrintChildrenOneLiner (bool hide_names)
                 }
                 child_sp->DumpPrintableRepresentation(*m_stream,
                                                       ValueObject::eValueObjectRepresentationStyleSummary,
-                                                      lldb::eFormatInvalid,
+                                                      m_options.m_format,
                                                       ValueObject::ePrintableRepresentationSpecialCasesDisable);
             }
         }

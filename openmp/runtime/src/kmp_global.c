@@ -33,6 +33,10 @@ __thread kmp_stats_list* __kmp_stats_thread_ptr = &__kmp_stats_list;
 // gives reference tick for all events (considered the 0 tick)
 tsc_tick_count __kmp_stats_start_time;
 #endif
+#if KMP_USE_HWLOC
+int __kmp_hwloc_error = FALSE;
+hwloc_topology_t __kmp_hwloc_topology = NULL;
+#endif
 
 /* ----------------------------------------------------- */
 /* INITIALIZATION VARIABLES */
