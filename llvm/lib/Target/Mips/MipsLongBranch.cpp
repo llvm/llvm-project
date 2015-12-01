@@ -262,8 +262,7 @@ void MipsLongBranch::expandToLongBranch(MBBInfo &I) {
       static_cast<const MipsInstrInfo *>(Subtarget.getInstrInfo());
 
   MF->insert(FallThroughMBB, LongBrMBB);
-  MBB->removeSuccessor(TgtMBB);
-  MBB->addSuccessor(LongBrMBB);
+  MBB->replaceSuccessor(TgtMBB, LongBrMBB);
 
   if (IsPIC) {
     MachineBasicBlock *BalTgtMBB = MF->CreateMachineBasicBlock(BB);

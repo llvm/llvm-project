@@ -294,8 +294,8 @@ entry:
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[5].Z
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[5].W
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[6].X
-; SI: s_load_dwordx8 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x11
-; VI: s_load_dwordx8 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x44
+; SI: s_load_dwordx8 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x11
+; VI: s_load_dwordx8 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x44
 define void @v8i32_arg(<8 x i32> addrspace(1)* nocapture %out, <8 x i32> %in) nounwind {
 entry:
   store <8 x i32> %in, <8 x i32> addrspace(1)* %out, align 4
@@ -311,7 +311,7 @@ entry:
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[5].Z
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[5].W
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[6].X
-; SI: s_load_dwordx8 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x11
+; SI: s_load_dwordx8 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x11
 define void @v8f32_arg(<8 x float> addrspace(1)* nocapture %out, <8 x float> %in) nounwind {
 entry:
   store <8 x float> %in, <8 x float> addrspace(1)* %out, align 4
@@ -413,8 +413,8 @@ entry:
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[9].Z
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[9].W
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[10].X
-; SI: s_load_dwordx16 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x19
-; VI: s_load_dwordx16 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x64
+; SI: s_load_dwordx16 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x19
+; VI: s_load_dwordx16 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x64
 define void @v16i32_arg(<16 x i32> addrspace(1)* nocapture %out, <16 x i32> %in) nounwind {
 entry:
   store <16 x i32> %in, <16 x i32> addrspace(1)* %out, align 4
@@ -438,8 +438,8 @@ entry:
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[9].Z
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[9].W
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[10].X
-; SI: s_load_dwordx16 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x19
-; VI: s_load_dwordx16 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x64
+; SI: s_load_dwordx16 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x19
+; VI: s_load_dwordx16 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x64
 define void @v16f32_arg(<16 x float> addrspace(1)* nocapture %out, <16 x float> %in) nounwind {
 entry:
   store <16 x float> %in, <16 x float> addrspace(1)* %out, align 4

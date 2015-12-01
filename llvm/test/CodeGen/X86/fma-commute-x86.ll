@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-win32 -mcpu=core-avx2 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-pc-win32 -mattr=+fma,+fma4 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-win32 -mattr=+fma | FileCheck %s
 ; RUN: llc < %s -mcpu=bdver2 -mtriple=x86_64-pc-win32 -mattr=-fma4 | FileCheck %s
 
 attributes #0 = { nounwind }

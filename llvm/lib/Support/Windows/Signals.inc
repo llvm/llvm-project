@@ -405,10 +405,7 @@ static void RegisterHandler() {
   // If we cannot load up the APIs (which would be unexpected as they should
   // exist on every version of Windows we support), we will bail out since
   // there would be nothing to report.
-  if (!load64BitDebugHelp()) {
-    assert(false && "These APIs should always be available");
-    return;
-  }
+  assert(load64BitDebugHelp() && "These APIs should always be available");
 
   if (RegisteredUnhandledExceptionFilter) {
     EnterCriticalSection(&CriticalSection);

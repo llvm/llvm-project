@@ -7964,8 +7964,7 @@ static bool IsMaxConsistingOf(const SCEV *MaybeMaxExpr,
   const MaxExprType *MaxExpr = dyn_cast<MaxExprType>(MaybeMaxExpr);
   if (!MaxExpr) return false;
 
-  auto It = std::find(MaxExpr->op_begin(), MaxExpr->op_end(), Candidate);
-  return It != MaxExpr->op_end();
+  return find(MaxExpr->operands(), Candidate) != MaxExpr->op_end();
 }
 
 
@@ -8403,8 +8402,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(ConstantRange Range,
 
   // The only time we can solve this is when we have all constant indices.
   // Otherwise, we cannot determine the overflow conditions.
-  if (std::any_of(op_begin(), op_end(),
-                  [](const SCEV *Op) { return !isa<SCEVConstant>(Op);}))
+  if (any_of(operands(), [](const SCEV *Op) { return !isa<SCEVConstant>(Op); }))
     return SE.getCouldNotCompute();
 
   // Okay at this point we know that all elements of the chrec are constants and
@@ -9694,8 +9692,8 @@ bool SCEVUnionPredicate::implies(const SCEVPredicate *N) const {
     return false;
   auto &SCEVPreds = ScevPredsIt->second;
 
-  return std::any_of(SCEVPreds.begin(), SCEVPreds.end(),
-                     [N](const SCEVPredicate *I) { return I->implies(N); });
+  return any_of(SCEVPreds,
+                [N](const SCEVPredicate *I) { return I->implies(N); });
 }
 
 const SCEV *SCEVUnionPredicate::getExpr() const { return nullptr; }

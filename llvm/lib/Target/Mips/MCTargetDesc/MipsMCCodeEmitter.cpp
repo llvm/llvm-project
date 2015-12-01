@@ -350,6 +350,23 @@ getBranchTarget26OpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
+/// getBranchTarget26OpValueMM - Return binary encoding of the branch
+/// target operand. If the machine operand requires relocation,
+/// record the relocation and return zero.
+unsigned MipsMCCodeEmitter::getBranchTarget26OpValueMM(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, divide by 2.
+  if (MO.isImm())
+    return MO.getImm() >> 1;
+
+  // TODO: Push 26 PC fixup.
+  return 0;
+}
+
 /// getJumpOffset16OpValue - Return binary encoding of the jump
 /// target operand. If the machine operand requires relocation,
 /// record the relocation and return zero.

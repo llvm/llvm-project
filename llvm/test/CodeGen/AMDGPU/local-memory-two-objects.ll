@@ -10,7 +10,7 @@
 ; EG: .long 166120
 ; EG-NEXT: .long 8
 ; GCN: .long 47180
-; GCN-NEXT: .long 38792
+; GCN-NEXT: .long 32900
 
 ; EG: {{^}}local_memory_two_objects:
 

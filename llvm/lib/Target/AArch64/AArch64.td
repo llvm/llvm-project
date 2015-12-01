@@ -38,6 +38,9 @@ def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
 def FeatureFullFP16 : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
   "Full FP16", [FeatureFPARMv8]>;
 
+def FeatureSPE : SubtargetFeature<"spe", "HasSPE", "true",
+  "Enable Statistical Profiling extension">;
+
 /// Cyclone has register move instructions which are "free".
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;

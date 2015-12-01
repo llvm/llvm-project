@@ -81,8 +81,7 @@ static const std::pair<unsigned, unsigned> opcodeData[] = {
     std::make_pair((unsigned)V4_SS2_storewi1, 4352)};
 
 static std::map<unsigned, unsigned>
-    subinstOpcodeMap(opcodeData,
-                     opcodeData + sizeof(opcodeData) / sizeof(opcodeData[0]));
+    subinstOpcodeMap(std::begin(opcodeData), std::end(opcodeData));
 
 bool HexagonMCInstrInfo::isDuplexPairMatch(unsigned Ga, unsigned Gb) {
   switch (Ga) {

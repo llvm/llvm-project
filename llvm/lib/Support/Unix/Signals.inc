@@ -86,12 +86,11 @@ static unsigned NumRegisteredSignals = 0;
 static struct {
   struct sigaction SA;
   int SigNo;
-} RegisteredSignalInfo[(sizeof(IntSigs)+sizeof(KillSigs))/sizeof(KillSigs[0])];
+} RegisteredSignalInfo[array_lengthof(IntSigs) + array_lengthof(KillSigs)];
 
 
 static void RegisterHandler(int Signal) {
-  assert(NumRegisteredSignals <
-         sizeof(RegisteredSignalInfo)/sizeof(RegisteredSignalInfo[0]) &&
+  assert(NumRegisteredSignals < array_lengthof(RegisteredSignalInfo) &&
          "Out of space for signal handlers!");
 
   struct sigaction NewHandler;

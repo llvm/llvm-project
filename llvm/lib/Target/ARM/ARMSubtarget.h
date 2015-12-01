@@ -52,7 +52,7 @@ protected:
   enum ARMArchEnum {
     ARMv2, ARMv2a, ARMv3, ARMv3m, ARMv4, ARMv4t, ARMv5, ARMv5t, ARMv5te,
     ARMv5tej, ARMv6, ARMv6k, ARMv6kz, ARMv6t2, ARMv6m, ARMv6sm, ARMv7a, ARMv7r,
-    ARMv7m, ARMv7em, ARMv8a, ARMv81a
+    ARMv7m, ARMv7em, ARMv8a, ARMv81a, ARMv82a
   };
 
   /// ARMProcFamily - ARM processor family: Cortex-A8, Cortex-A9, and others.
@@ -77,6 +77,7 @@ protected:
   bool HasV7Ops;
   bool HasV8Ops;
   bool HasV8_1aOps;
+  bool HasV8_2aOps;
 
   /// HasVFPv2, HasVFPv3, HasVFPv4, HasFPARMv8, HasNEON - Specify what
   /// floating point ISAs are supported.
@@ -130,9 +131,11 @@ protected:
   /// Thumb.
   bool SupportsTailCall;
 
-  /// HasFP16 - True if subtarget supports half-precision FP (We support VFP+HF
-  /// only so far)
+  /// HasFP16 - True if subtarget supports half-precision FP conversions
   bool HasFP16;
+
+  /// HasFullFP16 - True if subtarget supports half-precision FP operations
+  bool HasFullFP16;
 
   /// HasD16 - True if subtarget is limited to 16 double precision
   /// FP registers for VFPv3.
@@ -309,6 +312,7 @@ public:
   bool hasV7Ops()   const { return HasV7Ops;  }
   bool hasV8Ops()   const { return HasV8Ops;  }
   bool hasV8_1aOps() const { return HasV8_1aOps; }
+  bool hasV8_2aOps() const { return HasV8_2aOps; }
 
   bool isCortexA5() const { return ARMProcFamily == CortexA5; }
   bool isCortexA7() const { return ARMProcFamily == CortexA7; }
@@ -362,6 +366,7 @@ public:
 
   bool hasFP16() const { return HasFP16; }
   bool hasD16() const { return HasD16; }
+  bool hasFullFP16() const { return HasFullFP16; }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 

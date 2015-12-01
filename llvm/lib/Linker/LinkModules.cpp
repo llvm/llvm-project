@@ -410,7 +410,7 @@ class ModuleLinker {
   std::vector<AppendingVarInfo> AppendingVars;
 
   // Set of items not to link in from source.
-  SmallPtrSet<const Value *, 16> DoNotLinkFromSource;
+  SmallPtrSet<const GlobalValue *, 16> DoNotLinkFromSource;
 
   DiagnosticHandlerFunction DiagnosticHandler;
 
@@ -1512,7 +1512,8 @@ void ModuleLinker::linkAppendingVarInit(AppendingVarInfo &AVI) {
 
   for (auto *V : SrcElements) {
     if (IsNewStructor) {
-      Constant *Key = V->getAggregateElement(2);
+      auto *Key =
+          dyn_cast<GlobalValue>(V->getAggregateElement(2)->stripPointerCasts());
       if (DoNotLinkFromSource.count(Key))
         continue;
     }

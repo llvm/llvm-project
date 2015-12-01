@@ -1,8 +1,8 @@
 ; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_debug_value:
-; CHECK: s_load_dwordx2
-; CHECK: DEBUG_VALUE: test_debug_value:globalptr_arg <- %SGPR0_SGPR1
+; CHECK: s_load_dwordx2 s[4:5]
+; CHECK: DEBUG_VALUE: test_debug_value:globalptr_arg <- %SGPR4_SGPR5
 ; CHECK: buffer_store_dword
 ; CHECK: s_endpgm
 define void @test_debug_value(i32 addrspace(1)* nocapture %globalptr_arg) #0 !dbg !4 {

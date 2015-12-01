@@ -28,6 +28,9 @@ class SITargetLowering : public AMDGPUTargetLowering {
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
 
+  SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
+                                 MVT VT, unsigned Offset) const;
+
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
@@ -113,10 +116,6 @@ public:
                            SDValue Ptr,
                            uint32_t RsrcDword1,
                            uint64_t RsrcDword2And3) const;
-  MachineSDNode *buildScratchRSRC(SelectionDAG &DAG,
-                                  SDLoc DL,
-                                  SDValue Ptr) const;
-
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;

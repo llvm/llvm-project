@@ -53,6 +53,9 @@ public:
   // Create a BranchProbability object with the given numerator and 1<<31
   // as denominator.
   static BranchProbability getRaw(uint32_t N) { return BranchProbability(N); }
+  // Create a BranchProbability object from 64-bit integers.
+  static BranchProbability getBranchProbability(uint64_t Numerator,
+                                                uint64_t Denominator);
 
   // Normalize given probabilties so that the sum of them becomes approximate
   // one.
@@ -131,10 +134,30 @@ public:
 
   bool operator==(BranchProbability RHS) const { return N == RHS.N; }
   bool operator!=(BranchProbability RHS) const { return !(*this == RHS); }
-  bool operator<(BranchProbability RHS) const { return N < RHS.N; }
-  bool operator>(BranchProbability RHS) const { return RHS < *this; }
-  bool operator<=(BranchProbability RHS) const { return !(RHS < *this); }
-  bool operator>=(BranchProbability RHS) const { return !(*this < RHS); }
+
+  bool operator<(BranchProbability RHS) const {
+    assert(N != UnknownN && RHS.N != UnknownN &&
+           "Unknown probability cannot participate in comparisons.");
+    return N < RHS.N;
+  }
+
+  bool operator>(BranchProbability RHS) const {
+    assert(N != UnknownN && RHS.N != UnknownN &&
+           "Unknown probability cannot participate in comparisons.");
+    return RHS < *this;
+  }
+
+  bool operator<=(BranchProbability RHS) const {
+    assert(N != UnknownN && RHS.N != UnknownN &&
+           "Unknown probability cannot participate in comparisons.");
+    return !(RHS < *this);
+  }
+
+  bool operator>=(BranchProbability RHS) const {
+    assert(N != UnknownN && RHS.N != UnknownN &&
+           "Unknown probability cannot participate in comparisons.");
+    return !(*this < RHS);
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, BranchProbability Prob) {

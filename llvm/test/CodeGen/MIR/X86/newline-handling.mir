@@ -35,7 +35,7 @@ liveins:
 # CHECK-LABEL: name: foo
 # CHECK: body: |
 # CHECK-NEXT: bb.0.entry:
-# CHECK-NEXT: successors: %bb.1.less(0), %bb.2.exit(0)
+# CHECK-NEXT: successors: %bb.1.less(0x40000000 / 0x80000000 = 50.00%), %bb.2.exit(0x40000000 / 0x80000000 = 50.00%)
 # CHECK-NEXT: liveins: %edi
 # CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
 # CHECK-NEXT: JG_1 %bb.2.exit, implicit killed %eflags
@@ -79,7 +79,7 @@ liveins:
 # CHECK-LABEL: name: bar
 # CHECK: body: |
 # CHECK-NEXT: bb.0.entry:
-# CHECK-NEXT: successors: %bb.1.less(0), %bb.2.exit(0)
+# CHECK-NEXT: successors: %bb.1.less(0x40000000 / 0x80000000 = 50.00%), %bb.2.exit(0x40000000 / 0x80000000 = 50.00%)
 # CHECK-NEXT: liveins: %edi
 # CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
 # CHECK-NEXT: JG_1 %bb.2.exit, implicit killed %eflags

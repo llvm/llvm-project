@@ -137,69 +137,99 @@ def _Fp80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, RFP80:$src2), TwoArgFP,
 // The FopST0 series are not included here because of the irregularities
 // in where the 'r' goes in assembly output.
 // These instructions cannot address 80-bit memory.
-multiclass FPBinary<SDNode OpNode, Format fp, string asmstring> {
+multiclass FPBinary<SDNode OpNode, Format fp, string asmstring,
+                    bit Forward = 1> {
 // ST(0) = ST(0) + [mem]
 def _Fp32m  : FpIf32<(outs RFP32:$dst),
                      (ins RFP32:$src1, f32mem:$src2), OneArgFPRW,
-                  [(set RFP32:$dst,
-                    (OpNode RFP32:$src1, (loadf32 addr:$src2)))]>;
+                  [!if(Forward,
+                       (set RFP32:$dst,
+                        (OpNode RFP32:$src1, (loadf32 addr:$src2))),
+                       (set RFP32:$dst,
+                        (OpNode (loadf32 addr:$src2), RFP32:$src1)))]>;
 def _Fp64m  : FpIf64<(outs RFP64:$dst),
                      (ins RFP64:$src1, f64mem:$src2), OneArgFPRW,
-                  [(set RFP64:$dst,
-                    (OpNode RFP64:$src1, (loadf64 addr:$src2)))]>;
+                  [!if(Forward,
+                       (set RFP64:$dst,
+                        (OpNode RFP64:$src1, (loadf64 addr:$src2))),
+                       (set RFP64:$dst,
+                        (OpNode (loadf64 addr:$src2), RFP64:$src1)))]>;
 def _Fp64m32: FpIf64<(outs RFP64:$dst),
                      (ins RFP64:$src1, f32mem:$src2), OneArgFPRW,
-                  [(set RFP64:$dst,
-                    (OpNode RFP64:$src1, (f64 (extloadf32 addr:$src2))))]>;
+                  [!if(Forward,
+                       (set RFP64:$dst,
+                        (OpNode RFP64:$src1, (f64 (extloadf32 addr:$src2)))),
+                       (set RFP64:$dst,
+                        (OpNode (f64 (extloadf32 addr:$src2)), RFP64:$src1)))]>;
 def _Fp80m32: FpI_<(outs RFP80:$dst),
                    (ins RFP80:$src1, f32mem:$src2), OneArgFPRW,
-                  [(set RFP80:$dst,
-                    (OpNode RFP80:$src1, (f80 (extloadf32 addr:$src2))))]>;
+                  [!if(Forward,
+                       (set RFP80:$dst,
+                        (OpNode RFP80:$src1, (f80 (extloadf32 addr:$src2)))),
+                       (set RFP80:$dst,
+                        (OpNode (f80 (extloadf32 addr:$src2)), RFP80:$src1)))]>;
 def _Fp80m64: FpI_<(outs RFP80:$dst),
                    (ins RFP80:$src1, f64mem:$src2), OneArgFPRW,
-                  [(set RFP80:$dst,
-                    (OpNode RFP80:$src1, (f80 (extloadf64 addr:$src2))))]>;
+                  [!if(Forward,
+                       (set RFP80:$dst,
+                        (OpNode RFP80:$src1, (f80 (extloadf64 addr:$src2)))),
+                       (set RFP80:$dst,
+                        (OpNode (f80 (extloadf64 addr:$src2)), RFP80:$src1)))]>;
+let mayLoad = 1 in
 def _F32m  : FPI<0xD8, fp, (outs), (ins f32mem:$src),
-                 !strconcat("f", asmstring, "{s}\t$src")> {
-  let mayLoad = 1;
-}
+                 !strconcat("f", asmstring, "{s}\t$src")>;
+let mayLoad = 1 in
 def _F64m  : FPI<0xDC, fp, (outs), (ins f64mem:$src),
-                 !strconcat("f", asmstring, "{l}\t$src")> {
-  let mayLoad = 1;
-}
+                 !strconcat("f", asmstring, "{l}\t$src")>;
 // ST(0) = ST(0) + [memint]
 def _FpI16m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i16mem:$src2),
                        OneArgFPRW,
-                    [(set RFP32:$dst, (OpNode RFP32:$src1,
-                                       (X86fild addr:$src2, i16)))]>;
+                       [!if(Forward,
+                            (set RFP32:$dst,
+                             (OpNode RFP32:$src1, (X86fild addr:$src2, i16))),
+                            (set RFP32:$dst,
+                             (OpNode (X86fild addr:$src2, i16), RFP32:$src1)))]>;
 def _FpI32m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i32mem:$src2),
                        OneArgFPRW,
-                    [(set RFP32:$dst, (OpNode RFP32:$src1,
-                                       (X86fild addr:$src2, i32)))]>;
+                       [!if(Forward,
+                            (set RFP32:$dst,
+                             (OpNode RFP32:$src1, (X86fild addr:$src2, i32))),
+                            (set RFP32:$dst,
+                             (OpNode (X86fild addr:$src2, i32), RFP32:$src1)))]>;
 def _FpI16m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i16mem:$src2),
                        OneArgFPRW,
-                    [(set RFP64:$dst, (OpNode RFP64:$src1,
-                                       (X86fild addr:$src2, i16)))]>;
+                       [!if(Forward,
+                            (set RFP64:$dst,
+                             (OpNode RFP64:$src1, (X86fild addr:$src2, i16))),
+                            (set RFP64:$dst,
+                             (OpNode (X86fild addr:$src2, i16), RFP64:$src1)))]>;
 def _FpI32m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i32mem:$src2),
                        OneArgFPRW,
-                    [(set RFP64:$dst, (OpNode RFP64:$src1,
-                                       (X86fild addr:$src2, i32)))]>;
+                       [!if(Forward,
+                            (set RFP64:$dst,
+                             (OpNode RFP64:$src1, (X86fild addr:$src2, i32))),
+                            (set RFP64:$dst,
+                             (OpNode (X86fild addr:$src2, i32), RFP64:$src1)))]>;
 def _FpI16m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i16mem:$src2),
-                       OneArgFPRW,
-                    [(set RFP80:$dst, (OpNode RFP80:$src1,
-                                       (X86fild addr:$src2, i16)))]>;
+                     OneArgFPRW,
+                     [!if(Forward,
+                          (set RFP80:$dst,
+                           (OpNode RFP80:$src1, (X86fild addr:$src2, i16))),
+                          (set RFP80:$dst,
+                           (OpNode (X86fild addr:$src2, i16), RFP80:$src1)))]>;
 def _FpI32m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i32mem:$src2),
-                       OneArgFPRW,
-                    [(set RFP80:$dst, (OpNode RFP80:$src1,
-                                       (X86fild addr:$src2, i32)))]>;
+                     OneArgFPRW,
+                     [!if(Forward,
+                          (set RFP80:$dst,
+                           (OpNode RFP80:$src1, (X86fild addr:$src2, i32))),
+                          (set RFP80:$dst,
+                           (OpNode (X86fild addr:$src2, i32), RFP80:$src1)))]>;
+let mayLoad = 1 in
 def _FI16m  : FPI<0xDE, fp, (outs), (ins i16mem:$src),
-                  !strconcat("fi", asmstring, "{s}\t$src")> {
-  let mayLoad = 1;
-}
+                  !strconcat("fi", asmstring, "{s}\t$src")>;
+let mayLoad = 1 in
 def _FI32m  : FPI<0xDA, fp, (outs), (ins i32mem:$src),
-                  !strconcat("fi", asmstring, "{l}\t$src")> {
-  let mayLoad = 1;
-}
+                  !strconcat("fi", asmstring, "{l}\t$src")>;
 }
 
 let Defs = [FPSW] in {
@@ -213,14 +243,14 @@ defm DIV : FPBinary_rr<fdiv>;
 let SchedRW = [WriteFAddLd] in {
 defm ADD : FPBinary<fadd, MRM0m, "add">;
 defm SUB : FPBinary<fsub, MRM4m, "sub">;
-defm SUBR: FPBinary<fsub ,MRM5m, "subr">;
+defm SUBR: FPBinary<fsub ,MRM5m, "subr", 0>;
 }
 let SchedRW = [WriteFMulLd] in {
 defm MUL : FPBinary<fmul, MRM1m, "mul">;
 }
 let SchedRW = [WriteFDivLd] in {
 defm DIV : FPBinary<fdiv, MRM6m, "div">;
-defm DIVR: FPBinary<fdiv, MRM7m, "divr">;
+defm DIVR: FPBinary<fdiv, MRM7m, "divr", 0>;
 }
 }
 

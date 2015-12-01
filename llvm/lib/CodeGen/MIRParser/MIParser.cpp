@@ -459,8 +459,9 @@ bool MIParser::parseBasicBlockSuccessors(MachineBasicBlock &MBB) {
       if (expectAndConsume(MIToken::rparen))
         return true;
     }
-    MBB.addSuccessor(SuccMBB, Weight);
+    MBB.addSuccessor(SuccMBB, BranchProbability::getRaw(Weight));
   } while (consumeIfPresent(MIToken::comma));
+  MBB.normalizeSuccProbs();
   return false;
 }
 

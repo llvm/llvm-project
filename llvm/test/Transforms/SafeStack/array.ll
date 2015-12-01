@@ -35,4 +35,52 @@ entry:
   ret void
 }
 
+; Load from an array at a fixed offset, no overflow.
+define i8 @StaticArrayFixedSafe() nounwind uwtable safestack {
+entry:
+  ; CHECK-LABEL: define i8 @StaticArrayFixedSafe(
+  ; CHECK-NOT: __safestack_unsafe_stack_ptr
+  ; CHECK: ret i8
+  %buf = alloca i8, i32 4, align 1
+  %gep = getelementptr inbounds i8, i8* %buf, i32 2
+  %x = load i8, i8* %gep, align 1
+  ret i8 %x
+}
+
+; Load from an array at a fixed offset with overflow.
+define i8 @StaticArrayFixedUnsafe() nounwind uwtable safestack {
+entry:
+  ; CHECK-LABEL: define i8 @StaticArrayFixedUnsafe(
+  ; CHECK: __safestack_unsafe_stack_ptr
+  ; CHECK: ret i8
+  %buf = alloca i8, i32 4, align 1
+  %gep = getelementptr inbounds i8, i8* %buf, i32 5
+  %x = load i8, i8* %gep, align 1
+  ret i8 %x
+}
+
+; Load from an array at an unknown offset.
+define i8 @StaticArrayVariableUnsafe(i32 %ofs) nounwind uwtable safestack {
+entry:
+  ; CHECK-LABEL: define i8 @StaticArrayVariableUnsafe(
+  ; CHECK: __safestack_unsafe_stack_ptr
+  ; CHECK: ret i8
+  %buf = alloca i8, i32 4, align 1
+  %gep = getelementptr inbounds i8, i8* %buf, i32 %ofs
+  %x = load i8, i8* %gep, align 1
+  ret i8 %x
+}
+
+; Load from an array of an unknown size.
+define i8 @DynamicArrayUnsafe(i32 %sz) nounwind uwtable safestack {
+entry:
+  ; CHECK-LABEL: define i8 @DynamicArrayUnsafe(
+  ; CHECK: __safestack_unsafe_stack_ptr
+  ; CHECK: ret i8
+  %buf = alloca i8, i32 %sz, align 1
+  %gep = getelementptr inbounds i8, i8* %buf, i32 2
+  %x = load i8, i8* %gep, align 1
+  ret i8 %x
+}
+
 declare i8* @strcpy(i8*, i8*)

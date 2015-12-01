@@ -745,12 +745,12 @@ TailDuplicatePass::duplicateSimpleBB(MachineBasicBlock *TailBB,
     if (PredTBB)
       TII->InsertBranch(*PredBB, PredTBB, PredFBB, PredCond, DebugLoc());
 
-    uint32_t Weight = MBPI->getEdgeWeight(PredBB, TailBB);
+    auto Prob = MBPI->getEdgeProbability(PredBB, TailBB);
     PredBB->removeSuccessor(TailBB);
     unsigned NumSuccessors = PredBB->succ_size();
     assert(NumSuccessors <= 1);
     if (NumSuccessors == 0 || *PredBB->succ_begin() != NewTarget)
-      PredBB->addSuccessor(NewTarget, Weight);
+      PredBB->addSuccessor(NewTarget, Prob);
 
     TDBBs.push_back(PredBB);
   }
@@ -858,7 +858,7 @@ TailDuplicatePass::TailDuplicate(MachineBasicBlock *TailBB,
            "TailDuplicate called on block with multiple successors!");
     for (MachineBasicBlock::succ_iterator I = TailBB->succ_begin(),
            E = TailBB->succ_end(); I != E; ++I)
-      PredBB->addSuccessor(*I, MBPI->getEdgeWeight(TailBB, I));
+      PredBB->addSuccessor(*I, MBPI->getEdgeProbability(TailBB, I));
 
     Changed = true;
     ++NumTailDups;

@@ -88,6 +88,9 @@ ARM_ARCH("armv8-a", AK_ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8,
 ARM_ARCH("armv8.1-a", AK_ARMV8_1A, "8.1-A", "v8.1a", ARMBuildAttrs::CPUArch::v8,
           FK_CRYPTO_NEON_FP_ARMV8, (AEK_SEC | AEK_MP | AEK_VIRT | AEK_HWDIVARM |
                              AEK_HWDIV | AEK_DSP | AEK_CRC))
+ARM_ARCH("armv8.2-a", AK_ARMV8_2A, "8.2-A", "v8.2a", ARMBuildAttrs::CPUArch::v8,
+          FK_CRYPTO_NEON_FP_ARMV8, (AEK_SEC | AEK_MP | AEK_VIRT | AEK_HWDIVARM |
+                             AEK_HWDIV | AEK_DSP | AEK_CRC))
 // Non-standard Arch names.
 ARM_ARCH("iwmmxt", AK_IWMMXT, "iwmmxt", "", ARMBuildAttrs::CPUArch::v5TE,
           FK_NONE, AEK_NONE)
@@ -115,6 +118,7 @@ ARM_ARCH_EXT_NAME("mp",       AEK_MP,       nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("simd",     AEK_SIMD,     nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("sec",      AEK_SEC,      nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("virt",     AEK_VIRT,     nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("fp16",     AEK_FP16,     "+fullfp16",  "-fullfp16")
 ARM_ARCH_EXT_NAME("os",       AEK_OS,       nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("iwmmxt",   AEK_IWMMXT,   nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("iwmmxt2",  AEK_IWMMXT2,  nullptr,  nullptr)

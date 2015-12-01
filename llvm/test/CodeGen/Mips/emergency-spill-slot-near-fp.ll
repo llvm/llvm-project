@@ -1,5 +1,5 @@
 ; Check that register scavenging spill slot is close to $fp.
-; RUN: llc -march=mipsel -O0 -fast-isel=false < %s | FileCheck %s
+; RUN: llc -march=mipsel -O0 < %s | FileCheck %s
 
 ; CHECK: sw ${{.*}}, 8($sp)
 ; CHECK: lw ${{.*}}, 8($sp)
@@ -31,4 +31,4 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { noinline optnone "no-frame-pointer-elim"="true" }
+attributes #0 = { noinline "no-frame-pointer-elim"="true" }

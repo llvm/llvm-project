@@ -422,25 +422,12 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   const ThumbRegisterInfo *RegInfo =
       static_cast<const ThumbRegisterInfo *>(STI.getRegisterInfo());
 
-  // If MBBI is a return instruction, we may be able to directly restore
-  // LR in the PC.
-  // This is possible if we do not need to emit any SP update.
-  // Otherwise, we need a temporary register to pop the value
-  // and copy that value into LR.
+  // When we need a special fix up for POP, this means that
+  // we either cannot use PC in POP or we have to update
+  // SP after poping the return address.
+  // In other words, we cannot use a pop {pc} like construction
+  // here, no matter what.
   auto MBBI = MBB.getFirstTerminator();
-  if (!ArgRegsSaveSize && MBBI != MBB.end() &&
-      MBBI->getOpcode() == ARM::tBX_RET) {
-    if (!DoIt)
-      return true;
-    MachineInstrBuilder MIB =
-        AddDefaultPred(
-            BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII.get(ARM::tPOP_RET)))
-            .addReg(ARM::PC, RegState::Define);
-    MIB.copyImplicitOps(&*MBBI);
-    // erase the old tBX_RET instruction
-    MBB.erase(MBBI);
-    return true;
-  }
 
   // Look for a temporary register to use.
   // First, compute the liveness information.

@@ -29,6 +29,8 @@ def HasCRC           : Predicate<"Subtarget->hasCRC()">,
 def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicate<"FeatureFullFP16", "fullfp16">;
+def HasSPE           : Predicate<"Subtarget->hasSPE()">,
+                                 AssemblerPredicate<"FeatureSPE", "spe">;
 
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
@@ -381,6 +383,9 @@ def : InstAlias<"wfe",  (HINT 0b010)>;
 def : InstAlias<"wfi",  (HINT 0b011)>;
 def : InstAlias<"sev",  (HINT 0b100)>;
 def : InstAlias<"sevl", (HINT 0b101)>;
+
+// v8.2a Statistical Profiling extension
+def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in

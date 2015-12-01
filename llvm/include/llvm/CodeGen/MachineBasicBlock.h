@@ -91,13 +91,6 @@ private:
   std::vector<MachineBasicBlock *> Predecessors;
   std::vector<MachineBasicBlock *> Successors;
 
-  /// Keep track of the weights to the successors. This vector has the same
-  /// order as Successors, or it is empty if we don't use it (disable
-  /// optimization).
-  std::vector<uint32_t> Weights;
-  typedef std::vector<uint32_t>::iterator weight_iterator;
-  typedef std::vector<uint32_t>::const_iterator const_weight_iterator;
-
   /// Keep track of the probabilities to the successors. This vector has the
   /// same order as Successors, or it is empty if we don't use it (disable
   /// optimization).
@@ -441,34 +434,21 @@ public:
   // Machine-CFG mutators
 
   /// Add Succ as a successor of this MachineBasicBlock.  The Predecessors list
-  /// of Succ is automatically updated. WEIGHT parameter is stored in Weights
-  /// list and it may be used by MachineBranchProbabilityInfo analysis to
-  /// calculate branch probability.
-  ///
-  /// Note that duplicate Machine CFG edges are not allowed.
-  void addSuccessor(MachineBasicBlock *Succ, uint32_t Weight = 0);
-
-  /// Add Succ as a successor of this MachineBasicBlock.  The Predecessors list
-  /// of Succ is automatically updated. The weight is not provided because BPI
-  /// is not available (e.g. -O0 is used), in which case edge weights won't be
-  /// used. Using this interface can save some space.
-  void addSuccessorWithoutWeight(MachineBasicBlock *Succ);
-
-  /// Add Succ as a successor of this MachineBasicBlock.  The Predecessors list
   /// of Succ is automatically updated. PROB parameter is stored in
-  /// Probabilities list.
+  /// Probabilities list. The default probability is set as unknown. Mixing
+  /// known and unknown probabilities in successor list is not allowed. When all
+  /// successors have unknown probabilities, 1 / N is returned as the
+  /// probability for each successor, where N is the number of successors.
   ///
   /// Note that duplicate Machine CFG edges are not allowed.
-  void addSuccessor(MachineBasicBlock *Succ, BranchProbability Prob);
+  void addSuccessor(MachineBasicBlock *Succ,
+                    BranchProbability Prob = BranchProbability::getUnknown());
 
   /// Add Succ as a successor of this MachineBasicBlock.  The Predecessors list
   /// of Succ is automatically updated. The probability is not provided because
   /// BPI is not available (e.g. -O0 is used), in which case edge probabilities
   /// won't be used. Using this interface can save some space.
   void addSuccessorWithoutProb(MachineBasicBlock *Succ);
-
-  /// Set successor weight of a given iterator.
-  void setSuccWeight(succ_iterator I, uint32_t Weight);
 
   /// Set successor probability of a given iterator.
   void setSuccProbability(succ_iterator I, BranchProbability Prob);
@@ -488,7 +468,7 @@ public:
   /// Return the iterator to the element after the one removed.
   succ_iterator removeSuccessor(succ_iterator I);
 
-  /// Replace successor OLD with NEW and update weight info.
+  /// Replace successor OLD with NEW and update probability info.
   void replaceSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New);
 
   /// Transfers all the successors from MBB to this machine basic block (i.e.,
@@ -499,9 +479,6 @@ public:
   /// Transfers all the successors, as in transferSuccessors, and update PHI
   /// operands in the successor blocks which refer to FromMBB to refer to this.
   void transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB);
-
-  /// Return true if any of the successors have weights attached to them.
-  bool hasSuccessorWeights() const { return !Weights.empty(); }
 
   /// Return true if any of the successors have probabilities attached to them.
   bool hasSuccessorProbabilities() const { return !Probs.empty(); }
@@ -759,10 +736,6 @@ public:
 
 
 private:
-  /// Return weight iterator corresponding to the I successor iterator.
-  weight_iterator getWeightIterator(succ_iterator I);
-  const_weight_iterator getWeightIterator(const_succ_iterator I) const;
-
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);
   const_probability_iterator
@@ -770,11 +743,6 @@ private:
 
   friend class MachineBranchProbabilityInfo;
   friend class MIPrinter;
-
-  /// Return weight of the edge from this block to MBB. This method should NOT
-  /// be called directly, but by using getEdgeWeight method from
-  /// MachineBranchProbabilityInfo class.
-  uint32_t getSuccWeight(const_succ_iterator Succ) const;
 
   /// Return probability of the edge from this block to MBB. This method should
   /// NOT be called directly, but by using getEdgeProbability method from

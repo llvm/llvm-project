@@ -4596,22 +4596,17 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
         Address = BCI->getOperand(0);
       // Parameters are handled specially.
       bool isParameter = Variable->isParameter() || isa<Argument>(Address);
-
-      const AllocaInst *AI = dyn_cast<AllocaInst>(Address);
-
-      if (isParameter && !AI) {
-        FrameIndexSDNode *FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
-        if (FINode)
-          // Byval parameter.  We have a frame index at this point.
-          SDV = DAG.getFrameIndexDbgValue(
-              Variable, Expression, FINode->getIndex(), 0, dl, SDNodeOrder);
-        else {
-          // Address is an argument, so try to emit its dbg value using
-          // virtual register info from the FuncInfo.ValueMap.
-          EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, false,
-                                   N);
-          return nullptr;
-        }
+      auto FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
+      if (isParameter && FINode) {
+        // Byval parameter. We have a frame index at this point.
+        SDV = DAG.getFrameIndexDbgValue(Variable, Expression,
+                                        FINode->getIndex(), 0, dl, SDNodeOrder);
+      } else if (isa<Argument>(Address)) {
+        // Address is an argument, so try to emit its dbg value using
+        // virtual register info from the FuncInfo.ValueMap.
+        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, false,
+                                 N);
+        return nullptr;
       } else {
         SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
                               true, 0, dl, SDNodeOrder);

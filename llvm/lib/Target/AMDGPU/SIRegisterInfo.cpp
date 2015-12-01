@@ -32,6 +32,40 @@ void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) co
     Reserved.set(*R);
 }
 
+unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
+  const MachineFunction &MF) const {
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  if (ST.hasSGPRInitBug()) {
+    unsigned BaseIdx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4 - 4;
+    unsigned BaseReg(AMDGPU::SGPR_32RegClass.getRegister(BaseIdx));
+    return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SReg_128RegClass);
+  }
+
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    // 98/99 need to be reserved for flat_scr, and 100/101 for vcc. This is the
+    // next sgpr128 down.
+    return AMDGPU::SGPR92_SGPR93_SGPR94_SGPR95;
+  }
+
+  return AMDGPU::SGPR96_SGPR97_SGPR98_SGPR99;
+}
+
+unsigned SIRegisterInfo::reservedPrivateSegmentWaveByteOffsetReg(
+  const MachineFunction &MF) const {
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  if (ST.hasSGPRInitBug()) {
+    unsigned Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4 - 5;
+    return AMDGPU::SGPR_32RegClass.getRegister(Idx);
+  }
+
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    // Next register before reservations for flat_scr and vcc.
+    return AMDGPU::SGPR97;
+  }
+
+  return AMDGPU::SGPR95;
+}
+
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   Reserved.set(AMDGPU::INDIRECT_BASE_ADDR);
@@ -66,6 +100,23 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
       reserveRegisterTuples(Reserved, Reg);
     }
+  }
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  unsigned ScratchWaveOffsetReg = MFI->getScratchWaveOffsetReg();
+  if (ScratchWaveOffsetReg != AMDGPU::NoRegister) {
+    // Reserve 1 SGPR for scratch wave offset in case we need to spill.
+    reserveRegisterTuples(Reserved, ScratchWaveOffsetReg);
+  }
+
+  unsigned ScratchRSrcReg = MFI->getScratchRSrcReg();
+  if (ScratchRSrcReg != AMDGPU::NoRegister) {
+    // Reserve 4 SGPRs for the scratch buffer resource descriptor in case we need
+    // to spill.
+    // TODO: May need to reserve a VGPR if doing LDS spilling.
+    reserveRegisterTuples(Reserved, ScratchRSrcReg);
+    assert(!isSubRegister(ScratchRSrcReg, ScratchWaveOffsetReg));
   }
 
   return Reserved;
@@ -188,11 +239,10 @@ void SIRegisterInfo::buildScratchLoadStore(MachineBasicBlock::iterator MI,
     unsigned SubReg = NumSubRegs > 1 ?
         getPhysRegSubReg(Value, &AMDGPU::VGPR_32RegClass, i) :
         Value;
-    bool IsKill = (i == e - 1);
 
     BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
       .addReg(SubReg, getDefRegState(IsLoad))
-      .addReg(ScratchRsrcReg, getKillRegState(IsKill))
+      .addReg(ScratchRsrcReg)
       .addReg(SOffset)
       .addImm(Offset)
       .addImm(0) // glc
@@ -243,6 +293,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 .addReg(SubReg)
                 .addImm(Spill.Lane);
 
+        // FIXME: Since this spills to another register instead of an actual
+        // frame index, we should delete the frame index when all references to
+        // it are fixed.
       }
       MI->eraseFromParent();
       break;
@@ -507,36 +560,47 @@ bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
   return OpType == AMDGPU::OPERAND_REG_INLINE_C;
 }
 
+// FIXME: Most of these are flexible with HSA and we don't need to reserve them
+// as input registers if unused. Whether the dispatch ptr is necessary should be
+// easy to detect from used intrinsics. Scratch setup is harder to know.
 unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
                                            enum PreloadedValue Value) const {
 
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  (void)ST;
   switch (Value) {
-  case SIRegisterInfo::TGID_X:
-    return AMDGPU::SReg_32RegClass.getRegister(MFI->NumUserSGPRs + 0);
-  case SIRegisterInfo::TGID_Y:
-    return AMDGPU::SReg_32RegClass.getRegister(MFI->NumUserSGPRs + 1);
-  case SIRegisterInfo::TGID_Z:
-    return AMDGPU::SReg_32RegClass.getRegister(MFI->NumUserSGPRs + 2);
-  case SIRegisterInfo::SCRATCH_WAVE_OFFSET:
-    if (MFI->getShaderType() != ShaderType::COMPUTE)
-      return MFI->ScratchOffsetReg;
-    return AMDGPU::SReg_32RegClass.getRegister(MFI->NumUserSGPRs + 4);
-  case SIRegisterInfo::SCRATCH_PTR:
-    return AMDGPU::SGPR2_SGPR3;
-  case SIRegisterInfo::INPUT_PTR:
-    if (ST.isAmdHsaOS())
-      return MFI->hasDispatchPtr() ? AMDGPU::SGPR2_SGPR3 : AMDGPU::SGPR0_SGPR1;
-    return AMDGPU::SGPR0_SGPR1;
+  case SIRegisterInfo::WORKGROUP_ID_X:
+    assert(MFI->hasWorkGroupIDX());
+    return MFI->WorkGroupIDXSystemSGPR;
+  case SIRegisterInfo::WORKGROUP_ID_Y:
+    assert(MFI->hasWorkGroupIDY());
+    return MFI->WorkGroupIDYSystemSGPR;
+  case SIRegisterInfo::WORKGROUP_ID_Z:
+    assert(MFI->hasWorkGroupIDZ());
+    return MFI->WorkGroupIDZSystemSGPR;
+  case SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET:
+    return MFI->PrivateSegmentWaveByteOffsetSystemSGPR;
+  case SIRegisterInfo::PRIVATE_SEGMENT_BUFFER:
+    assert(ST.isAmdHsaOS() && "Non-HSA ABI currently uses relocations");
+    assert(MFI->hasPrivateSegmentBuffer());
+    return MFI->PrivateSegmentBufferUserSGPR;
+  case SIRegisterInfo::KERNARG_SEGMENT_PTR:
+    assert(MFI->hasKernargSegmentPtr());
+    return MFI->KernargSegmentPtrUserSGPR;
   case SIRegisterInfo::DISPATCH_PTR:
     assert(MFI->hasDispatchPtr());
-    return AMDGPU::SGPR0_SGPR1;
-  case SIRegisterInfo::TIDIG_X:
+    return MFI->DispatchPtrUserSGPR;
+  case SIRegisterInfo::QUEUE_PTR:
+    llvm_unreachable("not implemented");
+  case SIRegisterInfo::WORKITEM_ID_X:
+    assert(MFI->hasWorkItemIDX());
     return AMDGPU::VGPR0;
-  case SIRegisterInfo::TIDIG_Y:
+  case SIRegisterInfo::WORKITEM_ID_Y:
+    assert(MFI->hasWorkItemIDY());
     return AMDGPU::VGPR1;
-  case SIRegisterInfo::TIDIG_Z:
+  case SIRegisterInfo::WORKITEM_ID_Z:
+    assert(MFI->hasWorkItemIDZ());
     return AMDGPU::VGPR2;
   }
   llvm_unreachable("unexpected preloaded value type");

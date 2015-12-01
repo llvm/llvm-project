@@ -573,10 +573,18 @@ bool PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
   RS.initRegState();
   RS.enterBasicBlock(MBB);
 
-  // The scratch register will be used at the end of the block, so must consider
-  // all registers used within the block
-  if (UseAtEnd && MBB->begin() != MBB->getFirstTerminator())
-    RS.forward(MBB->getFirstTerminator());
+  if (UseAtEnd && !MBB->empty()) {
+    // The scratch register will be used at the end of the block, so must consider
+    // all registers used within the block
+
+    MachineBasicBlock::iterator MBBI = MBB->getFirstTerminator();
+    // If no terminator, back iterator up to previous instruction.
+    if (MBBI == MBB->end())
+      MBBI = std::prev(MBBI);
+
+    if (MBBI != MBB->begin())
+      RS.forward(MBBI);
+  }
   
   if (!RS.isRegUsed(R0)) 
     return true;
@@ -1768,6 +1776,6 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 }
 
 bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
-  // FIXME: Enable this for non-Darwin PPC64 once it is confirmed working.
-  return false;
+  return (MF.getSubtarget<PPCSubtarget>().isSVR4ABI() &&
+          MF.getSubtarget<PPCSubtarget>().isPPC64());
 }

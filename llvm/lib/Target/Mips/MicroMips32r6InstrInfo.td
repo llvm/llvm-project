@@ -11,6 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+def brtarget26_mm : Operand<OtherVT> {
+  let EncoderMethod = "getBranchTarget26OpValueMM";
+  let OperandType = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranchTarget26MM";
+  let ParserMatchClass = MipsJumpTargetAsmOperand;
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Encodings
@@ -238,11 +245,11 @@ class BC_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd>
   bit isBarrier = 1;
 }
 
-class BALC_MMR6_DESC : BC_MMR6_DESC_BASE<"balc", brtarget26> {
+class BALC_MMR6_DESC : BC_MMR6_DESC_BASE<"balc", brtarget26_mm> {
   bit isCall = 1;
   list<Register> Defs = [RA];
 }
-class BC_MMR6_DESC : BC_MMR6_DESC_BASE<"bc", brtarget26>;
+class BC_MMR6_DESC : BC_MMR6_DESC_BASE<"bc", brtarget26_mm>;
 
 class BC16_MMR6_DESC : MicroMipsInst16<(outs), (ins brtarget10_mm:$offset),
                                        !strconcat("bc16", "\t$offset"), [],

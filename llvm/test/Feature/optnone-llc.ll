@@ -3,11 +3,13 @@
 ; RUN: llc -O2 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 ; RUN: llc -O3 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 ; RUN: llc -misched-postra -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-MORE
+; RUN: llc -O1 -debug-only=isel %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc -O1 -debug-only=isel -fast-isel=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOFAST
 
 ; REQUIRES: asserts, default_triple
 
 ; This test verifies that we don't run Machine Function optimizations
-; on optnone functions.
+; on optnone functions, and that we can turn off FastISel.
 
 ; Function Attrs: noinline optnone
 define i32 @_Z3fooi(i32 %x) #0 {
@@ -52,3 +54,7 @@ attributes #0 = { optnone noinline }
 
 ; Alternate post-RA scheduler.
 ; LLC-MORE: Skipping pass 'PostRA Machine Instruction Scheduler'
+
+; Selectively disable FastISel for optnone functions.
+; FAST:   FastISel is enabled
+; NOFAST: FastISel is disabled

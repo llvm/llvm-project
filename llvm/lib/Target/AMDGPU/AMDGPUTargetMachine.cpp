@@ -327,7 +327,6 @@ void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
 }
 
 void GCNPassConfig::addPostRegAlloc() {
-  addPass(createSIPrepareScratchRegs(), false);
   addPass(createSIShrinkInstructionsPass(), false);
 }
 

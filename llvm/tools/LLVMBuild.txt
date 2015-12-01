@@ -28,6 +28,7 @@ subdirectories =
  llvm-diff
  llvm-dis
  llvm-dwarfdump
+ llvm-dwp
  llvm-extract
  llvm-jitlistener
  llvm-link

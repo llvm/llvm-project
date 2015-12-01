@@ -4,7 +4,7 @@
 ; RUN:   FileCheck --check-prefix=ALL --check-prefix=CHECK2 %s
 
 ; Test the bitcode writer too. It used to crash.
-; RUN: llvm-link %s %p/Inputs/ctors.ll -o t.bc
+; RUN: llvm-link %s %p/Inputs/ctors.ll -o %t.bc
 
 @v = weak global i8 0
 ; CHECK1: @v = weak global i8 0

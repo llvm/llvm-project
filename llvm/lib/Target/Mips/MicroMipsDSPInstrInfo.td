@@ -130,6 +130,17 @@ class PRECRQ_QB_PH_MM_ENC : POOL32A_3RB0_FMT<"precrq.qb.ph", 0b0010101101>;
 class PRECRQU_S_QB_PH_MM_ENC
     : POOL32A_3RB0_FMT<"precrqu_s.qb.ph", 0b0101101101>;
 class PRECRQ_RS_PH_W_MM_ENC : POOL32A_3RB0_FMT<"precrq_rs.ph.w", 0b0100101101>;
+class LBUX_MM_ENC : POOL32A_1RMEMB0_FMT<"lbux", 0b1000100101>;
+class LHX_MM_ENC : POOL32A_1RMEMB0_FMT<"lhx", 0b0101100101>;
+class LWX_MM_ENC : POOL32A_1RMEMB0_FMT<"lwx", 0b0110100101>;
+class MAQ_S_W_PHL_MM_ENC : POOL32A_2RAC_FMT<"maq_s.w.phl", 0b01101001>;
+class MAQ_SA_W_PHL_MM_ENC : POOL32A_2RAC_FMT<"maq_sa.w.phl", 0b11101001>;
+class MAQ_S_W_PHR_MM_ENC : POOL32A_2RAC_FMT<"maq_s.w.phr", 0b00101001>;
+class MAQ_SA_W_PHR_MM_ENC : POOL32A_2RAC_FMT<"maq_sa.w.phr", 0b10101001>;
+class MFHI_MM_ENC : POOL32A_1RAC_FMT<"mfhi", 0b00000001>;
+class MFLO_MM_ENC : POOL32A_1RAC_FMT<"mflo", 0b01000001>;
+class MTHI_MM_ENC : POOL32A_1RAC_FMT<"mthi", 0b10000001>;
+class MTLO_MM_ENC : POOL32A_1RAC_FMT<"mthi", 0b11000001>;
 
 // Instruction desc.
 class ABSQ_S_PH_MM_R2_DESC_BASE<string opstr, SDPatternOperator OpNode,
@@ -288,6 +299,20 @@ class EXTRV_S_H_MM_DESC
     : EXT_MM_2R_DESC_BASE<"extrv_s.h", MipsEXTR_S_H, NoItinerary>,
       Defs<[DSPOutFlag23]>;
 
+class MFHI_MM_DESC_BASE<string instr_asm, RegisterOperand RO, SDNode OpNode,
+                        InstrItinClass itin> {
+  dag OutOperandList = (outs GPR32Opnd:$rs);
+  dag InOperandList = (ins RO:$ac);
+  string AsmString = !strconcat(instr_asm, "\t$rs, $ac");
+  list<dag> Pattern = [(set GPR32Opnd:$rs, (OpNode RO:$ac))];
+  InstrItinClass Itinerary = itin;
+}
+
+class MFHI_MM_DESC : MFHI_MM_DESC_BASE<"mfhi", ACC64DSPOpnd, MipsMFHI,
+                                       NoItinerary>;
+class MFLO_MM_DESC : MFHI_MM_DESC_BASE<"mflo", ACC64DSPOpnd, MipsMFLO,
+                                       NoItinerary>;
+
 // Instruction defs.
 // microMIPS DSP Rev 1
 def ADDQ_PH_MM : DspMMRel, ADDQ_PH_MM_ENC, ADDQ_PH_DESC;
@@ -368,6 +393,17 @@ def PRECRQ_PH_W_MM : DspMMRel, PRECRQ_PH_W_MM_ENC, PRECRQ_PH_W_DESC;
 def PRECRQ_QB_PH_MM : DspMMRel, PRECRQ_QB_PH_MM_ENC, PRECRQ_QB_PH_DESC;
 def PRECRQU_S_QB_PH_MM : DspMMRel, PRECRQU_S_QB_PH_MM_ENC, PRECRQU_S_QB_PH_DESC;
 def PRECRQ_RS_PH_W_MM : DspMMRel, PRECRQ_RS_PH_W_MM_ENC, PRECRQ_RS_PH_W_DESC;
+def LBUX_MM : DspMMRel, LBUX_MM_ENC, LBUX_DESC;
+def LHX_MM : DspMMRel, LHX_MM_ENC, LHX_DESC;
+def LWX_MM : DspMMRel, LWX_MM_ENC, LWX_DESC;
+def MAQ_S_W_PHL_MM : DspMMRel, MAQ_S_W_PHL_MM_ENC, MAQ_S_W_PHL_DESC;
+def MAQ_SA_W_PHL_MM : DspMMRel, MAQ_SA_W_PHL_MM_ENC, MAQ_SA_W_PHL_DESC;
+def MAQ_S_W_PHR_MM : DspMMRel, MAQ_S_W_PHR_MM_ENC, MAQ_S_W_PHR_DESC;
+def MAQ_SA_W_PHR_MM : DspMMRel, MAQ_SA_W_PHR_MM_ENC, MAQ_SA_W_PHR_DESC;
+def MFHI_DSP_MM : DspMMRel, MFHI_MM_ENC, MFHI_MM_DESC;
+def MFLO_DSP_MM : DspMMRel, MFLO_MM_ENC, MFLO_MM_DESC;
+def MTHI_DSP_MM : DspMMRel, MTHI_MM_ENC, MTHI_DESC;
+def MTLO_DSP_MM : DspMMRel, MTLO_MM_ENC, MTLO_DESC;
 // microMIPS DSP Rev 2
 def ABSQ_S_QB_MMR2 : DspMMRel, ABSQ_S_QB_MMR2_ENC, ABSQ_S_QB_MMR2_DESC,
                      ISA_DSPR2;

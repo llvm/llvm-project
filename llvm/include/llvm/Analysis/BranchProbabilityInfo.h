@@ -61,6 +61,9 @@ public:
   BranchProbability getEdgeProbability(const BasicBlock *Src,
                                        const BasicBlock *Dst) const;
 
+  BranchProbability getEdgeProbability(const BasicBlock *Src,
+                                       succ_const_iterator Dst) const;
+
   /// \brief Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot

@@ -21,6 +21,9 @@ public:
     AMDGPUFrameLowering(D, StackAl, LAO, TransAl) {}
   ~SIFrameLowering() override {}
 
+  void emitPrologue(MachineFunction &MF,
+                    MachineBasicBlock &MBB) const override;
+
   void processFunctionBeforeFrameFinalized(
     MachineFunction &MF,
     RegScavenger *RS = nullptr) const override;
