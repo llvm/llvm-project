@@ -275,6 +275,7 @@ class RADDU_W_QB_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string AsmString = !strconcat(instr_asm, "\t$rd, $rs");
   list<dag> Pattern = [(set ROD:$rd, (OpNode ROS:$rs))];
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class CMP_EQ_QB_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -328,6 +329,7 @@ class REPL_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string AsmString = !strconcat(instr_asm, "\t$rd, $imm");
   list<dag> Pattern = [(set RO:$rd, (OpNode immPat:$imm))];
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class SHLL_QB_R3_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -383,6 +385,7 @@ class APPEND_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                         (OpNode GPR32Opnd:$src, GPR32Opnd:$rs, Imm:$sa))];
   InstrItinClass Itinerary = itin;
   string Constraints = "$src = $rt";
+  string BaseOpcode = instr_asm;
 }
 
 class EXTR_W_TY1_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -428,6 +431,7 @@ class MTHLIP_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
   list<dag> Pattern = [(set ACC64DSPOpnd:$ac,
                         (OpNode GPR32Opnd:$rs, ACC64DSPOpnd:$acin))];
   string Constraints = "$acin = $ac";
+  string BaseOpcode = instr_asm;
 }
 
 class RDDSP_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -437,6 +441,7 @@ class RDDSP_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string AsmString = !strconcat(instr_asm, "\t$rd, $mask");
   list<dag> Pattern = [(set GPR32Opnd:$rd, (OpNode immZExt10:$mask))];
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class WRDSP_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -1107,7 +1112,7 @@ def SUBQ_S_W : DspMMRel, SUBQ_S_W_ENC, SUBQ_S_W_DESC;
 def ADDSC : DspMMRel, ADDSC_ENC, ADDSC_DESC;
 def ADDWC : DspMMRel, ADDWC_ENC, ADDWC_DESC;
 def MODSUB : MODSUB_ENC, MODSUB_DESC;
-def RADDU_W_QB : RADDU_W_QB_ENC, RADDU_W_QB_DESC;
+def RADDU_W_QB : DspMMRel, RADDU_W_QB_ENC, RADDU_W_QB_DESC;
 def ABSQ_S_PH : DspMMRel, ABSQ_S_PH_ENC, ABSQ_S_PH_DESC;
 def ABSQ_S_W : DspMMRel, ABSQ_S_W_ENC, ABSQ_S_W_DESC;
 def PRECRQ_QB_PH : DspMMRel, PRECRQ_QB_PH_ENC, PRECRQ_QB_PH_DESC;
@@ -1179,10 +1184,10 @@ def CMP_LT_PH : CMP_LT_PH_ENC, CMP_LT_PH_DESC;
 def CMP_LE_PH : CMP_LE_PH_ENC, CMP_LE_PH_DESC;
 def BITREV : BITREV_ENC, BITREV_DESC;
 def PACKRL_PH : PACKRL_PH_ENC, PACKRL_PH_DESC;
-def REPL_QB : REPL_QB_ENC, REPL_QB_DESC;
-def REPL_PH : REPL_PH_ENC, REPL_PH_DESC;
-def REPLV_QB : REPLV_QB_ENC, REPLV_QB_DESC;
-def REPLV_PH : REPLV_PH_ENC, REPLV_PH_DESC;
+def REPL_QB : DspMMRel, REPL_QB_ENC, REPL_QB_DESC;
+def REPL_PH : DspMMRel, REPL_PH_ENC, REPL_PH_DESC;
+def REPLV_QB : DspMMRel, REPLV_QB_ENC, REPLV_QB_DESC;
+def REPLV_PH : DspMMRel, REPLV_PH_ENC, REPLV_PH_DESC;
 def PICK_QB : PICK_QB_ENC, PICK_QB_DESC;
 def PICK_PH : PICK_PH_ENC, PICK_PH_DESC;
 def LWX : DspMMRel, LWX_ENC, LWX_DESC;
@@ -1204,8 +1209,8 @@ def EXTR_S_H : DspMMRel, EXTR_S_H_ENC, EXTR_S_H_DESC;
 def EXTRV_S_H : DspMMRel, EXTRV_S_H_ENC, EXTRV_S_H_DESC;
 def SHILO : SHILO_ENC, SHILO_DESC;
 def SHILOV : SHILOV_ENC, SHILOV_DESC;
-def MTHLIP : MTHLIP_ENC, MTHLIP_DESC;
-def RDDSP : RDDSP_ENC, RDDSP_DESC;
+def MTHLIP : DspMMRel, MTHLIP_ENC, MTHLIP_DESC;
+def RDDSP : DspMMRel, RDDSP_ENC, RDDSP_DESC;
 def WRDSP : WRDSP_ENC, WRDSP_DESC;
 
 // MIPS DSP Rev 2
@@ -1256,7 +1261,7 @@ def SHRL_PH : DspMMRel, SHRL_PH_ENC, SHRL_PH_DESC;
 def SHRLV_PH : DspMMRel, SHRLV_PH_ENC, SHRLV_PH_DESC;
 def APPEND : APPEND_ENC, APPEND_DESC;
 def BALIGN : BALIGN_ENC, BALIGN_DESC;
-def PREPEND : PREPEND_ENC, PREPEND_DESC;
+def PREPEND : DspMMRel, PREPEND_ENC, PREPEND_DESC;
 
 }
 

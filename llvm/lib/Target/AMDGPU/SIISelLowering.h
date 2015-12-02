@@ -80,6 +80,8 @@ public:
                           bool MemcpyStrSrc,
                           MachineFunction &MF) const override;
 
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(EVT VT) const override;
 

@@ -41,12 +41,15 @@ class DWARFUnitIndex {
 
 public:
   class Entry {
-    const DWARFUnitIndex *Index;
-    uint64_t Signature;
+  public:
     struct SectionContribution {
       uint32_t Offset;
       uint32_t Length;
     };
+
+  private:
+    const DWARFUnitIndex *Index;
+    uint64_t Signature;
     std::unique_ptr<SectionContribution[]> Contributions;
     friend class DWARFUnitIndex;
 
@@ -55,16 +58,21 @@ public:
     const SectionContribution *getOffset() const;
   };
 
+private:
   struct Header Header;
 
+  DWARFSectionKind InfoColumnKind;
   int InfoColumn = -1;
   std::unique_ptr<DWARFSectionKind[]> ColumnKinds;
   std::unique_ptr<Entry[]> Rows;
 
   static StringRef getColumnHeader(DWARFSectionKind DS);
+  bool parseImpl(DataExtractor IndexData);
 
 public:
   bool parse(DataExtractor IndexData);
+  DWARFUnitIndex(DWARFSectionKind InfoColumnKind)
+      : InfoColumnKind(InfoColumnKind) {}
   void dump(raw_ostream &OS) const;
   const Entry *getFromOffset(uint32_t Offset) const;
 };

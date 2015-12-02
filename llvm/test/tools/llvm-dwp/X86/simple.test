@@ -33,12 +33,13 @@ CHECK:     DW_AT_name {{.*}} "a"
 CHECK:   DW_TAG_structure_type
 CHECK:     DW_AT_name {{.*}} "foo"
 
-FIXME: Using cu_index, identify that abbr_offset is 0x0031, not 0x0000
-CHECK: 0x00000029: Compile Unit: length = 0x00000031 version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000005e)
-FIXME: Using cu_index, use strings based on the right str index offset
-CHECK:   DW_AT_name {{.*}} "a.cpp"
-FIXME: Using cu_index to find the right abbrevs at abbr_offset, this abbrevation should actually be structure_type
-CHECK:   DW_TAG_variable
+CHECK: 0x00000029: Compile Unit: length = 0x00000031 version = 0x0004 abbr_offset = 0x0031 addr_size = 0x08 (next unit at 0x0000005e)
+CHECK:   DW_AT_name {{.*}} "b.cpp"
+CHECK:   DW_TAG_structure_type
+CHECK:     DW_AT_name {{.*}} "bar"
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "b"
+CHECK:     DW_TAG_formal_parameter
 
 CHECK: .debug_cu_index contents:
 FIXME: Emit and verify the cu_index contents

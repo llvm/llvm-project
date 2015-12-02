@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+fma -fp-contract=fast | FileCheck %s --check-prefix=ALL --check-prefix=FMA
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+fma4,+fma -fp-contract=fast | FileCheck %s --check-prefix=ALL --check-prefix=FMA4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+fma4 -fp-contract=fast | FileCheck %s --check-prefix=ALL --check-prefix=FMA4
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl -fp-contract=fast | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512vl -fp-contract=fast | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
 
 ;
 ; Pattern: (fadd (fmul x, y), z) -> (fmadd x,y,z)
@@ -1107,6 +1107,89 @@ define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y
   %m1 = fmul <4 x float> %m0, <float 4.0, float 3.0, float 2.0, float 1.0>
   %a  = fadd <4 x float> %m1, %y
   ret <4 x float> %a
+}
+
+; Pattern: (fneg (fmul x, y)) -> (fnmsub x, y, 0)
+
+define double @test_f64_fneg_fmul(double %x, double %y) #0 {
+; FMA-LABEL: test_f64_fneg_fmul:
+; FMA:       # BB#0:
+; FMA-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; FMA-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_f64_fneg_fmul:
+; FMA4:       # BB#0:
+; FMA4-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; FMA4-NEXT:    vfnmsubsd %xmm2, %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_f64_fneg_fmul:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vfnmsub213sd %xmm2, %xmm0, %xmm1
+; AVX512-NEXT:    vmovaps %zmm1, %zmm0
+; AVX512-NEXT:    retq
+  %m = fmul nsz double %x, %y
+  %n = fsub double -0.0, %m
+  ret double %n
+}
+
+define <4 x float> @test_v4f32_fneg_fmul(<4 x float> %x, <4 x float> %y) #0 {
+; FMA-LABEL: test_v4f32_fneg_fmul:
+; FMA:       # BB#0:
+; FMA-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; FMA-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_v4f32_fneg_fmul:
+; FMA4:       # BB#0:
+; FMA4-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; FMA4-NEXT:    vfnmsubps %xmm2, %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_v4f32_fneg_fmul:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %m = fmul nsz <4 x float> %x, %y
+  %n = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %m
+  ret <4 x float> %n
+}
+
+define <4 x double> @test_v4f64_fneg_fmul(<4 x double> %x, <4 x double> %y) #0 {
+; FMA-LABEL: test_v4f64_fneg_fmul:
+; FMA:       # BB#0:
+; FMA-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
+; FMA-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_v4f64_fneg_fmul:
+; FMA4:       # BB#0:
+; FMA4-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
+; FMA4-NEXT:    vfnmsubpd %ymm2, %ymm1, %ymm0, %ymm0
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_v4f64_fneg_fmul:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; AVX512-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+  %m = fmul nsz <4 x double> %x, %y
+  %n = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  ret <4 x double> %n
+}
+
+define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %y) #0 {
+; ALL-LABEL: test_v4f64_fneg_fmul_no_nsz:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; ALL-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
+; ALL-NEXT:    retq
+  %m = fmul <4 x double> %x, %y
+  %n = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  ret <4 x double> %n
 }
 
 attributes #0 = { "unsafe-fp-math"="true" }

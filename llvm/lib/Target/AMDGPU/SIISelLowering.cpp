@@ -492,6 +492,17 @@ EVT SITargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
   return MVT::Other;
 }
 
+static bool isFlatGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
+    AS == AMDGPUAS::FLAT_ADDRESS ||
+    AS == AMDGPUAS::CONSTANT_ADDRESS;
+}
+
+bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
+                                           unsigned DestAS) const {
+  return isFlatGlobalAddrSpace(SrcAS) &&  isFlatGlobalAddrSpace(DestAS);
+}
+
 TargetLoweringBase::LegalizeTypeAction
 SITargetLowering::getPreferredVectorAction(EVT VT) const {
   if (VT.getVectorNumElements() != 1 && VT.getScalarType().bitsLE(MVT::i16))

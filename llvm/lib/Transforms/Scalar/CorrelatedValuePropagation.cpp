@@ -307,27 +307,31 @@ bool CorrelatedValuePropagation::processSwitch(SwitchInst *SI) {
 /// processCallSite - Infer nonnull attributes for the arguments at the
 /// specified callsite.
 bool CorrelatedValuePropagation::processCallSite(CallSite CS) {
-  bool Changed = false;
-
+  SmallVector<unsigned, 4> Indices;
   unsigned ArgNo = 0;
+
   for (Value *V : CS.args()) {
     PointerType *Type = dyn_cast<PointerType>(V->getType());
 
     if (Type && !CS.paramHasAttr(ArgNo + 1, Attribute::NonNull) &&
         LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
                             ConstantPointerNull::get(Type),
-                            CS.getInstruction()) == LazyValueInfo::False) {
-      AttributeSet AS = CS.getAttributes();
-      AS = AS.addAttribute(CS.getInstruction()->getContext(), ArgNo + 1,
-                           Attribute::NonNull);
-      CS.setAttributes(AS);
-      Changed = true;
-    }
+                            CS.getInstruction()) == LazyValueInfo::False)
+      Indices.push_back(ArgNo + 1);
     ArgNo++;
   }
+
   assert(ArgNo == CS.arg_size() && "sanity check");
 
-  return Changed;
+  if (Indices.empty())
+    return false;
+
+  AttributeSet AS = CS.getAttributes();
+  LLVMContext &Ctx = CS.getInstruction()->getContext();
+  AS = AS.addAttribute(Ctx, Indices, Attribute::get(Ctx, Attribute::NonNull));
+  CS.setAttributes(AS);
+
+  return true;
 }
 
 Constant *CorrelatedValuePropagation::getConstantAt(Value *V, Instruction *At) {

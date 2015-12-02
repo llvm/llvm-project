@@ -291,6 +291,7 @@ typedef struct ValueProfData {
    */
   void deserializeTo(InstrProfRecord &Record,
                      InstrProfRecord::ValueMapType *VMap);
+  void operator delete(void *ptr) { ::operator delete(ptr); }
 #endif
 } ValueProfData;
 

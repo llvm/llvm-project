@@ -227,6 +227,11 @@ public:
   AttributeSet addAttribute(LLVMContext &C, unsigned Index,
                             StringRef Kind, StringRef Value) const;
 
+  /// Add an attribute to the attribute set at the given indices. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet addAttribute(LLVMContext &C, ArrayRef<unsigned> Indices,
+                            Attribute A) const;
+
   /// \brief Add attributes to the attribute set at the given index. Because
   /// attribute sets are immutable, this returns a new set.
   AttributeSet addAttributes(LLVMContext &C, unsigned Index,

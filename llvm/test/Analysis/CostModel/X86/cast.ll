@@ -84,11 +84,11 @@ define i32 @zext_sext(<8 x i1> %in) {
   ;CHECK-AVX: cost of 4 {{.*}} zext
   %D = zext <4 x i32> undef to <4 x i64>
 
-  ;CHECK-AVX512: cost of 3 {{.*}} %D1 = zext
-  %D1 = zext <16 x i32> undef to <16 x i64>
+  ;CHECK-AVX512: cost of 1 {{.*}} %D1 = zext
+  %D1 = zext <8 x i32> undef to <8 x i64>
 
-  ;CHECK-AVX512: cost of 3 {{.*}} %D2 = sext
-  %D2 = sext <16 x i32> undef to <16 x i64>
+  ;CHECK-AVX512: cost of 1 {{.*}} %D2 = sext
+  %D2 = sext <8 x i32> undef to <8 x i64>
 
   ;CHECK-AVX512: cost of 1 {{.*}} %D3 = zext
   %D3 = zext <16 x i16> undef to <16 x i32>
@@ -118,9 +118,11 @@ define i32 @zext_sext(<8 x i1> %in) {
   ;CHECK_AVX512: cost of 1 {{.*}} G = trunc
   %G = trunc <8 x i64> undef to <8 x i32>
 
-  ;CHECK-AVX512: cost of 4 {{.*}} %G1 = trunc
-  %G1 = trunc <16 x i64> undef to <16 x i32>
+  ;CHECK-AVX512: cost of 1 {{.*}} %G1 = trunc
+  %G1 = trunc <16 x i32> undef to <16 x i16>
 
+  ;CHECK-AVX512: cost of 1 {{.*}} %G2 = trunc
+  %G2 = trunc <16 x i32> undef to <16 x i8>
   ret i32 undef
 }
 
@@ -207,38 +209,40 @@ define void @uitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
   ; CHECK: cost of 2 {{.*}} uitofp
   %C2 = uitofp <4 x i16> %c to <4 x double>
 
-  ; CHECK: cost of 6 {{.*}} uitofp
+  ; CHECK-AVX2: cost of 6 {{.*}} uitofp
   %D1 = uitofp <4 x i32> %d to <4 x float>
-  ; CHECK: cost of 6 {{.*}} uitofp
+  ; CHECK-AVX2: cost of 6 {{.*}} uitofp
   %D2 = uitofp <4 x i32> %d to <4 x double>
   ret void
 }
 
 define void @uitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
 ; CHECK-LABEL: for function 'uitofp8'
-  ; CHECK: cost of 6 {{.*}} uitofp
+  ; CHECK-AVX2: cost of 6 {{.*}} uitofp
   %A1 = uitofp <8 x i1> %a to <8 x float>
 
-  ; CHECK: cost of 5 {{.*}} uitofp
+  ; CHECK-AVX2: cost of 5 {{.*}} uitofp
+  ; CHECK-AVX512: cost of 2 {{.*}} uitofp
   %B1 = uitofp <8 x i8> %b to <8 x float>
 
-  ; CHECK: cost of 5 {{.*}} uitofp
+  ; CHECK-AVX2: cost of 5 {{.*}} uitofp
+  ; CHECK-AVX512: cost of 2 {{.*}} uitofp
   %C1 = uitofp <8 x i16> %c to <8 x float>
 
   ; CHECK-AVX2: cost of 8 {{.*}} uitofp
-  ; CHECK-AVX512: cost of 8 {{.*}} uitofp
+  ; CHECK-AVX512: cost of 1 {{.*}} uitofp
   ; CHECK-AVX: cost of 9 {{.*}} uitofp
   %D1 = uitofp <8 x i32> %d to <8 x float>
   ret void
 }
 
-define void @fp_conv(<8 x float> %a, <16 x float>%b) {
+define void @fp_conv(<8 x float> %a, <16 x float>%b, <4 x float> %c) {
 ;CHECK-LABEL: for function 'fp_conv'
   ; CHECK-AVX512: cost of 1 {{.*}} fpext
   %A1 = fpext <8 x float> %a to <8 x double>
 
-  ; CHECK-AVX512: cost of 3 {{.*}} fpext
-  %A2 = fpext <16 x float> %b to <16 x double>
+  ; CHECK-AVX512: cost of 1 {{.*}} fpext
+  %A2 = fpext <4 x float> %c to <4 x double>
 
   ; CHECK-AVX2:   cost of 3 {{.*}} %A3 = fpext
   ; CHECK-AVX512: cost of 1 {{.*}} %A3 = fpext
@@ -248,7 +252,7 @@ define void @fp_conv(<8 x float> %a, <16 x float>%b) {
   ; CHECK-AVX512: cost of 1 {{.*}} %A4 = fptrunc
   %A4 = fptrunc <8 x double> undef to <8 x float>
 
-  ; CHECK-AVX512: cost of 3 {{.*}} %A5 = fptrunc
-  %A5 = fptrunc <16 x double> undef to <16 x float>
+  ; CHECK-AVX512: cost of 1 {{.*}} %A5 = fptrunc
+  %A5 = fptrunc <4 x double> undef to <4 x float>
   ret void
 }

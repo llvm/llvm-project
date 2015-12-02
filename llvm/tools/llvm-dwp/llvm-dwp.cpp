@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include <memory>
 #include <list>
 #include <unordered_set>
@@ -85,48 +86,106 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
-  const StringMap<MCSection *> KnownSections = {
-      {"debug_info.dwo", MCOFI.getDwarfInfoDWOSection()},
-      {"debug_types.dwo", MCOFI.getDwarfTypesDWOSection()},
-      {"debug_str_offsets.dwo", StrOffsetSection},
-      {"debug_str.dwo", StrSection},
-      {"debug_loc.dwo", MCOFI.getDwarfLocDWOSection()},
-      {"debug_abbrev.dwo", MCOFI.getDwarfAbbrevDWOSection()}};
+  const StringMap<std::pair<MCSection *, DWARFSectionKind>> KnownSections = {
+      {"debug_info.dwo", {MCOFI.getDwarfInfoDWOSection(), DW_SECT_INFO}},
+      {"debug_types.dwo", {MCOFI.getDwarfTypesDWOSection(), DW_SECT_TYPES}},
+      {"debug_str_offsets.dwo", {StrOffsetSection, DW_SECT_STR_OFFSETS}},
+      {"debug_str.dwo", {StrSection, static_cast<DWARFSectionKind>(0)}},
+      {"debug_loc.dwo", {MCOFI.getDwarfLocDWOSection(), DW_SECT_LOC}},
+      {"debug_abbrev.dwo", {MCOFI.getDwarfAbbrevDWOSection(), DW_SECT_ABBREV}}};
+
+  struct UnitIndexEntry {
+    uint64_t Signature;
+    DWARFUnitIndex::Entry::SectionContribution Contributions[8];
+  };
+
+  std::vector<UnitIndexEntry> IndexEntries;
 
   StringMap<uint32_t> Strings;
   uint32_t StringOffset = 0;
+
+  uint64_t UnitIndex = 0;
+  uint32_t ContributionOffsets[8] = {};
 
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);
     if (!ErrOrObj)
       return ErrOrObj.getError();
-    const auto *Obj = ErrOrObj->getBinary();
+
+    IndexEntries.emplace_back();
+    UnitIndexEntry &CurEntry = IndexEntries.back();
+    CurEntry.Signature = UnitIndex++;
+
     StringRef CurStrSection;
     StringRef CurStrOffsetSection;
-    for (const auto &Section : Obj->sections()) {
+
+    for (const auto &Section : ErrOrObj->getBinary()->sections()) {
       StringRef Name;
       if (std::error_code Err = Section.getName(Name))
         return Err;
-      if (MCSection *OutSection =
-              KnownSections.lookup(Name.substr(Name.find_first_not_of("._")))) {
-        StringRef Contents;
-        if (auto Err = Section.getContents(Contents))
-          return Err;
-        if (OutSection == StrOffsetSection)
-          CurStrOffsetSection = Contents;
-        else if (OutSection == StrSection)
-          CurStrSection = Contents;
-        else {
-          Out.SwitchSection(OutSection);
-          Out.EmitBytes(Contents);
-        }
+
+      auto SectionPair =
+          KnownSections.find(Name.substr(Name.find_first_not_of("._")));
+      if (SectionPair == KnownSections.end())
+        continue;
+
+      StringRef Contents;
+      if (auto Err = Section.getContents(Contents))
+        return Err;
+
+      if (DWARFSectionKind Kind = SectionPair->second.second) {
+        auto Index = Kind - DW_SECT_INFO;
+        CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
+        ContributionOffsets[Index] +=
+            (CurEntry.Contributions[Index].Length = Contents.size());
+      }
+
+      MCSection *OutSection = SectionPair->second.first;
+      if (OutSection == StrOffsetSection)
+        CurStrOffsetSection = Contents;
+      else if (OutSection == StrSection)
+        CurStrSection = Contents;
+      else {
+        Out.SwitchSection(OutSection);
+        Out.EmitBytes(Contents);
       }
     }
+
     if (auto Err = writeStringsAndOffsets(Out, Strings, StringOffset,
                                           StrSection, StrOffsetSection,
                                           CurStrSection, CurStrOffsetSection))
       return Err;
   }
+
+  Out.SwitchSection(MCOFI.getDwarfCUIndexSection());
+  Out.EmitIntValue(2, 4);                   // Version
+  Out.EmitIntValue(8, 4);                   // Columns
+  Out.EmitIntValue(IndexEntries.size(), 4); // Num Units
+  // FIXME: This is not the right number of buckets for a real hash.
+  Out.EmitIntValue(IndexEntries.size(), 4); // Num Buckets
+
+  // Write the signatures.
+  for (const auto &E : IndexEntries)
+    Out.EmitIntValue(E.Signature, 8);
+
+  // Write the indexes.
+  for (size_t i = 0; i != IndexEntries.size(); ++i)
+    Out.EmitIntValue(i + 1, 4);
+
+  // Write the column headers (which sections will appear in the table)
+  for (size_t i = 1; i != 9; ++i)
+    Out.EmitIntValue(i, 4);
+
+  // Write the offsets.
+  for (const auto &E : IndexEntries)
+    for (const auto &C : E.Contributions)
+      Out.EmitIntValue(C.Offset, 4);
+
+  // Write the lengths.
+  for (const auto &E : IndexEntries)
+    for (const auto &C : E.Contributions)
+      Out.EmitIntValue(C.Length, 4);
+
   return std::error_code();
 }
 

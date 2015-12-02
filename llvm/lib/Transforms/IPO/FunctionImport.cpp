@@ -51,7 +51,7 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
 }
 
 // Get a Module for \p FileName from the cache, or load it lazily.
-Module &FunctionImporter::getOrLoadModule(StringRef FileName) {
+Module &ModuleLazyLoaderCache::operator()(StringRef FileName) {
   auto &Module = ModuleMap[FileName];
   if (!Module)
     Module = loadFile(FileName, Context);
@@ -86,7 +86,6 @@ static void findExternalCalls(const Function &F, StringSet<> &CalledFunctions,
 // The current implementation imports every called functions that exists in the
 // summaries index.
 bool FunctionImporter::importFunctions(Module &M) {
-  assert(&Context == &M.getContext());
 
   bool Changed = false;
 
@@ -142,7 +141,8 @@ bool FunctionImporter::importFunctions(Module &M) {
                  << "\n");
 
     // Get the module for the import (potentially from the cache).
-    auto &Module = getOrLoadModule(FileName);
+    auto &Module = getLazyModule(FileName);
+    assert(&Module.getContext() == &M.getContext());
 
     // The function that we will import!
     GlobalValue *SGV = Module.getNamedValue(CalledFunctionName);
@@ -182,7 +182,10 @@ bool FunctionImporter::importFunctions(Module &M) {
     }
 
     // Link in the specified function.
-    if (L.linkInModule(Module, Linker::Flags::None, &Index, F))
+    DenseSet<const GlobalValue *> FunctionsToImport;
+    FunctionsToImport.insert(F);
+    if (L.linkInModule(Module, Linker::Flags::None, &Index,
+                       &FunctionsToImport))
       report_fatal_error("Function Import: link error");
 
     // Process the newly imported function and add callees to the worklist.
@@ -194,6 +197,7 @@ bool FunctionImporter::importFunctions(Module &M) {
 
     Changed = true;
   }
+
   return Changed;
 }
 
@@ -255,7 +259,10 @@ public:
     }
 
     // Perform the import now.
-    FunctionImporter Importer(M.getContext(), *Index, diagnosticHandler);
+    ModuleLazyLoaderCache Loader(M.getContext());
+    FunctionImporter Importer(*Index, diagnosticHandler,
+                              [&](StringRef Name)
+                                  -> Module &{ return Loader(Name); });
     return Importer.importFunctions(M);
 
     return false;

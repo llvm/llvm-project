@@ -116,3 +116,4 @@
   muleu_s.ph.qbl $1, $2, $3    # CHECK: muleu_s.ph.qbl $1, $2, $3  # encoding: [0x00,0x62,0x08,0x95]
   muleu_s.ph.qbr $1, $2, $3    # CHECK: muleu_s.ph.qbr $1, $2, $3  # encoding: [0x00,0x62,0x08,0xd5]
   mulq_rs.ph $1, $2, $3        # CHECK: mulq_rs.ph $1, $2, $3      # encoding: [0x00,0x62,0x09,0x15]
+  prepend $1, $2, 3            # CHECK: prepend $1, $2, 3          # encoding: [0x00,0x22,0x1a,0x55]

@@ -141,6 +141,14 @@ class MFHI_MM_ENC : POOL32A_1RAC_FMT<"mfhi", 0b00000001>;
 class MFLO_MM_ENC : POOL32A_1RAC_FMT<"mflo", 0b01000001>;
 class MTHI_MM_ENC : POOL32A_1RAC_FMT<"mthi", 0b10000001>;
 class MTLO_MM_ENC : POOL32A_1RAC_FMT<"mthi", 0b11000001>;
+class PREPEND_MMR2_ENC : POOL32A_2RSA5B0_FMT<"prepend", 0b1001010101>;
+class RADDU_W_QB_MM_ENC : POOL32A_2R_FMT<"raddu.w.qb", 0b1111000100>;
+class RDDSP_MM_ENC : POOL32A_1RMASK7_FMT<"rddsp", 0b00011001>;
+class REPL_PH_MM_ENC : POOL32A_1RIMM10_FMT<"repl.ph", 0b0000111101>;
+class REPL_QB_MM_ENC : POOL32A_1RIMM8_FMT<"repl.qb", 0b010111>;
+class REPLV_PH_MM_ENC : POOL32A_2R_FMT<"replv.ph", 0b0000001100>;
+class REPLV_QB_MM_ENC : POOL32A_2R_FMT<"replv.qb", 0b0001001100>;
+class MTHLIP_MM_ENC : POOL32A_1RAC_FMT<"mthlip", 0b00001001>;
 
 // Instruction desc.
 class ABSQ_S_PH_MM_R2_DESC_BASE<string opstr, SDPatternOperator OpNode,
@@ -262,6 +270,7 @@ class EXT_MM_1R_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string AsmString = !strconcat(instr_asm, "\t$rt, $ac, $imm");
   InstrItinClass Itinerary = itin;
 }
+
 class EXTP_MM_DESC
     : EXT_MM_1R_DESC_BASE<"extp", MipsEXTP, NoItinerary>,
       Uses<[DSPPos]>, Defs<[DSPEFI]>;
@@ -313,7 +322,38 @@ class MFHI_MM_DESC : MFHI_MM_DESC_BASE<"mfhi", ACC64DSPOpnd, MipsMFHI,
 class MFLO_MM_DESC : MFHI_MM_DESC_BASE<"mflo", ACC64DSPOpnd, MipsMFLO,
                                        NoItinerary>;
 
-// Instruction defs.
+class RADDU_W_QB_MM_DESC {
+  dag OutOperandList = (outs GPR32Opnd:$rt);
+  dag InOperandList = (ins DSPROpnd:$rs);
+  string AsmString = !strconcat("raddu.w.qb", "\t$rt, $rs");
+  list<dag> Pattern = [(set GPR32Opnd:$rt, (int_mips_raddu_w_qb DSPROpnd:$rs))];
+  InstrItinClass Itinerary = NoItinerary;
+  string BaseOpcode = "raddu.w.qb";
+}
+
+class RDDSP_MM_DESC {
+  dag OutOperandList = (outs GPR32Opnd:$rt);
+  dag InOperandList = (ins uimm16:$mask);
+  string AsmString = !strconcat("rddsp", "\t$rt, $mask");
+  list<dag> Pattern = [(set GPR32Opnd:$rt, (int_mips_rddsp immZExt10:$mask))];
+  InstrItinClass Itinerary = NoItinerary;
+}
+
+class REPL_QB_MM_DESC {
+  dag OutOperandList = (outs DSPROpnd:$rt);
+  dag InOperandList = (ins uimm16:$imm);
+  string AsmString = !strconcat("repl.qb", "\t$rt, $imm");
+  list<dag> Pattern = [(set DSPROpnd:$rt, (int_mips_repl_qb immZExt8:$imm))];
+  InstrItinClass Itinerary = NoItinerary;
+}
+
+class REPLV_PH_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"replv.ph", int_mips_repl_ph,
+                                                   NoItinerary, DSPROpnd,
+                                                   GPR32Opnd>;
+class REPLV_QB_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"replv.qb", int_mips_repl_qb,
+                                                   NoItinerary, DSPROpnd,
+                                                   GPR32Opnd>;
+
 // microMIPS DSP Rev 1
 def ADDQ_PH_MM : DspMMRel, ADDQ_PH_MM_ENC, ADDQ_PH_DESC;
 def ADDQ_S_PH_MM : DspMMRel, ADDQ_S_PH_MM_ENC, ADDQ_S_PH_DESC;
@@ -404,6 +444,13 @@ def MFHI_DSP_MM : DspMMRel, MFHI_MM_ENC, MFHI_MM_DESC;
 def MFLO_DSP_MM : DspMMRel, MFLO_MM_ENC, MFLO_MM_DESC;
 def MTHI_DSP_MM : DspMMRel, MTHI_MM_ENC, MTHI_DESC;
 def MTLO_DSP_MM : DspMMRel, MTLO_MM_ENC, MTLO_DESC;
+def RADDU_W_QB_MM : DspMMRel, RADDU_W_QB_MM_ENC, RADDU_W_QB_MM_DESC;
+def RDDSP_MM : DspMMRel, RDDSP_MM_ENC, RDDSP_MM_DESC;
+def REPL_PH_MM : DspMMRel, REPL_PH_MM_ENC, REPL_PH_DESC;
+def REPL_QB_MM : DspMMRel, REPL_QB_MM_ENC, REPL_QB_MM_DESC;
+def REPLV_PH_MM : DspMMRel, REPLV_PH_MM_ENC, REPLV_PH_MM_DESC;
+def REPLV_QB_MM : DspMMRel, REPLV_QB_MM_ENC, REPLV_QB_MM_DESC;
+def MTHLIP_MM : DspMMRel, MTHLIP_MM_ENC, MTHLIP_DESC;
 // microMIPS DSP Rev 2
 def ABSQ_S_QB_MMR2 : DspMMRel, ABSQ_S_QB_MMR2_ENC, ABSQ_S_QB_MMR2_DESC,
                      ISA_DSPR2;
@@ -454,3 +501,4 @@ def PRECR_SRA_PH_W_MMR2 : DspMMRel, PRECR_SRA_PH_W_MMR2_ENC,
                           PRECR_SRA_PH_W_DESC, ISA_DSPR2;
 def PRECR_SRA_R_PH_W_MMR2 : DspMMRel, PRECR_SRA_R_PH_W_MMR2_ENC,
                             PRECR_SRA_R_PH_W_DESC, ISA_DSPR2;
+def PREPEND_MMR2 : DspMMRel, PREPEND_MMR2_ENC, PREPEND_DESC, ISA_DSPR2;
